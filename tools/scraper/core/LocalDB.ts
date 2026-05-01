@@ -81,6 +81,14 @@ db.exec(`
     special_events TEXT, -- JSON
     adult_night_schedule TEXT, -- JSON,
     
+    -- Photo Categories
+    facade_exterior TEXT,
+    skate_floor TEXT,
+    arcade_zone TEXT,
+    snack_bar TEXT,
+    interior TEXT,
+    food TEXT,
+    
     -- We can store the entire row payload here just in case we miss a column
     raw_data TEXT -- JSON
   );
@@ -165,6 +173,14 @@ const FIELD_SEEDS: { id: string; field_name: string; phase_id: number; display_l
   { id: 'schedule_url',       field_name: 'schedule_url',       phase_id: 2, display_label: 'Schedule URL',         data_type: 'text',     sort_order: 238 },
   { id: 'is_indoor',          field_name: 'is_indoor',          phase_id: 2, display_label: 'Is Indoor',            data_type: 'boolean',  sort_order: 170 },
   { id: 'operator_name',      field_name: 'operator_name',      phase_id: 2, display_label: 'Operator Name',        data_type: 'text',     sort_order: 360 },
+  { id: 'opening_hours',      field_name: 'opening_hours',      phase_id: 2, display_label: 'Opening Hours',        data_type: 'json',     sort_order: 361 },
+  { id: 'operator_description',field_name: 'operator_description',phase_id: 2, display_label: 'Operator Description', data_type: 'text',     sort_order: 362 },
+  { id: 'facility_type',      field_name: 'facility_type',      phase_id: 2, display_label: 'Facility Type',        data_type: 'text',     sort_order: 363 },
+  { id: 'has_adult_night',    field_name: 'has_adult_night',    phase_id: 2, display_label: 'Has Adult Night',      data_type: 'boolean',  sort_order: 364 },
+  { id: 'has_pro_shop',       field_name: 'has_pro_shop',       phase_id: 2, display_label: 'Has Pro Shop',         data_type: 'boolean',  sort_order: 365 },
+  { id: 'surface_type',       field_name: 'surface_type',       phase_id: 2, display_label: 'Surface Type',         data_type: 'text',     sort_order: 366 },
+  { id: 'adult_night_details',field_name: 'adult_night_details',phase_id: 2, display_label: 'Adult Night Details',  data_type: 'text',     sort_order: 367 },
+  { id: 'ai_metadata',        field_name: 'ai_metadata',        phase_id: 2, display_label: 'AI Metadata',          data_type: 'json',     sort_order: 368 },
 
   // ── Phase 3: Photographer ──
   { id: 'p3_candidate_photos', field_name: 'candidate_photos', phase_id: 3, display_label: 'Candidate Photos',     data_type: 'jsonb',    sort_order: 700 },
@@ -275,10 +291,25 @@ const rowToObj = (row: any) => {
  * Upserts a spot into the local DB.
  */
 export const upsertLocalSpot = (spot: any) => {
-  const is_published = spot.is_published ? 1 : 0;
+  let is_published = spot.is_published ? 1 : 0;
   const has_adult_night = spot.has_adult_night ? 1 : 0;
   const has_pro_shop = spot.has_pro_shop || spot.has_proshop ? 1 : 0;
   const is_deep_crawled = spot.is_deep_crawled ? 1 : 0;
+  let verification_status = spot.verification_status || null;
+
+  if (spot.name) {
+    const spotName = spot.name.toLowerCase();
+    const keywords = db.prepare('SELECT keyword FROM scraper_blocklist_keywords').all() as any[];
+    const bl = db.prepare('SELECT pattern FROM scraper_blocklist').all() as any[];
+    
+    const isBlocked = keywords.some(k => spotName.includes(k.keyword.toLowerCase())) || 
+                      bl.some(b => spotName.includes(b.pattern.toLowerCase()));
+                      
+    if (isBlocked) {
+      verification_status = 'REJECTED';
+      is_published = 0;
+    }
+  }
 
   const stmt = db.prepare(`
     INSERT INTO local_spots (
@@ -394,7 +425,7 @@ export const upsertLocalSpot = (spot: any) => {
     operator_description: spot.operator_description || null,
     facility_type: spot.facility_type || null,
     is_published,
-    verification_status: spot.verification_status || null,
+    verification_status,
     has_adult_night,
     has_pro_shop,
     is_deep_crawled,

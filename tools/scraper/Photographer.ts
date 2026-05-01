@@ -38,7 +38,7 @@ if (!fs.existsSync(PHOTOS_DIR)) {
 const PHOTO_SERVE_BASE = 'http://localhost:5999/api/photos';
 
 const COOLDOWN_MS = 800;
-const MAX_PHOTOS_PER_SPOT = 4;
+const MAX_PHOTOS_PER_SPOT = 10;
 
 const reportPulse = (delayMs: number) => {
   fetch('http://localhost:5999/api/pulse', {
@@ -128,7 +128,7 @@ async function runPhotographerLoop() {
     const priorityStates: string[] = configRes.priority_states || [];
 
     // Build query with priority state ordering
-    let query = `SELECT id, name, state, candidate_photos, photos, verification_status FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND photos IS NULL`;
+    let query = `SELECT id, name, state, candidate_photos, photos, verification_status FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND (photos IS NULL OR photos = '[]' OR photos = '')`;
     if (priorityStates.length > 0) {
       query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
     }
@@ -165,6 +165,16 @@ async function runPhotographerLoop() {
 
     // Build ordered list of photo URLs to attempt
     const urlCandidates: Array<{ key: string; url: string }> = [];
+    
+    // 1. Google Places Photos (highest quality hero candidates)
+    if (candidates.google_refs?.length && process.env.GOOGLE_MAPS_API_KEY) {
+      candidates.google_refs.forEach((ref: string, i: number) => {
+        const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${ref}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
+        urlCandidates.push({ key: `google_${i}`, url });
+      });
+    }
+
+    // 2. Fallbacks: Website OG, parsed DOM images, Facebook, Street View
     if (candidates.og_image) urlCandidates.push({ key: 'og_image', url: candidates.og_image });
     if (candidates.dom_images?.length) {
       candidates.dom_images.forEach((url: string, i: number) =>

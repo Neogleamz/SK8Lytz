@@ -107,12 +107,22 @@ export async function startGoogleSweep(
         let derivedCity: string | undefined;
         let derivedZip: string | undefined;
 
+        // Reliable US Zip Regex extraction
+        if (details.formatted_address) {
+          const match = details.formatted_address.match(/\b([A-Z]{2})\s+(\d{5}(?:-\d{4})?)(?:,\s*USA)?\s*$/i);
+          if (match) {
+            derivedState = match[1];
+            derivedZip = match[2];
+          }
+        }
+
         if (parts.length >= 3) {
-          const stateZipStr = parts[parts.length - 2].trim(); // "CA 94611"
           derivedCity = parts[parts.length - 3].trim();       // "Oakland"
-          const splitStateZip = stateZipStr.split(' ');
-          if (splitStateZip.length > 0) derivedState = splitStateZip[0]; // "CA"
-          if (splitStateZip.length > 1) derivedZip  = splitStateZip[1]; // "94611"
+          if (!derivedState) {
+            const stateZipStr = parts[parts.length - 2].trim(); // "CA 94611"
+            const splitStateZip = stateZipStr.split(' ');
+            if (splitStateZip.length > 0) derivedState = splitStateZip[0]; // "CA"
+          }
         }
         if (!derivedState) derivedState = stateCode; // fallback
 

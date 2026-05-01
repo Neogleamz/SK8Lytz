@@ -39,6 +39,9 @@ interface BeltProps {
   onBlockSpot?: (spotId: string, spotName: string) => void;
   onRestartSpot?: (spotId: string) => void;
   onFreezeSpot?: (spotId: string) => void;
+  onPurgeSpot?: (id: string, name: string) => void;
+  onSetHero?: (spotId: string, photoIndex: number) => void;
+  onDeletePhoto?: (spotId: string, photoIndex: number) => void;
 }
 
 // Shared card dimensions
@@ -140,18 +143,20 @@ export const BeltNode: React.FC<BeltProps> = ({
   carouselSpots,
   id, name, color, rgb, job, daemon, target, inQ, status, gatekeeper, attempting, outCards,
   onPhaseNav, daemonActive = false, onDaemonStart, onDaemonStop, hasDaemon = true, daemonStatus, inputStatus, outputStatus, countBadges = [],
-  onBlockSpot, onRestartSpot, onFreezeSpot,
+  onBlockSpot, onRestartSpot, onFreezeSpot, onPurgeSpot, onSetHero, onDeletePhoto
 }) => {
   const [isConfigOpen, setConfigOpen] = useState(false);
   const [carouselIdx, setCarouselIdx] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
 
   React.useEffect(() => {
     if (!carouselSpots || carouselSpots.length === 0) return;
+    if (isHovered) return;
     const interval = setInterval(() => {
       setCarouselIdx(prev => (prev + 1) % carouselSpots.length);
     }, 3500);
     return () => clearInterval(interval);
-  }, [carouselSpots]);
+  }, [carouselSpots, isHovered]);
 
   const successCards = outCards.filter(c => c.type === 'success').slice(0, 2);
   const rejectedCards = outCards.filter(c => c.type === 'rejected').slice(0, 2);
@@ -524,13 +529,21 @@ export const BeltNode: React.FC<BeltProps> = ({
           gap: 8, paddingLeft: 4, zIndex: 1,
         }}>
           {carouselSpots && carouselSpots.length > 0 ? (
-            <div style={{ width: 180, height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div 
+              style={{ width: 180, height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+            >
               <div style={{ transform: 'scale(0.85)', transformOrigin: 'center left', width: '100%', height: '100%', animation: 'fadeIn 0.5s ease-in-out' }} key={carouselIdx}>
                 <DatabankCard 
                   spot={carouselSpots[carouselIdx]} 
                   variant="polaroid" 
-                  readOnly={true} 
-                  proxyImg={(url: string) => url ? `http://localhost:5999/api/proxy-image?url=${encodeURIComponent(url)}` : ''} 
+                  readOnly={false} 
+                  proxyImg={(url: string | null) => url ? `http://localhost:5999/api/proxy-image?url=${encodeURIComponent(url)}` : null} 
+                  onBlock={onBlockSpot}
+                  onPurge={onPurgeSpot}
+                  onSetHero={onSetHero}
+                  onDeletePhoto={onDeletePhoto}
                 />
               </div>
             </div>

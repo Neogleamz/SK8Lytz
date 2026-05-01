@@ -337,6 +337,7 @@ export async function executeDetective(
           { pattern: /hours|schedule|session|times|calendar|events|open.?skate/i, score: 10 },
           { pattern: /adult.?night|18\+|21\+/i,                                  score: 10 },
           { pattern: /pricing|price|admission|rates|tickets|booking/i,            score: 9  },
+          { pattern: /about|story|history|facility|rink/i,                        score: 8  },
           { pattern: /location|directions|contact|info/i,                         score: 6  },
         ];
 
@@ -474,8 +475,13 @@ export async function executeDetective(
         systemMessage += `1. If you cannot find evidence for a field in the provided text, return null for that field. Do NOT guess or infer.\n`;
         systemMessage += `2. Return ONLY a valid JSON object matching the schema below. No markdown, no code blocks, no commentary.\n`;
         systemMessage += `3. For boolean fields, return true, false, or null (not strings).\n`;
-        systemMessage += `4. For URL fields, return the full URL starting with http/https, or null.\n\n`;
-        systemMessage += `SCHEMA (extract ALL of these fields):\n${JSON.stringify(mergedSchema, null, 2)}`;
+        systemMessage += `4. For URL fields, return the full URL starting with http/https, or null.\n`;
+        
+        if (aiConfig.ai_exclusion_keywords && aiConfig.ai_exclusion_keywords.length > 0) {
+          systemMessage += `5. TOXICITY BOUNCER: If the PRIMARY BUSINESS of this facility is any of the following: [${aiConfig.ai_exclusion_keywords.join(', ')}], you MUST return EXACTLY {"TOXICITY_ABORT": true} and nothing else. However, if they merely mention these items (e.g., selling scooter wheels, banning skateboards), DO NOT abort.\n`;
+        }
+        
+        systemMessage += `\nSCHEMA (extract ALL of these fields):\n${JSON.stringify(mergedSchema, null, 2)}`;
 
         const userMessage = `Website/Image Text:\n${combinedText.slice(-30000)}`;
         const detectiveModel = aiConfig.detective_model || 'local-model';
@@ -559,13 +565,9 @@ export async function executeDetective(
     }
   } // end: website null guard
 
-  // ── AI Toxicity Bouncer ──────────────────────────────────────────────────
-  const exclusions = aiConfig.ai_exclusion_keywords || [];
-  const toxicityReason = exclusions.find((kw: string) =>
-    combinedText.toLowerCase().includes(kw.toLowerCase())
-  );
-  if (toxicityReason) {
-    onProgress(`[Detective] 🚫 HEALER ABORT: Exclusion keyword [${toxicityReason}] found in content.`);
+  // ── AI Toxicity Bouncer (Smart Evaluation) ──────────────────────────────
+  if (aiMetadata.TOXICITY_ABORT === true) {
+    onProgress(`[Detective] 🚫 HEALER ABORT: AI determined this facility matches an exclusion keyword primary business.`);
     return {
       aiMetadata: {}, mappedFields: {}, combinedText,
       qualityScore: 0, passedQualityGate: false, candidatePhotos: null,

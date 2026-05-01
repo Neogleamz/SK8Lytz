@@ -429,7 +429,7 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
                       }} style={{ alignSelf: 'flex-start', background: `linear-gradient(135deg, ${colColor} 0%, ${colColor}aa 100%)`, color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 800 }}>+ ADD VECTOR PROMPT</button>
                     </div>
                   </div>
-                  <TagInput label="Exclusion Keywords" tags={config?.ai_exclusion_keywords || []} setTags={(t: any) => handleUpdate('ai_exclusion_keywords', t)} colColor={colColor} />
+                  <TagInput label="Toxicity Bouncer (Exclusion Keywords)" tags={config?.ai_exclusion_keywords || []} setTags={(t: any) => handleUpdate('ai_exclusion_keywords', t)} colColor={colColor} />
                   <div>
                     <label style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                       <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: colColor, boxShadow: `0 0 8px ${colColor}` }} />

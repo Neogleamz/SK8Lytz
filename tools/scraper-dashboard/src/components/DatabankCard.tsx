@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 // Helpers
 const toHoursArr = (h: any): string[] | null => {
@@ -54,30 +54,76 @@ export interface DatabankCardProps {
   onEdit?: (spot: any) => void;
   onReset?: (id: string, name: string) => void;
   onPurge?: (id: string, name: string) => void;
+  onBlock?: (id: string, name: string) => void;
+  onSetHero?: (spotId: string, photoIndex: number) => void;
+  onDeletePhoto?: (spotId: string, photoIndex: number) => void;
+  onAssignPhotoType?: (spotId: string, photoIndex: number, fieldType: string) => void;
   onPublishToggle?: (spot: any) => void;
-  proxyImg: (url: string) => string;
+  proxyImg: (url: string | null) => string | null;
 }
 
 export const DatabankCard: React.FC<DatabankCardProps> = ({ 
   spot, variant = 'detailed', readOnly = false,
-  onEdit, onReset, onPurge, onPublishToggle, proxyImg
+  onEdit, onReset, onPurge, onBlock, onSetHero, onDeletePhoto, onAssignPhotoType, onPublishToggle, proxyImg
 }) => {
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const [showTypeMenu, setShowTypeMenu] = useState(false);
+
+  // Reset photo index if spot changes to avoid out-of-bounds
+  React.useEffect(() => {
+    setPhotoIndex(0);
+  }, [spot.id]);
+
   const _ph = spot.photos as any[] | null; 
   const _cd = spot.candidate_photos as any;
-  const rawPhoto = (typeof _ph?.[0] === 'string' ? _ph[0] : _ph?.[0]?.url) ?? (_cd?.street_view_url ?? (_cd?.[0]?.url ?? null));
+  const safePh = Array.isArray(_ph) ? _ph : [];
+  
+  const validPhotoIndex = photoIndex >= safePh.length ? 0 : photoIndex;
+  const rawPhoto = (typeof safePh[validPhotoIndex] === 'string' ? safePh[validPhotoIndex] : safePh[validPhotoIndex]?.url) ?? (_cd?.street_view_url ?? (_cd?.[0]?.url ?? null));
   const photo = proxyImg(rawPhoto);
   
   const openStatus = isOpenNow(toHoursArr(spot.opening_hours));
   const ratingNum  = spot.rating ? parseFloat(String(spot.rating)) : null;
   const proShop    = spot.has_pro_shop || (spot as any).has_proshop;
   const adultNight = spot.has_adult_night;
-  const photoCount = (_ph?.length ?? 0);
+  const photoCount = (safePh.length);
   const candCount  = (_cd?.street_view_url ? 1 : 0);
   const igUrl      = (spot as any).instagram_url;
   const fbUrl      = (spot as any).facebook_url;
   const ttUrl      = (spot as any).tiktok_url;
   const hours      = toHoursArr(spot.opening_hours);
   const adultSched = spot.adult_night_schedule;
+
+  const PHOTO_TYPES = [
+    'facade_exterior', 'skate_floor', 'arcade_zone', 'snack_bar', 'interior', 'food',
+    'og_image', 'street_view_url', 'dom_images', 'flyer_urls', 'photos'
+  ];
+
+  // Helper to render the type menu
+  const renderTypeMenu = () => {
+    if (!showTypeMenu) return null;
+    return (
+      <div style={{ position: 'absolute', top: '10px', left: '10px', right: '10px', bottom: '10px', background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(10px)', borderRadius: '8px', zIndex: 10, display: 'flex', flexDirection: 'column', padding: '10px', overflowY: 'auto', border: '1px solid rgba(255,255,255,0.1)' }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#fff' }}>ASSIGN CATEGORY</span>
+          <button onClick={() => setShowTypeMenu(false)} style={{ background: 'transparent', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '0.8rem', padding: '0 4px' }}>✕</button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          {PHOTO_TYPES.map(t => (
+            <label key={t} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.7rem', color: '#ccc', cursor: 'pointer', padding: '4px 6px', borderRadius: '4px', background: 'rgba(255,255,255,0.05)' }}
+              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.1)'}
+              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)'}>
+              <input type="radio" name={`type_${spot.id}_${validPhotoIndex}`} checked={false} onChange={() => {
+                onAssignPhotoType?.(spot.id, validPhotoIndex, t);
+                setShowTypeMenu(false);
+              }} style={{ cursor: 'pointer', accentColor: '#8a2be2' }} />
+              {t}
+            </label>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   if (variant === 'polaroid') {
     return (
@@ -88,16 +134,39 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
         boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
       }}>
         <div style={{ position: 'relative', height: '120px', background: 'rgba(255,255,255,0.03)', flexShrink: 0 }}>
+          {renderTypeMenu()}
           {photo
             ? <img src={photo} alt={spot.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
             : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'6px' }}>
                 <span style={{ fontSize:'1.5rem', opacity:0.15 }}>[ IMG ]</span>
               </div>
           }
+          {photoCount > 1 && (
+            <>
+              <button onClick={(e) => { e.stopPropagation(); setPhotoIndex(prev => (prev - 1 + photoCount) % photoCount); }} 
+                style={{ position:'absolute', top:'50%', left:2, transform:'translateY(-50%)', background:'rgba(0,0,0,0.6)', color:'white', border:'none', borderRadius:'50%', width:'20px', height:'20px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px' }}>&#10094;</button>
+              <button onClick={(e) => { e.stopPropagation(); setPhotoIndex(prev => (prev + 1) % photoCount); }} 
+                style={{ position:'absolute', top:'50%', right:2, transform:'translateY(-50%)', background:'rgba(0,0,0,0.6)', color:'white', border:'none', borderRadius:'50%', width:'20px', height:'20px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px' }}>&#10095;</button>
+            </>
+          )}
           {/* Status badge */}
           <span style={{ position:'absolute', top:8, left:8, padding:'2px 6px', borderRadius:'4px', fontSize:'0.55rem', fontWeight:800, letterSpacing:'0.05em',
             background: spot.verification_status === 'MEDIA_READY' ? '#e91e63' : spot.verification_status === 'ENRICHED' ? '#ff9800' : spot.verification_status === 'INDEXED' ? '#2196f3' : 'rgba(0,0,0,0.6)',
             color: '#fff' }}>{spot.verification_status || 'PENDING'}</span>
+          
+          {/* Quick Actions overlay */}
+          {!readOnly && (
+            <div style={{ position:'absolute', bottom:4, left:4, right:4, display:'flex', gap:'4px', justifyContent:'space-between', zIndex: 5 }}>
+              <div style={{ display:'flex', gap:'4px' }}>
+                <button onClick={(e) => { e.stopPropagation(); onSetHero?.(spot.id, validPhotoIndex); }} style={{ background:'rgba(0,0,0,0.7)', color: validPhotoIndex === 0 ? '#ffb300' : 'rgba(255,255,255,0.4)', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.75rem', cursor:'pointer' }} title="Set Hero">{validPhotoIndex === 0 ? '★' : '☆'}</button>
+                <button onClick={(e) => { e.stopPropagation(); onDeletePhoto?.(spot.id, validPhotoIndex); }} style={{ background:'rgba(0,0,0,0.7)', color:'#ff3b30', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.55rem', cursor:'pointer' }} title="Delete Photo">🗑</button>
+                <button onClick={(e) => { e.stopPropagation(); setShowTypeMenu(true); }} style={{ background:'rgba(0,0,0,0.7)', color:'#64b5f6', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.6rem', cursor:'pointer', fontWeight: 800 }} title="Assign Type">TAG</button>
+              </div>
+              <div style={{ display:'flex', gap:'4px' }}>
+                <button onClick={(e) => { e.stopPropagation(); onBlock?.(spot.id, spot.name); }} style={{ background:'rgba(0,0,0,0.7)', color:'#ff3b30', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.55rem', cursor:'pointer', fontWeight: 800 }} title="Block">BLOCK 🚫</button>
+              </div>
+            </div>
+          )}
         </div>
         <div style={{ padding:'8px 10px', flex:1, display:'flex', flexDirection:'column', justifyContent:'center' }}>
           <div style={{ fontWeight:800, fontSize:'0.8rem', lineHeight:1.1, marginBottom:'2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{spot.name}</div>
@@ -121,6 +190,7 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
     >
       {/* Hero image */}
       <div style={{ position: 'relative', height: '180px', background: 'rgba(255,255,255,0.03)', flexShrink: 0 }}>
+        {renderTypeMenu()}
         {photo
           ? <img src={photo} alt={spot.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
           : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'6px' }}>
@@ -128,6 +198,14 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
               <span style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.2)' }}>{candCount > 0 ? `${candCount} candidate(s) queued` : 'No photo'}</span>
             </div>
         }
+        {photoCount > 1 && (
+          <>
+            <button onClick={(e) => { e.stopPropagation(); setPhotoIndex(prev => (prev - 1 + photoCount) % photoCount); }} 
+              style={{ position:'absolute', top:'50%', left:5, transform:'translateY(-50%)', background:'rgba(0,0,0,0.5)', color:'white', border:'none', borderRadius:'50%', width:'28px', height:'28px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px' }}>&#10094;</button>
+            <button onClick={(e) => { e.stopPropagation(); setPhotoIndex(prev => (prev + 1) % photoCount); }} 
+              style={{ position:'absolute', top:'50%', right:5, transform:'translateY(-50%)', background:'rgba(0,0,0,0.5)', color:'white', border:'none', borderRadius:'50%', width:'28px', height:'28px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px' }}>&#10095;</button>
+          </>
+        )}
         {/* Status badge */}
         <span style={{ position:'absolute', top:10, left:10, padding:'3px 8px', borderRadius:'6px', fontSize:'0.6rem', fontWeight:800, letterSpacing:'0.05em',
           background: spot.verification_status === 'MEDIA_READY' ? '#e91e63' : spot.verification_status === 'ENRICHED' ? '#ff9800' : spot.verification_status === 'INDEXED' ? '#2196f3' : 'rgba(0,0,0,0.6)',
@@ -139,16 +217,25 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
             {openStatus ? 'OPEN NOW' : 'CLOSED'}
           </span>
         )}
-        {/* Photo count */}
-        {photoCount > 0 && (
-          <span style={{ position:'absolute', bottom:8, right:8, padding:'2px 7px', borderRadius:'4px', fontSize:'0.58rem', fontWeight:700, background:'rgba(0,0,0,0.65)', color:'#fff' }}>
-            {photoCount} photo{photoCount > 1 ? 's' : ''}
-          </span>
-        )}
-        {/* LIVE badge */}
-        {spot.is_published && (
-          <span style={{ position:'absolute', bottom:8, left:8, padding:'2px 8px', borderRadius:'4px', fontSize:'0.58rem', fontWeight:800, background:'#4caf50', color:'#fff', letterSpacing:'0.06em' }}>LIVE</span>
-        )}
+        {/* Quick Media Actions */}
+        <div style={{ position:'absolute', bottom:8, right:8, display:'flex', alignItems:'center', gap:'6px' }}>
+          {/* LIVE badge */}
+          {spot.is_published && (
+            <span style={{ padding:'2px 8px', borderRadius:'4px', fontSize:'0.58rem', fontWeight:800, background:'#4caf50', color:'#fff', letterSpacing:'0.06em' }}>LIVE</span>
+          )}
+          {photoCount > 0 && (
+            <span style={{ padding:'2px 7px', borderRadius:'4px', fontSize:'0.58rem', fontWeight:700, background:'rgba(0,0,0,0.65)', color:'#fff' }}>
+              {validPhotoIndex + 1} / {photoCount}
+            </span>
+          )}
+          {!readOnly && photoCount > 0 && (
+            <div style={{ display:'flex', gap:'4px', background:'rgba(0,0,0,0.7)', padding:'2px', borderRadius:'6px', zIndex: 5 }}>
+              <button onClick={(e) => { e.stopPropagation(); onSetHero?.(spot.id, validPhotoIndex); }} style={{ background:'transparent', color: validPhotoIndex === 0 ? '#ffb300' : 'rgba(255,255,255,0.4)', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'1rem', cursor:'pointer' }} title="Set Hero Image">{validPhotoIndex === 0 ? '★' : '☆'}</button>
+              <button onClick={(e) => { e.stopPropagation(); onDeletePhoto?.(spot.id, validPhotoIndex); }} style={{ background:'transparent', color:'#ff3b30', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.65rem', cursor:'pointer' }} title="Delete Image">🗑</button>
+              <button onClick={(e) => { e.stopPropagation(); setShowTypeMenu(true); }} style={{ background:'transparent', color:'#64b5f6', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.65rem', cursor:'pointer', fontWeight: 800 }} title="Assign Type">TAG</button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Card body */}
@@ -269,6 +356,8 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
               style={{ marginLeft:'auto', padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,255,255,0.15)', background:'transparent', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:'0.65rem' }}>Edit</button>
             <button onClick={() => onReset?.(spot.id, spot.name)} title="Reset to SEEDED"
               style={{ padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,179,0,0.25)', background:'rgba(255,179,0,0.08)', color:'#ffb300', cursor:'pointer', fontSize:'0.65rem', fontWeight:700 }}>&#8635; Reset</button>
+            <button onClick={() => onBlock?.(spot.id, spot.name)}
+              style={{ padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,152,0,0.25)', background:'rgba(255,152,0,0.1)', color:'rgba(255,152,0,0.8)', cursor:'pointer', fontSize:'0.65rem', fontWeight:700 }}>Block</button>
             <button onClick={() => onPurge?.(spot.id, spot.name)}
               style={{ padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,59,48,0.25)', background:'rgba(255,59,48,0.1)', color:'rgba(255,59,48,0.8)', cursor:'pointer', fontSize:'0.65rem', fontWeight:700 }}>Purge</button>
           </div>

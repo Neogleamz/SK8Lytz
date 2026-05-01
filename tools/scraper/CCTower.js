@@ -1001,8 +1001,8 @@ app.get('/api/stats/databank-coverage', async (req, res) => {
         state,
         COUNT(*) as total,
         SUM(CASE WHEN is_published = 1 THEN 1 ELSE 0 END) as published,
-        SUM(CASE WHEN verification_status = 'PENDING' THEN 1 ELSE 0 END) as PENDING,
-        SUM(CASE WHEN verification_status = 'ENRICHED' THEN 1 ELSE 0 END) as ENRICHED,
+        SUM(CASE WHEN verification_status = 'SEEDED' THEN 1 ELSE 0 END) as SEEDED,
+        SUM(CASE WHEN verification_status = 'DEEP_CRAWLED' THEN 1 ELSE 0 END) as DEEP_CRAWLED,
         SUM(CASE WHEN verification_status = 'IDENTITY_ESTABLISHED' THEN 1 ELSE 0 END) as IDENTITY_ESTABLISHED,
         SUM(CASE WHEN verification_status = 'INDEXED' THEN 1 ELSE 0 END) as INDEXED,
         SUM(CASE WHEN verification_status = 'MEDIA_READY' THEN 1 ELSE 0 END) as MEDIA_READY

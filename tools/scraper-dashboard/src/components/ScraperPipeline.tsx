@@ -102,8 +102,11 @@ export const ScraperPipeline: React.FC<{
     status?: any;
     triggerSpecificDaemon?: (name: string, action: 'start' | 'stop') => void;
     triggerHarvest?: (type: string, states?: string[]) => void;
-    onBlockSpot?: () => void; // optional refresh callback after block
-}> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot }) => {
+    onBlockSpot?: (id: string, name: string) => void; // optional refresh callback after block
+    onPurgeSpot?: (id: string, name: string) => void;
+    onSetHero?: (spotId: string, photoIndex: number) => void;
+    onDeletePhoto?: (spotId: string, photoIndex: number) => void;
+}> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot, onPurgeSpot, onSetHero, onDeletePhoto }) => {
     const { telemetry, config, loading, pulse } = useScraperTelemetry(2000);
     const { fields } = useFieldRegistry();
 
@@ -168,18 +171,18 @@ export const ScraperPipeline: React.FC<{
                     displayVal = rawVal ? new Date(rawVal).toLocaleDateString() : 'NEVER';
                     status = rawVal ? 'val' : 'missing';
                 } else if (f.data_type === 'json') {
-                    // Compact: show key count + first key preview, not a full pre block
+                    // Unroll full JSON stringified block
                     if (rawVal && typeof rawVal === 'object') {
                         const keys = Object.keys(rawVal).filter(k => rawVal[k] != null && rawVal[k] !== '');
                         displayVal = keys.length > 0
-                            ? `${keys.length} fields · ${keys.slice(0, 2).join(', ')}${keys.length > 2 ? '…' : ''}`
+                            ? <pre style={{margin:0, fontSize:'0.65rem', whiteSpace:'pre-wrap', color:'#a5d6ff', background:'rgba(0,0,0,0.3)', padding:'4px', borderRadius:'4px'}}>{JSON.stringify(rawVal, null, 2)}</pre>
                             : 'EMPTY';
                         status = keys.length > 0 ? 'success' : 'missing';
                     } else if (typeof rawVal === 'string' && rawVal.startsWith('{')) {
                         try {
                             const parsed = JSON.parse(rawVal);
                             const keys = Object.keys(parsed).filter(k => parsed[k] != null && parsed[k] !== '');
-                            displayVal = keys.length > 0 ? `${keys.length} fields · ${keys.slice(0,2).join(', ')}` : 'EMPTY';
+                            displayVal = keys.length > 0 ? <pre style={{margin:0, fontSize:'0.65rem', whiteSpace:'pre-wrap', color:'#a5d6ff', background:'rgba(0,0,0,0.3)', padding:'4px', borderRadius:'4px'}}>{JSON.stringify(parsed, null, 2)}</pre> : 'EMPTY';
                             status = keys.length > 0 ? 'success' : 'missing';
                         } catch { displayVal = 'PARSE ERR'; status = 'missing'; }
                     } else {
@@ -472,10 +475,13 @@ export const ScraperPipeline: React.FC<{
                             onDaemonStart={dc?.onStart}
                             onDaemonStop={dc?.onStop}
                             daemonStatus={daemonStatus}
-                            onBlockSpot={handleBlockSpot}
+                            onBlockSpot={onBlockSpot || handleBlockSpot}
                             onRestartSpot={handleRestartSpot}
                             onFreezeSpot={handleFreezeSpot}
                             carouselSpots={b.id === 4 ? phaseQueues?.['published'] : undefined}
+                            onPurgeSpot={onPurgeSpot}
+                            onSetHero={onSetHero}
+                            onDeletePhoto={onDeletePhoto}
                         />
                     );
                 })}

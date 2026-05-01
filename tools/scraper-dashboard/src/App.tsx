@@ -223,10 +223,12 @@ function App() {
   }, [logs]);
 
   useEffect(() => {
-    if (activeTab === 'phase1') {
-      fetchDatabankCoverage(); // Phase 1 map uses same source — Google record density per state
+    if (activeTab === 'pipeline') {
+      fetchDatabankCoverage(); // Map uses same source
     }
-    
+    if (['pipeline', 'graveyard'].includes(activeTab)) {
+      fetchSpots(0, gridFilter, sortCol, sortDir, searchQuery, chips, stateChip);
+    }
   }, [activeTab, gridFilter, sortCol, sortDir, searchQuery, chips, stateChip]);
 
   // --- Data Fetchers ---
@@ -648,6 +650,76 @@ function App() {
     } catch (e) {}
   };
 
+  const updateSpot = async (id: string, updates: any) => {
+    try {
+      await fetch(`${API_BASE}/api/spots/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates)
+      });
+      fetchSpots(page, gridFilter);
+    } catch (e) {}
+  };
+
+  const deleteImage = async (spotId: string, photoIndex: number) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/spots/${spotId}`);
+      if (!res.ok) return;
+      const spot = await res.json();
+      if (!spot || !spot.photos) return;
+      const newPhotos = [...spot.photos];
+      newPhotos.splice(photoIndex, 1);
+      await updateSpot(spotId, { photos: newPhotos });
+      fetchPipelineStatsRef.current();
+    } catch(e) {}
+  };
+
+  const setHeroImage = async (spotId: string, photoIndex: number) => {
+    if (photoIndex === 0) return; // already hero
+    try {
+      const res = await fetch(`${API_BASE}/api/spots/${spotId}`);
+      if (!res.ok) return;
+      const spot = await res.json();
+      if (!spot || !spot.photos) return;
+      const newPhotos = [...spot.photos];
+      const [hero] = newPhotos.splice(photoIndex, 1);
+      newPhotos.unshift(hero);
+      await updateSpot(spotId, { photos: newPhotos });
+      fetchPipelineStatsRef.current();
+    } catch(e) {}
+  };
+
+  const blockSpot = async (spotId: string, name: string) => {
+    if (!confirm(`Block ${name} from further scraping and set to REJECTED?`)) return;
+    try {
+      await fetch(`${API_BASE}/api/skate_spots/${spotId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verification_status: 'REJECTED' })
+      });
+      fetchSpots(page, gridFilter);
+      fetchPipelineStatsRef.current();
+    } catch (e) {}
+  };
+
+  const assignPhotoType = async (spotId: string, photoIndex: number, fieldType: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/skate_spots/${spotId}`);
+      if (!res.ok) return;
+      const spot = await res.json();
+      if (!spot.photos || spot.photos.length <= photoIndex) return;
+
+      const url = spot.photos[photoIndex];
+      await fetch(`${API_BASE}/api/skate_spots/${spotId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [fieldType]: url })
+      });
+      fetchSpots(page, gridFilter);
+      fetchPipelineStatsRef.current();
+    } catch (e) {}
+  };
+
   const promoteSpot = async (id: string, published: boolean) => {
     try {
       await fetch(`${API_BASE}/api/spots/${id}`, {
@@ -662,7 +734,7 @@ function App() {
   };
 
   const bulkPromote = async () => {
-    if (!confirm('Promote ALL ENRICHED and MEDIA_READY records to the public Skate Map?')) return;
+    if (!confirm('Promote ALL MEDIA_READY records to the public Skate Map?')) return;
     try {
       await fetch(`${API_BASE}/api/promote-all`, { method: 'POST' });
       alert('Bulk promotion complete!');
@@ -755,7 +827,8 @@ function App() {
               {/* ④ PUBLISHER — IN: MEDIA_READY  OUT: PUBLISHED */}
               <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
                 <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.pub, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.pub}33`, paddingBottom: '4px' }}>④ Publisher  IN:MEDIA_READY → OUT:PUBLISHED</div>
-                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
+
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
                   {row('Pub Queue (MEDIA_READY)', s.publisher_queue, s.publisher_queue > 0 ? '#ffb300' : C.pub)}
                   {row('Live on App', s.published, '#4ade80')}
                   {row('Pipeline %', `${s.total > 0 ? Math.round((s.deep_crawled_count/s.total)*100) : 0}%`, 'rgba(255,255,255,0.5)')}
@@ -942,239 +1015,12 @@ function App() {
               status={status}
               triggerSpecificDaemon={triggerSpecificDaemon}
               triggerHarvest={triggerHarvest}
+              onBlockSpot={blockSpot}
+              onSetHero={setHeroImage}
+              onDeletePhoto={deleteImage}
             />
-        </div>
-      )}
 
-      {activeTab !== 'pipeline' && (
-      <>
-      <div className="content-area fade-in">
-        {/* =========== PHASE 1: GLOBAL STRATEGY & INTAKE =========== */}
-        {activeTab === 'phase1' && (
-          <div className="tab-pane phase-1">
-            <div className="explainer-block" style={{marginBottom: '1rem'}}>
-              <SectionHdr id="phase1_explainer" label="The Scout: GIS Ingestion Engine" color="#8a2be2" />
-              {!isCollapsed('phase1_explainer') && <p>Phase 1 uses the <strong style={{color:'#ffb300'}}>Google Places API</strong> to seed the entire pipeline — querying by state for roller rinks and skate shops. Each result is written directly as an <strong>ENRICHED</strong> record with full coordinates, phone, hours, rating, and website. The OSM fallback mode is available for legacy re-harvests but is <em style={{color:'rgba(255,255,255,0.4)'}}>not recommended</em> — Google data is always higher quality.</p>}
-            </div>
-
-            <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem', marginBottom: '2rem' }}>
-               <div style={{ textAlign: 'center', minWidth: '120px' }}>
-                 <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ffb300' }}>Google</div>
-                 <div style={{ fontSize: '0.75rem', color: '#ffb300', textTransform: 'uppercase', fontWeight: 700 }}>Places API (Primary)</div>
-                 <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>writes ENRICHED directly</div>
-               </div>
-               <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
-                  <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                     <button className={`btn-mini start ${isStarting ? 'pulsing' : ''}`} onClick={() => triggerHarvest('start-all', stateOverride)} disabled={status?.isHarvestingActive || status?.isGoogleSweepActive || isStarting}>
-                        ▶ {isStarting ? 'INITIATING...' : stateOverride.length > 0 ? `SEED ${stateOverride.join(', ')}` : 'GLOBAL SEED'}
-                     </button>
-                     <button className="btn-mini stop" onClick={() => triggerHarvest('stop-all')} disabled={!status?.isHarvestingActive && !status?.isGoogleSweepActive}>■ STOP</button>
-                  </div>
-                  {(status?.isHarvestingActive || status?.isGoogleSweepActive) && <div className="flow-animation"></div>}
-               </div>
-               <div style={{ textAlign: 'center', minWidth: '120px' }}>
-                 <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#ff9800' }}>{status?.enrichedCount || 0}</div>
-                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>ENRICHED in DB</div>
-                 <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>Google-sourced records</div>
-               </div>
-            </div>
-
-            {/* OMNI-NET DISCOVERY PANEL */}
-            <div className="discovery-net-panel" style={{ background: 'linear-gradient(135deg, rgba(138,43,226,0.1) 0%, rgba(0,0,0,0.3) 100%)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(138, 43, 226, 0.3)', marginBottom: '2rem', position: 'relative' }}>
-               <div style={{ position: 'absolute', top: '-10px', right: '20px', background: '#8a2be2', color: '#fff', fontSize: '0.6rem', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>STATE TARGETING</div>
-               <h3 style={{ marginTop: 0, color: '#fff', fontSize: 18 }}> State Re-Sweep Controls</h3>
-               <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem' }}>Manually trigger a Google Places sweep for a specific state, or switch the seeding provider. Useful for topping up states with low record counts.</p>
-               
-               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
-                     <h4 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: '#8a2be2' }}>Re-Sweep State</h4>
-                     <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>Force a fresh Google Places sweep for a single state. Respects the dedup logic — existing records are refreshed, not duplicated.</p>
-                     <div style={{ display: 'flex', gap: '8px' }}>
-                       <select className="mini-input" style={{ flex: 1, background: '#1a1a1a' }} id="force-state-sel">
-                         {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                       </select>
-                       <button className="btn-mini" onClick={() => triggerForceHarvest((document.getElementById('force-state-sel') as HTMLSelectElement).value)}>FORCE RELOAD</button>
-                     </div>
-                  </div>
-                  
-                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '8px' }}>
-                     <h4 style={{ margin: '0 0 10px 0', fontSize: '0.8rem', color: '#ffb300' }}>Origin Provider</h4>
-                     <p style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', marginBottom: '1rem' }}>Select the data source for the GLOBAL SEED button. Google Places is the primary source and writes ENRICHED records directly. OSM is a legacy fallback that writes PENDING skeletons.</p>
-                     <div className="provider-toggle switch-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.5)', padding: '8px', borderRadius: '6px' }}>
-                         <span style={{ fontSize: '0.8rem', fontWeight: 600, color: seedProvider === 'google' ? '#ffb300' : '#8a2be2' }}>{seedProvider === 'osm' ? 'OSM Mode' : 'Google Mode'}</span>
-                         <label className="switch">
-                            <input type="checkbox" checked={seedProvider === 'google'} onChange={e => setSeedProvider(e.target.checked ? 'google' : 'osm')} />
-                            <span className="slider round"></span>
-                         </label>
-                     </div>
-                  </div>
-               </div>
-            </div>
-
-            {/* DYNAMIC BLOCKLIST UI */}
-            <div className="dynamic-blocklist-panel" style={{ background: 'linear-gradient(135deg, rgba(233,30,99,0.1) 0%, rgba(0,0,0,0.3) 100%)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(233, 30, 99, 0.3)', marginBottom: '2rem', position: 'relative', zIndex: 50 }}>
-               <div style={{ position: 'absolute', top: '-10px', right: '20px', background: '#e91e63', color: '#fff', fontSize: '0.6rem', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>LIVE GUILLOTINE</div>
-               <h3 style={{ marginTop: 0, color: '#fff', fontSize: 18 }}>Dynamic Retail Blocklist</h3>
-               <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem' }}>Add toxic keywords here. Submitting instantly blacklists the term for future Google Sweeps AND executes a SQL Guillotine to delete any currently matching records in the database.</p>
-               
-               <div style={{ display: 'flex', gap: '8px', marginBottom: '1.5rem' }}>
-                 <input className="form-input" placeholder="e.g. 'trek', 'hockey', 'camping'"
-                   value={newKeyword} onChange={e => setNewKeyword(e.target.value)}
-                   onKeyDown={e => e.key === 'Enter' && addKeyword()}
-                   style={{ flex: 1, zIndex: 50 }} />
-                 <button className="btn-primary" style={{ background: '#e91e63', border: 'none', cursor: 'pointer', zIndex: 50 }} onClick={addKeyword}>Block & Purge Database</button>
-               </div>
-
-               <div style={{ background: 'rgba(0,0,0,0.4)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)', padding: '1rem', maxHeight: '180px', overflowY: 'auto' }}>
-                 {uiBlocklist.length === 0 ? (
-                   <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', textAlign: 'center' }}>No dynamic keywords configured.</div>
-                 ) : (
-                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                     {uiBlocklist.map((item: any) => (
-                       <div key={item.keyword} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(233,30,99,0.15)', border: '1px solid rgba(233,30,99,0.3)', padding: '4px 10px', borderRadius: '20px' }}>
-                         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#f48fb1' }}>{item.keyword}</span>
-                         <button onClick={() => removeKeyword(item.keyword)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: '0.7rem', padding: '0 4px' }}>x</button>
-                       </div>
-                     ))}
-                   </div>
-                 )}
-               </div>
-            </div>
-
-            <div className="omni-grid tri-grid phase-1-controls" style={{ display: 'grid', gap: '1.5rem', gridTemplateColumns: 'minmax(250px, 1fr) 1.5fr', marginBottom: '2rem' }}>
-               <div className="facility-switches-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1.5rem', marginTop: 0 }}>Target Facilities</h3>
-                  <div className="facility-switches">
-                     {['roller_rink', 'skate_park', 'skate_shop'].map(f => (
-                       <label key={f} className="switch-row mini" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', padding: '4px 0' }}>
-                          <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{f.replace('_', ' ').toUpperCase()}</span>
-                          <label className="switch">
-                            <input type="checkbox" checked={targetFacilities.includes(f)} onChange={() => updateGlobalStrategy('facility', f)} />
-                            <span className="slider round"></span>
-                          </label>
-                       </label>
-                     ))}
-                  </div>
-               </div>
-               
-               <div className="state-targets-panel" style={{ background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: '1rem', marginTop: 0, display: 'flex', justifyContent: 'space-between' }}>
-                    Target States
-                    <span className="btn-mini" onClick={() => updateGlobalStrategy('state_override', 'ALL')} style={{ cursor: 'pointer' }}>ALL</span>
-                  </h3>
-                  <div className="state-pill-container" style={{maxHeight: '180px', overflowY: 'auto', gap: '6px', display: 'flex', flexWrap: 'wrap'}}>
-                     {US_STATES.map(st => {
-                        const count = harvestData.stateCounts[st] || 0;
-                        return (
-                          <button key={st} className={`state-pill mini ${stateOverride.includes(st) ? 'active' : ''}`} onClick={() => updateGlobalStrategy('state_override', st)} style={{ padding: '6px 12px', fontSize: '0.8rem', margin: '2px', background: stateOverride.includes(st) ? 'var(--primary-color)' : 'rgba(255,255,255,0.1)', color: stateOverride.includes(st) ? '#000' : '#fff', border: 'none', borderRadius: '12px', cursor: 'pointer' }}>
-                            {st} {count > 0 && <span style={{opacity: 0.6, fontSize: '0.7em', marginLeft: '4px'}}>({count})</span>}
-                          </button>
-                        )
-                     })}
-                  </div>
-               </div>
-            </div>
-
-            {/* ========= GOOGLE COVERAGE DENSITY MAP ========= */}
-            <div className="panel coverage-panel" style={{ marginTop: '2rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                <h2 className="panel-header" style={{ margin: 0 }}>Google Places Coverage — State Density</h2>
-                <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontStyle: 'italic' }}>
-                  {databankCoverage.reduce((a: number, r: any) => a + (r.total || 0), 0).toLocaleString()} records across {databankCoverage.filter((r: any) => r.total > 0).length} states
-                </span>
-              </div>
-              <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)', margin: '0 0 1rem' }}>
-                Record density per state from Google Places. Click any state to target it for the next sweep.
-              </p>
-
-              {/* Density legend */}
-              <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-                {[
-                  { color: 'rgba(255,255,255,0.07)', label: 'Untouched',       range: '0 records' },
-                  { color: '#f5a623cc',               label: 'Early Coverage', range: '1–49' },
-                  { color: '#ff6b00cc',               label: 'Well Seeded',    range: '50–99' },
-                  { color: '#4caf50cc',               label: 'Saturated',      range: '100+' },
-                ].map(t => (
-                  <div key={t.label} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.03)', padding: '5px 12px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: t.color, display: 'inline-block', border: '1px solid rgba(255,255,255,0.15)' }}></span>
-                    <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.7)', fontWeight: 700 }}>{t.label}</span>
-                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.35)' }}>{t.range}</span>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '800px', margin: '0 auto' }}>
-                {/* @ts-ignore */}
-                <USAMap
-                  defaultFill="rgba(255,255,255,0.05)"
-                  customize={(() => {
-                    const colors: Record<string, any> = {};
-                    databankCoverage.forEach((row: any) => {
-                      if (!row.state || row.state === 'UNKNOWN') return;
-                      const n = row.total || 0;
-                      if (n === 0) return;
-                      // Density tiers: amber → orange → green
-                      const fill = n >= 100 ? '#4caf50cc'
-                        : n >= 50  ? '#ff6b00cc'
-                        : '#f5a623cc';
-                      colors[row.state] = { fill, customText: n.toString() };
-                    });
-                    return colors;
-                  })()}
-                  onClick={(e: any) => {
-                    const st = e.target?.dataset?.name || e.target?.id;
-                    if (st && st.length === 2) updateGlobalStrategy('state_override', st);
-                  }}
-                />
-              </div>
-
-              {/* State leaderboard table */}
-              {databankCoverage.length > 0 && (
-                <div style={{ marginTop: '2rem', maxHeight: '260px', overflowY: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontSize: '0.7rem' }}>
-                        <th style={{ textAlign: 'left', padding: '6px 8px' }}>State</th>
-                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>Records</th>
-                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>ENRICHED</th>
-                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>MEDIA_READY</th>
-                        <th style={{ textAlign: 'right', padding: '6px 8px' }}>Published</th>
-                        <th style={{ textAlign: 'center', padding: '6px 8px' }}>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {[...databankCoverage]
-                        .filter((r: any) => r.total > 0)
-                        .sort((a: any, b: any) => b.total - a.total)
-                        .map((row: any) => {
-                          const tier = row.total >= 100 ? { color: '#4caf50', label: '' }
-                            : row.total >= 50 ? { color: '#ff6b00', label: '' }
-                            : { color: '#f5a623', label: '' };
-                          return (
-                            <tr key={row.state} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                              <td style={{ padding: '6px 8px', fontWeight: 700, color: tier.color }}>
-                                {tier.label} {row.state}
-                              </td>
-                              <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 800 }}>{(row.total || 0).toLocaleString()}</td>
-                              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#ff9800' }}>{(row.ENRICHED || 0).toLocaleString()}</td>
-                              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#e91e63' }}>{(row.MEDIA_READY || 0).toLocaleString()}</td>
-                              <td style={{ padding: '6px 8px', textAlign: 'right', color: '#4caf50' }}>{(row.published || 0).toLocaleString()}</td>
-                              <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-                                <button
-                                  style={{ fontSize: '0.65rem', padding: '3px 10px', borderRadius: '10px', border: 'none', background: stateOverride.includes(row.state) ? '#8a2be2' : 'rgba(255,255,255,0.08)', color: stateOverride.includes(row.state) ? '#fff' : 'rgba(255,255,255,0.6)', cursor: 'pointer', fontWeight: 700 }}
-                                  onClick={() => updateGlobalStrategy('state_override', row.state)}
-                                >{stateOverride.includes(row.state) ? ' TARGETED' : 'TARGET'}</button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            <div style={{marginTop: '2rem'}}>
+              <div style={{marginTop: '2rem'}}>
                 <h4 style={{fontSize: '0.8rem', textTransform:'uppercase', color:'#ffc107', marginBottom: 0, fontWeight: 800, letterSpacing: '0.05em'}}>?? PUBLISHED TROPHY CASE (LIVE)</h4>
                   {(phaseQueues['published'] || []).length === 0 ? (
                       <div style={{ background: 'rgba(255,255,255,0.02)', padding: '2rem', textAlign: 'center', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic', marginTop: '10px' }}>
@@ -1190,175 +1036,30 @@ function App() {
                                   proxyImg={proxyImg}
                                   onEdit={(s) => { setEditingId(s.id); setEditForm(s); }}
                                   onReset={(id, name) => resetSpotToSeeded(id, name)}
-                                  onPurge={async (id, name) => { if(confirm(`Purge AND permanently block ${name}?`)) { await fetch(`${API_BASE}/api/skate_spots/${id}?blacklist=true`,{method:'DELETE'}); fetchSpots(page,gridFilter); } }}
+                                  onBlock={blockSpot}
+                                  onSetHero={setHeroImage}
+                                  onDeletePhoto={deleteImage}
+                                  onAssignPhotoType={assignPhotoType}
                                   onPublishToggle={async (s) => { await fetch(`${API_BASE}/api/skate_spots/${s.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ is_published: !s.is_published }) }); fetchSpots(page, gridFilter); fetchPipelineStatsRef.current(); }}
                               />
                           ))}
                       </div>
                   )}
             </div>
-          </div>
-        )}
 
+        </div>
+      )}
+
+      {true && (
+      <>
+      <div className="content-area fade-in">
         {/* =========== DAEMON CONTROL CENTER (PHASE 2-4) =========== */}
-        {(['phase2', 'phase3', 'phase4'].includes(activeTab)) && (
-          <div className="tab-pane daemon-center">
-             <div className="explainer-block" style={{marginBottom: '1rem'}}>
-               <SectionHdr
-                 id={`daemon_explainer_${activeTab}`}
-                 label={<span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button className="btn-mini" onClick={(e) => { e.stopPropagation(); setActiveTab('pipeline'); }} style={{ background: '#00ffaa', color: '#000', border: 'none' }}>← BACK TO FACTORY</button>
-                    Phase Databank
-                 </span>}
-                 color={'#fff'}
-               />
-               {!isCollapsed(`daemon_explainer_${activeTab}`) && (
-                 <>
-                   
-                   {activeTab === 'phase2' && <p>The AI Detective visits the <strong>website</strong> collected by the Indexer in Phase 1 — no regex crawl needed. Runs <strong>Ollama Llama-3</strong> across the combined page text to extract hours, adult night schedules, pricing, events, social links, and photo candidates. Promotes records to <strong>INDEXED</strong>.</p>}
-                   {activeTab === 'phase3' && <p>The Photographer daemon reads <code>candidate_photos</code> written by the Indexer — downloading OG images and DOM media as binary uploads to Supabase Storage. Falls back to Google Street View Static as a guaranteed photo source. Promotes records to <strong>MEDIA_READY</strong> on success.</p>}
-                   {activeTab === 'phase4' && <p>The Publisher Gate is the final human-approved release step. Only records with <strong style={{color:'#4caf50'}}>is_published = true</strong> are visible on the live SK8Lytz app map. Bulk-promote all pipeline-complete records (ENRICHED + MEDIA_READY) below, or use the Databank QA tab to approve individual spots.</p>}
-                 </>
-               )}
-             </div>
-             
-             
-
-             
-             {activeTab === 'phase2' && (
-                <div className="flow-visualizer" style={{ padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
-                    {/* input: SEEDED feeds into Detective */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'flex-end', minWidth: '120px' }}>
-                      <div style={{ textAlign: 'center' }}>
-                        <div style={{ fontSize: '1.8rem', fontWeight: 800, color: '#00ffaa' }}>{status?.seededCount || 0}</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>SEEDED</div>
-                      </div>
-                    </div>
-                    <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
-                       <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                          <button className="btn-mini start" onClick={() => triggerSpecificDaemon('indexer', 'start')} disabled={status?.currentTarget?.includes('Indexer: online')}>▶ Phase 2: Detective (Indexer)</button>
-                          <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('indexer', 'stop')} disabled={!status?.currentTarget?.includes('Indexer: online')}>■ STOP</button>
-                       </div>
-                       <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
-                          {status?.indexedCount || 0} websites crawled (+ photo candidates)
-                       </div>
-                       {status?.currentTarget?.includes('Indexer: online') && <div className="flow-animation"></div>}
-                    </div>
-                    <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                       <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#e91e63' }}>{status?.candidatesReadyCount || 0}</div>
-                       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>PHOTO CANDIDATES</div>
-                       <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '4px' }}>Awaiting harvest</div>
-                    </div>
-                  </div>
-                </div>
-             )}
-
-
-                          {activeTab === 'phase2' && (
-                <div style={{ marginTop: '2rem' }}>
-                  <DetectiveLab
-                    aiSystemPrompt={aiSystemPrompt}
-                    setAiSystemPrompt={setAiSystemPrompt}
-                    aiTargetVectors={aiTargetVectors}
-                    setAiTargetVectors={setAiTargetVectors}
-                    aiExclusionKeywords={aiExclusionKeywords}
-                    setAiExclusionKeywords={setAiExclusionKeywords}
-                    updateGlobalStrategy={updateGlobalStrategy}
-                  />
-                </div>
-             )}
-
-                          {activeTab === 'phase3' && (
-                <div className="flow-visualizer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem', padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
-                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#e91e63' }}>{status?.candidatesReadyCount || 0}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>CANDIDATES</div>
-                   </div>
-                   <div style={{ flex: 1, height: '4px', background: 'rgba(255,255,255,0.1)', position: 'relative' }}>
-                      <div style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '10px' }}>
-                         <button className="btn-mini start" onClick={() => triggerSpecificDaemon('photographer', 'start')} disabled={status?.currentTarget?.includes('Photographer: online')}>▶ Phase 3: Photographer</button>
-                         <button className="btn-mini stop" onClick={() => triggerSpecificDaemon('photographer', 'stop')} disabled={!status?.currentTarget?.includes('Photographer: online')}>■ STOP</button>
-                      </div>
-                      <div style={{ position: 'absolute', top: '15px', left: '50%', transform: 'translateX(-50%)', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
-                         OG Image → DOM Images → Street View → Facebook OG
-                      </div>
-                      {status?.currentTarget?.includes('Photographer: online') && <div className="flow-animation"></div>}
-                   </div>
-                   <div style={{ textAlign: 'center', minWidth: '100px' }}>
-                      <div style={{ fontSize: '2.5rem', fontWeight: 800, color: '#e91e63' }}>{status?.mediaReadyCount || 0}</div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>MEDIA_READY</div>
-                   </div>
-                </div>
-             )}
-
-                          {activeTab === 'phase4' && (
-                <div style={{ padding: '3rem 2rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', marginTop: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4rem', marginBottom: '2rem' }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '3rem', fontWeight: 800, color: '#e91e63' }}>{status?.mediaReadyCount || 0}</div>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>MEDIA_READY</div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '3rem', fontWeight: 800, color: '#ff5a00' }}>{status?.deepCrawledCount || 0}</div>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>DEEP_CRAWLED</div>
-                    </div>
-                    <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '3rem', fontWeight: 800, color: '#4caf50' }}>{status?.publishedCount || 0}</div>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>LIVE ON MAP</div>
-                    </div>
-                  </div>
-                  <div style={{ textAlign: 'center', padding: '1.5rem', background: 'rgba(76,175,80,0.05)', border: '1px solid rgba(76,175,80,0.3)', borderRadius: '8px' }}>
-                    <p style={{ margin: '0 0 1rem', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem' }}>The Publisher Gate controls which records are visible to users on the SK8Lytz app map. Use the Databank QA tab below to review individual records and toggle <strong style={{color:'#4caf50'}}>APP_LIVE</strong>, or bulk-promote all ready records.</p>
-                    <button className="btn btn-start" style={{background: '#4caf50', border: 'none'}} onClick={bulkPromote}> BULK PUBLISH ALL READY → APP MAP</button>
-                  </div>
-                </div>
-             )}
-
-             {/* Mini Data Bank & Evasion Audit */}
-             {(['phase2', 'phase3', 'phase4'].includes(activeTab)) && (() => {
-                const queue = phaseQueues[activeTab] || [];
-                let hydratingFields: string[] = [];
-                if (activeTab === 'phase2') hydratingFields = ['Pricing', 'Adult Night', 'Hours', ' Photo Candidates'];
-                if (activeTab === 'phase3') hydratingFields = ['OG Photo', 'DOM Images', 'Street View', 'Facebook OG'];
-                if (activeTab === 'phase4') hydratingFields = ['Media URLs', 'Thumbnails'];
-
-                const activeLabel = `Phase ${activeTab.replace('phase','')}`;
-                const activeColor = '#fff';
-
-                return (
-                  <div style={{marginTop: '20px'}}>
-
-                     <h4 style={{fontSize: '0.8rem', textTransform:'uppercase', color:'var(--text-secondary)', marginBottom: 0, marginTop: '2rem'}}>Processing Queue (Top 10)</h4>
-                     {queue.length === 0 ? (
-                        <div style={{ background: 'rgba(255,255,255,0.02)', padding: '2rem', textAlign: 'center', borderRadius: '8px', color: 'var(--text-secondary)', fontSize: '0.9rem', fontStyle: 'italic', marginTop: '10px' }}>
-                            Queue is empty. Awaiting spots from the previous phase.
-                        </div>
-                     ) : (
-                        <div className="mini-data-bank" style={{ marginTop: '10px' }}>
-                          {queue.map(spot => (
-                            <div key={spot.id} className="queue-card active">
-                              <div className="queue-card-title">{spot.name}</div>
-                              <div className="queue-card-loc">{spot.city}, {spot.state}</div>
-                              <div className="queue-tags">
-                                {hydratingFields.map(f => <span key={f} className="queue-badge" style={{color: activeColor}}>⏳ {f}</span>)}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                     )}
-                  </div>
-                );
-             })()}
-          </div>
-        )}
-
         {/* =========== PHASE 4: DATABANK QA =========== */}
-        {['phase4', 'graveyard'].includes(activeTab) && (
+        {['pipeline', 'graveyard'].includes(activeTab) && (
             <div className="tab-pane graveyard fade-in">
               <div className="explainer-block" style={{marginBottom: '1rem', background: activeTab === 'graveyard' ? 'rgba(244, 67, 54, 0.05)' : 'rgba(76, 175, 80, 0.05)', border: `1px solid ${activeTab === 'graveyard' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(76, 175, 80, 0.2)'}`}}>
                 <h3 style={{marginTop: 0, color: activeTab === 'graveyard' ? '#f44336' : '#4caf50'}}>
-                  {activeTab === 'graveyard' ? 'Graveyard: Rejected & Purged Records' : 'Phase 4: Databank QA & Live Publish'}
+                  {activeTab === 'graveyard' ? 'Graveyard: Rejected & Purged Records' : 'Publisher: Live Publish'}
                 </h3>
                 <p>{activeTab === 'graveyard' 
                     ? 'Review records that were blocked by the Guillotine or manually rejected. These will not be published.'
@@ -1367,133 +1068,7 @@ function App() {
               </div>
 
 
-             {/* =========== STATUS COVERAGE MAP =========== */}
-              {activeTab !== 'graveyard' && (
-              <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255,179,0,0.03)', border: '1px solid rgba(255,179,0,0.2)', borderRadius: '12px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isCollapsed('coverage_map') ? 0 : '0.5rem' }}>
-                <SectionHdr id="coverage_map" label="Pipeline Coverage Map" color="#ffb300" right={
-                  !isCollapsed('coverage_map') && (
-                    <div style={{ display: 'flex', gap: '6px', background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '8px' }} onClick={e => e.stopPropagation()}>
-                      <button onClick={() => setMapMode('quality')} style={{ padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: mapMode === 'quality' ? '#ffb300' : 'transparent', color: mapMode === 'quality' ? '#000' : 'rgba(255,255,255,0.5)' }}>Quality</button>
-                      <button onClick={() => setMapMode('published')} style={{ padding: '5px 14px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 700, background: mapMode === 'published' ? '#4caf50' : 'transparent', color: mapMode === 'published' ? '#000' : 'rgba(255,255,255,0.5)' }}>Published</button>
-                    </div>
-                  )
-                } />
-              </div>
-              {!isCollapsed('coverage_map') && (<>
-              <p style={{ margin: '0 0 1.5rem', color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>
-                {mapMode === 'quality'
-                  ? 'Dominant pipeline status per state. Click a state to filter the grid.'
-                  : 'Live app coverage — green = fully published, grey = not yet live. Click to filter.'}
-              </p>
-              
-              {/* Nationwide status totals */}
-              {(() => {
-                const totals: Record<string, number> = {};
-                let totalPublished = 0;
-                databankCoverage.forEach((row: any) => {
-                  ['PENDING','ENRICHED','MEDIA_READY'].forEach(s => {
-                    if (row[s]) totals[s] = (totals[s] || 0) + row[s];
-                  });
-                  totalPublished += (row.published || 0);
-                });
-                const totalRecords = databankCoverage.reduce((a: number, r: any) => a + (r.total || 0), 0);
-                const STATUS_META: Record<string, {color: string; label: string}> = {
-                  PENDING:     { color: '#8a2be2', label: 'Pending' },
-                  ENRICHED:    { color: '#ff9800', label: 'Enriched' },
-                  MEDIA_READY: { color: '#e91e63', label: 'Media Ready' },
-                };
-                return (
-                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '1.5rem', alignItems: 'center' }}>
-                    {mapMode === 'quality'
-                      ? Object.entries(STATUS_META).map(([s, meta]) => (
-                          <div key={s} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.04)', padding: '6px 12px', borderRadius: '20px', border: `1px solid ${meta.color}44` }}>
-                            <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: meta.color, display: 'inline-block' }}></span>
-                            <span style={{ fontSize: '0.75rem', color: meta.color, fontWeight: 700 }}>{meta.label}</span>
-                            <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)' }}>{(totals[s] || 0).toLocaleString()}</span>
-                          </div>
-                        ))
-                      : (
-                          <>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(76,175,80,0.08)', padding: '8px 16px', borderRadius: '20px', border: '1px solid #4caf5044' }}>
-                              <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: '#4caf50', display: 'inline-block' }}></span>
-                              <span style={{ fontSize: '0.75rem', color: '#4caf50', fontWeight: 700 }}> Published</span>
-                              <span style={{ fontSize: '0.85rem', color: '#4caf50', fontWeight: 800 }}>{totalPublished.toLocaleString()}</span>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.04)', padding: '8px 16px', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                              <span style={{ width: '10px', height: '10px', borderRadius: '2px', background: 'rgba(255,255,255,0.2)', display: 'inline-block' }}></span>
-                              <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', fontWeight: 700 }}>Unpublished</span>
-                              <span style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', fontWeight: 800 }}>{(totalRecords - totalPublished).toLocaleString()}</span>
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.3)', marginLeft: 'auto' }}>
-                              {totalRecords > 0 ? `${Math.round((totalPublished / totalRecords) * 100)}% live` : '0% live'}
-                            </div>
-                          </>
-                        )
-                    }
-                  </div>
-                );
-              })()}
-
-              <div style={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '800px', margin: '0 auto' }}>
-                {/* @ts-ignore */}
-                <USAMap
-                  defaultFill="rgba(255,255,255,0.05)"
-                  customize={(() => {
-                    const colors: Record<string, any> = {};
-
-                    if (mapMode === 'quality') {
-                      const STATUS_PRIORITY = ['MEDIA_READY','ENRICHED','PENDING'];
-                      const STATUS_COLOR: Record<string, string> = {
-                        MEDIA_READY: '#e91e63', ENRICHED: '#ff9800', PENDING: '#8a2be2',
-                      };
-                      databankCoverage.forEach((row: any) => {
-                        if (!row.state || row.state === 'UNKNOWN') return;
-                        const total = row.total || 0;
-                        if (total === 0) return;
-                        const dominant = STATUS_PRIORITY.find(s => (row[s] || 0) > 0) || 'PENDING';
-                        const baseColor = STATUS_COLOR[dominant] || '#8a2be2';
-                        const density = Math.min(total / 40, 1);
-                        const opacity = Math.max(density, 0.35);
-                        colors[row.state] = {
-                          fill: baseColor + Math.round(opacity * 255).toString(16).padStart(2, '0'),
-                          customText: total.toString()
-                        };
-                      });
-                    } else {
-                      // Published mode: green gradient by % published
-                      databankCoverage.forEach((row: any) => {
-                        if (!row.state || row.state === 'UNKNOWN') return;
-                        const total = row.total || 0;
-                        const published = row.published || 0;
-                        if (total === 0) return;
-                        const pct = published / total;
-                        // 0% = faint purple, 100% = vivid green
-                        const color = pct === 0 ? '#ffffff14'
-                          : pct < 0.25 ? '#ff980060'
-                          : pct < 0.75 ? '#4caf5088'
-                          : '#4caf50dd';
-                        colors[row.state] = {
-                          fill: color,
-                          customText: `${published}/${total}`
-                        };
-                      });
-                    }
-                    return colors;
-                  })()}
-                  onClick={(e: any) => {
-                    const st = e.target?.dataset?.name || e.target?.id;
-                    if (st && st.length === 2) {
-                      setSearchQuery(st);
-                      setActiveStateFilter(st);
-                    }
-                  }}
-                />
-              </div>
-              </>)}
-
-            </div>
-            )}
+              {/* Coverage map removed */}
 
             {/* ======= DATABANK GRID ======= */}
             <div style={{ marginBottom: '1rem' }}>
@@ -1521,10 +1096,11 @@ function App() {
                 {/* Status filter */}
                 <select className="form-input" style={{ width: 'auto', fontSize: '0.75rem' }} value={gridFilter} onChange={e => setGridFilter(e.target.value)}>
                   <option value="ALL">All Status</option>
+                  <option value="PENDING">PENDING</option>
                   <option value="SEEDED">SEEDED</option>
                   <option value="DEEP_CRAWLED">DEEP_CRAWLED</option>
                   <option value="MEDIA_READY">MEDIA_READY</option>
-                  <option value="ON_HOLD">ON_HOLD</option>
+                  <option value="PUBLISHED">PUBLISHED</option>
                   <option value="REJECTED">REJECTED</option>
                 </select>
                 {/* State filter */}
@@ -1618,7 +1194,10 @@ function App() {
                     proxyImg={proxyImg}
                     onEdit={(s) => { setEditingId(s.id); setEditForm(s); }}
                     onReset={(id, name) => resetSpotToSeeded(id, name)}
-                    onPurge={async (id, name) => { if(confirm(`Purge AND permanently block ${name}?`)) { await fetch(`${API_BASE}/api/skate_spots/${id}?blacklist=true`,{method:'DELETE'}); fetchSpots(page,gridFilter); } }}
+                    onBlock={blockSpot}
+                    onSetHero={setHeroImage}
+                    onDeletePhoto={deleteImage}
+                    onAssignPhotoType={assignPhotoType}
                     onPublishToggle={async (s) => { await fetch(`${API_BASE}/api/skate_spots/${s.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ is_published: !s.is_published }) }); fetchSpots(page, gridFilter); }}
                   />
                 ))}
@@ -1679,8 +1258,7 @@ function App() {
                     const ttUrl    = (spot as any).tiktok_url;
                     const photoCount = (_ph?.length ?? 0);
                     const STATUS_COLOR: Record<string,string> = {
-                      MEDIA_READY:'#e91e63', ENRICHED:'#ff9800', INDEXED:'#2196f3',
-                      IDENTITY_ESTABLISHED:'#9c27b0', PENDING:'rgba(255,255,255,0.3)', REJECTED:'#f44336'
+                      MEDIA_READY:'#e91e63', DEEP_CRAWLED:'#ff9800', SEEDED:'rgba(255,255,255,0.3)', REJECTED:'#f44336'
                     };
                     const sColor = STATUS_COLOR[spot.verification_status ?? 'PENDING'] ?? 'rgba(255,255,255,0.3)';
 
@@ -1829,13 +1407,11 @@ function App() {
                              }}
                              style={{ padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', appearance: 'menulist' }}
                            >
-                              <option value="PENDING"> PENDING (PH_1)</option>
-                              <option value="IDENTITY_ESTABLISHED">️ IDENTIFIED (PH_2)</option>
-                              <option value="INDEXED">️ INDEXED (PH_3)</option>
-                              <option value="ENRICHED"> ENRICHED (Gold Standard)</option>
-                              <option value="MEDIA_READY"> MEDIA_READY (PH_5)</option>
-                              <option value="DEPRECATED">️ Deprecated</option>
-                              <option value="REJECTED"> Graveyard</option>
+                              <option value="SEEDED"> SEEDED</option>
+                                <option value="DEEP_CRAWLED"> DEEP_CRAWLED</option>
+                                <option value="MEDIA_READY"> MEDIA_READY</option>
+                                <option value="DEPRECATED"> Deprecated</option>
+                                <option value="REJECTED"> Graveyard</option>
                            </select>
                         </td>
                         <td>
@@ -1923,6 +1499,7 @@ function App() {
         </div>
       )}
 
+      {activeTab !== 'pipeline' && (
       <div className="log-panel panel">
         <div className="log-header">
            <h2 className="panel-header" style={{margin:0}}>
@@ -1972,6 +1549,7 @@ function App() {
           </div>
         )}
       </div>
+      )}
       </>
       )}
     </div>
@@ -1979,6 +1557,7 @@ function App() {
 }
 
 export default App;
+
 
 
 
