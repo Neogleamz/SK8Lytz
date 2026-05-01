@@ -293,6 +293,14 @@ export function useBLEScanner({
     if (!options?.keepAlive) {
       setPendingRegistrations([]);
       rejectedMacsRef.current.clear();
+      // ── GHOST BUST: Flush stale OS-cached device records from the previous scan session.
+      // Android/iOS BLE stacks re-broadcast cached advertisement data the instant a new scan
+      // begins. Without this flush, powered-off devices that were seen in a prior session
+      // appear immediately in the device list as if they are live and nearby.
+      // The keepAlive path (Setup Wizard continuous polling) is intentionally exempt —
+      // it must retain devices discovered earlier in the same wizard session.
+      setAllDevices([]);
+      allDevicesRef.current = [];
     }
 
     const skipProbing = options?.disableProbing ?? disableProbing;
@@ -385,6 +393,24 @@ export function useBLEScanner({
         const logData = { id: device.id, name: device.name || 'Unknown', rssi: device.rssi, isSymphony, isKnownPrefix, hasZenggeService, serviceUUIDs: device.serviceUUIDs || [], manufacturerData: manufacturerData ? 'presents' : 'none' };
 
         if (isMatch) {
+          // ── RSSI GATE (Layer 2 defence against OS-cache ghosts) ────────────────────────────
+          // Powered-off or out-of-range devices have no live radio. Their cached BLE
+          // advertisement is replayed by the OS with rssi=null or a very low value.
+          // -80 dBm is conservative (collocated devices typically read -40 to -65 dBm)
+          // so valid nearby devices with momentary signal dips are never rejected.
+          const RSSI_THRESHOLD = -80;
+          const deviceRssi = device.rssi ?? -99;
+          if (deviceRssi < RSSI_THRESHOLD) {
+            if (!rejectedMacsRef.current.has(device.id)) {
+              rejectedMacsRef.current.add(device.id);
+              AppLogger.log('SCAN_FILTER_REJECT', {
+                ...logData,
+                reason: `RSSI too low (${deviceRssi} dBm < ${RSSI_THRESHOLD} dBm threshold) — likely OS-cache ghost`,
+              });
+            }
+            return;
+          }
+
           setAllDevices((prevState) => {
             if (!isDuplicateDevice(prevState, device)) {
               let advFirmware, firmwareVer, ledVersion, bleVersion, productId;
