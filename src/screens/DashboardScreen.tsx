@@ -91,6 +91,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     bleState,
     bleGateRef,
     probeDevice,
+    pingDevice,
   } = useBLE();
 
   // ── Registration system ────────────────────────────────────────────────────
@@ -734,7 +735,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           pendingRegistrations={pendingRegistrations}
           setPendingRegistrations={setPendingRegistrations}
           writeToDevice={writeToDevice}
-          probeDevice={probeDevice}
+          pingDevice={pingDevice}
         />
       );
     default:

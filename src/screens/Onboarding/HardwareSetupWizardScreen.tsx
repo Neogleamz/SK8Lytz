@@ -27,7 +27,11 @@ interface HardwareSetupWizardScreenProps {
   /** Updater for pendingRegistrations — used to enrich entries in-place with EEPROM probe data */
   setPendingRegistrations: React.Dispatch<React.SetStateAction<PendingRegistration[]>>;
   writeToDevice: (data: number[], deviceId?: string) => Promise<void | boolean | 'partial'>;
-  probeDevice: (deviceId: string) => Promise<any>;
+  /**
+   * Wizard-exclusive atomic ping: Connect → Blink → Probe → Off → Disconnect.
+   * Returns hwConfig or null. Replaces the broken writeToDevice + probeDevice pair.
+   */
+  pingDevice: (mac: string, blinkPayload: number[]) => Promise<any>;
 }
 
 export default function HardwareSetupWizardScreen({
@@ -40,7 +44,7 @@ export default function HardwareSetupWizardScreen({
   pendingRegistrations,
   setPendingRegistrations,
   writeToDevice,
-  probeDevice,
+  pingDevice,
 }: HardwareSetupWizardScreenProps) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
@@ -97,7 +101,7 @@ export default function HardwareSetupWizardScreen({
   const handleBlinkDevice = async (deviceMac: string) => {
     if (isBlinking) return;
     setIsBlinking(deviceMac);
-    
+
     // Blink & Claim: Automatically ensure the device is selected when tested
     setSelectedDeviceMacs(prev => {
       const next = new Set(prev);
@@ -106,24 +110,24 @@ export default function HardwareSetupWizardScreen({
     });
 
     try {
-      // Resolve product profile to get accurate blink LED count
+      // Build the blink payload using the best LED count we currently know
       const registration = pendingRegistrations.find(r => r.device_mac === deviceMac);
       const productType = (registration?.product_type && registration.product_type !== 'UNKNOWN') ? registration.product_type : LOCAL_PRODUCT_CATALOG[0].id;
       const profile = getLocalProfileById(productType) || LOCAL_PRODUCT_CATALOG[0];
       const blinkPoints = registration?.led_points || profile.vizDefaultPoints;
 
-      // 0x59 static multi-color mode: Green. 
+      // 0x59 static multi-color mode: Green
       const colorArray = Array(blinkPoints).fill({ r: 0, g: 255, b: 0 });
-      const blinkPayload = ZenggeProtocol.setMultiColor(colorArray, blinkPoints, 1, 1, 0x00); 
-      await writeToDevice(blinkPayload, deviceMac);
-      
-      // ── ON-DEMAND PROBE (perf/ble-probe-on-demand) ────────────────────────────
-      // The blink write just opened a GATT connection to this device. Fire the
-      // hardware probe now while that channel is hot. This is non-blocking —
-      // the user sees the blink immediately and the card enriches in the background.
-      probeDevice(deviceMac).then((hwConfig: any) => {
-        if (!hwConfig) return;
-        // Update this registration entry in-place with real EEPROM data
+      const blinkPayload = ZenggeProtocol.setMultiColor(colorArray, blinkPoints, 1, 1, 0x00);
+
+      // ── ATOMIC PING (fix/wizard-blink-probe) ─────────────────────────────────
+      // pingDevice() owns the full GATT lifecycle: Connect → Blink → Probe → Off → Disconnect.
+      // This replaces the broken writeToDevice (requires Fleet connection) + probeDevice
+      // (severs GATT in finally, causing collision) pair from perf/ble-probe-on-demand.
+      const hwConfig = await pingDevice(deviceMac, blinkPayload);
+
+      // Enrich the pending registration card in-place with real EEPROM data (if probe succeeded)
+      if (hwConfig) {
         setPendingRegistrations(prev => prev.map(r =>
           r.device_mac === deviceMac
             ? {
@@ -138,17 +142,12 @@ export default function HardwareSetupWizardScreen({
         ));
         // Cache the result so repeat wizard visits are instant
         AsyncStorage.setItem(`@sk8_hw_${deviceMac}`, JSON.stringify(hwConfig)).catch(() => {});
-        AppLogger.log('DEVICE_DISCOVERED', { context: 'on_demand_probe_complete', deviceId: deviceMac, ledPoints: hwConfig.ledPoints });
-      }).catch(() => { /* Non-fatal — registration defaults remain */ });
-
-      // Keep it solid green for 10 seconds based on user request, then send Off command
-      setTimeout(async () => {
-        const offPayload = ZenggeProtocol.turnOff();
-        await writeToDevice(offPayload, deviceMac);
-        setIsBlinking(null);
-      }, 10000);
+        AppLogger.log('DEVICE_DISCOVERED', { context: 'pingDevice_complete', deviceId: deviceMac, ledPoints: hwConfig.ledPoints });
+      }
     } catch (e) {
-      console.warn("Blink test failed", e);
+      console.warn('Blink test failed', e);
+    } finally {
+      // pingDevice handles the off command — just reset the button state
       setIsBlinking(null);
     }
   };
@@ -532,8 +531,9 @@ export default function HardwareSetupWizardScreen({
                        // Let EEPROM persist
                        await new Promise(r => setTimeout(r, 600));
 
-                       // Re-probe to verify
-                       await probeDevice(device.device_mac);
+                       // Re-probe to verify — use pingDevice with an "off" payload (invisible, no visual blink)
+                       const offPayload = ZenggeProtocol.turnOff();
+                       await pingDevice(device.device_mac, offPayload);
                        console.log(`[FTUE] Assuming successful verification for ${device.device_mac} due to void return`);
                     }
                  }
