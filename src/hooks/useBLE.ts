@@ -41,6 +41,12 @@ export interface BluetoothLowEnergyApi {
   /** Send large payloads (>MTU) via sequential ZENGGE-framed BLE chunks. Required for 0x51 extended Scene Builder payloads. */
   writeChunked: (payload: number[], targetDeviceId?: string) => Promise<void>;
   probeDevice: (mac: string) => Promise<void>;
+  /**
+   * Wizard-specific atomic ping: Connect → Blink → Probe EEPROM → Turn Off → Disconnect.
+   * Designed for use in HardwareSetupWizardScreen only. Bypasses connectedDevices requirement.
+   * Returns hwConfig (ledPoints, icName, etc.) or null if probe timed out.
+   */
+  pingDevice: (mac: string, blinkPayload: number[]) => Promise<any>;
   connectedDevices: Device[];
   allDevices: Device[];
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
@@ -243,6 +249,113 @@ export default function useBLE(): BluetoothLowEnergyApi {
       AppLogger.warn(`[BLE Probe Single] Failed to probe ${mac}:`, { error: String(err) });
       return null;
     } finally {
+      await bleManager.cancelDeviceConnection(mac).catch(() => {});
+    }
+  };
+
+  /**
+   * pingDevice — Wizard-exclusive atomic GATT session.
+   *
+   * Fixes two bugs introduced by perf/ble-probe-on-demand:
+   *  1. "Phantom Blink": writeToDevice() requires connectedDevices.length > 0. During setup
+   *     there is no Fleet connection, so the payload silently vanishes. Hardware never lights up.
+   *  2. GATT collision: probeDevice() connects independently and its `finally` block severs
+   *     the connection, racing against the blink write. GATT 133 ensues, probe returns null.
+   *
+   * Solution: one GATT session owns the full lifecycle:
+   *   Connect → Discover → Write Blink → Monitor Notify → Write HW Query → Await EEPROM
+   *     → (user watches skate blink for ~8s) → Write Off → Disconnect → Return hwConfig
+   *
+   * @param mac          Target device MAC address
+   * @param blinkPayload Pre-built 0x59 multi-color payload from ZenggeProtocol.setMultiColor()
+   * @returns            hwConfig object (ledPoints, segments, icName, colorSortingName, rfMode)
+   *                     or null if probe timed out / connection failed.
+   */
+  const pingDevice = async (mac: string, blinkPayload: number[]): Promise<any> => {
+    if (Platform.OS === 'web' || !bleManager) return null;
+
+    try {
+      // ── Step 1: Connect ───────────────────────────────────────────────────────
+      await bleManager.connectToDevice(mac, { timeout: 6000 }).catch((e: any) => {
+        if (!String(e).includes('already')) throw e;
+      });
+      await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
+
+      // ── Step 2: Write Blink (channel is now hot — no Phantom Blink) ───────────
+      const b64Blink = Buffer.from(blinkPayload).toString('base64');
+      await bleManager.writeCharacteristicWithoutResponseForDevice(
+        mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64Blink
+      ).catch(() => {});
+
+      // ── Step 3: Probe EEPROM (same GATT session — no collision) ──────────────
+      const hwConfig = await new Promise<any>((resolve) => {
+        let accumulatedTelemetry: any = null;
+
+        const timer = setTimeout(() => {
+          sub.remove();
+          if (accumulatedTelemetry) {
+            AppLogger.warn(`[BLE pingDevice] Partial telemetry for ${mac}. Returning partial.`);
+            resolve(accumulatedTelemetry);
+          } else {
+            AppLogger.warn(`[BLE pingDevice] Probe timed out for ${mac} after 3500ms.`);
+            resolve(null);
+          }
+        }, 3500);
+
+        const sub = bleManager.monitorCharacteristicForDevice(
+          mac,
+          ZENGGE_SERVICE_UUID,
+          ZENGGE_NOTIFY_UUID,
+          (err: any, char: any) => {
+            if (err) return;
+            if (!char?.value) return;
+            try {
+              const raw = Array.from(Buffer.from(char.value, 'base64')) as number[];
+              const hwParsed = ZenggeProtocol.parseHardwareSettingsResponse(raw);
+              if (hwParsed) accumulatedTelemetry = { ...accumulatedTelemetry, ...hwParsed };
+              const rfParsed = ZenggeProtocol.parseRfRemoteState(raw);
+              if (rfParsed) accumulatedTelemetry = { ...accumulatedTelemetry, rfMode: rfParsed.mode, rfPairedCount: rfParsed.pairedCount };
+              if (accumulatedTelemetry?.detected && accumulatedTelemetry?.rfMode) {
+                clearTimeout(timer);
+                sub.remove();
+                AppLogger.log('DEVICE_DISCOVERED', { context: 'pingDevice_probe_success', deviceId: mac });
+                resolve(accumulatedTelemetry);
+              }
+            } catch (e) { /* ignore parse errors */ }
+          }
+        );
+
+        // Fire queries after giving the notification monitor 400ms to set up
+        setTimeout(() => {
+          const b64HW = Buffer.from(ZenggeProtocol.queryHardwareSettings(false)).toString('base64');
+          bleManager.writeCharacteristicWithoutResponseForDevice(
+            mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64HW
+          ).catch((e: any) => AppLogger.warn('[BLE pingDevice] HW query write failed', { error: String(e) }));
+
+          setTimeout(() => {
+            const b64RF = Buffer.from(ZenggeProtocol.queryRfRemoteState()).toString('base64');
+            bleManager.writeCharacteristicWithoutResponseForDevice(
+              mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64RF
+            ).catch((e: any) => AppLogger.warn('[BLE pingDevice] RF query write failed', { error: String(e) }));
+          }, 200);
+        }, 400);
+      });
+
+      // ── Step 4: Wait so user can see the blink (probe ran concurrently) ───────
+      await new Promise(r => setTimeout(r, 8000));
+
+      // ── Step 5: Turn Off ─────────────────────────────────────────────────────
+      const b64Off = Buffer.from(ZenggeProtocol.turnOff()).toString('base64');
+      await bleManager.writeCharacteristicWithoutResponseForDevice(
+        mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64Off
+      ).catch(() => {});
+
+      return hwConfig;
+    } catch (err: any) {
+      AppLogger.warn(`[BLE pingDevice] Failed for ${mac}:`, { error: String(err) });
+      return null;
+    } finally {
+      // ── Step 6: Always disconnect cleanly ────────────────────────────────────
       await bleManager.cancelDeviceConnection(mac).catch(() => {});
     }
   };
@@ -669,6 +782,7 @@ export default function useBLE(): BluetoothLowEnergyApi {
     clearPendingRegistrations: () => scanner.setPendingRegistrations([]),
     setPendingRegistrations: scanner.setPendingRegistrations,
     probeDevice,
+    pingDevice,
     ghostedDeviceIds: autoRecovery.ghostedDeviceIds,
     bleState: derivedBleState,
     bleGateRef,
