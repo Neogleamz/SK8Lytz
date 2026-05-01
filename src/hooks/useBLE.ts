@@ -310,6 +310,13 @@ export default function useBLE(): BluetoothLowEnergyApi {
       // FIX: Android thoroughly forbids GATT connections during high-duty LE scans. Must stop before connect.
       scanner.stopScanner();
 
+      // ── ATOMIC GROUP CONNECT: Stage all successful connections, update state ONCE ───
+      // setConnectedDevices was previously called per-device inside the loop, causing the
+      // UI to flash "1 connected" mid-loop while device 2 was still negotiating MTU.
+      // Collecting into connectedGroup and calling state ONCE after the loop makes the
+      // transition from 0→2 (or 0→N) devices atomic from React's perspective.
+      const connectedGroup: any[] = [];
+
       for (const device of devices) {
         let conn: any = null;
         let lastErr: any = null;
@@ -400,11 +407,9 @@ export default function useBLE(): BluetoothLowEnergyApi {
             AppLogger.warn('[BLE] Time sync write failed (non-fatal)', { error: String(timeSyncErr), deviceId: conn.id });
           }
 
-          // FIX: Add to React state ONLY AFTER GATT is fully booted to block the UI from blasting animation payloads during MTU queries
-          setConnectedDevices(prev => {
-            if (!prev.find(c => c.id === conn.id)) return [...prev, conn];
-            return prev;
-          });
+          // Stage for atomic group state update after the loop completes.
+          // (Previously: setConnectedDevices called here per-device — caused "1 of 2" flash)
+          connectedGroup.push(conn);
 
         } catch (deviceError: any) {
           const errMsg = deviceError?.message || String(deviceError);
@@ -416,6 +421,20 @@ export default function useBLE(): BluetoothLowEnergyApi {
           }
         }
       }
+
+      // ── Single atomic state update with the fully-booted group ───────────────────
+      // All GATT handshakes, MTU negotiations, and time syncs are complete for every
+      // device that made it here. The UI transitions 0→N in one React commit.
+      if (connectedGroup.length > 0) {
+        setConnectedDevices(prev => {
+          const merged = [...prev];
+          for (const c of connectedGroup) {
+            if (!merged.find(x => x.id === c.id)) merged.push(c);
+          }
+          return merged;
+        });
+      }
+
       setGate('IDLE');
     } catch (e: any) {
       const errMsg = e?.message || String(e);
