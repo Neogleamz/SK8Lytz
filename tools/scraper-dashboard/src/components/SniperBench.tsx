@@ -84,6 +84,35 @@ export const SniperBench: React.FC = () => {
     setExecutionLog([]);
   };
 
+  const handleApply = async () => {
+    if (!sniperResult?.detectiveResult) return;
+    
+    log('[Sniper] 💾 Attempting to apply simulation data to database...');
+    setRunState('running');
+    
+    try {
+      const res = await fetch('/api/sniper/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          spot_id: spotId.trim(),
+          detectiveResult: sniperResult.detectiveResult
+        })
+      });
+      
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Unknown API error during apply');
+      }
+      
+      log(`[Sniper] ✅ DB overwrite successful! New status: ${data.status}`);
+      setRunState('done');
+    } catch (err: any) {
+      log(`[Sniper] ❌ Failed to apply: ${err.message}`);
+      setRunState('error');
+    }
+  };
+
   if (fieldsLoading) return <div className="p-8 text-white">Loading Field Registry...</div>;
 
   const statusColor: Record<RunState, string> = {
@@ -139,19 +168,34 @@ export const SniperBench: React.FC = () => {
         {/* Controls */}
         <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', gap: '8px', flexShrink: 0 }}>
           {runState !== 'running' ? (
-            <button
-              onClick={runState !== 'idle' ? handleReset : handleFire}
-              style={{
-                flex: 1, padding: '10px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer',
-                background: runState !== 'idle' ? 'rgba(255,255,255,0.07)' : '#f43f5e',
-                color: runState !== 'idle' ? 'rgba(255,255,255,0.5)' : '#fff',
-                border: runState !== 'idle' ? '1px solid rgba(255,255,255,0.1)' : 'none',
-                boxShadow: runState === 'idle' ? '0 0 20px rgba(244,63,94,0.3)' : 'none',
-                transition: 'all 0.2s'
-              }}
-            >
-              {runState === 'idle' ? '🎯 FIRE' : '↺ RESET'}
-            </button>
+            <>
+              <button
+                onClick={runState !== 'idle' ? handleReset : handleFire}
+                style={{
+                  flex: 1, padding: '10px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer',
+                  background: runState !== 'idle' ? 'rgba(255,255,255,0.07)' : '#f43f5e',
+                  color: runState !== 'idle' ? 'rgba(255,255,255,0.5)' : '#fff',
+                  border: runState !== 'idle' ? '1px solid rgba(255,255,255,0.1)' : 'none',
+                  boxShadow: runState === 'idle' ? '0 0 20px rgba(244,63,94,0.3)' : 'none',
+                  transition: 'all 0.2s'
+                }}
+              >
+                {runState === 'idle' ? '🎯 FIRE' : '↺ RESET'}
+              </button>
+              
+              {runState === 'done' && sniperResult?.detectiveResult && (
+                <button
+                  onClick={handleApply}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer',
+                    background: '#4ade80', color: '#000', border: 'none',
+                    boxShadow: '0 0 15px rgba(74,222,128,0.3)', transition: 'all 0.2s'
+                  }}
+                >
+                  💾 APPLY TO DB
+                </button>
+              )}
+            </>
           ) : (
             <button
               onClick={handleCancel}
