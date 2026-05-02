@@ -263,7 +263,11 @@ export default function HardwareSetupWizardScreen({
           
           {pendingRegistrations.length === 0 && bleState !== 'SCANNING' && bleState !== 'PROBING' && (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No devices found. Ensure they are powered on.</Text>
+              <MaterialCommunityIcons name="radar" size={32} color={Colors.textMuted} style={{ marginBottom: Spacing.sm }} />
+              <Text style={styles.emptyText}>Sweeping the area for hardware...</Text>
+              <Text style={[styles.emptyText, { fontSize: 12, marginTop: 4, opacity: 0.6 }]}>
+                Make sure your controllers are powered on and within range.
+              </Text>
             </View>
           )}
         </ScrollView>

@@ -460,6 +460,11 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       }
       // FIX: Android thoroughly forbids GATT connections during high-duty LE scans. Must stop before connect.
       scanner.stopScanner();
+      // ── Overwatch: Also stop the Silent Sweeper during GATT connect phase ──────
+      // The radio cannot actively scan AND perform GATT operations simultaneously on
+      // Android without risking GATT 133. The Sweeper is resumed after connect completes.
+      const wasSweeperActive = sweeper.isSweeperActive;
+      if (wasSweeperActive) sweeper.stopSweeper();
 
       // ── ATOMIC GROUP CONNECT: Stage all successful connections, update state ONCE ───
       // setConnectedDevices was previously called per-device inside the loop, causing the
@@ -587,6 +592,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       }
 
       setGate('IDLE');
+      // Resume Sweeper after successful connection
+      if (wasSweeperActive && isBluetoothEnabled) sweeper.startSweeper();
     } catch (e: any) {
       const errMsg = e?.message || String(e);
       if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
@@ -596,6 +603,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
          AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, context: 'group' });
       }
       setGate('IDLE');
+      // Resume Sweeper even after a connection failure
+      if (wasSweeperActive && isBluetoothEnabled) sweeper.startSweeper();
     }
   };
 
@@ -795,7 +804,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       }
       return true;
     },
-    scanForPeripherals: scanner.scanForPeripherals,
     connectToDevices,
     writeToDevice,
     writeChunked,

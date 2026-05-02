@@ -10,6 +10,7 @@ import { supabase } from '../../services/supabaseClient';
 import { locationService } from '../../services/LocationService';
 import type { PendingRegistration } from '../../types/dashboard.types';
 import { getDefaultGroupName } from '../../utils/NamingUtils';
+import { mapDeviceToRegistration } from '../../utils/classifyBLEDevice';
 
 export interface UseBLEScannerProps {
   bleManager: any;
@@ -107,52 +108,21 @@ export function useBLEScanner({
       }
     }
 
-    const mapToRegistration = (d: any, i: number, type: string): PendingRegistration => {
-      const isUnknown = type === 'UNKNOWN';
-      const pos = i % 2 === 0 ? 'Left' : 'Right';
-      const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === type) || LOCAL_PRODUCT_CATALOG[0];
-
-      const normalizedMac = d.id.toUpperCase();
-      const deviceIdShort = normalizedMac.replace(/:/g, '').slice(-4);
-
-      // ── Overwatch Cache Lookup ────────────────────────────────────────────
-      // If the Sweeper's Interrogator has already probed this device, use the
-      // real EEPROM data instead of advertisement/name heuristics.
-      const cached = hwCache[normalizedMac];
-
-      return {
-        device_mac:   normalizedMac,
-        device_name:  `SK8Lytz-${deviceIdShort}`,
-        factory_name: d.name || 'Unknown',
-        manufacturer_data: d.manufacturerData,
-        ble_version:  d.bleVersion,
-        product_type: type as any,
-        position:     pos,
-        group_name:   getDefaultGroupName(type),
-        led_points:   cached?.ledPoints    ?? d.hwPoints ?? profile.vizDefaultPoints,
-        segments:     cached?.segments     ?? d.hwSegments ?? profile.defaultSegments,
-        ic_type:      cached?.icName       ?? d.hwStripType ?? (profile.defaultIcType === 1 ? 'WS2812B' : 'SM16703'),
-        color_sorting: cached?.colorSortingName ?? d.hwSorting ?? (profile.defaultColorSorting === 2 ? 'GRB' : 'RGB'),
-        rssi:         d.rssi ?? -99,
-        firmware_ver: d.firmwareVer,
-        led_version:  d.ledVersion,
-        product_id:   d.productId,
-        rf_mode:      cached?.rfMode ?? d.hwRfMode,
-        rf_paired_count: cached?.rfPairedCount ?? d.hwRfPairedCount,
-      };
-    };
-
+    // ── Use shared classification utility (single source of truth) ────────────
+    // Previously: inline mapToRegistration duplicated the field priority chain
+    // that also lives in useBLESweeper.classifyForRegistrations.
+    // Now both paths call mapDeviceToRegistration from classifyBLEDevice.ts.
     const results: PendingRegistration[] = [];
     LOCAL_PRODUCT_CATALOG.forEach(p => {
       if (groups[p.id]) {
         const sorted = [...groups[p.id]].sort((a,b) => (b.rssi ?? -99) - (a.rssi ?? -99));
-        sorted.forEach((d, i) => results.push(mapToRegistration(d, i, p.id)));
+        sorted.forEach((d, i) => results.push(mapDeviceToRegistration(d, i, hwCache, p.id)));
       }
     });
 
     if (unknown.length > 0) {
       const sortedUnknown = [...unknown].sort((a,b) => (b.rssi ?? -99) - (a.rssi ?? -99));
-      sortedUnknown.forEach((d, i) => results.push(mapToRegistration(d, i, 'UNKNOWN')));
+      sortedUnknown.forEach((d, i) => results.push(mapDeviceToRegistration(d, i, hwCache, 'UNKNOWN')));
     }
 
     if (results.length > 0) {
