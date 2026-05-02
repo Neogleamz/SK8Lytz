@@ -4,6 +4,7 @@ import ScraperPipeline from './components/ScraperPipeline';
 import DetectiveLab from './DetectiveLab';
 import { SniperBench } from './components/SniperBench';
 import { DatabankCard } from './components/DatabankCard';
+import { RecordEditModal } from './components/RecordEditModal';
 import './App.css';
 
 const API_BASE = 'http://localhost:5999';
@@ -627,16 +628,18 @@ function App() {
   };
 
   const startEdit = (spot: any) => { setEditingId(spot.id); setEditForm({ ...spot }); };
-  const saveEdit = async () => {
-    try {
-      await fetch(`${API_BASE}/api/spots/${editingId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editForm)
-      });
-      setEditingId(null);
-      fetchSpots(page, gridFilter);
-    } catch (e) {}
+  const handleModalSave = async (updates: any) => {
+    const res = await fetch(`${API_BASE}/api/spots/${editingId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates)
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Network error or server failed to update record.');
+    }
+    setEditingId(null);
+    fetchSpots(page, gridFilter);
   };
 
   const updateSpotStatus = async (id: string, status: string) => {
@@ -1359,39 +1362,22 @@ function App() {
                     <th onClick={() => toggleSort('phone_number')} style={{cursor:'pointer'}}>Phone {sortCol==='phone_number' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                     <th onClick={() => toggleSort('has_adult_night')} style={{cursor:'pointer'}}>18+ {sortCol==='has_adult_night' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                     <th onClick={() => toggleSort('retry_count')} style={{cursor:'pointer'}}>Retries {sortCol==='retry_count' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('last_attempted_at')} style={{cursor:'pointer'}}>Last Ping {sortCol==='last_attempted_at' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
+                    <th onClick={() => toggleSort('last_attempted_at')} style={{cursor:'pointer'}}>Last Ping {sortCol==='last_attempted_at' ? (so                <tbody>
                   {spots.map(row => {
-                    const isEditing = editingId === row.id;
                     return (
                       <tr key={row.id}>
                         <td>
-                          {isEditing ? (
-                            <>
-                              <input className="table-input" value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="Name" />
-                              <input className="table-input" value={editForm.city} onChange={e => setEditForm({...editForm, city: e.target.value})} placeholder="City" />
-                            </>
-                          ) : (
-                            <>
-                              <div style={{fontWeight: 'bold', color: 'var(--text-primary)'}}>{row.name}</div>
-                              <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>{row.city}, {row.state}</div>
-                            </>
-                          )}
+                          <div style={{fontWeight: 'bold', color: 'var(--text-primary)'}}>{row.name}</div>
+                          <div style={{fontSize: '0.8rem', color: 'var(--text-secondary)'}}>{row.city}, {row.state}</div>
                         </td>
                         <td>
-                          {isEditing ? <input className="table-input" value={editForm.street_address || ''} onChange={e => setEditForm({...editForm, street_address: e.target.value})} placeholder="Street Address" /> : <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}>{row.street_address || '-'}</div>}
+                          <div style={{fontSize: '0.85rem', color: 'var(--text-secondary)'}}>{row.street_address || '-'}</div>
                         </td>
                         <td className="status-cell">
                            <select 
                              className={`table-input status-pill ${row.verification_status?.toLowerCase() || 'pending'}`} 
-                             value={isEditing ? (editForm.verification_status || 'PENDING') : (row.verification_status || 'PENDING')} 
-                             onChange={e => {
-                                if (isEditing) setEditForm({...editForm, verification_status: e.target.value});
-                                else updateSpotStatus(row.id, e.target.value);
-                             }}
+                             value={row.verification_status || 'PENDING'} 
+                             onChange={e => updateSpotStatus(row.id, e.target.value)}
                              style={{ padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', appearance: 'menulist' }}
                            >
                               <option value="SEEDED"> SEEDED</option>
@@ -1405,36 +1391,22 @@ function App() {
                            {row.rating ? <span style={{color: '#ffd700', fontWeight:'bold', textShadow: '0 0 5px rgba(255,215,0,0.5)'}}>{row.rating} <span style={{fontSize: '0.7em', color: 'gray'}}>({row.user_ratings_total || 0})</span></span> : <span style={{color:'gray'}}>-</span>}
                         </td>
                         <td>
-                           {isEditing ? (
-                             <input className="table-input" value={editForm.surface_quality || ''} onChange={e => setEditForm({...editForm, surface_quality: e.target.value})} placeholder="Buttery..." />
-                           ) : (
-                             <span className={`surface-tag ${row.surface_quality?.toLowerCase()}`}>{row.surface_quality || '-'}</span>
-                           )}
+                           <span className={`surface-tag ${row.surface_quality?.toLowerCase()}`}>{row.surface_quality || '-'}</span>
                         </td>
                         <td>
-                          {isEditing ? <input className="table-input" value={editForm.website || ''} onChange={e => setEditForm({...editForm, website: e.target.value})} /> : (
-                            row.website ? <a href={row.website} target="_blank" rel="noreferrer" style={{color: 'var(--success)', fontWeight: 600}}>Visit ↗</a> : '-'
-                          )}
+                          {row.website ? <a href={row.website} target="_blank" rel="noreferrer" style={{color: 'var(--success)', fontWeight: 600}}>Visit ↗</a> : '-'}
                         </td>
                         <td>
-                          {isEditing ? <input className="table-input" value={editForm.phone_number || ''} onChange={e => setEditForm({...editForm, phone_number: e.target.value})} /> : (
-                            row.phone_number || '-'
-                          )}
+                          {row.phone_number || '-'}
                         </td>
                         <td>
-                          {isEditing ? <input type="checkbox" checked={editForm.has_adult_night} onChange={e => setEditForm({...editForm, has_adult_night: e.target.checked})} /> : (
-                            <div style={{display:'flex', alignItems: 'center', gap: '5px', justifyContent: 'center'}}>
-                               {row.has_adult_night ? '' : ''}
-                               {row.adult_night_details && <span title={row.adult_night_details} style={{cursor: 'help'}}>ℹ️</span>}
-                            </div>
-                          )}
+                          <div style={{display:'flex', alignItems: 'center', gap: '5px', justifyContent: 'center'}}>
+                             {row.has_adult_night ? '✅' : ''}
+                             {row.adult_night_details && <span title={row.adult_night_details} style={{cursor: 'help'}}>ℹ️</span>}
+                          </div>
                         </td>
                         <td>
-                          {isEditing ? (
-                            <input type="number" className="table-input" value={editForm.retry_count || 0} onChange={e => setEditForm({...editForm, retry_count: parseInt(e.target.value) || 0})} />
-                          ) : (
-                            <span style={{ color: row.retry_count >= 8 ? 'var(--danger)' : 'var(--text-secondary)' }}>{row.retry_count || 0}/10</span>
-                          )}
+                          <span style={{ color: row.retry_count >= 8 ? 'var(--danger)' : 'var(--text-secondary)' }}>{row.retry_count || 0}/10</span>
                         </td>
                         <td style={{fontSize: '0.75rem', color: 'var(--text-secondary)'}}>
                           {row.last_attempted_at ? new Date(row.last_attempted_at).toLocaleString() : 'Never'}
@@ -1445,28 +1417,31 @@ function App() {
                                <input type="checkbox" checked={row.is_published} onChange={e => promoteSpot(row.id, e.target.checked)} />
                                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: row.is_published ? '#4caf50' : 'var(--text-secondary)', userSelect:'none' }}>APP_LIVE</span>
                             </label>
-                            {isEditing ? (
-                              <button className="btn-icon btn-save-inline" onClick={saveEdit}></button>
-                            ) : (
-                              <button className="btn-icon" onClick={() => startEdit(row)}>️</button>
-                            )}
+                            
+                            <button className="btn-icon" onClick={() => startEdit(row)}>✏️</button>
+                            
                             {activeTab === 'graveyard' ? (
-                                <button className="btn-icon" onClick={() => restoreSpot(row.id, row.name)} title="Restore" style={{color: '#4caf50'}}>♻️</button>
+                                <button className="btn-icon" onClick={() => restoreSpot(row.id, row.name)} title="Restore" style={{color: '#4caf50'}}>🔄</button>
                               ) : (
                                 <>
                                   <button
                                     className="btn-icon"
                                     onClick={() => resetSpotToSeeded(row.id, row.name)}
-                                    title="Reset to SEEDED — re-enter Detective queue"
+                                    title="Reset to SEEDED ↺ re-enter Detective queue"
                                     disabled={resettingIds[row.id] === 'loading' || resettingIds[row.id] === 'success'}
                                     style={{ color: resettingIds[row.id] === 'success' ? '#4caf50' : '#ffb300', fontSize: '0.85rem', cursor: resettingIds[row.id] ? 'default' : 'pointer', opacity: resettingIds[row.id] === 'loading' ? 0.5 : 1 }}
                                   >
-                                    {resettingIds[row.id] === 'loading' ? '⏳' : resettingIds[row.id] === 'success' ? '✅' : '🔄'}
+                                    {resettingIds[row.id] === 'loading' ? '⏳' : resettingIds[row.id] === 'success' ? '✓' : '↺'}
                                   </button>
                                   <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>🗑️</button>
                                 </>
                               )}
                           </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>               </div>
                         </td>
                       </tr>
                     );
@@ -1527,9 +1502,10 @@ function App() {
           )}
         </div>
         
-        {historyLogs.length > 0 && (
-          <div className="history-preview">
-             <h4 className="panel-sub-header">Recent History Snippet</h4>
+                   <div className="log-container mini">
+                {historyLogs.slice(-10).map((line, i) => <div key={i} className="log-entry history">{line}</div>)}
+             </div>
+          </div>
              <div className="log-container mini">
                 {historyLogs.slice(-10).map((line, i) => <div key={i} className="log-entry history">{line}</div>)}
              </div>
@@ -1539,23 +1515,18 @@ function App() {
       )}
       </>
       )}
+
+      {/* Record Edit Modal Overlay */}
+      {editingId && editForm && (
+        <RecordEditModal 
+          spot={editForm} 
+          onSave={handleModalSave} 
+          onClose={() => { setEditingId(null); setEditForm({}); }} 
+        />
+      )}
+
     </div>
   );
 }
 
 export default App;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
