@@ -153,6 +153,7 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
             ? <img src={photo} alt={spot.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => { (e.target as HTMLImageElement).style.display='none'; }} />
             : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'6px' }}>
                 <span style={{ fontSize:'1.5rem', opacity:0.15 }}>[ IMG ]</span>
+                {!readOnly && <button onClick={handleUploadClick} style={{ padding:'3px 8px', background:'rgba(76,175,80,0.2)', color:'#4caf50', border:'1px solid rgba(76,175,80,0.5)', borderRadius:'5px', cursor:'pointer', fontSize:'0.62rem' }}>Upload</button>}
               </div>
           }
           {photoCount > 1 && (
@@ -175,6 +176,7 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
                 <button onClick={(e) => { e.stopPropagation(); onSetHero?.(spot.id, validPhotoIndex); setPhotoIndex(0); }} style={{ background:'rgba(0,0,0,0.7)', color: validPhotoIndex === 0 ? '#ffb300' : 'rgba(255,255,255,0.4)', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.75rem', cursor:'pointer' }} title="Set Hero">{validPhotoIndex === 0 ? '★' : '☆'}</button>
                 <button onClick={(e) => { e.stopPropagation(); onDeletePhoto?.(spot.id, validPhotoIndex); }} style={{ background:'rgba(0,0,0,0.7)', color:'#ff3b30', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.55rem', cursor:'pointer' }} title="Delete Photo">🗑</button>
                 <button onClick={(e) => { e.stopPropagation(); setShowTypeMenu(true); }} style={{ background:'rgba(0,0,0,0.7)', color:'#64b5f6', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.6rem', cursor:'pointer', fontWeight: 800 }} title="Assign Type">TAG</button>
+                <button onClick={handleUploadClick} style={{ background:'rgba(0,0,0,0.7)', color:'#4caf50', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.6rem', cursor:'pointer', fontWeight: 800 }} title="Upload Photo">UP</button>
               </div>
               <div style={{ display:'flex', gap:'4px' }}>
                 <button onClick={(e) => { e.stopPropagation(); onBlock?.(spot.id, spot.name); }} style={{ background:'rgba(0,0,0,0.7)', color:'#ff3b30', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.55rem', cursor:'pointer', fontWeight: 800 }} title="Block">BLOCK 🚫</button>
