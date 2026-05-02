@@ -435,6 +435,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       return;
     }
     setGate('CONNECTING');
+    // Hoist outside try{} so it's visible in catch{} for Sweeper resume-on-failure
+    const wasSweeperActive = sweeper.isSweeperActive;
     try {
       let isMock = 'false';
       if (__DEV__) {
@@ -463,7 +465,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       // ── Overwatch: Also stop the Silent Sweeper during GATT connect phase ──────
       // The radio cannot actively scan AND perform GATT operations simultaneously on
       // Android without risking GATT 133. The Sweeper is resumed after connect completes.
-      const wasSweeperActive = sweeper.isSweeperActive;
       if (wasSweeperActive) sweeper.stopSweeper();
 
       // ── ATOMIC GROUP CONNECT: Stage all successful connections, update state ONCE ───
