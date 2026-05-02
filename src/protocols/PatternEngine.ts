@@ -193,30 +193,50 @@ export const SK8LYTZ_TEMPLATES: SK8LytzTemplate[] = [
   { id: 72, name: 'Center-Out Marquee',   icon: '🎆', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Marquee' },
 
   // ── GROUP 10: TEST NATIVE (0x51) ─────────────────────────────────────────
-  { id: 201, name: 'Change gradually',     icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 202, name: 'Bright up & Fade',     icon: '🧪', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 203, name: 'Change quickly',       icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 204, name: 'Strobe-flash',         icon: '🧪', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 205, name: 'Run 1 pt',             icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 207, name: 'Run center-out',       icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 209, name: 'Overlay',              icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 211, name: 'Overlay center',       icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 213, name: 'Fading run 1 pt',      icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 215, name: 'Olivary flowing',      icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 217, name: 'Run 1 pt w/bg',        icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 219, name: '2c run multi pts',     icon: '🧪', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 221, name: '2c run alt fade',      icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 223, name: '2c run alt multi',     icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 225, name: 'Fade out flows',       icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 227, name: '7c alt 1 pt w/bg',     icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 229, name: '7c run alt 1 pt',      icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 231, name: '7c run alt multi',     icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 233, name: '7c overlay multi',     icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 235, name: '7c overlay center',    icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 237, name: '7c flow gradually',    icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 239, name: '7c fading out run',    icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 241, name: '7c olivary run',       icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
-  { id: 243, name: '7c fading run w/white',icon: '🧪', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true,  supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 201, name: 'Circulate all modes', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 202, name: '7 colors change gradually', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 203, name: '7 colors run in olivary', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 204, name: '7 colors change quickly', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 205, name: '7 colors strobe-flash', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 206, name: '7 colors running, 1 point from start to end and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 207, name: '7 colors running, multi points from start to end and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 208, name: '7 colors overlay, multi points from start to end and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 209, name: '7 colors overlay, multi points from the middle to the both ends and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 210, name: '7 colors flow gradually, from start to end and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 211, name: 'Fading out run, 7 colors from start to end and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 212, name: 'Runs in olivary, 7 colors from start to end and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 213, name: 'Fading out run, 7 colors start with white color from start to end and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 214, name: 'Run circularly, 7 colors with black background, 1point from start to end', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 215, name: 'Run circularly, 7 colors with red background, 1point from start to end', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 216, name: 'Run circularly, 7 colors with green background, 1point from start to end', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 217, name: 'Run circularly, 7 colors with blue background, 1point from start to end', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 218, name: 'Run circularly, 7 colors with yellow background, 1point from start to end', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 219, name: 'Run circularly, 7 colors with purple background, 1point from start to end', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 220, name: 'Run circularly, 7 colors with cyan background, 1point from start to end', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 221, name: 'Run circularly, 7 colors with white background, 1point from start to end', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 222, name: 'Run circularly, 7 colors with black background, 1point from end to start', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 223, name: 'Run circularly, 7 colors with red background, 1point from end to start', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 224, name: 'Run circularly, 7 colors with green background, 1point from end to start', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 225, name: 'Run circularly, 7 colors with blue background, 1point from end to start', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 226, name: 'Run circularly, 7 colors with yellow background, 1point from end to start', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 227, name: 'Run circularly, 7 colors with purple background, 1point from end to start', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 228, name: 'Run circularly, 7 colors with cyan background, 1point from end to start', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 229, name: 'Run circularly, 7 colors with white background, 1point from end to start', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 230, name: 'Run circularly, 7 colors with black background, 1point from start to end and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 231, name: 'Run circularly, 7 colors with red background, 1point from start to end and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 232, name: 'Run circularly, 7 colors with green background, 1point from start to end and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 233, name: 'Run circularly, 7 colors with blue background, 1point from start to end and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 234, name: 'Run circularly, 7 colors with yellow background, 1point from start to end and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 235, name: 'Run circularly, 7 colors with purple background, 1point from start to end and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 236, name: 'Run circularly, 7 colors with cyan background, 1point from start to end and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 237, name: 'Run circularly, 7 colors with white background, 1point from start to end and return back', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 238, name: 'Run circularly, 7 colors with black background, 1point from middle to both ends', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 239, name: 'Run circularly, 7 colors with red background, 1point from middle to both ends', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 240, name: 'Run circularly, 7 colors with green background, 1point from middle to both ends', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 241, name: 'Run circularly, 7 colors with blue background, 1point from middle to both ends', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 242, name: 'Run circularly, 7 colors with yellow background, 1point from middle to both ends', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 243, name: 'Run circularly, 7 colors with purple background, 1point from middle to both ends', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
+  { id: 244, name: 'Run circularly, 7 colors with cyan background, 1point from middle to both ends', icon: '🧪', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Test' },
 ];
 
 // ─── MATH HELPERS ─────────────────────────────────────────────────────────────
@@ -1132,10 +1152,6 @@ export function getVisualizerFrame(
   // ── NATIVE 0x51 TEST PATTERN INTERCEPTION ──
   if (patternId >= 201 && patternId <= 244) {
     let modeId = patternId - 200;
-    // Map Forward/Reverse via the modeId + 1 trick
-    if (direction === 0 && modeId >= 5) {
-      modeId += 1;
-    }
     return getSymphonyVisualizerFrame(modeId, fg, bg, n, animTick);
   }
 
@@ -1306,10 +1322,6 @@ export function buildPatternPayload(
 
     if (patternId >= 201 && patternId <= 244) {
       modeId = patternId - 200;
-      // Map Forward/Reverse via the modeId + 1 trick
-      if (direction === 0 && modeId >= 5) {
-        modeId += 1;
-      }
     }
 
     // Direction for named patterns (17,18,26,72) is encoded via the modeId itself.

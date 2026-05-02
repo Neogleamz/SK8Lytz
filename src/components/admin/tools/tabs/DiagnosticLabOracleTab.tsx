@@ -6,6 +6,7 @@ import { DiagnosticLabHwBadge } from './DiagnosticLabHwBadge';
 import { TRANSITION_TYPES } from './DiagnosticLabConstants';
 import { QuickColorGrid } from './DiagnosticLabQuickColorGrid';
 import { ZenggeProtocol } from '../../../../protocols/ZenggeProtocol';
+import { SK8LYTZ_TEMPLATES } from '../../../../protocols/PatternEngine';
 import { OpcodeStatus, TRACKED_OPCODES, TestVerdict } from '../../../../hooks/useDiagnosticLog';
 
 interface OracleTabProps {
@@ -477,7 +478,7 @@ export function DiagnosticLabOracleTab({
         </View>
       )}
 
-      {/* 🎨 0x41 SETTLED MODE — Effect ID Sweep (1–44) */}
+      {/* 🎵 0x51 NATIVE SYMPHONY — Effect ID Sweep (1–44) */}
       <TouchableOpacity
         onPress={() => setExpandedP2(expandedP2 === '0x41' ? null : '0x41')}
         style={[S.diagBox, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
@@ -485,52 +486,27 @@ export function DiagnosticLabOracleTab({
           borderWidth: expandedP2 === '0x41' ? 1.5 : 1 }]}
       >
         <View>
-          <Text style={{ color: '#9D4EFF', fontWeight: '900', fontSize: 13 }}>🎨 0x41 Settled Mode — Effect ID Sweep (1–44)</Text>
+          <Text style={{ color: '#9D4EFF', fontWeight: '900', fontSize: 13 }}>🎵 0x51 Native Symphony (1–44)</Text>
           <Text style={{ color: txtMuted, fontSize: 10, marginTop: 2 }}>
-            FG/BG · speed · dir · tap each ID · log verdict
+            FG/BG · speed · authentic hardware effect names
           </Text>
         </View>
         <Text style={{ color: '#9D4EFF', fontSize: 18 }}>{expandedP2 === '0x41' ? '▲' : '▼'}</Text>
       </TouchableOpacity>
       {expandedP2 === '0x41' && (
         <View style={[S.diagBox, { borderColor: '#9D4EFF', borderWidth: 1 }]}>
-          <Text style={{ color: '#FF9500', fontSize: 10, fontWeight: '700', marginBottom: Spacing.md }}>
-            ⚠️ LAB ONLY — 0x41 is a condemned production opcode. Oracle use only.{'\n'}
-            APK truth: [0x41, id, FG.R,G,B, BG.R,G,B, speed, dir, 0x00, 0xF0, CS] — 13 bytes
+          <Text style={{ color: '#00CC88', fontSize: 10, fontWeight: '700', marginBottom: Spacing.md }}>
+            ✅ PRODUCTION READY — 0x51 is the stable Scene Mode opcode.{'\n'}
+            Testing authentic APK strings 1-44 via setCustomModeCompact.
           </Text>
-
-          {/* Summary grid — 44 cells */}
-          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>RESULT GRID</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginBottom: Spacing.lg }}>
-            {Array.from({ length: 44 }, (_, i) => i + 1).map(id => {
-              const res = p41SweepResults[String(id)];
-              const cellColor = res === 'WORKS' ? '#00CC88' : res === 'NO_EFFECT' ? '#FF9500' : res === 'CRASHED' ? '#FF4040' : border;
-              return (
-                <View key={id} style={{ width: 36, height: 36, borderRadius: 6, backgroundColor: cellColor + '33', borderWidth: 1, borderColor: cellColor, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: cellColor, fontSize: 10, fontWeight: '900' }}>{id}</Text>
-                </View>
-              );
-            })}
-          </View>
 
           {/* Controls row */}
           <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>SPEED (1–255)</Text>
+              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>SPEED (1–100)</Text>
               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]}
                 value={String(p41Speed)} keyboardType="numeric"
-                onChangeText={v => setP41Speed(Math.max(1, Math.min(255, parseInt(v) || 1)))} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>DIRECTION</Text>
-              <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
-                {[{ v: 0x00, l: 'FWD' }, { v: 0x01, l: 'REV' }].map(d => (
-                  <TouchableOpacity key={d.v} onPress={() => setP41Dir(d.v)}
-                    style={[S.chip, p41Dir === d.v && { backgroundColor: '#9D4EFF22', borderColor: '#9D4EFF' }, { flex: 1, height: 40 }]}>
-                    <Text style={{ color: p41Dir === d.v ? '#9D4EFF' : txtMuted, fontSize: 11, textAlign: 'center', fontWeight: '900' }}>{d.l}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+                onChangeText={v => setP41Speed(Math.max(1, Math.min(100, parseInt(v) || 1)))} />
             </View>
           </View>
           <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>FG COLOR</Text>
@@ -540,7 +516,8 @@ export function DiagnosticLabOracleTab({
 
           {/* 44-ID grid — tap to send + verdict buttons inline */}
           <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginTop: Spacing.md, marginBottom: Spacing.xs }}>TAP TO SEND EACH EFFECT</Text>
-          {Array.from({ length: 44 }, (_, i) => i + 1).map(id => {
+          {SK8LYTZ_TEMPLATES.filter(t => t.id >= 201 && t.id <= 244).map(template => {
+            const id = template.id - 200; // 1-44
             const res = p41SweepResults[String(id)];
             const setRes = (r: 'WORKS' | 'NO_EFFECT' | 'CRASHED') =>
               setP41SweepResults(prev => ({ ...prev, [String(id)]: r }));
@@ -550,8 +527,8 @@ export function DiagnosticLabOracleTab({
                 borderBottomWidth: 1, borderBottomColor: border, paddingBottom: Spacing.sm }}>
                 <TouchableOpacity
                   onPress={() => transmit(
-                    ZenggeProtocol.setSettledMode(id, p41Color1, p41Color2, p41Speed, p41Dir as 0 | 1),
-                    `0x41 id=${id} spd=${p41Speed} dir=${p41Dir}`, '0x41'
+                    ZenggeProtocol.setCustomModeCompact([{ mode: id, speed: p41Speed, color1: p41Color1, color2: p41Color2 }]),
+                    `0x51 id=${id} spd=${p41Speed}`, '0x51'
                   )}
                   style={{ width: 48, height: 40, borderRadius: 8, backgroundColor: resColor + '22',
                     borderWidth: 1.5, borderColor: resColor, justifyContent: 'center', alignItems: 'center' }}
@@ -559,9 +536,14 @@ export function DiagnosticLabOracleTab({
                   <Text style={{ color: resColor, fontWeight: '900', fontSize: 12 }}>{id}</Text>
                   <Text style={{ color: resColor, fontSize: 8 }}>SEND</Text>
                 </TouchableOpacity>
+                <View style={{ flex: 1, paddingLeft: 4 }}>
+                  <Text style={{ color: txtPri, fontSize: 11, fontWeight: '600' }}>
+                    {template.name}
+                  </Text>
+                </View>
                 {(['WORKS', 'NO_EFFECT', 'CRASHED'] as const).map(r => (
                   <TouchableOpacity key={r} onPress={() => setRes(r)}
-                    style={{ flex: 1, paddingVertical: Spacing.sm, borderRadius: 6, alignItems: 'center',
+                    style={{ width: 36, paddingVertical: Spacing.sm, borderRadius: 6, alignItems: 'center',
                       backgroundColor: res === r ? (r === 'WORKS' ? '#00CC8822' : r === 'CRASHED' ? '#FF404022' : '#FF950022') : 'transparent',
                       borderWidth: 1, borderColor: res === r ? (r === 'WORKS' ? '#00CC88' : r === 'CRASHED' ? '#FF4040' : '#FF9500') : border }}
                   >
