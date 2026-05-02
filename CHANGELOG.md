@@ -1,3 +1,23 @@
+## [3.3.0] - 2026-05-02
+
+### ✨ Features
+- **ble**: Overwatch BLE Engine — reactive always-on discovery architecture
+- **ble**: On-demand hardware probe via BLINK tap — kill 7s blocking scan phase
+
+### 🐛 Bug Fixes
+- **ble**: Overwatch Polish — P1 preemption, dedup classification, dual-scan hardening
+- **ble**: Atomic group connect — single setConnectedDevices after full loop
+- **wizard**: Atomic pingDevice() primitive — fixes Phantom Blink and GATT probe collision
+- **ble**: Flush allDevices pre-scan + RSSI gate to kill ghost devices
+- **ble**: Hoist wasSweeperActive above try block (TS2304 scope fix)
+- **ble**: Fix TS1117 duplicate scanForPeripherals property in useBLE return object
+- **ble**: Match writeToDevice signature in AccountModal (TS2322)
+
+### 🔧 Maintenance & Refactoring
+- **ble**: Overwatch cleanup — remove legacy code, fix burst timer race, dedup Interrogator, thread writeToDevice prop
+
+---
+
 ## [3.2.1] - 2026-04-24
 
 ### 🐛 Bug Fixes
