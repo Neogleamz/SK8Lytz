@@ -305,14 +305,17 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   // 1. Check FTUE state on mount
   useEffect(() => {
-    hasCloudRegistrations().then(hasAny => {
-      if (!hasAny) {
+    if (isLoading) return;
+    
+    // Only route if we are still waiting in the initial loading state
+    if (viewState === 'LOADING_REGS') {
+      if (registeredDevices.length === 0) {
         setViewState('SETUP_WIZARD');
       } else {
         setViewState('DASHBOARD');
       }
-    });
-  }, []);
+    }
+  }, [isLoading, registeredDevices.length, viewState]);
 
   // 2. Continuous listener for new devices beyond FTUE
   useEffect(() => {
@@ -341,7 +344,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // We no longer spam the user when hardware connections drop out organically.
 
   // ── Cloud Sync & BLE Auto-Connect (extracted to useDashboardAutoConnect) ──
-  useDashboardAutoConnect({
+  const { clearAutoConnectQueue } = useDashboardAutoConnect({
     isBluetoothSupported,
     isBluetoothEnabled,
     isActuallyConnected, // now canonical — hoisted displayConnectedDevices above
@@ -353,7 +356,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     refreshProfile,
     registeredDevices,
     bleGateRef,
+    isWizardActive: viewState === 'SETUP_WIZARD',
   });
+
+  const [isControllerOpen, setIsControllerOpen] = useState(false);
 
 
   // Voice command dispatch + notification init are now handled
@@ -438,9 +444,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, [sortedAllDevices, registeredDevices]);
 
   const handleDisconnect = useCallback(async () => {
-    if (bleState === 'DISCONNECTING') return;
-    await disconnectFromDevice();
-  }, [disconnectFromDevice, bleState]);
+    setIsControllerOpen(false);
+  }, []);
 
   useEffect(() => {
     const handleBackPress = () => {
@@ -694,6 +699,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           }
           // connectToDevices (gated) — additive connection, preserves existing group members.
           await connectToDevices([bleDevice]);
+          setIsControllerOpen(true);
           // NOTE: Hardware probe (0x63) intentionally NOT fired here.
           // hwSettings are loaded from DeviceRepository on mount — registered devices
           // already have their ledPoints/segments persisted from setup wizard.
@@ -787,11 +793,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       {BluetoothWarningBanner}
       <View style={styles.container}>
 
-        {isActuallyConnected && (
+        {isControllerOpen && (
           <View style={{ flex: 1 }}>
             <View pointerEvents="box-none" style={{ paddingBottom: Spacing.lg, zIndex: 100, elevation: 100 }}>
               <DashboardHeader
-                isActuallyConnected={isActuallyConnected}
+                isActuallyConnected={true}
                 isOfflineMode={isOfflineMode}
                 isTestModeActive={isTestModeActive}
                 isDark={isDark}
@@ -814,7 +820,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             </View>
           </View>
         )}
-        {!isActuallyConnected && (
+        {!isControllerOpen && (
           /* ── 4-SLAB VERTICAL HIERARCHY ── */
           <View style={{ flex: 1, backgroundColor: Colors.background }}>
              {/* SLAB 1: HEADER (Logo + Pulse) */}
@@ -876,6 +882,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                       scanForPeripherals();
                       Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
                     }
+                    setIsControllerOpen(true);
                   }}
                   onGroupLongPress={(id: string) => openGroupRename(id)}
                   onSetupWizard={() => setViewState('SETUP_WIZARD')}

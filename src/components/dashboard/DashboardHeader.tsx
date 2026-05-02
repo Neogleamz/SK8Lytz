@@ -62,10 +62,12 @@ const DashboardHeader = React.memo(({
       paddingBottom: isActuallyConnected ? 2 : 8,
     }}>
       {isActuallyConnected ? (
-        /* ── Connected: Unified Header Layout ── */
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          {/* LEFT: user pill */}
-          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
+          {/* LEFT: close button + user pill */}
+          <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
+            <TouchableOpacity onPress={handleDisconnect} style={{ padding: Spacing.xs, marginLeft: -Spacing.xs }}>
+              <MaterialCommunityIcons name="chevron-down" size={28} color={Colors.text} />
+            </TouchableOpacity>
             <TouchableOpacity
               onPress={onPressAccount}
               style={{

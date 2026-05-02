@@ -611,6 +611,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **TS Type Safety**: Resolved strict typing regressions regarding Supabase dynamic model assignment payload objects in `AdminPicksScheduler` and `CrewService`. 
 - **Identity Invariant**: Hardened MAC address lookup strings universally, enforcing `toUpperCase()` transformation and database-layer `ilike` operators to destroy "ghost device" synchronization bugs.
 
+## [3.3.1] - 2026-05-02
+ 
+### Fixed
+ 
+- **FTUE Navigation Decoupling**: Decoupled the Dashboard UI from the raw background BLE auto-connect observer state. Resolved a critical UX race condition where background auto-connections would falsely hijack the screen during the First Time User Experience (FTUE) setup wizard.
+- **Controller Background Persistence**: Replaced the Controller 'Force Disconnect' header action with a non-destructive 'Minimize' action (`chevron-down`), allowing users to return to the Dashboard while maintaining a hot, zero-latency BLE background connection to their hardware.
+- **Boot Sync Race Condition**: Delayed UI loading indicators to explicitly wait for `repo.syncFromCloud()`, preventing the app from falsely trapping established users in the Setup Wizard due to local cache delays.
+
 ## [1.7.0] - 2026-04-14
 
 ### Changed

@@ -74,11 +74,11 @@ export function useRegistration() {
     const boot = async () => {
       await repo.initialize();
       setRegisteredDevices(repo.getDevices());
-      setIsLoading(false);
 
       // Cloud sync — updates repo in-memory, then we pull fresh state
       const merged = await repo.syncFromCloud();
       setRegisteredDevices(merged);
+      setIsLoading(false);
     };
     boot();
 

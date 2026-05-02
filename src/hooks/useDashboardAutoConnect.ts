@@ -40,6 +40,8 @@ interface UseDashboardAutoConnectOptions {
   registeredDevices: RegisteredDevice[];
   /** Global connection gate semaphore — observer only connects when IDLE */
   bleGateRef: React.MutableRefObject<string>;
+  /** Gate the observer if setup wizard is active */
+  isWizardActive?: boolean;
 }
 
 /**
@@ -58,7 +60,8 @@ export function useDashboardAutoConnect({
   requestPermissions,
   refreshProfile,
   bleGateRef,
-}: UseDashboardAutoConnectOptions): void {
+  isWizardActive,
+}: UseDashboardAutoConnectOptions): { clearAutoConnectQueue: () => void } {
 
   const hasAutoConnectedRef = useRef(false);
   const autoConnectIdsRef = useRef<string[]>([]);
@@ -70,6 +73,7 @@ export function useDashboardAutoConnect({
 
   useEffect(() => {
     if (autoConnectIdsRef.current.length === 0) return;
+    if (isWizardActive) return;
 
     const pendingToConnect = allDevices.filter(d =>
       autoConnectIdsRef.current.includes(d.id) &&
@@ -246,4 +250,10 @@ export function useDashboardAutoConnect({
     const timerId = setTimeout(syncCloudAndAutoConnect, 1500);
     return () => clearTimeout(timerId);
   }, [isBluetoothSupported, isBluetoothEnabled]);
+
+  return {
+    clearAutoConnectQueue: () => {
+      autoConnectIdsRef.current = [];
+    }
+  };
 }
