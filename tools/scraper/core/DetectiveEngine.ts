@@ -184,7 +184,12 @@ async function callLMStudio(
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
       const fetchFn = require('node-fetch');
-      const res = await fetchFn(LM_STUDIO_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      const res = await fetchFn(LM_STUDIO_URL, { 
+        method:'POST', 
+        headers:{'Content-Type':'application/json'}, 
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(120000)
+      });
       if (!res.ok) throw new Error(`LM Studio: ${res.statusText}`);
       const data = await res.json();
       const raw = data.choices?.[0]?.message?.content || '{}';
