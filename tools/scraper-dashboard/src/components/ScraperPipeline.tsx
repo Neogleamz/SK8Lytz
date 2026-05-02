@@ -353,7 +353,7 @@ export const ScraperPipeline: React.FC<{
             if (data.success) {
                 alert(`✅ Blocked "${spotName}" — purged ${data.count ?? 0} matching record(s) from the database.`);
                 pulse();
-                onBlockSpot?.(); // trigger parent refresh if provided
+                onBlockSpot?.('', spotName); // trigger parent refresh if provided
             } else {
                 alert('Block failed: ' + JSON.stringify(data));
             }
@@ -368,7 +368,7 @@ export const ScraperPipeline: React.FC<{
             const res = await fetch(`${CCTOWER}/api/skate_spots/${spotId}/restart`, { method: 'POST' });
             if ((await res.json()).success) {
                 pulse();
-                onBlockSpot?.(); // trigger refresh
+                onBlockSpot?.(spotId, ''); // trigger refresh
             }
         } catch (e) { console.error(e); }
     };
@@ -379,7 +379,7 @@ export const ScraperPipeline: React.FC<{
             const res = await fetch(`${CCTOWER}/api/skate_spots/${spotId}/freeze`, { method: 'POST' });
             if ((await res.json()).success) {
                 pulse();
-                onBlockSpot?.(); // trigger refresh
+                onBlockSpot?.(spotId, ''); // trigger refresh
             }
         } catch (e) { console.error(e); }
     };

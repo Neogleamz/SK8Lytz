@@ -12,7 +12,7 @@ const API_BASE = 'http://localhost:5999';
 // Route external photo URLs through CCTower proxy to avoid referrer/CORS blocks on localhost
 const proxyImg = (url: string | null) => {
   if (!url) return null;
-  // Supabase CDN URLs are already ours — serve directly
+  // Supabase CDN URLs are already ours â€” serve directly
   if (url.includes('supabase')) return url;
   // Everything else (googleapis Street View, etc.) goes through the proxy
   return `${API_BASE}/api/img-proxy?url=${encodeURIComponent(url)}`;
@@ -85,7 +85,7 @@ function App() {
       <span style={{ color, fontWeight:800, fontSize:'0.85rem', textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</span>
       <span style={{ display:'flex', alignItems:'center', gap:'10px' }}>
         {right}
-        <span style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.25)', fontWeight:700 }}>{isCollapsed(id) ? '▼ show' : '▲ hide'}</span>
+        <span style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.25)', fontWeight:700 }}>{isCollapsed(id) ? 'â–¼ show' : 'â–² hide'}</span>
       </span>
     </div>
   );
@@ -153,7 +153,7 @@ function App() {
   useEffect(() => {
     fetchSystemStatus();
     fetchBlocklist();      // Initial load of keywords
-    fetchQueue();          // Full initial load — all phases
+    fetchQueue();          // Full initial load â€” all phases
     fetchHarvestStatus();
     fetchHistory();
     fetchCoverage();
@@ -204,7 +204,7 @@ function App() {
 
   // Re-fetch pipeline health stats when region changes
   const fetchPipelineStats = async () => {
-    const activeStates = stateOverrideRef.current; // use ref — safe in stale useEffect
+    const activeStates = stateOverrideRef.current; // use ref â€” safe in stale useEffect
     const statesParam = activeStates.length > 0 ? `?states=${activeStates.join(',')}` : '';
     try {
       const res = await fetch(`${API_BASE}/api/pipeline-stats${statesParam}`);
@@ -615,13 +615,13 @@ function App() {
       });
       const data = await res.json();
       if (data.success) {
-        alert(`✅ Reset ${data.reset_count} records to SEEDED.\nFilters: ${stateLabel} / ${facLabel}`);
+        alert(`âœ… Reset ${data.reset_count} records to SEEDED.\nFilters: ${stateLabel} / ${facLabel}`);
         fetchSpots(page, gridFilter);
       } else {
         alert(`Error: ${data.error}`);
       }
     } catch (e) {
-      alert('Bulk reset failed — check CCTower logs.');
+      alert('Bulk reset failed â€” check CCTower logs.');
     } finally {
       setIsBulkResetting(false);
     }
@@ -749,7 +749,7 @@ function App() {
 
   const unpublishState = async (state: string) => {
     if (!state || state.length !== 2) return;
-    if (!confirm(`️ Retract ALL published records in ${state} from the live app map?`)) return;
+    if (!confirm(`ï¸ Retract ALL published records in ${state} from the live app map?`)) return;
     try {
       const res = await fetch(`${API_BASE}/api/unpublish-state/${state}`, { method: 'POST' });
       const data = await res.json();
@@ -762,11 +762,11 @@ function App() {
 
   
 
-  // ── REGION PULSE — single source of truth, used in both tab layouts ──
+  // â”€â”€ REGION PULSE â€” single source of truth, used in both tab layouts â”€â”€
   const regionPulseEl = pipelineStats ? (() => {
     const s = pipelineStats.summary;
     const rows = pipelineStats.stats || [];
-    const label = stateOverride.length > 0 ? stateOverride.join(' · ') : 'NATIONWIDE';
+    const label = stateOverride.length > 0 ? stateOverride.join(' Â· ') : 'NATIONWIDE';
     const C = { scout: '#00ffaa', detective: '#ff6a00', photo: '#ff007f', pub: '#00d4ff' };
     const row = (k: string, v: any, color = '#fff') => (
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
@@ -779,14 +779,14 @@ function App() {
         <div onClick={() => toggleSection('pulse')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 14px', borderBottom: isCollapsed('pulse') ? 'none' : '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.03)', cursor: 'pointer', userSelect: 'none' as const }}>
           <span style={{ fontSize: '0.56rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' as const, letterSpacing: '0.12em' }}>Region Pulse</span>
           <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#8a2be2' }}>{label}</span>
-          <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)', marginLeft: 'auto' }}>{s.total?.toLocaleString()} records · {isCollapsed('pulse') ? '▼' : '▲'}</span>
+          <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)', marginLeft: 'auto' }}>{s.total?.toLocaleString()} records Â· {isCollapsed('pulse') ? 'â–¼' : 'â–²'}</span>
         </div>
         {!isCollapsed('pulse') && (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'rgba(255,255,255,0.04)' }}>
-              {/* ① SCOUT — IN: PENDING  OUT: SEEDED */}
+              {/* â‘  SCOUT â€” IN: PENDING  OUT: SEEDED */}
               <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
-                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.scout, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.scout}33`, paddingBottom: '4px' }}>① Scout  IN:PENDING → OUT:SEEDED</div>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.scout, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.scout}33`, paddingBottom: '4px' }}>â‘  Scout  IN:PENDING â†’ OUT:SEEDED</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
                   {row('Total in DB', s.total, '#fff')}
                   {row('SEEDED (awaiting Det.)', s.seeded, C.scout)}
@@ -794,9 +794,9 @@ function App() {
                   {row('No Website', (s.total||0)-(s.has_website||0), 'rgba(255,255,255,0.25)')}
                 </div>
               </div>
-              {/* ② DETECTIVE — IN: SEEDED  OUT: DEEP_CRAWLED */}
+              {/* â‘¡ DETECTIVE â€” IN: SEEDED  OUT: DEEP_CRAWLED */}
               <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
-                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.detective, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.detective}33`, paddingBottom: '4px' }}>② Detective  IN:SEEDED → OUT:DEEP_CRAWLED</div>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.detective, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.detective}33`, paddingBottom: '4px' }}>â‘¡ Detective  IN:SEEDED â†’ OUT:DEEP_CRAWLED</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
                   {row('AI Queue (SEEDED+site)', s.detective_queue, s.detective_queue > 0 ? '#ffb300' : 'rgba(255,255,255,0.3)')}
                   {row('AI Done (DEEP_CRAWLED)', s.deep_crawled_count, C.detective)}
@@ -804,9 +804,9 @@ function App() {
                   {row('No Candidates', (s.deep_crawled_count||0)-(s.has_candidates||0), 'rgba(255,255,255,0.25)')}
                 </div>
               </div>
-              {/* ③ PHOTOGRAPHER — IN: DEEP_CRAWLED  OUT: MEDIA_READY */}
+              {/* â‘¢ PHOTOGRAPHER â€” IN: DEEP_CRAWLED  OUT: MEDIA_READY */}
               <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
-                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.photo, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.photo}33`, paddingBottom: '4px' }}>③ Photographer  IN:DEEP_CRAWLED → OUT:MEDIA_READY</div>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.photo, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.photo}33`, paddingBottom: '4px' }}>â‘¢ Photographer  IN:DEEP_CRAWLED â†’ OUT:MEDIA_READY</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
                   {row('Photo Queue (DEEP_CRAWLED)', s.photographer_queue, s.photographer_queue > 0 ? '#ffb300' : 'rgba(255,255,255,0.3)')}
                   {row('Photo Candidates', s.has_candidates, 'rgba(255,255,255,0.6)')}
@@ -814,9 +814,9 @@ function App() {
                   {row('MEDIA_READY', s.media_ready, C.photo)}
                 </div>
               </div>
-              {/* ④ PUBLISHER — IN: MEDIA_READY  OUT: PUBLISHED */}
+              {/* â‘£ PUBLISHER â€” IN: MEDIA_READY  OUT: PUBLISHED */}
               <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
-                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.pub, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.pub}33`, paddingBottom: '4px' }}>④ Publisher  IN:MEDIA_READY → OUT:PUBLISHED</div>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.pub, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.pub}33`, paddingBottom: '4px' }}>â‘£ Publisher  IN:MEDIA_READY â†’ OUT:PUBLISHED</div>
 
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
                   {row('Pub Queue (MEDIA_READY)', s.publisher_queue, s.publisher_queue > 0 ? '#ffb300' : C.pub)}
@@ -835,10 +835,10 @@ function App() {
                     <div key={r.state} style={{ display: 'inline-flex', gap: '4px', alignItems: 'center', padding: '2px 7px', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
                       <span style={{ fontSize: '0.64rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)' }}>{r.state}</span>
                       <span style={{ fontSize: '0.58rem', color: '#00ffaa' }} title="Total">{r.total}</span>
-                      {r.detective_queue  > 0 && <span style={{ fontSize: '0.58rem', color: '#ff6a00' }} title="AI queue">🔎{r.detective_queue}</span>}
-                      {r.photographer_queue > 0 && <span style={{ fontSize: '0.58rem', color: '#ff007f' }} title="Photo queue">📸{r.photographer_queue}</span>}
-                      {r.publisher_queue > 0 && <span style={{ fontSize: '0.58rem', color: '#00d4ff' }} title="Publisher queue">🚀{r.publisher_queue}</span>}
-                      {r.published        > 0 && <span style={{ fontSize: '0.58rem', color: '#4ade80' }} title="Published">✓{r.published}</span>}
+                      {r.detective_queue  > 0 && <span style={{ fontSize: '0.58rem', color: '#ff6a00' }} title="AI queue">ðŸ”Ž{r.detective_queue}</span>}
+                      {r.photographer_queue > 0 && <span style={{ fontSize: '0.58rem', color: '#ff007f' }} title="Photo queue">ðŸ“¸{r.photographer_queue}</span>}
+                      {r.publisher_queue > 0 && <span style={{ fontSize: '0.58rem', color: '#00d4ff' }} title="Publisher queue">ðŸš€{r.publisher_queue}</span>}
+                      {r.published        > 0 && <span style={{ fontSize: '0.58rem', color: '#4ade80' }} title="Published">âœ“{r.published}</span>}
                     </div>
                   ))}
                 </div>
@@ -945,13 +945,13 @@ function App() {
         <input type="number" className="mini-input" style={{ width: '58px' }} value={sleepInterval} onChange={e => updateGlobalStrategy('sleep_interval', parseInt(e.target.value))} />
         <span style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.18)' }}>ms</span>
       </div>
-      {/* Power — pushed right */}
+      {/* Power â€” pushed right */}
       <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', flexShrink: 0, alignItems: 'center' }}>
         <button className="btn-icon" onClick={() => setActiveTab('pipeline')} title="Factory Floor"
           style={{ background: activeTab === 'pipeline' ? 'rgba(0, 255, 170, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'pipeline' ? '#00ffaa' : 'rgba(255,255,255,0.6)', border: activeTab === 'pipeline' ? '1px solid #00ffaa' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 800 }}>
           FACTORY FLOOR
         </button>
-        {/* Bulk Reset to SEEDED — respects global state + facility filters */}
+        {/* Bulk Reset to SEEDED â€” respects global state + facility filters */}
                 <button
           onClick={bulkResetToSeeded}
           disabled={isBulkResetting}
@@ -962,11 +962,11 @@ function App() {
         </button>
         <button className="btn-icon" onClick={() => setActiveTab('sniper')} title="Sniper Bench"
           style={{ background: activeTab === 'sniper' ? 'rgba(255, 106, 0, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'sniper' ? '#ff6a00' : 'rgba(255,255,255,0.6)', border: activeTab === 'sniper' ? '1px solid #ff6a00' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>
-          🔫
+          ðŸ”«
         </button>
         <button className="btn-icon" onClick={() => setActiveTab('graveyard')} title="Garbage Can (Rejected & Purged)"
           style={{ background: activeTab === 'graveyard' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'graveyard' ? '#f44336' : 'rgba(255,255,255,0.6)', border: activeTab === 'graveyard' ? '1px solid #f44336' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>
-          🗑️
+          ðŸ—‘ï¸
         </button>
         <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}
           style={{ padding: '4px 12px', fontSize: '0.62rem', fontWeight: 800 }}>BOOT ALL</button>
@@ -1066,9 +1066,9 @@ function App() {
                       !isCollapsed('coverage_map') && (
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                           <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>Priority:</span>
-                          <span style={{ fontSize: '0.65rem', color: '#e91e63', fontWeight: 800 }}>■ MEDIA_READY</span>
-                          <span style={{ fontSize: '0.65rem', color: '#ff9800', fontWeight: 800 }}>■ DEEP_CRAWLED</span>
-                          <span style={{ fontSize: '0.65rem', color: '#8a2be2', fontWeight: 800 }}>■ SEEDED</span>
+                          <span style={{ fontSize: '0.65rem', color: '#e91e63', fontWeight: 800 }}>â–  MEDIA_READY</span>
+                          <span style={{ fontSize: '0.65rem', color: '#ff9800', fontWeight: 800 }}>â–  DEEP_CRAWLED</span>
+                          <span style={{ fontSize: '0.65rem', color: '#8a2be2', fontWeight: 800 }}>â–  SEEDED</span>
                         </div>
                       )
                     }/>
@@ -1339,7 +1339,7 @@ function App() {
                           {/* Address */}
                           <div style={{ fontSize:'0.68rem', color:'rgba(255,255,255,0.35)', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
                             {[spot.city, spot.state].filter(Boolean).join(', ')}
-                            {spot.street_address ? ` — ${spot.street_address}` : ''}
+                            {spot.street_address ? ` â€” ${spot.street_address}` : ''}
                           </div>
 
                           {/* Data row: rating | hours | website | socials */}
@@ -1388,7 +1388,7 @@ function App() {
                           <button onClick={() => { setEditingId(spot.id); setEditForm(spot); }}
                             style={{ padding:'3px 10px', borderRadius:'5px', border:'1px solid rgba(255,255,255,0.12)', background:'transparent', color:'rgba(255,255,255,0.45)', cursor:'pointer', fontSize:'0.6rem' }}>Edit</button>
                           <button onClick={() => resetSpotToSeeded(spot.id, spot.name)} title="Reset to SEEDED"
-                            style={{ padding:'3px 10px', borderRadius:'5px', border:'1px solid rgba(255,179,0,0.2)', background:'rgba(255,179,0,0.08)', color:'#ffb300', cursor:'pointer', fontSize:'0.6rem', fontWeight:700 }}>🔄</button>
+                            style={{ padding:'3px 10px', borderRadius:'5px', border:'1px solid rgba(255,179,0,0.2)', background:'rgba(255,179,0,0.08)', color:'#ffb300', cursor:'pointer', fontSize:'0.6rem', fontWeight:700 }}>ðŸ”„</button>
                           <button onClick={async () => { if(confirm(`Purge AND permanently block ${spot.name}?`)) { await fetch(`${API_BASE}/api/skate_spots/${spot.id}?blacklist=true`,{method:'DELETE'}); fetchSpots(page,gridFilter); } }}
                             style={{ padding:'3px 10px', borderRadius:'5px', border:'1px solid rgba(255,59,48,0.2)', background:'rgba(255,59,48,0.1)', color:'rgba(255,59,48,0.8)', cursor:'pointer', fontSize:'0.6rem', fontWeight:700 }}>Purge</button>
                         </div>
@@ -1405,16 +1405,19 @@ function App() {
               <table className="databank-table">
                 <thead>
                   <tr>
-                    <th onClick={() => toggleSort('name')} style={{cursor:'pointer'}}>Location {sortCol==='name' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('street_address')} style={{cursor:'pointer'}}>Address {sortCol==='street_address' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('verification_status')} style={{cursor:'pointer'}}>Current Phase {sortCol==='verification_status' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('rating')} style={{cursor:'pointer'}}>Rating {sortCol==='rating' ? (sortDir==='asc'?'▲':'▼') : ''}</th>
+                    <th onClick={() => toggleSort('name')} style={{cursor:'pointer'}}>Location {sortCol==='name' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
+                    <th onClick={() => toggleSort('street_address')} style={{cursor:'pointer'}}>Address {sortCol==='street_address' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
+                    <th onClick={() => toggleSort('verification_status')} style={{cursor:'pointer'}}>Current Phase {sortCol==='verification_status' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
+                    <th onClick={() => toggleSort('rating')} style={{cursor:'pointer'}}>Rating {sortCol==='rating' ? (sortDir==='asc'?'â–²':'â–¼') : ''}</th>
                     <th>Surface</th>
-                    <th onClick={() => toggleSort('website')} style={{cursor:'pointer'}}>Website {sortCol==='website' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('phone_number')} style={{cursor:'pointer'}}>Phone {sortCol==='phone_number' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('has_adult_night')} style={{cursor:'pointer'}}>18+ {sortCol==='has_adult_night' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('retry_count')} style={{cursor:'pointer'}}>Retries {sortCol==='retry_count' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('last_attempted_at')} style={{cursor:'pointer'}}>Last Ping {sortCol==='last_attempted_at' ? (so                <tbody>
+                    <th onClick={() => toggleSort('website')} style={{cursor:'pointer'}}>Website {sortCol==='website' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
+                    <th onClick={() => toggleSort('phone_number')} style={{cursor:'pointer'}}>Phone {sortCol==='phone_number' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
+                    <th onClick={() => toggleSort('has_adult_night')} style={{cursor:'pointer'}}>18+ {sortCol==='has_adult_night' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
+                    <th onClick={() => toggleSort('retry_count')} style={{cursor:'pointer'}}>Retries {sortCol==='retry_count' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
+                    <th onClick={() => toggleSort('last_attempted_at')} style={{cursor:'pointer'}}>Last Ping {sortCol==='last_attempted_at' ? (sortDir==='asc'?'â†‘':'â†“') : ''}</th>
+                  </tr>
+                </thead>
+                <tbody>
                   {spots.map(row => {
                     return (
                       <tr key={row.id}>
@@ -1446,15 +1449,15 @@ function App() {
                            <span className={`surface-tag ${row.surface_quality?.toLowerCase()}`}>{row.surface_quality || '-'}</span>
                         </td>
                         <td>
-                          {row.website ? <a href={row.website} target="_blank" rel="noreferrer" style={{color: 'var(--success)', fontWeight: 600}}>Visit ↗</a> : '-'}
+                          {row.website ? <a href={row.website} target="_blank" rel="noreferrer" style={{color: 'var(--success)', fontWeight: 600}}>Visit â†—</a> : '-'}
                         </td>
                         <td>
                           {row.phone_number || '-'}
                         </td>
                         <td>
                           <div style={{display:'flex', alignItems: 'center', gap: '5px', justifyContent: 'center'}}>
-                             {row.has_adult_night ? '✅' : ''}
-                             {row.adult_night_details && <span title={row.adult_night_details} style={{cursor: 'help'}}>ℹ️</span>}
+                             {row.has_adult_night ? 'âœ…' : ''}
+                             {row.adult_night_details && <span title={row.adult_night_details} style={{cursor: 'help'}}>â„¹ï¸</span>}
                           </div>
                         </td>
                         <td>
@@ -1470,30 +1473,25 @@ function App() {
                                <span style={{ fontSize: '0.7rem', fontWeight: 800, color: row.is_published ? '#4caf50' : 'var(--text-secondary)', userSelect:'none' }}>APP_LIVE</span>
                             </label>
                             
-                            <button className="btn-icon" onClick={() => startEdit(row)}>✏️</button>
+                            <button className="btn-icon" onClick={() => startEdit(row)}>âœï¸</button>
                             
                             {activeTab === 'graveyard' ? (
-                                <button className="btn-icon" onClick={() => restoreSpot(row.id, row.name)} title="Restore" style={{color: '#4caf50'}}>🔄</button>
+                                <button className="btn-icon" onClick={() => restoreSpot(row.id, row.name)} title="Restore" style={{color: '#4caf50'}}>ðŸ”„</button>
                               ) : (
                                 <>
                                   <button
                                     className="btn-icon"
                                     onClick={() => resetSpotToSeeded(row.id, row.name)}
-                                    title="Reset to SEEDED ↺ re-enter Detective queue"
+                                    title="Reset to SEEDED â†º re-enter Detective queue"
                                     disabled={resettingIds[row.id] === 'loading' || resettingIds[row.id] === 'success'}
                                     style={{ color: resettingIds[row.id] === 'success' ? '#4caf50' : '#ffb300', fontSize: '0.85rem', cursor: resettingIds[row.id] ? 'default' : 'pointer', opacity: resettingIds[row.id] === 'loading' ? 0.5 : 1 }}
                                   >
-                                    {resettingIds[row.id] === 'loading' ? '⏳' : resettingIds[row.id] === 'success' ? '✓' : '↺'}
+                                    {resettingIds[row.id] === 'loading' ? 'â³' : resettingIds[row.id] === 'success' ? 'âœ“' : 'â†º'}
                                   </button>
-                                  <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>🗑️</button>
+                                  <button className="btn-icon btn-delete" onClick={() => deleteSpot(row.id, row.name)}>ðŸ—‘ï¸</button>
                                 </>
                               )}
                           </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>               </div>
                         </td>
                       </tr>
                     );
@@ -1554,19 +1552,11 @@ function App() {
           )}
         </div>
         
-                   <div className="log-container mini">
-                {historyLogs.slice(-10).map((line, i) => <div key={i} className="log-entry history">{line}</div>)}
-             </div>
-          </div>
-             <div className="log-container mini">
-                {historyLogs.slice(-10).map((line, i) => <div key={i} className="log-entry history">{line}</div>)}
-             </div>
-          </div>
-        )}
+        <div className="log-container mini">
+            {historyLogs.slice(-10).map((line, i) => <div key={i} className="log-entry history">{line}</div>)}
+        </div>
       </div>
-      )}
-      </>
-      )}
+        )}
 
       {/* Record Edit Modal Overlay */}
       {editingId && editForm && (
@@ -1577,6 +1567,8 @@ function App() {
         />
       )}
 
+      </>
+      )}
     </div>
   );
 }
