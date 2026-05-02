@@ -5,7 +5,6 @@ import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
 import { IC_TYPE_NAMES, COLOR_SORTING_RGB, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import CustomSlider from '../CustomSlider';
-import useBLE from '../../hooks/useBLE';
 
 export interface AdvancedHardwareModalProps {
   visible: boolean;
@@ -15,13 +14,14 @@ export interface AdvancedHardwareModalProps {
   currentSegments?: number;
   currentIcType?: string;
   currentSorting?: string;
+  /** BLE write function injected from Dashboard via AccountModal — avoids duplicate useBLE() instance */
+  writeToDevice: (payload: number[], targetId: string) => Promise<boolean>;
 }
 
 export const AdvancedHardwareModal: React.FC<AdvancedHardwareModalProps> = ({
-  visible, onClose, targetDeviceId, currentPoints = 30, currentSegments = 10, currentIcType = 'WS2812B', currentSorting = 'GRB'
+  visible, onClose, targetDeviceId, currentPoints = 30, currentSegments = 10, currentIcType = 'WS2812B', currentSorting = 'GRB', writeToDevice
 }) => {
   const { Colors, isDark } = useTheme();
-  const { writeToDevice } = useBLE();
 
   const [points, setPoints] = useState(currentPoints);
   const [segments, setSegments] = useState(currentSegments);

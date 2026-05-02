@@ -41,7 +41,6 @@ export interface BluetoothLowEnergyApi {
   writeToDevice: (payload: number[], targetDeviceId?: string) => Promise<boolean | 'partial'>;
   /** Send large payloads (>MTU) via sequential ZENGGE-framed BLE chunks. Required for 0x51 extended Scene Builder payloads. */
   writeChunked: (payload: number[], targetDeviceId?: string) => Promise<void>;
-  probeDevice: (mac: string) => Promise<void>;
   /**
    * Wizard-specific atomic ping: Connect → Blink → Probe EEPROM → Turn Off → Disconnect.
    * Designed for use in HardwareSetupWizardScreen only. Bypasses connectedDevices requirement.
@@ -176,94 +175,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     return () => subscription.remove();
   }, [bleManager]);
 
-  const probeDevice = async (mac: string): Promise<any> => {
-    if (Platform.OS === 'web' || !bleManager) return null;
-    
-    try {
-      await bleManager.connectToDevice(mac, { timeout: 5000 }).catch((e: any) => {
-         if (!String(e).includes('already')) throw e;
-      });
-      await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
-      
-      const hwConfig = await new Promise<any>((resolve) => {
-        let accumulatedTelemetry: any = null;
-
-        const timer = setTimeout(() => {
-          sub.remove();
-          if (accumulatedTelemetry) {
-             AppLogger.warn(`[BLE Probe Single] Partial telemetry for ${mac} — RF or HW missing. Returning partial.`);
-             resolve(accumulatedTelemetry);
-          } else {
-             AppLogger.warn(`[BLE Probe Single] Probe empty timed out for ${mac} after 3500ms`);
-             resolve(null);
-          }
-        }, 3500);
-
-        const sub = bleManager.monitorCharacteristicForDevice(
-          mac,
-          ZENGGE_SERVICE_UUID,
-          ZENGGE_NOTIFY_UUID,
-          (err: any, char: any) => {
-            if (err) {
-              AppLogger.warn(`[BLE Probe Single] Monitor error for ${mac}`, { error: String(err) });
-              return;
-            }
-            if (!char?.value) return;
-            try {
-              const raw = Array.from(Buffer.from(char.value, 'base64')) as number[];
-              
-              const hwParsed = ZenggeProtocol.parseHardwareSettingsResponse(raw);
-              if (hwParsed) {
-                 accumulatedTelemetry = { ...accumulatedTelemetry, ...hwParsed };
-              }
-
-              const rfParsed = ZenggeProtocol.parseRfRemoteState(raw);
-              if (rfParsed) {
-                 accumulatedTelemetry = { 
-                   ...accumulatedTelemetry, 
-                   rfMode: rfParsed.mode, 
-                   rfPairedCount: rfParsed.pairedCount 
-                 };
-              }
-
-              if (accumulatedTelemetry?.detected && accumulatedTelemetry?.rfMode) {
-                clearTimeout(timer);
-                sub.remove();
-                AppLogger.log('DEVICE_DISCOVERED', { context: 'probe_success_full', deviceId: mac });
-                resolve(accumulatedTelemetry);
-              }
-            } catch (e) { /* ignore */ }
-          }
-        );
-
-        setTimeout(() => {
-          // Fire HW Query
-          const qpHW = ZenggeProtocol.queryHardwareSettings(false);
-          const b64HW = Buffer.from(qpHW).toString('base64');
-          bleManager.writeCharacteristicWithoutResponseForDevice(
-            mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64HW
-          ).catch((e: any) => AppLogger.warn('[BLE Probe Single] hw query write failed', { error: String(e) }));
-
-          // Fire RF Query 200ms later to avoid baseband collision
-          setTimeout(() => {
-             const qpRF = ZenggeProtocol.queryRfRemoteState();
-             const b64RF = Buffer.from(qpRF).toString('base64');
-             bleManager.writeCharacteristicWithoutResponseForDevice(
-               mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64RF
-             ).catch((e: any) => AppLogger.warn('[BLE Probe Single] rf query write failed', { error: String(e) }));
-          }, 200);
-
-        }, 600);
-      });
-
-      return hwConfig;
-    } catch (err: any) {
-      AppLogger.warn(`[BLE Probe Single] Failed to probe ${mac}:`, { error: String(err) });
-      return null;
-    } finally {
-      await bleManager.cancelDeviceConnection(mac).catch(() => {});
-    }
-  };
 
   /**
    * pingDevice — Wizard-exclusive atomic GATT session.
@@ -435,6 +346,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       return;
     }
     setGate('CONNECTING');
+    // Hoist outside try{} so it's visible in catch{} for Sweeper resume-on-failure
+    const wasSweeperActive = sweeper.isSweeperActive;
     try {
       let isMock = 'false';
       if (__DEV__) {
@@ -463,7 +376,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       // ── Overwatch: Also stop the Silent Sweeper during GATT connect phase ──────
       // The radio cannot actively scan AND perform GATT operations simultaneously on
       // Android without risking GATT 133. The Sweeper is resumed after connect completes.
-      const wasSweeperActive = sweeper.isSweeperActive;
       if (wasSweeperActive) sweeper.stopSweeper();
 
       // ── ATOMIC GROUP CONNECT: Stage all successful connections, update state ONCE ───
@@ -827,7 +739,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     pendingRegistrations: scanner.pendingRegistrations,
     clearPendingRegistrations: () => scanner.setPendingRegistrations([]),
     setPendingRegistrations: scanner.setPendingRegistrations,
-    probeDevice,
     pingDevice,
     ghostedDeviceIds: autoRecovery.ghostedDeviceIds,
     bleState: derivedBleState,

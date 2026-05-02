@@ -90,7 +90,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     setPendingRegistrations,
     bleState,
     bleGateRef,
-    probeDevice,
     pingDevice,
     startSweeper,
     stopSweeper,
@@ -1054,6 +1053,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             setIsAccountModalVisible(false);
           }}
           registeredDevices={mappedRegisteredDevicesForModal}
+          writeToDevice={writeToDevice}
           onDeviceRenamed={async (deviceId, newName) => {
             setAllDevices((prev: any[]) => prev.map((d: any) =>
               d.id === deviceId ? { ...d, customName: newName } : d

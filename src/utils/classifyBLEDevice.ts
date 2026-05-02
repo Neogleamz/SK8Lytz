@@ -17,6 +17,7 @@
 import type { Device } from 'react-native-ble-plx';
 import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import type { PendingRegistration } from '../types/dashboard.types';
+import { getDefaultGroupName } from './NamingUtils';
 
 /**
  * Resolve the product type string for a device using catalog-driven point matching.
@@ -65,7 +66,7 @@ export function mapDeviceToRegistration(
     ble_version:        device.bleVersion,
     product_type:       resolvedType as any,
     position:           pos,
-    group_name:         profile.id,
+    group_name:         getDefaultGroupName(resolvedType),
     // ── Hardware fields — EEPROM > advertisement > profile default ──────────
     led_points:         cached?.ledPoints        ?? device.hwPoints        ?? profile.vizDefaultPoints,
     segments:           cached?.segments         ?? device.hwSegments      ?? profile.defaultSegments,
