@@ -527,7 +527,7 @@ export function DiagnosticLabOracleTab({
                 borderBottomWidth: 1, borderBottomColor: border, paddingBottom: Spacing.sm }}>
                 <TouchableOpacity
                   onPress={() => transmit(
-                    ZenggeProtocol.setCustomModeCompact([{ mode: id, speed: p41Speed, color1: p41Color1, color2: p41Color2 }]),
+                    ZenggeProtocol.setCustomModeExtended([{ mode: id, speed: p41Speed, color1: p41Color1, color2: p41Color2, dir: 0x80 }]),
                     `0x51 id=${id} spd=${p41Speed}`, '0x51'
                   )}
                   style={{ width: 48, height: 40, borderRadius: 8, backgroundColor: resColor + '22',

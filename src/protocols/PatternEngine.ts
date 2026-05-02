@@ -1326,14 +1326,14 @@ export function buildPatternPayload(
 
     // Direction for named patterns (17,18,26,72) is encoded via the modeId itself.
     // Direction for TEST group (201-244) is encoded via the modeId pairing (e.g. 5=fwd, 6=rev).
-    // Compact format has no dir byte slot — this is correct and intentional.
-    // EXTENDED format (323B via writeChunked) is confirmed non-functional on 0xA3 hardware
-    // until a real HCI BLE sniff validates the 0x40 framing. Compact is the confirmed path.
-    return ZenggeProtocol.setCustomModeCompact([{
+    // We MUST use setCustomModeExtended (10-byte format) to unlock effects 34-44 on 0xA3 hardware.
+    // The payload is 323B and is automatically routed through the 0x40 chunker in useBLE.ts.
+    return ZenggeProtocol.setCustomModeExtended([{
       mode: modeId,
       speed,
       color1: fg,
       color2: bg,
+      dir: 0x80 // Forward + Section Toggle ON (default for testing)
     }]);
   }
 
