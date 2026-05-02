@@ -127,16 +127,12 @@ async function runPhotographerLoop() {
     const configRes = await fetch('http://localhost:5999/api/priority-states').then(r => r.json()).catch(() => ({ priority_states: [] }));
     const priorityStates: string[] = configRes.priority_states || [];
 
-    // Build query — pick up ANY record that has candidate_photos but no photos yet.
-    // This covers DEEP_CRAWLED, MEDIA_READY (Detective-promoted), and SEEDED records
-    // that accumulated candidates during the Detective pass.
-    let query = `SELECT id, name, state, candidate_photos, photos, verification_status FROM local_spots
-      WHERE candidate_photos IS NOT NULL AND candidate_photos != '{}' AND candidate_photos != 'null'
-      AND (photos IS NULL OR photos = '[]' OR photos = 'null' OR photos = '')`;
+    // Build query with priority state ordering
+    let query = `SELECT id, name, state, candidate_photos, photos, verification_status FROM local_spots WHERE verification_status = 'DEEP_CRAWLED'`;
     if (priorityStates.length > 0) {
       query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
     }
-    query += ` ORDER BY CASE verification_status WHEN 'DEEP_CRAWLED' THEN 0 WHEN 'MEDIA_READY' THEN 1 ELSE 2 END, last_attempted_at ASC NULLS FIRST LIMIT 1`;
+    query += ` ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`;
 
     let target: any = null;
     let queryError = null;
