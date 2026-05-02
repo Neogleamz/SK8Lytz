@@ -145,6 +145,22 @@ if (!fieldRegCheck.find(c => c.name === 'importance_level')) {
   `);
 }
 
+// ── v2 Column Migrations (sitemap-first intelligence refactor) ────────────────
+// Safe: silently skips if column already exists
+const colsV2 = db.prepare("PRAGMA table_info(local_spots)").all() as any[];
+if (!colsV2.find(c => c.name === 'logo_url')) {
+  db.exec(`ALTER TABLE local_spots ADD COLUMN logo_url TEXT`);
+}
+if (!colsV2.find(c => c.name === 'cover_photo_url')) {
+  db.exec(`ALTER TABLE local_spots ADD COLUMN cover_photo_url TEXT`);
+}
+if (!colsV2.find(c => c.name === 'yelp_url')) {
+  db.exec(`ALTER TABLE local_spots ADD COLUMN yelp_url TEXT`);
+}
+if (!colsV2.find(c => c.name === 'price_range')) {
+  db.exec(`ALTER TABLE local_spots ADD COLUMN price_range TEXT`);
+}
+
 // Migrate field registry phase_ids from old 5-phase to new 4-phase numbering (ONE-TIME)
 // Old: 1=Scout, 2=Spider(dead), 3=Detective, 4=Photographer, 5=Publisher
 // New: 1=Scout, 2=Detective, 3=Photographer, 4=Publisher
