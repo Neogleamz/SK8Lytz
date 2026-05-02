@@ -1066,9 +1066,9 @@ function App() {
                       !isCollapsed('coverage_map') && (
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                           <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>Priority:</span>
-                          <span style={{ fontSize: '0.65rem', color: '#e91e63', fontWeight: 800 }}>� MEDIA_READY</span>
-                          <span style={{ fontSize: '0.65rem', color: '#ff9800', fontWeight: 800 }}>� DEEP_CRAWLED</span>
-                          <span style={{ fontSize: '0.65rem', color: '#8a2be2', fontWeight: 800 }}>� SEEDED</span>
+                          <span style={{ fontSize: '0.65rem', color: '#e91e63', fontWeight: 800 }}>■ MEDIA_READY</span>
+                          <span style={{ fontSize: '0.65rem', color: '#ff9800', fontWeight: 800 }}>■ DEEP_CRAWLED</span>
+                          <span style={{ fontSize: '0.65rem', color: '#8a2be2', fontWeight: 800 }}>■ SEEDED</span>
                         </div>
                       )
                     }/>
@@ -1414,10 +1414,7 @@ function App() {
                     <th onClick={() => toggleSort('phone_number')} style={{cursor:'pointer'}}>Phone {sortCol==='phone_number' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                     <th onClick={() => toggleSort('has_adult_night')} style={{cursor:'pointer'}}>18+ {sortCol==='has_adult_night' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                     <th onClick={() => toggleSort('retry_count')} style={{cursor:'pointer'}}>Retries {sortCol==='retry_count' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
-                    <th onClick={() => toggleSort('last_attempted_at')} style={{cursor:'pointer'}}>Last Ping {sortCol==='last_attempted_at' ? (sortDir==='asc'?'?':'?') : ''}</th>
-                  </tr>
-                </thead>
-                <tbody>
+                    <th onClick={() => toggleSort('last_attempted_at')} style={{cursor:'pointer'}}>Last Ping {sortCol==='last_attempted_at' ? (so                <tbody>
                   {spots.map(row => {
                     return (
                       <tr key={row.id}>
@@ -1492,6 +1489,11 @@ function App() {
                                 </>
                               )}
                           </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>               </div>
                         </td>
                       </tr>
                     );
@@ -1580,6 +1582,3 @@ function App() {
 }
 
 export default App;
-
-
-
