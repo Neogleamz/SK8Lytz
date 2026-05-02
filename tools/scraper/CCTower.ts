@@ -918,7 +918,38 @@ app.put('/api/skate_spots/:id', async (req, res) => {
 });
 
 
-// Photo Management Endpoints
+  // Photo Management Endpoints
+app.post('/api/skate_spots/:id/photos/upload', async (req, res) => {
+  const { id } = req.params;
+  const { image } = req.body;
+  try {
+    if (!image || !image.startsWith('data:image/')) return res.status(400).json({ error: 'Invalid image payload' });
+    const spot = getLocalSpots().find(s => String(s.id) === String(id));
+    if (!spot) return res.status(404).json({ error: 'Not found' });
+    
+    const matches = image.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) return res.status(400).json({ error: 'Invalid base64 string' });
+    
+    const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+    const buffer = Buffer.from(matches[2], 'base64');
+    
+    const filename = `manual_${id}_${Date.now()}.${ext}`;
+    fs.writeFileSync(path.join(PHOTOS_DIR, filename), buffer);
+    
+    const photoUrl = `http://localhost:5999/api/photos/${filename}`;
+    
+    let photos = spot.photos;
+    if (typeof photos === 'string') try { photos = JSON.parse(photos); } catch { photos = []; }
+    if (!Array.isArray(photos)) photos = [];
+    
+    photos.unshift(photoUrl); // Make it the hero immediately
+    updateLocalSpot(id, { photos: JSON.stringify(photos) });
+    res.json({ success: true, url: photoUrl });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.post('/api/skate_spots/:id/photos/hero', async (req, res) => {
   const { id } = req.params;
   const { photoIndex } = req.body;

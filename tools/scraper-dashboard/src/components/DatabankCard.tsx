@@ -58,16 +58,30 @@ export interface DatabankCardProps {
   onSetHero?: (spotId: string, photoIndex: number) => void;
   onDeletePhoto?: (spotId: string, photoIndex: number) => void;
   onAssignPhotoType?: (spotId: string, photoIndex: number, fieldType: string) => void;
+  onUploadPhoto?: (spotId: string, file: File) => void;
   onPublishToggle?: (spot: any) => void;
   proxyImg: (url: string | null) => string | null;
 }
 
 export const DatabankCard: React.FC<DatabankCardProps> = ({ 
   spot, variant = 'detailed', readOnly = false,
-  onEdit, onReset, onPurge, onBlock, onSetHero, onDeletePhoto, onAssignPhotoType, onPublishToggle, proxyImg
+  onEdit, onReset, onPurge, onBlock, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto, onPublishToggle, proxyImg
 }) => {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [showTypeMenu, setShowTypeMenu] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const handleUploadClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      onUploadPhoto?.(spot.id, e.target.files[0]);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   // Reset photo index if spot changes to avoid out-of-bounds
   React.useEffect(() => {
@@ -196,6 +210,11 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
           : <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'6px' }}>
               <span style={{ fontSize:'2rem', opacity:0.15 }}>[ IMG ]</span>
               <span style={{ fontSize:'0.65rem', color:'rgba(255,255,255,0.2)' }}>{candCount > 0 ? `${candCount} candidate(s) queued` : 'No photo'}</span>
+              {!readOnly && (
+                <button onClick={handleUploadClick} style={{ padding:'4px 10px', background:'rgba(76,175,80,0.2)', color:'#4caf50', border:'1px solid rgba(76,175,80,0.5)', borderRadius:'6px', cursor:'pointer', fontSize:'0.7rem', marginTop:'8px' }}>
+                  Upload Photo
+                </button>
+              )}
             </div>
         }
         {photoCount > 1 && (
@@ -233,8 +252,10 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
               <button onClick={(e) => { e.stopPropagation(); onSetHero?.(spot.id, validPhotoIndex); setPhotoIndex(0); }} style={{ background:'transparent', color: validPhotoIndex === 0 ? '#ffb300' : 'rgba(255,255,255,0.4)', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'1rem', cursor:'pointer' }} title="Set Hero Image">{validPhotoIndex === 0 ? '★' : '☆'}</button>
               <button onClick={(e) => { e.stopPropagation(); onDeletePhoto?.(spot.id, validPhotoIndex); }} style={{ background:'transparent', color:'#ff3b30', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.65rem', cursor:'pointer' }} title="Delete Image">🗑</button>
               <button onClick={(e) => { e.stopPropagation(); setShowTypeMenu(true); }} style={{ background:'transparent', color:'#64b5f6', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.65rem', cursor:'pointer', fontWeight: 800 }} title="Assign Type">TAG</button>
+              <button onClick={handleUploadClick} style={{ background:'transparent', color:'#4caf50', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.65rem', cursor:'pointer', fontWeight: 800 }} title="Upload Photo">UP</button>
             </div>
           )}
+          <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept="image/jpeg, image/png, image/webp" onChange={handleFileChange} />
         </div>
       </div>
 

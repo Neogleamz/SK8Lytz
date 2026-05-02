@@ -145,7 +145,7 @@ export const BeltNode: React.FC<BeltProps> = ({
   carouselSpots,
   id, name, color, rgb, job, daemon, target, inQ, status, gatekeeper, attempting, outCards,
   onPhaseNav, daemonActive = false, onDaemonStart, onDaemonStop, hasDaemon = true, daemonStatus, inputStatus, outputStatus, countBadges = [],
-  onBlockSpot, onRestartSpot, onFreezeSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType
+  onBlockSpot, onRestartSpot, onFreezeSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto
 }) => {
   const [isConfigOpen, setConfigOpen] = useState(false);
   const [carouselIdx, setCarouselIdx] = useState(0);
@@ -546,6 +546,7 @@ export const BeltNode: React.FC<BeltProps> = ({
                   onPurge={onPurgeSpot}
                   onSetHero={onSetHero}
                   onDeletePhoto={onDeletePhoto}
+                  onUploadPhoto={onUploadPhoto}
                   onAssignPhotoType={onAssignPhotoType}
                 />
               </div>
@@ -571,6 +572,7 @@ export const BeltNode: React.FC<BeltProps> = ({
                   onPurge={onPurgeSpot}
                   onSetHero={onSetHero}
                   onDeletePhoto={onDeletePhoto}
+                  onUploadPhoto={onUploadPhoto}
                   onAssignPhotoType={onAssignPhotoType}
                 />
               </div>
@@ -612,4 +614,5 @@ export const BeltNode: React.FC<BeltProps> = ({
 };
 
 export default BeltNode;
+
 

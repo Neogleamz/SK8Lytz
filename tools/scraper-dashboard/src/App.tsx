@@ -698,6 +698,26 @@ function App() {
     } catch (e) {}
   };
   
+  const uploadPhoto = async (spotId: string, file: File) => {
+    return new Promise<void>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          await fetch(`${API_BASE}/api/skate_spots/${spotId}/photos/upload`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: reader.result })
+          });
+          fetchSpots(page, gridFilter);
+          fetchQueue();
+          resolve();
+        } catch(e) { reject(e); }
+      };
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  };
+
   const assignPhotoType = async (spotId: string, photoIndex: number, fieldType: string) => {
     try {
       await fetch(`${API_BASE}/api/skate_spots/${spotId}/photos/tag`, {
@@ -1010,6 +1030,7 @@ function App() {
               onSetHero={setHeroImage}
               onDeletePhoto={deleteImage}
               onAssignPhotoType={assignPhotoType}
+                      onUploadPhoto={uploadPhoto}
             />
 
               <div style={{marginTop: '2rem'}}>
@@ -1032,7 +1053,9 @@ function App() {
                                   onSetHero={setHeroImage}
                                   onDeletePhoto={deleteImage}
               onAssignPhotoType={assignPhotoType}
+                      onUploadPhoto={uploadPhoto}
                                   onAssignPhotoType={assignPhotoType}
+                      onUploadPhoto={uploadPhoto}
                                   onPublishToggle={async (s) => { await fetch(`${API_BASE}/api/skate_spots/${s.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ is_published: !s.is_published }) }); fetchSpots(page, gridFilter); fetchPipelineStatsRef.current(); }}
                               />
                           ))}
@@ -1244,7 +1267,9 @@ function App() {
                     onSetHero={setHeroImage}
                     onDeletePhoto={deleteImage}
               onAssignPhotoType={assignPhotoType}
+                      onUploadPhoto={uploadPhoto}
                     onAssignPhotoType={assignPhotoType}
+                      onUploadPhoto={uploadPhoto}
                     onPublishToggle={async (s) => { await fetch(`${API_BASE}/api/skate_spots/${s.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ is_published: !s.is_published }) }); fetchSpots(page, gridFilter); }}
                   />
                 ))}
@@ -1580,4 +1605,5 @@ function App() {
 }
 
 export default App;
+
 
