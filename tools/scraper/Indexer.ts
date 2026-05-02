@@ -113,15 +113,16 @@ async function runIndexer() {
         aiMetadata = typeof target.ai_metadata === 'string' ? JSON.parse(target.ai_metadata) : (target.ai_metadata || null);
       } catch (e) {}
 
-      // Handle STALLED (quality gate failed but not toxicity)
+      // Handle quality gate failure — still emit DEEP_CRAWLED so Photographer gets a shot.
+      // Low quality is flagged via ai_metadata.quality_note, not by blocking the pipeline.
       if (!result.passedQualityGate) {
-        console.error(`   ⚠️  STALLED: Quality score ${result.qualityScore}/17 — insufficient data extracted.`);
+        console.error(`   ⚠️  Low quality (${result.qualityScore}/17) — promoting to DEEP_CRAWLED for Photographer.`);
         updateLocalSpot(target.id, {
-          verification_status: 'STALLED',
-          is_deep_crawled: false,
+          verification_status: 'DEEP_CRAWLED',
+          is_deep_crawled: true,
           retry_count: (target.retry_count || 0) + 1,
           last_attempted_at: new Date().toISOString(),
-          ai_metadata: Object.keys(result.aiMetadata).length > 0 ? result.aiMetadata : aiMetadata,
+          ai_metadata: { ...(Object.keys(result.aiMetadata).length > 0 ? result.aiMetadata : (aiMetadata || {})), quality_note: `Low quality score: ${result.qualityScore}/17` },
           ...(result.candidatePhotos ? { candidate_photos: result.candidatePhotos } : {})
         });
         continue;
