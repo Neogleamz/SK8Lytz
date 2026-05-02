@@ -15,7 +15,7 @@ export interface AdvancedHardwareModalProps {
   currentIcType?: string;
   currentSorting?: string;
   /** BLE write function injected from Dashboard via AccountModal — avoids duplicate useBLE() instance */
-  writeToDevice: (payload: number[], targetId: string) => Promise<boolean>;
+  writeToDevice: (payload: number[], targetId?: string) => Promise<boolean | 'partial'>;
 }
 
 export const AdvancedHardwareModal: React.FC<AdvancedHardwareModalProps> = ({

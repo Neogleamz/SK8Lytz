@@ -76,7 +76,7 @@ interface AccountModalProps {
   /** When true, hides online-only tabs like CREWZ */
   isOfflineMode?: boolean;
   /** BLE write function — threaded to AdvancedHardwareModal to avoid duplicate useBLE() */
-  writeToDevice?: (payload: number[], targetId: string) => Promise<boolean>;
+  writeToDevice?: (payload: number[], targetId?: string) => Promise<boolean | 'partial'>;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
