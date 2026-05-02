@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { GooglePlacesProvider, FacilityType, RETAIL_BLOCKLIST, injectDynamicBlocklist } from './lib/providers/GooglePlacesProvider';
-import { db, getClosestLocalSpot, updateLocalSpot, upsertLocalSpot, getBlocklistKeywords } from './core/LocalDB';
+import { db, getClosestLocalSpot, updateLocalSpot, upsertLocalSpot, getBlocklistKeywords, getBlocklist } from './core/LocalDB';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -54,8 +54,13 @@ export async function startGoogleSweep(
   // --- Dynamic Blocklist Injection ---
   try {
     const dbKeywords = getBlocklistKeywords();
-    if (dbKeywords && dbKeywords.length > 0) {
-      injectDynamicBlocklist(dbKeywords.map((k: any) => k.keyword));
+    const dbPatterns = getBlocklist();
+    const combined = [
+      ...dbKeywords.map((k: any) => k.keyword),
+      ...dbPatterns.map((p: any) => p.pattern)
+    ];
+    if (combined.length > 0) {
+      injectDynamicBlocklist(combined);
     }
   } catch (err) {
     console.error('⚠️ Failed to fetch dynamic blocklist from LocalDB:', err);

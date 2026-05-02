@@ -318,7 +318,7 @@ export const upsertLocalSpot = (spot: any) => {
       opening_hours, operator_description, facility_type, is_published, verification_status,
       has_adult_night, has_pro_shop, is_deep_crawled, raw_knowledge_panel, photos,
       candidate_photos, candidate_links, ai_metadata, last_attempted_at, last_enriched_at,
-      last_enriched_at, retry_count, raw_data,
+      retry_count, raw_data,
       surface_type, is_indoor, adult_night_details, source, is_verified, updated_at,
       updated_by, is_featured, has_lights,
       has_fee, operator_name, has_rental, is_wheelchair_accessible, has_wifi,
@@ -478,8 +478,21 @@ export const upsertLocalSpot = (spot: any) => {
 };
 
 export const updateLocalSpot = (id: string, updates: any) => {
-  const keys = Object.keys(updates);
-  if (keys.length === 0) return;
+    const existing = db.prepare('SELECT name FROM local_spots WHERE id = ?').get(id) as any;
+    if (existing && existing.name) {
+      const spotName = (updates.name || existing.name).toLowerCase();
+      const keywords = db.prepare('SELECT keyword FROM scraper_blocklist_keywords').all() as any[];
+      const bl = db.prepare('SELECT pattern FROM scraper_blocklist').all() as any[];
+      const isBlocked = keywords.some(k => spotName.includes(k.keyword.toLowerCase())) || 
+                        bl.some(b => spotName.includes(b.pattern.toLowerCase()));
+      if (isBlocked) {
+        updates.verification_status = 'REJECTED';
+        updates.is_published = 0;
+      }
+    }
+
+    const keys = Object.keys(updates);
+    if (keys.length === 0) return;
 
   const setClauses = [];
   const params: any = { id };
