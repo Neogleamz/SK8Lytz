@@ -1496,11 +1496,6 @@ function App() {
                       </tr>
                     );
                   })}
-                </tbody>               </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
                 </tbody>
               </table>
             </div>
@@ -1585,5 +1580,6 @@ function App() {
 }
 
 export default App;
+
 
 
