@@ -1058,7 +1058,59 @@ function App() {
               </div>
 
 
-              {/* Coverage map removed */}
+              {/* =========== STATUS COVERAGE MAP =========== */}
+              {activeTab !== 'graveyard' && (
+                <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255,179,0,0.03)', border: '1px solid rgba(255,179,0,0.2)', borderRadius: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isCollapsed('coverage_map') ? 0 : '0.5rem' }}>
+                    <SectionHdr id="coverage_map" label="Pipeline Coverage Map" color="#ffb300" right={
+                      !isCollapsed('coverage_map') && (
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>Priority:</span>
+                          <span style={{ fontSize: '0.65rem', color: '#e91e63', fontWeight: 800 }}>¦ MEDIA_READY</span>
+                          <span style={{ fontSize: '0.65rem', color: '#ff9800', fontWeight: 800 }}>¦ DEEP_CRAWLED</span>
+                          <span style={{ fontSize: '0.65rem', color: '#8a2be2', fontWeight: 800 }}>¦ SEEDED</span>
+                        </div>
+                      )
+                    }/>
+                  </div>
+                  {!isCollapsed('coverage_map') && (
+                    <div style={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '800px', margin: '0 auto' }}>
+                      {/* @ts-ignore */}
+                      <USAMap
+                        defaultFill="rgba(255,255,255,0.05)"
+                        customize={(() => {
+                          const colors: Record<string, any> = {};
+                          const STATUS_PRIORITY = ['MEDIA_READY', 'DEEP_CRAWLED', 'SEEDED'];
+                          const STATUS_COLOR: Record<string, string> = {
+                            MEDIA_READY: '#e91e63', DEEP_CRAWLED: '#ff9800', SEEDED: '#8a2be2',
+                          };
+                          databankCoverage.forEach((row: any) => {
+                            if (!row.state || row.state === 'UNKNOWN') return;
+                            const total = row.total || 0;
+                            if (total === 0) return;
+                            const dominant = STATUS_PRIORITY.find(s => (row[s] || 0) > 0) || 'SEEDED';
+                            const baseColor = STATUS_COLOR[dominant] || '#8a2be2';
+                            const density = Math.min(total / 40, 1);
+                            const opacity = Math.max(density, 0.35);
+                            colors[row.state] = {
+                              fill: baseColor + Math.round(opacity * 255).toString(16).padStart(2, '0'),
+                              customText: total.toString()
+                            };
+                          });
+                          return colors;
+                        })()}
+                        onClick={(e: any) => {
+                          const st = e.target?.dataset?.name || e.target?.id;
+                          if (st && st.length === 2) {
+                            setStateChip(st);
+                            fetchSpots(0, gridFilter, sortCol, sortDir, searchQuery, chips, st);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
 
             {/* ======= DATABANK GRID ======= */}
             <div style={{ marginBottom: '1rem' }}>
@@ -1530,3 +1582,4 @@ function App() {
 }
 
 export default App;
+

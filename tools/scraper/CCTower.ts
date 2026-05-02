@@ -1018,7 +1018,7 @@ app.get('/api/stats/coverage', async (req, res) => {
       SELECT 
         state, 
         COUNT(*) as total, 
-        SUM(CASE WHEN verification_status = 'ENRICHED' THEN 1 ELSE 0 END) as enriched,
+        SUM(CASE WHEN verification_status = 'MEDIA_READY' THEN 1 ELSE 0 END) as MEDIA_READY, SUM(CASE WHEN verification_status = 'DEEP_CRAWLED' THEN 1 ELSE 0 END) as DEEP_CRAWLED, SUM(CASE WHEN verification_status = 'SEEDED' THEN 1 ELSE 0 END) as SEEDED,
         SUM(CASE WHEN is_published = 1 THEN 1 ELSE 0 END) as published
       FROM local_spots
       WHERE state IS NOT NULL
@@ -1041,9 +1041,7 @@ app.get('/api/stats/databank-coverage', async (req, res) => {
         SUM(CASE WHEN is_published = 1 THEN 1 ELSE 0 END) as published,
         SUM(CASE WHEN verification_status = 'SEEDED' THEN 1 ELSE 0 END) as SEEDED,
         SUM(CASE WHEN verification_status = 'DEEP_CRAWLED' THEN 1 ELSE 0 END) as DEEP_CRAWLED,
-        SUM(CASE WHEN verification_status = 'IDENTITY_ESTABLISHED' THEN 1 ELSE 0 END) as IDENTITY_ESTABLISHED,
-        SUM(CASE WHEN verification_status = 'INDEXED' THEN 1 ELSE 0 END) as INDEXED,
-        SUM(CASE WHEN verification_status = 'MEDIA_READY' THEN 1 ELSE 0 END) as MEDIA_READY
+        SUM(CASE WHEN verification_status = 'MEDIA_READY' THEN 1 ELSE 0 END) as MEDIA_READY, SUM(CASE WHEN verification_status = 'DEPRECATED' THEN 1 ELSE 0 END) as DEPRECATED, SUM(CASE WHEN verification_status = 'REJECTED' THEN 1 ELSE 0 END) as REJECTED
       FROM local_spots
       WHERE state IS NOT NULL
       GROUP BY state
@@ -1207,3 +1205,4 @@ app.post('/api/sniper/apply', async (req, res) => {
 app.listen(5999, () => {
   console.log('[CCTower] API listening on port 5999');
 });
+
