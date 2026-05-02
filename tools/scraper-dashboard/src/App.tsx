@@ -1146,6 +1146,7 @@ function App() {
                   <option value="DEEP_CRAWLED">DEEP_CRAWLED</option>
                   <option value="MEDIA_READY">MEDIA_READY</option>
                   <option value="PUBLISHED">PUBLISHED</option>
+                  <option value="STALLED">STALLED</option>
                   <option value="REJECTED">REJECTED</option>
                 </select>
                 {/* State filter */}
@@ -1304,7 +1305,7 @@ function App() {
                     const ttUrl    = (spot as any).tiktok_url;
                     const photoCount = (_ph?.length ?? 0);
                     const STATUS_COLOR: Record<string,string> = {
-                      MEDIA_READY:'#e91e63', DEEP_CRAWLED:'#ff9800', SEEDED:'rgba(255,255,255,0.3)', REJECTED:'#f44336'
+                      MEDIA_READY:'#e91e63', DEEP_CRAWLED:'#ff9800', SEEDED:'rgba(255,255,255,0.3)', REJECTED:'#f44336', STALLED:'#9c27b0'
                     };
                     const sColor = STATUS_COLOR[spot.verification_status ?? 'PENDING'] ?? 'rgba(255,255,255,0.3)';
 
@@ -1443,6 +1444,7 @@ function App() {
                                 <option value="DEEP_CRAWLED"> DEEP_CRAWLED</option>
                                 <option value="MEDIA_READY"> MEDIA_READY</option>
                                 <option value="DEPRECATED"> Deprecated</option>
+                                <option value="STALLED"> Stalled</option>
                                 <option value="REJECTED"> Graveyard</option>
                            </select>
                         </td>
