@@ -93,6 +93,7 @@ export function useBLESweeper({
   const probingMacsRef = useRef<Set<string>>(new Set());
   const probeQueueRef = useRef<string[]>([]);
   const probeQueueTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const burstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSweeperActiveRef = useRef(false);
 
   // ── In-memory HW cache ──────────────────────────────────────────────────
@@ -178,7 +179,7 @@ export function useBLESweeper({
     const lockHandle = await acquireGattLock(2);
     if (!lockHandle) {
       AppLogger.log('BLE_STATE_CHANGE', { event: 'interrogator_yield_p1_lock', mac });
-      probeQueueRef.current.push(mac); // re-queue
+      if (!probeQueueRef.current.includes(mac)) probeQueueRef.current.push(mac); // re-queue (deduped)
       return;
     }
 
@@ -334,6 +335,9 @@ export function useBLESweeper({
     if (Platform.OS === 'web' || !bleManager) return;
     if (isSweeperActiveRef.current) return;
 
+    // Cancel any pending burst-revert timer to prevent double-start
+    if (burstTimerRef.current) { clearTimeout(burstTimerRef.current); burstTimerRef.current = null; }
+
     // CRITICAL: Stop any existing scan before starting (Android single-scan constraint)
     bleManager.stopDeviceScan();
 
@@ -368,11 +372,12 @@ export function useBLESweeper({
 
     bleManager.startDeviceScan(null, { scanMode: 2 }, createScanCallback());
 
-    setTimeout(() => {
+    burstTimerRef.current = setTimeout(() => {
+      burstTimerRef.current = null;
       AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_burst_end_revert' });
       startSweeper();
     }, durationMs);
-  }, [bleManager, createScanCallback, startSweeper]);
+  }, [bleManager, createScanCallback, startSweeper, setAllDevices]);
 
   // ── Stop Sweeper ─────────────────────────────────────────────────────────
   const stopSweeper = useCallback(() => {
@@ -382,6 +387,8 @@ export function useBLESweeper({
     setIsSweeperActive(false);
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     if (probeQueueTimerRef.current) clearTimeout(probeQueueTimerRef.current);
+    // FIX: Cancel pending burst-revert timer to prevent radio restart while app is backgrounded
+    if (burstTimerRef.current) { clearTimeout(burstTimerRef.current); burstTimerRef.current = null; }
     AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_stop' });
   }, [bleManager]);
 

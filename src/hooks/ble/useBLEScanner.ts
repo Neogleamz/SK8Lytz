@@ -9,7 +9,6 @@ import { AppLogger } from '../../services/AppLogger';
 import { supabase } from '../../services/supabaseClient';
 import { locationService } from '../../services/LocationService';
 import type { PendingRegistration } from '../../types/dashboard.types';
-import { getDefaultGroupName } from '../../utils/NamingUtils';
 import { mapDeviceToRegistration } from '../../utils/classifyBLEDevice';
 
 export interface UseBLEScannerProps {
