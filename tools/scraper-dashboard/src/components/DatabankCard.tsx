@@ -158,7 +158,7 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
           {!readOnly && (
             <div style={{ position:'absolute', bottom:4, left:4, right:4, display:'flex', gap:'4px', justifyContent:'space-between', zIndex: 5 }}>
               <div style={{ display:'flex', gap:'4px' }}>
-                <button onClick={(e) => { e.stopPropagation(); onSetHero?.(spot.id, validPhotoIndex); }} style={{ background:'rgba(0,0,0,0.7)', color: validPhotoIndex === 0 ? '#ffb300' : 'rgba(255,255,255,0.4)', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.75rem', cursor:'pointer' }} title="Set Hero">{validPhotoIndex === 0 ? '★' : '☆'}</button>
+                <button onClick={(e) => { e.stopPropagation(); onSetHero?.(spot.id, validPhotoIndex); setPhotoIndex(0); }} style={{ background:'rgba(0,0,0,0.7)', color: validPhotoIndex === 0 ? '#ffb300' : 'rgba(255,255,255,0.4)', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.75rem', cursor:'pointer' }} title="Set Hero">{validPhotoIndex === 0 ? '★' : '☆'}</button>
                 <button onClick={(e) => { e.stopPropagation(); onDeletePhoto?.(spot.id, validPhotoIndex); }} style={{ background:'rgba(0,0,0,0.7)', color:'#ff3b30', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.55rem', cursor:'pointer' }} title="Delete Photo">🗑</button>
                 <button onClick={(e) => { e.stopPropagation(); setShowTypeMenu(true); }} style={{ background:'rgba(0,0,0,0.7)', color:'#64b5f6', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.6rem', cursor:'pointer', fontWeight: 800 }} title="Assign Type">TAG</button>
               </div>
@@ -230,7 +230,7 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
           )}
           {!readOnly && photoCount > 0 && (
             <div style={{ display:'flex', gap:'4px', background:'rgba(0,0,0,0.7)', padding:'2px', borderRadius:'6px', zIndex: 5 }}>
-              <button onClick={(e) => { e.stopPropagation(); onSetHero?.(spot.id, validPhotoIndex); }} style={{ background:'transparent', color: validPhotoIndex === 0 ? '#ffb300' : 'rgba(255,255,255,0.4)', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'1rem', cursor:'pointer' }} title="Set Hero Image">{validPhotoIndex === 0 ? '★' : '☆'}</button>
+              <button onClick={(e) => { e.stopPropagation(); onSetHero?.(spot.id, validPhotoIndex); setPhotoIndex(0); }} style={{ background:'transparent', color: validPhotoIndex === 0 ? '#ffb300' : 'rgba(255,255,255,0.4)', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'1rem', cursor:'pointer' }} title="Set Hero Image">{validPhotoIndex === 0 ? '★' : '☆'}</button>
               <button onClick={(e) => { e.stopPropagation(); onDeletePhoto?.(spot.id, validPhotoIndex); }} style={{ background:'transparent', color:'#ff3b30', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.65rem', cursor:'pointer' }} title="Delete Image">🗑</button>
               <button onClick={(e) => { e.stopPropagation(); setShowTypeMenu(true); }} style={{ background:'transparent', color:'#64b5f6', border:'none', borderRadius:'4px', padding:'2px 6px', fontSize:'0.65rem', cursor:'pointer', fontWeight: 800 }} title="Assign Type">TAG</button>
             </div>
@@ -352,17 +352,16 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
                 style={{ accentColor:'#4caf50', width:'14px', height:'14px' }} />
               {spot.is_published ? 'LIVE' : 'Publish'}
             </label>
-            <button onClick={() => onEdit?.(spot)}
+            <button onClick={(e) => { e.stopPropagation(); onEdit?.(spot); }}
               style={{ marginLeft:'auto', padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,255,255,0.15)', background:'transparent', color:'rgba(255,255,255,0.5)', cursor:'pointer', fontSize:'0.65rem' }}>Edit</button>
-            <button onClick={() => onReset?.(spot.id, spot.name)} title="Reset to SEEDED"
+            <button onClick={(e) => { e.stopPropagation(); onReset?.(spot.id, spot.name); }} title="Reset to SEEDED"
               style={{ padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,179,0,0.25)', background:'rgba(255,179,0,0.08)', color:'#ffb300', cursor:'pointer', fontSize:'0.65rem', fontWeight:700 }}>&#8635; Reset</button>
-            <button onClick={() => onBlock?.(spot.id, spot.name)}
+            <button onClick={(e) => { e.stopPropagation(); onBlock?.(spot.id, spot.name); }}
               style={{ padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,152,0,0.25)', background:'rgba(255,152,0,0.1)', color:'rgba(255,152,0,0.8)', cursor:'pointer', fontSize:'0.65rem', fontWeight:700 }}>Block</button>
-            <button onClick={() => onPurge?.(spot.id, spot.name)}
-              style={{ padding:'4px 10px', borderRadius:'6px', border:'1px solid rgba(255,59,48,0.25)', background:'rgba(255,59,48,0.1)', color:'rgba(255,59,48,0.8)', cursor:'pointer', fontSize:'0.65rem', fontWeight:700 }}>Purge</button>
           </div>
         )}
       </div>
     </div>
   );
 };
+

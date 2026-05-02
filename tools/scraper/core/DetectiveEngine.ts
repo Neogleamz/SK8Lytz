@@ -308,7 +308,7 @@ export async function executeDetective(
           if (!ogImage && pageData.ogMeta && !pageData.ogMeta.includes('placeholder')) ogImage = pageData.ogMeta;
 
           const pageImages = pageData.imgs.map((i: any) => i.src);
-          domImages.push(...pageImages.slice(0, 2));
+          domImages.push(...pageImages.slice(0, 5));
           
           const trappedFlyers = pageData.imgs.filter((i: any) => i.isFlyer).map((i: any) => i.src);
           if (trappedFlyers.length > 0) flyerUrls.push(...trappedFlyers);
@@ -483,7 +483,7 @@ export async function executeDetective(
         
         systemMessage += `\nSCHEMA (extract ALL of these fields):\n${JSON.stringify(mergedSchema, null, 2)}`;
 
-        const userMessage = `Website/Image Text:\n${combinedText.slice(-30000)}`;
+        const userMessage = `Website/Image Text:\n${combinedText.slice(-40000)}`;
         const detectiveModel = aiConfig.detective_model || 'local-model';
         onProgress(`[Detective] 🧠 Invoking LM Studio (${detectiveModel}) - Pass ${passCount}...`);
 
@@ -619,19 +619,28 @@ export async function executeDetective(
   const schedule_url  = aiMetadata.schedule_url  || spotContext.schedule_url  || null;
 
   // ── Photo Candidates ─────────────────────────────────────────────────────
-  let candidatePhotos: Record<string, any> | null = spotContext.candidate_photos || null;
-  if (!spotContext.photos && !candidatePhotos) {
-    const candidateMap: Record<string, any> = {};
-    if (ogImage) candidateMap.og_image = ogImage;
-    if (domImages.length > 0) candidateMap.dom_images = [...new Set(domImages)].slice(0, 3);
+  let candidatePhotos: Record<string, any> = {};
+  try {
+    candidatePhotos = typeof spotContext.candidate_photos === 'string' ? JSON.parse(spotContext.candidate_photos) : (spotContext.candidate_photos || {});
+  } catch (e) {}
+
+  if (!spotContext.photos) {
+    if (ogImage && !candidatePhotos.og_image) candidatePhotos.og_image = ogImage;
+    if (domImages.length > 0) {
+      candidatePhotos.dom_images = [...new Set(domImages)].slice(0, 10);
+    }
     const MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_PLACES_API_KEY || '';
-    if (spotContext.lat && spotContext.lng && MAPS_KEY) {
-      candidateMap.street_view_url = `https://maps.googleapis.com/maps/api/streetview?size=800x600&location=${spotContext.lat},${spotContext.lng}&heading=auto&fov=80&key=${MAPS_KEY}`;
+    if (spotContext.lat && spotContext.lng && MAPS_KEY && !candidatePhotos.street_view_url) {
+      candidatePhotos.street_view_url = `https://maps.googleapis.com/maps/api/streetview?size=800x600&location=${spotContext.lat},${spotContext.lng}&heading=auto&fov=80&key=${MAPS_KEY}`;
     }
-    if (Object.keys(candidateMap).length > 0) {
-      candidatePhotos = candidateMap;
-      onProgress(`[Detective] 📸 Photo candidates: ${Object.keys(candidateMap).join(', ')}`);
+    
+    if (Object.keys(candidatePhotos).length > 0) {
+      onProgress(`[Detective] 📸 Photo candidates: ${Object.keys(candidatePhotos).join(', ')}`);
     }
+  }
+  
+  if (Object.keys(candidatePhotos).length === 0) {
+    candidatePhotos = null as any;
   }
 
   // ── Google Places Fallback for Hours ─────────────────────────────────────

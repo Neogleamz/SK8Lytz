@@ -917,6 +917,64 @@ app.put('/api/skate_spots/:id', async (req, res) => {
   }
 });
 
+
+// Photo Management Endpoints
+app.post('/api/skate_spots/:id/photos/hero', async (req, res) => {
+  const { id } = req.params;
+  const { photoIndex } = req.body;
+  try {
+    const spot = getLocalSpots().find(s => String(s.id) === String(id));
+    if (!spot) return res.status(404).json({ error: 'Not found' });
+    let photos = spot.photos;
+    if (typeof photos === 'string') try { photos = JSON.parse(photos); } catch { photos = []; }
+    if (!Array.isArray(photos) || photos.length <= photoIndex) return res.status(400).json({ error: 'Invalid index' });
+    
+    const hero = photos.splice(photoIndex, 1)[0];
+    photos.unshift(hero);
+    updateLocalSpot(id, { photos: JSON.stringify(photos) });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/skate_spots/:id/photos/:index', async (req, res) => {
+  const { id, index } = req.params;
+  const idx = parseInt(index, 10);
+  try {
+    const spot = getLocalSpots().find(s => String(s.id) === String(id));
+    if (!spot) return res.status(404).json({ error: 'Not found' });
+    let photos = spot.photos;
+    if (typeof photos === 'string') try { photos = JSON.parse(photos); } catch { photos = []; }
+    if (!Array.isArray(photos) || photos.length <= idx) return res.status(400).json({ error: 'Invalid index' });
+    
+    photos.splice(idx, 1);
+    updateLocalSpot(id, { photos: JSON.stringify(photos) });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/skate_spots/:id/photos/tag', async (req, res) => {
+  const { id } = req.params;
+  const { photoIndex, fieldType } = req.body;
+  try {
+    const spot = getLocalSpots().find(s => String(s.id) === String(id));
+    if (!spot) return res.status(404).json({ error: 'Not found' });
+    let photos = spot.photos;
+    if (typeof photos === 'string') try { photos = JSON.parse(photos); } catch { photos = []; }
+    if (!Array.isArray(photos) || photos.length <= photoIndex) return res.status(400).json({ error: 'Invalid index' });
+    
+    const photoUrl = typeof photos[photoIndex] === 'string' ? photos[photoIndex] : photos[photoIndex]?.url;
+    if (!photoUrl) return res.status(400).json({ error: 'Invalid photo url' });
+
+    updateLocalSpot(id, { [fieldType]: photoUrl });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 app.delete('/api/skate_spots/:id', async (req, res) => {
   const { id } = req.params;
   const { blacklist } = req.query;

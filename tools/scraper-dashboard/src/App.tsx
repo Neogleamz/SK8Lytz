@@ -582,18 +582,16 @@ function App() {
 
   // Reset a single spot back to SEEDED so it re-enters the Detective queue
   const resetSpotToSeeded = async (id: string, name: string) => {
-    if (!confirm(`Reset "${name}" back to SEEDED? The AI Detective will re-crawl it.`)) return;
     setResettingIds(prev => ({ ...prev, [id]: 'loading' }));
     try {
-      await fetch(`/api/spots/`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verification_status: 'SEEDED', retry_count: 0, last_attempted_at: null })
+      await fetch(`${API_BASE}/api/skate_spots/${id}/restart`, {
+        method: 'POST'
       });
       setResettingIds(prev => ({ ...prev, [id]: 'success' }));
       setTimeout(() => {
         setResettingIds(prev => { const next = {...prev}; delete next[id]; return next; });
         fetchSpots(page, gridFilter);
+        fetchQueue();
       }, 1500);
     } catch (e) {
       setResettingIds(prev => { const next = {...prev}; delete next[id]; return next; });
@@ -669,6 +667,7 @@ function App() {
       await fetch(`${API_BASE}/api/skate_spots/${spotId}/photos/${photoIndex}`, { method: 'DELETE' });
       fetchSpots(page, gridFilter);
       fetchPipelineStatsRef.current();
+      fetchQueue();
     } catch(e) {}
   };
 
@@ -682,31 +681,33 @@ function App() {
       });
       fetchSpots(page, gridFilter);
       fetchPipelineStatsRef.current();
+      fetchQueue();
     } catch(e) {}
   };
 
   const blockSpot = async (spotId: string, name: string) => {
-    if (!confirm(`Block ${name} from further scraping and set to REJECTED?`)) return;
     try {
-      await fetch(`${API_BASE}/api/skate_spots/${spotId}`, {
-        method: 'PUT',
+      await fetch(`${API_BASE}/api/scraper/blocklist`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verification_status: 'REJECTED' })
+        body: JSON.stringify({ keyword: name, match_type: 'name', reason: 'Manual Block' })
       });
       fetchSpots(page, gridFilter);
       fetchPipelineStatsRef.current();
+      fetchQueue();
     } catch (e) {}
   };
-
+  
   const assignPhotoType = async (spotId: string, photoIndex: number, fieldType: string) => {
     try {
       await fetch(`${API_BASE}/api/skate_spots/${spotId}/photos/tag`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photoIndex, tag: fieldType })
+        body: JSON.stringify({ photoIndex, fieldType })
       });
       fetchSpots(page, gridFilter);
       fetchPipelineStatsRef.current();
+      fetchQueue();
     } catch (e) {}
   };
 
@@ -1008,6 +1009,7 @@ function App() {
               onBlockSpot={blockSpot}
               onSetHero={setHeroImage}
               onDeletePhoto={deleteImage}
+              onAssignPhotoType={assignPhotoType}
             />
 
               <div style={{marginTop: '2rem'}}>
@@ -1029,6 +1031,7 @@ function App() {
                                   onBlock={blockSpot}
                                   onSetHero={setHeroImage}
                                   onDeletePhoto={deleteImage}
+              onAssignPhotoType={assignPhotoType}
                                   onAssignPhotoType={assignPhotoType}
                                   onPublishToggle={async (s) => { await fetch(`${API_BASE}/api/skate_spots/${s.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ is_published: !s.is_published }) }); fetchSpots(page, gridFilter); fetchPipelineStatsRef.current(); }}
                               />
@@ -1239,6 +1242,7 @@ function App() {
                     onBlock={blockSpot}
                     onSetHero={setHeroImage}
                     onDeletePhoto={deleteImage}
+              onAssignPhotoType={assignPhotoType}
                     onAssignPhotoType={assignPhotoType}
                     onPublishToggle={async (s) => { await fetch(`${API_BASE}/api/skate_spots/${s.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ is_published: !s.is_published }) }); fetchSpots(page, gridFilter); }}
                   />
@@ -1574,3 +1578,4 @@ function App() {
 }
 
 export default App;
+

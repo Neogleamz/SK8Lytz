@@ -128,7 +128,7 @@ async function runPhotographerLoop() {
     const priorityStates: string[] = configRes.priority_states || [];
 
     // Build query with priority state ordering
-    let query = `SELECT id, name, state, candidate_photos, photos, verification_status FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND (photos IS NULL OR photos = '[]' OR photos = '')`;
+    let query = `SELECT id, name, state, candidate_photos, photos, verification_status FROM local_spots WHERE verification_status = 'DEEP_CRAWLED'`;
     if (priorityStates.length > 0) {
       query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
     }
@@ -167,9 +167,10 @@ async function runPhotographerLoop() {
     const urlCandidates: Array<{ key: string; url: string }> = [];
     
     // 1. Google Places Photos (highest quality hero candidates)
-    if (candidates.google_refs?.length && process.env.GOOGLE_MAPS_API_KEY) {
+    const MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || process.env.VITE_GOOGLE_PLACES_API_KEY || '';
+    if (candidates.google_refs?.length && MAPS_KEY) {
       candidates.google_refs.forEach((ref: string, i: number) => {
-        const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${ref}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
+        const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${ref}&key=${MAPS_KEY}`;
         urlCandidates.push({ key: `google_${i}`, url });
       });
     }
@@ -184,7 +185,14 @@ async function runPhotographerLoop() {
     if (candidates.facebook_og) urlCandidates.push({ key: 'facebook_og', url: candidates.facebook_og });
     if (candidates.street_view_url) urlCandidates.push({ key: 'street_view', url: candidates.street_view_url });
 
-    let photoIndex = 0;
+    let existingPhotos: string[] = [];
+    try {
+      if (target.photos && target.photos !== '[]') {
+        existingPhotos = typeof target.photos === 'string' ? JSON.parse(target.photos) : target.photos;
+      }
+    } catch (e) {}
+
+    let photoIndex = existingPhotos.length;
     for (const candidate of urlCandidates) {
       if (photoIndex >= MAX_PHOTOS_PER_SPOT) break;
 
@@ -202,25 +210,24 @@ async function runPhotographerLoop() {
       }
     }
 
-    // Store local HTTP URLs — served by CCTower /api/photos static handler
-    const finalPhotos: string[] | null = localUrls.length > 0 ? localUrls : null;
+    // Combine existing photos with any new local URLs
+    const finalPhotos: string[] = [...existingPhotos, ...localUrls];
 
-    if (finalPhotos) {
+    if (finalPhotos.length > 0) {
       updateLocalSpot(target.id, {
         photos: finalPhotos,
         verification_status: 'MEDIA_READY',
         last_attempted_at: new Date().toISOString()
       });
 
-      logToTower('INFO', `✨ ${target.name} → MEDIA_READY (${finalPhotos.length} photos saved to disk)`);
+      logToTower('INFO', `✨ ${target.name} → MEDIA_READY (${finalPhotos.length} total photos saved)`);
     } else {
-      // Null out candidate_photos so this record is skipped on future runs, but promote to MEDIA_READY so it doesn't get stuck.
+      // Do not null out candidate_photos so we retain the metadata. Just promote to MEDIA_READY.
       updateLocalSpot(target.id, {
-        candidate_photos: null,
         verification_status: 'MEDIA_READY',
         last_attempted_at: new Date().toISOString()
       });
-      logToTower('INFO', `⚠️ ${target.name} → no photos obtainable, cleared candidates and promoted to MEDIA_READY`);
+      logToTower('INFO', `⚠️ ${target.name} → no photos obtainable, promoted to MEDIA_READY without clearing candidates`);
     }
 
     reportPulse(COOLDOWN_MS);

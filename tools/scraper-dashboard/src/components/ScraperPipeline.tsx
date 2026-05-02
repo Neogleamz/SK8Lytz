@@ -226,6 +226,7 @@ export const ScraperPipeline: React.FC<{
                 type: 'success' as const,
                 spotId: spot.id,
                 spotName: spot.name,
+                rawSpot: spot,
                 data
             };
         });

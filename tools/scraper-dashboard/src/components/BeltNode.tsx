@@ -9,6 +9,7 @@ interface OutCard {
   data: [string, React.ReactNode, string][];
   spotId?: string;
   spotName?: string;
+  rawSpot?: any;
 }
 
 interface BeltProps {
@@ -559,21 +560,37 @@ export const BeltNode: React.FC<BeltProps> = ({
               <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.18)', fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase' }}>awaiting...</span>
             </div>
           ) : successCards.map((sc, i) => (
-            <DataCard
-              key={i}
-              title={sc.title}
-              badge={sc.status}
-              badgeColor={colVar}
-              data={sc.data}
-              colColor={colVar}
-              borderColor={colVar}
-              bgColor="rgba(10,10,15,0.95)"
-              minW={SUCCESS_W}
-              maxW={300}
-              onBlock={onBlockSpot && sc.spotId ? () => onBlockSpot(sc.spotId!, sc.spotName ?? sc.title) : undefined}
-              onRestart={onRestartSpot && sc.spotId ? () => onRestartSpot(sc.spotId!) : undefined}
-              onFreeze={onFreezeSpot && sc.spotId ? () => onFreezeSpot(sc.spotId!) : undefined}
-            />
+            id === 4 && sc.rawSpot ? (
+              <div key={i} style={{ minWidth: SUCCESS_W, maxWidth: 300, height: '100%' }}>
+                <DatabankCard 
+                  spot={sc.rawSpot} 
+                  variant="polaroid" 
+                  readOnly={false} 
+                  proxyImg={(url: string | null) => url ? `http://localhost:5999/api/proxy-image?url=${encodeURIComponent(url)}` : null} 
+                  onBlock={onBlockSpot}
+                  onPurge={onPurgeSpot}
+                  onSetHero={onSetHero}
+                  onDeletePhoto={onDeletePhoto}
+                  onAssignPhotoType={onAssignPhotoType}
+                />
+              </div>
+            ) : (
+              <DataCard
+                key={i}
+                title={sc.title}
+                badge={sc.status}
+                badgeColor={colVar}
+                data={sc.data}
+                colColor={colVar}
+                borderColor={colVar}
+                bgColor="rgba(10,10,15,0.95)"
+                minW={SUCCESS_W}
+                maxW={300}
+                onBlock={onBlockSpot && sc.spotId ? () => onBlockSpot(sc.spotId!, sc.spotName ?? sc.title) : undefined}
+                onRestart={onRestartSpot && sc.spotId ? () => onRestartSpot(sc.spotId!) : undefined}
+                onFreeze={onFreezeSpot && sc.spotId ? () => onFreezeSpot(sc.spotId!) : undefined}
+              />
+            )
           ))}
         </div>
 
