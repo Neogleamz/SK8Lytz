@@ -795,7 +795,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       }
       return true;
     },
-    scanForPeripherals: scanner.scanForPeripherals,
     connectToDevices,
     writeToDevice,
     writeChunked,
