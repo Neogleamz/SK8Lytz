@@ -1647,20 +1647,58 @@ This allows the hardware to respond instantly to high-quality audio captured dir
 
 > **SEE BUG-1 UPDATE**: 10B extended fails due to our wrapper mismatch, not the hardware rejecting 10B slots.
 
-#### 0x51 Sequence Modes (The 34 Baked Hardware Effects / SymphonyEffects)
-The ZENGGE `0x51` sequence editor (`ActivityCustomSymphonyEdit.java`) relies on 34 baked-in hardware effects (known internally as `SymphonyEffect` 1-34). 
+#### 0x51 Sequence Modes (The 44 Baked Hardware Effects / SymphonyEffects)
+The ZENGGE `0x51` sequence editor (`ActivityCustomSymphonyEdit.java`) relies on 44 baked-in hardware effects (known internally as `SymphonyEffect` 1-44). 
 
-We extracted the actual English string translations for the first 10 modes from the APK's `strings.xml`:
-1. **Change gradually** *(Crossfade/Breathe between FG and BG)*
-2. **Bright up and Fade gradually** *(Pulse to black)*
-3. **Change quickly** *(Hard Jump)*
-4. **Strobe-flash**
-5. **Running, 1point from start to end**
-6. **Running, 1point from end to start**
-7. **Running, 1point from the middle to the both ends**
-8. **Running, 1point from the both ends to the middle**
-9. **Overlay, from start to end**
-10. **Overlay, from end to start**
+We extracted the actual English string translations for all 44 modes from the APK's `strings.xml`:
+
+**Single/Dual Color Modifiable (1-34):**
+1. Change gradually *(Crossfade/Breathe between FG and BG)*
+2. Bright up and Fade gradually *(Pulse to black)*
+3. Change quickly *(Hard Jump)*
+4. Strobe-flash
+5. Running, 1point from start to end
+6. Running, 1point from end to start
+7. Running, 1point from the middle to the both ends
+8. Running, 1point from the both ends to the middle
+9. Overlay, from start to end
+10. Overlay, from end to start
+11. Overlay, from the middle to the both ends
+12. Overlay, from the both ends to the middle
+13. Fading and running, 1point from start to end
+14. Fading and running, 1point from end to start
+15. Olivary Flowing, from start to end
+16. Olivary Flowing, from end to start
+17. Running, 1point w/background from start to end
+18. Running, 1point w/background from end to start
+19. 2 colors run, multi points w/black background from start to end
+20. 2 colors run, multi points w/black background from end to start
+21. 2 colors run alternately, fading from start to end
+22. 2 colors run alternately, fading from end to start
+23. 2 colors run alternately, multi points from start to end
+24. 2 colors run alternately, multi points from end to start
+25. Fading out Flows, from start to end
+26. Fading out Flows, from end to start
+27. 7 colors run alternately, 1 point with multi points background, from start to end
+28. 7 colors run alternately, 1 point with multi points background, from end to start
+29. 7 colors run alternately, 1 point from start to end
+30. 7 colors run alternately, 1 point from end to start
+31. 7 colors run alternately, multi points from start to end
+32. 7 colors run alternately, multi points from end to start
+33. 7 colors overlay, multi points from start to end
+34. 7 colors overlay, multi points from end to start
+
+**7-Color Generative / No-Color (35-44):**
+35. 7 colors overlay, multi points from the middle to the both ends
+36. 7 colors overlay, multi points from the both ends to the middle
+37. 7 colors flow gradually, from start to end
+38. 7 colors flow gradually, from end to start
+39. Fading out run, 7 colors from start to end
+40. Fading out run, 7 colors from end to start
+41. Runs in olivary, 7 colors from start to end
+42. Runs in olivary, 7 colors from end to start
+43. Fading out run, 7 colors start with white color from start to end
+44. Fading out run, 7 colors start with white color from end to start
 
 Below is the definitive UI gating logic (`C9273c.java`) dictating which features each effect supports:
 
