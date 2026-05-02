@@ -663,13 +663,8 @@ function App() {
 
   const deleteImage = async (spotId: string, photoIndex: number) => {
     try {
-      const res = await fetch(`${API_BASE}/api/spots/${spotId}`);
-      if (!res.ok) return;
-      const spot = await res.json();
-      if (!spot || !spot.photos) return;
-      const newPhotos = [...spot.photos];
-      newPhotos.splice(photoIndex, 1);
-      await updateSpot(spotId, { photos: newPhotos });
+      await fetch(`${API_BASE}/api/skate_spots/${spotId}/photos/${photoIndex}`, { method: 'DELETE' });
+      fetchSpots(page, gridFilter);
       fetchPipelineStatsRef.current();
     } catch(e) {}
   };
@@ -677,14 +672,12 @@ function App() {
   const setHeroImage = async (spotId: string, photoIndex: number) => {
     if (photoIndex === 0) return; // already hero
     try {
-      const res = await fetch(`${API_BASE}/api/spots/${spotId}`);
-      if (!res.ok) return;
-      const spot = await res.json();
-      if (!spot || !spot.photos) return;
-      const newPhotos = [...spot.photos];
-      const [hero] = newPhotos.splice(photoIndex, 1);
-      newPhotos.unshift(hero);
-      await updateSpot(spotId, { photos: newPhotos });
+      await fetch(`${API_BASE}/api/skate_spots/${spotId}/photos/hero`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoIndex })
+      });
+      fetchSpots(page, gridFilter);
       fetchPipelineStatsRef.current();
     } catch(e) {}
   };
@@ -704,16 +697,10 @@ function App() {
 
   const assignPhotoType = async (spotId: string, photoIndex: number, fieldType: string) => {
     try {
-      const res = await fetch(`${API_BASE}/api/skate_spots/${spotId}`);
-      if (!res.ok) return;
-      const spot = await res.json();
-      if (!spot.photos || spot.photos.length <= photoIndex) return;
-
-      const url = spot.photos[photoIndex];
-      await fetch(`${API_BASE}/api/skate_spots/${spotId}`, {
-        method: 'PUT',
+      await fetch(`${API_BASE}/api/skate_spots/${spotId}/photos/tag`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ [fieldType]: url })
+        body: JSON.stringify({ photoIndex, tag: fieldType })
       });
       fetchSpots(page, gridFilter);
       fetchPipelineStatsRef.current();

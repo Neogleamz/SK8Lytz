@@ -106,7 +106,8 @@ export const ScraperPipeline: React.FC<{
     onPurgeSpot?: (id: string, name: string) => void;
     onSetHero?: (spotId: string, photoIndex: number) => void;
     onDeletePhoto?: (spotId: string, photoIndex: number) => void;
-}> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot, onPurgeSpot, onSetHero, onDeletePhoto }) => {
+    onAssignPhotoType?: (spotId: string, photoIndex: number, fieldType: string) => void;
+}> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType }) => {
     const { telemetry, config, loading, pulse } = useScraperTelemetry(2000);
     const { fields } = useFieldRegistry();
 
@@ -482,6 +483,7 @@ export const ScraperPipeline: React.FC<{
                             onPurgeSpot={onPurgeSpot}
                             onSetHero={onSetHero}
                             onDeletePhoto={onDeletePhoto}
+                            onAssignPhotoType={onAssignPhotoType}
                         />
                     );
                 })}
