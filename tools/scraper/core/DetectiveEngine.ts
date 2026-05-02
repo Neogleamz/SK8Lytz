@@ -569,8 +569,10 @@ export async function executeDetective(
   if (aiMetadata.TOXICITY_ABORT === true) {
     onProgress(`[Detective] 🚫 HEALER ABORT: AI determined this facility matches an exclusion keyword primary business.`);
     return {
-      aiMetadata: {}, mappedFields: {}, combinedText,
-      qualityScore: 0, passedQualityGate: false, candidatePhotos: null,
+      aiMetadata: { TOXICITY_ABORT: true }, 
+      mappedFields: { _simulated_status: 'REJECTED' }, 
+      combinedText,
+      qualityScore: 0, passedQualityGate: false, candidatePhotos: null, toxicity_abort: true,
       socialLinks: { instagram_url: null, facebook_url: null, tiktok_url: null, schedule_url: null },
       flyerUrls
     };
