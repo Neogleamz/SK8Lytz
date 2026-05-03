@@ -793,8 +793,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       {BluetoothWarningBanner}
       <View style={styles.container}>
 
-        {isControllerOpen && (
-          <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, display: isControllerOpen ? 'flex' : 'none' }}>
             <View pointerEvents="box-none" style={{ paddingBottom: Spacing.lg, zIndex: 100, elevation: 100 }}>
               <DashboardHeader
                 isActuallyConnected={true}
@@ -819,10 +818,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               {MemoizedSk8lytzController}
             </View>
           </View>
-        )}
-        {!isControllerOpen && (
-          /* ── 4-SLAB VERTICAL HIERARCHY ── */
-          <View style={{ flex: 1, backgroundColor: Colors.background }}>
+        <View style={{ flex: 1, display: isControllerOpen ? 'none' : 'flex', backgroundColor: Colors.background }}>
              {/* SLAB 1: HEADER (Logo + Pulse) */}
              <View style={styles.headerSlab}>
                 <DashboardHeader
@@ -905,7 +901,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 />
               </ScrollView>
           </View>
-        )}
         <DeviceSettingsModal
           isVisible={isSettingsVisible}
           onClose={() => setIsSettingsVisible(false)}

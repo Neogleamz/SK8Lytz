@@ -667,18 +667,19 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
     for (const chunk of chunks) {
       const b64 = Buffer.from(chunk).toString('base64');
-      for (const device of targets) {
-        if (autoRecovery.ghostedDeviceIds.includes(device.id)) continue;
-        try {
-          // writeWithResponse: each chunk waits for GATT ACK before next is sent.
-          // Prevents Android TX buffer saturation across 24+ chunks (323B / ~13B data = ~25 chunks).
-          await device.writeCharacteristicWithResponseForService(
-            ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
-          );
-        } catch (e: any) {
-          AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: String(e) });
-        }
-      }
+      // Parallel write: send this chunk to ALL devices simultaneously.
+      // Both skates receive chunk N at the same wall-clock time → pattern fires in sync.
+      await Promise.all(
+        targets
+          .filter(device => !autoRecovery.ghostedDeviceIds.includes(device.id))
+          .map(device =>
+            device.writeCharacteristicWithResponseForService(
+              ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
+            ).catch((e: any) => {
+              AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: String(e) });
+            })
+          )
+      );
       await new Promise(resolve => setTimeout(resolve, Platform.OS === 'ios' ? 20 : 30));
     }
     // Allow hardware to fully reassemble the payload before next command
