@@ -670,16 +670,22 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       for (const device of targets) {
         if (autoRecovery.ghostedDeviceIds.includes(device.id)) continue;
         try {
-          await device.writeCharacteristicWithoutResponseForService(
+          // Use writeWithResponse so each chunk gets a GATT ACK before the next is sent.
+          // writeWithoutResponse saturates the Android TX buffer on multi-chunk sequences
+          // (323B / 20B = ~24 chunks), causing subsequent 0x51 calls to be silently dropped
+          // until a short 0x59 write clears the pending queue.
+          await device.writeCharacteristicWithResponseForService(
             ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
           );
         } catch (e: any) {
           AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: String(e) });
         }
       }
-      // Inter-chunk delay to prevent BLE TX buffer overflow
-      await new Promise(resolve => setTimeout(resolve, Platform.OS === 'ios' ? 30 : 20));
+      // Small breath between chunks — still needed even with writeWithResponse on some Android stacks
+      await new Promise(resolve => setTimeout(resolve, Platform.OS === 'ios' ? 20 : 30));
     }
+    // Post-sequence settling: allow hardware to reassemble the full payload before the next command
+    await new Promise(resolve => setTimeout(resolve, 150));
   };
 
 
@@ -768,6 +774,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     // This eliminates the dual startDeviceScan() conflict (single scan loop, all consumers).
     scanForPeripherals: (options?: { keepAlive?: boolean; disableProbing?: boolean }) => {
       if (sweeper.isSweeperActive) {
+        // Mirror scannerState so derivedBleState shows 'SCANNING' to wizard consumers.
+        // Without this, burstScan runs silently and the wizard snaps to "RETRY SCAN" immediately.
+        scanner.setScannerState('SCANNING');
         sweeper.burstScan(options?.keepAlive ? 10000 : 5000);
       } else {
         scanner.scanForPeripherals(options);
