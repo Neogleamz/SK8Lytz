@@ -670,16 +670,19 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       for (const device of targets) {
         if (autoRecovery.ghostedDeviceIds.includes(device.id)) continue;
         try {
-          await device.writeCharacteristicWithoutResponseForService(
+          // writeWithResponse: each chunk waits for GATT ACK before next is sent.
+          // Prevents Android TX buffer saturation across 24+ chunks (323B / ~13B data = ~25 chunks).
+          await device.writeCharacteristicWithResponseForService(
             ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
           );
         } catch (e: any) {
           AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: String(e) });
         }
       }
-      // Inter-chunk delay to prevent BLE TX buffer overflow
-      await new Promise(resolve => setTimeout(resolve, Platform.OS === 'ios' ? 30 : 20));
+      await new Promise(resolve => setTimeout(resolve, Platform.OS === 'ios' ? 20 : 30));
     }
+    // Allow hardware to fully reassemble the payload before next command
+    await new Promise(resolve => setTimeout(resolve, 150));
   };
 
 

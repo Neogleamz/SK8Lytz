@@ -779,8 +779,8 @@ export class ZenggeProtocol {
         raw.push(Math.max(0, Math.min(255, step.color2.b | 0)));
         raw.push((step.dir ?? dir) & 0xFF); // direction byte — required in 10B format
       } else {
-        // Inactive slot — 10 bytes all zero
-        raw.push(0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
+        // Inactive slot — 10 bytes, first byte 0x0F per ZENGGE APK C7787x.java m20864c()
+        raw.push(0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
       }
     }
 
