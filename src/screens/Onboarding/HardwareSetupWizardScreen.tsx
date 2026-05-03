@@ -64,21 +64,26 @@ export default function HardwareSetupWizardScreen({
 
   useEffect(() => {
     if (!hasStartedScan && isBluetoothSupported && isBluetoothEnabled) {
-      handleStartScan();
+      if (pendingRegistrations.length > 0) {
+        // Sweeper already pre-populated devices before wizard opened — skip the
+        // scanForPeripherals call which would trigger burstScan and wipe the list.
+        setHasStartedScan(true);
+      } else {
+        handleStartScan();
+      }
     }
-  }, [hasStartedScan, isBluetoothSupported, isBluetoothEnabled]);
+  }, [hasStartedScan, isBluetoothSupported, isBluetoothEnabled, pendingRegistrations.length]);
 
   useEffect(() => {
     let timer: any;
-    if (hasStartedScan && step < 3 && bleState !== 'SCANNING' && bleState !== 'PROBING') {
-      // Keep continuously polling while the user is still looking for hardware (Wait 2s to let radio breathe)
-      // disableProbing is now a no-op — probing is on-demand only (BLINK tap)
+    // Skip keepAlive polling if devices already found — avoids burstScan wiping the list unnecessarily
+    if (hasStartedScan && step < 3 && pendingRegistrations.length === 0 && bleState !== 'SCANNING' && bleState !== 'PROBING') {
       timer = setTimeout(() => {
         scanForPeripherals({ keepAlive: true });
       }, 2000);
     }
     return () => clearTimeout(timer);
-  }, [step, bleState, hasStartedScan]);
+  }, [step, bleState, hasStartedScan, pendingRegistrations.length]);
 
   const handleStartScan = async () => {
     const granted = await requestPermissions();
