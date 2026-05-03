@@ -820,7 +820,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               {isControllerOpen && connectedDevices.length === 0 && (
                 <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, zIndex: 50 }}>
                   <ActivityIndicator size="large" color={Colors.primary} />
-                  <Text style={{ color: Colors.text, marginTop: 16, fontFamily: Typography.fonts.primary.medium, fontSize: 16 }}>
+                  <Text style={{ color: Colors.text, marginTop: 16, fontFamily: Typography.body.fontFamily, fontSize: 16 }}>
                     Synchronizing Hardware...
                   </Text>
                 </View>
