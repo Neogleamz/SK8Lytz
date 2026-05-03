@@ -339,7 +339,6 @@ export function useBLEScanner({
 
   return {
     scannerState,
-    setScannerState,
     pendingRegistrations,
     scanForPeripherals,
     stopScanner,
