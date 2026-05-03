@@ -625,27 +625,42 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     let segmentIndex = 0;
 
     while (offset < totalLen) {
-      // ZENGGE 0x40 chunk header is always 8 bytes:
-      //   [0x40, seqByte, offset_lo, offset_hi, len_hi, len_lo, checksum, 0x0B, ...data]
-      const HEADER_SIZE = 8;
-      const dataLen = Math.min(chunkSize - HEADER_SIZE, totalLen - offset);
+      const isFirstChunk = segmentIndex === 0;
+      const headerSize = isFirstChunk ? 8 : 5;
+      
+      // Calculate how much data fits in this chunk based on negotiated MTU
+      const maxDataLen = chunkSize - headerSize;
+      const dataLen = Math.min(maxDataLen, totalLen - offset);
+      const isLastChunk = (offset + dataLen) >= totalLen;
+
+      // 0x40 Fragmentation Protocol (from ZENGGE_PROTOCOL_BIBLE.md)
+      let indexWord = segmentIndex;
+      if (isLastChunk) {
+        indexWord |= 0x8000; // Terminator bit signals EOF to hardware
+      }
 
       const chunk = [
-        0x40,                          // [0] ZENGGE chunked frame marker
-        seqByte,                       // [1] Session sequence ID
-        offset & 0xFF,                 // [2] offset_lo (little-endian byte offset)
-        (offset >> 8) & 0xFF,          // [3] offset_hi
-        (totalLen >> 8) & 0xFF,        // [4] Total Payload Length (High)
-        totalLen & 0xFF,               // [5] Total Payload Length (Low)
-        (totalLen + 1) & 0xFF,         // [6] Checksum (derived from wrapCommand)
-        0x0B,                          // [7] Command Family
+        0x40,                          // [0] Control Byte
+        seqByte,                       // [1] Sequence Counter
+        (indexWord >> 8) & 0xFF,       // [2] Segment Index (High)
+        indexWord & 0xFF,              // [3] Segment Index (Low)
       ];
+
+      if (isFirstChunk) {
+        chunk.push((totalLen >> 8) & 0xFF); // [4] Total Payload Length (High)
+        chunk.push(totalLen & 0xFF);        // [5] Total Payload Length (Low)
+        chunk.push(dataLen & 0xFF);         // [6] Payload length in THIS chunk
+        chunk.push(0x0B);                   // [7] Command ID (0x0B for Control/Write)
+      } else {
+        chunk.push(dataLen & 0xFF);         // [4] Payload length in THIS chunk
+      }
 
       // Append payload data for this chunk
       chunk.push(...payload.slice(offset, offset + dataLen));
 
       chunks.push(chunk);
       offset += dataLen;
+      segmentIndex++;
     }
 
     AppLogger.log('BLE_CHUNKED_WRITE', { payloadLen: totalLen, numChunks: chunks.length, chunkSize });
