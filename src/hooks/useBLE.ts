@@ -642,8 +642,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       const chunk = [
         0x40,                          // [0] Control Byte
         seqByte,                       // [1] Sequence Counter
-        (indexWord >> 8) & 0xFF,       // [2] Segment Index (High)
-        indexWord & 0xFF,              // [3] Segment Index (Low)
+        indexWord & 0xFF,              // [2] Segment Index (Low)
+        (indexWord >> 8) & 0xFF,       // [3] Segment Index (High)
       ];
 
       if (isFirstChunk) {
