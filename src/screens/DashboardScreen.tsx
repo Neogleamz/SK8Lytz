@@ -644,7 +644,18 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             }}
           />
           </BLEErrorBoundary>
-          {/* Disconnection Teardown Overlay — driven by FSM bleState */}
+          {/* Connection + Disconnection overlays — driven by FSM bleState */}
+          {bleState === 'CONNECTING' && (
+            <Animated.View style={{
+              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.9)',
+              justifyContent: 'center', alignItems: 'center',
+              zIndex: 9999
+            }}>
+              <ActivityIndicator size="large" color="#00F0FF" />
+              <Text style={[Typography.header, { color: '#00F0FF', marginTop: Spacing.md }]}>Connecting to skates...</Text>
+            </Animated.View>
+          )}
           {bleState === 'DISCONNECTING' && (
             <Animated.View style={{
               position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
@@ -876,6 +887,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   onGroupPress={(group: CustomGroup) => {
                     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
                     if (devicesToConnect.length > 0) {
+                      // FIX: Open controller shell immediately so transition feels instant.
+                      // The 'CONNECTING' bleState drives the overlay below — user sees
+                      // 'Connecting to skates...' during the real GATT handshake.
+                      setIsControllerOpen(true);
                       connectToDevices(devicesToConnect);
                     } else {
                       // No BLE devices discovered yet — trigger scan and inform user
@@ -883,7 +898,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                       scanForPeripherals();
                       Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
                     }
-                    setIsControllerOpen(true);
                   }}
                   onGroupLongPress={(id: string) => openGroupRename(id)}
                   onSetupWizard={() => setViewState('SETUP_WIZARD')}

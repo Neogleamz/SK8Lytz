@@ -667,23 +667,26 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
     for (const chunk of chunks) {
       const b64 = Buffer.from(chunk).toString('base64');
-      // Parallel write: send this chunk to ALL devices simultaneously.
-      // Both skates receive chunk N at the same wall-clock time → pattern fires in sync.
+      // FIX: Use writeWithoutResponse for all chunks — fire-and-forget eliminates the
+      // per-chunk acknowledgment wait that caused 2-3 second pattern latency.
+      // The 0x40 fragmentation protocol is self-describing; hardware reassembles without ACKs.
       await Promise.all(
         targets
           .filter(device => !autoRecovery.ghostedDeviceIds.includes(device.id))
           .map(device =>
-            device.writeCharacteristicWithResponseForService(
+            device.writeCharacteristicWithoutResponseForService(
               ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
             ).catch((e: any) => {
               AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: String(e) });
             })
           )
       );
-      await new Promise(resolve => setTimeout(resolve, Platform.OS === 'ios' ? 20 : 30));
+      // Minimal inter-chunk pacing — just enough for Android BLE stack to queue the next packet.
+      // 8ms keeps throughput high while avoiding GATT congestion on older Android versions.
+      await new Promise(resolve => setTimeout(resolve, 8));
     }
-    // Allow hardware to fully reassemble the payload before next command
-    await new Promise(resolve => setTimeout(resolve, 150));
+    // Give hardware 50ms to reassemble and execute before next command.
+    await new Promise(resolve => setTimeout(resolve, 50));
   };
 
 
@@ -770,13 +773,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     // When Sweeper is running: delegate to burstScan() (elevate scan mode 5s then revert).
     // When Sweeper is idle: fall through to the original useBLEScanner.scanForPeripherals.
     // This eliminates the dual startDeviceScan() conflict (single scan loop, all consumers).
-    scanForPeripherals: async (options?: { keepAlive?: boolean; disableProbing?: boolean }) => {
+    scanForPeripherals: (options?: { keepAlive?: boolean; disableProbing?: boolean }) => {
       if (sweeper.isSweeperActive) {
-        // Mirror scannerState so derivedBleState shows 'SCANNING' to wizard consumers.
-        // Without this, burstScan runs silently and the wizard snaps to "RETRY SCAN" immediately.
-        scanner.setScannerState('SCANNING');
-        await sweeper.burstScan(options?.keepAlive ? 10000 : 5000);
-        scanner.setScannerState('IDLE');
+        // FIX: Fire-and-forget — do NOT await burstScan.
+        // Awaiting it locked bleState='SCANNING' for the full 5s burst duration,
+        // blocking the Wizard from ever showing discovered devices.
+        // burstScan handles its own timer + revert internally.
+        sweeper.burstScan(options?.keepAlive ? 10000 : 5000);
       } else {
         scanner.scanForPeripherals(options);
       }
