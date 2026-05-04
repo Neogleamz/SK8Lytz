@@ -63,7 +63,8 @@ export function useBLEScanner({
           location: locString
         }));
 
-        await supabase.from('discovered_devices_telemetry').insert(payloads);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await supabase.from('discovered_devices_telemetry').insert(payloads as any);
       } catch (e) {
         AppLogger.warn('[Scanner] Ambient telemetry flush failed', { error: String(e) });
       }
