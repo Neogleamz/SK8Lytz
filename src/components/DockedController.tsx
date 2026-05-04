@@ -1,16 +1,16 @@
 /**
- * DockedController.tsx — SK8Lytz Primary LED Control Interface
+ * DockedController.tsx — SK8Lytz Primary LED Control Interface (Hollow Shell v2)
  *
- * The main user-facing control panel for LED mode management.
- * Renders as a bottom sheet overlay on DashboardScreen.
+ * Routing shell: manages shared state, BLE write bus, and mode FSM.
+ * Delegates all panel rendering to isolated sub-components via DockedBus.
  *
- * Responsibilities:
- *  - Mode switching: MultiMode, Music, Camera, Street (Accelerometer), DIY Array
- *  - Color picker, RGB sliders, brightness & speed knobs
- *  - Pattern wheel (ArcPatternWheel / VerticalPatternDrum)
- *  - Music mic source controls (APP MIC / DEVICE MIC)
- *  - Favorites system and Quick Presets
- *  - Per-device and group analytics telemetry (MODE_CHANGED, PATTERN_CHANGED, COLOR_CHANGED)
+ * Sub-panels (all React.memo isolated):
+ *  - ProEffectsPanel   (MULTIMODE / pattern grid)
+ *  - BuilderPanel      (BUILDER / gradient editor)
+ *  - MusicPanel        (MUSIC)
+ *  - CameraPanel       (CAMERA)
+ *  - StreetPanel       (STREET)
+ *  - FavoritesPanel    (FAVORITES)
  *
  * Depends on: ZenggeProtocol, AppLogger, useBLE (via prop injection), ThemeContext
  * Platform: React Native (Android + Web)
@@ -28,7 +28,7 @@ import { getMusicPatternMax, getMusicPatternLabel } from '../hooks/useMusicMode'
 import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
 import { useSessionTracking } from '../hooks/useSessionTracking';
 import { useStreetMode } from '../hooks/useStreetMode';
-import type { BleConnectionState, IDeviceState, IFavoriteState, ModeType } from '../types/dashboard.types';
+import type { BleConnectionState, DockedBus, IDeviceState, IFavoriteState, ModeType } from '../types/dashboard.types';
 import { getColorName, hexToHue, hueToHex, hexToRgb } from '../utils/ColorUtils';
 import AnalogGauge from './docked/AnalogGauge';
 import FavoritesPanel from './docked/FavoritesPanel';
@@ -37,6 +37,7 @@ import CameraPanel from './docked/CameraPanel';
 import StreetPanel from './docked/StreetPanel';
 import FavoritePromptModal from './docked/FavoritePromptModal';
 import UniversalSlidersFooter from './docked/UniversalSlidersFooter';
+import ProEffectsPanel from './docked/ProEffectsPanel';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Layout, Spacing, Typography } from '../theme/theme';
@@ -650,6 +651,24 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       }
     }, [currentStatusText, onPatternChanged]);
 
+    // ── DockedBus: memoized contract object passed to isolated panel consumers ────
+    // Stabilized so React.memo panels only re-render when their specific slice changes.
+    // Broadcast + mutex logic stays inside writeToDevice above — panels are write-only clients.
+    const dockedBus = React.useMemo((): DockedBus => ({
+      writeToDevice,
+      writeStatus,
+      brightness,
+      speed,
+      selectedColor,
+      points,
+      hwSettings,
+      fixedPatternId,
+      setFixedPatternId,
+      fixedFgColor,
+      fixedBgColor,
+      fixedDirection,
+    }), [brightness, speed, selectedColor, points, hwSettings, fixedPatternId, fixedFgColor, fixedBgColor, fixedDirection, writeToDevice, writeStatus]);
+
     // ── GESTURE NAVIGATION: Horizontal swipe to change modes ──
     const MODE_ORDER = ['HOME', 'FAVORITES', 'MULTIMODE', 'BUILDER', 'MUSIC', 'STREET', 'CAMERA'] as const;
     const swipePanResponder = React.useRef(
@@ -809,20 +828,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             )}
 
             {activeMode === 'MULTIMODE' && (
-              <UnifiedPatternPicker
-                selectedPatternId={fixedPatternId}
-                speed={speed}
-                brightness={brightness}
-                hwSettings={hwSettings}
-                points={points}
-                fgColor={fixedFgColor}
-                bgColor={fixedBgColor}
-                direction={fixedDirection}
-                writeToDevice={writeToDevice}
-                onStateChange={(id: number) => {
-                  setFixedPatternId(id);
-                }}
-              />
+              <ProEffectsPanel bus={dockedBus} />
             )}
 
             {activeMode === 'BUILDER' && (

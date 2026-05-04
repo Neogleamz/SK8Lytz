@@ -195,3 +195,34 @@ export interface IQuickPreset {
   colors: string[];
   type: number;
 }
+
+// ─── DockedBus — Panel Communication Contract ─────────────────────────────────
+
+/**
+ * DockedBus — the typed contract between DockedController and its mode panels.
+ *
+ * Panels receive this as a single `bus` prop and MUST NOT reach outside it
+ * for state or write operations. This enforces the Hollow Shell isolation boundary.
+ *
+ * The bus object is stabilized via `useMemo` inside DockedController so that
+ * React.memo panels only re-render when their specific slice of data changes.
+ */
+export interface DockedBus {
+  // ── Write pipeline ────────────────────────────────────────────────────────
+  /** Debounced + mutex-guarded BLE write. Use for all non-critical writes. */
+  writeToDevice: (payload: number[]) => Promise<void>;
+  /** Current BLE write status — drives the status indicator dot in the visualizer. */
+  writeStatus: 'IDLE' | 'PENDING' | 'RECONCILED';
+  // ── Shared display parameters ─────────────────────────────────────────────
+  brightness: number;
+  speed: number;
+  selectedColor: string;
+  points?: number;
+  hwSettings?: any;
+  // ── ProEffects / MULTIMODE panel ─────────────────────────────────────────
+  fixedPatternId: number;
+  setFixedPatternId: (id: number) => void;
+  fixedFgColor: string;
+  fixedBgColor: string;
+  fixedDirection: number;
+}
