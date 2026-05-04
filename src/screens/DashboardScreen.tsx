@@ -76,6 +76,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     connectToDevices,
     connectedDevices,
     disconnectFromDevice,
+    forceDisconnect,
     writeToDevice,
     // isScanning / isScanProbing removed — bleState FSM is the canonical source of truth
     isBluetoothSupported,
@@ -290,12 +291,15 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
       if (nextState === 'background' || nextState === 'inactive') {
         stopSweeper();
+        // KEEPALIVE: App is backgrounding — skip the 60s window and disconnect immediately.
+        // A backgrounded app should not hold open GATT sessions (battery + OS resource concern).
+        forceDisconnect();
       } else if (nextState === 'active') {
         if (isBluetoothEnabled && isBluetoothSupported) startSweeper();
       }
     });
     return () => sub.remove();
-  }, [isBluetoothEnabled, isBluetoothSupported, startSweeper, stopSweeper]);
+  }, [isBluetoothEnabled, isBluetoothSupported, startSweeper, stopSweeper, forceDisconnect]);
 
   // Cleanup on Dashboard unmount
   useEffect(() => {

@@ -42,6 +42,8 @@ export interface BluetoothLowEnergyApi {
   scanForPeripherals(options?: { keepAlive?: boolean, disableProbing?: boolean }): void;
   connectToDevices: (devices: Device[]) => Promise<void>;
   disconnectFromDevice: () => void;
+  /** Bypasses keepalive timer and immediately tears down all GATT connections. Use in AppState background handlers. */
+  forceDisconnect: () => void;
   writeToDevice: (payload: number[], targetDeviceId?: string) => Promise<boolean | 'partial'>;
   /** Send large payloads (>MTU) via sequential ZENGGE-framed BLE chunks. Required for 0x51 extended Scene Builder payloads. */
   writeChunked: (payload: number[], targetDeviceId?: string) => Promise<void>;
@@ -103,6 +105,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // Prevents BLE queue pile-up when user swipes rapidly through the pattern picker.
   // Critical writes (power, time sync) bypass this and go direct.
   const writeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // ── GATT Keepalive Timer ───────────────────────────────────────────────────
+  // When the controller closes, we defer the real GATT teardown by 60s.
+  // If the user re-opens within that window, we cancel the timer and reuse the
+  // existing connection (zero GATT re-negotiation, zero MTU exchange, zero time-sync).
+  // forceDisconnect() bypasses this for AppState background events.
+  const KEEPALIVE_DURATION_MS = 60_000;
+  const keepaliveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Helper: set gate in both ref (for sync checks) and state (for React re-renders)
   const setGate = useCallback((phase: 'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING') => {
@@ -347,6 +356,15 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   const connectToDevices = async (devices: Device[]) => {
     if (devices.length === 0) return;
+
+    // ── KEEPALIVE: Cancel any pending deferred disconnect ────────────────────
+    // User is re-connecting (same or different group). Clear the keepalive timer
+    // so the deferred disconnect doesn't fire mid-connection-handshake.
+    if (keepaliveTimerRef.current) {
+      clearTimeout(keepaliveTimerRef.current);
+      keepaliveTimerRef.current = null;
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'keepalive_cancelled_reconnect' });
+    }
 
     // ── CONNECTION GATE: Reject if another BLE operation is in-flight ────────
     if (bleGateRef.current !== 'IDLE') {
@@ -753,8 +771,12 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   };
 
 
-  const disconnectFromDevice = async () => {
-    // ── CONNECTION GATE: Acquire DISCONNECTING phase ─────────────────────────
+  // ── _executeRealDisconnect ────────────────────────────────────────────────
+  // The actual GATT teardown. Called by:
+  //   • keepalive timer expiry (after 60s of controller being closed)
+  //   • forceDisconnect() (app backgrounded, group swap, unmount)
+  // NOT called directly by disconnectFromDevice (which now defers via keepalive).
+  const _executeRealDisconnect = async () => {
     if (bleGateRef.current === 'DISCONNECTING') return; // Already tearing down
     setGate('DISCONNECTING');
     await autoRecovery.cancelAllRecoveries();
@@ -777,12 +799,50 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       await Promise.all(disconnectPromises);
       await new Promise(resolve => setTimeout(resolve, 250));
     }
-    
+
     // Clear per-device MTU cache
     mtuMapRef.current.clear();
     setConnectedDevices([]);
     setGate('IDLE');
+    AppLogger.log('BLE_STATE_CHANGE', { event: 'keepalive_expired_disconnect' });
   };
+
+  // ── disconnectFromDevice (keepalive-aware public API) ─────────────────────
+  // Called by handleDisconnect in DashboardScreen when the controller closes.
+  // Instead of immediate teardown, starts a 60s keepalive timer. The GATT
+  // session stays alive so a re-open within 60s is instantaneous.
+  const disconnectFromDevice = () => {
+    if (keepaliveTimerRef.current) return; // Keepalive already pending — no-op
+    AppLogger.log('BLE_STATE_CHANGE', { event: 'keepalive_started', durationMs: KEEPALIVE_DURATION_MS });
+    keepaliveTimerRef.current = setTimeout(() => {
+      keepaliveTimerRef.current = null;
+      _executeRealDisconnect();
+    }, KEEPALIVE_DURATION_MS);
+    // bleGate intentionally stays IDLE; React state stays READY.
+    // From the app's perspective, the group is still connected during the window.
+  };
+
+  // ── forceDisconnect (immediate teardown, bypasses keepalive) ─────────────
+  // Used by: AppState background handler, component unmount cleanup.
+  // Clears any pending keepalive timer and executes real disconnect immediately.
+  const forceDisconnect = () => {
+    if (keepaliveTimerRef.current) {
+      clearTimeout(keepaliveTimerRef.current);
+      keepaliveTimerRef.current = null;
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'keepalive_force_cancelled' });
+    }
+    _executeRealDisconnect();
+  };
+
+  // ── Keepalive cleanup on unmount ─────────────────────────────────────────
+  useEffect(() => {
+    return () => {
+      if (keepaliveTimerRef.current) {
+        clearTimeout(keepaliveTimerRef.current);
+        keepaliveTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const derivedBleState: BleConnectionState = 
     bleGateState === 'DISCONNECTING' ? 'DISCONNECTING' :
@@ -807,6 +867,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     setAllDevices,
     connectedDevices,
     disconnectFromDevice,
+    forceDisconnect,
     isBluetoothSupported,
     isBluetoothEnabled,
     setOnDataReceived: (callback: (deviceId: string, data: number[]) => void) => { 
