@@ -444,8 +444,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, [sortedAllDevices, registeredDevices]);
 
   const handleDisconnect = useCallback(async () => {
-    setIsControllerOpen(false);
-  }, []);
+    setIsControllerOpen(false);    // Close UI instantly — feels snappy
+    disconnectFromDevice();         // Fire-and-forget BLE teardown — prevents stale connections accumulating when switching groups
+  }, [disconnectFromDevice]);
 
   useEffect(() => {
     const handleBackPress = () => {
