@@ -667,15 +667,19 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           </BLEErrorBoundary>
           {/* Connection + Disconnection overlays — driven by FSM bleState */}
           {bleState === 'CONNECTING' && (
-            <Animated.View style={{
-              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.9)',
+            <View style={{
+              position: 'absolute', top: 0, left: 0, right: 0,
+              backgroundColor: 'rgba(0, 80, 120, 0.92)',
+              paddingVertical: 10,
+              flexDirection: 'row',
               justifyContent: 'center', alignItems: 'center',
-              zIndex: 9999
+              zIndex: 9999,
             }}>
-              <ActivityIndicator size="large" color="#00F0FF" />
-              <Text style={[Typography.header, { color: '#00F0FF', marginTop: Spacing.md }]}>Connecting to skates...</Text>
-            </Animated.View>
+              <ActivityIndicator size="small" color="#00F0FF" />
+              <Text style={[Typography.caption, { color: '#00F0FF', marginLeft: 8, fontWeight: 'bold', letterSpacing: 0.5 }]}>
+                CONNECTING...
+              </Text>
+            </View>
           )}
           {bleState === 'DISCONNECTING' && (
             <Animated.View style={{

@@ -523,14 +523,11 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       // ── Single atomic state update with the fully-booted group ───────────────────
       // All GATT handshakes, MTU negotiations, and time syncs are complete for every
       // device that made it here. The UI transitions 0→N in one React commit.
+      // REPLACE (not merge): all taps — group or single — replace the connected set.
+      // The keepalive kept stale devices in state; additive merge caused ghost-device
+      // flashes when the old group's devices appeared on top of the new connection.
       if (connectedGroup.length > 0) {
-        setConnectedDevices(prev => {
-          const merged = [...prev];
-          for (const c of connectedGroup) {
-            if (!merged.find(x => x.id === c.id)) merged.push(c);
-          }
-          return merged;
-        });
+        setConnectedDevices(connectedGroup);
 
         // FIX: Restore last-sent pattern payload on reconnect.
         // If the user had a pattern active before disconnecting, replay it immediately
