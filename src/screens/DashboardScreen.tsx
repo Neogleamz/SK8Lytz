@@ -1120,7 +1120,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               g.name === oldGroupName ? { ...g, name: newGroupName } : g
             );
             setCustomGroups(updatedGroups);
-            AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(updatedGroups)).catch(() => {});
+            // NOTE: Do NOT add AsyncStorage.setItem here — customGroups state is
+            // owned by DeviceRepository/useDashboardGroups. setCustomGroups triggers
+            // the hook's persistence logic. A second raw write here is a race condition.
           }}
           onGroupForgotten={async (groupName) => {
             const devs = registeredDevices.filter(d => d.group_name === groupName);
@@ -1149,7 +1151,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           liveRxPayload={lastRawNotification}
           liveDeviceConfigs={deviceConfigs}
           onConnectToDevice={async (d: any) => { await connectToDevices([d]); }}
-          onDisconnectFromDevice={async (_id: string) => { disconnectFromDevice(); }}
+          onDisconnectFromDevice={async (_id: string) => { forceDisconnect(); }}
           isDiagnosticsMode={isDiagnosticsMode}
           onToggleDiagnostics={() => setIsDiagnosticsMode(!isDiagnosticsMode)}
           hwSettings={activeHwSettings}
