@@ -364,6 +364,15 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       clearTimeout(keepaliveTimerRef.current);
       keepaliveTimerRef.current = null;
       AppLogger.log('BLE_STATE_CHANGE', { event: 'keepalive_cancelled_reconnect' });
+      // ── GROUP SWAP FIX: Flush stale GATT connections before connecting new group ──
+      // Cancelling the timer does NOT disconnect the old group's devices —
+      // they are still alive on the GATT stack. We must teardown first or the
+      // new group's devices get appended on top, showing all devices simultaneously.
+      if (connectedDevicesRef.current.length > 0) {
+        await _executeRealDisconnect();
+        // _executeRealDisconnect sets gate → DISCONNECTING → IDLE.
+        // We must wait for IDLE before the gate check below allows CONNECTING.
+      }
     }
 
     // ── CONNECTION GATE: Reject if another BLE operation is in-flight ────────
