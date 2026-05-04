@@ -88,6 +88,7 @@ export function useBLESweeper({
 
   // ── Raw state (Ref-only — never triggers React renders directly) ────────
   const seenMacsRef = useRef<Set<string>>(new Set());
+  const lastSeenRef = useRef<Map<string, number>>(new Map()); // MAC → last-seen epoch ms
   const pendingStagedRef = useRef<Device[]>([]);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const probingMacsRef = useRef<Set<string>>(new Set());
@@ -152,8 +153,18 @@ export function useBLESweeper({
     pendingStagedRef.current = [];
     if (staged.length === 0) return;
 
+    const staleThreshold = Date.now() - 15000;
+
     setAllDevices(prev => {
-      const merged = [...prev];
+      // Prune stale devices (not seen in >15s) then merge new ones in.
+      // This replaces the destructive setAllDevices([]) wipe in burstScan —
+      // existing devices stay visible until they go cold, preventing the
+      // group-tap-finds-nothing race condition.
+      const live = prev.filter(d => {
+        const lastSeen = lastSeenRef.current.get((d.id || '').toUpperCase());
+        return lastSeen !== undefined && lastSeen > staleThreshold;
+      });
+      const merged = [...live];
       for (const d of staged) {
         if (!merged.some(p => p.id === d.id)) merged.push(d);
       }
@@ -321,6 +332,9 @@ export function useBLESweeper({
       if (rssi < RSSI_THRESHOLD) return;
 
       const mac = device.id.toUpperCase();
+      // Always stamp last-seen time regardless of whether the MAC is new.
+      // flushStagedDevices uses this to prune devices cold for >15s.
+      lastSeenRef.current.set(mac, Date.now());
       if (!seenMacsRef.current.has(mac)) {
         seenMacsRef.current.add(mac);
         pendingStagedRef.current.push(device);
@@ -371,11 +385,15 @@ export function useBLESweeper({
       bleManager.stopDeviceScan();
       isSweeperActiveRef.current = false;
 
-      // ── Reset seenMacs to clear stale ghost devices ─────────────────────────
-      // Without this, a powered-off skate's MAC stays in seenMacsRef forever.
-      // Fresh devices seen during the burst re-populate the list cleanly.
+      // FIX: Do NOT wipe allDevices or seenMacs on burst.
+      // Instead, staleness-based pruning in flushStagedDevices removes devices
+      // that haven't been heard in >15s. This eliminates the race condition where
+      // group tap fires connectToDevices([]) because the list was just cleared.
+      // seenMacsRef is cleared ONLY so devices re-heard during burst get re-staged
+      // (otherwise the dedup gate would silently drop them as "already seen").
       seenMacsRef.current = new Set();
-      setAllDevices([]);
+      // NOTE: lastSeenRef is preserved — timestamps from the previous low-power sweep
+      // ensure devices that burst can't hear yet aren't pruned prematurely.
 
       bleManager.startDeviceScan(null, { scanMode: 2 }, createScanCallback());
 
@@ -386,7 +404,7 @@ export function useBLESweeper({
         resolve();
       }, durationMs);
     });
-  }, [bleManager, createScanCallback, startSweeper, setAllDevices]);
+  }, [bleManager, createScanCallback, startSweeper]);
 
   // ── Stop Sweeper ─────────────────────────────────────────────────────────
   const stopSweeper = useCallback(() => {

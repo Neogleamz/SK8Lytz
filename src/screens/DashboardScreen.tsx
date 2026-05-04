@@ -634,12 +634,20 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             appSettings={appSettings}
             onCrewSceneChange={(scene: Record<string, any>) => crewService.broadcastScene(scene)}
             bleState={bleState}
-            onPatternChanged={(patternName: string) => {
+            onPatternChanged={(patternName: string, lastPayload?: number[]) => {
               // Ensure we only bind this to a physical hardware controller view, not when
               // we don't have a specific group/skate selected.
               const targetGroupId = displayConnectedDevices[0]?.groupId || displayConnectedDevices[0]?.id;
               if (targetGroupId && patternName !== lastGroupPatterns[targetGroupId]) {
                 setLastGroupPattern(targetGroupId, patternName);
+                // FIX: Persist last-sent pattern payload for cache-restore on reconnect.
+                // When the user reconnects this group, the last pattern fires immediately.
+                if (lastPayload && lastPayload.length > 0) {
+                  AsyncStorage.setItem(
+                    `@Sk8lytz_last_pattern_${(displayConnectedDevices[0]?.id || '').toUpperCase()}`,
+                    JSON.stringify({ payload: lastPayload, ts: Date.now() })
+                  ).catch(() => {});
+                }
               }
             }}
           />

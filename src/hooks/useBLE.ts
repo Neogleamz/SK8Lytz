@@ -32,6 +32,10 @@ if (Platform.OS !== 'web') {
 }
 
 let writeMutex: Promise<any> = Promise.resolve();
+let writeGeneration = 0; // Increments on every new write; stale debounce checks compare against this
+
+/** AsyncStorage key for last-sent pattern payload per group/device */
+const PATTERN_CACHE_KEY = (groupId: string) => `@Sk8lytz_last_pattern_${groupId.toUpperCase()}`;
 
 export interface BluetoothLowEnergyApi {
   requestPermissions(): Promise<boolean>;
@@ -95,6 +99,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // GATT operations that cause Android GATT 133 errors.
   const bleGateRef = useRef<'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING'>('IDLE');
   const [bleGateState, setBleGateState] = useState<'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING'>('IDLE');
+  // ── Pattern write debounce ─────────────────────────────────────────────────
+  // Prevents BLE queue pile-up when user swipes rapidly through the pattern picker.
+  // Critical writes (power, time sync) bypass this and go direct.
+  const writeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Helper: set gate in both ref (for sync checks) and state (for React re-renders)
   const setGate = useCallback((phase: 'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING') => {
@@ -501,6 +509,29 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
           }
           return merged;
         });
+
+        // FIX: Restore last-sent pattern payload on reconnect.
+        // If the user had a pattern active before disconnecting, replay it immediately
+        // so skates light up without requiring user interaction.
+        try {
+          const groupId = connectedGroup[0]?.id?.toUpperCase() || 'default';
+          const cached = await AsyncStorage.getItem(PATTERN_CACHE_KEY(groupId));
+          if (cached) {
+            const { payload: lastPayload, ts } = JSON.parse(cached);
+            const ageMs = Date.now() - ts;
+            if (Array.isArray(lastPayload) && ageMs < 3600000) { // 60 min TTL
+              // Delay 300ms to let hardware settle post-connect before writing
+              setTimeout(() => {
+                if (connectedDevicesRef.current.some(d => d.id === connectedGroup[0]?.id)) {
+                  writeToDevice(lastPayload);
+                  AppLogger.log('BLE_STATE_CHANGE', { event: 'pattern_cache_restored', groupId, ageMs });
+                }
+              }, 300);
+            }
+          }
+        } catch (cacheErr) {
+          // Non-fatal — cache miss or parse error, user just starts fresh
+        }
       }
 
       setGate('IDLE');
@@ -526,6 +557,29 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
     // Web / no-op path: return true so optimisticWrite sees success
     if (connectedDevicesRef.current.length === 0 || Platform.OS === 'web') return true;
+
+    const cmdByte = payload[0];
+    // Critical writes (power 0x01, time sync 0x10, query 0x63) bypass debounce — fire immediately.
+    // Pattern writes (0x59 spatial, 0x51 symphony) go through 100ms debounce to
+    // prevent queue pile-up when user swipes rapidly through the pattern picker.
+    const isPatternWrite = (cmdByte === 0x59 || cmdByte === 0x51 || cmdByte === 0x40);
+    if (isPatternWrite) {
+      const thisGeneration = ++writeGeneration;
+      return new Promise((resolve) => {
+        if (writeDebounceTimerRef.current) clearTimeout(writeDebounceTimerRef.current);
+        writeDebounceTimerRef.current = setTimeout(async () => {
+          writeDebounceTimerRef.current = null;
+          // If a newer write queued up during the debounce window, drop this one.
+          if (thisGeneration !== writeGeneration) { resolve(true); return; }
+          const result = await _executeWriteToDevice(payload, targetDeviceId);
+          resolve(result);
+        }, 100);
+      });
+    }
+    return _executeWriteToDevice(payload, targetDeviceId);
+  };
+
+  const _executeWriteToDevice = async (payload: number[], targetDeviceId?: string): Promise<boolean | 'partial'> => {
 
     const targets = targetDeviceId
       ? connectedDevicesRef.current.filter(d => d.id === targetDeviceId)
