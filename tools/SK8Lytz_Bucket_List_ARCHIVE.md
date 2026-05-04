@@ -72,3 +72,13 @@
 - [x] `audit/device-group-naming-consistency` : ✅ Audited naming logic.
 - [x] `feat/account-deletion` : ✅ Cascade-deletion for App Store compliance.
 - [x] `feat/granular-permissions-flow` : ✅ Granular opt-in/out toggles.
+- [x] `fix/burst-scan-merge-not-wipe` : ? Fixed burstScan empty list race condition by merging new scans.
+- [x] `fix/pattern-write-debounce` : ? 100ms debounce on non-critical pattern writes to prevent BLE queue pile-up.
+- [x] `fix/hw-state-cache-on-reconnect` : ? Cached last-sent pattern payload via AsyncStorage for instant on-reconnect lighting.
+- [x] `fix/parallel-group-connect` : ? Refactored connectToDevices to 2-phase sequence, cutting group open time by 50%.
+- [x] `fix/optimistic-ui-pattern-changes` : ? Threaded payload state to enable instant Optimistic UI on pattern tap.
+- [x] `fix/write-queue-cancellation` : ? Stale non-critical commands dropped in writeMutex via generation tracking.
+- [x] `fix/auto-reconnect-post-wizard` : ? Re-trigger useDashboardAutoConnect after handleRegistrationComplete.
+- [x] `fix/connection-keepalive` : ? Deferred 60s GATT keepalive teardown for instantaneous re-opens.
+- [x] `chore/npm-audit-fix` : ? Resolved 11 moderate vulnerabilities via package overrides.
+- [x] `chore/workspace-cleanup` : ? Performed ts-prune static analysis and purged 15+ orphaned files and 70MB of diagnostics.
