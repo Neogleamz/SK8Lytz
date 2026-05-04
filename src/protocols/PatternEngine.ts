@@ -1159,9 +1159,13 @@ export function getVisualizerFrame(
   const transitionType = getPatternTransitionType(patternId);
   const isContinuousScroll = transitionType === 0x02 && patternId < 100;
 
-  // Spatial effects (Continuous scroll) need a static `tick=0` to build a seamless snapshot
-  // Temporal effects (Breathe, Flash, Strobe) need dynamic `animTick` to interpolate phase
-  const passTick = isContinuousScroll ? 0 : animTick;
+  // Spatial effects (Continuous scroll) need a static `tick` to build a seamless snapshot.
+  // We use `seedTick` to ensure the initial frame is visually rich (not all-black).
+  // Temporal effects (Breathe, Flash, Strobe) need dynamic `animTick` to interpolate phase.
+  const ZERO_TICK_IDS = new Set([26, 28, 31, 46, 54]); // Strobe/Jump
+  const QUARTER_TICK_IDS = new Set([24, 30, 36, 40]); // Breathe (sin wave peak at PI/2)
+  const seedTick = ZERO_TICK_IDS.has(patternId) ? 0.0 : (QUARTER_TICK_IDS.has(patternId) ? 0.25 : 0.33);
+  const passTick = isContinuousScroll ? seedTick : animTick;
 
   const generated = generateArray(patternId, fg, bg, n, passTick, direction, visualizerOptions);
 
@@ -1187,6 +1191,11 @@ export function getHardwarePixelArray(
   //   IDs 20-22, 30-31, 33, 37, 39-40, 46-47, 54-55 use Breathe/Jump/Strobe commandTypes.
   //   The pixel array is the color seed; hardware animates it autonomously.
   //
+  // Use tick=0.33 for most patterns so the initial hardware seed frame is visually rich.
+  // EXCEPTION: Jump (0x04) and Strobe (0x03) patterns, plus some Breathe patterns
+  // These builders include an isOn phase-gate that can return all-black at tick=0.33.
+  // Since hardware handles flash/jump autonomously once the array is received,
+  // we need a fully-lit seed. We use tick=0.0 for strobes/jumps, and tick=0.25 for breathe.
   // Use tick=0.33 for most patterns so the initial hardware seed frame is visually rich.
   // EXCEPTION: Jump (0x04) and Strobe (0x03) patterns, plus some Breathe patterns
   // These builders include an isOn phase-gate that can return all-black at tick=0.33.

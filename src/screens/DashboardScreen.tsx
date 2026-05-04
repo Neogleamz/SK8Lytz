@@ -444,9 +444,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, [sortedAllDevices, registeredDevices]);
 
   const handleDisconnect = useCallback(async () => {
-    setIsControllerOpen(false);    // Close UI instantly — feels snappy
-    disconnectFromDevice();         // Fire-and-forget BLE teardown — prevents stale connections accumulating when switching groups
-  }, [disconnectFromDevice]);
+    setIsControllerOpen(false);
+  }, []);
 
   useEffect(() => {
     const handleBackPress = () => {
@@ -794,7 +793,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       {BluetoothWarningBanner}
       <View style={styles.container}>
 
-        <View style={{ flex: 1, display: isControllerOpen ? 'flex' : 'none' }}>
+        {isControllerOpen && (
+          <View style={{ flex: 1 }}>
             <View pointerEvents="box-none" style={{ paddingBottom: Spacing.lg, zIndex: 100, elevation: 100 }}>
               <DashboardHeader
                 isActuallyConnected={true}
@@ -817,17 +817,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             </View>
             <View style={{ flex: 1 }}>
               {MemoizedSk8lytzController}
-              {isControllerOpen && connectedDevices.length === 0 && (
-                <View style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background, zIndex: 50 }}>
-                  <ActivityIndicator size="large" color={Colors.primary} />
-                  <Text style={{ color: Colors.text, marginTop: 16, fontFamily: Typography.body.fontFamily, fontSize: 16 }}>
-                    Synchronizing Hardware...
-                  </Text>
-                </View>
-              )}
             </View>
           </View>
-        <View style={{ flex: 1, display: isControllerOpen ? 'none' : 'flex', backgroundColor: Colors.background }}>
+        )}
+        {!isControllerOpen && (
+          /* ── 4-SLAB VERTICAL HIERARCHY ── */
+          <View style={{ flex: 1, backgroundColor: Colors.background }}>
              {/* SLAB 1: HEADER (Logo + Pulse) */}
              <View style={styles.headerSlab}>
                 <DashboardHeader
@@ -910,6 +905,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 />
               </ScrollView>
           </View>
+        )}
         <DeviceSettingsModal
           isVisible={isSettingsVisible}
           onClose={() => setIsSettingsVisible(false)}
