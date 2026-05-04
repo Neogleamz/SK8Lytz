@@ -212,7 +212,7 @@ export interface DockedBus {
   /** Debounced + mutex-guarded BLE write. Use for all non-critical writes. */
   writeToDevice: (payload: number[]) => Promise<void>;
   /** Current BLE write status — drives the status indicator dot in the visualizer. */
-  writeStatus: 'IDLE' | 'PENDING' | 'RECONCILED';
+  writeStatus: import('../hooks/useOptimisticBLE').BLEWriteStatus;
   // ── Shared display parameters ─────────────────────────────────────────────
   brightness: number;
   speed: number;

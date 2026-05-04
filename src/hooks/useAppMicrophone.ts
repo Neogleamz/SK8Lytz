@@ -73,7 +73,7 @@ export function useAppMicrophone({
         if (stats.canRecord && stats.isRecording) {
           const metering = stats.metering ?? -160;
           // Map -60...0 to 0...1 for usable visualization
-          const normalized = Math.max(0, Math.min(1, (metering + 60) / 60));
+          const normalized = Math.max(0, Math.min(1, (metering + 100) / 100));
           // Delta guard: skip BLE write if magnitude hasn't changed by >5%
           if (Math.abs(normalized - prevMagRef.current) < 0.05) return;
           prevMagRef.current = normalized;

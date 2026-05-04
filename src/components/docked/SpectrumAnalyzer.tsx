@@ -113,8 +113,8 @@ export default function SpectrumAnalyzer({
         ambientAnimationRef.current = null;
       }
       
-      // Magnitude is 0-255. Normalize to 0.0 - 1.0.
-      const normalizedMag = Math.max(0, Math.min(1.0, audioMagnitude / 255));
+      // audioMagnitude is already normalized 0–1 by useAppMicrophone
+      const normalizedMag = Math.max(0, Math.min(1.0, audioMagnitude));
       
       animatedValues.forEach((anim, index) => {
         // Lift the floor: even at magnitude=0 we show a little activity
