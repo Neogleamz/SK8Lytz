@@ -61,10 +61,14 @@ export function useDashboardAutoConnect({
   refreshProfile,
   bleGateRef,
   isWizardActive,
-}: UseDashboardAutoConnectOptions): { clearAutoConnectQueue: () => void } {
+}: UseDashboardAutoConnectOptions): { clearAutoConnectQueue: () => void; retriggerAutoConnect: () => void } {
 
   const hasAutoConnectedRef = useRef(false);
   const autoConnectIdsRef = useRef<string[]>([]);
+  // Stable ref to the cloud sync function — allows retriggerAutoConnect to call it
+  // directly without needing to re-subscribe to the useEffect dependency array.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const syncCloudAndAutoConnectRef = useRef<() => Promise<void>>(async () => {});
 
   // ── Continuous observer: connect queued devices as they appear in scan ───
   // Debounce: batch devices that appear within 500ms into a single connectToDevices call.
@@ -246,6 +250,10 @@ export function useDashboardAutoConnect({
       }
     }
 
+    // Keep the ref current so retriggerAutoConnect can call this function
+    // after the Wizard completes without needing to re-run the useEffect.
+    syncCloudAndAutoConnectRef.current = syncCloudAndAutoConnect;
+
     // Slight delay to allow Bluetooth stack to fully initialize
     const timerId = setTimeout(syncCloudAndAutoConnect, 1500);
     return () => clearTimeout(timerId);
@@ -254,6 +262,17 @@ export function useDashboardAutoConnect({
   return {
     clearAutoConnectQueue: () => {
       autoConnectIdsRef.current = [];
-    }
+    },
+    // FIX: Allow DashboardScreen to re-trigger auto-connect after Setup Wizard completes.
+    // Resets the one-shot gate so the cloud sync runs again and queues the newly
+    // registered device for connection the moment it appears in the BLE scan.
+    retriggerAutoConnect: () => {
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_retriggered' });
+      hasAutoConnectedRef.current = false;
+      autoConnectIdsRef.current = [];
+      // The useEffect watching isBluetoothSupported/isBluetoothEnabled won't re-fire
+      // since those haven't changed. Call the async function directly.
+      syncCloudAndAutoConnectRef.current();
+    },
   };
 }

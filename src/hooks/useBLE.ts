@@ -580,6 +580,12 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   };
 
   const _executeWriteToDevice = async (payload: number[], targetDeviceId?: string): Promise<boolean | 'partial'> => {
+    // Capture generation at queue time. If a newer pattern write arrives while this
+    // one waits in the mutex chain, the generation check inside executeWrite drops it.
+    // capturedGeneration === 0 means it's a critical write — never get dropped.
+    const cmdByte = payload[0];
+    const isPatternWriteCmd = (cmdByte === 0x59 || cmdByte === 0x51 || cmdByte === 0x40);
+    const capturedGeneration = isPatternWriteCmd ? writeGeneration : 0;
 
     const targets = targetDeviceId
       ? connectedDevicesRef.current.filter(d => d.id === targetDeviceId)
@@ -604,6 +610,14 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     }
 
     const executeWrite = async (): Promise<boolean | 'partial'> => {
+      // Write-queue cancellation: drop stale pattern writes that queued in the mutex chain.
+      // If a newer pattern was selected while this one waited, silently no-op.
+      // capturedGeneration === 0 means critical write — always fires.
+      if (capturedGeneration !== 0 && capturedGeneration !== writeGeneration) {
+        AppLogger.log('BLE_STATE_CHANGE', { event: 'write_stale_dropped', capturedGeneration, currentGeneration: writeGeneration });
+        return true;
+      }
+
       const liveTargets = targets.filter(device => {
         if (autoRecovery.ghostedDeviceIds.includes(device.id)) {
           AppLogger.warn(`[BLE] Write SKIPPED ghosted device ${device.id}`);

@@ -165,6 +165,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const allDevicesRef = React.useRef(allDevices);
 
   const [viewState, setViewState] = useState<DashboardViewState>('LOADING_REGS');
+  // Stable ref to retriggerAutoConnect — bridges the forward-reference since
+  // useDashboardAutoConnect is declared after useDashboardGroups (hook order constraint).
+  const retriggerAutoConnectRef = React.useRef<() => void>(() => {});
   const {
     customGroups,
     setCustomGroups,
@@ -206,6 +209,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     onRegistrationComplete: () => {
       setViewState('DASHBOARD');
       wizardCheckedRef.current = false;
+      // FIX: Re-trigger auto-connect after Wizard completes.
+      // Resets the one-shot gate so the newly registered device is queued
+      // for connection the moment it appears in the BLE scan — no user tap needed.
+      retriggerAutoConnectRef.current();
     },
   });
 
@@ -344,10 +351,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // We no longer spam the user when hardware connections drop out organically.
 
   // ── Cloud Sync & BLE Auto-Connect (extracted to useDashboardAutoConnect) ──
-  const { clearAutoConnectQueue } = useDashboardAutoConnect({
+  const { clearAutoConnectQueue, retriggerAutoConnect } = useDashboardAutoConnect({
     isBluetoothSupported,
     isBluetoothEnabled,
-    isActuallyConnected, // now canonical — hoisted displayConnectedDevices above
+    isActuallyConnected,
     allDevices,
     connectedDevices,
     connectToDevices,
@@ -358,6 +365,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     bleGateRef,
     isWizardActive: viewState === 'SETUP_WIZARD',
   });
+  // Wire the real function into the ref now that the hook has been called.
+  retriggerAutoConnectRef.current = retriggerAutoConnect;
 
   const [isControllerOpen, setIsControllerOpen] = useState(false);
 
