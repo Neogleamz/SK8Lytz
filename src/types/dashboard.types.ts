@@ -108,11 +108,10 @@ export type DashboardViewState =
   | 'CREW_HUB'
   | 'OFFLINE';
 
-/** FSM for the DockedController primary mode selector. */
 export type ModeType =
   | 'FAVORITES'
-  | 'FIXED'
   | 'MULTIMODE'
+  | 'BUILDER'
   | 'MUSIC'
   | 'STREET'
   | 'CAMERA';

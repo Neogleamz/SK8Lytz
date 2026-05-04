@@ -33,7 +33,6 @@ import { getColorName, hexToHue, hueToHex, hexToRgb } from '../utils/ColorUtils'
 import AnalogGauge from './docked/AnalogGauge';
 import FavoritesPanel from './docked/FavoritesPanel';
 import MusicPanel from './docked/MusicPanel';
-import FixedPanel from './docked/FixedPanel';
 import CameraPanel from './docked/CameraPanel';
 import StreetPanel from './docked/StreetPanel';
 import FavoritePromptModal from './docked/FavoritePromptModal';
@@ -46,6 +45,7 @@ import { SK8LYTZ_TEMPLATES } from '../protocols/PatternEngine';
 import { useTheme } from '../context/ThemeContext';
 import CameraTracker from './CameraTracker';
 import { UnifiedPatternPicker } from './patterns/UnifiedPatternPicker';
+import { BuilderPanel } from './docked/BuilderPanel';
 import CustomEffectVisualizer from './CustomEffectVisualizer';
 import NeonHueStrip from './NeonHueStrip';
 import ProductVisualizer from './ProductVisualizer';
@@ -423,10 +423,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             chips.push('Custom Fade', 'Neon Pulse', 'My Setup');
             defaultName = 'Custom Fade';
           }
-        } else if (activeMode === 'FIXED') {
-          const colorName = getColorName(selectedColor);
-          chips.push(`Solid ${colorName}`, `${colorName} Glow`, 'My Setup');
-          defaultName = `Solid ${colorName}`;
         } else if (activeMode === 'MUSIC') {
           chips.push('Neon Pulse', 'Music Vibe', 'My Setup');
           defaultName = 'Music Vibe';
@@ -617,7 +613,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       switch (activeMode) {
         case 'MULTIMODE':
           const fixedClr = fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
-          return `MultiMode - ${getColorName(fixedClr)}`;
+          return `Pro Effects - ${getColorName(fixedClr)}`;
+        case 'BUILDER':
+          return `Builder Mode`;
         case 'MUSIC':
           const patternName = getMusicPatternLabel(musicMatrixStyle, musicPatternId);
           return `Music - ${patternName}`;
@@ -630,8 +628,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, selectedPatternId, musicPatternId, selectedColor, isStreetBraking]);
     const visualizerColor = React.useMemo(() => {
       if (activeMode === 'MULTIMODE') {
-        if (fixedSubMode === 'PATTERN') return fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
-        return selectedColor; // BUILDER
+        return fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
+      }
+      if (activeMode === 'BUILDER') {
+        return selectedColor;
       }
       if (activeMode === 'MUSIC') {
         const f = (n: number, k = (n + musicHue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
@@ -651,7 +651,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     }, [currentStatusText, onPatternChanged]);
 
     // ── GESTURE NAVIGATION: Horizontal swipe to change modes ──
-    const MODE_ORDER = ['HOME', 'FAVORITES', 'MULTIMODE', 'MUSIC', 'STREET', 'CAMERA'] as const;
+    const MODE_ORDER = ['HOME', 'FAVORITES', 'MULTIMODE', 'BUILDER', 'MUSIC', 'STREET', 'CAMERA'] as const;
     const swipePanResponder = React.useRef(
       PanResponder.create({
         onMoveShouldSetPanResponder: (evt, gestureState) => {
@@ -752,8 +752,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             <ProductVisualizer
               product={activeProduct}
               color={visualizerColor}
-              mode={activeMode === 'FAVORITES' ? (lastOperatingMode === 'MULTIMODE' ? (fixedSubMode === 'BUILDER' ? 'BUILDER' : 'MULTIMODE') : lastOperatingMode) : activeMode === 'MULTIMODE' ? (fixedSubMode === 'BUILDER' ? 'BUILDER' : 'MULTIMODE') : activeMode}
-              patternId={activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN' ? fixedPatternId : selectedPatternId}
+              mode={activeMode === 'FAVORITES' ? lastOperatingMode : activeMode}
+              patternId={activeMode === 'MULTIMODE' ? fixedPatternId : selectedPatternId}
               isPaired={isPaired}
               points={points}
               hwSettings={hwSettings}
@@ -808,17 +808,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               />
             )}
 
-            {activeMode === 'FIXED' && (
-              <FixedPanel
-                fixedModePattern={fixedModePattern}
-                setFixedModePattern={setFixedModePattern}
-                speed={speed}
-                setSpeed={setSpeed}
-                applyPattern={(pat, spd) => applyStaticModePattern(pat, undefined, undefined, undefined, spd)}
-                Colors={Colors}
-              />
-            )}
-
             {activeMode === 'MULTIMODE' && (
               <UnifiedPatternPicker
                 selectedPatternId={fixedPatternId}
@@ -833,6 +822,24 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 onStateChange={(id: number) => {
                   setFixedPatternId(id);
                 }}
+              />
+            )}
+
+            {activeMode === 'BUILDER' && (
+              <BuilderPanel
+                writeToDevice={writeToDevice}
+                points={points}
+                speed={speed}
+                direction={builderDirection}
+                builderNodes={builderNodes}
+                setBuilderNodes={setBuilderNodes}
+                builderFillMode={builderFillMode}
+                setBuilderFillMode={setBuilderFillMode}
+                builderTransitionType={builderTransitionType}
+                setBuilderTransitionType={setBuilderTransitionType}
+                builderDirection={builderDirection}
+                setBuilderDirection={setBuilderDirection}
+                fgColor={selectedColor}
               />
             )}
 
@@ -964,15 +971,13 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             {[
               { id: 'HOME',      icon: 'home-outline'         },
               { id: 'FAVORITES', icon: 'cards-heart-outline'  },
-              { id: 'MULTI',     icon: 'palette'              },
+              { id: 'MULTIMODE', icon: 'lightning-bolt'       },
+              { id: 'BUILDER',   icon: 'palette'              },
               { id: 'MUSIC',     icon: 'music'                },
               { id: 'STREET',    icon: 'run-fast'             },
               { id: 'CAMERA',    icon: 'camera'               },
             ].map(dockItem => {
-              const isActive =
-                dockItem.id === 'MULTI'   ? activeMode === 'MULTIMODE' :
-
-                activeMode === dockItem.id;
+              const isActive = activeMode === dockItem.id;
               return (
                 <TouchableOpacity
                   key={dockItem.id}
@@ -981,9 +986,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                       if (onDisconnect) onDisconnect();
                     } else if (dockItem.id === 'FAVORITES') {
                       setActiveMode('FAVORITES');
-                    } else if (dockItem.id === 'FIXED') {
-                      setActiveMode('FIXED');
-                      setLastOperatingMode('FIXED');
                     } else if (dockItem.id === 'STREET') {
                       setActiveMode('STREET');
                       setLastOperatingMode('STREET');
@@ -993,11 +995,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     } else if (dockItem.id === 'CAMERA') {
                       setActiveMode('CAMERA');
                       setLastOperatingMode('CAMERA');
-                    } else {
-                      // MULTI -> MULTIMODE (restores to PATTERN submode)
+                    } else if (dockItem.id === 'BUILDER') {
+                      setActiveMode('BUILDER');
+                      setLastOperatingMode('BUILDER');
+                    } else if (dockItem.id === 'MULTIMODE') {
                       setActiveMode('MULTIMODE');
                       setLastOperatingMode('MULTIMODE');
-                      setFixedSubMode('PATTERN');
                     }
                   }}
                   style={[styles.dockIconCont, isActive && styles.dockIconActive]}
