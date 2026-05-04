@@ -357,6 +357,14 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const connectToDevices = async (devices: Device[]) => {
     if (devices.length === 0) return;
 
+    // ── IMMEDIATE STATE CLEAR ─────────────────────────────────────────────────
+    // Synchronously wipe connectedDevices BEFORE any async work so the controller
+    // shell never renders the previous group's devices while the new GATT
+    // negotiation is in-flight. This is the real fix for the stale-state flash.
+    // (setIsControllerOpen(true) fires before this function resolves, so the
+    // controller mounts with [] and sees the CONNECTING state — clean.)
+    setConnectedDevices([]);
+
     // ── KEEPALIVE: Cancel any pending deferred disconnect ────────────────────
     // User is re-connecting (same or different group). Clear the keepalive timer
     // so the deferred disconnect doesn't fire mid-connection-handshake.
@@ -523,11 +531,17 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       // ── Single atomic state update with the fully-booted group ───────────────────
       // All GATT handshakes, MTU negotiations, and time syncs are complete for every
       // device that made it here. The UI transitions 0→N in one React commit.
-      // REPLACE (not merge): all taps — group or single — replace the connected set.
-      // The keepalive kept stale devices in state; additive merge caused ghost-device
-      // flashes when the old group's devices appeared on top of the new connection.
+      // Additive merge: preserves any device that completed handshake but was not in
+      // the current batch (e.g. recovery reconnect racing a group connect).
+      // stale-state flash is prevented by the setConnectedDevices([]) at function top.
       if (connectedGroup.length > 0) {
-        setConnectedDevices(connectedGroup);
+        setConnectedDevices(prev => {
+          const merged = [...prev];
+          for (const c of connectedGroup) {
+            if (!merged.find(x => x.id === c.id)) merged.push(c);
+          }
+          return merged;
+        });
 
         // FIX: Restore last-sent pattern payload on reconnect.
         // If the user had a pattern active before disconnecting, replay it immediately

@@ -665,33 +665,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             }}
           />
           </BLEErrorBoundary>
-          {/* Connection + Disconnection overlays — driven by FSM bleState */}
-          {bleState === 'CONNECTING' && (
-            <View style={{
-              position: 'absolute', top: 0, left: 0, right: 0,
-              backgroundColor: 'rgba(0, 80, 120, 0.92)',
-              paddingVertical: 10,
-              flexDirection: 'row',
-              justifyContent: 'center', alignItems: 'center',
-              zIndex: 9999,
-            }}>
-              <ActivityIndicator size="small" color="#00F0FF" />
-              <Text style={[Typography.caption, { color: '#00F0FF', marginLeft: 8, fontWeight: 'bold', letterSpacing: 0.5 }]}>
-                CONNECTING...
-              </Text>
-            </View>
-          )}
-          {bleState === 'DISCONNECTING' && (
-            <Animated.View style={{
-              position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-              backgroundColor: 'rgba(0,0,0,0.85)',
-              justifyContent: 'center', alignItems: 'center',
-              zIndex: 9999
-            }}>
-              <ActivityIndicator size="large" color="#00F0FF" />
-              <Text style={[Typography.header, { color: '#00F0FF', marginTop: Spacing.md }]}>Disconnecting...</Text>
-            </Animated.View>
-          )}
+          {/* BLE state overlays removed: connectToDevices now synchronously clears
+              connectedDevices before any async work, so the controller shell never
+              renders stale state. No overlay needed — the UI simply loads clean. */}
       </Animated.View>
     );
   }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, activeHwSettings, crewRole, crewSession, lastLeaderScene, bleState]);
@@ -912,9 +888,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   onGroupPress={(group: CustomGroup) => {
                     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
                     if (devicesToConnect.length > 0) {
-                      // FIX: Open controller shell immediately so transition feels instant.
-                      // The 'CONNECTING' bleState drives the overlay below — user sees
-                      // 'Connecting to skates...' during the real GATT handshake.
                       setIsControllerOpen(true);
                       connectToDevices(devicesToConnect);
                     } else {
