@@ -72,7 +72,7 @@ export interface UseBLESweeperReturn {
   stopSweeper(): void;
   /** Elevate to LowLatency burst scan for durationMs, then revert to LowPower.
    *  Also resets the seenMacs set to clear stale/ghost device accumulation. */
-  burstScan(durationMs?: number): void;
+  burstScan(durationMs?: number): Promise<void>;
   /** In-memory HW cache — keyed by uppercase MAC, value is EEPROM hwConfig */
   hwCache: Record<string, any>;
 }
@@ -356,27 +356,33 @@ export function useBLESweeper({
    *
    * One scan loop, all consumers — prevents dual startDeviceScan() conflict.
    */
-  const burstScan = useCallback((durationMs: number = 5000) => {
-    if (Platform.OS === 'web' || !bleManager) return;
-    AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_burst_start', durationMs });
+  const burstScan = useCallback((durationMs: number = 5000): Promise<void> => {
+    return new Promise((resolve) => {
+      if (Platform.OS === 'web' || !bleManager) {
+        resolve();
+        return;
+      }
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_burst_start', durationMs });
 
-    // Stop existing sweep
-    bleManager.stopDeviceScan();
-    isSweeperActiveRef.current = false;
+      // Stop existing sweep
+      bleManager.stopDeviceScan();
+      isSweeperActiveRef.current = false;
 
-    // ── Reset seenMacs to clear stale ghost devices ─────────────────────────
-    // Without this, a powered-off skate's MAC stays in seenMacsRef forever.
-    // Fresh devices seen during the burst re-populate the list cleanly.
-    seenMacsRef.current = new Set();
-    setAllDevices([]);
+      // ── Reset seenMacs to clear stale ghost devices ─────────────────────────
+      // Without this, a powered-off skate's MAC stays in seenMacsRef forever.
+      // Fresh devices seen during the burst re-populate the list cleanly.
+      seenMacsRef.current = new Set();
+      setAllDevices([]);
 
-    bleManager.startDeviceScan(null, { scanMode: 2 }, createScanCallback());
+      bleManager.startDeviceScan(null, { scanMode: 2 }, createScanCallback());
 
-    burstTimerRef.current = setTimeout(() => {
-      burstTimerRef.current = null;
-      AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_burst_end_revert' });
-      startSweeper();
-    }, durationMs);
+      burstTimerRef.current = setTimeout(() => {
+        burstTimerRef.current = null;
+        AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_burst_end_revert' });
+        startSweeper();
+        resolve();
+      }, durationMs);
+    });
   }, [bleManager, createScanCallback, startSweeper, setAllDevices]);
 
   // ── Stop Sweeper ─────────────────────────────────────────────────────────

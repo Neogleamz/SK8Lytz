@@ -770,12 +770,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     // When Sweeper is running: delegate to burstScan() (elevate scan mode 5s then revert).
     // When Sweeper is idle: fall through to the original useBLEScanner.scanForPeripherals.
     // This eliminates the dual startDeviceScan() conflict (single scan loop, all consumers).
-    scanForPeripherals: (options?: { keepAlive?: boolean; disableProbing?: boolean }) => {
+    scanForPeripherals: async (options?: { keepAlive?: boolean; disableProbing?: boolean }) => {
       if (sweeper.isSweeperActive) {
         // Mirror scannerState so derivedBleState shows 'SCANNING' to wizard consumers.
         // Without this, burstScan runs silently and the wizard snaps to "RETRY SCAN" immediately.
         scanner.setScannerState('SCANNING');
-        sweeper.burstScan(options?.keepAlive ? 10000 : 5000);
+        await sweeper.burstScan(options?.keepAlive ? 10000 : 5000);
+        scanner.setScannerState('IDLE');
       } else {
         scanner.scanForPeripherals(options);
       }
