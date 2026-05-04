@@ -642,8 +642,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       const chunk = [
         0x40,                          // [0] Control Byte
         seqByte,                       // [1] Sequence Counter
-        (indexWord >> 8) & 0xFF,       // [2] Segment Index (High)
-        indexWord & 0xFF,              // [3] Segment Index (Low)
+        indexWord & 0xFF,              // [2] Segment Index (Low)
+        (indexWord >> 8) & 0xFF,       // [3] Segment Index (High)
       ];
 
       if (isFirstChunk) {
@@ -667,19 +667,23 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
     for (const chunk of chunks) {
       const b64 = Buffer.from(chunk).toString('base64');
-      for (const device of targets) {
-        if (autoRecovery.ghostedDeviceIds.includes(device.id)) continue;
-        try {
-          await device.writeCharacteristicWithoutResponseForService(
-            ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
-          );
-        } catch (e: any) {
-          AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: String(e) });
-        }
-      }
-      // Inter-chunk delay to prevent BLE TX buffer overflow
-      await new Promise(resolve => setTimeout(resolve, Platform.OS === 'ios' ? 30 : 20));
+      // Parallel write: send this chunk to ALL devices simultaneously.
+      // Both skates receive chunk N at the same wall-clock time → pattern fires in sync.
+      await Promise.all(
+        targets
+          .filter(device => !autoRecovery.ghostedDeviceIds.includes(device.id))
+          .map(device =>
+            device.writeCharacteristicWithResponseForService(
+              ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
+            ).catch((e: any) => {
+              AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: String(e) });
+            })
+          )
+      );
+      await new Promise(resolve => setTimeout(resolve, Platform.OS === 'ios' ? 20 : 30));
     }
+    // Allow hardware to fully reassemble the payload before next command
+    await new Promise(resolve => setTimeout(resolve, 150));
   };
 
 
@@ -768,6 +772,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     // This eliminates the dual startDeviceScan() conflict (single scan loop, all consumers).
     scanForPeripherals: (options?: { keepAlive?: boolean; disableProbing?: boolean }) => {
       if (sweeper.isSweeperActive) {
+        // Mirror scannerState so derivedBleState shows 'SCANNING' to wizard consumers.
+        // Without this, burstScan runs silently and the wizard snaps to "RETRY SCAN" immediately.
+        scanner.setScannerState('SCANNING');
         sweeper.burstScan(options?.keepAlive ? 10000 : 5000);
       } else {
         scanner.scanForPeripherals(options);
