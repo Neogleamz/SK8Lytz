@@ -124,26 +124,6 @@ export function useBLESweeper({
     }).catch(() => {});
   }, []);
 
-  // ── Flush staged devices to React state (debounced) ─────────────────────
-  const flushStagedDevices = useCallback(() => {
-    const staged = [...pendingStagedRef.current];
-    pendingStagedRef.current = [];
-    if (staged.length === 0) return;
-
-    setAllDevices(prev => {
-      const merged = [...prev];
-      for (const d of staged) {
-        if (!merged.some(p => p.id === d.id)) merged.push(d);
-      }
-      return merged;
-    });
-  }, [setAllDevices]);
-
-  const scheduleFlush = useCallback(() => {
-    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(flushStagedDevices, DEBOUNCE_MS);
-  }, [flushStagedDevices]);
-
   // ── Classify discovered devices into pendingRegistrations ────────────────
   // Uses shared classifyBLEDevice utility — single source of truth.
   const classifyForRegistrations = useCallback((devices: Device[]) => {
@@ -165,6 +145,29 @@ export function useBLESweeper({
       return merged;
     });
   }, [setPendingRegistrations]);
+
+  // ── Flush staged devices to React state (debounced) ─────────────────────
+  const flushStagedDevices = useCallback(() => {
+    const staged = [...pendingStagedRef.current];
+    pendingStagedRef.current = [];
+    if (staged.length === 0) return;
+
+    setAllDevices(prev => {
+      const merged = [...prev];
+      for (const d of staged) {
+        if (!merged.some(p => p.id === d.id)) merged.push(d);
+      }
+      return merged;
+    });
+
+    // [NEW] Instantly populate the Wizard UI before background interrogation finishes
+    classifyForRegistrations(staged);
+  }, [setAllDevices, classifyForRegistrations]);
+
+  const scheduleFlush = useCallback(() => {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    debounceTimerRef.current = setTimeout(flushStagedDevices, DEBOUNCE_MS);
+  }, [flushStagedDevices]);
 
   // ── Interrogator: silently probe a single device EEPROM ─────────────────
   const interrogateDevice = useCallback(async (mac: string) => {
