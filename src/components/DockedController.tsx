@@ -146,8 +146,8 @@ interface Sk8lytzControllerProps {
   crewRole?: 'leader' | 'member' | null;
   /** Called with full scene snapshot whenever any mode/color changes (leader only) */
   onCrewSceneChange?: (scene: Record<string, any>) => void;
-  /** Triggered to persist the active pattern name to dashboard group persistent storage */
-  onPatternChanged?: (patternName: string) => void;
+  /** Triggered to persist the active pattern name + payload to dashboard group persistent storage */
+  onPatternChanged?: (patternName: string, lastPayload?: number[]) => void;
   appSettings?: Record<string, string | boolean>;
 }
 
@@ -641,10 +641,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       return selectedColor;
     }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, musicHue, selectedColor, fixedSubMode]);
 
-    // Relays the dynamically generated pattern name upward to persist dashboard group state
+    // Relays the dynamically generated pattern name + last payload upward to persist dashboard group state
     React.useEffect(() => {
       if (onPatternChanged) {
-        onPatternChanged(currentStatusText);
+        // Pass lastSentPayload so DashboardScreen can persist the cache for reconnect restore.
+        // lastSentPayload is updated on every BLE write in writeToDevice (line above).
+        onPatternChanged(currentStatusText, lastSentPayload.length > 0 ? lastSentPayload : undefined);
       }
     }, [currentStatusText, onPatternChanged]);
 

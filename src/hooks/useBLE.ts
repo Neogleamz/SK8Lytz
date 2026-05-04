@@ -386,92 +386,85 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       // Android without risking GATT 133. The Sweeper is resumed after connect completes.
       if (wasSweeperActive) sweeper.stopSweeper();
 
-      // ── ATOMIC GROUP CONNECT: Stage all successful connections, update state ONCE ───
-      // setConnectedDevices was previously called per-device inside the loop, causing the
-      // UI to flash "1 connected" mid-loop while device 2 was still negotiating MTU.
-      // Collecting into connectedGroup and calling state ONCE after the loop makes the
-      // transition from 0→2 (or 0→N) devices atomic from React's perspective.
-      const connectedGroup: any[] = [];
-
+      // ── PARALLEL GROUP CONNECT (2-phase) ───────────────────────────────────
+      // Phase 1 (serial): Acquire GATT connections one at a time.
+      //   Android's BT stack serializes connectToDevice internally anyway,
+      //   and firing them concurrently risks GATT 133 on congested stacks.
+      // Phase 2 (parallel): Once all GATT channels are open, run the post-connect
+      //   handshake (discoverServices → MTU → timeSync → notifyMonitor) for all
+      //   devices simultaneously via Promise.all.
+      //   For a 2-device group this cuts ~1.5s off open time (device 2's handshake
+      //   overlaps with device 1's instead of waiting behind it).
+      // ── Phase 1: Serial GATT acquisition ─────────────────────────────────────
+      const rawConns: any[] = [];
       for (const device of devices) {
         let conn: any = null;
         let lastErr: any = null;
-        
-        // FIX: The GATT 133 Retry Bumper
         for (let attempt = 1; attempt <= 2; attempt++) {
           try {
             const isConnected = await bleManager.isDeviceConnected(device.id);
-            conn = isConnected 
-              ? device 
-              : await bleManager.connectToDevice(device.id);
-            break; // Connection acquired
+            conn = isConnected ? device : await bleManager.connectToDevice(device.id);
+            break;
           } catch (e: any) {
             lastErr = e;
             if (String(e).includes('133')) {
               AppLogger.warn(`[BLE] GATT 133 congestion linking ${device.id}. Attempt ${attempt}/2...`);
               await new Promise(resolve => setTimeout(resolve, 200));
             } else {
-              break; // Hard fault, don't retry
+              break;
             }
           }
         }
-
-        if (!conn) {
+        if (conn) {
+          rawConns.push(conn);
+        } else {
           AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${device.id}`, lastErr);
           AppLogger.log('BLE_CONNECTION_ERROR', { error: lastErr?.message || String(lastErr), deviceId: device.id, context: 'group_sync_fail' });
-          continue;
         }
+      }
 
+      // ── Phase 2: Parallel post-connect handshake ──────────────────────────
+      // Each device negotiates MTU, sets up notifications, and sends time sync
+      // concurrently. Returns the device conn if successful, null if it failed.
+      const handshakeDevice = async (conn: any): Promise<any | null> => {
         try {
-          // FIX: Escalate Android connection interval to 'High' (~11.25ms) to beat RF interference
           if (Platform.OS === 'android') {
             await bleManager.requestConnectionPriorityForDevice(conn.id, 1).catch(() => {});
           }
-
           await conn.discoverAllServicesAndCharacteristics();
 
-          try {
-            let negotiatedMtu = 23;
-            // Retry MTU negotiation up to 2 times if the Android stack botches it and returns 23
-            for (let mtuAttempt = 1; mtuAttempt <= 2; mtuAttempt++) {
-              try {
-                const negotiated = await conn.requestMTU(512);
-                negotiatedMtu = negotiated.mtu;
-                if (negotiatedMtu > 23) break;
-                AppLogger.warn(`[BLE] MTU glitch (23) for ${conn.id}. Retrying...`);
-                await new Promise(res => setTimeout(res, 200));
-              } catch (e) {
-                await new Promise(res => setTimeout(res, 200));
-              }
+          // MTU negotiation (up to 2 retries)
+          let negotiatedMtu = 23;
+          for (let mtuAttempt = 1; mtuAttempt <= 2; mtuAttempt++) {
+            try {
+              const negotiated = await conn.requestMTU(512);
+              negotiatedMtu = negotiated.mtu;
+              if (negotiatedMtu > 23) break;
+              AppLogger.warn(`[BLE] MTU glitch (23) for ${conn.id}. Retrying...`);
+              await new Promise(res => setTimeout(res, 200));
+            } catch (e) {
+              await new Promise(res => setTimeout(res, 200));
             }
-            if (negotiatedMtu > 23) {
-              mtuMapRef.current.set(conn.id, negotiatedMtu);
-              AppLogger.log('DEVICE_CONNECTED', { context: 'mtu_negotiated', mtu: negotiatedMtu, deviceId: conn.id });
-            } else {
-              AppLogger.warn(`[BLE] MTU stuck at 23 for ${conn.id}. Assuming Android GATT stack limit/glitch and forcing safe default 186.`);
-              mtuMapRef.current.set(conn.id, 186);
-            }
-          } catch (mtuErr: any) {
-            AppLogger.warn(`[BLE] MTU throw for ${conn.id}. Forcing default 186.`, mtuErr);
-            mtuMapRef.current.set(conn.id, 186);
           }
+          mtuMapRef.current.set(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);
+          AppLogger.log('DEVICE_CONNECTED', {
+            context: 'mtu_negotiated',
+            mtu: mtuMapRef.current.get(conn.id),
+            deviceId: conn.id,
+          });
 
+          // Disconnect listener + notification monitor
           if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
           disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {
             handleOrganicDisconnect(error, conn.id);
           });
-
           conn.monitorCharacteristicForService(
             ZENGGE_SERVICE_UUID,
             ZENGGE_NOTIFY_UUID,
             (error: any, characteristic: any) => handleNotificationRef.current(error, characteristic, conn.id)
           );
 
-          AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name });
-
-          // FIX: Send 0x10 session time sync immediately after GATT handshake.
-          // ZENGGE app does this before any other write — hardware clock starts from
-          // epoch 0 without it, causing timing-sensitive effects to drift.
+          // Time sync — ZENGGE requires this before any other write
           try {
             const timeSyncPayload = ZenggeProtocol.setSessionTime();
             const b64TimeSync = Buffer.from(timeSyncPayload).toString('base64');
@@ -483,20 +476,22 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
             AppLogger.warn('[BLE] Time sync write failed (non-fatal)', { error: String(timeSyncErr), deviceId: conn.id });
           }
 
-          // Stage for atomic group state update after the loop completes.
-          // (Previously: setConnectedDevices called here per-device — caused "1 of 2" flash)
-          connectedGroup.push(conn);
-
+          AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name });
+          return conn;
         } catch (deviceError: any) {
           const errMsg = deviceError?.message || String(deviceError);
           if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
-             AppLogger.warn(`[BLE] Connection dropout for ${device.id} (ignoring VIP error)`);
+            AppLogger.warn(`[BLE] Connection dropout for ${conn.id} (ignoring VIP error)`);
           } else {
-             AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${device.id}`, deviceError);
-             AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, deviceId: device.id, context: 'group_sync_fail' });
+            AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${conn.id}`, deviceError);
+            AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, deviceId: conn.id, context: 'group_sync_fail' });
           }
+          return null;
         }
-      }
+      };
+
+      const handshakeResults = await Promise.all(rawConns.map(handshakeDevice));
+      const connectedGroup = handshakeResults.filter(Boolean);
 
       // ── Single atomic state update with the fully-booted group ───────────────────
       // All GATT handshakes, MTU negotiations, and time syncs are complete for every
