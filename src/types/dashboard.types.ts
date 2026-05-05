@@ -39,8 +39,6 @@ export interface DevicePatternState {
   ts: number;                  // Date.now() of last write
 }
 
-// ─── Device & Group Contracts ───────────────────────────────────────────────
-
 // Auto-classify result — fed into FirstTimeSetupModal
 export interface PendingRegistration {
   device_mac: string;

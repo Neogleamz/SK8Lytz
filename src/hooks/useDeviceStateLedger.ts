@@ -38,6 +38,31 @@ export const isStale = (ts: number): boolean =>
  */
 const memoryCache = new Map<string, DevicePatternState>();
 
+/**
+ * Warm the in-memory cache from AsyncStorage on app boot.
+ * MUST be called once at startup (e.g. DashboardScreen mount) so that
+ * loadSync() returns valid data for lazy useState initializers in
+ * useDockedControllerState. Without this, cache is always empty on cold
+ * start and pre-warm never fires even though data exists in storage.
+ */
+export async function warmLedgerCache(): Promise<void> {
+  try {
+    const allKeys = await AsyncStorage.getAllKeys();
+    const ledgerKeys = allKeys.filter(k => k.startsWith(KEY_PREFIX));
+    if (ledgerKeys.length === 0) return;
+    const pairs = await AsyncStorage.multiGet(ledgerKeys);
+    pairs.forEach(([, raw]) => {
+      if (!raw) return;
+      try {
+        const parsed: DevicePatternState = JSON.parse(raw);
+        if (parsed?.deviceMac) {
+          memoryCache.set(normalizeMac(parsed.deviceMac), parsed);
+        }
+      } catch { /* corrupt entry — skip */ }
+    });
+  } catch { /* storage unavailable — silent */ }
+}
+
 export function useDeviceStateLedger() {
   // Per-instance debounce timers keyed by MAC
   const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());

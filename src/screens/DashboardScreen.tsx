@@ -50,7 +50,7 @@ import { useDashboardCrew } from '../hooks/useDashboardCrew';
 import { useDashboardDeviceConfig } from '../hooks/useDashboardDeviceConfig';
 
 import { useHardwareNotifications } from '../hooks/useHardwareNotifications';
-import { useDeviceStateLedger, normalizeMac } from '../hooks/useDeviceStateLedger';
+import { useDeviceStateLedger, normalizeMac, warmLedgerCache } from '../hooks/useDeviceStateLedger';
 import type { DashboardViewState, DeviceSettings, CustomGroup } from '../types/dashboard.types';
 
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
@@ -157,6 +157,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // ── Screen Navigation Telemetry ────────────────────────────────────────────
   useEffect(() => {
     AppLogger.log('SCREEN_OPENED', { screen: 'DashboardScreen' });
+    // Pre-warm the ledger in-memory cache from AsyncStorage so that loadSync()
+    // returns valid data when DockedController mounts and calls lazy useState init.
+    // Without this, cold starts always get default state even though storage has data.
+    warmLedgerCache().catch(() => {});
   }, []);
 
   // ── Hardware BLE callbacks (extracted to useHardwareNotifications) ───────────

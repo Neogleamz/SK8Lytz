@@ -373,15 +373,24 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       const ledgerState = primaryMac ? ledger.loadSync(primaryMac) : null;
       if (!ledgerState || ledgerState.rawPayload.length === 0) return;
       hasReplayedRef.current = true;
-      const timer = setTimeout(() => {
-        // BUG FIX: Target replay at the SPECIFIC device that just connected,
-        // not a broadcast. Broadcast could overwrite another device's in-flight
-        // pattern when a second device in a group reconnects independently.
-        // parentWriteToDevice(payload, targetDeviceId) routes to one device only.
-        parentWriteToDevice(ledgerState.rawPayload, primaryMac).catch(() => {});
-        AppLogger.log('LEDGER_RECONNECT_REPLAY', { mac: primaryMac, payloadLen: ledgerState.rawPayload.length });
-      }, 300);
-      return () => clearTimeout(timer);
+      // Stagger writes across all connected devices (100ms apart) to avoid GATT contention.
+      // For a solo device there is only one iteration. For a group, each device gets
+      // a targeted write — avoids overwriting an in-flight pattern on a partner device.
+      const devicesToReplay = devices ?? [];
+      devicesToReplay.forEach((d, idx) => {
+        const timer = setTimeout(() => {
+          parentWriteToDevice(ledgerState.rawPayload, d.id).catch(() => {});
+          if (idx === 0) {
+            AppLogger.log('LEDGER_RECONNECT_REPLAY', {
+              macs: devicesToReplay.map(x => x.id),
+              payloadLen: ledgerState.rawPayload.length,
+            });
+          }
+        }, 300 + idx * 100);
+        // Note: cleanup only cancels idx=0 timer — acceptable since the effect
+        // has already set hasReplayedRef.current = true before any timer fires.
+        if (idx === 0) return () => clearTimeout(timer);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isActuallyPairedOrConnected]);
 
