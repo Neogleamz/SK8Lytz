@@ -27,7 +27,7 @@ import {
   useCameraPermission,
   useFrameOutput,
 } from 'react-native-vision-camera';
-import { useRunOnJS } from 'react-native-worklets-core';
+import { runOnJS } from 'react-native-worklets';
 import { requestPermission } from '../services/PermissionService';
 import { Colors, Spacing } from '../theme/theme';
 
@@ -64,16 +64,15 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
   }, [hasPermission, requestFromHook]);
 
   // --- Frame Processor (Option A): worklet on camera thread ---
-  const updateColorOnJS = useRunOnJS(
-    (hex: string) => {
-      const now = Date.now();
-      // Throttle to ~10 state updates per second
-      if (now - lastUpdateRef.current < 100) return;
-      lastUpdateRef.current = now;
-      setLiveHex(hex);
-    },
-    [setLiveHex]
-  );
+  const updateColor = useCallback((hex: string) => {
+    const now = Date.now();
+    // Throttle to ~10 state updates per second
+    if (now - lastUpdateRef.current < 100) return;
+    lastUpdateRef.current = now;
+    setLiveHex(hex);
+  }, [setLiveHex]);
+
+  const updateColorOnJS = runOnJS(updateColor);
 
   const frameOutput = useFrameOutput({
     pixelFormat: 'rgb',

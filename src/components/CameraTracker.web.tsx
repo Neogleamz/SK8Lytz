@@ -8,6 +8,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+
 import { Colors, Spacing } from '../theme/theme';
 
 interface CameraTrackerProps {
