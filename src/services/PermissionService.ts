@@ -1,5 +1,5 @@
 import { requestRecordingPermissionsAsync, getRecordingPermissionsAsync } from 'expo-audio';
-import { Camera } from 'expo-camera';
+import { Camera } from 'react-native-vision-camera';
 import * as Location from 'expo-location';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -59,7 +59,7 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
   try {
     switch (type) {
       case 'CAMERA': {
-        const { status } = await Camera.requestCameraPermissionsAsync();
+        const status = await Camera.requestCameraPermission();
         return status === 'granted';
       }
       case 'MIC': {
@@ -114,7 +114,7 @@ const checkPermissionNative = async (type: PermissionType): Promise<boolean> => 
   try {
     switch (type) {
       case 'CAMERA': {
-        const { status } = await Camera.getCameraPermissionsAsync();
+        const status = Camera.getCameraPermissionStatus();
         return status === 'granted';
       }
       case 'MIC': {

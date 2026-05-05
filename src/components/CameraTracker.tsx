@@ -1,10 +1,11 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Buffer } from 'buffer';
-import { CameraView, useCameraPermissions } from 'expo-camera';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { ActivityIndicator, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import { Colors, Spacing } from '../theme/theme';
 import { openGlobalPermissionsModal } from '../services/PermissionService';
+import * as FileSystem from 'expo-file-system';
 
 // Types for dynamically loaded native-only libraries
 type ImageManipulatorModule = {
@@ -36,173 +37,150 @@ interface CameraTrackerProps {
   isActive: boolean;
 }
 
-// Ensure the Base64 snippet has no MIME header
-const extractBase64Data = (uri: string) => uri.replace(/^data:image\/\w+;base64,/, '');
-
 export default function CameraTracker({ onColorDetected, isActive }: CameraTrackerProps) {
-  const [permission, requestPermission] = useCameraPermissions();
-  const [detectedHex, setDetectedHex] = useState<string>('#000000');
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { hasPermission, requestPermission } = useCameraPermission();
+  const device = useCameraDevice('back');
+  const cameraRef = useRef<Camera>(null);
+  
+  const [liveHex, setLiveHex] = useState<string>('#000000');
+  const [isCapturing, setIsCapturing] = useState(false);
   const [layout, setLayout] = useState({ width: 0, height: 0 });
-  const cameraRef = useRef<CameraView>(null);
+  const isProcessingRef = useRef(false);
 
-  // Aggressive prompt for undetermined permissions on mount
+  // Aggressive prompt for undetermined permissions
   useEffect(() => {
-    if (permission && permission.status === 'undetermined') {
+    if (!hasPermission) {
       openGlobalPermissionsModal().then(() => requestPermission());
     }
-  }, [permission, requestPermission]);
+  }, [hasPermission, requestPermission]);
 
-  if (Platform.OS === 'web') {
+  // Continuous background polling loop (Simulated Frame Processor)
+  useEffect(() => {
+    if (!isActive || !hasPermission || !device || !layout.width || !layout.height) return;
+
+    let mounted = true;
+    const POLLING_INTERVAL_MS = 300; // ~3 FPS
+
+    const pollCenterPixel = async () => {
+      if (!mounted || isProcessingRef.current || !cameraRef.current || !ImageManipulator || !jpeg) return;
+
+      isProcessingRef.current = true;
+      try {
+        const photo = await cameraRef.current.takePhoto({
+          qualityPrioritization: 'speed',
+          enableShutterSound: false,
+          flash: 'off',
+        });
+
+        const cropSize = 10; 
+        const originX = Math.floor(Math.max(0, (photo.width / 2) - (cropSize / 2)));
+        const originY = Math.floor(Math.max(0, (photo.height / 2) - (cropSize / 2)));
+
+        const result = await ImageManipulator.manipulateAsync(
+          `file://${photo.path}`,
+          [{ crop: { originX, originY, width: cropSize, height: cropSize } }],
+          { base64: true, format: ImageManipulator.SaveFormat.JPEG, compress: 1.0 }
+        );
+
+        // Cleanup the massive original photo from flash storage to prevent leaks
+        FileSystem.deleteAsync(`file://${photo.path}`).catch(() => {});
+
+        if (result.base64 && mounted) {
+          const buffer = Buffer.from(result.base64, 'base64');
+          const decoded = jpeg.decode(buffer, { useTArray: true });
+          
+          let r = 0, g = 0, b = 0;
+          const pixelCount = decoded.width * decoded.height;
+          
+          for (let i = 0; i < decoded.data.length; i += 4) {
+              r += decoded.data[i];
+              g += decoded.data[i + 1];
+              b += decoded.data[i + 2];
+          }
+          
+          let avgR = Math.round(r / pixelCount);
+          let avgG = Math.round(g / pixelCount);
+          let avgB = Math.round(b / pixelCount);
+
+          // VIVIDNESS NORMALIZATION (HSL BOOST)
+          const rNorm = avgR / 255;
+          const gNorm = avgG / 255;
+          const bNorm = avgB / 255;
+          const cMax = Math.max(rNorm, gNorm, bNorm);
+          const cMin = Math.min(rNorm, gNorm, bNorm);
+          const delta = cMax - cMin;
+
+          let h = 0;
+          if (delta !== 0) {
+            switch (cMax) {
+              case rNorm: h = ((gNorm - bNorm) / delta) % 6; break;
+              case gNorm: h = (bNorm - rNorm) / delta + 2; break;
+              case bNorm: h = (rNorm - gNorm) / delta + 4; break;
+            }
+            h = Math.round(h * 60);
+            if (h < 0) h += 360;
+          }
+
+          // Lock S and L for pure vibrant LED color
+          const s = 1.0;
+          const l = 0.5;
+
+          const c = (1 - Math.abs(2 * l - 1)) * s;
+          const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+          const m = l - c / 2;
+          let rPrime = 0, gPrime = 0, bPrime = 0;
+
+          if (h >= 0 && h < 60) { rPrime = c; gPrime = x; bPrime = 0; }
+          else if (h >= 60 && h < 120) { rPrime = x; gPrime = c; bPrime = 0; }
+          else if (h >= 120 && h < 180) { rPrime = 0; gPrime = c; bPrime = x; }
+          else if (h >= 180 && h < 240) { rPrime = 0; gPrime = x; bPrime = c; }
+          else if (h >= 240 && h < 300) { rPrime = x; gPrime = 0; bPrime = c; }
+          else if (h >= 300 && h < 360) { rPrime = c; gPrime = 0; bPrime = x; }
+
+          avgR = Math.round((rPrime + m) * 255);
+          avgG = Math.round((gPrime + m) * 255);
+          avgB = Math.round((bPrime + m) * 255);
+          
+          const hex = '#' + [avgR, avgG, avgB].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
+          setLiveHex(hex);
+        }
+      } catch (e) {
+        // Silent catch for background polling
+      } finally {
+        if (mounted) isProcessingRef.current = false;
+      }
+    };
+
+    const intervalId = setInterval(pollCenterPixel, POLLING_INTERVAL_MS);
+    return () => {
+      mounted = false;
+      clearInterval(intervalId);
+    };
+  }, [isActive, hasPermission, device, layout.width, layout.height]);
+
+  const handleCapture = useCallback(() => {
+    setIsCapturing(true);
+    onColorDetected(liveHex);
+    // Haptic simulation via slight delay before resetting capture state
+    setTimeout(() => setIsCapturing(false), 200);
+  }, [liveHex, onColorDetected]);
+
+  if (Platform.OS === 'web' || !device) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', padding: Spacing.xl }]}>
-        <MaterialCommunityIcons name="camera-iris" size={48} color={Colors.primary} style={{ marginBottom: Spacing.lg, opacity: 0.8 }} />
-        <Text style={[styles.message, { fontSize: 18, marginBottom: Spacing.sm }]}>Optical Simulation Mode</Text>
-        <Text style={{ color: Colors.textMuted, textAlign: 'center', fontSize: 13, lineHeight: 18, marginBottom: Spacing.xl }}>
-          Optical telemetry requires native hardware acceleration reserved for Android & iOS builds.
-        </Text>
-        
-        <TouchableOpacity 
-          style={[styles.button, { backgroundColor: 'rgba(0,240,255,0.15)', borderWidth: 1, borderColor: Colors.primary }]}
-          onPress={() => {
-            const randomHex = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0').toUpperCase();
-            setDetectedHex(randomHex);
-            onColorDetected(randomHex);
-          }}
-        >
-          <Text style={{ color: Colors.primary, fontWeight: 'bold', letterSpacing: 1 }}>SIMULATE TELEMETRY</Text>
-        </TouchableOpacity>
+        <ActivityIndicator color={Colors.primary} size="large" />
       </View>
     );
   }
 
-  const handlePress = async (event: { nativeEvent: { locationX: number; locationY: number } }) => {
-    if (!isActive || !permission?.granted || !cameraRef.current || isProcessing || !layout.width || !layout.height) return;
-    if (!ImageManipulator || !jpeg) return; // native libs not loaded (should not happen on device)
-
-    const { locationX, locationY } = event.nativeEvent;
-    
-    setIsProcessing(true);
-    try {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.1, skipProcessing: true });
-      if (!photo) {
-        setIsProcessing(false);
-        return;
-      }
-      
-      // Map screen touch to photo coordinates
-      const x_p = (locationX / layout.width) * photo.width;
-      const y_p = (locationY / layout.height) * photo.height;
-      
-      const cropSize = 10; // 10x10 sample area to average out camera noise
-      const originX = Math.floor(Math.max(0, Math.min(photo.width - cropSize, x_p)));
-      const originY = Math.floor(Math.max(0, Math.min(photo.height - cropSize, y_p)));
-
-      const result = await ImageManipulator.manipulateAsync(
-        photo.uri,
-        [{ crop: { originX, originY, width: cropSize, height: cropSize } }],
-        { base64: true, format: ImageManipulator.SaveFormat.JPEG, compress: 1.0 }
-      );
-
-      if (result.base64) {
-        const rawData = extractBase64Data(result.base64);
-        const buffer = Buffer.from(rawData, 'base64');
-        const decoded = jpeg.decode(buffer, { useTArray: true });
-        
-        let r = 0, g = 0, b = 0;
-        const pixelCount = decoded.width * decoded.height;
-        
-        for (let i = 0; i < decoded.data.length; i += 4) {
-            r += decoded.data[i];
-            g += decoded.data[i + 1];
-            b += decoded.data[i + 2];
-        }
-        
-        let avgR = Math.round(r / pixelCount);
-        let avgG = Math.round(g / pixelCount);
-        let avgB = Math.round(b / pixelCount);
-
-        // VIVIDNESS NORMALIZATION ALGORITHM (HSL BOOST):
-        // Convert averaged RGB to HSL, boost saturation to make colors pop on LEDs,
-        // without destroying underlying whites and greys like a min/max stretch would.
-        const rNorm = avgR / 255;
-        const gNorm = avgG / 255;
-        const bNorm = avgB / 255;
-        const cMax = Math.max(rNorm, gNorm, bNorm);
-        const cMin = Math.min(rNorm, gNorm, bNorm);
-        const delta = cMax - cMin;
-
-        let h = 0, s = 0, l = (cMax + cMin) / 2;
-
-        if (delta !== 0) {
-          s = delta / (1 - Math.abs(2 * l - 1));
-          switch (cMax) {
-            case rNorm: h = ((gNorm - bNorm) / delta) % 6; break;
-            case gNorm: h = (bNorm - rNorm) / delta + 2; break;
-            case bNorm: h = (rNorm - gNorm) / delta + 4; break;
-          }
-          h = Math.round(h * 60);
-          if (h < 0) h += 360;
-        }
-
-        // FORCE PURE HUE VIVIDNESS:
-        // By locking Saturation to 100% and Lightness to 50%, we discard shadows/lighting
-        // and extract pure, blazing colors optimized for physical LEDs.
-        s = 1.0;
-        l = 0.5;
-
-        // Convert back to RGB
-        const c = (1 - Math.abs(2 * l - 1)) * s;
-        const x = c * (1 - Math.abs((h / 60) % 2 - 1));
-        const m = l - c / 2;
-        let rPrime = 0, gPrime = 0, bPrime = 0;
-
-        if (h >= 0 && h < 60) { rPrime = c; gPrime = x; bPrime = 0; }
-        else if (h >= 60 && h < 120) { rPrime = x; gPrime = c; bPrime = 0; }
-        else if (h >= 120 && h < 180) { rPrime = 0; gPrime = c; bPrime = x; }
-        else if (h >= 180 && h < 240) { rPrime = 0; gPrime = x; bPrime = c; }
-        else if (h >= 240 && h < 300) { rPrime = x; gPrime = 0; bPrime = c; }
-        else if (h >= 300 && h < 360) { rPrime = c; gPrime = 0; bPrime = x; }
-
-        avgR = Math.round((rPrime + m) * 255);
-        avgG = Math.round((gPrime + m) * 255);
-        avgB = Math.round((bPrime + m) * 255);
-        
-        const hex = '#' + [avgR, avgG, avgB].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
-        setDetectedHex(hex);
-        onColorDetected(hex);
-      }
-    } catch (e: any) {
-      console.error('Camera capture failed', e);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  if (!permission) {
-    // Still loading permission status — show spinner, not blank
-    return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={[styles.message, { marginTop: Spacing.md }]}>Checking camera access…</Text>
-      </View>
-    );
-  }
-
-  if (!permission.granted) {
-    // If we've explicitly been denied and the OS says we can't ask again, then we fallback to open settings
-    const requiresSettings = permission.status === 'denied' && !permission.canAskAgain;
+  if (!hasPermission) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xl }]}>
         <MaterialCommunityIcons name="camera-off" size={40} color={Colors.textMuted} style={{ marginBottom: Spacing.md }} />
-        <Text style={styles.message}>
-          {requiresSettings
-            ? 'Camera access was denied permanently. Please enable it in your device Settings.'
-            : 'Camera access is needed to detect colors from your environment.'}
-        </Text>
-        <TouchableOpacity style={styles.button} onPress={requiresSettings ? () => Linking.openSettings() : async () => { await openGlobalPermissionsModal(); requestPermission(); }}>
+        <Text style={styles.message}>Camera access is needed to detect colors from your environment.</Text>
+        <TouchableOpacity style={styles.button} onPress={async () => { await openGlobalPermissionsModal(); requestPermission(); }}>
           <Text style={{ color: Colors.isDark ? '#FFF' : '#000', fontWeight: 'bold' }}>
-            {requiresSettings ? 'OPEN SETTINGS' : 'GRANT PERMISSION'}
+            GRANT PERMISSION
           </Text>
         </TouchableOpacity>
       </View>
@@ -211,33 +189,54 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
-        activeOpacity={1} 
-        onPress={handlePress}
-        style={StyleSheet.absoluteFillObject}
-      >
-        <CameraView 
-          style={StyleSheet.absoluteFillObject} 
-          ref={cameraRef} 
-          facing="back"
-          onLayout={(e) => {
-            setLayout({
-              width: e.nativeEvent.layout.width,
-              height: e.nativeEvent.layout.height
-            });
-          }}
-        >
-           <View style={styles.instructionOverlay}>
-              <View style={styles.pillContainer}>
-                <View style={[styles.swatch, { backgroundColor: detectedHex }]} />
-                <Text style={styles.pillText}>{detectedHex}</Text>
-              </View>
-              <Text style={styles.instructionText}>
-                {isProcessing ? 'Analyzing light matrix...' : 'Touch anywhere to extract pure hue'}
-              </Text>
-           </View>
-        </CameraView>
-      </TouchableOpacity>
+      <Camera 
+        style={StyleSheet.absoluteFillObject} 
+        device={device}
+        isActive={isActive}
+        ref={cameraRef}
+        photo={true}
+        onLayout={(e) => {
+          setLayout({
+            width: e.nativeEvent.layout.width,
+            height: e.nativeEvent.layout.height
+          });
+        }}
+      />
+      
+      {/* Reticle Overlay */}
+      <View style={styles.reticleContainer} pointerEvents="none">
+        <View style={[styles.reticleRing, { borderColor: liveHex }]}>
+          <View style={styles.reticleCrosshairHorizontal} />
+          <View style={styles.reticleCrosshairVertical} />
+        </View>
+      </View>
+
+      {/* Control Overlay */}
+      <View style={styles.instructionOverlay}>
+         <View style={styles.pillContainer}>
+           <Text style={styles.pillText}>{liveHex}</Text>
+         </View>
+         <Text style={styles.instructionText}>
+           Center target on a light source and capture
+         </Text>
+
+         {/* Massive CAPTURE FAB */}
+         <TouchableOpacity 
+            activeOpacity={0.8}
+            onPress={handleCapture}
+            style={[
+              styles.captureFab, 
+              { backgroundColor: liveHex },
+              isCapturing && styles.captureFabActive
+            ]}
+          >
+            <MaterialCommunityIcons 
+              name="line-scan" 
+              size={36} 
+              color={liveHex === '#FFFFFF' || liveHex === '#FFFF00' ? '#000' : '#FFF'} 
+            />
+         </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -245,7 +244,7 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    minHeight: 200,
+    minHeight: 300,
     backgroundColor: '#000',
     overflow: 'hidden',
   },
@@ -262,48 +261,84 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: Spacing.xl,
   },
-  instructionOverlay: {
+  reticleContainer: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    paddingBottom: Spacing.xl,
+  },
+  reticleRing: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 3,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...Platform.select({
+      web: { boxShadow: '0px 0px 10px rgba(0,0,0,0.5)' } as any,
+      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10 }
+    }),
+  },
+  reticleCrosshairHorizontal: {
+    position: 'absolute',
+    width: 20,
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+  },
+  reticleCrosshairVertical: {
+    position: 'absolute',
+    width: 2,
+    height: 20,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+  },
+  instructionOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingBottom: Spacing.xxl,
+    paddingTop: Spacing.xl,
   },
   pillContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: 12,
-    borderRadius: 30,
-    marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
-    ...Platform.select({
-      web: { boxShadow: '0px 4px 4px rgba(0,0,0,0.3)' } as any,
-      default: { shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4 }
-    }),
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: Spacing.xs,
   },
   pillText: {
     color: '#FFF',
-    fontSize: 18,
+    fontSize: 14,
     fontFamily: 'Inter-Bold',
-    letterSpacing: 2,
+    letterSpacing: 1,
   },
   instructionText: {
-    color: 'rgba(255,255,255,0.6)',
+    color: 'rgba(255,255,255,0.8)',
     fontSize: 12,
     fontFamily: 'Inter-Medium',
     textAlign: 'center',
     letterSpacing: 0.5,
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
+    textShadowColor: 'rgba(0,0,0,0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
-  swatch: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    marginRight: Spacing.md,
-    borderWidth: 2,
+  captureFab: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 4,
     borderColor: 'rgba(255,255,255,0.8)',
+    ...Platform.select({
+      web: { boxShadow: '0px 8px 15px rgba(0,0,0,0.4)' } as any,
+      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 15 }
+    }),
+  },
+  captureFabActive: {
+    transform: [{ scale: 0.95 }],
+    opacity: 0.8,
   }
 });
