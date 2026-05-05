@@ -88,9 +88,14 @@ export function useMusicMode({
       c2Hex: color2Hex,
     });
 
+    // BIBLE §11 ORACLE FIX: modeType is the MATRIX SELECTOR (0x26=Light Bar / 0x27=Light Screen).
+    // It is NOT the mic source. App mic is activated by streaming 0x74 packets — the hardware
+    // overrides its built-in mic when it receives rapid 0x74 magnitude packets.
+    // Previously this was `isDeviceMic ? 0x27 : 0x26` which hardlocked the hardware to Light Bar
+    // (0x26) in APP mic mode, making pattern switching broken and all Light Screen patterns unreachable.
     writeToDevice(ZenggeProtocol.setMusicConfig(
-      safePatternId,                        // effectId — 1–16 or 1–30
-      isDeviceMic ? 0x27 : 0x26,           // modeType byte (matrix style)
+      safePatternId,                        // effectId — 1–16 (0x26) or 1–30 (0x27)
+      matrix as 0x26 | 0x27,               // modeType = the matrix the user selected, NOT mic source
       true,                                 // isOn — always true when entering music mode
       c1,
       c2,
@@ -134,7 +139,7 @@ export function useMusicMode({
       AppLogger.log('MUSIC_MODE_EXIT', { from: prev, to: activeMode });
       writeToDevice(ZenggeProtocol.setMusicConfig(
         musicPatternId,
-        isDeviceMic ? 0x27 : 0x26,
+        musicMatrixStyle as 0x26 | 0x27, // use actual matrix style, not mic source
         false, // isOn=false — exit music reactive mode
         c1,
         c2,

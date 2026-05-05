@@ -63,27 +63,33 @@ export function useAppMicrophone({
       await recorder.prepareToRecordAsync();
       recorder.record();
 
-      // Start magnitude stream
-      // prevMagRef: stores last-written normalized magnitude to gate redundant BLE writes.
-      // Interval at 10Hz (100ms) — hardware smooths between values; 20Hz is imperceptible.
+      // Start magnitude stream — firehose to hardware at 20Hz.
+      // BIBLE §11: ZENGGE app streams 0x74 continuously. Hardware switches from
+      // built-in mic to app mic ONLY when it receives a steady 0x74 stream.
+      // Too-slow streaming (10Hz with delta gate) looks like silence → hardware falls back to device mic.
       const prevMagRef = { current: -1 };
       magnitudeInterval.current = setInterval(() => {
         if (!writeToDevice) return;
         const stats = recorder.getStatus();
         if (stats.canRecord && stats.isRecording) {
           const metering = stats.metering ?? -160;
-          // Map -60...0 to 0...1 for usable visualization
-          const normalized = Math.max(0, Math.min(1, (metering + 100) / 100));
-          // Delta guard: skip BLE write if magnitude hasn't changed by >5%
-          if (Math.abs(normalized - prevMagRef.current) < 0.05) return;
-          prevMagRef.current = normalized;
-          setAudioMagnitude(normalized);
+          // Map -100..0 dBFS → 0..1 (covers full Android expo-audio metering range)
+          const raw = Math.max(0, Math.min(1, (metering + 100) / 100));
 
-          // Send to physical device (0x74 music magnitude command expects 0-255)
-          const deviceMag = Math.floor(normalized * 255);
+          // Exponential moving average — smooths noisy mic readings so the EQ
+          // glides instead of jumping. alpha=0.4: snappy but not jittery.
+          const smoothed = prevMagRef.current < 0
+            ? raw
+            : prevMagRef.current + 0.4 * (raw - prevMagRef.current);
+          prevMagRef.current = smoothed;
+
+          setAudioMagnitude(smoothed);
+
+          // Send to hardware — 0x74 expects 0-255
+          const deviceMag = Math.floor(smoothed * 255);
           writeToDevice(ZenggeProtocol.sendMusicMagnitude(deviceMag));
         }
-      }, 100); // 10Hz — saves ~50% BLE writes vs 20Hz with no perceptible visual difference
+      }, 50); // 20Hz — hardware needs continuous stream to stay in app-mic mode
     } catch (err) {
       AppLogger.error('Failed to start recording', err);
     }
