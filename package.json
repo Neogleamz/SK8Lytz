@@ -60,6 +60,7 @@
     "supercluster": "^8.0.1"
   },
   "devDependencies": {
+    "@babel/plugin-proposal-optional-chaining": "^7.21.0",
     "@types/react": "~19.2.2",
     "@types/string-similarity": "^4.0.2",
     "@types/supercluster": "^7.1.3",
