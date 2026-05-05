@@ -227,15 +227,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     // ── Device State Ledger ─────────────────────────────────────────────────
     // Unified per-device pattern state. Pre-warms controller UI on mount.
     const ledger = useDeviceStateLedger();
-    // Resolve primary MAC — for groups, find the first device that already has a
-    // ledger entry so we restore the correct group pattern, not always device[0].
-    // Falls back to device[0] for cold starts (no ledger entry exists yet).
-    const primaryMac = React.useMemo(() => {
-      if (!devices || devices.length === 0) return '';
-      const withEntry = devices.find(d => ledger.loadSync(d.id) !== null);
-      return (withEntry ?? devices[0]).id;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [devices?.[0]?.id, devices?.length]);
+    // Resolve primary MAC — device[0] is the group leader or the solo device.
+    // warmLedgerCache() fires on app boot (App.tsx) so the in-memory cache is
+    // already populated by the time DockedController mounts. No need to scan
+    // all devices for a ledger entry — device[0] will have one if any do.
+    const primaryMac = devices?.[0]?.id ?? '';
 
     const {
       activeProduct, setActiveProduct,

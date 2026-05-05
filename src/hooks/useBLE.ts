@@ -543,36 +543,11 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
           return merged;
         });
 
-        // FIX: Restore last-sent pattern payload on reconnect.
-        // If the user had a pattern active before disconnecting, replay it immediately
-        // so skates light up without requiring user interaction.
-        // BUG FIX: Pattern cache restore was keyed to connectedGroup[0]?.id only.
-        // DashboardScreen writes the cache using displayConnectedDevices[0]?.id which may
-        // differ on reconnect (e.g. right skate reconnects before left). Try all device IDs.
-        try {
-          let cached: string | null = null;
-          let resolvedKey = '';
-          for (const conn of connectedGroup) {
-            const key = PATTERN_CACHE_KEY(conn.id.toUpperCase());
-            cached = await AsyncStorage.getItem(key);
-            if (cached) { resolvedKey = key; break; }
-          }
-          if (cached) {
-            const { payload: lastPayload, ts } = JSON.parse(cached);
-            const ageMs = Date.now() - ts;
-            if (Array.isArray(lastPayload) && ageMs < 3600000) { // 60 min TTL
-              // Delay 300ms to let hardware settle post-connect before writing
-              setTimeout(() => {
-                if (connectedDevicesRef.current.some(d => d.id === connectedGroup[0]?.id)) {
-                  writeToDevice(lastPayload);
-                  AppLogger.log('BLE_STATE_CHANGE', { event: 'pattern_cache_restored', key: resolvedKey, ageMs });
-                }
-              }, 300);
-            }
-          }
-        } catch (cacheErr) {
-          // Non-fatal — cache miss or parse error, user just starts fresh
-        }
+        // REMOVED: Legacy @Sk8lytz_last_pattern_* reconnect replay.
+        // Superseded by DeviceStateLedger (useDeviceStateLedger.ts) + DockedController
+        // reconnect-replay useEffect. The old system caused a double-write race:
+        // two BLE payloads firing at ~300ms post-connect from different code layers.
+        // The ledger handles this correctly with per-device targeting and staggered writes.
       }
 
       setGate('IDLE');

@@ -12,7 +12,7 @@
  * Storage key: `@SK8Lytz_DeviceState_v2_{MAC_UPPERCASE}`
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useRef } from 'react';
+import { useCallback } from 'react';
 import type { DevicePatternState } from '../types/dashboard.types';
 
 const KEY_PREFIX = '@SK8Lytz_DeviceState_v2_';
@@ -37,6 +37,13 @@ export const isStale = (ts: number): boolean =>
  * Populated on load(), updated on save(). Synchronous — no async penalty.
  */
 const memoryCache = new Map<string, DevicePatternState>();
+/**
+ * Module-level debounce timer map — shared across ALL hook instances.
+ * Ensures only ONE AsyncStorage write is in-flight per MAC at any time,
+ * even when DashboardScreen and DockedController both call save() simultaneously.
+ * Previously this was a per-instance useRef, causing independent timers to race.
+ */
+const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 /**
  * Warm the in-memory cache from AsyncStorage on app boot.
@@ -64,8 +71,7 @@ export async function warmLedgerCache(): Promise<void> {
 }
 
 export function useDeviceStateLedger() {
-  // Per-instance debounce timers keyed by MAC
-  const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  // debounceTimers is now module-level (shared singleton) — see top of file.
 
   /**
    * Save device pattern state to ledger.
@@ -78,18 +84,18 @@ export function useDeviceStateLedger() {
     // Synchronous in-memory update — available immediately for loadSync()
     memoryCache.set(key, entry);
 
-    // Debounced AsyncStorage write — prevents hammering storage on slider drags
-    const existing = debounceTimers.current.get(key);
+    // Debounced AsyncStorage write — module-level timer map prevents dual-instance race
+    const existing = debounceTimers.get(key);
     if (existing) clearTimeout(existing);
 
     const timer = setTimeout(() => {
       AsyncStorage.setItem(`${KEY_PREFIX}${key}`, JSON.stringify(entry)).catch(() => {
         // Silent — storage write failure is non-fatal; in-memory cache still valid
       });
-      debounceTimers.current.delete(key);
+      debounceTimers.delete(key);
     }, 500);
 
-    debounceTimers.current.set(key, timer);
+    debounceTimers.set(key, timer);
   }, []);
 
   /**
@@ -134,11 +140,11 @@ export function useDeviceStateLedger() {
   const clear = useCallback(async (mac: string): Promise<void> => {
     const key = normalizeMac(mac);
 
-    // Cancel any pending debounced write
-    const timer = debounceTimers.current.get(key);
+    // Cancel any pending debounced write before wiping from cache
+    const timer = debounceTimers.get(key);
     if (timer) {
       clearTimeout(timer);
-      debounceTimers.current.delete(key);
+      debounceTimers.delete(key);
     }
 
     memoryCache.delete(key);

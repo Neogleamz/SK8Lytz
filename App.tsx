@@ -10,6 +10,7 @@ import { GlobalPermissionsModal } from './src/components/modals/GlobalPermission
 import { useFonts, Righteous_400Regular } from '@expo-google-fonts/righteous';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppLogger } from './src/services/AppLogger';
+import { warmLedgerCache } from './src/hooks/useDeviceStateLedger';
 import { supabase } from './src/services/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
@@ -219,6 +220,9 @@ export default function App() {
       SplashScreen.hideAsync().catch(() => {});
       AppLogger.log('APP_OPENED', { loadTimeMs: Date.now() - appStartTime });
       AppLogger.uploadLogsToSupabase();
+      // Pre-warm ledger cache so loadSync() has data before any screen mounts.
+      // Fires once per cold start — reads all @SK8Lytz_DeviceState_v2_* keys from AsyncStorage.
+      warmLedgerCache().catch(() => {});
     }
   }, [fontsLoaded]);
 
