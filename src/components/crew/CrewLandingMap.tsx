@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, Image, Platform, Animated } from 'react-native';
+import { View, Text, Image, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import MapView, { Marker, PROVIDER_GOOGLE, PROVIDER_DEFAULT } from 'react-native-maps';
+import MapView, { Marker, UrlTile, PROVIDER_DEFAULT } from 'react-native-maps';
 import MapViewCluster from 'react-native-map-clustering';
 import { useTheme } from '../../context/ThemeContext';
 import { NearbySession, NearbySkateSpot } from '../../services/LocationService';
@@ -57,7 +57,7 @@ export function CrewLandingMap({
   return (
     <MapViewCluster
       ref={mapRef}
-      provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : PROVIDER_DEFAULT}
+      provider={PROVIDER_DEFAULT}
       style={{ flex: 1 }}
       initialRegion={{
         latitude: locationCoords?.lat || 39.8283,
@@ -70,6 +70,12 @@ export function CrewLandingMap({
       showsUserLocation
       showsMyLocationButton
     >
+      {/* OSM tile layer — replaces Google Maps tiles, no API key required */}
+      <UrlTile
+        urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+        maximumZ={19}
+        flipY={false}
+      />
       {/* ── Static Skate Spots — color-coded by facility_type ── */}
       {nearbySpots.map((spot: NearbySkateSpot) => {
         const { hex, icon } = getSpotMarker(spot);
