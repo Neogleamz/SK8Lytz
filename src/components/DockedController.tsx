@@ -1006,6 +1006,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                       setLastOperatingMode('BUILDER');
                     } else if (dockItem.id === 'MULTIMODE') {
                       setActiveMode('MULTIMODE');
+                      setFixedSubMode('PATTERN'); // FIX: reset submode so UniversalSlidersFooter shows FG/BG pickers
                       setLastOperatingMode('MULTIMODE');
                     }
                   }}
