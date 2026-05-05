@@ -58,6 +58,7 @@ export function CrewLandingMap({
     <MapViewCluster
       ref={mapRef}
       provider={PROVIDER_DEFAULT}
+      mapType="none"
       style={{ flex: 1 }}
       initialRegion={{
         latitude: locationCoords?.lat || 39.8283,
@@ -75,6 +76,7 @@ export function CrewLandingMap({
         urlTemplate="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         maximumZ={19}
         flipY={false}
+        zIndex={-1}
       />
       {/* ── Static Skate Spots — color-coded by facility_type ── */}
       {nearbySpots.map((spot: NearbySkateSpot) => {
