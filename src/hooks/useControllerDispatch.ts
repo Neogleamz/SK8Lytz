@@ -187,16 +187,21 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
     ) => {
       if (!writeToDevice) return;
 
-      const isDeviceMic = src === 'DEVICE';
       const c1 = hexToRgb(color1Hex);
       const c2 = hexToRgb(color2Hex);
 
-      AppLogger.log("MUSIC_CONFIG_REQUESTED", { patternId, c1Hex: color1Hex, c2Hex: color2Hex, matrix });
+      AppLogger.log("MUSIC_CONFIG_REQUESTED", { patternId, src, c1Hex: color1Hex, c2Hex: color2Hex, matrix });
 
       writeToDevice(ZenggeProtocol.setMusicConfig(
-        patternId,               // musicMode 1-13
-        isDeviceMic ? 0x27 : 0x26, // micSource byte
-        true,                    // isOn
+        patternId,                               // musicMode 1–30
+        // modeType: 0x26 = Light Bar (16 patterns), 0x27 = Light Screen (30 patterns).
+        // This is the matrix style selector — NOT the mic source. BUG FIX: was using
+        // `isDeviceMic ? 0x27 : 0x26` here, conflating mic source with matrix style.
+        matrix === 0x27 ? 0x27 : 0x26,
+        // isOn: true  = hardware mic active (device mic path, hardware drives audio).
+        //        false = hardware mic OFF, hardware awaits 0x74 app-mic magnitude streams.
+        // BUG FIX: was hardcoded `true`, making App Mic mode functionally dead on hardware.
+        src === 'DEVICE',
         c1,
         c2,
         sens,

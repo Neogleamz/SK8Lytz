@@ -546,9 +546,17 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
         // FIX: Restore last-sent pattern payload on reconnect.
         // If the user had a pattern active before disconnecting, replay it immediately
         // so skates light up without requiring user interaction.
+        // BUG FIX: Pattern cache restore was keyed to connectedGroup[0]?.id only.
+        // DashboardScreen writes the cache using displayConnectedDevices[0]?.id which may
+        // differ on reconnect (e.g. right skate reconnects before left). Try all device IDs.
         try {
-          const groupId = connectedGroup[0]?.id?.toUpperCase() || 'default';
-          const cached = await AsyncStorage.getItem(PATTERN_CACHE_KEY(groupId));
+          let cached: string | null = null;
+          let resolvedKey = '';
+          for (const conn of connectedGroup) {
+            const key = PATTERN_CACHE_KEY(conn.id.toUpperCase());
+            cached = await AsyncStorage.getItem(key);
+            if (cached) { resolvedKey = key; break; }
+          }
           if (cached) {
             const { payload: lastPayload, ts } = JSON.parse(cached);
             const ageMs = Date.now() - ts;
@@ -557,7 +565,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
               setTimeout(() => {
                 if (connectedDevicesRef.current.some(d => d.id === connectedGroup[0]?.id)) {
                   writeToDevice(lastPayload);
-                  AppLogger.log('BLE_STATE_CHANGE', { event: 'pattern_cache_restored', groupId, ageMs });
+                  AppLogger.log('BLE_STATE_CHANGE', { event: 'pattern_cache_restored', key: resolvedKey, ageMs });
                 }
               }, 300);
             }

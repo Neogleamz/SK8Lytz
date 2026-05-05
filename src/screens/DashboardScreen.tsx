@@ -230,7 +230,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, [connectedDevices, deviceConfigs]);
 
   const isActuallyConnected = displayConnectedDevices.length > 0;
-  const isGrouped = displayConnectedDevices.length > 1 && displayConnectedDevices.every(d => (d as any).grouped);
+  // BUG FIX: was `every(d => d.grouped)` — fails for re-provisioned devices missing the `.grouped` flag.
+  // Fix: check `groupId` presence (the canonical group membership token from DeviceRepository).
+  const isGrouped = displayConnectedDevices.length > 1 && displayConnectedDevices.every(d => !!(d as any).groupId);
 
   // 🔶 Crew Hub state & auto-rejoin → useDashboardCrew
   const {
@@ -591,7 +593,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     // from overriding the GRB sortingIdx fallback derived from the device name string.
     const colorSortingFinal = d?.detected ? (d.colorSorting ?? sortingIdx) : sortingIdx;
     return {
-      ledPoints: d?.ledPoints || d?.points || (d?.name?.toLowerCase().includes('soul') ? 43 : 16),
+      ledPoints: d?.ledPoints || d?.points ||
+        // BUG FIX: was `(name.includes('soul') ? 43 : 16)` — hardcoded 16 is wrong for HALOZ (defaultLedPoints=8).
+        // Regression risk: unprobed HALOZ gets 16-element arrays, bypassing the hardware segment mirror engine.
+        // Fix: derive fallback from ProductCatalog so HALOZ→8, SOULZ→43, future products auto-correct.
+        getLocalProfileByPoints(d?.points ?? 0).defaultLedPoints,
       segments:  d?.segments || 1,
       icType:    d?.icType || 1,
       icName:    d?.icName || d?.stripType || 'WS2812B',
