@@ -71,7 +71,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const styles = createDashboardStyles(Colors, windowHeight, windowWidth);
   // ── Device State Ledger — unified per-device pattern state ────────────────────
-  const ledger = useDeviceStateLedger();
+  // Destructure to STABLE function refs (each is a useCallback with [] deps inside the hook).
+  // Do NOT pass `ledger` as an object — it's a new object reference on every render,
+  // which would break FlatList performance by invalidating renderItem's useCallback.
+  const { save: ledgerSave, loadSync: ledgerLoadSync } = useDeviceStateLedger();
   const {
     scanForPeripherals,
     allDevices,
@@ -685,15 +688,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     JSON.stringify({ payload: lastPayload, ts: Date.now() })
                   ).catch(() => {});
                   // NEW: Save to unified ledger for each connected device.
-                  // This fixes the key mismatch — ledger always uses normalized MAC.
+                  // ledgerSave() normalizes the MAC internally — do NOT pre-normalize here.
                   displayConnectedDevices.forEach(d => {
-                    const mac = normalizeMac(d.id);
-                    ledger.save(mac, {
-                      deviceMac: mac,
+                    ledgerSave(d.id, {
+                      deviceMac: normalizeMac(d.id),
                       groupId: targetGroupId,
-                      mode: 'MULTIMODE',  // Best available — dashboard does not have access to controller mode
+                      mode: 'MULTIMODE',
                       patternLabel: patternName,
-                      speed: 50,          // Defaults — structured fields populated on Phase 3 upgrade
+                      speed: 50,
                       brightness: 90,
                       rawPayload: lastPayload,
                       ts: Date.now(),
@@ -709,7 +711,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               renders stale state. No overlay needed — the UI simply loads clean. */}
       </Animated.View>
     );
-  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, activeHwSettings, crewRole, crewSession, lastLeaderScene, bleState]);
+  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, activeHwSettings, crewRole, crewSession, lastLeaderScene, bleState, ledgerSave]);
 
   /**
    * Renders a single device item card, merging registration data 
@@ -725,8 +727,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       ...cachedConfig,
       name: item.device_name || cachedConfig.name || item.name // Map DB field to component prop
     };
-    // Read last known pattern state from ledger for preview swatch.
-    const ledgerState = ledger.loadSync(normalizeMac(mac));
+    // Read last known pattern state from ledger for preview swatch (synchronous, in-memory only).
+    const ledgerState = ledgerLoadSync(normalizeMac(mac));
 
     return (
     <View style={{ paddingHorizontal: Layout.padding }}>
@@ -769,7 +771,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       />
     </View>
     ); // close return
-  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs, allDevices, connectToDevices, scanForPeripherals, writeToDevice, ledger]);
+  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs, allDevices, connectToDevices, scanForPeripherals, writeToDevice, ledgerLoadSync]);
 
   const mappedRegisteredDevicesForModal = useMemo(() => registeredDevices.map((d) => ({
     // IDENTITY KEY: always use device_mac (BLE MAC address), NOT d.id (Supabase UUID).
