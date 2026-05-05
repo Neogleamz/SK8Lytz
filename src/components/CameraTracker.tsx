@@ -1,36 +1,35 @@
+/**
+ * CameraTracker — Vision Camera v4 (Nitro) Sniper Dropper
+ *
+ * Architecture (Option A):
+ *   useFrameOutput({ onFrame }) → worklet runs on camera thread → reads
+ *   center pixel bytes directly from raw ArrayBuffer (no file I/O, no JPEG).
+ *   runOnJS throttles state updates to ~10fps so React re-renders stay smooth.
+ *
+ * Permission flow stays entirely in PermissionService (PermissionsAndroid).
+ * The hook (useCameraPermission) is used ONLY as a read source so the UI
+ * re-renders automatically when the OS state changes.
+ */
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { Buffer } from 'buffer';
-import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { ActivityIndicator, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Camera, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  AppState,
+  Linking,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import {
+  Camera,
+  useCameraPermission,
+  useFrameOutput,
+} from 'react-native-vision-camera';
+import { useRunOnJS } from 'react-native-worklets-core';
+import { requestPermission } from '../services/PermissionService';
 import { Colors, Spacing } from '../theme/theme';
-import { openGlobalPermissionsModal } from '../services/PermissionService';
-import * as FileSystem from 'expo-file-system';
-
-// Types for dynamically loaded native-only libraries
-type ImageManipulatorModule = {
-  manipulateAsync: (
-    uri: string,
-    actions: Array<{ crop?: { originX: number; originY: number; width: number; height: number } }>,
-    options: { base64?: boolean; format?: string; compress?: number }
-  ) => Promise<{ uri: string; base64?: string; width: number; height: number }>;
-  SaveFormat: { JPEG: string; PNG: string };
-};
-type JpegModule = {
-  decode: (buffer: Buffer, options?: { useTArray?: boolean }) => { width: number; height: number; data: Uint8Array };
-};
-
-let ImageManipulator: ImageManipulatorModule | null = null;
-let jpeg: JpegModule | null = null;
-
-if (Platform.OS !== 'web') {
-  try {
-    ImageManipulator = require('expo-image-manipulator');
-    jpeg = require('jpeg-js');
-  } catch (e) {
-    console.warn("Optical native libraries bypassed on Web array.");
-  }
-}
 
 interface CameraTrackerProps {
   onColorDetected: (hex: string) => void;
@@ -38,204 +37,219 @@ interface CameraTrackerProps {
 }
 
 export default function CameraTracker({ onColorDetected, isActive }: CameraTrackerProps) {
-  const { hasPermission, requestPermission } = useCameraPermission();
-  const device = useCameraDevice('back');
-  const cameraRef = useRef<Camera>(null);
-  
-  const [liveHex, setLiveHex] = useState<string>('#000000');
+  const { hasPermission, requestPermission: requestFromHook } = useCameraPermission();
+  const [liveHex, setLiveHex] = useState<string>('#FF0080');
   const [isCapturing, setIsCapturing] = useState(false);
-  const [layout, setLayout] = useState({ width: 0, height: 0 });
-  const isProcessingRef = useRef(false);
+  const lastUpdateRef = useRef<number>(0);
 
-  // Aggressive prompt for undetermined permissions
+  // --- Permission: re-check every time the app comes to the foreground ---
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        // Re-check by calling requestPermission which on Android reads the
+        // current granted/denied state without re-prompting if already set.
+        requestFromHook();
+      }
+    });
+    return () => sub.remove();
+  }, [requestFromHook]);
+
+  // On first render, try requesting if not yet granted
   useEffect(() => {
     if (!hasPermission) {
-      openGlobalPermissionsModal().then(() => requestPermission());
+      requestPermission('CAMERA').then((granted) => {
+        if (granted) requestFromHook(); // sync the hook state
+      });
     }
-  }, [hasPermission, requestPermission]);
+  }, [hasPermission, requestFromHook]);
 
-  // Continuous background polling loop (Simulated Frame Processor)
-  useEffect(() => {
-    if (!isActive || !hasPermission || !device || !layout.width || !layout.height) return;
+  // --- Frame Processor (Option A): worklet on camera thread ---
+  const updateColorOnJS = useRunOnJS(
+    (hex: string) => {
+      const now = Date.now();
+      // Throttle to ~10 state updates per second
+      if (now - lastUpdateRef.current < 100) return;
+      lastUpdateRef.current = now;
+      setLiveHex(hex);
+    },
+    [setLiveHex]
+  );
 
-    let mounted = true;
-    const POLLING_INTERVAL_MS = 300; // ~3 FPS
+  const frameOutput = useFrameOutput({
+    pixelFormat: 'rgb',
+    // Lower resolution = faster buffer reads. Vision Camera downscales for us.
+    targetResolution: { width: 480, height: 640 },
+    onFrame: (frame) => {
+      'worklet';
 
-    const pollCenterPixel = async () => {
-      if (!mounted || isProcessingRef.current || !cameraRef.current || !ImageManipulator || !jpeg) return;
-
-      isProcessingRef.current = true;
-      try {
-        const photo = await cameraRef.current.takePhoto({
-          qualityPrioritization: 'speed',
-          enableShutterSound: false,
-          flash: 'off',
-        });
-
-        const cropSize = 10; 
-        const originX = Math.floor(Math.max(0, (photo.width / 2) - (cropSize / 2)));
-        const originY = Math.floor(Math.max(0, (photo.height / 2) - (cropSize / 2)));
-
-        const result = await ImageManipulator.manipulateAsync(
-          `file://${photo.path}`,
-          [{ crop: { originX, originY, width: cropSize, height: cropSize } }],
-          { base64: true, format: ImageManipulator.SaveFormat.JPEG, compress: 1.0 }
-        );
-
-        // Cleanup the massive original photo from flash storage to prevent leaks
-        FileSystem.deleteAsync(`file://${photo.path}`).catch(() => {});
-
-        if (result.base64 && mounted) {
-          const buffer = Buffer.from(result.base64, 'base64');
-          const decoded = jpeg.decode(buffer, { useTArray: true });
-          
-          let r = 0, g = 0, b = 0;
-          const pixelCount = decoded.width * decoded.height;
-          
-          for (let i = 0; i < decoded.data.length; i += 4) {
-              r += decoded.data[i];
-              g += decoded.data[i + 1];
-              b += decoded.data[i + 2];
-          }
-          
-          let avgR = Math.round(r / pixelCount);
-          let avgG = Math.round(g / pixelCount);
-          let avgB = Math.round(b / pixelCount);
-
-          // VIVIDNESS NORMALIZATION (HSL BOOST)
-          const rNorm = avgR / 255;
-          const gNorm = avgG / 255;
-          const bNorm = avgB / 255;
-          const cMax = Math.max(rNorm, gNorm, bNorm);
-          const cMin = Math.min(rNorm, gNorm, bNorm);
-          const delta = cMax - cMin;
-
-          let h = 0;
-          if (delta !== 0) {
-            switch (cMax) {
-              case rNorm: h = ((gNorm - bNorm) / delta) % 6; break;
-              case gNorm: h = (bNorm - rNorm) / delta + 2; break;
-              case bNorm: h = (rNorm - gNorm) / delta + 4; break;
-            }
-            h = Math.round(h * 60);
-            if (h < 0) h += 360;
-          }
-
-          // Lock S and L for pure vibrant LED color
-          const s = 1.0;
-          const l = 0.5;
-
-          const c = (1 - Math.abs(2 * l - 1)) * s;
-          const x = c * (1 - Math.abs((h / 60) % 2 - 1));
-          const m = l - c / 2;
-          let rPrime = 0, gPrime = 0, bPrime = 0;
-
-          if (h >= 0 && h < 60) { rPrime = c; gPrime = x; bPrime = 0; }
-          else if (h >= 60 && h < 120) { rPrime = x; gPrime = c; bPrime = 0; }
-          else if (h >= 120 && h < 180) { rPrime = 0; gPrime = c; bPrime = x; }
-          else if (h >= 180 && h < 240) { rPrime = 0; gPrime = x; bPrime = c; }
-          else if (h >= 240 && h < 300) { rPrime = x; gPrime = 0; bPrime = c; }
-          else if (h >= 300 && h < 360) { rPrime = c; gPrime = 0; bPrime = x; }
-
-          avgR = Math.round((rPrime + m) * 255);
-          avgG = Math.round((gPrime + m) * 255);
-          avgB = Math.round((bPrime + m) * 255);
-          
-          const hex = '#' + [avgR, avgG, avgB].map(x => x.toString(16).padStart(2, '0')).join('').toUpperCase();
-          setLiveHex(hex);
-        }
-      } catch (e) {
-        // Silent catch for background polling
-      } finally {
-        if (mounted) isProcessingRef.current = false;
+      if (!frame.isValid) {
+        frame.dispose();
+        return;
       }
-    };
 
-    const intervalId = setInterval(pollCenterPixel, POLLING_INTERVAL_MS);
-    return () => {
-      mounted = false;
-      clearInterval(intervalId);
-    };
-  }, [isActive, hasPermission, device, layout.width, layout.height]);
+      try {
+        const buffer = frame.getPixelBuffer();
+        const bytes = new Uint8Array(buffer);
+
+        // bytesPerPixel is typically 3 (RGB) or 4 (BGRA/RGBA)
+        const bytesPerPixel = frame.width > 0
+          ? Math.max(3, Math.floor(frame.bytesPerRow / frame.width))
+          : 4;
+
+        const centerX = Math.floor(frame.width / 2);
+        const centerY = Math.floor(frame.height / 2);
+
+        // Sample a 5×5 block around center for stability
+        let rSum = 0, gSum = 0, bSum = 0, count = 0;
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            const px = centerX + dx;
+            const py = centerY + dy;
+            if (px < 0 || px >= frame.width || py < 0 || py >= frame.height) continue;
+            const idx = (py * frame.width + px) * bytesPerPixel;
+            rSum += bytes[idx];
+            gSum += bytes[idx + 1];
+            bSum += bytes[idx + 2];
+            count++;
+          }
+        }
+
+        if (count === 0) {
+          frame.dispose();
+          return;
+        }
+
+        let r = Math.round(rSum / count);
+        let g = Math.round(gSum / count);
+        let b = Math.round(bSum / count);
+
+        // HSL Hue extraction → boost S=1.0, L=0.5 for vivid LED color
+        const rN = r / 255;
+        const gN = g / 255;
+        const bN = b / 255;
+        const cMax = rN > gN ? (rN > bN ? rN : bN) : (gN > bN ? gN : bN);
+        const cMin = rN < gN ? (rN < bN ? rN : bN) : (gN < bN ? gN : bN);
+        const delta = cMax - cMin;
+
+        let h = 0;
+        if (delta > 0.001) {
+          if (cMax === rN)      h = ((gN - bN) / delta) % 6;
+          else if (cMax === gN) h = (bN - rN) / delta + 2;
+          else                  h = (rN - gN) / delta + 4;
+          h = h * 60;
+          if (h < 0) h += 360;
+        }
+
+        // HSL → RGB with S=1.0, L=0.5 (pure vivid hue)
+        const c = 1.0;
+        const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+        const m = 0;
+        let rV = 0, gV = 0, bV = 0;
+        if      (h < 60)  { rV = c; gV = x; bV = 0; }
+        else if (h < 120) { rV = x; gV = c; bV = 0; }
+        else if (h < 180) { rV = 0; gV = c; bV = x; }
+        else if (h < 240) { rV = 0; gV = x; bV = c; }
+        else if (h < 300) { rV = x; gV = 0; bV = c; }
+        else              { rV = c; gV = 0; bV = x; }
+
+        r = Math.round((rV + m) * 255);
+        g = Math.round((gV + m) * 255);
+        b = Math.round((bV + m) * 255);
+
+        const toHex = (v: number) => {
+          const s = v.toString(16);
+          return s.length === 1 ? '0' + s : s;
+        };
+        const hex = '#' + toHex(r) + toHex(g) + toHex(b);
+        updateColorOnJS(hex.toUpperCase());
+      } catch {
+        // Silent — don't crash the camera thread
+      } finally {
+        frame.dispose();
+      }
+    },
+  });
 
   const handleCapture = useCallback(() => {
     setIsCapturing(true);
     onColorDetected(liveHex);
-    // Haptic simulation via slight delay before resetting capture state
     setTimeout(() => setIsCapturing(false), 200);
   }, [liveHex, onColorDetected]);
 
-  if (Platform.OS === 'web' || !device) {
+  // --- Permission denied state ---
+  if (!hasPermission) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', padding: Spacing.xl }]}>
-        <ActivityIndicator color={Colors.primary} size="large" />
+      <View style={styles.centeredContainer}>
+        <MaterialCommunityIcons name="camera-off" size={40} color={Colors.textMuted} style={{ marginBottom: Spacing.md }} />
+        <Text style={styles.message}>Camera access is needed to detect colors from your environment.</Text>
+        <TouchableOpacity
+          style={styles.button}
+          onPress={async () => {
+            const granted = await requestPermission('CAMERA');
+            if (granted) {
+              requestFromHook();
+            } else {
+              // Fallback: Send user to Settings if OS blocked it
+              Linking.openSettings();
+            }
+          }}
+        >
+          <Text style={{ color: '#FFF', fontWeight: 'bold' }}>GRANT PERMISSION</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
-  if (!hasPermission) {
+  if (Platform.OS === 'web') {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xl }]}>
-        <MaterialCommunityIcons name="camera-off" size={40} color={Colors.textMuted} style={{ marginBottom: Spacing.md }} />
-        <Text style={styles.message}>Camera access is needed to detect colors from your environment.</Text>
-        <TouchableOpacity style={styles.button} onPress={async () => { await openGlobalPermissionsModal(); requestPermission(); }}>
-          <Text style={{ color: Colors.isDark ? '#FFF' : '#000', fontWeight: 'bold' }}>
-            GRANT PERMISSION
-          </Text>
-        </TouchableOpacity>
+      <View style={styles.centeredContainer}>
+        <ActivityIndicator color={Colors.primary} size="large" />
+        <Text style={[styles.message, { marginTop: Spacing.md }]}>Camera not available on web.</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Camera 
-        style={StyleSheet.absoluteFillObject} 
-        device={device}
-        isActive={isActive}
-        ref={cameraRef}
-        photo={true}
-        onLayout={(e) => {
-          setLayout({
-            width: e.nativeEvent.layout.width,
-            height: e.nativeEvent.layout.height
-          });
-        }}
+      <Camera
+        style={StyleSheet.absoluteFillObject}
+        device="back"
+        isActive={isActive && hasPermission}
+        outputs={[frameOutput]}
       />
-      
-      {/* Reticle Overlay */}
+
+      {/* Reticle — border color is live color */}
       <View style={styles.reticleContainer} pointerEvents="none">
         <View style={[styles.reticleRing, { borderColor: liveHex }]}>
-          <View style={styles.reticleCrosshairHorizontal} />
-          <View style={styles.reticleCrosshairVertical} />
+          <View style={styles.reticleCrosshairH} />
+          <View style={styles.reticleCrosshairV} />
         </View>
       </View>
 
-      {/* Control Overlay */}
-      <View style={styles.instructionOverlay}>
-         <View style={styles.pillContainer}>
-           <Text style={styles.pillText}>{liveHex}</Text>
-         </View>
-         <Text style={styles.instructionText}>
-           Center target on a light source and capture
-         </Text>
+      {/* Bottom control overlay */}
+      <View style={styles.controlOverlay}>
+        {/* Live hex pill */}
+        <View style={styles.hexPill}>
+          <Text style={styles.hexText}>{liveHex}</Text>
+        </View>
+        <Text style={styles.instructionText}>Aim at a light source and capture</Text>
 
-         {/* Massive CAPTURE FAB */}
-         <TouchableOpacity 
-            activeOpacity={0.8}
-            onPress={handleCapture}
-            style={[
-              styles.captureFab, 
-              { backgroundColor: liveHex },
-              isCapturing && styles.captureFabActive
-            ]}
-          >
-            <MaterialCommunityIcons 
-              name="line-scan" 
-              size={36} 
-              color={liveHex === '#FFFFFF' || liveHex === '#FFFF00' ? '#000' : '#FFF'} 
-            />
-         </TouchableOpacity>
+        {/* Capture FAB — background = live color */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={handleCapture}
+          style={[
+            styles.captureFab,
+            { backgroundColor: liveHex },
+            isCapturing && styles.captureFabActive,
+          ]}
+        >
+          <MaterialCommunityIcons
+            name="line-scan"
+            size={36}
+            color="#FFF"
+          />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -247,6 +261,14 @@ const styles = StyleSheet.create({
     minHeight: 300,
     backgroundColor: '#000',
     overflow: 'hidden',
+  },
+  centeredContainer: {
+    flex: 1,
+    minHeight: 300,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
   },
   message: {
     color: '#FFF',
@@ -267,31 +289,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   reticleRing: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     borderWidth: 3,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
-    ...Platform.select({
-      web: { boxShadow: '0px 0px 10px rgba(0,0,0,0.5)' } as any,
-      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10 }
-    }),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  reticleCrosshairHorizontal: {
+  reticleCrosshairH: {
     position: 'absolute',
     width: 20,
     height: 2,
-    backgroundColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: 'rgba(255,255,255,0.85)',
   },
-  reticleCrosshairVertical: {
+  reticleCrosshairV: {
     position: 'absolute',
     width: 2,
     height: 20,
-    backgroundColor: 'rgba(255,255,255,0.8)',
+    backgroundColor: 'rgba(255,255,255,0.85)',
   },
-  instructionOverlay: {
+  controlOverlay: {
     position: 'absolute',
     bottom: 0,
     left: 0,
@@ -300,14 +323,14 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.xxl,
     paddingTop: Spacing.xl,
   },
-  pillContainer: {
+  hexPill: {
     backgroundColor: 'rgba(0,0,0,0.7)',
     paddingHorizontal: Spacing.lg,
     paddingVertical: 8,
     borderRadius: 20,
     marginBottom: Spacing.xs,
   },
-  pillText: {
+  hexText: {
     color: '#FFF',
     fontSize: 14,
     fontFamily: 'Inter-Bold',
@@ -332,13 +355,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 4,
     borderColor: 'rgba(255,255,255,0.8)',
-    ...Platform.select({
-      web: { boxShadow: '0px 8px 15px rgba(0,0,0,0.4)' } as any,
-      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.4, shadowRadius: 15 }
-    }),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 15,
+    elevation: 12,
   },
   captureFabActive: {
     transform: [{ scale: 0.95 }],
     opacity: 0.8,
-  }
+  },
 });
