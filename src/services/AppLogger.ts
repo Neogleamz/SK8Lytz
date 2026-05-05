@@ -145,7 +145,9 @@ export type EventType =
   | 'MUSIC_MODE_EXIT'
   // ── BLE Hardening (PR-B) ───────────────────────────────────────────────
   | 'BLE_TIME_SYNC'
-  | 'BLE_CHUNKED_WRITE';
+  | 'BLE_CHUNKED_WRITE'
+  // ── Device State Ledger ─────────────────────────────────────────────────────
+  | 'LEDGER_RECONNECT_REPLAY';
 
 
 

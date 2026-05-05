@@ -28,7 +28,7 @@ import { getMusicPatternMax, getMusicPatternLabel } from '../hooks/useMusicMode'
 import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
 import { useSessionTracking } from '../hooks/useSessionTracking';
 import { useStreetMode } from '../hooks/useStreetMode';
-import { useDeviceStateLedger, normalizeMac } from '../hooks/useDeviceStateLedger';
+import { useDeviceStateLedger } from '../hooks/useDeviceStateLedger';
 import type { BleConnectionState, DockedBus, IDeviceState, IFavoriteState, ModeType } from '../types/dashboard.types';
 import { getColorName, hexToHue, hueToHex, hexToRgb } from '../utils/ColorUtils';
 import AnalogGauge from './docked/AnalogGauge';

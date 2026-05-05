@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { normalizeMac } from './useDeviceStateLedger';
 import type { DevicePatternState, FixedModePattern, ModeType } from '../types/dashboard.types';
 
@@ -18,8 +18,15 @@ export function useDockedControllerState(
   /** Optional: primary device MAC for ledger lookup. */
   mac?: string
 ) {
-  // Resolved once on mount — drives lazy useState initializers
-  const ledgerState = mac && ledgerLoadSync ? ledgerLoadSync(normalizeMac(mac)) : null;
+  // Resolved ONCE on mount via ref — drives lazy useState initializers below.
+  // Using useRef instead of a plain variable ensures the ledger is NOT re-read
+  // on every re-render (which would be wasted work since lazy useState only
+  // uses the initializer value on the very first render anyway).
+  const ledgerStateRef = useRef<DevicePatternState | null | 'uninitialized'>('uninitialized');
+  if (ledgerStateRef.current === 'uninitialized') {
+    ledgerStateRef.current = (mac && ledgerLoadSync) ? ledgerLoadSync(normalizeMac(mac)) : null;
+  }
+  const ledgerState = ledgerStateRef.current;
   // Core State
   const [activeProduct, setActiveProduct] = useState<ProductType>(initialProduct);
   const [activeMode, setActiveMode] = useState<ModeType>('FAVORITES');

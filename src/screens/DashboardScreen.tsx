@@ -50,7 +50,7 @@ import { useDashboardCrew } from '../hooks/useDashboardCrew';
 import { useDashboardDeviceConfig } from '../hooks/useDashboardDeviceConfig';
 
 import { useHardwareNotifications } from '../hooks/useHardwareNotifications';
-import { useDeviceStateLedger, normalizeMac, isStale } from '../hooks/useDeviceStateLedger';
+import { useDeviceStateLedger, normalizeMac } from '../hooks/useDeviceStateLedger';
 import type { DashboardViewState, DeviceSettings, CustomGroup } from '../types/dashboard.types';
 
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
