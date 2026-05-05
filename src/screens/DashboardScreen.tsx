@@ -230,8 +230,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       // in the live BLE device object or deviceConfigs. On cold start before EEPROM
       // probe fires, cfg.type is undefined — causing SOULZ to silently resolve to HALOZ
       // (RING visualizer) because getLocalProfileByPoints(0) returns the first catalog entry.
-      // registeredDevices is populated from local SQLite on mount (always available offline)
-      // and is the canonical post-wizard product type source.
+      // registeredDevices is populated from AsyncStorage via useRegistration → DeviceRepository
+      // on mount (always available offline) and is the canonical post-wizard product type source.
       const rd = registeredDevices.find(
         (r: RegisteredDevice) => r.device_mac?.toUpperCase() === mac
       );
