@@ -227,8 +227,15 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     // ── Device State Ledger ─────────────────────────────────────────────────
     // Unified per-device pattern state. Pre-warms controller UI on mount.
     const ledger = useDeviceStateLedger();
-    // Derive primary BLE MAC from devices prop for ledger key resolution.
-    const primaryMac = devices?.[0]?.id ?? '';
+    // Resolve primary MAC — for groups, find the first device that already has a
+    // ledger entry so we restore the correct group pattern, not always device[0].
+    // Falls back to device[0] for cold starts (no ledger entry exists yet).
+    const primaryMac = React.useMemo(() => {
+      if (!devices || devices.length === 0) return '';
+      const withEntry = devices.find(d => ledger.loadSync(d.id) !== null);
+      return (withEntry ?? devices[0]).id;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [devices?.[0]?.id, devices?.length]);
 
     const {
       activeProduct, setActiveProduct,
@@ -354,28 +361,34 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     };
 
     // ── Ledger Reconnect Replay ─────────────────────────────────────────────
-    // When isPaired flips true (device/group reconnects), replay the last
-    // known rawPayload to hardware so the skates resume their previous pattern
-    // without the user needing to tap anything.
+    // Fire when ANY device becomes available (solo OR grouped).
+    // BUG FIX: isPaired === isGrouped (only true for 2+ device groups),
+    // so solo connections were NEVER triggering this effect. Using
+    // isActuallyConnected (devices?.length > 0) covers both cases.
+    const isActuallyPairedOrConnected = (devices?.length ?? 0) > 0;
     const hasReplayedRef = useRef(false);
     useEffect(() => {
-      if (!isPaired || !parentWriteToDevice) return;
+      if (!isActuallyPairedOrConnected || !parentWriteToDevice) return;
       if (hasReplayedRef.current) return;
       const ledgerState = primaryMac ? ledger.loadSync(primaryMac) : null;
       if (!ledgerState || ledgerState.rawPayload.length === 0) return;
       hasReplayedRef.current = true;
       const timer = setTimeout(() => {
-        parentWriteToDevice(ledgerState.rawPayload).catch(() => {});
+        // BUG FIX: Target replay at the SPECIFIC device that just connected,
+        // not a broadcast. Broadcast could overwrite another device's in-flight
+        // pattern when a second device in a group reconnects independently.
+        // parentWriteToDevice(payload, targetDeviceId) routes to one device only.
+        parentWriteToDevice(ledgerState.rawPayload, primaryMac).catch(() => {});
         AppLogger.log('LEDGER_RECONNECT_REPLAY', { mac: primaryMac, payloadLen: ledgerState.rawPayload.length });
       }, 300);
       return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isPaired]);
+    }, [isActuallyPairedOrConnected]);
 
-    // Reset replay gate when device disconnects so next reconnect fires again
+    // Reset replay gate on full disconnect so next reconnect fires again
     useEffect(() => {
-      if (!isPaired) hasReplayedRef.current = false;
-    }, [isPaired]);
+      if (!isActuallyPairedOrConnected) hasReplayedRef.current = false;
+    }, [isActuallyPairedOrConnected]);
 
     // Favorites Array — now managed by useFavorites hook above
 
@@ -673,11 +686,18 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       return selectedColor;
     }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, musicHue, selectedColor, fixedSubMode]);
 
-    // Relays the dynamically generated pattern name + last payload upward to persist dashboard group state
+    // Relays the dynamically generated pattern name + last payload upward to persist dashboard group state.
+    // BUG FIX: Guard against mount-fire with isMountedRef — on first render, lastSentPayload is []
+    // (no hardware interaction has occurred yet) so calling onPatternChanged immediately would
+    // pass undefined as lastPayload, preventing the ledger from ever receiving a valid payload
+    // on the first pattern selection after reconnect.
+    const isMountedRef = useRef(false);
     React.useEffect(() => {
+      if (!isMountedRef.current) {
+        isMountedRef.current = true;
+        return; // Skip the initial mount fire — lastSentPayload is always [] here
+      }
       if (onPatternChanged) {
-        // Pass lastSentPayload so DashboardScreen can persist the cache for reconnect restore.
-        // lastSentPayload is updated on every BLE write in writeToDevice (line above).
         onPatternChanged(currentStatusText, lastSentPayload.length > 0 ? lastSentPayload : undefined);
       }
     }, [currentStatusText, onPatternChanged]);
