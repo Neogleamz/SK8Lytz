@@ -224,10 +224,21 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // 'Rendered more hooks than previous render' crash.
   const displayConnectedDevices = useMemo(() => {
     return connectedDevices.map(d => {
-      const cfg = deviceConfigs[(d as any).id] || {};
-      return { ...d, ...cfg };
+      const mac = (d as any).id?.toUpperCase() ?? '';
+      const cfg = deviceConfigs[mac] || deviceConfigs[(d as any).id] || {};
+      // GAP 1 FIX: Inject `type` from registeredDevices.product_type when not present
+      // in the live BLE device object or deviceConfigs. On cold start before EEPROM
+      // probe fires, cfg.type is undefined — causing SOULZ to silently resolve to HALOZ
+      // (RING visualizer) because getLocalProfileByPoints(0) returns the first catalog entry.
+      // registeredDevices is populated from local SQLite on mount (always available offline)
+      // and is the canonical post-wizard product type source.
+      const rd = registeredDevices.find(
+        (r: RegisteredDevice) => r.device_mac?.toUpperCase() === mac
+      );
+      const resolvedType = cfg.type || (d as any).type || rd?.product_type || undefined;
+      return { ...d, ...cfg, ...(resolvedType ? { type: resolvedType } : {}) };
     });
-  }, [connectedDevices, deviceConfigs]);
+  }, [connectedDevices, deviceConfigs, registeredDevices]);
 
   const isActuallyConnected = displayConnectedDevices.length > 0;
   // BUG FIX: was `every(d => d.grouped)` — fails for re-provisioned devices missing the `.grouped` flag.
@@ -637,7 +648,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             ref={dockedControllerRef}
             hwSettings={activeHwSettings}
             lockedProduct={
-              // Catalog-driven resolution: stored type takes priority, then derive from LED count.
+              // Resolution priority (highest → lowest):
+              // 1. deviceConfigs[mac].type  — post-probe/wizard persisted value
+              // 2. registeredDevices[mac].product_type — injected by displayConnectedDevices enrichment
+              //    (always available on cold start after FTUE, even before 0x63 EEPROM probe fires)
+              // 3. getLocalProfileByPoints  — genuine last resort for unregistered/unknown devices
               (displayConnectedDevices[0] as any)?.type ||
               getLocalProfileByPoints((displayConnectedDevices[0] as any)?.points ?? 0).id
             }
