@@ -1,4 +1,4 @@
-import 'react-native-worklets-core';
+import 'react-native-worklets';
 import { registerRootComponent } from 'expo';
 
 import App from './App';
