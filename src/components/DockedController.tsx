@@ -28,6 +28,7 @@ import { getMusicPatternMax, getMusicPatternLabel } from '../hooks/useMusicMode'
 import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
 import { useSessionTracking } from '../hooks/useSessionTracking';
 import { useStreetMode } from '../hooks/useStreetMode';
+import { useDeviceStateLedger, normalizeMac } from '../hooks/useDeviceStateLedger';
 import type { BleConnectionState, DockedBus, IDeviceState, IFavoriteState, ModeType } from '../types/dashboard.types';
 import { getColorName, hexToHue, hueToHex, hexToRgb } from '../utils/ColorUtils';
 import AnalogGauge from './docked/AnalogGauge';
@@ -223,6 +224,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
 
 
+    // ── Device State Ledger ─────────────────────────────────────────────────
+    // Unified per-device pattern state. Pre-warms controller UI on mount.
+    const ledger = useDeviceStateLedger();
+    // Derive primary BLE MAC from devices prop for ledger key resolution.
+    const primaryMac = devices?.[0]?.id ?? '';
+
     const {
       activeProduct, setActiveProduct,
       activeMode, setActiveMode,
@@ -263,7 +270,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       applyCloudScene: baseApplyCloudScene,
       captureEntireState: baseCaptureEntireState,
       applySpatialSegments
-    } = useDockedControllerState(lockedProduct || 'HALOZ');
+    } = useDockedControllerState(lockedProduct || 'HALOZ', ledger.loadSync, primaryMac);
     // Favorites & Quick Presets Domain Hook
     const {
       favorites,
@@ -345,6 +352,30 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         AppLogger.warn('[DockedController] BLE write reconciled — UI snapped back to last confirmed state');
       }
     };
+
+    // ── Ledger Reconnect Replay ─────────────────────────────────────────────
+    // When isPaired flips true (device/group reconnects), replay the last
+    // known rawPayload to hardware so the skates resume their previous pattern
+    // without the user needing to tap anything.
+    const hasReplayedRef = useRef(false);
+    useEffect(() => {
+      if (!isPaired || !parentWriteToDevice) return;
+      if (hasReplayedRef.current) return;
+      const ledgerState = primaryMac ? ledger.loadSync(primaryMac) : null;
+      if (!ledgerState || ledgerState.rawPayload.length === 0) return;
+      hasReplayedRef.current = true;
+      const timer = setTimeout(() => {
+        parentWriteToDevice(ledgerState.rawPayload).catch(() => {});
+        AppLogger.log('LEDGER_RECONNECT_REPLAY', { mac: primaryMac, payloadLen: ledgerState.rawPayload.length });
+      }, 300);
+      return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isPaired]);
+
+    // Reset replay gate when device disconnects so next reconnect fires again
+    useEffect(() => {
+      if (!isPaired) hasReplayedRef.current = false;
+    }, [isPaired]);
 
     // Favorites Array — now managed by useFavorites hook above
 

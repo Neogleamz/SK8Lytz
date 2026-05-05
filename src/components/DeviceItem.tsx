@@ -3,7 +3,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { isStale } from '../hooks/useDeviceStateLedger';
 import { Layout, Spacing } from '../theme/theme';
+import type { DevicePatternState } from '../types/dashboard.types';
 import { HardwareStatusPills } from './dashboard/HardwareStatusPills';
 
 interface DeviceItemProps {
@@ -16,9 +18,11 @@ interface DeviceItemProps {
   isSelected?: boolean;
   onPowerToggle?: () => void;
   isPoweredOn?: boolean;
+  /** Optional: last known pattern state from useDeviceStateLedger — drives preview swatch. */
+  ledgerState?: DevicePatternState;
 }
 
-export default function DeviceItem({ device, onPress, onLongPress, isConnected, showGroupIcon, isSelectionMode, isSelected, onPowerToggle, isPoweredOn = true }: DeviceItemProps) {
+export default function DeviceItem({ device, onPress, onLongPress, isConnected, showGroupIcon, isSelectionMode, isSelected, onPowerToggle, isPoweredOn = true, ledgerState }: DeviceItemProps) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
   const isZengge = (device.name?.toLowerCase().includes('led') || device.name?.toLowerCase().includes('zengge') || device.name?.toLowerCase().includes('magic')) && !device.name?.includes('HALOZ') && !device.name?.includes('SOULZ');
@@ -115,11 +119,34 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
             </View>
           </View>
           
-          {/* Bottom: Hardware Pills */}
+          {/* Bottom: Hardware Pills + Pattern Preview */}
           {!device.isGroup && (
             <View style={styles.footerRow}>
               {isSelectionMode && <View style={{ width: 22 + Spacing.sm }} />}
               <HardwareStatusPills device={device} />
+            </View>
+          )}
+          {/* Pattern Preview — only when ledger state exists */}
+          {!device.isGroup && ledgerState && (
+            <View style={styles.patternPreviewRow}>
+              <View
+                style={[
+                  styles.patternSwatch,
+                  {
+                    backgroundColor: ledgerState.fgColor ?? '#888888',
+                    opacity: isStale(ledgerState.ts) ? 0.4 : 1,
+                  },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.patternLabelText,
+                  { opacity: isStale(ledgerState.ts) ? 0.4 : 0.8 },
+                ]}
+                numberOfLines={1}
+              >
+                {ledgerState.patternLabel}
+              </Text>
             </View>
           )}
         </View>
@@ -233,5 +260,22 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     alignItems: 'center',
     marginTop: Spacing.xs,
     zIndex: 2,
-  }
+  },
+  patternPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 6,
+  },
+  patternSwatch: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  patternLabelText: {
+    fontSize: 10,
+    color: '#AAAAAA',
+    fontFamily: 'Inter-Medium',
+    flex: 1,
+  },
 });

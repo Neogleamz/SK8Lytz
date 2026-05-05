@@ -10,6 +10,37 @@
 
 // ─── Device & Group Contracts ───────────────────────────────────────────────
 
+/**
+ * DevicePatternState — the canonical per-device ledger entry.
+ * Stored in AsyncStorage under `@SK8Lytz_DeviceState_v2_{MAC}`.
+ * In-memory cache in useDeviceStateLedger for synchronous reads.
+ */
+export interface DevicePatternState {
+  // Identity
+  deviceMac: string;          // Always: MAC.toUpperCase(), no composite keys
+  groupId?: string;
+
+  // Structured (for UI pre-warm and dashboard preview)
+  mode: ModeType;
+  patternId?: number;
+  patternLabel: string;        // e.g. "Pro Effects – Crimson"
+  fgColor?: string;
+  bgColor?: string;
+  speed: number;
+  brightness: number;
+  builderNodes?: Array<{ id: string; position: number; colorHex: string }>;
+  builderFillMode?: 'GRADIENT' | 'SOLID';
+  builderTransitionType?: number;
+
+  // Raw (for immediate BLE hardware replay on reconnect)
+  rawPayload: number[];
+
+  // Metadata
+  ts: number;                  // Date.now() of last write
+}
+
+// ─── Device & Group Contracts ───────────────────────────────────────────────
+
 // Auto-classify result — fed into FirstTimeSetupModal
 export interface PendingRegistration {
   device_mac: string;

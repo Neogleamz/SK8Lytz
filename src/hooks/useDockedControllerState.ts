@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import type { FixedModePattern, ModeType } from '../types/dashboard.types';
+import { normalizeMac } from './useDeviceStateLedger';
+import type { DevicePatternState, FixedModePattern, ModeType } from '../types/dashboard.types';
 
 /** Opaque alias kept for backward-compatibility — represents a product catalog ID string. */
 export type ProductType = string;
@@ -10,18 +11,34 @@ export interface BuilderNode {
   colorHex: string;
 }
 
-export function useDockedControllerState(initialProduct: ProductType = 'HALOZ') {
+export function useDockedControllerState(
+  initialProduct: ProductType = 'HALOZ',
+  /** Optional: synchronous ledger read function for pre-warming state on mount. */
+  ledgerLoadSync?: (mac: string) => DevicePatternState | null,
+  /** Optional: primary device MAC for ledger lookup. */
+  mac?: string
+) {
+  // Resolved once on mount — drives lazy useState initializers
+  const ledgerState = mac && ledgerLoadSync ? ledgerLoadSync(normalizeMac(mac)) : null;
   // Core State
   const [activeProduct, setActiveProduct] = useState<ProductType>(initialProduct);
   const [activeMode, setActiveMode] = useState<ModeType>('FAVORITES');
   const [lastOperatingMode, setLastOperatingMode] = useState<ModeType>('MULTIMODE');
 
-  // Shared parameters
-  const [selectedColor, setSelectedColor] = useState<string>('#00F0FF');
+  // Shared parameters — lazy initializers read from ledger on first render
+  const [selectedColor, setSelectedColor] = useState<string>(
+    () => ledgerState?.fgColor ?? '#00F0FF'
+  );
   const [selectedHue, setSelectedHue] = useState<number>(180);
-  const [selectedPatternId, setSelectedPatternId] = useState<number>(1);
-  const [brightness, setBrightness] = useState<number>(90);
-  const [speed, setSpeed] = useState<number>(50);
+  const [selectedPatternId, setSelectedPatternId] = useState<number>(
+    () => ledgerState?.patternId ?? 1
+  );
+  const [brightness, setBrightness] = useState<number>(
+    () => ledgerState?.brightness ?? 90
+  );
+  const [speed, setSpeed] = useState<number>(
+    () => ledgerState?.speed ?? 50
+  );
 
   // Audio / Mic parameters (Global)
   const [micSensitivity, setMicSensitivity] = useState<number>(80);
@@ -55,11 +72,17 @@ export function useDockedControllerState(initialProduct: ProductType = 'HALOZ') 
   const [musicColorFocus, setMusicColorFocus] = useState<'PRIMARY' | 'SECONDARY'>('PRIMARY');
   const [musicSetting, setMusicSetting] = useState<'SENSITIVITY' | 'BRIGHTNESS'>('SENSITIVITY');
 
-  // Fixed Pattern parameters (PRO Effects)
-  const [fixedPatternId, setFixedPatternId] = useState<number>(1);
+  // Fixed Pattern parameters (PRO Effects) — lazy init from ledger
+  const [fixedPatternId, setFixedPatternId] = useState<number>(
+    () => ledgerState?.patternId ?? 1
+  );
   const [fixedColorMode, setFixedColorMode] = useState<'FOREGROUND' | 'BACKGROUND'>('FOREGROUND');
-  const [fixedFgColor, setFixedFgColor] = useState<string>('#00FF00');
-  const [fixedBgColor, setFixedBgColor] = useState<string>('#000000');
+  const [fixedFgColor, setFixedFgColor] = useState<string>(
+    () => ledgerState?.fgColor ?? '#00FF00'
+  );
+  const [fixedBgColor, setFixedBgColor] = useState<string>(
+    () => ledgerState?.bgColor ?? '#000000'
+  );
   const [fixedHue, setFixedHue] = useState<number>(120);
   const [fixedDirection, setFixedDirection] = useState<number>(1); // 1=forward, 0=reverse
 

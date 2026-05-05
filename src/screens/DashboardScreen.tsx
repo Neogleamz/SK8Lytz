@@ -50,6 +50,7 @@ import { useDashboardCrew } from '../hooks/useDashboardCrew';
 import { useDashboardDeviceConfig } from '../hooks/useDashboardDeviceConfig';
 
 import { useHardwareNotifications } from '../hooks/useHardwareNotifications';
+import { useDeviceStateLedger, normalizeMac, isStale } from '../hooks/useDeviceStateLedger';
 import type { DashboardViewState, DeviceSettings, CustomGroup } from '../types/dashboard.types';
 
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
@@ -69,6 +70,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const styles = createDashboardStyles(Colors, windowHeight, windowWidth);
+  // ── Device State Ledger — unified per-device pattern state ────────────────────
+  const ledger = useDeviceStateLedger();
   const {
     scanForPeripherals,
     allDevices,
@@ -681,6 +684,21 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     `@Sk8lytz_last_pattern_${(displayConnectedDevices[0]?.id || '').toUpperCase()}`,
                     JSON.stringify({ payload: lastPayload, ts: Date.now() })
                   ).catch(() => {});
+                  // NEW: Save to unified ledger for each connected device.
+                  // This fixes the key mismatch — ledger always uses normalized MAC.
+                  displayConnectedDevices.forEach(d => {
+                    const mac = normalizeMac(d.id);
+                    ledger.save(mac, {
+                      deviceMac: mac,
+                      groupId: targetGroupId,
+                      mode: 'MULTIMODE',  // Best available — dashboard does not have access to controller mode
+                      patternLabel: patternName,
+                      speed: 50,          // Defaults — structured fields populated on Phase 3 upgrade
+                      brightness: 90,
+                      rawPayload: lastPayload,
+                      ts: Date.now(),
+                    });
+                  });
                 }
               }
             }}
@@ -707,6 +725,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       ...cachedConfig,
       name: item.device_name || cachedConfig.name || item.name // Map DB field to component prop
     };
+    // Read last known pattern state from ledger for preview swatch.
+    const ledgerState = ledger.loadSync(normalizeMac(mac));
 
     return (
     <View style={{ paddingHorizontal: Layout.padding }}>
@@ -715,6 +735,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         isConnected={displayConnectedDevices.some(d => d.id.toUpperCase() === mac)}
         isSelectionMode={isSelectionMode}
         isSelected={selectedIds.includes(mac)}
+        ledgerState={ledgerState ?? undefined}
         onPress={async () => {
           if (isSelectionMode) {
             toggleDeviceSelection(mac);
@@ -748,7 +769,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       />
     </View>
     ); // close return
-  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs, allDevices, connectToDevices, scanForPeripherals, writeToDevice]);
+  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs, allDevices, connectToDevices, scanForPeripherals, writeToDevice, ledger]);
 
   const mappedRegisteredDevicesForModal = useMemo(() => registeredDevices.map((d) => ({
     // IDENTITY KEY: always use device_mac (BLE MAC address), NOT d.id (Supabase UUID).
