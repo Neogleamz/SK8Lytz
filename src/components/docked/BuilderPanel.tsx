@@ -35,12 +35,16 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
   const [editingPreset, setEditingPreset] = useState<CustomBuilderPreset | undefined>();
 
   const dispatchGradient = React.useCallback((preset: CustomBuilderPreset) => {
+    // Sync UI state first so the visualizer and builder reflect the applied preset
+    setBuilderNodes(preset.nodes);
+    setBuilderFillMode(preset.fill_mode);
+    setBuilderTransitionType(preset.transition_type);
     if (!writeToDevice) return;
     const generatedRgbArray = PositionalMathBuffer.generateArray(preset.nodes, points, preset.fill_mode === 'GRADIENT');
     const mappedSpeed = Math.max(1, Math.min(31, Math.round((speed / 100) * 31)));
     const payload = ZenggeProtocol.setMultiColor(generatedRgbArray, points, mappedSpeed, direction, preset.transition_type);
     writeToDevice(payload);
-  }, [writeToDevice, points, speed, direction]);
+  }, [writeToDevice, points, speed, direction, setBuilderNodes, setBuilderFillMode, setBuilderTransitionType]);
 
   const openGradientBuilder = (preset?: CustomBuilderPreset) => {
     if (preset) {
