@@ -60,13 +60,6 @@ export default function AccountTabSettings({
       </View>
 
 
-      {/* Legal & Compliance */}
-      <Text style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>LEGAL</Text>
-
-      <TouchableOpacity style={styles.signOutBtn} onPress={() => setShowEula(true)}>
-        <MaterialCommunityIcons name="file-document-outline" size={18} color={Colors.textMuted} />
-        <Text style={[styles.signOutText, { color: Colors.text }]}>Review EULA</Text>
-      </TouchableOpacity>
 
       {/* Sign out */}
       <Text style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>ACCOUNT</Text>
