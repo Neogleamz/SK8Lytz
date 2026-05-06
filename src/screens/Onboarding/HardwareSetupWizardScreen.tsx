@@ -76,8 +76,11 @@ export default function HardwareSetupWizardScreen({
 
   useEffect(() => {
     let timer: any;
-    // Skip keepAlive polling if devices already found — avoids burstScan wiping the list unnecessarily
-    if (hasStartedScan && step < 3 && pendingRegistrations.length === 0 && bleState !== 'SCANNING' && bleState !== 'PROBING') {
+    // keepAlive polling: only fires on Step 2 (devices already found, watching for more arrivals).
+    // IMPORTANT: Must NOT run on Step 1 when pendingRegistrations is empty — it would silently
+    // flip bleState back to SCANNING every 2s, which steals the "RETRY SCAN" button
+    // from the user before they can tap it.
+    if (hasStartedScan && step === 2 && pendingRegistrations.length === 0 && bleState !== 'SCANNING' && bleState !== 'PROBING') {
       timer = setTimeout(() => {
         scanForPeripherals({ keepAlive: true });
       }, 2000);
