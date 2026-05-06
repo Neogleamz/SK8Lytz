@@ -50,9 +50,11 @@ export const SkateGroupCard = ({
         colors={isPoweredOn ? (colors as any) : ['#333', '#1a1a1a']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.skateCardGradient, isActive && { borderColor: Colors.primary, borderWidth: 1.5 }]}
+        style={[styles.skateCardGradient, isActive && { borderColor: Colors.primary, borderWidth: 1.5 }, { overflow: 'hidden' }]}
       >
-        <View style={[styles.skateCardInner, { minHeight: 130, justifyContent: 'center', position: 'relative' }]}>
+        <View style={{ flexDirection: 'row', flex: 1 }}>
+          {/* Main Left Content Area */}
+          <View style={[styles.skateCardInner, { flex: 1, minHeight: 130, justifyContent: 'center', position: 'relative' }]}>
           {/* Glassmorphism Refraction */}
           <View style={styles.skateCardRefraction} />
 
@@ -96,16 +98,6 @@ export const SkateGroupCard = ({
                   );
                 })}
               </View>
-            </View>
-
-            {/* Power Button moved from footer */}
-            <View style={[styles.powerIconCircle, { backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255,255,255,0.05)', marginLeft: 'auto' }]}>
-              <MaterialCommunityIcons 
-                name="power" 
-                size={16} 
-                color={isPoweredOn ? Colors.primary : '#666'} 
-              />
-            </View>
           </View>
 
           {/* MAIN CONTENT: Name Only (Perfect Center) */}
@@ -121,6 +113,42 @@ export const SkateGroupCard = ({
             <Text style={styles.patternName} numberOfLines={1}>
               {isPoweredOn ? (lastPattern || 'ACTIVE') : 'POWERED OFF'}
             </Text>
+          </View>
+          </View>
+          
+          {/* Right-Side Quick Launch Strip */}
+          <View style={{ 
+            width: 48, 
+            backgroundColor: 'rgba(0,0,0,0.25)', 
+            borderLeftWidth: 1, 
+            borderLeftColor: 'rgba(255,255,255,0.05)', 
+            alignItems: 'center', 
+            justifyContent: 'space-evenly',
+            paddingVertical: 8
+          }}>
+            <TouchableOpacity activeOpacity={0.7} onPress={() => {/* Handle Power */}}>
+              <View style={[styles.powerIconCircle, { backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.1)' : 'transparent', width: 34, height: 34 }]}>
+                <MaterialCommunityIcons name="power" size={18} color={isPoweredOn ? Colors.primary : '#666'} />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity activeOpacity={0.7} onPress={() => {/* Handle Music */}}>
+              <View style={[styles.powerIconCircle, { backgroundColor: 'transparent', width: 34, height: 34 }]}>
+                <MaterialCommunityIcons name="music-note" size={18} color="#AAA" />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity activeOpacity={0.7} onPress={() => {/* Handle Camera */}}>
+              <View style={[styles.powerIconCircle, { backgroundColor: 'transparent', width: 34, height: 34 }]}>
+                <MaterialCommunityIcons name="camera" size={18} color="#AAA" />
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity activeOpacity={0.7} onPress={() => {/* Handle Favorite */}}>
+              <View style={[styles.powerIconCircle, { backgroundColor: 'transparent', width: 34, height: 34 }]}>
+                <MaterialCommunityIcons name="heart" size={16} color="#AAA" />
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
       </LinearGradient>
