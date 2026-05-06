@@ -393,19 +393,21 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
           if (!effect?.supportsDirection || !setFixedDirection) return null;
           const isForward = (fixedDirection ?? 1) === 1;
           return (
-            <View style={{ flexDirection: 'row', alignSelf: 'flex-end', marginBottom: 2, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
-              <TouchableOpacity
-                onPress={() => { setFixedDirection(0); }}
-                style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: !isForward ? 'rgba(0,240,255,0.2)' : 'transparent' }}
-              >
-                <Text style={{ color: !isForward ? '#00F0FF' : 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '800' }}>◀ REV</Text>
-              </TouchableOpacity>
-              <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.15)' }} />
+            <View style={{ flexDirection: 'column', alignSelf: 'stretch', width: 46, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
               <TouchableOpacity
                 onPress={() => { setFixedDirection(1); }}
-                style={{ paddingHorizontal: 10, paddingVertical: 6, backgroundColor: isForward ? 'rgba(0,240,255,0.2)' : 'transparent' }}
+                style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: isForward ? 'rgba(0,240,255,0.2)' : 'transparent' }}
               >
-                <Text style={{ color: isForward ? '#00F0FF' : 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: '800' }}>FWD ▶</Text>
+                <Text style={{ color: isForward ? '#00F0FF' : 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: '800', lineHeight: 11 }}>▲</Text>
+                <Text style={{ color: isForward ? '#00F0FF' : 'rgba(255,255,255,0.35)', fontSize: 7, fontWeight: '800', lineHeight: 10 }}>FWD</Text>
+              </TouchableOpacity>
+              <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.15)' }} />
+              <TouchableOpacity
+                onPress={() => { setFixedDirection(0); }}
+                style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: !isForward ? 'rgba(0,240,255,0.2)' : 'transparent' }}
+              >
+                <Text style={{ color: !isForward ? '#00F0FF' : 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: '800', lineHeight: 11 }}>▼</Text>
+                <Text style={{ color: !isForward ? '#00F0FF' : 'rgba(255,255,255,0.35)', fontSize: 7, fontWeight: '800', lineHeight: 10 }}>REV</Text>
               </TouchableOpacity>
             </View>
           );
