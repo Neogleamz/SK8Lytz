@@ -836,7 +836,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             <ProductVisualizer
               product={activeProduct}
               color={visualizerColor}
-              mode={activeMode === 'FAVORITES' ? lastOperatingMode : activeMode}
+              mode={
+                activeMode === 'FAVORITES' ? lastOperatingMode :
+                (activeMode === 'MULTIMODE' && fixedSubMode === 'BUILDER') ? 'BUILDER' :
+                activeMode
+              }
               patternId={activeMode === 'MULTIMODE' ? fixedPatternId : selectedPatternId}
               isPaired={isPaired}
               points={points}

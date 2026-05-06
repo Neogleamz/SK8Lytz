@@ -29,8 +29,13 @@ export function useDockedControllerState(
   const ledgerState = ledgerStateRef.current;
   // Core State
   const [activeProduct, setActiveProduct] = useState<ProductType>(initialProduct);
-  const [activeMode, setActiveMode] = useState<ModeType>('FAVORITES');
-  const [lastOperatingMode, setLastOperatingMode] = useState<ModeType>('MULTIMODE');
+  // Pre-warm from ledger — restores the mode the device was last set to so the
+  // visualizer shows the correct pattern immediately on controller open.
+  const restoredMode = (ledgerState?.mode as ModeType) || 'FAVORITES';
+  const [activeMode, setActiveMode] = useState<ModeType>(restoredMode);
+  const [lastOperatingMode, setLastOperatingMode] = useState<ModeType>(
+    restoredMode !== 'FAVORITES' ? restoredMode : 'MULTIMODE'
+  );
 
   // Shared parameters — lazy initializers read from ledger on first render
   const [selectedColor, setSelectedColor] = useState<string>(
