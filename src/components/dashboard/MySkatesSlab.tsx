@@ -52,12 +52,20 @@ const MySkatesSlab = React.memo(({
           const fallbackColors = [Colors.primary || '#00F0FF', Colors.secondary || '#7000FF'];
           const cardColors = resolveGroupCardColors(snapshot, fallbackColors);
           const isActive = group.deviceIds.some(id => connectedDevices.some(d => d.id.toUpperCase() === id));
+          
+          const rssiMap = group.deviceIds.reduce((acc, id) => {
+            const device = allDevices.find(d => d.id.toUpperCase() === id);
+            if (device && device.rssi) acc[id] = device.rssi;
+            return acc;
+          }, {} as Record<string, number>);
+
           return (
             <SkateGroupCard
               key={group.id}
               group={group}
               isActive={isActive}
               colors={cardColors}
+              rssiMap={rssiMap}
               lastPattern={snapshot?.patternLabel}
               userProfile={userProfile}
               powerStates={powerStates}

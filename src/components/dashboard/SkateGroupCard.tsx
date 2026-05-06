@@ -12,6 +12,7 @@ interface SkateGroupCardProps {
   colors: string[];
   lastPattern?: string;
   isActive?: boolean;
+  rssiMap?: Record<string, number>;
   userProfile: any;
   powerStates: Record<string, boolean>;
   Colors: ThemePalette;
@@ -30,6 +31,7 @@ export const SkateGroupCard = ({
   colors,
   lastPattern,
   isActive,
+  rssiMap = {},
   userProfile,
   powerStates,
   Colors,
@@ -73,17 +75,29 @@ export const SkateGroupCard = ({
                   />
                 ))}
               </View>
-              {/* Status Dots next to the pair */}
-              <View style={{ flexDirection: 'row', marginLeft: 2 }}>
-                {group.deviceIds.map((id) => {
+              {/* Staggered RSSI Meters next to the pair */}
+              <View style={{ flexDirection: 'row', marginLeft: 6 }}>
+                {group.deviceIds.map((id, index) => {
                   const isDeviceOn = powerStates[id] !== false;
+                  const rssi = rssiMap[id] || -100;
+                  const activeColor = isDeviceOn ? Colors.success : Colors.error;
+                  
                   return (
                     <View 
-                      key={`dot-${id}`} 
-                      style={[styles.avatarStatusDot, { 
-                        backgroundColor: isDeviceOn ? Colors.success : Colors.error 
-                      }]} 
-                    />
+                      key={`rssi-${id}`} 
+                      style={{ 
+                        flexDirection: 'row', 
+                        alignItems: 'flex-end', 
+                        gap: 1,
+                        marginLeft: index > 0 ? -4 : 0, 
+                        transform: [{ translateY: index > 0 ? -4 : 0 }],
+                        zIndex: group.deviceIds.length - index 
+                      }}
+                    >
+                      <View style={{ width: 2, height: 4, backgroundColor: rssi >= -90 ? activeColor : '#555' }} />
+                      <View style={{ width: 2, height: 6, backgroundColor: rssi >= -75 ? activeColor : '#555' }} />
+                      <View style={{ width: 2, height: 8, backgroundColor: rssi >= -60 ? activeColor : '#555' }} />
+                    </View>
                   );
                 })}
               </View>
