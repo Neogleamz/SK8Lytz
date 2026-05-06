@@ -1,9 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, Animated } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import { Typography, Spacing, Layout } from '../../theme/theme';
-import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import { Layout, Spacing } from '../../theme/theme';
+import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop, Mask } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 
 // Wrapping Circle for standard Animated API
@@ -28,31 +27,39 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
 }) => {
   const { Colors } = useTheme();
 
-  // Screen layout logic (half-circle gauge to save vertical space)
+  // Mathematical Bounding Box for minimum vertical height
   const windowWidth = Dimensions.get('window').width;
   const isWeb = Dimensions.get('window').width > 600;
-  const padding = Spacing.md * 4; // Increased padding to shrink gauge size
-  const svgWidth = isWeb ? 400 - padding : windowWidth - padding; 
   
-  const strokeWidth = 24; // Thicker, more aggressive gauge
-  const radius = (svgWidth / 2) - (strokeWidth * 2); 
+  // Shrink the gauge width so it's not overwhelmingly large
+  const horizontalPadding = Spacing.md * 3;
+  const svgWidth = isWeb ? 400 - horizontalPadding : windowWidth - horizontalPadding; 
+  
+  const strokeWidth = 32; // Extremely thick arcade tachometer
+  const padding = 24; // Glow buffer space
+  const radius = (svgWidth / 2) - padding; 
   const cx = svgWidth / 2;
-  const cy = radius + (strokeWidth * 2); 
+  const cy = radius + padding; // Center sits exactly at the bottom radius + padding
+  
+  // Hard-clip the SVG height to eliminate wasted space at the top and bottom
+  const svgHeight = cy + (strokeWidth / 2) + 5; 
   
   const circumference = 2 * Math.PI * radius;
   const halfCircumference = circumference / 2;
 
-  // Max speed scale (e.g. 25 mph)
+  // Tachometer segmentation math (Block width 6, Gap 6)
+  const segmentPattern = `6 6`;
+
+  // Max speed scale
   const MAX_SPEED = 25;
   const speedRatio = Math.min(Math.max(gpsSpeed / MAX_SPEED, 0), 1);
   
-  // Physics engine value
   const animatedProgress = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
     Animated.spring(animatedProgress, {
       toValue: speedRatio,
-      friction: 5, // Bouncier, tighter spring
+      friction: 5, 
       tension: 50,
       useNativeDriver: false 
     }).start();
@@ -69,92 +76,95 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Gamified Calorie Estimate
   const kcalBurned = Math.round(sessionDistanceMiles * 65);
 
   return (
     <View style={styles.container}>
-
-      {/* MASSIVE NEON GAUGE (Half Circle) */}
-      <View style={{ width: svgWidth, height: cy + 10, alignItems: 'center', alignSelf: 'center', marginTop: 0 }}>
-        <Svg width={svgWidth} height={cy + 10} viewBox={`0 0 ${svgWidth} ${cy + 10}`}>
+      
+      {/* MASSIVE SEGMENTED TACHOMETER */}
+      <View style={{ width: svgWidth, height: svgHeight, alignItems: 'center', alignSelf: 'center', marginTop: 0 }}>
+        <Svg width={svgWidth} height={svgHeight} viewBox={`0 0 ${svgWidth} ${svgHeight}`}>
           <Defs>
-            <SvgLinearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <SvgLinearGradient id="redlineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
               <Stop offset="0%" stopColor="#00FFFF" stopOpacity="1" />
-              <Stop offset="50%" stopColor="#8A2BE2" stopOpacity="1" />
-              <Stop offset="100%" stopColor="#FF00FF" stopOpacity="1" />
+              <Stop offset="40%" stopColor="#8A2BE2" stopOpacity="1" />
+              <Stop offset="70%" stopColor="#FF00FF" stopOpacity="1" />
+              <Stop offset="90%" stopColor="#FF0000" stopOpacity="1" />
+              <Stop offset="100%" stopColor="#FF0000" stopOpacity="1" />
             </SvgLinearGradient>
+
+            <Mask id="progressMask">
+              <AnimatedCircle
+                cx={cx}
+                cy={cy}
+                r={radius}
+                stroke="#FFFFFF"
+                strokeWidth={strokeWidth + 40} // Massively oversize mask to catch outer glow layers
+                fill="none"
+                strokeDasharray={`${halfCircumference} ${circumference}`}
+                strokeDashoffset={strokeDashoffset}
+                strokeLinecap="butt"
+                transform={`rotate(180 ${cx} ${cy})`}
+              />
+            </Mask>
           </Defs>
           
-          {/* Layer 1: Background Track (Dark & Deep) */}
+          {/* Layer 1: Dark Segmented Track */}
           <Circle
             cx={cx}
             cy={cy}
             r={radius}
-            stroke="rgba(255,255,255,0.03)"
+            stroke="rgba(255,255,255,0.06)"
             strokeWidth={strokeWidth}
             fill="none"
-            strokeDasharray={`${halfCircumference} ${circumference}`}
+            strokeDasharray={segmentPattern}
             strokeDashoffset="0"
-            strokeLinecap="round"
+            strokeLinecap="butt"
             transform={`rotate(180 ${cx} ${cy})`}
           />
 
-          {/* Layer 2: Massive Outer Bloom */}
-          <AnimatedCircle
+          {/* Layer 2: Massive Outer Redline Bloom (Masked) */}
+          <Circle
             cx={cx}
             cy={cy}
             r={radius}
-            stroke="url(#neonGradient)"
+            stroke="url(#redlineGradient)"
             strokeWidth={strokeWidth + 24}
             fill="none"
-            opacity={0.15}
-            strokeDasharray={`${halfCircumference} ${circumference}`}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
+            opacity={0.25}
+            strokeDasharray={segmentPattern}
+            strokeDashoffset="0"
+            strokeLinecap="butt"
             transform={`rotate(180 ${cx} ${cy})`}
+            mask="url(#progressMask)"
           />
 
-          {/* Layer 3: Main Colored Core Line */}
-          <AnimatedCircle
+          {/* Layer 3: Core Segmented Colored Tachometer (Masked) */}
+          <Circle
             cx={cx}
             cy={cy}
             r={radius}
-            stroke="url(#neonGradient)"
+            stroke="url(#redlineGradient)"
             strokeWidth={strokeWidth}
             fill="none"
-            strokeDasharray={`${halfCircumference} ${circumference}`}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
+            strokeDasharray={segmentPattern}
+            strokeDashoffset="0"
+            strokeLinecap="butt"
             transform={`rotate(180 ${cx} ${cy})`}
-          />
-          
-          {/* Layer 4: Hot White Inner Filament */}
-          <AnimatedCircle
-            cx={cx}
-            cy={cy}
-            r={radius}
-            stroke="#FFFFFF"
-            strokeWidth={2}
-            fill="none"
-            opacity={0.8}
-            strokeDasharray={`${halfCircumference} ${circumference}`}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-            transform={`rotate(180 ${cx} ${cy})`}
+            mask="url(#progressMask)"
           />
         </Svg>
         
-        {/* Absolute Centered Speed Text */}
+        {/* Speed Text moved slightly up inside the arc bounds */}
         <View style={styles.speedTextContainer}>
-          <Text style={[styles.speedValue, { color: '#FFFFFF', textShadowColor: '#00FFFF', textShadowRadius: 25 }]}>
+          <Text style={[styles.speedValue, { color: '#FFFFFF', textShadowColor: '#00FFFF', textShadowRadius: 20 }]}>
             {gpsSpeed.toFixed(1)}
           </Text>
           <Text style={[styles.speedUnit, { color: '#00FFFF', textShadowColor: '#00FFFF', textShadowRadius: 10 }]}>MPH</Text>
         </View>
       </View>
 
-      {/* BOTTOM 6-METRIC GRID */}
+      {/* COMPACT BOTTOM GRID */}
       <View style={styles.metricsGrid}>
         <View style={styles.metricsRow}>
           <TelemetryGlassPill label="DISTANCE" value={sessionDistanceMiles.toFixed(2)} unit="mi" accent="#00FFFF" />
@@ -172,17 +182,16 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
   );
 };
 
-// Extracted Glassmorphic Pill Component
 const TelemetryGlassPill = ({ label, value, unit, accent }: { label: string, value: string, unit: string, accent: string }) => (
   <View style={styles.pillContainer}>
     <LinearGradient
-      colors={['rgba(255,255,255,0.08)', 'rgba(0,0,0,0.6)']}
+      colors={['rgba(255,255,255,0.06)', 'rgba(0,0,0,0.4)']}
       style={styles.pillBackground}
     />
     <View style={[styles.accentTick, { backgroundColor: accent, shadowColor: accent }]} />
     <Text style={styles.pillLabel}>{label}</Text>
     <View style={styles.pillValueContainer}>
-      <Text style={[styles.pillValue, { textShadowColor: accent, textShadowRadius: 15 }]}>{value}</Text>
+      <Text style={[styles.pillValue, { textShadowColor: accent, textShadowRadius: 12 }]}>{value}</Text>
       {unit !== '' && <Text style={styles.pillUnit}>{unit}</Text>}
     </View>
   </View>
@@ -192,23 +201,10 @@ const styles = StyleSheet.create({
   container: {
     marginHorizontal: Layout.padding,
     marginBottom: Spacing.sm,
-    paddingBottom: Spacing.xs,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
-    gap: 6,
-  },
-  headerText: {
-    fontFamily: 'Righteous',
-    fontSize: 12,
-    letterSpacing: 1.5,
   },
   speedTextContainer: {
     position: 'absolute',
-    bottom: 5,
+    bottom: -10, // Pulled down slightly because the bounding box is clipped very tight
     alignItems: 'center',
   },
   speedValue: {
@@ -223,25 +219,24 @@ const styles = StyleSheet.create({
     marginTop: -8,
   },
   metricsGrid: {
-    paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.md,
-    paddingTop: Spacing.sm,
-    gap: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+    paddingTop: Spacing.md,
+    gap: Spacing.xs, // Ultra dense gap
   },
   metricsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: Spacing.sm,
+    gap: Spacing.xs,
   },
   pillContainer: {
     flex: 1,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm, // Squeezed vertical padding
     paddingHorizontal: Spacing.xs,
-    borderRadius: 12,
+    borderRadius: 8, // Sharper corners for aggressive look
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-    borderTopColor: 'rgba(255,255,255,0.15)', // Frosted edge light
+    borderColor: 'rgba(255,255,255,0.03)',
+    borderTopColor: 'rgba(255,255,255,0.12)', 
     overflow: 'hidden',
   },
   pillBackground: {
@@ -252,20 +247,18 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: '20%',
     right: '20%',
-    height: 3,
-    borderTopLeftRadius: 3,
-    borderTopRightRadius: 3,
+    height: 2,
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 1,
     shadowRadius: 5,
     elevation: 4,
   },
   pillLabel: {
-    fontSize: 9,
+    fontSize: 8, // Smaller label
     fontFamily: 'Righteous',
     letterSpacing: 1.5,
     color: 'rgba(255,255,255,0.4)',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   pillValueContainer: {
     flexDirection: 'row',
@@ -274,13 +267,13 @@ const styles = StyleSheet.create({
   },
   pillValue: {
     fontFamily: 'monospace',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '900',
     color: '#FFFFFF',
   },
   pillUnit: {
     fontFamily: 'Righteous',
-    fontSize: 10,
+    fontSize: 9,
     color: 'rgba(255,255,255,0.5)',
   }
 });
