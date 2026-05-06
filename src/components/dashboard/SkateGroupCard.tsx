@@ -53,67 +53,72 @@ export const SkateGroupCard = ({
         style={[styles.skateCardGradient, isActive && { borderColor: Colors.primary, borderWidth: 1.5 }, { overflow: 'hidden' }]}
       >
         <View style={{ flexDirection: 'row', flex: 1 }}>
+          
           {/* Main Left Content Area */}
           <View style={[styles.skateCardInner, { flex: 1, minHeight: 130, justifyContent: 'center', position: 'relative' }]}>
-          {/* Glassmorphism Refraction */}
-          <View style={styles.skateCardRefraction} />
+            
+            {/* Glassmorphism Refraction */}
+            <View style={styles.skateCardRefraction} />
 
-          {/* TOP BAR: Skates & Power */}
-          <View style={[styles.skateCardHeader, { position: 'absolute', top: 10, left: 12, right: 12, zIndex: 10, marginBottom: 0 }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              {/* Stacked Skates in a fixed 3D box (Smaller) */}
-              <View style={{ width: 28, height: 22, position: 'relative' }}>
-                {group.deviceIds.map((id, index) => (
-                  <MaterialCommunityIcons 
-                    key={`icon-${id}`} 
-                    name="roller-skate" 
-                    size={16} 
-                    color="#FFF" 
-                    style={{ 
-                      position: 'absolute',
-                      bottom: index > 0 ? 6 : 0,
-                      left: index > 0 ? 10 : 0,
-                      zIndex: group.deviceIds.length - index 
-                    }} 
-                  />
-                ))}
+            {/* TOP BAR: Skates & Power */}
+            <View style={[styles.skateCardHeader, { position: 'absolute', top: 10, left: 12, right: 12, zIndex: 10, marginBottom: 0 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                
+                {/* Stacked Skates in a fixed 3D box (Smaller) */}
+                <View style={{ width: 28, height: 22, position: 'relative' }}>
+                  {group.deviceIds.map((id, index) => (
+                    <MaterialCommunityIcons 
+                      key={`icon-${id}`} 
+                      name="roller-skate" 
+                      size={16} 
+                      color="#FFF" 
+                      style={{ 
+                        position: 'absolute',
+                        bottom: index > 0 ? 6 : 0,
+                        left: index > 0 ? 10 : 0,
+                        zIndex: group.deviceIds.length - index 
+                      }} 
+                    />
+                  ))}
+                </View>
+
+                {/* Vertical Stack of RSSI Meters (Smaller) */}
+                <View style={{ flexDirection: 'column', gap: 5, marginLeft: 6, height: 22, justifyContent: 'center' }}>
+                  {[...group.deviceIds].reverse().map((id) => {
+                    const isDeviceOn = powerStates[id] !== false;
+                    const rssi = rssiMap[id] || -100;
+                    const activeColor = isDeviceOn ? Colors.success : Colors.error;
+                    return (
+                      <View 
+                        key={`rssi-${id}`} 
+                        style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 1, height: 8 }}
+                      >
+                        <View style={{ width: 2, height: 3, backgroundColor: rssi >= -90 ? activeColor : '#555' }} />
+                        <View style={{ width: 2, height: 5, backgroundColor: rssi >= -75 ? activeColor : '#555' }} />
+                        <View style={{ width: 2, height: 8, backgroundColor: rssi >= -60 ? activeColor : '#555' }} />
+                      </View>
+                    );
+                  })}
+                </View>
+
               </View>
+            </View>
 
-              {/* Vertical Stack of RSSI Meters (Smaller) */}
-              <View style={{ flexDirection: 'column', gap: 5, marginLeft: 6, height: 22, justifyContent: 'center' }}>
-                {[...group.deviceIds].reverse().map((id) => {
-                  const isDeviceOn = powerStates[id] !== false;
-                  const rssi = rssiMap[id] || -100;
-                  const activeColor = isDeviceOn ? Colors.success : Colors.error;
-                  
-                  return (
-                    <View 
-                      key={`rssi-${id}`} 
-                      style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 1, height: 8 }}
-                    >
-                      <View style={{ width: 2, height: 3, backgroundColor: rssi >= -90 ? activeColor : '#555' }} />
-                      <View style={{ width: 2, height: 5, backgroundColor: rssi >= -75 ? activeColor : '#555' }} />
-                      <View style={{ width: 2, height: 8, backgroundColor: rssi >= -60 ? activeColor : '#555' }} />
-                    </View>
-                  );
-                })}
-              </View>
-          </View>
+            {/* MAIN CONTENT: Name Only (Perfect Center) */}
+            <View style={[styles.skateCardContent, { marginBottom: 0, marginTop: 10, alignItems: 'center', justifyContent: 'center' }]}>
+              <Text style={[styles.skateCardGroupName, { textAlign: 'center' }]} numberOfLines={1}>
+                {group.name.toUpperCase()}
+              </Text>
+            </View>
 
-          {/* MAIN CONTENT: Name Only (Perfect Center) */}
-          <View style={[styles.skateCardContent, { marginBottom: 0, marginTop: 10, alignItems: 'center', justifyContent: 'center' }]}>
-            <Text style={[styles.skateCardGroupName, { textAlign: 'center' }]} numberOfLines={1}>
-              {group.name.toUpperCase()}
-            </Text>
-          </View>
+            {/* BOTTOM BAR: Pattern Pill */}
+            <View style={[styles.patternPill, { position: 'absolute', bottom: 16, alignSelf: 'center' }]}>
+              <View style={[styles.patternDot, { backgroundColor: isPoweredOn ? colors[0] : '#555' }]} />
+              <Text style={styles.patternName} numberOfLines={1}>
+                {isPoweredOn ? (lastPattern || 'ACTIVE') : 'POWERED OFF'}
+              </Text>
+            </View>
 
-          {/* BOTTOM BAR: Pattern Pill */}
-          <View style={[styles.patternPill, { position: 'absolute', bottom: 16, alignSelf: 'center' }]}>
-            <View style={[styles.patternDot, { backgroundColor: isPoweredOn ? colors[0] : '#555' }]} />
-            <Text style={styles.patternName} numberOfLines={1}>
-              {isPoweredOn ? (lastPattern || 'ACTIVE') : 'POWERED OFF'}
-            </Text>
-          </View>
           </View>
           
           {/* Right-Side Quick Launch Strip */}
@@ -126,30 +131,31 @@ export const SkateGroupCard = ({
             justifyContent: 'space-evenly',
             paddingVertical: 8
           }}>
-            <TouchableOpacity activeOpacity={0.7} onPress={() => {/* Handle Power */}}>
+            <TouchableOpacity activeOpacity={0.7} onPress={() => {}}>
               <View style={[styles.powerIconCircle, { backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.1)' : 'transparent', width: 34, height: 34 }]}>
                 <MaterialCommunityIcons name="power" size={18} color={isPoweredOn ? Colors.primary : '#666'} />
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity activeOpacity={0.7} onPress={() => {/* Handle Music */}}>
+            <TouchableOpacity activeOpacity={0.7} onPress={() => {}}>
               <View style={[styles.powerIconCircle, { backgroundColor: 'transparent', width: 34, height: 34 }]}>
                 <MaterialCommunityIcons name="music-note" size={18} color="#AAA" />
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity activeOpacity={0.7} onPress={() => {/* Handle Camera */}}>
+            <TouchableOpacity activeOpacity={0.7} onPress={() => {}}>
               <View style={[styles.powerIconCircle, { backgroundColor: 'transparent', width: 34, height: 34 }]}>
                 <MaterialCommunityIcons name="camera" size={18} color="#AAA" />
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity activeOpacity={0.7} onPress={() => {/* Handle Favorite */}}>
+            <TouchableOpacity activeOpacity={0.7} onPress={() => {}}>
               <View style={[styles.powerIconCircle, { backgroundColor: 'transparent', width: 34, height: 34 }]}>
                 <MaterialCommunityIcons name="heart" size={16} color="#AAA" />
               </View>
             </TouchableOpacity>
           </View>
+
         </View>
       </LinearGradient>
     </TouchableOpacity>
