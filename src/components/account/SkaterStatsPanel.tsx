@@ -100,6 +100,24 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
     }
   });
 
+  const topPatterns = Object.entries(activeStats.pattern_time_map || {})
+    .sort((a, b) => (b[1] as number) - (a[1] as number))
+    .slice(0, 3)
+    .map(p => ({ name: p[0].replace('pattern_', 'Pattern '), time: p[1] as number }));
+
+  const topColors = Object.entries(activeStats.color_time_map || {})
+    .sort((a, b) => (b[1] as number) - (a[1] as number))
+    .slice(0, 3)
+    .map(c => ({ hex: c[0].toUpperCase(), time: c[1] as number }));
+
+  const formatTime = (sec: number) => {
+    if (sec < 60) return `${Math.floor(sec)}s`;
+    const m = Math.floor(sec / 60);
+    if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60);
+    return `${h}h ${m % 60}m`;
+  };
+
   return (
     <View style={{ marginTop: Spacing.xl, marginBottom: Spacing.lg }}>
       <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1.2, marginBottom: Spacing.sm }}>
@@ -140,6 +158,43 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
           <MaterialCommunityIcons name="star-shooting-outline" size={28} color={Colors.primary} />
         )}
       </View>
+
+      {/* Top 3 Patterns */}
+      {topPatterns.length > 0 && (
+        <View style={{ marginTop: Spacing.xl }}>
+          <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1.2, marginBottom: Spacing.sm }}>
+            TOP PATTERNS
+          </Text>
+          {topPatterns.map((p, i) => (
+            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: Spacing.md, marginBottom: Spacing.xs }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                <Text style={{ color: Colors.textMuted, fontSize: 12, fontWeight: '800', width: 20 }}>#{i + 1}</Text>
+                <Text style={{ color: Colors.text, fontSize: 14, fontWeight: '600' }}>{p.name}</Text>
+              </View>
+              <Text style={{ color: Colors.primary, fontSize: 12, fontWeight: '700' }}>{formatTime(p.time)}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Top 3 Colors */}
+      {topColors.length > 0 && (
+        <View style={{ marginTop: Spacing.xl }}>
+          <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1.2, marginBottom: Spacing.sm }}>
+            TOP COLORS
+          </Text>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+            {topColors.map((c, i) => (
+              <View key={i} style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.03)', borderRadius: 10, padding: Spacing.md, alignItems: 'center' }}>
+                <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: c.hex, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', marginBottom: Spacing.xs }} />
+                <Text style={{ color: Colors.text, fontSize: 11, fontWeight: '700' }}>{c.hex}</Text>
+                <Text style={{ color: Colors.textMuted, fontSize: 10, marginTop: 2 }}>{formatTime(c.time)}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
     </View>
   );
 }
