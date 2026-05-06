@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../services/supabaseClient';
 import { Spacing } from '../../theme/theme';
 
@@ -19,7 +20,19 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
 
   useEffect(() => {
     async function fetchStats() {
-      if (!supabase) return;
+      const CACHE_KEY = '@sk8lytz_lifetime_stats_cache';
+      
+      // 1. Instantly load from cache for offline-first zero-latency
+      try {
+        const cached = await AsyncStorage.getItem(CACHE_KEY);
+        if (cached) setStats(JSON.parse(cached));
+      } catch (e) {}
+
+      if (!supabase) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const { data: authData } = await supabase.auth.getUser();
         if (!authData.user) return;
@@ -30,9 +43,13 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
           .eq('user_id', authData.user.id)
           .single();
           
-        if (data) setStats(data);
+        if (data && !error) {
+          setStats(data);
+          // 2. Save fresh cloud data to offline cache
+          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(() => {});
+        }
       } catch (e) {
-        // Silent catch for offline or non-existent stats
+        // Fallback to cache (already loaded)
       } finally {
         setLoading(false);
       }
@@ -48,29 +65,36 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
     );
   }
 
-  if (!stats) return null;
+  // Gamified Zero-State
+  const activeStats = stats || {
+    total_distance_meters: 0,
+    total_app_time_sec: 0,
+    lifetime_top_speed_mph: 0,
+    pattern_time_map: {},
+    color_time_map: {}
+  };
 
   // Convert distance to miles
-  const distanceMiles = (stats.total_distance_meters / 1609.34).toFixed(1);
-  const hoursSkated = Math.floor(stats.total_app_time_sec / 3600);
-  const topSpeed = stats.lifetime_top_speed_mph.toFixed(1);
+  const distanceMiles = (activeStats.total_distance_meters / 1609.34).toFixed(1);
+  const hoursSkated = Math.floor(activeStats.total_app_time_sec / 3600);
+  const topSpeed = activeStats.lifetime_top_speed_mph.toFixed(1);
 
   // Find Signature Style (Pattern or Color)
-  let bestStyle = "Rookie";
+  let bestStyle = "Rookie — Go Skate!";
   let bestTime = 0;
   let isHex = false;
 
-  Object.entries(stats.pattern_time_map || {}).forEach(([key, val]) => {
-    if (val > bestTime) {
-      bestTime = val;
+  Object.entries(activeStats.pattern_time_map || {}).forEach(([key, val]) => {
+    if ((val as number) > bestTime) {
+      bestTime = val as number;
       bestStyle = key.replace('pattern_', 'Pattern ');
       isHex = false;
     }
   });
 
-  Object.entries(stats.color_time_map || {}).forEach(([key, val]) => {
-    if (val > bestTime) {
-      bestTime = val;
+  Object.entries(activeStats.color_time_map || {}).forEach(([key, val]) => {
+    if ((val as number) > bestTime) {
+      bestTime = val as number;
       bestStyle = key.toUpperCase();
       isHex = true;
     }
