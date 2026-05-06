@@ -89,9 +89,9 @@ export default function AccountTabStats({
               { icon: 'flag-checkered',        val: String(lifetimeStats!.totalSessions),                        unit: '',    lbl: 'Sessions' },
               { icon: 'map-marker-distance',   val: lifetimeStats!.totalDistanceMiles.toFixed(1),               unit: 'mi',  lbl: 'Distance' },
               { icon: 'speedometer',           val: lifetimeStats!.lifetimePeakSpeedMph.toFixed(1),             unit: 'mph', lbl: 'Record Speed' },
-              { icon: 'gauge',                 val: lifetimeStats!.lifetimeAvgSpeedMph.toFixed(1),              unit: 'mph', lbl: 'Avg Speed' },
+              { icon: 'gauge',                 val: lifetimeStats!.lifetimePeakGForce?.toFixed(1) || '0.0',     unit: 'g',   lbl: 'Peak G-Force' },
+              { icon: 'speedometer-medium',    val: lifetimeStats!.lifetimeAvgSpeedMph.toFixed(1),              unit: 'mph', lbl: 'Avg Speed' },
               { icon: 'timer-outline',         val: fmtDuration(lifetimeStats!.totalDurationSec),               unit: '',    lbl: 'Time on Skates' },
-              { icon: 'fire',                  val: String(lifetimeStats!.lifetimeCalories),                    unit: 'kcal',lbl: 'Calories' },
             ].map(({ icon, val, unit, lbl }) => (
               <View key={lbl} style={{
                 width: '47%', backgroundColor: 'rgba(255,255,255,0.05)',
@@ -134,10 +134,10 @@ export default function AccountTabStats({
                       <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 16 }}>{s.avgSpeedMph.toFixed(1)}</Text>
                       <Text style={{ color: Colors.textMuted, fontSize: 10 }}>avg mph</Text>
                     </View>
-                    {s.calories != null && (
+                    {s.peakGForce != null && (
                       <View style={{ alignItems: 'center' }}>
-                        <Text style={{ color: '#FF6B35', fontWeight: '800', fontSize: 16 }}>{s.calories}</Text>
-                        <Text style={{ color: Colors.textMuted, fontSize: 10 }}>kcal</Text>
+                        <Text style={{ color: '#FF6B35', fontWeight: '800', fontSize: 16 }}>{s.peakGForce.toFixed(1)}</Text>
+                        <Text style={{ color: Colors.textMuted, fontSize: 10 }}>peak g</Text>
                       </View>
                     )}
                   </View>

@@ -7,7 +7,7 @@ export function useCrewManage(
   const [selectedCrewDetail, setSelectedCrewDetail] = useState<PermanentCrew | null>(null);
 
   // Crew detail & Stats
-  const [crewStats, setCrewStats] = useState<Record<string, { sessionCount: number; lastActive: string | null; topScene: string | null }>>({});
+  const [crewStats, setCrewStats] = useState<Record<string, { sessionCount: number; lastActive: string | null; topScene: string | null; totalDistanceMiles?: number; avgSpeedMph?: number; peakSpeedMph?: number; peakGForce?: number; totalDurationSec?: number }>>({});
   const [expandedCrewId, setExpandedCrewId] = useState<string | null>(null);
 
   // Members Card info
