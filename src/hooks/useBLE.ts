@@ -18,6 +18,7 @@ import { AppLogger } from '../services/AppLogger';
 import type { BleConnectionState, PendingRegistration } from '../types/dashboard.types';
 
 import { checkPermission, openGlobalPermissionsModal } from '../services/PermissionService';
+import { supabase } from '../services/supabaseClient';
 import { useBLEScanner } from './ble/useBLEScanner';
 import { useBLEAutoRecovery } from './ble/useBLEAutoRecovery';
 import { useBLESweeper } from './ble/useBLESweeper';
@@ -136,6 +137,21 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const hardwareProbedCallbackRef = useRef<((deviceId: string, config: any) => void) | undefined>(undefined);
   const connectedDevicesRef = useRef<Device[]>([]);
   const droppedOutDeviceIdsRef = useRef<string[]>([]);
+  const blacklistedMacsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    const fetchBlacklist = async () => {
+      try {
+        const { data, error } = await supabase.from('hardware_blacklist').select('mac_address');
+        if (data && !error) {
+          blacklistedMacsRef.current = data.map(d => d.mac_address.toUpperCase());
+        }
+      } catch (e) {
+        AppLogger.error('[BLE] Failed to fetch hardware blacklist on boot', e);
+      }
+    };
+    fetchBlacklist();
+  }, []);
 
   useEffect(() => {
     droppedOutDeviceIdsRef.current = droppedOutDeviceIds;
@@ -356,6 +372,14 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   const connectToDevices = async (devices: Device[]) => {
     if (devices.length === 0) return;
+
+    // ── HARDWARE BLACKLIST GUARD ──────────────────────────────────────────────
+    const blockedDevices = devices.filter(d => blacklistedMacsRef.current.includes(d.id.toUpperCase()));
+    if (blockedDevices.length > 0) {
+      AppLogger.warn('[BLE] Hardware Blacklist Blocked Connection', { blockedDevices: blockedDevices.map(d => d.id) });
+      Alert.alert('Connection Blocked', 'One or more devices have been restricted and cannot be connected.');
+      return;
+    }
 
     // ── IMMEDIATE STATE CLEAR ─────────────────────────────────────────────────
     // Synchronously wipe connectedDevices BEFORE any async work so the controller

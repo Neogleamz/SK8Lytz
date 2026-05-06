@@ -879,6 +879,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 powerStates={powerStates}
                 handleDisconnect={handleDisconnect}
                 handlePowerToggle={handlePowerToggle}
+                isAdmin={userProfile?.role === 'admin'}
                 onPressAdminTools={() => setIsAdminToolsVisible(true)}
                 onPressSupport={() => setIsSupportModalVisible(true)}
                 onPressTheme={toggleTheme}
@@ -908,6 +909,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   powerStates={powerStates}
                   handleDisconnect={handleDisconnect}
                   handlePowerToggle={handlePowerToggle}
+                  isAdmin={userProfile?.role === 'admin'}
                   onPressAdminTools={() => setIsAdminToolsVisible(true)}
                   onPressSupport={() => setIsSupportModalVisible(true)}
                   onPressTheme={toggleTheme}
@@ -1176,7 +1178,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       )}
       
       {/* Admin Tools Hub (Replaces LogViewerModal) */}
-      {isAdminToolsVisible && (
+      {isAdminToolsVisible && userProfile?.role === 'admin' && (
         <AdminToolsModal
           visible={isAdminToolsVisible}
           onClose={() => setIsAdminToolsVisible(false)}

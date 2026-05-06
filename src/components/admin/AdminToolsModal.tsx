@@ -28,6 +28,10 @@ import { ProductManager } from './tools/ProductManager';
 import Sk8LytzDiagnosticLab from './tools/Sk8LytzDiagnosticLab';
 import Sk8LytzProgrammer from './tools/Sk8LytzProgrammer';
 import { UserManagementPanel } from './tools/UserManagementPanel';
+import { AdminRosterPanel } from './tools/AdminRosterPanel';
+import { AdminAuditLogViewer } from './tools/AdminAuditLogViewer';
+import { HardwareBlacklistPanel } from './tools/HardwareBlacklistPanel';
+import { FeatureFlagsPanel } from './tools/FeatureFlagsPanel';
 
 
 type Tab = 'timeline' | 'stats' | 'device' | 'tools';
@@ -63,6 +67,10 @@ export default function AdminToolsModal({
   const [isUserManagementVisible, setIsUserManagementVisible] = useState(false);
   const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
   const [isLabVisible, setIsLabVisible] = useState(false);
+  const [isRosterVisible, setIsRosterVisible] = useState(false);
+  const [isAuditVisible, setIsAuditVisible] = useState(false);
+  const [isBlacklistVisible, setIsBlacklistVisible] = useState(false);
+  const [isFeatureFlagsVisible, setIsFeatureFlagsVisible] = useState(false);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
 
   // ── Domain Hooks ────────────────────────────────────────────────────────────
@@ -188,6 +196,10 @@ export default function AdminToolsModal({
             setIsProductManagerVisible={setIsProductManagerVisible}
             setIsAppManagerVisible={setIsAppManagerVisible}
             setIsUserManagementVisible={setIsUserManagementVisible}
+            setIsRosterVisible={setIsRosterVisible}
+            setIsAuditVisible={setIsAuditVisible}
+            setIsBlacklistVisible={setIsBlacklistVisible}
+            setIsFeatureFlagsVisible={setIsFeatureFlagsVisible}
             textMuted={textMuted} 
             textPrimary={textPrimary} 
             cardBg={cardBg} 
@@ -215,6 +227,30 @@ export default function AdminToolsModal({
         <UserManagementPanel
           visible={isUserManagementVisible}
           onClose={() => setIsUserManagementVisible(false)}
+          bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
+        />
+      ) : isRosterVisible ? (
+        <AdminRosterPanel
+          visible={isRosterVisible}
+          onClose={() => setIsRosterVisible(false)}
+          bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
+        />
+      ) : isAuditVisible ? (
+        <AdminAuditLogViewer
+          visible={isAuditVisible}
+          onClose={() => setIsAuditVisible(false)}
+          bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
+        />
+      ) : isBlacklistVisible ? (
+        <HardwareBlacklistPanel
+          visible={isBlacklistVisible}
+          onClose={() => setIsBlacklistVisible(false)}
+          bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
+        />
+      ) : isFeatureFlagsVisible ? (
+        <FeatureFlagsPanel
+          visible={isFeatureFlagsVisible}
+          onClose={() => setIsFeatureFlagsVisible(false)}
           bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
         />
       ) : isProductManagerVisible ? (

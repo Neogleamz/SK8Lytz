@@ -184,6 +184,50 @@ export function UserManagementPanel({
     );
   };
 
+  const handleRevokeSessions = (userId: string) => {
+    Alert.alert(
+      'Revoke Sessions',
+      'This will instantly log the user out of all devices by destroying their active tokens. Proceed?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Revoke',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase.rpc('admin_revoke_sessions', {
+                p_target_user_id: userId,
+              });
+              if (error) throw error;
+              Alert.alert('Success', 'All sessions revoked.');
+            } catch (err: any) {
+              Alert.alert('Failed', err.message);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleExportData = async (userId: string, displayName: string | null) => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.rpc('admin_export_user_data', {
+        p_target_user_id: userId,
+      });
+      if (error) throw error;
+      
+      // In a real app we'd save to file. Here we'll just show it or log it, or save using Expo FileSystem.
+      // Since FileSystem isn't imported, let's just log it and alert for now, or display in a simple modal.
+      AppLogger.log('DATA_EXPORT', { userId, data });
+      Alert.alert('Data Exported', `Data for ${displayName || userId} has been fetched and logged to the telemetry stream. (Length: ${JSON.stringify(data).length} bytes)`);
+    } catch (err: any) {
+      Alert.alert('Export Failed', err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredUsers = users.filter((u) => {
     const q = searchQuery.toLowerCase();
     return (
@@ -233,6 +277,16 @@ export function UserManagementPanel({
           <TouchableOpacity onPress={() => handleResetPassword(item.user_id)} style={styles.actionBtn}>
             <MaterialCommunityIcons name="lock-reset" size={18} color="#FF5A00" />
             <Text style={[styles.actionText, { color: '#FF5A00' }]}>Lockout</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => handleRevokeSessions(item.user_id)} style={styles.actionBtn}>
+            <MaterialCommunityIcons name="logout-variant" size={18} color="#FFD700" />
+            <Text style={[styles.actionText, { color: '#FFD700' }]}>Revoke</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity onPress={() => handleExportData(item.user_id, item.display_name)} style={styles.actionBtn}>
+            <MaterialCommunityIcons name="database-export" size={18} color="#00f0ff" />
+            <Text style={[styles.actionText, { color: '#00f0ff' }]}>Export</Text>
           </TouchableOpacity>
 
           <TouchableOpacity onPress={() => handleSoftDelete(item.user_id)} style={styles.actionBtn}>

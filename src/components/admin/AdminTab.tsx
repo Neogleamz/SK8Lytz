@@ -12,11 +12,16 @@ export interface AdminTabProps extends TabProps {
   setIsProductManagerVisible: (v: boolean) => void;
   setIsAppManagerVisible: (v: boolean) => void;
   setIsUserManagementVisible: (v: boolean) => void;
+  setIsRosterVisible: (v: boolean) => void;
+  setIsAuditVisible: (v: boolean) => void;
+  setIsBlacklistVisible: (v: boolean) => void;
+  setIsFeatureFlagsVisible: (v: boolean) => void;
 }
 
 export const AdminTab = React.memo(({ 
   onOpenProgrammer, onOpenLab, setIsPicksSchedulerVisible, 
   setIsProductManagerVisible, setIsAppManagerVisible, setIsUserManagementVisible,
+  setIsRosterVisible, setIsAuditVisible, setIsBlacklistVisible, setIsFeatureFlagsVisible,
   textMuted, textPrimary, cardBg, borderColor 
 }: AdminTabProps) => {
   return (
@@ -52,6 +57,42 @@ export const AdminTab = React.memo(({
         <View style={{ marginLeft: Spacing.md }}>
           <Text style={{ color: textPrimary, fontWeight: '700' }}>User Management</Text>
           <Text style={{ color: textMuted, fontSize: 12 }}>Ban, lockout, or supervise users</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => setIsRosterVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center', marginTop: Spacing.md }]}>
+        <MaterialCommunityIcons name="shield-star" size={24} color="#FFD700" />
+        <View style={{ marginLeft: Spacing.md }}>
+          <Text style={{ color: textPrimary, fontWeight: '700' }}>Admin Roster</Text>
+          <Text style={{ color: textMuted, fontSize: 12 }}>View and manage administrators</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => setIsAuditVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center', marginTop: Spacing.md }]}>
+        <MaterialCommunityIcons name="text-box-search-outline" size={24} color="#FF5A00" />
+        <View style={{ marginLeft: Spacing.md }}>
+          <Text style={{ color: textPrimary, fontWeight: '700' }}>Audit Trail</Text>
+          <Text style={{ color: textMuted, fontSize: 12 }}>Log of all administrative actions</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => setIsBlacklistVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center', marginTop: Spacing.md }]}>
+        <MaterialCommunityIcons name="chip" size={24} color="#ff4040" />
+        <View style={{ marginLeft: Spacing.md }}>
+          <Text style={{ color: textPrimary, fontWeight: '700' }}>Hardware Blacklist</Text>
+          <Text style={{ color: textMuted, fontSize: 12 }}>Block specific MAC addresses</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => setIsFeatureFlagsVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center', marginTop: Spacing.md }]}>
+        <MaterialCommunityIcons name="flag-variant" size={24} color="#00f0ff" />
+        <View style={{ marginLeft: Spacing.md }}>
+          <Text style={{ color: textPrimary, fontWeight: '700' }}>Feature Flags</Text>
+          <Text style={{ color: textMuted, fontSize: 12 }}>Manage A/B testing and rollouts</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
       </TouchableOpacity>

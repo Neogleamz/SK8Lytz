@@ -18,6 +18,7 @@ interface DashboardHeaderProps {
   isOfflineMode: boolean;
   isTestModeActive: boolean;
   isDark: boolean;
+  isAdmin: boolean;
   // Connected variant
   displayConnectedDevices: any[];
   customGroups: any[];
@@ -40,6 +41,7 @@ const DashboardHeader = React.memo(({
   isOfflineMode,
   isTestModeActive,
   isDark,
+  isAdmin,
   displayConnectedDevices,
   customGroups,
   powerStates,
@@ -93,7 +95,7 @@ const DashboardHeader = React.memo(({
           </View>
 
           {/* CENTER: logo + connection status */}
-          <TouchableOpacity activeOpacity={0.7} style={{ position: 'relative', alignItems: 'center' }} onPress={onPressAdminTools}>
+          <TouchableOpacity activeOpacity={0.7} style={{ position: 'relative', alignItems: 'center' }} onPress={isAdmin ? onPressAdminTools : undefined}>
             <Image source={require('../../../assets/logo.png')} style={{ width: 80, height: 24 }} resizeMode="contain" tintColor={Colors.text} />
             {(() => {
               const connectedCount = displayConnectedDevices.length;
@@ -164,7 +166,7 @@ const DashboardHeader = React.memo(({
 
           {/* [BUG FIX]: pointerEvents="box-none" prevents blocking the logo TouchableOpacity */}
           <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, top: 0, justifyContent: 'center', alignItems: 'center' }}>
-            <TouchableOpacity activeOpacity={0.7} style={{ position: 'relative', alignItems: 'center' }} onPress={onPressAdminTools}>
+            <TouchableOpacity activeOpacity={0.7} style={{ position: 'relative', alignItems: 'center' }} onPress={isAdmin ? onPressAdminTools : undefined}>
               <Image source={require('../../../assets/logo.png')} style={{ width: 85, height: 26 }} resizeMode="contain" tintColor={Colors.text} />
             </TouchableOpacity>
           </View>
