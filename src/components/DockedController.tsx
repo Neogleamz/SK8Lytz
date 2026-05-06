@@ -148,8 +148,8 @@ interface Sk8lytzControllerProps {
   crewRole?: 'leader' | 'member' | null;
   /** Called with full scene snapshot whenever any mode/color changes (leader only) */
   onCrewSceneChange?: (scene: Record<string, any>) => void;
-  /** Triggered to persist the active pattern name + payload to dashboard group persistent storage */
-  onPatternChanged?: (patternName: string, lastPayload?: number[]) => void;
+  /** Triggered to persist the active pattern name + color snapshot to dashboard group persistent storage */
+  onPatternChanged?: (patternName: string, snapshot: import('../types/dashboard.types').GroupPatternSnapshot, lastPayload?: number[]) => void;
   appSettings?: Record<string, string | boolean>;
 }
 
@@ -703,7 +703,16 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         return; // Skip the initial mount fire — lastSentPayload is always [] here
       }
       if (onPatternChanged) {
-        onPatternChanged(currentStatusText, lastSentPayload.length > 0 ? lastSentPayload : undefined);
+        // Build color snapshot so the dashboard group card renders accurate colors
+        const snapshot: import('../types/dashboard.types').GroupPatternSnapshot = {
+          patternLabel: currentStatusText,
+          patternId: activeMode === 'MULTIMODE' ? fixedPatternId : undefined,
+          mode: activeMode,
+          fgColor: fixedFgColor || selectedColor,
+          bgColor: fixedBgColor,
+          multiColors: activeMode === 'BUILDER' ? builderNodes?.map((n: any) => n.colorHex) : undefined,
+        };
+        onPatternChanged(currentStatusText, snapshot, lastSentPayload.length > 0 ? lastSentPayload : undefined);
       }
     }, [currentStatusText, onPatternChanged]);
 

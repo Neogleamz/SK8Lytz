@@ -20,7 +20,7 @@ import type { RegisteredDevice } from '../hooks/useRegistration';
 import { AppLogger } from '../services/AppLogger';
 import DeviceRepository from '../services/DeviceRepository';
 // NOTE: Direct supabase import removed — all cloud writes go through DeviceRepository SSOT.
-import type { CustomGroup, DeviceSettings, GroupModalState } from '../types/dashboard.types';
+import type { CustomGroup, DeviceSettings, GroupModalState, GroupPatternSnapshot } from '../types/dashboard.types';
 import { getDefaultDeviceName, getDefaultGroupName } from '../utils/NamingUtils';
 
 interface UseDashboardGroupsOptions {
@@ -54,8 +54,8 @@ export interface UseDashboardGroupsResult {
   setDeviceConfigs: React.Dispatch<React.SetStateAction<Record<string, DeviceSettings>>>;
   powerStates: Record<string, boolean>;
   setPowerState: (deviceIds: string[], forceState?: boolean) => void;
-  lastGroupPatterns: Record<string, string>;
-  setLastGroupPattern: (groupId: string, patternName: string) => Promise<void>;
+  lastGroupPatterns: Record<string, GroupPatternSnapshot>;
+  setLastGroupPattern: (groupId: string, snapshot: GroupPatternSnapshot) => Promise<void>;
   // ─── Group modal FSM ──────────────────────────────────────────────────────
   groupModalState: GroupModalState;
   editingGroupId: string | null;
@@ -227,8 +227,8 @@ export function useDashboardGroups({
     setPowerStates(newStates);
   };
 
-  // ─── Last group patterns — persisted LED pattern per group ────────────────
-  const [lastGroupPatterns, setLastGroupPatterns] = useState<Record<string, string>>({});
+  // ─── Last group patterns — persisted color snapshot per group ───────────────
+  const [lastGroupPatterns, setLastGroupPatterns] = useState<Record<string, GroupPatternSnapshot>>({});
 
   useEffect(() => {
     AsyncStorage.getItem('@Sk8lytz_last_group_patterns').then(saved => {
@@ -238,8 +238,8 @@ export function useDashboardGroups({
     }).catch(() => {});
   }, []);
 
-  const setLastGroupPattern = async (groupId: string, patternName: string): Promise<void> => {
-    const updated = { ...lastGroupPatterns, [groupId]: patternName };
+  const setLastGroupPattern = async (groupId: string, snapshot: GroupPatternSnapshot): Promise<void> => {
+    const updated = { ...lastGroupPatterns, [groupId]: snapshot };
     setLastGroupPatterns(updated);
     await AsyncStorage.setItem('@Sk8lytz_last_group_patterns', JSON.stringify(updated)).catch(() => {});
   };

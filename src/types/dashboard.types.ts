@@ -100,6 +100,26 @@ export interface CustomGroup {
   lastPatternName?: string;
 }
 
+/**
+ * GroupPatternSnapshot — lean color snapshot stored in lastGroupPatterns per group.
+ * Replaces the legacy plain string so group cards can render accurate colors.
+ * patternId → SK8LYTZ_TEMPLATES lookup drives GENERATIVE vs FG_BG vs FG_ONLY rendering.
+ */
+export interface GroupPatternSnapshot {
+  /** Human-readable label shown on the card pill (e.g. "Pro Effects – Crimson") */
+  patternLabel: string;
+  /** Pattern template ID — used to look up colorMode (GENERATIVE/FG_BG/FG_ONLY) */
+  patternId?: number;
+  /** Active mode at time of dispatch */
+  mode: string;
+  /** Foreground color hex (undefined for GENERATIVE patterns) */
+  fgColor?: string;
+  /** Background color hex */
+  bgColor?: string;
+  /** Builder mode node colors */
+  multiColors?: string[];
+}
+
 // ─── UI State FSMs (replaces scattered boolean flags) ───────────────────────
 
 /** FSM for the group creation / rename modal. Replaces isGroupModalVisible + groupModalMode booleans. */

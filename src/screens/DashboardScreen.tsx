@@ -674,19 +674,29 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             appSettings={appSettings}
             onCrewSceneChange={(scene: Record<string, any>) => crewService.broadcastScene(scene)}
             bleState={bleState}
-            onPatternChanged={(patternName: string, lastPayload?: number[]) => {
-              const targetGroupId = displayConnectedDevices[0]?.groupId || displayConnectedDevices[0]?.id;
-              if (targetGroupId && patternName !== lastGroupPatterns[targetGroupId]) {
-                setLastGroupPattern(targetGroupId, patternName);
+            onPatternChanged={(patternName: string, snapshot: import('../types/dashboard.types').GroupPatternSnapshot, lastPayload?: number[]) => {
+              // FIX: Resolve groupId from customGroups (always hydrated) rather than
+              // displayConnectedDevices[0].groupId which may be undefined if deviceConfigs
+              // hasn't finished its async repo load yet — causing the key to land on the MAC
+              // address instead of the group UUID, making the card lookup always miss.
+              const deviceMac = displayConnectedDevices[0]?.id?.toUpperCase();
+              const matchingGroup = customGroups.find(g => g.deviceIds.includes(deviceMac ?? ''));
+              const targetGroupId = matchingGroup?.id || deviceMac;
+              if (targetGroupId) {
+                const currentSnapshot = lastGroupPatterns[targetGroupId];
+                if (!currentSnapshot || currentSnapshot.patternLabel !== patternName) {
+                  setLastGroupPattern(targetGroupId, snapshot);
+                }
                 // Save to unified ledger for each connected device.
-                // Legacy @Sk8lytz_last_pattern_* removed — ledger is now the single source.
                 if (lastPayload && lastPayload.length > 0) {
                   displayConnectedDevices.forEach(d => {
                     ledgerSave(d.id, {
                       deviceMac: normalizeMac(d.id),
                       groupId: targetGroupId,
-                      mode: 'MULTIMODE',
+                      mode: snapshot.mode as any,
                       patternLabel: patternName,
+                      fgColor: snapshot.fgColor,
+                      bgColor: snapshot.bgColor,
                       speed: 50,
                       brightness: 90,
                       rawPayload: lastPayload,

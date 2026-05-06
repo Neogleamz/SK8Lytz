@@ -12,7 +12,7 @@ import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import type { UserProfile } from '../../services/ProfileService';
 import type { CustomGroup } from '../../types/dashboard.types';
-import { getPatternColors } from '../../styles/DashboardStyles';
+import { resolveGroupCardColors } from '../../utils/presetColorUtils';
 import { SkateGroupCard } from './SkateGroupCard';
 
 interface MySkatesSlabProps {
@@ -51,14 +51,15 @@ const MySkatesSlab = React.memo(({
     {customGroups.length > 0 ? (
       <View style={{ gap: Spacing.md }}>
         {customGroups.map((group) => {
-          const lastPattern = lastGroupPatterns[group.id];
-          const cardColors = getPatternColors(lastPattern, Colors);
+          const snapshot = lastGroupPatterns[group.id];
+          const fallbackColors = [Colors.primary || '#00F0FF', Colors.secondary || '#7000FF'];
+          const cardColors = resolveGroupCardColors(snapshot, fallbackColors);
           return (
             <SkateGroupCard
               key={group.id}
               group={group}
               colors={cardColors}
-              lastPattern={lastPattern}
+              lastPattern={snapshot?.patternLabel}
               userProfile={userProfile}
               powerStates={powerStates}
               Colors={Colors}

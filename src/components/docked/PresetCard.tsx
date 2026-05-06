@@ -11,6 +11,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { Spacing } from '../../theme/theme';
 import type { IFavoriteState } from '../../types/dashboard.types';
 import MarqueeText from '../MarqueeText';
+import { resolveGlowColor, resolveGradientColors, resolveModeIcon, GENERATIVE_RAINBOW } from '../../utils/presetColorUtils';
 
 interface PresetCardProps {
   preset: IFavoriteState;
@@ -29,30 +30,6 @@ interface PresetCardProps {
   Colors: any;
 }
 
-/** Resolves the dominant glow color from a preset's mode and palette. */
-const resolveGlowColor = (fav: IFavoriteState, fallback: string): string => {
-  if (fav.mode === 'MUSIC') return fav.musicPrimaryColor || fav.musicSecondaryColor || fallback;
-  if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') return fav.fixedFgColor || fav.fixedBgColor || fallback;
-  if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') return fav.multiColors?.[0] || fallback;
-  return fallback;
-};
-
-/** Resolves gradient color pair from a preset's mode and palette. */
-const resolveGradientColors = (fav: IFavoriteState, glow: string): string[] => {
-  if (fav.mode === 'MUSIC' && fav.musicPrimaryColor) return [fav.musicPrimaryColor, fav.musicSecondaryColor || fav.musicPrimaryColor];
-  if ((fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') && fav.fixedFgColor) return [fav.fixedFgColor, fav.fixedBgColor || fav.fixedFgColor];
-  if ((fav.mode === 'MULTI' || fav.mode === 'BUILDER') && fav.multiColors && fav.multiColors.length > 0)
-    return fav.multiColors.length === 1 ? [fav.multiColors[0], fav.multiColors[0]] : fav.multiColors;
-  return [glow, glow];
-};
-
-/** Resolves the mode icon name for the preset. */
-const resolveModeIcon = (mode: string): string => {
-  if (mode === 'MUSIC') return 'microphone-outline';
-  if (mode === 'RBM') return 'animation-play';
-  if (mode === 'MULTI' || mode === 'BUILDER') return 'shape-square-plus';
-  return 'speedometer';
-};
 
 const PresetCard = React.memo(({
   preset,
@@ -126,10 +103,11 @@ const PresetCard = React.memo(({
                 </View>
               );
             } else if (preset.mode === 'PATTERN' || preset.mode === 'MULTIMODE') {
+              // GENERATIVE patterns: render 7-stop rainbow strip — same as card gradient
+              const colors = gradColors.length > 2 ? gradColors : [gradColors[0], gradColors[gradColors.length - 1]];
               return (
-                <View style={{ width: '80%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: Spacing.xs }}>
-                  <View style={{ flex: 1, backgroundColor: preset.fixedFgColor || '#FFFFFF' }} />
-                  <View style={{ flex: 1, backgroundColor: preset.fixedBgColor || '#000000' }} />
+                <View style={{ width: '90%', height: 6, borderRadius: 3, flexDirection: 'row', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)', alignSelf: 'center', marginTop: Spacing.xs }}>
+                  {colors.map((c: string, i: number) => <View key={i} style={{ flex: 1, backgroundColor: c }} />)}
                 </View>
               );
             } else if (preset.mode === 'MULTI' || preset.mode === 'BUILDER') {
