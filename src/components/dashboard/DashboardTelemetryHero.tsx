@@ -5,8 +5,12 @@ import { useTheme } from '../../context/ThemeContext';
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
+// Wrapper to strip the 'collapsable' prop injected by Animated which causes DOM errors on Web
+const CircleWrapper = React.forwardRef((props: any, ref) => {
+  const { collapsable, ...rest } = props;
+  return <Circle ref={ref} {...rest} />;
+});
+const AnimatedCircle = Animated.createAnimatedComponent(CircleWrapper);
 interface DashboardTelemetryHeroProps {
   gpsSpeed: number;
   peakGForce: number;
