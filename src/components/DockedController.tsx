@@ -239,6 +239,13 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
 
 
+    // ── Global Device Context for Analytics ────────────────────────────────────
+    const deviceContext = React.useMemo(() => {
+      if (!devices || devices.length === 0) return { target: 'none' };
+      if (devices.length === 1) return { target: 'device', deviceId: devices[0].id };
+      return { target: 'group', deviceIds: devices.map(d => d.id), groupSize: devices.length };
+    }, [devices]);
+
     // ── Device State Ledger ─────────────────────────────────────────────────
     // Unified per-device pattern state. Pre-warms controller UI on mount.
     const ledger = useDeviceStateLedger();
@@ -433,13 +440,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       }
     }), [speed, brightness, writeToDevice, lastSentPayload, optimisticWrite]);
 
-
-    // ── Global Device Context for Analytics ────────────────────────────────────
-    const deviceContext = React.useMemo(() => {
-      if (!devices || devices.length === 0) return { target: 'none' };
-      if (devices.length === 1) return { target: 'device', deviceId: devices[0].id };
-      return { target: 'group', deviceIds: devices.map(d => d.id), groupSize: devices.length };
-    }, [devices]);
 
     // (useStreetMode and useSessionTracking placed higher up context)
     /** Convenience alias for JSX readability */
