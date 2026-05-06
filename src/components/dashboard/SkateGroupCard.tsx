@@ -65,7 +65,11 @@ export const SkateGroupCard = ({
                     name="roller-skate" 
                     size={16} 
                     color="#FFF" 
-                    style={{ marginLeft: index > 0 ? -10 : 0, zIndex: group.deviceIds.length - index }} 
+                    style={{ 
+                      marginLeft: index > 0 ? -8 : 0, 
+                      transform: [{ translateY: index > 0 ? -4 : 0 }],
+                      zIndex: group.deviceIds.length - index 
+                    }} 
                   />
                 ))}
               </View>
