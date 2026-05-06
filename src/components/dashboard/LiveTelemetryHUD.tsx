@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   value: {
-    fontFamily: Typography.fonts.mono,
+    fontFamily: 'monospace',
     fontSize: 14,
     fontWeight: '700',
   },
