@@ -79,7 +79,7 @@ class GradientsServiceClass {
       name: preset.name || 'Unnamed Gradient',
       nodes: preset.nodes || [],
       fill_mode: preset.fill_mode || 'GRADIENT',
-      transition_type: preset.transition_type || 0,
+      transition_type: preset.transition_type || 0x01, // 0x01 = Static fallback — never dispatch 0x00 (undefined opcode)
       user_id: userId
     };
 
