@@ -104,9 +104,21 @@ export const SkateGroupCard = ({
               </View>
             </View>
 
-            {/* MAIN CONTENT: Name Only (Perfect Center) */}
-            <View style={[styles.skateCardContent, { marginBottom: 0, marginTop: 10, alignItems: 'center', justifyContent: 'center' }]}>
-              <Text style={[styles.skateCardGroupName, { textAlign: 'center' }]} numberOfLines={1}>
+            {/* MAIN CONTENT: Name Only (Perfect Center relative to whole card) */}
+            <View style={[styles.skateCardContent, { marginBottom: 0, marginLeft: 24, alignItems: 'center', justifyContent: 'center' }]}>
+              <Text 
+                style={[
+                  styles.skateCardGroupName, 
+                  { 
+                    textAlign: 'center', 
+                    fontSize: 24,
+                    textShadowColor: isPoweredOn ? colors[0] : 'rgba(255,255,255,0.2)',
+                    textShadowOffset: { width: 0, height: 0 },
+                    textShadowRadius: 10
+                  }
+                ]} 
+                numberOfLines={1}
+              >
                 {group.name.toUpperCase()}
               </Text>
             </View>
