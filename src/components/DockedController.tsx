@@ -655,8 +655,28 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     );
 
 
-    // ── Music Mode: re-send config on color/pattern/source change ──
-    // Placed AFTER handleMusicChange so the closure is always fresh.
+    // ── Music Mode: on-enter + settings-change dispatch ──────────────────────
+    // Split into two effects:
+    //   1. On-enter: fires when activeMode becomes 'MUSIC', delayed 150ms so the
+    //      BLE stack has settled after the mode switch (avoids a race where the
+    //      immediate write lands while connectedDevices is momentarily 0, which
+    //      triggers the Dashboard fallback guard and kicks the user out).
+    //   2. Settings-change: fires instantly when music params change (user is
+    //      already connected and in Music mode — no race risk).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    React.useEffect(() => {
+      if (activeMode !== 'MUSIC' || !writeToDevice) return;
+      const t = setTimeout(() => {
+        handleMusicChange(
+          musicPatternId, micSensitivity, brightness, micSource,
+          musicPrimaryColor, musicSecondaryColor, musicMatrixStyle
+        );
+      }, 150);
+      return () => clearTimeout(t);
+    // Only activeMode in deps — this effect is for mode ENTRY only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeMode]);
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
     React.useEffect(() => {
       if (activeMode !== 'MUSIC' || !writeToDevice) return;
@@ -664,9 +684,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         musicPatternId, micSensitivity, brightness, micSource,
         musicPrimaryColor, musicSecondaryColor, musicMatrixStyle
       );
-    // activeMode IS in this dep array so the effect fires when switching INTO Music mode.
-    // Without it, the hardware gets no pattern until the user changes a music setting.
-    }, [activeMode, musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
+    // activeMode intentionally excluded — handled by the on-enter effect above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
 
     // getColorName — now imported from '../utils/ColorUtils'
 
