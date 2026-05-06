@@ -56,16 +56,33 @@ export const SkateGroupCard = ({
 
           {/* TOP BAR: Skates & Power */}
           <View style={[styles.skateCardHeader, { position: 'absolute', top: 16, left: 16, right: 16, zIndex: 10, marginBottom: 0 }]}>
-            <View style={{ flexDirection: 'row', gap: 6 }}>
-              {group.deviceIds.map((id) => {
-                const isDeviceOn = powerStates[id] !== false;
-                return (
-                  <View key={id} style={styles.avatarPill}>
-                    <MaterialCommunityIcons name="roller-skate" size={14} color="#FFF" />
-                    <View style={[styles.avatarStatusDot, { backgroundColor: isDeviceOn ? Colors.success : Colors.error }]} />
-                  </View>
-                );
-              })}
+            <View style={styles.avatarPill}>
+              {/* Stacked Skates */}
+              <View style={{ flexDirection: 'row' }}>
+                {group.deviceIds.map((id, index) => (
+                  <MaterialCommunityIcons 
+                    key={`icon-${id}`} 
+                    name="roller-skate" 
+                    size={16} 
+                    color="#FFF" 
+                    style={{ marginLeft: index > 0 ? -10 : 0, zIndex: group.deviceIds.length - index }} 
+                  />
+                ))}
+              </View>
+              {/* Status Dots next to the pair */}
+              <View style={{ flexDirection: 'row', marginLeft: 2 }}>
+                {group.deviceIds.map((id) => {
+                  const isDeviceOn = powerStates[id] !== false;
+                  return (
+                    <View 
+                      key={`dot-${id}`} 
+                      style={[styles.avatarStatusDot, { 
+                        backgroundColor: isDeviceOn ? Colors.success : Colors.error 
+                      }]} 
+                    />
+                  );
+                })}
+              </View>
             </View>
 
             {/* Power Button moved from footer */}
@@ -78,18 +95,19 @@ export const SkateGroupCard = ({
             </View>
           </View>
 
-          {/* MAIN CONTENT: Name & Pattern */}
+          {/* MAIN CONTENT: Name Only (Perfect Center) */}
           <View style={[styles.skateCardContent, { marginBottom: 0, marginTop: 10, alignItems: 'center', justifyContent: 'center' }]}>
             <Text style={[styles.skateCardGroupName, { textAlign: 'center' }]} numberOfLines={1}>
               {group.name.toUpperCase()}
             </Text>
-            
-            <View style={[styles.patternPill, { alignSelf: 'center' }]}>
-              <View style={[styles.patternDot, { backgroundColor: isPoweredOn ? colors[0] : '#555' }]} />
-              <Text style={styles.patternName} numberOfLines={1}>
-                {isPoweredOn ? (lastPattern || 'ACTIVE') : 'POWERED OFF'}
-              </Text>
-            </View>
+          </View>
+
+          {/* BOTTOM BAR: Pattern Pill */}
+          <View style={[styles.patternPill, { position: 'absolute', bottom: 16, alignSelf: 'center' }]}>
+            <View style={[styles.patternDot, { backgroundColor: isPoweredOn ? colors[0] : '#555' }]} />
+            <Text style={styles.patternName} numberOfLines={1}>
+              {isPoweredOn ? (lastPattern || 'ACTIVE') : 'POWERED OFF'}
+            </Text>
           </View>
         </View>
       </LinearGradient>
