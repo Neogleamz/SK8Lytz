@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Text, TextInput, TouchableOpacity, View, Platform } from 'react-native';
+
+const WebFormWrapper = Platform.OS === 'web' 
+  ? (props: any) => React.createElement('form', { onSubmit: (e: any) => e.preventDefault(), style: { width: '100%', margin: 0, padding: 0 } }, props.children) 
+  : React.Fragment;
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { makeRedirectUri } from 'expo-auth-session';
 import EulaModal from '../modals/EulaModal';
@@ -118,6 +122,7 @@ export function AuthFormSignUp({ onModeChange }: AuthFormSignUpProps) {
 
   return (
     <View style={styles.formContainer}>
+      <WebFormWrapper>
       <TextInput
         style={styles.input}
         placeholder="Username"
@@ -233,6 +238,7 @@ export function AuthFormSignUp({ onModeChange }: AuthFormSignUpProps) {
           onDecline={() => setShowEulaModal(false)}
         />
       )}
+      </WebFormWrapper>
     </View>
   );
 }
