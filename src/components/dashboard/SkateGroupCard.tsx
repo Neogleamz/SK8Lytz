@@ -50,12 +50,12 @@ export const SkateGroupCard = ({
         end={{ x: 1, y: 1 }}
         style={[styles.skateCardGradient, isActive && { borderColor: Colors.primary, borderWidth: 1.5 }]}
       >
-        <View style={styles.skateCardInner}>
+        <View style={[styles.skateCardInner, { minHeight: 130, justifyContent: 'center', position: 'relative' }]}>
           {/* Glassmorphism Refraction */}
           <View style={styles.skateCardRefraction} />
 
           {/* TOP BAR: Skates & Power */}
-          <View style={styles.skateCardHeader}>
+          <View style={[styles.skateCardHeader, { position: 'absolute', top: 16, left: 16, right: 16, zIndex: 10, marginBottom: 0 }]}>
             <View style={{ flexDirection: 'row', gap: 6 }}>
               {group.deviceIds.map((id) => {
                 const isDeviceOn = powerStates[id] !== false;
@@ -79,7 +79,7 @@ export const SkateGroupCard = ({
           </View>
 
           {/* MAIN CONTENT: Name & Pattern */}
-          <View style={[styles.skateCardContent, { marginBottom: 0, alignItems: 'center', justifyContent: 'center' }]}>
+          <View style={[styles.skateCardContent, { marginBottom: 0, marginTop: 10, alignItems: 'center', justifyContent: 'center' }]}>
             <Text style={[styles.skateCardGroupName, { textAlign: 'center' }]} numberOfLines={1}>
               {group.name.toUpperCase()}
             </Text>
