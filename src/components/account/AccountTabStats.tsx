@@ -54,6 +54,25 @@ export default function AccountTabStats({
         </View>
       </View>
 
+      {/* ── Crew session history preview ── */}
+      {history?.length > 0 && (
+        <View style={{ marginBottom: Spacing.xl }}>
+          <Text style={styles.sectionHeader}>RECENT CREW SESSIONS</Text>
+          {history.slice(0, 5).map((item: any, i: number) => (
+            <View key={`h-${i}`} style={styles.historyRow}>
+              <View style={[styles.historyDot, { backgroundColor: item.role === 'leader' ? '#FFAA00' : '#00AAFF' }]} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.historyName}>{item.session_name}</Text>
+                <Text style={styles.historyDate}>{fmtDate(item.joined_at)}</Text>
+              </View>
+              <Text style={{ fontSize: 12, color: item.role === 'leader' ? '#FFAA00' : '#00AAFF' }}>
+                {item.role === 'leader' ? '👑' : '⚡'}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       {noData ? (
         <View style={{ alignItems: 'center', paddingVertical: Spacing.huge }}>
           <MaterialCommunityIcons name="skate" size={48} color={Colors.textMuted} />

@@ -104,24 +104,7 @@ export default function AccountTabProfile({
         )}
       </TouchableOpacity>
 
-      {/* Session history preview */}
-      {history.length > 0 && (
-        <>
-          <Text style={styles.label}>RECENT SESSIONS</Text>
-          {history.slice(0, 5).map((item: any, i: number) => (
-            <View key={`h-${i}`} style={styles.historyRow}>
-              <View style={[styles.historyDot, { backgroundColor: item.role === 'leader' ? '#FFAA00' : '#00AAFF' }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.historyName}>{item.session_name}</Text>
-                <Text style={styles.historyDate}>{formatDate(item.joined_at)}</Text>
-              </View>
-              <Text style={{ fontSize: 12, color: item.role === 'leader' ? '#FFAA00' : '#00AAFF' }}>
-                {item.role === 'leader' ? '👑' : '⚡'}
-              </Text>
-            </View>
-          ))}
-        </>
-      )}
+
 
       {/* Legal & Compliance */}
       <Text style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>LEGAL</Text>
