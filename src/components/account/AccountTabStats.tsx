@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Spacing } from '../../theme/theme';
+import SkaterStatsPanel from './SkaterStatsPanel';
 
 export default function AccountTabStats({
   Colors,
@@ -32,6 +33,7 @@ export default function AccountTabStats({
 
   return (
     <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+      <SkaterStatsPanel Colors={Colors} />
       {noData ? (
         <View style={{ alignItems: 'center', paddingVertical: Spacing.huge }}>
           <MaterialCommunityIcons name="skate" size={48} color={Colors.textMuted} />
