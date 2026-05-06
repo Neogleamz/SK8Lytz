@@ -59,24 +59,8 @@ export const SkateGroupCard = ({
           {/* TOP BAR: Skates & Power */}
           <View style={[styles.skateCardHeader, { position: 'absolute', top: 16, left: 16, right: 16, zIndex: 10, marginBottom: 0 }]}>
             <View style={styles.avatarPill}>
-              {/* Stacked Skates */}
+              {/* Stacked Skate+Meter Clusters */}
               <View style={{ flexDirection: 'row' }}>
-                {group.deviceIds.map((id, index) => (
-                  <MaterialCommunityIcons 
-                    key={`icon-${id}`} 
-                    name="roller-skate" 
-                    size={16} 
-                    color="#FFF" 
-                    style={{ 
-                      marginLeft: index > 0 ? -8 : 0, 
-                      transform: [{ translateY: index > 0 ? -4 : 0 }],
-                      zIndex: group.deviceIds.length - index 
-                    }} 
-                  />
-                ))}
-              </View>
-              {/* Staggered RSSI Meters next to the pair */}
-              <View style={{ flexDirection: 'row', marginLeft: 6 }}>
                 {group.deviceIds.map((id, index) => {
                   const isDeviceOn = powerStates[id] !== false;
                   const rssi = rssiMap[id] || -100;
@@ -84,19 +68,25 @@ export const SkateGroupCard = ({
                   
                   return (
                     <View 
-                      key={`rssi-${id}`} 
+                      key={`cluster-${id}`} 
                       style={{ 
                         flexDirection: 'row', 
-                        alignItems: 'flex-end', 
-                        gap: 1,
-                        marginLeft: index > 0 ? -4 : 0, 
-                        transform: [{ translateY: index > 0 ? -4 : 0 }],
+                        alignItems: 'center', 
+                        marginLeft: index > 0 ? -12 : 0, 
+                        transform: [{ translateY: index > 0 ? -10 : 0 }],
                         zIndex: group.deviceIds.length - index 
                       }}
                     >
-                      <View style={{ width: 2, height: 4, backgroundColor: rssi >= -90 ? activeColor : '#555' }} />
-                      <View style={{ width: 2, height: 6, backgroundColor: rssi >= -75 ? activeColor : '#555' }} />
-                      <View style={{ width: 2, height: 8, backgroundColor: rssi >= -60 ? activeColor : '#555' }} />
+                      <MaterialCommunityIcons 
+                        name="roller-skate" 
+                        size={18} 
+                        color="#FFF" 
+                      />
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-end', marginLeft: 4, gap: 1, height: 10 }}>
+                        <View style={{ width: 2, height: 4, backgroundColor: rssi >= -90 ? activeColor : '#555' }} />
+                        <View style={{ width: 2, height: 7, backgroundColor: rssi >= -75 ? activeColor : '#555' }} />
+                        <View style={{ width: 2, height: 10, backgroundColor: rssi >= -60 ? activeColor : '#555' }} />
+                      </View>
                     </View>
                   );
                 })}
