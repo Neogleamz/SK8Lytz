@@ -285,6 +285,21 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isCrewHubCollapsed, setIsCrewHubCollapsed] = useState(false);
   const dockedControllerRef = React.useRef<DockedControllerHandle>(null);
 
+  // Load Crew Hub collapsed state on mount
+  useEffect(() => {
+    AsyncStorage.getItem('@Sk8lytz_crewHubCollapsed')
+      .then(res => { if (res !== null) setIsCrewHubCollapsed(res === 'true'); })
+      .catch(() => {});
+  }, []);
+
+  const toggleCrewHubCollapse = useCallback(() => {
+    setIsCrewHubCollapsed(prev => {
+      const next = !prev;
+      AsyncStorage.setItem('@Sk8lytz_crewHubCollapsed', String(next)).catch(() => {});
+      return next;
+    });
+  }, []);
+
   // Relay Soft Disconnect recoveries down to the DockedController for silent payload blasting
   useEffect(() => {
     setOnDeviceRecovered((deviceId: string) => {
@@ -938,6 +953,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   onPressTheme={toggleTheme}
                   authUsername={authUsername}
                   onPressAccount={() => setIsAccountModalVisible(true)}
+                  showBackButton={false}
                   insetTop={insets.top}
                   Colors={Colors}
                 />
@@ -958,7 +974,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   onOpenHub={() => { setCrewInitialStep('landing'); setIsCrewModalVisible(true); }}
                   onOpenMap={() => { setCrewInitialStep('map'); setIsCrewModalVisible(true); }}
                   isCrewHubCollapsed={isCrewHubCollapsed}
-                  onToggleCollapse={() => setIsCrewHubCollapsed(!isCrewHubCollapsed)}
+                  onToggleCollapse={toggleCrewHubCollapse}
                   Colors={Colors}
                   styles={styles}
                 />

@@ -28,6 +28,7 @@ interface DashboardHeaderProps {
   onPressAdminTools: () => void;
   onPressSupport: () => void;
   onPressTheme: () => void;
+  showBackButton?: boolean;
   // Disconnected variant
   authUsername: string | null;
   onPressAccount: () => void;
@@ -50,6 +51,7 @@ const DashboardHeader = React.memo(({
   onPressAdminTools,
   onPressSupport,
   onPressTheme,
+  showBackButton = true,
   authUsername,
   onPressAccount,
   insetTop,
@@ -67,9 +69,11 @@ const DashboardHeader = React.memo(({
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {/* LEFT: close button + user pill */}
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.xs }}>
-            <TouchableOpacity onPress={handleDisconnect} style={{ padding: Spacing.xs, marginLeft: -Spacing.xs }}>
-              <MaterialCommunityIcons name="chevron-down" size={28} color={Colors.text} />
-            </TouchableOpacity>
+            {showBackButton && (
+              <TouchableOpacity onPress={handleDisconnect} style={{ padding: Spacing.xs, marginLeft: -Spacing.xs }}>
+                <MaterialCommunityIcons name="chevron-down" size={28} color={Colors.text} />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               onPress={onPressAccount}
               style={{
