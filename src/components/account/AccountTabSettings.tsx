@@ -2,7 +2,6 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Spacing } from '../../theme/theme';
-import GranularPermissionsList from '../permissions/GranularPermissionsList';
 
 export default function AccountTabSettings({
   Colors,
@@ -60,9 +59,6 @@ export default function AccountTabSettings({
         />
       </View>
 
-      {/* Privacy & Permissions */}
-      <Text style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>PRIVACY & PERMISSIONS</Text>
-      <GranularPermissionsList />
 
       {/* Legal & Compliance */}
       <Text style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>LEGAL</Text>

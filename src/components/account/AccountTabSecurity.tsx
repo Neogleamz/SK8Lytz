@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Spacing } from '../../theme/theme';
+import GranularPermissionsList from '../permissions/GranularPermissionsList';
 
 export default function AccountTabSecurity({
   Colors,
@@ -71,6 +72,10 @@ export default function AccountTabSecurity({
           </>
         )}
       </TouchableOpacity>
+
+      {/* Privacy & Permissions */}
+      <Text style={[styles.sectionHeader, { marginTop: Spacing.xxl }]}>PRIVACY & PERMISSIONS</Text>
+      <GranularPermissionsList />
 
       <View style={{ height: 20 }} />
     </ScrollView>
