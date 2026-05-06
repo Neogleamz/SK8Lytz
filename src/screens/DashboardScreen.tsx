@@ -1028,20 +1028,31 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                       Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
                     }
                   }}
-                  onGroupFavoritePress={(group: CustomGroup, snapshot: any) => {
-                    // Apply last-used pattern snapshot directly without opening controller
-                    if (!snapshot) {
-                      Alert.alert('No Favorite', 'No previous pattern saved for this group yet. Use the controller to set one.');
+                  onGroupFavoritePress={async (group: CustomGroup, _snapshot: any) => {
+                    // Load the last-used IFavoriteState from AsyncStorage (same key as useFavorites)
+                    let lastFav: any = null;
+                    try {
+                      const raw = await AsyncStorage.getItem('@Sk8lytz_Favorites');
+                      if (raw) {
+                        const favs = JSON.parse(raw);
+                        if (Array.isArray(favs) && favs.length > 0) {
+                          // Use the most recently saved favorite (last in array)
+                          lastFav = favs[favs.length - 1];
+                        }
+                      }
+                    } catch (e) { /* ignore parse errors */ }
+
+                    if (!lastFav) {
+                      Alert.alert('No Favorites', 'You haven\'t saved any favorites yet. Open the controller and tap the ❤️ to save one.');
                       return;
                     }
+
                     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
                     if (devicesToConnect.length > 0) {
                       connectToDevices(devicesToConnect);
                       setIsControllerOpen(true);
                       setTimeout(() => {
-                        if (snapshot.mode && dockedControllerRef.current) {
-                          dockedControllerRef.current.applyCloudScene(snapshot);
-                        }
+                        dockedControllerRef.current?.loadFavorite(lastFav);
                       }, 300);
                     } else {
                       scanForPeripherals();

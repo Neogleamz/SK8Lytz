@@ -29,7 +29,7 @@ interface MySkatesSlabProps {
   onGroupPowerPress: (group: CustomGroup) => void;
   onGroupMusicPress: (group: CustomGroup) => void;
   onGroupCameraPress: (group: CustomGroup) => void;
-  onGroupFavoritePress: (group: CustomGroup, snapshot: any) => void;
+  onGroupFavoritePress: (group: CustomGroup, snapshot: any) => Promise<void> | void;
   Colors: any;
   styles: any;
 }
