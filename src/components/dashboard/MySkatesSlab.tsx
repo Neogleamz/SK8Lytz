@@ -49,7 +49,7 @@ const MySkatesSlab = React.memo(({
     </View>
 
     {customGroups.length > 0 ? (
-      <View style={{ gap: Spacing.xl }}>
+      <View style={{ gap: Spacing.md }}>
         {customGroups.map((group) => {
           const snapshot = lastGroupPatterns[group.id];
           const fallbackColors = [Colors.primary || '#00F0FF', Colors.secondary || '#7000FF'];
