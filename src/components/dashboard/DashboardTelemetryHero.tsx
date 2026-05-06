@@ -74,15 +74,9 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
 
   return (
     <View style={styles.container}>
-      
-      {/* FLOATING REC INDICATOR */}
-      <View style={{ position: 'absolute', top: Spacing.md, right: Spacing.md, flexDirection: 'row', alignItems: 'center', gap: 4, zIndex: 10 }}>
-        <MaterialCommunityIcons name="record-circle-outline" size={12} color={Colors.error} />
-        <Text style={[styles.headerText, { fontSize: 10, color: Colors.error, textShadowColor: Colors.error, textShadowRadius: 8 }]}>REC</Text>
-      </View>
 
       {/* MASSIVE NEON GAUGE (Half Circle) */}
-      <View style={{ width: svgWidth, height: cy + 10, alignItems: 'center', alignSelf: 'center', marginTop: Spacing.xl }}>
+      <View style={{ width: svgWidth, height: cy + 10, alignItems: 'center', alignSelf: 'center', marginTop: 0 }}>
         <Svg width={svgWidth} height={cy + 10} viewBox={`0 0 ${svgWidth} ${cy + 10}`}>
           <Defs>
             <SvgLinearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -197,13 +191,8 @@ const TelemetryGlassPill = ({ label, value, unit, accent }: { label: string, val
 const styles = StyleSheet.create({
   container: {
     marginHorizontal: Layout.padding,
-    marginBottom: 24, // Matched with slabContainer
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    overflow: 'hidden',
-    paddingBottom: Spacing.md,
+    marginBottom: Spacing.sm,
+    paddingBottom: Spacing.xs,
   },
   headerRow: {
     flexDirection: 'row',
