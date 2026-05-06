@@ -664,7 +664,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         musicPatternId, micSensitivity, brightness, micSource,
         musicPrimaryColor, musicSecondaryColor, musicMatrixStyle
       );
-    }, [musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
+    // activeMode IS in this dep array so the effect fires when switching INTO Music mode.
+    // Without it, the hardware gets no pattern until the user changes a music setting.
+    }, [activeMode, musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
 
     // getColorName — now imported from '../utils/ColorUtils'
 
@@ -1095,9 +1097,14 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                     } else if (dockItem.id === 'STREET') {
                       setActiveMode('STREET');
                       setLastOperatingMode('STREET');
+                      // Optimistically lock the visualizer to STREET so it switches
+                      // immediately without waiting for the first BLE write round-trip.
+                      setVizLock(prev => ({ ...prev, mode: 'STREET' }));
                     } else if (dockItem.id === 'MUSIC') {
                       setActiveMode('MUSIC');
                       setLastOperatingMode('MUSIC');
+                      // Optimistically lock the visualizer to MUSIC.
+                      setVizLock(prev => ({ ...prev, mode: 'MUSIC' }));
                     } else if (dockItem.id === 'CAMERA') {
                       setActiveMode('CAMERA');
                       setLastOperatingMode('CAMERA');

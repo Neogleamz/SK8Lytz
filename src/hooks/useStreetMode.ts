@@ -143,6 +143,19 @@ export function useStreetMode({
     }
   }, [applyStreetPattern]);
 
+  // ── On-Enter: Fire initial pattern immediately when switching to STREET ────
+  // Without this, the GPS evaluator only fires when gpsSpeed *changes* — if the
+  // user is stationary the value stays the same and no pattern ever gets sent.
+  useEffect(() => {
+    if (activeMode !== 'STREET') return;
+    // Small delay so the BLE stack settles after the mode switch
+    const t = setTimeout(() => {
+      applyStreetPattern(motionStateRef.current);
+    }, 150);
+    return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMode]);
+
   // ── GPS Motion State Evaluator ──────────────────────────────────────────
   useEffect(() => {
     if (activeMode !== 'STREET') return;
