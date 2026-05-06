@@ -43,11 +43,6 @@ const MySkatesSlab = React.memo(({
   styles,
 }: MySkatesSlabProps) => (
   <View style={styles.slabContainer}>
-    <View style={styles.slabHeader}>
-      <Text style={styles.slabTitle}>MY SKATES</Text>
-      <MaterialCommunityIcons name="lightning-bolt" size={14} color={Colors.primary} />
-    </View>
-
     {customGroups.length > 0 ? (
       <View style={{ gap: Spacing.md }}>
         {customGroups.map((group) => {

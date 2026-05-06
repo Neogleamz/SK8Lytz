@@ -282,6 +282,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     onApplyScene: (scene) => dockedControllerRef.current?.applyCloudScene(scene),
   });
   const [crewInitialStep, setCrewInitialStep] = useState<any>('landing');
+  const [isCrewHubCollapsed, setIsCrewHubCollapsed] = useState(false);
   const dockedControllerRef = React.useRef<DockedControllerHandle>(null);
 
   // Relay Soft Disconnect recoveries down to the DockedController for silent payload blasting
@@ -956,6 +957,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   windowHeight={windowHeight}
                   onOpenHub={() => { setCrewInitialStep('landing'); setIsCrewModalVisible(true); }}
                   onOpenMap={() => { setCrewInitialStep('map'); setIsCrewModalVisible(true); }}
+                  isCrewHubCollapsed={isCrewHubCollapsed}
+                  onToggleCollapse={() => setIsCrewHubCollapsed(!isCrewHubCollapsed)}
                   Colors={Colors}
                   styles={styles}
                 />

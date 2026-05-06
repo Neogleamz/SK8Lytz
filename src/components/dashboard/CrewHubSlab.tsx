@@ -20,6 +20,8 @@ interface CrewHubSlabProps {
   windowHeight: number;
   onOpenHub: () => void;
   onOpenMap?: () => void;
+  isCrewHubCollapsed: boolean;
+  onToggleCollapse: () => void;
   Colors: any;
   styles: any;
 }
@@ -32,6 +34,8 @@ const CrewHubSlab = React.memo(({
   windowHeight,
   onOpenHub,
   onOpenMap,
+  isCrewHubCollapsed,
+  onToggleCollapse,
   Colors,
   styles,
 }: CrewHubSlabProps) => (
@@ -42,7 +46,12 @@ const CrewHubSlab = React.memo(({
     }]}>
       {/* Header row */}
       <View style={[styles.slabHeader, isOfflineMode && { marginBottom: Spacing.sm }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+        <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flex: 1 }} onPress={onToggleCollapse}>
+          <MaterialCommunityIcons
+            name={isCrewHubCollapsed ? 'chevron-down' : 'chevron-up'}
+            size={18}
+            color={isOfflineMode ? Colors.textMuted : '#FFAA00'}
+          />
           <MaterialCommunityIcons
             name={isOfflineMode ? 'cloud-off-outline' : 'account-group'}
             size={18}
@@ -51,7 +60,7 @@ const CrewHubSlab = React.memo(({
           <Text style={[styles.slabTitle, { color: isOfflineMode ? Colors.textMuted : '#FFAA00' }]}>
             CREWZ HUB
           </Text>
-        </View>
+        </TouchableOpacity>
         {!crewSession && !isOfflineMode && (
           <TouchableOpacity onPress={onOpenHub} style={styles.slabAction}>
             <Text style={styles.slabActionText}>OPEN HUB</Text>
@@ -60,50 +69,54 @@ const CrewHubSlab = React.memo(({
       </View>
 
       {/* Body — 4-state switch */}
-      {appSettings['global_crew_hub_locked'] ? (
-        /* State 1: Admin-locked */
-        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: Spacing.md, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
-          <MaterialCommunityIcons name="lock-outline" size={16} color={Colors.textMuted} style={{ marginRight: Spacing.sm }} />
-          <Text style={[styles.slabEmptyText, { color: Colors.textMuted, flex: 1, fontSize: 11 }]}>
-            FEATURE TEMPORARILY DISABLED BY ADMIN
-          </Text>
-        </View>
-      ) : isOfflineMode ? (
-        /* State 2: Offline */
-        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: Spacing.md, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
-          <MaterialCommunityIcons name="cloud-off-outline" size={16} color={Colors.textMuted} style={{ marginRight: Spacing.sm }} />
-          <Text style={[styles.slabEmptyText, { color: Colors.textMuted, flex: 1, fontSize: 11 }]}>
-            Go online to sync lights with nearby skaters.
-          </Text>
-        </View>
-      ) : crewSession ? (
-        /* State 3: Active session */
-        <TouchableOpacity
-          style={[styles.activeCrewPill, { paddingVertical: Spacing.xl }]}
-          onPress={onOpenHub}
-        >
-          <View style={[styles.statusDot, { backgroundColor: crewRole === 'leader' ? '#FFAA00' : '#00AAFF' }]} />
-          <Text style={[styles.activeCrewText, { color: crewRole === 'leader' ? '#FFAA00' : '#00AAFF' }]}>
-            {crewSession.name.toUpperCase()} 🔴 LIVE
-          </Text>
-          <MaterialCommunityIcons
-            name="chevron-right"
-            size={16}
-            color={crewRole === 'leader' ? '#FFAA00' : '#00AAFF'}
-          />
-        </TouchableOpacity>
-      ) : (
-        /* State 4: Empty — no sessions */
-        <View style={{ gap: Spacing.lg }}>
-          <Text style={styles.slabEmptyText}>No active sessions nearby. Launch a crew to sync lights.</Text>
-          <TouchableOpacity
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingVertical: Spacing.md, borderRadius: 8, borderWidth: 1, borderColor: '#FFAA00', marginTop: Spacing.sm }}
-            onPress={onOpenMap}
-          >
-            <MaterialCommunityIcons name="map-marker-radius" size={18} color="#FFAA00" style={{ marginRight: Spacing.sm }} />
-            <Text style={{ color: '#FFAA00', fontWeight: '800', letterSpacing: 1, fontSize: 13 }}>EXPLORE SKATE MAP</Text>
-          </TouchableOpacity>
-        </View>
+      {!isCrewHubCollapsed && (
+        <React.Fragment>
+          {appSettings['global_crew_hub_locked'] ? (
+            /* State 1: Admin-locked */
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: Spacing.md, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+              <MaterialCommunityIcons name="lock-outline" size={16} color={Colors.textMuted} style={{ marginRight: Spacing.sm }} />
+              <Text style={[styles.slabEmptyText, { color: Colors.textMuted, flex: 1, fontSize: 11 }]}>
+                FEATURE TEMPORARILY DISABLED BY ADMIN
+              </Text>
+            </View>
+          ) : isOfflineMode ? (
+            /* State 2: Offline */
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.02)', padding: Spacing.md, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }}>
+              <MaterialCommunityIcons name="cloud-off-outline" size={16} color={Colors.textMuted} style={{ marginRight: Spacing.sm }} />
+              <Text style={[styles.slabEmptyText, { color: Colors.textMuted, flex: 1, fontSize: 11 }]}>
+                Go online to sync lights with nearby skaters.
+              </Text>
+            </View>
+          ) : crewSession ? (
+            /* State 3: Active session */
+            <TouchableOpacity
+              style={[styles.activeCrewPill, { paddingVertical: Spacing.xl }]}
+              onPress={onOpenHub}
+            >
+              <View style={[styles.statusDot, { backgroundColor: crewRole === 'leader' ? '#FFAA00' : '#00AAFF' }]} />
+              <Text style={[styles.activeCrewText, { color: crewRole === 'leader' ? '#FFAA00' : '#00AAFF' }]}>
+                {crewSession.name.toUpperCase()} 🔴 LIVE
+              </Text>
+              <MaterialCommunityIcons
+                name="chevron-right"
+                size={16}
+                color={crewRole === 'leader' ? '#FFAA00' : '#00AAFF'}
+              />
+            </TouchableOpacity>
+          ) : (
+            /* State 4: Empty — no sessions */
+            <View style={{ gap: Spacing.lg }}>
+              <Text style={styles.slabEmptyText}>No active sessions nearby. Launch a crew to sync lights.</Text>
+              <TouchableOpacity
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingVertical: Spacing.md, borderRadius: 8, borderWidth: 1, borderColor: '#FFAA00', marginTop: Spacing.sm }}
+                onPress={onOpenMap}
+              >
+                <MaterialCommunityIcons name="map-marker-radius" size={18} color="#FFAA00" style={{ marginRight: Spacing.sm }} />
+                <Text style={{ color: '#FFAA00', fontWeight: '800', letterSpacing: 1, fontSize: 13 }}>EXPLORE SKATE MAP</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </React.Fragment>
       )}
     </View>
   </View>
