@@ -133,14 +133,16 @@ export function useDockedControllerState(
   const captureEntireState = (
     streetSensitivity: number,
     streetCruiseColor: string,
-    streetBrakeColor: string
+    streetBrakeColor: string,
+    override?: Partial<ReturnType<typeof captureEntireState>>
   ) => {
     return {
       activeMode, fixedSubMode, fixedModePattern,
       selectedColor, selectedPatternId, brightness, speed,
       multiColors, multiLength, multiTransition,
       musicPatternId, musicPrimaryColor, musicSecondaryColor, micSensitivity, micSource, musicMatrixStyle,
-      streetSensitivity, streetCruiseColor, streetBrakeColor
+      streetSensitivity, streetCruiseColor, streetBrakeColor,
+      ...(override || {})
     };
   };
 

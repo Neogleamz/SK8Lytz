@@ -210,14 +210,14 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       disableHaptics: appSettings['global_haptics_enabled'] === false,
     });
 
-    const writeToDevice = async (payload: number[]) => {
+    const writeToDevice = async (payload: number[], override?: Record<string, any>) => {
       // Gate: only write if the parent BLE write function exists (same pattern as Pro Effects).
       // Previously used `bleState !== 'READY'` which was too aggressive — the derived bleState
       // transiently leaves 'READY' during background rescans/probing even while devices are
       // fully connected and writable, silently dropping fixed mode, solid color, and camera writes.
       // The BLE stack in useBLE.writeToDevice already handles connection-level safety internally.
       if (!parentWriteToDevice) return;
-      lastConfirmedStateRef.current = captureEntireState();
+      lastConfirmedStateRef.current = captureEntireState(override);
 
       // Lock visualizer to exactly what we are sending
       const currentResolvedMode = (activeMode === 'MULTIMODE' && fixedSubMode === 'BUILDER') ? 'BUILDER' : activeMode;
@@ -362,7 +362,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       sessionPeakSpeedRef,
     });
 
-    const captureEntireState = () => baseCaptureEntireState(streetSensitivity, streetCruiseColor, streetBrakeColor);
+    const captureEntireState = (override?: Record<string, any>) => baseCaptureEntireState(streetSensitivity, streetCruiseColor, streetBrakeColor, override);
     const applyCloudScene = (scenePayload: any) => baseApplyCloudScene(scenePayload, setStreetSensitivity, setStreetCruiseColor, setStreetBrakeColor);
 
     // ── Ghost Reconcile Wiring ──────────────────────────────────────────────

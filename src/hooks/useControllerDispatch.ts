@@ -15,7 +15,7 @@ import { AppLogger } from '../services/AppLogger';
 import { hexToRgb } from '../utils/ColorUtils';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
 
-type WriteFn = (payload: number[]) => Promise<boolean | 'partial' | void>;
+type WriteFn = (payload: number[], override?: Record<string, any>) => Promise<boolean | 'partial' | void>;
 
 interface UseControllerDispatchParams {
   writeToDevice?: WriteFn;
@@ -206,7 +206,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
         c2,
         sens,
         bright
-      ));
+      ), { micSource: src });
     },
     [writeToDevice]
   );
