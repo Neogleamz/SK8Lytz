@@ -665,7 +665,19 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           const fixedClr = fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
           const patternTemplate = SK8LYTZ_TEMPLATES.find(t => t.id === fixedPatternId);
           const patternLabel = patternTemplate?.name ?? `Pattern ${fixedPatternId}`;
-          return `${patternLabel} - ${getColorName(fixedClr)}`;
+          const colorName = getColorName(fixedClr);
+
+          if (patternLabel.includes('Custom') && colorName === 'Custom') {
+            return 'Custom Preset';
+          }
+          if (patternLabel === 'Custom Mode') {
+            return `${colorName} Solid`;
+          }
+          if (colorName === 'Custom') {
+            return patternLabel; // Don't append "- Custom" blindly
+          }
+
+          return `${patternLabel} - ${colorName}`;
         }
         case 'BUILDER':
           return `Builder Mode`;

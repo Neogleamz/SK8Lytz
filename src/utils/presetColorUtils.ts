@@ -43,8 +43,12 @@ export const resolveGlowColor = (fav: IFavoriteState, fallback: string): string 
     return fav.fixedFgColor || fav.fixedBgColor || fallback;
   }
 
-  if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') return fav.multiColors?.[0] || fallback;
-  return fallback;
+  if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
+    if (fav.builderNodes && fav.builderNodes.length > 0) return fav.builderNodes[0].colorHex;
+    return fav.multiColors?.[0] || fallback;
+  }
+
+  return fav.fixedFgColor || fav.color || fallback;
 };
 
 /**
@@ -69,10 +73,23 @@ export const resolveGradientColors = (fav: IFavoriteState, glow: string): string
     }
   }
 
-  if ((fav.mode === 'MULTI' || fav.mode === 'BUILDER') && fav.multiColors && fav.multiColors.length > 0) {
-    return fav.multiColors.length === 1
-      ? [fav.multiColors[0], fav.multiColors[0]]
-      : fav.multiColors;
+  if (fav.mode === 'MULTI' || fav.mode === 'BUILDER') {
+    if (fav.builderNodes && fav.builderNodes.length > 0) {
+      const colors = fav.builderNodes.map(n => n.colorHex);
+      return colors.length === 1 ? [colors[0], colors[0]] : colors;
+    }
+    if (fav.multiColors && fav.multiColors.length > 0) {
+      return fav.multiColors.length === 1
+        ? [fav.multiColors[0], fav.multiColors[0]]
+        : fav.multiColors;
+    }
+  }
+
+  if (fav.fixedFgColor) {
+    return [fav.fixedFgColor, fav.fixedBgColor || fav.fixedFgColor];
+  }
+  if (fav.color) {
+    return [fav.color, fav.color];
   }
 
   return [glow, glow];
