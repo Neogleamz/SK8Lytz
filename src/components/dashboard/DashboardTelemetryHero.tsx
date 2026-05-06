@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, Dimensions, Animated } from 'react-native';
 import { Layout, Spacing } from '../../theme/theme';
+import { useTheme } from '../../context/ThemeContext';
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -30,6 +31,7 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
   gpsSpeed, peakGForce, sessionDistanceMiles,
   sessionDurationSec, sessionPeakSpeed, sessionAvgSpeed,
 }) => {
+  const { Colors } = useTheme();
   const windowWidth = Dimensions.get('window').width;
   const isWeb       = windowWidth > 600;
 
@@ -216,7 +218,7 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
 
         {/* Speed text — inside the arc */}
         <View style={[styles.speedOverlay, { width: svgWidth, height: svgH }]}>
-          <Text style={styles.speedValue}>{gpsSpeed.toFixed(1)}</Text>
+          <Text style={[styles.speedValue, { color: Colors.primary, textShadowColor: Colors.primary }]}>{gpsSpeed.toFixed(1)}</Text>
           <Text style={styles.speedUnit}>MPH</Text>
         </View>
       </View>
@@ -276,8 +278,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Righteous',
     fontSize: 60,
     lineHeight: 66,
-    color: '#FF00FF',
-    textShadowColor: '#FF00FF',
     textShadowRadius: 28,
     textShadowOffset: { width: 0, height: 0 },
   },
