@@ -10,6 +10,9 @@ export default function AccountTabStats({
   statsLoading,
   lifetimeStats,
   recentSessions,
+  crews,
+  history,
+  devices,
 }: any) {
   /** Formats seconds into e.g. "1h 23m" */
   const fmtDuration = (sec: number) => {
@@ -34,6 +37,23 @@ export default function AccountTabStats({
   return (
     <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
       <SkaterStatsPanel Colors={Colors} />
+      
+      {/* Overview Stats */}
+      <View style={[styles.statsRow, { marginTop: Spacing.sm, marginBottom: Spacing.xl }]}>
+        <View style={styles.statCard}>
+          <Text style={styles.statNum}>{crews?.length || 0}</Text>
+          <Text style={styles.statLabel}>CREWZ</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statNum}>{history?.length || '—'}</Text>
+          <Text style={styles.statLabel}>Sessions</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statNum}>{devices?.length || 0}</Text>
+          <Text style={styles.statLabel}>Devices</Text>
+        </View>
+      </View>
+
       {noData ? (
         <View style={{ alignItems: 'center', paddingVertical: Spacing.huge }}>
           <MaterialCommunityIcons name="skate" size={48} color={Colors.textMuted} />

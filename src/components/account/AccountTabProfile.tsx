@@ -104,22 +104,6 @@ export default function AccountTabProfile({
         )}
       </TouchableOpacity>
 
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNum}>{crews.length}</Text>
-          <Text style={styles.statLabel}>CREWZ</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNum}>{history.length || '—'}</Text>
-          <Text style={styles.statLabel}>Sessions</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNum}>{devices.length || '—'}</Text>
-          <Text style={styles.statLabel}>Devices</Text>
-        </View>
-      </View>
-
       {/* Session history preview */}
       {history.length > 0 && (
         <>
