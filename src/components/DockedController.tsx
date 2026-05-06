@@ -218,6 +218,17 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       // The BLE stack in useBLE.writeToDevice already handles connection-level safety internally.
       if (!parentWriteToDevice) return;
       lastConfirmedStateRef.current = captureEntireState();
+
+      // Lock visualizer to exactly what we are sending
+      const currentResolvedMode = (activeMode === 'MULTIMODE' && fixedSubMode === 'BUILDER') ? 'BUILDER' : activeMode;
+      const currentResolvedPattern = activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'MULTIMODE' ? fixedPatternId : selectedPatternId);
+      
+      setVizLock({
+        mode: currentResolvedMode,
+        patternId: currentResolvedPattern,
+        color: visualizerColor,
+      });
+
       setLastSentPayload([...payload]);
       await optimisticWrite(payload);
     };
@@ -232,6 +243,15 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     // already populated by the time DockedController mounts. No need to scan
     // all devices for a ledger entry — device[0] will have one if any do.
     const primaryMac = devices?.[0]?.id ?? '';
+
+    // Hardware Visualizer Lock — decodes the actual state being sent to the hardware
+    // rather than relying on the active UI tab (which bounces around during swiping).
+    const initialLedgerRef = useRef(primaryMac ? ledger.loadSync(primaryMac) : null);
+    const [vizLock, setVizLock] = useState({
+      mode: (initialLedgerRef.current?.mode as string) || 'HOME',
+      patternId: initialLedgerRef.current?.patternId || 1,
+      color: initialLedgerRef.current?.fgColor || '#00f0ff'
+    });
 
     const {
       activeProduct, setActiveProduct,
@@ -839,13 +859,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             </TouchableOpacity>
             <ProductVisualizer
               product={activeProduct}
-              color={visualizerColor}
+              color={vizLock.color}
               mode={
-                activeMode === 'FAVORITES' ? lastOperatingMode :
-                (activeMode === 'MULTIMODE' && fixedSubMode === 'BUILDER') ? 'BUILDER' :
-                activeMode
+                vizLock.mode === 'FAVORITES' ? lastOperatingMode :
+                vizLock.mode
               }
-              patternId={activeMode === 'MULTIMODE' ? fixedPatternId : selectedPatternId}
+              patternId={vizLock.patternId}
               isPaired={isPaired}
               points={points}
               hwSettings={hwSettings}
