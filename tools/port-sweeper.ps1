@@ -10,10 +10,10 @@ foreach ($Port in $Ports) {
             $parts[-1]
         } | Select-Object -Unique
         
-        foreach ($pid in $Pids) {
-            if ($pid -ne "0") {
-                Write-Host "💀 Killing PID $pid (holding port $Port)..." -ForegroundColor Yellow
-                Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+        foreach ($processId in $Pids) {
+            if ($processId -ne "0") {
+                Write-Host "💀 Killing PID $processId (holding port $Port)..." -ForegroundColor Yellow
+                Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
             }
         }
     }
