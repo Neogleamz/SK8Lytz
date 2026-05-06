@@ -446,45 +446,34 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
 
     const [isDiyBuilderExpanded, setIsDiyBuilderExpanded] = useState(false);
-    const [suggestionChips, setSuggestionChips] = useState<string[]>([]);
+    
 
     const handleSaveFavoriteClick = () => {
       if (activeFavoriteId) {
         const activeFav = favorites.find(f => f.id === activeFavoriteId);
         if (activeFav) {
-          setSuggestionChips([]);
           openFavoritePrompt(activeFav.id, activeFav.name);
           return;
         }
       }
       
       let defaultName = '';
-      let chips: string[] = [];
       try { 
         if (activeMode === 'MULTIMODE') {
           if (fixedSubMode === 'PATTERN') {
             const colorName = getColorName(fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor);
-            if (speed > 80) chips.push(`Fast ${colorName} Pattern`);
-            else if (speed < 30) chips.push(`Slow ${colorName} Pattern`);
-            chips.push(`${colorName} Pattern`);
-            chips.push('Custom Pattern');
             defaultName = `${colorName} Pattern`;
           } else {
-            chips.push('Custom Fade', 'Neon Pulse', 'My Setup');
             defaultName = 'Custom Fade';
           }
         } else if (activeMode === 'MUSIC') {
-          chips.push('Neon Pulse', 'Music Vibe', 'My Setup');
           defaultName = 'Music Vibe';
         } else {
           defaultName = currentStatusText || `${activeMode} Preset`;
-          chips.push('My Setup', 'Vibe 1');
         }
       } catch (e) { 
         defaultName = `${activeMode} Preset`; 
-        chips.push('Preset 1');
       }
-      setSuggestionChips(chips);
       openFavoritePrompt(undefined, defaultName);
     };
 
@@ -1213,7 +1202,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           promptName={promptName}
           onChangePromptName={setPromptName}
           favPromptTargetId={favPromptTargetId}
-          suggestionChips={suggestionChips}
+          
           onDelete={() => { deleteFavorite(favPromptTargetId!); closePrompt(); }}
           onCancel={() => closePrompt()}
           onSave={handleConfirmSaveFavorite}
