@@ -407,7 +407,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isControllerOpen, setIsControllerOpen] = useState(false);
 
   // ── Global Telemetry ──
-  const { gpsSpeed, peakGForce, sessionDistanceMiles, sessionDurationSec } = useGlobalTelemetry(isActuallyConnected);
+  const { 
+    gpsSpeed, 
+    peakGForce, 
+    sessionDistanceMiles, 
+    sessionDurationSec,
+    sessionPeakSpeed,
+    sessionAvgSpeed
+  } = useGlobalTelemetry(isActuallyConnected);
 
 
   // Voice command dispatch + notification init are now handled
@@ -955,12 +962,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
 
                 {/* SLAB 2.5: LIVE TELEMETRY HUD */}
-                <View style={{ marginTop: Spacing.sm }}>
+                <View>
                   <DashboardTelemetryHero 
                     gpsSpeed={gpsSpeed} 
                     peakGForce={peakGForce} 
                     sessionDistanceMiles={sessionDistanceMiles} 
                     sessionDurationSec={sessionDurationSec} 
+                    sessionPeakSpeed={sessionPeakSpeed}
+                    sessionAvgSpeed={sessionAvgSpeed}
                   />
                 </View>
 

@@ -1,12 +1,12 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Dimensions, Animated } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { Typography, Spacing, Layout } from '../../theme/theme';
-import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
-import Animated, { useSharedValue, useAnimatedProps, withSpring } from 'react-native-reanimated';
+import Svg, { Circle, Defs, LinearGradient as SvgLinearGradient, Stop } from 'react-native-svg';
+import { LinearGradient } from 'expo-linear-gradient';
 
-// Wrapping Circle for Reanimated
+// Wrapping Circle for standard Animated API
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 interface DashboardTelemetryHeroProps {
@@ -14,50 +14,53 @@ interface DashboardTelemetryHeroProps {
   peakGForce: number;
   sessionDistanceMiles: number;
   sessionDurationSec: number;
+  sessionPeakSpeed: number;
+  sessionAvgSpeed: number;
 }
 
 export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
   gpsSpeed,
   peakGForce,
   sessionDistanceMiles,
-  sessionDurationSec
+  sessionDurationSec,
+  sessionPeakSpeed,
+  sessionAvgSpeed
 }) => {
   const { Colors } = useTheme();
 
   // Screen layout logic (half-circle gauge to save vertical space)
   const windowWidth = Dimensions.get('window').width;
-  // If we are on web, limit the width so it doesn't stretch infinitely on big screens
   const isWeb = Dimensions.get('window').width > 600;
   const padding = Spacing.md * 2;
   const svgWidth = isWeb ? 400 - padding : windowWidth - padding; 
   
-  const strokeWidth = 14;
-  const radius = (svgWidth / 2) - (strokeWidth * 2); // Padding on edges for glow
+  const strokeWidth = 24; // Thicker, more aggressive gauge
+  const radius = (svgWidth / 2) - (strokeWidth * 2); 
   const cx = svgWidth / 2;
-  const cy = radius + (strokeWidth * 2); // Center Y pushed down so top curve fits
+  const cy = radius + (strokeWidth * 2); 
   
-  // Circumference of full circle
   const circumference = 2 * Math.PI * radius;
-  // Half circle length
   const halfCircumference = circumference / 2;
 
   // Max speed scale (e.g. 25 mph)
   const MAX_SPEED = 25;
   const speedRatio = Math.min(Math.max(gpsSpeed / MAX_SPEED, 0), 1);
   
-  // Reanimated values for smooth sweeping needle
-  const animatedProgress = useSharedValue(0);
+  // Physics engine value
+  const animatedProgress = useRef(new Animated.Value(0)).current;
   
   useEffect(() => {
-    // When gpsSpeed changes, sweep the needle smoothly using spring physics
-    animatedProgress.value = withSpring(speedRatio, { damping: 15, stiffness: 90 });
-  }, [gpsSpeed, speedRatio]);
+    Animated.spring(animatedProgress, {
+      toValue: speedRatio,
+      friction: 5, // Bouncier, tighter spring
+      tension: 50,
+      useNativeDriver: false 
+    }).start();
+  }, [gpsSpeed, speedRatio, animatedProgress]);
 
-  const animatedCircleProps = useAnimatedProps(() => {
-    const strokeDashoffset = halfCircumference - (halfCircumference * animatedProgress.value);
-    return {
-      strokeDashoffset,
-    };
+  const strokeDashoffset = animatedProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [halfCircumference, 0]
   });
 
   const formatDuration = (secs: number) => {
@@ -66,8 +69,11 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Gamified Calorie Estimate
+  const kcalBurned = Math.round(sessionDistanceMiles * 65);
+
   return (
-    <View style={[styles.container, { backgroundColor: Colors.surface, borderColor: Colors.border }]}>
+    <View style={styles.container}>
       
       {/* HEADER ROW */}
       <View style={styles.headerRow}>
@@ -75,25 +81,26 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
         <Text style={[styles.headerText, { color: Colors.primary }]}>LIVE TELEMETRY</Text>
         <View style={{ flex: 1 }} />
         <MaterialCommunityIcons name="record-circle-outline" size={16} color={Colors.error} />
-        <Text style={[styles.headerText, { color: Colors.error }]}>REC</Text>
+        <Text style={[styles.headerText, { color: Colors.error, textShadowColor: Colors.error, textShadowRadius: 8 }]}>REC</Text>
       </View>
 
       {/* MASSIVE NEON GAUGE (Half Circle) */}
-      <View style={{ width: svgWidth, height: cy + 10, alignItems: 'center', alignSelf: 'center' }}>
+      <View style={{ width: svgWidth, height: cy + 10, alignItems: 'center', alignSelf: 'center', marginTop: Spacing.sm }}>
         <Svg width={svgWidth} height={cy + 10} viewBox={`0 0 ${svgWidth} ${cy + 10}`}>
           <Defs>
-            <LinearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <Stop offset="0%" stopColor={Colors.primary} stopOpacity="1" />
-              <Stop offset="100%" stopColor={Colors.accent} stopOpacity="1" />
-            </LinearGradient>
+            <SvgLinearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <Stop offset="0%" stopColor="#00FFFF" stopOpacity="1" />
+              <Stop offset="50%" stopColor="#8A2BE2" stopOpacity="1" />
+              <Stop offset="100%" stopColor="#FF00FF" stopOpacity="1" />
+            </SvgLinearGradient>
           </Defs>
           
-          {/* Background Track (Dark) */}
+          {/* Layer 1: Background Track (Dark & Deep) */}
           <Circle
             cx={cx}
             cy={cy}
             r={radius}
-            stroke="rgba(255,255,255,0.05)"
+            stroke="rgba(255,255,255,0.03)"
             strokeWidth={strokeWidth}
             fill="none"
             strokeDasharray={`${halfCircumference} ${circumference}`}
@@ -102,7 +109,22 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
             transform={`rotate(180 ${cx} ${cy})`}
           />
 
-          {/* Core Bright Neon Line */}
+          {/* Layer 2: Massive Outer Bloom */}
+          <AnimatedCircle
+            cx={cx}
+            cy={cy}
+            r={radius}
+            stroke="url(#neonGradient)"
+            strokeWidth={strokeWidth + 24}
+            fill="none"
+            opacity={0.15}
+            strokeDasharray={`${halfCircumference} ${circumference}`}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+            transform={`rotate(180 ${cx} ${cy})`}
+          />
+
+          {/* Layer 3: Main Colored Core Line */}
           <AnimatedCircle
             cx={cx}
             cy={cy}
@@ -111,49 +133,47 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
             strokeWidth={strokeWidth}
             fill="none"
             strokeDasharray={`${halfCircumference} ${circumference}`}
+            strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
             transform={`rotate(180 ${cx} ${cy})`}
-            animatedProps={animatedCircleProps}
           />
           
-          {/* Subtle Outer Glow Layer */}
+          {/* Layer 4: Hot White Inner Filament */}
           <AnimatedCircle
             cx={cx}
             cy={cy}
             r={radius}
-            stroke="url(#neonGradient)"
-            strokeWidth={strokeWidth + 12}
+            stroke="#FFFFFF"
+            strokeWidth={2}
             fill="none"
-            opacity={0.3}
+            opacity={0.8}
             strokeDasharray={`${halfCircumference} ${circumference}`}
+            strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
             transform={`rotate(180 ${cx} ${cy})`}
-            animatedProps={animatedCircleProps}
           />
         </Svg>
         
         {/* Absolute Centered Speed Text */}
         <View style={styles.speedTextContainer}>
-          <Text style={[styles.speedValue, { color: Colors.text }]}>
+          <Text style={[styles.speedValue, { color: '#FFFFFF', textShadowColor: '#00FFFF', textShadowRadius: 25 }]}>
             {gpsSpeed.toFixed(1)}
           </Text>
-          <Text style={[styles.speedUnit, { color: Colors.primary }]}>MPH</Text>
+          <Text style={[styles.speedUnit, { color: '#00FFFF', textShadowColor: '#00FFFF', textShadowRadius: 10 }]}>MPH</Text>
         </View>
       </View>
 
-      {/* BOTTOM METRICS GRID */}
+      {/* BOTTOM 6-METRIC GRID */}
       <View style={styles.metricsGrid}>
-        <View style={[styles.metricBox, { backgroundColor: 'rgba(255,255,255,0.03)' }]}>
-          <Text style={[styles.metricLabel, { color: Colors.textDim }]}>DISTANCE</Text>
-          <Text style={[styles.metricValue, { color: Colors.text }]}>{sessionDistanceMiles.toFixed(2)}<Text style={styles.metricUnit}> mi</Text></Text>
+        <View style={styles.metricsRow}>
+          <TelemetryGlassPill label="DISTANCE" value={sessionDistanceMiles.toFixed(2)} unit="mi" accent="#00FFFF" />
+          <TelemetryGlassPill label="G-FORCE" value={peakGForce.toFixed(1)} unit="g" accent="#FF00FF" />
+          <TelemetryGlassPill label="TIME" value={formatDuration(sessionDurationSec)} unit="" accent="#FFD600" />
         </View>
-        <View style={[styles.metricBox, { backgroundColor: 'rgba(255,255,255,0.03)' }]}>
-          <Text style={[styles.metricLabel, { color: Colors.textDim }]}>G-FORCE</Text>
-          <Text style={[styles.metricValue, { color: Colors.text }]}>{peakGForce.toFixed(1)}<Text style={styles.metricUnit}> g</Text></Text>
-        </View>
-        <View style={[styles.metricBox, { backgroundColor: 'rgba(255,255,255,0.03)' }]}>
-          <Text style={[styles.metricLabel, { color: Colors.textDim }]}>TIME</Text>
-          <Text style={[styles.metricValue, { color: Colors.text }]}>{formatDuration(sessionDurationSec)}</Text>
+        <View style={styles.metricsRow}>
+          <TelemetryGlassPill label="AVG SPD" value={sessionAvgSpeed.toFixed(1)} unit="mph" accent="#00FF85" />
+          <TelemetryGlassPill label="TOP SPD" value={sessionPeakSpeed.toFixed(1)} unit="mph" accent="#FF4D00" />
+          <TelemetryGlassPill label="BURN" value={kcalBurned.toString()} unit="kcal" accent="#FF0000" />
         </View>
       </View>
 
@@ -161,13 +181,32 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
   );
 };
 
+// Extracted Glassmorphic Pill Component
+const TelemetryGlassPill = ({ label, value, unit, accent }: { label: string, value: string, unit: string, accent: string }) => (
+  <View style={styles.pillContainer}>
+    <LinearGradient
+      colors={['rgba(255,255,255,0.08)', 'rgba(0,0,0,0.6)']}
+      style={styles.pillBackground}
+    />
+    <View style={[styles.accentTick, { backgroundColor: accent, shadowColor: accent }]} />
+    <Text style={styles.pillLabel}>{label}</Text>
+    <View style={styles.pillValueContainer}>
+      <Text style={[styles.pillValue, { textShadowColor: accent, textShadowRadius: 15 }]}>{value}</Text>
+      {unit !== '' && <Text style={styles.pillUnit}>{unit}</Text>}
+    </View>
+  </View>
+);
+
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: Spacing.md,
-    marginBottom: Spacing.md,
-    borderRadius: 24,
+    marginHorizontal: Layout.padding,
+    marginBottom: 24, // Matched with slabContainer
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderRadius: 16,
     borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
     overflow: 'hidden',
+    paddingBottom: Spacing.md,
   },
   headerRow: {
     flexDirection: 'row',
@@ -177,9 +216,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   headerText: {
-    fontFamily: 'monospace',
+    fontFamily: 'Righteous',
     fontSize: 12,
-    fontWeight: '800',
     letterSpacing: 1.5,
   },
   speedTextContainer: {
@@ -188,47 +226,73 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   speedValue: {
-    fontFamily: 'monospace',
-    fontSize: 64,
-    fontWeight: '900',
-    lineHeight: 70,
+    fontFamily: 'Righteous',
+    fontSize: 72,
+    lineHeight: 80,
   },
   speedUnit: {
-    fontFamily: 'monospace',
+    fontFamily: 'Righteous',
     fontSize: 16,
-    fontWeight: '800',
-    letterSpacing: 2,
-    marginTop: -5,
+    letterSpacing: 3,
+    marginTop: -8,
   },
   metricsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     padding: Spacing.md,
     gap: Spacing.sm,
   },
-  metricBox: {
+  metricsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: Spacing.sm,
+  },
+  pillContainer: {
     flex: 1,
     paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.sm,
-    borderRadius: 16,
+    paddingHorizontal: Spacing.xs,
+    borderRadius: 12,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
+    borderTopColor: 'rgba(255,255,255,0.15)', // Frosted edge light
+    overflow: 'hidden',
   },
-  metricLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1,
+  pillBackground: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  accentTick: {
+    position: 'absolute',
+    bottom: 0,
+    left: '20%',
+    right: '20%',
+    height: 3,
+    borderTopLeftRadius: 3,
+    borderTopRightRadius: 3,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 1,
+    shadowRadius: 5,
+    elevation: 4,
+  },
+  pillLabel: {
+    fontSize: 9,
+    fontFamily: 'Righteous',
+    letterSpacing: 1.5,
+    color: 'rgba(255,255,255,0.4)',
     marginBottom: 4,
   },
-  metricValue: {
-    fontFamily: 'monospace',
-    fontSize: 18,
-    fontWeight: '800',
+  pillValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 2,
   },
-  metricUnit: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.4)',
+  pillValue: {
+    fontFamily: 'monospace',
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  pillUnit: {
+    fontFamily: 'Righteous',
+    fontSize: 10,
+    color: 'rgba(255,255,255,0.5)',
   }
 });

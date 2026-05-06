@@ -19,6 +19,8 @@ export function useGlobalTelemetry(isActuallyConnected: boolean): GlobalTelemetr
   const [peakGForce, setPeakGForce] = useState<number>(1.0);
   const [sessionDistanceMiles, setSessionDistanceMiles] = useState<number>(0);
   const [sessionDurationSec, setSessionDurationSec] = useState<number>(0);
+  const [sessionPeakSpeed, setSessionPeakSpeed] = useState<number>(0);
+  const [sessionAvgSpeed, setSessionAvgSpeed] = useState<number>(0);
 
   const sessionStartTimeRef = useRef<number | null>(null);
   const sessionDistanceMilesRef = useRef<number>(0);
@@ -71,6 +73,8 @@ export function useGlobalTelemetry(isActuallyConnected: boolean): GlobalTelemetr
     sessionSpeedSamplesRef.current = [];
     setSessionDistanceMiles(0);
     setSessionDurationSec(0);
+    setSessionPeakSpeed(0);
+    setSessionAvgSpeed(0);
   }, []);
 
   useEffect(() => {
@@ -86,6 +90,8 @@ export function useGlobalTelemetry(isActuallyConnected: boolean): GlobalTelemetr
         sessionSpeedSamplesRef.current = [];
         setSessionDistanceMiles(0);
         setSessionDurationSec(0);
+        setSessionPeakSpeed(0);
+        setSessionAvgSpeed(0);
         AppLogger.log('GLOBAL_TELEMETRY_STARTED');
       }
 
@@ -132,7 +138,15 @@ export function useGlobalTelemetry(isActuallyConnected: boolean): GlobalTelemetr
                 sessionSpeedSamplesRef.current.push(spdMph);
                 if (spdMph > sessionPeakSpeedRef.current) {
                   sessionPeakSpeedRef.current = spdMph;
+                  setSessionPeakSpeed(spdMph);
                 }
+                
+                // Update average speed
+                const samples = sessionSpeedSamplesRef.current;
+                const avgSpeedMph = samples.length > 0
+                  ? samples.reduce((acc, s) => acc + s, 0) / samples.length
+                  : 0;
+                setSessionAvgSpeed(avgSpeedMph);
 
                 if (crewService.currentSessionId) {
                    if (spdMph > crewService.sessionTelemetry.topSpeedMph) {
@@ -186,5 +200,7 @@ export function useGlobalTelemetry(isActuallyConnected: boolean): GlobalTelemetr
     peakGForce,
     sessionDistanceMiles,
     sessionDurationSec,
+    sessionPeakSpeed,
+    sessionAvgSpeed,
   };
 }
