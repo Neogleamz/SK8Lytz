@@ -136,34 +136,39 @@ export const SkateGroupCard = ({
           {/* Right-Side Quick Launch Strip */}
           <View style={{ 
             width: 48, 
-            backgroundColor: 'rgba(0,0,0,0.25)', 
+            backgroundColor: 'rgba(0,0,0,0.6)', 
             borderLeftWidth: 1, 
-            borderLeftColor: 'rgba(255,255,255,0.05)', 
+            borderLeftColor: 'rgba(255,255,255,0.1)', 
             alignItems: 'center', 
             justifyContent: 'space-evenly',
             paddingVertical: 8
           }}>
             <TouchableOpacity activeOpacity={0.7} onPress={() => {}}>
-              <View style={[styles.powerIconCircle, { backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.1)' : 'transparent', width: 34, height: 34 }]}>
-                <MaterialCommunityIcons name="power" size={18} color={isPoweredOn ? Colors.primary : '#666'} />
+              <View style={[styles.powerIconCircle, { backgroundColor: isPoweredOn ? 'rgba(255, 255, 255, 0.15)' : 'transparent', width: 34, height: 34 }]}>
+                <MaterialCommunityIcons 
+                  name="power" 
+                  size={18} 
+                  color={isPoweredOn ? '#FFF' : '#666'} 
+                  style={isPoweredOn ? { textShadowColor: Colors.primary, textShadowOffset: {width: 0, height: 0}, textShadowRadius: 8 } : undefined}
+                />
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity activeOpacity={0.7} onPress={() => {}}>
               <View style={[styles.powerIconCircle, { backgroundColor: 'transparent', width: 34, height: 34 }]}>
-                <MaterialCommunityIcons name="music-note" size={18} color="#AAA" />
+                <MaterialCommunityIcons name="music-note" size={18} color="#FFF" />
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity activeOpacity={0.7} onPress={() => {}}>
               <View style={[styles.powerIconCircle, { backgroundColor: 'transparent', width: 34, height: 34 }]}>
-                <MaterialCommunityIcons name="camera" size={18} color="#AAA" />
+                <MaterialCommunityIcons name="camera" size={18} color="#FFF" />
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity activeOpacity={0.7} onPress={() => {}}>
               <View style={[styles.powerIconCircle, { backgroundColor: 'transparent', width: 34, height: 34 }]}>
-                <MaterialCommunityIcons name="heart" size={16} color="#AAA" />
+                <MaterialCommunityIcons name="heart" size={16} color="#FFF" />
               </View>
             </TouchableOpacity>
           </View>
