@@ -3,8 +3,10 @@ import { supabase } from '../services/supabaseClient';
 import { GradientsService } from '../services/GradientsService';
 import { CustomBuilderPreset } from '../protocols/PositionalMathBuffer';
 import { AppLogger } from '../services/AppLogger';
+import { useTelemetryLedger } from './useTelemetryLedger';
 
 export function useGradients() {
+  const telemetry = useTelemetryLedger();
   const [userId, setUserId] = useState<string | undefined>();
   
   useEffect(() => {
@@ -34,8 +36,13 @@ export function useGradients() {
 
   const saveGradient = async (preset: Partial<CustomBuilderPreset>) => {
     try {
+      // Basic check to see if this is likely a new creation (id starts with temp_)
+      const isNew = preset.id?.startsWith('temp_') || !preset.id;
       await GradientsService.saveGradient(preset, userId);
       await loadGradients();
+      if (isNew) {
+        telemetry.incrementCounter('favorites_created');
+      }
     } catch (e) {
       AppLogger.error('USE_GRADIENTS_SAVE_ERROR', e);
       throw e;

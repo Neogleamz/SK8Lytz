@@ -118,6 +118,44 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
     return `${h}h ${m % 60}m`;
   };
 
+  // ── Mode Split Calculation ──
+  const modeStreet = activeStats.engagement_counters?.['mode_STREET_sec'] || 0;
+  const modeMusic = activeStats.engagement_counters?.['mode_MUSIC_sec'] || 0;
+  const modeSolid = activeStats.engagement_counters?.['mode_SOLID_sec'] || 0;
+  const modeMultimode = activeStats.engagement_counters?.['mode_MULTIMODE_sec'] || 0;
+  const totalModeTime = modeStreet + modeMusic + modeSolid + modeMultimode;
+  const hasModeData = totalModeTime > 0;
+
+  // ── Explorer Badge ──
+  const patternCount = Object.keys(activeStats.pattern_time_map || {}).length;
+  let patternBadge = 'The Enthusiast';
+  let badgeDesc = `${patternCount} patterns explored`;
+  if (patternCount > 20) {
+    patternBadge = 'The Explorer';
+  } else if (patternCount > 0 && patternCount < 5) {
+    patternBadge = 'The Purist';
+  }
+
+  // ── Color Aura ──
+  let auraTitle = 'No Aura Yet';
+  let auraColor = 'rgba(255,255,255,0.1)';
+  if (topColors.length > 0) {
+    auraColor = topColors[0].hex;
+    // Extremely rudimentary "Aura" text generator based on Hex string
+    if (auraColor.toUpperCase().includes('FF00') || auraColor.toUpperCase().includes('F0F')) {
+      auraTitle = 'Cyberpunk Neon';
+    } else if (auraColor.toUpperCase().includes('00FF') || auraColor.toUpperCase().includes('0F0')) {
+      auraTitle = 'Toxic Green';
+    } else if (auraColor.toUpperCase().includes('FF') && !auraColor.toUpperCase().includes('00')) {
+      auraTitle = 'Bright & Loud';
+    } else {
+      auraTitle = 'Late Night Chill';
+    }
+  }
+
+  const favoritesCreated = activeStats.engagement_counters?.['favorites_created'] || 0;
+  const hardwareConnections = activeStats.engagement_counters?.['hardware_connections'] || 0;
+
   return (
     <View style={{ marginTop: Spacing.xl, marginBottom: Spacing.lg }}>
       <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1.2, marginBottom: Spacing.sm }}>
@@ -157,6 +195,52 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
         ) : (
           <MaterialCommunityIcons name="star-shooting-outline" size={28} color={Colors.primary} />
         )}
+      </View>
+
+      {/* Mode Split Bar */}
+      {hasModeData && (
+        <View style={{ marginTop: Spacing.xl }}>
+          <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 1.2, marginBottom: Spacing.sm }}>
+            YOUR RIDER PERSONA
+          </Text>
+          <View style={{ height: 16, borderRadius: 8, flexDirection: 'row', overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.05)' }}>
+            <View style={{ width: `${(modeStreet / totalModeTime) * 100}%`, backgroundColor: '#FF4444' }} />
+            <View style={{ width: `${(modeMusic / totalModeTime) * 100}%`, backgroundColor: '#4444FF' }} />
+            <View style={{ width: `${(modeSolid / totalModeTime) * 100}%`, backgroundColor: '#44FF44' }} />
+            <View style={{ width: `${(modeMultimode / totalModeTime) * 100}%`, backgroundColor: '#FFFF44' }} />
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.xs }}>
+            <Text style={{ color: Colors.textMuted, fontSize: 10 }}>Street: {Math.round((modeStreet / totalModeTime) * 100)}%</Text>
+            <Text style={{ color: Colors.textMuted, fontSize: 10 }}>Pro: {Math.round((modeMultimode / totalModeTime) * 100)}%</Text>
+            <Text style={{ color: Colors.textMuted, fontSize: 10 }}>Music: {Math.round((modeMusic / totalModeTime) * 100)}%</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Vibe Analysis Grid */}
+      <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xl }}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: Spacing.lg }}>
+          <MaterialCommunityIcons name="compass-outline" size={24} color={Colors.primary} style={{ marginBottom: Spacing.xs }} />
+          <Text style={{ color: Colors.text, fontSize: 14, fontWeight: '800' }}>{patternBadge}</Text>
+          <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>{badgeDesc}</Text>
+        </View>
+        <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: Spacing.lg }}>
+          <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: auraColor, marginBottom: Spacing.xs }} />
+          <Text style={{ color: Colors.text, fontSize: 14, fontWeight: '800' }}>Color Aura</Text>
+          <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>{auraTitle}</Text>
+        </View>
+      </View>
+
+      {/* Engagement Grid */}
+      <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm }}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: Spacing.lg }}>
+          <Text style={{ color: Colors.text, fontSize: 20, fontWeight: '900' }}>{favoritesCreated}</Text>
+          <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>Favorites Built</Text>
+        </View>
+        <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: Spacing.lg }}>
+          <Text style={{ color: Colors.text, fontSize: 20, fontWeight: '900' }}>{hardwareConnections}</Text>
+          <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: 2 }}>Skate Connections</Text>
+        </View>
       </View>
 
       {/* Top 3 Patterns */}

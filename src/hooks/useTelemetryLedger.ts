@@ -24,7 +24,7 @@ let globalFlushTimer: ReturnType<typeof setInterval> | null = null;
  */
 export function useTelemetryLedger() {
   const payloadBuffer = useRef<TelemetryPayload>({});
-  const activeState = useRef<{ type: 'pattern' | 'color', id: string, startTime: number } | null>(null);
+  const activeState = useRef<{ type: 'pattern' | 'color' | 'mode', id: string, startTime: number } | null>(null);
   const sessionStartTime = useRef<number>(Date.now());
 
   // Helper to merge payloads locally
@@ -69,6 +69,8 @@ export function useTelemetryLedger() {
         mergeIntoBuffer({ pattern_time_map: { [id]: elapsedSec } });
       } else if (type === 'color') {
         mergeIntoBuffer({ color_time_map: { [id]: elapsedSec } });
+      } else if (type === 'mode') {
+        mergeIntoBuffer({ engagement_counters: { [`mode_${id}_sec`]: elapsedSec } });
       }
     }
     activeState.current = null;
@@ -82,6 +84,11 @@ export function useTelemetryLedger() {
   const trackColor = useCallback((hexCode: string) => {
     closeCurrentState();
     activeState.current = { type: 'color', id: hexCode, startTime: Date.now() };
+  }, [closeCurrentState]);
+
+  const trackMode = useCallback((modeId: string) => {
+    closeCurrentState();
+    activeState.current = { type: 'mode', id: modeId, startTime: Date.now() };
   }, [closeCurrentState]);
 
   const incrementCounter = useCallback((counterKey: string, count: number = 1) => {
@@ -173,5 +180,5 @@ export function useTelemetryLedger() {
     };
   }, [flushToDatabase]);
 
-  return { trackPattern, trackColor, incrementCounter, injectStreetSummary, flushToDatabase };
+  return { trackPattern, trackColor, trackMode, incrementCounter, injectStreetSummary, flushToDatabase };
 }

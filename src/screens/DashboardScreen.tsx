@@ -51,6 +51,7 @@ import { useDashboardDeviceConfig } from '../hooks/useDashboardDeviceConfig';
 
 import { useHardwareNotifications } from '../hooks/useHardwareNotifications';
 import { useDeviceStateLedger, normalizeMac } from '../hooks/useDeviceStateLedger';
+import { useTelemetryLedger } from '../hooks/useTelemetryLedger';
 import type { DashboardViewState, DeviceSettings, CustomGroup } from '../types/dashboard.types';
 
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
@@ -251,6 +252,15 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // BUG FIX: was `every(d => d.grouped)` — fails for re-provisioned devices missing the `.grouped` flag.
   // Fix: check `groupId` presence (the canonical group membership token from DeviceRepository).
   const isGrouped = displayConnectedDevices.length > 1 && displayConnectedDevices.every(d => !!(d as any).groupId);
+
+  const prevIsConnectedRef = useRef(false);
+  const telemetry = useTelemetryLedger();
+  useEffect(() => {
+    if (isActuallyConnected && !prevIsConnectedRef.current) {
+      telemetry.incrementCounter('hardware_connections');
+    }
+    prevIsConnectedRef.current = isActuallyConnected;
+  }, [isActuallyConnected, telemetry]);
 
   // 🔶 Crew Hub state & auto-rejoin → useDashboardCrew
   const {

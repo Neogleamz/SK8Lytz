@@ -49,8 +49,9 @@ export function useControllerAnalytics({
 
   // Mode change logger
   useEffect(() => {
+    telemetry.trackMode(activeMode);
     AppLogger.log('MODE_CHANGED', { mode: activeMode, ...deviceContext });
-  }, [activeMode, deviceContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeMode, deviceContextKey, telemetry]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pattern change logger
   useEffect(() => {
