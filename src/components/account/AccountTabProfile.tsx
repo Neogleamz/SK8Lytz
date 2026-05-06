@@ -34,6 +34,7 @@ export default function AccountTabProfile({
   history,
   devices,
   setShowEula,
+  handleSignOut,
 }: any) {
   return (
     <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
@@ -144,6 +145,13 @@ export default function AccountTabProfile({
       <TouchableOpacity style={styles.signOutBtn} onPress={() => setShowEula(true)}>
         <MaterialCommunityIcons name="file-document-outline" size={18} color={Colors.textMuted} />
         <Text style={[styles.signOutText, { color: Colors.text }]}>Review EULA</Text>
+      </TouchableOpacity>
+
+      {/* Sign Out */}
+      <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: Colors.error, marginTop: Spacing.xl }]}
+        onPress={handleSignOut}>
+        <MaterialCommunityIcons name="logout" size={16} color="#FFF" />
+        <Text style={[styles.primaryBtnText, { color: '#FFF' }]}>Sign Out</Text>
       </TouchableOpacity>
 
       <View style={{ height: 20 }} />

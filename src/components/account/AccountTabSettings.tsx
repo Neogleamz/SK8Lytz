@@ -16,7 +16,6 @@ export default function AccountTabSettings({
   isDark,
   toggleTheme,
   setShowEula,
-  handleSignOut,
   handleDeleteAccount,
 }: any) {
   return (
@@ -61,13 +60,6 @@ export default function AccountTabSettings({
 
 
 
-      {/* Sign out */}
-      <Text style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>ACCOUNT</Text>
-
-      <TouchableOpacity style={styles.signOutBtn} onPress={handleSignOut}>
-        <MaterialCommunityIcons name="logout" size={18} color="#FF4444" />
-        <Text style={styles.signOutText}>Sign Out</Text>
-      </TouchableOpacity>
 
       {/* Danger zone */}
       <View style={styles.dangerZone}>
