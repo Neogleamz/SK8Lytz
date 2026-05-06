@@ -52,54 +52,42 @@ export const SkateGroupCard = ({
           {/* Glassmorphism Refraction */}
           <View style={styles.skateCardRefraction} />
 
-          {/* TOP BAR: Avatar & Status */}
+          {/* TOP BAR: Skates & Power */}
           <View style={styles.skateCardHeader}>
-            <View style={styles.avatarPill}>
-              {userProfile && userProfile.avatar_url ? (
-                <Text>😎</Text> // Fallback until avatar config is wired deeply
-              ) : (
-                <MaterialCommunityIcons name="skate" size={14} color="#FFF" />
-              )}
-              <View style={[styles.avatarStatusDot, { backgroundColor: isPoweredOn ? Colors.success : '#555' }]} />
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {group.deviceIds.map((id) => {
+                const isDeviceOn = powerStates[id] !== false;
+                return (
+                  <View key={id} style={styles.avatarPill}>
+                    <MaterialCommunityIcons name="roller-skate" size={14} color="#FFF" />
+                    <View style={[styles.avatarStatusDot, { backgroundColor: isDeviceOn ? Colors.success : Colors.error }]} />
+                  </View>
+                );
+              })}
             </View>
-            <View style={styles.telemetryContainer}>
-              <View style={styles.telemetryItem}>
-                <MaterialCommunityIcons name="bluetooth" size={12} color="#AAA" />
-                <View style={styles.rssiBars}>
-                  <View style={[styles.rssiBar, { height: 4, backgroundColor: Colors.success }]} />
-                  <View style={[styles.rssiBar, { height: 7, backgroundColor: Colors.success }]} />
-                  <View style={[styles.rssiBar, { height: 10, backgroundColor: Colors.success }]} />
-                </View>
-              </View>
+
+            {/* Power Button moved from footer */}
+            <View style={[styles.powerIconCircle, { backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255,255,255,0.05)', marginLeft: 'auto' }]}>
+              <MaterialCommunityIcons 
+                name="power" 
+                size={16} 
+                color={isPoweredOn ? Colors.primary : '#666'} 
+              />
             </View>
           </View>
 
           {/* MAIN CONTENT: Name & Pattern */}
-          <View style={styles.skateCardContent}>
-            <Text style={styles.skateCardGroupName}>
+          <View style={[styles.skateCardContent, { marginBottom: 0 }]}>
+            <Text style={styles.skateCardGroupName} numberOfLines={1}>
               {group.name.toUpperCase()}
             </Text>
             
             <View style={styles.patternPill}>
               <View style={[styles.patternDot, { backgroundColor: isPoweredOn ? colors[0] : '#555' }]} />
-              <Text style={styles.patternName}>
+              <Text style={styles.patternName} numberOfLines={1}>
                 {isPoweredOn ? (lastPattern || 'ACTIVE') : 'POWERED OFF'}
               </Text>
             </View>
-          </View>
-
-          {/* BOTTOM DECOR: Device Count */}
-          <View style={styles.skateCardFooter}>
-             <Text style={styles.deviceCountText}>
-               {group.deviceIds.length} {group.deviceIds.length === 1 ? 'DEVICE' : 'DEVICES'} PAIRED
-             </Text>
-             <View style={[styles.powerIconCircle, { backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255,255,255,0.05)' }]}>
-               <MaterialCommunityIcons 
-                 name="power" 
-                 size={16} 
-                 color={isPoweredOn ? Colors.primary : '#666'} 
-               />
-             </View>
           </View>
         </View>
       </LinearGradient>
