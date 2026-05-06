@@ -11,6 +11,7 @@ interface SkateGroupCardProps {
   onLongPress: () => void;
   colors: string[];
   lastPattern?: string;
+  isActive?: boolean;
   userProfile: any;
   powerStates: Record<string, boolean>;
   Colors: ThemePalette;
@@ -28,6 +29,7 @@ export const SkateGroupCard = ({
   onLongPress,
   colors,
   lastPattern,
+  isActive,
   userProfile,
   powerStates,
   Colors,
@@ -40,13 +42,13 @@ export const SkateGroupCard = ({
       onPress={onPress}
       onLongPress={onLongPress}
       activeOpacity={0.85}
-      style={styles.skateCardWrapper}
+      style={[styles.skateCardWrapper, { opacity: isActive ? 1 : 0.65 }]}
     >
       <LinearGradient
         colors={isPoweredOn ? (colors as any) : ['#333', '#1a1a1a']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.skateCardGradient}
+        style={[styles.skateCardGradient, isActive && { borderColor: Colors.primary, borderWidth: 1.5 }]}
       >
         <View style={styles.skateCardInner}>
           {/* Glassmorphism Refraction */}
@@ -77,12 +79,12 @@ export const SkateGroupCard = ({
           </View>
 
           {/* MAIN CONTENT: Name & Pattern */}
-          <View style={[styles.skateCardContent, { marginBottom: 0 }]}>
-            <Text style={styles.skateCardGroupName} numberOfLines={1}>
+          <View style={[styles.skateCardContent, { marginBottom: 0, alignItems: 'center', justifyContent: 'center' }]}>
+            <Text style={[styles.skateCardGroupName, { textAlign: 'center' }]} numberOfLines={1}>
               {group.name.toUpperCase()}
             </Text>
             
-            <View style={styles.patternPill}>
+            <View style={[styles.patternPill, { alignSelf: 'center' }]}>
               <View style={[styles.patternDot, { backgroundColor: isPoweredOn ? colors[0] : '#555' }]} />
               <Text style={styles.patternName} numberOfLines={1}>
                 {isPoweredOn ? (lastPattern || 'ACTIVE') : 'POWERED OFF'}

@@ -19,6 +19,7 @@ interface MySkatesSlabProps {
   customGroups: CustomGroup[];
   lastGroupPatterns: Record<string, any>;
   allDevices: any[];
+  connectedDevices: any[];
   registeredDevices: any[];
   powerStates: Record<string, boolean>;
   userProfile: UserProfile | null;
@@ -33,6 +34,7 @@ const MySkatesSlab = React.memo(({
   customGroups,
   lastGroupPatterns,
   allDevices,
+  connectedDevices,
   registeredDevices,
   powerStates,
   userProfile,
@@ -49,10 +51,12 @@ const MySkatesSlab = React.memo(({
           const snapshot = lastGroupPatterns[group.id];
           const fallbackColors = [Colors.primary || '#00F0FF', Colors.secondary || '#7000FF'];
           const cardColors = resolveGroupCardColors(snapshot, fallbackColors);
+          const isActive = group.deviceIds.some(id => connectedDevices.some(d => d.id.toUpperCase() === id));
           return (
             <SkateGroupCard
               key={group.id}
               group={group}
+              isActive={isActive}
               colors={cardColors}
               lastPattern={snapshot?.patternLabel}
               userProfile={userProfile}

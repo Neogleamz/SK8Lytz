@@ -981,6 +981,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   customGroups={customGroups}
                   lastGroupPatterns={lastGroupPatterns}
                   allDevices={allDevices}
+                  connectedDevices={connectedDevices}
                   registeredDevices={registeredDevices}
                   powerStates={powerStates}
                   userProfile={userProfile}
