@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Text, TextInput, TouchableOpacity, View, Platform } from 'react-native';
 
 const WebFormWrapper = Platform.OS === 'web' 
-  ? (props: any) => React.createElement('form', { onSubmit: (e: any) => e.preventDefault(), style: { width: '100%', margin: 0, padding: 0 } }, props.children) 
+  ? (props: any) => React.createElement('form', { onSubmit: (e: any) => e.preventDefault(), style: { width: '100%', margin: 0, padding: 0, display: 'flex', flexDirection: 'column' } }, props.children) 
   : React.Fragment;
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
