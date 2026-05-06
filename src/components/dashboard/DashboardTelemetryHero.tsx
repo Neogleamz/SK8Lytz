@@ -31,7 +31,7 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
   // Screen layout logic (half-circle gauge to save vertical space)
   const windowWidth = Dimensions.get('window').width;
   const isWeb = Dimensions.get('window').width > 600;
-  const padding = Spacing.md * 2;
+  const padding = Spacing.md * 4; // Increased padding to shrink gauge size
   const svgWidth = isWeb ? 400 - padding : windowWidth - padding; 
   
   const strokeWidth = 24; // Thicker, more aggressive gauge
@@ -75,17 +75,14 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
   return (
     <View style={styles.container}>
       
-      {/* HEADER ROW */}
-      <View style={styles.headerRow}>
-        <MaterialCommunityIcons name="broadcast" size={16} color={Colors.primary} />
-        <Text style={[styles.headerText, { color: Colors.primary }]}>LIVE TELEMETRY</Text>
-        <View style={{ flex: 1 }} />
-        <MaterialCommunityIcons name="record-circle-outline" size={16} color={Colors.error} />
-        <Text style={[styles.headerText, { color: Colors.error, textShadowColor: Colors.error, textShadowRadius: 8 }]}>REC</Text>
+      {/* FLOATING REC INDICATOR */}
+      <View style={{ position: 'absolute', top: Spacing.md, right: Spacing.md, flexDirection: 'row', alignItems: 'center', gap: 4, zIndex: 10 }}>
+        <MaterialCommunityIcons name="record-circle-outline" size={12} color={Colors.error} />
+        <Text style={[styles.headerText, { fontSize: 10, color: Colors.error, textShadowColor: Colors.error, textShadowRadius: 8 }]}>REC</Text>
       </View>
 
       {/* MASSIVE NEON GAUGE (Half Circle) */}
-      <View style={{ width: svgWidth, height: cy + 10, alignItems: 'center', alignSelf: 'center', marginTop: Spacing.sm }}>
+      <View style={{ width: svgWidth, height: cy + 10, alignItems: 'center', alignSelf: 'center', marginTop: Spacing.xl }}>
         <Svg width={svgWidth} height={cy + 10} viewBox={`0 0 ${svgWidth} ${cy + 10}`}>
           <Defs>
             <SvgLinearGradient id="neonGradient" x1="0%" y1="0%" x2="100%" y2="0%">
@@ -237,7 +234,9 @@ const styles = StyleSheet.create({
     marginTop: -8,
   },
   metricsGrid: {
-    padding: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.md,
+    paddingTop: Spacing.sm,
     gap: Spacing.sm,
   },
   metricsRow: {
