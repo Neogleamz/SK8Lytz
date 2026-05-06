@@ -1009,7 +1009,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           </View>
 
           {/* UNIVERSAL SLIDERS FOOTER - Hidden in FAVORITES only */}
-          {activeMode !== 'FAVORITES' && (
+          {activeMode !== 'FAVORITES' && activeMode !== 'CAMERA' && (
             <UniversalSlidersFooter
               activeMode={activeMode}
               fixedSubMode={fixedSubMode}
