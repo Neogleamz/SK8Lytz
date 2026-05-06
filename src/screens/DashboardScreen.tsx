@@ -96,7 +96,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     clearPendingRegistrations,
     setPendingRegistrations,
     bleState,
-    bleGateState,
     bleGateRef,
     pingDevice,
     startSweeper,
@@ -486,11 +485,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   useEffect(() => {
     // If the controller is open, but all devices have completely disconnected
     // AND AutoRecovery has finally given up (no ghosts), kick the user to the Scanner UI.
-    if (isControllerOpen && connectedDevices.length === 0 && ghostedDeviceIds.length === 0 && bleGateState !== 'CONNECTING') {
+    if (isControllerOpen && connectedDevices.length === 0 && ghostedDeviceIds.length === 0) {
+      // Do not fallback if the BLE engine is actively negotiating a connection or teardown.
+      if (bleState === 'CONNECTING' || bleState === 'DISCONNECTING') return;
+
       AppLogger.log('DASHBOARD_STATE', { event: 'auto_closed_no_devices' });
       setIsControllerOpen(false);
     }
-  }, [isControllerOpen, connectedDevices.length, ghostedDeviceIds.length, bleGateState]);
+  }, [isControllerOpen, connectedDevices.length, ghostedDeviceIds.length, bleState]);
 
   useEffect(() => {
     const handleBackPress = () => {
