@@ -101,6 +101,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     startSweeper,
     stopSweeper,
     isSweeperActive,
+    ghostedDeviceIds,
     // NOTE: registeredMacs is passed to useBLE after useRegistration() via registeredMacsRef below
   } = useBLE();
 
@@ -310,9 +311,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     const sub = AppState.addEventListener('change', (nextState: AppStateStatus) => {
       if (nextState === 'background' || nextState === 'inactive') {
         stopSweeper();
-        // KEEPALIVE: App is backgrounding — skip the 60s window and disconnect immediately.
-        // A backgrounded app should not hold open GATT sessions (battery + OS resource concern).
-        forceDisconnect();
+        // Option A: We no longer force disconnect on background.
+        // This allows GATT sessions to stay alive for Music/Street mode
+        // and enables AutoRecovery if they drop organically.
       } else if (nextState === 'active') {
         if (isBluetoothEnabled && isBluetoothSupported) startSweeper();
       }
@@ -479,6 +480,16 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     setIsControllerOpen(false);    // Close UI instantly — feels snappy
     disconnectFromDevice();         // Fire-and-forget BLE teardown — prevents stale connections accumulating when switching groups
   }, [disconnectFromDevice]);
+
+  // Option A Fallback: Prevent getting stranded on a blue screen
+  useEffect(() => {
+    // If the controller is open, but all devices have completely disconnected
+    // AND AutoRecovery has finally given up (no ghosts), kick the user to the Scanner UI.
+    if (isControllerOpen && connectedDevices.length === 0 && ghostedDeviceIds.length === 0) {
+      AppLogger.log('DASHBOARD_STATE', { event: 'auto_closed_no_devices' });
+      setIsControllerOpen(false);
+    }
+  }, [isControllerOpen, connectedDevices.length, ghostedDeviceIds.length]);
 
   useEffect(() => {
     const handleBackPress = () => {

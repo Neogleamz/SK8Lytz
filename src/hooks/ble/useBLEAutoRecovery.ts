@@ -48,7 +48,8 @@ export function useBLEAutoRecovery({
 
   // After this many failures we give up and eject the device from the UI.
   // Prevents permanent dark-device limbo when a Zengge chip is in a hard soft-lock.
-  const MAX_RECOVERY_ATTEMPTS = 8;
+  // 720 attempts * ~5s backoff ceiling = ~60 minutes of background recovery attempts.
+  const MAX_RECOVERY_ATTEMPTS = 720;
 
   const initiateRecovery = useCallback((deviceId: string) => {
     // If already recovering, ignore
