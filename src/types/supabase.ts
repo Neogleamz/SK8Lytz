@@ -31,6 +31,10 @@ export interface Database {
       sessions: AnyTable;
       product_catalog: AnyTable;
       compliance_records: AnyTable;
+      skate_sessions: AnyTable;
+      crew_memberships: AnyTable;
+      crew_sessions: AnyTable;
+      push_tokens: AnyTable;
       [key: string]: AnyTable;
     };
     Views: Record<string, { Row: AnyRow }>;

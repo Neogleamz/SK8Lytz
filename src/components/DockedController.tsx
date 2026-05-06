@@ -68,6 +68,8 @@ import CommunityModal from './CommunityModal';
 import MarqueeText from './MarqueeText';
 import PositionalGradientBuilder from './PositionalGradientBuilder';
 import SessionSummaryModal from './SessionSummaryModal';
+import { useGlobalTelemetry } from '../hooks/useGlobalTelemetry';
+import { LiveTelemetryHUD } from './dashboard/LiveTelemetryHUD';
 
 
 
@@ -149,7 +151,6 @@ interface Sk8lytzControllerProps {
   /** Called with full scene snapshot whenever any mode/color changes (leader only) */
   onCrewSceneChange?: (scene: Record<string, any>) => void;
   /** Triggered to persist the active pattern name + color snapshot to dashboard group persistent storage */
-  onPatternChanged?: (patternName: string, snapshot: import('../types/dashboard.types').GroupPatternSnapshot, lastPayload?: number[]) => void;
   appSettings?: Record<string, string | boolean>;
 }
 
@@ -232,6 +233,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       setLastSentPayload([...payload]);
       await optimisticWrite(payload);
     };
+
+    // ── Global Telemetry Engine ─────────────────────────────────────────────
+    const { gpsSpeed, peakGForce, sessionDistanceMiles, sessionDurationSec } = useGlobalTelemetry(true);
 
 
 
@@ -342,8 +346,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       isStreetBraking,
       motionState,
       motionStateRef,
-      gpsSpeed,
-      peakGForce,
       applyStreetPattern,
       streetDistribution,
       setStreetDistribution,
@@ -355,11 +357,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       activeProduct,
       brightness,
       speed,
-      deviceContext: { target: 'none' }, // Temporary
-      sessionStartTimeRef,
-      sessionSpeedSamplesRef,
-      sessionDistanceMilesRef,
-      sessionPeakSpeedRef,
+      deviceContext,
+      gpsSpeed,
+      peakGForce,
     });
 
     const captureEntireState = (override?: Record<string, any>) => baseCaptureEntireState(streetSensitivity, streetCruiseColor, streetBrakeColor, override);
@@ -828,6 +828,14 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             ))}
           </View>
         )}
+
+        {/* Live HUD Pill */}
+        <LiveTelemetryHUD
+          gpsSpeed={gpsSpeed}
+          peakGForce={peakGForce}
+          sessionDistanceMiles={sessionDistanceMiles}
+          sessionDurationSec={sessionDurationSec}
+        />
 
         {/* Visual Product Shape Selector/Indicator - ENLARGED FOCUS */}
         <View style={styles.visualizerWrapper}>

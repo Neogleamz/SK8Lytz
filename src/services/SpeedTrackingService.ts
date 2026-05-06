@@ -53,6 +53,7 @@ export interface ILifetimeStats {
   totalDurationSec: number;
   lifetimePeakSpeedMph: number;
   lifetimeAvgSpeedMph: number;
+  lifetimePeakGForce: number;
   lifetimeCalories: number;
 }
 
@@ -173,7 +174,7 @@ class SpeedTrackingServiceClass {
   async fetchLifetimeStats(): Promise<ILifetimeStats> {
     const empty: ILifetimeStats = {
       totalSessions: 0, totalDistanceMiles: 0, totalDurationSec: 0,
-      lifetimePeakSpeedMph: 0, lifetimeAvgSpeedMph: 0, lifetimeCalories: 0,
+      lifetimePeakSpeedMph: 0, lifetimeAvgSpeedMph: 0, lifetimePeakGForce: 0, lifetimeCalories: 0,
     };
     if (!supabase) return empty;
 
@@ -183,7 +184,7 @@ class SpeedTrackingServiceClass {
 
       const { data, error } = await supabase
         .from('skate_sessions')
-        .select('duration_sec, distance_miles, avg_speed_mph, peak_speed_mph, calories')
+        .select('duration_sec, distance_miles, avg_speed_mph, peak_speed_mph, peak_gforce, calories')
         .eq('user_id', user.id);
 
       if (error || !data || data.length === 0) return empty;
@@ -193,6 +194,7 @@ class SpeedTrackingServiceClass {
       const totalDurationSec = data.reduce((s: number, r: Record<string, any>) => s + Number(r.duration_sec), 0);
       const lifetimePeakSpeedMph = Math.max(...data.map((r: Record<string, any>) => Number(r.peak_speed_mph)));
       const lifetimeAvgSpeedMph = data.reduce((s: number, r: Record<string, any>) => s + Number(r.avg_speed_mph), 0) / totalSessions;
+      const lifetimePeakGForce = Math.max(...data.map((r: Record<string, any>) => Number(r.peak_gforce ?? 0)));
       const lifetimeCalories = data.reduce((s: number, r: Record<string, any>) => s + (r.calories ?? 0), 0);
 
       return {
@@ -201,6 +203,7 @@ class SpeedTrackingServiceClass {
         totalDurationSec,
         lifetimePeakSpeedMph: parseFloat(lifetimePeakSpeedMph.toFixed(1)),
         lifetimeAvgSpeedMph: parseFloat(lifetimeAvgSpeedMph.toFixed(1)),
+        lifetimePeakGForce: parseFloat(lifetimePeakGForce.toFixed(1)),
         lifetimeCalories,
       };
     } catch {

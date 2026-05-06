@@ -532,6 +532,11 @@ class ProfileService {
     sessionCount: number;
     lastActive: string | null;
     topScene: string | null;
+    totalDistanceMiles: number;
+    avgSpeedMph: number;
+    peakSpeedMph: number;
+    peakGForce: number;
+    totalDurationSec: number;
   }> {
     const { data, error } = await supabase
       .from('crew_sessions')
@@ -556,7 +561,38 @@ class ProfileService {
       ? Object.keys(tally).reduce((a, b) => tally[a] > tally[b] ? a : b)
       : null;
 
-    return { sessionCount, lastActive, topScene };
+    let totalDistanceMiles = 0;
+    let avgSpeedMph = 0;
+    let peakSpeedMph = 0;
+    let peakGForce = 0;
+    let totalDurationSec = 0;
+
+    const sessionIds = data.map(s => s.id);
+    if (sessionIds.length > 0) {
+      const { data: skateData } = await supabase
+        .from('skate_sessions')
+        .select('distance_miles, duration_sec, avg_speed_mph, peak_speed_mph, peak_gforce')
+        .in('crew_session_id', sessionIds);
+
+      if (skateData && skateData.length > 0) {
+        totalDistanceMiles = skateData.reduce((s: number, r: any) => s + Number(r.distance_miles ?? 0), 0);
+        totalDurationSec = skateData.reduce((s: number, r: any) => s + Number(r.duration_sec ?? 0), 0);
+        peakSpeedMph = Math.max(0, ...skateData.map((r: any) => Number(r.peak_speed_mph ?? 0)));
+        peakGForce = Math.max(0, ...skateData.map((r: any) => Number(r.peak_gforce ?? 0)));
+        avgSpeedMph = skateData.reduce((s: number, r: any) => s + Number(r.avg_speed_mph ?? 0), 0) / skateData.length;
+      }
+    }
+
+    return { 
+      sessionCount, 
+      lastActive, 
+      topScene,
+      totalDistanceMiles: parseFloat(totalDistanceMiles.toFixed(2)),
+      avgSpeedMph: parseFloat(avgSpeedMph.toFixed(1)),
+      peakSpeedMph: parseFloat(peakSpeedMph.toFixed(1)),
+      peakGForce: parseFloat(peakGForce.toFixed(1)),
+      totalDurationSec
+    };
   }
   /**
    * Fetch all members of a permanent crew with their display names and roles.
