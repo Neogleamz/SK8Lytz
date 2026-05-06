@@ -421,16 +421,22 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   retriggerAutoConnectRef.current = retriggerAutoConnect;
 
   const [isControllerOpen, setIsControllerOpen] = useState(false);
+  // Logical session flag — NOT the raw BLE connection state.
+  // Starts when the user taps a group/device to connect, ends ONLY on explicit disconnect.
+  // This ensures a brief BLE hiccup never wipes the in-progress skate session.
+  const [isSkateSessionActive, setIsSkateSessionActive] = useState(false);
 
   // ── Global Telemetry ──
-  const { 
-    gpsSpeed, 
-    peakGForce, 
-    sessionDistanceMiles, 
+  // Pass `isSkateSessionActive` (logical) NOT `isActuallyConnected` (raw BLE).
+  // Session persists through BLE drops — only ends on explicit user disconnect.
+  const {
+    gpsSpeed,
+    peakGForce,
+    sessionDistanceMiles,
     sessionDurationSec,
     sessionPeakSpeed,
     sessionAvgSpeed
-  } = useGlobalTelemetry(isActuallyConnected);
+  } = useGlobalTelemetry(isSkateSessionActive);
 
 
   // Voice command dispatch + notification init are now handled
@@ -515,8 +521,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, [sortedAllDevices, registeredDevices]);
 
   const handleDisconnect = useCallback(async () => {
-    setIsControllerOpen(false);    // Close UI instantly — feels snappy
-    disconnectFromDevice();         // Fire-and-forget BLE teardown — prevents stale connections accumulating when switching groups
+    setIsSkateSessionActive(false);  // End the logical session → commits GPS data
+    setIsControllerOpen(false);      // Close UI instantly — feels snappy
+    disconnectFromDevice();          // Fire-and-forget BLE teardown
   }, [disconnectFromDevice]);
 
   // Option A Fallback: Prevent getting stranded on a blue screen
@@ -810,6 +817,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           }
           // connectToDevices (gated) — additive connection, preserves existing group members.
           await connectToDevices([bleDevice]);
+          setIsSkateSessionActive(true);
           setIsControllerOpen(true);
           // NOTE: Hardware probe (0x63) intentionally NOT fired here.
           // hwSettings are loaded from DeviceRepository on mount — registered devices
@@ -1004,6 +1012,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   onGroupPress={(group: CustomGroup) => {
                     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
                     if (devicesToConnect.length > 0) {
+                      setIsSkateSessionActive(true);
                       setIsControllerOpen(true);
                       connectToDevices(devicesToConnect);
                     } else {
@@ -1024,6 +1033,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
                     if (devicesToConnect.length > 0) {
                       connectToDevices(devicesToConnect);
+                      setIsSkateSessionActive(true);
                       setIsControllerOpen(true);
                       // Small delay so the controller mounts before we switch mode
                       setTimeout(() => dockedControllerRef.current?.setActiveMode('MUSIC'), 300);
@@ -1037,6 +1047,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
                     if (devicesToConnect.length > 0) {
                       connectToDevices(devicesToConnect);
+                      setIsSkateSessionActive(true);
                       setIsControllerOpen(true);
                       setTimeout(() => dockedControllerRef.current?.setActiveMode('CAMERA'), 300);
                     } else {
@@ -1066,6 +1077,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
                     if (devicesToConnect.length > 0) {
                       connectToDevices(devicesToConnect);
+                      setIsSkateSessionActive(true);
                       setIsControllerOpen(true);
                       setTimeout(() => {
                         dockedControllerRef.current?.loadFavorite(lastFav);

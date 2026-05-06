@@ -12,9 +12,22 @@ export interface GlobalTelemetryState {
   peakGForce: number;
   sessionDistanceMiles: number;
   sessionDurationSec: number;
+  sessionPeakSpeed: number;
+  sessionAvgSpeed: number;
 }
 
-export function useGlobalTelemetry(isActuallyConnected: boolean): GlobalTelemetryState {
+/**
+ * useGlobalTelemetry — GPS + Accelerometer session tracker.
+ *
+ * ARCHITECTURE NOTE (v3.3.2):
+ * `isSkateSessionActive` is a LOGICAL session flag, NOT the raw BLE `isActuallyConnected` boolean.
+ * The caller (DashboardScreen) sets this to `true` when the user initiates a skate session
+ * and `false` ONLY when the user explicitly disconnects (handleDisconnect / forceDisconnect).
+ *
+ * This decouples the GPS/timer session from the fragile BLE radio link so that brief
+ * signal drops or OS-level connection management do NOT zero out the in-progress session.
+ */
+export function useGlobalTelemetry(isSkateSessionActive: boolean): GlobalTelemetryState {
   const [gpsSpeed, setGpsSpeed] = useState<number>(0);
   const [peakGForce, setPeakGForce] = useState<number>(1.0);
   const [sessionDistanceMiles, setSessionDistanceMiles] = useState<number>(0);
@@ -33,13 +46,16 @@ export function useGlobalTelemetry(isActuallyConnected: boolean): GlobalTelemetr
   const prevGRef = useRef(1.0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Commit session helper
+  // Stable ref so commitSession never closes over stale peakGForce state
+  const peakGForceRef = useRef(1.0);
+
+  // Commit session helper — called ONLY on explicit user disconnect
   const commitSession = useCallback(async () => {
     if (!sessionStartTimeRef.current) return;
-    
+
     const durationSec = (Date.now() - sessionStartTimeRef.current) / 1000;
     const distanceMiles = sessionDistanceMilesRef.current;
-    
+
     // Only save if meaningful distance traveled
     if (distanceMiles > 0.2) {
       const samples = sessionSpeedSamplesRef.current;
@@ -77,11 +93,37 @@ export function useGlobalTelemetry(isActuallyConnected: boolean): GlobalTelemetr
     setSessionAvgSpeed(0);
   }, []);
 
+  // ── Effect 1: Isolated 1-second UI timer ──────────────────────────────────
+  // Separated from the GPS/Accelerometer effect so it is NOT torn down and
+  // recreated every 80ms when the accelerometer updates peakGForce state.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    if (!isSkateSessionActive) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = null;
+      return;
+    }
+
+    timerRef.current = setInterval(() => {
+      if (sessionStartTimeRef.current) {
+        setSessionDurationSec(Math.floor((Date.now() - sessionStartTimeRef.current) / 1000));
+      }
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = null;
+    };
+  }, [isSkateSessionActive]);
+
+  // ── Effect 2: GPS + Accelerometer sensors ────────────────────────────────
+  // Dependency array NO LONGER includes peakGForce — removing the accelerometer
+  // as a dependency prevents this effect from being destroyed/recreated every 80ms.
   useEffect(() => {
     if (Platform.OS === 'web') return;
 
-    if (isActuallyConnected) {
-      // Start Session
+    if (isSkateSessionActive) {
+      // Start Session accumulators (idempotent — guards against double-fire)
       if (!sessionStartTimeRef.current) {
         sessionStartTimeRef.current = Date.now();
         sessionDistanceMilesRef.current = 0;
@@ -95,13 +137,6 @@ export function useGlobalTelemetry(isActuallyConnected: boolean): GlobalTelemetr
         AppLogger.log('GLOBAL_TELEMETRY_STARTED');
       }
 
-      // Start duration ticker for UI
-      timerRef.current = setInterval(() => {
-        if (sessionStartTimeRef.current) {
-          setSessionDurationSec((Date.now() - sessionStartTimeRef.current) / 1000);
-        }
-      }, 1000);
-
       // Start Location Tracking
       (async () => {
         try {
@@ -111,7 +146,7 @@ export function useGlobalTelemetry(isActuallyConnected: boolean): GlobalTelemetr
              const reG = await checkPermission('LOCATION');
              if (!reG) throw new Error('Location permission denied via modal');
           }
-          
+
           locationSubRef.current = await Location.watchPositionAsync(
               { accuracy: Location.Accuracy.Balanced, timeInterval: 1000, distanceInterval: 1 },
               (pos) => {
@@ -126,7 +161,7 @@ export function useGlobalTelemetry(isActuallyConnected: boolean): GlobalTelemetr
                     const distDelta = spdMph * hoursDelta;
                     sessionDistanceMilesRef.current += distDelta;
                     setSessionDistanceMiles(sessionDistanceMilesRef.current);
-                    
+
                     // Inject to Crew Service if active
                     if (crewService.currentSessionId) {
                       crewService.sessionTelemetry.distanceMiles += distDelta;
@@ -140,7 +175,7 @@ export function useGlobalTelemetry(isActuallyConnected: boolean): GlobalTelemetr
                   sessionPeakSpeedRef.current = spdMph;
                   setSessionPeakSpeed(spdMph);
                 }
-                
+
                 // Update average speed
                 const samples = sessionSpeedSamplesRef.current;
                 const avgSpeedMph = samples.length > 0
@@ -169,10 +204,12 @@ export function useGlobalTelemetry(isActuallyConnected: boolean): GlobalTelemetr
           ? parseFloat(newG.toFixed(2))
           : parseFloat((prevGRef.current * 0.95 + 1.0 * 0.05).toFixed(2));
         prevGRef.current = decayed;
-        
-        if (Math.abs(decayed - peakGForce) > 0.05) {
-          setPeakGForce(decayed);
-        }
+
+        // Write to ref first (no setState) to avoid triggering effect re-runs
+        peakGForceRef.current = decayed;
+
+        // Only push to React state when the change is perceptible to avoid excessive re-renders
+        setPeakGForce(prev => Math.abs(decayed - prev) > 0.05 ? decayed : prev);
 
         if (decayed > sessionPeakGForceRef.current) {
           sessionPeakGForceRef.current = decayed;
@@ -185,15 +222,20 @@ export function useGlobalTelemetry(isActuallyConnected: boolean): GlobalTelemetr
           locationSubRef.current.remove();
           locationSubRef.current = null;
         }
-        if (timerRef.current) clearInterval(timerRef.current);
       };
     } else {
-      // Disconnected: stop tracking and evaluate commit
+      // isSkateSessionActive just flipped false — user explicitly disconnected.
+      // Commit and zero out the session.
       if (sessionStartTimeRef.current) {
         commitSession();
       }
+      setGpsSpeed(0);
     }
-  }, [isActuallyConnected, peakGForce, commitSession]);
+  // NOTE: peakGForce intentionally NOT in this dependency array.
+  // The accelerometer updates its own state internally. Including peakGForce
+  // here would destroy and recreate this effect 12x/second while skating.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSkateSessionActive, commitSession]);
 
   return {
     gpsSpeed,

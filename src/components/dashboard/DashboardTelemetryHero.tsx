@@ -107,9 +107,14 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
   });
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
-  const formatDuration = (secs: number) => {
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
+  const formatDuration = (rawSecs: number) => {
+    const total = Math.floor(rawSecs);
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const s = total % 60;
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
   const kcalBurned = Math.round(sessionDistanceMiles * 65);
