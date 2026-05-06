@@ -1,8 +1,12 @@
-import React, { useCallback, useRef, useState } from 'react';
-import { ScrollView, FlatList, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
+import { ScrollView, FlatList, StyleSheet, View, Text, TouchableOpacity, Animated } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { Spacing } from '../../theme/theme';
 import { PatternCard } from './PatternCard';
+
+
 
 interface PatternPickerTabProps {
   selectedEffectId: number;
@@ -17,6 +21,64 @@ interface PatternPickerTabProps {
 }
 
 const CATEGORIES = ['Solid', 'Rainbow', 'Sparkle', 'Chase', 'Marquee', 'Wave', 'Breathe', 'Test'];
+
+const CATEGORY_STYLES: Record<string, { icon: string, colors: string[], start?: any, end?: any }> = {
+  Solid: { icon: 'format-color-fill', colors: ['#00F0FF', '#0080FF'] },
+  Rainbow: { icon: 'palette', colors: ['#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF'], start: {x: 0, y: 0}, end: {x: 1, y: 0} },
+  Sparkle: { icon: 'star-four-points', colors: ['#222222', '#666666', '#222222'], start: {x: 0, y: 0}, end: {x: 1, y: 1} },
+  Chase: { icon: 'run-fast', colors: ['#FF0055', '#330011'], start: {x: 0, y: 0}, end: {x: 1, y: 0} },
+  Marquee: { icon: 'dots-horizontal-circle-outline', colors: ['#FF9900', '#331100', '#FF9900'], start: {x: 0, y: 0}, end: {x: 1, y: 0} },
+  Wave: { icon: 'waveform', colors: ['#0000FF', '#00FFFF', '#0000FF'], start: {x: 0, y: 0}, end: {x: 1, y: 0} },
+  Breathe: { icon: 'weather-windy', colors: ['#00F0FF', '#002244', '#00F0FF'], start: {x: 0, y: 0}, end: {x: 1, y: 0} },
+  Test: { icon: 'test-tube', colors: ['#444444', '#111111'] },
+};
+
+const AnimatedCategoryPill = ({ cat, isActive, onPress }: { cat: string, isActive: boolean, onPress: () => void }) => {
+  const scale = useRef(new Animated.Value(isActive ? 1.05 : 1)).current;
+  const opacity = useRef(new Animated.Value(isActive ? 1 : 0.4)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scale, {
+        toValue: isActive ? 1.1 : 1,
+        useNativeDriver: true,
+        friction: 6,
+        tension: 100,
+      }),
+      Animated.timing(opacity, {
+        toValue: isActive ? 1 : 0.4,
+        duration: 200,
+        useNativeDriver: true,
+      })
+    ]).start();
+  }, [isActive, scale, opacity]);
+
+  const styleData = CATEGORY_STYLES[cat] || CATEGORY_STYLES['Solid'];
+
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+      <Animated.View style={[
+        styles.categoryPill,
+        { transform: [{ scale }], overflow: 'hidden', borderWidth: isActive ? 2 : 1, borderColor: isActive ? '#FFF' : 'rgba(255,255,255,0.1)', paddingHorizontal: 0, paddingVertical: 0 }
+      ]}>
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
+          <LinearGradient
+            colors={styleData.colors}
+            start={styleData.start}
+            end={styleData.end}
+            style={StyleSheet.absoluteFill}
+          />
+        </Animated.View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.md, paddingVertical: 8, zIndex: 2 }}>
+          <MaterialCommunityIcons name={styleData.icon as any} size={14} color="#FFF" style={{ textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 4 }} />
+          <Text style={[styles.categoryText, { color: '#FFF', textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } }]}>
+            {cat.toUpperCase()}
+          </Text>
+        </View>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+};
 
 export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
   selectedEffectId, fgColor, bgColor, speed, brightness, points, direction, onSelect, Colors
@@ -72,23 +134,14 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.wheelContent}
         >
-          {CATEGORIES.map((cat) => {
-            const isActive = activeCategory === cat;
-            return (
-              <TouchableOpacity
-                key={cat}
-                style={[
-                  styles.categoryPill,
-                  isActive && { backgroundColor: 'rgba(0,240,255,0.1)', borderColor: '#00F0FF' }
-                ]}
-                onPress={() => setActiveCategory(cat)}
-              >
-                <Text style={[styles.categoryText, isActive && { color: '#00F0FF' }]}>
-                  {cat.toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+          {CATEGORIES.map((cat) => (
+            <AnimatedCategoryPill
+              key={cat}
+              cat={cat}
+              isActive={activeCategory === cat}
+              onPress={() => setActiveCategory(cat)}
+            />
+          ))}
         </ScrollView>
       </View>
 
