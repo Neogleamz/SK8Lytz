@@ -264,7 +264,7 @@ const TelemetryPill = ({ label, value, unit, accent }:
 const styles = StyleSheet.create({
   container: {
     marginHorizontal: Layout.padding,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.xxl,
     marginTop: -Spacing.md, // pull up tight against Crewz Hub
   },
   speedOverlay: {
