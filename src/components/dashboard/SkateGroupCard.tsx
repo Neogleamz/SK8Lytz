@@ -17,6 +17,10 @@ interface SkateGroupCardProps {
   powerStates: Record<string, boolean>;
   Colors: ThemePalette;
   styles: any;
+  onPowerPress?: () => void;
+  onMusicPress?: () => void;
+  onCameraPress?: () => void;
+  onFavoritePress?: () => void;
 }
 
 /**
@@ -35,7 +39,11 @@ export const SkateGroupCard = ({
   userProfile,
   powerStates,
   Colors,
-  styles
+  styles,
+  onPowerPress,
+  onMusicPress,
+  onCameraPress,
+  onFavoritePress,
 }: SkateGroupCardProps) => {
   const isPoweredOn = group.deviceIds.every(id => powerStates[id] !== false);
 
@@ -143,7 +151,7 @@ export const SkateGroupCard = ({
             justifyContent: 'space-evenly',
             paddingVertical: 8
           }}>
-            <TouchableOpacity activeOpacity={0.7} onPress={() => {}}>
+            <TouchableOpacity activeOpacity={0.7} onPress={onPowerPress}>
               <View style={[styles.powerIconCircle, { backgroundColor: isPoweredOn ? 'rgba(255, 255, 255, 0.15)' : 'transparent', width: 34, height: 34 }]}>
                 <MaterialCommunityIcons 
                   name="power" 
@@ -154,19 +162,19 @@ export const SkateGroupCard = ({
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity activeOpacity={0.7} onPress={() => {}}>
+            <TouchableOpacity activeOpacity={0.7} onPress={onMusicPress}>
               <View style={[styles.powerIconCircle, { backgroundColor: 'transparent', width: 34, height: 34 }]}>
                 <MaterialCommunityIcons name="music-note" size={18} color="#FFF" />
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity activeOpacity={0.7} onPress={() => {}}>
+            <TouchableOpacity activeOpacity={0.7} onPress={onCameraPress}>
               <View style={[styles.powerIconCircle, { backgroundColor: 'transparent', width: 34, height: 34 }]}>
                 <MaterialCommunityIcons name="camera" size={18} color="#FFF" />
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity activeOpacity={0.7} onPress={() => {}}>
+            <TouchableOpacity activeOpacity={0.7} onPress={onFavoritePress}>
               <View style={[styles.powerIconCircle, { backgroundColor: 'transparent', width: 34, height: 34 }]}>
                 <MaterialCommunityIcons name="heart" size={16} color="#FFF" />
               </View>

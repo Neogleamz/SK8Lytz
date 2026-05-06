@@ -999,6 +999,55 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   }}
                   onGroupLongPress={(id: string) => openGroupRename(id)}
                   onSetupWizard={() => setViewState('SETUP_WIZARD')}
+                  onGroupPowerPress={(group: CustomGroup) => {
+                    // Toggle power for all devices in the group
+                    handlePowerToggle(group.deviceIds);
+                  }}
+                  onGroupMusicPress={(group: CustomGroup) => {
+                    // Connect to group then switch controller to MUSIC mode
+                    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
+                    if (devicesToConnect.length > 0) {
+                      connectToDevices(devicesToConnect);
+                      setIsControllerOpen(true);
+                      // Small delay so the controller mounts before we switch mode
+                      setTimeout(() => dockedControllerRef.current?.setActiveMode('MUSIC'), 300);
+                    } else {
+                      scanForPeripherals();
+                      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
+                    }
+                  }}
+                  onGroupCameraPress={(group: CustomGroup) => {
+                    // Connect to group then switch controller to CAMERA mode
+                    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
+                    if (devicesToConnect.length > 0) {
+                      connectToDevices(devicesToConnect);
+                      setIsControllerOpen(true);
+                      setTimeout(() => dockedControllerRef.current?.setActiveMode('CAMERA'), 300);
+                    } else {
+                      scanForPeripherals();
+                      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
+                    }
+                  }}
+                  onGroupFavoritePress={(group: CustomGroup, snapshot: any) => {
+                    // Apply last-used pattern snapshot directly without opening controller
+                    if (!snapshot) {
+                      Alert.alert('No Favorite', 'No previous pattern saved for this group yet. Use the controller to set one.');
+                      return;
+                    }
+                    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
+                    if (devicesToConnect.length > 0) {
+                      connectToDevices(devicesToConnect);
+                      setIsControllerOpen(true);
+                      setTimeout(() => {
+                        if (snapshot.mode && dockedControllerRef.current) {
+                          dockedControllerRef.current.applyCloudScene(snapshot);
+                        }
+                      }, 300);
+                    } else {
+                      scanForPeripherals();
+                      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
+                    }
+                  }}
                   Colors={Colors}
                   styles={styles}
                 />

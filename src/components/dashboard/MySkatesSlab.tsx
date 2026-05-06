@@ -26,6 +26,10 @@ interface MySkatesSlabProps {
   onGroupPress: (group: CustomGroup) => void;
   onGroupLongPress: (groupId: string) => void;
   onSetupWizard: () => void;
+  onGroupPowerPress: (group: CustomGroup) => void;
+  onGroupMusicPress: (group: CustomGroup) => void;
+  onGroupCameraPress: (group: CustomGroup) => void;
+  onGroupFavoritePress: (group: CustomGroup, snapshot: any) => void;
   Colors: any;
   styles: any;
 }
@@ -41,6 +45,10 @@ const MySkatesSlab = React.memo(({
   onGroupPress,
   onGroupLongPress,
   onSetupWizard,
+  onGroupPowerPress,
+  onGroupMusicPress,
+  onGroupCameraPress,
+  onGroupFavoritePress,
   Colors,
   styles,
 }: MySkatesSlabProps) => (
@@ -73,6 +81,10 @@ const MySkatesSlab = React.memo(({
               styles={styles}
               onPress={() => onGroupPress(group)}
               onLongPress={() => onGroupLongPress(group.id)}
+              onPowerPress={() => onGroupPowerPress(group)}
+              onMusicPress={() => onGroupMusicPress(group)}
+              onCameraPress={() => onGroupCameraPress(group)}
+              onFavoritePress={() => onGroupFavoritePress(group, snapshot)}
             />
           );
         })}
