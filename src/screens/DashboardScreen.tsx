@@ -41,6 +41,8 @@ import CrewMemberDashboard from '../components/CrewMemberDashboard';
 import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { RegisteredDevice, useRegistration } from '../hooks/useRegistration';
 import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
+import { useGlobalTelemetry } from '../hooks/useGlobalTelemetry';
+import { LiveTelemetryHUD } from '../components/dashboard/LiveTelemetryHUD';
 
 // ─── Phase 1 Domain Hooks ──────────────────────────────────────────────────────
 import { useDashboardAutoConnect } from '../hooks/useDashboardAutoConnect';
@@ -403,6 +405,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   retriggerAutoConnectRef.current = retriggerAutoConnect;
 
   const [isControllerOpen, setIsControllerOpen] = useState(false);
+
+  // ── Global Telemetry ──
+  const { gpsSpeed, peakGForce, sessionDistanceMiles, sessionDurationSec } = useGlobalTelemetry(isActuallyConnected);
 
 
   // Voice command dispatch + notification init are now handled
@@ -948,6 +953,18 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   styles={styles}
                 />
 
+
+                {/* SLAB 2.5: LIVE TELEMETRY HUD */}
+                {isActuallyConnected && (
+                  <View style={{ marginTop: Spacing.sm }}>
+                    <LiveTelemetryHUD 
+                      gpsSpeed={gpsSpeed} 
+                      peakGForce={peakGForce} 
+                      sessionDistanceMiles={sessionDistanceMiles} 
+                      sessionDurationSec={sessionDurationSec} 
+                    />
+                  </View>
+                )}
 
                 {/* SLAB 3: MY SKATES */}
                 <MySkatesSlab
