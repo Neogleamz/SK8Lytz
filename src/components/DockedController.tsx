@@ -661,9 +661,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
     const currentStatusText = React.useMemo(() => {
       switch (activeMode) {
-        case 'MULTIMODE':
+        case 'MULTIMODE': {
           const fixedClr = fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
-          return `Pro Effects - ${getColorName(fixedClr)}`;
+          const patternTemplate = SK8LYTZ_TEMPLATES.find(t => t.id === fixedPatternId);
+          const patternLabel = patternTemplate?.name ?? `Pattern ${fixedPatternId}`;
+          return `${patternLabel} - ${getColorName(fixedClr)}`;
+        }
         case 'BUILDER':
           return `Builder Mode`;
         case 'MUSIC':
@@ -675,7 +678,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
         default: return activeMode;
       }
-    }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, selectedPatternId, musicPatternId, selectedColor, isStreetBraking]);
+    }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, fixedPatternId, musicPatternId, musicMatrixStyle, selectedColor, isStreetBraking]);
     const visualizerColor = React.useMemo(() => {
       if (activeMode === 'MULTIMODE') {
         return fixedColorMode === 'FOREGROUND' ? fixedFgColor : fixedBgColor;
