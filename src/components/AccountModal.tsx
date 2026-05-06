@@ -539,7 +539,7 @@ const createStyles = (Colors: any) => StyleSheet.create({
   sheet: {
     backgroundColor: Colors.background ?? '#0D0D0D',
     borderTopLeftRadius: 26, borderTopRightRadius: 26,
-    maxHeight: '93%', minHeight: '70%', paddingTop: Spacing.xl,
+    height: '93%', paddingTop: Spacing.xl,
   },
   closeBtn:   { position: 'absolute', top: 16, right: 16, zIndex: 10, padding: Spacing.sm },
   sheetTitle: { color: Colors.text ?? '#FFF', fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: Spacing.lg },
