@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, AppState, Text, LogBox } from 'react-native';
+import { StyleSheet, View, AppState, Text, LogBox, Platform } from 'react-native';
 import { Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import DashboardScreen from './src/screens/DashboardScreen';
@@ -217,7 +217,13 @@ export default function App() {
 
   useEffect(() => {
     if (fontsLoaded) {
-      SplashScreen.hideAsync().catch(() => {});
+      if (Platform.OS === 'web') {
+        setTimeout(() => {
+          SplashScreen.hideAsync().catch(() => {});
+        }, 150);
+      } else {
+        SplashScreen.hideAsync().catch(() => {});
+      }
       AppLogger.log('APP_OPENED', { loadTimeMs: Date.now() - appStartTime });
       AppLogger.uploadLogsToSupabase();
       // Pre-warm ledger cache so loadSync() has data before any screen mounts.
