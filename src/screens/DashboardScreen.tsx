@@ -42,7 +42,7 @@ import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/Pro
 import { RegisteredDevice, useRegistration } from '../hooks/useRegistration';
 import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
 import { useGlobalTelemetry } from '../hooks/useGlobalTelemetry';
-import { LiveTelemetryHUD } from '../components/dashboard/LiveTelemetryHUD';
+import { DashboardTelemetryHero } from '../components/dashboard/DashboardTelemetryHero';
 
 // ─── Phase 1 Domain Hooks ──────────────────────────────────────────────────────
 import { useDashboardAutoConnect } from '../hooks/useDashboardAutoConnect';
@@ -956,7 +956,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
                 {/* SLAB 2.5: LIVE TELEMETRY HUD */}
                 <View style={{ marginTop: Spacing.sm }}>
-                  <LiveTelemetryHUD 
+                  <DashboardTelemetryHero 
                     gpsSpeed={gpsSpeed} 
                     peakGForce={peakGForce} 
                     sessionDistanceMiles={sessionDistanceMiles} 
