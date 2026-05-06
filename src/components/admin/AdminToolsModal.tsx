@@ -32,6 +32,7 @@ import { AdminRosterPanel } from './tools/AdminRosterPanel';
 import { AdminAuditLogViewer } from './tools/AdminAuditLogViewer';
 import { HardwareBlacklistPanel } from './tools/HardwareBlacklistPanel';
 import { FeatureFlagsPanel } from './tools/FeatureFlagsPanel';
+import GlobalAnalyticsPanel from './tools/GlobalAnalyticsPanel';
 
 
 type Tab = 'timeline' | 'stats' | 'device' | 'tools';
@@ -71,6 +72,7 @@ export default function AdminToolsModal({
   const [isAuditVisible, setIsAuditVisible] = useState(false);
   const [isBlacklistVisible, setIsBlacklistVisible] = useState(false);
   const [isFeatureFlagsVisible, setIsFeatureFlagsVisible] = useState(false);
+  const [isGlobalAnalyticsVisible, setIsGlobalAnalyticsVisible] = useState(false);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
 
   // ── Domain Hooks ────────────────────────────────────────────────────────────
@@ -200,6 +202,7 @@ export default function AdminToolsModal({
             setIsAuditVisible={setIsAuditVisible}
             setIsBlacklistVisible={setIsBlacklistVisible}
             setIsFeatureFlagsVisible={setIsFeatureFlagsVisible}
+            setIsGlobalAnalyticsVisible={setIsGlobalAnalyticsVisible}
             textMuted={textMuted} 
             textPrimary={textPrimary} 
             cardBg={cardBg} 
@@ -253,6 +256,8 @@ export default function AdminToolsModal({
           onClose={() => setIsFeatureFlagsVisible(false)}
           bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
         />
+      ) : isGlobalAnalyticsVisible ? (
+        <GlobalAnalyticsPanel Colors={Colors} />
       ) : isProductManagerVisible ? (
          <ProductManager 
            visible={isProductManagerVisible} 

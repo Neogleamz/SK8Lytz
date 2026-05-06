@@ -14,6 +14,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { AppLogger } from '../services/AppLogger';
 import type { ISessionSnapshot } from '../services/SpeedTrackingService';
+import { useTelemetryLedger } from './useTelemetryLedger';
 import { SpeedTrackingService } from '../services/SpeedTrackingService';
 
 export type SessionState = 'IDLE' | 'RECORDING' | 'COMPLETE';
@@ -49,6 +50,7 @@ export interface UseSessionTrackingResult {
 }
 
 export function useSessionTracking(): UseSessionTrackingResult {
+  const telemetry = useTelemetryLedger();
   const [sessionState, setSessionState] = useState<SessionState>('IDLE');
   const [sessionSummary, setSessionSummary] = useState<ISessionSnapshot | null>(null);
   const [showSessionModal, setShowSessionModal] = useState<boolean>(false);
@@ -101,7 +103,12 @@ export function useSessionTracking(): UseSessionTrackingResult {
     setSessionSummary(snapshot);
     setSessionState('COMPLETE');
     setShowSessionModal(true);
-  }, [sessionState]);
+
+    // Inject metrics to the global God-Tier telemetry accumulator
+    // Convert distanceMiles to meters (1 mile = 1609.34 meters)
+    const distanceMeters = snapshot.distanceMiles * 1609.34;
+    telemetry.injectStreetSummary(distanceMeters, snapshot.peakSpeedMph);
+  }, [sessionState, telemetry]);
 
   const saveSession = useCallback(async () => {
     if (!sessionSummary) return;

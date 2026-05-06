@@ -16,12 +16,14 @@ export interface AdminTabProps extends TabProps {
   setIsAuditVisible: (v: boolean) => void;
   setIsBlacklistVisible: (v: boolean) => void;
   setIsFeatureFlagsVisible: (v: boolean) => void;
+  setIsGlobalAnalyticsVisible: (v: boolean) => void;
 }
 
 export const AdminTab = React.memo(({ 
   onOpenProgrammer, onOpenLab, setIsPicksSchedulerVisible, 
   setIsProductManagerVisible, setIsAppManagerVisible, setIsUserManagementVisible,
   setIsRosterVisible, setIsAuditVisible, setIsBlacklistVisible, setIsFeatureFlagsVisible,
+  setIsGlobalAnalyticsVisible,
   textMuted, textPrimary, cardBg, borderColor 
 }: AdminTabProps) => {
   return (
@@ -93,6 +95,15 @@ export const AdminTab = React.memo(({
         <View style={{ marginLeft: Spacing.md }}>
           <Text style={{ color: textPrimary, fontWeight: '700' }}>Feature Flags</Text>
           <Text style={{ color: textMuted, fontSize: 12 }}>Manage A/B testing and rollouts</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => setIsGlobalAnalyticsVisible(true)} style={[styles.statCard, { backgroundColor: cardBg, borderColor, flexDirection: 'row', alignItems: 'center', marginTop: Spacing.md }]}>
+        <MaterialCommunityIcons name="chart-bar" size={24} color="#00E676" />
+        <View style={{ marginLeft: Spacing.md }}>
+          <Text style={{ color: textPrimary, fontWeight: '700' }}>Global Analytics</Text>
+          <Text style={{ color: textMuted, fontSize: 12 }}>Macroscopic fleet-wide telemetry</Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color={textMuted} style={{ marginLeft: 'auto' }} />
       </TouchableOpacity>

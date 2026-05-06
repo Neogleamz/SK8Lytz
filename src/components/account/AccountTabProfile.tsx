@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Image, TextInput, ActivityInd
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import CustomSlider from '../CustomSlider';
 import { Spacing } from '../../theme/theme';
+import SkaterStatsPanel from './SkaterStatsPanel';
 
 function initials(name: string | null) {
   if (!name) return '?';
@@ -51,6 +52,9 @@ export default function AccountTabProfile({
         </View>
       </TouchableOpacity>
       <Text style={styles.emailDisplay}>{userEmail}</Text>
+
+      {/* God-Tier Telemetry Hero */}
+      <SkaterStatsPanel Colors={Colors} />
 
       {/* Display name */}
       <Text style={styles.label}>DISPLAY NAME</Text>

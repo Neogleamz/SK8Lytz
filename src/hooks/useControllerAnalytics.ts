@@ -9,6 +9,7 @@
 import { useEffect, useRef } from 'react';
 import { AppLogger } from '../services/AppLogger';
 import type { ModeType } from '../types/dashboard.types';
+import { useTelemetryLedger } from './useTelemetryLedger';
 
 interface DeviceContext {
   target: string;
@@ -41,6 +42,7 @@ export function useControllerAnalytics({
   deviceContext,
 }: UseControllerAnalyticsParams) {
   const logTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const telemetry = useTelemetryLedger();
   // Fix 6: Serialize deviceContext to a stable string key so useEffect deps don't
   // fire spuriously when the devices[] array reference changes without content change.
   const deviceContextKey = JSON.stringify(deviceContext);
@@ -53,6 +55,12 @@ export function useControllerAnalytics({
   // Pattern change logger
   useEffect(() => {
     const name = `Pattern ${selectedPatternId}`;
+    
+    // Inject into God-Tier telemetry accumulator
+    if (activeMode !== 'SOLID') {
+      telemetry.trackPattern(selectedPatternId);
+    }
+    
     AppLogger.log('PATTERN_CHANGED', {
       pattern: `ID:${selectedPatternId}`,
       name,
@@ -60,12 +68,17 @@ export function useControllerAnalytics({
       color: selectedColor,
       ...deviceContext
     });
-  }, [selectedPatternId, deviceContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedPatternId, activeMode, deviceContextKey, telemetry]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Color change logger
   useEffect(() => {
+    // Inject into God-Tier telemetry accumulator
+    if (activeMode === 'SOLID') {
+      telemetry.trackColor(selectedColor);
+    }
+    
     AppLogger.log('COLOR_CHANGED', { hex: selectedColor, ...deviceContext });
-  }, [selectedColor, deviceContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedColor, activeMode, deviceContextKey, telemetry]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Brightness change logger (debounced 600ms)
   useEffect(() => {
