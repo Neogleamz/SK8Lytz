@@ -955,16 +955,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
 
                 {/* SLAB 2.5: LIVE TELEMETRY HUD */}
-                {isActuallyConnected && (
-                  <View style={{ marginTop: Spacing.sm }}>
-                    <LiveTelemetryHUD 
-                      gpsSpeed={gpsSpeed} 
-                      peakGForce={peakGForce} 
-                      sessionDistanceMiles={sessionDistanceMiles} 
-                      sessionDurationSec={sessionDurationSec} 
-                    />
-                  </View>
-                )}
+                <View style={{ marginTop: Spacing.sm }}>
+                  <LiveTelemetryHUD 
+                    gpsSpeed={gpsSpeed} 
+                    peakGForce={peakGForce} 
+                    sessionDistanceMiles={sessionDistanceMiles} 
+                    sessionDurationSec={sessionDurationSec} 
+                  />
+                </View>
 
                 {/* SLAB 3: MY SKATES */}
                 <MySkatesSlab
