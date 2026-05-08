@@ -399,9 +399,6 @@ export const ScraperPipeline: React.FC<{
         5: { hasDaemon: false, active: false, onStart: () => {}, onStop: () => {} },
     };
 
-
-    const [controlsOpen, setControlsOpen] = React.useState(false);
-
     // ☠ Block & Purge — called from any belt card button
     const handleBlockSpot = async (spotId: string, spotName: string) => {
         if (!window.confirm(`☠ Block & purge "${spotName}" from the entire pipeline?\n\nThis will:\n• Delete all matching records from the database\n• Prevent future re-ingestion\n\nThis cannot be undone.`)) return;
