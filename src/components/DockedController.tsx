@@ -68,7 +68,10 @@ import CommunityModal from './CommunityModal';
 import MarqueeText from './MarqueeText';
 import PositionalGradientBuilder from './PositionalGradientBuilder';
 import SessionSummaryModal from './SessionSummaryModal';
-import { useGlobalTelemetry } from '../hooks/useGlobalTelemetry';
+// NOTE: useGlobalTelemetry intentionally NOT imported here.
+// GPS + accelerometer sensors are owned exclusively by DashboardScreen via
+// useGlobalTelemetry(isSkateSessionActive). The 4 telemetry values are threaded
+// down as props to prevent a duplicate sensor loop. (BUG-01 fix, 2026-05-08)
 import { LiveTelemetryHUD } from './dashboard/LiveTelemetryHUD';
 
 
@@ -152,6 +155,17 @@ interface Sk8lytzControllerProps {
   onCrewSceneChange?: (scene: Record<string, any>) => void;
   /** Triggered to persist the active pattern name + color snapshot to dashboard group persistent storage */
   appSettings?: Record<string, string | boolean>;
+  // ── Telemetry props (BUG-01 fix) ──────────────────────────────────────────
+  // These values are owned by DashboardScreen's single useGlobalTelemetry instance.
+  // DockedController is a display consumer — it must NOT create its own sensor subscriptions.
+  /** Current GPS speed in MPH */
+  gpsSpeed?: number;
+  /** Current peak G-force reading (exponential decay smoothed) */
+  peakGForce?: number;
+  /** Cumulative distance traveled this session in miles */
+  sessionDistanceMiles?: number;
+  /** Elapsed session duration in seconds */
+  sessionDurationSec?: number;
 }
 
 export type DockedControllerHandle = {
@@ -169,7 +183,7 @@ export type DockedControllerHandle = {
 // MarqueeText moved to standalone component MarqueeText.tsx
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
-  function DockedController({ hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onPowerToggle, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {} }: Sk8lytzControllerProps, ref) {
+  function DockedController({ hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onPowerToggle, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {}, gpsSpeed = 0, peakGForce = 1.0, sessionDistanceMiles = 0, sessionDurationSec = 0 }: Sk8lytzControllerProps, ref) {
     const { Colors, isDark } = useTheme();
     const { height: windowHeight } = useWindowDimensions();
     const isShort = windowHeight < 720;
@@ -235,7 +249,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     };
 
     // ── Global Telemetry Engine ─────────────────────────────────────────────
-    const { gpsSpeed, peakGForce, sessionDistanceMiles, sessionDurationSec } = useGlobalTelemetry(true);
+    // REMOVED: useGlobalTelemetry(true) — values now received as props from DashboardScreen.
+    // The parent holds the single GPS + accelerometer subscription, preventing double-sensor
+    // registration that caused 2x battery drain and incorrect session distance accumulation.
+    // See: BUG-01 forensic audit 2026-05-08, Bucket List fix/double-global-telemetry.
 
 
 

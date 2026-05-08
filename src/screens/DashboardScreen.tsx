@@ -735,6 +735,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             appSettings={appSettings}
             onCrewSceneChange={(scene: Record<string, any>) => crewService.broadcastScene(scene)}
             bleState={bleState}
+            // ── Telemetry props (BUG-01 fix) ─────────────────────────────────────────
+            // Owned by the single useGlobalTelemetry(isSkateSessionActive) above.
+            // DockedController receives these as props — it must NOT create its own sensor subscriptions.
+            gpsSpeed={gpsSpeed}
+            peakGForce={peakGForce}
+            sessionDistanceMiles={sessionDistanceMiles}
+            sessionDurationSec={sessionDurationSec}
             onPatternChanged={(patternName: string, snapshot: import('../types/dashboard.types').GroupPatternSnapshot, lastPayload?: number[]) => {
               // FIX: Resolve groupId from customGroups (always hydrated) rather than
               // displayConnectedDevices[0].groupId which may be undefined if deviceConfigs
@@ -774,7 +781,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               renders stale state. No overlay needed — the UI simply loads clean. */}
       </Animated.View>
     );
-  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, activeHwSettings, crewRole, crewSession, lastLeaderScene, bleState, ledgerSave]);
+  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, activeHwSettings, crewRole, crewSession, lastLeaderScene, bleState, ledgerSave, gpsSpeed, peakGForce, sessionDistanceMiles, sessionDurationSec]);
 
   /**
    * Renders a single device item card, merging registration data 
