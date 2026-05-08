@@ -42,6 +42,8 @@ interface UseDashboardAutoConnectOptions {
   bleGateRef: React.MutableRefObject<string>;
   /** Gate the observer if setup wizard is active */
   isWizardActive?: boolean;
+  /** Trigger a high-power active scan (from useBLESweeper) */
+  burstScan?: (durationMs: number) => Promise<void>;
 }
 
 /**
@@ -61,6 +63,7 @@ export function useDashboardAutoConnect({
   refreshProfile,
   bleGateRef,
   isWizardActive,
+  burstScan,
 }: UseDashboardAutoConnectOptions): { clearAutoConnectQueue: () => void; retriggerAutoConnect: () => void } {
 
   const hasAutoConnectedRef = useRef(false);
@@ -68,7 +71,7 @@ export function useDashboardAutoConnect({
   // Stable ref to the cloud sync function — allows retriggerAutoConnect to call it
   // directly without needing to re-subscribe to the useEffect dependency array.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const syncCloudAndAutoConnectRef = useRef<() => Promise<void>>(async () => {});
+  const syncCloudAndAutoConnectRef = useRef<(isRetrigger?: boolean) => Promise<void>>(async () => {});
 
   // ── Continuous observer: connect queued devices as they appear in scan ───
   // Debounce: batch devices that appear within 500ms into a single connectToDevices call.
@@ -135,8 +138,8 @@ export function useDashboardAutoConnect({
 
   // ── One-shot cloud sync + auto-connect trigger on BLE ready ─────────────
   useEffect(() => {
-    async function syncCloudAndAutoConnect() {
-      if (hasAutoConnectedRef.current || !isBluetoothSupported || !isBluetoothEnabled) return;
+    async function syncCloudAndAutoConnect(isRetrigger: boolean = false) {
+      if ((hasAutoConnectedRef.current && !isRetrigger) || !isBluetoothSupported || !isBluetoothEnabled) return;
       hasAutoConnectedRef.current = true;
 
       let groupsToProcess: any[] = [];
@@ -248,6 +251,14 @@ export function useDashboardAutoConnect({
             // fire connectToDevices() the moment Fleet MACs appear in the list.
             // Starting a manual scan here was a duplicate trigger that raced
             // against the Sweeper and caused double-connection attempts.
+
+            // BUG-04 Fix: If this is a post-wizard retrigger, we don't want to wait 
+            // for the passive sweeper's next slow cycle (which could take 30s+ in low power).
+            // We fire a targeted 8-second burst scan to instantly discover the device.
+            if (isRetrigger && burstScan) {
+              AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_burst_scan_triggered' });
+              burstScan(8000).catch(() => {});
+            }
           }
         }
       }
@@ -258,7 +269,7 @@ export function useDashboardAutoConnect({
     syncCloudAndAutoConnectRef.current = syncCloudAndAutoConnect;
 
     // Slight delay to allow Bluetooth stack to fully initialize
-    const timerId = setTimeout(syncCloudAndAutoConnect, 1500);
+    const timerId = setTimeout(() => syncCloudAndAutoConnect(false), 1500);
     return () => clearTimeout(timerId);
   }, [isBluetoothSupported, isBluetoothEnabled]);
 
@@ -274,8 +285,8 @@ export function useDashboardAutoConnect({
       hasAutoConnectedRef.current = false;
       autoConnectIdsRef.current = [];
       // The useEffect watching isBluetoothSupported/isBluetoothEnabled won't re-fire
-      // since those haven't changed. Call the async function directly.
-      syncCloudAndAutoConnectRef.current();
+      // since those haven't changed. Call the async function directly with isRetrigger=true.
+      syncCloudAndAutoConnectRef.current(true);
     },
   };
 }

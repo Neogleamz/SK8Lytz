@@ -104,6 +104,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     startSweeper,
     stopSweeper,
     isSweeperActive,
+    burstScan,
     ghostedDeviceIds,
     // NOTE: registeredMacs is passed to useBLE after useRegistration() via registeredMacsRef below
   } = useBLE();
@@ -416,6 +417,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     registeredDevices,
     bleGateRef,
     isWizardActive: viewState === 'SETUP_WIZARD',
+    burstScan,
   });
   // Wire the real function into the ref now that the hook has been called.
   retriggerAutoConnectRef.current = retriggerAutoConnect;
