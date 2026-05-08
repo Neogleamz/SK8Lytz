@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
+import * as Linking from 'expo-linking';
 import React from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
@@ -239,10 +240,13 @@ export function CrewDetailScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.shareBtn}
-          onPress={() => Share.share({
-            message: `Join my SK8Lytz crew "${crew.name}"! Use code: ${crew.invite_code} in the SK8Lytz app.`,
-            title: `Join ${crew.name} on SK8Lytz`,
-          })}
+          onPress={() => {
+            const deepLink = Linking.createURL('crew/join', { queryParams: { code: crew.invite_code || '' } });
+            Share.share({
+              message: `Rolling with ${crew.name}! Join the crew: ${deepLink}`,
+              title: `Join ${crew.name} on SK8Lytz`,
+            });
+          }}
         >
           <MaterialCommunityIcons name="share-variant" size={17} color="#000" />
           <Text style={styles.shareBtnText}>Share Invite Code</Text>

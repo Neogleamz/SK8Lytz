@@ -164,6 +164,29 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     AppLogger.log('SCREEN_OPENED', { screen: 'DashboardScreen' });
   }, []);
 
+  // ── Deep Link Handling ─────────────────────────────────────────────────────
+  const [initialDeepLinkCode, setInitialDeepLinkCode] = useState<string | null>(null);
+  useEffect(() => {
+    const handleDeepLink = ({ url }: { url: string }) => {
+      if (!url) return;
+      try {
+        const parsed = Linking.parse(url);
+        if (parsed.path === 'crew/join' && parsed.queryParams?.code) {
+          const inviteCode = String(parsed.queryParams.code).toUpperCase();
+          AppLogger.log('DEEP_LINK', { action: 'crew_join', inviteCode });
+          setInitialDeepLinkCode(inviteCode);
+          setCrewInitialStep('join');
+          setIsCrewModalVisible(true);
+        }
+      } catch (err) {
+        console.error('Dashboard Deep link parsed error', err);
+      }
+    };
+    const linkSubscription = Linking.addEventListener('url', handleDeepLink);
+    Linking.getInitialURL().then(url => { if (url) handleDeepLink({ url }); });
+    return () => linkSubscription.remove();
+  }, []);
+
   // ── Hardware BLE callbacks (extracted to useHardwareNotifications) ───────────
 
   const [updateTrigger, setUpdateTrigger] = useState(0);
@@ -1182,6 +1205,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           visible={isCrewModalVisible}
           onClose={() => setIsCrewModalVisible(false)}
           initialStep={crewInitialStep}
+          initialInviteCode={initialDeepLinkCode}
           activeSession={crewSession}
           activeRole={crewRole}
           currentModeSummary={crewModeSummary}

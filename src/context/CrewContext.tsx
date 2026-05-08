@@ -37,6 +37,8 @@ interface CrewContextValue {
     setShowTimePicker: (show: boolean) => void;
     joiningCrewId: string | null;
     setJoiningCrewId: (id: string | null) => void;
+    inviteCode: string;
+    setInviteCode: (code: string) => void;
   };
 
   hub: ReturnType<typeof useCrewHub>;

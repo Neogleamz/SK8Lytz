@@ -32,6 +32,7 @@ interface CrewModalProps {
   currentModeSummary?: string;
   lastLeaderScene?: Record<string, any> | null;
   initialStep?: ModalStep;
+  initialInviteCode?: string | null;
 }
 
 function CrewModalRouter({ onClose, currentModeSummary, lastLeaderScene }: { onClose: () => void, currentModeSummary?: string, lastLeaderScene?: Record<string, any> | null }) {
@@ -67,7 +68,7 @@ function CrewModalRouter({ onClose, currentModeSummary, lastLeaderScene }: { onC
 
 export function CrewModal({
   visible, onClose, onSessionReady, onSessionLeft, onSessionEnded,
-  activeSession, activeRole, currentModeSummary, lastLeaderScene, initialStep
+  activeSession, activeRole, currentModeSummary, lastLeaderScene, initialStep, initialInviteCode
 }: CrewModalProps) {
 
   const [step, setStep] = useState<ModalStep>(activeSession ? 'controller' : (initialStep || 'landing'));
@@ -86,6 +87,7 @@ export function CrewModal({
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [joiningCrewId, setJoiningCrewId] = useState<string | null>(null);
+  const [inviteCode, setInviteCode] = useState(initialInviteCode || '');
 
   useEffect(() => {
     supabase.auth.getUser().then(async (res: any) => {
@@ -125,7 +127,8 @@ export function CrewModal({
       schedDateTime, setSchedDateTime,
       showDatePicker, setShowDatePicker,
       showTimePicker, setShowTimePicker,
-      joiningCrewId, setJoiningCrewId
+      joiningCrewId, setJoiningCrewId,
+      inviteCode, setInviteCode
     },
     hub,
     manage,
