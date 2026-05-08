@@ -274,8 +274,9 @@ export async function executeDetective(
     if(gt) { coreText+='\n\n'+gt; amenityText+='\n\n'+gt; }
 
     let browser:any=null;
-      const page=await browser.newPage();
-      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36');
+    browser=await puppeteer.launch({headless:isHeadless?'new':false,protocolTimeout:60000,args:['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage']});
+    const page=await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36');
       await page.setViewport({width:1280,height:800});
       const targeted=[...new Set([...sitemap.schedule_urls.slice(0,3),...sitemap.pricing_urls.slice(0,3),...sitemap.about_urls.slice(0,2),...sitemap.events_urls.slice(0,2),...sitemap.contact_urls.slice(0,1)])];
       const crawlUrls=[spotContext.website,...targeted].slice(0,MAX_PAGES_PER_RECORD);
