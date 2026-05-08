@@ -280,7 +280,10 @@ class LocationService {
     });
 
     if (radiusMi != null) {
-      return sorted.filter(s => s.distanceMi !== null && s.distanceMi <= radiusMi);
+      // If distanceMi is null (GPS not yet available), let the spot through — we can't
+      // measure the distance yet. Once GPS resolves, refreshNearby re-fires and applies
+      // the real radius cap. This prevents a cold-start blank map.
+      return sorted.filter(s => s.distanceMi === null || s.distanceMi <= radiusMi);
     }
     return sorted;
   }

@@ -80,7 +80,7 @@ export function useCrewHub(visible: boolean, step: string) {
   useEffect(() => {
     if (!visible || step !== 'landing') return;
     refreshNearby();
-  }, [visible, step, discoverRadiusMi, refreshNearby]);
+  }, [visible, step, discoverRadiusMi, locationCoords, refreshNearby]);
 
   // Load Active Sessions
   const loadActiveSessions = useCallback(async () => {
