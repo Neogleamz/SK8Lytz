@@ -342,6 +342,7 @@ export async function executeDetective(
     onProgress(`[Detective] Pre-crawl phase error: ${err.message}`);
   }
 
+  try {
   const userVectors=aiConfig.ai_target_vectors||[];
   const userSchema=userVectors.reduce((acc:any,vec:any)=>{acc[vec.key]=vec.prompt||vec.type;return acc;},{});
   const REQUIRED_SCHEMA={hours:'Complete weekly public skating schedule {day: time_range}.',pricing:'All admission fees {adult,child,senior,spectator,skate_rental}.',has_fee:'boolean',has_adult_night:'boolean',adult_night_schedule:'If adult nights: {day:time_range}. Null if none.'};
