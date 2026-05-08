@@ -115,7 +115,8 @@ export function useHardwareNotifications({
           DeviceRepository.getInstance().updateConfig(deviceId, { rfMode: rfConfig.rfMode, rfRemotes: rfConfig.rfRemotes }).catch(() => {});
           return { ...prevConfigs, [deviceId]: updated };
         });
-        return; // Handled the RF packet, exit mailroom
+        // BUG-03 Fix: Removed early return. Compound notifications contain both RF and LED configs.
+        // Continuing execution allows the payload to be evaluated by parseLedPayload.
       }
 
       // ── [Pure Utility] Parse hardware config ────────────────────────────────
