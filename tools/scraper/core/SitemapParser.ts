@@ -37,8 +37,11 @@ const BUCKET_RULES: Array<{ bucket: keyof Omit<SitemapResult, 'all_urls'>; patte
   // Score 10 — Required fields for Detective
   { bucket: 'schedule_urls', patterns: /schedule|hours|session|times|calendar|open.?skate|public.?skate|skate.?time|skating.?schedule/i, score: 10 },
   { bucket: 'pricing_urls',  patterns: /pric|admission|rates|ticket|fees|cost|payment|entry.?fee/i, score: 10 },
+  // Score 10 - High Priority Events
+  { bucket: 'events_urls',   patterns: /adult.?night|18.?plus|21.?plus|cosmic|derby|upcoming.?events|special.?events/i, score: 10 },
+  { bucket: 'events_urls',   patterns: /event/i, score: 9 },
   // Score 8 — High value
-  { bucket: 'events_urls',   patterns: /event|part(y|ies)|adult.?night|18.?plus|21.?plus|cosmic|derby|birthday|special/i, score: 8 },
+  { bucket: 'events_urls',   patterns: /part(y|ies)|birthday|special/i, score: 7 },
   { bucket: 'about_urls',    patterns: /about|history|facilit|rink|story|team|our.?rink|who.?we.?are/i, score: 7 },
   // Score 6 — Optional
   { bucket: 'contact_urls',  patterns: /contact|location|direction|find.?us|get.?here|info/i, score: 6 },
@@ -88,12 +91,13 @@ function extractSitemapUrlsFromIndex(xml: string): string[] {
 
 function scoreAndBucket(urls: string[]): Omit<SitemapResult, 'all_urls'> {
   const buckets: Omit<SitemapResult, 'all_urls'> = {
-    schedule_urls: [],
-    pricing_urls: [],
-    about_urls: [],
-    events_urls: [],
-    contact_urls: [],
-    gallery_urls: [],
+    schedule_urls: [], pricing_urls: [], about_urls: [],
+    events_urls: [], contact_urls: [], gallery_urls: []
+  };
+
+  const scoredBuckets: Record<keyof typeof buckets, Array<{url: string; score: number}>> = {
+    schedule_urls: [], pricing_urls: [], about_urls: [],
+    events_urls: [], contact_urls: [], gallery_urls: []
   };
 
   // Score each URL against all bucket rules, assign to best match
@@ -112,9 +116,17 @@ function scoreAndBucket(urls: string[]): Omit<SitemapResult, 'all_urls'> {
       }
     }
 
-    if (bestBucket && buckets[bestBucket].length < MAX_PER_BUCKET) {
-      buckets[bestBucket].push(url);
+    if (bestBucket) {
+      scoredBuckets[bestBucket].push({ url, score: bestScore });
     }
+  }
+
+  // Sort by score descending and truncate
+  for (const key of Object.keys(scoredBuckets) as Array<keyof typeof buckets>) {
+    buckets[key] = scoredBuckets[key]
+      .sort((a, b) => b.score - a.score)
+      .slice(0, MAX_PER_BUCKET)
+      .map(x => x.url);
   }
 
   return buckets;

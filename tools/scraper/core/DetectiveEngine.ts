@@ -344,7 +344,7 @@ export async function executeDetective(
   try {
   const userVectors=aiConfig.ai_target_vectors||[];
   const userSchema=userVectors.reduce((acc:any,vec:any)=>{acc[vec.key]=vec.prompt||vec.type;return acc;},{});
-  const REQUIRED_SCHEMA={hours:'Complete weekly public skating schedule {day: time_range}.',pricing:'All admission fees {adult,child,senior,spectator,skate_rental}.',has_fee:'boolean',has_adult_night:'boolean',adult_night_schedule:'If adult nights: {day:time_range}. Null if none.'};
+  const REQUIRED_SCHEMA={hours:'Complete weekly public skating schedule for ALL 7 DAYS {Monday: time_range, Tuesday: time_range, ...}. Include every day even if closed.',pricing:'All admission fees {adult,child,senior,spectator,skate_rental}.',has_fee:'boolean',has_adult_night:'boolean',adult_night_schedule:'If adult nights: {day:time_range}. Null if none.'};
   const FULL_SCHEMA:Record<string,string>={surface_type:'Floor: wood/maple/concrete/asphalt/sport_court/synthetic.',surface_quality:'Condition 3-5 words.',vibe_score:'0-100.',is_indoor:'boolean',has_rental:'boolean',has_pro_shop:'boolean',has_food:'boolean',has_lights:'boolean',has_lockers:'boolean',has_ac:'boolean',has_wifi:'boolean',has_toilets:'boolean',wheelchair:'boolean',derby:'boolean',capacity:'integer.',special_events:'Array.',operator_name:'Owner name.',operator_description:'1-2 sentences.',cultural_meta:'Significance or null.',adult_night_details:'Details or null.',instagram_url:'URL or null.',facebook_url:'URL or null.',tiktok_url:'URL or null.',schedule_url:'URL or null.',yelp_url:'URL or null.',price_range:'$ to $$$$ or null.',logo_url:'Logo URL or null.',...userSchema};
   const exclusionKw=aiConfig.ai_exclusion_keywords||[];
   const usp=aiConfig.ai_system_prompt||'';
@@ -354,6 +354,22 @@ export async function executeDetective(
     if(exclusionKw.length) s+=`TOXICITY: If PRIMARY business matches [${exclusionKw.join(',')}] return {"TOXICITY_ABORT":true}.\n`;
     if(ctx) s+=`PASS 1 CONTEXT: ${ctx}\n`;
     return s+`SCHEMA:\n${JSON.stringify(schema,null,2)}`;
+  };
+
+  const sanitize=(obj:any):any=>{
+    if(!obj) return obj;
+    if(Array.isArray(obj)) return obj.map(sanitize);
+    if(typeof obj==='object'){
+      const n:any={};
+      for(const k in obj){
+        let v=obj[k];
+        if(v==='null'||v==='NULL'||v==='None'||v==='N/A') v=null;
+        n[k]=sanitize(v);
+      }
+      return n;
+    }
+    if(obj==='null'||obj==='NULL'||obj==='None'||obj==='N/A') return null;
+    return obj;
   };
 
   if(coreText.trim().length>=50){
@@ -480,12 +496,14 @@ export async function executeDetective(
 
   const qFields=[opening_hours,pricing_data,operator_name,operator_description,surface_type,surface_quality,vibe_score,is_indoor,capacity,has_fee,has_rental,has_pro_shop,has_food,has_lights,has_ac,has_lockers,has_toilets,has_wifi,is_wheelchair_accessible,has_adult_night,adult_night_details,adultNightSchedule,special_events,hosts_derby,instagram_url,facebook_url,tiktok_url,cultural_metadata];
   const qualityScore=qFields.filter(f=>f!==null&&f!==undefined&&f!==false).length;
-  const hasHighValueField=(opening_hours&&Object.keys(opening_hours).length>0)||(pricing_data&&Object.keys(pricing_data).length>0);
-  const passedQualityGate=qualityScore>=3&&!!hasHighValueField;
+  // FIX: Truthy check — LM can return hours as a string OR object; Object.keys() throws on strings
+  const hasHighValueField=!!(opening_hours)||!!(pricing_data);
+  const passedQualityGate=qualityScore>=3&&hasHighValueField;
   onProgress(`[Detective] Quality[${qualityScore}/${qFields.length}]`);
   onProgress(passedQualityGate?'[Detective] Quality gate passed.':'[Detective] Low quality — emitting DEEP_CRAWLED anyway.');
 
-  const mappedFields={is_indoor,operator_description,operator_name,instagram_url,facebook_url,tiktok_url,schedule_url,opening_hours,adult_night_schedule:adultNightSchedule,has_adult_night,adult_night_details,special_events,pricing_data,has_fee,surface_type,surface_quality,vibe_score,capacity,has_rental,has_pro_shop,has_food,has_lights,has_lockers,has_ac,has_wifi,has_toilets,is_wheelchair_accessible,hosts_derby,cultural_metadata,yelp_url,price_range,logo_url,candidate_photos:candidatePhotos,ai_metadata:Object.keys(aiMetadata).length>0?aiMetadata:null,_simulated_status:passedQualityGate?'DEEP_CRAWLED':'LOW_QUALITY'};
+  const mappedFieldsRaw={is_indoor,operator_description,operator_name,instagram_url,facebook_url,tiktok_url,schedule_url,opening_hours,adult_night_schedule:adultNightSchedule,has_adult_night,adult_night_details,special_events,pricing_data,has_fee,surface_type,surface_quality,vibe_score,capacity,has_rental,has_pro_shop,has_food,has_lights,has_lockers,has_ac,has_wifi,has_toilets,is_wheelchair_accessible,hosts_derby,cultural_metadata,yelp_url,price_range,logo_url,candidate_photos:candidatePhotos,ai_metadata:Object.keys(aiMetadata).length>0?aiMetadata:null,_simulated_status:passedQualityGate?'DEEP_CRAWLED':'LOW_QUALITY'};
+  const mappedFields=sanitize(mappedFieldsRaw);
   
   return {aiMetadata,mappedFields,combinedText,qualityScore,passedQualityGate,candidatePhotos,socialLinks:{instagram_url,facebook_url,tiktok_url,schedule_url},flyerUrls};
   } finally {

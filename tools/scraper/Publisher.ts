@@ -107,7 +107,7 @@ async function runPublisher() {
 
           if (missingRequired) {
             console.error(`[Publisher] 🛑 GUILLOTINE: Rejected [${spot.id}] ${spot.name} (Missing required field: ${missingFieldName})`);
-            updateLocalSpot(spot.id, { is_published: 0, pipeline_status: 'REJECTED', verification_status: 'REJECTED' });
+            // updateLocalSpot(spot.id, { is_published: 0, pipeline_status: 'REJECTED', verification_status: 'REJECTED' });
             markSpotSynced(spot.id);
             continue;
           }
@@ -181,7 +181,7 @@ async function runPublisher() {
           if (error) {
             console.error(`[Publisher] ❌ Failed to upsert [${spot.id}] ${spot.name}: ${error.message}`);
             if (error.message.includes('invalid input syntax for type uuid')) {
-              updateLocalSpot(spot.id, { is_published: 0, pipeline_status: 'REJECTED', verification_status: 'REJECTED' });
+              // updateLocalSpot(spot.id, { is_published: 0, pipeline_status: 'REJECTED', verification_status: 'REJECTED' });
               markSpotSynced(spot.id);
             }
           } else {
@@ -195,7 +195,7 @@ async function runPublisher() {
           if (error) {
             console.error(`[Publisher] ❌ Failed to retract [${spot.id}] ${spot.name}: ${error.message}`);
             if (error.message.includes('invalid input syntax for type uuid')) {
-              updateLocalSpot(spot.id, { is_published: 0, pipeline_status: 'REJECTED', verification_status: 'REJECTED' });
+              // updateLocalSpot(spot.id, { is_published: 0, pipeline_status: 'REJECTED', verification_status: 'REJECTED' });
               markSpotSynced(spot.id);
             }
           } else {

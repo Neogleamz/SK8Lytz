@@ -434,6 +434,73 @@ app.get('/api/sniper/poll/:id', async (req, res) => {
   }
 });
 
+// ─── NEW SNIPER & SEARCH ENDPOINTS ──────────────────────────────────────────
+
+app.get('/api/spots/search', (req, res) => {
+  const { q } = req.query;
+  if (!q) return res.json({ spots: [] });
+  try {
+    const spots = db.prepare(`
+      SELECT id, name, city, state, verification_status 
+      FROM local_spots 
+      WHERE name LIKE ? OR city LIKE ? OR id = ?
+      LIMIT 10
+    `).all(`%${q}%`, `%${q}%`, q);
+    res.json({ spots });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/sniper', async (req, res) => {
+  const { target_id } = req.body;
+  if (!target_id) return res.status(400).json({ error: 'target_id is required' });
+  try {
+    const config = getConfig();
+    updateConfig({ ...config, sniper_target_id: target_id });
+    res.json({ success: true, sniper_target_id: target_id });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/sniper', async (req, res) => {
+  try {
+    const config = getConfig();
+    updateConfig({ ...config, sniper_target_id: null });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/spots/:id/reset', async (req, res) => {
+  const { id } = req.params;
+  try {
+    // Purge AI fields and reset status
+    db.prepare(`
+      UPDATE local_spots 
+      SET 
+        verification_status = 'SEEDED', 
+        last_attempted_at = NULL,
+        is_deep_crawled = 0,
+        ai_metadata = NULL,
+        opening_hours = NULL,
+        pricing_data = NULL,
+        surface_type = NULL,
+        surface_quality = NULL,
+        candidate_photos = NULL,
+        candidate_links = NULL
+      WHERE id = ?
+    `).run(id);
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ────────────────────────────────────────────────────────────────────────────
+
 // --- AI Detective Sandbox ---
 app.post('/api/sandbox', async (req, res) => {
   const { url, ai_system_prompt, ai_target_vectors, spot_name, spot_city } = req.body;

@@ -15,6 +15,33 @@ db.pragma('journal_mode = WAL');
 db.pragma('synchronous = NORMAL');
 db.pragma('temp_store = MEMORY');
 
+// ─── Automatic Rolling Backup ─────────────────────────────────────────────────
+const BACKUP_DIR = path.join(DB_DIR, 'backups');
+if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+
+const runBackup = () => {
+  const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  const dest = path.join(BACKUP_DIR, `scraper-${ts}.db`);
+  try {
+    db.backup(dest).then(() => {
+      // Keep only the 7 most recent backups
+      const files = fs.readdirSync(BACKUP_DIR)
+        .filter(f => f.startsWith('scraper-') && f.endsWith('.db'))
+        .sort();
+      while (files.length > 7) {
+        fs.unlinkSync(path.join(BACKUP_DIR, files.shift()!));
+      }
+      console.log(`[LocalDB] ✅ Backup saved: ${path.basename(dest)}`);
+    }).catch((e: any) => console.error('[LocalDB] Backup failed:', e.message));
+  } catch (e: any) {
+    console.error('[LocalDB] Backup error:', e.message);
+  }
+};
+
+// Run immediately on startup, then every 4 hours
+runBackup();
+setInterval(runBackup, 4 * 60 * 60 * 1000);
+
 // Initialize schema
 db.exec(`
   CREATE TABLE IF NOT EXISTS local_spots (

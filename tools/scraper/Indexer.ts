@@ -53,28 +53,39 @@ async function runIndexer() {
 
   while (true) {
     try {
-      // Fetch active region config
-      const configRes = await fetch('http://localhost:5999/api/priority-states')
-        .then(r => r.json())
-        .catch(() => ({ priority_states: [] }));
-      const priorityStates = configRes.priority_states || [];
+      // ── Fetch global AI config and headless preference ─────────────────
+      const statusRes = await fetch('http://localhost:5999/status').then(r => r.json()).catch(() => ({ isHeadless: true }));
+      const configResGlobal = await fetch('http://localhost:5999/config').then(r => r.json()).catch(() => ({ config: {} }));
+      const aiConfig = configResGlobal.config || {};
+      const priorityStates = aiConfig.state_override || [];
 
-      let query = `SELECT * FROM local_spots WHERE verification_status = 'SEEDED'`;
-      if (priorityStates.length > 0) {
-        query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
+      let target: any = null;
+
+      // sniper_target_id isolation
+      if (aiConfig.sniper_target_id) {
+        target = db.prepare(`SELECT * FROM local_spots WHERE id = ?`).get(aiConfig.sniper_target_id);
+        if (target && target.verification_status !== 'SEEDED') {
+          // If we are in sniper mode, we only process it if it's SEEDED. 
+          // If it's already past SEEDED, we stop and wait (unless it's being reset)
+          target = null;
+        }
       }
-      query += ` ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`;
 
-      const spots = db.prepare(query).all() as any[];
+      if (!target) {
+        let query = `SELECT * FROM local_spots WHERE verification_status = 'SEEDED'`;
+        if (priorityStates.length > 0) {
+          query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
+        }
+        query += ` ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`;
+        target = db.prepare(query).get();
+      }
 
-      if (!spots || spots.length === 0) {
+      if (!target) {
         const delay = 15000;
         reportPulse(delay);
         await sleep(delay);
         continue;
       }
-
-      const target = spots[0];
       console.log(`\n🧠 [Detective] Analyzing: ${target.name} (${target.city}, ${target.state})`);
       reportPulse(0, undefined, target.name, target.website || null);
 
@@ -84,10 +95,7 @@ async function runIndexer() {
         retry_count: (target.retry_count || 0) + 1
       });
 
-      // ── Fetch global AI config and headless preference ─────────────────
-      const statusRes = await fetch('http://localhost:5999/status').then(r => r.json()).catch(() => ({ isHeadless: true }));
-      const configResGlobal = await fetch('http://localhost:5999/config').then(r => r.json()).catch(() => ({ config: {} }));
-      const aiConfig = configResGlobal.config || {};
+      // ── Delegate to DetectiveEngine ─────────────────────────────────────
 
       // ── Delegate to DetectiveEngine ─────────────────────────────────────
       const result = await executeDetective(
@@ -116,20 +124,19 @@ async function runIndexer() {
       // Handle quality gate failure — still emit DEEP_CRAWLED so Photographer gets a shot.
       // Low quality is flagged via ai_metadata.quality_note, not by blocking the pipeline.
       if (!result.passedQualityGate) {
-        console.error(`   ⚠️  Low quality (${result.qualityScore}/17) — promoting to DEEP_CRAWLED for Photographer.`);
+        console.error(`   ⚠️  Low quality (${result.qualityScore}/17) → promoting to DEEP_CRAWLED for Photographer.`);
         updateLocalSpot(target.id, {
           verification_status: 'DEEP_CRAWLED',
           is_deep_crawled: true,
           retry_count: (target.retry_count || 0) + 1,
           last_attempted_at: new Date().toISOString(),
-          ai_metadata: { ...(Object.keys(result.aiMetadata).length > 0 ? result.aiMetadata : (aiMetadata || {})), quality_note: `Low quality score: ${result.qualityScore}/17` },
-          ...(result.candidatePhotos ? { candidate_photos: result.candidatePhotos } : {})
+          ai_metadata: JSON.stringify({ ...(Object.keys(result.aiMetadata).length > 0 ? result.aiMetadata : (aiMetadata || {})), quality_note: `Low quality score: ${result.qualityScore}/17` }),
+          ...(result.candidatePhotos ? { candidate_photos: JSON.stringify(result.candidatePhotos) } : {})
         });
         continue;
       }
 
       // ── ✅ Write all fields to DB (Non-Destructive Merge) ───────────────
-      const { mappedFields } = result;
       const finalUpdates: any = {};
       
       const fieldsToCheck = [
@@ -142,32 +149,33 @@ async function runIndexer() {
       ];
 
       for (const key of fieldsToCheck) {
-        const newVal = mappedFields[key];
+        const newVal = result.mappedFields ? result.mappedFields[key] : undefined;
         const oldVal = target[key];
         
-        // Check if old value is empty (including stringified null/empty)
-        const isOldEmpty = oldVal === null || oldVal === undefined || oldVal === '' || oldVal === 'null' || oldVal === '{}' || oldVal === '[]';
+        const isEmpty = (v: any) => v === null || v === undefined || v === '' || v === 'null' || v === 'NULL' || v === '{}' || v === '[]';
+        const sanitize = (v: any) => isEmpty(v) ? null : (typeof v === 'object' ? JSON.stringify(v) : v);
 
-        if (!isOldEmpty) {
-          // Idea A: Pure Fill-in-the-Blank. If DB has a value, lock out the AI.
-          finalUpdates[key] = oldVal;
-          if (newVal !== undefined && newVal !== null) {
-            console.log(`   🛡️ Locked DB value for ${key}. AI update ignored.`);
-          }
+        if (!isEmpty(newVal)) {
+          // Fresh AI crawl wins
+          finalUpdates[key] = sanitize(newVal);
+        } else if (!isEmpty(oldVal)) {
+          // Keep existing good data, but sanitize it in case it was a "null" string
+          finalUpdates[key] = sanitize(oldVal);
         } else {
-          finalUpdates[key] = newVal;
+          finalUpdates[key] = null;
         }
       }
 
       try {
         updateLocalSpot(target.id, {
           ...finalUpdates,
-          ...(result.candidatePhotos ? { candidate_photos: result.candidatePhotos } : {}),
-          ai_metadata: mappedFields.ai_metadata,
+          ...(result.candidatePhotos ? { candidate_photos: JSON.stringify(result.candidatePhotos) } : {}),
+          ai_metadata: result.mappedFields?.ai_metadata ? JSON.stringify(result.mappedFields.ai_metadata) : null,
           verification_status: 'DEEP_CRAWLED',
           is_deep_crawled: true,
           retry_count: 0,
-          last_attempted_at: new Date().toISOString()
+          last_attempted_at: new Date().toISOString(),
+          pipeline_status: ''
         });
       } catch (updateError: any) {
         console.error('[Indexer] DB write failed after sanitization:', updateError.message);
@@ -175,8 +183,9 @@ async function runIndexer() {
           verification_status: 'DEEP_CRAWLED',
           is_deep_crawled: true,
           last_attempted_at: new Date().toISOString(),
-          ai_metadata: mappedFields.ai_metadata,
-          ...(result.candidatePhotos ? { candidate_photos: result.candidatePhotos } : {})
+          pipeline_status: '',
+          ai_metadata: result.mappedFields?.ai_metadata ? JSON.stringify(result.mappedFields.ai_metadata) : null,
+          ...(result.candidatePhotos ? { candidate_photos: JSON.stringify(result.candidatePhotos) } : {})
         });
       }
 

@@ -4,7 +4,22 @@ import React, { useState } from 'react';
 const toHoursArr = (h: any): string[] | null => {
   if (!h) return null;
   if (Array.isArray(h)) return h;
-  if (typeof h === 'string') { try { const p = JSON.parse(h); return Array.isArray(p) ? p : null; } catch { return null; } }
+  if (typeof h === 'string') {
+    try {
+      const p = JSON.parse(h);
+      if (Array.isArray(p)) return p;
+      // Handle JSON-LD ScheduledService shape
+      if (p && p['@type'] === 'ScheduledService' && p.dayOfWeek) {
+        const days = Array.isArray(p.dayOfWeek) ? p.dayOfWeek : [p.dayOfWeek];
+        return days.map((d: string) => `${d}: ${p.timeRange || p.opens || '?'}`);
+      }
+      return null;
+    } catch { return null; }
+  }
+  if (h && h['@type'] === 'ScheduledService' && h.dayOfWeek) {
+    const days = Array.isArray(h.dayOfWeek) ? h.dayOfWeek : [h.dayOfWeek];
+    return days.map((d: string) => `${d}: ${h.timeRange || h.opens || '?'}`);
+  }
   return null;
 };
 
@@ -102,9 +117,11 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
   const adultNight = spot.has_adult_night;
   const photoCount = (safePh.length);
   const candCount  = (_cd?.street_view_url ? 1 : 0);
-  const igUrl      = (spot as any).instagram_url;
-  const fbUrl      = (spot as any).facebook_url;
-  const ttUrl      = (spot as any).tiktok_url;
+  // Guard against literal "null" strings stored by the AI
+  const nullGuard = (v: any) => (!v || v === 'null' || v === 'NULL') ? null : v;
+  const igUrl      = nullGuard((spot as any).instagram_url);
+  const fbUrl      = nullGuard((spot as any).facebook_url);
+  const ttUrl      = nullGuard((spot as any).tiktok_url);
   const hours      = toHoursArr(spot.opening_hours);
   const adultSched = spot.adult_night_schedule;
 
@@ -326,6 +343,24 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
             )}
           </div>
         )}
+
+        {/* Pricing */}
+        {(spot.pricing_data || spot.has_fee || spot.price_range) && (() => {
+          let priceLabel = spot.price_range || '';
+          if (!priceLabel && spot.pricing_data) {
+            try {
+              const pd = typeof spot.pricing_data === 'string' ? JSON.parse(spot.pricing_data) : spot.pricing_data;
+              if (pd?.priceAmount) priceLabel = `$${pd.priceAmount} admission`;
+              else if (pd?.adult) priceLabel = `Adult: $${pd.adult}`;
+            } catch {}
+          }
+          return (
+            <div style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.55)', display:'flex', alignItems:'center', gap:'6px' }}>
+              <span style={{ color:'rgba(255,255,255,0.25)' }}>💰</span>
+              <span>{priceLabel || (spot.has_fee ? 'Paid admission' : 'Free entry')}</span>
+            </div>
+          );
+        })()}
 
         {/* Website */}
         {spot.website && (

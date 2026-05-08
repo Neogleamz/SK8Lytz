@@ -19,6 +19,7 @@ import fs from 'fs';
 import fetch from 'node-fetch';
 import puppeteer from 'puppeteer';
 import Tesseract from 'tesseract.js';
+import crypto from 'crypto';
 import { db, updateLocalSpot, getConfig } from './core/LocalDB';
 
 const envPaths = [
@@ -82,6 +83,20 @@ function saveToDisk(buf: Buffer, spotId: string, state: string, index: number, p
     const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg';
     const dir = path.join(PHOTOS_DIR, state || 'US', spotId);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+    // De-duplicate by file content hash
+    const hash = crypto.createHash('sha256').update(buf).digest('hex');
+    const existingFiles = fs.readdirSync(dir);
+    for (const file of existingFiles) {
+      if (file.startsWith('logo_') || file.startsWith('cover_')) continue;
+      const existingBuf = fs.readFileSync(path.join(dir, file));
+      const existingHash = crypto.createHash('sha256').update(existingBuf).digest('hex');
+      if (hash === existingHash) {
+        logToTower('INFO', `  ⏭️ Duplicate image content detected (hash: ${hash.slice(0,8)}). Skipping.`);
+        return `${PHOTO_SERVE_BASE}/${state || 'US'}/${spotId}/${file}`;
+      }
+    }
+
     const filename = `${prefix}_${index}.${ext}`;
     fs.writeFileSync(path.join(dir, filename), buf);
     return `${PHOTO_SERVE_BASE}/${state || 'US'}/${spotId}/${filename}`;
@@ -214,14 +229,24 @@ async function runPhotographerLoop() {
     const priorityStates: string[] = configRes.priority_states || [];
     const aiConfig = await fetch('http://localhost:5999/config').then(r => r.json()).then((d:any) => d.config || {}).catch(() => ({}));
 
-    let query = `SELECT id, name, state, candidate_photos, photos, logo_url, cover_photo_url, verification_status FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND website IS NOT NULL`;
-    if (priorityStates.length > 0) {
-      query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
-    }
-    query += ` ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`;
-
     let target: any = null;
-    try { target = db.prepare(query).get() as any; } catch {}
+
+    // sniper_target_id isolation
+    if (aiConfig.sniper_target_id) {
+      target = db.prepare(`SELECT id, name, state, candidate_photos, photos, logo_url, cover_photo_url, verification_status FROM local_spots WHERE id = ?`).get(aiConfig.sniper_target_id);
+      if (target && target.verification_status !== 'DEEP_CRAWLED') {
+        target = null;
+      }
+    }
+
+    if (!target) {
+      let query = `SELECT id, name, state, candidate_photos, photos, logo_url, cover_photo_url, verification_status FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND website IS NOT NULL`;
+      if (priorityStates.length > 0) {
+        query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
+      }
+      query += ` ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`;
+      try { target = db.prepare(query).get() as any; } catch {}
+    }
 
     if (!target) {
       // Fallback: any DEEP_CRAWLED without priority filter
@@ -338,7 +363,7 @@ async function runPhotographerLoop() {
     }
 
     // ── Step 6: Write to DB ───────────────────────────────────────────────────
-    const finalPhotos = [...existingPhotos, ...newUrls];
+    const finalPhotos = [...new Set([...existingPhotos, ...newUrls])];
     const updates: any = {
       photos: finalPhotos,
       verification_status: 'MEDIA_READY',

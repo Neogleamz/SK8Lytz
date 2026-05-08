@@ -112,6 +112,66 @@ export const ScraperPipeline: React.FC<{
     const { telemetry, config, loading, pulse } = useScraperTelemetry(2000);
     const { fields } = useFieldRegistry();
 
+    const [controlsOpen, setControlsOpen] = React.useState(false);
+    const [sniperSearch, setSniperSearch] = React.useState('');
+    const [sniperResults, setSniperResults] = React.useState<any[]>([]);
+    const [isSearching, setIsSearching] = React.useState(false);
+
+    // Effect for sniper search
+    React.useEffect(() => {
+        const t = setTimeout(async () => {
+            if (!sniperSearch || sniperSearch.length < 2) {
+                setSniperResults([]);
+                return;
+            }
+            setIsSearching(true);
+            try {
+                const res = await fetch(`${CCTOWER}/api/spots/search?q=${encodeURIComponent(sniperSearch)}`);
+                const data = await res.json();
+                setSniperResults(data.spots || []);
+            } catch (e) { console.error(e); }
+            finally { setIsSearching(false); }
+        }, 500);
+        return () => clearTimeout(t);
+    }, [sniperSearch]);
+
+    const handleSetSniper = async (id: string) => {
+        try {
+            await fetch(`${CCTOWER}/api/sniper`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_id: id })
+            });
+            setSniperSearch('');
+            setSniperResults([]);
+            pulse();
+        } catch (e) { console.error(e); }
+    };
+
+    const [sniperActiveSpot, setSniperActiveSpot] = React.useState<any>(null);
+
+    // Fetch active sniper spot details
+    React.useEffect(() => {
+        const id = config?.sniper_target_id;
+        if (!id) {
+            setSniperActiveSpot(null);
+            return;
+        }
+        fetch(`${CCTOWER}/api/sniper/poll/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.spot) setSniperActiveSpot(data.spot);
+            })
+            .catch(e => console.error(e));
+    }, [config?.sniper_target_id]);
+
+    const handleClearSniper = async () => {
+        try {
+            await fetch(`${CCTOWER}/api/sniper`, { method: 'DELETE' });
+            pulse();
+        } catch (e) { console.error(e); }
+    };
+
     // outCards show OUTPUT (completed) records for each belt.
     // The output of phase N = the input of phase N+1, so we read the next phase queue.
     const getSpotsForPhase = (beltId: number, count: number = 2) => {
@@ -365,9 +425,9 @@ export const ScraperPipeline: React.FC<{
     };
 
     const handleRestartSpot = async (spotId: string) => {
-        if (!window.confirm(`Force restart this spot to SEEDED?`)) return;
+        if (!window.confirm(`Force restart this spot to SEEDED and purge AI data?`)) return;
         try {
-            const res = await fetch(`${CCTOWER}/api/skate_spots/${spotId}/restart`, { method: 'POST' });
+            const res = await fetch(`${CCTOWER}/api/spots/${spotId}/reset`, { method: 'POST' });
             if ((await res.json()).success) {
                 pulse();
                 onBlockSpot?.(spotId, ''); // trigger refresh
@@ -419,6 +479,53 @@ export const ScraperPipeline: React.FC<{
                         ))}
                     </div>
                     <div style={{ flex: 1 }} />
+
+                    {/* 🎯 SNIPER MISSION CONTROL (Main Header) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: '20px' }}>
+                        <div style={{ position: 'relative', width: 200 }}>
+                            <input 
+                                type="text" 
+                                placeholder="🎯 Sniper Search..."
+                                value={sniperSearch}
+                                onChange={(e) => setSniperSearch(e.target.value)}
+                                style={{ 
+                                    width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,255,170,0.15)', 
+                                    color: '#fff', fontSize: '0.6rem', padding: '5px 10px', borderRadius: '20px',
+                                    fontFamily: 'JetBrains Mono, monospace', outline: 'none'
+                                }}
+                            />
+                            {sniperResults.length > 0 && (
+                                <div style={{ 
+                                    position: 'absolute', top: '100%', left: 0, width: '220px', background: '#0a0a0f', 
+                                    border: '1px solid rgba(0,255,170,0.3)', borderRadius: '8px', zIndex: 1000,
+                                    boxShadow: '0 10px 30px rgba(0,0,0,0.8)', overflow: 'hidden', marginTop: '5px'
+                                }}>
+                                    {sniperResults.map(s => (
+                                        <div 
+                                            key={s.id} 
+                                            onClick={() => handleSetSniper(s.id)}
+                                            style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,255,170,0.1)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                                        >
+                                            <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#00ffaa' }}>{s.name}</div>
+                                            <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)' }}>{s.city}, {s.state}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {config?.sniper_target_id && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(0,255,170,0.1)', padding: '3px 10px', borderRadius: '20px', border: '1px solid rgba(0,255,170,0.3)' }}>
+                                <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#00ffaa', whiteSpace: 'nowrap' }}>
+                                    🎯 SNIPING: {sniperActiveSpot ? `${sniperActiveSpot.name} (${sniperActiveSpot.city}, ${sniperActiveSpot.state})` : config.sniper_target_id.slice(0, 8)}
+                                </span>
+                                <button onClick={() => handleRestartSpot(config.sniper_target_id)} style={{ background: 'rgba(0,255,170,0.2)', border: 'none', color: '#00ffaa', padding: '2px 6px', borderRadius: '4px', fontSize: '0.5rem', fontWeight: 900, cursor: 'pointer' }}>RESET</button>
+                                <button onClick={handleClearSniper} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', padding: '0 4px', fontSize: '0.7rem', cursor: 'pointer' }}>×</button>
+                            </div>
+                        )}
+                    </div>
                     <button
                         onClick={() => setControlsOpen(o => !o)}
                         style={{
@@ -463,11 +570,14 @@ export const ScraperPipeline: React.FC<{
                     // Build live status string from belt telemetry
                     const isActive = dc?.active;
                     const statusLabel = b.status === 'PROCESSING' ? 'PROCESSING' : 'IDLE';
-                    const daemonStatus = b.target && b.target !== 'WAITING...'
-                        ? `${statusLabel}: ${b.target}`
-                        : b.job && b.job !== 'IDLE'
-                            ? b.job
-                            : isActive ? 'RUNNING \u2014 WAITING FOR QUEUE' : 'IDLE \u2014 AWAITING JOB';
+                    const activeRecordStatus = telemetry?.active_record?.pipeline_status;
+                    const daemonStatus = activeRecordStatus
+                        ? `[DETECTIVE] ${activeRecordStatus}`
+                        : b.target && b.target !== 'WAITING...'
+                            ? `${statusLabel}: ${b.target}`
+                            : b.job && b.job !== 'IDLE'
+                                ? b.job
+                                : isActive ? 'RUNNING \u2014 WAITING FOR QUEUE' : 'IDLE \u2014 AWAITING JOB';
                     return (
                         <BeltNode
                             key={b.id}
