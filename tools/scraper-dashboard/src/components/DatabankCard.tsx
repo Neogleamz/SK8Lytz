@@ -344,8 +344,8 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
           </div>
         )}
 
-        {/* Pricing */}
-        {(spot.pricing_data || spot.has_fee || spot.price_range) && (() => {
+        {/* Pricing — only render if we have CONFIRMED data, never assume free */}
+        {(() => {
           let priceLabel = spot.price_range || '';
           if (!priceLabel && spot.pricing_data) {
             try {
@@ -354,10 +354,16 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
               else if (pd?.adult) priceLabel = `Adult: $${pd.adult}`;
             } catch {}
           }
+          // 3-state guard: null = unknown (don't render), false = confirmed free, true = confirmed paid
+          const feeStatus =
+            spot.has_fee === true  ? 'Paid admission' :
+            spot.has_fee === false ? 'Free entry' :
+            null;
+          if (!priceLabel && !feeStatus) return null; // Unknown — show nothing
           return (
             <div style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.55)', display:'flex', alignItems:'center', gap:'6px' }}>
               <span style={{ color:'rgba(255,255,255,0.25)' }}>💰</span>
-              <span>{priceLabel || (spot.has_fee ? 'Paid admission' : 'Free entry')}</span>
+              <span>{priceLabel || feeStatus}</span>
             </div>
           );
         })()}

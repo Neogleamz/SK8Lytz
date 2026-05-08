@@ -344,12 +344,13 @@ export async function executeDetective(
   try {
   const userVectors=aiConfig.ai_target_vectors||[];
   const userSchema=userVectors.reduce((acc:any,vec:any)=>{acc[vec.key]=vec.prompt||vec.type;return acc;},{});
-  const REQUIRED_SCHEMA={hours:'Complete weekly public skating schedule for ALL 7 DAYS {Monday: time_range, Tuesday: time_range, ...}. Include every day even if closed.',pricing:'All admission fees {adult,child,senior,spectator,skate_rental}.',has_fee:'boolean',has_adult_night:'boolean',adult_night_schedule:'If adult nights: {day:time_range}. Null if none.'};
+  const REQUIRED_SCHEMA={hours:'Complete weekly public skating schedule for ALL 7 DAYS {Monday: time_range, Tuesday: time_range, ...}. Include every day even if closed.',pricing:'All admission fees {adult,child,senior,spectator,skate_rental}.',has_fee:'boolean or null — return null if no pricing/fee information was found. DO NOT assume free.',has_adult_night:'boolean or null — return null if no adult night information was found.',adult_night_schedule:'If adult nights: {day:time_range}. Null if none.'};
   const FULL_SCHEMA:Record<string,string>={surface_type:'Floor: wood/maple/concrete/asphalt/sport_court/synthetic.',surface_quality:'Condition 3-5 words.',vibe_score:'0-100.',is_indoor:'boolean',has_rental:'boolean',has_pro_shop:'boolean',has_food:'boolean',has_lights:'boolean',has_lockers:'boolean',has_ac:'boolean',has_wifi:'boolean',has_toilets:'boolean',wheelchair:'boolean',derby:'boolean',capacity:'integer.',special_events:'Array.',operator_name:'Owner name.',operator_description:'1-2 sentences.',cultural_meta:'Significance or null.',adult_night_details:'Details or null.',instagram_url:'URL or null.',facebook_url:'URL or null.',tiktok_url:'URL or null.',schedule_url:'URL or null.',yelp_url:'URL or null.',price_range:'$ to $$$$ or null.',logo_url:'Logo URL or null.',...userSchema};
   const exclusionKw=aiConfig.ai_exclusion_keywords||[];
   const usp=aiConfig.ai_system_prompt||'';
   const buildSystem=(schema:Record<string,string>,ctx?:string)=>{
-    let s=`You are a data extraction agent for [${spotContext.name}] in [${spotContext.city}].\nONLY this location. null for missing. Valid JSON only. true/false/null booleans.\n`;
+    let s=`You are a data extraction agent for [${spotContext.name}] in [${spotContext.city}].\nONLY this location. Valid JSON only.\n`;
+    s+=`CRITICAL BOOLEAN RULE: For ALL boolean fields, you MUST return null if the information was not explicitly found in the text. Do NOT assume false. Do NOT infer. A missing fee schedule does NOT mean admission is free. A missing amenity mention does NOT mean it is absent. Return null to indicate unknown.\n`;
     if(usp) s+=usp+'\n';
     if(exclusionKw.length) s+=`TOXICITY: If PRIMARY business matches [${exclusionKw.join(',')}] return {"TOXICITY_ABORT":true}.\n`;
     if(ctx) s+=`PASS 1 CONTEXT: ${ctx}\n`;
