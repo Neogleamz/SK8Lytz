@@ -127,7 +127,18 @@ export function useBLEScanner({
 
     if (results.length > 0) {
       AppLogger.warn(`[EMERGENCY-DEBUG] classifyProbeResults pushing ${results.length} devices to pendingRegistrations`);
-      setPendingRegistrations(results);
+      setPendingRegistrations(prev => {
+        const merged = [...prev];
+        for (const r of results) {
+          const idx = merged.findIndex(p => p.device_mac === r.device_mac);
+          if (idx >= 0) {
+            merged[idx] = { ...merged[idx], ...r };
+          } else {
+            merged.push(r);
+          }
+        }
+        return merged;
+      });
     }
   };
 
