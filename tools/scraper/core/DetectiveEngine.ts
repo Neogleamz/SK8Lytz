@@ -335,6 +335,7 @@ export async function executeDetective(
           }
         }catch{}
       }
+    }
   } catch (err: any) {
     onProgress(`[Detective] Pre-crawl phase error: ${err.message}`);
   }
