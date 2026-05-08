@@ -807,7 +807,17 @@ export class ZenggeProtocol {
   }
 
 
-  static queryHardwareConfig(): number[] {
+  /**
+   * @deprecated MISNAMED — this sends 0x10 (Session Time Sync), NOT 0x63 (EEPROM config query).
+   * Use `setSessionTime()` instead, which sends the correctly-structured 0x10 time sync packet
+   * with the real current date/time payload.
+   * Use `ZenggeProtocol.wrapCommand([0x63, 0x12, 0x21, 0x0F, checksum])` for the actual EEPROM read.
+   *
+   * Kept as a deprecated stub to prevent accidental resurrection via autocomplete.
+   * @see setSessionTime()
+   */
+  /** @deprecated — use setSessionTime() */
+  static queryHardwareConfig_DEPRECATED_DO_NOT_USE(): number[] {
     return this.wrapCommand([0x10, 0x00, 0x00, 0x10]);
   }
 

@@ -858,9 +858,9 @@ A stealthy `Puppeteer` background process (`CulturalDaemon.ts`) runs infinitely 
 - **The Engine:** It uses Google Shadow-DOM scraping to extract aggregate `vibe_rating`, Instagram links, and adult-night presence.
 - **The Stealth:** The script strictly sleeps for 4 minutes between hits (~280 locations/day), guaranteeing zero CAPTCHAs and eliminating the need for paid IP proxies.
 
-### Wave 3: The AI Detective (Local Llama-3 Pipeline)
+### Wave 3: The AI Detective (Local LM Studio Pipeline)
 A localized, schema-driven AI extraction pipeline that processes raw text dumps from deep-crawled websites.
-- **The Brain:** Ollama running locally (Llama-3 model).
+- **The Brain:** LM Studio running locally (Llama-3 / Mistral model via OpenAI-compatible REST endpoint on port 1234). Ollama was permanently removed — see conversation `40767855`.
 - **The Interface:** Phase 2 (Detective) dashboard tab provides **AI Target Vectors** toggle switches (e.g., General Hours, Adult Night, Pricing, House Rules).
 - **The Config (SSOT):** `scraper_config.ai_target_vectors` stores the active extraction goals as a `text[]` array in Supabase.
 - **The Indexer:** The AI Daemon (`Indexer.ts`) dynamically compiles the prompt using the active target vectors and forces the AI to reply strictly in JSON.
