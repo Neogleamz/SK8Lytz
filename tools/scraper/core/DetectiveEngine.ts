@@ -486,9 +486,8 @@ export async function executeDetective(
 
   const mappedFields={is_indoor,operator_description,operator_name,instagram_url,facebook_url,tiktok_url,schedule_url,opening_hours,adult_night_schedule:adultNightSchedule,has_adult_night,adult_night_details,special_events,pricing_data,has_fee,surface_type,surface_quality,vibe_score,capacity,has_rental,has_pro_shop,has_food,has_lights,has_lockers,has_ac,has_wifi,has_toilets,is_wheelchair_accessible,hosts_derby,cultural_metadata,yelp_url,price_range,logo_url,candidate_photos:candidatePhotos,ai_metadata:Object.keys(aiMetadata).length>0?aiMetadata:null,_simulated_status:passedQualityGate?'DEEP_CRAWLED':'LOW_QUALITY'};
   
+  return {aiMetadata,mappedFields,combinedText,qualityScore,passedQualityGate,candidatePhotos,socialLinks:{instagram_url,facebook_url,tiktok_url,schedule_url},flyerUrls};
   } finally {
     if(browser){try{await browser.close();}catch{}}
   }
-
-  return {aiMetadata,mappedFields,combinedText,qualityScore,passedQualityGate,candidatePhotos,socialLinks:{instagram_url,facebook_url,tiktok_url,schedule_url},flyerUrls};
 }
