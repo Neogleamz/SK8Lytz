@@ -90,64 +90,33 @@ function saveToDisk(buf: Buffer, spotId: string, state: string, index: number, p
   }
 }
 
-// ─── LM Studio AI Photo Selection ────────────────────────────────────────────
+// ─── Programmatic Photo Selection (Heuristics) ──────────────────────────────
 
-async function aiSelectPhotos(candidates: ImageCandidate[], model: string): Promise<string[]> {
+async function estimateImageQuality(candidates: ImageCandidate[]): Promise<string[]> {
   if (candidates.length === 0) return [];
-  const candidateList = candidates.map((c, i) => ({
-    index: i, url: c.url, alt: c.alt.slice(0,80), parentClass: c.parentClass.slice(0,60), source: c.pageSource
-  }));
-  const systemPrompt = `You are a photo curator for roller skating venue profiles.
-Select the 10 best photos from the list below.
-
-PRIORITIZE (in order):
-1. Rink floor / skating surface
-2. Skaters in action on the rink
-3. Venue interior (seating, concession, rental counter, DJ booth)
-4. Venue exterior / building front
-5. Special events (cosmic skate, adult night, DJ, parties)
-
-ACCEPT:
-- Professional venue logos (brand representation)
-- Event promotional graphics that show the rink
-- Staff/team photos if rink is visible
-
-REJECT:
-- Pure text graphics with no rink imagery
-- Social media platform icons or buttons
-- Duplicate images (same content, different URL)
-- Navigation UI elements
-- Tiny decorative graphics
-
-Return ONLY a valid JSON array of the selected URLs (max 10).
-Example: ["https://example.com/photo1.jpg","https://example.com/photo2.jpg"]
-If fewer than 10 qualify, return all that qualify. No markdown, no explanation.`;
-
-  try {
-    const res = await fetch(LM_STUDIO_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role:'system', content: systemPrompt },
-          { role:'user', content: `Candidate images:\n${JSON.stringify(candidateList, null, 2)}` }
-        ],
-        temperature: 0.1,
-        stream: false,
-      }),
-    });
-    if (!res.ok) throw new Error(`LM Studio: ${res.statusText}`);
-    const data: any = await res.json();
-    const raw = data.choices?.[0]?.message?.content || '[]';
-    const cleaned = raw.trim().replace(/```json/g,'').replace(/```/g,'').trim();
-    const parsed = JSON.parse(cleaned);
-    if (Array.isArray(parsed)) return parsed.filter((u:any) => typeof u === 'string').slice(0, MAX_PHOTOS);
-    return [];
-  } catch (e: any) {
-    logToTower('ERROR', `LM Studio photo selection failed: ${e.message} — falling back to filesize sort`);
-    return candidates.sort((a,b) => (b.estimatedSize||0) - (a.estimatedSize||0)).map(c=>c.url).slice(0, MAX_PHOTOS);
+  const sizeMap = new Map<string, number>();
+  
+  // Batch HEAD requests 10 at a time
+  for (let i = 0; i < candidates.length; i += 10) {
+    const batch = candidates.slice(i, i + 10);
+    await Promise.all(batch.map(async (c) => {
+      try {
+        const res = await fetch(c.url, { method: 'HEAD', headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(5000) });
+        if (res.ok) {
+          const cl = res.headers.get('content-length');
+          sizeMap.set(c.url, cl ? parseInt(cl, 10) : 0);
+        } else { sizeMap.set(c.url, 0); }
+      } catch { sizeMap.set(c.url, 0); }
+    }));
   }
+
+  const sortedUrls = candidates
+    .filter(c => (sizeMap.get(c.url) || 0) >= MIN_FILE_SIZE_BYTES)
+    .sort((a, b) => (sizeMap.get(b.url) || 0) - (sizeMap.get(a.url) || 0))
+    .map(c => c.url)
+    .slice(0, MAX_PHOTOS);
+
+  return sortedUrls;
 }
 
 // ─── Puppeteer Gallery Crawl ──────────────────────────────────────────────────
@@ -225,7 +194,6 @@ async function runPhotographerLoop() {
     const configRes = await fetch('http://localhost:5999/api/priority-states').then(r => r.json()).catch(() => ({ priority_states: [] }));
     const priorityStates: string[] = configRes.priority_states || [];
     const aiConfig = await fetch('http://localhost:5999/config').then(r => r.json()).then((d:any) => d.config || {}).catch(() => ({}));
-    const photoModel = aiConfig.detective_model || 'local-model';
 
     let query = `SELECT id, name, state, candidate_photos, photos, logo_url, cover_photo_url, verification_status FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND website IS NOT NULL`;
     if (priorityStates.length > 0) {
@@ -332,9 +300,10 @@ async function runPhotographerLoop() {
 
     logToTower('INFO', `  🔎 Total raw candidates: ${allCandidates.length}. Sending to AI...`);
 
-    // ── Step 4: AI Photo Selection ────────────────────────────────────────────
-    const selectedUrls = await aiSelectPhotos(allCandidates, photoModel);
-    logToTower('INFO', `  🤖 AI selected ${selectedUrls.length} photos`);
+    // ── Step 4: Programmatic Selection (Heuristic-First) ──────────────────────
+    logToTower('INFO', `  🤖 Estimating image quality for ${allCandidates.length} candidates via HTTP Content-Length...`);
+    const selectedUrls = await estimateImageQuality(allCandidates);
+    logToTower('INFO', `  🤖 Selected ${selectedUrls.length} high-resolution photos based on file size heuristics.`);
 
     // ── Step 5: Download AI-selected photos ───────────────────────────────────
     const newUrls: string[] = [];

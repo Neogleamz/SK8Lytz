@@ -242,7 +242,7 @@ async function crawlPage(page: any, url: string, onProgress: (m: string) => void
 export async function executeDetective(
   spotContext: any, aiConfig: any, isHeadless: boolean, onProgress: (msg:string)=>void=()=>{}
 ): Promise<DetectiveResult> {
-  let combinedText=''; const flyerUrls:string[]=[]; let ogImage:string|null=null;
+  let coreText=''; let amenityText=''; let combinedText=''; const flyerUrls:string[]=[]; let ogImage:string|null=null;
   const domImages:Array<{src:string;alt:string;parentClass:string}>=[];
   let aiMetadata:Record<string,any>={};
   const detectiveModel=aiConfig.detective_model||'local-model';
@@ -251,24 +251,24 @@ export async function executeDetective(
   let fbData:any={text:'',cover_photo:null,photos_url:null};
 
   if (!spotContext.website) {
-    onProgress('[Detective] No website.'); combinedText=`Facility: ${spotContext.name}. ${spotContext.city}, ${spotContext.state}. No website.`;
+    onProgress('[Detective] No website.'); coreText=`Facility: ${spotContext.name}. ${spotContext.city}, ${spotContext.state}. No website.`; amenityText=coreText;
   } else if (isSocialCrawlBlocked(spotContext.website)) {
-    onProgress('[Detective] Social-only.'); combinedText=`Facility: ${spotContext.name}. ${spotContext.city}, ${spotContext.state}. No traditional website.`;
+    onProgress('[Detective] Social-only.'); coreText=`Facility: ${spotContext.name}. ${spotContext.city}, ${spotContext.state}. No traditional website.`; amenityText=coreText;
   } else {
     onProgress('[Detective] Fetching sitemap...');
     sitemap=await parseSitemap(spotContext.website);
     onProgress(`[Detective] schedule(${sitemap.schedule_urls.length}) pricing(${sitemap.pricing_urls.length}) gallery(${sitemap.gallery_urls.length})`);
     onProgress('[Detective] Fetching Yelp...');
     yelpData=await fetchYelpData(spotContext.name,spotContext.city,spotContext.state,spotContext.yelp_url);
-    if(yelpData.text) combinedText+='\n\n'+yelpData.text;
+    if(yelpData.text) { coreText+='\n\n'+yelpData.text; amenityText+='\n\n'+yelpData.text; }
     await sleep(EXTERNAL_SOURCE_DELAY);
     onProgress('[Detective] Fetching Facebook...');
     fbData=await fetchFacebookData(spotContext.facebook_url||null);
-    if(fbData.text) combinedText+='\n\n'+fbData.text;
+    if(fbData.text) { coreText+='\n\n'+fbData.text; amenityText+='\n\n'+fbData.text; }
     await sleep(EXTERNAL_SOURCE_DELAY);
     onProgress('[Detective] Fetching Google Places...');
     const gt=await fetchGooglePlacesWeb(spotContext.google_place_id||null);
-    if(gt) combinedText+='\n\n'+gt;
+    if(gt) { coreText+='\n\n'+gt; amenityText+='\n\n'+gt; }
 
     let browser:any=null;
     try {
@@ -284,27 +284,53 @@ export async function executeDetective(
       for(const url of crawlUrls){
         onProgress(`[Detective] -> ${url}`);
         const pg=await crawlPage(page,url,onProgress);
-        if(pg.jsonLd) combinedText+=`\n\n[JSON-LD: ${url}]\n${pg.jsonLd}`;
-        if(pg.text) combinedText+=`\n\n[PAGE: ${url}]\n${pg.text}`;
+        const isOpsUrl = url === spotContext.website || /schedule|pricing|admission|rates|calendar|events/i.test(url);
+        const isAmenityUrl = url === spotContext.website || /about|story|history|facility|rink/i.test(url);
+
+        if(pg.jsonLd) {
+          const ld = `\n\n[JSON-LD: ${url}]\n${pg.jsonLd}`;
+          if(isOpsUrl) coreText+=ld;
+          if(isAmenityUrl) amenityText+=ld;
+        }
+        if(pg.text) {
+          const txt = `\n\n[PAGE: ${url}]\n${pg.text}`;
+          if(isOpsUrl) coreText+=txt;
+          if(isAmenityUrl) amenityText+=txt;
+        }
         if(!ogImage&&pg.ogImage&&!pg.ogImage.includes('placeholder')) ogImage=pg.ogImage;
         domImages.push(...pg.images.slice(0,5));
         flyerUrls.push(...pg.images.filter(i=>/schedule|pricing|flyer/i.test(i.src+i.alt)).map(i=>i.src));
         allLinks.push(...pg.links);
-        for(const iframe of pg.iframes){const ig=await crawlPage(page,iframe,onProgress);if(ig.text)combinedText+=`\n\n[IFRAME:${iframe}]\n${ig.text}`;}
+        for(const iframe of pg.iframes){
+          const ig=await crawlPage(page,iframe,onProgress);
+          if(ig.text) {
+            const igTxt = `\n\n[IFRAME:${iframe}]\n${ig.text}`;
+            coreText+=igTxt; amenityText+=igTxt;
+          }
+        }
       }
       if(targeted.length===0){
         const internal=allLinks.filter(l=>{try{return new URL(l.href).hostname===hostname;}catch{return false;}});
         const scored=internal.map(l=>{let s=0;for(const r of PAGE_SCORE_RULES){if(r.pattern.test(l.href)||r.pattern.test(l.text))s=Math.max(s,r.score);}return{...l,score:s};}).filter(l=>l.score>0).sort((a,b)=>b.score-a.score);
         for(const l of [...new Set(scored.map(s=>s.href))].slice(0,5)){
-          if(combinedText.includes(`[PAGE: ${l}]`)) continue;
+          if(coreText.includes(`[PAGE: ${l}]`)) continue;
           const pg=await crawlPage(page,l,onProgress);
-          if(pg.text) combinedText+=`\n\n[PAGE: ${l}]\n${pg.text}`;
+          if(pg.text) {
+            const txt = `\n\n[PAGE: ${l}]\n${pg.text}`;
+            coreText+=txt; amenityText+=txt;
+          }
           domImages.push(...pg.images.slice(0,3));
         }
       }
       for(const fUrl of [...new Set(flyerUrls)].slice(0,5)){
-        if(combinedText.includes(`[OCR from Flyer Image: ${fUrl}]`)) continue;
-        try{const{data:{text}}=await Tesseract.recognize(fUrl,'eng');if(text?.length>20)combinedText+=`\n\n[OCR from Flyer Image: ${fUrl}]\n${text}`;}catch{}
+        if(coreText.includes(`[OCR from Flyer Image: ${fUrl}]`)) continue;
+        try{
+          const{data:{text}}=await Tesseract.recognize(fUrl,'eng');
+          if(text?.length>20) {
+            const ocrTxt = `\n\n[OCR from Flyer Image: ${fUrl}]\n${text}`;
+            coreText+=ocrTxt; amenityText+=ocrTxt;
+          }
+        }catch{}
       }
     } finally{if(browser){try{await browser.close();}catch{}}}
   }
@@ -323,14 +349,35 @@ export async function executeDetective(
     return s+`SCHEMA:\n${JSON.stringify(schema,null,2)}`;
   };
 
-  if(combinedText.trim().length>=50){
-    const slice=combinedText.slice(-40000);
-    onProgress('[Detective] LM Studio Pass 1...');
-    const pass1=await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${slice}`,detectiveModel,onProgress,'Pass1');
+  if(coreText.trim().length>=50){
+    const cSlice=coreText.slice(0, 24000);
+    const aSlice=amenityText.slice(0, 24000);
+    combinedText = `[OPS CORE]\n${cSlice}\n\n[AMENITIES]\n${aSlice}`;
+    
+    onProgress('[Detective] LM Studio Pass 1 (Ops)...');
+    const pass1=await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice}`,detectiveModel,onProgress,'Pass1');
     if(pass1.TOXICITY_ABORT===true) return{aiMetadata:{TOXICITY_ABORT:true},mappedFields:{_simulated_status:'REJECTED'},combinedText,qualityScore:0,passedQualityGate:false,candidatePhotos:null,socialLinks:{instagram_url:null,facebook_url:null,tiktok_url:null,schedule_url:null},flyerUrls};
-    onProgress('[Detective] LM Studio Pass 2...');
-    const pass2=await callLMStudio(buildSystem(FULL_SCHEMA,`Hours:${JSON.stringify(pass1.hours)} Pricing:${JSON.stringify(pass1.pricing)}`),`Website Text:\n${slice}`,detectiveModel,onProgress,'Pass2');
-    aiMetadata={...pass2,...pass1};
+    
+    const AMENITIES_SCHEMA = {
+      surface_type:'Floor: wood/maple/concrete/asphalt/sport_court/synthetic.',
+      is_indoor:'boolean', has_rental:'boolean', has_pro_shop:'boolean', has_food:'boolean', 
+      has_lights:'boolean', has_lockers:'boolean', has_ac:'boolean', has_wifi:'boolean', 
+      has_toilets:'boolean', wheelchair:'boolean', capacity:'integer.'
+    };
+    onProgress('[Detective] LM Studio Pass 2 (Amenities)...');
+    const pass2=await callLMStudio(buildSystem(AMENITIES_SCHEMA),`Website Text:\n${aSlice}`,detectiveModel,onProgress,'Pass2');
+
+    const VIBE_SCHEMA = {
+      surface_quality:'Condition 3-5 words.', vibe_score:'0-100.', derby:'boolean', special_events:'Array.', 
+      operator_name:'Owner name.', operator_description:'1-2 sentences.', cultural_meta:'Significance or null.', 
+      adult_night_details:'Details or null.', instagram_url:'URL or null.', facebook_url:'URL or null.', 
+      tiktok_url:'URL or null.', schedule_url:'URL or null.', yelp_url:'URL or null.', price_range:'$ to $$$$ or null.', 
+      logo_url:'Logo URL or null.', ...userSchema
+    };
+    onProgress('[Detective] LM Studio Pass 3 (Vibe)...');
+    const pass3=await callLMStudio(buildSystem(VIBE_SCHEMA),`Website Text:\n${aSlice}`,detectiveModel,onProgress,'Pass3');
+
+    aiMetadata={...pass3,...pass2,...pass1};
   } else onProgress('[Detective] Content too short. Skipping LM Studio.');
 
   const opening_hours=aiMetadata.hours||aiMetadata.opening_hours||spotContext.opening_hours||null;

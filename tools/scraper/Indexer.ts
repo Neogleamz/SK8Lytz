@@ -128,43 +128,39 @@ async function runIndexer() {
         continue;
       }
 
-      // ── ✅ Write all fields to DB ─────────────────────────────────────────
+      // ── ✅ Write all fields to DB (Non-Destructive Merge) ───────────────
       const { mappedFields } = result;
+      const finalUpdates: any = {};
+      
+      const fieldsToCheck = [
+        'is_indoor', 'operator_description', 'operator_name', 'instagram_url', 'facebook_url',
+        'tiktok_url', 'schedule_url', 'opening_hours', 'adult_night_schedule', 'has_adult_night',
+        'adult_night_details', 'special_events', 'pricing_data', 'has_fee', 'surface_type',
+        'surface_quality', 'vibe_score', 'capacity', 'has_rental', 'has_pro_shop', 'has_food',
+        'has_lights', 'has_lockers', 'has_ac', 'has_wifi', 'has_toilets', 'is_wheelchair_accessible',
+        'hosts_derby', 'cultural_metadata', 'yelp_url', 'price_range', 'logo_url', 'cover_photo_url'
+      ];
+
+      for (const key of fieldsToCheck) {
+        const newVal = mappedFields[key];
+        const oldVal = target[key];
+        
+        // Check if new value is empty
+        const isNewEmpty = newVal === null || newVal === undefined || newVal === '' || (typeof newVal === 'object' && Object.keys(newVal).length === 0);
+        // Check if old value is empty (including stringified null/empty)
+        const isOldEmpty = oldVal === null || oldVal === undefined || oldVal === '' || oldVal === 'null' || oldVal === '{}' || oldVal === '[]';
+
+        if (isNewEmpty && !isOldEmpty) {
+          finalUpdates[key] = oldVal;
+          console.log(`   🛡️ Retained existing DB value for: ${key}`);
+        } else {
+          finalUpdates[key] = newVal;
+        }
+      }
+
       try {
         updateLocalSpot(target.id, {
-          is_indoor:                  mappedFields.is_indoor,
-          operator_description:       mappedFields.operator_description,
-          operator_name:              mappedFields.operator_name,
-          instagram_url:              mappedFields.instagram_url,
-          facebook_url:               mappedFields.facebook_url,
-          tiktok_url:                 mappedFields.tiktok_url,
-          schedule_url:               mappedFields.schedule_url,
-          opening_hours:              mappedFields.opening_hours,
-          adult_night_schedule:       mappedFields.adult_night_schedule,
-          has_adult_night:            mappedFields.has_adult_night,
-          adult_night_details:        mappedFields.adult_night_details,
-          special_events:             mappedFields.special_events,
-          pricing_data:               mappedFields.pricing_data,
-          has_fee:                    mappedFields.has_fee,
-          surface_type:               mappedFields.surface_type,
-          surface_quality:            mappedFields.surface_quality,
-          vibe_score:                 mappedFields.vibe_score,
-          capacity:                   mappedFields.capacity,
-          has_rental:                 mappedFields.has_rental,
-          has_pro_shop:               mappedFields.has_pro_shop,
-          has_food:                   mappedFields.has_food,
-          has_lights:                 mappedFields.has_lights,
-          has_lockers:                mappedFields.has_lockers,
-          has_ac:                     mappedFields.has_ac,
-          has_wifi:                   mappedFields.has_wifi,
-          has_toilets:                mappedFields.has_toilets,
-          is_wheelchair_accessible:   mappedFields.is_wheelchair_accessible,
-          hosts_derby:                mappedFields.hosts_derby,
-          cultural_metadata:          mappedFields.cultural_metadata,
-          yelp_url:                   mappedFields.yelp_url,
-          price_range:                mappedFields.price_range,
-          logo_url:                   mappedFields.logo_url,
-          cover_photo_url:            mappedFields.cover_photo_url,
+          ...finalUpdates,
           ...(result.candidatePhotos ? { candidate_photos: result.candidatePhotos } : {}),
           ai_metadata: mappedFields.ai_metadata,
           verification_status: 'DEEP_CRAWLED',
