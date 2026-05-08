@@ -210,10 +210,12 @@ class LocationService {
       return 0;
     });
 
-    // Apply radius filter (sessions without coords pass through — user might be at same location)
-    // Apply radius filter (Only show sessions with valid coordinates within the radius)
+    // Apply radius filter (sessions without coords or user location pass through)
+    // If distanceMi is null (GPS not yet available), let the spot through — we can't
+    // measure the distance yet. Once GPS resolves, refreshNearby re-fires and applies
+    // the real radius cap. This prevents a cold-start blank map.
     if (radiusMi != null) {
-      return sorted.filter(s => s.distanceMi !== null && s.distanceMi <= radiusMi);
+      return sorted.filter(s => s.distanceMi === null || s.distanceMi <= radiusMi);
     }
     return sorted;
   }
@@ -280,7 +282,10 @@ class LocationService {
     });
 
     if (radiusMi != null) {
-      return sorted.filter(s => s.distanceMi !== null && s.distanceMi <= radiusMi);
+      // If distanceMi is null (GPS not yet available), let the spot through — we can't
+      // measure the distance yet. Once GPS resolves, refreshNearby re-fires and applies
+      // the real radius cap. This prevents a cold-start blank map.
+      return sorted.filter(s => s.distanceMi === null || s.distanceMi <= radiusMi);
     }
     return sorted;
   }
