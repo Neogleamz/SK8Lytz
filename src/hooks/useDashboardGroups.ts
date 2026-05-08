@@ -128,6 +128,9 @@ export function useDashboardGroups({
     setCustomGroups(Object.values(groupMap));
 
     // ── Pass 2: Hardware config merge (functional updater, async-safe) ───────
+    // NOTE: This config layer only handles hardware topology (points/segments/groups).
+    // Live pattern/color dispatch state is tracked in DeviceStateLedger, NOT here
+    // and definitely NOT in ControllerPersistence (which is purely for UI widget state).
     setDeviceConfigs(prevConfigs => {
       let nextConfigs = { ...prevConfigs };
       let configsChanged = false;

@@ -10,6 +10,11 @@
  *  - All keys normalized via normalizeMac() — kills the Supabase-composite vs BLE-MAC key mismatch
  *
  * Storage key: `@SK8Lytz_DeviceState_v2_{MAC_UPPERCASE}`
+ * 
+ * CONTRACT BOUNDARY:
+ * This hook ONLY tracks actual hardware dispatch state (what was sent over BLE).
+ * It does NOT track the UI slider positions or temporary controller modes.
+ * For UI widget state, see `useControllerPersistence.ts`.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback } from 'react';

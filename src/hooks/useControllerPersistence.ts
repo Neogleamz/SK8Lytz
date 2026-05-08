@@ -5,6 +5,11 @@
  * in-memory FSM state and the `@Sk8lytz_ControllerState` AsyncStorage blob.
  *
  * Extracted from DockedController.tsx to isolate persistence side-effects.
+ * 
+ * CONTRACT BOUNDARY:
+ * This hook ONLY saves UI widget state (what the user sees on the sliders/buttons).
+ * It does NOT track what was actually sent to the hardware.
+ * For true hardware state ("restore last session"), see `useDeviceStateLedger.ts`.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
