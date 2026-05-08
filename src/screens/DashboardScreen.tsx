@@ -467,39 +467,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     customGroupsRef.current = customGroups;
   }, [customGroups]); // Keep ref in sync with hook-managed state
 
-  // One-shot startup cleanup: prune simulator entries from @Sk8lytz_device_configs.
-  // NOTE: customGroups and deviceConfigs state are now fully owned by useDashboardGroups.
-  // This effect ONLY cleans sim- prefixed entries — it does NOT call setDeviceConfigs
-  // to avoid a race condition with useDashboardGroups' own load.
-  useEffect(() => {
-    // Prune sim-device entries from device configs (without overwriting hook state)
-    AsyncStorage.getItem('@Sk8lytz_device_configs')
-      .then(res => {
-        if (!res) return;
-        try {
-          const configs = JSON.parse(res) || {};
-          const hasSim = Object.keys(configs).some(k => k.startsWith('sim-'));
-          if (hasSim) {
-            for (const key in configs) { if (key.startsWith('sim-')) delete configs[key]; }
-            AsyncStorage.setItem('@Sk8lytz_device_configs', JSON.stringify(configs)).catch(() => {});
-          }
-        } catch (e: any) { AppLogger.warn('JSON parse error configs cleanup', { error: String(e) }); }
-      })
-      .catch((e: any) => AppLogger.warn('AsyncStorage error configs cleanup', { error: String(e) }));
 
-    // Prune sim-device entries from processed devices log
-    AsyncStorage.getItem('@Sk8lytz_processed_devices')
-      .then(res => {
-        if (!res) return;
-        try {
-          const processed = JSON.parse(res) || [];
-          const cleaned = processed.filter((id: string) => !id.startsWith('sim-'));
-          if (cleaned.length !== processed.length) {
-            AsyncStorage.setItem('@Sk8lytz_processed_devices', JSON.stringify(cleaned)).catch(() => {});
-          }
-        } catch (e) {}
-      });
-  }, []);
 
   // displayConnectedDevices, isActuallyConnected, isGrouped hoisted to top of component (after useDashboardGroups).
 
