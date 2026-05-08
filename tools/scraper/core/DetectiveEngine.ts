@@ -249,8 +249,11 @@ export async function executeDetective(
   let sitemap:any={schedule_urls:[],pricing_urls:[],about_urls:[],events_urls:[],contact_urls:[],gallery_urls:[],all_urls:[]};
   let yelpData:any={text:'',photos_url:null,og_image:null};
   let fbData:any={text:'',cover_photo:null,photos_url:null};
+  let allLinks:Array<{href:string;text:string}>=[];
+  let browser:any=null;
 
-  if (!spotContext.website) {
+  try {
+    if (!spotContext.website) {
     onProgress('[Detective] No website.'); coreText=`Facility: ${spotContext.name}. ${spotContext.city}, ${spotContext.state}. No website.`; amenityText=coreText;
   } else if (isSocialCrawlBlocked(spotContext.website)) {
     onProgress('[Detective] Social-only.'); coreText=`Facility: ${spotContext.name}. ${spotContext.city}, ${spotContext.state}. No traditional website.`; amenityText=coreText;
@@ -279,7 +282,7 @@ export async function executeDetective(
       const targeted=[...new Set([...sitemap.schedule_urls.slice(0,3),...sitemap.pricing_urls.slice(0,3),...sitemap.about_urls.slice(0,2),...sitemap.events_urls.slice(0,2),...sitemap.contact_urls.slice(0,1)])];
       const crawlUrls=[spotContext.website,...targeted].slice(0,MAX_PAGES_PER_RECORD);
       const PAGE_SCORE_RULES=[{pattern:/hours|schedule|session|times|calendar|events|open.?skate/i,score:10},{pattern:/adult.?night|18\+|21\+/i,score:10},{pattern:/pricing|price|admission|rates|tickets/i,score:9},{pattern:/about|story|history|facility|rink/i,score:8},{pattern:/location|directions|contact/i,score:6}];
-      let allLinks:Array<{href:string;text:string}>=[];
+      
       let hostname='';try{hostname=new URL(spotContext.website).hostname;}catch{}
       for(const url of crawlUrls){
         onProgress(`[Detective] -> ${url}`);
@@ -334,7 +337,9 @@ export async function executeDetective(
           }
         }catch{}
       }
-    } finally{if(browser){try{await browser.close();}catch{}}}
+    }
+  } catch (err: any) {
+    onProgress(`[Detective] Pre-crawl phase error: ${err.message}`);
   }
 
   const userVectors=aiConfig.ai_target_vectors||[];
@@ -360,6 +365,49 @@ export async function executeDetective(
     const pass1=await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice}`,detectiveModel,onProgress,'Pass1');
     if(pass1.TOXICITY_ABORT===true) return{aiMetadata:{TOXICITY_ABORT:true},mappedFields:{_simulated_status:'REJECTED'},combinedText,qualityScore:0,passedQualityGate:false,candidatePhotos:null,socialLinks:{instagram_url:null,facebook_url:null,tiktok_url:null,schedule_url:null},flyerUrls};
     
+    // ── ESCALATION PROTOCOL ──
+    const needsEscalation = !pass1.hours || !pass1.pricing;
+    if (needsEscalation && browser) {
+      onProgress('[Detective] 🚨 ESCALATION PROTOCOL: Missing hours/pricing. Activating Hound Dog & OCR.');
+      const ESCALATION_RULES = [/hours/i, /schedule/i, /pricing/i, /rates/i, /admission/i, /calendar/i];
+      const undiscovered = allLinks.filter(l => ESCALATION_RULES.some(r => r.test(l.href) || r.test(l.text)))
+                                   .map(l => l.href)
+                                   .filter(href => !coreText.includes(`[PAGE: ${href}]`));
+      
+      const targets = [...new Set(undiscovered)].slice(0, 2);
+      if (targets.length > 0) {
+        const pages = await browser.pages();
+        const escPage = pages.length > 0 ? pages[0] : await browser.newPage();
+        
+        for (const targetUrl of targets) {
+          onProgress(`[Detective] 🚨 Escalation deep crawl -> ${targetUrl}`);
+          await escPage.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 25000 }).catch(()=>{});
+          await autoScroll(escPage);
+          
+          try {
+            onProgress(`[Detective] 📸 Visual Snapshot taken. Running Tesseract OCR...`);
+            const screenshotBuffer = await escPage.screenshot({ fullPage: true, type: 'jpeg', quality: 80 });
+            const { data: { text } } = await Tesseract.recognize(screenshotBuffer, 'eng');
+            if (text?.trim().length > 50) {
+              const ocrTxt = `\n\n[ESCALATION OCR from ${targetUrl}]\n${text}\n\n`;
+              coreText = ocrTxt + coreText;
+              amenityText = ocrTxt + amenityText;
+            }
+          } catch(e:any) {
+            onProgress(`[Detective] OCR failed: ${e.message}`);
+          }
+        }
+        
+        onProgress('[Detective] 🚨 Re-running LM Studio Pass 1 (Ops) with OCR context...');
+        const cSlice2 = coreText.slice(0, 24000);
+        const pass1_retry = await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice2}`,detectiveModel,onProgress,'Pass1-Retry');
+        if (pass1_retry.hours) pass1.hours = pass1_retry.hours;
+        if (pass1_retry.pricing) pass1.pricing = pass1_retry.pricing;
+      } else {
+        onProgress('[Detective] 🚨 No undiscovered priority links found for escalation.');
+      }
+    }
+
     const AMENITIES_SCHEMA = {
       surface_type:'Floor: wood/maple/concrete/asphalt/sport_court/synthetic.',
       is_indoor:'boolean', has_rental:'boolean', has_pro_shop:'boolean', has_food:'boolean', 
@@ -436,5 +484,10 @@ export async function executeDetective(
   onProgress(passedQualityGate?'[Detective] Quality gate passed.':'[Detective] Low quality — emitting DEEP_CRAWLED anyway.');
 
   const mappedFields={is_indoor,operator_description,operator_name,instagram_url,facebook_url,tiktok_url,schedule_url,opening_hours,adult_night_schedule:adultNightSchedule,has_adult_night,adult_night_details,special_events,pricing_data,has_fee,surface_type,surface_quality,vibe_score,capacity,has_rental,has_pro_shop,has_food,has_lights,has_lockers,has_ac,has_wifi,has_toilets,is_wheelchair_accessible,hosts_derby,cultural_metadata,yelp_url,price_range,logo_url,candidate_photos:candidatePhotos,ai_metadata:Object.keys(aiMetadata).length>0?aiMetadata:null,_simulated_status:passedQualityGate?'DEEP_CRAWLED':'LOW_QUALITY'};
+  
+  } finally {
+    if(browser){try{await browser.close();}catch{}}
+  }
+
   return {aiMetadata,mappedFields,combinedText,qualityScore,passedQualityGate,candidatePhotos,socialLinks:{instagram_url,facebook_url,tiktok_url,schedule_url},flyerUrls};
 }
