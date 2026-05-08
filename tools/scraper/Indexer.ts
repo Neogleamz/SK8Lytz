@@ -145,14 +145,15 @@ async function runIndexer() {
         const newVal = mappedFields[key];
         const oldVal = target[key];
         
-        // Check if new value is empty
-        const isNewEmpty = newVal === null || newVal === undefined || newVal === '' || (typeof newVal === 'object' && Object.keys(newVal).length === 0);
         // Check if old value is empty (including stringified null/empty)
         const isOldEmpty = oldVal === null || oldVal === undefined || oldVal === '' || oldVal === 'null' || oldVal === '{}' || oldVal === '[]';
 
-        if (isNewEmpty && !isOldEmpty) {
+        if (!isOldEmpty) {
+          // Idea A: Pure Fill-in-the-Blank. If DB has a value, lock out the AI.
           finalUpdates[key] = oldVal;
-          console.log(`   🛡️ Retained existing DB value for: ${key}`);
+          if (newVal !== undefined && newVal !== null) {
+            console.log(`   🛡️ Locked DB value for ${key}. AI update ignored.`);
+          }
         } else {
           finalUpdates[key] = newVal;
         }

@@ -327,8 +327,10 @@ export async function executeDetective(
         try{
           const{data:{text}}=await Tesseract.recognize(fUrl,'eng');
           if(text?.length>20) {
-            const ocrTxt = `\n\n[OCR from Flyer Image: ${fUrl}]\n${text}`;
-            coreText+=ocrTxt; amenityText+=ocrTxt;
+            const ocrTxt = `[OCR from Flyer Image: ${fUrl}]\n${text}\n\n`;
+            coreText = ocrTxt + coreText;
+            amenityText = ocrTxt + amenityText;
+            onProgress(`[Detective] Pre-pended OCR text from flyer: ${fUrl}`);
           }
         }catch{}
       }
