@@ -95,15 +95,16 @@ export function useDashboardAutoConnect({
       // Clear existing debounce timer and set a new one
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
 
-      debounceTimerRef.current = setTimeout(() => {
+      const attemptConnection = () => {
         // ── GATE CHECK: Only connect when no other BLE operation is in-flight ──
         if (bleGateRef.current !== 'IDLE') {
           AppLogger.log('BLE_STATE_CHANGE', {
-            event: 'auto_connect_observer_gate_blocked',
+            event: 'auto_connect_observer_gate_blocked_retrying',
             gate: bleGateRef.current,
             batchSize: pendingBatchRef.current.length,
           });
-          pendingBatchRef.current = [];
+          // BUG-02 Fix: Do not wipe pendingBatchRef. Instead, retry in 1000ms.
+          debounceTimerRef.current = setTimeout(attemptConnection, 1000);
           return;
         }
 
@@ -126,7 +127,9 @@ export function useDashboardAutoConnect({
             scanForPeripherals({ disableProbing: true });
           }
         });
-      }, 500); // 500ms debounce window
+      };
+
+      debounceTimerRef.current = setTimeout(attemptConnection, 500); // 500ms debounce window
     }
   }, [allDevices, connectedDevices]);
 
