@@ -366,10 +366,10 @@ export async function executeDetective(
     if(pass1.TOXICITY_ABORT===true) return{aiMetadata:{TOXICITY_ABORT:true},mappedFields:{_simulated_status:'REJECTED'},combinedText,qualityScore:0,passedQualityGate:false,candidatePhotos:null,socialLinks:{instagram_url:null,facebook_url:null,tiktok_url:null,schedule_url:null},flyerUrls};
     
     // ── ESCALATION PROTOCOL ──
-    const needsEscalation = !pass1.hours || !pass1.pricing;
+    const needsEscalation = !pass1.hours || !pass1.pricing || (pass1.has_adult_night === true && !pass1.adult_night_schedule);
     if (needsEscalation && browser) {
-      onProgress('[Detective] 🚨 ESCALATION PROTOCOL: Missing hours/pricing. Activating Hound Dog & OCR.');
-      const ESCALATION_RULES = [/hours/i, /schedule/i, /pricing/i, /rates/i, /admission/i, /calendar/i];
+      onProgress('[Detective] 🚨 ESCALATION PROTOCOL: Missing hours/pricing/adult-night. Activating Hound Dog & OCR.');
+      const ESCALATION_RULES = [/hours/i, /schedule/i, /pricing/i, /rates/i, /admission/i, /calendar/i, /adult.?night/i, /18\+/i, /21\+/i];
       const undiscovered = allLinks.filter(l => ESCALATION_RULES.some(r => r.test(l.href) || r.test(l.text)))
                                    .map(l => l.href)
                                    .filter(href => !coreText.includes(`[PAGE: ${href}]`));
@@ -403,6 +403,8 @@ export async function executeDetective(
         const pass1_retry = await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice2}`,detectiveModel,onProgress,'Pass1-Retry');
         if (pass1_retry.hours) pass1.hours = pass1_retry.hours;
         if (pass1_retry.pricing) pass1.pricing = pass1_retry.pricing;
+        if (pass1_retry.has_adult_night !== undefined) pass1.has_adult_night = pass1_retry.has_adult_night;
+        if (pass1_retry.adult_night_schedule) pass1.adult_night_schedule = pass1_retry.adult_night_schedule;
       } else {
         onProgress('[Detective] 🚨 No undiscovered priority links found for escalation.');
       }
