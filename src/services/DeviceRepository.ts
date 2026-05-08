@@ -349,6 +349,15 @@ class DeviceRepository {
    */
   async updateConfig(mac: string, patch: Partial<DeviceSettings>): Promise<void> {
     const key = mac.toUpperCase();
+    
+    // BUG-05 Fix: Automatically stamp userConfiguredAt when hardware topology (points) 
+    // is successfully probed/written. This prevents the initial Setup Wizard results 
+    // from being immediately overwritten by stale cloud state (which defaults to 0).
+    const incomingPoints = patch.points ?? (patch as any).ledPoints;
+    if (incomingPoints !== undefined && incomingPoints > 0 && !patch.userConfiguredAt) {
+      patch.userConfiguredAt = new Date().toISOString();
+    }
+
     this.configs[key] = { ...(this.configs[key] || {} as DeviceSettings), ...patch };
     await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch(() => {});
     this._notifyListeners();
