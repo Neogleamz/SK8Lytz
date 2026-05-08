@@ -977,7 +977,19 @@ app.get('/api/queue', async (req, res) => {
 app.put('/api/skate_spots/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    updateLocalSpot(id, req.body);
+    const body = { ...req.body };
+    // Co-update verification_status when publishing/unpublishing so the
+    // status badge on DatabankCard stays in sync with the LIVE toggle.
+    if ('is_published' in body) {
+      const publishing = body.is_published === true || body.is_published === 1;
+      if (publishing && !body.verification_status) {
+        body.verification_status = 'PUBLISHED';
+      } else if (!publishing && !body.verification_status) {
+        // Revert to MEDIA_READY on unpublish (spot has photos, just pulled back)
+        body.verification_status = 'MEDIA_READY';
+      }
+    }
+    updateLocalSpot(id, body);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
