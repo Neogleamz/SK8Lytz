@@ -18,6 +18,7 @@ import path from 'path';
 import fs from 'fs';
 import fetch from 'node-fetch';
 import puppeteer from 'puppeteer';
+import Tesseract from 'tesseract.js';
 import { db, updateLocalSpot, getConfig } from './core/LocalDB';
 
 const envPaths = [
@@ -114,9 +115,27 @@ async function estimateImageQuality(candidates: ImageCandidate[]): Promise<strin
     .filter(c => (sizeMap.get(c.url) || 0) >= MIN_FILE_SIZE_BYTES)
     .sort((a, b) => (sizeMap.get(b.url) || 0) - (sizeMap.get(a.url) || 0))
     .map(c => c.url)
-    .slice(0, MAX_PHOTOS);
+    .slice(0, MAX_PHOTOS * 2); // Take top 20 to screen
 
-  return sortedUrls;
+  const finalUrls: string[] = [];
+  logToTower('INFO', `  🔍 Running OCR Bouncer on top ${sortedUrls.length} candidate images...`);
+  
+  for (const url of sortedUrls) {
+    if (finalUrls.length >= MAX_PHOTOS) break;
+    try {
+      const { data: { text } } = await Tesseract.recognize(url, 'eng');
+      const textLen = text?.trim().length || 0;
+      if (textLen > 100) {
+        logToTower('INFO', `  🚫 Rejected as Flyer (Text length: ${textLen}): ${url.slice(0, 60)}`);
+      } else {
+        finalUrls.push(url);
+      }
+    } catch {
+      finalUrls.push(url); // Default to keep if OCR fails
+    }
+  }
+
+  return finalUrls;
 }
 
 // ─── Puppeteer Gallery Crawl ──────────────────────────────────────────────────
