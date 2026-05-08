@@ -177,27 +177,36 @@ export function useDashboardAutoConnect({
 
       if (isOffline || groupsToProcess.length === 0) {
         AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_offline_fallback' });
-        const localDevicesStr = await AsyncStorage.getItem('@Sk8lytz_registered_devices');
-        if (localDevicesStr) {
-          try {
-            const parsed = JSON.parse(localDevicesStr);
-            const offlineGroupMap = new Map<string, any>();
-            parsed.forEach((d: any) => {
-              if (d.group_id && d.group_id !== 'default-fleet') {
-                if (!offlineGroupMap.has(d.group_id)) {
-                  offlineGroupMap.set(d.group_id, {
-                    id: d.group_id,
-                    group_name: d.group_name || d.group_id,
-                    created_at: new Date().toISOString(),
-                    deviceIds: [],
-                  });
-                }
-                offlineGroupMap.get(d.group_id).deviceIds.push(d.device_mac);
+        
+        const processLocalDevices = (devicesArray: any[]) => {
+          const offlineGroupMap = new Map<string, any>();
+          devicesArray.forEach((d: any) => {
+            if (d.group_id && d.group_id !== 'default-fleet') {
+              if (!offlineGroupMap.has(d.group_id)) {
+                offlineGroupMap.set(d.group_id, {
+                  id: d.group_id,
+                  group_name: d.group_name || d.group_id,
+                  created_at: new Date().toISOString(),
+                  deviceIds: [],
+                });
               }
-            });
-            groupsToProcess = Array.from(offlineGroupMap.values());
-          } catch (e) {
-            AppLogger.warn('Failed to parse offline registered_devices', { error: String(e) });
+              offlineGroupMap.get(d.group_id).deviceIds.push(d.device_mac);
+            }
+          });
+          groupsToProcess = Array.from(offlineGroupMap.values());
+        };
+
+        if (registeredDevices && registeredDevices.length > 0) {
+          processLocalDevices(registeredDevices);
+        } else {
+          const localDevicesStr = await AsyncStorage.getItem('@Sk8lytz_registered_devices');
+          if (localDevicesStr) {
+            try {
+              const parsed = JSON.parse(localDevicesStr);
+              processLocalDevices(parsed);
+            } catch (e) {
+              AppLogger.warn('Failed to parse offline registered_devices', { error: String(e) });
+            }
           }
         }
       }
