@@ -701,19 +701,30 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
 
     // ── Music Mode: fire on mode entry AND on settings change ────────────────
-    // activeMode is in the dep array so this fires when switching INTO Music mode,
-    // not just when a setting changes. The DashboardScreen fallback guard (which
-    // previously kicked the user out on a SCANNING blip) now correctly gates on
-    // bleState === 'SCANNING' — no debounce needed here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Split into two effects to narrow dependencies. This prevents non-music interactions
+    // from forcing unintentional hardware writes or duplicate writes during mode transitions.
+    const isInMusicModeRef = useRef(activeMode === 'MUSIC');
+
+    // 1. Fire on mode entry
     React.useEffect(() => {
+      isInMusicModeRef.current = activeMode === 'MUSIC';
       if (activeMode !== 'MUSIC' || !writeToDevice) return;
       handleMusicChange(
         musicPatternId, micSensitivity, brightness, micSource,
         musicPrimaryColor, musicSecondaryColor, musicMatrixStyle
       );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeMode, musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
+    }, [activeMode]); // Only fire when activeMode changes
+
+    // 2. Fire on settings change (ONLY when already in Music mode)
+    React.useEffect(() => {
+      if (!isInMusicModeRef.current || !writeToDevice) return;
+      handleMusicChange(
+        musicPatternId, micSensitivity, brightness, micSource,
+        musicPrimaryColor, musicSecondaryColor, musicMatrixStyle
+      );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle, micSensitivity, brightness]);
 
     // getColorName — now imported from '../utils/ColorUtils'
 
