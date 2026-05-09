@@ -220,7 +220,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       writeToDevice: parentWriteToDevice as ((payload: number[], targetDeviceId?: string) => Promise<boolean | 'partial'>) | undefined,
       // Indirection via ref: always calls the latest closure without recreating the hook callback
       onReconcile: () => onReconcileRef.current(),
-      debounceMs: 40,
+      debounceMs: 0, // perf(ble): removed redundant pre-debounce — useBLE.ts 50ms is the authoritative guard
       disableOptimisticUI: appSettings['global_optimistic_ui_enabled'] === false,
       disableHaptics: appSettings['global_haptics_enabled'] === false,
     });

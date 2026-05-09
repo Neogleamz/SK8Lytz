@@ -613,7 +613,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
           if (thisGeneration !== writeGeneration) { resolve(true); return; }
           const result = await _executeWriteToDevice(payload, targetDeviceId);
           resolve(result);
-        }, 100);
+        }, 50); // perf(ble): 100ms→50ms — coalesces slider drags at 60Hz (16ms intervals); discrete taps land in ~50ms
       });
     }
     return _executeWriteToDevice(payload, targetDeviceId);
