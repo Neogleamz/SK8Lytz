@@ -15,6 +15,13 @@ import { AppLogger } from '../services/AppLogger';
 import { hexToRgb } from '../utils/ColorUtils';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
 
+/**
+ * LRU Cache for pattern payloads to avoid re-running the Math Synthesizer on repeat taps.
+ * Key format: {patternId}_{fg.r}_{fg.g}_{fg.b}_{bg.r}_{bg.g}_{bg.b}_{numLEDs}_{speed}_{brightness}
+ * Capacity: 8
+ */
+const patternPayloadCache = new Map<string, number[]>();
+
 type WriteFn = (payload: number[], override?: Record<string, any>) => Promise<boolean | 'partial' | void>;
 
 interface UseControllerDispatchParams {
@@ -77,15 +84,35 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       // Instead of bypassing the Math Synthesizer directly to hardware, we use the
       // PatternEngine to derive identically matched 0x59 Temporal Array Payloads
       // for Spatial Patterns, OR 0x51 Temporal payloads for full-strip Temporal patterns.
-      const payload = buildPatternPayload(
-        patternId,
-        fgRaw,
-        bgRaw,
-        numLEDs,
-        clampSpeed(currentSpeed ?? 50),
-        1,
-        currentBrightness ?? 100
-      );
+      // Pattern Payload Memoization (perf: avoids 30-80ms Math Synthesizer run on repeat taps)
+      const spd = clampSpeed(currentSpeed ?? 50);
+      const brt = currentBrightness ?? 100;
+      const cacheKey = `${patternId}_${fgRaw.r}_${fgRaw.g}_${fgRaw.b}_${bgRaw.r}_${bgRaw.g}_${bgRaw.b}_${numLEDs}_${spd}_${brt}`;
+
+      let payload = patternPayloadCache.get(cacheKey);
+      if (payload) {
+        // Refresh LRU position
+        patternPayloadCache.delete(cacheKey);
+        patternPayloadCache.set(cacheKey, payload);
+      } else {
+        payload = buildPatternPayload(
+          patternId,
+          fgRaw,
+          bgRaw,
+          numLEDs,
+          spd,
+          1,
+          brt
+        );
+        if (payload) {
+          patternPayloadCache.set(cacheKey, payload);
+          // Evict oldest if exceeding capacity
+          if (patternPayloadCache.size > 8) {
+            const firstKey = patternPayloadCache.keys().next().value;
+            if (firstKey) patternPayloadCache.delete(firstKey);
+          }
+        }
+      }
 
       if (payload) writeToDevice(payload);
     },
