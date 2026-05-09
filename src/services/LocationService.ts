@@ -93,7 +93,7 @@ class LocationService {
    * Fetch active public sessions sorted by distance from current position.
    * Falls back to creation-date order if location permission denied.
    */
-  async getNearbyPublicSessions(radiusMi?: number | null): Promise<NearbySession[]> {
+  async getNearbyPublicSessions(radiusMi?: number | null, userCoords?: { lat: number; lng: number } | null): Promise<NearbySession[]> {
 
     const SESSION_SELECT = 'id, name, invite_code, location_label, location_coords, scheduled_at, created_at, is_public, crew_id, crew_members(count), crews(name, avatar_url, avatar_icon, avatar_color)';
 
@@ -156,17 +156,9 @@ class LocationService {
 
     if (unique.length === 0) return [];
 
-    // ── Get user location for distance sort ──────────────────────────────────
-    let userLat: number | null = null;
-    let userLng: number | null = null;
-    try {
-      const { status } = await Location.getForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
-        userLat = pos.coords.latitude;
-        userLng = pos.coords.longitude;
-      }
-    } catch { /* location unavailable - sort by date */ }
+    // ── Get user location for distance sort (provided by caller — no GPS acquisition here) ──
+    const userLat = userCoords?.lat ?? null;
+    const userLng = userCoords?.lng ?? null;
 
     const sessions: NearbySession[] = unique.map((s: any) => {
       const coords = s.location_coords as { lat?: number; lng?: number } | null;
@@ -223,7 +215,7 @@ class LocationService {
   /**
    * Fetch static skate spots sorted by distance from current position.
    */
-  async getNearbySkateSpots(radiusMi?: number | null): Promise<NearbySkateSpot[]> {
+  async getNearbySkateSpots(radiusMi?: number | null, userCoords?: { lat: number; lng: number } | null): Promise<NearbySkateSpot[]> {
     const { data } = await supabase
       .from('skate_spots')
       .select('*')
@@ -232,16 +224,9 @@ class LocationService {
 
     if (!data || data.length === 0) return [];
 
-    let userLat: number | null = null;
-    let userLng: number | null = null;
-    try {
-      const { status } = await Location.getForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low });
-        userLat = pos.coords.latitude;
-        userLng = pos.coords.longitude;
-      }
-    } catch { /* ignore */ }
+    // GPS provided by caller — no acquisition race here
+    const userLat = userCoords?.lat ?? null;
+    const userLng = userCoords?.lng ?? null;
 
     const spots: NearbySkateSpot[] = data.map((spot: any) => {
       let distanceMi: number | null = null;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 import { crewService, CrewSession } from '../services/CrewService';
 import { locationService, NearbySession, NearbySkateSpot } from '../services/LocationService';
 import { PermanentCrew, profileService } from '../services/ProfileService';
@@ -66,16 +67,54 @@ export function useCrewHub(visible: boolean, step: string) {
 
   const refreshNearby = useCallback(() => {
     setIsLoadingNearby(true);
-    
-    Promise.all([
-      locationService.getNearbyPublicSessions(discoverRadiusMi),
-      locationService.getNearbySkateSpots(discoverRadiusMi)
-    ]).then(([sessions, spots]) => {
-      setNearbySessions(sessions);
-      setNearbySpots(spots);
-    }).catch(() => { })
-    .finally(() => setIsLoadingNearby(false));
-  }, [discoverRadiusMi]);
+
+    const GPS_TIMEOUT_MS = 3000;
+
+    // Acquire GPS once — silent cached position first (instant), then fresh with timeout.
+    // This eliminates the dual concurrent getCurrentPositionAsync race that could hang Promise.all.
+    const acquireCoords = async (): Promise<{ lat: number; lng: number } | null> => {
+      // Step 1: Try cached OS position — always resolves instantly, zero battery cost
+      const silent = await locationService.getSilentLocation();
+      if (silent) return silent;
+
+      // Step 2: Request fresh fix with a hard 3s timeout — we never hang
+      try {
+        const { status } = await Location.getForegroundPermissionsAsync();
+        if (status !== 'granted') return null;
+
+        const pos = await Promise.race<Location.LocationObject | null>([
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }),
+          new Promise<null>(resolve => setTimeout(() => resolve(null), GPS_TIMEOUT_MS)),
+        ]);
+
+        if (!pos) return null;
+        return { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      } catch {
+        return null;
+      }
+    };
+
+    acquireCoords()
+      .then(userCoords => {
+        // Side-effect: seed the map centre if it hasn't been set yet
+        if (userCoords && !locationCoords) {
+          setLocationCoords(userCoords);
+        }
+        // One GPS call, two consumers — no race, no hang
+        return Promise.all([
+          locationService.getNearbyPublicSessions(discoverRadiusMi, userCoords),
+          locationService.getNearbySkateSpots(discoverRadiusMi, userCoords),
+        ]);
+      })
+      .then(([sessions, spots]) => {
+        setNearbySessions(sessions);
+        setNearbySpots(spots);
+      })
+      .catch((err) => {
+        AppLogger.warn('[useCrewHub] refreshNearby failed', err);
+      })
+      .finally(() => setIsLoadingNearby(false));
+  }, [discoverRadiusMi, locationCoords]);
 
   useEffect(() => {
     if (!visible || step !== 'landing') return;
