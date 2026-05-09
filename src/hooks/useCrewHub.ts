@@ -100,11 +100,15 @@ export function useCrewHub(visible: boolean, step: string) {
         if (userCoords && !locationCoords) {
           setLocationCoords(userCoords);
         }
-        // One GPS call, two consumers — no race, no hang
-        return Promise.all([
-          locationService.getNearbyPublicSessions(discoverRadiusMi, userCoords),
-          locationService.getNearbySkateSpots(discoverRadiusMi, userCoords),
-        ]);
+        // Isolated queries — one failing must NOT nuke the other.
+        // Previously used Promise.all which is atomic: if getNearbyPublicSessions
+        // threw (stale auth, network), setNearbySpots was never called → no pins.
+        const sessionsP = locationService.getNearbyPublicSessions(discoverRadiusMi, userCoords)
+          .catch(err => { AppLogger.warn('[useCrewHub] sessions query failed', err); return [] as any[]; });
+        const spotsP = locationService.getNearbySkateSpots(discoverRadiusMi, userCoords)
+          .catch(err => { AppLogger.warn('[useCrewHub] spots query failed', err); return [] as any[]; });
+
+        return Promise.all([sessionsP, spotsP]);
       })
       .then(([sessions, spots]) => {
         setNearbySessions(sessions);
@@ -117,7 +121,7 @@ export function useCrewHub(visible: boolean, step: string) {
   }, [discoverRadiusMi, locationCoords]);
 
   useEffect(() => {
-    if (!visible || step !== 'landing') return;
+    if (!visible || (step !== 'landing' && step !== 'map')) return;
     refreshNearby();
   }, [visible, step, discoverRadiusMi, refreshNearby]);
 
