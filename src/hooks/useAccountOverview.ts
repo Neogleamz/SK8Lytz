@@ -84,10 +84,21 @@ export function useAccountOverview(visible: boolean) {
 
       // ── Phase B: Fan-out all profile service calls in parallel ───────────────
       // Pass the already-resolved user/userId to avoid redundant auth token lookups.
+      // Isolation: each query has its own .catch() so a single failure (e.g. profile
+      // not yet created) doesn't nuke crew/history loading (mirrors useCrewHub fix).
       const [p, c, h] = await Promise.all([
-        profileService.fetchOrCreateProfile(user),
-        profileService.getMyCrew(undefined, user?.id),
-        profileService.getSessionHistory(user?.id),
+        profileService.fetchOrCreateProfile(user).catch((e) => {
+          AppLogger.warn('[AccountOverview] fetchOrCreateProfile failed', { error: String(e) });
+          return null;
+        }),
+        profileService.getMyCrew(undefined, user?.id).catch((e) => {
+          AppLogger.warn('[AccountOverview] getMyCrew failed', { error: String(e) });
+          return [] as import('../services/ProfileService').PermanentCrew[];
+        }),
+        profileService.getSessionHistory(user?.id).catch((e) => {
+          AppLogger.warn('[AccountOverview] getSessionHistory failed', { error: String(e) });
+          return [] as import('../services/ProfileService').SessionHistoryItem[];
+        }),
       ]);
       AppLogger.log('ACCOUNT_MODAL_DATA_RESOLVED', { hasProfile: !!p, crewCount: c?.length || 0, historyCount: h?.length || 0 });
       if (p) {
