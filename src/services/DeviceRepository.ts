@@ -199,7 +199,7 @@ class DeviceRepository {
       // 1.5. Purge from tombstone on re-add (Fix: BUG-14 — permanent tombstone lock)
       if (this.tombstones.includes(normalizedMac)) {
         this.tombstones = this.tombstones.filter(t => t !== normalizedMac);
-        await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(this.tombstones)).catch(() => {});
+        await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(this.tombstones)).catch((e) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'TOMBSTONE_KEY', error: String(e) }));
         AppLogger.warn('[DeviceRepository] Tombstone cleared on re-add', { mac: normalizedMac });
       }
 
@@ -304,7 +304,7 @@ class DeviceRepository {
       // Step 1: Write tombstone (prevents cloud resurrection)
       if (!this.tombstones.includes(normalizedMac)) {
         this.tombstones.push(normalizedMac);
-        await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(this.tombstones)).catch(() => {});
+        await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(this.tombstones)).catch((e) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'TOMBSTONE_KEY', error: String(e) }));
       }
 
       // Step 2: Remove from in-memory devices
@@ -314,7 +314,7 @@ class DeviceRepository {
       // Step 3: Scrub device config
       if (this.configs[normalizedMac]) {
         delete this.configs[normalizedMac];
-        await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch(() => {});
+        await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch((e) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'CONFIGS_KEY', error: String(e) }));
       }
 
       // Step 4: Notify subscribers
@@ -359,7 +359,7 @@ class DeviceRepository {
     }
 
     this.configs[key] = { ...(this.configs[key] || {} as DeviceSettings), ...patch };
-    await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch(() => {});
+    await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch((e) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'CONFIGS_KEY/updateConfig', error: String(e) }));
     this._notifyListeners();
   }
 
@@ -368,7 +368,7 @@ class DeviceRepository {
    */
   async setConfigs(configs: Record<string, DeviceSettings>): Promise<void> {
     this.configs = configs;
-    await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch(() => {});
+    await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch((e) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'CONFIGS_KEY/setConfigs', error: String(e) }));;
     this._notifyListeners();
   }
 
@@ -379,7 +379,7 @@ class DeviceRepository {
     const key = mac.toUpperCase();
     if (this.configs[key]) {
       delete this.configs[key];
-      await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch(() => {});
+      await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch((e) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'CONFIGS_KEY/deleteConfig', error: String(e) }));
       this._notifyListeners();
     }
   }
@@ -391,7 +391,7 @@ class DeviceRepository {
    */
   async setGroups(groups: CustomGroup[]): Promise<void> {
     this.groups = groups;
-    await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch(() => {});
+    await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch((e) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/setGroups', error: String(e) }));
     this._notifyListeners();
   }
 
@@ -403,7 +403,7 @@ class DeviceRepository {
   async deleteGroup(groupId: string): Promise<void> {
     // 1. Remove group row
     this.groups = this.groups.filter(g => g.id !== groupId);
-    await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch(() => {});
+    await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch((e) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/deleteGroup', error: String(e) }));
 
     // 2. Clear group assignments from in-memory devices
     let devicesChanged = false;
@@ -461,7 +461,7 @@ class DeviceRepository {
 
     if (existingIdx >= 0) this.groups[existingIdx] = updatedGroup;
     else this.groups.push(updatedGroup);
-    await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch(() => {});
+    await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch((e) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/saveGroupTransactional', error: String(e) }));
 
     // In-memory mapping: convert frontend MAC addresses to Supabase registered_devices PKs
     // AND update in-memory devices for immediate UI rendering.
@@ -882,7 +882,7 @@ class DeviceRepository {
       // Tombstones that were successfully deleted from cloud can be cleared locally.
       // We KEEP any we failed to sync so the next boot retries them.
       this.tombstones = this.tombstones.filter(t => !synced.includes(t));
-      await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(this.tombstones)).catch(() => {});
+      await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(this.tombstones)).catch((e) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'TOMBSTONE_KEY/flushPendingTombstones', error: String(e) }));
     }
   }
 }
