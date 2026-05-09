@@ -147,7 +147,20 @@ export type EventType =
   | 'BLE_TIME_SYNC'
   | 'BLE_CHUNKED_WRITE'
   // ── Device State Ledger ─────────────────────────────────────────────────────
-  | 'LEDGER_RECONNECT_REPLAY';
+  | 'LEDGER_RECONNECT_REPLAY'
+  // ── Crew Session Lifecycle ──────────────────────────────────────────────────
+  | 'CREW_END_SESSION'
+  | 'CREW_CLEANUP'
+  | 'CREW_DB_UPDATE'
+  // ── Navigation & Deep Links ─────────────────────────────────────────────────
+  | 'DEEP_LINK'
+  | 'DASHBOARD_STATE'
+  // ── Global Telemetry Session ────────────────────────────────────────────────
+  | 'GLOBAL_SESSION_SAVED'
+  | 'GLOBAL_SESSION_DISCARDED'
+  | 'GLOBAL_TELEMETRY_STARTED'
+  // ── Admin Tools ─────────────────────────────────────────────────────────────
+  | 'DATA_EXPORT';
 
 
 
