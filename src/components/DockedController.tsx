@@ -225,7 +225,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       disableHaptics: appSettings['global_haptics_enabled'] === false,
     });
 
-    const writeToDevice = async (payload: number[], override?: Record<string, any>) => {
+    const writeToDevice = React.useCallback(async (payload: number[], override?: Record<string, any>) => {
       // Gate: only write if the parent BLE write function exists (same pattern as Pro Effects).
       // Previously used `bleState !== 'READY'` which was too aggressive — the derived bleState
       // transiently leaves 'READY' during background rescans/probing even while devices are
@@ -234,19 +234,23 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       if (!parentWriteToDevice) return;
       lastConfirmedStateRef.current = captureEntireState(override);
 
-      // Lock visualizer to exactly what we are sending
-      const currentResolvedMode = (activeMode === 'MULTIMODE' && fixedSubMode === 'BUILDER') ? 'BUILDER' : activeMode;
-      const currentResolvedPattern = activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'MULTIMODE' ? fixedPatternId : selectedPatternId);
-      
+      // Lock visualizer to exactly what we are sending.
+      // Read volatile mode/pattern/color via refs (updated every render) so this
+      // useCallback can remain stable without them as deps.
+      const currentResolvedMode = (activeModeRef.current === 'MULTIMODE' && fixedSubModeRef.current === 'BUILDER') ? 'BUILDER' : activeModeRef.current;
+      const currentResolvedPattern = activeModeRef.current === 'MUSIC' ? musicPatternIdRef.current : (activeModeRef.current === 'MULTIMODE' ? fixedPatternIdRef.current : selectedPatternIdRef.current);
+
       setVizLock({
         mode: currentResolvedMode,
         patternId: currentResolvedPattern,
-        color: visualizerColor,
+        color: visualizerColorRef.current,
       });
 
       setLastSentPayload([...payload]);
       await optimisticWrite(payload);
-    };
+    // Deps: only truly stable refs — volatile state read via refs above
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [parentWriteToDevice, captureEntireState, optimisticWrite]);
 
     // ── Global Telemetry Engine ─────────────────────────────────────────────
     // REMOVED: useGlobalTelemetry(true) — values now received as props from DashboardScreen.
@@ -281,7 +285,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       color: initialLedgerRef.current?.fgColor || '#00f0ff'
     });
 
+
     const {
+
       activeProduct, setActiveProduct,
       activeMode, setActiveMode,
       lastOperatingMode, setLastOperatingMode,
@@ -322,6 +328,22 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       captureEntireState: baseCaptureEntireState,
       applySpatialSegments
     } = useDockedControllerState(lockedProduct || 'HALOZ', ledger.loadSync, primaryMac);
+
+    // ── Volatile-State Refs (perf: stabilize useCallback deps without stale closures) ─────────────
+    // Updated every render (assignment is free — no re-render triggered).
+    // useCallback closures read via refs so writeToDevice stays reference-stable
+    // without needing frequently-changing state values in its dependency array.
+    const activeModeRef = useRef(activeMode);
+    activeModeRef.current = activeMode;
+    const fixedSubModeRef = useRef(fixedSubMode);
+    fixedSubModeRef.current = fixedSubMode;
+    const musicPatternIdRef = useRef(musicPatternId);
+    musicPatternIdRef.current = musicPatternId;
+    const fixedPatternIdRef = useRef(fixedPatternId);
+    fixedPatternIdRef.current = fixedPatternId;
+    const selectedPatternIdRef = useRef(selectedPatternId);
+    selectedPatternIdRef.current = selectedPatternId;
+    const visualizerColorRef = useRef<string>('#00f0ff'); // synced below after visualizerColor useMemo
     // Favorites & Quick Presets Domain Hook
     const {
       favorites,
@@ -386,8 +408,14 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       peakGForce,
     });
 
-    const captureEntireState = (override?: Record<string, any>) => baseCaptureEntireState(streetSensitivity, streetCruiseColor, streetBrakeColor, override);
-    const applyCloudScene = (scenePayload: any) => baseApplyCloudScene(scenePayload, setStreetSensitivity, setStreetCruiseColor, setStreetBrakeColor);
+    const captureEntireState = React.useCallback(
+      (override?: Record<string, any>) => baseCaptureEntireState(streetSensitivity, streetCruiseColor, streetBrakeColor, override),
+      [baseCaptureEntireState, streetSensitivity, streetCruiseColor, streetBrakeColor]
+    );
+    const applyCloudScene = React.useCallback(
+      (scenePayload: any) => baseApplyCloudScene(scenePayload, setStreetSensitivity, setStreetCruiseColor, setStreetBrakeColor),
+      [baseApplyCloudScene, setStreetSensitivity, setStreetCruiseColor, setStreetBrakeColor]
+    );
 
     // ── Ghost Reconcile Wiring ──────────────────────────────────────────────
     // Updated every render so the ref always holds the latest applyCloudScene closure.
@@ -735,6 +763,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       }
       return selectedColor;
     }, [activeMode, fixedColorMode, fixedFgColor, fixedBgColor, musicHue, selectedColor, fixedSubMode]);
+    // Keep visualizerColorRef in sync so writeToDevice useCallback always reads the latest value
+    visualizerColorRef.current = visualizerColor;
 
     // Relays the dynamically generated pattern name + last payload upward to persist dashboard group state.
     // BUG FIX: Guard against mount-fire with isMountedRef — on first render, lastSentPayload is []
@@ -792,7 +822,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           return false;
         },
         onPanResponderRelease: (evt, gestureState) => {
-          const currentModeStr = activeMode === 'MULTI' as any ? 'MULTIMODE' : activeMode;
+          // Read from ref (updated every render) — prevents stale closure over initial activeMode
+          const currentModeStr = activeModeRef.current === 'MULTI' as any ? 'MULTIMODE' : activeModeRef.current;
           const currentModeIdx = MODE_ORDER.indexOf(currentModeStr as any);
           if (currentModeIdx === -1) return;
 
