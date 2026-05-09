@@ -591,7 +591,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     }
   };
 
-  const writeToDevice = async (payload: number[], targetDeviceId?: string): Promise<boolean | 'partial'> => {
+  const writeToDevice = async (payload: number[], targetDeviceId?: string, opts?: { lowPriority?: boolean }): Promise<boolean | 'partial'> => {
     const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
     AppLogger.setLastTxPayload(hexString);
 
@@ -604,7 +604,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     // prevent queue pile-up when user swipes rapidly through the pattern picker.
     const isPatternWrite = (cmdByte === 0x59 || cmdByte === 0x51 || cmdByte === 0x40);
     if (isPatternWrite) {
-      const thisGeneration = ++writeGeneration;
+      // lowPriority writes (e.g. reconnect replay) use current generation WITHOUT incrementing.
+      // A user-initiated tap DOES increment — instantly marking the replay write as stale,
+      // so it gets silently dropped by the capturedGeneration check in _executeWriteToDevice.
+      const thisGeneration = opts?.lowPriority ? writeGeneration : ++writeGeneration;
       return new Promise((resolve) => {
         if (writeDebounceTimerRef.current) clearTimeout(writeDebounceTimerRef.current);
         writeDebounceTimerRef.current = setTimeout(async () => {

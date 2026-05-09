@@ -145,7 +145,7 @@ interface Sk8lytzControllerProps {
   points?: number;
   devices?: IDeviceState[];
   onLongPressDevice?: (device: IDeviceState) => void;
-  writeToDevice?: (payload: number[], targetDeviceId?: string) => Promise<boolean | 'partial'>;
+  writeToDevice?: (payload: number[], targetDeviceId?: string, opts?: { lowPriority?: boolean }) => Promise<boolean | 'partial'>;
   isPoweredOn?: boolean;
   onPowerToggle?: () => void;
   onDisconnect?: () => void;
@@ -447,7 +447,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       const devicesToReplay = devices ?? [];
       devicesToReplay.forEach((d, idx) => {
         const timer = setTimeout(() => {
-          parentWriteToDevice(ledgerState.rawPayload, d.id).catch(() => {});
+          parentWriteToDevice(ledgerState.rawPayload, d.id, { lowPriority: true }).catch(() => {});
           if (idx === 0) {
             AppLogger.log('LEDGER_RECONNECT_REPLAY', {
               macs: devicesToReplay.map(x => x.id),
