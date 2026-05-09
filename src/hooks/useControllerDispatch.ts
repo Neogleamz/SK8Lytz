@@ -103,7 +103,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
           spd,
           1,
           brt
-        );
+        ) ?? undefined;
         if (payload) {
           patternPayloadCache.set(cacheKey, payload);
           // Evict oldest if exceeding capacity

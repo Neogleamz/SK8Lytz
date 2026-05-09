@@ -544,7 +544,7 @@ class ProfileService {
       .eq('crew_id', crewId)
       .order('created_at', { ascending: false });
 
-    if (error || !data) return { sessionCount: 0, lastActive: null, topScene: null };
+    if (error || !data) return { sessionCount: 0, lastActive: null, topScene: null, totalDistanceMiles: 0, avgSpeedMph: 0, peakSpeedMph: 0, peakGForce: 0, totalDurationSec: 0 };
 
     const sessionCount = data.length;
     const lastActive = data[0]?.ended_at ?? data[0]?.created_at ?? null;

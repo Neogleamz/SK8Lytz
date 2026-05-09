@@ -12,8 +12,11 @@ export const DarkColors = {
   accent: '#FF3300',
   text: '#FFFFFF',
   textMuted: '#A0B4CF',
+  textDim: '#6B85A0',
+  border: '#2E5FA3',
   success: '#00E88F',
   error: '#FF3D71',
+  warning: '#FFB800',
   isDark: true,
 };
 
@@ -26,8 +29,11 @@ export const LightColors: ThemePalette = {
   accent: '#1B4279',
   text: '#0A1C38',
   textMuted: '#5C7491',
+  textDim: '#8A9EB5',
+  border: '#B0C0D0',
   success: '#00C476',
   error: '#FF3D71',
+  warning: '#E07A00',
   isDark: false,
 };
 
