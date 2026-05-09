@@ -58,7 +58,7 @@ export function useControllerAnalytics({
     const name = `Pattern ${selectedPatternId}`;
     
     // Inject into God-Tier telemetry accumulator
-    if (activeMode !== 'SOLID') {
+    if (activeMode !== 'FAVORITES') {
       telemetry.trackPattern(selectedPatternId);
     }
     
@@ -74,7 +74,7 @@ export function useControllerAnalytics({
   // Color change logger
   useEffect(() => {
     // Inject into God-Tier telemetry accumulator
-    if (activeMode === 'SOLID') {
+    if (activeMode === 'MULTIMODE') {
       telemetry.trackColor(selectedColor);
     }
     

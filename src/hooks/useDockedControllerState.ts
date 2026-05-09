@@ -130,12 +130,22 @@ export function useDockedControllerState(
     if (scenePayload.streetBrakeColor) setStreetBrakeColor(scenePayload.streetBrakeColor);
   };
 
+  type CapturedControllerState = {
+    activeMode: ModeType; fixedSubMode: 'PATTERN' | 'BUILDER'; fixedModePattern: FixedModePattern;
+    selectedColor: string; selectedPatternId: number; brightness: number; speed: number;
+    multiColors: string[]; multiLength: number; multiTransition: number;
+    musicPatternId: number; musicPrimaryColor: string; musicSecondaryColor: string;
+    micSensitivity: number; micSource: 'APP' | 'DEVICE'; musicMatrixStyle: number;
+    streetSensitivity: number; streetCruiseColor: string; streetBrakeColor: string;
+    [key: string]: any;
+  };
+
   const captureEntireState = (
     streetSensitivity: number,
     streetCruiseColor: string,
     streetBrakeColor: string,
-    override?: Partial<ReturnType<typeof captureEntireState>>
-  ) => {
+    override?: Partial<CapturedControllerState>
+  ): CapturedControllerState => {
     return {
       activeMode, fixedSubMode, fixedModePattern,
       selectedColor, selectedPatternId, brightness, speed,

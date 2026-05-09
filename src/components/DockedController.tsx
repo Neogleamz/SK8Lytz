@@ -166,6 +166,8 @@ interface Sk8lytzControllerProps {
   sessionDistanceMiles?: number;
   /** Elapsed session duration in seconds */
   sessionDurationSec?: number;
+  /** Called when a pattern is applied — lets DashboardScreen persist the group pattern snapshot + ledger entry. */
+  onPatternChanged?: (patternName: string, snapshot: import('../types/dashboard.types').GroupPatternSnapshot, lastPayload?: number[]) => void;
 }
 
 export type DockedControllerHandle = {
@@ -205,6 +207,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
      * If the write is rejected (RECONCILED phase), applyCloudScene restores this snapshot.
      */
     const lastConfirmedStateRef = useRef<any>(null);
+    // Ref indirection for captureEntireState — declared here to break the TDZ forward reference.
+    // captureEntireState (defined at L413 via useCallback) is assigned to this ref each render.
+    const captureEntireStateRef = useRef<(override?: Record<string, any>) => any>(() => null);
 
     /**
      * Stable ref wrapper for the onReconcile callback.
@@ -232,7 +237,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       // fully connected and writable, silently dropping fixed mode, solid color, and camera writes.
       // The BLE stack in useBLE.writeToDevice already handles connection-level safety internally.
       if (!parentWriteToDevice) return;
-      lastConfirmedStateRef.current = captureEntireState(override);
+      lastConfirmedStateRef.current = captureEntireStateRef.current(override);
 
       // Lock visualizer to exactly what we are sending.
       // Read volatile mode/pattern/color via refs (updated every render) so this
@@ -248,9 +253,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
       setLastSentPayload([...payload]);
       await optimisticWrite(payload);
-    // Deps: only truly stable refs — volatile state read via refs above
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [parentWriteToDevice, captureEntireState, optimisticWrite]);
+    }, [parentWriteToDevice, optimisticWrite]);
 
     // ── Global Telemetry Engine ─────────────────────────────────────────────
     // REMOVED: useGlobalTelemetry(true) — values now received as props from DashboardScreen.
@@ -412,6 +416,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       (override?: Record<string, any>) => baseCaptureEntireState(streetSensitivity, streetCruiseColor, streetBrakeColor, override),
       [baseCaptureEntireState, streetSensitivity, streetCruiseColor, streetBrakeColor]
     );
+    // Keep ref current so writeToDevice (declared above) always captures the latest
+    captureEntireStateRef.current = captureEntireState;
     const applyCloudScene = React.useCallback(
       (scenePayload: any) => baseApplyCloudScene(scenePayload, setStreetSensitivity, setStreetCruiseColor, setStreetBrakeColor),
       [baseApplyCloudScene, setStreetSensitivity, setStreetCruiseColor, setStreetBrakeColor]

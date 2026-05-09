@@ -12,6 +12,7 @@ interface LifetimeStats {
   total_street_sessions: number;
   pattern_time_map: Record<string, number>;
   color_time_map: Record<string, number>;
+  engagement_counters?: Record<string, number>;
 }
 
 export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
@@ -44,7 +45,7 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
           .single();
           
         if (data && !error) {
-          setStats(data);
+          setStats(data as unknown as LifetimeStats);
           // 2. Save fresh cloud data to offline cache
           await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(() => {});
         }
@@ -70,8 +71,10 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
     total_distance_meters: 0,
     total_app_time_sec: 0,
     lifetime_top_speed_mph: 0,
+    total_street_sessions: 0,
     pattern_time_map: {},
-    color_time_map: {}
+    color_time_map: {},
+    engagement_counters: {},
   };
 
   // Convert distance to miles

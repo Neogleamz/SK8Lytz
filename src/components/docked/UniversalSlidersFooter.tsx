@@ -153,7 +153,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                   const r = parseInt(dynamicColor.slice(1, 3), 16) || 255;
                   const g = parseInt(dynamicColor.slice(3, 5), 16) || 255;
                   const b = parseInt(dynamicColor.slice(5, 7), 16) || 255;
-                  if (activeMode === 'FIXED') applyStaticModePattern(fixedModePattern, r, g, b);
+                  if (fixedSubMode === 'PATTERN') applyStaticModePattern(fixedModePattern, r, g, b);
                   else if (activeMode === 'MULTIMODE' && fixedSubMode !== 'PATTERN') sendColor(r, g, b);
                   else if (activeMode === 'STREET') applyStreetPattern(motionStateRef.current);
                 }}
@@ -276,13 +276,6 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                         setStreetCruiseColor(color);
                         if (PRESET_HUE_MAP[color] !== undefined) setSelectedHue(PRESET_HUE_MAP[color]);
                         applyStreetPattern(motionStateRef.current);
-                      } else if (activeMode === 'FIXED') {
-                        setSelectedColor(color);
-                        if (PRESET_HUE_MAP[color] !== undefined) setSelectedHue(PRESET_HUE_MAP[color]);
-                        const r = parseInt(color.slice(1, 3), 16);
-                        const g = parseInt(color.slice(3, 5), 16);
-                        const b = parseInt(color.slice(5, 7), 16);
-                        applyStaticModePattern(fixedModePattern, r, g, b);
                       } else {
                         setSelectedColor(color);
                         if (PRESET_HUE_MAP[color] !== undefined) setSelectedHue(PRESET_HUE_MAP[color]);

@@ -63,7 +63,7 @@ const AnimatedCategoryPill = ({ cat, isActive, onPress }: { cat: string, isActiv
       ]}>
         <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
           <LinearGradient
-            colors={styleData.colors}
+            colors={styleData.colors as any}
             start={styleData.start}
             end={styleData.end}
             style={StyleSheet.absoluteFill}

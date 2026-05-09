@@ -170,7 +170,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     const handleDeepLink = ({ url }: { url: string }) => {
       if (!url) return;
       try {
-        const parsed = Linking.parse(url);
+        const parsed = (Linking as any).parse(url) as { path?: string; queryParams?: Record<string, string> };
         if (parsed.path === 'crew/join' && parsed.queryParams?.code) {
           const inviteCode = String(parsed.queryParams.code).toUpperCase();
           AppLogger.log('DEEP_LINK', { action: 'crew_join', inviteCode });

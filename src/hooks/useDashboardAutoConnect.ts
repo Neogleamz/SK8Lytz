@@ -43,7 +43,7 @@ interface UseDashboardAutoConnectOptions {
   /** Gate the observer if setup wizard is active */
   isWizardActive?: boolean;
   /** Trigger a high-power active scan (from useBLESweeper) */
-  burstScan?: (durationMs: number) => Promise<void>;
+  burstScan?: (durationMs?: number) => void | Promise<void>;
 }
 
 /**
@@ -61,6 +61,7 @@ export function useDashboardAutoConnect({
   scanForPeripherals,
   requestPermissions,
   refreshProfile,
+  registeredDevices,
   bleGateRef,
   isWizardActive,
   burstScan,
@@ -266,7 +267,10 @@ export function useDashboardAutoConnect({
             // We fire a targeted 8-second burst scan to instantly discover the device.
             if (isRetrigger && burstScan) {
               AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_burst_scan_triggered' });
-              burstScan(8000).catch(() => {});
+              const scanResult = burstScan(8000);
+              if (scanResult && typeof (scanResult as any).catch === 'function') {
+                (scanResult as Promise<void>).catch(() => {});
+              }
             }
           }
         }
