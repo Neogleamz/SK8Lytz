@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SceneStep } from '../hooks/useSceneBuilder';
+import { AppLogger } from './AppLogger';
 
 export interface Scene {
   id: string;
@@ -42,7 +43,7 @@ class ScenesServiceClass {
       if (error) throw error;
       return data as unknown as ICloudScene[];
     } catch (e) {
-      console.error('[ScenesService] getPublicScenes error:', e);
+      AppLogger.error('[ScenesService] getPublicScenes error', { error: String(e) });
       return [];
     }
   }
@@ -64,7 +65,7 @@ class ScenesServiceClass {
       if (error) throw error;
       return data as unknown as ICloudScene[];
     } catch (e) {
-      console.error('[ScenesService] getMyScenes error:', e);
+      AppLogger.error('[ScenesService] getMyScenes error', { error: String(e) });
       return [];
     }
   }
@@ -76,7 +77,7 @@ class ScenesServiceClass {
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
-        console.warn('[ScenesService] Skipping cloud publish (not logged in)');
+      AppLogger.warn('[ScenesService] Skipping cloud publish (not logged in)');
         return false;
       }
 
@@ -95,7 +96,7 @@ class ScenesServiceClass {
       if (error) throw error;
       return true;
     } catch (e) {
-      console.error('[ScenesService] publishScene error:', e);
+      AppLogger.error('[ScenesService] publishScene error', { error: String(e) });
       return false;
     }
   }
@@ -113,7 +114,7 @@ class ScenesServiceClass {
        if (error) throw error;
        return true;
      } catch (e) {
-       console.error('[ScenesService] deleteScene error:', e);
+       AppLogger.error('[ScenesService] deleteScene error', { error: String(e) });
        return false;
      }
   }
@@ -127,7 +128,7 @@ class ScenesServiceClass {
        if (error) throw error;
        return true;
      } catch (e) {
-       console.error('[ScenesService] upvoteScene error:', e);
+       AppLogger.error('[ScenesService] upvoteScene error', { error: String(e) });
        return false;
      }
   }
@@ -141,7 +142,7 @@ class ScenesServiceClass {
        if (error) throw error;
        return true;
      } catch (e) {
-       console.error('[ScenesService] downloadScene error:', e);
+       AppLogger.error('[ScenesService] downloadScene error', { error: String(e) });
        return false;
      }
   }
@@ -170,7 +171,7 @@ class ScenesServiceClass {
         }));
       }
     } catch (err) {
-      console.warn('[ScenesService] Global sync fail:', err);
+      AppLogger.warn('[ScenesService] Global sync fail', { error: String(err) });
     }
 
     // 2. Fetch User Cloud (user_saved_presets)
@@ -192,7 +193,7 @@ class ScenesServiceClass {
           }));
         }
       } catch (err) {
-        console.warn('[ScenesService] User cloud sync fail:', err);
+        AppLogger.warn('[ScenesService] User cloud sync fail', { error: String(err) });
       }
     }
 
@@ -207,7 +208,7 @@ class ScenesServiceClass {
         }
       }
     } catch (e) {
-      console.error('[ScenesService] Local read fail:', e);
+      AppLogger.error('[ScenesService] Local read fail', { error: String(e) });
     }
 
     // 4. Merge deduplicating by ID 
@@ -242,7 +243,7 @@ class ScenesServiceClass {
       }
       await AsyncStorage.setItem(LOCAL_SCENES_KEY, JSON.stringify(userScenes));
     } catch (e) {
-      console.error('[ScenesService] saveLocalScene error:', e);
+      AppLogger.error('[ScenesService] saveLocalScene error', { error: String(e) });
     }
 
     // 2. Save Cloud (user_saved_presets)
@@ -259,7 +260,7 @@ class ScenesServiceClass {
         } as any);
         if (error) throw error;
       } catch (err) {
-        console.warn('[ScenesService] Cloud save fail:', err);
+        AppLogger.warn('[ScenesService] Cloud save fail', { error: String(err) });
       }
     }
 
@@ -277,7 +278,7 @@ class ScenesServiceClass {
       userScenes = userScenes.filter(s => s.id !== sceneId);
       await AsyncStorage.setItem(LOCAL_SCENES_KEY, JSON.stringify(userScenes));
     } catch (e) {
-      console.error('[ScenesService] deleteLocalScene error:', e);
+      AppLogger.error('[ScenesService] deleteLocalScene error', { error: String(e) });
     }
 
     // 2. Delete Cloud (user_saved_presets)
@@ -285,7 +286,7 @@ class ScenesServiceClass {
       try {
         await supabase.from('user_saved_presets').delete().eq('id', sceneId);
       } catch (err) {
-        console.warn('[ScenesService] Cloud delete fail:', err);
+        AppLogger.warn('[ScenesService] Cloud delete fail', { error: String(err) });
       }
     }
 

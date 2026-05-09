@@ -143,7 +143,7 @@ class CrewService {
       .eq('is_active', true);
 
     if (error) {
-      console.warn('[CrewService] cleanupLegacySessions failed:', error.message);
+      AppLogger.warn('[CrewService] cleanupLegacySessions failed', { error: error.message });
       AppLogger.log('CREW_ERROR', { action: 'cleanupLegacySessions', error: error.message });
     }
   }
@@ -162,9 +162,9 @@ class CrewService {
       .lt('expires_at', now);
 
     if (error) {
-      console.warn('[CrewService] cleanupExpiredSessions failed:', error.message);
+      AppLogger.warn('[CrewService] cleanupExpiredSessions failed', { error: error.message });
     } else {
-      console.log('[CrewService] System-wide session cleanup complete');
+      AppLogger.log('CREW_CLEANUP', { action: 'cleanupExpiredSessions', status: 'complete' });
     }
   }
 
@@ -338,7 +338,7 @@ class CrewService {
     const sessionId = explicitSessionId ?? this.currentSessionId;
     if (!sessionId) throw new Error('No active session to end');
 
-    console.log('[CrewService] endSession called', { sessionId, userId: user.id });
+    AppLogger.log('CREW_END_SESSION', { sessionId, userId: user.id });
 
     // ── Single update filtered by id AND leader_user_id ──────────────────────
     // RLS-safe: Supabase only matches rows the policy allows.
@@ -363,7 +363,7 @@ class CrewService {
       .select('id');
 
     if (fullError) {
-      console.warn('[CrewService] Full update failed, trying fallback:', fullError.message);
+      AppLogger.warn('[CrewService] Full update failed, trying fallback', { error: fullError.message });
       // Fallback: just flip is_active — works even without migration 006
       const { error: fallbackError, data: fallbackData } = await supabase
         .from('crew_sessions')
@@ -407,7 +407,7 @@ class CrewService {
       .from('crew_members')
       .delete()
       .eq('session_id', sessionId)
-      .then(() => console.log('[CrewService] crew_members cleaned up for session', sessionId));
+      .then(() => AppLogger.log('CREW_CLEANUP', { action: 'crew_members_deleted', sessionId }));
 
     // Delay channel teardown so the session_ended broadcast can propagate to members
     const channelRef = this.channel;
@@ -416,13 +416,12 @@ class CrewService {
     this.currentRole = null;
     setTimeout(() => {
       if (channelRef) supabase.removeChannel(channelRef);
-      console.log('[CrewService] channel torn down after broadcast delay');
+      AppLogger.log('CREW_SESSION_ENDED', { action: 'channel_torn_down' });
     }, 600);
 
     if (this.broadcastTimer) { clearTimeout(this.broadcastTimer); this.broadcastTimer = null; }
     await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
     AppLogger.log('CREW_SESSION_ENDED', { reason: 'leader_ended', sessionId });
-    console.log('[CrewService] endSession complete');
   }
 
   /** Fetch the last scene snapshot from a session (for late-arrival sync). */
