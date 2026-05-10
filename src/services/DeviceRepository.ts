@@ -22,6 +22,12 @@ import { supabase } from './supabaseClient';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import type { CustomGroup, DeviceSettings } from '../types/dashboard.types';
+import type { Tables, TablesInsert } from '../types/supabase';
+
+// ─── Local Supabase Insert Type Aliases ───────────────────────────────────────
+// Derived directly from generated types — stay in sync with schema automatically.
+type DeviceInsertRow = TablesInsert<'registered_devices'>;
+type GroupInsert     = Omit<TablesInsert<'registered_groups'>, 'created_at'>;
 
 // ─── Storage Keys ─────────────────────────────────────────────────────────────
 const DEVICES_KEY     = '@Sk8lytz_registered_devices';
@@ -227,7 +233,7 @@ class DeviceRepository {
               group_name: fullDevice.group_name || 'Default Fleet',
               type: 'device-fleet',
               user_id: user.id
-            } as any, { onConflict: 'id' } as any);
+            } satisfies GroupInsert, { onConflict: 'id' });
           } catch (_fk) {
             AppLogger.warn('[DeviceRepository] Group FK fallback also failed:', _fk);
           }
@@ -239,33 +245,43 @@ class DeviceRepository {
         const validIcType   = fullDevice.ic_type    && fullDevice.ic_type !== 'UNKNOWN' ? fullDevice.ic_type : undefined;
         const validSorting  = fullDevice.color_sorting && fullDevice.color_sorting !== 'UNKNOWN' ? fullDevice.color_sorting : undefined;
 
-        const dbRow = {
+        const dbRow: DeviceInsertRow = {
           device_mac:      fullDevice.device_mac,
           device_name:     fullDevice.device_name,
-          product_type:    fullDevice.product_type,
-          position:        fullDevice.position,
-          group_name:      fullDevice.group_name,
+          product_type:    fullDevice.product_type || null,
+          position:        fullDevice.position || null,
+          group_name:      fullDevice.group_name || null,
           group_id:        fullDevice.group_id,
-          custom_name:     fullDevice.device_name,
+          custom_name:     fullDevice.device_name || '',
           user_id:         user.id,
           id:              fullDevice.id || deviceId,
           updated_at:      now,
-          registered_at:   fullDevice.registered_at,
-          rssi_at_register: fullDevice.rssi_at_register,
-          firmware_ver:    fullDevice.firmware_ver,
-          led_version:     fullDevice.led_version,
-          product_id:      fullDevice.product_id,
-          rf_mode:         fullDevice.rf_mode,
-          rf_paired_count: fullDevice.rf_paired_count,
-          ...(validPoints   !== undefined ? { points: validPoints,   led_points: validPoints }   : {}),
-          ...(validSegments !== undefined ? { segments: validSegments }                           : {}),
-          ...(validIcType   !== undefined ? { ic_type: validIcType,  strip_type: validIcType }   : {}),
-          ...(validSorting  !== undefined ? { color_sorting: validSorting, sorting: validSorting } : {}),
+          registered_at:   fullDevice.registered_at || null,
+          rssi_at_register: fullDevice.rssi_at_register ?? null,
+          firmware_ver:    fullDevice.firmware_ver ?? null,
+          led_version:     fullDevice.led_version ?? null,
+          product_id:      fullDevice.product_id ?? null,
+          rf_mode:         fullDevice.rf_mode ?? null,
+          rf_paired_count: fullDevice.rf_paired_count ?? null,
+          // Required non-null fields — use validated values or safe defaults
+          points:          validPoints   ?? 0,
+          led_points:      validPoints   ?? null,
+          segments:        validSegments ?? 1,
+          sorting:         validSorting  ?? 'GRB',
+          strip_type:      validIcType   ?? 'WS2812B',
+          ic_type:         validIcType   ?? null,
+          color_sorting:   validSorting  ?? null,
+          // Unused hardware metadata fields — not tracked at registration time
+          ble_version:     null,
+          factory_name:    null,
+          manufacturer_data: null,
+          is_pending_sync: false,
+          product_id_confirmed_at: null,
         };
 
         const { error } = await supabase
           .from('registered_devices')
-          .upsert(dbRow as any, { onConflict: 'user_id,device_mac' } as any);
+          .upsert(dbRow, { onConflict: 'user_id,device_mac' });
 
         if (error) throw error;
       } else {
@@ -738,38 +754,45 @@ class DeviceRepository {
             group_name: device.group_name || 'Default Fleet',
             type: 'device-fleet',
             user_id: userId
-          } as any, { onConflict: 'id' } as any);
+          } satisfies GroupInsert, { onConflict: 'id' });
         } catch (_fk) {}
 
-        const dbRow = {
+        const dbRow: DeviceInsertRow = {
           device_mac:      device.device_mac,
-          device_name:     device.device_name,
-          product_type:    device.product_type,
-          position:        device.position,
+          device_name:     device.device_name || null,
+          product_type:    device.product_type || null,
+          position:        device.position || null,
           group_id:        groupId,
-          custom_name:     device.device_name,
+          group_name:      device.group_name || null,
+          custom_name:     device.device_name || '',
           points:          device.led_points || 0,
-          led_points:      device.led_points,
+          led_points:      device.led_points ?? null,
           segments:        device.segments || 1,
-          ic_type:         device.ic_type,
+          ic_type:         device.ic_type ?? null,
           strip_type:      device.ic_type || 'WS2812B',
-          color_sorting:   device.color_sorting,
+          color_sorting:   device.color_sorting ?? null,
           sorting:         device.color_sorting || 'GRB',
-          rssi_at_register: device.rssi_at_register,
-          firmware_ver:    device.firmware_ver,
-          led_version:     device.led_version,
-          product_id:      device.product_id,
-          rf_mode:         device.rf_mode,
-          rf_paired_count: device.rf_paired_count,
+          rssi_at_register: device.rssi_at_register ?? null,
+          firmware_ver:    device.firmware_ver ?? null,
+          led_version:     device.led_version ?? null,
+          product_id:      device.product_id ?? null,
+          rf_mode:         device.rf_mode ?? null,
+          rf_paired_count: device.rf_paired_count ?? null,
           user_id:         userId,
           id:              device.id || `${device.device_mac.toUpperCase().replace(/:/g, '')}-${userId.slice(0, 8)}`,
           updated_at:      new Date().toISOString(),
-          registered_at:   device.registered_at,
+          registered_at:   device.registered_at ?? null,
+          // Unused hardware metadata fields — not tracked at registration time
+          ble_version:     null,
+          factory_name:    null,
+          manufacturer_data: null,
+          is_pending_sync: true,
+          product_id_confirmed_at: null,
         };
 
         const { error } = await supabase
           .from('registered_devices')
-          .upsert(dbRow as any, { onConflict: 'user_id,device_mac' } as any);
+          .upsert(dbRow, { onConflict: 'user_id,device_mac' });
         if (error) AppLogger.warn('[DeviceRepository] Flush error for ' + device.device_mac, { error: error.message });
       }
 
@@ -836,7 +859,7 @@ class DeviceRepository {
               group_name: entry.groupName,
               type: entry.type,
               user_id: userId,
-            } as any, { onConflict: 'id' } as any);
+            } satisfies GroupInsert, { onConflict: 'id' });
           } catch (fbErr) {
             AppLogger.warn('[DeviceRepository] Group flush fallback failed:', fbErr);
           }
