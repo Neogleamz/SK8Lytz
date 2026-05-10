@@ -4,16 +4,15 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../services/supabaseClient';
 import { Spacing } from '../../theme/theme';
+import type { Tables } from '../../types/supabase';
 
-interface LifetimeStats {
-  total_app_time_sec: number;
-  total_distance_meters: number;
-  lifetime_top_speed_mph: number;
-  total_street_sessions: number;
-  pattern_time_map: Record<string, number>;
-  color_time_map: Record<string, number>;
-  engagement_counters?: Record<string, number>;
-}
+// Use the generated Supabase Row type directly — stays in sync with schema automatically.
+type LifetimeStats = Tables<'user_lifetime_stats'>;
+
+// Narrow the Json map fields for local computation
+type JsonMap = Record<string, number>;
+const toMap = (v: LifetimeStats['pattern_time_map']): JsonMap =>
+  (v && typeof v === 'object' && !Array.isArray(v) ? v : {}) as JsonMap;
 
 export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
   const [stats, setStats] = useState<LifetimeStats | null>(null);
@@ -45,7 +44,7 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
           .single();
           
         if (data && !error) {
-          setStats(data as unknown as LifetimeStats);
+          setStats(data);
           // 2. Save fresh cloud data to offline cache
           await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(() => {});
         }
@@ -66,52 +65,46 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
     );
   }
 
-  // Gamified Zero-State
-  const activeStats = stats || {
-    total_distance_meters: 0,
-    total_app_time_sec: 0,
-    lifetime_top_speed_mph: 0,
-    total_street_sessions: 0,
-    pattern_time_map: {},
-    color_time_map: {},
-    engagement_counters: {},
-  };
+  // Resolve nullable numeric fields — DB returns null for new users
+  const distanceMiles = ((stats?.total_distance_meters ?? 0) / 1609.34).toFixed(1);
+  const hoursSkated = Math.floor((stats?.total_app_time_sec ?? 0) / 3600);
+  const topSpeed = (stats?.lifetime_top_speed_mph ?? 0).toFixed(1);
 
-  // Convert distance to miles
-  const distanceMiles = (activeStats.total_distance_meters / 1609.34).toFixed(1);
-  const hoursSkated = Math.floor(activeStats.total_app_time_sec / 3600);
-  const topSpeed = activeStats.lifetime_top_speed_mph.toFixed(1);
+  // Resolve Json map fields with runtime type narrowing
+  const patternTimeMap = toMap(stats?.pattern_time_map ?? null);
+  const colorTimeMap   = toMap(stats?.color_time_map ?? null);
+  const engagementMap  = toMap(stats?.engagement_counters ?? null);
 
   // Find Signature Style (Pattern or Color)
   let bestStyle = "Rookie — Go Skate!";
   let bestTime = 0;
   let isHex = false;
 
-  Object.entries(activeStats.pattern_time_map || {}).forEach(([key, val]) => {
-    if ((val as number) > bestTime) {
-      bestTime = val as number;
+  Object.entries(patternTimeMap).forEach(([key, val]) => {
+    if (val > bestTime) {
+      bestTime = val;
       bestStyle = key.replace('pattern_', 'Pattern ');
       isHex = false;
     }
   });
 
-  Object.entries(activeStats.color_time_map || {}).forEach(([key, val]) => {
-    if ((val as number) > bestTime) {
-      bestTime = val as number;
+  Object.entries(colorTimeMap).forEach(([key, val]) => {
+    if (val > bestTime) {
+      bestTime = val;
       bestStyle = key.toUpperCase();
       isHex = true;
     }
   });
 
-  const topPatterns = Object.entries(activeStats.pattern_time_map || {})
-    .sort((a, b) => (b[1] as number) - (a[1] as number))
+  const topPatterns = Object.entries(patternTimeMap)
+    .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
-    .map(p => ({ name: p[0].replace('pattern_', 'Pattern '), time: p[1] as number }));
+    .map(p => ({ name: p[0].replace('pattern_', 'Pattern '), time: p[1] }));
 
-  const topColors = Object.entries(activeStats.color_time_map || {})
-    .sort((a, b) => (b[1] as number) - (a[1] as number))
+  const topColors = Object.entries(colorTimeMap)
+    .sort((a, b) => b[1] - a[1])
     .slice(0, 3)
-    .map(c => ({ hex: c[0].toUpperCase(), time: c[1] as number }));
+    .map(c => ({ hex: c[0].toUpperCase(), time: c[1] }));
 
   const formatTime = (sec: number) => {
     if (sec < 60) return `${Math.floor(sec)}s`;
@@ -122,15 +115,15 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
   };
 
   // ── Mode Split Calculation ──
-  const modeStreet = activeStats.engagement_counters?.['mode_STREET_sec'] || 0;
-  const modeMusic = activeStats.engagement_counters?.['mode_MUSIC_sec'] || 0;
-  const modeSolid = activeStats.engagement_counters?.['mode_SOLID_sec'] || 0;
-  const modeMultimode = activeStats.engagement_counters?.['mode_MULTIMODE_sec'] || 0;
+  const modeStreet = engagementMap['mode_STREET_sec'] || 0;
+  const modeMusic = engagementMap['mode_MUSIC_sec'] || 0;
+  const modeSolid = engagementMap['mode_SOLID_sec'] || 0;
+  const modeMultimode = engagementMap['mode_MULTIMODE_sec'] || 0;
   const totalModeTime = modeStreet + modeMusic + modeSolid + modeMultimode;
   const hasModeData = totalModeTime > 0;
 
   // ── Explorer Badge ──
-  const patternCount = Object.keys(activeStats.pattern_time_map || {}).length;
+  const patternCount = Object.keys(patternTimeMap).length;
   let patternBadge = 'The Enthusiast';
   let badgeDesc = `${patternCount} patterns explored`;
   if (patternCount > 20) {
@@ -156,8 +149,8 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
     }
   }
 
-  const favoritesCreated = activeStats.engagement_counters?.['favorites_created'] || 0;
-  const hardwareConnections = activeStats.engagement_counters?.['hardware_connections'] || 0;
+  const favoritesCreated = engagementMap['favorites_created'] || 0;
+  const hardwareConnections = engagementMap['hardware_connections'] || 0;
 
   return (
     <View style={{ marginTop: Spacing.xl, marginBottom: Spacing.lg }}>
