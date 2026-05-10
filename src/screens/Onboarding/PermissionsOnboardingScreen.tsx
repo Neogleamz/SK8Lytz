@@ -33,7 +33,7 @@ export default function PermissionsOnboardingScreen({ onComplete }: PermissionsO
       bleAutoFired.current = true;
       requestPermission('BLUETOOTH')
         .then((granted) => {
-          AppLogger.log('BLE_AUTO_REQUEST_RESULT' as any, { granted });
+          AppLogger.log('BLE_AUTO_REQUEST_RESULT', { granted });
           // Bump the key so GranularPermissionsList re-checks all statuses.
           setBleAutoRequestKey((k) => k + 1);
         })

@@ -390,7 +390,7 @@ class CrewService {
       }
     }
 
-    console.log('[CrewService] DB update succeeded, broadcasting session_ended');
+    AppLogger.log('CREW_SESSION_ENDED', { reason: 'db_update_succeeded', action: 'broadcasting_ended' });
 
     // Broadcast END event so members know the session is over.
     // IMPORTANT: Do NOT call unsubscribe() immediately after send() — the Realtime

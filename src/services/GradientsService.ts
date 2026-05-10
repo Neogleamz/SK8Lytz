@@ -23,7 +23,7 @@ class GradientsServiceClass {
         globalPresets = (data as any as CustomBuilderPreset[]).filter(p => p && p.id && p.name && Array.isArray(p.nodes));
       }
     } catch (err) {
-      AppLogger.warn('GRADIENT_SYNC_FAIL' as any, err);
+      AppLogger.warn('GRADIENT_SYNC_FAIL', err);
     }
 
     // 2. Fetch User Cloud (user_saved_presets)
@@ -39,7 +39,7 @@ class GradientsServiceClass {
           userCloudPresets = (data as any as CustomBuilderPreset[]).filter(p => p && p.id && p.name && Array.isArray(p.nodes));
         }
       } catch (err) {
-        AppLogger.warn('GRADIENT_SYNC_FAIL' as any, err);
+        AppLogger.warn('GRADIENT_SYNC_FAIL', err);
       }
     }
     
@@ -54,7 +54,7 @@ class GradientsServiceClass {
         }
       }
     } catch (e) {
-      AppLogger.error('GRADIENT_LOCAL_READ_FAIL' as any, e);
+      AppLogger.error('GRADIENT_LOCAL_READ_FAIL', e);
     }
     
     // 4. Merge deduplicating by ID 
@@ -96,7 +96,7 @@ class GradientsServiceClass {
       }
       await AsyncStorage.setItem(LOCAL_GRADIENTS_KEY, JSON.stringify(userPresets));
     } catch (e) {
-      AppLogger.error('GRADIENT_LOCAL_SAVE_FAIL' as any, e);
+      AppLogger.error('GRADIENT_LOCAL_SAVE_FAIL', e);
     }
 
     // 2. Save Cloud (user_saved_presets)
@@ -105,7 +105,7 @@ class GradientsServiceClass {
         const { error } = await supabase.from('user_saved_presets').upsert({ ...newPreset, created_at: new Date().toISOString() } as any);
         if (error) throw error;
       } catch (err) {
-        AppLogger.warn('GRADIENT_CLOUD_SAVE_FAIL' as any, err);
+        AppLogger.warn('GRADIENT_CLOUD_SAVE_FAIL', err);
       }
     }
 
@@ -121,7 +121,7 @@ class GradientsServiceClass {
       userPresets = userPresets.filter(p => p.id !== id);
       await AsyncStorage.setItem(LOCAL_GRADIENTS_KEY, JSON.stringify(userPresets));
     } catch (e) {
-      AppLogger.error('GRADIENT_LOCAL_DEL_FAIL' as any, e);
+      AppLogger.error('GRADIENT_LOCAL_DEL_FAIL', e);
     }
 
     // 2. Delete Cloud (user_saved_presets)
@@ -129,7 +129,7 @@ class GradientsServiceClass {
       try {
         await supabase.from('user_saved_presets').delete().eq('id', id);
       } catch (err) {
-        AppLogger.warn('GRADIENT_CLOUD_DEL_FAIL' as any, err);
+        AppLogger.warn('GRADIENT_CLOUD_DEL_FAIL', err);
       }
     }
 
