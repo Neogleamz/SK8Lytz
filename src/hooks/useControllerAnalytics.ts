@@ -74,7 +74,9 @@ export function useControllerAnalytics({
   // Color change logger
   useEffect(() => {
     // Inject into God-Tier telemetry accumulator
-    if (activeMode === 'MULTIMODE') {
+    // Track color in all modes where user is explicitly picking a color
+    // (MUSIC uses its own dual-color tracking; CAMERA has no color picking)
+    if (activeMode !== 'MUSIC' && activeMode !== 'CAMERA') {
       telemetry.trackColor(selectedColor);
     }
     

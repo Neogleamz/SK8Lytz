@@ -153,8 +153,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                   const r = parseInt(dynamicColor.slice(1, 3), 16) || 255;
                   const g = parseInt(dynamicColor.slice(3, 5), 16) || 255;
                   const b = parseInt(dynamicColor.slice(5, 7), 16) || 255;
-                  if (fixedSubMode === 'PATTERN') applyStaticModePattern(fixedModePattern, r, g, b);
-                  else if (activeMode === 'MULTIMODE' && fixedSubMode !== 'PATTERN') sendColor(r, g, b);
+                  if (activeMode === 'MULTIMODE' && fixedSubMode !== 'PATTERN') sendColor(r, g, b);
                   else if (activeMode === 'STREET') applyStreetPattern(motionStateRef.current);
                 }}
                 style={{
