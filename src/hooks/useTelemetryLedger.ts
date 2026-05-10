@@ -135,7 +135,7 @@ export function useTelemetryLedger() {
 
     try {
       // Push to Supabase RPC
-      const { error } = await (supabase as any).rpc('flush_telemetry', { payload: payloadToUpload });
+      const { error } = await supabase.rpc('flush_telemetry', { payload: payloadToUpload });
       if (error) throw error;
 
       // Success! Clear memory buffer and AsyncStorage
