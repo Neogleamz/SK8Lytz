@@ -16,30 +16,13 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { AppLogger } from './AppLogger';
 import { supabase } from './supabaseClient';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+import type { Tables } from '../types/supabase';
 
-export interface CrewSession {
-  id: string;
-  invite_code: string;
-  name: string;
-  leader_user_id: string | null;
-  created_at: string;
-  expires_at: string;
-  is_active: boolean;
-  last_scene?: Record<string, any> | null;
-  member_count?: number;      // populated by fetchActiveSessions
-  // Migration 006 fields
-  status?: 'active' | 'scheduled' | 'ended';
-  location_label?: string;
-  location_coords?: { lat: number; lng: number };
-  scheduled_at?: string;
-  ended_at?: string;
-  // Migration 007 fields
-  is_public?: boolean;  // true = anyone nearby can join without a code
-  // Migration 008 fields
-  crew_id?: string | null;  // FK to permanent crews table — enables reliable crew↔session matching
-  skate_spot_id?: string | null; // FK to skate_spots table
-}
+// Use the generated Supabase Row type directly — stays in sync with schema automatically.
+// member_count is injected dynamically by fetchActiveSessions via a join on crew_members(count).
+export type CrewSession = Tables<'crew_sessions'> & {
+  member_count?: number;
+};
 
 export interface CrewMember {
   id: string;
@@ -114,7 +97,7 @@ class CrewService {
       .single();
 
     if (error) throw error;
-    const session = data as unknown as CrewSession;
+    const session = data as CrewSession;
 
     // Auto-join as leader member
     await supabase.from('crew_members').insert({
@@ -182,7 +165,7 @@ class CrewService {
       .eq('is_active', true)
       .gt('expires_at', new Date().toISOString())
       .single();
-    const session = _sessionData as unknown as CrewSession;
+    const session = _sessionData as CrewSession;
 
     if (sessionErr || !session) throw new Error('Crew not found or session expired');
 
@@ -209,7 +192,7 @@ class CrewService {
     this.currentSessionId = session.id;
     this.currentRole = user.id === session.leader_user_id ? 'leader' : 'member';
     this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
-    return session as unknown as CrewSession;
+    return session as CrewSession;
   }
 
   /** Join a session directly by ID (from the active sessions browser). */
@@ -224,7 +207,7 @@ class CrewService {
       .eq('is_active', true)
       .gt('expires_at', new Date().toISOString())
       .single();
-    const session = _sessionDataById as unknown as CrewSession;
+    const session = _sessionDataById as CrewSession;
 
     if (error || !session) throw new Error('Session not found or expired');
 
@@ -244,7 +227,7 @@ class CrewService {
     this.currentSessionId = sessionId;
     this.currentRole = user.id === session.leader_user_id ? 'leader' : 'member';
     this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
-    return session as unknown as CrewSession;
+    return session as CrewSession;
   }
 
   /**
@@ -508,7 +491,7 @@ class CrewService {
         .single();
 
       if (!session) return null;
-      const typedSession = session as unknown as CrewSession;
+      const typedSession = session as CrewSession;
 
       // Ensure membership still exists
       const { data: membership } = await supabase
