@@ -54,7 +54,7 @@ import { useDashboardDeviceConfig } from '../hooks/useDashboardDeviceConfig';
 import { useHardwareNotifications } from '../hooks/useHardwareNotifications';
 import { useDeviceStateLedger, normalizeMac } from '../hooks/useDeviceStateLedger';
 import { useTelemetryLedger } from '../hooks/useTelemetryLedger';
-import type { DashboardViewState, DeviceSettings, CustomGroup } from '../types/dashboard.types';
+import type { DashboardViewState, DeviceSettings, CustomGroup, DisplayDevice, IDeviceState } from '../types/dashboard.types';
 
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
 // — migrated as part of Phase 1 Domain-Driven Refactor
@@ -256,10 +256,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // and any useEffect/useCallback that closes over isActuallyConnected.
   // Having two separate definitions of this concept was the root cause of the
   // 'Rendered more hooks than previous render' crash.
-  const displayConnectedDevices = useMemo(() => {
+  const displayConnectedDevices = useMemo((): DisplayDevice[] => {
     return connectedDevices.map(d => {
-      const mac = (d as any).id?.toUpperCase() ?? '';
-      const cfg = deviceConfigs[mac] || deviceConfigs[(d as any).id] || {};
+      const mac = d.id?.toUpperCase() ?? '';
+      const cfg = deviceConfigs[mac] || deviceConfigs[d.id] || {};
       // GAP 1 FIX: Inject `type` from registeredDevices.product_type when not present
       // in the live BLE device object or deviceConfigs. On cold start before EEPROM
       // probe fires, cfg.type is undefined — causing SOULZ to silently resolve to HALOZ
@@ -269,15 +269,15 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       const rd = registeredDevices.find(
         (r: RegisteredDevice) => r.device_mac?.toUpperCase() === mac
       );
-      const resolvedType = cfg.type || (d as any).type || rd?.product_type || undefined;
-      return { ...d, ...cfg, ...(resolvedType ? { type: resolvedType } : {}) };
+      const resolvedType = cfg.type || (d as DisplayDevice).type || rd?.product_type || undefined;
+      return { ...d, ...cfg, ...(resolvedType ? { type: resolvedType } : {}) } as DisplayDevice;
     });
   }, [connectedDevices, deviceConfigs, registeredDevices]);
 
   const isActuallyConnected = displayConnectedDevices.length > 0;
   // BUG FIX: was `every(d => d.grouped)` — fails for re-provisioned devices missing the `.grouped` flag.
   // Fix: check `groupId` presence (the canonical group membership token from DeviceRepository).
-  const isGrouped = displayConnectedDevices.length > 1 && displayConnectedDevices.every(d => !!(d as any).groupId);
+  const isGrouped = displayConnectedDevices.length > 1 && displayConnectedDevices.every(d => !!d.groupId);
 
   const prevIsConnectedRef = useRef(false);
   const telemetry = useTelemetryLedger();
@@ -498,8 +498,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     return [...allDevices]
       .sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999))
       .map(d => {
-        const cfg = deviceConfigs[(d as any).id] || {};
-        return { ...d, ...cfg };
+        const cfg = deviceConfigs[d.id] || {};
+        return { ...d, ...cfg } as DisplayDevice;
       });
   }, [allDevices, deviceConfigs]);
 
@@ -650,7 +650,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   });
 
   const activeHwSettings = useMemo(() => {
-    const raw = displayConnectedDevices[0] as any;
+    const raw = displayConnectedDevices[0];
     // Merge persisted deviceConfigs on top — ensures 0x63 ping results always surface
     // even when displayConnectedDevices comes from useBLE.connectedDevices (real hardware path)
     const cached = raw?.id ? (deviceConfigs[raw.id] || {}) : {};
@@ -713,12 +713,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               // 2. registeredDevices[mac].product_type — injected by displayConnectedDevices enrichment
               //    (always available on cold start after FTUE, even before 0x63 EEPROM probe fires)
               // 3. getLocalProfileByPoints  — genuine last resort for unregistered/unknown devices
-              (displayConnectedDevices[0] as any)?.type ||
-              getLocalProfileByPoints((displayConnectedDevices[0] as any)?.points ?? 0).id
+              displayConnectedDevices[0]?.type ||
+              getLocalProfileByPoints(displayConnectedDevices[0]?.points ?? 0).id
             }
             isPaired={isGrouped}
             points={activeHwSettings.ledPoints}
-            devices={displayConnectedDevices as any}
+            devices={displayConnectedDevices as IDeviceState[]}
             onLongPressDevice={openSettings}
             writeToDevice={writeToDevice}
             isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
@@ -1115,11 +1115,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           onSave={saveSettings}
           writeToDevice={writeToDevice}
           initialSettings={(() => {
-            const sDef = selectedDeviceForSettings as any;
+            const sDef = selectedDeviceForSettings as DisplayDevice | null;
             const targetMac = (sDef?.device_mac || sDef?.id || '').toUpperCase();
             const dCfg = deviceConfigs[targetMac] || {};
             
-            const hasProbeData = (sDef?.points > 0 && sDef?.stripType !== 'UNKNOWN' && sDef?.stripType);
+            const hasProbeData = ((sDef?.points ?? 0) > 0 && sDef?.stripType !== 'UNKNOWN' && sDef?.stripType);
             const hasManualData = !!dCfg?.userConfiguredAt;
             const provenance = hasManualData ? 'MANUALLY_CONFIGURED' : (hasProbeData ? 'PROBED' : 'UNCONFIGURED');
 
@@ -1145,14 +1145,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           })()}
           groups={customGroups}
           deviceName={(() => {
-            const sDef = selectedDeviceForSettings as any;
+            const sDef = selectedDeviceForSettings as DisplayDevice | null;
             const targetMac = (sDef?.device_mac || sDef?.id || '').toUpperCase();
             const rd = registeredDevices.find(r => r.device_mac.toUpperCase() === targetMac);
-            return rd?.custom_name || rd?.device_name || sDef?.name;
+            return rd?.custom_name || rd?.device_name || (sDef?.name ?? undefined);
           })()}
           onDeregister={(() => {
             // Only provide onDeregister if the device is actually registered
-            const sDef = selectedDeviceForSettings as any;
+            const sDef = selectedDeviceForSettings as DisplayDevice | null;
             const targetMac = (sDef?.device_mac || sDef?.id || '').toUpperCase();
             const isRegistered = registeredDevices.some(r => r.device_mac.toUpperCase() === targetMac);
             if (!isRegistered) return undefined;

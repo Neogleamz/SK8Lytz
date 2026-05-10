@@ -205,6 +205,42 @@ export interface IDeviceState {
   [key: string]: any; // safe loose fallback for undocumented BLE peripheral keys
 }
 
+/**
+ * DisplayDevice — the enriched shape of a connected BLE device after the
+ * displayConnectedDevices useMemo in DashboardScreen injects DeviceConfigs
+ * and RegisteredDevices data on top of the raw react-native-ble-plx Device.
+ *
+ * Fields come from three sources:
+ *   1. BLE Device (react-native-ble-plx): id, name, rssi, mtu
+ *   2. deviceConfigs spread: points, segments, sorting, stripType, detected, firmware
+ *   3. displayConnectedDevices injector: type, groupId
+ */
+export interface DisplayDevice {
+  // ── From BLE Device ───────────────────────────────────────
+  id: string;
+  name: string | null;
+  rssi?: number | null;
+  mtu?: number;
+  // ── From deviceConfigs spread ─────────────────────────────
+  points?: number;
+  segments?: number;
+  sorting?: string;
+  colorSorting?: number;
+  colorSortingName?: string;
+  stripType?: string;
+  icType?: number;
+  icName?: string;
+  detected?: boolean;
+  firmware?: string;
+  ledPoints?: number;
+  groupId?: string;
+  // ── Injected by displayConnectedDevices resolver ──────────
+  /** Product type resolved from deviceConfigs → BLE → registeredDevices chain */
+  type?: string;
+  // ── Safe catch-all for undocumented BLE / config fields ───
+  [key: string]: any;
+}
+
 /** A saved light preset (user favorite or SK8Lytz Pick). */
 export interface IFavoriteState {
   id: string;
