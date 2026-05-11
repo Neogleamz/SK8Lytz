@@ -6,7 +6,7 @@
  * mode panel for all modes except FAVORITES.
  */
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Spacing } from '../../theme/theme';
 import { hexToHue } from '../../utils/ColorUtils';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
@@ -88,7 +88,7 @@ export interface UniversalSlidersFooterProps {
   motionStateRef: React.MutableRefObject<MotionState>;
 
   // ── Styling ─────────────────────────────────────────────────────────────
-  styles: any;
+  // styles prop removed — UniversalSlidersFooter now owns its own local StyleSheet.
 }
 
 // ── Helper: hue → hex ───────────────────────────────────────────────────────
@@ -134,7 +134,6 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
     sendColor, applyFixedPattern, applyStaticModePattern, applyEmergencyPattern,
     applyStreetPattern, handleMusicChange, clampSpeed, brtFactor,
     writeToDevice, hwSettings, motionStateRef,
-    styles,
   } = props;
 
   return (
@@ -513,3 +512,22 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
 
 export default UniversalSlidersFooter;
 
+
+// -- Local StyleSheet -----------------------------------------------------------
+// Migrated from parent DockedController prop-threading (feat/hollow-shell-v3-cleanup).
+// These 3 keys are layout-only -- no theme colours required.
+const styles = StyleSheet.create({
+  sceneSlidersContainer: {
+    padding: Spacing.sm,
+  },
+  colorGrid: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
+  controlRow: {
+    marginTop: Spacing.sm,
+  },
+});

@@ -11,7 +11,7 @@
  */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useCallback } from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   getActiveMusicProfile,
   getMusicPatternLabel,
@@ -36,7 +36,6 @@ interface MusicPanelProps {
   setSpeed: (v: number) => void;
   handleMusicChange: (...args: any[]) => void;
   Colors: any;
-  styles: any;
 }
 
 const ColorSwatch = React.memo(({
@@ -79,8 +78,8 @@ const MusicPanel = React.memo(({
   setSpeed,
   handleMusicChange,
   Colors,
-  styles,
 }: MusicPanelProps) => {
+  const styles = createStyles(Colors);
 
   // Active profile — resolves colorMode, name, etc.
   const activeProfile = getActiveMusicProfile(musicMatrixStyle, musicPatternId);
@@ -210,3 +209,90 @@ const MusicPanel = React.memo(({
 });
 
 export default MusicPanel;
+
+const createStyles = (Colors: any) => StyleSheet.create({
+  musicToggleHeader: {
+    flexDirection: 'row',
+    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : Colors.surfaceHighlight,
+    borderRadius: 25,
+    padding: Spacing.xs,
+    alignItems: 'center',
+    marginVertical: Spacing.xs,
+    marginHorizontal: Spacing.xs,
+    borderWidth: 1,
+    borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+  },
+  musicModeIndicator: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  musicModeCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.isDark ? 'rgba(0,0,0,0.6)' : Colors.surfaceHighlight,
+  },
+  musicModeNumber: {
+    color: Colors.text,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  micControlSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.xs,
+  },
+  micIconBtn: {
+    flex: 1,
+    alignItems: 'center',
+    padding: Spacing.sm,
+    borderRadius: 12,
+  },
+  micBtnActive: {
+    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+  },
+  micIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+  },
+  micSubText: {
+    fontSize: 9,
+    color: Colors.textMuted,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    fontWeight: '600',
+  },
+  playButtonMain: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: Spacing.md,
+  },
+  playIconInner: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

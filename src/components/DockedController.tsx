@@ -1,4 +1,4 @@
-/**
+﻿/**
  * DockedController.tsx — SK8Lytz Primary LED Control Interface (Hollow Shell v3)
  *
  * Routing shell: manages shared state, BLE write bus, and mode FSM.
@@ -1010,7 +1010,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 setSpeed={setSpeed}
                 handleMusicChange={handleMusicChange}
                 Colors={Colors}
-                styles={styles}
               />
             )}
 
@@ -1108,7 +1107,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               motionStateRef={motionStateRef}
               fixedDirection={fixedDirection}
               setFixedDirection={setFixedDirection}
-              styles={styles}
             />
           )}
         </View>
@@ -1236,107 +1234,4 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     flex: 1,
     overflow: 'hidden',
   },
-  // ── Styles threaded to sub-panels via styles={styles} prop ──────────────
-  // MusicPanel consumers:
-  musicToggleHeader: {
-    flexDirection: 'row' as const,
-    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : Colors.surfaceHighlight,
-    borderRadius: 25,
-    padding: Spacing.xs,
-    alignItems: 'center' as const,
-    marginVertical: Spacing.xs,
-    marginHorizontal: Spacing.xs,
-    borderWidth: 1,
-    borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
-  },
-  musicModeIndicator: {
-    width: '100%' as any,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
-  musicModeCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    backgroundColor: Colors.isDark ? 'rgba(0,0,0,0.6)' : Colors.surfaceHighlight,
-  },
-  musicModeNumber: {
-    color: Colors.text,
-    fontSize: 18,
-    fontWeight: 'bold' as const,
-  },
-  micControlSection: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    justifyContent: 'space-between' as const,
-    width: '100%' as any,
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.xs,
-  },
-  micIconBtn: {
-    flex: 1,
-    alignItems: 'center' as const,
-    padding: Spacing.sm,
-    borderRadius: 12,
-  },
-  micBtnActive: {
-    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-  },
-  micIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-  },
-  micSubText: {
-    fontSize: 9,
-    color: Colors.textMuted,
-    textAlign: 'center' as const,
-    textTransform: 'uppercase' as const,
-    fontWeight: '600' as const,
-  },
-  playButtonMain: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    marginHorizontal: Spacing.md,
-  },
-  playIconInner: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: Colors.primary,
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-  },
-  // UniversalSlidersFooter consumers:
-  sceneSlidersContainer: {
-    padding: Spacing.lg,
-    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
-  },
-  colorGrid: {
-    flexDirection: 'row' as const,
-    flexWrap: 'nowrap' as const,
-    marginTop: Spacing.lg,
-    justifyContent: 'space-between' as const,
-    alignItems: 'center' as const,
-    width: '100%' as any,
-  },
-  controlRow: {
-    marginTop: Spacing.sm,
-  },
 });
-
