@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, AppState, AppStateStatus, BackHandler, Dimensions, Image, Linking, Modal, PanResponder, Platform, SafeAreaView, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as ExpoLinking from 'expo-linking';
 import DeviceItem from '../components/DeviceItem';
 import { useTheme } from '../context/ThemeContext';
 import useBLE from '../hooks/useBLE';
@@ -170,7 +171,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     const handleDeepLink = ({ url }: { url: string }) => {
       if (!url) return;
       try {
-        const parsed = (Linking as any).parse(url) as { path?: string; queryParams?: Record<string, string> };
+        const parsed = ExpoLinking.parse(url) as { path?: string; queryParams?: Record<string, string> };
         if (parsed.path === 'crew/join' && parsed.queryParams?.code) {
           const inviteCode = String(parsed.queryParams.code).toUpperCase();
           AppLogger.log('DEEP_LINK', { action: 'crew_join', inviteCode });
