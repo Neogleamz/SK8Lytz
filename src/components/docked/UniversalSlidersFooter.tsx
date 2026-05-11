@@ -518,11 +518,15 @@ export default UniversalSlidersFooter;
 // These 3 keys are layout-only -- no theme colours required.
 const styles = StyleSheet.create({
   sceneSlidersContainer: {
-    padding: Spacing.sm,
+    // Original: padding Spacing.lg so left/right sides breathe;
+    // paddingTop + paddingBottom are overridden per-site in JSX.
+    padding: Spacing.lg,
+    backgroundColor: 'rgba(255,255,255,0.02)',
   },
   colorGrid: {
     flexDirection: 'row',
     flexWrap: 'nowrap',
+    marginTop: Spacing.lg,
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',

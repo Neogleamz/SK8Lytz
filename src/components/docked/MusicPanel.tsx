@@ -10,7 +10,7 @@
  * Updated: Full 46-profile support (16 Light Bar + 30 Light Screen).
  */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
   getActiveMusicProfile,
@@ -79,7 +79,7 @@ const MusicPanel = React.memo(({
   handleMusicChange,
   Colors,
 }: MusicPanelProps) => {
-  const styles = createStyles(Colors);
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
 
   // Active profile — resolves colorMode, name, etc.
   const activeProfile = getActiveMusicProfile(musicMatrixStyle, musicPatternId);
