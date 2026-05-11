@@ -40,6 +40,7 @@ trigger: always_on
 1. **Keep Specs Synced**: `tools/SK8Lytz_App_Master_Reference.md` (Architecture/Hardware) and `tools/SK8Lytz_TEST_PLAN.md` (Testing).
 2. **Search Before Write**: Do not append blindly. Update existing sections.
 3. **The QA Mandate**: If you build a new UI feature, you must add a corresponding manual test case to the TEST_PLAN.
+4. **The TDD Mandate**: If you modify ANY file that has a corresponding `.test.ts` file (or if you extract a new pure-math core logic hook), you MUST run `npm test` and update the unit test to verify your exact byte-math matches expected outputs. Never merge a broken test.
 
 
 ---

@@ -9,7 +9,8 @@
     "web": "expo start --web",
     "postinstall": "patch-package",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "prepare": "husky"
   },
   "dependencies": {
     "@config-plugins/react-native-ble-plx": "^7.0.0",
