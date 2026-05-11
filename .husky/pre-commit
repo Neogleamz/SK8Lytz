@@ -1,8 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
-# 1. TypeScript — fail fast on type errors before running tests
+#!/bin/sh
 npx tsc --noEmit
-
-# 2. Jest — run all tests in CI mode (no watch, no interactive prompts)
-npm test -- --watchAll=false --passWithNoTests
+npx jest --watchAll=false
