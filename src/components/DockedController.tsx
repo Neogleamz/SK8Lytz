@@ -961,7 +961,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
         {/* Removed Active Mode Header to save vertical space */}
 
-        <View {...swipePanResponder.panHandlers} style={[styles.controlsContainer, { padding: Spacing.xs, overflow: 'hidden' }]}>
+        <View style={[styles.controlsContainer, { padding: Spacing.xs, overflow: 'hidden' }]}>
           <View style={[styles.activeModeContainer, { flex: 1, justifyContent: 'space-evenly' }]}>
             {activeMode === 'FAVORITES' && (
               <FavoritesPanel
@@ -972,7 +972,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 onEditFavorite={(id, name) => openFavoritePrompt(id, name)}
                 isDark={isDark}
                 Colors={Colors}
-                styles={styles}
               />
             )}
 

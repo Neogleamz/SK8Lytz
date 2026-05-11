@@ -20,10 +20,6 @@ interface FavoritesPanelProps {
   onEditFavorite: (id: string, name: string) => void;
   isDark: boolean;
   Colors: any;
-  styles: {
-    presetCard: any;
-    presetTitle: any;
-  };
 }
 
 const FavoritesPanel = React.memo(({
@@ -33,12 +29,12 @@ const FavoritesPanel = React.memo(({
   onEditFavorite,
   isDark,
   Colors,
-  styles,
 }: FavoritesPanelProps) => {
   const cardWidth = (Dimensions.get('window').width - (Layout.padding * 2)) / 3.5;
+  const localStyles = React.useMemo(() => createStyles(Colors), [Colors]);
 
   const emptyPlaceholder = (keyPrefix: string) => (
-    <View style={[styles.presetCard, { width: cardWidth, marginHorizontal: Spacing.xs, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />
+    <View style={[localStyles.presetCard, { width: cardWidth, marginHorizontal: Spacing.xs, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />
   );
 
   return (
@@ -63,7 +59,7 @@ const FavoritesPanel = React.memo(({
                 onEdit={() => onEditFavorite(fav.id, fav.name)}
                 accentFallback={Colors.primary}
                 cardWidth={cardWidth}
-                styles={styles}
+                styles={localStyles}
                 Colors={Colors}
               />
             );
@@ -89,7 +85,7 @@ const FavoritesPanel = React.memo(({
                 onPress={() => onLoadFavorite(fav, 'PICK')}
                 accentFallback={Colors.secondary}
                 cardWidth={cardWidth}
-                styles={styles}
+                styles={localStyles}
                 Colors={Colors}
               />
             );
@@ -101,3 +97,21 @@ const FavoritesPanel = React.memo(({
 });
 
 export default FavoritesPanel;
+
+const createStyles = (Colors: any) => ({
+  presetCard: {
+    width: '48%' as any,
+    minHeight: 80,
+    padding: Spacing.sm,
+    backgroundColor: Colors.isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.04)',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  presetTitle: {
+    ...Typography.body,
+    fontWeight: 'bold' as const,
+    color: Colors.text,
+  },
+});
