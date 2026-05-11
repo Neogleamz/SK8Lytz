@@ -25,20 +25,17 @@ import { useTheme } from '../context/ThemeContext';
 import useBLE from '../hooks/useBLE';
 import { Layout, Typography, Spacing } from '../theme/theme';
 
-import DeviceSettingsModal from '../components/DeviceSettingsModal';
-import DockedController, { DockedControllerHandle } from '../components/DockedController';
+import { DockedControllerHandle } from '../components/DockedController';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import { BLEErrorBoundary } from '../components/shared/BLEErrorBoundary';
 
 import AdminToolsModal from '../components/admin/AdminToolsModal';
-import { CrewModal } from '../components/CrewModal';
 
 import { AppLogger } from '../services/AppLogger';
 import { CrewRole, crewService, CrewSession } from '../services/CrewService';
 
 import AccountModal from '../components/AccountModal';
 import { getDefaultGroupName } from '../utils/NamingUtils';
-import CrewMemberDashboard from '../components/CrewMemberDashboard';
 import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { RegisteredDevice, useRegistration } from '../hooks/useRegistration';
 import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
@@ -62,7 +59,8 @@ import type { DashboardViewState, DeviceSettings, CustomGroup, DisplayDevice, ID
 
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { SkateGroupCard } from '../components/dashboard/SkateGroupCard';
-import CrewHubSlab from '../components/dashboard/CrewHubSlab';
+import DashboardCrewPanel from '../components/dashboard/DashboardCrewPanel';
+import { useDashboardController } from '../hooks/useDashboardController';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
 import MySkatesSlab from '../components/dashboard/MySkatesSlab';
 import RegisteredFleetSlab from '../components/dashboard/RegisteredFleetSlab';
@@ -176,7 +174,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           const inviteCode = String(parsed.queryParams.code).toUpperCase();
           AppLogger.log('DEEP_LINK', { action: 'crew_join', inviteCode });
           setInitialDeepLinkCode(inviteCode);
-          setCrewInitialStep('join');
           setIsCrewModalVisible(true);
         }
       } catch (err) {
@@ -260,7 +257,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const displayConnectedDevices = useMemo((): DisplayDevice[] => {
     return connectedDevices.map(d => {
       const mac = d.id?.toUpperCase() ?? '';
-      const cfg = deviceConfigs[mac] || deviceConfigs[d.id] || {};
+      const cfg = (deviceConfigs[mac] || deviceConfigs[d.id] || {}) as Partial<DeviceSettings>;
       // GAP 1 FIX: Inject `type` from registeredDevices.product_type when not present
       // in the live BLE device object or deviceConfigs. On cold start before EEPROM
       // probe fires, cfg.type is undefined — causing SOULZ to silently resolve to HALOZ
@@ -306,24 +303,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   } = useDashboardCrew({
     onApplyScene: (scene) => dockedControllerRef.current?.applyCloudScene(scene),
   });
-  const [crewInitialStep, setCrewInitialStep] = useState<any>('landing');
-  const [isCrewHubCollapsed, setIsCrewHubCollapsed] = useState(false);
   const dockedControllerRef = React.useRef<DockedControllerHandle>(null);
-
-  // Load Crew Hub collapsed state on mount
-  useEffect(() => {
-    AsyncStorage.getItem('@Sk8lytz_crewHubCollapsed')
-      .then(res => { if (res !== null) setIsCrewHubCollapsed(res === 'true'); })
-      .catch(() => {});
-  }, []);
-
-  const toggleCrewHubCollapse = useCallback(() => {
-    setIsCrewHubCollapsed(prev => {
-      const next = !prev;
-      AsyncStorage.setItem('@Sk8lytz_crewHubCollapsed', String(next)).catch(() => {});
-      return next;
-    });
-  }, []);
 
   // Relay Soft Disconnect recoveries down to the DockedController for silent payload blasting
   useEffect(() => {
@@ -499,7 +479,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     return [...allDevices]
       .sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999))
       .map(d => {
-        const cfg = deviceConfigs[d.id] || {};
+        const cfg = (deviceConfigs[d.id] || {}) as Partial<DeviceSettings>;
         return { ...d, ...cfg } as DisplayDevice;
       });
   }, [allDevices, deviceConfigs]);
@@ -622,160 +602,50 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
 
 
-  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
-  const [selectedDeviceForSettingsId, setSelectedDeviceForSettingsId] = useState<string | null>(null);
-
-  const selectedDeviceForSettings = useMemo(() => {
-    if (!selectedDeviceForSettingsId) return null;
-    return allDevices.find(d => d.id === selectedDeviceForSettingsId) || null;
-  }, [selectedDeviceForSettingsId, allDevices]);
-
-  const openSettings = (device: any) => {
-    setSelectedDeviceForSettingsId(device.id);
-    // NOTE: Hardware probe (0x63) intentionally NOT fired here.
-    // Probe runs only during setup wizard (new device) or explicit on-demand user action.
-    // Firing on every settings open created an async race against the stored deviceConfigs.
-    setIsSettingsVisible(true);
-  };
-
-  // 🔶 Device config mutation → useDashboardDeviceConfig
-  const { saveSettings } = useDashboardDeviceConfig({
+    const {
+    MemoizedSk8lytzController,
+    activeHwSettings,
+    isSettingsVisible,
+    setIsSettingsVisible,
     selectedDeviceForSettings,
+    openSettings,
+    saveSettings
+  } = useDashboardController({
+    isActuallyConnected,
+    isTestModeActive,
+    crewSession,
+    crewRole,
+    lastLeaderScene,
+    setCrewSession,
+    setCrewRole,
+    setLastLeaderScene,
+    setCrewModeSummary,
+    dockedControllerRef,
+    displayConnectedDevices,
+    deviceConfigs,
+    isGrouped,
+    powerStates,
+    handlePowerToggle,
+    handleDisconnect,
+    appSettings,
+    bleState,
+    gpsSpeed,
+    peakGForce,
+    sessionDistanceMiles,
+    sessionDurationSec,
     customGroups,
-    registeredDevices,
-    saveRegisteredDevice,
+    lastGroupPatterns,
+    setLastGroupPattern,
+    ledgerSave,
+    writeToDevice,
+    edgePanResponder,
+    allDevices,
     setAllDevices,
     allDevicesRef,
+    registeredDevices,
+    saveRegisteredDevice,
     setUpdateTrigger,
-    setIsSettingsVisible,
   });
-
-  const activeHwSettings = useMemo(() => {
-    const raw = displayConnectedDevices[0];
-    // Merge persisted deviceConfigs on top — ensures 0x63 ping results always surface
-    // even when displayConnectedDevices comes from useBLE.connectedDevices (real hardware path)
-    const cached = raw?.id ? (deviceConfigs[raw.id] || {}) : {};
-    const d = { ...raw, ...cached };
-    // String-derived fallback for sorting when hardware hasn't been probed yet
-    const s = d?.sorting || d?.colorSortingName || 'GRB';
-    const sortingIdx = s === 'RGB' ? 0 : s === 'RBG' ? 1 : s === 'GRB' ? 2 : s === 'GBR' ? 3 : s === 'BRG' ? 4 : s === 'BGR' ? 5 : 2;
-    // CRITICAL: Only trust the numeric colorSorting index when hardware has been probed (detected=true).
-    // Stale cached data may have colorSorting=0 (RGB) from old parses, which ?? does NOT override
-    // because 0 is not null/undefined. Using detected as the gate prevents wrong cached values
-    // from overriding the GRB sortingIdx fallback derived from the device name string.
-    const colorSortingFinal = d?.detected ? (d.colorSorting ?? sortingIdx) : sortingIdx;
-    return {
-      ledPoints: d?.ledPoints || d?.points ||
-        // BUG FIX: was `(name.includes('soul') ? 43 : 16)` — hardcoded 16 is wrong for HALOZ (defaultLedPoints=8).
-        // Regression risk: unprobed HALOZ gets 16-element arrays, bypassing the hardware segment mirror engine.
-        // Fix: derive fallback from ProductCatalog so HALOZ→8, SOULZ→43, future products auto-correct.
-        getLocalProfileByPoints(d?.points ?? 0).defaultLedPoints,
-      segments:  d?.segments || 1,
-      icType:    d?.icType || 1,
-      icName:    d?.icName || d?.stripType || 'WS2812B',
-      colorSorting: colorSortingFinal,
-      colorSortingName: s,
-      detected:  d?.detected || false,
-    };
-  }, [displayConnectedDevices, deviceConfigs]);
-
-
-  const MemoizedSk8lytzController = useMemo(() => {
-    if (!isActuallyConnected) return null;
-    if (isTestModeActive) return null;
-
-    // ── Crew member view: show telemetry dashboard instead of full controller ──
-    if (crewSession && crewRole === 'member') {
-      return (
-        <CrewMemberDashboard
-          session={crewSession}
-          role={crewRole}
-          currentScene={lastLeaderScene}
-          onLeave={async () => {
-            await crewService.leaveSession().catch(() => {});
-            setCrewSession(null);
-            setCrewRole(null);
-            setLastLeaderScene(null);
-            setCrewModeSummary(undefined);
-          }}
-        />
-      );
-    }
-
-    return (
-      <Animated.View {...edgePanResponder.panHandlers} style={{ flex: 1, backgroundColor: 'transparent' }}>
-          <BLEErrorBoundary componentName="DockedController">
-          <DockedController
-            ref={dockedControllerRef}
-            hwSettings={activeHwSettings}
-            lockedProduct={
-              // Resolution priority (highest → lowest):
-              // 1. deviceConfigs[mac].type  — post-probe/wizard persisted value
-              // 2. registeredDevices[mac].product_type — injected by displayConnectedDevices enrichment
-              //    (always available on cold start after FTUE, even before 0x63 EEPROM probe fires)
-              // 3. getLocalProfileByPoints  — genuine last resort for unregistered/unknown devices
-              displayConnectedDevices[0]?.type ||
-              getLocalProfileByPoints(displayConnectedDevices[0]?.points ?? 0).id
-            }
-            isPaired={isGrouped}
-            points={activeHwSettings.ledPoints}
-            devices={displayConnectedDevices as IDeviceState[]}
-            onLongPressDevice={openSettings}
-            writeToDevice={writeToDevice}
-            isPoweredOn={displayConnectedDevices.some(d => powerStates[d.id] ?? true)}
-            onPowerToggle={() => handlePowerToggle(displayConnectedDevices.map(d => d.id))}
-            onDisconnect={handleDisconnect}
-            crewRole={crewRole}
-            appSettings={appSettings}
-            onCrewSceneChange={(scene: Record<string, any>) => crewService.broadcastScene(scene)}
-            bleState={bleState}
-            // ── Telemetry props (BUG-01 fix) ─────────────────────────────────────────
-            // Owned by the single useGlobalTelemetry(isSkateSessionActive) above.
-            // DockedController receives these as props — it must NOT create its own sensor subscriptions.
-            gpsSpeed={gpsSpeed}
-            peakGForce={peakGForce}
-            sessionDistanceMiles={sessionDistanceMiles}
-            sessionDurationSec={sessionDurationSec}
-            onPatternChanged={(patternName: string, snapshot: import('../types/dashboard.types').GroupPatternSnapshot, lastPayload?: number[]) => {
-              // FIX: Resolve groupId from customGroups (always hydrated) rather than
-              // displayConnectedDevices[0].groupId which may be undefined if deviceConfigs
-              // hasn't finished its async repo load yet — causing the key to land on the MAC
-              // address instead of the group UUID, making the card lookup always miss.
-              const deviceMac = displayConnectedDevices[0]?.id?.toUpperCase();
-              const matchingGroup = customGroups.find(g => g.deviceIds.includes(deviceMac ?? ''));
-              const targetGroupId = matchingGroup?.id || deviceMac;
-              if (targetGroupId) {
-                const currentSnapshot = lastGroupPatterns[targetGroupId];
-                if (!currentSnapshot || currentSnapshot.patternLabel !== patternName) {
-                  setLastGroupPattern(targetGroupId, snapshot);
-                }
-                // Save to unified ledger for each connected device.
-                if (lastPayload && lastPayload.length > 0) {
-                  displayConnectedDevices.forEach(d => {
-                    ledgerSave(d.id, {
-                      deviceMac: normalizeMac(d.id),
-                      groupId: targetGroupId,
-                      mode: snapshot.mode as any,
-                      patternLabel: patternName,
-                      fgColor: snapshot.fgColor,
-                      bgColor: snapshot.bgColor,
-                      speed: 50,
-                      brightness: 90,
-                      rawPayload: lastPayload,
-                      ts: Date.now(),
-                    });
-                  });
-                }
-              }
-            }}
-          />
-          </BLEErrorBoundary>
-          {/* BLE state overlays removed: connectToDevices now synchronously clears
-              connectedDevices before any async work, so the controller shell never
-              renders stale state. No overlay needed — the UI simply loads clean. */}
-      </Animated.View>
-    );
-  }, [isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, isTestModeActive, activeHwSettings, crewRole, crewSession, lastLeaderScene, bleState, ledgerSave, gpsSpeed, peakGForce, sessionDistanceMiles, sessionDurationSec]);
 
   /**
    * Renders a single device item card, merging registration data 
@@ -785,11 +655,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     // IDENTITY FIX: Always resolve to BLE MAC address for all lookups.
     // RegisteredDevice.id is a Supabase composite key (MAC+userId).
     const mac = (item.device_mac || item.id || '').toUpperCase();
-    const cachedConfig = deviceConfigs?.[mac] || {};
-    const mergedItem = { 
-      ...item, 
-      ...cachedConfig,
-      name: item.device_name || cachedConfig.name || item.name // Map DB field to component prop
+      const cachedConfig = (deviceConfigs[item.id] || {}) as Partial<DeviceSettings>;
+      const mergedItem = {
+        ...item,
+        ...cachedConfig,
+        name: item.device_name || cachedConfig.name || item.name // Map DB field to component prop
     };
     // Read last known pattern state from ledger for preview swatch (synchronous, in-memory only).
     const ledgerState = ledgerLoadSync(normalizeMac(mac));
@@ -976,18 +846,24 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                showsVerticalScrollIndicator={false}
              >
                 {/* SLAB 2: CREW HUB */}
-                <CrewHubSlab
+                <DashboardCrewPanel
                   crewSession={crewSession}
+                  setCrewSession={setCrewSession}
                   crewRole={crewRole}
+                  setCrewRole={setCrewRole}
+                  isCrewModalVisible={isCrewModalVisible}
+                  setIsCrewModalVisible={setIsCrewModalVisible}
+                  crewModeSummary={crewModeSummary}
+                  setCrewModeSummary={setCrewModeSummary}
+                  lastLeaderScene={lastLeaderScene}
+                  setLastLeaderScene={setLastLeaderScene}
+                  initialDeepLinkCode={initialDeepLinkCode}
                   isOfflineMode={isOfflineMode}
                   appSettings={appSettings}
                   windowHeight={windowHeight}
-                  onOpenHub={() => { setCrewInitialStep('landing'); setIsCrewModalVisible(true); }}
-                  onOpenMap={() => { setCrewInitialStep('map'); setIsCrewModalVisible(true); }}
-                  isCrewHubCollapsed={isCrewHubCollapsed}
-                  onToggleCollapse={toggleCrewHubCollapse}
                   Colors={Colors}
                   styles={styles}
+                  onApplyCloudScene={(scene) => dockedControllerRef.current?.applyCloudScene(scene)}
                 />
 
 
@@ -1110,60 +986,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               </ScrollView>
           </View>
         )}
-        <DeviceSettingsModal
-          isVisible={isSettingsVisible}
-          onClose={() => setIsSettingsVisible(false)}
-          onSave={saveSettings}
-          writeToDevice={writeToDevice}
-          initialSettings={(() => {
-            const sDef = selectedDeviceForSettings as DisplayDevice | null;
-            const targetMac = (sDef?.device_mac || sDef?.id || '').toUpperCase();
-            const dCfg = deviceConfigs[targetMac] || {};
-            
-            const hasProbeData = ((sDef?.points ?? 0) > 0 && sDef?.stripType !== 'UNKNOWN' && sDef?.stripType);
-            const hasManualData = !!dCfg?.userConfiguredAt;
-            const provenance = hasManualData ? 'MANUALLY_CONFIGURED' : (hasProbeData ? 'PROBED' : 'UNCONFIGURED');
-
-            return {
-              name: selectedDeviceForSettings?.name || LOCAL_PRODUCT_CATALOG[0].displayName,
-              type: getLocalProfileByPoints(sDef?.points ?? 0).id,
-              provenance,
-              points: provenance === 'UNCONFIGURED' ? undefined : (dCfg?.points || sDef?.points),
-              segments: provenance === 'UNCONFIGURED' ? undefined : (dCfg?.segments || sDef?.segments),
-              stripType: provenance === 'UNCONFIGURED' ? undefined : (dCfg?.stripType || sDef?.stripType),
-              sorting: provenance === 'UNCONFIGURED' ? undefined : (dCfg?.sorting || sDef?.sorting),
-              grouped: !!dCfg?.groupId || sDef?.grouped || false,
-              groupId: dCfg?.groupId || sDef?.groupId,
-              groupName: customGroups.find(g => g.id === (dCfg?.groupId || sDef?.groupId))?.name || getDefaultGroupName(sDef?.product_type || sDef?.type),
-              firmware: dCfg?.firmware || sDef?.firmware || (sDef?.id?.startsWith('sim-') ? 'v2.0.1.DEMO' : 'Unknown'),
-              // Thread product_id through: BLE peripheral may carry it directly post-scan;
-              // fall back to the registered_devices record which always has it after a cloud sync.
-              productId: (sDef?.productId || registeredDevices.find(
-                (r: any) => r.device_mac.toUpperCase() === targetMac
-              )?.product_id) ?? undefined,
-            };
-
-          })()}
-          groups={customGroups}
-          deviceName={(() => {
-            const sDef = selectedDeviceForSettings as DisplayDevice | null;
-            const targetMac = (sDef?.device_mac || sDef?.id || '').toUpperCase();
-            const rd = registeredDevices.find(r => r.device_mac.toUpperCase() === targetMac);
-            return rd?.custom_name || rd?.device_name || (sDef?.name ?? undefined);
-          })()}
-          onDeregister={(() => {
-            // Only provide onDeregister if the device is actually registered
-            const sDef = selectedDeviceForSettings as DisplayDevice | null;
-            const targetMac = (sDef?.device_mac || sDef?.id || '').toUpperCase();
-            const isRegistered = registeredDevices.some(r => r.device_mac.toUpperCase() === targetMac);
-            if (!isRegistered) return undefined;
-            return async () => {
-              setIsSettingsVisible(false);
-              setAllDevices((prev: any[]) => prev.filter((d: any) => d.id.toUpperCase() !== targetMac));
-              await deregisterDevice(targetMac);
-            };
-          })()}
-        />
+        
 
         <GroupSettingsModal
           isVisible={groupModalState !== 'HIDDEN'}
@@ -1200,57 +1023,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
 
 
-      {/* Crew Hub Modal */}
-      {isCrewModalVisible && (
-        <CrewModal
-          visible={isCrewModalVisible}
-          onClose={() => setIsCrewModalVisible(false)}
-          initialStep={crewInitialStep}
-          initialInviteCode={initialDeepLinkCode}
-          activeSession={crewSession}
-          activeRole={crewRole}
-          currentModeSummary={crewModeSummary}
-          lastLeaderScene={lastLeaderScene}
-          onSessionReady={(session: CrewSession, role: CrewRole, lastScene: Record<string, any> | null) => {
-            setCrewSession(session);
-            setCrewRole(role);
-            if (role === 'leader') {
-              crewService.subscribeAsLeader(session.id, () => {});
-            } else {
-              crewService.subscribeAsMember(session.id, (scene) => {
-                dockedControllerRef.current?.applyCloudScene(scene);
-                setLastLeaderScene(scene); // track for member dashboard
-              }, () => {
-                // session_ended callback — leader ended the session
-                setCrewSession(null);
-                setCrewRole(null);
-                setCrewModeSummary(undefined);
-                setIsCrewModalVisible(false);
-                Alert.alert('Session Ended', 'The crew leader has ended this session. Your skates will keep the current pattern.');
-              });
-              if (lastScene) {
-                setLastLeaderScene(lastScene); // seed dashboard immediately from persisted DB scene
-                setTimeout(() => dockedControllerRef.current?.applyCloudScene(lastScene), 300);
-              }
-            }
-          }}
-          onSessionLeft={() => {
-            // Member left voluntarily — clear session and return to hub landing
-            setCrewSession(null);
-            setCrewRole(null);
-            setCrewModeSummary(undefined);
-            // Don't close modal — CrewModal will reset step to 'landing' via its useEffect
-            // so the user lands back at the hub page naturally
-          }}
-          onSessionEnded={() => {
-            // Leader ended the session — clear all session state
-            setCrewSession(null);
-            setCrewRole(null);
-            setCrewModeSummary(undefined);
-            // Don't force-close — CrewModal resets step to 'landing' via activeSession→null
-          }}
-        />
-      )}
+      
 
       {/* Account Management Modal */}
       {isAccountModalVisible && (

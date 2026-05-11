@@ -16,9 +16,10 @@ Eliminate guesses by anchoring decisions to First Principles.
 2. **First-Principles Audit**: You MUST read `tools/SK8Lytz_App_Master_Reference.md` AND `tools/ZENGGE_PROTOCOL_BIBLE.md` BEFORE generating any implementation plan, bucket list task, or writing code. These are the absolute sources of truth.
 3. **Continuous Sync**: If you discover a protocol truth (like an opcode meaning) during development, you MUST update both the Master Reference and the ZENGGE_PROTOCOL_BIBLE before proceeding with code changes.
 4. **Cite Truth**: When generating an Implementation Plan that touches BLE payloads, opcodes, or architecture, you MUST include a `# Cited Truth` section quoting the exact line number from the Master Reference or Protocol Bible that justifies your code. If you cannot cite it, you cannot write it.
-5. **Math Mandate**: For BLE payloads or SQL/schema logic, output the hex array math/SQL clearly and verify before editing.
-6. **Conflict Halt**: If the live codebase contradicts the Master Reference, HALT immediately and ask the user to decide the source of truth.
-7. **Discovery Mode**: If answers are missing entirely, explicitly announce entering "Discovery Mode" before researching via external tools.
+5. **The No `any` Cast Law**: You are strictly forbidden from fixing a TypeScript error by casting to `any` (e.g. `as any`, `@ts-ignore`). If the compiler says a method doesn't exist, you must find the correct import or fix the interface. `any` is a lazy bandage that causes runtime crashes.
+6. **Math Mandate**: For BLE payloads or SQL/schema logic, output the hex array math/SQL clearly and verify before editing.
+7. **Conflict Halt**: If the live codebase contradicts the Master Reference, HALT immediately and ask the user to decide the source of truth.
+8. **Discovery Mode**: If answers are missing entirely, explicitly announce entering "Discovery Mode" before researching via external tools.
 
 
 ---
