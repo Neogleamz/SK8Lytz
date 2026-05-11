@@ -26,13 +26,15 @@ import { useDockedControllerState } from '../hooks/useDockedControllerState';
 import { useControllerPersistence } from '../hooks/useControllerPersistence';
 import { useControllerDispatch } from '../hooks/useControllerDispatch';
 import { useFavorites } from '../hooks/useFavorites';
-import { getMusicPatternMax, getMusicPatternLabel } from '../hooks/useMusicMode';
+import { getMusicPatternLabel } from '../hooks/useMusicMode';
 import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
 import { useSessionTracking } from '../hooks/useSessionTracking';
 import { useStreetMode } from '../hooks/useStreetMode';
 import { useDeviceStateLedger } from '../hooks/useDeviceStateLedger';
 import type { BleConnectionState, DockedBus, IDeviceState, IFavoriteState, ModeType } from '../types/dashboard.types';
 import { getColorName, hexToHue, hueToHex, hexToRgb } from '../utils/ColorUtils';
+
+
 import AnalogGauge from './docked/AnalogGauge';
 import FavoritesPanel from './docked/FavoritesPanel';
 import MusicPanel from './docked/MusicPanel';
@@ -44,25 +46,19 @@ import ProEffectsPanel from './docked/ProEffectsPanel';
 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Layout, Spacing, Typography } from '../theme/theme';
-
 import { SK8LYTZ_TEMPLATES } from '../protocols/PatternEngine';
 import { useTheme } from '../context/ThemeContext';
 import CameraTracker from './CameraTracker';
-import { UnifiedPatternPicker } from './patterns/UnifiedPatternPicker';
 import { BuilderPanel } from './docked/BuilderPanel';
-import CustomEffectVisualizer from './CustomEffectVisualizer';
-import NeonHueStrip from './NeonHueStrip';
 import ProductVisualizer from './ProductVisualizer';
 import SpectrumAnalyzer from './docked/SpectrumAnalyzer';
-import TacticalSlider from './TacticalSlider';
-import VerticalPatternDrum from './VerticalPatternDrum';
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
-import { crewService } from '../services/CrewService';
 import CommunityModal from './CommunityModal';
+
 import DockedDock from './docked/DockedDock';
 import QuickPresetModal from './docked/QuickPresetModal';
 import SessionSummaryModal from './SessionSummaryModal';
