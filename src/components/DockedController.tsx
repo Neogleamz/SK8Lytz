@@ -1,22 +1,24 @@
 /**
- * DockedController.tsx — SK8Lytz Primary LED Control Interface (Hollow Shell v2)
+ * DockedController.tsx — SK8Lytz Primary LED Control Interface (Hollow Shell v3)
  *
  * Routing shell: manages shared state, BLE write bus, and mode FSM.
  * Delegates all panel rendering to isolated sub-components via DockedBus.
  *
  * Sub-panels (all React.memo isolated):
+ *  - DockedDock        (floating nav bar + swipe gesture)
  *  - ProEffectsPanel   (MULTIMODE / pattern grid)
  *  - BuilderPanel      (BUILDER / gradient editor)
  *  - MusicPanel        (MUSIC)
  *  - CameraPanel       (CAMERA)
  *  - StreetPanel       (STREET)
  *  - FavoritesPanel    (FAVORITES)
+ *  - QuickPresetModal  (cloud/preset save modal)
  *
  * Depends on: ZenggeProtocol, AppLogger, useBLE (via prop injection), ThemeContext
  * Platform: React Native (Android + Web)
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Alert, Dimensions, FlatList, Modal, PanResponder, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useAppMicrophone } from '../hooks/useAppMicrophone';
 import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
 import { useCuratedPicks } from '../hooks/useCuratedPicks';
@@ -56,17 +58,13 @@ import TacticalSlider from './TacticalSlider';
 import VerticalPatternDrum from './VerticalPatternDrum';
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_PREFIX } from '../constants/AppConstants';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
-import { containsProfanity } from '../services/AuthUtils';
 import { crewService } from '../services/CrewService';
-import { ScenesService } from '../services/ScenesService';
 import CommunityModal from './CommunityModal';
-import MarqueeText from './MarqueeText';
-import PositionalGradientBuilder from './PositionalGradientBuilder';
+import DockedDock from './docked/DockedDock';
+import QuickPresetModal from './docked/QuickPresetModal';
 import SessionSummaryModal from './SessionSummaryModal';
 // NOTE: useGlobalTelemetry intentionally NOT imported here.
 // GPS + accelerometer sensors are owned exclusively by DashboardScreen via
@@ -826,48 +824,30 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       fixedDirection,
     }), [brightness, speed, selectedColor, points, hwSettings, fixedPatternId, fixedFgColor, fixedBgColor, fixedDirection, writeToDevice, writeStatus]);
 
-    // ── GESTURE NAVIGATION: Horizontal swipe to change modes ──
-    const MODE_ORDER = ['HOME', 'FAVORITES', 'MULTIMODE', 'BUILDER', 'MUSIC', 'STREET', 'CAMERA'] as const;
-    const swipePanResponder = React.useRef(
-      PanResponder.create({
-        onMoveShouldSetPanResponder: (evt, gestureState) => {
-          // Capture horizontal swipes that are deliberate (>30px) and mostly horizontal
-          // We don't use Capture phase so child sliders can grab touches first
-          if (Math.abs(gestureState.dx) > 30 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) * 1.5) {
-            return true;
-          }
-          return false;
-        },
-        onPanResponderRelease: (evt, gestureState) => {
-          // Read from ref (updated every render) — prevents stale closure over initial activeMode
-          const currentModeStr = activeModeRef.current === 'MULTI' as any ? 'MULTIMODE' : activeModeRef.current;
-          const currentModeIdx = MODE_ORDER.indexOf(currentModeStr as any);
-          if (currentModeIdx === -1) return;
-
-          if (gestureState.dx > 50) {
-            // Swipe Right (Left-to-Right): Go to previous mode
-            if (currentModeIdx > 0) {
-              const prevMode = MODE_ORDER[currentModeIdx - 1];
-              if (prevMode === 'HOME') {
-                if (onDisconnect) onDisconnect();
-              } else {
-                setActiveMode(prevMode as any);
-                if (prevMode !== 'FAVORITES') setLastOperatingMode(prevMode as any);
-                if (prevMode === 'MULTIMODE') setFixedSubMode('PATTERN');
-              }
-            }
-          } else if (gestureState.dx < -50) {
-            // Swipe Left (Right-to-Left): Go to next mode
-            if (currentModeIdx < MODE_ORDER.length - 1) {
-              const nextMode = MODE_ORDER[currentModeIdx + 1];
-              setActiveMode(nextMode as any);
-              if (nextMode !== 'FAVORITES') setLastOperatingMode(nextMode as any);
-              if (nextMode === 'MULTIMODE') setFixedSubMode('PATTERN');
-            }
-          }
-        },
-      })
-    ).current;
+    // ── Mode change handler — wires DockedDock callbacks to local state ───────
+    const handleDockModeChange = React.useCallback((newMode: ModeType | string) => {
+      if (newMode === 'STREET') {
+        setActiveMode('STREET');
+        setLastOperatingMode('STREET');
+        setVizLock(prev => ({ ...prev, mode: 'STREET' }));
+      } else if (newMode === 'MUSIC') {
+        setActiveMode('MUSIC');
+        setLastOperatingMode('MUSIC');
+        setVizLock(prev => ({ ...prev, mode: 'MUSIC' }));
+      } else if (newMode === 'CAMERA') {
+        setActiveMode('CAMERA');
+        setLastOperatingMode('CAMERA');
+      } else if (newMode === 'BUILDER') {
+        setActiveMode('BUILDER' as any);
+        setLastOperatingMode('BUILDER' as any);
+      } else if (newMode === 'MULTIMODE') {
+        setActiveMode('MULTIMODE');
+        setFixedSubMode('PATTERN');
+        setLastOperatingMode('MULTIMODE');
+      } else if (newMode === 'FAVORITES') {
+        setActiveMode('FAVORITES');
+      }
+    }, [setActiveMode, setLastOperatingMode, setFixedSubMode]);
 
     return (
       <View style={styles.container}>
@@ -1140,154 +1120,33 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           )}
         </View>
 
-        {/* THE FLOATING DOCK */}
-        <View style={{ marginBottom: Spacing.xs }}>
-          <View style={[styles.floatingDock, { marginBottom: 0 }]}>
-            {[
-              { id: 'HOME',      icon: 'home-outline'         },
-              { id: 'FAVORITES', icon: 'cards-heart-outline'  },
-              { id: 'MULTIMODE', icon: 'lightning-bolt'       },
-              { id: 'BUILDER',   icon: 'palette'              },
-              { id: 'MUSIC',     icon: 'music'                },
-              { id: 'STREET',    icon: 'run-fast'             },
-              { id: 'CAMERA',    icon: 'camera'               },
-            ].map(dockItem => {
-              const isActive = activeMode === dockItem.id;
-              return (
-                <TouchableOpacity
-                  key={dockItem.id}
-                  onPress={() => {
-                    if (dockItem.id === 'HOME') {
-                      if (onDisconnect) onDisconnect();
-                    } else if (dockItem.id === 'FAVORITES') {
-                      setActiveMode('FAVORITES');
-                    } else if (dockItem.id === 'STREET') {
-                      setActiveMode('STREET');
-                      setLastOperatingMode('STREET');
-                      // Optimistically lock the visualizer to STREET so it switches
-                      // immediately without waiting for the first BLE write round-trip.
-                      setVizLock(prev => ({ ...prev, mode: 'STREET' }));
-                    } else if (dockItem.id === 'MUSIC') {
-                      setActiveMode('MUSIC');
-                      setLastOperatingMode('MUSIC');
-                      // Optimistically lock the visualizer to MUSIC.
-                      setVizLock(prev => ({ ...prev, mode: 'MUSIC' }));
-                    } else if (dockItem.id === 'CAMERA') {
-                      setActiveMode('CAMERA');
-                      setLastOperatingMode('CAMERA');
-                    } else if (dockItem.id === 'BUILDER') {
-                      setActiveMode('BUILDER');
-                      setLastOperatingMode('BUILDER');
-                    } else if (dockItem.id === 'MULTIMODE') {
-                      setActiveMode('MULTIMODE');
-                      setFixedSubMode('PATTERN'); // FIX: reset submode so UniversalSlidersFooter shows FG/BG pickers
-                      setLastOperatingMode('MULTIMODE');
-                    }
-                  }}
-                  style={[styles.dockIconCont, isActive && styles.dockIconActive]}
-                >
-                  <MaterialCommunityIcons
-                    name={dockItem.icon as any}
-                    size={22}
-                    color={isActive ? '#000000' : Colors.textMuted}
-                  />
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-        {/* Quick Preset Prompt Modal */}
-        <Modal visible={promptState === 'NAMING_PRESET'} transparent animationType="fade">
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }}>
-            <View style={{ backgroundColor: Colors.surface, padding: Spacing.xl, borderRadius: 20, width: '100%', maxWidth: 340, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
-              <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: Spacing.md, textAlign: 'center' }}>
-                {quickPromptTargetIndex === -1 ? 'Save Quick Preset' : 'Edit Quick Preset'}
-              </Text>
-              <Text style={{ color: Colors.textMuted, fontSize: 14, marginBottom: Spacing.xl, textAlign: 'center' }}>
-                {quickPromptTargetIndex === -1 ? 'Name your new preset to store it in the Quick bar.' : 'Rename your preset or delete it from the bar.'}
-              </Text>
-              <TextInput
-                style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: '#FFF', padding: Spacing.md, borderRadius: 8, fontSize: 16, marginBottom: Spacing.lg, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}
-                placeholder="Preset Name..."
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                value={promptName}
-                onChangeText={setPromptName}
-                autoFocus
-              />
-              {/* Cloud visibility toggle */}
-              {quickPromptTargetIndex === -1 && (
-                <TouchableOpacity
-                  onPress={() => setCloudPublicToggle(p => !p)}
-                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 10, padding: Spacing.md, marginBottom: Spacing.xl, borderWidth: 1, borderColor: cloudPublicToggle ? '#00C853' : 'rgba(255,255,255,0.1)' }}
-                >
-                  <MaterialCommunityIcons
-                    name={cloudPublicToggle ? 'earth' : 'lock-outline'}
-                    size={18}
-                    color={cloudPublicToggle ? '#00C853' : Colors.textMuted}
-                    style={{ marginRight: Spacing.md }}
-                  />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 13 }}>{cloudPublicToggle ? 'Public — visible to community' : 'Private — only you can see it'}</Text>
-                    <Text style={{ color: Colors.textMuted, fontSize: 11, marginTop: Spacing.xxs }}>Tap to toggle visibility</Text>
-                  </View>
-                </TouchableOpacity>
-              )}
-              <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-                {quickPromptTargetIndex !== -1 && (
-                  <TouchableOpacity style={{ flex: 1, padding: Spacing.lg, borderRadius: 10, backgroundColor: 'rgba(255,0,0,0.3)' }} onPress={() => {
-                    const newArr = [...quickPresets];
-                    newArr.splice(quickPromptTargetIndex, 1);
-                    setQuickPresets(newArr);
-                    AsyncStorage.setItem(`${STORAGE_PREFIX}QuickPresets`, JSON.stringify(newArr));
-                    AppLogger.log('BUILDER_PRESET_DELETED', { index: quickPromptTargetIndex });
-                    closePrompt();
-                  }}>
-                    <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Delete</Text>
-                  </TouchableOpacity>
-                )}
-                {quickPromptTargetIndex === -1 && (
-                  <TouchableOpacity style={{ flex: 1, padding: Spacing.lg, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' }} onPress={() => closePrompt()}>
-                    <Text style={{ color: '#FFF', textAlign: 'center', fontWeight: 'bold' }}>Cancel</Text>
-                  </TouchableOpacity>
-                )}
-                <TouchableOpacity style={{ flex: 1, padding: Spacing.lg, borderRadius: 10, backgroundColor: '#00C853' }} disabled={isPublishingCloud} onPress={async () => {
-                  setIsPublishingCloud(true);
-                  const safeName = promptName.trim() || 'Cloud Scene';
-                  if (containsProfanity(safeName)) {
-                    Alert.alert('Invalid Name', 'Scene names cannot contain inappropriate language. Please choose a different name.');
-                    setIsPublishingCloud(false);
-                    return;
-                  }
-                  const success = await ScenesService.publishScene(safeName, captureEntireState(), cloudPublicToggle);
-                  if (success) {
-                    Alert.alert(cloudPublicToggle ? 'Published!' : 'Saved!', cloudPublicToggle ? 'Your scene is now available to the community.' : 'Scene saved privately to your cloud.');
-                    closePrompt();
-                  } else {
-                    Alert.alert('Error', 'Could not save scene. Are you logged in?');
-                  }
-                  setIsPublishingCloud(false);
-                }}>
-                  <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>{isPublishingCloud ? 'Saving...' : (cloudPublicToggle ? '🌍 Publish' : '🔒 Save Private')}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={{ flex: 1, padding: Spacing.lg, borderRadius: 10, backgroundColor: Colors.primary }} onPress={() => {
-                  const newArr = [...quickPresets];
-                  const safeName = promptName.trim() || 'Preset';
-                  if (quickPromptTargetIndex === -1) {
-                    newArr.push({ name: safeName, colors: multiColors, type: multiTransition });
-                  } else {
-                    newArr[quickPromptTargetIndex].name = safeName;
-                  }
-                  setQuickPresets(newArr);
-                  AsyncStorage.setItem(`${STORAGE_PREFIX}QuickPresets`, JSON.stringify(newArr));
-                  AppLogger.log('BUILDER_PRESET_SAVED', { name: safeName, isOverwrite: quickPromptTargetIndex !== -1 });
-                  closePrompt();
-                }}>
-                  <Text style={{ color: '#000', textAlign: 'center', fontWeight: 'bold' }}>Save</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
+        {/* THE FLOATING DOCK — gesture + nav delegated to DockedDock */}
+        <DockedDock
+          activeModeRef={activeModeRef as React.RefObject<ModeType | string>}
+          activeMode={activeMode}
+          onModeChange={handleDockModeChange}
+          onDisconnect={onDisconnect}
+          Colors={Colors}
+        />
+
+        {/* Quick Preset / Cloud Save Modal */}
+        <QuickPresetModal
+          visible={promptState === 'NAMING_PRESET'}
+          promptName={promptName}
+          setPromptName={setPromptName}
+          quickPromptTargetIndex={quickPromptTargetIndex}
+          quickPresets={quickPresets}
+          setQuickPresets={setQuickPresets}
+          cloudPublicToggle={cloudPublicToggle}
+          setCloudPublicToggle={setCloudPublicToggle}
+          isPublishingCloud={isPublishingCloud}
+          setIsPublishingCloud={setIsPublishingCloud}
+          captureEntireState={captureEntireState}
+          multiColors={multiColors}
+          multiTransition={multiTransition}
+          closePrompt={closePrompt}
+          Colors={Colors}
+        />
 
         {/* Community Modal */}
         <CommunityModal
@@ -1380,362 +1239,9 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     borderWidth: 1,
     borderColor: Colors.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0,0,0,0.08)',
   },
-  modesContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  modePill: {
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.sm,
-    borderRadius: Layout.borderRadius,
-    backgroundColor: Colors.background,
-    marginRight: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0,0,0,0.08)',
-    overflow: 'hidden',
-    justifyContent: 'center',
-  },
-  activeModePill: {
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
-  },
-  modePillText: {
-    color: Colors.textMuted,
-    fontWeight: '600',
-  },
-  activeModePillText: {
-    color: Colors.isDark ? Colors.background : Colors.surface,
-    fontWeight: 'bold',
-  },
   activeModeContainer: {
     flex: 1,
     overflow: 'hidden',
   },
-  controlRow: {
-    marginTop: Spacing.sm,
-  },
-  placeholderSlider: {
-    height: 8,
-    backgroundColor: Colors.surfaceHighlight,
-    borderRadius: 4,
-    marginTop: Spacing.sm,
-    overflow: 'hidden',
-  },
-  sliderFill: {
-    height: '100%',
-    backgroundColor: Colors.secondary,
-    borderRadius: 4,
-  },
-  colorGrid: {
-    flexDirection: 'row',
-    flexWrap: 'nowrap',
-    marginTop: Spacing.lg,
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-  },
-  colorButton: {
-    flex: 1,
-    aspectRatio: 1,
-    maxWidth: 36,
-    maxHeight: 36,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: Colors.isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)',
-    marginHorizontal: Spacing.xs,
-  },
-  selectedColorButton: {
-    borderWidth: 3,
-    borderColor: Colors.text,
-    transform: [{ scale: 1.1 }]
-  },
-  presetContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    alignContent: 'flex-start',
-    gap: Spacing.sm
-  },
-  presetCard: {
-    width: '48%',
-    minHeight: 80,
-    padding: Spacing.sm,
-    backgroundColor: Colors.isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.04)',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...Platform.select({
-      web: { boxShadow: `0px 4px 10px ${Colors.primary}40` } as any,
-      default: { shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 10 }
-    }),
-  },
-  presetTitle: {
-    ...Typography.body,
-    fontWeight: 'bold',
-    color: Colors.text,
-  },
-  presetDesc: {
-    ...Typography.caption,
-    marginTop: Spacing.xs,
-    color: Colors.textMuted,
-  },
-  sceneContainer: {
-    backgroundColor: Colors.isDark ? '#050505' : Colors.surfaceHighlight,
-    borderRadius: 24,
-    padding: Spacing.xxs,
-    marginTop: Spacing.sm,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
-  },
-  sceneHeader: {
-    padding: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
-    alignItems: 'center',
-  },
-  sceneTitle: {
-    ...Typography.title,
-    color: Colors.text,
-    fontSize: 18,
-  },
-  rbmWheelSection: {
-    height: 180,
-    backgroundColor: Colors.isDark ? '#050505' : Colors.surfaceHighlight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sceneSlidersContainer: {
-    padding: Spacing.lg,
-    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
-  },
-  sceneLabel: {
-    ...Typography.caption,
-    color: Colors.textMuted,
-    fontSize: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    fontWeight: '700',
-  },
-  musicToggleHeader: {
-    flexDirection: 'row',
-    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : Colors.surfaceHighlight,
-    borderRadius: 25,
-    padding: Spacing.xs,
-    alignItems: 'center',
-    marginVertical: Spacing.xs,
-    marginHorizontal: Spacing.xs,
-    borderWidth: 1,
-    borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
-  },
-  musicToggleOption: {
-    flex: 1,
-    paddingVertical: Spacing.md,
-    alignItems: 'center',
-    borderRadius: 20,
-  },
-  musicToggleActive: {
-    backgroundColor: Colors.primary,
-  },
-  musicToggleActiveText: {
-    color: Colors.isDark ? '#FFF' : '#000',
-    fontWeight: 'bold',
-  },
-  musicToggleText: {
-    color: Colors.textMuted,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  musicModeIndicator: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  musicModeCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.isDark ? 'rgba(0,0,0,0.6)' : Colors.surfaceHighlight,
-  },
-  musicModeNumber: {
-    color: Colors.text,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  musicModeRefresh: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  micControlSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.xs,
-  },
-  micIconBtn: {
-    flex: 1,
-    alignItems: 'center',
-    padding: Spacing.sm,
-    borderRadius: 12,
-  },
-  micBtnActive: {
-    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-  },
-  micIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-  },
-  micIconText: {
-    fontSize: 24,
-    color: Colors.textMuted,
-  },
-  micSubText: {
-    fontSize: 9,
-    color: Colors.textMuted,
-    textAlign: 'center',
-    textTransform: 'uppercase',
-    fontWeight: '600',
-  },
-  playButtonMain: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: Spacing.md,
-  },
-  playIconInner: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  musicOptionsGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.xs,
-  },
-  radioItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  radioOuter: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.textMuted,
-    marginRight: Spacing.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioActive: {
-    borderColor: Colors.primary,
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.primary,
-  },
-  radioLabel: {
-    color: Colors.text,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  gradientSliderTrack: {
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: Colors.surfaceHighlight,
-    overflow: 'hidden',
-  },
-  musicSettingsToggleRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    gap: Spacing.xxl,
-    marginBottom: Spacing.xs,
-  },
-  floatingDock: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: Colors.isDark ? 'rgba(8, 10, 16, 0.98)' : 'rgba(255, 255, 255, 0.98)',
-    borderWidth: 1,
-    borderColor: Colors.isDark ? 'rgba(0, 240, 255, 0.35)' : 'rgba(0, 200, 255, 0.4)',
-    borderRadius: 30,
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.xl,
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.sm,
-    marginTop: Spacing.sm,
-    ...Platform.select({
-      web: { boxShadow: `0px 8px 20px ${Colors.primary}99` } as any,
-      default: { shadowColor: Colors.primary, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.6, shadowRadius: 20 }
-    }),
-    elevation: 15
-  },
-  dockIconCont: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.05)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
-  },
-  dockIconActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-    ...Platform.select({
-      web: { boxShadow: `0px 0px 12px ${Colors.primary}e6` } as any,
-      default: { shadowColor: Colors.primary, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 12 }
-    }),
-    elevation: 8,
-    transform: [{ scale: 1.15 }]
-  },
-  dockActiveText: {
-    color: Colors.primary,
-    fontFamily: 'Righteous',
-    fontSize: 18,
-    textAlign: 'center',
-    letterSpacing: 4,
-    textTransform: 'uppercase',
-    ...Platform.select({
-      web: { textShadow: `0px 0px 24px ${Colors.primary}` } as any,
-      default: { textShadowColor: Colors.primary, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 24 }
-    }),
-    opacity: 1.0,
-    marginTop: Spacing.xs,
-  }
 });
 
