@@ -31,7 +31,7 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { useAccountOverview } from '../hooks/useAccountOverview';
 import { useSkateStats } from '../hooks/useSkateStats';
-import { PermanentCrew, profileService } from '../services/ProfileService';
+import { PermanentCrew } from '../services/ProfileService';
 import { supabase } from '../services/supabaseClient';
 import EulaModal from './modals/EulaModal';
 import { AdvancedHardwareModal } from './admin/AdvancedHardwareModal';
