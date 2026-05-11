@@ -35,7 +35,6 @@ import type { BleConnectionState, DockedBus, IDeviceState, IFavoriteState, ModeT
 import { getColorName, hexToHue, hueToHex, hexToRgb } from '../utils/ColorUtils';
 
 
-import AnalogGauge from './docked/AnalogGauge';
 import FavoritesPanel from './docked/FavoritesPanel';
 import MusicPanel from './docked/MusicPanel';
 import CameraPanel from './docked/CameraPanel';
@@ -48,7 +47,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Layout, Spacing, Typography } from '../theme/theme';
 import { SK8LYTZ_TEMPLATES } from '../protocols/PatternEngine';
 import { useTheme } from '../context/ThemeContext';
-import CameraTracker from './CameraTracker';
 import { BuilderPanel } from './docked/BuilderPanel';
 import ProductVisualizer from './ProductVisualizer';
 import SpectrumAnalyzer from './docked/SpectrumAnalyzer';
@@ -1237,6 +1235,108 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   activeModeContainer: {
     flex: 1,
     overflow: 'hidden',
+  },
+  // ── Styles threaded to sub-panels via styles={styles} prop ──────────────
+  // MusicPanel consumers:
+  musicToggleHeader: {
+    flexDirection: 'row' as const,
+    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : Colors.surfaceHighlight,
+    borderRadius: 25,
+    padding: Spacing.xs,
+    alignItems: 'center' as const,
+    marginVertical: Spacing.xs,
+    marginHorizontal: Spacing.xs,
+    borderWidth: 1,
+    borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)',
+  },
+  musicModeIndicator: {
+    width: '100%' as any,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  musicModeCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    backgroundColor: Colors.isDark ? 'rgba(0,0,0,0.6)' : Colors.surfaceHighlight,
+  },
+  musicModeNumber: {
+    color: Colors.text,
+    fontSize: 18,
+    fontWeight: 'bold' as const,
+  },
+  micControlSection: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    width: '100%' as any,
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.xs,
+  },
+  micIconBtn: {
+    flex: 1,
+    alignItems: 'center' as const,
+    padding: Spacing.sm,
+    borderRadius: 12,
+  },
+  micBtnActive: {
+    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+  },
+  micIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+  },
+  micSubText: {
+    fontSize: 9,
+    color: Colors.textMuted,
+    textAlign: 'center' as const,
+    textTransform: 'uppercase' as const,
+    fontWeight: '600' as const,
+  },
+  playButtonMain: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginHorizontal: Spacing.md,
+  },
+  playIconInner: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: Colors.primary,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+  // UniversalSlidersFooter consumers:
+  sceneSlidersContainer: {
+    padding: Spacing.lg,
+    backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+  },
+  colorGrid: {
+    flexDirection: 'row' as const,
+    flexWrap: 'nowrap' as const,
+    marginTop: Spacing.lg,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    width: '100%' as any,
+  },
+  controlRow: {
+    marginTop: Spacing.sm,
   },
 });
 
