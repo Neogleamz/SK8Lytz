@@ -12,12 +12,26 @@ Do not manually flip states unless via the Scraper Dashboard UI.
 4. `MEDIA_READY`: Photos downloaded, awaiting manual human review of the 'Hero Image'.
 5. `PUBLISHED`: Pushed to Supabase. Now visible in the mobile app.
 
-## The Detective Engine
-- DO NOT use Regex to parse websites. 
-- We use LM Studio / Ollama via `DetectiveEngine.ts` to parse raw HTML blocks into strictly typed JSON (Zod schema).
-- If extraction is failing (e.g., missing social media links), you must modify the Zod schema and system prompt in `DetectiveEngine.ts`, do NOT write procedural string parsing.
+---
+
+## The Detective Engine (Zod / LLM)
+- **DO NOT** use Regex to parse websites. 
+- We use LM Studio / Ollama via `DetectiveEngine.ts` to parse raw HTML blocks into strictly typed JSON.
+- We enforce extraction using Zod Schemas.
+  
+**Example Schema Constraint**:
+```typescript
+z.object({
+  weekly_hours: z.array(z.string()).describe("Strictly format as 'Mon: 10AM-10PM'. Null if missing."),
+  social_links: z.array(z.string().url()).describe("Must be valid URLs. Extract from href tags.")
+})
+```
+
+If extraction is failing, you must modify the **Zod schema and system prompt** in `DetectiveEngine.ts`. Do NOT write procedural string parsing or Regex cleanup scripts.
+
+---
 
 ## The Local SQLite Truth
 - The master data lives in `scraper.db` locally.
 - Supabase is ONLY a downstream replica. 
-- Never write scripts that bypass SQLite to write directly to Supabase. The `Publisher` daemon handles all syncing.
+- Never write scripts that bypass SQLite to write directly to Supabase. The `Publisher` daemon (`scraper-publisher.ts`) handles all syncing using the `is_published` toggle.
