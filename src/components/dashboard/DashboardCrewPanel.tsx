@@ -24,6 +24,10 @@ interface DashboardCrewPanelProps {
   styles: any;
   
   onApplyCloudScene: (scene: Record<string, any>) => void;
+  crewInitialStep: any;
+  setCrewInitialStep: (step: any) => void;
+  isCrewHubCollapsed: boolean;
+  toggleCrewHubCollapse: () => void;
 }
 
 export default function DashboardCrewPanel({
@@ -43,12 +47,13 @@ export default function DashboardCrewPanel({
   windowHeight,
   Colors,
   styles,
-  onApplyCloudScene
+  onApplyCloudScene,
+  crewInitialStep,
+  setCrewInitialStep,
+  isCrewHubCollapsed,
+  toggleCrewHubCollapse
 }: DashboardCrewPanelProps) {
-  const [crewInitialStep, setCrewInitialStep] = useState<any>('landing');
-  const [isCrewHubCollapsed, setIsCrewHubCollapsed] = useState(false);
-
-  const toggleCrewHubCollapse = () => setIsCrewHubCollapsed(!isCrewHubCollapsed);
+  // State lifted to DashboardScreen
 
   return (
     <>

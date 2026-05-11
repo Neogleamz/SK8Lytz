@@ -174,6 +174,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           const inviteCode = String(parsed.queryParams.code).toUpperCase();
           AppLogger.log('DEEP_LINK', { action: 'crew_join', inviteCode });
           setInitialDeepLinkCode(inviteCode);
+          setCrewInitialStep('join');
           setIsCrewModalVisible(true);
         }
       } catch (err) {
@@ -304,6 +305,24 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     onApplyScene: (scene) => dockedControllerRef.current?.applyCloudScene(scene),
   });
   const dockedControllerRef = React.useRef<DockedControllerHandle>(null);
+
+  const [crewInitialStep, setCrewInitialStep] = useState<any>('landing');
+  const [isCrewHubCollapsed, setIsCrewHubCollapsed] = useState(false);
+
+  // Load Crew Hub collapsed state on mount
+  useEffect(() => {
+    AsyncStorage.getItem('@Sk8lytz_crewHubCollapsed')
+      .then(res => { if (res !== null) setIsCrewHubCollapsed(res === 'true'); })
+      .catch(() => {});
+  }, []);
+
+  const toggleCrewHubCollapse = useCallback(() => {
+    setIsCrewHubCollapsed(prev => {
+      const next = !prev;
+      AsyncStorage.setItem('@Sk8lytz_crewHubCollapsed', String(next)).catch(() => {});
+      return next;
+    });
+  }, []);
 
   // Relay Soft Disconnect recoveries down to the DockedController for silent payload blasting
   useEffect(() => {
@@ -864,6 +883,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   Colors={Colors}
                   styles={styles}
                   onApplyCloudScene={(scene) => dockedControllerRef.current?.applyCloudScene(scene)}
+                  crewInitialStep={crewInitialStep}
+                  setCrewInitialStep={setCrewInitialStep}
+                  isCrewHubCollapsed={isCrewHubCollapsed}
+                  toggleCrewHubCollapse={toggleCrewHubCollapse}
                 />
 
 
