@@ -1,4 +1,4 @@
-import { RGB, PatternId, PatternOptions } from './PatternEngine';
+import type { RGB, PatternId, PatternOptions } from './PatternEngine';
 import { generateArray, getPatternTransitionType } from './SpatialEngine';
 import { getSymphonyVisualizerFrame } from './SymphonyEngine';
 
