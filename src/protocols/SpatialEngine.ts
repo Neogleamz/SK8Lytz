@@ -1,5 +1,24 @@
-import { RGB, PatternId, PatternOptions } from './PatternEngine';
-import { buildNativeBreathe, buildNativeSweep, buildNativeCenterOut } from './SymphonyEngine';
+import type { RGB, PatternId, PatternOptions } from './PatternEngine';
+
+
+export function buildNativeBreathe(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const brightness = Math.sin(tick * Math.PI) ** 2; // smooth power curve
+  return Array(numLEDs).fill(blendRGB(fg, bg, brightness));
+}
+
+
+export function buildNativeSweep(fg: RGB, bg: RGB, numLEDs: number, tick: number, direction: 0 | 1): RGB[] {
+  const t = direction === 0 ? tick : 1 - tick;
+  const pos = Math.floor(t * numLEDs);
+  return Array.from({ length: numLEDs }, (_, i) => i < pos ? fg : bg);
+}
+
+
+export function buildNativeCenterOut(fg: RGB, bg: RGB, numLEDs: number, tick: number): RGB[] {
+  const center = Math.floor(numLEDs / 2);
+  const spread = Math.floor(tick * center);
+  return Array.from({ length: numLEDs }, (_, i) => Math.abs(i - center) <= spread ? fg : bg);
+}
 
 export function dim(c: RGB, factor: number): RGB {
   return {
