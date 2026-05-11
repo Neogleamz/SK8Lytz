@@ -41,3 +41,18 @@ trigger: always_on
 2. **Search Before Write**: Do not append blindly. Update existing sections.
 3. **The QA Mandate**: If you build a new UI feature, you must add a corresponding manual test case to the TEST_PLAN.
 
+
+---
+trigger: always_on
+---
+
+## No Pre-Existing Excuses
+
+**"Pre-existing" is not a valid reason to leave a defect in the codebase.**
+
+1. **Own Every Problem**: If you discover a bug, dead import, stale reference, or broken pattern during ANY phase (audit, QA, Release Manager review), you fix it — regardless of whether you introduced it. It is now our problem.
+2. **Never Say "Not My Problem"**: Do NOT flag something as "pre-existing" and leave it for later unless it is a MAJOR architectural risk that requires its own plan and worktree. A dead import, a missing null guard, a stale variable — fix it on the spot and include it in the current commit.
+3. **The Boy-Scout Distinction**: This rule does NOT override `Zero-Collateral Damage` (RULE[preferences.md] #4). The distinction is:
+   - **Boy-Scout refactors** = unsolicited architectural rewrites, hook extractions, and renames during active development → **FORBIDDEN**
+   - **Discovered defects** = dead imports, unused variables, stale references, broken patterns found during QA/audit → **ALWAYS FIX**
+4. **Commit It With Context**: When fixing a pre-existing defect, include it in the current commit with a `chore(cleanup):` prefix or fold it into the nearest `fix:` commit. Never leave the repo in a state where you said "I saw a bug but it wasn't my task."
