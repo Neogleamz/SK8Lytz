@@ -24,6 +24,7 @@ import {
 } from 'react-native';
 import {
   Camera,
+  useCameraDevice,
   useCameraPermission,
   useFrameOutput,
 } from 'react-native-vision-camera';
@@ -37,6 +38,7 @@ interface CameraTrackerProps {
 }
 
 export default function CameraTracker({ onColorDetected, isActive }: CameraTrackerProps) {
+  const device = useCameraDevice('back');
   const { hasPermission, requestPermission: requestFromHook } = useCameraPermission();
   const [liveHex, setLiveHex] = useState<string>('#FF0080');
   const lastUpdateRef = useRef<number>(0);
@@ -205,11 +207,20 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
     );
   }
 
+  if (device == null) {
+    return (
+      <View style={styles.centeredContainer}>
+        <ActivityIndicator color={Colors.primary} size="large" />
+        <Text style={[styles.message, { marginTop: Spacing.md }]}>Initializing Camera...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Camera
         style={StyleSheet.absoluteFillObject}
-        device="back"
+        device={device}
         isActive={isActive && hasPermission}
         outputs={[frameOutput]}
       />
