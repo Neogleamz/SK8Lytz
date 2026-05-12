@@ -1,5 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+(global as any).__DEV__ = true;
 import { isStale, normalizeMac, useDeviceStateLedger, warmLedgerCache } from '../useDeviceStateLedger';
+
+jest.mock('react-native', () => ({
+  AppState: {
+    addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+    currentState: 'active',
+  },
+}));
 
 jest.mock('../../services/AppLogger', () => ({
   AppLogger: {
