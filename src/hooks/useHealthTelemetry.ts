@@ -53,8 +53,10 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
         const updateBpm = (bpm: number) => {
           setLatestBpm(bpm);
           bpmSamplesRef.current.push(bpm);
-          const max = Math.max(...bpmSamplesRef.current);
-          const avg = Math.round(bpmSamplesRef.current.reduce((a, b) => a + b, 0) / bpmSamplesRef.current.length);
+          const samples = bpmSamplesRef.current;
+          if (samples.length === 0) return; // Guard: Math.max([]) = -Infinity, divide-by-zero guard
+          const max = samples.reduce((a, b) => (b > a ? b : a), samples[0]);
+          const avg = Math.round(samples.reduce((a, b) => a + b, 0) / samples.length);
           setPeakBpm(max);
           setAvgBpm(avg);
         };
