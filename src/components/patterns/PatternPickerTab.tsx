@@ -1,5 +1,5 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react';
-import { ScrollView, FlatList, StyleSheet, View, Text, TouchableOpacity, Animated } from 'react-native';
+import { ScrollView, FlatList, StyleSheet, View, Text, TouchableOpacity, Animated, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
@@ -41,14 +41,14 @@ const AnimatedCategoryPill = ({ cat, isActive, onPress }: { cat: string, isActiv
     Animated.parallel([
       Animated.spring(scale, {
         toValue: isActive ? 1.1 : 1,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
         friction: 6,
         tension: 100,
       }),
       Animated.timing(opacity, {
         toValue: isActive ? 1 : 0.4,
         duration: 200,
-        useNativeDriver: true,
+        useNativeDriver: Platform.OS !== 'web',
       })
     ]).start();
   }, [isActive, scale, opacity]);

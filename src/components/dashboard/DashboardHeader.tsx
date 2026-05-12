@@ -169,7 +169,7 @@ const DashboardHeader = React.memo(({
           </View>
 
           {/* [BUG FIX]: pointerEvents="box-none" prevents blocking the logo TouchableOpacity */}
-          <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: 0, top: 0, justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, top: 0, justifyContent: 'center', alignItems: 'center', pointerEvents: 'box-none' }}>
             <TouchableOpacity activeOpacity={0.7} style={{ position: 'relative', alignItems: 'center' }} onPress={isAdmin ? onPressAdminTools : undefined}>
               <Image source={require('../../../assets/logo.png')} style={{ width: 85, height: 26 }} resizeMode="contain" tintColor={Colors.text} />
             </TouchableOpacity>

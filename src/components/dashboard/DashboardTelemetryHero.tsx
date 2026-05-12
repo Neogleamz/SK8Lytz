@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, Animated } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Animated, Platform } from 'react-native';
 import { Layout, Spacing } from '../../theme/theme';
 import { useTheme } from '../../context/ThemeContext';
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
@@ -227,7 +227,7 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
 
         {/* Speed text — inside the arc */}
         <View style={[styles.speedOverlay, { width: svgWidth, height: svgH }]}>
-          <Text style={[styles.speedValue, { color: Colors.primary, textShadowColor: Colors.primary }]}>{gpsSpeed.toFixed(1)}</Text>
+          <Text style={[styles.speedValue, { color: Colors.primary, ...(Platform.OS === 'web' ? { textShadow: `0 0 28px ${Colors.primary}` } : { textShadowColor: Colors.primary }) }]}>{gpsSpeed.toFixed(1)}</Text>
           <Text style={styles.speedUnit}>MPH</Text>
         </View>
       </View>
@@ -261,7 +261,7 @@ const TelemetryPill = ({ label, value, unit, accent }:
     <View style={[styles.accentTick, { backgroundColor: accent, shadowColor: accent }]} />
     <Text style={styles.pillLabel}>{label}</Text>
     <View style={styles.pillValueRow}>
-      <Text style={[styles.pillValue, { textShadowColor: accent, textShadowRadius: 14 }]}>
+      <Text style={[styles.pillValue, Platform.OS === 'web' ? { textShadow: `0 0 14px ${accent}` } as any : { textShadowColor: accent, textShadowRadius: 14 }]}>
         {value}
       </Text>
       {unit !== '' && <Text style={styles.pillUnit}>{unit}</Text>}
@@ -287,17 +287,20 @@ const styles = StyleSheet.create({
     fontFamily: 'Righteous',
     fontSize: 60,
     lineHeight: 66,
-    textShadowRadius: 28,
-    textShadowOffset: { width: 0, height: 0 },
+    ...(Platform.OS !== 'web' ? {
+      textShadowRadius: 28,
+      textShadowOffset: { width: 0, height: 0 },
+    } : {}),
   },
   speedUnit: {
     fontFamily: 'Righteous',
     fontSize: 13,
     letterSpacing: 4,
     color: '#00FFFF',
-    textShadowColor: '#00FFFF',
-    textShadowRadius: 10,
     marginTop: -2,
+    ...(Platform.OS === 'web'
+      ? { textShadow: '0 0 10px #00FFFF' }
+      : { textShadowColor: '#00FFFF', textShadowRadius: 10 }),
   },
   metricsGrid: {
     paddingHorizontal: Spacing.xs,
@@ -323,10 +326,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0, left: '20%', right: '20%',
     height: 2,
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 1,
-    shadowRadius: 5,
-    elevation: 4,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px -2px 5px currentColor' }
+      : { shadowOffset: { width: 0, height: -2 }, shadowOpacity: 1, shadowRadius: 5, elevation: 4 }),
   },
   pillLabel: {
     fontSize: 8,
