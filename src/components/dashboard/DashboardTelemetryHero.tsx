@@ -31,7 +31,7 @@ const TICK_MPH   = [0, 5, 10, 15, 20, 25];
 // SVG tip coords: x = cx + r*cos(θ_math), y = cy - r*sin(θ_math)
 const angleForRatio = (t: number) => (1 - t) * Math.PI;
 
-export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
+export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = React.memo(({
   gpsSpeed, peakGForce, sessionDistanceMiles,
   sessionDurationSec, sessionPeakSpeed, sessionAvgSpeed,
 }) => {
@@ -248,7 +248,7 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = ({
 
     </View>
   );
-};
+});
 
 // ─── Glass Pill ───────────────────────────────────────────────────────────────
 const TelemetryPill = ({ label, value, unit, accent }:
