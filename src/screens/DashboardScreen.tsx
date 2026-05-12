@@ -526,9 +526,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const handleGroupPress = useCallback((group: CustomGroup) => {
     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
     if (devicesToConnect.length > 0) {
-      setIsSkateSessionActive(true);
-      setIsControllerOpen(true);
-      connectToDevices(devicesToConnect);
+      // Optimistic UI: Defer heavy controller mount by one frame to allow tap animation.
+      requestAnimationFrame(() => {
+        setIsSkateSessionActive(true);
+        setIsControllerOpen(true);
+        connectToDevices(devicesToConnect);
+      });
     } else {
       // No BLE devices discovered yet — trigger scan and inform user
       AppLogger.log('BLE_STATE_CHANGE', { event: 'group_tap_no_ble_devices', groupId: group.id, expectedMacs: group.deviceIds });
@@ -787,7 +790,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         isSelectionMode={isSelectionMode}
         isSelected={selectedIds.includes(mac)}
         ledgerState={ledgerState ?? undefined}
-        onPress={async () => {
+        onPress={() => {
           if (isSelectionMode) {
             toggleDeviceSelection(mac);
             return;
@@ -803,10 +806,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             scanForPeripherals();
             return;
           }
-          // connectToDevices (gated) — additive connection, preserves existing group members.
-          await connectToDevices([bleDevice]);
-          setIsSkateSessionActive(true);
-          setIsControllerOpen(true);
+          // Optimistic UI: Defer heavy controller mount by one frame to allow tap animation.
+          // Fire-and-forget the BLE connection so JS thread is not blocked.
+          requestAnimationFrame(() => {
+            setIsSkateSessionActive(true);
+            setIsControllerOpen(true);
+            connectToDevices([bleDevice]);
+          });
           // NOTE: Hardware probe (0x63) intentionally NOT fired here.
           // hwSettings are loaded from DeviceRepository on mount — registered devices
           // already have their ledPoints/segments persisted from setup wizard.

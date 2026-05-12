@@ -381,6 +381,19 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       return;
     }
 
+    // ── CONNECTION CACHING GUARD (Optimistic UI) ──────────────────────────────
+    // If ALL requested devices are already in the connected array, skip the
+    // GATT handshake. This prevents visually dropping the connection and 
+    // unnecessarily restarting the MTU/Time-Sync cycle.
+    const allRequestedAlreadyConnected = devices.every(requested => 
+      connectedDevicesRef.current.some(connected => connected.id === requested.id)
+    );
+
+    if (allRequestedAlreadyConnected) {
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'connectToDevices_cached_hit_skip' });
+      return;
+    }
+
     // ── IMMEDIATE STATE CLEAR ─────────────────────────────────────────────────
     // Synchronously wipe connectedDevices BEFORE any async work so the controller
     // shell never renders the previous group's devices while the new GATT
