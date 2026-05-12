@@ -167,7 +167,18 @@ export type EventType =
   | 'GLOBAL_SESSION_DISCARDED'
   | 'GLOBAL_TELEMETRY_STARTED'
   // ── Admin Tools ─────────────────────────────────────────────────────────────
-  | 'DATA_EXPORT';
+  | 'DATA_EXPORT'
+  // ── Domain Service Telemetry ────────────────────────────────────────────────
+  | 'NOTIFICATION_SERVICE'
+  | 'PERSISTENCE'
+  | 'PERMISSION_SERVICE'
+  | 'CREW_PROFILE'
+  | 'SCENE_BUILDER'
+  | 'SCENE_SERVICE'
+  | 'BUILDER_PANEL'
+  | 'ACCOUNT_MGMT'
+  | 'CREW_SESSION'
+  | 'BLE_TRANSPORT';
 
 
 

@@ -80,7 +80,7 @@ export function useDashboardProfile({
     );
 
     return () => {
-      notificationService.cleanup().catch(() => {});
+      notificationService.cleanup().catch((e) => AppLogger.warn('NOTIFICATION_SERVICE', { event: 'cleanup_failed', error: String(e) }));
     };
     // onCrewJoinNotification is a stable callback ref — intentionally excluded from deps
     // to avoid re-registering the notification service on every render.
@@ -91,7 +91,7 @@ export function useDashboardProfile({
   useEffect(() => {
     AsyncStorage.getItem('@Sk8lytz_auth_username').then(val => {
       if (val && !authUsername) setAuthUsername(val);
-    }).catch(() => {});
+    }).catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_auth_username', event: 'load_failed', error: String(e) }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -104,8 +104,8 @@ export function useDashboardProfile({
       const sessionEmailPrefix = session?.user?.email?.split('@')[0];
       const fallback = dbDisplay || dbUser || sessionEmailPrefix || 'GUEST';
       setAuthUsername(fallback);
-      AsyncStorage.setItem('@Sk8lytz_auth_username', fallback).catch(() => {});
-    }).catch(() => {});
+      AsyncStorage.setItem('@Sk8lytz_auth_username', fallback).catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_auth_username', event: 'save_failed', error: String(e) }));
+    }).catch((e) => AppLogger.warn('PERSISTENCE', { event: 'auth_session_failed', error: String(e) }));
   }, [userProfile]);
 
   const handleLogout = async (): Promise<void> => {

@@ -34,7 +34,7 @@ import AdminToolsModal from '../components/admin/AdminToolsModal';
 import { AppLogger } from '../services/AppLogger';
 import { CrewRole, crewService, CrewSession } from '../services/CrewService';
 
-import AccountModal from '../components/AccountModal';
+import AccountModal, { StoredDevice } from '../components/AccountModal';
 import { getDefaultGroupName } from '../utils/NamingUtils';
 import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { RegisteredDevice, useRegistration } from '../hooks/useRegistration';
@@ -313,13 +313,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   useEffect(() => {
     AsyncStorage.getItem('@Sk8lytz_crewHubCollapsed')
       .then(res => { if (res !== null) setIsCrewHubCollapsed(res === 'true'); })
-      .catch(() => {});
+      .catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_crewHubCollapsed', event: 'load_failed', error: String(e) }));
   }, []);
 
   const toggleCrewHubCollapse = useCallback(() => {
     setIsCrewHubCollapsed(prev => {
       const next = !prev;
-      AsyncStorage.setItem('@Sk8lytz_crewHubCollapsed', String(next)).catch(() => {});
+      AsyncStorage.setItem('@Sk8lytz_crewHubCollapsed', String(next)).catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_crewHubCollapsed', event: 'save_failed', error: String(e) }));
       return next;
     });
   }, []);

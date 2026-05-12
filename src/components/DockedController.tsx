@@ -1,4 +1,4 @@
-﻿/**
+/**
  * DockedController.tsx — SK8Lytz Primary LED Control Interface (Hollow Shell v3)
  *
  * Routing shell: manages shared state, BLE write bus, and mode FSM.
@@ -445,7 +445,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       const devicesToReplay = devices ?? [];
       devicesToReplay.forEach((d, idx) => {
         const timer = setTimeout(() => {
-          parentWriteToDevice(ledgerState.rawPayload, d.id, { lowPriority: true }).catch(() => {});
+          parentWriteToDevice(ledgerState.rawPayload, d.id, { lowPriority: true }).catch((e: any) => AppLogger.warn('BLE_TRANSPORT', { event: 'ledger_replay_write_failed', deviceId: d.id, error: String(e) }));
           if (idx === 0) {
             AppLogger.log('LEDGER_RECONNECT_REPLAY', {
               macs: devicesToReplay.map(x => x.id),
@@ -479,7 +479,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         if (!lastSentPayload || lastSentPayload.length === 0) return;
         AppLogger.log('BLE_QUEUE_REPLAY', { deviceId, payloadLen: lastSentPayload.length });
         // Use direct write to skip optimistic UI/haptics when ghosting a resurrected device
-        optimisticWrite(lastSentPayload, undefined, deviceId).catch(() => {});
+        optimisticWrite(lastSentPayload, undefined, deviceId).catch((e: any) => AppLogger.warn('BLE_TRANSPORT', { event: 'ghost_replay_write_failed', deviceId, error: String(e) }));
       }
     }), [speed, brightness, writeToDevice, lastSentPayload, optimisticWrite]);
 

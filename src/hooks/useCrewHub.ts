@@ -14,12 +14,12 @@ export function useCrewHub(visible: boolean, step: string) {
   useEffect(() => {
     AsyncStorage.getItem(RADIUS_STORAGE_KEY).then(val => {
       if (val !== null) _setDiscoverRadiusMi(JSON.parse(val));
-    }).catch(() => {});
+    }).catch((e) => AppLogger.warn('PERSISTENCE', { key: RADIUS_STORAGE_KEY, event: 'load_failed', error: String(e) }));
   }, []);
 
   const setDiscoverRadiusMi = useCallback((val: number | null) => {
     _setDiscoverRadiusMi(val);
-    AsyncStorage.setItem(RADIUS_STORAGE_KEY, JSON.stringify(val)).catch(() => {});
+    AsyncStorage.setItem(RADIUS_STORAGE_KEY, JSON.stringify(val)).catch((e) => AppLogger.warn('PERSISTENCE', { key: RADIUS_STORAGE_KEY, event: 'save_failed', error: String(e) }));
   }, []);
   
   const [myCrews, setMyCrews] = useState<PermanentCrew[]>([]);

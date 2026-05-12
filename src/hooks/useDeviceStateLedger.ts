@@ -18,6 +18,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback } from 'react';
+import { AppLogger } from '../services/AppLogger';
 import type { DevicePatternState } from '../types/dashboard.types';
 
 const KEY_PREFIX = '@SK8Lytz_DeviceState_v2_';
@@ -94,8 +95,8 @@ export function useDeviceStateLedger() {
     if (existing) clearTimeout(existing);
 
     const timer = setTimeout(() => {
-      AsyncStorage.setItem(`${KEY_PREFIX}${key}`, JSON.stringify(entry)).catch(() => {
-        // Silent — storage write failure is non-fatal; in-memory cache still valid
+      AsyncStorage.setItem(`${KEY_PREFIX}${key}`, JSON.stringify(entry)).catch((e) => {
+        AppLogger.warn('PERSISTENCE', { key: `${KEY_PREFIX}${key}`, event: 'ledger_write_failed', error: String(e) });
       });
       debounceTimers.delete(key);
     }, 500);
@@ -153,7 +154,7 @@ export function useDeviceStateLedger() {
     }
 
     memoryCache.delete(key);
-    await AsyncStorage.removeItem(`${KEY_PREFIX}${key}`).catch(() => {});
+    await AsyncStorage.removeItem(`${KEY_PREFIX}${key}`).catch((e) => AppLogger.warn('PERSISTENCE', { key: `${KEY_PREFIX}${key}`, event: 'ledger_clear_failed', error: String(e) }));
   }, []);
 
   return { save, load, loadSync, clear };
