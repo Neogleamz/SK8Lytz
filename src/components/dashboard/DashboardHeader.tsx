@@ -141,7 +141,7 @@ const DashboardHeader = React.memo(({
         </View>
       ) : (
         /* ── Disconnected: 3-column layout ── */
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           {/* LEFT: user pill */}
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
             <TouchableOpacity
@@ -168,12 +168,10 @@ const DashboardHeader = React.memo(({
             </TouchableOpacity>
           </View>
 
-          {/* [BUG FIX]: pointerEvents="box-none" prevents blocking the logo TouchableOpacity */}
-          <View style={{ position: 'absolute', left: 0, right: 0, bottom: 0, top: 0, justifyContent: 'center', alignItems: 'center', pointerEvents: 'box-none' }}>
-            <TouchableOpacity activeOpacity={0.7} style={{ position: 'relative', alignItems: 'center' }} onPress={isAdmin ? onPressAdminTools : undefined}>
-              <Image source={require('../../../assets/logo.png')} style={{ width: 85, height: 26 }} resizeMode="contain" tintColor={Colors.text} />
-            </TouchableOpacity>
-          </View>
+          {/* CENTER: logo */}
+          <TouchableOpacity activeOpacity={0.7} style={{ alignItems: 'center' }} onPress={isAdmin ? onPressAdminTools : undefined}>
+            <Image source={require('../../../assets/logo.png')} style={{ width: 85, height: 26 }} resizeMode="contain" tintColor={Colors.text} />
+          </TouchableOpacity>
 
           {/* RIGHT: support + theme */}
           <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: Spacing.sm }}>
