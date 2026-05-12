@@ -66,9 +66,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
           const frameMs = 1000 / targetFps;
 
           if (now - lastRenderTimeRef.current >= frameMs) {
-            InteractionManager.runAfterInteractions(() => {
-              setAnimTick(tickRef.current);
-            });
+            setAnimTick(tickRef.current);
             lastRenderTimeRef.current = now;
           }
 
