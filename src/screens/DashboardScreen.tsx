@@ -545,9 +545,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     setViewState('SETUP_WIZARD');
   }, []);
 
-  const handleGroupPowerPress = useCallback((group: CustomGroup) => {
-    handlePowerToggle(group.deviceIds);
-  }, [handlePowerToggle]);
+
 
   const handleGroupMusicPress = useCallback((group: CustomGroup) => {
     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
@@ -610,8 +608,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, [allDevices, connectToDevices, scanForPeripherals]);
 
   const handleToggleRegisteredCollapse = useCallback(() => {
-    setIsRegisteredCollapsed(prev => !prev);
-  }, []);
+    setIsRegisteredCollapsed(!isRegisteredCollapsed);
+  }, [isRegisteredCollapsed, setIsRegisteredCollapsed]);
 
   // Option A Fallback: Prevent getting stranded on a blue screen
   useEffect(() => {
@@ -674,7 +672,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     })
   ).current;
 
-  const handlePowerToggle = async (deviceIds: string[], forceState?: boolean) => {
+  const handlePowerToggle = useCallback(async (deviceIds: string[], forceState?: boolean) => {
     // 1. Determine target state (if not forced, toggle based on first device)
     const targetState = forceState !== undefined ? forceState : !(powerStates[deviceIds[0]] ?? true);
     
@@ -686,7 +684,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     for (const mac of deviceIds) {
       if (writeToDevice) await writeToDevice(payload, mac);
     }
-  };
+  }, [powerStates, setPowerState, writeToDevice]);
+
+  const handleGroupPowerPress = useCallback((group: CustomGroup) => {
+    handlePowerToggle(group.deviceIds);
+  }, [handlePowerToggle]);
 
   const handleDeviceTap = (id: string) => {
     toggleDeviceSelection(id);

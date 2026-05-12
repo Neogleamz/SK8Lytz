@@ -546,7 +546,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       const name = promptName.trim() || defaultName;
 
       const capturedState = {
-        mode: activeMode === 'MULTIMODE' ? fixedSubMode : activeMode,
+        mode: activeMode === 'MULTIMODE' ? 'MULTIMODE' : activeMode,
         color: selectedColor,
         patternId: activeMode === 'MUSIC' ? musicPatternId : (activeMode === 'MULTIMODE' ? fixedPatternId : selectedPatternId),
         speed,
@@ -592,6 +592,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
       if (legacyMode === 'PATTERN' || legacyMode === 'MULTIMODE') {
         setActiveMode('MULTIMODE');
+        setLastOperatingMode('MULTIMODE');
+        setVizLock(prev => ({ ...prev, mode: 'MULTIMODE' }));
+        activeModeRef.current = 'MULTIMODE'; // Force sync for writeToDevice closure
         setFixedSubMode('PATTERN');
         const restoredId = favRaw.patternId ?? 1;
         setFixedPatternId(restoredId);
@@ -601,29 +604,63 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         applyFixedPattern(restoredId, favRaw.fixedFgColor ?? '#FF6600', favRaw.fixedBgColor ?? '#000000', favRaw.speed ?? 80, favRaw.brightness ?? 100);
       } else if (legacyMode === 'MUSIC') {
         setActiveMode('MUSIC');
-        setMusicPatternId(favRaw.patternId ?? 0);
-        handleMusicChange(favRaw.patternId ?? 0, micSensitivity, favRaw.brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
+        setLastOperatingMode('MUSIC');
+        setVizLock(prev => ({ ...prev, mode: 'MUSIC' }));
+        activeModeRef.current = 'MUSIC'; // Force sync for writeToDevice closure
+        
+        const restoredPattern = favRaw.patternId ?? 0;
+        const restoredSens = favRaw.micSensitivity ?? 80;
+        const restoredSource = favRaw.micSource ?? 'APP';
+        const restoredPrimary = favRaw.musicPrimaryColor ?? '#FF0000';
+        const restoredSecondary = favRaw.musicSecondaryColor ?? '#0000FF';
+        const restoredMatrix = favRaw.musicMatrixStyle ?? 0x27;
+
+        setMusicPatternId(restoredPattern);
+        setMicSensitivity(restoredSens);
+        setMicSource(restoredSource);
+        setMusicPrimaryColor(restoredPrimary);
+        setMusicSecondaryColor(restoredSecondary);
+        setMusicMatrixStyle(restoredMatrix);
+
+        handleMusicChange(restoredPattern, restoredSens, favRaw.brightness ?? 100, restoredSource, restoredPrimary, restoredSecondary, restoredMatrix);
       } else if (legacyMode === 'CAMERA') {
         setActiveMode('CAMERA');
+        setLastOperatingMode('CAMERA');
+        setVizLock(prev => ({ ...prev, mode: 'CAMERA' }));
+        activeModeRef.current = 'CAMERA';
       } else if (legacyMode === 'FAVORITES') {
         setActiveMode('FAVORITES');
       } else if (legacyMode === 'BUILDER') {
-
         setActiveMode('MULTIMODE');
+        setLastOperatingMode('MULTIMODE');
+        setVizLock(prev => ({ ...prev, mode: 'MULTIMODE' }));
+        activeModeRef.current = 'MULTIMODE'; // Force sync for writeToDevice closure
         setFixedSubMode('BUILDER');
+        
         if (favRaw.builderNodes && favRaw.builderNodes.length > 0) {
           setBuilderNodes(favRaw.builderNodes);
         }
         if (favRaw.builderFillMode) setBuilderFillMode(favRaw.builderFillMode);
         if (favRaw.builderTransitionType !== undefined) setBuilderTransitionType(favRaw.builderTransitionType);
         if (favRaw.builderDirection !== undefined) setBuilderDirection(favRaw.builderDirection);
-        // Note: hardware dispatch is not auto-triggered for BUILDER restores.
-        // The gradient is re-sent when the user opens Builder tab and taps Send.
-        // Auto-dispatch tracked in: refactor/docked-controller-decomposition
+        
+        // Auto-dispatch BUILDER payload instead of dead-loading
+        if (writeToDevice && favRaw.builderNodes && favRaw.builderNodes.length > 0) {
+          const rgbColors = favRaw.builderNodes.map((n: any) => ({
+            r: parseInt(n.colorHex.slice(1, 3), 16) || 0,
+            g: parseInt(n.colorHex.slice(3, 5), 16) || 0,
+            b: parseInt(n.colorHex.slice(5, 7), 16) || 0,
+          }));
+          const transition = favRaw.builderTransitionType ?? 1;
+          writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 16, clampSpeed(favRaw.speed ?? 50), 1, transition));
+        }
       } else if (legacyMode === 'MULTI' || legacyMode === 'DIY' || legacyMode === 'MULTICOLOR') {
-
         setActiveMode('MULTIMODE');
+        setLastOperatingMode('MULTIMODE');
+        setVizLock(prev => ({ ...prev, mode: 'MULTIMODE' }));
+        activeModeRef.current = 'MULTIMODE'; // Force sync for writeToDevice closure
         setFixedSubMode('BUILDER');
+        
         setMultiColors(favRaw.multiColors || []);
         setMultiTransition(favRaw.multiTransition || 3);
         setMultiLength(favRaw.multiLength || 16);
@@ -633,7 +670,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             g: parseInt(h.slice(3, 5), 16) || 0,
             b: parseInt(h.slice(5, 7), 16) || 0,
           }));
-          writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(favRaw.speed), 1, favRaw.multiTransition));
+          writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(favRaw.speed ?? 50), 1, favRaw.multiTransition ?? 3));
         }
       } else {
         // Unknown/legacy mode — best-effort color dispatch
@@ -650,7 +687,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       } else {
         AppLogger.log('FAVORITE_RENDERED', { id: favRaw.id, name: favRaw.name || favRaw.customName, mode: legacyMode, patternId: favRaw.patternId });
       }
-    }, [writeToDevice, handleMusicChange, applyFixedPattern, sendColor, clampSpeed, micSensitivity, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [writeToDevice, handleMusicChange, applyFixedPattern, sendColor, clampSpeed, hwSettings?.ledPoints, setActiveFavoriteId, setSpeed, setBrightness, setSelectedColor, setActiveMode, setLastOperatingMode, setFixedSubMode, setFixedPatternId, setFixedColorMode, setFixedFgColor, setFixedBgColor, setMusicPatternId, setMicSensitivity, setMicSource, setMusicPrimaryColor, setMusicSecondaryColor, setMusicMatrixStyle, setBuilderNodes, setBuilderFillMode, setBuilderTransitionType, setBuilderDirection, setMultiColors, setMultiTransition, setMultiLength]);
 
 
 
