@@ -21,6 +21,8 @@ import { useCallback } from 'react';
 import { AppLogger } from '../services/AppLogger';
 import type { DevicePatternState } from '../types/dashboard.types';
 
+import { AppState } from 'react-native';
+
 const KEY_PREFIX = '@SK8Lytz_DeviceState_v2_';
 
 /**
@@ -28,8 +30,10 @@ const KEY_PREFIX = '@SK8Lytz_DeviceState_v2_';
  * Strips Supabase composite suffixes (e.g. 'AA:BB:CC:DD:EE:FF_userId123' → 'AA:BB:CC:DD:EE:FF').
  * Safe to call with a raw BLE MAC — it passes through unchanged.
  */
-export const normalizeMac = (rawId: string): string =>
-  rawId.split('_')[0].toUpperCase().replace(/[^A-F0-9:]/g, '');
+export const normalizeMac = (rawId: string): string => {
+  if (!rawId) return '';
+  return String(rawId).split('_')[0].toUpperCase().replace(/[^A-F0-9:]/g, '');
+};
 
 /**
  * Returns true if the ledger entry is older than 24 hours.
@@ -38,18 +42,43 @@ export const normalizeMac = (rawId: string): string =>
 export const isStale = (ts: number): boolean =>
   Date.now() - ts > 24 * 60 * 60 * 1000;
 
+// Dev-mode Fast Refresh global survival
+const globalAny: any = global;
+
 /**
  * Module-level in-memory cache shared across all hook instances.
  * Populated on load(), updated on save(). Synchronous — no async penalty.
  */
-const memoryCache = new Map<string, DevicePatternState>();
+const memoryCache: Map<string, DevicePatternState> = globalAny.__sk8lytz_ledger_cache || new Map<string, DevicePatternState>();
+
 /**
  * Module-level debounce timer map — shared across ALL hook instances.
  * Ensures only ONE AsyncStorage write is in-flight per MAC at any time,
  * even when DashboardScreen and DockedController both call save() simultaneously.
  * Previously this was a per-instance useRef, causing independent timers to race.
  */
-const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const debounceTimers: Map<string, ReturnType<typeof setTimeout>> = globalAny.__sk8lytz_ledger_timers || new Map<string, ReturnType<typeof setTimeout>>();
+
+if (__DEV__) {
+  globalAny.__sk8lytz_ledger_cache = memoryCache;
+  globalAny.__sk8lytz_ledger_timers = debounceTimers;
+}
+
+// ── Background Data Loss Preventer ──
+// If the OS backgrounds the app, synchronously flush all pending AsyncStorage writes 
+// so user slider changes are not lost if the process is killed before the 500ms debounce fires.
+AppState.addEventListener('change', (next) => {
+  if (next === 'background') {
+    for (const [key, timer] of debounceTimers.entries()) {
+      clearTimeout(timer);
+      const entry = memoryCache.get(key);
+      if (entry) {
+        AsyncStorage.setItem(`${KEY_PREFIX}${key}`, JSON.stringify(entry)).catch(() => {});
+      }
+    }
+    debounceTimers.clear();
+  }
+});
 
 /**
  * Warm the in-memory cache from AsyncStorage on app boot.

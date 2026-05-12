@@ -350,7 +350,11 @@ class AppLoggerService {
 
     // 3. PII Scrubbing — targeted recursive key-walk (no round-trip serialize)
     const piiKeys = new Set(['email', 'name', 'password', 'token', 'phone', 'address', 'fullname']);
+    const seen = new WeakSet();
+
     const obfuscate = (obj: Record<string, any>) => {
+      if (seen.has(obj)) return;
+      seen.add(obj);
       for (const key in obj) {
         if (piiKeys.has(key.toLowerCase()) && typeof obj[key] === 'string') {
           obj[key] = '[REDACTED]';
@@ -382,10 +386,17 @@ class AppLoggerService {
     const CRITICAL_EVENTS: EventType[] = ['ERROR_CAUGHT', 'PROTOCOL_ERROR', 'BLE_WRITE_ERROR', 'BLE_CONNECTION_ERROR', 'CREW_ERROR'];
     if (CRITICAL_EVENTS.includes(event)) {
       if (supabase) {
+        let safeErrorString = 'Unknown error';
+        try {
+          safeErrorString = String(payload.message || payload.error || payload.errorMessage || JSON.stringify(payload));
+        } catch {
+          safeErrorString = '[Circular or Unparseable Error Object]';
+        }
+
         supabase.from('telemetry_errors').insert({
           session_id: this.sessionId,
           event_type: event,
-          error_message: String(payload.message || payload.error || payload.errorMessage || JSON.stringify(payload) || 'Unknown error').substring(0, 500),
+          error_message: safeErrorString.substring(0, 500),
           stack_trace: payload.stack || payload.stackTrace || null,
           raw_context: {
             ...payload,

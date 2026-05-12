@@ -83,6 +83,7 @@ export function useBLEAutoRecovery({
 
     // 2. Spawn isolated async recovery loop
     let attempts = 0;
+    let gateWaitCount = 0;
     const attemptRecoveryLoop = async () => {
       while (ghostedRefs.current.includes(deviceId)) {
         // ── CANCELLATION CHECK: break if token has changed ──
@@ -116,9 +117,20 @@ export function useBLEAutoRecovery({
           // If the gate isn't IDLE, skip this attempt and try again next loop.
           // This prevents recovery from colliding with active connections/scans.
           if (bleGateRef.current !== 'IDLE') {
-            AppLogger.log('AUTO_RECOVERY_GATE_WAIT', { deviceId, gate: bleGateRef.current, attempt: attempts });
+            gateWaitCount++;
+            AppLogger.log('AUTO_RECOVERY_GATE_WAIT', { deviceId, gate: bleGateRef.current, attempt: attempts, gateWaitCount });
+            
+            if (gateWaitCount > 6) {
+              AppLogger.warn(`[AutoRecovery] ${deviceId} hit Zombie Gate Lock — gate stuck on ${bleGateRef.current} for too long. Ejecting.`);
+              ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
+              setGhostedDeviceIds([...ghostedRefs.current]);
+              setConnectedDevices(prev => prev.filter(d => d.id !== deviceId));
+              break;
+            }
             continue; // Will sleep again via backoff at top of loop
           }
+          
+          gateWaitCount = 0; // Reset gate wait count since gate is IDLE
 
           // Attempt blind GATT connection (or reuse if natively connected)
           const nativelyConnected = await bleManager.isDeviceConnected(deviceId).catch(() => false);
