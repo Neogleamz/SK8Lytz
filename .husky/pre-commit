@@ -1,3 +1,30 @@
 #!/bin/sh
+# Husky pre-commit hook — Worktree-safe
+#
+# Problem: When committing inside a git worktree, $CWD is the worktree directory
+# which has no node_modules. npx tsc/jest would fail with "preset not found".
+#
+# Fix: Resolve the master fortress root via the shared git common-dir,
+# then run all checks from there where node_modules lives.
+#
+# git rev-parse --git-common-dir returns the path to the shared .git dir.
+# For the main repo it returns ".git"; for worktrees it returns the absolute path
+# to the main repo's .git dir (e.g. /path/to/SK8Lytz/.git).
+# We resolve the parent of that path as the fortress root.
+
+COMMON_DIR=$(git rev-parse --git-common-dir)
+if [ "$COMMON_DIR" = ".git" ]; then
+  # Already in the master fortress
+  FORTRESS_ROOT=$(git rev-parse --show-toplevel)
+else
+  # In a worktree — parent of the shared .git dir IS the fortress root
+  FORTRESS_ROOT=$(dirname "$COMMON_DIR")
+fi
+
+cd "$FORTRESS_ROOT" || exit 1
+
+echo "[Husky] Running TSC check from: $FORTRESS_ROOT"
 npx tsc --noEmit
-npx jest --watchAll=false
+
+echo "[Husky] Running Jest from: $FORTRESS_ROOT"
+npx jest --watchAll=false --passWithNoTests
