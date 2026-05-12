@@ -1,14 +1,13 @@
 /**
- * CameraTracker — Vision Camera v4 (Nitro) Sniper Dropper
+ * CameraTracker — Silent snapshot-based ambient color sampler
  *
- * Architecture (Option A):
- *   useFrameOutput({ onFrame }) → worklet runs on camera thread → reads
- *   center pixel bytes directly from raw ArrayBuffer (no file I/O, no JPEG).
- *   runOnJS throttles state updates to ~10fps so React re-renders stay smooth.
+ * Architecture:
+ *   Every 600ms → cameraRef.current.takeSnapshot() (NO shutter sound)
+ *   → nitro Image.resize(1,1) → toRawPixelData() → BGRA/RGBA buffer
+ *   → extract center pixel → HSL hue → vivid LED hex → onColorDetected
  *
- * Permission flow stays entirely in PermissionService (PermissionsAndroid).
- * The hook (useCameraPermission) is used ONLY as a read source so the UI
- * re-renders automatically when the OS state changes.
+ * No frame processors. No worklets. No YUV parsing. Pure JS thread.
+ * Uses react-native-nitro-image's Image API — included with vision-camera v5.
  */
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -24,11 +23,10 @@ import {
 } from 'react-native';
 import {
   Camera,
+  type CameraRef,
   useCameraDevice,
   useCameraPermission,
-  useFrameOutput,
 } from 'react-native-vision-camera';
-import { runOnJS } from 'react-native-worklets';
 import { requestPermission } from '../services/PermissionService';
 import { Colors, Spacing } from '../theme/theme';
 
@@ -37,171 +35,145 @@ interface CameraTrackerProps {
   isActive: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Extract vivid hue hex from raw RGB values
+// ---------------------------------------------------------------------------
+function rgbToVividHex(r: number, g: number, b: number): string {
+  const rN = r / 255;
+  const gN = g / 255;
+  const bN = b / 255;
+  const cMax = Math.max(rN, gN, bN);
+  const cMin = Math.min(rN, gN, bN);
+  const delta = cMax - cMin;
+
+  let h = 0;
+  if (delta > 0.001) {
+    if (cMax === rN)      h = ((gN - bN) / delta) % 6;
+    else if (cMax === gN) h = (bN - rN) / delta + 2;
+    else                  h = (rN - gN) / delta + 4;
+    h = h * 60;
+    if (h < 0) h += 360;
+  }
+
+  // Convert hue → vivid RGB (S=1.0, L=0.5)
+  const c = 1.0;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  let rV = 0, gV = 0, bV = 0;
+  if      (h < 60)  { rV = c; gV = x; bV = 0; }
+  else if (h < 120) { rV = x; gV = c; bV = 0; }
+  else if (h < 180) { rV = 0; gV = c; bV = x; }
+  else if (h < 240) { rV = 0; gV = x; bV = c; }
+  else if (h < 300) { rV = x; gV = 0; bV = c; }
+  else              { rV = c; gV = 0; bV = x; }
+
+  const toHex = (v: number) => {
+    const s = Math.round(v * 255).toString(16);
+    return s.length === 1 ? '0' + s : s;
+  };
+  return ('#' + toHex(rV) + toHex(gV) + toHex(bV)).toUpperCase();
+}
+
 export default function CameraTracker({ onColorDetected, isActive }: CameraTrackerProps) {
   const device = useCameraDevice('back');
   const { hasPermission, requestPermission: requestFromHook } = useCameraPermission();
   const [liveHex, setLiveHex] = useState<string>('#FF0080');
-  const lastUpdateRef = useRef<number>(0);
 
-  // --- Permission: re-check every time the app comes to the foreground ---
+  const cameraRef = useRef<CameraRef>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isSamplingRef = useRef(false);
+
+  // --- Permission management ---
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') {
-        // Re-check by calling requestPermission which on Android reads the
-        // current granted/denied state without re-prompting if already set.
-        requestFromHook();
-      }
+      if (nextState === 'active') requestFromHook();
     });
     return () => sub.remove();
   }, [requestFromHook]);
 
-  // On first render, try requesting if not yet granted
   useEffect(() => {
     if (!hasPermission) {
       requestPermission('CAMERA').then((granted) => {
-        if (granted) requestFromHook(); // sync the hook state
+        if (granted) requestFromHook();
       });
     }
   }, [hasPermission, requestFromHook]);
 
-  // --- Frame Processor (Option A): worklet on camera thread ---
-  const updateColor = useCallback((hex: string) => {
-    const now = Date.now();
-    // Throttle to ~10 state updates per second
-    if (now - lastUpdateRef.current < 100) return;
-    lastUpdateRef.current = now;
-    setLiveHex(hex);
-    onColorDetected(hex); // Send live color upstream constantly
-  }, [setLiveHex, onColorDetected]);
+  // --- Core silent sampler ---
+  const sampleColor = useCallback(async () => {
+    if (!cameraRef.current || isSamplingRef.current) return;
+    isSamplingRef.current = true;
 
-  const updateColorOnJS = runOnJS(updateColor);
+    try {
+      // takeSnapshot() reads from the preview buffer — NO shutter sound, NO disk I/O
+      const image = await cameraRef.current.takeSnapshot();
 
-  // useFrameOutput (VisionCamera v5 Nitro API).
-  // Replaces useFrameProcessor which was removed in v5.
-  // pixelFormat is specified here; frame.dispose() is required to avoid stalling the pipeline.
-  const frameOutput = useFrameOutput({
-    pixelFormat: 'yuv',
-    onFrame(frame) {
-      'worklet';
+      // Resize to 1×1 — averages all pixels to a single color. Pure native, fast.
+      const tiny = image.resize(1, 1);
 
-      if (!frame.isValid) {
-        frame.dispose();
-        return;
+      // Get raw pixel bytes + format (BGRA on Android, RGBA on iOS typically)
+      const { buffer, pixelFormat } = tiny.toRawPixelData();
+      const bytes = new Uint8Array(buffer);
+
+      let r = 0, g = 0, b = 0;
+      switch (pixelFormat) {
+        case 'BGRA':
+        case 'BGR':
+        case 'BGRX':
+          b = bytes[0]; g = bytes[1]; r = bytes[2];
+          break;
+        case 'ABGR':
+          b = bytes[1]; g = bytes[2]; r = bytes[3];
+          break;
+        case 'RGBA':
+        case 'RGB':
+        case 'RGBX':
+          r = bytes[0]; g = bytes[1]; b = bytes[2];
+          break;
+        case 'ARGB':
+        case 'XRGB':
+          r = bytes[1]; g = bytes[2]; b = bytes[3];
+          break;
+        default:
+          // Unknown format — try BGRA (most common on Android ARM64)
+          b = bytes[0]; g = bytes[1]; r = bytes[2];
       }
 
-      try {
-        let r = 0, g = 0, b = 0;
+      if (isNaN(r) || isNaN(g) || isNaN(b)) return;
 
-        if (frame.isPlanar) {
-          // Android Native YUV_420_888
-          const planes = frame.getPlanes();
-          if (planes.length >= 3) {
-            const yPlane = planes[0];
-            const uPlane = planes[1];
-            const vPlane = planes[2];
+      const hex = rgbToVividHex(r, g, b);
+      setLiveHex(hex);
+      onColorDetected(hex);
+    } catch {
+      // Silently skip — camera may still be warming up
+    } finally {
+      isSamplingRef.current = false;
+    }
+  }, [onColorDetected]);
 
-            const yBytes = new Uint8Array(yPlane.getPixelBuffer());
-            const uBytes = new Uint8Array(uPlane.getPixelBuffer());
-            const vBytes = new Uint8Array(vPlane.getPixelBuffer());
+  // --- Start/stop loop ---
+  useEffect(() => {
+    if (isActive && hasPermission && device) {
+      // Brief warmup delay before first snapshot
+      const startTimer = setTimeout(() => {
+        intervalRef.current = setInterval(sampleColor, 600);
+      }, 900);
 
-            const centerX = Math.floor(frame.width / 2);
-            const centerY = Math.floor(frame.height / 2);
-
-            // Y Plane (Luma) is always pixelStride 1
-            const yIdx = centerY * yPlane.bytesPerRow + centerX;
-            const y = yBytes[yIdx];
-
-            // U/V Planes (Chroma) are downsampled by 2
-            const uvX = Math.floor(centerX / 2);
-            const uvY = Math.floor(centerY / 2);
-            
-            // Guess pixel stride: if bytesPerRow >= width, it's interleaved (NV21/NV12, stride 2)
-            const uvPixelStride = uPlane.bytesPerRow >= frame.width ? 2 : 1;
-            
-            const uIdx = uvY * uPlane.bytesPerRow + uvX * uvPixelStride;
-            const vIdx = uvY * vPlane.bytesPerRow + uvX * uvPixelStride;
-
-            const u = uBytes[uIdx] - 128;
-            const v = vBytes[vIdx] - 128;
-
-            // BT.601 YUV to RGB
-            r = y + 1.402 * v;
-            g = y - 0.344136 * u - 0.714136 * v;
-            b = y + 1.772 * u;
-          }
-        } else {
-          // Fallback for RGB (e.g. if forced by iOS)
-          const bytes = new Uint8Array(frame.getPixelBuffer());
-          const bpr = frame.bytesPerRow;
-          const bytesPerPixel = Math.max(3, Math.floor(bpr / frame.width));
-          
-          const centerX = Math.floor(frame.width / 2);
-          const centerY = Math.floor(frame.height / 2);
-          const idx = centerY * bpr + centerX * bytesPerPixel;
-
-          r = bytes[idx];
-          g = bytes[idx + 1];
-          b = bytes[idx + 2];
+      return () => {
+        clearTimeout(startTimer);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
         }
-
-        // Guard against NaN collapse
-        if (Number.isNaN(r) || r === undefined) {
-          return; // Skip this frame
-        }
-
-        r = Math.min(255, Math.max(0, Math.round(r)));
-        g = Math.min(255, Math.max(0, Math.round(g)));
-        b = Math.min(255, Math.max(0, Math.round(b)));
-
-        // HSL Hue extraction → boost S=1.0, L=0.5 for vivid LED color
-        const rN = r / 255;
-        const gN = g / 255;
-        const bN = b / 255;
-        const cMax = rN > gN ? (rN > bN ? rN : bN) : (gN > bN ? gN : bN);
-        const cMin = rN < gN ? (rN < bN ? rN : bN) : (gN < bN ? gN : bN);
-        const delta = cMax - cMin;
-
-        let h = 0;
-        if (delta > 0.001) {
-          if (cMax === rN)      h = ((gN - bN) / delta) % 6;
-          else if (cMax === gN) h = (bN - rN) / delta + 2;
-          else                  h = (rN - gN) / delta + 4;
-          h = h * 60;
-          if (h < 0) h += 360;
-        }
-
-        // HSL → RGB with S=1.0, L=0.5 (pure vivid hue)
-        const c = 1.0;
-        const x = c * (1 - Math.abs((h / 60) % 2 - 1));
-        let rV = 0, gV = 0, bV = 0;
-        if      (h < 60)  { rV = c; gV = x; bV = 0; }
-        else if (h < 120) { rV = x; gV = c; bV = 0; }
-        else if (h < 180) { rV = 0; gV = c; bV = x; }
-        else if (h < 240) { rV = 0; gV = x; bV = c; }
-        else if (h < 300) { rV = x; gV = 0; bV = c; }
-        else              { rV = c; gV = 0; bV = x; }
-
-        r = Math.round(rV * 255);
-        g = Math.round(gV * 255);
-        b = Math.round(bV * 255);
-
-        const toHex = (v: number) => {
-          const s = v.toString(16);
-          return s.length === 1 ? '0' + s : s;
-        };
-        const hex = '#' + toHex(r) + toHex(g) + toHex(b);
-        updateColorOnJS(hex.toUpperCase());
-      } catch (e) {
-        // Silent — don't crash the camera thread
-      } finally {
-        frame.dispose();
+      };
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
-    },
-  });
+    }
+  }, [isActive, hasPermission, device, sampleColor]);
 
-  // Handle Capture moved to CameraPanel.tsx
-
-  // --- Permission denied state ---
+  // --- Guard states ---
   if (!hasPermission) {
     return (
       <View style={styles.centeredContainer}>
@@ -211,12 +183,8 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
           style={styles.button}
           onPress={async () => {
             const granted = await requestPermission('CAMERA');
-            if (granted) {
-              requestFromHook();
-            } else {
-              // Fallback: Send user to Settings if OS blocked it
-              Linking.openSettings();
-            }
+            if (granted) requestFromHook();
+            else Linking.openSettings();
           }}
         >
           <Text style={{ color: '#FFF', fontWeight: 'bold' }}>GRANT PERMISSION</Text>
@@ -246,13 +214,13 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
   return (
     <View style={styles.container}>
       <Camera
+        ref={cameraRef}
         style={StyleSheet.absoluteFillObject}
         device={device}
         isActive={isActive && hasPermission}
-        outputs={[frameOutput]}
       />
 
-      {/* Reticle — border color is live color */}
+      {/* Reticle — border color tracks detected ambient color */}
       <View style={styles.reticleContainer} pointerEvents="none">
         <View style={[styles.reticleRing, { borderColor: liveHex }]}>
           <View style={styles.reticleCrosshairH} />
@@ -321,56 +289,5 @@ const styles = StyleSheet.create({
     width: 2,
     height: 20,
     backgroundColor: 'rgba(255,255,255,0.85)',
-  },
-  controlOverlay: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    paddingBottom: Spacing.xxl,
-    paddingTop: Spacing.xl,
-  },
-  hexPill: {
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginBottom: Spacing.xs,
-  },
-  hexText: {
-    color: '#FFF',
-    fontSize: 14,
-    fontFamily: 'Inter-Bold',
-    letterSpacing: 1,
-  },
-  instructionText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 12,
-    fontFamily: 'Inter-Medium',
-    textAlign: 'center',
-    letterSpacing: 0.5,
-    marginBottom: Spacing.lg,
-    textShadowColor: 'rgba(0,0,0,0.8)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
-  captureFab: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 4,
-    borderColor: 'rgba(255,255,255,0.8)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 15,
-    elevation: 12,
-  },
-  captureFabActive: {
-    transform: [{ scale: 0.95 }],
-    opacity: 0.8,
   },
 });
