@@ -391,33 +391,47 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
     if (allRequestedAlreadyConnected) {
       AppLogger.log('BLE_STATE_CHANGE', { event: 'connectToDevices_cached_hit_skip' });
+      // FIX: Must cancel the keepalive timer, otherwise the skates will drop while in use!
+      if (keepaliveTimerRef.current) {
+        clearTimeout(keepaliveTimerRef.current);
+        keepaliveTimerRef.current = null;
+      }
       return;
     }
 
-    // ── IMMEDIATE STATE CLEAR ─────────────────────────────────────────────────
-    // Synchronously wipe connectedDevices BEFORE any async work so the controller
-    // shell never renders the previous group's devices while the new GATT
-    // negotiation is in-flight. This is the real fix for the stale-state flash.
-    // (setIsControllerOpen(true) fires before this function resolves, so the
-    // controller mounts with [] and sees the CONNECTING state — clean.)
-    setConnectedDevices([]);
+    // ── PARTIAL CONNECTION RETAINING ──────────────────────────────────────────
+    // Instead of wiping `connectedDevices = []`, we KEEP the devices that are 
+    // already connected and requested, and only drop the stale ones.
+    const retainedDevices = connectedDevicesRef.current.filter(c => devices.some(d => d.id === c.id));
+    setConnectedDevices(retainedDevices);
 
-    // ── KEEPALIVE: Cancel any pending deferred disconnect ────────────────────
+    // ── KEEPALIVE & STALE DEVICE TEARDOWN ────────────────────────────────────
     // User is re-connecting (same or different group). Clear the keepalive timer
     // so the deferred disconnect doesn't fire mid-connection-handshake.
     if (keepaliveTimerRef.current) {
       clearTimeout(keepaliveTimerRef.current);
       keepaliveTimerRef.current = null;
       AppLogger.log('BLE_STATE_CHANGE', { event: 'keepalive_cancelled_reconnect' });
-      // ── GROUP SWAP FIX: Flush stale GATT connections before connecting new group ──
-      // Cancelling the timer does NOT disconnect the old group's devices —
-      // they are still alive on the GATT stack. We must teardown first or the
-      // new group's devices get appended on top, showing all devices simultaneously.
-      if (connectedDevicesRef.current.length > 0) {
-        await _executeRealDisconnect();
-        // _executeRealDisconnect sets gate → DISCONNECTING → IDLE.
-        // We must wait for IDLE before the gate check below allows CONNECTING.
+    }
+
+    // Flush stale GATT connections (devices currently connected but NOT in the new request)
+    const staleDevices = connectedDevicesRef.current.filter(c => !devices.some(d => d.id === c.id));
+    if (staleDevices.length > 0) {
+      for (const stale of staleDevices) {
+        // Explicitly remove disconnect listeners to prevent auto-recovery from fighting the intentional teardown
+        if (disconnectListeners.current[stale.id]) {
+           try { disconnectListeners.current[stale.id].remove(); } catch (e) {}
+           delete disconnectListeners.current[stale.id];
+        }
+        try {
+          await bleManager.cancelDeviceConnection(stale.id);
+          AppLogger.log('BLE_STATE_CHANGE', { event: 'stale_device_flushed', mac: stale.id });
+        } catch (e) {
+          AppLogger.warn('Failed to flush stale device', { mac: stale.id, error: String(e) });
+        }
       }
+      // Wait a moment for the OS BLE stack to finalize the teardowns before acquiring new connections
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     // ── CONNECTION GATE: Reject if another BLE operation is in-flight ────────
@@ -470,6 +484,11 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       // ── Phase 1: Serial GATT acquisition ─────────────────────────────────────
       const rawConns: any[] = [];
       for (const device of devices) {
+        // PARTIAL CACHE GUARD: Skip devices we already retained!
+        if (retainedDevices.some(r => r.id === device.id)) {
+          continue; 
+        }
+
         let conn: any = null;
         let lastErr: any = null;
         for (let attempt = 1; attempt <= 2; attempt++) {
