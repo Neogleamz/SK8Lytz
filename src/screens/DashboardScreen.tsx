@@ -178,7 +178,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           setIsCrewModalVisible(true);
         }
       } catch (err) {
-        console.error('Dashboard Deep link parsed error', err);
+        AppLogger.error('DEEP_LINK', { event: 'parse_failed', url, error: String(err) });
       }
     };
     const linkSubscription = Linking.addEventListener('url', handleDeepLink);
@@ -504,13 +504,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, [allDevices, deviceConfigs]);
 
   const registeredDevicesData = useMemo(() => {
-    const macs = new Set(registeredDevices.map((d: any) => d.device_mac?.toUpperCase() ?? ''));
-    return sortedAllDevices.filter((d: any) => macs.has(d.id?.toUpperCase() ?? ''));
+    const macs = new Set(registeredDevices.map((d: RegisteredDevice) => d.device_mac?.toUpperCase() ?? ''));
+    return sortedAllDevices.filter((d: DisplayDevice) => macs.has(d.id?.toUpperCase() ?? ''));
   }, [sortedAllDevices, registeredDevices]);
 
   const availableDevicesData = useMemo(() => {
-    const macs = new Set(registeredDevices.map((d: any) => d.device_mac?.toUpperCase() ?? ''));
-    return sortedAllDevices.filter((d: any) => !macs.has(d.id?.toUpperCase() ?? ''));
+    const macs = new Set(registeredDevices.map((d: RegisteredDevice) => d.device_mac?.toUpperCase() ?? ''));
+    return sortedAllDevices.filter((d: DisplayDevice) => !macs.has(d.id?.toUpperCase() ?? ''));
   }, [sortedAllDevices, registeredDevices]);
 
   const handleDisconnect = useCallback(async () => {
@@ -604,7 +604,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     if (selectedIds.length === 0) return;
     const selectedDevices = allDevices.filter(d => selectedIds.includes(d.id));
     // Catalog-driven type resolution — replaces name.includes('soul') heuristic.
-    const resolveType = (d: any) => getLocalProfileByPoints((d as any).points ?? 0).id;
+    const resolveType = (d: DisplayDevice) => getLocalProfileByPoints(d.points ?? 0).id;
     const firstType = resolveType(selectedDevices[0]);
     const allSame = selectedDevices.every(d => resolveType(d) === firstType);
 
@@ -736,7 +736,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     name: d.device_name || '',
     customName: d.custom_name || '',
     groupName: d.group_name || '',
-    type: d.product_type as any,
+    type: d.product_type as StoredDevice['type'],
     registeredAt: d.registered_at,
     // Hardware fields — required for pill display in AccountModal Devices tab
     led_points: d.led_points,
@@ -1109,7 +1109,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           visible={isAdminToolsVisible}
           onClose={() => setIsAdminToolsVisible(false)}
           allDevices={allDevices}
-          connectedDevices={connectedDevices as any[]}
+          connectedDevices={connectedDevices as DisplayDevice[]}
           bleState={bleState}
           handleScan={() => scanForPeripherals()}
           writeToDevice={writeToDevice}

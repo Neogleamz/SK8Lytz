@@ -12,6 +12,7 @@
 
 import { supabase } from './supabaseClient';
 import type { PermanentCrew, CrewMemberDisplay, CrewMemberFull } from './ProfileService.types';
+import { AppLogger } from './AppLogger';
 
 class CrewProfileService {
 
@@ -463,7 +464,7 @@ class CrewProfileService {
       .or(`username.ilike.${searchTerms},display_name.ilike.${searchTerms}`)
       .limit(10);
     if (error) {
-      console.warn('Search users error:', error);
+      AppLogger.warn('CREW_PROFILE', { event: 'search_users_failed', query, error: String(error) });
       return [];
     }
     return data ?? [];

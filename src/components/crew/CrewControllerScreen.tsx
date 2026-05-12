@@ -9,6 +9,7 @@ import { Spacing } from '../../theme/theme';
 import { useCrewContext } from '../../context/CrewContext';
 import CrewMemberDashboard from '../CrewMemberDashboard';
 import { createStyles } from './CrewStyles';
+import { AppLogger } from '../../services/AppLogger';
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -35,11 +36,11 @@ export function CrewControllerScreen({ onClose, currentModeSummary, lastLeaderSc
   const { currentSession, isHandoffMode, setIsHandoffMode, currentRole, members, executeLeaveSession, executeEndSession, handleHandoffLeadership } = session;
   
   const handleLeave = async () => {
-    try { await executeLeaveSession(); } catch (e) { console.warn(e); }
+    try { await executeLeaveSession(); } catch (e) { AppLogger.warn('CREW_SESSION', { event: 'leave_failed', error: String(e) }); }
   };
   
   const handleEndSession = async () => {
-    try { await executeEndSession(); } catch (e) { console.warn(e); }
+    try { await executeEndSession(); } catch (e) { AppLogger.warn('CREW_SESSION', { event: 'end_failed', error: String(e) }); }
   };
 
   const renderMemberRow = ({ item }: { item: CrewMember }) => {

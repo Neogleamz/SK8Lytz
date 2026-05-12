@@ -67,7 +67,7 @@ class NotificationService {
 
     const granted = await this._requestPermissions(autoRequest);
     if (!granted) {
-      console.log('[NotificationService] Permission denied (or undetermined)');
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'permission_denied_or_undetermined' });
       return null;
     }
 
@@ -77,13 +77,13 @@ class NotificationService {
         projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
       });
       this.token = tokenObj.data;
-      console.log('[NotificationService] Token:', this.token);
+      AppLogger.log('NOTIFICATION_SERVICE', { event: 'token_acquired', tokenPrefix: this.token.slice(0, 12) });
 
       const platform = Platform.OS as 'ios' | 'android' | 'web';
       await profileService.registerPushToken(this.token, platform);
       AppLogger.log('PUSH_TOKEN_REGISTERED', { platform, tokenPrefix: this.token.slice(0, 12) });
     } catch (err) {
-      console.log('[NotificationService] Push token unavailable (simulator?):', err);
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'push_token_unavailable', error: String(err) });
       return null;
     }
 
@@ -139,7 +139,7 @@ class NotificationService {
       });
       AppLogger.log('PUSH_NOTIFICATION_SENT', { type: 'crew_invite', crewId: opts.crewId });
     } catch (err) {
-      console.warn('[NotificationService] sendCrewInviteNotification failed:', err);
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'crew_invite_notification_failed', error: String(err) });
     }
   }
 
@@ -189,7 +189,7 @@ class NotificationService {
         trigger: null,
       });
     } catch (err) {
-      console.warn('[NotificationService] sendSessionLiveAlert failed:', err);
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'session_live_alert_failed', error: String(err) });
     }
   }
 
@@ -214,7 +214,7 @@ class NotificationService {
       AppLogger.log('PUSH_NOTIFICATION_SENT', { type: 'session_reminder', subtype: 'scheduled', sessionId: opts.sessionId, trigger: trigger?.date?.toISOString() });
       return id;
     } catch (err) {
-      console.warn('[NotificationService] _scheduleSessionAlert failed:', err);
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'schedule_session_alert_failed', error: String(err) });
       return null;
     }
   }
@@ -257,7 +257,7 @@ class NotificationService {
     if (!Notifications) return;
     this.foregroundSub = Notifications.addNotificationReceivedListener(notification => {
       // Already handled by setNotificationHandler above (shows banner)
-      console.log('[NotificationService] Foreground notification:', notification.request.identifier);
+      AppLogger.log('NOTIFICATION_SERVICE', { event: 'foreground_received', id: notification.request.identifier });
     });
   }
 
@@ -268,8 +268,7 @@ class NotificationService {
       const crewId    = data?.crewId;
       const sessionId = data?.sessionId;
 
-      console.log('[NotificationService] Tapped notification:', { crewId, sessionId });
-      AppLogger.log('PUSH_NOTIFICATION_TAPPED', { crewId, sessionId });
+      AppLogger.log('NOTIFICATION_SERVICE', { event: 'tapped', crewId, sessionId });
 
       if (crewId && sessionId && this.joinHandler) {
         this.joinHandler(crewId, sessionId);

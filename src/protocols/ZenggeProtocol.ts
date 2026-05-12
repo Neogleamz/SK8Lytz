@@ -401,16 +401,7 @@ export class ZenggeProtocol {
   // ─── EXISTING COMMANDS ─────────────────────────────────────────────────────
 
 
-  /**
-   * Set a single legacy solid color via 0x41.
-   * @deprecated For production use setSettledMode(). This 7-byte form
-   * may not activate effects on 0xA3 hardware.
-   */
-  static setSymphonyColor(r: number, g: number, b: number): number[] {
-    const cmd = [0x41, r, g, b, 0x01, 0x01, 0xf0];
-    const checksum = this.calculateChecksum(cmd);
-    return this.wrapCommand([...cmd, checksum]);
-  }
+
 
   /**
    * 0x41 Settled Mode — dual-color animated Symphony effects.
@@ -516,25 +507,7 @@ export class ZenggeProtocol {
     return this.wrapCommand([...cmd, checksum]);
   }
 
-  /**
-   * ⚠️  LEGACY / WRONG FORMAT  ⚠️
-   * Preserved for diff-comparison in Oracle Phase 2 tests.
-   * DO NOT USE in production — bytes incorrect for 0xA3 hardware.
-   *
-   * Old broken format (12 bytes, no isOn byte, wrong mic source bytes):
-   *   [0x73, isDeviceMic(0x01/0x00), matrixStyle, patternId, R1, G1, B1, R2, G2, B2, 0x20, sensitivity, brightness, checksum]
-   */
-  static setMusicConfigLegacy(
-    isDeviceMic: boolean, matrixStyle: number, patternId: number,
-    color1: { r: number; g: number; b: number },
-    color2: { r: number; g: number; b: number },
-    sensitivity: number, brightness: number
-  ): number[] {
-    const payload = [0x73, isDeviceMic ? 0x01 : 0x00, matrixStyle, patternId,
-      color1.r, color1.g, color1.b, color2.r, color2.g, color2.b, 0x20, sensitivity, brightness];
-    const checksum = this.calculateChecksum(payload);
-    return this.wrapCommand([...payload, checksum]);
-  }
+
 
   /**
    * Build 0x73 Music Config packet — APK-verified 13-byte format for 0xA3 hardware.
@@ -807,19 +780,7 @@ export class ZenggeProtocol {
   }
 
 
-  /**
-   * @deprecated MISNAMED — this sends 0x10 (Session Time Sync), NOT 0x63 (EEPROM config query).
-   * Use `setSessionTime()` instead, which sends the correctly-structured 0x10 time sync packet
-   * with the real current date/time payload.
-   * Use `ZenggeProtocol.wrapCommand([0x63, 0x12, 0x21, 0x0F, checksum])` for the actual EEPROM read.
-   *
-   * Kept as a deprecated stub to prevent accidental resurrection via autocomplete.
-   * @see setSessionTime()
-   */
-  /** @deprecated — use setSessionTime() */
-  static queryHardwareConfig_DEPRECATED_DO_NOT_USE(): number[] {
-    return this.wrapCommand([0x10, 0x00, 0x00, 0x10]);
-  }
+
 
   /**
    * Build a 0x10 session time sync packet.

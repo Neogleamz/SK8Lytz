@@ -41,6 +41,7 @@ import AccountTabCrewz from './account/AccountTabCrewz';
 import AccountTabDevices from './account/AccountTabDevices';
 import AccountTabSettings from './account/AccountTabSettings';
 import AccountTabStats from './account/AccountTabStats';
+import { AppLogger } from '../services/AppLogger';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -405,7 +406,7 @@ export default function AccountModal({
                       // Attempt to run the dedicated Account Deletion RPC
                       const { error } = await (supabase as any).rpc('delete_account');
                       if (error) {
-                        console.error('Account deletion RPC failed:', error);
+                        AppLogger.error('ACCOUNT_MGMT', { event: 'delete_account_rpc_failed', error: String(error) });
                         throw new Error('Database rejection. Please contact support.');
                       }
 

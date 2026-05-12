@@ -107,7 +107,7 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
         return false;
     }
   } catch (error) {
-    console.error(`Error requesting ${type} permission:`, error);
+    AppLogger.error('PERMISSION_SERVICE', { event: 'request_failed', type, error: String(error) });
     return false;
   }
 };
@@ -149,7 +149,7 @@ const checkPermissionNative = async (type: PermissionType): Promise<boolean> => 
         return false;
     }
   } catch (error) {
-    console.warn(`Error checking ${type} permission natively:`, error);
+    AppLogger.warn('PERMISSION_SERVICE', { event: 'check_failed', type, error: String(error) });
     return false;
   }
 };

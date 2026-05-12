@@ -241,7 +241,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       const b64Blink = Buffer.from(blinkPayload).toString('base64');
       await bleManager.writeCharacteristicWithoutResponseForDevice(
         mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64Blink
-      ).catch(() => {});
+      ).catch((e: any) => { AppLogger.warn('[BLE] pingDevice blink write failed (non-fatal)', { mac, error: e?.message }); });
 
       // ── Step 3: Probe EEPROM (same GATT session — no collision) ──────────────
       const hwConfig = await new Promise<any>((resolve) => {
@@ -304,7 +304,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       const b64Off = Buffer.from(ZenggeProtocol.turnOff()).toString('base64');
       await bleManager.writeCharacteristicWithoutResponseForDevice(
         mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64Off
-      ).catch(() => {});
+      ).catch((e: any) => { AppLogger.warn('[BLE] pingDevice turn-off write failed (non-fatal)', { mac, error: e?.message }); });
 
       return hwConfig;
     } catch (err: any) {
@@ -312,7 +312,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       return null;
     } finally {
       // ── Step 6: Always disconnect cleanly ────────────────────────────────────
-      await bleManager.cancelDeviceConnection(mac).catch(() => {});
+      await bleManager.cancelDeviceConnection(mac).catch((e: any) => { AppLogger.warn('[BLE] pingDevice cancelDeviceConnection failed', { mac, error: e?.message }); });
     }
   };
 

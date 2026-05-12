@@ -10,6 +10,7 @@ import { useGradients } from '../../hooks/useGradients';
 import { useFavorites } from '../../hooks/useFavorites';
 import FavoritePromptModal from './FavoritePromptModal';
 import { Spacing } from '../../theme/theme';
+import { AppLogger } from '../../services/AppLogger';
 
 interface BuilderPanelProps {
   writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
@@ -90,7 +91,7 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
       setSaveModalVisible(false);
       setViewMode('LIBRARY');
     } catch (err) {
-      console.error(err);
+      AppLogger.error('BUILDER_PANEL', { event: 'save_preset_failed', name: presetNameInput, error: String(err) });
     } finally {
       setIsSaving(false);
     }

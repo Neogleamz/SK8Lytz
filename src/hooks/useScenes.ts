@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { Scene, ScenesService } from '../services/ScenesService';
+import { AppLogger } from '../services/AppLogger';
 
 export function useScenes() {
   const [localScenes, setLocalScenes] = useState<Scene[]>([]);
@@ -19,7 +20,7 @@ export function useScenes() {
       const scenes = await ScenesService.getSavedScenes(userId);
       setLocalScenes(scenes);
     } catch (e) {
-      console.error('[useScenes] Failed to load saved scenes', e);
+      AppLogger.error('SCENE_SERVICE', { event: 'load_scenes_failed', error: String(e) });
     } finally {
       setIsLoading(false);
     }

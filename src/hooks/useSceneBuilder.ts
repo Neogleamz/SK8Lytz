@@ -97,7 +97,7 @@ export function useSceneBuilder(writeToDevice?: (payload: number[]) => Promise<v
       
       return true;
     } catch (err) {
-      console.error('[useSceneBuilder] Save failed:', err);
+      AppLogger.error('SCENE_BUILDER', { event: 'save_failed', error: String(err) });
       return false;
     }
   }, [steps, sceneId, userId]);
