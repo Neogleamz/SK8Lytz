@@ -1,3 +1,24 @@
+## [3.4.0] - 2026-05-12
+
+### ✨ Features
+- feat(location): build useCrewProximityRadar and integrate into CrewHubSlab
+- feat(health): add health telemetry supabase migration
+- feat(telemetry): aggregate health metrics, insert to supabase, display in lifetime stats
+- feat(ui): implement optimistic UI and BLE connection caching
+
+### 🐛 Bug Fixes
+- fix(web): remove interactionmanager starvation blocking visualizer animation
+- fix(camera): restore native frame processor by injecting useCameraDevice for v5 nitro compat
+- fix(health): resolve TSC errors for granular permissions and supabase types
+- fix(ui): add zIndex to dashboard header to prevent scrollview touch blocking on web
+- fix(ble): implement partial connection caching and fix keepalive teardown bug
+- fix(ui): remove absolute overlay blocking web touches on dashboard header
+
+### ⚡ Performance
+- perf(web): implement concurrent transitions and visualizer FPS throttling
+
+---
+
 ## [3.3.0] - 2026-05-02
 
 ### ✨ Features
