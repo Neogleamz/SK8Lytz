@@ -49,6 +49,8 @@
     "react-dom": "19.2.0",
     "react-native": "0.83.2",
     "react-native-ble-plx": "^3.5.1",
+    "react-native-health": "^1.19.0",
+    "react-native-health-connect": "^3.5.0",
     "react-native-map-clustering": "^4.0.0",
     "react-native-maps": "1.27.2",
     "react-native-nitro-image": "^0.14.0",

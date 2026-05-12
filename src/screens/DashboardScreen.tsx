@@ -40,6 +40,7 @@ import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/Pro
 import { RegisteredDevice, useRegistration } from '../hooks/useRegistration';
 import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
 import { useGlobalTelemetry } from '../hooks/useGlobalTelemetry';
+import { useHealthTelemetry } from '../hooks/useHealthTelemetry';
 import { DashboardTelemetryHero } from '../components/dashboard/DashboardTelemetryHero';
 
 // ─── Phase 1 Domain Hooks ──────────────────────────────────────────────────────
@@ -451,6 +452,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // This ensures a brief BLE hiccup never wipes the in-progress skate session.
   const [isSkateSessionActive, setIsSkateSessionActive] = useState(false);
 
+  const { latestBpm, avgBpm, peakBpm, activeCalories } = useHealthTelemetry(isSkateSessionActive);
+
   // ── Global Telemetry ──
   // Pass `isSkateSessionActive` (logical) NOT `isActuallyConnected` (raw BLE).
   // Session persists through BLE drops — only ends on explicit user disconnect.
@@ -461,7 +464,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     sessionDurationSec,
     sessionPeakSpeed,
     sessionAvgSpeed
-  } = useGlobalTelemetry(isSkateSessionActive);
+  } = useGlobalTelemetry(isSkateSessionActive, { avgBpm, peakBpm, activeCalories });
 
 
   // Voice command dispatch + notification init are now handled
@@ -1011,6 +1014,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     sessionDurationSec={sessionDurationSec} 
                     sessionPeakSpeed={sessionPeakSpeed}
                     sessionAvgSpeed={sessionAvgSpeed}
+                    healthBpm={latestBpm}
+                    healthCalories={activeCalories}
                   />
                 </View>
 

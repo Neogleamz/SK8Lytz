@@ -8,6 +8,7 @@ import { PermanentCrew, profileService, SessionHistoryItem, UserProfile } from '
 import { supabase } from '../services/supabaseClient';
 import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
+import { checkPermission, requestPermission, setPermissionOptOut } from '../services/PermissionService';
 
 const NOTIF_PREF_KEY = `${STORAGE_PREFIX}notif_prefs`;
 
@@ -59,6 +60,9 @@ export function useAccountOverview(visible: boolean) {
   const [notifSessionReminders, setNotifSessionReminders] = useState(true);
   const [notifLeaderHandoff, setNotifLeaderHandoff] = useState(true);
 
+  // Health Sync
+  const [healthSyncEnabled, setHealthSyncEnabled] = useState(false);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -66,9 +70,10 @@ export function useAccountOverview(visible: boolean) {
 
       // ── Phase A: Run auth lookup + notif prefs in parallel ──────────────────
       // Neither depends on the other, so fire both immediately.
-      const [authResult, rawNotifPrefs] = await Promise.all([
+      const [authResult, rawNotifPrefs, hasHealth] = await Promise.all([
         supabase.auth.getUser(),
         AsyncStorage.getItem(NOTIF_PREF_KEY).catch(() => null),
+        checkPermission('HEALTH'),
       ]);
 
       const user = authResult.data?.user ?? null;
@@ -81,6 +86,7 @@ export function useAccountOverview(visible: boolean) {
         setNotifSessionReminders(prefs.sessionReminders ?? true);
         setNotifLeaderHandoff(prefs.leaderHandoff ?? true);
       }
+      setHealthSyncEnabled(hasHealth);
 
       // ── Phase B: Fan-out all profile service calls in parallel ───────────────
       // Pass the already-resolved user/userId to avoid redundant auth token lookups.
@@ -187,6 +193,22 @@ export function useAccountOverview(visible: boolean) {
     await AsyncStorage.setItem(NOTIF_PREF_KEY, JSON.stringify(prefs)).catch(() => {});
   };
 
+  const handleToggleHealthSync = async (enabled: boolean) => {
+    if (enabled) {
+      const granted = await requestPermission('HEALTH');
+      if (granted) {
+        await setPermissionOptOut('HEALTH', false);
+        setHealthSyncEnabled(true);
+      } else {
+        // Automatically flips back to false if denied
+        setHealthSyncEnabled(false);
+      }
+    } else {
+      await setPermissionOptOut('HEALTH', true);
+      setHealthSyncEnabled(false);
+    }
+  };
+
   // Crew handlers
   const handleCreateCrew = async () => {
     if (!newCrewName.trim()) { setCrewError('Enter a crew name'); return; }
@@ -247,5 +269,7 @@ export function useAccountOverview(visible: boolean) {
     handleCreateCrew,
     handleJoinCrew,
     handleLeaveCrew,
+    healthSyncEnabled,
+    handleToggleHealthSync,
   };
 }

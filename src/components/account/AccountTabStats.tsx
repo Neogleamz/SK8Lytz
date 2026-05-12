@@ -92,6 +92,8 @@ export default function AccountTabStats({
               { icon: 'gauge',                 val: lifetimeStats!.lifetimePeakGForce?.toFixed(1) || '0.0',     unit: 'g',   lbl: 'Peak G-Force' },
               { icon: 'speedometer-medium',    val: lifetimeStats!.lifetimeAvgSpeedMph.toFixed(1),              unit: 'mph', lbl: 'Avg Speed' },
               { icon: 'timer-outline',         val: fmtDuration(lifetimeStats!.totalDurationSec),               unit: '',    lbl: 'Time on Skates' },
+              ...(lifetimeStats!.lifetimeCalories > 0 ? [{ icon: 'fire', val: String(lifetimeStats!.lifetimeCalories), unit: 'kcal', lbl: 'Total Burned' }] : []),
+              ...(lifetimeStats!.lifetimePeakBpm ? [{ icon: 'heart-pulse', val: String(lifetimeStats!.lifetimePeakBpm), unit: 'bpm', lbl: 'Peak HR' }] : []),
             ].map(({ icon, val, unit, lbl }) => (
               <View key={lbl} style={{
                 width: '47%', backgroundColor: 'rgba(255,255,255,0.05)',
@@ -121,23 +123,35 @@ export default function AccountTabStats({
                     <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 14 }}>{fmtDate(s.sessionDate)}</Text>
                     <Text style={{ color: Colors.textMuted, fontSize: 12 }}>{fmtDuration(s.durationSec)}</Text>
                   </View>
-                  <View style={{ flexDirection: 'row', gap: Spacing.lg }}>
-                    <View style={{ alignItems: 'center' }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.lg }}>
+                    <View style={{ alignItems: 'center', minWidth: 50 }}>
                       <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 16 }}>{s.distanceMiles.toFixed(2)}</Text>
                       <Text style={{ color: Colors.textMuted, fontSize: 10 }}>mi</Text>
                     </View>
-                    <View style={{ alignItems: 'center' }}>
+                    <View style={{ alignItems: 'center', minWidth: 50 }}>
                       <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 16 }}>{s.peakSpeedMph.toFixed(1)}</Text>
                       <Text style={{ color: Colors.textMuted, fontSize: 10 }}>peak mph</Text>
                     </View>
-                    <View style={{ alignItems: 'center' }}>
+                    <View style={{ alignItems: 'center', minWidth: 50 }}>
                       <Text style={{ color: '#FFF', fontWeight: '800', fontSize: 16 }}>{s.avgSpeedMph.toFixed(1)}</Text>
                       <Text style={{ color: Colors.textMuted, fontSize: 10 }}>avg mph</Text>
                     </View>
                     {s.peakGForce != null && (
-                      <View style={{ alignItems: 'center' }}>
+                      <View style={{ alignItems: 'center', minWidth: 50 }}>
                         <Text style={{ color: '#FF6B35', fontWeight: '800', fontSize: 16 }}>{s.peakGForce.toFixed(1)}</Text>
                         <Text style={{ color: Colors.textMuted, fontSize: 10 }}>peak g</Text>
+                      </View>
+                    )}
+                    {s.calories != null && s.calories > 0 && (
+                      <View style={{ alignItems: 'center', minWidth: 50 }}>
+                        <Text style={{ color: '#FF4444', fontWeight: '800', fontSize: 16 }}>{s.calories}</Text>
+                        <Text style={{ color: Colors.textMuted, fontSize: 10 }}>kcal</Text>
+                      </View>
+                    )}
+                    {s.avgBpm != null && (
+                      <View style={{ alignItems: 'center', minWidth: 50 }}>
+                        <Text style={{ color: '#FF4444', fontWeight: '800', fontSize: 16 }}>{s.avgBpm}</Text>
+                        <Text style={{ color: Colors.textMuted, fontSize: 10 }}>avg bpm</Text>
                       </View>
                     )}
                   </View>

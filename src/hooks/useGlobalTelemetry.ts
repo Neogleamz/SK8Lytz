@@ -27,7 +27,10 @@ export interface GlobalTelemetryState {
  * This decouples the GPS/timer session from the fragile BLE radio link so that brief
  * signal drops or OS-level connection management do NOT zero out the in-progress session.
  */
-export function useGlobalTelemetry(isSkateSessionActive: boolean): GlobalTelemetryState {
+export function useGlobalTelemetry(
+  isSkateSessionActive: boolean,
+  healthMetrics?: { avgBpm: number | null; peakBpm: number | null; activeCalories: number | null }
+): GlobalTelemetryState {
   const [gpsSpeed, setGpsSpeed] = useState<number>(0);
   const [peakGForce, setPeakGForce] = useState<number>(1.0);
   const [sessionDistanceMiles, setSessionDistanceMiles] = useState<number>(0);
@@ -40,6 +43,11 @@ export function useGlobalTelemetry(isSkateSessionActive: boolean): GlobalTelemet
   const sessionPeakGForceRef = useRef<number>(1.0);
   const sessionPeakSpeedRef = useRef<number>(0);
   const sessionSpeedSamplesRef = useRef<number[]>([]);
+  const healthMetricsRef = useRef(healthMetrics);
+
+  useEffect(() => {
+    healthMetricsRef.current = healthMetrics;
+  }, [healthMetrics]);
 
   const lastGpsTimeRef = useRef<number | null>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
@@ -69,6 +77,9 @@ export function useGlobalTelemetry(isSkateSessionActive: boolean): GlobalTelemet
         peakSpeedMph: sessionPeakSpeedRef.current,
         avgSpeedMph: parseFloat(avgSpeedMph.toFixed(2)),
         peakGForce: sessionPeakGForceRef.current,
+        healthBpm: healthMetricsRef.current?.avgBpm ?? undefined,
+        healthPeakBpm: healthMetricsRef.current?.peakBpm ?? undefined,
+        healthCalories: healthMetricsRef.current?.activeCalories ?? undefined,
       };
 
       try {

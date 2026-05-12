@@ -31,6 +31,9 @@ export interface ISessionSnapshot {
   peakGForce: number;
   locationLabel?: string;
   crewSessionId?: string;
+  healthBpm?: number;
+  healthPeakBpm?: number;
+  healthCalories?: number;
 }
 
 /** A single historic skate session row returned from Supabase. */
@@ -43,6 +46,8 @@ export interface ISkateSession {
   peakSpeedMph: number;
   peakGForce: number | null;
   calories: number | null;
+  avgBpm: number | null;
+  peakBpm: number | null;
   locationLabel: string | null;
 }
 
@@ -55,6 +60,7 @@ export interface ILifetimeStats {
   lifetimeAvgSpeedMph: number;
   lifetimePeakGForce: number;
   lifetimeCalories: number;
+  lifetimePeakBpm: number | null;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -96,7 +102,9 @@ class SpeedTrackingServiceClass {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
 
-      const calories = estimateCalories(snapshot.avgSpeedMph, snapshot.durationSec);
+      const calories = snapshot.healthCalories !== undefined && snapshot.healthCalories !== null
+        ? snapshot.healthCalories
+        : estimateCalories(snapshot.avgSpeedMph, snapshot.durationSec);
 
       const { data, error } = await supabase
         .from('skate_sessions')
@@ -108,6 +116,8 @@ class SpeedTrackingServiceClass {
           peak_speed_mph: parseFloat(snapshot.peakSpeedMph.toFixed(2)),
           peak_gforce: parseFloat(snapshot.peakGForce.toFixed(2)),
           calories,
+          avg_bpm: snapshot.healthBpm ?? null,
+          peak_bpm: snapshot.healthPeakBpm ?? null,
           location_label: snapshot.locationLabel ?? null,
           crew_session_id: snapshot.crewSessionId ?? null,
         })
@@ -161,6 +171,8 @@ class SpeedTrackingServiceClass {
         peakSpeedMph: Number(r.peak_speed_mph),
         peakGForce: r.peak_gforce !== null ? Number(r.peak_gforce) : null,
         calories: r.calories,
+        avgBpm: r.avg_bpm ?? null,
+        peakBpm: r.peak_bpm ?? null,
         locationLabel: r.location_label,
       }));
     } catch {
@@ -175,6 +187,7 @@ class SpeedTrackingServiceClass {
     const empty: ILifetimeStats = {
       totalSessions: 0, totalDistanceMiles: 0, totalDurationSec: 0,
       lifetimePeakSpeedMph: 0, lifetimeAvgSpeedMph: 0, lifetimePeakGForce: 0, lifetimeCalories: 0,
+      lifetimePeakBpm: null,
     };
     if (!supabase) return empty;
 
@@ -184,7 +197,7 @@ class SpeedTrackingServiceClass {
 
       const { data, error } = await supabase
         .from('skate_sessions')
-        .select('duration_sec, distance_miles, avg_speed_mph, peak_speed_mph, peak_gforce, calories')
+        .select('duration_sec, distance_miles, avg_speed_mph, peak_speed_mph, peak_gforce, calories, peak_bpm')
         .eq('user_id', user.id);
 
       if (error || !data || data.length === 0) return empty;
@@ -196,6 +209,7 @@ class SpeedTrackingServiceClass {
       const lifetimeAvgSpeedMph = data.reduce((s: number, r: Record<string, any>) => s + Number(r.avg_speed_mph), 0) / totalSessions;
       const lifetimePeakGForce = Math.max(...data.map((r: Record<string, any>) => Number(r.peak_gforce ?? 0)));
       const lifetimeCalories = data.reduce((s: number, r: Record<string, any>) => s + (r.calories ?? 0), 0);
+      const lifetimePeakBpm = Math.max(...data.map((r: Record<string, any>) => Number(r.peak_bpm ?? 0)));
 
       return {
         totalSessions,
@@ -205,6 +219,7 @@ class SpeedTrackingServiceClass {
         lifetimeAvgSpeedMph: parseFloat(lifetimeAvgSpeedMph.toFixed(1)),
         lifetimePeakGForce: parseFloat(lifetimePeakGForce.toFixed(1)),
         lifetimeCalories,
+        lifetimePeakBpm: lifetimePeakBpm > 0 ? lifetimePeakBpm : null,
       };
     } catch {
       return empty;

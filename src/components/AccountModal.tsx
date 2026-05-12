@@ -190,6 +190,8 @@ export default function AccountModal({
     handleCreateCrew,
     handleJoinCrew,
     handleLeaveCrew: leaveCrewHook,
+    healthSyncEnabled,
+    handleToggleHealthSync,
   } = useAccountOverview(visible);
 
   const handleDeleteCrew = (crew: PermanentCrew) => {
@@ -502,6 +504,7 @@ export default function AccountModal({
               notifCrewInvites, setNotifCrewInvites, notifSessionReminders, setNotifSessionReminders,
               notifLeaderHandoff, setNotifLeaderHandoff, saveNotifPrefs, isDark, toggleTheme, setShowEula,
               handleSignOut, handleDeleteAccount, statsLoading, lifetimeStats, recentSessions,
+              healthSyncEnabled, handleToggleHealthSync: (val: boolean) => handleToggleHealthSync(val),
             };
 
             if (accountLoading) return <AccountModalSkeleton />;

@@ -17,6 +17,8 @@ export default function AccountTabSettings({
   toggleTheme,
   setShowEula,
   handleDeleteAccount,
+  healthSyncEnabled,
+  handleToggleHealthSync,
 }: any) {
   return (
     <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
@@ -41,6 +43,21 @@ export default function AccountTabSettings({
           />
         </View>
       ))}
+
+      {/* Health Sync preferences */}
+      <Text style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>HEALTH INTEGRATION</Text>
+      <View style={styles.settingRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.settingLabel}>Sync with Health App</Text>
+          <Text style={styles.settingSubLabel}>Track active calories and heart rate (Apple Health / Google Fit)</Text>
+        </View>
+        <Switch
+          value={healthSyncEnabled}
+          onValueChange={handleToggleHealthSync}
+          trackColor={{ false: 'rgba(255,255,255,0.15)', true: Colors.primary }}
+          thumbColor="#FFF"
+        />
+      </View>
 
       {/* App preferences */}
       <Text style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>APP</Text>

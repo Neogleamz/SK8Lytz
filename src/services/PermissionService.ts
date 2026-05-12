@@ -17,7 +17,7 @@ export const openGlobalPermissionsModal = (): Promise<void> => {
   });
 };
 
-export type PermissionType = 'CAMERA' | 'MIC' | 'LOCATION' | 'NOTIFICATIONS' | 'BLUETOOTH';
+export type PermissionType = 'CAMERA' | 'MIC' | 'LOCATION' | 'NOTIFICATIONS' | 'BLUETOOTH' | 'HEALTH';
 
 export const OPTOUT_LEDGER_KEY = '@sk8lytz_permissions_optout';
 
@@ -27,6 +27,7 @@ export const DEFAULT_LEDGER: Record<PermissionType, boolean> = {
   LOCATION: false,
   NOTIFICATIONS: false,
   BLUETOOTH: false,
+  HEALTH: false,
 };
 
 export const getOptOutLedger = async (): Promise<Record<PermissionType, boolean>> => {
@@ -103,6 +104,32 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
         // iOS handles BLE permission automatically upon first use, but we can assume true for onboarding if they click allow
         return true; 
       }
+      case 'HEALTH': {
+        if (Platform.OS === 'web') return false;
+        if (Platform.OS === 'ios') {
+          return new Promise<boolean>((resolve) => {
+            const AppleHealthKit = require('react-native-health').default;
+            const options = {
+              permissions: {
+                read: [AppleHealthKit.Constants.Permissions.HeartRate, AppleHealthKit.Constants.Permissions.ActiveEnergyBurned],
+              },
+            };
+            AppleHealthKit.initHealthKit(options, (err: string) => {
+              if (err) {
+                AppLogger.error('PERMISSION_SERVICE', { event: 'health_request_failed', error: err });
+                resolve(false);
+              } else {
+                resolve(true);
+              }
+            });
+          });
+        } else if (Platform.OS === 'android') {
+          // Android: Request Activity Recognition
+          const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACTIVITY_RECOGNITION);
+          return result === PermissionsAndroid.RESULTS.GRANTED;
+        }
+        return false;
+      }
       default:
         return false;
     }
@@ -144,6 +171,15 @@ const checkPermissionNative = async (type: PermissionType): Promise<boolean> => 
           return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
         }
         return true;
+      }
+      case 'HEALTH': {
+        if (Platform.OS === 'web') return false;
+        if (Platform.OS === 'ios') {
+          return true; // Assume granted if not opted out
+        } else if (Platform.OS === 'android') {
+          return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACTIVITY_RECOGNITION);
+        }
+        return false;
       }
       default:
         return false;

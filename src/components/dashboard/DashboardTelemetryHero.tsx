@@ -18,6 +18,8 @@ interface DashboardTelemetryHeroProps {
   sessionDurationSec: number;
   sessionPeakSpeed: number;
   sessionAvgSpeed: number;
+  healthBpm?: number | null;
+  healthCalories?: number | null;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -34,6 +36,7 @@ const angleForRatio = (t: number) => (1 - t) * Math.PI;
 export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = React.memo(({
   gpsSpeed, peakGForce, sessionDistanceMiles,
   sessionDurationSec, sessionPeakSpeed, sessionAvgSpeed,
+  healthBpm, healthCalories
 }) => {
   const { Colors } = useTheme();
   const windowWidth = Dimensions.get('window').width;
@@ -117,7 +120,9 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = Rea
     }
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
-  const kcalBurned = Math.round(sessionDistanceMiles * 65);
+  const kcalBurned = healthCalories !== undefined && healthCalories !== null 
+    ? healthCalories 
+    : Math.round(sessionDistanceMiles * 65);
 
   return (
     <View style={styles.container}>
@@ -229,6 +234,14 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = Rea
         <View style={[styles.speedOverlay, { width: svgWidth, height: svgH }]}>
           <Text style={[styles.speedValue, { color: Colors.primary, ...(Platform.OS === 'web' ? { textShadow: `0 0 28px ${Colors.primary}` } : { textShadowColor: Colors.primary }) }]}>{gpsSpeed.toFixed(1)}</Text>
           <Text style={styles.speedUnit}>MPH</Text>
+          
+          {/* Heart Rate Indicator overlay */}
+          {healthBpm && healthBpm > 0 && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, backgroundColor: 'rgba(255,0,0,0.1)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: 'rgba(255,0,0,0.3)' }}>
+              <Text style={{ fontSize: 16, marginRight: 6 }}>❤️</Text>
+              <Text style={{ fontFamily: 'Righteous', color: '#FF4D4D', fontSize: 14 }}>{healthBpm} BPM</Text>
+            </View>
+          )}
         </View>
       </View>
 
@@ -242,7 +255,7 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = Rea
         <View style={styles.metricsRow}>
           <TelemetryPill label="AVG SPD"  value={sessionAvgSpeed.toFixed(1)}       unit="mph"  accent="#00FF85" />
           <TelemetryPill label="TOP SPD"  value={sessionPeakSpeed.toFixed(1)}      unit="mph"  accent="#FF4D00" />
-          <TelemetryPill label="BURN"     value={kcalBurned.toString()}             unit="kcal" accent="#FF0000" />
+          <TelemetryPill label="BURN"     value={kcalBurned.toString()}             unit="kcal" accent="#FF4D4D" />
         </View>
       </View>
 
