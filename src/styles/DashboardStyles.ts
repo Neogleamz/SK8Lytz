@@ -136,6 +136,8 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     backgroundColor: 'rgba(0,0,0,0.5)',
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0,240,255,0.1)',
+    zIndex: 100,
+    elevation: 100,
   },
   slabContainer: {
     paddingHorizontal: Layout.padding,
