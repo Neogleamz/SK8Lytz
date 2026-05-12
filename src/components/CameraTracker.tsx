@@ -80,7 +80,7 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
   // Replaces useFrameProcessor which was removed in v5.
   // pixelFormat is specified here; frame.dispose() is required to avoid stalling the pipeline.
   const frameOutput = useFrameOutput({
-    pixelFormat: 'rgb',
+    pixelFormat: 'yuv',
     onFrame(frame) {
       'worklet';
 
@@ -90,41 +90,68 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
       }
 
       try {
-        const buffer = frame.getPixelBuffer();
-        const bytes = new Uint8Array(buffer);
+        let r = 0, g = 0, b = 0;
 
-        // Fix Android memory layout bug: MUST use bytesPerRow, never assume width * bytesPerPixel
-        const bpr = frame.bytesPerRow;
-        const bytesPerPixel = Math.max(3, Math.floor(bpr / frame.width));
+        if (frame.isPlanar) {
+          // Android Native YUV_420_888
+          const planes = frame.getPlanes();
+          if (planes.length >= 3) {
+            const yPlane = planes[0];
+            const uPlane = planes[1];
+            const vPlane = planes[2];
 
-        const centerX = Math.floor(frame.width / 2);
-        const centerY = Math.floor(frame.height / 2);
+            const yBytes = new Uint8Array(yPlane.getPixelBuffer());
+            const uBytes = new Uint8Array(uPlane.getPixelBuffer());
+            const vBytes = new Uint8Array(vPlane.getPixelBuffer());
 
-        let rSum = 0, gSum = 0, bSum = 0, count = 0;
-        for (let dy = -2; dy <= 2; dy++) {
-          for (let dx = -2; dx <= 2; dx++) {
-            const px = centerX + dx;
-            const py = centerY + dy;
-            if (px < 0 || px >= frame.width || py < 0 || py >= frame.height) continue;
+            const centerX = Math.floor(frame.width / 2);
+            const centerY = Math.floor(frame.height / 2);
 
-            // CORRECT memory index using hardware stride
-            const idx = py * bpr + px * bytesPerPixel;
+            // Y Plane (Luma) is always pixelStride 1
+            const yIdx = centerY * yPlane.bytesPerRow + centerX;
+            const y = yBytes[yIdx];
 
-            rSum += bytes[idx];
-            gSum += bytes[idx + 1];
-            bSum += bytes[idx + 2];
-            count++;
+            // U/V Planes (Chroma) are downsampled by 2
+            const uvX = Math.floor(centerX / 2);
+            const uvY = Math.floor(centerY / 2);
+            
+            // Guess pixel stride: if bytesPerRow >= width, it's interleaved (NV21/NV12, stride 2)
+            const uvPixelStride = uPlane.bytesPerRow >= frame.width ? 2 : 1;
+            
+            const uIdx = uvY * uPlane.bytesPerRow + uvX * uvPixelStride;
+            const vIdx = uvY * vPlane.bytesPerRow + uvX * uvPixelStride;
+
+            const u = uBytes[uIdx] - 128;
+            const v = vBytes[vIdx] - 128;
+
+            // BT.601 YUV to RGB
+            r = y + 1.402 * v;
+            g = y - 0.344136 * u - 0.714136 * v;
+            b = y + 1.772 * u;
           }
+        } else {
+          // Fallback for RGB (e.g. if forced by iOS)
+          const bytes = new Uint8Array(frame.getPixelBuffer());
+          const bpr = frame.bytesPerRow;
+          const bytesPerPixel = Math.max(3, Math.floor(bpr / frame.width));
+          
+          const centerX = Math.floor(frame.width / 2);
+          const centerY = Math.floor(frame.height / 2);
+          const idx = centerY * bpr + centerX * bytesPerPixel;
+
+          r = bytes[idx];
+          g = bytes[idx + 1];
+          b = bytes[idx + 2];
         }
 
-        if (count === 0) {
-          frame.dispose();
-          return;
+        // Guard against NaN collapse
+        if (Number.isNaN(r) || r === undefined) {
+          return; // Skip this frame
         }
 
-        let r = Math.round(rSum / count);
-        let g = Math.round(gSum / count);
-        let b = Math.round(bSum / count);
+        r = Math.min(255, Math.max(0, Math.round(r)));
+        g = Math.min(255, Math.max(0, Math.round(g)));
+        b = Math.min(255, Math.max(0, Math.round(b)));
 
         // HSL Hue extraction → boost S=1.0, L=0.5 for vivid LED color
         const rN = r / 255;
@@ -164,7 +191,7 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
         };
         const hex = '#' + toHex(r) + toHex(g) + toHex(b);
         updateColorOnJS(hex.toUpperCase());
-      } catch {
+      } catch (e) {
         // Silent — don't crash the camera thread
       } finally {
         frame.dispose();
