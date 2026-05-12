@@ -166,7 +166,7 @@ class LocationService {
       let distanceLabel = '';
 
       if (userLat !== null && userLng !== null && coords?.lat && coords?.lng) {
-        distanceMi = this._haversineMi(userLat, userLng, coords.lat, coords.lng);
+        distanceMi = this.haversineMi(userLat, userLng, coords.lat, coords.lng);
         distanceLabel = distanceMi < 0.1
           ? 'Here now'
           : distanceMi < 1
@@ -233,7 +233,7 @@ class LocationService {
       let distanceLabel = '';
 
       if (userLat !== null && userLng !== null && spot.lat && spot.lng) {
-        distanceMi = this._haversineMi(userLat, userLng, spot.lat, spot.lng);
+        distanceMi = this.haversineMi(userLat, userLng, spot.lat, spot.lng);
         distanceLabel = distanceMi < 0.1
           ? 'Here now'
           : distanceMi < 1
@@ -276,7 +276,7 @@ class LocationService {
   }
 
   /** Haversine distance in miles between two lat/lng points */
-  private _haversineMi(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  public haversineMi(lat1: number, lng1: number, lat2: number, lng2: number): number {
     const R = 3958.8; // Earth radius in miles
     const dLat = this._deg2rad(lat2 - lat1);
     const dLng = this._deg2rad(lng2 - lng1);

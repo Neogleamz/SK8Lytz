@@ -11,6 +11,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Alert, Text, TouchableOpacity, View } from 'react-native';
 import type { CrewRole, CrewSession } from '../../services/CrewService';
+import type { RadarAlert } from '../../hooks/useCrewProximityRadar';
 
 interface CrewHubSlabProps {
   crewSession: CrewSession | null;
@@ -22,6 +23,8 @@ interface CrewHubSlabProps {
   onOpenMap?: () => void;
   isCrewHubCollapsed: boolean;
   onToggleCollapse: () => void;
+  radarAlert?: RadarAlert | null;
+  onRadarAction?: (alert: RadarAlert) => void;
   Colors: any;
   styles: any;
 }
@@ -36,6 +39,8 @@ const CrewHubSlab = React.memo(({
   onOpenMap,
   isCrewHubCollapsed,
   onToggleCollapse,
+  radarAlert,
+  onRadarAction,
   Colors,
   styles,
 }: CrewHubSlabProps) => (
@@ -103,8 +108,60 @@ const CrewHubSlab = React.memo(({
                 color={crewRole === 'leader' ? '#FFAA00' : '#00AAFF'}
               />
             </TouchableOpacity>
+          ) : radarAlert && radarAlert.matchType !== 'NONE' ? (
+            /* State 4: Radar Alert (Proximity detected) */
+            <View style={{ gap: Spacing.sm }}>
+              <Text style={{ color: Colors.textMuted, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>
+                📍 {radarAlert.venueName.toUpperCase()} ({radarAlert.distanceMi < 0.1 ? 'Here now' : `${radarAlert.distanceMi.toFixed(1)}mi`})
+              </Text>
+
+              {radarAlert.matchType === 'PRIVATE_CREW' && (
+                <View style={{ gap: Spacing.sm }}>
+                  <Text style={[styles.slabEmptyText, { color: '#FFF' }]}>
+                    🔥 Your Crew <Text style={{ color: '#FFAA00', fontWeight: 'bold' }}>[{radarAlert.crewName}]</Text> is rolling right now!
+                  </Text>
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFAA00', paddingVertical: Spacing.md, borderRadius: 8, marginTop: Spacing.xs }}
+                    onPress={() => onRadarAction?.(radarAlert)}
+                  >
+                    <MaterialCommunityIcons name="account-group" size={18} color="#000" style={{ marginRight: Spacing.sm }} />
+                    <Text style={{ color: '#000', fontWeight: '800', letterSpacing: 1, fontSize: 13 }}>CHECK IN & SYNC</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {radarAlert.matchType === 'PUBLIC_SESSION' && (
+                <View style={{ gap: Spacing.sm }}>
+                  <Text style={[styles.slabEmptyText, { color: '#FFF' }]}>
+                    🛼 A public session is live with {radarAlert.memberCount} skaters.
+                  </Text>
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#00AAFF', paddingVertical: Spacing.md, borderRadius: 8, marginTop: Spacing.xs }}
+                    onPress={() => onRadarAction?.(radarAlert)}
+                  >
+                    <MaterialCommunityIcons name="broadcast" size={18} color="#000" style={{ marginRight: Spacing.sm }} />
+                    <Text style={{ color: '#000', fontWeight: '800', letterSpacing: 1, fontSize: 13 }}>JOIN PUBLIC SESSION</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {radarAlert.matchType === 'EMPTY_RINK' && (
+                <View style={{ gap: Spacing.sm }}>
+                  <Text style={styles.slabEmptyText}>
+                    No active sessions here. Be the first to start one.
+                  </Text>
+                  <TouchableOpacity
+                    style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingVertical: Spacing.md, borderRadius: 8, borderWidth: 1, borderColor: '#FFAA00', marginTop: Spacing.xs }}
+                    onPress={() => onRadarAction?.(radarAlert)}
+                  >
+                    <MaterialCommunityIcons name="flag-triangle" size={18} color="#FFAA00" style={{ marginRight: Spacing.sm }} />
+                    <Text style={{ color: '#FFAA00', fontWeight: '800', letterSpacing: 1, fontSize: 13 }}>START CREW SESSION</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
           ) : (
-            /* State 4: Empty — no sessions */
+            /* State 5: Empty (Not near a rink) */
             <View style={{ gap: Spacing.lg }}>
               <Text style={styles.slabEmptyText}>No active sessions nearby. Launch a crew to sync lights.</Text>
               <TouchableOpacity

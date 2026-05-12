@@ -3,6 +3,7 @@ import { View, Alert } from 'react-native';
 import { CrewRole, CrewSession, crewService } from '../../services/CrewService';
 import CrewHubSlab from './CrewHubSlab';
 import { CrewModal } from '../CrewModal';
+import { useCrewProximityRadar, RadarAlert } from '../../hooks/useCrewProximityRadar';
 
 interface DashboardCrewPanelProps {
   crewSession: CrewSession | null;
@@ -54,6 +55,23 @@ export default React.memo(function DashboardCrewPanel({
   toggleCrewHubCollapse
 }: DashboardCrewPanelProps) {
   // State lifted to DashboardScreen
+  const radarAlert = useCrewProximityRadar();
+
+  const handleRadarAction = (alert: RadarAlert) => {
+    if (alert.matchType === 'PRIVATE_CREW') {
+      // Direct them to the hub landing where their crew session will be visible
+      setCrewInitialStep('landing');
+      setIsCrewModalVisible(true);
+    } else if (alert.matchType === 'PUBLIC_SESSION') {
+      // Direct them to the join screen (or hub) where they can see the public session
+      setCrewInitialStep('landing'); 
+      setIsCrewModalVisible(true);
+    } else if (alert.matchType === 'EMPTY_RINK') {
+      // Prompt them to start a session for their crew
+      setCrewInitialStep('create');
+      setIsCrewModalVisible(true);
+    }
+  };
 
   return (
     <>
@@ -67,6 +85,8 @@ export default React.memo(function DashboardCrewPanel({
         onOpenMap={() => { setCrewInitialStep('map'); setIsCrewModalVisible(true); }}
         isCrewHubCollapsed={isCrewHubCollapsed}
         onToggleCollapse={toggleCrewHubCollapse}
+        radarAlert={radarAlert}
+        onRadarAction={handleRadarAction}
         Colors={Colors}
         styles={styles}
       />
