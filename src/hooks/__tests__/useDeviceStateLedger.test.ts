@@ -1,13 +1,24 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { renderHook, act } from '@testing-library/react-hooks';
 import { isStale, normalizeMac, useDeviceStateLedger, warmLedgerCache } from '../useDeviceStateLedger';
 
+jest.mock('../../services/AppLogger', () => ({
+  AppLogger: {
+    log: jest.fn(),
+    warn: jest.fn(),
+  }
+}));
+
+jest.mock('react', () => ({
+  ...jest.requireActual('react'),
+  useCallback: (fn: any) => fn,
+}));
+
 jest.mock('@react-native-async-storage/async-storage', () => ({
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  getAllKeys: jest.fn(),
-  multiGet: jest.fn(),
+  getItem: jest.fn().mockResolvedValue(null),
+  setItem: jest.fn().mockResolvedValue(undefined),
+  removeItem: jest.fn().mockResolvedValue(undefined),
+  getAllKeys: jest.fn().mockResolvedValue([]),
+  multiGet: jest.fn().mockResolvedValue([]),
 }));
 
 describe('useDeviceStateLedger', () => {
@@ -51,24 +62,22 @@ describe('useDeviceStateLedger', () => {
 
   describe('save() and loadSync() in-memory caching', () => {
     it('updates in-memory cache immediately so loadSync can read it without awaiting AsyncStorage', () => {
-      const { result } = renderHook(() => useDeviceStateLedger());
+      const ledger = useDeviceStateLedger();
       
       const mockState = {
-        patternIndex: 1,
+        patternId: 1,
         mode: 'FIXED',
         speed: 50,
         brightness: 100,
         timestamp: Date.now()
       } as any;
 
-      act(() => {
-        result.current.save('AA:BB:CC', mockState);
-      });
+      ledger.save('AA:BB:CC', mockState);
 
       // Synchronous read immediately after save should succeed
-      const readState = result.current.loadSync('aa:bb:cc_suffix');
+      const readState = ledger.loadSync('aa:bb:cc_suffix');
       expect(readState).toBeDefined();
-      expect(readState?.patternIndex).toBe(1);
+      expect(readState?.patternId).toBe(1);
       expect(readState?.deviceMac).toBe('AA:BB:CC'); // the key is injected by save()
 
       // The async storage write should have been queued via setTimeout (500ms debounce)

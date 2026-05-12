@@ -1,5 +1,17 @@
 import { getRecoveryBackoffMs, hasExceededMaxRecovery, MAX_RECOVERY_ATTEMPTS } from '../useBLEAutoRecovery';
 
+jest.mock('../../../services/AppLogger', () => ({
+  AppLogger: {
+    log: jest.fn(),
+    warn: jest.fn(),
+  }
+}));
+
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+}));
+
 describe('useBLEAutoRecovery Math Helpers', () => {
   describe('getRecoveryBackoffMs', () => {
     it('starts at 1500ms on the 0th attempt', () => {
