@@ -27,6 +27,28 @@ export interface UseBLEAutoRecoveryProps {
   bleGateRef: React.MutableRefObject<'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING'>;
 }
 
+
+
+// After this many failures we give up and eject the device from the UI.
+// Prevents permanent dark-device limbo when a Zengge chip is in a hard soft-lock.
+// 720 attempts * ~5s backoff ceiling = ~60 minutes of background recovery attempts.
+export const MAX_RECOVERY_ATTEMPTS = 720;
+
+/**
+ * Calculates the backoff delay in milliseconds for the given attempt number.
+ * Linear backoff: starts at 1.5s, increases by 500ms per attempt, ceiling at 5s.
+ */
+export const getRecoveryBackoffMs = (attempts: number): number => {
+  return Math.min(1500 + (attempts * 500), 5000);
+};
+
+/**
+ * Evaluates whether the recovery loop has exceeded the maximum allowed attempts.
+ */
+export const hasExceededMaxRecovery = (attempts: number): boolean => {
+  return attempts > MAX_RECOVERY_ATTEMPTS;
+};
+
 export function useBLEAutoRecovery({
   bleManager,
   setConnectedDevices,
@@ -45,11 +67,6 @@ export function useBLEAutoRecovery({
 
   // Track active recovery loop promises so cancelAllRecoveries can await them.
   const activeLoopsRef = useRef<Promise<void>[]>([]);
-
-  // After this many failures we give up and eject the device from the UI.
-  // Prevents permanent dark-device limbo when a Zengge chip is in a hard soft-lock.
-  // 720 attempts * ~5s backoff ceiling = ~60 minutes of background recovery attempts.
-  const MAX_RECOVERY_ATTEMPTS = 720;
 
   const initiateRecovery = useCallback((deviceId: string) => {
     // If already recovering, ignore
@@ -75,8 +92,7 @@ export function useBLEAutoRecovery({
         }
 
         try {
-          // Exponential backoff: 1.5s → 5s ceiling
-          const backoff = Math.min(1500 + (attempts * 500), 5000);
+          const backoff = getRecoveryBackoffMs(attempts);
           await new Promise(r => setTimeout(r, backoff));
 
           // Safety check after sleep — token or ghost list may have changed
@@ -85,7 +101,7 @@ export function useBLEAutoRecovery({
           attempts++;
 
           // FIX: Hard ceiling — eject device after MAX_RECOVERY_ATTEMPTS failures.
-          if (attempts > MAX_RECOVERY_ATTEMPTS) {
+          if (hasExceededMaxRecovery(attempts)) {
             AppLogger.warn(`[AutoRecovery] ${deviceId} failed after ${attempts} attempts — ejecting from UI`);
             AppLogger.log('AUTO_RECOVERY_FAILED', { deviceId, attempts });
             ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
