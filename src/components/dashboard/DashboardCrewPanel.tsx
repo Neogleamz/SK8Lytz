@@ -30,7 +30,7 @@ interface DashboardCrewPanelProps {
   toggleCrewHubCollapse: () => void;
 }
 
-export default function DashboardCrewPanel({
+export default React.memo(function DashboardCrewPanel({
   crewSession,
   setCrewSession,
   crewRole,
@@ -123,4 +123,4 @@ export default function DashboardCrewPanel({
       )}
     </>
   );
-}
+});

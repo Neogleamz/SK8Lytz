@@ -519,6 +519,100 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     disconnectFromDevice();          // Fire-and-forget BLE teardown
   }, [disconnectFromDevice]);
 
+  const handleCrewHubApplyCloudScene = useCallback((scene: Record<string, any>) => {
+    dockedControllerRef.current?.applyCloudScene(scene);
+  }, []);
+
+  const handleGroupPress = useCallback((group: CustomGroup) => {
+    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
+    if (devicesToConnect.length > 0) {
+      setIsSkateSessionActive(true);
+      setIsControllerOpen(true);
+      connectToDevices(devicesToConnect);
+    } else {
+      // No BLE devices discovered yet — trigger scan and inform user
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'group_tap_no_ble_devices', groupId: group.id, expectedMacs: group.deviceIds });
+      scanForPeripherals();
+      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
+    }
+  }, [allDevices, connectToDevices, scanForPeripherals]);
+
+  const handleGroupLongPress = useCallback((id: string) => {
+    openGroupRename(id);
+  }, [openGroupRename]);
+
+  const handleSetupWizard = useCallback(() => {
+    setViewState('SETUP_WIZARD');
+  }, []);
+
+  const handleGroupPowerPress = useCallback((group: CustomGroup) => {
+    handlePowerToggle(group.deviceIds);
+  }, [handlePowerToggle]);
+
+  const handleGroupMusicPress = useCallback((group: CustomGroup) => {
+    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
+    if (devicesToConnect.length > 0) {
+      connectToDevices(devicesToConnect);
+      setIsSkateSessionActive(true);
+      setIsControllerOpen(true);
+      // Small delay so the controller mounts before we switch mode
+      setTimeout(() => dockedControllerRef.current?.setActiveMode('MUSIC'), 300);
+    } else {
+      scanForPeripherals();
+      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
+    }
+  }, [allDevices, connectToDevices, scanForPeripherals]);
+
+  const handleGroupCameraPress = useCallback((group: CustomGroup) => {
+    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
+    if (devicesToConnect.length > 0) {
+      connectToDevices(devicesToConnect);
+      setIsSkateSessionActive(true);
+      setIsControllerOpen(true);
+      setTimeout(() => dockedControllerRef.current?.setActiveMode('CAMERA'), 300);
+    } else {
+      scanForPeripherals();
+      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
+    }
+  }, [allDevices, connectToDevices, scanForPeripherals]);
+
+  const handleGroupFavoritePress = useCallback(async (group: CustomGroup, _snapshot: any) => {
+    // Load the last-used IFavoriteState from AsyncStorage (same key as useFavorites)
+    let lastFav: any = null;
+    try {
+      const raw = await AsyncStorage.getItem('@Sk8lytz_Favorites');
+      if (raw) {
+        const favs = JSON.parse(raw);
+        if (Array.isArray(favs) && favs.length > 0) {
+          // Use the most recently saved favorite (last in array)
+          lastFav = favs[favs.length - 1];
+        }
+      }
+    } catch (e) { /* ignore parse errors */ }
+
+    if (!lastFav) {
+      Alert.alert('No Favorites', 'You haven\'t saved any favorites yet. Open the controller and tap the ❤️ to save one.');
+      return;
+    }
+
+    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
+    if (devicesToConnect.length > 0) {
+      connectToDevices(devicesToConnect);
+      setIsSkateSessionActive(true);
+      setIsControllerOpen(true);
+      setTimeout(() => {
+        dockedControllerRef.current?.loadFavorite(lastFav);
+      }, 300);
+    } else {
+      scanForPeripherals();
+      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
+    }
+  }, [allDevices, connectToDevices, scanForPeripherals]);
+
+  const handleToggleRegisteredCollapse = useCallback(() => {
+    setIsRegisteredCollapsed(prev => !prev);
+  }, []);
+
   // Option A Fallback: Prevent getting stranded on a blue screen
   useEffect(() => {
     // If the controller is open, but all devices have completely disconnected
@@ -882,7 +976,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   windowHeight={windowHeight}
                   Colors={Colors}
                   styles={styles}
-                  onApplyCloudScene={(scene) => dockedControllerRef.current?.applyCloudScene(scene)}
+                  onApplyCloudScene={handleCrewHubApplyCloudScene}
                   crewInitialStep={crewInitialStep}
                   setCrewInitialStep={setCrewInitialStep}
                   isCrewHubCollapsed={isCrewHubCollapsed}
@@ -911,84 +1005,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   registeredDevices={registeredDevices}
                   powerStates={powerStates}
                   userProfile={userProfile}
-                  onGroupPress={(group: CustomGroup) => {
-                    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
-                    if (devicesToConnect.length > 0) {
-                      setIsSkateSessionActive(true);
-                      setIsControllerOpen(true);
-                      connectToDevices(devicesToConnect);
-                    } else {
-                      // No BLE devices discovered yet — trigger scan and inform user
-                      AppLogger.log('BLE_STATE_CHANGE', { event: 'group_tap_no_ble_devices', groupId: group.id, expectedMacs: group.deviceIds });
-                      scanForPeripherals();
-                      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
-                    }
-                  }}
-                  onGroupLongPress={(id: string) => openGroupRename(id)}
-                  onSetupWizard={() => setViewState('SETUP_WIZARD')}
-                  onGroupPowerPress={(group: CustomGroup) => {
-                    // Toggle power for all devices in the group
-                    handlePowerToggle(group.deviceIds);
-                  }}
-                  onGroupMusicPress={(group: CustomGroup) => {
-                    // Connect to group then switch controller to MUSIC mode
-                    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
-                    if (devicesToConnect.length > 0) {
-                      connectToDevices(devicesToConnect);
-                      setIsSkateSessionActive(true);
-                      setIsControllerOpen(true);
-                      // Small delay so the controller mounts before we switch mode
-                      setTimeout(() => dockedControllerRef.current?.setActiveMode('MUSIC'), 300);
-                    } else {
-                      scanForPeripherals();
-                      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
-                    }
-                  }}
-                  onGroupCameraPress={(group: CustomGroup) => {
-                    // Connect to group then switch controller to CAMERA mode
-                    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
-                    if (devicesToConnect.length > 0) {
-                      connectToDevices(devicesToConnect);
-                      setIsSkateSessionActive(true);
-                      setIsControllerOpen(true);
-                      setTimeout(() => dockedControllerRef.current?.setActiveMode('CAMERA'), 300);
-                    } else {
-                      scanForPeripherals();
-                      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
-                    }
-                  }}
-                  onGroupFavoritePress={async (group: CustomGroup, _snapshot: any) => {
-                    // Load the last-used IFavoriteState from AsyncStorage (same key as useFavorites)
-                    let lastFav: any = null;
-                    try {
-                      const raw = await AsyncStorage.getItem('@Sk8lytz_Favorites');
-                      if (raw) {
-                        const favs = JSON.parse(raw);
-                        if (Array.isArray(favs) && favs.length > 0) {
-                          // Use the most recently saved favorite (last in array)
-                          lastFav = favs[favs.length - 1];
-                        }
-                      }
-                    } catch (e) { /* ignore parse errors */ }
-
-                    if (!lastFav) {
-                      Alert.alert('No Favorites', 'You haven\'t saved any favorites yet. Open the controller and tap the ❤️ to save one.');
-                      return;
-                    }
-
-                    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
-                    if (devicesToConnect.length > 0) {
-                      connectToDevices(devicesToConnect);
-                      setIsSkateSessionActive(true);
-                      setIsControllerOpen(true);
-                      setTimeout(() => {
-                        dockedControllerRef.current?.loadFavorite(lastFav);
-                      }, 300);
-                    } else {
-                      scanForPeripherals();
-                      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
-                    }
-                  }}
+                  onGroupPress={handleGroupPress}
+                  onGroupLongPress={handleGroupLongPress}
+                  onSetupWizard={handleSetupWizard}
+                  onGroupPowerPress={handleGroupPowerPress}
+                  onGroupMusicPress={handleGroupMusicPress}
+                  onGroupCameraPress={handleGroupCameraPress}
+                  onGroupFavoritePress={handleGroupFavoritePress}
                   Colors={Colors}
                   styles={styles}
                 />
@@ -1000,8 +1023,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 <RegisteredFleetSlab
                   registeredDevices={registeredDevices}
                   isRegisteredCollapsed={isRegisteredCollapsed}
-                  onToggleCollapse={() => setIsRegisteredCollapsed(!isRegisteredCollapsed)}
-                  onSetupWizard={() => setViewState('SETUP_WIZARD')}
+                  onToggleCollapse={handleToggleRegisteredCollapse}
+                  onSetupWizard={handleSetupWizard}
                   renderItem={renderItem}
                   Colors={Colors}
                   styles={styles}
