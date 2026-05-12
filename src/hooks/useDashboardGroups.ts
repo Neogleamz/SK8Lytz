@@ -173,7 +173,7 @@ export function useDashboardGroups({
 
       if (configsChanged) {
         // Persist via DeviceRepository singleton (canonical write path)
-        repo.setConfigs(nextConfigs).catch(() => {});
+        repo.setConfigs(nextConfigs).catch((e) => AppLogger.warn('PERSISTENCE', { event: 'repo_set_configs_failed', error: String(e) }));
         return nextConfigs;
       }
       return prevConfigs;
@@ -196,7 +196,7 @@ export function useDashboardGroups({
       if (Object.keys(configs).length > 0) {
         setDeviceConfigs(configs);
       }
-    }).catch(() => {});
+    }).catch((e) => AppLogger.warn('PERSISTENCE', { event: 'repo_initialize_failed', error: String(e) }));
 
     // Subscribe: re-read configs on every repo mutation (saveDevice, updateConfig, etc.)
     const unsubscribe = repo.subscribe(() => {
@@ -238,13 +238,13 @@ export function useDashboardGroups({
       if (saved) {
         try { setLastGroupPatterns(JSON.parse(saved)); } catch (e) { AppLogger.warn('[Groups] Failed to parse last group patterns', { error: String(e) }); }
       }
-    }).catch(() => {});
+    }).catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_last_group_patterns', event: 'load_failed', error: String(e) }));
   }, []);
 
   const setLastGroupPattern = async (groupId: string, snapshot: GroupPatternSnapshot): Promise<void> => {
     const updated = { ...lastGroupPatterns, [groupId]: snapshot };
     setLastGroupPatterns(updated);
-    await AsyncStorage.setItem('@Sk8lytz_last_group_patterns', JSON.stringify(updated)).catch(() => {});
+    await AsyncStorage.setItem('@Sk8lytz_last_group_patterns', JSON.stringify(updated)).catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_last_group_patterns', event: 'save_failed', error: String(e) }));
   };
 
   // ─── Group modal FSM ──────────────────────────────────────────────────────
