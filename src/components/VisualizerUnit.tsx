@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, InteractionManager, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { useTheme } from '../context/ThemeContext';
 import type { PatternId, RGB } from '../protocols/PatternEngine';
@@ -51,13 +51,27 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
   const [animTick, setAnimTick] = useState(0);
   const tickRef = useRef(0);
   const rafPendingRef = useRef<number | null>(null);
+  const lastRenderTimeRef = useRef(0);
+
   useEffect(() => {
     const id = animValue.addListener(({ value }: { value: number }) => {
       tickRef.current = value;
-      // Batch tick updates through RAF — prevents flooding the React reconciler at 60fps
+      // Batch tick updates through RAF — prevents flooding the React reconciler
       if (!rafPendingRef.current) {
         rafPendingRef.current = requestAnimationFrame(() => {
-          setAnimTick(tickRef.current);
+          const now = Date.now();
+          // Throttle to 30 FPS on Web to prevent MessageQueue flooding. 
+          // Native runs at 60 FPS (or uncapped).
+          const targetFps = Platform.OS === 'web' ? 30 : 60;
+          const frameMs = 1000 / targetFps;
+
+          if (now - lastRenderTimeRef.current >= frameMs) {
+            InteractionManager.runAfterInteractions(() => {
+              setAnimTick(tickRef.current);
+            });
+            lastRenderTimeRef.current = now;
+          }
+
           rafPendingRef.current = null;
         });
       }

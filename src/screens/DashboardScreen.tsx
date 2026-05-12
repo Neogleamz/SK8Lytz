@@ -16,7 +16,7 @@
  */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Animated, AppState, AppStateStatus, BackHandler, Dimensions, Image, Linking, Modal, PanResponder, Platform, SafeAreaView, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ExpoLinking from 'expo-linking';
@@ -529,7 +529,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       // Optimistic UI: Defer heavy controller mount by one frame to allow tap animation.
       requestAnimationFrame(() => {
         setIsSkateSessionActive(true);
-        setIsControllerOpen(true);
+        startTransition(() => {
+          setIsControllerOpen(true);
+        });
         connectToDevices(devicesToConnect);
       });
     } else {
@@ -555,7 +557,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     if (devicesToConnect.length > 0) {
       connectToDevices(devicesToConnect);
       setIsSkateSessionActive(true);
-      setIsControllerOpen(true);
+      startTransition(() => {
+        setIsControllerOpen(true);
+      });
       // Small delay so the controller mounts before we switch mode
       setTimeout(() => dockedControllerRef.current?.setActiveMode('MUSIC'), 300);
     } else {
@@ -569,7 +573,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     if (devicesToConnect.length > 0) {
       connectToDevices(devicesToConnect);
       setIsSkateSessionActive(true);
-      setIsControllerOpen(true);
+      startTransition(() => {
+        setIsControllerOpen(true);
+      });
       setTimeout(() => dockedControllerRef.current?.setActiveMode('CAMERA'), 300);
     } else {
       scanForPeripherals();
@@ -600,7 +606,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     if (devicesToConnect.length > 0) {
       connectToDevices(devicesToConnect);
       setIsSkateSessionActive(true);
-      setIsControllerOpen(true);
+      startTransition(() => {
+        setIsControllerOpen(true);
+      });
       setTimeout(() => {
         dockedControllerRef.current?.loadFavorite(lastFav);
       }, 300);
@@ -810,7 +818,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           // Fire-and-forget the BLE connection so JS thread is not blocked.
           requestAnimationFrame(() => {
             setIsSkateSessionActive(true);
-            setIsControllerOpen(true);
+            startTransition(() => {
+              setIsControllerOpen(true);
+            });
             connectToDevices([bleDevice]);
           });
           // NOTE: Hardware probe (0x63) intentionally NOT fired here.
