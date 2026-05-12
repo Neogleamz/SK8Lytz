@@ -3910,6 +3910,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      admin_revoke_admin_role: {
+        Args: { p_target_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       skate_spot_surface:

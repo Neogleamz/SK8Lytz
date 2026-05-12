@@ -83,18 +83,12 @@ export function AdminRosterPanel({
           style: 'destructive',
           onPress: async () => {
             try {
-              // Doing this via direct update since it requires admin role, RLS will allow it if caller is admin.
-              // Wait, user_profiles RLS might prevent updating other users' roles directly from client.
-              // We should probably use an RPC if RLS blocks it, but let's assume RLS allows admins to update roles
-              // Actually, standard practice: we should use an RPC, but we can try direct update first or create an RPC later if needed.
-              // Let's check user_profiles RLS. Usually, admins can update any profile.
-              const { error } = await supabase
-                .from('user_profiles')
-                .update({ role: 'user', updated_at: new Date().toISOString() })
-                .eq('user_id', userId);
-              
+              // Use SECURITY DEFINER RPC — direct client UPDATE is blocked by RLS.
+              const { error } = await supabase.rpc('admin_revoke_admin_role', {
+                p_target_user_id: userId,
+              });
               if (error) throw error;
-              Alert.alert('Success', 'User has been demoted.');
+              Alert.alert('Success', 'User has been demoted to regular user.');
               fetchAdmins();
             } catch (err: any) {
               Alert.alert('Failed', err.message);
