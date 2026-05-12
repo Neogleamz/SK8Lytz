@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -1747,6 +1747,8 @@ export type Database = {
       }
       skate_sessions: {
         Row: {
+          active_calories: number | null
+          avg_bpm: number | null
           avg_speed_mph: number
           calories: number | null
           crew_session_id: string | null
@@ -1754,6 +1756,7 @@ export type Database = {
           duration_sec: number
           id: string
           location_label: string | null
+          peak_bpm: number | null
           peak_gforce: number | null
           peak_speed_mph: number
           session_date: string
@@ -1761,6 +1764,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          active_calories?: number | null
+          avg_bpm?: number | null
           avg_speed_mph?: number
           calories?: number | null
           crew_session_id?: string | null
@@ -1768,6 +1773,7 @@ export type Database = {
           duration_sec?: number
           id?: string
           location_label?: string | null
+          peak_bpm?: number | null
           peak_gforce?: number | null
           peak_speed_mph?: number
           session_date?: string
@@ -1775,6 +1781,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          active_calories?: number | null
+          avg_bpm?: number | null
           avg_speed_mph?: number
           calories?: number | null
           crew_session_id?: string | null
@@ -1782,6 +1790,7 @@ export type Database = {
           duration_sec?: number
           id?: string
           location_label?: string | null
+          peak_bpm?: number | null
           peak_gforce?: number | null
           peak_speed_mph?: number
           session_date?: string

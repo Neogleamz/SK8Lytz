@@ -74,6 +74,7 @@ export default function GranularPermissionsList({ onAllRequiredGranted, readOnly
     LOCATION: null,
     CAMERA: null,
     MIC: null,
+    HEALTH: null,
   });
 
   const [loading, setLoading] = useState(true);
@@ -84,7 +85,7 @@ export default function GranularPermissionsList({ onAllRequiredGranted, readOnly
     const init = async () => {
       setLoading(true);
       const results: Record<PermissionType, boolean | null> = {
-        BLUETOOTH: null, NOTIFICATIONS: null, LOCATION: null, CAMERA: null, MIC: null,
+        BLUETOOTH: null, NOTIFICATIONS: null, LOCATION: null, CAMERA: null, MIC: null, HEALTH: null,
       };
       for (const item of PERMISSIONS_LIST) {
         results[item.id] = await checkPermission(item.id);
