@@ -174,7 +174,7 @@ export function useHardwareNotifications({
         return next;
       });
       setAllDevices(prev => prev.map(d =>
-        (d as any).id === deviceId
+        d.id === deviceId
           ? {
               ...d,
               points:      cfg.ledPoints,
@@ -184,7 +184,7 @@ export function useHardwareNotifications({
               colorSorting: cfg.colorSorting,
               icType:      cfg.icType,
               detected:    true,
-            } as any
+            }
           : d
       ));
     });

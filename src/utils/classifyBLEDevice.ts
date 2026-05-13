@@ -19,18 +19,50 @@ import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/Pro
 import type { PendingRegistration } from '../types/dashboard.types';
 import { getDefaultGroupName } from './NamingUtils';
 
+/** Minimal shape of a raw BLE device + optional advertisement-derived hardware fields. */
+interface BLERawDevice {
+  id: string;
+  name?: string | null;
+  rssi?: number | null;
+  manufacturerData?: string | null;
+  bleVersion?: number;
+  firmwareVer?: number;
+  ledVersion?: number;
+  productId?: number;
+  hwPoints?: number;
+  hwSegments?: number;
+  hwStripType?: string;
+  hwSorting?: string;
+  hwRfMode?: string;
+  hwRfPairedCount?: number;
+  product_type?: string;
+}
+
+/** Shape of an individual EEPROM cache entry from useBLESweeper. */
+interface HWCacheEntry {
+  detected?: boolean;
+  ledPoints?: number;
+  segments?: number;
+  icName?: string;
+  icType?: number;
+  colorSorting?: number;
+  colorSortingName?: string;
+  rfMode?: string;
+  rfPairedCount?: number;
+}
+
 /**
  * Resolve the product type string for a device using catalog-driven point matching.
  * Falls back to advertisement data, then 'UNKNOWN'.
  */
-export function resolveProductType(device: any, hwCache?: Record<string, any>): string {
+export function resolveProductType(device: BLERawDevice, hwCache?: Record<string, HWCacheEntry>): string {
   const mac = (device.id || '').toUpperCase();
   const cached = hwCache?.[mac];
-  const points = cached?.ledPoints ?? (device as any).hwPoints ?? 0;
+  const points = cached?.ledPoints ?? device.hwPoints ?? 0;
   const profile = getLocalProfileByPoints(points);
   // Only trust catalog resolution if we have real probe data
   if (cached?.detected || points > 0) return profile.id;
-  return (device as any).product_type || 'UNKNOWN';
+  return device.product_type || 'UNKNOWN';
 }
 
 /**
@@ -42,9 +74,9 @@ export function resolveProductType(device: any, hwCache?: Record<string, any>): 
  * @param productType  Optional pre-resolved product type string (from classifyProbeResults)
  */
 export function mapDeviceToRegistration(
-  device: any,
+  device: BLERawDevice,
   index: number,
-  hwCache: Record<string, any> = {},
+  hwCache: Record<string, HWCacheEntry> = {},
   productType?: string,
 ): PendingRegistration {
   const mac = (device.id || '').toUpperCase();
@@ -62,9 +94,9 @@ export function mapDeviceToRegistration(
     device_mac:         mac,
     device_name:        `SK8Lytz-${deviceIdShort}`,
     factory_name:       device.name || 'Unknown',
-    manufacturer_data:  device.manufacturerData,
+    manufacturer_data:  device.manufacturerData ?? undefined,
     ble_version:        device.bleVersion,
-    product_type:       resolvedType as any,
+    product_type:       resolvedType as PendingRegistration['product_type'],
     position:           pos,
     group_name:         getDefaultGroupName(resolvedType),
     // ── Hardware fields — EEPROM > advertisement > profile default ──────────
