@@ -109,13 +109,13 @@ async function _share(message: string, s: ShareableSession): Promise<void> {
 
     if (result.action === Share.sharedAction) {
       AppLogger.log('CREW_SESSION_SHARED', {
-        activityType: (result as any).activityType ?? 'unknown',
+        activityType: (result as Record<string, unknown>).activityType ?? 'unknown',
         sessionName: s.name,
         isScheduled: !!s.scheduled_at,
       });
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     // User dismissed or share failed — not a fatal error, just log
-    AppLogger.log('CREW_SESSION_SHARED', { error: e.message ?? 'dismissed', sessionName: s.name });
+    AppLogger.log('CREW_SESSION_SHARED', { error: e instanceof Error ? e.message : 'dismissed', sessionName: s.name });
   }
 }

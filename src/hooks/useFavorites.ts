@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
+import type { Database } from '../types/supabase';
 import type { IFavoriteState, IQuickPreset } from '../types/dashboard.types';
 
 // Shared Storage Prefix constant
@@ -67,10 +68,10 @@ export function useFavorites() {
             .eq('fill_mode', 'FAVORITE');
 
           if (!error && data) {
-            const cloudFavs = (data as any[]).map(d => ({
+            const cloudFavs = data.map(d => ({
               id: d.id,
               name: d.name,
-              ...(typeof d.nodes === 'string' ? JSON.parse(d.nodes) : d.nodes)
+              ...(typeof d.nodes === 'string' ? JSON.parse(d.nodes) : d.nodes as Record<string, unknown>)
             })) as IFavoriteState[];
 
             // Merge local and cloud (cloud wins on ID collision)
@@ -148,9 +149,9 @@ export function useFavorites() {
           name,
           fill_mode: 'FAVORITE',
           transition_type: 0,
-          nodes: payload as any,
+          nodes: payload as unknown as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
           created_at: new Date().toISOString()
-        } as any);
+        });
       }
     } catch (err) {
       AppLogger.warn('[Favorites] Cloud save failed', { error: String(err) });

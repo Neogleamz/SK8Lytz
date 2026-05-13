@@ -209,7 +209,7 @@ class NotificationService {
           sound: true,
           ...(Platform.OS === 'android' ? { channelId: 'session-reminders' } : {}),
         },
-        trigger: trigger as any,
+        trigger: trigger as NotificationsType.NotificationTriggerInput,
       });
       AppLogger.log('PUSH_NOTIFICATION_SENT', { type: 'session_reminder', subtype: 'scheduled', sessionId: opts.sessionId, trigger: trigger?.date?.toISOString() });
       return id;

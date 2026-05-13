@@ -323,9 +323,12 @@ class CrewProfileService {
     // Tally scene names from last_scene JSONB { modeName, patternName, etc. }
     const tally: Record<string, number> = {};
     for (const s of data) {
-      const scene = s.last_scene as any;
+      const scene = s.last_scene as Record<string, unknown> | null;
       const label: string | undefined =
-        scene?.modeName ?? scene?.patternName ?? scene?.activeMode ?? scene?.mode;
+        (typeof scene?.modeName === 'string' ? scene.modeName : undefined) ??
+        (typeof scene?.patternName === 'string' ? scene.patternName : undefined) ??
+        (typeof scene?.activeMode === 'string' ? scene.activeMode : undefined) ??
+        (typeof scene?.mode === 'string' ? scene.mode : undefined);
       if (label) tally[label] = (tally[label] ?? 0) + 1;
     }
     const topScene = Object.keys(tally).length

@@ -52,7 +52,7 @@ export const SkateSpotsService = {
           source: 'native',
           is_verified: true, // Marked verified if crowdsourced, or we can leave it false until admin approval
           updated_at: new Date().toISOString()
-        } as any)
+        } as Database['public']['Tables']['skate_spots']['Insert'])
         .select()
         .single();
 

@@ -24,7 +24,7 @@ export const GENERATIVE_RAINBOW: string[] = [
 const getColorMode = (patternId?: number): 'FG_ONLY' | 'FG_BG' | 'GENERATIVE' | null => {
   if (!patternId) return null;
   const template = SK8LYTZ_TEMPLATES.find(t => t.id === patternId);
-  return (template?.colorMode as any) ?? null;
+  return (template?.colorMode) ?? null;
 };
 
 // ─── Exported resolvers ────────────────────────────────────────────────────────
