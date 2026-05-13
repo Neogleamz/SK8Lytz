@@ -73,8 +73,10 @@ export function useCrewProximityRadar() {
           const sessionDist = locationService.haversineMi(userLoc.coords.lat, userLoc.coords.lng, coords.lat, coords.lng);
           
           if (sessionDist <= RADAR_RADIUS_MI) {
-            const memberCount = (session.crew_members as any)?.[0]?.count ?? 0;
-            const crewName = (session.crews as any)?.name ?? session.name ?? 'Unknown Crew';
+            const membersJoin = session.crew_members as { count: number }[] | null;
+            const memberCount = membersJoin?.[0]?.count ?? 0;
+            const crewsJoin = session.crews as { name: string } | null;
+            const crewName = crewsJoin?.name ?? session.name ?? 'Unknown Crew';
 
             const match: RadarAlert = {
               matchType: session.is_public ? 'PUBLIC_SESSION' : 'PRIVATE_CREW',
