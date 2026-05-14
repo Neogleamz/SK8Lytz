@@ -112,7 +112,7 @@ export function useHardwareNotifications({
             rfRemotes: rfConfig.rfRemotes
           };
           // Persist RF config update via DeviceRepository SSOT (tombstone-safe merge)
-          DeviceRepository.getInstance().updateConfig(deviceId, { rfMode: rfConfig.rfMode, rfRemotes: rfConfig.rfRemotes }).catch(() => {});
+          DeviceRepository.getInstance().updateConfig(deviceId, { rfMode: rfConfig.rfMode, rfRemotes: rfConfig.rfRemotes }).catch(e => AppLogger.warn('Failed to persist RF config', e));
           return { ...prevConfigs, [deviceId]: updated };
         });
         // BUG-03 Fix: Removed early return. Compound notifications contain both RF and LED configs.
@@ -151,7 +151,7 @@ export function useHardwareNotifications({
         };
 
         // Mirror securely to persistent memory via DeviceRepository SSOT
-        DeviceRepository.getInstance().updateConfig(deviceId, newD).catch(() => {});
+        DeviceRepository.getInstance().updateConfig(deviceId, newD).catch(e => AppLogger.warn('Failed to persist LED config', e));
 
         setDeviceConfigs(prevConfigs => ({
           ...prevConfigs,
@@ -170,7 +170,7 @@ export function useHardwareNotifications({
         const merged = { ...(prev[deviceId] || {}), ...cfg };
         const next = { ...prev, [deviceId]: merged };
         // Persist probe config via DeviceRepository SSOT (updateConfig merges internally)
-        DeviceRepository.getInstance().updateConfig(deviceId, cfg).catch(() => {});
+        DeviceRepository.getInstance().updateConfig(deviceId, cfg).catch(e => AppLogger.warn('Failed to persist probed config', e));
         return next;
       });
       setAllDevices(prev => prev.map(d =>

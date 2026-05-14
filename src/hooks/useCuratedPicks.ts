@@ -91,7 +91,7 @@ export function useCuratedPicks() {
           });
 
           // Update cache asynchronously
-          AsyncStorage.setItem(CACHE_KEY, JSON.stringify(mapped)).catch(() => {});
+          AsyncStorage.setItem(CACHE_KEY, JSON.stringify(mapped)).catch(e => AppLogger.warn('Failed to cache curated picks', e));
         }
       } catch (e) {
         AppLogger.error('[SK8Lytz Picks] Exception fetching from DB', e);

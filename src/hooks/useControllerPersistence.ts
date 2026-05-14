@@ -15,6 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect } from 'react';
 import { STORAGE_PREFIX } from '../constants/AppConstants';
 import type { ModeType } from '../types/dashboard.types';
+import { AppLogger } from '../services/AppLogger';
 
 interface ControllerStateSetters {
   setSelectedColor: (v: string) => void;
@@ -122,7 +123,7 @@ export function useControllerPersistence(
       fixedBgColor: stateValues.fixedBgColor,
       fixedHue: stateValues.fixedHue,
     };
-    AsyncStorage.setItem(`${STORAGE_PREFIX}ControllerState`, JSON.stringify(stateBlob)).catch(() => {});
+    AsyncStorage.setItem(`${STORAGE_PREFIX}ControllerState`, JSON.stringify(stateBlob)).catch(e => AppLogger.warn('Failed to save controller state blob', e));
   }, [
     stateValues.activeMode, stateValues.selectedColor, stateValues.selectedPatternId,
     stateValues.brightness, stateValues.speed, stateValues.micSensitivity,

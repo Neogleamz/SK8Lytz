@@ -73,7 +73,7 @@ AppState.addEventListener('change', (next) => {
       clearTimeout(timer);
       const entry = memoryCache.get(key);
       if (entry) {
-        AsyncStorage.setItem(`${KEY_PREFIX}${key}`, JSON.stringify(entry)).catch(() => {});
+        AsyncStorage.setItem(`${KEY_PREFIX}${key}`, JSON.stringify(entry)).catch(e => AppLogger.error('Failed to write device state ledger entry', e));
       }
     }
     debounceTimers.clear();

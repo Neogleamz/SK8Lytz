@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../services/supabaseClient';
 import { Spacing } from '../../theme/theme';
 import type { Tables } from '../../types/supabase';
+import { AppLogger } from '../../services/AppLogger';
 
 // Use the generated Supabase Row type directly — stays in sync with schema automatically.
 type LifetimeStats = Tables<'user_lifetime_stats'>;
@@ -46,7 +47,7 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
         if (data && !error) {
           setStats(data);
           // 2. Save fresh cloud data to offline cache
-          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(() => {});
+          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(e => AppLogger.warn('Failed to cache skater stats', e));
         }
       } catch (e) {
         // Fallback to cache (already loaded)

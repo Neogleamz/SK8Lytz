@@ -168,7 +168,7 @@ export function useBLEAutoRecovery({
           const qp = ZenggeProtocol.queryHardwareSettings(false);
           await conn.writeCharacteristicWithoutResponseForService(
             ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, Buffer.from(qp).toString('base64')
-          ).catch(() => {});
+          ).catch(e => AppLogger.warn('[useBLEAutoRecovery] AutoRecovery ping failed', e));
 
           // Publish back to UI and clear ghost state
           setConnectedDevices(prev => prev.map(d => d.id === deviceId ? conn : d));

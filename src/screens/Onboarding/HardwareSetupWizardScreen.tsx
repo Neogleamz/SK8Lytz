@@ -149,7 +149,7 @@ export default function HardwareSetupWizardScreen({
             : r
         ));
         // Cache the result so repeat wizard visits are instant
-        AsyncStorage.setItem(`@sk8_hw_${deviceMac}`, JSON.stringify(hwConfig)).catch(() => {});
+        AsyncStorage.setItem(`@sk8_hw_${deviceMac}`, JSON.stringify(hwConfig)).catch(e => AppLogger.warn('Failed to cache probed hardware config', e));
         AppLogger.log('DEVICE_DISCOVERED', { context: 'pingDevice_complete', deviceId: deviceMac, ledPoints: hwConfig.ledPoints });
       }
     } catch (e) {

@@ -86,7 +86,7 @@ export const useDiagnosticLog = ({
       } catch (e) {
         AppLogger.warn('[useDiagnosticLog] Failed to parse verdict log', { error: String(e) });
       }
-    }).catch(() => {});
+    }).catch(e => AppLogger.warn('[useDiagnosticLog] Failed to load verdict log from storage', e));
   }, []);
 
   // ── RX listener ──────────────────────────────────────────────────────────
@@ -160,7 +160,7 @@ export const useDiagnosticLog = ({
   const setVerdict = useCallback((entryId: string, opcode: string, verdict: TestVerdict) => {
     setTestLog(prev => {
       const updated = prev.map(e => e.id === entryId ? { ...e, verdict } : e);
-      AsyncStorage.setItem(VERDICT_LOG_KEY, JSON.stringify(updated)).catch(() => {});
+      AsyncStorage.setItem(VERDICT_LOG_KEY, JSON.stringify(updated)).catch(e => AppLogger.warn('[useDiagnosticLog] Failed to save verdict log', e));
       return updated;
     });
     if (TRACKED_OPCODES.includes(opcode as TrackedOpcode) && verdict) {
@@ -179,7 +179,7 @@ export const useDiagnosticLog = ({
   const clearTestLog = useCallback(() => {
     setTestLog([]);
     setCoverage(Object.fromEntries(TRACKED_OPCODES.map(op => [op, 'UNTESTED'])) as Record<TrackedOpcode, OpcodeStatus>);
-    AsyncStorage.removeItem(VERDICT_LOG_KEY).catch(() => {});
+    AsyncStorage.removeItem(VERDICT_LOG_KEY).catch(e => AppLogger.warn('[useDiagnosticLog] Failed to remove verdict log', e));
   }, []);
 
   return {

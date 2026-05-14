@@ -190,7 +190,7 @@ export function useAccountOverview(visible: boolean) {
   };
 
   const saveNotifPrefs = async (prefs: { crewInvites: boolean; sessionReminders: boolean; leaderHandoff: boolean }) => {
-    await AsyncStorage.setItem(NOTIF_PREF_KEY, JSON.stringify(prefs)).catch(() => {});
+    await AsyncStorage.setItem(NOTIF_PREF_KEY, JSON.stringify(prefs)).catch(e => AppLogger.warn('Failed to persist notification preferences', e));
   };
 
   const handleToggleHealthSync = async (enabled: boolean) => {
