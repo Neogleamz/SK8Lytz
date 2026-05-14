@@ -57,7 +57,7 @@ const DashboardHeader = React.memo(({
   insetTop,
   Colors,
 }: DashboardHeaderProps) => {
-  const allOn = displayConnectedDevices.every(d => powerStates[(d as any).id] ?? true);
+  const allOn = displayConnectedDevices.every(d => powerStates[d.id] ?? true);
 
   return (
     <View style={{
@@ -88,7 +88,7 @@ const DashboardHeader = React.memo(({
                 width: 6, height: 6, borderRadius: 3,
                 backgroundColor: isOfflineMode ? '#FFA500' : Colors.success,
               }, Platform.OS === 'web' 
-                ? { boxShadow: `0px 0px 4px ${isOfflineMode ? '#FFA500' : Colors.success}` } as any
+                ? { boxShadow: `0px 0px 4px ${isOfflineMode ? '#FFA500' : Colors.success}` } as Record<string, string>
                 : { shadowColor: isOfflineMode ? '#FFA500' : Colors.success, shadowOpacity: 0.8, shadowRadius: 4, elevation: 2 }
               ]} />
               <Text style={{ color: Colors.text, fontSize: 10, fontWeight: '700', maxWidth: 55, fontFamily: 'Righteous' }} numberOfLines={1}>
@@ -104,7 +104,7 @@ const DashboardHeader = React.memo(({
             {(() => {
               const connectedCount = displayConnectedDevices.length;
               let expectedCount = 1;
-              const firstDevice = displayConnectedDevices[0] as any;
+              const firstDevice = displayConnectedDevices[0];
               if (firstDevice?.grouped && firstDevice?.groupId) {
                 const group = customGroups.find(g => g.id === firstDevice.groupId);
                 if (group) expectedCount = group.deviceIds.length;
@@ -158,7 +158,7 @@ const DashboardHeader = React.memo(({
                 width: 6, height: 6, borderRadius: 3,
                 backgroundColor: isOfflineMode ? '#FFA500' : Colors.success,
               }, Platform.OS === 'web' 
-                ? { boxShadow: `0px 0px 4px ${isOfflineMode ? '#FFA500' : Colors.success}` } as any
+                ? { boxShadow: `0px 0px 4px ${isOfflineMode ? '#FFA500' : Colors.success}` } as Record<string, string>
                 : { shadowColor: isOfflineMode ? '#FFA500' : Colors.success, shadowOpacity: 0.8, shadowRadius: 4, elevation: 2 }
               ]} />
               <Text style={{ color: Colors.text, fontSize: 10, fontWeight: '700', maxWidth: 55, fontFamily: 'Righteous' }} numberOfLines={1}>

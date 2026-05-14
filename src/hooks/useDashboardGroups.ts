@@ -337,7 +337,7 @@ export function useDashboardGroups({
       AsyncStorage.getItem('@Sk8lytz_processed_devices'),
     ]);
 
-    let configs: any = {};
+    let configs: Record<string, DeviceSettings> = {};
     if (resConfigs) { try { configs = JSON.parse(resConfigs); } catch (e) { AppLogger.warn('[Groups] Failed to parse stored configs during migration', { error: String(e) }); } }
 
     let processed: string[] = [];
@@ -383,7 +383,7 @@ export function useDashboardGroups({
 
         [leftId, rightId].forEach((id, idx) => {
           if (!configs[id]) {
-            configs[id] = { name: getDefaultDeviceName(id), type: typeVal, points: pointsVal } as any;
+            configs[id] = { name: getDefaultDeviceName(id), type: typeVal, points: pointsVal, grouped: false } as DeviceSettings;
             didUpdateConfigs = true;
           }
         });
@@ -393,7 +393,7 @@ export function useDashboardGroups({
     // Catalog-driven classification — groups by resolved product type
     const devicesByType = new Map<string, typeof currentDevices>();
     for (const d of currentDevices) {
-      const pts = (d as any).points ?? 0;
+      const pts = d.points ?? 0;
       const profile = getLocalProfileByPoints(pts);
       if (!devicesByType.has(profile.id)) devicesByType.set(profile.id, []);
       devicesByType.get(profile.id)!.push(d);
@@ -440,9 +440,9 @@ export function useDashboardGroups({
         let morphed = false;
         const next = prev.map(d => {
           const c = configs[d.id];
-          if (c && (d.name !== c.name || (d as any).sorting !== c.sorting || (d as any).stripType !== c.stripType)) {
+          if (c && (d.name !== c.name || d.sorting !== c.sorting || d.stripType !== c.stripType)) {
             morphed = true;
-            return { ...d, name: c.name, points: c.points, sorting: c.sorting, stripType: c.stripType } as any;
+            return { ...d, name: c.name, points: c.points, sorting: c.sorting, stripType: c.stripType };
           }
           return d;
         });
