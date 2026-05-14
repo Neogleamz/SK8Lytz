@@ -10,6 +10,7 @@
  */
 import { useEffect, useState } from 'react';
 import { CrewRole, crewService, CrewSession } from '../services/CrewService';
+import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
 
 interface UseDashboardCrewOptions {

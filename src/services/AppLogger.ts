@@ -178,7 +178,11 @@ export type EventType =
   | 'BUILDER_PANEL'
   | 'ACCOUNT_MGMT'
   | 'CREW_SESSION'
-  | 'BLE_TRANSPORT';
+  | 'BLE_TRANSPORT'
+  // ── FTUE (First-Time User Experience) ─────────────────────────────────────
+  | 'FTUE_PHASE_3_COMPLETE'
+  | 'FTUE_HARDWARE_WRITE'
+  | 'FTUE_HARDWARE_VERIFIED';
 
 
 

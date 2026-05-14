@@ -111,8 +111,8 @@ export function useBLESweeper({
         const loaded: Record<string, any> = {};
         for (const [key, val] of pairs) {
           if (!val) continue;
+          const mac = key.replace('@sk8_hw_', '').toUpperCase();
           try {
-            const mac = key.replace('@sk8_hw_', '').toUpperCase();
             loaded[mac] = JSON.parse(val);
           } catch (e) {
             AppLogger.warn('[useBLESweeper] Malformed HW cache', { mac, error: String(e) });
