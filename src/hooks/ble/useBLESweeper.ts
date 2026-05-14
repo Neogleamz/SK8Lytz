@@ -121,6 +121,7 @@ export function useBLESweeper({
           setHwCache(prev => ({ ...prev, ...loaded }));
           AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_cache_loaded', count: Object.keys(loaded).length });
         }
+      });
     }).catch(e => AppLogger.warn('[useBLESweeper] Failed to load sweeper hardware cache', { error: String(e) }));
   }, []);
 
@@ -262,13 +263,13 @@ export function useBLESweeper({
           const b64HW = Buffer.from(ZenggeProtocol.queryHardwareSettings(false)).toString('base64');
           bleManager.writeCharacteristicWithoutResponseForDevice(
             mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64HW
-          ).catch(e => AppLogger.warn('[useBLESweeper] Interrogator HW query failed', { error: String(e) }));
+          ).catch((e: any) => AppLogger.warn('[useBLESweeper] Interrogator HW query failed', { error: String(e) }));
           setTimeout(() => {
             if (signal.aborted) return;
             const b64RF = Buffer.from(ZenggeProtocol.queryRfRemoteState()).toString('base64');
             bleManager.writeCharacteristicWithoutResponseForDevice(
               mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64RF
-            ).catch(e => AppLogger.warn('[useBLESweeper] Interrogator RF query failed', { error: String(e) }));
+            ).catch((e: any) => AppLogger.warn('[useBLESweeper] Interrogator RF query failed', { error: String(e) }));
           }, 200);
         }, 400);
       });

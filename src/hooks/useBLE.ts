@@ -727,7 +727,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     };
 
     const currentWrite = (async () => {
-      await previousMutex.catch(e => AppLogger.warn('[BLE] Write mutex pipeline failure', { error: String(e) }));
+      await writeMutex.catch((e: any) => AppLogger.warn('[BLE] Write mutex pipeline failure', { error: String(e) }));
       return executeWrite();
     })();
     
