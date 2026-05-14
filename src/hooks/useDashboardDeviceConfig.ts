@@ -106,7 +106,7 @@ export function useDashboardDeviceConfig({
             }
           : d
       });
-      allDevicesRef.current = next as any;
+      allDevicesRef.current = next;
       return next;
     });
 

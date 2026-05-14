@@ -104,9 +104,9 @@ export function useCrewHub(visible: boolean, step: string) {
         // Previously used Promise.all which is atomic: if getNearbyPublicSessions
         // threw (stale auth, network), setNearbySpots was never called → no pins.
         const sessionsP = locationService.getNearbyPublicSessions(discoverRadiusMi, userCoords)
-          .catch(err => { AppLogger.warn('[useCrewHub] sessions query failed', err); return [] as any[]; });
+          .catch(err => { AppLogger.warn('[useCrewHub] sessions query failed', err); return [] as NearbySession[]; });
         const spotsP = locationService.getNearbySkateSpots(discoverRadiusMi, userCoords)
-          .catch(err => { AppLogger.warn('[useCrewHub] spots query failed', err); return [] as any[]; });
+          .catch(err => { AppLogger.warn('[useCrewHub] spots query failed', err); return [] as NearbySkateSpot[]; });
 
         return Promise.all([sessionsP, spotsP]);
       })

@@ -125,7 +125,7 @@ export function useDashboardAutoConnect({
           devices: batch.map(d => d.name ?? d.id),
         });
 
-        connectToDevices(batch as any).finally(() => {
+        connectToDevices(batch).finally(() => {
           if (autoConnectIdsRef.current.length > 0) {
             AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_resume_scan' });
             scanForPeripherals({ disableProbing: true });
@@ -164,7 +164,7 @@ export function useDashboardAutoConnect({
               .from('registered_groups')
               .select('*')
               .eq('user_id', cloudUserId);
-            groups = result.data as any[];
+            groups = result.data;
             isOffline = !!result.error;
           } catch {
             isOffline = true;
@@ -268,7 +268,7 @@ export function useDashboardAutoConnect({
             if (isRetrigger && burstScan) {
               AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_burst_scan_triggered' });
               const scanResult = burstScan(8000);
-              if (scanResult && typeof (scanResult as any).catch === 'function') {
+              if (scanResult && typeof (scanResult as Promise<void>).catch === 'function') {
                 (scanResult as Promise<void>).catch(() => {});
               }
             }

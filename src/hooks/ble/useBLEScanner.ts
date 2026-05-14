@@ -7,6 +7,7 @@ import { LOCAL_PRODUCT_CATALOG, getLocalProfileByPoints } from '../../constants/
 import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { AppLogger } from '../../services/AppLogger';
 import { supabase } from '../../services/supabaseClient';
+import type { Database } from '../../types/supabase';
 import { locationService } from '../../services/LocationService';
 import type { PendingRegistration } from '../../types/dashboard.types';
 import { mapDeviceToRegistration } from '../../utils/classifyBLEDevice';
@@ -64,7 +65,7 @@ export function useBLEScanner({
         }));
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await supabase.from('discovered_devices_telemetry').insert(payloads as any);
+        await supabase.from('discovered_devices_telemetry').insert(payloads as unknown as Database['public']['Tables']['discovered_devices_telemetry']['Insert'][]);
       } catch (e) {
         AppLogger.warn('[Scanner] Ambient telemetry flush failed', { error: String(e) });
       }
@@ -84,7 +85,7 @@ export function useBLEScanner({
     const unknown: Device[] = [];
 
     for (const d of devices) {
-      const pts = (d as any).hwPoints as number | undefined;
+      const pts = (d as unknown as Record<string, unknown>).hwPoints as number | undefined;
       const name = d.name?.toUpperCase() || '';
 
       if (pts != null) {
@@ -190,7 +191,7 @@ export function useBLEScanner({
               { id: 'sim-DE:M0:HA:L0:00:02', name: 'HALOZ Right Skate', type: 'HALOZ', points: 11, segments: 2, sorting: 'GRB', stripType: 'WS2812B', rssi: -55, serviceUUIDs: [ZENGGE_SERVICE_UUID], manufacturerData: 'AAAAAAAAAAAz' },
               { id: 'sim-DE:M0:S0:UL:00:01', name: 'SOULZ Left Skate', type: 'SOULZ', points: 43, segments: 1, sorting: 'GRB', stripType: 'WS2812B', rssi: -42, serviceUUIDs: [ZENGGE_SERVICE_UUID], manufacturerData: 'AAAAAAAAAAAz' },
               { id: 'sim-DE:M0:S0:UL:00:02', name: 'SOULZ Right Skate', type: 'SOULZ', points: 43, segments: 1, sorting: 'GRB', stripType: 'WS2812B', rssi: -85, serviceUUIDs: [ZENGGE_SERVICE_UUID], manufacturerData: 'AAAAAAAAAAAz' }
-            ] as any[];
+            ] as any[]; // DEV-ONLY: mock devices have custom props (points, type) not on Device
             setAllDevices(mockDevices);
             
             const pendingMocks = mockDevices.map(device => {

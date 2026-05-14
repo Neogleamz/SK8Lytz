@@ -193,7 +193,7 @@ export function useDashboardController({
                     ledgerSave(d.id, {
                       deviceMac: normalizeMac(d.id),
                       groupId: targetGroupId,
-                      mode: snapshot.mode as any,
+                      mode: snapshot.mode,
                       patternLabel: patternName,
                       fgColor: snapshot.fgColor,
                       bgColor: snapshot.bgColor,
