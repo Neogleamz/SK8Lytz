@@ -17,6 +17,7 @@ import { AppLogger } from './AppLogger';
 import { supabase } from './supabaseClient';
 
 import type { Tables } from '../types/supabase';
+import type { Database } from '../types/supabase';
 
 // Use the generated Supabase Row type directly — stays in sync with schema automatically.
 // member_count is injected dynamically by fetchActiveSessions via a join on crew_members(count).
@@ -78,7 +79,7 @@ class CrewService {
     // Proactively end any previous active sessions by this leader
     await this.cleanupLegacySessions(user.id);
 
-    const insertData: Record<string, any> = {
+    const insertData: Partial<Database['public']['Tables']['crew_sessions']['Insert']> & Record<string, unknown> = {
       name,
       leader_user_id: user.id,
       status: opts?.scheduledAt ? 'scheduled' : 'active',
@@ -92,7 +93,7 @@ class CrewService {
 
     const { data, error } = await supabase
       .from('crew_sessions')
-      .insert(insertData as any)
+      .insert(insertData as Database['public']['Tables']['crew_sessions']['Insert'])
       .select()
       .single();
 

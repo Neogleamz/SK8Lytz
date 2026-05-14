@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SceneStep } from '../hooks/useSceneBuilder';
+import type { Database } from '../types/supabase';
 import { AppLogger } from './AppLogger';
 
 export interface Scene {
@@ -162,12 +163,12 @@ class ScenesServiceClass {
         .eq('fill_mode', 'SCENE');
         
       if (!error && data) {
-        globalScenes = (data as any[]).map(p => ({
+        globalScenes = data.map(p => ({
           id: p.id,
           name: p.name,
-          steps: Array.isArray(p.nodes) ? p.nodes : [],
-          created_at: p.created_at,
-          user_id: p.user_id
+          steps: Array.isArray(p.nodes) ? p.nodes as unknown as SceneStep[] : [],
+          created_at: p.created_at ?? '',
+          user_id: p.user_id ?? undefined
         }));
       }
     } catch (err) {
@@ -184,12 +185,12 @@ class ScenesServiceClass {
           .eq('fill_mode', 'SCENE');
           
         if (!error && data) {
-          userCloudScenes = (data as any[]).map(p => ({
+          userCloudScenes = data.map(p => ({
             id: p.id,
             name: p.name,
-            steps: Array.isArray(p.nodes) ? p.nodes : [],
-            created_at: p.created_at,
-            user_id: p.user_id
+            steps: Array.isArray(p.nodes) ? p.nodes as unknown as SceneStep[] : [],
+            created_at: p.created_at ?? '',
+            user_id: p.user_id ?? undefined
           }));
         }
       } catch (err) {
@@ -257,7 +258,7 @@ class ScenesServiceClass {
           transition_type: 0,
           user_id: userId,
           created_at: scene.created_at || new Date().toISOString()
-        } as any);
+        } as unknown as Database['public']['Tables']['user_saved_presets']['Insert']);
         if (error) throw error;
       } catch (err) {
         AppLogger.warn('[ScenesService] Cloud save fail', { error: String(err) });

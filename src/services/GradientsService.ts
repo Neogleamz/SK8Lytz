@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from './AppLogger';
+import type { Database } from '../types/supabase';
 import { BuilderNode, CustomBuilderPreset } from '../protocols/PositionalMathBuffer';
 
 const LOCAL_GRADIENTS_KEY = '@Sk8lytz_Builder_Presets';
@@ -20,7 +21,7 @@ class GradientsServiceClass {
         .neq('fill_mode', 'SCENE');
         
       if (!error && data) {
-        globalPresets = (data as any as CustomBuilderPreset[]).filter(p => p && p.id && p.name && Array.isArray(p.nodes));
+        globalPresets = (data as unknown as CustomBuilderPreset[]).filter(p => p && p.id && p.name && Array.isArray(p.nodes));
       }
     } catch (err) {
       AppLogger.warn('GRADIENT_SYNC_FAIL', err);
@@ -36,7 +37,7 @@ class GradientsServiceClass {
           .neq('fill_mode', 'SCENE');
           
         if (!error && data) {
-          userCloudPresets = (data as any as CustomBuilderPreset[]).filter(p => p && p.id && p.name && Array.isArray(p.nodes));
+          userCloudPresets = (data as unknown as CustomBuilderPreset[]).filter(p => p && p.id && p.name && Array.isArray(p.nodes));
         }
       } catch (err) {
         AppLogger.warn('GRADIENT_SYNC_FAIL', err);
@@ -102,7 +103,7 @@ class GradientsServiceClass {
     // 2. Save Cloud (user_saved_presets)
     if (userId) {
       try {
-        const { error } = await supabase.from('user_saved_presets').upsert({ ...newPreset, created_at: new Date().toISOString() } as any);
+        const { error } = await supabase.from('user_saved_presets').upsert({ ...newPreset, created_at: new Date().toISOString() } as unknown as Database['public']['Tables']['user_saved_presets']['Insert']);
         if (error) throw error;
       } catch (err) {
         AppLogger.warn('GRADIENT_CLOUD_SAVE_FAIL', err);
