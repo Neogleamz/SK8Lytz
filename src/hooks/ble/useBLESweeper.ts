@@ -114,7 +114,9 @@ export function useBLESweeper({
           try {
             const mac = key.replace('@sk8_hw_', '').toUpperCase();
             loaded[mac] = JSON.parse(val);
-          } catch (e) {}
+          } catch (e) {
+            AppLogger.warn('[useBLESweeper] Malformed HW cache', { mac, error: String(e) });
+          }
         }
         if (Object.keys(loaded).length > 0) {
           hwCacheRef.current = { ...hwCacheRef.current, ...loaded };
@@ -254,7 +256,9 @@ export function useBLESweeper({
                 sub.remove();
                 resolve(accumulated);
               }
-            } catch (e) {}
+            } catch (e) {
+              AppLogger.warn('[useBLESweeper] ZenggeProtocol parse failed', { mac, error: String(e) });
+            }
           }
         );
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../../../services/supabaseClient';
+import { AppLogger } from '../../../services/AppLogger';
 
 export default function GlobalAnalyticsPanel({ Colors }: { Colors: any }) {
   const [data, setData] = useState<any>(null);
@@ -14,7 +15,7 @@ export default function GlobalAnalyticsPanel({ Colors }: { Colors: any }) {
         const { data, error } = await (supabase as unknown as { rpc: (fn: string) => Promise<{ data: any, error: any }> }).rpc('admin_get_global_telemetry');
         if (data && !error) setData(data);
       } catch (e) {
-        console.error('Failed to load global telemetry', e);
+        AppLogger.error('[GlobalAnalytics] RPC failed', { error: String(e) });
       } finally {
         setLoading(false);
       }

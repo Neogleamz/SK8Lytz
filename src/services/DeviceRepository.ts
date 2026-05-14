@@ -755,7 +755,9 @@ class DeviceRepository {
             type: 'device-fleet',
             user_id: userId
           } satisfies GroupInsert, { onConflict: 'id' });
-        } catch (_fk) {}
+        } catch (_fk) {
+          AppLogger.error('[DeviceRepository] FK fallback failed', { error: String(_fk) });
+        }
 
         const dbRow: DeviceInsertRow = {
           device_mac:      device.device_mac,

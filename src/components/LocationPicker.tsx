@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Spacing } from '../theme/theme';
 import { LocationMarker, LocationPickerMap } from './LocationPickerMap';
 import { useRecentSpots, RecentSpot } from '../hooks/useRecentSpots';
+import { AppLogger } from '../services/AppLogger';
 
 interface LocationPickerProps {
   locationLabel: string;
@@ -91,7 +92,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         const data = await res.json();
         setSuggestions(data || []);
       } catch (err) {
-        console.warn('OSM fetch error', err);
+        AppLogger.warn('[LocationPicker] OSM fetch error', { error: String(err) });
       } finally {
         setIsSearching(false);
       }

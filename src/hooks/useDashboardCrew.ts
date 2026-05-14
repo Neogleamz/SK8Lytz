@@ -45,27 +45,31 @@ export function useDashboardCrew({
   // ── Auto-rejoin on launch ──────────────────────────────────────────────────
   useEffect(() => {
     const tryRejoin = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const displayName = user.email?.split('@')[0] || 'Skater';
-      const result = await crewService.tryAutoRejoin(displayName);
-      if (!result) return;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const displayName = user.email?.split('@')[0] || 'Skater';
+        const result = await crewService.tryAutoRejoin(displayName);
+        if (!result) return;
 
-      const { session, role } = result;
-      setCrewSession(session);
-      setCrewRole(role);
+        const { session, role } = result;
+        setCrewSession(session);
+        setCrewRole(role);
 
-      if (role === 'leader') {
-        crewService.subscribeAsLeader(session.id, () => {});
-      } else {
-        crewService.subscribeAsMember(session.id, (scene) => {
-          onApplyScene(scene);
-        });
-        // Apply last known scene immediately on rejoin
-        const lastScene = await crewService.fetchLastScene(session.id).catch(() => null);
-        if (lastScene) {
-          setTimeout(() => onApplyScene(lastScene), 500);
+        if (role === 'leader') {
+          crewService.subscribeAsLeader(session.id, () => {});
+        } else {
+          crewService.subscribeAsMember(session.id, (scene) => {
+            onApplyScene(scene);
+          });
+          // Apply last known scene immediately on rejoin
+          const lastScene = await crewService.fetchLastScene(session.id).catch(() => null);
+          if (lastScene) {
+            setTimeout(() => onApplyScene(lastScene), 500);
+          }
         }
+      } catch (e) {
+        AppLogger.warn('[useDashboardCrew] auto-rejoin failed', { error: String(e) });
       }
     };
 

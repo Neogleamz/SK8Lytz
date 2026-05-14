@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import PermissionsOnboardingScreen from '../screens/Onboarding/PermissionsOnboardingScreen';
 import { AppSettingsService } from '../services/AppSettingsService';
 import { supabase } from '../services/supabaseClient';
+import { AppLogger } from '../services/AppLogger';
 
 interface ComplianceGateProps {
   children: React.ReactNode;
@@ -59,7 +60,7 @@ export function ComplianceGate({ children, isOfflineMode }: ComplianceGateProps)
         setRequiresEula(true);
       }
     } catch (e) {
-      console.warn("Compliance check error", e);
+      AppLogger.warn('[ComplianceGate] check error', { error: String(e) });
     } finally {
       setLoading(false);
     }

@@ -153,7 +153,7 @@ export default function HardwareSetupWizardScreen({
         AppLogger.log('DEVICE_DISCOVERED', { context: 'pingDevice_complete', deviceId: deviceMac, ledPoints: hwConfig.ledPoints });
       }
     } catch (e) {
-      console.warn('Blink test failed', e);
+      AppLogger.warn('[FTUE] Blink test failed', { error: String(e) });
     } finally {
       // pingDevice handles the off command — just reset the button state
       setIsBlinking(null);
@@ -524,7 +524,7 @@ export default function HardwareSetupWizardScreen({
             style={[styles.primaryBtn, (!groupName.trim() || isClaiming) && styles.primaryBtnDisabled]} 
             disabled={!groupName.trim() || isClaiming}
             onPress={async () => {
-               console.log('[FTUE] Phase 3 Complete. Transitioning to Hardware Save & Dashboard Phase 4.');
+               AppLogger.log('FTUE_PHASE_3_COMPLETE', { action: 'transition_to_phase_4' });
                setIsClaiming(true);
                try {
                  const selected = pendingRegistrations.filter(r => selectedDeviceMacs.has(r.device_mac));
@@ -536,7 +536,7 @@ export default function HardwareSetupWizardScreen({
 
                     // If points were adjusted, we must push the EEPROM update and verify
                     if (getLocalProfileById(cfg.type)?.hardwareAllowsCustomPoints && cfg.points !== device.led_points) {
-                       console.log(`[FTUE] Writing hardware settings ${cfg.points} to ${device.device_mac}`);
+                       AppLogger.log('FTUE_HARDWARE_WRITE', { points: cfg.points, deviceId: device.device_mac });
                        const payload = ZenggeProtocol.writeHardwareSettingsByName(cfg.points, 1, 'WS2812B', 'GRB');
                        await writeToDevice(payload, device.device_mac);
                        
@@ -546,7 +546,7 @@ export default function HardwareSetupWizardScreen({
                        // Re-probe to verify — use pingDevice with an "off" payload (invisible, no visual blink)
                        const offPayload = ZenggeProtocol.turnOff();
                        await pingDevice(device.device_mac, offPayload);
-                       console.log(`[FTUE] Assuming successful verification for ${device.device_mac} due to void return`);
+                       AppLogger.log('FTUE_HARDWARE_VERIFIED', { deviceId: device.device_mac });
                     }
                  }
 

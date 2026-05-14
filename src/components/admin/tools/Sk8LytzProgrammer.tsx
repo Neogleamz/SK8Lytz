@@ -155,7 +155,7 @@ export default function Sk8LytzProgrammer({
       try {
           await AsyncStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(newProfiles));
       } catch (e) {
-          console.error('[Programmer] Failed to persist profile');
+          AppLogger.error('[Sk8LytzProgrammer] persist failed', { error: String(e) });
       }
   };
 

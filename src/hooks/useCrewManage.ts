@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CrewMemberFull, PermanentCrew, profileService } from '../services/ProfileService';
+import { AppLogger } from '../services/AppLogger';
 
 export function useCrewManage(
   myCrews: PermanentCrew[]
@@ -58,7 +59,7 @@ export function useCrewManage(
     setLoadingCardMembersFor(crewId);
     profileService.getCrewMembersWithNames(crewId)
       .then(members => setCardMembers(prev => ({ ...prev, [crewId]: members })))
-      .catch(() => { })
+      .catch((e) => AppLogger.warn('[CrewManage] loadCrewMembers failed', { crewId, error: String(e) }))
       .finally(() => setLoadingCardMembersFor(null));
   };
 
@@ -67,9 +68,9 @@ export function useCrewManage(
     if (!selectedCrewDetail) return;
     const id = selectedCrewDetail.id;
     if (crewStats[id]) return; // already loaded
-    profileService.getCrewStats(id).then(stats =>
-      setCrewStats(prev => ({ ...prev, [id]: stats }))
-    );
+    profileService.getCrewStats(id)
+      .then(stats => setCrewStats(prev => ({ ...prev, [id]: stats })))
+      .catch((e) => AppLogger.warn('[CrewManage] getCrewStats failed', { id, error: String(e) }));
   }, [selectedCrewDetail, crewStats]);
 
   // Search users with debounce
@@ -79,7 +80,9 @@ export function useCrewManage(
       return;
     }
     const timer = setTimeout(() => {
-      profileService.searchUsers(userSearchQuery).then(setUserSearchResults);
+      profileService.searchUsers(userSearchQuery)
+        .then(setUserSearchResults)
+        .catch((e) => AppLogger.warn('[CrewManage] searchUsers failed', { query: userSearchQuery, error: String(e) }));
     }, 300);
     return () => clearTimeout(timer);
   }, [userSearchQuery]);

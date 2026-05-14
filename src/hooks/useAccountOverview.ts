@@ -142,6 +142,7 @@ export function useAccountOverview(visible: boolean) {
       AppLogger.log('PROFILE_UPDATED', { fields: Object.keys(updates) });
       Alert.alert('Saved', 'Profile updated successfully.');
     } catch (e: any) {
+      AppLogger.error('[AccountOverview] handleSaveProfile failed', { error: String(e) });
       Alert.alert('Error', e.message || 'Could not save profile');
     } finally {
       setSavingProfile(false);
@@ -185,6 +186,7 @@ export function useAccountOverview(visible: boolean) {
       setProfile(p => p ? { ...p, avatar_url: publicUrl } : p);
       AppLogger.log('PROFILE_UPDATED', { field: 'photo', bucket: 'avatars', path });
     } catch (e: any) {
+      AppLogger.error('[AccountOverview] handlePickProfilePhoto failed', { error: String(e) });
       Alert.alert('Upload failed', e.message ?? 'Could not upload photo. Try again.');
     }
   };
@@ -219,6 +221,7 @@ export function useAccountOverview(visible: boolean) {
       setNewCrewName(''); setCrewStep('list');
       AppLogger.log('CREW_PERMANENT_CREATED', { crewName: newCrewName.trim() });
     } catch (e: any) {
+      AppLogger.warn('[AccountOverview] handleCreateCrew failed', { error: String(e) });
       setCrewError(e.message ?? 'Failed to create crew');
     } finally { setCrewLoading(false); }
   };
@@ -232,6 +235,7 @@ export function useAccountOverview(visible: boolean) {
       setJoinCode(''); setCrewStep('list');
       AppLogger.log('CREW_PERMANENT_JOINED', { crewId: crew.id });
     } catch (e: any) {
+      AppLogger.warn('[AccountOverview] handleJoinCrew failed', { error: String(e) });
       setCrewError(e.message ?? 'Failed to join crew');
     } finally { setCrewLoading(false); }
   };
@@ -241,7 +245,10 @@ export function useAccountOverview(visible: boolean) {
       await profileService.leavePermanentCrew(crewId);
       setCrews(prev => prev.filter(c => c.id !== crewId));
       AppLogger.log('CREW_PERMANENT_LEFT', { crewId });
-    } catch (e: any) { Alert.alert('Error', e.message); }
+    } catch (e: any) { 
+      AppLogger.error('[AccountOverview] handleLeaveCrew failed', { crewId, error: String(e) });
+      Alert.alert('Error', e.message); 
+    }
   };
 
   return {
