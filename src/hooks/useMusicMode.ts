@@ -96,7 +96,7 @@ export function useMusicMode({
     writeToDevice(ZenggeProtocol.setMusicConfig(
       safePatternId,                        // effectId — 1–16 (0x26) or 1–30 (0x27)
       matrix as 0x26 | 0x27,               // modeType = the matrix the user selected, NOT mic source
-      true,                                 // isOn — always true when entering music mode
+      isDeviceMic,                          // isOn: true=device mic active, false=hardware mic OFF (listen for 0x74 stream)
       c1,
       c2,
       sens,
