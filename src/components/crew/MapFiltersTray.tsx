@@ -37,7 +37,7 @@ export function MapFiltersTray({ filters, toggleFilter }: Props) {
             onPress={() => toggleFilter(opt.key as keyof MapFilterMatrix)}
           >
             <MaterialCommunityIcons 
-              name={opt.icon as any} 
+              name={opt.icon as keyof typeof MaterialCommunityIcons.glyphMap} 
               size={12} 
               color={isActive ? '#FFF' : Colors.textMuted} 
             />

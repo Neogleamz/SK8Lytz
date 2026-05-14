@@ -646,7 +646,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         
         // Auto-dispatch BUILDER payload instead of dead-loading
         if (writeToDevice && favRaw.builderNodes && favRaw.builderNodes.length > 0) {
-          const rgbColors = favRaw.builderNodes.map((n: any) => ({
+          const rgbColors = favRaw.builderNodes.map((n: { colorHex: string }) => ({
             r: parseInt(n.colorHex.slice(1, 3), 16) || 0,
             g: parseInt(n.colorHex.slice(3, 5), 16) || 0,
             b: parseInt(n.colorHex.slice(5, 7), 16) || 0,
@@ -832,7 +832,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           mode: activeMode,
           fgColor: fixedFgColor || selectedColor,
           bgColor: fixedBgColor,
-          multiColors: activeMode === 'BUILDER' ? builderNodes?.map((n: any) => n.colorHex) : undefined,
+          multiColors: activeMode === 'BUILDER' ? builderNodes?.map((n: { colorHex: string }) => n.colorHex) : undefined,
         };
         onPatternChanged(currentStatusText, snapshot, lastSentPayload.length > 0 ? lastSentPayload : undefined);
       }
@@ -870,8 +870,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         setActiveMode('CAMERA');
         setLastOperatingMode('CAMERA');
       } else if (newMode === 'BUILDER') {
-        setActiveMode('BUILDER' as any);
-        setLastOperatingMode('BUILDER' as any);
+        setActiveMode('BUILDER' as ModeType);
+        setLastOperatingMode('BUILDER' as ModeType);
       } else if (newMode === 'MULTIMODE') {
         setActiveMode('MULTIMODE');
         setFixedSubMode('PATTERN');
@@ -888,15 +888,15 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         {/* Product Selector - Only show if NO lockedProduct is provided */}
         {!lockedProduct && (
           <View style={styles.tabContainer}>
-            {LOCAL_PRODUCT_CATALOG.filter(p => (p as any).isActive !== false).map((profile) => (
+            {LOCAL_PRODUCT_CATALOG.filter(p => (p as { isActive?: boolean }).isActive !== false).map((profile) => (
               <TouchableOpacity
                 key={profile.id}
                 style={[styles.tab, activeProduct === profile.id && styles.activeTab]}
-                onPress={() => setActiveProduct(profile.id as any)}
+                onPress={() => setActiveProduct(profile.id)}
               >
                 {activeProduct === profile.id && (
                   <LinearGradient 
-                    colors={[profile.vizThemeColor || Colors.primary, Colors.accent] as any} 
+                    colors={[profile.vizThemeColor || Colors.primary, Colors.accent]} 
                     start={{ x: 0, y: 0 }} 
                     end={{ x: 1, y: 1 }} 
                     style={StyleSheet.absoluteFill} 

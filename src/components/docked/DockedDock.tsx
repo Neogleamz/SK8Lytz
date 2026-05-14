@@ -62,7 +62,7 @@ const DockedDock = React.memo(function DockedDock({
       },
       onPanResponderRelease: (_evt, gestureState) => {
         const currentModeStr =
-          activeModeRef.current === ('MULTI' as any) ? 'MULTIMODE' : activeModeRef.current;
+          activeModeRef.current === ('MULTI' as string) ? 'MULTIMODE' : activeModeRef.current;
         const currentModeIdx = MODE_ORDER.indexOf(currentModeStr as DockMode);
         if (currentModeIdx === -1) return;
 
@@ -105,7 +105,7 @@ const DockedDock = React.memo(function DockedDock({
               style={[styles.dockIconCont, isActive && styles.dockIconActive]}
             >
               <MaterialCommunityIcons
-                name={dockItem.icon as any}
+                name={dockItem.icon as keyof typeof MaterialCommunityIcons.glyphMap}
                 size={22}
                 color={isActive ? '#000000' : Colors.textMuted}
               />
@@ -138,15 +138,14 @@ const createStyles = (Colors: ThemePalette) =>
       marginHorizontal: Spacing.lg,
       marginBottom: Spacing.sm,
       marginTop: Spacing.sm,
-      ...Platform.select({
-        web: { boxShadow: `0px 8px 20px ${Colors.primary}99` } as any,
-        default: {
-          shadowColor: Colors.primary,
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.6,
-          shadowRadius: 20,
-        },
-      }),
+      ...(Platform.OS === 'web'
+        ? { boxShadow: `0px 8px 20px ${Colors.primary}99` } as unknown as import('react-native').ViewStyle
+        : {
+            shadowColor: Colors.primary,
+            shadowOffset: { width: 0, height: 8 },
+            shadowOpacity: 0.6,
+            shadowRadius: 20,
+          }),
       elevation: 15,
     },
     dockIconCont: {
@@ -166,15 +165,14 @@ const createStyles = (Colors: ThemePalette) =>
     dockIconActive: {
       backgroundColor: Colors.primary,
       borderColor: Colors.primary,
-      ...Platform.select({
-        web: { boxShadow: `0px 0px 12px ${Colors.primary}e6` } as any,
-        default: {
-          shadowColor: Colors.primary,
-          shadowOffset: { width: 0, height: 0 },
-          shadowOpacity: 0.9,
-          shadowRadius: 12,
-        },
-      }),
+      ...(Platform.OS === 'web'
+        ? { boxShadow: `0px 0px 12px ${Colors.primary}e6` } as unknown as import('react-native').ViewStyle
+        : {
+            shadowColor: Colors.primary,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.9,
+            shadowRadius: 12,
+          }),
       elevation: 8,
       transform: [{ scale: 1.15 }],
     },

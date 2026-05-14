@@ -274,7 +274,7 @@ const TelemetryPill = ({ label, value, unit, accent }:
     <View style={[styles.accentTick, { backgroundColor: accent, shadowColor: accent }]} />
     <Text style={styles.pillLabel}>{label}</Text>
     <View style={styles.pillValueRow}>
-      <Text style={[styles.pillValue, Platform.OS === 'web' ? { textShadow: `0 0 14px ${accent}` } as any : { textShadowColor: accent, textShadowRadius: 14 }]}>
+      <Text style={[styles.pillValue, Platform.OS === 'web' ? { textShadow: `0 0 14px ${accent}` } as Record<string, string> : { textShadowColor: accent, textShadowRadius: 14 }]}>
         {value}
       </Text>
       {unit !== '' && <Text style={styles.pillUnit}>{unit}</Text>}

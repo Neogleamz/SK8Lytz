@@ -46,7 +46,7 @@ const FavoritesPanel = React.memo(({
           style={{ flex: 1 }}
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={favorites.length > 0 ? favorites : [null as any]}
+          data={favorites.length > 0 ? favorites : [null as unknown as IFavoriteState]}
           keyExtractor={(item, index) => item ? item.id : `empty-yours-${index}`}
           contentContainerStyle={{ paddingHorizontal: Layout.padding, flexGrow: 1 }}
           renderItem={({ item: fav }) => {
@@ -74,7 +74,7 @@ const FavoritesPanel = React.memo(({
           style={{ flex: 1 }}
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={curatedPresets.length > 0 ? curatedPresets : [null as any]}
+          data={curatedPresets.length > 0 ? curatedPresets : [null as unknown as IFavoriteState]}
           keyExtractor={(item, index) => item ? item.id : `empty-picks-${index}`}
           contentContainerStyle={{ paddingHorizontal: Layout.padding, flexGrow: 1 }}
           renderItem={({ item: fav }) => {
@@ -100,7 +100,7 @@ export default FavoritesPanel;
 
 const createStyles = (Colors: any) => ({
   presetCard: {
-    width: '48%' as any,
+    width: '48%' as import('react-native').DimensionValue,
     minHeight: 80,
     padding: Spacing.sm,
     backgroundColor: Colors.isDark ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.04)',

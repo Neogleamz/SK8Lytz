@@ -63,14 +63,14 @@ const AnimatedCategoryPill = ({ cat, isActive, onPress }: { cat: string, isActiv
       ]}>
         <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
           <LinearGradient
-            colors={styleData.colors as any}
+            colors={styleData.colors as unknown as readonly [string, string, ...string[]]}
             start={styleData.start}
             end={styleData.end}
             style={StyleSheet.absoluteFill}
           />
         </Animated.View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: Spacing.md, paddingVertical: 8, zIndex: 2 }}>
-          <MaterialCommunityIcons name={styleData.icon as any} size={14} color="#FFF" style={{ textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 4 }} />
+          <MaterialCommunityIcons name={styleData.icon as keyof typeof MaterialCommunityIcons.glyphMap} size={14} color="#FFF" style={{ textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 4 }} />
           <Text style={[styles.categoryText, { color: '#FFF', textShadowColor: 'rgba(0,0,0,0.8)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 1 } }]}>
             {cat.toUpperCase()}
           </Text>

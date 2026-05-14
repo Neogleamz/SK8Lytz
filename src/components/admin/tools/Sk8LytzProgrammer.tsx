@@ -400,7 +400,7 @@ export default function Sk8LytzProgrammer({
                         {/* Show detected hw from scan probe */}
                         {detected && (
                           <Text style={{ color: '#00cc88', fontSize: 10, marginTop: Spacing.xxs }}>
-                            ✓ {detected.ledPoints ?? (detected as any).points ?? '?'}pts · {detected.segments ?? '?'}seg · {detected.icName ?? (detected as any).stripType ?? '?'} · {detected.colorSortingName ?? (detected as any).sorting ?? '?'}
+                            ✓ {detected.ledPoints ?? (detected as unknown as { points?: number }).points ?? '?'}pts · {detected.segments ?? '?'}seg · {detected.icName ?? (detected as unknown as { stripType?: string }).stripType ?? '?'} · {detected.colorSortingName ?? (detected as unknown as { sorting?: string }).sorting ?? '?'}
                           </Text>
                         )}
                      </View>
@@ -490,9 +490,8 @@ const s = StyleSheet.create({
       borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
-      ...Platform.select({
-        web: { boxShadow: '0px 4px 8px rgba(0,0,0,0.3)' } as any,
-        default: { shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 }
-      })
+      ...(Platform.OS === 'web'
+        ? { boxShadow: '0px 4px 8px rgba(0,0,0,0.3)' } as unknown as import('react-native').ViewStyle
+        : { shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 })
   }
 });

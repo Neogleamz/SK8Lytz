@@ -202,7 +202,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
                       <Image source={{ uri: crew.avatar_url }} style={[styles.hubCrewAvatar, { width: 36, height: 36, borderRadius: 18 }]} />
                     ) : (
                       <View style={[styles.hubCrewAvatar, { backgroundColor: crew.avatar_color || '#FFAA00' }]}>
-                        <MaterialCommunityIcons name={(crew.avatar_icon as any) || 'account-group'} size={20} color="#000" />
+                        <MaterialCommunityIcons name={(crew.avatar_icon as keyof typeof MaterialCommunityIcons.glyphMap) || 'account-group'} size={20} color="#000" />
                       </View>
                     )}
                     {!crew.is_public && (

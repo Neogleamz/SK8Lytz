@@ -58,7 +58,7 @@ function LedStripPreview({ colors, mode }: { colors: string[], mode: string }) {
           flexDirection: 'row',
           width: '200%',
           height: '100%',
-          transform: isAnimated ? [{ translateX: translateX as any }] : [],
+          transform: isAnimated ? [{ translateX: translateX as unknown as number }] : [],
         }}
       >
         {repeated.map((color, idx) => (

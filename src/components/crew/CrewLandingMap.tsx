@@ -106,7 +106,7 @@ export function CrewLandingMap({
                 shadowOpacity: 0.6,
                 elevation: 4,
               }}>
-                <MaterialCommunityIcons name={icon as any} size={14} color="#FFF" />
+                <MaterialCommunityIcons name={icon as keyof typeof MaterialCommunityIcons.glyphMap} size={14} color="#FFF" />
               </View>
 
               {/* Spot name + optional live sessions callout below pin */}
@@ -169,7 +169,7 @@ export function CrewLandingMap({
                     alignItems: 'center',
                   }}>
                     <MaterialCommunityIcons
-                      name={(s.crewAvatarIcon as any) || 'account-group'}
+                      name={(s.crewAvatarIcon as keyof typeof MaterialCommunityIcons.glyphMap) || 'account-group'}
                       size={18}
                       color="#FFF"
                     />

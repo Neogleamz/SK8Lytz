@@ -181,6 +181,7 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
   // ── Derive color from scene ─────────────────────────────────────────────────
   const primaryColor: string = currentScene?.color ?? currentScene?.colors?.[0] ?? '#FFAA00';
   const isLeader = role === 'leader';
+  const extendedSession = session as CrewSession & { invite_code?: string; location_coords?: { lat?: number; lng?: number } };
 
   return (
     <View style={styles.root}>
@@ -201,7 +202,7 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
           onPress={() => shareSessionInvite({
             name: session.name,
             location_label: session.location_label,
-            invite_code: (session as any).invite_code,
+            invite_code: extendedSession.invite_code,
             scheduled_at: session.scheduled_at,
             status: session.status,
           })}
@@ -213,7 +214,7 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
       <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
 
         {/* ── Location card ── */}
-        {(session.location_label || (session as any).location_coords) && (
+        {(session.location_label || extendedSession.location_coords) && (
           <View style={styles.card}>
             <View style={styles.cardRow}>
               <MaterialCommunityIcons name="map-marker" size={18} color="#FFAA00" />
@@ -222,9 +223,9 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
                 <Text style={styles.cardValue}>
                   {session.location_label ?? 'Location detected'}
                 </Text>
-                {(session as any).location_coords && (
+                {extendedSession.location_coords && (
                   <Text style={styles.cardSub}>
-                    {(session as any).location_coords.lat?.toFixed(4)}°, {(session as any).location_coords.lng?.toFixed(4)}°
+                    {extendedSession.location_coords.lat?.toFixed(4)}°, {extendedSession.location_coords.lng?.toFixed(4)}°
                   </Text>
                 )}
               </View>
@@ -324,7 +325,7 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
             onPress={() => shareSessionInvite({
               name: session.name,
               location_label: session.location_label,
-              invite_code: (session as any).invite_code,
+              invite_code: extendedSession.invite_code,
               scheduled_at: session.scheduled_at,
               status: session.status,
             })}

@@ -115,7 +115,7 @@ export function CrewManageScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.lg }}>
                   {/* Live Avatar Preview */}
                   <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: newCrewColor, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.2)' }}>
-                    <MaterialCommunityIcons name={newCrewIcon as any} size={38} color="#000" />
+                    <MaterialCommunityIcons name={newCrewIcon as keyof typeof MaterialCommunityIcons.glyphMap} size={38} color="#000" />
                   </View>
 
                   {/* Photo Upload Option */}
@@ -136,7 +136,7 @@ export function CrewManageScreen() {
                   {AVATAR_ICONS.map(ic => (
                     <TouchableOpacity key={ic} onPress={() => setNewCrewIcon(ic)}
                       style={[styles.mgIconBtn, newCrewIcon === ic && { backgroundColor: newCrewColor }]}>
-                      <MaterialCommunityIcons name={ic as any} size={22} color={newCrewIcon === ic ? '#000' : Colors.textMuted} />
+                      <MaterialCommunityIcons name={ic as keyof typeof MaterialCommunityIcons.glyphMap} size={22} color={newCrewIcon === ic ? '#000' : Colors.textMuted} />
                     </TouchableOpacity>
                   ))}
                 </View>

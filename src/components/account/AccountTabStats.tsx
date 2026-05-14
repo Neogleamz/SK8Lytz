@@ -99,7 +99,7 @@ export default function AccountTabStats({
                 width: '47%', backgroundColor: 'rgba(255,255,255,0.05)',
                 borderRadius: 16, padding: Spacing.lg, alignItems: 'center',
               }}>
-                <MaterialCommunityIcons name={icon as any} size={20} color={Colors.primary} />
+                <MaterialCommunityIcons name={icon as keyof typeof MaterialCommunityIcons.glyphMap} size={20} color={Colors.primary} />
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.xxs, marginTop: Spacing.sm }}>
                   <Text style={{ color: '#FFF', fontSize: 22, fontWeight: '900' }}>{val}</Text>
                   {unit ? <Text style={{ color: Colors.primary, fontSize: 10, fontWeight: '700', marginBottom: Spacing.xxs }}>{unit}</Text> : null}

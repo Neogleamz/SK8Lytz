@@ -74,7 +74,7 @@ interface MetricTileProps {
 function MetricTile({ icon, value, unit, label, accentColor }: MetricTileProps) {
   return (
     <View style={tileStyles.container}>
-      <MaterialCommunityIcons name={icon as any} size={20} color={accentColor} />
+      <MaterialCommunityIcons name={icon as keyof typeof MaterialCommunityIcons.glyphMap} size={20} color={accentColor} />
       <View style={tileStyles.valueRow}>
         <Text style={tileStyles.value}>{value}</Text>
         <Text style={[tileStyles.unit, { color: accentColor }]}>{unit}</Text>
@@ -206,10 +206,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#111',
     borderRadius: 24, borderWidth: 1.5,
     padding: Spacing.xl,
-    ...Platform.select({
-      web: { boxShadow: '0px 0px 30px rgba(0,0,0,0.8)' } as any,
-      default: { shadowColor: '#000000', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 30, elevation: 20 }
-    }),
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 0px 30px rgba(0,0,0,0.8)' } as unknown as import('react-native').ViewStyle
+      : { shadowColor: '#000000', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 30, elevation: 20 })
   },
   headerRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.md, marginBottom: Spacing.md,

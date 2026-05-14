@@ -88,7 +88,7 @@ export const ProductManager = React.memo(({
                   <TouchableOpacity key={p.id} onPress={() => startEditing(p)}
                     style={{ paddingHorizontal: Spacing.lg, paddingVertical: Spacing.sm, borderRadius: 20, backgroundColor: isActive ? '#9D4EFF' : '#333' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                      {p.brandIcon && <MaterialCommunityIcons name={p.brandIcon as any} size={14} color="#FFF" />}
+                      {p.brandIcon && <MaterialCommunityIcons name={p.brandIcon as keyof typeof MaterialCommunityIcons.glyphMap} size={14} color="#FFF" />}
                       <Text style={{ color: '#FFF', fontWeight: '600' }}>{p.displayName || p.id}</Text>
                     </View>
                   </TouchableOpacity>

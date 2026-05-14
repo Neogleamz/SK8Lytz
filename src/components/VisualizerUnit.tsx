@@ -463,7 +463,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
                   position: 'absolute',
                   width: diam * 5.5, height: diam * 5.5,
                   borderRadius: (diam * 5.5) / 2,
-                  backgroundColor: led.activeColor as any,
+                  backgroundColor: led.activeColor,
                   opacity: 0.03,
                 }} />
 
@@ -473,7 +473,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
                   position: 'absolute',
                   width: diam * 3.2, height: diam * 3.2,
                   borderRadius: (diam * 3.2) / 2,
-                  backgroundColor: led.activeColor as any,
+                  backgroundColor: led.activeColor,
                   opacity: 0.10,
                 }} />
 
@@ -483,14 +483,14 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
                   position: 'absolute',
                   width: diam * 1.7, height: diam * 1.7,
                   borderRadius: (diam * 1.7) / 2,
-                  backgroundColor: led.activeColor as any,
+                  backgroundColor: led.activeColor,
                   opacity: 0.38,
                 }} />
 
                 {/* ── Main LED chip body ──────────────────────────────────────────── */}
                 <Animated.View style={{
                   position: 'absolute', width: '100%', height: '100%', borderRadius: diam / 2,
-                  backgroundColor: led.activeColor as any,
+                  backgroundColor: led.activeColor,
                 }} />
 
                 {/* ── Hot-spot chip centre ─────────────────────────────────────────── */}

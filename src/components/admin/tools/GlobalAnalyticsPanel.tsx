@@ -11,7 +11,7 @@ export default function GlobalAnalyticsPanel({ Colors }: { Colors: any }) {
     async function loadGlobalStats() {
       if (!supabase) return;
       try {
-        const { data, error } = await (supabase as any).rpc('admin_get_global_telemetry');
+        const { data, error } = await (supabase as unknown as { rpc: (fn: string) => Promise<{ data: any, error: any }> }).rpc('admin_get_global_telemetry');
         if (data && !error) setData(data);
       } catch (e) {
         console.error('Failed to load global telemetry', e);

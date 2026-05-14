@@ -85,7 +85,7 @@ export function CrewDetailScreen() {
       Alert.alert('Success', `Added ${selectedMembers.length} skater(s) to the crew!`);
       setSelectedMembers([]);
       setUserSearchQuery('');
-      setCardMembers(prev => ({ ...prev, [crewId]: undefined as any }));
+      setCardMembers(prev => { const next = { ...prev }; delete next[crewId]; return next; });
       loadCrewMembers(crewId);
     } catch (e: any) {
       Alert.alert('Error', e.message ?? 'Could not add members to crew.');
@@ -143,7 +143,7 @@ export function CrewDetailScreen() {
             {crew.avatar_url
               ? <Image source={{ uri: crew.avatar_url }} style={[styles.mgAvatarImg, { width: 72, height: 72, borderRadius: 36 }]} />
               : <View style={[styles.mgAvatar, { width: 72, height: 72, borderRadius: 36, backgroundColor: crew.avatar_color ?? '#FFAA00' }]}>
-                <MaterialCommunityIcons name={(crew.avatar_icon ?? 'account-group') as any} size={32} color="#000" />
+                <MaterialCommunityIcons name={(crew.avatar_icon ?? 'account-group') as keyof typeof MaterialCommunityIcons.glyphMap} size={32} color="#000" />
               </View>}
             {!crew.is_public && (
               <MaterialCommunityIcons name="lock" size={18} color="#FFF" style={{ position: 'absolute', top: -2, right: -2, backgroundColor: '#000', borderRadius: 10, padding: Spacing.xxs, overflow: 'hidden', borderWidth: 2, borderColor: '#1C1C1E' }} />
@@ -200,7 +200,7 @@ export function CrewDetailScreen() {
                     width: '47%', backgroundColor: 'rgba(255,255,255,0.05)',
                     borderRadius: 16, padding: Spacing.lg, alignItems: 'center',
                   }}>
-                    <MaterialCommunityIcons name={icon as any} size={20} color={Colors.primary} />
+                    <MaterialCommunityIcons name={icon as keyof typeof MaterialCommunityIcons.glyphMap} size={20} color={Colors.primary} />
                     <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.xxs, marginTop: Spacing.sm }}>
                       <Text style={{ color: '#FFF', fontSize: 22, fontWeight: '900' }}>{val}</Text>
                       {unit ? <Text style={{ color: Colors.primary, fontSize: 10, fontWeight: '700', marginBottom: Spacing.xxs }}>{unit}</Text> : null}

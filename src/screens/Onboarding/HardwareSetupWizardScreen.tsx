@@ -556,7 +556,7 @@ export default function HardwareSetupWizardScreen({
                      ...device,
                      group_name: groupName.trim(),
                      device_name: cfg?.name.trim() || device.device_name,
-                     product_type: (cfg?.type || LOCAL_PRODUCT_CATALOG[0].id) as any,
+                     product_type: (cfg?.type || LOCAL_PRODUCT_CATALOG[0].id),
                      position: cfg?.position || null,
                      group_id: groupName.trim().toLowerCase().replace(/\s+/g, '-'),
                      led_points: cfg?.points || device.led_points,

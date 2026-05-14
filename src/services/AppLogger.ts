@@ -340,11 +340,11 @@ class AppLoggerService {
 
     // 2. Hardware Injection (unchanged)
     if (this.activeDevices && this.activeDevices.length > 0) {
-      const primary = this.activeDevices.find(d => d.id === (clean as any).deviceId || d.id === (clean as any).device_id) || this.activeDevices[0];
+      const primary = this.activeDevices.find(d => d.id === clean.deviceId || d.id === clean.device_id) || this.activeDevices[0];
       if (primary) {
-        if (!(clean as any).rssi && primary.rssi !== undefined) (clean as any).rssi = primary.rssi;
-        if (!(clean as any).mtu && primary.mtu !== undefined) (clean as any).mtu = primary.mtu;
-        if (!(clean as any).battery_level && primary.batteryLevel !== undefined) (clean as any).battery_level = primary.batteryLevel;
+        if (!clean.rssi && primary.rssi !== undefined) clean.rssi = primary.rssi;
+        if (!clean.mtu && primary.mtu !== undefined) clean.mtu = primary.mtu;
+        if (!clean.battery_level && primary.batteryLevel !== undefined) clean.battery_level = primary.batteryLevel;
       }
     }
 
@@ -538,7 +538,7 @@ class AppLoggerService {
       const CHUNK = 500;
       for (let i = 0; i < currentRunLogs.length; i += CHUNK) {
         const chunk = currentRunLogs.slice(i, i + CHUNK);
-        const dbPayload = chunk.map((item: any) => {
+        const dbPayload = chunk.map((item: LogEntry) => {
           const isGroup = item.d?.target === 'group' || (item.d?.deviceIds && item.d.deviceIds.length > 1);
           const tgtDev = isGroup ? null : (item.d?.deviceId || null);
 
@@ -588,7 +588,7 @@ class AppLoggerService {
   }> {
     await this.ensureLoaded();
     const modeUsage: Record<string, number> = {};
-    const patternUsage: Record<string, any> = {};
+    const patternUsage: Record<string, { count: number; colors: Set<string> }> = {};
     const colorUsage: Record<string, number> = {};
     let devicesDiscovered = 0;
 
@@ -601,8 +601,8 @@ class AppLoggerService {
         if (!patternUsage[key]) {
           patternUsage[key] = { count: 0, colors: new Set<string>() };
         }
-        (patternUsage[key] as any).count++;
-        if (entry.d.color) (patternUsage[key] as any).colors.add(entry.d.color);
+        patternUsage[key].count++;
+        if (entry.d.color) patternUsage[key].colors.add(entry.d.color);
       }
       if (entry.e === 'COLOR_CHANGED' && entry.d.hex) {
         colorUsage[entry.d.hex] = (colorUsage[entry.d.hex] || 0) + 1;
@@ -643,8 +643,8 @@ class AppLoggerService {
     const finalPatternUsage: Record<string, { count: number; colors: string[] }> = {};
     for (const [name, data] of Object.entries(patternUsage)) {
       finalPatternUsage[name] = { 
-        count: (data as any).count, 
-        colors: Array.from((data as any).colors) 
+        count: data.count, 
+        colors: Array.from(data.colors) 
       };
     }
 

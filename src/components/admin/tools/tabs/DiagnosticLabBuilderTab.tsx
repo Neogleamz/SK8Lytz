@@ -106,7 +106,7 @@ export function DiagnosticLabBuilderTab({
         ].map(p => (
            <TouchableOpacity key={p.id}
              style={[S.chip, bldProtocol === p.id && S.chipActive, { backgroundColor: bldProtocol === p.id ? cyan + '22' : cardBg, borderColor: bldProtocol === p.id ? cyan : border }]}
-             onPress={() => setBldProtocol(p.id as any)}>
+             onPress={() => setBldProtocol(p.id as Parameters<typeof setBldProtocol>[0])}>
              <Text style={{ color: bldProtocol === p.id ? cyan : txtMuted, fontWeight: '900', fontSize: 11 }}>{p.label}</Text>
            </TouchableOpacity>
         ))}

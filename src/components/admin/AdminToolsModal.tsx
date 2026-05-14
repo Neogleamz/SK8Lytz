@@ -153,7 +153,7 @@ export default function AdminToolsModal({
     const meta = EVENT_META[item.e as EventType] || { icon: 'information', color: '#888', label: item.e };
     return (
       <View style={[styles.logRow, { borderBottomColor: borderColor }]}>
-        <MaterialCommunityIcons name={meta.icon as any} size={18} color={meta.color} style={styles.logIcon} />
+        <MaterialCommunityIcons name={meta.icon as keyof typeof MaterialCommunityIcons.glyphMap} size={18} color={meta.color} style={styles.logIcon} />
         <View style={styles.logBody}>
           <View style={styles.logHeader}>
             <Text style={[styles.logType, { color: meta.color }]}>{meta.label}</Text>
@@ -278,9 +278,9 @@ export default function AdminToolsModal({
           visible={isProgrammerVisible} 
           onClose={() => setIsProgrammerVisible(false)} 
           onExitToLogs={() => setIsProgrammerVisible(false)}
-          allDevices={(allDevices as any)}
-          deviceConfigs={liveDeviceConfigs as any}
-          connectToDevice={async (d: any) => { if (onConnectToDevice) await onConnectToDevice(d); }}
+          allDevices={allDevices || []}
+          deviceConfigs={liveDeviceConfigs}
+          connectToDevice={async (d) => { if (onConnectToDevice) await onConnectToDevice(d); }}
           disconnectFromDevice={async (id: string) => { if (onDisconnectFromDevice) await onDisconnectFromDevice(id); }}
           writeToDevice={writeToDevice || (async () => false)}
           bleState={bleState || 'IDLE'}
@@ -292,15 +292,15 @@ export default function AdminToolsModal({
           isDiagnosticsMode={isDiagnosticsMode}
           onToggleDiagnostics={onToggleDiagnostics}
           onClose={() => setIsLabVisible(false)}
-          connectedDevices={connectedDevices as any}
+          connectedDevices={connectedDevices}
           writeToDevice={writeToDevice || (async () => false)}
           liveRxPayload={liveRxPayload}
           hwSettings={hwSettings}
           allDevices={allDevices}
           bleState={bleState || 'IDLE'}
           handleScan={handleScan || (() => {})}
-          connectToDevice={async (d: any) => { if (onConnectToDevice) await onConnectToDevice(d); }}
-          liveDeviceConfigs={liveDeviceConfigs as any}
+          connectToDevice={async (d) => { if (onConnectToDevice) await onConnectToDevice(d); }}
+          liveDeviceConfigs={liveDeviceConfigs}
         />
       ) : (
         <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>

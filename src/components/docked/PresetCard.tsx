@@ -51,7 +51,7 @@ const PresetCard = React.memo(({
       onPress={onPress}
     >
       <LinearGradient
-        colors={gradColors as any}
+        colors={gradColors as unknown as readonly [string, string, ...string[]]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{ flex: 1, width: cardWidth, borderRadius: 9, padding: 1.5 }}
@@ -68,7 +68,7 @@ const PresetCard = React.memo(({
 
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', width: '100%' }}>
             <MaterialCommunityIcons
-              name={iconName as any}
+              name={iconName as keyof typeof MaterialCommunityIcons.glyphMap}
               size={24}
               color={glow}
               style={{ marginBottom: Spacing.sm }}

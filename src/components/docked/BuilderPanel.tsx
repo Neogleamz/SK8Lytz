@@ -155,7 +155,7 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
             speed={speed}
             deviceLedCount={points}
             selectedColor={fgColor}
-            writeToDevice={writeToDevice as any}
+            writeToDevice={writeToDevice as unknown as ((p: number[], id?: string) => Promise<boolean | "partial">)}
           />
         </View>
 

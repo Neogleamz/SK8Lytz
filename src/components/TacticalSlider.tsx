@@ -115,7 +115,7 @@ const TacticalSlider = ({
 
   return (
     <View 
-      style={[styles.container, style, { touchAction: 'none', userSelect: 'none' } as any]} 
+      style={[styles.container, style, { touchAction: 'none', userSelect: 'none' } as unknown as import('react-native').ViewStyle]} 
       onLayout={(e: LayoutChangeEvent) => {
         setContainerWidth(e.nativeEvent.layout.width);
         containerWidthRef.current = e.nativeEvent.layout.width;

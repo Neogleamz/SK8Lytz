@@ -116,7 +116,7 @@ function AccountModalSkeleton() {
   const SkeletonBar = ({ w = '100%', h = 14, mb = 12, br = 8 }: { w?: string | number; h?: number; mb?: number; br?: number }) => (
     <Animated.View
       style={{
-        width: w as any, height: h, borderRadius: br,
+        width: w as import('react-native').DimensionValue, height: h, borderRadius: br,
         backgroundColor: 'rgba(255,255,255,0.08)',
         marginBottom: mb,
         opacity: pulse,
@@ -406,7 +406,7 @@ export default function AccountModal({
                   onPress: async () => {
                     try {
                       // Attempt to run the dedicated Account Deletion RPC
-                      const { error } = await (supabase as any).rpc('delete_account');
+                      const { error } = await (supabase as unknown as { rpc: (fn: string) => Promise<{ error: any }> }).rpc('delete_account');
                       if (error) {
                         AppLogger.error('ACCOUNT_MGMT', { event: 'delete_account_rpc_failed', error: String(error) });
                         throw new Error('Database rejection. Please contact support.');
@@ -478,7 +478,7 @@ export default function AccountModal({
                 style={[styles.tabBtn, tab === t.id && styles.tabBtnActive]}
                 onPress={() => { setTab(t.id); setCrewStep('list'); setSecurityMsg(null); }}>
                 <MaterialCommunityIcons
-                  name={t.icon as any}
+                  name={t.icon as keyof typeof MaterialCommunityIcons.glyphMap}
                   size={16}
                   color={tab === t.id ? '#000' : Colors.textMuted} />
                 <Text style={[styles.tabBtnText, tab === t.id && styles.tabBtnTextActive]}

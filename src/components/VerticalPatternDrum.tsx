@@ -77,7 +77,7 @@ const VerticalPatternDrum = ({
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetY = e.nativeEvent.contentOffset.y;
     const index = Math.max(0, Math.round(offsetY / ITEM_HEIGHT));
-    const item = items[index] as any; 
+    const item = items[index];
     
     if (item && item.type === 'item') {
       if (item.val !== localVal) {
@@ -114,7 +114,7 @@ const VerticalPatternDrum = ({
                ListFooterComponent={<View style={{ height: padCount * ITEM_HEIGHT }} />}
                getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
                renderItem={({ item }) => {
-                 const itemVal = (item as any).val;
+                 const itemVal = (item as unknown as { val: any }).val;
                  const isSelected = itemVal === localVal;
                  
                  return (

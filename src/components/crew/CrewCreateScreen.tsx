@@ -96,7 +96,7 @@ export function CrewCreateScreen() {
                   <Image source={{ uri: crew.avatar_url }} style={{ width: 16, height: 16, borderRadius: 8, marginRight: Spacing.xxs }} />
                 ) : (
                   <View style={{ width: 16, height: 16, borderRadius: 8, backgroundColor: crew.avatar_color || '#FFAA00', alignItems: 'center', justifyContent: 'center', marginRight: Spacing.xxs }}>
-                    <MaterialCommunityIcons name={(crew.avatar_icon as any) || 'account-group'} size={10} color="#000" />
+                    <MaterialCommunityIcons name={(crew.avatar_icon as keyof typeof MaterialCommunityIcons.glyphMap) || 'account-group'} size={10} color="#000" />
                   </View>
                 )}
                 {!crew.is_public && (

@@ -28,7 +28,7 @@ export const SkateSpotBottomSheet: React.FC<BottomSheetProps> = ({ visible, onCl
     setIsUpdating(true);
     const result = await SkateSpotsService.claimAndUpdateSpot({
       ...spot,
-      surface_type: selectedSurface as any,
+      surface_type: selectedSurface as 'wood' | 'concrete' | 'asphalt' | 'sport_court' | 'unknown',
       is_indoor: isIndoor
     });
     setIsUpdating(false);

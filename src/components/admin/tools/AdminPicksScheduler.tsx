@@ -89,7 +89,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
         insertData.pattern_id = createPatternId;
       }
 
-      const { error } = await supabase.from('sk8lytz_picks').insert(insertData as any);
+      const { error } = await supabase.from('sk8lytz_picks').insert(insertData as import('../../../types/supabase').TablesInsert<'sk8lytz_picks'>);
       if (error) throw error;
       
       setCreateModalVisible(false);

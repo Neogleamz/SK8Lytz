@@ -55,7 +55,7 @@ export const SkateGroupCard = ({
       style={[styles.skateCardWrapper, { opacity: isActive ? 1 : 0.65 }]}
     >
       <LinearGradient
-        colors={isPoweredOn ? (colors as any) : ['#333', '#1a1a1a']}
+        colors={isPoweredOn ? (colors as unknown as readonly [string, string, ...string[]]) : ['#333', '#1a1a1a']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.skateCardGradient, isActive && { borderColor: Colors.primary, borderWidth: 1.5 }, { overflow: 'hidden' }]}
