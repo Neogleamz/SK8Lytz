@@ -2932,6 +2932,10 @@ export type Database = {
         Args: { p_mac_address: string }
         Returns: undefined
       }
+      admin_revoke_admin_role: {
+        Args: { p_target_user_id: string }
+        Returns: undefined
+      }
       admin_revoke_ban: {
         Args: { p_target_user_id: string }
         Returns: undefined
@@ -3910,10 +3914,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      admin_revoke_admin_role: {
-        Args: { p_target_user_id: string }
-        Returns: undefined
-      }
     }
     Enums: {
       skate_spot_surface:
@@ -4088,4 +4088,3 @@ export const Constants = {
     },
   },
 } as const
-

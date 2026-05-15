@@ -76,7 +76,7 @@ export interface UniversalSlidersFooterProps {
 
   // ── Dispatch functions ──────────────────────────────────────────────────
   sendColor: (r: number, g: number, b: number) => void;
-  applyFixedPattern: (patternId: number, fg: string, bg: string, spd?: number, brt?: number) => void;
+  applyFixedPattern: (patternId: number, fg: string, bg: string, spd?: number, brt?: number, direction?: number) => void;
   applyStaticModePattern: (pat: FixedModePattern, r?: number, g?: number, b?: number, spd?: number) => void;
   applyEmergencyPattern: (spd: number, brt: number) => void;
   applyStreetPattern: (motionState: MotionState, brt?: number, spd?: number) => void;
