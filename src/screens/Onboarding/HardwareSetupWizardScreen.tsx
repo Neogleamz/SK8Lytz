@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
@@ -56,7 +56,30 @@ export default function HardwareSetupWizardScreen({
   
   // Step 3 State
   const [groupName, setGroupName] = useState('');
-  const [deviceConfigsState, setDeviceConfigsState] = useState<Record<string, {name: string, type: string, position: 'Left'|'Right'|null, points: number}>>({});
+  const [deviceConfigsState, setDeviceConfigsState] = useState<Record<string, {name: string, type: string, position: 'Left'|'Right'|null, points: number}>>({}); 
+
+  // ── Grace period timer: show spinner for 8s after scan starts before allowing RETRY ──
+  const [scanStartTime, setScanStartTime] = useState<number | null>(null);
+  const graceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [, forceRender] = useState(0);
+  const GRACE_PERIOD_MS = 8000;
+
+  // Drive re-renders during the grace period so the button transitions smoothly
+  useEffect(() => {
+    if (scanStartTime !== null && pendingRegistrations.length === 0) {
+      graceTimerRef.current = setInterval(() => {
+        if (Date.now() - scanStartTime >= GRACE_PERIOD_MS) {
+          if (graceTimerRef.current) clearInterval(graceTimerRef.current);
+          graceTimerRef.current = null;
+        }
+        forceRender(n => n + 1);
+      }, 1000);
+      return () => { if (graceTimerRef.current) clearInterval(graceTimerRef.current); };
+    }
+  }, [scanStartTime, pendingRegistrations.length]);
+
+  // Derived: are we still within the initial discovery grace window?
+  const isWithinGrace = scanStartTime !== null && (Date.now() - scanStartTime) < GRACE_PERIOD_MS && pendingRegistrations.length === 0;
 
   useEffect(() => {
     // Wait for user to hit next. Devices are NOT auto-selected based on user feedback.
@@ -70,6 +93,7 @@ export default function HardwareSetupWizardScreen({
         setHasStartedScan(true);
       } else {
         handleStartScan();
+        setScanStartTime(Date.now());
       }
     }
   }, [hasStartedScan, isBluetoothSupported, isBluetoothEnabled, pendingRegistrations.length]);
@@ -92,6 +116,7 @@ export default function HardwareSetupWizardScreen({
     const granted = await requestPermissions();
     if (granted && bleState !== 'SCANNING') {
       setHasStartedScan(true);
+      setScanStartTime(Date.now());
       // disableProbing is now a no-op — probing is on-demand only (BLINK tap)
       scanForPeripherals();
     }
@@ -444,15 +469,15 @@ export default function HardwareSetupWizardScreen({
               </TouchableOpacity>
             ) : (
               <TouchableOpacity 
-                style={[styles.primaryBtn, bleState === 'SCANNING' && styles.primaryBtnDisabled]} 
+                style={[styles.primaryBtn, (bleState === 'SCANNING' || isWithinGrace) && styles.primaryBtnDisabled]} 
                 onPress={handleStartScan}
-                disabled={bleState === 'SCANNING'}
+                disabled={bleState === 'SCANNING' || isWithinGrace}
               >
-                {bleState === 'SCANNING' || bleState === 'PROBING' || !hasStartedScan ? (
+                {bleState === 'SCANNING' || bleState === 'PROBING' || !hasStartedScan || isWithinGrace ? (
                   <View style={styles.scanningRow}>
                     <ActivityIndicator color="#000" size="small" />
                     <Text style={styles.primaryBtnText}>
-                      {bleState === 'SCANNING' ? 'SEARCHING FOR SKATES...' : 'IDENTIFYING HARDWARE...'}
+                      {bleState === 'SCANNING' ? 'SEARCHING FOR SKATES...' : 'DISCOVERING HARDWARE...'}
                     </Text>
                   </View>
                 ) : (

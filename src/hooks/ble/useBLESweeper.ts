@@ -46,12 +46,16 @@ const RSSI_THRESHOLD = -80;
 
 /** How long to wait between debounced React state flushes (ms) */
 const DEBOUNCE_MS = 1500;
+/** Faster flush during FTUE (no registered devices) — devices appear sooner in wizard */
+const DEBOUNCE_MS_FTUE = 800;
 
 /** Interrogator probe timeout (ms) — same as pingDevice */
 const PROBE_TIMEOUT_MS = 3500;
 
 /** How long to wait before starting a queued probe (ms) — lets user actions settle */
 const PROBE_QUEUE_DELAY_MS = 2000;
+/** Faster probe during FTUE — no user BLE actions to interfere with, radio is idle */
+const PROBE_QUEUE_DELAY_MS_FTUE = 500;
 
 /** BLE device name prefixes that identify SK8Lytz/ZENGGE hardware */
 const ZENGGE_NAME_PREFIXES = ['lednet', 'sk8', 'zg', 'halo', 'soul'];
@@ -179,8 +183,10 @@ export function useBLESweeper({
 
   const scheduleFlush = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    debounceTimerRef.current = setTimeout(flushStagedDevices, DEBOUNCE_MS);
-  }, [flushStagedDevices]);
+    // FTUE mode: shorter debounce so devices appear faster in the wizard
+    const delay = registeredMacs.length === 0 ? DEBOUNCE_MS_FTUE : DEBOUNCE_MS;
+    debounceTimerRef.current = setTimeout(flushStagedDevices, delay);
+  }, [flushStagedDevices, registeredMacs.length]);
 
   // ── Interrogator: silently probe a single device EEPROM ─────────────────
   const interrogateDevice = useCallback(async (mac: string) => {
@@ -304,14 +310,16 @@ export function useBLESweeper({
   // ── Probe queue processor ───────────────────────────────────────────────
   const processProbeQueue = useCallback(() => {
     if (probeQueueTimerRef.current) clearTimeout(probeQueueTimerRef.current);
+    // FTUE mode: shorter delay — no user BLE actions to wait for, radio is idle
+    const delay = registeredMacs.length === 0 ? PROBE_QUEUE_DELAY_MS_FTUE : PROBE_QUEUE_DELAY_MS;
     probeQueueTimerRef.current = setTimeout(async () => {
       while (probeQueueRef.current.length > 0) {
         const mac = probeQueueRef.current.shift()!;
         await interrogateDevice(mac);
         await new Promise(r => setTimeout(r, 500));
       }
-    }, PROBE_QUEUE_DELAY_MS);
-  }, [interrogateDevice]);
+    }, delay);
+  }, [interrogateDevice, registeredMacs.length]);
 
   // ── Shared scan callback (used by both startSweeper and burstScan) ───────
   const createScanCallback = useCallback(() => {
