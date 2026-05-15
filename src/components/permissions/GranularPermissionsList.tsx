@@ -54,6 +54,14 @@ export const PERMISSIONS_LIST: PermissionItem[] = [
     description: 'Get alerts when your crew starts a live session near you.',
     required: false,
     disabledFeature: 'Crew Session Invites',
+  },
+  {
+    id: 'HEALTH',
+    title: 'Biometrics Sync',
+    icon: 'heart-pulse',
+    description: 'Sync active calories and heart rate data from Apple Health or Google Fit during skate sessions.',
+    required: false,
+    disabledFeature: 'Live Dashboard Biometrics',
   }
 ];
 

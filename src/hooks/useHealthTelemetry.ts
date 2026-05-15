@@ -42,11 +42,7 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
 
     const pollHealthData = async () => {
       if (!sessionActive || !sessionStartTimeRef.current) return;
-      
       try {
-        const syncEnabledStr = await AsyncStorage.getItem('@Sk8lytz_healthSync');
-        if (syncEnabledStr !== 'true') return;
-
         const hasPermission = await checkPermission('HEALTH');
         if (!hasPermission) return;
 
