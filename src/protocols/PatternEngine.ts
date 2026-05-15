@@ -313,9 +313,9 @@ export function buildPatternPayload(
   if (is0x51Target) {
     let modeId = 1; // Default to Breathe
     if (patternId === 17 || patternId === 24) modeId = 1; // Change gradually (Breathe)
-    if (patternId === 18) modeId = 5; // Running, 1point from start to end (Sweep/Wipe)
+    if (patternId === 18) modeId = direction === 1 ? 5 : 6; // Running, 1point from start to end (Sweep/Wipe)
     if (patternId === 26) modeId = 4; // Strobe-flash
-    if (patternId === 72) modeId = 7; // Running, from middle to both ends (Center-Out)
+    if (patternId === 72) modeId = direction === 1 ? 7 : 8; // Running, from middle to both ends (Center-Out)
 
     if (patternId >= 201 && patternId <= 244) {
       modeId = patternId - 200;
@@ -344,3 +344,4 @@ export function buildPatternPayload(
  */
 
 export { getVisualizerFrame, getMusicVisualizerFrame, getSymphonyVisualizerFrame };
+

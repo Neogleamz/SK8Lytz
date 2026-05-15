@@ -310,4 +310,5 @@ export interface DockedBus {
   fixedFgColor: string;
   fixedBgColor: string;
   fixedDirection: number;
+  applyFixedPattern: (patternId: number, fg: string, bg: string, spd?: number, brt?: number, dir?: number) => void;
 }

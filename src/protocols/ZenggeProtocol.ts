@@ -436,7 +436,7 @@ export class ZenggeProtocol {
       Math.min(255, Math.max(0, bg.g | 0)),
       Math.min(255, Math.max(0, bg.b | 0)),
       Math.max(1, Math.min(255, speed | 0)),
-      direction & 0x01,
+      (direction === 1 ? 0 : 1) & 0x01,
       0x00, // static trailer byte 1 — DO NOT CHANGE (APK confirmed)
       0xF0, // static trailer byte 2 — DO NOT CHANGE (APK confirmed)
     ];
@@ -640,6 +640,7 @@ export class ZenggeProtocol {
     // Previously 0x00 (CASCADE) was HARDCODED to speed=1 — that was wrong, made animations look frozen.
     // Fix: pass speed through for ALL transition types, properly clamped to 1–31.
     const safeSpeed = Math.max(this.ANIM_SPEED_MIN, Math.min(this.ANIM_SPEED_MAX, Math.round(speed) || 16));
+    const hwDir = direction === 1 ? 0 : 1;
 
     const totalLen = (numPoints * 3) + 9;
     const payload = new Array(totalLen).fill(0);
@@ -656,7 +657,7 @@ export class ZenggeProtocol {
     payload[idx++] = safeLedPoints & 0xFF;
     payload[idx++] = transitionType & 0xFF;
     payload[idx++] = safeSpeed;
-    payload[idx++] = direction & 0xFF;
+    payload[idx++] = hwDir & 0xFF;
     payload[idx] = this.calculateChecksum(payload.slice(0, totalLen - 1));
     return this.wrapCommand(payload);
   }

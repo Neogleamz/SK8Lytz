@@ -255,7 +255,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                           if (fixedColorMode === 'FOREGROUND') { newFg = color; setFixedFgColor(color); setSelectedColor(color); }
                           else { newBg = color; setFixedBgColor(color); setSelectedColor(color); }
                           if (PRESET_HUE_MAP[color] !== undefined) setFixedHue(PRESET_HUE_MAP[color]);
-                          applyFixedPattern(fixedPatternId, newFg, newBg);
+                          applyFixedPattern(fixedPatternId, newFg, newBg, speed, brightness, fixedDirection);
                         } else {
                           setSelectedColor(color);
                           if (PRESET_HUE_MAP[color] !== undefined) setFixedHue(PRESET_HUE_MAP[color]);
@@ -326,7 +326,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
             }}
             onSlidingComplete={(hue) => {
               if (activeMode === 'MULTIMODE') {
-                if (fixedSubMode === 'PATTERN') applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor);
+                if (fixedSubMode === 'PATTERN') applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, fixedDirection);
               } else if (activeMode === 'MUSIC') {
                 const hex = hueToHexUpper(hue);
                 if (musicColorFocus === 'PRIMARY') handleMusicChange(musicPatternId, micSensitivity, brightness, micSource, hex, musicSecondaryColor, musicMatrixStyle);
@@ -364,7 +364,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
               AppLogger.log('BRIGHTNESS_CHANGED', { value: val, mode: activeMode });
               if (writeToDevice) {
                 if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
-                  applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val);
+                  applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val, fixedDirection);
                 } else {
                   const factor = brtFactor(val);
                   const hex = selectedColor;
@@ -386,7 +386,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
           return (
             <View style={{ flexDirection: 'column', alignSelf: 'stretch', width: 46, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', overflow: 'hidden' }}>
               <TouchableOpacity
-                onPress={() => { setFixedDirection(1); }}
+                onPress={() => { setFixedDirection(1); applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, 1); }}
                 style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: isForward ? 'rgba(0,240,255,0.2)' : 'transparent' }}
               >
                 <Text style={{ color: isForward ? '#00F0FF' : 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: '800', lineHeight: 11 }}>▲</Text>
@@ -394,7 +394,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
               </TouchableOpacity>
               <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.15)' }} />
               <TouchableOpacity
-                onPress={() => { setFixedDirection(0); }}
+                onPress={() => { setFixedDirection(0); applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, 0); }}
                 style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: !isForward ? 'rgba(0,240,255,0.2)' : 'transparent' }}
               >
                 <Text style={{ color: !isForward ? '#00F0FF' : 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: '800', lineHeight: 11 }}>▼</Text>
@@ -452,7 +452,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
               if (writeToDevice) {
                 if (activeMode === 'MULTIMODE') {
                   if (fixedSubMode === 'PATTERN') {
-                    applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val);
+                    applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val, brightness, fixedDirection);
                   } else if (fixedSubMode === 'BUILDER') {
                     const factor = brtFactor(brightness);
                     const rgbColors = multiColors.map(h => {

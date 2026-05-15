@@ -68,7 +68,8 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       fg: string,
       bg: string,
       currentSpeed?: number,
-      currentBrightness?: number
+      currentBrightness?: number,
+      currentDirection?: number
     ) => {
       if (!writeToDevice) return;
 
@@ -87,7 +88,8 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       // Pattern Payload Memoization (perf: avoids 30-80ms Math Synthesizer run on repeat taps)
       const spd = clampSpeed(currentSpeed ?? 50);
       const brt = currentBrightness ?? 100;
-      const cacheKey = `${patternId}_${fgRaw.r}_${fgRaw.g}_${fgRaw.b}_${bgRaw.r}_${bgRaw.g}_${bgRaw.b}_${numLEDs}_${spd}_${brt}`;
+      const dir = currentDirection ?? 1;
+      const cacheKey = `${patternId}_${fgRaw.r}_${fgRaw.g}_${fgRaw.b}_${bgRaw.r}_${bgRaw.g}_${bgRaw.b}_${numLEDs}_${spd}_${brt}_${dir}`;
 
       let payload = patternPayloadCache.get(cacheKey);
       if (payload) {
@@ -101,7 +103,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
           bgRaw,
           numLEDs,
           spd,
-          1,
+          dir,
           brt
         ) ?? undefined;
         if (payload) {

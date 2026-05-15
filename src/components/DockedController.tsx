@@ -750,7 +750,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         musicPrimaryColor, musicSecondaryColor, musicMatrixStyle
       );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeMode]); // Only fire when activeMode changes
+    }, [activeMode, writeToDevice]); // Only fire when activeMode changes
 
     // 2. Fire on settings change (ONLY when already in Music mode)
     React.useEffect(() => {
@@ -761,6 +761,17 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       );
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle, micSensitivity, brightness]);
+
+    // ── MULTIMODE (PATTERN): fire on mode entry ──────────────────────────────
+    // Restores the last saved pattern state to hardware on app launch or mode switch.
+    // Replaces the deprecated reactive useEffect in UnifiedPatternPicker that caused race conditions.
+    const isInPatternModeRef = useRef(activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN');
+    React.useEffect(() => {
+      isInPatternModeRef.current = activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN';
+      if (!isInPatternModeRef.current || !writeToDevice) return;
+      applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, fixedDirection);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeMode, fixedSubMode, writeToDevice]);
 
     // getColorName — now imported from '../utils/ColorUtils'
 
@@ -854,7 +865,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       fixedFgColor,
       fixedBgColor,
       fixedDirection,
-    }), [brightness, speed, selectedColor, points, hwSettings, fixedPatternId, fixedFgColor, fixedBgColor, fixedDirection, writeToDevice, writeStatus]);
+      applyFixedPattern,
+    }), [brightness, speed, selectedColor, points, hwSettings, fixedPatternId, fixedFgColor, fixedBgColor, fixedDirection, writeToDevice, writeStatus, applyFixedPattern]);
 
     // ── Mode change handler — wires DockedDock callbacks to local state ───────
     const handleDockModeChange = React.useCallback((newMode: ModeType | string) => {

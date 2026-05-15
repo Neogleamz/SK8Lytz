@@ -21,12 +21,13 @@ interface UnifiedPatternPickerProps {
   selectedPatternId?: number;
   /** Callback fired when an effect is successfully dispatched. */
   onStateChange?: (id: number) => void;
+  applyFixedPattern?: (patternId: number, fg: string, bg: string, spd?: number, brt?: number, dir?: number) => void;
 }
 
 export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
   writeToDevice, points = 16, segments = 1, speed, brightness = 100, direction = 1,
   hwSettings, onStateChange, fgColor, bgColor,
-  selectedPatternId = 1,
+  selectedPatternId = 1, applyFixedPattern
 }) => {
   const { Colors } = useTheme();
   const devicePoints = hwSettings?.ledPoints || points || 16;
@@ -34,10 +35,12 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
   // Track volatile callbacks in refs to avoid breaking React.memo downstream
   const onStateChangeRef = useRef(onStateChange);
   const writeToDeviceRef = useRef(writeToDevice);
+  const applyFixedPatternRef = useRef(applyFixedPattern);
   useEffect(() => {
     onStateChangeRef.current = onStateChange;
     writeToDeviceRef.current = writeToDevice;
-  }, [onStateChange, writeToDevice]);
+    applyFixedPatternRef.current = applyFixedPattern;
+  }, [onStateChange, writeToDevice, applyFixedPattern]);
 
   // Dispatch logic for PATTERNS tab — uses PatternEngine → 0x59 pipeline.
   // buildPatternPayload() generates our math-synthesized pixel arrays and
@@ -45,14 +48,18 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
   // This is the ONLY correct dispatch path. Do NOT use 0x51 setCustomModeCompact
   // here — that sends firmware symphony effect IDs, not our pixel math.
   const dispatchEffect = useCallback((effectId: number, fg: string, bg: string, spd: number, dir: number, brt: number) => {
-    if (!writeToDeviceRef.current) return;
-    const fgRgb = hexToRgb(fg);
-    const bgRgb = hexToRgb(bg);
-    const payload = buildPatternPayload(
-      effectId, fgRgb, bgRgb, devicePoints,
-      Math.max(1, Math.min(100, Math.round(spd))), dir, brt
-    );
-    if (payload) writeToDeviceRef.current(payload);
+    if (applyFixedPatternRef.current) {
+      applyFixedPatternRef.current(effectId, fg, bg, spd, brt, dir);
+    } else {
+      if (!writeToDeviceRef.current) return;
+      const fgRgb = hexToRgb(fg);
+      const bgRgb = hexToRgb(bg);
+      const payload = buildPatternPayload(
+        effectId, fgRgb, bgRgb, devicePoints,
+        Math.max(1, Math.min(100, Math.round(spd))), dir, brt
+      );
+      if (payload) writeToDeviceRef.current(payload);
+    }
     onStateChangeRef.current?.(effectId);
   }, [devicePoints]);
 
@@ -60,18 +67,8 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
     dispatchEffect(effectId, fgColor, bgColor, speed, direction, brightness);
   }, [dispatchEffect, fgColor, bgColor, speed, direction, brightness]);
 
-  // Sync speed/color changes to PATTERNS tab hardware.
-  // NOTE: dispatchEffect is intentionally omitted from deps — it is stable via useCallback
-  // ([writeToDevice, onStateChange]). Including it causes an infinite loop because
-  // DockedController passes onStateChange as an inline arrow (new ref every render),
-  // which recreates dispatchEffect, which re-fires this effect, which calls writeToDevice,
-  // which calls setLastSentPayload in DockedController, which re-renders, which ... loops.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (selectedPatternId) {
-      dispatchEffect(selectedPatternId, fgColor, bgColor, speed, direction, brightness);
-    }
-  }, [speed, brightness, direction, selectedPatternId, fgColor, bgColor]);
+  // Reactive useEffect removed to prevent dispatch race conditions and clobbering.
+  // Slider and state changes are now explicitly handled by UniversalSlidersFooter via applyFixedPattern.
 
   return (
     <View style={{ flex: 1 }}>

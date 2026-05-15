@@ -28,6 +28,7 @@ const ProEffectsPanel = React.memo(({ bus }: ProEffectsPanelProps) => {
       bgColor={bus.fixedBgColor}
       direction={bus.fixedDirection}
       writeToDevice={bus.writeToDevice}
+      applyFixedPattern={bus.applyFixedPattern}
       onStateChange={(id: number) => {
         bus.setFixedPatternId(id);
       }}
