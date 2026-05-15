@@ -52,7 +52,7 @@ export const SkateGroupCard = ({
       onPress={onPress}
       onLongPress={onLongPress}
       activeOpacity={0.85}
-      style={[styles.skateCardWrapper, { opacity: isActive ? 1 : 0.65 }]}
+      style={styles.skateCardWrapper}
     >
       <LinearGradient
         colors={isPoweredOn ? (colors as unknown as readonly [string, string, ...string[]]) : ['#333', '#1a1a1a']}

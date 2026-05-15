@@ -369,6 +369,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         // and enables AutoRecovery if they drop organically.
       } else if (nextState === 'active') {
         if (isBluetoothEnabled && isBluetoothSupported) startSweeper();
+        // Re-arm auto-connect on foreground return. If GATT dropped while backgrounded,
+        // the one-shot gate is closed and the MAC queue is drained — retrigger refills both.
+        retriggerAutoConnectRef.current();
       }
     });
     return () => sub.remove();
@@ -538,12 +541,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         connectToDevices(devicesToConnect);
       });
     } else {
-      // No BLE devices discovered yet — trigger scan and inform user
+      // No BLE devices discovered yet — re-arm auto-connect + burst scan silently
       AppLogger.log('BLE_STATE_CHANGE', { event: 'group_tap_no_ble_devices', groupId: group.id, expectedMacs: group.deviceIds });
-      scanForPeripherals();
-      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
+      retriggerAutoConnectRef.current();
     }
-  }, [allDevices, connectToDevices, scanForPeripherals]);
+  }, [allDevices, connectToDevices]);
 
   const handleGroupLongPress = useCallback((id: string) => {
     openGroupRename(id);
@@ -566,10 +568,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       // Small delay so the controller mounts before we switch mode
       setTimeout(() => dockedControllerRef.current?.setActiveMode('MUSIC'), 300);
     } else {
-      scanForPeripherals();
-      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
+      retriggerAutoConnectRef.current();
     }
-  }, [allDevices, connectToDevices, scanForPeripherals]);
+  }, [allDevices, connectToDevices]);
 
   const handleGroupCameraPress = useCallback((group: CustomGroup) => {
     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
@@ -581,10 +582,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       });
       setTimeout(() => dockedControllerRef.current?.setActiveMode('CAMERA'), 300);
     } else {
-      scanForPeripherals();
-      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
+      retriggerAutoConnectRef.current();
     }
-  }, [allDevices, connectToDevices, scanForPeripherals]);
+  }, [allDevices, connectToDevices]);
 
   const handleGroupFavoritePress = useCallback(async (group: CustomGroup, _snapshot: any) => {
     // Load the last-used IFavoriteState from AsyncStorage (same key as useFavorites)
@@ -616,10 +616,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         dockedControllerRef.current?.loadFavorite(lastFav);
       }, 300);
     } else {
-      scanForPeripherals();
-      Alert.alert('Scanning...', 'Your skates aren\'t visible yet. Scanning now — tap again in a few seconds.');
+      retriggerAutoConnectRef.current();
     }
-  }, [allDevices, connectToDevices, scanForPeripherals]);
+  }, [allDevices, connectToDevices]);
 
   const handleToggleRegisteredCollapse = useCallback(() => {
     setIsRegisteredCollapsed(!isRegisteredCollapsed);
