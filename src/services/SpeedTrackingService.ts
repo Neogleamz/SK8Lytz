@@ -17,6 +17,7 @@
  *
  * Platform: React Native (Android + iOS) + Web-safe fallbacks
  */
+import { Platform } from 'react-native';
 import { AppLogger } from './AppLogger';
 import { supabase } from './supabaseClient';
 
@@ -135,6 +136,45 @@ class SpeedTrackingServiceClass {
         peakSpeedMph: snapshot.peakSpeedMph,
         durationSec: snapshot.durationSec,
       });
+
+      // --- TWO-WAY HEALTH SYNC (Close the Rings) ---
+      try {
+        const { checkPermission } = require('./PermissionService');
+        const hasHealthPermission = await checkPermission('HEALTH');
+        
+        if (hasHealthPermission) {
+          const endDate = new Date();
+          const startDate = new Date(endDate.getTime() - snapshot.durationSec * 1000);
+          
+          if (Platform.OS === 'ios') {
+            const AppleHealthKit = require('react-native-health').default;
+            const options = {
+              type: 'SkatingSports',
+              startDate: startDate.toISOString(),
+              endDate: endDate.toISOString(),
+              energyBurned: calories,
+              distance: snapshot.distanceMiles,
+            };
+            AppleHealthKit.saveWorkout(options, (err: string) => {
+              if (err) AppLogger.warn('HEALTH_TELEMETRY', { event: 'ios_save_workout_failed', error: err });
+            });
+          } else if (Platform.OS === 'android') {
+            const { writeRecords } = require('react-native-health-connect');
+            await writeRecords([{
+              recordType: 'ExerciseSession',
+              exerciseType: 64, // 64 = Skating
+              startTime: startDate.toISOString(),
+              endTime: endDate.toISOString(),
+            }]);
+            
+            // Optionally write distance and calories explicitly if needed, but 
+            // ExerciseSession groups them if sent in a batch. For MVP, tracking
+            // the session time closes the activity rings.
+          }
+        }
+      } catch (healthErr: any) {
+        AppLogger.warn('HEALTH_TELEMETRY', { event: 'save_workout_exception', error: healthErr.message });
+      }
 
       return data.id;
     } catch (err: any) {
