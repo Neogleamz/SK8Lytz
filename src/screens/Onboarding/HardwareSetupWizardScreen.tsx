@@ -205,7 +205,7 @@ export default function HardwareSetupWizardScreen({
     const renderDeviceGroup = (title: string, devices: typeof pendingRegistrations, color: string) => {
       if (devices.length === 0) return null;
       return (
-        <View style={styles.groupContainer}>
+        <View key={title} style={styles.groupContainer}>
           <Text style={[styles.groupTitle, { color }]}>{title} DISCOVERED</Text>
           {devices.map((device) => {
             const isSelected = selectedDeviceMacs.has(device.device_mac);

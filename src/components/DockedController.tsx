@@ -212,11 +212,13 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       AppLogger.warn('[DockedController] BLE write reconciled — no snapshot to restore yet');
     });
 
+    const handleReconcile = React.useCallback(() => onReconcileRef.current(), []);
+
     // ── Optimistic BLE Bridge (Ghost Standard) ─────────────────────────────
     const { optimisticWrite, writeStatus } = useOptimisticBLE({
       writeToDevice: parentWriteToDevice as ((payload: number[], targetDeviceId?: string) => Promise<boolean | 'partial'>) | undefined,
       // Indirection via ref: always calls the latest closure without recreating the hook callback
-      onReconcile: () => onReconcileRef.current(),
+      onReconcile: handleReconcile,
       debounceMs: 0, // perf(ble): removed redundant pre-debounce — useBLE.ts 50ms is the authoritative guard
       disableOptimisticUI: appSettings['global_optimistic_ui_enabled'] === false,
       disableHaptics: appSettings['global_haptics_enabled'] === false,
@@ -744,17 +746,17 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     // 1. Fire on mode entry
     React.useEffect(() => {
       isInMusicModeRef.current = activeMode === 'MUSIC';
-      if (activeMode !== 'MUSIC' || !writeToDevice) return;
+      if (activeMode !== 'MUSIC' || !parentWriteToDevice) return;
       handleMusicChange(
         musicPatternId, micSensitivity, brightness, micSource,
         musicPrimaryColor, musicSecondaryColor, musicMatrixStyle
       );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeMode, writeToDevice]); // Only fire when activeMode changes
+    }, [activeMode, parentWriteToDevice]); // Only fire when activeMode changes
 
     // 2. Fire on settings change (ONLY when already in Music mode)
     React.useEffect(() => {
-      if (!isInMusicModeRef.current || !writeToDevice) return;
+      if (!isInMusicModeRef.current || !parentWriteToDevice) return;
       handleMusicChange(
         musicPatternId, micSensitivity, brightness, micSource,
         musicPrimaryColor, musicSecondaryColor, musicMatrixStyle
@@ -768,10 +770,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const isInPatternModeRef = useRef(activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN');
     React.useEffect(() => {
       isInPatternModeRef.current = activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN';
-      if (!isInPatternModeRef.current || !writeToDevice) return;
+      if (!isInPatternModeRef.current || !parentWriteToDevice) return;
       applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, brightness, fixedDirection);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeMode, fixedSubMode, writeToDevice]);
+    }, [activeMode, fixedSubMode, parentWriteToDevice]);
 
     // getColorName — now imported from '../utils/ColorUtils'
 
