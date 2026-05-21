@@ -19,6 +19,7 @@
  */
 
 import type { IControllerProtocol } from './IControllerProtocol';
+import { BanlanxAdapter } from './BanlanxAdapter';
 import { ZenggeAdapter } from './ZenggeAdapter';
 
 // Lazy AppLogger — ControllerRegistry may load before native modules are ready
@@ -33,6 +34,9 @@ function getAppLogger() {
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
 const registry: IControllerProtocol[] = [
+  // BanlanX checked FIRST — FFE0 service UUID is unambiguous for SP621E.
+  // ZenggeAdapter is the fallback for FFFF / MFR-data-matched devices.
+  new BanlanxAdapter(),
   new ZenggeAdapter(),
 ];
 

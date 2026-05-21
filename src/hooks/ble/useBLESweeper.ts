@@ -27,12 +27,9 @@ import { Buffer } from 'buffer';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
-import {
-  ZENGGE_CHARACTERISTIC_UUID,
-  ZENGGE_NOTIFY_UUID,
-  ZENGGE_SERVICE_UUID,
-  ZenggeProtocol,
-} from '../../protocols/ZenggeProtocol';
+import { ZENGGE_SERVICE_UUID } from '../../protocols/ZenggeProtocol';
+import { resolveProtocol, getDefaultProtocol } from '../../protocols/ControllerRegistry';
+
 import { AppLogger } from '../../services/AppLogger';
 import type { PendingRegistration } from '../../types/dashboard.types';
 import { mapDeviceToRegistration } from '../../utils/classifyBLEDevice';
@@ -228,6 +225,16 @@ export function useBLESweeper({
 
       await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
 
+      // ── HAL: Resolve adapter from service UUIDs ───────────────────────────────
+      let interrogatorAdapter;
+      try {
+        const svcs = await bleManager.servicesForDevice(mac);
+        const svcUUIDs = svcs.map((s: any) => s.uuid as string);
+        interrogatorAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
+      } catch (_e) {
+        interrogatorAdapter = getDefaultProtocol();
+      }
+
       if (signal.aborted) {
         AppLogger.log('BLE_STATE_CHANGE', { event: 'interrogator_preempted_post_discover', mac });
         return;
@@ -241,7 +248,7 @@ export function useBLESweeper({
         }, PROBE_TIMEOUT_MS);
 
         const sub = bleManager.monitorCharacteristicForDevice(
-          mac, ZENGGE_SERVICE_UUID, ZENGGE_NOTIFY_UUID,
+          mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.notifyCharacteristicUUID,
           (err: any, char: any) => {
             // ── P1 preemption check inside notification handler ───────────
             if (signal.aborted) {
@@ -253,9 +260,9 @@ export function useBLESweeper({
             if (err || !char?.value) return;
             try {
               const raw = Array.from(Buffer.from(char.value, 'base64')) as number[];
-              const hwParsed = ZenggeProtocol.parseHardwareSettingsResponse(raw);
+              const hwParsed = interrogatorAdapter.parseSettingsResponse(raw);
               if (hwParsed) accumulated = { ...accumulated, ...hwParsed };
-              const rfParsed = ZenggeProtocol.parseRfRemoteState(raw);
+              const rfParsed = interrogatorAdapter.parseRfRemoteState(raw);
               if (rfParsed) accumulated = { ...accumulated, rfMode: rfParsed.mode, rfPairedCount: rfParsed.pairedCount };
               if (accumulated?.detected && accumulated?.rfMode) {
                 clearTimeout(timer);
@@ -263,23 +270,29 @@ export function useBLESweeper({
                 resolve(accumulated);
               }
             } catch (e) {
-              AppLogger.warn('[useBLESweeper] ZenggeProtocol parse failed', { mac, error: String(e) });
+              AppLogger.warn('[useBLESweeper] Protocol parse failed', { mac, error: String(e) });
             }
           }
         );
 
         setTimeout(() => {
           if (signal.aborted) { clearTimeout(timer); sub.remove(); resolve(null); return; }
-          const b64HW = Buffer.from(ZenggeProtocol.queryHardwareSettings(false)).toString('base64');
-          bleManager.writeCharacteristicWithoutResponseForDevice(
-            mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64HW
-          ).catch((e: any) => AppLogger.warn('[useBLESweeper] Interrogator HW query failed', { error: String(e) }));
+          const hwQuery = interrogatorAdapter.buildQuerySettings(false);
+          if (hwQuery.packets.length > 0) {
+            const b64HW = Buffer.from(hwQuery.packets[0]).toString('base64');
+            bleManager.writeCharacteristicWithoutResponseForDevice(
+              mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.writeCharacteristicUUID, b64HW
+            ).catch((e: any) => AppLogger.warn('[useBLESweeper] Interrogator HW query failed', { error: String(e) }));
+          }
           setTimeout(() => {
             if (signal.aborted) return;
-            const b64RF = Buffer.from(ZenggeProtocol.queryRfRemoteState()).toString('base64');
-            bleManager.writeCharacteristicWithoutResponseForDevice(
-              mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64RF
-            ).catch((e: any) => AppLogger.warn('[useBLESweeper] Interrogator RF query failed', { error: String(e) }));
+            const rfQuery = interrogatorAdapter.buildQueryRfRemoteState();
+            if (rfQuery.packets.length > 0) {
+              const b64RF = Buffer.from(rfQuery.packets[0]).toString('base64');
+              bleManager.writeCharacteristicWithoutResponseForDevice(
+                mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.writeCharacteristicUUID, b64RF
+              ).catch((e: any) => AppLogger.warn('[useBLESweeper] Interrogator RF query failed', { error: String(e) }));
+            }
           }, 200);
         }, 400);
       });

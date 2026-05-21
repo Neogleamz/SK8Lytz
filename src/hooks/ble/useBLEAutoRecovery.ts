@@ -14,7 +14,8 @@
 import { Buffer } from 'buffer';
 import { useCallback, useRef, useState } from 'react';
 import type { Device, Subscription } from 'react-native-ble-plx';
-import { ZENGGE_CHARACTERISTIC_UUID, ZENGGE_NOTIFY_UUID, ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
+import { resolveProtocol, getDefaultProtocol } from '../../protocols/ControllerRegistry';
+import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
 import { AppLogger } from '../../services/AppLogger';
 
 export interface UseBLEAutoRecoveryProps {
@@ -25,6 +26,12 @@ export interface UseBLEAutoRecoveryProps {
   onOrganicDisconnect: (error: any, deviceId: string) => void;
   /** Global connection gate semaphore — recovery waits for IDLE before touching radio */
   bleGateRef: React.MutableRefObject<'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING'>;
+  /**
+   * Called after a successful reconnect with the resolved protocol adapter.
+   * useBLE.ts uses this to update adapterMapRef so writeToDevice continues
+   * using the correct service/characteristic UUIDs for the recovered device.
+   */
+  onAdapterResolved: (deviceId: string, adapter: IControllerProtocol) => void;
 }
 
 
@@ -56,6 +63,7 @@ export function useBLEAutoRecovery({
   handleNotification,
   onOrganicDisconnect,
   bleGateRef,
+  onAdapterResolved,
 }: UseBLEAutoRecoveryProps) {
   const [ghostedDeviceIds, setGhostedDeviceIds] = useState<string[]>([]);
   const ghostedRefs = useRef<string[]>([]);
@@ -137,13 +145,30 @@ export function useBLEAutoRecovery({
           
           let conn: Device;
           if (nativelyConnected) {
-            // Re-discover services just in case, since we lost the logical connection
-            const devicesList = await bleManager.connectedDevices([ZENGGE_SERVICE_UUID]).catch(() => []);
+            // Re-discover services just in case, since we lost the logical connection.
+            // Use empty array to get ALL connected devices (not filtered to Zengge UUID).
+            const devicesList = await bleManager.connectedDevices([]).catch(() => []);
             conn = devicesList.find((d: any) => d.id === deviceId) || (await bleManager.connectToDevice(deviceId, { timeout: 3500 }));
           } else {
             conn = await bleManager.connectToDevice(deviceId, { timeout: 3500 });
           }
           await conn.discoverAllServicesAndCharacteristics();
+
+          // ── HAL: Resolve adapter fresh from conn.services() ──────────────────────
+          // A reconnect is structurally identical to a fresh connect: services are
+          // available after discoverAllServicesAndCharacteristics(). No prop drilling
+          // of adapterMapRef needed — the hook resolves independently and reports
+          // back via onAdapterResolved so useBLE.ts can update its adapterMapRef.
+          let recoveryAdapter: IControllerProtocol;
+          try {
+            const svcs = await conn.services();
+            const svcUUIDs = svcs.map((s: any) => s.uuid as string);
+            recoveryAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
+          } catch (_e) {
+            recoveryAdapter = getDefaultProtocol();
+          }
+          onAdapterResolved(conn.id, recoveryAdapter);
+          AppLogger.log('AUTO_RECOVERY_ADAPTER', { deviceId: conn.id, protocolId: recoveryAdapter.protocolId });
 
           try { await conn.requestMTU(512); } catch (e) { AppLogger.warn('[AutoRecovery] MTU negotiation failed', { deviceId, error: String(e) }); }
 
@@ -158,17 +183,21 @@ export function useBLEAutoRecovery({
           });
 
           conn.monitorCharacteristicForService(
-            ZENGGE_SERVICE_UUID,
-            ZENGGE_NOTIFY_UUID,
+            recoveryAdapter.serviceUUID,
+            recoveryAdapter.notifyCharacteristicUUID,
             (error: any, characteristic: any) => handleNotification(error, characteristic, conn.id)
           );
 
-          // Send 0x63 Ping to align hardware state
+          // Send recovery ping using adapter — BanlanX has no EEPROM query (empty no-op),
+          // Zengge sends 0x63 queryHardwareSettings to realign hardware state.
           await new Promise(r => setTimeout(r, 600));
-          const qp = ZenggeProtocol.queryHardwareSettings(false);
-          await conn.writeCharacteristicWithoutResponseForService(
-            ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, Buffer.from(qp).toString('base64')
-          ).catch(e => AppLogger.warn('[useBLEAutoRecovery] AutoRecovery ping failed', e));
+          const pingResult = recoveryAdapter.buildQuerySettings(false);
+          if (pingResult.packets.length > 0) {
+            await conn.writeCharacteristicWithoutResponseForService(
+              recoveryAdapter.serviceUUID, recoveryAdapter.writeCharacteristicUUID,
+              Buffer.from(pingResult.packets[0]).toString('base64')
+            ).catch(e => AppLogger.warn('[useBLEAutoRecovery] Recovery ping failed', e));
+          }
 
           // Publish back to UI and clear ghost state
           setConnectedDevices(prev => prev.map(d => d.id === deviceId ? conn : d));

@@ -15,9 +15,10 @@ import { Alert, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { resolveProtocol, getDefaultProtocol, resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 import type { IControllerProtocol } from '../protocols/IControllerProtocol';
-// NOTE: Zengge static imports retained for pingDevice and any legacy callsites
-// that will be migrated in Task 1C (refactor/ble-subsystem-hal-wiring).
-import { ZENGGE_CHARACTERISTIC_UUID, ZENGGE_NOTIFY_UUID, ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../protocols/ZenggeProtocol';
+// NOTE: Zengge static parse methods (parseHardwareSettingsResponse, parseRfRemoteState)
+// retained in pingDevice for Phase 1 EEPROM probing. BanlanX returns null for both
+// (no EEPROM probe in Phase 1). UUID constants are no longer used in pingDevice.
+import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 import type { BleConnectionState, PendingRegistration } from '../types/dashboard.types';
 
@@ -241,6 +242,19 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       });
       await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
 
+      // ── HAL: Resolve adapter from service UUIDs ───────────────────────────────
+      // Pattern mirrors connectToDevices Phase 2 handshake (same timing guarantees).
+      // BanlanX resolves to BanlanxAdapter (FFE0 service); Zengge to ZenggeAdapter (FFFF).
+      // Falls back to Zengge default if services() API is unavailable.
+      let pingAdapter: IControllerProtocol;
+      try {
+        const svcs = await bleManager.servicesForDevice(mac);
+        const svcUUIDs = svcs.map((s: any) => s.uuid as string);
+        pingAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
+      } catch (_e) {
+        pingAdapter = getDefaultProtocol();
+      }
+
       // ── Step 2: Write Blink (channel is now hot — no Phantom Blink) ───────────
       const b64Blink = Buffer.from(blinkPayload).toString('base64');
       await bleManager.writeCharacteristicWithoutResponseForDevice(
@@ -264,8 +278,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
         const sub = bleManager.monitorCharacteristicForDevice(
           mac,
-          ZENGGE_SERVICE_UUID,
-          ZENGGE_NOTIFY_UUID,
+          pingAdapter.serviceUUID,
+          pingAdapter.notifyCharacteristicUUID,
           (err: any, char: any) => {
             if (err) return;
             if (!char?.value) return;
@@ -285,18 +299,26 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
           }
         );
 
-        // Fire queries after giving the notification monitor 400ms to set up
+        // Fire queries after giving the notification monitor 400ms to set up.
+        // NOTE: ZenggeProtocol parse calls are intentionally kept — BanlanX
+        // returns null for both, which is correct Phase 1 behavior (no EEPROM probe).
         setTimeout(() => {
-          const b64HW = Buffer.from(ZenggeProtocol.queryHardwareSettings(false)).toString('base64');
-          bleManager.writeCharacteristicWithoutResponseForDevice(
-            mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64HW
-          ).catch((e: any) => AppLogger.warn('[BLE pingDevice] HW query write failed', { error: String(e) }));
+          const queryResult = pingAdapter.buildQuerySettings(false);
+          if (queryResult.packets.length > 0) {
+            const b64HW = Buffer.from(queryResult.packets[0]).toString('base64');
+            bleManager.writeCharacteristicWithoutResponseForDevice(
+              mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64HW
+            ).catch((e: any) => AppLogger.warn('[BLE pingDevice] HW query write failed', { error: String(e) }));
+          }
 
           setTimeout(() => {
-            const b64RF = Buffer.from(ZenggeProtocol.queryRfRemoteState()).toString('base64');
-            bleManager.writeCharacteristicWithoutResponseForDevice(
-              mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64RF
-            ).catch((e: any) => AppLogger.warn('[BLE pingDevice] RF query write failed', { error: String(e) }));
+            const rfResult = pingAdapter.buildQueryRfRemoteState();
+            if (rfResult.packets.length > 0) {
+              const b64RF = Buffer.from(rfResult.packets[0]).toString('base64');
+              bleManager.writeCharacteristicWithoutResponseForDevice(
+                mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64RF
+              ).catch((e: any) => AppLogger.warn('[BLE pingDevice] RF query write failed', { error: String(e) }));
+            }
           }, 200);
         }, 400);
       });
@@ -305,10 +327,14 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       await new Promise(r => setTimeout(r, 8000));
 
       // ── Step 5: Turn Off ─────────────────────────────────────────────────────
-      const b64Off = Buffer.from(ZenggeProtocol.turnOff()).toString('base64');
-      await bleManager.writeCharacteristicWithoutResponseForDevice(
-        mac, ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64Off
-      ).catch((e: any) => { AppLogger.warn('[BLE] pingDevice turn-off write failed (non-fatal)', { mac, error: e?.message }); });
+      // Use adapter.buildPowerOff() — Zengge=0x71/0x24, BanlanX=0xA0/0x50/0x01/0x00
+      const offResult = pingAdapter.buildPowerOff();
+      if (offResult.packets.length > 0) {
+        await bleManager.writeCharacteristicWithoutResponseForDevice(
+          mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID,
+          Buffer.from(offResult.packets[0]).toString('base64')
+        ).catch((e: any) => { AppLogger.warn('[BLE] pingDevice turn-off write failed (non-fatal)', { mac, error: e?.message }); });
+      }
 
       return hwConfig;
     } catch (err: any) {
@@ -334,6 +360,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     handleNotification: (error: any, characteristic: any, deviceId: string) => handleNotificationRef.current(error, characteristic, deviceId),
     onOrganicDisconnect: handleOrganicDisconnect,
     bleGateRef,
+    onAdapterResolved: (deviceId: string, adapter: IControllerProtocol) => {
+      // Keep adapterMapRef in sync when AutoRecovery reconnects a device.
+      // The recovery hook resolves the adapter fresh from conn.services() after
+      // GATT reconnect, then reports it here so writeToDevice keeps using the
+      // correct protocol UUIDs without re-discovering from scratch.
+      adapterMapRef.current.set(deviceId, adapter);
+    },
   });
 
   // ── Overwatch: Silent Sweeper + Interrogator Queue ────────────────────────
