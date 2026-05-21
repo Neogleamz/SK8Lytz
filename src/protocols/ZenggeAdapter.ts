@@ -1,29 +1,37 @@
 /**
  * ZenggeAdapter.ts — Zengge Protocol Adapter (IControllerProtocol Implementation)
  *
- * Thin adapter that delegates to the existing ZenggeProtocol static class,
- * implementing the IControllerProtocol interface for the HAL.
+ * Implements the IControllerProtocol HAL interface for Zengge/MagicHome/LEDnetWF
+ * hardware. Owns its own ZenggeProtocol instance (independent sequence counter)
+ * and wraps all protocol calls to return ProtocolResult.
  *
  * This is the ONLY file that should import ZenggeProtocol directly. All other
- * files should go through the ControllerRegistry or ControllerContext.
+ * files should go through the ControllerRegistry or IControllerProtocol.
  *
- * NOTE: For this initial HAL phase, the existing 15 files still import
- * ZenggeProtocol directly. Those will be migrated file-by-file in a follow-up
- * once the interface is proven stable.
+ * NOTE: For backward compatibility, the 25 existing consumers still call
+ * ZenggeProtocol.setMultiColor() etc. statically. Those static calls delegate
+ * to ZenggeProtocol._instance (the shared singleton). ZenggeAdapter uses its
+ * OWN instance so adapter writes have an independent sequence counter — this
+ * prevents sequence number corruption when both paths are active simultaneously.
  *
- * All 4 stubs from the initial HAL phase are now fully wired:
- *   - buildMusicConfig → ZenggeProtocol.setMusicConfig (0x73)
- *   - buildMusicMagnitude → ZenggeProtocol.sendMusicMagnitude (0x74)
- *   - buildPowerOn → 0x56 0xAA wrapped
- *   - buildPowerOff → 0x56 0xAB wrapped
+ * Transport:
+ *   - Chunking: 0x40 fragmentation is handled HERE in prepareForTransmission().
+ *     useBLE.ts no longer contains any chunking math.
+ *   - MTU: Negotiated MTU is received by prepareForTransmission(). Chunked
+ *     packets use (mtu - 3) as the safe payload limit (3 bytes ATT overhead).
+ *   - Handshake: Zengge requires a 0x10 session time sync immediately after
+ *     GATT connection. Returned by getHandshakePayloads().
  */
 
 import type {
   CustomModeStep,
+  FirmwareInfo,
   HardwareSettingsResult,
   IControllerProtocol,
   MusicConfig,
+  ProtocolResult,
   RGB,
+  RfRemoteState,
 } from './IControllerProtocol';
 import {
   ZENGGE_CHARACTERISTIC_UUID,
@@ -33,79 +41,284 @@ import {
 } from './ZenggeProtocol';
 
 export class ZenggeAdapter implements IControllerProtocol {
-  // ─── Identity ──────────────────────────────────────────────────────
+  // ─── Instance ──────────────────────────────────────────────────────────────
+  // Own ZenggeProtocol instance with independent sequence counter.
+  // DO NOT use ZenggeProtocol.static* methods from here — use this.protocol.*
+  private readonly protocol = new ZenggeProtocol();
+
+  // ─── Identity ──────────────────────────────────────────────────────────────
   readonly protocolId = 'zengge';
   readonly serviceUUID = ZENGGE_SERVICE_UUID;
   readonly writeCharacteristicUUID = ZENGGE_CHARACTERISTIC_UUID;
   readonly notifyCharacteristicUUID = ZENGGE_NOTIFY_UUID;
 
-  // ─── Discovery ─────────────────────────────────────────────────────
-  matchesAdvertisement(serviceUUIDs: string[], _manufacturerData?: string): boolean {
-    return serviceUUIDs?.includes(ZENGGE_SERVICE_UUID) ?? false;
+  /**
+   * Zengge uses the app's software FFT engine (AudioContext + 0x74 magnitude
+   * stream). The AudioContext must stay active during music mode.
+   */
+  readonly requiresSoftwareFFT = true;
+
+  // ─── Helper ────────────────────────────────────────────────────────────────
+  /** Wrap a single packet into a ProtocolResult. */
+  private toResult(packet: number[], isRateLimited = false): ProtocolResult {
+    return { packets: [packet], interPacketDelayMs: 0, isRateLimited };
   }
 
-  // ─── Hardware Settings (EEPROM) ────────────────────────────────────
-  buildQuerySettingsPayload(hasMic: boolean = false): number[] {
-    return ZenggeProtocol.queryHardwareSettings(hasMic);
+  /** Wrap an empty result (no-op command). */
+  private noOp(): ProtocolResult {
+    return { packets: [], interPacketDelayMs: 0, isRateLimited: false };
+  }
+
+  // ─── Discovery ─────────────────────────────────────────────────────────────
+  matchesAdvertisement(serviceUUIDs: string[], _manufacturerData?: string): boolean {
+    // Zengge advertises service UUID 0000ffff-...
+    return serviceUUIDs?.some(uuid =>
+      uuid.toLowerCase().includes('ffff') &&
+      uuid.toLowerCase().startsWith('0000')
+    ) ?? false;
+  }
+
+  parseFirmwareFromAdvertisement(manufacturerDataBase64: string): FirmwareInfo | null {
+    const result = ZenggeProtocol.parseFirmwareFromAdvertisement(manufacturerDataBase64);
+    if (!result) return null;
+    return {
+      firmwareVer: result.firmwareVer,
+      ledVersion: result.ledVersion,
+      bleVersion: result.bleVersion,
+      productId: result.productId,
+    };
+  }
+
+  // ─── Connection Lifecycle ──────────────────────────────────────────────────
+  /**
+   * Zengge requires a 0x10 session time sync on EVERY connection.
+   * Without it, timing-sensitive effects may drift or misfire.
+   * Source: TimeControllerFragment.java (APK analysis)
+   */
+  getHandshakePayloads(): ProtocolResult {
+    return this.toResult(this.protocol.setSessionTime());
+  }
+
+  // ─── Hardware Settings (EEPROM) ────────────────────────────────────────────
+  buildQuerySettings(hasMic: boolean = false): ProtocolResult {
+    return this.toResult(this.protocol.queryHardwareSettings(hasMic));
   }
 
   parseSettingsResponse(raw: number[]): HardwareSettingsResult | null {
     return ZenggeProtocol.parseHardwareSettingsResponse(raw);
   }
 
-  buildWriteSettingsPayload(points: number, segments: number, icType: number, sorting: number): number[] {
-    return ZenggeProtocol.writeHardwareSettings(points, segments, icType, sorting);
+  buildWriteSettings(
+    points: number,
+    segments: number,
+    icType: number,
+    sorting: number
+  ): ProtocolResult {
+    return this.toResult(this.protocol.writeHardwareSettings(points, segments, icType, sorting));
   }
 
-  // ─── LED Commands ──────────────────────────────────────────────────
-  buildSolidColor(r: number, g: number, b: number): number[] {
-    // Single solid color = setMultiColor with 1 pixel, FREEZE transition
-    return ZenggeProtocol.setMultiColor([{ r, g, b }], 12, 1, 1, 0x01);
+  // ─── RF Remote ─────────────────────────────────────────────────────────────
+  buildQueryRfRemoteState(): ProtocolResult {
+    return this.toResult(this.protocol.queryRfRemoteState());
   }
 
-  buildMultiColor(colors: RGB[], speed: number, direction: number, transition: number): number[] {
-    return ZenggeProtocol.setMultiColor(colors, colors.length, speed, direction, transition);
+  parseRfRemoteState(raw: number[]): RfRemoteState | null {
+    return ZenggeProtocol.parseRfRemoteState(raw);
   }
 
-  buildCustomMode(steps: CustomModeStep[]): number[] {
-    return ZenggeProtocol.setCustomMode(steps);
+  // ─── Power ─────────────────────────────────────────────────────────────────
+  /**
+   * Power ON — delegates to 0x71 0x23 (APK-proven opcode).
+   *
+   * ⚠️ CRITICAL BUG FIX: Prior adapter used 0x56 0xAA which is the SCENE DELETE
+   * opcode, not power control. 0x71 is the APK-confirmed power toggle opcode.
+   * Source: ZENGGE_PROTOCOL_BIBLE.md §4 — Power Opcodes.
+   */
+  buildPowerOn(): ProtocolResult {
+    return this.toResult(this.protocol.turnOn());
   }
 
-  buildMusicConfig(config: MusicConfig): number[] {
-    return ZenggeProtocol.setMusicConfig(
-      config.patternId,
-      0x26,                // APP mic by default — caller can override via raw write
-      true,                // isOn
-      config.color1,
-      config.color2,
-      config.micSensitivity,
-      config.brightness,
+  /**
+   * Power OFF — delegates to 0x71 0x24 (APK-proven opcode).
+   *
+   * ⚠️ CRITICAL BUG FIX: Prior adapter used 0x56 0xAB. See buildPowerOn().
+   */
+  buildPowerOff(): ProtocolResult {
+    return this.toResult(this.protocol.turnOff());
+  }
+
+  // ─── Color & Pattern Commands ──────────────────────────────────────────────
+  buildSolidColor(r: number, g: number, b: number): ProtocolResult {
+    // Single solid color: 0x59 with 1 color padded to 12 points, STATIC transition
+    return this.toResult(
+      this.protocol.setMultiColor([{ r, g, b }], 12, 1, 1, 0x01),
+      false // solid color is not rate-limited (it's a one-shot)
     );
   }
 
-  buildMusicMagnitude(magnitude: number): number[] {
-    return ZenggeProtocol.sendMusicMagnitude(magnitude);
+  buildMultiColor(
+    colors: RGB[],
+    ledPoints: number,
+    speed: number,
+    direction: number,
+    transitionType: number = 0x02
+  ): ProtocolResult {
+    return this.toResult(
+      this.protocol.setMultiColor(colors, ledPoints, speed, direction, transitionType),
+      true // pattern writes ARE rate-limited (e.g. rapid slider drags)
+    );
   }
 
-  // ─── Power ─────────────────────────────────────────────────────────
-  buildPowerOn(): number[] {
-    // Zengge ON = 0x56 0xAA 0x56 0xAA (wrapped with counter header)
-    const raw = [0x56, 0xAA, 0x56, 0xAA];
-    return ZenggeProtocol.wrapCommand(raw);
+  buildCustomMode(steps: CustomModeStep[]): ProtocolResult {
+    return this.toResult(
+      this.protocol.setCustomMode(steps),
+      true
+    );
   }
 
-  buildPowerOff(): number[] {
-    // Zengge OFF = 0x56 0xAB 0x56 0xAB (wrapped with counter header)
-    const raw = [0x56, 0xAB, 0x56, 0xAB];
-    return ZenggeProtocol.wrapCommand(raw);
+  /**
+   * Extended 0x51 format (323 bytes) for 0xA3 hardware.
+   * This REQUIRES chunked transmission — prepareForTransmission() will
+   * automatically apply 0x40 fragmentation when the packet exceeds MTU.
+   */
+  buildCustomModeExtended(steps: CustomModeStep[], direction: number = 0x80): ProtocolResult {
+    const extSteps = steps.map(s => ({
+      mode: s.mode,
+      speed: s.speed,
+      color1: s.color1,
+      color2: s.color2,
+      dir: s.dir ?? direction,
+    }));
+    return this.toResult(
+      this.protocol.setCustomModeExtended(extSteps, direction),
+      true
+    );
   }
 
-  // ─── Utility ───────────────────────────────────────────────────────
-  calculateChecksum(payload: number[]): number {
-    return ZenggeProtocol.calculateChecksum(payload);
+  /**
+   * 0x42 RBM effect (Zengge). Single packet: [effectId, speed, brightness].
+   * Note: 0x42 is deprecated in production UI — DiagnosticLab only.
+   */
+  buildEffect(effectId: number, speed: number, brightness: number): ProtocolResult {
+    return this.toResult(
+      this.protocol.setCustomRbm(effectId, speed, brightness),
+      false
+    );
   }
 
-  wrapCommand(rawPayload: number[]): number[] {
-    return ZenggeProtocol.wrapCommand(rawPayload);
+  buildCandleMode(
+    r: number,
+    g: number,
+    b: number,
+    speed: number,
+    brightness: number,
+    amplitude: number
+  ): ProtocolResult {
+    return this.toResult(
+      this.protocol.setCandleMode(r, g, b, speed, brightness, amplitude),
+      false
+    );
+  }
+
+  buildStreamPixelFrame(pixels: RGB[]): ProtocolResult {
+    return this.toResult(
+      this.protocol.streamPixelFrame(pixels),
+      false
+    );
+  }
+
+  // ─── Music ─────────────────────────────────────────────────────────────────
+  buildMusicConfig(config: MusicConfig): ProtocolResult {
+    return this.toResult(
+      this.protocol.setMusicConfig(
+        config.patternId,
+        0x26,               // APP mic by default (APK truth: 0x26 = phone mic)
+        true,               // isOn
+        config.color1,
+        config.color2,
+        config.micSensitivity,
+        config.brightness,
+      ),
+      false
+    );
+  }
+
+  /**
+   * 0x74 magnitude sample for real-time audio reactivity.
+   * Called at the app's FFT frame rate (30-60fps) — NOT rate-limited.
+   */
+  buildMusicMagnitude(magnitude: number): ProtocolResult {
+    return this.toResult(
+      this.protocol.sendMusicMagnitude(magnitude),
+      false
+    );
+  }
+
+  // ─── Transport Preparation ─────────────────────────────────────────────────
+  /**
+   * Apply MTU-aware chunking to a ProtocolResult.
+   *
+   * Zengge 0x40 chunk framing:
+   *   Packets larger than (mtu - 3) bytes are fragmented into chunks.
+   *   Each chunk is prefixed with: [0x40, chunkIndex, totalChunks]
+   *   followed by up to (safeMtu - 3) bytes of payload.
+   *
+   * This logic was previously inline in useBLE.ts writeChunked() (L747-832).
+   * Moving it here means useBLE.ts has ZERO protocol knowledge.
+   *
+   * Example (323-byte 0x51 extended, MTU=186):
+   *   safeMtu = 186 - 3 = 183 bytes per write
+   *   chunkPayloadSize = 183 - 3 (chunk header) = 180 bytes of data per chunk
+   *   Chunks = ceil(323 / 180) = 2 chunks
+   *   chunk0: [0x40, 0x00, 0x02, ...180 bytes...]
+   *   chunk1: [0x40, 0x01, 0x02, ...143 bytes...]
+   *
+   * @param result  ProtocolResult to prepare.
+   * @param mtu     Negotiated BLE MTU for this device.
+   */
+  prepareForTransmission(result: ProtocolResult, mtu: number): ProtocolResult {
+    const safeMtu = mtu - 3; // Subtract 3 bytes ATT overhead
+    const CHUNK_HEADER_SIZE = 3; // [0x40, chunkIndex, totalChunks]
+    const chunkPayloadSize = safeMtu - CHUNK_HEADER_SIZE;
+
+    let needsChunking = false;
+    for (const packet of result.packets) {
+      if (packet.length > safeMtu) {
+        needsChunking = true;
+        break;
+      }
+    }
+
+    if (!needsChunking) return result;
+
+    const chunkedPackets: number[][] = [];
+
+    for (const packet of result.packets) {
+      if (packet.length <= safeMtu) {
+        // Packet fits in one MTU — send as-is
+        chunkedPackets.push(packet);
+      } else {
+        // Fragment into 0x40-prefixed chunks
+        const totalChunks = Math.ceil(packet.length / chunkPayloadSize);
+        for (let i = 0; i < totalChunks; i++) {
+          const chunkData = packet.slice(i * chunkPayloadSize, (i + 1) * chunkPayloadSize);
+          chunkedPackets.push([
+            0x40,              // Zengge chunk framing opcode
+            i & 0xFF,          // chunk index (0-based)
+            totalChunks & 0xFF, // total chunk count
+            ...chunkData,
+          ]);
+        }
+      }
+    }
+
+    return {
+      packets: chunkedPackets,
+      // Add 8ms inter-chunk delay when we actually chunked something
+      interPacketDelayMs: chunkedPackets.length > result.packets.length
+        ? Math.max(8, result.interPacketDelayMs)
+        : result.interPacketDelayMs,
+      isRateLimited: result.isRateLimited,
+    };
   }
 }

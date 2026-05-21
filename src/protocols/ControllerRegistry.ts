@@ -71,8 +71,25 @@ export function getDefaultProtocol(): IControllerProtocol {
 }
 
 /**
- * Get all registered protocol IDs (for diagnostics/admin tools).
+ * Get all registered protocol IDs (for diagnostics/admin tools).\
  */
 export function getRegisteredProtocolIds(): string[] {
   return registry.map(p => p.protocolId);
+}
+
+/**
+ * Resolve the adapter for a specific already-connected device from an
+ * adapter map (e.g. useBLE.ts adapterMapRef). Falls back to the default
+ * protocol if the device is not in the map.
+ *
+ * This avoids re-running advertisement matching for devices already connected.
+ *
+ * @param deviceId   The BLE device ID (MAC on Android, UUID on iOS).
+ * @param adapterMap The per-device adapter map from useBLE.ts adapterMapRef.
+ */
+export function resolveProtocolForDevice(
+  deviceId: string,
+  adapterMap: Map<string, IControllerProtocol>
+): IControllerProtocol {
+  return adapterMap.get(deviceId) ?? getDefaultProtocol();
 }

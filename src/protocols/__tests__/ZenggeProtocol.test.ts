@@ -1,4 +1,11 @@
 import { ZenggeProtocol } from '../ZenggeProtocol';
+import { ZenggeAdapter } from '../ZenggeAdapter';
+import type { ProtocolResult } from '../IControllerProtocol';
+
+// ─── ZenggeProtocol (Static Facade Backward Compatibility) ───────────────────
+// Verifies that all 25 legacy consumers can still call ZenggeProtocol.method()
+// statically and receive correct results. The static methods delegate to the
+// singleton instance (_instance) — these tests prove that still works.
 
 describe('ZenggeProtocol', () => {
   describe('calculateChecksum', () => {
@@ -8,28 +15,31 @@ describe('ZenggeProtocol', () => {
     });
   });
 
-  describe('wrapCommand', () => {
-    it('should correctly build the header envelope', () => {
-      // Mock getSequenceCounter to 0 to make test deterministic
-      const spy = jest.spyOn(ZenggeProtocol as any, 'getSequenceCounter').mockReturnValue(0);
-      
+  describe('wrapCommand (static facade)', () => {
+    it('should correctly build the header envelope via the static singleton', () => {
+      // The static facade delegates to _instance. We spy on the prototype's
+      // instance method (getSequenceCounter) to make the test deterministic.
+      const proto = ZenggeProtocol.prototype as any;
+      const spy = jest.spyOn(proto, 'getSequenceCounter').mockReturnValue(0);
+
       const payload = [0x71, 0x23, 0x0f, 0xa3];
       const result = ZenggeProtocol.wrapCommand(payload);
-      
+
       // Expected header: [0x00, 0x00, 0x80, 0x00, 0x00, 0x04, 0x05, 0x0b]
       expect(result.slice(0, 8)).toEqual([0x00, 0x00, 0x80, 0x00, 0x00, 0x04, 0x05, 0x0b]);
       // Appended payload
       expect(result.slice(8)).toEqual([0x71, 0x23, 0x0f, 0xa3]);
-      
+
       spy.mockRestore();
     });
   });
 
   describe('queryHardwareSettings', () => {
     it('should generate correct query packet for no-mic', () => {
-      const spy = jest.spyOn(ZenggeProtocol as any, 'getSequenceCounter').mockReturnValue(0);
+      const proto = ZenggeProtocol.prototype as any;
+      const spy = jest.spyOn(proto, 'getSequenceCounter').mockReturnValue(0);
       const result = ZenggeProtocol.queryHardwareSettings(false);
-      
+
       // raw: [0x63, 0x12, 0x21, 0x0F] -> cs: 0xA5
       expect(result.slice(8)).toEqual([0x63, 0x12, 0x21, 0x0F, 0xA5]);
       spy.mockRestore();
@@ -38,33 +48,192 @@ describe('ZenggeProtocol', () => {
 
   describe('setMultiColor', () => {
     it('should construct correct 0x59 payload and respect constraints', () => {
-      const spy = jest.spyOn(ZenggeProtocol as any, 'getSequenceCounter').mockReturnValue(0);
-      
+      const proto = ZenggeProtocol.prototype as any;
+      const spy = jest.spyOn(proto, 'getSequenceCounter').mockReturnValue(0);
+
       const colors = [
         { r: 255, g: 0, b: 0 },
         { r: 0, g: 255, b: 0 },
       ]; // Only 2 colors, will be padded to 12
-      
+
       const result = ZenggeProtocol.setMultiColor(colors, 50, 10, 1, 0x02);
-      
+
       // Payload starts at index 8 after wrapper
       expect(result[8]).toBe(0x59);
-      
+
       // Check total length calculation: (12 points * 3) + 9 = 45 (0x2D)
       expect(result[9]).toBe(0x00); // len_hi
       expect(result[10]).toBe(0x2D); // len_lo
-      
+
       // Check first pixel
       expect(result[11]).toBe(255);
       expect(result[12]).toBe(0);
       expect(result[13]).toBe(0);
-      
+
       // Check hardware led points (50 = 0x00 0x32)
       // Colors take 3 * 12 = 36 bytes. Index 11 + 36 = 47
       expect(result[47]).toBe(0x00); // pts_hi
       expect(result[48]).toBe(0x32); // pts_lo
-      
+
       spy.mockRestore();
+    });
+  });
+});
+
+// ─── ZenggeAdapter (HAL Layer Tests) ─────────────────────────────────────────
+// Verifies the adapter's IControllerProtocol implementation — ProtocolResult
+// wrapping, corrected power opcodes, handshake, and transmission chunking.
+
+describe('ZenggeAdapter', () => {
+  let adapter: ZenggeAdapter;
+
+  beforeEach(() => {
+    adapter = new ZenggeAdapter();
+  });
+
+  describe('identity', () => {
+    it('should have correct protocol ID and service UUID', () => {
+      expect(adapter.protocolId).toBe('zengge');
+      expect(adapter.serviceUUID).toBe('0000ffff-0000-1000-8000-00805f9b34fb');
+      expect(adapter.requiresSoftwareFFT).toBe(true);
+    });
+  });
+
+  describe('matchesAdvertisement', () => {
+    it('should match on ffff service UUID', () => {
+      expect(adapter.matchesAdvertisement(['0000ffff-0000-1000-8000-00805f9b34fb'])).toBe(true);
+    });
+    it('should NOT match on ffe0 service UUID (BanlanX)', () => {
+      expect(adapter.matchesAdvertisement(['0000ffe0-0000-1000-8000-00805f9b34fb'])).toBe(false);
+    });
+    it('should return false for empty UUID list', () => {
+      expect(adapter.matchesAdvertisement([])).toBe(false);
+    });
+  });
+
+  describe('buildPowerOn', () => {
+    it('should return 0x71 0x23 opcode — NOT the old 0x56 0xAA bug', () => {
+      const result: ProtocolResult = adapter.buildPowerOn();
+      expect(result.packets).toHaveLength(1);
+      expect(result.interPacketDelayMs).toBe(0);
+      // After the 8-byte wrapper, payload starts at index 8
+      const payload = result.packets[0];
+      // The 0x71 opcode confirms correct power-on (APK-proven)
+      // Payload inner bytes: [0x71, 0x23, 0x0f, 0xa3]
+      expect(payload[8]).toBe(0x71);
+      expect(payload[9]).toBe(0x23);
+      // REGRESSION CHECK: 0x56 was the old wrong opcode (Scene Delete)
+      expect(payload[8]).not.toBe(0x56);
+    });
+  });
+
+  describe('buildPowerOff', () => {
+    it('should return 0x71 0x24 opcode — NOT the old 0x56 0xAB bug', () => {
+      const result: ProtocolResult = adapter.buildPowerOff();
+      expect(result.packets).toHaveLength(1);
+      const payload = result.packets[0];
+      expect(payload[8]).toBe(0x71);
+      expect(payload[9]).toBe(0x24);
+      expect(payload[8]).not.toBe(0x56);
+    });
+  });
+
+  describe('getHandshakePayloads', () => {
+    it('should return a 0x10 time sync packet', () => {
+      const result: ProtocolResult = adapter.getHandshakePayloads();
+      expect(result.packets).toHaveLength(1);
+      expect(result.interPacketDelayMs).toBe(0);
+      // Inner payload byte 0 = 0x10 (time sync opcode)
+      const payload = result.packets[0];
+      expect(payload[8]).toBe(0x10);
+    });
+  });
+
+  describe('buildMultiColor', () => {
+    it('should return isRateLimited=true for pattern writes', () => {
+      const result = adapter.buildMultiColor(
+        [{ r: 255, g: 0, b: 0 }], 12, 16, 1, 0x02
+      );
+      expect(result.isRateLimited).toBe(true);
+      expect(result.packets).toHaveLength(1);
+      expect(result.packets[0][8]).toBe(0x59); // 0x59 opcode
+    });
+  });
+
+  describe('buildQuerySettings', () => {
+    it('should return a 0x63 query packet', () => {
+      const result = adapter.buildQuerySettings(false);
+      expect(result.packets).toHaveLength(1);
+      expect(result.packets[0][8]).toBe(0x63);
+    });
+  });
+
+  describe('buildMusicMagnitude', () => {
+    it('should return a 0x74 magnitude packet and NOT be rate-limited', () => {
+      const result = adapter.buildMusicMagnitude(128);
+      expect(result.packets).toHaveLength(1);
+      expect(result.isRateLimited).toBe(false);
+      // Inner opcode
+      expect(result.packets[0][8]).toBe(0x74);
+    });
+  });
+
+  describe('prepareForTransmission', () => {
+    it('should pass through small packets unchanged', () => {
+      const small: ProtocolResult = {
+        packets: [[0x59, 0x00, 0x2D, ...new Array(45).fill(0)]],
+        interPacketDelayMs: 0,
+        isRateLimited: true,
+      };
+      const prepared = adapter.prepareForTransmission(small, 186);
+      expect(prepared.packets).toHaveLength(1);
+      expect(prepared.packets[0]).toEqual(small.packets[0]);
+    });
+
+    it('should chunk a 323-byte 0x51 extended packet into multiple 0x40 chunks (MTU=186)', () => {
+      // 323 bytes > (186-3)=183 safeMtu → must chunk
+      // chunkPayloadSize = 183 - 3 (header) = 180 bytes per chunk
+      // chunks = ceil(323 / 180) = 2
+      const largePayload = [0x51, ...new Array(322).fill(0xAB)];
+      const large: ProtocolResult = {
+        packets: [largePayload],
+        interPacketDelayMs: 0,
+        isRateLimited: true,
+      };
+      const prepared = adapter.prepareForTransmission(large, 186);
+
+      // Must produce 2 chunks
+      expect(prepared.packets).toHaveLength(2);
+
+      // Each chunk starts with [0x40, chunkIndex, totalChunks]
+      expect(prepared.packets[0][0]).toBe(0x40);
+      expect(prepared.packets[0][1]).toBe(0x00); // chunk 0
+      expect(prepared.packets[0][2]).toBe(0x02); // total 2
+
+      expect(prepared.packets[1][0]).toBe(0x40);
+      expect(prepared.packets[1][1]).toBe(0x01); // chunk 1
+      expect(prepared.packets[1][2]).toBe(0x02); // total 2
+
+      // Inter-packet delay should be at least 8ms when chunking
+      expect(prepared.interPacketDelayMs).toBeGreaterThanOrEqual(8);
+
+      // Verify no data is lost
+      const chunk0Data = prepared.packets[0].slice(3);
+      const chunk1Data = prepared.packets[1].slice(3);
+      const reconstructed = [...chunk0Data, ...chunk1Data];
+      expect(reconstructed).toEqual(largePayload);
+    });
+
+    it('should use 8ms delay when chunking, preserving larger delays', () => {
+      const largePayload = new Array(300).fill(0xCC);
+      const large: ProtocolResult = {
+        packets: [largePayload],
+        interPacketDelayMs: 20, // larger than 8ms
+        isRateLimited: false,
+      };
+      const prepared = adapter.prepareForTransmission(large, 186);
+      // Should preserve the 20ms delay since it's larger than the 8ms minimum
+      expect(prepared.interPacketDelayMs).toBe(20);
     });
   });
 });

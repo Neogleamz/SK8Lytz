@@ -96,9 +96,17 @@ export interface HardwareSettings {
 }
 
 export class ZenggeProtocol {
-  // (Removed applyColorSorting)
+  // ─── Instance State ──────────────────────────────────────────────────────────
+  // Each ZenggeProtocol instance has its own sequence counter so that a
+  // ZenggeAdapter instance (used by the HAL) and legacy static callers (the 25
+  // existing consumers) don't share and corrupt each other's sequence.
 
-  private static messageCounter = 0;
+  private messageCounter = 0;
+
+  // Module-level singleton — used by all static facade methods below.
+  // This preserves 100% backward compatibility: ZenggeProtocol.setMultiColor()
+  // still works exactly as before for all 25 legacy consumers.
+  private static readonly _instance = new ZenggeProtocol();
 
   /**
    * Diagnostic mode gate — must be set to true by Sk8LytzDiagnosticLab before
@@ -107,16 +115,19 @@ export class ZenggeProtocol {
    */
   public static DIAGNOSTIC_MODE_ENABLED = false;
 
-  private static getSequenceCounter(): number {
+  // Instance method — used by this instance and by ZenggeAdapter
+  private getSequenceCounter(): number {
     this.messageCounter = (this.messageCounter + 1) % 256;
     return this.messageCounter;
   }
 
-  public static calculateChecksum(payload: number[]): number {
+  // ─── Instance Methods (used by ZenggeAdapter and internally) ────────────────
+
+  public calculateChecksum(payload: number[]): number {
     return payload.reduce((acc, val) => acc + val, 0) & 0xFF;
   }
 
-  public static wrapCommand(rawPayload: number[], cmdFamily: number = 0x0b): number[] {
+  public wrapCommand(rawPayload: number[], cmdFamily: number = 0x0b): number[] {
     const payloadLen = rawPayload.length;
     const seq = this.getSequenceCounter();
     const packet = [
@@ -130,6 +141,18 @@ export class ZenggeProtocol {
       cmdFamily
     ];
     return [...packet, ...rawPayload];
+  }
+
+  // ─── Static Facades (backward compatibility — DO NOT REMOVE) ─────────────────
+  // All 25 existing consumers call ZenggeProtocol.method() statically.
+  // These facades delegate to the singleton instance with zero behavior change.
+
+  public static calculateChecksum(payload: number[]): number {
+    return ZenggeProtocol._instance.calculateChecksum(payload);
+  }
+
+  public static wrapCommand(rawPayload: number[], cmdFamily: number = 0x0b): number[] {
+    return ZenggeProtocol._instance.wrapCommand(rawPayload, cmdFamily);
   }
 
   // ─── HARDWARE SETTINGS: QUERY (0x63) ───────────────────────────────────────
