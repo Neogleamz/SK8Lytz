@@ -13,6 +13,10 @@ import { Buffer } from 'buffer';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
+import { resolveProtocol, getDefaultProtocol, resolveProtocolForDevice } from '../protocols/ControllerRegistry';
+import type { IControllerProtocol } from '../protocols/IControllerProtocol';
+// NOTE: Zengge static imports retained for pingDevice and any legacy callsites
+// that will be migrated in Task 1C (refactor/ble-subsystem-hal-wiring).
 import { ZENGGE_CHARACTERISTIC_UUID, ZENGGE_NOTIFY_UUID, ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 import type { BleConnectionState, PendingRegistration } from '../types/dashboard.types';
@@ -370,6 +374,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const mtuMapRef = useRef<Map<string, number>>(new Map());
   const getDeviceMtu = (deviceId: string) => mtuMapRef.current.get(deviceId) ?? 186;
 
+  // ─── Per-device adapter map (HAL) ─────────────────────────────────────────
+  // Stores the resolved IControllerProtocol adapter for each connected device.
+  // Populated during connectToDevices Phase 2 handshake (after discoverServices).
+  // Cleared on disconnect. Falls back to getDefaultProtocol() if device not found.
+  // Enables mixed-protocol group writes: Zengge + BanlanX skates in the same group.
+  const adapterMapRef = useRef<Map<string, IControllerProtocol>>(new Map());
+
   const connectToDevices = async (devices: Device[]) => {
     if (devices.length === 0) return;
 
@@ -544,27 +555,49 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
             deviceId: conn.id,
           });
 
-          // Disconnect listener + notification monitor
+          // ── HAL: Resolve protocol adapter from service UUIDs ───────────────────
+          // discoverAllServicesAndCharacteristics() must complete first so service
+          // UUIDs are available. Adapter resolution lives here (Phase 2) for that reason.
+          let adapter: IControllerProtocol;
+          try {
+            const services = await conn.services();
+            const serviceUUIDs = services.map((s: any) => s.uuid as string);
+            adapter = resolveProtocol(serviceUUIDs, conn.manufacturerData) ?? getDefaultProtocol();
+          } catch (_e) {
+            // services() not available on all platforms — fall back to Zengge default
+            adapter = getDefaultProtocol();
+          }
+          adapterMapRef.current.set(conn.id, adapter);
+          AppLogger.log('DEVICE_CONNECTED', { context: 'adapter_resolved', deviceId: conn.id, protocolId: adapter.protocolId });
+
+          // Disconnect listener + notification monitor using ADAPTER UUIDs
           if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
           disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {
             handleOrganicDisconnect(error, conn.id);
           });
           conn.monitorCharacteristicForService(
-            ZENGGE_SERVICE_UUID,
-            ZENGGE_NOTIFY_UUID,
+            adapter.serviceUUID,
+            adapter.notifyCharacteristicUUID,
             (error: any, characteristic: any) => handleNotificationRef.current(error, characteristic, conn.id)
           );
 
-          // Time sync — ZENGGE requires this before any other write
+          // ── HAL: Handshake — adapter-specific (Zengge=0x10 time sync, BanlanX=no-op)
           try {
-            const timeSyncPayload = ZenggeProtocol.setSessionTime();
-            const b64TimeSync = Buffer.from(timeSyncPayload).toString('base64');
-            await conn.writeCharacteristicWithoutResponseForService(
-              ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64TimeSync
-            );
-            AppLogger.log('BLE_TIME_SYNC', { deviceId: conn.id, timestamp: Date.now() });
-          } catch (timeSyncErr: any) {
-            AppLogger.warn('[BLE] Time sync write failed (non-fatal)', { error: String(timeSyncErr), deviceId: conn.id });
+            const handshake = adapter.getHandshakePayloads();
+            for (let i = 0; i < handshake.packets.length; i++) {
+              const b64 = Buffer.from(handshake.packets[i]).toString('base64');
+              await conn.writeCharacteristicWithoutResponseForService(
+                adapter.serviceUUID, adapter.writeCharacteristicUUID, b64
+              );
+              if (i < handshake.packets.length - 1 && handshake.interPacketDelayMs > 0) {
+                await new Promise(res => setTimeout(res, handshake.interPacketDelayMs));
+              }
+            }
+            if (handshake.packets.length > 0) {
+              AppLogger.log('BLE_TIME_SYNC', { deviceId: conn.id, protocolId: adapter.protocolId, timestamp: Date.now() });
+            }
+          } catch (handshakeErr: any) {
+            AppLogger.warn('[BLE] Handshake write failed (non-fatal)', { error: String(handshakeErr), deviceId: conn.id });
           }
 
           AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name });
@@ -706,14 +739,16 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
       let allSucceeded = true;
       const base64Full = Buffer.from(payload).toString('base64');
-      
-      // Sending payload atomically in a single write packet without chunking or mid-transmission delays
-      // This matches hardware constraint: each write packet is treated as an independent complete command
+
+      // ── HAL: per-device adapter UUID lookup ────────────────────────────────
+      // Each device may run a different protocol (Zengge FFFF vs BanlanX FFE0).
+      // resolveProtocolForDevice() checks adapterMapRef, falls back to Zengge default.
       for (const device of liveTargets) {
+        const deviceAdapter = resolveProtocolForDevice(device.id, adapterMapRef.current);
         try {
           await device.writeCharacteristicWithoutResponseForService(
-            ZENGGE_SERVICE_UUID,
-            ZENGGE_CHARACTERISTIC_UUID,
+            deviceAdapter.serviceUUID,
+            deviceAdapter.writeCharacteristicUUID,
             base64Full
           );
         } catch (writeError: any) {
@@ -815,13 +850,14 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       await Promise.all(
         targets
           .filter(device => !autoRecovery.ghostedDeviceIds.includes(device.id))
-          .map(device =>
-            device.writeCharacteristicWithoutResponseForService(
-              ZENGGE_SERVICE_UUID, ZENGGE_CHARACTERISTIC_UUID, b64
+          .map(device => {
+            const deviceAdapter = resolveProtocolForDevice(device.id, adapterMapRef.current);
+            return device.writeCharacteristicWithoutResponseForService(
+              deviceAdapter.serviceUUID, deviceAdapter.writeCharacteristicUUID, b64
             ).catch((e: any) => {
               AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: String(e) });
-            })
-          )
+            });
+          })
       );
       // Minimal inter-chunk pacing — just enough for Android BLE stack to queue the next packet.
       // 8ms keeps throughput high while avoiding GATT congestion on older Android versions.
@@ -861,8 +897,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       await new Promise(resolve => setTimeout(resolve, 250));
     }
 
-    // Clear per-device MTU cache
+    // Clear per-device caches (MTU + HAL adapter)
     mtuMapRef.current.clear();
+    adapterMapRef.current.clear();
     setConnectedDevices([]);
     setGate('IDLE');
     AppLogger.log('BLE_STATE_CHANGE', { event: 'keepalive_expired_disconnect' });
