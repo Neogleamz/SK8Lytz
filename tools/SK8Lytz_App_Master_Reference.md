@@ -1,6 +1,6 @@
 # SK8Lytz App Master Reference
 
-_Last Updated: 2026-04-23 | **BATCH:P2 COMPLETE** — UnifiedPatternPicker, Scene Builder (32-slot), GradientBuilder corrections, LEDStripPreview, pattern-favorites-v2 (full BUILDER state persistence). Hotfix: color-picker snap-back (stale-closure regression). Visualizer simMode engine removed. TSC clean. v2.7.0 | Source of Truth: `src/protocols/ZenggeProtocol.ts`_
+_Last Updated: 2026-05-21 | **BATCH:hal-foundation COMPLETE (1A‘1B‘1C‘1D)** — HAL migration finalized. `IControllerProtocol` polymorphic interface + `ZenggeAdapter` + `BanlanxAdapter` (SP621E) fully wired. `useBLE.ts`, `useBLEAutoRecovery`, `useBLESweeper` are hardware-agnostic. `ControllerRegistry` resolves adapters by service UUID (FFE0=BanlanX, FFFF=Zengge). TSC clean. v3.3.9 | Source of Truth: `src/protocols/IControllerProtocol.ts` + `ControllerRegistry.ts`_
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
 
@@ -415,7 +415,7 @@ The **Auto-Recovery** system monitors GATT-connected devices for organic disconn
 | :--- | :--- |
 | **Trigger** | Organic `onDisconnected` event from BLE PLX |
 | **Gate coordination** | Skips recovery attempts when `bleGateRef ≠ IDLE` (e.g., during manual connections) |
-| **Retry sequence** | 1. Set gate → `RECOVERING` → 2. `connectToDevice` (3500ms timeout) → 3. Discover services → 4. Re-register FF02 monitor → 5. Release gate → `IDLE` |
+| **Retry sequence** | 1. Set gate → `RECOVERING` → 2. `connectToDevice` (3500ms timeout) → 3. `discoverAllServicesAndCharacteristics` → 4. Resolve adapter via `conn.services()` → re-register `adapter.notifyCharacteristicUUID` monitor → 5. `onAdapterResolved` callback fires (updates `adapterMapRef` in `useBLE.ts`) → 6. Release gate → `IDLE` |
 | **Cancellation** | AbortController-style token — incrementing counter instantly breaks all active loops |
 | **Max retries** | `5` with exponential delay: `2s, 4s, 8s, 16s, 30s` |
 | **Ghosting** | Failed recovery adds device to `ghostedDeviceIds` — UI dims card, `writeToDevice` skips it |

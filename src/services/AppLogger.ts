@@ -145,6 +145,7 @@ export type EventType =
   // ── Auto-Recovery Extended ─────────────────────────────────
   | 'AUTO_RECOVERY_CANCELLED'
   | 'AUTO_RECOVERY_GATE_WAIT'
+  | 'AUTO_RECOVERY_ADAPTER'
   // ── Telemetry Hardening ─────────────────────────────────────────
   | 'SCREEN_ERROR'
   | 'PROMISE_REJECTION'

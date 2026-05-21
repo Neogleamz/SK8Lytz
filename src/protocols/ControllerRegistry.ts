@@ -33,11 +33,16 @@ function getAppLogger() {
 
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
+// The registry is ordered: BanlanX FIRST (FFE0 UUID is unambiguous — must not be masked
+// by Zengge's FFFF match). ZenggeAdapter is the production default fallback.
+const _banlanxAdapter = new BanlanxAdapter();
+const _zenggeAdapter = new ZenggeAdapter();
+
 const registry: IControllerProtocol[] = [
   // BanlanX checked FIRST — FFE0 service UUID is unambiguous for SP621E.
   // ZenggeAdapter is the fallback for FFFF / MFR-data-matched devices.
-  new BanlanxAdapter(),
-  new ZenggeAdapter(),
+  _banlanxAdapter,
+  _zenggeAdapter,
 ];
 
 /**
@@ -67,11 +72,12 @@ export function registerProtocol(protocol: IControllerProtocol): void {
 }
 
 /**
- * Get the default protocol (first registered).
- * Used as a fallback when no specific protocol is resolved.
+ * Get the default protocol (Zengge — the primary production hardware).
+ * BanlanxAdapter is registry[0] for advertisement priority, but Zengge
+ * is the correct fallback for devices where no protocol is resolved.
  */
 export function getDefaultProtocol(): IControllerProtocol {
-  return registry[0];
+  return _zenggeAdapter;
 }
 
 /**
