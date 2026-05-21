@@ -1,0 +1,100 @@
+/**
+ * useProtocolDispatch.ts — Protocol-Aware Command Dispatch
+ *
+ * This hook acts as the translation layer between UI intents (e.g. "turn red")
+ * and hardware-specific byte arrays. It supports mixed-protocol groups by
+ * iterating over connected devices and resolving the correct HAL adapter for each.
+ */
+import { useCallback } from 'react';
+import useBLE from './useBLE';
+import type { CustomModeStep, MusicConfig, RGB, ProtocolResult } from '../protocols/IControllerProtocol';
+
+export function useProtocolDispatch() {
+  const { connectedDevices, getAdapterForDevice, executeProtocolResults } = useBLE();
+
+  const _dispatchToDevices = useCallback(
+    (
+      builder: (adapter: ReturnType<typeof getAdapterForDevice>) => ProtocolResult,
+      targetDeviceId?: string,
+      opts?: { lowPriority?: boolean }
+    ) => {
+      const targets = targetDeviceId 
+        ? connectedDevices.filter(d => d.id === targetDeviceId)
+        : connectedDevices;
+
+      if (targets.length === 0) return Promise.resolve(true);
+
+      const payloads = targets.map(device => {
+        const adapter = getAdapterForDevice(device.id);
+        const result = builder(adapter);
+        return { targetDeviceId: device.id, result };
+      });
+
+      return executeProtocolResults(payloads, opts);
+    },
+    [connectedDevices, getAdapterForDevice, executeProtocolResults]
+  );
+
+  const setPower = useCallback((isOn: boolean, targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => isOn ? adapter.buildPowerOn() : adapter.buildPowerOff(), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
+  const setSolidColor = useCallback((r: number, g: number, b: number, targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => adapter.buildSolidColor(r, g, b), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
+  const setMultiColor = useCallback((colors: RGB[], ledPoints: number, speed: number, direction: number, transitionType?: number, targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => adapter.buildMultiColor(colors, ledPoints, speed, direction, transitionType), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
+  const setEffect = useCallback((effectId: number, speed: number, brightness: number, targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => adapter.buildEffect(effectId, speed, brightness), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
+  const setCustomMode = useCallback((steps: CustomModeStep[], targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => adapter.buildCustomMode(steps), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
+  const setCustomModeExtended = useCallback((steps: CustomModeStep[], direction?: number, targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => adapter.buildCustomModeExtended(steps, direction), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
+  const setCandleMode = useCallback((r: number, g: number, b: number, speed: number, brightness: number, amplitude: number, targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => adapter.buildCandleMode(r, g, b, speed, brightness, amplitude), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
+  const streamPixelFrame = useCallback((pixels: RGB[], targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => adapter.buildStreamPixelFrame(pixels), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
+  const setMusicConfig = useCallback((config: MusicConfig, targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => adapter.buildMusicConfig(config), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
+  const setMusicMagnitude = useCallback((magnitude: number, targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => adapter.buildMusicMagnitude(magnitude), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
+  const queryHardwareSettings = useCallback((hasMic?: boolean, targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => adapter.buildQuerySettings(hasMic), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
+  const queryRfRemoteState = useCallback((targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => adapter.buildQueryRfRemoteState(), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
+  return {
+    setPower,
+    setSolidColor,
+    setMultiColor,
+    setEffect,
+    setCustomMode,
+    setCustomModeExtended,
+    setCandleMode,
+    streamPixelFrame,
+    setMusicConfig,
+    setMusicMagnitude,
+    queryHardwareSettings,
+    queryRfRemoteState,
+  };
+}

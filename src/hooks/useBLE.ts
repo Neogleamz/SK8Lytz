@@ -14,7 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { resolveProtocol, getDefaultProtocol, resolveProtocolForDevice } from '../protocols/ControllerRegistry';
-import type { IControllerProtocol } from '../protocols/IControllerProtocol';
+import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
 // NOTE: Zengge static parse methods (parseHardwareSettingsResponse, parseRfRemoteState)
 // retained in pingDevice for Phase 1 EEPROM probing. BanlanX returns null for both
 // (no EEPROM probe in Phase 1). UUID constants are no longer used in pingDevice.
@@ -53,6 +53,8 @@ export interface BluetoothLowEnergyApi {
   writeToDevice: (payload: number[], targetDeviceId?: string) => Promise<boolean | 'partial'>;
   /** Send large payloads (>MTU) via sequential ZENGGE-framed BLE chunks. Required for 0x51 extended Scene Builder payloads. */
   writeChunked: (payload: number[], targetDeviceId?: string) => Promise<void>;
+  getAdapterForDevice: (deviceId: string) => IControllerProtocol;
+  executeProtocolResults: (payloads: { targetDeviceId: string, result: ProtocolResult }[], opts?: { lowPriority?: boolean }) => Promise<boolean>;
   /**
    * Wizard-specific atomic ping: Connect → Blink → Probe EEPROM → Turn Off → Disconnect.
    * Designed for use in HardwareSetupWizardScreen only. Bypasses connectedDevices requirement.
@@ -975,6 +977,79 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     };
   }, []);
 
+  const getAdapterForDevice = useCallback((deviceId: string): IControllerProtocol => {
+    return resolveProtocolForDevice(deviceId, adapterMapRef.current);
+  }, []);
+
+  const executeProtocolResults = async (payloads: { targetDeviceId: string, result: ProtocolResult }[], opts?: { lowPriority?: boolean }): Promise<boolean> => {
+    if (payloads.length === 0) return true;
+    
+    const isRateLimited = payloads.some(p => p.result.isRateLimited);
+    const capturedGeneration = isRateLimited ? writeGeneration : 0;
+    
+    if (isRateLimited) {
+      const thisGeneration = opts?.lowPriority ? writeGeneration : ++writeGeneration;
+      return new Promise((resolve) => {
+        if (writeDebounceTimerRef.current) clearTimeout(writeDebounceTimerRef.current);
+        writeDebounceTimerRef.current = setTimeout(async () => {
+          writeDebounceTimerRef.current = null;
+          if (thisGeneration !== writeGeneration) { resolve(true); return; }
+          const res = await _executeProtocolResultsInternal(payloads, capturedGeneration);
+          resolve(res);
+        }, 50);
+      });
+    }
+    
+    return _executeProtocolResultsInternal(payloads, capturedGeneration);
+  };
+
+  const _executeProtocolResultsInternal = async (payloads: { targetDeviceId: string, result: ProtocolResult }[], capturedGeneration: number): Promise<boolean> => {
+    const executeWrite = async (): Promise<boolean> => {
+      if (capturedGeneration !== 0 && capturedGeneration !== writeGeneration) {
+        return true;
+      }
+      
+      let allSucceeded = true;
+      for (const { targetDeviceId, result } of payloads) {
+        if (autoRecovery.ghostedDeviceIds.includes(targetDeviceId)) continue;
+        
+        const device = connectedDevicesRef.current.find(d => d.id === targetDeviceId);
+        if (!device) continue;
+        
+        const adapter = resolveProtocolForDevice(targetDeviceId, adapterMapRef.current);
+        const mtu = getDeviceMtu(targetDeviceId);
+        const preparedResult = adapter.prepareForTransmission(result, mtu);
+        
+        for (let i = 0; i < preparedResult.packets.length; i++) {
+          const base64 = Buffer.from(preparedResult.packets[i]).toString('base64');
+          try {
+            await device.writeCharacteristicWithoutResponseForService(
+              adapter.serviceUUID,
+              adapter.writeCharacteristicUUID,
+              base64
+            );
+            if (i < preparedResult.packets.length - 1 && preparedResult.interPacketDelayMs > 0) {
+              await new Promise(res => setTimeout(res, preparedResult.interPacketDelayMs));
+            }
+          } catch (e) {
+            AppLogger.warn(`[BLE] executeProtocolResults failed for ${targetDeviceId}`, e);
+            allSucceeded = false;
+            break; // Stop sending subsequent packets for this device if one fails
+          }
+        }
+      }
+      return allSucceeded;
+    };
+    
+    const currentWrite = (async () => {
+      await writeMutex.catch(() => {});
+      return executeWrite();
+    })();
+    
+    writeMutex = currentWrite;
+    return currentWrite;
+  };
+
   const derivedBleState: BleConnectionState = 
     bleGateState === 'DISCONNECTING' ? 'DISCONNECTING' :
     bleGateState === 'CONNECTING' ? 'CONNECTING' :
@@ -1016,6 +1091,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     clearPendingRegistrations: () => scanner.setPendingRegistrations([]),
     setPendingRegistrations: scanner.setPendingRegistrations,
     pingDevice,
+    getAdapterForDevice,
+    executeProtocolResults,
     ghostedDeviceIds: autoRecovery.ghostedDeviceIds,
     bleState: derivedBleState,
     bleGateRef,
