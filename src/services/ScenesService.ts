@@ -25,6 +25,14 @@ export interface ICloudScene {
 }
 
 const LOCAL_SCENES_KEY = '@Sk8lytz_Scenes';
+const LOCAL_SCENE_SYNC_QUEUE_KEY = '@Sk8lytz_Scene_Sync_Queue';
+
+export interface SceneSyncJob {
+  id: string;
+  type: 'upsert_user_scene' | 'delete_user_scene' | 'publish_community_scene';
+  payload: any;
+  timestamp: number;
+}
 
 class ScenesServiceClass {
   
@@ -78,23 +86,27 @@ class ScenesServiceClass {
     try {
       const { data: userData, error: userError } = await supabase.auth.getUser();
       if (userError || !userData?.user) {
-      AppLogger.warn('[ScenesService] Skipping cloud publish (not logged in)');
+        AppLogger.warn('[ScenesService] Skipping cloud publish (not logged in)');
         return false;
       }
 
       const username = userData.user.user_metadata?.username || 'Anonymous Skater';
 
-      const { error } = await supabase
-        .from('shared_scenes')
-        .insert([{
-          author_id: userData.user.id,
-          author_username: username,
-          name: name,
-          scene_payload: payload,
-          is_public: isPublic
-        }]);
+      const jobPayload = {
+        author_id: userData.user.id,
+        author_username: username,
+        name: name,
+        scene_payload: payload,
+        is_public: isPublic
+      };
 
-      if (error) throw error;
+      await this.enqueueSyncJob({
+        id: `pub_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+        type: 'publish_community_scene',
+        payload: jobPayload,
+        timestamp: Date.now()
+      });
+
       return true;
     } catch (e) {
       AppLogger.error('[ScenesService] publishScene error', { error: String(e) });
@@ -247,10 +259,12 @@ class ScenesServiceClass {
       AppLogger.error('[ScenesService] saveLocalScene error', { error: String(e) });
     }
 
-    // 2. Save Cloud (user_saved_presets)
+    // 2. Save Cloud (user_saved_presets) via Queue
     if (userId) {
-      try {
-        const { error } = await supabase.from('user_saved_presets').upsert({
+      await this.enqueueSyncJob({
+        id: `save_${scene.id}_${Date.now()}`,
+        type: 'upsert_user_scene',
+        payload: {
           id: scene.id,
           name: scene.name,
           nodes: scene.steps,
@@ -258,11 +272,9 @@ class ScenesServiceClass {
           transition_type: 0,
           user_id: userId,
           created_at: scene.created_at || new Date().toISOString()
-        } as unknown as Database['public']['Tables']['user_saved_presets']['Insert']);
-        if (error) throw error;
-      } catch (err) {
-        AppLogger.warn('[ScenesService] Cloud save fail', { error: String(err) });
-      }
+        },
+        timestamp: Date.now()
+      });
     }
 
     return true;
@@ -282,16 +294,82 @@ class ScenesServiceClass {
       AppLogger.error('[ScenesService] deleteLocalScene error', { error: String(e) });
     }
 
-    // 2. Delete Cloud (user_saved_presets)
+    // 2. Delete Cloud (user_saved_presets) via Queue
     if (userId) {
-      try {
-        await supabase.from('user_saved_presets').delete().eq('id', sceneId);
-      } catch (err) {
-        AppLogger.warn('[ScenesService] Cloud delete fail', { error: String(err) });
-      }
+      await this.enqueueSyncJob({
+        id: `del_${sceneId}_${Date.now()}`,
+        type: 'delete_user_scene',
+        payload: { id: sceneId },
+        timestamp: Date.now()
+      });
     }
 
     return true;
+  }
+
+  // ── Sync Queue Operations ──
+
+  private async enqueueSyncJob(job: SceneSyncJob) {
+    try {
+      const rawQueue = await AsyncStorage.getItem(LOCAL_SCENE_SYNC_QUEUE_KEY);
+      const queue: SceneSyncJob[] = rawQueue ? JSON.parse(rawQueue) : [];
+      queue.push(job);
+      await AsyncStorage.setItem(LOCAL_SCENE_SYNC_QUEUE_KEY, JSON.stringify(queue));
+      AppLogger.debug('[ScenesService] Enqueued sync job', { jobType: job.type, jobId: job.id });
+    } catch (e) {
+      AppLogger.error('[ScenesService] Enqueue fail', { error: String(e) });
+    }
+  }
+
+  async flushSyncQueue() {
+    if (!supabase) return;
+    try {
+      const rawQueue = await AsyncStorage.getItem(LOCAL_SCENE_SYNC_QUEUE_KEY);
+      let queue: SceneSyncJob[] = rawQueue ? JSON.parse(rawQueue) : [];
+      
+      if (queue.length === 0) return;
+      
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.user) {
+        // Can't sync without auth, keep in queue
+        return;
+      }
+
+      let remainingQueue: SceneSyncJob[] = [];
+      let successCount = 0;
+
+      for (const job of queue) {
+        let success = false;
+        try {
+          if (job.type === 'publish_community_scene') {
+            const { error } = await supabase.from('shared_scenes').insert([job.payload]);
+            if (!error) success = true;
+          } else if (job.type === 'upsert_user_scene') {
+            const { error } = await supabase.from('user_saved_presets').upsert(job.payload as unknown as Database['public']['Tables']['user_saved_presets']['Insert']);
+            if (!error) success = true;
+          } else if (job.type === 'delete_user_scene') {
+            const { error } = await supabase.from('user_saved_presets').delete().eq('id', job.payload.id);
+            if (!error) success = true;
+          }
+        } catch (err) {
+          // Swallow explicit error to allow retry
+        }
+
+        if (success) {
+          successCount++;
+        } else {
+          remainingQueue.push(job);
+        }
+      }
+
+      await AsyncStorage.setItem(LOCAL_SCENE_SYNC_QUEUE_KEY, JSON.stringify(remainingQueue));
+      
+      if (successCount > 0) {
+        AppLogger.info('[ScenesService] Sync queue flushed', { successCount, remaining: remainingQueue.length });
+      }
+    } catch (e) {
+      AppLogger.error('[ScenesService] Flush fail', { error: String(e) });
+    }
   }
 }
 

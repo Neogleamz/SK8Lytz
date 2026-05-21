@@ -210,10 +210,14 @@ function AppContent() {
 
 const appStartTime = Date.now();
 
+import { useOfflineSyncWorker } from './src/hooks/cloud/useOfflineSyncWorker';
+
 export default function App() {
   const [fontsLoaded] = useFonts({
     'Righteous': Righteous_400Regular,
   });
+
+  useOfflineSyncWorker();
 
   useEffect(() => {
     if (fontsLoaded) {
