@@ -572,7 +572,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       applyEmergencyPattern,
       handleMusicChange,
       clampSpeed,
-    } = useControllerDispatch({ writeToDevice, hwSettings, points });
+    } = useControllerDispatch({ hwSettings, points });
 
     /** Convenience wrapper — pre-binds selectedColor and speed for callers */
     const applyStaticModePattern = (pat: typeof fixedModePattern, r?: number, g?: number, b?: number, spd?: number) =>
@@ -700,7 +700,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
     // -- App Microphone — now owned by useAppMicrophone hook --
     const { audioMagnitude, hasMicPermission, requestMicPermission } = useAppMicrophone({
-      writeToDevice,
       activeMode,
       micSource,
       isPoweredOn,

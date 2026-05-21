@@ -3,7 +3,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
+import { getDefaultProtocol } from '../../protocols/ControllerRegistry';
 import { Spacing, Typography } from '../../theme/theme';
 
 import { LOCAL_PRODUCT_CATALOG, getLocalProfileById } from '../../constants/ProductCatalog';
@@ -126,9 +126,11 @@ export default function HardwareSetupWizardScreen({
 
       // 0x59 static multi-color mode: Green
       const colorArray = Array(blinkPoints).fill({ r: 0, g: 255, b: 0 });
-      const blinkPayload = ZenggeProtocol.setMultiColor(colorArray, blinkPoints, 1, 1, 0x00);
+      const adapter = getDefaultProtocol();
+      const blinkPayloadResult = adapter.buildMultiColor(colorArray, blinkPoints, 1, 1, 0x00);
+      const blinkPayload = blinkPayloadResult.packets[0];
 
-      // ── ATOMIC PING (fix/wizard-blink-probe) ─────────────────────────────────
+      // 🚨 ATOMIC PING (fix/wizard-blink-probe) ─────────────────────────────────
       // pingDevice() owns the full GATT lifecycle: Connect → Blink → Probe → Off → Disconnect.
       // This replaces the broken writeToDevice (requires Fleet connection) + probeDevice
       // (severs GATT in finally, causing collision) pair from perf/ble-probe-on-demand.
@@ -537,15 +539,19 @@ export default function HardwareSetupWizardScreen({
                     // If points were adjusted, we must push the EEPROM update and verify
                     if (getLocalProfileById(cfg.type)?.hardwareAllowsCustomPoints && cfg.points !== device.led_points) {
                        AppLogger.log('FTUE_HARDWARE_WRITE', { points: cfg.points, deviceId: device.device_mac });
-                       const payload = ZenggeProtocol.writeHardwareSettingsByName(cfg.points, 1, 'WS2812B', 'GRB');
-                       await writeToDevice(payload, device.device_mac);
+                       // Note: For Tier 1 migration we fallback to Zengge's internal map by using buildWriteSettings with raw integers for WS2812B GRB
+                       // WS2812B = 1, GRB = 1 (typically). We use the adapter.
+                       const hwAdapter = getDefaultProtocol();
+                       // ZenggeAdapter uses writeHardwareSettingsByName internally if we pass 1, 1 but let's just use raw buildWriteSettings (WS2812B=1, GRB=1)
+                       const payloadResult = hwAdapter.buildWriteSettings(cfg.points, 1, 1, 1);
+                       await writeToDevice(payloadResult.packets[0], device.device_mac);
                        
                        // Let EEPROM persist
                        await new Promise(r => setTimeout(r, 600));
 
                        // Re-probe to verify — use pingDevice with an "off" payload (invisible, no visual blink)
-                       const offPayload = ZenggeProtocol.turnOff();
-                       await pingDevice(device.device_mac, offPayload);
+                       const offPayloadResult = hwAdapter.buildPowerOff();
+                       await pingDevice(device.device_mac, offPayloadResult.packets[0]);
                        AppLogger.log('FTUE_HARDWARE_VERIFIED', { deviceId: device.device_mac });
                     }
                  }

@@ -13,11 +13,10 @@ import { AppLogger } from '../services/AppLogger';
 import { useAudioRecorder, setAudioModeAsync, RecordingPresets } from 'expo-audio';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { Platform } from 'react-native';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { useProtocolDispatch } from './useProtocolDispatch';
 import type { ModeType } from '../types/dashboard.types';
 
 interface UseAppMicrophoneParams {
-  writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
   activeMode: ModeType;
   micSource: 'APP' | 'DEVICE';
   isPoweredOn: boolean;
@@ -30,11 +29,11 @@ interface UseAppMicrophoneParams {
 import { checkPermission, openGlobalPermissionsModal } from '../services/PermissionService';
 
 export function useAppMicrophone({
-  writeToDevice,
   activeMode,
   micSource,
   isPoweredOn,
 }: UseAppMicrophoneParams) {
+  const dispatch = useProtocolDispatch();
   const recorderConfig = useMemo(() => ({
     ...RecordingPresets.LOW_QUALITY,
     isMeteringEnabled: true,
@@ -69,7 +68,6 @@ export function useAppMicrophone({
       // Too-slow streaming (10Hz with delta gate) looks like silence → hardware falls back to device mic.
       const prevMagRef = { current: -1 };
       magnitudeInterval.current = setInterval(() => {
-        if (!writeToDevice) return;
         const stats = recorder.getStatus();
         if (stats.canRecord && stats.isRecording) {
           const metering = stats.metering ?? -160;
@@ -87,7 +85,7 @@ export function useAppMicrophone({
 
           // Send to hardware — 0x74 expects 0-255
           const deviceMag = Math.floor(smoothed * 255);
-          writeToDevice(ZenggeProtocol.sendMusicMagnitude(deviceMag));
+          dispatch.setMusicMagnitude(deviceMag);
         }
       }, 50); // 20Hz — hardware needs continuous stream to stay in app-mic mode
     } catch (err) {

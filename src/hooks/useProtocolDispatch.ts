@@ -83,6 +83,28 @@ export function useProtocolDispatch() {
     return _dispatchToDevices(adapter => adapter.buildQueryRfRemoteState(), targetDeviceId, opts);
   }, [_dispatchToDevices]);
 
+  const executeRawPayload = useCallback((payload: number[], targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    // For raw payloads, we wrap it in a ProtocolResult with no inter-packet delay.
+    // The underlying executeProtocolResults will still correctly debounce and chunk it.
+    const result: ProtocolResult = {
+      packets: [payload],
+      interPacketDelayMs: 0,
+      isRateLimited: payload[0] === 0x59 || payload[0] === 0x51 || payload[0] === 0x40
+    };
+    
+    const targets = targetDeviceId 
+      ? connectedDevices.filter(d => d.id === targetDeviceId)
+      : connectedDevices;
+
+    if (targets.length === 0) return Promise.resolve(true);
+
+    const payloads = targets.map(device => {
+      return { targetDeviceId: device.id, result };
+    });
+
+    return executeProtocolResults(payloads, opts);
+  }, [connectedDevices, executeProtocolResults]);
+
   return {
     setPower,
     setSolidColor,
@@ -96,5 +118,6 @@ export function useProtocolDispatch() {
     setMusicMagnitude,
     queryHardwareSettings,
     queryRfRemoteState,
+    executeRawPayload,
   };
 }
