@@ -21,4 +21,4 @@ if ($LASTEXITCODE -ne 0) {
 
 Set-Location ..
 
-Write-Host "### Build Finished! APK is at: android\app\build\outputs\apk\release\SK8Lytz.apk ###"
+Write-Host "### Build Finished! APK is at: android\app\build\outputs\apk\release\app-release.apk ###"
