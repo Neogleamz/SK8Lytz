@@ -127,3 +127,6 @@ tools/scraper/core/pipeline.db
 tools/scraper/logs/
 tools/scraper/patch-*.js
 tools/scraper/node_modules/
+
+# Reverse Engineering Artifacts
+BANLANX_APK/
