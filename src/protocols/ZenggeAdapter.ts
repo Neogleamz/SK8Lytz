@@ -96,12 +96,12 @@ export class ZenggeAdapter implements IControllerProtocol {
    * Source: TimeControllerFragment.java (APK analysis)
    */
   getHandshakePayloads(): ProtocolResult {
-    return this.toResult(this.protocol.setSessionTime());
+    return this.toResult(ZenggeProtocol.setSessionTime());
   }
 
   // ─── Hardware Settings (EEPROM) ────────────────────────────────────────────
   buildQuerySettings(hasMic: boolean = false): ProtocolResult {
-    return this.toResult(this.protocol.queryHardwareSettings(hasMic));
+    return this.toResult(ZenggeProtocol.queryHardwareSettings(hasMic));
   }
 
   parseSettingsResponse(raw: number[]): HardwareSettingsResult | null {
@@ -114,12 +114,12 @@ export class ZenggeAdapter implements IControllerProtocol {
     icType: number,
     sorting: number
   ): ProtocolResult {
-    return this.toResult(this.protocol.writeHardwareSettings(points, segments, icType, sorting));
+    return this.toResult(ZenggeProtocol.writeHardwareSettings(points, segments, icType, sorting));
   }
 
   // ─── RF Remote ─────────────────────────────────────────────────────────────
   buildQueryRfRemoteState(): ProtocolResult {
-    return this.toResult(this.protocol.queryRfRemoteState());
+    return this.toResult(ZenggeProtocol.queryRfRemoteState());
   }
 
   parseRfRemoteState(raw: number[]): RfRemoteState | null {
@@ -135,7 +135,7 @@ export class ZenggeAdapter implements IControllerProtocol {
    * Source: ZENGGE_PROTOCOL_BIBLE.md §4 — Power Opcodes.
    */
   buildPowerOn(): ProtocolResult {
-    return this.toResult(this.protocol.turnOn());
+    return this.toResult(ZenggeProtocol.turnOn());
   }
 
   /**
@@ -144,16 +144,12 @@ export class ZenggeAdapter implements IControllerProtocol {
    * ⚠️ CRITICAL BUG FIX: Prior adapter used 0x56 0xAB. See buildPowerOn().
    */
   buildPowerOff(): ProtocolResult {
-    return this.toResult(this.protocol.turnOff());
+    return this.toResult(ZenggeProtocol.turnOff());
   }
 
   // ─── Color & Pattern Commands ──────────────────────────────────────────────
   buildSolidColor(r: number, g: number, b: number): ProtocolResult {
-    // Single solid color: 0x59 with 1 color padded to 12 points, STATIC transition
-    return this.toResult(
-      this.protocol.setMultiColor([{ r, g, b }], 12, 1, 1, 0x01),
-      false // solid color is not rate-limited (it's a one-shot)
-    );
+    return this.toResult(ZenggeProtocol.setMultiColor([{ r, g, b }], 12, 1, 1, 0x01), false);
   }
 
   buildMultiColor(
@@ -163,17 +159,11 @@ export class ZenggeAdapter implements IControllerProtocol {
     direction: number,
     transitionType: number = 0x02
   ): ProtocolResult {
-    return this.toResult(
-      this.protocol.setMultiColor(colors, ledPoints, speed, direction, transitionType),
-      true // pattern writes ARE rate-limited (e.g. rapid slider drags)
-    );
+    return this.toResult(ZenggeProtocol.setMultiColor(colors, ledPoints, speed, direction, transitionType), true);
   }
 
   buildCustomMode(steps: CustomModeStep[]): ProtocolResult {
-    return this.toResult(
-      this.protocol.setCustomMode(steps),
-      true
-    );
+    return this.toResult(ZenggeProtocol.setCustomMode(steps), true);
   }
 
   /**
@@ -182,17 +172,8 @@ export class ZenggeAdapter implements IControllerProtocol {
    * automatically apply 0x40 fragmentation when the packet exceeds MTU.
    */
   buildCustomModeExtended(steps: CustomModeStep[], direction: number = 0x80): ProtocolResult {
-    const extSteps = steps.map(s => ({
-      mode: s.mode,
-      speed: s.speed,
-      color1: s.color1,
-      color2: s.color2,
-      dir: s.dir ?? direction,
-    }));
-    return this.toResult(
-      this.protocol.setCustomModeExtended(extSteps, direction),
-      true
-    );
+    const extSteps = steps.map(s => ({ mode: s.mode, speed: s.speed, color1: s.color1, color2: s.color2, dir: s.dir ?? direction }));
+    return this.toResult(ZenggeProtocol.setCustomModeExtended(extSteps, direction), true);
   }
 
   /**
@@ -200,45 +181,21 @@ export class ZenggeAdapter implements IControllerProtocol {
    * Note: 0x42 is deprecated in production UI — DiagnosticLab only.
    */
   buildEffect(effectId: number, speed: number, brightness: number): ProtocolResult {
-    return this.toResult(
-      this.protocol.setCustomRbm(effectId, speed, brightness),
-      false
-    );
+    return this.toResult(ZenggeProtocol.setCustomRbm(effectId, speed, brightness), false);
   }
 
-  buildCandleMode(
-    r: number,
-    g: number,
-    b: number,
-    speed: number,
-    brightness: number,
-    amplitude: number
-  ): ProtocolResult {
-    return this.toResult(
-      this.protocol.setCandleMode(r, g, b, speed, brightness, amplitude),
-      false
-    );
+  buildCandleMode(r: number, g: number, b: number, speed: number, brightness: number, amplitude: number): ProtocolResult {
+    return this.toResult(ZenggeProtocol.setCandleMode(r, g, b, speed, brightness, amplitude), false);
   }
 
   buildStreamPixelFrame(pixels: RGB[]): ProtocolResult {
-    return this.toResult(
-      this.protocol.streamPixelFrame(pixels),
-      false
-    );
+    return this.toResult(ZenggeProtocol.streamPixelFrame(pixels), false);
   }
 
   // ─── Music ─────────────────────────────────────────────────────────────────
   buildMusicConfig(config: MusicConfig): ProtocolResult {
     return this.toResult(
-      this.protocol.setMusicConfig(
-        config.patternId,
-        0x26,               // APP mic by default (APK truth: 0x26 = phone mic)
-        true,               // isOn
-        config.color1,
-        config.color2,
-        config.micSensitivity,
-        config.brightness,
-      ),
+      ZenggeProtocol.setMusicConfig(config.patternId, 0x26, true, config.color1, config.color2, config.micSensitivity, config.brightness),
       false
     );
   }
@@ -248,10 +205,7 @@ export class ZenggeAdapter implements IControllerProtocol {
    * Called at the app's FFT frame rate (30-60fps) — NOT rate-limited.
    */
   buildMusicMagnitude(magnitude: number): ProtocolResult {
-    return this.toResult(
-      this.protocol.sendMusicMagnitude(magnitude),
-      false
-    );
+    return this.toResult(ZenggeProtocol.sendMusicMagnitude(magnitude), false);
   }
 
   // ─── Transport Preparation ─────────────────────────────────────────────────
