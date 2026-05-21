@@ -76,8 +76,6 @@ interface AccountModalProps {
   onGroupForgotten?: (groupName: string) => void;
   /** When true, hides online-only tabs like CREWZ */
   isOfflineMode?: boolean;
-  /** BLE write function — threaded to AdvancedHardwareModal to avoid duplicate useBLE() */
-  writeToDevice?: (payload: number[], targetId?: string) => Promise<boolean | 'partial'>;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -156,7 +154,6 @@ export default function AccountModal({
   onGroupRenamed,
   onGroupForgotten,
   isOfflineMode = false,
-  writeToDevice,
 }: AccountModalProps) {
   const { Colors, isDark, toggleTheme } = useTheme();
   const styles = createStyles(Colors);
@@ -530,7 +527,6 @@ export default function AccountModal({
         currentSegments={advancedModalDevice?.segments}
         currentIcType={advancedModalDevice?.ic_type}
         currentSorting={advancedModalDevice?.color_sorting}
-        writeToDevice={writeToDevice ?? (async () => false)}
       />
     </Modal>
   );

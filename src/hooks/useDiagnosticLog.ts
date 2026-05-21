@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getDefaultProtocol } from '../protocols/ControllerRegistry';
 import { AppLogger } from '../services/AppLogger';
+import { useProtocolDispatch } from './useProtocolDispatch';
 
 const VERDICT_LOG_KEY = '@sk8lytz_diag_test_log';
 const VERDICT_LOG_MAX = 200;
@@ -45,16 +46,15 @@ export interface BleLog {
 interface UseDiagnosticLogProps {
   visible: boolean;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
-  writeToDevice?: (data: number[], deviceId?: string) => Promise<void | boolean | 'partial'>;
   targetDeviceId: string | null;
 }
 
 export const useDiagnosticLog = ({
   visible,
   liveRxPayload,
-  writeToDevice,
   targetDeviceId,
 }: UseDiagnosticLogProps) => {
+  const dispatch = useProtocolDispatch();
   const [logs, setLogs] = useState<BleLog[]>([]);
   const [lastSent, setLastSent] = useState<string>('');
   const [lastNote, setLastNote] = useState<string>('');
@@ -121,8 +121,7 @@ export const useDiagnosticLog = ({
     note?: string,
     opcode?: string
   ) => {
-    if (!writeToDevice) return;
-    await writeToDevice(bytes, targetDeviceId ?? undefined).catch(e =>
+    await dispatch.executeRawPayload(bytes, targetDeviceId ?? undefined, { lowPriority: true }).catch(e =>
       AppLogger.error('[useDiagnosticLog] write failed', e)
     );
     const hexStr = bytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
@@ -145,7 +144,7 @@ export const useDiagnosticLog = ({
       };
       setTestLog(prev => [newEntry, ...prev].slice(0, VERDICT_LOG_MAX));
     }
-  }, [writeToDevice, targetDeviceId]);
+  }, [dispatch, targetDeviceId]);
 
   const sendRawHex = useCallback(async (hexStr: string, note?: string, opcode?: string) => {
     const bytes = hexStr.replace(/[^0-9A-Fa-f]/g, '').match(/.{1,2}/g)?.map(h => parseInt(h, 16)) || [];

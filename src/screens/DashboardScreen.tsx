@@ -1107,7 +1107,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             setIsAccountModalVisible(false);
           }}
           registeredDevices={mappedRegisteredDevicesForModal}
-          writeToDevice={writeToDevice}
           onDeviceRenamed={async (deviceId, newName) => {
             setAllDevices((prev: any[]) => prev.map((d: any) =>
               d.id === deviceId ? { ...d, customName: newName } : d
@@ -1158,7 +1157,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           connectedDevices={connectedDevices as DisplayDevice[]}
           bleState={bleState}
           handleScan={() => scanForPeripherals()}
-          writeToDevice={writeToDevice}
           liveRxPayload={lastRawNotification}
           liveDeviceConfigs={deviceConfigs}
           onConnectToDevice={async (d: any) => { await connectToDevices([d]); }}

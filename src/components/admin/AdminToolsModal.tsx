@@ -44,7 +44,6 @@ export interface AdminToolsModalProps {
   onToggleDiagnostics?: () => void;
   hwSettings?: any;
   onDisconnectFromDevice?: (id: string) => Promise<void>;
-  writeToDevice?: (data: number[], deviceId?: string) => Promise<void | boolean | 'partial'>;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
   connectedDevices?: { id: string, name: string | null }[];
   allDevices?: any[];
@@ -56,7 +55,7 @@ export interface AdminToolsModalProps {
 }
 
 export default function AdminToolsModal({ 
-  visible, onClose, onClearAll, writeToDevice, liveRxPayload, 
+  visible, onClose, onClearAll, liveRxPayload, 
   connectedDevices, allDevices, bleState, handleScan, onConnectToDevice, 
   liveDeviceConfigs, isDiagnosticsMode, onToggleDiagnostics, hwSettings, onDisconnectFromDevice 
 }: AdminToolsModalProps) {
@@ -282,7 +281,6 @@ export default function AdminToolsModal({
           deviceConfigs={liveDeviceConfigs}
           connectToDevice={async (d) => { if (onConnectToDevice) await onConnectToDevice(d); }}
           disconnectFromDevice={async (id: string) => { if (onDisconnectFromDevice) await onDisconnectFromDevice(id); }}
-          writeToDevice={writeToDevice || (async () => false)}
           bleState={bleState || 'IDLE'}
           handleScan={handleScan || (() => {})}
         />
@@ -293,7 +291,6 @@ export default function AdminToolsModal({
           onToggleDiagnostics={onToggleDiagnostics}
           onClose={() => setIsLabVisible(false)}
           connectedDevices={connectedDevices}
-          writeToDevice={writeToDevice || (async () => false)}
           liveRxPayload={liveRxPayload}
           hwSettings={hwSettings}
           allDevices={allDevices}

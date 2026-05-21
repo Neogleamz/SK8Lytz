@@ -47,7 +47,6 @@ import CustomEffectVisualizer from '../../CustomEffectVisualizer';
 interface LabProps {
   visible: boolean;
   onClose: () => void;
-  writeToDevice?: (data: number[], deviceId?: string) => Promise<void | boolean | 'partial'>;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
   connectedDevices?: { id: string; name: string | null }[];
   hwSettings?: {
@@ -85,7 +84,7 @@ import { DiagnosticLabOracleTab } from './tabs/DiagnosticLabOracleTab';
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Sk8LytzDiagnosticLab({
-  visible, onClose, writeToDevice, liveRxPayload,
+  visible, onClose, liveRxPayload,
   connectedDevices = [], hwSettings,
   allDevices = [], bleState = 'IDLE', handleScan,
   connectToDevice, liveDeviceConfigs = {},
@@ -116,7 +115,7 @@ export default function Sk8LytzDiagnosticLab({
   const {
     logs, lastSent, lastNote, transmit, sendRawHex, clearLogs,
     testLog, coverage, setVerdict, setLastVerdict, clearTestLog,
-  } = useDiagnosticLog({ visible, liveRxPayload, writeToDevice, targetDeviceId });
+  } = useDiagnosticLog({ visible, liveRxPayload, targetDeviceId });
 
   const {
     bldProtocol, setBldProtocol,

@@ -22,6 +22,7 @@ import {
 } from '../../../protocols/ZenggeProtocol';
 import { AppLogger } from '../../../services/AppLogger';
 import { Spacing, Typography } from '../../../theme/theme';
+import { useProtocolDispatch } from '../../../hooks/useProtocolDispatch';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -39,7 +40,6 @@ interface Sk8LytzProgrammerModalProps {
   deviceConfigs?: Record<string, HardwareSettings>;       // pre-populated from scan probe
   connectToDevice?: (d: ScannedDevice) => Promise<void>;
   disconnectFromDevice?: (id: string) => Promise<void>;
-  writeToDevice: (data: number[], deviceId?: string) => Promise<void | boolean | 'partial'>;
   bleState?: string;
   handleScan: () => void;
 }
@@ -57,8 +57,9 @@ export default function Sk8LytzProgrammer({
   visible, onClose, onExitToLogs, allDevices,
   deviceConfigs = {},
   connectToDevice, disconnectFromDevice,
-  writeToDevice, bleState = 'IDLE', handleScan
+  bleState = 'IDLE', handleScan
 }: Sk8LytzProgrammerModalProps) {
+  const dispatch = useProtocolDispatch();
   const { Colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -171,12 +172,6 @@ export default function Sk8LytzProgrammer({
       setIsFlashing(true);
 
       const config = profiles[activeProfile];
-      const cmd = ZenggeProtocol.writeHardwareSettings(
-          config.ledPoints,
-          config.segments,
-          config.icType,
-          config.colorSorting
-      );
 
       for (const id of selectedIds) {
           setFlashStatus(prev => ({ ...prev, [id]: 'pending' }));
@@ -187,7 +182,7 @@ export default function Sk8LytzProgrammer({
                   await connectToDevice(device);
                   await new Promise(res => setTimeout(res, 600)); // let GATT settle
               }
-              await writeToDevice(cmd, id);
+              await dispatch.writeSettings(config.ledPoints, config.segments, config.icType, config.colorSorting, id);
               await new Promise(res => setTimeout(res, 400)); // let write land
               if (disconnectFromDevice) {
                   await disconnectFromDevice(id);

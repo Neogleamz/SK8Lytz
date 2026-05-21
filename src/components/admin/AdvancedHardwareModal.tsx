@@ -3,8 +3,9 @@ import { Modal, View, Text, TouchableOpacity, ScrollView, Alert } from 'react-na
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
-import { IC_TYPE_NAMES, COLOR_SORTING_RGB, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
+import { IC_TYPE_NAMES, COLOR_SORTING_RGB } from '../../protocols/ZenggeProtocol';
 import CustomSlider from '../CustomSlider';
+import { useProtocolDispatch } from '../../hooks/useProtocolDispatch';
 
 export interface AdvancedHardwareModalProps {
   visible: boolean;
@@ -14,13 +15,12 @@ export interface AdvancedHardwareModalProps {
   currentSegments?: number;
   currentIcType?: string;
   currentSorting?: string;
-  /** BLE write function injected from Dashboard via AccountModal — avoids duplicate useBLE() instance */
-  writeToDevice: (payload: number[], targetId?: string) => Promise<boolean | 'partial'>;
 }
 
 export const AdvancedHardwareModal: React.FC<AdvancedHardwareModalProps> = ({
-  visible, onClose, targetDeviceId, currentPoints = 30, currentSegments = 10, currentIcType = 'WS2812B', currentSorting = 'GRB', writeToDevice
+  visible, onClose, targetDeviceId, currentPoints = 30, currentSegments = 10, currentIcType = 'WS2812B', currentSorting = 'GRB'
 }) => {
+  const dispatch = useProtocolDispatch();
   const { Colors, isDark } = useTheme();
 
   const [points, setPoints] = useState(currentPoints);
@@ -47,10 +47,6 @@ export const AdvancedHardwareModal: React.FC<AdvancedHardwareModalProps> = ({
       return;
     }
 
-    const payload = ZenggeProtocol.writeHardwareSettingsByName(
-      points, segments, icType, sorting
-    );
-
     Alert.alert(
       '⚠️ Overwrite Hardware EEPROM',
       `You are writing directly to the non-volatile memory of ${targetDeviceId.slice(-4)}. The device will reboot.\n\nPoints: ${points}\nSegments: ${segments}\nIC: ${icType}\nSort: ${sorting}`,
@@ -60,7 +56,7 @@ export const AdvancedHardwareModal: React.FC<AdvancedHardwareModalProps> = ({
           text: 'Flash Device', 
           style: 'destructive',
           onPress: async () => {
-            const success = await writeToDevice(payload, targetDeviceId);
+            const success = await dispatch.writeSettingsByName(points, segments, icType, sorting, targetDeviceId);
             if (success) {
                Alert.alert('Success', 'EEPROM written successfully. Device should reboot momentarily.');
                onClose();

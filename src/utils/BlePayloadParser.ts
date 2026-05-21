@@ -44,9 +44,7 @@ export const BlePayloadParser = {
       if (!Array.isArray(payload) || payload.length === 0) return null;
 
       const v2Config = getDefaultProtocol().parseSettingsResponse(payload);
-      const v1Config = null; // Deprecated V1 path — adapter.parseSettingsResponse() handles both V1+V2
-
-      const parsedOk = !!(v2Config || v1Config);
+      const parsedOk = !!v2Config;
       if (!parsedOk) return null;
 
       let configPoints: number | undefined;
@@ -63,14 +61,6 @@ export const BlePayloadParser = {
         configSorting = v2Config.colorSortingName;
         configSortingIdx = v2Config.colorSorting;
         configIcType = v2Config.icType;
-      } else if (v1Config) {
-        configPoints = v1Config.points;
-        configSegments = v1Config.segments;
-        configStripType = v1Config.stripType;
-        configSorting = v1Config.sorting;
-        // Derive numeric index from string for v1 (defaults to GRB=2 if unknown)
-        configSortingIdx = ['RGB', 'RBG', 'GRB', 'GBR', 'BRG', 'BGR'].indexOf(configSorting ?? 'GRB');
-        if (configSortingIdx < 0) configSortingIdx = 2;
       }
 
       return {
@@ -82,11 +72,11 @@ export const BlePayloadParser = {
         icType: configIcType,
         parsedOk,
         rawUploadData: {
-          points: v2Config?.ledPoints ?? v1Config?.points ?? null,
+          points: v2Config?.ledPoints ?? null,
           icType: v2Config?.icType ?? null,
-          icName: v2Config?.icName ?? v1Config?.stripType ?? null,
+          icName: v2Config?.icName ?? null,
           colorSorting: v2Config?.colorSorting ?? null,
-          colorOrder: v2Config?.colorSortingName ?? v1Config?.sorting ?? null,
+          colorOrder: v2Config?.colorSortingName ?? null,
         },
       };
     } catch (error) {
