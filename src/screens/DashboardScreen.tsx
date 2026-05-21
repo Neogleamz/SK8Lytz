@@ -58,7 +58,7 @@ import type { DashboardViewState, DeviceSettings, CustomGroup, DisplayDevice, ID
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
 // — migrated as part of Phase 1 Domain-Driven Refactor
 
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { useProtocolDispatch } from '../hooks/useProtocolDispatch';
 import { SkateGroupCard } from '../components/dashboard/SkateGroupCard';
 import DashboardCrewPanel from '../components/dashboard/DashboardCrewPanel';
 import { useDashboardController } from '../hooks/useDashboardController';
@@ -685,6 +685,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     })
   ).current;
 
+  const dispatch = useProtocolDispatch();
+
   const handlePowerToggle = useCallback(async (deviceIds: string[], forceState?: boolean) => {
     // 1. Determine target state (if not forced, toggle based on first device)
     const targetState = forceState !== undefined ? forceState : !(powerStates[deviceIds[0]] ?? true);
@@ -692,12 +694,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     // 2. Set React State
     setPowerState(deviceIds, targetState);
 
-    // 3. Dispatch BLE command to each device
-    const payload = ZenggeProtocol.setPower(targetState);
+    // 3. Dispatch BLE command to each device via HAL
     for (const mac of deviceIds) {
-      if (writeToDevice) await writeToDevice(payload, mac);
+      dispatch.setPower(targetState, mac);
     }
-  }, [powerStates, setPowerState, writeToDevice]);
+  }, [powerStates, setPowerState, dispatch]);
 
   const handleGroupPowerPress = useCallback((group: CustomGroup) => {
     handlePowerToggle(group.deviceIds);

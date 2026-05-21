@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { useProtocolDispatch } from './useProtocolDispatch';
 import { hexToRgb } from '../utils/ColorUtils';
 import { supabase } from '../services/supabaseClient';
 import { ScenesService, Scene } from '../services/ScenesService';
@@ -16,7 +16,8 @@ export interface SceneStep {
   direction: 0 | 1;
 }
 
-export function useSceneBuilder(writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>) {
+export function useSceneBuilder() {
+  const dispatch = useProtocolDispatch();
   const [steps, setSteps] = useState<SceneStep[]>([]);
   const [sceneName, setSceneName] = useState<string>('New Scene');
   const [sceneId, setSceneId] = useState<string | null>(null);
@@ -52,7 +53,7 @@ export function useSceneBuilder(writeToDevice?: (payload: number[]) => Promise<v
   }, []);
 
   const fireToSkates = useCallback(() => {
-    if (!writeToDevice || steps.length === 0) return;
+    if (steps.length === 0) return;
 
     // Use setCustomModeExtended for 32-slot (10-byte slots)
     // The plan specifies 0x51 payload via writeChunked.
@@ -66,9 +67,8 @@ export function useSceneBuilder(writeToDevice?: (payload: number[]) => Promise<v
       dir: s.direction
     }));
 
-    const payload = ZenggeProtocol.setCustomModeExtended(payloadSteps);
-    writeToDevice(payload);
-  }, [steps, writeToDevice]);
+    dispatch.setCustomModeExtended(payloadSteps);
+  }, [steps, dispatch]);
 
   const saveScene = useCallback(async (nameToSave: string, isPublic: boolean = false) => {
     try {

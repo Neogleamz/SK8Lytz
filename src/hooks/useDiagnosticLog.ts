@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { getDefaultProtocol } from '../protocols/ControllerRegistry';
 import { AppLogger } from '../services/AppLogger';
 
 const VERDICT_LOG_KEY = '@sk8lytz_diag_test_log';
@@ -99,7 +99,7 @@ export const useDiagnosticLog = ({
       dev: liveRxPayload.deviceId,
     };
     const bytes = liveRxPayload.payloadHex.split(' ').map(h => parseInt(h, 16));
-    const hw63 = ZenggeProtocol.parseHardwareSettingsResponse(bytes);
+    const hw63 = getDefaultProtocol().parseSettingsResponse(bytes);
     if (hw63) {
       entry.note = `0x63 → LEDs:${hw63.ledPoints} ${hw63.icName} ${hw63.colorSortingName} sort:${hw63.colorSorting}`;
     }

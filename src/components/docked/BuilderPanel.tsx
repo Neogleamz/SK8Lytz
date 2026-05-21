@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GradientLibraryTab } from '../patterns/GradientLibraryTab';
 import PositionalGradientBuilder from '../PositionalGradientBuilder';
 import { BuilderNode, CustomBuilderPreset, PositionalMathBuffer } from '../../protocols/PositionalMathBuffer';
-import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
+import { useProtocolDispatch } from '../../hooks/useProtocolDispatch';
 import { useTheme } from '../../context/ThemeContext';
 import { useGradients } from '../../hooks/useGradients';
 import { useFavorites } from '../../hooks/useFavorites';
@@ -39,6 +39,7 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
   fgColor,
 }) => {
   const { Colors, isDark } = useTheme();
+  const dispatch = useProtocolDispatch();
   const { saveGradient } = useGradients();
   const { openFavoritePrompt, saveFavorite, promptState, promptName, setPromptName, closePrompt } = useFavorites();
 
@@ -58,8 +59,7 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
     if (!writeToDevice) return;
     const generatedRgbArray = PositionalMathBuffer.generateArray(preset.nodes, points, preset.fill_mode === 'GRADIENT');
     const mappedSpeed = Math.max(1, Math.min(31, Math.round((speed / 100) * 31)));
-    const payload = ZenggeProtocol.setMultiColor(generatedRgbArray, points, mappedSpeed, direction, safeTransition);
-    writeToDevice(payload);
+    dispatch.setMultiColor(generatedRgbArray, points, mappedSpeed, direction, safeTransition);
   }, [writeToDevice, points, speed, direction, setBuilderNodes, setBuilderFillMode, setBuilderTransitionType]);
 
   const openBuilder = (preset?: CustomBuilderPreset) => {

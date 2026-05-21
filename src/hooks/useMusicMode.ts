@@ -9,7 +9,7 @@
  *  - 0x27 (Light Screen): 30 profiles  →  LIGHT_SCREEN_PROFILES
  */
 import { useCallback, useEffect, useRef } from 'react';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { useProtocolDispatch } from './useProtocolDispatch';
 import { AppLogger } from '../services/AppLogger';
 import type { ModeType } from '../types/dashboard.types';
 import { hexToRgb } from '../utils/ColorUtils';
@@ -25,7 +25,7 @@ export { getMusicProfiles, getMusicPatternMax, getActiveMusicProfile, getMusicPa
 
 interface UseMusicModeParams {
   activeMode: ModeType;
-  writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
+
   musicPatternId: number;
   micSensitivity: number;
   brightness: number;
@@ -51,7 +51,6 @@ interface UseMusicModeParams {
  */
 export function useMusicMode({
   activeMode,
-  writeToDevice,
   musicPatternId,
   micSensitivity,
   brightness,
@@ -60,6 +59,7 @@ export function useMusicMode({
   musicSecondaryColor,
   musicMatrixStyle,
 }: UseMusicModeParams) {
+  const dispatch = useProtocolDispatch();
 
   const handleMusicChange = useCallback((
     patternId: number = musicPatternId,
@@ -70,9 +70,9 @@ export function useMusicMode({
     color2Hex: string = musicSecondaryColor,
     matrix: number = musicMatrixStyle
   ) => {
-    if (!writeToDevice) return;
+    // dispatch is always available from hook
 
-    const isDeviceMic = src === 'DEVICE';
+
     const c1 = hexToRgb(color1Hex);
     const c2 = hexToRgb(color2Hex);
 
@@ -93,20 +93,20 @@ export function useMusicMode({
     // overrides its built-in mic when it receives rapid 0x74 magnitude packets.
     // Previously this was `isDeviceMic ? 0x27 : 0x26` which hardlocked the hardware to Light Bar
     // (0x26) in APP mic mode, making pattern switching broken and all Light Screen patterns unreachable.
-    writeToDevice(ZenggeProtocol.setMusicConfig(
-      safePatternId,                        // effectId — 1–16 (0x26) or 1–30 (0x27)
-      matrix as 0x26 | 0x27,               // modeType = the matrix the user selected, NOT mic source
-      isDeviceMic,                          // isOn: true=device mic active, false=hardware mic OFF (listen for 0x74 stream)
-      c1,
-      c2,
-      sens,
-      bright
-    ));
-  }, [writeToDevice, musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle]);
+    dispatch.setMusicConfig({
+      patternId: safePatternId,
+      matrixStyle: matrix as 0x26 | 0x27,
+      micSensitivity: sens,
+      brightness: bright,
+      color1: c1,
+      color2: c2,
+      speed: safePatternId,
+    });
+  }, [dispatch, musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle]);
 
   // Re-send music config on color/pattern/source/matrix change
   useEffect(() => {
-    if (activeMode !== 'MUSIC' || !writeToDevice) return;
+    if (activeMode !== 'MUSIC') return;
     handleMusicChange(
       musicPatternId, micSensitivity, brightness, micSource,
       musicPrimaryColor, musicSecondaryColor, musicMatrixStyle
@@ -132,20 +132,20 @@ export function useMusicMode({
     const prev = previousActiveModeRef.current;
     previousActiveModeRef.current = activeMode;
 
-    if (prev === 'MUSIC' && activeMode !== 'MUSIC' && writeToDevice) {
+    if (prev === 'MUSIC' && activeMode !== 'MUSIC') {
       const c1 = hexToRgb(musicPrimaryColor);
       const c2 = hexToRgb(musicSecondaryColor);
-      const isDeviceMic = micSource === 'DEVICE';
       AppLogger.log('MUSIC_MODE_EXIT', { from: prev, to: activeMode });
-      writeToDevice(ZenggeProtocol.setMusicConfig(
-        musicPatternId,
-        musicMatrixStyle as 0x26 | 0x27, // use actual matrix style, not mic source
-        false, // isOn=false — exit music reactive mode
-        c1,
-        c2,
+      dispatch.setMusicConfig({
+        patternId: musicPatternId,
+        matrixStyle: musicMatrixStyle as 0x26 | 0x27,
         micSensitivity,
-        brightness
-      ));
+        brightness,
+        color1: c1,
+        color2: c2,
+        speed: musicPatternId,
+        isOn: false, // Explicit exit signal to hardware
+      });
     }
   }, [activeMode]);
   // Note: intentionally omitting music params from deps — we want to fire
