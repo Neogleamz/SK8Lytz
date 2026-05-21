@@ -53,7 +53,6 @@ import SpectrumAnalyzer from './docked/SpectrumAnalyzer';
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 import CommunityModal from './CommunityModal';
 
@@ -564,7 +563,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     };
 
 
-    // ── BLE Dispatch: hardware command translation via extracted hook ──────
     const {
       sendColor,
       applyFixedPattern,
@@ -572,6 +570,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       applyEmergencyPattern,
       handleMusicChange,
       clampSpeed,
+      setPower,
+      setMultiColor,
     } = useControllerDispatch({ hwSettings, points });
 
     /** Convenience wrapper — pre-binds selectedColor and speed for callers */
@@ -647,14 +647,14 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         if (favRaw.builderDirection !== undefined) setBuilderDirection(favRaw.builderDirection);
         
         // Auto-dispatch BUILDER payload instead of dead-loading
-        if (writeToDevice && favRaw.builderNodes && favRaw.builderNodes.length > 0) {
+        if (favRaw.builderNodes && favRaw.builderNodes.length > 0) {
           const rgbColors = favRaw.builderNodes.map((n: { colorHex: string }) => ({
             r: parseInt(n.colorHex.slice(1, 3), 16) || 0,
             g: parseInt(n.colorHex.slice(3, 5), 16) || 0,
             b: parseInt(n.colorHex.slice(5, 7), 16) || 0,
           }));
           const transition = favRaw.builderTransitionType ?? 1;
-          writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 16, clampSpeed(favRaw.speed ?? 50), 1, transition));
+          setMultiColor(rgbColors, hwSettings?.ledPoints || 16, clampSpeed(favRaw.speed ?? 50), 1, transition);
         }
       } else if (legacyMode === 'MULTI' || legacyMode === 'DIY' || legacyMode === 'MULTICOLOR') {
         setActiveMode('MULTIMODE');
@@ -666,13 +666,13 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         setMultiColors(favRaw.multiColors || []);
         setMultiTransition(favRaw.multiTransition || 3);
         setMultiLength(favRaw.multiLength || 16);
-        if (writeToDevice && favRaw.multiColors) {
+        if (favRaw.multiColors) {
           const rgbColors = favRaw.multiColors.map((h: string) => ({
             r: parseInt(h.slice(1, 3), 16) || 0,
             g: parseInt(h.slice(3, 5), 16) || 0,
             b: parseInt(h.slice(5, 7), 16) || 0,
           }));
-          writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(favRaw.speed ?? 50), 1, favRaw.multiTransition ?? 3));
+          setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(favRaw.speed ?? 50), 1, favRaw.multiTransition ?? 3);
         }
       } else {
         // Unknown/legacy mode — best-effort color dispatch
@@ -946,7 +946,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               style={{ position: 'absolute', top: 12, left: 16, zIndex: 100, backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 68, 68, 0.15)', padding: Spacing.sm, borderRadius: 20, borderWidth: 1, borderColor: isPoweredOn ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255, 68, 68, 0.3)' }}
               onPress={() => {
                 if (onPowerToggle) onPowerToggle();
-                else if (writeToDevice) writeToDevice(isPoweredOn ? ZenggeProtocol.turnOff() : ZenggeProtocol.turnOn());
+                else setPower(!isPoweredOn);
               }}
             >
               <MaterialCommunityIcons name="power" size={22} color={isPoweredOn ? "#00f0ff" : "#ff4444"} />

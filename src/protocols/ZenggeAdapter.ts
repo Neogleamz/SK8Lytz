@@ -117,9 +117,26 @@ export class ZenggeAdapter implements IControllerProtocol {
     return this.toResult(ZenggeProtocol.writeHardwareSettings(points, segments, icType, sorting));
   }
 
+  buildWriteSettingsByName(
+    points: number,
+    segments: number,
+    stripTypeName: string,
+    sortingName: string
+  ): ProtocolResult {
+    return this.toResult(ZenggeProtocol.writeHardwareSettingsByName(points, segments, stripTypeName, sortingName));
+  }
+
   // ─── RF Remote ─────────────────────────────────────────────────────────────
   buildQueryRfRemoteState(): ProtocolResult {
     return this.toResult(ZenggeProtocol.queryRfRemoteState());
+  }
+
+  buildSetRfRemoteState(mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED', autoSave: boolean): ProtocolResult {
+    return this.toResult(ZenggeProtocol.setRfRemoteState(mode, autoSave));
+  }
+
+  buildClearRfRemotes(mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED'): ProtocolResult {
+    return this.toResult(ZenggeProtocol.clearRfRemotes(mode));
   }
 
   parseRfRemoteState(raw: number[]): RfRemoteState | null {

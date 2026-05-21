@@ -79,8 +79,24 @@ export function useProtocolDispatch() {
     return _dispatchToDevices(adapter => adapter.buildQuerySettings(hasMic), targetDeviceId, opts);
   }, [_dispatchToDevices]);
 
+  const writeSettings = useCallback((points: number, segments: number, icType: number, sorting: number, targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => adapter.buildWriteSettings(points, segments, icType, sorting), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
+  const writeSettingsByName = useCallback((points: number, segments: number, stripTypeName: string, sortingName: string, targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => adapter.buildWriteSettingsByName(points, segments, stripTypeName, sortingName), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
   const queryRfRemoteState = useCallback((targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
     return _dispatchToDevices(adapter => adapter.buildQueryRfRemoteState(), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
+  const setRfRemoteState = useCallback((mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED', autoSave: boolean, targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => adapter.buildSetRfRemoteState(mode, autoSave), targetDeviceId, opts);
+  }, [_dispatchToDevices]);
+
+  const clearRfRemotes = useCallback((mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED', targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
+    return _dispatchToDevices(adapter => adapter.buildClearRfRemotes(mode), targetDeviceId, opts);
   }, [_dispatchToDevices]);
 
   const executeRawPayload = useCallback((payload: number[], targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
@@ -117,7 +133,11 @@ export function useProtocolDispatch() {
     setMusicConfig,
     setMusicMagnitude,
     queryHardwareSettings,
+    writeSettings,
+    writeSettingsByName,
     queryRfRemoteState,
+    setRfRemoteState,
+    clearRfRemotes,
     executeRawPayload,
   };
 }

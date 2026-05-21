@@ -235,5 +235,7 @@ export function useControllerDispatch({ hwSettings, points }: UseControllerDispa
     applyEmergencyPattern,
     handleMusicChange,
     clampSpeed,
+    setPower: dispatch.setPower,
+    setMultiColor: dispatch.setMultiColor,
   };
 }

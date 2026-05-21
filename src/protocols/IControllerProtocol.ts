@@ -166,7 +166,27 @@ export interface IControllerProtocol {
     sorting: number
   ): ProtocolResult;
 
+  /**
+   * Convenience wrapper around buildWriteSettings that accepts string names.
+   */
+  buildWriteSettingsByName(
+    points: number,
+    segments: number,
+    stripTypeName: string,
+    sortingName: string
+  ): ProtocolResult;
+
   // ─── RF Remote ─────────────────────────────────────────────────────────────
+  /**
+   * Build the payload to set RF remote auth state.
+   */
+  buildSetRfRemoteState(mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED', autoSave: boolean): ProtocolResult;
+
+  /**
+   * Clear all paired RF remotes. The hardware requires the current mode as a parameter.
+   */
+  buildClearRfRemotes(mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED'): ProtocolResult;
+
   /**
    * Build the payload to query RF remote auth state.
    * Zengge: 0x2B query. BanlanX: no-op (returns empty packets).

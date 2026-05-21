@@ -163,6 +163,15 @@ export class BanlanxAdapter implements IControllerProtocol {
     return EMPTY_RESULT;
   }
 
+  buildWriteSettingsByName(
+    _points: number,
+    _segments: number,
+    _stripTypeName: string,
+    _sortingName: string
+  ): ProtocolResult {
+    return EMPTY_RESULT;
+  }
+
   // ─── RF Remote ───────────────────────────────────────────────────────────────
 
   /**
@@ -170,6 +179,14 @@ export class BanlanxAdapter implements IControllerProtocol {
    * Source: BANLANX_PROTOCOL_BIBLE.md — no RF remote opcode found.
    */
   buildQueryRfRemoteState(): ProtocolResult {
+    return EMPTY_RESULT;
+  }
+
+  buildSetRfRemoteState(mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED', autoSave: boolean): ProtocolResult {
+    return EMPTY_RESULT;
+  }
+
+  buildClearRfRemotes(mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED'): ProtocolResult {
     return EMPTY_RESULT;
   }
 

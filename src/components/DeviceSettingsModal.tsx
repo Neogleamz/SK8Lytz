@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { useProtocolDispatch } from '../hooks/useProtocolDispatch';
 import { AppLogger } from '../services/AppLogger';
 import { Colors, Spacing, Typography } from '../theme/theme';
 import { getDefaultGroupName } from '../utils/NamingUtils';
@@ -21,6 +21,8 @@ interface DeviceSettingsModalProps {
   onDeregister?: () => void;
   /** Friendly name shown in the deregister confirmation prompt */
   deviceName?: string;
+  /** Device MAC/ID to target specific hardware via HAL */
+  deviceId?: string;
 }
 
 
@@ -31,8 +33,9 @@ const deriveNames = (type: string, position: 'Left' | 'Right' | null) => {
   return { deviceName, groupName };
 };
 
-export default function DeviceSettingsModal({ isVisible, onClose, onSave, initialSettings, groups, writeToDevice, onDeregister, deviceName }: DeviceSettingsModalProps) {
+export default function DeviceSettingsModal({ isVisible, onClose, onSave, initialSettings, groups, writeToDevice, onDeregister, deviceName, deviceId }: DeviceSettingsModalProps) {
 
+  const dispatch = useProtocolDispatch();
   const insets = useSafeAreaInsets();
   const [type, setTypeState] = useState<string>(initialSettings.type || 'SOULZ');
   const [position, setPosition] = useState<'Left' | 'Right' | null>(
@@ -133,7 +136,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
     onSave(finalSettings);
 
     if (writeToDevice) {
-      writeToDevice(ZenggeProtocol.writeHardwareSettingsByName(finalPoints, finalSegments, finalStripType, finalSorting));
+      dispatch.writeSettingsByName(finalPoints, finalSegments, finalStripType, finalSorting, deviceId);
     }
 
     onClose();
@@ -142,7 +145,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
   const handleSetRfMode = (mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED') => {
     setRfMode(mode);
     if (writeToDevice) {
-      writeToDevice(ZenggeProtocol.setRfRemoteState(mode, false));
+      dispatch.setRfRemoteState(mode, false, deviceId);
     }
   };
 
@@ -174,7 +177,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
           text: 'Clear Remotes', style: 'destructive',
           onPress: () => {
             if (writeToDevice) {
-              writeToDevice(ZenggeProtocol.clearRfRemotes(rfMode));
+              dispatch.clearRfRemotes(rfMode, deviceId);
             }
           },
         },
@@ -184,14 +187,14 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
 
   const handleQueryRfState = () => {
     if (writeToDevice) {
-      writeToDevice(ZenggeProtocol.queryRfRemoteState());
+      dispatch.queryRfRemoteState(deviceId);
     }
   };
 
   const handleProbeHardware = () => {
     if (writeToDevice) {
       setIsProbing(true);
-      writeToDevice(ZenggeProtocol.queryHardwareSettings(false));
+      dispatch.queryHardwareSettings(false, deviceId);
       // Fallback timeout in case the device doesn't respond
       setTimeout(() => {
         setIsProbing(prev => {
