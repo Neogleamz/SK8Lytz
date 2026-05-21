@@ -33,6 +33,12 @@ export interface UseBLEAutoRecoveryProps {
    * using the correct service/characteristic UUIDs for the recovered device.
    */
   onAdapterResolved: (deviceId: string, adapter: IControllerProtocol) => void;
+  /**
+   * Called after a device has been fully recovered (GATT reconnected, adapter resolved,
+   * notification monitor re-registered). DashboardScreen uses this to replay the last
+   * pattern/color state to the recovered device so it doesn't sit dark after dropout.
+   */
+  onDeviceRecovered?: (deviceId: string) => void;
 }
 
 
@@ -65,6 +71,7 @@ export function useBLEAutoRecovery({
   onOrganicDisconnect,
   bleGateRef,
   onAdapterResolved,
+  onDeviceRecovered,
 }: UseBLEAutoRecoveryProps) {
   const [ghostedDeviceIds, setGhostedDeviceIds] = useState<string[]>([]);
   const ghostedRefs = useRef<string[]>([]);
@@ -215,6 +222,9 @@ export function useBLEAutoRecovery({
           setGhostedDeviceIds([...ghostedRefs.current]);
 
           AppLogger.log('AUTO_RECOVERY_SUCCESS', { deviceId, attempts });
+
+          // Notify consumers (e.g. DashboardScreen) so they can replay last pattern state
+          onDeviceRecovered?.(conn.id);
           break;
 
         } catch (e: any) {

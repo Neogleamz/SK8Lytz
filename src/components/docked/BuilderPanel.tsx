@@ -13,7 +13,6 @@ import { Spacing } from '../../theme/theme';
 import { AppLogger } from '../../services/AppLogger';
 
 interface BuilderPanelProps {
-  writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
   points?: number;
   speed: number;
   direction?: number;
@@ -31,7 +30,7 @@ interface BuilderPanelProps {
 type ViewMode = 'LIBRARY' | 'BUILDER';
 
 export const BuilderPanel: React.FC<BuilderPanelProps> = ({
-  writeToDevice, points = 16, speed, direction = 1,
+  points = 16, speed, direction = 1,
   builderNodes, setBuilderNodes,
   builderFillMode, setBuilderFillMode,
   builderTransitionType, setBuilderTransitionType,
@@ -56,11 +55,10 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
     setBuilderNodes(preset.nodes);
     setBuilderFillMode(preset.fill_mode);
     setBuilderTransitionType(safeTransition);
-    if (!writeToDevice) return;
     const generatedRgbArray = PositionalMathBuffer.generateArray(preset.nodes, points, preset.fill_mode === 'GRADIENT');
     const mappedSpeed = Math.max(1, Math.min(31, Math.round((speed / 100) * 31)));
     dispatch.setMultiColor(generatedRgbArray, points, mappedSpeed, direction, safeTransition);
-  }, [writeToDevice, points, speed, direction, setBuilderNodes, setBuilderFillMode, setBuilderTransitionType]);
+  }, [points, speed, direction, setBuilderNodes, setBuilderFillMode, setBuilderTransitionType, dispatch]);
 
   const openBuilder = (preset?: CustomBuilderPreset) => {
     if (preset) {
@@ -155,7 +153,6 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
             speed={speed}
             deviceLedCount={points}
             selectedColor={fgColor}
-            writeToDevice={writeToDevice as unknown as ((p: number[], id?: string) => Promise<boolean | "partial">)}
           />
         </View>
 

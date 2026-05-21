@@ -20,7 +20,6 @@ interface Props {
   speed: number;
   deviceLedCount: number;
   selectedColor: string; // The universal color passed from DockedController
-  writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>; // Deprecated, will be ignored
 }
 
 export default function PositionalGradientBuilder({ 
@@ -28,7 +27,7 @@ export default function PositionalGradientBuilder({
    fillMode, onFillModeChange, 
    transitionType, onTransitionTypeChange,
    direction, onDirectionChange,
-   speed, deviceLedCount, selectedColor, writeToDevice
+   speed, deviceLedCount, selectedColor
 }: Props) {
   const { Colors, isDark } = useTheme();
 

@@ -15,16 +15,11 @@ import { Alert, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { getDefaultProtocol, resolveProtocol, resolveProtocolForDevice, getProtocolById } from '../protocols/ControllerRegistry';
 import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
-// NOTE: Zengge static parse methods (parseHardwareSettingsResponse, parseRfRemoteState)
-// retained in pingDevice for Phase 1 EEPROM probing. BanlanX returns null for both
-// (no EEPROM probe in Phase 1). UUID constants are no longer used in pingDevice.
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 import type { BleConnectionState, PendingRegistration } from '../types/dashboard.types';
 
 import { checkPermission, openGlobalPermissionsModal } from '../services/PermissionService';
 import { supabase } from '../services/supabaseClient';
-import { BlePayloadParser } from '../utils/BlePayloadParser';
 import { BleCharacteristicCache } from '../services/BleCharacteristicCache';
 import { useBLEScanner } from './ble/useBLEScanner';
 import { useBLEAutoRecovery } from './ble/useBLEAutoRecovery';
@@ -299,9 +294,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
             if (!char?.value) return;
             try {
               const raw = Array.from(Buffer.from(char.value, 'base64')) as number[];
-              const hwParsed = ZenggeProtocol.parseHardwareSettingsResponse(raw);
+              const hwParsed = pingAdapter.parseSettingsResponse(raw);
               if (hwParsed) accumulatedTelemetry = { ...accumulatedTelemetry, ...hwParsed };
-              const rfParsed = ZenggeProtocol.parseRfRemoteState(raw);
+              const rfParsed = pingAdapter.parseRfRemoteState(raw);
               if (rfParsed) accumulatedTelemetry = { ...accumulatedTelemetry, rfMode: rfParsed.mode, rfPairedCount: rfParsed.pairedCount };
               if (accumulatedTelemetry?.detected && accumulatedTelemetry?.rfMode) {
                 clearTimeout(timer);
@@ -314,8 +309,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
         );
 
         // Fire queries after giving the notification monitor 400ms to set up.
-        // NOTE: ZenggeProtocol parse calls are intentionally kept — BanlanX
-        // returns null for both, which is correct Phase 1 behavior (no EEPROM probe).
+        // Uses adapter's polymorphic parse methods — Zengge parses EEPROM,
+        // BanlanX returns null for both (correct Phase 1 behavior — no EEPROM probe).
         setTimeout(() => {
           const queryResult = pingAdapter.buildQuerySettings(false);
           if (queryResult.packets.length > 0) {
@@ -380,6 +375,11 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       // GATT reconnect, then reports it here so writeToDevice keeps using the
       // correct protocol UUIDs without re-discovering from scratch.
       adapterMapRef.current.set(deviceId, adapter);
+    },
+    onDeviceRecovered: (deviceId: string) => {
+      // Relay to consumers (DashboardScreen) so they can replay the last
+      // pattern/color state to the recovered device after dropout.
+      deviceRecoveredCallbackRef.current?.(deviceId);
     },
   });
 
