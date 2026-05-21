@@ -18,7 +18,6 @@ import { Accelerometer } from 'expo-sensors';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { AppLogger } from '../services/AppLogger';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
 import { buildPatternPayload } from '../protocols/PatternEngine';

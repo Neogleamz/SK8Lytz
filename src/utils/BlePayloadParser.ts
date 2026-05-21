@@ -7,7 +7,7 @@
  * UI thread.
  */
 
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { getDefaultProtocol } from '../protocols/ControllerRegistry';
 import { AppLogger } from '../services/AppLogger';
 
 export interface ParsedLedConfig {
@@ -43,8 +43,8 @@ export const BlePayloadParser = {
     try {
       if (!Array.isArray(payload) || payload.length === 0) return null;
 
-      const v2Config = ZenggeProtocol.parseHardwareSettingsResponse(payload);
-      const v1Config = ZenggeProtocol.parseHardwareConfig(payload);
+      const v2Config = getDefaultProtocol().parseSettingsResponse(payload);
+      const v1Config = null; // Deprecated V1 path — adapter.parseSettingsResponse() handles both V1+V2
 
       const parsedOk = !!(v2Config || v1Config);
       if (!parsedOk) return null;
@@ -101,7 +101,7 @@ export const BlePayloadParser = {
   parseRfPayload(payload: number[]): ParsedRfConfig | null {
     try {
       if (!Array.isArray(payload) || payload.length === 0) return null;
-      const rfState = ZenggeProtocol.parseRfRemoteState(payload);
+      const rfState = getDefaultProtocol().parseRfRemoteState(payload);
       if (!rfState) return null;
 
       return {

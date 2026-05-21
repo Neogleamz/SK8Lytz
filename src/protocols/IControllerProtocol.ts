@@ -80,6 +80,8 @@ export interface MusicConfig {
   color2: RGB;
   speed: number;
   brightness: number;
+  /** Pass false to explicitly exit music-reactive mode. Defaults to true. */
+  isOn?: boolean;
 }
 
 export interface FirmwareInfo {

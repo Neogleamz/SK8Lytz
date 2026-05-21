@@ -212,7 +212,7 @@ export class ZenggeAdapter implements IControllerProtocol {
   // ─── Music ─────────────────────────────────────────────────────────────────
   buildMusicConfig(config: MusicConfig): ProtocolResult {
     return this.toResult(
-      ZenggeProtocol.setMusicConfig(config.patternId, 0x26, true, config.color1, config.color2, config.micSensitivity, config.brightness),
+      ZenggeProtocol.setMusicConfig(config.patternId, 0x26, config.isOn ?? true, config.color1, config.color2, config.micSensitivity, config.brightness),
       false
     );
   }
