@@ -28,6 +28,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { ZENGGE_SERVICE_UUID } from '../../protocols/ZenggeProtocol';
+import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
 import { resolveProtocol, getDefaultProtocol } from '../../protocols/ControllerRegistry';
 
 import { AppLogger } from '../../services/AppLogger';
@@ -342,6 +343,7 @@ export function useBLESweeper({
 
       const nameLower = device.name?.toLowerCase() || '';
       const hasZenggeService = device.serviceUUIDs?.includes(ZENGGE_SERVICE_UUID);
+      const hasBanlanxService = device.serviceUUIDs?.includes(BANLANX_SERVICE_UUID);
       const mfData = device.manufacturerData;
       let isSymphony = false;
       if (mfData) {
@@ -351,7 +353,7 @@ export function useBLESweeper({
         } catch (e) {}
       }
       const isKnownPrefix = ZENGGE_NAME_PREFIXES.some(p => nameLower.startsWith(p));
-      if (!isSymphony && !isKnownPrefix && !hasZenggeService) return;
+      if (!isSymphony && !isKnownPrefix && !hasZenggeService && !hasBanlanxService) return;
 
       const rssi = device.rssi ?? -99;
       if (rssi < RSSI_THRESHOLD) return;
