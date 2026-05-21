@@ -29,9 +29,10 @@ import { Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { ZENGGE_SERVICE_UUID } from '../../protocols/ZenggeProtocol';
 import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
-import { resolveProtocol, getDefaultProtocol } from '../../protocols/ControllerRegistry';
-
+import { resolveProtocol, getDefaultProtocol, getProtocolById } from '../../protocols/ControllerRegistry';
+import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
 import { AppLogger } from '../../services/AppLogger';
+import { BleCharacteristicCache } from '../../services/BleCharacteristicCache';
 import type { PendingRegistration } from '../../types/dashboard.types';
 import { mapDeviceToRegistration } from '../../utils/classifyBLEDevice';
 import { acquireGattLock } from './useBLEGattMutex';
@@ -214,8 +215,9 @@ export function useBLESweeper({
         return;
       }
 
-      await bleManager.connectToDevice(mac, { timeout: 6000 }).catch((e: any) => {
+      const conn = await bleManager.connectToDevice(mac, { timeout: 6000 }).catch((e: any) => {
         if (!String(e).includes('already')) throw e;
+        return bleManager.deviceForDevice(mac);
       });
 
       // ── P1 preemption check: bail after connect, before service discovery ─
@@ -224,16 +226,28 @@ export function useBLESweeper({
         return;
       }
 
-      await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
+      // ── HAL: Resolve adapter from service UUIDs & Caching ─────────────────
+      let interrogatorAdapter: IControllerProtocol | null = null;
+      let usedCache = false;
 
-      // ── HAL: Resolve adapter from service UUIDs ───────────────────────────────
-      let interrogatorAdapter;
-      try {
-        const svcs = await bleManager.servicesForDevice(mac);
-        const svcUUIDs = svcs.map((s: any) => s.uuid as string);
-        interrogatorAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
-      } catch (_e) {
-        interrogatorAdapter = getDefaultProtocol();
+      const cachedGatt = await BleCharacteristicCache.get(mac);
+      if (cachedGatt) {
+        interrogatorAdapter = getProtocolById(cachedGatt.protocolId);
+        if (interrogatorAdapter) usedCache = true;
+      }
+
+      if (!interrogatorAdapter) {
+        await conn.discoverAllServicesAndCharacteristics();
+        try {
+          const svcs = await conn.services();
+          const svcUUIDs = svcs.map((s: any) => s.uuid as string);
+          interrogatorAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
+        } catch (_e) {
+          interrogatorAdapter = getDefaultProtocol();
+        }
+        await BleCharacteristicCache.set(mac, interrogatorAdapter.protocolId);
+      } else {
+        AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context: 'interrogateDevice', mac });
       }
 
       if (signal.aborted) {

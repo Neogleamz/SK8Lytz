@@ -14,9 +14,10 @@
 import { Buffer } from 'buffer';
 import { useCallback, useRef, useState } from 'react';
 import type { Device, Subscription } from 'react-native-ble-plx';
-import { resolveProtocol, getDefaultProtocol } from '../../protocols/ControllerRegistry';
+import { resolveProtocol, getDefaultProtocol, getProtocolById } from '../../protocols/ControllerRegistry';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
 import { AppLogger } from '../../services/AppLogger';
+import { BleCharacteristicCache } from '../../services/BleCharacteristicCache';
 
 export interface UseBLEAutoRecoveryProps {
   bleManager: any;
@@ -152,21 +153,29 @@ export function useBLEAutoRecovery({
           } else {
             conn = await bleManager.connectToDevice(deviceId, { timeout: 3500 });
           }
-          await conn.discoverAllServicesAndCharacteristics();
+          let recoveryAdapter: IControllerProtocol | null = null;
+          let usedCache = false;
 
-          // ── HAL: Resolve adapter fresh from conn.services() ──────────────────────
-          // A reconnect is structurally identical to a fresh connect: services are
-          // available after discoverAllServicesAndCharacteristics(). No prop drilling
-          // of adapterMapRef needed — the hook resolves independently and reports
-          // back via onAdapterResolved so useBLE.ts can update its adapterMapRef.
-          let recoveryAdapter: IControllerProtocol;
-          try {
-            const svcs = await conn.services();
-            const svcUUIDs = svcs.map((s: any) => s.uuid as string);
-            recoveryAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
-          } catch (_e) {
-            recoveryAdapter = getDefaultProtocol();
+          const cachedGatt = await BleCharacteristicCache.get(conn.id);
+          if (cachedGatt) {
+            recoveryAdapter = getProtocolById(cachedGatt.protocolId);
+            if (recoveryAdapter) usedCache = true;
           }
+
+          if (!recoveryAdapter) {
+            await conn.discoverAllServicesAndCharacteristics();
+            try {
+              const svcs = await conn.services();
+              const svcUUIDs = svcs.map((s: any) => s.uuid as string);
+              recoveryAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
+            } catch (_e) {
+              recoveryAdapter = getDefaultProtocol();
+            }
+            await BleCharacteristicCache.set(conn.id, recoveryAdapter.protocolId);
+          } else {
+            AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context: 'autoRecovery', deviceId: conn.id });
+          }
+
           onAdapterResolved(conn.id, recoveryAdapter);
           AppLogger.log('AUTO_RECOVERY_ADAPTER', { deviceId: conn.id, protocolId: recoveryAdapter.protocolId });
 

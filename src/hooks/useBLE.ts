@@ -13,7 +13,7 @@ import { Buffer } from 'buffer';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
-import { resolveProtocol, getDefaultProtocol, resolveProtocolForDevice } from '../protocols/ControllerRegistry';
+import { getDefaultProtocol, resolveProtocol, resolveProtocolForDevice, getProtocolById } from '../protocols/ControllerRegistry';
 import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
 // NOTE: Zengge static parse methods (parseHardwareSettingsResponse, parseRfRemoteState)
 // retained in pingDevice for Phase 1 EEPROM probing. BanlanX returns null for both
@@ -24,6 +24,8 @@ import type { BleConnectionState, PendingRegistration } from '../types/dashboard
 
 import { checkPermission, openGlobalPermissionsModal } from '../services/PermissionService';
 import { supabase } from '../services/supabaseClient';
+import { BlePayloadParser } from '../utils/BlePayloadParser';
+import { BleCharacteristicCache } from '../services/BleCharacteristicCache';
 import { useBLEScanner } from './ble/useBLEScanner';
 import { useBLEAutoRecovery } from './ble/useBLEAutoRecovery';
 import { useBLESweeper } from './ble/useBLESweeper';
@@ -242,19 +244,29 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       await bleManager.connectToDevice(mac, { timeout: 6000 }).catch((e: any) => {
         if (!String(e).includes('already')) throw e;
       });
-      await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
 
-      // ── HAL: Resolve adapter from service UUIDs ───────────────────────────────
-      // Pattern mirrors connectToDevices Phase 2 handshake (same timing guarantees).
-      // BanlanX resolves to BanlanxAdapter (FFE0 service); Zengge to ZenggeAdapter (FFFF).
-      // Falls back to Zengge default if services() API is unavailable.
-      let pingAdapter: IControllerProtocol;
-      try {
-        const svcs = await bleManager.servicesForDevice(mac);
-        const svcUUIDs = svcs.map((s: any) => s.uuid as string);
-        pingAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
-      } catch (_e) {
-        pingAdapter = getDefaultProtocol();
+      // ── HAL: Resolve adapter & Caching ────────────────────────────────────────
+      let pingAdapter: IControllerProtocol | null = null;
+      let usedCache = false;
+
+      const cachedGatt = await BleCharacteristicCache.get(mac);
+      if (cachedGatt) {
+        pingAdapter = getProtocolById(cachedGatt.protocolId);
+        if (pingAdapter) usedCache = true;
+      }
+
+      if (!pingAdapter) {
+        await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
+        try {
+          const svcs = await bleManager.servicesForDevice(mac);
+          const svcUUIDs = svcs.map((s: any) => s.uuid as string);
+          pingAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
+        } catch (_e) {
+          pingAdapter = getDefaultProtocol();
+        }
+        await BleCharacteristicCache.set(mac, pingAdapter.protocolId);
+      } else {
+        AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context: 'pingDevice', mac });
       }
 
       // ── Step 2: Write Blink (channel is now hot — no Phantom Blink) ───────────
@@ -568,7 +580,30 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
           if (Platform.OS === 'android') {
             await bleManager.requestConnectionPriorityForDevice(conn.id, 1).catch(() => {});
           }
-          await conn.discoverAllServicesAndCharacteristics();
+          // ── HAL: Resolve protocol adapter from service UUIDs & Caching ────────
+          let adapter: IControllerProtocol | null = null;
+          let usedCache = false;
+
+          const cachedGatt = await BleCharacteristicCache.get(conn.id);
+          if (cachedGatt) {
+            adapter = getProtocolById(cachedGatt.protocolId);
+            if (adapter) usedCache = true;
+          }
+
+          if (!adapter) {
+            await conn.discoverAllServicesAndCharacteristics();
+            try {
+              const services = await conn.services();
+              const serviceUUIDs = services.map((s: any) => s.uuid as string);
+              adapter = resolveProtocol(serviceUUIDs, conn.manufacturerData) ?? getDefaultProtocol();
+            } catch (_e) {
+              // services() not available on all platforms — fall back to Zengge default
+              adapter = getDefaultProtocol();
+            }
+            await BleCharacteristicCache.set(conn.id, adapter.protocolId);
+          } else {
+            AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context: 'handshakeDevice', deviceId: conn.id });
+          }
 
           // MTU negotiation (up to 2 retries)
           let negotiatedMtu = 23;
@@ -590,18 +625,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
             deviceId: conn.id,
           });
 
-          // ── HAL: Resolve protocol adapter from service UUIDs ───────────────────
-          // discoverAllServicesAndCharacteristics() must complete first so service
-          // UUIDs are available. Adapter resolution lives here (Phase 2) for that reason.
-          let adapter: IControllerProtocol;
-          try {
-            const services = await conn.services();
-            const serviceUUIDs = services.map((s: any) => s.uuid as string);
-            adapter = resolveProtocol(serviceUUIDs, conn.manufacturerData) ?? getDefaultProtocol();
-          } catch (_e) {
-            // services() not available on all platforms — fall back to Zengge default
-            adapter = getDefaultProtocol();
-          }
           adapterMapRef.current.set(conn.id, adapter);
           AppLogger.log('DEVICE_CONNECTED', { context: 'adapter_resolved', deviceId: conn.id, protocolId: adapter.protocolId });
 

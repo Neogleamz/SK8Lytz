@@ -88,6 +88,13 @@ export function getRegisteredProtocolIds(): string[] {
 }
 
 /**
+ * Retrieve a specific protocol adapter by its ID.
+ */
+export function getProtocolById(protocolId: string): IControllerProtocol | null {
+  return registry.find(p => p.protocolId === protocolId) ?? null;
+}
+
+/**
  * Resolve the adapter for a specific already-connected device from an
  * adapter map (e.g. useBLE.ts adapterMapRef). Falls back to the default
  * protocol if the device is not in the map.
