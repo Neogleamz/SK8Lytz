@@ -12,3 +12,4 @@ Core behavioral non-defaults optimized for SK8Lytz:
 4. **Zero-Collateral Damage**: DO NOT perform unsolicited "boy-scout" refactors or cleanups. You must touch ONLY the exact lines of code required for the active sprint. Tech debt must be reported to the Bucket List, never silently fixed.
 5. **Commits**: Strictly use Conventional Commits (`type(scope): subject`, with `!` for breaking DB/BLE changes).
 6. **Modularity**: Domain logic belongs in custom hooks (`useXyz`), not UI files. Use the `/scaffold-hook` workflow when extracting logic.
+7. **The Offline-First Mandate**: The app must function 100% locally with zero network degradation. All core reads (presets, scenes, hardware config) MUST hit a local cache (e.g. AsyncStorage) first. All core writes (color changes, UI actions) MUST use Optimistic UI, applying locally instantly and syncing to Supabase asynchronously in the background. Infinite loading spinners blocking the UI for cloud sync are strictly forbidden.
