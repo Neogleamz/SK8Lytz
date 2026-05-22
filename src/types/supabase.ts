@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -300,6 +300,8 @@ export type Database = {
           end_date: string | null
           id: string
           is_archived: boolean | null
+          metadata: Json | null
+          project_id: string | null
           start_date: string | null
           title: string
         }
@@ -310,6 +312,8 @@ export type Database = {
           end_date?: string | null
           id?: string
           is_archived?: boolean | null
+          metadata?: Json | null
+          project_id?: string | null
           start_date?: string | null
           title: string
         }
@@ -320,6 +324,8 @@ export type Database = {
           end_date?: string | null
           id?: string
           is_archived?: boolean | null
+          metadata?: Json | null
+          project_id?: string | null
           start_date?: string | null
           title?: string
         }
@@ -329,6 +335,13 @@ export type Database = {
             columns: ["assigned_team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cyclez_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projectz"
             referencedColumns: ["id"]
           },
         ]
@@ -937,6 +950,7 @@ export type Database = {
           qty: number
           started_at: string | null
           status: string
+          wip_state: Json | null
           wo_id: string | null
         }
         Insert: {
@@ -948,6 +962,7 @@ export type Database = {
           qty?: number
           started_at?: string | null
           status?: string
+          wip_state?: Json | null
           wo_id?: string | null
         }
         Update: {
@@ -959,6 +974,7 @@ export type Database = {
           qty?: number
           started_at?: string | null
           status?: string
+          wip_state?: Json | null
           wo_id?: string | null
         }
         Relationships: []
@@ -1103,6 +1119,62 @@ export type Database = {
           steps?: Json | null
         }
         Relationships: []
+      }
+      projectz: {
+        Row: {
+          color_hex: string | null
+          created_at: string | null
+          description: string | null
+          due_date: string | null
+          health_status: Database["public"]["Enums"]["project_status"] | null
+          icon_name: string | null
+          id: string
+          is_archived: boolean | null
+          metadata: Json | null
+          owner_id: string | null
+          team_id: string | null
+          title: string
+          visibility: Database["public"]["Enums"]["project_visibility"] | null
+        }
+        Insert: {
+          color_hex?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          health_status?: Database["public"]["Enums"]["project_status"] | null
+          icon_name?: string | null
+          id?: string
+          is_archived?: boolean | null
+          metadata?: Json | null
+          owner_id?: string | null
+          team_id?: string | null
+          title: string
+          visibility?: Database["public"]["Enums"]["project_visibility"] | null
+        }
+        Update: {
+          color_hex?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          health_status?: Database["public"]["Enums"]["project_status"] | null
+          icon_name?: string | null
+          id?: string
+          is_archived?: boolean | null
+          metadata?: Json | null
+          owner_id?: string | null
+          team_id?: string | null
+          title?: string
+          visibility?: Database["public"]["Enums"]["project_visibility"] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projectz_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       push_tokens: {
         Row: {
@@ -2030,6 +2102,7 @@ export type Database = {
       }
       socialz_audience: {
         Row: {
+          avatar_url: string | null
           collab_status: string | null
           collab_tier: string | null
           contact_info: string | null
@@ -2059,6 +2132,7 @@ export type Database = {
           viral_url: string | null
         }
         Insert: {
+          avatar_url?: string | null
           collab_status?: string | null
           collab_tier?: string | null
           contact_info?: string | null
@@ -2088,6 +2162,7 @@ export type Database = {
           viral_url?: string | null
         }
         Update: {
+          avatar_url?: string | null
           collab_status?: string | null
           collab_tier?: string | null
           contact_info?: string | null
@@ -2190,6 +2265,27 @@ export type Database = {
           internal_recipe_name?: string | null
           platform?: string | null
           storefront_sku?: string
+        }
+        Relationships: []
+      }
+      tagz: {
+        Row: {
+          color_hex: string | null
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          color_hex?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          color_hex?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }
@@ -2334,6 +2430,8 @@ export type Database = {
           linked_module: Database["public"]["Enums"]["task_module"] | null
           metadata: Json | null
           parent_task_id: string | null
+          personal_cycle_id: string | null
+          project_id: string | null
           status: Database["public"]["Enums"]["task_status"] | null
           title: string
         }
@@ -2353,6 +2451,8 @@ export type Database = {
           linked_module?: Database["public"]["Enums"]["task_module"] | null
           metadata?: Json | null
           parent_task_id?: string | null
+          personal_cycle_id?: string | null
+          project_id?: string | null
           status?: Database["public"]["Enums"]["task_status"] | null
           title: string
         }
@@ -2372,6 +2472,8 @@ export type Database = {
           linked_module?: Database["public"]["Enums"]["task_module"] | null
           metadata?: Json | null
           parent_task_id?: string | null
+          personal_cycle_id?: string | null
+          project_id?: string | null
           status?: Database["public"]["Enums"]["task_status"] | null
           title?: string
         }
@@ -2395,6 +2497,20 @@ export type Database = {
             columns: ["parent_task_id"]
             isOneToOne: false
             referencedRelation: "taskz"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "taskz_personal_cycle_id_fkey"
+            columns: ["personal_cycle_id"]
+            isOneToOne: false
+            referencedRelation: "cyclez"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "taskz_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projectz"
             referencedColumns: ["id"]
           },
         ]
@@ -3916,6 +4032,8 @@ export type Database = {
       }
     }
     Enums: {
+      project_status: "On Track" | "At Risk" | "Off Track"
+      project_visibility: "Private" | "Organization"
       skate_spot_surface:
         | "wood"
         | "concrete"
@@ -4067,6 +4185,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      project_status: ["On Track", "At Risk", "Off Track"],
+      project_visibility: ["Private", "Organization"],
       skate_spot_surface: [
         "wood",
         "concrete",
@@ -4088,3 +4208,4 @@ export const Constants = {
     },
   },
 } as const
+
