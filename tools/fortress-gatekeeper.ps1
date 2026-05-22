@@ -46,7 +46,18 @@ foreach ($Line in $WorktreeList) {
     Write-Host "Merging branch '$Branch' into master..." -ForegroundColor Yellow
     git merge $Commit --ff-only
 
-    # 4. Teardown Worktree
+    # 4. Teardown Worktree safely (removing directory junctions first to prevent recursive deletion)
+    Write-Host "Cleaning up worktree junctions..." -ForegroundColor Yellow
+    if (Test-Path "$Path\node_modules") {
+        $Item = Get-Item "$Path\node_modules"
+        if ($Item.Attributes -match "ReparsePoint") {
+            [System.IO.Directory]::Delete("$Path\node_modules")
+            Write-Host "Safely unlinked node_modules junction." -ForegroundColor Green
+        } else {
+            Remove-Item -Recurse -Force "$Path\node_modules" -ErrorAction SilentlyContinue
+        }
+    }
+
     Write-Host "Tearing down worktree..." -ForegroundColor Yellow
     git worktree remove $Path --force
     
