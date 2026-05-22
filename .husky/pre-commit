@@ -24,7 +24,15 @@ fi
 
 WORKTREE_ROOT=$(pwd)
 
-cd "$WORKTREE_ROOT"
+# Ensure node_modules junction exists if inside a worktree
+if [ "$WORKTREE_ROOT" != "$FORTRESS_ROOT" ]; then
+  if [ ! -d "node_modules" ]; then
+    echo "[Husky] Creating node_modules directory junction..."
+    WIN_FORTRESS_ROOT=$(cygpath -w "$FORTRESS_ROOT" || echo "$FORTRESS_ROOT")
+    cmd.exe /c "mklink /j node_modules \"$WIN_FORTRESS_ROOT\\node_modules\""
+  fi
+fi
+
 STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.\(ts\|tsx\|js\|jsx\)$' || true)
 
 ABS_FILES=""
@@ -34,16 +42,17 @@ if [ -n "$STAGED_FILES" ]; then
   done
 fi
 
-cd "$FORTRESS_ROOT" || exit 1
-
 if [ -n "$ABS_FILES" ]; then
   echo "[Husky] Running Babel Syntax Gate..."
-  export NODE_PATH="$FORTRESS_ROOT/node_modules"
+  export NODE_PATH="$WORKTREE_ROOT/node_modules"
   eval node "\"$WORKTREE_ROOT/scripts/babel-syntax-gate.js\"" $ABS_FILES
+
+  echo "[Husky] Running ESLint on staged files..."
+  eval npx eslint $ABS_FILES --max-warnings=0
 fi
 
-echo "[Husky] Running TSC check from: $FORTRESS_ROOT"
+echo "[Husky] Running TSC check from: $WORKTREE_ROOT"
 npx tsc --noEmit
 
-echo "[Husky] Running Jest from: $FORTRESS_ROOT"
+echo "[Husky] Running Jest from: $WORKTREE_ROOT"
 npx jest --watchAll=false --passWithNoTests
