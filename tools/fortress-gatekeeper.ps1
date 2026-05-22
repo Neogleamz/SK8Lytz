@@ -34,7 +34,7 @@ foreach ($Line in $WorktreeList) {
 
         # 2. Run verification on the local attestation file
         Write-Host "Executing cryptographic verification..." -ForegroundColor Yellow
-        node "$FORTRESS_ROOT\tools\verifiable-check-runner.js" --verify
+        node tools/verifiable-check-runner.js --verify
         
         Write-Host "Proof of Execution verified! Cleared for merge." -ForegroundColor Green
     }
