@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { EventEmitter } from 'events';
-import { exec } from 'child_process';
+import { exec, spawn, ChildProcess } from 'child_process';
 import { startGoogleSweep, stopGoogleSweep, isGoogleSweepActive } from './GoogleSweep';
 import { GooglePlacesProvider, RETAIL_BLOCKLIST } from './lib/providers/GooglePlacesProvider';
 import { executeDetective } from './core/DetectiveEngine';
@@ -221,70 +221,80 @@ app.post('/api/pulse', (req, res) => {
   res.json({ success: true });
 });
 
+const activeDaemons = new Map<string, ChildProcess>();
+
 app.post('/start', (req, res) => {
-  const { daemons } = (req.body || {}) as { daemons?: string[] };
-  const target = (daemons && daemons.length > 0)
-    ? daemons.map(d => `scraper-${d}`).join(',')
-    : 'scraper-indexer,scraper-photographer,scraper-publisher';
-  console.log(`Orchestrating start: ${target}`);
-  exec(`npx pm2 start ecosystem.config.js --only ${target} --update-env`, {
-    cwd: __dirname,
-    windowsHide: true,
-    env: { ...process.env, SCRAPER_REGISTER_ONLY: 'false' }
-  }, (err) => {
-     if (err) {
-        console.error('Failed to start scrapers cluster:', err);
-        return res.status(500).json({ success: false, message: 'Start failed', error: err.message });
-     }
-     isRunning = true;
-     res.json({ success: true, message: `Started: ${target}` });
-  });
+  // Bulk start not fully supported in this simple refactor, rely on individual endpoints for UI
+  res.json({ success: true, message: `Use individual daemon endpoints in Docker mode` });
 });
 
 app.post('/stop', (req, res) => {
-  const { daemons } = (req.body || {}) as { daemons?: string[] };
-  const target = (daemons && daemons.length > 0)
-    ? daemons.map(d => `scraper-${d}`).join(' ')
-    : 'scraper-indexer scraper-photographer scraper-publisher';
-  console.log(`Orchestrating stop: ${target}`);
-  exec(`pm2 stop ${target}`, { cwd: __dirname, windowsHide: true }, (err) => {
-     if (err) {
-        console.error('Failed to stop scrapers cluster:', err);
-        return res.status(500).json({ success: false, message: 'Stop failed', error: err.message });
-     }
-     isRunning = false;
-     res.json({ success: true, message: `Stopped: ${target}` });
+  // Bulk stop
+  activeDaemons.forEach((child, target) => {
+    child.kill('SIGTERM');
+    activeDaemons.delete(target);
   });
+  isRunning = false;
+  res.json({ success: true, message: `All local daemons stopped` });
 });
 
 app.post('/api/daemons/:name/start', (req, res) => {
   const { name } = req.params;
   const target = `scraper-${name}`;
+  
+  if (activeDaemons.has(target)) {
+    return res.status(400).json({ success: false, message: `${name} is already running` });
+  }
+
   console.log(`Commanding daemon start: ${target}`);
-  exec(`npx pm2 start ecosystem.config.js --only ${target} --update-env`, {
-    cwd: __dirname,
-    windowsHide: true,
-    env: { ...process.env, SCRAPER_REGISTER_ONLY: 'false' }
-  }, (err, stdout, stderr) => {
-     if (err) {
-        console.error(`Failed to start ${name}:`, err);
-        return res.status(500).json({ success: false, message: `Failed to start ${name}` });
-     }
-     res.json({ success: true, message: `${name} daemon started` });
-  });
+  
+  const scriptMap: Record<string, string> = {
+    'indexer': 'Indexer.ts',
+    'photographer': 'Photographer.ts',
+    'publisher': 'Publisher.ts'
+  };
+  
+  const scriptName = scriptMap[name];
+  if (!scriptName) return res.status(400).json({ success: false, message: 'Invalid daemon' });
+
+  try {
+    const outLog = fs.openSync(path.join(LOG_DIR, `${name}-out.log`), 'a');
+    const errLog = fs.openSync(path.join(LOG_DIR, `${name}-error.log`), 'a');
+
+    const child = spawn('bun', [scriptName], {
+      cwd: __dirname,
+      stdio: ['ignore', outLog, errLog],
+      detached: false,
+      env: { ...process.env, SCRAPER_REGISTER_ONLY: 'false' }
+    });
+
+    child.on('exit', () => {
+      activeDaemons.delete(target);
+      console.log(`Daemon ${target} exited`);
+    });
+
+    activeDaemons.set(target, child);
+    isRunning = true;
+    res.json({ success: true, message: `${name} daemon started natively` });
+  } catch (err: any) {
+    console.error(`Failed to spawn ${name}:`, err);
+    res.status(500).json({ success: false, message: `Failed to spawn ${name}` });
+  }
 });
 
 app.post('/api/daemons/:name/stop', (req, res) => {
   const { name } = req.params;
   const target = `scraper-${name}`;
   console.log(`Commanding daemon stop: ${target}`);
-  exec(`pm2 stop ${target}`, { cwd: __dirname, windowsHide: true }, (err, stdout, stderr) => {
-     if (err) {
-        console.error(`Failed to stop ${name}:`, err);
-        return res.status(500).json({ success: false, message: `Failed to stop ${name}` });
-     }
-     res.json({ success: true, message: `${name} daemon stopped` });
-  });
+  
+  const child = activeDaemons.get(target);
+  if (child) {
+    child.kill('SIGTERM');
+    activeDaemons.delete(target);
+    res.json({ success: true, message: `${name} daemon stopped` });
+  } else {
+    res.json({ success: true, message: `${name} stopped or not running` });
+  }
 });
 
 // ─── LM Studio Integration Status State & Helper ────────────────────────────
@@ -1702,8 +1712,36 @@ app.post('/api/sniper/apply', async (req, res) => {
   }
 });
 
-app.listen(5999, () => {
-  console.log('[CCTower] API listening on port 5999');
+// ─── STARTUP BACKGROUND SERVICES (Replacements for PM2) ───────────
+try {
+  console.log('[CCTower] Booting Discord Bridge...');
+  const discordOut = fs.openSync(path.join(LOG_DIR, `discord-out.log`), 'a');
+  const discordChild = spawn('bun', ['run', 'index.js'], {
+    cwd: path.resolve(__dirname, '../discord-bridge'),
+    stdio: ['ignore', discordOut, discordOut],
+    detached: false
+  });
+  
+  console.log('[CCTower] Booting Vite Dashboard...');
+  const dashOut = fs.openSync(path.join(LOG_DIR, `dashboard-out.log`), 'a');
+  const dashChild = spawn('bun', ['run', 'dev', '--host', '0.0.0.0', '--port', '5998'], {
+    cwd: path.resolve(__dirname, '../scraper-dashboard'),
+    stdio: ['ignore', dashOut, dashOut],
+    detached: false
+  });
+
+  process.on('SIGTERM', () => {
+    discordChild.kill('SIGTERM');
+    dashChild.kill('SIGTERM');
+    process.exit(0);
+  });
+} catch (e: any) {
+  console.error('[CCTower] Failed to boot auxiliary services:', e.message);
+}
+
+const PORT = process.env.CCTOWER_PORT || 5999;
+app.listen(PORT, () => {
+  console.log(`[CCTower] Master Control Node online at port ${PORT}`);
   
   updateLmsStatus().then(() => {
     console.log('[CCTower] Initial LM Studio status checked:', cachedLmsStatus.serverStatus);

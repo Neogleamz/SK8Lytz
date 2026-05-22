@@ -1,0 +1,23 @@
+# Use the official Bun Alpine image for minimal footprint
+FROM oven/bun:alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package management files
+COPY package.json ./
+
+# Install dependencies
+RUN bun install --ignore-scripts
+
+# Copy the entire workspace
+COPY . .
+
+# Ensure logs directory exists
+RUN mkdir -p tools/scraper/logs
+
+# Expose CCTower Port
+EXPOSE 5999
+
+# Set the entrypoint to the newly refactored CCTower master process
+CMD ["bun", "run", "tools/scraper/CCTower.ts"]

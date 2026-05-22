@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  cctower:
+    build:
+      context: .
+      dockerfile: Dockerfile.scraper
+    container_name: sk8lytz-scraper-stack
+    restart: always
+    ports:
+      - "5999:5999" # CCTower API & Dashboard Backend
+      - "5998:5998" # Vite Frontend Dashboard
+    volumes:
+      # Map logs directly to Windows filesystem so user can read them in IDE
+      - ./tools/scraper/logs:/app/tools/scraper/logs
+      # Map local scraper database and photos
+      - ./.scraper-data:/app/.scraper-data
+    env_file:
+      - .env
