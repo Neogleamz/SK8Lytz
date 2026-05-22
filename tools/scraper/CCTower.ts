@@ -321,9 +321,8 @@ let cachedGpuTelemetry: GpuTelemetry = {
 };
 
 function updateGpuTelemetry(): void {
-  // VRAM usage from Windows Performance Counters (same as Task Manager)
-  const psCmd = `powershell.exe -NoProfile -Command "$v=(Get-Counter '\GPU Adapter Memory(*)\Dedicated Usage' -ErrorAction SilentlyContinue).CounterSamples | Sort-Object CookedValue -Descending | Select-Object -First 1; $u=(Get-Counter '\GPU Engine(*engtype_3D*)\Utilization Percentage' -ErrorAction SilentlyContinue).CounterSamples | Where-Object {$_.CookedValue -gt 0} | Measure-Object CookedValue -Sum; Write-Output \"$([math]::Round($v.CookedValue/1MB,1))|$([math]::Round($u.Sum,1))\""`;
-  exec(psCmd, { windowsHide: true, timeout: 5000 }, (err, stdout) => {
+  const scriptPath = path.resolve(__dirname, 'gpu-stats.ps1');
+  exec(`powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}"`, { windowsHide: true, timeout: 8000 }, (err, stdout) => {
     if (err || !stdout?.trim()) return;
     const [vramStr, utilStr] = stdout.trim().split('|');
     const vramUsedMB = parseFloat(vramStr) || 0;
