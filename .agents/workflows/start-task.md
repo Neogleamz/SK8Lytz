@@ -46,17 +46,23 @@ You must execute this pipeline sequentially. **DO NOT BYPASS ANY GATES.** You mu
 - List 5 weird, rare edge cases (e.g., backgrounding the app, BLE drops, null states).
 - Verify the code explicitly handles these edge cases.
 
-### Phase 6: The Release Manager (Commit & Clean)
-- Run tests and self-review (e.g., `npx tsc --noEmit` from master).
-- Commit within worktree: `git add .` then `git commit -m "feat: complete <task-slug>"`.
-- Merge to master: `git checkout master` then `git merge <task-slug> --ff-only`
-- **Clean Slate Check**: Run `git status -s` on master immediately after merge.
+### Phase 6: The Release Manager (Cryptographic Attestation & Gatekeeper Merge)
+1. **Verification Check (PoE):** Run the unified check runner locally in the worktree root to execute TypeScript compilation and Jest tests, compiling a cryptographically signed proof of execution:
+   ```powershell
+   npm run verify
+   ```
+2. **Commit within worktree:** Stage any remaining changes and commit: `git add .` then `git commit -m "feat: complete <task-slug>"` (or use the appropriate semantic prefix).
+   > [!IMPORTANT]
+   > Since the commit hash changes upon commit, you MUST execute `npm run verify` immediately *after* your final commit to anchor the attestation to the exact HEAD hash!
+3. **Execute Gatekeeper:** Context switch back to the master fortress (`C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`) and run the automated validator script:
+   ```powershell
+   powershell.exe -ExecutionPolicy Bypass -File .\tools\fortress-gatekeeper.ps1
+   ```
+   This script will verify the local worktree attestation signature, ensure git hygiene, execute a fast-forward merge into `master`, tear down the worktree, and delete the branch automatically.
+4. **Clean Slate Check**: Run `git status -s` on master immediately after merge.
   - Any modified plan files (`tools/plans/*.md`) → stage and commit as `docs(plans): commit AI-First plan for <task-slug>`
   - Any temp scripts (`*.py`, `*.js` in root or `tools/`) → DELETE them, do not commit
-- Push to remote ONLY after `git status -s` returns empty output.
-- Remove worktree: `git worktree remove ../SK8Lytz-worktrees/<task-slug>`
-- Delete branch: `git branch -d <task-slug>`
-- **Apply Completion Stamp**: Mark the task `[x]` in `SK8Lytz_Bucket_List.md` with the commit hash (`git log -1 --format="%h"`) and a one-line outcome summary per Law 7.
+5. **Apply Completion Stamp**: Mark the task `[x]` in `SK8Lytz_Bucket_List.md` with the commit hash (`git log -1 --format="%h"`) and a one-line outcome summary per Law 7.
 - **Batch Progression Check**:
   - IF there are MORE uncompleted tasks in the active batch:
     - Ask the user: "Task complete. Shall I spin up the worktree for the next task in the batch?"
