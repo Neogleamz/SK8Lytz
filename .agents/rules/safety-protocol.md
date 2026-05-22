@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Critical Safety & Security Boundaries
 
 ## 1. Git & Branching Safeguards
