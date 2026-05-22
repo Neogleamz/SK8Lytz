@@ -1,3 +1,14 @@
+## [3.5.1] - 2026-05-22
+
+### ✨ Features
+- **qa**: Implement zero-dependency Headless Browser Console Sniffer Gate (`web-console-harvester.js`) utilizing native Google Chrome remote debugging via CDP WebSocket commands to hook runtime exceptions and errors on startup.
+- **qa**: Integrate the console sniffer into `verifiable-check-runner.js` and bind `browserConsoleStatus` securely into the cryptographically signed attestation signature.
+
+### 🔧 Maintenance & Refactoring
+- **git**: Ignore `.system_generated/` directory in `.gitignore` to keep runtime log reports out of codebase commits.
+
+---
+
 ## [3.5.0] - 2026-05-21
 
 ### ✨ Features
