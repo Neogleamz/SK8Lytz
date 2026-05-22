@@ -130,3 +130,7 @@ tools/scraper/node_modules/
 
 # Reverse Engineering Artifacts
 BANLANX_APK/
+
+# QA Attestation Token
+.test-attestation.json
+

@@ -1,0 +1,6 @@
+#!/bin/sh
+set -e
+# Husky pre-push hook — Zero-Bypass QA Gate
+
+echo "[Husky] Pre-push verification triggered..."
+node tools/verifiable-check-runner.js --verify

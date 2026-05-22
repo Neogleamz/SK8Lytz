@@ -10,7 +10,8 @@
     "postinstall": "patch-package",
     "test": "jest",
     "test:watch": "jest --watch",
-    "prepare": "husky"
+    "prepare": "husky",
+    "verify": "node tools/verifiable-check-runner.js"
   },
   "dependencies": {
     "@config-plugins/react-native-ble-plx": "^7.0.0",
