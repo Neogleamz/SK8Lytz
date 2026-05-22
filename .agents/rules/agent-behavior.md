@@ -71,6 +71,17 @@ Writes clean, isolated code inside the designated worktree. Follows "Local Boy-S
 **Role C: The Release Manager & QA**
 Runs `npm run verify` check-runners, checks edge cases (`/qa-tester` hunt for 5 weird edge cases), bumps versions, and manages remote pushes cleanly.
 
-## 8. The Turbo & Autopilot Protocols
+## 8. Project & Task Management Constitution (Kanban Protocols)
+1. **The Active Sprint Mandate**: You are strictly forbidden from writing code for tasks outside the `🚧 ACTIVE SPRINT`. You must work on exactly ONE task at a time, and every task MUST use a Git worktree.
+2. **Task Definition Schema**: Every task must follow the strict multi-line nested list schema with exactly one tag from the 5 categories (`[Status]`, `[Layer]`, `[Risk]`, `[Size]`, `[Cognitive Load]`). Single-line tasks are forbidden.
+3. **Sequential vs. Parallel Batching**: You must run sequential batch tasks one at a time, each in its own isolated worktree. Parallel batches can run simultaneously only if there is zero file overlap.
+4. **Completion Stamp Protocol**: When marking any task `[x]`, you must append the merge commit hash and a one-line outcome summary inline. Update the task details to summarize key decisions and files changed.
+5. **No Unsolicited Refactoring**: Zero collateral damage is allowed. If you find a bug unrelated to the active task, you must log it to the Triage Queue and must not fix it silently.
+
+## 9. The Turbo & Autopilot Protocols
 1. **The // turbo Annotation**: If a step in an Implementation Plan or Workflow is annotated with `// turbo`, you are authorized to set `SafeToAutoRun` to `true` for those specific `run_command` calls to bypass manual user confirmation.
 2. **The Snack Autopilot**: Any task tagged `[L-RISK]` AND `[Snack]` AND `[BATCH]` is authorized for "Zero-Gate Execution." You may implement the change, verify it, and commit it in a single turn WITHOUT waiting for a formal plan approval or a separate branch if it is part of a maintenance sweep.
+
+## 10. Evolved Rules (SDE Closed-Loop Friction Feedback)
+- **Rule: Surgical Buffer Overflow Defense**: The agent must enforce a minimum length of 12 RGB pixels for all `0x59` Static Colorful payload dispatches. Payloads below 10 pixels cause physical controller EEPROM buffer lockouts on the `0xA3` chipset.
+

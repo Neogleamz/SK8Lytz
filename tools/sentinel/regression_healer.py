@@ -24,7 +24,8 @@ class RegressionHealer:
             ["npm.cmd", "run", "verify"],
             cwd=self.workspace_path,
             capture_output=True,
-            text=True
+            text=True,
+            encoding="utf-8"
         )
         return res.returncode == 0, res.stdout, res.stderr
 

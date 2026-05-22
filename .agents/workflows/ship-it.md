@@ -36,8 +36,16 @@ When invoked via `/ship-it`, you must act as a strict state machine orchestratin
 1. **Bump versions:** Ask the user if this is a `patch`, `minor`, or `major` release. Once confirmed, manually increment the version in `package.json` and `app.json` (update `versionCode`, `buildNumber`, and semver string).
 2. **Documentation:** Execute the `/changelog` and `/pr-summary` workflows to generate release notes based on the worktree's commits.
 3. **Staging:** Execute `/diff-review` for a final check of the file modifications.
-4. **Final Commit:** Stage all changes and commit directly to the worktree branch: `git commit -m "chore(release): vX.Y.Z"`
-5. **Attestation Renewal:** Since the commit hash changed on version bump and documentation commit, you MUST execute `npm run verify` one final time to anchor the attestation to the exact release commit hash! This breaks the verification loop.
+4. **Final Commit:** Stage all changes and commit directly to the worktree branch:
+   ```powershell
+   git add .
+   git commit -m "chore(release): vX.Y.Z"
+   ```
+5. **Attestation Renewal:** Since the commit hash changed on version bump and documentation commit, you MUST execute `npm run verify` one final time to anchor the attestation to the exact release commit hash! Since `.test-attestation.json` is gitignored, this will not dirty your working tree:
+   ```powershell
+   npm run verify
+   ```
+
 
 ### Phase 4: The Master Fortress Merge (Automated Gatekeeper)
 *Location: Context switch back to the main directory (`C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`)*
