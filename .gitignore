@@ -137,3 +137,7 @@ BANLANX_APK/
 # System Generated Artifacts
 .system_generated/
 
+# Python caching
+__pycache__/
+*.pyc
+
