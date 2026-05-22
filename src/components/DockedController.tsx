@@ -232,17 +232,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       if (!parentWriteToDevice) return;
       lastConfirmedStateRef.current = captureEntireStateRef.current(override);
 
-      // Lock visualizer to exactly what we are sending.
-      // Read volatile mode/pattern/color via refs (updated every render) so this
-      // useCallback can remain stable without them as deps.
-      const currentResolvedMode = (activeModeRef.current === 'MULTIMODE' && fixedSubModeRef.current === 'BUILDER') ? 'BUILDER' : activeModeRef.current;
-      const currentResolvedPattern = activeModeRef.current === 'MUSIC' ? musicPatternIdRef.current : (activeModeRef.current === 'MULTIMODE' ? fixedPatternIdRef.current : selectedPatternIdRef.current);
-
-      setVizLock({
-        mode: currentResolvedMode,
-        patternId: currentResolvedPattern,
-        color: visualizerColorRef.current,
-      });
+      // vizLock is now a derived useMemo — no manual update needed here.
+      // The visualizer automatically reflects the current UI state.
 
       setLastSentPayload([...payload]);
       await optimisticWrite(payload);
@@ -273,14 +264,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     // all devices for a ledger entry — device[0] will have one if any do.
     const primaryMac = devices?.[0]?.id ?? '';
 
-    // Hardware Visualizer Lock — decodes the actual state being sent to the hardware
-    // rather than relying on the active UI tab (which bounces around during swiping).
-    const initialLedgerRef = useRef(primaryMac ? ledger.loadSync(primaryMac) : null);
-    const [vizLock, setVizLock] = useState({
-      mode: (initialLedgerRef.current?.mode as string) || 'HOME',
-      patternId: initialLedgerRef.current?.patternId || 1,
-      color: initialLedgerRef.current?.fgColor || '#00f0ff'
-    });
+    // Hardware Visualizer Lock — derived via useMemo from current UI state.
+    // See vizLock useMemo below (after visualizerColor) for the derived definition.
+    // Previously this was a useState coupled to writeToDevice which broke when
+    // the HAL dispatch path bypassed writeToDevice entirely.
 
 
     const {
@@ -595,7 +582,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       if (legacyMode === 'PATTERN' || legacyMode === 'MULTIMODE') {
         setActiveMode('MULTIMODE');
         setLastOperatingMode('MULTIMODE');
-        setVizLock(prev => ({ ...prev, mode: 'MULTIMODE' }));
+
         activeModeRef.current = 'MULTIMODE'; // Force sync for writeToDevice closure
         setFixedSubMode('PATTERN');
         const restoredId = favRaw.patternId ?? 1;
@@ -607,7 +594,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       } else if (legacyMode === 'MUSIC') {
         setActiveMode('MUSIC');
         setLastOperatingMode('MUSIC');
-        setVizLock(prev => ({ ...prev, mode: 'MUSIC' }));
+
         activeModeRef.current = 'MUSIC'; // Force sync for writeToDevice closure
         
         const restoredPattern = favRaw.patternId ?? 0;
@@ -628,14 +615,14 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       } else if (legacyMode === 'CAMERA') {
         setActiveMode('CAMERA');
         setLastOperatingMode('CAMERA');
-        setVizLock(prev => ({ ...prev, mode: 'CAMERA' }));
+
         activeModeRef.current = 'CAMERA';
       } else if (legacyMode === 'FAVORITES') {
         setActiveMode('FAVORITES');
       } else if (legacyMode === 'BUILDER') {
         setActiveMode('MULTIMODE');
         setLastOperatingMode('MULTIMODE');
-        setVizLock(prev => ({ ...prev, mode: 'MULTIMODE' }));
+
         activeModeRef.current = 'MULTIMODE'; // Force sync for writeToDevice closure
         setFixedSubMode('BUILDER');
         
@@ -659,7 +646,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       } else if (legacyMode === 'MULTI' || legacyMode === 'DIY' || legacyMode === 'MULTICOLOR') {
         setActiveMode('MULTIMODE');
         setLastOperatingMode('MULTIMODE');
-        setVizLock(prev => ({ ...prev, mode: 'MULTIMODE' }));
+
         activeModeRef.current = 'MULTIMODE'; // Force sync for writeToDevice closure
         setFixedSubMode('BUILDER');
         
@@ -825,6 +812,23 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     // Keep visualizerColorRef in sync so writeToDevice useCallback always reads the latest value
     visualizerColorRef.current = visualizerColor;
 
+    // ── Derived Visualizer Lock — ALWAYS reflects current UI state ────────────
+    // Replaces the old useState + setVizLock pattern which was coupled to BLE
+    // writes and broke when the HAL dispatch path bypassed writeToDevice.
+    // Now the ProductVisualizer updates immediately on any mode/color/pattern
+    // change, regardless of whether a BLE device is connected.
+    const vizLock = React.useMemo(() => ({
+      mode: (activeMode === 'MULTIMODE' && fixedSubMode === 'BUILDER')
+        ? 'BUILDER'
+        : activeMode,
+      patternId: activeMode === 'MUSIC'
+        ? musicPatternId
+        : (activeMode === 'MULTIMODE'
+          ? fixedPatternId
+          : selectedPatternId),
+      color: visualizerColor,
+    }), [activeMode, fixedSubMode, musicPatternId, fixedPatternId, selectedPatternId, visualizerColor]);
+
     // Relays the dynamically generated pattern name + last payload upward to persist dashboard group state.
     // BUG FIX: Guard against mount-fire with isMountedRef — on first render, lastSentPayload is []
     // (no hardware interaction has occurred yet) so calling onPatternChanged immediately would
@@ -874,11 +878,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       if (newMode === 'STREET') {
         setActiveMode('STREET');
         setLastOperatingMode('STREET');
-        setVizLock(prev => ({ ...prev, mode: 'STREET' }));
       } else if (newMode === 'MUSIC') {
         setActiveMode('MUSIC');
         setLastOperatingMode('MUSIC');
-        setVizLock(prev => ({ ...prev, mode: 'MUSIC' }));
       } else if (newMode === 'CAMERA') {
         setActiveMode('CAMERA');
         setLastOperatingMode('CAMERA');
