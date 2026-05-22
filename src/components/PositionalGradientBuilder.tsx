@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { TouchableOpacity, View, Text, ScrollView } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { BuilderNode, PositionalMathBuffer } from '../protocols/PositionalMathBuffer';
-import { useProtocolDispatch } from '../hooks/useProtocolDispatch';
+import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import CustomSlider from './CustomSlider';
 import { COLOR_PRESET_PALETTE, hexToHue, hueToHex } from '../utils/ColorUtils';
 
@@ -20,6 +20,7 @@ interface Props {
   speed: number;
   deviceLedCount: number;
   selectedColor: string; // The universal color passed from DockedController
+  writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
 }
 
 export default function PositionalGradientBuilder({ 
@@ -27,27 +28,23 @@ export default function PositionalGradientBuilder({
    fillMode, onFillModeChange, 
    transitionType, onTransitionTypeChange,
    direction, onDirectionChange,
-   speed, deviceLedCount, selectedColor
+   speed, deviceLedCount, selectedColor, writeToDevice
 }: Props) {
   const { Colors, isDark } = useTheme();
 
   const [activeNodeId, setActiveNodeId] = useState<string | null>(nodes[0]?.id || null);
 
-  // Internal color state is now directly managed via activeNode instead of external sync
-
-  const dispatch = useProtocolDispatch();
 
   // Dispatch payloads whenever parameters change (with throttle to prevent hardware blackout from BLE flood)
   useEffect(() => {
      const timeout = setTimeout(() => {
-         // Use the central protocol dispatch
          const generatedRgbArray = PositionalMathBuffer.generateArray(nodes, deviceLedCount, fillMode === 'GRADIENT');
          // Normalize speed 0-100 to 0x01-0x1F (1-31)
          const mappedSpeed = Math.max(1, Math.min(31, Math.round((speed / 100) * 31)));
-         dispatch.setMultiColor(generatedRgbArray, deviceLedCount, mappedSpeed, direction, transitionType);
+         if (writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(generatedRgbArray, deviceLedCount, mappedSpeed, direction, transitionType));
      }, 100);
      return () => clearTimeout(timeout);
-  }, [nodes, fillMode, transitionType, direction, speed, deviceLedCount, dispatch]);
+  }, [nodes, fillMode, transitionType, direction, speed, deviceLedCount, writeToDevice]);
 
   const addNode = () => {
       let newPosition = 50;

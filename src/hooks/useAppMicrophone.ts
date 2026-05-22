@@ -13,13 +13,14 @@ import { AppLogger } from '../services/AppLogger';
 import { useAudioRecorder, setAudioModeAsync, RecordingPresets } from 'expo-audio';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { Platform } from 'react-native';
-import { useProtocolDispatch } from './useProtocolDispatch';
+import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import type { ModeType } from '../types/dashboard.types';
 
 interface UseAppMicrophoneParams {
   activeMode: ModeType;
   micSource: 'APP' | 'DEVICE';
   isPoweredOn: boolean;
+  writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
 }
 
 /**
@@ -32,8 +33,8 @@ export function useAppMicrophone({
   activeMode,
   micSource,
   isPoweredOn,
+  writeToDevice,
 }: UseAppMicrophoneParams) {
-  const dispatch = useProtocolDispatch();
   const recorderConfig = useMemo(() => ({
     ...RecordingPresets.LOW_QUALITY,
     isMeteringEnabled: true,
@@ -85,7 +86,7 @@ export function useAppMicrophone({
 
           // Send to hardware — 0x74 expects 0-255
           const deviceMag = Math.floor(smoothed * 255);
-          dispatch.setMusicMagnitude(deviceMag);
+          if (writeToDevice) writeToDevice(ZenggeProtocol.sendMusicMagnitude(deviceMag));
         }
       }, 50); // 20Hz — hardware needs continuous stream to stay in app-mic mode
     } catch (err) {

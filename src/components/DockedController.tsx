@@ -559,7 +559,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       clampSpeed,
       setPower,
       setMultiColor,
-    } = useControllerDispatch({ hwSettings, points });
+    } = useControllerDispatch({ writeToDevice, hwSettings, points });
 
     /** Convenience wrapper — pre-binds selectedColor and speed for callers */
     const applyStaticModePattern = (pat: typeof fixedModePattern, r?: number, g?: number, b?: number, spd?: number) =>
@@ -690,6 +690,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       activeMode,
       micSource,
       isPoweredOn,
+      writeToDevice,
     });
 
     // -- Analytics Logging — now owned by useControllerAnalytics hook --
@@ -1040,6 +1041,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 builderDirection={builderDirection}
                 setBuilderDirection={setBuilderDirection}
                 fgColor={selectedColor}
+                writeToDevice={writeToDevice}
               />
             )}
 

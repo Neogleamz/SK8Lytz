@@ -11,7 +11,7 @@ import { Spacing } from '../../theme/theme';
 import { hexToHue } from '../../utils/ColorUtils';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import { AppLogger } from '../../services/AppLogger';
-import { useProtocolDispatch } from '../../hooks/useProtocolDispatch';
+import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { getActiveMusicProfile } from '../../hooks/useMusicMode';
 import NeonHueStrip from '../NeonHueStrip';
 import TacticalSlider from '../TacticalSlider';
@@ -118,7 +118,6 @@ const PRESET_HUE_MAP: { [key: string]: number } = {
 // ── Component ───────────────────────────────────────────────────────────────
 
 const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props: UniversalSlidersFooterProps) {
-  const dispatch = useProtocolDispatch();
   const {
     activeMode, fixedSubMode, fixedColorMode, fixedModePattern,
     selectedColor, fixedFgColor, fixedBgColor, fixedHue,
@@ -462,7 +461,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                       const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
                       return { r: rawR, g: rawG, b: rawB };
                     });
-                    dispatch.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, multiTransition);
+                    if (writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, multiTransition));
                   }
                 } else if (activeMode === 'STREET') {
                   applyStreetPattern(motionStateRef.current, brightness, val);

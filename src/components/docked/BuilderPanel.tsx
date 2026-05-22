@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GradientLibraryTab } from '../patterns/GradientLibraryTab';
 import PositionalGradientBuilder from '../PositionalGradientBuilder';
 import { BuilderNode, CustomBuilderPreset, PositionalMathBuffer } from '../../protocols/PositionalMathBuffer';
-import { useProtocolDispatch } from '../../hooks/useProtocolDispatch';
+import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { useTheme } from '../../context/ThemeContext';
 import { useGradients } from '../../hooks/useGradients';
 import { useFavorites } from '../../hooks/useFavorites';
@@ -25,6 +25,7 @@ interface BuilderPanelProps {
   builderDirection: number;
   setBuilderDirection: (dir: number) => void;
   fgColor: string;
+  writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
 }
 
 type ViewMode = 'LIBRARY' | 'BUILDER';
@@ -35,10 +36,9 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
   builderFillMode, setBuilderFillMode,
   builderTransitionType, setBuilderTransitionType,
   builderDirection, setBuilderDirection,
-  fgColor,
+  fgColor, writeToDevice,
 }) => {
   const { Colors, isDark } = useTheme();
-  const dispatch = useProtocolDispatch();
   const { saveGradient } = useGradients();
   const { openFavoritePrompt, saveFavorite, promptState, promptName, setPromptName, closePrompt } = useFavorites();
 
@@ -57,8 +57,8 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
     setBuilderTransitionType(safeTransition);
     const generatedRgbArray = PositionalMathBuffer.generateArray(preset.nodes, points, preset.fill_mode === 'GRADIENT');
     const mappedSpeed = Math.max(1, Math.min(31, Math.round((speed / 100) * 31)));
-    dispatch.setMultiColor(generatedRgbArray, points, mappedSpeed, direction, safeTransition);
-  }, [points, speed, direction, setBuilderNodes, setBuilderFillMode, setBuilderTransitionType, dispatch]);
+    if (writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(generatedRgbArray, points, mappedSpeed, direction, safeTransition));
+  }, [points, speed, direction, setBuilderNodes, setBuilderFillMode, setBuilderTransitionType, writeToDevice]);
 
   const openBuilder = (preset?: CustomBuilderPreset) => {
     if (preset) {
@@ -153,6 +153,7 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
             speed={speed}
             deviceLedCount={points}
             selectedColor={fgColor}
+            writeToDevice={writeToDevice}
           />
         </View>
 
