@@ -55,7 +55,10 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
   /** Send a solid color instantly using setMultiColor (0x59 FREEZE) to bypass physical payload limits */
   const sendColor = useCallback(
     async (r: number, g: number, b: number) => {
-      if (!writeToDevice) return;
+      if (!writeToDevice) {
+        if (__DEV__) console.error("🔴 [BLE DEAD WIRE] sendColor called but writeToDevice is undefined — writes are silently dropping!");
+        return;
+      }
       // 0x59 FREEZE is the true architectural ghost standard for Solid Replication without glitching/failing
       const arr = Array.from({ length: numLEDs }, () => ({ r, g, b }));
       await writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSettings?.ledPoints || points || 16, 31, 1, 0x01)); // 0x01 = FREEZE
@@ -76,7 +79,10 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       currentBrightness?: number,
       currentDirection?: number
     ) => {
-      if (!writeToDevice) return;
+      if (!writeToDevice) {
+        if (__DEV__) console.error("🔴 [BLE DEAD WIRE] applyFixedPattern called but writeToDevice is undefined — writes are silently dropping!");
+        return;
+      }
 
       const fgRaw = hexToRgb(fg);
       const bgRaw = hexToRgb(bg);
@@ -137,7 +143,10 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       b?: number,
       spd?: number
     ) => {
-      if (!writeToDevice) return;
+      if (!writeToDevice) {
+        if (__DEV__) console.error("🔴 [BLE DEAD WIRE] applyStaticModePattern called but writeToDevice is undefined — writes are silently dropping!");
+        return;
+      }
       const tR = r !== undefined ? Math.max(0, Math.min(255, r | 0)) : parseInt(selectedColor.slice(1, 3), 16) || 255;
       const tG = g !== undefined ? Math.max(0, Math.min(255, g | 0)) : parseInt(selectedColor.slice(3, 5), 16) || 255;
       const tB = b !== undefined ? Math.max(0, Math.min(255, b | 0)) : parseInt(selectedColor.slice(5, 7), 16) || 255;
@@ -170,7 +179,10 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
    */
   const applyEmergencyPattern = useCallback(
     (spd: number, bright: number) => {
-      if (!writeToDevice) return;
+      if (!writeToDevice) {
+        if (__DEV__) console.error("🔴 [BLE DEAD WIRE] applyEmergencyPattern called but writeToDevice is undefined — writes are silently dropping!");
+        return;
+      }
       const factor = bright / 100;
       const profile = getLocalProfileById(hwSettings?.type || '');
       const isRingShape = profile?.vizShape === 'RING';
@@ -213,7 +225,10 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       color2Hex: string,
       matrix: number
     ) => {
-      if (!writeToDevice) return;
+      if (!writeToDevice) {
+        if (__DEV__) console.error("🔴 [BLE DEAD WIRE] handleMusicChange called but writeToDevice is undefined — writes are silently dropping!");
+        return;
+      }
 
       const c1 = hexToRgb(color1Hex);
       const c2 = hexToRgb(color2Hex);
@@ -236,7 +251,10 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
   /** Send power on/off command */
   const setPower = useCallback(
     (isOn: boolean) => {
-      if (!writeToDevice) return;
+      if (!writeToDevice) {
+        if (__DEV__) console.error("🔴 [BLE DEAD WIRE] setPower called but writeToDevice is undefined — writes are silently dropping!");
+        return;
+      }
       writeToDevice(isOn ? ZenggeProtocol.turnOn() : ZenggeProtocol.turnOff());
     },
     [writeToDevice]
@@ -245,7 +263,10 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
   /** Send multi-color array (used by BUILDER mode, favorites restore) */
   const setMultiColor = useCallback(
     (colors: { r: number; g: number; b: number }[], ledPoints: number, speed: number, direction: number, transitionType?: number) => {
-      if (!writeToDevice) return;
+      if (!writeToDevice) {
+        if (__DEV__) console.error("🔴 [BLE DEAD WIRE] setMultiColor called but writeToDevice is undefined — writes are silently dropping!");
+        return;
+      }
       writeToDevice(ZenggeProtocol.setMultiColor(colors, ledPoints, speed, direction, transitionType));
     },
     [writeToDevice]
