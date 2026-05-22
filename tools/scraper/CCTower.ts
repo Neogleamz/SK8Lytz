@@ -227,7 +227,7 @@ app.post('/start', (req, res) => {
     ? daemons.map(d => `scraper-${d}`).join(',')
     : 'scraper-indexer,scraper-photographer,scraper-publisher';
   console.log(`Orchestrating start: ${target}`);
-  exec(`pm2 start ecosystem.config.js --only ${target} --update-env`, {
+  exec(`npx pm2 start ecosystem.config.js --only ${target} --update-env`, {
     cwd: __dirname,
     windowsHide: true,
     env: { ...process.env, SCRAPER_REGISTER_ONLY: 'false' }
@@ -261,7 +261,7 @@ app.post('/api/daemons/:name/start', (req, res) => {
   const { name } = req.params;
   const target = `scraper-${name}`;
   console.log(`Commanding daemon start: ${target}`);
-  exec(`pm2 start ecosystem.config.js --only ${target} --update-env`, {
+  exec(`npx pm2 start ecosystem.config.js --only ${target} --update-env`, {
     cwd: __dirname,
     windowsHide: true,
     env: { ...process.env, SCRAPER_REGISTER_ONLY: 'false' }
@@ -1596,7 +1596,7 @@ app.get('/api/sniper/stream', async (req, res) => {
   try {
     // ── Fetch spot record (read-only) ──────────────────────────────────────
     send('log', '[Sniper] 🎯 Fetching spot record from local database...');
-    const spot = db.prepare('SELECT * FROM local_spots WHERE id = ?').get(String(spot_id)) as LocalSpot | undefined;
+    const spot = db.prepare('SELECT * FROM local_spots WHERE id = ?').get(String(spot_id)) as any;
     const fetchError = !spot ? new Error('Spot not found') : null;
 
     if (fetchError || !spot) {

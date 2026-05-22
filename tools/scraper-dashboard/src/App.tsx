@@ -897,9 +897,8 @@ function App() {
       <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
       {/* Daemon pills */}
       {[
-        { id: 'operator',     label: 'Phase 2: Spider',    color: '#9d4edd', onKey: 'Operator: online' },
-        { id: 'indexer',      label: 'Phase 3: Detective', color: '#ff5a00', onKey: 'Indexer: online' },
-        { id: 'photographer', label: 'Phase 4: Photo',     color: '#e91e63', onKey: 'Photographer: online' },
+        { id: 'indexer',      label: 'Phase 2: Detective', color: '#ff5a00', onKey: 'Indexer: online' },
+        { id: 'photographer', label: 'Phase 3: Photo',     color: '#e91e63', onKey: 'Photographer: online' },
       ].map(d => {
         const isOn = status?.currentTarget?.includes(d.onKey);
         return (
@@ -1232,7 +1231,7 @@ function App() {
       {true && (
       <>
       <div className="content-area fade-in">
-        {/* =========== DAEMON CONTROL CENTER (PHASE 2-4) =========== */}
+        {/* =========== DAEMON CONTROL CENTER (PHASE 2-3) =========== */}
         {/* =========== PHASE 4: DATABANK QA =========== */}
         {['pipeline', 'graveyard'].includes(activeTab) && (
             <div className="tab-pane graveyard fade-in">
