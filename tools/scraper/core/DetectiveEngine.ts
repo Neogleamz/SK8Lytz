@@ -476,8 +476,8 @@ export async function executeDetective(
   if (Object.keys(jsonLdFields).length > 0) onProgress(`[Detective] 📋 JSON-LD direct parse: ${Object.keys(jsonLdFields).join(', ')}`);
 
   if(coreText.trim().length>=50){
-    const cSlice=coreText.slice(0, 24000);
-    const aSlice=amenityText.slice(0, 24000);
+    const cSlice=coreText.slice(0, 12000);
+    const aSlice=amenityText.slice(0, 12000);
     combinedText = `[OPS CORE]\n${cSlice}\n\n[AMENITIES]\n${aSlice}`;
     
     onProgress('[Detective] LM Studio Pass 1 (Ops: hours/pricing/adult-night)...');
@@ -520,7 +520,7 @@ export async function executeDetective(
         }
         
         onProgress('[Detective] 🚨 Re-running LM Studio Pass 1 (Ops) with OCR context...');
-        const cSlice2 = coreText.slice(0, 24000);
+        const cSlice2 = coreText.slice(0, 12000);
         const pass1_retry = await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice2}`,detectiveModel,onProgress,'Pass1-Retry');
         if (pass1_retry.hours) pass1.hours = pass1_retry.hours;
         if (pass1_retry.pricing) pass1.pricing = pass1_retry.pricing;
@@ -545,7 +545,7 @@ export async function executeDetective(
       logo_url:'Logo URL or null.', email_addresses:'Array of ALL contact email addresses found for this venue. Include info, events, parties, management, booking — every unique email. Return [] if none found.', ...userSchema
     };
     // Fix #11: Use enriched text if escalation ran
-    const pass2Slice = escalationRan ? amenityText.slice(0, 24000) : aSlice;
+    const pass2Slice = escalationRan ? amenityText.slice(0, 12000) : aSlice;
     onProgress('[Detective] LM Studio Pass 2 (Amenities + Vibe + Social)...');
     const pass2=await callLMStudio(buildSystem(COMBINED_SCHEMA),`Website Text:\n${pass2Slice}`,detectiveModel,onProgress,'Pass2-Combined');
 
