@@ -917,7 +917,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView testID="dashboard-screen" style={styles.safeArea}>
       {BluetoothWarningBanner}
       <View style={styles.container}>
 

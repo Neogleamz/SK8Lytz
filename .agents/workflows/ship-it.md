@@ -17,7 +17,10 @@ When invoked via `/ship-it`, you must act as a strict state machine orchestratin
    ```powershell
    npm run verify
    ```
-3. **Smoke Test:** Execute the `/smoke-test` workflow to visually guarantee the app won't fatal exception/white screen.
+3. **Automated Smoke Test:** Execute Detox E2E tests to autonomously guarantee the app UI renders without crashing:
+   ```powershell
+   npx detox test -c android.emu.debug
+   ```
 4. **Bundle Audit:** Execute the `/bundle-audit` workflow.
 *(Pause and verify no errors exist before proceeding).*
 
