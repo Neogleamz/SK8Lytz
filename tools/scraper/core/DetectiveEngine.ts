@@ -160,13 +160,29 @@ async function fetchExternalText(url: string, label: string, onProgress?: (msg: 
     const ogImage = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]+)"/i)?.[1] || '';
     const ogTitle = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i)?.[1] || '';
     // Strip tags for body text (simple)
-    const bodyText = html.replace(/<[^>]+>/g,' ').replace(/\s{2,}/g,' ').trim().slice(0, 8000);
+    const fullBodyText = html.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    const bodyText = fullBodyText.slice(0, 8000);
+    
+    // Feature: Review Text Mining Regex Engine
+    // Extract sentences from full body text
+    const sentences = fullBodyText.match(/[^.!?]+[.!?]+/g) || [];
+    const keywords = ['adult', '18+', '21+', 'price', 'admission', '$', 'cost', 'fee', 'schedule', 'hours', 'session', 'dj', 'music'];
+    const matchedSnippets = sentences
+      .map(s => s.trim())
+      .filter(s => s.length > 10 && s.length < 300)
+      .filter(s => {
+        const lower = s.toLowerCase();
+        return keywords.some(k => lower.includes(k));
+      });
+    const uniqueSnippets = [...new Set(matchedSnippets)].slice(0, 30);
+
     let result = `[${label}: ${url}]\n`;
     if (jsonLdMatches.length) result += `JSON-LD: ${jsonLdMatches.join('\n')}\n`;
     if (ogTitle) result += `Title: ${ogTitle}\n`;
     if (ogImage) result += `og:image: ${ogImage}\n`;
+    if (uniqueSnippets.length > 0) result += `MINED SNIPPETS:\n- ${uniqueSnippets.join('\n- ')}\n\n`;
     result += bodyText;
-    onProgress?.(`[Detective] ✓ ${label}: ${bodyText.length} chars, ${jsonLdMatches.length} JSON-LD blocks`);
+    onProgress?.(`[Detective] ✓ ${label}: ${bodyText.length} chars, ${jsonLdMatches.length} JSON-LD blocks, ${uniqueSnippets.length} snippets mined`);
     return result;
   } catch (err: any) {
     onProgress?.(`[Detective] ⚠️ ${label} fetch error: ${err.message}`);
