@@ -900,7 +900,6 @@ function App() {
         { id: 'operator',     label: 'Phase 2: Spider',    color: '#9d4edd', onKey: 'Operator: online' },
         { id: 'indexer',      label: 'Phase 3: Detective', color: '#ff5a00', onKey: 'Indexer: online' },
         { id: 'photographer', label: 'Phase 4: Photo',     color: '#e91e63', onKey: 'Photographer: online' },
-        { id: 'ollama-daemon',label: 'Ollama Engine',      color: '#00d4ff', onKey: 'Ollama: online' },
       ].map(d => {
         const isOn = status?.currentTarget?.includes(d.onKey);
         return (
@@ -914,6 +913,96 @@ function App() {
           </div>
         );
       })}
+      {/* ═══ LM Studio Control Capsule ═══ */}
+      {(() => {
+        const lms = (status as any)?.lmsStatus;
+        const serverOn = lms?.serverStatus === 'ON';
+        const serverMissing = lms?.serverStatus === 'MISSING';
+        const loadedModel = lms?.loadedModels?.[0] || null;
+        const availModels: { key: string; arch: string; size: string; loaded: boolean }[] = lms?.availableModels || [];
+        const capsuleColor = serverOn ? '#a200ff' : serverMissing ? '#555' : '#ff2d55';
+        const glowColor = serverOn ? (loadedModel ? '#a200ff' : '#ffb300') : '#ff2d55';
+        return (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            background: serverOn ? 'rgba(162,0,255,0.08)' : 'rgba(255,45,85,0.06)',
+            padding: '3px 10px', borderRadius: '20px',
+            border: `1px solid ${capsuleColor}55`, flexShrink: 0,
+            transition: 'all 0.3s ease',
+          }}>
+            {/* Glowing status dot */}
+            <div style={{
+              width: '7px', height: '7px', borderRadius: '50%',
+              background: glowColor,
+              boxShadow: `0 0 ${serverOn ? '8px' : '4px'} ${glowColor}`,
+              animation: serverOn && loadedModel ? 'pulse 2s ease-in-out infinite' : 'none',
+            }} />
+            {/* Label */}
+            <span style={{ fontSize: '0.6rem', fontWeight: 800, color: capsuleColor, letterSpacing: '0.03em' }}>
+              LM STUDIO
+            </span>
+            {/* Server toggle */}
+            <button
+              onClick={async () => {
+                try {
+                  await fetch(`${API_BASE}/api/llm/server/${serverOn ? 'stop' : 'start'}`, { method: 'POST' });
+                  fetchSystemStatus();
+                } catch (e) { /* swallow */ }
+              }}
+              style={{
+                fontSize: '0.56rem', fontWeight: 800, padding: '1px 6px', borderRadius: '8px',
+                border: 'none', cursor: 'pointer',
+                background: serverOn ? 'rgba(255,60,60,0.25)' : 'rgba(162,0,255,0.3)',
+                color: serverOn ? '#ff6b6b' : '#a200ff',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              {serverMissing ? 'N/A' : serverOn ? 'STOP' : 'START'}
+            </button>
+            {/* Model selector dropdown — only when server is ON */}
+            {serverOn && (
+              <select
+                value={loadedModel || ''}
+                onChange={async (e) => {
+                  const model = e.target.value;
+                  if (!model) return;
+                  try {
+                    await fetch(`${API_BASE}/api/llm/model/load`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ model }),
+                    });
+                    fetchSystemStatus();
+                  } catch (e) { /* swallow */ }
+                }}
+                style={{
+                  fontSize: '0.56rem', fontWeight: 700, padding: '1px 4px', borderRadius: '8px',
+                  border: '1px solid rgba(162,0,255,0.3)', background: 'rgba(0,0,0,0.4)',
+                  color: loadedModel ? '#c77dff' : 'rgba(255,255,255,0.4)',
+                  cursor: 'pointer', outline: 'none', maxWidth: '140px',
+                }}
+              >
+                {!loadedModel && <option value="">No model loaded</option>}
+                {availModels.map((m) => (
+                  <option key={m.key} value={m.key} style={{ background: '#111', color: m.loaded ? '#a200ff' : '#fff' }}>
+                    {m.key} ({m.size})
+                  </option>
+                ))}
+              </select>
+            )}
+            {/* Loaded model micro-badge */}
+            {serverOn && loadedModel && (
+              <span style={{
+                fontSize: '0.5rem', fontWeight: 700, padding: '1px 5px', borderRadius: '6px',
+                background: 'rgba(162,0,255,0.15)', color: '#c77dff', border: '1px solid rgba(162,0,255,0.25)',
+                whiteSpace: 'nowrap', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {loadedModel.replace('llama-', 'L').replace('-instruct', '')}
+              </span>
+            )}
+          </div>
+        );
+      })()}
       <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
       {/* Active Region chips */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
