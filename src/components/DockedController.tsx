@@ -1026,7 +1026,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
             {activeMode === 'BUILDER' && (
               <BuilderPanel
-                writeToDevice={writeToDevice}
                 points={points}
                 speed={speed}
                 direction={builderDirection}

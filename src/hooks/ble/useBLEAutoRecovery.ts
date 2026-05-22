@@ -39,6 +39,12 @@ export interface UseBLEAutoRecoveryProps {
    * pattern/color state to the recovered device so it doesn't sit dark after dropout.
    */
   onDeviceRecovered?: (deviceId: string) => void;
+  /**
+   * Called after MTU is successfully negotiated during recovery, so useBLE.ts
+   * can update mtuMapRef with the real value. Without this, post-recovery writes
+   * silently fall back to the 186-byte default, potentially truncating large payloads.
+   */
+  onMtuNegotiated?: (deviceId: string, mtu: number) => void;
 }
 
 
@@ -72,6 +78,7 @@ export function useBLEAutoRecovery({
   bleGateRef,
   onAdapterResolved,
   onDeviceRecovered,
+  onMtuNegotiated,
 }: UseBLEAutoRecoveryProps) {
   const [ghostedDeviceIds, setGhostedDeviceIds] = useState<string[]>([]);
   const ghostedRefs = useRef<string[]>([]);
@@ -186,7 +193,13 @@ export function useBLEAutoRecovery({
           onAdapterResolved(conn.id, recoveryAdapter);
           AppLogger.log('AUTO_RECOVERY_ADAPTER', { deviceId: conn.id, protocolId: recoveryAdapter.protocolId });
 
-          try { await conn.requestMTU(512); } catch (e) { AppLogger.warn('[AutoRecovery] MTU negotiation failed', { deviceId, error: String(e) }); }
+          try {
+            const mtuResult = await conn.requestMTU(512);
+            const negotiatedMtu = mtuResult?.mtu ?? 186;
+            onMtuNegotiated?.(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);
+          } catch (e) {
+            AppLogger.warn('[AutoRecovery] MTU negotiation failed', { deviceId, error: String(e) });
+          }
 
           // Purge old listener and attach new one
           if (disconnectListeners.current[conn.id]) {

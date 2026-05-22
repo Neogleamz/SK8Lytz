@@ -381,6 +381,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       // pattern/color state to the recovered device after dropout.
       deviceRecoveredCallbackRef.current?.(deviceId);
     },
+    onMtuNegotiated: (deviceId: string, mtu: number) => {
+      // Persist the MTU negotiated during auto-recovery back into mtuMapRef.
+      // Without this, post-recovery writes silently use the 186-byte fallback
+      // even if the device negotiated a higher MTU (e.g. 517 bytes on Android).
+      mtuMapRef.current.set(deviceId, mtu);
+      AppLogger.log('DEVICE_CONNECTED', { context: 'mtu_recovery_updated', mtu, deviceId });
+    },
   });
 
   // ── Overwatch: Silent Sweeper + Interrogator Queue ────────────────────────
