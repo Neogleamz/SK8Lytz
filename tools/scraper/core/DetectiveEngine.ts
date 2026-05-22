@@ -304,36 +304,14 @@ export async function executeDetective(
   let externalText = ''; // Yelp, Facebook, Google Places (low priority — appended LAST)
   let priorityText = ''; // Targeted sitemap pages (high priority — prepended FIRST)
 
+  const isSocialOnly = spotContext.website && isSocialCrawlBlocked(spotContext.website);
+  const hasWebsite = !!spotContext.website;
+  let hasCrawledWebsite = false;
+
   try {
-    // ── Always fetch external sources regardless of website type ──
-    const isSocialOnly = spotContext.website && isSocialCrawlBlocked(spotContext.website);
-    const hasWebsite = !!spotContext.website;
-
-    // Yelp + Google Places fetched for ALL records (Fix #4: social-only still gets data)
-    onProgress('[Detective] Fetching Yelp...');
-    yelpData = await fetchYelpData(spotContext.name, spotContext.city, spotContext.state, spotContext.yelp_url);
-    if (yelpData.text) externalText += '\n\n' + yelpData.text;
-    await sleep(EXTERNAL_SOURCE_DELAY);
-
-    onProgress('[Detective] Fetching Facebook...');
-    fbData = await fetchFacebookData(spotContext.facebook_url || null);
-    if (fbData.text) externalText += '\n\n' + fbData.text;
-    await sleep(EXTERNAL_SOURCE_DELAY);
-
-    onProgress('[Detective] Fetching Google Places...');
-    const gt = await fetchGooglePlacesWeb(spotContext.google_place_id || null);
-    if (gt) externalText += '\n\n' + gt;
-
-    if (!hasWebsite) {
-      onProgress('[Detective] No website — using external sources only.');
-      coreText = `Facility: ${spotContext.name}. ${spotContext.city}, ${spotContext.state}.\n` + externalText;
-      amenityText = coreText;
-    } else if (isSocialOnly) {
-      onProgress('[Detective] Social-only website — using external sources only.');
-      coreText = `Facility: ${spotContext.name}. ${spotContext.city}, ${spotContext.state}. Social media only.\n` + externalText;
-      amenityText = coreText;
-    } else {
-    onProgress('[Detective] Fetching sitemap...');
+    if (hasWebsite && !isSocialOnly) {
+      hasCrawledWebsite = true;
+      onProgress('[Detective] Fetching sitemap...');
     sitemap=await parseSitemap(spotContext.website);
     onProgress(`[Detective] 🕷️ Sitemap: schedule(${sitemap.schedule_urls.length}) pricing(${sitemap.pricing_urls.length}) contact(${sitemap.contact_urls.length}) gallery(${sitemap.gallery_urls.length}) about(${sitemap.about_urls.length}) total(${sitemap.all_urls.length})`);
 
@@ -402,21 +380,22 @@ export async function executeDetective(
           }
         }catch{}
       }
-    // Fix #1: Assemble final text — priority pages FIRST, external noise LAST
-    coreText = priorityText + '\n\n' + externalText;
-    amenityText = priorityText + '\n\n' + externalText;
+      // Fix #1: Assign website text directly (no external noise yet)
+      coreText = priorityText;
+      amenityText = priorityText;
+    } else {
+      onProgress('[Detective] No website or Social-only. Will rely entirely on Phase 3 Enrichment.');
     }
   } catch (err: any) {
     onProgress(`[Detective] Pre-crawl phase error: ${err.message}`);
-    // Ensure coreText has at least external data if crawl crashed
-    if (!coreText && externalText) { coreText = externalText; amenityText = externalText; }
   }
 
   try {
   const userVectors=aiConfig.ai_target_vectors||[];
   const userSchema=userVectors.reduce((acc:any,vec:any)=>{acc[vec.key]=vec.prompt||vec.type;return acc;},{});
   const REQUIRED_SCHEMA={hours:'Complete weekly public skating schedule for ALL 7 DAYS {Monday: time_range, Tuesday: time_range, ...}. Include every day even if closed.',pricing:'All admission fees {adult,child,senior,spectator,skate_rental}.',has_fee:'boolean or null — return null if no pricing/fee information was found. DO NOT assume free.',has_adult_night:'boolean or null — return null if no adult night information was found.',adult_night_schedule:'If adult nights: {day:time_range}. Null if none.'};
-  const FULL_SCHEMA:Record<string,string>={surface_type:'Floor: wood/maple/concrete/asphalt/sport_court/synthetic.',surface_quality:'Condition 3-5 words.',vibe_score:'0-100.',is_indoor:'boolean',has_rental:'boolean',has_pro_shop:'boolean',has_food:'boolean',has_lights:'boolean',has_lockers:'boolean',has_ac:'boolean',has_wifi:'boolean',has_toilets:'boolean',wheelchair:'boolean',derby:'boolean',capacity:'integer.',special_events:'Array.',operator_name:'Owner name.',operator_description:'1-2 sentences.',cultural_meta:'Significance or null.',adult_night_details:'Details or null.',instagram_url:'URL or null.',facebook_url:'URL or null.',tiktok_url:'URL or null.',schedule_url:'URL or null.',yelp_url:'URL or null.',price_range:'$ to $$$$ or null.',logo_url:'Logo URL or null.',...userSchema};
+  const COMBINED_SCHEMA:Record<string,string>={surface_type:'Floor: wood/maple/concrete/asphalt/sport_court/synthetic.',surface_quality:'Condition 3-5 words.',vibe_score:'0-100.',is_indoor:'boolean',has_rental:'boolean',has_pro_shop:'boolean',has_food:'boolean',has_lights:'boolean',has_lockers:'boolean',has_ac:'boolean',has_wifi:'boolean',has_toilets:'boolean',wheelchair:'boolean',derby:'boolean',capacity:'integer.',special_events:'Array.',operator_name:'Owner name.',operator_description:'1-2 sentences.',cultural_meta:'Significance or null.',adult_night_details:'Details or null.',instagram_url:'URL or null.',facebook_url:'URL or null.',tiktok_url:'URL or null.',schedule_url:'URL or null.',yelp_url:'URL or null.',price_range:'$ to $$$$ or null.',logo_url:'Logo URL or null.',email_addresses:'Array of ALL contact email addresses found for this venue. Include info, events, parties, management, booking — every unique email. Return [] if none found.',...userSchema};
+  const FULL_SCHEMA = COMBINED_SCHEMA;
   const exclusionKw=aiConfig.ai_exclusion_keywords||[];
   const usp=aiConfig.ai_system_prompt||'';
   const buildSystem=(schema:Record<string,string>,ctx?:string)=>{
@@ -475,14 +454,18 @@ export async function executeDetective(
   }
   if (Object.keys(jsonLdFields).length > 0) onProgress(`[Detective] 📋 JSON-LD direct parse: ${Object.keys(jsonLdFields).join(', ')}`);
 
-  if(coreText.trim().length>=50){
+  let pass1: any = {};
+  let pass2: any = {};
+  let escalationRan = false;
+
+  if (coreText.trim().length >= 50 && hasCrawledWebsite) {
     const cSlice=coreText.slice(0, 12000);
     const aSlice=amenityText.slice(0, 12000);
     combinedText = `[OPS CORE]\n${cSlice}\n\n[AMENITIES]\n${aSlice}`;
     
     onProgress('[Detective] LM Studio Pass 1 (Ops: hours/pricing/adult-night)...');
-    const pass1=await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice}`,detectiveModel,onProgress,'Pass1');
-    if(pass1.TOXICITY_ABORT===true) return{aiMetadata:{TOXICITY_ABORT:true},mappedFields:{_simulated_status:'REJECTED'},combinedText,qualityScore:0,passedQualityGate:false,candidatePhotos:null,socialLinks:{instagram_url:null,facebook_url:null,tiktok_url:null,schedule_url:null},flyerUrls};
+    pass1 = await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice}`,detectiveModel,onProgress,'Pass1');
+    if(pass1.TOXICITY_ABORT===true) return{aiMetadata:{TOXICITY_ABORT:true},mappedFields:{_simulated_status:'REJECTED'},combinedText,qualityScore:0,passedQualityGate:false,candidatePhotos:null,socialLinks:{instagram_url:null,facebook_url:null,tiktok_url:null,schedule_url:null},flyerUrls,fieldConfidence:{}};
     
     // ── ESCALATION PROTOCOL ──
     const needsEscalation = !pass1.hours || !pass1.pricing || (pass1.has_adult_night === true && !pass1.adult_night_schedule);
@@ -532,26 +515,49 @@ export async function executeDetective(
     }
 
     // Fix #9: Merged Pass 2+3 into single combined pass (Amenities + Vibe + Social)
-    const COMBINED_SCHEMA = {
-      surface_type:'Floor: wood/maple/concrete/asphalt/sport_court/synthetic.',
-      surface_quality:'Condition 3-5 words.', vibe_score:'0-100.',
-      is_indoor:'boolean', has_rental:'boolean', has_pro_shop:'boolean', has_food:'boolean', 
-      has_lights:'boolean', has_lockers:'boolean', has_ac:'boolean', has_wifi:'boolean', 
-      has_toilets:'boolean', wheelchair:'boolean', capacity:'integer.',
-      derby:'boolean', special_events:'Array.', 
-      operator_name:'Owner name.', operator_description:'1-2 sentences.', cultural_meta:'Significance or null.', 
-      adult_night_details:'Details or null.', instagram_url:'URL or null.', facebook_url:'URL or null.', 
-      tiktok_url:'URL or null.', schedule_url:'URL or null.', yelp_url:'URL or null.', price_range:'$ to $$$$ or null.', 
-      logo_url:'Logo URL or null.', email_addresses:'Array of ALL contact email addresses found for this venue. Include info, events, parties, management, booking — every unique email. Return [] if none found.', ...userSchema
-    };
     // Fix #11: Use enriched text if escalation ran
     const pass2Slice = escalationRan ? amenityText.slice(0, 12000) : aSlice;
     onProgress('[Detective] LM Studio Pass 2 (Amenities + Vibe + Social)...');
-    const pass2=await callLMStudio(buildSystem(COMBINED_SCHEMA),`Website Text:\n${pass2Slice}`,detectiveModel,onProgress,'Pass2-Combined');
+    pass2 = await callLMStudio(buildSystem(COMBINED_SCHEMA),`Website Text:\n${pass2Slice}`,detectiveModel,onProgress,'Pass2-Combined');
+  } else {
+    onProgress('[Detective] Content too short or skipped. Bypassing Website LLM Passes.');
+  }
 
-    // Fix #2: JSON-LD fields fill gaps — LLM wins, JSON-LD is fallback
-    aiMetadata={...jsonLdFields,...pass2,...pass1};
-  } else onProgress('[Detective] Content too short. Skipping LM Studio.');
+  // ── PHASE 3: EXTERNAL ENRICHMENT ──
+  const needsEnrichment = !hasWebsite || isSocialOnly || !pass1.hours || !pass1.pricing || (pass1.has_adult_night === true && !pass1.adult_night_schedule);
+
+  if (needsEnrichment) {
+    onProgress('[Detective] 🚨 ENRICHMENT PHASE: Fetching Yelp, Facebook, and Google Places...');
+    yelpData = await fetchYelpData(spotContext.name, spotContext.city, spotContext.state, spotContext.yelp_url);
+    if (yelpData.text) externalText += '\n\n' + yelpData.text;
+    await sleep(EXTERNAL_SOURCE_DELAY);
+
+    onProgress('[Detective] Fetching Facebook...');
+    fbData = await fetchFacebookData(spotContext.facebook_url || null);
+    if (fbData.text) externalText += '\n\n' + fbData.text;
+    await sleep(EXTERNAL_SOURCE_DELAY);
+
+    onProgress('[Detective] Fetching Google Places...');
+    const gt = await fetchGooglePlacesWeb(spotContext.google_place_id || null);
+    if (gt) externalText += '\n\n' + gt;
+
+    if (externalText.trim().length > 50) {
+      onProgress('[Detective] LM Studio Pass 3 (Enrichment Fallback)...');
+      const eSlice = externalText.slice(0, 12000);
+      const ENRICH_SCHEMA = { ...REQUIRED_SCHEMA, ...COMBINED_SCHEMA };
+      const pass3 = await callLMStudio(buildSystem(ENRICH_SCHEMA), `External Fallback Text:\n${eSlice}`, detectiveModel, onProgress, 'Pass3-Enrichment');
+      
+      // Merge without overwriting official website data
+      for (const k in pass3) {
+        if (pass1[k] === undefined || pass1[k] === null) pass1[k] = pass3[k];
+        if (pass2[k] === undefined || pass2[k] === null) pass2[k] = pass3[k];
+      }
+      combinedText += `\n\n[EXTERNAL FALLBACKS]\n${eSlice}`;
+    }
+  }
+
+  // Fix #2: JSON-LD fields fill gaps — LLM wins, JSON-LD is fallback
+  aiMetadata = { ...jsonLdFields, ...pass2, ...pass1 };
 
   const opening_hours=aiMetadata.hours||aiMetadata.opening_hours||spotContext.opening_hours||null;
   const pricing_data=aiMetadata.pricing||aiMetadata.pricing_data||spotContext.pricing_data||null;
