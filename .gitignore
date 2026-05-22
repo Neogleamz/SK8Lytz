@@ -134,3 +134,6 @@ BANLANX_APK/
 # QA Attestation Token
 .test-attestation.json
 
+# System Generated Artifacts
+.system_generated/
+
