@@ -1312,14 +1312,14 @@ app.delete('/api/skate_spots/:id', async (req, res) => {
 app.post('/api/skate_spots/:id/restart', async (req, res) => {
   const { id } = req.params;
   try {
+    // ── Additive-Only: NEVER wipe enrichment data on restart ──
+    // Only reset pipeline status so the record re-enters the Detective queue.
+    // Photos, hours, pricing, and all manually curated data are SACRED.
     updateLocalSpot(id, {
       verification_status: 'SEEDED',
       last_attempted_at: null,
-      candidate_links: null,
-      candidate_photos: null,
-      photos: null,
-      opening_hours: null,
-      pricing_data: null
+      retry_count: 0,
+      is_deep_crawled: false,
     });
     res.json({ success: true });
   } catch (err: any) {
@@ -1547,19 +1547,26 @@ app.post('/api/sniper/apply', async (req, res) => {
 
     const { mappedFields, socialLinks, candidatePhotos, flyerUrls, aiMetadata, simulatedStatus } = detectiveResult;
 
-    // Merge the fields
+    // ── Additive-Only: filter out null/empty values to prevent data destruction ──
+    const safeFields: Record<string, any> = {};
+    if (mappedFields) {
+      for (const [key, val] of Object.entries(mappedFields)) {
+        if (key === '_simulated_status') continue; // skip internal marker
+        if (val != null && val !== '' && val !== '[]' && val !== '{}' && val !== 'null') {
+          safeFields[key] = val;
+        }
+      }
+    }
+
     const updatePayload: Record<string, any> = {
-      ...mappedFields,
-      social_links: socialLinks ? JSON.stringify(socialLinks) : null,
-      candidate_photos: candidatePhotos ? JSON.stringify(candidatePhotos) : null,
-      flyer_urls: flyerUrls ? JSON.stringify(flyerUrls) : null,
-      ai_metadata: aiMetadata ? JSON.stringify(aiMetadata) : null,
+      ...safeFields,
+      ...(socialLinks ? { social_links: JSON.stringify(socialLinks) } : {}),
+      ...(candidatePhotos ? { candidate_photos: JSON.stringify(candidatePhotos) } : {}),
+      ...(flyerUrls ? { flyer_urls: JSON.stringify(flyerUrls) } : {}),
+      ...(aiMetadata ? { ai_metadata: JSON.stringify(aiMetadata) } : {}),
       verification_status: simulatedStatus || 'MEDIA_READY',
       last_attempted_at: new Date().toISOString(),
     };
-
-    // Remove the temporary simulated status from the mappedFields payload so it doesn't get written to a non-existent column
-    delete updatePayload._simulated_status;
 
     updateLocalSpot(String(spot_id), updatePayload);
 

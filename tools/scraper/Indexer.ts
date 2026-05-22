@@ -227,19 +227,17 @@ async function runIndexer() {
         if (!isEmpty(newVal)) {
           // Fresh AI crawl wins
           finalUpdates[key] = sanitize(newVal);
-        } else if (!isEmpty(oldVal)) {
-          // Keep existing good data, but sanitize it in case it was a "null" string
-          finalUpdates[key] = sanitize(oldVal);
-        } else {
-          finalUpdates[key] = null;
         }
+        // ── Additive-Only: if AI returned nothing, DON'T write anything ──
+        // The existing value in the DB stays untouched.
       }
 
       try {
         updateLocalSpot(target.id, {
           ...finalUpdates,
           ...(result.candidatePhotos ? { candidate_photos: JSON.stringify(result.candidatePhotos) } : {}),
-          ai_metadata: result.mappedFields?.ai_metadata ? JSON.stringify(result.mappedFields.ai_metadata) : null,
+          // ── Additive-Only: only write ai_metadata if AI returned real data ──
+          ...(result.mappedFields?.ai_metadata ? { ai_metadata: JSON.stringify(result.mappedFields.ai_metadata) } : {}),
           verification_status: 'DEEP_CRAWLED',
           is_deep_crawled: true,
           retry_count: 0,
@@ -253,7 +251,7 @@ async function runIndexer() {
           is_deep_crawled: true,
           last_attempted_at: new Date().toISOString(),
           pipeline_status: '',
-          ai_metadata: result.mappedFields?.ai_metadata ? JSON.stringify(result.mappedFields.ai_metadata) : null,
+          ...(result.mappedFields?.ai_metadata ? { ai_metadata: JSON.stringify(result.mappedFields.ai_metadata) } : {}),
           ...(result.candidatePhotos ? { candidate_photos: JSON.stringify(result.candidatePhotos) } : {})
         });
       }
