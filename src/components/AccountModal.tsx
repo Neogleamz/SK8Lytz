@@ -76,6 +76,7 @@ interface AccountModalProps {
   onGroupForgotten?: (groupName: string) => void;
   /** When true, hides online-only tabs like CREWZ */
   isOfflineMode?: boolean;
+  onProfileUpdated?: () => void;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -154,6 +155,7 @@ export default function AccountModal({
   onGroupRenamed,
   onGroupForgotten,
   isOfflineMode = false,
+  onProfileUpdated,
 }: AccountModalProps) {
   const { Colors, isDark, toggleTheme } = useTheme();
   const styles = createStyles(Colors);
@@ -189,7 +191,7 @@ export default function AccountModal({
     handleLeaveCrew: leaveCrewHook,
     healthSyncEnabled,
     handleToggleHealthSync,
-  } = useAccountOverview(visible);
+  } = useAccountOverview(visible, onProfileUpdated);
 
   const handleDeleteCrew = (crew: PermanentCrew) => {
     Alert.alert(

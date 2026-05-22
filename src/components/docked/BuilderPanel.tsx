@@ -7,7 +7,7 @@ import { BuilderNode, CustomBuilderPreset, PositionalMathBuffer } from '../../pr
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { useTheme } from '../../context/ThemeContext';
 import { useGradients } from '../../hooks/useGradients';
-import { useFavorites } from '../../hooks/useFavorites';
+import { useSharedFavorites } from '../../context/FavoritesContext';
 import FavoritePromptModal from './FavoritePromptModal';
 import { Spacing } from '../../theme/theme';
 import { AppLogger } from '../../services/AppLogger';
@@ -40,7 +40,7 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
 }) => {
   const { Colors, isDark } = useTheme();
   const { saveGradient } = useGradients();
-  const { openFavoritePrompt, saveFavorite, promptState, promptName, setPromptName, closePrompt } = useFavorites();
+  const { openFavoritePrompt, saveFavorite, promptState, promptName, setPromptName, closePrompt } = useSharedFavorites();
 
   const [viewMode, setViewMode] = useState<ViewMode>('LIBRARY');
   const [editingPreset, setEditingPreset] = useState<CustomBuilderPreset | undefined>();

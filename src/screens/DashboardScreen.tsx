@@ -1103,6 +1103,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           onClose={() => setIsAccountModalVisible(false)}
           onSignOut={handleLogout}
           isOfflineMode={isOfflineMode}
+          onProfileUpdated={refreshProfile}
           onJoinCrewSession={(crewId) => {
             setPendingJoinCrewId(crewId);
             setIsCrewModalVisible(true);

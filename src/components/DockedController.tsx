@@ -24,9 +24,7 @@ import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
 import { useCuratedPicks } from '../hooks/useCuratedPicks';
 import { useDockedControllerState } from '../hooks/useDockedControllerState';
 import { useControllerPersistence } from '../hooks/useControllerPersistence';
-import { useControllerDispatch } from '../hooks/useControllerDispatch';
-import { useFavorites } from '../hooks/useFavorites';
-import { getMusicPatternLabel } from '../hooks/useMusicMode';
+import { useSharedFavorites } from '../context/FavoritesContext';
 import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
 import { useSessionTracking } from '../hooks/useSessionTracking';
 import { useStreetMode } from '../hooks/useStreetMode';
@@ -328,7 +326,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const selectedPatternIdRef = useRef(selectedPatternId);
     selectedPatternIdRef.current = selectedPatternId;
     const visualizerColorRef = useRef<string>('#00f0ff'); // synced below after visualizerColor useMemo
-    // Favorites & Quick Presets Domain Hook
     const {
       favorites,
       activeFavoriteId,
@@ -348,7 +345,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       saveFavorite,
       deleteFavorite,
       saveQuickPreset
-    } = useFavorites();
+    } = useSharedFavorites();
 
     const {
       sessionState,

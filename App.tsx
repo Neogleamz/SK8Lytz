@@ -16,6 +16,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
 import { ComplianceGate } from './src/providers/ComplianceGate';
 import { BLEProvider } from './src/context/BLEContext';
+import { FavoritesProvider } from './src/context/FavoritesContext';
 
 
 LogBox.ignoreLogs([
@@ -198,9 +199,11 @@ function AppContent() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {isAuthenticated ? (
         <ComplianceGate isOfflineMode={offlineMode}>
-          <BLEProvider>
-            <DashboardScreen isOfflineMode={offlineMode} onLogout={() => setOfflineMode(false)} />
-          </BLEProvider>
+          <FavoritesProvider>
+            <BLEProvider>
+              <DashboardScreen isOfflineMode={offlineMode} onLogout={() => setOfflineMode(false)} />
+            </BLEProvider>
+          </FavoritesProvider>
         </ComplianceGate>
       ) : (
         <AuthScreen

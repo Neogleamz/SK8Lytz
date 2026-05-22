@@ -1,8 +1,18 @@
 import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SceneStep } from '../hooks/useSceneBuilder';
 import type { Database } from '../types/supabase';
 import { AppLogger } from './AppLogger';
+
+export interface SceneStep {
+  id: string;
+  mode: 'pattern' | 'symphony';
+  effectId: number;
+  fg: string;
+  bg: string;
+  speed: number;
+  duration: number;
+  direction: 0 | 1;
+}
 
 export interface Scene {
   id: string;

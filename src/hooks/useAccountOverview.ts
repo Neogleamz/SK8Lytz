@@ -34,7 +34,7 @@ function hexToHue(hex: string | null | undefined): number {
   return h;
 }
 
-export function useAccountOverview(visible: boolean) {
+export function useAccountOverview(visible: boolean, onProfileUpdated?: () => void) {
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [editName, setEditName] = useState('');
@@ -143,6 +143,7 @@ export function useAccountOverview(visible: boolean) {
       await profileService.updateProfile(updates);
       setProfile(p => p ? { ...p, ...updates } : p);
       AppLogger.log('PROFILE_UPDATED', { fields: Object.keys(updates) });
+      onProfileUpdated?.();
       Alert.alert('Saved', 'Profile updated successfully.');
     } catch (e: any) {
       AppLogger.error('[AccountOverview] handleSaveProfile failed', { error: String(e) });
@@ -188,6 +189,7 @@ export function useAccountOverview(visible: boolean) {
       await profileService.updateProfile({ avatar_url: publicUrl });
       setProfile(p => p ? { ...p, avatar_url: publicUrl } : p);
       AppLogger.log('PROFILE_UPDATED', { field: 'photo', bucket: 'avatars', path });
+      onProfileUpdated?.();
     } catch (e: any) {
       AppLogger.error('[AccountOverview] handlePickProfilePhoto failed', { error: String(e) });
       Alert.alert('Upload failed', e.message ?? 'Could not upload photo. Try again.');
