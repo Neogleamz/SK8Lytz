@@ -10,6 +10,9 @@ import { GooglePlacesProvider, RETAIL_BLOCKLIST } from './lib/providers/GooglePl
 import { executeDetective } from './core/DetectiveEngine';
 import { db, getLocalSpots, getLocalCount, updateLocalSpot, deleteLocalSpot, upsertLocalSpot, getConfig, updateConfig, getBlocklist, addBlocklist, deleteBlocklist, addBlocklistKeyword, getPipelineStats, getFieldRegistry, upsertFieldRegistryItem } from './core/LocalDB';
 
+// Guard against PM2 environment variable serialization bugs
+process.env.SCRAPER_REGISTER_ONLY = 'false';
+
 const US_STATES = [
   'AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA',
   'KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ',
@@ -222,7 +225,11 @@ app.post('/start', (req, res) => {
     ? daemons.map(d => `scraper-${d}`).join(',')
     : 'scraper-indexer,scraper-photographer,scraper-publisher';
   console.log(`Orchestrating start: ${target}`);
-  exec(`pm2 start ecosystem.config.js --only ${target}`, { cwd: __dirname, windowsHide: true }, (err) => {
+  exec(`pm2 start ecosystem.config.js --only ${target} --update-env`, {
+    cwd: __dirname,
+    windowsHide: true,
+    env: { ...process.env, SCRAPER_REGISTER_ONLY: 'false' }
+  }, (err) => {
      if (err) {
         console.error('Failed to start scrapers cluster:', err);
         return res.status(500).json({ success: false, message: 'Start failed', error: err.message });
@@ -252,7 +259,11 @@ app.post('/api/daemons/:name/start', (req, res) => {
   const { name } = req.params;
   const target = `scraper-${name}`;
   console.log(`Commanding daemon start: ${target}`);
-  exec(`pm2 start ${target}`, { cwd: __dirname, windowsHide: true }, (err, stdout, stderr) => {
+  exec(`pm2 start ecosystem.config.js --only ${target} --update-env`, {
+    cwd: __dirname,
+    windowsHide: true,
+    env: { ...process.env, SCRAPER_REGISTER_ONLY: 'false' }
+  }, (err, stdout, stderr) => {
      if (err) {
         console.error(`Failed to start ${name}:`, err);
         return res.status(500).json({ success: false, message: `Failed to start ${name}` });
