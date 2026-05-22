@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # SDE Sub-Agent Operational Constraints
 
 These rules specifically govern how autonomous SDE sub-agents (Google Antigravity nodes) must behave and format their output. 

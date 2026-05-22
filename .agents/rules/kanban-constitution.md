@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Kanban Constitution & Task Schema
 
 **North Star**: Every pattern the app shows on screen is byte-for-byte what the skates play. No guesswork. No baked-in firmware mystery. Full color control. One BLE packet. Forever.
