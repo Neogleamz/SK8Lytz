@@ -57,6 +57,21 @@ const US_STATES = [
   'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY', 'DC'
 ];
 
+const getEmails = (emails: unknown): string[] => {
+  if (!emails) return [];
+  if (Array.isArray(emails)) return emails.filter(Boolean).map(String);
+  if (typeof emails === 'string') {
+    try {
+      const parsed = JSON.parse(emails);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean).map(String);
+      return [emails].filter(Boolean);
+    } catch {
+      return emails.split(',').map((e: string) => e.trim()).filter(Boolean);
+    }
+  }
+  return [];
+};
+
 function App() {
   const [activeTab, setActiveTab] = useState<'pipeline' | 'phase1' | 'phase2' | 'phase3' | 'phase4' | 'sniper' | 'graveyard'>('pipeline');
   const [seedProvider, setSeedProvider] = useState<'osm'|'google'>('google');
@@ -1402,6 +1417,43 @@ function App() {
                             {igUrl && <span style={{ fontSize:'0.56rem', fontWeight:700, padding:'1px 6px', borderRadius:'8px', background:'rgba(193,53,132,0.12)', color:'#c13584', border:'1px solid rgba(193,53,132,0.25)' }}>IG</span>}
                             {fbUrl && <span style={{ fontSize:'0.56rem', fontWeight:700, padding:'1px 6px', borderRadius:'8px', background:'rgba(24,119,242,0.12)', color:'#1877f2', border:'1px solid rgba(24,119,242,0.25)' }}>FB</span>}
                             {ttUrl && <span style={{ fontSize:'0.56rem', fontWeight:700, padding:'1px 6px', borderRadius:'8px', background:'rgba(255,0,80,0.1)', color:'#ff0050', border:'1px solid rgba(255,0,80,0.2)' }}>TT</span>}
+                            {(() => {
+                              const emails = getEmails(spot.email_addresses);
+                              if (emails.length === 0) return null;
+                              const firstEmail = emails[0];
+                              const remaining = emails.length - 1;
+                              return (
+                                <a
+                                  href={`mailto:${firstEmail}`}
+                                  style={{
+                                    fontSize: '0.56rem',
+                                    fontWeight: 700,
+                                    padding: '1px 6px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(168,85,247,0.15)',
+                                    color: '#c084fc',
+                                    border: '1px solid rgba(168,85,247,0.25)',
+                                    textDecoration: 'none',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '2px',
+                                    transition: 'all 0.2s',
+                                  }}
+                                  onMouseEnter={e => {
+                                    e.currentTarget.style.background = 'rgba(168,85,247,0.25)';
+                                    e.currentTarget.style.boxShadow = '0 0 6px rgba(168,85,247,0.4)';
+                                  }}
+                                  onMouseLeave={e => {
+                                    e.currentTarget.style.background = 'rgba(168,85,247,0.15)';
+                                    e.currentTarget.style.boxShadow = 'none';
+                                  }}
+                                  title={emails.join(', ')}
+                                >
+                                  ✉️ {firstEmail}
+                                  {remaining > 0 ? ` (+${remaining})` : ''}
+                                </a>
+                              );
+                            })()}
                           </div>
                         </div>
 
@@ -1442,6 +1494,7 @@ function App() {
                     <th>Surface</th>
                     <th onClick={() => toggleSort('website')} style={{cursor:'pointer'}}>Website {sortCol==='website' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                     <th onClick={() => toggleSort('phone_number')} style={{cursor:'pointer'}}>Phone {sortCol==='phone_number' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
+                    <th onClick={() => toggleSort('email_addresses')} style={{cursor:'pointer'}}>Emails {sortCol==='email_addresses' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                     <th onClick={() => toggleSort('has_adult_night')} style={{cursor:'pointer'}}>18+ {sortCol==='has_adult_night' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                     <th onClick={() => toggleSort('retry_count')} style={{cursor:'pointer'}}>Retries {sortCol==='retry_count' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
                     <th onClick={() => toggleSort('last_attempted_at')} style={{cursor:'pointer'}}>Last Ping {sortCol==='last_attempted_at' ? (sortDir==='asc'?'↑':'↓') : ''}</th>
@@ -1484,6 +1537,46 @@ function App() {
                         </td>
                         <td>
                           {row.phone_number || '-'}
+                        </td>
+                        <td>
+                          {(() => {
+                            const emails = getEmails(row.email_addresses);
+                            if (emails.length === 0) return '-';
+                            return (
+                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                {emails.map((email, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={`mailto:${email}`}
+                                    style={{
+                                      fontSize: '0.75rem',
+                                      fontWeight: 600,
+                                      padding: '2px 8px',
+                                      borderRadius: '12px',
+                                      background: 'rgba(168,85,247,0.15)',
+                                      color: '#c084fc',
+                                      border: '1px solid rgba(168,85,247,0.25)',
+                                      textDecoration: 'none',
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '4px',
+                                      transition: 'all 0.2s',
+                                    }}
+                                    onMouseEnter={e => {
+                                      e.currentTarget.style.background = 'rgba(168,85,247,0.25)';
+                                      e.currentTarget.style.boxShadow = '0 0 6px rgba(168,85,247,0.4)';
+                                    }}
+                                    onMouseLeave={e => {
+                                      e.currentTarget.style.background = 'rgba(168,85,247,0.15)';
+                                      e.currentTarget.style.boxShadow = 'none';
+                                    }}
+                                  >
+                                    ✉️ {email}
+                                  </a>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td>
                           <div style={{display:'flex', alignItems: 'center', gap: '5px', justifyContent: 'center'}}>

@@ -1,30 +1,63 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+
+const getEmails = (emails: unknown): string[] => {
+  if (!emails) return [];
+  if (Array.isArray(emails)) return emails.filter(Boolean).map(String);
+  if (typeof emails === 'string') {
+    try {
+      const parsed = JSON.parse(emails);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean).map(String);
+      return [emails].filter(Boolean);
+    } catch {
+      return emails.split(',').map((e: string) => e.trim()).filter(Boolean);
+    }
+  }
+  return [];
+};
+
+export interface SpotRecord {
+  id: string;
+  name: string;
+  verification_status: string;
+  street_address?: string | null;
+  city?: string | null;
+  website?: string | null;
+  phone_number?: string | null;
+  email_addresses?: string | string[] | null;
+  surface_quality?: string | null;
+  has_adult_night?: boolean | null;
+  is_published?: boolean | null;
+  opening_hours?: unknown;
+  pricing_data?: unknown;
+  social_links?: unknown;
+  raw_knowledge_panel?: unknown;
+  email_input?: string;
+  [key: string]: unknown;
+}
 
 interface RecordEditModalProps {
-  spot: any;
-  onSave: (updates: any) => Promise<void>;
+  spot: SpotRecord;
+  onSave: (updates: Partial<SpotRecord>) => Promise<void>;
   onClose: () => void;
 }
 
 export const RecordEditModal: React.FC<RecordEditModalProps> = ({ spot, onSave, onClose }) => {
   const [tab, setTab] = useState<'basic' | 'json'>('basic');
-  const [form, setForm] = useState<any>({});
-  const [jsonText, setJsonText] = useState<{ [key: string]: string }>({});
+  const [form, setForm] = useState<Partial<SpotRecord>>(() => {
+    const emailList = getEmails(spot.email_addresses).join(', ');
+    return { ...spot, email_input: emailList };
+  });
+  const [jsonText, setJsonText] = useState<{ [key: string]: string }>(() => ({
+    opening_hours: spot.opening_hours ? JSON.stringify(spot.opening_hours, null, 2) : '',
+    pricing_data: spot.pricing_data ? JSON.stringify(spot.pricing_data, null, 2) : '',
+    social_links: spot.social_links ? JSON.stringify(spot.social_links, null, 2) : '',
+    raw_knowledge_panel: spot.raw_knowledge_panel ? JSON.stringify(spot.raw_knowledge_panel, null, 2) : '',
+  }));
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    setForm({ ...spot });
-    setJsonText({
-      opening_hours: spot.opening_hours ? JSON.stringify(spot.opening_hours, null, 2) : '',
-      pricing_data: spot.pricing_data ? JSON.stringify(spot.pricing_data, null, 2) : '',
-      social_links: spot.social_links ? JSON.stringify(spot.social_links, null, 2) : '',
-      raw_knowledge_panel: spot.raw_knowledge_panel ? JSON.stringify(spot.raw_knowledge_panel, null, 2) : '',
-    });
-  }, [spot]);
-
-  const handleBasicChange = (field: string, val: any) => {
-    setForm((prev: any) => ({ ...prev, [field]: val }));
+  const handleBasicChange = (field: keyof SpotRecord, val: unknown) => {
+    setForm((prev) => ({ ...prev, [field]: val }));
   };
 
   const handleJsonChange = (field: string, val: string) => {
@@ -36,7 +69,14 @@ export const RecordEditModal: React.FC<RecordEditModalProps> = ({ spot, onSave, 
     setErrorMsg(null);
     setIsSaving(true);
     
-    const updates = { ...form };
+    const updates: Partial<SpotRecord> = { ...form };
+    
+    if (typeof updates.email_input === 'string') {
+      const parsedEmails = updates.email_input.split(',').map((e: string) => e.trim()).filter(Boolean);
+      updates.email_addresses = parsedEmails;
+    }
+    delete updates.email_input;
+
     let hasError = false;
 
     // Validate JSON fields
@@ -47,8 +87,8 @@ export const RecordEditModal: React.FC<RecordEditModalProps> = ({ spot, onSave, 
       } else {
         try {
           updates[field] = JSON.parse(text);
-        } catch (e: any) {
-          setErrorMsg(`Invalid JSON in ${field}: ${e.message}`);
+        } catch (e) {
+          setErrorMsg(`Invalid JSON in ${field}: ${(e as Error).message}`);
           hasError = true;
         }
       }
@@ -62,8 +102,8 @@ export const RecordEditModal: React.FC<RecordEditModalProps> = ({ spot, onSave, 
     try {
       await onSave(updates);
       onClose();
-    } catch (e: any) {
-      setErrorMsg(`Save failed: ${e.message}`);
+    } catch (e) {
+      setErrorMsg(`Save failed: ${(e as Error).message}`);
     } finally {
       setIsSaving(false);
     }
@@ -145,6 +185,10 @@ export const RecordEditModal: React.FC<RecordEditModalProps> = ({ spot, onSave, 
               <div>
                 <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', marginBottom: '5px' }}>PHONE NUMBER</label>
                 <input value={form.phone_number || ''} onChange={e => handleBasicChange('phone_number', e.target.value)} style={{ width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff' }} />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', marginBottom: '5px' }}>EMAIL ADDRESSES (COMMA-SEPARATED)</label>
+                <input value={form.email_input || ''} onChange={e => handleBasicChange('email_input', e.target.value)} style={{ width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff' }} placeholder="e.g. hello@skatespot.com, info@skatespot.com" />
               </div>
 
               <div>

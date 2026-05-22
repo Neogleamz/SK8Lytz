@@ -1,3 +1,4 @@
+/* global __DEV__ */
 /**
  * useBLE.ts — SK8Lytz Bluetooth Low Energy Engine
  *
@@ -10,7 +11,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { getDefaultProtocol, resolveProtocol, resolveProtocolForDevice, getProtocolById } from '../protocols/ControllerRegistry';
@@ -38,8 +39,6 @@ if (Platform.OS !== 'web') {
 let writeMutex: Promise<any> = Promise.resolve();
 let writeGeneration = 0; // Increments on every new write; stale debounce checks compare against this
 
-/** AsyncStorage key for last-sent pattern payload per group/device */
-const PATTERN_CACHE_KEY = (groupId: string) => `@Sk8lytz_last_pattern_${groupId.toUpperCase()}`;
 
 export interface BluetoothLowEnergyApi {
   requestPermissions(): Promise<boolean>;
@@ -244,9 +243,31 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
     try {
       // ── Step 1: Connect ───────────────────────────────────────────────────────
-      await bleManager.connectToDevice(mac, { timeout: 6000 }).catch((e: any) => {
-        if (!String(e).includes('already')) throw e;
-      });
+      let lastErr: any = null;
+      let connected = false;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const isConnected = await bleManager.isDeviceConnected(mac);
+          if (!isConnected) {
+            await bleManager.connectToDevice(mac, { timeout: 6000 });
+          }
+          connected = true;
+          break;
+        } catch (e: any) {
+          lastErr = e;
+          if (String(e).includes('133') || String(e).includes('133 (0x85)')) {
+            AppLogger.warn(`[BLE] pingDevice GATT 133 congestion linking ${mac}. Attempt ${attempt}/2...`);
+            await bleManager.cancelDeviceConnection(mac).catch(() => {});
+            await new Promise(resolve => setTimeout(resolve, 300));
+          } else if (String(e).includes('already')) {
+            connected = true;
+            break;
+          } else {
+            break;
+          }
+        }
+      }
+      if (!connected) throw lastErr;
 
       // ── HAL: Resolve adapter & Caching ────────────────────────────────────────
       let pingAdapter: IControllerProtocol | null = null;
@@ -262,7 +283,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
           const svcs = await bleManager.servicesForDevice(mac);
           const svcUUIDs = svcs.map((s: any) => s.uuid as string);
           pingAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
-        } catch (_e) {
+        } catch {
           pingAdapter = getDefaultProtocol();
         }
         await BleCharacteristicCache.set(mac, pingAdapter.protocolId);
@@ -585,9 +606,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
               break;
             } catch (e: any) {
               lastErr = e;
-              if (String(e).includes('133')) {
+              if (String(e).includes('133') || String(e).includes('133 (0x85)')) {
                 AppLogger.warn(`[BLE] GATT 133 congestion linking ${device.id}. Attempt ${attempt}/2...`);
-                await new Promise(resolve => setTimeout(resolve, 200));
+                await bleManager.cancelDeviceConnection(device.id).catch(() => {});
+                await new Promise(resolve => setTimeout(resolve, 300));
               } else {
                 break;
               }
@@ -613,12 +635,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
             }
             // ── HAL: Resolve protocol adapter from service UUIDs & Caching ────────
             let adapter: IControllerProtocol | null = null;
-            let usedCache = false;
 
             const cachedGatt = await BleCharacteristicCache.get(conn.id);
             if (cachedGatt) {
               adapter = getProtocolById(cachedGatt.protocolId);
-              if (adapter) usedCache = true;
             }
 
             if (!adapter) {
@@ -646,7 +666,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
                 if (negotiatedMtu > 23) break;
                 AppLogger.warn(`[BLE] MTU glitch (23) for ${conn.id}. Retrying...`);
                 await new Promise(res => setTimeout(res, 200));
-              } catch (e) {
+              } catch {
                 await new Promise(res => setTimeout(res, 200));
               }
             }

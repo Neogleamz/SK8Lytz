@@ -43,8 +43,8 @@ const BUCKET_RULES: Array<{ bucket: keyof Omit<SitemapResult, 'all_urls'>; patte
   // Score 8 — High value
   { bucket: 'events_urls',   patterns: /part(y|ies)|birthday|special/i, score: 7 },
   { bucket: 'about_urls',    patterns: /about|history|facilit|rink|story|team|our.?rink|who.?we.?are/i, score: 7 },
-  // Score 6 — Optional
-  { bucket: 'contact_urls',  patterns: /contact|location|direction|find.?us|get.?here|info/i, score: 6 },
+  // Score 10 — Required for email capture
+  { bucket: 'contact_urls',  patterns: /contact|location|direction|find.?us|get.?here|info|email|reach.?us|connect/i, score: 10 },
   // Score 10 — Primary for Photographer
   { bucket: 'gallery_urls',  patterns: /gallerh?y|photo|media|image|picture|album|slideshow/i, score: 10 },
 ];

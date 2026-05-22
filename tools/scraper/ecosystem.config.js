@@ -1,73 +1,74 @@
+const path = require('path');
+
 module.exports = {
   apps: [
     {
       name: 'sk8lytz-cctower',
-      script: 'CCTower.ts',
+      script: path.resolve(__dirname, 'CCTower.ts'),
       interpreter: 'node',
-      interpreter_args: './node_modules/tsx/dist/cli.mjs',
-      cwd: '.',
+      interpreter_args: path.resolve(__dirname, 'node_modules/tsx/dist/cli.mjs'),
+      cwd: __dirname,
       watch: false,
       env: { NODE_ENV: 'production' },
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
-      error_file: './logs/api-error.log',
-      out_file: './logs/api-out.log'
+      error_file: path.resolve(__dirname, 'logs/api-error.log'),
+      out_file: path.resolve(__dirname, 'logs/api-out.log')
     },
     {
       name: 'scraper-indexer',
-      script: 'Indexer.ts',
+      script: path.resolve(__dirname, 'Indexer.ts'),
       interpreter: 'node',
-      interpreter_args: './node_modules/tsx/dist/cli.mjs',
-      cwd: '.',
+      interpreter_args: path.resolve(__dirname, 'node_modules/tsx/dist/cli.mjs'),
+      cwd: __dirname,
       watch: false,
       autorestart: false,
       max_restarts: 0,
       env: { NODE_ENV: 'production' },
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
-      error_file: './logs/indexer-error.log',
-      out_file: './logs/indexer-out.log'
+      error_file: path.resolve(__dirname, 'logs/indexer-error.log'),
+      out_file: path.resolve(__dirname, 'logs/indexer-out.log')
     },
     {
       name: 'scraper-photographer',
-      script: 'Photographer.ts',
+      script: path.resolve(__dirname, 'Photographer.ts'),
       interpreter: 'node',
-      interpreter_args: './node_modules/tsx/dist/cli.mjs',
-      cwd: '.',
+      interpreter_args: path.resolve(__dirname, 'node_modules/tsx/dist/cli.mjs'),
+      cwd: __dirname,
       watch: false,
       autorestart: false,
       max_restarts: 0,
       env: { NODE_ENV: 'production' },
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
-      error_file: './logs/photographer-error.log',
-      out_file: './logs/photographer-out.log'
+      error_file: path.resolve(__dirname, 'logs/photographer-error.log'),
+      out_file: path.resolve(__dirname, 'logs/photographer-out.log')
     },
     {
       name: 'scraper-publisher',
-      script: 'Publisher.ts',
+      script: path.resolve(__dirname, 'Publisher.ts'),
       interpreter: 'node',
-      interpreter_args: './node_modules/tsx/dist/cli.mjs',
-      cwd: '.',
+      interpreter_args: path.resolve(__dirname, 'node_modules/tsx/dist/cli.mjs'),
+      cwd: __dirname,
       watch: false,
       autorestart: false,
       max_restarts: 0,
       env: { NODE_ENV: 'production' },
       log_date_format: 'YYYY-MM-DD HH:mm:ss',
-      error_file: './logs/publisher-error.log',
-      out_file: './logs/publisher-out.log'
+      error_file: path.resolve(__dirname, 'logs/publisher-error.log'),
+      out_file: path.resolve(__dirname, 'logs/publisher-out.log')
     },
     {
       name: 'discord-bridge',
       script: 'index.js',
-      cwd: '../discord-bridge',
+      cwd: path.resolve(__dirname, '../discord-bridge'),
       watch: false,
       log_date_format: 'YYYY-MM-DD HH:mm:ss'
     },
     {
       name: 'scraper-dashboard',
       script: 'node_modules/vite/bin/vite.js',
-      cwd: '../scraper-dashboard',
+      cwd: path.resolve(__dirname, '../scraper-dashboard'),
       watch: false,
       log_date_format: 'YYYY-MM-DD HH:mm:ss'
     }
   ]
 };
-

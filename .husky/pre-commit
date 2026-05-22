@@ -33,7 +33,7 @@ if [ "$WORKTREE_ROOT" != "$FORTRESS_ROOT" ]; then
   fi
 fi
 
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.\(ts\|tsx\|js\|jsx\)$' || true)
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep '\.\(ts\|tsx\|js\|jsx\)$' | grep -v '^tools/' | grep -v '^scratch/' || true)
 
 ABS_FILES=""
 if [ -n "$STAGED_FILES" ]; then

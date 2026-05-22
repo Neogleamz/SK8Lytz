@@ -49,6 +49,40 @@ class LocalAgentConfig:
                         pass
         return None
 
+class ContextCompiler:
+    @staticmethod
+    def compile_all(workspace_dir="C:\\Neogleamz\\AG_SK8Lytz_App\\SK8Lytz"):
+        context = "--- GLOBAL AI AGENT DIRECTIVES ---\n"
+        
+        # 1. Load Rules from .agents/rules/
+        rules_dir = os.path.join(workspace_dir, ".agents", "rules")
+        if os.path.exists(rules_dir):
+            context += "\n## OPERATIONAL RULES & KANBAN CONSTITUTION\n"
+            for filename in os.listdir(rules_dir):
+                if filename.endswith(".md"):
+                    filepath = os.path.join(rules_dir, filename)
+                    try:
+                        with open(filepath, "r", encoding="utf-8") as f:
+                            context += f"\n### Rule File: {filename}\n"
+                            context += f.read() + "\n"
+                    except Exception as e:
+                        pass
+        
+        # 2. Load Master Reference & Protocol Bible
+        tools_dir = os.path.join(workspace_dir, "tools")
+        core_files = ["SK8Lytz_App_Master_Reference.md", "ZENGGE_PROTOCOL_BIBLE.md"]
+        for core_file in core_files:
+            filepath = os.path.join(tools_dir, core_file)
+            if os.path.exists(filepath):
+                context += f"\n## CORE ARCHITECTURE: {core_file}\n"
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        context += f.read() + "\n"
+                except Exception as e:
+                    pass
+                    
+        return context
+
 class AgentCoordinator:
     def __init__(self, config=None):
         self.config = config or LocalAgentConfig()
@@ -73,7 +107,8 @@ class SpawnerAgent:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.config.model}:generateContent?key={api_key}"
         headers = {"Content-Type": "application/json"}
         
-        system_instruction = f"You are a highly capable agent with the role: {self.role}. Your instruction: {self.instruction}"
+        compiled_rules = ContextCompiler.compile_all()
+        system_instruction = f"{compiled_rules}\n\nYou are a highly capable agent with the role: {self.role}.\nYour instruction: {self.instruction}"
         
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
@@ -110,7 +145,8 @@ class SpawnerAgent:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.config.model}:generateContent?key={api_key}"
         headers = {"Content-Type": "application/json"}
         
-        system_instruction = f"You are a highly capable agent with the role: {self.role}. Your instruction: {self.instruction}"
+        compiled_rules = ContextCompiler.compile_all()
+        system_instruction = f"{compiled_rules}\n\nYou are a highly capable agent with the role: {self.role}.\nYour instruction: {self.instruction}"
         
         payload = {
             "contents": [

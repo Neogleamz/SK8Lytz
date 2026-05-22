@@ -24,7 +24,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { ZENGGE_SERVICE_UUID } from '../../protocols/ZenggeProtocol';
@@ -84,7 +84,7 @@ export function useBLESweeper({
   bleManager,
   setAllDevices,
   setPendingRegistrations,
-  bleGateRef,
+  bleGateRef: _bleGateRef,
   registeredMacs,
 }: UseBLESweeperProps): UseBLESweeperReturn {
   const [isSweeperActive, setIsSweeperActive] = useState(false);
@@ -215,10 +215,28 @@ export function useBLESweeper({
         return;
       }
 
-      const conn = await bleManager.connectToDevice(mac, { timeout: 6000 }).catch((e: any) => {
-        if (!String(e).includes('already')) throw e;
-        return bleManager.deviceForDevice(mac);
-      });
+      let conn: any = null;
+      let lastErr: any = null;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        try {
+          const isConnected = await bleManager.isDeviceConnected(mac);
+          conn = isConnected ? await bleManager.deviceForDevice(mac) : await bleManager.connectToDevice(mac, { timeout: 6000 });
+          break;
+        } catch (e: any) {
+          lastErr = e;
+          if (String(e).includes('133') || String(e).includes('133 (0x85)')) {
+            AppLogger.warn(`[BLE] Sweeper GATT 133 congestion linking ${mac}. Attempt ${attempt}/2...`);
+            await bleManager.cancelDeviceConnection(mac).catch(() => {});
+            await new Promise(resolve => setTimeout(resolve, 300));
+          } else if (String(e).includes('already')) {
+            conn = await bleManager.deviceForDevice(mac);
+            break;
+          } else {
+            break;
+          }
+        }
+      }
+      if (!conn) throw lastErr;
 
       // ── P1 preemption check: bail after connect, before service discovery ─
       if (signal.aborted) {
@@ -228,12 +246,10 @@ export function useBLESweeper({
 
       // ── HAL: Resolve adapter from service UUIDs & Caching ─────────────────
       let interrogatorAdapter: IControllerProtocol | null = null;
-      let usedCache = false;
 
       const cachedGatt = await BleCharacteristicCache.get(mac);
       if (cachedGatt) {
         interrogatorAdapter = getProtocolById(cachedGatt.protocolId);
-        if (interrogatorAdapter) usedCache = true;
       }
 
       if (!interrogatorAdapter) {

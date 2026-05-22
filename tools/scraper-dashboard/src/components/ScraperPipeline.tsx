@@ -2,6 +2,7 @@ import React from 'react';
 import BeltNode from './BeltNode';
 import { useScraperTelemetry } from '../hooks/useScraperTelemetry';
 import { useFieldRegistry } from '../hooks/useFieldRegistry';
+import type { SpotRecord } from './RecordEditModal';
 
 const CCTOWER = 'http://localhost:5999';
 
@@ -92,14 +93,52 @@ const generateUniformBelt = (idx: number, id: number, name: string, color: strin
 // Belt id → app tab mapping
 const BELT_TAB: Record<number, string> = { 1: 'phase1', 2: 'phase2', 3: 'phase3', 4: 'phase4', 5: 'sniper' };
 
+export interface PipelineStats {
+    summary?: {
+        seeded?: number;
+        enriched?: number;
+        deep_crawled_count?: number;
+        media_ready?: number;
+        published?: number;
+        [key: string]: unknown;
+    };
+    stats?: unknown[];
+}
+
+export interface PhaseQueues {
+    phase1?: SpotRecord[];
+    phase2?: SpotRecord[];
+    phase3?: SpotRecord[];
+    phase4?: SpotRecord[];
+    ['detective-recent']?: SpotRecord[];
+    published?: SpotRecord[];
+    [key: string]: SpotRecord[] | undefined;
+}
+
+export interface DaemonStatus {
+    isHarvestingActive?: boolean;
+    isGoogleSweepActive?: boolean;
+    currentTarget?: string;
+    [key: string]: unknown;
+}
+
+export interface TelemetryLiveData {
+    active_record?: Record<string, unknown> | null;
+    active_job?: string;
+    target?: string;
+    alive?: boolean;
+    in_q?: string[];
+    [key: string]: unknown;
+}
+
 export const ScraperPipeline: React.FC<{
     headerControls?: React.ReactNode;
     belowHeader?: React.ReactNode;
-    pipelineStats?: any;
-    phaseQueues?: any;
+    pipelineStats?: PipelineStats;
+    phaseQueues?: PhaseQueues;
     onPhaseNav?: (tab: string) => void;
     // Daemon control props
-    status?: any;
+    status?: DaemonStatus;
     triggerSpecificDaemon?: (name: string, action: 'start' | 'stop') => void;
     triggerHarvest?: (type: string, states?: string[]) => void;
     onBlockSpot?: (id: string, name: string) => void; // optional refresh callback after block
@@ -114,8 +153,7 @@ export const ScraperPipeline: React.FC<{
 
     const [controlsOpen, setControlsOpen] = React.useState(false);
     const [sniperSearch, setSniperSearch] = React.useState('');
-    const [sniperResults, setSniperResults] = React.useState<any[]>([]);
-    const [isSearching, setIsSearching] = React.useState(false);
+    const [sniperResults, setSniperResults] = React.useState<SpotRecord[]>([]);
 
     // Effect for sniper search
     React.useEffect(() => {
@@ -124,13 +162,11 @@ export const ScraperPipeline: React.FC<{
                 setSniperResults([]);
                 return;
             }
-            setIsSearching(true);
             try {
                 const res = await fetch(`${CCTOWER}/api/spots/search?q=${encodeURIComponent(sniperSearch)}`);
                 const data = await res.json();
                 setSniperResults(data.spots || []);
             } catch (e) { console.error(e); }
-            finally { setIsSearching(false); }
         }, 500);
         return () => clearTimeout(t);
     }, [sniperSearch]);
@@ -148,13 +184,15 @@ export const ScraperPipeline: React.FC<{
         } catch (e) { console.error(e); }
     };
 
-    const [sniperActiveSpot, setSniperActiveSpot] = React.useState<any>(null);
+    const [sniperActiveSpot, setSniperActiveSpot] = React.useState<SpotRecord | null>(null);
 
     // Fetch active sniper spot details
     React.useEffect(() => {
         const id = config?.sniper_target_id;
         if (!id) {
-            setSniperActiveSpot(null);
+            Promise.resolve().then(() => {
+                setSniperActiveSpot(null);
+            });
             return;
         }
         fetch(`${CCTOWER}/api/sniper/poll/${id}`)
@@ -174,8 +212,8 @@ export const ScraperPipeline: React.FC<{
 
     // outCards show OUTPUT (completed) records for each belt.
     // The output of phase N = the input of phase N+1, so we read the next phase queue.
-    const getSpotsForPhase = (beltId: number, count: number = 2) => {
-        let spots: any[] = [];
+    const getSpotsForPhase = (beltId: number, count: number = 2): SpotRecord[] => {
+        let spots: SpotRecord[] = [];
         if (beltId === 1) spots = phaseQueues?.phase1 || [];              // Sweep out  = SEEDED (Detective input)
         else if (beltId === 2) spots = phaseQueues?.['detective-recent'] || []; // Detective out = DEEP_CRAWLED (Photographer input)
         else if (beltId === 3) spots = phaseQueues?.phase4 || [];              // Photographer out = MEDIA_READY (Publisher input)
@@ -183,7 +221,8 @@ export const ScraperPipeline: React.FC<{
         return spots.slice(0, count);
     };
 
-    const getQueueNames = (phase: string, count: number = 3) => (phaseQueues?.[phase] || []).slice(0, count).map((s: any) => s.name || s.url || s.target);
+    const getQueueNames = (phase: string, count: number = 3): string[] => 
+        (phaseQueues?.[phase] || []).slice(0, count).map((s: SpotRecord) => String(s.name || s.url || s.target || ''));
 
     // Fields to NEVER show in belt output cards — too bulky, use Phase drawer instead
     const CARD_SKIP_FIELDS = new Set([
@@ -191,13 +230,13 @@ export const ScraperPipeline: React.FC<{
         'candidate_links', 'raw_knowledge_panel', 'flyer_urls', 'dom_images'
     ]);
 
-    const buildPhaseCards = (phaseId: number, spots: any[]) => {
+    const buildPhaseCards = (phaseId: number, spots: SpotRecord[]) => {
         return spots.map(spot => {
             const data: [string, React.ReactNode, string][] = [];
-            const bool = (v: any) => (v === true ? 'YES' : v === false ? 'NO' : 'N/A');
-            const val  = (v: any, fallback = 'NULL') => v != null ? String(v) : fallback;
-            const ok   = (v: any): string => (v != null && v !== '' && v !== false) ? 'success' : 'missing';
-            const boolOk = (v: any): string => (v === true ? 'success' : 'missing');
+            const bool = (v: unknown) => (v === true ? 'YES' : v === false ? 'NO' : 'N/A');
+            const val  = (v: unknown, fallback = 'NULL') => v != null ? String(v) : fallback;
+            const ok   = (v: unknown): string => (v != null && v !== '' && v !== false) ? 'success' : 'missing';
+            const boolOk = (v: unknown): string => (v === true ? 'success' : 'missing');
 
             // ▶ CURRENT STATUS badge
             if (phaseId === 1) {
@@ -223,7 +262,45 @@ export const ScraperPipeline: React.FC<{
                 const rawVal = spot[f.field_name];
                 const clVal = spot.candidate_links?.[f.field_name];
 
-                if (f.data_type === 'boolean') {
+                if (f.field_name === 'email_addresses') {
+                    const emails = (() => {
+                        if (!rawVal) return [];
+                        if (Array.isArray(rawVal)) return rawVal.filter(Boolean);
+                        try {
+                            const parsed = JSON.parse(rawVal);
+                            return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+                        } catch {
+                            return String(rawVal).split(',').map((e: string) => e.trim()).filter(Boolean);
+                        }
+                    })();
+                    if (emails.length > 0) {
+                        displayVal = (
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                {emails.map((e: string) => (
+                                    <a key={e} href={`mailto:${e}`} style={{
+                                        background: 'rgba(168,85,247,0.15)',
+                                        border: '1px solid rgba(168,85,247,0.3)',
+                                        color: '#c084fc',
+                                        padding: '1px 5px',
+                                        borderRadius: '4px',
+                                        textDecoration: 'none',
+                                        fontSize: '0.6rem',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '2px'
+                                    }} title={e}>
+                                        <span>📧</span>
+                                        <span>{e}</span>
+                                    </a>
+                                ))}
+                            </div>
+                        );
+                        status = 'success';
+                    } else {
+                        displayVal = 'NULL';
+                        status = 'missing';
+                    }
+                } else if (f.data_type === 'boolean') {
                     displayVal = bool(rawVal);
                     status = boolOk(rawVal);
                 } else if (f.data_type === 'number') {
@@ -308,7 +385,7 @@ export const ScraperPipeline: React.FC<{
     const aiVectors = config?.ai_target_vectors || [];
     baseBelts[1].attempting = [
       ...fields.filter(f => f.phase_id === 2).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]),
-      ...aiVectors.map((v: any) => [(v.key || v), 'pending', '⚪'] as [string, string, string])
+      ...aiVectors.map((v: unknown) => [typeof v === 'object' && v !== null && 'key' in v ? String((v as { key: string }).key) : String(v), 'pending', '⚪'] as [string, string, string])
     ];
 
     // Phase 3 Photographer: Registry fields + photo categories
@@ -322,7 +399,7 @@ export const ScraperPipeline: React.FC<{
     baseBelts[3].attempting = fields.filter(f => f.phase_id === 4).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]);
 
     const mergedBelts = baseBelts.map(belt => {
-        let liveData: any = null;
+        let liveData: TelemetryLiveData | null = null;
         if (belt.id === 1) liveData = telemetry.scout;
 
         if (belt.id === 2) liveData = telemetry.detective;
@@ -334,7 +411,6 @@ export const ScraperPipeline: React.FC<{
         const dynamicCards = buildPhaseCards(belt.id, specificSpots);
 
         // Per-belt count badges from live telemetry + pipelineStats
-        const inQCount = liveData?.in_q?.length ?? 0;
         const countBadges: {label: string; value: string}[] = [];
         if (belt.id === 1) {
             countBadges.push({ label: 'OUT', value: `${(pipelineStats?.summary?.seeded ?? 0).toLocaleString()} SEEDED` });
@@ -354,14 +430,17 @@ export const ScraperPipeline: React.FC<{
             let dynamicAttempting = belt.attempting;
             
             if (activeRecord) {
-                dynamicAttempting = belt.attempting.map(([fieldName, oldStatus, oldIcon], i) => {
+                dynamicAttempting = belt.attempting.map(([fieldName, , oldIcon]) => {
                     const rawVal = activeRecord[fieldName];
                     let clVal = null;
                     try {
-                        clVal = typeof activeRecord.candidate_links === 'string' 
-                            ? JSON.parse(activeRecord.candidate_links)?.[fieldName] 
-                            : activeRecord.candidate_links?.[fieldName];
-                    } catch(e) {}
+                        const cl = activeRecord['candidate_links'];
+                        clVal = typeof cl === 'string' 
+                            ? JSON.parse(cl)?.[fieldName] 
+                            : (cl as Record<string, unknown>)?.[fieldName];
+                    } catch {
+                        /* ignore parsing errors */
+                    }
                     
                     const target = clVal || rawVal;
                     let newStatus = 'missing';
@@ -416,8 +495,8 @@ export const ScraperPipeline: React.FC<{
             } else {
                 alert('Block failed: ' + JSON.stringify(data));
             }
-        } catch (e: any) {
-            alert('CCTower unreachable: ' + e.message);
+        } catch (e) {
+            alert('CCTower unreachable: ' + (e instanceof Error ? e.message : String(e)));
         }
     };
 
@@ -593,6 +672,7 @@ export const ScraperPipeline: React.FC<{
                             onSetHero={onSetHero}
                             onDeletePhoto={onDeletePhoto}
                             onAssignPhotoType={onAssignPhotoType}
+                            onUploadPhoto={onUploadPhoto}
                         />
                     );
                 })}

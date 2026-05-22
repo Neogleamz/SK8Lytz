@@ -1,27 +1,102 @@
 import React, { useState } from 'react';
 
+export interface ScheduledService {
+  '@type'?: string;
+  dayOfWeek?: string | string[];
+  timeRange?: string;
+  opens?: string;
+}
+
+export interface PhotoItem {
+  url: string;
+  type?: string;
+  [key: string]: unknown;
+}
+
+export interface CandidatePhotos {
+  street_view_url?: string | null;
+  [key: string]: unknown;
+}
+
+export interface SpotRecord {
+  id: string;
+  name: string;
+  verification_status: string;
+  street_address?: string | null;
+  city?: string | null;
+  website?: string | null;
+  phone_number?: string | null;
+  email_addresses?: string | string[] | null;
+  surface_quality?: string | null;
+  has_adult_night?: boolean | null;
+  is_published?: boolean | null;
+  opening_hours?: unknown;
+  pricing_data?: unknown;
+  social_links?: unknown;
+  raw_knowledge_panel?: unknown;
+  facility_type?: string | null;
+  has_rental?: boolean | null;
+  hosts_derby?: boolean | null;
+  surface_type?: string | null;
+  adult_night_schedule?: string | object | null;
+  adult_night_details?: string | null;
+  price_range?: string | null;
+  has_fee?: boolean | null;
+  phone?: string | null;
+  rating?: string | number | null;
+  has_pro_shop?: boolean | null;
+  has_proshop?: boolean | null;
+  instagram_url?: string | null;
+  facebook_url?: string | null;
+  tiktok_url?: string | null;
+  photos?: unknown;
+  candidate_photos?: unknown;
+  [key: string]: unknown;
+}
+
 // Helpers
-const toHoursArr = (h: any): string[] | null => {
+const toHoursArr = (h: unknown): string[] | null => {
   if (!h) return null;
-  if (Array.isArray(h)) return h;
+  if (Array.isArray(h)) return h.map(String);
   if (typeof h === 'string') {
     try {
       const p = JSON.parse(h);
-      if (Array.isArray(p)) return p;
-      // Handle JSON-LD ScheduledService shape
-      if (p && p['@type'] === 'ScheduledService' && p.dayOfWeek) {
-        const days = Array.isArray(p.dayOfWeek) ? p.dayOfWeek : [p.dayOfWeek];
-        return days.map((d: string) => `${d}: ${p.timeRange || p.opens || '?'}`);
+      if (Array.isArray(p)) return p.map(String);
+      if (p && typeof p === 'object') {
+        const service = p as ScheduledService;
+        if (service['@type'] === 'ScheduledService' && service.dayOfWeek) {
+          const days = Array.isArray(service.dayOfWeek) ? service.dayOfWeek : [service.dayOfWeek];
+          return days.map((d: string) => `${d}: ${service.timeRange || service.opens || '?'}`);
+        }
       }
       return null;
     } catch { return null; }
   }
-  if (h && h['@type'] === 'ScheduledService' && h.dayOfWeek) {
-    const days = Array.isArray(h.dayOfWeek) ? h.dayOfWeek : [h.dayOfWeek];
-    return days.map((d: string) => `${d}: ${h.timeRange || h.opens || '?'}`);
+  if (h && typeof h === 'object') {
+    const service = h as ScheduledService;
+    if (service['@type'] === 'ScheduledService' && service.dayOfWeek) {
+      const days = Array.isArray(service.dayOfWeek) ? service.dayOfWeek : [service.dayOfWeek];
+      return days.map((d: string) => `${d}: ${service.timeRange || service.opens || '?'}`);
+    }
   }
   return null;
 };
+
+const getEmails = (emails: unknown): string[] => {
+  if (!emails) return [];
+  if (Array.isArray(emails)) return emails.filter(Boolean).map(String);
+  if (typeof emails === 'string') {
+    try {
+      const parsed = JSON.parse(emails);
+      if (Array.isArray(parsed)) return parsed.filter(Boolean).map(String);
+      return [emails].filter(Boolean);
+    } catch {
+      return emails.split(',').map((e: string) => e.trim()).filter(Boolean);
+    }
+  }
+  return [];
+};
+
 
 const isOpenNow = (hours: string[] | null): boolean | null => {
   if (!hours || !hours.length) return null;
@@ -33,7 +108,8 @@ const isOpenNow = (hours: string[] | null): boolean | null => {
   const p = (s: string): number => {
     const m = s.trim().match(/(\d+):(\d+)\s*(AM|PM)?/i);
     if (!m) return 0;
-    let h = parseInt(m[1]), min = parseInt(m[2]);
+    let h = parseInt(m[1]);
+    const min = parseInt(m[2]);
     const per = (m[3] || '').toUpperCase();
     if (per === 'PM' && h !== 12) h += 12;
     if (per === 'AM' && h === 12) h = 0;
@@ -42,7 +118,7 @@ const isOpenNow = (hours: string[] | null): boolean | null => {
   const cur = new Date().getHours() * 60 + new Date().getMinutes();
   const segments = todayEntry.replace(/^[^:]+:\s*/, '').split(',');
   return segments.some(seg => {
-    const rng = seg.match(/(.+?)\s*[\u2013\u2014\-]\s*(.+)/);
+    const rng = seg.match(/(.+?)\s*[\u2013\u2014-]\s*(.+)/);
     if (!rng) return false;
     return cur >= p(rng[1]) && cur <= p(rng[2]);
   });
@@ -63,10 +139,10 @@ const todayHours = (hours: string[] | null): string => {
 };
 
 export interface DatabankCardProps {
-  spot: any;
+  spot: SpotRecord;
   variant?: 'detailed' | 'polaroid';
   readOnly?: boolean;
-  onEdit?: (spot: any) => void;
+  onEdit?: (spot: SpotRecord) => void;
   onReset?: (id: string, name: string) => void;
   onPurge?: (id: string, name: string) => void;
   onBlock?: (id: string, name: string) => void;
@@ -74,13 +150,13 @@ export interface DatabankCardProps {
   onDeletePhoto?: (spotId: string, photoIndex: number) => void;
   onAssignPhotoType?: (spotId: string, photoIndex: number, fieldType: string) => void;
   onUploadPhoto?: (spotId: string, file: File) => void;
-  onPublishToggle?: (spot: any) => void;
+  onPublishToggle?: (spot: SpotRecord) => void;
   proxyImg: (url: string | null) => string | null;
 }
 
 export const DatabankCard: React.FC<DatabankCardProps> = ({ 
   spot, variant = 'detailed', readOnly = false,
-  onEdit, onReset, onPurge, onBlock, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto, onPublishToggle, proxyImg
+  onEdit, onReset, onBlock, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto, onPublishToggle, proxyImg
 }) => {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [showTypeMenu, setShowTypeMenu] = useState(false);
@@ -103,25 +179,26 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
     setPhotoIndex(0);
   }, [spot.id]);
 
-  const _ph = spot.photos as any[] | null; 
-  const _cd = spot.candidate_photos as any;
+  const _ph = spot.photos as (string | PhotoItem)[] | null; 
+  const _cd = spot.candidate_photos as CandidatePhotos | PhotoItem[] | null;
   const safePh = Array.isArray(_ph) ? _ph : [];
   
   const validPhotoIndex = photoIndex >= safePh.length ? 0 : photoIndex;
-  const rawPhoto = (typeof safePh[validPhotoIndex] === 'string' ? safePh[validPhotoIndex] : safePh[validPhotoIndex]?.url) ?? (_cd?.street_view_url ?? (_cd?.[0]?.url ?? null));
+  const rawPhoto = (typeof safePh[validPhotoIndex] === 'string' ? safePh[validPhotoIndex] : (safePh[validPhotoIndex] as PhotoItem)?.url) ?? 
+    ((_cd as CandidatePhotos)?.street_view_url ?? (Array.isArray(_cd) ? (_cd[0] as PhotoItem)?.url : null));
   const photo = proxyImg(rawPhoto);
   
   const openStatus = isOpenNow(toHoursArr(spot.opening_hours));
   const ratingNum  = spot.rating ? parseFloat(String(spot.rating)) : null;
-  const proShop    = spot.has_pro_shop || (spot as any).has_proshop;
+  const proShop    = spot.has_pro_shop || spot.has_proshop;
   const adultNight = spot.has_adult_night;
   const photoCount = (safePh.length);
-  const candCount  = (_cd?.street_view_url ? 1 : 0);
+  const candCount  = ((_cd as CandidatePhotos)?.street_view_url ? 1 : 0);
   // Guard against literal "null" strings stored by the AI
-  const nullGuard = (v: any) => (!v || v === 'null' || v === 'NULL') ? null : v;
-  const igUrl      = nullGuard((spot as any).instagram_url);
-  const fbUrl      = nullGuard((spot as any).facebook_url);
-  const ttUrl      = nullGuard((spot as any).tiktok_url);
+  const nullGuard = (v: unknown): string | null => (!v || v === 'null' || v === 'NULL') ? null : String(v);
+  const igUrl      = nullGuard(spot.instagram_url);
+  const fbUrl      = nullGuard(spot.facebook_url);
+  const ttUrl      = nullGuard(spot.tiktok_url);
   const hours      = toHoursArr(spot.opening_hours);
   const adultSched = spot.adult_night_schedule;
 
@@ -203,9 +280,32 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
         </div>
         <div style={{ padding:'8px 10px', flex:1, display:'flex', flexDirection:'column', justifyContent:'center' }}>
           <div style={{ fontWeight:800, fontSize:'0.8rem', lineHeight:1.1, marginBottom:'2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{spot.name}</div>
-          <div style={{ fontSize:'0.6rem', color:'rgba(255,255,255,0.45)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize:'0.6rem', color:'rgba(255,255,255,0.45)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: getEmails(spot.email_addresses).length > 0 ? '4px' : '0' }}>
             {[spot.city, spot.state].filter(Boolean).join(', ')}
           </div>
+          {(() => {
+            const emails = getEmails(spot.email_addresses);
+            if (emails.length === 0) return null;
+            const firstEmail = emails[0];
+            const extraCount = emails.length - 1;
+            return (
+              <div style={{ 
+                fontSize: '0.58rem', 
+                color: '#c084fc', 
+                textShadow: '0 0 4px rgba(168,85,247,0.4)',
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '3px',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
+              }} title={emails.join(', ')}>
+                <span>📧</span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{firstEmail}</span>
+                {extraCount > 0 && <span style={{ opacity: 0.6 }}>({extraCount}+)</span>}
+              </div>
+            );
+          })()}
         </div>
       </div>
     );
@@ -304,7 +404,7 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
           {adultNight && <span style={{ padding:'2px 8px', borderRadius:'12px', fontSize:'0.6rem', fontWeight:700, background:'rgba(233,30,99,0.15)', border:'1px solid rgba(233,30,99,0.35)', color:'#f48fb1' }}>18+ Night</span>}
           {proShop && <span style={{ padding:'2px 8px', borderRadius:'12px', fontSize:'0.6rem', fontWeight:700, background:'rgba(255,152,0,0.15)', border:'1px solid rgba(255,152,0,0.35)', color:'#ffcc80' }}>Pro Shop</span>}
           {spot.has_rental && <span style={{ padding:'2px 8px', borderRadius:'12px', fontSize:'0.6rem', fontWeight:700, background:'rgba(33,150,243,0.15)', border:'1px solid rgba(33,150,243,0.3)', color:'#90caf9' }}>Rentals</span>}
-          {(spot as any).hosts_derby && <span style={{ padding:'2px 8px', borderRadius:'12px', fontSize:'0.6rem', fontWeight:700, background:'rgba(76,175,80,0.15)', border:'1px solid rgba(76,175,80,0.3)', color:'#a5d6a7' }}>Derby</span>}
+          {spot.hosts_derby && <span style={{ padding:'2px 8px', borderRadius:'12px', fontSize:'0.6rem', fontWeight:700, background:'rgba(76,175,80,0.15)', border:'1px solid rgba(76,175,80,0.3)', color:'#a5d6a7' }}>Derby</span>}
           {spot.surface_type && <span style={{ padding:'2px 8px', borderRadius:'12px', fontSize:'0.6rem', fontWeight:700, background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.12)', color:'rgba(255,255,255,0.5)' }}>{String(spot.surface_type)}</span>}
         </div>
 
@@ -330,15 +430,15 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
         )}
 
         {/* Adult night */}
-        {(spot.has_adult_night || adultSched || (spot as any).adult_night_details) && (
+        {(spot.has_adult_night || adultSched || spot.adult_night_details) && (
           <div style={{ borderRadius: '6px', background: 'rgba(233,30,99,0.08)', border: '1px solid rgba(233,30,99,0.2)', overflow: 'hidden' }}>
             <div style={{ padding: '5px 8px', background: 'rgba(233,30,99,0.14)', display: 'flex', alignItems: 'center', gap: '5px' }}>
               <span style={{ color: '#f48fb1', fontWeight: 800, fontSize: '0.63rem', letterSpacing: '0.05em' }}>18+ ADULT NIGHT</span>
             </div>
-            {(spot as any).adult_night_details && (
-              <div style={{ padding: '5px 8px', color: 'rgba(255,255,255,0.5)', fontSize: '0.66rem', lineHeight: 1.4 }}>{(spot as any).adult_night_details}</div>
+            {spot.adult_night_details && (
+              <div style={{ padding: '5px 8px', color: 'rgba(255,255,255,0.5)', fontSize: '0.66rem', lineHeight: 1.4 }}>{spot.adult_night_details}</div>
             )}
-            {adultSched && !(spot as any).adult_night_details && (
+            {adultSched && !spot.adult_night_details && (
               <div style={{ padding: '5px 8px', color: 'rgba(255,255,255,0.4)', fontSize: '0.66rem' }}>{typeof adultSched === 'object' ? JSON.stringify(adultSched) : String(adultSched)}</div>
             )}
           </div>
@@ -349,10 +449,12 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
           let priceLabel = spot.price_range || '';
           if (!priceLabel && spot.pricing_data) {
             try {
-              const pd = typeof spot.pricing_data === 'string' ? JSON.parse(spot.pricing_data) : spot.pricing_data;
+              const pd = (typeof spot.pricing_data === 'string' ? JSON.parse(spot.pricing_data) : spot.pricing_data) as Record<string, unknown> | null;
               if (pd?.priceAmount) priceLabel = `$${pd.priceAmount} admission`;
               else if (pd?.adult) priceLabel = `Adult: $${pd.adult}`;
-            } catch {}
+            } catch {
+              /* Ignore pricing JSON parsing error */
+            }
           }
           // 3-state guard: null = unknown (don't render), false = confirmed free, true = confirmed paid
           const feeStatus =
@@ -377,12 +479,58 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
         )}
 
         {/* Phone */}
-        {(spot.phone || (spot as any).phone_number) && (
+        {(spot.phone || spot.phone_number) && (
           <div style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.45)' }}>
             <span style={{ color:'rgba(255,255,255,0.25)', marginRight:'4px' }}>Ph:</span>
-            {spot.phone || (spot as any).phone_number}
+            {spot.phone || spot.phone_number}
           </div>
         )}
+
+        {/* Emails */}
+        {(() => {
+          const emails = getEmails(spot.email_addresses);
+          if (emails.length === 0) return null;
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.05em' }}>EMAILS</span>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {emails.map((email) => (
+                  <a
+                    key={email}
+                    href={`mailto:${email}`}
+                    style={{
+                      fontSize: '0.65rem',
+                      color: '#c084fc',
+                      textDecoration: 'none',
+                      padding: '3px 8px',
+                      borderRadius: '10px',
+                      border: '1px solid rgba(168,85,247,0.35)',
+                      background: 'rgba(168,85,247,0.1)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.2s',
+                      boxShadow: '0 0 6px rgba(168,85,247,0.15)',
+                    }}
+                    onMouseEnter={e => {
+                      (e.currentTarget as HTMLElement).style.background = 'rgba(168,85,247,0.2)';
+                      (e.currentTarget as HTMLElement).style.boxShadow = '0 0 10px rgba(168,85,247,0.4)';
+                      (e.currentTarget as HTMLElement).style.borderColor = 'rgba(168,85,247,0.6)';
+                    }}
+                    onMouseLeave={e => {
+                      (e.currentTarget as HTMLElement).style.background = 'rgba(168,85,247,0.1)';
+                      (e.currentTarget as HTMLElement).style.boxShadow = '0 0 6px rgba(168,85,247,0.15)';
+                      (e.currentTarget as HTMLElement).style.borderColor = 'rgba(168,85,247,0.35)';
+                    }}
+                  >
+                    <span>📧</span>
+                    <span>{email}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Social links */}
         {(igUrl || fbUrl || ttUrl) && (
