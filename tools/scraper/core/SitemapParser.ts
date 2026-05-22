@@ -8,7 +8,8 @@
  *   1. GET /sitemap.xml
  *   2. GET /sitemap_index.xml  → flatten child sitemaps
  *   3. GET /robots.txt         → look for Sitemap: directive
- *   4. Graceful empty fallback — never throws
+ *   4. Homepage nav-menu link discovery (fetch HTML, extract <a> hrefs)
+ *   5. Graceful empty fallback — never throws
  *
  * Returns URLs bucketed by content type so each engine can
  * target exactly the pages it needs.
@@ -198,6 +199,63 @@ export async function parseSitemap(websiteUrl: string): Promise<SitemapResult> {
         if (directiveXml) allLocs = extractLocsFromXml(directiveXml);
       }
     }
+  }
+
+  // ── Attempt 4: Full shallow spider — discover ALL pages ──────────────────
+  // Most rink/skatepark sites have 10-20 pages total. We can afford to
+  // spider the entire site: homepage → all links → follow each → extract more.
+  // Every discovered URL gets scored and bucketed automatically.
+  if (allLocs.length === 0) {
+    const MAX_SPIDER_URLS = 40;
+    const visited = new Set<string>();
+    const queue: string[] = [origin, origin + '/'];
+
+    /** Extract all same-origin <a> hrefs from raw HTML */
+    const extractLinks = (html: string): string[] => {
+      const linkRegex = /<a\s+[^>]*href=["']([^"'#]+)["'][^>]*>/gi;
+      let m: RegExpExecArray | null;
+      const links: string[] = [];
+      while ((m = linkRegex.exec(html)) !== null) {
+        let href = m[1].trim();
+        if (!href || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) continue;
+        // Strip query params and fragments for dedup
+        if (href.startsWith('/')) href = origin + href;
+        else if (!href.startsWith('http')) href = origin + '/' + href;
+        // Only same-origin
+        try { if (new URL(href).origin !== origin) continue; } catch { continue; }
+        // Normalize: strip trailing slash, lowercase
+        href = href.replace(/\/+$/, '').split('?')[0].split('#')[0];
+        if (href && !visited.has(href)) links.push(href);
+      }
+      return links;
+    };
+
+    // Level 1: Fetch homepage, discover all top-level links
+    const homepageHtml = await fetchText(origin);
+    if (homepageHtml) {
+      const level1Links = extractLinks(homepageHtml);
+      for (const link of level1Links) {
+        if (visited.size >= MAX_SPIDER_URLS) break;
+        visited.add(link);
+        queue.push(link);
+      }
+
+      // Level 2: Follow each L1 page and extract ITS links too
+      // (catches sub-pages like /about/staff, /events/adult-night, etc.)
+      for (const pageUrl of [...queue].slice(0, 20)) {
+        if (visited.size >= MAX_SPIDER_URLS) break;
+        if (pageUrl === origin || pageUrl === origin + '/') continue; // already fetched
+        const pageHtml = await fetchText(pageUrl, 5000);
+        if (!pageHtml) continue;
+        const level2Links = extractLinks(pageHtml);
+        for (const link of level2Links) {
+          if (visited.size >= MAX_SPIDER_URLS) break;
+          visited.add(link);
+        }
+      }
+    }
+
+    allLocs = [...visited];
   }
 
   // De-duplicate

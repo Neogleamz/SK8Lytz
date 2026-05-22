@@ -138,13 +138,16 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 // ─── Pre-Crawl External Source Fetchers (no Puppeteer) ───────────────────────
 
-async function fetchExternalText(url: string, label: string): Promise<string> {
+async function fetchExternalText(url: string, label: string, onProgress?: (msg: string) => void): Promise<string> {
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
       signal: AbortSignal.timeout(10000),
     });
-    if (!res.ok) return '';
+    if (!res.ok) {
+      onProgress?.(`[Detective] ⚠️ ${label} fetch failed: HTTP ${res.status} ${res.statusText}`);
+      return '';
+    }
     const html = await res.text();
     // Extract JSON-LD blocks
     const jsonLdMatches: string[] = [];
@@ -161,8 +164,12 @@ async function fetchExternalText(url: string, label: string): Promise<string> {
     if (ogTitle) result += `Title: ${ogTitle}\n`;
     if (ogImage) result += `og:image: ${ogImage}\n`;
     result += bodyText;
+    onProgress?.(`[Detective] ✓ ${label}: ${bodyText.length} chars, ${jsonLdMatches.length} JSON-LD blocks`);
     return result;
-  } catch { return ''; }
+  } catch (err: any) {
+    onProgress?.(`[Detective] ⚠️ ${label} fetch error: ${err.message}`);
+    return '';
+  }
 }
 
 async function fetchYelpData(name: string, city: string, state: string, existingYelpUrl?: string): Promise<{ text: string; photos_url: string | null; og_image: string | null }> {
@@ -275,32 +282,65 @@ export async function executeDetective(
   const allMailtos:string[]=[];
   let browser:any=null;
 
+  // ── Fix #8: Extract Google Places photo references from raw_data ──
+  let googlePhotoRefs: string[] = [];
   try {
-    if (!spotContext.website) {
-    onProgress('[Detective] No website.'); coreText=`Facility: ${spotContext.name}. ${spotContext.city}, ${spotContext.state}. No website.`; amenityText=coreText;
-  } else if (isSocialCrawlBlocked(spotContext.website)) {
-    onProgress('[Detective] Social-only.'); coreText=`Facility: ${spotContext.name}. ${spotContext.city}, ${spotContext.state}. No traditional website.`; amenityText=coreText;
-  } else {
+    const rawData = typeof spotContext.raw_data === 'string' ? JSON.parse(spotContext.raw_data) : (spotContext.raw_data || {});
+    if (rawData.photos?.length) {
+      const GMAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
+      if (GMAPS_KEY) {
+        googlePhotoRefs = rawData.photos.slice(0, 5)
+          .map((p: any) => p.photo_reference || p)
+          .filter((ref: any) => typeof ref === 'string' && ref.length > 10)
+          .map((ref: string) => `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200&photo_reference=${ref}&key=${GMAPS_KEY}`);
+        if (googlePhotoRefs.length > 0) onProgress(`[Detective] 🗺️ Extracted ${googlePhotoRefs.length} Google Places photo refs from raw_data`);
+      }
+    }
+  } catch {}
+
+  // ── Separate text buckets for priority ordering (Fix #1) ──
+  let externalText = ''; // Yelp, Facebook, Google Places (low priority — appended LAST)
+  let priorityText = ''; // Targeted sitemap pages (high priority — prepended FIRST)
+
+  try {
+    // ── Always fetch external sources regardless of website type ──
+    const isSocialOnly = spotContext.website && isSocialCrawlBlocked(spotContext.website);
+    const hasWebsite = !!spotContext.website;
+
+    // Yelp + Google Places fetched for ALL records (Fix #4: social-only still gets data)
+    onProgress('[Detective] Fetching Yelp...');
+    yelpData = await fetchYelpData(spotContext.name, spotContext.city, spotContext.state, spotContext.yelp_url);
+    if (yelpData.text) externalText += '\n\n' + yelpData.text;
+    await sleep(EXTERNAL_SOURCE_DELAY);
+
+    onProgress('[Detective] Fetching Facebook...');
+    fbData = await fetchFacebookData(spotContext.facebook_url || null);
+    if (fbData.text) externalText += '\n\n' + fbData.text;
+    await sleep(EXTERNAL_SOURCE_DELAY);
+
+    onProgress('[Detective] Fetching Google Places...');
+    const gt = await fetchGooglePlacesWeb(spotContext.google_place_id || null);
+    if (gt) externalText += '\n\n' + gt;
+
+    if (!hasWebsite) {
+      onProgress('[Detective] No website — using external sources only.');
+      coreText = `Facility: ${spotContext.name}. ${spotContext.city}, ${spotContext.state}.\n` + externalText;
+      amenityText = coreText;
+    } else if (isSocialOnly) {
+      onProgress('[Detective] Social-only website — using external sources only.');
+      coreText = `Facility: ${spotContext.name}. ${spotContext.city}, ${spotContext.state}. Social media only.\n` + externalText;
+      amenityText = coreText;
+    } else {
     onProgress('[Detective] Fetching sitemap...');
     sitemap=await parseSitemap(spotContext.website);
-    onProgress(`[Detective] schedule(${sitemap.schedule_urls.length}) pricing(${sitemap.pricing_urls.length}) gallery(${sitemap.gallery_urls.length})`);
-    onProgress('[Detective] Fetching Yelp...');
-    yelpData=await fetchYelpData(spotContext.name,spotContext.city,spotContext.state,spotContext.yelp_url);
-    if(yelpData.text) { coreText+='\n\n'+yelpData.text; amenityText+='\n\n'+yelpData.text; }
-    await sleep(EXTERNAL_SOURCE_DELAY);
-    onProgress('[Detective] Fetching Facebook...');
-    fbData=await fetchFacebookData(spotContext.facebook_url||null);
-    if(fbData.text) { coreText+='\n\n'+fbData.text; amenityText+='\n\n'+fbData.text; }
-    await sleep(EXTERNAL_SOURCE_DELAY);
-    onProgress('[Detective] Fetching Google Places...');
-    const gt=await fetchGooglePlacesWeb(spotContext.google_place_id||null);
-    if(gt) { coreText+='\n\n'+gt; amenityText+='\n\n'+gt; }
+    onProgress(`[Detective] 🕷️ Sitemap: schedule(${sitemap.schedule_urls.length}) pricing(${sitemap.pricing_urls.length}) contact(${sitemap.contact_urls.length}) gallery(${sitemap.gallery_urls.length}) about(${sitemap.about_urls.length}) total(${sitemap.all_urls.length})`);
 
     browser=await puppeteer.launch({headless:isHeadless?'new':false,protocolTimeout:60000,args:['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage']});
     const page=await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36');
       await page.setViewport({width:1280,height:800});
-      const targeted=[...new Set([...sitemap.schedule_urls.slice(0,3),...sitemap.pricing_urls.slice(0,3),...sitemap.about_urls.slice(0,2),...sitemap.events_urls.slice(0,2),...sitemap.contact_urls.slice(0,3)])];
+      // Fix #7: Include gallery_urls in targeted crawl (SitemapParser spider handles discovery)
+      const targeted=[...new Set([...sitemap.schedule_urls.slice(0,3),...sitemap.pricing_urls.slice(0,3),...sitemap.about_urls.slice(0,2),...sitemap.events_urls.slice(0,2),...sitemap.contact_urls.slice(0,3),...sitemap.gallery_urls.slice(0,2)])];
       const crawlUrls=[spotContext.website,...targeted].slice(0,MAX_PAGES_PER_RECORD);
       const PAGE_SCORE_RULES=[{pattern:/hours|schedule|session|times|calendar|events|open.?skate/i,score:10},{pattern:/adult.?night|18\+|21\+/i,score:10},{pattern:/pricing|price|admission|rates|tickets/i,score:9},{pattern:/about|story|history|facility|rink/i,score:8},{pattern:/contact|location|directions|email|info/i,score:10}];
       
@@ -311,15 +351,16 @@ export async function executeDetective(
         const isOpsUrl = url === spotContext.website || /schedule|pricing|admission|rates|calendar|events/i.test(url);
         const isAmenityUrl = url === spotContext.website || /about|story|history|facility|rink/i.test(url);
 
+        // Fix #1: Targeted pages go into priorityText (prepended), NOT appended to external noise
         if(pg.jsonLd) {
           const ld = `\n\n[JSON-LD: ${url}]\n${pg.jsonLd}`;
-          if(isOpsUrl) coreText+=ld;
-          if(isAmenityUrl) amenityText+=ld;
+          if(isOpsUrl) priorityText += ld;
+          if(isAmenityUrl) amenityText += ld;
         }
         if(pg.text) {
           const txt = `\n\n[PAGE: ${url}]\n${pg.text}`;
-          if(isOpsUrl) coreText+=txt;
-          if(isAmenityUrl) amenityText+=txt;
+          if(isOpsUrl) priorityText += txt;
+          if(isAmenityUrl) amenityText += txt;
         }
         if(!ogImage&&pg.ogImage&&!pg.ogImage.includes('placeholder')) ogImage=pg.ogImage;
         domImages.push(...pg.images.slice(0,5));
@@ -359,9 +400,14 @@ export async function executeDetective(
           }
         }catch{}
       }
+    // Fix #1: Assemble final text — priority pages FIRST, external noise LAST
+    coreText = priorityText + '\n\n' + externalText;
+    amenityText = priorityText + '\n\n' + externalText;
     }
   } catch (err: any) {
     onProgress(`[Detective] Pre-crawl phase error: ${err.message}`);
+    // Ensure coreText has at least external data if crawl crashed
+    if (!coreText && externalText) { coreText = externalText; amenityText = externalText; }
   }
 
   try {
@@ -396,17 +442,49 @@ export async function executeDetective(
     return obj;
   };
 
+  // ── Fix #2: Parse JSON-LD structured data directly ──
+  const jsonLdFields: Record<string, any> = {};
+  const jsonLdRegex = /\[JSON-LD:[^\]]*\]\n([\s\S]*?)(?=\n\n|$)/g;
+  let jsonLdMatch: RegExpExecArray | null;
+  while ((jsonLdMatch = jsonLdRegex.exec(coreText + '\n' + amenityText)) !== null) {
+    try {
+      const parsed = JSON.parse(jsonLdMatch[1].trim());
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+      for (const item of items) {
+        if (item.telephone && !jsonLdFields.phone_number) jsonLdFields.phone_number = item.telephone;
+        if (item.priceRange && !jsonLdFields.price_range) jsonLdFields.price_range = item.priceRange;
+        if (item.image && !jsonLdFields.logo_url) jsonLdFields.logo_url = typeof item.image === 'string' ? item.image : item.image?.url;
+        if (item.openingHoursSpecification && !jsonLdFields.hours) {
+          const hoursMap: Record<string, string> = {};
+          for (const spec of (Array.isArray(item.openingHoursSpecification) ? item.openingHoursSpecification : [item.openingHoursSpecification])) {
+            const days = Array.isArray(spec.dayOfWeek) ? spec.dayOfWeek : [spec.dayOfWeek];
+            for (const day of days) {
+              const dayName = typeof day === 'string' ? day.replace('https://schema.org/', '').replace('http://schema.org/', '') : day;
+              if (dayName && spec.opens && spec.closes) hoursMap[dayName] = `${spec.opens}-${spec.closes}`;
+            }
+          }
+          if (Object.keys(hoursMap).length > 0) jsonLdFields.hours = hoursMap;
+        }
+        if (item.address) {
+          if (item.address.streetAddress && !jsonLdFields.street_address) jsonLdFields.street_address = item.address.streetAddress;
+        }
+      }
+    } catch {}
+  }
+  if (Object.keys(jsonLdFields).length > 0) onProgress(`[Detective] 📋 JSON-LD direct parse: ${Object.keys(jsonLdFields).join(', ')}`);
+
   if(coreText.trim().length>=50){
     const cSlice=coreText.slice(0, 24000);
     const aSlice=amenityText.slice(0, 24000);
     combinedText = `[OPS CORE]\n${cSlice}\n\n[AMENITIES]\n${aSlice}`;
     
-    onProgress('[Detective] LM Studio Pass 1 (Ops)...');
+    onProgress('[Detective] LM Studio Pass 1 (Ops: hours/pricing/adult-night)...');
     const pass1=await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice}`,detectiveModel,onProgress,'Pass1');
     if(pass1.TOXICITY_ABORT===true) return{aiMetadata:{TOXICITY_ABORT:true},mappedFields:{_simulated_status:'REJECTED'},combinedText,qualityScore:0,passedQualityGate:false,candidatePhotos:null,socialLinks:{instagram_url:null,facebook_url:null,tiktok_url:null,schedule_url:null},flyerUrls};
     
     // ── ESCALATION PROTOCOL ──
     const needsEscalation = !pass1.hours || !pass1.pricing || (pass1.has_adult_night === true && !pass1.adult_night_schedule);
+    let escalationRan = false;
     if (needsEscalation && browser) {
       onProgress('[Detective] 🚨 ESCALATION PROTOCOL: Missing hours/pricing/adult-night. Activating Hound Dog & OCR.');
       const ESCALATION_RULES = [/hours/i, /schedule/i, /pricing/i, /rates/i, /admission/i, /calendar/i, /adult.?night/i, /18\+/i, /21\+/i];
@@ -416,6 +494,7 @@ export async function executeDetective(
       
       const targets = [...new Set(undiscovered)].slice(0, 2);
       if (targets.length > 0) {
+        escalationRan = true;
         const pages = await browser.pages();
         const escPage = pages.length > 0 ? pages[0] : await browser.newPage();
         
@@ -450,26 +529,26 @@ export async function executeDetective(
       }
     }
 
-    const AMENITIES_SCHEMA = {
+    // Fix #9: Merged Pass 2+3 into single combined pass (Amenities + Vibe + Social)
+    const COMBINED_SCHEMA = {
       surface_type:'Floor: wood/maple/concrete/asphalt/sport_court/synthetic.',
+      surface_quality:'Condition 3-5 words.', vibe_score:'0-100.',
       is_indoor:'boolean', has_rental:'boolean', has_pro_shop:'boolean', has_food:'boolean', 
       has_lights:'boolean', has_lockers:'boolean', has_ac:'boolean', has_wifi:'boolean', 
-      has_toilets:'boolean', wheelchair:'boolean', capacity:'integer.'
-    };
-    onProgress('[Detective] LM Studio Pass 2 (Amenities)...');
-    const pass2=await callLMStudio(buildSystem(AMENITIES_SCHEMA),`Website Text:\n${aSlice}`,detectiveModel,onProgress,'Pass2');
-
-    const VIBE_SCHEMA = {
-      surface_quality:'Condition 3-5 words.', vibe_score:'0-100.', derby:'boolean', special_events:'Array.', 
+      has_toilets:'boolean', wheelchair:'boolean', capacity:'integer.',
+      derby:'boolean', special_events:'Array.', 
       operator_name:'Owner name.', operator_description:'1-2 sentences.', cultural_meta:'Significance or null.', 
       adult_night_details:'Details or null.', instagram_url:'URL or null.', facebook_url:'URL or null.', 
       tiktok_url:'URL or null.', schedule_url:'URL or null.', yelp_url:'URL or null.', price_range:'$ to $$$$ or null.', 
       logo_url:'Logo URL or null.', email_addresses:'Array of ALL contact email addresses found for this venue. Include info, events, parties, management, booking — every unique email. Return [] if none found.', ...userSchema
     };
-    onProgress('[Detective] LM Studio Pass 3 (Vibe)...');
-    const pass3=await callLMStudio(buildSystem(VIBE_SCHEMA),`Website Text:\n${aSlice}`,detectiveModel,onProgress,'Pass3');
+    // Fix #11: Use enriched text if escalation ran
+    const pass2Slice = escalationRan ? amenityText.slice(0, 24000) : aSlice;
+    onProgress('[Detective] LM Studio Pass 2 (Amenities + Vibe + Social)...');
+    const pass2=await callLMStudio(buildSystem(COMBINED_SCHEMA),`Website Text:\n${pass2Slice}`,detectiveModel,onProgress,'Pass2-Combined');
 
-    aiMetadata={...pass3,...pass2,...pass1};
+    // Fix #2: JSON-LD fields fill gaps — LLM wins, JSON-LD is fallback
+    aiMetadata={...jsonLdFields,...pass2,...pass1};
   } else onProgress('[Detective] Content too short. Skipping LM Studio.');
 
   const opening_hours=aiMetadata.hours||aiMetadata.opening_hours||spotContext.opening_hours||null;
@@ -531,11 +610,14 @@ export async function executeDetective(
     if(fbData.cover_photo) candidatePhotos.cover_photo_url=fbData.cover_photo;
     if(yelpData.photos_url) candidatePhotos.yelp_photos_url=yelpData.photos_url;
     if(logo_url) candidatePhotos.logo_url=logo_url;
+    // Fix #8: Inject Google Places photo references
+    if(googlePhotoRefs.length > 0) candidatePhotos.google_refs = googlePhotoRefs;
   }
   if(Object.keys(candidatePhotos).length===0) candidatePhotos=null as any;
 
   const qFields=[opening_hours,pricing_data,operator_name,operator_description,surface_type,surface_quality,vibe_score,is_indoor,capacity,has_fee,has_rental,has_pro_shop,has_food,has_lights,has_ac,has_lockers,has_toilets,has_wifi,is_wheelchair_accessible,has_adult_night,adult_night_details,adultNightSchedule,special_events,hosts_derby,instagram_url,facebook_url,tiktok_url,cultural_metadata];
-  const qualityScore=qFields.filter(f=>f!==null&&f!==undefined&&f!==false).length;
+  // Fix #3: false is VALID data (e.g. has_rental:false = confirmed no rental), don't penalize it
+  const qualityScore=qFields.filter(f=>f!==null&&f!==undefined).length;
   // FIX: Truthy check — LM can return hours as a string OR object; Object.keys() throws on strings
   const hasHighValueField=!!(opening_hours)||!!(pricing_data);
   const passedQualityGate=qualityScore>=3&&hasHighValueField;
