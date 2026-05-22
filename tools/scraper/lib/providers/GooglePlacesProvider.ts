@@ -336,7 +336,7 @@ export class GooglePlacesProvider {
           : null,
         business_status: (place as any).business_status ?? null,
         google_maps_url: (place as any).url ?? null,
-        types: place.types ?? null,
+        types: place.types ? (place.types as string[]) : undefined,
       };
     } catch (error: any) {
       console.error(`[GooglePlaces] Details error for ${placeId}:`, error.message);

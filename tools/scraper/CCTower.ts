@@ -157,15 +157,16 @@ app.get('/status', async (req, res) => {
       } catch(e) {}
     }
 
-    const totalCount = db.prepare('SELECT COUNT(*) as cnt FROM local_spots').get().cnt;
-    const totalProcessed = db.prepare('SELECT COUNT(*) as cnt FROM local_spots WHERE last_attempted_at IS NOT NULL').get().cnt;
-    const publishedCount = db.prepare('SELECT COUNT(*) as cnt FROM local_spots WHERE is_published = 1').get().cnt;
-    const pendingCount = db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'PENDING' OR verification_status IS NULL`).get().cnt;
-    const seededCount = db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'SEEDED'`).get().cnt;
-    const enrichedCount = db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'ENRICHED'`).get().cnt;
-    const deepCrawledCount = db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'DEEP_CRAWLED'`).get().cnt;
-    const mediaReadyCount = db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'MEDIA_READY'`).get().cnt;
-    const candidatesCount = db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE candidate_photos IS NOT NULL AND photos IS NULL`).get().cnt;
+    const totalCount = (db.prepare('SELECT COUNT(*) as cnt FROM local_spots').get() as { cnt: number }).cnt;
+    const totalProcessed = (db.prepare('SELECT COUNT(*) as cnt FROM local_spots WHERE last_attempted_at IS NOT NULL').get() as { cnt: number }).cnt;
+    const publishedCount = (db.prepare('SELECT COUNT(*) as cnt FROM local_spots WHERE is_published = 1').get() as { cnt: number }).cnt;
+    const pendingCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'PENDING' OR verification_status IS NULL`).get() as { cnt: number }).cnt;
+    const seededCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'SEEDED'`).get() as { cnt: number }).cnt;
+    const enrichedCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'ENRICHED'`).get() as { cnt: number }).cnt;
+    const deepCrawledCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'DEEP_CRAWLED'`).get() as { cnt: number }).cnt;
+    const mediaReadyCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'MEDIA_READY'`).get() as { cnt: number }).cnt;
+    const candidatesCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE candidate_photos IS NOT NULL AND photos IS NULL`).get() as { cnt: number }).cnt;
+
 
     res.json({
       isRunning: running,
@@ -526,12 +527,12 @@ app.post('/api/sandbox', async (req, res) => {
       // --- Smart City Spider Logic ---
       if (spot_city) {
         try {
-          const links = await page.evaluate(() => {
+          const links = (await page.evaluate(() => {
             return Array.from(document.querySelectorAll('a')).map(a => ({
               text: (a.innerText || '').toLowerCase(),
               href: (a.href || '').toLowerCase()
             }));
-          });
+          })) as { text: string; href: string }[];
           
           const currentHostname = new URL(url).hostname;
           const internalLinks = links.filter(l => {
@@ -692,7 +693,7 @@ app.post('/api/harvest', async (req, res) => {
   const { state, target_facilities } = req.body;
   if (!state || !US_STATES.includes(state)) return res.status(400).json({ error: 'Invalid state code' });
   
-  processState(state, target_facilities || []).catch(e => console.error(e));
+  processState(state, target_facilities || []).catch(console.error);
   res.json({ success: true, message: `Started harvest for US-${state}` });
 });
 
@@ -701,7 +702,7 @@ app.post('/api/harvest/force', async (req, res) => {
   if (!state) return res.status(400).json({ error: 'State code required' });
   
   const { processState } = require('./USANationalHarvest');
-  processState(state, [], true).catch(e => console.error(e));
+  processState(state, [], true).catch(console.error);
   res.json({ success: true, message: `Forced re-harvest started for ${state}` });
 });
 
@@ -710,7 +711,7 @@ app.post('/api/discover', async (req, res) => {
   if (!stateFull) return res.status(400).json({ error: 'State name required' });
   
   const { runDirectDiscovery } = require('./Discoverer');
-  runDirectDiscovery(stateFull).catch(e => console.error(e));
+  runDirectDiscovery(stateFull).catch(console.error);
   res.json({ success: true, message: `Started direct discovery for ${stateFull}` });
 });
 
@@ -1271,7 +1272,7 @@ app.get('/api/sniper/stream', async (req, res) => {
   try {
     // ── Fetch spot record (read-only) ──────────────────────────────────────
     send('log', '[Sniper] 🎯 Fetching spot record from local database...');
-    const spot = db.prepare('SELECT * FROM local_spots WHERE id = ?').get(String(spot_id));
+    const spot = db.prepare('SELECT * FROM local_spots WHERE id = ?').get(String(spot_id)) as LocalSpot | undefined;
     const fetchError = !spot ? new Error('Spot not found') : null;
 
     if (fetchError || !spot) {

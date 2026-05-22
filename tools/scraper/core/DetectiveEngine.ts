@@ -232,8 +232,8 @@ async function callLMStudio(
 
 // ─── Page Crawl Helper ───────────────────────────────────────────────────────
 
-async function crawlPage(page: any, url: string, onProgress: (m: string) => void): Promise<{ text:string; jsonLd:string; ogImage:string|null; images:Array<{src:string;alt:string;parentClass:string}>; iframes:string[]; links:Array<{href:string;text:string}>; mailtos:string[]; }> {
-  const empty = { text:'', jsonLd:'', ogImage:null, images:[], iframes:[], links:[], mailtos:[] };
+async function crawlPage(page: any, url: string, onProgress: (m: string) => void): Promise<{ text:string; jsonLd:string; ogImage:string|null; images:Array<{src:string;alt:string;parentClass:string}>; iframes:string[]; links:Array<{href:string;text:string}>; mailtos:string[]; fullText:string; }> {
+  const empty = { text:'', jsonLd:'', ogImage:null, images:[], iframes:[], links:[], mailtos:[], fullText:'' };
   if (url.toLowerCase().endsWith('.pdf')) {
     try { const fetchFn = require('node-fetch'); const buf = await (await fetchFn(url)).buffer(); const pdfData = await pdfParse(buf); return { ...empty, text:`[PDF: ${url}]\n${pdfData.text}` }; } catch { return empty; }
   }

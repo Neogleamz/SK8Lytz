@@ -768,8 +768,32 @@ export const addBlocklistKeyword = (keyword: string) => {
   db.prepare(`INSERT INTO scraper_blocklist_keywords (keyword) VALUES (?)`).run(keyword);
 };
 
+export interface FieldRegistryItem {
+  id: string;
+  field_name: string;
+  phase_id: number;
+  display_label: string;
+  data_type: string;
+  sort_order: number;
+  importance_level: number;
+}
+
+export interface PipelineStats {
+  total: number;
+  seeded: number;
+  deep_crawled_count: number;
+  media_ready: number;
+  published: number;
+  has_website: number;
+  detective_queue: number;
+  photographer_queue: number;
+  has_candidates: number;
+  publisher_queue: number;
+  has_photos: number;
+}
+
 // --- PIPELINE STATS METHODS ---
-export const getPipelineStats = (states: string[] = []) => {
+export const getPipelineStats = (states: string[] = []): PipelineStats => {
   let whereClause = '1=1';
   let params: any[] = [];
   
@@ -795,13 +819,13 @@ export const getPipelineStats = (states: string[] = []) => {
     WHERE ${whereClause}
   `;
   
-  const result = db.prepare(query).get(...params);
+  const result = db.prepare(query).get(...params) as PipelineStats;
   return result;
 };
 
 // --- Pipeline Field Registry ---
-export function getFieldRegistry() {
-  return db.prepare('SELECT * FROM pipeline_field_registry ORDER BY sort_order ASC').all();
+export function getFieldRegistry(): FieldRegistryItem[] {
+  return db.prepare('SELECT * FROM pipeline_field_registry ORDER BY sort_order ASC').all() as FieldRegistryItem[];
 }
 
 export function upsertFieldRegistryItem(item: any) {
@@ -818,3 +842,4 @@ export function upsertFieldRegistryItem(item: any) {
   `);
   stmt.run(item);
 }
+
