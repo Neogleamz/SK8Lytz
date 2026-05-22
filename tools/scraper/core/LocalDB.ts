@@ -199,6 +199,26 @@ if (!colsV2.find(c => c.name === 'price_range')) {
 if (!colsV2.find((c: any) => c.name === 'email_addresses')) {
   db.exec(`ALTER TABLE local_spots ADD COLUMN email_addresses TEXT`);
 }
+if (!colsV2.find((c: any) => c.name === 'field_confidence')) {
+  db.exec(`ALTER TABLE local_spots ADD COLUMN field_confidence TEXT`); // JSON: { field_name: { source, confidence, extracted_at } }
+}
+
+// ── Field Corrections Table (tracks user edits as training data) ──────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS field_corrections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    spot_id TEXT NOT NULL,
+    field_name TEXT NOT NULL,
+    old_value TEXT,
+    new_value TEXT,
+    old_source TEXT,
+    old_confidence REAL,
+    corrected_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (spot_id) REFERENCES local_spots(id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_corrections_spot ON field_corrections(spot_id);
+  CREATE INDEX IF NOT EXISTS idx_corrections_field ON field_corrections(field_name);
+`);
 
 // Migrate field registry phase_ids from old 5-phase to new 4-phase numbering (ONE-TIME)
 // Old: 1=Scout, 2=Spider(dead), 3=Detective, 4=Photographer, 5=Publisher
@@ -323,6 +343,7 @@ const rowToObj = (row: any) => {
   obj.special_events = safeJsonParse(obj.special_events);
   obj.adult_night_schedule = safeJsonParse(obj.adult_night_schedule);
   obj.email_addresses = safeJsonParse(obj.email_addresses);
+  obj.field_confidence = safeJsonParse(obj.field_confidence);
   obj.raw_data = safeJsonParse(obj.raw_data);
 
   // Convert additional booleans
@@ -382,7 +403,8 @@ export const upsertLocalSpot = (spot: any) => {
       has_toilets, has_food, has_ac, has_lockers, capacity, hosts_derby, surface_quality,
       vibe_score, cultural_metadata, instagram_url, facebook_url, tiktok_url, schedule_url,
       pricing_data, special_events, adult_night_schedule,
-      email_addresses
+      email_addresses,
+      field_confidence
     ) VALUES (
       @id, @name, @lat, @lng, @city, @state, @zip, @street_address, @phone_number, @website,
       @google_place_id, @google_maps_url, @business_status, @rating, @user_ratings_total,
@@ -396,7 +418,8 @@ export const upsertLocalSpot = (spot: any) => {
       @has_toilets, @has_food, @has_ac, @has_lockers, @capacity, @hosts_derby, @surface_quality,
       @vibe_score, @cultural_metadata, @instagram_url, @facebook_url, @tiktok_url, @schedule_url,
       @pricing_data, @special_events, @adult_night_schedule,
-      @email_addresses
+      @email_addresses,
+      @field_confidence
     )
     ON CONFLICT(id) DO UPDATE SET
       -- ── Identity fields: always accept fresh data from Scout ──
@@ -463,7 +486,8 @@ export const upsertLocalSpot = (spot: any) => {
       pricing_data = COALESCE(excluded.pricing_data, local_spots.pricing_data),
       special_events = COALESCE(excluded.special_events, local_spots.special_events),
       adult_night_schedule = COALESCE(excluded.adult_night_schedule, local_spots.adult_night_schedule),
-      email_addresses = COALESCE(excluded.email_addresses, local_spots.email_addresses)
+      email_addresses = COALESCE(excluded.email_addresses, local_spots.email_addresses),
+      field_confidence = COALESCE(excluded.field_confidence, local_spots.field_confidence)
   `);
 
   const id = spot.id || Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -535,7 +559,8 @@ export const upsertLocalSpot = (spot: any) => {
     pricing_data: safeJsonStringify(spot.pricing_data),
     special_events: safeJsonStringify(spot.special_events),
     adult_night_schedule: safeJsonStringify(spot.adult_night_schedule),
-    email_addresses: safeJsonStringify(spot.email_addresses)
+    email_addresses: safeJsonStringify(spot.email_addresses),
+    field_confidence: safeJsonStringify(spot.field_confidence)
   });
 
   return id;
@@ -579,6 +604,62 @@ export const updateLocalSpot = (id: string, updates: any) => {
 
   const stmt = db.prepare(`UPDATE local_spots SET ${setClauses.join(', ')} WHERE id = @id`);
   stmt.run(params);
+};
+
+/**
+ * Log a field correction (user edit) as training data.
+ * Called when a user manually changes a field value via the dashboard.
+ */
+export const logFieldCorrection = (spotId: string, fieldName: string, oldValue: any, newValue: any) => {
+  // Look up existing confidence data for this field
+  const spot = db.prepare('SELECT field_confidence FROM local_spots WHERE id = ?').get(spotId) as any;
+  let oldSource = 'unknown';
+  let oldConfidence = 0;
+  if (spot?.field_confidence) {
+    try {
+      const fc = typeof spot.field_confidence === 'string' ? JSON.parse(spot.field_confidence) : spot.field_confidence;
+      if (fc[fieldName]) {
+        oldSource = fc[fieldName].source || 'unknown';
+        oldConfidence = fc[fieldName].confidence || 0;
+      }
+    } catch {}
+  }
+
+  const corrStmt = db.prepare(`
+    INSERT INTO field_corrections (spot_id, field_name, old_value, new_value, old_source, old_confidence)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `);
+  corrStmt.run(
+    spotId,
+    fieldName,
+    typeof oldValue === 'object' ? JSON.stringify(oldValue) : String(oldValue ?? ''),
+    typeof newValue === 'object' ? JSON.stringify(newValue) : String(newValue ?? ''),
+    oldSource,
+    oldConfidence
+  );
+
+  // Update field_confidence for this field to 'user_manual' (1.0)
+  try {
+    const fc = spot?.field_confidence
+      ? (typeof spot.field_confidence === 'string' ? JSON.parse(spot.field_confidence) : spot.field_confidence)
+      : {};
+    fc[fieldName] = { source: 'user_manual', confidence: 1.0, extracted_at: new Date().toISOString() };
+    db.prepare('UPDATE local_spots SET field_confidence = ? WHERE id = ?').run(JSON.stringify(fc), spotId);
+  } catch {}
+};
+
+/**
+ * Get correction stats — which fields get corrected most often.
+ */
+export const getCorrectionStats = () => {
+  return db.prepare(`
+    SELECT field_name, COUNT(*) as correction_count, 
+           AVG(old_confidence) as avg_old_confidence,
+           old_source, MAX(corrected_at) as last_correction
+    FROM field_corrections 
+    GROUP BY field_name, old_source 
+    ORDER BY correction_count DESC
+  `).all();
 };
 
 export const getLocalSpot = (id: string) => {

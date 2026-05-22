@@ -103,6 +103,8 @@ export interface DetectiveResult {
   candidatePhotos: Record<string, any> | null;
   socialLinks: { instagram_url: string|null; facebook_url: string|null; tiktok_url: string|null; schedule_url: string|null };
   flyerUrls: string[];
+  /** Per-field confidence map: { field_name: { source, confidence, extracted_at } } */
+  fieldConfidence: Record<string, { source: string; confidence: number; extracted_at: string }>;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -627,7 +629,54 @@ export async function executeDetective(
   const mappedFieldsRaw={is_indoor,operator_description,operator_name,instagram_url,facebook_url,tiktok_url,schedule_url,opening_hours,adult_night_schedule:adultNightSchedule,has_adult_night,adult_night_details,special_events,pricing_data,has_fee,surface_type,surface_quality,vibe_score,capacity,has_rental,has_pro_shop,has_food,has_lights,has_lockers,has_ac,has_wifi,has_toilets,is_wheelchair_accessible,hosts_derby,cultural_metadata,yelp_url,price_range,logo_url,email_addresses:email_addresses.length>0?email_addresses:null,candidate_photos:candidatePhotos,ai_metadata:Object.keys(aiMetadata).length>0?aiMetadata:null,_simulated_status:passedQualityGate?'DEEP_CRAWLED':'LOW_QUALITY'};
   const mappedFields=sanitize(mappedFieldsRaw);
   
-  return {aiMetadata,mappedFields,combinedText,qualityScore,passedQualityGate,candidatePhotos,socialLinks:{instagram_url,facebook_url,tiktok_url,schedule_url},flyerUrls};
+  // ── Build per-field confidence map ──────────────────────────────────────────
+  const now = new Date().toISOString();
+  const fieldConfidence: Record<string, { source: string; confidence: number; extracted_at: string }> = {};
+
+  const tag = (field: string, source: string, confidence: number) => {
+    if (mappedFields[field] !== null && mappedFields[field] !== undefined) {
+      fieldConfidence[field] = { source, confidence, extracted_at: now };
+    }
+  };
+
+  // JSON-LD parsed fields (highest automated confidence: 0.90)
+  const jsonLdFieldNames = Object.keys(jsonLdFields);
+  const JSON_LD_FIELD_MAP: Record<string, string> = {
+    hours: 'opening_hours', phone_number: 'phone_number', price_range: 'price_range',
+    logo_url: 'logo_url', street_address: 'street_address'
+  };
+  for (const jf of jsonLdFieldNames) {
+    const mapped = JSON_LD_FIELD_MAP[jf] || jf;
+    // Only tag as json_ld if the final value actually came from JSON-LD (not overridden by LLM)
+    if (aiMetadata[jf] === jsonLdFields[jf]) tag(mapped, 'json_ld', 0.90);
+  }
+
+  // LLM Pass 1 fields (ops: hours, pricing, adult night) — confidence 0.70
+  const pass1Fields = ['opening_hours', 'pricing_data', 'has_fee', 'has_adult_night', 'adult_night_schedule', 'adult_night_details'];
+  for (const f of pass1Fields) {
+    if (!fieldConfidence[f]) tag(f, 'llm_pass1', 0.70);
+  }
+
+  // LLM Pass 2 fields (amenities, vibe, social) — confidence 0.60
+  const pass2Fields = ['surface_type','surface_quality','vibe_score','is_indoor','has_rental','has_pro_shop',
+    'has_food','has_lights','has_lockers','has_ac','has_wifi','has_toilets','is_wheelchair_accessible',
+    'hosts_derby','capacity','special_events','operator_name','operator_description','cultural_metadata',
+    'instagram_url','facebook_url','tiktok_url','schedule_url','yelp_url','price_range','logo_url'];
+  for (const f of pass2Fields) {
+    if (!fieldConfidence[f]) tag(f, 'llm_pass2', 0.60);
+  }
+
+  // Regex/mailto extraction (high confidence: 0.80)
+  if (email_addresses.length > 0 && !fieldConfidence['email_addresses']) {
+    tag('email_addresses', 'regex_extraction', 0.80);
+  }
+
+  const confSummary = Object.entries(fieldConfidence).reduce((acc, [, v]) => {
+    acc[v.source] = (acc[v.source] || 0) + 1; return acc;
+  }, {} as Record<string, number>);
+  onProgress(`[Detective] 🎯 Confidence: ${Object.entries(confSummary).map(([s,c]) => `${s}(${c})`).join(' ')}`);
+
+  return {aiMetadata,mappedFields,combinedText,qualityScore,passedQualityGate,candidatePhotos,socialLinks:{instagram_url,facebook_url,tiktok_url,schedule_url},flyerUrls,fieldConfidence};
   } finally {
     if(browser){try{await browser.close();}catch{}}
   }

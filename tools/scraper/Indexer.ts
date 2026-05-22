@@ -193,13 +193,21 @@ async function runIndexer() {
       // Low quality is flagged via ai_metadata.quality_note, not by blocking the pipeline.
       if (!result.passedQualityGate) {
         console.error(`   ⚠️  Low quality (${result.qualityScore}/17) → promoting to DEEP_CRAWLED for Photographer.`);
+        // Merge confidence with existing (preserve user_manual overrides)
+        let existingConf: any = {};
+        try { existingConf = typeof target.field_confidence === 'string' ? JSON.parse(target.field_confidence) : (target.field_confidence || {}); } catch {}
+        const mergedConf = { ...existingConf };
+        for (const [k, v] of Object.entries(result.fieldConfidence)) {
+          if (!mergedConf[k] || mergedConf[k].source !== 'user_manual') mergedConf[k] = v;
+        }
         updateLocalSpot(target.id, {
           verification_status: 'DEEP_CRAWLED',
           is_deep_crawled: true,
           retry_count: (target.retry_count || 0) + 1,
           last_attempted_at: new Date().toISOString(),
           ai_metadata: JSON.stringify({ ...(Object.keys(result.aiMetadata).length > 0 ? result.aiMetadata : (aiMetadata || {})), quality_note: `Low quality score: ${result.qualityScore}/17` }),
-          ...(result.candidatePhotos ? { candidate_photos: JSON.stringify(result.candidatePhotos) } : {})
+          ...(result.candidatePhotos ? { candidate_photos: JSON.stringify(result.candidatePhotos) } : {}),
+          field_confidence: JSON.stringify(mergedConf)
         });
         continue;
       }
@@ -232,17 +240,25 @@ async function runIndexer() {
         // The existing value in the DB stays untouched.
       }
 
+      // Merge confidence with existing (preserve user_manual overrides)
+      let existingConf: any = {};
+      try { existingConf = typeof target.field_confidence === 'string' ? JSON.parse(target.field_confidence) : (target.field_confidence || {}); } catch {}
+      const mergedConf = { ...existingConf };
+      for (const [k, v] of Object.entries(result.fieldConfidence)) {
+        if (!mergedConf[k] || mergedConf[k].source !== 'user_manual') mergedConf[k] = v;
+      }
+
       try {
         updateLocalSpot(target.id, {
           ...finalUpdates,
           ...(result.candidatePhotos ? { candidate_photos: JSON.stringify(result.candidatePhotos) } : {}),
-          // ── Additive-Only: only write ai_metadata if AI returned real data ──
           ...(result.mappedFields?.ai_metadata ? { ai_metadata: JSON.stringify(result.mappedFields.ai_metadata) } : {}),
           verification_status: 'DEEP_CRAWLED',
           is_deep_crawled: true,
           retry_count: 0,
           last_attempted_at: new Date().toISOString(),
-          pipeline_status: ''
+          pipeline_status: '',
+          field_confidence: JSON.stringify(mergedConf)
         });
       } catch (updateError: any) {
         console.error('[Indexer] DB write failed after sanitization:', updateError.message);

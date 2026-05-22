@@ -8,7 +8,7 @@ import { exec } from 'child_process';
 import { startGoogleSweep, stopGoogleSweep, isGoogleSweepActive } from './GoogleSweep';
 import { GooglePlacesProvider, RETAIL_BLOCKLIST } from './lib/providers/GooglePlacesProvider';
 import { executeDetective } from './core/DetectiveEngine';
-import { db, getLocalSpots, getLocalCount, updateLocalSpot, deleteLocalSpot, upsertLocalSpot, getConfig, updateConfig, getBlocklist, addBlocklist, deleteBlocklist, addBlocklistKeyword, getPipelineStats, getFieldRegistry, upsertFieldRegistryItem } from './core/LocalDB';
+import { db, getLocalSpots, getLocalCount, updateLocalSpot, deleteLocalSpot, upsertLocalSpot, getConfig, updateConfig, getBlocklist, addBlocklist, deleteBlocklist, addBlocklistKeyword, getPipelineStats, getFieldRegistry, upsertFieldRegistryItem, logFieldCorrection, getCorrectionStats } from './core/LocalDB';
 
 // Guard against PM2 environment variable serialization bugs
 process.env.SCRAPER_REGISTER_ONLY = 'false';
@@ -929,6 +929,24 @@ app.put('/api/spots/:id', async (req, res) => {
   const { id } = req.params;
   const updates = req.body;
   try {
+    // Log field corrections for training data (before applying updates)
+    const existing = db.prepare('SELECT * FROM local_spots WHERE id = ?').get(id) as any;
+    if (existing) {
+      const trackableFields = [
+        'name', 'phone_number', 'website', 'street_address', 'opening_hours',
+        'pricing_data', 'has_adult_night', 'adult_night_schedule', 'adult_night_details',
+        'surface_type', 'surface_quality', 'has_rental', 'has_pro_shop', 'has_food',
+        'has_lights', 'has_lockers', 'has_ac', 'has_wifi', 'has_toilets',
+        'is_wheelchair_accessible', 'hosts_derby', 'capacity', 'operator_name',
+        'operator_description', 'instagram_url', 'facebook_url', 'tiktok_url',
+        'schedule_url', 'yelp_url', 'email_addresses', 'is_indoor', 'vibe_score'
+      ];
+      for (const field of trackableFields) {
+        if (field in updates && updates[field] !== existing[field]) {
+          logFieldCorrection(id, field, existing[field], updates[field]);
+        }
+      }
+    }
     updateLocalSpot(id, updates);
     res.json({ success: true });
   } catch (error: any) {
@@ -953,6 +971,20 @@ app.post('/api/promote-state/:state', async (req, res) => {
   try {
     const info = db.prepare(`UPDATE local_spots SET is_published = 1 WHERE state = ? AND verification_status IN ('VERIFIED', 'ENRICHED', 'MEDIA_READY')`).run(state.toUpperCase());
     res.json({ success: true, state: state.toUpperCase(), promoted: info.changes });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── Field Correction Stats (AI Quality Monitoring) ────────────────────────────
+app.get('/api/correction-stats', async (req, res) => {
+  try {
+    const stats = getCorrectionStats();
+    const totalCorrections = db.prepare('SELECT COUNT(*) as cnt FROM field_corrections').get() as any;
+    res.json({
+      total_corrections: totalCorrections?.cnt || 0,
+      by_field_and_source: stats
+    });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
