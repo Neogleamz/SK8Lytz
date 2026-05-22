@@ -6,6 +6,7 @@ import os
 import sys
 import json
 import asyncio
+import argparse
 from google_antigravity import AgentCoordinator, LocalAgentConfig
 
 async def run_assembly_line_sprint(task_slug, test_mode=False):
@@ -74,8 +75,13 @@ async def run_assembly_line_sprint(task_slug, test_mode=False):
     return attestation
 
 def main():
-    test_mode = len(sys.argv) > 1 and sys.argv[1] == "--test"
-    task = "fix/ble-write-debounce-latency" if test_mode else "feat/ble-virtual-simulator"
+    parser = argparse.ArgumentParser(description="Multi-Agent Parallel Orchestration (The Assembly Line)")
+    parser.add_argument("--task", type=str, default="feat/ble-virtual-simulator", help="Task slug to execute sprint for")
+    parser.add_argument("--test", action="store_true", help="Run in mock/test/offline mode")
+    args = parser.parse_args()
+
+    test_mode = args.test
+    task = args.task
     
     # Verify API key
     config = LocalAgentConfig()

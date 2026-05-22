@@ -47,10 +47,10 @@ if (isVerifyMode) {
     process.exit(1);
   }
 
-  const { commit, timestamp, tscStatus, jestStatus, browserConsoleStatus, stdoutHash, signature } = attestation;
+  const { commit, timestamp, tscStatus, jestStatus, browserConsoleStatus, astStatus, stdoutHash, signature } = attestation;
 
   // 1. Recalculate signature
-  const dataToSign = `${commit}:${timestamp}:${tscStatus}:${jestStatus}:${browserConsoleStatus || 'FAILED'}:${stdoutHash}`;
+  const dataToSign = `${commit}:${timestamp}:${tscStatus}:${jestStatus}:${browserConsoleStatus || 'FAILED'}:${astStatus || 'FAILED'}:${stdoutHash}`;
   const expectedSignature = crypto.createHmac('sha256', salt).update(dataToSign).digest('hex');
 
   if (signature !== expectedSignature) {
@@ -59,7 +59,7 @@ if (isVerifyMode) {
   }
 
   // 2. Verify status values
-  if (tscStatus !== 'SUCCESS' || jestStatus !== 'SUCCESS' || browserConsoleStatus !== 'SUCCESS') {
+  if (tscStatus !== 'SUCCESS' || jestStatus !== 'SUCCESS' || browserConsoleStatus !== 'SUCCESS' || astStatus !== 'SUCCESS') {
     console.error('❌ Error: Stored attestation indicates failed checks (TSC/Jest/BrowserConsole).');
     process.exit(1);
   }
@@ -160,11 +160,25 @@ try {
   console.error(browserConsoleOutput);
 }
 
+let astOutput = '';
+let astStatus = 'FAILED';
+const astStart = Date.now();
+console.log('⏳ Running Static Code Quality Guards for OP_0x59...');
+try {
+  astOutput = execSync('node tools/sentinel/ast_knowledge_compiler.js --check', { stdio: 'pipe', encoding: 'utf8' });
+  astStatus = 'SUCCESS';
+  console.log('✅ Static OP_0x59 guards passed clean!');
+} catch (e) {
+  astOutput = e.stdout || e.message;
+  console.error('❌ Static OP_0x59 validation FAILED:');
+  console.error(astOutput);
+}
+
 // Create cryptographic package
-const combinedOutput = tscOutput + jestOutput + browserConsoleOutput;
+const combinedOutput = tscOutput + jestOutput + browserConsoleOutput + astOutput;
 const stdoutHash = crypto.createHash('sha256').update(combinedOutput).digest('hex');
 
-const dataToSign = `${currentCommit}:${timestamp}:${tscStatus}:${jestStatus}:${browserConsoleStatus}:${stdoutHash}`;
+const dataToSign = `${currentCommit}:${timestamp}:${tscStatus}:${jestStatus}:${browserConsoleStatus}:${astStatus}:${stdoutHash}`;
 const signature = crypto.createHmac('sha256', salt).update(dataToSign).digest('hex');
 
 const attestationData = {
@@ -176,13 +190,15 @@ const attestationData = {
   jestDurationMs: Date.now() - jestStart,
   browserConsoleStatus,
   browserConsoleDurationMs: Date.now() - browserConsoleStart,
+  astStatus,
+  astDurationMs: Date.now() - astStart,
   stdoutHash,
   signature
 };
 
 fs.writeFileSync(attestationPath, JSON.stringify(attestationData, null, 2), 'utf8');
 
-if (tscStatus === 'SUCCESS' && jestStatus === 'SUCCESS' && browserConsoleStatus === 'SUCCESS') {
+if (tscStatus === 'SUCCESS' && jestStatus === 'SUCCESS' && browserConsoleStatus === 'SUCCESS' && astStatus === 'SUCCESS') {
   console.log('\n🔒 Cryptographic Attestation written to .test-attestation.json successfully!');
   console.log('✅ QA Hardening checks passed cleanly.');
   process.exit(0);

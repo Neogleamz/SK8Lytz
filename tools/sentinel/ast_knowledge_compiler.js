@@ -148,11 +148,175 @@ function syncMarkdownFile(filePath, markdownBlock) {
   return true;
 }
 
+function runStaticOP59Checks(srcDir) {
+  log("Commencing Static Code Quality Guards for OP_0x59...");
+  const violations = [];
+
+  function getFiles(dir) {
+    let results = [];
+    if (!fs.existsSync(dir)) return results;
+    const list = fs.readdirSync(dir);
+    list.forEach(file => {
+      file = path.join(dir, file);
+      const stat = fs.statSync(file);
+      if (stat && stat.isDirectory()) {
+        results = results.concat(getFiles(file));
+      } else if ((file.endsWith('.ts') || file.endsWith('.tsx')) && !file.includes('__tests__') && !file.endsWith('.test.ts') && !file.endsWith('.test.tsx')) {
+        results.push(file);
+      }
+    });
+    return results;
+  }
+
+  const files = getFiles(srcDir);
+  log(`Found ${files.length} TypeScript files to scan.`);
+
+  files.forEach(filePath => {
+    const sourceCode = fs.readFileSync(filePath, 'utf8');
+    const sourceFile = ts.createSourceFile(filePath, sourceCode, ts.ScriptTarget.Latest, true);
+
+    function getNumericValue(element, sourceFile) {
+      const rawText = element.getText(sourceFile).trim();
+      if (rawText.startsWith('0x') || rawText.startsWith('0X')) {
+        return parseInt(rawText, 16);
+      }
+      if (ts.isNumericLiteral(element)) {
+        const text = element.text.trim();
+        if (text.startsWith('0x') || text.startsWith('0X')) {
+          return parseInt(text, 16);
+        }
+        return parseInt(text, 10);
+      }
+      return parseInt(rawText, 10);
+    }
+
+    function findArrayLiteralLengthForIdentifier(sourceFile, identifierText) {
+      let length = null;
+      function findDecl(node) {
+        if (ts.isVariableDeclaration(node) && node.name.getText(sourceFile) === identifierText) {
+          if (node.initializer && ts.isArrayLiteralExpression(node.initializer)) {
+            length = node.initializer.elements.length;
+          }
+        }
+        ts.forEachChild(node, findDecl);
+      }
+      ts.forEachChild(sourceFile, findDecl);
+      return length;
+    }
+
+    function getLineAndChar(node, sourceFile) {
+      const { line, character } = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
+      return { line: line + 1, character: character + 1 };
+    }
+
+    function visitor(node) {
+      // 1. Check call expressions
+      if (ts.isCallExpression(node)) {
+        let methodName = '';
+        if (ts.isIdentifier(node.expression)) {
+          methodName = node.expression.text;
+        } else if (ts.isPropertyAccessExpression(node.expression)) {
+          methodName = node.expression.name.text;
+        }
+
+        if (methodName === 'setMultiColor' || methodName === 'writeColorArray' || methodName === 'dispatchStaticColorful') {
+          if (node.arguments.length > 0) {
+            const firstArg = node.arguments[0];
+            let length = null;
+            let resolvedType = '';
+
+            if (ts.isArrayLiteralExpression(firstArg)) {
+              length = firstArg.elements.length;
+              resolvedType = 'ArrayLiteral';
+            } else if (ts.isIdentifier(firstArg)) {
+              const varName = firstArg.text;
+              length = findArrayLiteralLengthForIdentifier(sourceFile, varName);
+              resolvedType = `VariableReference(${varName})`;
+            }
+
+            if (length !== null) {
+              if (length > 1 && length < 12) {
+                const { line, character } = getLineAndChar(node, sourceFile);
+                violations.push({
+                  file: filePath,
+                  line,
+                  character,
+                  msg: `Unsafe color array dispatch! Method '${methodName}' called with array of length ${length} via ${resolvedType}. Minimum length is 12 (length 1 is allowed for padded solid mode). Potential physical controller EEPROM buffer lockout risk!`
+                });
+              }
+            }
+          }
+        }
+      }
+
+      // 2. Check raw array literals
+      if (ts.isArrayLiteralExpression(node)) {
+        const elements = node.elements;
+        if (elements.length > 0) {
+          const val0 = getNumericValue(elements[0], sourceFile);
+          if (val0 === 89) { // 0x59
+            if (elements.length < 45) {
+              const { line, character } = getLineAndChar(node, sourceFile);
+              violations.push({
+                file: filePath,
+                line,
+                character,
+                msg: `Unsafe raw OP_0x59 payload array! Length is ${elements.length} (< 45 bytes). Minimum length is 45 bytes (12 RGB pixels + 9 bytes header). Potential physical controller EEPROM buffer lockout risk!`
+              });
+            }
+          } else if (val0 === 0 && elements.length > 8) {
+            const val8 = getNumericValue(elements[8], sourceFile);
+            if (val8 === 89) {
+              if (elements.length < 45) {
+                const { line, character } = getLineAndChar(node, sourceFile);
+                violations.push({
+                  file: filePath,
+                  line,
+                  character,
+                  msg: `Unsafe raw wrapped OP_0x59 payload array! Length is ${elements.length} (< 45 bytes). Minimum length is 45 bytes. Potential physical controller EEPROM buffer lockout risk!`
+                });
+              }
+            }
+          }
+        }
+      }
+
+      ts.forEachChild(node, visitor);
+    }
+
+    ts.forEachChild(sourceFile, visitor);
+  });
+
+  return violations;
+}
+
 function main() {
   const root = path.resolve(__dirname, '../..');
+  const srcDir = path.join(root, 'src');
   const protocolFile = path.join(root, 'src/protocols/ZenggeProtocol.ts');
   const zenggeBible = path.join(root, 'tools/ZENGGE_PROTOCOL_BIBLE.md');
   const masterRef = path.join(root, 'tools/SK8Lytz_App_Master_Reference.md');
+
+  const isCheckMode = process.argv.includes('--check');
+
+  if (isCheckMode) {
+    try {
+      const violations = runStaticOP59Checks(srcDir);
+      if (violations.length > 0) {
+        console.error(`\n🚨 [STATIC-OP59-GUARD] VIOLATIONS DETECTED (${violations.length}):`);
+        violations.forEach(v => {
+          console.error(`  ❌ ${path.relative(root, v.file)}:${v.line}:${v.character} - ${v.msg}`);
+        });
+        console.error("\n👉 Please fix the color array lengths to prevent physical controller lockouts!\n");
+        process.exit(1);
+      }
+      log("✅ Static Code Quality Guards for OP_0x59 passed cleanly!");
+      process.exit(0);
+    } catch (e) {
+      console.error("[ERROR] Static guard run crashed:", e);
+      process.exit(1);
+    }
+  }
 
   try {
     const constants = parseZenggeProtocol(protocolFile);

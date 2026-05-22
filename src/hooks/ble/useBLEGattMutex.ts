@@ -105,9 +105,14 @@ export async function acquireGattLock(
   _currentHolderAbortController = priority === 2 ? ownAbortController : null;
 
   // Wait for previous operation to complete
-  await prevChain.catch((e: any) => {
+  await prevChain.catch((e: unknown) => {
     AppLogger.warn('[Mutex] Previous operation in GATT lock chain rejected', e);
   });
+
+  const waitTime = Date.now() - waitStart;
+  if (waitTime > 2000) {
+    AppLogger.warn('GATT_LOCK_CONTENTION', { waitTime, priority });
+  }
 
   return {
     signal: ownAbortController.signal,

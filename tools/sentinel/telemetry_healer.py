@@ -118,6 +118,58 @@ def spawn_isolated_worktree(slug):
             # Create directory junction
             subprocess.run(["cmd.exe", "/c", "mklink", "/j", worktree_node_modules, fortress_node_modules], capture_output=True)
             print("[HEALER] Windows Directory Junction created for node_modules! [SUCCESS]")
+
+        # Trigger E2E Autonomous Telemetry Repair Autopilot
+        print(f"[HEALER] [Autopilot] Launching micro-agent sprint for {slug}...")
+        cmd_args = ["python", "tools/sentinel/assembly_line.py", "--task", slug]
+        if not os.environ.get("GEMINI_API_KEY"):
+            cmd_args.append("--test")
+            
+        sprint_res = subprocess.run(
+            cmd_args, 
+            cwd=worktree_path, 
+            capture_output=True, 
+            text=True
+        )
+        print(sprint_res.stdout)
+        if sprint_res.stderr:
+            print(f"[HEALER] [Autopilot] Sprint warnings/errors: {sprint_res.stderr}")
+            
+        print(f"[HEALER] [Autopilot] Running verifiable check runner ('npm run verify') on the patch...")
+        verify_res = subprocess.run(
+            ["npm.cmd", "run", "verify"], 
+            cwd=worktree_path, 
+            capture_output=True, 
+            text=True
+        )
+        
+        if verify_res.returncode == 0:
+            print("[HEALER] [Autopilot] Verifiable check runner passed cleanly! Committing fix...")
+            # Commit the patch
+            subprocess.run(["git", "add", "."], cwd=worktree_path, capture_output=True, text=True)
+            git_commit = subprocess.run(
+                ["git", "commit", "-m", f"chore(telemetry): autonomous healing patch for {slug}"], 
+                cwd=worktree_path, 
+                capture_output=True, 
+                text=True
+            )
+            if git_commit.returncode == 0:
+                print(f"[HEALER] [Autopilot] Autonomous patch committed successfully! [SUCCESS]")
+                print("\n=======================================================")
+                print(f"🚀 AUTONOMOUS PULL REQUEST SUMMARY FOR TASK: {slug}")
+                print("=======================================================")
+                print("Branch: " + branch_name)
+                print(f"Description: Surgically resolved telemetry error {slug}.")
+                print("Attestation: Stored in .test-attestation.json and cryptographically signed.")
+                print("Verification: TypeScript, Jest unit tests, browser console, and AST guards passed.")
+                print("=======================================================\n")
+            else:
+                print(f"[HEALER] [Autopilot] Commit failed: {git_commit.stderr.strip()}")
+        else:
+            print(f"[HEALER] [Autopilot] Verifiable check runner FAILED (exit code {verify_res.returncode}):")
+            print(verify_res.stdout)
+            if verify_res.stderr:
+                print(verify_res.stderr)
     else:
         print(f"[HEALER] Worktree spawn failed: {res.stderr.strip()} [ERROR]")
 
