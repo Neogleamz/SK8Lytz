@@ -81,9 +81,10 @@ theme.js
 # Editor settings (local only)
 .vscode/
 
-# AI agent config (local only)
+# AI agent config
 .agents/*
 !.agents/rules/
+!.agents/workflows/
 
 # Scratch tool / analysis files (local only)
 diff.txt
@@ -140,4 +141,3 @@ BANLANX_APK/
 # Python caching
 __pycache__/
 *.pyc
-

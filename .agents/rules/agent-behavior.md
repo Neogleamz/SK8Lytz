@@ -73,7 +73,7 @@ Runs `npm run verify` check-runners, checks edge cases (`/qa-tester` hunt for 5 
 
 ## 8. Project & Task Management Constitution (Kanban Protocols)
 1. **The Active Sprint Mandate**: You are strictly forbidden from writing code for tasks outside the `🚧 ACTIVE SPRINT`. You must work on exactly ONE task at a time, and every task MUST use a Git worktree.
-2. **Task Definition Schema**: Every task must follow the strict multi-line nested list schema with exactly one tag from the 5 categories (`[Status]`, `[Layer]`, `[Risk]`, `[Size]`, `[Cognitive Load]`). Single-line tasks are forbidden.
+2. **Task Definition Schema**: Every task must follow the strict multi-line nested list schema with exactly one tag from the 6 categories (`[Status]`, `[Verification Status]`, `[Layer]`, `[Risk]`, `[Size]`, `[Cognitive Load]`). Single-line tasks are forbidden.
 3. **Sequential vs. Parallel Batching**: You must run sequential batch tasks one at a time, each in its own isolated worktree. Parallel batches can run simultaneously only if there is zero file overlap.
 4. **Completion Stamp Protocol**: When marking any task `[x]`, you must append the merge commit hash and a one-line outcome summary inline. Update the task details to summarize key decisions and files changed.
 5. **No Unsolicited Refactoring**: Zero collateral damage is allowed. If you find a bug unrelated to the active task, you must log it to the Triage Queue and must not fix it silently.
