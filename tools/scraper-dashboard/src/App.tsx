@@ -913,18 +913,25 @@ function App() {
           </div>
         );
       })}
-      {/* ═══ LM Studio Control Capsule ═══ */}
+      {/* ═══ LM Studio Control Capsule (Full GPU Telemetry) ═══ */}
       {(() => {
         const lms = (status as any)?.lmsStatus;
+        const gpu = (status as any)?.gpuTelemetry;
         const serverOn = lms?.serverStatus === 'ON';
         const serverMissing = lms?.serverStatus === 'MISSING';
-        const loadedModel = lms?.loadedModels?.[0] || null;
+        const loadedModels: string[] = lms?.loadedModels || [];
+        const loadedModel = loadedModels[0] || null;
         const availModels: { key: string; arch: string; size: string; loaded: boolean }[] = lms?.availableModels || [];
         const capsuleColor = serverOn ? '#a200ff' : serverMissing ? '#555' : '#ff2d55';
         const glowColor = serverOn ? (loadedModel ? '#a200ff' : '#ffb300') : '#ff2d55';
+        const vramPct = gpu?.vramPercent ?? 0;
+        const vramUsed = gpu?.vramUsedMB ?? 0;
+        const vramTotal = gpu?.vramTotalMB ?? 8192;
+        const gpuUtil = gpu?.gpuUtilPercent ?? 0;
+        const vramBarColor = vramPct > 90 ? '#ff2d55' : vramPct > 70 ? '#ffb300' : '#a200ff';
         return (
           <div style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
+            display: 'flex', alignItems: 'center', gap: '5px',
             background: serverOn ? 'rgba(162,0,255,0.08)' : 'rgba(255,45,85,0.06)',
             padding: '3px 10px', borderRadius: '20px',
             border: `1px solid ${capsuleColor}55`, flexShrink: 0,
@@ -932,13 +939,13 @@ function App() {
           }}>
             {/* Glowing status dot */}
             <div style={{
-              width: '7px', height: '7px', borderRadius: '50%',
+              width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
               background: glowColor,
               boxShadow: `0 0 ${serverOn ? '8px' : '4px'} ${glowColor}`,
               animation: serverOn && loadedModel ? 'pulse 2s ease-in-out infinite' : 'none',
             }} />
             {/* Label */}
-            <span style={{ fontSize: '0.6rem', fontWeight: 800, color: capsuleColor, letterSpacing: '0.03em' }}>
+            <span style={{ fontSize: '0.58rem', fontWeight: 800, color: capsuleColor, letterSpacing: '0.03em' }}>
               LM STUDIO
             </span>
             {/* Server toggle */}
@@ -950,7 +957,7 @@ function App() {
                 } catch (e) { /* swallow */ }
               }}
               style={{
-                fontSize: '0.56rem', fontWeight: 800, padding: '1px 6px', borderRadius: '8px',
+                fontSize: '0.54rem', fontWeight: 800, padding: '1px 6px', borderRadius: '8px',
                 border: 'none', cursor: 'pointer',
                 background: serverOn ? 'rgba(255,60,60,0.25)' : 'rgba(162,0,255,0.3)',
                 color: serverOn ? '#ff6b6b' : '#a200ff',
@@ -959,47 +966,100 @@ function App() {
             >
               {serverMissing ? 'N/A' : serverOn ? 'STOP' : 'START'}
             </button>
-            {/* Model selector dropdown — only when server is ON */}
+            {/* Model selector + context length + gpu offload — only when server is ON */}
             {serverOn && (
-              <select
-                value={loadedModel || ''}
-                onChange={async (e) => {
-                  const model = e.target.value;
-                  if (!model) return;
-                  try {
-                    await fetch(`${API_BASE}/api/llm/model/load`, {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ model }),
-                    });
-                    fetchSystemStatus();
-                  } catch (e) { /* swallow */ }
-                }}
-                style={{
-                  fontSize: '0.56rem', fontWeight: 700, padding: '1px 4px', borderRadius: '8px',
-                  border: '1px solid rgba(162,0,255,0.3)', background: 'rgba(0,0,0,0.4)',
-                  color: loadedModel ? '#c77dff' : 'rgba(255,255,255,0.4)',
-                  cursor: 'pointer', outline: 'none', maxWidth: '140px',
-                }}
-              >
-                {!loadedModel && <option value="">No model loaded</option>}
-                {availModels.map((m) => (
-                  <option key={m.key} value={m.key} style={{ background: '#111', color: m.loaded ? '#a200ff' : '#fff' }}>
-                    {m.key} ({m.size})
-                  </option>
-                ))}
-              </select>
+              <>
+                <select
+                  value={loadedModel || ''}
+                  onChange={async (e) => {
+                    const modelKey = e.target.value;
+                    if (!modelKey) return;
+                    try {
+                      await fetch(`${API_BASE}/api/llm/model/load`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ modelKey, contextLength: 8192, gpuOffload: 'max' }),
+                      });
+                      fetchSystemStatus();
+                    } catch (e) { /* swallow */ }
+                  }}
+                  title="Select model to load (auto-sets as detective model)"
+                  style={{
+                    fontSize: '0.54rem', fontWeight: 700, padding: '1px 4px', borderRadius: '6px',
+                    border: '1px solid rgba(162,0,255,0.3)', background: 'rgba(0,0,0,0.5)',
+                    color: loadedModel ? '#c77dff' : 'rgba(255,255,255,0.4)',
+                    cursor: 'pointer', outline: 'none', maxWidth: '150px',
+                  }}
+                >
+                  {!loadedModel && <option value="">Load model...</option>}
+                  {availModels.map((m) => (
+                    <option key={m.key} value={m.key} style={{ background: '#111', color: m.loaded ? '#a200ff' : '#fff' }}>
+                      {m.loaded ? '● ' : ''}{m.key} ({m.size})
+                    </option>
+                  ))}
+                </select>
+              </>
             )}
-            {/* Loaded model micro-badge */}
-            {serverOn && loadedModel && (
-              <span style={{
-                fontSize: '0.5rem', fontWeight: 700, padding: '1px 5px', borderRadius: '6px',
+            {/* Loaded model badges with unload buttons */}
+            {serverOn && loadedModels.map((m: string) => (
+              <span key={m} style={{
+                display: 'inline-flex', alignItems: 'center', gap: '3px',
+                fontSize: '0.48rem', fontWeight: 700, padding: '1px 5px', borderRadius: '6px',
                 background: 'rgba(162,0,255,0.15)', color: '#c77dff', border: '1px solid rgba(162,0,255,0.25)',
-                whiteSpace: 'nowrap', maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}>
-                {loadedModel.replace('llama-', 'L').replace('-instruct', '')}
+                {m.replace(/llama-|mistralai\/|qwen|phi-/gi, '').replace('-instruct', '').slice(0, 16)}
+                <button
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    try {
+                      await fetch(`${API_BASE}/api/llm/model/unload`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ identifier: m }),
+                      });
+                      fetchSystemStatus();
+                    } catch (e) { /* swallow */ }
+                  }}
+                  title={`Unload ${m}`}
+                  style={{
+                    fontSize: '0.46rem', fontWeight: 900, padding: '0 3px', borderRadius: '4px',
+                    border: 'none', cursor: 'pointer', lineHeight: 1,
+                    background: 'rgba(255,60,60,0.3)', color: '#ff6b6b',
+                  }}
+                >✕</button>
               </span>
-            )}
+            ))}
+            {/* VRAM Gauge */}
+            <div title={`VRAM: ${Math.round(vramUsed)}/${vramTotal} MB (${vramPct}%) | GPU: ${gpuUtil}%`}
+              style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
+              <div style={{
+                width: '40px', height: '6px', borderRadius: '3px',
+                background: 'rgba(255,255,255,0.08)', overflow: 'hidden',
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}>
+                <div style={{
+                  width: `${vramPct}%`, height: '100%', borderRadius: '3px',
+                  background: `linear-gradient(90deg, ${vramBarColor}88, ${vramBarColor})`,
+                  transition: 'width 0.5s ease, background 0.5s ease',
+                }} />
+              </div>
+              <span style={{ fontSize: '0.46rem', color: vramBarColor, fontWeight: 800, whiteSpace: 'nowrap' }}>
+                {(vramUsed / 1024).toFixed(1)}G
+              </span>
+              <span style={{ fontSize: '0.42rem', color: 'rgba(255,255,255,0.25)', fontWeight: 700 }}>
+                /{(vramTotal / 1024).toFixed(0)}G
+              </span>
+            </div>
+            {/* GPU Utilization */}
+            <span style={{
+              fontSize: '0.46rem', fontWeight: 800, padding: '1px 4px', borderRadius: '4px',
+              background: gpuUtil > 50 ? 'rgba(255,90,0,0.2)' : 'rgba(255,255,255,0.04)',
+              color: gpuUtil > 50 ? '#ff5a00' : gpuUtil > 10 ? '#a200ff' : 'rgba(255,255,255,0.3)',
+              whiteSpace: 'nowrap',
+            }}>
+              GPU {gpuUtil}%
+            </span>
           </div>
         );
       })()}

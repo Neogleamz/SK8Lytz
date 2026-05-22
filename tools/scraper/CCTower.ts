@@ -194,7 +194,8 @@ app.get('/status', async (req, res) => {
       isGated,
       lastError,
       pulseRegistry,
-      lmsStatus: cachedLmsStatus
+      lmsStatus: cachedLmsStatus,
+      gpuTelemetry: cachedGpuTelemetry
     });
   });
 });
@@ -303,6 +304,44 @@ let cachedLmsStatus: LmsStatus = {
   availableModels: [],
   lastUpdated: new Date().toISOString()
 };
+
+// ─── GPU Telemetry (Windows Performance Counters) ────────────────────────────
+
+interface GpuTelemetry {
+  vramUsedMB: number;
+  vramTotalMB: number;
+  vramPercent: number;
+  gpuUtilPercent: number;
+  lastUpdated: string;
+}
+
+let cachedGpuTelemetry: GpuTelemetry = {
+  vramUsedMB: 0, vramTotalMB: 8192, vramPercent: 0,
+  gpuUtilPercent: 0, lastUpdated: new Date().toISOString()
+};
+
+function updateGpuTelemetry(): void {
+  // VRAM usage from Windows Performance Counters (same as Task Manager)
+  const psCmd = `powershell.exe -NoProfile -Command "$v=(Get-Counter '\GPU Adapter Memory(*)\Dedicated Usage' -ErrorAction SilentlyContinue).CounterSamples | Sort-Object CookedValue -Descending | Select-Object -First 1; $u=(Get-Counter '\GPU Engine(*engtype_3D*)\Utilization Percentage' -ErrorAction SilentlyContinue).CounterSamples | Where-Object {$_.CookedValue -gt 0} | Measure-Object CookedValue -Sum; Write-Output \"$([math]::Round($v.CookedValue/1MB,1))|$([math]::Round($u.Sum,1))\""`;
+  exec(psCmd, { windowsHide: true, timeout: 5000 }, (err, stdout) => {
+    if (err || !stdout?.trim()) return;
+    const [vramStr, utilStr] = stdout.trim().split('|');
+    const vramUsedMB = parseFloat(vramStr) || 0;
+    const gpuUtilPercent = parseFloat(utilStr) || 0;
+    const vramTotalMB = 8192; // W5500 8GB — can be auto-detected later
+    cachedGpuTelemetry = {
+      vramUsedMB,
+      vramTotalMB,
+      vramPercent: Math.round((vramUsedMB / vramTotalMB) * 100),
+      gpuUtilPercent: Math.round(gpuUtilPercent * 10) / 10,
+      lastUpdated: new Date().toISOString()
+    };
+  });
+}
+
+// Poll GPU telemetry every 10 seconds
+setInterval(updateGpuTelemetry, 10000);
+updateGpuTelemetry();
 
 function updateLmsStatus(): Promise<void> {
   return new Promise((resolve) => {
@@ -436,20 +475,39 @@ app.post('/api/llm/server/:action', (req, res) => {
 });
 
 app.post('/api/llm/model/load', (req, res) => {
-  const { modelKey } = req.body;
+  const { modelKey, contextLength, gpuOffload, setAsDetective } = req.body;
   const targetModel = modelKey || 'llama-3.2-3b-instruct';
   console.log(`[CCTower] LM Studio loading model: ${targetModel}`);
   
-  const cmd = `lms load ${targetModel} -y`;
+  // Build command with optional params
+  let cmd = `lms load ${targetModel} -y`;
+  if (contextLength && [2048, 4096, 8192, 16384, 32768].includes(Number(contextLength))) {
+    cmd += ` --context-length ${contextLength}`;
+  }
+  if (gpuOffload && ['off', 'max', '0.5', '0.75'].includes(gpuOffload)) {
+    cmd += ` --gpu ${gpuOffload}`;
+  }
+  console.log(`[CCTower] LM Studio load cmd: ${cmd}`);
   
-  exec(cmd, { windowsHide: true }, async (err, stdout, stderr) => {
+  exec(cmd, { windowsHide: true, timeout: 120000 }, async (err, stdout, stderr) => {
     if (err) {
       console.error(`[CCTower] LM Studio load model failed:`, err);
       return res.status(500).json({ success: false, error: err.message });
     }
     
+    // Auto-update detective_model in global config if requested (or by default)
+    if (setAsDetective !== false) {
+      try {
+        updateConfig({ detective_model: targetModel });
+        console.log(`[CCTower] Auto-set detective_model → ${targetModel}`);
+      } catch (e: any) {
+        console.error(`[CCTower] Failed to auto-set detective_model:`, e.message);
+      }
+    }
+    
     await updateLmsStatus();
-    res.json({ success: true, message: `Loaded model ${targetModel}`, cachedLmsStatus });
+    updateGpuTelemetry();
+    res.json({ success: true, message: `Loaded model ${targetModel}`, cachedLmsStatus, detective_model: targetModel });
   });
 });
 
@@ -467,6 +525,41 @@ app.post('/api/llm/model/unload', (req, res) => {
     await updateLmsStatus();
     res.json({ success: true, message: identifier ? `Unloaded model ${identifier}` : 'Unloaded all models', cachedLmsStatus });
   });
+});
+
+// ─── Model VRAM Estimate (pre-load check) ────────────────────────────────────
+app.post('/api/llm/model/estimate', (req, res) => {
+  const { modelKey } = req.body;
+  if (!modelKey) return res.status(400).json({ error: 'modelKey required' });
+  const cmd = `lms load ${modelKey} --estimate-only`;
+  exec(cmd, { windowsHide: true, timeout: 10000 }, (err, stdout, stderr) => {
+    // LM Studio outputs estimate to stderr, so check both
+    const output = (stdout || '') + '\n' + (stderr || '');
+    const gpuMatch = output.match(/Estimated GPU Memory:\s*([\d.]+)\s*(GiB|MiB|GB|MB)/i);
+    const totalMatch = output.match(/Estimated Total Memory:\s*([\d.]+)\s*(GiB|MiB|GB|MB)/i);
+    const fitsMatch = output.match(/Estimate:\s*(.+)/i);
+    
+    const parseSize = (val: string, unit: string) => {
+      const n = parseFloat(val);
+      return (unit.toLowerCase().startsWith('g')) ? Math.round(n * 1024) : Math.round(n);
+    };
+    
+    res.json({
+      success: true,
+      modelKey,
+      estimatedGpuMB: gpuMatch ? parseSize(gpuMatch[1], gpuMatch[2]) : null,
+      estimatedTotalMB: totalMatch ? parseSize(totalMatch[1], totalMatch[2]) : null,
+      verdict: fitsMatch ? fitsMatch[1].trim() : 'Unknown',
+      currentVramUsedMB: cachedGpuTelemetry.vramUsedMB,
+      currentVramTotalMB: cachedGpuTelemetry.vramTotalMB,
+      headroomMB: gpuMatch ? cachedGpuTelemetry.vramTotalMB - cachedGpuTelemetry.vramUsedMB : null
+    });
+  });
+});
+
+// ─── GPU Telemetry Endpoint ──────────────────────────────────────────────────
+app.get('/api/gpu/stats', (req, res) => {
+  res.json(cachedGpuTelemetry);
 });
 
 // Initial background polling for LM Studio
