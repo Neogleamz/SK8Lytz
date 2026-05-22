@@ -1,3 +1,28 @@
+## [3.5.2] - 2026-05-22
+
+### ✨ Features
+- `bf02132b` feat(scraper): field confidence scoring + user correction feedback loop
+- `72c97763` feat(sitemap): multi-label content fingerprinting — classify pages by actual content
+- `56e62d9f` feat(detective): v2 overhaul — 11 fixes for data harvesting quality
+- `1c0faa35` feat(dashboard): LM Studio GPU telemetry control panel
+- `1d1a6de1` feat(scraper): integrate LM Studio pipeline control + fix dashboard TS compilation
+
+### 🐛 Bug Fixes
+- `1289dae4` fix(pipeline): additive-only data integrity guards — never delete, only verify and add
+- `49c1ba2d` hotfix(dashboard): replace dead Ollama toggle with interactive LM Studio Control Capsule
+- `9d6fa959` hotfix: resolve pm2 path bypass and migrate to qwen2.5-7b
+- `fbc432c0` fix(scraper): extract GPU telemetry to ps1 script, remove stale CCTower.js
+- `5cbdc2a4` fix(scraper): redefine daemon start command to use ecosystem.config.js
+
+### 🔧 Maintenance & Tests
+- `7ff122d7` test: implement useControllerDispatch test suite and fix parseInt bug
+- `abceadb3` chore: track pm2 daemon bootstrap scripts
+- `135c84c6` chore(scraper): resolve strict typescript compiler type warnings
+- `5daaaf24` chore(git): track auto-generated implementation plans and helper tools
+- `0c8f7a28` chore(rules): update kanban constitution and agent behavior with verification status tags
+
+---
+
 ## [3.5.1] - 2026-05-22
 
 ### ✨ Features
