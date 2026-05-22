@@ -1,0 +1,12 @@
+{
+  "errors": [
+    {
+      "error_id": "err_091a",
+      "exception": "GATT_CONN_133_EXCEPTION",
+      "message": "GattException: status 133 (0x85) during BLE scan discover for HALOZ",
+      "stack_trace": "at useBLE.ts:321\nat useBLESweeper.ts:145",
+      "file_affected": "src/hooks/ble/useBLEAutoRecovery.ts",
+      "timestamp": "2026-05-22T05:00:00Z"
+    }
+  ]
+}

@@ -375,8 +375,51 @@ Every GATT connection fires this sequence before the device is added to React st
 2. **0x10 Session Time Sync** — `ZenggeProtocol.setSessionTime()` → written directly to `ZENGGE_CHARACTERISTIC_UUID`. Format: `[0x10, year-2000, month(1-12), day, hour, min, sec, weekday(0=Sun), checksum]`. Source: `TimeControllerFragment.java` APK decompile. Non-fatal — wrapped in try/catch.
 3. **React state update** — `setConnectedDevices()` fires _after_ GATT is booted to prevent UI from blasting payloads during MTU queries.
 
-> [!IMPORTANT]
-> `setSessionTime()` was missing from `ZenggeProtocol.ts` entirely (line 742 was `queryHardwareConfig` — the plan was stale). The method was implemented from scratch (commit `fdc0ff3`).
+<!-- AST_COMPILER_START: ZENGGE_CONSTANTS -->
+#### 📝 Auto-Compiled Zengge Protocol Constants (AST Compiler)
+
+##### 🔌 BLE UUIDs
+- **Service UUID**: `0000ffff-0000-1000-8000-00805f9b34fb` (`ZENGGE_SERVICE_UUID`)
+- **Write Characteristic UUID**: `0000ff01-0000-1000-8000-00805f9b34fb` (`ZENGGE_CHARACTERISTIC_UUID`)
+- **Notification Characteristic UUID**: `0000ff02-0000-1000-8000-00805f9b34fb` (`ZENGGE_NOTIFY_UUID`)
+
+##### 🛠️ Hardware Constraints
+| Constraint | Value | Description |
+|:---|:---:|:---|
+| `maxPoints` | 300 | Maximum addressable points per segment |
+| `maxSegments` | 2048 | Maximum physical segment duplicates |
+| `maxPxS` | 2048 | Max points * segments limit |
+| `maxMicPoints` | 150 | Maximum points when microphone is active |
+| `maxMicPxS` | 960 | Max micPoints * micSegments limit |
+| `defaultPoints` | 30 | Fallback default point count |
+| `defaultSegments` | 10 | Fallback default segment count |
+
+##### 📟 IC Chip Types (`IC_TYPES`)
+| Key | Chip Type |
+|:---:|:---|
+| 1 | WS2812B |
+| 2 | SM16703 |
+| 3 | SM16704 |
+| 4 | WS2811 |
+| 5 | UCS1903 |
+| 6 | SK6812 |
+| 7 | SK6812RGBW |
+| 8 | INK1003 |
+| 9 | UCS2904B |
+| 10 | JY1903 |
+| 11 | WS2812E |
+
+##### 🎨 Color Sorting RGB (`COLOR_SORTING_RGB`)
+| Key | RGB Order |
+|:---:|:---|
+| 0 | RGB |
+| 1 | RBG |
+| 2 | GRB |
+| 3 | GBR |
+| 4 | BRG |
+| 5 | BGR |
+
+<!-- AST_COMPILER_END: ZENGGE_CONSTANTS -->
 
 ### writeChunked — 0x51 Extended Payload Framing
 

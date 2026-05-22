@@ -24,6 +24,7 @@ import { BleCharacteristicCache } from '../services/BleCharacteristicCache';
 import { useBLEScanner } from './ble/useBLEScanner';
 import { useBLEAutoRecovery } from './ble/useBLEAutoRecovery';
 import { useBLESweeper } from './ble/useBLESweeper';
+import { acquireGattLock } from './ble/useBLEGattMutex';
 
 let BleManager: any;
 let State: any;
@@ -234,6 +235,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const pingDevice = async (mac: string, blinkPayload: number[]): Promise<any> => {
     if (Platform.OS === 'web' || !bleManager) return null;
 
+    const lockHandle = await acquireGattLock(1);
+    if (!lockHandle) {
+      AppLogger.warn(`[BLE] pingDevice rejected — could not acquire GATT lock`);
+      return null;
+    }
+    const { release } = lockHandle;
+
     try {
       // ── Step 1: Connect ───────────────────────────────────────────────────────
       await bleManager.connectToDevice(mac, { timeout: 6000 }).catch((e: any) => {
@@ -242,12 +250,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
       // ── HAL: Resolve adapter & Caching ────────────────────────────────────────
       let pingAdapter: IControllerProtocol | null = null;
-      let usedCache = false;
 
       const cachedGatt = await BleCharacteristicCache.get(mac);
       if (cachedGatt) {
         pingAdapter = getProtocolById(cachedGatt.protocolId);
-        if (pingAdapter) usedCache = true;
       }
 
       if (!pingAdapter) {
@@ -354,6 +360,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     } finally {
       // ── Step 6: Always disconnect cleanly ────────────────────────────────────
       await bleManager.cancelDeviceConnection(mac).catch((e: any) => { AppLogger.warn('[BLE] pingDevice cancelDeviceConnection failed', { mac, error: e?.message }); });
+      release();
     }
   };
 
@@ -466,267 +473,266 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       return;
     }
 
-    // ── PARTIAL CONNECTION RETAINING ──────────────────────────────────────────
-    // Instead of wiping `connectedDevices = []`, we KEEP the devices that are 
-    // already connected and requested, and only drop the stale ones.
-    const retainedDevices = connectedDevicesRef.current.filter(c => devices.some(d => d.id === c.id));
-    setConnectedDevices(retainedDevices);
-
-    // ── KEEPALIVE & STALE DEVICE TEARDOWN ────────────────────────────────────
-    // User is re-connecting (same or different group). Clear the keepalive timer
-    // so the deferred disconnect doesn't fire mid-connection-handshake.
-    if (keepaliveTimerRef.current) {
-      clearTimeout(keepaliveTimerRef.current);
-      keepaliveTimerRef.current = null;
-      AppLogger.log('BLE_STATE_CHANGE', { event: 'keepalive_cancelled_reconnect' });
-    }
-
-    // Flush stale GATT connections (devices currently connected but NOT in the new request)
-    const staleDevices = connectedDevicesRef.current.filter(c => !devices.some(d => d.id === c.id));
-    if (staleDevices.length > 0) {
-      for (const stale of staleDevices) {
-        // Explicitly remove disconnect listeners to prevent auto-recovery from fighting the intentional teardown
-        if (disconnectListeners.current[stale.id]) {
-           try {
-             disconnectListeners.current[stale.id].remove();
-           } catch (e) {
-             AppLogger.warn('[BLE] Failed to remove disconnect listener during stale device flush', e);
-           }
-           delete disconnectListeners.current[stale.id];
-        }
-        try {
-          await bleManager.cancelDeviceConnection(stale.id);
-          AppLogger.log('BLE_STATE_CHANGE', { event: 'stale_device_flushed', mac: stale.id });
-        } catch (e) {
-          AppLogger.warn('Failed to flush stale device', { mac: stale.id, error: String(e) });
-        }
-      }
-      // Wait a moment for the OS BLE stack to finalize the teardowns before acquiring new connections
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-
-    // ── CONNECTION GATE: Reject if another BLE operation is in-flight ────────
-    if (bleGateRef.current !== 'IDLE') {
-      AppLogger.warn('[BLE] connectToDevices REJECTED — gate is ' + bleGateRef.current, { requestedDevices: devices.map(d => d.id) });
+    // ── GATT LOCK ACQUISITION: Priority 1 (User Action) ──
+    const lockHandle = await acquireGattLock(1);
+    if (!lockHandle) {
+      AppLogger.warn('[BLE] connectToDevices REJECTED — could not acquire GATT lock', { requestedDevices: devices.map(d => d.id) });
       return;
     }
-    setGate('CONNECTING');
-    // Hoist outside try{} so it's visible in catch{} for Sweeper resume-on-failure
-    const wasSweeperActive = sweeper.isSweeperActive;
+    const { release } = lockHandle;
+
     try {
-      let isMock = 'false';
-      if (__DEV__) {
-         isMock = await AsyncStorage.getItem('@Sk8lytz_demo_mode') || 'false';
+      // ── PARTIAL CONNECTION RETAINING ──────────────────────────────────────────
+      // Instead of wiping `connectedDevices = []`, we KEEP the devices that are 
+      // already connected and requested, and only drop the stale ones.
+      const retainedDevices = connectedDevicesRef.current.filter(c => devices.some(d => d.id === c.id));
+      setConnectedDevices(retainedDevices);
+
+      // ── KEEPALIVE & STALE DEVICE TEARDOWN ────────────────────────────────────
+      // User is re-connecting (same or different group). Clear the keepalive timer
+      // so the deferred disconnect doesn't fire mid-connection-handshake.
+      if (keepaliveTimerRef.current) {
+        clearTimeout(keepaliveTimerRef.current);
+        keepaliveTimerRef.current = null;
+        AppLogger.log('BLE_STATE_CHANGE', { event: 'keepalive_cancelled_reconnect' });
       }
 
-      if (Platform.OS === 'web' || isMock === 'true') {
-        setConnectedDevices(devices);
-        devices.forEach(d => {
-          AppLogger.log('DEVICE_CONNECTED', { id: d.id, name: d.name, firmware: 'v2.0.1.DEMO' });
-        });
-        
-        if (dataReceivedCallbackRef.current) {
-          setTimeout(() => {
-             devices.forEach(d => {
-               const mockPacket = [0x66, 0x14, 0x22, 0x01, 0x01, 0x33, 0x01, 0x55, 0x66, 0x99];
-               dataReceivedCallbackRef.current!(d.id, mockPacket);
-             });
-          }, 1000);
+      // Flush stale GATT connections (devices currently connected but NOT in the new request)
+      const staleDevices = connectedDevicesRef.current.filter(c => !devices.some(d => d.id === c.id));
+      if (staleDevices.length > 0) {
+        for (const stale of staleDevices) {
+          // Explicitly remove disconnect listeners to prevent auto-recovery from fighting the intentional teardown
+          if (disconnectListeners.current[stale.id]) {
+             try {
+               disconnectListeners.current[stale.id].remove();
+             } catch (e) {
+               AppLogger.warn('[BLE] Failed to remove disconnect listener during stale device flush', e);
+             }
+             delete disconnectListeners.current[stale.id];
+          }
+          try {
+            await bleManager.cancelDeviceConnection(stale.id);
+            AppLogger.log('BLE_STATE_CHANGE', { event: 'stale_device_flushed', mac: stale.id });
+          } catch (e) {
+            AppLogger.warn('Failed to flush stale device', { mac: stale.id, error: String(e) });
+          }
         }
-        setGate('IDLE');
+        // Wait a moment for the OS BLE stack to finalize the teardowns before acquiring new connections
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+
+      // ── CONNECTION GATE: Reject if another BLE operation is in-flight ────────
+      if (bleGateRef.current !== 'IDLE') {
+        AppLogger.warn('[BLE] connectToDevices REJECTED — gate is ' + bleGateRef.current, { requestedDevices: devices.map(d => d.id) });
         return;
       }
-      // FIX: Android thoroughly forbids GATT connections during high-duty LE scans. Must stop before connect.
-      scanner.stopScanner();
-      // ── Overwatch: Also stop the Silent Sweeper during GATT connect phase ──────
-      // The radio cannot actively scan AND perform GATT operations simultaneously on
-      // Android without risking GATT 133. The Sweeper is resumed after connect completes.
-      if (wasSweeperActive) sweeper.stopSweeper();
-
-      // ── PARALLEL GROUP CONNECT (2-phase) ───────────────────────────────────
-      // Phase 1 (serial): Acquire GATT connections one at a time.
-      //   Android's BT stack serializes connectToDevice internally anyway,
-      //   and firing them concurrently risks GATT 133 on congested stacks.
-      // Phase 2 (parallel): Once all GATT channels are open, run the post-connect
-      //   handshake (discoverServices → MTU → timeSync → notifyMonitor) for all
-      //   devices simultaneously via Promise.all.
-      //   For a 2-device group this cuts ~1.5s off open time (device 2's handshake
-      //   overlaps with device 1's instead of waiting behind it).
-      // ── Phase 1: Serial GATT acquisition ─────────────────────────────────────
-      const rawConns: any[] = [];
-      for (const device of devices) {
-        // PARTIAL CACHE GUARD: Skip devices we already retained!
-        if (retainedDevices.some(r => r.id === device.id)) {
-          continue; 
+      setGate('CONNECTING');
+      // Hoist outside try{} so it's visible in catch{} for Sweeper resume-on-failure
+      const wasSweeperActive = sweeper.isSweeperActive;
+      try {
+        let isMock = 'false';
+        if (__DEV__) {
+           isMock = await AsyncStorage.getItem('@Sk8lytz_demo_mode') || 'false';
         }
 
-        let conn: any = null;
-        let lastErr: any = null;
-        for (let attempt = 1; attempt <= 2; attempt++) {
-          try {
-            const isConnected = await bleManager.isDeviceConnected(device.id);
-            conn = isConnected ? device : await bleManager.connectToDevice(device.id);
-            break;
-          } catch (e: any) {
-            lastErr = e;
-            if (String(e).includes('133')) {
-              AppLogger.warn(`[BLE] GATT 133 congestion linking ${device.id}. Attempt ${attempt}/2...`);
-              await new Promise(resolve => setTimeout(resolve, 200));
-            } else {
+        if (Platform.OS === 'web' || isMock === 'true') {
+          setConnectedDevices(devices);
+          devices.forEach(d => {
+            AppLogger.log('DEVICE_CONNECTED', { id: d.id, name: d.name, firmware: 'v2.0.1.DEMO' });
+          });
+          
+          if (dataReceivedCallbackRef.current) {
+            setTimeout(() => {
+               devices.forEach(d => {
+                 const mockPacket = [0x66, 0x14, 0x22, 0x01, 0x01, 0x33, 0x01, 0x55, 0x66, 0x99];
+                 dataReceivedCallbackRef.current!(d.id, mockPacket);
+               });
+            }, 1000);
+          }
+          setGate('IDLE');
+          return;
+        }
+        // FIX: Android thoroughly forbids GATT connections during high-duty LE scans. Must stop before connect.
+        scanner.stopScanner();
+        // ── Overwatch: Also stop the Silent Sweeper during GATT connect phase ──────
+        // The radio cannot actively scan AND perform GATT operations simultaneously on
+        // Android without risking GATT 133. The Sweeper is resumed after connect completes.
+        if (wasSweeperActive) sweeper.stopSweeper();
+
+        // ── PARALLEL GROUP CONNECT (2-phase) ───────────────────────────────────
+        // Phase 1 (serial): Acquire GATT connections one at a time.
+        //   Android's BT stack serializes connectToDevice internally anyway,
+        //   and firing them concurrently risks GATT 133 on congested stacks.
+        // Phase 2 (parallel): Once all GATT channels are open, run the post-connect
+        //   handshake (discoverServices → MTU → timeSync → notifyMonitor) for all
+        //   devices simultaneously via Promise.all.
+        //   For a 2-device group this cuts ~1.5s off open time (device 2's handshake
+        //   overlaps with device 1's instead of waiting behind it).
+        // ── Phase 1: Serial GATT acquisition ─────────────────────────────────────
+        const rawConns: any[] = [];
+        for (const device of devices) {
+          // PARTIAL CACHE GUARD: Skip devices we already retained!
+          if (retainedDevices.some(r => r.id === device.id)) {
+            continue; 
+          }
+
+          let conn: any = null;
+          let lastErr: any = null;
+          for (let attempt = 1; attempt <= 2; attempt++) {
+            try {
+              const isConnected = await bleManager.isDeviceConnected(device.id);
+              conn = isConnected ? device : await bleManager.connectToDevice(device.id);
               break;
-            }
-          }
-        }
-        if (conn) {
-          rawConns.push(conn);
-        } else {
-          AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${device.id}`, lastErr);
-          AppLogger.log('BLE_CONNECTION_ERROR', { error: lastErr?.message || String(lastErr), deviceId: device.id, context: 'group_sync_fail' });
-        }
-      }
-
-      // ── Phase 2: Parallel post-connect handshake ──────────────────────────
-      // Each device negotiates MTU, sets up notifications, and sends time sync
-      // concurrently. Returns the device conn if successful, null if it failed.
-      const handshakeDevice = async (conn: any): Promise<any | null> => {
-        try {
-          if (Platform.OS === 'android') {
-            await bleManager.requestConnectionPriorityForDevice(conn.id, 1).catch((e: any) => {
-              AppLogger.warn('[BLE] requestConnectionPriorityForDevice failed', e);
-            });
-          }
-          // ── HAL: Resolve protocol adapter from service UUIDs & Caching ────────
-          let adapter: IControllerProtocol | null = null;
-          let usedCache = false;
-
-          const cachedGatt = await BleCharacteristicCache.get(conn.id);
-          if (cachedGatt) {
-            adapter = getProtocolById(cachedGatt.protocolId);
-            if (adapter) usedCache = true;
-          }
-
-          if (!adapter) {
-            await conn.discoverAllServicesAndCharacteristics();
-            try {
-              const services = await conn.services();
-              const serviceUUIDs = services.map((s: any) => s.uuid as string);
-              adapter = resolveProtocol(serviceUUIDs, conn.manufacturerData) ?? getDefaultProtocol();
-            } catch (e) {
-              // services() not available on all platforms — fall back to Zengge default
-              AppLogger.warn('[BLE] service lookup failed during group connect, falling back to default protocol', e);
-              adapter = getDefaultProtocol();
-            }
-            await BleCharacteristicCache.set(conn.id, adapter.protocolId);
-          } else {
-            AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context: 'handshakeDevice', deviceId: conn.id });
-          }
-
-          // MTU negotiation (up to 2 retries)
-          let negotiatedMtu = 23;
-          for (let mtuAttempt = 1; mtuAttempt <= 2; mtuAttempt++) {
-            try {
-              const negotiated = await conn.requestMTU(512);
-              negotiatedMtu = negotiated.mtu;
-              if (negotiatedMtu > 23) break;
-              AppLogger.warn(`[BLE] MTU glitch (23) for ${conn.id}. Retrying...`);
-              await new Promise(res => setTimeout(res, 200));
-            } catch (e) {
-              await new Promise(res => setTimeout(res, 200));
-            }
-          }
-          mtuMapRef.current.set(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);
-          AppLogger.log('DEVICE_CONNECTED', {
-            context: 'mtu_negotiated',
-            mtu: mtuMapRef.current.get(conn.id),
-            deviceId: conn.id,
-          });
-
-          adapterMapRef.current.set(conn.id, adapter);
-          AppLogger.log('DEVICE_CONNECTED', { context: 'adapter_resolved', deviceId: conn.id, protocolId: adapter.protocolId });
-
-          // Disconnect listener + notification monitor using ADAPTER UUIDs
-          if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
-          disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {
-            handleOrganicDisconnect(error, conn.id);
-          });
-          conn.monitorCharacteristicForService(
-            adapter.serviceUUID,
-            adapter.notifyCharacteristicUUID,
-            (error: any, characteristic: any) => handleNotificationRef.current(error, characteristic, conn.id)
-          );
-
-          // ── HAL: Handshake — adapter-specific (Zengge=0x10 time sync, BanlanX=no-op)
-          try {
-            const handshake = adapter.getHandshakePayloads();
-            for (let i = 0; i < handshake.packets.length; i++) {
-              const b64 = Buffer.from(handshake.packets[i]).toString('base64');
-              await conn.writeCharacteristicWithoutResponseForService(
-                adapter.serviceUUID, adapter.writeCharacteristicUUID, b64
-              );
-              if (i < handshake.packets.length - 1 && handshake.interPacketDelayMs > 0) {
-                await new Promise(res => setTimeout(res, handshake.interPacketDelayMs));
+            } catch (e: any) {
+              lastErr = e;
+              if (String(e).includes('133')) {
+                AppLogger.warn(`[BLE] GATT 133 congestion linking ${device.id}. Attempt ${attempt}/2...`);
+                await new Promise(resolve => setTimeout(resolve, 200));
+              } else {
+                break;
               }
             }
-            if (handshake.packets.length > 0) {
-              AppLogger.log('BLE_TIME_SYNC', { deviceId: conn.id, protocolId: adapter.protocolId, timestamp: Date.now() });
-            }
-          } catch (handshakeErr: any) {
-            AppLogger.warn('[BLE] Handshake write failed (non-fatal)', { error: String(handshakeErr), deviceId: conn.id });
           }
-
-          AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name });
-          return conn;
-        } catch (deviceError: any) {
-          const errMsg = deviceError?.message || String(deviceError);
-          if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
-            AppLogger.warn(`[BLE] Connection dropout for ${conn.id} (ignoring VIP error)`);
+          if (conn) {
+            rawConns.push(conn);
           } else {
-            AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${conn.id}`, deviceError);
-            AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, deviceId: conn.id, context: 'group_sync_fail' });
+            AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${device.id}`, lastErr);
+            AppLogger.log('BLE_CONNECTION_ERROR', { error: lastErr?.message || String(lastErr), deviceId: device.id, context: 'group_sync_fail' });
           }
-          return null;
         }
-      };
 
-      const handshakeResults = await Promise.all(rawConns.map(handshakeDevice));
-      const connectedGroup = handshakeResults.filter(Boolean);
+        // ── Phase 2: Parallel post-connect handshake ──────────────────────────
+        // Each device negotiates MTU, sets up notifications, and sends time sync
+        // concurrently. Returns the device conn if successful, null if it failed.
+        const handshakeDevice = async (conn: any): Promise<any | null> => {
+          try {
+            if (Platform.OS === 'android') {
+              await bleManager.requestConnectionPriorityForDevice(conn.id, 1).catch((e: any) => {
+                AppLogger.warn('[BLE] requestConnectionPriorityForDevice failed', e);
+              });
+            }
+            // ── HAL: Resolve protocol adapter from service UUIDs & Caching ────────
+            let adapter: IControllerProtocol | null = null;
+            let usedCache = false;
 
-      // ── Single atomic state update with the fully-booted group ───────────────────
-      // All GATT handshakes, MTU negotiations, and time syncs are complete for every
-      // device that made it here. The UI transitions 0→N in one React commit.
-      // Additive merge: preserves any device that completed handshake but was not in
-      // the current batch (e.g. recovery reconnect racing a group connect).
-      // stale-state flash is prevented by the setConnectedDevices([]) at function top.
-      if (connectedGroup.length > 0) {
-        setConnectedDevices(prev => {
-          const merged = [...prev];
-          for (const c of connectedGroup) {
-            if (!merged.find(x => x.id === c.id)) merged.push(c);
+            const cachedGatt = await BleCharacteristicCache.get(conn.id);
+            if (cachedGatt) {
+              adapter = getProtocolById(cachedGatt.protocolId);
+              if (adapter) usedCache = true;
+            }
+
+            if (!adapter) {
+              await conn.discoverAllServicesAndCharacteristics();
+              try {
+                const services = await conn.services();
+                const serviceUUIDs = services.map((s: any) => s.uuid as string);
+                adapter = resolveProtocol(serviceUUIDs, conn.manufacturerData) ?? getDefaultProtocol();
+              } catch (e) {
+                // services() not available on all platforms — fall back to Zengge default
+                AppLogger.warn('[BLE] service lookup failed during group connect, falling back to default protocol', e);
+                adapter = getDefaultProtocol();
+              }
+              await BleCharacteristicCache.set(conn.id, adapter.protocolId);
+            } else {
+              AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context: 'handshakeDevice', deviceId: conn.id });
+            }
+
+            // MTU negotiation (up to 2 retries)
+            let negotiatedMtu = 23;
+            for (let mtuAttempt = 1; mtuAttempt <= 2; mtuAttempt++) {
+              try {
+                const negotiated = await conn.requestMTU(512);
+                negotiatedMtu = negotiated.mtu;
+                if (negotiatedMtu > 23) break;
+                AppLogger.warn(`[BLE] MTU glitch (23) for ${conn.id}. Retrying...`);
+                await new Promise(res => setTimeout(res, 200));
+              } catch (e) {
+                await new Promise(res => setTimeout(res, 200));
+              }
+            }
+            mtuMapRef.current.set(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);
+            AppLogger.log('DEVICE_CONNECTED', {
+              context: 'mtu_negotiated',
+              mtu: mtuMapRef.current.get(conn.id),
+              deviceId: conn.id,
+            });
+
+            adapterMapRef.current.set(conn.id, adapter);
+            AppLogger.log('DEVICE_CONNECTED', { context: 'adapter_resolved', deviceId: conn.id, protocolId: adapter.protocolId });
+
+            // Disconnect listener + notification monitor using ADAPTER UUIDs
+            if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
+            disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {
+              handleOrganicDisconnect(error, conn.id);
+            });
+            conn.monitorCharacteristicForService(
+              adapter.serviceUUID,
+              adapter.notifyCharacteristicUUID,
+              (error: any, characteristic: any) => handleNotificationRef.current(error, characteristic, conn.id)
+            );
+
+            // ── HAL: Handshake — adapter-specific (Zengge=0x10 time sync, BanlanX=no-op)
+            try {
+              const handshake = adapter.getHandshakePayloads();
+              for (let i = 0; i < handshake.packets.length; i++) {
+                const b64 = Buffer.from(handshake.packets[i]).toString('base64');
+                await conn.writeCharacteristicWithoutResponseForService(
+                  adapter.serviceUUID, adapter.writeCharacteristicUUID, b64
+                );
+                if (i < handshake.packets.length - 1 && handshake.interPacketDelayMs > 0) {
+                  await new Promise(res => setTimeout(res, handshake.interPacketDelayMs));
+                }
+              }
+              if (handshake.packets.length > 0) {
+                AppLogger.log('BLE_TIME_SYNC', { deviceId: conn.id, protocolId: adapter.protocolId, timestamp: Date.now() });
+              }
+            } catch (handshakeErr: any) {
+              AppLogger.warn('[BLE] Handshake write failed (non-fatal)', { error: String(handshakeErr), deviceId: conn.id });
+            }
+
+            AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name });
+            return conn;
+          } catch (deviceError: any) {
+            const errMsg = deviceError?.message || String(deviceError);
+            if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
+              AppLogger.warn(`[BLE] Connection dropout for ${conn.id} (ignoring VIP error)`);
+            } else {
+              AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${conn.id}`, deviceError);
+              AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, deviceId: conn.id, context: 'group_sync_fail' });
+            }
+            return null;
           }
-          return merged;
-        });
+        };
 
-        // REMOVED: Legacy @Sk8lytz_last_pattern_* reconnect replay.
-        // Superseded by DeviceStateLedger (useDeviceStateLedger.ts) + DockedController
-        // reconnect-replay useEffect. The old system caused a double-write race:
-        // two BLE payloads firing at ~300ms post-connect from different code layers.
-        // The ledger handles this correctly with per-device targeting and staggered writes.
-      }
+        const handshakeResults = await Promise.all(rawConns.map(handshakeDevice));
+        const connectedGroup = handshakeResults.filter(Boolean);
 
-      setGate('IDLE');
-      // Resume Sweeper after successful connection
-      if (wasSweeperActive && isBluetoothEnabled) sweeper.startSweeper();
-    } catch (e: any) {
-      const errMsg = e?.message || String(e);
-      if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
-         AppLogger.warn(`[BLE] Group connection dropout (ignoring VIP error)`);
-      } else {
-         AppLogger.error('FAILED TO CONNECT TO GROUP', e);
-         AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, context: 'group' });
+        // ── Single atomic state update with the fully-booted group ───────────────────
+        if (connectedGroup.length > 0) {
+          setConnectedDevices(prev => {
+            const merged = [...prev];
+            for (const c of connectedGroup) {
+              if (!merged.find(x => x.id === c.id)) merged.push(c);
+            }
+            return merged;
+          });
+        }
+      } catch (e: any) {
+        const errMsg = e?.message || String(e);
+        if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
+           AppLogger.warn(`[BLE] Group connection dropout (ignoring VIP error)`);
+        } else {
+           AppLogger.error('FAILED TO CONNECT TO GROUP', e);
+           AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, context: 'group' });
+        }
+        setGate('IDLE');
+        // Resume Sweeper even after a connection failure
+        if (wasSweeperActive && isBluetoothEnabled) sweeper.startSweeper();
       }
-      setGate('IDLE');
-      // Resume Sweeper even after a connection failure
-      if (wasSweeperActive && isBluetoothEnabled) sweeper.startSweeper();
+    } catch (outerErr: any) {
+      AppLogger.error('[BLE] connectToDevices outer failed', outerErr);
+    } finally {
+      release();
     }
   };
 

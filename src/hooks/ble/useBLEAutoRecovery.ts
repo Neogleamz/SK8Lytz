@@ -18,6 +18,7 @@ import { resolveProtocol, getDefaultProtocol, getProtocolById } from '../../prot
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
 import { AppLogger } from '../../services/AppLogger';
 import { BleCharacteristicCache } from '../../services/BleCharacteristicCache';
+import { acquireGattLock } from './useBLEGattMutex';
 
 export interface UseBLEAutoRecoveryProps {
   bleManager: any;
@@ -115,6 +116,7 @@ export function useBLEAutoRecovery({
           break;
         }
 
+        let releaseFn: (() => void) | null = null;
         try {
           const backoff = getRecoveryBackoffMs(attempts);
           await new Promise(r => setTimeout(r, backoff));
@@ -136,15 +138,14 @@ export function useBLEAutoRecovery({
 
           if (!bleManager) break;
 
-          // ── GATE CHECK: Wait for IDLE before touching the radio ──
-          // If the gate isn't IDLE, skip this attempt and try again next loop.
-          // This prevents recovery from colliding with active connections/scans.
-          if (bleGateRef.current !== 'IDLE') {
+          // ── GATT LOCK ACQUISITION: Priority 2 (Background Recovery) ──
+          const lockHandle = await acquireGattLock(2);
+          if (!lockHandle) {
             gateWaitCount++;
-            AppLogger.log('AUTO_RECOVERY_GATE_WAIT', { deviceId, gate: bleGateRef.current, attempt: attempts, gateWaitCount });
+            AppLogger.log('AUTO_RECOVERY_GATE_WAIT', { deviceId, gate: 'GATT_MUTEX_BUSY', attempt: attempts, gateWaitCount });
             
             if (gateWaitCount > 6) {
-              AppLogger.warn(`[AutoRecovery] ${deviceId} hit Zombie Gate Lock — gate stuck on ${bleGateRef.current} for too long. Ejecting.`);
+              AppLogger.warn(`[AutoRecovery] ${deviceId} hit Zombie Lock — lock busy for too long. Ejecting.`);
               ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
               setGhostedDeviceIds([...ghostedRefs.current]);
               setConnectedDevices(prev => prev.filter(d => d.id !== deviceId));
@@ -153,33 +154,43 @@ export function useBLEAutoRecovery({
             continue; // Will sleep again via backoff at top of loop
           }
           
-          gateWaitCount = 0; // Reset gate wait count since gate is IDLE
+          gateWaitCount = 0; // Reset gate wait count since we successfully locked
+          const { release, signal } = lockHandle;
+          releaseFn = release;
+
+          if (signal.aborted || cancelTokenRef.current !== myToken || !ghostedRefs.current.includes(deviceId)) {
+            break;
+          }
 
           // Attempt blind GATT connection (or reuse if natively connected)
           const nativelyConnected = await bleManager.isDeviceConnected(deviceId).catch(() => false);
+          if (signal.aborted) break;
           
           let conn: Device;
           if (nativelyConnected) {
             // Re-discover services just in case, since we lost the logical connection.
             // Use empty array to get ALL connected devices (not filtered to Zengge UUID).
             const devicesList = await bleManager.connectedDevices([]).catch(() => []);
+            if (signal.aborted) break;
             conn = devicesList.find((d: any) => d.id === deviceId) || (await bleManager.connectToDevice(deviceId, { timeout: 3500 }));
           } else {
             conn = await bleManager.connectToDevice(deviceId, { timeout: 3500 });
           }
+          if (signal.aborted) break;
+
           let recoveryAdapter: IControllerProtocol | null = null;
-          let usedCache = false;
 
           const cachedGatt = await BleCharacteristicCache.get(conn.id);
           if (cachedGatt) {
             recoveryAdapter = getProtocolById(cachedGatt.protocolId);
-            if (recoveryAdapter) usedCache = true;
           }
 
           if (!recoveryAdapter) {
             await conn.discoverAllServicesAndCharacteristics();
+            if (signal.aborted) break;
             try {
               const svcs = await conn.services();
+              if (signal.aborted) break;
               const svcUUIDs = svcs.map((s: any) => s.uuid as string);
               recoveryAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
             } catch (_e: any) {
@@ -190,17 +201,20 @@ export function useBLEAutoRecovery({
           } else {
             AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context: 'autoRecovery', deviceId: conn.id });
           }
+          if (signal.aborted) break;
 
           onAdapterResolved(conn.id, recoveryAdapter);
           AppLogger.log('AUTO_RECOVERY_ADAPTER', { deviceId: conn.id, protocolId: recoveryAdapter.protocolId });
 
           try {
             const mtuResult = await conn.requestMTU(512);
+            if (signal.aborted) break;
             const negotiatedMtu = mtuResult?.mtu ?? 186;
             onMtuNegotiated?.(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);
           } catch (e) {
             AppLogger.warn('[AutoRecovery] MTU negotiation failed', { deviceId, error: String(e) });
           }
+          if (signal.aborted) break;
 
           // Purge old listener and attach new one
           if (disconnectListeners.current[conn.id]) {
@@ -221,6 +235,7 @@ export function useBLEAutoRecovery({
           // Send recovery ping using adapter — BanlanX has no EEPROM query (empty no-op),
           // Zengge sends 0x63 queryHardwareSettings to realign hardware state.
           await new Promise(r => setTimeout(r, 600));
+          if (signal.aborted) break;
           const pingResult = recoveryAdapter.buildQuerySettings(false);
           if (pingResult.packets.length > 0) {
             await conn.writeCharacteristicWithoutResponseForService(
@@ -228,6 +243,7 @@ export function useBLEAutoRecovery({
               Buffer.from(pingResult.packets[0]).toString('base64')
             ).catch(e => AppLogger.warn('[useBLEAutoRecovery] Recovery ping failed', e));
           }
+          if (signal.aborted) break;
 
           // Publish back to UI and clear ghost state
           setConnectedDevices(prev => prev.map(d => d.id === deviceId ? conn : d));
@@ -243,6 +259,10 @@ export function useBLEAutoRecovery({
 
         } catch (e: any) {
           AppLogger.warn(`[AutoRecovery] Connection attempt failed for ${deviceId}, retrying with backoff`, e);
+        } finally {
+          if (releaseFn) {
+            releaseFn();
+          }
         }
       }
     };
