@@ -32,6 +32,51 @@ def parse_args():
     )
     return parser.parse_args()
 
+def harvest_adb_screenshot(output_path):
+    import subprocess
+    adb_paths = [
+        r"C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\.local-builder\android-sdk\platform-tools\adb.exe",
+        "adb"
+    ]
+    resolved_adb = None
+    for p in adb_paths:
+        try:
+            res = subprocess.run([p, "version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if res.returncode == 0:
+                resolved_adb = p
+                break
+        except Exception:
+            continue
+            
+    if not resolved_adb:
+        print("[AUDITOR] ADB executable not found. Skipping live screen capture.")
+        return False
+        
+    try:
+        res = subprocess.run([resolved_adb, "devices"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        lines = res.stdout.strip().split("\n")
+        devices = [line.split()[0] for line in lines[1:] if line.strip() and "device" in line]
+        if not devices:
+            print("[AUDITOR] No active ADB devices/emulators detected. Skipping live screen capture.")
+            return False
+            
+        print(f"[AUDITOR] Connected device detected: {devices[0]}. Capturing viewport...")
+        cap_res = subprocess.run([resolved_adb, "shell", "screencap", "-p", "/sdcard/screencap.png"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if cap_res.returncode != 0:
+            print(f"[AUDITOR] Screencap failed: {cap_res.stderr}")
+            return False
+            
+        pull_res = subprocess.run([resolved_adb, "pull", "/sdcard/screencap.png", output_path], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if pull_res.returncode != 0:
+            print(f"[AUDITOR] Pull failed: {pull_res.stderr}")
+            return False
+            
+        print(f"[AUDITOR] Live viewport successfully harvested to {output_path} via ADB!")
+        return True
+    except Exception as e:
+        print(f"[AUDITOR] Warning: ADB harvest error: {str(e)}")
+        return False
+
 def main():
     args = parse_args()
     
@@ -39,8 +84,8 @@ def main():
     target_image = args.image
     is_mock = False
     
-    if args.test or not target_image:
-        print("[AUDITOR] No screenshot path provided or --test flag passed. Generating mock test image...")
+    if args.test:
+        print("[AUDITOR] --test flag passed. Generating mock test image...")
         mock_path = "mock_screenshot_temp.png"
         try:
             with open(mock_path, "wb") as f:
@@ -51,6 +96,24 @@ def main():
         except Exception as e:
             print(f"[ERROR] Failed to write mock image: {str(e)}")
             sys.exit(1)
+    elif not target_image:
+        print("[AUDITOR] No screenshot path provided. Attempting live viewport harvest via ADB...")
+        harvested_path = "harvested_screenshot.png"
+        if harvest_adb_screenshot(harvested_path):
+            target_image = harvested_path
+            is_mock = True  # Clean it up after audit completes
+        else:
+            print("[AUDITOR] Live harvest failed or skipped. Falling back to mock test image...")
+            mock_path = "mock_screenshot_temp.png"
+            try:
+                with open(mock_path, "wb") as f:
+                    f.write(MINIMAL_PNG_BYTES)
+                target_image = mock_path
+                is_mock = True
+                print(f"[AUDITOR] Mock fallback image generated successfully at {mock_path}")
+            except Exception as e:
+                print(f"[ERROR] Failed to write fallback mock image: {str(e)}")
+                sys.exit(1)
             
     if not os.path.exists(target_image):
         print(f"[ERROR] Specified screenshot path does not exist: {target_image}")
