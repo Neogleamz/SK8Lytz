@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ExpoLinking from 'expo-linking';
 import DeviceItem from '../components/DeviceItem';
 import { useTheme } from '../context/ThemeContext';
-import useBLE from '../hooks/useBLE';
+import { BLEContext } from '../context/BLEContext';
 import { Layout, Typography, Spacing } from '../theme/theme';
 
 import { DockedControllerHandle } from '../components/DockedController';
@@ -78,6 +78,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // Do NOT pass `ledger` as an object — it's a new object reference on every render,
   // which would break FlatList performance by invalidating renderItem's useCallback.
   const { save: ledgerSave, loadSync: ledgerLoadSync } = useDeviceStateLedger();
+  const ble = React.useContext(BLEContext);
+  if (!ble) {
+    throw new Error('DashboardScreen must be used within a BLEProvider');
+  }
   const {
     scanForPeripherals,
     allDevices,
@@ -87,7 +91,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     disconnectFromDevice,
     forceDisconnect,
     writeToDevice,
-    // isScanning / isScanProbing removed — bleState FSM is the canonical source of truth
     isBluetoothSupported,
     isBluetoothEnabled,
     requestPermissions,
@@ -106,8 +109,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     isSweeperActive,
     burstScan,
     ghostedDeviceIds,
-    // NOTE: registeredMacs is passed to useBLE after useRegistration() via registeredMacsRef below
-  } = useBLE();
+  } = ble;
 
   // ── Registration system ────────────────────────────────────────────────────
   const {

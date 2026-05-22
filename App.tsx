@@ -15,6 +15,8 @@ import { supabase } from './src/services/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
 import { ComplianceGate } from './src/providers/ComplianceGate';
+import { BLEProvider } from './src/context/BLEContext';
+
 
 LogBox.ignoreLogs([
   '"shadow*" style props are deprecated',
@@ -196,7 +198,9 @@ function AppContent() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {isAuthenticated ? (
         <ComplianceGate isOfflineMode={offlineMode}>
-          <DashboardScreen isOfflineMode={offlineMode} onLogout={() => setOfflineMode(false)} />
+          <BLEProvider>
+            <DashboardScreen isOfflineMode={offlineMode} onLogout={() => setOfflineMode(false)} />
+          </BLEProvider>
         </ComplianceGate>
       ) : (
         <AuthScreen

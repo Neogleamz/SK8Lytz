@@ -5,12 +5,16 @@
  * and hardware-specific byte arrays. It supports mixed-protocol groups by
  * iterating over connected devices and resolving the correct HAL adapter for each.
  */
-import { useCallback } from 'react';
-import useBLE from './useBLE';
+import { useCallback, useContext } from 'react';
+import { BLEContext } from '../context/BLEContext';
 import type { CustomModeStep, MusicConfig, RGB, ProtocolResult } from '../protocols/IControllerProtocol';
 
 export function useProtocolDispatch() {
-  const { connectedDevices, getAdapterForDevice, executeProtocolResults } = useBLE();
+  const context = useContext(BLEContext);
+  if (!context) {
+    throw new Error('useProtocolDispatch must be used within a BLEProvider');
+  }
+  const { connectedDevices, getAdapterForDevice, executeProtocolResults } = context;
 
   const _dispatchToDevices = useCallback(
     (
