@@ -242,7 +242,8 @@ export function useBLESweeper({
           const svcs = await conn.services();
           const svcUUIDs = svcs.map((s: any) => s.uuid as string);
           interrogatorAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
-        } catch (_e) {
+        } catch (_e: any) {
+          AppLogger.warn(`[Sweeper] Failed resolving service UUIDs for ${mac}, falling back to default protocol`, _e);
           interrogatorAdapter = getDefaultProtocol();
         }
         await BleCharacteristicCache.set(mac, interrogatorAdapter.protocolId);
@@ -364,7 +365,9 @@ export function useBLESweeper({
         try {
           const buf = Buffer.from(mfData, 'base64');
           if (buf.length > 9 && (buf[9] === 0x33 || buf[9] === 0xBF)) isSymphony = true;
-        } catch (e) {}
+        } catch (e) {
+          AppLogger.warn('[useBLESweeper] Failed parsing manufacturerData base64', e);
+        }
       }
       const isKnownPrefix = ZENGGE_NAME_PREFIXES.some(p => nameLower.startsWith(p));
       if (!isSymphony && !isKnownPrefix && !hasZenggeService && !hasBanlanxService) return;

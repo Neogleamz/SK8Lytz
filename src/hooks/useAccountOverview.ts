@@ -72,7 +72,10 @@ export function useAccountOverview(visible: boolean) {
       // Neither depends on the other, so fire both immediately.
       const [authResult, rawNotifPrefs, hasHealth] = await Promise.all([
         supabase.auth.getUser(),
-        AsyncStorage.getItem(NOTIF_PREF_KEY).catch(() => null),
+        AsyncStorage.getItem(NOTIF_PREF_KEY).catch(e => {
+          AppLogger.warn('Failed to load notification preferences from cache', e);
+          return null;
+        }),
         checkPermission('HEALTH'),
       ]);
 

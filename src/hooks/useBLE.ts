@@ -304,7 +304,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
                 AppLogger.log('DEVICE_DISCOVERED', { context: 'pingDevice_probe_success', deviceId: mac });
                 resolve(accumulatedTelemetry);
               }
-            } catch (e) { /* ignore parse errors */ }
+            } catch (e) {
+              AppLogger.warn('[BLE] Parse error during pingDevice telemetry monitor', e);
+            }
           }
         );
 
@@ -485,7 +487,11 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       for (const stale of staleDevices) {
         // Explicitly remove disconnect listeners to prevent auto-recovery from fighting the intentional teardown
         if (disconnectListeners.current[stale.id]) {
-           try { disconnectListeners.current[stale.id].remove(); } catch (e) {}
+           try {
+             disconnectListeners.current[stale.id].remove();
+           } catch (e) {
+             AppLogger.warn('[BLE] Failed to remove disconnect listener during stale device flush', e);
+           }
            delete disconnectListeners.current[stale.id];
         }
         try {
@@ -585,7 +591,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       const handshakeDevice = async (conn: any): Promise<any | null> => {
         try {
           if (Platform.OS === 'android') {
-            await bleManager.requestConnectionPriorityForDevice(conn.id, 1).catch(() => {});
+            await bleManager.requestConnectionPriorityForDevice(conn.id, 1).catch((e: any) => {
+              AppLogger.warn('[BLE] requestConnectionPriorityForDevice failed', e);
+            });
           }
           // ── HAL: Resolve protocol adapter from service UUIDs & Caching ────────
           let adapter: IControllerProtocol | null = null;
@@ -603,8 +611,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
               const services = await conn.services();
               const serviceUUIDs = services.map((s: any) => s.uuid as string);
               adapter = resolveProtocol(serviceUUIDs, conn.manufacturerData) ?? getDefaultProtocol();
-            } catch (_e) {
+            } catch (e) {
               // services() not available on all platforms — fall back to Zengge default
+              AppLogger.warn('[BLE] service lookup failed during group connect, falling back to default protocol', e);
               adapter = getDefaultProtocol();
             }
             await BleCharacteristicCache.set(conn.id, adapter.protocolId);
@@ -1072,7 +1081,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     };
     
     const currentWrite = (async () => {
-      await writeMutex.catch(() => {});
+      await writeMutex.catch((e: any) => {
+        AppLogger.warn('[BLE] executeProtocolResults mutex pipeline failure', e);
+      });
       return executeWrite();
     })();
     

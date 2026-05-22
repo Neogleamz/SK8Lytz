@@ -26,6 +26,7 @@
  * Design: Module-level (not a React hook) so the same lock instance is
  * shared across all hook instances without React context overhead.
  */
+import { AppLogger } from '../../services/AppLogger';
 
 export type GattPriority = 1 | 2 | 3;
 
@@ -104,7 +105,9 @@ export async function acquireGattLock(
   _currentHolderAbortController = priority === 2 ? ownAbortController : null;
 
   // Wait for previous operation to complete
-  await prevChain.catch(() => {});
+  await prevChain.catch((e: any) => {
+    AppLogger.warn('[Mutex] Previous operation in GATT lock chain rejected', e);
+  });
 
   return {
     signal: ownAbortController.signal,

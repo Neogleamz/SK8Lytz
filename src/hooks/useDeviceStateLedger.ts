@@ -100,9 +100,13 @@ export async function warmLedgerCache(): Promise<void> {
         if (parsed?.deviceMac) {
           memoryCache.set(normalizeMac(parsed.deviceMac), parsed);
         }
-      } catch { /* corrupt entry — skip */ }
+      } catch (e) {
+        AppLogger.warn('Failed to parse ledger entry from storage during cache warm', e);
+      }
     });
-  } catch { /* storage unavailable — silent */ }
+  } catch (e) {
+    AppLogger.error('Failed to warm ledger cache from AsyncStorage', e);
+  }
 }
 
 export function useDeviceStateLedger() {
@@ -154,7 +158,8 @@ export function useDeviceStateLedger() {
       // Warm the cache for future synchronous reads
       memoryCache.set(key, parsed);
       return parsed;
-    } catch {
+    } catch (e) {
+      AppLogger.error('Failed to read device state ledger entry from storage', e, { mac: key });
       return null;
     }
   }, []);

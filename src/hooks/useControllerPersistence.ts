@@ -68,35 +68,39 @@ export function useControllerPersistence(
   stateValues: ControllerStateValues,
   setters: ControllerStateSetters
 ) {
-  // Load from persistence on mount
-  useEffect(() => {
-    AsyncStorage.getItem(`${STORAGE_PREFIX}ControllerState`).then((saved) => {
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed.selectedColor) setters.setSelectedColor(parsed.selectedColor);
-          if (parsed.selectedPatternId) setters.setSelectedPatternId(parsed.selectedPatternId);
-          if (parsed.brightness !== undefined) setters.setBrightness(parsed.brightness);
-          else setters.setBrightness(90);
-          if (parsed.speed !== undefined) setters.setSpeed(parsed.speed);
-          else setters.setSpeed(50);
-          if (parsed.micSensitivity !== undefined) setters.setMicSensitivity(parsed.micSensitivity);
-          if (parsed.musicHue !== undefined) setters.setMusicHue(parsed.musicHue);
-          if (parsed.musicSecondaryHue !== undefined) setters.setMusicSecondaryHue(parsed.musicSecondaryHue);
-          if (parsed.musicPrimaryColor) setters.setMusicPrimaryColor(parsed.musicPrimaryColor);
-          if (parsed.musicSecondaryColor) setters.setMusicSecondaryColor(parsed.musicSecondaryColor);
-          if (parsed.musicMatrixStyle) setters.setMusicMatrixStyle(parsed.musicMatrixStyle);
-          if (parsed.musicPatternId) setters.setMusicPatternId(parsed.musicPatternId);
-          if (parsed.micSource) setters.setMicSource(parsed.micSource);
-          if (parsed.musicSetting) setters.setMusicSetting(parsed.musicSetting);
-          if (parsed.fixedPatternId) setters.setFixedPatternId(parsed.fixedPatternId);
-          if (parsed.fixedColorMode) setters.setFixedColorMode(parsed.fixedColorMode);
-          if (parsed.fixedFgColor) setters.setFixedFgColor(parsed.fixedFgColor);
-          if (parsed.fixedBgColor) setters.setFixedBgColor(parsed.fixedBgColor);
-          if (parsed.fixedHue !== undefined) setters.setFixedHue(parsed.fixedHue);
-        } catch (_e) { /* corrupted data — use defaults */ }
-      }
-    });
+    AsyncStorage.getItem(`${STORAGE_PREFIX}ControllerState`)
+      .then((saved) => {
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (parsed.selectedColor) setters.setSelectedColor(parsed.selectedColor);
+            if (parsed.selectedPatternId) setters.setSelectedPatternId(parsed.selectedPatternId);
+            if (parsed.brightness !== undefined) setters.setBrightness(parsed.brightness);
+            else setters.setBrightness(90);
+            if (parsed.speed !== undefined) setters.setSpeed(parsed.speed);
+            else setters.setSpeed(50);
+            if (parsed.micSensitivity !== undefined) setters.setMicSensitivity(parsed.micSensitivity);
+            if (parsed.musicHue !== undefined) setters.setMusicHue(parsed.musicHue);
+            if (parsed.musicSecondaryHue !== undefined) setters.setMusicSecondaryHue(parsed.musicSecondaryHue);
+            if (parsed.musicPrimaryColor) setters.setMusicPrimaryColor(parsed.musicPrimaryColor);
+            if (parsed.musicSecondaryColor) setters.setMusicSecondaryColor(parsed.musicSecondaryColor);
+            if (parsed.musicMatrixStyle) setters.setMusicMatrixStyle(parsed.musicMatrixStyle);
+            if (parsed.musicPatternId) setters.setMusicPatternId(parsed.musicPatternId);
+            if (parsed.micSource) setters.setMicSource(parsed.micSource);
+            if (parsed.musicSetting) setters.setMusicSetting(parsed.musicSetting);
+            if (parsed.fixedPatternId) setters.setFixedPatternId(parsed.fixedPatternId);
+            if (parsed.fixedColorMode) setters.setFixedColorMode(parsed.fixedColorMode);
+            if (parsed.fixedFgColor) setters.setFixedFgColor(parsed.fixedFgColor);
+            if (parsed.fixedBgColor) setters.setFixedBgColor(parsed.fixedBgColor);
+            if (parsed.fixedHue !== undefined) setters.setFixedHue(parsed.fixedHue);
+          } catch (e) {
+            AppLogger.warn('Failed to parse controller state cache', e);
+          }
+        }
+      })
+      .catch((e) => {
+        AppLogger.warn('Failed to load controller state from storage', e);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

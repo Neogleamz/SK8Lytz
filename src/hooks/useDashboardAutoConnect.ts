@@ -166,7 +166,8 @@ export function useDashboardAutoConnect({
               .eq('user_id', cloudUserId);
             groups = result.data;
             isOffline = !!result.error;
-          } catch {
+          } catch (e) {
+            AppLogger.warn('Failed to query registered groups from Supabase, entering offline mode', e);
             isOffline = true;
           }
 
@@ -269,7 +270,9 @@ export function useDashboardAutoConnect({
               AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_burst_scan_triggered' });
               const scanResult = burstScan(8000);
               if (scanResult && typeof (scanResult as Promise<void>).catch === 'function') {
-                (scanResult as Promise<void>).catch(() => {});
+                (scanResult as Promise<void>).catch((e: any) => {
+                  AppLogger.warn('Auto-connect burst scan failed', e);
+                });
               }
             }
           }

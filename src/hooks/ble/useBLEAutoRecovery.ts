@@ -182,7 +182,8 @@ export function useBLEAutoRecovery({
               const svcs = await conn.services();
               const svcUUIDs = svcs.map((s: any) => s.uuid as string);
               recoveryAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
-            } catch (_e) {
+            } catch (_e: any) {
+              AppLogger.warn(`[AutoRecovery] Failed resolving service UUIDs for ${deviceId}, falling back to default protocol`, _e);
               recoveryAdapter = getDefaultProtocol();
             }
             await BleCharacteristicCache.set(conn.id, recoveryAdapter.protocolId);
@@ -241,7 +242,7 @@ export function useBLEAutoRecovery({
           break;
 
         } catch (e: any) {
-          // Silent ignore on GATT error — will loop again with backoff
+          AppLogger.warn(`[AutoRecovery] Connection attempt failed for ${deviceId}, retrying with backoff`, e);
         }
       }
     };
