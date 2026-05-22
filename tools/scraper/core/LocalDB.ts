@@ -107,6 +107,8 @@ db.exec(`
     pricing_data TEXT, -- JSON
     special_events TEXT, -- JSON
     adult_night_schedule TEXT, -- JSON,
+    yelp_url TEXT,
+    email_addresses TEXT,
     
     -- Photo Categories
     facade_exterior TEXT,
@@ -167,10 +169,17 @@ if (!fieldRegCheck.find(c => c.name === 'importance_level')) {
   db.exec(`ALTER TABLE pipeline_field_registry ADD COLUMN importance_level INTEGER DEFAULT 0`);
   // Seed initial importance levels
   db.exec(`
-    UPDATE pipeline_field_registry SET importance_level = 2 WHERE field_name IN ('name', 'address', 'lat', 'lng');
-    UPDATE pipeline_field_registry SET importance_level = 1 WHERE field_name IN ('phone', 'website');
+    UPDATE pipeline_field_registry SET importance_level = 2 WHERE field_name IN ('name', 'street_address', 'lat', 'lng');
+    UPDATE pipeline_field_registry SET importance_level = 1 WHERE field_name IN ('phone_number', 'website');
   `);
 }
+// Fix stale field names from legacy migration (address → street_address, phone → phone_number)
+db.exec(`
+  UPDATE pipeline_field_registry SET field_name = 'street_address' WHERE field_name = 'address';
+  UPDATE pipeline_field_registry SET field_name = 'phone_number' WHERE field_name = 'phone';
+  UPDATE pipeline_field_registry SET importance_level = 2 WHERE field_name IN ('name', 'street_address', 'lat', 'lng');
+  UPDATE pipeline_field_registry SET importance_level = 1 WHERE field_name IN ('phone_number', 'website');
+`);
 
 // ── v2 Column Migrations (sitemap-first intelligence refactor) ────────────────
 // Safe: silently skips if column already exists
@@ -186,6 +195,9 @@ if (!colsV2.find(c => c.name === 'yelp_url')) {
 }
 if (!colsV2.find(c => c.name === 'price_range')) {
   db.exec(`ALTER TABLE local_spots ADD COLUMN price_range TEXT`);
+}
+if (!colsV2.find((c: any) => c.name === 'email_addresses')) {
+  db.exec(`ALTER TABLE local_spots ADD COLUMN email_addresses TEXT`);
 }
 
 // Migrate field registry phase_ids from old 5-phase to new 4-phase numbering (ONE-TIME)
@@ -214,6 +226,7 @@ const FIELD_SEEDS: { id: string; field_name: string; phase_id: number; display_l
   { id: 'vibe_score',         field_name: 'vibe_score',         phase_id: 2, display_label: 'Vibe Score',           data_type: 'float',    sort_order: 236 },
   { id: 'capacity',           field_name: 'capacity',           phase_id: 2, display_label: 'Capacity',             data_type: 'integer',  sort_order: 237 },
   { id: 'schedule_url',       field_name: 'schedule_url',       phase_id: 2, display_label: 'Schedule URL',         data_type: 'text',     sort_order: 238 },
+  { id: 'email_addresses',   field_name: 'email_addresses',   phase_id: 2, display_label: 'Email Addresses',      data_type: 'jsonb',    sort_order: 239 },
   { id: 'is_indoor',          field_name: 'is_indoor',          phase_id: 2, display_label: 'Is Indoor',            data_type: 'boolean',  sort_order: 170 },
   { id: 'operator_name',      field_name: 'operator_name',      phase_id: 2, display_label: 'Operator Name',        data_type: 'text',     sort_order: 360 },
   { id: 'opening_hours',      field_name: 'opening_hours',      phase_id: 2, display_label: 'Opening Hours',        data_type: 'json',     sort_order: 361 },
@@ -309,6 +322,7 @@ const rowToObj = (row: any) => {
   obj.pricing_data = safeJsonParse(obj.pricing_data);
   obj.special_events = safeJsonParse(obj.special_events);
   obj.adult_night_schedule = safeJsonParse(obj.adult_night_schedule);
+  obj.email_addresses = safeJsonParse(obj.email_addresses);
   obj.raw_data = safeJsonParse(obj.raw_data);
 
   // Convert additional booleans
@@ -367,7 +381,8 @@ export const upsertLocalSpot = (spot: any) => {
       has_fee, operator_name, has_rental, is_wheelchair_accessible, has_wifi,
       has_toilets, has_food, has_ac, has_lockers, capacity, hosts_derby, surface_quality,
       vibe_score, cultural_metadata, instagram_url, facebook_url, tiktok_url, schedule_url,
-      pricing_data, special_events, adult_night_schedule
+      pricing_data, special_events, adult_night_schedule,
+      email_addresses
     ) VALUES (
       @id, @name, @lat, @lng, @city, @state, @zip, @street_address, @phone_number, @website,
       @google_place_id, @google_maps_url, @business_status, @rating, @user_ratings_total,
@@ -380,7 +395,8 @@ export const upsertLocalSpot = (spot: any) => {
       @has_fee, @operator_name, @has_rental, @is_wheelchair_accessible, @has_wifi,
       @has_toilets, @has_food, @has_ac, @has_lockers, @capacity, @hosts_derby, @surface_quality,
       @vibe_score, @cultural_metadata, @instagram_url, @facebook_url, @tiktok_url, @schedule_url,
-      @pricing_data, @special_events, @adult_night_schedule
+      @pricing_data, @special_events, @adult_night_schedule,
+      @email_addresses
     )
     ON CONFLICT(id) DO UPDATE SET
       name = excluded.name,
@@ -443,7 +459,8 @@ export const upsertLocalSpot = (spot: any) => {
       schedule_url = excluded.schedule_url,
       pricing_data = excluded.pricing_data,
       special_events = excluded.special_events,
-      adult_night_schedule = excluded.adult_night_schedule
+      adult_night_schedule = excluded.adult_night_schedule,
+      email_addresses = excluded.email_addresses
   `);
 
   const id = spot.id || Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -514,7 +531,8 @@ export const upsertLocalSpot = (spot: any) => {
     schedule_url: spot.schedule_url || null,
     pricing_data: safeJsonStringify(spot.pricing_data),
     special_events: safeJsonStringify(spot.special_events),
-    adult_night_schedule: safeJsonStringify(spot.adult_night_schedule)
+    adult_night_schedule: safeJsonStringify(spot.adult_night_schedule),
+    email_addresses: safeJsonStringify(spot.email_addresses)
   });
 
   return id;

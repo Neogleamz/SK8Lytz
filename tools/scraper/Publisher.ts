@@ -122,7 +122,7 @@ async function runPublisher() {
           delete payload.raw_data; // Exclude raw backup JSON
 
           // Serialize JSON columns properly for Supabase JSONB
-          ['opening_hours', 'raw_knowledge_panel', 'photos', 'candidate_photos', 'candidate_links', 'ai_metadata'].forEach(field => {
+          ['opening_hours', 'raw_knowledge_panel', 'photos', 'candidate_photos', 'candidate_links', 'ai_metadata', 'email_addresses'].forEach(field => {
             if (payload[field] && typeof payload[field] === 'string') {
               try { payload[field] = JSON.parse(payload[field]); } catch (e) {}
             }

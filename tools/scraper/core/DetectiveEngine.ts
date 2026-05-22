@@ -72,6 +72,26 @@ export const safeSurface = (v: any): string | null => {
   return 'unknown';
 };
 
+// ─── Email Extraction Helper ──────────────────────────────────────────────────
+
+const EMAIL_DOMAIN_BLOCKLIST = [
+  'example.com', 'sentry.io', 'wordpress.org', 'w3.org', 'schema.org',
+  'wixpress.com', 'squarespace.com', 'googleapis.com', 'googleusercontent.com',
+  'gstatic.com', 'cloudflare.com', 'jquery.com', 'jsdelivr.net',
+  'facebook.com', 'twitter.com', 'instagram.com', 'tiktok.com'
+];
+
+function extractEmails(text: string): string[] {
+  const regex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+  const matches = (text.match(regex) || []).map(e => e.toLowerCase().trim());
+  return [...new Set(matches)].filter(e => {
+    if (EMAIL_DOMAIN_BLOCKLIST.some(b => e.endsWith('@' + b) || e.endsWith('.' + b))) return false;
+    if (/\.(png|jpg|jpeg|gif|webp|svg|css|js)$/i.test(e)) return false;
+    if (e.split('@')[0].length < 2) return false;
+    return true;
+  });
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface DetectiveResult {
@@ -212,8 +232,8 @@ async function callLMStudio(
 
 // ─── Page Crawl Helper ───────────────────────────────────────────────────────
 
-async function crawlPage(page: any, url: string, onProgress: (m: string) => void): Promise<{ text:string; jsonLd:string; ogImage:string|null; images:Array<{src:string;alt:string;parentClass:string}>; iframes:string[]; links:Array<{href:string;text:string}>; }> {
-  const empty = { text:'', jsonLd:'', ogImage:null, images:[], iframes:[], links:[] };
+async function crawlPage(page: any, url: string, onProgress: (m: string) => void): Promise<{ text:string; jsonLd:string; ogImage:string|null; images:Array<{src:string;alt:string;parentClass:string}>; iframes:string[]; links:Array<{href:string;text:string}>; mailtos:string[]; }> {
+  const empty = { text:'', jsonLd:'', ogImage:null, images:[], iframes:[], links:[], mailtos:[] };
   if (url.toLowerCase().endsWith('.pdf')) {
     try { const fetchFn = require('node-fetch'); const buf = await (await fetchFn(url)).buffer(); const pdfData = await pdfParse(buf); return { ...empty, text:`[PDF: ${url}]\n${pdfData.text}` }; } catch { return empty; }
   }
@@ -229,11 +249,12 @@ async function crawlPage(page: any, url: string, onProgress: (m: string) => void
       const iframes=Array.from(document.querySelectorAll('iframe')).map((e:any)=>e.src||'').filter((s:string)=>s.includes('calendar')||s.includes('ticket')||s.includes('centeredge')||s.includes('roller'));
       const images=Array.from(document.querySelectorAll('img')).filter((i:any)=>{const w=i.naturalWidth||i.width||0,h=i.naturalHeight||i.height||0;return w>=400&&h>=300&&i.src&&(i.src.startsWith('http')||i.src.startsWith('//'));}).map((i:any)=>({src:i.src,alt:(i.alt||'').toLowerCase(),parentClass:(i.parentElement?.className||'').toLowerCase()}));
       const links=Array.from(document.querySelectorAll('a')).map((a:any)=>({href:(a.href||'').toLowerCase(),text:(a.innerText||'').toLowerCase()})).filter((l:any)=>l.href&&(l.href.startsWith('http')||l.href.startsWith('//')));
+      const mailtos=Array.from(document.querySelectorAll('a[href^="mailto:"]')).map((a:any)=>a.href.replace('mailto:','').split('?')[0].trim().toLowerCase()).filter((e:string)=>e&&e.includes('@'));
       document.querySelectorAll('nav,footer,script,style,header,iframe,noscript').forEach(el=>el.remove());
       const text=document.body?.innerText?.replace(/\n+/g,' ').replace(/\s{2,}/g,' ').trim()||'';
-      return {ogImage,jsonLd,iframes,images,links,text};
-    }).catch(()=>({ogImage:null,jsonLd:'',iframes:[],images:[],links:[],text:''}));
-    return {text:d.text,jsonLd:d.jsonLd,ogImage:d.ogImage,images:d.images,iframes:d.iframes,links:d.links};
+      return {ogImage,jsonLd,iframes,images,links,mailtos,text};
+    }).catch(()=>({ogImage:null,jsonLd:'',iframes:[],images:[],links:[],mailtos:[],text:''}));
+    return {text:d.text,jsonLd:d.jsonLd,ogImage:d.ogImage,images:d.images,iframes:d.iframes,links:d.links,mailtos:d.mailtos};
   } catch { onProgress(`[Detective] Nav failed: ${url}`); return empty; }
 }
 
@@ -250,6 +271,7 @@ export async function executeDetective(
   let yelpData:any={text:'',photos_url:null,og_image:null};
   let fbData:any={text:'',cover_photo:null,photos_url:null};
   let allLinks:Array<{href:string;text:string}>=[];
+  const allMailtos:string[]=[];
   let browser:any=null;
 
   try {
@@ -273,7 +295,6 @@ export async function executeDetective(
     const gt=await fetchGooglePlacesWeb(spotContext.google_place_id||null);
     if(gt) { coreText+='\n\n'+gt; amenityText+='\n\n'+gt; }
 
-    let browser:any=null;
     browser=await puppeteer.launch({headless:isHeadless?'new':false,protocolTimeout:60000,args:['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage']});
     const page=await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36');
@@ -303,6 +324,7 @@ export async function executeDetective(
         domImages.push(...pg.images.slice(0,5));
         flyerUrls.push(...pg.images.filter(i=>/schedule|pricing|flyer/i.test(i.src+i.alt)).map(i=>i.src));
         allLinks.push(...pg.links);
+        allMailtos.push(...pg.mailtos);
         for(const iframe of pg.iframes){
           const ig=await crawlPage(page,iframe,onProgress);
           if(ig.text) {
@@ -441,7 +463,7 @@ export async function executeDetective(
       operator_name:'Owner name.', operator_description:'1-2 sentences.', cultural_meta:'Significance or null.', 
       adult_night_details:'Details or null.', instagram_url:'URL or null.', facebook_url:'URL or null.', 
       tiktok_url:'URL or null.', schedule_url:'URL or null.', yelp_url:'URL or null.', price_range:'$ to $$$$ or null.', 
-      logo_url:'Logo URL or null.', ...userSchema
+      logo_url:'Logo URL or null.', email_addresses:'Array of ALL contact email addresses found for this venue. Include info, events, parties, management, booking — every unique email. Return [] if none found.', ...userSchema
     };
     onProgress('[Detective] LM Studio Pass 3 (Vibe)...');
     const pass3=await callLMStudio(buildSystem(VIBE_SCHEMA),`Website Text:\n${aSlice}`,detectiveModel,onProgress,'Pass3');
@@ -482,6 +504,22 @@ export async function executeDetective(
   const price_range=aiMetadata.price_range||null;
   const logo_url=aiMetadata.logo_url||null;
 
+  // ── 3-Layer Email Merge ────────────────────────────────────────────────────
+  const regexEmails = extractEmails(coreText + '\n' + amenityText);
+  const aiEmails: string[] = Array.isArray(aiMetadata.email_addresses)
+    ? aiMetadata.email_addresses.map((e: string) => e.toLowerCase().trim())
+    : (typeof aiMetadata.email_addresses === 'string' ? [aiMetadata.email_addresses.toLowerCase().trim()] : []);
+  const existingEmails: string[] = Array.isArray(spotContext.email_addresses)
+    ? spotContext.email_addresses
+    : (typeof spotContext.email_addresses === 'string' ? (() => { try { return JSON.parse(spotContext.email_addresses); } catch { return []; } })() : []);
+  const email_addresses = [...new Set([
+    ...allMailtos,
+    ...regexEmails,
+    ...aiEmails,
+    ...existingEmails,
+  ])].filter(e => e && e.includes('@')).sort();
+  if (email_addresses.length > 0) onProgress(`[Detective] 📧 Captured ${email_addresses.length} email(s): ${email_addresses.join(', ')}`);
+
   let candidatePhotos:Record<string,any>={};
   try{candidatePhotos=typeof spotContext.candidate_photos==='string'?JSON.parse(spotContext.candidate_photos):(spotContext.candidate_photos||{});}catch{}
   if(!spotContext.photos){
@@ -503,7 +541,7 @@ export async function executeDetective(
   onProgress(`[Detective] Quality[${qualityScore}/${qFields.length}]`);
   onProgress(passedQualityGate?'[Detective] Quality gate passed.':'[Detective] Low quality — emitting DEEP_CRAWLED anyway.');
 
-  const mappedFieldsRaw={is_indoor,operator_description,operator_name,instagram_url,facebook_url,tiktok_url,schedule_url,opening_hours,adult_night_schedule:adultNightSchedule,has_adult_night,adult_night_details,special_events,pricing_data,has_fee,surface_type,surface_quality,vibe_score,capacity,has_rental,has_pro_shop,has_food,has_lights,has_lockers,has_ac,has_wifi,has_toilets,is_wheelchair_accessible,hosts_derby,cultural_metadata,yelp_url,price_range,logo_url,candidate_photos:candidatePhotos,ai_metadata:Object.keys(aiMetadata).length>0?aiMetadata:null,_simulated_status:passedQualityGate?'DEEP_CRAWLED':'LOW_QUALITY'};
+  const mappedFieldsRaw={is_indoor,operator_description,operator_name,instagram_url,facebook_url,tiktok_url,schedule_url,opening_hours,adult_night_schedule:adultNightSchedule,has_adult_night,adult_night_details,special_events,pricing_data,has_fee,surface_type,surface_quality,vibe_score,capacity,has_rental,has_pro_shop,has_food,has_lights,has_lockers,has_ac,has_wifi,has_toilets,is_wheelchair_accessible,hosts_derby,cultural_metadata,yelp_url,price_range,logo_url,email_addresses:email_addresses.length>0?email_addresses:null,candidate_photos:candidatePhotos,ai_metadata:Object.keys(aiMetadata).length>0?aiMetadata:null,_simulated_status:passedQualityGate?'DEEP_CRAWLED':'LOW_QUALITY'};
   const mappedFields=sanitize(mappedFieldsRaw);
   
   return {aiMetadata,mappedFields,combinedText,qualityScore,passedQualityGate,candidatePhotos,socialLinks:{instagram_url,facebook_url,tiktok_url,schedule_url},flyerUrls};

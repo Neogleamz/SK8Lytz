@@ -77,7 +77,7 @@ async function runIndexer() {
       // sniper_target_id isolation
       if (aiConfig.sniper_target_id) {
         target = db.prepare(`SELECT * FROM local_spots WHERE id = ?`).get(aiConfig.sniper_target_id);
-        if (target && target.verification_status !== 'SEEDED') {
+        if (target && !['SEEDED', 'PENDING'].includes(target.verification_status)) {
           // If we are in sniper mode, we only process it if it's SEEDED. 
           // If it's already past SEEDED, we stop and wait (unless it's being reset)
           target = null;
@@ -85,7 +85,7 @@ async function runIndexer() {
       }
 
       if (!target) {
-        let query = `SELECT * FROM local_spots WHERE verification_status = 'SEEDED'`;
+        let query = `SELECT * FROM local_spots WHERE verification_status IN ('SEEDED', 'PENDING')`;
         if (priorityStates.length > 0) {
           query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
         }
@@ -158,7 +158,8 @@ async function runIndexer() {
         'adult_night_details', 'special_events', 'pricing_data', 'has_fee', 'surface_type',
         'surface_quality', 'vibe_score', 'capacity', 'has_rental', 'has_pro_shop', 'has_food',
         'has_lights', 'has_lockers', 'has_ac', 'has_wifi', 'has_toilets', 'is_wheelchair_accessible',
-        'hosts_derby', 'cultural_metadata', 'yelp_url', 'price_range', 'logo_url', 'cover_photo_url'
+        'hosts_derby', 'cultural_metadata', 'yelp_url', 'price_range', 'logo_url', 'cover_photo_url',
+        'email_addresses'
       ];
 
       for (const key of fieldsToCheck) {

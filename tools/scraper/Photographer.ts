@@ -357,6 +357,21 @@ async function runPhotographerLoop() {
       candidates.dom_images.forEach((url: string) => allCandidates.push({ url, alt: 'dom_image', parentClass: '', pageSource: 'detective_dom' }));
     }
 
+    // Google Places photo references (Phase 1 handoff)
+    if (candidates.google_refs?.length) {
+      const GMAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
+      if (GMAPS_API_KEY) {
+        for (const ref of candidates.google_refs.slice(0, 5)) {
+          const photoRef = typeof ref === 'string' ? ref : ref?.photo_reference;
+          if (photoRef) {
+            const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200&photo_reference=${photoRef}&key=${GMAPS_API_KEY}`;
+            allCandidates.push({ url, alt: 'google_places', parentClass: '', pageSource: 'google_refs' });
+          }
+        }
+        logToTower('INFO', `  🗺️ Added ${Math.min(candidates.google_refs.length, 5)} Google Places photo candidates`);
+      }
+    }
+
     logToTower('INFO', `  🔎 Total raw candidates: ${allCandidates.length}. Sending to AI...`);
 
     // ── Step 4: Programmatic Selection (Heuristic-First) ──────────────────────
