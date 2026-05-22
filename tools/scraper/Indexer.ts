@@ -19,6 +19,11 @@ import path from 'path';
 import { executeDetective } from './core/DetectiveEngine';
 import { db, updateLocalSpot } from './core/LocalDB';
 
+if (process.env.SCRAPER_REGISTER_ONLY === 'true') {
+  console.log('[Indexer] PM2 registration mode: exiting immediately.');
+  process.exit(0);
+}
+
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));

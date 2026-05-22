@@ -69,6 +69,10 @@ console.error = (...args) => { _err(...args); pushLog('ERROR', args.join(' ')); 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 async function runPublisher() {
+  if (process.env.SCRAPER_REGISTER_ONLY === 'true') {
+    console.log('[Publisher] PM2 registration mode: exiting immediately.');
+    process.exit(0);
+  }
   console.log('[Publisher] 🚀 Booting Sync-to-Production Daemon...');
 
   while (true) {

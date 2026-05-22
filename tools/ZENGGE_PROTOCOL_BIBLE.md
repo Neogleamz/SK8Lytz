@@ -985,3 +985,10 @@ Note:    Uses ATT WRITE REQUEST (not Write Without Response) — device ACKs thi
 EEPROM Write:   Programmer → C14184b.m4807B etc → [0x62, ...]
 EEPROM Read:    Programmer → C14184b.m4771f0 → [0x63, 0x12, 0x21, 0x0F, chk]
 ```
+
+
+### 🚨 SDE Autonomous Fuzzer Discoveries (Auto-Documented)
+- **Opcode**: `0x59` (Static Colorful)
+- **Constraint**: Array sizes between 2 and 9 elements cause physical EEPROM buffer lockout on the `0xA3` chipset.
+- **Rule**: Minimum safe payload length is 12 RGB pixels. (See Rule: Surgical Buffer Overflow Defense in agent-behavior.md).
+

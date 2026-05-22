@@ -10,7 +10,7 @@
   .\tools\scraper\start-scraper-stack.ps1
 #>
 
-Set-Location "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\tools\scraper"
+Set-Location $PSScriptRoot
 
 Write-Host "🚀 SK8Lytz Scraper Stack — Starting up..." -ForegroundColor Cyan
 
@@ -27,11 +27,12 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Register daemon processes with PM2 (stopped state - they are started from web UI)
-
+$env:SCRAPER_REGISTER_ONLY="true"
 pm2 start ecosystem.config.js --only scraper-indexer --stop-exit-codes 0 2>&1 | Out-Null
 pm2 start ecosystem.config.js --only scraper-photographer --stop-exit-codes 0 2>&1 | Out-Null
 pm2 start ecosystem.config.js --only scraper-publisher --stop-exit-codes 0 2>&1 | Out-Null
-pm2 stop scraper-operator scraper-indexer scraper-photographer scraper-publisher 2>&1 | Out-Null
+Remove-Item Env:\SCRAPER_REGISTER_ONLY
+pm2 stop scraper-indexer scraper-photographer scraper-publisher 2>&1 | Out-Null
 Write-Host "   🤖 Daemons registered (STOPPED) - start them from the web UI" -ForegroundColor DarkGray
 
 # 3. Start Discord Bridge via PM2 (always-on notification relay)
@@ -47,8 +48,9 @@ if (-not $dashboardRunning) {
     pm2 reload scraper-dashboard 2>&1 | Out-Null
 }
 
-# 5. Save PM2 process list so it survives reboots
-pm2 save 2>&1 | Out-Null
+# 5. DO NOT pm2 save — daemons must never auto-start on boot.
+#    They are managed exclusively from the Dashboard UI.
+#    (pm2 save was removed to prevent zombie Chrome processes on reboot)
 
 Write-Host ""
 Write-Host "✅ Stack is UP!" -ForegroundColor Green

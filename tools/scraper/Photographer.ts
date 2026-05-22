@@ -220,6 +220,10 @@ async function crawlForImages(urls: string[], pageSourceLabel: string, isHeadles
 // ─── Main Loop ────────────────────────────────────────────────────────────────
 
 async function runPhotographerLoop() {
+  if (process.env.SCRAPER_REGISTER_ONLY === 'true') {
+    console.log('[Photographer] PM2 registration mode: exiting immediately.');
+    process.exit(0);
+  }
   logToTower('INFO', '🚀 Photographer v2 daemon starting — Sitemap-First AI Photo Selection active');
   let consecutiveIdle = 0;
   const isHeadless = process.env.PHOTOGRAPHER_HEADLESS !== 'false';

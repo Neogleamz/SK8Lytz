@@ -1,7 +1,7 @@
 {
-  "hasLayoutIssues": false,
+  "hasLayoutIssues": true,
   "issues": [
-    "The provided image is completely blank (white). No visual elements or layout could be analyzed to identify issues."
+    "Visual sweep exception: Gemini API multimodal request failed: 429 Client Error: Too Many Requests for url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyC2iSHVwHMI5IS4ZKcW8CsFsMLUHKvImmI"
   ],
   "suggestedCSSOverrides": {}
 }
