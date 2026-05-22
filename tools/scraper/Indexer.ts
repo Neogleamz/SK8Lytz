@@ -28,6 +28,14 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// ─── Graceful Shutdown (Anti-Zombie Chrome Defense) ───────────────────────────
+const gracefulShutdown = (signal: string) => {
+  console.log(`[Indexer] ${signal} received — shutting down gracefully...`);
+  process.exit(0);
+};
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 // ─── Telemetry Hook to CCTower ─────────────────────────────────────────────
 const _log = console.log;
 const _err = console.error;

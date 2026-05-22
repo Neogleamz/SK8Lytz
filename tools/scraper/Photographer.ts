@@ -42,6 +42,16 @@ const MIN_IMG_HEIGHT = 400;
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+// ─── Graceful Shutdown (Anti-Zombie Chrome Defense) ───────────────────────────
+let activeBrowser: any = null;
+const gracefulShutdown = async (signal: string) => {
+  console.log(`[Photographer] ${signal} received — cleaning up Puppeteer...`);
+  if (activeBrowser) { try { await activeBrowser.close(); } catch {} }
+  process.exit(0);
+};
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 const reportPulse = (delayMs: number) => {
   fetch('http://localhost:5999/api/pulse', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source:'Photographer',delayMs}) }).catch(()=>{});
 };
@@ -161,6 +171,7 @@ async function crawlForImages(urls: string[], pageSourceLabel: string, isHeadles
   let browser: any = null;
   try {
     browser = await puppeteer.launch({ headless: isHeadless ? 'new' : false, args:['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage'] });
+    activeBrowser = browser;
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36');
     await page.setViewport({width:1280, height:900});
@@ -210,7 +221,7 @@ async function crawlForImages(urls: string[], pageSourceLabel: string, isHeadles
         logToTower('INFO', `  ⚠️ Crawl failed: ${url}`);
       }
     }
-  } finally { if (browser) { try { await browser.close(); } catch {} } }
+  } finally { if (browser) { try { await browser.close(); } catch {} } activeBrowser = null; }
 
   // De-duplicate by URL
   const seen = new Set<string>();
