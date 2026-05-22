@@ -13,7 +13,7 @@ When I say "run health check", "audit codebase", or "clean the house", execute t
 3. **Database Security Audit**: Run `mcp_supabase-mcp-server_get_advisors` tool with `type: 'security'`.
 4. **Architectural Smell Scan**: Scan `src/` for files exceeding 30KB.
 5. **God Object Scan**: Flag components with excessive hook usage (> 15 hook calls).
-6. **Telemetry Sync**: Run `node tools/sync_remote_errors.mjs` to fetch crash telemetry.
+6. **Telemetry Sync**: *(Skipped - Telemetry sync script is pending implementation in `fix/missing-telemetry-script`)*
 7. **Bucket List Integration**: 
    - Pipe all findings into `tools/SK8Lytz_Bucket_List.md` under the `🧹 TECH DEBT` queue.
    - You MUST strictly format the injected tasks according to the nested multi-line Task Schema defined in the AI AGENT DIRECTIVES.

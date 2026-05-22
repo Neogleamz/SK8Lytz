@@ -34,7 +34,7 @@ When invoked via `/ship-it`, you must act as a strict state machine orchestratin
 2. **Documentation:** Execute the `/changelog` and `/pr-summary` workflows to generate release notes based on the worktree's commits.
 3. **Staging:** Execute `/diff-review` for a final check of the file modifications.
 4. **Final Commit:** Stage all changes and commit directly to the worktree branch: `git commit -m "chore(release): vX.Y.Z"`
-5. **Attestation Renewal:** Since the commit hash changed on version bump and documentation commit, you MUST execute `npm run verify` one final time to anchor the attestation to the exact release commit hash!
+5. **Attestation Renewal:** Since the commit hash changed on version bump and documentation commit, you MUST execute `npm run verify` one final time to anchor the attestation to the exact release commit hash! This breaks the verification loop.
 
 ### Phase 4: The Master Fortress Merge (Automated Gatekeeper)
 *Location: Context switch back to the main directory (`C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`)*
