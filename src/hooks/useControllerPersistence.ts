@@ -68,6 +68,8 @@ export function useControllerPersistence(
   stateValues: ControllerStateValues,
   setters: ControllerStateSetters
 ) {
+  // Load from persistence on mount
+  useEffect(() => {
     AsyncStorage.getItem(`${STORAGE_PREFIX}ControllerState`)
       .then((saved) => {
         if (saved) {
