@@ -1,3 +1,17 @@
+## [3.5.0] - 2026-05-21
+
+### ✨ Features
+- **detox**: Add Detox End-to-End automated testing framework (`detox`, `jest-circus`, `@config-plugins/detox`) for virtual devices
+- **detox**: Implement Android debug build environment and write foundational `smoke.test.ts`
+- **detox**: Configure automated Jest runner and add `testID` targets to DashboardScreen
+
+### 🔧 Maintenance & Refactoring
+- **rules**: Execute rules consolidation, refactoring 12 bloated system roles into 3 clean, high-integrity archetypes (Architect, Precision Builder, Release Manager)
+- **rules**: Refactor workflows (`nuke-cache`, `audit-codebase`, `ship-it`) off Unix syntax to native PowerShell for Windows host compatibility
+- **git**: Harden check-runners and fast-forward gatekeeper validations
+
+---
+
 ## [3.4.0] - 2026-05-12
 
 ### ✨ Features
