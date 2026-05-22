@@ -1,5 +1,5 @@
 /**
- * SitemapParser.ts — Shared Sitemap Discovery Utility
+ * SitemapParser.ts — Shared Sitemap Discovery + Content Fingerprinting Utility
  *
  * Used by BOTH DetectiveEngine (Phase 2) and Photographer (Phase 3).
  * Pure function — NO Puppeteer, NO database, NO side effects.
@@ -8,8 +8,19 @@
  *   1. GET /sitemap.xml
  *   2. GET /sitemap_index.xml  → flatten child sitemaps
  *   3. GET /robots.txt         → look for Sitemap: directive
- *   4. Homepage nav-menu link discovery (fetch HTML, extract <a> hrefs)
+ *   4. Full 2-level shallow spider with content fingerprinting
  *   5. Graceful empty fallback — never throws
+ *
+ * Content Fingerprinting:
+ *   Each discovered URL is classified using 4 signal layers:
+ *     - URL path keywords
+ *     - Anchor text (how other pages link TO this page)
+ *     - Page <title> tag
+ *     - <h1>/<h2>/<h3> headings on the page
+ *
+ *   MULTI-LABEL: A URL can appear in MULTIPLE buckets simultaneously.
+ *   A "Plan Your Visit" page with hours + pricing + directions ends up
+ *   in schedule_urls AND pricing_urls AND contact_urls.
  *
  * Returns URLs bucketed by content type so each engine can
  * target exactly the pages it needs.
@@ -53,6 +64,20 @@ const BUCKET_RULES: Array<{ bucket: keyof Omit<SitemapResult, 'all_urls'>; patte
 // Max URLs per bucket to prevent crawl bloat
 const MAX_PER_BUCKET = 5;
 
+// ─── Content Fingerprint Types ────────────────────────────────────────────────
+
+interface PageFingerprint {
+  url: string;
+  /** Anchor text(s) from pages that link TO this URL */
+  anchorTexts: string[];
+  /** <title> tag content, if fetched */
+  title: string;
+  /** All <h1>, <h2>, <h3> heading text, if fetched */
+  headings: string[];
+  /** Number of large images on the page (gallery signal) */
+  imageCount: number;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function fetchText(url: string, timeoutMs = 8000): Promise<string | null> {
@@ -80,7 +105,6 @@ function extractLocsFromXml(xml: string): string[] {
 }
 
 function extractSitemapUrlsFromIndex(xml: string): string[] {
-  // Sitemap index files have <sitemap><loc>...</loc></sitemap> blocks
   const sitemapUrls: string[] = [];
   const sitemapRegex = /<sitemap>[\s\S]*?<loc>(.*?)<\/loc>[\s\S]*?<\/sitemap>/gi;
   let match: RegExpExecArray | null;
@@ -90,7 +114,42 @@ function extractSitemapUrlsFromIndex(xml: string): string[] {
   return sitemapUrls;
 }
 
-function scoreAndBucket(urls: string[]): Omit<SitemapResult, 'all_urls'> {
+/** Extract lightweight content signals from raw HTML */
+function extractPageMeta(html: string): { title: string; headings: string[]; imageCount: number } {
+  // <title> tag
+  const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
+  const title = (titleMatch?.[1] || '').trim();
+
+  // All <h1>, <h2>, <h3> headings
+  const headings: string[] = [];
+  const headingRegex = /<h[1-3][^>]*>([^<]*(?:<[^/][^>]*>[^<]*)*)<\/h[1-3]>/gi;
+  let hMatch: RegExpExecArray | null;
+  while ((hMatch = headingRegex.exec(html)) !== null) {
+    // Strip any inner tags from heading text
+    const text = hMatch[1].replace(/<[^>]+>/g, '').trim();
+    if (text.length > 1 && text.length < 200) headings.push(text);
+  }
+
+  // Count images with src attributes (gallery signal)
+  const imgMatches = html.match(/<img\s+[^>]*src=["'][^"']+["']/gi);
+  const imageCount = imgMatches ? imgMatches.length : 0;
+
+  return { title, headings, imageCount };
+}
+
+// ─── Multi-Label Content-Aware Scoring ────────────────────────────────────────
+
+/**
+ * Score page fingerprints against ALL bucket rules, MULTI-LABEL.
+ * A single URL can appear in multiple buckets if its content matches.
+ *
+ * 4 signal layers, weighted:
+ *   - URL path:     1x (weakest — opaque slugs like /page-3 have no signal)
+ *   - Anchor text:  2x (what other pages call this page)
+ *   - Page title:   3x (what the site owner named the page)
+ *   - Headings:     3x (what sections are ON the page — catches mixed pages)
+ */
+function scoreAndBucketFingerprints(fingerprints: PageFingerprint[]): Omit<SitemapResult, 'all_urls'> {
   const buckets: Omit<SitemapResult, 'all_urls'> = {
     schedule_urls: [], pricing_urls: [], about_urls: [],
     events_urls: [], contact_urls: [], gallery_urls: []
@@ -101,24 +160,45 @@ function scoreAndBucket(urls: string[]): Omit<SitemapResult, 'all_urls'> {
     events_urls: [], contact_urls: [], gallery_urls: []
   };
 
-  // Score each URL against all bucket rules, assign to best match
-  for (const url of urls) {
-    // Only test the path portion (after the domain) to avoid false matches on domain names
-    let path = url;
-    try { path = new URL(url).pathname + new URL(url).search; } catch {}
+  // Track which URLs already added to which bucket (dedup)
+  const seen: Record<keyof typeof buckets, Set<string>> = {
+    schedule_urls: new Set(), pricing_urls: new Set(), about_urls: new Set(),
+    events_urls: new Set(), contact_urls: new Set(), gallery_urls: new Set()
+  };
 
-    let bestBucket: keyof typeof buckets | null = null;
-    let bestScore = 0;
+  for (const fp of fingerprints) {
+    // Build the combined text signals
+    let urlPath = fp.url;
+    try { urlPath = new URL(fp.url).pathname; } catch {}
+    const anchorText = fp.anchorTexts.join(' ');
+    const headingsText = fp.headings.join(' ');
 
+    // Test EACH bucket rule against ALL signal layers
     for (const rule of BUCKET_RULES) {
-      if (rule.patterns.test(path) && rule.score > bestScore) {
-        bestBucket = rule.bucket;
-        bestScore = rule.score;
-      }
-    }
+      let totalScore = 0;
 
-    if (bestBucket) {
-      scoredBuckets[bestBucket].push({ url, score: bestScore });
+      // Layer 1: URL path (1x weight)
+      if (rule.patterns.test(urlPath)) totalScore += rule.score * 1;
+
+      // Layer 2: Anchor text (2x weight)
+      if (anchorText && rule.patterns.test(anchorText)) totalScore += rule.score * 2;
+
+      // Layer 3: Page title (3x weight)
+      if (fp.title && rule.patterns.test(fp.title)) totalScore += rule.score * 3;
+
+      // Layer 4: Headings (3x weight — catches mixed pages with multiple h1/h2)
+      if (headingsText && rule.patterns.test(headingsText)) totalScore += rule.score * 3;
+
+      // Threshold: need at least 1 signal match
+      if (totalScore > 0 && !seen[rule.bucket].has(fp.url)) {
+        // Bonus: gallery pages with many images get a boost
+        if (rule.bucket === 'gallery_urls' && fp.imageCount >= 5) {
+          totalScore += 15;
+        }
+
+        scoredBuckets[rule.bucket].push({ url: fp.url, score: totalScore });
+        seen[rule.bucket].add(fp.url);
+      }
     }
   }
 
@@ -131,6 +211,16 @@ function scoreAndBucket(urls: string[]): Omit<SitemapResult, 'all_urls'> {
   }
 
   return buckets;
+}
+
+/**
+ * Legacy fallback: score URLs by path only (for sitemap.xml/robots.txt URLs
+ * that we haven't fetched HTML for). Still multi-label.
+ */
+function scoreAndBucket(urls: string[]): Omit<SitemapResult, 'all_urls'> {
+  return scoreAndBucketFingerprints(
+    urls.map(url => ({ url, anchorTexts: [], title: '', headings: [], imageCount: 0 }))
+  );
 }
 
 // ─── Main Export ──────────────────────────────────────────────────────────────
@@ -159,12 +249,10 @@ export async function parseSitemap(websiteUrl: string): Promise<SitemapResult> {
   // ── Attempt 1: /sitemap.xml ───────────────────────────────────────────────
   const sitemapXml = await fetchText(`${origin}/sitemap.xml`);
   if (sitemapXml) {
-    // Check if this is a sitemap index (contains <sitemap> elements)
     const isSitemapIndex = /<sitemap>/i.test(sitemapXml);
     if (isSitemapIndex) {
-      // Flatten: fetch each child sitemap and extract its locs
       const childUrls = extractSitemapUrlsFromIndex(sitemapXml);
-      for (const childUrl of childUrls.slice(0, 5)) { // max 5 child sitemaps
+      for (const childUrl of childUrls.slice(0, 5)) {
         const childXml = await fetchText(childUrl);
         if (childXml) allLocs.push(...extractLocsFromXml(childXml));
       }
@@ -201,72 +289,110 @@ export async function parseSitemap(websiteUrl: string): Promise<SitemapResult> {
     }
   }
 
-  // ── Attempt 4: Full shallow spider — discover ALL pages ──────────────────
-  // Most rink/skatepark sites have 10-20 pages total. We can afford to
-  // spider the entire site: homepage → all links → follow each → extract more.
-  // Every discovered URL gets scored and bucketed automatically.
-  if (allLocs.length === 0) {
-    const MAX_SPIDER_URLS = 40;
-    const visited = new Set<string>();
-    const queue: string[] = [origin, origin + '/'];
+  // ── Attempts 1-3 found sitemap URLs → path-only scoring ──────────────────
+  if (allLocs.length > 0) {
+    const uniqueLocs = [...new Set(allLocs)];
+    const buckets = scoreAndBucket(uniqueLocs);
+    return { ...buckets, all_urls: uniqueLocs };
+  }
 
-    /** Extract all same-origin <a> hrefs from raw HTML */
-    const extractLinks = (html: string): string[] => {
-      const linkRegex = /<a\s+[^>]*href=["']([^"'#]+)["'][^>]*>/gi;
-      let m: RegExpExecArray | null;
-      const links: string[] = [];
-      while ((m = linkRegex.exec(html)) !== null) {
-        let href = m[1].trim();
-        if (!href || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) continue;
-        // Strip query params and fragments for dedup
-        if (href.startsWith('/')) href = origin + href;
-        else if (!href.startsWith('http')) href = origin + '/' + href;
-        // Only same-origin
-        try { if (new URL(href).origin !== origin) continue; } catch { continue; }
-        // Normalize: strip trailing slash, lowercase
-        href = href.replace(/\/+$/, '').split('?')[0].split('#')[0];
-        if (href && !visited.has(href)) links.push(href);
+  // ── Attempt 4: Full spider + content fingerprinting ──────────────────────
+  // When no sitemap exists, spider the site and classify pages using
+  // multi-layer content signals (URL path + anchor text + title + headings).
+  // Most rink sites have 10-20 pages — we can fingerprint every single one.
+
+  const MAX_SPIDER_URLS = 40;
+  const fingerprints: Map<string, PageFingerprint> = new Map();
+
+  /** Resolve and normalize a URL, return null if invalid/off-origin */
+  const resolveUrl = (href: string): string | null => {
+    if (!href || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) return null;
+    if (href.startsWith('/')) href = origin + href;
+    else if (!href.startsWith('http')) href = origin + '/' + href;
+    try { if (new URL(href).origin !== origin) return null; } catch { return null; }
+    // Normalize: strip trailing slash, query params, fragments
+    return href.replace(/\/+$/, '').split('?')[0].split('#')[0] || null;
+  };
+
+  /** Extract all same-origin links WITH their anchor text from HTML */
+  const extractLinksWithAnchors = (html: string): Array<{ href: string; anchorText: string }> => {
+    const linkRegex = /<a\s+[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    let m: RegExpExecArray | null;
+    const links: Array<{ href: string; anchorText: string }> = [];
+    while ((m = linkRegex.exec(html)) !== null) {
+      const resolved = resolveUrl(m[1]);
+      if (!resolved) continue;
+      // Strip HTML tags from anchor text
+      const anchorText = m[2].replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+      links.push({ href: resolved, anchorText });
+    }
+    return links;
+  };
+
+  /** Get or create a fingerprint entry for a URL */
+  const getFingerprint = (url: string): PageFingerprint => {
+    if (!fingerprints.has(url)) {
+      fingerprints.set(url, { url, anchorTexts: [], title: '', headings: [], imageCount: 0 });
+    }
+    return fingerprints.get(url)!;
+  };
+
+  // Level 1: Fetch homepage, discover all top-level links with anchor text
+  const homepageHtml = await fetchText(origin);
+  if (homepageHtml) {
+    // Fingerprint the homepage itself
+    const homeFp = getFingerprint(origin);
+    const homeMeta = extractPageMeta(homepageHtml);
+    homeFp.title = homeMeta.title;
+    homeFp.headings = homeMeta.headings;
+    homeFp.imageCount = homeMeta.imageCount;
+
+    // Extract all links with their anchor text
+    const level1Links = extractLinksWithAnchors(homepageHtml);
+    const level1Urls: string[] = [];
+    for (const { href, anchorText } of level1Links) {
+      if (fingerprints.size >= MAX_SPIDER_URLS) break;
+      const fp = getFingerprint(href);
+      if (anchorText && !fp.anchorTexts.includes(anchorText)) {
+        fp.anchorTexts.push(anchorText);
       }
-      return links;
-    };
+      if (!level1Urls.includes(href)) level1Urls.push(href);
+    }
 
-    // Level 1: Fetch homepage, discover all top-level links
-    const homepageHtml = await fetchText(origin);
-    if (homepageHtml) {
-      const level1Links = extractLinks(homepageHtml);
-      for (const link of level1Links) {
-        if (visited.size >= MAX_SPIDER_URLS) break;
-        visited.add(link);
-        queue.push(link);
-      }
+    // Level 2: Fetch each discovered page — extract title, headings, images, AND sub-links
+    for (const pageUrl of level1Urls.slice(0, 25)) {
+      if (fingerprints.size >= MAX_SPIDER_URLS) break;
+      if (pageUrl === origin) continue;
 
-      // Level 2: Follow each L1 page and extract ITS links too
-      // (catches sub-pages like /about/staff, /events/adult-night, etc.)
-      for (const pageUrl of [...queue].slice(0, 20)) {
-        if (visited.size >= MAX_SPIDER_URLS) break;
-        if (pageUrl === origin || pageUrl === origin + '/') continue; // already fetched
-        const pageHtml = await fetchText(pageUrl, 5000);
-        if (!pageHtml) continue;
-        const level2Links = extractLinks(pageHtml);
-        for (const link of level2Links) {
-          if (visited.size >= MAX_SPIDER_URLS) break;
-          visited.add(link);
+      const pageHtml = await fetchText(pageUrl, 5000);
+      if (!pageHtml) continue;
+
+      // Fingerprint this page with its actual content
+      const pageFp = getFingerprint(pageUrl);
+      const pageMeta = extractPageMeta(pageHtml);
+      pageFp.title = pageMeta.title;
+      pageFp.headings = pageMeta.headings;
+      pageFp.imageCount = pageMeta.imageCount;
+
+      // Extract sub-links (Level 2 discovery) with anchor text
+      const level2Links = extractLinksWithAnchors(pageHtml);
+      for (const { href, anchorText } of level2Links) {
+        if (fingerprints.size >= MAX_SPIDER_URLS) break;
+        const subFp = getFingerprint(href);
+        if (anchorText && !subFp.anchorTexts.includes(anchorText)) {
+          subFp.anchorTexts.push(anchorText);
         }
       }
     }
-
-    allLocs = [...visited];
   }
 
-  // De-duplicate
-  const uniqueLocs = [...new Set(allLocs)];
+  if (fingerprints.size === 0) return empty;
 
-  if (uniqueLocs.length === 0) return empty;
-
-  const buckets = scoreAndBucket(uniqueLocs);
+  const allFingerprints = [...fingerprints.values()];
+  const buckets = scoreAndBucketFingerprints(allFingerprints);
 
   return {
     ...buckets,
-    all_urls: uniqueLocs,
+    all_urls: allFingerprints.map(fp => fp.url),
   };
 }
