@@ -24,6 +24,8 @@ export interface SpotRecord {
   verification_status: string;
   street_address?: string | null;
   city?: string | null;
+  state?: string | null;
+  status?: string | null;
   website?: string | null;
   phone_number?: string | null;
   email_addresses?: string | string[] | null;
@@ -51,6 +53,11 @@ export interface SpotRecord {
   tiktok_url?: string | null;
   photos?: unknown;
   candidate_photos?: unknown;
+  user_ratings_total?: number | null;
+  google_place_id?: string | null;
+  last_enriched_at?: string | number | Date | null;
+  is_deep_crawled?: boolean | null;
+  candidate_links?: Record<string, string> | null;
   [key: string]: unknown;
 }
 

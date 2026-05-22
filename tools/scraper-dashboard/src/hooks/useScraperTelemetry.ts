@@ -15,6 +15,9 @@ export interface DaemonTelemetry {
   in_q?: string[];
   rejected?: TelemetryOutCard[];
   success?: TelemetryOutCard[];
+  active_record?: Record<string, unknown> | null;
+  alive?: boolean;
+  [key: string]: unknown;
 }
 
 export interface PipelineTelemetry {

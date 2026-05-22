@@ -44,6 +44,7 @@ interface BeltProps {
   onSetHero?: (spotId: string, photoIndex: number) => void;
   onDeletePhoto?: (spotId: string, photoIndex: number) => void;
   onAssignPhotoType?: (spotId: string, photoIndex: number, fieldType: string) => void;
+  onUploadPhoto?: (spotId: string, file: File) => void;
 }
 
 // Shared card dimensions

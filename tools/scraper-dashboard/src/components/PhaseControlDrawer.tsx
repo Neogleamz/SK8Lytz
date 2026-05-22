@@ -476,7 +476,7 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
                     <div style={{ background: '#000', border: `1px solid ${colColor}44`, borderRadius: '6px', padding: '12px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {sandboxResult.aiResponse && (
                         <div>
-                          <h5 style={{ margin: '0 0 6px 0', color: colColor, fontSize: '0.65rem', textTransform: 'uppercase' }}>Ollama JSON Output</h5>
+                          <h5 style={{ margin: '0 0 6px 0', color: colColor, fontSize: '0.65rem', textTransform: 'uppercase' }}>LM Studio JSON Output</h5>
                           <pre style={{ margin: 0, color: '#fff', fontSize: '0.65rem', whiteSpace: 'pre-wrap', wordBreak: 'break-all', background: 'rgba(255,255,255,0.05)', padding: '8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.1)' }}>{JSON.stringify(sandboxResult.aiResponse, null, 2)}</pre>
                         </div>
                       )}

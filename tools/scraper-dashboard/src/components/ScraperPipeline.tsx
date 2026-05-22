@@ -95,10 +95,17 @@ const BELT_TAB: Record<number, string> = { 1: 'phase1', 2: 'phase2', 3: 'phase3'
 
 export interface PipelineStats {
     summary?: {
+        total?: number;
         seeded?: number;
         enriched?: number;
+        has_website?: number;
+        detective_queue?: number;
         deep_crawled_count?: number;
+        has_candidates?: number;
+        photographer_queue?: number;
+        has_photos?: number;
         media_ready?: number;
+        publisher_queue?: number;
         published?: number;
         [key: string]: unknown;
     };
@@ -267,7 +274,7 @@ export const ScraperPipeline: React.FC<{
                         if (!rawVal) return [];
                         if (Array.isArray(rawVal)) return rawVal.filter(Boolean);
                         try {
-                            const parsed = JSON.parse(rawVal);
+                            const parsed = JSON.parse(rawVal as string);
                             return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
                         } catch {
                             return String(rawVal).split(',').map((e: string) => e.trim()).filter(Boolean);
@@ -307,12 +314,13 @@ export const ScraperPipeline: React.FC<{
                     displayVal = val(rawVal);
                     status = ok(rawVal);
                 } else if (f.data_type === 'date') {
-                    displayVal = rawVal ? new Date(rawVal).toLocaleDateString() : 'NEVER';
+                    displayVal = rawVal ? new Date(rawVal as string | number | Date).toLocaleDateString() : 'NEVER';
                     status = rawVal ? 'val' : 'missing';
                 } else if (f.data_type === 'json') {
                     // Unroll full JSON stringified block
                     if (rawVal && typeof rawVal === 'object') {
-                        const keys = Object.keys(rawVal).filter(k => rawVal[k] != null && rawVal[k] !== '');
+                        const valObj = rawVal as Record<string, unknown>;
+                        const keys = Object.keys(valObj).filter(k => valObj[k] != null && valObj[k] !== '');
                         displayVal = keys.length > 0
                             ? <pre style={{margin:0, fontSize:'0.65rem', whiteSpace:'pre-wrap', color:'#a5d6ff', background:'rgba(0,0,0,0.3)', padding:'4px', borderRadius:'4px'}}>{JSON.stringify(rawVal, null, 2)}</pre>
                             : 'EMPTY';
@@ -329,7 +337,7 @@ export const ScraperPipeline: React.FC<{
                         status = rawVal ? 'success' : 'missing';
                     }
                 } else if (f.data_type === 'url_check') {
-                    const target = clVal || rawVal;
+                    const target = (clVal || rawVal) as string;
                     displayVal = target ? <a href={target} target="_blank" rel="noreferrer" style={{color: 'inherit', textDecoration: 'underline'}}>{String(target).replace(/^https?:\/\//, '').slice(0, 40)}</a> : 'NULL';
                     status = ok(target);
                 } else if (f.data_type === 'json_array') {
@@ -360,7 +368,7 @@ export const ScraperPipeline: React.FC<{
 
             return {
                 title: spot.name,
-                status: spot.status || spot.verification_status || 'PROCESSED',
+                status: (spot.status || spot.verification_status || 'PROCESSED') as string,
                 type: 'success' as const,
                 spotId: spot.id,
                 spotName: spot.name,
@@ -400,11 +408,11 @@ export const ScraperPipeline: React.FC<{
 
     const mergedBelts = baseBelts.map(belt => {
         let liveData: TelemetryLiveData | null = null;
-        if (belt.id === 1) liveData = telemetry.scout;
+        if (belt.id === 1) liveData = telemetry.scout || null;
 
-        if (belt.id === 2) liveData = telemetry.detective;
-        if (belt.id === 3) liveData = telemetry.photographer;
-        if (belt.id === 4) liveData = telemetry.publisher;
+        if (belt.id === 2) liveData = telemetry.detective || null;
+        if (belt.id === 3) liveData = telemetry.photographer || null;
+        if (belt.id === 4) liveData = telemetry.publisher || null;
 
         // Populate fields from real DB spots
         const specificSpots = getSpotsForPhase(belt.id, 2);
@@ -646,7 +654,7 @@ export const ScraperPipeline: React.FC<{
                     // Build live status string from belt telemetry
                     const isActive = dc?.active;
                     const statusLabel = b.status === 'PROCESSING' ? 'PROCESSING' : 'IDLE';
-                    const activeRecordStatus = telemetry?.active_record?.pipeline_status;
+                    const activeRecordStatus = telemetry?.detective?.active_record?.pipeline_status as string | undefined;
                     const daemonStatus = activeRecordStatus
                         ? `[DETECTIVE] ${activeRecordStatus}`
                         : b.target && b.target !== 'WAITING...'

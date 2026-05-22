@@ -173,10 +173,11 @@ async function run() {
 
     // Intercept Net/Log errors
     if (msg.method === 'Log.entryAdded') {
-      const { level, text, source } = msg.params.entry;
+      const { level, text, source, url } = msg.params.entry;
       if (level === 'error') {
-        collectedErrors.push({ source: `network.${source}`, text });
-        console.error(`  🔴 [Network/Log Error] ${text}`);
+        const errorText = url ? `${text} (URL: ${url})` : text;
+        collectedErrors.push({ source: `network.${source}`, text: errorText });
+        console.error(`  🔴 [Network/Log Error] ${errorText}`);
       } else if (level === 'warning') {
         collectedWarnings.push({ source: `network.${source}`, text });
       }

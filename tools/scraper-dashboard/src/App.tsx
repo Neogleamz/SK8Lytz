@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import USAMap from './USMap';
 import ScraperPipeline from './components/ScraperPipeline';
+import type { PipelineStats } from './components/ScraperPipeline';
 import DetectiveLab from './DetectiveLab';
 import { SniperBench } from './components/SniperBench';
 import { DatabankCard } from './components/DatabankCard';
@@ -82,7 +83,7 @@ function App() {
   const [status, setStatus] = useState<any>(null);
   const [targetFacilities, setTargetFacilities] = useState<string[]>([]);
   const [stateOverride, setStateOverride] = useState<string[]>([]);
-  const [pipelineStats, setPipelineStats] = useState<{ summary: any; stats: any[] } | null>(null);
+  const [pipelineStats, setPipelineStats] = useState<PipelineStats | undefined>(undefined);
 
   // --- Collapsible sections: persisted to localStorage ---
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
@@ -801,6 +802,7 @@ function App() {
   // ── REGION PULSE — single source of truth, used in both tab layouts ──
   const regionPulseEl = pipelineStats ? (() => {
     const s = pipelineStats.summary;
+    if (!s) return null;
     const rows = pipelineStats.stats || [];
     const label = stateOverride.length > 0 ? stateOverride.join(' · ') : 'NATIONWIDE';
     const C = { scout: '#00ffaa', detective: '#ff6a00', photo: '#ff007f', pub: '#00d4ff' };
@@ -815,7 +817,7 @@ function App() {
         <div onClick={() => toggleSection('pulse')} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '5px 14px', borderBottom: isCollapsed('pulse') ? 'none' : '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.03)', cursor: 'pointer', userSelect: 'none' as const }}>
           <span style={{ fontSize: '0.56rem', fontWeight: 900, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' as const, letterSpacing: '0.12em' }}>Region Pulse</span>
           <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#8a2be2' }}>{label}</span>
-          <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)', marginLeft: 'auto' }}>{s.total?.toLocaleString()} records · {isCollapsed('pulse') ? '▼' : '▲'}</span>
+          <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)', marginLeft: 'auto' }}>{(s.total ?? 0).toLocaleString()} records · {isCollapsed('pulse') ? '▼' : '▲'}</span>
         </div>
         {!isCollapsed('pulse') && (
           <>
@@ -824,41 +826,40 @@ function App() {
               <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
                 <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.scout, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.scout}33`, paddingBottom: '4px' }}>① Scout  IN:PENDING → OUT:SEEDED</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
-                  {row('Total in DB', s.total, '#fff')}
-                  {row('SEEDED (awaiting Det.)', s.seeded, C.scout)}
-                  {row('Has Website', s.has_website, 'rgba(255,255,255,0.6)')}
-                  {row('No Website', (s.total||0)-(s.has_website||0), 'rgba(255,255,255,0.25)')}
+                  {row('Total in DB', s.total ?? 0, '#fff')}
+                  {row('SEEDED (awaiting Det.)', s.seeded ?? 0, C.scout)}
+                  {row('Has Website', s.has_website ?? 0, 'rgba(255,255,255,0.6)')}
+                  {row('No Website', (s.total || 0) - (s.has_website || 0), 'rgba(255,255,255,0.25)')}
                 </div>
               </div>
               {/* ② DETECTIVE — IN: SEEDED  OUT: DEEP_CRAWLED */}
               <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
                 <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.detective, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.detective}33`, paddingBottom: '4px' }}>② Detective  IN:SEEDED → OUT:DEEP_CRAWLED</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
-                  {row('AI Queue (SEEDED+site)', s.detective_queue, s.detective_queue > 0 ? '#ffb300' : 'rgba(255,255,255,0.3)')}
-                  {row('AI Done (DEEP_CRAWLED)', s.deep_crawled_count, C.detective)}
-                  {row('Has Photo Candidates', s.has_candidates, 'rgba(255,255,255,0.6)')}
-                  {row('No Candidates', (s.deep_crawled_count||0)-(s.has_candidates||0), 'rgba(255,255,255,0.25)')}
+                  {row('AI Queue (SEEDED+site)', s.detective_queue ?? 0, (s.detective_queue ?? 0) > 0 ? '#ffb300' : 'rgba(255,255,255,0.3)')}
+                  {row('AI Done (DEEP_CRAWLED)', s.deep_crawled_count ?? 0, C.detective)}
+                  {row('Has Photo Candidates', s.has_candidates ?? 0, 'rgba(255,255,255,0.6)')}
+                  {row('No Candidates', (s.deep_crawled_count || 0) - (s.has_candidates || 0), 'rgba(255,255,255,0.25)')}
                 </div>
               </div>
               {/* ③ PHOTOGRAPHER — IN: DEEP_CRAWLED  OUT: MEDIA_READY */}
               <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
                 <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.photo, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.photo}33`, paddingBottom: '4px' }}>③ Photographer  IN:DEEP_CRAWLED → OUT:MEDIA_READY</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
-                  {row('Photo Queue (DEEP_CRAWLED)', s.photographer_queue, s.photographer_queue > 0 ? '#ffb300' : 'rgba(255,255,255,0.3)')}
-                  {row('Photo Candidates', s.has_candidates, 'rgba(255,255,255,0.6)')}
-                  {row('Photographed', s.has_photos, '#fff')}
-                  {row('MEDIA_READY', s.media_ready, C.photo)}
+                  {row('Photo Queue (DEEP_CRAWLED)', s.photographer_queue ?? 0, (s.photographer_queue ?? 0) > 0 ? '#ffb300' : 'rgba(255,255,255,0.3)')}
+                  {row('Photo Candidates', s.has_candidates ?? 0, 'rgba(255,255,255,0.6)')}
+                  {row('Photographed', s.has_photos ?? 0, '#fff')}
+                  {row('MEDIA_READY', s.media_ready ?? 0, C.photo)}
                 </div>
               </div>
               {/* ④ PUBLISHER — IN: MEDIA_READY  OUT: PUBLISHED */}
               <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
                 <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.pub, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.pub}33`, paddingBottom: '4px' }}>④ Publisher  IN:MEDIA_READY → OUT:PUBLISHED</div>
-
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
-                  {row('Pub Queue (MEDIA_READY)', s.publisher_queue, s.publisher_queue > 0 ? '#ffb300' : C.pub)}
-                  {row('Live on App', s.published, '#4ade80')}
-                  {row('Pipeline %', `${s.total > 0 ? Math.round((s.deep_crawled_count/s.total)*100) : 0}%`, 'rgba(255,255,255,0.5)')}
-                  {row('Published %', `${s.total > 0 ? Math.round((s.published/s.total)*100) : 0}%`, '#4ade80')}
+                  {row('Pub Queue (MEDIA_READY)', s.publisher_queue ?? 0, (s.publisher_queue ?? 0) > 0 ? '#ffb300' : C.pub)}
+                  {row('Live on App', s.published ?? 0, '#4ade80')}
+                  {row('Pipeline %', `${(s.total ?? 0) > 0 ? Math.round(((s.deep_crawled_count ?? 0) / (s.total ?? 0)) * 100) : 0}%`, 'rgba(255,255,255,0.5)')}
+                  {row('Published %', `${(s.total ?? 0) > 0 ? Math.round(((s.published ?? 0) / (s.total ?? 0)) * 100) : 0}%`, '#4ade80')}
                 </div>
               </div>
             </div>
@@ -1067,10 +1068,8 @@ function App() {
                                   onBlock={blockSpot}
                                   onSetHero={setHeroImage}
                                   onDeletePhoto={deleteImage}
-              onAssignPhotoType={assignPhotoType}
-                      onUploadPhoto={uploadPhoto}
                                   onAssignPhotoType={assignPhotoType}
-                      onUploadPhoto={uploadPhoto}
+                                  onUploadPhoto={uploadPhoto}
                                   onPublishToggle={async (s) => { await fetch(`${API_BASE}/api/skate_spots/${s.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ is_published: !s.is_published }) }); fetchSpots(page, gridFilter); fetchPipelineStatsRef.current(); }}
                               />
                           ))}
@@ -1281,10 +1280,8 @@ function App() {
                     onBlock={blockSpot}
                     onSetHero={setHeroImage}
                     onDeletePhoto={deleteImage}
-              onAssignPhotoType={assignPhotoType}
-                      onUploadPhoto={uploadPhoto}
                     onAssignPhotoType={assignPhotoType}
-                      onUploadPhoto={uploadPhoto}
+                    onUploadPhoto={uploadPhoto}
                     onPublishToggle={async (s) => { await fetch(`${API_BASE}/api/skate_spots/${s.id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ is_published: !s.is_published }) }); fetchSpots(page, gridFilter); }}
                   />
                 ))}

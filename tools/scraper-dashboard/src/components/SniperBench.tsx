@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useFieldRegistry } from '../hooks/useFieldRegistry';
 import { DatabankCard } from './DatabankCard';
+import type { SpotRecord } from './DatabankCard';
 
 const API = 'http://localhost:5999';
 
@@ -273,7 +274,7 @@ export const SniperBench: React.FC = () => {
           <div style={{ padding: '1rem 1.5rem', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, background: 'rgba(74,222,128,0.03)' }}>
             <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#4ade80', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '10px' }}>📋 Simulated Result Preview</div>
             <div style={{ width: '280px' }}>
-              <DatabankCard spot={liveSpot} variant="detailed" readOnly={true} proxyImg={proxyImg} />
+              <DatabankCard spot={liveSpot as SpotRecord} variant="detailed" readOnly={true} proxyImg={proxyImg} />
             </div>
           </div>
         )}
@@ -314,7 +315,7 @@ export const SniperBench: React.FC = () => {
                 const rawVal = liveSpot ? liveSpot[f.field_name] : undefined;
                 const isMissing = rawVal === undefined || rawVal === null || rawVal === '' || (Array.isArray(rawVal) && rawVal.length === 0);
                 const hasValue = !isMissing || rawVal === false;
-                const methodText = f.phase_id === 1 ? 'Google Places API' : f.phase_id === 3 ? 'AI Detective (Ollama)' : f.phase_id === 4 ? 'Photographer / Vision' : 'Pipeline';
+                const methodText = f.phase_id === 1 ? 'Google Places API' : f.phase_id === 3 ? 'AI Detective (LM Studio)' : f.phase_id === 4 ? 'Photographer / Vision' : 'Pipeline';
                 const phaseColor = f.phase_id === 1 ? '#fbbf24' : f.phase_id === 3 ? '#38bdf8' : f.phase_id === 4 ? '#fb7185' : '#94a3b8';
                 return (
                   <div key={f.id} style={{ display: 'flex', padding: '10px 16px', borderBottom: i < fields.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', transition: 'background 0.15s' }}

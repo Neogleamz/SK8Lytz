@@ -91,7 +91,7 @@ export default function DetectiveLab({
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
         
         <div className="panel" style={{ background: 'rgba(20,20,30,0.95)' }}>
-          <h2 className="panel-header" style={{ color: '#00d2ff' }}>Engine Room (Ollama)</h2>
+          <h2 className="panel-header" style={{ color: '#8a2be2' }}>Engine Room (LM Studio)</h2>
           <div style={{ padding: '15px' }}>
              <label style={{ display: 'block', fontSize: '0.8rem', color: '#888', marginBottom: '5px' }}>System Prompt (Model Instructions)</label>
              <textarea 
@@ -176,7 +176,7 @@ export default function DetectiveLab({
            <div style={{ flex: 1, background: '#0a0a0a', border: '1px solid #333', borderRadius: '8px', padding: '15px', overflowY: 'auto' }}>
              {sandboxResult?.aiResponse && (
                <div style={{ marginBottom: '20px' }}>
-                 <h4 style={{ color: '#4caf50', marginTop: 0, marginBottom: '10px', fontSize: '0.8rem', textTransform: 'uppercase' }}>Ollama JSON Output:</h4>
+                 <h4 style={{ color: '#4caf50', marginTop: 0, marginBottom: '10px', fontSize: '0.8rem', textTransform: 'uppercase' }}>LM Studio JSON Output:</h4>
                  <pre style={{ color: '#00d2ff', fontSize: '0.8rem', margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                    {JSON.stringify(sandboxResult.aiResponse, null, 2)}
                  </pre>
@@ -197,7 +197,7 @@ export default function DetectiveLab({
              )}
              {!sandboxResult && !isSandboxRunning && (
                <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: '0.85rem', textAlign: 'center', marginTop: '100px' }}>
-                 Enter a URL and click Run to test the pipeline against the Local Ollama instance.
+                 Enter a URL and click Run to test the pipeline against the Local LM Studio instance.
                </div>
              )}
            </div>

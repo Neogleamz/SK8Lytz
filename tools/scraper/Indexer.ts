@@ -66,6 +66,61 @@ async function runIndexer() {
 
   while (true) {
     try {
+      // ── Pre-flight LM Studio check & auto-start gating ─────────────────
+      let lmsOk = false;
+      try {
+        const lmsStatusRes = await fetch('http://localhost:5999/api/llm/status').then(r => r.json());
+        const isServerOn = lmsStatusRes.serverStatus === 'ON';
+        const isModelLoaded = lmsStatusRes.loadedModels.includes('llama-3.2-3b-instruct');
+        
+        if (isServerOn && isModelLoaded) {
+          lmsOk = true;
+        } else {
+          console.warn(`[Indexer] ⚠️ LM Studio gatekeeper warning — Server: ${lmsStatusRes.serverStatus}, Model Loaded: ${isModelLoaded ? 'YES' : 'NO'}`);
+          
+          if (lmsStatusRes.serverStatus === 'OFF') {
+            console.log('[Indexer] Attempting to auto-start LM Studio server...');
+            await fetch('http://localhost:5999/api/llm/server/start', { method: 'POST' }).catch(() => {});
+          }
+          
+          if (isServerOn && !isModelLoaded) {
+            console.log('[Indexer] Attempting to auto-load llama-3.2-3b-instruct model...');
+            await fetch('http://localhost:5999/api/llm/model/load', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ modelKey: 'llama-3.2-3b-instruct' })
+            }).catch(() => {});
+          }
+          
+          console.log('[Indexer] Waiting 15 seconds for LM Studio to settle...');
+          await sleep(15000);
+          
+          const lmsStatusRecheck = await fetch('http://localhost:5999/api/llm/status').then(r => r.json());
+          if (lmsStatusRecheck.serverStatus === 'ON' && lmsStatusRecheck.loadedModels.includes('llama-3.2-3b-instruct')) {
+            lmsOk = true;
+          }
+        }
+      } catch (err: any) {
+        console.error('[Indexer] LM Studio status pre-flight check crashed:', err.message);
+      }
+
+      if (!lmsOk) {
+        console.error('[Indexer] ⛔ PIPELINE GATED: LM Studio is offline or llama-3.2-3b-instruct model is not loaded. Retrying in 30 seconds...');
+        await fetch('http://localhost:5999/api/pulse', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            source: 'Phase 3', 
+            delayMs: 30000, 
+            active_job: 'GATED: LM Studio Offline',
+            target: 'GATED: llama-3.2-3b-instruct missing'
+          })
+        }).catch(() => {});
+        
+        await sleep(30000);
+        continue;
+      }
+
       // ── Fetch global AI config and headless preference ─────────────────
       const statusRes = await fetch('http://localhost:5999/status').then(r => r.json()).catch(() => ({ isHeadless: true }));
       const configResGlobal = await fetch('http://localhost:5999/config').then(r => r.json()).catch(() => ({ config: {} }));

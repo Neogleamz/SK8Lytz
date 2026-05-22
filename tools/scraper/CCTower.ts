@@ -193,7 +193,8 @@ app.get('/status', async (req, res) => {
       consecutiveErrors,
       isGated,
       lastError,
-      pulseRegistry
+      pulseRegistry,
+      lmsStatus: cachedLmsStatus
     });
   });
 });
@@ -284,6 +285,194 @@ app.post('/api/daemons/:name/stop', (req, res) => {
      res.json({ success: true, message: `${name} daemon stopped` });
   });
 });
+
+// ─── LM Studio Integration Status State & Helper ────────────────────────────
+
+interface LmsStatus {
+  serverStatus: 'ON' | 'OFF' | 'MISSING';
+  port: number;
+  loadedModels: string[];
+  availableModels: { key: string; arch: string; size: string; loaded: boolean }[];
+  lastUpdated: string;
+}
+
+let cachedLmsStatus: LmsStatus = {
+  serverStatus: 'OFF',
+  port: 1234,
+  loadedModels: [],
+  availableModels: [],
+  lastUpdated: new Date().toISOString()
+};
+
+function updateLmsStatus(): Promise<void> {
+  return new Promise((resolve) => {
+    exec('lms status', { windowsHide: true }, (err, stdout, stderr) => {
+      let serverStatus: 'ON' | 'OFF' | 'MISSING' = 'OFF';
+      let port = 1234;
+      let loadedModels: string[] = [];
+      
+      const statusOutput = stdout || '';
+      if (statusOutput.includes('Server: ON')) {
+        serverStatus = 'ON';
+        const portMatch = statusOutput.match(/port:\s*(\d+)/);
+        if (portMatch) {
+          port = parseInt(portMatch[1], 10);
+        }
+        
+        const lines = statusOutput.split('\n');
+        let inLoadedSection = false;
+        for (const line of lines) {
+          if (line.includes('Loaded Models')) {
+            inLoadedSection = true;
+            continue;
+          }
+          if (inLoadedSection) {
+            const match = line.match(/·\s*([^\s-]+)/);
+            if (match) {
+              loadedModels.push(match[1].trim());
+            }
+          }
+        }
+      } else if (statusOutput.includes('Server:  OFF') || statusOutput.includes('Server: OFF')) {
+        serverStatus = 'OFF';
+      } else {
+        serverStatus = 'MISSING';
+      }
+      
+      exec('lms ls', { windowsHide: true }, (errLs, stdoutLs) => {
+        let availableModels: { key: string; arch: string; size: string; loaded: boolean }[] = [];
+        if (!errLs && stdoutLs) {
+          const lines = stdoutLs.split('\n');
+          let inLlmSection = false;
+          for (const line of lines) {
+            if (line.startsWith('LLM')) {
+              inLlmSection = true;
+              continue;
+            }
+            if (line.startsWith('EMBEDDING')) {
+              inLlmSection = false;
+            }
+            if (inLlmSection && line.trim()) {
+              const parts = line.trim().split(/\s{2,}/);
+              if (parts.length >= 4) {
+                const key = parts[0];
+                const arch = parts[2];
+                const size = parts[3];
+                const loaded = line.includes('LOADED');
+                availableModels.push({ key, arch, size, loaded });
+              }
+            }
+          }
+        }
+        
+        if (serverStatus === 'ON') {
+          fetch(`http://localhost:${port}/v1/models`)
+            .then(res => res.json())
+            .then((data: { data?: { id: string }[] }) => {
+              if (data && Array.isArray(data.data)) {
+                const httpLoaded = data.data.map((m: { id: string }) => m.id);
+                if (httpLoaded.length > 0) {
+                  loadedModels = Array.from(new Set([...loadedModels, ...httpLoaded]));
+                }
+              }
+              cachedLmsStatus = {
+                serverStatus,
+                port,
+                loadedModels,
+                availableModels,
+                lastUpdated: new Date().toISOString()
+              };
+              resolve();
+            })
+            .catch(() => {
+              cachedLmsStatus = {
+                serverStatus,
+                port,
+                loadedModels,
+                availableModels,
+                lastUpdated: new Date().toISOString()
+              };
+              resolve();
+            });
+        } else {
+          cachedLmsStatus = {
+            serverStatus,
+            port,
+            loadedModels,
+            availableModels,
+            lastUpdated: new Date().toISOString()
+          };
+          resolve();
+        }
+      });
+    });
+  });
+}
+
+// ─── LM Studio Integration Endpoints ────────────────────────────────────────
+
+app.get('/api/llm/status', (req, res) => {
+  res.json(cachedLmsStatus);
+});
+
+app.post('/api/llm/server/:action', (req, res) => {
+  const { action } = req.params;
+  if (action !== 'start' && action !== 'stop') {
+    return res.status(400).json({ error: 'Action must be start or stop' });
+  }
+
+  const cmd = `lms server ${action}`;
+  console.log(`[CCTower] LM Studio Server commanding: ${cmd}`);
+  
+  exec(cmd, { windowsHide: true }, async (err, stdout, stderr) => {
+    if (err) {
+      console.error(`[CCTower] LM Studio Server command failed:`, err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+    
+    await updateLmsStatus();
+    res.json({ success: true, message: `LM Studio Server ${action}ed successfully`, cachedLmsStatus });
+  });
+});
+
+app.post('/api/llm/model/load', (req, res) => {
+  const { modelKey } = req.body;
+  const targetModel = modelKey || 'llama-3.2-3b-instruct';
+  console.log(`[CCTower] LM Studio loading model: ${targetModel}`);
+  
+  const cmd = `lms load ${targetModel} -y`;
+  
+  exec(cmd, { windowsHide: true }, async (err, stdout, stderr) => {
+    if (err) {
+      console.error(`[CCTower] LM Studio load model failed:`, err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+    
+    await updateLmsStatus();
+    res.json({ success: true, message: `Loaded model ${targetModel}`, cachedLmsStatus });
+  });
+});
+
+app.post('/api/llm/model/unload', (req, res) => {
+  const { identifier } = req.body;
+  const cmd = identifier ? `lms unload ${identifier}` : 'lms unload --all';
+  console.log(`[CCTower] LM Studio unloading: ${cmd}`);
+  
+  exec(cmd, { windowsHide: true }, async (err, stdout, stderr) => {
+    if (err) {
+      console.error(`[CCTower] LM Studio unload failed:`, err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+    
+    await updateLmsStatus();
+    res.json({ success: true, message: identifier ? `Unloaded model ${identifier}` : 'Unloaded all models', cachedLmsStatus });
+  });
+});
+
+// Initial background polling for LM Studio
+setInterval(updateLmsStatus, 30000);
+updateLmsStatus();
+
 app.get('/api/pipeline/telemetry', async (req, res) => {
   try {
     // Build live telemetry from DB queues + in-memory active job registry
@@ -1384,5 +1573,15 @@ app.post('/api/sniper/apply', async (req, res) => {
 
 app.listen(5999, () => {
   console.log('[CCTower] API listening on port 5999');
+  
+  updateLmsStatus().then(() => {
+    console.log('[CCTower] Initial LM Studio status checked:', cachedLmsStatus.serverStatus);
+  });
+  
+  setInterval(() => {
+    updateLmsStatus().catch(err => {
+      console.error('[CCTower] Error polling LM Studio status:', err);
+    });
+  }, 10000);
 });
 

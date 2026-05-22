@@ -21,6 +21,8 @@ export interface SpotRecord {
   verification_status: string;
   street_address?: string | null;
   city?: string | null;
+  state?: string | null;
+  status?: string | null;
   website?: string | null;
   phone_number?: string | null;
   email_addresses?: string | string[] | null;
@@ -32,6 +34,7 @@ export interface SpotRecord {
   social_links?: unknown;
   raw_knowledge_panel?: unknown;
   email_input?: string;
+  candidate_links?: Record<string, string> | null;
   [key: string]: unknown;
 }
 
