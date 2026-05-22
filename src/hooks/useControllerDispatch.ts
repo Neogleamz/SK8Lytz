@@ -147,9 +147,12 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
         if (__DEV__) console.error("🔴 [BLE DEAD WIRE] applyStaticModePattern called but writeToDevice is undefined — writes are silently dropping!");
         return;
       }
-      const tR = r !== undefined ? Math.max(0, Math.min(255, r | 0)) : parseInt(selectedColor.slice(1, 3), 16) || 255;
-      const tG = g !== undefined ? Math.max(0, Math.min(255, g | 0)) : parseInt(selectedColor.slice(3, 5), 16) || 255;
-      const tB = b !== undefined ? Math.max(0, Math.min(255, b | 0)) : parseInt(selectedColor.slice(5, 7), 16) || 255;
+      const pR = parseInt(selectedColor.slice(1, 3), 16);
+      const pG = parseInt(selectedColor.slice(3, 5), 16);
+      const pB = parseInt(selectedColor.slice(5, 7), 16);
+      const tR = r !== undefined ? Math.max(0, Math.min(255, r | 0)) : (isNaN(pR) ? 255 : pR);
+      const tG = g !== undefined ? Math.max(0, Math.min(255, g | 0)) : (isNaN(pG) ? 255 : pG);
+      const tB = b !== undefined ? Math.max(0, Math.min(255, b | 0)) : (isNaN(pB) ? 255 : pB);
       const tSpd = normalizeUISpeedToHardware(spd !== undefined ? spd : speed);
 
       if (pat === 'STATIC') {
