@@ -22,7 +22,12 @@ export function useProtocolDispatch() {
         ? connectedDevices.filter(d => d.id === targetDeviceId)
         : connectedDevices;
 
-      if (targets.length === 0) return Promise.resolve(true);
+      if (targets.length === 0) {
+        if (__DEV__) {
+          console.error("🔴 [BLE ORPHAN DISPATCH] _dispatchToDevices called but connectedDevices/targets is empty! This indicates an orphaned hook instance or dead write path.");
+        }
+        return Promise.resolve(true);
+      }
 
       const payloads = targets.map(device => {
         const adapter = getAdapterForDevice(device.id);
@@ -112,7 +117,12 @@ export function useProtocolDispatch() {
       ? connectedDevices.filter(d => d.id === targetDeviceId)
       : connectedDevices;
 
-    if (targets.length === 0) return Promise.resolve(true);
+    if (targets.length === 0) {
+      if (__DEV__) {
+        console.error("🔴 [BLE ORPHAN DISPATCH] executeRawPayload called but connectedDevices/targets is empty! This indicates an orphaned hook instance or dead write path.");
+      }
+      return Promise.resolve(true);
+    }
 
     const payloads = targets.map(device => {
       return { targetDeviceId: device.id, result };
