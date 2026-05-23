@@ -374,42 +374,150 @@ let cachedLmsStatus: LmsStatus = {
   lastUpdated: new Date().toISOString()
 };
 
-// ─── GPU Telemetry (Windows Performance Counters) ────────────────────────────
+// ─── Host Telemetry (LibreHardwareMonitor Bridge) ────────────────────────────
 
-interface GpuTelemetry {
+interface HostTelemetry {
   vramUsedMB: number;
   vramTotalMB: number;
   vramPercent: number;
   gpuUtilPercent: number;
+  cpuUtilPercent: number;
+  ramUsedGB: number;
+  ramTotalGB: number;
+  ramPercent: number;
   lastUpdated: string;
 }
 
-let cachedGpuTelemetry: GpuTelemetry = {
+let cachedGpuTelemetry: HostTelemetry = {
   vramUsedMB: 0, vramTotalMB: 8192, vramPercent: 0,
-  gpuUtilPercent: 0, lastUpdated: new Date().toISOString()
+  gpuUtilPercent: 0,
+  cpuUtilPercent: 0,
+  ramUsedGB: 0, ramTotalGB: 16, ramPercent: 0,
+  lastUpdated: new Date().toISOString()
 };
 
-function updateGpuTelemetry(): void {
-  const scriptPath = path.resolve(__dirname, 'gpu-stats.ps1');
-  exec(`powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${scriptPath}"`, { windowsHide: true, timeout: 8000 }, (err, stdout) => {
-    if (err || !stdout?.trim()) return;
-    const [vramStr, utilStr] = stdout.trim().split('|');
-    const vramUsedMB = parseFloat(vramStr) || 0;
-    const gpuUtilPercent = parseFloat(utilStr) || 0;
-    const vramTotalMB = 8192; // W5500 8GB — can be auto-detected later
-    cachedGpuTelemetry = {
-      vramUsedMB,
-      vramTotalMB,
-      vramPercent: Math.round((vramUsedMB / vramTotalMB) * 100),
-      gpuUtilPercent: Math.round(gpuUtilPercent * 10) / 10,
-      lastUpdated: new Date().toISOString()
-    };
-  });
+interface LhmNode {
+  Text: string;
+  Value?: string;
+  ImageURL?: string;
+  Children?: LhmNode[];
 }
 
-// Poll GPU telemetry every 10 seconds
-setInterval(updateGpuTelemetry, 10000);
-updateGpuTelemetry();
+// Find a hardware component node in the sensor tree (e.g. CPU, GPU, Generic Memory)
+function findLhmHardwareNode(node: LhmNode, imageKeyword: string): LhmNode | null {
+  if (node.ImageURL?.toLowerCase().includes(imageKeyword.toLowerCase())) {
+    return node;
+  }
+  if (node.Children) {
+    for (const child of node.Children) {
+      const found = findLhmHardwareNode(child, imageKeyword);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// Recursively find the value of a specific named sensor under a hardware component
+function findLhmSensorValue(node: LhmNode, sensorName: string): string | null {
+  if (node.Text.toLowerCase().trim() === sensorName.toLowerCase().trim() && node.Value !== undefined) {
+    return node.Value;
+  }
+  if (node.Children) {
+    for (const child of node.Children) {
+      const found = findLhmSensorValue(child, sensorName);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+let lmsConnectionWarningLogged = false;
+
+async function updateHostTelemetry(): Promise<void> {
+  try {
+    const fetchFn = require('node-fetch');
+    const res = await fetchFn('http://host.docker.internal:8085/data.json', { signal: AbortSignal.timeout(3000) });
+    if (!res.ok) throw new Error(`LHM HTTP status ${res.status}`);
+    
+    const tree = (await res.json()) as LhmNode;
+    if (!tree) return;
+
+    lmsConnectionWarningLogged = false; // Reset warning state upon successful query
+
+    // 1. Parse CPU load
+    let cpuUtilPercent = 0;
+    const cpuNode = findLhmHardwareNode(tree, 'cpu.png');
+    if (cpuNode) {
+      const valStr = findLhmSensorValue(cpuNode, 'CPU Total');
+      if (valStr) cpuUtilPercent = parseFloat(valStr) || 0;
+    }
+
+    // 2. Parse Generic Memory (System RAM)
+    let ramPercent = 0;
+    let ramUsedGB = 0;
+    let ramTotalGB = 16;
+    const ramNode = findLhmHardwareNode(tree, 'ram.png');
+    if (ramNode) {
+      const pctStr = findLhmSensorValue(ramNode, 'Memory');
+      const usedStr = findLhmSensorValue(ramNode, 'Memory Used');
+      const availStr = findLhmSensorValue(ramNode, 'Memory Available');
+      
+      if (pctStr) ramPercent = parseFloat(pctStr) || 0;
+      if (usedStr) ramUsedGB = parseFloat(usedStr) || 0;
+      if (usedStr && availStr) {
+        const availGB = parseFloat(availStr) || 0;
+        ramTotalGB = Math.round((ramUsedGB + availGB) * 10) / 10;
+      }
+    }
+
+    // 3. Parse GPU load & VRAM telemetry (supports nvidia, amd, intel)
+    let gpuUtilPercent = 0;
+    let vramUsedMB = 0;
+    let vramTotalMB = 8192;
+    
+    const gpuNode = findLhmHardwareNode(tree, 'nvidia.png') || 
+                    findLhmHardwareNode(tree, 'amd.png') || 
+                    findLhmHardwareNode(tree, 'ati.png') || 
+                    findLhmHardwareNode(tree, 'intel.png');
+                    
+    if (gpuNode) {
+      const utilStr = findLhmSensorValue(gpuNode, 'GPU Core');
+      const vramUsedStr = findLhmSensorValue(gpuNode, 'GPU Memory Used') || findLhmSensorValue(gpuNode, 'GPU Memory');
+      const vramFreeStr = findLhmSensorValue(gpuNode, 'GPU Memory Free');
+      const vramTotalStr = findLhmSensorValue(gpuNode, 'GPU Memory Total');
+
+      if (utilStr) gpuUtilPercent = parseFloat(utilStr) || 0;
+      if (vramUsedStr) vramUsedMB = parseFloat(vramUsedStr) || 0;
+      if (vramTotalStr) {
+        vramTotalMB = parseFloat(vramTotalStr) || 8192;
+      } else if (vramUsedStr && vramFreeStr) {
+        const freeMB = parseFloat(vramFreeStr) || 0;
+        vramTotalMB = Math.round(vramUsedMB + freeMB);
+      }
+    }
+
+    cachedGpuTelemetry = {
+      vramUsedMB: Math.round(vramUsedMB),
+      vramTotalMB: Math.round(vramTotalMB),
+      vramPercent: Math.round((vramUsedMB / vramTotalMB) * 100) || 0,
+      gpuUtilPercent: Math.round(gpuUtilPercent * 10) / 10,
+      cpuUtilPercent: Math.round(cpuUtilPercent * 10) / 10,
+      ramUsedGB: Math.round(ramUsedGB * 10) / 10,
+      ramTotalGB,
+      ramPercent: Math.round(ramPercent),
+      lastUpdated: new Date().toISOString()
+    };
+  } catch (err: any) {
+    if (!lmsConnectionWarningLogged) {
+      console.warn(`[CCTower] ⚠️ Host telemetry unavailable. Start LibreHardwareMonitor on Windows and enable Options -> Remote Web Server on port 8085.`);
+      lmsConnectionWarningLogged = true; // Log only once to avoid spamming the terminal logs
+    }
+  }
+}
+
+// Poll host hardware telemetry every 6 seconds
+setInterval(updateHostTelemetry, 6000);
+updateHostTelemetry();
 
 async function updateLmsStatus(): Promise<void> {
   const hosts = ['host.docker.internal', 'localhost', '127.0.0.1'];
