@@ -188,6 +188,142 @@ async function autoScroll(page: any) {
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+/**
+ * Adaptive Sitemap Sibling Location Bouncer
+ * Analyzes discovered URLs to identify multi-location branch structures,
+ * matches the target branch against the active spot's city/name,
+ * prunes all sibling location paths, and extracts any target location-specific landing URL to prioritize.
+ */
+function filterMultiLocationUrls(
+  sitemap: any,
+  spotContext: any,
+  onProgress: (msg: string) => void
+): string | null {
+  if (!spotContext.website) return null;
+  
+  let baseHost = '';
+  let origin = '';
+  try {
+    const parsed = new URL(spotContext.website);
+    origin = parsed.origin;
+    baseHost = parsed.hostname.toLowerCase().replace('www.', '');
+  } catch {
+    return null;
+  }
+  
+  const targetCity = (spotContext.city || '').toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+  const targetName = (spotContext.name || '').toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+  
+  if (!targetCity) return null;
+  
+  const COMMON_GLOBAL_PATHS = new Set([
+    'about', 'contact', 'pricing', 'schedule', 'gallery', 'home', 'careers', 'parties', 'events', 
+    'privacy', 'terms', 'faq', 'services', 'news', 'blog', 'location', 'locations', 'hours', 
+    'find-us', 'contact-us', 'book', 'booking', 'shop', 'store', 'cart', 'checkout', 'gift-cards', 
+    'register', 'sign-up', 'login', 'admin', 'wp-admin', 'wp-content', 'assets', 'images', 'uploads', 
+    'api', 'v1', 'v2', 'index', 'main', 'default', 'error', '404', 'search', 'facility', 'rink', 'arena',
+    'birthday', 'birthdays', 'class', 'classes', 'lesson', 'lessons', 'session', 'sessions', 'open-skate',
+    'public-skate', 'admission', 'rates', 'tickets', 'fundraisers', 'fundraising', 'stem', 'field-trips',
+    'group-events', 'private-parties', 'skate-rental', 'pro-shop', 'concessions', 'cafe', 'food', 'menu',
+    'adult-night', 'adults', 'kids', 'family', 'teen-night', 'schedule-events', 'calendar', 'announcements'
+  ]);
+
+  const candidateBranches = new Set<string>();
+  const allUrls = sitemap.all_urls || [];
+  
+  for (const urlStr of allUrls) {
+    try {
+      const url = new URL(urlStr);
+      if (url.hostname.toLowerCase().replace('www.', '') !== baseHost) continue;
+      
+      const segments = url.pathname.split('/').filter(Boolean);
+      if (segments.length > 0) {
+        const topSegment = segments[0].toLowerCase();
+        if (
+          /^[a-z0-9-]+$/.test(topSegment) && 
+          topSegment.length >= 3 && 
+          !COMMON_GLOBAL_PATHS.has(topSegment)
+        ) {
+          candidateBranches.add(topSegment);
+        }
+      }
+    } catch {}
+  }
+  
+  if (candidateBranches.size <= 1) {
+    return null;
+  }
+  
+  let targetBranchSegment = '';
+  for (const branch of candidateBranches) {
+    const cleanBranch = branch.replace(/-/g, '');
+    if (
+      targetCity.includes(cleanBranch) || 
+      cleanBranch.includes(targetCity) ||
+      targetName.includes(cleanBranch)
+    ) {
+      targetBranchSegment = branch;
+      break;
+    }
+  }
+  
+  if (!targetBranchSegment) {
+    onProgress(`[Detective-Bouncer] ⚠️ Multi-location candidates detected (${Array.from(candidateBranches).join(', ')}), but none matched target city/name "${spotContext.city}/${spotContext.name}". Bouncer inactive.`);
+    return null;
+  }
+  
+  const siblingBranches = Array.from(candidateBranches).filter(b => b !== targetBranchSegment);
+  onProgress(`[Detective-Bouncer] 🛡️ Multi-location detected for "${spotContext.name}". Target branch: "${targetBranchSegment}". Sibling branches to bounce: ${siblingBranches.join(', ')}`);
+  
+  const pruneList = (urls: string[]): string[] => {
+    if (!urls) return [];
+    return urls.filter(urlStr => {
+      try {
+        const url = new URL(urlStr);
+        if (url.hostname.toLowerCase().replace('www.', '') !== baseHost) return true;
+        
+        const pathLower = url.pathname.toLowerCase();
+        for (const sibling of siblingBranches) {
+          const pattern = new RegExp(`(^|/|-)` + sibling + `($|/|-)`);
+          if (pattern.test(pathLower)) {
+            return false;
+          }
+        }
+        return true;
+      } catch {
+        return true;
+      }
+    });
+  };
+  
+  const beforeTotal = sitemap.all_urls.length;
+  sitemap.all_urls = pruneList(sitemap.all_urls);
+  if (sitemap.schedule_urls) sitemap.schedule_urls = pruneList(sitemap.schedule_urls);
+  if (sitemap.pricing_urls) sitemap.pricing_urls = pruneList(sitemap.pricing_urls);
+  if (sitemap.contact_urls) sitemap.contact_urls = pruneList(sitemap.contact_urls);
+  if (sitemap.gallery_urls) sitemap.gallery_urls = pruneList(sitemap.gallery_urls);
+  if (sitemap.about_urls) sitemap.about_urls = pruneList(sitemap.about_urls);
+  if (sitemap.events_urls) sitemap.events_urls = pruneList(sitemap.events_urls);
+  
+  const bouncedCount = beforeTotal - sitemap.all_urls.length;
+  if (bouncedCount > 0) {
+    onProgress(`[Detective-Bouncer] 🛡️ Bounced ${bouncedCount} sibling branch URLs from crawl queue.`);
+  }
+
+  // Look for target branch specific location landing URL
+  const targetBranchUrl = `${origin}/${targetBranchSegment}`;
+  const foundTargetUrl = sitemap.all_urls.find((u: string) => {
+    try {
+      const parsed = new URL(u);
+      return parsed.pathname.toLowerCase().replace(/\/$/, '') === '/' + targetBranchSegment;
+    } catch {
+      return false;
+    }
+  });
+
+  return foundTargetUrl || targetBranchUrl;
+}
+
 // ─── Pre-Crawl External Source Fetchers (no Puppeteer) ───────────────────────
 
 async function fetchExternalText(url: string, label: string, onProgress?: (msg: string) => void): Promise<string> {
@@ -595,7 +731,10 @@ export async function executeDetective(
       hasCrawledWebsite = true;
       onProgress('[Detective] Fetching sitemap...');
     sitemap=await parseSitemap(spotContext.website);
-    onProgress(`[Detective] 🕷️ Sitemap: schedule(${sitemap.schedule_urls.length}) pricing(${sitemap.pricing_urls.length}) contact(${sitemap.contact_urls.length}) gallery(${sitemap.gallery_urls.length}) about(${sitemap.about_urls.length}) total(${sitemap.all_urls.length})`);
+    onProgress(`[Detective] 🕷️ Discovered sitemap URLs: schedule(${sitemap.schedule_urls.length}) pricing(${sitemap.pricing_urls.length}) contact(${sitemap.contact_urls.length}) gallery(${sitemap.gallery_urls.length}) about(${sitemap.about_urls.length}) total(${sitemap.all_urls.length})`);
+
+    // Run the Adaptive Sitemap Sibling Location Bouncer
+    const targetLocationUrl = filterMultiLocationUrls(sitemap, spotContext, onProgress);
 
     browser=await puppeteer.launch({headless:isHeadless?'new':false,protocolTimeout:60000,args:['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage']});
     const page=await browser.newPage();
@@ -606,11 +745,21 @@ export async function executeDetective(
       let targeted: string[] = [];
       if (sitemap.all_urls && sitemap.all_urls.length > 0 && sitemap.all_urls.length <= 15) {
         // Small site optimization: crawl ALL unique discovered pages to guarantee 100% data extraction completeness
-        crawlUrls = [...new Set([spotContext.website, ...sitemap.all_urls])];
+        if (targetLocationUrl && targetLocationUrl !== spotContext.website) {
+          crawlUrls = [...new Set([targetLocationUrl, spotContext.website, ...sitemap.all_urls])];
+          onProgress(`[Detective-Bouncer] 🎯 Prioritizing specific location landing page: ${targetLocationUrl}`);
+        } else {
+          crawlUrls = [...new Set([spotContext.website, ...sitemap.all_urls])];
+        }
         onProgress(`[Detective] 🕷️ Small site detected (${sitemap.all_urls.length} pages). Crawling ALL unique URLs.`);
       } else {
         targeted=[...new Set([...sitemap.schedule_urls.slice(0,3),...sitemap.pricing_urls.slice(0,3),...sitemap.about_urls.slice(0,2),...sitemap.events_urls.slice(0,2),...sitemap.contact_urls.slice(0,3),...sitemap.gallery_urls.slice(0,2)])];
-        crawlUrls=[spotContext.website,...targeted].slice(0,MAX_PAGES_PER_RECORD);
+        if (targetLocationUrl && targetLocationUrl !== spotContext.website) {
+          crawlUrls = [targetLocationUrl, spotContext.website, ...targeted].slice(0, MAX_PAGES_PER_RECORD);
+          onProgress(`[Detective-Bouncer] 🎯 Prioritizing specific location landing page: ${targetLocationUrl}`);
+        } else {
+          crawlUrls=[spotContext.website,...targeted].slice(0,MAX_PAGES_PER_RECORD);
+        }
       }
       const PAGE_SCORE_RULES=[{pattern:/hours|schedule|session|times|calendar|events|open.?skate/i,score:10},{pattern:/adult.?night|18\+|21\+/i,score:10},{pattern:/pricing|price|admission|rates|tickets/i,score:9},{pattern:/about|story|history|facility|rink/i,score:8},{pattern:/contact|location|directions|email|info/i,score:10}];
       
