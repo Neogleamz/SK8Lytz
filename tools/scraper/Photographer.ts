@@ -140,6 +140,72 @@ function saveToDisk(buf: Buffer, spotId: string, state: string, index: number, p
 
 // ─── Programmatic Photo Selection (Heuristics) ──────────────────────────────
 
+// ─── Programmatic Photo Selection (Heuristics) ──────────────────────────────
+
+function normalizeImageUrl(urlStr: string): string {
+  try {
+    const url = new URL(urlStr);
+    
+    // Strip common sizing and resizing query parameters
+    const paramsToStrip = [
+      'width', 'height', 'w', 'h', 'resize', 'size', 'v', 'cache', 'dpr', 
+      'fit', 'crop', 'quality', 'q', 'auto', 'format'
+    ];
+    paramsToStrip.forEach(p => url.searchParams.delete(p));
+    
+    // Remove typical WordPress/CDN dimension suffixes like "-300x200.jpg" to ".jpg"
+    let pathname = url.pathname;
+    pathname = pathname.replace(/-\d+x\d+(\.[a-zA-Z0-9]+)$/i, '$1');
+    
+    return url.origin + pathname;
+  } catch {
+    return urlStr;
+  }
+}
+
+function calculateCandidateScore(c: ImageCandidate, size: number): number {
+  let score = size; // Base score is file size in bytes
+
+  const urlLower = c.url.toLowerCase();
+  const altLower = c.alt.toLowerCase();
+  const classLower = c.parentClass.toLowerCase();
+
+  // 1. Extreme Penalty for bad keywords in URL, Alt, or parentClass (UI, icons, menus, generic templates)
+  const badKeywords = [
+    'logo', 'icon', 'placeholder', 'avatar', 'button', 'sprite', 'spacer', 
+    'transparent', 'bg-', 'star', 'rating', 'map-marker', 'arrow', 'loader',
+    'advertisement', 'ad-', 'ad_', 'social', 'widget', 'header-bg', 'footer-bg',
+    'generic', 'blank', 'no-image', 'no-photo', 'default', 'close', 'search',
+    'menu', 'pin', 'marker', 'cart', 'trash', 'user', 'profile'
+  ];
+  
+  for (const kw of badKeywords) {
+    if (urlLower.includes(kw) || altLower.includes(kw) || classLower.includes(kw)) {
+      score -= 1000 * 1024; // Deduct 1MB worth of score priority
+    }
+  }
+
+  // 2. Extra Boost for positive, high-value image keywords
+  const goodKeywords = [
+    'gallery', 'upload', 'media', 'photo', 'rink', 'floor', 'skater', 'skate',
+    'spot', 'interior', 'exterior', 'facility', 'full', 'large', 'original',
+    'action', 'party', 'event', 'fun'
+  ];
+  
+  for (const kw of goodKeywords) {
+    if (urlLower.includes(kw) || altLower.includes(kw)) {
+      score += 200 * 1024; // Boost by 200KB worth of priority
+    }
+  }
+
+  // 3. Parental class boosts
+  if (classLower.includes('gallery') || classLower.includes('slider') || classLower.includes('carousel') || classLower.includes('portfolio')) {
+    score += 150 * 1024; // Boost by 150KB
+  }
+
+  return score;
+}
+
 async function estimateImageQuality(candidates: ImageCandidate[]): Promise<string[]> {
   if (candidates.length === 0) return [];
   const sizeMap = new Map<string, number>();
@@ -160,9 +226,13 @@ async function estimateImageQuality(candidates: ImageCandidate[]): Promise<strin
 
   const sortedUrls = candidates
     .filter(c => (sizeMap.get(c.url) || 0) >= MIN_FILE_SIZE_BYTES)
-    .sort((a, b) => (sizeMap.get(b.url) || 0) - (sizeMap.get(a.url) || 0))
+    .sort((a, b) => {
+      const scoreA = calculateCandidateScore(a, sizeMap.get(a.url) || 0);
+      const scoreB = calculateCandidateScore(b, sizeMap.get(b.url) || 0);
+      return scoreB - scoreA;
+    })
     .map(c => c.url)
-    .slice(0, MAX_PHOTOS * 2); // Take top 20 to screen
+    .slice(0, MAX_PHOTOS * 2.5); // Take top 25 to screen
 
   const finalUrls: string[] = [];
   logToTower('INFO', `  🔍 Running OCR Bouncer on top ${sortedUrls.length} candidate images...`);
@@ -234,8 +304,18 @@ async function crawlForImages(urls: string[], pageSourceLabel: string, isHeadles
             const w = img.naturalWidth || img.width || 0;
             const h = img.naturalHeight || img.height || 0;
             const src = img.src || img.dataset?.src || img.dataset?.lazySrc || '';
-            if (w >= minW && h >= minH && src && src.startsWith('http')) {
-              results.push({ url:src, alt:(img.alt||'').toLowerCase(), parentClass:(img.closest('[class]')?.className||'').toLowerCase().slice(0,80), pageSource:source });
+            
+            if (src && src.startsWith('http')) {
+              // Relax strict layout size check if the URL contains strong visual photo cues
+              const isPlaceholderOrIcon = /icon|logo|sprite|spacer|star|button|avatar/i.test(src);
+              const isHighResCandidate = /uploads|gallery|media|photos|rink|skate|original/i.test(src) || src.includes('places/photo');
+              
+              const passesSize = (w >= minW && h >= minH);
+              const passesLazyLoad = (w === 0 && h === 0 && isHighResCandidate);
+              
+              if (!isPlaceholderOrIcon && (passesSize || passesLazyLoad)) {
+                results.push({ url:src, alt:(img.alt||'').toLowerCase(), parentClass:(img.closest('[class]')?.className||'').toLowerCase().slice(0,80), pageSource:source });
+              }
             }
           });
           // CSS background images on hero/slider/gallery divs
@@ -255,9 +335,17 @@ async function crawlForImages(urls: string[], pageSourceLabel: string, isHeadles
     }
   } finally { if (browser) { try { await browser.close(); } catch {} } activeBrowser = null; }
 
-  // De-duplicate by URL
-  const seen = new Set<string>();
-  return candidates.filter(c => { if (seen.has(c.url)) return false; seen.add(c.url); return true; });
+  // De-duplicate by normalized URL to completely avoid multi-CDN / resized duplicates
+  const seenNormalized = new Set<string>();
+  const uniqueCandidates: ImageCandidate[] = [];
+  for (const c of candidates) {
+    const norm = normalizeImageUrl(c.url);
+    if (!seenNormalized.has(norm)) {
+      seenNormalized.add(norm);
+      uniqueCandidates.push(c);
+    }
+  }
+  return uniqueCandidates;
 }
 
 // ─── Main Loop ────────────────────────────────────────────────────────────────
