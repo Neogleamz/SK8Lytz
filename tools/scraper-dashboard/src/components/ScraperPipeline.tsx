@@ -156,7 +156,9 @@ export const ScraperPipeline: React.FC<{
     onDeletePhoto?: (spotId: string, photoIndex: number) => void;
     onAssignPhotoType?: (spotId: string, photoIndex: number, fieldType: string) => void;
     onUploadPhoto?: (spotId: string, file: File) => void;
-}> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto }) => {
+    seedProvider?: 'osm' | 'google' | 'website-resolver';
+    onProviderChange?: (p: 'osm' | 'google' | 'website-resolver') => void;
+}> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto, seedProvider, onProviderChange }) => {
     const { telemetry, config, loading, pulse } = useScraperTelemetry(2000);
     const { fields } = useFieldRegistry();
 
@@ -249,22 +251,7 @@ export const ScraperPipeline: React.FC<{
             const boolOk = (v: unknown): string => (v === true ? 'success' : 'missing');
 
             // ▶ CURRENT STATUS badge
-            if (phaseId === 0) {
-                const s0 = spot.verification_status || 'PENDING_WEBSITE';
-                data.push(['\u25b6 CURRENT STATUS', s0, s0 === 'SEEDED' ? 'success' : 'warning']);
-                data.push(['Website', spot.website || 'PENDING', spot.website ? 'success' : 'missing']);
-                let resolverMeta = null;
-                try {
-                    resolverMeta = typeof spot.ai_metadata === 'string' ? JSON.parse(spot.ai_metadata)?.website_resolver : spot.ai_metadata?.website_resolver;
-                } catch {}
-                if (resolverMeta) {
-                    if (resolverMeta.source) data.push(['Source', resolverMeta.source.toUpperCase(), 'success']);
-                    if (resolverMeta.score != null) data.push(['Confidence', `${Math.round(resolverMeta.score * 100)}%`, 'success']);
-                    if (resolverMeta.reason || resolverMeta.failed_reason) {
-                        data.push(['Reason', resolverMeta.reason || resolverMeta.failed_reason, 'val']);
-                    }
-                }
-            } else if (phaseId === 1) {
+            if (phaseId === 1) {
                 const s1 = spot.verification_status || 'SEEDED';
                 data.push(['\u25b6 CURRENT STATUS', s1, s1 === 'SEEDED' ? 'success' : 'warning']);
             } else if (phaseId === 2) {
@@ -399,39 +386,44 @@ export const ScraperPipeline: React.FC<{
 
     const baseBelts = [
         generateUniformBelt(1, 1, 'Phase 1 │ Scout (Seed Engine)  IN: null → OUT: SEEDED', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING...', 'Waiting', 'PENDING', 'SEEDED', getQueueNames('phase1')),
-        generateUniformBelt(0, 0, 'Phase 1.5 │ Website Resolver (OSM + DDG)  IN: PENDING_WEBSITE → OUT: SEEDED', '--neon-scout', '0, 255, 170', 'WebsiteResolver', 'RESOLVING...', 'Waiting', 'PENDING_WEBSITE', 'SEEDED', getQueueNames('pending_website')),
         generateUniformBelt(2, 2, 'Phase 2 │ Detective (AI Crawl)  IN: SEEDED → OUT: DEEP_CRAWLED', '--neon-detective', '255, 106, 0', config?.detective_model || 'Llama3.2-8b', 'PROCESSING...', 'Waiting', 'SEEDED', 'DEEP_CRAWLED', getQueueNames('phase2')),
         generateUniformBelt(3, 3, 'Phase 3 │ Photographer  IN: DEEP_CRAWLED → OUT: MEDIA_READY', '--neon-photo', '255, 0, 127', 'Vision_v1', 'PROCESSING...', 'Waiting', 'DEEP_CRAWLED', 'MEDIA_READY', getQueueNames('phase3')),
         generateUniformBelt(4, 4, 'Phase 4 │ Publisher  IN: MEDIA_READY → OUT: PUBLISHED', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('phase4'))
     ];
 
     // Dynamically pull attempting checkmarks from the field_registry
-    baseBelts[0].attempting = fields.filter(f => f.phase_id === 1).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]);
-    
-    // Phase 1.5 Website Resolver: Target website field
-    baseBelts[1].attempting = [ ['website', 'pending', '🛑'] ];
+    baseBelts[0].attempting = seedProvider === 'website-resolver'
+      ? [ ['website', 'pending', '🛑'] ]
+      : fields.filter(f => f.phase_id === 1).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]);
 
     // Phase 2 Detective: Registry fields + dynamic AI vectors
     const aiVectors = config?.ai_target_vectors || [];
-    baseBelts[2].attempting = [
+    baseBelts[1].attempting = [
       ...fields.filter(f => f.phase_id === 2).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]),
       ...aiVectors.map((v: unknown) => [typeof v === 'object' && v !== null && 'key' in v ? String((v as { key: string }).key) : String(v), 'pending', '⚪'] as [string, string, string])
     ];
 
     // Phase 3 Photographer: Registry fields + photo categories
     const photoCategories = config?.photo_categories || [];
-    baseBelts[3].attempting = [
+    baseBelts[2].attempting = [
       ...fields.filter(f => f.phase_id === 3).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]),
       ...photoCategories.map((c: string) => [c, 'pending', '⚪'] as [string, string, string])
     ];
 
     // Phase 4 Publisher: Registry fields
-    baseBelts[4].attempting = fields.filter(f => f.phase_id === 4).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]);
+    baseBelts[3].attempting = fields.filter(f => f.phase_id === 4).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]);
 
     const mergedBelts = baseBelts.map(belt => {
         let liveData: TelemetryLiveData | null = null;
-        if (belt.id === 1) liveData = telemetry.scout || null;
-        if (belt.id === 0) liveData = telemetry.resolver || null;
+        if (belt.id === 1) {
+            const scoutData = telemetry.scout || null;
+            const resolverData = telemetry.resolver || null;
+            if (seedProvider === 'website-resolver' && resolverData?.active_job) {
+                liveData = resolverData;
+            } else {
+                liveData = scoutData || resolverData;
+            }
+        }
         if (belt.id === 2) liveData = telemetry.detective || null;
         if (belt.id === 3) liveData = telemetry.photographer || null;
         if (belt.id === 4) liveData = telemetry.publisher || null;
@@ -444,9 +436,8 @@ export const ScraperPipeline: React.FC<{
         const countBadges: {label: string; value: string}[] = [];
         if (belt.id === 1) {
             countBadges.push({ label: 'OUT', value: `${(pipelineStats?.summary?.seeded ?? 0).toLocaleString()} SEEDED` });
-        } else if (belt.id === 0) {
-            countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.pending_website ?? 0)} PENDING` });
-            countBadges.push({ label: 'STALL', value: `${(pipelineStats?.summary?.stalled_website ?? 0)} STALLED` });
+            countBadges.push({ label: 'RESOLVING', value: `${(pipelineStats?.summary?.pending_website ?? 0)} PENDING` });
+            countBadges.push({ label: 'STALLED', value: `${(pipelineStats?.summary?.stalled_website ?? 0)} STALLED` });
         } else if (belt.id === 2) {
             countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.enriched ?? 0)} ENRICHED` });
             countBadges.push({ label: 'OUT', value: `${(pipelineStats?.summary?.deep_crawled_count ?? 0)} DEEP_CRAWLED` });
@@ -505,8 +496,14 @@ export const ScraperPipeline: React.FC<{
 
     // Per-belt daemon control mappings
     const beltDaemon: Record<number, { active: boolean; hasDaemon: boolean; onStart: () => void; onStop: () => void }> = {
-        1: { hasDaemon: true,  active: !!(status?.isHarvestingActive || status?.isGoogleSweepActive), onStart: () => triggerHarvest?.('start-all'), onStop: () => triggerHarvest?.('stop-all') },
-        0: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Website Resolver: online')), onStart: () => triggerSpecificDaemon?.('website-resolver', 'start'), onStop: () => triggerSpecificDaemon?.('website-resolver', 'stop') },
+        1: {
+            hasDaemon: true,
+            active: seedProvider === 'website-resolver'
+                ? !!(status?.currentTarget?.includes('Website Resolver: online'))
+                : !!(status?.isHarvestingActive || status?.isGoogleSweepActive),
+            onStart: () => triggerHarvest?.('start-all'),
+            onStop: () => triggerHarvest?.('stop-all')
+        },
         2: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Indexer: online')),     onStart: () => triggerSpecificDaemon?.('indexer', 'start'),     onStop: () => triggerSpecificDaemon?.('indexer', 'stop') },
         3: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Photographer: online')), onStart: () => triggerSpecificDaemon?.('photographer', 'start'), onStop: () => triggerSpecificDaemon?.('photographer', 'stop') },
         4: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Publisher: online')),    onStart: () => triggerSpecificDaemon?.('publisher', 'start'),    onStop: () => triggerSpecificDaemon?.('publisher', 'stop') },
@@ -682,7 +679,7 @@ export const ScraperPipeline: React.FC<{
                     const isActive = dc?.active;
                     const statusLabel = b.status === 'PROCESSING' ? 'PROCESSING' : 'IDLE';
                     const activeRecordStatus = (b as any).activeRecord?.pipeline_status as string | undefined;
-                    const daemonName = b.id === 1 ? 'SCOUT' : b.id === 0 ? 'RESOLVER' : b.id === 2 ? 'DETECTIVE' : b.id === 3 ? 'PHOTOGRAPHER' : 'PUBLISHER';
+                    const daemonName = b.id === 1 ? (seedProvider === 'website-resolver' ? 'RESOLVER' : 'SCOUT') : b.id === 2 ? 'DETECTIVE' : b.id === 3 ? 'PHOTOGRAPHER' : 'PUBLISHER';
                     const daemonStatus = activeRecordStatus
                         ? `[${daemonName}] ${activeRecordStatus}`
                         : b.target && b.target !== 'WAITING...'
@@ -709,6 +706,8 @@ export const ScraperPipeline: React.FC<{
                             onDeletePhoto={onDeletePhoto}
                             onAssignPhotoType={onAssignPhotoType}
                             onUploadPhoto={onUploadPhoto}
+                            seedProvider={b.id === 1 ? seedProvider : undefined}
+                            onProviderChange={b.id === 1 ? onProviderChange : undefined}
                         />
                     );
                 })}

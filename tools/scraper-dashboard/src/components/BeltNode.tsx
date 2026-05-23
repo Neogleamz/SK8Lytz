@@ -45,6 +45,8 @@ interface BeltProps {
   onDeletePhoto?: (spotId: string, photoIndex: number) => void;
   onAssignPhotoType?: (spotId: string, photoIndex: number, fieldType: string) => void;
   onUploadPhoto?: (spotId: string, file: File) => void;
+  seedProvider?: 'osm' | 'google' | 'website-resolver';
+  onProviderChange?: (p: 'osm' | 'google' | 'website-resolver') => void;
 }
 
 // Shared card dimensions
@@ -146,7 +148,8 @@ export const BeltNode: React.FC<BeltProps> = ({
   carouselSpots,
   id, name, color, rgb, job, daemon, target, inQ, status, gatekeeper, attempting, outCards,
   onPhaseNav, daemonActive = false, onDaemonStart, onDaemonStop, hasDaemon = true, daemonStatus, inputStatus, outputStatus, countBadges = [],
-  onBlockSpot, onRestartSpot, onFreezeSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto
+  onBlockSpot, onRestartSpot, onFreezeSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto,
+  seedProvider, onProviderChange
 }) => {
   const [isConfigOpen, setConfigOpen] = useState(false);
   const [carouselIdx, setCarouselIdx] = useState(0);
@@ -267,6 +270,29 @@ export const BeltNode: React.FC<BeltProps> = ({
         {/* Daemon START / STOP pill */}
         {hasDaemon && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+            {id === 1 && onProviderChange && (
+              <select
+                value={seedProvider || 'google'}
+                onChange={(e) => onProviderChange(e.target.value as any)}
+                style={{
+                  background: 'rgba(0,0,0,0.5)',
+                  border: `1px solid rgba(${colRgb}, 0.3)`,
+                  color: colVar,
+                  fontSize: '0.62rem',
+                  fontWeight: 900,
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  marginRight: '8px',
+                  fontFamily: 'JetBrains Mono, monospace',
+                }}
+              >
+                <option value="google" style={{ background: '#111' }}>Google (API)</option>
+                <option value="osm" style={{ background: '#111' }}>OSM (Harvest)</option>
+                <option value="website-resolver" style={{ background: '#111' }}>Website Resolver (Pass 2)</option>
+              </select>
+            )}
             {/* Live status dot */}
             <div style={{
               width: 7, height: 7, borderRadius: '50%',

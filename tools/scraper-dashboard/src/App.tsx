@@ -84,7 +84,7 @@ const getEmails = (emails: unknown): string[] => {
 
 function App() {
   const [activeTab, setActiveTab] = useState<'pipeline' | 'phase1' | 'phase2' | 'phase3' | 'phase4' | 'sniper' | 'heuristics' | 'graveyard'>('pipeline');
-  const [seedProvider, setSeedProvider] = useState<'osm'|'google'>('google');
+  const [seedProvider, setSeedProvider] = useState<'osm'|'google'|'website-resolver'>('google');
   const [resettingIds, setResettingIds] = useState<Record<string, 'loading' | 'success'>>({});
 
 
@@ -538,11 +538,18 @@ function App() {
   const triggerHarvest = async (type: string, states: string[] = []) => {
     setIsStarting(true);
     try {
-       await fetch(`${API_BASE}/api/harvest/${type}`, {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ target_facilities: targetFacilities, target_states: states, provider: seedProvider })
-       });
+       if (seedProvider === 'website-resolver') {
+         const action = type === 'start-all' ? 'start' : 'stop';
+         await fetch(`${API_BASE}/api/daemons/website-resolver/${action}`, {
+           method: 'POST'
+         });
+       } else {
+         await fetch(`${API_BASE}/api/harvest/${type}`, {
+           method: 'POST',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ target_facilities: targetFacilities, target_states: states, provider: seedProvider })
+         });
+       }
        fetchSystemStatus();
     } catch (e) {
        alert('Harvest failed to start.');
@@ -942,7 +949,6 @@ function App() {
       <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
       {/* Daemon pills */}
       {[
-        { id: 'website-resolver', label: '🔍 Resolver', color: '#00ffaa', onKey: 'Website Resolver: online' },
         { id: 'indexer',          label: 'Phase 2: Detective', color: '#ff5a00', onKey: 'Indexer: online' },
         { id: 'photographer',     label: 'Phase 3: Photo',     color: '#e91e63', onKey: 'Photographer: online' },
         { id: 'publisher',        label: 'Phase 4: Publish',   color: '#00d4ff', onKey: 'Publisher: online' },
@@ -1265,7 +1271,9 @@ function App() {
               onSetHero={setHeroImage}
               onDeletePhoto={deleteImage}
               onAssignPhotoType={assignPhotoType}
-                      onUploadPhoto={uploadPhoto}
+              onUploadPhoto={uploadPhoto}
+              seedProvider={seedProvider}
+              onProviderChange={setSeedProvider}
             />
 
               <div style={{marginTop: '2rem'}}>
