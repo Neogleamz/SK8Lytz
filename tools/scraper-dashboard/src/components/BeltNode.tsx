@@ -157,17 +157,6 @@ export const BeltNode: React.FC<BeltProps> = ({
   seedProvider, onProviderChange, liveStreamText, isStreaming = false, currentAnalyzingSpot = '', isAnchored = true, setIsAnchored
 }) => {
   const [isConfigOpen, setConfigOpen] = useState(false);
-  const [carouselIdx, setCarouselIdx] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
-
-  React.useEffect(() => {
-    if (!carouselSpots || carouselSpots.length === 0) return;
-    if (isHovered) return;
-    const interval = setInterval(() => {
-      setCarouselIdx(prev => (prev + 1) % carouselSpots.length);
-    }, 3500);
-    return () => clearInterval(interval);
-  }, [carouselSpots, isHovered]);
 
   const successCards = outCards.filter(c => c.type === 'success').slice(0, 2);
   const rejectedCards = outCards.filter(c => c.type === 'rejected').slice(0, 2);
@@ -559,18 +548,33 @@ export const BeltNode: React.FC<BeltProps> = ({
         {/* ═══ COL 5, ROW 1: SUCCESS CARDS ═══ */}
         <div style={{
           gridColumn: 5, gridRow: 1,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          gap: 8, paddingLeft: 4, zIndex: 1,
+          display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+          gap: 4, paddingLeft: 4, zIndex: 1,
+          overflowX: 'auto',
+          width: '100%',
+          minWidth: 0,
         }}>
           {carouselSpots && carouselSpots.length > 0 ? (
-            <div 
-              style={{ width: 180, height: 180, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-            >
-              <div style={{ transform: 'scale(0.85)', transformOrigin: 'center left', width: '100%', height: '100%', animation: 'fadeIn 0.5s ease-in-out' }} key={carouselIdx}>
+            carouselSpots.map((spot) => (
+              <div 
+                key={spot.id} 
+                style={{ 
+                  width: 175, 
+                  height: 180, 
+                  flexShrink: 0,
+                  transform: 'scale(0.92)',
+                  transformOrigin: 'center center',
+                  transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+                }}
+                onMouseEnter={e => {
+                  (e.currentTarget as HTMLElement).style.transform = 'scale(0.96)';
+                }}
+                onMouseLeave={e => {
+                  (e.currentTarget as HTMLElement).style.transform = 'scale(0.92)';
+                }}
+              >
                 <DatabankCard 
-                  spot={carouselSpots[carouselIdx]} 
+                  spot={spot} 
                   variant="polaroid" 
                   readOnly={false} 
                   proxyImg={(url: string | null) => {
@@ -588,7 +592,7 @@ export const BeltNode: React.FC<BeltProps> = ({
                   onAssignPhotoType={onAssignPhotoType}
                 />
               </div>
-            </div>
+            ))
           ) : successCards.length === 0 ? (
             <div style={{
               width: SUCCESS_W, minHeight: 72,

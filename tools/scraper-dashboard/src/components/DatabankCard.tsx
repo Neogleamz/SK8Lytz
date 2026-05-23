@@ -193,6 +193,7 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
 }) => {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [showTypeMenu, setShowTypeMenu] = useState(false);
+  const [isCardHovered, setIsCardHovered] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleUploadClick = (e: React.MouseEvent) => {
@@ -247,6 +248,16 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
   const adultNight = spot.has_adult_night;
   const photoCount = (safePh.length);
   const candCount  = ((safeCd as CandidatePhotos)?.street_view_url ? 1 : 0);
+
+  // Auto-rotate photos if photoCount > 1 and not card hovered
+  React.useEffect(() => {
+    if (photoCount <= 1) return;
+    if (isCardHovered) return;
+    const interval = setInterval(() => {
+      setPhotoIndex(prev => (prev + 1) % photoCount);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [photoCount, isCardHovered]);
   // Guard against literal "null" strings stored by the AI
   const nullGuard = (v: unknown): string | null => (!v || v === 'null' || v === 'NULL') ? null : String(v);
   const igUrl      = nullGuard(spot.instagram_url);
@@ -288,12 +299,15 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
 
   if (variant === 'polaroid') {
     return (
-      <div style={{
-        background: 'rgba(30,30,40,0.95)', borderRadius: '10px', overflow: 'hidden',
-        border: `1px solid ${spot.is_published ? 'rgba(76,175,80,0.4)' : 'rgba(255,255,255,0.08)'}`,
-        display: 'flex', flexDirection: 'column', width: '100%', height: '100%',
-        boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
-      }}>
+      <div 
+        onMouseEnter={() => setIsCardHovered(true)}
+        onMouseLeave={() => setIsCardHovered(false)}
+        style={{
+          background: 'rgba(30,30,40,0.95)', borderRadius: '10px', overflow: 'hidden',
+          border: `1px solid ${spot.is_published ? 'rgba(76,175,80,0.4)' : 'rgba(255,255,255,0.08)'}`,
+          display: 'flex', flexDirection: 'column', width: '100%', height: '100%',
+          boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
+        }}>
         <div style={{ position: 'relative', height: '120px', background: 'rgba(255,255,255,0.03)', flexShrink: 0 }}>
           {renderTypeMenu()}
           {photo
@@ -371,8 +385,16 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
       display: 'flex', flexDirection: 'column', transition: 'transform 0.18s, box-shadow 0.18s',
       height: '100%'
     }}
-      onMouseEnter={e => { (e.currentTarget as HTMLElement).style.transform='translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow='0 12px 40px rgba(0,0,0,0.5)'; }}
-      onMouseLeave={e => { (e.currentTarget as HTMLElement).style.transform=''; (e.currentTarget as HTMLElement).style.boxShadow=''; }}
+      onMouseEnter={e => {
+        setIsCardHovered(true);
+        (e.currentTarget as HTMLElement).style.transform='translateY(-3px)';
+        (e.currentTarget as HTMLElement).style.boxShadow='0 12px 40px rgba(0,0,0,0.5)';
+      }}
+      onMouseLeave={e => {
+        setIsCardHovered(false);
+        (e.currentTarget as HTMLElement).style.transform='';
+        (e.currentTarget as HTMLElement).style.boxShadow='';
+      }}
     >
       {/* Hero image */}
       <div style={{ position: 'relative', height: '180px', background: 'rgba(255,255,255,0.03)', flexShrink: 0 }}>
