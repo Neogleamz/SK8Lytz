@@ -748,7 +748,7 @@ app.post('/api/sniper/seed', async (req, res) => {
       facility_type:        'roller_rink',
       last_enriched_at:     new Date().toISOString(),
       raw_knowledge_panel:  { types: details.types || null },
-      verification_status:  'SEEDED',
+      verification_status:  (url || details.website) ? 'SEEDED' : 'PENDING_WEBSITE',
       retry_count:          -999, // Push to front of queue
       last_attempted_at:    new Date(0).toISOString(),
       ...(googlePhotos ? { candidate_photos: googlePhotos } : {}),
@@ -831,11 +831,22 @@ app.delete('/api/sniper', async (req, res) => {
 app.post('/api/spots/:id/reset', async (req, res) => {
   const { id } = req.params;
   try {
+    const spot = db.prepare('SELECT website, candidate_links FROM local_spots WHERE id = ?').get(id) as any;
+    const hasWebsite = (spot?.website && spot.website.trim() !== '') || (() => {
+      try {
+        const cl = JSON.parse(spot?.candidate_links || '{}');
+        return !!(cl.website && cl.website.trim() !== '');
+      } catch {
+        return false;
+      }
+    })();
+    const nextStatus = hasWebsite ? 'SEEDED' : 'PENDING_WEBSITE';
+
     // Purge AI fields and reset status
     db.prepare(`
       UPDATE local_spots 
       SET 
-        verification_status = 'SEEDED', 
+        verification_status = ?, 
         last_attempted_at = NULL,
         is_deep_crawled = 0,
         ai_metadata = NULL,
@@ -846,7 +857,7 @@ app.post('/api/spots/:id/reset', async (req, res) => {
         candidate_photos = NULL,
         candidate_links = NULL
       WHERE id = ?
-    `).run(id);
+    `).run(nextStatus, id);
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1327,9 +1338,19 @@ app.post('/api/bulk-reset-to-seeded', (req, res) => {
     // First count so we can report
     const countRes = db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE ${where}`).get(...params) as any;
     // Execute reset
-    const result = db.prepare(
-      `UPDATE local_spots SET verification_status = 'SEEDED', retry_count = 0, last_attempted_at = NULL WHERE ${where}`
-    ).run(...params);
+    const result = db.prepare(`
+      UPDATE local_spots 
+      SET 
+        verification_status = CASE 
+          WHEN (website IS NOT NULL AND website != '') 
+            OR (candidate_links IS NOT NULL AND json_extract(candidate_links, '$.website') IS NOT NULL AND json_extract(candidate_links, '$.website') != '')
+          THEN 'SEEDED' 
+          ELSE 'PENDING_WEBSITE' 
+        END, 
+        retry_count = 0, 
+        last_attempted_at = NULL 
+      WHERE ${where}
+    `).run(...params);
 
     res.json({
       success: true,
@@ -1517,8 +1538,19 @@ app.post('/api/skate_spots/:id/restart', async (req, res) => {
     // ── Additive-Only: NEVER wipe enrichment data on restart ──
     // Only reset pipeline status so the record re-enters the Detective queue.
     // Photos, hours, pricing, and all manually curated data are SACRED.
+    const spot = db.prepare('SELECT website, candidate_links FROM local_spots WHERE id = ?').get(id) as any;
+    const hasWebsite = (spot?.website && spot.website.trim() !== '') || (() => {
+      try {
+        const cl = JSON.parse(spot?.candidate_links || '{}');
+        return !!(cl.website && cl.website.trim() !== '');
+      } catch {
+        return false;
+      }
+    })();
+    const nextStatus = hasWebsite ? 'SEEDED' : 'PENDING_WEBSITE';
+
     updateLocalSpot(id, {
-      verification_status: 'SEEDED',
+      verification_status: nextStatus,
       last_attempted_at: null,
       retry_count: 0,
       is_deep_crawled: false,
