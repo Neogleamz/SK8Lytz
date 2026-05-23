@@ -385,6 +385,11 @@ interface HostTelemetry {
   ramUsedGB: number;
   ramTotalGB: number;
   ramPercent: number;
+  dockerMemory?: {
+    usedMB: number;
+    limitMB: number;
+    percent: number;
+  };
   lastUpdated: string;
 }
 
@@ -393,6 +398,7 @@ let cachedGpuTelemetry: HostTelemetry = {
   gpuUtilPercent: 0,
   cpuUtilPercent: 0,
   ramUsedGB: 0, ramTotalGB: 16, ramPercent: 0,
+  dockerMemory: { usedMB: 0, limitMB: 4096, percent: 0 },
   lastUpdated: new Date().toISOString()
 };
 
@@ -429,6 +435,43 @@ function findLhmSensorValue(node: LhmNode, sensorName: string): string | null {
     }
   }
   return null;
+}
+
+function getDockerMemoryStats(): { usedMB: number; limitMB: number; percent: number } {
+  let usedBytes = 0;
+  let limitBytes = 0;
+
+  try {
+    // Check cgroup v2 first
+    if (fs.existsSync('/sys/fs/cgroup/memory.current')) {
+      usedBytes = parseInt(fs.readFileSync('/sys/fs/cgroup/memory.current', 'utf8').trim()) || 0;
+      const maxStr = fs.readFileSync('/sys/fs/cgroup/memory.max', 'utf8').trim();
+      if (maxStr && maxStr !== 'max') {
+        limitBytes = parseInt(maxStr) || 0;
+      }
+    } else if (fs.existsSync('/sys/fs/cgroup/memory/memory.usage_in_bytes')) {
+      // Fallback to cgroup v1
+      usedBytes = parseInt(fs.readFileSync('/sys/fs/cgroup/memory/memory.usage_in_bytes', 'utf8').trim()) || 0;
+      const limitStr = fs.readFileSync('/sys/fs/cgroup/memory/memory.limit_in_bytes', 'utf8').trim();
+      if (limitStr) {
+        limitBytes = parseInt(limitStr) || 0;
+      }
+    }
+  } catch (e) {
+    // Fail silently
+  }
+
+  const usedMB = Math.round(usedBytes / (1024 * 1024)) || 0;
+  let limitMB = Math.round(limitBytes / (1024 * 1024)) || 0;
+  if (limitMB <= 0 || limitMB > 262144) {
+    limitMB = 4096; // 4GB fallback
+  }
+
+  return {
+    usedMB,
+    limitMB,
+    percent: Math.min(100, Math.round((usedMB / limitMB) * 100)) || 0
+  };
 }
 
 let lmsConnectionWarningLogged = false;
@@ -505,6 +548,7 @@ async function updateHostTelemetry(): Promise<void> {
       ramUsedGB: Math.round(ramUsedGB * 10) / 10,
       ramTotalGB,
       ramPercent: Math.round(ramPercent),
+      dockerMemory: getDockerMemoryStats(),
       lastUpdated: new Date().toISOString()
     };
   } catch (err: any) {

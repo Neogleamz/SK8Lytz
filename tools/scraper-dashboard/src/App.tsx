@@ -1108,10 +1108,33 @@ function App() {
           flexDirection: 'column',
           gap: '12px',
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <h3 style={{ fontSize: '0.72rem', fontWeight: 900, color: '#d8b4fe', textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>🤖</span> AI & Compute Gear
-            </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', flexWrap: 'wrap', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <h3 style={{ fontSize: '0.72rem', fontWeight: 900, color: '#d8b4fe', textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>🤖</span> AI & Compute Gear
+              </h3>
+              {(() => {
+                const dockerMem = (status as any)?.gpuTelemetry?.dockerMemory;
+                const dockerUsed = dockerMem?.usedMB ?? 0;
+                const dockerLimit = dockerMem?.limitMB ?? 4096;
+                if (dockerUsed <= 0) return null;
+                return (
+                  <span title="Docker Container Memory Usage" style={{
+                    background: 'rgba(162, 0, 255, 0.15)',
+                    border: '1px solid rgba(162, 0, 255, 0.3)',
+                    color: '#c77dff',
+                    padding: '2px 7px',
+                    borderRadius: '12px',
+                    fontSize: '0.5rem',
+                    fontWeight: 900,
+                    letterSpacing: '0.05em',
+                    boxShadow: '0 0 8px rgba(162, 0, 255, 0.1)'
+                  }}>
+                    🐳 DOCKER: {dockerUsed}MB / {Math.round(dockerLimit / 1024 * 10) / 10}GB
+                  </span>
+                );
+              })()}
+            </div>
             
             <button onClick={() => setActiveTab('heuristics')} title="Heuristics Control Center"
               style={{
@@ -1145,6 +1168,9 @@ function App() {
             const ramPercent = gpu?.ramPercent ?? 0;
             const ramUsed = gpu?.ramUsedGB ?? 0;
             const ramTotal = gpu?.ramTotalGB ?? 16;
+            const dockerMem = gpu?.dockerMemory;
+            const dockerUsed = dockerMem?.usedMB ?? 0;
+            const dockerLimit = dockerMem?.limitMB ?? 4096;
 
             const vramBarColor = vramPct > 90 ? '#ff2d55' : vramPct > 70 ? '#ffb300' : '#c77dff';
             const cpuBarColor = cpuUtil > 80 ? '#ff5a00' : cpuUtil > 40 ? '#ffb300' : '#c77dff';
@@ -1245,18 +1271,21 @@ function App() {
                   </div>
                 )}
 
-                {/* Unified System & GPU Analytics */}
+                {/* 🖥️ HOST PC PERFORMANCE */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
+                  <div style={{ fontSize: '0.52rem', fontWeight: 900, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+                    🖥️ Host PC Performance
+                  </div>
                   
                   {/* CPU Metrics */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.56rem' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>CPU Telemetry</span>
+                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>CPU Total Load</span>
                     <span style={{ color: cpuBarColor, fontWeight: 800 }}>
-                      {cpuUtil}% Load
+                      {cpuUtil}%
                     </span>
                   </div>
                   <div style={{
-                    width: '100%', height: '6px', borderRadius: '3px',
+                    width: '100%', height: '5px', borderRadius: '3px',
                     background: 'rgba(255,255,255,0.06)', overflow: 'hidden',
                     border: '1px solid rgba(255,255,255,0.08)',
                   }}>
@@ -1269,13 +1298,13 @@ function App() {
 
                   {/* RAM Metrics */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.56rem', marginTop: '2px' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>RAM Usage</span>
+                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>System RAM (Memory)</span>
                     <span style={{ color: ramBarColor, fontWeight: 800 }}>
                       {ramUsed}GB / {ramTotal}GB ({ramPercent}%)
                     </span>
                   </div>
                   <div style={{
-                    width: '100%', height: '6px', borderRadius: '3px',
+                    width: '100%', height: '5px', borderRadius: '3px',
                     background: 'rgba(255,255,255,0.06)', overflow: 'hidden',
                     border: '1px solid rgba(255,255,255,0.08)',
                   }}>
@@ -1285,35 +1314,42 @@ function App() {
                       transition: 'width 0.4s ease',
                     }} />
                   </div>
+                </div>
 
-                  {/* GPU VRAM Metrics */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.56rem', marginTop: '2px' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>VRAM Telemetry</span>
-                    <span style={{ color: vramBarColor, fontWeight: 800 }}>
-                      {Math.round(vramUsed)}MB / {vramTotal}MB ({vramPct}%)
-                    </span>
-                  </div>
-                  <div style={{
-                    width: '100%', height: '6px', borderRadius: '3px',
-                    background: 'rgba(255,255,255,0.06)', overflow: 'hidden',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                  }}>
-                    <div style={{
-                      width: `${vramPct}%`, height: '100%', borderRadius: '3px',
-                      background: `linear-gradient(90deg, ${vramBarColor}aa, ${vramBarColor})`,
-                      transition: 'width 0.4s ease',
-                    }} />
+                {/* ⚡ GPU & LLM ORCHESTRATION */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
+                  <div style={{ fontSize: '0.52rem', fontWeight: 900, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+                    ⚡ GPU & LLM Orchestration
                   </div>
 
                   {/* GPU Load Metrics */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.56rem', marginTop: '2px' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Core GPU load</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.56rem' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>Core GPU Load</span>
                     <span style={{
                       fontWeight: 800,
                       color: gpuUtil > 80 ? '#ff5a00' : gpuUtil > 15 ? '#00ffaa' : 'rgba(255,255,255,0.4)',
                     }}>
                       {gpuUtil}% Load
                     </span>
+                  </div>
+
+                  {/* GPU VRAM Metrics */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.56rem', marginTop: '2px' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>Dedicated VRAM</span>
+                    <span style={{ color: vramBarColor, fontWeight: 800 }}>
+                      {Math.round(vramUsed)}MB / {vramTotal}MB ({vramPercent}%)
+                    </span>
+                  </div>
+                  <div style={{
+                    width: '100%', height: '5px', borderRadius: '3px',
+                    background: 'rgba(255,255,255,0.06)', overflow: 'hidden',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}>
+                    <div style={{
+                      width: `${vramPercent}%`, height: '100%', borderRadius: '3px',
+                      background: `linear-gradient(90deg, ${vramBarColor}aa, ${vramBarColor})`,
+                      transition: 'width 0.4s ease',
+                    }} />
                   </div>
 
                   {/* Database Sync */}
