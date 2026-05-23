@@ -120,15 +120,15 @@ const flushLogQueue = () => {
 };
 
 const pushLog = (type: 'INFO' | 'ERROR', message: string) => {
-  queueLog(type, 'Phase 2', message);
+  queueLog(type, 'Phase 3', message);
 };
 
 const reportPulse = (delayMs: number, ghost?: any, active_job?: string | null, target_url?: string | null) => {
-  safePost('http://localhost:5999/api/pulse', { source: 'Phase 2', delayMs, ghost, active_job, target: target_url });
+  safePost('http://localhost:5999/api/pulse', { source: 'Indexer', delayMs, ghost, active_job, target: target_url });
 };
 
 const onStream = (text: string) => {
-  queueLog('LLM_STREAM', 'Phase 2', text);
+  queueLog('LLM_STREAM', 'Phase 3', text);
 };
 
 console.log = (...args) => { _log(...args); pushLog('INFO', args.join(' ')); };
@@ -186,7 +186,7 @@ async function runIndexer() {
       if (!lmsOk) {
         console.error(`[Indexer] ⛔ PIPELINE GATED: LM Studio is offline. Retrying in 30 seconds...`);
         await safePost('http://localhost:5999/api/pulse', { 
-          source: 'Phase 2', 
+          source: 'Indexer', 
           delayMs: 30000, 
           active_job: 'GATED: LM Studio Offline',
           target: `GATED: ${targetModel} missing`
