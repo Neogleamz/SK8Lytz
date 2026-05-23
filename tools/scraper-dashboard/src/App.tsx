@@ -94,6 +94,7 @@ function App() {
   const [stateOverride, setStateOverride] = useState<string[]>([]);
   const [pipelineStats, setPipelineStats] = useState<PipelineStats | undefined>(undefined);
   const [showBulkResetModal, setShowBulkResetModal] = useState<boolean>(false);
+  const [resetToTarget, setResetToTarget] = useState<'SEEDED' | 'DEEP_CRAWLED' | 'MEDIA_READY'>('SEEDED');
   const [resetStatuses, setResetStatuses] = useState<Record<string, boolean>>({
     DEEP_CRAWLED: true,
     MEDIA_READY: true,
@@ -650,7 +651,7 @@ function App() {
     }
   };
 
-  // Bulk reset all filtered records back to SEEDED (respects global state + facility filters + selected statuses)
+  // Bulk reset all filtered records back to target phase (respects global state + facility filters + selected statuses)
   const [isBulkResetting, setIsBulkResetting] = useState(false);
   const bulkResetToSeeded = async () => {
     const activeStatuses = Object.entries(resetStatuses)
@@ -674,12 +675,13 @@ function App() {
         body: JSON.stringify({ 
           states: stateOverride, 
           facility_types: targetFacilities,
-          target_statuses: activeStatuses
+          target_statuses: activeStatuses,
+          reset_to: resetToTarget
         })
       });
       const data = await res.json();
       if (data.success) {
-        alert(`✅ Reset ${data.reset_count} records to SEEDED.\nFilters: ${stateLabel} / ${facLabel}\nStatuses Reset: ${statusLabel}`);
+        alert(`✅ Reset ${data.reset_count} records to ${resetToTarget}.\nFilters: ${stateLabel} / ${facLabel}\nStatuses Reset: ${statusLabel}`);
         setShowBulkResetModal(false);
         fetchSpots(page, gridFilter);
         fetchQueue();
@@ -1189,14 +1191,14 @@ function App() {
           style={{ background: activeTab === 'pipeline' ? 'rgba(0, 255, 170, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'pipeline' ? '#00ffaa' : 'rgba(255,255,255,0.6)', border: activeTab === 'pipeline' ? '1px solid #00ffaa' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 800 }}>
           FACTORY FLOOR
         </button>
-        {/* Bulk Reset to SEEDED — respects global state + facility filters */}
+        {/* Bulk Reset records back to target phase — respects global state + facility filters */}
         <button
            onClick={() => setShowBulkResetModal(true)}
            disabled={isBulkResetting}
-           title={`Reset all ${stateOverride.length > 0 ? stateOverride.join('/') : 'ALL'} ${targetFacilities.length > 0 ? targetFacilities.join('/') : 'ALL TYPE'} records back to SEEDED`}
+           title={`Reset matching records back to a specific phase (Seeded, Deep Crawled, or Media Ready)`}
            style={{ background: isBulkResetting ? 'rgba(255, 179, 0, 0.4)' : 'rgba(255, 179, 0, 0.15)', color: isBulkResetting ? '#fff' : '#ffb300', border: '1px solid rgba(255, 179, 0, 0.3)', padding: '4px 10px', borderRadius: '6px', cursor: isBulkResetting ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}
         >
-          {isBulkResetting ? '⏳ RESETTING...' : '⚡ FORCE RESET TO SEEDED'}
+          {isBulkResetting ? '⏳ RESETTING...' : '⚡ Reset Records'}
         </button>
         {/* Bulk Reset Website-less spots back to PENDING_WEBSITE */}
         <button
@@ -2038,7 +2040,7 @@ function App() {
             </div>
 
             {/* Content */}
-            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '70vh', overflowY: 'auto' }}>
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '18px', maxHeight: '70vh', overflowY: 'auto' }}>
               
               {/* Target Filters Indicator */}
               <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '8px', padding: '12px 14px' }}>
@@ -2057,6 +2059,90 @@ function App() {
                       {targetFacilities.length > 0 ? targetFacilities.map(f => f.replace('_', ' ').toUpperCase()).join(', ') : 'ALL TYPES'}
                     </span>
                   </div>
+                </div>
+              </div>
+
+              {/* Target Reset-To Phase Selector */}
+              <div>
+                <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Choose Target Phase (Reset To)</div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                  
+                  {/* SEEDED Card */}
+                  <div 
+                    onClick={() => setResetToTarget('SEEDED')}
+                    style={{
+                      padding: '14px 10px',
+                      borderRadius: '12px',
+                      background: resetToTarget === 'SEEDED' ? 'rgba(138, 43, 226, 0.12)' : 'rgba(255,255,255,0.02)',
+                      border: resetToTarget === 'SEEDED' ? '2px solid #8a2be2' : '1px solid rgba(255,255,255,0.06)',
+                      boxShadow: resetToTarget === 'SEEDED' ? '0 0 16px rgba(138, 43, 226, 0.35)' : 'none',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '5px',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transform: resetToTarget === 'SEEDED' ? 'scale(1.03)' : 'scale(1)',
+                    }}
+                  >
+                    <span style={{ fontSize: '1.4rem' }}>🔎</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 900, color: resetToTarget === 'SEEDED' ? '#a255ff' : 'rgba(255,255,255,0.6)', letterSpacing: '0.02em' }}>SEEDED</span>
+                    <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.2 }}>Phase 2: AI Detective</span>
+                  </div>
+
+                  {/* DEEP_CRAWLED Card */}
+                  <div 
+                    onClick={() => setResetToTarget('DEEP_CRAWLED')}
+                    style={{
+                      padding: '14px 10px',
+                      borderRadius: '12px',
+                      background: resetToTarget === 'DEEP_CRAWLED' ? 'rgba(255, 152, 0, 0.12)' : 'rgba(255,255,255,0.02)',
+                      border: resetToTarget === 'DEEP_CRAWLED' ? '2px solid #ff9800' : '1px solid rgba(255,255,255,0.06)',
+                      boxShadow: resetToTarget === 'DEEP_CRAWLED' ? '0 0 16px rgba(255, 152, 0, 0.35)' : 'none',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '5px',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transform: resetToTarget === 'DEEP_CRAWLED' ? 'scale(1.03)' : 'scale(1)',
+                    }}
+                  >
+                    <span style={{ fontSize: '1.4rem' }}>📸</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 900, color: resetToTarget === 'DEEP_CRAWLED' ? '#ffb74d' : 'rgba(255,255,255,0.6)', letterSpacing: '0.02em' }}>DEEP_CRAWLED</span>
+                    <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.2 }}>Phase 3: Photo</span>
+                  </div>
+
+                  {/* MEDIA_READY Card */}
+                  <div 
+                    onClick={() => setResetToTarget('MEDIA_READY')}
+                    style={{
+                      padding: '14px 10px',
+                      borderRadius: '12px',
+                      background: resetToTarget === 'MEDIA_READY' ? 'rgba(233, 30, 99, 0.12)' : 'rgba(255,255,255,0.02)',
+                      border: resetToTarget === 'MEDIA_READY' ? '2px solid #e91e63' : '1px solid rgba(255,255,255,0.06)',
+                      boxShadow: resetToTarget === 'MEDIA_READY' ? '0 0 16px rgba(233, 30, 99, 0.35)' : 'none',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '5px',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transform: resetToTarget === 'MEDIA_READY' ? 'scale(1.03)' : 'scale(1)',
+                    }}
+                  >
+                    <span style={{ fontSize: '1.4rem' }}>🚀</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 900, color: resetToTarget === 'MEDIA_READY' ? '#f06292' : 'rgba(255,255,255,0.6)', letterSpacing: '0.02em' }}>MEDIA_READY</span>
+                    <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.2 }}>Phase 4: Publish</span>
+                  </div>
+
                 </div>
               </div>
 

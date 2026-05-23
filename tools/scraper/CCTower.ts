@@ -1305,16 +1305,17 @@ app.put('/api/field-registry/:id', async (req, res) => {
 });
 
 
-// ── Bulk Reset to SEEDED ──────────────────────────────────────────────────────
-// Resets all matching records back to SEEDED so they re-enter the Detective queue.
+// ── Bulk Reset Records ────────────────────────────────────────────────────────
+// Resets all matching records back to a target status phase (SEEDED, DEEP_CRAWLED, or MEDIA_READY).
 // Respects the global state[] and facility_types[] filters.
-// Body: { states: string[], facility_types: string[], confirm: true }
+// Body: { states: string[], facility_types: string[], target_statuses: string[], reset_to: string }
 app.post('/api/bulk-reset-to-seeded', (req, res) => {
   try {
     const { 
       states = [], 
       facility_types = [], 
-      target_statuses = ['DEEP_CRAWLED', 'MEDIA_READY', 'STALLED', 'REJECTED'] 
+      target_statuses = ['DEEP_CRAWLED', 'MEDIA_READY', 'STALLED', 'REJECTED'],
+      reset_to = 'SEEDED'
     } = req.body;
 
     if (!Array.isArray(target_statuses) || target_statuses.length === 0) {
@@ -1342,21 +1343,25 @@ app.post('/api/bulk-reset-to-seeded', (req, res) => {
       UPDATE local_spots 
       SET 
         verification_status = CASE 
-          WHEN (website IS NOT NULL AND website != '') 
-            OR (candidate_links IS NOT NULL AND json_extract(candidate_links, '$.website') IS NOT NULL AND json_extract(candidate_links, '$.website') != '')
-          THEN 'SEEDED' 
-          ELSE 'PENDING_WEBSITE' 
+          WHEN ? = 'DEEP_CRAWLED' THEN 'DEEP_CRAWLED'
+          WHEN ? = 'MEDIA_READY' THEN 'MEDIA_READY'
+          ELSE CASE 
+            WHEN (website IS NOT NULL AND website != '') 
+              OR (candidate_links IS NOT NULL AND json_extract(candidate_links, '$.website') IS NOT NULL AND json_extract(candidate_links, '$.website') != '')
+            THEN 'SEEDED' 
+            ELSE 'PENDING_WEBSITE' 
+          END
         END, 
         retry_count = 0, 
         last_attempted_at = NULL 
       WHERE ${where}
-    `).run(...params);
+    `).run(reset_to, reset_to, ...params);
 
     res.json({
       success: true,
       reset_count: result.changes,
       total_matched: countRes?.cnt ?? 0,
-      filters: { states, facility_types, target_statuses }
+      filters: { states, facility_types, target_statuses, reset_to }
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
