@@ -161,12 +161,20 @@ export const RecordEditModal: React.FC<RecordEditModalProps> = ({ spot, onSave, 
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', marginBottom: '5px' }}>VERIFICATION STATUS</label>
-                <select value={form.verification_status || 'PENDING'} onChange={e => handleBasicChange('verification_status', e.target.value)} style={{ width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff' }}>
-                  <option value="SEEDED">SEEDED</option>
-                  <option value="DEEP_CRAWLED">DEEP_CRAWLED</option>
-                  <option value="MEDIA_READY">MEDIA_READY</option>
+                <select 
+                  className="custom-dark" 
+                  value={form.verification_status || 'PENDING'} 
+                  onChange={e => handleBasicChange('verification_status', e.target.value)} 
+                  style={{ width: '100%', padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: '#fff' }}
+                >
+                  <option value="PENDING_WEBSITE">PENDING_WEBSITE (Resolving)</option>
+                  <option value="STALLED_WEBSITE">STALLED_WEBSITE (Stalled Resolver)</option>
+                  <option value="SEEDED">SEEDED (Seeded)</option>
+                  <option value="DEEP_CRAWLED">DEEP_CRAWLED (Deep Crawled)</option>
+                  <option value="MEDIA_READY">MEDIA_READY (Media Ready)</option>
+                  <option value="PUBLISHED">PUBLISHED (Published)</option>
+                  <option value="STALLED">STALLED (Stalled)</option>
                   <option value="REJECTED">REJECTED (Graveyard)</option>
-                  <option value="DEPRECATED">DEPRECATED</option>
                 </select>
               </div>
               

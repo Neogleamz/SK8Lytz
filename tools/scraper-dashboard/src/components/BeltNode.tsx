@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { PhaseControlDrawer } from './PhaseControlDrawer';
 import { DatabankCard } from './DatabankCard';
 
@@ -50,8 +50,7 @@ interface BeltProps {
   liveStreamText?: string;
   isStreaming?: boolean;
   currentAnalyzingSpot?: string;
-  isAnchored?: boolean;
-  setIsAnchored?: (a: boolean) => void;
+  logs?: {type: string, message: string, source?: string}[];
 }
 
 // Shared card dimensions
@@ -93,7 +92,7 @@ const DataCard: React.FC<{
       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '65%' }}>{title}</span>
       <span style={{ color: badgeColor, fontSize: '0.54rem', flexShrink: 0, marginLeft: 4, fontFamily: 'JetBrains Mono, monospace' }}>{badge}</span>
     </div>
-    <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: '3px 5px', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.56rem', flex: 1 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: '72px 1fr', gap: '3px 5px', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.56rem', flex: 1, alignContent: 'start' }}>
       {data.map(([k, v, cls], j) => (
         <React.Fragment key={j}>
           <div style={{ color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{k}</div>
@@ -154,9 +153,89 @@ export const BeltNode: React.FC<BeltProps> = ({
   id, name, color, rgb, job, daemon, target, inQ, status, gatekeeper, attempting, outCards,
   onPhaseNav, daemonActive = false, onDaemonStart, onDaemonStop, hasDaemon = true, daemonStatus, inputStatus, outputStatus, countBadges = [],
   onBlockSpot, onRestartSpot, onFreezeSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto,
-  seedProvider, onProviderChange, liveStreamText, isStreaming = false, currentAnalyzingSpot = '', isAnchored = true, setIsAnchored
+  seedProvider, onProviderChange, liveStreamText, isStreaming = false, currentAnalyzingSpot = '', logs = []
 }) => {
   const [isConfigOpen, setConfigOpen] = useState(false);
+  const [isViewAllOpen, setIsViewAllOpen] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Terminal state
+  const [isAnchored, setIsAnchored] = useState<boolean>(true);
+  const [isMinimized, setIsMinimized] = useState<boolean>(false);
+  const [isClosed, setIsClosed] = useState<boolean>(false);
+  const [isBeltCollapsed, setIsBeltCollapsed] = useState<boolean>(false);
+  
+  const getInitialPos = () => {
+    const startX = window.innerWidth - 480;
+    const startY = 100;
+    const offset = (id - 1) * 40; 
+    return { x: startX - offset, y: startY + offset };
+  };
+  const [brainPos, setBrainPos] = useState(getInitialPos);
+
+  const dragStartRef = useRef<{ startX: number; startY: number; posX: number; posY: number } | null>(null);
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    const targetEl = e.target as HTMLElement;
+    if (targetEl.closest('button') || targetEl.closest('select') || targetEl.closest('input')) return;
+
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      posX: brainPos.x,
+      posY: brainPos.y,
+    };
+    
+    const handleMouseMove = (ev: MouseEvent) => {
+      if (!dragStartRef.current) return;
+      const dx = ev.clientX - dragStartRef.current.startX;
+      const dy = ev.clientY - dragStartRef.current.startY;
+      const nextX = dragStartRef.current.posX + dx;
+      const nextY = dragStartRef.current.posY + dy;
+
+      const clampedX = Math.max(10, Math.min(window.innerWidth - 460, nextX));
+      const clampedY = Math.max(10, Math.min(window.innerHeight - 60, nextY));
+
+      setBrainPos({ x: clampedX, y: clampedY });
+    };
+
+    const handleMouseUp = () => {
+      dragStartRef.current = null;
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    e.preventDefault();
+  };
+
+  React.useEffect(() => {
+    if (isStreaming && id === 2) {
+      setIsClosed(false);
+    }
+    // For other phases, open if logs arrive
+    if (logs.length > 0 && id !== 2) {
+        setIsClosed(false);
+    }
+  }, [isStreaming, logs.length, id]);
+
+  const phaseLogs = React.useMemo(() => {
+     return logs.filter(log => {
+        if (id === 1) return log.source === 'Phase 1' || log.source === 'System';
+        if (id === 2) return log.source === 'Phase 2' || log.source === 'System';
+        if (id === 3) return log.source === 'Photographer' || log.source === 'System';
+        if (id === 4) return log.source === 'Publisher' || log.source === 'System';
+        return false;
+     });
+  }, [logs, id]);
+
+  const scrollBelt = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const amount = 400;
+      scrollRef.current.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
+    }
+  };
 
   const successCards = outCards.filter(c => c.type === 'success').slice(0, 2);
   const rejectedCards = outCards.filter(c => c.type === 'rejected').slice(0, 2);
@@ -221,17 +300,69 @@ export const BeltNode: React.FC<BeltProps> = ({
         {/* Count badges: pipeline throughput metrics */}
         {countBadges.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-            {countBadges.map((badge, i) => (
-              <div key={i} style={{
-                display: 'flex', alignItems: 'center', gap: 4,
-                padding: '2px 8px', borderRadius: 10,
-                background: `rgba(${colRgb},0.1)`,
-                border: `1px solid rgba(${colRgb},0.2)`,
-              }}>
-                <span style={{ fontSize: '0.48rem', fontWeight: 900, color: `rgba(${colRgb},0.7)`, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'JetBrains Mono, monospace' }}>{badge.label}</span>
-                <span style={{ fontSize: '0.56rem', fontWeight: 800, color: '#fff', fontFamily: 'JetBrains Mono, monospace' }}>{badge.value}</span>
-              </div>
-            ))}
+            {countBadges.map((badge, i) => {
+              const isArrow = badge.label === '──►' || badge.label === '│';
+              if (isArrow) {
+                return (
+                  <span key={i} style={{
+                    fontSize: '0.65rem',
+                    color: badge.label === '──►' ? colVar : 'rgba(255,255,255,0.15)',
+                    padding: '0 2px',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontWeight: 900,
+                    textShadow: badge.label === '──►' ? `0 0 8px ${colVar}` : 'none',
+                    opacity: badge.label === '──►' ? 0.75 : 1,
+                  }}>{badge.label}</span>
+                );
+              }
+              
+              // Standard Pill
+              const isSession = badge.label.includes('SESSION');
+              const isQueued = badge.label.includes('QUEUED');
+              const isResolving = badge.label.includes('RESOLVING');
+              const isStalled = badge.label.includes('STALLED');
+              
+              const pillBg = isSession 
+                ? 'rgba(34,197,94,0.15)' 
+                : isQueued 
+                  ? 'rgba(255,193,7,0.08)'
+                  : isStalled
+                    ? 'rgba(244,67,54,0.12)'
+                    : `rgba(${colRgb},0.1)`;
+                    
+              const pillBorder = isSession
+                ? 'rgba(34,197,94,0.45)'
+                : isQueued
+                  ? 'rgba(255,193,7,0.3)'
+                  : isStalled
+                    ? 'rgba(244,67,54,0.4)'
+                    : `rgba(${colRgb},0.2)`;
+                    
+              const labelColor = isSession
+                ? '#4ade80'
+                : isQueued
+                  ? '#ffc107'
+                  : isStalled
+                    ? '#f44336'
+                    : `rgba(${colRgb},0.7)`;
+
+              const valueColor = '#fff';
+
+              return (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  padding: '2px 8px', borderRadius: 10,
+                  background: pillBg,
+                  border: `1px solid ${pillBorder}`,
+                  boxShadow: isSession ? '0 0 10px rgba(34,197,94,0.15)' : 'none',
+                }}>
+                  <span style={{ fontSize: '0.48rem', fontWeight: 900, color: labelColor, textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'JetBrains Mono, monospace' }}>{badge.label}</span>
+                  {badge.value && (
+                    <span style={{ fontSize: '0.56rem', fontWeight: 800, color: valueColor, fontFamily: 'JetBrains Mono, monospace' }}>{badge.value}</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -316,9 +447,17 @@ export const BeltNode: React.FC<BeltProps> = ({
         {!hasDaemon && (
           <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.2)', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>MANUAL QA GATE</span>
         )}
+        <button onClick={(e) => { e.stopPropagation(); setIsBeltCollapsed(!isBeltCollapsed); }} style={{
+          background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.4)',
+          fontSize: '0.65rem', fontWeight: 700, padding: '0 8px', marginLeft: 10, flexShrink: 0
+        }}>
+          {isBeltCollapsed ? '▼ SHOW' : '▲ HIDE'}
+        </button>
       </div>
 
-      <PhaseControlDrawer phaseId={id} isOpen={isConfigOpen} onClose={() => setConfigOpen(false)} colColor={colVar} />
+      {!isBeltCollapsed && (
+        <>
+          <PhaseControlDrawer phaseId={id} isOpen={isConfigOpen} onClose={() => setConfigOpen(false)} colColor={colVar} />
 
       {/* ── BELT CONTENT ── */}
       <div style={{ padding: '10px 14px 12px' }}>
@@ -548,12 +687,38 @@ export const BeltNode: React.FC<BeltProps> = ({
         {/* ═══ COL 5, ROW 1: SUCCESS CARDS ═══ */}
         <div style={{
           gridColumn: 5, gridRow: 1,
-          display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
-          gap: 4, paddingLeft: 4, zIndex: 1,
-          overflowX: 'auto',
+          position: 'relative',
           width: '100%',
           minWidth: 0,
+          display: 'flex',
         }}>
+          {/* Left Arrow */}
+          {((carouselSpots && carouselSpots.length > 0) || successCards.length > 0) && (
+            <button 
+              onClick={() => scrollBelt('left')}
+              style={{
+                position: 'absolute', left: 0, top: 0, bottom: 0, width: 40,
+                background: `linear-gradient(to right, rgba(10,10,15,0.95) 0%, rgba(10,10,15,0.7) 40%, transparent 100%)`,
+                border: 'none', color: colVar, fontSize: '1.5rem', cursor: 'pointer',
+                zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'flex-start', paddingLeft: 5,
+                opacity: 0, transition: 'opacity 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '0'}
+            >
+              ❮
+            </button>
+          )}
+
+          <div 
+            ref={scrollRef}
+            className="hide-scrollbar"
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'flex-start',
+              gap: 4, paddingLeft: 4, zIndex: 1,
+              overflowX: 'auto', scrollBehavior: 'smooth',
+              width: '100%',
+            }}>
           {carouselSpots && carouselSpots.length > 0 ? (
             carouselSpots.map((spot) => (
               <div 
@@ -593,7 +758,32 @@ export const BeltNode: React.FC<BeltProps> = ({
                 />
               </div>
             ))
-          ) : successCards.length === 0 ? (
+          ) : null}
+
+          {carouselSpots && carouselSpots.length > 0 && (
+            <div style={{ paddingRight: 40, flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+              <button 
+                onClick={() => setIsViewAllOpen(true)}
+                style={{
+                  width: 140, height: 165, flexShrink: 0,
+                  background: 'rgba(255,255,255,0.03)',
+                  border: `1px dashed ${colVar}`,
+                  borderRadius: 12, color: colVar,
+                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', fontFamily: 'JetBrains Mono, monospace', fontSize: '0.65rem', fontWeight: 900,
+                  transition: 'background 0.2s',
+                  textTransform: 'uppercase',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
+              >
+                <div style={{ fontSize: '1.8rem', marginBottom: 12, opacity: 0.8 }}>⊞</div>
+                View All ({carouselSpots.length})
+              </button>
+            </div>
+          )}
+
+          {(!carouselSpots || carouselSpots.length === 0) && successCards.length === 0 ? (
             <div style={{
               width: SUCCESS_W, minHeight: 72,
               background: 'rgba(10,10,15,0.4)',
@@ -642,6 +832,25 @@ export const BeltNode: React.FC<BeltProps> = ({
               />
             )
           ))}
+          </div>
+
+          {/* Right Arrow */}
+          {((carouselSpots && carouselSpots.length > 0) || successCards.length > 0) && (
+            <button 
+              onClick={() => scrollBelt('right')}
+              style={{
+                position: 'absolute', right: 0, top: 0, bottom: 0, width: 60,
+                background: `linear-gradient(to left, rgba(10,10,15,0.95) 0%, rgba(10,10,15,0.7) 40%, transparent 100%)`,
+                border: 'none', color: colVar, fontSize: '1.5rem', cursor: 'pointer',
+                zIndex: 10, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', paddingRight: 10,
+                opacity: 0, transition: 'opacity 0.2s',
+              }}
+              onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+              onMouseLeave={e => e.currentTarget.style.opacity = '0'}
+            >
+              ❯
+            </button>
+          )}
         </div>
 
         {/* ═══ COL 4+5, ROW 2: empty spacer ═══ */}
@@ -650,14 +859,68 @@ export const BeltNode: React.FC<BeltProps> = ({
       </div>
       </div>  {/* end belt content padding */}
 
-      {/* Inline Live Detective Brain Terminal */}
-      {id === 2 && isStreaming && isAnchored && (
+      {/* ── VIEW ALL MODAL ── */}
+      {isViewAllOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)',
+          zIndex: 9999, display: 'flex', flexDirection: 'column',
+          padding: 40, overflow: 'hidden'
+        }}>
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            marginBottom: 20, borderBottom: `1px solid ${colVar}`, paddingBottom: 10,
+            flexShrink: 0
+          }}>
+            <h2 style={{ color: colVar, margin: 0, fontFamily: 'JetBrains Mono, monospace', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ width: 12, height: 12, borderRadius: '50%', background: colVar, boxShadow: `0 0 12px ${colVar}, 0 0 24px ${colVar}` }} />
+              {name} — All Records ({carouselSpots?.length || 0})
+            </h2>
+            <button onClick={() => setIsViewAllOpen(false)} style={{
+              background: 'none', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer', padding: 10
+            }}>✕</button>
+          </div>
+          
+          <div className="hide-scrollbar" style={{
+            flex: 1, overflowY: 'auto',
+            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+            gap: '20px 20px', paddingRight: 10, paddingBottom: 40,
+            alignContent: 'start'
+          }}>
+            {carouselSpots?.map((spot) => (
+              <div key={spot.id} style={{ width: '100%', height: 230 }}>
+                <DatabankCard 
+                  spot={spot} 
+                  variant="polaroid" 
+                  readOnly={false} 
+                  proxyImg={(url: string | null) => {
+                    if (!url) return null;
+                    if (url.includes('supabase')) return url;
+                    if (url.startsWith('/local-bucket')) return `http://localhost:5999${url}`;
+                    if (url.includes('localhost:5999') || url.includes('127.0.0.1:5999')) return url;
+                    return `http://localhost:5999/api/img-proxy?url=${encodeURIComponent(url)}`;
+                  }} 
+                  onBlock={onBlockSpot}
+                  onPurge={onPurgeSpot}
+                  onSetHero={onSetHero}
+                  onDeletePhoto={onDeletePhoto}
+                  onUploadPhoto={onUploadPhoto}
+                  onAssignPhotoType={onAssignPhotoType}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Inline Live Daemon Terminal */}
+      {isAnchored && !isClosed && (
         <div style={{
           margin: '0 14px 14px',
           background: 'rgba(10, 10, 15, 0.96)',
-          border: '1px solid #ff5a00',
+          border: `1px solid rgba(${colRgb}, 0.6)`,
           borderRadius: '12px',
-          boxShadow: '0 10px 30px rgba(255, 90, 0, 0.15)',
+          boxShadow: `0 10px 30px rgba(${colRgb}, 0.15)`,
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -666,31 +929,36 @@ export const BeltNode: React.FC<BeltProps> = ({
         }}>
           {/* Header */}
           <div style={{ 
-            background: 'rgba(255, 90, 0, 0.08)', 
+            background: `rgba(${colRgb}, 0.08)`, 
             padding: '8px 16px', 
             fontSize: '0.7rem', 
             fontWeight: 800, 
-            color: '#ff5a00', 
+            color: colVar, 
             textTransform: 'uppercase', 
             letterSpacing: '0.12em', 
             display: 'flex', 
             justifyContent: 'space-between', 
             alignItems: 'center',
-            borderBottom: '1px solid rgba(255, 90, 0, 0.15)'
+            borderBottom: isMinimized ? 'none' : `1px solid rgba(${colRgb}, 0.15)`
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>🧠 Live Detective Brain</span>
-              {currentAnalyzingSpot && (
-                <span style={{ 
+              <span>🧠 Live {id === 1 ? 'Scout' : id === 2 ? 'Detective' : id === 3 ? 'Photographer' : 'Publisher'} Brain</span>
+              {daemonStatus && (
+                <span 
+                  title={daemonStatus}
+                  style={{ 
                   fontSize: '0.62rem', 
                   color: 'rgba(255, 255, 255, 0.75)', 
                   background: 'rgba(255, 255, 255, 0.08)',
                   padding: '2px 8px', 
                   borderRadius: '4px',
                   fontFamily: 'JetBrains Mono, monospace',
-                  letterSpacing: 'normal'
+                  letterSpacing: 'normal',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
                 }}>
-                  Analyzing: {currentAnalyzingSpot}
+                  {daemonStatus}
                 </span>
               )}
             </div>
@@ -698,13 +966,13 @@ export const BeltNode: React.FC<BeltProps> = ({
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  setIsAnchored?.(false);
+                  setIsAnchored(false);
                 }}
                 style={{
-                  background: 'rgba(255, 90, 0, 0.15)',
-                  border: '1px solid rgba(255, 90, 0, 0.3)',
+                  background: `rgba(${colRgb}, 0.15)`,
+                  border: `1px solid rgba(${colRgb}, 0.3)`,
                   borderRadius: '6px',
-                  color: '#ff5a00',
+                  color: colVar,
                   fontSize: '0.58rem',
                   fontWeight: 900,
                   padding: '3px 8px',
@@ -717,26 +985,244 @@ export const BeltNode: React.FC<BeltProps> = ({
               >
                 🔓 Float Window
               </button>
-              <span className="pulse-dot" style={{ background: '#ff5a00', width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block' }}></span>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMinimized(!isMinimized);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: colVar,
+                  fontSize: '0.65rem',
+                  cursor: 'pointer',
+                  padding: '0 4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  fontWeight: 'bold',
+                  marginRight: '2px'
+                }}
+                title={isMinimized ? 'Expand window' : 'Minimize window'}
+              >
+                {isMinimized ? '▼' : '▲'}
+              </button>
+              <span className="pulse-dot" style={{ background: colVar, width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block' }}></span>
             </div>
           </div>
           {/* Terminal Content */}
-          <div style={{ 
-            padding: '12px 16px', 
-            height: '180px', 
-            color: '#00ffaa', 
-            fontFamily: 'JetBrains Mono, monospace', 
-            fontSize: '0.74rem', 
-            whiteSpace: 'pre-wrap', 
-            overflowY: 'auto', 
-            textShadow: '0 0 5px rgba(0,255,170,0.4)',
-            background: 'rgba(0,0,0,0.45)',
-            boxSizing: 'border-box'
-          }}>
-            {liveStreamText || 'Initializing neural link...'}
-            <span className="cursor-blink" style={{ animation: 'blink 1s step-end infinite' }}>_</span>
-          </div>
+          {!isMinimized && (
+            <div style={{ 
+              padding: '12px 16px', 
+              height: '180px', 
+              color: '#00ffaa', 
+              fontFamily: 'JetBrains Mono, monospace', 
+              fontSize: '0.74rem', 
+              whiteSpace: 'pre-wrap', 
+              overflowY: 'auto', 
+              textShadow: '0 0 5px rgba(0,255,170,0.4)',
+              background: 'rgba(0,0,0,0.45)',
+              boxSizing: 'border-box'
+            }}>
+              {id === 2 ? (
+                  isStreaming ? (
+                      <>
+                          {liveStreamText || 'Initializing neural link...'}
+                          <span className="cursor-blink" style={{ animation: 'blink 1s step-end infinite' }}>_</span>
+                      </>
+                  ) : (
+                      <div style={{ color: 'rgba(255,255,255,0.4)', opacity: 0.8, fontStyle: 'italic' }}>
+                          [SYSTEM] DETECTIVE IDLE — WAITING FOR JOB...<br/>
+                          <span className="cursor-blink" style={{ animation: 'blink 1s step-end infinite', fontStyle: 'normal' }}>_</span>
+                      </div>
+                  )
+              ) : (
+                  phaseLogs.length > 0 ? (
+                      phaseLogs.map((log, i) => (
+                          <div key={i} style={{ color: log.type === 'ERROR' ? '#ff3366' : '#00ffaa', marginBottom: '4px' }}>
+                              <span style={{ opacity: 0.5 }}>[{new Date().toLocaleTimeString()}]</span> {log.message}
+                          </div>
+                      ))
+                  ) : (
+                      <div style={{ color: 'rgba(255,255,255,0.4)', opacity: 0.8, fontStyle: 'italic' }}>
+                          [SYSTEM] {id === 1 ? 'SCOUT' : id === 3 ? 'PHOTOGRAPHER' : 'PUBLISHER'} IDLE — WAITING FOR JOB...<br/>
+                          <span className="cursor-blink" style={{ animation: 'blink 1s step-end infinite', fontStyle: 'normal' }}>_</span>
+                      </div>
+                  )
+              )}
+            </div>
+          )}
         </div>
+      )}
+
+      {/* Floating Live Daemon Terminal */}
+      {!isAnchored && !isClosed && (
+        <div style={{
+          position: 'fixed',
+          left: `${brainPos.x}px`,
+          top: `${brainPos.y}px`,
+          width: '450px',
+          height: isMinimized ? '38px' : '400px',
+          background: 'rgba(10, 10, 15, 0.96)',
+          border: `1px solid rgba(${colRgb}, 0.8)`,
+          borderRadius: '12px',
+          boxShadow: `0 15px 45px rgba(0, 0, 0, 0.65), 0 0 25px rgba(${colRgb}, 0.18)`,
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          backdropFilter: 'blur(15px)',
+          transition: 'height 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+        }}>
+          {/* Header */}
+          <div 
+            onMouseDown={handleMouseDown}
+            style={{ 
+              background: `rgba(${colRgb}, 0.12)`, 
+              padding: '8px 14px', 
+              fontSize: '0.7rem', 
+              fontWeight: 800, 
+              color: colVar, 
+              textTransform: 'uppercase', 
+              letterSpacing: '0.12em', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              cursor: 'move',
+              userSelect: 'none',
+              borderBottom: isMinimized ? 'none' : `1px solid rgba(${colRgb}, 0.25)`
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>
+              <span>🧠 {id === 1 ? 'Scout' : id === 2 ? 'Detective' : id === 3 ? 'Photographer' : 'Publisher'}</span>
+              {daemonStatus && (
+                <span 
+                  title={daemonStatus}
+                  style={{ 
+                    fontSize: '0.6rem', 
+                    color: 'rgba(255, 255, 255, 0.72)', 
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    padding: '2px 8px', 
+                    borderRadius: '4px',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    letterSpacing: 'normal',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {daemonStatus}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsAnchored(true);
+                }}
+                style={{
+                  background: `rgba(${colRgb}, 0.15)`,
+                  border: `1px solid rgba(${colRgb}, 0.3)`,
+                  borderRadius: '4px',
+                  color: colVar,
+                  fontSize: '0.52rem',
+                  fontWeight: 900,
+                  padding: '2px 6px',
+                  cursor: 'pointer',
+                  fontFamily: 'JetBrains Mono, monospace'
+                }}
+                title={`Anchor this console into the Phase ${id} row`}
+              >
+                🔒 Anchor
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMinimized(!isMinimized);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: colVar,
+                  fontSize: '0.65rem',
+                  cursor: 'pointer',
+                  padding: '0 4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  fontWeight: 'bold',
+                  marginRight: '2px'
+                }}
+                title={isMinimized ? 'Expand window' : 'Minimize window'}
+              >
+                {isMinimized ? '▼' : '▲'}
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsClosed(true);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'rgba(255,255,255,0.4)',
+                  fontSize: '1rem',
+                  cursor: 'pointer',
+                  padding: '0 4px',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                title="Close console overlay"
+              >
+                ✕
+              </button>
+              <span className="pulse-dot" style={{ background: colVar, width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block', marginLeft: '2px' }}></span>
+            </div>
+          </div>
+          {/* Terminal Screen */}
+          {!isMinimized && (
+            <div style={{ 
+              padding: '12px 14px', 
+              color: '#00ffaa', 
+              fontFamily: 'JetBrains Mono, monospace', 
+              fontSize: '0.74rem', 
+              whiteSpace: 'pre-wrap', 
+              overflowY: 'auto', 
+              flex: 1, 
+              textShadow: '0 0 5px rgba(0,255,170,0.4)',
+              background: 'rgba(0, 0, 0, 0.4)'
+            }}>
+                {id === 2 ? (
+                    isStreaming ? (
+                        <>
+                            {liveStreamText || 'Initializing neural link...'}
+                            <span className="cursor-blink" style={{ animation: 'blink 1s step-end infinite' }}>_</span>
+                        </>
+                    ) : (
+                        <div style={{ color: 'rgba(255,255,255,0.4)', opacity: 0.8, fontStyle: 'italic' }}>
+                            [SYSTEM] DETECTIVE IDLE — WAITING FOR JOB...<br/>
+                            <span className="cursor-blink" style={{ animation: 'blink 1s step-end infinite', fontStyle: 'normal' }}>_</span>
+                        </div>
+                    )
+                ) : (
+                    phaseLogs.length > 0 ? (
+                        phaseLogs.map((log, i) => (
+                            <div key={i} style={{ color: log.type === 'ERROR' ? '#ff3366' : '#00ffaa', marginBottom: '4px' }}>
+                                <span style={{ opacity: 0.5 }}>[{new Date().toLocaleTimeString()}]</span> {log.message}
+                            </div>
+                        ))
+                    ) : (
+                        <div style={{ color: 'rgba(255,255,255,0.4)', opacity: 0.8, fontStyle: 'italic' }}>
+                            [SYSTEM] {id === 1 ? 'SCOUT' : id === 3 ? 'PHOTOGRAPHER' : 'PUBLISHER'} IDLE — WAITING FOR JOB...<br/>
+                            <span className="cursor-blink" style={{ animation: 'blink 1s step-end infinite', fontStyle: 'normal' }}>_</span>
+                        </div>
+                    )
+                )}
+            </div>
+          )}
+        </div>
+      )}
+
+      </>
       )}
 
       <style>{`
@@ -745,6 +1231,8 @@ export const BeltNode: React.FC<BeltProps> = ({
         @keyframes fadeIn { from { opacity: 0; transform: scale(0.8); } to { opacity: 1; transform: scale(0.85); } }
         @keyframes spin  { 100%{transform:rotate(360deg)} }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+        .hide-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>
     </div>
   );

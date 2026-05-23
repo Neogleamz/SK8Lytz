@@ -624,35 +624,6 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
         </div>
       )}
 
-        <div style={{ marginTop: '24px', padding: '16px', background: 'rgba(255,255,255,0.03)', border: `1px solid rgba(255,255,255,0.1)`, borderRadius: '12px' }}>
-          <h4 style={{ margin: '0 0 12px 0', color: '#fff', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '1.2rem' }}>🎯</span> SNIPER FOCUS (DEBUG ISOLATION)
-          </h4>
-          <p style={{ margin: '0 0 16px 0', color: 'rgba(255,255,255,0.5)', fontSize: '0.7rem', lineHeight: '1.4' }}>
-            When a Sniper Target is set, all pipeline phases (Indexer, Photographer) will <strong>ONLY</strong> process this specific record. Use this to re-run the pipeline on a single spot for debugging.
-          </p>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-            <div style={{ flex: 1, position: 'relative' }}>
-              <input 
-                type="text" 
-                placeholder="Search name or Paste UUID..."
-                value={config?.sniper_target_id || ''}
-                onChange={(e) => handleUpdate('sniper_target_id', e.target.value)}
-                style={{ width: '100%', background: 'rgba(0,0,0,0.4)', border: `1px solid rgba(255,255,255,0.2)`, borderBottom: `2px solid ${colColor}`, color: '#fff', padding: '10px 14px', borderRadius: '6px', fontSize: '0.75rem', fontFamily: 'JetBrains Mono, monospace', outline: 'none' }}
-              />
-              {config?.sniper_target_id && (
-                <button 
-                  onClick={() => handleUpdate('sniper_target_id', null)}
-                  style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,51,102,0.1)', border: '1px solid rgba(255,51,102,0.3)', color: '#ff3366', borderRadius: '4px', fontSize: '0.6rem', padding: '4px 8px', cursor: 'pointer', fontWeight: 800 }}
-                >CLEAR FOCUS</button>
-              )}
-            </div>
-            <div style={{ fontSize: '0.7rem', color: config?.sniper_target_id ? colColor : 'rgba(255,255,255,0.2)', fontWeight: 800 }}>
-              {config?.sniper_target_id ? 'TARGET LOCKED' : 'GLOBAL QUEUE'}
-            </div>
-          </div>
-        </div>
-
       <div style={{ marginTop: 'auto', paddingTop: '16px', display: 'flex', justifyContent: 'flex-end', borderTop: `1px solid rgba(255,255,255,0.1)` }}>
         <button onClick={handleSave} disabled={saveStatus === 'saving'} style={{ 
           background: saveStatus === 'success' ? '#4caf50' : saveStatus === 'error' ? '#f44336' : `linear-gradient(135deg, ${colColor} 0%, ${colColor}aa 100%)`, 

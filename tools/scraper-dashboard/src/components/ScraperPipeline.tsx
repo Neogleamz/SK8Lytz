@@ -1,5 +1,6 @@
 import React from 'react';
 import BeltNode from './BeltNode';
+
 import { useScraperTelemetry } from '../hooks/useScraperTelemetry';
 import { useFieldRegistry } from '../hooks/useFieldRegistry';
 import type { SpotRecord } from './RecordEditModal';
@@ -161,11 +162,31 @@ export const ScraperPipeline: React.FC<{
     liveStreamText?: string;
     isStreaming?: boolean;
     currentAnalyzingSpot?: string;
-    isAnchored?: boolean;
-    setIsAnchored?: (a: boolean) => void;
-}> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto, seedProvider, onProviderChange, liveStreamText, isStreaming, currentAnalyzingSpot, isAnchored, setIsAnchored }) => {
+    logs?: {type: string, message: string, source?: string}[];
+    historyLogs?: string[];
+    fetchHistory?: () => void;
+}> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto, seedProvider, onProviderChange, liveStreamText, isStreaming, currentAnalyzingSpot, logs, historyLogs, fetchHistory }) => {
     const { telemetry, config, loading, pulse } = useScraperTelemetry(2000);
     const { fields } = useFieldRegistry();
+
+    const initialStatsRef = React.useRef<{
+        seeded?: number;
+        deep_crawled_count?: number;
+        media_ready?: number;
+        published?: number;
+    } | null>(null);
+
+    React.useEffect(() => {
+        if (pipelineStats?.summary && !initialStatsRef.current) {
+            const summary = pipelineStats.summary;
+            initialStatsRef.current = {
+                seeded: summary.seeded ?? 0,
+                deep_crawled_count: summary.deep_crawled_count ?? 0,
+                media_ready: summary.media_ready ?? 0,
+                published: summary.published ?? 0,
+            };
+        }
+    }, [pipelineStats]);
 
     const [controlsOpen, setControlsOpen] = React.useState(false);
     const [sniperSearch, setSniperSearch] = React.useState('');
@@ -238,13 +259,27 @@ export const ScraperPipeline: React.FC<{
         return spots.slice(0, count);
     };
 
-    const getQueueNames = (phase: string, count: number = 3): string[] => 
-        (phaseQueues?.[phase] || []).slice(0, count).map((s: SpotRecord) => String(s.name || s.url || s.target || ''));
+    const getQueueNames = (phase: string, count: number = 3): string[] => {
+        let activeTarget = '';
+        if (phase === 'phase1') activeTarget = telemetry.scout?.active_job?.target || telemetry.resolver?.active_job?.spot_name || '';
+        else if (phase === 'phase2') activeTarget = telemetry.detective?.active_job?.spot_name || '';
+        else if (phase === 'phase3') activeTarget = telemetry.photographer?.active_job?.spot_name || '';
+        else if (phase === 'phase4') activeTarget = telemetry.publisher?.active_job?.spot_name || '';
+
+        return (phaseQueues?.[phase] || [])
+            .filter((s: SpotRecord) => {
+                const name = String(s.name || s.url || s.target || '');
+                return name !== activeTarget;
+            })
+            .slice(0, count)
+            .map((s: SpotRecord) => String(s.name || s.url || s.target || ''));
+    };
 
     // Fields to NEVER show in belt output cards — too bulky, use Phase drawer instead
     const CARD_SKIP_FIELDS = new Set([
         'candidate_photos', 'photos', 'ai_metadata', 'raw_data',
-        'candidate_links', 'raw_knowledge_panel', 'flyer_urls', 'dom_images'
+        'candidate_links', 'raw_knowledge_panel', 'flyer_urls', 'dom_images',
+        'field_confidence'
     ]);
 
     const buildPhaseCards = (phaseId: number, spots: SpotRecord[]) => {
@@ -273,6 +308,8 @@ export const ScraperPipeline: React.FC<{
             // DYNAMIC FIELDS — skip bloat fields, compact all values to single lines
             const phaseFields = fields.filter(f => f.phase_id === phaseId && !CARD_SKIP_FIELDS.has(f.field_name));
             phaseFields.forEach(f => {
+                if (f.field_name?.toLowerCase().includes('confidence') || (f.display_label?.toLowerCase().includes('confidence'))) return;
+
                 let displayVal: React.ReactNode = 'NULL';
                 let status = 'missing';
 
@@ -437,21 +474,48 @@ export const ScraperPipeline: React.FC<{
         const specificSpots = getSpotsForPhase(belt.id, 2);
         const dynamicCards = buildPhaseCards(belt.id, specificSpots);
 
-        // Per-belt count badges from live telemetry + pipelineStats
+        const sessionCompleted = {
+            scouted: Math.max(0, (pipelineStats?.summary?.seeded ?? 0) - (initialStatsRef.current?.seeded ?? 0)),
+            deep_crawled: Math.max(0, (pipelineStats?.summary?.deep_crawled_count ?? 0) - (initialStatsRef.current?.deep_crawled_count ?? 0)),
+            media_ready: Math.max(0, (pipelineStats?.summary?.media_ready ?? 0) - (initialStatsRef.current?.media_ready ?? 0)),
+            published: Math.max(0, (pipelineStats?.summary?.published ?? 0) - (initialStatsRef.current?.published ?? 0)),
+        };
+
+        // Per-belt count badges from live telemetry + pipelineStats using Option B Vector Flow
         const countBadges: {label: string; value: string}[] = [];
         if (belt.id === 1) {
-            countBadges.push({ label: 'OUT', value: `${(pipelineStats?.summary?.seeded ?? 0).toLocaleString()} SEEDED` });
-            countBadges.push({ label: 'RESOLVING', value: `${(pipelineStats?.summary?.pending_website ?? 0)} PENDING` });
-            countBadges.push({ label: 'STALLED', value: `${(pipelineStats?.summary?.stalled_website ?? 0)} STALLED` });
+            countBadges.push({ label: '⏳ QUEUED', value: `${(status?.pendingCount ?? 0).toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '✓ SEEDED', value: `${(pipelineStats?.summary?.seeded ?? 0).toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '⚡ SESSION', value: `+${sessionCompleted.scouted}` });
+            
+            if (pipelineStats?.summary?.pending_website || pipelineStats?.summary?.stalled_website) {
+                countBadges.push({ label: '│', value: '' });
+                countBadges.push({ label: '🔍 RESOLVING', value: `${(pipelineStats?.summary?.pending_website ?? 0)}` });
+                countBadges.push({ label: '🛑 STALLED', value: `${(pipelineStats?.summary?.stalled_website ?? 0)}` });
+            }
         } else if (belt.id === 2) {
-            countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.enriched ?? 0)} ENRICHED` });
-            countBadges.push({ label: 'OUT', value: `${(pipelineStats?.summary?.deep_crawled_count ?? 0)} DEEP_CRAWLED` });
+            const qCount = pipelineStats?.summary?.detective_queue ?? 0;
+            countBadges.push({ label: '⏳ QUEUED', value: `${qCount.toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '✓ CRAWLED', value: `${(pipelineStats?.summary?.deep_crawled_count ?? 0).toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '⚡ SESSION', value: `+${sessionCompleted.deep_crawled}` });
         } else if (belt.id === 3) {
-            countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.deep_crawled_count ?? 0)} DEEP_CRAWLED` });
-            countBadges.push({ label: 'OUT', value: `${(pipelineStats?.summary?.media_ready ?? 0)} MEDIA_READY` });
+            const qCount = pipelineStats?.summary?.photographer_queue ?? 0;
+            countBadges.push({ label: '⏳ QUEUED', value: `${qCount.toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '✓ IMAGED', value: `${(pipelineStats?.summary?.media_ready ?? 0).toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '⚡ SESSION', value: `+${sessionCompleted.media_ready}` });
         } else if (belt.id === 4) {
-            countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.media_ready ?? 0)} MEDIA_READY` });
-            countBadges.push({ label: 'PUB', value: `${(pipelineStats?.summary?.published ?? 0)} PUBLISHED` });
+            const qCount = pipelineStats?.summary?.publisher_queue ?? 0;
+            countBadges.push({ label: '⏳ QUEUED', value: `${qCount.toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '✓ PUBLISHED', value: `${(pipelineStats?.summary?.published ?? 0).toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '⚡ SESSION', value: `+${sessionCompleted.published}` });
         }
 
         if (liveData) {
@@ -572,29 +636,26 @@ export const ScraperPipeline: React.FC<{
             <div style={{
                 position: 'sticky', top: 0, zIndex: 100,
                 background: 'rgba(8,8,14,0.97)',
-                borderBottom: '1px solid rgba(0,255,170,0.12)',
+                borderBottom: '1px solid rgba(59, 130, 246, 0.25)',
                 backdropFilter: 'blur(20px)',
                 boxShadow: '0 4px 30px rgba(0,0,0,0.6)',
             }}>
                 {/* Top row: branding + stats + controls toggle */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 0, padding: '10px 20px', minHeight: 52 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, flexShrink: 0, marginRight: 18 }}>
-                        <span style={{ fontSize: '1.05rem', fontWeight: 900, background: 'linear-gradient(90deg,#00ffaa,#00d4ff)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '0.05em' }}>SK8LYTZ</span>
-                        <span style={{ fontSize: '0.48rem', fontWeight: 800, color: 'rgba(0,255,170,0.45)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>FACTORY FLOOR</span>
-                    </div>
-                    <div style={{ width: 1, height: 28, background: 'rgba(255,255,255,0.07)', flexShrink: 0, marginRight: 18 }} />
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                        {[
-                            { label: 'Seeds',      value: pipelineStats?.summary?.seeded?.toLocaleString() ?? '\u2014', color: '#00ffaa' },
-                            { label: 'Published',  value: pipelineStats?.summary?.published?.toLocaleString()    ?? '\u2014', color: '#4ade80' },
-                            { label: 'Throughput', value: `${pipelineStats?.summary?.throughput ?? 0}/m`,                    color: '#fff' },
-                            { label: 'DB Sync',    value: loading ? 'SYNCING' : 'LIVE',                                      color: loading ? '#ffb300' : '#00ffaa' },
-                        ].map(s => (
-                            <div key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 10px', borderRadius: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', flexShrink: 0 }}>
-                                <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.1em', fontFamily: 'JetBrains Mono, monospace' }}>{s.label}</span>
-                                <span style={{ fontSize: '0.68rem', fontWeight: 900, color: s.color, fontFamily: 'JetBrains Mono, monospace' }}>{s.value}</span>
-                            </div>
-                        ))}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 0, padding: '10px 20px', minHeight: 64 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, flexShrink: 0, marginRight: 18, marginTop: -2 }}>
+                        <img src="/sk8lytz-logo.png" alt="SK8Lytz" style={{ height: '38px', objectFit: 'contain', alignSelf: 'flex-start', filter: 'drop-shadow(0 0 8px rgba(59,130,246,0.3))' }} />
+                        <span style={{ 
+                            fontSize: '0.62rem', 
+                            fontWeight: 900, 
+                            background: 'linear-gradient(90deg, #3b82f6 0%, #ff5a00 100%)', 
+                            WebkitBackgroundClip: 'text', 
+                            WebkitTextFillColor: 'transparent',
+                            textTransform: 'uppercase', 
+                            letterSpacing: '0.15em', 
+                            marginTop: '3px', 
+                            marginLeft: '2px',
+                            textShadow: '0 0 10px rgba(59, 130, 246, 0.2)'
+                        }}>SK8 SPOTZ</span>
                     </div>
                     <div style={{ flex: 1 }} />
 
@@ -607,7 +668,7 @@ export const ScraperPipeline: React.FC<{
                                 value={sniperSearch}
                                 onChange={(e) => setSniperSearch(e.target.value)}
                                 style={{ 
-                                    width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(0,255,170,0.15)', 
+                                    width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(59, 130, 246, 0.3)', 
                                     color: '#fff', fontSize: '0.6rem', padding: '5px 10px', borderRadius: '20px',
                                     fontFamily: 'JetBrains Mono, monospace', outline: 'none'
                                 }}
@@ -615,7 +676,7 @@ export const ScraperPipeline: React.FC<{
                             {sniperResults.length > 0 && (
                                 <div style={{ 
                                     position: 'absolute', top: '100%', left: 0, width: '220px', background: '#0a0a0f', 
-                                    border: '1px solid rgba(0,255,170,0.3)', borderRadius: '8px', zIndex: 1000,
+                                    border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: '8px', zIndex: 1000,
                                     boxShadow: '0 10px 30px rgba(0,0,0,0.8)', overflow: 'hidden', marginTop: '5px'
                                 }}>
                                     {sniperResults.map(s => (
@@ -623,10 +684,10 @@ export const ScraperPipeline: React.FC<{
                                             key={s.id} 
                                             onClick={() => handleSetSniper(s.id)}
                                             style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}
-                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,255,170,0.1)'}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'}
                                             onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
                                         >
-                                            <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#00ffaa' }}>{s.name}</div>
+                                            <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#3b82f6' }}>{s.name}</div>
                                             <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)' }}>{s.city}, {s.state}</div>
                                         </div>
                                     ))}
@@ -635,11 +696,11 @@ export const ScraperPipeline: React.FC<{
                         </div>
 
                         {config?.sniper_target_id && (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(0,255,170,0.1)', padding: '3px 10px', borderRadius: '20px', border: '1px solid rgba(0,255,170,0.3)' }}>
-                                <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#00ffaa', whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255, 90, 0, 0.08)', padding: '3px 10px', borderRadius: '20px', border: '1px solid rgba(255, 90, 0, 0.3)' }}>
+                                <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ff5a00', whiteSpace: 'nowrap' }}>
                                     🎯 SNIPING: {sniperActiveSpot ? `${sniperActiveSpot.name} (${sniperActiveSpot.city}, ${sniperActiveSpot.state})` : config.sniper_target_id.slice(0, 8)}
                                 </span>
-                                <button onClick={() => handleRestartSpot(config.sniper_target_id)} style={{ background: 'rgba(0,255,170,0.2)', border: 'none', color: '#00ffaa', padding: '2px 6px', borderRadius: '4px', fontSize: '0.5rem', fontWeight: 900, cursor: 'pointer' }}>RESET</button>
+                                <button onClick={() => handleRestartSpot(config.sniper_target_id)} style={{ background: 'rgba(255, 90, 0, 0.2)', border: 'none', color: '#ff5a00', padding: '2px 6px', borderRadius: '4px', fontSize: '0.5rem', fontWeight: 900, cursor: 'pointer' }}>RESET</button>
                                 <button onClick={handleClearSniper} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', padding: '0 4px', fontSize: '0.7rem', cursor: 'pointer' }}>×</button>
                             </div>
                         )}
@@ -649,9 +710,9 @@ export const ScraperPipeline: React.FC<{
                         style={{
                             display: 'flex', alignItems: 'center', gap: 6,
                             padding: '5px 14px', borderRadius: 20,
-                            border: `1px solid ${controlsOpen ? 'rgba(0,255,170,0.4)' : 'rgba(255,255,255,0.1)'}`,
-                            background: controlsOpen ? 'rgba(0,255,170,0.08)' : 'rgba(255,255,255,0.04)',
-                            color: controlsOpen ? '#00ffaa' : 'rgba(255,255,255,0.5)',
+                            border: `1px solid ${controlsOpen ? 'rgba(59, 130, 246, 0.4)' : 'rgba(255,255,255,0.1)'}`,
+                            background: controlsOpen ? 'rgba(59, 130, 246, 0.08)' : 'rgba(255,255,255,0.04)',
+                            color: controlsOpen ? '#3b82f6' : 'rgba(255,255,255,0.5)',
                             cursor: 'pointer', fontSize: '0.6rem', fontWeight: 800,
                             textTransform: 'uppercase', letterSpacing: '0.1em',
                             transition: 'all 0.2s', flexShrink: 0, marginLeft: 12,
@@ -669,10 +730,7 @@ export const ScraperPipeline: React.FC<{
                         padding: '10px 20px',
                         display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 14px',
                     }}>
-                        <span style={{ fontSize: '0.5rem', fontWeight: 900, color: 'rgba(0,255,170,0.5)', textTransform: 'uppercase', letterSpacing: '0.2em', fontFamily: 'JetBrains Mono, monospace', flexShrink: 0 }}>
-                            ⚡ MISSION CONTROLS
-                        </span>
-                        <div style={{ width: 1, height: 20, background: 'rgba(255,255,255,0.07)', flexShrink: 0 }} />
+
                         {headerControls}
                     </div>
                 )}
@@ -721,12 +779,12 @@ export const ScraperPipeline: React.FC<{
                             liveStreamText={liveStreamText}
                             isStreaming={isStreaming}
                             currentAnalyzingSpot={currentAnalyzingSpot}
-                            isAnchored={isAnchored}
-                            setIsAnchored={setIsAnchored}
+                            logs={logs}
                         />
                     );
                 })}
             </div>
+
         </div>
     );
 }

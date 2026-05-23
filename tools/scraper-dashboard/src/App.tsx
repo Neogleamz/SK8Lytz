@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import USAMap from './USMap';
 import ScraperPipeline from './components/ScraperPipeline';
 import type { PipelineStats } from './components/ScraperPipeline';
+import { OmniTerminal } from './components/OmniTerminal';
 import DetectiveLab from './DetectiveLab';
 import { SniperBench } from './components/SniperBench';
 import { HeuristicsControlCenter } from './components/HeuristicsControlCenter';
@@ -143,89 +144,10 @@ function App() {
   const [liveStreamText, setLiveStreamText] = useState<string>('');
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
   
-  // --- Live Detective Brain Dual-Layout States ---
-  const [isAnchored, setIsAnchored] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('sk8_brain_anchored');
-      return saved !== null ? JSON.parse(saved) : true;
-    } catch { return true; }
-  });
-  const [isMinimized, setIsMinimized] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('sk8_brain_minimized');
-      return saved !== null ? JSON.parse(saved) : false;
-    } catch { return false; }
-  });
-  const [isClosed, setIsClosed] = useState<boolean>(false);
   const [currentAnalyzingSpot, setCurrentAnalyzingSpot] = useState<string>('');
-  const [brainPos, setBrainPos] = useState<{ x: number; y: number }>(() => {
-    try {
-      const saved = localStorage.getItem('sk8_brain_pos');
-      return saved ? JSON.parse(saved) : { x: window.innerWidth - 480, y: window.innerHeight - 440 };
-    } catch {
-      return { x: window.innerWidth - 480, y: window.innerHeight - 440 };
-    }
-  });
 
-  // Keep localStorage synced via effects
-  useEffect(() => {
-    localStorage.setItem('sk8_brain_anchored', JSON.stringify(isAnchored));
-  }, [isAnchored]);
 
-  useEffect(() => {
-    localStorage.setItem('sk8_brain_minimized', JSON.stringify(isMinimized));
-  }, [isMinimized]);
 
-  useEffect(() => {
-    localStorage.setItem('sk8_brain_pos', JSON.stringify(brainPos));
-  }, [brainPos]);
-
-  const dragStartRef = useRef<{ startX: number; startY: number; posX: number; posY: number } | null>(null);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return; // only left click
-    const target = e.target as HTMLElement;
-    if (target.closest('button') || target.closest('select') || target.closest('input')) return;
-
-    dragStartRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      posX: brainPos.x,
-      posY: brainPos.y,
-    };
-    
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-    e.preventDefault();
-  };
-
-  const handleMouseMove = (e: MouseEvent) => {
-    if (!dragStartRef.current) return;
-    const dx = e.clientX - dragStartRef.current.startX;
-    const dy = e.clientY - dragStartRef.current.startY;
-    const nextX = dragStartRef.current.posX + dx;
-    const nextY = dragStartRef.current.posY + dy;
-
-    // Keep it on screen
-    const clampedX = Math.max(10, Math.min(window.innerWidth - 460, nextX));
-    const clampedY = Math.max(10, Math.min(window.innerHeight - 60, nextY));
-
-    setBrainPos({ x: clampedX, y: clampedY });
-  };
-
-  const handleMouseUp = () => {
-    dragStartRef.current = null;
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-  };
-
-  // Clean up drag listeners on unmount
-  useEffect(() => {
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, []);
 
   const logsRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef<typeof activeTab>('phase1');
@@ -301,7 +223,6 @@ function App() {
       const data = JSON.parse(event.data);
       if (data.type === 'LLM_STREAM') {
         setIsStreaming(true);
-        setIsClosed(false); // Auto-reopen when new stream starts
         setLiveStreamText(prev => prev + data.message);
         return;
       }
@@ -1038,300 +959,423 @@ function App() {
 
   const headerControls = (
     <>
-      {/* Logo */}
-      <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, flexShrink: 0, marginRight: '6px' }}>
-        <span style={{ fontSize: '0.95rem', fontWeight: 900, background: 'linear-gradient(90deg,#8a2be2,#e91e63)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', letterSpacing: '-0.02em' }}>SK8Lytz</span>
-        <span style={{ fontSize: '0.52rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>SK8Spotz</span>
-      </div>
-      <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
-      {/* Daemon pills */}
-      {[
-        { id: 'indexer',          label: 'Phase 2: Detective', color: '#ff5a00', onKey: 'Indexer: online' },
-        { id: 'photographer',     label: 'Phase 3: Photo',     color: '#e91e63', onKey: 'Photographer: online' },
-        { id: 'publisher',        label: 'Phase 4: Publish',   color: '#00d4ff', onKey: 'Publisher: online' },
-      ].map(d => {
-        const isOn = status?.currentTarget?.includes(d.onKey);
-        return (
-          <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: isOn ? `${d.color}12` : 'rgba(255,255,255,0.03)', padding: '3px 8px', borderRadius: '20px', border: `1px solid ${isOn ? d.color + '55' : 'rgba(255,255,255,0.08)'}`, flexShrink: 0 }}>
-            <div className={`status-dot ${isOn ? 'online' : 'offline'}`} style={{ background: isOn ? d.color : '', boxShadow: isOn ? `0 0 5px ${d.color}` : '', width: '6px', height: '6px' }} />
-            <span style={{ fontSize: '0.6rem', color: isOn ? d.color : 'rgba(255,255,255,0.25)', fontWeight: 700 }}>{d.label.toUpperCase()}</span>
-            <button onClick={() => triggerSpecificDaemon(d.id, isOn ? 'stop' : 'start')}
-              style={{ fontSize: '0.58rem', fontWeight: 800, padding: '1px 5px', borderRadius: '8px', border: 'none', cursor: 'pointer', background: isOn ? 'rgba(255,60,60,0.25)' : `${d.color}33`, color: isOn ? '#ff6b6b' : d.color }}>
-              {isOn ? 'STOP' : 'GO'}
-            </button>
-          </div>
-        );
-      })}
-      {/* ═══ LM Studio Control Capsule (Full GPU Telemetry) ═══ */}
-      {(() => {
-        const lms = (status as any)?.lmsStatus;
-        const gpu = (status as any)?.gpuTelemetry;
-        const serverOn = lms?.serverStatus === 'ON';
-        const serverMissing = lms?.serverStatus === 'MISSING';
-        const loadedModels: string[] = lms?.loadedModels || [];
-        const loadedModel = loadedModels[0] || null;
-        const availModels: { key: string; arch: string; size: string; loaded: boolean }[] = lms?.availableModels || [];
-        const capsuleColor = serverOn ? '#a200ff' : serverMissing ? '#555' : '#ff2d55';
-        const glowColor = serverOn ? (loadedModel ? '#a200ff' : '#ffb300') : '#ff2d55';
-        const vramPct = gpu?.vramPercent ?? 0;
-        const vramUsed = gpu?.vramUsedMB ?? 0;
-        const vramTotal = gpu?.vramTotalMB ?? 8192;
-        const gpuUtil = gpu?.gpuUtilPercent ?? 0;
-        const vramBarColor = vramPct > 90 ? '#ff2d55' : vramPct > 70 ? '#ffb300' : '#a200ff';
-        return (
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '5px',
-            background: serverOn ? 'rgba(162,0,255,0.08)' : 'rgba(255,45,85,0.06)',
-            padding: '3px 10px', borderRadius: '20px',
-            border: `1px solid ${capsuleColor}55`, flexShrink: 0,
-            transition: 'all 0.3s ease',
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '16px',
+      width: '100%',
+      padding: '4px 0',
+    }}>
+      {/* TOP BAR: Header Navigation / Action Deck */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        width: '100%',
+        flexWrap: 'wrap',
+        gap: '12px',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+        paddingBottom: '12px'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{
+            fontSize: '0.85rem',
+            fontWeight: 900,
+            background: 'linear-gradient(90deg, #c084fc, #00d4ff)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            textTransform: 'uppercase',
+            letterSpacing: '0.15em'
           }}>
-            {/* Glowing status dot */}
-            <div style={{
-              width: '7px', height: '7px', borderRadius: '50%', flexShrink: 0,
-              background: glowColor,
-              boxShadow: `0 0 ${serverOn ? '8px' : '4px'} ${glowColor}`,
-              animation: serverOn && loadedModel ? 'pulse 2s ease-in-out infinite' : 'none',
-            }} />
-            {/* Label */}
-            <span style={{ fontSize: '0.58rem', fontWeight: 800, color: capsuleColor, letterSpacing: '0.03em' }}>
-              LM STUDIO
-            </span>
-            {/* Server toggle */}
-            <button
-              onClick={async () => {
-                try {
-                  await fetch(`${API_BASE}/api/llm/server/${serverOn ? 'stop' : 'start'}`, { method: 'POST' });
-                  fetchSystemStatus();
-                } catch (e) { /* swallow */ }
-              }}
-              style={{
-                fontSize: '0.54rem', fontWeight: 800, padding: '1px 6px', borderRadius: '8px',
-                border: 'none', cursor: 'pointer',
-                background: serverOn ? 'rgba(255,60,60,0.25)' : 'rgba(162,0,255,0.3)',
-                color: serverOn ? '#ff6b6b' : '#a200ff',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              {serverMissing ? 'N/A' : serverOn ? 'STOP' : 'START'}
-            </button>
-            {/* Model selector + context length + gpu offload — only when server is ON */}
-            {serverOn && (
-              <>
-                <select
-                  value={loadedModel || ''}
-                  onChange={async (e) => {
-                    const modelKey = e.target.value;
-                    if (!modelKey) return;
-                    try {
-                      await fetch(`${API_BASE}/api/llm/model/load`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ modelKey, contextLength: 8192, gpuOffload: 'max' }),
-                      });
-                      fetchSystemStatus();
-                    } catch (e) { /* swallow */ }
-                  }}
-                  title="Select model to load (auto-sets as detective model)"
-                  style={{
-                    fontSize: '0.54rem', fontWeight: 700, padding: '1px 4px', borderRadius: '6px',
-                    border: '1px solid rgba(162,0,255,0.3)', background: 'rgba(0,0,0,0.5)',
-                    color: loadedModel ? '#c77dff' : 'rgba(255,255,255,0.4)',
-                    cursor: 'pointer', outline: 'none', maxWidth: '150px',
-                  }}
-                >
-                  {!loadedModel && <option value="">Load model...</option>}
-                  {availModels.map((m) => (
-                    <option key={m.key} value={m.key} style={{ background: '#111', color: m.loaded ? '#a200ff' : '#fff' }}>
-                      {m.loaded ? '● ' : ''}{m.key} ({m.size})
-                    </option>
-                  ))}
-                </select>
-              </>
-            )}
-            {/* Loaded model badges with unload buttons */}
-            {serverOn && loadedModels.map((m: string) => (
-              <span key={m} style={{
-                display: 'inline-flex', alignItems: 'center', gap: '3px',
-                fontSize: '0.48rem', fontWeight: 700, padding: '1px 5px', borderRadius: '6px',
-                background: 'rgba(162,0,255,0.15)', color: '#c77dff', border: '1px solid rgba(162,0,255,0.25)',
-                whiteSpace: 'nowrap',
-              }}>
-                {m.replace(/llama-|mistralai\/|qwen|phi-/gi, '').replace('-instruct', '').slice(0, 16)}
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    try {
-                      await fetch(`${API_BASE}/api/llm/model/unload`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ identifier: m }),
-                      });
-                      fetchSystemStatus();
-                    } catch (e) { /* swallow */ }
-                  }}
-                  title={`Unload ${m}`}
-                  style={{
-                    fontSize: '0.46rem', fontWeight: 900, padding: '0 3px', borderRadius: '4px',
-                    border: 'none', cursor: 'pointer', lineHeight: 1,
-                    background: 'rgba(255,60,60,0.3)', color: '#ff6b6b',
-                  }}
-                >✕</button>
-              </span>
-            ))}
-            {/* VRAM Gauge */}
-            <div title={`VRAM: ${Math.round(vramUsed)}/${vramTotal} MB (${vramPct}%) | GPU: ${gpuUtil}%`}
-              style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0 }}>
-              <div style={{
-                width: '40px', height: '6px', borderRadius: '3px',
-                background: 'rgba(255,255,255,0.08)', overflow: 'hidden',
-                border: '1px solid rgba(255,255,255,0.1)',
-              }}>
-                <div style={{
-                  width: `${vramPct}%`, height: '100%', borderRadius: '3px',
-                  background: `linear-gradient(90deg, ${vramBarColor}88, ${vramBarColor})`,
-                  transition: 'width 0.5s ease, background 0.5s ease',
-                }} />
-              </div>
-              <span style={{ fontSize: '0.46rem', color: vramBarColor, fontWeight: 800, whiteSpace: 'nowrap' }}>
-                {(vramUsed / 1024).toFixed(1)}G
-              </span>
-              <span style={{ fontSize: '0.42rem', color: 'rgba(255,255,255,0.25)', fontWeight: 700 }}>
-                /{(vramTotal / 1024).toFixed(0)}G
-              </span>
-            </div>
-            {/* GPU Utilization */}
-            <span style={{
-              fontSize: '0.46rem', fontWeight: 800, padding: '1px 4px', borderRadius: '4px',
-              background: gpuUtil > 50 ? 'rgba(255,90,0,0.2)' : 'rgba(255,255,255,0.04)',
-              color: gpuUtil > 50 ? '#ff5a00' : gpuUtil > 10 ? '#a200ff' : 'rgba(255,255,255,0.3)',
-              whiteSpace: 'nowrap',
-            }}>
-              GPU {gpuUtil}%
-            </span>
-          </div>
-        );
-      })()}
-      <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
-      {/* Active Region chips */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-        <span style={{ fontSize: '0.56rem', fontWeight: 800, color: '#8a2be2', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Region:</span>
-        <button onClick={() => updateGlobalStrategy('state_override', 'ALL')}
-          style={{ fontSize: '0.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-            background: stateOverride.length === 0 ? '#8a2be2' : 'rgba(255,255,255,0.06)',
-            color: stateOverride.length === 0 ? '#fff' : 'rgba(255,255,255,0.3)' }}>ALL</button>
-        {stateOverride.map(st => (
-          <button key={st} onClick={() => updateGlobalStrategy('state_override', st)}
-            style={{ fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#8a2be2', color: '#fff' }}
-          >{st} x</button>
-        ))}
-        <select 
-          value="" 
-          onChange={(e) => {
-            const st = e.target.value;
-            if (st) updateGlobalStrategy('state_override', st);
-          }}
-          style={{ 
-            fontSize: '0.58rem', padding: '2px 5px', borderRadius: '10px', 
-            border: '1px dashed rgba(138,43,226,0.4)', background: 'transparent', 
-            color: '#8a2be2', cursor: 'pointer', outline: 'none' 
-          }}
-        >
-          <option value="" disabled>+</option>
-          {['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'].filter(s => !stateOverride.includes(s)).map(st => (
-            <option key={st} value={st} style={{ background: '#111', color: '#fff' }}>{st}</option>
-          ))}
-        </select>
-      </div>
-      <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
-      {/* Target Facilities */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-        <span style={{ fontSize: '0.56rem', fontWeight: 800, color: '#00ffaa', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Targets:</span>
-        {['roller_rink', 'skate_park', 'skate_shop'].map(fac => {
-          const isActive = targetFacilities?.includes(fac);
-          return (
-            <button key={fac} onClick={() => updateGlobalStrategy('target_facilities', fac)}
-              style={{ fontSize: '0.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: '10px', border: isActive ? '1px solid #00ffaa' : '1px solid rgba(255,255,255,0.1)', cursor: 'pointer',
-                background: isActive ? 'rgba(0,255,170,0.15)' : 'rgba(255,255,255,0.02)',
-                color: isActive ? '#00ffaa' : 'rgba(255,255,255,0.4)' }}>{fac.replace('_', ' ').toUpperCase()}</button>
-          );
-        })}
-      </div>
-      <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
-      {/* Stealth toggles */}
-      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', flexShrink: 0 }}>
-        <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700 }}>Headless</span>
-        <label className="switch mini"><input type="checkbox" checked={isHeadless} onChange={e => toggleHeadless(e.target.checked)} /><span className="slider round" /></label>
-      </label>
-      <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', flexShrink: 0 }}>
-        <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700 }}>Spoof</span>
-        <label className="switch mini"><input type="checkbox" checked={identityRotation} onChange={e => updateGlobalStrategy('identity_rotation_enabled', e.target.checked)} /><span className="slider round" /></label>
-      </label>
-      <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
-      {/* Timing */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
-        <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.3)' }}>Cooldown</span>
-        <input type="number" className="mini-input" style={{ width: '58px' }} value={cooldownBase} onChange={e => updateGlobalStrategy('cooldown_base_ms', parseInt(e.target.value))} />
-        <span style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.18)' }}>ms</span>
-        <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.3)', marginLeft: '3px' }}>Jitter</span>
-        <input type="number" className="mini-input" style={{ width: '40px' }} value={cooldownJitter} onChange={e => updateGlobalStrategy('cooldown_jitter_pct', parseInt(e.target.value))} />
-        <span style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.18)' }}>%</span>
-        <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.3)', marginLeft: '3px' }}>Throttle</span>
-        <input type="number" className="mini-input" style={{ width: '58px' }} value={sleepInterval} onChange={e => updateGlobalStrategy('sleep_interval', parseInt(e.target.value))} />
-        <span style={{ fontSize: '0.54rem', color: 'rgba(255,255,255,0.18)' }}>ms</span>
-      </div>
-      {/* Power — pushed right */}
-      <div style={{ marginLeft: 'auto', display: 'flex', gap: '6px', flexShrink: 0, alignItems: 'center' }}>
-        <button className="btn-icon" onClick={() => setActiveTab('pipeline')} title="Factory Floor"
-          style={{ background: activeTab === 'pipeline' ? 'rgba(0, 255, 170, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'pipeline' ? '#00ffaa' : 'rgba(255,255,255,0.6)', border: activeTab === 'pipeline' ? '1px solid #00ffaa' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 800 }}>
-          FACTORY FLOOR
-        </button>
-        {/* Bulk Reset records back to target phase — respects global state + facility filters */}
-        <button
-           onClick={() => setShowBulkResetModal(true)}
-           disabled={isBulkResetting}
-           title={`Reset matching records back to a specific phase (Seeded, Deep Crawled, or Media Ready)`}
-           style={{ background: isBulkResetting ? 'rgba(255, 179, 0, 0.4)' : 'rgba(255, 179, 0, 0.15)', color: isBulkResetting ? '#fff' : '#ffb300', border: '1px solid rgba(255, 179, 0, 0.3)', padding: '4px 10px', borderRadius: '6px', cursor: isBulkResetting ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}
-        >
-          {isBulkResetting ? '⏳ RESETTING...' : '⚡ Reset Records'}
-        </button>
-        {/* Bulk Reset Website-less spots back to PENDING_WEBSITE */}
-        <button
-           onClick={async () => {
-             if (!confirm('Reset all website-less spots in the database back to PENDING_WEBSITE?')) return;
-             try {
-               const res = await fetch(`${API_BASE}/api/website-resolver/reset-missing`, { method: 'POST' });
-               const data = await res.json();
-               if (data.success) {
-                 alert(`Successfully reset ${data.count} website-less spots back to PENDING_WEBSITE!`);
-                 fetchPipelineStats();
-                 fetchQueue();
+            🛰️ Neogleamz Grid Control Deck
+          </span>
+        </div>
+
+        {/* Action Deck (Factory Floor, Reset, Sniper, Graveyard, Engine Brain, Boot, Halt) */}
+        <div style={{ display: 'flex', gap: '6px', flexShrink: 0, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button className="btn-icon" onClick={() => setActiveTab('pipeline')} title="Factory Floor"
+            style={{ background: activeTab === 'pipeline' ? 'rgba(0, 255, 170, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'pipeline' ? '#00ffaa' : 'rgba(255,255,255,0.6)', border: activeTab === 'pipeline' ? '1px solid #00ffaa' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 800 }}>
+            FACTORY FLOOR
+          </button>
+          
+          <button
+             onClick={() => setShowBulkResetModal(true)}
+             disabled={isBulkResetting}
+             title={`Reset matching records back to a specific phase (Seeded, Deep Crawled, or Media Ready)`}
+             style={{ background: isBulkResetting ? 'rgba(255, 179, 0, 0.4)' : 'rgba(255, 179, 0, 0.15)', color: isBulkResetting ? '#fff' : '#ffb300', border: '1px solid rgba(255, 179, 0, 0.3)', padding: '4px 10px', borderRadius: '6px', cursor: isBulkResetting ? 'not-allowed' : 'pointer', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            {isBulkResetting ? '⏳ RESETTING...' : '⚡ Reset Records'}
+          </button>
+          
+          <button
+             onClick={async () => {
+               if (!confirm('Reset all website-less spots in the database back to PENDING_WEBSITE?')) return;
+               try {
+                 const res = await fetch(`${API_BASE}/api/website-resolver/reset-missing`, { method: 'POST' });
+                 const data = await res.json();
+                 if (data.success) {
+                   alert(`Successfully reset ${data.count} website-less spots back to PENDING_WEBSITE!`);
+                   fetchPipelineStats();
+                   fetchQueue();
+                 }
+               } catch (e) {
+                 alert('Reset failed.');
                }
-             } catch (e) {
-               alert('Reset failed.');
-             }
-           }}
-           style={{ background: 'rgba(0, 255, 170, 0.15)', color: '#00ffaa', border: '1px solid rgba(0, 255, 170, 0.3)', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}
-        >
-          🔍 Reset Website-Less
-        </button>
-        <button className="btn-icon" onClick={() => setActiveTab('sniper')} title="Sniper Bench"
-          style={{ background: activeTab === 'sniper' ? 'rgba(255, 106, 0, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'sniper' ? '#ff6a00' : 'rgba(255,255,255,0.6)', border: activeTab === 'sniper' ? '1px solid #ff6a00' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>
-          🔫
-        </button>
-        <button className="btn-icon" onClick={() => setActiveTab('graveyard')} title="Garbage Can (Rejected & Purged)"
-          style={{ background: activeTab === 'graveyard' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'graveyard' ? '#f44336' : 'rgba(255,255,255,0.6)', border: activeTab === 'graveyard' ? '1px solid #f44336' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>
-          🗑️
-        </button>
-        <button className="btn-icon" onClick={() => setActiveTab('heuristics')} title="Heuristics Control Center"
-          style={{ background: activeTab === 'heuristics' ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'heuristics' ? '#38bdf8' : 'rgba(255,255,255,0.6)', border: activeTab === 'heuristics' ? '1px solid #38bdf8' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 800 }}>
-          🧠 ENGINE BRAIN
-        </button>
-        <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}
-          style={{ padding: '4px 12px', fontSize: '0.62rem', fontWeight: 800 }}>BOOT ALL</button>
-        <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}
-          style={{ padding: '4px 12px', fontSize: '0.62rem', fontWeight: 800 }}>HALT ALL</button>
+             }}
+             style={{ background: 'rgba(0, 255, 170, 0.15)', color: '#00ffaa', border: '1px solid rgba(0, 255, 170, 0.3)', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}
+           >
+             🔍 Reset Website-Less
+           </button>
+          
+          <button className="btn-icon" onClick={() => setActiveTab('sniper')} title="Sniper Bench"
+            style={{ background: activeTab === 'sniper' ? 'rgba(255, 106, 0, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'sniper' ? '#ff6a00' : 'rgba(255,255,255,0.6)', border: activeTab === 'sniper' ? '1px solid #ff6a00' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
+            🔫
+          </button>
+          <button className="btn-icon" onClick={() => setActiveTab('graveyard')} title="Garbage Can (Rejected & Purged)"
+            style={{ background: activeTab === 'graveyard' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'graveyard' ? '#f44336' : 'rgba(255,255,255,0.6)', border: activeTab === 'graveyard' ? '1px solid #f44336' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
+            🗑️
+          </button>
+          <button className="btn-icon" onClick={() => setActiveTab('heuristics')} title="Heuristics Control Center"
+            style={{ background: activeTab === 'heuristics' ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'heuristics' ? '#38bdf8' : 'rgba(255,255,255,0.6)', border: activeTab === 'heuristics' ? '1px solid #38bdf8' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 800 }}>
+            🧠 ENGINE BRAIN
+          </button>
+          <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}
+            style={{ padding: '4px 12px', fontSize: '0.62rem', fontWeight: 800 }}>BOOT ALL</button>
+          <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}
+            style={{ padding: '4px 12px', fontSize: '0.62rem', fontWeight: 800 }}>HALT ALL</button>
+        </div>
       </div>
+
+      {/* GRID CONTROL DECK (3 Columns) */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+        gap: '16px',
+        width: '100%',
+      }}>
+        {/* ================= COLUMN 1: TARGET STRATEGY ================= */}
+        <div className="hud-panel" style={{
+          background: 'rgba(255,255,255,0.01)',
+          border: '1px solid rgba(138,43,226,0.18)',
+          borderRadius: '12px',
+          padding: '16px',
+          boxShadow: 'inset 0 0 15px rgba(138,43,226,0.05)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+        }}>
+          <h3 style={{ fontSize: '0.72rem', fontWeight: 900, color: '#c084fc', textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>🎯</span> Target Strategy
+          </h3>
+          
+          {/* Region Override */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={{ fontSize: '0.56rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Region Coverage Override</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+              <button onClick={() => updateGlobalStrategy('state_override', 'ALL')}
+                style={{ fontSize: '0.58rem', fontWeight: 700, padding: '2px 7px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                  background: stateOverride.length === 0 ? '#8a2be2' : 'rgba(255,255,255,0.06)',
+                  color: stateOverride.length === 0 ? '#fff' : 'rgba(255,255,255,0.3)' }}>ALL</button>
+              {stateOverride.map(st => (
+                <button key={st} onClick={() => updateGlobalStrategy('state_override', st)}
+                  style={{ fontSize: '0.6rem', fontWeight: 800, padding: '2px 7px', borderRadius: '10px', border: 'none', cursor: 'pointer', background: '#8a2be2', color: '#fff' }}
+                >{st} ✕</button>
+              ))}
+              <select 
+                value="" 
+                onChange={(e) => {
+                  const st = e.target.value;
+                  if (st) updateGlobalStrategy('state_override', st);
+                }}
+                className="custom-dark"
+                style={{ padding: '2px 8px', borderRadius: '10px', fontSize: '0.58rem' }}
+              >
+                <option value="" disabled>+</option>
+                {['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY'].filter(s => !stateOverride.includes(s)).map(st => (
+                  <option key={st} value={st}>{st}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Target Facilities */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+            <span style={{ fontSize: '0.56rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Target Facilities</span>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {['roller_rink', 'skate_park', 'skate_shop'].map(fac => {
+                const isActive = targetFacilities?.includes(fac);
+                return (
+                  <button key={fac} onClick={() => updateGlobalStrategy('target_facilities', fac)}
+                    style={{ fontSize: '0.58rem', fontWeight: 700, padding: '3px 8px', borderRadius: '10px', border: isActive ? '1px solid #00ffaa' : '1px solid rgba(255,255,255,0.1)', cursor: 'pointer',
+                      background: isActive ? 'rgba(0,255,170,0.15)' : 'rgba(255,255,255,0.02)',
+                      color: isActive ? '#00ffaa' : 'rgba(255,255,255,0.4)',
+                      transition: 'all 0.2s ease' }}>
+                    {fac.replace('_', ' ').toUpperCase()}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* ================= COLUMN 2: AI & COMPUTE GEAR ================= */}
+        <div className="hud-panel" style={{
+          background: 'rgba(255,255,255,0.01)',
+          border: '1px solid rgba(162,0,255,0.18)',
+          borderRadius: '12px',
+          padding: '16px',
+          boxShadow: 'inset 0 0 15px rgba(162,0,255,0.05)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+        }}>
+          <h3 style={{ fontSize: '0.72rem', fontWeight: 900, color: '#d8b4fe', textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>🤖</span> AI & Compute Gear
+          </h3>
+
+          {(() => {
+            const lms = (status as any)?.lmsStatus;
+            const gpu = (status as any)?.gpuTelemetry;
+            const serverOn = lms?.serverStatus === 'ON';
+            const serverMissing = lms?.serverStatus === 'MISSING';
+            const loadedModels: string[] = lms?.loadedModels || [];
+            const loadedModel = loadedModels[0] || null;
+            const availModels: { key: string; arch: string; size: string; loaded: boolean }[] = lms?.availableModels || [];
+            const capsuleColor = serverOn ? '#c77dff' : serverMissing ? '#555' : '#ff2d55';
+            const glowColor = serverOn ? (loadedModel ? '#00ffaa' : '#ffb300') : '#ff2d55';
+            const vramPct = gpu?.vramPercent ?? 0;
+            const vramUsed = gpu?.vramUsedMB ?? 0;
+            const vramTotal = gpu?.vramTotalMB ?? 8192;
+            const gpuUtil = gpu?.gpuUtilPercent ?? 0;
+            const vramBarColor = vramPct > 90 ? '#ff2d55' : vramPct > 70 ? '#ffb300' : '#a200ff';
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{
+                      width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
+                      background: glowColor,
+                      boxShadow: `0 0 6px ${glowColor}`,
+                    }} />
+                    <span style={{ fontSize: '0.58rem', fontWeight: 800, color: capsuleColor, letterSpacing: '0.05em' }}>
+                      LM STUDIO
+                    </span>
+                  </div>
+                  
+                  <button
+                    onClick={async () => {
+                      try {
+                        await fetch(`${API_BASE}/api/llm/server/${serverOn ? 'stop' : 'start'}`, { method: 'POST' });
+                        fetchSystemStatus();
+                      } catch (e) { /* swallow */ }
+                    }}
+                    style={{
+                      fontSize: '0.52rem', fontWeight: 800, padding: '2px 6px', borderRadius: '6px',
+                      border: 'none', cursor: 'pointer',
+                      background: serverOn ? 'rgba(255,45,85,0.15)' : 'rgba(162,0,255,0.2)',
+                      color: serverOn ? '#ff3b30' : '#c77dff',
+                      marginLeft: 'auto',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    {serverMissing ? 'N/A' : serverOn ? 'SHUTDOWN' : 'ACTIVATE'}
+                  </button>
+                </div>
+
+                {serverOn && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    <select
+                      value={loadedModel || ''}
+                      onChange={async (e) => {
+                        const modelKey = e.target.value;
+                        if (!modelKey) return;
+                        try {
+                          await fetch(`${API_BASE}/api/llm/model/load`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ modelKey, contextLength: 8192, gpuOffload: 'max' }),
+                          });
+                          fetchSystemStatus();
+                        } catch (e) { /* swallow */ }
+                      }}
+                      title="Select model to load (auto-sets as detective model)"
+                      className="custom-dark"
+                      style={{ width: '100%', padding: '4px 8px' }}
+                    >
+                      {!loadedModel && <option value="">Load LLM Model...</option>}
+                      {availModels.map((m) => (
+                        <option key={m.key} value={m.key}>
+                          {m.loaded ? '● ' : ''}{m.key} ({m.size})
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Loaded model badges */}
+                    {loadedModels.map((m: string) => (
+                      <span key={m} style={{
+                        display: 'inline-flex', alignItems: 'center', justifyContent: 'space-between',
+                        fontSize: '0.54rem', fontWeight: 700, padding: '3px 8px', borderRadius: '6px',
+                        background: 'rgba(162,0,255,0.12)', color: '#d8b4fe', border: '1px solid rgba(162,0,255,0.2)',
+                      }}>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
+                          🧠 {m.replace(/llama-|mistralai\/|qwen|phi-/gi, '').replace('-instruct', '')}
+                        </span>
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            try {
+                              await fetch(`${API_BASE}/api/llm/model/unload`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ identifier: m }),
+                              });
+                              fetchSystemStatus();
+                            } catch (e) { /* swallow */ }
+                          }}
+                          title={`Unload ${m}`}
+                          style={{
+                            fontSize: '0.52rem', fontWeight: 900, padding: '0 4px', borderRadius: '4px',
+                            border: 'none', cursor: 'pointer', background: 'rgba(255,60,60,0.2)', color: '#ff6b6b',
+                            marginLeft: 'auto'
+                          }}
+                        >✕</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* VRAM / GPU Analytics */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.56rem' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>VRAM Telemetry</span>
+                    <span style={{ color: vramBarColor, fontWeight: 800 }}>
+                      {Math.round(vramUsed)}MB / {vramTotal}MB ({vramPct}%)
+                    </span>
+                  </div>
+                  <div style={{
+                    width: '100%', height: '6px', borderRadius: '3px',
+                    background: 'rgba(255,255,255,0.06)', overflow: 'hidden',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}>
+                    <div style={{
+                      width: `${vramPct}%`, height: '100%', borderRadius: '3px',
+                      background: `linear-gradient(90deg, ${vramBarColor}aa, ${vramBarColor})`,
+                      transition: 'width 0.4s ease',
+                    }} />
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.56rem', marginTop: '2px' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Core GPU load</span>
+                    <span style={{
+                      fontWeight: 800,
+                      color: gpuUtil > 80 ? '#ff5a00' : gpuUtil > 15 ? '#00ffaa' : 'rgba(255,255,255,0.4)',
+                    }}>
+                      {gpuUtil}% Load
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.56rem', marginTop: '4px', borderTop: '1px dashed rgba(255,255,255,0.06)', paddingTop: '4px' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Database Sync</span>
+                    <span style={{
+                      fontWeight: 800,
+                      color: status?.currentTarget === 'API OFFLINE' ? '#ff2d55' : '#00ffaa',
+                      textTransform: 'uppercase'
+                    }}>
+                      {status?.currentTarget === 'API OFFLINE' ? 'OFFLINE' : 'LIVE'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        {/* ================= COLUMN 3: PIPELINE & STEALTH ================= */}
+        <div className="hud-panel" style={{
+          background: 'rgba(255,255,255,0.01)',
+          border: '1px solid rgba(0,212,255,0.18)',
+          borderRadius: '12px',
+          padding: '16px',
+          boxShadow: 'inset 0 0 15px rgba(0,212,255,0.05)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
+        }}>
+          <h3 style={{ fontSize: '0.72rem', fontWeight: 900, color: '#00d4ff', textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>⚙️</span> Pipeline & Stealth
+          </h3>
+
+          {/* Daemons list */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <span style={{ fontSize: '0.56rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active Phase Daemons</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              {[
+                { id: 'indexer',          label: 'Phase 2: Detective', color: '#ff5a00', onKey: 'Indexer: online' },
+                { id: 'photographer',     label: 'Phase 3: Photo',     color: '#e91e63', onKey: 'Photographer: online' },
+                { id: 'publisher',        label: 'Phase 4: Publish',   color: '#00d4ff', onKey: 'Publisher: online' },
+              ].map(d => {
+                const isOn = status?.currentTarget?.includes(d.onKey);
+                return (
+                  <div key={d.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: isOn ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.15)', padding: '4px 8px', borderRadius: '6px', border: `1px solid ${isOn ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.02)'}` }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ background: isOn ? d.color : 'rgba(255,255,255,0.15)', boxShadow: isOn ? `0 0 6px ${d.color}` : '', width: '6px', height: '6px', borderRadius: '50%' }} />
+                      <span style={{ fontSize: '0.56rem', color: isOn ? '#fff' : 'rgba(255,255,255,0.3)', fontWeight: 700 }}>{d.label.toUpperCase()}</span>
+                    </div>
+                    <button onClick={() => triggerSpecificDaemon(d.id, isOn ? 'stop' : 'start')}
+                      style={{ fontSize: '0.52rem', fontWeight: 800, padding: '1px 5px', borderRadius: '4px', border: 'none', cursor: 'pointer', background: isOn ? 'rgba(255,60,60,0.2)' : `${d.color}22`, color: isOn ? '#ff6b6b' : d.color }}>
+                      {isOn ? 'STOP' : 'GO'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Stealth switches */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px', paddingBottom: '2px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+              <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700, textTransform: 'uppercase' }}>Headless</span>
+              <label className="switch mini"><input type="checkbox" checked={isHeadless} onChange={e => toggleHeadless(e.target.checked)} /><span className="slider round" /></label>
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+              <span style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.4)', fontWeight: 700, textTransform: 'uppercase' }}>Spoofing</span>
+              <label className="switch mini"><input type="checkbox" checked={identityRotation} onChange={e => updateGlobalStrategy('identity_rotation_enabled', e.target.checked)} /><span className="slider round" /></label>
+            </label>
+          </div>
+
+          {/* Timing parameters */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
+            <span style={{ fontSize: '0.56rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Stealth Timing Parameters</span>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>Cooldown</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <input type="number" className="console-readout" style={{ width: '58px' }} value={cooldownBase} onChange={e => updateGlobalStrategy('cooldown_base_ms', parseInt(e.target.value))} />
+                  <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)' }}>ms</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>Jitter</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <input type="number" className="console-readout" style={{ width: '40px' }} value={cooldownJitter} onChange={e => updateGlobalStrategy('cooldown_jitter_pct', parseInt(e.target.value))} />
+                  <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)' }}>%</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>Throttle</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <input type="number" className="console-readout" style={{ width: '58px' }} value={sleepInterval} onChange={e => updateGlobalStrategy('sleep_interval', parseInt(e.target.value))} />
+                  <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)' }}>ms</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
     </>
   );
 
@@ -1374,8 +1418,9 @@ function App() {
               liveStreamText={liveStreamText}
               isStreaming={isStreaming}
               currentAnalyzingSpot={currentAnalyzingSpot}
-              isAnchored={isAnchored}
-              setIsAnchored={setIsAnchored}
+              logs={logs}
+              historyLogs={historyLogs}
+              fetchHistory={fetchHistory}
             />
 
               <div style={{marginTop: '2rem'}}>
@@ -1416,21 +1461,24 @@ function App() {
         {/* =========== PHASE 4: DATABANK QA =========== */}
         {['pipeline', 'graveyard'].includes(activeTab) && (
             <div className="tab-pane graveyard fade-in">
-              <div className="explainer-block" style={{marginBottom: '1rem', background: activeTab === 'graveyard' ? 'rgba(244, 67, 54, 0.05)' : 'rgba(76, 175, 80, 0.05)', border: `1px solid ${activeTab === 'graveyard' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(76, 175, 80, 0.2)'}`}}>
-                <h3 style={{marginTop: 0, color: activeTab === 'graveyard' ? '#f44336' : '#4caf50'}}>
-                  {activeTab === 'graveyard' ? 'Graveyard: Rejected & Purged Records' : 'Publisher: Live Publish'}
-                </h3>
-                <p>{activeTab === 'graveyard' 
-                    ? 'Review records that were blocked by the Guillotine or manually rejected. These will not be published.'
-                    : 'Final review before publication. Filter and inspect records, then publish state-by-state or individually. Use the view toggle to switch between Card, List, and Table views.'}
-                </p>
+              <div style={{ marginBottom: '1rem' }}>
+                <SectionHdr 
+                  id="publisher_explainer" 
+                  label={activeTab === 'graveyard' ? 'Graveyard: Rejected & Purged Records' : 'Publisher: Live Publish'} 
+                  color={activeTab === 'graveyard' ? '#f44336' : '#4caf50'} 
+                />
               </div>
+              {activeTab === 'graveyard' && !isCollapsed('publisher_explainer') && (
+                <div className="explainer-block" style={{marginBottom: '1rem', background: 'rgba(244, 67, 54, 0.05)', border: '1px solid rgba(244, 67, 54, 0.2)'}}>
+                  <p style={{ margin: 0 }}>Review records that were blocked by the Guillotine or manually rejected. These will not be published.</p>
+                </div>
+              )}
 
 
               {/* =========== STATUS COVERAGE MAP =========== */}
               {activeTab !== 'graveyard' && (
-                <div style={{ marginBottom: '2rem', padding: '1.5rem', background: 'rgba(255,179,0,0.03)', border: '1px solid rgba(255,179,0,0.2)', borderRadius: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isCollapsed('coverage_map') ? 0 : '0.5rem' }}>
+                <div style={{ marginBottom: '2rem' }}>
+                  <div style={{ marginBottom: isCollapsed('coverage_map') ? 0 : '0.5rem' }}>
                     <SectionHdr id="coverage_map" label="Pipeline Coverage Map" color="#ffb300" right={
                       !isCollapsed('coverage_map') && (
                         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1443,39 +1491,41 @@ function App() {
                     }/>
                   </div>
                   {!isCollapsed('coverage_map') && (
-                    <div style={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '800px', margin: '0 auto' }}>
-                      {/* @ts-ignore */}
-                      <USAMap
-                        defaultFill="rgba(255,255,255,0.05)"
-                        customize={(() => {
-                          const colors: Record<string, any> = {};
-                          const STATUS_PRIORITY = ['MEDIA_READY', 'DEEP_CRAWLED', 'SEEDED'];
-                          const STATUS_COLOR: Record<string, string> = {
-                            MEDIA_READY: '#e91e63', DEEP_CRAWLED: '#ff9800', SEEDED: '#8a2be2',
-                          };
-                          databankCoverage.forEach((row: any) => {
-                            if (!row.state || row.state === 'UNKNOWN') return;
-                            const total = row.total || 0;
-                            if (total === 0) return;
-                            const dominant = STATUS_PRIORITY.find(s => (row[s] || 0) > 0) || 'SEEDED';
-                            const baseColor = STATUS_COLOR[dominant] || '#8a2be2';
-                            const density = Math.min(total / 40, 1);
-                            const opacity = Math.max(density, 0.35);
-                            colors[row.state] = {
-                              fill: baseColor + Math.round(opacity * 255).toString(16).padStart(2, '0'),
-                              customText: total.toString()
+                    <div style={{ padding: '1.5rem', background: 'rgba(255,179,0,0.03)', border: '1px solid rgba(255,179,0,0.2)', borderRadius: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'center', width: '100%', maxWidth: '800px', margin: '0 auto' }}>
+                        {/* @ts-ignore */}
+                        <USAMap
+                          defaultFill="rgba(255,255,255,0.05)"
+                          customize={(() => {
+                            const colors: Record<string, any> = {};
+                            const STATUS_PRIORITY = ['MEDIA_READY', 'DEEP_CRAWLED', 'SEEDED'];
+                            const STATUS_COLOR: Record<string, string> = {
+                              MEDIA_READY: '#e91e63', DEEP_CRAWLED: '#ff9800', SEEDED: '#8a2be2',
                             };
-                          });
-                          return colors;
-                        })()}
-                        onClick={(e: any) => {
-                          const st = e.target?.dataset?.name || e.target?.id;
-                          if (st && st.length === 2) {
-                            setStateChip(st);
-                            fetchSpots(0, gridFilter, sortCol, sortDir, searchQuery, chips, st);
-                          }
-                        }}
-                      />
+                            databankCoverage.forEach((row: any) => {
+                              if (!row.state || row.state === 'UNKNOWN') return;
+                              const total = row.total || 0;
+                              if (total === 0) return;
+                              const dominant = STATUS_PRIORITY.find(s => (row[s] || 0) > 0) || 'SEEDED';
+                              const baseColor = STATUS_COLOR[dominant] || '#8a2be2';
+                              const density = Math.min(total / 40, 1);
+                              const opacity = Math.max(density, 0.35);
+                              colors[row.state] = {
+                                fill: baseColor + Math.round(opacity * 255).toString(16).padStart(2, '0'),
+                                customText: total.toString()
+                              };
+                            });
+                            return colors;
+                          })()}
+                          onClick={(e: any) => {
+                            const st = e.target?.dataset?.name || e.target?.id;
+                            if (st && st.length === 2) {
+                              setStateChip(st);
+                              fetchSpots(0, gridFilter, sortCol, sortDir, searchQuery, chips, st);
+                            }
+                          }}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>
@@ -1505,15 +1555,16 @@ function App() {
                   onChange={e => { setSearchQuery(e.target.value); setActiveStateFilter(e.target.value.trim().length === 2 ? e.target.value.trim().toUpperCase() : null); }}
                 />
                 {/* Status filter */}
-                <select className="form-input" style={{ width: 'auto', fontSize: '0.75rem' }} value={gridFilter} onChange={e => setGridFilter(e.target.value)}>
-                  <option value="ALL">All Status</option>
-                  <option value="PENDING">PENDING</option>
-                  <option value="SEEDED">SEEDED</option>
-                  <option value="DEEP_CRAWLED">DEEP_CRAWLED</option>
-                  <option value="MEDIA_READY">MEDIA_READY</option>
-                  <option value="PUBLISHED">PUBLISHED</option>
-                  <option value="STALLED">STALLED</option>
-                  <option value="REJECTED">REJECTED</option>
+                <select className="custom-dark" style={{ width: 'auto', fontSize: '0.75rem' }} value={gridFilter} onChange={e => setGridFilter(e.target.value)}>
+                  <option value="ALL">All Statuses</option>
+                  <option value="PENDING_WEBSITE">PENDING_WEBSITE (Resolving)</option>
+                  <option value="STALLED_WEBSITE">STALLED_WEBSITE (Stalled Resolver)</option>
+                  <option value="SEEDED">SEEDED (Seeded)</option>
+                  <option value="DEEP_CRAWLED">DEEP_CRAWLED (Deep Crawled)</option>
+                  <option value="MEDIA_READY">MEDIA_READY (Media Ready)</option>
+                  <option value="PUBLISHED">PUBLISHED (Published)</option>
+                  <option value="STALLED">STALLED (Stalled)</option>
+                  <option value="REJECTED">REJECTED (Graveyard)</option>
                 </select>
                 {/* State filter */}
                 <input className="form-input" style={{ width: '68px', fontSize: '0.75rem', textTransform: 'uppercase', textAlign: 'center' }}
@@ -1522,7 +1573,7 @@ function App() {
                   onChange={e => setStateChip(e.target.value.toUpperCase())}
                 />
                 {/* Sort col */}
-                <select className="form-input" style={{ width: 'auto', fontSize: '0.75rem' }}
+                <select className="custom-dark" style={{ width: 'auto', fontSize: '0.75rem' }}
                   value={sortCol}
                   onChange={e => { setSortCol(e.target.value); fetchSpots(0, gridFilter, e.target.value, sortDir); }}
                 >
@@ -1865,17 +1916,19 @@ function App() {
                         </td>
                         <td className="status-cell">
                            <select 
-                             className={`table-input status-pill ${row.verification_status?.toLowerCase() || 'pending'}`} 
+                             className={`custom-dark status-pill ${row.verification_status?.toLowerCase() || 'pending'}`} 
                              value={row.verification_status || 'PENDING'} 
                              onChange={e => updateSpotStatus(row.id, e.target.value)}
                              style={{ padding: '6px 8px', borderRadius: '6px', cursor: 'pointer', appearance: 'menulist' }}
                            >
-                              <option value="SEEDED"> SEEDED</option>
-                                <option value="DEEP_CRAWLED"> DEEP_CRAWLED</option>
-                                <option value="MEDIA_READY"> MEDIA_READY</option>
-                                <option value="DEPRECATED"> Deprecated</option>
-                                <option value="STALLED"> Stalled</option>
-                                <option value="REJECTED"> Graveyard</option>
+                             <option value="PENDING_WEBSITE">PENDING_WEBSITE (Resolving)</option>
+                             <option value="STALLED_WEBSITE">STALLED_WEBSITE (Stalled Resolver)</option>
+                             <option value="SEEDED">SEEDED (Seeded)</option>
+                             <option value="DEEP_CRAWLED">DEEP_CRAWLED (Deep Crawled)</option>
+                             <option value="MEDIA_READY">MEDIA_READY (Media Ready)</option>
+                             <option value="PUBLISHED">PUBLISHED (Published)</option>
+                             <option value="STALLED">STALLED (Stalled)</option>
+                             <option value="REJECTED">REJECTED (Graveyard)</option>
                            </select>
                         </td>
                         <td>
@@ -1977,6 +2030,15 @@ function App() {
             </div>
             )}
             </div>}  {/* end databank_grid collapsible */}
+
+            {activeTab === 'pipeline' && logs && historyLogs && fetchHistory && (
+              <div style={{ marginTop: '2rem' }}>
+                <SectionHdr id="omni_terminal" label="Omni-Terminal (Global Scope)" color="#00ffaa" />
+                {!isCollapsed('omni_terminal') && (
+                  <OmniTerminal logs={logs} historyLogs={historyLogs} fetchHistory={fetchHistory} />
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -2007,195 +2069,9 @@ function App() {
         </div>
       )}
 
-      {activeTab !== 'pipeline' && (
-      <div className="log-panel panel">
-        <div className="log-header">
-           <h2 className="panel-header" style={{margin:0}}>
-             {activeTab === 'phase1' ? 'Phase 1: Seed Engine Logs' :
-              activeTab === 'phase2' ? 'Phase 2: Detective Logs' :
-              activeTab === 'phase3' ? 'Phase 3: Photographer Logs' :
-              activeTab === 'phase4' ? 'Phase 4: Publisher Logs' :
-              'Omni-Terminal (Restricted Access)'}
-           </h2>
-           <button className="btn-mini" onClick={fetchHistory}>PERSISTENT HISTORY</button>
-        </div>
-        <div className="log-container" ref={logsRef}>
-          {logs
-             .filter(log => {
-                if (activeTab === 'phase1') return log.source === 'Phase 1' || log.source === 'System';
-                if (activeTab === 'phase2') return log.source === 'Phase 2' || log.source === 'System';
-             if (activeTab === 'phase3') return log.source === 'Photographer' || log.source === 'System';
-             if (activeTab === 'phase4') return log.source === 'Publisher' || log.source === 'System';
-                return true; 
-             })
-             .map((log, i) => (
-               <div key={i} className={`log-entry ${log.type === 'ERROR' ? 'error' : ''}`}>
-                 <span className="log-timestamp">[{new Date().toLocaleTimeString()}]</span>
-                 <span style={{ color: 'var(--primary-color)', fontWeight: 'bold', marginRight: '8px' }}>
-                    [{log.source || 'UNKNOWN'}]
-                 </span> 
-                 {log.message}
-               </div>
-          ))}
-          {logs.filter(log => {
-             if (activeTab === 'phase1') return log.source === 'Phase 1' || log.source === 'System';
-             if (activeTab === 'phase2') return log.source === 'Phase 2' || log.source === 'System';
-             if (activeTab === 'phase3') return log.source === 'Photographer' || log.source === 'System';
-             if (activeTab === 'phase4') return log.source === 'Publisher' || log.source === 'System';
-             return true;
-          }).length === 0 && (
-             <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', padding: '1rem' }}>No active telemetry signals detected for this phase.</div>
-          )}
-        </div>
 
-        
-        <div className="log-container mini">
-            {historyLogs.slice(-10).map((line, i) => <div key={i} className="log-entry history">{line}</div>)}
-        </div>
-      </div>
-        )}
 
-      {isStreaming && !isAnchored && !isClosed && (
-        <div style={{
-          position: 'fixed',
-          left: `${brainPos.x}px`,
-          top: `${brainPos.y}px`,
-          width: '450px',
-          height: isMinimized ? '38px' : '400px',
-          background: 'rgba(10, 10, 15, 0.96)',
-          border: '1px solid #ff5a00',
-          borderRadius: '12px',
-          boxShadow: '0 15px 45px rgba(0, 0, 0, 0.65), 0 0 25px rgba(255, 90, 0, 0.18)',
-          zIndex: 9999,
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          backdropFilter: 'blur(15px)',
-          transition: 'height 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-        }}>
-          {/* Header */}
-          <div 
-            onMouseDown={handleMouseDown}
-            style={{ 
-              background: 'rgba(255, 90, 0, 0.08)', 
-              padding: '8px 14px', 
-              fontSize: '0.7rem', 
-              fontWeight: 800, 
-              color: '#ff5a00', 
-              textTransform: 'uppercase', 
-              letterSpacing: '0.12em', 
-              display: 'flex', 
-              justifyContent: 'space-between', 
-              alignItems: 'center',
-              cursor: 'move',
-              userSelect: 'none',
-              borderBottom: isMinimized ? 'none' : '1px solid rgba(255, 90, 0, 0.15)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>
-              <span>🧠 Brain</span>
-              {currentAnalyzingSpot && (
-                <span 
-                  title={currentAnalyzingSpot}
-                  style={{ 
-                    fontSize: '0.6rem', 
-                    color: 'rgba(255, 255, 255, 0.72)', 
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    padding: '2px 8px', 
-                    borderRadius: '4px',
-                    fontFamily: 'JetBrains Mono, monospace',
-                    letterSpacing: 'normal',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap'
-                  }}
-                >
-                  {currentAnalyzingSpot}
-                </span>
-              )}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsAnchored(true);
-                }}
-                style={{
-                  background: 'rgba(255, 90, 0, 0.15)',
-                  border: '1px solid rgba(255, 90, 0, 0.3)',
-                  borderRadius: '4px',
-                  color: '#ff5a00',
-                  fontSize: '0.52rem',
-                  fontWeight: 900,
-                  padding: '2px 6px',
-                  cursor: 'pointer',
-                  fontFamily: 'JetBrains Mono, monospace'
-                }}
-                title="Anchor this console into the Phase 2 Assembly line row"
-              >
-                🔒 Anchor
-              </button>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsMinimized(!isMinimized);
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#ff5a00',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  padding: '0 4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  fontWeight: 'bold'
-                }}
-                title={isMinimized ? 'Expand window' : 'Minimize window'}
-              >
-                {isMinimized ? '＋' : '➖'}
-              </button>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsClosed(true);
-                }}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'rgba(255,255,255,0.4)',
-                  fontSize: '1rem',
-                  cursor: 'pointer',
-                  padding: '0 4px',
-                  display: 'flex',
-                  alignItems: 'center'
-                }}
-                title="Close console overlay"
-              >
-                ✕
-              </button>
-              <span className="pulse-dot" style={{ background: '#ff5a00', width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block', marginLeft: '2px' }}></span>
-            </div>
-          </div>
-          {/* Terminal Screen */}
-          {!isMinimized && (
-            <div style={{ 
-              padding: '12px 14px', 
-              color: '#00ffaa', 
-              fontFamily: 'JetBrains Mono, monospace', 
-              fontSize: '0.74rem', 
-              whiteSpace: 'pre-wrap', 
-              overflowY: 'auto', 
-              flex: 1, 
-              textShadow: '0 0 5px rgba(0,255,170,0.4)',
-              background: 'rgba(0, 0, 0, 0.4)'
-            }}>
-              {liveStreamText || 'Initializing neural link...'}
-              <span className="cursor-blink" style={{ animation: 'blink 1s step-end infinite' }}>_</span>
-            </div>
-          )}
-        </div>
-      )}
+
 
       {/* Record Edit Modal Overlay */}
       {editingId && editForm && (
