@@ -542,7 +542,13 @@ export const BeltNode: React.FC<BeltProps> = ({
                   spot={carouselSpots[carouselIdx]} 
                   variant="polaroid" 
                   readOnly={false} 
-                  proxyImg={(url: string | null) => url ? `http://localhost:5999/api/proxy-image?url=${encodeURIComponent(url)}` : null} 
+                  proxyImg={(url: string | null) => {
+                    if (!url) return null;
+                    if (url.includes('supabase')) return url;
+                    if (url.startsWith('/local-bucket')) return `http://localhost:5999${url}`;
+                    if (url.includes('localhost:5999') || url.includes('127.0.0.1:5999')) return url;
+                    return `http://localhost:5999/api/img-proxy?url=${encodeURIComponent(url)}`;
+                  }} 
                   onBlock={onBlockSpot}
                   onPurge={onPurgeSpot}
                   onSetHero={onSetHero}
@@ -568,7 +574,13 @@ export const BeltNode: React.FC<BeltProps> = ({
                   spot={sc.rawSpot} 
                   variant="polaroid" 
                   readOnly={false} 
-                  proxyImg={(url: string | null) => url ? `http://localhost:5999/api/proxy-image?url=${encodeURIComponent(url)}` : null} 
+                  proxyImg={(url: string | null) => {
+                    if (!url) return null;
+                    if (url.includes('supabase')) return url;
+                    if (url.startsWith('/local-bucket')) return `http://localhost:5999${url}`;
+                    if (url.includes('localhost:5999') || url.includes('127.0.0.1:5999')) return url;
+                    return `http://localhost:5999/api/img-proxy?url=${encodeURIComponent(url)}`;
+                  }} 
                   onBlock={onBlockSpot}
                   onPurge={onPurgeSpot}
                   onSetHero={onSetHero}

@@ -7,7 +7,17 @@ const API = 'http://localhost:5999';
 
 type RunState = 'idle' | 'running' | 'done' | 'error';
 
-const proxyImg = (url: string | null) => url;
+const proxyImg = (url: string | null) => {
+  if (!url) return null;
+  if (url.includes('supabase')) return url;
+  if (url.startsWith('/local-bucket')) {
+    return `${API}${url}`;
+  }
+  if (url.includes('localhost:5999') || url.includes('127.0.0.1:5999')) {
+    return url;
+  }
+  return `${API}/api/img-proxy?url=${encodeURIComponent(url)}`;
+};
 
 export const SniperBench: React.FC = () => {
   const { fields, loading: fieldsLoading } = useFieldRegistry();

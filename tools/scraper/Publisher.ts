@@ -172,44 +172,58 @@ async function runPublisher() {
             const remotePhotos: string[] = [];
             for (let i = 0; i < payload.photos.length; i++) {
               const photoUrl = payload.photos[i];
-              if (typeof photoUrl === 'string' && photoUrl.startsWith('http://localhost:5999/api/photos')) {
-                // Extract state, id, filename
-                const urlParts = photoUrl.split('/');
-                const filename = urlParts.pop();
-                const id = urlParts.pop();
-                const state = urlParts.pop();
-                
-                if (state && id && filename) {
-                  const localPath = path.resolve(__dirname, '../../.scraper-data/photos', state, id, filename);
-                  if (fs.existsSync(localPath)) {
-                    const fileBuffer = fs.readFileSync(localPath);
-                    const ext = filename.split('.').pop() || 'jpg';
-                    const contentType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
-                    const storagePath = `${state}/${id}/${filename}`;
-                    
-                    console.log(`[Publisher] ⬆️  Uploading ${filename}...`);
-                    const { data, error } = await supabase.storage.from('spot-photos').upload(storagePath, fileBuffer, {
-                      contentType,
-                      upsert: true
-                    });
-                    
-                    if (error) {
-                      console.error(`[Publisher] ❌ Failed to upload photo ${filename}: ${error.message}`);
-                      remotePhotos.push(photoUrl);
-                    } else {
-                      const { data: publicUrlData } = supabase.storage.from('spot-photos').getPublicUrl(storagePath);
-                      if (publicUrlData && publicUrlData.publicUrl) {
-                        remotePhotos.push(publicUrlData.publicUrl);
-                        console.log(`[Publisher] ☁️  Uploaded -> ${publicUrlData.publicUrl}`);
-                      } else {
-                        remotePhotos.push(photoUrl);
-                      }
-                    }
-                  } else {
-                    console.warn(`[Publisher] ⚠️ Local photo not found on disk: ${localPath}`);
+              
+              const isLocalPhoto = typeof photoUrl === 'string' && photoUrl.startsWith('http://localhost:5999/api/photos');
+              const isLocalBucket = typeof photoUrl === 'string' && photoUrl.startsWith('/local-bucket/');
+
+              if (isLocalPhoto || isLocalBucket) {
+                let localPath = '';
+                let filename = '';
+                let storagePath = '';
+
+                if (isLocalPhoto) {
+                  const urlParts = photoUrl.split('/');
+                  filename = urlParts.pop() || '';
+                  const id = urlParts.pop() || '';
+                  const state = urlParts.pop() || '';
+                  if (state && id && filename) {
+                    localPath = path.resolve(__dirname, '../../.scraper-data/photos', state, id, filename);
+                    storagePath = `${state}/${id}/${filename}`;
+                  }
+                } else if (isLocalBucket) {
+                  const urlParts = photoUrl.split('/');
+                  filename = urlParts.pop() || '';
+                  if (filename) {
+                    localPath = path.resolve(__dirname, '../../.scraper-data/bucket', filename);
+                    storagePath = `${spot.state || 'US'}/${spot.id}/${filename}`;
+                  }
+                }
+
+                if (localPath && fs.existsSync(localPath)) {
+                  const fileBuffer = fs.readFileSync(localPath);
+                  const ext = filename.split('.').pop() || 'jpg';
+                  const contentType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+                  
+                  console.log(`[Publisher] ⬆️  Uploading ${filename}...`);
+                  const { data, error } = await supabase.storage.from('spot-photos').upload(storagePath, fileBuffer, {
+                    contentType,
+                    upsert: true
+                  });
+                  
+                  if (error) {
+                    console.error(`[Publisher] ❌ Failed to upload photo ${filename}: ${error.message}`);
                     remotePhotos.push(photoUrl);
+                  } else {
+                    const { data: publicUrlData } = supabase.storage.from('spot-photos').getPublicUrl(storagePath);
+                    if (publicUrlData && publicUrlData.publicUrl) {
+                      remotePhotos.push(publicUrlData.publicUrl);
+                      console.log(`[Publisher] ☁️  Uploaded -> ${publicUrlData.publicUrl}`);
+                    } else {
+                      remotePhotos.push(photoUrl);
+                    }
                   }
                 } else {
+                  console.warn(`[Publisher] ⚠️ Local photo not found on disk: ${localPath}`);
                   remotePhotos.push(photoUrl);
                 }
               } else {

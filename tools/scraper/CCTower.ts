@@ -82,6 +82,13 @@ if (!fs.existsSync(PHOTOS_DIR)) {
   fs.mkdirSync(PHOTOS_DIR, { recursive: true });
 }
 app.use('/api/photos', express.static(PHOTOS_DIR));
+
+// ─── Local Bucket Storage (Supabase Migrated Photos) ─────────────────────────
+const BUCKET_DIR = path.resolve(__dirname, '../../.scraper-data/bucket');
+if (!fs.existsSync(BUCKET_DIR)) {
+  fs.mkdirSync(BUCKET_DIR, { recursive: true });
+}
+app.use('/local-bucket', express.static(BUCKET_DIR));
 // ────────────────────────────────────────────────────────────────────────────
 
 let isRunning = false;
@@ -1533,7 +1540,7 @@ app.get('/api/stats/databank-coverage', async (req, res) => {
 
 // --- Image Proxy: pipes external photo URLs server-side to bypass referrer/CORS restrictions ---
 // Used by the dashboard so Street View Static and other CDN images render from localhost.
-app.get('/api/img-proxy', async (req, res) => {
+app.get(['/api/img-proxy', '/api/proxy-image'], async (req, res) => {
   const url = req.query.url as string;
   if (!url || !url.startsWith('http')) {
     res.status(400).send('Missing or invalid url param');

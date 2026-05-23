@@ -15,6 +15,14 @@ const proxyImg = (url: string | null) => {
   if (!url) return null;
   // Supabase CDN URLs are already ours — serve directly
   if (url.includes('supabase')) return url;
+  // Local bucket relative URLs — append API base and serve directly
+  if (url.startsWith('/local-bucket')) {
+    return `${API_BASE}${url}`;
+  }
+  // Local backend URLs (localhost:5999) — serve directly without proxying
+  if (url.includes('localhost:5999') || url.includes('127.0.0.1:5999')) {
+    return url;
+  }
   // Everything else (googleapis Street View, etc.) goes through the proxy
   return `${API_BASE}/api/img-proxy?url=${encodeURIComponent(url)}`;
 };
