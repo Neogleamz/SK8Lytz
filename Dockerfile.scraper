@@ -1,14 +1,30 @@
-# Use the official Bun Alpine image for minimal footprint
-FROM oven/bun:alpine
+# Use the official Bun Debian image for Puppeteer and native compatibility
+FROM oven/bun:1
 
 # Set working directory
 WORKDIR /app
 
-# Copy package management files
+# Install build dependencies for native modules (like better-sqlite3)
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
+
+# Copy root package management files
 COPY package.json ./
 
-# Install dependencies
-RUN bun install --ignore-scripts
+# Copy all the sub-project package.jsons so we can install their dependencies
+COPY tools/scraper/package.json ./tools/scraper/
+COPY tools/scraper-dashboard/package.json ./tools/scraper-dashboard/
+COPY tools/discord-bridge/package.json ./tools/discord-bridge/
+
+# Install root dependencies
+RUN bun install
+
+# Install sub-project dependencies
+RUN cd tools/scraper && bun install --trust better-sqlite3
+RUN cd tools/scraper-dashboard && bun install
+RUN cd tools/discord-bridge && bun install
+
+# Download the exact Chrome version expected by Puppeteer (21.9.0) and install dependencies (requires fresh apt-get update)
+RUN apt-get update && cd tools/scraper && bunx puppeteer browsers install chrome --install-deps && rm -rf /var/lib/apt/lists/*
 
 # Copy the entire workspace
 COPY . .
@@ -16,8 +32,9 @@ COPY . .
 # Ensure logs directory exists
 RUN mkdir -p tools/scraper/logs
 
-# Expose CCTower Port
+# Expose CCTower and Dashboard Ports
 EXPOSE 5999
+EXPOSE 5998
 
 # Set the entrypoint to the newly refactored CCTower master process
 CMD ["bun", "run", "tools/scraper/CCTower.ts"]

@@ -47,12 +47,30 @@ const COOLDOWN_MS = 5000;
 const _log = console.log;
 const _err = console.error;
 
-const pushLog = (type: 'INFO' | 'ERROR', message: string) => {
-  fetch('http://localhost:5999/api/logs/ingest', { 
-    method: 'POST', 
-    headers: { 'Content-Type': 'application/json' }, 
-    body: JSON.stringify({ type, source: 'Publisher', message }) 
+let logQueue: { type: string; source: string; message: string }[] = [];
+let flushTimeout: any = null;
+
+const queueLog = (type: string, source: string, message: string) => {
+  logQueue.push({ type, source, message });
+  if (!flushTimeout) {
+    flushTimeout = setTimeout(flushLogQueue, 100);
+  }
+};
+
+const flushLogQueue = () => {
+  flushTimeout = null;
+  if (logQueue.length === 0) return;
+  const batch = [...logQueue];
+  logQueue = [];
+  fetch('http://localhost:5999/api/logs/ingest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(batch)
   }).catch(() => {});
+};
+
+const pushLog = (type: 'INFO' | 'ERROR', message: string) => {
+  queueLog(type, 'Publisher', message);
 };
 
 const reportPulse = (delayMs: number, target?: string | null) => {
@@ -120,6 +138,27 @@ async function runPublisher() {
           const payload = { ...spot };
           delete payload.sync_required; // Don't push local sync flag
           delete payload.raw_data; // Exclude raw backup JSON
+
+          // Automatically strip all local-only database columns that aren't in Supabase production
+          const allowedKeys = new Set([
+            'id', 'name', 'lat', 'lng', 'city', 'state', 'zip', 'street_address', 'phone_number', 'website',
+            'google_place_id', 'google_maps_url', 'business_status', 'rating', 'user_ratings_total',
+            'opening_hours', 'operator_description', 'facility_type', 'is_published', 'verification_status',
+            'has_adult_night', 'has_pro_shop', 'has_proshop', 'is_deep_crawled', 'raw_knowledge_panel',
+            'photos', 'candidate_photos', 'candidate_links', 'ai_metadata', 'last_attempted_at',
+            'last_enriched_at', 'retry_count', 'created_at', 'surface_type', 'is_indoor', 'adult_night_details',
+            'source', 'is_verified', 'updated_at', 'updated_by', 'is_featured', 'has_lights', 'has_fee',
+            'operator_name', 'has_rental', 'is_wheelchair_accessible', 'has_wifi', 'has_toilets', 'has_food',
+            'has_ac', 'has_lockers', 'capacity', 'hosts_derby', 'surface_quality', 'vibe_score', 'vibe_rating',
+            'cultural_metadata', 'instagram_url', 'facebook_url', 'tiktok_url', 'schedule_url', 'pricing_data',
+            'special_events', 'adult_night_schedule', 'email_addresses', 'address', 'phone', 'socials'
+          ]);
+
+          Object.keys(payload).forEach(key => {
+            if (!allowedKeys.has(key)) {
+              delete payload[key];
+            }
+          });
 
           // Serialize JSON columns properly for Supabase JSONB
           ['opening_hours', 'raw_knowledge_panel', 'photos', 'candidate_photos', 'candidate_links', 'ai_metadata', 'email_addresses'].forEach(field => {

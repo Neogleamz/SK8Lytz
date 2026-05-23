@@ -36,24 +36,99 @@ const gracefulShutdown = (signal: string) => {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
+import http from 'http';
+
+function safePost(urlStr: string, body: any): Promise<void> {
+  return new Promise<void>((resolve) => {
+    try {
+      const url = new URL(urlStr);
+      const postData = JSON.stringify(body);
+      const req = http.request({
+        hostname: url.hostname,
+        port: url.port || 80,
+        path: url.pathname,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(postData)
+        },
+        timeout: 5000
+      }, (res) => {
+        res.resume();
+        resolve();
+      });
+      req.on('error', () => resolve());
+      req.on('timeout', () => { req.destroy(); resolve(); });
+      req.write(postData);
+      req.end();
+    } catch {
+      resolve();
+    }
+  });
+}
+
+function safeGet(urlStr: string, fallback: any = {}): Promise<any> {
+  return new Promise<any>((resolve) => {
+    try {
+      const url = new URL(urlStr);
+      const req = http.request({
+        hostname: url.hostname,
+        port: url.port || 80,
+        path: url.pathname,
+        method: 'GET',
+        timeout: 5000
+      }, (res) => {
+        let data = '';
+        res.on('data', (chunk) => { data += chunk; });
+        res.on('end', () => {
+          try {
+            resolve(JSON.parse(data));
+          } catch {
+            resolve(fallback);
+          }
+        });
+      });
+      req.on('error', () => resolve(fallback));
+      req.on('timeout', () => { req.destroy(); resolve(fallback); });
+      req.end();
+    } catch {
+      resolve(fallback);
+    }
+  });
+}
+
 // ─── Telemetry Hook to CCTower ─────────────────────────────────────────────
 const _log = console.log;
 const _err = console.error;
 
+let logQueue: { type: string; source: string; message: string }[] = [];
+let flushTimeout: any = null;
+
+const queueLog = (type: string, source: string, message: string) => {
+  logQueue.push({ type, source, message });
+  if (!flushTimeout) {
+    flushTimeout = setTimeout(flushLogQueue, 100);
+  }
+};
+
+const flushLogQueue = () => {
+  flushTimeout = null;
+  if (logQueue.length === 0) return;
+  const batch = [...logQueue];
+  logQueue = [];
+  safePost('http://localhost:5999/api/logs/ingest', batch).catch(() => {});
+};
+
 const pushLog = (type: 'INFO' | 'ERROR', message: string) => {
-  fetch('http://localhost:5999/api/logs/ingest', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type, source: 'Phase 3', message })
-  }).catch(() => {});
+  queueLog(type, 'Phase 2', message);
 };
 
 const reportPulse = (delayMs: number, ghost?: any, active_job?: string | null, target_url?: string | null) => {
-  fetch('http://localhost:5999/api/pulse', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ source: 'Phase 3', delayMs, ghost, active_job, target: target_url })
-  }).catch(() => {});
+  safePost('http://localhost:5999/api/pulse', { source: 'Phase 2', delayMs, ghost, active_job, target: target_url });
+};
+
+const onStream = (text: string) => {
+  queueLog('LLM_STREAM', 'Phase 2', text);
 };
 
 console.log = (...args) => { _log(...args); pushLog('INFO', args.join(' ')); };
@@ -66,37 +141,41 @@ async function runIndexer() {
 
   while (true) {
     try {
+      // ── Fetch global AI config and headless preference ─────────────────
+      const statusRes = await safeGet('http://localhost:5999/status', { isHeadless: true });
+      const configResGlobal = await safeGet('http://localhost:5999/config', { config: {} });
+      const aiConfig = configResGlobal.config || {};
+      const priorityStates = aiConfig.state_override || [];
+      const targetModel = aiConfig.detective_model || 'local-model';
+
       // ── Pre-flight LM Studio check & auto-start gating ─────────────────
       let lmsOk = false;
       try {
-        const lmsStatusRes = await fetch('http://localhost:5999/api/llm/status').then(r => r.json());
+        const lmsStatusRes = await safeGet('http://localhost:5999/api/llm/status', { serverStatus: 'OFF', loadedModels: [] });
         const isServerOn = lmsStatusRes.serverStatus === 'ON';
-        const isModelLoaded = lmsStatusRes.loadedModels.includes('qwen2.5-7b-instruct-1m');
+        const isModelLoaded = lmsStatusRes.loadedModels.includes(targetModel);
         
-        if (isServerOn && isModelLoaded) {
+        // Relax strict gating: let LM Studio JIT load the model if it's off.
+        if (isServerOn) {
           lmsOk = true;
         } else {
-          console.warn(`[Indexer] ⚠️ LM Studio gatekeeper warning — Server: ${lmsStatusRes.serverStatus}, Model Loaded: ${isModelLoaded ? 'YES' : 'NO'}`);
+          console.warn(`[Indexer] ⚠️ LM Studio gatekeeper warning — Server: ${lmsStatusRes.serverStatus}, Model Loaded: ${isModelLoaded ? 'YES' : 'NO'} (${targetModel})`);
           
           if (lmsStatusRes.serverStatus === 'OFF') {
             console.log('[Indexer] Attempting to auto-start LM Studio server...');
-            await fetch('http://localhost:5999/api/llm/server/start', { method: 'POST' }).catch(() => {});
+            await safePost('http://localhost:5999/api/llm/server/start', {});
           }
           
           if (isServerOn && !isModelLoaded) {
-            console.log('[Indexer] Attempting to auto-load qwen2.5-7b-instruct-1m model...');
-            await fetch('http://localhost:5999/api/llm/model/load', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ modelKey: 'qwen2.5-7b-instruct-1m' })
-            }).catch(() => {});
+            console.log(`[Indexer] Attempting to auto-load ${targetModel} model...`);
+            await safePost('http://localhost:5999/api/llm/model/load', { modelKey: targetModel });
           }
           
           console.log('[Indexer] Waiting 15 seconds for LM Studio to settle...');
           await sleep(15000);
           
-          const lmsStatusRecheck = await fetch('http://localhost:5999/api/llm/status').then(r => r.json());
-          if (lmsStatusRecheck.serverStatus === 'ON' && lmsStatusRecheck.loadedModels.includes('qwen2.5-7b-instruct-1m')) {
+          const lmsStatusRecheck = await safeGet('http://localhost:5999/api/llm/status', { serverStatus: 'OFF', loadedModels: [] });
+          if (lmsStatusRecheck.serverStatus === 'ON' && lmsStatusRecheck.loadedModels.includes(targetModel)) {
             lmsOk = true;
           }
         }
@@ -105,27 +184,17 @@ async function runIndexer() {
       }
 
       if (!lmsOk) {
-        console.error('[Indexer] ⛔ PIPELINE GATED: LM Studio is offline or qwen2.5-7b-instruct-1m model is not loaded. Retrying in 30 seconds...');
-        await fetch('http://localhost:5999/api/pulse', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            source: 'Phase 3', 
-            delayMs: 30000, 
-            active_job: 'GATED: LM Studio Offline',
-            target: 'GATED: qwen2.5-7b-instruct-1m missing'
-          })
-        }).catch(() => {});
+        console.error(`[Indexer] ⛔ PIPELINE GATED: LM Studio is offline. Retrying in 30 seconds...`);
+        await safePost('http://localhost:5999/api/pulse', { 
+          source: 'Phase 2', 
+          delayMs: 30000, 
+          active_job: 'GATED: LM Studio Offline',
+          target: `GATED: ${targetModel} missing`
+        });
         
         await sleep(30000);
         continue;
       }
-
-      // ── Fetch global AI config and headless preference ─────────────────
-      const statusRes = await fetch('http://localhost:5999/status').then(r => r.json()).catch(() => ({ isHeadless: true }));
-      const configResGlobal = await fetch('http://localhost:5999/config').then(r => r.json()).catch(() => ({ config: {} }));
-      const aiConfig = configResGlobal.config || {};
-      const priorityStates = aiConfig.state_override || [];
 
       let target: any = null;
 
@@ -164,14 +233,34 @@ async function runIndexer() {
       });
 
       // ── Delegate to DetectiveEngine ─────────────────────────────────────
+      let streamBuffer = '';
+      let streamTimeout: any = null;
+      const flushStream = () => {
+        if (streamBuffer) {
+          queueLog('LLM_STREAM', 'Phase 2', streamBuffer);
+          streamBuffer = '';
+        }
+        streamTimeout = null;
+      };
 
-      // ── Delegate to DetectiveEngine ─────────────────────────────────────
       const result = await executeDetective(
         target,
         aiConfig,
         statusRes.isHeadless,
-        (msg: string) => console.log(`   ${msg}`)
+        (msg: string) => console.log(`   ${msg}`),
+        (text: string) => {
+          streamBuffer += text;
+          if (!streamTimeout) {
+            streamTimeout = setTimeout(flushStream, 100);
+          }
+        }
       );
+
+      // Clean up final remaining stream chunks at the end
+      if (streamTimeout) {
+        clearTimeout(streamTimeout);
+      }
+      flushStream();
 
       // Handle toxicity abort (quality gate = 0, passedQualityGate = false from toxicity)
       const wasToxicityAborted = !result.passedQualityGate && result.qualityScore === 0 && Object.keys(result.aiMetadata).length === 0;

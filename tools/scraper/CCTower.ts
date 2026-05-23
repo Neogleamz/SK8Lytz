@@ -10,6 +10,9 @@ import { GooglePlacesProvider, RETAIL_BLOCKLIST } from './lib/providers/GooglePl
 import { executeDetective } from './core/DetectiveEngine';
 import { db, getLocalSpots, getLocalCount, updateLocalSpot, deleteLocalSpot, upsertLocalSpot, getConfig, updateConfig, getBlocklist, addBlocklist, deleteBlocklist, addBlocklistKeyword, getPipelineStats, getFieldRegistry, upsertFieldRegistryItem, logFieldCorrection, getCorrectionStats } from './core/LocalDB';
 
+// Identify this as the CCTower process for LocalDB initialization
+process.env.IS_CCTOWER = 'true';
+
 // Guard against PM2 environment variable serialization bugs
 process.env.SCRAPER_REGISTER_ONLY = 'false';
 
@@ -102,6 +105,7 @@ interface PulseData {
 }
 
 const pulseRegistry: Record<string, PulseData> = {
+  'Phase 1': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
   'Phase 3': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
   'Phase 4': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
   'Phase 5': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
@@ -112,6 +116,7 @@ const pulseRegistry: Record<string, PulseData> = {
 const activeJobRegistry: Record<string, { active_job: string | null; target: string | null; updated_at: string }> = {
   'Phase 3': { active_job: null, target: null, updated_at: '' },
   'Phase 4': { active_job: null, target: null, updated_at: '' },
+  'Phase 6': { active_job: null, target: null, updated_at: '' },
 };
 
 // Async sleep helper
@@ -138,70 +143,54 @@ async function fetchConfig() {
 }
 
 app.get('/status', async (req, res) => {
-  // Let's use PM2 to check if the scrapers are actually running online
-  exec('pm2 jlist', { windowsHide: true }, async (err, stdout) => {
-    let running = false;
-    let indexerStatus = 'Offline';
-    let photographerStatus = 'Offline';
-    let publisherStatus = 'Offline';
+  let running = activeDaemons.size > 0;
+  let indexerStatus = activeDaemons.has('scraper-indexer') ? 'online' : 'Offline';
+  let photographerStatus = activeDaemons.has('scraper-photographer') ? 'online' : 'Offline';
+  let publisherStatus = activeDaemons.has('scraper-publisher') ? 'online' : 'Offline';
 
-    if (!err && stdout) {
-      try {
-        const pm2List = JSON.parse(stdout);
-        const indexer = pm2List.find((p: any) => p.name === 'scraper-indexer');
-        const photographer = pm2List.find((p: any) => p.name === 'scraper-photographer');
-        const publisher = pm2List.find((p: any) => p.name === 'scraper-publisher');
-        if (indexer?.pm2_env?.status === 'online' || publisher?.pm2_env?.status === 'online') {
-            running = true;
-        }
-        indexerStatus = indexer?.pm2_env?.status || 'Offline';
-        photographerStatus = photographer?.pm2_env?.status || 'Offline';
-        publisherStatus = publisher?.pm2_env?.status || 'Offline';
-      } catch(e) {}
-    }
+  const totalCount = (db.prepare('SELECT COUNT(*) as cnt FROM local_spots').get() as { cnt: number }).cnt;
+  const totalProcessed = (db.prepare('SELECT COUNT(*) as cnt FROM local_spots WHERE last_attempted_at IS NOT NULL').get() as { cnt: number }).cnt;
+  const publishedCount = (db.prepare('SELECT COUNT(*) as cnt FROM local_spots WHERE is_published = 1').get() as { cnt: number }).cnt;
+  const pendingCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'PENDING' OR verification_status IS NULL`).get() as { cnt: number }).cnt;
+  const seededCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'SEEDED'`).get() as { cnt: number }).cnt;
+  const enrichedCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'ENRICHED'`).get() as { cnt: number }).cnt;
+  const deepCrawledCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'DEEP_CRAWLED'`).get() as { cnt: number }).cnt;
+  const mediaReadyCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'MEDIA_READY'`).get() as { cnt: number }).cnt;
+  const candidatesCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE candidate_photos IS NOT NULL AND photos IS NULL`).get() as { cnt: number }).cnt;
 
-    const totalCount = (db.prepare('SELECT COUNT(*) as cnt FROM local_spots').get() as { cnt: number }).cnt;
-    const totalProcessed = (db.prepare('SELECT COUNT(*) as cnt FROM local_spots WHERE last_attempted_at IS NOT NULL').get() as { cnt: number }).cnt;
-    const publishedCount = (db.prepare('SELECT COUNT(*) as cnt FROM local_spots WHERE is_published = 1').get() as { cnt: number }).cnt;
-    const pendingCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'PENDING' OR verification_status IS NULL`).get() as { cnt: number }).cnt;
-    const seededCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'SEEDED'`).get() as { cnt: number }).cnt;
-    const enrichedCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'ENRICHED'`).get() as { cnt: number }).cnt;
-    const deepCrawledCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'DEEP_CRAWLED'`).get() as { cnt: number }).cnt;
-    const mediaReadyCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'MEDIA_READY'`).get() as { cnt: number }).cnt;
-    const candidatesCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE candidate_photos IS NOT NULL AND photos IS NULL`).get() as { cnt: number }).cnt;
-
-
-    res.json({
-      isRunning: running,
-      isHarvestingActive,
-      isHeadless,
-      currentTarget: `Indexer: ${indexerStatus} | Photographer: ${photographerStatus}`,
-      isGoogleSweepActive,
-      totalCount: totalCount || 0,          // COUNT(*) — true total seeded
-      processedCount: totalProcessed || 0,
-      enrichedCount: enrichedCount || 0,
-      mediaReadyCount: mediaReadyCount || 0,
-      candidatesReadyCount: candidatesCount || 0,
-      publishedCount: publishedCount || 0,
-      
-      // Pipeline stage counts (matches real verification_status values)
-      pendingCount: pendingCount || 0,
-      seededCount: seededCount || 0,
-      deepCrawledCount: deepCrawledCount || 0,
-      
-      errorCount,
-      consecutiveErrors,
-      isGated,
-      lastError,
-      pulseRegistry,
-      lmsStatus: cachedLmsStatus,
-      gpuTelemetry: cachedGpuTelemetry
-    });
+  res.json({
+    isRunning: running,
+    isHarvestingActive,
+    isHeadless,
+    currentTarget: `Indexer: ${indexerStatus} | Photographer: ${photographerStatus} | Publisher: ${publisherStatus}`,
+    isGoogleSweepActive,
+    totalCount: totalCount || 0,
+    processedCount: totalProcessed || 0,
+    enrichedCount: enrichedCount || 0,
+    mediaReadyCount: mediaReadyCount || 0,
+    candidatesReadyCount: candidatesCount || 0,
+    publishedCount: publishedCount || 0,
+    pendingCount: pendingCount || 0,
+    seededCount: seededCount || 0,
+    deepCrawledCount: deepCrawledCount || 0,
+    errorCount,
+    consecutiveErrors,
+    isGated,
+    lastError,
+    pulseRegistry,
+    lmsStatus: cachedLmsStatus,
+    gpuTelemetry: cachedGpuTelemetry
   });
 });
 
 app.post('/api/pulse', (req, res) => {
-  const { source, delayMs, ghost, active_job, target } = req.body;
+  let { source, delayMs, ghost, active_job, target } = req.body;
+  if (source === 'Phase 2') source = 'Phase 3';
+  if (source === 'Photographer' || source === 'photographer') source = 'Phase 4';
+  if (source === 'Publisher' || source === 'publisher') source = 'Phase 6';
+  if (source === 'Indexer' || source === 'indexer') source = 'Phase 3';
+  if (source === 'Scout' || source === 'scout') source = 'Phase 1';
+
   if (pulseRegistry[source]) {
     pulseRegistry[source] = {
       lastRunAt: new Date().toISOString(),
@@ -224,8 +213,60 @@ app.post('/api/pulse', (req, res) => {
 const activeDaemons = new Map<string, ChildProcess>();
 
 app.post('/start', (req, res) => {
-  // Bulk start not fully supported in this simple refactor, rely on individual endpoints for UI
-  res.json({ success: true, message: `Use individual daemon endpoints in Docker mode` });
+  const scriptMap: Record<string, string> = {
+    'indexer': 'Indexer.ts',
+    'photographer': 'Photographer.ts',
+    'publisher': 'Publisher.ts'
+  };
+
+  const started: string[] = [];
+  const errors: string[] = [];
+
+  for (const [name, scriptName] of Object.entries(scriptMap)) {
+    const target = `scraper-${name}`;
+    if (activeDaemons.has(target)) {
+      continue;
+    }
+
+    try {
+      const outLog = fs.openSync(path.join(LOG_DIR, `${name}-out.log`), 'a');
+      const errLog = fs.openSync(path.join(LOG_DIR, `${name}-error.log`), 'a');
+
+      const child = spawn('bun', [scriptName], {
+        cwd: __dirname,
+        stdio: ['ignore', outLog, errLog],
+        detached: false,
+        env: { ...process.env, SCRAPER_REGISTER_ONLY: 'false' }
+      });
+
+      child.on('exit', () => {
+        activeDaemons.delete(target);
+        console.log(`Daemon ${target} exited`);
+      });
+
+      activeDaemons.set(target, child);
+      started.push(name);
+    } catch (err: any) {
+      console.error(`Failed to spawn ${name} in bulk start:`, err);
+      errors.push(name);
+    }
+  }
+
+  isRunning = activeDaemons.size > 0;
+
+  if (errors.length > 0) {
+    res.status(500).json({
+      success: false,
+      message: `Bulk start complete with errors. Started: ${started.join(', ') || 'none'}. Failed to start: ${errors.join(', ')}`
+    });
+  } else {
+    res.json({
+      success: true,
+      message: started.length > 0 
+        ? `Bulk start completed. Launched: ${started.join(', ')}`
+        : `All daemons are already running.`
+    });
+  }
 });
 
 app.post('/stop', (req, res) => {
@@ -352,109 +393,64 @@ function updateGpuTelemetry(): void {
 setInterval(updateGpuTelemetry, 10000);
 updateGpuTelemetry();
 
-function updateLmsStatus(): Promise<void> {
-  return new Promise((resolve) => {
-    exec('lms status', { windowsHide: true }, (err, stdout, stderr) => {
-      let serverStatus: 'ON' | 'OFF' | 'MISSING' = 'OFF';
-      let port = 1234;
-      let loadedModels: string[] = [];
-      
-      const statusOutput = stdout || '';
-      if (statusOutput.includes('Server: ON')) {
-        serverStatus = 'ON';
-        const portMatch = statusOutput.match(/port:\s*(\d+)/);
-        if (portMatch) {
-          port = parseInt(portMatch[1], 10);
+async function updateLmsStatus(): Promise<void> {
+  const hosts = ['host.docker.internal', 'localhost', '127.0.0.1'];
+  const port = 1234;
+  let probedHost: string | null = null;
+  let fetchedModels: string[] = [];
+
+  for (const host of hosts) {
+    try {
+      const fetchFn = require('node-fetch');
+      const res = await fetchFn(`http://${host}:${port}/v1/models`, { signal: AbortSignal.timeout(2000) });
+      if (res.ok) {
+        const data = (await res.json()) as { data?: { id: string }[] };
+        if (data && Array.isArray(data.data)) {
+          fetchedModels = data.data.map((m: { id: string }) => m.id);
+          probedHost = host;
+          break;
         }
-        
-        const lines = statusOutput.split('\n');
-        let inLoadedSection = false;
-        for (const line of lines) {
-          if (line.includes('Loaded Models')) {
-            inLoadedSection = true;
-            continue;
-          }
-          if (inLoadedSection) {
-            const match = line.match(/·\s*([^\s-]+)/);
-            if (match) {
-              loadedModels.push(match[1].trim());
-            }
-          }
-        }
-      } else if (statusOutput.includes('Server:  OFF') || statusOutput.includes('Server: OFF')) {
-        serverStatus = 'OFF';
-      } else {
-        serverStatus = 'MISSING';
       }
-      
-      exec('lms ls', { windowsHide: true }, (errLs, stdoutLs) => {
-        let availableModels: { key: string; arch: string; size: string; loaded: boolean }[] = [];
-        if (!errLs && stdoutLs) {
-          const lines = stdoutLs.split('\n');
-          let inLlmSection = false;
-          for (const line of lines) {
-            if (line.startsWith('LLM')) {
-              inLlmSection = true;
-              continue;
-            }
-            if (line.startsWith('EMBEDDING')) {
-              inLlmSection = false;
-            }
-            if (inLlmSection && line.trim()) {
-              const parts = line.trim().split(/\s{2,}/);
-              if (parts.length >= 4) {
-                const key = parts[0];
-                const arch = parts[2];
-                const size = parts[3];
-                const loaded = line.includes('LOADED');
-                availableModels.push({ key, arch, size, loaded });
-              }
-            }
-          }
-        }
-        
-        if (serverStatus === 'ON') {
-          fetch(`http://localhost:${port}/v1/models`)
-            .then(res => res.json())
-            .then((data: { data?: { id: string }[] }) => {
-              if (data && Array.isArray(data.data)) {
-                const httpLoaded = data.data.map((m: { id: string }) => m.id);
-                if (httpLoaded.length > 0) {
-                  loadedModels = Array.from(new Set([...loadedModels, ...httpLoaded]));
-                }
-              }
-              cachedLmsStatus = {
-                serverStatus,
-                port,
-                loadedModels,
-                availableModels,
-                lastUpdated: new Date().toISOString()
-              };
-              resolve();
-            })
-            .catch(() => {
-              cachedLmsStatus = {
-                serverStatus,
-                port,
-                loadedModels,
-                availableModels,
-                lastUpdated: new Date().toISOString()
-              };
-              resolve();
-            });
-        } else {
-          cachedLmsStatus = {
-            serverStatus,
-            port,
-            loadedModels,
-            availableModels,
-            lastUpdated: new Date().toISOString()
-          };
-          resolve();
-        }
-      });
-    });
-  });
+    } catch (e) {}
+  }
+
+  if (probedHost) {
+    process.env.LM_STUDIO_HOST = probedHost;
+    
+    // In Docker, we rely on aiConfig to know which model is targeted
+    let currentDetective = 'local-model';
+    try {
+      const cfg = getConfig();
+      if (cfg && cfg.detective_model) currentDetective = cfg.detective_model;
+    } catch (e) {}
+
+    const availableModels = fetchedModels.map(m => ({ 
+      key: m, 
+      arch: 'unknown', 
+      size: 'unknown', 
+      loaded: m === currentDetective 
+    }));
+    
+    // Provide a clean UI by marking only the active targeted model as "loaded"
+    const loadedModels = fetchedModels.includes(currentDetective) ? [currentDetective] : [];
+
+    cachedLmsStatus = {
+      serverStatus: 'ON',
+      port,
+      loadedModels,
+      availableModels,
+      lastUpdated: new Date().toISOString()
+    };
+    return;
+  }
+
+  cachedLmsStatus = {
+    serverStatus: 'OFF',
+    port: 1234,
+    loadedModels: [],
+    availableModels: [],
+    lastUpdated: new Date().toISOString()
+  };
 }
 
 // ─── LM Studio Integration Endpoints ────────────────────────────────────────
@@ -463,106 +459,60 @@ app.get('/api/llm/status', (req, res) => {
   res.json(cachedLmsStatus);
 });
 
-app.post('/api/llm/server/:action', (req, res) => {
-  const { action } = req.params;
-  if (action !== 'start' && action !== 'stop') {
-    return res.status(400).json({ error: 'Action must be start or stop' });
-  }
-
-  const cmd = `lms server ${action}`;
-  console.log(`[CCTower] LM Studio Server commanding: ${cmd}`);
-  
-  exec(cmd, { windowsHide: true }, async (err, stdout, stderr) => {
-    if (err) {
-      console.error(`[CCTower] LM Studio Server command failed:`, err);
-      return res.status(500).json({ success: false, error: err.message });
-    }
-    
-    await updateLmsStatus();
-    res.json({ success: true, message: `LM Studio Server ${action}ed successfully`, cachedLmsStatus });
-  });
+app.post('/api/llm/server/start', (req, res) => {
+  res.json({ success: false, message: 'Cannot start LM Studio from inside Docker. Please launch LM Studio manually on your host machine.' });
 });
 
-app.post('/api/llm/model/load', (req, res) => {
-  const { modelKey, contextLength, gpuOffload, setAsDetective } = req.body;
+app.post('/api/llm/server/stop', (req, res) => {
+  res.json({ success: false, message: 'Cannot stop LM Studio from inside Docker.' });
+});
+
+app.post('/api/llm/model/load', async (req, res) => {
+  const { modelKey, setAsDetective } = req.body;
   const targetModel = modelKey || 'llama-3.2-3b-instruct';
-  console.log(`[CCTower] LM Studio loading model: ${targetModel}`);
+  console.log(`[CCTower] Setting target LLM model: ${targetModel}`);
   
-  // Build command with optional params
-  let cmd = `lms load ${targetModel} -y`;
-  if (contextLength && [2048, 4096, 8192, 16384, 32768].includes(Number(contextLength))) {
-    cmd += ` --context-length ${contextLength}`;
-  }
-  if (gpuOffload && ['off', 'max', '0.5', '0.75'].includes(gpuOffload)) {
-    cmd += ` --gpu ${gpuOffload}`;
-  }
-  console.log(`[CCTower] LM Studio load cmd: ${cmd}`);
-  
-  exec(cmd, { windowsHide: true, timeout: 120000 }, async (err, stdout, stderr) => {
-    if (err) {
-      console.error(`[CCTower] LM Studio load model failed:`, err);
-      return res.status(500).json({ success: false, error: err.message });
+  // Auto-update detective_model in global config
+  if (setAsDetective !== false) {
+    try {
+      updateConfig({ detective_model: targetModel });
+      console.log(`[CCTower] Auto-set detective_model → ${targetModel}`);
+    } catch (e: any) {
+      console.error(`[CCTower] Failed to auto-set detective_model:`, e.message);
     }
-    
-    // Auto-update detective_model in global config if requested (or by default)
-    if (setAsDetective !== false) {
-      try {
-        updateConfig({ detective_model: targetModel });
-        console.log(`[CCTower] Auto-set detective_model → ${targetModel}`);
-      } catch (e: any) {
-        console.error(`[CCTower] Failed to auto-set detective_model:`, e.message);
-      }
-    }
-    
-    await updateLmsStatus();
-    updateGpuTelemetry();
-    res.json({ success: true, message: `Loaded model ${targetModel}`, cachedLmsStatus, detective_model: targetModel });
-  });
+  }
+
+  // Fire a JIT warmup request to LM Studio
+  try {
+    const fetchFn = require('node-fetch');
+    const host = process.env.LM_STUDIO_HOST || 'host.docker.internal';
+    const port = cachedLmsStatus.port || 1234;
+    fetchFn(`http://${host}:${port}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: targetModel, messages: [{ role: 'user', content: 'wake up' }], max_tokens: 1 })
+    }).catch(() => {});
+  } catch (e) {}
+
+  await updateLmsStatus();
+  res.json({ success: true, message: `Set target model to ${targetModel} (JIT loading applied)`, cachedLmsStatus, detective_model: targetModel });
 });
 
-app.post('/api/llm/model/unload', (req, res) => {
-  const { identifier } = req.body;
-  const cmd = identifier ? `lms unload ${identifier}` : 'lms unload --all';
-  console.log(`[CCTower] LM Studio unloading: ${cmd}`);
-  
-  exec(cmd, { windowsHide: true }, async (err, stdout, stderr) => {
-    if (err) {
-      console.error(`[CCTower] LM Studio unload failed:`, err);
-      return res.status(500).json({ success: false, error: err.message });
-    }
-    
-    await updateLmsStatus();
-    res.json({ success: true, message: identifier ? `Unloaded model ${identifier}` : 'Unloaded all models', cachedLmsStatus });
-  });
+app.post('/api/llm/model/unload', async (req, res) => {
+  res.json({ success: true, message: 'Model unloading is managed via LM Studio JIT.' });
 });
 
 // ─── Model VRAM Estimate (pre-load check) ────────────────────────────────────
 app.post('/api/llm/model/estimate', (req, res) => {
-  const { modelKey } = req.body;
-  if (!modelKey) return res.status(400).json({ error: 'modelKey required' });
-  const cmd = `lms load ${modelKey} --estimate-only`;
-  exec(cmd, { windowsHide: true, timeout: 10000 }, (err, stdout, stderr) => {
-    // LM Studio outputs estimate to stderr, so check both
-    const output = (stdout || '') + '\n' + (stderr || '');
-    const gpuMatch = output.match(/Estimated GPU Memory:\s*([\d.]+)\s*(GiB|MiB|GB|MB)/i);
-    const totalMatch = output.match(/Estimated Total Memory:\s*([\d.]+)\s*(GiB|MiB|GB|MB)/i);
-    const fitsMatch = output.match(/Estimate:\s*(.+)/i);
-    
-    const parseSize = (val: string, unit: string) => {
-      const n = parseFloat(val);
-      return (unit.toLowerCase().startsWith('g')) ? Math.round(n * 1024) : Math.round(n);
-    };
-    
-    res.json({
-      success: true,
-      modelKey,
-      estimatedGpuMB: gpuMatch ? parseSize(gpuMatch[1], gpuMatch[2]) : null,
-      estimatedTotalMB: totalMatch ? parseSize(totalMatch[1], totalMatch[2]) : null,
-      verdict: fitsMatch ? fitsMatch[1].trim() : 'Unknown',
-      currentVramUsedMB: cachedGpuTelemetry.vramUsedMB,
-      currentVramTotalMB: cachedGpuTelemetry.vramTotalMB,
-      headroomMB: gpuMatch ? cachedGpuTelemetry.vramTotalMB - cachedGpuTelemetry.vramUsedMB : null
-    });
+  res.json({
+    success: false,
+    modelKey: req.body.modelKey,
+    estimatedGpuMB: null,
+    estimatedTotalMB: null,
+    verdict: 'Docker cannot estimate',
+    currentVramUsedMB: cachedGpuTelemetry.vramUsedMB,
+    currentVramTotalMB: cachedGpuTelemetry.vramTotalMB,
+    headroomMB: null
   });
 });
 
@@ -596,9 +546,9 @@ app.get('/api/pipeline/telemetry', async (req, res) => {
 
     res.json({
       scout:      { active_job: aj('Phase 1'), target: tgt('Phase 1'), active_record: getRecord(tgt('Phase 1')), in_q: names(p1), pulse: pulseRegistry['Phase 1'], alive: isAlive('Phase 1') },
-      detective:  { active_job: aj('Phase 3'), target: tgt('Phase 3'), active_record: getRecord(tgt('Phase 3')), in_q: names(p3), pulse: pulseRegistry['Phase 3'], alive: isAlive('Phase 3') },
+      detective:  { active_job: aj('Phase 3'), target: tgt('Phase 3'), active_record: getRecord(aj('Phase 3')), in_q: names(p3), pulse: pulseRegistry['Phase 3'], alive: isAlive('Phase 3') },
       photographer: { active_job: aj('Phase 4'), target: tgt('Phase 4'), active_record: getRecord(tgt('Phase 4')), in_q: names(p4), pulse: pulseRegistry['Phase 4'], alive: isAlive('Phase 4') },
-      publisher:  { active_job: null, target: null, active_record: null, in_q: names(p6), pulse: pulseRegistry['Phase 6'], alive: false },
+      publisher:  { active_job: aj('Phase 6'), target: tgt('Phase 6'), active_record: getRecord(tgt('Phase 6')), in_q: names(p6), pulse: pulseRegistry['Phase 6'], alive: isAlive('Phase 6') },
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -622,6 +572,23 @@ app.post('/config', async (req, res) => {
 
   try {
     updateConfig(payload);
+
+    // JIT hot-load the model if the detective_model was updated
+    if (payload.detective_model) {
+      console.log(`[CCTower] Detective model changed to: ${payload.detective_model}. Hot-loading via JIT...`);
+      try {
+        const fetchFn = require('node-fetch');
+        const host = process.env.LM_STUDIO_HOST || 'host.docker.internal';
+        const port = cachedLmsStatus.port || 1234;
+        fetchFn(`http://${host}:${port}/v1/chat/completions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: payload.detective_model, messages: [{ role: 'user', content: 'wake up' }], max_tokens: 1 })
+        }).catch(() => {});
+      } catch (e) {}
+      await updateLmsStatus();
+    }
+
     res.json({ success: true, message: 'Config updated' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -1135,15 +1102,22 @@ app.get('/api/logs/stream', (req, res) => {
 
 // External Webhook to push logs into the live SSE stream from PM2 Daemons
 app.post('/api/logs/ingest', (req, res) => {
-  const { type, source, message } = req.body;
-  if (!message) return res.status(400).json({ error: 'Message payload required' });
+  const payload = req.body;
+  if (!payload) return res.status(400).json({ error: 'Payload required' });
+
+  const logs = Array.isArray(payload) ? payload : [payload];
   
-  // Format for internal tracking and logging
-  const msgContext = source ? `[${source}] ${message}` : message;
-  writeToLogFile(type || 'INFO', msgContext);
-  
-  // Emit to SSE clients immediately
-  logEmitter.emit('log', { type: type || 'INFO', source: source || 'UNKNOWN', message });
+  for (const log of logs) {
+    const { type, source, message } = log;
+    if (!message) continue;
+    
+    // Format for internal tracking and logging
+    const msgContext = source ? `[${source}] ${message}` : message;
+    writeToLogFile(type || 'INFO', msgContext);
+    
+    // Emit to SSE clients immediately
+    logEmitter.emit('log', { type: type || 'INFO', source: source || 'UNKNOWN', message });
+  }
   
   res.sendStatus(200);
 });
@@ -1338,7 +1312,7 @@ app.post('/api/skate_spots/:id/photos/upload', async (req, res) => {
   const { image } = req.body;
   try {
     if (!image || !image.startsWith('data:image/')) return res.status(400).json({ error: 'Invalid image payload' });
-    const spot = getLocalSpots().find(s => String(s.id) === String(id));
+    const spot = getLocalSpots().find((s: any) => String(s.id) === String(id));
     if (!spot) return res.status(404).json({ error: 'Not found' });
     
     const matches = image.match(/^data:image\/([A-Za-z-+\/]+);base64,(.+)$/);
@@ -1368,7 +1342,7 @@ app.post('/api/skate_spots/:id/photos/hero', async (req, res) => {
   const { id } = req.params;
   const { photoIndex } = req.body;
   try {
-    const spot = getLocalSpots().find(s => String(s.id) === String(id));
+    const spot = getLocalSpots().find((s: any) => String(s.id) === String(id));
     if (!spot) return res.status(404).json({ error: 'Not found' });
     let photos = spot.photos;
     if (typeof photos === 'string') try { photos = JSON.parse(photos); } catch { photos = []; }
@@ -1387,7 +1361,7 @@ app.delete('/api/skate_spots/:id/photos/:index', async (req, res) => {
   const { id, index } = req.params;
   const idx = parseInt(index, 10);
   try {
-    const spot = getLocalSpots().find(s => String(s.id) === String(id));
+    const spot = getLocalSpots().find((s: any) => String(s.id) === String(id));
     if (!spot) return res.status(404).json({ error: 'Not found' });
     let photos = spot.photos;
     if (typeof photos === 'string') try { photos = JSON.parse(photos); } catch { photos = []; }
@@ -1405,7 +1379,7 @@ app.post('/api/skate_spots/:id/photos/tag', async (req, res) => {
   const { id } = req.params;
   const { photoIndex, fieldType } = req.body;
   try {
-    const spot = getLocalSpots().find(s => String(s.id) === String(id));
+    const spot = getLocalSpots().find((s: any) => String(s.id) === String(id));
     if (!spot) return res.status(404).json({ error: 'Not found' });
     let photos = spot.photos;
     if (typeof photos === 'string') try { photos = JSON.parse(photos); } catch { photos = []; }

@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { Database } from 'bun:sqlite';
 import path from 'path';
 import fs from 'fs';
 
@@ -8,12 +8,38 @@ if (!fs.existsSync(DB_DIR)) {
 }
 
 const DB_PATH = path.join(DB_DIR, 'scraper.db');
-export const db = new Database(DB_PATH, { verbose: process.env.SQLITE_VERBOSE === 'true' ? console.log : undefined });
+export const db = new Database(DB_PATH, { create: true });
+
+// Configure busy_timeout FIRST to prevent concurrent startup locks
+try {
+  db.exec('PRAGMA busy_timeout = 10000;');
+} catch (e: any) {
+  console.warn(`[LocalDB] PRAGMA busy_timeout failed: ${e.message}`);
+}
 
 // Configure for performance
-db.pragma('journal_mode = WAL');
-db.pragma('synchronous = NORMAL');
-db.pragma('temp_store = MEMORY');
+const isDocker = process.platform === 'linux';
+try {
+  if (isDocker) {
+    db.exec('PRAGMA journal_mode = DELETE;');
+  } else {
+    db.exec('PRAGMA journal_mode = WAL;');
+  }
+} catch (e: any) {
+  console.warn(`[LocalDB] Preferred journal mode failed: ${e.message}. Falling back to default.`);
+}
+
+try {
+  db.exec('PRAGMA synchronous = NORMAL;');
+} catch (e: any) {
+  console.warn(`[LocalDB] PRAGMA synchronous failed: ${e.message}`);
+}
+
+try {
+  db.exec('PRAGMA temp_store = MEMORY;');
+} catch (e: any) {
+  console.warn(`[LocalDB] PRAGMA temp_store failed: ${e.message}`);
+}
 
 // ─── Automatic Rolling Backup ─────────────────────────────────────────────────
 const BACKUP_DIR = path.join(DB_DIR, 'backups');
@@ -23,24 +49,28 @@ const runBackup = () => {
   const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
   const dest = path.join(BACKUP_DIR, `scraper-${ts}.db`);
   try {
-    db.backup(dest).then(() => {
-      // Keep only the 7 most recent backups
-      const files = fs.readdirSync(BACKUP_DIR)
-        .filter(f => f.startsWith('scraper-') && f.endsWith('.db'))
-        .sort();
-      while (files.length > 7) {
-        fs.unlinkSync(path.join(BACKUP_DIR, files.shift()!));
-      }
-      console.log(`[LocalDB] ✅ Backup saved: ${path.basename(dest)}`);
-    }).catch((e: any) => console.error('[LocalDB] Backup failed:', e.message));
+    // Bun sqlite doesn't have db.backup(), so we copy the file
+    fs.copyFileSync(DB_PATH, dest);
+    // Keep only the 7 most recent backups
+    const files = fs.readdirSync(BACKUP_DIR)
+      .filter(f => f.startsWith('scraper-') && f.endsWith('.db'))
+      .sort();
+    while (files.length > 7) {
+      fs.unlinkSync(path.join(BACKUP_DIR, files.shift()!));
+    }
+    console.log(`[LocalDB] ✅ Backup saved: ${path.basename(dest)}`);
   } catch (e: any) {
     console.error('[LocalDB] Backup error:', e.message);
   }
 };
 
-// Run immediately on startup, then every 4 hours
-runBackup();
-setInterval(runBackup, 4 * 60 * 60 * 1000);
+// Run backups only in the CCTower process to avoid lock collisions during daemon startup
+const shouldRunBackup = process.env.IS_CCTOWER === 'true' || (process.argv[1] && process.argv[1].includes('CCTower'));
+if (shouldRunBackup) {
+  // Run immediately on startup, then every 4 hours
+  runBackup();
+  setInterval(runBackup, 4 * 60 * 60 * 1000);
+}
 
 // Initialize schema
 db.exec(`
@@ -584,7 +614,7 @@ export const updateLocalSpot = (id: string, updates: any) => {
     if (keys.length === 0) return;
 
   const setClauses = [];
-  const params: any = { id };
+  const params: any = { '@id': id };
 
   for (const k of keys) {
     if (k === 'id') continue;
@@ -599,7 +629,7 @@ export const updateLocalSpot = (id: string, updates: any) => {
     const colName = k === 'has_proshop' ? 'has_pro_shop' : k;
 
     setClauses.push(`${colName} = @${colName}`);
-    params[colName] = val;
+    params[`@${colName}`] = val;
   }
 
   const stmt = db.prepare(`UPDATE local_spots SET ${setClauses.join(', ')} WHERE id = @id`);

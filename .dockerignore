@@ -1,0 +1,18 @@
+.expo
+.git
+.local-builder
+.scraper-data
+.system_generated
+BANLANX_APK
+Brand Materials
+ZENGGE_APK
+android
+backups
+node_modules
+docs
+scratch
+supabase
+tools/*/node_modules
+tools/*/dist
+e2e
+ios

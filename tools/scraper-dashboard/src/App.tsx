@@ -123,6 +123,8 @@ function App() {
 
   // --- Logs & Queue States ---
   const [logs, setLogs] = useState<{type: string, message: string, source?: string}[]>([]);
+  const [liveStreamText, setLiveStreamText] = useState<string>('');
+  const [isStreaming, setIsStreaming] = useState<boolean>(false);
   const logsRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef<typeof activeTab>('phase1');
   const stateOverrideRef = useRef<string[]>([]); // mirrors stateOverride but readable in stale closures
@@ -195,6 +197,17 @@ function App() {
     const es = new EventSource(`${API_BASE}/api/logs/stream`);
     es.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      if (data.type === 'LLM_STREAM') {
+        setIsStreaming(true);
+        setLiveStreamText(prev => prev + data.message);
+        return;
+      }
+      if (data.type === 'INFO' && data.message.includes('LM Studio Pass') && !data.message.includes('complete')) {
+        setLiveStreamText('');
+      }
+      if (data.type === 'INFO' && data.message.includes('complete. Keys:')) {
+        setTimeout(() => setIsStreaming(false), 8000);
+      }
       setLogs(prev => {
         const newLogs = [...prev, data];
         return newLogs.slice(-50); 
@@ -899,6 +912,7 @@ function App() {
       {[
         { id: 'indexer',      label: 'Phase 2: Detective', color: '#ff5a00', onKey: 'Indexer: online' },
         { id: 'photographer', label: 'Phase 3: Photo',     color: '#e91e63', onKey: 'Photographer: online' },
+        { id: 'publisher',    label: 'Phase 4: Publish',   color: '#00d4ff', onKey: 'Publisher: online' },
       ].map(d => {
         const isOn = status?.currentTarget?.includes(d.onKey);
         return (
@@ -1774,6 +1788,20 @@ function App() {
         )}
       </div>
 
+      {activeTab === 'phase2' && (
+        <div className="tab-pane phase-detective" style={{ width: '100%', marginBottom: '1.5rem' }}>
+          <DetectiveLab 
+            aiSystemPrompt={aiSystemPrompt}
+            setAiSystemPrompt={setAiSystemPrompt}
+            aiTargetVectors={aiTargetVectors}
+            setAiTargetVectors={setAiTargetVectors}
+            aiExclusionKeywords={aiExclusionKeywords}
+            setAiExclusionKeywords={setAiExclusionKeywords}
+            updateGlobalStrategy={updateGlobalStrategy}
+          />
+        </div>
+      )}
+
       {activeTab === 'sniper' && (
         <div className="tab-pane phase-sniper" style={{ height: '80vh', width: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid #2D3340', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
           <SniperBench />
@@ -1796,9 +1824,9 @@ function App() {
           {logs
              .filter(log => {
                 if (activeTab === 'phase1') return log.source === 'Phase 1' || log.source === 'System';
-                if (activeTab === 'phase2') return log.source === 'Phase 3' || log.source === 'System';
+                if (activeTab === 'phase2') return log.source === 'Phase 2' || log.source === 'System';
              if (activeTab === 'phase3') return log.source === 'Photographer' || log.source === 'System';
-             if (activeTab === 'phase4') return log.source === 'System';
+             if (activeTab === 'phase4') return log.source === 'Publisher' || log.source === 'System';
                 return true; 
              })
              .map((log, i) => (
@@ -1812,20 +1840,49 @@ function App() {
           ))}
           {logs.filter(log => {
              if (activeTab === 'phase1') return log.source === 'Phase 1' || log.source === 'System';
-             if (activeTab === 'phase2') return log.source === 'Phase 3' || log.source === 'System';
+             if (activeTab === 'phase2') return log.source === 'Phase 2' || log.source === 'System';
              if (activeTab === 'phase3') return log.source === 'Photographer' || log.source === 'System';
-             if (activeTab === 'phase4') return log.source === 'System';
+             if (activeTab === 'phase4') return log.source === 'Publisher' || log.source === 'System';
              return true;
           }).length === 0 && (
              <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic', padding: '1rem' }}>No active telemetry signals detected for this phase.</div>
           )}
         </div>
+
         
         <div className="log-container mini">
             {historyLogs.slice(-10).map((line, i) => <div key={i} className="log-entry history">{line}</div>)}
         </div>
       </div>
         )}
+
+      {isStreaming && (
+        <div style={{
+          position: 'absolute',
+          bottom: '20px',
+          right: '20px',
+          width: '450px',
+          maxHeight: '400px',
+          background: 'rgba(10, 10, 15, 0.95)',
+          border: '1px solid #ff5a00',
+          borderRadius: '8px',
+          boxShadow: '0 8px 32px rgba(255, 90, 0, 0.2)',
+          zIndex: 9999,
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          backdropFilter: 'blur(10px)'
+        }}>
+          <div style={{ background: 'rgba(255, 90, 0, 0.1)', padding: '8px 12px', fontSize: '0.75rem', fontWeight: 800, color: '#ff5a00', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>🧠 Live Detective Brain</span>
+            <span className="pulse-dot" style={{ background: '#ff5a00', width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block' }}></span>
+          </div>
+          <div style={{ padding: '12px', color: '#00ffaa', fontFamily: 'monospace', fontSize: '0.8rem', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1, textShadow: '0 0 5px rgba(0,255,170,0.5)' }}>
+            {liveStreamText || 'Initializing neural link...'}
+            <span className="cursor-blink">_</span>
+          </div>
+        </div>
+      )}
 
       {/* Record Edit Modal Overlay */}
       {editingId && editForm && (

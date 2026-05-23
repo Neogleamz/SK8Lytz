@@ -468,6 +468,7 @@ export const ScraperPipeline: React.FC<{
                 inQ: liveData.in_q && liveData.in_q.length > 0 ? liveData.in_q.slice(0, 3) : belt.inQ,
                 outCards: dynamicCards.length > 0 ? dynamicCards : belt.outCards,
                 countBadges,
+                activeRecord: activeRecord || null,
             };
         }
         return {
@@ -482,7 +483,7 @@ export const ScraperPipeline: React.FC<{
         1: { hasDaemon: true,  active: !!(status?.isHarvestingActive || status?.isGoogleSweepActive), onStart: () => triggerHarvest?.('start-all'), onStop: () => triggerHarvest?.('stop-all') },
         2: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Indexer: online')),     onStart: () => triggerSpecificDaemon?.('indexer', 'start'),     onStop: () => triggerSpecificDaemon?.('indexer', 'stop') },
         3: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Photographer: online')), onStart: () => triggerSpecificDaemon?.('photographer', 'start'), onStop: () => triggerSpecificDaemon?.('photographer', 'stop') },
-        4: { hasDaemon: false, active: false, onStart: () => {}, onStop: () => {} },
+        4: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Publisher: online')),    onStart: () => triggerSpecificDaemon?.('publisher', 'start'),    onStop: () => triggerSpecificDaemon?.('publisher', 'stop') },
         5: { hasDaemon: false, active: false, onStart: () => {}, onStop: () => {} },
     };
 
@@ -654,9 +655,10 @@ export const ScraperPipeline: React.FC<{
                     // Build live status string from belt telemetry
                     const isActive = dc?.active;
                     const statusLabel = b.status === 'PROCESSING' ? 'PROCESSING' : 'IDLE';
-                    const activeRecordStatus = telemetry?.detective?.active_record?.pipeline_status as string | undefined;
+                    const activeRecordStatus = (b as any).activeRecord?.pipeline_status as string | undefined;
+                    const daemonName = b.id === 1 ? 'SCOUT' : b.id === 2 ? 'DETECTIVE' : b.id === 3 ? 'PHOTOGRAPHER' : 'PUBLISHER';
                     const daemonStatus = activeRecordStatus
-                        ? `[DETECTIVE] ${activeRecordStatus}`
+                        ? `[${daemonName}] ${activeRecordStatus}`
                         : b.target && b.target !== 'WAITING...'
                             ? `${statusLabel}: ${b.target}`
                             : b.job && b.job !== 'IDLE'

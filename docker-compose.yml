@@ -13,7 +13,7 @@ services:
     volumes:
       # Map logs directly to Windows filesystem so user can read them in IDE
       - ./tools/scraper/logs:/app/tools/scraper/logs
-      # Map local scraper database and photos
-      - ./.scraper-data:/app/.scraper-data
+      # Map local scraper database and photos correctly to where PM2 had them
+      - ./tools/.scraper-data:/app/tools/.scraper-data
     env_file:
       - .env

@@ -1,15 +1,5 @@
-Write-Host "🐳 SK8Lytz Scraper Stack — Booting via Docker Compose..." -ForegroundColor Cyan
+Write-Host "🐳 SK8Lytz Scraper Stack - Booting via Docker Compose..." -ForegroundColor Cyan
 
-# 0. Validate Docker is installed
-try {
-    $dockerVersion = docker --version 2>&1
-    Write-Host "   📦 Docker verified ($dockerVersion)" -ForegroundColor DarkGray
-} catch {
-    Write-Host "   ❌ Docker not found! Please install Docker Desktop first." -ForegroundColor Red
-    exit 1
-}
-
-# 1. Start the stack
 Write-Host "   🚀 Spinning up containers..." -ForegroundColor Yellow
 docker compose up -d --build
 

@@ -4,9 +4,11 @@
  * ZERO DB WRITES — pure function called by Indexer.ts and SniperBench.
  */
 
+import http from 'http';
 import puppeteer from 'puppeteer';
 import Tesseract from 'tesseract.js';
-import pdfParse from 'pdf-parse';
+// Bypass Bun ESM resolution bug for pdf-parse
+const pdfParse = require('pdf-parse');
 import { parseSitemap } from './SitemapParser';
 
 // ─── Shared Sanitizers (re-exported for Indexer) ─────────────────────────────
@@ -141,11 +143,14 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 // ─── Pre-Crawl External Source Fetchers (no Puppeteer) ───────────────────────
 
 async function fetchExternalText(url: string, label: string, onProgress?: (msg: string) => void): Promise<string> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
   try {
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' },
-      signal: AbortSignal.timeout(10000),
+      signal: controller.signal,
     });
+    clearTimeout(timeout);
     if (!res.ok) {
       onProgress?.(`[Detective] ⚠️ ${label} fetch failed: HTTP ${res.status} ${res.statusText}`);
       return '';
@@ -161,7 +166,7 @@ async function fetchExternalText(url: string, label: string, onProgress?: (msg: 
     const ogTitle = html.match(/<meta[^>]*property="og:title"[^>]*content="([^"]+)"/i)?.[1] || '';
     // Strip tags for body text (simple)
     const fullBodyText = html.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim();
-    const bodyText = fullBodyText.slice(0, 8000);
+    const bodyText = fullBodyText.slice(0, 1500);
     
     // Feature: Review Text Mining Regex Engine
     // Extract sentences from full body text
@@ -222,29 +227,108 @@ async function callLMStudio(
   userMessage: string,
   model: string,
   onProgress: (msg: string) => void,
-  passLabel: string
+  passLabel: string,
+  onStream?: (text: string) => void
 ): Promise<Record<string, any>> {
-  const LM_STUDIO_URL = 'http://localhost:1234/v1/chat/completions';
-  const payload = { model, messages: [{ role:'system', content: systemMessage },{ role:'user', content: userMessage }], temperature: 0.1, stream: false };
+  const host = process.env.LM_STUDIO_HOST || 'host.docker.internal';
+  const LM_STUDIO_URL = `http://${host}:1234/v1/chat/completions`;
+  console.log(`[Detective] 🔗 Querying LM Studio URL: ${LM_STUDIO_URL} (Model: ${model})`);
+  
+  if (onStream) {
+    onStream(`\n\n--- [${passLabel} LLM PASS START] ---\nQuerying model ${model}...\n`);
+  }
+  
+  const payload = { model, messages: [{ role:'system', content: systemMessage },{ role:'user', content: userMessage }], temperature: 0.1, stream: true };
+  
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const fetchFn = require('node-fetch');
-      const res = await fetchFn(LM_STUDIO_URL, { 
-        method:'POST', 
-        headers:{'Content-Type':'application/json'}, 
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(120000)
+      const url = new URL(LM_STUDIO_URL);
+      const postData = JSON.stringify(payload);
+      
+      const fullText = await new Promise<string>((resolve, reject) => {
+        const req = http.request({
+          hostname: url.hostname,
+          port: url.port || 80,
+          path: url.pathname,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(postData)
+          },
+          timeout: 300000 // 5 minutes timeout
+        }, (res: http.IncomingMessage) => {
+          if (res.statusCode && (res.statusCode < 200 || res.statusCode >= 300)) {
+            reject(new Error(`HTTP status ${res.statusCode}: ${res.statusMessage}`));
+            return;
+          }
+
+          let buffer = '';
+          let accumulated = '';
+          
+          res.on('data', (chunk: any) => {
+            const chunkStr = chunk.toString();
+            buffer += chunkStr;
+            
+            let lines = buffer.split('\n');
+            buffer = lines.pop() || ''; // keep last partial line in buffer
+            
+            for (const line of lines) {
+              const cleanLine = line.trim();
+              if (!cleanLine) continue;
+              if (cleanLine.startsWith('data: ')) {
+                const dataStr = cleanLine.slice(6).trim();
+                if (dataStr === '[DONE]') continue;
+                try {
+                  const parsed = JSON.parse(dataStr);
+                  const content = parsed.choices?.[0]?.delta?.content || '';
+                  if (content) {
+                    accumulated += content;
+                    if (onStream) {
+                      onStream(content);
+                    }
+                  }
+                } catch (e) {
+                  // partial stream line parse error is fine
+                }
+              }
+            }
+          });
+          
+          res.on('end', () => {
+            if (buffer.startsWith('data: ')) {
+              const dataStr = buffer.slice(6).trim();
+              if (dataStr !== '[DONE]') {
+                try {
+                  const parsed = JSON.parse(dataStr);
+                  const content = parsed.choices?.[0]?.delta?.content || '';
+                  if (content) {
+                    accumulated += content;
+                    if (onStream) onStream(content);
+                  }
+                } catch (e) {}
+              }
+            }
+            resolve(accumulated);
+          });
+        });
+        
+        req.on('error', (err: Error) => reject(err));
+        req.on('timeout', () => {
+          req.destroy();
+          reject(new Error('Request timed out after 5 minutes'));
+        });
+        
+        req.write(postData);
+        req.end();
       });
-      if (!res.ok) throw new Error(`LM Studio: ${res.statusText}`);
-      const data = await res.json();
-      const raw = data.choices?.[0]?.message?.content || '{}';
+      
       try {
-        const parsed = JSON.parse(raw.replace(/```json/g,'').replace(/```/g,'').trim());
+        const parsed = JSON.parse(fullText.replace(/```json/g,'').replace(/```/g,'').trim());
         onProgress(`[Detective] ✓ LM Studio ${passLabel} complete. Keys: ${Object.keys(parsed).length}`);
         return parsed;
       } catch {
         onProgress(`[Detective] ⚠️ JSON repair needed (${passLabel})...`);
-        return repairJSON(raw);
+        return repairJSON(fullText);
       }
     } catch (err: any) {
       onProgress(`[Detective] ✗ LM Studio attempt ${attempt}/2 failed: ${err.message}`);
@@ -287,7 +371,7 @@ async function crawlPage(page: any, url: string, onProgress: (m: string) => void
 // ─── Main Detective Function ─────────────────────────────────────────────────
 
 export async function executeDetective(
-  spotContext: any, aiConfig: any, isHeadless: boolean, onProgress: (msg:string)=>void=()=>{}
+  spotContext: any, aiConfig: any, isHeadless: boolean, onProgress: (msg:string)=>void=()=>{}, onStream?: (msg:string)=>void
 ): Promise<DetectiveResult> {
   let coreText=''; let amenityText=''; let combinedText=''; const flyerUrls:string[]=[]; let ogImage:string|null=null;
   const domImages:Array<{src:string;alt:string;parentClass:string}>=[];
@@ -480,7 +564,7 @@ export async function executeDetective(
     combinedText = `[OPS CORE]\n${cSlice}\n\n[AMENITIES]\n${aSlice}`;
     
     onProgress('[Detective] LM Studio Pass 1 (Ops: hours/pricing/adult-night)...');
-    pass1 = await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice}`,detectiveModel,onProgress,'Pass1');
+    pass1 = await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice}`,detectiveModel,onProgress,'Pass1',onStream);
     if(pass1.TOXICITY_ABORT===true) return{aiMetadata:{TOXICITY_ABORT:true},mappedFields:{_simulated_status:'REJECTED'},combinedText,qualityScore:0,passedQualityGate:false,candidatePhotos:null,socialLinks:{instagram_url:null,facebook_url:null,tiktok_url:null,schedule_url:null},flyerUrls,fieldConfidence:{}};
     
     // ── ESCALATION PROTOCOL ──
@@ -520,7 +604,7 @@ export async function executeDetective(
         
         onProgress('[Detective] 🚨 Re-running LM Studio Pass 1 (Ops) with OCR context...');
         const cSlice2 = coreText.slice(0, 12000);
-        const pass1_retry = await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice2}`,detectiveModel,onProgress,'Pass1-Retry');
+        const pass1_retry = await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice2}`,detectiveModel,onProgress,'Pass1-Retry',onStream);
         if (pass1_retry.hours) pass1.hours = pass1_retry.hours;
         if (pass1_retry.pricing) pass1.pricing = pass1_retry.pricing;
         if (pass1_retry.has_adult_night !== undefined) pass1.has_adult_night = pass1_retry.has_adult_night;
@@ -534,7 +618,7 @@ export async function executeDetective(
     // Fix #11: Use enriched text if escalation ran
     const pass2Slice = escalationRan ? amenityText.slice(0, 12000) : aSlice;
     onProgress('[Detective] LM Studio Pass 2 (Amenities + Vibe + Social)...');
-    pass2 = await callLMStudio(buildSystem(COMBINED_SCHEMA),`Website Text:\n${pass2Slice}`,detectiveModel,onProgress,'Pass2-Combined');
+    pass2 = await callLMStudio(buildSystem(COMBINED_SCHEMA),`Website Text:\n${pass2Slice}`,detectiveModel,onProgress,'Pass2-Combined',onStream);
   } else {
     onProgress('[Detective] Content too short or skipped. Bypassing Website LLM Passes.');
   }
@@ -559,9 +643,9 @@ export async function executeDetective(
 
     if (externalText.trim().length > 50) {
       onProgress('[Detective] LM Studio Pass 3 (Enrichment Fallback)...');
-      const eSlice = externalText.slice(0, 12000);
+      const eSlice = externalText.slice(0, 4000);
       const ENRICH_SCHEMA = { ...REQUIRED_SCHEMA, ...COMBINED_SCHEMA };
-      const pass3 = await callLMStudio(buildSystem(ENRICH_SCHEMA), `External Fallback Text:\n${eSlice}`, detectiveModel, onProgress, 'Pass3-Enrichment');
+      const pass3 = await callLMStudio(buildSystem(ENRICH_SCHEMA), `External Fallback Text:\n${eSlice}`, detectiveModel, onProgress, 'Pass3-Enrichment', onStream);
       
       // Merge without overwriting official website data
       for (const k in pass3) {

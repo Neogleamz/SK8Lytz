@@ -52,12 +52,34 @@ const gracefulShutdown = async (signal: string) => {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
-const reportPulse = (delayMs: number) => {
-  fetch('http://localhost:5999/api/pulse', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source:'Photographer',delayMs}) }).catch(()=>{});
+const reportPulse = (delayMs: number, active_job: string | null = null, target: string | null = null) => {
+  fetch('http://localhost:5999/api/pulse', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source:'Photographer',delayMs,active_job,target}) }).catch(()=>{});
+};
+
+let logQueue: { type: string; source: string; message: string }[] = [];
+let flushTimeout: any = null;
+
+const queueLog = (type: string, source: string, message: string) => {
+  logQueue.push({ type, source, message });
+  if (!flushTimeout) {
+    flushTimeout = setTimeout(flushLogQueue, 100);
+  }
+};
+
+const flushLogQueue = () => {
+  flushTimeout = null;
+  if (logQueue.length === 0) return;
+  const batch = [...logQueue];
+  logQueue = [];
+  fetch('http://localhost:5999/api/logs/ingest', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(batch)
+  }).catch(() => {});
 };
 
 const logToTower = (type: 'INFO'|'ERROR', message: string) => {
-  fetch('http://localhost:5999/api/logs/ingest', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({type,source:'Photographer',message}) }).catch(()=>{});
+  queueLog(type, 'Photographer', message);
   console.log(`${type==='ERROR'?'❌':'📸'} [Photographer] ${message}`);
 };
 
@@ -183,7 +205,17 @@ async function crawlForImages(urls: string[], pageSourceLabel: string, isHeadles
         await page.evaluate(async () => {
           await new Promise(resolve => {
             let total=0; const dist=150;
-            const timer=setInterval(()=>{window.scrollBy(0,dist);total+=dist;if(total>=document.body.scrollHeight){clearInterval(timer);resolve(true);}},120);
+            const maxScrolls = 40;
+            let scrolls = 0;
+            const timer=setInterval(()=>{
+              window.scrollBy(0,dist);
+              total+=dist;
+              scrolls++;
+              if(total>=document.body.scrollHeight || scrolls >= maxScrolls){
+                clearInterval(timer);
+                resolve(true);
+              }
+            },120);
           });
         });
         await sleep(800);
@@ -240,9 +272,9 @@ async function runPhotographerLoop() {
   const isHeadless = process.env.PHOTOGRAPHER_HEADLESS !== 'false';
 
   while (true) {
-    const configRes = await fetch('http://localhost:5999/api/priority-states').then(r => r.json()).catch(() => ({ priority_states: [] }));
+    const configRes = await fetch('http://localhost:5999/api/priority-states').then((r: any) => r.json()).catch(() => ({ priority_states: [] }));
     const priorityStates: string[] = configRes.priority_states || [];
-    const aiConfig = await fetch('http://localhost:5999/config').then(r => r.json()).then((d:any) => d.config || {}).catch(() => ({}));
+    const aiConfig = await fetch('http://localhost:5999/config').then((r: any) => r.json()).then((d:any) => d.config || {}).catch(() => ({}));
 
     let target: any = null;
 
@@ -271,13 +303,14 @@ async function runPhotographerLoop() {
     if (!target) {
       consecutiveIdle++;
       if (consecutiveIdle === 1) logToTower('INFO', '⏸️ Queue empty — idling...');
-      reportPulse(30000);
+      reportPulse(30000, 'IDLE', null);
       await sleep(30000);
       continue;
     }
 
     consecutiveIdle = 0;
     logToTower('INFO', `📷 Processing: ${target.name} (${target.state}) [${target.id}]`);
+    reportPulse(0, 'Crawling Photos', target.name);
 
     let candidates: any = {};
     try { candidates = typeof target.candidate_photos === 'string' ? JSON.parse(target.candidate_photos) : (target.candidate_photos || {}); } catch {}
@@ -320,33 +353,71 @@ async function runPhotographerLoop() {
     // ── Step 3: Puppeteer crawl — all sources ─────────────────────────────────
     const allCandidates: ImageCandidate[] = [];
 
-    // Priority 1: Sitemap gallery pages
-    if (candidates.gallery_urls?.length) {
-      logToTower('INFO', `  🗺️ Crawling ${candidates.gallery_urls.length} gallery pages...`);
-      const found = await crawlForImages(candidates.gallery_urls, 'gallery', isHeadless);
-      allCandidates.push(...found);
-    }
+    try {
+      // Priority 1: Sitemap gallery pages
+      if (candidates.gallery_urls?.length) {
+        logToTower('INFO', `  🗺️ Crawling ${candidates.gallery_urls.length} gallery pages...`);
+        const found = await crawlForImages(candidates.gallery_urls, 'gallery', isHeadless);
+        allCandidates.push(...found);
+      }
 
-    // Priority 2: Facebook photos
-    if (candidates.facebook_photos_url) {
-      logToTower('INFO', `  📘 Crawling Facebook photos...`);
-      const found = await crawlForImages([candidates.facebook_photos_url], 'facebook', isHeadless);
-      allCandidates.push(...found);
-    }
+      // Priority 2: Facebook photos
+      if (candidates.facebook_photos_url) {
+        logToTower('INFO', `  📘 Crawling Facebook photos...`);
+        const found = await crawlForImages([candidates.facebook_photos_url], 'facebook', isHeadless);
+        allCandidates.push(...found);
+      }
 
-    // Priority 3: Yelp photos
-    if (candidates.yelp_photos_url) {
-      logToTower('INFO', `  ⭐ Crawling Yelp photos...`);
-      const found = await crawlForImages([candidates.yelp_photos_url], 'yelp', isHeadless);
-      allCandidates.push(...found);
-    }
+      // Priority 3: Yelp photos
+      if (candidates.yelp_photos_url) {
+        logToTower('INFO', `  ⭐ Crawling Yelp photos...`);
+        const found = await crawlForImages([candidates.yelp_photos_url], 'yelp', isHeadless);
+        allCandidates.push(...found);
+      }
 
-    // Priority 4-7: Homepage + OG + JSON-LD (always run as fallback/supplement)
-    const spot: any = db.prepare('SELECT website FROM local_spots WHERE id = ?').get(target.id);
-    if (spot?.website) {
-      logToTower('INFO', `  🏠 Crawling homepage...`);
-      const found = await crawlForImages([spot.website], 'homepage', isHeadless);
-      allCandidates.push(...found);
+      // Priority 4-7: Homepage + OG + JSON-LD (always run as fallback/supplement)
+      const spot: any = db.prepare('SELECT website FROM local_spots WHERE id = ?').get(target.id);
+      if (spot?.website) {
+        logToTower('INFO', `  🏠 Crawling homepage...`);
+        const found = await crawlForImages([spot.website], 'homepage', isHeadless);
+        allCandidates.push(...found);
+      }
+    } catch (crawlErr: any) {
+      logToTower('ERROR', `  ⚠️ Puppeteer sitemap crawl crashed: ${crawlErr.message}`);
+      logToTower('INFO', `  ⚡ Triggering lightweight Cheerio fallback sitemap crawler...`);
+      try {
+        const cheerio = require('cheerio');
+        const urlsToCrawl: string[] = [...(candidates.gallery_urls || [])];
+        const spot: any = db.prepare('SELECT website FROM local_spots WHERE id = ?').get(target.id);
+        if (spot?.website) urlsToCrawl.push(spot.website);
+
+        for (const url of urlsToCrawl) {
+          try {
+            logToTower('INFO', `    🌐 Cheerio crawling: ${url}`);
+            const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 8000 });
+            if (res.ok) {
+              const html = await res.text();
+              const $ = cheerio.load(html);
+              
+              // Parse og:image
+              const og = $('meta[property="og:image"]').attr('content');
+              if (og) allCandidates.push({ url: og, alt: 'og:image', parentClass: 'meta', pageSource: 'cheerio_fallback' });
+
+              // Parse standard img tags
+              $('img').each((_: number, img: any) => {
+                const src = $(img).attr('src') || $(img).attr('data-src') || $(img).attr('data-lazy-src') || '';
+                if (src && src.startsWith('http')) {
+                  allCandidates.push({ url: src, alt: ($(img).attr('alt') || '').toLowerCase(), parentClass: 'img_tag', pageSource: 'cheerio_fallback' });
+                }
+              });
+            }
+          } catch (e: any) {
+            logToTower('INFO', `    ⚠️ Cheerio fallback crawl failed for ${url}: ${e.message}`);
+          }
+        }
+      } catch (cheerioErr: any) {
+        logToTower('ERROR', `    ⚠️ Cheerio fallback parser failed: ${cheerioErr.message}`);
+      }
     }
 
     // Add direct OG image as a candidate if not already found by crawl
@@ -410,7 +481,7 @@ async function runPhotographerLoop() {
       logToTower('INFO', `⚠️ ${target.name} → MEDIA_READY (no photos obtainable — promoted anyway)`);
     }
 
-    reportPulse(LOOP_COOLDOWN_MS);
+    reportPulse(LOOP_COOLDOWN_MS, 'IDLE', null);
     await sleep(LOOP_COOLDOWN_MS);
   }
 }
