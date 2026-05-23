@@ -8,6 +8,7 @@ import { exec, spawn, ChildProcess } from 'child_process';
 import { startGoogleSweep, stopGoogleSweep, isGoogleSweepActive } from './GoogleSweep';
 import { GooglePlacesProvider, RETAIL_BLOCKLIST } from './lib/providers/GooglePlacesProvider';
 import { executeDetective } from './core/DetectiveEngine';
+import { HeuristicsEngine } from './core/HeuristicsEngine';
 import { db, getLocalSpots, getLocalCount, updateLocalSpot, deleteLocalSpot, upsertLocalSpot, getConfig, updateConfig, getBlocklist, addBlocklist, deleteBlocklist, addBlocklistKeyword, getPipelineStats, getFieldRegistry, upsertFieldRegistryItem, logFieldCorrection, getCorrectionStats } from './core/LocalDB';
 
 // Identify this as the CCTower process for LocalDB initialization
@@ -50,7 +51,7 @@ function writeToLogFile(type: 'INFO' | 'ERROR', message: string) {
 const autoTagSource = (msg: string) => {
   if (msg.includes('[Harvester]') || msg.includes('[GIS]') || msg.includes('[GHOST]') ||
       msg.includes('Golden Seed') || msg.includes('GoogleSweep') || msg.includes('[GoogleSweep]')) return 'Phase 1';
-  if (msg.includes('[Operator]') || msg.includes('Google Captcha') || msg.includes('Overpass')) return 'Phase 2';
+  if (msg.includes('[Operator]') || msg.includes('Google Captcha') || msg.includes('Overpass') || msg.includes('[HEURISTIC]')) return 'Phase 2';
   if (msg.includes('[Indexer]')) return 'Phase 3';
   if (msg.includes('[Photographer]')) return 'Phase 5';
   return 'System';
@@ -464,6 +465,25 @@ async function updateLmsStatus(): Promise<void> {
 
 app.get('/api/llm/status', (req, res) => {
   res.json(cachedLmsStatus);
+});
+
+// ─── Heuristics Registry Endpoints ───────────────────────────────────────────
+app.get('/api/heuristics', (req, res) => {
+  try {
+    const ledger = HeuristicsEngine.load();
+    res.json({ success: true, ledger });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/heuristics', (req, res) => {
+  try {
+    HeuristicsEngine.save(req.body);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 app.post('/api/llm/server/start', (req, res) => {

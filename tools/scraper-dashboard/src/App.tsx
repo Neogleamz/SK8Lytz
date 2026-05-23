@@ -4,6 +4,7 @@ import ScraperPipeline from './components/ScraperPipeline';
 import type { PipelineStats } from './components/ScraperPipeline';
 import DetectiveLab from './DetectiveLab';
 import { SniperBench } from './components/SniperBench';
+import { HeuristicsControlCenter } from './components/HeuristicsControlCenter';
 import { DatabankCard } from './components/DatabankCard';
 import { RecordEditModal } from './components/RecordEditModal';
 import './App.css';
@@ -82,7 +83,7 @@ const getEmails = (emails: unknown): string[] => {
 };
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'phase1' | 'phase2' | 'phase3' | 'phase4' | 'sniper' | 'graveyard'>('pipeline');
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'phase1' | 'phase2' | 'phase3' | 'phase4' | 'sniper' | 'heuristics' | 'graveyard'>('pipeline');
   const [seedProvider, setSeedProvider] = useState<'osm'|'google'>('google');
   const [resettingIds, setResettingIds] = useState<Record<string, 'loading' | 'success'>>({});
 
@@ -1198,6 +1199,10 @@ function App() {
           style={{ background: activeTab === 'graveyard' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'graveyard' ? '#f44336' : 'rgba(255,255,255,0.6)', border: activeTab === 'graveyard' ? '1px solid #f44336' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>
           🗑️
         </button>
+        <button className="btn-icon" onClick={() => setActiveTab('heuristics')} title="Heuristics Control Center"
+          style={{ background: activeTab === 'heuristics' ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'heuristics' ? '#38bdf8' : 'rgba(255,255,255,0.6)', border: activeTab === 'heuristics' ? '1px solid #38bdf8' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 800 }}>
+          🧠 ENGINE BRAIN
+        </button>
         <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}
           style={{ padding: '4px 12px', fontSize: '0.62rem', fontWeight: 800 }}>BOOT ALL</button>
         <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}
@@ -1836,6 +1841,12 @@ function App() {
       {activeTab === 'sniper' && (
         <div className="tab-pane phase-sniper" style={{ height: '80vh', width: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid #2D3340', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
           <SniperBench />
+        </div>
+      )}
+
+      {activeTab === 'heuristics' && (
+        <div className="tab-pane phase-heuristics" style={{ height: '82vh', width: '100%', borderRadius: '12px', overflow: 'hidden', border: '1px solid #2D3340', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
+          <HeuristicsControlCenter />
         </div>
       )}
 

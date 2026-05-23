@@ -10,6 +10,7 @@ import Tesseract from 'tesseract.js';
 // Bypass Bun ESM resolution bug for pdf-parse
 const pdfParse = require('pdf-parse');
 import { parseSitemap } from './SitemapParser';
+import { HeuristicsEngine } from './HeuristicsEngine';
 
 // ─── Shared Sanitizers (re-exported for Indexer) ─────────────────────────────
 
@@ -524,6 +525,41 @@ export async function executeDetective(
   const allMailtos:string[]=[];
   let browser:any=null;
 
+  let pass1: any = null;
+  let pass2: any = null;
+  let escalationRan = false;
+  let earlyTerminated = false;
+
+  // Hoisted extraction schema and system prompt builders
+  const userVectors=aiConfig.ai_target_vectors||[];
+  const userSchema=userVectors.reduce((acc:any,vec:any)=>{acc[vec.key]=vec.prompt||vec.type;return acc;},{});
+  const REQUIRED_SCHEMA={
+    hours:'Complete weekly public skating schedule for ALL 7 DAYS {Monday: time_range, Tuesday: time_range, ...}. Include every day even if closed.',
+    pricing: {
+      adult: 'number or null — adult admission fee',
+      child: 'number or null — child/kid admission fee',
+      senior: 'number or null — senior admission fee',
+      spectator: 'number or null — spectator/non-skating supervising fee',
+      skate_rental: 'number or null — regular skate rental fee'
+    },
+    has_fee:'boolean or null — return null if no pricing/fee information was found. DO NOT assume free.',
+    has_rental:'boolean or null — return null if no skate rental information was found.',
+    has_adult_night:'boolean or null — return null if no adult night information was found.',
+    adult_night_schedule:'If adult nights: {day:time_range}. Null if none.'
+  };
+  const COMBINED_SCHEMA:Record<string,any>={surface_type:'Floor: wood/maple/concrete/asphalt/sport_court/synthetic.',surface_quality:'Condition 3-5 words.',vibe_score:'0-100.',is_indoor:'boolean',has_rental:'boolean',has_pro_shop:'boolean',has_food:'boolean',has_lights:'boolean',has_lockers:'boolean',has_ac:'boolean',has_wifi:'boolean',has_toilets:'boolean',wheelchair:'boolean',derby:'boolean',capacity:'integer.',special_events:'Array.',operator_name:'Owner name.',operator_description:'1-2 sentences.',cultural_meta:'Significance or null.',adult_night_details:'Details or null.',instagram_url:'URL or null.',facebook_url:'URL or null.',tiktok_url:'URL or null.',schedule_url:'URL or null.',yelp_url:'URL or null.',price_range:'$ to $$$$ or null.',logo_url:'Logo URL or null.',email_addresses:'Array of ALL contact email addresses found for this venue. Include info, events, parties, management, booking — every unique email. Return [] if none found.',...userSchema};
+  const FULL_SCHEMA = COMBINED_SCHEMA;
+  const exclusionKw=aiConfig.ai_exclusion_keywords||[];
+  const usp=aiConfig.ai_system_prompt||'';
+  const buildSystem=(schema:Record<string,any>,ctx?:string)=>{
+    let s=`You are a data extraction agent for [${spotContext.name}] in [${spotContext.city}].\nONLY this location. Valid JSON only.\n`;
+    s+=`CRITICAL BOOLEAN RULE: For ALL boolean fields, you MUST return null if the information was not explicitly found in the text. Do NOT assume false. Do NOT infer. A missing fee schedule does NOT mean admission is free. A missing amenity mention does NOT mean it is absent. Return null to indicate unknown.\n`;
+    if(usp) s+=usp+'\n';
+    if(exclusionKw.length) s+=`TOXICITY: If PRIMARY business matches [${exclusionKw.join(',')}] return {"TOXICITY_ABORT":true}.\n`;
+    if(ctx) s+=`PASS 1 CONTEXT: ${ctx}\n`;
+    return s+`SCHEMA:\n${JSON.stringify(schema,null,2)}`;
+  };
+
   // ── Fix #8: Extract Google Places photo references from raw_data ──
   let googlePhotoRefs: string[] = [];
   try {
@@ -607,8 +643,45 @@ export async function executeDetective(
             coreText+=igTxt; amenityText+=igTxt;
           }
         }
+
+        // Check for early termination after crawling the website homepage
+        try {
+          const ledger = HeuristicsEngine.load();
+          if (ledger.early_termination_enabled && url === spotContext.website && priorityText.trim().length >= 50) {
+            onProgress(`[HEURISTIC] 🧬 Checking early termination conditions on homepage...`);
+            const testPass1 = await callLMStudio(
+              buildSystem(REQUIRED_SCHEMA),
+              `Website Text:\n${priorityText.slice(0, 12000)}`,
+              detectiveModel,
+              onProgress,
+              'Early-Check',
+              onStream
+            );
+            
+            const hasHours = testPass1.hours && (
+              typeof testPass1.hours === 'object' || 
+              (typeof testPass1.hours === 'string' && testPass1.hours.toLowerCase().includes('monday'))
+            );
+            const hasPricing = testPass1.pricing && (
+              testPass1.pricing.adult !== null || 
+              testPass1.pricing.child !== null || 
+              testPass1.pricing.skate_rental !== null
+            );
+            
+            if (hasHours && hasPricing) {
+              onProgress(`[HEURISTIC] 🎯 Early termination triggered! Hours & Pricing resolved on homepage. Skipping remaining ${crawlUrls.length - 1} pages.`);
+              pass1 = testPass1;
+              earlyTerminated = true;
+              break;
+            } else {
+              onProgress(`[HEURISTIC] ❌ Early termination conditions not met (hours: ${!!hasHours}, pricing: ${!!hasPricing}). Continuing crawl.`);
+            }
+          }
+        } catch (e: any) {
+          onProgress(`[HEURISTIC] ⚠️ Error during early termination check: ${e.message}`);
+        }
       }
-      if(targeted.length===0){
+      if(targeted.length===0 && !earlyTerminated){
         const internal=allLinks.filter(l=>{try{return new URL(l.href).hostname===hostname;}catch{return false;}});
         const scored=internal.map(l=>{let s=0;for(const r of PAGE_SCORE_RULES){if(r.pattern.test(l.href)||r.pattern.test(l.text))s=Math.max(s,r.score);}return{...l,score:s};}).filter(l=>l.score>0).sort((a,b)=>b.score-a.score);
         for(const l of [...new Set(scored.map(s=>s.href))].slice(0,5)){
@@ -621,17 +694,19 @@ export async function executeDetective(
           domImages.push(...pg.images.slice(0,3));
         }
       }
-      for(const fUrl of [...new Set(flyerUrls)].slice(0,5)){
-        if(coreText.includes(`[OCR from Flyer Image: ${fUrl}]`)) continue;
-        try{
-          const{data:{text}}=await Tesseract.recognize(fUrl,'eng');
-          if(text?.length>20) {
-            const ocrTxt = `[OCR from Flyer Image: ${fUrl}]\n${text}\n\n`;
-            coreText = ocrTxt + coreText;
-            amenityText = ocrTxt + amenityText;
-            onProgress(`[Detective] Pre-pended OCR text from flyer: ${fUrl}`);
-          }
-        }catch{}
+      if (!earlyTerminated) {
+        for(const fUrl of [...new Set(flyerUrls)].slice(0,5)){
+          if(coreText.includes(`[OCR from Flyer Image: ${fUrl}]`)) continue;
+          try{
+            const{data:{text}}=await Tesseract.recognize(fUrl,'eng');
+            if(text?.length>20) {
+              const ocrTxt = `[OCR from Flyer Image: ${fUrl}]\n${text}\n\n`;
+              coreText = ocrTxt + coreText;
+              amenityText = ocrTxt + amenityText;
+              onProgress(`[Detective] Pre-pended OCR text from flyer: ${fUrl}`);
+            }
+          }catch{}
+        }
       }
       // Fix #1: Assign website text directly (no external noise yet)
       coreText = priorityText;
@@ -644,34 +719,6 @@ export async function executeDetective(
   }
 
   try {
-  const userVectors=aiConfig.ai_target_vectors||[];
-  const userSchema=userVectors.reduce((acc:any,vec:any)=>{acc[vec.key]=vec.prompt||vec.type;return acc;},{});
-  const REQUIRED_SCHEMA={
-    hours:'Complete weekly public skating schedule for ALL 7 DAYS {Monday: time_range, Tuesday: time_range, ...}. Include every day even if closed.',
-    pricing: {
-      adult: 'number or null — adult admission fee',
-      child: 'number or null — child/kid admission fee',
-      senior: 'number or null — senior admission fee',
-      spectator: 'number or null — spectator/non-skating supervising fee',
-      skate_rental: 'number or null — regular skate rental fee'
-    },
-    has_fee:'boolean or null — return null if no pricing/fee information was found. DO NOT assume free.',
-    has_rental:'boolean or null — return null if no skate rental information was found.',
-    has_adult_night:'boolean or null — return null if no adult night information was found.',
-    adult_night_schedule:'If adult nights: {day:time_range}. Null if none.'
-  };
-  const COMBINED_SCHEMA:Record<string,any>={surface_type:'Floor: wood/maple/concrete/asphalt/sport_court/synthetic.',surface_quality:'Condition 3-5 words.',vibe_score:'0-100.',is_indoor:'boolean',has_rental:'boolean',has_pro_shop:'boolean',has_food:'boolean',has_lights:'boolean',has_lockers:'boolean',has_ac:'boolean',has_wifi:'boolean',has_toilets:'boolean',wheelchair:'boolean',derby:'boolean',capacity:'integer.',special_events:'Array.',operator_name:'Owner name.',operator_description:'1-2 sentences.',cultural_meta:'Significance or null.',adult_night_details:'Details or null.',instagram_url:'URL or null.',facebook_url:'URL or null.',tiktok_url:'URL or null.',schedule_url:'URL or null.',yelp_url:'URL or null.',price_range:'$ to $$$$ or null.',logo_url:'Logo URL or null.',email_addresses:'Array of ALL contact email addresses found for this venue. Include info, events, parties, management, booking — every unique email. Return [] if none found.',...userSchema};
-  const FULL_SCHEMA = COMBINED_SCHEMA;
-  const exclusionKw=aiConfig.ai_exclusion_keywords||[];
-  const usp=aiConfig.ai_system_prompt||'';
-  const buildSystem=(schema:Record<string,any>,ctx?:string)=>{
-    let s=`You are a data extraction agent for [${spotContext.name}] in [${spotContext.city}].\nONLY this location. Valid JSON only.\n`;
-    s+=`CRITICAL BOOLEAN RULE: For ALL boolean fields, you MUST return null if the information was not explicitly found in the text. Do NOT assume false. Do NOT infer. A missing fee schedule does NOT mean admission is free. A missing amenity mention does NOT mean it is absent. Return null to indicate unknown.\n`;
-    if(usp) s+=usp+'\n';
-    if(exclusionKw.length) s+=`TOXICITY: If PRIMARY business matches [${exclusionKw.join(',')}] return {"TOXICITY_ABORT":true}.\n`;
-    if(ctx) s+=`PASS 1 CONTEXT: ${ctx}\n`;
-    return s+`SCHEMA:\n${JSON.stringify(schema,null,2)}`;
-  };
 
   const sanitize=(obj:any):any=>{
     if(!obj) return obj;
@@ -720,9 +767,8 @@ export async function executeDetective(
   }
   if (Object.keys(jsonLdFields).length > 0) onProgress(`[Detective] 📋 JSON-LD direct parse: ${Object.keys(jsonLdFields).join(', ')}`);
 
-  let pass1: any = {};
-  let pass2: any = {};
-  let escalationRan = false;
+  if (!pass1) pass1 = {};
+  if (!pass2) pass2 = {};
 
   // ── Pre-LLM Regex Content Bouncer ──
   const fullText = (coreText + '\n' + amenityText).toLowerCase();
@@ -755,17 +801,22 @@ export async function executeDetective(
   }
 
   if (coreText.trim().length >= 50 && hasCrawledWebsite) {
-    const cSlice=coreText.slice(0, 12000);
-    const aSlice=amenityText.slice(0, 12000);
+    // 🧬 Heuristics Semantic DOM Slicing
+    onProgress(`[HEURISTIC] 🧬 Applying semantic slicing to extraction text...`);
+    const cSlice = HeuristicsEngine.getSemanticSlice(coreText).slice.slice(0, 12000);
+    const aSlice = HeuristicsEngine.getSemanticSlice(amenityText).slice.slice(0, 12000);
     combinedText = `[OPS CORE]\n${cSlice}\n\n[AMENITIES]\n${aSlice}`;
     
-    onProgress('[Detective] LM Studio Pass 1 (Ops: hours/pricing/adult-night)...');
-    pass1 = await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice}`,detectiveModel,onProgress,'Pass1',onStream);
-    if(pass1.TOXICITY_ABORT===true) return{aiMetadata:{TOXICITY_ABORT:true},mappedFields:{_simulated_status:'REJECTED'},combinedText,qualityScore:0,passedQualityGate:false,candidatePhotos:null,socialLinks:{instagram_url:null,facebook_url:null,tiktok_url:null,schedule_url:null},flyerUrls,fieldConfidence:{}};
+    if (!earlyTerminated) {
+      onProgress('[Detective] LM Studio Pass 1 (Ops: hours/pricing/adult-night)...');
+      pass1 = await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice}`,detectiveModel,onProgress,'Pass1',onStream);
+      if(pass1.TOXICITY_ABORT===true) return{aiMetadata:{TOXICITY_ABORT:true},mappedFields:{_simulated_status:'REJECTED'},combinedText,qualityScore:0,passedQualityGate:false,candidatePhotos:null,socialLinks:{instagram_url:null,facebook_url:null,tiktok_url:null,schedule_url:null},flyerUrls,fieldConfidence:{}};
+    } else {
+      onProgress('[HEURISTIC] 🎯 Bypassing Pass 1 LLM. Reusing early-terminated homepage results!');
+    }
     
     // ── ESCALATION PROTOCOL ──
-    const needsEscalation = !pass1.hours || !pass1.pricing || (pass1.has_adult_night === true && !pass1.adult_night_schedule);
-    let escalationRan = false;
+    const needsEscalation = !earlyTerminated && (!pass1.hours || !pass1.pricing || (pass1.has_adult_night === true && !pass1.adult_night_schedule));
     if (needsEscalation && browser) {
       onProgress('[Detective] 🚨 ESCALATION PROTOCOL: Missing hours/pricing/adult-night. Activating Hound Dog & OCR.');
       const ESCALATION_RULES = [/hours/i, /schedule/i, /pricing/i, /rates/i, /admission/i, /calendar/i, /adult.?night/i, /18\+/i, /21\+/i];

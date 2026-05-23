@@ -25,6 +25,7 @@
  * Returns URLs bucketed by content type so each engine can
  * target exactly the pages it needs.
  */
+import { HeuristicsEngine } from './HeuristicsEngine';
 
 export interface SitemapResult {
   /** Schedule/hours/sessions pages — highest priority for Detective */
@@ -189,6 +190,24 @@ function scoreAndBucketFingerprints(fingerprints: PageFingerprint[]): Omit<Sitem
       // Layer 4: Headings (3x weight — catches mixed pages with multiple h1/h2)
       if (headingsText && rule.patterns.test(headingsText)) totalScore += rule.score * 3;
 
+      // Integrate dynamic path priorities from HeuristicsEngine
+      if (totalScore > 0) {
+        try {
+          const ledger = HeuristicsEngine.load();
+          let priorityBoost = 0;
+          for (const [kw, weight] of Object.entries(ledger.path_priorities)) {
+            const kwRegex = new RegExp(kw, 'i');
+            if (kwRegex.test(urlPath)) priorityBoost += weight * 10;
+            if (anchorText && kwRegex.test(anchorText)) priorityBoost += weight * 20;
+            if (fp.title && kwRegex.test(fp.title)) priorityBoost += weight * 30;
+            if (headingsText && kwRegex.test(headingsText)) priorityBoost += weight * 30;
+          }
+          totalScore += priorityBoost;
+        } catch (err: any) {
+          // Silent fallback on configuration error
+        }
+      }
+
       // Threshold: need at least 1 signal match
       if (totalScore > 0 && !seen[rule.bucket].has(fp.url)) {
         // Bonus: gallery pages with many images get a boost
@@ -325,8 +344,8 @@ export async function parseSitemap(websiteUrl: string): Promise<SitemapResult> {
       const pathname = new URL(normalized).pathname.toLowerCase();
       if (subpath && subpath !== '/' && subpath !== '') {
         if (!pathname.startsWith(subpath)) {
-          // Escape hatch for same-origin high-priority keywords (schedule, pricing, hours, calendar, tickets)
-          const isPriorityEscape = /schedule|hours|session|times|calendar|pricing|price|admission|rates|ticket/i.test(pathname);
+          // Escape hatch for same-origin high-priority keywords from global Heuristics Engine
+          const isPriorityEscape = HeuristicsEngine.getPriorityRegex().test(pathname);
           if (!isPriorityEscape) return null;
         }
       }

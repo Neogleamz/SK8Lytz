@@ -85,7 +85,8 @@ async function run() {
   }
 
   // Find the page target
-  const pageTarget = targets.find(t => t.type === 'page');
+  // Find the page target (prefer localhost page to avoid hijacking other active debugging crawls)
+  const pageTarget = targets.find(t => t.type === 'page' && (t.url.includes('localhost') || t.url.includes('127.0.0.1'))) || targets.find(t => t.type === 'page');
   if (!pageTarget) {
     console.error('❌ Error: No page target found in browser JSON list.');
     cleanupAndExit(1);
@@ -176,6 +177,10 @@ async function run() {
       const { level, text, source, url } = msg.params.entry;
       if (level === 'error') {
         const errorText = url ? `${text} (URL: ${url})` : text;
+        // Ignore external URL errors to avoid external site script/asset noise failing the quality gate
+        if (url && !url.includes('localhost') && !url.includes('127.0.0.1')) {
+          return;
+        }
         collectedErrors.push({ source: `network.${source}`, text: errorText });
         console.error(`  🔴 [Network/Log Error] ${errorText}`);
       } else if (level === 'warning') {
