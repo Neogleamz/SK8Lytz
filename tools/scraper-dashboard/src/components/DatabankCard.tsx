@@ -186,13 +186,33 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
     setPhotoIndex(0);
   }, [spot.id]);
 
-  const _ph = spot.photos as (string | PhotoItem)[] | null; 
-  const _cd = spot.candidate_photos as CandidatePhotos | PhotoItem[] | null;
-  const safePh = Array.isArray(_ph) ? _ph : [];
+  const _ph = spot.photos as unknown; 
+  const _cd = spot.candidate_photos as unknown;
+  
+  let safePh: (string | PhotoItem)[] = [];
+  if (Array.isArray(_ph)) {
+    safePh = _ph as (string | PhotoItem)[];
+  } else if (typeof _ph === 'string' && _ph.trim()) {
+    try {
+      const parsed = JSON.parse(_ph);
+      if (Array.isArray(parsed)) safePh = parsed;
+    } catch {}
+  }
+
+  let safeCd: CandidatePhotos | PhotoItem[] | null = null;
+  if (_cd) {
+    if (typeof _cd === 'string' && _cd.trim()) {
+      try {
+        safeCd = JSON.parse(_cd);
+      } catch {}
+    } else {
+      safeCd = _cd as CandidatePhotos | PhotoItem[];
+    }
+  }
   
   const validPhotoIndex = photoIndex >= safePh.length ? 0 : photoIndex;
   const rawPhoto = (typeof safePh[validPhotoIndex] === 'string' ? safePh[validPhotoIndex] : (safePh[validPhotoIndex] as PhotoItem)?.url) ?? 
-    ((_cd as CandidatePhotos)?.street_view_url ?? (Array.isArray(_cd) ? (_cd[0] as PhotoItem)?.url : null));
+    ((safeCd as CandidatePhotos)?.street_view_url ?? (Array.isArray(safeCd) ? (safeCd[0] as PhotoItem)?.url : null));
   const photo = proxyImg(rawPhoto);
   
   const openStatus = isOpenNow(toHoursArr(spot.opening_hours));
@@ -200,7 +220,7 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
   const proShop    = spot.has_pro_shop || spot.has_proshop;
   const adultNight = spot.has_adult_night;
   const photoCount = (safePh.length);
-  const candCount  = ((_cd as CandidatePhotos)?.street_view_url ? 1 : 0);
+  const candCount  = ((safeCd as CandidatePhotos)?.street_view_url ? 1 : 0);
   // Guard against literal "null" strings stored by the AI
   const nullGuard = (v: unknown): string | null => (!v || v === 'null' || v === 'NULL') ? null : String(v);
   const igUrl      = nullGuard(spot.instagram_url);
