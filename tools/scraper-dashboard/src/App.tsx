@@ -142,6 +142,91 @@ function App() {
   const [logs, setLogs] = useState<{type: string, message: string, source?: string}[]>([]);
   const [liveStreamText, setLiveStreamText] = useState<string>('');
   const [isStreaming, setIsStreaming] = useState<boolean>(false);
+  
+  // --- Live Detective Brain Dual-Layout States ---
+  const [isAnchored, setIsAnchored] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('sk8_brain_anchored');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch { return true; }
+  });
+  const [isMinimized, setIsMinimized] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('sk8_brain_minimized');
+      return saved !== null ? JSON.parse(saved) : false;
+    } catch { return false; }
+  });
+  const [isClosed, setIsClosed] = useState<boolean>(false);
+  const [currentAnalyzingSpot, setCurrentAnalyzingSpot] = useState<string>('');
+  const [brainPos, setBrainPos] = useState<{ x: number; y: number }>(() => {
+    try {
+      const saved = localStorage.getItem('sk8_brain_pos');
+      return saved ? JSON.parse(saved) : { x: window.innerWidth - 480, y: window.innerHeight - 440 };
+    } catch {
+      return { x: window.innerWidth - 480, y: window.innerHeight - 440 };
+    }
+  });
+
+  // Keep localStorage synced via effects
+  useEffect(() => {
+    localStorage.setItem('sk8_brain_anchored', JSON.stringify(isAnchored));
+  }, [isAnchored]);
+
+  useEffect(() => {
+    localStorage.setItem('sk8_brain_minimized', JSON.stringify(isMinimized));
+  }, [isMinimized]);
+
+  useEffect(() => {
+    localStorage.setItem('sk8_brain_pos', JSON.stringify(brainPos));
+  }, [brainPos]);
+
+  const dragStartRef = useRef<{ startX: number; startY: number; posX: number; posY: number } | null>(null);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return; // only left click
+    const target = e.target as HTMLElement;
+    if (target.closest('button') || target.closest('select') || target.closest('input')) return;
+
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      posX: brainPos.x,
+      posY: brainPos.y,
+    };
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    e.preventDefault();
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!dragStartRef.current) return;
+    const dx = e.clientX - dragStartRef.current.startX;
+    const dy = e.clientY - dragStartRef.current.startY;
+    const nextX = dragStartRef.current.posX + dx;
+    const nextY = dragStartRef.current.posY + dy;
+
+    // Keep it on screen
+    const clampedX = Math.max(10, Math.min(window.innerWidth - 460, nextX));
+    const clampedY = Math.max(10, Math.min(window.innerHeight - 60, nextY));
+
+    setBrainPos({ x: clampedX, y: clampedY });
+  };
+
+  const handleMouseUp = () => {
+    dragStartRef.current = null;
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+  };
+
+  // Clean up drag listeners on unmount
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
   const logsRef = useRef<HTMLDivElement>(null);
   const activeTabRef = useRef<typeof activeTab>('phase1');
   const stateOverrideRef = useRef<string[]>([]); // mirrors stateOverride but readable in stale closures
@@ -216,14 +301,24 @@ function App() {
       const data = JSON.parse(event.data);
       if (data.type === 'LLM_STREAM') {
         setIsStreaming(true);
+        setIsClosed(false); // Auto-reopen when new stream starts
         setLiveStreamText(prev => prev + data.message);
         return;
       }
       if (data.type === 'INFO' && data.message.includes('LM Studio Pass') && !data.message.includes('complete')) {
         setLiveStreamText('');
       }
+      if (data.type === 'INFO' && data.message.includes('[Detective] Analyzing:')) {
+        const match = data.message.match(/Analyzing:\s*(.+)/);
+        if (match && match[1]) {
+          setCurrentAnalyzingSpot(match[1].trim());
+        }
+      }
       if (data.type === 'INFO' && data.message.includes('complete. Keys:')) {
-        setTimeout(() => setIsStreaming(false), 8000);
+        setTimeout(() => {
+          setIsStreaming(false);
+          setCurrentAnalyzingSpot('');
+        }, 8000);
       }
       setLogs(prev => {
         const newLogs = [...prev, data];
@@ -1276,6 +1371,11 @@ function App() {
               onUploadPhoto={uploadPhoto}
               seedProvider={seedProvider}
               onProviderChange={setSeedProvider}
+              liveStreamText={liveStreamText}
+              isStreaming={isStreaming}
+              currentAnalyzingSpot={currentAnalyzingSpot}
+              isAnchored={isAnchored}
+              setIsAnchored={setIsAnchored}
             />
 
               <div style={{marginTop: '2rem'}}>
@@ -1955,31 +2055,145 @@ function App() {
       </div>
         )}
 
-      {isStreaming && (
+      {isStreaming && !isAnchored && !isClosed && (
         <div style={{
-          position: 'absolute',
-          bottom: '20px',
-          right: '20px',
+          position: 'fixed',
+          left: `${brainPos.x}px`,
+          top: `${brainPos.y}px`,
           width: '450px',
-          maxHeight: '400px',
-          background: 'rgba(10, 10, 15, 0.95)',
+          height: isMinimized ? '38px' : '400px',
+          background: 'rgba(10, 10, 15, 0.96)',
           border: '1px solid #ff5a00',
-          borderRadius: '8px',
-          boxShadow: '0 8px 32px rgba(255, 90, 0, 0.2)',
+          borderRadius: '12px',
+          boxShadow: '0 15px 45px rgba(0, 0, 0, 0.65), 0 0 25px rgba(255, 90, 0, 0.18)',
           zIndex: 9999,
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          backdropFilter: 'blur(10px)'
+          backdropFilter: 'blur(15px)',
+          transition: 'height 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
         }}>
-          <div style={{ background: 'rgba(255, 90, 0, 0.1)', padding: '8px 12px', fontSize: '0.75rem', fontWeight: 800, color: '#ff5a00', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>🧠 Live Detective Brain</span>
-            <span className="pulse-dot" style={{ background: '#ff5a00', width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block' }}></span>
+          {/* Header */}
+          <div 
+            onMouseDown={handleMouseDown}
+            style={{ 
+              background: 'rgba(255, 90, 0, 0.08)', 
+              padding: '8px 14px', 
+              fontSize: '0.7rem', 
+              fontWeight: 800, 
+              color: '#ff5a00', 
+              textTransform: 'uppercase', 
+              letterSpacing: '0.12em', 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              cursor: 'move',
+              userSelect: 'none',
+              borderBottom: isMinimized ? 'none' : '1px solid rgba(255, 90, 0, 0.15)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '60%' }}>
+              <span>🧠 Brain</span>
+              {currentAnalyzingSpot && (
+                <span 
+                  title={currentAnalyzingSpot}
+                  style={{ 
+                    fontSize: '0.6rem', 
+                    color: 'rgba(255, 255, 255, 0.72)', 
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    padding: '2px 8px', 
+                    borderRadius: '4px',
+                    fontFamily: 'JetBrains Mono, monospace',
+                    letterSpacing: 'normal',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {currentAnalyzingSpot}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsAnchored(true);
+                }}
+                style={{
+                  background: 'rgba(255, 90, 0, 0.15)',
+                  border: '1px solid rgba(255, 90, 0, 0.3)',
+                  borderRadius: '4px',
+                  color: '#ff5a00',
+                  fontSize: '0.52rem',
+                  fontWeight: 900,
+                  padding: '2px 6px',
+                  cursor: 'pointer',
+                  fontFamily: 'JetBrains Mono, monospace'
+                }}
+                title="Anchor this console into the Phase 2 Assembly line row"
+              >
+                🔒 Anchor
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMinimized(!isMinimized);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#ff5a00',
+                  fontSize: '0.85rem',
+                  cursor: 'pointer',
+                  padding: '0 4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  fontWeight: 'bold'
+                }}
+                title={isMinimized ? 'Expand window' : 'Minimize window'}
+              >
+                {isMinimized ? '＋' : '➖'}
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsClosed(true);
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'rgba(255,255,255,0.4)',
+                  fontSize: '1rem',
+                  cursor: 'pointer',
+                  padding: '0 4px',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                title="Close console overlay"
+              >
+                ✕
+              </button>
+              <span className="pulse-dot" style={{ background: '#ff5a00', width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block', marginLeft: '2px' }}></span>
+            </div>
           </div>
-          <div style={{ padding: '12px', color: '#00ffaa', fontFamily: 'monospace', fontSize: '0.8rem', whiteSpace: 'pre-wrap', overflowY: 'auto', flex: 1, textShadow: '0 0 5px rgba(0,255,170,0.5)' }}>
-            {liveStreamText || 'Initializing neural link...'}
-            <span className="cursor-blink">_</span>
-          </div>
+          {/* Terminal Screen */}
+          {!isMinimized && (
+            <div style={{ 
+              padding: '12px 14px', 
+              color: '#00ffaa', 
+              fontFamily: 'JetBrains Mono, monospace', 
+              fontSize: '0.74rem', 
+              whiteSpace: 'pre-wrap', 
+              overflowY: 'auto', 
+              flex: 1, 
+              textShadow: '0 0 5px rgba(0,255,170,0.4)',
+              background: 'rgba(0, 0, 0, 0.4)'
+            }}>
+              {liveStreamText || 'Initializing neural link...'}
+              <span className="cursor-blink" style={{ animation: 'blink 1s step-end infinite' }}>_</span>
+            </div>
+          )}
         </div>
       )}
 

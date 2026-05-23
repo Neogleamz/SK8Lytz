@@ -47,6 +47,11 @@ interface BeltProps {
   onUploadPhoto?: (spotId: string, file: File) => void;
   seedProvider?: 'osm' | 'google' | 'website-resolver';
   onProviderChange?: (p: 'osm' | 'google' | 'website-resolver') => void;
+  liveStreamText?: string;
+  isStreaming?: boolean;
+  currentAnalyzingSpot?: string;
+  isAnchored?: boolean;
+  setIsAnchored?: (a: boolean) => void;
 }
 
 // Shared card dimensions
@@ -149,7 +154,7 @@ export const BeltNode: React.FC<BeltProps> = ({
   id, name, color, rgb, job, daemon, target, inQ, status, gatekeeper, attempting, outCards,
   onPhaseNav, daemonActive = false, onDaemonStart, onDaemonStop, hasDaemon = true, daemonStatus, inputStatus, outputStatus, countBadges = [],
   onBlockSpot, onRestartSpot, onFreezeSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto,
-  seedProvider, onProviderChange
+  seedProvider, onProviderChange, liveStreamText, isStreaming = false, currentAnalyzingSpot = '', isAnchored = true, setIsAnchored
 }) => {
   const [isConfigOpen, setConfigOpen] = useState(false);
   const [carouselIdx, setCarouselIdx] = useState(0);
@@ -640,6 +645,95 @@ export const BeltNode: React.FC<BeltProps> = ({
 
       </div>
       </div>  {/* end belt content padding */}
+
+      {/* Inline Live Detective Brain Terminal */}
+      {id === 2 && isStreaming && isAnchored && (
+        <div style={{
+          margin: '0 14px 14px',
+          background: 'rgba(10, 10, 15, 0.96)',
+          border: '1px solid #ff5a00',
+          borderRadius: '12px',
+          boxShadow: '0 10px 30px rgba(255, 90, 0, 0.15)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          backdropFilter: 'blur(15px)',
+          animation: 'fadeIn 0.3s ease-out'
+        }}>
+          {/* Header */}
+          <div style={{ 
+            background: 'rgba(255, 90, 0, 0.08)', 
+            padding: '8px 16px', 
+            fontSize: '0.7rem', 
+            fontWeight: 800, 
+            color: '#ff5a00', 
+            textTransform: 'uppercase', 
+            letterSpacing: '0.12em', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center',
+            borderBottom: '1px solid rgba(255, 90, 0, 0.15)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>🧠 Live Detective Brain</span>
+              {currentAnalyzingSpot && (
+                <span style={{ 
+                  fontSize: '0.62rem', 
+                  color: 'rgba(255, 255, 255, 0.75)', 
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  padding: '2px 8px', 
+                  borderRadius: '4px',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  letterSpacing: 'normal'
+                }}>
+                  Analyzing: {currentAnalyzingSpot}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsAnchored?.(false);
+                }}
+                style={{
+                  background: 'rgba(255, 90, 0, 0.15)',
+                  border: '1px solid rgba(255, 90, 0, 0.3)',
+                  borderRadius: '6px',
+                  color: '#ff5a00',
+                  fontSize: '0.58rem',
+                  fontWeight: 900,
+                  padding: '3px 8px',
+                  cursor: 'pointer',
+                  textTransform: 'uppercase',
+                  fontFamily: 'JetBrains Mono, monospace',
+                  transition: 'all 0.2s'
+                }}
+                title="Float this window so you can drag it around the screen"
+              >
+                🔓 Float Window
+              </button>
+              <span className="pulse-dot" style={{ background: '#ff5a00', width: '8px', height: '8px', borderRadius: '50%', display: 'inline-block' }}></span>
+            </div>
+          </div>
+          {/* Terminal Content */}
+          <div style={{ 
+            padding: '12px 16px', 
+            height: '180px', 
+            color: '#00ffaa', 
+            fontFamily: 'JetBrains Mono, monospace', 
+            fontSize: '0.74rem', 
+            whiteSpace: 'pre-wrap', 
+            overflowY: 'auto', 
+            textShadow: '0 0 5px rgba(0,255,170,0.4)',
+            background: 'rgba(0,0,0,0.45)',
+            boxSizing: 'border-box'
+          }}>
+            {liveStreamText || 'Initializing neural link...'}
+            <span className="cursor-blink" style={{ animation: 'blink 1s step-end infinite' }}>_</span>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes beltFlowRight { 0%{transform:translateX(-4px);opacity:0} 50%{opacity:1} 100%{transform:translateX(4px);opacity:0} }

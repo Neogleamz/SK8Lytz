@@ -158,7 +158,12 @@ export const ScraperPipeline: React.FC<{
     onUploadPhoto?: (spotId: string, file: File) => void;
     seedProvider?: 'osm' | 'google' | 'website-resolver';
     onProviderChange?: (p: 'osm' | 'google' | 'website-resolver') => void;
-}> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto, seedProvider, onProviderChange }) => {
+    liveStreamText?: string;
+    isStreaming?: boolean;
+    currentAnalyzingSpot?: string;
+    isAnchored?: boolean;
+    setIsAnchored?: (a: boolean) => void;
+}> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto, seedProvider, onProviderChange, liveStreamText, isStreaming, currentAnalyzingSpot, isAnchored, setIsAnchored }) => {
     const { telemetry, config, loading, pulse } = useScraperTelemetry(2000);
     const { fields } = useFieldRegistry();
 
@@ -708,6 +713,11 @@ export const ScraperPipeline: React.FC<{
                             onUploadPhoto={onUploadPhoto}
                             seedProvider={b.id === 1 ? seedProvider : undefined}
                             onProviderChange={b.id === 1 ? onProviderChange : undefined}
+                            liveStreamText={liveStreamText}
+                            isStreaming={isStreaming}
+                            currentAnalyzingSpot={currentAnalyzingSpot}
+                            isAnchored={isAnchored}
+                            setIsAnchored={setIsAnchored}
                         />
                     );
                 })}
