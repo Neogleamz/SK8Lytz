@@ -161,7 +161,7 @@ export const BeltNode: React.FC<BeltProps> = ({
   const successCards = outCards.filter(c => c.type === 'success').slice(0, 2);
   const rejectedCards = outCards.filter(c => c.type === 'rejected').slice(0, 2);
   // Always show 2 slots in each lane
-  const pendingSlots: (string | null)[] = [inQ[0] ?? null, inQ[1] ?? null];
+  const pendingSlots: (string | null)[] = [inQ[1] ?? null, inQ[0] ?? null];
   const rejectedSlots = rejectedCards.length > 0 ? rejectedCards : null;
 
   const colVar = `var(${color})`;

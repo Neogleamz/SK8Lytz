@@ -480,13 +480,18 @@ export const ScraperPipeline: React.FC<{
                 });
             }
 
+            const rawInQ = liveData.in_q || [];
+            const activeJob = liveData.active_job;
+            const activeTarget = liveData.target;
+            const cleanInQ = rawInQ.filter((name: string) => name !== activeJob && name !== activeTarget);
+
             return {
                 ...belt,
                 attempting: dynamicAttempting,
                 job: liveData.active_job || 'IDLE',
-                target: liveData.target || (liveData.in_q?.[0] ? `Next: ${liveData.in_q[0]}` : 'WAITING...'),
+                target: liveData.target || (cleanInQ[0] ? `Next: ${cleanInQ[0]}` : 'WAITING...'),
                 status: liveData.active_job ? 'PROCESSING' : (liveData.alive ? 'WAITING' : 'OFFLINE'),
-                inQ: liveData.in_q && liveData.in_q.length > 0 ? liveData.in_q.slice(0, 3) : belt.inQ,
+                inQ: cleanInQ.slice(0, 3),
                 outCards: dynamicCards.length > 0 ? dynamicCards : belt.outCards,
                 countBadges,
                 activeRecord: activeRecord || null,
