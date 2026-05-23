@@ -112,9 +112,16 @@ const isOpenNow = (hours: string[] | null): boolean | null => {
   const todayEntry = hours.find(h => h.startsWith(todayName));
   if (!todayEntry) return null;
   if (todayEntry.toLowerCase().includes('closed')) return false;
+  
   const p = (s: string): number => {
     const m = s.trim().match(/(\d+):(\d+)\s*(AM|PM)?/i);
-    if (!m) return 0;
+    if (!m) {
+      const m24 = s.trim().match(/^(\d{1,2}):(\d{2})$/);
+      if (m24) {
+        return parseInt(m24[1]) * 60 + parseInt(m24[2]);
+      }
+      return 0;
+    }
     let h = parseInt(m[1]);
     const min = parseInt(m[2]);
     const per = (m[3] || '').toUpperCase();
@@ -122,12 +129,31 @@ const isOpenNow = (hours: string[] | null): boolean | null => {
     if (per === 'AM' && h === 12) h = 0;
     return h * 60 + min;
   };
+  
   const cur = new Date().getHours() * 60 + new Date().getMinutes();
   const segments = todayEntry.replace(/^[^:]+:\s*/, '').split(',');
+  
   return segments.some(seg => {
-    const rng = seg.match(/(.+?)\s*[\u2013\u2014-]\s*(.+)/);
+    const rng = seg.match(/(.+?)\s*[\u2013\u2014\-]\s*(.+)/);
     if (!rng) return false;
-    return cur >= p(rng[1]) && cur <= p(rng[2]);
+    
+    let startStr = rng[1].trim();
+    let endStr = rng[2].trim();
+    
+    const startHasPeriod = /[AP]M/i.test(startStr);
+    const endMatch = endStr.match(/([AP]M)/i);
+    if (!startHasPeriod && endMatch) {
+      startStr = `${startStr} ${endMatch[1]}`;
+    }
+    
+    const start = p(startStr);
+    const end = p(endStr);
+    
+    if (end < start) {
+      return cur >= start || cur <= end;
+    }
+    
+    return cur >= start && cur <= end;
   });
 };
 
