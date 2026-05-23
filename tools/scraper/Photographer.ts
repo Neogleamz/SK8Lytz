@@ -376,14 +376,14 @@ async function runPhotographerLoop() {
 
     // sniper_target_id isolation
     if (aiConfig.sniper_target_id) {
-      target = db.prepare(`SELECT id, name, state, candidate_photos, photos, logo_url, cover_photo_url, verification_status FROM local_spots WHERE id = ?`).get(aiConfig.sniper_target_id);
+      target = db.prepare(`SELECT id, name, state, candidate_photos, photos, logo_url, cover_photo_url, verification_status, retry_count FROM local_spots WHERE id = ?`).get(aiConfig.sniper_target_id);
       if (target && target.verification_status !== 'DEEP_CRAWLED') {
         target = null;
       }
     }
 
     if (!target) {
-      let query = `SELECT id, name, state, candidate_photos, photos, logo_url, cover_photo_url, verification_status FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND website IS NOT NULL`;
+      let query = `SELECT id, name, state, candidate_photos, photos, logo_url, cover_photo_url, verification_status, retry_count FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND website IS NOT NULL`;
       if (priorityStates.length > 0) {
         query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
       }
@@ -393,7 +393,7 @@ async function runPhotographerLoop() {
 
     if (!target) {
       // Fallback: any DEEP_CRAWLED without priority filter
-      try { target = db.prepare(`SELECT id, name, state, candidate_photos, photos, logo_url, cover_photo_url, verification_status FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`).get() as any; } catch {}
+      try { target = db.prepare(`SELECT id, name, state, candidate_photos, photos, logo_url, cover_photo_url, verification_status, retry_count FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`).get() as any; } catch {}
     }
 
     if (!target) {
@@ -405,6 +405,30 @@ async function runPhotographerLoop() {
     }
 
     consecutiveIdle = 0;
+
+    // ── Self-Healing Safeguard ────────────────────────────────────────────────
+    // If a spot has crashed the photographer 3 or more times, auto-promote it to prevent infinite blocking
+    if ((target.retry_count || 0) >= 3) {
+      logToTower('ERROR', `⚠️ Spot ${target.name} has crashed the photographer ${target.retry_count} times. Auto-promoting to prevent infinite queue blockages.`);
+      try {
+        updateLocalSpot(target.id, {
+          verification_status: 'MEDIA_READY',
+          last_attempted_at: new Date().toISOString()
+        });
+      } catch {}
+      await sleep(LOOP_COOLDOWN_MS);
+      continue;
+    }
+
+    // ── Optimistic Touch Gate ─────────────────────────────────────────────────
+    // Update last_attempted_at and increment retry_count instantly. If we crash, this pushes the spot to the back of the queue
+    try {
+      updateLocalSpot(target.id, {
+        last_attempted_at: new Date().toISOString(),
+        retry_count: (target.retry_count || 0) + 1
+      });
+    } catch {}
+
     logToTower('INFO', `📷 Processing: ${target.name} (${target.state}) [${target.id}]`);
     reportPulse(0, 'Crawling Photos', target.name);
 
