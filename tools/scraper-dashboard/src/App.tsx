@@ -1017,10 +1017,7 @@ function App() {
             style={{ background: activeTab === 'graveyard' ? 'rgba(244, 67, 54, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'graveyard' ? '#f44336' : 'rgba(255,255,255,0.6)', border: activeTab === 'graveyard' ? '1px solid #f44336' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
             🗑️
           </button>
-          <button className="btn-icon" onClick={() => setActiveTab('heuristics')} title="Heuristics Control Center"
-            style={{ background: activeTab === 'heuristics' ? 'rgba(56, 189, 248, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'heuristics' ? '#38bdf8' : 'rgba(255,255,255,0.6)', border: activeTab === 'heuristics' ? '1px solid #38bdf8' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 800 }}>
-            🧠 ENGINE BRAIN
-          </button>
+
           <button className="btn btn-start" onClick={handleSysStart} disabled={status?.isRunning}
             style={{ padding: '4px 12px', fontSize: '0.62rem', fontWeight: 800 }}>BOOT ALL</button>
           <button className="btn btn-stop" onClick={handleSysStop} disabled={!status?.isRunning}
@@ -1111,9 +1108,24 @@ function App() {
           flexDirection: 'column',
           gap: '12px',
         }}>
-          <h3 style={{ fontSize: '0.72rem', fontWeight: 900, color: '#d8b4fe', textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span>🤖</span> AI & Compute Gear
-          </h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <h3 style={{ fontSize: '0.72rem', fontWeight: 900, color: '#d8b4fe', textTransform: 'uppercase', letterSpacing: '0.12em', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>🤖</span> AI & Compute Gear
+            </h3>
+            
+            <button onClick={() => setActiveTab('heuristics')} title="Heuristics Control Center"
+              style={{
+                background: activeTab === 'heuristics' ? 'rgba(162, 0, 255, 0.2)' : 'rgba(255,255,255,0.05)',
+                color: activeTab === 'heuristics' ? '#c77dff' : 'rgba(255,255,255,0.6)',
+                border: activeTab === 'heuristics' ? '1px solid #c77dff' : '1px solid rgba(255,255,255,0.1)',
+                padding: '3px 8px', borderRadius: '6px', cursor: 'pointer',
+                fontSize: '0.55rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em',
+                transition: 'all 0.2s ease', display: 'flex', alignItems: 'center', gap: '4px'
+              }}
+            >
+              🧠 Engine Brain
+            </button>
+          </div>
 
           {(() => {
             const lms = (status as any)?.lmsStatus;
