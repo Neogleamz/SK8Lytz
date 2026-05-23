@@ -20,7 +20,7 @@ import fetch from 'node-fetch';
 import puppeteer from 'puppeteer';
 import Tesseract from 'tesseract.js';
 import crypto from 'crypto';
-import { db, updateLocalSpot, getConfig } from './core/LocalDB';
+import { db, updateLocalSpot } from './core/LocalDB';
 
 const envPaths = [
   path.resolve(__dirname, '../../.env'),
@@ -35,7 +35,7 @@ if (!fs.existsSync(PHOTOS_DIR)) fs.mkdirSync(PHOTOS_DIR, { recursive: true });
 const PHOTO_SERVE_BASE = 'http://localhost:5999/api/photos';
 const LM_STUDIO_URL = 'http://localhost:1234/v1/chat/completions';
 const LOOP_COOLDOWN_MS = 800;
-const MAX_PHOTOS = 10;
+const MAX_PHOTOS = 20;
 const MIN_FILE_SIZE_BYTES = 50 * 1024; // 50KB
 const MIN_IMG_WIDTH = 600;
 const MIN_IMG_HEIGHT = 400;
@@ -172,7 +172,8 @@ function normalizeImageUrl(urlStr: string): string {
 }
 
 function calculateCandidateScore(c: ImageCandidate, size: number): number {
-  let score = size; // Base score is file size in bytes
+  // Clamp raw size contribution to 250KB so large unoptimized images don't dominate
+  let score = Math.min(size, 250 * 1024);
 
   const urlLower = c.url.toLowerCase();
   const altLower = c.alt.toLowerCase();
@@ -197,18 +198,23 @@ function calculateCandidateScore(c: ImageCandidate, size: number): number {
   const goodKeywords = [
     'gallery', 'upload', 'media', 'photo', 'rink', 'floor', 'skater', 'skate',
     'spot', 'interior', 'exterior', 'facility', 'full', 'large', 'original',
-    'action', 'party', 'event', 'fun'
+    'action', 'party', 'event', 'fun', 'arena', 'roll'
   ];
   
   for (const kw of goodKeywords) {
-    if (urlLower.includes(kw) || altLower.includes(kw)) {
-      score += 200 * 1024; // Boost by 200KB worth of priority
+    if (urlLower.includes(kw) || altLower.includes(kw) || classLower.includes(kw)) {
+      score += 400 * 1024; // Boost by 400KB worth of priority
     }
   }
 
   // 3. Parental class boosts
   if (classLower.includes('gallery') || classLower.includes('slider') || classLower.includes('carousel') || classLower.includes('portfolio')) {
-    score += 150 * 1024; // Boost by 150KB
+    score += 500 * 1024; // Boost by 500KB
+  }
+
+  // 4. Google Places photo reference boost (pristine physical photos of spot itself)
+  if (c.pageSource === 'google_refs' || urlLower.includes('googleusercontent.com') || urlLower.includes('maps.googleapis.com')) {
+    score += 1000 * 1024; // Boost by 1MB priority
   }
 
   return score;
@@ -240,17 +246,27 @@ async function estimateImageQuality(candidates: ImageCandidate[]): Promise<strin
       return scoreB - scoreA;
     })
     .map(c => c.url)
-    .slice(0, MAX_PHOTOS * 2.5); // Take top 25 to screen
+    .slice(0, MAX_PHOTOS * 2.5); // Take top candidates to screen
 
   const finalUrls: string[] = [];
   logToTower('INFO', `  🔍 Running OCR Bouncer on top ${sortedUrls.length} candidate images...`);
   
   for (const url of sortedUrls) {
     if (finalUrls.length >= MAX_PHOTOS) break;
+
+    // Google Places references are pre-verified real rink photos, never flyers or coupon scans.
+    // Skip OCR completely to optimize speed and guarantee preservation.
+    const isGooglePlaces = url.includes('googleusercontent.com') || url.includes('maps.googleapis.com') || url.includes('places/photo');
+    if (isGooglePlaces) {
+      logToTower('INFO', `  ✅ Fast-tracking Google Places photo (skipping OCR): ${url.slice(0, 60)}`);
+      finalUrls.push(url);
+      continue;
+    }
+
     try {
       const { data: { text } } = await Tesseract.recognize(url, 'eng');
       const textLen = text?.trim().length || 0;
-      if (textLen > 100) {
+      if (textLen > 350) {
         logToTower('INFO', `  🚫 Rejected as Flyer (Text length: ${textLen}): ${url.slice(0, 60)}`);
       } else {
         finalUrls.push(url);
@@ -316,7 +332,10 @@ async function crawlForImages(urls: string[], pageSourceLabel: string, isHeadles
             if (src && src.startsWith('http')) {
               // Relax strict layout size check if the URL contains strong visual photo cues
               const isPlaceholderOrIcon = /icon|logo|sprite|spacer|star|button|avatar/i.test(src);
-              const isHighResCandidate = /uploads|gallery|media|photos|rink|skate|original/i.test(src) || src.includes('places/photo');
+              const isHighResCandidate = /uploads|gallery|media|photos|rink|skate|original/i.test(src) || 
+                                         src.includes('places/photo') ||
+                                         src.includes('wixstatic.com/media') ||
+                                         src.includes('squarespace-cdn.com');
               
               const passesSize = (w >= minW && h >= minH);
               const passesLazyLoad = (w === 0 && h === 0 && isHighResCandidate);
