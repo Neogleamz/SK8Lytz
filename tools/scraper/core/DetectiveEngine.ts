@@ -217,16 +217,22 @@ async function fetchExternalText(url: string, label: string, onProgress?: (msg: 
     const bodyText = fullBodyText.slice(0, 1500);
     
     // Feature: Review Text Mining Regex Engine
-    // Extract sentences from full body text
-    const sentences = fullBodyText.match(/[^.!?]+[.!?]+/g) || [];
-    const keywords = ['adult', '18+', '21+', 'price', 'admission', '$', 'cost', 'fee', 'schedule', 'hours', 'session', 'dj', 'music'];
-    const matchedSnippets = sentences
+    // Extract sentences from full body text, splitting by punctuation or line breaks
+    const sentences = fullBodyText.split(/[.!?]+|\n+/)
       .map(s => s.trim())
-      .filter(s => s.length > 10 && s.length < 300)
-      .filter(s => {
-        const lower = s.toLowerCase();
-        return keywords.some(k => lower.includes(k));
+      .filter(s => s.length > 10 && s.length < 300);
+    const keywords = ['adult', '18+', '21+', 'price', 'admission', '$', 'cost', 'fee', 'schedule', 'hours', 'session', 'dj', 'music'];
+    const matchedSnippets = sentences.filter(s => {
+      const lower = s.toLowerCase();
+      return keywords.some(k => {
+        if (k.length <= 3) {
+          // Escape '+' and enforce word boundaries for short key terms
+          const regex = new RegExp(`\\b${k.replace('+', '\\+')}\\b`, 'i');
+          return regex.test(lower);
+        }
+        return lower.includes(k);
       });
+    });
     const uniqueSnippets = [...new Set(matchedSnippets)].slice(0, 30);
 
     let result = `[${label}: ${url}]\n`;
