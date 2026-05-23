@@ -95,8 +95,10 @@ function App() {
   const [stateOverride, setStateOverride] = useState<string[]>([]);
   const [pipelineStats, setPipelineStats] = useState<PipelineStats | undefined>(undefined);
   const [showBulkResetModal, setShowBulkResetModal] = useState<boolean>(false);
-  const [resetToTarget, setResetToTarget] = useState<'SEEDED' | 'DEEP_CRAWLED' | 'MEDIA_READY'>('SEEDED');
+  const [resetToTarget, setResetToTarget] = useState<'SEEDED' | 'DEEP_CRAWLED' | 'MEDIA_READY' | 'PENDING_WEBSITE'>('SEEDED');
   const [resetStatuses, setResetStatuses] = useState<Record<string, boolean>>({
+    PENDING_WEBSITE: true,
+    WEBSITE_STALLED: true,
     DEEP_CRAWLED: true,
     MEDIA_READY: true,
     STALLED: true,
@@ -991,10 +993,10 @@ function App() {
           </span>
         </div>
 
-        {/* Action Deck (Factory Floor, Reset, Sniper, Graveyard, Engine Brain, Boot, Halt) */}
+        {/* Action Deck (Factory Floor, Reset, Sniper, Graveyard, Engine Brain) */}
         <div style={{ display: 'flex', gap: '6px', flexShrink: 0, alignItems: 'center', flexWrap: 'wrap' }}>
           <button className="btn-icon" onClick={() => setActiveTab('pipeline')} title="Factory Floor"
-            style={{ background: activeTab === 'pipeline' ? 'rgba(0, 255, 170, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'pipeline' ? '#00ffaa' : 'rgba(255,255,255,0.6)', border: activeTab === 'pipeline' ? '1px solid #00ffaa' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 800 }}>
+            style={{ background: activeTab === 'pipeline' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'pipeline' ? '#3b82f6' : 'rgba(255,255,255,0.6)', border: activeTab === 'pipeline' ? '1px solid #3b82f6' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 800 }}>
             FACTORY FLOOR
           </button>
           
@@ -1002,33 +1004,13 @@ function App() {
              onClick={() => setShowBulkResetModal(true)}
              disabled={isBulkResetting}
              title={`Reset matching records back to a specific phase (Seeded, Deep Crawled, or Media Ready)`}
-             style={{ background: isBulkResetting ? 'rgba(255, 179, 0, 0.4)' : 'rgba(255, 179, 0, 0.15)', color: isBulkResetting ? '#fff' : '#ffb300', border: '1px solid rgba(255, 179, 0, 0.3)', padding: '4px 10px', borderRadius: '6px', cursor: isBulkResetting ? 'not-allowed' : 'pointer', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}
+             style={{ background: isBulkResetting ? 'rgba(255, 90, 0, 0.4)' : 'rgba(255, 90, 0, 0.15)', color: isBulkResetting ? '#fff' : '#ff5a00', border: '1px solid rgba(255, 90, 0, 0.3)', padding: '4px 10px', borderRadius: '6px', cursor: isBulkResetting ? 'not-allowed' : 'pointer', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
             {isBulkResetting ? '⏳ RESETTING...' : '⚡ Reset Records'}
           </button>
           
-          <button
-             onClick={async () => {
-               if (!confirm('Reset all website-less spots in the database back to PENDING_WEBSITE?')) return;
-               try {
-                 const res = await fetch(`${API_BASE}/api/website-resolver/reset-missing`, { method: 'POST' });
-                 const data = await res.json();
-                 if (data.success) {
-                   alert(`Successfully reset ${data.count} website-less spots back to PENDING_WEBSITE!`);
-                   fetchPipelineStats();
-                   fetchQueue();
-                 }
-               } catch (e) {
-                 alert('Reset failed.');
-               }
-             }}
-             style={{ background: 'rgba(0, 255, 170, 0.15)', color: '#00ffaa', border: '1px solid rgba(0, 255, 170, 0.3)', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}
-           >
-             🔍 Reset Website-Less
-           </button>
-          
           <button className="btn-icon" onClick={() => setActiveTab('sniper')} title="Sniper Bench"
-            style={{ background: activeTab === 'sniper' ? 'rgba(255, 106, 0, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'sniper' ? '#ff6a00' : 'rgba(255,255,255,0.6)', border: activeTab === 'sniper' ? '1px solid #ff6a00' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
+            style={{ background: activeTab === 'sniper' ? 'rgba(255, 90, 0, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'sniper' ? '#ff5a00' : 'rgba(255,255,255,0.6)', border: activeTab === 'sniper' ? '1px solid #ff5a00' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.85rem' }}>
             🔫
           </button>
           <button className="btn-icon" onClick={() => setActiveTab('graveyard')} title="Garbage Can (Rejected & Purged)"
@@ -2156,13 +2138,38 @@ function App() {
               <div>
                 <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Choose Target Phase (Reset To)</div>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
                   
+                  {/* PENDING_WEBSITE Card */}
+                  <div 
+                    onClick={() => setResetToTarget('PENDING_WEBSITE')}
+                    style={{
+                      padding: '14px 6px',
+                      borderRadius: '12px',
+                      background: resetToTarget === 'PENDING_WEBSITE' ? 'rgba(59, 130, 246, 0.12)' : 'rgba(255,255,255,0.02)',
+                      border: resetToTarget === 'PENDING_WEBSITE' ? '2px solid #3b82f6' : '1px solid rgba(255,255,255,0.06)',
+                      boxShadow: resetToTarget === 'PENDING_WEBSITE' ? '0 0 16px rgba(59, 130, 246, 0.35)' : 'none',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '5px',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transform: resetToTarget === 'PENDING_WEBSITE' ? 'scale(1.03)' : 'scale(1)',
+                    }}
+                  >
+                    <span style={{ fontSize: '1.4rem' }}>🔍</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: resetToTarget === 'PENDING_WEBSITE' ? '#3b82f6' : 'rgba(255,255,255,0.6)', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>WEBSITE</span>
+                    <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.2 }}>Phase 1: Resolver</span>
+                  </div>
+
                   {/* SEEDED Card */}
                   <div 
                     onClick={() => setResetToTarget('SEEDED')}
                     style={{
-                      padding: '14px 10px',
+                      padding: '14px 6px',
                       borderRadius: '12px',
                       background: resetToTarget === 'SEEDED' ? 'rgba(138, 43, 226, 0.12)' : 'rgba(255,255,255,0.02)',
                       border: resetToTarget === 'SEEDED' ? '2px solid #8a2be2' : '1px solid rgba(255,255,255,0.06)',
@@ -2179,15 +2186,15 @@ function App() {
                     }}
                   >
                     <span style={{ fontSize: '1.4rem' }}>🔎</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 900, color: resetToTarget === 'SEEDED' ? '#a255ff' : 'rgba(255,255,255,0.6)', letterSpacing: '0.02em' }}>SEEDED</span>
-                    <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.2 }}>Phase 2: AI Detective</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: resetToTarget === 'SEEDED' ? '#a255ff' : 'rgba(255,255,255,0.6)', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>SEEDED</span>
+                    <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.2 }}>Phase 2: Detective</span>
                   </div>
 
                   {/* DEEP_CRAWLED Card */}
                   <div 
                     onClick={() => setResetToTarget('DEEP_CRAWLED')}
                     style={{
-                      padding: '14px 10px',
+                      padding: '14px 6px',
                       borderRadius: '12px',
                       background: resetToTarget === 'DEEP_CRAWLED' ? 'rgba(255, 152, 0, 0.12)' : 'rgba(255,255,255,0.02)',
                       border: resetToTarget === 'DEEP_CRAWLED' ? '2px solid #ff9800' : '1px solid rgba(255,255,255,0.06)',
@@ -2204,15 +2211,15 @@ function App() {
                     }}
                   >
                     <span style={{ fontSize: '1.4rem' }}>📸</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 900, color: resetToTarget === 'DEEP_CRAWLED' ? '#ffb74d' : 'rgba(255,255,255,0.6)', letterSpacing: '0.02em' }}>DEEP_CRAWLED</span>
-                    <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.2 }}>Phase 3: Photo</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: resetToTarget === 'DEEP_CRAWLED' ? '#ffb74d' : 'rgba(255,255,255,0.6)', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>CRAWLED</span>
+                    <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.2 }}>Phase 3: Photo</span>
                   </div>
 
                   {/* MEDIA_READY Card */}
                   <div 
                     onClick={() => setResetToTarget('MEDIA_READY')}
                     style={{
-                      padding: '14px 10px',
+                      padding: '14px 6px',
                       borderRadius: '12px',
                       background: resetToTarget === 'MEDIA_READY' ? 'rgba(233, 30, 99, 0.12)' : 'rgba(255,255,255,0.02)',
                       border: resetToTarget === 'MEDIA_READY' ? '2px solid #e91e63' : '1px solid rgba(255,255,255,0.06)',
@@ -2229,8 +2236,8 @@ function App() {
                     }}
                   >
                     <span style={{ fontSize: '1.4rem' }}>🚀</span>
-                    <span style={{ fontSize: '0.75rem', fontWeight: 900, color: resetToTarget === 'MEDIA_READY' ? '#f06292' : 'rgba(255,255,255,0.6)', letterSpacing: '0.02em' }}>MEDIA_READY</span>
-                    <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.2 }}>Phase 4: Publish</span>
+                    <span style={{ fontSize: '0.7rem', fontWeight: 900, color: resetToTarget === 'MEDIA_READY' ? '#f06292' : 'rgba(255,255,255,0.6)', letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>READY</span>
+                    <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.2 }}>Phase 4: Publish</span>
                   </div>
 
                 </div>
@@ -2242,6 +2249,54 @@ function App() {
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   
+                  {/* PENDING_WEBSITE */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: resetStatuses.PENDING_WEBSITE ? 'rgba(59, 130, 246, 0.06)' : 'transparent',
+                    border: resetStatuses.PENDING_WEBSITE ? '1px solid rgba(59, 130, 246, 0.2)' : '1px solid rgba(255,255,255,0.05)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}>
+                    <input 
+                      type="checkbox" 
+                      style={{ marginTop: '3px', cursor: 'pointer' }}
+                      checked={resetStatuses.PENDING_WEBSITE}
+                      onChange={e => setResetStatuses(prev => ({ ...prev, PENDING_WEBSITE: e.target.checked }))}
+                    />
+                    <div>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#3b82f6' }}>PENDING_WEBSITE</div>
+                      <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>Spots currently waiting in queue for website discovery (Phase 1).</div>
+                    </div>
+                  </label>
+
+                  {/* WEBSITE_STALLED */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: resetStatuses.WEBSITE_STALLED ? 'rgba(255, 90, 0, 0.06)' : 'transparent',
+                    border: resetStatuses.WEBSITE_STALLED ? '1px solid rgba(255, 90, 0, 0.2)' : '1px solid rgba(255,255,255,0.05)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}>
+                    <input 
+                      type="checkbox" 
+                      style={{ marginTop: '3px', cursor: 'pointer' }}
+                      checked={resetStatuses.WEBSITE_STALLED}
+                      onChange={e => setResetStatuses(prev => ({ ...prev, WEBSITE_STALLED: e.target.checked }))}
+                    />
+                    <div>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#ff5a00' }}>WEBSITE_STALLED</div>
+                      <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>Spots that stalled during website discovery (Phase 1).</div>
+                    </div>
+                  </label>
+
                   {/* DEEP_CRAWLED */}
                   <label style={{
                     display: 'flex',

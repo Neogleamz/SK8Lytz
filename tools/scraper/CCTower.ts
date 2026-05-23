@@ -1345,6 +1345,7 @@ app.post('/api/bulk-reset-to-seeded', (req, res) => {
         verification_status = CASE 
           WHEN ? = 'DEEP_CRAWLED' THEN 'DEEP_CRAWLED'
           WHEN ? = 'MEDIA_READY' THEN 'MEDIA_READY'
+          WHEN ? = 'PENDING_WEBSITE' THEN 'PENDING_WEBSITE'
           ELSE CASE 
             WHEN (website IS NOT NULL AND website != '') 
               OR (candidate_links IS NOT NULL AND json_extract(candidate_links, '$.website') IS NOT NULL AND json_extract(candidate_links, '$.website') != '')
@@ -1355,7 +1356,7 @@ app.post('/api/bulk-reset-to-seeded', (req, res) => {
         retry_count = 0, 
         last_attempted_at = NULL 
       WHERE ${where}
-    `).run(reset_to, reset_to, ...params);
+    `).run(reset_to, reset_to, reset_to, ...params);
 
     res.json({
       success: true,
