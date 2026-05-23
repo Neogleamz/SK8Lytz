@@ -180,8 +180,11 @@ export async function startGoogleSweep(
           raw_knowledge_panel: { types: details.types || null }
         };
 
-        // freshRecord: only for brand-new inserts — Scout outputs SEEDED status
-        const freshRecord = { ...metaRecord, verification_status: 'SEEDED' };
+        // freshRecord: only for brand-new inserts — Scout outputs SEEDED status (or PENDING_WEBSITE if missing website)
+        const freshRecord = { 
+          ...metaRecord, 
+          verification_status: details.website ? 'SEEDED' : 'PENDING_WEBSITE' 
+        };
 
         // 1. Spatial dedup (150m radius) — catches nearby rows regardless of google_place_id
         const closestSpot = getClosestLocalSpot(details.lat, details.lng, 150);

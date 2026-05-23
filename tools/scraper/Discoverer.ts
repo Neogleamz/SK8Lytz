@@ -62,7 +62,7 @@ export async function runDirectDiscovery(stateFull: string) {
                  name: lead.name,
                  street_address: lead.address,
                  state: stateFull.split(' ').pop() || '',
-                 verification_status: 'PENDING'
+                 verification_status: 'PENDING_WEBSITE'
                });
                console.log(`   ➕ Lead Added: ${lead.name}`);
              } catch (err: any) {

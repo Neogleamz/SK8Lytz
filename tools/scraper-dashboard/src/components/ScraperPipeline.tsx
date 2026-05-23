@@ -91,7 +91,7 @@ const generateUniformBelt = (idx: number, id: number, name: string, color: strin
 });
 
 // Belt id → app tab mapping
-const BELT_TAB: Record<number, string> = { 1: 'phase1', 2: 'phase2', 3: 'phase3', 4: 'phase4', 5: 'sniper' };
+const BELT_TAB: Record<number, string> = { 1: 'phase1', 0: 'phase1', 2: 'phase2', 3: 'phase3', 4: 'phase4', 5: 'sniper' };
 
 export interface PipelineStats {
     summary?: {
@@ -107,6 +107,8 @@ export interface PipelineStats {
         media_ready?: number;
         publisher_queue?: number;
         published?: number;
+        pending_website?: number;
+        stalled_website?: number;
         [key: string]: unknown;
     };
     stats?: unknown[];
@@ -221,7 +223,8 @@ export const ScraperPipeline: React.FC<{
     // The output of phase N = the input of phase N+1, so we read the next phase queue.
     const getSpotsForPhase = (beltId: number, count: number = 2): SpotRecord[] => {
         let spots: SpotRecord[] = [];
-        if (beltId === 1) spots = phaseQueues?.phase1 || [];              // Sweep out  = SEEDED (Detective input)
+        if (beltId === 0) spots = phaseQueues?.stalled_website || [];
+        else if (beltId === 1) spots = phaseQueues?.phase1 || [];              // Sweep out  = SEEDED (Detective input)
         else if (beltId === 2) spots = phaseQueues?.['detective-recent'] || []; // Detective out = DEEP_CRAWLED (Photographer input)
         else if (beltId === 3) spots = phaseQueues?.phase4 || [];              // Photographer out = MEDIA_READY (Publisher input)
         else if (beltId === 4) spots = phaseQueues?.published || [];              // Publisher out = PUBLISHED
@@ -246,7 +249,22 @@ export const ScraperPipeline: React.FC<{
             const boolOk = (v: unknown): string => (v === true ? 'success' : 'missing');
 
             // ▶ CURRENT STATUS badge
-            if (phaseId === 1) {
+            if (phaseId === 0) {
+                const s0 = spot.verification_status || 'PENDING_WEBSITE';
+                data.push(['\u25b6 CURRENT STATUS', s0, s0 === 'SEEDED' ? 'success' : 'warning']);
+                data.push(['Website', spot.website || 'PENDING', spot.website ? 'success' : 'missing']);
+                let resolverMeta = null;
+                try {
+                    resolverMeta = typeof spot.ai_metadata === 'string' ? JSON.parse(spot.ai_metadata)?.website_resolver : spot.ai_metadata?.website_resolver;
+                } catch {}
+                if (resolverMeta) {
+                    if (resolverMeta.source) data.push(['Source', resolverMeta.source.toUpperCase(), 'success']);
+                    if (resolverMeta.score != null) data.push(['Confidence', `${Math.round(resolverMeta.score * 100)}%`, 'success']);
+                    if (resolverMeta.reason || resolverMeta.failed_reason) {
+                        data.push(['Reason', resolverMeta.reason || resolverMeta.failed_reason, 'val']);
+                    }
+                }
+            } else if (phaseId === 1) {
                 const s1 = spot.verification_status || 'SEEDED';
                 data.push(['\u25b6 CURRENT STATUS', s1, s1 === 'SEEDED' ? 'success' : 'warning']);
             } else if (phaseId === 2) {
@@ -381,6 +399,7 @@ export const ScraperPipeline: React.FC<{
 
     const baseBelts = [
         generateUniformBelt(1, 1, 'Phase 1 │ Scout (Seed Engine)  IN: null → OUT: SEEDED', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING...', 'Waiting', 'PENDING', 'SEEDED', getQueueNames('phase1')),
+        generateUniformBelt(0, 0, 'Phase 1.5 │ Website Resolver (OSM + DDG)  IN: PENDING_WEBSITE → OUT: SEEDED', '--neon-scout', '0, 255, 170', 'WebsiteResolver', 'RESOLVING...', 'Waiting', 'PENDING_WEBSITE', 'SEEDED', getQueueNames('pending_website')),
         generateUniformBelt(2, 2, 'Phase 2 │ Detective (AI Crawl)  IN: SEEDED → OUT: DEEP_CRAWLED', '--neon-detective', '255, 106, 0', config?.detective_model || 'Llama3.2-8b', 'PROCESSING...', 'Waiting', 'SEEDED', 'DEEP_CRAWLED', getQueueNames('phase2')),
         generateUniformBelt(3, 3, 'Phase 3 │ Photographer  IN: DEEP_CRAWLED → OUT: MEDIA_READY', '--neon-photo', '255, 0, 127', 'Vision_v1', 'PROCESSING...', 'Waiting', 'DEEP_CRAWLED', 'MEDIA_READY', getQueueNames('phase3')),
         generateUniformBelt(4, 4, 'Phase 4 │ Publisher  IN: MEDIA_READY → OUT: PUBLISHED', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('phase4'))
@@ -389,27 +408,30 @@ export const ScraperPipeline: React.FC<{
     // Dynamically pull attempting checkmarks from the field_registry
     baseBelts[0].attempting = fields.filter(f => f.phase_id === 1).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]);
     
+    // Phase 1.5 Website Resolver: Target website field
+    baseBelts[1].attempting = [ ['website', 'pending', '🛑'] ];
+
     // Phase 2 Detective: Registry fields + dynamic AI vectors
     const aiVectors = config?.ai_target_vectors || [];
-    baseBelts[1].attempting = [
+    baseBelts[2].attempting = [
       ...fields.filter(f => f.phase_id === 2).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]),
       ...aiVectors.map((v: unknown) => [typeof v === 'object' && v !== null && 'key' in v ? String((v as { key: string }).key) : String(v), 'pending', '⚪'] as [string, string, string])
     ];
 
     // Phase 3 Photographer: Registry fields + photo categories
     const photoCategories = config?.photo_categories || [];
-    baseBelts[2].attempting = [
+    baseBelts[3].attempting = [
       ...fields.filter(f => f.phase_id === 3).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]),
       ...photoCategories.map((c: string) => [c, 'pending', '⚪'] as [string, string, string])
     ];
 
     // Phase 4 Publisher: Registry fields
-    baseBelts[3].attempting = fields.filter(f => f.phase_id === 4).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]);
+    baseBelts[4].attempting = fields.filter(f => f.phase_id === 4).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]);
 
     const mergedBelts = baseBelts.map(belt => {
         let liveData: TelemetryLiveData | null = null;
         if (belt.id === 1) liveData = telemetry.scout || null;
-
+        if (belt.id === 0) liveData = telemetry.resolver || null;
         if (belt.id === 2) liveData = telemetry.detective || null;
         if (belt.id === 3) liveData = telemetry.photographer || null;
         if (belt.id === 4) liveData = telemetry.publisher || null;
@@ -422,6 +444,9 @@ export const ScraperPipeline: React.FC<{
         const countBadges: {label: string; value: string}[] = [];
         if (belt.id === 1) {
             countBadges.push({ label: 'OUT', value: `${(pipelineStats?.summary?.seeded ?? 0).toLocaleString()} SEEDED` });
+        } else if (belt.id === 0) {
+            countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.pending_website ?? 0)} PENDING` });
+            countBadges.push({ label: 'STALL', value: `${(pipelineStats?.summary?.stalled_website ?? 0)} STALLED` });
         } else if (belt.id === 2) {
             countBadges.push({ label: 'IN', value: `${(pipelineStats?.summary?.enriched ?? 0)} ENRICHED` });
             countBadges.push({ label: 'OUT', value: `${(pipelineStats?.summary?.deep_crawled_count ?? 0)} DEEP_CRAWLED` });
@@ -481,6 +506,7 @@ export const ScraperPipeline: React.FC<{
     // Per-belt daemon control mappings
     const beltDaemon: Record<number, { active: boolean; hasDaemon: boolean; onStart: () => void; onStop: () => void }> = {
         1: { hasDaemon: true,  active: !!(status?.isHarvestingActive || status?.isGoogleSweepActive), onStart: () => triggerHarvest?.('start-all'), onStop: () => triggerHarvest?.('stop-all') },
+        0: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Website Resolver: online')), onStart: () => triggerSpecificDaemon?.('website-resolver', 'start'), onStop: () => triggerSpecificDaemon?.('website-resolver', 'stop') },
         2: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Indexer: online')),     onStart: () => triggerSpecificDaemon?.('indexer', 'start'),     onStop: () => triggerSpecificDaemon?.('indexer', 'stop') },
         3: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Photographer: online')), onStart: () => triggerSpecificDaemon?.('photographer', 'start'), onStop: () => triggerSpecificDaemon?.('photographer', 'stop') },
         4: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Publisher: online')),    onStart: () => triggerSpecificDaemon?.('publisher', 'start'),    onStop: () => triggerSpecificDaemon?.('publisher', 'stop') },
@@ -656,7 +682,7 @@ export const ScraperPipeline: React.FC<{
                     const isActive = dc?.active;
                     const statusLabel = b.status === 'PROCESSING' ? 'PROCESSING' : 'IDLE';
                     const activeRecordStatus = (b as any).activeRecord?.pipeline_status as string | undefined;
-                    const daemonName = b.id === 1 ? 'SCOUT' : b.id === 2 ? 'DETECTIVE' : b.id === 3 ? 'PHOTOGRAPHER' : 'PUBLISHER';
+                    const daemonName = b.id === 1 ? 'SCOUT' : b.id === 0 ? 'RESOLVER' : b.id === 2 ? 'DETECTIVE' : b.id === 3 ? 'PHOTOGRAPHER' : 'PUBLISHER';
                     const daemonStatus = activeRecordStatus
                         ? `[${daemonName}] ${activeRecordStatus}`
                         : b.target && b.target !== 'WAITING...'

@@ -51,7 +51,7 @@ function writeToLogFile(type: 'INFO' | 'ERROR', message: string) {
 const autoTagSource = (msg: string) => {
   if (msg.includes('[Harvester]') || msg.includes('[GIS]') || msg.includes('[GHOST]') ||
       msg.includes('Golden Seed') || msg.includes('GoogleSweep') || msg.includes('[GoogleSweep]')) return 'Phase 1';
-  if (msg.includes('[Operator]') || msg.includes('Google Captcha') || msg.includes('Overpass') || msg.includes('[HEURISTIC]')) return 'Phase 2';
+  if (msg.includes('[Operator]') || msg.includes('Google Captcha') || msg.includes('Overpass') || msg.includes('[HEURISTIC]') || msg.includes('[WebsiteResolver]') || msg.includes('[WEBSITE_RESOLVER]')) return 'Phase 2';
   if (msg.includes('[Indexer]')) return 'Phase 3';
   if (msg.includes('[Photographer]')) return 'Phase 5';
   return 'System';
@@ -114,6 +114,7 @@ interface PulseData {
 
 const pulseRegistry: Record<string, PulseData> = {
   'Phase 1': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
+  'Phase 2': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
   'Phase 3': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
   'Phase 4': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
   'Phase 5': { lastRunAt: null, nextRunAt: null, delayMs: 0 },
@@ -122,6 +123,7 @@ const pulseRegistry: Record<string, PulseData> = {
 
 // Active job tracker — daemons report what they are currently processing
 const activeJobRegistry: Record<string, { active_job: string | null; target: string | null; updated_at: string }> = {
+  'Phase 2': { active_job: null, target: null, updated_at: '' },
   'Phase 3': { active_job: null, target: null, updated_at: '' },
   'Phase 4': { active_job: null, target: null, updated_at: '' },
   'Phase 6': { active_job: null, target: null, updated_at: '' },
@@ -153,6 +155,7 @@ async function fetchConfig() {
 app.get('/status', async (req, res) => {
   let running = activeDaemons.size > 0;
   let indexerStatus = activeDaemons.has('scraper-indexer') ? 'online' : 'Offline';
+  let resolverStatus = activeDaemons.has('scraper-website-resolver') ? 'online' : 'Offline';
   let photographerStatus = activeDaemons.has('scraper-photographer') ? 'online' : 'Offline';
   let publisherStatus = activeDaemons.has('scraper-publisher') ? 'online' : 'Offline';
 
@@ -165,12 +168,15 @@ app.get('/status', async (req, res) => {
   const deepCrawledCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'DEEP_CRAWLED'`).get() as { cnt: number }).cnt;
   const mediaReadyCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'MEDIA_READY'`).get() as { cnt: number }).cnt;
   const candidatesCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE candidate_photos IS NOT NULL AND photos IS NULL`).get() as { cnt: number }).cnt;
+  
+  const pendingWebsiteCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'PENDING_WEBSITE'`).get() as { cnt: number }).cnt;
+  const stalledWebsiteCount = (db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'WEBSITE_STALLED'`).get() as { cnt: number }).cnt;
 
   res.json({
     isRunning: running,
     isHarvestingActive,
     isHeadless,
-    currentTarget: `Indexer: ${indexerStatus} | Photographer: ${photographerStatus} | Publisher: ${publisherStatus}`,
+    currentTarget: `Website Resolver: ${resolverStatus} | Indexer: ${indexerStatus} | Photographer: ${photographerStatus} | Publisher: ${publisherStatus}`,
     isGoogleSweepActive,
     totalCount: totalCount || 0,
     processedCount: totalProcessed || 0,
@@ -181,6 +187,8 @@ app.get('/status', async (req, res) => {
     pendingCount: pendingCount || 0,
     seededCount: seededCount || 0,
     deepCrawledCount: deepCrawledCount || 0,
+    pendingWebsiteCount: pendingWebsiteCount || 0,
+    stalledWebsiteCount: stalledWebsiteCount || 0,
     errorCount,
     consecutiveErrors,
     isGated,
@@ -193,7 +201,7 @@ app.get('/status', async (req, res) => {
 
 app.post('/api/pulse', (req, res) => {
   let { source, delayMs, ghost, active_job, target } = req.body;
-  if (source === 'Phase 2') source = 'Phase 3';
+  if (source === 'Phase 2') source = 'Phase 2';
   if (source === 'Photographer' || source === 'photographer') source = 'Phase 4';
   if (source === 'Publisher' || source === 'publisher') source = 'Phase 6';
   if (source === 'Indexer' || source === 'indexer') source = 'Phase 3';
@@ -222,6 +230,7 @@ const activeDaemons = new Map<string, ChildProcess>();
 
 app.post('/start', (req, res) => {
   const scriptMap: Record<string, string> = {
+    'website-resolver': 'WebsiteResolverDaemon.ts',
     'indexer': 'Indexer.ts',
     'photographer': 'Photographer.ts',
     'publisher': 'Publisher.ts'
@@ -298,6 +307,7 @@ app.post('/api/daemons/:name/start', (req, res) => {
   console.log(`Commanding daemon start: ${target}`);
   
   const scriptMap: Record<string, string> = {
+    'website-resolver': 'WebsiteResolverDaemon.ts',
     'indexer': 'Indexer.ts',
     'photographer': 'Photographer.ts',
     'publisher': 'Publisher.ts'
@@ -486,6 +496,51 @@ app.post('/api/heuristics', (req, res) => {
   }
 });
 
+// ─── Website Resolver Endpoints ──────────────────────────────────────────────
+app.post('/api/website-resolver/trigger', (req, res) => {
+  const target = 'scraper-website-resolver';
+  if (activeDaemons.has(target)) {
+    return res.json({ success: true, message: 'Website Resolver is already active and running.' });
+  }
+  try {
+    const outLog = fs.openSync(path.join(LOG_DIR, `website-resolver-out.log`), 'a');
+    const errLog = fs.openSync(path.join(LOG_DIR, `website-resolver-error.log`), 'a');
+    const child = spawn('bun', ['WebsiteResolverDaemon.ts'], {
+      cwd: __dirname,
+      stdio: ['ignore', outLog, errLog],
+      detached: false,
+      env: { ...process.env, SCRAPER_REGISTER_ONLY: 'false' }
+    });
+    child.on('exit', () => {
+      activeDaemons.delete(target);
+      console.log(`Daemon ${target} exited`);
+    });
+    activeDaemons.set(target, child);
+    res.json({ success: true, message: 'Website Resolver daemon launched successfully!' });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post('/api/website-resolver/reset-missing', (req, res) => {
+  try {
+    const query = `
+      UPDATE local_spots 
+      SET 
+        verification_status = 'PENDING_WEBSITE',
+        retry_count = 0,
+        last_attempted_at = NULL
+      WHERE 
+        (website IS NULL OR website = '') 
+        AND (verification_status IN ('SEEDED', 'PENDING', 'STALLED', 'WEBSITE_STALLED') OR verification_status IS NULL)
+    `;
+    const result = db.prepare(query).run();
+    res.json({ success: true, count: result.changes });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.post('/api/llm/server/start', (req, res) => {
   res.json({ success: false, message: 'Cannot start LM Studio from inside Docker. Please launch LM Studio manually on your host machine.' });
 });
@@ -557,6 +612,7 @@ app.get('/api/pipeline/telemetry', async (req, res) => {
     // Build live telemetry from DB queues + in-memory active job registry
     // in_q = next 3 spots waiting in each phase queue (DB truth)
     const p1 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'PENDING' OR verification_status IS NULL ORDER BY created_at ASC LIMIT 3`).all();
+    const pW = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'PENDING_WEBSITE' ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 3`).all();
     const p3 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'SEEDED' ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 3`).all();
     const p4 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND photos IS NULL ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 3`).all();
     const p6 = db.prepare(`SELECT name FROM local_spots WHERE verification_status = 'MEDIA_READY' AND is_published = 0 ORDER BY created_at DESC LIMIT 3`).all();
@@ -573,6 +629,7 @@ app.get('/api/pipeline/telemetry', async (req, res) => {
 
     res.json({
       scout:      { active_job: aj('Phase 1'), target: tgt('Phase 1'), active_record: getRecord(tgt('Phase 1')), in_q: names(p1), pulse: pulseRegistry['Phase 1'], alive: isAlive('Phase 1') },
+      resolver:   { active_job: aj('Phase 2'), target: tgt('Phase 2'), active_record: getRecord(tgt('Phase 2')), in_q: names(pW), pulse: pulseRegistry['Phase 2'], alive: isAlive('Phase 2') },
       detective:  { active_job: aj('Phase 3'), target: tgt('Phase 3'), active_record: getRecord(aj('Phase 3')), in_q: names(p3), pulse: pulseRegistry['Phase 3'], alive: isAlive('Phase 3') },
       photographer: { active_job: aj('Phase 4'), target: tgt('Phase 4'), active_record: getRecord(tgt('Phase 4')), in_q: names(p4), pulse: pulseRegistry['Phase 4'], alive: isAlive('Phase 4') },
       publisher:  { active_job: aj('Phase 6'), target: tgt('Phase 6'), active_record: getRecord(tgt('Phase 6')), in_q: names(p6), pulse: pulseRegistry['Phase 6'], alive: isAlive('Phase 6') },
@@ -1291,7 +1348,9 @@ app.get('/api/queue', async (req, res) => {
   const states = statesRaw ? statesRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
 
   let query = 'SELECT * FROM local_spots WHERE 1=1';
-  if (phase === 'phase1') query += ` AND verification_status = 'SEEDED'`;
+  if (phase === 'pending_website') query += ` AND verification_status = 'PENDING_WEBSITE'`;
+  else if (phase === 'stalled_website') query += ` AND verification_status = 'WEBSITE_STALLED'`;
+  else if (phase === 'phase1') query += ` AND verification_status = 'SEEDED'`;
   else if (phase === 'phase2') query += ` AND verification_status = 'SEEDED'`; // Detective input
   else if (phase === 'phase3') query += ` AND verification_status = 'DEEP_CRAWLED' AND photos IS NULL`; // Photographer input
   else if (phase === 'phase4') query += ` AND verification_status = 'MEDIA_READY' AND is_published = 0`; // Publisher input
@@ -1299,7 +1358,7 @@ app.get('/api/queue', async (req, res) => {
   // spider-recent removed (dead) — Spider phase eliminated
   else if (phase === 'detective-recent') query += ` AND verification_status = 'DEEP_CRAWLED'`;
   else if (phase === 'published') query += ` AND is_published = 1`;
-  else query += ` AND (verification_status IN ('SEEDED','DEEP_CRAWLED','MEDIA_READY') OR verification_status IS NULL)`;
+  else query += ` AND (verification_status IN ('SEEDED','DEEP_CRAWLED','MEDIA_READY','PENDING_WEBSITE','WEBSITE_STALLED') OR verification_status IS NULL)`;
 
   if (states.length > 0) {
     query += ` AND state IN (${states.map(s => `'${s}'`).join(',')})`;

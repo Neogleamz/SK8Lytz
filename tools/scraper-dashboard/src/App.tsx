@@ -199,7 +199,7 @@ function App() {
       // Only re-fetch queue for the currently visible tab (not all 6 every 5s)
       // When viewing the pipeline belt, refresh all phase queues so every belt has live data
       const phasesToRefresh = activeTabRef.current === 'pipeline'
-        ? ['phase1', 'phase2', 'phase3', 'phase4', 'detective-recent', 'recent']
+        ? ['pending_website', 'stalled_website', 'phase1', 'phase2', 'phase3', 'phase4', 'detective-recent', 'recent']
         : [activeTabRef.current, 'recent'];
       fetchQueue(phasesToRefresh);
 
@@ -358,8 +358,8 @@ function App() {
   const [phaseQueues, setPhaseQueues] = useState<Record<string, any[]>>({});
 
   const fetchQueue = async (only?: string[]) => {
-    // Phases now: phase1, phase3 (Detective), phase4 (Photographer), phase6 (Publisher)
-                const phasesToFetch = only ?? ['phase1', 'phase2', 'phase3', 'phase4', 'detective-recent', 'published', 'recent'];
+    // Phases now: pending_website, stalled_website, phase1, phase3 (Detective), phase4 (Photographer), phase6 (Publisher)
+    const phasesToFetch = only ?? ['pending_website', 'stalled_website', 'phase1', 'phase2', 'phase3', 'phase4', 'detective-recent', 'published', 'recent'];
     // Read from ref so this always has the live value even inside stale interval closures
     const activeStates = stateOverrideRef.current;
     const statesParam = activeStates.length > 0 ? `&states=${activeStates.join(',')}` : '';
@@ -942,9 +942,10 @@ function App() {
       <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
       {/* Daemon pills */}
       {[
-        { id: 'indexer',      label: 'Phase 2: Detective', color: '#ff5a00', onKey: 'Indexer: online' },
-        { id: 'photographer', label: 'Phase 3: Photo',     color: '#e91e63', onKey: 'Photographer: online' },
-        { id: 'publisher',    label: 'Phase 4: Publish',   color: '#00d4ff', onKey: 'Publisher: online' },
+        { id: 'website-resolver', label: '🔍 Resolver', color: '#00ffaa', onKey: 'Website Resolver: online' },
+        { id: 'indexer',          label: 'Phase 2: Detective', color: '#ff5a00', onKey: 'Indexer: online' },
+        { id: 'photographer',     label: 'Phase 3: Photo',     color: '#e91e63', onKey: 'Photographer: online' },
+        { id: 'publisher',        label: 'Phase 4: Publish',   color: '#00d4ff', onKey: 'Publisher: online' },
       ].map(d => {
         const isOn = status?.currentTarget?.includes(d.onKey);
         return (
@@ -1183,13 +1184,33 @@ function App() {
           FACTORY FLOOR
         </button>
         {/* Bulk Reset to SEEDED — respects global state + facility filters */}
-                <button
-          onClick={() => setShowBulkResetModal(true)}
-          disabled={isBulkResetting}
-          title={`Reset all ${stateOverride.length > 0 ? stateOverride.join('/') : 'ALL'} ${targetFacilities.length > 0 ? targetFacilities.join('/') : 'ALL TYPE'} records back to SEEDED`}
-          style={{ background: isBulkResetting ? 'rgba(255, 179, 0, 0.4)' : 'rgba(255, 179, 0, 0.15)', color: isBulkResetting ? '#fff' : '#ffb300', border: '1px solid rgba(255, 179, 0, 0.3)', padding: '4px 10px', borderRadius: '6px', cursor: isBulkResetting ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}
+        <button
+           onClick={() => setShowBulkResetModal(true)}
+           disabled={isBulkResetting}
+           title={`Reset all ${stateOverride.length > 0 ? stateOverride.join('/') : 'ALL'} ${targetFacilities.length > 0 ? targetFacilities.join('/') : 'ALL TYPE'} records back to SEEDED`}
+           style={{ background: isBulkResetting ? 'rgba(255, 179, 0, 0.4)' : 'rgba(255, 179, 0, 0.15)', color: isBulkResetting ? '#fff' : '#ffb300', border: '1px solid rgba(255, 179, 0, 0.3)', padding: '4px 10px', borderRadius: '6px', cursor: isBulkResetting ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}
         >
-          {isBulkResetting ? '? RESETTING...' : '?? FORCE RESET TO SEEDED'}
+          {isBulkResetting ? '⏳ RESETTING...' : '⚡ FORCE RESET TO SEEDED'}
+        </button>
+        {/* Bulk Reset Website-less spots back to PENDING_WEBSITE */}
+        <button
+           onClick={async () => {
+             if (!confirm('Reset all website-less spots in the database back to PENDING_WEBSITE?')) return;
+             try {
+               const res = await fetch(`${API_BASE}/api/website-resolver/reset-missing`, { method: 'POST' });
+               const data = await res.json();
+               if (data.success) {
+                 alert(`Successfully reset ${data.count} website-less spots back to PENDING_WEBSITE!`);
+                 fetchPipelineStats();
+                 fetchQueue();
+               }
+             } catch (e) {
+               alert('Reset failed.');
+             }
+           }}
+           style={{ background: 'rgba(0, 255, 170, 0.15)', color: '#00ffaa', border: '1px solid rgba(0, 255, 170, 0.3)', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}
+        >
+          🔍 Reset Website-Less
         </button>
         <button className="btn-icon" onClick={() => setActiveTab('sniper')} title="Sniper Bench"
           style={{ background: activeTab === 'sniper' ? 'rgba(255, 106, 0, 0.2)' : 'rgba(255,255,255,0.05)', color: activeTab === 'sniper' ? '#ff6a00' : 'rgba(255,255,255,0.6)', border: activeTab === 'sniper' ? '1px solid #ff6a00' : '1px solid transparent', padding: '4px 8px', borderRadius: '6px', marginRight: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>

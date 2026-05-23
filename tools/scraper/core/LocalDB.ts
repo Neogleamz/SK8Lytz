@@ -904,6 +904,8 @@ export interface PipelineStats {
   has_candidates: number;
   publisher_queue: number;
   has_photos: number;
+  pending_website: number;
+  stalled_website: number;
 }
 
 // --- PIPELINE STATS METHODS ---
@@ -928,7 +930,9 @@ export const getPipelineStats = (states: string[] = []): PipelineStats => {
       SUM(CASE WHEN verification_status = 'DEEP_CRAWLED' THEN 1 ELSE 0 END) as photographer_queue,
       SUM(CASE WHEN candidate_photos IS NOT NULL AND candidate_photos != '[]' AND candidate_photos != 'null' AND (photos IS NULL OR photos = '[]' OR photos = 'null') THEN 1 ELSE 0 END) as has_candidates,
       SUM(CASE WHEN verification_status = 'MEDIA_READY' AND is_published = 0 THEN 1 ELSE 0 END) as publisher_queue,
-      SUM(CASE WHEN photos IS NOT NULL AND photos != '[]' AND photos != 'null' THEN 1 ELSE 0 END) as has_photos
+      SUM(CASE WHEN photos IS NOT NULL AND photos != '[]' AND photos != 'null' THEN 1 ELSE 0 END) as has_photos,
+      SUM(CASE WHEN verification_status = 'PENDING_WEBSITE' THEN 1 ELSE 0 END) as pending_website,
+      SUM(CASE WHEN verification_status = 'WEBSITE_STALLED' THEN 1 ELSE 0 END) as stalled_website
     FROM local_spots
     WHERE ${whereClause}
   `;
