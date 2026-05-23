@@ -1337,7 +1337,7 @@ function App() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.56rem', marginTop: '2px' }}>
                     <span style={{ color: 'rgba(255,255,255,0.4)' }}>Dedicated VRAM</span>
                     <span style={{ color: vramBarColor, fontWeight: 800 }}>
-                      {Math.round(vramUsed)}MB / {vramTotal}MB ({vramPercent}%)
+                      {Math.round(vramUsed)}MB / {vramTotal}MB ({vramPct}%)
                     </span>
                   </div>
                   <div style={{
@@ -1346,7 +1346,7 @@ function App() {
                     border: '1px solid rgba(255,255,255,0.08)',
                   }}>
                     <div style={{
-                      width: `${vramPercent}%`, height: '100%', borderRadius: '3px',
+                      width: `${vramPct}%`, height: '100%', borderRadius: '3px',
                       background: `linear-gradient(90deg, ${vramBarColor}aa, ${vramBarColor})`,
                       transition: 'width 0.4s ease',
                     }} />
