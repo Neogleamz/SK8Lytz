@@ -381,7 +381,7 @@ export const ScraperPipeline: React.FC<{
 
     const baseBelts = [
         generateUniformBelt(1, 1, 'Phase 1 │ Scout (Seed Engine)  IN: null → OUT: SEEDED', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING...', 'Waiting', 'PENDING', 'SEEDED', getQueueNames('phase1')),
-        generateUniformBelt(2, 2, 'Phase 2 │ Detective (AI Crawl)  IN: SEEDED → OUT: DEEP_CRAWLED', '--neon-detective', '255, 106, 0', 'Llama3.2-8b', 'PROCESSING...', 'Waiting', 'SEEDED', 'DEEP_CRAWLED', getQueueNames('phase2')),
+        generateUniformBelt(2, 2, 'Phase 2 │ Detective (AI Crawl)  IN: SEEDED → OUT: DEEP_CRAWLED', '--neon-detective', '255, 106, 0', config?.detective_model || 'Llama3.2-8b', 'PROCESSING...', 'Waiting', 'SEEDED', 'DEEP_CRAWLED', getQueueNames('phase2')),
         generateUniformBelt(3, 3, 'Phase 3 │ Photographer  IN: DEEP_CRAWLED → OUT: MEDIA_READY', '--neon-photo', '255, 0, 127', 'Vision_v1', 'PROCESSING...', 'Waiting', 'DEEP_CRAWLED', 'MEDIA_READY', getQueueNames('phase3')),
         generateUniformBelt(4, 4, 'Phase 4 │ Publisher  IN: MEDIA_READY → OUT: PUBLISHED', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('phase4'))
     ];
@@ -677,7 +677,7 @@ export const ScraperPipeline: React.FC<{
                             onBlockSpot={onBlockSpot || handleBlockSpot}
                             onRestartSpot={handleRestartSpot}
                             onFreezeSpot={handleFreezeSpot}
-                            carouselSpots={b.id === 4 ? phaseQueues?.['published'] : undefined}
+                            carouselSpots={b.id === 3 ? phaseQueues?.phase4 : (b.id === 4 ? phaseQueues?.['published'] : undefined)}
                             onPurgeSpot={onPurgeSpot}
                             onSetHero={onSetHero}
                             onDeletePhoto={onDeletePhoto}

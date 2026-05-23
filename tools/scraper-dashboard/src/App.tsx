@@ -92,6 +92,13 @@ function App() {
   const [targetFacilities, setTargetFacilities] = useState<string[]>([]);
   const [stateOverride, setStateOverride] = useState<string[]>([]);
   const [pipelineStats, setPipelineStats] = useState<PipelineStats | undefined>(undefined);
+  const [showBulkResetModal, setShowBulkResetModal] = useState<boolean>(false);
+  const [resetStatuses, setResetStatuses] = useState<Record<string, boolean>>({
+    DEEP_CRAWLED: true,
+    MEDIA_READY: true,
+    STALLED: true,
+    REJECTED: false
+  });
 
   // --- Collapsible sections: persisted to localStorage ---
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>(() => {
@@ -635,23 +642,39 @@ function App() {
     }
   };
 
-  // Bulk reset all filtered records back to SEEDED (respects global state + facility filters)
+  // Bulk reset all filtered records back to SEEDED (respects global state + facility filters + selected statuses)
   const [isBulkResetting, setIsBulkResetting] = useState(false);
   const bulkResetToSeeded = async () => {
+    const activeStatuses = Object.entries(resetStatuses)
+      .filter(([_, enabled]) => enabled)
+      .map(([status]) => status);
+
+    if (activeStatuses.length === 0) {
+      alert('⚠️ Please select at least one status stage to reset.');
+      return;
+    }
+
     const stateLabel = stateOverride.length > 0 ? stateOverride.join(', ') : 'ALL STATES';
     const facLabel = targetFacilities.length > 0 ? targetFacilities.join(', ') : 'ALL TYPES';
-    if (!confirm(`Reset ALL records back to SEEDED?\n\nFilters: ${stateLabel} / ${facLabel}\n\nThis will clear retry counts and requeue everything for the AI Detective.`)) return;
+    const statusLabel = activeStatuses.join(', ');
+
     setIsBulkResetting(true);
     try {
       const res = await fetch(`${API_BASE}/api/bulk-reset-to-seeded`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ states: stateOverride, facility_types: targetFacilities })
+        body: JSON.stringify({ 
+          states: stateOverride, 
+          facility_types: targetFacilities,
+          target_statuses: activeStatuses
+        })
       });
       const data = await res.json();
       if (data.success) {
-        alert(`✅ Reset ${data.reset_count} records to SEEDED.\nFilters: ${stateLabel} / ${facLabel}`);
+        alert(`✅ Reset ${data.reset_count} records to SEEDED.\nFilters: ${stateLabel} / ${facLabel}\nStatuses Reset: ${statusLabel}`);
+        setShowBulkResetModal(false);
         fetchSpots(page, gridFilter);
+        fetchQueue();
       } else {
         alert(`Error: ${data.error}`);
       }
@@ -1160,7 +1183,7 @@ function App() {
         </button>
         {/* Bulk Reset to SEEDED — respects global state + facility filters */}
                 <button
-          onClick={bulkResetToSeeded}
+          onClick={() => setShowBulkResetModal(true)}
           disabled={isBulkResetting}
           title={`Reset all ${stateOverride.length > 0 ? stateOverride.join('/') : 'ALL'} ${targetFacilities.length > 0 ? targetFacilities.join('/') : 'ALL TYPE'} records back to SEEDED`}
           style={{ background: isBulkResetting ? 'rgba(255, 179, 0, 0.4)' : 'rgba(255, 179, 0, 0.15)', color: isBulkResetting ? '#fff' : '#ffb300', border: '1px solid rgba(255, 179, 0, 0.3)', padding: '4px 10px', borderRadius: '6px', cursor: isBulkResetting ? 'not-allowed' : 'pointer', fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}
@@ -1899,6 +1922,238 @@ function App() {
           onSave={handleModalSave} 
           onClose={() => { setEditingId(null); setEditForm({}); }} 
         />
+      )}
+
+      {/* Bulk Reset / Requeue Wizard Modal Overlay */}
+      {showBulkResetModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(5, 5, 8, 0.85)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          zIndex: 10000,
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div style={{
+            width: '100%',
+            maxWidth: '520px',
+            background: 'rgba(18, 18, 28, 0.96)',
+            border: '1px solid rgba(255, 179, 0, 0.35)',
+            boxShadow: '0 24px 64px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 179, 0, 0.1)',
+            borderRadius: '16px',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(90deg, rgba(255, 179, 0, 0.15) 0%, rgba(138, 43, 226, 0.15) 100%)',
+              padding: '16px 20px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 900, color: '#ffb300', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                ⚙️ Pipeline Requeue Wizard
+              </h3>
+              <button 
+                onClick={() => setShowBulkResetModal(false)}
+                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '1.4rem', cursor: 'pointer', outline: 'none' }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '70vh', overflowY: 'auto' }}>
+              
+              {/* Target Filters Indicator */}
+              <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.06)', borderRadius: '8px', padding: '12px 14px' }}>
+                <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>Active Selection Filters</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginRight: '6px' }}>States:</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#00ffaa' }}>
+                      {stateOverride.length > 0 ? stateOverride.join(', ') : 'ALL STATES'}
+                    </span>
+                  </div>
+                  <div style={{ width: 1, background: 'rgba(255,255,255,0.1)', height: '14px' }} />
+                  <div>
+                    <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', marginRight: '6px' }}>Facilities:</span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#00ffaa' }}>
+                      {targetFacilities.length > 0 ? targetFacilities.map(f => f.replace('_', ' ').toUpperCase()).join(', ') : 'ALL TYPES'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status Toggles */}
+              <div>
+                <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>Select Pipeline Stages to Re-Seed</div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  
+                  {/* DEEP_CRAWLED */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: resetStatuses.DEEP_CRAWLED ? 'rgba(255, 152, 0, 0.06)' : 'transparent',
+                    border: resetStatuses.DEEP_CRAWLED ? '1px solid rgba(255, 152, 0, 0.2)' : '1px solid rgba(255,255,255,0.05)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}>
+                    <input 
+                      type="checkbox" 
+                      style={{ marginTop: '3px', cursor: 'pointer' }}
+                      checked={resetStatuses.DEEP_CRAWLED}
+                      onChange={e => setResetStatuses(prev => ({ ...prev, DEEP_CRAWLED: e.target.checked }))}
+                    />
+                    <div>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#ff9800' }}>DEEP_CRAWLED</div>
+                      <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>Spots successfully analyzed by AI Detective but not yet photographed/published.</div>
+                    </div>
+                  </label>
+
+                  {/* MEDIA_READY */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: resetStatuses.MEDIA_READY ? 'rgba(233, 30, 99, 0.06)' : 'transparent',
+                    border: resetStatuses.MEDIA_READY ? '1px solid rgba(233, 30, 99, 0.2)' : '1px solid rgba(255,255,255,0.05)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}>
+                    <input 
+                      type="checkbox" 
+                      style={{ marginTop: '3px', cursor: 'pointer' }}
+                      checked={resetStatuses.MEDIA_READY}
+                      onChange={e => setResetStatuses(prev => ({ ...prev, MEDIA_READY: e.target.checked }))}
+                    />
+                    <div>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#e91e63' }}>MEDIA_READY</div>
+                      <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>Spots with all media successfully downloaded and ready for live publication.</div>
+                    </div>
+                  </label>
+
+                  {/* STALLED */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: resetStatuses.STALLED ? 'rgba(156, 39, 176, 0.06)' : 'transparent',
+                    border: resetStatuses.STALLED ? '1px solid rgba(156, 39, 176, 0.2)' : '1px solid rgba(255,255,255,0.05)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}>
+                    <input 
+                      type="checkbox" 
+                      style={{ marginTop: '3px', cursor: 'pointer' }}
+                      checked={resetStatuses.STALLED}
+                      onChange={e => setResetStatuses(prev => ({ ...prev, STALLED: e.target.checked }))}
+                    />
+                    <div>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#9c27b0' }}>STALLED</div>
+                      <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>Spots that failed in the crawler (timeouts, network errors) or ran out of retries.</div>
+                    </div>
+                  </label>
+
+                  {/* REJECTED */}
+                  <label style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    background: resetStatuses.REJECTED ? 'rgba(244, 67, 54, 0.06)' : 'transparent',
+                    border: resetStatuses.REJECTED ? '1px solid rgba(244, 67, 54, 0.3)' : '1px solid rgba(255,255,255,0.05)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}>
+                    <input 
+                      type="checkbox" 
+                      style={{ marginTop: '3px', cursor: 'pointer' }}
+                      checked={resetStatuses.REJECTED}
+                      onChange={e => setResetStatuses(prev => ({ ...prev, REJECTED: e.target.checked }))}
+                    />
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#f44336' }}>REJECTED</div>
+                        <span style={{ fontSize: '0.55rem', background: '#f4433622', color: '#f44336', padding: '1px 5px', borderRadius: '4px', fontWeight: 900 }}>⚠️ DANGER</span>
+                      </div>
+                      <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.5)', marginTop: '2px' }}>
+                        Records filtered by early content/name bouncers (e.g. municipal ice rinks). 
+                        <strong style={{ color: 'rgba(255,255,255,0.85)', display: 'block', marginTop: '2px' }}>
+                          Warning: Keeping this unchecked prevents re-evaluating known invalid targets.
+                        </strong>
+                      </div>
+                    </div>
+                  </label>
+
+                </div>
+              </div>
+
+            </div>
+
+            {/* Actions */}
+            <div style={{
+              background: 'rgba(0, 0, 0, 0.2)',
+              padding: '16px 20px',
+              borderTop: '1px solid rgba(255, 255, 255, 0.06)',
+              display: 'flex',
+              justifyContent: 'flex-end',
+              gap: '10px'
+            }}>
+              <button
+                onClick={() => setShowBulkResetModal(false)}
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  color: 'rgba(255,255,255,0.7)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  padding: '6px 14px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.75rem',
+                  fontWeight: 700
+                }}
+              >
+                CANCEL
+              </button>
+              <button
+                onClick={bulkResetToSeeded}
+                disabled={isBulkResetting || !Object.values(resetStatuses).some(Boolean)}
+                style={{
+                  background: isBulkResetting ? 'rgba(255, 179, 0, 0.4)' : '#ffb300',
+                  color: isBulkResetting ? 'rgba(255,255,255,0.6)' : '#0c0c14',
+                  border: 'none',
+                  padding: '6px 16px',
+                  borderRadius: '6px',
+                  cursor: (isBulkResetting || !Object.values(resetStatuses).some(Boolean)) ? 'not-allowed' : 'pointer',
+                  fontSize: '0.75rem',
+                  fontWeight: 900,
+                  textTransform: 'uppercase'
+                }}
+              >
+                {isBulkResetting ? '🔄 Resetting...' : '↺ Confirm Requeue'}
+              </button>
+            </div>
+
+          </div>
+        </div>
       )}
 
       </>

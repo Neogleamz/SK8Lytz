@@ -278,30 +278,7 @@ async function runIndexer() {
         aiMetadata = typeof target.ai_metadata === 'string' ? JSON.parse(target.ai_metadata) : (target.ai_metadata || null);
       } catch (e) {}
 
-      // Handle quality gate failure — still emit DEEP_CRAWLED so Photographer gets a shot.
-      // Low quality is flagged via ai_metadata.quality_note, not by blocking the pipeline.
-      if (!result.passedQualityGate) {
-        console.error(`   ⚠️  Low quality (${result.qualityScore}/17) → promoting to DEEP_CRAWLED for Photographer.`);
-        // Merge confidence with existing (preserve user_manual overrides)
-        let existingConf: any = {};
-        try { existingConf = typeof target.field_confidence === 'string' ? JSON.parse(target.field_confidence) : (target.field_confidence || {}); } catch {}
-        const mergedConf = { ...existingConf };
-        for (const [k, v] of Object.entries(result.fieldConfidence)) {
-          if (!mergedConf[k] || mergedConf[k].source !== 'user_manual') mergedConf[k] = v;
-        }
-        updateLocalSpot(target.id, {
-          verification_status: 'DEEP_CRAWLED',
-          is_deep_crawled: true,
-          retry_count: (target.retry_count || 0) + 1,
-          last_attempted_at: new Date().toISOString(),
-          ai_metadata: JSON.stringify({ ...(Object.keys(result.aiMetadata).length > 0 ? result.aiMetadata : (aiMetadata || {})), quality_note: `Low quality score: ${result.qualityScore}/17` }),
-          ...(result.candidatePhotos ? { candidate_photos: JSON.stringify(result.candidatePhotos) } : {}),
-          field_confidence: JSON.stringify(mergedConf)
-        });
-        continue;
-      }
-
-      // ── ✅ Write all fields to DB (Non-Destructive Merge) ───────────────
+      // ── ✅ Build all fields (Non-Destructive Merge) ─────────────────
       const finalUpdates: any = {};
       
       const fieldsToCheck = [
@@ -316,8 +293,6 @@ async function runIndexer() {
 
       for (const key of fieldsToCheck) {
         const newVal = result.mappedFields ? result.mappedFields[key] : undefined;
-        const oldVal = target[key];
-        
         const isEmpty = (v: any) => v === null || v === undefined || v === '' || v === 'null' || v === 'NULL' || v === '{}' || v === '[]';
         const sanitize = (v: any) => isEmpty(v) ? null : (typeof v === 'object' ? JSON.stringify(v) : v);
 
@@ -325,8 +300,6 @@ async function runIndexer() {
           // Fresh AI crawl wins
           finalUpdates[key] = sanitize(newVal);
         }
-        // ── Additive-Only: if AI returned nothing, DON'T write anything ──
-        // The existing value in the DB stays untouched.
       }
 
       // Merge confidence with existing (preserve user_manual overrides)
@@ -335,6 +308,23 @@ async function runIndexer() {
       const mergedConf = { ...existingConf };
       for (const [k, v] of Object.entries(result.fieldConfidence)) {
         if (!mergedConf[k] || mergedConf[k].source !== 'user_manual') mergedConf[k] = v;
+      }
+
+      // Handle quality gate failure — still emit DEEP_CRAWLED so Photographer gets a shot.
+      // Low quality is flagged via ai_metadata.quality_note, not by blocking the pipeline.
+      if (!result.passedQualityGate) {
+        console.error(`   ⚠️  Low quality (${result.qualityScore}/17) → promoting to DEEP_CRAWLED for Photographer.`);
+        updateLocalSpot(target.id, {
+          ...finalUpdates,
+          verification_status: 'DEEP_CRAWLED',
+          is_deep_crawled: true,
+          retry_count: (target.retry_count || 0) + 1,
+          last_attempted_at: new Date().toISOString(),
+          ai_metadata: JSON.stringify({ ...(Object.keys(result.aiMetadata).length > 0 ? result.aiMetadata : (aiMetadata || {})), quality_note: `Low quality score: ${result.qualityScore}/17` }),
+          ...(result.candidatePhotos ? { candidate_photos: JSON.stringify(result.candidatePhotos) } : {}),
+          field_confidence: JSON.stringify(mergedConf)
+        });
+        continue;
       }
 
       try {

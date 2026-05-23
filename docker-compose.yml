@@ -13,7 +13,11 @@ services:
     volumes:
       # Map logs directly to Windows filesystem so user can read them in IDE
       - ./tools/scraper/logs:/app/tools/scraper/logs
-      # Map local scraper database and photos correctly to where PM2 had them
+      # Map local scraper database correctly to where core/LocalDB.ts expects it
       - ./tools/.scraper-data:/app/tools/.scraper-data
+      # Map host root photos folder to container root photos folder (where CCTower/Photographer expect it)
+      - ./.scraper-data/photos:/app/.scraper-data/photos
+      # Map host tools bucket folder to container root bucket folder (where CCTower expects it)
+      - ./tools/.scraper-data/bucket:/app/.scraper-data/bucket
     env_file:
       - .env

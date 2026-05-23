@@ -1223,10 +1223,18 @@ app.put('/api/field-registry/:id', async (req, res) => {
 // Body: { states: string[], facility_types: string[], confirm: true }
 app.post('/api/bulk-reset-to-seeded', (req, res) => {
   try {
-    const { states = [], facility_types = [] } = req.body;
+    const { 
+      states = [], 
+      facility_types = [], 
+      target_statuses = ['DEEP_CRAWLED', 'MEDIA_READY', 'STALLED', 'REJECTED'] 
+    } = req.body;
 
-    let whereClauses = [`verification_status IN ('DEEP_CRAWLED','MEDIA_READY','STALLED','REJECTED')`];
-    const params: any[] = [];
+    if (!Array.isArray(target_statuses) || target_statuses.length === 0) {
+      return res.status(400).json({ error: 'target_statuses must be a non-empty array' });
+    }
+
+    let whereClauses = [`verification_status IN (${target_statuses.map(() => '?').join(',')})`];
+    const params: any[] = [...target_statuses];
 
     if (states.length > 0) {
       whereClauses.push(`state IN (${states.map(() => '?').join(',')})`);
@@ -1250,7 +1258,7 @@ app.post('/api/bulk-reset-to-seeded', (req, res) => {
       success: true,
       reset_count: result.changes,
       total_matched: countRes?.cnt ?? 0,
-      filters: { states, facility_types }
+      filters: { states, facility_types, target_statuses }
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

@@ -38,7 +38,11 @@ db.transaction(() => {
       verification_status = 'SEEDED', 
       pipeline_status = '', 
       is_deep_crawled = 0,
-      last_attempted_at = NULL
+      last_attempted_at = NULL,
+      photos = NULL,
+      candidate_photos = NULL,
+      logo_url = NULL,
+      cover_photo_url = NULL
     WHERE verification_status != 'REJECTED'
   `).run();
 

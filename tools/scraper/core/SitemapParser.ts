@@ -54,7 +54,7 @@ const BUCKET_RULES: Array<{ bucket: keyof Omit<SitemapResult, 'all_urls'>; patte
   { bucket: 'events_urls',   patterns: /event/i, score: 9 },
   // Score 8 — High value
   { bucket: 'events_urls',   patterns: /part(y|ies)|birthday|special/i, score: 7 },
-  { bucket: 'about_urls',    patterns: /about|history|facilit|rink|story|team|our.?rink|who.?we.?are/i, score: 7 },
+  { bucket: 'about_urls',    patterns: /about|history|facilit|rink|story|team|our.?rink|who.?we.?are|pro.?shop|shop|concession|cafe|food|snack|menu|restaurant|cafeteria|grill|eats/i, score: 7 },
   // Score 10 — Required for email capture
   { bucket: 'contact_urls',  patterns: /contact|location|direction|find.?us|get.?here|info|email|reach.?us|connect/i, score: 10 },
   // Score 10 — Primary for Photographer
@@ -238,8 +238,11 @@ export async function parseSitemap(websiteUrl: string): Promise<SitemapResult> {
   if (!websiteUrl) return empty;
 
   let origin = '';
+  let subpath = '';
   try {
-    origin = new URL(websiteUrl).origin;
+    const parsed = new URL(websiteUrl);
+    origin = parsed.origin;
+    subpath = parsed.pathname.replace(/\/+$/, '').toLowerCase();
   } catch {
     return empty;
   }
@@ -290,14 +293,16 @@ export async function parseSitemap(websiteUrl: string): Promise<SitemapResult> {
   }
 
   // ── Attempts 1-3 found sitemap URLs → path-only scoring ──────────────────
-  if (allLocs.length > 0) {
+  // If we found a robust sitemap with 15+ URLs, use it. Otherwise, fall through
+  // and run our full Puppeteer spider crawl to capture dynamic JS/Wix menus.
+  if (allLocs.length >= 15) {
     const uniqueLocs = [...new Set(allLocs)];
     const buckets = scoreAndBucket(uniqueLocs);
     return { ...buckets, all_urls: uniqueLocs };
   }
 
   // ── Attempt 4: Full spider + content fingerprinting ──────────────────────
-  // When no sitemap exists, spider the site and classify pages using
+  // When no sitemap exists (or is too short/sparse), spider the site and classify pages using
   // multi-layer content signals (URL path + anchor text + title + headings).
   // Most rink sites have 10-20 pages — we can fingerprint every single one.
 
@@ -310,8 +315,26 @@ export async function parseSitemap(websiteUrl: string): Promise<SitemapResult> {
     if (href.startsWith('/')) href = origin + href;
     else if (!href.startsWith('http')) href = origin + '/' + href;
     try { if (new URL(href).origin !== origin) return null; } catch { return null; }
+    
     // Normalize: strip trailing slash, query params, fragments
-    return href.replace(/\/+$/, '').split('?')[0].split('#')[0] || null;
+    const normalized = href.replace(/\/+$/, '').split('?')[0].split('#')[0] || null;
+    if (!normalized) return null;
+
+    // Enforce municipal / shared domain path-containment
+    try {
+      const pathname = new URL(normalized).pathname.toLowerCase();
+      if (subpath && subpath !== '/' && subpath !== '') {
+        if (!pathname.startsWith(subpath)) {
+          // Escape hatch for same-origin high-priority keywords (schedule, pricing, hours, calendar, tickets)
+          const isPriorityEscape = /schedule|hours|session|times|calendar|pricing|price|admission|rates|ticket/i.test(pathname);
+          if (!isPriorityEscape) return null;
+        }
+      }
+    } catch {
+      return null;
+    }
+
+    return normalized;
   };
 
   /** Extract all same-origin links WITH their anchor text from HTML */
@@ -337,8 +360,55 @@ export async function parseSitemap(websiteUrl: string): Promise<SitemapResult> {
     return fingerprints.get(url)!;
   };
 
+  // Seed fingerprints with any sitemap URLs we found in attempts 1-3
+  if (allLocs.length > 0) {
+    const uniqueLocs = [...new Set(allLocs)];
+    for (const url of uniqueLocs) {
+      getFingerprint(url);
+    }
+  }
+
   // Level 1: Fetch homepage, discover all top-level links with anchor text
-  const homepageHtml = await fetchText(origin);
+  let homepageHtml = await fetchText(origin);
+  let level1Links: Array<{ href: string; anchorText: string }> = [];
+
+  if (homepageHtml) {
+    level1Links = extractLinksWithAnchors(homepageHtml);
+  }
+
+  // If basic fetch discovered very few links (common on JS/Wix Client-Side Rendered sites)
+  if (level1Links.length < 15) {
+    try {
+      const puppeteer = require('puppeteer');
+      const browser = await puppeteer.launch({
+        headless: 'new',
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+      });
+      const page = await browser.newPage();
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36');
+      await page.goto(origin, { waitUntil: 'networkidle2', timeout: 20000 }).catch(() => page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 10000 }));
+      
+      const domLinks = await page.evaluate(() => {
+        return Array.from(document.querySelectorAll('a')).map((a: any) => ({
+          href: a.href || '',
+          anchorText: (a.innerText || '').trim()
+        })).filter(l => l.href && (l.href.startsWith('http') || l.href.startsWith('//')));
+      });
+
+      homepageHtml = await page.content();
+      await browser.close();
+
+      for (const { href, anchorText } of domLinks) {
+        const resolved = resolveUrl(href);
+        if (resolved && !level1Links.some(l => l.href === resolved)) {
+          level1Links.push({ href: resolved, anchorText });
+        }
+      }
+    } catch (e) {
+      // Graceful fallback
+    }
+  }
+
   if (homepageHtml) {
     // Fingerprint the homepage itself
     const homeFp = getFingerprint(origin);
@@ -347,8 +417,6 @@ export async function parseSitemap(websiteUrl: string): Promise<SitemapResult> {
     homeFp.headings = homeMeta.headings;
     homeFp.imageCount = homeMeta.imageCount;
 
-    // Extract all links with their anchor text
-    const level1Links = extractLinksWithAnchors(homepageHtml);
     const level1Urls: string[] = [];
     for (const { href, anchorText } of level1Links) {
       if (fingerprints.size >= MAX_SPIDER_URLS) break;

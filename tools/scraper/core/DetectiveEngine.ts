@@ -74,6 +74,53 @@ export const safeSurface = (v: any): string | null => {
   return 'unknown';
 };
 
+export const normalizePricing = (rawPricing: any): Record<string, number | null> => {
+  const norm: Record<string, number | null> = { adult: null, child: null, senior: null, spectator: null, skate_rental: null };
+  if (!rawPricing) return norm;
+  
+  if (typeof rawPricing === 'string') {
+    const trimmed = rawPricing.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      try {
+        rawPricing = JSON.parse(trimmed);
+      } catch {}
+    }
+  }
+
+  if (typeof rawPricing === 'object' && !Array.isArray(rawPricing)) {
+    const keys = ['adult', 'child', 'senior', 'spectator', 'skate_rental'];
+    let matchesExact = true;
+    for (const k of keys) {
+      if (rawPricing[k] !== undefined) {
+        norm[k] = safeNum(rawPricing[k]);
+      } else {
+        matchesExact = false;
+      }
+    }
+    if (matchesExact) return norm;
+
+    // Otherwise, map dynamically
+    for (const [k, v] of Object.entries(rawPricing)) {
+      const lower = k.toLowerCase();
+      const num = safeNum(v);
+      if (lower.includes('adult')) norm.adult = num;
+      else if (lower.includes('child') || lower.includes('kid')) norm.child = num;
+      else if (lower.includes('senior')) norm.senior = num;
+      else if (lower.includes('spectator') || lower.includes('observer')) norm.spectator = num;
+      else if (lower.includes('rental') || lower.includes('skate_rental')) norm.skate_rental = num;
+    }
+  } else if (typeof rawPricing === 'string') {
+    // Fallback regex parsing if it returned a flat string
+    const adultMatch = rawPricing.match(/adult[^\d$]*(\d+\.?\d*)/i);
+    if (adultMatch) norm.adult = Number(adultMatch[1]);
+    const childMatch = rawPricing.match(/(child|kid)[^\d$]*(\d+\.?\d*)/i);
+    if (childMatch) norm.child = Number(childMatch[2]);
+    const rentalMatch = rawPricing.match(/(rental|skate[^\d$]*rental)[^\d$]*(\d+\.?\d*)/i);
+    if (rentalMatch) norm.skate_rental = Number(rentalMatch[2]);
+  }
+  return norm;
+};
+
 // ─── Email Extraction Helper ──────────────────────────────────────────────────
 
 const EMAIL_DOMAIN_BLOCKLIST = [
@@ -238,7 +285,15 @@ async function callLMStudio(
     onStream(`\n\n--- [${passLabel} LLM PASS START] ---\nQuerying model ${model}...\n`);
   }
   
-  const payload = { model, messages: [{ role:'system', content: systemMessage },{ role:'user', content: userMessage }], temperature: 0.1, stream: true };
+  const payload = { 
+    model, 
+    messages: [
+      { role:'system', content: systemMessage },
+      { role:'user', content: userMessage }
+    ], 
+    temperature: 0.1, 
+    stream: true
+  };
   
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
@@ -258,7 +313,11 @@ async function callLMStudio(
           timeout: 300000 // 5 minutes timeout
         }, (res: http.IncomingMessage) => {
           if (res.statusCode && (res.statusCode < 200 || res.statusCode >= 300)) {
-            reject(new Error(`HTTP status ${res.statusCode}: ${res.statusMessage}`));
+            let errBody = '';
+            res.on('data', (chunk) => { errBody += chunk.toString(); });
+            res.on('end', () => {
+              reject(new Error(`HTTP status ${res.statusCode}: ${res.statusMessage} - Body: ${errBody}`));
+            });
             return;
           }
 
@@ -353,19 +412,100 @@ async function crawlPage(page: any, url: string, onProgress: (m: string) => void
     await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000}).catch(()=>page.goto(url,{waitUntil:'domcontentloaded',timeout:15000}));
     await autoScroll(page);
     const d = await page.evaluate(()=>{
+      const decodeCfEmail = (encoded: string): string | null => {
+        try {
+          let email = "";
+          const key = parseInt(encoded.substring(0, 2), 16);
+          for (let i = 2; i < encoded.length; i += 2) {
+            email += String.fromCharCode(parseInt(encoded.substring(i, i + 2), 16) ^ key);
+          }
+          return email.trim().toLowerCase();
+        } catch {
+          return null;
+        }
+      };
+
       const ogImage=document.querySelector('meta[property="og:image"]')?.getAttribute('content')||null;
       const jsonLd=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map((e:any)=>e.innerText).join('\n');
       const iframes=Array.from(document.querySelectorAll('iframe')).map((e:any)=>e.src||'').filter((s:string)=>s.includes('calendar')||s.includes('ticket')||s.includes('centeredge')||s.includes('roller'));
       const images=Array.from(document.querySelectorAll('img')).filter((i:any)=>{const w=i.naturalWidth||i.width||0,h=i.naturalHeight||i.height||0;return w>=400&&h>=300&&i.src&&(i.src.startsWith('http')||i.src.startsWith('//'));}).map((i:any)=>({src:i.src,alt:(i.alt||'').toLowerCase(),parentClass:(i.parentElement?.className||'').toLowerCase()}));
       const links=Array.from(document.querySelectorAll('a')).map((a:any)=>({href:(a.href||'').toLowerCase(),text:(a.innerText||'').toLowerCase()})).filter((l:any)=>l.href&&(l.href.startsWith('http')||l.href.startsWith('//')));
+      
       const mailtos=Array.from(document.querySelectorAll('a[href^="mailto:"]')).map((a:any)=>a.href.replace('mailto:','').split('?')[0].trim().toLowerCase()).filter((e:string)=>e&&e.includes('@'));
-      const fullText=document.body?.innerText?.replace(/\n+/g,' ').replace(/\s{2,}/g,' ').trim()||'';
+      
+      // Extract Cloudflare protected emails
+      document.querySelectorAll('[data-cfemail]').forEach((el: any) => {
+        const enc = el.getAttribute('data-cfemail');
+        if (enc) {
+          const dec = decodeCfEmail(enc);
+          if (dec && dec.includes('@') && !mailtos.includes(dec)) mailtos.push(dec);
+        }
+      });
+      document.querySelectorAll('a[href*="email-protection"]').forEach((el: any) => {
+        const href = el.href || '';
+        const hashIndex = href.indexOf('#');
+        if (hashIndex !== -1) {
+          const enc = href.substring(hashIndex + 1);
+          const dec = decodeCfEmail(enc);
+          if (dec && dec.includes('@') && !mailtos.includes(dec)) mailtos.push(dec);
+        }
+      });
+
+      const fullText=document.body?.innerText?.trim()||'';
       document.querySelectorAll('nav,footer,script,style,header,iframe,noscript').forEach(el=>el.remove());
-      const text=document.body?.innerText?.replace(/\n+/g,' ').replace(/\s{2,}/g,' ').trim()||'';
+      const text=document.body?.innerText?.trim()||'';
       return {ogImage,jsonLd,iframes,images,links,mailtos,text,fullText};
     }).catch(()=>({ogImage:null,jsonLd:'',iframes:[],images:[],links:[],mailtos:[],text:'',fullText:''}));
     return {text:d.text,jsonLd:d.jsonLd,ogImage:d.ogImage,images:d.images,iframes:d.iframes,links:d.links,mailtos:d.mailtos,fullText:d.fullText};
   } catch { onProgress(`[Detective] Nav failed: ${url}`); return empty; }
+}
+
+// ─── Web Text Condensation (RAG-Lite Boilerplate Filter) ────────────────────
+function condenseWebText(rawText: string): string {
+  if (!rawText) return '';
+  const lines = rawText.split('\n');
+  const keptSegments: string[] = [];
+
+  const highValuePatterns = [
+    /hour|schedule|session|time|calendar|events|open.?skate/i,
+    /adult.?night|18\+|21\+/i,
+    /pricing|price|admission|rates|ticket|fee|cost|dollar/i,
+    /about|story|history|facility|rink|floor|surface|wood/i,
+    /contact|location|directions|email|info|phone|address/i,
+    /rental|pro.?shop|food|snack|arcade|party|birthday/i
+  ];
+
+  const skipKeywords = [
+    /copyright/i, /all rights reserved/i, /privacy policy/i, /cookie policy/i,
+    /terms of (use|service)/i, /designed by/i, /powered by/i, /skip to/i,
+    /menu toggle/i, /cart/i, /checkout/i
+  ];
+
+  for (const line of lines) {
+    const s = line.trim();
+    if (!s || s.length < 5 || s.length > 500) continue;
+
+    // Discard typical layout and cookie policy boilerplate
+    if (skipKeywords.some(pat => pat.test(s))) continue;
+
+    // Keep if matches high-value rink data patterns
+    const isHighValue = highValuePatterns.some(pat => pat.test(s));
+    
+    // Also keep if it looks like a time/price line (contains numbers + day name or am/pm/$)
+    const hasNumbers = /\d+/.test(s);
+    const hasTimeOrPrice = /(am|pm|\$|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i.test(s);
+    
+    if (isHighValue || (hasNumbers && hasTimeOrPrice)) {
+      keptSegments.push(s);
+    }
+  }
+
+  // Fallback to basic slicing if page was exceptionally sparse to avoid data loss
+  if (keptSegments.length < 5) {
+    return rawText.replace(/\s+/g, ' ').slice(0, 4000);
+  }
+
+  return keptSegments.join('\n');
 }
 
 // ─── Main Detective Function ─────────────────────────────────────────────────
@@ -420,16 +560,29 @@ export async function executeDetective(
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36');
       await page.setViewport({width:1280,height:800});
       // Fix #7: Include gallery_urls in targeted crawl (SitemapParser spider handles discovery)
-      const targeted=[...new Set([...sitemap.schedule_urls.slice(0,3),...sitemap.pricing_urls.slice(0,3),...sitemap.about_urls.slice(0,2),...sitemap.events_urls.slice(0,2),...sitemap.contact_urls.slice(0,3),...sitemap.gallery_urls.slice(0,2)])];
-      const crawlUrls=[spotContext.website,...targeted].slice(0,MAX_PAGES_PER_RECORD);
+      let crawlUrls: string[] = [];
+      let targeted: string[] = [];
+      if (sitemap.all_urls && sitemap.all_urls.length > 0 && sitemap.all_urls.length <= 15) {
+        // Small site optimization: crawl ALL unique discovered pages to guarantee 100% data extraction completeness
+        crawlUrls = [...new Set([spotContext.website, ...sitemap.all_urls])];
+        onProgress(`[Detective] 🕷️ Small site detected (${sitemap.all_urls.length} pages). Crawling ALL unique URLs.`);
+      } else {
+        targeted=[...new Set([...sitemap.schedule_urls.slice(0,3),...sitemap.pricing_urls.slice(0,3),...sitemap.about_urls.slice(0,2),...sitemap.events_urls.slice(0,2),...sitemap.contact_urls.slice(0,3),...sitemap.gallery_urls.slice(0,2)])];
+        crawlUrls=[spotContext.website,...targeted].slice(0,MAX_PAGES_PER_RECORD);
+      }
       const PAGE_SCORE_RULES=[{pattern:/hours|schedule|session|times|calendar|events|open.?skate/i,score:10},{pattern:/adult.?night|18\+|21\+/i,score:10},{pattern:/pricing|price|admission|rates|tickets/i,score:9},{pattern:/about|story|history|facility|rink/i,score:8},{pattern:/contact|location|directions|email|info/i,score:10}];
       
       let hostname='';try{hostname=new URL(spotContext.website).hostname;}catch{}
       for(const url of crawlUrls){
         onProgress(`[Detective] -> ${url}`);
         const pg=await crawlPage(page,url,onProgress);
-        const isOpsUrl = url === spotContext.website || /schedule|pricing|admission|rates|calendar|events/i.test(url);
-        const isAmenityUrl = url === spotContext.website || /about|story|history|facility|rink/i.test(url);
+        let isOpsUrl = url === spotContext.website || /schedule|pricing|admission|rates|calendar|events|hours|session|times/i.test(url);
+        let isAmenityUrl = url === spotContext.website || /about|story|history|facility|rink|pro.?shop|shop|concession|cafe|food/i.test(url);
+        if (!isOpsUrl && !isAmenityUrl) {
+          // Uncategorized crawled pages: include in both segments to prevent data loss
+          isOpsUrl = true;
+          isAmenityUrl = true;
+        }
 
         // Fix #1: Targeted pages go into priorityText (prepended), NOT appended to external noise
         if(pg.jsonLd) {
@@ -438,7 +591,7 @@ export async function executeDetective(
           if(isAmenityUrl) amenityText += ld;
         }
         if(pg.text) {
-          const txt = `\n\n[PAGE: ${url}]\n${pg.text}`;
+          const txt = `\n\n[PAGE: ${url}]\n${condenseWebText(pg.text)}`;
           if(isOpsUrl) priorityText += txt;
           if(isAmenityUrl) amenityText += txt;
         }
@@ -450,7 +603,7 @@ export async function executeDetective(
         for(const iframe of pg.iframes){
           const ig=await crawlPage(page,iframe,onProgress);
           if(ig.text) {
-            const igTxt = `\n\n[IFRAME:${iframe}]\n${ig.text}`;
+            const igTxt = `\n\n[IFRAME:${iframe}]\n${condenseWebText(ig.text)}`;
             coreText+=igTxt; amenityText+=igTxt;
           }
         }
@@ -493,12 +646,25 @@ export async function executeDetective(
   try {
   const userVectors=aiConfig.ai_target_vectors||[];
   const userSchema=userVectors.reduce((acc:any,vec:any)=>{acc[vec.key]=vec.prompt||vec.type;return acc;},{});
-  const REQUIRED_SCHEMA={hours:'Complete weekly public skating schedule for ALL 7 DAYS {Monday: time_range, Tuesday: time_range, ...}. Include every day even if closed.',pricing:'All admission fees {adult,child,senior,spectator,skate_rental}.',has_fee:'boolean or null — return null if no pricing/fee information was found. DO NOT assume free.',has_adult_night:'boolean or null — return null if no adult night information was found.',adult_night_schedule:'If adult nights: {day:time_range}. Null if none.'};
-  const COMBINED_SCHEMA:Record<string,string>={surface_type:'Floor: wood/maple/concrete/asphalt/sport_court/synthetic.',surface_quality:'Condition 3-5 words.',vibe_score:'0-100.',is_indoor:'boolean',has_rental:'boolean',has_pro_shop:'boolean',has_food:'boolean',has_lights:'boolean',has_lockers:'boolean',has_ac:'boolean',has_wifi:'boolean',has_toilets:'boolean',wheelchair:'boolean',derby:'boolean',capacity:'integer.',special_events:'Array.',operator_name:'Owner name.',operator_description:'1-2 sentences.',cultural_meta:'Significance or null.',adult_night_details:'Details or null.',instagram_url:'URL or null.',facebook_url:'URL or null.',tiktok_url:'URL or null.',schedule_url:'URL or null.',yelp_url:'URL or null.',price_range:'$ to $$$$ or null.',logo_url:'Logo URL or null.',email_addresses:'Array of ALL contact email addresses found for this venue. Include info, events, parties, management, booking — every unique email. Return [] if none found.',...userSchema};
+  const REQUIRED_SCHEMA={
+    hours:'Complete weekly public skating schedule for ALL 7 DAYS {Monday: time_range, Tuesday: time_range, ...}. Include every day even if closed.',
+    pricing: {
+      adult: 'number or null — adult admission fee',
+      child: 'number or null — child/kid admission fee',
+      senior: 'number or null — senior admission fee',
+      spectator: 'number or null — spectator/non-skating supervising fee',
+      skate_rental: 'number or null — regular skate rental fee'
+    },
+    has_fee:'boolean or null — return null if no pricing/fee information was found. DO NOT assume free.',
+    has_rental:'boolean or null — return null if no skate rental information was found.',
+    has_adult_night:'boolean or null — return null if no adult night information was found.',
+    adult_night_schedule:'If adult nights: {day:time_range}. Null if none.'
+  };
+  const COMBINED_SCHEMA:Record<string,any>={surface_type:'Floor: wood/maple/concrete/asphalt/sport_court/synthetic.',surface_quality:'Condition 3-5 words.',vibe_score:'0-100.',is_indoor:'boolean',has_rental:'boolean',has_pro_shop:'boolean',has_food:'boolean',has_lights:'boolean',has_lockers:'boolean',has_ac:'boolean',has_wifi:'boolean',has_toilets:'boolean',wheelchair:'boolean',derby:'boolean',capacity:'integer.',special_events:'Array.',operator_name:'Owner name.',operator_description:'1-2 sentences.',cultural_meta:'Significance or null.',adult_night_details:'Details or null.',instagram_url:'URL or null.',facebook_url:'URL or null.',tiktok_url:'URL or null.',schedule_url:'URL or null.',yelp_url:'URL or null.',price_range:'$ to $$$$ or null.',logo_url:'Logo URL or null.',email_addresses:'Array of ALL contact email addresses found for this venue. Include info, events, parties, management, booking — every unique email. Return [] if none found.',...userSchema};
   const FULL_SCHEMA = COMBINED_SCHEMA;
   const exclusionKw=aiConfig.ai_exclusion_keywords||[];
   const usp=aiConfig.ai_system_prompt||'';
-  const buildSystem=(schema:Record<string,string>,ctx?:string)=>{
+  const buildSystem=(schema:Record<string,any>,ctx?:string)=>{
     let s=`You are a data extraction agent for [${spotContext.name}] in [${spotContext.city}].\nONLY this location. Valid JSON only.\n`;
     s+=`CRITICAL BOOLEAN RULE: For ALL boolean fields, you MUST return null if the information was not explicitly found in the text. Do NOT assume false. Do NOT infer. A missing fee schedule does NOT mean admission is free. A missing amenity mention does NOT mean it is absent. Return null to indicate unknown.\n`;
     if(usp) s+=usp+'\n';
@@ -557,6 +723,36 @@ export async function executeDetective(
   let pass1: any = {};
   let pass2: any = {};
   let escalationRan = false;
+
+  // ── Pre-LLM Regex Content Bouncer ──
+  const fullText = (coreText + '\n' + amenityText).toLowerCase();
+  const toxicTerms = [
+    'ice rink', 'ice skating', 'figure skating', 'ice hockey', 
+    'curling rink', 'ice arena', 'ice center', 'ice centre', 
+    'iceplex', 'icehouse', 'hockey tournament', 'skating on ice'
+  ];
+  let toxicScore = 0;
+  for (const term of toxicTerms) {
+    const matches = fullText.match(new RegExp(term, 'g'));
+    if (matches) {
+      toxicScore += matches.length;
+    }
+  }
+
+  if (toxicScore >= 3) {
+    onProgress(`[Detective] 🚫 PRE-LLM BOUNCER REJECTED (Toxic Score: ${toxicScore}). Spot is an Ice/Hockey facility.`);
+    return {
+      aiMetadata: { TOXICITY_ABORT: true },
+      mappedFields: { _simulated_status: 'REJECTED' },
+      combinedText: `[BOUNCER REJECTED] Toxic Score: ${toxicScore}`,
+      qualityScore: 0,
+      passedQualityGate: false,
+      candidatePhotos: null,
+      socialLinks: { instagram_url: null, facebook_url: null, tiktok_url: null, schedule_url: null },
+      flyerUrls,
+      fieldConfidence: {}
+    };
+  }
 
   if (coreText.trim().length >= 50 && hasCrawledWebsite) {
     const cSlice=coreText.slice(0, 12000);
@@ -660,18 +856,24 @@ export async function executeDetective(
   aiMetadata = { ...jsonLdFields, ...pass2, ...pass1 };
 
   const opening_hours=aiMetadata.hours||aiMetadata.opening_hours||spotContext.opening_hours||null;
-  const pricing_data=aiMetadata.pricing||aiMetadata.pricing_data||spotContext.pricing_data||null;
+  const pricing_data=normalizePricing(aiMetadata.pricing||aiMetadata.pricing_data||spotContext.pricing_data);
   const surface_type=safeSurface(aiMetadata.surface_type||spotContext.surface_type);
   const surface_quality=aiMetadata.surface_quality||spotContext.surface_quality||null;
   const vibe_score=safeNum(aiMetadata.vibe_score??spotContext.vibe_score);
   const is_indoor=safeBool(aiMetadata.is_indoor??spotContext.is_indoor);
-  const has_fee=safeBool(aiMetadata.has_fee??spotContext.has_fee);
+  let has_fee=safeBool(aiMetadata.has_fee??spotContext.has_fee);
+  if (has_fee === null && pricing_data && (typeof pricing_data.adult === 'number' || typeof pricing_data.child === 'number')) {
+    has_fee = true;
+  }
   const has_adult_night=safeBool(aiMetadata.has_adult_night??spotContext.has_adult_night)??false;
   const adult_night_details=has_adult_night?aiMetadata.adult_night_details||spotContext.adult_night_details||null:null;
   const adultNightSchedule=has_adult_night?aiMetadata.adult_night_schedule||spotContext.adult_night_schedule||null:null;
   const special_events=aiMetadata.special_events||spotContext.special_events||null;
   const capacity=safeNum(aiMetadata.capacity??spotContext.capacity);
-  const has_rental=safeBool(aiMetadata.has_rental??spotContext.has_rental);
+  let has_rental=safeBool(aiMetadata.has_rental??spotContext.has_rental);
+  if (has_rental === null && pricing_data && typeof pricing_data.skate_rental === 'number') {
+    has_rental = true;
+  }
   const has_pro_shop=safeBool(aiMetadata.has_pro_shop??spotContext.has_pro_shop);
   const has_food=safeBool(aiMetadata.has_food??spotContext.has_food);
   const has_lights=safeBool(aiMetadata.has_lights??spotContext.has_lights);
@@ -693,7 +895,7 @@ export async function executeDetective(
   const logo_url=aiMetadata.logo_url||null;
 
   // ── 3-Layer Email Merge ────────────────────────────────────────────────────
-  const regexEmails = extractEmails(coreText + '\n' + amenityText);
+  const regexEmails = extractEmails(coreText + '\n' + amenityText + '\n' + externalText + '\n' + combinedText);
   const aiEmails: string[] = Array.isArray(aiMetadata.email_addresses)
     ? aiMetadata.email_addresses.map((e: string) => e.toLowerCase().trim())
     : (typeof aiMetadata.email_addresses === 'string' ? [aiMetadata.email_addresses.toLowerCase().trim()] : []);

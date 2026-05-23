@@ -125,7 +125,7 @@ function saveToDisk(buf: Buffer, spotId: string, state: string, index: number, p
       const existingHash = crypto.createHash('sha256').update(existingBuf).digest('hex');
       if (hash === existingHash) {
         logToTower('INFO', `  ⏭️ Duplicate image content detected (hash: ${hash.slice(0,8)}). Skipping.`);
-        return `${PHOTO_SERVE_BASE}/${state || 'US'}/${spotId}/${file}`;
+        return null;
       }
     }
 
@@ -153,9 +153,17 @@ function normalizeImageUrl(urlStr: string): string {
     ];
     paramsToStrip.forEach(p => url.searchParams.delete(p));
     
-    // Remove typical WordPress/CDN dimension suffixes like "-300x200.jpg" to ".jpg"
-    let pathname = url.pathname;
-    pathname = pathname.replace(/-\d+x\d+(\.[a-zA-Z0-9]+)$/i, '$1');
+    // Lowercase path for robust suffix matching
+    let pathname = url.pathname.toLowerCase();
+    
+    // Remove typical WordPress/CDN dimension suffixes (e.g. -300x200, _100x100)
+    pathname = pathname.replace(/[-_]\d+x\d+/g, '');
+    
+    // Remove typical scale/size suffixes (e.g. -scaled, -large, -thumb)
+    pathname = pathname.replace(/[-_](scaled|large|medium|thumbnail|thumb|small|big|hero)/g, '');
+    
+    // Remove file extensions for robust visual stem-level deduplication
+    pathname = pathname.replace(/\.(jpg|jpeg|png|webp|gif|svg|bmp)$/i, '');
     
     return url.origin + pathname;
   } catch {
