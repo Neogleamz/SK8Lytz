@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useFieldRegistry } from '../hooks/useFieldRegistry';
 
 export interface ScheduledService {
   '@type'?: string;
@@ -191,10 +192,66 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
   spot, variant = 'detailed', readOnly = false,
   onEdit, onReset, onBlock, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto, onPublishToggle, proxyImg
 }) => {
+  const { fields } = useFieldRegistry();
   const [photoIndex, setPhotoIndex] = useState(0);
   const [showTypeMenu, setShowTypeMenu] = useState(false);
   const [isCardHovered, setIsCardHovered] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const isFieldEmpty = (fieldName: string): boolean => {
+    switch (fieldName) {
+      case 'name':
+        return !spot.name;
+      case 'street_address':
+      case 'address':
+        return !spot.street_address && !spot.address;
+      case 'city':
+        return !spot.city;
+      case 'state':
+        return !spot.state;
+      case 'zip':
+        return !spot.zip;
+      case 'email_addresses': {
+        const emails = getEmails(spot.email_addresses);
+        return emails.length === 0;
+      }
+      case 'phone_number':
+      case 'phone':
+        return !spot.phone_number && !spot.phone;
+      case 'opening_hours':
+        return !spot.opening_hours || (Array.isArray(spot.opening_hours) && spot.opening_hours.length === 0);
+      case 'pricing_data':
+      case 'price_range':
+      case 'has_fee':
+        return !spot.price_range && !spot.pricing_data && spot.has_fee === null;
+      case 'has_pro_shop':
+      case 'has_proshop':
+        return spot.has_pro_shop === null || spot.has_pro_shop === undefined;
+      case 'has_adult_night':
+        return spot.has_adult_night === null || spot.has_adult_night === undefined;
+      case 'instagram_url':
+        return !spot.instagram_url || spot.instagram_url === 'null';
+      case 'facebook_url':
+        return !spot.facebook_url || spot.facebook_url === 'null';
+      case 'tiktok_url':
+        return !spot.tiktok_url || spot.tiktok_url === 'null';
+      case 'surface_type':
+        return !spot.surface_type;
+      case 'surface_quality':
+        return !spot.surface_quality;
+      case 'has_rental':
+        return spot.has_rental === null || spot.has_rental === undefined;
+      default:
+        return !spot[fieldName];
+    }
+  };
+
+  const isGlowEmpty = (fieldName: string): boolean => {
+    const config = fields.find(f => f.field_name === fieldName);
+    return !!(config && config.visual_glow === 1 && isFieldEmpty(fieldName));
+  };
+
+  const anyGlowEmpty = fields.some(f => f.visual_glow === 1 && isFieldEmpty(f.field_name));
 
   const handleUploadClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -304,9 +361,13 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
         onMouseLeave={() => setIsCardHovered(false)}
         style={{
           background: 'rgba(30,30,40,0.95)', borderRadius: '10px', overflow: 'hidden',
-          border: `1px solid ${spot.is_published ? 'rgba(76,175,80,0.4)' : 'rgba(255,255,255,0.08)'}`,
+          border: anyGlowEmpty 
+            ? '1.5px solid rgba(255, 51, 102, 0.8)' 
+            : `1px solid ${spot.is_published ? 'rgba(76,175,80,0.4)' : 'rgba(255,255,255,0.08)'}`,
           display: 'flex', flexDirection: 'column', width: '100%', height: '100%',
-          boxShadow: '0 4px 15px rgba(0,0,0,0.5)'
+          boxShadow: anyGlowEmpty 
+            ? '0 0 15px rgba(255, 51, 102, 0.4), inset 0 0 10px rgba(255, 51, 102, 0.15)' 
+            : '0 4px 15px rgba(0,0,0,0.5)'
         }}>
         <div style={{ position: 'relative', height: '120px', background: 'rgba(255,255,255,0.03)', flexShrink: 0 }}>
           {renderTypeMenu()}
@@ -381,19 +442,24 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
   return (
     <div style={{
       background: 'rgba(30,30,40,0.95)', borderRadius: '14px', overflow: 'hidden',
-      border: `1px solid ${spot.is_published ? 'rgba(76,175,80,0.4)' : 'rgba(255,255,255,0.08)'}`,
+      border: anyGlowEmpty 
+        ? '1.5px solid rgba(255, 51, 102, 0.8)' 
+        : `1px solid ${spot.is_published ? 'rgba(76,175,80,0.4)' : 'rgba(255,255,255,0.08)'}`,
       display: 'flex', flexDirection: 'column', transition: 'transform 0.18s, box-shadow 0.18s',
-      height: '100%'
+      height: '100%',
+      boxShadow: anyGlowEmpty ? '0 0 15px rgba(255, 51, 102, 0.3)' : ''
     }}
       onMouseEnter={e => {
         setIsCardHovered(true);
         (e.currentTarget as HTMLElement).style.transform='translateY(-3px)';
-        (e.currentTarget as HTMLElement).style.boxShadow='0 12px 40px rgba(0,0,0,0.5)';
+        (e.currentTarget as HTMLElement).style.boxShadow= anyGlowEmpty 
+          ? '0 12px 40px rgba(255, 51, 102, 0.5), 0 0 20px rgba(255, 51, 102, 0.4)' 
+          : '0 12px 40px rgba(0,0,0,0.5)';
       }}
       onMouseLeave={e => {
         setIsCardHovered(false);
         (e.currentTarget as HTMLElement).style.transform='';
-        (e.currentTarget as HTMLElement).style.boxShadow='';
+        (e.currentTarget as HTMLElement).style.boxShadow= anyGlowEmpty ? '0 0 15px rgba(255, 51, 102, 0.3)' : '';
       }}
     >
       {/* Hero image */}
@@ -459,9 +525,28 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
         {/* Name + location */}
         <div>
           <div style={{ fontWeight:800, fontSize:'1rem', lineHeight:1.2, marginBottom:'3px' }}>{spot.name}</div>
-          <div style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.45)' }}>
-            {[spot.street_address || spot.address, spot.city, spot.state, spot.zip].filter(Boolean).join(', ')}
-          </div>
+          {isGlowEmpty('street_address') ? (
+            <div style={{
+              border: '1px dashed rgba(255, 51, 102, 0.6)',
+              boxShadow: '0 0 10px rgba(255, 51, 102, 0.35), inset 0 0 5px rgba(255, 51, 102, 0.15)',
+              background: 'rgba(255, 51, 102, 0.05)',
+              padding: '5px 9px',
+              borderRadius: '6px',
+              fontSize: '0.68rem',
+              color: '#ff3366',
+              fontWeight: 'bold',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              marginTop: '4px'
+            }}>
+              <span>📍</span> MISSING HIGH-PRIORITY STREET ADDRESS!
+            </div>
+          ) : (
+            <div style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.45)' }}>
+              {[spot.street_address || spot.address, spot.city, spot.state, spot.zip].filter(Boolean).join(', ')}
+            </div>
+          )}
         </div>
 
         {/* Rating row */}
@@ -484,10 +569,31 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
         </div>
 
         {/* Today's hours + Open Now */}
-        {hours && (
+        {(hours || isGlowEmpty('opening_hours')) && (
           <div style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.55)' }}>
-            <span style={{ color:'rgba(255,255,255,0.3)', marginRight:'4px' }}>Today:</span>
-            <span style={{ color: openStatus === true ? '#4caf50' : openStatus === false ? '#f44336' : 'rgba(255,255,255,0.55)', fontWeight:600 }}>{todayHours(hours) || 'Hours available'}</span>
+            {isGlowEmpty('opening_hours') ? (
+              <div style={{
+                border: '1px dashed rgba(255, 51, 102, 0.6)',
+                boxShadow: '0 0 10px rgba(255, 51, 102, 0.35), inset 0 0 5px rgba(255, 51, 102, 0.15)',
+                background: 'rgba(255, 51, 102, 0.05)',
+                padding: '5px 9px',
+                borderRadius: '6px',
+                fontSize: '0.68rem',
+                color: '#ff3366',
+                fontWeight: 'bold',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                marginTop: '2px'
+              }}>
+                <span>⏱️</span> MISSING HIGH-PRIORITY HOURS!
+              </div>
+            ) : (
+              <>
+                <span style={{ color:'rgba(255,255,255,0.3)', marginRight:'4px' }}>Today:</span>
+                <span style={{ color: openStatus === true ? '#4caf50' : openStatus === false ? '#f44336' : 'rgba(255,255,255,0.55)', fontWeight:600 }}>{todayHours(hours) || 'Hours available'}</span>
+              </>
+            )}
           </div>
         )}
 
@@ -505,10 +611,29 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
         )}
 
         {/* Adult night */}
-        {(spot.has_adult_night || adultSched || spot.adult_night_details) && (
-          <div style={{ borderRadius: '6px', background: 'rgba(233,30,99,0.08)', border: '1px solid rgba(233,30,99,0.2)', overflow: 'hidden' }}>
-            <div style={{ padding: '5px 8px', background: 'rgba(233,30,99,0.14)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span style={{ color: '#f48fb1', fontWeight: 800, fontSize: '0.63rem', letterSpacing: '0.05em' }}>18+ ADULT NIGHT</span>
+        {(spot.has_adult_night || adultSched || spot.adult_night_details || isGlowEmpty('has_adult_night')) && (
+          <div style={{
+            borderRadius: '6px',
+            background: isGlowEmpty('has_adult_night') ? 'rgba(255, 51, 102, 0.05)' : 'rgba(233,30,99,0.08)',
+            border: isGlowEmpty('has_adult_night') ? '1px dashed rgba(255, 51, 102, 0.6)' : '1px solid rgba(233,30,99,0.2)',
+            overflow: 'hidden',
+            boxShadow: isGlowEmpty('has_adult_night') ? '0 0 10px rgba(255, 51, 102, 0.35)' : 'none'
+          }}>
+            <div style={{
+              padding: '5px 8px',
+              background: isGlowEmpty('has_adult_night') ? 'rgba(255, 51, 102, 0.1)' : 'rgba(233,30,99,0.14)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px'
+            }}>
+              <span style={{
+                color: isGlowEmpty('has_adult_night') ? '#ff3366' : '#f48fb1',
+                fontWeight: 800,
+                fontSize: '0.63rem',
+                letterSpacing: '0.05em'
+              }}>
+                {isGlowEmpty('has_adult_night') ? '⚠️ MISSING HIGH-PRIORITY 18+ ADULT NIGHT STATUS' : '18+ ADULT NIGHT'}
+              </span>
             </div>
             {spot.adult_night_details && (
               <div style={{ padding: '5px 8px', color: 'rgba(255,255,255,0.5)', fontSize: '0.66rem', lineHeight: 1.4 }}>{spot.adult_night_details}</div>
@@ -536,11 +661,34 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
             spot.has_fee === true  ? 'Paid admission' :
             spot.has_fee === false ? 'Free entry' :
             null;
-          if (!priceLabel && !feeStatus) return null; // Unknown — show nothing
+          
+          const isGlow = isGlowEmpty('pricing_data');
+          if (!priceLabel && !feeStatus && !isGlow) return null; // Unknown — show nothing
           return (
             <div style={{ fontSize:'0.7rem', color:'rgba(255,255,255,0.55)', display:'flex', alignItems:'center', gap:'6px' }}>
-              <span style={{ color:'rgba(255,255,255,0.25)' }}>💰</span>
-              <span>{priceLabel || feeStatus}</span>
+              {isGlow ? (
+                <div style={{
+                  border: '1px dashed rgba(255, 51, 102, 0.6)',
+                  boxShadow: '0 0 10px rgba(255, 51, 102, 0.35), inset 0 0 5px rgba(255, 51, 102, 0.15)',
+                  background: 'rgba(255, 51, 102, 0.05)',
+                  padding: '5px 9px',
+                  borderRadius: '6px',
+                  fontSize: '0.68rem',
+                  color: '#ff3366',
+                  fontWeight: 'bold',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  marginTop: '2px'
+                }}>
+                  <span>💰</span> MISSING HIGH-PRIORITY PRICING DATA / FEES!
+                </div>
+              ) : (
+                <>
+                  <span style={{ color:'rgba(255,255,255,0.25)' }}>💰</span>
+                  <span>{priceLabel || feeStatus}</span>
+                </>
+              )}
             </div>
           );
         })()}
@@ -554,65 +702,126 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
         )}
 
         {/* Phone */}
-        {(spot.phone || spot.phone_number) && (
+        {(spot.phone || spot.phone_number || isGlowEmpty('phone_number')) && (
           <div style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.45)' }}>
-            <span style={{ color:'rgba(255,255,255,0.25)', marginRight:'4px' }}>Ph:</span>
-            {spot.phone || spot.phone_number}
+            {isGlowEmpty('phone_number') ? (
+              <div style={{
+                border: '1px dashed rgba(255, 51, 102, 0.6)',
+                boxShadow: '0 0 10px rgba(255, 51, 102, 0.35), inset 0 0 5px rgba(255, 51, 102, 0.15)',
+                background: 'rgba(255, 51, 102, 0.05)',
+                padding: '5px 9px',
+                borderRadius: '6px',
+                fontSize: '0.68rem',
+                color: '#ff3366',
+                fontWeight: 'bold',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                marginTop: '2px'
+              }}>
+                <span>📞</span> MISSING HIGH-PRIORITY PHONE NUMBER!
+              </div>
+            ) : (
+              <>
+                <span style={{ color:'rgba(255,255,255,0.25)', marginRight:'4px' }}>Ph:</span>
+                {spot.phone || spot.phone_number}
+              </>
+            )}
           </div>
         )}
 
         {/* Emails */}
         {(() => {
           const emails = getEmails(spot.email_addresses);
-          if (emails.length === 0) return null;
+          const isGlow = isGlowEmpty('email_addresses');
+          if (emails.length === 0 && !isGlow) return null;
           return (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-              <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.05em' }}>EMAILS</span>
+              <span style={{ fontSize: '0.62rem', fontWeight: 700, color: isGlow ? '#ff3366' : 'rgba(255,255,255,0.3)', letterSpacing: '0.05em' }}>EMAILS</span>
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                {emails.map((email) => (
-                  <a
-                    key={email}
-                    href={`mailto:${email}`}
-                    style={{
-                      fontSize: '0.65rem',
-                      color: '#c084fc',
-                      textDecoration: 'none',
-                      padding: '3px 8px',
-                      borderRadius: '10px',
-                      border: '1px solid rgba(168,85,247,0.35)',
-                      background: 'rgba(168,85,247,0.1)',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      transition: 'all 0.2s',
-                      boxShadow: '0 0 6px rgba(168,85,247,0.15)',
-                    }}
-                    onMouseEnter={e => {
-                      (e.currentTarget as HTMLElement).style.background = 'rgba(168,85,247,0.2)';
-                      (e.currentTarget as HTMLElement).style.boxShadow = '0 0 10px rgba(168,85,247,0.4)';
-                      (e.currentTarget as HTMLElement).style.borderColor = 'rgba(168,85,247,0.6)';
-                    }}
-                    onMouseLeave={e => {
-                      (e.currentTarget as HTMLElement).style.background = 'rgba(168,85,247,0.1)';
-                      (e.currentTarget as HTMLElement).style.boxShadow = '0 0 6px rgba(168,85,247,0.15)';
-                      (e.currentTarget as HTMLElement).style.borderColor = 'rgba(168,85,247,0.35)';
-                    }}
-                  >
-                    <span>📧</span>
-                    <span>{email}</span>
-                  </a>
-                ))}
+                {isGlow ? (
+                  <div style={{
+                    border: '1px dashed rgba(255, 51, 102, 0.6)',
+                    boxShadow: '0 0 10px rgba(255, 51, 102, 0.35), inset 0 0 5px rgba(255, 51, 102, 0.15)',
+                    background: 'rgba(255, 51, 102, 0.05)',
+                    padding: '5px 9px',
+                    borderRadius: '6px',
+                    fontSize: '0.68rem',
+                    color: '#ff3366',
+                    fontWeight: 'bold',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <span>📧</span> MISSING HIGH-PRIORITY EMAIL ADDRESSES!
+                  </div>
+                ) : (
+                  emails.map((email) => (
+                    <a
+                      key={email}
+                      href={`mailto:${email}`}
+                      style={{
+                        fontSize: '0.65rem',
+                        color: '#c084fc',
+                        textDecoration: 'none',
+                        padding: '3px 8px',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(168,85,247,0.35)',
+                        background: 'rgba(168,85,247,0.1)',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 0 6px rgba(168,85,247,0.15)',
+                      }}
+                      onMouseEnter={e => {
+                        (e.currentTarget as HTMLElement).style.background = 'rgba(168,85,247,0.2)';
+                        (e.currentTarget as HTMLElement).style.boxShadow = '0 0 10px rgba(168,85,247,0.4)';
+                        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(168,85,247,0.6)';
+                      }}
+                      onMouseLeave={e => {
+                        (e.currentTarget as HTMLElement).style.background = 'rgba(168,85,247,0.1)';
+                        (e.currentTarget as HTMLElement).style.boxShadow = '0 0 6px rgba(168,85,247,0.15)';
+                        (e.currentTarget as HTMLElement).style.borderColor = 'rgba(168,85,247,0.35)';
+                      }}
+                    >
+                      <span>📧</span>
+                      <span>{email}</span>
+                    </a>
+                  ))
+                )}
               </div>
             </div>
           );
         })()}
 
         {/* Social links */}
-        {(igUrl || fbUrl || ttUrl) && (
-          <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
-            {igUrl && <a href={igUrl} target="_blank" rel="noreferrer" style={{ fontSize:'0.65rem', color:'#c13584', textDecoration:'none', padding:'2px 8px', borderRadius:'10px', border:'1px solid rgba(193,53,132,0.35)', background:'rgba(193,53,132,0.1)' }}>Instagram</a>}
-            {fbUrl && <a href={fbUrl} target="_blank" rel="noreferrer" style={{ fontSize:'0.65rem', color:'#1877f2', textDecoration:'none', padding:'2px 8px', borderRadius:'10px', border:'1px solid rgba(24,119,242,0.35)', background:'rgba(24,119,242,0.1)' }}>Facebook</a>}
-            {ttUrl && <a href={ttUrl} target="_blank" rel="noreferrer" style={{ fontSize:'0.65rem', color:'#ff0050', textDecoration:'none', padding:'2px 8px', borderRadius:'10px', border:'1px solid rgba(255,0,80,0.35)', background:'rgba(255,0,80,0.1)' }}>TikTok</a>}
+        {(igUrl || fbUrl || ttUrl || isGlowEmpty('instagram_url')) && (
+          <div style={{ display:'flex', gap:'8px', flexWrap:'wrap', flexDirection: isGlowEmpty('instagram_url') ? 'column' : 'row' }}>
+            {isGlowEmpty('instagram_url') ? (
+              <div style={{
+                border: '1px dashed rgba(255, 51, 102, 0.6)',
+                boxShadow: '0 0 10px rgba(255, 51, 102, 0.35), inset 0 0 5px rgba(255, 51, 102, 0.15)',
+                background: 'rgba(255, 51, 102, 0.05)',
+                padding: '5px 9px',
+                borderRadius: '6px',
+                fontSize: '0.68rem',
+                color: '#ff3366',
+                fontWeight: 'bold',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                marginTop: '2px'
+              }}>
+                <span>🌐</span> MISSING HIGH-PRIORITY SOCIALS!
+              </div>
+            ) : (
+              <>
+                {igUrl && <a href={igUrl} target="_blank" rel="noreferrer" style={{ fontSize:'0.65rem', color:'#c13584', textDecoration:'none', padding:'2px 8px', borderRadius:'10px', border:'1px solid rgba(193,53,132,0.35)', background:'rgba(193,53,132,0.1)' }}>Instagram</a>}
+                {fbUrl && <a href={fbUrl} target="_blank" rel="noreferrer" style={{ fontSize:'0.65rem', color:'#1877f2', textDecoration:'none', padding:'2px 8px', borderRadius:'10px', border:'1px solid rgba(24,119,242,0.35)', background:'rgba(24,119,242,0.1)' }}>Facebook</a>}
+                {ttUrl && <a href={ttUrl} target="_blank" rel="noreferrer" style={{ fontSize:'0.65rem', color:'#ff0050', textDecoration:'none', padding:'2px 8px', borderRadius:'10px', border:'1px solid rgba(255,0,80,0.35)', background:'rgba(255,0,80,0.1)' }}>TikTok</a>}
+              </>
+            )}
           </div>
         )}
 

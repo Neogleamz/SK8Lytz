@@ -15,28 +15,61 @@ export interface FieldConfig {
     visual_glow?: number;
 }
 
-export function useFieldRegistry() {
-    const [fields, setFields] = useState<FieldConfig[]>([]);
-    const [loading, setLoading] = useState(true);
+// Module-level global state cache
+let globalFields: FieldConfig[] = [];
+let globalLoading = false;
+const globalListeners = new Set<(fields: FieldConfig[]) => void>();
 
-    const fetchFields = async () => {
-        try {
-            const res = await fetch(`${API_BASE}/api/field-registry`);
+const notifyListeners = () => {
+    globalListeners.forEach(listener => listener([...globalFields]));
+};
+
+export const fetchFieldRegistryGlobal = async () => {
+    if (globalLoading) return;
+    globalLoading = true;
+    try {
+        const res = await fetch(`${API_BASE}/api/field-registry`);
+        if (res.ok) {
             const data = await res.json();
             if (data.fields) {
-                setFields(data.fields);
+                globalFields = data.fields;
             } else if (data.error) {
                 console.error('Failed to load field registry:', data.error);
             }
-        } catch (error) {
-            console.error('Failed to fetch field registry:', error);
+            notifyListeners();
         }
-        setLoading(false);
-    };
+    } catch (err) {
+        console.error('Failed to fetch field registry:', err);
+    } finally {
+        globalLoading = false;
+    }
+};
+
+export function useFieldRegistry() {
+    const [fields, setFields] = useState<FieldConfig[]>(globalFields);
+    const [loading, setLoading] = useState(globalFields.length === 0);
 
     useEffect(() => {
-        fetchFields();
+        const listener = (newFields: FieldConfig[]) => {
+            setFields(newFields);
+            setLoading(false);
+        };
+        globalListeners.add(listener);
+
+        if (globalFields.length === 0) {
+            fetchFieldRegistryGlobal();
+        } else {
+            setLoading(false);
+        }
+
+        return () => {
+            globalListeners.delete(listener);
+        };
     }, []);
+
+    const fetchFields = async () => {
+        await fetchFieldRegistryGlobal();
+    };
 
     const getFieldsForPhase = (phaseId: number) => {
         return fields.filter(f => f.phase_id === phaseId);
@@ -45,8 +78,9 @@ export function useFieldRegistry() {
     const toggleImportance = async (id: string, currentLevel: number = 0) => {
         const nextLevel = (currentLevel + 1) % 3; // cycles 0 -> 1 -> 2 -> 0
         
-        // Optimistic update
-        setFields(prev => prev.map(f => f.id === id ? { ...f, importance_level: nextLevel } : f));
+        // Optimistic update globally
+        globalFields = globalFields.map(f => f.id === id ? { ...f, importance_level: nextLevel } : f);
+        notifyListeners();
 
         try {
             const res = await fetch(`${API_BASE}/api/field-registry/${id}`, {
@@ -55,17 +89,17 @@ export function useFieldRegistry() {
                 body: JSON.stringify({ importance_level: nextLevel })
             });
             if (!res.ok) {
-                // Revert if failed
-                fetchFields();
+                fetchFieldRegistryGlobal();
             }
         } catch (err) {
-            fetchFields();
+            fetchFieldRegistryGlobal();
         }
     };
 
     const updateFieldConfig = async (id: string, updates: Partial<FieldConfig>) => {
-        // Optimistic update
-        setFields(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+        // Optimistic update globally
+        globalFields = globalFields.map(f => f.id === id ? { ...f, ...updates } : f);
+        notifyListeners();
 
         try {
             const res = await fetch(`${API_BASE}/api/field-registry/${id}`, {
@@ -74,11 +108,10 @@ export function useFieldRegistry() {
                 body: JSON.stringify(updates)
             });
             if (!res.ok) {
-                // Revert if failed
-                fetchFields();
+                fetchFieldRegistryGlobal();
             }
         } catch (err) {
-            fetchFields();
+            fetchFieldRegistryGlobal();
         }
     };
 
@@ -89,7 +122,7 @@ export function useFieldRegistry() {
                 method: 'POST'
             });
             if (res.ok) {
-                await fetchFields();
+                await fetchFieldRegistryGlobal();
             }
         } catch (err) {
             console.error('Failed to reset field registry:', err);
