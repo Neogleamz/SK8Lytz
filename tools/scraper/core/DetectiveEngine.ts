@@ -540,12 +540,29 @@ async function callLMStudio(
   return {};
 }
 
+const MIN_OCR_DIMENSION = 16; // Leptonica hard minimum is 3px; we use 16 as safe floor
+
 function isValidJpegOrPng(buf: Buffer): boolean {
-  if (!buf || buf.length < 4) return false;
-  // JPEG magic bytes: FF D8 FF
-  if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return true;
-  // PNG magic bytes: 89 50 4E 47
-  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return true;
+  if (!buf || buf.length < 24) return false;
+  // JPEG magic bytes: FF D8 FF — parse width/height from SOF0/SOF2 marker
+  if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) {
+    // Scan for SOF marker (0xFF 0xC0 or 0xFF 0xC2)
+    for (let i = 2; i < buf.length - 9; i++) {
+      if (buf[i] === 0xFF && (buf[i + 1] === 0xC0 || buf[i + 1] === 0xC2)) {
+        const h = (buf[i + 5] << 8) | buf[i + 6];
+        const w = (buf[i + 7] << 8) | buf[i + 8];
+        return w >= MIN_OCR_DIMENSION && h >= MIN_OCR_DIMENSION;
+      }
+    }
+    return false; // No SOF found — reject
+  }
+  // PNG magic bytes: 89 50 4E 47 — width/height at bytes 16-23 in IHDR chunk
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) {
+    if (buf.length < 24) return false;
+    const w = (buf[16] << 24) | (buf[17] << 16) | (buf[18] << 8) | buf[19];
+    const h = (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | buf[23];
+    return w >= MIN_OCR_DIMENSION && h >= MIN_OCR_DIMENSION;
+  }
   return false;
 }
 
@@ -575,10 +592,12 @@ async function crawlPage(page: any, url: string, onProgress: (m: string) => void
   if (/\.(png|jpg|jpeg)(\?.*)?$/i.test(url)) {
     try {
       const buf = await downloadImageBuffer(url);
-      // Safety dimension & size check to prevent Leptonica crashes
-      if (buf && buf.length >= 1024 && isValidJpegOrPng(buf)) {
-        const { data:{text} } = await Tesseract.recognize(buf,'eng');
-        return { ...empty, text:text?.length>20?`[OCR Image: ${url}]\n${text}`:'' };
+      // Dimension + magic byte guard prevents Leptonica worker crashes
+      if (buf && buf.length >= 2048 && isValidJpegOrPng(buf)) {
+        try {
+          const { data:{text} } = await Tesseract.recognize(buf,'eng');
+          return { ...empty, text:text?.length>20?`[OCR Image: ${url}]\n${text}`:'' };
+        } catch { /* Tesseract worker crash — swallow and continue */ }
       }
       return empty;
     } catch { return empty; }
@@ -1010,18 +1029,20 @@ export async function executeDetective(
             const isOcrCompatible = cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.png');
             if (isOcrCompatible) {
               const buf = await downloadImageBuffer(fUrl);
-              // Safety dimension & size check to prevent Leptonica crashes
-              if (buf && buf.length >= 1024 && isValidJpegOrPng(buf)) {
-                const { data: { text } } = await Tesseract.recognize(buf, 'eng');
-                if (text && text.trim().length > 20) {
-                  const ocrTxt = `\n\n[OCR from Flyer Image: ${fUrl}]\n${text}\n\n`;
-                  coreText = ocrTxt + coreText;
-                  amenityText = ocrTxt + amenityText;
-                  onProgress(`[Detective] ✓ Extracted flyer OCR: ${fUrl}`);
-                  escalationRan = true;
-                }
+              // Dimension + magic byte guard prevents Leptonica worker crashes
+              if (buf && buf.length >= 2048 && isValidJpegOrPng(buf)) {
+                try {
+                  const { data: { text } } = await Tesseract.recognize(buf, 'eng');
+                  if (text && text.trim().length > 20) {
+                    const ocrTxt = `\n\n[OCR from Flyer Image: ${fUrl}]\n${text}\n\n`;
+                    coreText = ocrTxt + coreText;
+                    amenityText = ocrTxt + amenityText;
+                    onProgress(`[Detective] ✓ Extracted flyer OCR: ${fUrl}`);
+                    escalationRan = true;
+                  }
+                } catch { /* Tesseract worker crash — swallow and continue */ }
               } else {
-                onProgress(`[Detective] Skipping flyer OCR: Image buffer corrupt or too small: ${fUrl}`);
+                onProgress(`[Detective] Skipping flyer OCR: Image too small or invalid format: ${fUrl}`);
               }
             }
           } catch (e: any) {
@@ -1050,18 +1071,20 @@ export async function executeDetective(
             try {
               onProgress(`[Detective] 📸 Visual Snapshot taken. Running Tesseract OCR...`);
               const screenshotBuffer = await escPage.screenshot({ fullPage: true, type: 'jpeg', quality: 80 });
-              if (screenshotBuffer && screenshotBuffer.length >= 1024) {
-                const { data: { text } } = await Tesseract.recognize(screenshotBuffer, 'eng');
-                if (text && text.trim().length > 50) {
-                  const ocrTxt = `\n\n[ESCALATION OCR from ${targetUrl}]\n${text}\n\n`;
-                  coreText = ocrTxt + coreText;
-                  amenityText = ocrTxt + amenityText;
-                }
+              if (screenshotBuffer && screenshotBuffer.length >= 2048 && isValidJpegOrPng(screenshotBuffer)) {
+                try {
+                  const { data: { text } } = await Tesseract.recognize(screenshotBuffer, 'eng');
+                  if (text && text.trim().length > 50) {
+                    const ocrTxt = `\n\n[ESCALATION OCR from ${targetUrl}]\n${text}\n\n`;
+                    coreText = ocrTxt + coreText;
+                    amenityText = ocrTxt + amenityText;
+                  }
+                } catch { /* Tesseract worker crash — swallow and continue */ }
               } else {
-                onProgress(`[Detective] Skipping screenshot OCR: buffer too small.`);
+                onProgress(`[Detective] Skipping screenshot OCR: buffer too small or invalid.`);
               }
             } catch(e:any) {
-              onProgress(`[Detective] OCR failed: ${e.message}`);
+              onProgress(`[Detective] Screenshot capture failed: ${e.message}`);
             }
           }
         } else {
