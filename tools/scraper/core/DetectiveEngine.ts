@@ -647,7 +647,8 @@ function condenseWebText(rawText: string): string {
     /pricing|price|admission|rates|ticket|fee|cost|dollar/i,
     /about|story|history|facility|rink|floor|surface|wood/i,
     /contact|location|directions|email|info|phone|address/i,
-    /rental|pro.?shop|food|snack|arcade|party|birthday/i
+    /rental|pro.?shop|food|snack|arcade|party|birthday/i,
+    /locker|bathroom|restroom|toilet|wifi|wi-fi|wheelchair|accessible|parking/i
   ];
 
   const skipKeywords = [
@@ -889,8 +890,8 @@ export async function executeDetective(
         }
       }
 
-      // Fix #1: Assign ops text for Pass 1. amenityText retains its accumulated about/facility text for Pass 2.
-      coreText = priorityText;
+      // Fix #1: Merge ops text with iframe text for Pass 1. amenityText retains its accumulated about/facility text for Pass 2.
+      coreText = priorityText + '\n' + coreText;
     } else {
       onProgress('[Detective] No website or Social-only. Will rely entirely on Phase 3 Enrichment.');
     }
