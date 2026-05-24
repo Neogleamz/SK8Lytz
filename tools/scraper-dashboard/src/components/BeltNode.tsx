@@ -47,6 +47,8 @@ interface BeltProps {
   onUploadPhoto?: (spotId: string, file: File) => void;
   seedProvider?: 'osm' | 'google' | 'website-resolver';
   onProviderChange?: (p: 'osm' | 'google' | 'website-resolver') => void;
+  scrapeScope?: string;
+  onScopeChange?: (s: string) => void;
   liveStreamText?: string;
   isStreaming?: boolean;
   currentAnalyzingSpot?: string;
@@ -153,7 +155,8 @@ export const BeltNode: React.FC<BeltProps> = ({
   id, name, color, rgb, job, daemon, target, inQ, status, gatekeeper, attempting, outCards,
   onPhaseNav, daemonActive = false, onDaemonStart, onDaemonStop, hasDaemon = true, daemonStatus, inputStatus, outputStatus, countBadges = [],
   onBlockSpot, onRestartSpot, onFreezeSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto,
-  seedProvider, onProviderChange, liveStreamText, isStreaming = false, currentAnalyzingSpot = '', logs = []
+  seedProvider, onProviderChange, liveStreamText, isStreaming = false, currentAnalyzingSpot = '', logs = [],
+  scrapeScope, onScopeChange
 }) => {
   const [isConfigOpen, setConfigOpen] = useState(false);
   const [isViewAllOpen, setIsViewAllOpen] = useState(false);
@@ -416,6 +419,36 @@ export const BeltNode: React.FC<BeltProps> = ({
                 <option value="google" style={{ background: '#111' }}>Google (API)</option>
                 <option value="osm" style={{ background: '#111' }}>OSM (Harvest)</option>
                 <option value="website-resolver" style={{ background: '#111' }}>Website Resolver (Pass 2)</option>
+              </select>
+            )}
+            {id === 2 && onScopeChange && (
+              <select
+                value={scrapeScope || 'gap-fill'}
+                onChange={(e) => onScopeChange(e.target.value)}
+                style={{
+                  background: 'rgba(0,0,0,0.5)',
+                  border: `1px solid rgba(${colRgb}, 0.3)`,
+                  color: colVar,
+                  fontSize: '0.62rem',
+                  fontWeight: 900,
+                  padding: '2px 8px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  marginRight: '8px',
+                  fontFamily: 'JetBrains Mono, monospace',
+                }}
+              >
+                <option value="gap-fill" style={{ background: '#111' }}>Gap-Fill (All Tiers)</option>
+                <option value="hours" style={{ background: '#111' }}>🕐 Hours Only (Pass 1A)</option>
+                <option value="pricing" style={{ background: '#111' }}>💰 Pricing Only (Pass 1B)</option>
+                <option value="tier-1" style={{ background: '#111' }}>Tier 1: 🕐 Session Hours</option>
+                <option value="tier-2" style={{ background: '#111' }}>Tier 2: 💰 Pricing &amp; Fees</option>
+                <option value="tier-3" style={{ background: '#111' }}>Tier 3: 🌙 Adult Night</option>
+                <option value="tier-4" style={{ background: '#111' }}>Tier 4: 🛹 Floor &amp; Vibe</option>
+                <option value="tier-5" style={{ background: '#111' }}>Tier 5: 🏢 Amenities</option>
+                <option value="tier-6" style={{ background: '#111' }}>Tier 6: 🎭 Identity &amp; Culture</option>
+                <option value="tier-7" style={{ background: '#111' }}>Tier 7: 📱 Contacts &amp; Socials</option>
               </select>
             )}
             {/* Live status dot */}

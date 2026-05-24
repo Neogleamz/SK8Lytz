@@ -129,9 +129,11 @@ const ToggleSwitch = ({ label, checked, onChange, colColor }: { label: string, c
 );
 
 export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onClose, colColor }) => {
-  const { fields, loading: registryLoading, toggleImportance, updateFieldConfig, resetRegistry } = useFieldRegistry();
+  const { fields, loading: registryLoading, toggleImportance, updateFieldConfig, resetRegistry, getFieldsForPhase } = useFieldRegistry();
   const [config, setConfig] = useState<any>(null);
   const [blocklist, setBlocklist] = useState<any[]>([]);
+  const [rejectedStats, setRejectedStats] = useState<any>(null);
+  const [newKw, setNewKw] = useState('');
   const [sandboxUrl, setSandboxUrl] = useState('');
   const [sandboxSpotName, setSandboxSpotName] = useState('');
   const [sandboxSpotCity, setSandboxSpotCity] = useState('');
@@ -162,11 +164,20 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
     }
   };
 
+  const fetchRejectedStats = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/rejected-stats`);
+      const data = await res.json();
+      setRejectedStats(data);
+    } catch {}
+  };
+
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
       fetchConfig();
       if (phaseId === 1) fetchBlocklist();
+      if (phaseId === 2) fetchRejectedStats();
     }
   }, [isOpen, phaseId]);
 
@@ -282,7 +293,7 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
                 </div>
               </div>
               <div style={{ gridColumn: '1 / -1', borderTop: `1px dashed ${colColor}55`, paddingTop: '12px' }}>
-                <label style={{ color: '#ff3366', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>BLOCKLIST GUILLOTINE</label>
+                <label style={{ color: '#ff3366', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>GUILLOTINE — BLOCK & PURGE <span style={{ fontSize: '0.65rem', fontWeight: 400, color: 'rgba(255,255,255,0.4)' }}>(syncs to unified keyword list — active on all phases)</span></label>
                 <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                   <input type="text" id="new-blocklist-kw" placeholder="Enter keyword/pattern to purge & block..." style={{ flex: 1, background: 'rgba(20, 20, 30, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)', borderBottom: `2px solid #ff3366`, color: '#fff', padding: '10px 14px', borderRadius: '6px', fontSize: '0.75rem', fontFamily: 'Outfit, sans-serif', outline: 'none', transition: 'all 0.2s ease', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)', boxSizing: 'border-box' }} />
                   <button onClick={async (e) => {
@@ -363,7 +374,7 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
                       </tr>
                     </thead>
                     <tbody>
-                      {fields.map(f => (
+                      {getFieldsForPhase(phaseId).map(f => (
                         <tr key={f.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', height: '36px' }}>
                           <td style={{ padding: '8px', fontWeight: 'bold', color: '#fff' }}>{f.field_name}</td>
                           <td style={{ padding: '8px' }}>
@@ -372,8 +383,18 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
                               onChange={(e) => updateFieldConfig(f.id, { priority_group: parseInt(e.target.value) })}
                               style={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px' }}
                             >
-                              {[1,2,3,4,5,6,7,8,9,10].map(tier => (
-                                <option key={tier} value={tier}>Tier {tier}</option>
+                              {[
+                                { v: 0, l: 'T0: Phase 1 (Seeded)' },
+                                { v: 1, l: 'T1: 🕐 Session Hours' },
+                                { v: 2, l: 'T2: 💰 Pricing & Fees' },
+                                { v: 3, l: 'T3: 🌙 Adult Night' },
+                                { v: 4, l: 'T4: 🛹 Floor & Vibe' },
+                                { v: 5, l: 'T5: 🏢 Amenities' },
+                                { v: 6, l: 'T6: 🎭 Identity & Culture' },
+                                { v: 7, l: 'T7: 📱 Contacts & Socials' },
+                                { v: 10, l: 'T10: Unassigned' },
+                              ].map(t => (
+                                <option key={t.v} value={t.v}>{t.l}</option>
                               ))}
                             </select>
                           </td>
@@ -468,7 +489,84 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
                       }} style={{ alignSelf: 'flex-start', background: `linear-gradient(135deg, ${colColor} 0%, ${colColor}aa 100%)`, color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.65rem', fontWeight: 800 }}>+ ADD VECTOR PROMPT</button>
                     </div>
                   </div>
-                  <TagInput label="Toxicity Bouncer (Exclusion Keywords)" tags={config?.ai_exclusion_keywords || []} setTags={(t: any) => handleUpdate('ai_exclusion_keywords', t)} colColor={colColor} />
+                  {/* ── Toxicity Bouncer & Guillotine Panel ── */}
+                  <div style={{ background: 'rgba(255,20,20,0.06)', border: '1px solid rgba(255,51,51,0.3)', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '1rem' }}>☠️</span>
+                        <span style={{ color: '#ff4444', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Toxicity Bouncer & Guillotine</span>
+                        <span style={{ background: 'rgba(255,68,68,0.15)', border: '1px solid rgba(255,68,68,0.4)', color: '#ff6666', padding: '2px 8px', borderRadius: '10px', fontSize: '0.65rem', fontWeight: 700 }}>{(config?.ai_exclusion_keywords || []).length} keywords</span>
+                        {rejectedStats && <span style={{ background: 'rgba(255,68,68,0.15)', border: '1px solid rgba(255,68,68,0.4)', color: '#ff8888', padding: '2px 8px', borderRadius: '10px', fontSize: '0.65rem' }}>☠ {rejectedStats.total} rejected</span>}
+                      </div>
+                      <button onClick={async () => {
+                        if (!confirm('Restore all default exclusion keywords? Your custom additions will be preserved.')) return;
+                        const res = await fetch(`${API_BASE}/config`);
+                        const d = await res.json();
+                        const defaults = ['ice rink','ice skating','ice skating rink','ice arena','ice complex','ice palace','ice center','ice centre','ice sport','hockey rink','hockey arena','hockey complex','curling','curling club','curling rink','trampoline park','bounce house','jump zone','sky zone','altitude trampoline','bmx','bike park','mountain bike park','laser tag','mini golf','go-kart','go kart','bowling alley'];
+                        const existing: string[] = d.config?.ai_exclusion_keywords || [];
+                        const seen = new Set(existing.map((k: string) => k.toLowerCase()));
+                        const merged = [...existing, ...defaults.filter(k => !seen.has(k.toLowerCase()))];
+                        handleUpdate('ai_exclusion_keywords', merged);
+                      }} style={{ background: 'rgba(255,68,68,0.1)', border: '1px solid rgba(255,68,68,0.3)', color: '#ff6666', padding: '3px 10px', borderRadius: '4px', fontSize: '0.6rem', fontWeight: 700, cursor: 'pointer', letterSpacing: '0.05em' }}>⟳ RELOAD DEFAULTS</button>
+                    </div>
+
+                    {/* Categorized keyword chips */}
+                    {(() => {
+                      const kws: string[] = config?.ai_exclusion_keywords || [];
+                      const cats: {label: string; emoji: string; patterns: string[]}[] = [
+                        { label: 'Ice / Hockey', emoji: '🧊', patterns: ['ice','hockey','curling','iceplex','polar','figure skat'] },
+                        { label: 'Bikes / BMX', emoji: '🚲', patterns: ['bmx','bike','bicycle','mountain bike'] },
+                        { label: 'Trampoline', emoji: '🤸', patterns: ['trampoline','bounce','jump zone','sky zone','altitude'] },
+                        { label: 'Other', emoji: '🎮', patterns: ['laser','golf','kart','bowling','bowling alley'] },
+                      ];
+                      return cats.map(cat => {
+                        const catKws = kws.filter(k => cat.patterns.some(p => k.toLowerCase().includes(p)));
+                        const uncatKws = cat.label === 'Other' ? kws.filter(k => !cats.slice(0,3).flatMap(c => c.patterns).some(p => k.toLowerCase().includes(p))) : catKws;
+                        const displayKws = cat.label === 'Other' ? uncatKws : catKws;
+                        if (displayKws.length === 0) return null;
+                        return (
+                          <div key={cat.label}>
+                            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem', fontWeight: 600, marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{cat.emoji} {cat.label}</div>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                              {displayKws.map(k => (
+                                <div key={k} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'rgba(255,40,40,0.1)', border: '1px solid rgba(255,40,40,0.25)', padding: '3px 8px', borderRadius: '12px' }}>
+                                  <span style={{ color: '#ff8888', fontSize: '0.65rem' }}>{k}</span>
+                                  <button onClick={() => handleUpdate('ai_exclusion_keywords', kws.filter(x => x !== k))} style={{ background: 'none', border: 'none', color: 'rgba(255,100,100,0.6)', cursor: 'pointer', fontSize: '0.7rem', padding: 0, lineHeight: 1 }}>×</button>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+
+                    {/* Add keyword input */}
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                      <input value={newKw} onChange={e => setNewKw(e.target.value)}
+                        placeholder="Add exclusion keyword (e.g. 'ice palace')..."
+                        onKeyDown={e => { if (e.key === 'Enter' && newKw.trim()) { const kws = config?.ai_exclusion_keywords || []; if (!kws.includes(newKw.trim())) handleUpdate('ai_exclusion_keywords', [...kws, newKw.trim().toLowerCase()]); setNewKw(''); } }}
+                        style={{ flex: 1, background: 'rgba(10,0,0,0.4)', border: '1px solid rgba(255,40,40,0.3)', borderBottom: '2px solid #ff4444', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.72rem', outline: 'none', fontFamily: 'Outfit, sans-serif' }} />
+                      <button onClick={() => { if (newKw.trim()) { const kws = config?.ai_exclusion_keywords || []; if (!kws.includes(newKw.trim())) handleUpdate('ai_exclusion_keywords', [...kws, newKw.trim().toLowerCase()]); setNewKw(''); } }}
+                        style={{ background: 'linear-gradient(135deg, #ff3333 0%, #cc0000 100%)', color: '#fff', border: 'none', padding: '0 16px', borderRadius: '6px', cursor: 'pointer', fontWeight: 800, fontSize: '0.7rem', letterSpacing: '0.05em' }}>+ ADD</button>
+                    </div>
+
+                    {/* Rejection audit log */}
+                    {rejectedStats?.recent?.length > 0 && (
+                      <div style={{ marginTop: '4px', borderTop: '1px solid rgba(255,40,40,0.15)', paddingTop: '10px' }}>
+                        <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px' }}>Recent Rejections</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '120px', overflowY: 'auto' }}>
+                          {rejectedStats.recent.map((r: any, i: number) => (
+                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', padding: '3px 6px', background: 'rgba(255,0,0,0.05)', borderRadius: '4px' }}>
+                              <span style={{ color: '#ff5555' }}>☠</span>
+                              <span style={{ color: 'rgba(255,255,255,0.75)', fontWeight: 600 }}>{r.name}</span>
+                              <span>·</span><span>{r.city}, {r.state}</span>
+                              <span>·</span><span style={{ color: '#ff7777', fontStyle: 'italic' }}>"{r.reason}"</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                   <div>
                     <label style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                       <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: colColor, boxShadow: `0 0 8px ${colColor}` }} />

@@ -1,11 +1,17 @@
 ---
-description: Start the entire SK8Lytz Scraper Stack — CCTower API, Vite Dashboard, and Discord Bridge via PM2. No popup windows.
+description: Start the entire SK8Lytz Scraper Stack — CCTower API, Vite Dashboard, and Discord Bridge via Docker Compose.
 ---
 
 // turbo
 
-1. Run the scraper stack startup script
+1. Rebuild and start the Docker container
 
 ```powershell
-powershell.exe -ExecutionPolicy Bypass -File "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\tools\scraper\start-scraper-stack.ps1"
+docker compose up -d --build
+```
+
+2. Verify the stack is online
+
+```powershell
+Start-Sleep -Seconds 5; docker compose ls; Invoke-RestMethod -Uri "http://localhost:5999/status" -Method GET | ConvertTo-Json -Depth 2
 ```

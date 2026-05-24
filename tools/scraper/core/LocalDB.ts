@@ -296,6 +296,10 @@ const FIELD_SEEDS: { id: string; field_name: string; phase_id: number; display_l
   { id: 'surface_type',       field_name: 'surface_type',       phase_id: 2, display_label: 'Surface Type',         data_type: 'text',     sort_order: 366 },
   { id: 'adult_night_details',field_name: 'adult_night_details',phase_id: 2, display_label: 'Adult Night Details',  data_type: 'text',     sort_order: 367 },
   { id: 'ai_metadata',        field_name: 'ai_metadata',        phase_id: 2, display_label: 'AI Metadata',          data_type: 'json',     sort_order: 368 },
+  // Fields added for 7-pass architecture
+  { id: 'price_range',        field_name: 'price_range',        phase_id: 2, display_label: 'Price Range',          data_type: 'text',     sort_order: 445 },
+  { id: 'yelp_url',           field_name: 'yelp_url',           phase_id: 2, display_label: 'Yelp URL',             data_type: 'text',     sort_order: 750 },
+  { id: 'logo_url',           field_name: 'logo_url',           phase_id: 2, display_label: 'Logo URL',             data_type: 'text',     sort_order: 755 },
 
   // ── Phase 3: Photographer ──
   { id: 'p3_candidate_photos', field_name: 'candidate_photos', phase_id: 3, display_label: 'Candidate Photos',     data_type: 'jsonb',    sort_order: 700 },
@@ -329,33 +333,128 @@ for (const seed of FIELD_SEEDS) {
   seedStmt.run(seed);
 }
 
-// DPPOS dynamic tier seeding:
+// DPPOS dynamic tier seeding — 7 tiers matching the 7-pass DetectiveEngine architecture
+// Phase 1 seeded fields (name, address, lat/lng, phone) = tier 0 (always present, NOT in detective scope)
+// Tiers 1-7 = Phase 2 detective-extracted fields, each tier maps 1:1 to a DetectiveEngine pass
 db.exec(`
-  -- Tier 1: Spot Name
-  UPDATE pipeline_field_registry SET priority_group = 1, is_hard_gate = 1, visual_glow = 1 WHERE field_name = 'name';
-  -- Tier 2: Location
-  UPDATE pipeline_field_registry SET priority_group = 2, is_hard_gate = 1, visual_glow = 1 WHERE field_name IN ('street_address', 'lat', 'lng', 'city', 'state', 'zip');
-  -- Tier 3: Digital Contacts
-  UPDATE pipeline_field_registry SET priority_group = 3, is_hard_gate = 1, visual_glow = 1 WHERE field_name = 'email_addresses';
-  -- Tier 4: Voice Contacts
-  UPDATE pipeline_field_registry SET priority_group = 4, is_hard_gate = 0, visual_glow = 1 WHERE field_name = 'phone_number';
-  -- Tier 5: Session Core
-  UPDATE pipeline_field_registry SET priority_group = 5, is_hard_gate = 1, visual_glow = 1 WHERE field_name IN ('opening_hours', 'pricing_data', 'has_fee', 'has_rental');
-  -- Tier 6: Pro Shop
-  UPDATE pipeline_field_registry SET priority_group = 6 WHERE field_name = 'has_pro_shop';
-  -- Tier 7: Adult Night
-  UPDATE pipeline_field_registry SET priority_group = 7 WHERE field_name IN ('has_adult_night', 'adult_night_schedule', 'adult_night_details');
-  -- Tier 8: Socials
-  UPDATE pipeline_field_registry SET priority_group = 8 WHERE field_name IN ('instagram_url', 'facebook_url', 'tiktok_url', 'schedule_url', 'yelp_url');
-  -- Tier 9: Floor & Vibe
-  UPDATE pipeline_field_registry SET priority_group = 9 WHERE field_name IN ('surface_type', 'surface_quality', 'vibe_score');
-  -- Tier 10: Standard Amenities (all others)
-  UPDATE pipeline_field_registry SET priority_group = 10 WHERE field_name IN (
-    'is_indoor', 'has_food', 'has_lights', 'has_lockers', 'has_ac', 'has_wifi', 'has_toilets', 'capacity',
-    'is_wheelchair_accessible', 'hosts_derby', 'special_events', 'operator_name', 'operator_description',
-    'cultural_metadata', 'price_range', 'logo_url'
+  -- Tier 0: Phase 1 Seeded Data (NOT detective-extracted — always present, never in scope dropdown)
+  UPDATE pipeline_field_registry SET priority_group = 0, is_hard_gate = 1, visual_glow = 0 WHERE field_name = 'name';
+  UPDATE pipeline_field_registry SET priority_group = 0, is_hard_gate = 1, visual_glow = 0 WHERE field_name IN ('street_address', 'lat', 'lng', 'city', 'state', 'zip');
+  UPDATE pipeline_field_registry SET priority_group = 0, is_hard_gate = 0, visual_glow = 0 WHERE field_name = 'phone_number';
+
+  -- Tier 1: 🕐 Session Hours (Pass 1A — SOLO, most complex extraction)
+  UPDATE pipeline_field_registry SET priority_group = 1, is_hard_gate = 1, visual_glow = 1 WHERE field_name = 'opening_hours';
+  -- Tier 2: 💰 Pricing & Fees (Pass 1B)
+  UPDATE pipeline_field_registry SET priority_group = 2, is_hard_gate = 1, visual_glow = 1 WHERE field_name IN ('pricing_data', 'has_fee', 'has_rental', 'price_range');
+  -- Tier 3: 🌙 Adult Night (Pass 1C — key SK8Lytz differentiator)
+  UPDATE pipeline_field_registry SET priority_group = 3, is_hard_gate = 0, visual_glow = 1 WHERE field_name IN ('has_adult_night', 'adult_night_schedule', 'adult_night_details');
+  -- Tier 4: 🛹 Floor & Vibe (Pass 2A)
+  UPDATE pipeline_field_registry SET priority_group = 4, is_hard_gate = 0, visual_glow = 1 WHERE field_name IN ('surface_type', 'surface_quality', 'vibe_score');
+  -- Tier 5: 🏢 Amenities (Pass 2B — boolean facility features)
+  UPDATE pipeline_field_registry SET priority_group = 5, is_hard_gate = 0, visual_glow = 0 WHERE field_name IN (
+    'is_indoor', 'has_pro_shop', 'has_food', 'has_lights', 'has_lockers', 'has_ac', 'has_wifi', 'has_toilets', 'capacity'
+  );
+  -- Tier 6: 🎭 Identity & Culture (Pass 2C)
+  UPDATE pipeline_field_registry SET priority_group = 6, is_hard_gate = 0, visual_glow = 0 WHERE field_name IN (
+    'is_wheelchair_accessible', 'hosts_derby', 'special_events', 'operator_name', 'operator_description', 'cultural_metadata'
+  );
+  -- Tier 7: 📱 Contacts & Socials (Pass 2D)
+  UPDATE pipeline_field_registry SET priority_group = 7, is_hard_gate = 0, visual_glow = 0 WHERE field_name IN (
+    'email_addresses', 'instagram_url', 'facebook_url', 'tiktok_url', 'schedule_url', 'yelp_url', 'logo_url'
   );
 `);
+
+// ── AI Target Vectors Migration ──────────────────────────────────────────────
+// Auto-upgrade ai_target_vectors from flat strings to {key, prompt} format.
+// This ensures the dashboard shows editable prompts and DetectiveEngine reads from DB.
+const CANONICAL_VECTORS: Array<{key: string, prompt: string}> = [
+  // ── TIER 1 / Pass 1A: Session Hours (SOLO — most complex extraction) ───
+  { key: 'opening_hours', prompt: 'JSON object mapping each day of the week to session times in 12-hour format. Split sessions use comma. Example: {"Monday": "3:00 PM - 5:00 PM", "Friday": "7:00 PM - 11:00 PM", "Saturday": "1:00 PM - 4:00 PM, 7:00 PM - 11:00 PM"}. Use "Closed" ONLY if explicitly stated closed. Use null for days not mentioned. Include ALL 7 days. DO NOT guess or fabricate times.' },
+
+  // ── TIER 2 / Pass 1B: Pricing & Fees ───────────────────────────────────
+  { key: 'pricing_data', prompt: 'JSON: {"adult": number|null, "child": number|null, "senior": number|null, "spectator": number|null, "skate_rental": number|null}. Dollar amounts as numbers (e.g. 12.00). null if not listed. Example: {"adult": 12.00, "child": 8.00, "senior": null, "spectator": 3.00, "skate_rental": 5.00}. DO NOT assume $0 or free.' },
+  { key: 'has_fee', prompt: 'true if admission fees charged. false ONLY if explicitly stated as free entry. Keywords: "$", "admission", "entry fee", "per person". System null rule applies.' },
+  { key: 'has_rental', prompt: 'true if skate rentals available. Keywords: "skate rental", "rent skates", "$X rental", "rental included". System null rule applies.' },
+  { key: 'price_range', prompt: '"$" (under $8), "$$" ($8-$15), "$$$" ($15-$25), "$$$$" (over $25) based on adult admission. null if no pricing found.' },
+
+  // ── TIER 3 / Pass 1C: Adult Night ──────────────────────────────────────
+  { key: 'has_adult_night', prompt: 'true if dedicated adult-only sessions (18+ or 21+). Keywords: "adult night", "grown-up skate", "18+", "21+", "adult session". DO NOT confuse regular evening sessions with adult-only events. System null rule applies.' },
+  { key: 'adult_night_schedule', prompt: 'JSON: {day: time_range} for adult-only sessions. Example: {"Friday": "9:00 PM - 12:00 AM"}. null if none.' },
+  { key: 'adult_night_details', prompt: 'Age requirements, dress code, drink policy, music genre, cover charge. Example: "21+ only, $15 cover includes rental, DJ plays R&B". null if no details.' },
+
+  // ── TIER 4 / Pass 2A: Floor & Vibe ─────────────────────────────────────
+  { key: 'surface_type', prompt: 'Exact value: "wood", "maple", "concrete", "asphalt", "sport_court", "synthetic", "vinyl", or "unknown". Maple IS wood — use "maple" if called maple. "sport_court" for modular plastic tiles (VersaCourt, SnapLock). null if not mentioned.' },
+  { key: 'surface_quality', prompt: '3-7 word description of floor condition from reviews. Examples: "super smooth freshly refinished maple", "sticky needs resurfacing", "brand new sport court". null if not mentioned.' },
+  { key: 'vibe_score', prompt: 'Integer 0-100. 0=hostile/abandoned, 25=boring/dead, 50=average, 75=fun/welcoming, 100=legendary/iconic. Based on review sentiment and community engagement. null if insufficient data.' },
+
+  // ── TIER 5 / Pass 2B: Amenities ────────────────────────────────────────
+  { key: 'is_indoor', prompt: 'true if fully enclosed indoor rink. false if outdoor/open-air. Keywords: "indoor", "outdoor", "open-air". System null rule applies.' },
+  { key: 'has_pro_shop', prompt: 'true if on-site shop sells gear/skates (not rentals). Keywords: "pro shop", "skate shop", "we sell", "retail", "gear for sale". System null rule applies.' },
+  { key: 'has_food', prompt: 'true if food service on-site. Keywords: "snack bar", "concessions", "pizza", "cafe", "we serve", menu items. System null rule applies.' },
+  { key: 'has_lights', prompt: 'true if special lighting effects. Keywords: "glow skate", "cosmic skating", "black light", "laser show", "LED lights", "light show". System null rule applies.' },
+  { key: 'has_lockers', prompt: 'true if lockers/cubbies for personal items. Keywords: "lockers", "cubbies", "storage", "secure belongings". System null rule applies.' },
+  { key: 'has_ac', prompt: 'true if air conditioning mentioned. Keywords: "air conditioned", "A/C", "climate controlled", "cool inside". System null rule applies.' },
+  { key: 'has_wifi', prompt: 'true if guest WiFi available. Keywords: "free wifi", "guest wifi", "wireless internet". System null rule applies.' },
+  { key: 'has_toilets', prompt: 'true if restrooms mentioned. Keywords: "restrooms", "bathrooms", "toilets". System null rule applies.' },
+  { key: 'capacity', prompt: 'Integer — max skaters at one time. Keywords: "capacity", "holds up to", "max skaters", "fire code", "accommodates". null if not mentioned.' },
+
+  // ── TIER 6 / Pass 2C: Identity & Culture ───────────────────────────────
+  { key: 'is_wheelchair_accessible', prompt: 'true if ADA/wheelchair accessible. Keywords: "ADA", "wheelchair", "handicap accessible", "accessible entrance", "ramp". System null rule applies.' },
+  { key: 'hosts_derby', prompt: 'true if roller derby league at this rink. Keywords: "roller derby", "derby league", "bout", "flat track", team names. System null rule applies.' },
+  { key: 'special_events', prompt: 'Array of unique recurring events/packages. Examples: ["Birthday Packages", "Cosmic Glow Fridays", "Lock-In Overnights", "Homeschool Skate"]. [] if none. Do NOT include regular public sessions.' },
+  { key: 'operator_name', prompt: 'Owner/operator name. Examples: "Smith Family Entertainment", "John Rodriguez", "Apex Skating LLC". null if not named.' },
+  { key: 'operator_description', prompt: '1-2 sentences about the operator: how long, background, why they opened it. null if not found.' },
+  { key: 'cultural_metadata', prompt: 'Cultural significance, community role, or historical importance. Example: "Iconic Black roller skating venue since the 1970s, featured in United Skates documentary." null if none.' },
+
+  // ── TIER 7 / Pass 2D: Contacts & Socials ───────────────────────────────
+  { key: 'email_addresses', prompt: 'Array of all contact emails. Extract from mailto: links and text. Examples: ["info@rollercity.com", "parties@rollercity.com"]. [] if none.' },
+  { key: 'instagram_url', prompt: 'Full Instagram URL from page links. Must start with https://instagram.com/ or https://www.instagram.com/. null if not found. DO NOT fabricate.' },
+  { key: 'facebook_url', prompt: 'Full Facebook URL from page links. Must start with https://facebook.com/ or https://www.facebook.com/. null if not found. DO NOT fabricate.' },
+  { key: 'tiktok_url', prompt: 'Full TikTok URL from page links. Must start with https://tiktok.com/ or https://www.tiktok.com/. null if not found. DO NOT fabricate.' },
+  { key: 'schedule_url', prompt: 'Direct URL to schedule/calendar page. null if none exists. DO NOT fabricate.' },
+  { key: 'yelp_url', prompt: 'Full Yelp URL. Must start with https://www.yelp.com/biz/. null if not found. DO NOT fabricate.' },
+  { key: 'logo_url', prompt: 'Direct URL to logo image (.png/.jpg/.svg/.webp). Check og:image, favicon, header logo. null if not found. DO NOT return stock photos.' },
+];
+
+// ── Default Exclusion Keywords (Guillotine / Toxicity Bouncer) ───────────────
+// These are ALWAYS restored on boot if the list is empty or missing.
+// They prevent ice rinks, hockey arenas, etc. from polluting the roller rink dataset.
+// User additions are preserved — this only fills in when the list is empty.
+const DEFAULT_EXCLUSION_KEYWORDS: string[] = [
+  // Ice venues — the #1 false positive source
+  'ice rink', 'ice skating', 'ice skating rink', 'ice arena', 'ice complex',
+  'ice palace', 'ice center', 'ice centre', 'ice sport',
+  // Hockey
+  'hockey rink', 'hockey arena', 'hockey complex',
+  // Curling
+  'curling', 'curling club', 'curling rink',
+  // Trampoline / bounce
+  'trampoline park', 'bounce house', 'jump zone', 'sky zone', 'altitude trampoline',
+  // Bikes / BMX
+  'bmx', 'bike park', 'mountain bike park',
+  // Generic entertainment (no skating)
+  'laser tag', 'mini golf', 'go-kart', 'go kart', 'bowling alley',
+];
+
+try {
+  const configRow = db.prepare('SELECT config_json FROM scraper_config WHERE id = 1').get() as any;
+  if (configRow?.config_json) {
+    const cfg = JSON.parse(configRow.config_json);
+    // Always seed canonical vectors — keys MUST match pipeline_field_registry field_names exactly
+    cfg.ai_target_vectors = CANONICAL_VECTORS;
+    // Restore default exclusion keywords if wiped or missing — never overwrites user additions
+    if (!cfg.ai_exclusion_keywords || cfg.ai_exclusion_keywords.length === 0) {
+      cfg.ai_exclusion_keywords = DEFAULT_EXCLUSION_KEYWORDS;
+    } else {
+      // Merge: ensure all defaults are present without duplicating user additions
+      const existing = new Set(cfg.ai_exclusion_keywords.map((k: string) => k.toLowerCase()));
+      const missing = DEFAULT_EXCLUSION_KEYWORDS.filter(k => !existing.has(k.toLowerCase()));
+      if (missing.length > 0) cfg.ai_exclusion_keywords = [...cfg.ai_exclusion_keywords, ...missing];
+    }
+    db.prepare('UPDATE scraper_config SET config_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1')
+      .run(JSON.stringify(cfg));
+  }
+} catch {}
 
 db.exec(`
   CREATE TRIGGER IF NOT EXISTS set_sync_required

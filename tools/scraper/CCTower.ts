@@ -1268,9 +1268,10 @@ app.post('/api/sandbox', async (req, res) => {
       }
     }
 
-    // Construct the Schema
+    // Construct the Schema (handle dashboard {key, prompt} and legacy {key, type} formats)
     const schema = ai_target_vectors.reduce((acc: any, vec: any) => {
-      acc[vec.key] = vec.type;
+      if (typeof vec === 'string') return acc;
+      acc[vec.key] = vec.prompt || vec.type || `${vec.key} (extract or null)`;
       return acc;
     }, {});
 
@@ -1635,20 +1636,38 @@ app.put('/api/field-registry/:id', async (req, res) => {
 app.post('/api/field-registry/reset', async (req, res) => {
   try {
     db.exec(`
+      -- Seed any missing Phase 2 fields that may not exist in legacy DBs
+      INSERT OR IGNORE INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order, importance_level, priority_group, is_hard_gate, visual_glow)
+      VALUES ('price_range', 'price_range', 2, 'Price Range', 'text', 445, 0, 10, 0, 0);
+      INSERT OR IGNORE INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order, importance_level, priority_group, is_hard_gate, visual_glow)
+      VALUES ('yelp_url', 'yelp_url', 2, 'Yelp URL', 'text', 750, 0, 10, 0, 0);
+      INSERT OR IGNORE INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order, importance_level, priority_group, is_hard_gate, visual_glow)
+      VALUES ('logo_url', 'logo_url', 2, 'Logo URL', 'text', 755, 0, 10, 0, 0);
+
       UPDATE pipeline_field_registry SET priority_group = 10, is_hard_gate = 0, visual_glow = 0;
-      UPDATE pipeline_field_registry SET priority_group = 1, is_hard_gate = 1, visual_glow = 1 WHERE field_name = 'name';
-      UPDATE pipeline_field_registry SET priority_group = 2, is_hard_gate = 1, visual_glow = 1 WHERE field_name IN ('street_address', 'lat', 'lng', 'city', 'state', 'zip');
-      UPDATE pipeline_field_registry SET priority_group = 3, is_hard_gate = 1, visual_glow = 1 WHERE field_name = 'email_addresses';
-      UPDATE pipeline_field_registry SET priority_group = 4, is_hard_gate = 0, visual_glow = 1 WHERE field_name = 'phone_number';
-      UPDATE pipeline_field_registry SET priority_group = 5, is_hard_gate = 1, visual_glow = 1 WHERE field_name IN ('opening_hours', 'pricing_data', 'has_fee', 'has_rental');
-      UPDATE pipeline_field_registry SET priority_group = 6 WHERE field_name = 'has_pro_shop';
-      UPDATE pipeline_field_registry SET priority_group = 7 WHERE field_name IN ('has_adult_night', 'adult_night_schedule', 'adult_night_details');
-      UPDATE pipeline_field_registry SET priority_group = 8 WHERE field_name IN ('instagram_url', 'facebook_url', 'tiktok_url', 'schedule_url', 'yelp_url');
-      UPDATE pipeline_field_registry SET priority_group = 9 WHERE field_name IN ('surface_type', 'surface_quality', 'vibe_score');
-      UPDATE pipeline_field_registry SET priority_group = 10 WHERE field_name IN (
-        'is_indoor', 'has_food', 'has_lights', 'has_lockers', 'has_ac', 'has_wifi', 'has_toilets', 'capacity',
-        'is_wheelchair_accessible', 'hosts_derby', 'special_events', 'operator_name', 'operator_description',
-        'cultural_metadata', 'price_range', 'logo_url'
+      -- Tier 0: Phase 1 Seeded Data (NOT detective-extracted)
+      UPDATE pipeline_field_registry SET priority_group = 0, is_hard_gate = 1, visual_glow = 0 WHERE field_name = 'name';
+      UPDATE pipeline_field_registry SET priority_group = 0, is_hard_gate = 1, visual_glow = 0 WHERE field_name IN ('street_address', 'lat', 'lng', 'city', 'state', 'zip');
+      UPDATE pipeline_field_registry SET priority_group = 0, is_hard_gate = 0, visual_glow = 0 WHERE field_name = 'phone_number';
+      -- Tier 1: 🕐 Session Hours (Pass 1A)
+      UPDATE pipeline_field_registry SET priority_group = 1, is_hard_gate = 1, visual_glow = 1 WHERE field_name = 'opening_hours';
+      -- Tier 2: 💰 Pricing & Fees (Pass 1B)
+      UPDATE pipeline_field_registry SET priority_group = 2, is_hard_gate = 1, visual_glow = 1 WHERE field_name IN ('pricing_data', 'has_fee', 'has_rental', 'price_range');
+      -- Tier 3: 🌙 Adult Night (Pass 1C)
+      UPDATE pipeline_field_registry SET priority_group = 3, is_hard_gate = 0, visual_glow = 1 WHERE field_name IN ('has_adult_night', 'adult_night_schedule', 'adult_night_details');
+      -- Tier 4: 🛹 Floor & Vibe (Pass 2A)
+      UPDATE pipeline_field_registry SET priority_group = 4, is_hard_gate = 0, visual_glow = 1 WHERE field_name IN ('surface_type', 'surface_quality', 'vibe_score');
+      -- Tier 5: 🏢 Amenities (Pass 2B)
+      UPDATE pipeline_field_registry SET priority_group = 5, is_hard_gate = 0, visual_glow = 0 WHERE field_name IN (
+        'is_indoor', 'has_pro_shop', 'has_food', 'has_lights', 'has_lockers', 'has_ac', 'has_wifi', 'has_toilets', 'capacity'
+      );
+      -- Tier 6: 🎭 Identity & Culture (Pass 2C)
+      UPDATE pipeline_field_registry SET priority_group = 6, is_hard_gate = 0, visual_glow = 0 WHERE field_name IN (
+        'is_wheelchair_accessible', 'hosts_derby', 'special_events', 'operator_name', 'operator_description', 'cultural_metadata'
+      );
+      -- Tier 7: 📱 Contacts & Socials (Pass 2D)
+      UPDATE pipeline_field_registry SET priority_group = 7, is_hard_gate = 0, visual_glow = 0 WHERE field_name IN (
+        'email_addresses', 'instagram_url', 'facebook_url', 'tiktok_url', 'schedule_url', 'yelp_url', 'logo_url'
       );
     `);
     res.json({ success: true, message: 'Field registry reset to system defaults successfully.' });
@@ -1945,12 +1964,20 @@ app.post('/api/scraper/blocklist', async (req, res) => {
   const kw = keyword.toLowerCase().trim();
   
   try {
+    // 1. Write to legacy blocklist table (for backwards compatibility)
     addBlocklist(kw, match_type, reason);
     
-    // Execute SQL Guillotine on local DB
+    // 2. Sync to ai_exclusion_keywords (SINGLE SOURCE OF TRUTH — used by Phase 1 + Phase 2)
+    const currentCfg = getConfig();
+    const existingKw: string[] = currentCfg.ai_exclusion_keywords || [];
+    if (!existingKw.map((k: string) => k.toLowerCase()).includes(kw)) {
+      updateConfig({ ai_exclusion_keywords: [...existingKw, kw] });
+    }
+    
+    // 3. Execute SQL Guillotine — purge matching spots from DB immediately
     const info = db.prepare(`UPDATE local_spots SET verification_status = 'REJECTED', is_published = 0 WHERE name LIKE ? COLLATE NOCASE`).run(`%${kw}%`);
       
-    console.log( `Added "${kw}" to blocklist and purged ${info.changes} matching local records.`);
+    console.log(`[Guillotine] ☠️  Added "${kw}" to unified blocklist — purged ${info.changes} matching spots.`);
     res.json({ success: true, count: info.changes });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -1962,6 +1989,31 @@ app.delete('/api/scraper/blocklist/:id', async (req, res) => {
   try {
     deleteBlocklist(id);
     res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ── Rejection Stats (Toxicity Bouncer Audit Log) ────────────────────────────
+app.get('/api/rejected-stats', (req, res) => {
+  try {
+    const totalRow = db.prepare(`SELECT COUNT(*) as cnt FROM local_spots WHERE verification_status = 'REJECTED'`).get() as any;
+    const recent = db.prepare(`
+      SELECT name, city, state, ai_metadata, last_attempted_at
+      FROM local_spots WHERE verification_status = 'REJECTED' 
+      ORDER BY last_attempted_at DESC LIMIT 15
+    `).all() as any[];
+    const recentParsed = recent.map((r: any) => {
+      let reason = 'manual_guillotine';
+      try {
+        const meta = typeof r.ai_metadata === 'string' ? JSON.parse(r.ai_metadata) : (r.ai_metadata || {});
+        reason = meta.rejection_reason || meta.reason || (meta.TOXICITY_ABORT ? 'toxicity_abort' : 'manual_guillotine');
+      } catch {}
+      return { name: r.name, city: r.city, state: r.state, reason, rejected_at: r.last_attempted_at };
+    });
+    const breakdown: Record<string, number> = {};
+    for (const r of recentParsed) { breakdown[r.reason] = (breakdown[r.reason] || 0) + 1; }
+    res.json({ total: totalRow.cnt, recent: recentParsed, breakdown });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

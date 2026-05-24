@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { GooglePlacesProvider, FacilityType, RETAIL_BLOCKLIST, injectDynamicBlocklist } from './lib/providers/GooglePlacesProvider';
-import { db, getClosestLocalSpot, updateLocalSpot, upsertLocalSpot, getBlocklistKeywords, getBlocklist } from './core/LocalDB';
+import { db, getClosestLocalSpot, updateLocalSpot, upsertLocalSpot, getBlocklistKeywords, getBlocklist, getConfig } from './core/LocalDB';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -51,19 +51,28 @@ export async function startGoogleSweep(
     ? ALL_FACILITY_TYPES.filter(ft => targetFacilities.includes(ft))
     : ['roller_rink'];
 
-  // --- Dynamic Blocklist Injection ---
+  // ── Unified Toxicity Bouncer Injection ─────────────────────────────────────
+  // ai_exclusion_keywords (from scraper_config) is the SINGLE source of truth.
+  // Old blocklist table keywords are merged in for backwards compatibility.
+  // Any keyword in either list blocks the spot at Google intake — before it ever enters the DB.
   try {
+    const cfg = getConfig();
+    const configKeywords: string[] = cfg.ai_exclusion_keywords || [];
     const dbKeywords = getBlocklistKeywords();
     const dbPatterns = getBlocklist();
-    const combined = [
+    const legacyKw = [
       ...dbKeywords.map((k: any) => k.keyword),
       ...dbPatterns.map((p: any) => p.pattern)
     ];
-    if (combined.length > 0) {
-      injectDynamicBlocklist(combined);
+    // Merge: config keywords take precedence, legacy keywords fill in any gaps
+    const seen = new Set(configKeywords.map((k: string) => k.toLowerCase()));
+    const merged = [...configKeywords, ...legacyKw.filter((k: string) => !seen.has(k.toLowerCase()))];
+    if (merged.length > 0) {
+      injectDynamicBlocklist(merged);
+      console.log(`[GoogleSweep] ☠️  Toxicity bouncer loaded: ${merged.length} keywords (${configKeywords.length} from config, ${legacyKw.length} from legacy table)`);
     }
   } catch (err) {
-    console.error('⚠️ Failed to fetch dynamic blocklist from LocalDB:', err);
+    console.error('⚠️ Failed to load unified toxicity bouncer keywords:', err);
   }
 
   const statesToRun = targetStates.length > 0 ? targetStates : Object.keys(STATE_NAMES);

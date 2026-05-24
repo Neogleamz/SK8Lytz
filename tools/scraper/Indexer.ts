@@ -274,13 +274,18 @@ async function runIndexer() {
       }
       flushStream();
 
-      // Handle toxicity abort (quality gate = 0, passedQualityGate = false from toxicity)
-      const wasToxicityAborted = !result.passedQualityGate && result.qualityScore === 0 && Object.keys(result.aiMetadata).length === 0;
+      // ── Toxicity Abort — REJECT ice rinks, hockey arenas, etc. ───────────
+      // Checks aiMetadata.TOXICITY_ABORT directly (old check was broken — it tested
+      // for empty aiMetadata which never matched since TOXICITY returns { TOXICITY_ABORT: true })
+      const wasToxicityAborted = result.aiMetadata?.TOXICITY_ABORT === true;
       if (wasToxicityAborted) {
+        const reason = result.aiMetadata?.reason || 'keyword match';
+        console.log(`[Indexer] ☠️  TOXICITY ABORT — "${target.name}" → REJECTED (matched: "${reason}")`);
         updateLocalSpot(target.id, {
           is_deep_crawled: true,
           verification_status: 'REJECTED',
-          last_attempted_at: new Date().toISOString()
+          last_attempted_at: new Date().toISOString(),
+          ai_metadata: JSON.stringify({ TOXICITY_ABORT: true, rejection_reason: reason })
         });
         continue;
       }

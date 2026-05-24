@@ -165,13 +165,15 @@ export const ScraperPipeline: React.FC<{
     onUploadPhoto?: (spotId: string, file: File) => void;
     seedProvider?: 'osm' | 'google' | 'website-resolver';
     onProviderChange?: (p: 'osm' | 'google' | 'website-resolver') => void;
+    scrapeScope?: string;
+    onScopeChange?: (s: string) => void;
     liveStreamText?: string;
     isStreaming?: boolean;
     currentAnalyzingSpot?: string;
     logs?: {type: string, message: string, source?: string}[];
     historyLogs?: string[];
     fetchHistory?: () => void;
-}> = ({ headerControls, belowHeader, heartbeatMatrix, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto, seedProvider, onProviderChange, liveStreamText, isStreaming, currentAnalyzingSpot, logs, historyLogs, fetchHistory }) => {
+}> = ({ headerControls, belowHeader, heartbeatMatrix, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto, seedProvider, onProviderChange, liveStreamText, isStreaming, currentAnalyzingSpot, logs, historyLogs, fetchHistory, scrapeScope, onScopeChange }) => {
     const { telemetry, config, loading, pulse } = useScraperTelemetry(2000);
     const { fields } = useFieldRegistry();
 
@@ -783,6 +785,8 @@ export const ScraperPipeline: React.FC<{
                             onUploadPhoto={onUploadPhoto}
                             seedProvider={b.id === 1 ? seedProvider : undefined}
                             onProviderChange={b.id === 1 ? onProviderChange : undefined}
+                            scrapeScope={b.id === 2 ? scrapeScope : undefined}
+                            onScopeChange={b.id === 2 ? onScopeChange : undefined}
                             liveStreamText={liveStreamText}
                             isStreaming={isStreaming}
                             currentAnalyzingSpot={currentAnalyzingSpot}
