@@ -178,6 +178,10 @@ db.exec(`
     display_label TEXT,
     data_type TEXT,
     sort_order INTEGER,
+    importance_level INTEGER DEFAULT 0,
+    priority_group INTEGER DEFAULT 10,
+    is_hard_gate INTEGER DEFAULT 0,
+    visual_glow INTEGER DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
 `);
@@ -188,7 +192,7 @@ if (!colCheck.find(c => c.name === 'sync_required')) {
   db.exec(`ALTER TABLE local_spots ADD COLUMN sync_required INTEGER DEFAULT 1`);
 }
 
-// Check for importance_level column in field registry (migration)
+// Check for columns in field registry (migration)
 const fieldRegCheck = db.prepare("PRAGMA table_info(pipeline_field_registry)").all() as any[];
 if (!fieldRegCheck.find(c => c.name === 'importance_level')) {
   db.exec(`ALTER TABLE pipeline_field_registry ADD COLUMN importance_level INTEGER DEFAULT 0`);
@@ -198,6 +202,16 @@ if (!fieldRegCheck.find(c => c.name === 'importance_level')) {
     UPDATE pipeline_field_registry SET importance_level = 1 WHERE field_name IN ('phone_number', 'website');
   `);
 }
+if (!fieldRegCheck.find(c => c.name === 'priority_group')) {
+  db.exec(`ALTER TABLE pipeline_field_registry ADD COLUMN priority_group INTEGER DEFAULT 10`);
+}
+if (!fieldRegCheck.find(c => c.name === 'is_hard_gate')) {
+  db.exec(`ALTER TABLE pipeline_field_registry ADD COLUMN is_hard_gate INTEGER DEFAULT 0`);
+}
+if (!fieldRegCheck.find(c => c.name === 'visual_glow')) {
+  db.exec(`ALTER TABLE pipeline_field_registry ADD COLUMN visual_glow INTEGER DEFAULT 0`);
+}
+
 // Fix stale field names from legacy migration (address → street_address, phone → phone_number)
 db.exec(`
   UPDATE pipeline_field_registry SET field_name = 'street_address' WHERE field_name = 'address';
@@ -314,6 +328,34 @@ const seedStmt = db.prepare(`
 for (const seed of FIELD_SEEDS) {
   seedStmt.run(seed);
 }
+
+// DPPOS dynamic tier seeding:
+db.exec(`
+  -- Tier 1: Spot Name
+  UPDATE pipeline_field_registry SET priority_group = 1, is_hard_gate = 1, visual_glow = 1 WHERE field_name = 'name';
+  -- Tier 2: Location
+  UPDATE pipeline_field_registry SET priority_group = 2, is_hard_gate = 1, visual_glow = 1 WHERE field_name IN ('street_address', 'lat', 'lng', 'city', 'state', 'zip');
+  -- Tier 3: Digital Contacts
+  UPDATE pipeline_field_registry SET priority_group = 3, is_hard_gate = 1, visual_glow = 1 WHERE field_name = 'email_addresses';
+  -- Tier 4: Voice Contacts
+  UPDATE pipeline_field_registry SET priority_group = 4, is_hard_gate = 0, visual_glow = 1 WHERE field_name = 'phone_number';
+  -- Tier 5: Session Core
+  UPDATE pipeline_field_registry SET priority_group = 5, is_hard_gate = 1, visual_glow = 1 WHERE field_name IN ('opening_hours', 'pricing_data', 'has_fee', 'has_rental');
+  -- Tier 6: Pro Shop
+  UPDATE pipeline_field_registry SET priority_group = 6 WHERE field_name = 'has_pro_shop';
+  -- Tier 7: Adult Night
+  UPDATE pipeline_field_registry SET priority_group = 7 WHERE field_name IN ('has_adult_night', 'adult_night_schedule', 'adult_night_details');
+  -- Tier 8: Socials
+  UPDATE pipeline_field_registry SET priority_group = 8 WHERE field_name IN ('instagram_url', 'facebook_url', 'tiktok_url', 'schedule_url', 'yelp_url');
+  -- Tier 9: Floor & Vibe
+  UPDATE pipeline_field_registry SET priority_group = 9 WHERE field_name IN ('surface_type', 'surface_quality', 'vibe_score');
+  -- Tier 10: Standard Amenities (all others)
+  UPDATE pipeline_field_registry SET priority_group = 10 WHERE field_name IN (
+    'is_indoor', 'has_food', 'has_lights', 'has_lockers', 'has_ac', 'has_wifi', 'has_toilets', 'capacity',
+    'is_wheelchair_accessible', 'hosts_derby', 'special_events', 'operator_name', 'operator_description',
+    'cultural_metadata', 'price_range', 'logo_url'
+  );
+`);
 
 db.exec(`
   CREATE TRIGGER IF NOT EXISTS set_sync_required
@@ -885,6 +927,9 @@ export interface FieldRegistryItem {
   data_type: string;
   sort_order: number;
   importance_level: number;
+  priority_group?: number;
+  is_hard_gate?: number;
+  visual_glow?: number;
 }
 
 export interface PipelineStats {
@@ -948,20 +993,23 @@ export const getPipelineStats = (states: string[] = []): PipelineStats => {
 
 // --- Pipeline Field Registry ---
 export function getFieldRegistry(): FieldRegistryItem[] {
-  return db.prepare('SELECT * FROM pipeline_field_registry ORDER BY sort_order ASC').all() as FieldRegistryItem[];
+  return db.prepare('SELECT * FROM pipeline_field_registry ORDER BY priority_group ASC, sort_order ASC').all() as FieldRegistryItem[];
 }
 
 export function upsertFieldRegistryItem(item: any) {
   const stmt = db.prepare(`
-    INSERT INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order, importance_level)
-    VALUES (@id, @field_name, @phase_id, @display_label, @data_type, @sort_order, COALESCE(@importance_level, 0))
+    INSERT INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order, importance_level, priority_group, is_hard_gate, visual_glow)
+    VALUES (@id, @field_name, @phase_id, @display_label, @data_type, @sort_order, COALESCE(@importance_level, 0), COALESCE(@priority_group, 10), COALESCE(@is_hard_gate, 0), COALESCE(@visual_glow, 0))
     ON CONFLICT(id) DO UPDATE SET
       field_name=excluded.field_name,
       phase_id=excluded.phase_id,
       display_label=excluded.display_label,
       data_type=excluded.data_type,
       sort_order=excluded.sort_order,
-      importance_level=excluded.importance_level
+      importance_level=excluded.importance_level,
+      priority_group=excluded.priority_group,
+      is_hard_gate=excluded.is_hard_gate,
+      visual_glow=excluded.visual_glow
   `);
   stmt.run(item);
 }
