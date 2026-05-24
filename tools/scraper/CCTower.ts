@@ -1612,18 +1612,49 @@ app.get('/api/field-registry', async (req, res) => {
 
 app.put('/api/field-registry/:id', async (req, res) => {
   try {
-    const { importance_level } = req.body;
-    if (importance_level === undefined) return res.status(400).json({ error: 'Missing importance_level' });
+    const { importance_level, priority_group, is_hard_gate, visual_glow } = req.body;
     
-    // We only update importance_level for now. Read existing record first to merge.
     const existing = getFieldRegistry().find(f => f.id === req.params.id);
     if (!existing) return res.status(404).json({ error: 'Field not found' });
     
-  upsertFieldRegistryItem({ ...existing, importance_level });
-  res.json({ success: true, importance_level });
-} catch (error: any) {
-  res.status(500).json({ error: error.message });
-}
+    const updated = {
+      ...existing,
+      importance_level: importance_level !== undefined ? importance_level : existing.importance_level,
+      priority_group: priority_group !== undefined ? priority_group : existing.priority_group,
+      is_hard_gate: is_hard_gate !== undefined ? is_hard_gate : existing.is_hard_gate,
+      visual_glow: visual_glow !== undefined ? visual_glow : existing.visual_glow
+    };
+    
+    upsertFieldRegistryItem(updated);
+    res.json({ success: true, field: updated });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/field-registry/reset', async (req, res) => {
+  try {
+    db.exec(`
+      UPDATE pipeline_field_registry SET priority_group = 10, is_hard_gate = 0, visual_glow = 0;
+      UPDATE pipeline_field_registry SET priority_group = 1, is_hard_gate = 1, visual_glow = 1 WHERE field_name = 'name';
+      UPDATE pipeline_field_registry SET priority_group = 2, is_hard_gate = 1, visual_glow = 1 WHERE field_name IN ('street_address', 'lat', 'lng', 'city', 'state', 'zip');
+      UPDATE pipeline_field_registry SET priority_group = 3, is_hard_gate = 1, visual_glow = 1 WHERE field_name = 'email_addresses';
+      UPDATE pipeline_field_registry SET priority_group = 4, is_hard_gate = 0, visual_glow = 1 WHERE field_name = 'phone_number';
+      UPDATE pipeline_field_registry SET priority_group = 5, is_hard_gate = 1, visual_glow = 1 WHERE field_name IN ('opening_hours', 'pricing_data', 'has_fee', 'has_rental');
+      UPDATE pipeline_field_registry SET priority_group = 6 WHERE field_name = 'has_pro_shop';
+      UPDATE pipeline_field_registry SET priority_group = 7 WHERE field_name IN ('has_adult_night', 'adult_night_schedule', 'adult_night_details');
+      UPDATE pipeline_field_registry SET priority_group = 8 WHERE field_name IN ('instagram_url', 'facebook_url', 'tiktok_url', 'schedule_url', 'yelp_url');
+      UPDATE pipeline_field_registry SET priority_group = 9 WHERE field_name IN ('surface_type', 'surface_quality', 'vibe_score');
+      UPDATE pipeline_field_registry SET priority_group = 10 WHERE field_name IN (
+        'is_indoor', 'has_food', 'has_lights', 'has_lockers', 'has_ac', 'has_wifi', 'has_toilets', 'capacity',
+        'is_wheelchair_accessible', 'hosts_derby', 'special_events', 'operator_name', 'operator_description',
+        'cultural_metadata', 'price_range', 'logo_url'
+      );
+    `);
+    res.json({ success: true, message: 'Field registry reset to system defaults successfully.' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 
