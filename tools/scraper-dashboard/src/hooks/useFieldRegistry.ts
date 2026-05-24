@@ -10,6 +10,9 @@ export interface FieldConfig {
     data_type: string;
     sort_order: number;
     importance_level?: number;
+    priority_group?: number;
+    is_hard_gate?: number;
+    visual_glow?: number;
 }
 
 export function useFieldRegistry() {
@@ -60,5 +63,39 @@ export function useFieldRegistry() {
         }
     };
 
-    return { fields, loading, getFieldsForPhase, toggleImportance, fetchFields };
+    const updateFieldConfig = async (id: string, updates: Partial<FieldConfig>) => {
+        // Optimistic update
+        setFields(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+
+        try {
+            const res = await fetch(`${API_BASE}/api/field-registry/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updates)
+            });
+            if (!res.ok) {
+                // Revert if failed
+                fetchFields();
+            }
+        } catch (err) {
+            fetchFields();
+        }
+    };
+
+    const resetRegistry = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/field-registry/reset`, {
+                method: 'POST'
+            });
+            if (res.ok) {
+                await fetchFields();
+            }
+        } catch (err) {
+            console.error('Failed to reset field registry:', err);
+        }
+        setLoading(false);
+    };
+
+    return { fields, loading, getFieldsForPhase, toggleImportance, updateFieldConfig, resetRegistry, fetchFields };
 }

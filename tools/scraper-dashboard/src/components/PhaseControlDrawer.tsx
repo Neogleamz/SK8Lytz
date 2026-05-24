@@ -129,7 +129,7 @@ const ToggleSwitch = ({ label, checked, onChange, colColor }: { label: string, c
 );
 
 export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onClose, colColor }) => {
-  const { fields, loading: registryLoading, toggleImportance } = useFieldRegistry();
+  const { fields, loading: registryLoading, toggleImportance, updateFieldConfig, resetRegistry } = useFieldRegistry();
   const [config, setConfig] = useState<any>(null);
   const [blocklist, setBlocklist] = useState<any[]>([]);
   const [sandboxUrl, setSandboxUrl] = useState('');
@@ -340,21 +340,63 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
           {/* Phase 2: DETECTIVE */}
           {phaseId === 2 && (
             <>
-              <div style={{ gridColumn: '1 / -1', background: 'rgba(255,106,0,0.05)', border: `1px solid ${colColor}44`, padding: '10px', borderRadius: '6px', marginBottom: '8px' }}>
-                <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping</h4>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
-                  {fields.filter(f => f.phase_id === 2).map(f => {
-  const isReq = f.importance_level === 2;
-  const isPri = f.importance_level === 1;
-  const icon = isReq ? '🛑' : isPri ? '⭐' : '⚪';
-  const color = isReq ? '#f44336' : isPri ? '#ffeb3b' : 'rgba(255,255,255,0.7)';
-  return (
-    <button key={f.id || f.field_name} onClick={() => toggleImportance(f.id, f.importance_level)} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', border: 'none', color, cursor: 'pointer', fontSize: '0.65rem' }}>
-      {icon} {f.field_name}
-    </button>
-  );
-})}
-                  {registryLoading && <span>Loading registry...</span>}
+              <div style={{ gridColumn: '1 / -1', background: 'rgba(20,20,30,0.5)', border: `1px solid ${colColor}33`, padding: '20px', borderRadius: '8px', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h4 style={{ margin: 0, color: colColor, textTransform: 'uppercase', fontSize: '0.8rem', fontWeight: 800 }}>Pipeline Field Priority & Gates Manager</h4>
+                  <button onClick={async () => {
+                    if (confirm('Reset all field priorities, hard gates, and glows back to system skater defaults?')) {
+                      await resetRegistry();
+                    }
+                  }} style={{ background: 'rgba(255,51,102,0.1)', border: '1px solid rgba(255,51,102,0.3)', color: '#ff3366', padding: '4px 10px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 'bold', cursor: 'pointer' }}>
+                    RESET TO DEFAULTS
+                  </button>
+                </div>
+                
+                <div style={{ maxHeight: '250px', overflowY: 'auto', paddingRight: '8px' }} className="custom-scroll">
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.7rem', color: 'rgba(255,255,255,0.8)' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', textAlign: 'left', color: 'rgba(255,255,255,0.4)' }}>
+                        <th style={{ padding: '8px' }}>Field</th>
+                        <th style={{ padding: '8px' }}>Priority Group (Tier)</th>
+                        <th style={{ padding: '8px', textAlign: 'center' }}>Hard Gate?</th>
+                        <th style={{ padding: '8px', textAlign: 'center' }}>Visual Glow?</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {fields.map(f => (
+                        <tr key={f.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', height: '36px' }}>
+                          <td style={{ padding: '8px', fontWeight: 'bold', color: '#fff' }}>{f.field_name}</td>
+                          <td style={{ padding: '8px' }}>
+                            <select 
+                              value={f.priority_group || 10} 
+                              onChange={(e) => updateFieldConfig(f.id, { priority_group: parseInt(e.target.value) })}
+                              style={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px' }}
+                            >
+                              {[1,2,3,4,5,6,7,8,9,10].map(tier => (
+                                <option key={tier} value={tier}>Tier {tier}</option>
+                              ))}
+                            </select>
+                          </td>
+                          <td style={{ padding: '8px', textAlign: 'center' }}>
+                            <input 
+                              type="checkbox" 
+                              checked={f.is_hard_gate === 1}
+                              onChange={(e) => updateFieldConfig(f.id, { is_hard_gate: e.target.checked ? 1 : 0 })}
+                              style={{ cursor: 'pointer', accentColor: colColor }}
+                            />
+                          </td>
+                          <td style={{ padding: '8px', textAlign: 'center' }}>
+                            <input 
+                              type="checkbox" 
+                              checked={f.visual_glow === 1}
+                              onChange={(e) => updateFieldConfig(f.id, { visual_glow: e.target.checked ? 1 : 0 })}
+                              style={{ cursor: 'pointer', accentColor: colColor }}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
