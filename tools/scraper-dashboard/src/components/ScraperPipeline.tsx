@@ -177,7 +177,7 @@ export const ScraperPipeline: React.FC<{
 
     const initialStatsRef = React.useRef<{
         seeded?: number;
-        deep_crawled_count?: number;
+        deep_crawled_ever?: number;
         media_ready?: number;
         published?: number;
     } | null>(null);
@@ -187,7 +187,7 @@ export const ScraperPipeline: React.FC<{
             const summary = pipelineStats.summary;
             initialStatsRef.current = {
                 seeded: summary.seeded ?? 0,
-                deep_crawled_count: summary.deep_crawled_count ?? 0,
+                deep_crawled_ever: summary.deep_crawled_ever ?? 0,
                 media_ready: summary.media_ready ?? 0,
                 published: summary.published ?? 0,
             };
@@ -482,7 +482,7 @@ export const ScraperPipeline: React.FC<{
 
         const sessionCompleted = {
             scouted: Math.max(0, (pipelineStats?.summary?.seeded ?? 0) - (initialStatsRef.current?.seeded ?? 0)),
-            deep_crawled: Math.max(0, (pipelineStats?.summary?.deep_crawled_count ?? 0) - (initialStatsRef.current?.deep_crawled_count ?? 0)),
+            deep_crawled: Math.max(0, (pipelineStats?.summary?.deep_crawled_ever ?? 0) - (initialStatsRef.current?.deep_crawled_ever ?? 0)),
             media_ready: Math.max(0, (pipelineStats?.summary?.media_ready ?? 0) - (initialStatsRef.current?.media_ready ?? 0)),
             published: Math.max(0, (pipelineStats?.summary?.published ?? 0) - (initialStatsRef.current?.published ?? 0)),
         };
@@ -505,7 +505,7 @@ export const ScraperPipeline: React.FC<{
             const qCount = pipelineStats?.summary?.detective_queue ?? 0;
             countBadges.push({ label: '⏳ QUEUED', value: `${qCount.toLocaleString()}` });
             countBadges.push({ label: '──►', value: '' });
-            countBadges.push({ label: '✓ CRAWLED', value: `${(pipelineStats?.summary?.deep_crawled_count ?? 0).toLocaleString()}` });
+            countBadges.push({ label: '✓ CRAWLED', value: `${(pipelineStats?.summary?.deep_crawled_ever ?? 0).toLocaleString()}` });
             countBadges.push({ label: '──►', value: '' });
             countBadges.push({ label: '⚡ SESSION', value: `+${sessionCompleted.deep_crawled}` });
         } else if (belt.id === 3) {
