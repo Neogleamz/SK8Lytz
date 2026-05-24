@@ -882,10 +882,17 @@ export async function executeDetective(
             );
             
             if (hasHours && hasPricing) {
-              onProgress(`[HEURISTIC] 🎯 Early termination triggered! Hours & Pricing resolved on homepage. Skipping remaining ${crawlUrls.length - 1} pages.`);
               pass1 = testPass1;
               earlyTerminated = true;
-              break;
+              const currentIdx = crawlUrls.indexOf(url);
+              if (currentIdx !== -1) {
+                const remaining = crawlUrls.slice(currentIdx + 1);
+                const amenitiesOnly = remaining.filter(u => /about|story|history|facility|rink|pro.?shop|shop|concession|cafe|food/i.test(u));
+                crawlUrls.splice(currentIdx + 1, crawlUrls.length - (currentIdx + 1), ...amenitiesOnly);
+                onProgress(`[HEURISTIC] 🎯 Early termination triggered! Hours & Pricing resolved. Kept ${amenitiesOnly.length} amenity/about pages, skipped ${remaining.length - amenitiesOnly.length} schedule/pricing/events pages.`);
+              } else {
+                break;
+              }
             } else {
               onProgress(`[HEURISTIC] ❌ Early termination conditions not met (hours: ${!!hasHours}, pricing: ${!!hasPricing}). Continuing crawl.`);
             }

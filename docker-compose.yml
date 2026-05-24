@@ -15,9 +15,9 @@ services:
       - ./tools/scraper/logs:/app/tools/scraper/logs
       # Map local scraper database correctly to where core/LocalDB.ts expects it
       - ./tools/.scraper-data:/app/tools/.scraper-data
-      # Map host root photos folder to container root photos folder (where CCTower/Photographer expect it)
+      # Manual upload photos — CCTower writes to /app/.scraper-data/photos (__dirname/../../.scraper-data/photos)
       - ./.scraper-data/photos:/app/.scraper-data/photos
-      # Map host tools bucket folder to container root bucket folder (where CCTower expects it)
-      - ./tools/.scraper-data/bucket:/app/.scraper-data/bucket
+      # Photographer bucket — CCTower writes to /app/.scraper-data/bucket (__dirname/../../.scraper-data/bucket)
+      - ./.scraper-data/bucket:/app/.scraper-data/bucket
     env_file:
       - .env
