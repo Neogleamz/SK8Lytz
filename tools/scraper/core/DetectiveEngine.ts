@@ -573,7 +573,15 @@ async function crawlPage(page: any, url: string, onProgress: (m: string) => void
     try { const fetchFn = require('node-fetch'); const buf = await (await fetchFn(url)).buffer(); const pdfData = await (pdfParse as any)(buf); return { ...empty, text:`[PDF: ${url}]\n${pdfData.text}` }; } catch { return empty; }
   }
   if (/\.(png|jpg|jpeg)(\?.*)?$/i.test(url)) {
-    return empty;
+    try {
+      const buf = await downloadImageBuffer(url);
+      // Safety dimension & size check to prevent Leptonica crashes
+      if (buf && buf.length >= 1024 && isValidJpegOrPng(buf)) {
+        const { data:{text} } = await Tesseract.recognize(buf,'eng');
+        return { ...empty, text:text?.length>20?`[OCR Image: ${url}]\n${text}`:'' };
+      }
+      return empty;
+    } catch { return empty; }
   }
   try {
     await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000}).catch(()=>page.goto(url,{waitUntil:'domcontentloaded',timeout:15000}));
