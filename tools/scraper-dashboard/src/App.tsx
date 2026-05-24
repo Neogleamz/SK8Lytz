@@ -282,6 +282,7 @@ function App() {
   const [aiSystemPrompt, setAiSystemPrompt] = useState<string>('');
   const [aiExclusionKeywords, setAiExclusionKeywords] = useState<string[]>([]);
   const [aiTargetVectors, setAiTargetVectors] = useState<any[]>([]);
+  const [scrapeScope, setScrapeScope] = useState<string>('gap-fill');
 
   // --- Logs & Queue States ---
   const [logs, setLogs] = useState<{type: string, message: string, source?: string}[]>([]);
@@ -606,6 +607,7 @@ function App() {
             setAiSystemPrompt(config.ai_system_prompt || '');
             setAiExclusionKeywords(config.ai_exclusion_keywords || []);
             setAiTargetVectors(config.ai_target_vectors || []);
+            setScrapeScope(config.scrape_scope || 'gap-fill');
 
             // Watchdog and Notification configuration
             setWatchdogEnabled(config.watchdog_enabled ?? true);
@@ -1924,6 +1926,34 @@ function App() {
                 );
               })}
             </div>
+          </div>
+
+          {/* Scrape Scope (Detective) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+            <span style={{ fontSize: '0.56rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Scrape Scope (Detective)</span>
+            <select
+              value={scrapeScope}
+              onChange={async (e) => {
+                const scope = e.target.value;
+                setScrapeScope(scope);
+                try {
+                  await fetch(`${API_BASE}/api/config/scope`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ scrape_scope: scope })
+                  });
+                  fetchSystemStatus();
+                } catch (e) { /* swallow */ }
+              }}
+              className="custom-dark"
+              style={{ width: '100%', padding: '4px 8px', fontSize: '0.65rem' }}
+            >
+              <option value="all">Full Pipeline Scrape (All 5 Passes)</option>
+              <option value="gap-fill">Surgical Gap-Fill (Skip Fully Resolved Passes)</option>
+              <option value="hours">Only Operations (Pass 1)</option>
+              <option value="floor">Only Floor & Physics (Pass 2A)</option>
+              <option value="amenities">Only Amenities & Concessions (Pass 2B)</option>
+            </select>
           </div>
         </div>
 

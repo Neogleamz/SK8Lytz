@@ -393,6 +393,63 @@ async function fetchYelpData(name: string, city: string, state: string, existing
   return { text, photos_url: photosUrl ? `${photosUrl}/photos` : null, og_image: ogImageMatch?.[1] || null };
 }
 
+async function fetchYelpReviewsWithPuppeteer(browser: any, name: string, city: string, state: string, existingYelpUrl?: string, onProgress?: (msg: string) => void): Promise<string> {
+  const url = existingYelpUrl || `https://www.yelp.com/search?find_desc=${encodeURIComponent(name)}&find_loc=${encodeURIComponent(`${city} ${state}`)}`;
+  onProgress?.(`[Yelp-Miner] Navigating to Yelp: ${url.slice(0, 60)}...`);
+  
+  const page = await browser.newPage();
+  try {
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36');
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 25000 }).catch(()=>{});
+    await sleep(2000);
+    
+    const isSearchPage = url.includes('/search?');
+    if (isSearchPage) {
+      const bizLink = await page.evaluate(() => {
+        const anchors = Array.from(document.querySelectorAll('a'));
+        const link = anchors.find(a => a.href && a.href.includes('/biz/'));
+        return link ? link.href : null;
+      });
+      if (bizLink) {
+        onProgress?.(`[Yelp-Miner] Found Yelp business link: ${bizLink}`);
+        await page.goto(bizLink, { waitUntil: 'domcontentloaded', timeout: 25000 }).catch(()=>{});
+        await sleep(2000);
+      } else {
+        onProgress?.(`[Yelp-Miner] No business listing found in Yelp search.`);
+        await page.close();
+        return '';
+      }
+    }
+    
+    const rawText = await page.evaluate(() => {
+      const comments = Array.from(document.querySelectorAll('[data-testid="comment"], p[class*="comment"], span[class*="raw"]'));
+      if (comments.length > 0) {
+        return comments.map(c => (c as any).innerText).join('\n\n');
+      }
+      return document.body.innerText;
+    });
+    
+    await page.close();
+    
+    const cleaned = rawText
+      .split('\n\n')
+      .map((r: string) => r.trim())
+      .filter((r: string) => r.length > 30 && r.length < 1000)
+      .slice(0, 5);
+      
+    if (cleaned.length > 0) {
+      onProgress?.(`[Yelp-Miner] ✓ Successfully mined ${cleaned.length} reviews from Yelp!`);
+      return `[YELP REVIEWS]\n- ${cleaned.join('\n- ')}\n`;
+    }
+    return '';
+  } catch (e: any) {
+    onProgress?.(`[Yelp-Miner] ⚠️ Scrape failed: ${e.message}`);
+    try { await page.close(); } catch {}
+    return '';
+  }
+}
+
+
 async function fetchFacebookData(facebookUrl: string | null): Promise<{ text: string; cover_photo: string | null; photos_url: string | null }> {
   if (!facebookUrl) return { text: '', cover_photo: null, photos_url: null };
   const text = await fetchExternalText(facebookUrl, 'FACEBOOK DATA');
@@ -727,8 +784,8 @@ export async function executeDetective(
   // Hoisted extraction schema and system prompt builders
   const userVectors=aiConfig.ai_target_vectors||[];
   const userSchema=userVectors.reduce((acc:any,vec:any)=>{acc[vec.key]=vec.prompt||vec.type;return acc;},{});
-  const REQUIRED_SCHEMA={
-    hours:'Complete weekly public skating schedule for ALL 7 DAYS {Monday: time_range, Tuesday: time_range, ...}. Include every day even if closed.',
+  const REQUIRED_SCHEMA = {
+    hours: 'Complete weekly public skating schedule for ALL 7 DAYS {Monday: time_range, Tuesday: time_range, ...}. Include every day even if closed.',
     pricing: {
       adult: 'number or null — adult admission fee',
       child: 'number or null — child/kid admission fee',
@@ -736,12 +793,54 @@ export async function executeDetective(
       spectator: 'number or null — spectator/non-skating supervising fee',
       skate_rental: 'number or null — regular skate rental fee'
     },
-    has_fee:'boolean or null — return null if no pricing/fee information was found. DO NOT assume free.',
-    has_rental:'boolean or null — return null if no skate rental information was found.',
-    has_adult_night:'boolean or null — return null if no adult night information was found.',
-    adult_night_schedule:'If adult nights: {day:time_range}. Null if none.'
+    has_fee: 'boolean or null — return null if no pricing/fee information was found. DO NOT assume free.',
+    has_rental: 'boolean or null — return null if no skate rental information was found.',
+    has_adult_night: 'boolean or null — return null if no adult night information was found.',
+    adult_night_schedule: 'If adult nights: {day:time_range}. Null if none.'
   };
-  const COMBINED_SCHEMA:Record<string,any>={surface_type:'Floor: wood/maple/concrete/asphalt/sport_court/synthetic.',surface_quality:'Condition 3-5 words.',vibe_score:'0-100.',is_indoor:'boolean',has_rental:'boolean',has_pro_shop:'boolean',has_food:'boolean',has_lights:'boolean',has_lockers:'boolean',has_ac:'boolean',has_wifi:'boolean',has_toilets:'boolean',wheelchair:'boolean',derby:'boolean',capacity:'integer.',special_events:'Array.',operator_name:'Owner name.',operator_description:'1-2 sentences.',cultural_meta:'Significance or null.',adult_night_details:'Details or null.',instagram_url:'URL or null.',facebook_url:'URL or null.',tiktok_url:'URL or null.',schedule_url:'URL or null.',yelp_url:'URL or null.',price_range:'$ to $$$$ or null.',logo_url:'Logo URL or null.',email_addresses:'Array of ALL contact email addresses found for this venue. Include info, events, parties, management, booking — every unique email. Return [] if none found.',...userSchema};
+
+  const FLOOR_SCHEMA = {
+    surface_type: 'Floor material: wood / maple / concrete / asphalt / sport_court / synthetic / unknown. String or null.',
+    surface_quality: 'Condition of the floor (3-5 words describing maintaining state, e.g. "super smooth, excellent", "slippery but fast", "warped with potholes"). String or null.',
+    vibe_score: 'Community vibe rating (integer score between 0 and 100 based on reviews/tone). Integer or null.'
+  };
+
+  const AMENITIES_SCHEMA = {
+    is_indoor: 'boolean or null — true if indoor rink, false if open-air outdoor rink.',
+    has_rental: 'boolean or null — true if skate rentals are offered, false if none.',
+    has_pro_shop: 'boolean or null — true if in-house pro-shop sells gear/skates.',
+    has_food: 'boolean or null — true if concessions, snack bar, or cafe is present.',
+    has_lights: 'boolean or null — true if lit/night skating lights are present.',
+    has_lockers: 'boolean or null — true if guest lockers are available for personal items.',
+    has_ac: 'boolean or null — true if air-conditioned/climate controlled.',
+    has_wifi: 'boolean or null — true if guest wifi is available.',
+    has_toilets: 'boolean or null — true if public restrooms/toilets are present.',
+    capacity: 'Rink maximum skater capacity (integer or null).'
+  };
+
+  const CULTURE_SCHEMA = {
+    wheelchair: 'boolean or null — true if wheelchair accessible/ADA compliant.',
+    derby: 'boolean or null — true if the rink hosts a roller derby league.',
+    special_events: 'Array of strings listing unique recurring events or party packages. Return [] if none.',
+    operator_name: 'Name of the rink operator, owner, or managing entity (string or null).',
+    operator_description: '1-2 sentences describing the rink operator/history (string or null).',
+    cultural_meta: 'Community significance, historical landmarks, or cultural background (string or null).',
+    adult_night_details: 'Adult night schedule details or requirements (string or null).'
+  };
+
+  const SOCIAL_SCHEMA = {
+    instagram_url: 'URL or null.',
+    facebook_url: 'URL or null.',
+    tiktok_url: 'URL or null.',
+    schedule_url: 'URL or null.',
+    yelp_url: 'URL or null.',
+    price_range: 'General price tier: $ to $$$$ or null.',
+    logo_url: 'Logo image URL or null.',
+    email_addresses: 'Array of ALL contact email addresses found for this venue (info, events, booking, parties). Return [] if none found.',
+    ...userSchema
+  };
+
+  const COMBINED_SCHEMA: Record<string, any> = { ...REQUIRED_SCHEMA, ...FLOOR_SCHEMA, ...AMENITIES_SCHEMA, ...CULTURE_SCHEMA, ...SOCIAL_SCHEMA };
   const FULL_SCHEMA = COMBINED_SCHEMA;
   const exclusionKw=aiConfig.ai_exclusion_keywords||[];
   const usp=aiConfig.ai_system_prompt||'';
@@ -977,6 +1076,62 @@ export async function executeDetective(
   if (!pass1) pass1 = {};
   if (!pass2) pass2 = {};
 
+  // ── Gap Analysis & JIT Pass Scheduler ──
+  const scope = aiConfig.scrape_scope || 'gap-fill';
+  let skipPass1 = false;
+  let skip2A = false;
+  let skip2B = false;
+  let skip2C = false;
+  let skip2D = false;
+
+  // Load existing confidence map
+  let confMap: Record<string, any> = {};
+  try {
+    if (spotContext.field_confidence) {
+      confMap = typeof spotContext.field_confidence === 'string' ? JSON.parse(spotContext.field_confidence) : spotContext.field_confidence;
+    }
+  } catch {}
+
+  const isFieldResolved = (f: string, minConf: number = 0.60): boolean => {
+    const val = spotContext[f];
+    const conf = confMap[f];
+    const isEmpty = (v: any) => v === null || v === undefined || v === '' || v === 'null' || v === 'NULL' || v === '{}' || v === '[]';
+    return !isEmpty(val) && (conf?.source === 'user_manual' || (conf?.confidence || 0) >= minConf);
+  };
+
+  if (scope === 'hours') {
+    skip2A = skip2B = skip2C = skip2D = true;
+  } else if (scope === 'amenities') {
+    skipPass1 = true;
+  } else if (scope === 'gap-fill') {
+    // Pass 1: Core Operations
+    skipPass1 = ['opening_hours', 'pricing_data', 'has_fee', 'has_adult_night', 'adult_night_schedule'].every(f => isFieldResolved(f, 0.70));
+    // Pass 2A: Floor & Vibe
+    skip2A = ['surface_type', 'surface_quality', 'vibe_score'].every(f => isFieldResolved(f, 0.60));
+    // Pass 2B: Amenities
+    skip2B = ['is_indoor', 'has_rental', 'has_pro_shop', 'has_food', 'has_lights', 'has_lockers', 'has_ac', 'has_wifi', 'has_toilets', 'capacity'].every(f => isFieldResolved(f, 0.60));
+    // Pass 2C: Culture & Access
+    skip2C = ['is_wheelchair_accessible', 'hosts_derby', 'special_events', 'operator_name', 'operator_description', 'cultural_metadata', 'adult_night_details'].every(f => isFieldResolved(f, 0.60));
+    // Pass 2D: Socials
+    skip2D = ['instagram_url', 'facebook_url', 'tiktok_url', 'schedule_url', 'yelp_url', 'price_range', 'logo_url', 'email_addresses'].every(f => isFieldResolved(f, 0.60));
+  }
+
+  const safeParseJson = (str: any) => {
+    try { return typeof str === 'string' ? JSON.parse(str) : str; } catch { return null; }
+  };
+
+  if (skipPass1) {
+    // Extract existing values from DB
+    pass1 = {
+      hours: safeParseJson(spotContext.opening_hours),
+      pricing: safeParseJson(spotContext.pricing_data),
+      has_fee: spotContext.has_fee !== null ? !!spotContext.has_fee : null,
+      has_rental: spotContext.has_rental !== null ? !!spotContext.has_rental : null,
+      has_adult_night: spotContext.has_adult_night !== null ? !!spotContext.has_adult_night : null,
+      adult_night_schedule: safeParseJson(spotContext.adult_night_schedule)
+    };
+  }
+
   // ── Pre-LLM Regex Content Bouncer ──
   const fullText = (coreText + '\n' + amenityText).toLowerCase();
   const toxicTerms = [
@@ -1014,16 +1169,18 @@ export async function executeDetective(
     const aSlice = HeuristicsEngine.getSemanticSlice(amenityText).slice.slice(0, 12000);
     combinedText = `[OPS CORE]\n${cSlice}\n\n[AMENITIES]\n${aSlice}`;
     
-    if (!earlyTerminated) {
+    if (!earlyTerminated && !skipPass1) {
       onProgress('[Detective] LM Studio Pass 1 (Ops: hours/pricing/adult-night)...');
       pass1 = await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice}`,detectiveModel,onProgress,'Pass1',onStream);
       if(pass1.TOXICITY_ABORT===true) return{aiMetadata:{TOXICITY_ABORT:true},mappedFields:{_simulated_status:'REJECTED'},combinedText,qualityScore:0,passedQualityGate:false,candidatePhotos:null,socialLinks:{instagram_url:null,facebook_url:null,tiktok_url:null,schedule_url:null},flyerUrls,fieldConfidence:{}};
-    } else {
+    } else if (earlyTerminated) {
       onProgress('[HEURISTIC] 🎯 Bypassing Pass 1 LLM. Reusing early-terminated homepage results!');
+    } else {
+      onProgress('[JIT-Scheduler] 🎯 Bypassing Pass 1 (Ops): Reusing resolved database values!');
     }
     
     // ── ESCALATION PROTOCOL ──
-    const needsEscalation = !earlyTerminated && (!pass1.hours || !pass1.pricing || (pass1.has_adult_night === true && !pass1.adult_night_schedule));
+    const needsEscalation = !earlyTerminated && !skipPass1 && (!pass1.hours || !pass1.pricing || (pass1.has_adult_night === true && !pass1.adult_night_schedule));
     if (needsEscalation) {
       onProgress('[Detective] 🚨 ESCALATION PROTOCOL: Missing hours/pricing/adult-night. Activating Hound Dog & OCR.');
       
@@ -1110,11 +1267,101 @@ export async function executeDetective(
       }
     }
 
-    // Fix #9: Merged Pass 2+3 into single combined pass (Amenities + Vibe + Social)
+    // Fix #9: Split monolithic Pass 2 into 4 highly focused sub-passes
     // Fix #11: Use enriched text if escalation ran
     const pass2Slice = escalationRan ? amenityText.slice(0, 12000) : aSlice;
-    onProgress('[Detective] LM Studio Pass 2 (Amenities + Vibe + Social)...');
-    pass2 = await callLMStudio(buildSystem(COMBINED_SCHEMA),`Website Text:\n${pass2Slice}`,detectiveModel,onProgress,'Pass2-Combined',onStream);
+
+    // Fetch Yelp Reviews with Puppeteer if browser is active and we need Pass 2A or Pass 2B
+    let yelpReviews = '';
+    if (browser && (!skip2A || !skip2B)) {
+      try {
+        yelpReviews = await fetchYelpReviewsWithPuppeteer(browser, spotContext.name, spotContext.city, spotContext.state, spotContext.yelp_url || undefined, onProgress);
+      } catch (e: any) {
+        onProgress(`[Yelp-Miner] ⚠️ Review extraction error: ${e.message}`);
+      }
+    }
+
+    let pass2A: any = null;
+    if (skip2A) {
+      onProgress('[JIT-Scheduler] 🎯 Bypassing Pass 2A (Floor & Physics): Reusing resolved database values!');
+      pass2A = {
+        surface_type: spotContext.surface_type || null,
+        surface_quality: spotContext.surface_quality || null,
+        vibe_score: spotContext.vibe_score !== null ? Number(spotContext.vibe_score) : null
+      };
+    } else {
+      onProgress('[Detective] LM Studio Pass 2A (Floor & Physics)...');
+      const pass2ASlice = yelpReviews ? `${yelpReviews}\n\n${pass2Slice}` : pass2Slice;
+      pass2A = await callLMStudio(buildSystem(FLOOR_SCHEMA), `Website Text & Reviews:\n${pass2ASlice}`, detectiveModel, onProgress, 'Pass2A', onStream);
+      if (pass2A.TOXICITY_ABORT === true) return { aiMetadata: { TOXICITY_ABORT: true }, mappedFields: { _simulated_status: 'REJECTED' }, combinedText, qualityScore: 0, passedQualityGate: false, candidatePhotos: null, socialLinks: { instagram_url: null, facebook_url: null, tiktok_url: null, schedule_url: null }, flyerUrls, fieldConfidence: {} };
+    }
+
+    let pass2B: any = null;
+    if (skip2B) {
+      onProgress('[JIT-Scheduler] 🎯 Bypassing Pass 2B (Amenities & Services): Reusing resolved database values!');
+      pass2B = {
+        is_indoor: spotContext.is_indoor !== null ? !!spotContext.is_indoor : null,
+        has_rental: spotContext.has_rental !== null ? !!spotContext.has_rental : null,
+        has_pro_shop: spotContext.has_pro_shop !== null ? !!spotContext.has_pro_shop : null,
+        has_food: spotContext.has_food !== null ? !!spotContext.has_food : null,
+        has_lights: spotContext.has_lights !== null ? !!spotContext.has_lights : null,
+        has_lockers: spotContext.has_lockers !== null ? !!spotContext.has_lockers : null,
+        has_ac: spotContext.has_ac !== null ? !!spotContext.has_ac : null,
+        has_wifi: spotContext.has_wifi !== null ? !!spotContext.has_wifi : null,
+        has_toilets: spotContext.has_toilets !== null ? !!spotContext.has_toilets : null,
+        capacity: spotContext.capacity !== null ? Number(spotContext.capacity) : null
+      };
+    } else {
+      onProgress('[Detective] LM Studio Pass 2B (Amenities & Services)...');
+      const pass2BSlice = yelpReviews ? `${yelpReviews}\n\n${pass2Slice}` : pass2Slice;
+      pass2B = await callLMStudio(buildSystem(AMENITIES_SCHEMA), `Website Text & Reviews:\n${pass2BSlice}`, detectiveModel, onProgress, 'Pass2B', onStream);
+      if (pass2B.TOXICITY_ABORT === true) return { aiMetadata: { TOXICITY_ABORT: true }, mappedFields: { _simulated_status: 'REJECTED' }, combinedText, qualityScore: 0, passedQualityGate: false, candidatePhotos: null, socialLinks: { instagram_url: null, facebook_url: null, tiktok_url: null, schedule_url: null }, flyerUrls, fieldConfidence: {} };
+    }
+
+    let pass2C: any = null;
+    if (skip2C) {
+      onProgress('[JIT-Scheduler] 🎯 Bypassing Pass 2C (Accessibility & Culture): Reusing resolved database values!');
+      const safeParseJson = (str: any) => {
+        try { return typeof str === 'string' ? JSON.parse(str) : str; } catch { return null; }
+      };
+      pass2C = {
+        is_wheelchair_accessible: spotContext.is_wheelchair_accessible !== null ? !!spotContext.is_wheelchair_accessible : null,
+        hosts_derby: spotContext.hosts_derby !== null ? !!spotContext.hosts_derby : null,
+        special_events: safeParseJson(spotContext.special_events) || null,
+        operator_name: spotContext.operator_name || null,
+        operator_description: spotContext.operator_description || null,
+        cultural_metadata: safeParseJson(spotContext.cultural_metadata) || spotContext.cultural_metadata || null,
+        adult_night_details: spotContext.adult_night_details || null
+      };
+    } else {
+      onProgress('[Detective] LM Studio Pass 2C (Accessibility & Culture)...');
+      pass2C = await callLMStudio(buildSystem(CULTURE_SCHEMA), `Website Text:\n${pass2Slice}`, detectiveModel, onProgress, 'Pass2C', onStream);
+      if (pass2C.TOXICITY_ABORT === true) return { aiMetadata: { TOXICITY_ABORT: true }, mappedFields: { _simulated_status: 'REJECTED' }, combinedText, qualityScore: 0, passedQualityGate: false, candidatePhotos: null, socialLinks: { instagram_url: null, facebook_url: null, tiktok_url: null, schedule_url: null }, flyerUrls, fieldConfidence: {} };
+    }
+
+    let pass2D: any = null;
+    if (skip2D) {
+      onProgress('[JIT-Scheduler] 🎯 Bypassing Pass 2D (Socials & Contacts): Reusing resolved database values!');
+      const safeParseJson = (str: any) => {
+        try { return typeof str === 'string' ? JSON.parse(str) : str; } catch { return null; }
+      };
+      pass2D = {
+        instagram_url: spotContext.instagram_url || null,
+        facebook_url: spotContext.facebook_url || null,
+        tiktok_url: spotContext.tiktok_url || null,
+        schedule_url: spotContext.schedule_url || null,
+        yelp_url: spotContext.yelp_url || null,
+        price_range: spotContext.price_range || null,
+        logo_url: spotContext.logo_url || null,
+        email_addresses: safeParseJson(spotContext.email_addresses) || null
+      };
+    } else {
+      onProgress('[Detective] LM Studio Pass 2D (Socials & Contacts)...');
+      pass2D = await callLMStudio(buildSystem(SOCIAL_SCHEMA), `Website Text:\n${pass2Slice}`, detectiveModel, onProgress, 'Pass2D', onStream);
+      if (pass2D.TOXICITY_ABORT === true) return { aiMetadata: { TOXICITY_ABORT: true }, mappedFields: { _simulated_status: 'REJECTED' }, combinedText, qualityScore: 0, passedQualityGate: false, candidatePhotos: null, socialLinks: { instagram_url: null, facebook_url: null, tiktok_url: null, schedule_url: null }, flyerUrls, fieldConfidence: {} };
+    }
+
+    pass2 = { ...pass2A, ...pass2B, ...pass2C, ...pass2D };
   } else {
     onProgress('[Detective] Content too short or skipped. Bypassing Website LLM Passes.');
   }
@@ -1265,13 +1512,28 @@ export async function executeDetective(
     if (!fieldConfidence[f]) tag(f, 'llm_pass1', 0.70);
   }
 
-  // LLM Pass 2 fields (amenities, vibe, social) — confidence 0.60
-  const pass2Fields = ['surface_type','surface_quality','vibe_score','is_indoor','has_rental','has_pro_shop',
-    'has_food','has_lights','has_lockers','has_ac','has_wifi','has_toilets','is_wheelchair_accessible',
-    'hosts_derby','capacity','special_events','operator_name','operator_description','cultural_metadata',
-    'instagram_url','facebook_url','tiktok_url','schedule_url','yelp_url','price_range','logo_url'];
-  for (const f of pass2Fields) {
-    if (!fieldConfidence[f]) tag(f, 'llm_pass2', 0.60);
+  // LLM Pass 2A fields (floor) — confidence 0.60
+  const pass2AFields = ['surface_type','surface_quality','vibe_score'];
+  for (const f of pass2AFields) {
+    if (!fieldConfidence[f]) tag(f, 'llm_pass2A', 0.60);
+  }
+
+  // LLM Pass 2B fields (amenities) — confidence 0.60
+  const pass2BFields = ['is_indoor','has_rental','has_pro_shop','has_food','has_lights','has_lockers','has_ac','has_wifi','has_toilets','capacity'];
+  for (const f of pass2BFields) {
+    if (!fieldConfidence[f]) tag(f, 'llm_pass2B', 0.60);
+  }
+
+  // LLM Pass 2C fields (accessibility & culture) — confidence 0.60
+  const pass2CFields = ['is_wheelchair_accessible','hosts_derby','special_events','operator_name','operator_description','cultural_metadata','adult_night_details'];
+  for (const f of pass2CFields) {
+    if (!fieldConfidence[f]) tag(f, 'llm_pass2C', 0.60);
+  }
+
+  // LLM Pass 2D fields (socials) — confidence 0.60
+  const pass2DFields = ['instagram_url','facebook_url','tiktok_url','schedule_url','yelp_url','price_range','logo_url'];
+  for (const f of pass2DFields) {
+    if (!fieldConfidence[f]) tag(f, 'llm_pass2D', 0.60);
   }
 
   // Regex/mailto extraction (high confidence: 0.80)

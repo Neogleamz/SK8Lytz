@@ -309,8 +309,29 @@ async function runIndexer() {
         const sanitize = (v: any) => isEmpty(v) ? null : (typeof v === 'object' ? JSON.stringify(v) : v);
 
         if (!isEmpty(newVal)) {
-          // Fresh AI crawl wins
-          finalUpdates[key] = sanitize(newVal);
+          // Winner-takes-all source tiering logic to protect manually verified data
+          let existingConfMap: any = {};
+          try {
+            existingConfMap = typeof target.field_confidence === 'string' ? JSON.parse(target.field_confidence) : (target.field_confidence || {});
+          } catch {}
+          const existingFieldConf = existingConfMap[key];
+          const newFieldConf = result.fieldConfidence[key];
+
+          const getTier = (source: string) => {
+            if (source === 'user_manual') return 4;
+            if (source === 'json_ld') return 3;
+            if (source === 'regex_extraction' || source === 'ocr') return 2;
+            if (source && source.startsWith('llm_')) return 1;
+            return 0;
+          };
+
+          const existingTier = existingFieldConf ? getTier(existingFieldConf.source) : 0;
+          const newTier = newFieldConf ? getTier(newFieldConf.source) : 1;
+
+          // Only update if existing field is empty or new tier is equal or higher
+          if (isEmpty(target[key]) || newTier >= existingTier) {
+            finalUpdates[key] = sanitize(newVal);
+          }
         }
       }
 

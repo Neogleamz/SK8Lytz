@@ -957,6 +957,17 @@ app.post('/config', async (req, res) => {
   }
 });
 
+app.post('/api/config/scope', async (req, res) => {
+  const { scrape_scope } = req.body;
+  if (!scrape_scope) return res.status(400).json({ error: 'scrape_scope is required' });
+  try {
+    updateConfig({ scrape_scope });
+    res.json({ success: true, scrape_scope, message: `Scrape scope updated to ${scrape_scope}` });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // --- Sniper Bench End-to-End Pipeline Tracing ---
 app.post('/api/sniper/seed', async (req, res) => {
   const { url, spot_name, spot_city } = req.body;
