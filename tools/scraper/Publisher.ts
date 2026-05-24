@@ -107,7 +107,7 @@ async function runPublisher() {
       console.log(`[Publisher] Found ${spotsToSync.length} spot(s) pending sync.`);
 
       const fields = getFieldRegistry();
-      const requiredFields = fields.filter(f => f.importance_level === 2).map(f => f.field_name);
+      const requiredFields = fields.filter(f => f.is_hard_gate === 1).map(f => f.field_name);
 
       for (const spot of spotsToSync) {
         reportPulse(0, spot.name);

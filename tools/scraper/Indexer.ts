@@ -17,7 +17,7 @@
 import dotenv from 'dotenv';
 import path from 'path';
 import { executeDetective } from './core/DetectiveEngine';
-import { db, updateLocalSpot } from './core/LocalDB';
+import { db, updateLocalSpot, getFieldRegistry } from './core/LocalDB';
 
 if (process.env.SCRAPER_REGISTER_ONLY === 'true') {
   console.log('[Indexer] PM2 registration mode: exiting immediately.');
@@ -335,12 +335,27 @@ async function runIndexer() {
         }
       }
 
+      // Dynamic priority tagging based on DB registry:
+      const registry = getFieldRegistry();
+      const fieldPriorityMap: Record<string, number> = {};
+      for (const f of registry) {
+        if (f.priority_group !== undefined) {
+          fieldPriorityMap[f.field_name] = f.priority_group;
+        }
+      }
+
       // Merge confidence with existing (preserve user_manual overrides)
       let existingConf: any = {};
       try { existingConf = typeof target.field_confidence === 'string' ? JSON.parse(target.field_confidence) : (target.field_confidence || {}); } catch {}
       const mergedConf = { ...existingConf };
       for (const [k, v] of Object.entries(result.fieldConfidence)) {
-        if (!mergedConf[k] || mergedConf[k].source !== 'user_manual') mergedConf[k] = v;
+        if (!mergedConf[k] || mergedConf[k].source !== 'user_manual') {
+          const priorityGroup = fieldPriorityMap[k];
+          const dynamicSource = (priorityGroup !== undefined && v.source && v.source.startsWith('llm_'))
+            ? `llm_pass_${priorityGroup}`
+            : v.source;
+          mergedConf[k] = { ...v, source: dynamicSource };
+        }
       }
 
       // Handle quality gate failure — still emit DEEP_CRAWLED so Photographer gets a shot.
