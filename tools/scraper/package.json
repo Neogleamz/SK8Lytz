@@ -13,6 +13,7 @@
     "@googlemaps/google-maps-services-js": "^3.4.2",
     "@supabase/supabase-js": "^2.39.0",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/sharp": "^0.32.0",
     "axios": "^1.6.8",
     "cheerio": "^1.0.0-rc.12",
     "cors": "^2.8.5",
@@ -21,6 +22,7 @@
     "opening_hours": "^3.12.0",
     "pdf-parse": "^2.4.5",
     "puppeteer": "^21.9.0",
+    "sharp": "^0.34.5",
     "tesseract.js": "^7.0.0"
   },
   "devDependencies": {

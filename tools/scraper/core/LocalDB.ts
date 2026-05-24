@@ -241,6 +241,9 @@ if (!colsV2.find((c: any) => c.name === 'email_addresses')) {
 if (!colsV2.find((c: any) => c.name === 'field_confidence')) {
   db.exec(`ALTER TABLE local_spots ADD COLUMN field_confidence TEXT`); // JSON: { field_name: { source, confidence, extracted_at } }
 }
+if (!colsV2.find((c: any) => c.name === 'photo_coverage')) {
+  db.exec(`ALTER TABLE local_spots ADD COLUMN photo_coverage TEXT`); // JSON: { logo, exterior, interior, floor, pro_shop, action } booleans
+}
 
 // ── Field Corrections Table (tracks user edits as training data) ──────────────
 db.exec(`
@@ -510,6 +513,7 @@ const rowToObj = (row: any) => {
   obj.adult_night_schedule = safeJsonParse(obj.adult_night_schedule);
   obj.email_addresses = safeJsonParse(obj.email_addresses);
   obj.field_confidence = safeJsonParse(obj.field_confidence);
+  obj.photo_coverage = safeJsonParse(obj.photo_coverage);
   obj.raw_data = safeJsonParse(obj.raw_data);
 
   // Convert additional booleans
@@ -570,7 +574,8 @@ export const upsertLocalSpot = (spot: any) => {
       vibe_score, cultural_metadata, instagram_url, facebook_url, tiktok_url, schedule_url,
       pricing_data, special_events, adult_night_schedule,
       email_addresses,
-      field_confidence
+      field_confidence,
+      photo_coverage
     ) VALUES (
       @id, @name, @lat, @lng, @city, @state, @zip, @street_address, @phone_number, @website,
       @google_place_id, @google_maps_url, @business_status, @rating, @user_ratings_total,
@@ -585,7 +590,8 @@ export const upsertLocalSpot = (spot: any) => {
       @vibe_score, @cultural_metadata, @instagram_url, @facebook_url, @tiktok_url, @schedule_url,
       @pricing_data, @special_events, @adult_night_schedule,
       @email_addresses,
-      @field_confidence
+      @field_confidence,
+      @photo_coverage
     )
     ON CONFLICT(id) DO UPDATE SET
       -- ── Identity fields: always accept fresh data from Scout ──
@@ -653,7 +659,8 @@ export const upsertLocalSpot = (spot: any) => {
       special_events = COALESCE(excluded.special_events, local_spots.special_events),
       adult_night_schedule = COALESCE(excluded.adult_night_schedule, local_spots.adult_night_schedule),
       email_addresses = COALESCE(excluded.email_addresses, local_spots.email_addresses),
-      field_confidence = COALESCE(excluded.field_confidence, local_spots.field_confidence)
+      field_confidence = COALESCE(excluded.field_confidence, local_spots.field_confidence),
+      photo_coverage = COALESCE(excluded.photo_coverage, local_spots.photo_coverage)
   `);
 
   const id = spot.id || Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -726,7 +733,8 @@ export const upsertLocalSpot = (spot: any) => {
     special_events: safeJsonStringify(spot.special_events),
     adult_night_schedule: safeJsonStringify(spot.adult_night_schedule),
     email_addresses: safeJsonStringify(spot.email_addresses),
-    field_confidence: safeJsonStringify(spot.field_confidence)
+    field_confidence: safeJsonStringify(spot.field_confidence),
+    photo_coverage: safeJsonStringify(spot.photo_coverage),
   });
 
   return id;

@@ -54,6 +54,15 @@ export interface SpotRecord {
   tiktok_url?: string | null;
   photos?: unknown;
   candidate_photos?: unknown;
+  logo_url?: string | null;
+  photo_coverage?: {
+    logo?: boolean;
+    exterior?: boolean;
+    interior?: boolean;
+    floor?: boolean;
+    pro_shop?: boolean;
+    action?: boolean;
+  } | null;
   user_ratings_total?: number | null;
   google_place_id?: string | null;
   last_enriched_at?: string | number | Date | null;
@@ -324,9 +333,18 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
   const adultSched = spot.adult_night_schedule;
 
   const PHOTO_TYPES = [
-    'facade_exterior', 'skate_floor', 'arcade_zone', 'snack_bar', 'interior', 'food',
-    'og_image', 'street_view_url', 'dom_images', 'flyer_urls', 'photos'
+    'exterior', 'interior', 'floor', 'pro_shop', 'action', 'logo', 'unknown',
   ];
+
+  const PHOTO_TYPE_LABELS: Record<string, { icon: string; color: string }> = {
+    exterior:  { icon: '🏢', color: '#64b5f6' },
+    interior:  { icon: '🏟️', color: '#81c784' },
+    floor:     { icon: '🛹', color: '#ffb74d' },
+    pro_shop:  { icon: '🛒', color: '#f06292' },
+    action:    { icon: '🎉', color: '#ce93d8' },
+    logo:      { icon: '🏷️', color: '#4fc3f7' },
+    unknown:   { icon: '❓', color: 'rgba(255,255,255,0.3)' },
+  };
 
   // Helper to render the type menu
   const renderTypeMenu = () => {
@@ -353,6 +371,20 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
       </div>
     );
   };
+
+  // Current photo type label
+  const currentPhotoObj = safePh[validPhotoIndex] as PhotoItem | undefined;
+  const currentPhotoType = typeof currentPhotoObj === 'object' ? (currentPhotoObj?.type || 'unknown') : 'unknown';
+  const currentTypeLabel = PHOTO_TYPE_LABELS[currentPhotoType] || PHOTO_TYPE_LABELS.unknown;
+
+  // Parse photo_coverage
+  let photoCoverage: Record<string, boolean> = {};
+  try {
+    const raw = spot.photo_coverage;
+    if (raw && typeof raw === 'object') photoCoverage = raw as Record<string, boolean>;
+    else if (typeof raw === 'string') photoCoverage = JSON.parse(raw);
+  } catch {}
+  const coverageCategories = ['exterior', 'interior', 'floor', 'pro_shop', 'action'];
 
   if (variant === 'polaroid') {
     return (
@@ -489,6 +521,13 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
         <span style={{ position:'absolute', top:10, left:10, padding:'3px 8px', borderRadius:'6px', fontSize:'0.6rem', fontWeight:800, letterSpacing:'0.05em',
           background: spot.verification_status === 'MEDIA_READY' ? '#e91e63' : spot.verification_status === 'ENRICHED' ? '#ff9800' : spot.verification_status === 'INDEXED' ? '#2196f3' : 'rgba(0,0,0,0.6)',
           color: '#fff' }}>{spot.verification_status || 'PENDING'}</span>
+        {/* Photo type badge — shows what category the current photo is */}
+        {photoCount > 0 && currentPhotoType !== 'unknown' && (
+          <span style={{ position:'absolute', bottom:8, left:8, padding:'2px 7px', borderRadius:'4px', fontSize:'0.58rem', fontWeight:800, letterSpacing:'0.05em',
+            background: 'rgba(0,0,0,0.75)', color: currentTypeLabel.color, border: `1px solid ${currentTypeLabel.color}40` }}>
+            {currentTypeLabel.icon} {currentPhotoType.replace('_',' ').toUpperCase()}
+          </span>
+        )}
         {/* Open Now badge */}
         {openStatus !== null && (
           <span style={{ position:'absolute', top:10, right:10, padding:'3px 8px', borderRadius:'6px', fontSize:'0.6rem', fontWeight:800,
@@ -519,34 +558,65 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
         </div>
       </div>
 
+      {/* Photo coverage chips */}
+      {Object.keys(photoCoverage).length > 0 && (
+        <div style={{ display:'flex', gap:'4px', padding:'6px 10px', flexWrap:'wrap', borderBottom:'1px solid rgba(255,255,255,0.05)', background:'rgba(0,0,0,0.2)' }}>
+          {coverageCategories.map(cat => {
+            const has = photoCoverage[cat];
+            const label = PHOTO_TYPE_LABELS[cat];
+            return (
+              <span key={cat} style={{ padding:'1px 6px', borderRadius:'3px', fontSize:'0.52rem', fontWeight:700, letterSpacing:'0.04em',
+                background: has ? `${label.color}18` : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${has ? label.color + '40' : 'rgba(255,255,255,0.08)'}`,
+                color: has ? label.color : 'rgba(255,255,255,0.2)' }}>
+                {has ? '✓' : '✗'} {label.icon} {cat.replace('_',' ')}
+              </span>
+            );
+          })}
+          {spot.logo_url && (
+            <span style={{ padding:'1px 6px', borderRadius:'3px', fontSize:'0.52rem', fontWeight:700, background:'rgba(79,195,247,0.1)', border:'1px solid rgba(79,195,247,0.3)', color:'#4fc3f7' }}>✓ 🏷️ logo</span>
+          )}
+        </div>
+      )}
+
       {/* Card body */}
       <div style={{ padding:'14px 16px', flex:1, display:'flex', flexDirection:'column', gap:'10px' }}>
 
-        {/* Name + location */}
-        <div>
-          <div style={{ fontWeight:800, fontSize:'1rem', lineHeight:1.2, marginBottom:'3px' }}>{spot.name}</div>
-          {isGlowEmpty('street_address') ? (
-            <div style={{
-              border: '1px dashed rgba(255, 51, 102, 0.6)',
-              boxShadow: '0 0 10px rgba(255, 51, 102, 0.35), inset 0 0 5px rgba(255, 51, 102, 0.15)',
-              background: 'rgba(255, 51, 102, 0.05)',
-              padding: '5px 9px',
-              borderRadius: '6px',
-              fontSize: '0.68rem',
-              color: '#ff3366',
-              fontWeight: 'bold',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              marginTop: '4px'
-            }}>
-              <span>📍</span> MISSING HIGH-PRIORITY STREET ADDRESS!
-            </div>
-          ) : (
-            <div style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.45)' }}>
-              {[spot.street_address || spot.address, spot.city, spot.state, spot.zip].filter(Boolean).join(', ')}
-            </div>
+        {/* Name + location + logo avatar */}
+        <div style={{ display:'flex', alignItems:'flex-start', gap:'10px' }}>
+          {spot.logo_url && (
+            <img
+              src={proxyImg(spot.logo_url) || ''}
+              alt={`${spot.name} logo`}
+              style={{ width:'36px', height:'36px', borderRadius:'8px', objectFit:'contain', background:'rgba(255,255,255,0.06)', border:'1px solid rgba(255,255,255,0.1)', flexShrink:0 }}
+              onError={e => { (e.target as HTMLImageElement).style.display='none'; }}
+            />
           )}
+          <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontWeight:800, fontSize:'1rem', lineHeight:1.2, marginBottom:'3px' }}>{spot.name}</div>
+            {isGlowEmpty('street_address') ? (
+              <div style={{
+                border: '1px dashed rgba(255, 51, 102, 0.6)',
+                boxShadow: '0 0 10px rgba(255, 51, 102, 0.35), inset 0 0 5px rgba(255, 51, 102, 0.15)',
+                background: 'rgba(255, 51, 102, 0.05)',
+                padding: '5px 9px',
+                borderRadius: '6px',
+                fontSize: '0.68rem',
+                color: '#ff3366',
+                fontWeight: 'bold',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                marginTop: '4px'
+              }}>
+                <span>📍</span> MISSING HIGH-PRIORITY STREET ADDRESS!
+              </div>
+            ) : (
+              <div style={{ fontSize:'0.72rem', color:'rgba(255,255,255,0.45)' }}>
+                {[spot.street_address || spot.address, spot.city, spot.state, spot.zip].filter(Boolean).join(', ')}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Rating row */}

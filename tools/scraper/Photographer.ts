@@ -1,16 +1,28 @@
 /**
- * Photographer.ts — Phase 3 AI Photo Harvest Daemon (v2 Sitemap-First Rebuild)
+ * Photographer.ts — Phase 3 AI Photo Harvest Daemon (v3 Category-Intent Rebuild)
+ * sharp: WebP compression at quality 82 — ~65% smaller than raw JPEG
  *
- * New architecture:
- *   1. Read candidatePhotos from Detective handoff (gallery_urls, yelp, facebook, og_image, logo, cover)
- *   2. Download logo_url + cover_photo_url as separate fields (not mixed into photos[])
- *   3. Puppeteer crawl gallery pages (from sitemap), Facebook photos, Yelp photos, homepage
- *   4. Extract all large images + context (alt, parentClass, pageSource)
- *   5. LM Studio AI selects the 10 best photos
- *   6. Download AI-approved photos → local disk
- *   7. Write photos[], logo_url, cover_photo_url → MEDIA_READY
+ * Strategy:
+ *   Collect 6 specific assets per spot — not 20 random images.
+ *   logo     → spot avatar (logo_url field, separate from photos[])
+ *   exterior → outside the building
+ *   interior → inside the rink
+ *   floor    → skating surface (stored for future vision model analysis of floor type)
+ *   pro_shop → optional, only if easy to find
+ *   action   → real people skating at THIS rink (not stock photos)
  *
- * Fallback: if LM Studio unavailable → top 10 by file size
+ * Collection order per category:
+ *   Pass 1 → Own website (Puppeteer, 5-signal context capture)
+ *   Pass 2 → Google Places refs (10 refs, up from 5)
+ *   Pass 3 → Instagram grid (action fallback, graceful fail if blocked)
+ *   Pass 4 → Yelp tab-specific (interior/pro_shop last resort only)
+ *
+ * Classification:
+ *   Step 1 → Keyword fast-path on 5 context signals (zero cost)
+ *   Step 2 → LLM text classification for ambiguous images (same text model, no VRAM swap)
+ *
+ * photos[] is now an array of {url, type, source, confidence, signals} objects.
+ * photo_coverage field tracks per-category fill status.
  */
 
 import dotenv from 'dotenv';
@@ -18,8 +30,8 @@ import path from 'path';
 import fs from 'fs';
 import fetch from 'node-fetch';
 import puppeteer from 'puppeteer';
-import Tesseract from 'tesseract.js';
 import crypto from 'crypto';
+import sharp from 'sharp';
 import { db, updateLocalSpot } from './core/LocalDB';
 
 const envPaths = [
@@ -33,16 +45,63 @@ const PHOTOS_DIR = path.resolve(__dirname, '../../.scraper-data/photos');
 if (!fs.existsSync(PHOTOS_DIR)) fs.mkdirSync(PHOTOS_DIR, { recursive: true });
 
 const PHOTO_SERVE_BASE = 'http://localhost:5999/api/photos';
-const LM_STUDIO_URL = 'http://localhost:1234/v1/chat/completions';
+const LM_STUDIO_URL = process.env.LM_STUDIO_URL || 'http://localhost:1234/v1/chat/completions';
+const LM_STUDIO_MODEL = process.env.LM_STUDIO_MODEL || 'qwen2.5-7b-instruct';
 const LOOP_COOLDOWN_MS = 800;
-const MAX_PHOTOS = 20;
-const MIN_FILE_SIZE_BYTES = 50 * 1024; // 50KB
-const MIN_IMG_WIDTH = 600;
-const MIN_IMG_HEIGHT = 400;
+const MIN_FILE_SIZE_BYTES = 30 * 1024;  // 30KB minimum before compression
+const MIN_IMG_WIDTH = 400;
+const MIN_IMG_HEIGHT = 300;
+const MAX_ACTION_PHOTOS = 4;
+const MAX_INTERIOR_PHOTOS = 3;
+const MAX_PHOTOS_TOTAL = 30;           // hard cap per spot (category fills first, then overflow for manual tagging)
+const OVERFLOW_MAX = 20;               // extra unknown photos collected after categories are filled
+const WEBP_QUALITY = 82;              // WebP compression quality — ~65% smaller than raw JPEG
+const MAX_OUTPUT_DIMENSION = 1800;    // max width or height — downscale only, never upscale
+
+// Stock photo domains — auto-reject action category images from these
+const STOCK_PHOTO_DOMAINS = [
+  'shutterstock', 'gettyimages', 'istock', 'unsplash', 'dreamstime',
+  'depositphotos', 'adobestock', 'alamy', 'bigstock',
+];
 
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-// ─── Graceful Shutdown (Anti-Zombie Chrome Defense) ───────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type PhotoCategory = 'exterior' | 'interior' | 'floor' | 'pro_shop' | 'action' | 'logo' | 'unknown';
+
+export interface ImageCandidate {
+  url: string;
+  alt: string;
+  filename: string;       // last path segment of URL
+  parentClass: string;
+  nearestHeading: string; // closest H2/H3 above the image in DOM
+  pageUrl: string;        // which page this image was found on
+  pageSource: string;     // 'website_gallery' | 'website_contact' | 'google_places' | 'yelp_inside' | 'instagram' etc.
+  estimatedSize?: number;
+  provisionalType?: PhotoCategory | null;
+  typeConfidence?: number;
+}
+
+export interface SavedPhoto {
+  url: string;            // local serve URL
+  type: PhotoCategory;
+  source: string;
+  confidence: number;     // 0.0–1.0
+  signals: string[];      // what triggered classification
+}
+
+export interface PhotoCoverage {
+  logo: boolean;
+  exterior: boolean;
+  interior: boolean;
+  floor: boolean;
+  pro_shop: boolean;
+  action: boolean;
+}
+
+// ─── Graceful Shutdown ────────────────────────────────────────────────────────
+
 let activeBrowser: any = null;
 const gracefulShutdown = async (signal: string) => {
   console.log(`[Photographer] ${signal} received — cleaning up Puppeteer...`);
@@ -52,414 +111,563 @@ const gracefulShutdown = async (signal: string) => {
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
+// ─── Logging ──────────────────────────────────────────────────────────────────
+
 const reportPulse = (delayMs: number, active_job: string | null = null, target: string | null = null) => {
-  fetch('http://localhost:5999/api/pulse', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({source:'Photographer',delayMs,active_job,target}) }).catch(()=>{});
+  fetch('http://localhost:5999/api/pulse', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ source: 'Photographer', delayMs, active_job, target }) }).catch(() => {});
 };
 
 let logQueue: { type: string; source: string; message: string }[] = [];
 let flushTimeout: any = null;
-
 const queueLog = (type: string, source: string, message: string) => {
   logQueue.push({ type, source, message });
-  if (!flushTimeout) {
-    flushTimeout = setTimeout(flushLogQueue, 100);
-  }
+  if (!flushTimeout) flushTimeout = setTimeout(flushLogQueue, 100);
 };
-
 const flushLogQueue = () => {
   flushTimeout = null;
   if (logQueue.length === 0) return;
-  const batch = [...logQueue];
-  logQueue = [];
-  fetch('http://localhost:5999/api/logs/ingest', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(batch)
-  }).catch(() => {});
+  const batch = [...logQueue]; logQueue = [];
+  fetch('http://localhost:5999/api/logs/ingest', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(batch) }).catch(() => {});
 };
-
-const logToTower = (type: 'INFO'|'ERROR', message: string) => {
+const log = (type: 'INFO' | 'ERROR', message: string) => {
   queueLog(type, 'Photographer', message);
-  console.log(`${type==='ERROR'?'❌':'📸'} [Photographer] ${message}`);
+  console.log(`${type === 'ERROR' ? '❌' : '📸'} [Photographer] ${message}`);
 };
 
-// ─── Image Candidate Type ─────────────────────────────────────────────────────
+// ─── Category Keyword Maps ────────────────────────────────────────────────────
 
-interface ImageCandidate {
-  url: string;
-  alt: string;
-  parentClass: string;
-  pageSource: string;
-  estimatedSize?: number;
+const CATEGORY_KEYWORDS: Record<PhotoCategory, { strong: string[]; medium: string[] }> = {
+  floor: {
+    strong: ['floor', 'surface', 'hardwood', 'hardwood-floor', 'skating-surface', 'rink-floor', 'skating-floor', 'wood-floor'],
+    medium: ['rink', 'skate', 'smooth', 'maple', 'poly', 'sport-court', 'concrete-floor'],
+  },
+  exterior: {
+    strong: ['exterior', 'outside', 'outside-view', 'building', 'entrance', 'front', 'parking', 'facade', 'frontage', 'storefront'],
+    medium: ['arrive', 'location', 'directions', 'contact', 'find-us', 'parking-lot', 'building-exterior'],
+  },
+  interior: {
+    strong: ['interior', 'inside', 'inside-view', 'inside-the-rink', 'facility', 'lobby', 'inside-view'],
+    medium: ['arena', 'center', 'complex', 'concourse', 'hall', 'main-floor', 'our-rink', 'the-rink'],
+  },
+  pro_shop: {
+    strong: ['pro-shop', 'proshop', 'skate-shop', 'shop', 'merchandise', 'gear', 'retail', 'skates-for-sale'],
+    medium: ['equipment', 'accessories', 'wheels', 'boots', 'store'],
+  },
+  action: {
+    strong: ['skaters', 'skating', 'action', 'crowd', 'people-skating', 'glow-skate', 'cosmic', 'fun', 'skate-night'],
+    medium: ['birthday', 'party', 'event', 'kids', 'family', 'friends', 'night', 'session', 'open-skate'],
+  },
+  logo: {
+    strong: ['logo', 'brand', 'icon', 'apple-touch-icon', 'favicon'],
+    medium: ['header-logo', 'site-logo', 'brand-logo'],
+  },
+  unknown: { strong: [], medium: [] },
+};
+
+// ─── Classification: Keyword Fast-Path ───────────────────────────────────────
+
+function inferPhotoTypeFromKeywords(candidate: ImageCandidate): { type: PhotoCategory; confidence: number; signals: string[] } {
+  const scores: Record<PhotoCategory, number> = {
+    floor: 0, exterior: 0, interior: 0, pro_shop: 0, action: 0, logo: 0, unknown: 0,
+  };
+  const matchedSignals: string[] = [];
+
+  // Reject stock photos for action category
+  if (STOCK_PHOTO_DOMAINS.some(d => candidate.url.includes(d))) {
+    return { type: 'unknown', confidence: 1.0, signals: ['stock:domain-rejected'] };
+  }
+
+  const signalTexts: Array<{ label: string; text: string; weight: number }> = [
+    { label: 'filename', text: candidate.filename.toLowerCase(), weight: 3 },
+    { label: 'alt',      text: candidate.alt.toLowerCase(),      weight: 3 },
+    { label: 'heading',  text: candidate.nearestHeading.toLowerCase(), weight: 2 },
+    { label: 'class',    text: candidate.parentClass.toLowerCase(), weight: 1 },
+    { label: 'page',     text: candidate.pageUrl.toLowerCase(),   weight: 2 },
+  ];
+
+  for (const [cat, kws] of Object.entries(CATEGORY_KEYWORDS) as Array<[PhotoCategory, { strong: string[]; medium: string[] }]>) {
+    if (cat === 'unknown') continue;
+    for (const sig of signalTexts) {
+      for (const kw of kws.strong) {
+        if (sig.text.includes(kw)) {
+          scores[cat] += sig.weight * 2;
+          matchedSignals.push(`${sig.label}:${kw}`);
+        }
+      }
+      for (const kw of kws.medium) {
+        if (sig.text.includes(kw)) {
+          scores[cat] += sig.weight;
+          matchedSignals.push(`${sig.label}:${kw}`);
+        }
+      }
+    }
+  }
+
+  // Source-based boosts (pageSource tells us a lot)
+  if (candidate.pageSource === 'google_refs') { scores.interior += 2; scores.action += 2; scores.floor += 2; }
+  if (candidate.pageSource === 'yelp_inside') { scores.interior += 5; }
+  if (candidate.pageSource === 'yelp_food')   { scores.pro_shop += 2; }
+  if (candidate.pageSource === 'instagram')   { scores.action += 4; }
+  if (candidate.pageSource === 'website_contact') { scores.exterior += 3; }
+  if (candidate.pageSource === 'website_og') { scores.floor += 3; scores.interior += 2; }
+
+  const sorted = (Object.entries(scores) as Array<[PhotoCategory, number]>)
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1]);
+
+  if (sorted.length === 0) return { type: 'unknown', confidence: 0.0, signals: [] };
+
+  const [bestCat, bestScore] = sorted[0];
+  const secondScore = sorted[1]?.[1] ?? 0;
+  const confidence = bestScore >= 6 ? 0.95 : bestScore >= 4 ? 0.80 : bestScore >= 2 ? 0.65 : 0.40;
+  const isAmbiguous = secondScore > 0 && bestScore - secondScore < 2;
+
+  return {
+    type: isAmbiguous && confidence < 0.7 ? 'unknown' : bestCat,
+    confidence,
+    signals: [...new Set(matchedSignals)].slice(0, 5),
+  };
+}
+
+// ─── Classification: LLM Text Pass (for ambiguous images) ────────────────────
+
+async function inferPhotoTypeLLM(candidate: ImageCandidate): Promise<{ type: PhotoCategory; confidence: number } | null> {
+  try {
+    const prompt = `You are classifying images for a roller skating rink venue database.
+Based ONLY on the following context signals (not the image itself), classify this image into exactly ONE category.
+
+Filename: ${candidate.filename}
+Alt text: ${candidate.alt || 'none'}
+Nearest page heading: ${candidate.nearestHeading || 'none'}
+Parent CSS class: ${candidate.parentClass || 'none'}
+Page URL: ${candidate.pageUrl || 'none'}
+Source: ${candidate.pageSource}
+
+Categories:
+- floor: The skating surface / rink floor (wood, concrete, sport court)
+- exterior: Outside the building, entrance, parking lot, building facade
+- interior: Inside the rink, lobby, general indoor views
+- pro_shop: Skate shop, merchandise, gear for sale
+- action: People skating, crowds having fun AT THIS specific rink
+- unknown: Cannot determine from context
+
+Respond with ONLY valid JSON. Example: {"type":"floor","confidence":0.85}`;
+
+    const res = await fetch(LM_STUDIO_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: LM_STUDIO_MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1,
+        max_tokens: 60,
+      }),
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json() as any;
+    const text = data?.choices?.[0]?.message?.content?.trim() || '';
+    const match = text.match(/\{[^}]+\}/);
+    if (!match) return null;
+    const parsed = JSON.parse(match[0]);
+    const validTypes: PhotoCategory[] = ['floor', 'exterior', 'interior', 'pro_shop', 'action', 'unknown'];
+    if (!validTypes.includes(parsed.type)) return null;
+    return { type: parsed.type as PhotoCategory, confidence: parseFloat(parsed.confidence) || 0.5 };
+  } catch {
+    return null;
+  }
+}
+
+// ─── Combined Classification ──────────────────────────────────────────────────
+
+async function classifyImage(candidate: ImageCandidate): Promise<{ type: PhotoCategory; confidence: number; signals: string[] }> {
+  const kwResult = inferPhotoTypeFromKeywords(candidate);
+
+  // If keyword fast-path is confident enough → skip LLM
+  if (kwResult.confidence >= 0.75 || kwResult.type === 'unknown' && kwResult.signals.includes('stock:domain-rejected')) {
+    return kwResult;
+  }
+
+  // Otherwise try LLM for ambiguous cases
+  const llmResult = await inferPhotoTypeLLM(candidate);
+  if (llmResult && llmResult.confidence > kwResult.confidence) {
+    return { type: llmResult.type, confidence: llmResult.confidence, signals: [...kwResult.signals, 'llm:text-classifier'] };
+  }
+
+  return kwResult;
 }
 
 // ─── Download Helpers ─────────────────────────────────────────────────────────
 
-const MIN_OCR_DIMENSION = 16; // Leptonica hard minimum is 3px; we use 16 as safe floor
-
-function isValidJpegOrPng(buf: Buffer): boolean {
-  if (!buf || buf.length < 24) return false;
-  // JPEG magic bytes: FF D8 FF — parse width/height from SOF0/SOF2 marker
-  if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) {
-    for (let i = 2; i < buf.length - 9; i++) {
-      if (buf[i] === 0xFF && (buf[i + 1] === 0xC0 || buf[i + 1] === 0xC2)) {
-        const h = (buf[i + 5] << 8) | buf[i + 6];
-        const w = (buf[i + 7] << 8) | buf[i + 8];
-        return w >= MIN_OCR_DIMENSION && h >= MIN_OCR_DIMENSION;
-      }
-    }
-    return false; // No SOF found — reject
-  }
-  // PNG magic bytes: 89 50 4E 47 — width/height at bytes 16-23 in IHDR chunk
-  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) {
-    const w = (buf[16] << 24) | (buf[17] << 16) | (buf[18] << 8) | buf[19];
-    const h = (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | buf[23];
-    return w >= MIN_OCR_DIMENSION && h >= MIN_OCR_DIMENSION;
-  }
-  return false;
-}
-
-async function downloadImage(url: string): Promise<{buffer: Buffer; mimeType: string} | null> {
+async function downloadImage(url: string): Promise<{ buffer: Buffer; mimeType: string } | null> {
   try {
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SK8LytzBot/2.0)' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SK8LytzBot/3.0)' },
       signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) return null;
     const contentType = res.headers.get('content-type') || '';
     if (!contentType.startsWith('image/')) return null;
     const buf = await res.buffer();
-    if (buf.length < MIN_FILE_SIZE_BYTES) return null; // rejects tracking pixels
+    if (buf.length < MIN_FILE_SIZE_BYTES) return null;
     return { buffer: buf, mimeType: contentType };
   } catch { return null; }
 }
 
-function saveToDisk(buf: Buffer, spotId: string, state: string, index: number, prefix = 'photo', mimeType = 'image/jpeg'): string | null {
+/**
+ * Compress image to WebP via sharp and save to disk.
+ * - Converts any format (JPEG/PNG/GIF) to WebP at WEBP_QUALITY (82)
+ * - Downscales if width or height exceeds MAX_OUTPUT_DIMENSION (never upscales)
+ * - De-duplicates by SHA-256 content hash of the ORIGINAL buffer
+ * - Returns the local serve URL or null on failure/duplicate
+ */
+async function compressAndSave(buf: Buffer, spotId: string, state: string, filename: string): Promise<string | null> {
   try {
-    const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg';
     const dir = path.join(PHOTOS_DIR, state || 'US', spotId);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-    // De-duplicate by file content hash
+    // De-duplicate by original content hash (before compression)
     const hash = crypto.createHash('sha256').update(buf).digest('hex');
     const existingFiles = fs.readdirSync(dir);
     for (const file of existingFiles) {
-      if (file.startsWith('logo_') || file.startsWith('cover_')) continue;
-      const existingBuf = fs.readFileSync(path.join(dir, file));
-      const existingHash = crypto.createHash('sha256').update(existingBuf).digest('hex');
-      if (hash === existingHash) {
-        logToTower('INFO', `  ⏭️ Duplicate image content detected (hash: ${hash.slice(0,8)}). Skipping.`);
-        return null;
-      }
+      try {
+        // Compare hashes stored in companion .hash files for speed
+        const hashFile = path.join(dir, file + '.hash');
+        if (fs.existsSync(hashFile) && fs.readFileSync(hashFile, 'utf8').trim() === hash) {
+          return null; // duplicate
+        }
+      } catch {}
     }
 
-    const filename = `${prefix}_${index}.${ext}`;
-    fs.writeFileSync(path.join(dir, filename), buf);
-    return `${PHOTO_SERVE_BASE}/${state || 'US'}/${spotId}/${filename}`;
+    // Compress: resize if too large, convert to WebP
+    const compressed = await sharp(buf)
+      .resize(MAX_OUTPUT_DIMENSION, MAX_OUTPUT_DIMENSION, {
+        fit: 'inside',
+        withoutEnlargement: true, // never upscale
+      })
+      .webp({ quality: WEBP_QUALITY, effort: 4 })
+      .toBuffer();
+
+    const finalFilename = `${filename}.webp`;
+    const finalPath = path.join(dir, finalFilename);
+    fs.writeFileSync(finalPath, compressed);
+    // Write companion hash file for fast dedup on future runs
+    fs.writeFileSync(finalPath + '.hash', hash);
+
+    const savedKB = Math.round(compressed.length / 1024);
+    const originalKB = Math.round(buf.length / 1024);
+    log('INFO', `  🗜️ ${filename}: ${originalKB}KB → ${savedKB}KB WebP (${Math.round((1 - savedKB / originalKB) * 100)}% saved)`);
+
+    return `${PHOTO_SERVE_BASE}/${state || 'US'}/${spotId}/${finalFilename}`;
   } catch (e: any) {
-    logToTower('ERROR', `Disk write failed: ${e.message}`);
+    log('ERROR', `compressAndSave failed for ${filename}: ${e.message}`);
     return null;
   }
 }
 
-// ─── Programmatic Photo Selection (Heuristics) ──────────────────────────────
+// ─── Logo Extraction ──────────────────────────────────────────────────────────
 
-// ─── Programmatic Photo Selection (Heuristics) ──────────────────────────────
-
-function normalizeImageUrl(urlStr: string): string {
+async function extractLogo(websiteUrl: string, spotId: string, state: string): Promise<string | null> {
+  let browser: any = null;
   try {
-    const url = new URL(urlStr);
-    
-    // Strip common sizing and resizing query parameters
-    const paramsToStrip = [
-      'width', 'height', 'w', 'h', 'resize', 'size', 'v', 'cache', 'dpr', 
-      'fit', 'crop', 'quality', 'q', 'auto', 'format'
-    ];
-    paramsToStrip.forEach(p => url.searchParams.delete(p));
-    
-    // Lowercase path for robust suffix matching
-    let pathname = url.pathname.toLowerCase();
-    
-    // Remove typical WordPress/CDN dimension suffixes (e.g. -300x200, _100x100)
-    pathname = pathname.replace(/[-_]\d+x\d+/g, '');
-    
-    // Remove typical scale/size suffixes (e.g. -scaled, -large, -thumb)
-    pathname = pathname.replace(/[-_](scaled|large|medium|thumbnail|thumb|small|big|hero)/g, '');
-    
-    // Remove file extensions for robust visual stem-level deduplication
-    pathname = pathname.replace(/\.(jpg|jpeg|png|webp|gif|svg|bmp)$/i, '');
-    
-    return url.origin + pathname;
-  } catch {
-    return urlStr;
-  }
-}
+    browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] });
+    activeBrowser = browser;
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36');
+    await page.goto(websiteUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
 
-function calculateCandidateScore(c: ImageCandidate, size: number): number {
-  // Clamp raw size contribution to 250KB so large unoptimized images don't dominate
-  let score = Math.min(size, 250 * 1024);
+    const logoUrl: string | null = await page.evaluate(() => {
+      // Priority 1: apple-touch-icon — designed for square icon display, perfect for avatars
+      const touch = document.querySelector('link[rel="apple-touch-icon"]') as HTMLLinkElement;
+      if (touch?.href) return touch.href;
 
-  const urlLower = c.url.toLowerCase();
-  const altLower = c.alt.toLowerCase();
-  const classLower = c.parentClass.toLowerCase();
+      // Priority 2: large PNG favicon
+      const icons = Array.from(document.querySelectorAll('link[rel~="icon"]')) as HTMLLinkElement[];
+      const large = icons
+        .filter(i => i.sizes?.value?.match(/\d+x\d+/))
+        .sort((a, b) => {
+          const sizeA = parseInt(a.sizes.value.split('x')[0]) || 0;
+          const sizeB = parseInt(b.sizes.value.split('x')[0]) || 0;
+          return sizeB - sizeA;
+        })[0];
+      if (large?.href) return large.href;
 
-  // 1. Extreme Penalty for bad keywords in URL, Alt, or parentClass (UI, icons, menus, generic templates)
-  const badKeywords = [
-    'logo', 'icon', 'placeholder', 'avatar', 'button', 'sprite', 'spacer', 
-    'transparent', 'bg-', 'star', 'rating', 'map-marker', 'arrow', 'loader',
-    'advertisement', 'ad-', 'ad_', 'social', 'widget', 'header-bg', 'footer-bg',
-    'generic', 'blank', 'no-image', 'no-photo', 'default', 'close', 'search',
-    'menu', 'pin', 'marker', 'cart', 'trash', 'user', 'profile'
-  ];
-  
-  for (const kw of badKeywords) {
-    if (urlLower.includes(kw) || altLower.includes(kw) || classLower.includes(kw)) {
-      score -= 1000 * 1024; // Deduct 1MB worth of score priority
-    }
-  }
+      // Priority 3: og:logo meta
+      const ogLogo = document.querySelector('meta[property="og:logo"]') as HTMLMetaElement;
+      if (ogLogo?.content) return ogLogo.content;
 
-  // 2. Extra Boost for positive, high-value image keywords
-  const goodKeywords = [
-    'gallery', 'upload', 'media', 'photo', 'rink', 'floor', 'skater', 'skate',
-    'spot', 'interior', 'exterior', 'facility', 'full', 'large', 'original',
-    'action', 'party', 'event', 'fun', 'arena', 'roll'
-  ];
-  
-  for (const kw of goodKeywords) {
-    if (urlLower.includes(kw) || altLower.includes(kw) || classLower.includes(kw)) {
-      score += 400 * 1024; // Boost by 400KB worth of priority
-    }
-  }
-
-  // 3. Parental class boosts
-  if (classLower.includes('gallery') || classLower.includes('slider') || classLower.includes('carousel') || classLower.includes('portfolio')) {
-    score += 500 * 1024; // Boost by 500KB
-  }
-
-  // 4. Google Places photo reference boost (pristine physical photos of spot itself)
-  if (c.pageSource === 'google_refs' || urlLower.includes('googleusercontent.com') || urlLower.includes('maps.googleapis.com')) {
-    score += 1000 * 1024; // Boost by 1MB priority
-  }
-
-  return score;
-}
-
-async function estimateImageQuality(candidates: ImageCandidate[]): Promise<string[]> {
-  if (candidates.length === 0) return [];
-  const sizeMap = new Map<string, number>();
-  
-  // Batch HEAD requests 10 at a time
-  for (let i = 0; i < candidates.length; i += 10) {
-    const batch = candidates.slice(i, i + 10);
-    await Promise.all(batch.map(async (c) => {
-      try {
-        const res = await fetch(c.url, { method: 'HEAD', headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(5000) });
-        if (res.ok) {
-          const cl = res.headers.get('content-length');
-          sizeMap.set(c.url, cl ? parseInt(cl, 10) : 0);
-        } else { sizeMap.set(c.url, 0); }
-      } catch { sizeMap.set(c.url, 0); }
-    }));
-  }
-
-  const sortedUrls = candidates
-    .filter(c => (sizeMap.get(c.url) || 0) >= MIN_FILE_SIZE_BYTES)
-    .sort((a, b) => {
-      const scoreA = calculateCandidateScore(a, sizeMap.get(a.url) || 0);
-      const scoreB = calculateCandidateScore(b, sizeMap.get(b.url) || 0);
-      return scoreB - scoreA;
-    })
-    .map(c => c.url)
-    .slice(0, MAX_PHOTOS * 2.5); // Take top candidates to screen
-
-  const finalUrls: string[] = [];
-  logToTower('INFO', `  🔍 Running OCR Bouncer on top ${sortedUrls.length} candidate images...`);
-  
-  for (const url of sortedUrls) {
-    if (finalUrls.length >= MAX_PHOTOS) break;
-
-    // Google Places references are pre-verified real rink photos, never flyers or coupon scans.
-    // Skip OCR completely to optimize speed and guarantee preservation.
-    const isGooglePlaces = url.includes('googleusercontent.com') || url.includes('maps.googleapis.com') || url.includes('places/photo');
-    if (isGooglePlaces) {
-      logToTower('INFO', `  ✅ Fast-tracking Google Places photo (skipping OCR): ${url.slice(0, 60)}`);
-      finalUrls.push(url);
-      continue;
-    }
-
-    try {
-      const cleanUrl = url.split('?')[0].toLowerCase();
-      const isOcrCompatible = cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.png');
-      if (isOcrCompatible) {
-        const dl = await downloadImage(url);
-        if (dl && dl.buffer.length >= 2048 && isValidJpegOrPng(dl.buffer)) {
-          try {
-            const { data: { text } } = await Tesseract.recognize(dl.buffer, 'eng');
-            const textLen = text?.trim().length || 0;
-            if (textLen > 350) {
-              logToTower('INFO', `  🚫 Rejected as Flyer (Text length: ${textLen}): ${url.slice(0, 60)}`);
-            } else {
-              finalUrls.push(url);
-            }
-          } catch { /* Tesseract worker crash — treat as non-flyer, keep the image */
-            finalUrls.push(url);
-          }
-        } else {
-          logToTower('INFO', `  ⏭️ OCR Skip (Download/Header check failed): ${url.slice(0, 60)}`);
-          finalUrls.push(url);
-        }
-      } else {
-        logToTower('INFO', `  ⏭️ Fast-tracking non-OCR format image (WebP/GIF/SVG/etc): ${url.slice(0, 60)}`);
-        finalUrls.push(url);
+      // Priority 4: JSON-LD logo
+      for (const el of Array.from(document.querySelectorAll('script[type="application/ld+json"]'))) {
+        try {
+          const ld = JSON.parse((el as HTMLElement).innerText);
+          const logo = ld?.logo || ld?.organization?.logo || ld?.publisher?.logo;
+          if (logo) return typeof logo === 'string' ? logo : logo?.url || null;
+        } catch {}
       }
-    } catch (e: any) {
-      logToTower('INFO', `  ⏭️ OCR Error (Graceful Skip): ${e.message}`);
-      finalUrls.push(url); // Default to keep if OCR fails
-    }
-  }
 
-  return finalUrls;
+      // Priority 5: img with class/alt containing "logo" and decent size
+      const imgs = Array.from(document.querySelectorAll('img')) as HTMLImageElement[];
+      const logoImg = imgs.find(i =>
+        (i.alt?.toLowerCase().includes('logo') || (i.className || '').toLowerCase().includes('logo')) &&
+        (i.naturalWidth || i.width || 0) >= 80
+      );
+      if (logoImg?.src) return logoImg.src;
+
+      // Priority 6: any favicon as fallback
+      const anyFav = document.querySelector('link[rel~="icon"]') as HTMLLinkElement;
+      return anyFav?.href || null;
+    });
+
+    if (!logoUrl) return null;
+
+    const dl = await downloadImage(logoUrl);
+    if (!dl) return null;
+    return await compressAndSave(dl.buffer, spotId, state, 'logo');
+  } catch (e: any) {
+    log('INFO', `Logo extraction failed: ${e.message}`);
+    return null;
+  } finally {
+    if (browser) { try { await browser.close(); } catch {} }
+    activeBrowser = null;
+  }
 }
 
-// ─── Puppeteer Gallery Crawl ──────────────────────────────────────────────────
+// ─── Puppeteer Category-Aware Crawl ──────────────────────────────────────────
 
-async function crawlForImages(urls: string[], pageSourceLabel: string, isHeadless: boolean): Promise<ImageCandidate[]> {
+async function crawlPageForImages(urls: string[], pageSourceLabel: string): Promise<ImageCandidate[]> {
   if (urls.length === 0) return [];
   const candidates: ImageCandidate[] = [];
   let browser: any = null;
   try {
-    browser = await puppeteer.launch({ headless: isHeadless ? 'new' : false, args:['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage'] });
+    browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] });
     activeBrowser = browser;
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36');
-    await page.setViewport({width:1280, height:900});
+    await page.setViewport({ width: 1280, height: 900 });
 
     for (const url of urls) {
       try {
-        await page.goto(url, { waitUntil:'domcontentloaded', timeout:25000 });
-        // Auto scroll to trigger lazy-load
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 25000 });
+        // Auto-scroll to trigger lazy-load
         await page.evaluate(async () => {
           await new Promise(resolve => {
-            let total=0; const dist=150;
-            const maxScrolls = 40;
-            let scrolls = 0;
-            const timer=setInterval(()=>{
-              window.scrollBy(0,dist);
-              total+=dist;
-              scrolls++;
-              if(total>=document.body.scrollHeight || scrolls >= maxScrolls){
-                clearInterval(timer);
-                resolve(true);
-              }
-            },120);
+            let total = 0; const dist = 150; let scrolls = 0;
+            const timer = setInterval(() => {
+              window.scrollBy(0, dist); total += dist; scrolls++;
+              if (total >= document.body.scrollHeight || scrolls >= 40) { clearInterval(timer); resolve(true); }
+            }, 120);
           });
         });
-        await sleep(800);
+        await sleep(600);
 
-        const found: ImageCandidate[] = await page.evaluate((source: string, minW: number, minH: number) => {
+        const found: ImageCandidate[] = await page.evaluate((source: string, pageUrlStr: string, minW: number, minH: number) => {
+          const getFilename = (urlStr: string): string => {
+            try { return decodeURIComponent(new URL(urlStr).pathname.split('/').pop() || '').replace(/[-_]/g, ' ').replace(/\.\w+$/, ''); }
+            catch { return ''; }
+          };
+          const getNearestHeading = (el: Element): string => {
+            let cur: Element | null = el.parentElement;
+            while (cur && cur !== document.body) {
+              const h = cur.querySelector('h1,h2,h3,h4');
+              if (h) return (h.textContent || '').trim().slice(0, 80);
+              // also look at preceding siblings
+              let prev = cur.previousElementSibling;
+              while (prev) {
+                if (prev.tagName?.match(/^H[1-4]$/)) return (prev.textContent || '').trim().slice(0, 80);
+                prev = prev.previousElementSibling;
+              }
+              cur = cur.parentElement;
+            }
+            return '';
+          };
+
           const results: any[] = [];
-          // OG image
+
+          // OG image — often the rink's best hero shot (floor or interior)
           const og = document.querySelector('meta[property="og:image"]')?.getAttribute('content');
-          if (og) results.push({ url: og, alt: 'og:image', parentClass: 'meta', pageSource: source });
+          if (og) results.push({ url: og, alt: 'og:image', filename: getFilename(og), parentClass: 'meta', nearestHeading: '', pageUrl: pageUrlStr, pageSource: source.includes('homepage') ? 'website_og' : source });
+
           // JSON-LD images
-          document.querySelectorAll('script[type="application/ld+json"]').forEach((el:any) => {
-            try { const ld = JSON.parse(el.innerText); if (ld.image) { const imgs = Array.isArray(ld.image) ? ld.image : [ld.image]; imgs.forEach((img:any) => { const u = typeof img==='string'?img:img?.url; if(u) results.push({url:u,alt:'json-ld',parentClass:'ld+json',pageSource:source}); }); } } catch {}
+          document.querySelectorAll('script[type="application/ld+json"]').forEach((el: any) => {
+            try {
+              const ld = JSON.parse(el.innerText);
+              const imgs = Array.isArray(ld.image) ? ld.image : (ld.image ? [ld.image] : []);
+              imgs.forEach((img: any) => {
+                const u = typeof img === 'string' ? img : img?.url;
+                if (u) results.push({ url: u, alt: 'json-ld', filename: getFilename(u), parentClass: 'ld+json', nearestHeading: '', pageUrl: pageUrlStr, pageSource: source });
+              });
+            } catch {}
           });
-          // IMG tags
-          document.querySelectorAll('img').forEach((img:any) => {
+
+          // IMG tags with 5-signal context capture
+          document.querySelectorAll('img').forEach((img: any) => {
             const w = img.naturalWidth || img.width || 0;
             const h = img.naturalHeight || img.height || 0;
             const src = img.src || img.dataset?.src || img.dataset?.lazySrc || '';
-            
-            if (src && src.startsWith('http')) {
-              // Relax strict layout size check if the URL contains strong visual photo cues
-              const isPlaceholderOrIcon = /icon|logo|sprite|spacer|star|button|avatar/i.test(src);
-              const isHighResCandidate = /uploads|gallery|media|photos|rink|skate|original/i.test(src) || 
-                                         src.includes('places/photo') ||
-                                         src.includes('wixstatic.com/media') ||
-                                         src.includes('squarespace-cdn.com');
-              
-              const passesSize = (w >= minW && h >= minH);
-              const passesLazyLoad = (w === 0 && h === 0 && isHighResCandidate);
-              
-              if (!isPlaceholderOrIcon && (passesSize || passesLazyLoad)) {
-                results.push({ url:src, alt:(img.alt||'').toLowerCase(), parentClass:(img.closest('[class]')?.className||'').toLowerCase().slice(0,80), pageSource:source });
-              }
+            if (!src || !src.startsWith('http')) return;
+
+            const isIcon = /icon|logo|sprite|spacer|star|button|avatar|thumbnail.*small|px[^a-z]|1x1|tracking/i.test(src);
+            if (isIcon) return;
+
+            const isHighRes = /uploads|gallery|media|photos|rink|skate|original|images\/.*\.(jpg|jpeg|png|webp)/i.test(src) ||
+              src.includes('places/photo') || src.includes('wixstatic.com/media') || src.includes('squarespace-cdn.com') ||
+              src.includes('googleusercontent.com');
+
+            const passesSize = w >= minW && h >= minH;
+            const passesLazy = w === 0 && h === 0 && isHighRes;
+
+            if (passesSize || passesLazy) {
+              results.push({
+                url: src,
+                alt: (img.alt || '').toLowerCase().slice(0, 120),
+                filename: getFilename(src),
+                parentClass: (img.closest('[class]')?.className || '').toLowerCase().slice(0, 80),
+                nearestHeading: getNearestHeading(img),
+                pageUrl: pageUrlStr,
+                pageSource: source,
+              });
             }
           });
-          // CSS background images on hero/slider/gallery divs
-          document.querySelectorAll('[class*="hero"],[class*="slider"],[class*="gallery"],[class*="banner"],[class*="carousel"],[class*="rink"],[class*="photo"]').forEach((el:any) => {
+
+          // CSS background images on hero/slider/gallery/rink containers
+          document.querySelectorAll('[class*="hero"],[class*="slider"],[class*="gallery"],[class*="banner"],[class*="carousel"],[class*="rink"],[class*="photo"],[class*="interior"],[class*="exterior"],[class*="floor"]').forEach((el: any) => {
             const bg = window.getComputedStyle(el).backgroundImage;
             const match = bg?.match(/url\(["']?(https?[^"')]+)["']?\)/);
-            if (match?.[1]) results.push({ url:match[1], alt:'css-background', parentClass:(el.className||'').toLowerCase().slice(0,80), pageSource:source });
+            if (match?.[1]) {
+              results.push({
+                url: match[1],
+                alt: 'css-background',
+                filename: getFilename(match[1]),
+                parentClass: (el.className || '').toLowerCase().slice(0, 80),
+                nearestHeading: getNearestHeading(el),
+                pageUrl: pageUrlStr,
+                pageSource: source,
+              });
+            }
           });
+
           return results;
-        }, pageSourceLabel + ':' + url, MIN_IMG_WIDTH, MIN_IMG_HEIGHT);
+        }, pageSourceLabel + ':' + url, url, MIN_IMG_WIDTH, MIN_IMG_HEIGHT);
 
         candidates.push(...found);
-        logToTower('INFO', `  📷 ${pageSourceLabel} ${url} → ${found.length} candidates`);
+        log('INFO', `  📷 ${pageSourceLabel} ${url.slice(0, 60)} → ${found.length} candidates`);
       } catch (e: any) {
-        logToTower('INFO', `  ⚠️ Crawl failed: ${url}`);
+        log('INFO', `  ⚠️ Crawl failed for ${url.slice(0, 60)}: ${e.message}`);
       }
     }
-  } finally { if (browser) { try { await browser.close(); } catch {} } activeBrowser = null; }
-
-  // De-duplicate by normalized URL to completely avoid multi-CDN / resized duplicates
-  const seenNormalized = new Set<string>();
-  const uniqueCandidates: ImageCandidate[] = [];
-  for (const c of candidates) {
-    const norm = normalizeImageUrl(c.url);
-    if (!seenNormalized.has(norm)) {
-      seenNormalized.add(norm);
-      uniqueCandidates.push(c);
-    }
+  } finally {
+    if (browser) { try { await browser.close(); } catch {} }
+    activeBrowser = null;
   }
-  return uniqueCandidates;
+
+  // Normalize URL dedup (strip CDN resize params)
+  const seenNorm = new Set<string>();
+  const unique: ImageCandidate[] = [];
+  for (const c of candidates) {
+    try {
+      const u = new URL(c.url);
+      ['width', 'height', 'w', 'h', 'resize', 'size', 'v', 'cache', 'dpr', 'fit', 'crop', 'quality', 'q', 'auto', 'format'].forEach(p => u.searchParams.delete(p));
+      const norm = u.origin + u.pathname.toLowerCase().replace(/[-_]\d+x\d+/g, '').replace(/[-_](scaled|large|medium|thumbnail|thumb|small|big|hero)/g, '').replace(/\.(jpg|jpeg|png|webp|gif|svg)$/i, '');
+      if (!seenNorm.has(norm)) { seenNorm.add(norm); unique.push(c); }
+    } catch { unique.push(c); }
+  }
+  return unique;
 }
 
-// ─── Main Loop ────────────────────────────────────────────────────────────────
+// ─── Instagram Grid Scrape (action fallback) ──────────────────────────────────
+
+async function scrapeInstagramGrid(instagramUrl: string): Promise<ImageCandidate[]> {
+  let browser: any = null;
+  try {
+    browser = await puppeteer.launch({ headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'] });
+    activeBrowser = browser;
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36');
+    await page.goto(instagramUrl, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await sleep(2000);
+
+    // Check if we hit a login wall
+    const isBlocked = await page.evaluate(() =>
+      !!(document.querySelector('[data-testid="login-form"]') || document.querySelector('form[id="loginForm"]'))
+    );
+    if (isBlocked) { log('INFO', '  📵 Instagram login wall — skipping gracefully'); return []; }
+
+    const images: ImageCandidate[] = await page.evaluate((source: string, pageUrlStr: string) => {
+      const results: any[] = [];
+      // Instagram grid images are in article > img or _aagu class
+      document.querySelectorAll('article img, ._aagu img, main img').forEach((img: any) => {
+        const src = img.src || img.dataset?.src || '';
+        if (src && src.startsWith('http') && !src.includes('profile_pic') && (img.naturalWidth || img.width || 0) >= 100) {
+          results.push({
+            url: src,
+            alt: (img.alt || '').toLowerCase().slice(0, 120),
+            filename: 'instagram-photo',
+            parentClass: 'instagram-grid',
+            nearestHeading: '',
+            pageUrl: pageUrlStr,
+            pageSource: source,
+          });
+        }
+      });
+      return results.slice(0, 9); // Max 9 grid posts
+    }, 'instagram', instagramUrl);
+
+    log('INFO', `  📸 Instagram grid → ${images.length} candidates`);
+    return images;
+  } catch (e: any) {
+    log('INFO', `  📵 Instagram scrape failed (graceful): ${e.message}`);
+    return [];
+  } finally {
+    if (browser) { try { await browser.close(); } catch {} }
+    activeBrowser = null;
+  }
+}
+
+// ─── Yelp Tab-Specific Scrape ─────────────────────────────────────────────────
+
+async function scrapeYelpTab(yelpUrl: string, tab: 'inside' | 'food'): Promise<ImageCandidate[]> {
+  const tabUrl = `${yelpUrl.replace(/\/$/, '')}/photos?tab=${tab}`;
+  try {
+    return await crawlPageForImages([tabUrl], `yelp_${tab}`);
+  } catch { return []; }
+}
+
+// ─── Main Collection Loop ─────────────────────────────────────────────────────
 
 async function runPhotographerLoop() {
   if (process.env.SCRAPER_REGISTER_ONLY === 'true') {
     console.log('[Photographer] PM2 registration mode: exiting immediately.');
     process.exit(0);
   }
-  logToTower('INFO', '🚀 Photographer v2 daemon starting — Sitemap-First AI Photo Selection active');
+  log('INFO', '🚀 Photographer v3 daemon starting — Category-Intent Photo Collection active');
   let consecutiveIdle = 0;
-  const isHeadless = process.env.PHOTOGRAPHER_HEADLESS !== 'false';
 
   while (true) {
     const configRes = await fetch('http://localhost:5999/api/priority-states').then((r: any) => r.json()).catch(() => ({ priority_states: [] }));
     const priorityStates: string[] = configRes.priority_states || [];
-    const aiConfig = await fetch('http://localhost:5999/config').then((r: any) => r.json()).then((d:any) => d.config || {}).catch(() => ({}));
+    const aiConfig = await fetch('http://localhost:5999/config').then((r: any) => r.json()).then((d: any) => d.config || {}).catch(() => ({}));
 
     let target: any = null;
 
-    // sniper_target_id isolation
     if (aiConfig.sniper_target_id) {
-      target = db.prepare(`SELECT id, name, state, candidate_photos, photos, logo_url, cover_photo_url, verification_status, retry_count FROM local_spots WHERE id = ?`).get(aiConfig.sniper_target_id);
-      if (target && target.verification_status !== 'DEEP_CRAWLED') {
-        target = null;
-      }
+      target = db.prepare(`SELECT id, name, state, website, candidate_photos, photos, logo_url, cover_photo_url, instagram_url, yelp_url, verification_status, retry_count, photo_coverage FROM local_spots WHERE id = ?`).get(aiConfig.sniper_target_id);
+      if (target && target.verification_status !== 'DEEP_CRAWLED') target = null;
     }
 
     if (!target) {
-      let query = `SELECT id, name, state, candidate_photos, photos, logo_url, cover_photo_url, verification_status, retry_count FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND website IS NOT NULL`;
-      if (priorityStates.length > 0) {
-        query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
-      }
+      let query = `SELECT id, name, state, website, candidate_photos, photos, logo_url, cover_photo_url, instagram_url, yelp_url, verification_status, retry_count, photo_coverage FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' AND website IS NOT NULL`;
+      if (priorityStates.length > 0) query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
       query += ` ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`;
       try { target = db.prepare(query).get() as any; } catch {}
     }
 
     if (!target) {
-      // Fallback: any DEEP_CRAWLED without priority filter
-      try { target = db.prepare(`SELECT id, name, state, candidate_photos, photos, logo_url, cover_photo_url, verification_status, retry_count FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`).get() as any; } catch {}
+      try { target = db.prepare(`SELECT id, name, state, website, candidate_photos, photos, logo_url, cover_photo_url, instagram_url, yelp_url, verification_status, retry_count, photo_coverage FROM local_spots WHERE verification_status = 'DEEP_CRAWLED' ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`).get() as any; } catch {}
     }
 
     if (!target) {
       consecutiveIdle++;
-      if (consecutiveIdle === 1) logToTower('INFO', '⏸️ Queue empty — idling...');
+      if (consecutiveIdle === 1) log('INFO', '⏸️ Queue empty — idling...');
       reportPulse(30000, 'IDLE', null);
       await sleep(30000);
       continue;
@@ -467,213 +675,267 @@ async function runPhotographerLoop() {
 
     consecutiveIdle = 0;
 
-    // ── Self-Healing Safeguard ────────────────────────────────────────────────
-    // If a spot has crashed the photographer 3 or more times, auto-promote it to prevent infinite blocking
+    // Self-healing: auto-promote spots that crash repeatedly
     if ((target.retry_count || 0) >= 3) {
-      logToTower('ERROR', `⚠️ Spot ${target.name} has crashed the photographer ${target.retry_count} times. Auto-promoting to prevent infinite queue blockages.`);
-      try {
-        updateLocalSpot(target.id, {
-          verification_status: 'MEDIA_READY',
-          last_attempted_at: new Date().toISOString()
-        });
-      } catch {}
+      log('ERROR', `⚠️ ${target.name} crashed ${target.retry_count}x — auto-promoting to MEDIA_READY`);
+      updateLocalSpot(target.id, { verification_status: 'MEDIA_READY', last_attempted_at: new Date().toISOString() });
       await sleep(LOOP_COOLDOWN_MS);
       continue;
     }
 
-    // ── Optimistic Touch Gate ─────────────────────────────────────────────────
-    // Update last_attempted_at and increment retry_count instantly. If we crash, this pushes the spot to the back of the queue
-    try {
-      updateLocalSpot(target.id, {
-        last_attempted_at: new Date().toISOString(),
-        retry_count: (target.retry_count || 0) + 1
-      });
-    } catch {}
+    // Optimistic touch gate — push to back of queue if we crash
+    updateLocalSpot(target.id, { last_attempted_at: new Date().toISOString(), retry_count: (target.retry_count || 0) + 1 });
 
-    logToTower('INFO', `📷 Processing: ${target.name} (${target.state}) [${target.id}]`);
-    reportPulse(0, 'Crawling Photos', target.name);
+    log('INFO', `📷 Processing: ${target.name} (${target.state}) [${target.id}]`);
+    reportPulse(0, 'Collecting Photos', target.name);
 
     let candidates: any = {};
     try { candidates = typeof target.candidate_photos === 'string' ? JSON.parse(target.candidate_photos) : (target.candidate_photos || {}); } catch {}
 
-    // ── Step 1: Logo + Cover (fast, no browser) ───────────────────────────────
-    let savedLogoUrl: string | null = null;
-    let savedCoverUrl: string | null = null;
-
-    if (candidates.logo_url && !target.logo_url) {
-      const dl = await downloadImage(candidates.logo_url);
-      if (dl) {
-        savedLogoUrl = saveToDisk(dl.buffer, target.id, target.state||'US', 0, 'logo', dl.mimeType);
-        if (savedLogoUrl) logToTower('INFO', `  🏷️ Logo saved: ${savedLogoUrl}`);
-      }
-    }
-
-    if (candidates.cover_photo_url && !target.cover_photo_url) {
-      const dl = await downloadImage(candidates.cover_photo_url);
-      if (dl) {
-        savedCoverUrl = saveToDisk(dl.buffer, target.id, target.state||'US', 0, 'cover', dl.mimeType);
-        if (savedCoverUrl) logToTower('INFO', `  🖼️ Cover saved: ${savedCoverUrl}`);
-      }
-    }
-
-    // ── Step 2: Build crawl source list ──────────────────────────────────────
-    let existingPhotos: string[] = [];
-    try { if (target.photos && target.photos !== '[]') existingPhotos = typeof target.photos === 'string' ? JSON.parse(target.photos) : target.photos; } catch {}
-
-    if (existingPhotos.length >= MAX_PHOTOS) {
-      // Already has enough photos — just ensure status is correct
-      const updates: any = { verification_status:'MEDIA_READY', last_attempted_at: new Date().toISOString() };
-      if (savedLogoUrl) updates.logo_url = savedLogoUrl;
-      if (savedCoverUrl) updates.cover_photo_url = savedCoverUrl;
-      updateLocalSpot(target.id, updates);
-      logToTower('INFO', `⏭️ ${target.name} already has ${existingPhotos.length} photos. Marking MEDIA_READY.`);
-      await sleep(LOOP_COOLDOWN_MS);
-      continue;
-    }
-
-    // ── Step 3: Puppeteer crawl — all sources ─────────────────────────────────
-    const allCandidates: ImageCandidate[] = [];
-
+    // Parse existing photos (may be old string[] format or new object[] format)
+    let existingPhotos: SavedPhoto[] = [];
     try {
-      // Priority 1: Sitemap gallery pages
-      if (candidates.gallery_urls?.length) {
-        logToTower('INFO', `  🗺️ Crawling ${candidates.gallery_urls.length} gallery pages...`);
-        const found = await crawlForImages(candidates.gallery_urls, 'gallery', isHeadless);
-        allCandidates.push(...found);
+      const raw = typeof target.photos === 'string' ? JSON.parse(target.photos) : (target.photos || []);
+      if (Array.isArray(raw)) {
+        existingPhotos = raw.map((p: any) => typeof p === 'string' ? { url: p, type: 'unknown' as PhotoCategory, source: 'legacy', confidence: 0.5, signals: [] } : p);
       }
+    } catch {}
 
-      // Priority 2: Facebook photos
-      if (candidates.facebook_photos_url) {
-        logToTower('INFO', `  📘 Crawling Facebook photos...`);
-        const found = await crawlForImages([candidates.facebook_photos_url], 'facebook', isHeadless);
-        allCandidates.push(...found);
+    // Parse existing coverage
+    let coverage: PhotoCoverage = { logo: !!target.logo_url, exterior: false, interior: false, floor: false, pro_shop: false, action: false };
+    try {
+      const existing = typeof target.photo_coverage === 'string' ? JSON.parse(target.photo_coverage) : (target.photo_coverage || {});
+      coverage = { ...coverage, ...existing };
+    } catch {}
+
+    // Count existing photos by category
+    const photosByType: Record<PhotoCategory, SavedPhoto[]> = { exterior: [], interior: [], floor: [], pro_shop: [], action: [], logo: [], unknown: [] };
+    for (const p of existingPhotos) { photosByType[p.type || 'unknown']?.push(p); }
+
+    const savedPhotos: SavedPhoto[] = [...existingPhotos];
+    const websiteUrl = target.website || '';
+    let allWebsiteCandidates: ImageCandidate[] = []; // hoisted for overflow pass
+
+    // ── LOGO (Priority 0) ─────────────────────────────────────────────────────
+    if (!target.logo_url && !coverage.logo && websiteUrl) {
+      log('INFO', '  🏷️ Extracting logo...');
+      const logoUrl = await extractLogo(websiteUrl, target.id, target.state || 'US');
+      if (logoUrl) {
+        coverage.logo = true;
+        log('INFO', `  ✅ Logo saved: ${logoUrl}`);
+        updateLocalSpot(target.id, { logo_url: logoUrl });
       }
+    }
 
-      // Priority 3: Yelp photos
-      if (candidates.yelp_photos_url) {
-        logToTower('INFO', `  ⭐ Crawling Yelp photos...`);
-        const found = await crawlForImages([candidates.yelp_photos_url], 'yelp', isHeadless);
-        allCandidates.push(...found);
-      }
+    // ── PASS 1: Own Website ────────────────────────────────────────────────────
+    if (websiteUrl) {
+      const needsFloor    = !coverage.floor    || photosByType.floor.length < 1;
+      const needsExterior = !coverage.exterior || photosByType.exterior.length < 1;
+      const needsInterior = !coverage.interior || photosByType.interior.length < MAX_INTERIOR_PHOTOS;
+      const needsProShop  = !coverage.pro_shop;
+      const needsAction   = !coverage.action   || photosByType.action.length < MAX_ACTION_PHOTOS;
 
-      // Priority 4-7: Homepage + OG + JSON-LD (always run as fallback/supplement)
-      const spot: any = db.prepare('SELECT website FROM local_spots WHERE id = ?').get(target.id);
-      if (spot?.website) {
-        logToTower('INFO', `  🏠 Crawling homepage...`);
-        const found = await crawlForImages([spot.website], 'homepage', isHeadless);
-        allCandidates.push(...found);
-      }
-    } catch (crawlErr: any) {
-      logToTower('ERROR', `  ⚠️ Puppeteer sitemap crawl crashed: ${crawlErr.message}`);
-      logToTower('INFO', `  ⚡ Triggering lightweight Cheerio fallback sitemap crawler...`);
-      try {
-        const cheerio = require('cheerio');
-        const urlsToCrawl: string[] = [...(candidates.gallery_urls || [])];
-        const spot: any = db.prepare('SELECT website FROM local_spots WHERE id = ?').get(target.id);
-        if (spot?.website) urlsToCrawl.push(spot.website);
+      if (needsFloor || needsExterior || needsInterior || needsProShop || needsAction) {
+        log('INFO', '  🌐 Pass 1: Website crawl...');
 
-        for (const url of urlsToCrawl) {
-          try {
-            logToTower('INFO', `    🌐 Cheerio crawling: ${url}`);
-            const res = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' }, timeout: 8000 });
-            if (res.ok) {
-              const html = await res.text();
-              const $ = cheerio.load(html);
-              
-              // Parse og:image
-              const og = $('meta[property="og:image"]').attr('content');
-              if (og) allCandidates.push({ url: og, alt: 'og:image', parentClass: 'meta', pageSource: 'cheerio_fallback' });
+        // Build targeted page list based on what we still need
+        const pagesToCrawl: string[] = [websiteUrl]; // homepage always (og:image → floor/interior)
 
-              // Parse standard img tags
-              $('img').each((_: number, img: any) => {
-                const src = $(img).attr('src') || $(img).attr('data-src') || $(img).attr('data-lazy-src') || '';
-                if (src && src.startsWith('http')) {
-                  allCandidates.push({ url: src, alt: ($(img).attr('alt') || '').toLowerCase(), parentClass: 'img_tag', pageSource: 'cheerio_fallback' });
-                }
-              });
-            }
-          } catch (e: any) {
-            logToTower('INFO', `    ⚠️ Cheerio fallback crawl failed for ${url}: ${e.message}`);
+        // Find category-specific pages from candidate_links
+        const candidateLinks: Record<string, string> = candidates.candidate_links || {};
+        const allLinks: string[] = candidates.gallery_urls || [];
+
+        // Contact page → exterior
+        if (needsExterior) {
+          const contactUrl = Object.values(candidateLinks).find((u: string) => /contact|find-us|location|directions/i.test(u))
+            || allLinks.find(u => /contact|find-us|location|directions/i.test(u));
+          if (contactUrl && contactUrl !== websiteUrl) pagesToCrawl.push(contactUrl);
+        }
+
+        // Gallery/facility/about pages → floor, interior
+        for (const u of allLinks.slice(0, 3)) {
+          if (/gallery|photo|facility|about|our-rink|inside|interior|floor/i.test(u) && !pagesToCrawl.includes(u)) {
+            pagesToCrawl.push(u);
           }
         }
-      } catch (cheerioErr: any) {
-        logToTower('ERROR', `    ⚠️ Cheerio fallback parser failed: ${cheerioErr.message}`);
+
+        // Pro-shop page → pro_shop
+        if (needsProShop) {
+          const shopUrl = Object.values(candidateLinks).find((u: string) => /pro.?shop|shop|gear|merchandise|store/i.test(u))
+            || allLinks.find(u => /pro.?shop|shop|gear/i.test(u));
+          if (shopUrl && !pagesToCrawl.includes(shopUrl)) pagesToCrawl.push(shopUrl);
+        }
+
+        const websiteCandidates = await crawlPageForImages(pagesToCrawl.slice(0, 5), 'website');
+        allWebsiteCandidates = websiteCandidates; // save for overflow pass
+
+        // Also add OG image as explicit candidate
+        if (candidates.og_image) {
+          websiteCandidates.push({ url: candidates.og_image, alt: 'og:image', filename: 'og-image', parentClass: 'meta', nearestHeading: '', pageUrl: websiteUrl, pageSource: 'website_og' });
+        }
+
+        // Classify and collect
+        for (const candidate of websiteCandidates) {
+          const { type, confidence, signals } = await classifyImage(candidate);
+          if (type === 'unknown') continue;
+
+          const currentCount = photosByType[type]?.length || 0;
+          const maxForType = type === 'action' ? MAX_ACTION_PHOTOS : type === 'interior' ? MAX_INTERIOR_PHOTOS : 1;
+          if (currentCount >= maxForType) continue;
+          if (type === 'exterior' && coverage.exterior) continue;
+          if (type === 'floor' && coverage.floor) continue;
+          if (type === 'pro_shop' && coverage.pro_shop) continue;
+
+          const dl = await downloadImage(candidate.url);
+          if (!dl) continue;
+
+          const index = savedPhotos.filter(p => p.type === type).length;
+          const localUrl = await compressAndSave(dl.buffer, target.id, target.state || 'US', `${type}_${index}`);
+          if (!localUrl) continue;
+
+          const saved: SavedPhoto = { url: localUrl, type, source: candidate.pageSource, confidence, signals };
+          savedPhotos.push(saved);
+          photosByType[type] = [...(photosByType[type] || []), saved];
+          if (type !== 'action' && type !== 'interior') coverage[type as keyof PhotoCoverage] = true;
+          if (type === 'interior' && photosByType.interior.length >= 1) coverage.interior = true;
+          if (type === 'action' && photosByType.action.length >= 1) coverage.action = true;
+          log('INFO', `  ✅ Saved ${type} (confidence: ${confidence.toFixed(2)}, signals: ${signals.join(', ')})`);
+        }
       }
     }
 
-    // Add direct OG image as a candidate if not already found by crawl
-    if (candidates.og_image) allCandidates.push({ url: candidates.og_image, alt: 'og:image', parentClass: 'meta', pageSource: 'og_direct' });
-
-    // DOM images from Detective handoff
-    if (candidates.dom_images?.length) {
-      candidates.dom_images.forEach((url: string) => allCandidates.push({ url, alt: 'dom_image', parentClass: '', pageSource: 'detective_dom' }));
-    }
-
-    // Google Places photo references (Phase 1 handoff)
-    if (candidates.google_refs?.length) {
+    // ── PASS 2: Google Places refs (up to 10, for unfilled categories) ─────────
+    const stillNeedsAny = !coverage.floor || !coverage.exterior || !coverage.interior || !coverage.action;
+    if (stillNeedsAny && candidates.google_refs?.length) {
+      log('INFO', '  🗺️ Pass 2: Google Places refs...');
       const GMAPS_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
       if (GMAPS_API_KEY) {
-        for (const ref of candidates.google_refs.slice(0, 5)) {
+        for (const ref of candidates.google_refs.slice(0, 10)) {
+          if (savedPhotos.length >= MAX_PHOTOS_TOTAL) break;
           const photoRef = typeof ref === 'string' ? ref : ref?.photo_reference;
-          if (photoRef) {
-            const url = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1200&photo_reference=${photoRef}&key=${GMAPS_API_KEY}`;
-            allCandidates.push({ url, alt: 'google_places', parentClass: '', pageSource: 'google_refs' });
-          }
+          if (!photoRef) continue;
+          const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1600&photo_reference=${photoRef}&key=${GMAPS_API_KEY}`;
+
+          const candidate: ImageCandidate = { url: photoUrl, alt: 'google-places', filename: 'google-places-photo', parentClass: '', nearestHeading: '', pageUrl: 'google', pageSource: 'google_refs' };
+          const { type, confidence, signals } = await classifyImage(candidate);
+          const resolvedType = type === 'unknown' ? 'interior' : type; // Google Places = real venue photos, tag as interior if uncertain
+
+          const maxForType = resolvedType === 'action' ? MAX_ACTION_PHOTOS : resolvedType === 'interior' ? MAX_INTERIOR_PHOTOS : 1;
+          const currentCount = photosByType[resolvedType]?.length || 0;
+          if (currentCount >= maxForType) continue;
+
+          const dl = await downloadImage(photoUrl);
+          if (!dl) continue;
+          const index = savedPhotos.filter(p => p.type === resolvedType).length;
+          const localUrl = await compressAndSave(dl.buffer, target.id, target.state || 'US', `${resolvedType}_gp_${index}`);
+          if (!localUrl) continue;
+
+          const saved: SavedPhoto = { url: localUrl, type: resolvedType, source: 'google_places', confidence, signals };
+          savedPhotos.push(saved);
+          photosByType[resolvedType] = [...(photosByType[resolvedType] || []), saved];
+          if (resolvedType !== 'action' && resolvedType !== 'interior') coverage[resolvedType as keyof PhotoCoverage] = true;
+          if (resolvedType === 'interior' && photosByType.interior.length >= 1) coverage.interior = true;
+          if (resolvedType === 'action' && photosByType.action.length >= 1) coverage.action = true;
+          log('INFO', `  ✅ Google Places → ${resolvedType}`);
         }
-        logToTower('INFO', `  🗺️ Added ${Math.min(candidates.google_refs.length, 5)} Google Places photo candidates`);
       }
     }
 
-    logToTower('INFO', `  🔎 Total raw candidates: ${allCandidates.length}. Sending to AI...`);
-
-    // ── Step 4: Programmatic Selection (Heuristic-First) ──────────────────────
-    logToTower('INFO', `  🤖 Estimating image quality for ${allCandidates.length} candidates via HTTP Content-Length...`);
-    const selectedUrls = await estimateImageQuality(allCandidates);
-    logToTower('INFO', `  🤖 Selected ${selectedUrls.length} high-resolution photos based on file size heuristics.`);
-
-    // ── Step 5: Download AI-selected photos ───────────────────────────────────
-    const newUrls: string[] = [];
-    for (let i = 0; i < selectedUrls.length && (existingPhotos.length + newUrls.length) < MAX_PHOTOS; i++) {
-      const url = selectedUrls[i];
-      const dl = await downloadImage(url);
-      if (!dl) { logToTower('INFO', `   ⚠️ Skip (download fail): ${url.slice(0,60)}`); continue; }
-      const localUrl = saveToDisk(dl.buffer, target.id, target.state||'US', existingPhotos.length + newUrls.length, 'photo', dl.mimeType);
-      if (localUrl) {
-        newUrls.push(localUrl);
-        logToTower('INFO', `   ✅ Saved: ${localUrl} (${(dl.buffer.length/1024).toFixed(1)}KB)`);
+    // ── PASS 3: Instagram grid (action fallback) ────────────────────────────────
+    const needsAction = !coverage.action || photosByType.action.length < MAX_ACTION_PHOTOS;
+    const instagramUrl = target.instagram_url || candidates.instagram_url;
+    if (needsAction && instagramUrl) {
+      log('INFO', '  📸 Pass 3: Instagram grid (action fallback)...');
+      const igCandidates = await scrapeInstagramGrid(instagramUrl);
+      for (const candidate of igCandidates) {
+        if (photosByType.action.length >= MAX_ACTION_PHOTOS) break;
+        const dl = await downloadImage(candidate.url);
+        if (!dl) continue;
+        const index = photosByType.action.length;
+        const localUrl = await compressAndSave(dl.buffer, target.id, target.state || 'US', `action_ig_${index}`);
+        if (!localUrl) continue;
+        const saved: SavedPhoto = { url: localUrl, type: 'action', source: 'instagram', confidence: 0.80, signals: ['source:instagram-grid'] };
+        savedPhotos.push(saved);
+        photosByType.action.push(saved);
+        coverage.action = true;
+        log('INFO', `  ✅ Instagram → action`);
       }
     }
 
-    // ── Step 6: Write to DB ───────────────────────────────────────────────────
-    const finalPhotos = [...new Set([...existingPhotos, ...newUrls])];
-    const updates: any = {
+    // ── PASS 4: Yelp tab-specific (last resort) ────────────────────────────────
+    const yelpUrl = target.yelp_url || candidates.yelp_url;
+    if (yelpUrl) {
+      if (!coverage.interior || photosByType.interior.length < 1) {
+        log('INFO', '  ⭐ Pass 4: Yelp inside tab...');
+        const yelpInside = await scrapeYelpTab(yelpUrl, 'inside');
+        for (const c of yelpInside.slice(0, 2)) {
+          if (photosByType.interior.length >= MAX_INTERIOR_PHOTOS) break;
+          const dl = await downloadImage(c.url);
+          if (!dl) continue;
+          const idx = photosByType.interior.length;
+          const localUrl = await compressAndSave(dl.buffer, target.id, target.state || 'US', `interior_yelp_${idx}`);
+          if (!localUrl) continue;
+          const saved: SavedPhoto = { url: localUrl, type: 'interior', source: 'yelp_inside', confidence: 0.88, signals: ['source:yelp-inside-tab'] };
+          savedPhotos.push(saved); photosByType.interior.push(saved); coverage.interior = true;
+          log('INFO', `  ✅ Yelp inside → interior`);
+        }
+      }
+    }
+
+    // ── OVERFLOW PASS: collect remaining website candidates as 'unknown' for manual tagging ──
+    // After filling priority categories, save ALL remaining website images tagged as 'unknown'.
+    // These show in the dashboard TAG queue for manual classification.
+    if (allWebsiteCandidates.length > 0 && savedPhotos.length < MAX_PHOTOS_TOTAL) {
+      const savedUrls = new Set(savedPhotos.map(p => p.url));
+      const overflowCandidates = allWebsiteCandidates.filter(c => {
+        // Skip already-saved and stock photos
+        if (STOCK_PHOTO_DOMAINS.some(d => c.url.includes(d))) return false;
+        return !savedUrls.has(c.url);
+      });
+      log('INFO', `  📦 Overflow pass: up to ${Math.min(overflowCandidates.length, OVERFLOW_MAX)} of ${overflowCandidates.length} remaining candidates for manual tagging...`);
+      let overflowCount = 0;
+      for (const candidate of overflowCandidates) {
+        if (savedPhotos.length >= MAX_PHOTOS_TOTAL || overflowCount >= OVERFLOW_MAX) break;
+        const dl = await downloadImage(candidate.url);
+        if (!dl) continue;
+        const idx = photosByType.unknown.length;
+        const localUrl = await compressAndSave(dl.buffer, target.id, target.state || 'US', `overflow_${idx}`);
+        if (!localUrl) continue;
+        const saved: SavedPhoto = { url: localUrl, type: 'unknown', source: candidate.pageSource, confidence: 0.0, signals: [candidate.alt || candidate.filename].filter(Boolean).slice(0, 3) };
+        savedPhotos.push(saved);
+        photosByType.unknown.push(saved);
+        overflowCount++;
+      }
+      if (overflowCount > 0) log('INFO', `  📦 Overflow: +${overflowCount} unknown photos ready for manual tagging`);
+    }
+
+    // ── Write results ──────────────────────────────────────────────────────────
+    const finalCoverage: PhotoCoverage = {
+      logo: !!target.logo_url || coverage.logo,
+      exterior: photosByType.exterior.length > 0,
+      interior: photosByType.interior.length > 0,
+      floor: photosByType.floor.length > 0,
+      pro_shop: photosByType.pro_shop.length > 0,
+      action: photosByType.action.length > 0,
+    };
+
+    const finalPhotos = savedPhotos.filter(p => p.type !== 'logo');
+    updateLocalSpot(target.id, {
       photos: finalPhotos,
+      photo_coverage: finalCoverage,
       verification_status: 'MEDIA_READY',
       last_attempted_at: new Date().toISOString(),
-    };
-    if (savedLogoUrl) updates.logo_url = savedLogoUrl;
-    if (savedCoverUrl) updates.cover_photo_url = savedCoverUrl;
+    });
 
-    updateLocalSpot(target.id, updates);
-
-    if (finalPhotos.length > 0) {
-      logToTower('INFO', `✨ ${target.name} → MEDIA_READY (${finalPhotos.length} photos, logo:${!!savedLogoUrl}, cover:${!!savedCoverUrl})`);
-    } else {
-      logToTower('INFO', `⚠️ ${target.name} → MEDIA_READY (no photos obtainable — promoted anyway)`);
-    }
-
+    const covSummary = Object.entries(finalCoverage).filter(([, v]) => v).map(([k]) => k).join(', ') || 'none';
+    log('INFO', `✨ ${target.name} → MEDIA_READY | Coverage: [${covSummary}] | ${finalPhotos.length} photos`);
     reportPulse(LOOP_COOLDOWN_MS, 'IDLE', null);
     await sleep(LOOP_COOLDOWN_MS);
   }
 }
 
-process.on('unhandledRejection', (reason) => {
-  console.error('[Photographer] Unhandled Rejection:', reason);
-});
-
-process.on('uncaughtException', (error) => {
-  console.error('[Photographer] Uncaught Exception:', error);
-});
+process.on('unhandledRejection', (reason) => { console.error('[Photographer] Unhandled Rejection:', reason); });
+process.on('uncaughtException', (error) => { console.error('[Photographer] Uncaught Exception:', error); });
 
 runPhotographerLoop().catch(err => {
   console.error('[Photographer] Fatal error:', err);
