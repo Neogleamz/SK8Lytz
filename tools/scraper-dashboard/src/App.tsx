@@ -83,6 +83,16 @@ const getEmails = (emails: unknown): string[] => {
   return [];
 };
 
+export interface InboxNotification {
+  id: string;
+  title: string;
+  body: string;
+  timestamp: string;
+  read: boolean;
+  source: 'Watchdog' | 'Detective' | 'Indexer' | 'Photographer' | 'Publisher' | 'Resolver' | 'Scout' | 'System';
+  level: 'info' | 'warn' | 'error';
+}
+
 interface ModelMetadata {
   name: string;
   architecture: string;
@@ -280,6 +290,26 @@ function App() {
   
   const [currentAnalyzingSpot, setCurrentAnalyzingSpot] = useState<string>('');
 
+  // --- Notification Inbox States ---
+  const [notifications, setNotifications] = useState<InboxNotification[]>(() => {
+    try {
+      const saved = localStorage.getItem('@sk8_notifications');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [showInbox, setShowInbox] = useState<boolean>(false);
+  const [notificationFilter, setNotificationFilter] = useState<string>('ALL');
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('@sk8_notifications', JSON.stringify(notifications));
+    } catch (e) {
+      console.error('Failed to save notifications to localStorage:', e);
+    }
+  }, [notifications]);
+
 
 
 
@@ -377,11 +407,86 @@ function App() {
       }
 
       // Hook native HTML5 browser notifications for watchdog/crash events
-      if (enableBrowserNotificationsRef.current && 'Notification' in window && Notification.permission === 'granted') {
-        const msg = data.message || '';
-        const lowerMsg = msg.toLowerCase();
-        if (msg.includes('[Watchdog]') || lowerMsg.includes('missed heartbeat') || lowerMsg.includes('auto-healing') || lowerMsg.includes('auto-starting') || lowerMsg.includes('exited') || lowerMsg.includes('crashed')) {
-          new Notification('SK8 SPOTZ Watchdog Alert 🛡️', {
+      let shouldNotify = false;
+      let title = 'System Alert';
+      let source: 'Watchdog' | 'Detective' | 'Indexer' | 'Photographer' | 'Publisher' | 'Resolver' | 'Scout' | 'System' = 'System';
+      let level: 'info' | 'warn' | 'error' = 'info';
+
+      const msg = data.message || '';
+      const lowerMsg = msg.toLowerCase();
+
+      if (msg.includes('[Watchdog]') || lowerMsg.includes('missed heartbeat') || lowerMsg.includes('auto-healing') || lowerMsg.includes('auto-starting') || lowerMsg.includes('exited') || lowerMsg.includes('crashed')) {
+        shouldNotify = true;
+        title = 'Watchdog Alert';
+        source = 'Watchdog';
+        level = (lowerMsg.includes('crash') || lowerMsg.includes('exit') || lowerMsg.includes('missed')) ? 'error' : 'warn';
+      } else if (msg.includes('[Detective]') || lowerMsg.includes('detective') || msg.includes('[Indexer]')) {
+        if (lowerMsg.includes('crash') || lowerMsg.includes('fail') || lowerMsg.includes('restart') || lowerMsg.includes('error')) {
+          shouldNotify = true;
+          title = 'Detective Incident';
+          source = 'Detective';
+          level = 'error';
+        } else if (lowerMsg.includes('analyzing') || lowerMsg.includes('complete') || lowerMsg.includes('tesseract')) {
+          shouldNotify = true;
+          title = lowerMsg.includes('analyzing') ? 'Detective Active' : 'Detective Done';
+          source = 'Detective';
+          level = 'info';
+        }
+      } else if (msg.includes('[Photographer]') || lowerMsg.includes('photographer')) {
+        if (lowerMsg.includes('fail') || lowerMsg.includes('error') || lowerMsg.includes('retry')) {
+          shouldNotify = true;
+          title = 'Photographer Alert';
+          source = 'Photographer';
+          level = 'warn';
+        } else if (lowerMsg.includes('downloaded') || lowerMsg.includes('saved') || lowerMsg.includes('success')) {
+          shouldNotify = true;
+          title = 'Photo Enriched';
+          source = 'Photographer';
+          level = 'info';
+        }
+      } else if (msg.includes('[Publisher]') || lowerMsg.includes('publisher')) {
+        if (lowerMsg.includes('fail') || lowerMsg.includes('error')) {
+          shouldNotify = true;
+          title = 'Publisher Alert';
+          source = 'Publisher';
+          level = 'error';
+        } else if (lowerMsg.includes('published') || lowerMsg.includes('success')) {
+          shouldNotify = true;
+          title = 'Spot Published';
+          source = 'Publisher';
+          level = 'info';
+        }
+      } else if (msg.includes('[Resolver]') || lowerMsg.includes('resolver') || msg.includes('[Website Resolver]')) {
+        if (lowerMsg.includes('stall') || lowerMsg.includes('fail') || lowerMsg.includes('error')) {
+          shouldNotify = true;
+          title = 'Resolver Alert';
+          source = 'Resolver';
+          level = 'warn';
+        }
+      } else if (msg.includes('[Scout]') || lowerMsg.includes('scout')) {
+        if (lowerMsg.includes('fail') || lowerMsg.includes('error')) {
+          shouldNotify = true;
+          title = 'Scout Incident';
+          source = 'Scout';
+          level = 'warn';
+        }
+      }
+
+      if (shouldNotify) {
+        const newNotif: InboxNotification = {
+          id: Math.random().toString(36).substring(2, 9),
+          title,
+          body: msg,
+          timestamp: new Date().toLocaleTimeString(),
+          read: false,
+          source,
+          level
+        };
+        setNotifications(prev => [newNotif, ...prev].slice(0, 100));
+
+        // Trigger native HTML5 browser notification strictly for critical/warning level events when enabled
+        if (enableBrowserNotificationsRef.current && 'Notification' in window && Notification.permission === 'granted' && level !== 'info') {
+          new Notification(`SK8 SPOTZ: ${title} 🛡️`, {
             body: msg,
             icon: '/favicon.ico'
           });
@@ -407,6 +512,19 @@ function App() {
   useEffect(() => { stateOverrideRef.current = stateOverride; }, [stateOverride]);
   // Keep enableBrowserNotificationsRef in sync
   useEffect(() => { enableBrowserNotificationsRef.current = enableBrowserNotifications; }, [enableBrowserNotifications]);
+
+  // Click outside to close notification dropdown
+  useEffect(() => {
+    if (!showInbox) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.sk8-bell-container')) {
+        setShowInbox(false);
+      }
+    };
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
+  }, [showInbox]);
 
   const requestNotificationPermission = async () => {
     if ('Notification' in window) {
@@ -1115,6 +1233,33 @@ function App() {
       { id: 'Phase 6', label: 'Publish', color: '#00d4ff' }
     ];
 
+    const unreadCount = notifications.filter(n => !n.read).length;
+
+    // Filter notifications
+    const filteredNotifications = notifications.filter(n => {
+      if (notificationFilter === 'ALL') return true;
+      if (notificationFilter === 'Sync') return n.source === 'Publisher';
+      if (notificationFilter === 'Photo') return n.source === 'Photographer';
+      return n.source === notificationFilter;
+    });
+
+    const markAllRead = () => {
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    };
+
+    const clearAllNotifications = () => {
+      setNotifications([]);
+    };
+
+    const deleteNotification = (id: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    };
+
+    const toggleNotificationRead = (id: string) => {
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: !n.read } : n));
+    };
+
     return (
       <>
       <style dangerouslySetInnerHTML={{__html: `
@@ -1128,91 +1273,416 @@ function App() {
           50% { opacity: 1.0; transform: scale(1.15); box-shadow: 0 0 16px var(--breath-color); }
           100% { opacity: 0.3; transform: scale(0.9); box-shadow: 0 0 2px var(--breath-color); }
         }
+        @keyframes pulse-bell-breath {
+          0% { filter: drop-shadow(0 0 2px rgba(199, 125, 255, 0.4)); transform: scale(1); }
+          50% { filter: drop-shadow(0 0 8px rgba(199, 125, 255, 0.8)); transform: scale(1.08); }
+          100% { filter: drop-shadow(0 0 2px rgba(199, 125, 255, 0.4)); transform: scale(1); }
+        }
         .pulse-node-active {
           animation: pulse-breath 2.5s infinite ease-in-out;
         }
         .pulse-node-processing {
           animation: pulse-flash 0.4s infinite ease-in-out;
         }
+        .pulse-bell-active {
+          animation: pulse-bell-breath 2s infinite ease-in-out;
+        }
       `}} />
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px',
-        background: 'rgba(255, 255, 255, 0.02)',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
-        padding: '3px 10px',
-        borderRadius: '20px',
-        marginLeft: '12px'
-      }}>
-        {phases.map((p, idx) => {
-          const info = getPhaseNodeState(p.id);
-          let bg = 'rgba(255, 255, 255, 0.12)';
-          let shadow = '';
-          let animClass = '';
-          let border = '1px solid rgba(255, 255, 255, 0.05)';
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          background: 'rgba(255, 255, 255, 0.02)',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+          padding: '3px 10px',
+          borderRadius: '20px',
+          marginLeft: '12px'
+        }}>
+          {phases.map((p, idx) => {
+            const info = getPhaseNodeState(p.id);
+            let bg = 'rgba(255, 255, 255, 0.12)';
+            let shadow = '';
+            let animClass = '';
+            let border = '1px solid rgba(255, 255, 255, 0.05)';
 
-          if (info.state === 'ACTIVE') {
-            bg = p.color;
-            animClass = 'pulse-node-active';
-          } else if (info.state === 'PROCESSING') {
-            bg = p.color;
-            animClass = 'pulse-node-processing';
-          } else if (info.state === 'MISSED_HEARTBEAT') {
-            bg = '#ffb300';
-            shadow = '0 0 8px #ffb300';
-          } else if (info.state === 'OFFLINE') {
-            bg = 'rgba(255,255,255,0.06)';
-            border = '1px solid rgba(255, 255, 255, 0.15)';
-          }
+            if (info.state === 'ACTIVE') {
+              bg = p.color;
+              animClass = 'pulse-node-active';
+            } else if (info.state === 'PROCESSING') {
+              bg = p.color;
+              animClass = 'pulse-node-processing';
+            } else if (info.state === 'MISSED_HEARTBEAT') {
+              bg = '#ffb300';
+              shadow = '0 0 8px #ffb300';
+            } else if (info.state === 'OFFLINE') {
+              bg = 'rgba(255,255,255,0.06)';
+              border = '1px solid rgba(255, 255, 255, 0.15)';
+            }
 
-          return (
-            <div key={p.id} style={{ display: 'flex', alignItems: 'center' }}>
-              {idx > 0 && (
-                <span style={{
-                  fontSize: '0.5rem',
-                  color: 'rgba(255,255,255,0.15)',
-                  margin: '0 4px',
-                  userSelect: 'none'
-                }}>
-                  ►
-                </span>
-              )}
-              <div 
-                className={animClass}
-                title={`${p.label.toUpperCase()}: ${info.label}`}
-                style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor: bg,
-                  boxShadow: shadow,
-                  border,
-                  cursor: 'help',
-                  transition: 'all 0.3s ease',
-                  ['--breath-color' as any]: p.color
-                }} 
-              />
+            return (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center' }}>
+                {idx > 0 && (
+                  <span style={{
+                    fontSize: '0.5rem',
+                    color: 'rgba(255,255,255,0.15)',
+                    margin: '0 4px',
+                    userSelect: 'none'
+                  }}>
+                    ►
+                  </span>
+                )}
+                <div 
+                  className={animClass}
+                  title={`${p.label.toUpperCase()}: ${info.label}`}
+                  style={{
+                    width: '8px',
+                    height: '8px',
+                    borderRadius: '50%',
+                    backgroundColor: bg,
+                    boxShadow: shadow,
+                    border,
+                    cursor: 'help',
+                    transition: 'all 0.3s ease',
+                    ['--breath-color' as any]: p.color
+                  }} 
+                />
+              </div>
+            );
+          })}
+          {watchdogEnabled && (
+            <span style={{
+              fontSize: '0.48rem',
+              fontWeight: 900,
+              color: '#ffb300',
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              marginLeft: '8px',
+              borderLeft: '1px solid rgba(255,255,255,0.1)',
+              paddingLeft: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '3px'
+            }}>
+              <span style={{ fontSize: '0.55rem' }}>🛡️</span> WD_ON
+            </span>
+          )}
+        </div>
+
+        {/* 🔔 Glowing Bell with Unread Badge */}
+        <div className="sk8-bell-container" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <button
+            onClick={() => setShowInbox(!showInbox)}
+            className={unreadCount > 0 ? 'pulse-bell-active' : ''}
+            style={{
+              background: showInbox ? 'rgba(199, 125, 255, 0.15)' : 'rgba(255, 255, 255, 0.02)',
+              border: `1px solid ${showInbox ? 'rgba(199, 125, 255, 0.4)' : 'rgba(255, 255, 255, 0.08)'}`,
+              color: unreadCount > 0 ? '#d8b4fe' : 'rgba(255, 255, 255, 0.4)',
+              width: '28px',
+              height: '28px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              outline: 'none',
+              padding: 0,
+              fontSize: '0.85rem',
+              transition: 'all 0.2s ease',
+              boxShadow: unreadCount > 0 ? '0 0 10px rgba(199, 125, 255, 0.2)' : 'none',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(199, 125, 255, 0.1)';
+              e.currentTarget.style.borderColor = 'rgba(199, 125, 255, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              if (!showInbox) {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+              }
+            }}
+            title="System Alert Inbox"
+          >
+            🔔
+          </button>
+          
+          {unreadCount > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: '-4px',
+              right: '-4px',
+              background: 'linear-gradient(135deg, #ff3b30, #ff007f)',
+              color: '#fff',
+              fontSize: '0.48rem',
+              fontWeight: 900,
+              minWidth: '14px',
+              height: '14px',
+              borderRadius: '7px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '0 3px',
+              border: '1.5px solid #08080e',
+              boxShadow: '0 0 6px #ff007f',
+              pointerEvents: 'none',
+            }}>
+              {unreadCount > 9 ? '9+' : unreadCount}
             </div>
-          );
-        })}
-        {watchdogEnabled && (
-          <span style={{
-            fontSize: '0.48rem',
-            fontWeight: 900,
-            color: '#ffb300',
-            textTransform: 'uppercase',
-            letterSpacing: '0.08em',
-            marginLeft: '8px',
-            borderLeft: '1px solid rgba(255,255,255,0.1)',
-            paddingLeft: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '3px'
-          }}>
-            <span style={{ fontSize: '0.55rem' }}>🛡️</span> WD_ON
-          </span>
-        )}
+          )}
+
+          {/* 📬 Glassmorphic Dropdown Popover */}
+          {showInbox && (
+            <div style={{
+              position: 'absolute',
+              top: 'calc(100% + 8px)',
+              right: 0,
+              width: '360px',
+              background: 'rgba(10, 10, 15, 0.94)',
+              backdropFilter: 'blur(25px)',
+              border: '1px solid rgba(199, 125, 255, 0.25)',
+              borderRadius: '12px',
+              boxShadow: '0 20px 45px rgba(0,0,0,0.85), inset 0 0 15px rgba(199, 125, 255, 0.04)',
+              display: 'flex',
+              flexDirection: 'column',
+              zIndex: 9999,
+              overflow: 'hidden',
+              fontFamily: "'Outfit', sans-serif"
+            }}>
+              {/* Header */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '12px 16px',
+                borderBottom: '1px solid rgba(255,255,255,0.06)',
+                background: 'rgba(255, 255, 255, 0.02)'
+              }}>
+                <span style={{
+                  fontSize: '0.62rem',
+                  fontWeight: 900,
+                  color: '#d8b4fe',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.12em'
+                }}>
+                  📡 Alert Inbox ({unreadCount} unread)
+                </span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    onClick={markAllRead}
+                    disabled={unreadCount === 0}
+                    style={{ background: 'none', border: 'none', color: unreadCount > 0 ? '#00ffaa' : 'rgba(255,255,255,0.2)', fontSize: '0.52rem', fontWeight: 800, cursor: unreadCount > 0 ? 'pointer' : 'not-allowed', textTransform: 'uppercase', padding: 0 }}
+                  >
+                    ✓ Read All
+                  </button>
+                  <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.6rem' }}>|</span>
+                  <button 
+                    onClick={clearAllNotifications}
+                    disabled={notifications.length === 0}
+                    style={{ background: 'none', border: 'none', color: notifications.length > 0 ? '#ff3b30' : 'rgba(255,255,255,0.2)', fontSize: '0.52rem', fontWeight: 800, cursor: notifications.length > 0 ? 'pointer' : 'not-allowed', textTransform: 'uppercase', padding: 0 }}
+                  >
+                    ✕ Clear All
+                  </button>
+                </div>
+              </div>
+
+              {/* Source Filters */}
+              <div style={{
+                display: 'flex',
+                gap: '4px',
+                padding: '6px 12px',
+                background: 'rgba(0,0,0,0.2)',
+                borderBottom: '1px solid rgba(255,255,255,0.03)',
+                flexWrap: 'wrap'
+              }}>
+                {['ALL', 'Watchdog', 'Detective', 'Photo', 'Sync', 'Resolver'].map(f => {
+                  const isActive = notificationFilter === f;
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => setNotificationFilter(f)}
+                      style={{
+                        fontSize: '0.48rem',
+                        fontWeight: 900,
+                        padding: '2px 6px',
+                        borderRadius: '4px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        background: isActive ? '#c77dff' : 'rgba(255,255,255,0.04)',
+                        color: isActive ? '#000' : 'rgba(255,255,255,0.4)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.02em',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {f}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Scrollable list */}
+              <div style={{
+                maxHeight: '280px',
+                overflowY: 'auto',
+                padding: '8px'
+              }}>
+                {filteredNotifications.length === 0 ? (
+                  <div style={{
+                    padding: '24px 16px',
+                    textAlign: 'center',
+                    color: 'rgba(255,255,255,0.3)',
+                    fontSize: '0.62rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.05em'
+                  }}>
+                    🛰️ NO ALERTS DEPLOYED IN THIS VECTOR
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {filteredNotifications.map(item => {
+                      let borderLeftColor = 'rgba(255,255,255,0.1)';
+                      if (item.level === 'error') borderLeftColor = '#ff3b30';
+                      else if (item.level === 'warn') borderLeftColor = '#ffb300';
+                      else if (item.level === 'info') borderLeftColor = '#00ffaa';
+
+                      let badgeBorder = '1px solid rgba(255,255,255,0.1)';
+                      let badgeColor = 'rgba(255,255,255,0.4)';
+                      if (item.source === 'Watchdog') { badgeBorder = '1px solid rgba(255,179,0,0.3)'; badgeColor = '#ffb300'; }
+                      else if (item.source === 'Detective') { badgeBorder = '1px solid rgba(255,90,0,0.3)'; badgeColor = '#ff6a00'; }
+                      else if (item.source === 'Photographer') { badgeBorder = '1px solid rgba(233,30,99,0.3)'; badgeColor = '#e91e63'; }
+                      else if (item.source === 'Publisher') { badgeBorder = '1px solid rgba(0,212,255,0.3)'; badgeColor = '#00d4ff'; }
+                      else if (item.source === 'Resolver') { badgeBorder = '1px solid rgba(192,132,252,0.3)'; badgeColor = '#c084fc'; }
+                      else if (item.source === 'Scout') { badgeBorder = '1px solid rgba(57,255,20,0.3)'; badgeColor = '#39ff14'; }
+
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => toggleNotificationRead(item.id)}
+                          style={{
+                            background: item.read ? 'rgba(255, 255, 255, 0.01)' : 'rgba(199, 125, 255, 0.04)',
+                            border: `1px solid ${item.read ? 'rgba(255,255,255,0.03)' : 'rgba(199, 125, 255, 0.15)'}`,
+                            borderLeft: `3px solid ${borderLeftColor}`,
+                            borderRadius: '6px',
+                            padding: '8px 10px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '4px',
+                            position: 'relative',
+                            transition: 'all 0.15s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = item.read ? 'rgba(255, 255, 255, 0.03)' : 'rgba(199, 125, 255, 0.07)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = item.read ? 'rgba(255, 255, 255, 0.01)' : 'rgba(199, 125, 255, 0.04)';
+                          }}
+                        >
+                          {/* Alert Item Header */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {!item.read && (
+                                <div style={{
+                                  width: '5px',
+                                  height: '5px',
+                                  borderRadius: '50%',
+                                  background: '#00ffaa',
+                                  boxShadow: '0 0 5px #00ffaa'
+                                }} />
+                              )}
+                              <span style={{ fontSize: '0.58rem', fontWeight: 800, color: item.read ? 'rgba(255,255,255,0.7)' : '#fff' }}>
+                                {item.title}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono, monospace' }}>
+                                {item.timestamp}
+                              </span>
+                              <button
+                                onClick={(e) => deleteNotification(item.id, e)}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: 'rgba(255,255,255,0.25)',
+                                  fontSize: '0.62rem',
+                                  cursor: 'pointer',
+                                  padding: '0 2px',
+                                  lineHeight: 1
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.color = '#ff3b30'}
+                                onMouseLeave={(e) => e.currentTarget.style.color = 'rgba(255,255,255,0.25)'}
+                                title="Dismiss Alert"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Alert Item Message */}
+                          <div style={{
+                            fontSize: '0.55rem',
+                            color: item.read ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.8)',
+                            lineHeight: 1.25,
+                            wordBreak: 'break-word',
+                            fontFamily: 'JetBrains Mono, monospace'
+                          }}>
+                            {item.body}
+                          </div>
+
+                          {/* Alert Source Badge */}
+                          <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '2px' }}>
+                            <span style={{
+                              fontSize: '0.45rem',
+                              fontWeight: 900,
+                              textTransform: 'uppercase',
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              border: badgeBorder,
+                              color: badgeColor,
+                              letterSpacing: '0.02em'
+                            }}>
+                              {item.source}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer with Integrated Notification Switch */}
+              <div style={{
+                padding: '10px 14px',
+                borderTop: '1px solid rgba(255,255,255,0.05)',
+                background: 'rgba(0, 0, 0, 0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}>
+                <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  <span>🛡️</span> Browser Popup Alerts
+                </span>
+                <label className="switch mini" style={{ margin: 0 }}>
+                  <input 
+                    type="checkbox" 
+                    checked={enableBrowserNotifications} 
+                    onChange={async (e) => {
+                      const val = e.target.checked;
+                      if (val) {
+                        const granted = await requestNotificationPermission();
+                        updateGlobalStrategy('enable_browser_notifications', granted);
+                      } else {
+                        updateGlobalStrategy('enable_browser_notifications', false);
+                      }
+                    }} 
+                  />
+                  <span className="slider round" />
+                </label>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
       </>
     );
