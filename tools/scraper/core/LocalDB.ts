@@ -891,6 +891,7 @@ export interface PipelineStats {
   total: number;
   seeded: number;
   deep_crawled_count: number;
+  deep_crawled_ever: number;
   media_ready: number;
   published: number;
   has_website: number;
@@ -901,6 +902,10 @@ export interface PipelineStats {
   has_photos: number;
   pending_website: number;
   stalled_website: number;
+  rejected: number;
+  on_hold: number;
+  stalled: number;
+  low_quality: number;
 }
 
 // --- PIPELINE STATS METHODS ---
@@ -917,7 +922,8 @@ export const getPipelineStats = (states: string[] = []): PipelineStats => {
     SELECT 
       COUNT(*) as total,
       SUM(CASE WHEN verification_status = 'SEEDED' THEN 1 ELSE 0 END) as seeded,
-      SUM(CASE WHEN is_deep_crawled = 1 THEN 1 ELSE 0 END) as deep_crawled_count,
+      SUM(CASE WHEN verification_status = 'DEEP_CRAWLED' THEN 1 ELSE 0 END) as deep_crawled_count,
+      SUM(CASE WHEN is_deep_crawled = 1 THEN 1 ELSE 0 END) as deep_crawled_ever,
       SUM(CASE WHEN verification_status = 'MEDIA_READY' THEN 1 ELSE 0 END) as media_ready,
       SUM(CASE WHEN is_published = 1 THEN 1 ELSE 0 END) as published,
       SUM(CASE WHEN website IS NOT NULL AND website != '' THEN 1 ELSE 0 END) as has_website,
@@ -927,7 +933,11 @@ export const getPipelineStats = (states: string[] = []): PipelineStats => {
       SUM(CASE WHEN verification_status = 'MEDIA_READY' AND is_published = 0 THEN 1 ELSE 0 END) as publisher_queue,
       SUM(CASE WHEN photos IS NOT NULL AND photos != '[]' AND photos != 'null' THEN 1 ELSE 0 END) as has_photos,
       SUM(CASE WHEN verification_status = 'PENDING_WEBSITE' THEN 1 ELSE 0 END) as pending_website,
-      SUM(CASE WHEN verification_status = 'WEBSITE_STALLED' THEN 1 ELSE 0 END) as stalled_website
+      SUM(CASE WHEN verification_status = 'WEBSITE_STALLED' THEN 1 ELSE 0 END) as stalled_website,
+      SUM(CASE WHEN verification_status = 'REJECTED' THEN 1 ELSE 0 END) as rejected,
+      SUM(CASE WHEN verification_status = 'ON_HOLD' THEN 1 ELSE 0 END) as on_hold,
+      SUM(CASE WHEN verification_status = 'STALLED' THEN 1 ELSE 0 END) as stalled,
+      SUM(CASE WHEN verification_status = 'LOW_QUALITY' THEN 1 ELSE 0 END) as low_quality
     FROM local_spots
     WHERE ${whereClause}
   `;

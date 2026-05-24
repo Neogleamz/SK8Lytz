@@ -102,6 +102,7 @@ export interface PipelineStats {
         has_website?: number;
         detective_queue?: number;
         deep_crawled_count?: number;
+        deep_crawled_ever?: number;
         has_candidates?: number;
         photographer_queue?: number;
         has_photos?: number;
@@ -110,6 +111,10 @@ export interface PipelineStats {
         published?: number;
         pending_website?: number;
         stalled_website?: number;
+        rejected?: number;
+        on_hold?: number;
+        stalled?: number;
+        low_quality?: number;
         [key: string]: unknown;
     };
     stats?: unknown[];

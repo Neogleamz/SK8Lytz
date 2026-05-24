@@ -1710,7 +1710,7 @@ function App() {
         </div>
         {!isCollapsed('pulse') && (
           <>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1px', background: 'rgba(255,255,255,0.04)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1px', background: 'rgba(255,255,255,0.04)' }}>
               {/* ① SCOUT — IN: PENDING  OUT: SEEDED */}
               <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
                 <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.scout, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.scout}33`, paddingBottom: '4px' }}>① Scout  IN:PENDING → OUT:SEEDED</div>
@@ -1718,7 +1718,8 @@ function App() {
                   {row('Total in DB', s.total ?? 0, '#fff')}
                   {row('SEEDED (awaiting Det.)', s.seeded ?? 0, C.scout)}
                   {row('Has Website', s.has_website ?? 0, 'rgba(255,255,255,0.6)')}
-                  {row('No Website', (s.total || 0) - (s.has_website || 0), 'rgba(255,255,255,0.25)')}
+                  {row('PENDING_WEBSITE', s.pending_website ?? 0, (s.pending_website ?? 0) > 0 ? '#ffb300' : 'rgba(255,255,255,0.25)')}
+                  {row('WEBSITE_STALLED', s.stalled_website ?? 0, (s.stalled_website ?? 0) > 0 ? '#ff3366' : 'rgba(255,255,255,0.25)')}
                 </div>
               </div>
               {/* ② DETECTIVE — IN: SEEDED  OUT: DEEP_CRAWLED */}
@@ -1726,9 +1727,9 @@ function App() {
                 <div style={{ fontSize: '0.57rem', fontWeight: 900, color: C.detective, textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: `1px solid ${C.detective}33`, paddingBottom: '4px' }}>② Detective  IN:SEEDED → OUT:DEEP_CRAWLED</div>
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
                   {row('AI Queue (SEEDED+site)', s.detective_queue ?? 0, (s.detective_queue ?? 0) > 0 ? '#ffb300' : 'rgba(255,255,255,0.3)')}
-                  {row('AI Done (DEEP_CRAWLED)', s.deep_crawled_count ?? 0, C.detective)}
-                  {row('Has Photo Candidates', s.has_candidates ?? 0, 'rgba(255,255,255,0.6)')}
-                  {row('No Candidates', (s.deep_crawled_count || 0) - (s.has_candidates || 0), 'rgba(255,255,255,0.25)')}
+                  {row('DEEP_CRAWLED (in queue)', s.deep_crawled_count ?? 0, C.detective)}
+                  {row('Ever Crawled (all-time)', s.deep_crawled_ever ?? 0, 'rgba(255,255,255,0.5)')}
+                  {row('LOW_QUALITY (drain)', s.low_quality ?? 0, (s.low_quality ?? 0) > 0 ? '#ff3366' : 'rgba(255,255,255,0.25)')}
                 </div>
               </div>
               {/* ③ PHOTOGRAPHER — IN: DEEP_CRAWLED  OUT: MEDIA_READY */}
@@ -1747,8 +1748,19 @@ function App() {
                 <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
                   {row('Pub Queue (MEDIA_READY)', s.publisher_queue ?? 0, (s.publisher_queue ?? 0) > 0 ? '#ffb300' : C.pub)}
                   {row('Live on App', s.published ?? 0, '#4ade80')}
-                  {row('Pipeline %', `${(s.total ?? 0) > 0 ? Math.round(((s.deep_crawled_count ?? 0) / (s.total ?? 0)) * 100) : 0}%`, 'rgba(255,255,255,0.5)')}
+                  {row('Pipeline %', `${(s.total ?? 0) > 0 ? Math.round(((s.deep_crawled_ever ?? 0) / (s.total ?? 0)) * 100) : 0}%`, 'rgba(255,255,255,0.5)')}
                   {row('Published %', `${(s.total ?? 0) > 0 ? Math.round(((s.published ?? 0) / (s.total ?? 0)) * 100) : 0}%`, '#4ade80')}
+                </div>
+              </div>
+              {/* ⑤ PIPELINE HEALTH — Terminal & Parked Statuses */}
+              <div style={{ background: 'rgba(12,12,20,0.95)', padding: '8px 12px' }}>
+                <div style={{ fontSize: '0.57rem', fontWeight: 900, color: '#a78bfa', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: '5px', borderBottom: '1px solid rgba(167,139,250,0.2)', paddingBottom: '4px' }}>⑤ Health  DRAINS & HOLDS</div>
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: '3px' }}>
+                  {row('REJECTED', s.rejected ?? 0, (s.rejected ?? 0) > 0 ? '#ff3366' : 'rgba(255,255,255,0.25)')}
+                  {row('ON_HOLD', s.on_hold ?? 0, (s.on_hold ?? 0) > 0 ? '#ffb300' : 'rgba(255,255,255,0.25)')}
+                  {row('STALLED', s.stalled ?? 0, (s.stalled ?? 0) > 0 ? '#ff6a00' : 'rgba(255,255,255,0.25)')}
+                  {row('LOW_QUALITY', s.low_quality ?? 0, (s.low_quality ?? 0) > 0 ? '#ff3366' : 'rgba(255,255,255,0.25)')}
+                  {row('Active Pipeline', (s.total ?? 0) - (s.rejected ?? 0) - (s.on_hold ?? 0), '#4ade80')}
                 </div>
               </div>
             </div>
