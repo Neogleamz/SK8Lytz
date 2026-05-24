@@ -1722,9 +1722,11 @@ app.post('/api/bulk-reset-to-seeded', (req, res) => {
           END
         END, 
         retry_count = 0, 
-        last_attempted_at = NULL 
+        last_attempted_at = NULL,
+        is_deep_crawled = CASE WHEN ? IN ('SEEDED', 'PENDING_WEBSITE') THEN 0 ELSE is_deep_crawled END,
+        is_published = CASE WHEN ? IN ('SEEDED', 'PENDING_WEBSITE', 'DEEP_CRAWLED') THEN 0 ELSE is_published END
       WHERE ${where}
-    `).run(reset_to, reset_to, reset_to, ...params);
+    `).run(reset_to, reset_to, reset_to, reset_to, reset_to, ...params);
 
     res.json({
       success: true,
