@@ -835,6 +835,12 @@ export async function executeDetective(
         try {
           const ledger = HeuristicsEngine.load();
           if (ledger.early_termination_enabled && url === spotContext.website && priorityText.trim().length >= 50) {
+            // Pre-gate: only burn an LLM call if homepage text actually contains time + price signals
+            const hasTimeSignal = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|am|pm|\d{1,2}:\d{2})\b/i.test(priorityText);
+            const hasPriceSignal = /(\$\d|admission|pricing|rates|fee|\bfree\b)/i.test(priorityText);
+            if (!hasTimeSignal || !hasPriceSignal) {
+              onProgress(`[HEURISTIC] ⏭️ Skipping Early-Check: homepage lacks time/price regex signals (time:${hasTimeSignal}, price:${hasPriceSignal}).`);
+            } else {
             onProgress(`[HEURISTIC] 🧬 Checking early termination conditions on homepage...`);
             const testPass1 = await callLMStudio(
               buildSystem(REQUIRED_SCHEMA),
@@ -863,6 +869,7 @@ export async function executeDetective(
             } else {
               onProgress(`[HEURISTIC] ❌ Early termination conditions not met (hours: ${!!hasHours}, pricing: ${!!hasPricing}). Continuing crawl.`);
             }
+            } // close regex pre-gate else
           }
         } catch (e: any) {
           onProgress(`[HEURISTIC] ⚠️ Error during early termination check: ${e.message}`);
@@ -882,9 +889,8 @@ export async function executeDetective(
         }
       }
 
-      // Fix #1: Assign website text directly (no external noise yet)
+      // Fix #1: Assign ops text for Pass 1. amenityText retains its accumulated about/facility text for Pass 2.
       coreText = priorityText;
-      amenityText = priorityText;
     } else {
       onProgress('[Detective] No website or Social-only. Will rely entirely on Phase 3 Enrichment.');
     }
