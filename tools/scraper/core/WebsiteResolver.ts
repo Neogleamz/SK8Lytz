@@ -203,7 +203,7 @@ export class WebsiteResolver {
 
     // 1. Name Match (Up to 0.40 weight)
     const spotNameClean = spotName.replace(/skate|rink|roller|skateland|center|arena/g, '').trim();
-    const cleanTokens = spotNameClean.split(/\s+/).filter(t => t.length > 2);
+    const cleanTokens = spotNameClean.split(/\s+/).filter((t: string) => t.length > 2);
     
     let matchesName = false;
     for (const token of cleanTokens) {
