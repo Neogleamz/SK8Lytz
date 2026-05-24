@@ -243,11 +243,24 @@ async function runIndexer() {
         streamTimeout = null;
       };
 
+      // Throttled keepalive pulse — fires at most once every 20s inside executeDetective.
+      // Without this the Watchdog kills us with SIGTERM during long Puppeteer+LLM runs (>60s silence).
+      let lastKeepalivePulse = Date.now();
+      const KEEPALIVE_INTERVAL_MS = 20_000;
+
+
       const result = await executeDetective(
         target,
         aiConfig,
         statusRes.isHeadless,
-        (msg: string) => console.log(`   ${msg}`),
+        (msg: string) => {
+          console.log(`   ${msg}`);
+          const now = Date.now();
+          if (now - lastKeepalivePulse >= KEEPALIVE_INTERVAL_MS) {
+            lastKeepalivePulse = now;
+            reportPulse(KEEPALIVE_INTERVAL_MS, undefined, target.name, target.website || null);
+          }
+        },
         (text: string) => {
           streamBuffer += text;
           if (!streamTimeout) {
