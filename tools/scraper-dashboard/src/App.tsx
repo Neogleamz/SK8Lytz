@@ -83,6 +83,126 @@ const getEmails = (emails: unknown): string[] => {
   return [];
 };
 
+interface ModelMetadata {
+  name: string;
+  architecture: string;
+  params: string;
+  quant: string;
+  vramEst: string;
+  contextEst: string;
+}
+
+function parseModelMetadata(modelId: string): ModelMetadata {
+  const lowercase = modelId.toLowerCase();
+  
+  // 1. Identify Architecture / Family
+  let architecture = 'Unknown';
+  if (lowercase.includes('qwen')) {
+    architecture = 'Qwen';
+  } else if (lowercase.includes('llama')) {
+    architecture = 'Llama';
+  } else if (lowercase.includes('mistral')) {
+    architecture = 'Mistral';
+  } else if (lowercase.includes('phi')) {
+    architecture = 'Phi';
+  } else if (lowercase.includes('gemma')) {
+    architecture = 'Gemma';
+  } else if (lowercase.includes('deepseek')) {
+    architecture = 'DeepSeek';
+  } else if (lowercase.includes('command-r')) {
+    architecture = 'Cohere';
+  }
+  
+  // 2. Identify Parameter Count
+  let params = 'Unknown';
+  const paramMatch = lowercase.match(/(\d+(?:\.\d+)?)[b]/);
+  if (paramMatch) {
+    params = `${paramMatch[1]}B`;
+  }
+  
+  // 3. Identify Quantization
+  let quant = 'FP16';
+  if (lowercase.includes('q4_k_m')) quant = 'Q4_K_M';
+  else if (lowercase.includes('q4_k_s')) quant = 'Q4_K_S';
+  else if (lowercase.includes('q5_k_m')) quant = 'Q5_K_M';
+  else if (lowercase.includes('q5_k_s')) quant = 'Q5_K_S';
+  else if (lowercase.includes('q8_0')) quant = 'Q8_0';
+  else if (lowercase.includes('q3_k_m')) quant = 'Q3_K_M';
+  else if (lowercase.includes('q2_k')) quant = 'Q2_K';
+  else if (lowercase.includes('q4_0')) quant = 'Q4_0';
+  else if (lowercase.includes('q4_1')) quant = 'Q4_1';
+  else if (lowercase.includes('q5_0')) quant = 'Q5_0';
+  else if (lowercase.includes('q5_1')) quant = 'Q5_1';
+  else if (lowercase.includes('q6_k')) quant = 'Q6_K';
+  else if (lowercase.includes('fp8') || lowercase.includes('e4m3') || lowercase.includes('e5m2')) quant = 'FP8';
+  else if (lowercase.includes('int8') || lowercase.includes('int-8')) quant = 'INT8';
+  else if (lowercase.includes('int4') || lowercase.includes('int-4')) quant = 'INT4';
+  
+  // 4. Estimate VRAM Footprint
+  let paramNum = parseFloat(params.replace('B', '')) || 7;
+  let bitsPerWeight = 16;
+  if (quant.startsWith('Q4')) bitsPerWeight = 4.5;
+  else if (quant.startsWith('Q5')) bitsPerWeight = 5.5;
+  else if (quant.startsWith('Q8')) bitsPerWeight = 8.5;
+  else if (quant.startsWith('Q3')) bitsPerWeight = 3.8;
+  else if (quant.startsWith('Q2')) bitsPerWeight = 2.8;
+  else if (quant.startsWith('Q6')) bitsPerWeight = 6.5;
+  else if (quant === 'FP8') bitsPerWeight = 8;
+  else if (quant === 'INT8') bitsPerWeight = 8;
+  else if (quant === 'INT4') bitsPerWeight = 4;
+  
+  const vramEstGB = (paramNum * bitsPerWeight) / 8 + 0.6;
+  const vramEst = `${vramEstGB.toFixed(1)} GB`;
+
+  // Estimate standard context window
+  let contextEst = '8K';
+  if (architecture === 'Qwen') {
+    contextEst = '32K';
+  } else if (architecture === 'Llama') {
+    contextEst = lowercase.includes('llama-3') ? '8K' : '4K';
+    if (lowercase.includes('128k') || lowercase.includes('llama-3.1') || lowercase.includes('llama-3.2')) {
+      contextEst = '128K';
+    }
+  } else if (architecture === 'Mistral') {
+    contextEst = '32K';
+  } else if (architecture === 'Phi') {
+    contextEst = lowercase.includes('phi-3') ? '128K' : '8K';
+  } else if (architecture === 'Gemma') {
+    contextEst = '8K';
+  } else if (architecture === 'DeepSeek') {
+    contextEst = '64K';
+  }
+
+  // 5. Clean up name
+  let name = modelId.split('/').pop() || modelId;
+  name = name
+    .replace(/\.gguf$/i, '')
+    .replace(/-gguf$/i, '')
+    .replace(/_gguf$/i, '')
+    .replace(new RegExp(`-${quant}`, 'i'), '')
+    .replace(new RegExp(`_${quant}`, 'i'), '')
+    .replace(/-instruct/gi, ' Instruct')
+    .replace(/-coder/gi, ' Coder')
+    .replace(/-/g, ' ');
+    
+  name = name
+    .replace(/qwen/gi, 'Qwen')
+    .replace(/llama/gi, 'Llama')
+    .replace(/mistral/gi, 'Mistral')
+    .replace(/phi/gi, 'Phi')
+    .replace(/gemma/gi, 'Gemma')
+    .replace(/deepseek/gi, 'DeepSeek');
+
+  return {
+    name: name.trim(),
+    architecture,
+    params,
+    quant,
+    vramEst,
+    contextEst
+  };
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState<'pipeline' | 'phase1' | 'phase2' | 'phase3' | 'phase4' | 'sniper' | 'heuristics' | 'graveyard'>('pipeline');
   const [seedProvider, setSeedProvider] = useState<'osm'|'google'|'website-resolver'>('google');
@@ -135,6 +255,18 @@ function App() {
   const [cooldownJitter, setCooldownJitter] = useState<number>(20);
   const [maxStrikes, setMaxStrikes] = useState<number>(3);
   const [autoResume, setAutoResume] = useState<boolean>(true);
+
+  // --- Watchdog & Notification States ---
+  const [watchdogEnabled, setWatchdogEnabled] = useState<boolean>(true);
+  const [watchdogHeartbeatTimeoutS, setWatchdogHeartbeatTimeoutS] = useState<number>(60);
+  const [watchdogPhases, setWatchdogPhases] = useState<Record<string, boolean>>({
+    'website-resolver': true,
+    'indexer': true,
+    'photographer': true,
+    'publisher': true
+  });
+  const [enableBrowserNotifications, setEnableBrowserNotifications] = useState<boolean>(false);
+  const enableBrowserNotificationsRef = useRef<boolean>(false);
 
   // --- AI Config States ---
   const [aiSystemPrompt, setAiSystemPrompt] = useState<string>('');
@@ -243,6 +375,19 @@ function App() {
           setCurrentAnalyzingSpot('');
         }, 8000);
       }
+
+      // Hook native HTML5 browser notifications for watchdog/crash events
+      if (enableBrowserNotificationsRef.current && 'Notification' in window && Notification.permission === 'granted') {
+        const msg = data.message || '';
+        const lowerMsg = msg.toLowerCase();
+        if (msg.includes('[Watchdog]') || lowerMsg.includes('missed heartbeat') || lowerMsg.includes('auto-healing') || lowerMsg.includes('auto-starting') || lowerMsg.includes('exited') || lowerMsg.includes('crashed')) {
+          new Notification('SK8 SPOTZ Watchdog Alert 🛡️', {
+            body: msg,
+            icon: '/favicon.ico'
+          });
+        }
+      }
+
       setLogs(prev => {
         const newLogs = [...prev, data];
         return newLogs.slice(-50); 
@@ -260,6 +405,27 @@ function App() {
   useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
   // Keep stateOverrideRef in sync so stale closures (setInterval) always read live value
   useEffect(() => { stateOverrideRef.current = stateOverride; }, [stateOverride]);
+  // Keep enableBrowserNotificationsRef in sync
+  useEffect(() => { enableBrowserNotificationsRef.current = enableBrowserNotifications; }, [enableBrowserNotifications]);
+
+  const requestNotificationPermission = async () => {
+    if ('Notification' in window) {
+      if (Notification.permission === 'default') {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          console.log('Notification permission granted.');
+          new Notification('SK8 SPOTZ Watchdog', {
+            body: 'System alerts enabled! 🛡️',
+            icon: '/favicon.ico'
+          });
+          return true;
+        }
+      } else if (Notification.permission === 'granted') {
+        return true;
+      }
+    }
+    return false;
+  };
 
   // Re-fetch queues immediately when active region priority changes
   useEffect(() => {
@@ -322,6 +488,17 @@ function App() {
             setAiSystemPrompt(config.ai_system_prompt || '');
             setAiExclusionKeywords(config.ai_exclusion_keywords || []);
             setAiTargetVectors(config.ai_target_vectors || []);
+
+            // Watchdog and Notification configuration
+            setWatchdogEnabled(config.watchdog_enabled ?? true);
+            setWatchdogHeartbeatTimeoutS(config.watchdog_heartbeat_timeout_s || 60);
+            setWatchdogPhases(config.watchdog_phases || {
+              'website-resolver': true,
+              'indexer': true,
+              'photographer': true,
+              'publisher': true
+            });
+            setEnableBrowserNotifications(config.enable_browser_notifications ?? false);
          }
       }
     } catch {
@@ -488,6 +665,10 @@ function App() {
      let newJitter = cooldownJitter;
      let newStrikes = maxStrikes;
      let newAutoResume = autoResume;
+     let newWatchdogEnabled = watchdogEnabled;
+     let newWatchdogHeartbeatTimeoutS = watchdogHeartbeatTimeoutS;
+     let newWatchdogPhases = { ...watchdogPhases };
+     let newEnableBrowserNotifications = enableBrowserNotifications;
 
      if (field === 'state_override') {
        if (value === 'ALL') {
@@ -532,6 +713,18 @@ function App() {
        setAiExclusionKeywords(value);
      } else if (field === 'ai_target_vectors') {
        setAiTargetVectors(value);
+     } else if (field === 'watchdog_enabled') {
+       newWatchdogEnabled = value;
+       setWatchdogEnabled(value);
+     } else if (field === 'watchdog_heartbeat_timeout_s') {
+       newWatchdogHeartbeatTimeoutS = value;
+       setWatchdogHeartbeatTimeoutS(value);
+     } else if (field === 'watchdog_phases') {
+       newWatchdogPhases = value;
+       setWatchdogPhases(value);
+     } else if (field === 'enable_browser_notifications') {
+       newEnableBrowserNotifications = value;
+       setEnableBrowserNotifications(value);
      }
 
      await fetch(`${API_BASE}/config`, {
@@ -549,7 +742,11 @@ function App() {
           randomize_viewport_enabled: field === 'randomize_viewport_enabled' ? value : randomizeViewport,
           ai_system_prompt: field === 'ai_system_prompt' ? value : aiSystemPrompt,
           ai_exclusion_keywords: field === 'ai_exclusion_keywords' ? value : aiExclusionKeywords,
-          ai_target_vectors: field === 'ai_target_vectors' ? value : aiTargetVectors
+          ai_target_vectors: field === 'ai_target_vectors' ? value : aiTargetVectors,
+          watchdog_enabled: newWatchdogEnabled,
+          watchdog_heartbeat_timeout_s: newWatchdogHeartbeatTimeoutS,
+          watchdog_phases: newWatchdogPhases,
+          enable_browser_notifications: newEnableBrowserNotifications
         })
      });
   };
@@ -869,7 +1066,157 @@ function App() {
     } catch (e) {}
   };
 
-  
+  const getPhaseNodeState = (phaseName: string) => {
+    const pulse = status?.pulseRegistry?.[phaseName];
+    const job = status?.activeJobRegistry?.[phaseName];
+    
+    // Check if the daemon is physically running (from status.activeDaemons)
+    const daemonKeys: Record<string, string> = {
+      'Phase 2': 'scraper-website-resolver',
+      'Phase 3': 'scraper-indexer',
+      'Phase 4': 'scraper-photographer',
+      'Phase 6': 'scraper-publisher'
+    };
+    
+    const daemonKey = daemonKeys[phaseName];
+    const isDaemonOnline = daemonKey ? status?.activeDaemons?.includes(daemonKey) : true;
+    
+    if (!pulse || !pulse.lastRunAt) {
+      return { state: 'OFFLINE', label: 'Idle / Off' };
+    }
+    
+    const now = Date.now();
+    const lastPulseTime = new Date(pulse.lastRunAt).getTime();
+    const secondsSince = (now - lastPulseTime) / 1000;
+    
+    // Heartbeat Missed
+    if (secondsSince > watchdogHeartbeatTimeoutS) {
+      return { 
+        state: isDaemonOnline ? 'MISSED_HEARTBEAT' : 'OFFLINE', 
+        label: isDaemonOnline ? `Missed Pulse (${Math.round(secondsSince)}s)` : 'Stopped' 
+      };
+    }
+    
+    // Processing / Rapid Flash
+    if (job?.active_job) {
+      return { state: 'PROCESSING', label: `Processing: ${job.active_job}` };
+    }
+    
+    // Active / Slowly Breathing
+    return { state: 'ACTIVE', label: `Active (Idle loop)` };
+  };
+
+  const renderHeartbeatMatrix = () => {
+    const phases = [
+      { id: 'Phase 1', label: 'Scout', color: '#39ff14' },
+      { id: 'Phase 2', label: 'Resolver', color: '#c084fc' },
+      { id: 'Phase 3', label: 'Detective', color: '#ff5a00' },
+      { id: 'Phase 4', label: 'Photo', color: '#e91e63' },
+      { id: 'Phase 6', label: 'Publish', color: '#00d4ff' }
+    ];
+
+    return (
+      <>
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes pulse-breath {
+          0% { opacity: 0.4; box-shadow: 0 0 4px var(--breath-color); }
+          50% { opacity: 1.0; box-shadow: 0 0 12px var(--breath-color); }
+          100% { opacity: 0.4; box-shadow: 0 0 4px var(--breath-color); }
+        }
+        @keyframes pulse-flash {
+          0% { opacity: 0.3; transform: scale(0.9); box-shadow: 0 0 2px var(--breath-color); }
+          50% { opacity: 1.0; transform: scale(1.15); box-shadow: 0 0 16px var(--breath-color); }
+          100% { opacity: 0.3; transform: scale(0.9); box-shadow: 0 0 2px var(--breath-color); }
+        }
+        .pulse-node-active {
+          animation: pulse-breath 2.5s infinite ease-in-out;
+        }
+        .pulse-node-processing {
+          animation: pulse-flash 0.4s infinite ease-in-out;
+        }
+      `}} />
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '4px',
+        background: 'rgba(255, 255, 255, 0.02)',
+        border: '1px solid rgba(255, 255, 255, 0.05)',
+        padding: '3px 10px',
+        borderRadius: '20px',
+        marginLeft: '12px'
+      }}>
+        {phases.map((p, idx) => {
+          const info = getPhaseNodeState(p.id);
+          let bg = 'rgba(255, 255, 255, 0.12)';
+          let shadow = '';
+          let animClass = '';
+          let border = '1px solid rgba(255, 255, 255, 0.05)';
+
+          if (info.state === 'ACTIVE') {
+            bg = p.color;
+            animClass = 'pulse-node-active';
+          } else if (info.state === 'PROCESSING') {
+            bg = p.color;
+            animClass = 'pulse-node-processing';
+          } else if (info.state === 'MISSED_HEARTBEAT') {
+            bg = '#ffb300';
+            shadow = '0 0 8px #ffb300';
+          } else if (info.state === 'OFFLINE') {
+            bg = 'rgba(255,255,255,0.06)';
+            border = '1px solid rgba(255, 255, 255, 0.15)';
+          }
+
+          return (
+            <div key={p.id} style={{ display: 'flex', alignItems: 'center' }}>
+              {idx > 0 && (
+                <span style={{
+                  fontSize: '0.5rem',
+                  color: 'rgba(255,255,255,0.15)',
+                  margin: '0 4px',
+                  userSelect: 'none'
+                }}>
+                  ►
+                </span>
+              )}
+              <div 
+                className={animClass}
+                title={`${p.label.toUpperCase()}: ${info.label}`}
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: bg,
+                  boxShadow: shadow,
+                  border,
+                  cursor: 'help',
+                  transition: 'all 0.3s ease',
+                  ['--breath-color' as any]: p.color
+                }} 
+              />
+            </div>
+          );
+        })}
+        {watchdogEnabled && (
+          <span style={{
+            fontSize: '0.48rem',
+            fontWeight: 900,
+            color: '#ffb300',
+            textTransform: 'uppercase',
+            letterSpacing: '0.08em',
+            marginLeft: '8px',
+            borderLeft: '1px solid rgba(255,255,255,0.1)',
+            paddingLeft: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '3px'
+          }}>
+            <span style={{ fontSize: '0.55rem' }}>🛡️</span> WD_ON
+          </span>
+        )}
+      </div>
+      </>
+    );
+  };
 
   // ── REGION PULSE — single source of truth, used in both tab layouts ──
   const regionPulseEl = pipelineStats ? (() => {
@@ -991,6 +1338,7 @@ function App() {
           }}>
             🛰️ Neogleamz Grid Control Deck
           </span>
+          {renderHeartbeatMatrix()}
         </div>
 
         {/* Action Deck (Factory Floor, Reset, Sniper, Graveyard, Engine Brain) */}
@@ -1171,6 +1519,7 @@ function App() {
             const dockerMem = gpu?.dockerMemory;
             const dockerUsed = dockerMem?.usedMB ?? 0;
             const dockerLimit = dockerMem?.limitMB ?? 4096;
+            const dockerPercent = dockerMem?.percent ?? 0;
 
             const vramBarColor = vramPct > 90 ? '#ff2d55' : vramPct > 70 ? '#ffb300' : '#c77dff';
             const cpuBarColor = cpuUtil > 80 ? '#ff5a00' : cpuUtil > 40 ? '#ffb300' : '#c77dff';
@@ -1178,15 +1527,22 @@ function App() {
             return (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <div style={{
-                      width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
-                      background: glowColor,
-                      boxShadow: `0 0 6px ${glowColor}`,
-                    }} />
-                    <span style={{ fontSize: '0.58rem', fontWeight: 800, color: capsuleColor, letterSpacing: '0.05em' }}>
-                      LM STUDIO
-                    </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{
+                        width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
+                        background: glowColor,
+                        boxShadow: `0 0 6px ${glowColor}`,
+                      }} />
+                      <span style={{ fontSize: '0.58rem', fontWeight: 800, color: capsuleColor, letterSpacing: '0.05em' }}>
+                        LM STUDIO
+                      </span>
+                    </div>
+                    {serverOn && (
+                      <span style={{ fontSize: '0.45rem', color: 'rgba(255,255,255,0.3)', fontWeight: 700, marginLeft: '12px', letterSpacing: '0.02em' }}>
+                        PORT: {lms?.port || 1234} · OPENAI COMPATIBLE
+                      </span>
+                    )}
                   </div>
                   
                   <button
@@ -1238,130 +1594,251 @@ function App() {
                     </select>
 
                     {/* Loaded model badges */}
-                    {loadedModels.map((m: string) => (
-                      <span key={m} style={{
-                        display: 'inline-flex', alignItems: 'center', justifyContent: 'space-between',
-                        fontSize: '0.54rem', fontWeight: 700, padding: '3px 8px', borderRadius: '6px',
-                        background: 'rgba(162,0,255,0.12)', color: '#d8b4fe', border: '1px solid rgba(162,0,255,0.2)',
-                      }}>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '200px' }}>
-                          🧠 {m.replace(/llama-|mistralai\/|qwen|phi-/gi, '').replace('-instruct', '')}
-                        </span>
-                        <button
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            try {
-                              await fetch(`${API_BASE}/api/llm/model/unload`, {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ identifier: m }),
-                              });
-                              fetchSystemStatus();
-                            } catch (e) { /* swallow */ }
-                          }}
-                          title={`Unload ${m}`}
-                          style={{
-                            fontSize: '0.52rem', fontWeight: 900, padding: '0 4px', borderRadius: '4px',
-                            border: 'none', cursor: 'pointer', background: 'rgba(255,60,60,0.2)', color: '#ff6b6b',
-                            marginLeft: 'auto'
-                          }}
-                        >✕</button>
-                      </span>
-                    ))}
+                    {loadedModels.map((m: string) => {
+                      const meta = parseModelMetadata(m);
+                      return (
+                        <div key={m} style={{
+                          display: 'flex', flexDirection: 'column', gap: '6px', padding: '8px', borderRadius: '8px',
+                          background: 'rgba(162,0,255,0.06)', border: '1px solid rgba(162,0,255,0.15)',
+                          boxShadow: 'inset 0 0 10px rgba(162,0,255,0.02)',
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', gap: '8px' }}>
+                            <span style={{
+                              overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                              fontSize: '0.56rem', fontWeight: 800, color: '#fff', letterSpacing: '0.01em',
+                              display: 'flex', alignItems: 'center', gap: '4px'
+                            }}>
+                              <span>🧠</span> {meta.name}
+                            </span>
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  await fetch(`${API_BASE}/api/llm/model/unload`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ identifier: m }),
+                                  });
+                                  fetchSystemStatus();
+                                } catch (e) { /* swallow */ }
+                              }}
+                              title={`Unload ${m}`}
+                              style={{
+                                fontSize: '0.5rem', fontWeight: 900, padding: '2px 5px', borderRadius: '4px',
+                                cursor: 'pointer', background: 'rgba(255,60,60,0.12)', color: '#ff6b6b',
+                                border: '1px solid rgba(255,60,60,0.2)', transition: 'all 0.2s ease',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(255,60,60,0.2)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(255,60,60,0.12)';
+                              }}
+                            >UNLOAD</button>
+                          </div>
+
+                          {/* Telemetry Badge Cluster */}
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', alignItems: 'center' }}>
+                            {/* Architecture */}
+                            <span title="Architecture Family" style={{
+                              background: 'rgba(199, 125, 255, 0.12)', border: '1px solid rgba(199, 125, 255, 0.25)',
+                              color: '#d8b4fe', padding: '1px 5px', borderRadius: '4px', fontSize: '0.48rem', fontWeight: 800,
+                              letterSpacing: '0.02em', textTransform: 'uppercase'
+                            }}>
+                              ARCH: {meta.architecture}
+                            </span>
+
+                            {/* Parameter Count */}
+                            <span title="Model Parameter Size" style={{
+                              background: 'rgba(0, 212, 255, 0.12)', border: '1px solid rgba(0, 212, 255, 0.25)',
+                              color: '#00d4ff', padding: '1px 5px', borderRadius: '4px', fontSize: '0.48rem', fontWeight: 800,
+                              letterSpacing: '0.02em', textTransform: 'uppercase'
+                            }}>
+                              SIZE: {meta.params}
+                            </span>
+
+                            {/* Quantization */}
+                            <span title="Quantization Format" style={{
+                              background: 'rgba(0, 255, 170, 0.12)', border: '1px solid rgba(0, 255, 170, 0.25)',
+                              color: '#00ffaa', padding: '1px 5px', borderRadius: '4px', fontSize: '0.48rem', fontWeight: 800,
+                              letterSpacing: '0.02em', textTransform: 'uppercase'
+                            }}>
+                              QUANT: {meta.quant}
+                            </span>
+
+                            {/* Estimated VRAM */}
+                            <span title="Estimated VRAM Footprint" style={{
+                              background: 'rgba(129, 140, 248, 0.12)', border: '1px solid rgba(129, 140, 248, 0.25)',
+                              color: '#a5b4fc', padding: '1px 5px', borderRadius: '4px', fontSize: '0.48rem', fontWeight: 800,
+                              letterSpacing: '0.02em', textTransform: 'uppercase'
+                            }}>
+                              EST VRAM: {meta.vramEst}
+                            </span>
+
+                            {/* Estimated Context */}
+                            <span title="Estimated Context Window" style={{
+                              background: 'rgba(251, 146, 60, 0.12)', border: '1px solid rgba(251, 146, 60, 0.25)',
+                              color: '#fdba74', padding: '1px 5px', borderRadius: '4px', fontSize: '0.48rem', fontWeight: 800,
+                              letterSpacing: '0.02em', textTransform: 'uppercase'
+                            }}>
+                              CTX: {meta.contextEst}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
                 {/* 🖥️ HOST PC PERFORMANCE */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
-                  <div style={{ fontSize: '0.52rem', fontWeight: 900, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
-                    🖥️ Host PC Performance
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.52rem', fontWeight: 900, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      🖥️ Host PC Performance
+                    </span>
+                    <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)' }}>Windows API</span>
                   </div>
                   
-                  {/* CPU Metrics */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.56rem' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>CPU Total Load</span>
-                    <span style={{ color: cpuBarColor, fontWeight: 800 }}>
-                      {cpuUtil}%
-                    </span>
+                  {/* CPU & RAM Inline Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    {/* CPU */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.54rem' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.4)' }}>CPU Load</span>
+                        <span style={{ color: cpuBarColor, fontWeight: 800 }}>{cpuUtil}%</span>
+                      </div>
+                      <div style={{
+                        width: '100%', height: '3px', borderRadius: '1.5px',
+                        background: 'rgba(255,255,255,0.04)', overflow: 'hidden',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                      }}>
+                        <div style={{
+                          width: `${cpuUtil}%`, height: '100%', borderRadius: '1.5px',
+                          background: `linear-gradient(90deg, ${cpuBarColor}aa, ${cpuBarColor})`,
+                          transition: 'width 0.4s ease',
+                        }} />
+                      </div>
+                    </div>
+
+                    {/* System RAM */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.54rem' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.4)' }}>System RAM</span>
+                        <span style={{ color: ramBarColor, fontWeight: 800 }}>{ramPercent}%</span>
+                      </div>
+                      <div style={{
+                        width: '100%', height: '3px', borderRadius: '1.5px',
+                        background: 'rgba(255,255,255,0.04)', overflow: 'hidden',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                      }}>
+                        <div style={{
+                          width: `${ramPercent}%`, height: '100%', borderRadius: '1.5px',
+                          background: `linear-gradient(90deg, ${ramBarColor}aa, ${ramBarColor})`,
+                          transition: 'width 0.4s ease',
+                        }} />
+                      </div>
+                    </div>
                   </div>
-                  <div style={{
-                    width: '100%', height: '5px', borderRadius: '3px',
-                    background: 'rgba(255,255,255,0.06)', overflow: 'hidden',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                  }}>
-                    <div style={{
-                      width: `${cpuUtil}%`, height: '100%', borderRadius: '3px',
-                      background: `linear-gradient(90deg, ${cpuBarColor}aa, ${cpuBarColor})`,
-                      transition: 'width 0.4s ease',
-                    }} />
+                  
+                  {/* Subtle RAM Details label */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', fontSize: '0.48rem', color: 'rgba(255,255,255,0.25)', marginTop: '-1px' }}>
+                    System Mem: {ramUsed}GB / {ramTotal}GB
+                  </div>
+                </div>
+
+                {/* 🐳 DOCKER CONTAINER PERFORMANCE */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{
+                        width: '5px', height: '5px', borderRadius: '50%',
+                        background: '#00ffaa',
+                        boxShadow: '0 0 5px #00ffaa',
+                      }} />
+                      <span style={{ fontSize: '0.52rem', fontWeight: 900, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        🐳 Docker Container
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '0.5rem', color: '#00ffaa', fontWeight: 800 }}>ONLINE</span>
                   </div>
 
-                  {/* RAM Metrics */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.56rem', marginTop: '2px' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>System RAM (Memory)</span>
-                    <span style={{ color: ramBarColor, fontWeight: 800 }}>
-                      {ramUsed}GB / {ramTotal}GB ({ramPercent}%)
-                    </span>
-                  </div>
-                  <div style={{
-                    width: '100%', height: '5px', borderRadius: '3px',
-                    background: 'rgba(255,255,255,0.06)', overflow: 'hidden',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                  }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.54rem' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.4)' }}>Container Memory (CGroups)</span>
+                      <span style={{ color: '#00d4ff', fontWeight: 800 }}>
+                        {dockerUsed}MB / {Math.round(dockerLimit / 1024 * 10) / 10}GB ({dockerPercent}%)
+                      </span>
+                    </div>
                     <div style={{
-                      width: `${ramPercent}%`, height: '100%', borderRadius: '3px',
-                      background: `linear-gradient(90deg, ${ramBarColor}aa, ${ramBarColor})`,
-                      transition: 'width 0.4s ease',
-                    }} />
+                      width: '100%', height: '3px', borderRadius: '1.5px',
+                      background: 'rgba(255,255,255,0.04)', overflow: 'hidden',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                    }}>
+                      <div style={{
+                        width: `${dockerPercent}%`, height: '100%', borderRadius: '1.5px',
+                        background: 'linear-gradient(90deg, rgba(0,212,255,0.6), #00d4ff)',
+                        transition: 'width 0.4s ease',
+                      }} />
+                    </div>
                   </div>
                 </div>
 
                 {/* ⚡ GPU & LLM ORCHESTRATION */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '8px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '6px' }}>
                   <div style={{ fontSize: '0.52rem', fontWeight: 900, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
                     ⚡ GPU & LLM Orchestration
                   </div>
 
-                  {/* GPU Load Metrics */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.56rem' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>Core GPU Load</span>
-                    <span style={{
-                      fontWeight: 800,
-                      color: gpuUtil > 80 ? '#ff5a00' : gpuUtil > 15 ? '#00ffaa' : 'rgba(255,255,255,0.4)',
-                    }}>
-                      {gpuUtil}% Load
-                    </span>
+                  {/* GPU Load & VRAM Inline Grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    {/* GPU Load */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.54rem' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.4)' }}>Core GPU Load</span>
+                        <span style={{ fontWeight: 800, color: gpuUtil > 80 ? '#ff5a00' : gpuUtil > 15 ? '#00ffaa' : 'rgba(255,255,255,0.4)' }}>{gpuUtil}%</span>
+                      </div>
+                      <div style={{
+                        width: '100%', height: '3px', borderRadius: '1.5px',
+                        background: 'rgba(255,255,255,0.04)', overflow: 'hidden',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                      }}>
+                        <div style={{
+                          width: `${gpuUtil}%`, height: '100%', borderRadius: '1.5px',
+                          background: `linear-gradient(90deg, ${gpuUtil > 80 ? '#ff5a00' : gpuUtil > 15 ? '#00ffaa' : '#c77dff'}aa, ${gpuUtil > 80 ? '#ff5a00' : gpuUtil > 15 ? '#00ffaa' : '#c77dff'})`,
+                          transition: 'width 0.4s ease',
+                        }} />
+                      </div>
+                    </div>
+
+                    {/* GPU VRAM */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.54rem' }}>
+                        <span style={{ color: 'rgba(255,255,255,0.4)' }}>Dedicated VRAM</span>
+                        <span style={{ color: vramBarColor, fontWeight: 800 }}>{vramPct}%</span>
+                      </div>
+                      <div style={{
+                        width: '100%', height: '3px', borderRadius: '1.5px',
+                        background: 'rgba(255,255,255,0.04)', overflow: 'hidden',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                      }}>
+                        <div style={{
+                          width: `${vramPct}%`, height: '100%', borderRadius: '1.5px',
+                          background: `linear-gradient(90deg, ${vramBarColor}aa, ${vramBarColor})`,
+                          transition: 'width 0.4s ease',
+                        }} />
+                      </div>
+                    </div>
                   </div>
 
-                  {/* GPU VRAM Metrics */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.56rem', marginTop: '2px' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>Dedicated VRAM</span>
-                    <span style={{ color: vramBarColor, fontWeight: 800 }}>
-                      {Math.round(vramUsed)}MB / {vramTotal}MB ({vramPct}%)
-                    </span>
-                  </div>
-                  <div style={{
-                    width: '100%', height: '5px', borderRadius: '3px',
-                    background: 'rgba(255,255,255,0.06)', overflow: 'hidden',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                  }}>
-                    <div style={{
-                      width: `${vramPct}%`, height: '100%', borderRadius: '3px',
-                      background: `linear-gradient(90deg, ${vramBarColor}aa, ${vramBarColor})`,
-                      transition: 'width 0.4s ease',
-                    }} />
-                  </div>
-
-                  {/* Database Sync */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.56rem', marginTop: '4px', borderTop: '1px dashed rgba(255,255,255,0.06)', paddingTop: '4px' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Database Sync</span>
-                    <span style={{
-                      fontWeight: 800,
-                      color: status?.currentTarget === 'API OFFLINE' ? '#ff2d55' : '#00ffaa',
-                      textTransform: 'uppercase'
-                    }}>
-                      {status?.currentTarget === 'API OFFLINE' ? 'OFFLINE' : 'LIVE'}
-                    </span>
+                  {/* Subtle VRAM Details & DB Sync */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.48rem', marginTop: '1px', borderTop: '1px dashed rgba(255,255,255,0.04)', paddingTop: '3px' }}>
+                    <span style={{ color: 'rgba(255,255,255,0.25)' }}>VRAM: {Math.round(vramUsed)}MB / {vramTotal}MB</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                      <span style={{ color: 'rgba(255,255,255,0.25)' }}>DB SYNC:</span>
+                      <span style={{ fontWeight: 800, color: status?.currentTarget === 'API OFFLINE' ? '#ff2d55' : '#00ffaa' }}>
+                        {status?.currentTarget === 'API OFFLINE' ? 'OFFLINE' : 'LIVE'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1452,6 +1929,91 @@ function App() {
               </div>
             </div>
           </div>
+
+          {/* Watchdog Shield configuration */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderTop: '1px solid rgba(255,255,255,0.04)', paddingTop: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <h4 style={{ fontSize: '0.62rem', fontWeight: 900, color: '#ffb300', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span>🛡️</span> Watchdog Shield
+              </h4>
+              <label className="switch mini">
+                <input 
+                  type="checkbox" 
+                  checked={watchdogEnabled} 
+                  onChange={e => updateGlobalStrategy('watchdog_enabled', e.target.checked)} 
+                />
+                <span className="slider round" style={{ backgroundColor: watchdogEnabled ? '#ffb300' : '' }} />
+              </label>
+            </div>
+
+            {watchdogEnabled && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '6px 8px', background: 'rgba(255,255,255,0.01)', borderRadius: '6px', border: '1px solid rgba(255, 179, 0, 0.08)' }}>
+                {/* Heartbeat Slider */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Heartbeat Timeout</span>
+                    <span style={{ fontSize: '0.54rem', color: '#ffb300', fontWeight: 800 }}>{watchdogHeartbeatTimeoutS}s</span>
+                  </div>
+                  <input 
+                    type="range" 
+                    min="15" 
+                    max="300" 
+                    step="5"
+                    value={watchdogHeartbeatTimeoutS} 
+                    onChange={e => updateGlobalStrategy('watchdog_heartbeat_timeout_s', parseInt(e.target.value))}
+                    style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', outline: 'none', borderRadius: '2px', cursor: 'pointer', accentColor: '#ffb300' }} 
+                  />
+                </div>
+
+                {/* Selective Auto-Start Switches */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '6px' }}>
+                  <span style={{ fontSize: '0.5rem', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', fontWeight: 800, marginBottom: '2px' }}>Protected Assembly Loops</span>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                    {[
+                      { key: 'website-resolver', label: 'Resolver' },
+                      { key: 'indexer', label: 'Indexer' },
+                      { key: 'photographer', label: 'Photo' },
+                      { key: 'publisher', label: 'Publisher' }
+                    ].map(p => (
+                      <label key={p.key} style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', userSelect: 'none' }}>
+                        <input 
+                          type="checkbox" 
+                          checked={watchdogPhases[p.key] ?? false}
+                          onChange={e => {
+                            const nextPhases = { ...watchdogPhases, [p.key]: e.target.checked };
+                            updateGlobalStrategy('watchdog_phases', nextPhases);
+                          }}
+                          style={{ accentColor: '#ffb300', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '0.54rem', color: watchdogPhases[p.key] ? '#fff' : 'rgba(255,255,255,0.4)', fontWeight: watchdogPhases[p.key] ? 700 : 500 }}>{p.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Notification switch */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '6px', marginTop: '2px' }}>
+                  <span style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase' }}>Browser Notifications</span>
+                  <label className="switch mini">
+                    <input 
+                      type="checkbox" 
+                      checked={enableBrowserNotifications} 
+                      onChange={async (e) => {
+                        const val = e.target.checked;
+                        if (val) {
+                          const granted = await requestNotificationPermission();
+                          updateGlobalStrategy('enable_browser_notifications', granted);
+                        } else {
+                          updateGlobalStrategy('enable_browser_notifications', false);
+                        }
+                      }} 
+                    />
+                    <span className="slider round" />
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -1481,6 +2043,7 @@ function App() {
            <ScraperPipeline
               headerControls={headerControls}
               belowHeader={regionPulseEl ?? undefined}
+              heartbeatMatrix={renderHeartbeatMatrix()}
               pipelineStats={pipelineStats}
               phaseQueues={phaseQueues}
               onPhaseNav={(tab) => setActiveTab(tab as any)}

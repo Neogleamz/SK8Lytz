@@ -18,13 +18,8 @@ try {
 }
 
 // Configure for performance
-const isDocker = process.platform === 'linux';
 try {
-  if (isDocker) {
-    db.exec('PRAGMA journal_mode = DELETE;');
-  } else {
-    db.exec('PRAGMA journal_mode = WAL;');
-  }
+  db.exec('PRAGMA journal_mode = WAL;');
 } catch (e: any) {
   console.warn(`[LocalDB] Preferred journal mode failed: ${e.message}. Falling back to default.`);
 }
@@ -64,8 +59,8 @@ const runBackup = () => {
   }
 };
 
-// Run backups only in the CCTower process to avoid lock collisions during daemon startup
-const shouldRunBackup = process.env.IS_CCTOWER === 'true' || (process.argv[1] && process.argv[1].includes('CCTower'));
+// Run backups only in the actual CCTower master process to eliminate multi-daemon backup I/O loops
+const shouldRunBackup = process.argv[1] && path.basename(process.argv[1]).toLowerCase().startsWith('cctower');
 if (shouldRunBackup) {
   // Run immediately on startup, then every 4 hours
   runBackup();

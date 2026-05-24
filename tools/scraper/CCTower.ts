@@ -194,6 +194,8 @@ app.get('/status', async (req, res) => {
     isGated,
     lastError,
     pulseRegistry,
+    activeJobRegistry,
+    activeDaemons: Array.from(activeDaemons.keys()),
     lmsStatus: cachedLmsStatus,
     gpuTelemetry: cachedGpuTelemetry
   });
@@ -754,6 +756,130 @@ app.post('/api/llm/model/estimate', (req, res) => {
 app.get('/api/gpu/stats', (req, res) => {
   res.json(cachedGpuTelemetry);
 });
+
+// ─── Scraper Watchdog Service (Self-Healing Loop) ───────────────────────────
+async function runWatchdogCheck(): Promise<void> {
+  try {
+    const config = getConfig() || {};
+    
+    // Check if the global Watchdog Auto-Heal setting is enabled (defaults to true)
+    const watchdogEnabled = config.watchdog_enabled !== false;
+    if (!watchdogEnabled) return;
+
+    const timeoutSec = config.watchdog_heartbeat_timeout_s || 60;
+    const watchdogPhases = config.watchdog_phases || {
+      'website-resolver': true,
+      'indexer': true,
+      'photographer': true,
+      'publisher': true
+    };
+
+    const daemonToPulseMap: Record<string, string> = {
+      'website-resolver': 'Phase 2',
+      'indexer': 'Phase 3',
+      'photographer': 'Phase 4',
+      'publisher': 'Phase 6'
+    };
+
+    const scriptMap: Record<string, string> = {
+      'website-resolver': 'WebsiteResolverDaemon.ts',
+      'indexer': 'Indexer.ts',
+      'photographer': 'Photographer.ts',
+      'publisher': 'Publisher.ts'
+    };
+
+    const now = Date.now();
+
+    for (const [daemonName, shouldProtect] of Object.entries(watchdogPhases)) {
+      if (!shouldProtect) {
+        // If user disabled it, ensure it's stopped if it is running
+        const target = `scraper-${daemonName}`;
+        if (activeDaemons.has(target)) {
+          console.log(`[Watchdog] 🛡️ Policy disabled for ${daemonName}. Shutting down daemon...`);
+          const child = activeDaemons.get(target);
+          if (child) {
+            child.kill('SIGTERM');
+            activeDaemons.delete(target);
+          }
+        }
+        continue;
+      }
+
+      // Check heartbeat
+      const pulseKey = daemonToPulseMap[daemonName];
+      if (!pulseKey) continue;
+
+      const lastPulse = pulseRegistry[pulseKey];
+      const target = `scraper-${daemonName}`;
+
+      let needsRestart = false;
+
+      if (!lastPulse || !lastPulse.lastRunAt) {
+        // Protected phase is enabled but has never run/pulsed. Auto-start it JIT!
+        needsRestart = true;
+      } else {
+        const lastPulseTime = new Date(lastPulse.lastRunAt).getTime();
+        const secondsSinceLastPulse = (now - lastPulseTime) / 1000;
+        if (secondsSinceLastPulse > timeoutSec) {
+          needsRestart = true;
+          console.warn(`[Watchdog] ⚠️ Daemon ${daemonName} missed heartbeat! Silence duration: ${Math.round(secondsSinceLastPulse)}s (limit: ${timeoutSec}s)`);
+        }
+      }
+
+      if (needsRestart) {
+        console.log(`[Watchdog] 🛡️ Auto-healing / Auto-starting daemon: ${target}`);
+        
+        // Kill existing if any (zombie cleanup)
+        if (activeDaemons.has(target)) {
+          try {
+            const child = activeDaemons.get(target);
+            if (child) child.kill('SIGKILL');
+          } catch {}
+          activeDaemons.delete(target);
+        }
+
+        // Spawn a fresh child process
+        const scriptName = scriptMap[daemonName];
+        if (scriptName) {
+          try {
+            const outLog = fs.openSync(path.join(LOG_DIR, `${daemonName}-out.log`), 'a');
+            const errLog = fs.openSync(path.join(LOG_DIR, `${daemonName}-error.log`), 'a');
+
+            // Stagger spawn slightly to prevent DB write race conditions on boot
+            await sleep(2000);
+
+            const child = spawn('bun', [scriptName], {
+              cwd: __dirname,
+              stdio: ['ignore', outLog, errLog],
+              detached: false,
+              env: { ...process.env, SCRAPER_REGISTER_ONLY: 'false' }
+            });
+
+            child.on('exit', () => {
+              activeDaemons.delete(target);
+              console.log(`[Watchdog] Daemon ${target} exited`);
+            });
+
+            activeDaemons.set(target, child);
+            isRunning = true;
+            
+            // Log to CCTower fleet logger so it prints in the timeline terminal!
+            console.log(`[Watchdog] 🛡️ Auto-healed and successfully restarted failed ${daemonName} loop!`);
+          } catch (err: any) {
+            console.error(`[Watchdog] Failed to auto-heal ${daemonName}:`, err.message);
+          }
+        }
+      }
+    }
+  } catch (e: any) {
+    console.error(`[Watchdog] Error in loop:`, e.message);
+  }
+}
+
+// Spin up the Watchdog check cycle every 15 seconds
+setInterval(runWatchdogCheck, 15000);
+runWatchdogCheck();
+
 
 // Initial background polling for LM Studio
 setInterval(updateLmsStatus, 30000);

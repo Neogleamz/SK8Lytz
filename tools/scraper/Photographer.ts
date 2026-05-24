@@ -95,6 +95,15 @@ interface ImageCandidate {
 
 // ─── Download Helpers ─────────────────────────────────────────────────────────
 
+function isValidJpegOrPng(buf: Buffer): boolean {
+  if (!buf || buf.length < 4) return false;
+  // JPEG magic bytes: FF D8 FF
+  if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return true;
+  // PNG magic bytes: 89 50 4E 47
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return true;
+  return false;
+}
+
 async function downloadImage(url: string): Promise<{buffer: Buffer; mimeType: string} | null> {
   try {
     const res = await fetch(url, {
@@ -264,14 +273,28 @@ async function estimateImageQuality(candidates: ImageCandidate[]): Promise<strin
     }
 
     try {
-      const { data: { text } } = await Tesseract.recognize(url, 'eng');
-      const textLen = text?.trim().length || 0;
-      if (textLen > 350) {
-        logToTower('INFO', `  🚫 Rejected as Flyer (Text length: ${textLen}): ${url.slice(0, 60)}`);
+      const cleanUrl = url.split('?')[0].toLowerCase();
+      const isOcrCompatible = cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.png');
+      if (isOcrCompatible) {
+        const dl = await downloadImage(url);
+        if (dl && isValidJpegOrPng(dl.buffer)) {
+          const { data: { text } } = await Tesseract.recognize(dl.buffer, 'eng');
+          const textLen = text?.trim().length || 0;
+          if (textLen > 350) {
+            logToTower('INFO', `  🚫 Rejected as Flyer (Text length: ${textLen}): ${url.slice(0, 60)}`);
+          } else {
+            finalUrls.push(url);
+          }
+        } else {
+          logToTower('INFO', `  ⏭️ OCR Skip (Download/Header check failed): ${url.slice(0, 60)}`);
+          finalUrls.push(url);
+        }
       } else {
+        logToTower('INFO', `  ⏭️ Fast-tracking non-OCR format image (WebP/GIF/SVG/etc): ${url.slice(0, 60)}`);
         finalUrls.push(url);
       }
-    } catch {
+    } catch (e: any) {
+      logToTower('INFO', `  ⏭️ OCR Error (Graceful Skip): ${e.message}`);
       finalUrls.push(url); // Default to keep if OCR fails
     }
   }
@@ -624,6 +647,14 @@ async function runPhotographerLoop() {
     await sleep(LOOP_COOLDOWN_MS);
   }
 }
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[Photographer] Unhandled Rejection:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('[Photographer] Uncaught Exception:', error);
+});
 
 runPhotographerLoop().catch(err => {
   console.error('[Photographer] Fatal error:', err);

@@ -144,6 +144,7 @@ export interface TelemetryLiveData {
 export const ScraperPipeline: React.FC<{
     headerControls?: React.ReactNode;
     belowHeader?: React.ReactNode;
+    heartbeatMatrix?: React.ReactNode;
     pipelineStats?: PipelineStats;
     phaseQueues?: PhaseQueues;
     onPhaseNav?: (tab: string) => void;
@@ -165,7 +166,7 @@ export const ScraperPipeline: React.FC<{
     logs?: {type: string, message: string, source?: string}[];
     historyLogs?: string[];
     fetchHistory?: () => void;
-}> = ({ headerControls, belowHeader, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto, seedProvider, onProviderChange, liveStreamText, isStreaming, currentAnalyzingSpot, logs, historyLogs, fetchHistory }) => {
+}> = ({ headerControls, belowHeader, heartbeatMatrix, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto, seedProvider, onProviderChange, liveStreamText, isStreaming, currentAnalyzingSpot, logs, historyLogs, fetchHistory }) => {
     const { telemetry, config, loading, pulse } = useScraperTelemetry(2000);
     const { fields } = useFieldRegistry();
 
@@ -261,10 +262,10 @@ export const ScraperPipeline: React.FC<{
 
     const getQueueNames = (phase: string, count: number = 3): string[] => {
         let activeTarget = '';
-        if (phase === 'phase1') activeTarget = telemetry.scout?.active_job?.target || telemetry.resolver?.active_job?.spot_name || '';
-        else if (phase === 'phase2') activeTarget = telemetry.detective?.active_job?.spot_name || '';
-        else if (phase === 'phase3') activeTarget = telemetry.photographer?.active_job?.spot_name || '';
-        else if (phase === 'phase4') activeTarget = telemetry.publisher?.active_job?.spot_name || '';
+        if (phase === 'phase1') activeTarget = telemetry.scout?.target || telemetry.resolver?.target || '';
+        else if (phase === 'phase2') activeTarget = telemetry.detective?.target || '';
+        else if (phase === 'phase3') activeTarget = telemetry.photographer?.target || '';
+        else if (phase === 'phase4') activeTarget = telemetry.publisher?.target || '';
 
         return (phaseQueues?.[phase] || [])
             .filter((s: SpotRecord) => {
@@ -657,6 +658,7 @@ export const ScraperPipeline: React.FC<{
                             textShadow: '0 0 10px rgba(59, 130, 246, 0.2)'
                         }}>SK8 SPOTZ</span>
                     </div>
+                    {heartbeatMatrix}
                     <div style={{ flex: 1 }} />
 
                     {/* 🎯 SNIPER MISSION CONTROL (Main Header) */}

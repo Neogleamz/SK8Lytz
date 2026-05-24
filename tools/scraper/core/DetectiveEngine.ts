@@ -540,6 +540,30 @@ async function callLMStudio(
   return {};
 }
 
+function isValidJpegOrPng(buf: Buffer): boolean {
+  if (!buf || buf.length < 4) return false;
+  // JPEG magic bytes: FF D8 FF
+  if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return true;
+  // PNG magic bytes: 89 50 4E 47
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return true;
+  return false;
+}
+
+async function downloadImageBuffer(url: string): Promise<Buffer | null> {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SK8LytzBot/2.0)' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return null;
+    const contentType = res.headers.get('content-type') || '';
+    if (!contentType.startsWith('image/')) return null;
+    const arrayBuffer = await res.arrayBuffer();
+    return Buffer.from(arrayBuffer);
+  } catch {
+    return null;
+  }
+}
 
 // ─── Page Crawl Helper ───────────────────────────────────────────────────────
 
@@ -548,8 +572,15 @@ async function crawlPage(page: any, url: string, onProgress: (m: string) => void
   if (url.toLowerCase().endsWith('.pdf')) {
     try { const fetchFn = require('node-fetch'); const buf = await (await fetchFn(url)).buffer(); const pdfData = await (pdfParse as any)(buf); return { ...empty, text:`[PDF: ${url}]\n${pdfData.text}` }; } catch { return empty; }
   }
-  if (/\.(png|jpg|jpeg|gif|webp)(\?.*)?$/i.test(url)) {
-    try { const { data:{text} } = await Tesseract.recognize(url,'eng'); return { ...empty, text:text?.length>20?`[OCR Image: ${url}]\n${text}`:'' }; } catch { return empty; }
+  if (/\.(png|jpg|jpeg)(\?.*)?$/i.test(url)) {
+    try {
+      const buf = await downloadImageBuffer(url);
+      if (buf && isValidJpegOrPng(buf)) {
+        const { data:{text} } = await Tesseract.recognize(buf,'eng');
+        return { ...empty, text:text?.length>20?`[OCR Image: ${url}]\n${text}`:'' };
+      }
+      return empty;
+    } catch { return empty; }
   }
   try {
     await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000}).catch(()=>page.goto(url,{waitUntil:'domcontentloaded',timeout:15000}));
@@ -853,12 +884,23 @@ export async function executeDetective(
         for(const fUrl of [...new Set(flyerUrls)].slice(0,5)){
           if(coreText.includes(`[OCR from Flyer Image: ${fUrl}]`)) continue;
           try{
-            const{data:{text}}=await Tesseract.recognize(fUrl,'eng');
-            if(text?.length>20) {
-              const ocrTxt = `[OCR from Flyer Image: ${fUrl}]\n${text}\n\n`;
-              coreText = ocrTxt + coreText;
-              amenityText = ocrTxt + amenityText;
-              onProgress(`[Detective] Pre-pended OCR text from flyer: ${fUrl}`);
+            const cleanUrl = fUrl.split('?')[0].toLowerCase();
+            const isOcrCompatible = cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.png');
+            if (isOcrCompatible) {
+              const buf = await downloadImageBuffer(fUrl);
+              if (buf && isValidJpegOrPng(buf)) {
+                const{data:{text}}=await Tesseract.recognize(buf,'eng');
+                if(text?.length>20) {
+                  const ocrTxt = `[OCR from Flyer Image: ${fUrl}]\n${text}\n\n`;
+                  coreText = ocrTxt + coreText;
+                  amenityText = ocrTxt + amenityText;
+                  onProgress(`[Detective] Pre-pended OCR text from flyer: ${fUrl}`);
+                }
+              } else {
+                onProgress(`[Detective] Skipping flyer OCR: Download/Header check failed: ${fUrl}`);
+              }
+            } else {
+              onProgress(`[Detective] Skipping flyer OCR for non-compatible format: ${fUrl}`);
             }
           }catch{}
         }
