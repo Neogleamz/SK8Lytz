@@ -11,6 +11,7 @@ import Tesseract from 'tesseract.js';
 const pdfParse = require('pdf-parse');
 import { parseSitemap } from './SitemapParser';
 import { HeuristicsEngine } from './HeuristicsEngine';
+import { getFieldRegistry } from './LocalDB';
 
 // ─── Shared Sanitizers (re-exported for Indexer) ─────────────────────────────
 
@@ -159,8 +160,132 @@ export interface DetectiveResult {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
+const FIELD_DESCRIPTIONS: Record<string, any> = {
+  // Pass 1
+  opening_hours: 'Complete weekly public skating schedule for ALL 7 DAYS {Monday: time_range, Tuesday: time_range, ...}. Include every day even if closed.',
+  pricing_data: {
+    adult: 'number or null — adult admission fee',
+    child: 'number or null — child/kid admission fee',
+    senior: 'number or null — senior admission fee',
+    spectator: 'number or null — spectator/non-skating supervising fee',
+    skate_rental: 'number or null — regular skate rental fee'
+  },
+  has_fee: 'boolean or null — return null if no pricing/fee information was found. DO NOT assume free.',
+  has_rental: 'boolean or null — return null if no skate rental information was found.',
+  has_adult_night: 'boolean or null — return null if no adult night information was found.',
+  adult_night_schedule: 'If adult nights: {day:time_range}. Null if none.',
+  adult_night_details: 'Adult night schedule details or requirements (string or null).',
+
+  // Pass 2A
+  surface_type: 'Floor material: wood / maple / concrete / asphalt / sport_court / synthetic / unknown. String or null.',
+  surface_quality: 'Condition of the floor (3-5 words describing maintaining state, e.g. "super smooth, excellent", "slippery but fast", "warped with potholes"). String or null.',
+  vibe_score: 'Community vibe rating (integer score between 0 and 100 based on reviews/tone). Integer or null.',
+
+  // Pass 2B
+  is_indoor: 'boolean or null — true if indoor rink, false if open-air outdoor rink.',
+  has_pro_shop: 'boolean or null — true if in-house pro-shop sells gear/skates.',
+  has_food: 'boolean or null — true if concessions, snack bar, or cafe is present.',
+  has_lights: 'boolean or null — true if lit/night skating lights are present.',
+  has_lockers: 'boolean or null — true if guest lockers are available for personal items.',
+  has_ac: 'boolean or null — true if air-conditioned/climate controlled.',
+  has_wifi: 'boolean or null — true if guest wifi is available.',
+  has_toilets: 'boolean or null — true if public restrooms/toilets are present.',
+  capacity: 'Rink maximum skater capacity (integer or null).',
+
+  // Pass 2C
+  is_wheelchair_accessible: 'boolean or null — true if wheelchair accessible/ADA compliant.',
+  hosts_derby: 'boolean or null — true if the rink hosts a roller derby league.',
+  special_events: 'Array of strings listing unique recurring events or party packages. Return [] if none.',
+  operator_name: 'Name of the rink operator, owner, or managing entity (string or null).',
+  operator_description: '1-2 sentences describing the rink operator/history (string or null).',
+  cultural_metadata: 'Community significance, historical landmarks, or cultural background (string or null).',
+
+  // Pass 2D
+  instagram_url: 'URL or null.',
+  facebook_url: 'URL or null.',
+  tiktok_url: 'URL or null.',
+  schedule_url: 'URL or null.',
+  yelp_url: 'URL or null.',
+  price_range: 'General price tier: $ to $$$$ or null.',
+  logo_url: 'Logo image URL or null.',
+  email_addresses: 'Array of contact email addresses found (e.g. info, events, booking, parties). Return [] if none found.'
+};
+
+const REQUIRED_SCHEMA = {
+  hours: FIELD_DESCRIPTIONS.opening_hours,
+  pricing: FIELD_DESCRIPTIONS.pricing_data,
+  has_fee: FIELD_DESCRIPTIONS.has_fee,
+  has_rental: FIELD_DESCRIPTIONS.has_rental,
+  has_adult_night: FIELD_DESCRIPTIONS.has_adult_night,
+  adult_night_schedule: FIELD_DESCRIPTIONS.adult_night_schedule
+};
+
+const FIELD_PASS_MAP: Record<string, string> = {
+  opening_hours: 'pass1',
+  pricing_data: 'pass1',
+  has_fee: 'pass1',
+  has_rental: 'pass1',
+  has_adult_night: 'pass1',
+  adult_night_schedule: 'pass1',
+  adult_night_details: 'pass1',
+
+  surface_type: 'pass2A',
+  surface_quality: 'pass2A',
+  vibe_score: 'pass2A',
+
+  is_indoor: 'pass2B',
+  has_pro_shop: 'pass2B',
+  has_food: 'pass2B',
+  has_lights: 'pass2B',
+  has_lockers: 'pass2B',
+  has_ac: 'pass2B',
+  has_wifi: 'pass2B',
+  has_toilets: 'pass2B',
+  capacity: 'pass2B',
+
+  is_wheelchair_accessible: 'pass2C',
+  hosts_derby: 'pass2C',
+  special_events: 'pass2C',
+  operator_name: 'pass2C',
+  operator_description: 'pass2C',
+  cultural_metadata: 'pass2C',
+
+  instagram_url: 'pass2D',
+  facebook_url: 'pass2D',
+  tiktok_url: 'pass2D',
+  schedule_url: 'pass2D',
+  yelp_url: 'pass2D',
+  price_range: 'pass2D',
+  logo_url: 'pass2D',
+  email_addresses: 'pass2D'
+};
+
+function buildPassSchema(fields: any[], spotContext: any, confMap: Record<string, any>, threshold = 0.60): Record<string, any> {
+  const schema: Record<string, any> = {};
+  for (const f of fields) {
+    const key = f.field_name;
+    const value = spotContext[key];
+    const conf = confMap[key];
+    
+    const isEmpty = value === null || value === undefined || value === '' || value === 'null' || value === 'NULL' || value === '{}' || value === '[]';
+    const isLowConfidence = !conf || conf.confidence < threshold;
+    
+    if (isEmpty || isLowConfidence) {
+      if (key === 'opening_hours') {
+        schema['hours'] = FIELD_DESCRIPTIONS.opening_hours;
+      } else if (key === 'pricing_data') {
+        schema['pricing'] = FIELD_DESCRIPTIONS.pricing_data;
+      } else {
+        schema[key] = FIELD_DESCRIPTIONS[key] || `${f.display_label} (${f.data_type} or null).`;
+      }
+    }
+  }
+  return schema;
+}
+
 const MAX_PAGES_PER_RECORD = 8;
 const EXTERNAL_SOURCE_DELAY = 5000; // 5s between external fetches per user spec
+
 
 const SOCIAL_CRAWL_BLOCKLIST = ['facebook.com','instagram.com','twitter.com','x.com','tiktok.com','youtube.com','yelp.com','google.com','linkedin.com'];
 
@@ -781,77 +906,18 @@ export async function executeDetective(
   let escalationRan = false;
   let earlyTerminated = false;
 
-  // Hoisted extraction schema and system prompt builders
-  const userVectors=aiConfig.ai_target_vectors||[];
-  const userSchema=userVectors.reduce((acc:any,vec:any)=>{acc[vec.key]=vec.prompt||vec.type;return acc;},{});
-  const REQUIRED_SCHEMA = {
-    hours: 'Complete weekly public skating schedule for ALL 7 DAYS {Monday: time_range, Tuesday: time_range, ...}. Include every day even if closed.',
-    pricing: {
-      adult: 'number or null — adult admission fee',
-      child: 'number or null — child/kid admission fee',
-      senior: 'number or null — senior admission fee',
-      spectator: 'number or null — spectator/non-skating supervising fee',
-      skate_rental: 'number or null — regular skate rental fee'
-    },
-    has_fee: 'boolean or null — return null if no pricing/fee information was found. DO NOT assume free.',
-    has_rental: 'boolean or null — return null if no skate rental information was found.',
-    has_adult_night: 'boolean or null — return null if no adult night information was found.',
-    adult_night_schedule: 'If adult nights: {day:time_range}. Null if none.'
+  const exclusionKw = aiConfig.ai_exclusion_keywords || [];
+  const usp = aiConfig.ai_system_prompt || '';
+  const buildSystem = (schema: Record<string, any>, ctx?: string) => {
+    let s = `You are a data extraction agent for [${spotContext.name}] in [${spotContext.city}].\nONLY this location. Valid JSON only.\n`;
+    s += `CRITICAL BOOLEAN RULE: For ALL boolean fields, you MUST return null if the information was not explicitly found in the text. Do NOT assume false. Do NOT infer. A missing fee schedule does NOT mean admission is free. A missing amenity mention does NOT mean it is absent. Return null to indicate unknown.\n`;
+    if (usp) s += usp + '\n';
+    if (exclusionKw.length) s += `TOXICITY: If PRIMARY business matches [${exclusionKw.join(',')}] return {"TOXICITY_ABORT":true}.\n`;
+    if (ctx) s += `PASS 1 CONTEXT: ${ctx}\n`;
+    return s + `SCHEMA:\n${JSON.stringify(schema, null, 2)}`;
   };
 
-  const FLOOR_SCHEMA = {
-    surface_type: 'Floor material: wood / maple / concrete / asphalt / sport_court / synthetic / unknown. String or null.',
-    surface_quality: 'Condition of the floor (3-5 words describing maintaining state, e.g. "super smooth, excellent", "slippery but fast", "warped with potholes"). String or null.',
-    vibe_score: 'Community vibe rating (integer score between 0 and 100 based on reviews/tone). Integer or null.'
-  };
 
-  const AMENITIES_SCHEMA = {
-    is_indoor: 'boolean or null — true if indoor rink, false if open-air outdoor rink.',
-    has_rental: 'boolean or null — true if skate rentals are offered, false if none.',
-    has_pro_shop: 'boolean or null — true if in-house pro-shop sells gear/skates.',
-    has_food: 'boolean or null — true if concessions, snack bar, or cafe is present.',
-    has_lights: 'boolean or null — true if lit/night skating lights are present.',
-    has_lockers: 'boolean or null — true if guest lockers are available for personal items.',
-    has_ac: 'boolean or null — true if air-conditioned/climate controlled.',
-    has_wifi: 'boolean or null — true if guest wifi is available.',
-    has_toilets: 'boolean or null — true if public restrooms/toilets are present.',
-    capacity: 'Rink maximum skater capacity (integer or null).'
-  };
-
-  const CULTURE_SCHEMA = {
-    wheelchair: 'boolean or null — true if wheelchair accessible/ADA compliant.',
-    derby: 'boolean or null — true if the rink hosts a roller derby league.',
-    special_events: 'Array of strings listing unique recurring events or party packages. Return [] if none.',
-    operator_name: 'Name of the rink operator, owner, or managing entity (string or null).',
-    operator_description: '1-2 sentences describing the rink operator/history (string or null).',
-    cultural_meta: 'Community significance, historical landmarks, or cultural background (string or null).',
-    adult_night_details: 'Adult night schedule details or requirements (string or null).'
-  };
-
-  const SOCIAL_SCHEMA = {
-    instagram_url: 'URL or null.',
-    facebook_url: 'URL or null.',
-    tiktok_url: 'URL or null.',
-    schedule_url: 'URL or null.',
-    yelp_url: 'URL or null.',
-    price_range: 'General price tier: $ to $$$$ or null.',
-    logo_url: 'Logo image URL or null.',
-    email_addresses: 'Array of ALL contact email addresses found for this venue (info, events, booking, parties). Return [] if none found.',
-    ...userSchema
-  };
-
-  const COMBINED_SCHEMA: Record<string, any> = { ...REQUIRED_SCHEMA, ...FLOOR_SCHEMA, ...AMENITIES_SCHEMA, ...CULTURE_SCHEMA, ...SOCIAL_SCHEMA };
-  const FULL_SCHEMA = COMBINED_SCHEMA;
-  const exclusionKw=aiConfig.ai_exclusion_keywords||[];
-  const usp=aiConfig.ai_system_prompt||'';
-  const buildSystem=(schema:Record<string,any>,ctx?:string)=>{
-    let s=`You are a data extraction agent for [${spotContext.name}] in [${spotContext.city}].\nONLY this location. Valid JSON only.\n`;
-    s+=`CRITICAL BOOLEAN RULE: For ALL boolean fields, you MUST return null if the information was not explicitly found in the text. Do NOT assume false. Do NOT infer. A missing fee schedule does NOT mean admission is free. A missing amenity mention does NOT mean it is absent. Return null to indicate unknown.\n`;
-    if(usp) s+=usp+'\n';
-    if(exclusionKw.length) s+=`TOXICITY: If PRIMARY business matches [${exclusionKw.join(',')}] return {"TOXICITY_ABORT":true}.\n`;
-    if(ctx) s+=`PASS 1 CONTEXT: ${ctx}\n`;
-    return s+`SCHEMA:\n${JSON.stringify(schema,null,2)}`;
-  };
 
   // ── Fix #8: Extract Google Places photo references from raw_data ──
   let googlePhotoRefs: string[] = [];
@@ -1092,28 +1158,39 @@ export async function executeDetective(
     }
   } catch {}
 
-  const isFieldResolved = (f: string, minConf: number = 0.60): boolean => {
-    const val = spotContext[f];
-    const conf = confMap[f];
-    const isEmpty = (v: any) => v === null || v === undefined || v === '' || v === 'null' || v === 'NULL' || v === '{}' || v === '[]';
-    return !isEmpty(val) && (conf?.source === 'user_manual' || (conf?.confidence || 0) >= minConf);
-  };
+  // Query SQLite registry for all fields dynamically
+  const allFields = getFieldRegistry();
+
+  // Map fields into their respective JIT passes
+  const pass1RegFields = allFields.filter(f => FIELD_PASS_MAP[f.field_name] === 'pass1');
+  const pass2ARegFields = allFields.filter(f => FIELD_PASS_MAP[f.field_name] === 'pass2A');
+  const pass2BRegFields = allFields.filter(f => FIELD_PASS_MAP[f.field_name] === 'pass2B');
+  const pass2CRegFields = allFields.filter(f => FIELD_PASS_MAP[f.field_name] === 'pass2C');
+  const pass2DRegFields = allFields.filter(f => FIELD_PASS_MAP[f.field_name] === 'pass2D');
+
+  // Build minimal schemas dynamically for gaps only!
+  const schemaPass1 = buildPassSchema(pass1RegFields, spotContext, confMap, 0.70);
+  const schemaPass2A = buildPassSchema(pass2ARegFields, spotContext, confMap, 0.60);
+  const schemaPass2B = buildPassSchema(pass2BRegFields, spotContext, confMap, 0.60);
+  const schemaPass2C = buildPassSchema(pass2CRegFields, spotContext, confMap, 0.60);
+  const schemaPass2D = buildPassSchema(pass2DRegFields, spotContext, confMap, 0.60);
 
   if (scope === 'hours') {
     skip2A = skip2B = skip2C = skip2D = true;
+    skipPass1 = Object.keys(schemaPass1).length === 0;
   } else if (scope === 'amenities') {
     skipPass1 = true;
-  } else if (scope === 'gap-fill') {
-    // Pass 1: Core Operations
-    skipPass1 = ['opening_hours', 'pricing_data', 'has_fee', 'has_adult_night', 'adult_night_schedule'].every(f => isFieldResolved(f, 0.70));
-    // Pass 2A: Floor & Vibe
-    skip2A = ['surface_type', 'surface_quality', 'vibe_score'].every(f => isFieldResolved(f, 0.60));
-    // Pass 2B: Amenities
-    skip2B = ['is_indoor', 'has_rental', 'has_pro_shop', 'has_food', 'has_lights', 'has_lockers', 'has_ac', 'has_wifi', 'has_toilets', 'capacity'].every(f => isFieldResolved(f, 0.60));
-    // Pass 2C: Culture & Access
-    skip2C = ['is_wheelchair_accessible', 'hosts_derby', 'special_events', 'operator_name', 'operator_description', 'cultural_metadata', 'adult_night_details'].every(f => isFieldResolved(f, 0.60));
-    // Pass 2D: Socials
-    skip2D = ['instagram_url', 'facebook_url', 'tiktok_url', 'schedule_url', 'yelp_url', 'price_range', 'logo_url', 'email_addresses'].every(f => isFieldResolved(f, 0.60));
+    skip2A = Object.keys(schemaPass2A).length === 0;
+    skip2B = Object.keys(schemaPass2B).length === 0;
+    skip2C = Object.keys(schemaPass2C).length === 0;
+    skip2D = Object.keys(schemaPass2D).length === 0;
+  } else {
+    // scope === 'gap-fill' (default)
+    skipPass1 = Object.keys(schemaPass1).length === 0;
+    skip2A = Object.keys(schemaPass2A).length === 0;
+    skip2B = Object.keys(schemaPass2B).length === 0;
+    skip2C = Object.keys(schemaPass2C).length === 0;
+    skip2D = Object.keys(schemaPass2D).length === 0;
   }
 
   const safeParseJson = (str: any) => {
@@ -1128,7 +1205,8 @@ export async function executeDetective(
       has_fee: spotContext.has_fee !== null ? !!spotContext.has_fee : null,
       has_rental: spotContext.has_rental !== null ? !!spotContext.has_rental : null,
       has_adult_night: spotContext.has_adult_night !== null ? !!spotContext.has_adult_night : null,
-      adult_night_schedule: safeParseJson(spotContext.adult_night_schedule)
+      adult_night_schedule: safeParseJson(spotContext.adult_night_schedule),
+      adult_night_details: spotContext.adult_night_details || null
     };
   }
 
@@ -1171,7 +1249,7 @@ export async function executeDetective(
     
     if (!earlyTerminated && !skipPass1) {
       onProgress('[Detective] LM Studio Pass 1 (Ops: hours/pricing/adult-night)...');
-      pass1 = await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice}`,detectiveModel,onProgress,'Pass1',onStream);
+      pass1 = await callLMStudio(buildSystem(schemaPass1),`Website Text:\n${cSlice}`,detectiveModel,onProgress,'Pass1',onStream);
       if(pass1.TOXICITY_ABORT===true) return{aiMetadata:{TOXICITY_ABORT:true},mappedFields:{_simulated_status:'REJECTED'},combinedText,qualityScore:0,passedQualityGate:false,candidatePhotos:null,socialLinks:{instagram_url:null,facebook_url:null,tiktok_url:null,schedule_url:null},flyerUrls,fieldConfidence:{}};
     } else if (earlyTerminated) {
       onProgress('[HEURISTIC] 🎯 Bypassing Pass 1 LLM. Reusing early-terminated homepage results!');
@@ -1259,7 +1337,8 @@ export async function executeDetective(
       if (escalationRan) {
         onProgress('[Detective] 🚨 Re-running LM Studio Pass 1 (Ops) with OCR context...');
         const cSlice2 = coreText.slice(0, 12000);
-        const pass1_retry = await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice2}`,detectiveModel,onProgress,'Pass1-Retry',onStream);
+        const schemaPass1Retry = buildPassSchema(pass1RegFields, spotContext, confMap, 0.70);
+        const pass1_retry = await callLMStudio(buildSystem(schemaPass1Retry),`Website Text:\n${cSlice2}`,detectiveModel,onProgress,'Pass1-Retry',onStream);
         if (pass1_retry.hours) pass1.hours = pass1_retry.hours;
         if (pass1_retry.pricing) pass1.pricing = pass1_retry.pricing;
         if (pass1_retry.has_adult_night !== undefined) pass1.has_adult_night = pass1_retry.has_adult_night;
@@ -1292,7 +1371,7 @@ export async function executeDetective(
     } else {
       onProgress('[Detective] LM Studio Pass 2A (Floor & Physics)...');
       const pass2ASlice = yelpReviews ? `${yelpReviews}\n\n${pass2Slice}` : pass2Slice;
-      pass2A = await callLMStudio(buildSystem(FLOOR_SCHEMA), `Website Text & Reviews:\n${pass2ASlice}`, detectiveModel, onProgress, 'Pass2A', onStream);
+      pass2A = await callLMStudio(buildSystem(schemaPass2A), `Website Text & Reviews:\n${pass2ASlice}`, detectiveModel, onProgress, 'Pass2A', onStream);
       if (pass2A.TOXICITY_ABORT === true) return { aiMetadata: { TOXICITY_ABORT: true }, mappedFields: { _simulated_status: 'REJECTED' }, combinedText, qualityScore: 0, passedQualityGate: false, candidatePhotos: null, socialLinks: { instagram_url: null, facebook_url: null, tiktok_url: null, schedule_url: null }, flyerUrls, fieldConfidence: {} };
     }
 
@@ -1314,7 +1393,7 @@ export async function executeDetective(
     } else {
       onProgress('[Detective] LM Studio Pass 2B (Amenities & Services)...');
       const pass2BSlice = yelpReviews ? `${yelpReviews}\n\n${pass2Slice}` : pass2Slice;
-      pass2B = await callLMStudio(buildSystem(AMENITIES_SCHEMA), `Website Text & Reviews:\n${pass2BSlice}`, detectiveModel, onProgress, 'Pass2B', onStream);
+      pass2B = await callLMStudio(buildSystem(schemaPass2B), `Website Text & Reviews:\n${pass2BSlice}`, detectiveModel, onProgress, 'Pass2B', onStream);
       if (pass2B.TOXICITY_ABORT === true) return { aiMetadata: { TOXICITY_ABORT: true }, mappedFields: { _simulated_status: 'REJECTED' }, combinedText, qualityScore: 0, passedQualityGate: false, candidatePhotos: null, socialLinks: { instagram_url: null, facebook_url: null, tiktok_url: null, schedule_url: null }, flyerUrls, fieldConfidence: {} };
     }
 
@@ -1335,7 +1414,7 @@ export async function executeDetective(
       };
     } else {
       onProgress('[Detective] LM Studio Pass 2C (Accessibility & Culture)...');
-      pass2C = await callLMStudio(buildSystem(CULTURE_SCHEMA), `Website Text:\n${pass2Slice}`, detectiveModel, onProgress, 'Pass2C', onStream);
+      pass2C = await callLMStudio(buildSystem(schemaPass2C), `Website Text:\n${pass2Slice}`, detectiveModel, onProgress, 'Pass2C', onStream);
       if (pass2C.TOXICITY_ABORT === true) return { aiMetadata: { TOXICITY_ABORT: true }, mappedFields: { _simulated_status: 'REJECTED' }, combinedText, qualityScore: 0, passedQualityGate: false, candidatePhotos: null, socialLinks: { instagram_url: null, facebook_url: null, tiktok_url: null, schedule_url: null }, flyerUrls, fieldConfidence: {} };
     }
 
@@ -1357,7 +1436,7 @@ export async function executeDetective(
       };
     } else {
       onProgress('[Detective] LM Studio Pass 2D (Socials & Contacts)...');
-      pass2D = await callLMStudio(buildSystem(SOCIAL_SCHEMA), `Website Text:\n${pass2Slice}`, detectiveModel, onProgress, 'Pass2D', onStream);
+      pass2D = await callLMStudio(buildSystem(schemaPass2D), `Website Text:\n${pass2Slice}`, detectiveModel, onProgress, 'Pass2D', onStream);
       if (pass2D.TOXICITY_ABORT === true) return { aiMetadata: { TOXICITY_ABORT: true }, mappedFields: { _simulated_status: 'REJECTED' }, combinedText, qualityScore: 0, passedQualityGate: false, candidatePhotos: null, socialLinks: { instagram_url: null, facebook_url: null, tiktok_url: null, schedule_url: null }, flyerUrls, fieldConfidence: {} };
     }
 
@@ -1387,8 +1466,8 @@ export async function executeDetective(
     if (externalText.trim().length > 50) {
       onProgress('[Detective] LM Studio Pass 3 (Enrichment Fallback)...');
       const eSlice = externalText.slice(0, 4000);
-      const ENRICH_SCHEMA = { ...REQUIRED_SCHEMA, ...COMBINED_SCHEMA };
-      const pass3 = await callLMStudio(buildSystem(ENRICH_SCHEMA), `External Fallback Text:\n${eSlice}`, detectiveModel, onProgress, 'Pass3-Enrichment', onStream);
+      const schemaPass3 = { ...schemaPass1, ...schemaPass2A, ...schemaPass2B, ...schemaPass2C, ...schemaPass2D };
+      const pass3 = await callLMStudio(buildSystem(schemaPass3), `External Fallback Text:\n${eSlice}`, detectiveModel, onProgress, 'Pass3-Enrichment', onStream);
       
       // Merge without overwriting official website data
       for (const k in pass3) {
