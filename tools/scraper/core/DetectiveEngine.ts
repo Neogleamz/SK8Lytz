@@ -573,14 +573,7 @@ async function crawlPage(page: any, url: string, onProgress: (m: string) => void
     try { const fetchFn = require('node-fetch'); const buf = await (await fetchFn(url)).buffer(); const pdfData = await (pdfParse as any)(buf); return { ...empty, text:`[PDF: ${url}]\n${pdfData.text}` }; } catch { return empty; }
   }
   if (/\.(png|jpg|jpeg)(\?.*)?$/i.test(url)) {
-    try {
-      const buf = await downloadImageBuffer(url);
-      if (buf && isValidJpegOrPng(buf)) {
-        const { data:{text} } = await Tesseract.recognize(buf,'eng');
-        return { ...empty, text:text?.length>20?`[OCR Image: ${url}]\n${text}`:'' };
-      }
-      return empty;
-    } catch { return empty; }
+    return empty;
   }
   try {
     await page.goto(url,{waitUntil:'domcontentloaded',timeout:30000}).catch(()=>page.goto(url,{waitUntil:'domcontentloaded',timeout:15000}));
@@ -880,31 +873,7 @@ export async function executeDetective(
           domImages.push(...pg.images.slice(0,3));
         }
       }
-      if (!earlyTerminated) {
-        for(const fUrl of [...new Set(flyerUrls)].slice(0,5)){
-          if(coreText.includes(`[OCR from Flyer Image: ${fUrl}]`)) continue;
-          try{
-            const cleanUrl = fUrl.split('?')[0].toLowerCase();
-            const isOcrCompatible = cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.png');
-            if (isOcrCompatible) {
-              const buf = await downloadImageBuffer(fUrl);
-              if (buf && isValidJpegOrPng(buf)) {
-                const{data:{text}}=await Tesseract.recognize(buf,'eng');
-                if(text?.length>20) {
-                  const ocrTxt = `[OCR from Flyer Image: ${fUrl}]\n${text}\n\n`;
-                  coreText = ocrTxt + coreText;
-                  amenityText = ocrTxt + amenityText;
-                  onProgress(`[Detective] Pre-pended OCR text from flyer: ${fUrl}`);
-                }
-              } else {
-                onProgress(`[Detective] Skipping flyer OCR: Download/Header check failed: ${fUrl}`);
-              }
-            } else {
-              onProgress(`[Detective] Skipping flyer OCR for non-compatible format: ${fUrl}`);
-            }
-          }catch{}
-        }
-      }
+
       // Fix #1: Assign website text directly (no external noise yet)
       coreText = priorityText;
       amenityText = priorityText;
@@ -1014,38 +983,78 @@ export async function executeDetective(
     
     // ── ESCALATION PROTOCOL ──
     const needsEscalation = !earlyTerminated && (!pass1.hours || !pass1.pricing || (pass1.has_adult_night === true && !pass1.adult_night_schedule));
-    if (needsEscalation && browser) {
+    if (needsEscalation) {
       onProgress('[Detective] 🚨 ESCALATION PROTOCOL: Missing hours/pricing/adult-night. Activating Hound Dog & OCR.');
-      const ESCALATION_RULES = [/hours/i, /schedule/i, /pricing/i, /rates/i, /admission/i, /calendar/i, /adult.?night/i, /18\+/i, /21\+/i];
-      const undiscovered = allLinks.filter(l => ESCALATION_RULES.some(r => r.test(l.href) || r.test(l.text)))
-                                   .map(l => l.href)
-                                   .filter(href => !coreText.includes(`[PAGE: ${href}]`));
       
-      const targets = [...new Set(undiscovered)].slice(0, 2);
-      if (targets.length > 0) {
-        escalationRan = true;
-        const pages = await browser.pages();
-        const escPage = pages.length > 0 ? pages[0] : await browser.newPage();
-        
-        for (const targetUrl of targets) {
-          onProgress(`[Detective] 🚨 Escalation deep crawl -> ${targetUrl}`);
-          await escPage.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 25000 }).catch(()=>{});
-          await autoScroll(escPage);
-          
+      // 1. Gated Flyer OCR (runs only during escalation!)
+      if (flyerUrls.length > 0) {
+        onProgress(`[Detective] 🚨 Running flyer OCR on ${Math.min(5, flyerUrls.length)} discovered flyers...`);
+        for (const fUrl of [...new Set(flyerUrls)].slice(0, 5)) {
           try {
-            onProgress(`[Detective] 📸 Visual Snapshot taken. Running Tesseract OCR...`);
-            const screenshotBuffer = await escPage.screenshot({ fullPage: true, type: 'jpeg', quality: 80 });
-            const { data: { text } } = await Tesseract.recognize(screenshotBuffer, 'eng');
-            if (text?.trim().length > 50) {
-              const ocrTxt = `\n\n[ESCALATION OCR from ${targetUrl}]\n${text}\n\n`;
-              coreText = ocrTxt + coreText;
-              amenityText = ocrTxt + amenityText;
+            const cleanUrl = fUrl.split('?')[0].toLowerCase();
+            const isOcrCompatible = cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.png');
+            if (isOcrCompatible) {
+              const buf = await downloadImageBuffer(fUrl);
+              // Safety dimension & size check to prevent Leptonica crashes
+              if (buf && buf.length >= 1024 && isValidJpegOrPng(buf)) {
+                const { data: { text } } = await Tesseract.recognize(buf, 'eng');
+                if (text && text.trim().length > 20) {
+                  const ocrTxt = `\n\n[OCR from Flyer Image: ${fUrl}]\n${text}\n\n`;
+                  coreText = ocrTxt + coreText;
+                  amenityText = ocrTxt + amenityText;
+                  onProgress(`[Detective] ✓ Extracted flyer OCR: ${fUrl}`);
+                  escalationRan = true;
+                }
+              } else {
+                onProgress(`[Detective] Skipping flyer OCR: Image buffer corrupt or too small: ${fUrl}`);
+              }
             }
-          } catch(e:any) {
-            onProgress(`[Detective] OCR failed: ${e.message}`);
+          } catch (e: any) {
+            onProgress(`[Detective] Flyer OCR failed for ${fUrl}: ${e.message}`);
           }
         }
+      }
+
+      if (browser) {
+        const ESCALATION_RULES = [/hours/i, /schedule/i, /pricing/i, /rates/i, /admission/i, /calendar/i, /adult.?night/i, /18\+/i, /21\+/i];
+        const undiscovered = allLinks.filter(l => ESCALATION_RULES.some(r => r.test(l.href) || r.test(l.text)))
+                                     .map(l => l.href)
+                                     .filter(href => !coreText.includes(`[PAGE: ${href}]`));
         
+        const targets = [...new Set(undiscovered)].slice(0, 2);
+        if (targets.length > 0) {
+          escalationRan = true;
+          const pages = await browser.pages();
+          const escPage = pages.length > 0 ? pages[0] : await browser.newPage();
+          
+          for (const targetUrl of targets) {
+            onProgress(`[Detective] 🚨 Escalation deep crawl -> ${targetUrl}`);
+            await escPage.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 25000 }).catch(()=>{});
+            await autoScroll(escPage);
+            
+            try {
+              onProgress(`[Detective] 📸 Visual Snapshot taken. Running Tesseract OCR...`);
+              const screenshotBuffer = await escPage.screenshot({ fullPage: true, type: 'jpeg', quality: 80 });
+              if (screenshotBuffer && screenshotBuffer.length >= 1024) {
+                const { data: { text } } = await Tesseract.recognize(screenshotBuffer, 'eng');
+                if (text && text.trim().length > 50) {
+                  const ocrTxt = `\n\n[ESCALATION OCR from ${targetUrl}]\n${text}\n\n`;
+                  coreText = ocrTxt + coreText;
+                  amenityText = ocrTxt + amenityText;
+                }
+              } else {
+                onProgress(`[Detective] Skipping screenshot OCR: buffer too small.`);
+              }
+            } catch(e:any) {
+              onProgress(`[Detective] OCR failed: ${e.message}`);
+            }
+          }
+        } else {
+          onProgress('[Detective] 🚨 No undiscovered priority links found for escalation.');
+        }
+      }
+
+      if (escalationRan) {
         onProgress('[Detective] 🚨 Re-running LM Studio Pass 1 (Ops) with OCR context...');
         const cSlice2 = coreText.slice(0, 12000);
         const pass1_retry = await callLMStudio(buildSystem(REQUIRED_SCHEMA),`Website Text:\n${cSlice2}`,detectiveModel,onProgress,'Pass1-Retry',onStream);
@@ -1053,8 +1062,6 @@ export async function executeDetective(
         if (pass1_retry.pricing) pass1.pricing = pass1_retry.pricing;
         if (pass1_retry.has_adult_night !== undefined) pass1.has_adult_night = pass1_retry.has_adult_night;
         if (pass1_retry.adult_night_schedule) pass1.adult_night_schedule = pass1_retry.adult_night_schedule;
-      } else {
-        onProgress('[Detective] 🚨 No undiscovered priority links found for escalation.');
       }
     }
 

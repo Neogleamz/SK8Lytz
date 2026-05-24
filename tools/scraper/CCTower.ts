@@ -1661,7 +1661,7 @@ app.get('/api/queue', async (req, res) => {
   else if (phase === 'phase4') query += ` AND verification_status = 'MEDIA_READY' AND is_published = 0`; // Publisher input
   // phase6 removed (dead) — was old Publisher queue key
   // spider-recent removed (dead) — Spider phase eliminated
-  else if (phase === 'detective-recent') query += ` AND verification_status = 'DEEP_CRAWLED'`;
+  else if (phase === 'detective-recent') query += ` AND is_deep_crawled = 1`;
   else if (phase === 'published') query += ` AND is_published = 1`;
   else query += ` AND (verification_status IN ('SEEDED','DEEP_CRAWLED','MEDIA_READY','PENDING_WEBSITE','WEBSITE_STALLED') OR verification_status IS NULL)`;
 

@@ -917,7 +917,7 @@ export const getPipelineStats = (states: string[] = []): PipelineStats => {
     SELECT 
       COUNT(*) as total,
       SUM(CASE WHEN verification_status = 'SEEDED' THEN 1 ELSE 0 END) as seeded,
-      SUM(CASE WHEN verification_status = 'DEEP_CRAWLED' THEN 1 ELSE 0 END) as deep_crawled_count,
+      SUM(CASE WHEN is_deep_crawled = 1 THEN 1 ELSE 0 END) as deep_crawled_count,
       SUM(CASE WHEN verification_status = 'MEDIA_READY' THEN 1 ELSE 0 END) as media_ready,
       SUM(CASE WHEN is_published = 1 THEN 1 ELSE 0 END) as published,
       SUM(CASE WHEN website IS NOT NULL AND website != '' THEN 1 ELSE 0 END) as has_website,
