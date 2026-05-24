@@ -675,10 +675,12 @@ async function runPhotographerLoop() {
 
     consecutiveIdle = 0;
 
-    // Self-healing: auto-promote spots that crash repeatedly
+    // Crash gate: never silently promote an unprocessed record to MEDIA_READY.
+    // A spot that crashed 3x has no photos — promoting it bypasses Phase 3 entirely.
+    // Set STALLED so it's visible in the dashboard and can be manually reviewed/restarted.
     if ((target.retry_count || 0) >= 3) {
-      log('ERROR', `⚠️ ${target.name} crashed ${target.retry_count}x — auto-promoting to MEDIA_READY`);
-      updateLocalSpot(target.id, { verification_status: 'MEDIA_READY', last_attempted_at: new Date().toISOString() });
+      log('ERROR', `🚫 ${target.name} failed ${target.retry_count}x — marking STALLED (not promoted to MEDIA_READY)`);
+      updateLocalSpot(target.id, { verification_status: 'STALLED', last_attempted_at: new Date().toISOString() });
       await sleep(LOOP_COOLDOWN_MS);
       continue;
     }
