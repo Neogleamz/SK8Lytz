@@ -1156,9 +1156,38 @@ app.post('/api/sandbox', async (req, res) => {
     // Image-Trap OCR logic
     if (url.match(/\.(jpeg|jpg|gif|png)$/i)) {
       console.log(`[Image-Trap] Detected image URL, running OCR on ${url}`);
-      const Tesseract = require('tesseract.js');
-      const { data: { text } } = await Tesseract.recognize(url, 'eng');
-      cleanText = text.replace(/\s+/g, ' ').trim();
+      try {
+        const nodeFetch = require('node-fetch');
+        const fetchRes = await nodeFetch(url, { signal: AbortSignal.timeout(10000) });
+
+        if (fetchRes.ok) {
+          const buf = Buffer.from(await fetchRes.arrayBuffer());
+          // Validate dimensions before handing to Leptonica
+          const isValidImg = buf.length >= 2048 && (() => {
+            if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) {
+              for (let i = 2; i < buf.length - 9; i++) {
+                if (buf[i] === 0xFF && (buf[i+1] === 0xC0 || buf[i+1] === 0xC2)) {
+                  return ((buf[i+7] << 8)|buf[i+8]) >= 16 && ((buf[i+5] << 8)|buf[i+6]) >= 16;
+                }
+              }
+              return false;
+            }
+            if (buf[0] === 0x89 && buf[1] === 0x50 && buf.length >= 24) {
+              return ((buf[16]<<24)|(buf[17]<<16)|(buf[18]<<8)|buf[19]) >= 16;
+            }
+            return false;
+          })();
+          if (isValidImg) {
+            const Tesseract = require('tesseract.js');
+            const { data: { text } } = await Tesseract.recognize(buf, 'eng');
+            cleanText = text.replace(/\s+/g, ' ').trim();
+          } else {
+            console.log(`[Image-Trap] Skipping OCR: image too small or invalid format`);
+          }
+        }
+      } catch (ocrErr: any) {
+        console.error('[Image-Trap] OCR failed:', ocrErr.message);
+      }
     } else {
       // Clean DOM and extract text for standard webpages
       const puppeteer = require('puppeteer');
@@ -1204,11 +1233,15 @@ app.post('/api/sandbox', async (req, res) => {
       let ocrText = '';
       try {
         console.log(`[Brute Force OCR] Taking full page screenshot for ${url}`);
-        const screenshotBuffer = await page.screenshot({ fullPage: true, encoding: 'base64' });
-        const Tesseract = require('tesseract.js');
-        const { data: { text } } = await Tesseract.recognize(Buffer.from(screenshotBuffer, 'base64'), 'eng');
-        ocrText = text.replace(/\s+/g, ' ').trim();
-        console.log(`[Brute Force OCR] Extracted ${ocrText.length} characters.`);
+        const screenshotBuffer = Buffer.from(await page.screenshot({ fullPage: true, encoding: 'base64' }) as string, 'base64');
+        if (screenshotBuffer && screenshotBuffer.length >= 2048) {
+          const Tesseract = require('tesseract.js');
+          const { data: { text } } = await Tesseract.recognize(screenshotBuffer, 'eng');
+          ocrText = text.replace(/\s+/g, ' ').trim();
+          console.log(`[Brute Force OCR] Extracted ${ocrText.length} characters.`);
+        } else {
+          console.log('[Brute Force OCR] Screenshot buffer too small, skipping OCR.');
+        }
       } catch (ocrErr) {
         console.error('[Brute Force OCR] Failed to process screenshot:', ocrErr);
       }

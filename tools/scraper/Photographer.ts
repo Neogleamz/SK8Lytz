@@ -95,12 +95,27 @@ interface ImageCandidate {
 
 // ─── Download Helpers ─────────────────────────────────────────────────────────
 
+const MIN_OCR_DIMENSION = 16; // Leptonica hard minimum is 3px; we use 16 as safe floor
+
 function isValidJpegOrPng(buf: Buffer): boolean {
-  if (!buf || buf.length < 4) return false;
-  // JPEG magic bytes: FF D8 FF
-  if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return true;
-  // PNG magic bytes: 89 50 4E 47
-  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) return true;
+  if (!buf || buf.length < 24) return false;
+  // JPEG magic bytes: FF D8 FF — parse width/height from SOF0/SOF2 marker
+  if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) {
+    for (let i = 2; i < buf.length - 9; i++) {
+      if (buf[i] === 0xFF && (buf[i + 1] === 0xC0 || buf[i + 1] === 0xC2)) {
+        const h = (buf[i + 5] << 8) | buf[i + 6];
+        const w = (buf[i + 7] << 8) | buf[i + 8];
+        return w >= MIN_OCR_DIMENSION && h >= MIN_OCR_DIMENSION;
+      }
+    }
+    return false; // No SOF found — reject
+  }
+  // PNG magic bytes: 89 50 4E 47 — width/height at bytes 16-23 in IHDR chunk
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4E && buf[3] === 0x47) {
+    const w = (buf[16] << 24) | (buf[17] << 16) | (buf[18] << 8) | buf[19];
+    const h = (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | buf[23];
+    return w >= MIN_OCR_DIMENSION && h >= MIN_OCR_DIMENSION;
+  }
   return false;
 }
 
@@ -277,12 +292,16 @@ async function estimateImageQuality(candidates: ImageCandidate[]): Promise<strin
       const isOcrCompatible = cleanUrl.endsWith('.jpg') || cleanUrl.endsWith('.jpeg') || cleanUrl.endsWith('.png');
       if (isOcrCompatible) {
         const dl = await downloadImage(url);
-        if (dl && isValidJpegOrPng(dl.buffer)) {
-          const { data: { text } } = await Tesseract.recognize(dl.buffer, 'eng');
-          const textLen = text?.trim().length || 0;
-          if (textLen > 350) {
-            logToTower('INFO', `  🚫 Rejected as Flyer (Text length: ${textLen}): ${url.slice(0, 60)}`);
-          } else {
+        if (dl && dl.buffer.length >= 2048 && isValidJpegOrPng(dl.buffer)) {
+          try {
+            const { data: { text } } = await Tesseract.recognize(dl.buffer, 'eng');
+            const textLen = text?.trim().length || 0;
+            if (textLen > 350) {
+              logToTower('INFO', `  🚫 Rejected as Flyer (Text length: ${textLen}): ${url.slice(0, 60)}`);
+            } else {
+              finalUrls.push(url);
+            }
+          } catch { /* Tesseract worker crash — treat as non-flyer, keep the image */
             finalUrls.push(url);
           }
         } else {
