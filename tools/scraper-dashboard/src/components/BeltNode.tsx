@@ -439,16 +439,14 @@ export const BeltNode: React.FC<BeltProps> = ({
                   fontFamily: 'JetBrains Mono, monospace',
                 }}
               >
-                <option value="gap-fill" style={{ background: '#111' }}>Gap-Fill (All Tiers)</option>
-                <option value="hours" style={{ background: '#111' }}>🕐 Hours Only (Pass 1A)</option>
-                <option value="pricing" style={{ background: '#111' }}>💰 Pricing Only (Pass 1B)</option>
-                <option value="tier-1" style={{ background: '#111' }}>Tier 1: 🕐 Session Hours</option>
-                <option value="tier-2" style={{ background: '#111' }}>Tier 2: 💰 Pricing &amp; Fees</option>
-                <option value="tier-3" style={{ background: '#111' }}>Tier 3: 🌙 Adult Night</option>
-                <option value="tier-4" style={{ background: '#111' }}>Tier 4: 🛹 Floor &amp; Vibe</option>
-                <option value="tier-5" style={{ background: '#111' }}>Tier 5: 🏢 Amenities</option>
-                <option value="tier-6" style={{ background: '#111' }}>Tier 6: 🎭 Identity &amp; Culture</option>
-                <option value="tier-7" style={{ background: '#111' }}>Tier 7: 📱 Contacts &amp; Socials</option>
+                <option value="gap-fill" style={{ background: '#111' }}>🔍 Gap-Fill (Re-Analyze Missing)</option>
+                <option value="tier-1" style={{ background: '#111' }}>T1: 🕐 Session Hours</option>
+                <option value="tier-2" style={{ background: '#111' }}>T2: 💰 Pricing &amp; Fees</option>
+                <option value="tier-3" style={{ background: '#111' }}>T3: 🌙 Adult Night</option>
+                <option value="tier-4" style={{ background: '#111' }}>T4: 🛹 Floor &amp; Vibe</option>
+                <option value="tier-5" style={{ background: '#111' }}>T5: 🏢 Amenities</option>
+                <option value="tier-6" style={{ background: '#111' }}>T6: 🎭 Identity &amp; Culture</option>
+                <option value="tier-7" style={{ background: '#111' }}>T7: 📱 Contacts &amp; Socials</option>
               </select>
             )}
             {/* Live status dot */}

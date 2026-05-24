@@ -208,13 +208,42 @@ async function runIndexer() {
         }
       }
 
+      const scrapeScope: string = aiConfig.scrape_scope || 'tier-all';
+
+      // ── Gap-Fill Pass: re-analyze already enriched spots with missing fields ──
+      const isGapFill = scrapeScope === 'gap-fill';
+
       if (!target) {
-        let query = `SELECT * FROM local_spots WHERE verification_status IN ('SEEDED', 'PENDING')`;
-        if (priorityStates.length > 0) {
-          query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
+        if (isGapFill) {
+          // Pick DEEP_CRAWLED or MEDIA_READY spots with any critical field still NULL
+          const NULL_FIELD_CHECK = `(
+            opening_hours IS NULL OR opening_hours = '' OR opening_hours = 'null' OR
+            pricing_data IS NULL OR pricing_data = '' OR pricing_data = 'null' OR
+            adult_night_schedule IS NULL OR adult_night_schedule = '' OR adult_night_schedule = 'null' OR
+            surface_type IS NULL OR surface_type = '' OR
+            operator_description IS NULL OR operator_description = ''
+          )`;
+          let gapQuery = `SELECT * FROM local_spots
+            WHERE verification_status IN ('DEEP_CRAWLED', 'MEDIA_READY')
+            AND ${NULL_FIELD_CHECK}`;
+          if (priorityStates.length > 0) {
+            gapQuery += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
+          }
+          // Avoid re-hammering the same spot — order by least recently attempted
+          gapQuery += ` ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`;
+          target = db.prepare(gapQuery).get();
+          if (target) {
+            console.log(`[Indexer] 🔍 GAP-FILL: Found enriched spot with missing fields: ${(target as any).name} (${(target as any).verification_status})`);
+          }
+        } else {
+          // Standard pass: pick next SEEDED / PENDING spot
+          let query = `SELECT * FROM local_spots WHERE verification_status IN ('SEEDED', 'PENDING')`;
+          if (priorityStates.length > 0) {
+            query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
+          }
+          query += ` ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`;
+          target = db.prepare(query).get();
         }
-        query += ` ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`;
-        target = db.prepare(query).get();
       }
 
       if (!target) {
@@ -363,13 +392,17 @@ async function runIndexer() {
         }
       }
 
+      // In gap-fill mode, preserve the spot's existing status (don't downgrade MEDIA_READY → DEEP_CRAWLED)
+      const preservedStatus = isGapFill ? target.verification_status : 'DEEP_CRAWLED';
+
       // Handle quality gate failure — still emit DEEP_CRAWLED so Photographer gets a shot.
       // Low quality is flagged via ai_metadata.quality_note, not by blocking the pipeline.
       if (!result.passedQualityGate) {
-        console.error(`   ⚠️  Low quality (${result.qualityScore}/17) → promoting to DEEP_CRAWLED for Photographer.`);
+        const gapFillStatus = isGapFill ? target.verification_status : 'DEEP_CRAWLED';
+        console.error(`   ⚠️  Low quality (${result.qualityScore}/17) → ${isGapFill ? 'preserving status' : 'promoting to DEEP_CRAWLED'}.`);
         updateLocalSpot(target.id, {
           ...finalUpdates,
-          verification_status: 'DEEP_CRAWLED',
+          verification_status: gapFillStatus,
           is_deep_crawled: true,
           retry_count: (target.retry_count || 0) + 1,
           last_attempted_at: new Date().toISOString(),
@@ -385,17 +418,17 @@ async function runIndexer() {
           ...finalUpdates,
           ...(result.candidatePhotos ? { candidate_photos: JSON.stringify(result.candidatePhotos) } : {}),
           ...(result.mappedFields?.ai_metadata ? { ai_metadata: JSON.stringify(result.mappedFields.ai_metadata) } : {}),
-          verification_status: 'DEEP_CRAWLED',
+          verification_status: preservedStatus,
           is_deep_crawled: true,
           retry_count: 0,
           last_attempted_at: new Date().toISOString(),
-          pipeline_status: '',
+          pipeline_status: isGapFill ? `gap-fill: ${new Date().toISOString()}` : '',
           field_confidence: JSON.stringify(mergedConf)
         });
       } catch (updateError: any) {
         console.error('[Indexer] DB write failed after sanitization:', updateError.message);
         updateLocalSpot(target.id, {
-          verification_status: 'DEEP_CRAWLED',
+          verification_status: preservedStatus,
           is_deep_crawled: true,
           last_attempted_at: new Date().toISOString(),
           pipeline_status: '',
