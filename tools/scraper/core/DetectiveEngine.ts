@@ -76,6 +76,62 @@ export const safeSurface = (v: any): string | null => {
   return 'unknown';
 };
 
+export const normalizeHours = (rawHours: any): string[] | null => {
+  if (!rawHours) return null;
+
+  // 1. If it's already an array of strings, return it
+  if (Array.isArray(rawHours)) {
+    return rawHours.map(String).filter(Boolean);
+  }
+
+  // 2. If it's a string, see if it is a JSON string
+  if (typeof rawHours === 'string') {
+    const trimmed = rawHours.trim();
+    if ((trimmed.startsWith('[') && trimmed.endsWith(']')) || (trimmed.startsWith('{') && trimmed.endsWith('}'))) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        return normalizeHours(parsed);
+      } catch {}
+    }
+    // If it's a plain text string with commas or newlines, split it into an array
+    const separators = /[\n,;]|\s{2,}/;
+    const split = trimmed.split(separators).map(s => s.trim()).filter(Boolean);
+    if (split.length >= 2) return split;
+    return [trimmed];
+  }
+
+  // 3. If it's a JSON object (like {"Monday": "Closed", "Tuesday": "6:00-9:00 PM"}), convert to string array
+  if (typeof rawHours === 'object') {
+    // If it's a Google Places opening_hours object with weekday_text
+    if (Array.isArray(rawHours.weekday_text)) {
+      return rawHours.weekday_text.map(String).filter(Boolean);
+    }
+    
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const result: string[] = [];
+    let hasDay = false;
+    for (const d of days) {
+      if (rawHours[d] !== undefined || rawHours[d.slice(0, 3)] !== undefined) {
+        const val = rawHours[d] !== undefined ? rawHours[d] : rawHours[d.slice(0, 3)];
+        result.push(`${d}: ${val}`);
+        hasDay = true;
+      }
+    }
+    if (hasDay) return result;
+
+    // Fallback: convert any key-value object to string
+    const resultFallback: string[] = [];
+    for (const [k, v] of Object.entries(rawHours)) {
+      if (v !== undefined && v !== null) {
+        resultFallback.push(`${k}: ${v}`);
+      }
+    }
+    if (resultFallback.length > 0) return resultFallback;
+  }
+
+  return null;
+};
+
 export const normalizePricing = (rawPricing: any): Record<string, number | null> => {
   const norm: Record<string, number | null> = { adult: null, child: null, senior: null, spectator: null, skate_rental: null };
   if (!rawPricing) return norm;
@@ -162,13 +218,13 @@ export interface DetectiveResult {
 
 const FIELD_DESCRIPTIONS: Record<string, any> = {
   // Pass 1
-  opening_hours: 'Complete weekly public skating schedule for ALL 7 DAYS {Monday: time_range, Tuesday: time_range, ...}. Include every day even if closed.',
+  opening_hours: 'Strict JSON map of public session times. Include split sessions (e.g. {"Saturday": "1:00 PM - 4:00 PM, 7:00 PM - 11:00 PM"}). SAFE NULL RULE: Return null for any day not explicitly discussed. DO NOT assume closed; only mark "Closed" if explicitly stated as closed on that day.',
   pricing_data: {
-    adult: 'number or null — adult admission fee',
-    child: 'number or null — child/kid admission fee',
-    senior: 'number or null — senior admission fee',
-    spectator: 'number or null — spectator/non-skating supervising fee',
-    skate_rental: 'number or null — regular skate rental fee'
+    adult: 'number or null — adult admission fee. Return null if not explicitly found. DO NOT assume free.',
+    child: 'number or null — child/kid admission fee. Return null if not explicitly found.',
+    senior: 'number or null — senior admission fee. Return null if not explicitly found.',
+    spectator: 'number or null — spectator/non-skating supervising fee. Return null if not explicitly found.',
+    skate_rental: 'number or null — regular skate rental fee. Return null if not explicitly found.'
   },
   has_fee: 'boolean or null — return null if no pricing/fee information was found. DO NOT assume free.',
   has_rental: 'boolean or null — return null if no skate rental information was found.',
@@ -1481,7 +1537,7 @@ export async function executeDetective(
   // Fix #2: JSON-LD fields fill gaps — LLM wins, JSON-LD is fallback
   aiMetadata = { ...jsonLdFields, ...pass2, ...pass1 };
 
-  const opening_hours=aiMetadata.hours||aiMetadata.opening_hours||spotContext.opening_hours||null;
+  const opening_hours=normalizeHours(aiMetadata.hours||aiMetadata.opening_hours||spotContext.opening_hours||null);
   const pricing_data=normalizePricing(aiMetadata.pricing||aiMetadata.pricing_data||spotContext.pricing_data);
   const surface_type=safeSurface(aiMetadata.surface_type||spotContext.surface_type);
   const surface_quality=aiMetadata.surface_quality||spotContext.surface_quality||null;
