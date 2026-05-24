@@ -1,6 +1,6 @@
 # SK8Lytz Scraper Pipeline Bible
 
-> **STATUS**: Living document. Last updated 2026-05-24.
+> **STATUS**: Living document. Last updated 2026-05-24 (Session 2).
 > **RULE**: Any agent MUST read this file COMPLETELY before modifying scraper code. No exceptions.
 
 ---
@@ -44,7 +44,7 @@ NULL/PENDING → PENDING_WEBSITE → SEEDED → DEEP_CRAWLED → MEDIA_READY →
 |------|-------|----------------|-----------------|
 | `GoogleSweep.ts` | 1 (Scout) | — | `SEEDED` or `PENDING_WEBSITE` |
 | `WebsiteResolverDaemon.ts` | 1.5 | `PENDING_WEBSITE` | `SEEDED` or `WEBSITE_STALLED` |
-| `Indexer.ts` | 2 (Detective) | `SEEDED` | `DEEP_CRAWLED`, `STALLED`, or `REJECTED` |
+| `Indexer.ts` | 2 (Detective) | `SEEDED` or `DEEP_CRAWLED`/`MEDIA_READY` (gap-fill) | `DEEP_CRAWLED`, `STALLED`, or `REJECTED` |
 | `Photographer.ts` | 3 | `DEEP_CRAWLED` | `MEDIA_READY` |
 | `Publisher.ts` | 4 | `MEDIA_READY` | `PUBLISHED` or `REJECTED` |
 | `CCTower.ts` | Master | — | Manages all daemons, serves API |
@@ -79,8 +79,12 @@ The single source of truth for all spot data. ~60 columns covering identity, enr
 - Identity & Culture (Pass 2C): `operator_name`, `operator_description`, `is_wheelchair_accessible`, `hosts_derby`, `special_events`, `cultural_metadata`
 - Contacts & Socials (Pass 2D): `email_addresses`, `instagram_url`, `facebook_url`, `tiktok_url`, `schedule_url`, `yelp_url`, `logo_url`
 
-**Phase 3 Photographer Fields**:
-- `candidate_photos` (JSON), `photos` (JSON), `logo_url`, `cover_photo_url`
+**Phase 3 Photographer Fields** (v3 schema — 2026-05-24):
+- `logo_url` — rink's brand logo (stored separately, used as card avatar)
+- `photos` (JSON array of `SavedPhoto` objects — see §3a)
+- `photo_coverage` (JSON object — see §3a)
+- `candidate_photos` (JSON — raw candidates from Detective, consumed by Photographer)
+- `cover_photo_url` — hero image override
 
 **Pipeline State Fields**:
 - `verification_status`, `is_published`, `is_deep_crawled`, `is_verified`
@@ -88,6 +92,68 @@ The single source of truth for all spot data. ~60 columns covering identity, enr
 - `field_confidence` (JSON: `{ field_name: { source, confidence, extracted_at } }`)
 - `ai_metadata` (JSON: `{ TOXICITY_ABORT: bool, rejection_reason: string, quality_note: string }`)
 - `sync_required` (auto-set by trigger on any update)
+- `pipeline_status` (TEXT — stamped `gap-fill: <ISO timestamp>` after a gap-fill re-analysis pass)
+
+---
+
+## §3a — Photo Schema (v3, 2026-05-24)
+
+### `SavedPhoto` Object
+Every photo stored in `photos[]` is now an object (NOT a raw URL string):
+```ts
+interface SavedPhoto {
+  url: string;           // local path: /local-bucket/<hash>.webp
+  type: PhotoType;       // canonical category (see below)
+  source: string;        // 'website' | 'google_refs' | 'instagram' | 'yelp' | 'upload' | 'legacy'
+  confidence: number;    // 0-1 (keyword fast-path = 1.0, LLM = 0.7-0.9)
+  signals: string[];     // evidence: ['alt:exterior', 'url:outside', ...]
+  savedAt: string;       // ISO timestamp
+}
+```
+
+### Canonical `PhotoType` Enum
+| Value | Purpose |
+|-------|---------|
+| `exterior` | Outside of building / parking lot |
+| `interior` | Inside the rink (skating floor, seating) |
+| `floor` | Close-up of skate floor surface (for AI floor-type analysis) |
+| `pro_shop` | Pro shop / skate rental area |
+| `action` | People skating, having fun |
+| `logo` | Brand logo (also stored in `logo_url`) |
+| `unknown` | Overflow / unclassified — manual tagging required |
+
+### `photo_coverage` JSON Object
+Stored as a TEXT column (`JSON.stringify`). Shows which categories have been filled:
+```json
+{ "exterior": true, "interior": false, "floor": true, "pro_shop": false, "action": false }
+```
+Displayed in the dashboard as colored ✓/✗ chips on each DatabankCard.
+
+### Collection Strategy (Priority Order)
+1. **Logo**: `apple-touch-icon` → `og:image` → `favicon` → `/logo` URL path
+2. **Priority categories** (exterior → interior → floor → pro_shop → action): website-first → Google refs (×10) → Instagram grid → Yelp tabs
+3. **Overflow pass**: remaining website candidates saved as `unknown` for manual tagging
+4. **Cap**: max 30 total photos per spot (6 targeted + up to 24 overflow)
+5. **Stock photo rejection**: domains like `shutterstock`, `getty`, `istock` always skipped
+
+### Compression
+All downloaded images are converted to **WebP at quality 82, max 1800px** via `sharp` (`libvips` native).
+Savings: ~65% smaller vs. original JPEG. Content-hash SHA-256 deduplication prevents re-downloading.
+
+### Classification Pipeline
+```
+Image URL + alt text + surrounding DOM text
+    → keyword fast-path (5 context signals: url, alt, title, caption, class)
+    → if ambiguous → LLM text classification (no VRAM — text-only, uses running model)
+    → PhotoType assigned
+```
+
+### Anti-Patterns
+- ❌ DO NOT store raw URL strings in `photos[]` — always `SavedPhoto` objects
+- ❌ DO NOT put `logo_url` inside `photos[]` — it lives in its own column
+- ❌ DO NOT dispatch sharp compression payloads below 12 RGB pixels (buffer lockout risk)
+
+---
 
 ### `scraper_config` (Global Configuration)
 Single row (id=1) containing a `config_json` TEXT blob. Key properties:
@@ -161,7 +227,10 @@ The Dynamic Priority-Based Pass Ordering System controls which fields the Detect
 | **7** | 2D | 📱 Contacts & Socials | `email_addresses`, `instagram_url`, `facebook_url`, `tiktok_url`, `schedule_url`, `yelp_url`, `logo_url` | ❌ |
 
 **RULE**: Tier 0 fields are NEVER sent to the LLM — they come from Google Places in Phase 1.
-**Scope Dropdown**: `gap-fill` (all tiers), `hours` (Pass 1A), `pricing` (Pass 1B), `tier-N` (fields ≤ tier N).
+**Scope Dropdown** (9 options — `tier-all` added 2026-05-24):
+- `tier-all` → Run ALL 7 passes on every `SEEDED`/`PENDING` spot — the default Indexer behavior
+- `gap-fill` → Re-analyze already-enriched spots (`DEEP_CRAWLED`/`MEDIA_READY`) with NULL critical fields
+- `tier-1` through `tier-7` → Standard `SEEDED`→`DEEP_CRAWLED` queue filtered to that tier
 
 ### Tier Seeding Locations (MUST stay in sync)
 1. `LocalDB.ts` L332-362 — runs on every DB boot
@@ -211,13 +280,18 @@ Priority chain for extraction prompts:
 14. Indexer checks `aiMetadata.TOXICITY_ABORT` → REJECTED if true
 
 ### Scope Modes
-| Scope Value | Pass 1A | Pass 1B | Pass 1C | Pass 2A-2D |
-|-------------|---------|---------|---------|------------|
-| `gap-fill` | ✅ (if gaps) | ✅ (if gaps) | ✅ (if gaps) | ✅ (if gaps) |
-| `hours` | ✅ | ❌ | ❌ | ❌ |
-| `pricing` | ❌ | ✅ | ❌ | ❌ |
-| `amenities` | ❌ | ❌ | ❌ | ✅ (if gaps) |
-| `tier-N` | filtered | filtered | filtered | filtered |
+| Scope Value | Queue Picked | Passes Run | Status After |
+|-------------|-------------|-----------|---------------|
+| `tier-all` | `SEEDED`/`PENDING` | **All 7 passes** (1A→2D) | `DEEP_CRAWLED` |
+| `gap-fill` | `DEEP_CRAWLED` or `MEDIA_READY` with NULL critical fields | All gaps only | Preserved (no downgrade) |
+| `tier-1` | `SEEDED`/`PENDING` | Pass 1A only | `DEEP_CRAWLED` |
+| `tier-2` | `SEEDED`/`PENDING` | Pass 1A-1B | `DEEP_CRAWLED` |
+| `tier-N` | `SEEDED`/`PENDING` | Passes ≤ tier N | `DEEP_CRAWLED` |
+
+**Gap-Fill Critical Fields** (triggers eligibility):
+`opening_hours`, `pricing_data`, `adult_night_schedule`, `surface_type`, `operator_description`
+
+**Gap-Fill Status Preservation Rule**: A `MEDIA_READY` spot processed in gap-fill mode stays `MEDIA_READY`. A `DEEP_CRAWLED` spot stays `DEEP_CRAWLED`. Gap-fill NEVER downgrades status.
 
 ---
 
@@ -487,9 +561,30 @@ curl http://localhost:5999/api/rejected-stats | jq '{total: .total, recent: .rec
 ### ⚠️ CRITICAL: Code changes require rebuild
 The Docker image copies source at build time (`COPY . .`). Edit any `.ts` file → `docker compose up -d --build`. The SQLite DB is volume-mounted and persists.
 
+### ⚠️ CRITICAL: New worktree DB copy rule
+When spinning up a new worktree container for the first time, the worktree's `.scraper-data/` has only an **empty placeholder DB** (gitignored). You MUST:
+```powershell
+# 1. Stop the container
+docker stop sk8lytz-scraper-stack
+
+# 2. Copy live DB from master
+$src = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\tools\.scraper-data"
+$dst = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\<slug>\tools\.scraper-data"
+Copy-Item "$src\scraper.db" "$dst\scraper.db" -Force
+Copy-Item "$src\scraper.db-shm" "$dst\scraper.db-shm" -Force -ErrorAction SilentlyContinue
+Copy-Item "$src\scraper.db-wal" "$dst\scraper.db-wal" -Force -ErrorAction SilentlyContinue
+
+# 3. Start container
+docker compose up -d
+
+# 4. Verify data loaded
+Invoke-RestMethod http://localhost:5999/api/pipeline-stats | Select -ExpandProperty summary
+```
+If `total` returns 0 after startup — the DB copy was skipped. Do NOT proceed with testing.
+
 ---
 
-## §14 — What This Bible Was Missing (Added 2026-05-24)
+## §14 — What This Bible Was Missing (Session 1 — 2026-05-24)
 
 The following were absent before this session and caused regressions:
 
@@ -501,3 +596,30 @@ The following were absent before this session and caused regressions:
 6. **GoogleSweep unified injection** — Phase 1 was using only the legacy blocklist table, ignoring `ai_exclusion_keywords`. Now merged at sweep startup.
 7. **Phase 1 BLOCK & PURGE write path** — was writing to legacy table only. Now syncs to `ai_exclusion_keywords` simultaneously.
 8. **Pre-LLM regex bouncer was hardcoded** — 12 ice/hockey terms, score threshold of 3. Now uses the dynamic `ai_exclusion_keywords` list from config.
+
+---
+
+## §15 — What Changed (Session 2 — 2026-05-24)
+
+### Photographer v3 — Complete Rewrite
+1. **Category-intent collection** — 6 targeted asset types (exterior, interior, floor, pro_shop, action, logo) collected in priority order from 4 sources (website → Google refs ×10 → Instagram → Yelp).
+2. **`SavedPhoto` object array** — `photos[]` column now stores typed objects with `type`, `source`, `confidence`, `signals`, `savedAt`. Raw URL strings are legacy.
+3. **`logo_url` separated** — logo extracted from `apple-touch-icon` chain, stored in its own column, NOT in `photos[]`.
+4. **`photo_coverage` column** — new TEXT column in `local_spots`, JSON object `{ exterior: bool, interior: bool, floor: bool, pro_shop: bool, action: bool }`. Displayed as dashboard chips.
+5. **30-photo cap** — 6 targeted + up to 24 overflow `unknown` photos for manual tagging.
+6. **WebP compression** — all photos converted via `sharp` (libvips). Quality 82, max 1800px. ~65% size reduction. SHA-256 dedup prevents re-downloads.
+7. **Stock photo rejection** — `shutterstock`, `getty`, `istock`, `depositphotos`, `unsplash`, `pexels` domains always skipped.
+8. **`libvips-dev` in Dockerfile** — required for `sharp` native build. Added to `apt-get install` layer.
+
+### Indexer — Gap-Fill Pass
+9. **Gap-fill mode** — `scrape_scope: 'gap-fill'` picks `DEEP_CRAWLED`/`MEDIA_READY` spots with NULL critical fields and re-runs detective WITHOUT changing their status. Use to patch holes without resetting the pipeline.
+10. **Status preservation** — `MEDIA_READY` spots processed via gap-fill stay `MEDIA_READY`. `pipeline_status` stamped with `gap-fill: <ISO>` for audit.
+
+### Dashboard
+11. **Phase 2 scope dropdown deduped** — removed stale `hours Only (Pass 1A)` and `pricing Only (Pass 1B)` aliases. Now 8 clean options: `gap-fill` + `tier-1` through `tier-7`.
+12. **DatabankCard photo type badge** — overlaid on hero image (bottom-left), shows current photo category (EXTERIOR, FLOOR, etc.).
+13. **DatabankCard coverage chips** — row of ✓/✗ chips below hero image showing which photo categories have been collected.
+14. **DatabankCard logo avatar** — rink's logo displayed as 36px avatar next to spot name in card header.
+
+### Operations
+15. **New worktree DB copy rule** — documented in §13. Worktrees always start with empty placeholder DB. Must copy from master before testing.

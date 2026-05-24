@@ -423,7 +423,7 @@ export const BeltNode: React.FC<BeltProps> = ({
             )}
             {id === 2 && onScopeChange && (
               <select
-                value={scrapeScope || 'gap-fill'}
+                value={scrapeScope || 'tier-all'}
                 onChange={(e) => onScopeChange(e.target.value)}
                 style={{
                   background: 'rgba(0,0,0,0.5)',
@@ -439,6 +439,7 @@ export const BeltNode: React.FC<BeltProps> = ({
                   fontFamily: 'JetBrains Mono, monospace',
                 }}
               >
+                <option value="tier-all" style={{ background: '#111' }}>🔥 All Tiers (Full 7-Pass)</option>
                 <option value="gap-fill" style={{ background: '#111' }}>🔍 Gap-Fill (Re-Analyze Missing)</option>
                 <option value="tier-1" style={{ background: '#111' }}>T1: 🕐 Session Hours</option>
                 <option value="tier-2" style={{ background: '#111' }}>T2: 💰 Pricing &amp; Fees</option>
