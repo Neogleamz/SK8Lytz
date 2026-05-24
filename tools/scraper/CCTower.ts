@@ -1120,6 +1120,12 @@ app.delete('/api/sniper', async (req, res) => {
 app.post('/api/spots/:id/reset', async (req, res) => {
   const { id } = req.params;
   try {
+    // ── Additive-Only: NEVER wipe enrichment data on reset ──────────────────
+    // Aligned with /api/skate_spots/:id/restart and the Requeue Wizard.
+    // All three reset paths now use the same safe contract:
+    //   TOUCH:   verification_status, last_attempted_at, retry_count, is_deep_crawled
+    //   SACRED:  photos[], logo_url, photo_coverage, opening_hours, pricing_data,
+    //            surface_type, surface_quality, ai_metadata, candidate_photos, candidate_links
     const spot = db.prepare('SELECT website, candidate_links FROM local_spots WHERE id = ?').get(id) as any;
     const hasWebsite = (spot?.website && spot.website.trim() !== '') || (() => {
       try {
@@ -1131,22 +1137,12 @@ app.post('/api/spots/:id/reset', async (req, res) => {
     })();
     const nextStatus = hasWebsite ? 'SEEDED' : 'PENDING_WEBSITE';
 
-    // Purge AI fields and reset status
-    db.prepare(`
-      UPDATE local_spots 
-      SET 
-        verification_status = ?, 
-        last_attempted_at = NULL,
-        is_deep_crawled = 0,
-        ai_metadata = NULL,
-        opening_hours = NULL,
-        pricing_data = NULL,
-        surface_type = NULL,
-        surface_quality = NULL,
-        candidate_photos = NULL,
-        candidate_links = NULL
-      WHERE id = ?
-    `).run(nextStatus, id);
+    updateLocalSpot(id, {
+      verification_status: nextStatus,
+      last_attempted_at: null,
+      retry_count: 0,
+      is_deep_crawled: false,
+    });
     res.json({ success: true });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
