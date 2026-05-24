@@ -1744,7 +1744,10 @@ app.get('/api/queue', async (req, res) => {
   const statesRaw = (req.query.states as string) || '';
   const states = statesRaw ? statesRaw.split(',').map(s => s.trim().toUpperCase()).filter(Boolean) : [];
 
-  let query = 'SELECT * FROM local_spots WHERE 1=1';
+  // ── Global Graveyard Shield ─────────────────────────────────────────────────
+  // REJECTED and ON_HOLD records must NEVER appear in any pipeline queue.
+  // This exclusion is applied at the base query root so ALL phase filters inherit it.
+  let query = `SELECT * FROM local_spots WHERE verification_status NOT IN ('REJECTED', 'ON_HOLD')`;
   if (phase === 'pending_website') query += ` AND verification_status = 'PENDING_WEBSITE'`;
   else if (phase === 'stalled_website') query += ` AND verification_status = 'WEBSITE_STALLED'`;
   else if (phase === 'phase1') query += ` AND verification_status = 'SEEDED'`;
@@ -1753,7 +1756,7 @@ app.get('/api/queue', async (req, res) => {
   else if (phase === 'phase4') query += ` AND verification_status = 'MEDIA_READY' AND is_published = 0`; // Publisher input
   // phase6 removed (dead) — was old Publisher queue key
   // spider-recent removed (dead) — Spider phase eliminated
-  else if (phase === 'detective-recent') query += ` AND is_deep_crawled = 1`;
+  else if (phase === 'detective-recent') query += ` AND is_deep_crawled = 1 AND verification_status = 'DEEP_CRAWLED'`; // Phase 2 out: only active DEEP_CRAWLED spots, never REJECTED/SEEDED/ON_HOLD phantoms
   else if (phase === 'published') query += ` AND is_published = 1`;
   else query += ` AND (verification_status IN ('SEEDED','DEEP_CRAWLED','MEDIA_READY','PENDING_WEBSITE','WEBSITE_STALLED') OR verification_status IS NULL)`;
 
