@@ -919,16 +919,6 @@ function condenseWebText(rawText: string): string {
   const lines = rawText.split('\n');
   const keptSegments: string[] = [];
 
-  const highValuePatterns = [
-    /hour|schedule|session|time|calendar|events|open.?skate/i,
-    /adult.?night|18\+|21\+/i,
-    /pricing|price|admission|rates|ticket|fee|cost|dollar/i,
-    /about|story|history|facility|rink|floor|surface|wood/i,
-    /contact|location|directions|email|info|phone|address/i,
-    /rental|pro.?shop|food|snack|arcade|party|birthday/i,
-    /locker|bathroom|restroom|toilet|wifi|wi-fi|wheelchair|accessible|parking/i
-  ];
-
   const skipKeywords = [
     /copyright/i, /all rights reserved/i, /privacy policy/i, /cookie policy/i,
     /terms of (use|service)/i, /designed by/i, /powered by/i, /skip to/i,
@@ -937,29 +927,24 @@ function condenseWebText(rawText: string): string {
 
   for (const line of lines) {
     const s = line.trim();
-    if (!s || s.length < 5 || s.length > 500) continue;
+    if (!s) continue;
 
     // Discard typical layout and cookie policy boilerplate
     if (skipKeywords.some(pat => pat.test(s))) continue;
 
-    // Keep if matches high-value rink data patterns
-    const isHighValue = highValuePatterns.some(pat => pat.test(s));
-    
-    // Also keep if it looks like a time/price line (contains numbers + day name or am/pm/$)
-    const hasNumbers = /\d+/.test(s);
-    const hasTimeOrPrice = /(am|pm|\$|monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i.test(s);
-    
-    if (isHighValue || (hasNumbers && hasTimeOrPrice)) {
-      keptSegments.push(s);
+    // Preserve the line
+    keptSegments.push(s);
+  }
+
+  // Deduplicate consecutive identical lines (often happens with navigation menus)
+  const deduped: string[] = [];
+  for (let i = 0; i < keptSegments.length; i++) {
+    if (i === 0 || keptSegments[i] !== keptSegments[i-1]) {
+      deduped.push(keptSegments[i]);
     }
   }
 
-  // Fallback to basic slicing if page was exceptionally sparse to avoid data loss
-  if (keptSegments.length < 5) {
-    return rawText.replace(/\s+/g, ' ').slice(0, 4000);
-  }
-
-  return keptSegments.join('\n');
+  return deduped.join('\n');
 }
 
 // ─── Main Detective Function ─────────────────────────────────────────────────
@@ -1296,7 +1281,7 @@ export async function executeDetective(
   } else {
     // scope === 'gap-fill' (default) or 'tier-N'
     skipPass1A = Object.keys(schemaPass1A).length === 0;
-    skipPass1B = Object.keys(schemaPass1B).length === 0;
+skipPass1B = Object.keys(schemaPass1B).length === 0;
     skipPass1C = Object.keys(schemaPass1C).length === 0;
     skip2A = Object.keys(schemaPass2A).length === 0;
     skip2B = Object.keys(schemaPass2B).length === 0;
@@ -1330,16 +1315,10 @@ export async function executeDetective(
   let cSlice = coreText;
   let aSlice = amenityText;
 
-  if (coreText.trim().length >= 50 && hasCrawledWebsite && !isTierOverride) {
-    // 🧬 Heuristics Semantic DOM Slicing
-    onProgress(`[HEURISTIC] 🧬 Applying semantic slicing to extraction text...`);
-    cSlice = HeuristicsEngine.getSemanticSlice(coreText).slice.slice(0, 12000);
-    aSlice = HeuristicsEngine.getSemanticSlice(amenityText).slice.slice(0, 12000);
-  } else {
-    if (isTierOverride) onProgress(`[HEURISTIC] ⏭️ Bypassing semantic slicing (Tier Override Active)`);
-    cSlice = coreText.slice(0, 15000);
-    aSlice = amenityText.slice(0, 15000);
-  }
+  onProgress('[HEURISTIC] Bypassing semantic slicing to preserve full context');
+  cSlice = coreText.slice(0, 30000);
+  aSlice = amenityText.slice(0, 30000);
+  
   
   combinedText = `[OPS CORE]\n${cSlice}\n\n[AMENITIES]${aSlice}`;
 
@@ -1788,3 +1767,4 @@ export async function executeDetective(
     if(browser){try{await browser.close();}catch{}}
   }
 }
+
