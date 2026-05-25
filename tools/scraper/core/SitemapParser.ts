@@ -99,7 +99,8 @@ function extractLocsFromXml(xml: string): string[] {
   const locRegex = /<loc>(.*?)<\/loc>/gi;
   let match: RegExpExecArray | null;
   while ((match = locRegex.exec(xml)) !== null) {
-    const url = match[1].trim();
+    let url = match[1].trim();
+    url = url.replace(/<!\[CDATA\[(.*?)\]\]>/gi, '$1').trim();
     if (url) locs.push(url);
   }
   return locs;
@@ -110,7 +111,9 @@ function extractSitemapUrlsFromIndex(xml: string): string[] {
   const sitemapRegex = /<sitemap>[\s\S]*?<loc>(.*?)<\/loc>[\s\S]*?<\/sitemap>/gi;
   let match: RegExpExecArray | null;
   while ((match = sitemapRegex.exec(xml)) !== null) {
-    sitemapUrls.push(match[1].trim());
+    let url = match[1].trim();
+    url = url.replace(/<!\[CDATA\[(.*?)\]\]>/gi, '$1').trim();
+    if (url) sitemapUrls.push(url);
   }
   return sitemapUrls;
 }

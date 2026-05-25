@@ -325,7 +325,7 @@ const FIELD_PASS_MAP: Record<string, string> = {
   email_addresses: 'pass2D'
 };
 
-function buildPassSchema(fields: any[], spotContext: any, confMap: Record<string, any>, threshold = 0.60, maxTier = 10, configVectorMap: Record<string, string> = {}): Record<string, any> {
+function buildPassSchema(fields: any[], spotContext: any, confMap: Record<string, any>, threshold = 0.60, maxTier = 10, configVectorMap: Record<string, string> = {}, scope: string = 'gap-fill'): Record<string, any> {
   const schema: Record<string, any> = {};
   for (const f of fields) {
     const key = f.field_name;
@@ -339,8 +339,13 @@ function buildPassSchema(fields: any[], spotContext: any, confMap: Record<string
     
     const isEmpty = value === null || value === undefined || value === '' || value === 'null' || value === 'NULL' || value === '{}' || value === '[]';
     const isLowConfidence = !conf || conf.confidence < threshold;
+    const isTierOverride = scope.startsWith('tier-');
     
-    if (isEmpty || isLowConfidence) {
+    if (key === 'opening_hours') {
+      console.log(`[DEBUG buildPassSchema] opening_hours check: isEmpty=${isEmpty}, isLowConfidence=${isLowConfidence}, isTierOverride=${isTierOverride}, priority=${f.priority_group}, maxTier=${maxTier}`);
+    }
+    
+    if (isEmpty || isLowConfidence || isTierOverride) {
       // Priority: DB ai_target_vector → hardcoded FIELD_DESCRIPTIONS → generic fallback
       const vectorPrompt = configVectorMap[key] || FIELD_DESCRIPTIONS[key] || `${f.display_label} (${f.data_type} or null).`;
       if (key === 'opening_hours') {
@@ -1268,13 +1273,13 @@ export async function executeDetective(
   const pass2DRegFields = allFields.filter(f => FIELD_PASS_MAP[f.field_name] === 'pass2D');
 
   // Build minimal schemas dynamically for gaps only!
-  const schemaPass1A = buildPassSchema(pass1ARegFields, spotContext, confMap, 0.70, maxTier, configVectorMap);
-  const schemaPass1B = buildPassSchema(pass1BRegFields, spotContext, confMap, 0.70, maxTier, configVectorMap);
-  const schemaPass1C = buildPassSchema(pass1CRegFields, spotContext, confMap, 0.70, maxTier, configVectorMap);
-  const schemaPass2A = buildPassSchema(pass2ARegFields, spotContext, confMap, 0.60, maxTier, configVectorMap);
-  const schemaPass2B = buildPassSchema(pass2BRegFields, spotContext, confMap, 0.60, maxTier, configVectorMap);
-  const schemaPass2C = buildPassSchema(pass2CRegFields, spotContext, confMap, 0.60, maxTier, configVectorMap);
-  const schemaPass2D = buildPassSchema(pass2DRegFields, spotContext, confMap, 0.60, maxTier, configVectorMap);
+  const schemaPass1A = buildPassSchema(pass1ARegFields, spotContext, confMap, 0.70, maxTier, configVectorMap, scope);
+  const schemaPass1B = buildPassSchema(pass1BRegFields, spotContext, confMap, 0.70, maxTier, configVectorMap, scope);
+  const schemaPass1C = buildPassSchema(pass1CRegFields, spotContext, confMap, 0.70, maxTier, configVectorMap, scope);
+  const schemaPass2A = buildPassSchema(pass2ARegFields, spotContext, confMap, 0.60, maxTier, configVectorMap, scope);
+  const schemaPass2B = buildPassSchema(pass2BRegFields, spotContext, confMap, 0.60, maxTier, configVectorMap, scope);
+  const schemaPass2C = buildPassSchema(pass2CRegFields, spotContext, confMap, 0.60, maxTier, configVectorMap, scope);
+  const schemaPass2D = buildPassSchema(pass2DRegFields, spotContext, confMap, 0.60, maxTier, configVectorMap, scope);
 
   if (scope === 'hours') {
     skipPass1B = skipPass1C = skip2A = skip2B = skip2C = skip2D = true;
@@ -1321,19 +1326,34 @@ export async function executeDetective(
   }
 
   // ── Pre-LLM Toxicity Bouncer (Dynamic — uses unified ai_exclusion_keywords) ──
-  // Runs on raw crawled text BEFORE semantic slicing or any LLM call.
-  // Uses the SAME keyword list the user manages in the Phase 2 UI.
+  const isTierOverride = scope.startsWith('tier-');
+  let cSlice = coreText;
+  let aSlice = amenityText;
+
+  if (coreText.trim().length >= 50 && hasCrawledWebsite && !isTierOverride) {
+    // 🧬 Heuristics Semantic DOM Slicing
+    onProgress(`[HEURISTIC] 🧬 Applying semantic slicing to extraction text...`);
+    cSlice = HeuristicsEngine.getSemanticSlice(coreText).slice.slice(0, 12000);
+    aSlice = HeuristicsEngine.getSemanticSlice(amenityText).slice.slice(0, 12000);
+  } else {
+    if (isTierOverride) onProgress(`[HEURISTIC] ⏭️ Bypassing semantic slicing (Tier Override Active)`);
+    cSlice = coreText.slice(0, 15000);
+    aSlice = amenityText.slice(0, 15000);
+  }
+  
+  combinedText = `[OPS CORE]\n${cSlice}\n\n[AMENITIES]${aSlice}`;
+
   if (exclusionKw.length > 0) {
-    const fullText = (coreText + '\n' + amenityText);
+    const textLower = combinedText.toLowerCase();
     const toxicHit = exclusionKw.find((kw: string) => {
       try {
-        return new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(fullText);
+        return new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(textLower);
       } catch {
-        return fullText.toLowerCase().includes(kw.toLowerCase());
+        return textLower.includes(kw.toLowerCase());
       }
     });
     if (toxicHit) {
-      onProgress(`[Detective] ☠️ TOXICITY ABORT (raw-text scan): matched "${toxicHit}" — skipping all LLM passes`);
+      onProgress(`[Detective] ☠️ TOXICITY ABORT: matched "${toxicHit}" — skipping all LLM passes`);
       return {
         aiMetadata: { TOXICITY_ABORT: true, reason: toxicHit },
         mappedFields: { _simulated_status: 'REJECTED' },
@@ -1348,43 +1368,9 @@ export async function executeDetective(
     }
   }
 
+
+
   if (coreText.trim().length >= 50 && hasCrawledWebsite) {
-    // 🧬 Heuristics Semantic DOM Slicing
-    onProgress(`[HEURISTIC] 🧬 Applying semantic slicing to extraction text...`);
-    const cSlice = HeuristicsEngine.getSemanticSlice(coreText).slice.slice(0, 12000);
-    const aSlice = HeuristicsEngine.getSemanticSlice(amenityText).slice.slice(0, 12000);
-    combinedText = `[OPS CORE]\n${cSlice}\n\n[AMENITIES]${aSlice}`;
-    
-    // ── Pre-LLM Toxicity Fast-Path (Regex) ─────────────────────────────────
-    // Runs BEFORE any LLM call. Scans page text against exclusion keywords.
-    // Ice rinks / hockey arenas get REJECTED without burning a single token.
-    if (exclusionKw.length > 0) {
-      const textLower = combinedText.toLowerCase();
-      const toxicHit = exclusionKw.find((kw: string) => {
-        // Word-boundary match: "hockey" won't match "field hockey roller rink" edge cases
-        // but "ice rink" will match "indoor ice rink admission"
-        try {
-          return new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(textLower);
-        } catch {
-          return textLower.includes(kw.toLowerCase());
-        }
-      });
-      if (toxicHit) {
-        onProgress(`[Detective] ☠️ TOXICITY ABORT (regex fast-path): matched "${toxicHit}" in page text — skipping all LLM passes`);
-        return {
-          aiMetadata: { TOXICITY_ABORT: true, reason: toxicHit },
-          mappedFields: {},
-          combinedText,
-          qualityScore: 0,
-          passedQualityGate: false,
-          candidatePhotos: null,
-          socialLinks: { instagram_url: null, facebook_url: null, tiktok_url: null, schedule_url: null },
-          flyerUrls,
-          fieldConfidence: {}
-        };
-      }
-    }
-    
     // ── Pass 1A: Session Hours (SOLO — highest-value extraction) ──
     if (!earlyTerminated && !skipPass1A) {
       onProgress('[Detective] 🕐 LM Studio Pass 1A (Session Hours)...');
