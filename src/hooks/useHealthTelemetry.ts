@@ -60,6 +60,18 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
         if (Platform.OS === 'ios') {
           const AppleHealthKit = require('react-native-health').default;
           
+          // Auto-start SDK before reads (safe to call repeatedly)
+          await new Promise<void>((resolve) => {
+            AppleHealthKit.initHealthKit({
+              permissions: {
+                read: [AppleHealthKit.Constants.Permissions.HeartRate, AppleHealthKit.Constants.Permissions.ActiveEnergyBurned]
+              }
+            }, (err: string) => {
+              if (err) AppLogger.warn('HEALTH_TELEMETRY', { event: 'init_failed', error: err });
+              resolve();
+            });
+          });
+
           // Poll Heart Rate
           AppleHealthKit.getHeartRateSamples(
             {
@@ -94,8 +106,16 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
             }
           );
         } else if (Platform.OS === 'android') {
-          const { readRecords } = require('react-native-health-connect');
+          const { initialize, readRecords } = require('react-native-health-connect');
           
+          try {
+             // Auto-start SDK before reads
+             await initialize();
+          } catch (e: any) {
+             AppLogger.warn('HEALTH_TELEMETRY', { event: 'init_failed', error: e.message });
+             return;
+          }
+
           // Android Health Connect
           const timeRangeFilter = {
             operator: 'between',
