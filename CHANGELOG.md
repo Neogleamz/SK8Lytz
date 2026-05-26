@@ -1,3 +1,16 @@
+## [3.6.2] - 2026-05-26
+
+### 🐛 Bug Fixes
+- fix(music): correct 0x73 'isOn' mic toggle routing to disable physical microphone in App Mic mode
+- fix(music): cap 0x74 magnitude streams to 150 to prevent controller saturation and visualizer freeze
+- fix(music): swap color bytes to match native sb_col / sb_point layout and clone primary color for Light Bar (0x26) mode
+- fix(music): clean up duplicate swatches and optimize layout in MusicPanel
+
+### 📖 Documentation
+- docs: true-up ZENGGE_PROTOCOL_BIBLE.md and SK8Lytz_App_Master_Reference.md to capture decompiler findings
+
+---
+
 ## [3.6.0] - 2026-05-26
 
 ### ? Features
