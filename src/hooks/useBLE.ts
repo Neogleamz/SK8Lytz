@@ -280,11 +280,16 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
           break;
         } catch (e: any) {
           lastErr = e;
-          if (String(e).includes('133') || String(e).includes('133 (0x85)')) {
-            AppLogger.warn(`[BLE] pingDevice GATT 133 congestion linking ${mac}. Attempt ${attempt}/2...`);
+          const errStr = String(e);
+          // Android: GATT 133 congestion | iOS: CoreBluetooth transient failures
+          const isTransient = errStr.includes('133') || errStr.includes('133 (0x85)')
+            || errStr.includes('connection failed') || errStr.includes('timed out')
+            || errStr.includes('Peer removed');
+          if (isTransient) {
+            AppLogger.warn(`[BLE] pingDevice transient error linking ${mac}. Attempt ${attempt}/2...`, { error: errStr });
             await bleManager.cancelDeviceConnection(mac).catch(() => {});
             await new Promise(resolve => setTimeout(resolve, 300));
-          } else if (String(e).includes('already')) {
+          } else if (errStr.includes('already')) {
             connected = true;
             break;
           } else {
@@ -631,8 +636,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
               break;
             } catch (e: any) {
               lastErr = e;
-              if (String(e).includes('133') || String(e).includes('133 (0x85)')) {
-                AppLogger.warn(`[BLE] GATT 133 congestion linking ${device.id}. Attempt ${attempt}/2...`);
+              const errStr = String(e);
+              // Android: GATT 133 congestion | iOS: CoreBluetooth transient failures
+              const isTransient = errStr.includes('133') || errStr.includes('133 (0x85)')
+                || errStr.includes('connection failed') || errStr.includes('timed out')
+                || errStr.includes('Peer removed');
+              if (isTransient) {
+                AppLogger.warn(`[BLE] Transient error linking ${device.id}. Attempt ${attempt}/2...`, { error: errStr });
                 await bleManager.cancelDeviceConnection(device.id).catch(() => {});
                 await new Promise(resolve => setTimeout(resolve, 300));
               } else {

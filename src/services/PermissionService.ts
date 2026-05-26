@@ -187,7 +187,14 @@ const checkPermissionNative = async (type: PermissionType): Promise<boolean> => 
       case 'HEALTH': {
         if (Platform.OS === 'web') return false;
         if (Platform.OS === 'ios') {
-          return true; // Assume granted if not opted out
+          // PLATFORM PARITY NOTE (RISK-4): Apple HealthKit deliberately does NOT
+          // expose an API to query authorization status for individual data types.
+          // HKAuthorizationStatus only distinguishes "not determined" vs "sharing denied/authorized",
+          // and READ permission is always reported as "not determined" for privacy.
+          // Returning true here is the accepted pragmatic approach — if the user denied HealthKit,
+          // the actual read calls in useHealthTelemetry will silently return empty results.
+          // This is functionally safe: no crash, no error — just missing data.
+          return true;
         } else if (Platform.OS === 'android') {
           return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACTIVITY_RECOGNITION);
         }

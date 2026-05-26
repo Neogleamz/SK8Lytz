@@ -1,11 +1,16 @@
 /**
  * CameraTracker.ios.tsx — iOS-Specific Color Sampler
+ *
+ * Unified with Android approach: uses takeSnapshot → center crop → 1×1 resize
+ * instead of worklet-based frame processing. This gives:
+ *   1. Center-crop reticle accuracy (not whole-frame averaging)
+ *   2. Proper pixelFormat switch guard (handles BGRA, ARGB, etc.)
+ *   3. Identical color detection behavior across both platforms
  */
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Camera, useCameraDevice, useCameraPermission, useFrameOutput } from 'react-native-vision-camera';
-import { runOnJS } from 'react-native-worklets';
+import { Camera, type CameraRef, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
 import { requestPermission } from '../services/PermissionService';
 import { Colors, Spacing } from '../theme/theme';
 
@@ -62,31 +67,16 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
     onColorDetectedRef.current = onColorDetected;
   }, [onColorDetected]);
 
+  const cameraRef = useRef<CameraRef>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const isSamplingRef = useRef(false);
+
   const dispatchColor = useCallback((r: number, g: number, b: number) => {
     if (isNaN(r) || isNaN(g) || isNaN(b)) return;
     const hex = rgbToVividHex(r, g, b);
     setLiveHex(hex);
     onColorDetectedRef.current(hex);
   }, []);
-
-  const dispatchColorJS = runOnJS(dispatchColor);
-
-  const frameOutput = useFrameOutput({
-    onFrame: (frame) => {
-      'worklet';
-      try {
-        if (!frame.isValid) { frame.dispose(); return; }
-        const buf = frame.getPixelBuffer();
-        const bytes = new Uint8Array(buf);
-        dispatchColorJS(bytes[0] ?? 0, bytes[1] ?? 0, bytes[2] ?? 0);
-      } finally {
-        frame.dispose();
-      }
-    },
-    targetResolution: { width: 1, height: 1 },
-    pixelFormat: 'rgb',
-    dropFramesWhileBusy: true,
-  });
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState) => {
@@ -102,6 +92,82 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
       });
     }
   }, [hasPermission, requestFromHook]);
+
+  const sampleColor = useCallback(async () => {
+    if (!cameraRef.current || isSamplingRef.current) return;
+    isSamplingRef.current = true;
+
+    try {
+      const image = await cameraRef.current.takeSnapshot();
+
+      // CENTER-CROP LOGIC — identical to Android
+      // Crops a 32×32 box from the center (reticle area) then downsamples to 1×1
+      const cropWidth = 32;
+      const cropHeight = 32;
+      const cropX = Math.max(0, Math.floor((image.width - cropWidth) / 2));
+      const cropY = Math.max(0, Math.floor((image.height - cropHeight) / 2));
+
+      const cropped = image.crop(cropX, cropY, cropWidth, cropHeight);
+      const tiny = cropped.resize(1, 1);
+
+      const { buffer, pixelFormat } = tiny.toRawPixelData();
+      const bytes = new Uint8Array(buffer);
+
+      // PIXEL FORMAT SWITCH GUARD — handles all known iOS pixel formats
+      // iOS commonly returns BGRA; this guard ensures correct channel mapping
+      let r = 0, g = 0, b = 0;
+      switch (pixelFormat) {
+        case 'BGRA':
+        case 'BGR':
+        case 'BGRX':
+          b = bytes[0] ?? 0; g = bytes[1] ?? 0; r = bytes[2] ?? 0;
+          break;
+        case 'ABGR':
+          b = bytes[1] ?? 0; g = bytes[2] ?? 0; r = bytes[3] ?? 0;
+          break;
+        case 'RGBA':
+        case 'RGB':
+        case 'RGBX':
+          r = bytes[0] ?? 0; g = bytes[1] ?? 0; b = bytes[2] ?? 0;
+          break;
+        case 'ARGB':
+        case 'XRGB':
+          r = bytes[1] ?? 0; g = bytes[2] ?? 0; b = bytes[3] ?? 0;
+          break;
+        default:
+          // iOS default: BGRA is the most common CoreVideo format
+          b = bytes[0] ?? 0; g = bytes[1] ?? 0; r = bytes[2] ?? 0;
+      }
+
+      dispatchColor(r, g, b);
+    } catch (e) {
+      if (__DEV__) console.error('[CameraTracker.ios] takeSnapshot failed:', e);
+    } finally {
+      isSamplingRef.current = false;
+    }
+  }, [dispatchColor]);
+
+  useEffect(() => {
+    if (isActive && hasPermission && device) {
+      // Delay start slightly to let the camera session stabilize
+      const startTimer = setTimeout(() => {
+        intervalRef.current = setInterval(sampleColor, 600);
+      }, 900);
+
+      return () => {
+        clearTimeout(startTimer);
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      };
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+  }, [isActive, hasPermission, device, sampleColor]);
 
   if (!hasPermission) {
     return (
@@ -129,10 +195,10 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
   return (
     <View style={styles.container}>
       <Camera
+        ref={cameraRef}
         style={StyleSheet.absoluteFillObject}
         device={device}
         isActive={isActive && hasPermission}
-        outputs={[frameOutput]}
       />
       <View style={styles.reticleContainer} pointerEvents="none">
         <View style={[styles.reticleRing, { borderColor: liveHex }]}>
