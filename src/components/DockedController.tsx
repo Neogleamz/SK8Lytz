@@ -873,6 +873,15 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       applyFixedPattern,
     }), [brightness, speed, selectedColor, points, hwSettings, fixedPatternId, fixedFgColor, fixedBgColor, fixedDirection, writeToDevice, writeStatus, applyFixedPattern]);
 
+    const handleCameraColorDetected = React.useCallback((hex: string) => {
+      // Boost camera's dark/washed-out pixels to 100% pure neon saturation
+      const hue = hexToHue(hex);
+      const neonHex = hueToHex(hue);
+      setSelectedColor(neonHex);
+      const { r, g, b } = hexToRgb(neonHex);
+      sendColor(r, g, b);
+    }, [sendColor, setSelectedColor]);
+
     // ── Mode change handler — wires DockedDock callbacks to local state ───────
     const handleDockModeChange = React.useCallback((newMode: ModeType | string) => {
       if (newMode === 'STREET') {
@@ -1069,14 +1078,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             {/* ── CAMERA MODE UI ────────────────────────────────────────────────── */}
             {activeMode === 'CAMERA' && (
               <CameraPanel
-                onColorDetected={(hex: string) => {
-                  // Boost camera's dark/washed-out pixels to 100% pure neon saturation
-                  const hue = hexToHue(hex);
-                  const neonHex = hueToHex(hue);
-                  setSelectedColor(neonHex);
-                  const { r, g, b } = hexToRgb(neonHex);
-                  sendColor(r, g, b);
-                }}
+                onColorDetected={handleCameraColorDetected}
               />
             )}
 

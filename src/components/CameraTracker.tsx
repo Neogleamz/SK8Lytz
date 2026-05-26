@@ -99,6 +99,11 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
   const { hasPermission, requestPermission: requestFromHook } = useCameraPermission();
   const [liveHex, setLiveHex] = useState<string>('#FF0080');
 
+  const onColorDetectedRef = useRef(onColorDetected);
+  useEffect(() => {
+    onColorDetectedRef.current = onColorDetected;
+  }, [onColorDetected]);
+
   // Android-only refs — not used on iOS
   const cameraRef = useRef<CameraRef>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -109,8 +114,8 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
     if (isNaN(r) || isNaN(g) || isNaN(b)) return;
     const hex = rgbToVividHex(r, g, b);
     setLiveHex(hex);
-    onColorDetected(hex);
-  }, [onColorDetected]);
+    onColorDetectedRef.current(hex);
+  }, []);
 
   // ── iOS PATH: useFrameOutput worklet ──────────────────────────────────────
   // Verified source: useFrameOutput.ts L121, Frame.nitro.ts L280
