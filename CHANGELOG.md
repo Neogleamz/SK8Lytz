@@ -1,3 +1,24 @@
+## [3.6.0] - 2026-05-26
+
+### ? Features
+- 7aa002c5 feat(ui): crew hub radius and padding fixes, pro-effects cleanup, tactical slider labels
+- 8c0b2bd feat(ui): dashboard pull to refresh
+- 427ad5a2 feat(photographer): v3 category-intent rebuild with sharp WebP compression and 30-photo cap
+- 34ab0ea feat(bouncer): unified toxicity guillotine across all phases
+- 9345a4a7 feat(core): add robust normalizeHours parser
+- 1d10c77e feat: Dockerize scraper stack and remove PM2
+- 309c061 feat: Implement Review Text Mining Engine
+
+### ?? Bug Fixes
+- 518d38f fix(ble): appstate ble reconnect autonomous recovery
+- 6deb539f fix(scraper): stop condenseWebText from deleting hours/prices
+- c5eaf7fe fix(scraper): restore missing variables and strip CDATA from sitemaps
+- c09fbcf fix(photographer): crashed records now go to STALLED not MEDIA_READY
+- 16caede fix(indexer): stop crash-restart loop caused by Tesseract worker thread kills
+
+### ?? Maintenance & Tests
+- 75c5576b chore(scraper): move test file to fix tsc
+- d9fec604 chore(scraper): clean up lingering files from yesterday
 ## [3.5.2] - 2026-05-22
 
 ### ✨ Features
@@ -814,6 +835,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Legacy Tools**: Retired the Simple Scanner, legacy DIY Builder, and Admin Hardware Tester in favor of consolidated modern modules.
 - **Stale Data**: Purged legacy 0x81 protocol commands and hardcoded product heuristics.
+
 
 
 
