@@ -244,11 +244,13 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       //   isOn (byte 1): 0x01 = activate music mode, 0x00 = deactivate
       //   Mic routing is NOT controlled here — APP mic is activated by streaming
       //   0x74 magnitude packets. DEVICE mic listens natively when 0x74 is absent.
-      //   isOn must always be true when dispatching a live music config.
+      //   isOn must be true ONLY when Device Mic is selected (built-in hardware mic).
+      //   In App Mic mode, isOn must be false (0x00) so the onboard mic is disabled
+      //   and the controller expects 0x74 magnitude packets.
       writeToDevice(ZenggeProtocol.setMusicConfig(
         patternId,
         matrix === 0x27 ? 0x27 : 0x26,
-        true,  // isOn: always activate — mic source handled by 0x74 stream
+        src === 'DEVICE',  // isOn: true for DEVICE mic, false for APP mic
         c1,
         c2,
         sens,

@@ -96,6 +96,7 @@ export function useMusicMode({
     dispatch.setMusicConfig({
       patternId: safePatternId,
       matrixStyle: matrix as 0x26 | 0x27,
+      isOn: src === 'DEVICE', // Enable onboard mic only if mic source is DEVICE
       micSensitivity: sens,
       brightness: bright,
       color1: c1,

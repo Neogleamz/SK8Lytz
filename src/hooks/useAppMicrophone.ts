@@ -84,8 +84,8 @@ export function useAppMicrophone({
 
           setAudioMagnitude(smoothed);
 
-          // Send to hardware — 0x74 expects 0-255
-          const deviceMag = Math.floor(smoothed * 255);
+          // Send to hardware — 0x74 expects 0-150 (ZENGGE §11 decompiler limit)
+          const deviceMag = Math.floor(smoothed * 150);
           if (writeToDevice) writeToDevice(ZenggeProtocol.sendMusicMagnitude(deviceMag));
         }
       }, 50); // 20Hz — hardware needs continuous stream to stay in app-mic mode
