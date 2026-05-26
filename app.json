@@ -2,7 +2,7 @@
   "expo": {
     "name": "SK8Lytz",
     "slug": "sk8lytz",
-    "version": "3.6.0",
+    "version": "3.6.1",
     "plugins": [
       "@config-plugins/detox"
     ]
