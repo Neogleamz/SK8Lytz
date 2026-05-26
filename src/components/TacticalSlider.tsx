@@ -148,9 +148,13 @@ const TacticalSlider = ({
       {/* Overlay Content */}
       <View style={styles.overlay} pointerEvents="none">
          {/* Left Anchored Large Icon */}
-         <MaterialCommunityIcons name={iconName} size={32} color="rgba(255,255,255,0.5)" style={{ position: 'absolute', left: 8, top: 6 }} />
+         <MaterialCommunityIcons name={iconName} size={32} color="rgba(255,255,255,0.2)" style={{ position: 'absolute', left: 8, top: 6 }} />
 
-
+         {label && (
+           <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 32 }}>
+             <Text style={styles.labelText}>{label}</Text>
+           </View>
+         )}
          
          {/* Value locked to right */}
          <View style={{ flex: 1 }} />

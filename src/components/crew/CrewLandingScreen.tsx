@@ -568,7 +568,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
                 minWidth: 110,
                 overflow: 'hidden',
               }}>
-                {([20, 50, 100, 250, null] as (number | null)[]).map((r, idx) => {
+                {([10, 20, 50, 100, 250, null] as (number | null)[]).map((r, idx) => {
                   const isActive = discoverRadiusMi === r;
                   const label = r != null ? `${r} mi` : 'All';
                   return (
@@ -577,7 +577,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
                       style={[
                         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 9 },
                         isActive && { backgroundColor: 'rgba(255,170,0,0.1)' },
-                        idx < 4 && { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+                        idx < 5 && { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
                       ]}
                       onPress={() => { setDiscoverRadiusMi(r); setShowRadiusPicker(false); }}
                     >

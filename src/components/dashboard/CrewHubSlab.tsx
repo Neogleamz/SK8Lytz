@@ -9,9 +9,11 @@ import { Spacing } from '../../theme/theme';
  */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { Alert, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Text, TouchableOpacity, View, Animated } from 'react-native';
 import type { CrewRole, CrewSession } from '../../services/CrewService';
 import type { RadarAlert } from '../../hooks/useCrewProximityRadar';
+import { useCrewContext } from '../../context/CrewContext';
+import { CrewLandingMap } from '../crew/CrewLandingMap';
 
 interface CrewHubSlabProps {
   crewSession: CrewSession | null;
@@ -43,11 +45,14 @@ const CrewHubSlab = React.memo(({
   onRadarAction,
   Colors,
   styles,
-}: CrewHubSlabProps) => (
+}: CrewHubSlabProps) => {
+  const { hub } = useCrewContext();
+
+  return (
   <View style={[styles.slabContainer, { marginTop: Spacing.md }]}>
     <View style={[styles.glassSlab, {
       borderColor: isOfflineMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,170,0,0.2)',
-      paddingVertical: isOfflineMode ? 16 : (windowHeight < 720 ? 16 : 40),
+      paddingVertical: isCrewHubCollapsed ? 12 : (isOfflineMode ? 16 : (windowHeight < 720 ? 16 : 40)),
     }]}>
       {/* Header row */}
       <View style={[styles.slabHeader, isOfflineMode && { marginBottom: Spacing.sm }]}>
@@ -164,19 +169,28 @@ const CrewHubSlab = React.memo(({
             /* State 5: Empty (Not near a rink) */
             <View style={{ gap: Spacing.lg }}>
               <Text style={styles.slabEmptyText}>No active sessions nearby. Launch a crew to sync lights.</Text>
-              <TouchableOpacity
-                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingVertical: Spacing.md, borderRadius: 8, borderWidth: 1, borderColor: '#FFAA00', marginTop: Spacing.sm }}
-                onPress={onOpenMap}
-              >
-                <MaterialCommunityIcons name="map-marker-radius" size={18} color="#FFAA00" style={{ marginRight: Spacing.sm }} />
-                <Text style={{ color: '#FFAA00', fontWeight: '800', letterSpacing: 1, fontSize: 13 }}>EXPLORE SKATE MAP</Text>
-              </TouchableOpacity>
+              <View style={{ height: 120, width: '100%', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,170,0,0.3)', marginTop: Spacing.sm }}>
+                <CrewLandingMap
+                  nearbySpots={hub.nearbySpots || []}
+                  nearbySessions={[]}
+                  pulseAnim={new Animated.Value(1)}
+                  handleJoinById={() => {}}
+                  locationCoords={hub.locationCoords ?? null}
+                  discoverRadiusMi={hub.discoverRadiusMi}
+                />
+                <TouchableOpacity
+                  style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+                  onPress={onOpenMap}
+                  activeOpacity={0.7}
+                />
+              </View>
             </View>
           )}
         </React.Fragment>
       )}
     </View>
   </View>
-));
+  );
+});
 
 export default CrewHubSlab;
