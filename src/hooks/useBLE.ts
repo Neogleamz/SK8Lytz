@@ -12,7 +12,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, AppState } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { getDefaultProtocol, resolveProtocol, resolveProtocolForDevice, getProtocolById } from '../protocols/ControllerRegistry';
 import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
@@ -209,7 +209,32 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       }
       setIsBluetoothEnabled(state === State.PoweredOn);
     }, true);
-    return () => subscription.remove();
+    
+    // Audit native connections when app wakes up to prune stale react-state
+    const appStateSub = AppState.addEventListener('change', async (nextState) => {
+      if (nextState === 'active' && connectedDevicesRef.current.length > 0) {
+        try {
+          const liveChecks = await Promise.all(
+            connectedDevicesRef.current.map(async d => ({
+              id: d.id,
+              connected: await bleManager.isDeviceConnected(d.id)
+            }))
+          );
+          const staleIds = liveChecks.filter(c => !c.connected).map(c => c.id);
+          if (staleIds.length > 0) {
+            AppLogger.log('BLE_STATE_CHANGE', { event: 'pruning_stale_connections_on_wake', count: staleIds.length });
+            setConnectedDevices(prev => prev.filter(p => !staleIds.includes(p.id)));
+          }
+        } catch (e) {
+          AppLogger.warn('[BLE] Failed to audit connections on wake', e);
+        }
+      }
+    });
+
+    return () => {
+      subscription.remove();
+      appStateSub.remove();
+    };
   }, [bleManager]);
 
 

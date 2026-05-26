@@ -73,6 +73,7 @@ export function useDashboardAutoConnect({
   // directly without needing to re-subscribe to the useEffect dependency array.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const syncCloudAndAutoConnectRef = useRef<(isRetrigger?: boolean) => Promise<void>>(async () => {});
+  const lastRetriggerRef = useRef<number>(0);
 
   // ── Continuous observer: connect queued devices as they appear in scan ───
   // Debounce: batch devices that appear within 500ms into a single connectToDevices call.
@@ -293,16 +294,24 @@ export function useDashboardAutoConnect({
     clearAutoConnectQueue: () => {
       autoConnectIdsRef.current = [];
     },
-    // FIX: Allow DashboardScreen to re-trigger auto-connect after Setup Wizard completes.
-    // Resets the one-shot gate so the cloud sync runs again and queues the newly
-    // registered device for connection the moment it appears in the BLE scan.
+    // FIX: Allow DashboardScreen to re-trigger auto-connect after Setup Wizard completes or AppState wakes up.
+    // Includes a 5-second throttle and a 1.5-second OS BLE stack wakeup delay.
     retriggerAutoConnect: () => {
+      const now = Date.now();
+      if (lastRetriggerRef.current && now - lastRetriggerRef.current < 5000) {
+        return; // Throttle 5 seconds to prevent spamming burst scans on rapid minimize/maximize
+      }
+      lastRetriggerRef.current = now;
+
       AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_retriggered' });
       hasAutoConnectedRef.current = false;
       autoConnectIdsRef.current = [];
-      // The useEffect watching isBluetoothSupported/isBluetoothEnabled won't re-fire
-      // since those haven't changed. Call the async function directly with isRetrigger=true.
-      syncCloudAndAutoConnectRef.current(true);
+      
+      // Delay to allow Android/iOS Bluetooth stack to fully transition from suspended to active
+      // before blasting a high-power burst scan.
+      setTimeout(() => {
+        syncCloudAndAutoConnectRef.current(true);
+      }, 1500);
     },
   };
 }
