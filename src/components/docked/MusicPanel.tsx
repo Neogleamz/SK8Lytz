@@ -106,7 +106,7 @@ const MusicPanel = React.memo(({
   }, [setMusicMatrixStyle, setMusicPatternId, handleMusicChange, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor]);
 
   return (
-    <View style={{ flex: 1, paddingHorizontal: Spacing.xs, paddingTop: Spacing.xs, overflow: 'hidden' }}>
+    <View style={{ flex: 1, paddingHorizontal: Spacing.xs, paddingTop: Spacing.xs }}>
 
       {/* ── Pattern Navigator (Pill) with Matrix Toggles ───────────────── */}
 
@@ -163,7 +163,25 @@ const MusicPanel = React.memo(({
 
       <View style={{ flex: 1, justifyContent: 'space-evenly' }}>
 
-
+        {/* ── FG / BG Color Pickers (gated by colorMode) ──────────────── */}
+        {activeProfile.colorMode !== 'NONE' && (
+          <View style={styles.colorPickerRow}>
+            <ColorSwatch
+              color={musicPrimaryColor}
+              label="SOUND COLOR"
+              onPress={() => setMusicPrimaryColor(musicPrimaryColor)}
+              Colors={Colors}
+            />
+            {activeProfile.colorMode === 'FG_BG' && (
+              <ColorSwatch
+                color={musicSecondaryColor}
+                label="DROP COLOR"
+                onPress={() => setMusicSecondaryColor(musicSecondaryColor)}
+                Colors={Colors}
+              />
+            )}
+          </View>
+        )}
 
         {/* ── Mic Source Toggle ─────────────────────────────────────── */}
         <View style={styles.micControlSection}>
@@ -247,6 +265,12 @@ const createStyles = (Colors: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
+    paddingHorizontal: Spacing.md,
+    marginBottom: Spacing.xs,
+  },
+  colorPickerRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
     paddingHorizontal: Spacing.md,
     marginBottom: Spacing.xs,
   },
