@@ -105,23 +105,16 @@ export function useHardwareNotifications({
       // ── [RF Remote Config] ────────────────────────────────────────────────
       const rfConfig = BlePayloadParser.parseRfPayload(payload);
       if (rfConfig && rfConfig.parsedOk) {
-        // Mirror rfMode/rfRemotes into BOTH deviceConfigs AND allDevices so that
-        // DeviceSettingsModal (which reads from allDevices via selectedDeviceForSettings)
-        // can display the live RF state without any additional query.
         setDeviceConfigs(prevConfigs => {
           const updated = {
             ...(prevConfigs[deviceId] || {}),
             rfMode: rfConfig.rfMode,
             rfRemotes: rfConfig.rfRemotes
           };
+          // Persist RF config update via DeviceRepository SSOT (tombstone-safe merge)
           DeviceRepository.getInstance().updateConfig(deviceId, { rfMode: rfConfig.rfMode, rfRemotes: rfConfig.rfRemotes }).catch(e => AppLogger.warn('Failed to persist RF config', e));
           return { ...prevConfigs, [deviceId]: updated };
         });
-        setAllDevices((prev: any[]) => prev.map(d =>
-          d.id === deviceId
-            ? { ...d, rfMode: rfConfig.rfMode, rfRemotes: rfConfig.rfRemotes }
-            : d
-        ));
         // BUG-03 Fix: Removed early return. Compound notifications contain both RF and LED configs.
         // Continuing execution allows the payload to be evaluated by parseLedPayload.
       }

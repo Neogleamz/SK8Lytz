@@ -16,7 +16,7 @@ import { Buffer } from 'buffer';
 let _appLogger: any;
 function getAppLogger() {
   if (!_appLogger) {
-    try { _appLogger = require('../services/AppLogger').AppLogger; } catch (_e) { _appLogger = console; }
+    try { _appLogger = require('../services/AppLogger').AppLogger; } catch { _appLogger = console; }
   }
   return _appLogger;
 }
@@ -200,7 +200,7 @@ export class ZenggeProtocol {
           isJsonFormat = true;
         }
       }
-    } catch (e) {
+    } catch {
       // Not JSON format — fall through to binary parse
     }
 
@@ -863,9 +863,9 @@ export class ZenggeProtocol {
   // Packet structure (inner payload, 15 bytes + checksum):
   //   [0x2A][modeByte][0xFF][0xFF][0xFF][0xFF][0xFF][clearByte][0x00...][0x0F]
   //
-  // modeByte:  0x01 = ALLOW_NONE (block all remotes)
-  //            0x02 = ALLOW_PAIRED (only exclusively paired remote)
-  //            0x03 = ALLOW_ALL (any RF remote can control device)
+  // modeByte:  0x01 = ALLOW_ALL (any RF remote in range can control device)
+  //            0x02 = ALLOW_NONE (block all RF remotes — also used when clearing)
+  //            0x03 = ALLOW_PAIRED (locked to exclusively paired remote UID only)
   //
   // clearByte: 0x00 = keep existing paired remotes
   //            0x01 = clear/unpair all paired remotes

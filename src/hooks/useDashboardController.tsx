@@ -92,8 +92,15 @@ export function useDashboardController({
 
   const selectedDeviceForSettings = useMemo(() => {
     if (!selectedDeviceForSettingsId) return null;
-    return allDevices.find(d => d.id === selectedDeviceForSettingsId) || null;
-  }, [selectedDeviceForSettingsId, allDevices]);
+    const device = allDevices.find(d => d.id === selectedDeviceForSettingsId);
+    if (!device) return null;
+    // Merge EEPROM config data (deviceConfigs) into the BLE device object.
+    // deviceConfigs is the SSOT for all polled hardware fields — points, segments,
+    // sorting, stripType, rfMode, rfRemotes. allDevices only carries BLE scan fields.
+    // Spread order: cfg first, device second so BLE identity fields (id, name) always win.
+    const cfg = deviceConfigs[selectedDeviceForSettingsId] || {};
+    return { ...cfg, ...device };
+  }, [selectedDeviceForSettingsId, allDevices, deviceConfigs]);
 
   const openSettings = (device: any) => {
     setSelectedDeviceForSettingsId(device.id);
