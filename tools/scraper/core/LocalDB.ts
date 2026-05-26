@@ -1,3 +1,4 @@
+// @ts-ignore - Ignore bun module resolution in the React Native tsc scope
 import { Database } from 'bun:sqlite';
 import path from 'path';
 import fs from 'fs';
@@ -17,15 +18,15 @@ try {
   console.warn(`[LocalDB] PRAGMA busy_timeout failed: ${e.message}`);
 }
 
-// Configure for performance
+// Configure for compatibility with Docker Windows Mounts
 try {
-  db.exec('PRAGMA journal_mode = WAL;');
+  db.exec('PRAGMA journal_mode = DELETE;');
 } catch (e: any) {
   console.warn(`[LocalDB] Preferred journal mode failed: ${e.message}. Falling back to default.`);
 }
 
 try {
-  db.exec('PRAGMA synchronous = NORMAL;');
+  db.exec('PRAGMA synchronous = FULL;');
 } catch (e: any) {
   console.warn(`[LocalDB] PRAGMA synchronous failed: ${e.message}`);
 }

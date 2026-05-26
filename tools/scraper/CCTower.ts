@@ -74,7 +74,7 @@ console.error = (...args) => {
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
 // ─── Local Photo Storage ────────────────────────────────────────────────────
 // Photographer saves images here; CCTower serves them via /api/photos
@@ -877,8 +877,9 @@ async function runWatchdogCheck(): Promise<void> {
 }
 
 // Spin up the Watchdog check cycle every 15 seconds
-setInterval(runWatchdogCheck, 15000);
-runWatchdogCheck();
+// DISABLED: Watchdog auto-heal is fully disabled to prevent pipelines from auto-starting against user wishes.
+// setInterval(runWatchdogCheck, 15000);
+// runWatchdogCheck();
 
 
 // Initial background polling for LM Studio

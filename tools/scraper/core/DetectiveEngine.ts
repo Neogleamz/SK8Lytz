@@ -17,10 +17,12 @@ import { getFieldRegistry } from './LocalDB';
 
 export const safeNum = (v: any): number | null => {
   if (v == null) return null;
+  if (typeof v === 'object') v = JSON.stringify(v);
   const n = Number(v);
   if (!isNaN(n)) return n;
   if (typeof v === 'string') {
-    const match = v.match(/^\s*(\d+\.?\d*)/);
+    // Extract the first number found anywhere in the string
+    const match = v.match(/(\d+\.?\d*)/);
     if (match) return Number(match[1]);
   }
   return null;
@@ -694,7 +696,8 @@ async function callLMStudio(
       { role:'user', content: userMessage }
     ], 
     temperature: 0.1, 
-    stream: true
+    stream: true,
+    max_tokens: 1500
   };
   
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -702,7 +705,7 @@ async function callLMStudio(
       const url = new URL(LM_STUDIO_URL);
       const postData = JSON.stringify(payload);
       
-      const fullText = await new Promise<string>((resolve, reject) => {
+      const fetchPromise = new Promise<string>((resolve, reject) => {
         const req = http.request({
           hostname: url.hostname,
           port: url.port || 80,
@@ -712,7 +715,7 @@ async function callLMStudio(
             'Content-Type': 'application/json',
             'Content-Length': Buffer.byteLength(postData)
           },
-          timeout: 300000 // 5 minutes timeout
+          timeout: 180000 // 3 minutes timeout natively
         }, (res: http.IncomingMessage) => {
           if (res.statusCode && (res.statusCode < 200 || res.statusCode >= 300)) {
             let errBody = '';
@@ -776,12 +779,18 @@ async function callLMStudio(
         req.on('error', (err: Error) => reject(err));
         req.on('timeout', () => {
           req.destroy();
-          reject(new Error('Request timed out after 5 minutes'));
+          reject(new Error('Request timed out natively after 3 minutes'));
         });
         
         req.write(postData);
         req.end();
       });
+      
+      // Hard fallback wrapper (in case Bun's http socket timeout drops the event)
+      const fullText = await Promise.race([
+        fetchPromise,
+        new Promise<string>((_, reject) => setTimeout(() => reject(new Error('Hard timeout: Model stalled for 3 minutes')), 180000))
+      ]);
       
       try {
         const parsed = JSON.parse(fullText.replace(/```json/g,'').replace(/```/g,'').trim());
@@ -1120,10 +1129,14 @@ export async function executeDetective(
               typeof testPass1.hours === 'object' || 
               (typeof testPass1.hours === 'string' && testPass1.hours.toLowerCase().includes('monday'))
             );
+            const isRealVal = (v: any) => v !== null && v !== undefined && String(v).toLowerCase() !== 'null' && String(v).toLowerCase() !== 'none' && String(v).trim() !== '';
+            
+            console.log('[DEBUG] Raw Pricing from LLM:', JSON.stringify(testPass1.pricing));
+            
             const hasPricing = testPass1.pricing && (
-              testPass1.pricing.adult !== null || 
-              testPass1.pricing.child !== null || 
-              testPass1.pricing.skate_rental !== null
+              isRealVal(testPass1.pricing.adult) || 
+              isRealVal(testPass1.pricing.child) || 
+              isRealVal(testPass1.pricing.skate_rental)
             );
             
             if (hasHours && hasPricing) {
@@ -1427,7 +1440,7 @@ skipPass1B = Object.keys(schemaPass1B).length === 0;
                                      .map(l => l.href)
                                      .filter(href => !coreText.includes(`[PAGE: ${href}]`));
         
-        const targets = [...new Set(undiscovered)].slice(0, 2);
+        const targets = [...new Set([spotContext.website, ...undiscovered])].slice(0, 3);
         if (targets.length > 0) {
           escalationRan = true;
           const pages = await browser.pages();
