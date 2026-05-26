@@ -181,16 +181,19 @@ describe('useControllerDispatch', () => {
       expect(AppLogger.log).toHaveBeenCalledWith("MUSIC_CONFIG_REQUESTED", expect.any(Object));
     });
 
-    it('dispatches APP mic config payload', () => {
+    it('dispatches APP mic config payload with isOn=true (mic source does not control activation)', () => {
       const dispatch = useControllerDispatch({ writeToDevice: mockWriteToDevice, points: 16 });
       dispatch.handleMusicChange(1, 50, 50, 'APP', '#FFFFFF', '#000000', 0x26);
 
       const c1 = { r: 255, g: 255, b: 255 };
       const c2 = { r: 0, g: 0, b: 0 };
       
-      const expectedPayload = ZenggeProtocol.setMusicConfig(1, 0x26, false, c1, c2, 50, 50);
+      // BUG FIX: isOn must ALWAYS be true — mic source is not the activation flag.
+      // Bible §0x73 §11 Oracle (2026-04-22): APP mic routes via 0x74 stream, not isOn byte.
+      const expectedPayload = ZenggeProtocol.setMusicConfig(1, 0x26, true, c1, c2, 50, 50);
       expectPayloadMatch(mockWriteToDevice, expectedPayload, [{ micSource: 'APP' }]);
     });
+
   });
 
   describe('setPower', () => {

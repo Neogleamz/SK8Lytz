@@ -238,10 +238,17 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
 
       AppLogger.log("MUSIC_CONFIG_REQUESTED", { patternId, src, c1Hex: color1Hex, c2Hex: color2Hex, matrix });
 
+      // BUG FIX: Previously passed `src === 'DEVICE'` as the `isOn` byte, which
+      // disabled music mode (isOn=false → 0x00) whenever APP mic was selected.
+      // Per ZENGGE_PROTOCOL_BIBLE.md §0x73 §11 Oracle (2026-04-22):
+      //   isOn (byte 1): 0x01 = activate music mode, 0x00 = deactivate
+      //   Mic routing is NOT controlled here — APP mic is activated by streaming
+      //   0x74 magnitude packets. DEVICE mic listens natively when 0x74 is absent.
+      //   isOn must always be true when dispatching a live music config.
       writeToDevice(ZenggeProtocol.setMusicConfig(
         patternId,
         matrix === 0x27 ? 0x27 : 0x26,
-        src === 'DEVICE',
+        true,  // isOn: always activate — mic source handled by 0x74 stream
         c1,
         c2,
         sens,
