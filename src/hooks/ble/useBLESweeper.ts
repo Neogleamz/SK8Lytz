@@ -27,7 +27,7 @@ import { Buffer } from 'buffer';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
-import { ZENGGE_SERVICE_UUID } from '../../protocols/ZenggeProtocol';
+import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
 import { resolveProtocol, getDefaultProtocol, getProtocolById } from '../../protocols/ControllerRegistry';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
@@ -397,6 +397,24 @@ export function useBLESweeper({
       lastSeenRef.current.set(mac, Date.now());
       if (!seenMacsRef.current.has(mac)) {
         seenMacsRef.current.add(mac);
+        // Parse firmware from BLE advertisement manufacturer data (same as useBLEScanner).
+        // Without this, devices in allDevices lack .firmware and the settings modal shows 'Unknown'.
+        if (mfData) {
+          try {
+            const fwInfo = ZenggeProtocol.parseFirmwareFromAdvertisement(mfData);
+            if (fwInfo) {
+              Object.assign(device, {
+                firmware: `v${fwInfo.firmwareVer}.${fwInfo.ledVersion} (BLE ${fwInfo.bleVersion})`,
+                firmwareVer: fwInfo.firmwareVer,
+                ledVersion: fwInfo.ledVersion,
+                bleVersion: fwInfo.bleVersion,
+                productId: fwInfo.productId,
+              });
+            }
+          } catch (e) {
+            AppLogger.warn('[Sweeper] Failed to parse firmware from adv data', { mac, error: String(e) });
+          }
+        }
         pendingStagedRef.current.push(device);
         scheduleFlush();
         if (!hwCacheRef.current[mac] && !probingMacsRef.current.has(mac)) {
