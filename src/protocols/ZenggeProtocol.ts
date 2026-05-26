@@ -533,21 +533,20 @@ export class ZenggeProtocol {
 
 
   /**
-   * Build 0x73 Music Config packet — APK-verified 13-byte format for 0xA3 hardware.
+   * Build 0x73 Music Config packet — Oracle-verified 13-byte format for 0xA3 hardware.
    *
-   * APK source: ZenggeProtocol.java / MusicActivity.java (April 2026 decompile).
-   * Byte positions confirmed via APK hex dump of live traffic.
+   * Source: ZENGGE_PROTOCOL_BIBLE.md §0x73 + §11 Oracle Hardware Validation (2026-04-22)
+   * Builder: C7789z.java (13B full form)
    *
-   * Format (13 bytes + checksum):
-   *   [0x73, musicMode(1–13), micSource, isOn, R1, G1, B1, R2, G2, B2, sensitivity, brightness, checksum]
+   * Format (13 bytes, wrapped):
+   *   [0x73, isOn, modeType, patternId, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b, sensitivity, brightness, checksum]
    *
-   *   musicMode:  1–13 (music pattern ID)
-   *   micSource:  0x26 = phone/app microphone (APK truth)
-   *               0x27 = device built-in mic
    *   isOn:       0x01 = activate music mode, 0x00 = deactivate
-   *
-   * ⚠️ Phase 1 Smoking Gun A verdict required before enabling in production.
-   *    Gate: hw-test/0x73-mic-source-shootout + hw-test/0x73-ison-byte-presence
+   *   modeType:   0x26 = Light Bar matrix (16 patterns, IDs 1–16)
+   *               0x27 = Light Screen matrix (30 patterns, IDs 1–30)
+   *   patternId:  1–16 for 0x26, 1–30 for 0x27 (clamped per modeType below)
+   *   FG (color1): Sound Column color
+   *   BG (color2): Drop color (ignored by hardware for NONE/FG_ONLY modes)
    */
   static setMusicConfig(
     musicMode: number,
@@ -558,11 +557,16 @@ export class ZenggeProtocol {
     sensitivity: number,
     brightness: number
   ): number[] {
+    // BUG FIX: Clamp patternId to the correct ceiling for each matrix.
+    // Light Bar (0x26) has only 16 patterns; Light Screen (0x27) has 30.
+    // Previously hardcoded to 30, allowing IDs 17-30 to be sent to a 0x26
+    // matrix — undefined hardware behavior. (Bible §0x73 §11, 2026-04-22)
+    const maxPatternId = modeType === 0x27 ? 30 : 16;
     const payload = [
       0x73,
       isOn ? 0x01 : 0x00,
       modeType,
-      Math.max(1, Math.min(30, musicMode | 0)),
+      Math.max(1, Math.min(maxPatternId, musicMode | 0)),
       Math.max(0, Math.min(255, color1.r | 0)),
       Math.max(0, Math.min(255, color1.g | 0)),
       Math.max(0, Math.min(255, color1.b | 0)),

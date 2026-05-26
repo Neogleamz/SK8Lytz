@@ -2,7 +2,7 @@
  * MusicDictionary.ts
  * Authoritative registry for all 46 hardware-native music profiles.
  *
- * Hardware Source: ZENGGE Protocol Bible §0x73 (APK-verified, 2026-04-22)
+ * Hardware Source: ZENGGE Protocol Bible §0x73 (Oracle-Verified 2026-04-22)
  *
  * Two distinct hardware matrices, each with its own pattern table:
  *  - 0x26 (Light Bar):    16 profiles (IDs 1–16)
@@ -13,11 +13,11 @@
  *  - 'FG_ONLY' → foreground (sound column) color only
  *  - 'FG_BG'   → both foreground (sound column) + background (drop) pickers
  *
- * Protocol Bible reference (lines 699–710, confirmed from APK MusicModeFragment):
- *  Light Bar  IDs 1–10, 12, 13, 16 → NONE (generative spectrum)
- *  Light Bar  IDs 11, 14, 15       → FG_ONLY (monochromatic rhythm)
- *  Light Screen IDs 1–18, 25–27    → NONE (advanced spectrum)
- *  Light Screen IDs 19–24, 28–30   → FG_BG (custom matrix rhythm)
+ * Protocol Bible §0x73 §11 Oracle Ground Truth (ZENGGE_PROTOCOL_BIBLE.md L770–L781):
+ *  Light Bar  IDs 1–10, 12, 13, 16 → NONE    (generative spectrum — HW ignores FG/BG)
+ *  Light Bar  IDs 11, 14, 15       → FG_ONLY  (monochromatic rhythm)
+ *  Light Screen ALL 30 IDs         → FG_ONLY  at minimum (Sound Column always available)
+ *  Light Screen IDs 19–24, 28–30   → FG_BG    (Sound Column + Drop color both shown)
  */
 
 /** Color picker availability for a music profile. */
@@ -69,41 +69,44 @@ export const LIGHT_BAR_PROFILES: MusicProfile[] = [
 // ---------------------------------------------------------------------------
 // 0x27 — Light Screen Matrix (30 profiles)
 // ---------------------------------------------------------------------------
-// IDs 1–18, 25–27 → NONE (advanced spectrum)
-// IDs 19–24, 28–30 → FG_BG (custom matrix rhythm — FG=sound, BG=drop)
+// BUG FIX (Protocol Bible §0x73 §11 Oracle 2026-04-22):
+//   ALL 30 Light Screen IDs support FG (Sound Column) color — previously
+//   IDs 1–18 and 25–27 were wrongly mapped to 'NONE', hiding the color picker.
+// IDs 1–18, 25–27 → FG_ONLY  (advanced spectrum — FG=Sound Column always available)
+// IDs 19–24, 28–30 → FG_BG   (custom matrix rhythm — FG=Sound Column, BG=Drop)
 // ---------------------------------------------------------------------------
 
 export const LIGHT_SCREEN_PROFILES: MusicProfile[] = [
-  { id: 1,  name: 'Spectrum Pulse',  colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 2,  name: 'Audio Rain',      colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 3,  name: 'Wave Rush',       colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 4,  name: 'Bounce Grid',     colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 5,  name: 'Frequency Arc',   colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 6,  name: 'Bass Column',     colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 7,  name: 'Neon Climb',      colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 8,  name: 'Pixel Bloom',     colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 9,  name: 'Sound Scatter',   colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 10, name: 'Vibe Matrix',     colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 11, name: 'Bass Burst',      colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 12, name: 'Spectrum Fade',   colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 13, name: 'Audio Flare',     colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 14, name: 'Rhythm Grid',     colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 15, name: 'Light Cascade',   colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 16, name: 'Neon Drift',      colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 17, name: 'Energy Sweep',    colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 18, name: 'Crystal Storm',   colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 19, name: 'Custom Drop',     colorMode: 'FG_BG', supportsSpeed: true, supportsBrightness: true },
-  { id: 20, name: 'Dual Wave',       colorMode: 'FG_BG', supportsSpeed: true, supportsBrightness: true },
-  { id: 21, name: 'Color Rain',      colorMode: 'FG_BG', supportsSpeed: true, supportsBrightness: true },
-  { id: 22, name: 'Beat Columns',    colorMode: 'FG_BG', supportsSpeed: true, supportsBrightness: true },
-  { id: 23, name: 'Hue Pulse',       colorMode: 'FG_BG', supportsSpeed: true, supportsBrightness: true },
-  { id: 24, name: 'Rhythm Fade',     colorMode: 'FG_BG', supportsSpeed: true, supportsBrightness: true },
-  { id: 25, name: 'Aurora Flow',     colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 26, name: 'Spectrum Dance',  colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 27, name: 'Pixel Storm',     colorMode: 'NONE',  supportsSpeed: true, supportsBrightness: true },
-  { id: 28, name: 'Glow Drop',       colorMode: 'FG_BG', supportsSpeed: true, supportsBrightness: true },
-  { id: 29, name: 'Chroma Wave',     colorMode: 'FG_BG', supportsSpeed: true, supportsBrightness: true },
-  { id: 30, name: 'Matrix Pulse',    colorMode: 'FG_BG', supportsSpeed: true, supportsBrightness: true },
+  { id: 1,  name: 'Spectrum Pulse',  colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 2,  name: 'Audio Rain',      colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 3,  name: 'Wave Rush',       colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 4,  name: 'Bounce Grid',     colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 5,  name: 'Frequency Arc',   colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 6,  name: 'Bass Column',     colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 7,  name: 'Neon Climb',      colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 8,  name: 'Pixel Bloom',     colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 9,  name: 'Sound Scatter',   colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 10, name: 'Vibe Matrix',     colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 11, name: 'Bass Burst',      colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 12, name: 'Spectrum Fade',   colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 13, name: 'Audio Flare',     colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 14, name: 'Rhythm Grid',     colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 15, name: 'Light Cascade',   colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 16, name: 'Neon Drift',      colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 17, name: 'Energy Sweep',    colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 18, name: 'Crystal Storm',   colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 19, name: 'Custom Drop',     colorMode: 'FG_BG',   supportsSpeed: true, supportsBrightness: true },
+  { id: 20, name: 'Dual Wave',       colorMode: 'FG_BG',   supportsSpeed: true, supportsBrightness: true },
+  { id: 21, name: 'Color Rain',      colorMode: 'FG_BG',   supportsSpeed: true, supportsBrightness: true },
+  { id: 22, name: 'Beat Columns',    colorMode: 'FG_BG',   supportsSpeed: true, supportsBrightness: true },
+  { id: 23, name: 'Hue Pulse',       colorMode: 'FG_BG',   supportsSpeed: true, supportsBrightness: true },
+  { id: 24, name: 'Rhythm Fade',     colorMode: 'FG_BG',   supportsSpeed: true, supportsBrightness: true },
+  { id: 25, name: 'Aurora Flow',     colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 26, name: 'Spectrum Dance',  colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 27, name: 'Pixel Storm',     colorMode: 'FG_ONLY', supportsSpeed: true, supportsBrightness: true },
+  { id: 28, name: 'Glow Drop',       colorMode: 'FG_BG',   supportsSpeed: true, supportsBrightness: true },
+  { id: 29, name: 'Chroma Wave',     colorMode: 'FG_BG',   supportsSpeed: true, supportsBrightness: true },
+  { id: 30, name: 'Matrix Pulse',    colorMode: 'FG_BG',   supportsSpeed: true, supportsBrightness: true },
 ];
 
 // ---------------------------------------------------------------------------

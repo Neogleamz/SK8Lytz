@@ -211,8 +211,20 @@ export class ZenggeAdapter implements IControllerProtocol {
 
   // ─── Music ─────────────────────────────────────────────────────────────────
   buildMusicConfig(config: MusicConfig): ProtocolResult {
+    // BUG FIX: Previously hardcoded to 0x26 (Light Bar), ignoring config.matrixStyle.
+    // This blocked all Light Screen (0x27) patterns from ever reaching hardware.
+    // matrixStyle is set by useMusicMode based on the user's matrix toggle.
+    // Source: ZENGGE_PROTOCOL_BIBLE.md §0x73 — modeType controls the pattern matrix.
     return this.toResult(
-      ZenggeProtocol.setMusicConfig(config.patternId, 0x26, config.isOn ?? true, config.color1, config.color2, config.micSensitivity, config.brightness),
+      ZenggeProtocol.setMusicConfig(
+        config.patternId,
+        config.matrixStyle as 0x26 | 0x27,
+        config.isOn ?? true,
+        config.color1,
+        config.color2,
+        config.micSensitivity,
+        config.brightness
+      ),
       false
     );
   }
