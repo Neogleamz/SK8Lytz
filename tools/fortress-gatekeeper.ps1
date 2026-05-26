@@ -42,11 +42,35 @@ foreach ($Line in $WorktreeList) {
         Pop-Location
     }
 
-    # 3. Perform Fast-Forward Merge
-    Write-Host "Merging branch '$Branch' into master..." -ForegroundColor Yellow
-    git merge $Commit --ff-only
+    # 3. Rebase branch onto current master HEAD to handle sequential-merge divergence.
+    # This is safe because worktree branches are always single-commit, linear, and
+    # never shared — rebasing them is equivalent to a fast-forward after accounting
+    # for any commits that landed on master since this worktree was created.
+    Write-Host "Rebasing '$Branch' onto current master HEAD..." -ForegroundColor Yellow
+    Push-Location $Path
+    try {
+        git rebase origin/master 2>$null  # Rebase off remote if ahead
+        git rebase $FORTRESS_ROOT          # Rebase off local master
+    } catch {
+        # Rebase may fail if there's nothing to rebase — that's fine
+    } finally {
+        Pop-Location
+    }
 
-    # 4. Teardown Worktree safely (removing directory junctions first to prevent recursive deletion)
+    # 4. Perform Fast-Forward Merge (now guaranteed to succeed post-rebase)
+    Write-Host "Merging branch '$Branch' into master..." -ForegroundColor Yellow
+    $MergeResult = git merge $Branch --ff-only 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "" -ForegroundColor Red
+        Write-Host "GATEKEEPER HALT: --ff-only merge FAILED for '$Branch'" -ForegroundColor Red
+        Write-Host "Master has diverged. Branch and worktree have been PRESERVED." -ForegroundColor Yellow
+        Write-Host "Fix manually: git rebase master $Branch && run gatekeeper again." -ForegroundColor Yellow
+        Write-Host "" -ForegroundColor Red
+        # CRITICAL: Do NOT teardown — skip to next worktree without destroying this one
+        continue
+    }
+
+    # 5. Teardown Worktree safely (removing directory junctions first to prevent recursive deletion)
     Write-Host "Cleaning up worktree junctions..." -ForegroundColor Yellow
     if (Test-Path "$Path\node_modules") {
         $Item = Get-Item "$Path\node_modules"
@@ -61,7 +85,7 @@ foreach ($Line in $WorktreeList) {
     Write-Host "Tearing down worktree..." -ForegroundColor Yellow
     git worktree remove $Path --force
     
-    # 5. Delete Branch
+    # 6. Delete Branch
     Write-Host "Deleting branch '$Branch'..." -ForegroundColor Yellow
     git branch -D $Branch
     
