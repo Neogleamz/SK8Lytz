@@ -17,7 +17,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, AppState, AppStateStatus, BackHandler, Dimensions, Image, Linking, Modal, PanResponder, Platform, SafeAreaView, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Alert, Animated, AppState, AppStateStatus, BackHandler, Dimensions, Image, Linking, Modal, PanResponder, Platform, SafeAreaView, ScrollView, Text, TouchableOpacity, View, useWindowDimensions, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ExpoLinking from 'expo-linking';
 import DeviceItem from '../components/DeviceItem';
@@ -202,6 +202,21 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const allDevicesRef = React.useRef(allDevices);
 
   const [viewState, setViewState] = useState<DashboardViewState>('LOADING_REGS');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    AppLogger.log('DASHBOARD_STATE', { event: 'dashboard_pull_to_refresh_triggered' });
+    
+    // Retrigger the auto connect sequence, which also calls burstScan 
+    retriggerAutoConnectRef.current();
+    
+    // Stop the spinner after 2 seconds
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 2000);
+  }, []);
+
   // Stable ref to retriggerAutoConnect — bridges the forward-reference since
   // useDashboardAutoConnect is declared after useDashboardGroups (hook order constraint).
   const retriggerAutoConnectRef = React.useRef<() => void>(() => {});
@@ -980,6 +995,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                style={{ flex: 1 }} 
                contentContainerStyle={{ paddingBottom: insets.bottom + 60, flexGrow: 1 }}
                showsVerticalScrollIndicator={false}
+               refreshControl={
+                 <RefreshControl 
+                   refreshing={isRefreshing} 
+                   onRefresh={onRefresh} 
+                   tintColor={Colors.primary}
+                   colors={[Colors.primary]}
+                 />
+               }
              >
                 {/* SLAB 2: CREW HUB */}
                 <DashboardCrewPanel
