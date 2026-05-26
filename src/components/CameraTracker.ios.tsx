@@ -1,0 +1,156 @@
+/**
+ * CameraTracker.ios.tsx — iOS-Specific Color Sampler
+ */
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Camera, useCameraDevice, useCameraPermission, useFrameOutput } from 'react-native-vision-camera';
+import { runOnJS } from 'react-native-worklets';
+import { requestPermission } from '../services/PermissionService';
+import { Colors, Spacing } from '../theme/theme';
+
+interface CameraTrackerProps {
+  onColorDetected: (hex: string) => void;
+  isActive: boolean;
+}
+
+function rgbToVividHex(r: number, g: number, b: number): string {
+  const rN = r / 255;
+  const gN = g / 255;
+  const bN = b / 255;
+  const cMax = Math.max(rN, gN, bN);
+  const cMin = Math.min(rN, gN, bN);
+  const delta = cMax - cMin;
+
+  if (delta < 0.15) {
+    return '#FFFFFF';
+  }
+
+  let h = 0;
+  if (delta > 0.001) {
+    if (cMax === rN)      h = ((gN - bN) / delta) % 6;
+    else if (cMax === gN) h = (bN - rN) / delta + 2;
+    else                  h = (rN - gN) / delta + 4;
+    h = h * 60;
+    if (h < 0) h += 360;
+  }
+
+  const c = 1.0;
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  let rV = 0, gV = 0, bV = 0;
+  if      (h < 60)  { rV = c; gV = x; bV = 0; }
+  else if (h < 120) { rV = x; gV = c; bV = 0; }
+  else if (h < 180) { rV = 0; gV = c; bV = x; }
+  else if (h < 240) { rV = 0; gV = x; bV = c; }
+  else if (h < 300) { rV = x; gV = 0; bV = c; }
+  else              { rV = c; gV = 0; bV = x; }
+
+  const toHex = (v: number) => {
+    const s = Math.round(v * 255).toString(16);
+    return s.length === 1 ? '0' + s : s;
+  };
+  return ('#' + toHex(rV) + toHex(gV) + toHex(bV)).toUpperCase();
+}
+
+export default function CameraTracker({ onColorDetected, isActive }: CameraTrackerProps) {
+  const device = useCameraDevice('back');
+  const { hasPermission, requestPermission: requestFromHook } = useCameraPermission();
+  const [liveHex, setLiveHex] = useState<string>('#FFFFFF');
+
+  const onColorDetectedRef = useRef(onColorDetected);
+  useEffect(() => {
+    onColorDetectedRef.current = onColorDetected;
+  }, [onColorDetected]);
+
+  const dispatchColor = useCallback((r: number, g: number, b: number) => {
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return;
+    const hex = rgbToVividHex(r, g, b);
+    setLiveHex(hex);
+    onColorDetectedRef.current(hex);
+  }, []);
+
+  const dispatchColorJS = runOnJS(dispatchColor);
+
+  const frameOutput = useFrameOutput({
+    onFrame: (frame) => {
+      'worklet';
+      try {
+        if (!frame.isValid) { frame.dispose(); return; }
+        const buf = frame.getPixelBuffer();
+        const bytes = new Uint8Array(buf);
+        dispatchColorJS(bytes[0] ?? 0, bytes[1] ?? 0, bytes[2] ?? 0);
+      } finally {
+        frame.dispose();
+      }
+    },
+    targetResolution: { width: 1, height: 1 },
+    pixelFormat: 'rgb',
+    dropFramesWhileBusy: true,
+  });
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') requestFromHook();
+    });
+    return () => sub.remove();
+  }, [requestFromHook]);
+
+  useEffect(() => {
+    if (!hasPermission) {
+      requestPermission('CAMERA').then((granted) => {
+        if (granted) requestFromHook();
+      });
+    }
+  }, [hasPermission, requestFromHook]);
+
+  if (!hasPermission) {
+    return (
+      <View style={styles.centeredContainer}>
+        <MaterialCommunityIcons name="camera-off" size={40} color={Colors.textMuted} style={{ marginBottom: Spacing.md }} />
+        <Text style={styles.message}>Camera access is needed to detect colors from your environment.</Text>
+        <TouchableOpacity style={styles.button} onPress={async () => {
+          const granted = await requestPermission('CAMERA');
+          if (granted) requestFromHook(); else Linking.openSettings();
+        }}>
+          <Text style={{ color: '#FFF', fontWeight: 'bold' }}>GRANT PERMISSION</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (device == null) {
+    return (
+      <View style={styles.centeredContainer}>
+        <Text style={[styles.message, { marginTop: Spacing.md }]}>Initializing Camera...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <Camera
+        style={StyleSheet.absoluteFillObject}
+        device={device}
+        isActive={isActive && hasPermission}
+        outputs={[frameOutput]}
+      />
+      <View style={styles.reticleContainer} pointerEvents="none">
+        <View style={[styles.reticleRing, { borderColor: liveHex }]}>
+          <View style={styles.reticleCrosshairH} />
+          <View style={styles.reticleCrosshairV} />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, minHeight: 300, backgroundColor: '#000', overflow: 'hidden' },
+  centeredContainer: { flex: 1, minHeight: 300, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: Spacing.xl },
+  message: { color: '#FFF', textAlign: 'center', paddingBottom: Spacing.md, fontFamily: 'Righteous' },
+  button: { backgroundColor: Colors.primary, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, borderRadius: 12, marginTop: Spacing.xl },
+  reticleContainer: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
+  reticleRing: { width: 64, height: 64, borderRadius: 32, borderWidth: 3, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 8 },
+  reticleCrosshairH: { position: 'absolute', width: 20, height: 2, backgroundColor: 'rgba(255,255,255,0.85)' },
+  reticleCrosshairV: { position: 'absolute', width: 2, height: 20, backgroundColor: 'rgba(255,255,255,0.85)' },
+});
