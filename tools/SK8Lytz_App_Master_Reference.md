@@ -679,13 +679,15 @@ _Configures the hardware's music-reactive mode with mode type (Bar vs Screen), p
 > **The `0x73` structure does NOT contain a trailing micSource byte.** The `0x26` and `0x27` values dictate the Matrix Style (Light Bar vs Light Screen), NOT the microphone source.
 > Microphone Source is toggled implicitly via the `isOn` byte.
 
-- **Format (13 bytes):** `[0x73, isOn, modeType, effectId, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b, sensitivity, brightness, checksum]`
+- **Format (13 bytes):** `[0x73, isOn, modeType, effectId, dropR, dropG, dropB, colR, colG, colB, sensitivity, brightness, checksum]`
 - **isOn:** `0x01` = Device Mic Active (Hardware processes audio). `0x00` = App Mic Active (Hardware mic OFF, waits for `0x74` magnitude streams).
 - **modeType:** `0x26` (38) = Light Bar Mode (16 built-in patterns). `0x27` (39) = Light Screen Mode (30 built-in patterns).
 - **effectId:** 1–30 music-reactive pattern IDs (mapped in `MusicDictionary.ts`)
+- **dropR, dropG, dropB (Bytes 4-6):** Drop Color (controlled by `sb_point` in the native app). Verified via `strings.xml` translation `<string name="point_color">drop color</string>`.
+- **colR, colG, colB (Bytes 7-9):** Sound Column Color (controlled by `sb_col` in the native app). Verified via `strings.xml` translation `<string name="col_color">sound column color</string>`.
+  - *Light Bar (0x26) specific behavior*: The native ZENGGE app clones the primary color to **both** the Drop Color and Sound Column Color slots inside the `0x73` payload to prevent hardware rendering confusion.
 - **sensitivity / brightness:** 0–255
-- **Source of Truth:** `ZenggeProtocol.setMusicConfig()` — **must be updated to remove the trailing hallucinated micSource byte and accurately map `0x26`/`0x27` to modeType.**
-- **APK Source:** `C7789z.java`,  `MusicModeFragment.java` line 752
+- **Source of Truth:** `ZenggeProtocol.setMusicConfig()` (decompiler trace: `C7789z.java`, `MusicModeFragment.java` line 752)
 
 ### Command: App Mic Magnitude (0x74)
 
@@ -1558,10 +1560,9 @@ Decoded relevant fields: `product_id = 163` (0xA3), `firmware_ver = 46`, `ble_ve
 - **Future work**: Replicate ZENGGE chunked framing to unlock true 10B slot support
 - **Impact**: LOW (current scenes work) — track as enhancement, not critical bug
 
-### BUG-2: `0x73` micSource Wrong Values (HIGH SEVERITY)
-- **Master Reference says**: `0x01` = Device mic, `0x00` = App mic
-- **APK truth (MusicModeFragment line 752)**: `38` (0x26) = phone/app mic, `39` (0x27) = device mic
-- **Impact**: Mic source selection may be inverted or ineffective
+### BUG-2: `0x73` micSource Wrong Values (HIGH SEVERITY) — ✅ RESOLVED (2026-05-26)
+- **Resolved**: Verified the exact `0x26`/`0x27` matrix routing and completed the true-up of Drop and Sound Column color sliders (Bytes 4-6 and Bytes 7-9).
+- **APK Source**: `strings.xml` + `C7789z.java`. Fixed inverted sliders and implemented Light Bar `0x26` fallback cloning.
 
 ### BUG-3: Mock Product ID (LOW SEVERITY)
 - **Location**: `useBLEScanner.ts` line 313
@@ -1641,14 +1642,17 @@ Device: Pixel 7 (Android 16), HCI log extracted via `adb bugreport`.
 
 **The `0x73` payload is strictly a 13-byte configuration command.** It dictates the active music visualization mode, its colors, and whether the hardware microphone is active. It does **not** transmit magnitude data (that is `0x74`).
 
-**Format (13 Bytes)**: `[0x73, isOn, modeType, modeId, fgR, fgG, fgB, bgR, bgG, bgB, sensitivity, brightness, checksum]`
+**Format (13 Bytes)**: `[0x73, isOn, modeType, modeId, dropR, dropG, dropB, colR, colG, colB, sensitivity, brightness, checksum]`
 
 - **`isOn` (Byte 1)**: `0x01` activates music mode. `0x00` disables it.
 - **`modeType` (Byte 2)**: Defines the hardware pattern matrix.
   - `0x26`: Light Bar Matrix (16 modes)
   - `0x27`: Light Screen Matrix (30 modes)
 - **`modeId` (Byte 3)**: The specific effect ID (1-16 or 1-30).
-- **`fg` and `bg` (Bytes 4-9)**: Foreground (Sound Column) and Background (Drop) colors. Ignored by generative modes.
+- **`drop` and `col` (Bytes 4-9)**:
+  - **Bytes 4-6 (Drop Color)**: Controlled by `sb_point`. Verified via `strings.xml` translation `<string name="point_color">drop color</string>`.
+  - **Bytes 7-9 (Sound Column Color)**: Controlled by `sb_col`. Verified via `strings.xml` translation `<string name="col_color">sound column color</string>`.
+  - **Light Bar `0x26` Fallback**: Discovered in `C7789z.java` - the ZENGGE app explicitly passes the identical primary color (`sb_color`) into BOTH the Bytes 4-6 and Bytes 7-9 slots for Light Bar matrices to prevent hardware confusion.
 - **`sensitivity` (Byte 10)**: 0-100 (hardware range).
 - **`brightness` (Byte 11)**: 0-100 (hardware range).
 

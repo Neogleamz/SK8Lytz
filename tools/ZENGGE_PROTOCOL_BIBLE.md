@@ -774,14 +774,17 @@ Device: Pixel 7 (Android 16), HCI log extracted via `adb bugreport`.
 
 **The `0x73` payload is strictly a 13-byte configuration command.** It dictates the active music visualization mode, its colors, and whether the hardware microphone is active. It does **not** transmit magnitude data (that is `0x74`).
 
-**Format (13 Bytes)**: `[0x73, isOn, modeType, modeId, fgR, fgG, fgB, bgR, bgG, bgB, sensitivity, brightness, checksum]`
+**Format (13 Bytes)**: `[0x73, isOn, modeType, modeId, dropR, dropG, dropB, colR, colG, colB, sensitivity, brightness, checksum]`
 
 - **`isOn` (Byte 1)**: `0x01` activates music mode. `0x00` disables it.
 - **`modeType` (Byte 2)**: Defines the hardware pattern matrix.
   - `0x26`: Light Bar Matrix (16 modes)
   - `0x27`: Light Screen Matrix (30 modes)
 - **`modeId` (Byte 3)**: The specific effect ID (1-16 or 1-30).
-- **`fg` and `bg` (Bytes 4-9)**: Foreground (Sound Column) and Background (Drop) colors. Ignored by generative modes.
+- **`drop` and `col` (Bytes 4-9)**:
+  - **Bytes 4-6 (Drop Color)**: Controlled by `sb_point`. Verified via `strings.xml` translation `<string name="point_color">drop color</string>`.
+  - **Bytes 7-9 (Sound Column Color)**: Controlled by `sb_col`. Verified via `strings.xml` translation `<string name="col_color">sound column color</string>`.
+  - **Light Bar `0x26` Fallback**: Discovered in `C7789z.java` - the ZENGGE app explicitly passes the identical primary color (`sb_color`) into BOTH the Bytes 4-6 and Bytes 7-9 slots for Light Bar matrices to prevent hardware confusion.
 - **`sensitivity` (Byte 10)**: 0-100 (hardware range).
 - **`brightness` (Byte 11)**: 0-100 (hardware range).
 

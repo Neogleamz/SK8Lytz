@@ -562,17 +562,27 @@ export class ZenggeProtocol {
     // Previously hardcoded to 30, allowing IDs 17-30 to be sent to a 0x26
     // matrix — undefined hardware behavior. (Bible §0x73 §11, 2026-04-22)
     const maxPatternId = modeType === 0x27 ? 30 : 16;
+
+    // BUG FIX (APK Decompile Discovery 2026-05-26): 
+    // The previous assumption that Bytes 4-6 = Sound Column and Bytes 7-9 = Drop Color was SWAPPED!
+    // Per `MusicModeFragment.java` & `strings.xml`:
+    //  - sb_col (Bytes 7-9) = "sound column color" (`col_color` translation)
+    //  - sb_point (Bytes 4-6) = "drop color" (`point_color` translation)
+    // Additionally, for Light Bar (0x26), the APK sends the exact same color to BOTH slots.
+    const dropColor = modeType === 0x26 ? color1 : color2;
+    const soundColumnColor = color1;
+
     const payload = [
       0x73,
       isOn ? 0x01 : 0x00,
       modeType,
       Math.max(1, Math.min(maxPatternId, musicMode | 0)),
-      Math.max(0, Math.min(255, color1.r | 0)),
-      Math.max(0, Math.min(255, color1.g | 0)),
-      Math.max(0, Math.min(255, color1.b | 0)),
-      Math.max(0, Math.min(255, color2.r | 0)),
-      Math.max(0, Math.min(255, color2.g | 0)),
-      Math.max(0, Math.min(255, color2.b | 0)),
+      Math.max(0, Math.min(255, dropColor.r | 0)),
+      Math.max(0, Math.min(255, dropColor.g | 0)),
+      Math.max(0, Math.min(255, dropColor.b | 0)),
+      Math.max(0, Math.min(255, soundColumnColor.r | 0)),
+      Math.max(0, Math.min(255, soundColumnColor.g | 0)),
+      Math.max(0, Math.min(255, soundColumnColor.b | 0)),
       Math.max(0, Math.min(255, sensitivity | 0)),
       Math.max(0, Math.min(255, brightness | 0)),
     ];

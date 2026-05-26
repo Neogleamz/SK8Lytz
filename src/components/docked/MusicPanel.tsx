@@ -38,28 +38,7 @@ interface MusicPanelProps {
   Colors: any;
 }
 
-const ColorSwatch = React.memo(({
-  color, label, onPress, Colors,
-}: { color: string; label: string; onPress: () => void; Colors: any }) => (
-  <TouchableOpacity
-    onPress={onPress}
-    style={{
-      flexDirection: 'row', alignItems: 'center', gap: Spacing.xs,
-      backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 10,
-      paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md,
-      flex: 1, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)',
-    }}
-  >
-    <View style={{
-      width: 22, height: 22, borderRadius: 11,
-      backgroundColor: color,
-      borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)',
-    }} />
-    <Text style={{ color: Colors.textMuted, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>
-      {label}
-    </Text>
-  </TouchableOpacity>
-));
+
 
 const MusicPanel = React.memo(({
   musicPatternId,
@@ -163,25 +142,7 @@ const MusicPanel = React.memo(({
 
       <View style={{ flex: 1, justifyContent: 'space-evenly' }}>
 
-        {/* ── FG / BG Color Pickers (gated by colorMode) ──────────────── */}
-        {activeProfile.colorMode !== 'NONE' && (
-          <View style={styles.colorPickerRow}>
-            <ColorSwatch
-              color={musicPrimaryColor}
-              label="SOUND COLOR"
-              onPress={() => setMusicPrimaryColor(musicPrimaryColor)}
-              Colors={Colors}
-            />
-            {activeProfile.colorMode === 'FG_BG' && (
-              <ColorSwatch
-                color={musicSecondaryColor}
-                label="DROP COLOR"
-                onPress={() => setMusicSecondaryColor(musicSecondaryColor)}
-                Colors={Colors}
-              />
-            )}
-          </View>
-        )}
+
 
         {/* ── Mic Source Toggle ─────────────────────────────────────── */}
         <View style={styles.micControlSection}>
@@ -268,12 +229,7 @@ const createStyles = (Colors: any) => StyleSheet.create({
     paddingHorizontal: Spacing.md,
     marginBottom: Spacing.xs,
   },
-  colorPickerRow: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    marginBottom: Spacing.xs,
-  },
+
   micIconBtn: {
     flex: 1,
     alignItems: 'center',
