@@ -11,7 +11,7 @@ interface CrewLandingMapProps {
   [key: string]: any;
 }
 
-export default function CrewLandingMap(_props: CrewLandingMapProps) {
+export function CrewLandingMap(_props: CrewLandingMapProps) {
   return (
     <View style={styles.container}>
       <Text style={styles.icon}>🗺️</Text>

@@ -180,14 +180,21 @@ export function useBLEAutoRecovery({
 
           let recoveryAdapter: IControllerProtocol | null = null;
 
+          // CRITICAL: discoverAllServicesAndCharacteristics MUST run on every new
+          // GATT session — including recovery reconnects. Skipping it on cache-hits
+          // leaves the native characteristic handle map empty, causing all writes to fail.
+          await conn.discoverAllServicesAndCharacteristics();
+          if (signal.aborted) break;
+
           const cachedGatt = await BleCharacteristicCache.get(conn.id);
           if (cachedGatt) {
+            // Cache hit: reuse resolved adapter ID, skip slow services() re-enumeration.
+            // GATT handles are populated from the mandatory discovery above.
             recoveryAdapter = getProtocolById(cachedGatt.protocolId);
+            AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context: 'autoRecovery', deviceId: conn.id });
           }
 
           if (!recoveryAdapter) {
-            await conn.discoverAllServicesAndCharacteristics();
-            if (signal.aborted) break;
             try {
               const svcs = await conn.services();
               if (signal.aborted) break;
@@ -198,8 +205,6 @@ export function useBLEAutoRecovery({
               recoveryAdapter = getDefaultProtocol();
             }
             await BleCharacteristicCache.set(conn.id, recoveryAdapter.protocolId);
-          } else {
-            AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context: 'autoRecovery', deviceId: conn.id });
           }
           if (signal.aborted) break;
 

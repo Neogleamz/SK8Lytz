@@ -659,15 +659,23 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
               });
             }
             // ── HAL: Resolve protocol adapter from service UUIDs & Caching ────────
+            // CRITICAL: discoverAllServicesAndCharacteristics MUST always run on every
+            // new GATT session. The native BLE stack (Android + iOS) uses it to populate
+            // its internal characteristic handle maps. Skipping it (even on a cache hit)
+            // leaves the maps empty, causing all writeCharacteristic calls to silently fail.
+            await conn.discoverAllServicesAndCharacteristics();
+
             let adapter: IControllerProtocol | null = null;
 
             const cachedGatt = await BleCharacteristicCache.get(conn.id);
             if (cachedGatt) {
+              // Cache hit: skip the slow conn.services() re-enumeration.
+              // Adapter schema is cached; GATT handles are fresh from the discovery above.
               adapter = getProtocolById(cachedGatt.protocolId);
+              AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context: 'handshakeDevice', deviceId: conn.id });
             }
 
             if (!adapter) {
-              await conn.discoverAllServicesAndCharacteristics();
               try {
                 const services = await conn.services();
                 const serviceUUIDs = services.map((s: any) => s.uuid as string);
@@ -678,8 +686,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
                 adapter = getDefaultProtocol();
               }
               await BleCharacteristicCache.set(conn.id, adapter.protocolId);
-            } else {
-              AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context: 'handshakeDevice', deviceId: conn.id });
             }
 
             // MTU negotiation (up to 2 retries)
