@@ -125,20 +125,16 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
             });
           });
         } else if (Platform.OS === 'android') {
-          const { requestPermission: requestHealthConnect } = require('react-native-health-connect');
-          try {
-            const granted = await requestHealthConnect([
-              { accessType: 'read', recordType: 'HeartRate' },
-              { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
-              { accessType: 'write', recordType: 'ExerciseSession' }
-            ]);
-            // Android 14+ requires ACTIVITY_RECOGNITION for background steps too
-            await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACTIVITY_RECOGNITION);
-            return granted && granted.length > 0;
-          } catch (e: any) {
-             AppLogger.error('PERMISSION_SERVICE', { event: 'health_connect_failed', error: e.message });
-             return false;
-          }
+          // FIX: Use PermissionsAndroid.request() to show a native in-app popup —
+          // identical to how CAMERA, BLUETOOTH, and LOCATION work.
+          // The old code called react-native-health-connect's requestPermission()
+          // which opened the Health Connect app (navigating the user away!).
+          // Health Connect SDK data-level access is handled lazily by initialize()
+          // + readRecords() in useHealthTelemetry when a session actually starts.
+          const result = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACTIVITY_RECOGNITION
+          );
+          return result === PermissionsAndroid.RESULTS.GRANTED;
         }
         return false;
       }
