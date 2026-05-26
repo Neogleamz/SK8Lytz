@@ -103,7 +103,7 @@ export function useDashboardController({
   }, [selectedDeviceForSettingsId, allDevices, deviceConfigs]);
 
   const openSettings = (device: any) => {
-    setSelectedDeviceForSettingsId(device.id);
+    setSelectedDeviceForSettingsId(device.device_mac || device.id);
     setIsSettingsVisible(true);
   };
 
