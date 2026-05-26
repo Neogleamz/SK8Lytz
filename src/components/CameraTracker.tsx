@@ -1,13 +1,32 @@
 /**
- * CameraTracker — Silent snapshot-based ambient color sampler
+ * CameraTracker — Platform-Split Ambient Color Sampler
  *
- * Architecture:
- *   Every 600ms → cameraRef.current.takeSnapshot() (NO shutter sound)
- *   → nitro Image.resize(1,1) → toRawPixelData() → BGRA/RGBA buffer
- *   → extract center pixel → HSL hue → vivid LED hex → onColorDetected
+ * FIX HISTORY (why previous attempts failed):
+ *   1. takeSnapshot() is @platform Android ONLY (PreviewView.nitro.ts L113)
+ *      → iOS always threw, bare catch{} swallowed it, reticle froze at #FF0080
+ *   2. Default Camera implementationMode='performance' uses SurfaceView on Android
+ *      which does NOT support takeSnapshot. Requires 'compatible' (TextureView).
+ *   3. All errors were silently eaten — debugging was impossible
  *
- * No frame processors. No worklets. No YUV parsing. Pure JS thread.
- * Uses react-native-nitro-image's Image API — included with vision-camera v5.
+ * CORRECT ARCHITECTURE (Verified from VC5 source, 2026-05-26):
+ *
+ *   Android:
+ *     <Camera implementationMode="compatible"> (TextureView — required for takeSnapshot)
+ *     cameraRef.current.takeSnapshot()        → Promise<NitroImage>
+ *     image.resize(1,1).toRawPixelData()      → { buffer: ArrayBuffer, pixelFormat }
+ *     extract R/G/B bytes → rgbToVividHex()   → onColorDetected(hex)
+ *
+ *   iOS:
+ *     useFrameOutput({ pixelFormat: 'rgb', onFrame: worklet })  ← CameraFrameOutput
+ *     frame.getPixelBuffer()  → ArrayBuffer[0]=R, [1]=G, [2]=B  ← non-planar RGB
+ *     runOnJS(dispatchColor)(r, g, b)   → onColorDetected(hex)  ← back to React
+ *
+ * Sources:
+ *   PreviewView.nitro.ts L113    — takeSnapshot() @platform Android
+ *   Image.nitro.ts L93           — toRawPixelData() sync API
+ *   Frame.nitro.ts L280          — getPixelBuffer() for non-planar RGB frames
+ *   useFrameOutput.ts L121       — iOS worklet hook
+ *   react-native-worklets L14    — runOnJS export
  */
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -26,7 +45,9 @@ import {
   type CameraRef,
   useCameraDevice,
   useCameraPermission,
+  useFrameOutput,
 } from 'react-native-vision-camera';
+import { runOnJS } from 'react-native-worklets';
 import { requestPermission } from '../services/PermissionService';
 import { Colors, Spacing } from '../theme/theme';
 
@@ -36,7 +57,7 @@ interface CameraTrackerProps {
 }
 
 // ---------------------------------------------------------------------------
-// Extract vivid hue hex from raw RGB values
+// Extract vivid hue hex from raw RGB byte values (0–255)
 // ---------------------------------------------------------------------------
 function rgbToVividHex(r: number, g: number, b: number): string {
   const rN = r / 255;
@@ -55,7 +76,7 @@ function rgbToVividHex(r: number, g: number, b: number): string {
     if (h < 0) h += 360;
   }
 
-  // Convert hue → vivid RGB (S=1.0, L=0.5)
+  // Boost to vivid neon (S=1.0, L=0.5) — skate LEDs are pure hue, not ambient
   const c = 1.0;
   const x = c * (1 - Math.abs((h / 60) % 2 - 1));
   let rV = 0, gV = 0, bV = 0;
@@ -78,11 +99,48 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
   const { hasPermission, requestPermission: requestFromHook } = useCameraPermission();
   const [liveHex, setLiveHex] = useState<string>('#FF0080');
 
+  // Android-only refs — not used on iOS
   const cameraRef = useRef<CameraRef>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isSamplingRef = useRef(false);
 
-  // --- Permission management ---
+  // Stable JS callback — safe to call from worklet via runOnJS
+  const dispatchColor = useCallback((r: number, g: number, b: number) => {
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return;
+    const hex = rgbToVividHex(r, g, b);
+    setLiveHex(hex);
+    onColorDetected(hex);
+  }, [onColorDetected]);
+
+  // ── iOS PATH: useFrameOutput worklet ──────────────────────────────────────
+  // Verified source: useFrameOutput.ts L121, Frame.nitro.ts L280
+  // onFrame MUST be a worklet — runs on camera native thread, not JS thread.
+  // pixelFormat='rgb' → non-planar → getPixelBuffer()[0..2] = R, G, B
+  // ─────────────────────────────────────────────────────────────────────────
+  const dispatchColorJS = runOnJS(dispatchColor);
+
+  const frameOutput = useFrameOutput({
+    // Only wire onFrame on iOS — on Android we use takeSnapshot instead
+    onFrame: Platform.OS === 'ios' ? (frame) => {
+      'worklet';
+      try {
+        if (!frame.isValid) { frame.dispose(); return; }
+        // Non-planar RGB: bytes[0]=R, bytes[1]=G, bytes[2]=B
+        const buf = frame.getPixelBuffer();
+        const bytes = new Uint8Array(buf);
+        dispatchColorJS(bytes[0] ?? 0, bytes[1] ?? 0, bytes[2] ?? 0);
+      } finally {
+        frame.dispose();
+      }
+    } : undefined,
+    // 1×1 resolution forces the camera pipeline to downsample to a single pixel
+    // (color average of the entire frame) — minimum CPU + BLE noise
+    targetResolution: { width: 1, height: 1 },
+    pixelFormat: 'rgb',    // Non-planar RGB → getPixelBuffer() is safe
+    dropFramesWhileBusy: true,
+  });
+
+  // ── Permission management ─────────────────────────────────────────────────
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') requestFromHook();
@@ -98,19 +156,24 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
     }
   }, [hasPermission, requestFromHook]);
 
-  // --- Core silent sampler ---
+  // ── Android PATH: takeSnapshot() polling loop ─────────────────────────────
+  // Verified source: PreviewView.nitro.ts L113 (@platform Android)
+  // REQUIRES implementationMode="compatible" (TextureView) on <Camera> below.
+  // SurfaceView (default 'performance') does NOT support takeSnapshot().
+  // ─────────────────────────────────────────────────────────────────────────
   const sampleColor = useCallback(async () => {
     if (!cameraRef.current || isSamplingRef.current) return;
     isSamplingRef.current = true;
 
     try {
-      // takeSnapshot() reads from the preview buffer — NO shutter sound, NO disk I/O
+      // takeSnapshot() reads from the TextureView preview buffer
+      // — NO shutter sound, NO disk I/O, NO JPEG encoding
       const image = await cameraRef.current.takeSnapshot();
 
-      // Resize to 1×1 — averages all pixels to a single color. Pure native, fast.
+      // Synchronous resize to 1×1 → pixel average of full frame
       const tiny = image.resize(1, 1);
 
-      // Get raw pixel bytes + format (BGRA on Android, RGBA on iOS typically)
+      // Synchronous raw pixel access — BGRA on ARM64 Android (little-endian)
       const { buffer, pixelFormat } = tiny.toRawPixelData();
       const bytes = new Uint8Array(buffer);
 
@@ -119,41 +182,39 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
         case 'BGRA':
         case 'BGR':
         case 'BGRX':
-          b = bytes[0]; g = bytes[1]; r = bytes[2];
+          b = bytes[0] ?? 0; g = bytes[1] ?? 0; r = bytes[2] ?? 0;
           break;
         case 'ABGR':
-          b = bytes[1]; g = bytes[2]; r = bytes[3];
+          b = bytes[1] ?? 0; g = bytes[2] ?? 0; r = bytes[3] ?? 0;
           break;
         case 'RGBA':
         case 'RGB':
         case 'RGBX':
-          r = bytes[0]; g = bytes[1]; b = bytes[2];
+          r = bytes[0] ?? 0; g = bytes[1] ?? 0; b = bytes[2] ?? 0;
           break;
         case 'ARGB':
         case 'XRGB':
-          r = bytes[1]; g = bytes[2]; b = bytes[3];
+          r = bytes[1] ?? 0; g = bytes[2] ?? 0; b = bytes[3] ?? 0;
           break;
         default:
-          // Unknown format — try BGRA (most common on Android ARM64)
-          b = bytes[0]; g = bytes[1]; r = bytes[2];
+          // Fallback: ARM64 Android emits BGRA from Bitmap.ARGB_8888 little-endian
+          b = bytes[0] ?? 0; g = bytes[1] ?? 0; r = bytes[2] ?? 0;
       }
 
-      if (isNaN(r) || isNaN(g) || isNaN(b)) return;
-
-      const hex = rgbToVividHex(r, g, b);
-      setLiveHex(hex);
-      onColorDetected(hex);
-    } catch {
-      // Silently skip — camera may still be warming up
+      dispatchColor(r, g, b);
+    } catch (e) {
+      // DEV-only: surface real errors so we stop flying blind
+      if (__DEV__) console.error('[CameraTracker] takeSnapshot failed:', e);
     } finally {
       isSamplingRef.current = false;
     }
-  }, [onColorDetected]);
+  }, [dispatchColor]);
 
-  // --- Start/stop loop ---
+  // Start/stop Android poll loop — only runs on Android
   useEffect(() => {
+    if (Platform.OS !== 'android') return;
     if (isActive && hasPermission && device) {
-      // Brief warmup delay before first snapshot
+      // 900ms warmup: TextureView needs one render cycle before snapshot works
       const startTimer = setTimeout(() => {
         intervalRef.current = setInterval(sampleColor, 600);
       }, 900);
@@ -173,7 +234,7 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
     }
   }, [isActive, hasPermission, device, sampleColor]);
 
-  // --- Guard states ---
+  // ── Guard states ──────────────────────────────────────────────────────────
   if (!hasPermission) {
     return (
       <View style={styles.centeredContainer}>
@@ -218,9 +279,16 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
         style={StyleSheet.absoluteFillObject}
         device={device}
         isActive={isActive && hasPermission}
+        // CRITICAL FIX: 'compatible' uses TextureView on Android.
+        // takeSnapshot() REQUIRES TextureView — SurfaceView ('performance') does not
+        // support snapshots and will throw "Camera Preview doesn't support snapshots".
+        // Source: PreviewView.nitro.ts implementationMode docs.
+        implementationMode={Platform.OS === 'android' ? 'compatible' : undefined}
+        // iOS wires the frameOutput for worklet-based color sampling
+        outputs={Platform.OS === 'ios' ? [frameOutput] : []}
       />
 
-      {/* Reticle — border color tracks detected ambient color */}
+      {/* Reticle — border color tracks detected ambient color in real time */}
       <View style={styles.reticleContainer} pointerEvents="none">
         <View style={[styles.reticleRing, { borderColor: liveHex }]}>
           <View style={styles.reticleCrosshairH} />
