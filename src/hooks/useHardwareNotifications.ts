@@ -105,16 +105,23 @@ export function useHardwareNotifications({
       // ── [RF Remote Config] ────────────────────────────────────────────────
       const rfConfig = BlePayloadParser.parseRfPayload(payload);
       if (rfConfig && rfConfig.parsedOk) {
+        // Mirror rfMode/rfRemotes into BOTH deviceConfigs AND allDevices so that
+        // DeviceSettingsModal (which reads from allDevices via selectedDeviceForSettings)
+        // can display the live RF state without any additional query.
         setDeviceConfigs(prevConfigs => {
           const updated = {
             ...(prevConfigs[deviceId] || {}),
             rfMode: rfConfig.rfMode,
             rfRemotes: rfConfig.rfRemotes
           };
-          // Persist RF config update via DeviceRepository SSOT (tombstone-safe merge)
           DeviceRepository.getInstance().updateConfig(deviceId, { rfMode: rfConfig.rfMode, rfRemotes: rfConfig.rfRemotes }).catch(e => AppLogger.warn('Failed to persist RF config', e));
           return { ...prevConfigs, [deviceId]: updated };
         });
+        setAllDevices((prev: any[]) => prev.map(d =>
+          d.id === deviceId
+            ? { ...d, rfMode: rfConfig.rfMode, rfRemotes: rfConfig.rfRemotes }
+            : d
+        ));
         // BUG-03 Fix: Removed early return. Compound notifications contain both RF and LED configs.
         // Continuing execution allows the payload to be evaluated by parseLedPayload.
       }
@@ -135,7 +142,8 @@ export function useHardwareNotifications({
 
       if (!isDirty) return; // Deduplicated — prevents 5+ disk writes per connect!
       
-      // Update state
+      // Update state — mirror all hardware fields into allDevices so DeviceSettingsModal
+      // receives a fully-populated initialSettings object without any extra queries.
       setAllDevices((prev: any[]) => prev.map(d => {
         if (d.id !== deviceId) return d;
         const newD = {
@@ -148,6 +156,10 @@ export function useHardwareNotifications({
           icType:           ledConfig.icType,
           segments:         ledConfig.segments,
           detected:         true,
+          // Carry firmware forward from BLE scan advertisement data if already present.
+          // parseLedPayload does not contain firmware — it lives on the raw Device object
+          // from the scan phase. We preserve it here to avoid overwriting with undefined.
+          firmware:         d.firmware,
         };
 
         // Mirror securely to persistent memory via DeviceRepository SSOT
