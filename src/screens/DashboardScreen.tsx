@@ -27,6 +27,7 @@ import { Layout, Typography, Spacing } from '../theme/theme';
 
 import { DockedControllerHandle } from '../components/DockedController';
 import GroupSettingsModal from '../components/GroupSettingsModal';
+import DeviceSettingsModal from '../components/DeviceSettingsModal';
 import { BLEErrorBoundary } from '../components/shared/BLEErrorBoundary';
 
 import AdminToolsModal from '../components/admin/AdminToolsModal';
@@ -1098,6 +1099,17 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             // Show connection status as a hint — doesn't gate visibility
             connected: allDevices.some(d => d.id.toUpperCase() === rd.device_mac.toUpperCase()),
           }))}
+        />
+
+        <DeviceSettingsModal
+          isVisible={isSettingsVisible}
+          onClose={() => setIsSettingsVisible(false)}
+          onSave={saveSettings}
+          initialSettings={selectedDeviceForSettings || {}}
+          groups={customGroups}
+          writeToDevice={writeToDevice}
+          deviceId={selectedDeviceForSettings?.id}
+          deviceName={selectedDeviceForSettings?.name || selectedDeviceForSettings?.id}
         />
 
       </View>

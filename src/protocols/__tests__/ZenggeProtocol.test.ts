@@ -78,6 +78,47 @@ describe('ZenggeProtocol', () => {
       spy.mockRestore();
     });
   });
+
+  describe('RF Remote settings mapping', () => {
+    it('should generate correct write payloads for each mode', () => {
+      // ALLOW_ALL: modeByte=0x01
+      const allowAll = ZenggeProtocol.setRfRemoteState('ALLOW_ALL', false);
+      expect(allowAll[8]).toBe(0x2A);
+      expect(allowAll[9]).toBe(0x01); // modeByte
+      expect(allowAll[15]).toBe(0x00); // clearByte
+
+      // ALLOW_NONE: modeByte=0x02
+      const allowNone = ZenggeProtocol.setRfRemoteState('ALLOW_NONE', false);
+      expect(allowNone[9]).toBe(0x02); // modeByte
+
+      // ALLOW_PAIRED: modeByte=0x03
+      const allowPaired = ZenggeProtocol.setRfRemoteState('ALLOW_PAIRED', false);
+      expect(allowPaired[9]).toBe(0x03); // modeByte
+
+      // Clear Pairing: clearByte=0x01
+      const clear = ZenggeProtocol.setRfRemoteState('ALLOW_PAIRED', true);
+      expect(clear[9]).toBe(0x03); // modeByte
+      expect(clear[15]).toBe(0x01); // clearByte
+    });
+
+    it('should parse 0x2B remote responses correctly', () => {
+      // Mock response: [0x2B, modeByte, pairedCount, ID_bytes...]
+      // 0x01 -> ALLOW_ALL
+      const resAll = ZenggeProtocol.parseRfRemoteState([0x2B, 0x01, 0x00]);
+      expect(resAll).not.toBeNull();
+      expect(resAll!.mode).toBe('ALLOW_ALL');
+
+      // 0x02 -> ALLOW_NONE
+      const resNone = ZenggeProtocol.parseRfRemoteState([0x2B, 0x02, 0x00]);
+      expect(resNone!.mode).toBe('ALLOW_NONE');
+
+      // 0x03 -> ALLOW_PAIRED
+      const resPaired = ZenggeProtocol.parseRfRemoteState([0x2B, 0x03, 0x01, 0xAA, 0xBB, 0xCC, 0xDD]);
+      expect(resPaired!.mode).toBe('ALLOW_PAIRED');
+      expect(resPaired!.pairedCount).toBe(1);
+      expect(resPaired!.pairedRemoteIds).toEqual(['AABBCCDD']);
+    });
+  });
 });
 
 // ─── ZenggeAdapter (HAL Layer Tests) ─────────────────────────────────────────

@@ -878,9 +878,9 @@ export class ZenggeProtocol {
     authMode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED',
     clearRemotes: boolean = false
   ): number[] {
-    let modeByte = 0x03; // ALLOW_ALL default
-    if (authMode === 'ALLOW_NONE')   modeByte = 0x01;
-    else if (authMode === 'ALLOW_PAIRED') modeByte = 0x02;
+    let modeByte = 0x01; // ALLOW_ALL default
+    if (authMode === 'ALLOW_NONE')   modeByte = 0x02;
+    else if (authMode === 'ALLOW_PAIRED') modeByte = 0x03;
 
     const clearByte = clearRemotes ? 0x01 : 0x00;
     const cmd = [0x2A, modeByte, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, clearByte, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F];
@@ -916,9 +916,9 @@ export class ZenggeProtocol {
     const modeByte = payload[innerStart + 1];
     const pairedCount = payload[innerStart + 2] ?? 0;
     const modeMap: Record<number, 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED'> = {
-      0x01: 'ALLOW_NONE',
-      0x02: 'ALLOW_PAIRED',
-      0x03: 'ALLOW_ALL',
+      0x01: 'ALLOW_ALL',
+      0x02: 'ALLOW_NONE',
+      0x03: 'ALLOW_PAIRED',
     };
     const mode = modeMap[modeByte] ?? 'ALLOW_ALL';
     const modeNames: Record<string, string> = {
