@@ -62,6 +62,7 @@ Every task MUST include exactly one tag from each of the following 6 categories:
 - The agent determines parallel vs. sequential via file-conflict scan at intake. Never assume.
 - **Blocked Rule**: Tasks tagged `[⏳ BLOCKED BY: <name>]` are HARD GATED — agents MUST refuse to start them until the named dependency is merged. No exceptions.
 - **Sprint Complete Rule**: Active Sprint is DONE only when ALL tasks nested under the active batch are `[x]`.
+- ⛔ **The Unverified Task Spike Gate**: Tasks tagged `[❌ UNVERIFIED]` are HARD BLOCKED from direct implementation. The agent MUST first run a `[🕵️ SPIKE]` to establish a verified Source of Truth before any code is written. The Snack Autopilot (`[L-RISK]` + `[Snack]` + `[BATCH]`) does NOT override this gate.
 
 **5. ON DECK Structure Law:**
 - ON DECK is organized by **batch group headers** (`### [BATCH:<name>]`), NOT a flat task list.
@@ -79,14 +80,53 @@ EVERY task must strictly follow this nested structure:
   - **Goal:** Human-readable detailed description of the user's goal.
   - **Details:** Comprehensive architectural details, constraints, or context.
 
-**7. Completion Stamp Law (Mandatory on `[x]`):**
-When marking any task `[x]`, the agent MUST append the short merge commit hash and a one-line outcome summary inline on the slug line:
+**7. Completion Stamp Law + Mandatory Archival (Non-Negotiable on `[x]`):**
+When marking any task `[x]`, the agent MUST execute ALL THREE steps in order. This is a hard gate — skipping any step is a constitution violation:
+
+**Step A — Stamp the task** inline on the slug line:
 - [x] **`domain/slug-name`** — `<one-line outcome>`. Merged `<7-char hash>`.
   - **Details:** *(update to "COMPLETE — ..." with key decisions, files changed, and any follow-up items logged to backlog.)*
-The hash is obtained via `git log -1 --format="%h"` immediately after the merge commit.
+- Hash obtained via: `git log -1 --format="%h"` immediately after the merge commit.
+
+**Step B — PHYSICALLY MOVE the batch** out of `## 🚧 ACTIVE SPRINT`:
+- ⛔ **STRICTLY FORBIDDEN**: Leaving any `[x]` task inside `## 🚧 ACTIVE SPRINT`. This is a split-brain state.
+- Cut the ENTIRE batch header + ALL its `[x]` tasks from `## 🚧 ACTIVE SPRINT`.
+- Paste into `## 📦 ARCHIVED SPRINT LOG` under a sprint heading: `### Sprint: vX.Y.Z — YYYY-MM-DD (<batch-name>)`
+- If more tasks in the batch are still `[ ]`, do NOT move yet — wait until ALL tasks in the batch are `[x]`.
+- Leave `## 🚧 ACTIVE SPRINT` with `*(empty — all tasks complete)*` when fully cleared.
+
+**Step C — Verify**: Scan `## 🚧 ACTIVE SPRINT`. It MUST contain ZERO `[x]` entries after archival.
 
 **8. The Source of Truth (SoT) Law:**
 - EVERY active task MUST have a dedicated `Source of Truth:` field.
 - The SoT must cite exact files, line numbers, API references, or hardware protocol sections (e.g., `ZENGGE_PROTOCOL_BIBLE.md` §11 or `src/hooks/useBLE.ts#L706`) that prove the technical necessity or payload correctness of the task.
 - Agents are STRICTLY FORBIDDEN from starting work on a task if its `Source of Truth` contains placeholders like `[PENDING]` or generic references (e.g., "the internet").
 - This field serves as the execution anchor for our "Self-Doubt Protocol," ensuring zero hallucinations occur during implementation.
+
+**9. Parallel Worktree Sequential Safety Law (VS-001):**
+- ⛔ **STRICTLY FORBIDDEN**: Creating two worktrees from the same base commit and running the gatekeeper expecting both to merge cleanly in one pass.
+- **Safe Pattern**: Create worktree 1 → commit → run gatekeeper → merge → THEN create worktree 2 from the new master HEAD.
+- **Why**: The gatekeeper enforces `--ff-only`. After worktree 1 merges, master moves ahead by 1 commit. Worktree 2's branch diverges and can no longer fast-forward.
+- **Parallel Exception**: Multiple worktrees are ONLY safe in one pass if the gatekeeper script has the rebase-before-merge patch (`tools/fortress-gatekeeper.ps1` — see VS-001 in `safety-protocol.md`).
+- Agents MUST verify the gatekeeper is patched before attempting any multi-worktree batch execution.
+
+**10. Pre-Merge Verification Matrix (Layer-Gated — MANDATORY before gatekeeper run):**
+`npm run verify` (TypeScript + Jest) is the MINIMUM bar. It is NOT sufficient on its own. Each task layer requires ADDITIONAL verification before the gatekeeper is run:
+
+| Layer | Required Verification | Tool |
+|---|---|---|
+| `[UI]` | Visual smoke test — app must render without white screen or Redbox crash | `/smoke-test` workflow |
+| `[CORE]` | All Jest unit tests pass for affected domain (`npm run verify`) | `npm run verify` |
+| `[CLOUD]` | Supabase query/mutation confirmed in Supabase dashboard OR MCP response | MCP `execute_sql` |
+| `[LAB]` | ADB logcat confirms correct BLE opcode and byte sequence on physical device | `$ADB logcat -s "ReactNativeJS:V"` |
+
+- ⛔ **STRICTLY FORBIDDEN**: Running the fortress gatekeeper before completing the layer-specific check for that task.
+- **Exception — `[🤖 FLASH]` + `[L-RISK]` + `[Snack]`**: Tooling-only changes (no app logic) may skip the UI smoke test. `npm run verify` is sufficient.
+- After layer verification passes, the agent MUST explicitly state: `"Layer verification complete: [verification method used]"` before running the gatekeeper.
+
+**11. Verification Status Tag Update Law (Mandatory on `[x]` — Part of Step A):**
+When stamping a task `[x]`, the `[Verification Status]` tag in the task header MUST be updated to reflect the ACTUAL post-merge state:
+- Change `[❌ UNVERIFIED]` → `[✅ VERIFIED]` only if physical device testing OR direct source file evidence confirms correct behavior.
+- Change `[🤔 INFERRED]` → `[✅ VERIFIED]` only if the implementation was validated by a concrete test result (ADB log, Supabase row, Jest pass, or UI screenshot).
+- ⛔ **FORBIDDEN**: Marking `[✅ VERIFIED]` based solely on TypeScript compilation or Jest passing. Those prove the code is syntactically valid, not that the hardware/UI/cloud behavior is correct.
+- If physical verification is not yet possible (e.g., no device connected), the tag stays `[🤔 INFERRED]` and a note is logged: `"Needs physical device smoke test to promote to VERIFIED."` 

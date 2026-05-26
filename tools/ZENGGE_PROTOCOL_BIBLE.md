@@ -353,11 +353,39 @@ ZENGGE hardware constantly broadcasts its identity in BLE Advertisement packets 
 
 ---
 
-### RF Remote Configuration
-RF Remotes are completely decoupled from the native `C14184b` Java protocol layer.
-- **Source of Truth**: [FlutterNewControlPlugin.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/com/zengge/wifi/flutter/plugin/FlutterNewControlPlugin.java)
-- **Mechanism**: The "Allow All / Allow Paired / Allow None" logic is sent via JSON payloads over Flutter `MethodChannel`. It does not use standard hex `0x64` opcodes.
-- **SK8Lytz relevance**: We must intercept these Flutter events via logcat to replicate remote pairing.
+### RF Remote Configuration (0x2A / 0x2B)
+RF Remote authorization modes are controlled via standard hex opcodes over BLE GATT, not just Flutter MethodChannels.
+- **Source of Truth**: [RemoteSettingActivity.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/com/zengge/wifi/activity/NewSymphony/RemoteSettingActivity.java)
+- **BLE Write Opcode (0x2A)**: Configures the RF Remote authorization mode on the `0xA3` controller.
+  - **Packet Format (15 Bytes + Checksum)**:
+    ```
+    [0x2A, modeByte, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, clearByte, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, checksum]
+    ```
+  - **`modeByte` Mappings (GATT Verified)**:
+    - `0x01` = **Allow All** (`ALLOW_ALL`) — Any RF remote in range can control the controller without explicit pairing.
+    - `0x02` = **Block All / Don't Allow** (`ALLOW_NONE`) — Disables all RF remote input. Also used by UI when "Clear Pairing" is clicked to clear the stored remote slot.
+    - `0x03` = **Paired Only** (`ALLOW_PAIRED`) — Locks the controller to only accept input from exclusively paired remote UIDs.
+  - **`clearByte` Mappings**:
+    - `0x00` = Maintain current paired remote UIDs in EEPROM memory.
+    - `0x01` = Clear all paired remote UIDs (unpair all remotes).
+
+- **BLE Query Opcode (0x2B)**: Queries the current RF Remote authorization state.
+  - **Query Packet Format (15 Bytes + Checksum)**:
+    ```
+    [0x2B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, checksum]
+    ```
+  - **Response Packet Format (0x2B Response)**:
+    Device responds with a notification packet containing the active `modeByte` (at payload offset 1) and details of paired remote UIDs:
+    ```
+    [0x2B, modeByte, pairedCount, ID1_b0, ID1_b1, ID1_b2, ID1_b3, ...]
+    ```
+    - `modeByte`: Matches the mappings above (`0x01` = Allow All, `0x02` = Block All, `0x03` = Paired Only).
+    - `pairedCount`: Number of paired remotes (typically 0 or 1).
+    - `ID_bytes`: 4-byte hex identifiers for each paired remote.
+
+- **SK8Lytz Relevance & Mapping Warning**: 
+  - Previous implementations inverted the `ALLOW_ALL` (`0x01`) and `ALLOW_PAIRED` (`0x03`) bytes. 
+  - The correct mapping is strictly: `ALLOW_ALL: 0x01`, `ALLOW_NONE: 0x02`, `ALLOW_PAIRED: 0x03`.
 
 ---
 

@@ -54,3 +54,18 @@ $APK = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\android\app\build\outputs\apk\releas
 To maintain real-time visibility, broadcast status via the Discord Webhook bridge:
 - Send push notification after any workflow script, or any significant manual phase, or before pausing.
 - Command: `powershell.exe -ExecutionPolicy Bypass -File .\tools\discord-bridge\notify_discord.ps1 -Message "Your short summary here."`
+
+## 6. Victory Snapshots (Learned Patterns)
+
+### 🏆 VS-001: Parallel Worktree Gatekeeper Divergence (2026-05-26)
+**Symptom**: Running the fortress-gatekeeper with 2+ active worktrees causes the second worktree's branch to be silently deleted even when its merge fails. The commit becomes an orphan recoverable only via `git reflog` + `cherry-pick`.
+
+**Root Cause**: The old gatekeeper's `foreach` loop merged worktrees sequentially. After worktree 1 merged, master moved ahead by 1 commit. Worktree 2's branch still had the OLD parent, so `--ff-only` failed. The script then called `git worktree remove` and `git branch -D` **regardless of merge success**.
+
+**Fix Applied**: `tools/fortress-gatekeeper.ps1` now:
+1. Rebases each branch onto current master HEAD before merging (safe — all worktree branches are single-commit linear)
+2. Captures the `--ff-only` exit code — on failure: **HALT + preserve branch + skip** via `continue`
+3. Only tears down worktree/branch if merge **succeeded**
+
+**⛔ Operational Rule**: NEVER create two worktrees in the same session from the same base commit and run the gatekeeper expecting both to merge cleanly in one pass. **Create worktree 1 → merge it → THEN create worktree 2.** Or rely on the rebase-before-merge step in the patched gatekeeper.
+

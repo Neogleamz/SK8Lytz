@@ -62,9 +62,28 @@ You must execute this pipeline sequentially. **DO NOT BYPASS ANY GATES.** You mu
 4. **Clean Slate Check**: Run `git status -s` on master immediately after merge.
   - Any modified plan files (`tools/plans/*.md`) → stage and commit as `docs(plans): commit AI-First plan for <task-slug>`
   - Any temp scripts (`*.py`, `*.js` in root or `tools/`) → DELETE them, do not commit
-5. **Apply Completion Stamp**: Mark the task `[x]` in `SK8Lytz_Bucket_List.md` with the commit hash (`git log -1 --format="%h"`) and a one-line outcome summary per Law 7.
+5. **Apply Completion Stamp + MANDATORY ARCHIVAL** (3 steps — ALL required, in order):
+   > [!IMPORTANT]
+   > Steps A, B, and C are NON-NEGOTIABLE. A task is NOT considered done until ALL THREE are complete. Never leave a completed `[x]` task sitting in ACTIVE SPRINT.
+
+   **A. Stamp the task `[x]`** in `SK8Lytz_Bucket_List.md` inside the `## 🚧 ACTIVE SPRINT` section:
+   - Replace `- [ ]` with `- [x]`
+   - Append `— <one-line outcome>. Merged \`<7-char-hash>\`` to the slug line
+   - Update `**Details:**` to start with `COMPLETE —` and summarize key decisions and files changed
+   - Get the hash via: `git log -1 --format="%h"`
+
+   **B. MOVE the completed batch** out of `## 🚧 ACTIVE SPRINT` entirely:
+   - Cut the entire batch header + all its `[x]` tasks from `## 🚧 ACTIVE SPRINT`
+   - Paste them into `## 📦 ARCHIVED SPRINT LOG` under the current sprint heading
+   - If the sprint heading doesn't exist yet, create one: `### Sprint: vX.Y.Z — YYYY-MM-DD (<batch-name>)`
+   - `## 🚧 ACTIVE SPRINT` must be left with `*(empty — all tasks complete)*` when all batches are done
+
+   **C. Verify the move** by scanning `## 🚧 ACTIVE SPRINT` — it must contain ZERO `[x]` tasks after archival
+
 - **Batch Progression Check**:
   - IF there are MORE uncompleted tasks in the active batch:
     - Ask the user: "Task complete. Shall I spin up the worktree for the next task in the batch?"
+    - Do NOT archive yet — the batch header stays in ACTIVE SPRINT until ALL tasks are `[x]`
   - IF this was the LAST task in the active batch:
-    - Move the completed batch header and tasks to `## 🚂 RELEASE TRAIN` or `📦 ARCHIVE`.
+    - Execute the full 3-step Archival Protocol above immediately
+
