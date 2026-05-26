@@ -68,3 +68,7 @@ export function useCrewContext() {
   }
   return context;
 }
+
+export function useOptionalCrewContext() {
+  return useContext(CrewContext);
+}

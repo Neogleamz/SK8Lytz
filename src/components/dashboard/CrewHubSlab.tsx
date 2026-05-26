@@ -9,10 +9,10 @@ import { Spacing } from '../../theme/theme';
  */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { Alert, Text, TouchableOpacity, View, Animated } from 'react-native';
+import { Text, TouchableOpacity, View, Animated } from 'react-native';
 import type { CrewRole, CrewSession } from '../../services/CrewService';
 import type { RadarAlert } from '../../hooks/useCrewProximityRadar';
-import { useCrewContext } from '../../context/CrewContext';
+import { useOptionalCrewContext } from '../../context/CrewContext';
 import { CrewLandingMap } from '../crew/CrewLandingMap';
 
 interface CrewHubSlabProps {
@@ -46,7 +46,8 @@ const CrewHubSlab = React.memo(({
   Colors,
   styles,
 }: CrewHubSlabProps) => {
-  const { hub } = useCrewContext();
+  const context = useOptionalCrewContext();
+  const hub = context?.hub;
 
   return (
   <View style={[styles.slabContainer, { marginTop: Spacing.md }]}>
@@ -171,12 +172,12 @@ const CrewHubSlab = React.memo(({
               <Text style={styles.slabEmptyText}>No active sessions nearby. Launch a crew to sync lights.</Text>
               <View style={{ height: 120, width: '100%', borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,170,0,0.3)', marginTop: Spacing.sm }}>
                 <CrewLandingMap
-                  nearbySpots={hub.nearbySpots || []}
+                  nearbySpots={hub?.nearbySpots || []}
                   nearbySessions={[]}
                   pulseAnim={new Animated.Value(1)}
                   handleJoinById={() => {}}
-                  locationCoords={hub.locationCoords ?? null}
-                  discoverRadiusMi={hub.discoverRadiusMi}
+                  locationCoords={hub?.locationCoords ?? null}
+                  discoverRadiusMi={hub?.discoverRadiusMi ?? 20}
                 />
                 <TouchableOpacity
                   style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
