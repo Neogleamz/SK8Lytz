@@ -6,6 +6,7 @@ export interface CameraTrackerProps {
   onVibePaletteDetected?: (colors: RGB[]) => void;
   subMode: 'SNIPER' | 'VIBE';
   isActive: boolean;
+  liveColorRef?: React.MutableRefObject<string>;
 }
 
 const CameraTracker: FC<CameraTrackerProps>;

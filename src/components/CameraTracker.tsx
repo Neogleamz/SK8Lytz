@@ -13,6 +13,7 @@ export interface CameraTrackerProps {
   onVibePaletteDetected?: (colors: RGB[]) => void;
   subMode: 'SNIPER' | 'VIBE';
   isActive: boolean;
+  liveColorRef?: React.MutableRefObject<string>;
 }
 
 // ---------------------------------------------------------------------------
@@ -61,6 +62,7 @@ export default function CameraTracker({
   onVibePaletteDetected,
   subMode,
   isActive,
+  liveColorRef,
 }: CameraTrackerProps) {
   const device = useCameraDevice('back');
   const { hasPermission, requestPermission: requestFromHook } = useCameraPermission();
@@ -104,8 +106,10 @@ export default function CameraTracker({
     if (isNaN(r) || isNaN(g) || isNaN(b)) return;
     const hex = rgbToVividHex(r, g, b);
     setLiveHex(hex);
-    onColorDetectedRef.current(hex);
-  }, []);
+    if (liveColorRef) {
+      liveColorRef.current = hex;
+    }
+  }, [liveColorRef]);
 
   const dispatchVibePalette = useCallback((colors: RGB[]) => {
     if (onVibePaletteDetectedRef.current) {

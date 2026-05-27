@@ -32,6 +32,7 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
   const [liveHex, setLiveHex] = useState<string>('#FFFFFF');
   const [swatches, setSwatches] = useState<string[]>([]);
   const [activeSwatch, setActiveSwatch] = useState<string | null>(null);
+  const liveColorRef = useRef<string>('#FFFFFF');
 
   // VIBE Mode State
   const [vibePalette, setVibePalette] = useState<RGB[]>([
@@ -45,8 +46,8 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
   const onVibePaletteChangeRef = useRef(onVibePaletteChange);
   onVibePaletteChangeRef.current = onVibePaletteChange;
 
-  const handleLiveColorDetected = useCallback((hex: string) => {
-    setLiveHex(hex);
+  const handleLiveColorDetected = useCallback((_hex: string) => {
+    // No-op at 5Hz to eliminate parent component re-renders
   }, []);
 
   const handleLiveVibePaletteDetected = useCallback((colors: RGB[]) => {
@@ -55,17 +56,19 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
 
   const handleCapture = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const capturedColor = liveColorRef.current;
+    setLiveHex(capturedColor);
     
     // Add to swatches list (shift oldest out if max reached)
     setSwatches(prev => {
-      const newSwatches = [liveHex, ...prev.filter(c => c !== liveHex)].slice(0, MAX_SWATCHES);
+      const newSwatches = [capturedColor, ...prev.filter(c => c !== capturedColor)].slice(0, MAX_SWATCHES);
       return newSwatches;
     });
     
     // Auto-select the newly captured color and dispatch BLE
-    setActiveSwatch(liveHex);
-    onColorDetected(liveHex);
-  }, [liveHex, onColorDetected]);
+    setActiveSwatch(capturedColor);
+    onColorDetected(capturedColor);
+  }, [onColorDetected]);
 
   const handleSelectSwatch = useCallback((hex: string) => {
     Haptics.selectionAsync();
@@ -101,6 +104,7 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
         subMode={subMode}
         onColorDetected={handleLiveColorDetected}
         onVibePaletteDetected={handleLiveVibePaletteDetected}
+        liveColorRef={liveColorRef}
       />
 
       <View style={styles.controlPanel}>
