@@ -20,7 +20,7 @@ interface PatternPickerTabProps {
   Colors: any;
 }
 
-const CATEGORIES = ['Solid', 'Rainbow', 'Sparkle', 'Chase', 'Marquee', 'Wave', 'Breathe'];
+const CATEGORIES = ['Solid', 'Rainbow', 'Sparkle', 'Chase', 'Marquee', 'Wave', 'Breathe', 'Test'];
 
 const CATEGORY_STYLES: Record<string, { icon: string, colors: string[], start?: any, end?: any }> = {
   Solid: { icon: 'format-color-fill', colors: ['#00F0FF', '#0080FF'] },

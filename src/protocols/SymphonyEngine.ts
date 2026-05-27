@@ -1,11 +1,6 @@
-import type { RGB, PatternId } from './PatternEngine';
-import { 
-  blendRGB, hsvToRgb, 
-  buildColorJump, buildStrobe, buildSingleDotChase, 
-  buildWipeFill, buildCometChase, buildSinePulseWave, buildDashedMarquee, 
-  buildBreathingWave, buildMeteorShower, buildRainbowMarquee, buildRainbowComet, 
-  buildTrueRainbowFlow, buildRainbowBreathing, buildRainbowChaser,
-  buildNativeBreathe, buildNativeSweep, buildNativeCenterOut, buildMicroAnts, buildWipeCenterOut, buildFireFlame,
+import type { RGB } from './PatternEngine';
+import { hsvToRgb, buildStrobe, buildSingleDotChase, buildCometChase, buildRainbowMarquee, buildRainbowComet, buildRainbowBreathing,
+  buildNativeBreathe, buildMicroAnts, buildWipeCenterOut, buildFireFlame,
   buildLargeChunkScroll, buildGradientChunk, buildPingPongFill, buildPingPongMarquee, buildRandomStrobe,
   buildStaticPartialRainbow, buildTetrisStacker, buildAlternatingComet, buildPingPongCenterFill,
   buildCustomArrayScroll, buildGlitchMarquee
