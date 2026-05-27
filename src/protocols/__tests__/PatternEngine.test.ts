@@ -5,8 +5,8 @@ describe('PatternEngine', () => {
     const fg = { r: 255, g: 0, b: 0 };
     const bg = { r: 0, g: 255, b: 0 };
 
-    it('should generate a valid 0x41 payload for a NATIVE pattern (ID: 1)', () => {
-      const payload = buildPatternPayload(1, fg, bg, 30, 50);
+    it('should generate a valid 0x41 payload for a NATIVE pattern (ID: 201)', () => {
+      const payload = buildPatternPayload(201, fg, bg, 30, 50);
       
       expect(payload).toBeDefined();
       if (!payload) return; // For TypeScript
