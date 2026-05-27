@@ -39,7 +39,14 @@ module.exports = [
         afterEach: "readonly",
         jest: "readonly",
         setTimeout: "readonly",
-        clearTimeout: "readonly"
+        clearTimeout: "readonly",
+        setInterval: "readonly",
+        clearInterval: "readonly",
+        fetch: "readonly",
+        URL: "readonly",
+        URLSearchParams: "readonly",
+        AbortController: "readonly",
+        __DEV__: "readonly"
       }
     },
     plugins: {

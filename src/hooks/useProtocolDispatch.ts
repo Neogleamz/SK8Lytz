@@ -14,7 +14,7 @@ export function useProtocolDispatch() {
   if (!context) {
     throw new Error('useProtocolDispatch must be used within a BLEProvider');
   }
-  const { connectedDevices, getAdapterForDevice, executeProtocolResults } = context;
+  const { connectedDevices, getAdapterForDevice, executeProtocolResults, writeChunked } = context;
 
   const _dispatchToDevices = useCallback(
     (
@@ -109,15 +109,23 @@ export function useProtocolDispatch() {
   }, [_dispatchToDevices]);
 
   const executeRawPayload = useCallback((payload: number[], targetDeviceId?: string, opts?: { lowPriority?: boolean }) => {
-    // For raw payloads, we wrap it in a ProtocolResult with no inter-packet delay.
-    // The underlying executeProtocolResults will still correctly debounce and chunk it.
+    // Route 0x51 extended payloads (323B) through writeChunked (0x40 framing).
+    // These are too large for a single BLE write and will be silently dropped
+    // by the BLE stack if sent through executeProtocolResults as a single packet.
+    // Source: ZENGGE_PROTOCOL_BIBLE.md §0x51 + BleWriteDispatcher.ts auto-route gate.
+    const cmdByte = payload[0];
+    if (cmdByte === 0x51 && payload.length > 200) {
+      return writeChunked(payload, targetDeviceId ?? undefined).then(() => true as const);
+    }
+
+    // For all other raw payloads, wrap in a ProtocolResult and dispatch normally.
     const result: ProtocolResult = {
       packets: [payload],
       interPacketDelayMs: 0,
-      isRateLimited: payload[0] === 0x59 || payload[0] === 0x51 || payload[0] === 0x40
+      isRateLimited: cmdByte === 0x59 || cmdByte === 0x51 || cmdByte === 0x40
     };
-    
-    const targets = targetDeviceId 
+
+    const targets = targetDeviceId
       ? connectedDevices.filter(d => d.id === targetDeviceId)
       : connectedDevices;
 
@@ -133,7 +141,7 @@ export function useProtocolDispatch() {
     });
 
     return executeProtocolResults(payloads, opts);
-  }, [connectedDevices, executeProtocolResults]);
+  }, [connectedDevices, executeProtocolResults, writeChunked]);
 
   return {
     setPower,
