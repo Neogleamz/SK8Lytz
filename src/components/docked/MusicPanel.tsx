@@ -85,7 +85,7 @@ const MusicPanel = React.memo(({
   }, [setMusicMatrixStyle, setMusicPatternId, handleMusicChange, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor]);
 
   return (
-    <View style={{ flex: 1, paddingHorizontal: Spacing.xs, paddingTop: Spacing.xs }}>
+    <View style={{ paddingHorizontal: Spacing.xs, paddingTop: Spacing.xs }}>
 
       {/* ── Pattern Navigator (Pill) with Matrix Toggles ───────────────── */}
 
@@ -140,7 +140,7 @@ const MusicPanel = React.memo(({
           
         </View>
 
-      <View style={{ flex: 1, justifyContent: 'space-evenly' }}>
+      <View style={{ marginTop: Spacing.sm }}>
 
 
 
