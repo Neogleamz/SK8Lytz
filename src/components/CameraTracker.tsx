@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission, useFrameOutput, Frame } from 'react-native-vision-camera';
 import { runOnJS } from 'react-native-worklets';
-import { useResizePlugin } from 'vision-camera-resize-plugin';
+import { useResizer } from 'react-native-vision-camera-resizer';
 import { requestPermission } from '../services/PermissionService';
 import { Colors, Spacing } from '../theme/theme';
 import { extractKMeansPalette, RGB } from '../utils/kMeansPalette';
@@ -113,8 +113,15 @@ export default function CameraTracker({
     }
   }, []);
 
-  // Frame processor resize utility hook
-  const { resize } = useResizePlugin();
+  // Frame processor GPU resizer configuration
+  const { resizer } = useResizer({
+    width: 50,
+    height: 50,
+    channelOrder: 'rgb',
+    dataType: 'uint8',
+    scaleMode: 'cover',
+    pixelLayout: 'interleaved',
+  });
 
   // Create worklet references to callbacks
   // Use runOnJS from react-native-worklets
@@ -125,7 +132,7 @@ export default function CameraTracker({
   const lastProcessedRef = useRef<number>(0);
 
   const frameOutput = useFrameOutput({
-    pixelFormat: 'rgb',
+    pixelFormat: 'yuv',
     onFrame: (frame: Frame) => {
       'worklet';
 
@@ -137,46 +144,41 @@ export default function CameraTracker({
         }
         lastProcessedRef.current = now;
 
-        // Resize frame to 50x50 pixels RGB Uint8Array (7,500 bytes) on GPU
-        const resized = resize(frame, {
-          scale: {
-            width: 50,
-            height: 50,
-          },
-          pixelFormat: 'rgb',
-          dataType: 'uint8',
-        });
+        if (resizer != null) {
+          const resized = resizer.resize(frame);
+          const buffer = resized.getPixelBuffer();
+          const resizedArray = new Uint8Array(buffer);
 
-        if (!resized || resized.length < 7500) {
-          return;
-        }
+          if (resizedArray.length >= 7500) {
+            const currentSubMode = subModeRef.current;
 
-        const currentSubMode = subModeRef.current;
+            if (currentSubMode === 'SNIPER') {
+              // 1. SNIPER mode: sampling center pixel
+              const centerIdx = (25 * 50 + 25) * 3;
+              const r = resizedArray[centerIdx];
+              const g = resizedArray[centerIdx + 1];
+              const b = resizedArray[centerIdx + 2];
 
-        if (currentSubMode === 'SNIPER') {
-          // 1. SNIPER mode: sampling center pixel
-          const centerIdx = (25 * 50 + 25) * 3;
-          const r = resized[centerIdx];
-          const g = resized[centerIdx + 1];
-          const b = resized[centerIdx + 2];
+              runOnJSSniper(r, g, b);
+            } else {
+              // 2. VIBE mode: K-Means palette extraction (k=3)
+              const pixels: RGB[] = [];
+              for (let i = 0; i < 7500; i += 3) {
+                pixels.push({
+                  r: resizedArray[i],
+                  g: resizedArray[i + 1],
+                  b: resizedArray[i + 2],
+                });
+              }
 
-          runOnJSSniper(r, g, b);
-        } else {
-          // 2. VIBE mode: K-Means palette extraction (k=3)
-          const pixels: RGB[] = [];
-          for (let i = 0; i < 7500; i += 3) {
-            pixels.push({
-              r: resized[i],
-              g: resized[i + 1],
-              b: resized[i + 2],
-            });
+              const palette = extractKMeansPalette(pixels, 3, 5);
+              runOnJSVibe(palette);
+            }
           }
-
-          const palette = extractKMeansPalette(pixels, 3, 5);
-          runOnJSVibe(palette);
+          resized.dispose(); // CRITICAL: Dispose GPUFrame immediately to prevent leaks
         }
       } finally {
-        frame.dispose(); // CRITICAL: Dispose frame immediately to prevent camera pipeline stalls
+        frame.dispose(); // CRITICAL: Dispose Frame immediately to prevent stalls
       }
     },
   });
