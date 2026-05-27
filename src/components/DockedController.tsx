@@ -18,7 +18,7 @@
  * Platform: React Native (Android + Web)
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { AppState, Platform, StyleSheet, Text, TouchableOpacity, View, DeviceEventEmitter, useWindowDimensions } from 'react-native';
 import { useAppMicrophone } from '../hooks/useAppMicrophone';
 import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
 import { useCuratedPicks } from '../hooks/useCuratedPicks';
@@ -54,6 +54,7 @@ import SpectrumAnalyzer from './docked/SpectrumAnalyzer';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { AppLogger } from '../services/AppLogger';
+import { checkPermission, openGlobalPermissionsModal, PERMISSION_STATUS_CHANGED_EVENT } from '../services/PermissionService';
 import CommunityModal from './CommunityModal';
 
 import DockedDock from './docked/DockedDock';
@@ -613,10 +614,18 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
         handleMusicChange(restoredPattern, restoredSens, favRaw.brightness ?? 100, restoredSource, restoredPrimary, restoredSecondary, restoredMatrix);
       } else if (legacyMode === 'CAMERA') {
-        setActiveMode('CAMERA');
-        setLastOperatingMode('CAMERA');
-
-        activeModeRef.current = 'CAMERA';
+        // Permission gate: if camera denied, fall back to MULTIMODE
+        checkPermission('CAMERA').then(granted => {
+          if (granted) {
+            setActiveMode('CAMERA');
+            setLastOperatingMode('CAMERA');
+            activeModeRef.current = 'CAMERA';
+          } else {
+            AppLogger.warn('[DockedController] CAMERA favorite skipped — permission denied');
+            setActiveMode('MULTIMODE');
+            setLastOperatingMode('MULTIMODE');
+          }
+        });
       } else if (legacyMode === 'FAVORITES') {
         setActiveMode('FAVORITES');
       } else if (legacyMode === 'BUILDER') {
@@ -704,6 +713,43 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       deviceContext,
     });
 
+
+
+    // ── Reactive Permission Gating for Dock Mode Visibility ─────────────────
+    // Checks CAMERA + LOCATION permission status on mount, when AppState returns
+    // to 'active' (user changed permissions in OS Settings), and when any
+    // permission toggle fires PERMISSION_STATUS_CHANGED_EVENT (Account Settings).
+    const [hiddenModes, setHiddenModes] = useState<readonly string[]>([]);
+
+    const recheckPermissions = React.useCallback(async () => {
+      const hidden: string[] = [];
+      const hasCam = await checkPermission('CAMERA');
+      const hasLoc = await checkPermission('LOCATION');
+      if (!hasCam) hidden.push('CAMERA');
+      if (!hasLoc) hidden.push('STREET');
+      setHiddenModes(hidden);
+    }, []);
+
+    // Initial check on mount
+    useEffect(() => {
+      recheckPermissions();
+    }, [recheckPermissions]);
+
+    // Re-check when user returns from OS Settings (AppState 'active')
+    useEffect(() => {
+      const sub = AppState.addEventListener('change', (state) => {
+        if (state === 'active') recheckPermissions();
+      });
+      return () => sub.remove();
+    }, [recheckPermissions]);
+
+    // Re-check when permissions toggled in Account Settings
+    useEffect(() => {
+      const sub = DeviceEventEmitter.addListener(PERMISSION_STATUS_CHANGED_EVENT, () => {
+        recheckPermissions();
+      });
+      return () => sub.remove();
+    }, [recheckPermissions]);
 
     React.useEffect(() => {
       if (lockedProduct) {
@@ -884,16 +930,36 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     }, [sendColor, setSelectedColor]);
 
     // ── Mode change handler — wires DockedDock callbacks to local state ───────
-    const handleDockModeChange = React.useCallback((newMode: ModeType | string) => {
-      if (newMode === 'STREET') {
+    const handleDockModeChange = React.useCallback(async (newMode: ModeType | string) => {
+      // Permission-gated modes: reprompt if denied, then hide on final deny
+      if (newMode === 'CAMERA') {
+        let granted = await checkPermission('CAMERA');
+        if (!granted) {
+          await openGlobalPermissionsModal();
+          granted = await checkPermission('CAMERA');
+        }
+        if (!granted) {
+          // User denied after reprompt — hide the dock icon reactively
+          recheckPermissions();
+          return;
+        }
+        setActiveMode('CAMERA');
+        setLastOperatingMode('CAMERA');
+      } else if (newMode === 'STREET') {
+        let granted = await checkPermission('LOCATION');
+        if (!granted) {
+          await openGlobalPermissionsModal();
+          granted = await checkPermission('LOCATION');
+        }
+        if (!granted) {
+          recheckPermissions();
+          return;
+        }
         setActiveMode('STREET');
         setLastOperatingMode('STREET');
       } else if (newMode === 'MUSIC') {
         setActiveMode('MUSIC');
         setLastOperatingMode('MUSIC');
-      } else if (newMode === 'CAMERA') {
-        setActiveMode('CAMERA');
-        setLastOperatingMode('CAMERA');
       } else if (newMode === 'BUILDER') {
         setActiveMode('BUILDER' as ModeType);
         setLastOperatingMode('BUILDER' as ModeType);
@@ -904,7 +970,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       } else if (newMode === 'FAVORITES') {
         setActiveMode('FAVORITES');
       }
-    }, [setActiveMode, setLastOperatingMode, setFixedSubMode]);
+    }, [setActiveMode, setLastOperatingMode, setFixedSubMode, recheckPermissions]);
 
     return (
       <View style={styles.container}>
@@ -1173,6 +1239,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           activeMode={activeMode}
           onModeChange={handleDockModeChange}
           onDisconnect={onDisconnect}
+          hiddenModes={hiddenModes}
           Colors={Colors}
         />
 

@@ -37,6 +37,8 @@ interface DockedDockProps {
   activeMode: ModeType | string;
   onModeChange: (mode: ModeType | string) => void;
   onDisconnect?: () => void;
+  /** Mode IDs that should be hidden from the dock (permission-denied modes). */
+  hiddenModes?: readonly string[];
   Colors: ThemePalette;
 }
 
@@ -45,9 +47,26 @@ const DockedDock = React.memo(function DockedDock({
   activeMode,
   onModeChange,
   onDisconnect,
+  hiddenModes = [],
   Colors,
 }: DockedDockProps) {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+
+  // Stable ref so PanResponder closure reads current hidden modes without recreation
+  const hiddenModesRef = React.useRef(hiddenModes);
+  hiddenModesRef.current = hiddenModes;
+
+  // Filter visible dock items (reactive to permission changes)
+  const visibleDockItems = React.useMemo(
+    () => DOCK_ITEMS.filter(item => !hiddenModes.includes(item.id)),
+    [hiddenModes]
+  );
+
+  // Filtered mode order for swipe navigation (skip hidden modes)
+  const visibleModeOrder = React.useMemo(
+    () => MODE_ORDER.filter(m => !hiddenModes.includes(m)),
+    [hiddenModes]
+  );
 
   // ── Gesture Navigation: Horizontal swipe to change modes ──────────────────
   // PanResponder reads activeModeRef.current so the closure stays stable
@@ -63,13 +82,16 @@ const DockedDock = React.memo(function DockedDock({
       onPanResponderRelease: (_evt, gestureState) => {
         const currentModeStr =
           activeModeRef.current === ('MULTI' as string) ? 'MULTIMODE' : activeModeRef.current;
-        const currentModeIdx = MODE_ORDER.indexOf(currentModeStr as DockMode);
+        // Use visible order so swipe skips hidden (permission-denied) modes
+        const currentHidden = hiddenModesRef.current;
+        const filteredOrder = MODE_ORDER.filter(m => !currentHidden.includes(m));
+        const currentModeIdx = filteredOrder.indexOf(currentModeStr as DockMode);
         if (currentModeIdx === -1) return;
 
         if (gestureState.dx > 50) {
           // Swipe Right → go to previous mode
           if (currentModeIdx > 0) {
-            const prevMode = MODE_ORDER[currentModeIdx - 1];
+            const prevMode = filteredOrder[currentModeIdx - 1];
             if (prevMode === 'HOME') {
               onDisconnect?.();
             } else {
@@ -78,8 +100,8 @@ const DockedDock = React.memo(function DockedDock({
           }
         } else if (gestureState.dx < -50) {
           // Swipe Left → go to next mode
-          if (currentModeIdx < MODE_ORDER.length - 1) {
-            const nextMode = MODE_ORDER[currentModeIdx + 1];
+          if (currentModeIdx < filteredOrder.length - 1) {
+            const nextMode = filteredOrder[currentModeIdx + 1];
             onModeChange(nextMode);
           }
         }
@@ -90,7 +112,7 @@ const DockedDock = React.memo(function DockedDock({
   return (
     <View {...swipePanResponder.panHandlers} style={{ marginBottom: Spacing.xs }}>
       <View style={styles.floatingDock}>
-        {DOCK_ITEMS.map(dockItem => {
+        {visibleDockItems.map(dockItem => {
           const isActive = activeMode === dockItem.id;
           return (
             <TouchableOpacity

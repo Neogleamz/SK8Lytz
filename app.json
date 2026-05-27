@@ -3,6 +3,11 @@
     "name": "SK8Lytz",
     "slug": "sk8lytz",
     "version": "3.6.3",
+    "android": {
+      "permissions": [
+        "android.permission.ACTIVITY_RECOGNITION"
+      ]
+    },
     "plugins": [
       "@config-plugins/detox"
     ]

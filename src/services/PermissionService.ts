@@ -7,6 +7,8 @@ import { AppLogger } from './AppLogger';
 
 export const SHOW_GLOBAL_PERMISSIONS_EVENT = 'SHOW_GLOBAL_PERMISSIONS_EVENT';
 export const GLOBAL_PERMISSIONS_CLOSED_EVENT = 'GLOBAL_PERMISSIONS_CLOSED_EVENT';
+/** Emitted after any permission toggle — listeners (e.g. DockedDock) reactively show/hide gated modes. */
+export const PERMISSION_STATUS_CHANGED_EVENT = 'PERMISSION_STATUS_CHANGED_EVENT';
 export const openGlobalPermissionsModal = (): Promise<void> => {
   return new Promise((resolve) => {
     const listener = DeviceEventEmitter.addListener(GLOBAL_PERMISSIONS_CLOSED_EVENT, () => {
@@ -46,6 +48,9 @@ export const setPermissionOptOut = async (type: PermissionType, isOptedOut: bool
   
   // Immutably log to Cloud Ledger
   AppLogger.log(isOptedOut ? 'PERMISSION_OPT_OUT' : 'PERMISSION_OPT_IN', { feature: type, source: 'app_toggle' });
+
+  // Notify reactive listeners (DockedDock icon visibility, etc.)
+  DeviceEventEmitter.emit(PERMISSION_STATUS_CHANGED_EVENT, { type, granted: !isOptedOut });
 };
 
 export const syncSystemPermissions = async (): Promise<void> => {
