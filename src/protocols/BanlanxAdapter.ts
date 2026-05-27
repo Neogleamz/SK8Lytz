@@ -4,25 +4,9 @@
  * Implements the IControllerProtocol HAL interface for the BanlanX SP621E
  * Mini SPI RGB Controller.
  *
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
- * PROTOCOL TRUTH (BANLANX_PROTOCOL_BIBLE.md §2, §3, §7, §10):
- *
- *   Packet format:  [0xA0, cmd, dataLen, ...payload]
- *   - NO sequence counter
- *   - NO checksum
- *   - NO multi-segment chunking (all packets < 20 bytes)
- *   - NO connection handshake (no 0x10 time sync equivalent)
- *
- *   GATTs (from libapp.so string extraction):
- *   - Service:  0000ffe0-0000-1000-8000-00805f9b34fb
- *   - Write:    0000ffe1-0000-1000-8000-00805f9b34fb
- *   - Notify:   0000ff12-0000-1000-8000-00805f9b34fb
- *
- *   Key difference from Zengge:
- *   - buildEffect() returns TWO packets (0x53 select + 0x54 speed)
- *     with a mandatory 20ms interPacketDelayMs.
- *   - Music mode uses hardware-native FFT — buildMusicMagnitude() is a no-op.
- * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ * SINGLE SOURCE OF TRUTH:
+ * For all packet formats, byte mapping, GATTs, and hardware behavior, refer strictly to:
+ * `tools/BANLANX_PROTOCOL_BIBLE.md`
  */
 
 import { Buffer } from 'buffer';
@@ -38,7 +22,7 @@ import type {
 } from './IControllerProtocol';
 
 // ─── BLE GATT Constants ────────────────────────────────────────────────────────
-// Source: BANLANX_PROTOCOL_BIBLE.md §2 — libapp.so string extraction
+// Refer to BANLANX_PROTOCOL_BIBLE.md
 
 /** Primary GATT service UUID for BanlanX SP621E */
 export const BANLANX_SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb';
@@ -60,7 +44,7 @@ const EMPTY_RESULT: ProtocolResult = {
 
 /**
  * Build a minimal BanlanX packet: [0xA0, cmd, dataLen, ...payload]
- * Source: BANLANX_PROTOCOL_BIBLE.md §2
+ * Refer to BANLANX_PROTOCOL_BIBLE.md
  */
 function buildPacket(cmd: number, payload: number[]): number[] {
   return [0xA0, cmd, payload.length, ...payload];
@@ -80,7 +64,7 @@ export class BanlanxAdapter implements IControllerProtocol {
    * The phone does NOT need to run AudioContext or stream magnitude bytes.
    * Music mode is activated by sending the audio input source opcode (0x59),
    * after which the hardware handles all audio processing internally.
-   * Source: BANLANX_PROTOCOL_BIBLE.md §10
+   * Refer to BANLANX_PROTOCOL_BIBLE.md
    */
   readonly requiresSoftwareFFT = false;
 
@@ -108,7 +92,7 @@ export class BanlanxAdapter implements IControllerProtocol {
       try {
         const buf = Buffer.from(manufacturerData, 'base64');
         if (buf.length >= 2 && buf[0] === 0x53 && buf[1] === 0x50) return true;
-      } catch (_e) { /* malformed base64 — ignore */ }
+      } catch { /* malformed base64 — ignore */ }
     }
 
     return false;
@@ -128,7 +112,7 @@ export class BanlanxAdapter implements IControllerProtocol {
    * BanlanX requires NO connection handshake.
    * Unlike Zengge (which needs a 0x10 time sync on every connect),
    * the SP621E is ready to accept commands immediately after GATT connection.
-   * Source: BANLANX_PROTOCOL_BIBLE.md §2 — "No session time sync equivalent"
+   * Refer to BANLANX_PROTOCOL_BIBLE.md
    */
   getHandshakePayloads(): ProtocolResult {
     return EMPTY_RESULT;
@@ -139,7 +123,7 @@ export class BanlanxAdapter implements IControllerProtocol {
   /**
    * BanlanX state query (0x70). Phase 1: returns empty — we don't parse the response yet.
    * Full implementation deferred to Task 2B (hardware integration testing).
-   * Source: BANLANX_PROTOCOL_BIBLE.md §3 — 0x70 State Query
+   * Refer to BANLANX_PROTOCOL_BIBLE.md
    */
   buildQuerySettings(_hasMic?: boolean): ProtocolResult {
     return EMPTY_RESULT;
@@ -176,17 +160,17 @@ export class BanlanxAdapter implements IControllerProtocol {
 
   /**
    * BanlanX SP621E has no RF remote subsystem.
-   * Source: BANLANX_PROTOCOL_BIBLE.md — no RF remote opcode found.
+   * Refer to BANLANX_PROTOCOL_BIBLE.md
    */
   buildQueryRfRemoteState(): ProtocolResult {
     return EMPTY_RESULT;
   }
 
-  buildSetRfRemoteState(mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED', autoSave: boolean): ProtocolResult {
+  buildSetRfRemoteState(_mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED', _autoSave: boolean): ProtocolResult {
     return EMPTY_RESULT;
   }
 
-  buildClearRfRemotes(mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED'): ProtocolResult {
+  buildClearRfRemotes(_mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED'): ProtocolResult {
     return EMPTY_RESULT;
   }
 
@@ -198,7 +182,7 @@ export class BanlanxAdapter implements IControllerProtocol {
 
   /**
    * Power ON — [0xA0, 0x50, 0x01, 0x01]
-   * Source: BANLANX_PROTOCOL_BIBLE.md §3 — 0x50 Power ON/OFF
+   * Refer to BANLANX_PROTOCOL_BIBLE.md
    * Byte math: cmd=0x50, dataLen=0x01, payload=0x01 (ON)
    */
   buildPowerOn(): ProtocolResult {
@@ -211,7 +195,7 @@ export class BanlanxAdapter implements IControllerProtocol {
 
   /**
    * Power OFF — [0xA0, 0x50, 0x01, 0x00]
-   * Source: BANLANX_PROTOCOL_BIBLE.md §3 — 0x50 Power ON/OFF
+   * Refer to BANLANX_PROTOCOL_BIBLE.md
    * Byte math: cmd=0x50, dataLen=0x01, payload=0x00 (OFF)
    */
   buildPowerOff(): ProtocolResult {
@@ -226,7 +210,7 @@ export class BanlanxAdapter implements IControllerProtocol {
 
   /**
    * Solid color — [0xA0, 0x52, 0x03, R, G, B]
-   * Source: BANLANX_PROTOCOL_BIBLE.md §3 — 0x52 Set Solid Color
+   * Refer to BANLANX_PROTOCOL_BIBLE.md
    * Byte math: cmd=0x52, dataLen=0x03, payload=[R, G, B] each 0x00–0xFF
    */
   buildSolidColor(r: number, g: number, b: number): ProtocolResult {
@@ -270,13 +254,13 @@ export class BanlanxAdapter implements IControllerProtocol {
   /**
    * Built-in effect select + speed — TWO packets required.
    *
-   * Source: BANLANX_PROTOCOL_BIBLE.md §3:
+   * Refer to BANLANX_PROTOCOL_BIBLE.md
    *   0x53: [0xA0, 0x53, 0x01, effectId]   — select effect (1–142)
    *   0x54: [0xA0, 0x54, 0x01, speed]       — set speed (1–10 scale)
    *
    * ⚠️ CRITICAL: 20ms interPacketDelayMs is MANDATORY.
    * Hardware drops the speed packet if it arrives before the effect settles.
-   * Source: BANLANX_PROTOCOL_BIBLE.md §3 §7 — "20ms interPacketDelayMs required"
+   * Refer to BANLANX_PROTOCOL_BIBLE.md
    *
    * Speed conversion: caller passes 1-100, BanlanX accepts 1-10.
    * Map: Math.round(speed / 10), clamped to [1, 10].
@@ -311,7 +295,7 @@ export class BanlanxAdapter implements IControllerProtocol {
   /**
    * Real-time pixel frame streaming — Phase 2 (opcode TBD via HCI sniff).
    * DiyPixel class confirmed in libapp.so but exact BLE framing is unknown.
-   * Source: BANLANX_PROTOCOL_BIBLE.md §8 — Critical Unknown
+   * Refer to BANLANX_PROTOCOL_BIBLE.md
    */
   buildStreamPixelFrame(_pixels: RGB[]): ProtocolResult {
     return EMPTY_RESULT;
@@ -322,7 +306,7 @@ export class BanlanxAdapter implements IControllerProtocol {
   /**
    * Activate hardware-native music reactive mode.
    *
-   * Source: BANLANX_PROTOCOL_BIBLE.md §10:
+   * Refer to BANLANX_PROTOCOL_BIBLE.md
    *   0x59: [0xA0, 0x59, 0x01, 0x00]  — audio input: internal mic (0x00)
    *   0x5A: [0xA0, 0x5A, 0x01, gain]  — sensitivity (1–16)
    *
@@ -347,7 +331,7 @@ export class BanlanxAdapter implements IControllerProtocol {
   /**
    * Software magnitude stream — NO-OP for BanlanX.
    *
-   * Source: BANLANX_PROTOCOL_BIBLE.md §10:
+   * Refer to BANLANX_PROTOCOL_BIBLE.md
    * "BanlanX native FFT — we do NOT send magnitude bytes."
    * The SP621E handles all audio processing onboard via libwled_lfx.so.
    *
@@ -363,7 +347,7 @@ export class BanlanxAdapter implements IControllerProtocol {
   /**
    * Passthrough — BanlanX packets are always small (< 20 bytes).
    * No 0x40 chunking is needed. The ProtocolResult is returned as-is.
-   * Source: BANLANX_PROTOCOL_BIBLE.md §2 — "No multi-segment chunking protocol"
+   * Refer to BANLANX_PROTOCOL_BIBLE.md
    */
   prepareForTransmission(result: ProtocolResult, _mtu: number): ProtocolResult {
     return result;

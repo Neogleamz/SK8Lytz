@@ -366,9 +366,9 @@ export function DiagnosticLabBuilderTab({
 
       {bldProtocol === '0x73' && (
         <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: '#FF4040', borderWidth: 1 }]}>
-          <Text style={[S.subTitle, { color: '#FF9500', marginTop: 0 }]}>SYMPHONY MODE (0x73) — APK 13B FORMAT</Text>
+          <Text style={[S.subTitle, { color: '#FF9500', marginTop: 0 }]}>SYMPHONY MODE (0x73) — 13B FORMAT</Text>
           <Text style={{ color: '#FF4040', fontSize: 10, marginBottom: Spacing.md, fontWeight: '700' }}>
-            ⚠️ APK-VERIFIED: 13B format · mic=0x26 (APP) / 0x27 (DEVICE) · isOn byte at position [3]
+            ⚠️ VERIFIED: 13B format · mic=0x26 (APP) / 0x27 (DEVICE) · isOn byte at position [3]
           </Text>
 
           <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
@@ -398,7 +398,7 @@ export function DiagnosticLabBuilderTab({
           </View>
 
           {/* MIC SOURCE: 0x26 (APP) vs 0x27 (DEVICE) */}
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, fontWeight: '900' }}>MIC SOURCE [BYTE 2] — APK TRUTH</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, fontWeight: '900' }}>MIC SOURCE [BYTE 2] — PROTOCOL TRUTH</Text>
           <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
             <TouchableOpacity
               onPress={() => setBldMic(false)}
@@ -446,7 +446,7 @@ export function DiagnosticLabBuilderTab({
               {`${bldMusicIsOn ? '0x01' : '0x00'}, `}
               {'R1, G1, B1, R2, G2, B2, SENS, BRIGHT, CS]'}
             </Text>
-            <Text style={{ color: txtMuted, fontSize: 9, marginTop: Spacing.xs }}>13 bytes (APK 0xA3 format) — was 12B (broken, no isOn)</Text>
+            <Text style={{ color: txtMuted, fontSize: 9, marginTop: Spacing.xs }}>13 bytes (0xA3 format) — was 12B (broken, no isOn)</Text>
           </View>
 
           <TouchableOpacity
@@ -468,7 +468,7 @@ export function DiagnosticLabBuilderTab({
               );
             }}
           >
-            <Text style={{ color: '#000', fontWeight: '900', fontSize: 12 }}>TX 0x73 (13B APK FORMAT)</Text>
+            <Text style={{ color: '#000', fontWeight: '900', fontSize: 12 }}>TX 0x73 (13B FORMAT)</Text>
           </TouchableOpacity>
         </View>
       )}

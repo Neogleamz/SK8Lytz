@@ -4,7 +4,7 @@
  * Owns: 0x73 music config dispatch, pattern names, pattern navigation.
  * Extracted from DockedController.tsx to isolate music-specific BLE logic.
  *
- * Pattern data source: MusicDictionary.ts (46 profiles across 2 matrices)
+ * Pattern definitions: MusicDictionary.ts (46 profiles across 2 matrices)
  *  - 0x26 (Light Bar):    16 profiles  →  LIGHT_BAR_PROFILES
  *  - 0x27 (Light Screen): 30 profiles  →  LIGHT_SCREEN_PROFILES
  */
@@ -112,8 +112,7 @@ export function useMusicMode({
       musicPatternId, micSensitivity, brightness, micSource,
       musicPrimaryColor, musicSecondaryColor, musicMatrixStyle
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
+      }, [musicPrimaryColor, musicSecondaryColor, musicPatternId, micSource, musicMatrixStyle]);
 
   /**
    * Track previous activeMode to detect MUSIC → other transitions.
@@ -127,7 +126,7 @@ export function useMusicMode({
    * to stop reacting to ambient sound. Without this, the device stays in
    * music-reactive mode indefinitely even though the UI has moved on.
    *
-   * APK truth: 0x73 packet with isOn=0x00 is the correct exit signal.
+   * Protocol truth: 0x73 packet with isOn=0x00 is the correct exit signal.
    */
   useEffect(() => {
     const prev = previousActiveModeRef.current;
@@ -151,7 +150,6 @@ export function useMusicMode({
   }, [activeMode]);
   // Note: intentionally omitting music params from deps — we want to fire
   // exactly once on mode transition, not re-fire when colors change.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-
+  
   return { handleMusicChange };
 }

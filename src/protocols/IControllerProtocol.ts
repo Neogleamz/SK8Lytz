@@ -16,6 +16,10 @@
  * Architecture:
  *   App Layer → IControllerProtocol → ControllerRegistry → Adapter → BLE GATT
  *
+ * SINGLE SOURCE OF TRUTH:
+ * For protocol architectures and hardware differences, refer strictly to:
+ * `tools/SK8Lytz_App_Master_Reference.md`
+ *
  * Return type: All build* methods return ProtocolResult — a self-describing
  * struct that bundles the BLE packets to send, the timing between them, and
  * whether the write path should be rate-limited (debounced).
@@ -270,7 +274,7 @@ export interface IControllerProtocol {
 
   /**
    * Stream a single pixel frame for real-time animation.
-   * Zengge: 0x53 hypothesis (APK-unconfirmed). BanlanX: Phase 2 (TBD opcode).
+   * Zengge: 0x53 hypothesis (Unconfirmed). BanlanX: Phase 2 (TBD opcode).
    */
   buildStreamPixelFrame(pixels: RGB[]): ProtocolResult;
 

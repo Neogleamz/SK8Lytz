@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, InteractionManager, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+/* global requestAnimationFrame, cancelAnimationFrame */
+import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { useTheme } from '../context/ThemeContext';
 import type { PatternId, RGB } from '../protocols/PatternEngine';
@@ -32,7 +33,7 @@ function HSLToHex(h: number, s: number, l: number) {
 }
 
 export const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, hwSettings, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1, fixedDirection = 1, streetDistribution = [0.3, 0.4, 0.3] }: any) => {
-  const { isDark } = useTheme();
+  const { isDark: _isDark } = useTheme();
   // Guard against String(undefined)='undefined' which causes silent SOULZ fallback for HALOZ devices
   const product = (device?.type && device.type !== 'undefined') ? String(device.type) : String(fallbackProduct || 'SOULZ');
 
@@ -43,7 +44,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
     return byId ?? LOCAL_PRODUCT_CATALOG.find(p => p.id === 'SOULZ')!;
   }, [product]);
   const vizShape = productProfile.vizShape;
-  const isMirrored = productProfile.vizIsMirrored;
+  const _isMirrored = productProfile.vizIsMirrored;
 
   // ── Animation tick — stored in a ref to avoid driving React re-renders ──
   // We still need a state value to trigger re-renders for pattern changes, but the
@@ -300,7 +301,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
         } else if (mode === 'STREET' || mode === 'MULTIMODE') {
           // ── Uses pre-computed hoistedFramePixels and hoistedFgRgb/BgRgb from above ──
           const fgRgb = hoistedFgRgb;
-          const bgRgb = hoistedBgRgb;
+          const _bgRgb = hoistedBgRgb;
           const pid = hoistedPid;
           const framePixels = hoistedFramePixels || [];
 
@@ -379,7 +380,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
           const pb = Math.round(pCurr.b * (1 - blendAmt) + pAdj.b * blendAmt);
           dotColor = `#${pr.toString(16).padStart(2, '0')}${pg.toString(16).padStart(2, '0')}${pb.toString(16).padStart(2, '00')}`;
 
-          // APK-PROVEN commandType — StaticColorfulMode.java:
+          // Validated commandType logic:
           if (builderTransitionType === 0x01) {        // Static — freeze, no animation
             dotOpacity = isPoweredOn ? (brightness / 100) : 0;
           } else if (builderTransitionType === 0x02) { // Running — scrolling (opacity stays solid)

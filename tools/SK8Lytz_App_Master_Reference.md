@@ -156,7 +156,7 @@ These rules govern `src/components/VisualizerUnit.tsx`. **Do NOT apply to SOULZ 
 
 | Opcode | Name | Why Condemned | What Replaced It |
 |:-------|:-----|:--------------|:-----------------|
-| **`0x41`** | Settled Mode (Symphony Effects) | Hardware runs one of 33 `ge.*` animations internally. App cannot know the pixel state. | 33 `ge.*` effects reverse-engineered as PatternEngine TypeScript, fired via `0x59` |
+| **`0x41`** | Settled Mode (Symphony Effects) | Used for native hardware parity on test patterns. | 33 native hardware effects (IDs 201-233) fired via `0x41`, fully integrated into PatternEngine |
 | **`0x42`** | RBM Programs Mode | Hardware runs one of 100 baked-in Programs internally. App cannot know the pixel state. | All Programs effects reimplemented as PatternEngine TypeScript, fired via `0x59` |
 
 **Architecture decision 2026-04-22**: Every LED effect in SK8Lytz is computed in TypeScript,
@@ -181,7 +181,7 @@ Every pattern belongs to one of three tiers:
 
 | Tier | Source | Count | Description |
 |:-----|:-------|:-----:|:------------|
-| **Tier 1** | ge.* Java class reversal | 33 | Settled Mode effects. Each `ge.*` class is read for its math → reimplemented in TypeScript. `0x41` is NEVER called. |
+| **Tier 1** | ge.* Java class reversal | 33 | Settled Mode effects. `0x41` was originally reverse-engineered, but test patterns 201-233 now utilize native `0x41` hardware routing for byte parity checks. |
 | **Tier 2** | Programs Mode reversal | ~28 | Standard LED strip effects. Each Programs effect is reimplemented in TypeScript. `0x42` is NEVER called. |
 | **Tier 3** | SK8Lytz originals | ∞ | Effects only possible because we own the payload. Positional gradients, reactive splits, sport sequences, etc. |
 

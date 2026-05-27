@@ -267,7 +267,7 @@ export interface IFavoriteState {
   /** Saved gradient node array — each node: { id, position 0–100, colorHex } */
   builderNodes?: Array<{ id: string; position: number; colorHex: string }>;
   builderFillMode?: 'GRADIENT' | 'SOLID';
-  /** commandType byte (APK-PROVEN StaticColorfulMode.java): 0x01=Static, 0x02=Running(scroll), 0x03=Strobe, 0x04=Jump */
+  /** commandType byte */
   builderTransitionType?: number;
   builderDirection?: number;
   // ── SCENE mode persistence ─────────────

@@ -5,17 +5,9 @@
  * At scan time, resolveProtocol() is called with a device's BLE advertisement
  * data to determine which protocol adapter should handle it.
  *
- * Usage:
- *   import { resolveProtocol } from '../protocols/ControllerRegistry';
- *   const protocol = resolveProtocol(device.serviceUUIDs, device.manufacturerData);
- *   if (protocol) {
- *     const query = protocol.buildQuerySettingsPayload();
- *     // ...
- *   }
- *
- * To register a new controller type:
- *   import { registerProtocol } from '../protocols/ControllerRegistry';
- *   registerProtocol(new Esp32SpiAdapter());
+ * SINGLE SOURCE OF TRUTH:
+ * For architectural taxonomy and protocol routing rules, refer strictly to:
+ * `tools/SK8Lytz_App_Master_Reference.md`
  */
 
 import type { IControllerProtocol } from './IControllerProtocol';
@@ -26,7 +18,7 @@ import { ZenggeAdapter } from './ZenggeAdapter';
 let _appLogger: any;
 function getAppLogger() {
   if (!_appLogger) {
-    try { _appLogger = require('../services/AppLogger').AppLogger; } catch (_e) { _appLogger = console; }
+    try { _appLogger = require('../services/AppLogger').AppLogger; } catch { _appLogger = console; }
   }
   return _appLogger;
 }

@@ -2,7 +2,7 @@
  * MusicDictionary.ts
  * Authoritative registry for all 46 hardware-native music profiles.
  *
- * Hardware Source: ZENGGE Protocol Bible §0x73 (Oracle-Verified 2026-04-22)
+ * Hardware Source: ZENGGE_PROTOCOL_BIBLE.md
  *
  * Two distinct hardware matrices, each with its own pattern table:
  *  - 0x26 (Light Bar):    16 profiles (IDs 1–16)

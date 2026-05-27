@@ -853,7 +853,7 @@ export function buildStreetMode(patternId: PatternId, fg: RGB, bg: RGB, n: numbe
 
 
 export function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: number = 0, direction: 0 | 1 = 1, options?: PatternOptions): RGB[] {
-  const arr: RGB[] = Array(n).fill(bg);
+  const _arr: RGB[] = Array(n).fill(bg);
 
   switch (patternId) {
     // ── GROUP 9: NATIVE TEMPORAL ──
@@ -1053,13 +1053,8 @@ export function getHardwarePixelArray(
 /**
  * Get the 0x59 transition (commandType) byte for a pattern.
  *
- * APK GROUND TRUTH — StaticColorfulMode.java (ZENGGE_DECOMPILED):
- *   Static(1)  → 0x01 — Freeze array in place
- *   Running(2) → 0x02 — Continuous hardware scroll (ANIMATION)
- *   Strobe(3)  → 0x03 — Strobe flash
- *   Jump(4)    → 0x04 — Hard jump
- *   Breathe(5) → 0x05 — Breathe
- *   Twinkly(6) → 0x06 — Twinkle
+ * SINGLE SOURCE OF TRUTH: ZENGGE_PROTOCOL_BIBLE.md
+ * 0x01=Static, 0x02=Running, 0x03=Strobe, 0x04=Jump, 0x05=Breathe, 0x06=Twinkle
  *
  * Previous bug: was returning 0x00 for animated patterns. 0x00 is NOT a valid
  * commandType — it maps to nothing. Hardware received undefined byte → no animation.
@@ -1070,7 +1065,6 @@ export function getPatternTransitionType(patternId: PatternId): number {
   if (patternId >= 1 && patternId <= 5) return 0x01; // Static — hardware freezes array
 
   // ── GROUP 5a: HARDWARE TEMPORAL (IDs 20–22) ────────────────────────────────
-  // APK source: StaticColorfulMode.java — verified commandType enum
   if (patternId === 17) return 0x05; // Breathe  — hardware pulses brightness
 
   // ── GROUP 7: ge.* BREATHE EFFECTS (IDs 30, 39, 40, 47, 55) ───────────────
@@ -1094,7 +1088,7 @@ export function getPatternTransitionType(patternId: PatternId): number {
   // ── ALL OTHER ge.* SCROLL EFFECTS (IDs 29, 32, 34–36, 38, 41–45, 48–53, 56–61) ──
   // Hardware scrolls the pre-computed pixel array continuously via 0x02 Running.
   // NOTE: Twinkle-style patterns (35, 45, 49, 50, 58, 60) intentionally use 0x02 (Running)
-  // because 0x06 (Twinkle) is NOT yet confirmed from APK decompile.
+  // because 0x06 (Twinkle) hardware support is incomplete.
   
   // ── GROUP 8: STREET MODES (101-105) ──────────────────────────────────────
   if (patternId === 101 || patternId === 104) return 0x01; // STOPPED/SLOWING — STATIC

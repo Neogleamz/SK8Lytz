@@ -219,7 +219,7 @@ export default function PositionalGradientBuilder({
       <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold', marginBottom: Spacing.xxs }}>ANIMATION</Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs }}>
           {[
-              // APK-PROVEN commandType bytes — StaticColorfulMode.java (ZENGGE_DECOMPILED 2026-04-23):
+              // Validated commandType bytes (ZENGGE_PROTOCOL_BIBLE.md):
               // 0x01=Static (freeze)  0x02=Running (scroll)  0x03=Strobe  0x04=Jump
               { id: 0x01, label: 'STATIC',  icon: 'pause-circle-outline' as const },
               { id: 0x02, label: 'FLOW',    icon: 'arrow-right-bold' as const },

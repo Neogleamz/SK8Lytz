@@ -93,7 +93,6 @@ export class ZenggeAdapter implements IControllerProtocol {
   /**
    * Zengge requires a 0x10 session time sync on EVERY connection.
    * Without it, timing-sensitive effects may drift or misfire.
-   * Source: TimeControllerFragment.java (APK analysis)
    */
   getHandshakePayloads(): ProtocolResult {
     return this.toResult(ZenggeProtocol.setSessionTime());
@@ -145,18 +144,17 @@ export class ZenggeAdapter implements IControllerProtocol {
 
   // ─── Power ─────────────────────────────────────────────────────────────────
   /**
-   * Power ON — delegates to 0x71 0x23 (APK-proven opcode).
+   * Power ON — delegates to 0x71 0x23.
    *
    * ⚠️ CRITICAL BUG FIX: Prior adapter used 0x56 0xAA which is the SCENE DELETE
-   * opcode, not power control. 0x71 is the APK-confirmed power toggle opcode.
-   * Source: ZENGGE_PROTOCOL_BIBLE.md §4 — Power Opcodes.
+   * opcode, not power control. 0x71 is the confirmed power toggle opcode.
    */
   buildPowerOn(): ProtocolResult {
     return this.toResult(ZenggeProtocol.turnOn());
   }
 
   /**
-   * Power OFF — delegates to 0x71 0x24 (APK-proven opcode).
+   * Power OFF — delegates to 0x71 0x24.
    *
    * ⚠️ CRITICAL BUG FIX: Prior adapter used 0x56 0xAB. See buildPowerOn().
    */
@@ -214,7 +212,7 @@ export class ZenggeAdapter implements IControllerProtocol {
     // BUG FIX: Previously hardcoded to 0x26 (Light Bar), ignoring config.matrixStyle.
     // This blocked all Light Screen (0x27) patterns from ever reaching hardware.
     // matrixStyle is set by useMusicMode based on the user's matrix toggle.
-    // Source: ZENGGE_PROTOCOL_BIBLE.md §0x73 — modeType controls the pattern matrix.
+    // Refer to ZENGGE_PROTOCOL_BIBLE.md
     return this.toResult(
       ZenggeProtocol.setMusicConfig(
         config.patternId,

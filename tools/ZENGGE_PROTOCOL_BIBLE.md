@@ -134,7 +134,7 @@ return (byte) sum;
 
 - **effectId range**: 1–33 (SymphonyEffect IDs, same as `0x51` effect column)
 - **dir**: `0` = forward, `1` = reverse
-- **SK8Lytz relevance**: HIGH — dual-palette animated effects with FG/BG color control
+- **SK8Lytz relevance**: **HIGH** — Originally condemned, this is now the verified path for the `0x41` native hardware parity test group (IDs 201-233). It is used to validate dual-palette animated effects against our internal PatternEngine math.
 
 ---
 

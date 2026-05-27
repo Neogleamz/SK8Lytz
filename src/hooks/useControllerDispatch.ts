@@ -53,7 +53,8 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
 
   /**
    * Maps UI speed slider (0–100) to Zengge hardware speed range (1–31).
-   * The APK enforces 1–31 for all 0x59 animated patterns.
+   * The hardware natively accepts 1-100 on 0xA3 chips, but 0x59 transition speed 
+   * logic enforces its own bounds. Refer to ZENGGE_PROTOCOL_BIBLE.md
    */
   const clampSpeed = useCallback(
     (uiSpeed: number): number => normalizeUISpeedToHardware(uiSpeed),
@@ -219,7 +220,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
         ];
       }
 
-      // 0x02 = Running: hardware scrolls the array natively (APK: StaticColorfulMode.Running)
+      // 0x02 = Running: hardware scrolls the array natively
       writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSettings?.ledPoints || numLEDs, hwSpd, 1, 0x02));
     },
     [writeToDevice, hwSettings, numLEDs]

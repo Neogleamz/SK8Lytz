@@ -159,7 +159,7 @@ describe('ZenggeAdapter', () => {
       expect(result.interPacketDelayMs).toBe(0);
       // After the 8-byte wrapper, payload starts at index 8
       const payload = result.packets[0];
-      // The 0x71 opcode confirms correct power-on (APK-proven)
+      // The 0x71 opcode confirms correct power-on
       // Payload inner bytes: [0x71, 0x23, 0x0f, 0xa3]
       expect(payload[8]).toBe(0x71);
       expect(payload[9]).toBe(0x23);

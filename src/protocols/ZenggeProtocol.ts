@@ -2,10 +2,9 @@
  * Zengge BLE Controller Protocol Implementation
  * Supports Magic Home / LEDnetWF / Zengge Symphony controllers
  *
- * Hardware Settings Protocol (from APK reverse engineering - April 2026):
- *   QUERY:  0x63 0x12 0x21 [0xF0|0x0F] [checksum]  — 5 bytes
- *   RESPONSE: 12 bytes starting with 0x63: icType, timings, points (little-endian swapped), sorting
- *   WRITE:  0x62 [ptsHigh] [ptsLow] [segHigh] [segLow] [icType] [sorting] [micPts] [micSegs] 0xF0 [cs]
+ * SINGLE SOURCE OF TRUTH:
+ * For all packet formats, byte mapping, and hardware behavior, refer strictly to:
+ * `tools/ZENGGE_PROTOCOL_BIBLE.md`
  */
 
 import { Buffer } from 'buffer';
@@ -26,7 +25,6 @@ export const ZENGGE_CHARACTERISTIC_UUID = '0000ff01-0000-1000-8000-00805f9b34fb'
 export const ZENGGE_NOTIFY_UUID         = '0000ff02-0000-1000-8000-00805f9b34fb'; // NOTIFY (responses)
 
 // ─── IC TYPE TABLE (0-indexed values sent in protocol) ───────────────────────
-// Source: dd/i.java → m(boolean, int) — non-mic mode list (HALOZ/SOULZ hardware)
 export const IC_TYPES: Record<number, string> = {
   1:  'WS2812B',
   2:  'SM16703',
@@ -44,7 +42,6 @@ export const IC_TYPES: Record<number, string> = {
 export const IC_TYPE_NAMES = Object.values(IC_TYPES);
 
 // ─── COLOR SORTING TABLE (0-indexed values sent in protocol) ─────────────────
-// Source: SymphonySettingForA3.java → b1() — non-RGBW mode
 export const COLOR_SORTING_RGB: Record<number, string> = {
   0: 'RGB',
   1: 'RBG',
@@ -158,7 +155,6 @@ export class ZenggeProtocol {
   // ─── HARDWARE SETTINGS: QUERY (0x63) ───────────────────────────────────────
   /**
    * Build 5-byte query packet for reading hardware config from device.
-   * Source: tc/b.java → f0(boolean)
    * Send immediately on BLE connection before any pattern commands.
    *
    * @param hasMic true if device has built-in mic (always false for HALOZ/SOULZ)
@@ -172,7 +168,6 @@ export class ZenggeProtocol {
   // ─── HARDWARE SETTINGS: PARSE RESPONSE (0x63) ──────────────────────────────
   /**
    * Parse a 12-byte hardware settings response from device.
-   * Source: tc/b.java → static class a → g(byte[])
    *
    * CRITICAL: Points bytes are LITTLE-ENDIAN SWAPPED in the response:
    *   bytes[8] = Low byte, bytes[9] = High byte  (reversed from write command)
@@ -278,7 +273,7 @@ export class ZenggeProtocol {
    * number[] from the BLE scanner's advertisement callback.
    * For base64-encoded strings (from the GATT probe path), use parseFirmwareFromAdvertisement.
    *
-   * Byte map (confirmed from ZENGGE APK BLE advertisement format — April 2026 decompile):
+   * Advertisement byte map (Refer to ZENGGE_PROTOCOL_BIBLE.md):
    *   [0]  = 0xA8 (ZENGGE vendor prefix high byte)
    *   [1]  = 0x01 (ZENGGE vendor prefix low byte)
    *   [2]  = flags / device class
@@ -313,9 +308,8 @@ export class ZenggeProtocol {
   // ─── HARDWARE SETTINGS: WRITE (0x62) ───────────────────────────────────────
   /**
    * Build 11-byte write packet to set hardware config on device.
-   * Source: tc/b.java → C(int, int, int, int, int, int)
    *
-   * Constraints (from SymphonySettingForA3.java):
+   * Constraints (Refer to ZENGGE_PROTOCOL_BIBLE.md):
    *   points: 1-300, points × segments ≤ 2048
    *   segments: 1 to 2048/points
    *   micPoints: 1-150, micPoints × micSegments ≤ 960
@@ -339,7 +333,7 @@ export class ZenggeProtocol {
     const maxMicSeg = Math.floor(HW_CONSTRAINTS.maxMicPxS / safeMicPts);
     const safeMicSegs = Math.max(1, Math.min(maxMicSeg, ms));
 
-    // 0x62 write format — mirrors 0x63 response field order (verified vs. APK):
+    // 0x62 write format:
     //   [0x62][ptsHigh][ptsLow][segHigh][segLow][icType][sorting][micPts][micSegs][0xF0][checksum]
     //
     // Points/Segments are big-endian 16-bit pairs.
@@ -381,7 +375,6 @@ export class ZenggeProtocol {
   // ─── FIRMWARE VERSION FROM ADVERTISEMENT DATA ───────────────────────────────
   /**
    * Parse firmware version from BLE manufacturer advertisement data.
-   * Source: ZGHBDevice.java → setDeviceInfo(byte[])
    *
    * Call during BLE scan callback when manufacturerData is available.
    */
@@ -408,14 +401,13 @@ export class ZenggeProtocol {
     }
   }
 
-  // ─── PROTOCOL CONSTANTS (APK proven 2026-04-06) ─────────────────────────────
+  // ─── PROTOCOL CONSTANTS ─────────────────────────────
   // 0x51 DIY step transition modes — must use these exact values
   static readonly STEP_JUMP    = 0x3A; // Hard cut between colors
   static readonly STEP_GRADUAL = 0x3B; // Smooth cross-fade between colors
   static readonly STEP_STROBE  = 0x3C; // Rapid flash between colors
 
   // 0x59 animated pattern speed range (ORACLE-CONFIRMED 2026-04-23: 1-100, NOT 1-31)
-  // The APK's Protocol/n.java: ad.e.a(f, 1, 31) clamp applies to 0x51, not 0x59.
   // Physical hardware (0xA3) responds to the full 1-100 range on the 0x59 speed byte.
   static readonly ANIM_SPEED_MIN = 1;
   static readonly ANIM_SPEED_MAX = 100; // Hardware confirmed via Oracle lab 2026-04-23
@@ -430,7 +422,7 @@ export class ZenggeProtocol {
    * 0x41 Settled Mode — dual-color animated Symphony effects.
    * Used by the Symphony tab (33 built-in hardware effects).
    *
-   * Hardware truth from C7775l.java (APK 2026-04-21):
+   * Format (Refer to ZENGGE_PROTOCOL_BIBLE.md):
    * Format (13 bytes): [0x41, effectId, FG.R, FG.G, FG.B, BG.R, BG.G, BG.B, speed, dir, 0x00, 0xF0, checksum]
    *
    * @DEPRECATED — not wired to any production UI. DiagnosticLab only.
@@ -460,8 +452,8 @@ export class ZenggeProtocol {
       Math.min(255, Math.max(0, bg.b | 0)),
       Math.max(1, Math.min(255, speed | 0)),
       (direction === 1 ? 0 : 1) & 0x01,
-      0x00, // static trailer byte 1 — DO NOT CHANGE (APK confirmed)
-      0xF0, // static trailer byte 2 — DO NOT CHANGE (APK confirmed)
+      0x00, // static trailer byte 1
+      0xF0, // static trailer byte 2
     ];
     raw.push(this.calculateChecksum(raw));
     getAppLogger().log('ZENGGE_SETTLED_MODE_0x41', { effectId, speed, direction });
@@ -535,8 +527,7 @@ export class ZenggeProtocol {
   /**
    * Build 0x73 Music Config packet — Oracle-verified 13-byte format for 0xA3 hardware.
    *
-   * Source: ZENGGE_PROTOCOL_BIBLE.md §0x73 + §11 Oracle Hardware Validation (2026-04-22)
-   * Builder: C7789z.java (13B full form)
+   * Refer to ZENGGE_PROTOCOL_BIBLE.md
    *
    * Format (13 bytes, wrapped):
    *   [0x73, isOn, modeType, patternId, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b, sensitivity, brightness, checksum]
@@ -563,12 +554,12 @@ export class ZenggeProtocol {
     // matrix — undefined hardware behavior. (Bible §0x73 §11, 2026-04-22)
     const maxPatternId = modeType === 0x27 ? 30 : 16;
 
-    // BUG FIX (APK Decompile Discovery 2026-05-26): 
+    // BUG FIX: 
     // The previous assumption that Bytes 4-6 = Sound Column and Bytes 7-9 = Drop Color was SWAPPED!
-    // Per `MusicModeFragment.java` & `strings.xml`:
+    // Mic Source definition:
     //  - sb_col (Bytes 7-9) = "sound column color" (`col_color` translation)
     //  - sb_point (Bytes 4-6) = "drop color" (`point_color` translation)
-    // Additionally, for Light Bar (0x26), the APK sends the exact same color to BOTH slots.
+    // Additionally, for Light Bar (0x26), we send the exact same color to BOTH slots.
     const dropColor = modeType === 0x26 ? color1 : color2;
     const soundColumnColor = color1;
 
@@ -601,7 +592,7 @@ export class ZenggeProtocol {
   }
 
   /**
-   * [APK HYPOTHESIS] Stream a single pixel frame via 0x53.
+   * [HYPOTHESIS] Stream a single pixel frame via 0x53.
    *
    * Used for real-time per-frame animation rendering. Sends one complete
    * frame of pixel data at the current FPS rate.
@@ -636,7 +627,7 @@ export class ZenggeProtocol {
   /**
    * Build a 0x59 MultiColor packet (the primary command for all IC-strip patterns).
    *
-   * APK-proven format (Protocol/a.java):
+   * Payload format:
    *   [0x59, totalLen_hi, totalLen_lo, R,G,B per pixel...,
    *    numPoints_hi, numPoints_lo, transitionType, speed, direction, checksum]
    *
@@ -644,7 +635,7 @@ export class ZenggeProtocol {
    *                     NO 32-pixel cap — hardware supports up to 300 LEDs.
    * @param speed        Clamp to 1–31 (hardware range). Unused for Static (0x01), send 1.
    * @param direction    1 = forward, 0 = reverse
-   * @param transitionType  APK-PROVEN (StaticColorfulMode.java):
+   * @param transitionType (Refer to ZENGGE_PROTOCOL_BIBLE.md):
    *   0x01 = Static  — freeze in place (Group 1 solid patterns)
    *   0x02 = Running — continuous hardware scroll (ALL animated patterns)
    *   0x03 = Strobe  — flash
@@ -751,7 +742,7 @@ export class ZenggeProtocol {
   /**
    * Build a 323-byte EXTENDED 0x51 packet required by 0xA3 hardware (product_id=163).
    *
-   * APK source: SymphonySettingForA3.java — uses 32 fixed-slot format with 10 bytes
+   * Uses 32 fixed-slot format with 10 bytes
    * per slot (vs 9-byte compact format used by 0xA2 hardware).
    *
    * Format: [0x51, slot0(10B), slot1(10B), ..., slot31(10B), 0x0F, checksum]
@@ -792,7 +783,7 @@ export class ZenggeProtocol {
         raw.push(Math.max(0, Math.min(255, step.color2.b | 0)));
         raw.push((step.dir ?? dir) & 0xFF); // direction byte — required in 10B format
       } else {
-        // Inactive slot — 10 bytes, first byte 0x0F per ZENGGE APK C7787x.java m20864c()
+        // Inactive slot — 10 bytes, first byte 0x0F
         raw.push(0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00);
       }
     }
@@ -828,7 +819,6 @@ export class ZenggeProtocol {
    * before any pattern commands. Without it, the hardware session clock
    * starts from epoch 0 — timing-sensitive effects may drift or misfire.
    *
-   * Source: TimeControllerFragment.java (APK analysis)
    * Format (8 bytes + checksum):
    *   [0x10, year-2000, month(1-12), day(1-31), hour(0-23), min(0-59), sec(0-59), weekday(0=Sun), checksum]
    */
@@ -870,7 +860,6 @@ export class ZenggeProtocol {
   }
 
   // ─── RF REMOTE CONTROL (0x2A) ─────────────────────────────────────────────────
-  // Source: APK reverse engineering — RemoteSettingActivity.java
   //
   // Packet structure (inner payload, 15 bytes + checksum):
   //   [0x2A][modeByte][0xFF][0xFF][0xFF][0xFF][0xFF][clearByte][0x00...][0x0F]

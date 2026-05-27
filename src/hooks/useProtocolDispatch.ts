@@ -112,7 +112,6 @@ export function useProtocolDispatch() {
     // Route 0x51 extended payloads (323B) through writeChunked (0x40 framing).
     // These are too large for a single BLE write and will be silently dropped
     // by the BLE stack if sent through executeProtocolResults as a single packet.
-    // Source: ZENGGE_PROTOCOL_BIBLE.md §0x51 + BleWriteDispatcher.ts auto-route gate.
     const cmdByte = payload[0];
     if (cmdByte === 0x51 && payload.length > 200) {
       return writeChunked(payload, targetDeviceId ?? undefined).then(() => true as const);

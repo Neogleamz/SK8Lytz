@@ -4,7 +4,7 @@ import { getVisualizerFrame, RGB } from '../protocols/PatternEngine';
 import { hexToRgb } from '../utils/ColorUtils';
 
 interface LEDStripPreviewProps {
-  // Source: PatternEngine only
+  // PatternEngine only
   patternId: number;             // 1-45
 
   // Colors
@@ -21,12 +21,12 @@ interface LEDStripPreviewProps {
   autoPlay?: boolean;           // default true
 
   // Display
-  dotSize?: number;             // default 6px
+  _dotSize?: number;             // default 6px
   height?: number;              // default 16px
   style?: ViewStyle;
 }
 
-export const LEDStripPreview = React.memo(({ patternId, fg, bg, numLEDs, speed, brightness = 100, direction = 1, autoPlay = true, dotSize = 6, height = 16, style }: LEDStripPreviewProps) => {
+export const LEDStripPreview = React.memo(({ patternId, fg, bg, numLEDs, speed, brightness = 100, direction = 1, autoPlay = true, _dotSize = 6, height = 16, style }: LEDStripPreviewProps) => {
   // Sync initial frame at t=0 so cards render immediately (no blank flash).
   // Static patterns are complete at t=0 and never need the interval.
   const bFactor = brightness / 100;

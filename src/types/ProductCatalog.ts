@@ -41,7 +41,7 @@ export interface ProductProfile {
 
   /**
    * Minimum LED point count reported by 0x63 query to classify as this product.
-   * Source: Master Reference §2 FTUE Logic — Threshold Classification.
+   * Refer to Master Reference §2 FTUE Logic — Threshold Classification.
    */
   detectMinPoints: number;
 

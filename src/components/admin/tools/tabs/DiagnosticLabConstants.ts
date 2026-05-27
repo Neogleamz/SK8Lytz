@@ -3,7 +3,7 @@ export const TRANSITION_TYPES = [
   { byte: 0x01, label: 'FREEZE',        color: '#00CC88', confirmed: true,  desc: '✅ CONFIRMED — Static lock. Array held in place, no movement.' },
   { byte: 0x02, label: 'STROBE',        color: '#FF4040', confirmed: true,  desc: '✅ CONFIRMED — Flash effect. Visually confirmed on 0xA3 hardware.' },
   { byte: 0x03, label: 'RUNNING WATER', color: '#FF69B4', confirmed: true,  desc: '✅ CONFIRMED — One-shot marquee trigger per command send.' },
-  { byte: 0x04, label: 'JUMP?',         color: '#C084FC', confirmed: false, desc: '❓ HYPOTHESIS — APK StaticColorfulMode.java entry. Hardware response unknown.' },
+  { byte: 0x04, label: 'JUMP?',         color: '#C084FC', confirmed: false, desc: '❓ HYPOTHESIS. Hardware response unknown.' },
 ];
 
 export const QUICK_PALETTE = [

@@ -34,7 +34,7 @@ export function DiagnosticLabOracleTab({
   clearTestLog,
   transmit,
 }: OracleTabProps) {
-  const { S, txtPri, txtMuted, cardBg, border, isDark, cyan } = useDiagnosticLabStyles();
+  const { S, txtPri, txtMuted, cardBg: _cardBg, border, isDark, cyan } = useDiagnosticLabStyles();
 
   /** Auto-stream 0x74 magnitude 200 every 100ms when active (for mic shootout). */
   const [streamActive, setStreamActive] = useState(false);
@@ -55,10 +55,10 @@ export function DiagnosticLabOracleTab({
   const [expandedP2, setExpandedP2] = useState<string | null>(null);
   
   // 0x41 Settled Mode panel
-  const [p41EffectId, setP41EffectId]   = useState(1);
+  const [_p41EffectId, _setP41EffectId]   = useState(1);
   const [p41Speed, setP41Speed]         = useState(50);
-  const [p41Bright, setP41Bright]       = useState(100);
-  const [p41Dir, setP41Dir]             = useState(0x01);
+  const [_p41Bright, _setP41Bright]       = useState(100);
+  const [_p41Dir, _setP41Dir]             = useState(0x01);
   const [p41Color1, setP41Color1]       = useState<{r:number;g:number;b:number}>({r:255,g:0,b:0});
   const [p41Color2, setP41Color2]       = useState<{r:number;g:number;b:number}>({r:0,g:0,b:255});
   const [p41SweepResults, setP41SweepResults] = useState<Record<string, 'WORKS'|'NO_EFFECT'|'CRASHED'>>({});
@@ -159,7 +159,7 @@ export function DiagnosticLabOracleTab({
         {
           label: 'MIC=0x26 ★',
           opcode: '0x73',
-          note: '0x73 APK app mic byte — 0x26, isOn=0x01. Send then enable AUTO-STREAM ⇓',
+          note: '0x73 app mic byte — 0x26, isOn=0x01. Send then enable AUTO-STREAM ⇓',
           bytes: () => {
             const raw = [0x73, 0x01, 0x26, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64];
             return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
@@ -168,7 +168,7 @@ export function DiagnosticLabOracleTab({
         {
           label: 'MIC=0x27 ★',
           opcode: '0x73',
-          note: '0x73 APK device mic byte — 0x27, isOn=0x01. Reacts to ambient sound WITHOUT 0x74.',
+          note: '0x73 device mic byte — 0x27, isOn=0x01. Reacts to ambient sound WITHOUT 0x74.',
           bytes: () => {
             const raw = [0x73, 0x01, 0x27, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64];
             return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
@@ -224,7 +224,7 @@ export function DiagnosticLabOracleTab({
         {
           label: '10B EXTENDED ★',
           opcode: '0x51',
-          note: '0x51 323B fixed 10B/slot ×32 — APK-verified 0xA3 format. Should cycle cleanly.',
+          note: '0x51 323B fixed 10B/slot ×32 — Verified 0xA3 format. Should cycle cleanly.',
           bytes: () => ZenggeProtocol.setCustomModeExtended([
             { mode: 1, speed: 10, color1: { r:255,g:0,b:0 }, color2: { r:0,g:0,b:255 } },
             { mode: 5, speed: 10, color1: { r:0,g:255,b:0 }, color2: { r:255,g:255,b:0 } },
@@ -377,10 +377,10 @@ export function DiagnosticLabOracleTab({
         </View>
       ))}
 
-      {/* PHASE 2 — EXTENDED PANELS (APK Hypothesis) */}
+      {/* PHASE 2 — EXTENDED PANELS (Hypothesis) */}
       <Text style={[S.subTitle, { color: '#9D4EFF' }]}>🧪 PHASE 2 EXTENDED PANELS</Text>
       <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.md }}>
-        APK-inferred builders for opcodes not yet confirmed. Tap header to expand. All are labeled [HYPOTHESIS].
+        Inferred builders for opcodes not yet confirmed. Tap header to expand. All are labeled [HYPOTHESIS].
       </Text>
 
       {/* 🔬 0x59 TRANSITION TYPE SWEEP — 0x00 through 0x06 */}
@@ -497,7 +497,7 @@ export function DiagnosticLabOracleTab({
         <View style={[S.diagBox, { borderColor: '#9D4EFF', borderWidth: 1 }]}>
           <Text style={{ color: '#00CC88', fontSize: 10, fontWeight: '700', marginBottom: Spacing.md }}>
             ✅ PRODUCTION READY — 0x51 is the stable Scene Mode opcode.{'\n'}
-            Testing authentic APK strings 1-44 via setCustomModeCompact.
+            Testing authentic strings 1-44 via setCustomModeCompact.
           </Text>
 
           {/* Controls row */}
