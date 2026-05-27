@@ -1019,6 +1019,51 @@ EEPROM Read:    Programmer → C14184b.m4771f0 → [0x63, 0x12, 0x21, 0x0F, chk]
 ```
 
 
+### SECTION 12: CAMERA MODE V2 (SNIPER & VIBE CATCHER)
+
+#### 🔬 Architectural Design & Frame Processing Flow
+
+To replace the unstable native camera snapshot pipeline, Camera Mode v2 implements a GPU-accelerated **VisionCamera v5 Frame Processor** utilizing the Nitro/JSI architecture.
+
+```mermaid
+graph TD
+    A[Native Camera Buffer] --> B[GPU Resizer useResizer]
+    B -->|GPU Vulkan/Metal| C[50x50 Interleaved RGB Grid]
+    C -->|5Hz Throttle 200ms| D{Sub-mode Selector}
+    D -->|SNIPER| E[Center Pixel Sample 25,25]
+    D -->|VIBE| F[extractKMeansPalette]
+    E --> G[Neutral White Snap delta < 0.15]
+    G --> H[Vivid Neon Boost S=1, L=0.5]
+    H --> I[UI Telemetry & Swatch History]
+    F -->|k=3, Iter=5| J[3 Dominant RGB Swatches]
+    J --> K[Liquid Gradient Preview]
+    I -->|Shutter Tap| L[0x59 spatial write]
+    K -->|Apply Vibe Tap| M[0x59 spatial write]
+    L --> N[12-Pixel EEPROM Defense]
+    M --> N
+    N -->|padded colors| O[0xA3 Controller]
+```
+
+1. **V5 GPU Resizer**: Scaled down to a `50x50` interleaved `HWC` RGB grid via `react-native-vision-camera-resizer` (Vulkan on Android, Metal on iOS) in `< 1ms`. Memory is safely managed by calling `resized.dispose()` in the worklet thread to avoid VRAM leakage.
+2. **CPU Worklet Rate-Limiting**: Frame processing is hard-throttled to **5Hz (every 200ms)** to preserve the JS main thread and eliminate UI stutters.
+3. **Dual Sub-Modes**:
+   * **SNIPER**: Coordinates center-pixel sampling `(25, 25) * 3` in the grid.
+     * *Neutral Snapping Gate*: If RGB delta $|Max(RGB) - Min(RGB)| < 0.15$, the color is snapped to `#FFFFFF` to prevent noisy color drifts in low-light environments.
+     * *Vivid Neon Boost*: Amplifies saturation to pure neon ($S=1.0$, $L=0.5$ in HSL) for high-impact visual representation.
+   * **VIBE**: Feeds the 2,500 scaled RGB pixels to the deterministic K-Means worklet ($k=3$ clusters, Euclidean distance metric in 3D RGB space, 5 iterations max) to extract the Foreground, Background, and Accent swatches sorted by dominance.
+
+#### 🚨 BLE Safeguards & Protocol Mapping
+
+* **BLE Mutex Preservation**: Active frames only update the visual UI layers (viewfinder, concentric reticle ring, palette swatches, and liquid gradient preview strip). BLE payloads are **only** sent to the hardware on explicit user actions (shutter tap in SNIPER, "APPLY VIBE" button in VIBE).
+* **The 12-Pixel Buffer Overflow Defense**: The `0xA3` controller suffers physical EEPROM buffer locks on custom spatial dispatches of size $< 10$ pixels.
+  * We enforce a **minimum length of 12 RGB pixels** for all `0x59` Static Colorful payload dispatches.
+  * If the device `ledPoints < 12` (such as HALOZ which has `ledPoints = 8`), the payload array is duplicated or padded up to **12** to prevent chipset freezes.
+  * If `ledPoints >= 12` (such as SOULZ which has `ledPoints = 43`), the three K-Means colors are interpolated across the full canvas size to form a smooth gradient.
+* **Transition Mode Mapping**: VIBE supports two state behaviors via `0x59`:
+  * `Static` (`0x01` transitionType): Freezes the spatial K-Means gradient across the strips.
+  * `Flow` (`0x03` transitionType): Automatically scrolls the custom gradient across the addressable strips.
+
+
 ### 🚨 SDE Autonomous Fuzzer Discoveries (Auto-Documented)
 - **Opcode**: `0x59` (Static Colorful)
 - **Constraint**: Array sizes between 2 and 9 elements cause physical EEPROM buffer lockout on the `0xA3` chipset.
