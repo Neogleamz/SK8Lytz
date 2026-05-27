@@ -1335,15 +1335,35 @@ skipPass1B = Object.keys(schemaPass1B).length === 0;
   
   combinedText = `[OPS CORE]\n${cSlice}\n\n[AMENITIES]${aSlice}`;
 
+  const defaultImmunity = ['roller rink', 'roller skat', 'skating center', 'skate center', 'skateland', 'roller derby'];
+  const defaultSoft = ['laser tag', 'mini golf', 'go-kart', 'go kart', 'bounce house', 'trampoline park', 'trampoline', 'batting cage', 'arcade', 'skate board', 'skateboard'];
+  
+  const immunityKw = Array.isArray(aiConfig.ai_immunity_keywords) && aiConfig.ai_immunity_keywords.length > 0 ? aiConfig.ai_immunity_keywords : defaultImmunity;
+  const softExclusions = Array.isArray(aiConfig.ai_soft_exclusion_keywords) && aiConfig.ai_soft_exclusion_keywords.length > 0 ? aiConfig.ai_soft_exclusion_keywords : defaultSoft;
+
   if (exclusionKw.length > 0) {
     const textLower = combinedText.toLowerCase();
+    
+    // 1. Check for immunity
+    const isImmune = immunityKw.some((kw: string) => {
+      return textLower.includes(kw.toLowerCase());
+    });
+
+    if (isImmune) {
+      onProgress(`[Detective] 🛡️ IMMUNITY TRIGGERED: Found roller-specific keywords. Soft exclusions will be bypassed.`);
+    }
+
     const toxicHit = exclusionKw.find((kw: string) => {
+      if (isImmune && softExclusions.some((s: string) => s.toLowerCase() === kw.toLowerCase())) {
+        return false; // Bypass this specific soft keyword because of immunity
+      }
       try {
         return new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i').test(textLower);
       } catch {
         return textLower.includes(kw.toLowerCase());
       }
     });
+
     if (toxicHit) {
       onProgress(`[Detective] ☠️ TOXICITY ABORT: matched "${toxicHit}" — skipping all LLM passes`);
       return {
@@ -1359,8 +1379,6 @@ skipPass1B = Object.keys(schemaPass1B).length === 0;
       };
     }
   }
-
-
 
   if (coreText.trim().length >= 50 && hasCrawledWebsite) {
     // ── Pass 1A: Session Hours (SOLO — highest-value extraction) ──

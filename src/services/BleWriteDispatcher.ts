@@ -7,7 +7,7 @@ import type { ProtocolResult } from '../protocols/IControllerProtocol';
 export interface BleWriteStateRefs {
   writeMutex: Promise<any>;
   writeGeneration: number;
-  writeDebounceTimerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
+  writeDebounceTimerRef: { current: ReturnType<typeof setTimeout> | null };
 }
 
 /**
@@ -209,14 +209,14 @@ export async function executeWriteChunked(
     const chunk = [
       0x40,
       seqByte,
-      indexWord & 0xFF,
       (indexWord >> 8) & 0xFF,
+      indexWord & 0xFF,
     ];
 
     if (isFirstChunk) {
       chunk.push((totalLen >> 8) & 0xFF);
       chunk.push(totalLen & 0xFF);
-      chunk.push(dataLen & 0xFF);
+      chunk.push((dataLen + 1) & 0xFF); // ZENGGE counts the 0x0B byte in the data length
       chunk.push(0x0B);
     } else {
       chunk.push(dataLen & 0xFF);

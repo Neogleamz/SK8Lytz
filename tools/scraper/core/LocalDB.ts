@@ -455,6 +455,13 @@ try {
       const missing = DEFAULT_EXCLUSION_KEYWORDS.filter(k => !existing.has(k.toLowerCase()));
       if (missing.length > 0) cfg.ai_exclusion_keywords = [...cfg.ai_exclusion_keywords, ...missing];
     }
+    // Seed Immunity & Soft Exclusions
+    if (!cfg.ai_immunity_keywords || cfg.ai_immunity_keywords.length === 0) {
+      cfg.ai_immunity_keywords = ['roller rink', 'roller skat', 'skating center', 'skate center', 'skateland', 'roller derby'];
+    }
+    if (!cfg.ai_soft_exclusion_keywords || cfg.ai_soft_exclusion_keywords.length === 0) {
+      cfg.ai_soft_exclusion_keywords = ['laser tag', 'mini golf', 'go-kart', 'go kart', 'bounce house', 'trampoline park', 'trampoline', 'batting cage', 'arcade', 'skate board', 'skateboard'];
+    }
     db.prepare('UPDATE scraper_config SET config_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = 1')
       .run(JSON.stringify(cfg));
   }

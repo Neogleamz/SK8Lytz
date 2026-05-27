@@ -358,9 +358,15 @@ Ice rinks, hockey arenas, trampoline parks, and bike shops frequently appear in 
 | 1 | `GoogleSweep.ts` | Sweep startup | Injects keywords into `BLOCKED_NAME_KEYWORDS` via `injectDynamicBlocklist()`. Name-match blocks before DB insert. |
 | 2 | `GooglePlacesProvider.ts` | Every search result | `BLOCKED_PLACE_TYPES`, `BLOCKED_NAME_KEYWORDS`, `RETAIL_BLOCKLIST` static filters on Google type array + name |
 | 3 | `DetectiveEngine.ts` | After raw page text collected | Regex word-boundary scan of ALL crawled text against exclusionKw. Zero LLM cost. |
-| 4 | `DetectiveEngine.ts` | After semantic slice, before Pass 1A | Second regex scan of compressed text slice. |
-| 5 | `DetectiveEngine.ts` | Inside every LLM pass system prompt | `"TOXICITY: If PRIMARY business matches [...] return {TOXICITY_ABORT: true}"` |
+| 4 | `DetectiveEngine.ts` | After semantic slice, before Pass 1A | Second regex scan of compressed text slice. **(Bypassed if Immunity Protocol triggered)** |
+| 5 | `DetectiveEngine.ts` | Inside every LLM pass system prompt | `"TOXICITY: If PRIMARY business matches [...] return {TOXICITY_ABORT: true}. IGNORE exclusions if it is a multi-attraction fun center that EXPLICITLY has a roller skating rink."` |
 | 6 | `Indexer.ts` | After engine returns | `result.aiMetadata.TOXICITY_ABORT === true` → `verification_status = 'REJECTED'`, `rejection_reason` written to `ai_metadata` |
+
+### The Immunity Protocol (Added 2026-05-26)
+To prevent false-positive rejections of Family Fun Centers that have mini-golf/laser tag but *also* feature a roller rink, the **Immunity Protocol** was introduced in Phase 2.
+1. **Immunity Keywords**: `/(roller rink|skate center|skating rink|roller skating|skateland)/i`
+2. **Pre-LLM Bypass**: If the spot's raw text hits an immunity keyword, it skips the Pre-LLM Toxicity Bouncer entirely.
+3. **LLM Forgiveness**: The LLM system prompt explicitly instructs the model to ignore exclusions if the venue is a fun center that explicitly includes a roller skating rink.
 
 ### TOXICITY_ABORT Return Shape
 ```ts
@@ -623,3 +629,12 @@ The following were absent before this session and caused regressions:
 
 ### Operations
 15. **New worktree DB copy rule** — documented in §13. Worktrees always start with empty placeholder DB. Must copy from master before testing.
+
+---
+
+## §16 — What Changed (Session 3 — 2026-05-26)
+
+### False Rejection Immunity Protocol
+1. **Pre-LLM Immunity Bypass**: Added `IMMUNITY_KEYWORDS` (`/(roller rink|skate center|skating rink|roller skating|skateland)/i`) to `DetectiveEngine.ts`. If a spot's text matches, it bypasses the Phase 2 Pre-LLM Toxicity Bouncer. This prevents fun centers with laser tag/mini golf from being falsely rejected.
+2. **LLM Forgiveness Prompt**: Updated the LLM TOXICITY instructions to explicitly allow multi-attraction fun centers if they contain a roller skating rink.
+3. **Missing Package Resolution**: Fixed `sharp` native bindings crashing the Photographer daemon by restoring missing Node module dependencies.

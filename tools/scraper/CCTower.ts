@@ -2170,7 +2170,8 @@ app.get('/api/sniper/stream', async (req, res) => {
     });
     send('done', true);
   } catch (err: any) {
-    send('error', `Sniper pipeline crashed: ${err.message}`);
+    console.error("Sniper Error:", err);
+    send('error', `Sniper pipeline crashed: ${err.message}\nStack: ${err.stack}`);
     send('done', true);
   } finally {
     res.end();

@@ -1,6 +1,6 @@
 # SK8Lytz App Master Reference
 
-_Last Updated: 2026-05-21 | **BATCH:hal-foundation COMPLETE (1A‘1B‘1C‘1D)** — HAL migration finalized. `IControllerProtocol` polymorphic interface + `ZenggeAdapter` + `BanlanxAdapter` (SP621E) fully wired. `useBLE.ts`, `useBLEAutoRecovery`, `useBLESweeper` are hardware-agnostic. `ControllerRegistry` resolves adapters by service UUID (FFE0=BanlanX, FFFF=Zengge). TSC clean. v3.3.9 | Source of Truth: `src/protocols/IControllerProtocol.ts` + `ControllerRegistry.ts`_
+_Last Updated: 2026-05-27 | **BATCH:monolith-cleanup COMPLETE** — useBLE.ts monolith cleanly partitioned into 4 stateless helper services (BleConnectionManager, BleWriteDispatcher, BlePingService, BleLifecycleManager) and refactored as a thin composition hook. Dependency diet applied (React 19.2.6). v3.6.4 | Source of Truth: src/hooks/useBLE.ts_
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
 
