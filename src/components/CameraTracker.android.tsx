@@ -104,7 +104,8 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
       const cropY = Math.max(0, Math.floor((image.height - cropHeight) / 2));
 
       // Crop the center then resize to 1x1 to average the reticle area
-      const cropped = image.crop(cropX, cropY, cropWidth, cropHeight);
+      // Image.crop() API: (startX, startY, endX, endY) — NOT (x, y, width, height)
+      const cropped = image.crop(cropX, cropY, cropX + cropWidth, cropY + cropHeight);
       const tiny = cropped.resize(1, 1);
 
       const { buffer, pixelFormat } = tiny.toRawPixelData();

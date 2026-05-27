@@ -1,11 +1,12 @@
 /**
  * CameraTracker.ios.tsx — iOS-Specific Color Sampler
  *
- * Unified with Android approach: uses takeSnapshot → center crop → 1×1 resize
- * instead of worklet-based frame processing. This gives:
- *   1. Center-crop reticle accuracy (not whole-frame averaging)
- *   2. Proper pixelFormat switch guard (handles BGRA, ARGB, etc.)
- *   3. Identical color detection behavior across both platforms
+ * Uses takeSnapshot → center crop → 1×1 resize for color extraction.
+ *
+ * ⚠️ KNOWN LIMITATION: takeSnapshot() is @platform Android in VisionCamera v5.
+ * On iOS this may silently throw. A future fix should use usePhotoOutput() + takePhoto()
+ * or a native Frame Processor Plugin for iOS-specific frame access.
+ * See: node_modules/react-native-vision-camera/src/specs/views/PreviewView.nitro.ts L112
  */
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -107,7 +108,8 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
       const cropX = Math.max(0, Math.floor((image.width - cropWidth) / 2));
       const cropY = Math.max(0, Math.floor((image.height - cropHeight) / 2));
 
-      const cropped = image.crop(cropX, cropY, cropWidth, cropHeight);
+      // Image.crop() API: (startX, startY, endX, endY) — NOT (x, y, width, height)
+      const cropped = image.crop(cropX, cropY, cropX + cropWidth, cropY + cropHeight);
       const tiny = cropped.resize(1, 1);
 
       const { buffer, pixelFormat } = tiny.toRawPixelData();
