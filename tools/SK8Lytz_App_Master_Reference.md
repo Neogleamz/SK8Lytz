@@ -344,6 +344,34 @@ For testing App Sync behavior vs. Offline mode offline fallbacks, you can authen
 - **Password**: `Password!2026`
 - **Username**: `TestSkater`
 
+### Offline & Guest Gating Architecture
+
+The application enforces a strict "Hardware First, Cloud Second" policy. Core hardware control (BLE opcodes) is NEVER gated behind an authentication wall.
+
+- **Offline Mode State**: Propagated dynamically via the `isOfflineMode` prop in the component tree (`DashboardScreen` → `DockedController` → Modals).
+- **Graceful Degradation**: 
+  - `QuickPresetModal`: Cloud preset saving is hidden when `isOfflineMode === true`. Only local device EEPROM saves are permitted.
+  - `CommunityModal`: The 'Community Profiles' tab is entirely disabled in offline mode. The UI defaults gracefully to the 'My Skates' local tab.
+- **Rule of Thumb**: Local SQLite (`AsyncStorage`) and direct GATT manipulation are 100% available to Guests. Any feature requiring Supabase REST/PostgREST must explicitly check `isOfflineMode` and display a friendly 'Login Required' state.
+
+### Camera Mode: Camera Vibe Catcher v2 Architecture
+
+The `CAMERA` mode provides real-time ambient lighting translation and dual-mode color analysis.
+- **Unified Cross-Platform Frame Processing**: 
+  - Uses a unified cross-platform `CameraTracker.tsx` utilizing `react-native-vision-camera` v5's GPU-backed `useFrameOutput` pipeline and `vision-camera-resize-plugin`.
+  - Frames are downscaled on the GPU to 50x50 pixels RGB format at 5Hz (200ms throttle interval) with JSI `'worklet';` execution.
+  - Hardened with explicit `frame.dispose()` invocation wrapped in a `try...finally` block inside the worklet thread to eliminate camera pipeline stalls. Dispatches are scheduled via `runOnJS` from `react-native-worklets` to transition back to the React JS thread.
+- **SNIPER Sub-Mode (Focus reticle)**:
+  - Samples the center pixel `(25, 25)` from the 50x50 resized frame.
+  - Applies a strict color-distance delta gate (`delta < 0.15`) to snap neutral colors to pure #FFFFFF (preventing blue/green ambient noise).
+  - Taps the Shutter button to lock in the vivid-neon boosted color and dispatches it via a 0x59 Freeze command to the skates, saving swatches in a tactile 5-item history row.
+- **VIBE Sub-Mode (Palette extractor)**:
+  - Evaluates the 2,500 pixel array to extract the 3 most dominant colors via an optimized client-side K-Means clustering algorithm (k=3, 5 iterations max) with thread-safe `'worklet';` annotations.
+  - Dominant colors populate FG/BG/ACCENT slots in the UI and generate a live liquid gradient preview.
+  - Tapping Apply auto-generates a `BuilderNode[]` array, maps them to a linear gradient matching the user's Flow/Static preference, and dispatches via `0x59`.
+- **Surgical Buffer Overflow Defense**:
+  - Enforces a minimum canvas length of 12 RGB pixels for all `0x59` spatial payload dispatches by interpolating dominant swatches to prevent physical controller EEPROM buffer lockouts on the `0xA3` chipset.
+
 ---
 
 ## 3. BLE Protocol Library

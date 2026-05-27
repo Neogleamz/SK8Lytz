@@ -334,7 +334,7 @@ totalLen = (numLEDs × 3) + 9
 
 - **Speed**: 0–100 UI → 1–100 HW. Pass UI speed directly (clamped to 1–100). ⚠️ **ORACLE-CONFIRMED 2026-04-23**: The APK's `Protocol/n.java: ad.e.a(f, 1, 31)` clamp is for 0x51, NOT 0x59. Physical hardware responds to the full 1–100 range on the 0x59 speed byte. Setting speed=31 while UI slider is at 100 produced exactly 31%-speed animation on physical 0xA3 hardware.
 - **Direction**: `0x01` = forward, `0x00` = reverse
-- **Minimum pixels**: 12 (hardware glitches below 10)
+- **Minimum pixels**: 12. Enforces a strict minimum layout length for all `0x59` Static Colorful spatial payload dispatches. Payloads below 10 pixels cause physical controller EEPROM buffer lockouts on the `0xA3` chipset.
 - **Tick Settings (Point Count)**: The `numLEDs_hi` and `numLEDs_lo` bytes represent the **physical length of the hardware strip** that the effect will span across, NOT the length of the RGB byte array sent! If clamped to `MAX_PIXELS = 54` for MTU reasons, the transition effects (Strobe, Jump, Breathe) will only animate on the first 54 LEDs of the strip and freeze/truncate the rest.
 - **LED count branch** in `C7760a` line 23: `if (mo20320T() == 167)` → different LED count constant (for 0xA7 variant). Our 0xA3 (163) takes the ELSE branch = standard LED count path.
 - **SK8Lytz relevance**: **CRITICAL** — primary pixel array command. ✅ Available on 0xA3.
@@ -561,10 +561,11 @@ Power OFF: [0x71, 0x24, 0x0F, checksum]  → checksum = 0x71+0x24+0x0F = 0xA4 �
 - **Format**: 3 bytes
 
 ```
-[0x74, magnitude(0-255), checksum]
+[0x74, magnitude(0-150), checksum]
 ```
 
-- **Used when**: micSource in the `0x73` config
+- **Used when**: `isOn` (byte 1) in the `0x73` config is `0x00` (App Mic).
+- **Safety Limit**: Hardware begins to saturate around 150. Values near 255 cause physical controller buffer lockouts or frozen visualizer states on 0xA3. Our codebase strictly clamps the magnitude to 150.
 - **SK8Lytz relevance**: **CRITICAL** ✅ Used by `useAppMicrophone.ts`
 
 ---
