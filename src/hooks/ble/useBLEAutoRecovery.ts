@@ -26,7 +26,7 @@ export interface UseBLEAutoRecoveryProps {
   handleNotification: (error: any, characteristic: any, deviceId: string) => void;
   onOrganicDisconnect: (error: any, deviceId: string) => void;
   /** Global connection gate semaphore — recovery waits for IDLE before touching radio */
-  bleGateRef: React.MutableRefObject<'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING'>;
+  bleGateRef: React.MutableRefObject<import('../../services/BleStateMachine').BleStateMachine>;
   /**
    * Called after a successful reconnect with the resolved protocol adapter.
    * useBLE.ts uses this to update adapterMapRef so writeToDevice continues

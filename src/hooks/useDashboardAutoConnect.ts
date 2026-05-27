@@ -39,7 +39,7 @@ interface UseDashboardAutoConnectOptions {
   refreshProfile: () => Promise<void>;
   registeredDevices: RegisteredDevice[];
   /** Global connection gate semaphore — observer only connects when IDLE */
-  bleGateRef: React.MutableRefObject<string>;
+  bleGateRef: React.MutableRefObject<import('../services/BleStateMachine').BleStateMachine>;
   /** Gate the observer if setup wizard is active */
   isWizardActive?: boolean;
   /** Trigger a high-power active scan (from useBLESweeper) */
@@ -102,10 +102,10 @@ export function useDashboardAutoConnect({
 
       const attemptConnection = () => {
         // ── GATE CHECK: Only connect when no other BLE operation is in-flight ──
-        if (bleGateRef.current !== 'IDLE') {
+        if (bleGateRef.current.tag !== 'IDLE') {
           AppLogger.log('BLE_STATE_CHANGE', {
             event: 'auto_connect_observer_gate_blocked_retrying',
-            gate: bleGateRef.current,
+            gate: bleGateRef.current.tag,
             batchSize: pendingBatchRef.current.length,
           });
           // BUG-02 Fix: Do not wipe pendingBatchRef. Instead, retry in 1000ms.

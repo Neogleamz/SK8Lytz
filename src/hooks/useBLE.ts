@@ -18,6 +18,7 @@ import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
 import { AppLogger } from '../services/AppLogger';
 import type { BleConnectionState, PendingRegistration } from '../types/dashboard.types';
+import { BleStateMachine, BLEPhaseTag } from '../services/BleStateMachine';
 
 import { checkPermission, openGlobalPermissionsModal } from '../services/PermissionService';
 import { supabase } from '../services/supabaseClient';
@@ -75,7 +76,7 @@ export interface BluetoothLowEnergyApi {
   ghostedDeviceIds: string[];
   bleState: BleConnectionState;
   /** Global connection gate semaphore — exposed for consumers that need gate-awareness */
-  bleGateRef: React.MutableRefObject<'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING'>;
+  bleGateRef: React.MutableRefObject<BleStateMachine>;
   // ── Overwatch BLE Engine API ───────────────────────────────────────────────
   /** Start the Silent Sweeper. Call once on Dashboard mount after BT permissions confirmed. */
   startSweeper(): void;
@@ -104,8 +105,16 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // ALL BLE operations (scan, connect, disconnect, recovery) must acquire this
   // gate before touching the radio. Prevents the "stampeding herd" of competing
   // GATT operations that cause Android GATT 133 errors.
-  const bleGateRef = useRef<'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING'>('IDLE');
-  const [bleGateState, setBleGateState] = useState<'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING'>('IDLE');
+  const bleGateRef = useRef<BleStateMachine>(new BleStateMachine());
+  const [bleGateState, setBleGateState] = useState<BLEPhaseTag>('IDLE');
+
+  // Automatically sync FSM transitions into React state for re-renders
+  useEffect(() => {
+    const unsubscribe = bleGateRef.current.addListener((phase) => {
+      setBleGateState(phase.tag);
+    });
+    return unsubscribe;
+  }, []);
   // ── Pattern write debounce ─────────────────────────────────────────────────
   // Prevents BLE queue pile-up when user swipes rapidly through the pattern picker.
   // Critical writes (power, time sync) bypass this and go direct.
@@ -118,10 +127,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const KEEPALIVE_DURATION_MS = 60_000;
   const keepaliveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Helper: set gate in both ref (for sync checks) and state (for React re-renders)
-  const setGate = useCallback((phase: 'IDLE' | 'SCANNING' | 'CONNECTING' | 'DISCONNECTING' | 'RECOVERING') => {
-    bleGateRef.current = phase;
-    setBleGateState(phase);
+  // Helper: transition the gate which automatically syncs to state via the listener
+  const setGate = useCallback((phase: BLEPhaseTag) => {
+    bleGateRef.current.transitionTo({ tag: phase }, 'Manual Phase Change');
   }, []);
 
   useEffect(() => {
@@ -526,8 +534,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       }
 
       // ── CONNECTION GATE: Reject if another BLE operation is in-flight ────────
-      if (bleGateRef.current !== 'IDLE') {
-        AppLogger.warn('[BLE] connectToDevices REJECTED — gate is ' + bleGateRef.current, { requestedDevices: devices.map(d => d.id) });
+      if (bleGateRef.current.tag !== 'IDLE') {
+        AppLogger.warn('[BLE] connectToDevices REJECTED — gate is ' + bleGateRef.current.tag, { requestedDevices: devices.map(d => d.id) });
         return;
       }
       setGate('CONNECTING');
@@ -946,7 +954,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   //   • forceDisconnect() (app backgrounded, group swap, unmount)
   // NOT called directly by disconnectFromDevice (which now defers via keepalive).
   const _executeRealDisconnect = async () => {
-    if (bleGateRef.current === 'DISCONNECTING') return; // Already tearing down
+    if (bleGateRef.current.tag === 'DISCONNECTING') return; // Already tearing down
     setGate('DISCONNECTING');
     await autoRecovery.cancelAllRecoveries();
 
