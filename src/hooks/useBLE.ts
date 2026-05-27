@@ -14,14 +14,14 @@ import { Buffer } from 'buffer';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform, AppState } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
-import { getDefaultProtocol, resolveProtocol, resolveProtocolForDevice, getProtocolById } from '../protocols/ControllerRegistry';
+import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
 import { AppLogger } from '../services/AppLogger';
 import type { BleConnectionState, PendingRegistration } from '../types/dashboard.types';
 
 import { checkPermission, openGlobalPermissionsModal } from '../services/PermissionService';
 import { supabase } from '../services/supabaseClient';
-import { BleCharacteristicCache } from '../services/BleCharacteristicCache';
+import { createGattSession } from '../services/BleSessionFactory';
 import { useBLEScanner } from './ble/useBLEScanner';
 import { useBLEAutoRecovery } from './ble/useBLEAutoRecovery';
 import { useBLESweeper } from './ble/useBLESweeper';
@@ -267,64 +267,12 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     const { release } = lockHandle;
 
     try {
-      // ── Step 1: Connect ───────────────────────────────────────────────────────
-      let lastErr: any = null;
-      let connected = false;
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          const isConnected = await bleManager.isDeviceConnected(mac);
-          if (!isConnected) {
-            await bleManager.connectToDevice(mac, { timeout: 6000 });
-          }
-          connected = true;
-          break;
-        } catch (e: any) {
-          lastErr = e;
-          const errStr = String(e);
-          // Android: GATT 133 congestion | iOS: CoreBluetooth transient failures
-          const isTransient = errStr.includes('133') || errStr.includes('133 (0x85)')
-            || errStr.includes('connection failed') || errStr.includes('timed out')
-            || errStr.includes('Peer removed');
-          if (isTransient) {
-            AppLogger.warn(`[BLE] pingDevice transient error linking ${mac}. Attempt ${attempt}/2...`, { error: errStr });
-            await bleManager.cancelDeviceConnection(mac).catch(() => {});
-            await new Promise(resolve => setTimeout(resolve, 300));
-          } else if (errStr.includes('already')) {
-            connected = true;
-            break;
-          } else {
-            break;
-          }
-        }
-      }
-      if (!connected) throw lastErr;
-
-      // ── HAL: Resolve adapter & Caching ────────────────────────────────────────
-      // CRITICAL: discoverAllServicesAndCharacteristics MUST always run on every
-      // new GATT session. The native BLE stack (Android + iOS) uses it to populate
-      // its internal characteristic handle maps. Skipping it (even on a cache hit)
-      // leaves the maps empty, causing all writeCharacteristic calls to silently fail.
-      await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
-
-      let pingAdapter: IControllerProtocol | null = null;
-
-      const cachedGatt = await BleCharacteristicCache.get(mac);
-      if (cachedGatt) {
-        pingAdapter = getProtocolById(cachedGatt.protocolId);
-      }
-
-      if (!pingAdapter) {
-        try {
-          const svcs = await bleManager.servicesForDevice(mac);
-          const svcUUIDs = svcs.map((s: any) => s.uuid as string);
-          pingAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
-        } catch {
-          pingAdapter = getDefaultProtocol();
-        }
-        await BleCharacteristicCache.set(mac, pingAdapter.protocolId);
-      } else {
-        AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context: 'pingDevice', mac });
-      }
+      // ── BleSessionFactory: connect → discover → resolve (single source of truth) ──
+      const { conn: _pingConn, adapter: pingAdapter } = await createGattSession(bleManager, mac, {
+        timeout: 6000,
+        retries: 2,
+        context: 'pingDevice',
+      });
 
       // ── Step 2: Write Blink (channel is now hot — no Phantom Blink) ───────────
       const b64Blink = Buffer.from(blinkPayload).toString('base64');
@@ -673,35 +621,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
                 AppLogger.warn('[BLE] requestConnectionPriorityForDevice failed', e);
               });
             }
-            // ── HAL: Resolve protocol adapter from service UUIDs & Caching ────────
-            // CRITICAL: discoverAllServicesAndCharacteristics MUST always run on every
-            // new GATT session. The native BLE stack (Android + iOS) uses it to populate
-            // its internal characteristic handle maps. Skipping it (even on a cache hit)
-            // leaves the maps empty, causing all writeCharacteristic calls to silently fail.
-            await conn.discoverAllServicesAndCharacteristics();
-
-            let adapter: IControllerProtocol | null = null;
-
-            const cachedGatt = await BleCharacteristicCache.get(conn.id);
-            if (cachedGatt) {
-              // Cache hit: skip the slow conn.services() re-enumeration.
-              // Adapter schema is cached; GATT handles are fresh from the discovery above.
-              adapter = getProtocolById(cachedGatt.protocolId);
-              AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context: 'handshakeDevice', deviceId: conn.id });
-            }
-
-            if (!adapter) {
-              try {
-                const services = await conn.services();
-                const serviceUUIDs = services.map((s: any) => s.uuid as string);
-                adapter = resolveProtocol(serviceUUIDs, conn.manufacturerData) ?? getDefaultProtocol();
-              } catch (e) {
-                // services() not available on all platforms — fall back to Zengge default
-                AppLogger.warn('[BLE] service lookup failed during group connect, falling back to default protocol', e);
-                adapter = getDefaultProtocol();
-              }
-              await BleCharacteristicCache.set(conn.id, adapter.protocolId);
-            }
+            // ── BleSessionFactory: connect → discover → resolve (single source of truth) ──
+            const { adapter } = await createGattSession(bleManager, conn.id, {
+              timeout: 6000,
+              retries: 1,
+              context: 'handshakeDevice',
+              manufacturerData: conn.manufacturerData ?? undefined,
+            });
 
             // MTU negotiation (up to 2 retries)
             let negotiatedMtu = 23;

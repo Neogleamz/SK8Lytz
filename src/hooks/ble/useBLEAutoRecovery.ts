@@ -14,10 +14,9 @@
 import { Buffer } from 'buffer';
 import { useCallback, useRef, useState } from 'react';
 import type { Device, Subscription } from 'react-native-ble-plx';
-import { resolveProtocol, getDefaultProtocol, getProtocolById } from '../../protocols/ControllerRegistry';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
 import { AppLogger } from '../../services/AppLogger';
-import { BleCharacteristicCache } from '../../services/BleCharacteristicCache';
+import { createGattSession } from '../../services/BleSessionFactory';
 import { acquireGattLock } from './useBLEGattMutex';
 
 export interface UseBLEAutoRecoveryProps {
@@ -162,50 +161,13 @@ export function useBLEAutoRecovery({
             break;
           }
 
-          // Attempt blind GATT connection (or reuse if natively connected)
-          const nativelyConnected = await bleManager.isDeviceConnected(deviceId).catch(() => false);
-          if (signal.aborted) break;
-          
-          let conn: Device;
-          if (nativelyConnected) {
-            // Re-discover services just in case, since we lost the logical connection.
-            // Use empty array to get ALL connected devices (not filtered to Zengge UUID).
-            const devicesList = await bleManager.connectedDevices([]).catch(() => []);
-            if (signal.aborted) break;
-            conn = devicesList.find((d: any) => d.id === deviceId) || (await bleManager.connectToDevice(deviceId, { timeout: 3500 }));
-          } else {
-            conn = await bleManager.connectToDevice(deviceId, { timeout: 3500 });
-          }
-          if (signal.aborted) break;
-
-          let recoveryAdapter: IControllerProtocol | null = null;
-
-          // CRITICAL: discoverAllServicesAndCharacteristics MUST run on every new
-          // GATT session — including recovery reconnects. Skipping it on cache-hits
-          // leaves the native characteristic handle map empty, causing all writes to fail.
-          await conn.discoverAllServicesAndCharacteristics();
-          if (signal.aborted) break;
-
-          const cachedGatt = await BleCharacteristicCache.get(conn.id);
-          if (cachedGatt) {
-            // Cache hit: reuse resolved adapter ID, skip slow services() re-enumeration.
-            // GATT handles are populated from the mandatory discovery above.
-            recoveryAdapter = getProtocolById(cachedGatt.protocolId);
-            AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context: 'autoRecovery', deviceId: conn.id });
-          }
-
-          if (!recoveryAdapter) {
-            try {
-              const svcs = await conn.services();
-              if (signal.aborted) break;
-              const svcUUIDs = svcs.map((s: any) => s.uuid as string);
-              recoveryAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
-            } catch (_e: any) {
-              AppLogger.warn(`[AutoRecovery] Failed resolving service UUIDs for ${deviceId}, falling back to default protocol`, _e);
-              recoveryAdapter = getDefaultProtocol();
-            }
-            await BleCharacteristicCache.set(conn.id, recoveryAdapter.protocolId);
-          }
+          // ── BleSessionFactory: connect → discover → resolve (single source of truth) ──
+          const { conn, adapter: recoveryAdapter } = await createGattSession(bleManager, deviceId, {
+            timeout: 3500,
+            retries: 1,
+            signal,
+            context: 'autoRecovery',
+          });
           if (signal.aborted) break;
 
           onAdapterResolved(conn.id, recoveryAdapter);
@@ -246,7 +208,7 @@ export function useBLEAutoRecovery({
             await conn.writeCharacteristicWithoutResponseForService(
               recoveryAdapter.serviceUUID, recoveryAdapter.writeCharacteristicUUID,
               Buffer.from(pingResult.packets[0]).toString('base64')
-            ).catch(e => AppLogger.warn('[useBLEAutoRecovery] Recovery ping failed', e));
+            ).catch((e: any) => AppLogger.warn('[useBLEAutoRecovery] Recovery ping failed', e));
           }
           if (signal.aborted) break;
 

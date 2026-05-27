@@ -29,10 +29,8 @@ import { Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
-import { resolveProtocol, getDefaultProtocol, getProtocolById } from '../../protocols/ControllerRegistry';
-import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
 import { AppLogger } from '../../services/AppLogger';
-import { BleCharacteristicCache } from '../../services/BleCharacteristicCache';
+import { createGattSession } from '../../services/BleSessionFactory';
 import type { PendingRegistration } from '../../types/dashboard.types';
 import { mapDeviceToRegistration } from '../../utils/classifyBLEDevice';
 import { acquireGattLock } from './useBLEGattMutex';
@@ -215,64 +213,13 @@ export function useBLESweeper({
         return;
       }
 
-      let conn: any = null;
-      let lastErr: any = null;
-      for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-          const isConnected = await bleManager.isDeviceConnected(mac);
-          conn = isConnected ? await bleManager.deviceForDevice(mac) : await bleManager.connectToDevice(mac, { timeout: 6000 });
-          break;
-        } catch (e: any) {
-          lastErr = e;
-          if (String(e).includes('133') || String(e).includes('133 (0x85)')) {
-            AppLogger.warn(`[BLE] Sweeper GATT 133 congestion linking ${mac}. Attempt ${attempt}/2...`);
-            await bleManager.cancelDeviceConnection(mac).catch(() => {});
-            await new Promise(resolve => setTimeout(resolve, 300));
-          } else if (String(e).includes('already')) {
-            conn = await bleManager.deviceForDevice(mac);
-            break;
-          } else {
-            break;
-          }
-        }
-      }
-      if (!conn) throw lastErr;
-
-      // ── P1 preemption check: bail after connect, before service discovery ─
-      if (signal.aborted) {
-        AppLogger.log('BLE_STATE_CHANGE', { event: 'interrogator_preempted_post_connect', mac });
-        return;
-      }
-
-      // ── HAL: Resolve adapter from service UUIDs & Caching ─────────────────
-      // CRITICAL INVARIANT: discoverAllServicesAndCharacteristics MUST always run
-      // on every new GATT session, even on cache hits. The native BLE stack uses
-      // it to populate internal characteristic handle maps. Skipping it leaves
-      // the maps empty → all writeCharacteristic/monitorCharacteristic calls
-      // silently fail. This bug was fixed in handshakeDevice, pingDevice, and
-      // initiateRecovery — this was the LAST unfixed copy.
-      await conn.discoverAllServicesAndCharacteristics();
-
-      let interrogatorAdapter: IControllerProtocol | null = null;
-
-      const cachedGatt = await BleCharacteristicCache.get(mac);
-      if (cachedGatt) {
-        interrogatorAdapter = getProtocolById(cachedGatt.protocolId);
-      }
-
-      if (!interrogatorAdapter) {
-        try {
-          const svcs = await conn.services();
-          const svcUUIDs = svcs.map((s: any) => s.uuid as string);
-          interrogatorAdapter = resolveProtocol(svcUUIDs) ?? getDefaultProtocol();
-        } catch (_e: any) {
-          AppLogger.warn(`[Sweeper] Failed resolving service UUIDs for ${mac}, falling back to default protocol`, _e);
-          interrogatorAdapter = getDefaultProtocol();
-        }
-        await BleCharacteristicCache.set(mac, interrogatorAdapter.protocolId);
-      } else {
-        AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context: 'interrogateDevice', mac });
-      }
+      // ── BleSessionFactory: connect → discover → resolve (single source of truth) ──
+      const { conn, adapter: interrogatorAdapter } = await createGattSession(bleManager, mac, {
+        timeout: 6000,
+        retries: 2,
+        signal,
+        context: 'interrogateDevice',
+      });
 
       if (signal.aborted) {
         AppLogger.log('BLE_STATE_CHANGE', { event: 'interrogator_preempted_post_discover', mac });
