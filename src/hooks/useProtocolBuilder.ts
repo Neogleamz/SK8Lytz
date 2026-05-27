@@ -50,7 +50,7 @@ function build0x59(
   return { raw, wrapped, hex, annotations };
 }
 
-export const useProtocolBuilder = (hwPts: number = 16) => {
+export const useProtocolBuilder = (_hwPts: number = 16) => {
   const [bldProtocol, setBldProtocol] = useState<ProtocolType>('0x59');
   
   // Builder 0x59
@@ -102,7 +102,7 @@ export const useProtocolBuilder = (hwPts: number = 16) => {
         setBldResult({ raw: wrapped, wrapped, hex: wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' '), annotations: ['[0x61] RBM Pattern Payload', `Pattern: ${id}`, `Speed: ${spd}`, `Brightness: ${br}`] });
       } else if (bldProtocol === '0x51') {
         const mode = safeParseInt(bld51Mode, 1);
-        const spd = Math.max(1, Math.min(31, safeParseInt(bld51Speed, 16)));
+        const spd = Math.max(1, Math.min(100, safeParseInt(bld51Speed, 16)));
         const wrapped = adapter.buildCustomMode([{
             mode, speed: spd, 
             color1: bld51Color1, color2: bld51Color2

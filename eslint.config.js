@@ -7,7 +7,7 @@ module.exports = [
     ignores: [
       "**/node_modules/**",
       "**/supabase/functions/**",
-      "**/tools/**",
+      "tools/**",
       "**/scratch/**",
       "android/**",
       "ios/**",

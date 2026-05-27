@@ -49,7 +49,7 @@ export function DiagnosticLabBuilderTab({
     bldMusicMode, setBldMusicMode,
     bldSens, setBldSens,
     bldC2, setBldC2,
-    bldMatrixStyle, setBldMatrixStyle,
+    bldMatrixStyle: _bldMatrixStyle, setBldMatrixStyle: _setBldMatrixStyle,
     bldIc, setBldIc,
     bldOrder, setBldOrder,
     bldSegs, setBldSegs,
@@ -120,7 +120,7 @@ export function DiagnosticLabBuilderTab({
               effectId={parseInt(bld51Mode) || 1} 
               fgColorHex={`#${bld51Color1.r.toString(16).padStart(2,'0')}${bld51Color1.g.toString(16).padStart(2,'0')}${bld51Color1.b.toString(16).padStart(2,'0')}`}
               bgColorHex={`#${bld51Color2.r.toString(16).padStart(2,'0')}${bld51Color2.g.toString(16).padStart(2,'0')}${bld51Color2.b.toString(16).padStart(2,'0')}`}
-              speed={Math.max(1, Math.min(31, parseInt(bld51Speed) || 16))}
+              speed={Math.max(1, Math.min(100, parseInt(bld51Speed) || 50))}
               direction={bld51Dir === 1}
               segments={bld51Seg ? 2 : 1}
             />
@@ -140,8 +140,8 @@ export function DiagnosticLabBuilderTab({
               </View>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>SPEED (1–31)</Text>
-              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bld51Speed.toString()} keyboardType="numeric" onChangeText={v => setBld51Speed(Math.max(1, Math.min(31, parseInt(v)||1)).toString())} />
+              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>SPEED (1–100)</Text>
+              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bld51Speed.toString()} keyboardType="numeric" onChangeText={v => setBld51Speed(Math.max(1, Math.min(100, parseInt(v)||1)).toString())} />
             </View>
           </View>
 
@@ -193,14 +193,14 @@ export function DiagnosticLabBuilderTab({
           <View style={{ backgroundColor: isDark ? '#05070a' : '#f9fafb', borderRadius: 8, padding: Spacing.md, marginBottom: Spacing.lg, borderColor: bld51Format === 'extended' ? '#FF9500' : '#00E676', borderWidth: 1 }}>
             {bld51Format === 'compact' ? (
               <Text style={{ color: cyan, fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
-                {`[0x51, 0xF0, 0x${(parseInt(bld51Mode)||1).toString(16).padStart(2,'0').toUpperCase()}, 0x${(Math.max(1,Math.min(31,parseInt(bld51Speed)||16))).toString(16).padStart(2,'0').toUpperCase()},`}
+                {`[0x51, 0xF0, 0x${(parseInt(bld51Mode)||1).toString(16).padStart(2,'0').toUpperCase()}, 0x${(Math.max(1,Math.min(100,parseInt(bld51Speed)||50))).toString(16).padStart(2,'0').toUpperCase()},`}
                 {`\n R1=${bld51Color1.r} G1=${bld51Color1.g} B1=${bld51Color1.b},`}
                 {`\n R2=${bld51Color2.r} G2=${bld51Color2.g} B2=${bld51Color2.b},`}
                 {`\n 0x0F, CS]  ← 12 bytes`}
               </Text>
             ) : (
               <Text style={{ color: '#FF9500', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
-                {`[0x51, 0xF0, 0x${(parseInt(bld51Mode)||1).toString(16).padStart(2,'0').toUpperCase()}, 0x${(Math.max(1,Math.min(31,parseInt(bld51Speed)||16))).toString(16).padStart(2,'0').toUpperCase()},`}
+                {`[0x51, 0xF0, 0x${(parseInt(bld51Mode)||1).toString(16).padStart(2,'0').toUpperCase()}, 0x${(Math.max(1,Math.min(100,parseInt(bld51Speed)||50))).toString(16).padStart(2,'0').toUpperCase()},`}
                 {`\n R1=${bld51Color1.r} G1=${bld51Color1.g} B1=${bld51Color1.b},`}
                 {`\n R2=${bld51Color2.r} G2=${bld51Color2.g} B2=${bld51Color2.b},`}
                 {`\n flags=0x${bld51Dir === 1 ? '80' : '00'} (${bld51Dir === 1 ? 'FWD+SEG' : 'REV'})]`}
@@ -215,7 +215,7 @@ export function DiagnosticLabBuilderTab({
               style={[S.txBtn, { flex: 1, backgroundColor: '#00E676', borderColor: '#00E676' }]}
               onPress={() => {
                 const mode = Math.max(1, Math.min(44, parseInt(bld51Mode) || 1));
-                const speed = Math.max(1, Math.min(31, parseInt(bld51Speed) || 16));
+                const speed = Math.max(1, Math.min(100, parseInt(bld51Speed) || 50));
                 transmit(
                   ZenggeProtocol.setCustomModeCompact([{ mode, speed, color1: bld51Color1, color2: bld51Color2 }]),
                   `0x51 compact mode=${mode} spd=${speed}`,
@@ -229,7 +229,7 @@ export function DiagnosticLabBuilderTab({
               style={[S.txBtn, { flex: 1, backgroundColor: '#FF9500', borderColor: '#FF9500' }]}
               onPress={() => {
                 const mode = Math.max(1, Math.min(44, parseInt(bld51Mode) || 1));
-                const speed = Math.max(1, Math.min(31, parseInt(bld51Speed) || 16));
+                const speed = Math.max(1, Math.min(100, parseInt(bld51Speed) || 50));
                 const flags = bld51Dir === 1 ? 0x80 : 0x00;
                 // Extended payload is 323B — writeToDevice will auto-route to writeChunked
                 transmit(
