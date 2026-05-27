@@ -242,6 +242,38 @@ export function DiagnosticLabBuilderTab({
               <Text style={{ color: '#000', fontWeight: '900', fontSize: 11 }}>TX EXTENDED (323B)</Text>
             </TouchableOpacity>
           </View>
+
+          {/* ── MODE ID EXPLORER ─────────────────────────────────────────────────── */}
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, marginTop: Spacing.xl, fontWeight: '900' }}>MODE ID EXPLORER (1-44)</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.md }}>Tap to fast-fire the active configuration with a specific Mode ID using the selected packet format.</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: Spacing.xs, paddingBottom: Spacing.sm }}>
+            {Array.from({length: 44}, (_, i) => i + 1).map(id => (
+              <TouchableOpacity
+                key={id}
+                style={[S.chip, bld51Mode === String(id) && { backgroundColor: cyan + '22', borderColor: cyan }, { width: 44, height: 44, paddingHorizontal: 0, justifyContent: 'center' }]}
+                onPress={() => {
+                  setBld51Mode(String(id));
+                  const speed = Math.max(1, Math.min(100, parseInt(bld51Speed) || 50));
+                  if (bld51Format === 'compact') {
+                    transmit(
+                      ZenggeProtocol.setCustomModeCompact([{ mode: id, speed, color1: bld51Color1, color2: bld51Color2 }]),
+                      `0x51 compact mode=${id} spd=${speed}`,
+                      '0x51'
+                    );
+                  } else {
+                    const flags = bld51Dir === 1 ? 0x80 : 0x00;
+                    transmit(
+                      ZenggeProtocol.setCustomModeExtended([{ mode: id, speed, color1: bld51Color1, color2: bld51Color2, dir: flags }]),
+                      `0x51 extended mode=${id} spd=${speed} dir=0x${flags.toString(16).toUpperCase()}`,
+                      '0x51'
+                    );
+                  }
+                }}
+              >
+                <Text style={{ color: bld51Mode === String(id) ? cyan : txtMuted, fontWeight: '900', fontSize: 14, textAlign: 'center' }}>{id}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
       )}
 
