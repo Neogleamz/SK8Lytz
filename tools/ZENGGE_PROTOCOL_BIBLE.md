@@ -240,6 +240,45 @@ seqNum increments per save operation (0x04, 0x05, 0x06...)
 - **Max slots**: 32
 - **SK8Lytz relevance**: **CRITICAL** — `setCustomMode` (9B compact) works via our current wrapper. To use 10B slots correctly, the BLE chunked framing header must also be replicated.
 
+### 0x51 Custom Scene Pattern Index (Modes 1-44)
+Based on direct hardware observations:
+
+| Mode ID | Visual Effect | Color Input Used |
+|:---:|---|:---:|
+| **1** | Large FG chunk scrolling back to front (~50% width) | FG only (BG is hardcoded White) |
+| **2** | Scrolling chunk (FG tips, BG center) over Black background | FG + BG |
+| **3** | Single FG dot scrolling over solid BG | FG + BG |
+| **4** | Alternating Bounce Fill (FG fills Fwd, BG fills Rev) | FG + BG |
+| **5** | Single FG dot bouncing back and forth over solid BG | FG + BG |
+| **6** | Marching Ants (Alternating FG/BG pixels flowing forward) | FG + BG |
+| **7** | Breathing (Fade In/Out) | FG only |
+| **8** | 3-Color RGB Breathing Cycle | Hardcoded (Ignores FG/BG) |
+| **9** | Full Rainbow Breathing | Hardcoded |
+| **10** | 3-Color RGB Strobe (Jump) | Hardcoded |
+| **11** | 7-Color Breathing Cycle | Hardcoded |
+| **12** | 7-Color Crossfade (Fade directly between colors) | Hardcoded |
+| **13** | 7-Color Hard Jump | Hardcoded |
+| **14** | Irregular Flashing Strobe (Jumps between colors) | FG + BG |
+| **15** | 3-Color RGB Strobe | Hardcoded |
+| **16** | 7-Color Strobe | Hardcoded |
+| **17** | Comet / Meteor (Scrolling FG stripe with fading tail over solid BG) | FG + BG |
+| **18** | Identical to 17 (Comet / Meteor) | FG + BG |
+| **19** | Identical to 3 (Single Pixel Chase) but faster | FG + BG |
+| **20** | Static Partial Rainbow Gradient (Blue ends, rainbow center) | Hardcoded |
+| **21** | 7-Color Multi-Comet Flow (Train of 8px fading chunks flowing forward) | Hardcoded |
+| **22** | 7-Color Sweep / Wipe (Sequential fills from back to front) | Hardcoded |
+| **23** | Identical to 22 (7-Color Sweep / Wipe) | Hardcoded |
+| **24** | 7-Color Stacker / Building Blocks (Dots build up from back to front) | Hardcoded |
+| **25** | Alternating Fading Chunks (FG chunk then BG chunk flowing forward) | FG + BG |
+| **26** | 7-Color Center-In Fill (Fills from edges to center, collapses, changes color) | Hardcoded |
+| **27** | 7-Color Large Multi-Comet Flow (Train of large ~30% fading chunks flowing forward) | Hardcoded |
+| **28** | Flowing Fire Effect (White -> Yellow -> Orange -> Red gradient flow) | Hardcoded |
+| **29** | 7-Color Large Block Flow (50% block of color flows from back to front) | Hardcoded |
+| **30** | 7-Color Alternating Center Fill (Fills Center-Out, then fills Edges-In) | Hardcoded |
+| **31** | Custom Marquee Chunk ([FG, BG, Black, BG, FG] scrolling forward over BG) | FG + BG |
+| **32** | Glitch / Twitch Marquee (Alternates small ants and chunky twitches) | FG + BG |
+| **33** | 7-Color Dot Stream over custom BG (Dots separated by BG spaces) | BG only (Ignores FG) |
+
 ---
 
 ### 0x53 — Live Pixel Streaming (real-time bitmap row send)

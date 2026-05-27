@@ -1,6 +1,6 @@
 import type { RGB, PatternId, PatternOptions } from './PatternEngine';
-import { generateArray, getPatternTransitionType } from './SpatialEngine';
-import { getSymphonyVisualizerFrame } from './SymphonyEngine';
+import { generateArray, getPatternTransitionType, getHardwarePixelArray } from './SpatialEngine';
+
 
 export function rotateArray(arr: RGB[], animTick: number, direction: 0 | 1): RGB[] {
   if (arr.length === 0) return arr;
@@ -36,23 +36,19 @@ export function getVisualizerFrame(
   // since ProductVisualizer's 'isMirrored' will automatically handle the physical geometry mapping.
   const visualizerOptions = { ...options, segments: 1 };
 
-  // ── NATIVE 0x51 TEST PATTERN INTERCEPTION ──
-  if (patternId >= 201 && patternId <= 244) {
-    let modeId = patternId - 200;
-    return getSymphonyVisualizerFrame(modeId, fg, bg, n, animTick);
+  // ── Native 0x41 Settled Mode Effects ──
+  // These are handled dynamically by generateArray at `animTick`.
+  // No array rotation is needed, the math generators build the exact frame.
+  if (patternId >= 1 && patternId <= 33) {
+    return generateArray(patternId, fg, bg, n, animTick, direction, visualizerOptions);
   }
 
-  // Check if hardware natively handles the animation via 0x02 Running
+  // ── 0x59 Fallbacks (e.g. Street Modes 101-105) ──
   const transitionType = getPatternTransitionType(patternId);
-  const isContinuousScroll = transitionType === 0x02 && patternId < 100;
+  const isContinuousScroll = transitionType === 0x02;
 
   // Spatial effects (Continuous scroll) need a static `tick` to build a seamless snapshot.
-  // We use `seedTick` to ensure the initial frame is visually rich (not all-black).
-  // Temporal effects (Breathe, Flash, Strobe) need dynamic `animTick` to interpolate phase.
-  const ZERO_TICK_IDS = new Set([26, 28, 31, 46, 54]); // Strobe/Jump
-  const QUARTER_TICK_IDS = new Set([24, 30, 36, 40]); // Breathe (sin wave peak at PI/2)
-  const seedTick = ZERO_TICK_IDS.has(patternId) ? 0.0 : (QUARTER_TICK_IDS.has(patternId) ? 0.25 : 0.33);
-  const passTick = isContinuousScroll ? seedTick : animTick;
+  const passTick = isContinuousScroll ? 0.33 : animTick;
 
   const generated = generateArray(patternId, fg, bg, n, passTick, direction, visualizerOptions);
 
@@ -67,3 +63,5 @@ export function getVisualizerFrame(
  * Get the hardware pixel array for a pattern.
  * Used by applyFixedPattern() to build the 0x59 payload.
  */
+
+export { getHardwarePixelArray };

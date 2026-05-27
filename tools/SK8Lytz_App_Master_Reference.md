@@ -651,7 +651,7 @@ _Sends up to 32 animation steps. Hardware loops through active steps autonomousl
 | `0x3A` | `STEP_JUMP` | Hard cut between FG and BG colors |
 | `0x3B` | `STEP_GRADUAL` | Smooth cross-fade between FG and BG |
 | `0x3C` | `STEP_STROBE` | Rapid flash between FG and BG |
-| `0x01`–`0x21` | Custom Effects 1–33 | Hardware `SymphonyEffect` IDs (advanced per-pixel effects) |
+| `0x01`–`0x2C` | Custom Effects 1–44 | Hardware `SymphonyEffect` IDs. Full mapping documented in `ZENGGE_PROTOCOL_BIBLE.md` |
 
 - **Speed:** Full 1–100 range valid (unlike `0x59` which is capped at 31).
 - **Max slots:** 32 active steps.

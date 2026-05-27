@@ -837,11 +837,6 @@ export function buildStreetMode(patternId: PatternId, fg: RGB, bg: RGB, n: numbe
   }
 
   // Palindrome bypass logic: If segments > 1 (e.g. HALOZ ring), we build the full physical array
-  // by appending the reversed left side. If segments === 1 (e.g. SOULZ Y-split), we just return rightSide.
-  if (segments === 1) {
-    return rightSide;
-  }
-
   const leftSide = [...rightSide].reverse();
   const fullPayload: RGB[] = [];
   for (let i = 0; i < segments; i++) {
@@ -853,72 +848,91 @@ export function buildStreetMode(patternId: PatternId, fg: RGB, bg: RGB, n: numbe
 
 
 export function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number, tick: number = 0, direction: 0 | 1 = 1, options?: PatternOptions): RGB[] {
-  const arr: RGB[] = Array(n).fill(bg);
+  const black: RGB = { r: 0, g: 0, b: 0 };
 
   switch (patternId) {
-    // ── GROUP 9: NATIVE TEMPORAL ──
-    case 70: return buildNativeBreathe(fg, bg, n, tick);
-    case 71: return buildNativeSweep(fg, bg, n, tick, direction);
-    case 72: return buildNativeCenterOut(fg, bg, n, tick);
-
-    // ── GROUP 1: SOLID & STATIC ──
-    case 1: return buildSolid(fg, n);
-    case 2: return buildSplitColors(fg, bg, n);
-    case 3: return buildTrisection(fg, bg, n);
-    case 4: return buildQuartered(fg, bg, n);
-    case 5: return buildCenterAccent(fg, bg, n);
-
-    // ── GROUP 2: CHASES & METEORS ──
-    case 6: return buildSingleDotChase(fg, bg, n, tick, direction);
-    case 7: return buildTwinDotChase(fg, bg, n, tick, direction);
-    case 8: return buildCometChase(fg, bg, n, tick, direction);
-    case 9: return buildMeteorShower(fg, bg, n, tick, direction);
-
-    // ── GROUP 3: MARQUEES & BANDS ──
-    case 10: return buildMicroAnts(fg, bg, n, tick, direction);
-    case 11: return buildTheaterChase(fg, bg, n, tick, direction);
-    case 12: return buildDashedMarquee(fg, bg, n, tick, direction);
-    case 13: return buildBoldStripes(fg, bg, n, tick, direction);     // ID 13 = BoldStripes (BarberPole was removed)
-
-    // ── GROUP 4: MATH WAVES ──
-    case 14: return buildSinePulseWave(fg, bg, n, tick, direction);   // was 15
-    case 15: return buildWavePinch(fg, bg, n, tick, direction);                  // was 16
-    case 16: return buildBreathingWave(fg, bg, n, tick, direction);   // was 17
-
-    // ── GROUP 5a: TEMPORAL FULL-STRIP (0x51) ──
-    case 17: return buildSmoothBreath(fg, n, tick);                   // was 20
-
-    // ── GROUP 5b: WIPE / FILL ──
-    case 18: return buildWipeFill(fg, bg, n, tick, direction);        // was 23
-
-    // ── GROUP 6: GENERATIVE RAINBOWS ──
-    case 19: return buildTrueRainbowFlow(n, tick, direction);         // was 25
-    case 20: return buildRainbowMarquee(n, tick, direction);          // was 26
-    case 21: return buildRainbowComet(n, tick, direction);            // was 27
-    case 22: return buildCyberpunkShift(fg, bg, n, tick, direction);  // was 28
-
-    // ── GROUP 7: ge.* PHASE 1A REVERSALS ──
-    case 23: return buildColorFlow(n, tick, direction);               // ge.ColorFlowEffect — was 29
-    case 24: return buildColorBreathing(fg, n, tick);                 // ge.BreathEffect    — was 30
-    case 25: return buildRunningWater(fg, bg, n, tick, direction);    // ge.RunningWaterEffect — was 32
-    case 26: return buildStrobe(fg, n, tick);                         // ge.StrobeEffect    — was 33
-    case 27: return buildOceanWave(fg, bg, n, tick, direction);       // ge.OceanWaveEffect — was 36
-    case 28: return buildLightning(fg, n, tick);                      // ge.LightningEffect — was 37
-    case 29: return buildSnowfall(fg, bg, n, tick, direction);                   // ge.SnowfallEffect  — was 38
-    case 30: return buildHeartbeat(fg, n, tick);                      // ge.HeartbeatEffect — was 40
-    case 31: return buildMeteor(fg, bg, n, tick, direction);          // ge.MeteorEffect    — was 41
-    case 32: return buildAurora(n, tick, direction);                  // ge.AuroraEffect    — was 42
-    case 33: return buildLava(fg, bg, n, tick, direction);                       // ge.LavaEffect      — was 43
-    case 34: return buildPlasma(fg, bg, n, tick, direction);          // ge.PlasmaEffect    — was 44
-    case 35: return buildStarCluster(fg, bg, n, tick, direction);               // ge.StarClusterEffect — was 45
-    case 36: return buildRainbowBreathing(n, tick);                   // was 47
-    case 37: return buildCrystalShimmer(n, tick, direction);                    // was 50
-    case 38: return buildGradientChase(fg, bg, n, tick, direction);   // was 51
-    case 39: return buildFireFlame(fg, bg, n, tick, direction);                  // was 53
-    case 40: return buildNeonPulse(fg, bg, n, tick);                  // was 55
-    case 41: return buildRainbowChaser(n, tick, direction);           // was 56
-    case 42: return buildMatrixRain(fg, bg, n, tick, direction);      // was 57
-    case 43: return buildStarlight(fg, bg, n, tick, direction);                  // was 60
+    // ── 0x41 PRO EFFECTS NATIVE PARITY (Modes 1-33) ──
+    case 1: return buildLargeChunkScroll(fg, { r: 255, g: 255, b: 255 }, n, tick, direction);
+    case 2: return buildGradientChunk(fg, bg, n, tick, direction);
+    case 3: return buildSingleDotChase(fg, bg, n, tick, direction);
+    case 4: return buildPingPongFill(fg, bg, n, tick); // no direction
+    case 5: return buildPingPongMarquee(fg, bg, n, tick); // no direction
+    case 6: return buildMicroAnts(fg, bg, n, tick, direction);
+    case 7: return buildNativeBreathe(fg, black, n, tick); // no direction
+    case 8: {
+      const frame = buildRainbowBreathing(n, tick);
+      return frame.map(p => {
+        const maxC = Math.max(p.r, p.g, p.b);
+        return {
+          r: p.r === maxC ? p.r : 0,
+          g: p.g === maxC && p.r !== maxC ? p.g : 0,
+          b: p.b === maxC && p.r !== maxC && p.g !== maxC ? p.b : 0
+        };
+      });
+    }
+    case 9: return buildRainbowBreathing(n, tick);
+    case 10: {
+      const phase = (tick * 3) % 3;
+      const c = phase < 1 ? {r: 255, g: 0, b: 0} : phase < 2 ? {r: 0, g: 255, b: 0} : {r: 0, g: 0, b: 255};
+      return Array(n).fill(c);
+    }
+    case 11: return buildRainbowBreathing(n, tick);
+    case 12: {
+      const hue = tick % 1.0;
+      return Array(n).fill(hsvToRgb(hue, 1.0, 1.0));
+    }
+    case 13: {
+      const hue = Math.floor(tick * 7) / 7;
+      return Array(n).fill(hsvToRgb(hue, 1.0, 1.0));
+    }
+    case 14: return buildRandomStrobe(fg, bg, n, tick);
+    case 15: {
+      const phase = (tick * 3) % 3;
+      const c = phase < 1 ? {r: 255, g: 0, b: 0} : phase < 2 ? {r: 0, g: 255, b: 0} : {r: 0, g: 0, b: 255};
+      return buildStrobe(c, n, tick);
+    }
+    case 16: {
+      const hue = Math.floor(tick * 7) / 7;
+      return buildStrobe(hsvToRgb(hue, 1.0, 1.0), n, tick);
+    }
+    case 17:
+    case 18: return buildCometChase(fg, bg, n, tick, direction);
+    case 19: return buildSingleDotChase(fg, bg, n, (tick * 2) % 1, direction);
+    case 20: return buildStaticPartialRainbow(n);
+    case 21: return buildRainbowComet(n, tick, direction);
+    case 22:
+    case 23: {
+      const fillCount = Math.floor(tick * n);
+      return Array.from({ length: n }, (_, i) => {
+        if (direction === 1 ? i < fillCount : i >= n - fillCount) return hsvToRgb((i / n) % 1.0, 1.0, 1.0);
+        return black;
+      });
+    }
+    case 24: return buildTetrisStacker(n, tick); // natively handles direction? Math relies on standard offset.
+    case 25: return buildAlternatingComet(fg, bg, n, tick, direction);
+    case 26: {
+      const hue = tick % 1.0;
+      return buildWipeCenterOut(hsvToRgb(hue, 1.0, 1.0), black, n, tick);
+    }
+    case 27: return buildRainbowComet(n, tick, direction); // Large rainbow comet
+    case 28: return buildFireFlame({r: 255, g: 100, b: 0}, black, n, tick, direction);
+    case 29: {
+      const CHUNK = Math.floor(n * 0.5);
+      const head = Math.floor(tick * n);
+      return Array.from({ length: n }, (_, i) => {
+        const offsetI = direction === 1 ? i : n - 1 - i;
+        const dist = (offsetI - head + n) % n;
+        if (dist < CHUNK) return hsvToRgb((offsetI / n + tick) % 1.0, 1.0, 1.0);
+        return black;
+      });
+    }
+    case 30: return buildPingPongCenterFill(n, tick);
+    case 31: return buildCustomArrayScroll(fg, bg, n, tick, direction);
+    case 32: return buildGlitchMarquee(fg, bg, n, tick, direction);
+    case 33: {
+      const frame = buildRainbowMarquee(n, tick, direction);
+      return frame.map(p => (p.r === 0 && p.g === 0 && p.b === 0) ? bg : p);
+    }
 
     // ── GROUP 8: STREET MODES ──
     case 101:
@@ -1031,3 +1045,96 @@ export function getPatternTransitionType(patternId: PatternId): number {
  *                            spatial footer so the controller maps pixels to the full strip.
  *                            Defaults to numLEDs if not provided (backwards-compatible).
  */
+
+// ─── NEW 0x41 NATIVE EFFECT GENERATORS (Visualizer Math Parity) ─────────────────
+
+export function buildLargeChunkScroll(fg: RGB, bg: RGB, n: number, tick: number, direction: 0 | 1): RGB[] {
+  const CHUNK = Math.max(1, Math.floor(n / 3)); 
+  const offset = Math.floor(tick * n);
+  return Array.from({ length: n }, (_, i) => {
+    const pos = direction === 1 ? (i + offset) % n : (i - offset + n) % n;
+    return (pos % (CHUNK * 2) < CHUNK) ? fg : bg;
+  });
+}
+
+export function buildGradientChunk(fg: RGB, bg: RGB, n: number, tick: number, direction: 0 | 1): RGB[] {
+  const offset = tick * Math.PI * 2;
+  return Array.from({ length: n }, (_, i) => {
+    const pos = direction === 1 ? i : n - 1 - i;
+    const ratio = (Math.sin((pos / n) * Math.PI * 4 + offset) + 1) / 2;
+    return blendRGB(bg, fg, ratio);
+  });
+}
+
+export function buildPingPongFill(fg: RGB, bg: RGB, n: number, tick: number): RGB[] {
+  const fillLevel = tick < 0.5 ? tick * 2 : (1 - tick) * 2;
+  const cutoff = Math.floor(fillLevel * n);
+  return Array.from({ length: n }, (_, i) => (i < cutoff ? fg : bg));
+}
+
+export function buildPingPongMarquee(fg: RGB, bg: RGB, n: number, tick: number): RGB[] {
+  const SIZE = Math.max(1, Math.floor(n / 6));
+  const maxPos = n - SIZE;
+  const pos = tick < 0.5 ? (tick * 2) * maxPos : ((1 - tick) * 2) * maxPos;
+  const start = Math.floor(pos);
+  return Array.from({ length: n }, (_, i) => (i >= start && i < start + SIZE ? fg : bg));
+}
+
+export function buildRandomStrobe(fg: RGB, bg: RGB, n: number, tick: number): RGB[] {
+  const phase = Math.floor(tick * 20);
+  return Array.from({ length: n }, (_, i) => {
+    const pseudo = (Math.sin(phase * i * 12.9898) * 43758.5453) % 1;
+    return pseudo > 0.5 ? fg : bg;
+  });
+}
+
+export function buildStaticPartialRainbow(n: number): RGB[] {
+  return Array.from({ length: n }, (_, i) => hsvToRgb((i / n), 1.0, 1.0));
+}
+
+export function buildTetrisStacker(n: number, tick: number): RGB[] {
+  const dropPos = Math.floor(tick * n);
+  const hue = tick % 1.0;
+  return Array.from({ length: n }, (_, i) => {
+    if (i === dropPos) return hsvToRgb(hue, 1.0, 1.0);
+    if (i > n * 0.8) return hsvToRgb((i / n) % 1.0, 1.0, 0.5);
+    return { r: 0, g: 0, b: 0 };
+  });
+}
+
+export function buildAlternatingComet(fg: RGB, bg: RGB, n: number, tick: number, direction: 0 | 1): RGB[] {
+  const headColor = (tick * 10) % 2 < 1 ? fg : { r: 255, g: 255, b: 255 };
+  return buildCometChase(headColor, bg, n, tick, direction);
+}
+
+export function buildPingPongCenterFill(n: number, tick: number): RGB[] {
+  const fg = { r: 255, g: 255, b: 255 };
+  const bg = { r: 0, g: 0, b: 0 };
+  const fillLevel = tick < 0.5 ? tick * 2 : (1 - tick) * 2;
+  const cutoff = Math.floor(fillLevel * (n / 2));
+  return Array.from({ length: n }, (_, i) => {
+    const distFromEdge = Math.min(i, n - 1 - i);
+    return distFromEdge < cutoff ? fg : bg;
+  });
+}
+
+export function buildCustomArrayScroll(fg: RGB, bg: RGB, n: number, tick: number, direction: 0 | 1): RGB[] {
+  const offset = Math.floor(tick * n);
+  return Array.from({ length: n }, (_, i) => {
+    const pos = direction === 1 ? (i + offset) % n : (i - offset + n) % n;
+    if (pos % 5 === 0) return fg;
+    if (pos % 5 === 2) return bg;
+    return { r: 0, g: 0, b: 0 };
+  });
+}
+
+export function buildGlitchMarquee(fg: RGB, bg: RGB, n: number, tick: number, direction: 0 | 1): RGB[] {
+  const phase = Math.floor(tick * 30);
+  const offset = Math.floor(tick * n);
+  return Array.from({ length: n }, (_, i) => {
+    const pos = direction === 1 ? (i + offset) % n : (i - offset + n) % n;
+    const isGlitch = (Math.sin(phase * i) * 43758.5453) % 1 > 0.85;
+    if (isGlitch) return { r: 255, g: 255, b: 255 };
+    return (pos % 4 < 2) ? fg : bg;
+  });
+}

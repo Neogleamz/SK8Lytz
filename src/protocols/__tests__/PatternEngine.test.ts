@@ -5,7 +5,7 @@ describe('PatternEngine', () => {
     const fg = { r: 255, g: 0, b: 0 };
     const bg = { r: 0, g: 255, b: 0 };
 
-    it('should generate a valid payload for a SOLID pattern (ID: 1)', () => {
+    it('should generate a valid 0x41 payload for a NATIVE pattern (ID: 1)', () => {
       const payload = buildPatternPayload(1, fg, bg, 30, 50);
       
       expect(payload).toBeDefined();
@@ -13,24 +13,24 @@ describe('PatternEngine', () => {
       
       expect(payload.length).toBeGreaterThan(0);
       
-      // Should be wrapped correctly (starts with 0x00 and 0x80 envelope or 0x59 raw depending on if it's chunked)
-      // Since it's a SOLID color, it proxies to setMultiColor which wraps it
+      // Since it's a Settled Mode 0x41, it proxies to setSettledMode which wraps it
       expect(payload[0]).toBe(0x00);
       
-      // 0x59 inside the wrapper
-      expect(payload[8]).toBe(0x59);
+      // 0x41 is the 9th byte inside the BLE wrapper envelope (index 8)
+      expect(payload[8]).toBe(0x41);
     });
 
-    it('should generate a valid payload for a TEST pattern (ID: 201)', () => {
-      // Test pattern goes to setCustomModeExtended (0x51 interception)
-      const payload = buildPatternPayload(201, fg, bg, 30, 50);
+    it('should generate a valid 0x59 payload for a STREET pattern (ID: 101)', () => {
+      // Test pattern goes to buildMultiColorPayload (0x59 interception)
+      const payload = buildPatternPayload(101, fg, bg, 30, 50);
       
       expect(payload).toBeDefined();
       if (!payload) return;
       
-      // 323 byte array
-      expect(payload.length).toBe(323);
-      expect(payload[0]).toBe(0x51);
+      expect(payload.length).toBeGreaterThan(0);
+      
+      // 0x59 is the 9th byte inside the BLE wrapper envelope (index 8)
+      expect(payload[8]).toBe(0x59);
     });
   });
 });

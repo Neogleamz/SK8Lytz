@@ -699,6 +699,8 @@ export class ZenggeProtocol {
     return this.wrapCommand(payload);
   }
 
+
+
   /**
    * Old fixed 32-step custom mode packet logic removed. 
    * Now proxies directly to setCustomModeCompact to ensure safe MTU size.
