@@ -129,6 +129,7 @@ const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segme
 export type { IDeviceState, IFavoriteState, IQuickPreset } from '../types/dashboard.types';
 
 interface Sk8lytzControllerProps {
+  isOfflineMode?: boolean;
   hwSettings?: any;
   lockedProduct?: ProductType;
   isPaired?: boolean;
@@ -176,7 +177,7 @@ export type DockedControllerHandle = {
 // MarqueeText moved to standalone component MarqueeText.tsx
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
-  function DockedController({ hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onPowerToggle, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {}, gpsSpeed = 0, peakGForce = 1.0, sessionDistanceMiles = 0, sessionDurationSec = 0 }: Sk8lytzControllerProps, ref) {
+  function DockedController({ isOfflineMode = false, hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onPowerToggle, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {}, gpsSpeed = 0, peakGForce = 1.0, sessionDistanceMiles = 0, sessionDurationSec = 0 }: Sk8lytzControllerProps, ref) {
     const { Colors, isDark } = useTheme();
     const { height: windowHeight } = useWindowDimensions();
     const isShort = windowHeight < 720;
@@ -1177,6 +1178,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
         {/* Quick Preset / Cloud Save Modal */}
         <QuickPresetModal
+          isOfflineMode={isOfflineMode}
           visible={promptState === 'NAMING_PRESET'}
           promptName={promptName}
           setPromptName={setPromptName}
@@ -1196,6 +1198,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
         {/* Community Modal */}
         <CommunityModal
+          isOfflineMode={isOfflineMode}
           isVisible={isCommunityModalVisible}
           onClose={() => setIsCommunityModalVisible(false)}
           onApplyScene={applyCloudScene}

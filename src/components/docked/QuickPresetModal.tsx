@@ -26,6 +26,7 @@ export interface QuickPreset {
 }
 
 interface QuickPresetModalProps {
+  isOfflineMode?: boolean;
   visible: boolean;
   promptName: string;
   setPromptName: (n: string) => void;
@@ -46,6 +47,7 @@ interface QuickPresetModalProps {
 }
 
 const QuickPresetModal = React.memo(function QuickPresetModal({
+  isOfflineMode = false,
   visible,
   promptName,
   setPromptName,
@@ -142,8 +144,8 @@ const QuickPresetModal = React.memo(function QuickPresetModal({
             autoFocus
           />
 
-          {/* Cloud visibility toggle — only shown when creating */}
-          {quickPromptTargetIndex === -1 && (
+          {/* Cloud visibility toggle — only shown when creating AND not offline */}
+          {quickPromptTargetIndex === -1 && !isOfflineMode && (
             <TouchableOpacity
               onPress={() => setCloudPublicToggle(p => !p)}
               style={[
@@ -183,20 +185,22 @@ const QuickPresetModal = React.memo(function QuickPresetModal({
               </TouchableOpacity>
             )}
 
-            {/* Cloud Publish */}
-            <TouchableOpacity
-              style={styles.btnPublish}
-              disabled={isPublishingCloud}
-              onPress={handlePublish}
-            >
-              <Text style={styles.btnTextBlack}>
-                {isPublishingCloud
-                  ? 'Saving...'
-                  : cloudPublicToggle
-                  ? '🌍 Publish'
-                  : '🔒 Save Private'}
-              </Text>
-            </TouchableOpacity>
+            {/* Cloud Publish - gated if offline */}
+            {!isOfflineMode && (
+              <TouchableOpacity
+                style={styles.btnPublish}
+                disabled={isPublishingCloud}
+                onPress={handlePublish}
+              >
+                <Text style={styles.btnTextBlack}>
+                  {isPublishingCloud
+                    ? 'Saving...'
+                    : cloudPublicToggle
+                    ? '🌍 Publish'
+                    : '🔒 Save Private'}
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {/* Local Save */}
             <TouchableOpacity style={[styles.btnSave, { backgroundColor: Colors.primary }]} onPress={handleSave}>

@@ -16,6 +16,7 @@ import { ICloudScene, ScenesService } from '../services/ScenesService';
 import { Layout, Spacing, Typography } from '../theme/theme';
 
 interface Props {
+  isOfflineMode?: boolean;
   isVisible: boolean;
   onClose: () => void;
   onApplyScene: (payload: any) => void;
@@ -70,21 +71,29 @@ function LedStripPreview({ colors, mode }: { colors: string[], mode: string }) {
 }
 
 // --- Main Component ---
-export default function CommunityModal({ isVisible, onClose, onApplyScene }: Props) {
+export default function CommunityModal({ isOfflineMode = false, isVisible, onClose, onApplyScene }: Props) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
 
-  const [activeTab, setActiveTab] = useState<'COMMUNITY' | 'PERSONAL'>('COMMUNITY');
+  const [activeTab, setActiveTab] = useState<'COMMUNITY' | 'PERSONAL'>(isOfflineMode ? 'PERSONAL' : 'COMMUNITY');
   const [scenes, setScenes] = useState<ICloudScene[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isVisible) fetchScenes();
-  }, [isVisible, activeTab]);
+    if (isVisible) {
+      if (isOfflineMode && activeTab === 'COMMUNITY') setActiveTab('PERSONAL');
+      fetchScenes();
+    }
+  }, [isVisible, activeTab, isOfflineMode]);
 
   const fetchScenes = async () => {
     setLoading(true);
+    if (activeTab === 'COMMUNITY' && isOfflineMode) {
+      setScenes([]);
+      setLoading(false);
+      return;
+    }
     const data = activeTab === 'COMMUNITY'
       ? await ScenesService.getPublicScenes()
       : await ScenesService.getMyScenes();
@@ -215,7 +224,9 @@ export default function CommunityModal({ isVisible, onClose, onApplyScene }: Pro
 
         {/* Tabs */}
         <View style={styles.tabsContainer}>
-          {(['COMMUNITY', 'PERSONAL'] as const).map(tab => (
+          {(['COMMUNITY', 'PERSONAL'] as const)
+            .filter(tab => !(isOfflineMode && tab === 'COMMUNITY'))
+            .map(tab => (
             <TouchableOpacity
               key={tab}
               style={[styles.tab, activeTab === tab && styles.activeTab]}

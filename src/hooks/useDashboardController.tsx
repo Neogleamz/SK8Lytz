@@ -10,6 +10,7 @@ import { useDashboardDeviceConfig } from './useDashboardDeviceConfig';
 import type { DisplayDevice, IDeviceState, GroupPatternSnapshot, BleConnectionState } from '../types/dashboard.types';
 
 export interface UseDashboardControllerProps {
+  isOfflineMode: boolean;
   isActuallyConnected: boolean;
   isTestModeActive: boolean;
   crewSession: any;
@@ -49,6 +50,7 @@ export interface UseDashboardControllerProps {
 }
 
 export function useDashboardController({
+  isOfflineMode,
   isActuallyConnected,
   isTestModeActive,
   crewSession,
@@ -164,6 +166,7 @@ export function useDashboardController({
       <Animated.View {...edgePanResponder.panHandlers} style={{ flex: 1, backgroundColor: 'transparent' }}>
           <BLEErrorBoundary componentName="DockedController">
           <DockedController
+            isOfflineMode={isOfflineMode}
             ref={dockedControllerRef}
             hwSettings={activeHwSettings}
             lockedProduct={

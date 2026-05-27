@@ -758,6 +758,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     openSettings,
     saveSettings
   } = useDashboardController({
+    isOfflineMode,
     isActuallyConnected,
     isTestModeActive,
     crewSession,
