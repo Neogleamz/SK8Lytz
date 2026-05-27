@@ -245,6 +245,14 @@ export function useBLESweeper({
       }
 
       // ── HAL: Resolve adapter from service UUIDs & Caching ─────────────────
+      // CRITICAL INVARIANT: discoverAllServicesAndCharacteristics MUST always run
+      // on every new GATT session, even on cache hits. The native BLE stack uses
+      // it to populate internal characteristic handle maps. Skipping it leaves
+      // the maps empty → all writeCharacteristic/monitorCharacteristic calls
+      // silently fail. This bug was fixed in handshakeDevice, pingDevice, and
+      // initiateRecovery — this was the LAST unfixed copy.
+      await conn.discoverAllServicesAndCharacteristics();
+
       let interrogatorAdapter: IControllerProtocol | null = null;
 
       const cachedGatt = await BleCharacteristicCache.get(mac);
@@ -253,7 +261,6 @@ export function useBLESweeper({
       }
 
       if (!interrogatorAdapter) {
-        await conn.discoverAllServicesAndCharacteristics();
         try {
           const svcs = await conn.services();
           const svcUUIDs = svcs.map((s: any) => s.uuid as string);
