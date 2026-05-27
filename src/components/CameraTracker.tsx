@@ -1,22 +1,24 @@
-/**
- * CameraTracker.android.tsx — Android-Specific Color Sampler
- */
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { Camera, type CameraRef, useCameraDevice, useCameraPermission } from 'react-native-vision-camera';
+import { Camera, useCameraDevice, useCameraPermission, useFrameOutput, Frame } from 'react-native-vision-camera';
+import { runOnJS } from 'react-native-worklets';
+import { useResizePlugin } from 'vision-camera-resize-plugin';
 import { requestPermission } from '../services/PermissionService';
 import { Colors, Spacing } from '../theme/theme';
+import { extractKMeansPalette, RGB } from '../utils/kMeansPalette';
 
-interface CameraTrackerProps {
+export interface CameraTrackerProps {
   onColorDetected: (hex: string) => void;
+  onVibePaletteDetected?: (colors: RGB[]) => void;
+  subMode: 'SNIPER' | 'VIBE';
   isActive: boolean;
 }
 
 // ---------------------------------------------------------------------------
 // Extract vivid hue hex from raw RGB byte values (0–255)
 // ---------------------------------------------------------------------------
-function rgbToVividHex(r: number, g: number, b: number): string {
+export function rgbToVividHex(r: number, g: number, b: number): string {
   const rN = r / 255;
   const gN = g / 255;
   const bN = b / 255;
@@ -54,27 +56,33 @@ function rgbToVividHex(r: number, g: number, b: number): string {
   return ('#' + toHex(rV) + toHex(gV) + toHex(bV)).toUpperCase();
 }
 
-export default function CameraTracker({ onColorDetected, isActive }: CameraTrackerProps) {
+export default function CameraTracker({
+  onColorDetected,
+  onVibePaletteDetected,
+  subMode,
+  isActive,
+}: CameraTrackerProps) {
   const device = useCameraDevice('back');
   const { hasPermission, requestPermission: requestFromHook } = useCameraPermission();
   const [liveHex, setLiveHex] = useState<string>('#FFFFFF');
 
   const onColorDetectedRef = useRef(onColorDetected);
+  const onVibePaletteDetectedRef = useRef(onVibePaletteDetected);
+  const subModeRef = useRef(subMode);
+
   useEffect(() => {
     onColorDetectedRef.current = onColorDetected;
   }, [onColorDetected]);
 
-  const cameraRef = useRef<CameraRef>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isSamplingRef = useRef(false);
+  useEffect(() => {
+    onVibePaletteDetectedRef.current = onVibePaletteDetected;
+  }, [onVibePaletteDetected]);
 
-  const dispatchColor = useCallback((r: number, g: number, b: number) => {
-    if (isNaN(r) || isNaN(g) || isNaN(b)) return;
-    const hex = rgbToVividHex(r, g, b);
-    setLiveHex(hex);
-    onColorDetectedRef.current(hex);
-  }, []);
+  useEffect(() => {
+    subModeRef.current = subMode;
+  }, [subMode]);
 
+  // Synchronize camera permission state on AppState change
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') requestFromHook();
@@ -82,6 +90,7 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
     return () => sub.remove();
   }, [requestFromHook]);
 
+  // Automatically request camera permissions if not granted
   useEffect(() => {
     if (!hasPermission) {
       requestPermission('CAMERA').then((granted) => {
@@ -90,78 +99,87 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
     }
   }, [hasPermission, requestFromHook]);
 
-  const sampleColor = useCallback(async () => {
-    if (!cameraRef.current || isSamplingRef.current) return;
-    isSamplingRef.current = true;
+  // The JS dispatch functions that receive the worklet threads values
+  const dispatchSniperColor = useCallback((r: number, g: number, b: number) => {
+    if (isNaN(r) || isNaN(g) || isNaN(b)) return;
+    const hex = rgbToVividHex(r, g, b);
+    setLiveHex(hex);
+    onColorDetectedRef.current(hex);
+  }, []);
 
-    try {
-      const image = await cameraRef.current.takeSnapshot();
-
-      // CENTER-CROP LOGIC
-      const cropWidth = 32;
-      const cropHeight = 32;
-      const cropX = Math.max(0, Math.floor((image.width - cropWidth) / 2));
-      const cropY = Math.max(0, Math.floor((image.height - cropHeight) / 2));
-
-      // Crop the center then resize to 1x1 to average the reticle area
-      // Image.crop() API: (startX, startY, endX, endY) — NOT (x, y, width, height)
-      const cropped = image.crop(cropX, cropY, cropX + cropWidth, cropY + cropHeight);
-      const tiny = cropped.resize(1, 1);
-
-      const { buffer, pixelFormat } = tiny.toRawPixelData();
-      const bytes = new Uint8Array(buffer);
-
-      let r = 0, g = 0, b = 0;
-      switch (pixelFormat) {
-        case 'BGRA':
-        case 'BGR':
-        case 'BGRX':
-          b = bytes[0] ?? 0; g = bytes[1] ?? 0; r = bytes[2] ?? 0;
-          break;
-        case 'ABGR':
-          b = bytes[1] ?? 0; g = bytes[2] ?? 0; r = bytes[3] ?? 0;
-          break;
-        case 'RGBA':
-        case 'RGB':
-        case 'RGBX':
-          r = bytes[0] ?? 0; g = bytes[1] ?? 0; b = bytes[2] ?? 0;
-          break;
-        case 'ARGB':
-        case 'XRGB':
-          r = bytes[1] ?? 0; g = bytes[2] ?? 0; b = bytes[3] ?? 0;
-          break;
-        default:
-          b = bytes[0] ?? 0; g = bytes[1] ?? 0; r = bytes[2] ?? 0;
-      }
-
-      dispatchColor(r, g, b);
-    } catch (e) {
-      if (__DEV__) console.error('[CameraTracker] takeSnapshot failed:', e);
-    } finally {
-      isSamplingRef.current = false;
+  const dispatchVibePalette = useCallback((colors: RGB[]) => {
+    if (onVibePaletteDetectedRef.current) {
+      onVibePaletteDetectedRef.current(colors);
     }
-  }, [dispatchColor]);
+  }, []);
 
-  useEffect(() => {
-    if (isActive && hasPermission && device) {
-      const startTimer = setTimeout(() => {
-        intervalRef.current = setInterval(sampleColor, 600);
-      }, 900);
+  // Frame processor resize utility hook
+  const { resize } = useResizePlugin();
 
-      return () => {
-        clearTimeout(startTimer);
-        if (intervalRef.current) {
-          clearInterval(intervalRef.current);
-          intervalRef.current = null;
+  // Create worklet references to callbacks
+  // Use runOnJS from react-native-worklets
+  const runOnJSSniper = runOnJS(dispatchSniperColor);
+  const runOnJSVibe = runOnJS(dispatchVibePalette);
+
+  // Hard-throttled Frame Processor logic running at 5Hz (every 200ms)
+  const lastProcessedRef = useRef<number>(0);
+
+  const frameOutput = useFrameOutput({
+    pixelFormat: 'rgb',
+    onFrame: (frame: Frame) => {
+      'worklet';
+
+      try {
+        const now = performance.now();
+        // 200ms interval = 5Hz execution cap
+        if (now - lastProcessedRef.current < 200) {
+          return;
         }
-      };
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
+        lastProcessedRef.current = now;
+
+        // Resize frame to 50x50 pixels RGB Uint8Array (7,500 bytes) on GPU
+        const resized = resize(frame, {
+          scale: {
+            width: 50,
+            height: 50,
+          },
+          pixelFormat: 'rgb',
+          dataType: 'uint8',
+        });
+
+        if (!resized || resized.length < 7500) {
+          return;
+        }
+
+        const currentSubMode = subModeRef.current;
+
+        if (currentSubMode === 'SNIPER') {
+          // 1. SNIPER mode: sampling center pixel
+          const centerIdx = (25 * 50 + 25) * 3;
+          const r = resized[centerIdx];
+          const g = resized[centerIdx + 1];
+          const b = resized[centerIdx + 2];
+
+          runOnJSSniper(r, g, b);
+        } else {
+          // 2. VIBE mode: K-Means palette extraction (k=3)
+          const pixels: RGB[] = [];
+          for (let i = 0; i < 7500; i += 3) {
+            pixels.push({
+              r: resized[i],
+              g: resized[i + 1],
+              b: resized[i + 2],
+            });
+          }
+
+          const palette = extractKMeansPalette(pixels, 3, 5);
+          runOnJSVibe(palette);
+        }
+      } finally {
+        frame.dispose(); // CRITICAL: Dispose frame immediately to prevent camera pipeline stalls
       }
-    }
-  }, [isActive, hasPermission, device, sampleColor]);
+    },
+  });
 
   if (!hasPermission) {
     return (
@@ -193,18 +211,19 @@ export default function CameraTracker({ onColorDetected, isActive }: CameraTrack
   return (
     <View style={styles.container}>
       <Camera
-        ref={cameraRef}
         style={StyleSheet.absoluteFillObject}
         device={device}
         isActive={isActive && hasPermission}
-        implementationMode="compatible"
+        outputs={[frameOutput]}
       />
-      <View style={styles.reticleContainer} pointerEvents="none">
-        <View style={[styles.reticleRing, { borderColor: liveHex }]}>
-          <View style={styles.reticleCrosshairH} />
-          <View style={styles.reticleCrosshairV} />
+      {subMode === 'SNIPER' && (
+        <View style={styles.reticleContainer} pointerEvents="none">
+          <View style={[styles.reticleRing, { borderColor: liveHex }]}>
+            <View style={styles.reticleCrosshairH} />
+            <View style={styles.reticleCrosshairV} />
+          </View>
         </View>
-      </View>
+      )}
     </View>
   );
 }
@@ -251,6 +270,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 8,
   },
   reticleCrosshairH: {
     position: 'absolute',

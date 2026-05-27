@@ -33,6 +33,8 @@ import { useStreetMode } from '../hooks/useStreetMode';
 import { useDeviceStateLedger } from '../hooks/useDeviceStateLedger';
 import type { BleConnectionState, DockedBus, IDeviceState, IFavoriteState, ModeType } from '../types/dashboard.types';
 import { getColorName, hexToHue, hueToHex, hexToRgb } from '../utils/ColorUtils';
+import { rgbToVividHex } from './CameraTracker';
+import type { RGB } from '../utils/kMeansPalette';
 
 
 import FavoritesPanel from './docked/FavoritesPanel';
@@ -194,6 +196,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       brt > 0 ? 0.10 + 0.90 * (brt / 100) : 0;
 
     const [lastSentPayload, setLastSentPayload] = useState<number[]>([]);
+    const [cameraSubMode, setCameraSubMode] = useState<'SNIPER' | 'VIBE'>('SNIPER');
+    const [cameraVibePalette, setCameraVibePalette] = useState<string[]>([]);
 
     /**
      * Snapshot of the full UI state captured immediately before each BLE write.
@@ -865,7 +869,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     // Now the ProductVisualizer updates immediately on any mode/color/pattern
     // change, regardless of whether a BLE device is connected.
     const vizLock = React.useMemo(() => ({
-      mode: (activeMode === 'MULTIMODE' && fixedSubMode === 'BUILDER')
+      mode: (activeMode === 'MULTIMODE' && fixedSubMode === 'BUILDER') || (activeMode === 'CAMERA' && cameraSubMode === 'VIBE')
         ? 'BUILDER'
         : activeMode,
       patternId: activeMode === 'MUSIC'
@@ -874,7 +878,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           ? fixedPatternId
           : selectedPatternId),
       color: visualizerColor,
-    }), [activeMode, fixedSubMode, musicPatternId, fixedPatternId, selectedPatternId, visualizerColor]);
+    }), [activeMode, fixedSubMode, cameraSubMode, musicPatternId, fixedPatternId, selectedPatternId, visualizerColor]);
 
     // Relays the dynamically generated pattern name + last payload upward to persist dashboard group state.
     // BUG FIX: Guard against mount-fire with isMountedRef — on first render, lastSentPayload is []
@@ -929,6 +933,56 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       sendColor(r, g, b);
     }, [sendColor, setSelectedColor]);
 
+    const handleVibePaletteChange = React.useCallback((colors: RGB[]) => {
+      const rgbToHexStr = (c: RGB): string => {
+        const toHex = (v: number) => {
+          const s = Math.round(v).toString(16);
+          return s.length === 1 ? '0' + s : s;
+        };
+        return ('#' + toHex(c.r) + toHex(c.g) + toHex(c.b)).toUpperCase();
+      };
+      const hexes = colors.map(rgbToHexStr);
+      setCameraVibePalette(hexes);
+    }, []);
+
+    const handleVibeApply = React.useCallback((colors: RGB[], isFlow: boolean) => {
+      // 1. Generate the BuilderNode[] payload
+      const vibeNodes = [
+        { id: 'vibe_fg',     position: 0,   colorHex: rgbToVividHex(colors[0].r, colors[0].g, colors[0].b) },
+        { id: 'vibe_bg',     position: 50,  colorHex: rgbToVividHex(colors[1].r, colors[1].g, colors[1].b) },
+        { id: 'vibe_accent', position: 100, colorHex: rgbToVividHex(colors[2].r, colors[2].g, colors[2].b) },
+      ];
+      setBuilderNodes(vibeNodes);
+      setBuilderTransitionType(isFlow ? 0x03 : 0x01);
+      setBuilderDirection(1);
+
+      // 2. Map colors to a full canvas with 12-pixel minimum buffer defense
+      const N = Math.max(12, Math.floor(hwSettings?.ledPoints || points || 12));
+      const rgbColors: RGB[] = [];
+      for (let i = 0; i !== N; i++) {
+        const t = i / (N - 1);
+        if (t <= 0.5) {
+          const localT = t * 2;
+          const r = Math.round(colors[0].r * (1 - localT) + colors[1].r * localT);
+          const g = Math.round(colors[0].g * (1 - localT) + colors[1].g * localT);
+          const b = Math.round(colors[0].b * (1 - localT) + colors[1].b * localT);
+          rgbColors.push({ r, g, b });
+        } else {
+          const localT = (t - 0.5) * 2;
+          const r = Math.round(colors[1].r * (1 - localT) + colors[2].r * localT);
+          const g = Math.round(colors[1].g * (1 - localT) + colors[2].g * localT);
+          const b = Math.round(colors[1].b * (1 - localT) + colors[2].b * localT);
+          rgbColors.push({ r, g, b });
+        }
+      }
+
+      // 3. Boost to vivid neon for hardware dispatch
+      const boostedColors = rgbColors.map(c => hexToRgb(rgbToVividHex(c.r, c.g, c.b)));
+
+      // 4. Dispatch BLE Static/Flow via 0x59
+      setMultiColor(boostedColors, N, speed, 1, isFlow ? 0x03 : 0x01);
+    }, [hwSettings?.ledPoints, points, speed, setMultiColor, setBuilderNodes, setBuilderTransitionType, setBuilderDirection]);
+
     // ── Mode change handler — wires DockedDock callbacks to local state ───────
     const handleDockModeChange = React.useCallback(async (newMode: ModeType | string) => {
       // Permission-gated modes: reprompt if denied, then hide on final deny
@@ -971,6 +1025,18 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         setActiveMode('FAVORITES');
       }
     }, [setActiveMode, setLastOperatingMode, setFixedSubMode, recheckPermissions]);
+
+    const activeBuilderNodes = (activeMode === 'CAMERA' && cameraSubMode === 'VIBE')
+      ? (cameraVibePalette.length >= 3 ? [
+          { id: 'vibe_fg',     position: 0,   colorHex: cameraVibePalette[0] },
+          { id: 'vibe_bg',     position: 50,  colorHex: cameraVibePalette[1] },
+          { id: 'vibe_accent', position: 100, colorHex: cameraVibePalette[2] },
+        ] : [])
+      : builderNodes;
+
+    const activeBuilderTransition = (activeMode === 'CAMERA' && cameraSubMode === 'VIBE')
+      ? 0x03
+      : builderTransitionType;
 
     return (
       <View style={styles.container}>
@@ -1061,9 +1127,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               isStreetBraking={isStreetBraking}
               streetCruiseColor={streetCruiseColor}
               motionState={motionState}
-              builderNodes={builderNodes}
+              builderNodes={activeBuilderNodes}
               builderFillMode={builderFillMode}
-              builderTransitionType={builderTransitionType}
+              builderTransitionType={activeBuilderTransition}
               builderDirection={builderDirection}
               fixedDirection={fixedDirection}
               streetDistribution={streetDistribution}
@@ -1146,6 +1212,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             {activeMode === 'CAMERA' && (
               <CameraPanel
                 onColorDetected={handleCameraColorDetected}
+                onVibeApply={handleVibeApply}
+                onVibePaletteChange={handleVibePaletteChange}
+                onSubModeChange={setCameraSubMode}
               />
             )}
 
@@ -1172,7 +1241,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           </View>
 
           {/* UNIVERSAL SLIDERS FOOTER - Hidden in FAVORITES only */}
-          {activeMode !== 'FAVORITES' && activeMode !== 'CAMERA' && (
+          {activeMode !== 'FAVORITES' && (
             <UniversalSlidersFooter
               activeMode={activeMode}
               fixedSubMode={fixedSubMode}

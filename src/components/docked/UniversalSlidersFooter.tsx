@@ -349,7 +349,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
       <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, marginBottom: Spacing.xs, minHeight: 44 }}>
 
         {/* LEFT SLOT: Brightness (standard) / Mic Sensitivity (music) / Brake Sensitivity (street) */}
-        {!(activeMode === 'CAMERA') && !(activeMode === 'STREET') && !(activeMode === 'MUSIC') && (
+        {!(activeMode === 'STREET') && !(activeMode === 'MUSIC') && (
           <TacticalSlider
             style={{ flex: 1 }}
             iconName="white-balance-sunny"
