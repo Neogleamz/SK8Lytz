@@ -142,6 +142,7 @@ export function useHardwareNotifications({
         const newD = {
           ...d,
           points:           ledConfig.points,
+          ledPoints:        ledConfig.points,  // Mirror for activeHwSettings (checks ledPoints first)
           sorting:          ledConfig.sorting,
           colorSorting:     ledConfig.colorSortingIdx,
           colorSortingName: ledConfig.sorting,
@@ -183,6 +184,7 @@ export function useHardwareNotifications({
           ? {
               ...d,
               points:      cfg.ledPoints,
+              ledPoints:   cfg.ledPoints,  // Mirror for activeHwSettings (checks ledPoints first)
               segments:    cfg.segments,
               stripType:   cfg.icName,
               sorting:     cfg.colorSortingName,

@@ -43,6 +43,14 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
   /** Resolve LED count from hw config or fallback */
   const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
 
+  // DEV diagnostic: Detect when numLEDs resolves from product defaults instead of EEPROM probe.
+  // If this fires, the EEPROM 0x63 response hasn't populated hwSettings before the first dispatch.
+  if (__DEV__ && !hwSettings?.detected && hwSettings?.ledPoints) {
+    console.warn('⚠️ [BLE] numLEDs resolved WITHOUT EEPROM probe — using product defaults!', {
+      numLEDs, hwLedPoints: hwSettings?.ledPoints, propPoints: points, detected: hwSettings?.detected,
+    });
+  }
+
   /**
    * Maps UI speed slider (0–100) to Zengge hardware speed range (1–31).
    * The APK enforces 1–31 for all 0x59 animated patterns.

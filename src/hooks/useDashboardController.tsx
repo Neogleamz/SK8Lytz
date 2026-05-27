@@ -127,7 +127,7 @@ export function useDashboardController({
     const sortingIdx = s === 'RGB' ? 0 : s === 'RBG' ? 1 : s === 'GRB' ? 2 : s === 'GBR' ? 3 : s === 'BRG' ? 4 : s === 'BGR' ? 5 : 2;
     const colorSortingFinal = d?.detected ? (d.colorSorting ?? sortingIdx) : sortingIdx;
     return {
-      ledPoints: d?.ledPoints || d?.points ||
+      ledPoints: d?.points || d?.ledPoints ||
         getLocalProfileByPoints(d?.points ?? 0).defaultLedPoints,
       segments:  d?.segments || 1,
       icType:    d?.icType || 1,
