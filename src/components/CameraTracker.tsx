@@ -237,13 +237,11 @@ export default function CameraTracker({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    minHeight: 300,
     backgroundColor: '#000',
     overflow: 'hidden',
   },
   centeredContainer: {
     flex: 1,
-    minHeight: 300,
     backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
