@@ -300,6 +300,12 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       if (!connected) throw lastErr;
 
       // ── HAL: Resolve adapter & Caching ────────────────────────────────────────
+      // CRITICAL: discoverAllServicesAndCharacteristics MUST always run on every
+      // new GATT session. The native BLE stack (Android + iOS) uses it to populate
+      // its internal characteristic handle maps. Skipping it (even on a cache hit)
+      // leaves the maps empty, causing all writeCharacteristic calls to silently fail.
+      await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
+
       let pingAdapter: IControllerProtocol | null = null;
 
       const cachedGatt = await BleCharacteristicCache.get(mac);
@@ -308,7 +314,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       }
 
       if (!pingAdapter) {
-        await bleManager.discoverAllServicesAndCharacteristicsForDevice(mac);
         try {
           const svcs = await bleManager.servicesForDevice(mac);
           const svcUUIDs = svcs.map((s: any) => s.uuid as string);

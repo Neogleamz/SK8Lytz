@@ -51,9 +51,6 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
 
   const handleLiveVibePaletteDetected = useCallback((colors: RGB[]) => {
     setVibePalette(colors);
-    if (onVibePaletteChangeRef.current) {
-      onVibePaletteChangeRef.current(colors);
-    }
   }, []);
 
   const handleCapture = useCallback(() => {
