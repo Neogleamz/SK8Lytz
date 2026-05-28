@@ -925,7 +925,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           isBluetoothEnabled={isBluetoothEnabled}
           pendingRegistrations={pendingRegistrations}
           setPendingRegistrations={setPendingRegistrations}
-          writeToDevice={writeToDevice}
           pingDevice={pingDevice}
         />
       );

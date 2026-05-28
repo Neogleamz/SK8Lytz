@@ -921,86 +921,334 @@ export function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number,
     case 43: return buildStarlight(fg, bg, n, tick, direction);                  // was 60
 
     // ── 0x41 Hardware Parity (Modes 201-233) ──
-    case 201: return buildLargeChunkScroll(fg, { r: 255, g: 255, b: 255 }, n, tick, direction);
-    case 202: return buildGradientChunk(fg, bg, n, tick, direction);
-    case 203: return buildSingleDotChase(fg, bg, n, tick, direction);
-    case 204: return buildPingPongFill(fg, bg, n, tick);
-    case 205: return buildPingPongMarquee(fg, bg, n, tick);
-    case 206: return buildMicroAnts(fg, bg, n, tick, direction);
-    case 207: return buildNativeBreathe(fg, { r: 0, g: 0, b: 0 }, n, tick);
-    case 208: {
-      const frame = buildRainbowBreathing(n, tick);
-      return frame.map(p => {
-        const maxC = Math.max(p.r, p.g, p.b);
-        return {
-          r: p.r === maxC ? p.r : 0,
-          g: p.g === maxC && p.r !== maxC ? p.g : 0,
-          b: p.b === maxC && p.r !== maxC && p.g !== maxC ? p.b : 0
-        };
+    case 201: {
+      // Large FG chunk scrolling back to front (~50% width) | FG only (BG is hardcoded White)
+      const offset = Math.floor(tick * n);
+      const chunk = Math.max(1, Math.floor(n / 2));
+      return Array.from({ length: n }, (_, i) => {
+        const pos = direction === 1 ? (i + offset) % n : (i - offset + n) % n;
+        return pos < chunk ? fg : { r: 255, g: 255, b: 255 };
       });
     }
-    case 209: return buildRainbowBreathing(n, tick);
-    case 210: {
-      const phase = (tick * 3) % 3;
-      const c = phase < 1 ? {r: 255, g: 0, b: 0} : phase < 2 ? {r: 0, g: 255, b: 0} : {r: 0, g: 0, b: 255};
-      return Array(n).fill(c);
+    case 202: {
+      // Scrolling chunk (FG tips, BG center) over Black background
+      const offset = Math.floor(tick * n);
+      const chunk = Math.max(1, Math.floor(n / 2));
+      return Array.from({ length: n }, (_, i) => {
+        const pos = direction === 1 ? (i + offset) % n : (i - offset + n) % n;
+        if (pos >= chunk) return { r: 0, g: 0, b: 0 }; 
+        const t = Math.abs((pos / (chunk - 1)) * 2 - 1); 
+        return blendRGB(fg, bg, t);
+      });
     }
-    case 211: return buildRainbowBreathing(n, tick);
+    case 203: {
+      return buildSingleDotChase(fg, bg, n, tick, direction);
+    }
+    case 204: {
+      // Alternating Bounce Fill (FG fills Fwd, BG fills Rev)
+      const isFwd = tick < 0.5;
+      const fillLevel = isFwd ? tick * 2 : (1 - tick) * 2;
+      const cutoff = Math.floor(fillLevel * n);
+      return Array.from({ length: n }, (_, i) => {
+        if (isFwd) return i <= cutoff ? fg : bg;
+        return i >= n - 1 - cutoff ? bg : fg;
+      });
+    }
+    case 205: {
+      // Single FG dot bouncing back and forth over solid BG
+      const maxPos = n - 1;
+      const pos = Math.floor((tick < 0.5 ? tick * 2 : (1 - tick) * 2) * maxPos);
+      return Array.from({ length: n }, (_, i) => (i === pos ? fg : bg));
+    }
+    case 206: {
+      // Marching Ants (Alternating FG/BG pixels flowing forward)
+      const offset = Math.floor(tick * n * 2); 
+      return Array.from({ length: n }, (_, i) => ((i + offset) % 2 === 0 ? fg : bg));
+    }
+    case 207: {
+      // Breathing (Fade In/Out) | FG only
+      return buildNativeBreathe(fg, { r: 0, g: 0, b: 0 }, n, tick);
+    }
+    case 208: {
+      // 3-Color RGB Breathing Cycle (R -> G -> B)
+      const colors = [{r:255,g:0,b:0}, {r:0,g:255,b:0}, {r:0,g:0,b:255}];
+      const c = colors[Math.floor(tick * 3) % 3];
+      const subTick = (tick * 3) % 1;
+      const brightness = Math.sin(subTick * Math.PI) ** 2;
+      return Array(n).fill({ r: Math.round(c.r * brightness), g: Math.round(c.g * brightness), b: Math.round(c.b * brightness) });
+    }
+    case 209: {
+      return buildRainbowBreathing(n, tick);
+    }
+    case 210: {
+      // 3-Color RGB Strobe (Jump)
+      const colors = [{r:255,g:0,b:0}, {r:0,g:255,b:0}, {r:0,g:0,b:255}];
+      const phase = (tick * 6) % 1; 
+      const isOn = phase < 0.5;
+      const c = colors[Math.floor(tick * 3) % 3];
+      return Array(n).fill(isOn ? c : {r:0,g:0,b:0});
+    }
+    case 211: {
+      // 7-Color Breathing Cycle
+      const colors = [
+        {r:255,g:0,b:0}, {r:255,g:255,b:0}, {r:0,g:255,b:0}, {r:0,g:255,b:255}, 
+        {r:0,g:0,b:255}, {r:255,g:0,b:255}, {r:255,g:255,b:255}
+      ];
+      const c = colors[Math.floor(tick * 7) % 7];
+      const subTick = (tick * 7) % 1;
+      const brightness = Math.sin(subTick * Math.PI) ** 2;
+      return Array(n).fill({ r: Math.round(c.r * brightness), g: Math.round(c.g * brightness), b: Math.round(c.b * brightness) });
+    }
     case 212: {
-      const hue = tick % 1.0;
-      return Array(n).fill(hsvToRgb(hue, 1.0, 1.0));
+      // 7-Color Crossfade
+      const colors = [
+        {r:255,g:0,b:0}, {r:255,g:255,b:0}, {r:0,g:255,b:0}, {r:0,g:255,b:255}, 
+        {r:0,g:0,b:255}, {r:255,g:0,b:255}, {r:255,g:255,b:255}
+      ];
+      const idx = Math.floor(tick * 7) % 7;
+      const nextIdx = (idx + 1) % 7;
+      const t = (tick * 7) % 1;
+      return Array(n).fill(blendRGB(colors[nextIdx], colors[idx], t)); 
     }
     case 213: {
-      const hue = Math.floor(tick * 7) / 7;
-      return Array(n).fill(hsvToRgb(hue, 1.0, 1.0));
+      // 7-Color Hard Jump
+      const colors = [
+        {r:255,g:0,b:0}, {r:255,g:255,b:0}, {r:0,g:255,b:0}, {r:0,g:255,b:255}, 
+        {r:0,g:0,b:255}, {r:255,g:0,b:255}, {r:255,g:255,b:255}
+      ];
+      return Array(n).fill(colors[Math.floor(tick * 7) % 7]);
     }
-    case 214: return buildRandomStrobe(fg, bg, n, tick);
+    case 214: {
+      // Irregular Flashing Strobe (Jumps between colors) | FG + BG
+      const isFlash = (Math.sin(tick * 50) * 43758) % 1 > 0.5;
+      const isBg = (Math.cos(tick * 30) * 12345) % 1 > 0.5;
+      return Array(n).fill(isFlash ? (isBg ? bg : fg) : {r:0,g:0,b:0});
+    }
     case 215: {
-      const phase = (tick * 3) % 3;
-      const c = phase < 1 ? {r: 255, g: 0, b: 0} : phase < 2 ? {r: 0, g: 255, b: 0} : {r: 0, g: 0, b: 255};
-      return buildStrobe(c, n, tick);
+      // 3-Color RGB Strobe | Hardcoded
+      const colors = [{r:255,g:0,b:0}, {r:0,g:255,b:0}, {r:0,g:0,b:255}];
+      const isOn = (tick * 10) % 1 < 0.5;
+      return Array(n).fill(isOn ? colors[Math.floor(tick * 3) % 3] : {r:0,g:0,b:0});
     }
     case 216: {
-      const hue = Math.floor(tick * 7) / 7;
-      return buildStrobe(hsvToRgb(hue, 1.0, 1.0), n, tick);
+      // 7-Color Strobe | Hardcoded
+      const colors = [
+        {r:255,g:0,b:0}, {r:255,g:255,b:0}, {r:0,g:255,b:0}, {r:0,g:255,b:255}, 
+        {r:0,g:0,b:255}, {r:255,g:0,b:255}, {r:255,g:255,b:255}
+      ];
+      const isOn = (tick * 14) % 1 < 0.5;
+      return Array(n).fill(isOn ? colors[Math.floor(tick * 7) % 7] : {r:0,g:0,b:0});
     }
     case 217:
-    case 218: return buildCometChase(fg, bg, n, tick, direction);
-    case 219: return buildSingleDotChase(fg, bg, n, (tick * 2) % 1, direction);
-    case 220: return buildStaticPartialRainbow(n);
-    case 221: return buildRainbowComet(n, tick, direction);
+    case 218: {
+      return buildCometChase(fg, bg, n, tick, direction);
+    }
+    case 219: {
+      return buildSingleDotChase(fg, bg, n, (tick * 2) % 1, direction);
+    }
+    case 220: {
+      // Static Partial Rainbow Gradient (Blue ends, rainbow center)
+      return Array.from({ length: n }, (_, i) => {
+        const t = Math.abs((i / (n - 1)) * 2 - 1); 
+        const hue = 0.66 * t; 
+        return hsvToRgb(hue, 1.0, 1.0);
+      });
+    }
+    case 221: {
+      // 7-Color Multi-Comet Flow (Train of fading chunks)
+      const colors = [
+        {r:255,g:0,b:0}, {r:255,g:255,b:0}, {r:0,g:255,b:0}, {r:0,g:255,b:255}, 
+        {r:0,g:0,b:255}, {r:255,g:0,b:255}, {r:255,g:255,b:255}
+      ];
+      const COMET_LEN = Math.max(3, Math.floor(n / 4));
+      const totalOffset = tick * n * 7;
+      const offset = Math.floor(totalOffset) % n;
+      const loopCount = Math.floor(totalOffset / n);
+      return Array.from({ length: n }, (_, i) => {
+        const pos = (i + offset) % n;
+        const cometIdx = Math.floor(pos / COMET_LEN);
+        const wrapped = (i + offset) >= n ? 1 : 0;
+        const c = colors[(cometIdx + loopCount + wrapped) % 7];
+        const dist = pos % COMET_LEN;
+        const brightness = dist / (COMET_LEN - 1);
+        return blendRGB(c, {r:0,g:0,b:0}, brightness);
+      });
+    }
     case 222:
     case 223: {
-      const fillCount = Math.floor(tick * n);
+      // 7-Color Sweep / Wipe (Sequential fills from back to front)
+      const colors = [
+        {r:255,g:0,b:0}, {r:255,g:255,b:0}, {r:0,g:255,b:0}, {r:0,g:255,b:255}, 
+        {r:0,g:0,b:255}, {r:255,g:0,b:255}, {r:255,g:255,b:255}
+      ];
+      const colorPhase = Math.floor(tick * 7);
+      const activeColor = colors[colorPhase % 7];
+      const prevColor = colors[(colorPhase + 6) % 7];
+      const wipeProgress = (tick * 7) % 1;
+      const fillCount = Math.floor(wipeProgress * n);
+      return Array.from({ length: n }, (_, i) => i <= fillCount ? activeColor : prevColor);
+    }
+    case 224: {
+      // 7-Color Stacker / Building Blocks (Drops one full color stack, then next)
+      const colors = [
+        {r:255,g:0,b:0}, {r:255,g:255,b:0}, {r:0,g:255,b:0}, {r:0,g:255,b:255}, 
+        {r:0,g:0,b:255}, {r:255,g:0,b:255}, {r:255,g:255,b:255}
+      ];
+      const colorPhase = Math.floor(tick * 7);
+      const activeColor = colors[colorPhase % 7];
+      const prevColor = colors[(colorPhase + 6) % 7];
+      const stackProgress = (tick * 7) % 1;
+      const stackLevel = Math.floor(stackProgress * n); 
+      const dropPos = Math.floor(((stackProgress * n) % 1) * (n - stackLevel)); 
       return Array.from({ length: n }, (_, i) => {
-        if (direction === 1 ? i < fillCount : i >= n - fillCount) return hsvToRgb((i / n) % 1.0, 1.0, 1.0);
-        return { r: 0, g: 0, b: 0 };
+        if (i >= n - stackLevel) return activeColor; 
+        if (i === dropPos) return activeColor; 
+        return prevColor; // Background is the previous stacked color
       });
     }
-    case 224: return buildTetrisStacker(n, tick); // natively handles direction? Math relies on standard offset.
-    case 225: return buildAlternatingComet(fg, bg, n, tick, direction);
+    case 225: {
+      // Alternating Fading Chunks (FG chunk then BG chunk flowing forward)
+      const CHUNK = Math.max(3, Math.floor(n / 4));
+      const offset = Math.floor(tick * n);
+      return Array.from({ length: n }, (_, i) => {
+        const pos = (i + offset) % n;
+        const chunkIdx = Math.floor(pos / CHUNK);
+        const activeColor = chunkIdx % 2 === 0 ? fg : bg;
+        const dist = pos % CHUNK;
+        const brightness = dist / (CHUNK - 1);
+        return blendRGB(activeColor, {r:0,g:0,b:0}, brightness);
+      });
+    }
     case 226: {
-      const hue = tick % 1.0;
-      return buildWipeCenterOut(hsvToRgb(hue, 1.0, 1.0), { r: 0, g: 0, b: 0 }, n, tick);
-    }
-    case 227: return buildRainbowComet(n, tick, direction); // Large rainbow comet
-    case 228: return buildFireFlame({r: 255, g: 100, b: 0}, { r: 0, g: 0, b: 0 }, n, tick, direction);
-    case 229: {
-      const CHUNK = Math.floor(n * 0.5);
-      const head = Math.floor(tick * n);
+      // 7-Color Center-In Fill (Fills from edges to center, collapses, changes color)
+      const colors = [
+        {r:255,g:0,b:0}, {r:255,g:255,b:0}, {r:0,g:255,b:0}, {r:0,g:255,b:255}, 
+        {r:0,g:0,b:255}, {r:255,g:0,b:255}, {r:255,g:255,b:255}
+      ];
+      const colorPhase = Math.floor(tick * 7);
+      const c = colors[colorPhase % 7];
+      const prevColor = colors[(colorPhase + 6) % 7];
+      const progress = (tick * 7) % 1;
+      const fillLen = Math.floor(progress * (n / 2));
       return Array.from({ length: n }, (_, i) => {
-        const offsetI = direction === 1 ? i : n - 1 - i;
-        const dist = (offsetI - head + n) % n;
-        if (dist < CHUNK) return hsvToRgb((offsetI / n + tick) % 1.0, 1.0, 1.0);
-        return { r: 0, g: 0, b: 0 };
+        const distFromEdge = Math.min(i, n - 1 - i);
+        return distFromEdge <= fillLen ? c : prevColor;
       });
     }
-    case 230: return buildPingPongCenterFill(n, tick);
-    case 231: return buildCustomArrayScroll(fg, bg, n, tick, direction);
-    case 232: return buildGlitchMarquee(fg, bg, n, tick, direction);
+    case 227: {
+      // 7-Color Large Multi-Comet Flow
+      const colors = [
+        {r:255,g:0,b:0}, {r:255,g:255,b:0}, {r:0,g:255,b:0}, {r:0,g:255,b:255}, 
+        {r:0,g:0,b:255}, {r:255,g:0,b:255}, {r:255,g:255,b:255}
+      ];
+      const COMET_LEN = Math.max(5, Math.floor(n / 2));
+      const totalOffset = tick * n * 7;
+      const offset = Math.floor(totalOffset) % n;
+      const loopCount = Math.floor(totalOffset / n);
+      return Array.from({ length: n }, (_, i) => {
+        const pos = (i + offset) % n;
+        const cometIdx = Math.floor(pos / COMET_LEN);
+        const wrapped = (i + offset) >= n ? 1 : 0;
+        const c = colors[(cometIdx + loopCount + wrapped) % 7];
+        const dist = pos % COMET_LEN;
+        const brightness = dist / (COMET_LEN - 1);
+        return blendRGB(c, {r:0,g:0,b:0}, brightness);
+      });
+    }
+    case 228: {
+      // Flowing Fire Effect (White -> Yellow -> Orange -> Red gradient flow)
+      const colors = [
+        {r:255,g:255,b:255}, 
+        {r:255,g:255,b:0},   
+        {r:255,g:100,b:0},   
+        {r:255,g:0,b:0}      
+      ];
+      const offset = tick * 4;
+      return Array.from({ length: n }, (_, i) => {
+        const t = (i / n * 4 - offset) % 4;
+        const p = t < 0 ? t + 4 : t;
+        const idx1 = Math.floor(p);
+        const idx2 = (idx1 + 1) % 4;
+        return blendRGB(colors[idx2], colors[idx1], p % 1);
+      });
+    }
+    case 229: {
+      // 7-Color Large Block Flow (50% block of color flows from back to front)
+      const colors = [
+        {r:255,g:0,b:0}, {r:255,g:255,b:0}, {r:0,g:255,b:0}, {r:0,g:255,b:255}, 
+        {r:0,g:0,b:255}, {r:255,g:0,b:255}, {r:255,g:255,b:255}
+      ];
+      const BLOCK = Math.floor(n / 2);
+      const totalOffset = tick * n * 7;
+      const offset = Math.floor(totalOffset) % n;
+      const loopCount = Math.floor(totalOffset / n);
+      return Array.from({ length: n }, (_, i) => {
+        const pos = (i + offset) % n;
+        const isBlock = pos < BLOCK;
+        const wrapped = (i + offset) >= n ? 1 : 0;
+        const colorIdx = (loopCount + wrapped) % 7;
+        return isBlock ? colors[colorIdx] : {r:0,g:0,b:0};
+      });
+    }
+    case 230: {
+      // 7-Color Alternating Center Fill (Fills Center-Out, then fills Edges-In)
+      const colors = [
+        {r:255,g:0,b:0}, {r:255,g:255,b:0}, {r:0,g:255,b:0}, {r:0,g:255,b:255}, 
+        {r:0,g:0,b:255}, {r:255,g:0,b:255}, {r:255,g:255,b:255}
+      ];
+      const colorPhase = Math.floor(tick * 7);
+      const c = colors[colorPhase % 7];
+      const prevColor = colors[(colorPhase + 6) % 7];
+      const subTick = (tick * 7) % 1;
+      const isCenterOut = subTick < 0.5;
+      const progress = isCenterOut ? subTick * 2 : (subTick - 0.5) * 2;
+      const fillLen = Math.floor(progress * (n / 2));
+      return Array.from({ length: n }, (_, i) => {
+        const distFromCenter = Math.abs(i - Math.floor(n / 2));
+        const distFromEdge = Math.min(i, n - 1 - i);
+        if (isCenterOut) return distFromCenter <= fillLen ? c : prevColor;
+        else return distFromEdge <= fillLen ? c : prevColor;
+      });
+    }
+    case 231: {
+      // Custom Marquee Chunk ([FG, BG, Black, BG, FG] scrolling forward over BG)
+      const offset = Math.floor(tick * n);
+      return Array.from({ length: n }, (_, i) => {
+        const pos = (i + offset) % n;
+        if (pos === 0) return fg;
+        if (pos === 1) return bg;
+        if (pos === 2) return {r:0,g:0,b:0};
+        if (pos === 3) return bg;
+        if (pos === 4) return fg;
+        return bg;
+      });
+    }
+    case 232: {
+      // Glitch / Twitch Marquee (Alternates small ants and chunky twitches)
+      const isTwitch = (Math.sin(tick * 15) * 43758) % 1 > 0.5;
+      const offset = Math.floor(tick * n * (isTwitch ? 3 : 1));
+      return Array.from({ length: n }, (_, i) => {
+        const pos = (i + offset) % n;
+        if (isTwitch) return pos % 8 < 4 ? fg : bg;
+        return pos % 2 === 0 ? fg : bg;
+      });
+    }
     case 233: {
-      const frame = buildRainbowMarquee(n, tick, direction);
-      return frame.map(p => (p.r === 0 && p.g === 0 && p.b === 0) ? bg : p);
+      // 7-Color Dot Stream over custom BG (Dots separated by BG spaces)
+      const colors = [
+        {r:255,g:0,b:0}, {r:255,g:255,b:0}, {r:0,g:255,b:0}, {r:0,g:255,b:255}, 
+        {r:0,g:0,b:255}, {r:255,g:0,b:255}, {r:255,g:255,b:255}
+      ];
+      const totalOffset = tick * n * 7;
+      const offset = Math.floor(totalOffset) % n;
+      const loopCount = Math.floor(totalOffset / n);
+      return Array.from({ length: n }, (_, i) => {
+        const pos = (i + offset) % n;
+        if (pos % 3 !== 0) return bg;
+        const wrapped = (i + offset) >= n ? 1 : 0;
+        const colorIdx = (loopCount + wrapped) % 7;
+        return colors[colorIdx];
+      });
     }
 
     // ── GROUP 8: STREET MODES ──

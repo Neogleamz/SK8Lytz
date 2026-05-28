@@ -112,8 +112,9 @@ export const SK8LYTZ_TEMPLATES: SK8LytzTemplate[] = [
   { id: 104, name: 'Street Slowing',      icon: '⚠️', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: true, tier: 3, group: 'Street' },
   { id: 105, name: 'Street Accelerating', icon: '💨', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: true, tier: 3, group: 'Street' },
 
-  // ── GROUP 9: NATIVE TEMPORAL (0x51 EXTENDED) ────────────────────────────
-  // (Note: Smooth Breath (17), Wipe/Fill (18), and Strobe Flash (26) natively intercept via 0x51 in buildPatternPayload)
+  // ── GROUP 9: NATIVE TEMPORAL (0x51 COMPACT) ────────────────────────────
+  // (Note: Smooth Breath (17), Wipe/Fill (18), Strobe Flash (26), SK8Lytz Signature (44) natively intercept via 0x51 in buildPatternPayload)
+  { id: 44, name: 'SK8Lytz Signature',  icon: '🛹', colorMode: 'FG_BG',    requiresForeground: true,  requiresBackground: true,    supportsDirection: false, supportsSegment: true,  tier: 3, group: 'Signature' },
   { id: 72, name: 'Center-Out Marquee',   icon: '🎆', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Marquee' },
 
   // ── GROUP 10: NATIVE 0x41 PARITY (Test) ──
@@ -220,21 +221,23 @@ export function buildPatternPayload(
   }
 
   // ── GROUP 9: NATIVE 0x51 INTERCEPTION ──
-  // The named legacy interception effects (17, 18, 24, 26, 72)
-  const is0x51Target = [17, 18, 24, 26, 72].includes(patternId);
+  // The named legacy interception effects (17, 18, 24, 26, 44, 72)
+  const is0x51Target = [17, 18, 24, 26, 44, 72].includes(patternId);
   if (is0x51Target) {
     let modeId = 1; // Default to Breathe
     if (patternId === 17 || patternId === 24) modeId = 1; // Change gradually (Breathe)
     if (patternId === 18) modeId = direction === 1 ? 5 : 6; // Running, 1point from start to end (Sweep/Wipe)
     if (patternId === 26) modeId = 4; // Strobe-flash
+    if (patternId === 44) modeId = 26; // ZENGGE HW Mode 26: 7-Color Center-In Fill (But accepts custom colors via 0x51!)
     if (patternId === 72) modeId = direction === 1 ? 7 : 8; // Running, from middle to both ends (Center-Out)
 
-    return ZenggeProtocol.setCustomModeExtended([{
+    // PER PROTOCOL BIBLE: 0xA3 hardware strictly requires 9B setCustomModeCompact.
+    // setCustomModeExtended (10B format) is condemned on 0xA3 as it fails to animate.
+    return ZenggeProtocol.setCustomModeCompact([{
       mode: modeId,
       speed,
       color1: fg,
-      color2: bg,
-      dir: 0x80 // Forward + Section Toggle ON (default for testing)
+      color2: bg
     }]);
   }
 

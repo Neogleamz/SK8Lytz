@@ -39,7 +39,7 @@ export function getVisualizerFrame(
   // ── Native 0x41 Settled Mode Effects ──
   // These are handled dynamically by generateArray at `animTick`.
   // No array rotation is needed, the math generators build the exact frame.
-  if (patternId >= 1 && patternId <= 33) {
+  if ((patternId >= 1 && patternId <= 33) || (patternId >= 201 && patternId <= 233)) {
     return generateArray(patternId, fg, bg, n, animTick, direction, visualizerOptions);
   }
 

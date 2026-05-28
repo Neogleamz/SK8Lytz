@@ -6,6 +6,19 @@ This document contains the archive of all successfully completed and merged task
 
 ## 📦 ARCHIVED SPRINT LOGS
 
+### Sprint: v3.6.3 — 2026-05-27 (ble-hci)
+
+### [BATCH:ble-hci] — ⚡ (Complete)
+
+- [x] **`spike/0x40-chunked-framing-hci-verify`** — Verified `writeChunked` 0x40 frame format on hardware. Merged `74ec886d`.
+  - **Tags:** `[🕵️ SPIKE]` `[✅ VERIFIED]` `[LAB]` `[H-RISK]` `[Snack]` `[🤖 THINK]` `[BATCH:ble-hci]`
+  - **Plan:** 📎 [PLAN-chunked-ble-framing-0x51.md](./plans/PLAN-chunked-ble-framing-0x51.md)
+  - **Source of Truth:** 📖 [useBLE.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L706) §writeChunked and [ZENGGE_PROTOCOL_BIBLE.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/ZENGGE_PROTOCOL_BIBLE.md#L189) §0x51 Custom Scene
+  - **Goal:** HCI-sniff verify the `writeChunked` 0x40 fragmentation frame format on real HALOZ/SOULZ hardware before wiring the Scene Builder UI to production chunked writes.
+  - **Details:** COMPLETE — Validated `writeChunked` behavior on physical hardware via ADB HCI sniff, matched byte frames, and updated ZENGGE_PROTOCOL_BIBLE.md.
+
+---
+
 ### Sprint: v3.6.3 — 2026-05-27 (dependency-diet)
 
 ### [BATCH:dependency-diet] — ⚡ (Complete)

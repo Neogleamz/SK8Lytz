@@ -11,6 +11,7 @@ import { RegisteredDevice } from '../../hooks/useRegistration';
 import { HardwareStatusPills } from '../../components/dashboard/HardwareStatusPills';
 import { getDefaultGroupName } from '../../utils/NamingUtils';
 import { AppLogger } from '../../services/AppLogger';
+import { buildPatternPayload } from '../../protocols/PatternEngine';
 
 import type { BleConnectionState } from '../../types/dashboard.types';
 import type { PendingRegistration } from '../../types/dashboard.types';
@@ -26,7 +27,6 @@ interface HardwareSetupWizardScreenProps {
   pendingRegistrations: PendingRegistration[];
   /** Updater for pendingRegistrations — used to enrich entries in-place with EEPROM probe data */
   setPendingRegistrations: React.Dispatch<React.SetStateAction<PendingRegistration[]>>;
-  writeToDevice: (data: number[], deviceId?: string) => Promise<void | boolean | 'partial'>;
   /**
    * Wizard-exclusive atomic ping: Connect → Blink → Probe → Off → Disconnect.
    * Returns hwConfig or null. Replaces the broken writeToDevice + probeDevice pair.
@@ -43,7 +43,6 @@ export default function HardwareSetupWizardScreen({
   isBluetoothEnabled,
   pendingRegistrations,
   setPendingRegistrations,
-  writeToDevice,
   pingDevice,
 }: HardwareSetupWizardScreenProps) {
   const { Colors } = useTheme();
@@ -57,10 +56,40 @@ export default function HardwareSetupWizardScreen({
   // Step 3 State
   const [groupName, setGroupName] = useState('');
   const [deviceConfigsState, setDeviceConfigsState] = useState<Record<string, {name: string, type: string, position: 'Left'|'Right'|null, points: number}>>({}); 
+  const [isIdentifying, setIsIdentifying] = useState(false);
+
+  const fireOrientationTest = async (configsOverride?: Record<string, any>) => {
+    const selected = pendingRegistrations.filter(r => selectedDeviceMacs.has(r.device_mac));
+    if (selected.length !== 2) return;
+    
+    setIsIdentifying(true);
+    const configs = configsOverride || deviceConfigsState;
+    const adapter = getDefaultProtocol();
+    
+    for (const device of selected) {
+       const cfg = configs[device.device_mac];
+       if (!cfg || !cfg.position) continue;
+       
+       const points = cfg.points || device.led_points || LOCAL_PRODUCT_CATALOG[0].defaultLedPoints;
+       const color = cfg.position === 'Left' ? { r: 255, g: 0, b: 0 } : { r: 0, g: 255, b: 0 };
+       const colorArray = Array(points).fill(color);
+       
+       const payloadResult = adapter.buildMultiColor(colorArray, points, 1, 1, 0x00);
+       await pingDevice(device.device_mac, payloadResult.packets[0]);
+    }
+  };
 
   useEffect(() => {
     // Wait for user to hit next. Devices are NOT auto-selected based on user feedback.
-  }, [pendingRegistrations, hasStartedScan, bleState]);
+    if (step === 3) {
+      const selectedCount = pendingRegistrations.filter(r => selectedDeviceMacs.has(r.device_mac)).length;
+      if (selectedCount === 2) {
+        fireOrientationTest();
+      }
+    } else if (isIdentifying) {
+      setIsIdentifying(false);
+    }
+  }, [step, pendingRegistrations, hasStartedScan, bleState]);
 
   useEffect(() => {
     if (!hasStartedScan && isBluetoothSupported && isBluetoothEnabled) {
@@ -312,7 +341,51 @@ export default function HardwareSetupWizardScreen({
             maxLength={32} 
           />
 
-          {selected.map((device, idx) => {
+          {selected.length === 2 && (
+             <TouchableOpacity 
+               style={[
+                 styles.primaryBtn, 
+                 { marginVertical: Spacing.md, backgroundColor: isIdentifying ? 'rgba(0, 240, 255, 0.15)' : Colors.surfaceHighlight, borderWidth: 1.5, borderColor: isIdentifying ? '#00f0ff' : 'transparent' },
+                 isIdentifying ? { shadowColor: '#00f0ff', shadowOpacity: 0.5, shadowRadius: 10, elevation: 5 } : {}
+               ]}
+               onPress={() => {
+                  const macs = selected.map(d => d.device_mac);
+                  setDeviceConfigsState(prev => {
+                     const newConfigs = { ...prev };
+                     const cfg1 = { ...newConfigs[macs[0]] };
+                     const cfg2 = { ...newConfigs[macs[1]] };
+                     
+                     if (cfg1.position && cfg2.position) {
+                       const tempPos = cfg1.position;
+                       cfg1.position = cfg2.position;
+                       cfg2.position = tempPos;
+                     }
+                     
+                     if (cfg1.name.toLowerCase().includes('left') || cfg1.name.toLowerCase().includes('right') || 
+                         cfg2.name.toLowerCase().includes('left') || cfg2.name.toLowerCase().includes('right')) {
+                         const tempName = cfg1.name;
+                         cfg1.name = cfg2.name;
+                         cfg2.name = tempName;
+                     }
+                     
+                     newConfigs[macs[0]] = cfg1;
+                     newConfigs[macs[1]] = cfg2;
+                     
+                     fireOrientationTest(newConfigs);
+                     return newConfigs;
+                  });
+               }}
+             >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm }}>
+                  <MaterialCommunityIcons name="swap-horizontal" size={24} color={isIdentifying ? '#00f0ff' : Colors.text} />
+                  <Text style={[styles.primaryBtnText, { color: isIdentifying ? '#00f0ff' : Colors.text, fontSize: 13 }]}>
+                    {isIdentifying ? 'SWAP LEFT/RIGHT (RED/GREEN)' : 'IDENTIFY PORT/STARBOARD'}
+                  </Text>
+                </View>
+             </TouchableOpacity>
+          )}
+
+          {selected.map((device) => {
             const config = deviceConfigsState[device.device_mac] || { name: '', type: LOCAL_PRODUCT_CATALOG[0].id, position: null, points: LOCAL_PRODUCT_CATALOG[0].defaultLedPoints };
             
             const updateConfig = (key: 'name' | 'type' | 'position' | 'points', val: string | number | null) => {
@@ -473,9 +546,6 @@ export default function HardwareSetupWizardScreen({
                let leftAssigned = false;
                let rightAssigned = false;
                
-               let hCount = 0;
-               let sCount = 0;
-               
                const typeCounts: Record<string, number> = {};
 
                selected.forEach(d => {
@@ -536,24 +606,33 @@ export default function HardwareSetupWizardScreen({
                     const cfg = deviceConfigsState[device.device_mac];
                     if (!cfg) continue;
 
+                    const hwAdapter = getDefaultProtocol();
+
                     // If points were adjusted, we must push the EEPROM update and verify
                     if (getLocalProfileById(cfg.type)?.hardwareAllowsCustomPoints && cfg.points !== device.led_points) {
                        AppLogger.log('FTUE_HARDWARE_WRITE', { points: cfg.points, deviceId: device.device_mac });
-                       // Note: For Tier 1 migration we fallback to Zengge's internal map by using buildWriteSettings with raw integers for WS2812B GRB
-                       // WS2812B = 1, GRB = 1 (typically). We use the adapter.
-                       const hwAdapter = getDefaultProtocol();
-                       // ZenggeAdapter uses writeHardwareSettingsByName internally if we pass 1, 1 but let's just use raw buildWriteSettings (WS2812B=1, GRB=1)
                        const payloadResult = hwAdapter.buildWriteSettings(cfg.points, 1, 1, 1);
-                       await writeToDevice(payloadResult.packets[0], device.device_mac);
-                       
+                       await pingDevice(device.device_mac, payloadResult.packets[0]);
                        // Let EEPROM persist
                        await new Promise(r => setTimeout(r, 600));
-
-                       // Re-probe to verify — use pingDevice with an "off" payload (invisible, no visual blink)
-                       const offPayloadResult = hwAdapter.buildPowerOff();
-                       await pingDevice(device.device_mac, offPayloadResult.packets[0]);
-                       AppLogger.log('FTUE_HARDWARE_VERIFIED', { deviceId: device.device_mac });
                     }
+                    
+                    // Re-probe to verify AND play SK8Lytz Signature (Mode 26 Dark Blue / Dark Orange)
+                    // We use pingDevice to force the connection cycle to complete gracefully.
+                    // Pattern 44 = SK8Lytz Signature (which intercepts as 0x51 Mode 26 natively)
+                    const signaturePayload = buildPatternPayload(
+                       44, 
+                       { r: 0, g: 0, b: 139 },     // Dark Blue
+                       { r: 255, g: 140, b: 0 },   // Dark Orange
+                       cfg.points,
+                       80,                         // Speed
+                       1                           // Forward
+                    );
+                    
+                    if (signaturePayload) {
+                      await pingDevice(device.device_mac, signaturePayload);
+                    }
+                    AppLogger.log('FTUE_HARDWARE_VERIFIED', { deviceId: device.device_mac });
                  }
 
                  const finalizedDevices = selected.map(device => {

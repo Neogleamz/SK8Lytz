@@ -530,6 +530,34 @@ export function DiagnosticLabBuilderTab({
         </TouchableOpacity>
       </View>
 
+      {/* 0x41 BLE LAB SPIKE */}
+      <Text style={[S.subTitle, { color: '#FF9500', marginTop: Spacing.xl }]}>0x41 BLE LAB SPIKE (HARDWARE SCALING)</Text>
+      <View style={{ gap: Spacing.sm, marginBottom: Spacing.xl }}>
+        <TouchableOpacity style={[S.presetBtn, { backgroundColor: '#FF950022', borderColor: '#FF9500' }]}
+          onPress={() => {
+            transmit(ZenggeProtocol.setSettledMode(1, {r:255,g:0,b:0}, {r:0,g:0,b:255}, 50, 0), 'Spike Test 1: ID 1 (50% Size Check)', '0x41');
+          }}>
+          <Text style={{ color: '#FF9500', fontSize: 12, fontWeight: '900' }}>TEST 1: ID 201 (Size Check)</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginTop: Spacing.xxs }}>Should draw 50% Red chunk on Blue bg. Does it scale to HALOZ (4) vs SOULZ (8)?</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity style={[S.presetBtn, { backgroundColor: '#FF950022', borderColor: '#FF9500' }]}
+          onPress={() => {
+            transmit(ZenggeProtocol.setSettledMode(24, {r:255,g:0,b:0}, {r:0,g:0,b:255}, 50, 0), 'Spike Test 2: ID 24 (Stacker Limit)', '0x41');
+          }}>
+          <Text style={{ color: '#FF9500', fontSize: 12, fontWeight: '900' }}>TEST 2: ID 224 (Stacker Limit Check)</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginTop: Spacing.xxs }}>Let it run. Does the stack stop at 8 LEDs even on the 16-LED SOULZ strip?</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity style={[S.presetBtn, { backgroundColor: '#FF950022', borderColor: '#FF9500' }]}
+          onPress={() => {
+            transmit(ZenggeProtocol.setSettledMode(31, {r:255,g:0,b:0}, {r:0,g:0,b:255}, 50, 0), 'Spike Test 3: ID 31 (Matrix Precision)', '0x41');
+          }}>
+          <Text style={{ color: '#FF9500', fontSize: 12, fontWeight: '900' }}>TEST 3: ID 231 (Pattern Matrix Check)</Text>
+          <Text style={{ color: txtMuted, fontSize: 10, marginTop: Spacing.xxs }}>Observe the marquee sequence. Does it exactly match [Red, Blue, Black, Blue, Red] (5px)?</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Quick presets */}
       <Text style={[S.subTitle, { color: txtMuted }]}>QUICK PRESETS</Text>
       <View style={{ gap: Spacing.sm }}>
