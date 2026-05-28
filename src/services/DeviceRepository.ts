@@ -509,10 +509,18 @@ class DeviceRepository {
     // 2. Cloud: atomic RPC transaction
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        // Offline: queue for later sync
+      
+      // Fix Local/Cloud Split-Brain: If any device in the group has not yet been
+      // committed to the cloud (is_pending_sync = true), we MUST NOT run the RPC yet,
+      // because the foreign key (device.id) does not exist in Supabase, leading to an FK violation.
+      const hasPendingDevices = this.devices.some(d => 
+        normalizedMacs.includes(d.device_mac.toUpperCase()) && d.is_pending_sync
+      );
+
+      if (!user || hasPendingDevices) {
+        // Offline or blocked by pending device sync: queue for later sync
         await this._queuePendingGroupSync(groupId, groupName, deviceMacs, type);
-        AppLogger.warn('[DeviceRepository] Offline — group queued for sync', { groupId });
+        AppLogger.warn('[DeviceRepository] Offline or Pending Devices — group queued for sync', { groupId, hasPendingDevices });
         return true; // Local write succeeded — return true
       }
 
