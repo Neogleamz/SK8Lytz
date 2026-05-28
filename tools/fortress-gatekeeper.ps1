@@ -50,7 +50,7 @@ foreach ($Line in $WorktreeList) {
     Push-Location $Path
     try {
         git rebase origin/master 2>$null  # Rebase off remote if ahead
-        git rebase $FORTRESS_ROOT          # Rebase off local master
+        git rebase master                 # Rebase off local master
     } catch {
         # Rebase may fail if there's nothing to rebase — that's fine
     } finally {

@@ -17,27 +17,25 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, AppState, AppStateStatus, BackHandler, Dimensions, Image, Linking, Modal, PanResponder, Platform, SafeAreaView, ScrollView, Text, TouchableOpacity, View, useWindowDimensions, RefreshControl } from 'react-native';
+import { ActivityIndicator, Alert, AppState, AppStateStatus, BackHandler, Linking, PanResponder, Platform, SafeAreaView, ScrollView, Text, TouchableOpacity, View, useWindowDimensions, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ExpoLinking from 'expo-linking';
 import DeviceItem from '../components/DeviceItem';
 import { useTheme } from '../context/ThemeContext';
 import { BLEContext } from '../context/BLEContext';
-import { Layout, Typography, Spacing } from '../theme/theme';
+import { Layout, Spacing } from '../theme/theme';
 
 import { DockedControllerHandle } from '../components/DockedController';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
-import { BLEErrorBoundary } from '../components/shared/BLEErrorBoundary';
 
 import AdminToolsModal from '../components/admin/AdminToolsModal';
 
 import { AppLogger } from '../services/AppLogger';
-import { CrewRole, crewService, CrewSession } from '../services/CrewService';
 
 import AccountModal, { StoredDevice } from '../components/AccountModal';
 import { getDefaultGroupName } from '../utils/NamingUtils';
-import { getLocalProfileByPoints, LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
+import { getLocalProfileByPoints } from '../constants/ProductCatalog';
 import { RegisteredDevice, useRegistration } from '../hooks/useRegistration';
 import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
 import { useGlobalTelemetry } from '../hooks/useGlobalTelemetry';
@@ -49,25 +47,23 @@ import { useDashboardAutoConnect } from '../hooks/useDashboardAutoConnect';
 import { useDashboardGroups } from '../hooks/useDashboardGroups';
 import { useDashboardProfile } from '../hooks/useDashboardProfile';
 import { useDashboardCrew } from '../hooks/useDashboardCrew';
-import { useDashboardDeviceConfig } from '../hooks/useDashboardDeviceConfig';
 
 import { useHardwareNotifications } from '../hooks/useHardwareNotifications';
 import { useDeviceStateLedger, normalizeMac } from '../hooks/useDeviceStateLedger';
 import { useTelemetryLedger } from '../hooks/useTelemetryLedger';
-import type { DashboardViewState, DeviceSettings, CustomGroup, DisplayDevice, IDeviceState } from '../types/dashboard.types';
+import type { DashboardViewState, DeviceSettings, CustomGroup, DisplayDevice } from '../types/dashboard.types';
 
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
 // — migrated as part of Phase 1 Domain-Driven Refactor
 
 import { useProtocolDispatch } from '../hooks/useProtocolDispatch';
-import { SkateGroupCard } from '../components/dashboard/SkateGroupCard';
 import DashboardCrewPanel from '../components/dashboard/DashboardCrewPanel';
 import { useDashboardController } from '../hooks/useDashboardController';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
 import MySkatesSlab from '../components/dashboard/MySkatesSlab';
 import RegisteredFleetSlab from '../components/dashboard/RegisteredFleetSlab';
 import SupportModal from '../components/dashboard/SupportModal';
-import { createDashboardStyles, getPatternColors } from '../styles/DashboardStyles';
+import { createDashboardStyles } from '../styles/DashboardStyles';
 
 export default function DashboardScreen({ isOfflineMode = false, onLogout }: { isOfflineMode?: boolean; onLogout?: () => void } = {}) {
   const { Colors, isDark, toggleTheme } = useTheme();
