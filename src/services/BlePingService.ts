@@ -14,9 +14,18 @@ import { type PingResult, isPingResult } from '../types/dashboard.types';
 export async function executePingDevice(
   bleManager: any,
   mac: string,
-  blinkPayload: number[]
+  blinkPayload: number[],
+  options?: {
+    probe?: boolean;
+    duration?: number;
+    turnOffAtEnd?: boolean;
+  }
 ): Promise<PingResult | null> {
   if (Platform.OS === 'web' || !bleManager) return null;
+
+  const probe = options?.probe ?? true;
+  const duration = options?.duration ?? 8000;
+  const turnOffAtEnd = options?.turnOffAtEnd ?? true;
 
   const lockHandle = await acquireGattLock(1);
   if (!lockHandle) {
@@ -41,88 +50,96 @@ export async function executePingDevice(
       AppLogger.warn('[BLE] pingDevice blink write failed (non-fatal)', { mac, error: e?.message });
     });
 
-    // ── Step 3: Probe EEPROM (same GATT session — no collision) ──────────────
-    const hwConfig = await new Promise<PingResult | null>((resolve) => {
-      let accumulatedTelemetry: Partial<PingResult> | null = null;
+    let hwConfig: PingResult | null = null;
 
-      const timer = setTimeout(() => {
-        sub.remove();
-        if (accumulatedTelemetry) {
-          AppLogger.warn(`[BLE pingDevice] Partial telemetry for ${mac}. Returning partial.`);
-          resolve(isPingResult(accumulatedTelemetry) ? accumulatedTelemetry : null);
-        } else {
-          AppLogger.warn(`[BLE pingDevice] Probe timed out for ${mac} after 3500ms.`);
-          resolve(null);
-        }
-      }, 3500);
+    if (probe) {
+      // ── Step 3: Probe EEPROM (same GATT session — no collision) ──────────────
+      hwConfig = await new Promise<PingResult | null>((resolve) => {
+        let accumulatedTelemetry: Partial<PingResult> | null = null;
 
-      const sub = bleManager.monitorCharacteristicForDevice(
-        mac,
-        pingAdapter.serviceUUID,
-        pingAdapter.notifyCharacteristicUUID,
-        (err: any, char: any) => {
-          if (err) return;
-          if (!char?.value) return;
-          try {
-            const raw = Array.from(Buffer.from(char.value, 'base64')) as number[];
-            const hwParsed = pingAdapter.parseSettingsResponse(raw);
-            if (hwParsed) accumulatedTelemetry = { ...accumulatedTelemetry, ...hwParsed };
-            const rfParsed = pingAdapter.parseRfRemoteState(raw);
-            if (rfParsed) {
-              accumulatedTelemetry = {
-                ...accumulatedTelemetry,
-                rfMode: rfParsed.mode,
-                rfPairedCount: rfParsed.pairedCount
-              };
-            }
-            if (accumulatedTelemetry?.detected && accumulatedTelemetry?.rfMode) {
-              clearTimeout(timer);
-              sub.remove();
-              AppLogger.log('DEVICE_DISCOVERED', { context: 'pingDevice_probe_success', deviceId: mac });
-              if (isPingResult(accumulatedTelemetry)) resolve(accumulatedTelemetry);
-            }
-          } catch (e) {
-            AppLogger.warn('[BLE] Parse error during pingDevice telemetry monitor', e);
+        const timer = setTimeout(() => {
+          sub.remove();
+          if (accumulatedTelemetry) {
+            AppLogger.warn(`[BLE pingDevice] Partial telemetry for ${mac}. Returning partial.`);
+            resolve(isPingResult(accumulatedTelemetry) ? accumulatedTelemetry : null);
+          } else {
+            AppLogger.warn(`[BLE pingDevice] Probe timed out for ${mac} after 3500ms.`);
+            resolve(null);
           }
-        }
-      );
+        }, 3500);
 
-      // Fire queries after giving the notification monitor 400ms to set up.
-      // Uses adapter's polymorphic parse methods — Zengge parses EEPROM,
-      // BanlanX returns null for both.
-      setTimeout(() => {
-        const queryResult = pingAdapter.buildQuerySettings(false);
-        if (queryResult.packets.length > 0) {
-          const b64HW = Buffer.from(queryResult.packets[0]).toString('base64');
-          bleManager.writeCharacteristicWithoutResponseForDevice(
-            mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64HW
-          ).catch((e: any) => AppLogger.warn('[BLE pingDevice] HW query write failed', { error: String(e) }));
-        }
+        const sub = bleManager.monitorCharacteristicForDevice(
+          mac,
+          pingAdapter.serviceUUID,
+          pingAdapter.notifyCharacteristicUUID,
+          (err: any, char: any) => {
+            if (err) return;
+            if (!char?.value) return;
+            try {
+              const raw = Array.from(Buffer.from(char.value, 'base64')) as number[];
+              const hwParsed = pingAdapter.parseSettingsResponse(raw);
+              if (hwParsed) accumulatedTelemetry = { ...accumulatedTelemetry, ...hwParsed };
+              const rfParsed = pingAdapter.parseRfRemoteState(raw);
+              if (rfParsed) {
+                accumulatedTelemetry = {
+                  ...accumulatedTelemetry,
+                  rfMode: rfParsed.mode,
+                  rfPairedCount: rfParsed.pairedCount
+                };
+              }
+              if (accumulatedTelemetry?.detected && accumulatedTelemetry?.rfMode) {
+                clearTimeout(timer);
+                sub.remove();
+                AppLogger.log('DEVICE_DISCOVERED', { context: 'pingDevice_probe_success', deviceId: mac });
+                if (isPingResult(accumulatedTelemetry)) resolve(accumulatedTelemetry);
+              }
+            } catch (e) {
+              AppLogger.warn('[BLE] Parse error during pingDevice telemetry monitor', e);
+            }
+          }
+        );
 
+        // Fire queries after giving the notification monitor 400ms to set up.
+        // Uses adapter's polymorphic parse methods — Zengge parses EEPROM,
+        // BanlanX returns null for both.
         setTimeout(() => {
-          const rfResult = pingAdapter.buildQueryRfRemoteState();
-          if (rfResult.packets.length > 0) {
-            const b64RF = Buffer.from(rfResult.packets[0]).toString('base64');
+          const queryResult = pingAdapter.buildQuerySettings(false);
+          if (queryResult.packets.length > 0) {
+            const b64HW = Buffer.from(queryResult.packets[0]).toString('base64');
             bleManager.writeCharacteristicWithoutResponseForDevice(
-              mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64RF
-            ).catch((e: any) => AppLogger.warn('[BLE pingDevice] RF query write failed', { error: String(e) }));
+              mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64HW
+            ).catch((e: any) => AppLogger.warn('[BLE pingDevice] HW query write failed', { error: String(e) }));
           }
-        }, 200);
-      }, 400);
-    });
 
-    // ── Step 4: Wait so user can see the blink (probe ran concurrently) ───────
-    await new Promise(r => setTimeout(r, 8000));
+          setTimeout(() => {
+            const rfResult = pingAdapter.buildQueryRfRemoteState();
+            if (rfResult.packets.length > 0) {
+              const b64RF = Buffer.from(rfResult.packets[0]).toString('base64');
+              bleManager.writeCharacteristicWithoutResponseForDevice(
+                mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64RF
+              ).catch((e: any) => AppLogger.warn('[BLE pingDevice] RF query write failed', { error: String(e) }));
+            }
+          }, 200);
+        }, 400);
+      });
+    }
+
+    // ── Step 4: Wait so user can see the blink ───────────────────────
+    if (duration > 0) {
+      await new Promise(r => setTimeout(r, duration));
+    }
 
     // ── Step 5: Turn Off ─────────────────────────────────────────────────────
-    const offResult = pingAdapter.buildPowerOff();
-    if (offResult.packets.length > 0) {
-      await bleManager.writeCharacteristicWithoutResponseForDevice(
-        mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID,
-        Buffer.from(offResult.packets[0]).toString('base64')
-      ).catch((e: any) => {
-        AppLogger.warn('[BLE] pingDevice turn-off write failed (non-fatal)', { mac, error: e?.message });
-      });
+    if (turnOffAtEnd) {
+      const offResult = pingAdapter.buildPowerOff();
+      if (offResult.packets.length > 0) {
+        await bleManager.writeCharacteristicWithoutResponseForDevice(
+          mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID,
+          Buffer.from(offResult.packets[0]).toString('base64')
+        ).catch((e: any) => {
+          AppLogger.warn('[BLE] pingDevice turn-off write failed (non-fatal)', { mac, error: e?.message });
+        });
+      }
     }
 
     return hwConfig;

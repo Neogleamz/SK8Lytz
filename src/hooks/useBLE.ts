@@ -12,6 +12,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, AppState } from 'react-native';
+import { Buffer } from 'buffer';
 import type { Device } from 'react-native-ble-plx';
 import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
@@ -60,7 +61,11 @@ export interface BluetoothLowEnergyApi {
    * Designed for use in HardwareSetupWizardScreen only. Bypasses connectedDevices requirement.
    * Returns hwConfig (ledPoints, icName, etc.) or null if probe timed out.
    */
-  pingDevice: (mac: string, blinkPayload: number[]) => Promise<PingResult | null>;
+  pingDevice: (
+    mac: string,
+    blinkPayload: number[],
+    options?: { probe?: boolean; duration?: number; turnOffAtEnd?: boolean }
+  ) => Promise<PingResult | null>;
   connectedDevices: Device[];
   allDevices: Device[];
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
@@ -266,8 +271,12 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
    * @returns            hwConfig object (ledPoints, segments, icName, colorSortingName, rfMode)
    *                     or null if probe timed out / connection failed.
    */
-  const pingDevice = useCallback(async (mac: string, blinkPayload: number[]): Promise<PingResult | null> => {
-    return executePingDevice(bleManager, mac, blinkPayload);
+  const pingDevice = useCallback(async (
+    mac: string,
+    blinkPayload: number[],
+    options?: { probe?: boolean; duration?: number; turnOffAtEnd?: boolean }
+  ): Promise<PingResult | null> => {
+    return executePingDevice(bleManager, mac, blinkPayload, options);
   }, [bleManager]);
 
   // --- Sub-Hooks ---

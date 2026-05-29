@@ -30,7 +30,11 @@ interface HardwareSetupWizardScreenProps {
    * Wizard-exclusive atomic ping: Connect → Blink → Probe → Off → Disconnect.
    * Returns hwConfig or null. Replaces the broken writeToDevice + probeDevice pair.
    */
-  pingDevice: (mac: string, blinkPayload: number[]) => Promise<PingResult | null>;
+  pingDevice: (
+    mac: string,
+    blinkPayload: number[],
+    options?: { probe?: boolean; duration?: number; turnOffAtEnd?: boolean }
+  ) => Promise<PingResult | null>;
 }
 
 export default function HardwareSetupWizardScreen({
@@ -74,7 +78,7 @@ export default function HardwareSetupWizardScreen({
        const colorArray = Array(points).fill(color);
        
        const payloadResult = adapter.buildMultiColor(colorArray, points, 1, 1, 0x00);
-       await pingDevice(device.device_mac, payloadResult.packets[0]);
+       await pingDevice(device.device_mac, payloadResult.packets[0], { probe: false, duration: 0, turnOffAtEnd: false });
     }
   };
 
@@ -611,7 +615,7 @@ export default function HardwareSetupWizardScreen({
                     if (getLocalProfileById(cfg.type)?.hardwareAllowsCustomPoints && cfg.points !== device.led_points) {
                        AppLogger.log('FTUE_HARDWARE_WRITE', { points: cfg.points, deviceId: device.device_mac });
                        const payloadResult = hwAdapter.buildWriteSettings(cfg.points, 1, 1, 1);
-                       await pingDevice(device.device_mac, payloadResult.packets[0]);
+                       await pingDevice(device.device_mac, payloadResult.packets[0], { probe: false, duration: 0, turnOffAtEnd: false });
                        // Let EEPROM persist
                        await new Promise(r => setTimeout(r, 600));
                     }
@@ -629,7 +633,7 @@ export default function HardwareSetupWizardScreen({
                     );
                     
                     if (signaturePayload) {
-                      await pingDevice(device.device_mac, signaturePayload);
+                      await pingDevice(device.device_mac, signaturePayload, { probe: false, duration: 0, turnOffAtEnd: false });
                     }
                     AppLogger.log('FTUE_HARDWARE_VERIFIED', { deviceId: device.device_mac });
                  }
