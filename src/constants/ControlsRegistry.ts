@@ -1,5 +1,5 @@
 export type ControlRiskLevel = 'normal' | 'warning' | 'danger';
-export type ControlType = 'switch' | 'action';
+export type ControlType = 'switch' | 'action' | 'number_stepper';
 
 export interface ControlEntry {
   key: string;
@@ -7,12 +7,16 @@ export interface ControlEntry {
   subLabel: string;
   type: ControlType;
   riskLevel: ControlRiskLevel;
-  defaultValue?: string | boolean;
+  defaultValue?: string | boolean | number;
   /** For switches that require a safety confirmation alert */
   confirmTitle?: string;
   confirmMsg?: string;
   /** For action buttons */
   actionLabel?: string;
+  /** For number_stepper */
+  min?: number;
+  max?: number;
+  step?: number;
 }
 
 export const CONTROLS_REGISTRY: Record<string, ControlEntry[]> = {
@@ -49,6 +53,17 @@ export const CONTROLS_REGISTRY: Record<string, ControlEntry[]> = {
     }
   ],
   Hardware: [
+    {
+      key: 'hw_setup_rssi_threshold',
+      label: 'Setup RSSI Threshold',
+      subLabel: 'Signal strength required to discover new unregistered skates.',
+      type: 'number_stepper',
+      riskLevel: 'normal',
+      defaultValue: -70,
+      min: -100,
+      max: -30,
+      step: 1
+    },
     {
       key: 'global_optimistic_ui_enabled',
       label: 'Ghost State (Optimistic UI)',

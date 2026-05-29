@@ -1,13 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Platform, InteractionManager } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { LOCAL_PRODUCT_CATALOG, getLocalProfileByPoints } from '../../constants/ProductCatalog';
 import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { AppLogger } from '../../services/AppLogger';
 import { supabase } from '../../services/supabaseClient';
-import type { Database } from '../../types/supabase';
 import { locationService } from '../../services/LocationService';
 import type { PendingRegistration } from '../../types/dashboard.types';
 import { mapDeviceToRegistration } from '../../utils/classifyBLEDevice';
@@ -30,12 +29,29 @@ export function useBLEScanner({
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
 
   const allDevicesRef = useRef<Device[]>([]);
+  // eslint-disable-next-line no-undef
   const scanTimerRef = useRef<NodeJS.Timeout | null>(null);
   const scannerStateRef = useRef<'IDLE' | 'SCANNING' | 'PROBING'>('IDLE');
   const rejectedMacsRef = useRef<Set<string>>(new Set());
+  const setupRssiThresholdRef = useRef<number>(-70);
+
+  useEffect(() => {
+    AsyncStorage.getItem('@sk8lytz_app_settings').then(cached => {
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed.hw_setup_rssi_threshold !== undefined) {
+             setupRssiThresholdRef.current = parseInt(String(parsed.hw_setup_rssi_threshold), 10);
+          }
+        // eslint-disable-next-line unused-imports/no-unused-vars
+        } catch (e) {}
+      }
+    });
+  }, []);
 
   const telemetryCacheRef = useRef<Map<string, number>>(new Map());
   const telemetryBatchRef = useRef<any[]>([]);
+  // eslint-disable-next-line no-undef
   const telemetryTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const flushTelemetry = () => {
@@ -64,10 +80,9 @@ export function useBLEScanner({
           location: locString
         }));
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await supabase.from('discovered_devices_telemetry').insert(payloads as unknown as Database['public']['Tables']['discovered_devices_telemetry']['Insert'][]);
-      } catch (e) {
-        AppLogger.warn('[Scanner] Ambient telemetry flush failed', { error: String(e) });
+        await supabase.from('discovered_devices_telemetry').insert(payloads as any);
+      } catch (_e) {
+        AppLogger.warn('[Scanner] Ambient telemetry flush failed', { error: String(_e) });
       }
     });
   };
@@ -266,12 +281,16 @@ export function useBLEScanner({
           // so valid nearby devices with momentary signal dips are never rejected.
           const RSSI_THRESHOLD = -80;
           const deviceRssi = device.rssi ?? -99;
-          if (deviceRssi < RSSI_THRESHOLD) {
+          
+          const isRegistered = hwCache && hwCache[device.id.toUpperCase()] !== undefined;
+          const targetThreshold = isRegistered ? RSSI_THRESHOLD : setupRssiThresholdRef.current;
+          
+          if (deviceRssi < targetThreshold) {
             if (!rejectedMacsRef.current.has(device.id)) {
               rejectedMacsRef.current.add(device.id);
               AppLogger.log('SCAN_FILTER_REJECT', {
                 ...logData,
-                reason: `RSSI too low (${deviceRssi} dBm < ${RSSI_THRESHOLD} dBm threshold) — likely OS-cache ghost`,
+                reason: `RSSI too low (${deviceRssi} dBm < ${targetThreshold} dBm threshold) — likely OS-cache ghost or skatepark noise`,
               });
             }
             return;

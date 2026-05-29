@@ -21,7 +21,7 @@ export interface AppManagerProps {
 const TABS = Object.keys(CONTROLS_REGISTRY);
 
 export const AppManager = React.memo(({
-  visible, onClose, appSettings, handlePolicyToggle, updateSetting,
+  visible: _visible, onClose, appSettings, handlePolicyToggle, updateSetting,
   bg, cardBg, borderColor, textPrimary, textMuted
 }: AppManagerProps) => {
   const [activeTab, setActiveTab] = useState(TABS[0]);
@@ -91,6 +91,37 @@ export const AppManager = React.memo(({
         </View>
       );
     }
+
+    if (ctrl.type === 'number_stepper') {
+      const currentRaw = appSettings[ctrl.key] ?? ctrl.defaultValue;
+      const currentValue = typeof currentRaw === 'number' ? currentRaw : parseInt(String(currentRaw), 10);
+
+      const changeValue = (delta: number) => {
+        let next = currentValue + delta;
+        if (ctrl.min !== undefined) next = Math.max(ctrl.min, next);
+        if (ctrl.max !== undefined) next = Math.min(ctrl.max, next);
+        updateSetting(ctrl.key, next.toString());
+      };
+
+      return (
+        <View key={ctrl.key} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.lg, borderBottomWidth: isLast ? 0 : 1, borderBottomColor: borderColor }}>
+          <View style={{ flex: 1, marginRight: Spacing.lg }}>
+            <Text style={{ color: textPrimary, fontSize: 15, fontWeight: '700' }}>{ctrl.label}</Text>
+            <Text style={{ color: textMuted, fontSize: 12, marginTop: Spacing.xxs }}>{ctrl.subLabel}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#333', borderRadius: 8 }}>
+            <TouchableOpacity onPress={() => changeValue(-(ctrl.step || 1))} style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
+              <Text style={{ color: textPrimary, fontSize: 20, fontWeight: 'bold' }}>-</Text>
+            </TouchableOpacity>
+            <Text style={{ color: textPrimary, fontSize: 16, fontWeight: '700', minWidth: 32, textAlign: 'center' }}>{currentValue}</Text>
+            <TouchableOpacity onPress={() => changeValue(ctrl.step || 1)} style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
+              <Text style={{ color: textPrimary, fontSize: 20, fontWeight: 'bold' }}>+</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      );
+    }
+
     return null;
   };
 
