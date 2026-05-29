@@ -1001,7 +1001,9 @@ export async function executeDetective(
     let s = `You are a data extraction agent for [${spotContext.name}] in [${spotContext.city}].\nONLY this location. Valid JSON only.\n`;
     s += `CRITICAL BOOLEAN RULE: For ALL boolean fields, you MUST return null if the information was not explicitly found in the text. Do NOT assume false. Do NOT infer. A missing fee schedule does NOT mean admission is free. A missing amenity mention does NOT mean it is absent. Return null to indicate unknown.\n`;
     if (usp) s += usp + '\n';
-    if (exclusionKw.length) s += `TOXICITY: If PRIMARY business matches [${exclusionKw.join(',')}] return {"TOXICITY_ABORT":true}.\n`;
+    
+    const isToxicityBypassed = spotContext.ai_metadata?.includes('bypass_toxicity');
+    if (exclusionKw.length && !isToxicityBypassed) s += `TOXICITY: If PRIMARY business matches [${exclusionKw.join(',')}] return {"TOXICITY_ABORT":true}.\n`;
     if (ctx) s += `PASS 1 CONTEXT: ${ctx}\n`;
     return s + `SCHEMA:\n${JSON.stringify(schema, null, 2)}`;
   };
@@ -1341,7 +1343,9 @@ skipPass1B = Object.keys(schemaPass1B).length === 0;
   const immunityKw = Array.isArray(aiConfig.ai_immunity_keywords) && aiConfig.ai_immunity_keywords.length > 0 ? aiConfig.ai_immunity_keywords : defaultImmunity;
   const softExclusions = Array.isArray(aiConfig.ai_soft_exclusion_keywords) && aiConfig.ai_soft_exclusion_keywords.length > 0 ? aiConfig.ai_soft_exclusion_keywords : defaultSoft;
 
-  if (exclusionKw.length > 0) {
+  const isToxicityBypassed = spotContext.ai_metadata?.includes('bypass_toxicity');
+
+  if (exclusionKw.length > 0 && !isToxicityBypassed) {
     const textLower = combinedText.toLowerCase();
     
     // 1. Check for immunity
