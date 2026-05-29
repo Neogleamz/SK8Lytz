@@ -28,6 +28,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import type { Device } from 'react-native-ble-plx';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../context/ThemeContext';
 import {
@@ -60,7 +61,7 @@ interface LabProps {
   allDevices?: any[];
   bleState?: string;
   handleScan?: () => void;
-  connectToDevice?: (device: any) => Promise<any>;
+  connectToDevice?: (device: Device) => Promise<void>;
   liveDeviceConfigs?: Record<string, any>;
   isDiagnosticsMode?: boolean;
   onToggleDiagnostics?: () => void;

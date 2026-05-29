@@ -16,7 +16,7 @@ import type { Device } from 'react-native-ble-plx';
 import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
 import { AppLogger } from '../services/AppLogger';
-import type { BleConnectionState, PendingRegistration } from '../types/dashboard.types';
+import type { BleConnectionState, PendingRegistration, PingResult } from '../types/dashboard.types';
 import { BleStateMachine, BLEPhaseTag } from '../services/BleStateMachine';
 
 import { checkPermission, openGlobalPermissionsModal } from '../services/PermissionService';
@@ -39,7 +39,7 @@ if (Platform.OS !== 'web') {
   State = blePlx.State;
 }
 
-let writeMutex: Promise<any> = Promise.resolve();
+let writeMutex: Promise<boolean | 'partial'> = Promise.resolve(true);
 let writeGeneration = 0; // Increments on every new write; stale debounce checks compare against this
 
 
@@ -60,14 +60,14 @@ export interface BluetoothLowEnergyApi {
    * Designed for use in HardwareSetupWizardScreen only. Bypasses connectedDevices requirement.
    * Returns hwConfig (ledPoints, icName, etc.) or null if probe timed out.
    */
-  pingDevice: (mac: string, blinkPayload: number[]) => Promise<any>;
+  pingDevice: (mac: string, blinkPayload: number[]) => Promise<PingResult | null>;
   connectedDevices: Device[];
   allDevices: Device[];
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   isBluetoothSupported: boolean;
   isBluetoothEnabled: boolean;
   setOnDataReceived: (callback: (deviceId: string, data: number[]) => void) => void;
-  setOnHardwareProbed: (callback: (deviceId: string, config: any) => void) => void;
+  setOnHardwareProbed: (callback: (deviceId: string, config: PingResult | null) => void) => void;
   setOnDeviceRecovered: (callback: (deviceId: string) => void) => void;
   droppedOutDeviceIds: string[];
   setDroppedOutDeviceIds: React.Dispatch<React.SetStateAction<string[]>>;
@@ -266,7 +266,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
    * @returns            hwConfig object (ledPoints, segments, icName, colorSortingName, rfMode)
    *                     or null if probe timed out / connection failed.
    */
-  const pingDevice = useCallback(async (mac: string, blinkPayload: number[]): Promise<any> => {
+  const pingDevice = useCallback(async (mac: string, blinkPayload: number[]): Promise<PingResult | null> => {
     return executePingDevice(bleManager, mac, blinkPayload);
   }, [bleManager]);
 
@@ -385,7 +385,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     writeDebounceTimerRef,
   }), []);
 
-  const setWriteMutex = useCallback((promise: Promise<any>) => {
+  const setWriteMutex = useCallback((promise: Promise<boolean | 'partial'>) => {
     writeMutex = promise;
   }, []);
 

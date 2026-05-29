@@ -61,6 +61,33 @@ export interface PendingRegistration {
   rf_paired_count?: number;
 }
 
+/**
+ * PingResult — the structured EEPROM probe result from executePingDevice / pingDevice.
+ * Extends HardwareSettingsResult (parseSettingsResponse return type) with optional
+ * RF state fields accumulated during the wizard ping flow.
+ * Returns null if the probe timed out before any telemetry was received.
+ *
+ * Source of truth: IControllerProtocol.ts HardwareSettingsResult §EEPROM
+ */
+export interface PingResult {
+  // From HardwareSettingsResult (parseSettingsResponse)
+  ledPoints: number;
+  segments: number;
+  icType: number;
+  icName: string;
+  colorSorting: number;
+  colorSortingName: string;
+  firmwareVer?: number;
+  ledVersion?: number;
+  bleVersion?: number;
+  detected: boolean;
+  // RF state (from parseRfRemoteState, accumulated separately)
+  rfMode?: string;
+  rfPairedCount?: number;
+  // Extra fields from firmware advertisement
+  productId?: number;
+}
+
 
 export interface DeviceSettings {
   name: string;

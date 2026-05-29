@@ -5,7 +5,7 @@ import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 import type { ProtocolResult } from '../protocols/IControllerProtocol';
 
 export interface BleWriteStateRefs {
-  writeMutex: Promise<any>;
+  writeMutex: Promise<boolean | 'partial'>;
   writeGeneration: number;
   writeDebounceTimerRef: { current: ReturnType<typeof setTimeout> | null };
 }
@@ -24,7 +24,7 @@ export async function executeWriteToDevice(
   mtuMap: Map<string, number>,
   adapterMap: Map<string, any>,
   stateRefs: BleWriteStateRefs,
-  setWriteMutex: (promise: Promise<any>) => void,
+  setWriteMutex: (promise: Promise<boolean | 'partial'>) => void,
   setWriteGeneration: (gen: number) => void
 ): Promise<boolean | 'partial'> {
   const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
@@ -92,7 +92,7 @@ async function _executeWriteToDeviceInternal(
   mtuMap: Map<string, number>,
   adapterMap: Map<string, any>,
   stateRefs: BleWriteStateRefs,
-  setWriteMutex: (promise: Promise<any>) => void
+  setWriteMutex: (promise: Promise<boolean | 'partial'>) => void
 ): Promise<boolean | 'partial'> {
   const targets = targetDeviceId
     ? connectedDevices.filter(d => d.id === targetDeviceId)
@@ -261,7 +261,7 @@ export async function executeProtocolResults(
   mtuMap: Map<string, number>,
   adapterMap: Map<string, any>,
   stateRefs: BleWriteStateRefs,
-  setWriteMutex: (promise: Promise<any>) => void,
+  setWriteMutex: (promise: Promise<boolean | 'partial'>) => void,
   setWriteGeneration: (gen: number) => void
 ): Promise<boolean> {
   if (payloads.length === 0) return true;
@@ -320,7 +320,7 @@ async function _executeProtocolResultsInternal(
   mtuMap: Map<string, number>,
   adapterMap: Map<string, any>,
   stateRefs: BleWriteStateRefs,
-  setWriteMutex: (promise: Promise<any>) => void
+  setWriteMutex: (promise: Promise<boolean | 'partial'>) => void
 ): Promise<boolean> {
   const executeWrite = async (): Promise<boolean> => {
     if (capturedGeneration !== 0 && capturedGeneration !== stateRefs.writeGeneration) {

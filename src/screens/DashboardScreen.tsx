@@ -320,7 +320,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   });
   const dockedControllerRef = React.useRef<DockedControllerHandle>(null);
 
-  const [crewInitialStep, setCrewInitialStep] = useState<any>('landing');
+  const [crewInitialStep, setCrewInitialStep] = useState<'landing' | 'join' | string>('landing');
   const [isCrewHubCollapsed, setIsCrewHubCollapsed] = useState(false);
 
   // Load Crew Hub collapsed state on mount

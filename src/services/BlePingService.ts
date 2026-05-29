@@ -3,6 +3,7 @@ import { Buffer } from 'buffer';
 import { AppLogger } from './AppLogger';
 import { createGattSession } from './BleSessionFactory';
 import { acquireGattLock } from '../hooks/ble/useBLEGattMutex';
+import type { PingResult } from '../types/dashboard.types';
 
 /**
  * executePingDevice — Wizard-exclusive atomic GATT session.
@@ -14,7 +15,7 @@ export async function executePingDevice(
   bleManager: any,
   mac: string,
   blinkPayload: number[]
-): Promise<any> {
+): Promise<PingResult | null> {
   if (Platform.OS === 'web' || !bleManager) return null;
 
   const lockHandle = await acquireGattLock(1);
@@ -41,14 +42,15 @@ export async function executePingDevice(
     });
 
     // ── Step 3: Probe EEPROM (same GATT session — no collision) ──────────────
-    const hwConfig = await new Promise<any>((resolve) => {
-      let accumulatedTelemetry: any = null;
+    const hwConfig = await new Promise<PingResult | null>((resolve) => {
+      let accumulatedTelemetry: Partial<PingResult> | null = null;
 
       const timer = setTimeout(() => {
         sub.remove();
         if (accumulatedTelemetry) {
           AppLogger.warn(`[BLE pingDevice] Partial telemetry for ${mac}. Returning partial.`);
-          resolve(accumulatedTelemetry);
+          // Cast: accumulated fields are sufficient for wizard use by this point.
+          resolve(accumulatedTelemetry as unknown as PingResult);
         } else {
           AppLogger.warn(`[BLE pingDevice] Probe timed out for ${mac} after 3500ms.`);
           resolve(null);
@@ -78,7 +80,8 @@ export async function executePingDevice(
               clearTimeout(timer);
               sub.remove();
               AppLogger.log('DEVICE_DISCOVERED', { context: 'pingDevice_probe_success', deviceId: mac });
-              resolve(accumulatedTelemetry);
+              // Cast: detected + rfMode both present = all required EEPROM fields accumulated.
+              resolve(accumulatedTelemetry as unknown as PingResult);
             }
           } catch (e) {
             AppLogger.warn('[BLE] Parse error during pingDevice telemetry monitor', e);

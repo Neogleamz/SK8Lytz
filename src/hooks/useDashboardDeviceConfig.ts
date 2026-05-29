@@ -30,7 +30,7 @@ interface UseDashboardDeviceConfigOptions {
   selectedDeviceForSettings: { id: string; name: string | null; [key: string]: any } | null;
   customGroups: Group[];
   registeredDevices: RegisteredDevice[];
-  saveRegisteredDevice: (rd: any) => Promise<any>;
+  saveRegisteredDevice: (rd: RegisteredDevice) => Promise<boolean>;
   setAllDevices: (updater: (prev: any[]) => any[]) => void;
   allDevicesRef: MutableRefObject<any[]>;
   setUpdateTrigger: (updater: (prev: number) => number) => void;

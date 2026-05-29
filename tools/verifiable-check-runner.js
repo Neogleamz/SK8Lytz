@@ -47,10 +47,10 @@ if (isVerifyMode) {
     process.exit(1);
   }
 
-  const { commit, timestamp, tscStatus, jestStatus, browserConsoleStatus, astStatus, stdoutHash, signature } = attestation;
+  const { commit, timestamp, tscStatus, jestStatus, browserConsoleStatus, astStatus, typeSafetyStatus, stdoutHash, signature } = attestation;
 
   // 1. Recalculate signature
-  const dataToSign = `${commit}:${timestamp}:${tscStatus}:${jestStatus}:${browserConsoleStatus || 'FAILED'}:${astStatus || 'FAILED'}:${stdoutHash}`;
+  const dataToSign = `${commit}:${timestamp}:${tscStatus}:${jestStatus}:${browserConsoleStatus || 'FAILED'}:${astStatus || 'FAILED'}:${typeSafetyStatus || 'FAILED'}:${stdoutHash}`;
   const expectedSignature = crypto.createHmac('sha256', salt).update(dataToSign).digest('hex');
 
   if (signature !== expectedSignature) {
@@ -59,8 +59,8 @@ if (isVerifyMode) {
   }
 
   // 2. Verify status values
-  if (tscStatus !== 'SUCCESS' || jestStatus !== 'SUCCESS' || browserConsoleStatus !== 'SUCCESS' || astStatus !== 'SUCCESS') {
-    console.error('❌ Error: Stored attestation indicates failed checks (TSC/Jest/BrowserConsole).');
+  if (tscStatus !== 'SUCCESS' || jestStatus !== 'SUCCESS' || browserConsoleStatus !== 'SUCCESS' || astStatus !== 'SUCCESS' || (typeSafetyStatus && typeSafetyStatus !== 'SUCCESS')) {
+    console.error('❌ Error: Stored attestation indicates failed checks (TSC/Jest/BrowserConsole/AST/TypeSafety).');
     process.exit(1);
   }
 
@@ -174,11 +174,61 @@ try {
   console.error(astOutput);
 }
 
+let typeSafetyOutput = '';
+let typeSafetyStatus = 'FAILED';
+const typeSafetyStart = Date.now();
+console.log('⏳ Running Production Type Safety Guard (no as any)...');
+try {
+  // Scan all production .ts/.tsx files (exclude __tests__ directories and .d.ts files)
+  const srcDir = path.join(WORKTREE_ROOT, 'src');
+  const FORBIDDEN_PATTERNS = [/ as any[^[]/, /as any$/, /as any,/, /as any\)/, /as any;/, /<any>/];
+  const WHITELIST_TOKENS = ['// MIGRATION-SHIM', '// eslint-disable', 'as unknown as', '// TYPE-OVERRIDE:'];
+
+  function scanDir(dir) {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    const violations = [];
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name === '__tests__' || entry.name === 'node_modules') continue;
+        violations.push(...scanDir(fullPath));
+      } else if (entry.isFile() && /\.(tsx?|)$/.test(entry.name) && !entry.name.endsWith('.d.ts') && (entry.name.endsWith('.ts') || entry.name.endsWith('.tsx'))) {
+        const lines = fs.readFileSync(fullPath, 'utf8').split('\n');
+        lines.forEach((line, idx) => {
+          const hasWhitelist = WHITELIST_TOKENS.some(token => line.includes(token));
+          if (hasWhitelist) return;
+          const hasForbidden = FORBIDDEN_PATTERNS.some(pat => pat.test(line));
+          if (hasForbidden) {
+            const rel = path.relative(WORKTREE_ROOT, fullPath).replace(/\\/g, '/');
+            violations.push(`  ${rel}:${idx + 1}  ${line.trim()}`);
+          }
+        });
+      }
+    }
+    return violations;
+  }
+
+  const violations = scanDir(srcDir);
+  if (violations.length === 0) {
+    typeSafetyStatus = 'SUCCESS';
+    typeSafetyOutput = '';
+    console.log('✅ Production type safety guard clean!');
+  } else {
+    typeSafetyOutput = violations.join('\n');
+    console.error(`❌ Production Type Safety FAILED — ${violations.length} forbidden \`as any\` cast(s) found:`);
+    console.error(typeSafetyOutput);
+    console.error('\n👉 Fix: use explicit types, optional chaining, or add // MIGRATION-SHIM comment if it is a known shim.');
+  }
+} catch (e) {
+  typeSafetyOutput = e.message;
+  console.error('❌ Type safety scan failed to run:', e.message);
+}
+
 // Create cryptographic package
-const combinedOutput = tscOutput + jestOutput + browserConsoleOutput + astOutput;
+const combinedOutput = tscOutput + jestOutput + browserConsoleOutput + astOutput + typeSafetyOutput;
 const stdoutHash = crypto.createHash('sha256').update(combinedOutput).digest('hex');
 
-const dataToSign = `${currentCommit}:${timestamp}:${tscStatus}:${jestStatus}:${browserConsoleStatus}:${astStatus}:${stdoutHash}`;
+const dataToSign = `${currentCommit}:${timestamp}:${tscStatus}:${jestStatus}:${browserConsoleStatus}:${astStatus}:${typeSafetyStatus}:${stdoutHash}`;
 const signature = crypto.createHmac('sha256', salt).update(dataToSign).digest('hex');
 
 const attestationData = {
@@ -192,13 +242,15 @@ const attestationData = {
   browserConsoleDurationMs: Date.now() - browserConsoleStart,
   astStatus,
   astDurationMs: Date.now() - astStart,
+  typeSafetyStatus,
+  typeSafetyDurationMs: Date.now() - typeSafetyStart,
   stdoutHash,
   signature
 };
 
 fs.writeFileSync(attestationPath, JSON.stringify(attestationData, null, 2), 'utf8');
 
-if (tscStatus === 'SUCCESS' && jestStatus === 'SUCCESS' && browserConsoleStatus === 'SUCCESS' && astStatus === 'SUCCESS') {
+if (tscStatus === 'SUCCESS' && jestStatus === 'SUCCESS' && browserConsoleStatus === 'SUCCESS' && astStatus === 'SUCCESS' && typeSafetyStatus === 'SUCCESS') {
   console.log('\n🔒 Cryptographic Attestation written to .test-attestation.json successfully!');
   console.log('✅ QA Hardening checks passed cleanly.');
   process.exit(0);

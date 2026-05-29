@@ -30,7 +30,9 @@ export function CrewLandingMap({
   discoverRadiusMi: number | null;
 }) {
   const { Colors } = useTheme();
-  const mapRef = React.useRef<any>(null);
+  // TYPE-OVERRIDE: react-native-map-clustering does not export its ref type.
+  // MapViewCluster extends MapView — the ref exposes animateToRegion from the base MapView.
+  const mapRef = React.useRef<(React.ElementRef<typeof MapViewCluster> & { animateToRegion: MapView['animateToRegion'] }) | null>(null);
 
   React.useEffect(() => {
     if (mapRef.current && locationCoords) {

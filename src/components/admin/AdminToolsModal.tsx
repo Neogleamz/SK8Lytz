@@ -11,6 +11,7 @@ import {
     View
 } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
+import type { Device } from 'react-native-ble-plx';
 import { useAdminSettings } from '../../hooks/useAdminSettings';
 import { EVENT_META, formatLogTime, getPayloadSummary, useAdminTelemetry } from '../../hooks/useAdminTelemetry';
 import { useProductManager } from '../../hooks/useProductManager';
@@ -50,7 +51,7 @@ export interface AdminToolsModalProps {
   bleState?: string;
   handleScan?: () => void;
   onClearAll?: () => void;
-  onConnectToDevice?: (device: any) => Promise<any>;
+  onConnectToDevice?: (device: { id: string; name: string | null; rssi?: number | null }) => Promise<void>;
   liveDeviceConfigs?: Record<string, any>;
 }
 

@@ -17,7 +17,7 @@ export interface ProductManagerProps {
   startEditing: (p: any) => void;
   createNew: () => void;
   patchEdit: (d: any) => void;
-  saveProduct: () => Promise<any>;
+  saveProduct: () => Promise<boolean>;
   productSaving: boolean;
 }
 

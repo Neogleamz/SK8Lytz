@@ -80,7 +80,9 @@ export function useBLEScanner({
           location: locString
         }));
 
-        await supabase.from('discovered_devices_telemetry').insert(payloads as any);
+        // TYPE-OVERRIDE: Supabase generated Insert type lags schema — discovered_devices_telemetry
+        // has optional BLE advert fields not reflected in the generated type. Remove at next /db-sync.
+        await supabase.from('discovered_devices_telemetry').insert(payloads as any); // TYPE-OVERRIDE: schema lag
       } catch (_e) {
         AppLogger.warn('[Scanner] Ambient telemetry flush failed', { error: String(_e) });
       }

@@ -24,7 +24,7 @@ const VerticalPatternDrum = ({
   
   const [localVal, setLocalVal] = useState(value);
   const [layoutHeight, setLayoutHeight] = useState(200);
-  const commitTimeoutRef = useRef<any>(null);
+  const commitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setLocalVal(value);

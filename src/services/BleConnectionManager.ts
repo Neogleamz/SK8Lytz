@@ -5,7 +5,7 @@ import { AppLogger } from './AppLogger';
 import { createGattSession } from './BleSessionFactory';
 import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 import { acquireGattLock } from '../hooks/ble/useBLEGattMutex';
-import { BLEPhaseTag } from './BleStateMachine';
+import { BleStateMachine, BLEPhaseTag } from './BleStateMachine';
 
 /**
  * executeConnectToDevices — Group connection manager.
@@ -22,7 +22,7 @@ export async function executeConnectToDevices(
   sweeper: any,
   scanner: any,
   autoRecovery: any,
-  bleGateRef: React.MutableRefObject<any>,
+  bleGateRef: React.MutableRefObject<BleStateMachine>,
   mtuMapRef: React.MutableRefObject<Map<string, number>>,
   adapterMapRef: React.MutableRefObject<Map<string, any>>,
   dataReceivedCallbackRef: React.MutableRefObject<((deviceId: string, data: number[]) => void) | undefined>,

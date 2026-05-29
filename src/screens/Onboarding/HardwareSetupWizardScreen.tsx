@@ -13,8 +13,7 @@ import { getDefaultGroupName } from '../../utils/NamingUtils';
 import { AppLogger } from '../../services/AppLogger';
 import { buildPatternPayload } from '../../protocols/PatternEngine';
 
-import type { BleConnectionState } from '../../types/dashboard.types';
-import type { PendingRegistration } from '../../types/dashboard.types';
+import type { BleConnectionState, PendingRegistration, PingResult } from '../../types/dashboard.types';
 
 interface HardwareSetupWizardScreenProps {
   onSetupComplete: (devices: RegisteredDevice[]) => Promise<void> | void;
@@ -31,7 +30,7 @@ interface HardwareSetupWizardScreenProps {
    * Wizard-exclusive atomic ping: Connect → Blink → Probe → Off → Disconnect.
    * Returns hwConfig or null. Replaces the broken writeToDevice + probeDevice pair.
    */
-  pingDevice: (mac: string, blinkPayload: number[]) => Promise<any>;
+  pingDevice: (mac: string, blinkPayload: number[]) => Promise<PingResult | null>;
 }
 
 export default function HardwareSetupWizardScreen({

@@ -4,8 +4,14 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../../../services/supabaseClient';
 import { AppLogger } from '../../../services/AppLogger';
 
-export default function GlobalAnalyticsPanel({ Colors }: { Colors: any }) {
-  const [data, setData] = useState<any>(null);
+interface GlobalAnalyticsSummary {
+  fleet_total_distance_meters?: number;
+  fleet_total_app_time_sec?: number;
+  fleet_total_street_sessions?: number;
+}
+
+export default function GlobalAnalyticsPanel({ Colors }: { Colors: Record<string, string> }) {
+  const [data, setData] = useState<GlobalAnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

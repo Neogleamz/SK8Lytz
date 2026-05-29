@@ -203,7 +203,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
      * Snapshot of the full UI state captured immediately before each BLE write.
      * If the write is rejected (RECONCILED phase), applyCloudScene restores this snapshot.
      */
-    const lastConfirmedStateRef = useRef<any>(null);
+    const lastConfirmedStateRef = useRef<Record<string, unknown> | null>(null);
     // Ref indirection for captureEntireState — declared here to break the TDZ forward reference.
     // captureEntireState (defined at L413 via useCallback) is assigned to this ref each render.
     const captureEntireStateRef = useRef<(override?: Record<string, any>) => any>(() => null);

@@ -31,7 +31,7 @@ import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProto
 import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
 import { AppLogger } from '../../services/AppLogger';
 import { createGattSession } from '../../services/BleSessionFactory';
-import type { PendingRegistration } from '../../types/dashboard.types';
+import type { PendingRegistration, PingResult } from '../../types/dashboard.types';
 import { mapDeviceToRegistration } from '../../utils/classifyBLEDevice';
 import { acquireGattLock } from './useBLEGattMutex';
 
@@ -75,7 +75,7 @@ export interface UseBLESweeperReturn {
    *  Also resets the seenMacs set to clear stale/ghost device accumulation. */
   burstScan(durationMs?: number): Promise<void>;
   /** In-memory HW cache — keyed by uppercase MAC, value is EEPROM hwConfig */
-  hwCache: Record<string, any>;
+  hwCache: Record<string, PingResult>;
 }
 
 export function useBLESweeper({
@@ -99,8 +99,8 @@ export function useBLESweeper({
   const isSweeperActiveRef = useRef(false);
 
   // ── In-memory HW cache ──────────────────────────────────────────────────
-  const [hwCache, setHwCache] = useState<Record<string, any>>({});
-  const hwCacheRef = useRef<Record<string, any>>({});
+  const [hwCache, setHwCache] = useState<Record<string, PingResult>>({});
+  const hwCacheRef = useRef<Record<string, PingResult>>({});
 
   // ── Boot: load persisted HW cache from AsyncStorage ─────────────────────
   useEffect(() => {
@@ -226,11 +226,12 @@ export function useBLESweeper({
         return;
       }
 
-      const hwConfig = await new Promise<any>(resolve => {
-        let accumulated: any = null;
+      const hwConfig = await new Promise<PingResult | null>(resolve => {
+        let accumulated: Partial<PingResult> | null = null;
         const timer = setTimeout(() => {
           sub.remove();
-          resolve(accumulated);
+          // Cast: partial EEPROM data is sufficient for hw cache after timeout.
+          resolve(accumulated as unknown as PingResult | null);
         }, PROBE_TIMEOUT_MS);
 
         const sub = bleManager.monitorCharacteristicForDevice(
@@ -253,7 +254,8 @@ export function useBLESweeper({
               if (accumulated?.detected && accumulated?.rfMode) {
                 clearTimeout(timer);
                 sub.remove();
-                resolve(accumulated);
+                // Cast: detected + rfMode both present = all required EEPROM fields accumulated.
+                resolve(accumulated as unknown as PingResult);
               }
             } catch (e) {
               AppLogger.warn('[useBLESweeper] Protocol parse failed', { mac, error: String(e) });
