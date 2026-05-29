@@ -142,6 +142,8 @@ BANLANX_APK/
 # Python caching
 __pycache__/
 *.pyc
+python27/
+
 
 # Local LibreHardwareMonitor
 tools/LibreHWMonitor/

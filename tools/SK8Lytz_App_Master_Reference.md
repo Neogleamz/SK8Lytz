@@ -1,6 +1,6 @@
 # SK8Lytz App Master Reference
 
-_Last Updated: 2026-05-27 | **BATCH:monolith-cleanup COMPLETE** — useBLE.ts monolith cleanly partitioned into 4 stateless helper services (BleConnectionManager, BleWriteDispatcher, BlePingService, BleLifecycleManager) and refactored as a thin composition hook. Dependency diet applied (React 19.2.6). v3.6.4 | Source of Truth: src/hooks/useBLE.ts_
+_Last Updated: 2026-05-29 | **BATCH:grouping-architecture-overhaul COMPLETE** — Many-to-many group membership migration, mixed-state UI (roller-skate icons red/green per-device), skatepark RSSI hijack prevention, offline auto-connect scalar→array migration, split-brain guard. v3.6.5 | Source of Truth: src/hooks/useDashboardAutoConnect.ts, src/services/DeviceRepository.ts_
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
 
@@ -245,15 +245,16 @@ Controls which color pickers the UI renders for a given pattern:
 | :---------------------------------- | :------------------------------ | :---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@sk8lytz_logs`                     | AppLogger                       | Compact telemetry event buffer array                                                                                                            |
 | `@Sk8lytz_auth_username`            | DashboardScreen                 | Local cache of Supabase display_name for instant UI feedback. Synced via Reactive Context Pattern (Load Cache -> Hydrate Profile -> Update UI). |
-| `@Sk8lytz_registered_devices`       | DeviceRepository                | Primary SSOT ledger of all claimed/bound hardware keyed by BLE MAC. Supersedes ad-hoc device configurations.                                    |
-| `@Sk8lytz_device_configs`           | useDashboardGroups / AppLogger  | Dict keyed by **BLE MAC** containing `{ name, type, points, segments, sorting, stripType, groupId }`                                           |
-| `@Sk8lytz_custom_groups`            | useDashboardGroups              | Array of `{ id, name, isGroup, deviceIds }` — group memberships                                                                                |
+| `@Sk8lytz_registered_devices`       | DeviceRepository                | Primary SSOT ledger of all claimed/bound hardware keyed by BLE MAC. Each entry uses `group_ids: string[]` and `group_names: string[]` (many-to-many migration 2026-05-28). Legacy scalar `group_id` is dead. |
+| `@Sk8lytz_device_configs`           | useDashboardGroups / AppLogger  | Dict keyed by **BLE MAC** containing `{ name, type, points, segments, sorting, stripType, group_ids: string[], group_names: string[] }` |
+| `@Sk8lytz_custom_groups`            | useDashboardGroups              | Array of `{ id, name, isGroup, deviceIds }` — group memberships (junction-table backed post v3.6.5) |
 | `@sk8_hw_<deviceId>`                | Sk8LytzProgrammerModal          | Per-device EEPROM hardware settings cache                                                                                                       |
 | `@sk8lytz_theme`                    | ThemeContext                    | `dark` or `light`                                                                                                                               |
 | `@sk8lytz_control_theme`            | ThemeContext                    | Control color theme name                                                                                                                        |
 | `@Sk8lytz_Favorites`                | useFavorites                    | Dictionary of user-defined lighting presets (Name, Palette, Mode)                                                                               |
 | `@sk8lytz_permissions_optout`       | PermissionService               | App-Level Opt-Out Ledger. User toggles that override OS permissions for legal/privacy reasons.                                                  |
 | `@Sk8lytz_voice_tutorial_dismissed` | boolean                         | Gating for the Voice Command onboarding modal                                                                                                   |
+| `@sk8lytz_app_settings`             | AppSettingsService / useBLEScanner | App-wide admin feature flags. Key `hw_setup_rssi_threshold` (default -70 dBm) controls the RSSI gate during Setup Wizard device discovery. Loaded once on scanner mount. |
 
 > [!CAUTION]
 > **PURGED KEYS (2026-04-17):** The following legacy `ng_*` keys are fully deprecated and MUST NOT be used anywhere in the codebase. They caused split-brain bugs due to namespace drift:
@@ -509,6 +510,17 @@ The dashboard auto-connect observer watches `allDevices` for registered peripher
 - **500ms debounce** — batches devices discovered within 500ms into a single `connectToDevices` call
 - **Gate check** — skips connection when `bleGateRef ≠ IDLE`
 - **Prevents stampeding herd** — no concurrent auto-connect attempts
+- **Group-IDs array aware (2026-05-29)**: The offline fallback `processLocalDevices()` iterates `d.group_ids` (array, post-migration) with a scalar `d.group_id` fallback for legacy persisted rows. The cloud path similarly checks `d.group_ids.includes(targetGroupId)` before the scalar. **Never assume `d.group_id` is populated on newly-registered devices.**
+
+### RSSI Proximity Gating (Setup Wizard)
+
+_Lives in: `src/hooks/ble/useBLEScanner.ts`_
+
+To prevent skatepark BLE noise from hijacking the Setup Wizard, the scanner enforces a two-tier RSSI gate:
+- **Registered devices** (already in fleet): -80 dBm hardcoded threshold — passes through as long as device is physically nearby
+- **Unregistered devices** (not yet claimed): `hw_setup_rssi_threshold` from `@sk8lytz_app_settings` (default -70 dBm) — tunable via Admin → App Manager → Hardware section
+- Threshold is loaded **once on scanner mount** from AsyncStorage. Changing it mid-session requires app restart to take effect.
+- Admin stepper control: `ControlsRegistry.ts` key `hw_setup_rssi_threshold`, type `number_stepper`, range -100 to -30 dBm, step 1.
 
 ---
 
@@ -832,7 +844,7 @@ All FSM states and shared interfaces live in **`src/types/dashboard.types.ts`**.
 | `MicSource`           | `'APP' \| 'DEVICE'`                                                           |
 | `MusicColorFocus`     | `'PRIMARY' \| 'SECONDARY'`                                                    |
 | `DeviceSettingsState` | FSM: `'IDLE' \| 'LOADING' \| 'READY' \| 'ERROR'`                              |
-| `IDeviceConfigEntry`  | `{ name, type, points, segments, sorting, stripType, groupId }`               |
+| `IDeviceConfigEntry`  | `{ name, type, points, segments, sorting, stripType, group_ids: string[], group_names: string[] }` — **NOTE**: scalar `groupId` removed in many-to-many migration (2026-05-28). |
 
 ---
 
@@ -874,11 +886,14 @@ _Project ID:_ `qefmeivpjyaukbwadgaz`
 | `product_id_confirmed_at`   | TIMESTAMPTZ| When product_id was confirmed via BLE (added 2026-04-22)|
 | `rf_mode`                   | TEXT       | RF remote auth policy                                |
 | `rf_paired_count`           | INT        | Number of paired RF remotes                          |
-| `group_id`                  | TEXT       | Fleet group assignment                               |
-| `group_name`                | TEXT       | Human-readable group name                            |
+| `group_id`                  | TEXT       | **⚠️ LEGACY — do not use for new code.** Superseded by junction table `device_group_members`. Still present in cloud rows for backward compat. |
+| `group_name`                | TEXT       | **⚠️ LEGACY — do not use for new code.** Superseded by `registered_groups.group_name`. |
 | `registered_at`             | TIMESTAMPTZ| First registration timestamp                         |
 | `updated_at`                | TIMESTAMPTZ| Last modification timestamp                          |
 | `rssi_at_register`          | INT        | Signal strength at registration                      |
+
+> [!IMPORTANT]
+> **Many-to-Many Migration (2026-05-28)**: Device-to-group membership is now stored in the `device_group_members` junction table (`device_id TEXT FK → registered_devices.device_mac`, `group_id TEXT FK → registered_groups.id`). The app-side `RegisteredDevice` object uses `group_ids: string[]` and `group_names: string[]` arrays. The `upsert_group_with_devices` RPC handles all atomic group mutations. Never write scalar `group_id` from new code.
 
 #### **`product_catalog`** (Dynamic Hardware Definitions)
 

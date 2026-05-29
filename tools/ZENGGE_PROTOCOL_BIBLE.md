@@ -6,7 +6,7 @@
 > `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\ZENGGE_APK\ZENGGE_DECOMPILED\sources\`
 > No community docs, no guesses. Every byte is APK-verified.
 
-> **Last Updated**: 2026-04-22 (Oracle Hardware Validation Session + Live BLE Sniff)
+> **Last Updated**: 2026-05-29 (Oracle Hardware Validation Session + Live BLE Sniff 2026-04-22 — no protocol changes in grouping-architecture-overhaul sprint)
 > **Confirmed Hardware**: `Ctrl_Mini_RGB_Symphony_new_0xA3` (product_id: 163 = 0xA3)
 > **Source Files**: `tc/C14184b.java`, `tc/C14187d.java`, `com/zengge/wifi/COMM/Protocol/C77*.java`,
 > `com/zengge/wifi/activity/NewSymphony/fragment/*.java`
