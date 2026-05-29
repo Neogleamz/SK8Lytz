@@ -118,7 +118,7 @@ export const SK8LYTZ_TEMPLATES: SK8LytzTemplate[] = [
   { id: 72, name: 'Center-Out Marquee',   icon: '🎆', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 3, group: 'Marquee' },
 
   // ── GROUP 10: NATIVE 0x41 PARITY (Test) ──
-  { id: 201, name: 'Large Scroll',      icon: '🌊', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 201, name: 'Large Scroll',      icon: '🌊', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 202, name: 'Gradient Chunk',    icon: '✨', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 203, name: 'Single Dot Chase',  icon: '💫', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 204, name: 'Ping-Pong Fill',    icon: '↔️', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
