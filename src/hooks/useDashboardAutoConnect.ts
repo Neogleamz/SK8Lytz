@@ -184,17 +184,24 @@ export function useDashboardAutoConnect({
         const processLocalDevices = (devicesArray: any[]) => {
           const offlineGroupMap = new Map<string, any>();
           devicesArray.forEach((d: any) => {
-            if (d.group_id && d.group_id !== 'default-fleet') {
-              if (!offlineGroupMap.has(d.group_id)) {
-                offlineGroupMap.set(d.group_id, {
-                  id: d.group_id,
-                  group_name: d.group_name || d.group_id,
-                  created_at: new Date().toISOString(),
-                  deviceIds: [],
-                });
+            // Many-to-many migration: prefer group_ids array, fall back to legacy scalar group_id
+            const gIds: string[] = d.group_ids || (d.group_id ? [d.group_id] : []);
+            const gNames: string[] = d.group_names || (d.group_name ? [d.group_name] : []);
+            gIds.forEach((gId: string, idx: number) => {
+              if (gId && gId !== 'default-fleet') {
+                if (!offlineGroupMap.has(gId)) {
+                  offlineGroupMap.set(gId, {
+                    id: gId,
+                    group_name: gNames[idx] || gId,
+                    created_at: new Date().toISOString(),
+                    deviceIds: [],
+                  });
+                }
+                if (!offlineGroupMap.get(gId).deviceIds.includes(d.device_mac)) {
+                  offlineGroupMap.get(gId).deviceIds.push(d.device_mac);
+                }
               }
-              offlineGroupMap.get(d.group_id).deviceIds.push(d.device_mac);
-            }
+            });
           });
           groupsToProcess = Array.from(offlineGroupMap.values());
         };
@@ -236,8 +243,13 @@ export function useDashboardAutoConnect({
                 (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
               );
               if (presentGroups.length > 0) {
+                const targetGroupId = presentGroups[0].id;
                 idsToConnect = devices
-                  .filter((d: any) => d.group_id === presentGroups[0].id)
+                  .filter((d: any) => {
+                    // Many-to-many: check group_ids array first, fall back to legacy scalar
+                    const dGroupIds: string[] = d.group_ids || (d.group_id ? [d.group_id] : []);
+                    return dGroupIds.includes(targetGroupId);
+                  })
                   .map((d: any) => d.device_mac || d.id);
               }
             }

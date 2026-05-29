@@ -241,8 +241,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     isRegisteredCollapsed,
     setIsRegisteredCollapsed,
     handleRegistrationComplete,
-    // runAutoProvisioning: removed — useDashboardAutoConnect owns auto-connect on boot.
-    // runAutoProvisioning is preserved in useDashboardGroups for future manual-scan UI.
+    // runAutoProvisioning deleted — the Setup Wizard now owns all device claiming.
     saveGroup,
     handleGroupDelete,
   } = useDashboardGroups({
