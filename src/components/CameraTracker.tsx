@@ -141,7 +141,7 @@ export default function CameraTracker({
       'worklet';
 
       try {
-        const now = performance.now();
+        const now = Date.now();
         // 200ms interval = 5Hz execution cap
         if (now - lastProcessedRef.current < 200) {
           return;
@@ -152,13 +152,16 @@ export default function CameraTracker({
           const resized = resizer.resize(frame);
           const buffer = resized.getPixelBuffer();
           const resizedArray = new Uint8Array(buffer);
+          
+          // Dynamically detect bytes per pixel to handle both RGB (3) and RGBA/BGRA (4) layouts
+          const channels = Math.floor(resizedArray.length / 2500);
 
           if (resizedArray.length >= 7500) {
             const currentSubMode = subModeRef.current;
 
             if (currentSubMode === 'SNIPER') {
-              // 1. SNIPER mode: sampling center pixel
-              const centerIdx = (25 * 50 + 25) * 3;
+              // 1. SNIPER mode: sampling center pixel (25x25 on a 50x50 grid)
+              const centerIdx = (25 * 50 + 25) * channels;
               const r = resizedArray[centerIdx];
               const g = resizedArray[centerIdx + 1];
               const b = resizedArray[centerIdx + 2];
@@ -167,7 +170,7 @@ export default function CameraTracker({
             } else {
               // 2. VIBE mode: K-Means palette extraction (k=3)
               const pixels: RGB[] = [];
-              for (let i = 0; i < 7500; i += 3) {
+              for (let i = 0; i < resizedArray.length; i += channels) {
                 pixels.push({
                   r: resizedArray[i],
                   g: resizedArray[i + 1],
@@ -238,7 +241,18 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+    borderRadius: 16,
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
     overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   centeredContainer: {
     flex: 1,
