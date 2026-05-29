@@ -121,33 +121,33 @@ export const SK8LYTZ_TEMPLATES: SK8LytzTemplate[] = [
   { id: 201, name: 'Large Scroll',      icon: '🌊', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 202, name: 'Gradient Chunk',    icon: '✨', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 203, name: 'Single Dot Chase',  icon: '💫', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 204, name: 'Ping-Pong Fill',    icon: '↔️', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 205, name: 'Ping-Pong Dot',     icon: '🎾', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 204, name: 'Ping-Pong Fill',    icon: '↔️', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 205, name: 'Ping-Pong Dot',     icon: '🎾', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 206, name: 'Marching Ants',     icon: '🐜', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 207, name: 'Smooth Breath',     icon: '💨', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 208, name: '3-Color Breath',    icon: '🫁', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 209, name: 'Rainbow Breath',    icon: '🌈', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 210, name: '3-Color Jump',      icon: '🐸', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 211, name: '7-Color Breathing', icon: '💓', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 212, name: 'Rainbow Crossfade', icon: '🌌', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 213, name: 'Rainbow Jump',      icon: '🦘', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 214, name: 'Irregular Strobe',  icon: '⚡', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 215, name: '3-Color Strobe',    icon: '📸', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 216, name: 'Rainbow Strobe',    icon: '💥', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 207, name: 'Smooth Breath',     icon: '💨', colorMode: 'FG_ONLY', requiresForeground: true, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 208, name: '3-Color Breath',    icon: '🫁', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 209, name: 'Rainbow Breath',    icon: '🌈', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 210, name: '3-Color Jump',      icon: '🐸', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 211, name: '7-Color Breathing', icon: '💓', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 212, name: 'Rainbow Crossfade', icon: '🌌', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 213, name: 'Rainbow Jump',      icon: '🦘', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 214, name: 'Irregular Strobe',  icon: '⚡', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 215, name: '3-Color Strobe',    icon: '📸', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 216, name: 'Rainbow Strobe',    icon: '💥', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 217, name: 'Comet Chase',       icon: '☄️', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 218, name: 'Comet Chase II',    icon: '🌠', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 219, name: 'Fast Dot Chase',    icon: '🏎️', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 220, name: 'Static Gradient',   icon: '🌅', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 220, name: 'Static Gradient',   icon: '🌅', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 221, name: 'Multi-Comet Flow',  icon: '💫', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 222, name: 'Rainbow Wipe',      icon: '🧹', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 223, name: 'Rainbow Sweep',     icon: '🖌️', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 224, name: 'Tetris Stacker',    icon: '🧱', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 225, name: 'Fading Chunks',     icon: '🧬', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 226, name: 'Center-In Wipe',    icon: '🗜️', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 226, name: 'Center-In Wipe',    icon: '🗜️', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 227, name: 'Large Multi-Comet', icon: '🏄', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 228, name: 'Fire Flame',        icon: '🔥', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 229, name: 'Rainbow Block',     icon: '🧱', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 230, name: 'Center Fill Cycle', icon: '🪀', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
+  { id: 230, name: 'Center Fill Cycle', icon: '🪀', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 231, name: 'Custom Marquee',    icon: '🦓', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 232, name: 'Glitch Marquee',    icon: '👾', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 233, name: 'Rainbow Stream',    icon: '🛤️', colorMode: 'BG_ONLY', requiresForeground: false, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' }
@@ -216,11 +216,14 @@ export function buildPatternPayload(
   // The 33 native hardware effects (IDs 201-233) must use 0x51.
   if (patternId >= 201 && patternId <= 233) {
     const hardwareModeId = patternId - 200; // 201 maps to mode 1
-    return ZenggeProtocol.setCustomModeCompact([{
+    const hwFlags = direction === 1 ? 0x80 : 0x00;
+    
+    return ZenggeProtocol.setCustomModeExtendedCompact([{
       mode: hardwareModeId,
       speed,
       color1: fg,
-      color2: bg
+      color2: bg,
+      dir: hwFlags
     }]);
   }
 
@@ -235,13 +238,15 @@ export function buildPatternPayload(
     if (patternId === 44) modeId = 26; // ZENGGE HW Mode 26: 7-Color Center-In Fill (But accepts custom colors via 0x51!)
     if (patternId === 72) modeId = direction === 1 ? 7 : 8; // Running, from middle to both ends (Center-Out)
 
-    // PER PROTOCOL BIBLE: 0xA3 hardware strictly requires 9B setCustomModeCompact.
-    // setCustomModeExtended (10B format) is condemned on 0xA3 as it fails to animate.
-    return ZenggeProtocol.setCustomModeCompact([{
+    const hwFlags = direction === 1 ? 0x80 : 0x00;
+
+    // Use the 10-byte unpadded compact payload so the direction flag is respected!
+    return ZenggeProtocol.setCustomModeExtendedCompact([{
       mode: modeId,
       speed,
       color1: fg,
-      color2: bg
+      color2: bg,
+      dir: hwFlags
     }]);
   }
 

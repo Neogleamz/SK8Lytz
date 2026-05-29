@@ -20,21 +20,21 @@ function getAppLogger() {
   return _appLogger;
 }
 
-export const ZENGGE_SERVICE_UUID        = '0000ffff-0000-1000-8000-00805f9b34fb';
+export const ZENGGE_SERVICE_UUID = '0000ffff-0000-1000-8000-00805f9b34fb';
 export const ZENGGE_CHARACTERISTIC_UUID = '0000ff01-0000-1000-8000-00805f9b34fb'; // WRITE
-export const ZENGGE_NOTIFY_UUID         = '0000ff02-0000-1000-8000-00805f9b34fb'; // NOTIFY (responses)
+export const ZENGGE_NOTIFY_UUID = '0000ff02-0000-1000-8000-00805f9b34fb'; // NOTIFY (responses)
 
 // ─── IC TYPE TABLE (0-indexed values sent in protocol) ───────────────────────
 export const IC_TYPES: Record<number, string> = {
-  1:  'WS2812B',
-  2:  'SM16703',
-  3:  'SM16704',
-  4:  'WS2811',
-  5:  'UCS1903',
-  6:  'SK6812',
-  7:  'SK6812RGBW',
-  8:  'INK1003',
-  9:  'UCS2904B',
+  1: 'WS2812B',
+  2: 'SM16703',
+  3: 'SM16704',
+  4: 'WS2811',
+  5: 'UCS1903',
+  6: 'SK6812',
+  7: 'SK6812RGBW',
+  8: 'INK1003',
+  9: 'UCS2904B',
   10: 'JY1903',
   11: 'WS2812E',
 };
@@ -53,7 +53,7 @@ export const COLOR_SORTING_RGB: Record<number, string> = {
 
 export const COLOR_SORTING_RGBW: Record<number, string> = {
   0: 'RGBW', 1: 'RBGW', 2: 'GRBW', 3: 'GBRW', 4: 'BRGW', 5: 'BGRW',
-  6: 'WRGB',  7: 'WRBG',  8: 'WGRB',  9: 'WGBR',  10: 'WBRG', 11: 'WBGR',
+  6: 'WRGB', 7: 'WRBG', 8: 'WGRB', 9: 'WGBR', 10: 'WBRG', 11: 'WBGR',
 };
 
 // Reverse lookups: name → index
@@ -181,7 +181,7 @@ export class ZenggeProtocol {
     let payload = raw;
     let isJsonFormat = false;
     try {
-      const jsonStart = raw.findIndex((b, i) => b === 0x7B && raw[i+1] === 0x22); // 0x7B = '{'
+      const jsonStart = raw.findIndex((b, i) => b === 0x7B && raw[i + 1] === 0x22); // 0x7B = '{'
       if (jsonStart !== -1) {
         const jsonStr = String.fromCharCode(...raw.slice(jsonStart));
         const parsed = JSON.parse(jsonStr);
@@ -230,14 +230,14 @@ export class ZenggeProtocol {
       // [6]=icType (e.g. 0x01=WS2812B)
       // [7]=colorSorting (e.g. 0x02=GRB)
       // [8]=micPoints  [9]=micSegments  [10]=flags
-      icType       = payload[6] & 0xFF;
-      ledPoints    = payload[3] & 0xFF;
+      icType = payload[6] & 0xFF;
+      ledPoints = payload[3] & 0xFF;
       colorSorting = payload[7] & 0xFF;
       const parsedSegments = payload[5] & 0xFF;
 
       return {
         ledPoints: (ledPoints > 0 && ledPoints <= 2048) ? ledPoints : HW_CONSTRAINTS.defaultPoints,
-        segments:  (parsedSegments > 0) ? parsedSegments : 1,
+        segments: (parsedSegments > 0) ? parsedSegments : 1,
         icType,
         icName: IC_TYPES[icType] || 'WS2812B',
         colorSorting,
@@ -246,8 +246,8 @@ export class ZenggeProtocol {
       };
     } else {
       // Classic 12-byte format
-      icType       = payload[3] & 0xFF;
-      ledPoints    = ((payload[9] & 0xFF) << 8) | (payload[8] & 0xFF);
+      icType = payload[3] & 0xFF;
+      ledPoints = ((payload[9] & 0xFF) << 8) | (payload[8] & 0xFF);
       colorSorting = payload[10] & 0xFF;
     }
 
@@ -291,11 +291,11 @@ export class ZenggeProtocol {
     if (!manufacturerData || manufacturerData.length < 15) return null;
     if (manufacturerData[0] !== 0xA8 || manufacturerData[1] !== 0x01) return null;
 
-    const bleVersion   = manufacturerData[3] & 0xFF;
-    const productId    = ((manufacturerData[10] & 0xFF) << 8) | (manufacturerData[11] & 0xFF);
-    const firmwareMaj  = manufacturerData[12] & 0xFF;
-    const firmwareMin  = manufacturerData[14] & 0xFF;
-    const firmwareVer  = firmwareMaj * 100 + firmwareMin;
+    const bleVersion = manufacturerData[3] & 0xFF;
+    const productId = ((manufacturerData[10] & 0xFF) << 8) | (manufacturerData[11] & 0xFF);
+    const firmwareMaj = manufacturerData[12] & 0xFF;
+    const firmwareMin = manufacturerData[14] & 0xFF;
+    const firmwareVer = firmwareMaj * 100 + firmwareMin;
 
     const macAddress = manufacturerData
       .slice(4, 10)
@@ -343,9 +343,9 @@ export class ZenggeProtocol {
     // Compare with 0x63 response inner payload (JSON format):
     //   [3]=points  [5]=segments  [6]=icType  [7]=sorting
     const pHigh = (safePoints >> 8) & 0xFF;
-    const pLow  = safePoints & 0xFF;
+    const pLow = safePoints & 0xFF;
     const sHigh = (safeSegments >> 8) & 0xFF;
-    const sLow  = safeSegments & 0xFF;
+    const sLow = safeSegments & 0xFF;
 
     const raw = [0x62, pHigh, pLow, sHigh, sLow, icType & 0xFF, sorting & 0xFF, safeMicPts, safeMicSegs, 0xF0];
     raw.push(this.calculateChecksum(raw));
@@ -403,9 +403,9 @@ export class ZenggeProtocol {
 
   // ─── PROTOCOL CONSTANTS ─────────────────────────────
   // 0x51 DIY step transition modes — must use these exact values
-  static readonly STEP_JUMP    = 0x3A; // Hard cut between colors
+  static readonly STEP_JUMP = 0x3A; // Hard cut between colors
   static readonly STEP_GRADUAL = 0x3B; // Smooth cross-fade between colors
-  static readonly STEP_STROBE  = 0x3C; // Rapid flash between colors
+  static readonly STEP_STROBE = 0x3C; // Rapid flash between colors
 
   // 0x59 animated pattern speed range (ORACLE-CONFIRMED 2026-04-23: 1-100, NOT 1-31)
   // Physical hardware (0xA3) responds to the full 1-100 range on the 0x59 speed byte.
@@ -645,7 +645,7 @@ export class ZenggeProtocol {
    *   ⚠️ 0x00 is NOT valid — sends undefined commandType to hardware.
    */
   static setMultiColor(
-    colors: {r: number, g: number, b: number}[],
+    colors: { r: number, g: number, b: number }[],
     hardwareLedPoints: number,
     speed: number,
     direction: number,
@@ -655,20 +655,20 @@ export class ZenggeProtocol {
     // Assuming default safe MTU of ~180 bytes, wrapper + 0x59 headers = 16 bytes.
     // 164 bytes / 3 bytes per pixel = 54 pixels max.
     const MAX_PIXELS = 54;
-    
+
     // Enforce an absolute minimum matrix length of 12! Master Reference explicitly warns that 0x59 payloads < 10 cause hardware memory lock glitching!
     const numPoints = Math.max(12, Math.min(MAX_PIXELS, colors.length));
     const safeLedPoints = Math.max(12, hardwareLedPoints);
-    
+
     // Pad the physical array out to numPoints internally if the caller under-filled it
-    const paddedColors = new Array(numPoints).fill(colors[0] || {r:0, g:0, b:0});
-    for(let i=0; i < Math.min(numPoints, colors.length); i++) paddedColors[i] = colors[i];
+    const paddedColors = new Array(numPoints).fill(colors[0] || { r: 0, g: 0, b: 0 });
+    for (let i = 0; i < Math.min(numPoints, colors.length); i++) paddedColors[i] = colors[i];
 
     // Speed mapping: user-facing 0–100 → hardware 1–31.
     // Previously 0x00 (CASCADE) was HARDCODED to speed=1 — that was wrong, made animations look frozen.
     // Fix: pass speed through for ALL transition types, properly clamped to 1–31.
     const safeSpeed = Math.max(this.ANIM_SPEED_MIN, Math.min(this.ANIM_SPEED_MAX, Math.round(speed) || 16));
-    const hwDir = direction === 1 ? 0 : 1;
+    const hwDir = direction === 1 ? 1 : 0;
 
     const totalLen = (numPoints * 3) + 9;
     const payload = new Array(totalLen).fill(0);
@@ -699,8 +699,8 @@ export class ZenggeProtocol {
   static setCustomMode(steps: {
     mode: number;  // 1-33 (0x01-0x21) for Custom Effects, or 0x3A, 0x3B, 0x3C for Standard
     speed: number; // 1–100
-    color1: {r: number, g: number, b: number}; // foreground
-    color2: {r: number, g: number, b: number}; // background
+    color1: { r: number, g: number, b: number }; // foreground
+    color2: { r: number, g: number, b: number }; // background
   }[]): number[] {
     return this.setCustomModeCompact(steps);
   }
@@ -714,8 +714,8 @@ export class ZenggeProtocol {
   static setCustomModeCompact(steps: {
     mode: number;
     speed: number;
-    color1: {r: number, g: number, b: number};
-    color2: {r: number, g: number, b: number};
+    color1: { r: number, g: number, b: number };
+    color2: { r: number, g: number, b: number };
   }[]): number[] {
     // 18 steps * 9 bytes/step + 11 overhead bytes = 173 bytes. Fits safely within 180 byte MTU limit.
     const safeSteps = steps.slice(0, 18);
@@ -736,6 +736,43 @@ export class ZenggeProtocol {
     raw.push(0x0F); // terminator
     raw.push(this.calculateChecksum(raw.slice(0, raw.length)));
     getAppLogger().log('ZENGGE_CUSTOM_MODE_COMPACT', { bytes: raw.length, steps: safeSteps.length });
+    return this.wrapCommand(raw);
+  }
+
+  /**
+   * Build a 10B-SLOT EXTENDED packet but send it as a COMPACT (variable length) payload.
+   * This bypasses the broken 0x40 chunking protocol while still sending the 10th byte (direction flag).
+   * 
+   * Format: [0x51, step0(10), step1(10), ..., 0x0F, checksum]
+   * For 1 step: 13 bytes raw -> 21 bytes wrapped — fits ANY BLE MTU.
+   */
+  static setCustomModeExtendedCompact(steps: {
+    mode: number;
+    speed: number;
+    color1: { r: number, g: number, b: number };
+    color2: { r: number, g: number, b: number };
+    dir?: number;
+  }[]): number[] {
+    // 16 steps * 10 bytes/step + 11 overhead bytes = 171 bytes. Fits safely within 180 byte MTU limit.
+    const safeSteps = steps.slice(0, 16);
+    // Variable-length: only active steps
+    const raw: number[] = [0x51];
+    for (const step of safeSteps) {
+      const safeSpeed = Math.max(1, Math.min(100, Math.round(step.speed)));
+      raw.push(0xF0); // active
+      raw.push(step.mode & 0xFF);
+      raw.push(safeSpeed);
+      raw.push(Math.max(0, Math.min(255, step.color1.r | 0)));
+      raw.push(Math.max(0, Math.min(255, step.color1.g | 0)));
+      raw.push(Math.max(0, Math.min(255, step.color1.b | 0)));
+      raw.push(Math.max(0, Math.min(255, step.color2.r | 0)));
+      raw.push(Math.max(0, Math.min(255, step.color2.g | 0)));
+      raw.push(Math.max(0, Math.min(255, step.color2.b | 0)));
+      raw.push((step.dir ?? 0x00) & 0xFF); // 10th byte: direction flag!
+    }
+    raw.push(0x0F); // terminator
+    raw.push(this.calculateChecksum(raw.slice(0, raw.length)));
+    getAppLogger().log('ZENGGE_CUSTOM_MODE_EXT_COMPACT', { bytes: raw.length, steps: safeSteps.length });
     return this.wrapCommand(raw);
   }
 
@@ -880,7 +917,7 @@ export class ZenggeProtocol {
     clearRemotes: boolean = false
   ): number[] {
     let modeByte = 0x01; // ALLOW_ALL default
-    if (authMode === 'ALLOW_NONE')   modeByte = 0x02;
+    if (authMode === 'ALLOW_NONE') modeByte = 0x02;
     else if (authMode === 'ALLOW_PAIRED') modeByte = 0x03;
 
     const clearByte = clearRemotes ? 0x01 : 0x00;
@@ -931,12 +968,12 @@ export class ZenggeProtocol {
     const pairedRemoteIds: string[] = [];
     let offset = innerStart + 3;
     for (let i = 0; i < pairedCount; i++) {
-       if (offset + 4 <= payload.length) {
-          const idBytes = payload.slice(offset, offset + 4);
-          const hexId = idBytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join('');
-          pairedRemoteIds.push(hexId);
-          offset += 4;
-       }
+      if (offset + 4 <= payload.length) {
+        const idBytes = payload.slice(offset, offset + 4);
+        const hexId = idBytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join('');
+        pairedRemoteIds.push(hexId);
+        offset += 4;
+      }
     }
 
     return { mode, modeName: modeNames[mode], pairedCount, pairedRemoteIds };
