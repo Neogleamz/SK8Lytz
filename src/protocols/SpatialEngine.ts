@@ -1060,7 +1060,7 @@ export function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number,
         {r:255,g:0,b:0}, {r:255,g:255,b:0}, {r:0,g:255,b:0}, {r:0,g:255,b:255}, 
         {r:0,g:0,b:255}, {r:255,g:0,b:255}, {r:255,g:255,b:255}
       ];
-      const COMET_LEN = Math.max(3, Math.floor(n / 4));
+      const COMET_LEN = Math.min(n, 8); // Bible: fixed 8px comet chunks for ID 221
       const totalOffset = tick * n * 7;
       const offset = Math.floor(totalOffset) % n;
       const loopCount = Math.floor(totalOffset / n);
@@ -1141,7 +1141,7 @@ export function generateArray(patternId: PatternId, fg: RGB, bg: RGB, n: number,
         {r:255,g:0,b:0}, {r:255,g:255,b:0}, {r:0,g:255,b:0}, {r:0,g:255,b:255}, 
         {r:0,g:0,b:255}, {r:255,g:0,b:255}, {r:255,g:255,b:255}
       ];
-      const COMET_LEN = Math.max(5, Math.floor(n / 2));
+      const COMET_LEN = Math.max(5, Math.floor(n * 0.3)); // Bible: ~30% large comet chunks for ID 227
       const totalOffset = tick * n * 7;
       const offset = Math.floor(totalOffset) % n;
       const loopCount = Math.floor(totalOffset / n);
