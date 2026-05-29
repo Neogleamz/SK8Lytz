@@ -27,14 +27,14 @@ export type PatternId = number; // 1 through 61
 // pattern metadata. UI components import from here — NOT from CustomEffects.ts.
 
 
-export type ColorMode = 'FG_BG' | 'FG_ONLY' | 'GENERATIVE';
+export type ColorMode = 'FG_BG' | 'FG_ONLY' | 'BG_ONLY' | 'GENERATIVE';
 
 
 export interface SK8LytzTemplate {
   id: number;                   // Unique. Never reuse. 1-28=P1B, 29-61=P1A ge.*
   name: string;                 // User-facing label in picker
   icon: string;                 // Emoji for picker card
-  colorMode: ColorMode;         // Canonical: 'FG_BG' | 'FG_ONLY' | 'GENERATIVE'
+  colorMode: ColorMode;         // Canonical: 'FG_BG' | 'FG_ONLY' | 'BG_ONLY' | 'GENERATIVE'
   requiresForeground: boolean;  // Derived: colorMode !== 'GENERATIVE' — show FG picker
   requiresBackground: boolean;  // Derived: colorMode === 'FG_BG'     — show BG picker
   supportsDirection: boolean;   // Show direction toggle in UI?
@@ -150,7 +150,7 @@ export const SK8LYTZ_TEMPLATES: SK8LytzTemplate[] = [
   { id: 230, name: 'Center Fill Cycle', icon: '🪀', colorMode: 'GENERATIVE', requiresForeground: false, requiresBackground: false, supportsDirection: false, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 231, name: 'Custom Marquee',    icon: '🦓', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
   { id: 232, name: 'Glitch Marquee',    icon: '👾', colorMode: 'FG_BG', requiresForeground: true, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' },
-  { id: 233, name: 'Rainbow Stream',    icon: '🛤️', colorMode: 'FG_BG', requiresForeground: false, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' }
+  { id: 233, name: 'Rainbow Stream',    icon: '🛤️', colorMode: 'BG_ONLY', requiresForeground: false, requiresBackground: true, supportsDirection: true, supportsSegment: false, tier: 1, group: 'Test' }
 ];
 
 // ─── MATH HELPERS ─────────────────────────────────────────────────────────────

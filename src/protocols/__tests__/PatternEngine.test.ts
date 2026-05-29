@@ -5,7 +5,7 @@ describe('PatternEngine', () => {
     const fg = { r: 255, g: 0, b: 0 };
     const bg = { r: 0, g: 255, b: 0 };
 
-    it('should generate a valid 0x41 payload for a NATIVE pattern (ID: 201)', () => {
+    it('should generate a valid 0x51 compact payload for a NATIVE pattern (ID: 201)', () => {
       const payload = buildPatternPayload(201, fg, bg, 30, 50);
       
       expect(payload).toBeDefined();
@@ -13,11 +13,11 @@ describe('PatternEngine', () => {
       
       expect(payload.length).toBeGreaterThan(0);
       
-      // Since it's a Settled Mode 0x41, it proxies to setSettledMode which wraps it
+      // Since it's a 0x51 Compact Mode, it proxies to setCustomModeCompact which wraps it
       expect(payload[0]).toBe(0x00);
       
-      // 0x41 is the 9th byte inside the BLE wrapper envelope (index 8)
-      expect(payload[8]).toBe(0x41);
+      // 0x51 is the 9th byte inside the BLE wrapper envelope (index 8)
+      expect(payload[8]).toBe(0x51);
     });
 
     it('should generate a valid 0x59 payload for a STREET pattern (ID: 101)', () => {

@@ -21,7 +21,7 @@ export const GENERATIVE_RAINBOW: string[] = [
 ];
 
 /** Resolve the colorMode for a given patternId from the canonical template registry. */
-const getColorMode = (patternId?: number): 'FG_ONLY' | 'FG_BG' | 'GENERATIVE' | null => {
+const getColorMode = (patternId?: number): 'FG_ONLY' | 'FG_BG' | 'BG_ONLY' | 'GENERATIVE' | null => {
   if (!patternId) return null;
   const template = SK8LYTZ_TEMPLATES.find(t => t.id === patternId);
   return (template?.colorMode) ?? null;
@@ -68,8 +68,12 @@ export const resolveGradientColors = (fav: IFavoriteState, glow: string): string
   if (fav.mode === 'PATTERN' || fav.mode === 'MULTIMODE') {
     const colorMode = getColorMode(fav.patternId);
     if (colorMode === 'GENERATIVE') return GENERATIVE_RAINBOW;
-    if ((colorMode === 'FG_ONLY' || colorMode === 'FG_BG') && fav.fixedFgColor) {
-      return [fav.fixedFgColor, fav.fixedBgColor || fav.fixedFgColor];
+    if ((colorMode === 'FG_ONLY' || colorMode === 'FG_BG' || colorMode === 'BG_ONLY') && (fav.fixedFgColor || fav.fixedBgColor)) {
+      if (colorMode === 'BG_ONLY') {
+        const bgClr = fav.fixedBgColor ?? fav.fixedFgColor ?? glow;
+        return [bgClr, bgClr];
+      }
+      return [fav.fixedFgColor ?? glow, fav.fixedBgColor ?? fav.fixedFgColor ?? glow];
     }
   }
 
