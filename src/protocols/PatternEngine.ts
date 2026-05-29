@@ -212,12 +212,16 @@ export function buildPatternPayload(
   options?: PatternOptions,
   hardwareLedPoints?: number
 ): number[] | null {
-  // ── GROUP 10: NATIVE 0x41 TEMPORAL INTERCEPTION ──
-  // The 33 native hardware effects (IDs 201-233) must use 0x41.
+  // ── GROUP 10: NATIVE 0x51 TEMPORAL INTERCEPTION ──
+  // The 33 native hardware effects (IDs 201-233) must use 0x51.
   if (patternId >= 201 && patternId <= 233) {
-    const hwDirection = direction === 1 ? 0 : 1; // 1 (UI fwd) -> 0 (HW fwd). 0 (UI rev) -> 1 (HW rev)
     const hardwareModeId = patternId - 200; // 201 maps to mode 1
-    return ZenggeProtocol.setSettledMode(hardwareModeId, fg, bg, speed, hwDirection);
+    return ZenggeProtocol.setCustomModeCompact([{
+      mode: hardwareModeId,
+      speed,
+      color1: fg,
+      color2: bg
+    }]);
   }
 
   // ── GROUP 9: NATIVE 0x51 INTERCEPTION ──
