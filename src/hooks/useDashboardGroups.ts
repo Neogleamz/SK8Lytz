@@ -360,26 +360,21 @@ export function useDashboardGroups({
         processed.push(leftId, rightId);
         didUpdateProcessed = true;
 
-        const existingIdx = updatedGroups.findIndex(g => g.name === targetGroupName);
-        if (existingIdx > -1) {
-          const target = updatedGroups[existingIdx];
-          if (!target.deviceIds.includes(leftId) || !target.deviceIds.includes(rightId)) {
-            updatedGroups[existingIdx] = {
-              ...target,
-              deviceIds: Array.from(new Set([...target.deviceIds, leftId, rightId])),
-            };
-            didUpdateGroups = true;
-          }
-        } else {
-          updatedGroups.push({
-            id: `group-${Date.now()}-${typeVal}-${Math.floor(Math.random() * 1000)}`,
-            name: targetGroupName,
-            deviceIds: [leftId, rightId],
-            type: typeVal,
-            isGroup: true,
-          });
-          didUpdateGroups = true;
+        let finalGroupName = targetGroupName;
+        let counter = 2;
+        while (updatedGroups.some(g => g.name === finalGroupName)) {
+          finalGroupName = `${targetGroupName} ${counter}`;
+          counter++;
         }
+
+        updatedGroups.push({
+          id: `group-${Date.now()}-${typeVal}-${Math.floor(Math.random() * 1000)}`,
+          name: finalGroupName,
+          deviceIds: [leftId, rightId],
+          type: typeVal,
+          isGroup: true,
+        });
+        didUpdateGroups = true;
 
         [leftId, rightId].forEach((id, idx) => {
           if (!configs[id]) {
