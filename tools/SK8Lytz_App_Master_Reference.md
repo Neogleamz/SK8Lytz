@@ -185,18 +185,18 @@ Every pattern belongs to one of three tiers:
 | **Tier 2** | Programs Mode reversal | ~28 | Standard LED strip effects. Each Programs effect is reimplemented in TypeScript. `0x42` is NEVER called. |
 | **Tier 3** | SK8Lytz originals | ∞ | Effects only possible because we own the payload. Positional gradients, reactive splits, sport sequences, etc. |
 
-**Total target**: ~75+ patterns across all tiers, all in one unified picker.
+**Current total**: 81 templates (43 spatial/temporal + 5 street + 33 Multimode Pro Effects), all in one unified picker.
 
 #### Pattern Template Schema
 
-Every pattern in `CustomEffects.ts` has this structure:
+Every pattern in `src/protocols/PatternEngine.ts` (`SK8LYTZ_TEMPLATES`) has this structure:
 
 ```typescript
 interface SK8LytzTemplate {
   id: number;                          // Unique, never reuse. 1-28 = existing. 29+ = new.
   name: string;                        // User-facing name in picker
   icon: string;                        // Emoji icon for picker card
-  colorMode: 'FG_BG' | 'FG_ONLY' | 'GENERATIVE';  // Which color pickers to show
+  colorMode: 'FG_BG' | 'FG_ONLY' | 'BG_ONLY' | 'GENERATIVE';  // Which color pickers to show
   supportsDirection: boolean;          // Show direction toggle in UI?
   tier: 1 | 2 | 3;                    // Source tier (ge.* | Programs | Original)
   sourceRef?: string;                  // e.g. 'ge.OceanWaveEffect' or 'Programs:CometChase'
@@ -220,6 +220,7 @@ Controls which color pickers the UI renders for a given pattern:
 
 - `FG_BG` — Both FG and BG pickers shown (e.g. Comet: FG=trail, BG=background color)
 - `FG_ONLY` — Only FG shown (e.g. Breathing: single color fade, BG irrelevant)
+- `BG_ONLY` — Only BG shown (e.g. ID 233 Rainbow Stream: hardware ignores FG entirely)
 - `GENERATIVE` — Neither picker shown (e.g. Rainbow Flow: hue is computed by math, not user-set)
 
 > Note: The pattern ALWAYS receives both `fg` and `bg` arguments — the gate is purely a UI affordance.
@@ -227,12 +228,13 @@ Controls which color pickers the UI renders for a given pattern:
 #### Implementation Contract for Every New Pattern
 
 ```
-1. Read source math (ge.* Java class, or Programs effect behavior)
-2. Write TypeScript: buildXyz(fg, bg, numLEDs, tick, direction): RGB[]
-3. Add case to PatternEngine.ts getVisualizerFrame()
-4. Add entry to CustomEffects.ts SK8LYTZ_TEMPLATES with correct colorMode/tier/sourceRef
-5. Verify: ProductVisualizer shows the effect ← identical to hardware via 0x59
-6. Hardware test on HALOZ: tap pattern → LED ring matches visualizer
+1. Read source math (ge.* Java class, or Bible §0x51 Pattern Index for test modes 201-233)
+2. Write TypeScript math: add case to `src/protocols/SpatialEngine.ts` or `SymphonyEngine.ts`
+3. Add case to `src/protocols/VisualizerEngine.ts` `getVisualizerFrame()`
+4. Add entry to `src/protocols/PatternEngine.ts` `SK8LYTZ_TEMPLATES` with correct colorMode/tier/sourceRef
+5. For test patterns (201-233): dispatch via `ZenggeProtocol.setCustomModeCompact()` — NOT `0x41`, NOT 10B extended
+6. Verify: ProductVisualizer shows the effect ← identical to hardware via 0x59 (or 0x51 for test modes)
+7. Hardware test on HALOZ: tap pattern → LED ring matches visualizer
 ```
 
 ---
@@ -273,10 +275,7 @@ To resolve dependency conflicts and legacy library issues, the following configu
 
 ### Third-Party Library Patches
 
-- **@react-native-voice/voice**:
-  - Requires manual removal of `jcenter()` repository from `node_modules/@react-native-voice/voice/android/build.gradle`.
-  - SDK versions in the library's `build.gradle` must be bumped to 34 to avoid manifest merger conflicts.
-  - Legacy `com.android.support` dependencies must be replaced with `androidx` equivalents (e.g., `androidx.appcompat:appcompat:1.3.1`).
+- **@react-native-voice/voice**: ~~REMOVED~~ — The voice command engine was deleted. Do not reinstall this dependency. Any references to it in legacy build configs are dead code.
 
 ### Dashboard UI Layout (4-Slab Architecture)
 
@@ -393,7 +392,7 @@ All byte definitions below represent the inner payload _before_ the V2 BLE packe
 > - `0x51` 10B extended format (323B) does NOT work via our wrapper — requires ZENGGE chunked framing header (see Protocol Bible Section 11)
 > - `0x42` effect ceiling: **1–100** (same as 0xA2). Effect 101 plays an undocumented effect (ceiling is soft).
 > - `0x43` Multi-Sequence: **DO NOT USE** — Oracle test caused hardware LED shutoff (state machine crash). ZENGGE app uses `0x51` for multi-step effects, not `0x43`.
-> - `0x41` Settled Mode, `0x53` Live Pixel Stream: **Unconfirmed** — our wrapper format appears wrong for these opcodes.
+> - `0x41` Settled Mode: **DO NOT USE for IDs 201-233.** `0x41` and `0x51` share the same effectId range (1-33) but are different hardware engines producing different visuals. Using `0x41` for test patterns destroys parity. It is available in DiagnosticLab only. See Protocol Bible §0x41 and the AGENT SENTINEL warning in §0x51 Pattern Index.
 > - Source: Oracle Lab + live BLE HCI sniff (2026-04-22), `ZENGGE_PROTOCOL_BIBLE.md` Section 11
 
 ### BLE Connection Handshake (2026-04-22)
@@ -527,7 +526,7 @@ To prevent skatepark BLE noise from hijacking the Setup Wizard, the scanner enfo
 ### LED Modes & Math Synthesizer Engine
 
 > [!IMPORTANT]
-> **Math Synthesizer Refactor (2026-04-21)**: The legacy "Fixed Mode" (10 hardcoded behaviors) and firmware-dependent RBM logic have been entirely superseded by a deterministic, client-side mathematical synthesizer. All lighting visualizations and sub-protocols are now driven by 28 customizable `SK8LYTZ_TEMPLATES`.
+> **Math Synthesizer Refactor (2026-04-21)**: The legacy "Fixed Mode" (10 hardcoded behaviors) and firmware-dependent RBM logic have been entirely superseded by a deterministic, client-side mathematical synthesizer. All lighting visualizations and sub-protocols are now driven by `SK8LYTZ_TEMPLATES` in `src/protocols/PatternEngine.ts`. **Current count: 43 spatial/temporal patterns (IDs 1-43) + 5 street modes (IDs 101-105) + 33 Multimode Pro Effects test patterns (IDs 201-233) = 81 total templates.**
 
 > [!NOTE]
 > **ProductVisualizer Architecture (2026-04-23)**: The legacy `simMode` Protocol Synchronization Engine (~120 lines) was removed. `ProductVisualizer` now passes props **directly** to `VisualizerUnit` with no intermediate state override layer. React state is the ground truth. The `rawHexPayload` BLE decoder, `applySorting()` color swapper, and dead `CANDLE`/`MULTICOLOR` branches were deleted. The `ledDot`/`ledDotSmall` unused StyleSheet entries were also purged. Visualizer animation now correctly fires on all `BUILDER`/`PROGRAMS`/`MUSIC`/`STREET`/`MULTIMODE` modes.
@@ -546,7 +545,7 @@ _Source of Truth: `src/protocols/PatternEngine.ts` (`SK8LYTZ_TEMPLATES`), `src/u
 
 #### The Mathematical Pattern Registry (`SK8LYTZ_TEMPLATES`)
 
-28 mathematical schemas define the structure (Comet, Breathing, Double Meteor) using a primary foreground (`FG`) and secondary background (`BG`) palette.
+**81 templates** define the full pattern library — 43 spatial/temporal patterns (Comet, Breathing, Double Meteor etc.), 5 street mode patterns, and 33 Multimode Pro Effects test patterns (IDs 201-233, dispatched via `0x51` compact). All use a primary foreground (`FG`) and secondary background (`BG`) palette where applicable.
 Dispatch chain: `useControllerDispatch.ts` → `PatternEngine.ts` (Synthesizer) → `ZenggeProtocol.ts` (BLE bytes).
 
 **Archetypes & Auto-Routing:**
@@ -555,7 +554,7 @@ Dispatch chain: `useControllerDispatch.ts` → `PatternEngine.ts` (Synthesizer) 
 - **Temporal Mode (`0x51` STEP_JUMP/GRADUAL):** For whole-strip temporal patterns (Jump, Strobe, Breathe), the engine MUST route to the `0x51` 32-step hardware scheduler. `0x59` is the wrong tool for whole-strip temporals because evaluating a Jump/Strobe equation at a static `seedTick` produces an un-animatable solid color or pure black frame that the hardware cannot jump/strobe properly. For patterns that require sub-millisecond fade interpolations (e.g., `Breath`, `Strobe`), the engine automatically routes to the `0x51` 32-step hardware scheduler to prevent BLE bus saturation.
 
 > [!NOTE]
-> The legacy `Fixed` UI tab was completely eliminated. The `MULTIMODE` hub now acts as a unified portal for the 28 spatial/temporal mathematical templates.
+> The legacy `Fixed` UI tab was completely eliminated. The `MULTIMODE` hub now acts as a unified portal for all spatial/temporal mathematical templates.
 
 #### RBM Built-in Patterns (100 Modes)
 

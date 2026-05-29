@@ -134,7 +134,7 @@ return (byte) sum;
 
 - **effectId range**: 1–33 (SymphonyEffect IDs, same as `0x51` effect column)
 - **dir**: `0` = forward, `1` = reverse
-- **SK8Lytz relevance**: **HIGH** — Originally condemned, this is now the verified path for the `0x41` native hardware parity test group (IDs 201-233). It is used to validate dual-palette animated effects against our internal PatternEngine math.
+- **SK8Lytz relevance**: **CONDEMNED for IDs 201-233.** `0x41` and `0x51` use the same effectId numbering (1-33) but produce **different visual outputs** — they are different hardware engines. The `e773af7c` commit mistakenly used `0x41` for test patterns and broke parity. **Use `0x51` (`setCustomModeCompact`) for IDs 201-233.** `0x41` is available in DiagnosticLab only (`__DEV__` guarded).
 
 ---
 
