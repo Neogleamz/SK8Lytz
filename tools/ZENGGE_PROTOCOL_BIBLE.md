@@ -241,11 +241,12 @@ seqNum increments per save operation (0x04, 0x05, 0x06...)
 - **SK8Lytz relevance**: **CRITICAL** — `setCustomMode` (9B compact) works via our current wrapper. To use 10B slots correctly, the BLE chunked framing header must also be replicated.
 
 ### 0x51 Custom Scene Pattern Index (Modes 1-44)
+
 Based on direct hardware observations:
 
 | Mode ID | Visual Effect | Color Input Used |
 |:---:|---|:---:|
-| **1** | Large FG chunk scrolling back to front (~50% width) | FG only (BG is hardcoded White) |
+| **1** | Large FG chunk scrolling back to front (~50% width) | FG + BG |
 | **2** | Scrolling chunk (FG tips, BG center) over Black background | FG + BG |
 | **3** | Single FG dot scrolling over solid BG | FG + BG |
 | **4** | Alternating Bounce Fill (FG fills Fwd, BG fills Rev) | FG + BG |
@@ -381,7 +382,9 @@ totalLen = (numLEDs × 3) + 9
 ---
 
 ### 0xFF — Passive Telemetry (Manufacturer Specific Data)
+
 ZENGGE hardware constantly broadcasts its identity in BLE Advertisement packets (`type 0xFF`), enabling passive identification without an active connection.
+
 - **Source of Truth**: [ZGHBDevice.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/com/zengge/hagallbjarkan/device/ZGHBDevice.java) (`setDeviceInfo`)
 - **Format**:
   - `bArr[3]`: BLE Version (Typically `5`)
@@ -393,13 +396,17 @@ ZENGGE hardware constantly broadcasts its identity in BLE Advertisement packets 
 ---
 
 ### RF Remote Configuration (0x2A / 0x2B)
+
 RF Remote authorization modes are controlled via standard hex opcodes over BLE GATT, not just Flutter MethodChannels.
+
 - **Source of Truth**: [RemoteSettingActivity.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/com/zengge/wifi/activity/NewSymphony/RemoteSettingActivity.java)
 - **BLE Write Opcode (0x2A)**: Configures the RF Remote authorization mode on the `0xA3` controller.
   - **Packet Format (15 Bytes + Checksum)**:
+
     ```
     [0x2A, modeByte, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, clearByte, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, checksum]
     ```
+
   - **`modeByte` Mappings (GATT Verified)**:
     - `0x01` = **Allow All** (`ALLOW_ALL`) — Any RF remote in range can control the controller without explicit pairing.
     - `0x02` = **Block All / Don't Allow** (`ALLOW_NONE`) — Disables all RF remote input. Also used by UI when "Clear Pairing" is clicked to clear the stored remote slot.
@@ -410,20 +417,24 @@ RF Remote authorization modes are controlled via standard hex opcodes over BLE G
 
 - **BLE Query Opcode (0x2B)**: Queries the current RF Remote authorization state.
   - **Query Packet Format (15 Bytes + Checksum)**:
+
     ```
     [0x2B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, checksum]
     ```
+
   - **Response Packet Format (0x2B Response)**:
     Device responds with a notification packet containing the active `modeByte` (at payload offset 1) and details of paired remote UIDs:
+
     ```
     [0x2B, modeByte, pairedCount, ID1_b0, ID1_b1, ID1_b2, ID1_b3, ...]
     ```
+
     - `modeByte`: Matches the mappings above (`0x01` = Allow All, `0x02` = Block All, `0x03` = Paired Only).
     - `pairedCount`: Number of paired remotes (typically 0 or 1).
     - `ID_bytes`: 4-byte hex identifiers for each paired remote.
 
-- **SK8Lytz Relevance & Mapping Warning**: 
-  - Previous implementations inverted the `ALLOW_ALL` (`0x01`) and `ALLOW_PAIRED` (`0x03`) bytes. 
+- **SK8Lytz Relevance & Mapping Warning**:
+  - Previous implementations inverted the `ALLOW_ALL` (`0x01`) and `ALLOW_PAIRED` (`0x03`) bytes.
   - The correct mapping is strictly: `ALLOW_ALL: 0x01`, `ALLOW_NONE: 0x02`, `ALLOW_PAIRED: 0x03`.
 
 ---
@@ -445,18 +456,20 @@ RF Remote authorization modes are controlled via standard hex opcodes over BLE G
 > 1. **`ptsHi` / `ptsLo`**: The number of addressable LEDs **per segment** (Big-Endian).
 > 2. **`segHi` / `segLo`**: The number of identical physical copies that mirror the pattern in parallel (Big-Endian). Total physical LEDs = `points × segments`.
 > 3. **`icType`**: Defines the hardware chip.
-> 4. **`sorting`**: The RGB color order. 
+> 4. **`sorting`**: The RGB color order.
 > 5. **`micPts` / `micSegs`**: Same segment logic, but specifically sets the bounds for when `0x73` Music Mode is active.
 >
 > <!-- AST_COMPILER_START: ZENGGE_CONSTANTS -->
 #### 📝 Auto-Compiled Zengge Protocol Constants (AST Compiler)
 
 ##### 🔌 BLE UUIDs
+
 - **Service UUID**: `0000ffff-0000-1000-8000-00805f9b34fb` (`ZENGGE_SERVICE_UUID`)
 - **Write Characteristic UUID**: `0000ff01-0000-1000-8000-00805f9b34fb` (`ZENGGE_CHARACTERISTIC_UUID`)
 - **Notification Characteristic UUID**: `0000ff02-0000-1000-8000-00805f9b34fb` (`ZENGGE_NOTIFY_UUID`)
 
 ##### 🛠️ Hardware Constraints
+
 | Constraint | Value | Description |
 |:---|:---:|:---|
 | `maxPoints` | 300 | Maximum addressable points per segment |
@@ -468,6 +481,7 @@ RF Remote authorization modes are controlled via standard hex opcodes over BLE G
 | `defaultSegments` | 10 | Fallback default segment count |
 
 ##### 📟 IC Chip Types (`IC_TYPES`)
+
 | Key | Chip Type |
 |:---:|:---|
 | 1 | WS2812B |
@@ -483,6 +497,7 @@ RF Remote authorization modes are controlled via standard hex opcodes over BLE G
 | 11 | WS2812E |
 
 ##### 🎨 Color Sorting RGB (`COLOR_SORTING_RGB`)
+
 | Key | RGB Order |
 |:---:|:---|
 | 0 | RGB |
@@ -542,8 +557,6 @@ RF Remote authorization modes are controlled via standard hex opcodes over BLE G
 >
 > If pixel[0] = RED → Right BOTTOM = RED AND Left TOP = RED. Horseshoe symmetry.
 > The VisualizerUnit achieves this via `rawFract` inversion: `if (vizShape === 'RING' && i >= renderLeds/2) { rawFract = 1 - rawFract - 0.0001; }`
-
-
 
 ---
 
@@ -954,7 +967,9 @@ To achieve perfect visualizer-to-hardware parity for temporal effects (Breathe, 
 ### Live BLE Sniff — Raw Packet Evidence
 Capture 1: 1-step customize (Effect 6, Speed 50%, White FG, Black BG):
 ```
+
 ATT Write 0x0017: 40 04 00 00 01 43 BD 0B 51 F0 06 32 FF FF FF 00 00 00 80 [0F×31] D6
+
 ```
 
 ### The MTU Packet-Chunking Algorithm (Reverse-Engineered 2026-04-24)
@@ -1057,7 +1072,6 @@ EEPROM Write:   Programmer → C14184b.m4807B etc → [0x62, ...]
 EEPROM Read:    Programmer → C14184b.m4771f0 → [0x63, 0x12, 0x21, 0x0F, chk]
 ```
 
-
 ### SECTION 12: CAMERA MODE V2 (SNIPER & VIBE CATCHER)
 
 #### 🔬 Architectural Design & Frame Processing Flow
@@ -1086,25 +1100,24 @@ graph TD
 1. **V5 GPU Resizer**: Scaled down to a `50x50` interleaved `HWC` RGB grid via `react-native-vision-camera-resizer` (Vulkan on Android, Metal on iOS) in `< 1ms`. Memory is safely managed by calling `resized.dispose()` in the worklet thread to avoid VRAM leakage.
 2. **CPU Worklet Rate-Limiting**: Frame processing is hard-throttled to **5Hz (every 200ms)** to preserve the JS main thread and eliminate UI stutters.
 3. **Dual Sub-Modes**:
-   * **SNIPER**: Coordinates center-pixel sampling `(25, 25) * 3` in the grid.
-     * *Neutral Snapping Gate*: If RGB delta $|Max(RGB) - Min(RGB)| < 0.15$, the color is snapped to `#FFFFFF` to prevent noisy color drifts in low-light environments.
-     * *Vivid Neon Boost*: Amplifies saturation to pure neon ($S=1.0$, $L=0.5$ in HSL) for high-impact visual representation.
-   * **VIBE**: Feeds the 2,500 scaled RGB pixels to the deterministic K-Means worklet ($k=3$ clusters, Euclidean distance metric in 3D RGB space, 5 iterations max) to extract the Foreground, Background, and Accent swatches sorted by dominance.
+   - **SNIPER**: Coordinates center-pixel sampling `(25, 25) * 3` in the grid.
+     - *Neutral Snapping Gate*: If RGB delta $|Max(RGB) - Min(RGB)| < 0.15$, the color is snapped to `#FFFFFF` to prevent noisy color drifts in low-light environments.
+     - *Vivid Neon Boost*: Amplifies saturation to pure neon ($S=1.0$, $L=0.5$ in HSL) for high-impact visual representation.
+   - **VIBE**: Feeds the 2,500 scaled RGB pixels to the deterministic K-Means worklet ($k=3$ clusters, Euclidean distance metric in 3D RGB space, 5 iterations max) to extract the Foreground, Background, and Accent swatches sorted by dominance.
 
 #### 🚨 BLE Safeguards & Protocol Mapping
 
-* **BLE Mutex Preservation**: Active frames only update the visual UI layers (viewfinder, concentric reticle ring, palette swatches, and liquid gradient preview strip). BLE payloads are **only** sent to the hardware on explicit user actions (shutter tap in SNIPER, "APPLY VIBE" button in VIBE).
-* **The 12-Pixel Buffer Overflow Defense**: The `0xA3` controller suffers physical EEPROM buffer locks on custom spatial dispatches of size $< 10$ pixels.
-  * We enforce a **minimum length of 12 RGB pixels** for all `0x59` Static Colorful payload dispatches.
-  * If the device `ledPoints < 12` (such as HALOZ which has `ledPoints = 8`), the payload array is duplicated or padded up to **12** to prevent chipset freezes.
-  * If `ledPoints >= 12` (such as SOULZ which has `ledPoints = 43`), the three K-Means colors are interpolated across the full canvas size to form a smooth gradient.
-* **Transition Mode Mapping**: VIBE supports two state behaviors via `0x59`:
-  * `Static` (`0x01` transitionType): Freezes the spatial K-Means gradient across the strips.
-  * `Flow` (`0x03` transitionType): Automatically scrolls the custom gradient across the addressable strips.
-
+- **BLE Mutex Preservation**: Active frames only update the visual UI layers (viewfinder, concentric reticle ring, palette swatches, and liquid gradient preview strip). BLE payloads are **only** sent to the hardware on explicit user actions (shutter tap in SNIPER, "APPLY VIBE" button in VIBE).
+- **The 12-Pixel Buffer Overflow Defense**: The `0xA3` controller suffers physical EEPROM buffer locks on custom spatial dispatches of size $< 10$ pixels.
+  - We enforce a **minimum length of 12 RGB pixels** for all `0x59` Static Colorful payload dispatches.
+  - If the device `ledPoints < 12` (such as HALOZ which has `ledPoints = 8`), the payload array is duplicated or padded up to **12** to prevent chipset freezes.
+  - If `ledPoints >= 12` (such as SOULZ which has `ledPoints = 43`), the three K-Means colors are interpolated across the full canvas size to form a smooth gradient.
+- **Transition Mode Mapping**: VIBE supports two state behaviors via `0x59`:
+  - `Static` (`0x01` transitionType): Freezes the spatial K-Means gradient across the strips.
+  - `Flow` (`0x03` transitionType): Automatically scrolls the custom gradient across the addressable strips.
 
 ### 🚨 SDE Autonomous Fuzzer Discoveries (Auto-Documented)
+
 - **Opcode**: `0x59` (Static Colorful)
 - **Constraint**: Array sizes between 2 and 9 elements cause physical EEPROM buffer lockout on the `0xA3` chipset.
 - **Rule**: Minimum safe payload length is 12 RGB pixels. (See Rule: Surgical Buffer Overflow Defense in agent-behavior.md).
-
