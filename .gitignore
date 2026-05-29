@@ -147,3 +147,14 @@ python27/
 
 # Local LibreHardwareMonitor
 tools/LibreHWMonitor/
+
+# Local reverse-engineering / LED protocol exploration tools (not project code)
+tools/Node.js-LEDnetWF-46CC/
+tools/java-*/
+
+# Scratch logcat / WSL dumps
+logcat.txt
+wsl_list.txt
+
+# Stale bucket list backups
+tools/SK8Lytz_Bucket_List_OLD*.md

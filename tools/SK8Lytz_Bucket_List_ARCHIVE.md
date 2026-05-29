@@ -6,9 +6,53 @@ This document contains the archive of all successfully completed and merged task
 
 ## 📦 ARCHIVED SPRINT LOGS
 
+### Sprint: v3.6.3 — 2026-05-29 (grouping-architecture-overhaul)
+
+### [BATCH:grouping-architecture-overhaul] (Active) — ⚡ Parallel-Safe
+- **Prerequisite**: None
+- **Active Tasks**: `feat/group-many-to-many`, `feat/group-mixed-state`, `fix/skatepark-hijack`, `fix/infinite-blob`, `fix/local-cloud-split-brain`
+
+- [x] **`feat/group-many-to-many`** — Migrated device group membership to junction table. Merged `7e34ba7`.
+  - **Tags:** `[✅ VERIFIED]` `[CORE]` `[H-RISK]` `[Feast]` `[🤖 THINK]`
+  - **Plan:** 📎 [PLAN-group-many-to-many.md](./plans/PLAN-group-many-to-many.md)
+  - **Source of Truth:** 📖 [useDashboardGroups.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardGroups.ts)
+  - **Goal:** Resolve The "Mutually Exclusive" Flaw (1-to-1 Mapping).
+  - **Details:** COMPLETE — Refactored `DeviceSettings` and Supabase schema to support a many-to-many relationship using array-based group mapping.
+
+- [x] **`feat/group-mixed-state`** — Added mixed state rendering and tap-to-unify UI. Merged `21636ec`.
+  - **Tags:** `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[🤖 PRO-HIGH]`
+  - **Plan:** 📎 [PLAN-group-mixed-state.md](./plans/PLAN-group-mixed-state.md)
+  - **Source of Truth:** 📖 [useDashboardGroups.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardGroups.ts)
+  - **Goal:** Resolve Lack of "Mixed State" Aggregation.
+  - **Details:** COMPLETE — Updated group UI cards to intelligently aggregate states using green/red status dots and introduced "Mixed - Tap to Sync" visual cue.
+
+- [x] **`fix/skatepark-hijack`** — Added RSSI gating to background discovery. Merged `378366a7`.
+  - **Tags:** `[✅ VERIFIED]` `[CORE]` `[H-RISK]` `[Meal]` `[🤖 THINK]`
+  - **Plan:** 📎 [PLAN-skatepark-hijack.md](./plans/PLAN-skatepark-hijack.md)
+  - **Source of Truth:** 📖 [useDashboardGroups.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardGroups.ts#L323)
+  - **Goal:** Resolve The "Skatepark Hijack" (Proximity Blindness).
+  - **Details:** COMPLETE — Introduced RSSI proximity gating and explicit user confirmation steps in `runAutoProvisioning` to prevent hijacking unregistered devices in public. Built an admin slider to adjust the threshold.
+
+- [x] **`fix/infinite-blob`** — Implemented while loop to auto-increment group names and prevent appending. Merged `a48aaebe`.
+  - **Tags:** `[✅ VERIFIED]` `[CORE]` `[M-RISK]` `[Snack]` `[🤖 PRO-HIGH]`
+  - **Plan:** 📎 [PLAN-infinite-blob.md](./plans/PLAN-infinite-blob.md)
+  - **Source of Truth:** 📖 [useDashboardGroups.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardGroups.ts#L363)
+  - **Goal:** Resolve The "Infinite Blob" (Accidental Mega-Groups).
+  - **Details:** COMPLETE — Replaced `findIndex` with an auto-incrementing `while` loop so that multiple pairs of the same product type are placed into "My SK8Lytz HALOZ", "My SK8Lytz HALOZ 2", etc.
+
+- [x] **`fix/local-cloud-split-brain`** — Fixed the UUID lookup failure in `saveGroupTransactional` by queuing cloud sync if devices are pending. Merged `d9bf414`.
+  - **Tags:** `[✅ VERIFIED]` `[CLOUD]` `[H-RISK]` `[Meal]` `[🤖 THINK]`
+  - **Plan:** 📎 [PLAN-local-cloud-split-brain.md](./plans/PLAN-local-cloud-split-brain.md)
+  - **Source of Truth:** 📖 [DeviceRepository.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/DeviceRepository.ts#L488)
+  - **Goal:** Resolve The Local/Cloud Split-Brain (MAC vs DB ID).
+  - **Details:** COMPLETE — Implemented `hasPendingDevices` guard to bypass the RPC and delegate group mapping to `_queuePendingGroupSync` to prevent silent FK violations.
+
+---
+
 ### Sprint: v3.6.3 — 2026-05-27 (ble-hci)
 
 ### [BATCH:ble-hci] — ⚡ (Complete)
+
 
 - [x] **`spike/0x40-chunked-framing-hci-verify`** — Verified `writeChunked` 0x40 frame format on hardware. Merged `74ec886d`.
   - **Tags:** `[🕵️ SPIKE]` `[✅ VERIFIED]` `[LAB]` `[H-RISK]` `[Snack]` `[🤖 THINK]` `[BATCH:ble-hci]`
