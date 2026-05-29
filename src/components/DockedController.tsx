@@ -196,6 +196,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       brt > 0 ? 0.10 + 0.90 * (brt / 100) : 0;
 
     const [lastSentPayload, setLastSentPayload] = useState<number[]>([]);
+    // Ref companion: always holds the latest sent payload for replayStateToDevice.
+    // The state above is kept for onPatternChanged (L904) and the mount guard (L892).
+    // The ref solves the stale closure bug: useImperativeHandle captures lastSentPayload
+    // at closure creation time — if the user changed patterns since then, the replay
+    // sends the OLD pattern to the reconnected device (split-brain).
+    const lastSentPayloadRef = useRef<number[]>([]);
     const [cameraSubMode, setCameraSubMode] = useState<'SNIPER' | 'VIBE'>('SNIPER');
     const [cameraVibePalette, setCameraVibePalette] = useState<string[]>([]);
 
@@ -242,6 +248,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       // The visualizer automatically reflects the current UI state.
 
       setLastSentPayload([...payload]);
+      lastSentPayloadRef.current = [...payload]; // sync update — ref is always current for replayStateToDevice
       await optimisticWrite(payload);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [parentWriteToDevice, optimisticWrite]);
@@ -469,12 +476,14 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       setSpeed,
       applySpatialSegments,
       replayStateToDevice: (deviceId: string) => {
-        if (!lastSentPayload || lastSentPayload.length === 0) return;
-        AppLogger.log('BLE_QUEUE_REPLAY', { deviceId, payloadLen: lastSentPayload.length });
-        // Use direct write to skip optimistic UI/haptics when ghosting a resurrected device
-        optimisticWrite(lastSentPayload, undefined, deviceId).catch((e: any) => AppLogger.warn('BLE_TRANSPORT', { event: 'ghost_replay_write_failed', deviceId, error: String(e) }));
+        // Use ref (not state) — ref is always the latest payload regardless of closure age.
+        // State-based closure caused split-brain: recovered device got the pattern from
+        // before the last user selection, not the current one.
+        if (!lastSentPayloadRef.current || lastSentPayloadRef.current.length === 0) return;
+        AppLogger.log('BLE_QUEUE_REPLAY', { deviceId, payloadLen: lastSentPayloadRef.current.length });
+        optimisticWrite(lastSentPayloadRef.current, undefined, deviceId).catch((e: any) => AppLogger.warn('BLE_TRANSPORT', { event: 'ghost_replay_write_failed', deviceId, error: String(e) }));
       }
-    }), [speed, brightness, writeToDevice, lastSentPayload, optimisticWrite]);
+    }), [speed, brightness, writeToDevice, optimisticWrite]);
 
 
     // (useStreetMode and useSessionTracking placed higher up context)
