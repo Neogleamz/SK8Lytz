@@ -2,7 +2,7 @@
   "expo": {
     "name": "SK8Lytz",
     "slug": "sk8lytz",
-    "version": "3.6.3",
+    "version": "3.7.0",
     "android": {
       "permissions": [
         "android.permission.ACTIVITY_RECOGNITION"
