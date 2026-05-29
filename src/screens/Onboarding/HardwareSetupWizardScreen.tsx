@@ -637,13 +637,14 @@ export default function HardwareSetupWizardScreen({
 
                  const finalizedDevices = selected.map(device => {
                    const cfg = deviceConfigsState[device.device_mac];
+                   const fleetName = groupName.trim() || 'My Skates';
                    return {
                      ...device,
-                     group_name: groupName.trim(),
+                     group_names: [fleetName],
                      device_name: cfg?.name.trim() || device.device_name,
                      product_type: (cfg?.type || LOCAL_PRODUCT_CATALOG[0].id),
                      position: cfg?.position || null,
-                     group_id: groupName.trim().toLowerCase().replace(/\s+/g, '-'),
+                     group_ids: [fleetName.toLowerCase().replace(/\s+/g, '-')],
                      led_points: cfg?.points || device.led_points,
                      segments: device.segments ?? 1,
                      ic_type: device.ic_type ?? 'WS2812B',
