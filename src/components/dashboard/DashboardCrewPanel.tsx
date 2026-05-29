@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Alert } from 'react-native';
+import React from 'react';
+import { Alert } from 'react-native';
 import { CrewRole, CrewSession, crewService } from '../../services/CrewService';
 import CrewHubSlab from './CrewHubSlab';
 import { CrewModal } from '../CrewModal';
@@ -25,8 +25,8 @@ interface DashboardCrewPanelProps {
   styles: any;
   
   onApplyCloudScene: (scene: Record<string, any>) => void;
-  crewInitialStep: any;
-  setCrewInitialStep: (step: any) => void;
+  crewInitialStep: 'landing' | 'join' | 'create' | 'map';
+  setCrewInitialStep: (step: 'landing' | 'join' | 'create' | 'map') => void;
   isCrewHubCollapsed: boolean;
   toggleCrewHubCollapse: () => void;
 }

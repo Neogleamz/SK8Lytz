@@ -88,6 +88,20 @@ export interface PingResult {
   productId?: number;
 }
 
+/**
+ * Type guard for PingResult — validates the minimum EEPROM fields are present.
+ * Use instead of `as unknown as PingResult` to safely narrow Partial<PingResult>.
+ */
+export function isPingResult(p: Partial<PingResult> | null | undefined): p is PingResult {
+  return (
+    p != null &&
+    typeof p.ledPoints === 'number' &&
+    typeof p.icType === 'number' &&
+    typeof p.icName === 'string' &&
+    p.detected === true
+  );
+}
+
 
 export interface DeviceSettings {
   name: string;

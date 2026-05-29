@@ -31,7 +31,7 @@ import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProto
 import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
 import { AppLogger } from '../../services/AppLogger';
 import { createGattSession } from '../../services/BleSessionFactory';
-import type { PendingRegistration, PingResult } from '../../types/dashboard.types';
+import { type PendingRegistration, type PingResult, isPingResult } from '../../types/dashboard.types';
 import { mapDeviceToRegistration } from '../../utils/classifyBLEDevice';
 import { acquireGattLock } from './useBLEGattMutex';
 
@@ -214,7 +214,7 @@ export function useBLESweeper({
       }
 
       // ── BleSessionFactory: connect → discover → resolve (single source of truth) ──
-      const { conn, adapter: interrogatorAdapter } = await createGattSession(bleManager, mac, {
+      const { conn: _conn, adapter: interrogatorAdapter } = await createGattSession(bleManager, mac, {
         timeout: 6000,
         retries: 2,
         signal,
@@ -230,8 +230,7 @@ export function useBLESweeper({
         let accumulated: Partial<PingResult> | null = null;
         const timer = setTimeout(() => {
           sub.remove();
-          // Cast: partial EEPROM data is sufficient for hw cache after timeout.
-          resolve(accumulated as unknown as PingResult | null);
+          resolve(isPingResult(accumulated) ? accumulated : null);
         }, PROBE_TIMEOUT_MS);
 
         const sub = bleManager.monitorCharacteristicForDevice(
@@ -254,8 +253,7 @@ export function useBLESweeper({
               if (accumulated?.detected && accumulated?.rfMode) {
                 clearTimeout(timer);
                 sub.remove();
-                // Cast: detected + rfMode both present = all required EEPROM fields accumulated.
-                resolve(accumulated as unknown as PingResult);
+                if (isPingResult(accumulated)) resolve(accumulated);
               }
             } catch (e) {
               AppLogger.warn('[useBLESweeper] Protocol parse failed', { mac, error: String(e) });
