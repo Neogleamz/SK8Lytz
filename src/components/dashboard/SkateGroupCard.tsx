@@ -45,7 +45,12 @@ export const SkateGroupCard = ({
   onCameraPress,
   onFavoritePress,
 }: SkateGroupCardProps) => {
-  const isPoweredOn = group.deviceIds.every(id => powerStates[id] !== false);
+  const onCount = group.deviceIds.filter(id => powerStates[id] !== false).length;
+  const total = group.deviceIds.length;
+  const isAllOn = onCount === total;
+  const isAllOff = onCount === 0;
+  const isMixed = onCount > 0 && onCount < total;
+  const isPoweredOn = onCount > 0;
 
   return (
     <TouchableOpacity
@@ -74,20 +79,23 @@ export const SkateGroupCard = ({
                 
                 {/* Stacked Skates in a fixed 3D box (Smaller) */}
                 <View style={{ width: 28, height: 22, position: 'relative' }}>
-                  {group.deviceIds.map((id, index) => (
-                    <MaterialCommunityIcons 
-                      key={`icon-${id}`} 
-                      name="roller-skate" 
-                      size={16} 
-                      color="#FFF" 
-                      style={{ 
-                        position: 'absolute',
-                        bottom: index > 0 ? 6 : 0,
-                        left: index > 0 ? 10 : 0,
-                        zIndex: group.deviceIds.length - index 
-                      }} 
-                    />
-                  ))}
+                  {group.deviceIds.map((id, index) => {
+                    const isDeviceOn = powerStates[id] !== false;
+                    return (
+                      <MaterialCommunityIcons 
+                        key={`icon-${id}`} 
+                        name="roller-skate" 
+                        size={16} 
+                        color={isDeviceOn ? Colors.success : Colors.error} 
+                        style={{ 
+                          position: 'absolute',
+                          bottom: index > 0 ? 6 : 0,
+                          left: index > 0 ? 10 : 0,
+                          zIndex: group.deviceIds.length - index 
+                        }} 
+                      />
+                    );
+                  })}
                 </View>
 
                 {/* Vertical Stack of RSSI Meters (Smaller) */}
@@ -133,9 +141,9 @@ export const SkateGroupCard = ({
 
             {/* BOTTOM BAR: Pattern Pill */}
             <View style={[styles.patternPill, { position: 'absolute', bottom: 16, alignSelf: 'center' }]}>
-              <View style={[styles.patternDot, { backgroundColor: isPoweredOn ? colors[0] : '#555' }]} />
+              <View style={[styles.patternDot, { backgroundColor: isAllOn ? colors[0] : isMixed ? Colors.warning : '#555' }]} />
               <Text style={styles.patternName} numberOfLines={1}>
-                {isPoweredOn ? (lastPattern || 'ACTIVE') : 'POWERED OFF'}
+                {isAllOn ? (lastPattern || 'ACTIVE') : isMixed ? 'MIXED - TAP TO SYNC' : 'POWERED OFF'}
               </Text>
             </View>
 
@@ -156,8 +164,8 @@ export const SkateGroupCard = ({
                 <MaterialCommunityIcons 
                   name="power" 
                   size={18} 
-                  color={isPoweredOn ? '#FFF' : '#666'} 
-                  style={isPoweredOn ? { textShadowColor: Colors.primary, textShadowOffset: {width: 0, height: 0}, textShadowRadius: 8 } : undefined}
+                  color={isAllOn ? '#FFF' : isMixed ? Colors.warning : '#666'} 
+                  style={isPoweredOn ? { textShadowColor: isMixed ? Colors.warning : Colors.primary, textShadowOffset: {width: 0, height: 0}, textShadowRadius: 8 } : undefined}
                 />
               </View>
             </TouchableOpacity>
