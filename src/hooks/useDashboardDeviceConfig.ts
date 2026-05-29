@@ -20,8 +20,8 @@ interface Group {
 
 interface RegisteredDevice {
   device_mac: string;
-  group_id?: string;
-  group_name?: string;
+  group_ids?: string[];
+  group_names?: string[];
   is_pending_sync?: boolean;
   [key: string]: any;
 }
@@ -58,29 +58,28 @@ export function useDashboardDeviceConfig({
     const targetMac = (selectedDeviceForSettings.device_mac || selectedDeviceForSettings.id).toUpperCase();
 
     // ── Group-ID resolution ────────────────────────────────────────────────
-    let finalGroupId = settings.groupId;
+    let finalGroupIds = settings.groupIds || [];
+    let finalGroupNames = settings.groupNames || [];
 
-    if (settings.grouped && settings.groupName && !settings.groupId) {
+    if (settings.grouped && finalGroupNames.length > 0 && finalGroupIds.length === 0) {
       // Implicit group association from the settings modal name field
       const existingGroup = customGroups.find(
-        g => g.name.toLowerCase() === settings.groupName?.toLowerCase()
+        g => g.name.toLowerCase() === finalGroupNames[0].toLowerCase()
       );
-      finalGroupId = existingGroup ? existingGroup.id : `group-${Date.now()}`;
+      finalGroupIds = existingGroup ? [existingGroup.id] : [`group-${Date.now()}`];
     } else if (!settings.grouped) {
-      finalGroupId = 'default-fleet';
+      finalGroupIds = ['default-fleet'];
+      finalGroupNames = ['Default Fleet'];
     }
 
     // ── Registration SSOT sync ─────────────────────────────────────────────
     const rd = registeredDevices.find(r => r.device_mac?.toUpperCase() === targetMac);
     if (rd) {
-      const targetGroupName = settings.grouped
-        ? (settings.groupName || rd.group_name)
-        : undefined;
       saveRegisteredDevice({
         ...rd,
         device_name: settings.name,
-        group_id: finalGroupId,
-        group_name: targetGroupName,
+        group_ids: finalGroupIds,
+        group_names: finalGroupNames,
         led_points: settings.points,
         segments: settings.segments,
         ic_type: settings.stripType,
@@ -102,7 +101,8 @@ export function useDashboardDeviceConfig({
               segments:  settings.segments,
               sorting:   settings.sorting,
               stripType: settings.stripType,
-              groupId:   finalGroupId,
+              groupIds:   finalGroupIds,
+              groupNames: finalGroupNames,
             }
           : d
       });
@@ -120,7 +120,7 @@ export function useDashboardDeviceConfig({
       // The userConfiguredAt field prevents cloud sync from ever overwriting
       // these settings unless the user explicitly saves again.
       const userConfiguredAt = new Date().toISOString();
-      await repo.updateConfig(targetMac, { ...settings, groupId: finalGroupId, userConfiguredAt });
+      await repo.updateConfig(targetMac, { ...settings, groupIds: finalGroupIds, groupNames: finalGroupNames, userConfiguredAt });
 
 
       AppLogger.log('HARDWARE_CONFIG_CHANGED', {

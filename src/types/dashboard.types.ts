@@ -72,8 +72,8 @@ export interface DeviceSettings {
   stripType?: string;
   sorting?: string;
   grouped: boolean;
-  groupId?: string;
-  groupName?: string;
+  groupIds?: string[];
+  groupNames?: string[];
   /** Firmware version string as reported by the device — e.g. 'v2.0.1' or 'Unknown'. */
   firmware?: string;
   /**
@@ -233,7 +233,7 @@ export interface DisplayDevice {
   detected?: boolean;
   firmware?: string;
   ledPoints?: number;
-  groupId?: string;
+  groupIds?: string[];
   // ── Injected by displayConnectedDevices resolver ──────────
   /** Product type resolved from deviceConfigs → BLE → registeredDevices chain */
   type?: string;

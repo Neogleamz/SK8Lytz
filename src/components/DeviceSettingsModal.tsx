@@ -128,8 +128,8 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
       stripType: finalStripType,
       sorting: finalSorting,
       grouped: true,
-      groupId: existingGroup?.id,    // undefined = will be created by saveSettings
-      groupName: autoGroupName,
+      groupIds: existingGroup?.id ? [existingGroup.id] : undefined,
+      groupNames: [autoGroupName],
       firmware: initialSettings.firmware,
     };
 

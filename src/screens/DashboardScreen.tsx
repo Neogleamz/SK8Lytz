@@ -865,7 +865,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     mac: d.device_mac || '',
     name: d.device_name || '',
     customName: d.custom_name || '',
-    groupName: d.group_name || '',
+    groupName: d.group_names && d.group_names.length > 0 ? d.group_names[0] : '',
     type: d.product_type as StoredDevice['type'],
     registeredAt: d.registered_at,
     // Hardware fields — required for pill display in AccountModal Devices tab
@@ -1155,9 +1155,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             await deregisterDevice(deviceId);
           }}
           onGroupRenamed={async (oldGroupName, newGroupName) => {
-            const devs = registeredDevices.filter(d => d.group_name === oldGroupName);
+            const devs = registeredDevices.filter(d => d.group_names?.includes(oldGroupName));
             for (const d of devs) {
-              await saveRegisteredDevice({ ...d, group_name: newGroupName, is_pending_sync: true });
+              const updatedNames = (d.group_names || []).map(n => n === oldGroupName ? newGroupName : n);
+              await saveRegisteredDevice({ ...d, group_names: updatedNames, is_pending_sync: true });
             }
             // Sync local customGroups array so the dashboard UI instantly re-renders
             const updatedGroups = customGroupsRef.current.map(g => 
@@ -1169,7 +1170,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             // the hook's persistence logic. A second raw write here is a race condition.
           }}
           onGroupForgotten={async (groupName) => {
-            const devs = registeredDevices.filter(d => d.group_name === groupName);
+            const devs = registeredDevices.filter(d => d.group_names?.includes(groupName));
             for (const d of devs) {
               await deregisterDevice(d.device_mac);
             }

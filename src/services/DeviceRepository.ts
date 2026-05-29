@@ -177,17 +177,17 @@ class DeviceRepository {
       const now = new Date().toISOString();
       const normalizedMac = device.device_mac.toUpperCase();
       const deviceId = device.id || `${normalizedMac.replace(/:/g, '')}-${user?.id?.slice(0, 8) || 'offline'}`;
-      const groupId = device.group_id || device.group_name?.toLowerCase().replace(/\s+/g, '-') || 'default-fleet';
+      const groupIds = device.group_ids || (device.group_names ? device.group_names.map(n => n.toLowerCase().replace(/\s+/g, '-')) : ['default-fleet']);
 
       const fullDevice: RegisteredDevice = {
         device_name: device.device_name || 'Unknown Device',
         product_type: device.product_type || LOCAL_PRODUCT_CATALOG[0].id,
-        group_name: device.group_name || 'Default Fleet',
+        group_names: device.group_names || ['Default Fleet'],
         position: device.position || null,
         ...device,
         device_mac: normalizedMac,
         id: deviceId,
-        group_id: groupId,
+        group_ids: groupIds,
         user_id: user?.id,
         updated_at: now,
         registered_at: device.registered_at || now,
@@ -220,8 +220,8 @@ class DeviceRepository {
         // Phase 5: Atomic group upsert via server-side RPC (single transaction)
         try {
           await supabase.rpc('upsert_group_with_devices', {
-            p_group_id:   fullDevice.group_id,
-            p_group_name: fullDevice.group_name || 'Default Fleet',
+            p_group_id:   fullDevice.group_ids && fullDevice.group_ids[0] ? fullDevice.group_ids[0] : 'default-fleet',
+            p_group_name: fullDevice.group_names && fullDevice.group_names[0] ? fullDevice.group_names[0] : 'Default Fleet',
             p_type:       'device-fleet',
             p_device_ids: [deviceId],
           });
@@ -229,8 +229,8 @@ class DeviceRepository {
           AppLogger.warn('[DeviceRepository] upsert_group_with_devices RPC failed, falling back:', _rpc);
           try {
             await supabase.from('registered_groups').upsert({
-              id: fullDevice.group_id,
-              group_name: fullDevice.group_name || 'Default Fleet',
+              id: fullDevice.group_ids && fullDevice.group_ids[0] ? fullDevice.group_ids[0] : 'default-fleet',
+              group_name: fullDevice.group_names && fullDevice.group_names[0] ? fullDevice.group_names[0] : 'Default Fleet',
               type: 'device-fleet',
               user_id: user.id
             } satisfies GroupInsert, { onConflict: 'id' });
@@ -250,8 +250,8 @@ class DeviceRepository {
           device_name:     fullDevice.device_name,
           product_type:    fullDevice.product_type || null,
           position:        fullDevice.position || null,
-          group_name:      fullDevice.group_name || null,
-          group_id:        fullDevice.group_id,
+          group_name:      fullDevice.group_names ? fullDevice.group_names[0] : null,
+          group_id:        fullDevice.group_ids ? fullDevice.group_ids[0] : 'default-fleet',
           custom_name:     fullDevice.device_name || '',
           user_id:         user.id,
           id:              fullDevice.id || deviceId,
@@ -424,9 +424,15 @@ class DeviceRepository {
     // 2. Clear group assignments from in-memory devices
     let devicesChanged = false;
     this.devices = this.devices.map(d => {
-      if (d.group_id === groupId) {
+      if (d.group_ids?.includes(groupId)) {
         devicesChanged = true;
-        return { ...d, group_id: 'default-fleet', group_name: 'Default Fleet' };
+        let newIds = d.group_ids.filter(id => id !== groupId);
+        let newNames = (d.group_names || []).filter(n => n !== groupId); // Name filter is approximate here since we don't know the exact name
+        if (newIds.length === 0) {
+          newIds = ['default-fleet'];
+          newNames = ['Default Fleet'];
+        }
+        return { ...d, group_ids: newIds, group_names: newNames };
       }
       return d;
     });
@@ -487,18 +493,30 @@ class DeviceRepository {
 
     this.devices = this.devices.map(d => {
       const mac = d.device_mac.toUpperCase();
+      const currentIds = d.group_ids || (d as any).group_id ? [(d as any).group_id] : [];
+      const currentNames = d.group_names || (d as any).group_name ? [(d as any).group_name] : [];
+
       // Case A: Part of the new group
       if (normalizedMacs.includes(mac)) {
         if (d.id) dbDeviceIds.push(d.id);
-        if (d.group_id !== groupId || d.group_name !== groupName) {
+        if (!currentIds.includes(groupId)) {
           devicesChanged = true;
-          return { ...d, group_id: groupId, group_name: groupName };
+          // Filter out default-fleet if we're adding a real group
+          const newIds = currentIds.filter(id => id !== 'default-fleet').concat(groupId);
+          const newNames = currentNames.filter(n => n !== 'Default Fleet').concat(groupName);
+          return { ...d, group_ids: newIds, group_names: newNames };
         }
       } 
       // Case B: Booted out of this group
-      else if (d.group_id === groupId) {
+      else if (currentIds.includes(groupId)) {
         devicesChanged = true;
-        return { ...d, group_id: 'default-fleet', group_name: 'Default Fleet' };
+        let newIds = currentIds.filter(id => id !== groupId);
+        let newNames = currentNames.filter(n => n !== groupName);
+        if (newIds.length === 0) {
+          newIds = ['default-fleet'];
+          newNames = ['Default Fleet'];
+        }
+        return { ...d, group_ids: newIds, group_names: newNames };
       }
       return d;
     });
@@ -524,6 +542,7 @@ class DeviceRepository {
         return true; // Local write succeeded — return true
       }
 
+      // RPC after supabase-mcp junction table migration
       const { error } = await supabase.rpc('upsert_group_with_devices', {
         p_group_id:   groupId,
         p_group_name: groupName,
@@ -531,6 +550,7 @@ class DeviceRepository {
         p_device_ids: dbDeviceIds,
       });
       if (error) throw error;
+      
       return true;
     } catch (e) {
       AppLogger.warn('[DeviceRepository] saveGroupTransactional RPC failed, queuing:', e);
@@ -591,8 +611,8 @@ class DeviceRepository {
           segments:      (localHasPendingChanges || localHasValidSegments)  ? local.segments      : cloud.segments,
           ic_type:       (localHasPendingChanges || localHasValidIcType)    ? local.ic_type       : cloud.ic_type,
           color_sorting: (localHasPendingChanges || localHasValidSorting)   ? local.color_sorting : cloud.color_sorting,
-          group_id:      cloud.group_id,
-          group_name:    cloud.group_name,
+          group_ids:      (cloud as any).group_ids || local.group_ids || [],
+          group_names:    (cloud as any).group_names || local.group_names || [],
           device_name:   cloud.device_name || local.device_name,
           is_pending_sync: localHasPendingChanges,
         };
@@ -734,9 +754,9 @@ class DeviceRepository {
       const marked: RegisteredDevice = {
         device_name: device.device_name || 'Unknown Device',
         product_type: device.product_type || LOCAL_PRODUCT_CATALOG[0].id,
-        group_name: device.group_name || 'Default Fleet',
+        group_names: device.group_names || ['Default Fleet'],
         position: device.position || null,
-        group_id: device.group_id || 'default-fleet',
+        group_ids: device.group_ids || ['default-fleet'],
         ...device,
         is_pending_sync: true,
       };
@@ -755,11 +775,11 @@ class DeviceRepository {
       if (queue.length === 0) return;
 
       for (const device of queue) {
-        const groupId = device.group_id || device.group_name?.toLowerCase().replace(/\s+/g, '-') || 'default-fleet';
+        const groupId = device.group_ids && device.group_ids[0] ? device.group_ids[0] : (device.group_names && device.group_names[0]?.toLowerCase().replace(/\s+/g, '-') || 'default-fleet');
         try {
           await supabase.from('registered_groups').upsert({
             id: groupId,
-            group_name: device.group_name || 'Default Fleet',
+            group_name: device.group_names && device.group_names[0] ? device.group_names[0] : 'Default Fleet',
             type: 'device-fleet',
             user_id: userId
           } satisfies GroupInsert, { onConflict: 'id' });
@@ -773,7 +793,7 @@ class DeviceRepository {
           product_type:    device.product_type || null,
           position:        device.position || null,
           group_id:        groupId,
-          group_name:      device.group_name || null,
+          group_name:      device.group_names ? device.group_names[0] : null,
           custom_name:     device.device_name || '',
           points:          device.led_points || 0,
           led_points:      device.led_points ?? null,

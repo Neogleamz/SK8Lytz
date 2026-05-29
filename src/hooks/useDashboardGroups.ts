@@ -115,14 +115,20 @@ export function useDashboardGroups({
     const groupMap: Record<string, CustomGroup> = {};
     registeredDevices.forEach(rd => {
       const mac = rd.device_mac.toUpperCase();
-      if (rd.group_id && rd.group_name && rd.group_id !== 'default-fleet') {
-        if (!groupMap[rd.group_id]) {
-          groupMap[rd.group_id] = { id: rd.group_id, name: rd.group_name, isGroup: true, deviceIds: [] };
+      const ids = rd.group_ids || (rd as any).group_id ? [(rd as any).group_id] : [];
+      const names = rd.group_names || (rd as any).group_name ? [(rd as any).group_name] : [];
+      
+      ids.forEach((gId, idx) => {
+        const gName = names[idx] || gId;
+        if (gId && gName && gId !== 'default-fleet') {
+          if (!groupMap[gId]) {
+            groupMap[gId] = { id: gId, name: gName, isGroup: true, deviceIds: [] };
+          }
+          if (!groupMap[gId].deviceIds.includes(mac)) {
+            groupMap[gId].deviceIds.push(mac);
+          }
         }
-        if (!groupMap[rd.group_id].deviceIds.includes(mac)) {
-          groupMap[rd.group_id].deviceIds.push(mac);
-        }
-      }
+      });
     });
     // setCustomGroups is called synchronously — groupMap is fully populated here
     setCustomGroups(Object.values(groupMap));
@@ -151,7 +157,7 @@ export function useDashboardGroups({
         const canSyncStrip     = !localIsUserConfigured && !!rd.ic_type          && rd.ic_type          !== 'UNKNOWN' && rd.ic_type          !== existing.stripType;
         // Name and group metadata always sync from cloud (cross-device authoritative state)
         const canSyncName  = !!rd.device_name && rd.device_name !== existing.name;
-        const canSyncGroup = !!rd.group_id && rd.group_id !== 'default-fleet' && rd.group_id !== existing.groupId;
+        const canSyncGroup = !!rd.group_ids && !rd.group_ids.includes('default-fleet') && JSON.stringify(rd.group_ids) !== JSON.stringify(existing.groupIds);
 
         if (canSyncPoints || canSyncSegments || canSyncSorting || canSyncStrip || canSyncName || canSyncGroup) {
           nextConfigs[mac] = {
@@ -161,9 +167,9 @@ export function useDashboardGroups({
             sorting:   canSyncSorting   ? rd.color_sorting! : existing.sorting,
             stripType: canSyncStrip     ? rd.ic_type!       : existing.stripType,
             name:      canSyncName      ? rd.device_name!   : existing.name,
-            groupId:   canSyncGroup     ? rd.group_id!      : existing.groupId,
-            groupName: rd.group_name    || existing.groupName,
-            grouped:   !!(rd.group_id && rd.group_id !== 'default-fleet'),
+            groupIds:  canSyncGroup     ? rd.group_ids!      : existing.groupIds,
+            groupNames:rd.group_names   || existing.groupNames,
+            grouped:   !!(rd.group_ids && rd.group_ids.length > 0 && !rd.group_ids.includes('default-fleet')),
             // Preserve the userConfiguredAt stamp — never erase it via cloud sync
             userConfiguredAt: existing.userConfiguredAt,
           };
@@ -478,7 +484,7 @@ export function useDashboardGroups({
           text: "Deregister Hardware",
           style: "destructive",
           onPress: async () => {
-            const devsToDelete = registeredDevices.filter(d => d.group_id === id);
+            const devsToDelete = registeredDevices.filter(d => d.group_ids && d.group_ids.includes(id));
             for (const d of devsToDelete) {
               await deregisterDevice(d.device_mac);
             }
@@ -499,9 +505,13 @@ export function useDashboardGroups({
         let configsChanged = false;
         for (const mac of groupToDelete.deviceIds) {
           if (configs[mac]) {
-            delete configs[mac].groupId;
-            delete configs[mac].groupName;
-            configs[mac].grouped = false;
+            const currentIds = configs[mac].groupIds || [];
+            const currentNames = configs[mac].groupNames || [];
+            const newIds = currentIds.filter(gid => gid !== groupToDelete.id);
+            const newNames = currentNames.filter(n => n !== groupToDelete.name);
+            configs[mac].groupIds = newIds;
+            configs[mac].groupNames = newNames;
+            configs[mac].grouped = newIds.length > 0 && !newIds.includes('default-fleet');
             configsChanged = true;
           }
         }
@@ -552,16 +562,24 @@ export function useDashboardGroups({
       const removedIds = previousDeviceIds.filter(id => !deviceIds.includes(id));
       for (const mac of removedIds) {
         if (configs[mac]) {
-          delete configs[mac].groupId;
-          delete configs[mac].groupName;
-          configs[mac].grouped = false;
+          const currentIds = configs[mac].groupIds || [];
+          const currentNames = configs[mac].groupNames || [];
+          const newIds = currentIds.filter(id => id !== finalGroupId);
+          const newNames = currentNames.filter(n => n !== name);
+          configs[mac].groupIds = newIds;
+          configs[mac].groupNames = newNames;
+          configs[mac].grouped = newIds.length > 0 && !newIds.includes('default-fleet');
           configsChanged = true;
         }
       }
 
       for (const mac of deviceIds) {
         if (!configs[mac]) configs[mac] = {} as DeviceSettings;
-        configs[mac] = { ...configs[mac], groupId: finalGroupId, groupName: name, grouped: true };
+        const currentIds = configs[mac].groupIds || [];
+        const currentNames = configs[mac].groupNames || [];
+        const newIds = currentIds.includes(finalGroupId) ? currentIds : [...currentIds.filter(id => id !== 'default-fleet'), finalGroupId];
+        const newNames = currentNames.includes(name) ? currentNames : [...currentNames.filter(n => n !== 'Default Fleet'), name];
+        configs[mac] = { ...configs[mac], groupIds: newIds, groupNames: newNames, grouped: true };
         configsChanged = true;
       }
 

@@ -34,8 +34,8 @@ export interface RegisteredDevice {
   /** Product type — must match a `ProductProfile.id` in LOCAL_PRODUCT_CATALOG. */
   product_type: 'HALOZ' | 'SOULZ' | 'RAILZ' | string;
   position: 'Left' | 'Right' | null;
-  group_name: string;
-  group_id: string;
+  group_names?: string[];
+  group_ids?: string[];
   led_points?: number;
   segments?: number;
   ic_type?: string;
@@ -187,8 +187,8 @@ export function useRegistration() {
             product_type:   config.type || LOCAL_PRODUCT_CATALOG[0].id,
             position:       config.name?.includes('Left') ? 'Left' :
                            config.name?.includes('Right') ? 'Right' : null,
-            group_name:     group.name,
-            group_id:       group.id || group.name,
+            group_names:    [group.name],
+            group_ids:      [group.id || group.name],
             led_points:     config.points,
             segments:       config.segments,
             ic_type:        config.stripType,
