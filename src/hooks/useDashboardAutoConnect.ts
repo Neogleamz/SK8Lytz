@@ -47,6 +47,50 @@ interface UseDashboardAutoConnectOptions {
 }
 
 /**
+ * Pure function: maps an array of registered devices (new or legacy format) into
+ * a group map suitable for the offline auto-connect sequence.
+ *
+ * Handles BOTH the new many-to-many format (group_ids[]) and the legacy scalar
+ * format (group_id) from pre-migration cache rows.
+ *
+ * @param devicesArray - Array of RegisteredDevice objects (may be pre-migration scalar format)
+ * @returns Array of group objects with { id, group_name, deviceIds[] }
+ *
+ * MIGRATION-SHIM: The group_id scalar fallback can be removed at v3.9.0
+ * once all users have re-registered their devices through the Setup Wizard.
+ */
+export function buildOfflineGroupMap(devicesArray: RegisteredDevice[]): Array<{
+  id: string;
+  group_name: string;
+  created_at: string;
+  deviceIds: string[];
+}> {
+  const offlineGroupMap = new Map<string, { id: string; group_name: string; created_at: string; deviceIds: string[] }>();
+  const now = new Date().toISOString();
+
+  devicesArray.forEach((d) => {
+    // Many-to-many migration: prefer group_ids array, fall back to legacy scalar group_id
+    // MIGRATION-SHIM: Remove scalar fallback at v3.9.0
+    const gIds: string[] = d.group_ids ?? (d.group_id ? [d.group_id] : []);
+    const gNames: string[] = d.group_names ?? (d.group_name ? [d.group_name] : []);
+    gIds.forEach((gId: string, idx: number) => {
+      if (gId && gId !== 'default-fleet') {
+        if (!offlineGroupMap.has(gId)) {
+          offlineGroupMap.set(gId, { id: gId, group_name: gNames[idx] || gId, created_at: now, deviceIds: [] });
+        }
+        const entry = offlineGroupMap.get(gId)!;
+        if (!entry.deviceIds.includes(d.device_mac)) {
+          entry.deviceIds.push(d.device_mac);
+        }
+      }
+    });
+  });
+
+  return Array.from(offlineGroupMap.values());
+}
+
+
+/**
  * Fires the cloud-sync → group-resolution → BLE auto-connect sequence
  * once per app launch, after BLE is confirmed ready.
  * Returns nothing — all managed via side-effects internally.
@@ -181,30 +225,10 @@ export function useDashboardAutoConnect({
       if (isOffline || groupsToProcess.length === 0) {
         AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_offline_fallback' });
         
-        const processLocalDevices = (devicesArray: any[]) => {
-          const offlineGroupMap = new Map<string, any>();
-          devicesArray.forEach((d: any) => {
-            // Many-to-many migration: prefer group_ids array, fall back to legacy scalar group_id
-            const gIds: string[] = d.group_ids || (d.group_id ? [d.group_id] : []);
-            const gNames: string[] = d.group_names || (d.group_name ? [d.group_name] : []);
-            gIds.forEach((gId: string, idx: number) => {
-              if (gId && gId !== 'default-fleet') {
-                if (!offlineGroupMap.has(gId)) {
-                  offlineGroupMap.set(gId, {
-                    id: gId,
-                    group_name: gNames[idx] || gId,
-                    created_at: new Date().toISOString(),
-                    deviceIds: [],
-                  });
-                }
-                if (!offlineGroupMap.get(gId).deviceIds.includes(d.device_mac)) {
-                  offlineGroupMap.get(gId).deviceIds.push(d.device_mac);
-                }
-              }
-            });
-          });
-          groupsToProcess = Array.from(offlineGroupMap.values());
+        const processLocalDevices = (devicesArray: RegisteredDevice[]) => {
+          groupsToProcess = buildOfflineGroupMap(devicesArray);
         };
+
 
         if (registeredDevices && registeredDevices.length > 0) {
           processLocalDevices(registeredDevices);

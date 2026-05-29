@@ -36,6 +36,10 @@ export interface RegisteredDevice {
   position: 'Left' | 'Right' | null;
   group_names?: string[];
   group_ids?: string[];
+  /** @deprecated MIGRATION-SHIM: Legacy scalar field. Use group_ids[] instead. Remove at v3.9.0 */
+  group_id?: string;
+  /** @deprecated MIGRATION-SHIM: Legacy scalar field. Use group_names[] instead. Remove at v3.9.0 */
+  group_name?: string;
   led_points?: number;
   segments?: number;
   ic_type?: string;

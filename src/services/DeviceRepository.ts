@@ -493,8 +493,9 @@ class DeviceRepository {
 
     this.devices = this.devices.map(d => {
       const mac = d.device_mac.toUpperCase();
-      const currentIds = d.group_ids || (d as any).group_id ? [(d as any).group_id] : [];
-      const currentNames = d.group_names || (d as any).group_name ? [(d as any).group_name] : [];
+      // MIGRATION-SHIM: Remove after all devices re-registered via wizard (target: v3.9.0)
+      const currentIds: string[] = d.group_ids ?? (d.group_id ? [d.group_id] : []);
+      const currentNames: string[] = d.group_names ?? (d.group_name ? [d.group_name] : []);
 
       // Case A: Part of the new group
       if (normalizedMacs.includes(mac)) {
@@ -611,8 +612,9 @@ class DeviceRepository {
           segments:      (localHasPendingChanges || localHasValidSegments)  ? local.segments      : cloud.segments,
           ic_type:       (localHasPendingChanges || localHasValidIcType)    ? local.ic_type       : cloud.ic_type,
           color_sorting: (localHasPendingChanges || localHasValidSorting)   ? local.color_sorting : cloud.color_sorting,
-          group_ids:      (cloud as any).group_ids || local.group_ids || [],
-          group_names:    (cloud as any).group_names || local.group_names || [],
+          // MIGRATION-SHIM: cloud row type predates group_ids — access via unknown cast. Remove at v3.9.0.
+          group_ids:      (cloud as unknown as RegisteredDevice).group_ids ?? local.group_ids ?? [],
+          group_names:    (cloud as unknown as RegisteredDevice).group_names ?? local.group_names ?? [],
           device_name:   cloud.device_name || local.device_name,
           is_pending_sync: localHasPendingChanges,
         };

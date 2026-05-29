@@ -112,8 +112,10 @@ export function useDashboardGroups({
     const groupMap: Record<string, CustomGroup> = {};
     registeredDevices.forEach(rd => {
       const mac = rd.device_mac.toUpperCase();
-      const ids = rd.group_ids || (rd as any).group_id ? [(rd as any).group_id] : [];
-      const names = rd.group_names || (rd as any).group_name ? [(rd as any).group_name] : [];
+      // MIGRATION-SHIM: Remove after all devices re-registered via wizard (target: v3.9.0)
+      // New devices use group_ids[]. Legacy cached devices may still have scalar group_id.
+      const ids: string[] = rd.group_ids ?? (rd.group_id ? [rd.group_id] : []);
+      const names: string[] = rd.group_names ?? (rd.group_name ? [rd.group_name] : []);
       
       ids.forEach((gId, idx) => {
         const gName = names[idx] || gId;
