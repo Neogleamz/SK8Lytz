@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { PhaseControlDrawer } from './PhaseControlDrawer';
 import { DatabankCard } from './DatabankCard';
 
@@ -158,15 +158,30 @@ export const BeltNode: React.FC<BeltProps> = ({
   seedProvider, onProviderChange, liveStreamText, isStreaming = false, currentAnalyzingSpot = '', logs = [],
   scrapeScope, onScopeChange
 }) => {
-  const [isConfigOpen, setConfigOpen] = useState(false);
+  // ── Persist UI state per phase to localStorage ──
+  const storageKey = `sk8lytz_belt_state_${id}`;
+  const readSaved = (): Record<string, boolean> => {
+    try {
+      const raw = localStorage.getItem(storageKey);
+      return raw ? JSON.parse(raw) : {};
+    } catch { return {}; }
+  };
+  const saved = readSaved();
+
+  const [isConfigOpen, setConfigOpen] = useState(saved.isConfigOpen ?? false);
   const [isViewAllOpen, setIsViewAllOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Terminal state
   const [isAnchored, setIsAnchored] = useState<boolean>(true);
-  const [isMinimized, setIsMinimized] = useState<boolean>(false);
-  const [isClosed, setIsClosed] = useState<boolean>(false);
-  const [isBeltCollapsed, setIsBeltCollapsed] = useState<boolean>(false);
+  const [isMinimized, setIsMinimized] = useState<boolean>(saved.isMinimized ?? false);
+  const [isClosed, setIsClosed] = useState<boolean>(saved.isClosed ?? false);
+  const [isBeltCollapsed, setIsBeltCollapsed] = useState<boolean>(saved.isBeltCollapsed ?? false);
+
+  // Sync collapsible state to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem(storageKey, JSON.stringify({ isConfigOpen, isMinimized, isClosed, isBeltCollapsed }));
+  }, [isConfigOpen, isMinimized, isClosed, isBeltCollapsed, storageKey]);
   
   const getInitialPos = () => {
     const startX = window.innerWidth - 480;

@@ -738,6 +738,125 @@ app.post('/api/llm/model/unload', async (req, res) => {
   res.json({ success: true, message: 'Model unloading is managed via LM Studio JIT.' });
 });
 
+// ─── Copypasta AI Text Analysis Endpoint ─────────────────────────────────────
+app.post('/api/llm/parse-copypasta', async (req, res) => {
+  const { text, spot_name } = req.body;
+  if (!text || text.trim() === '') {
+    return res.status(400).json({ success: false, error: 'No text provided for analysis.' });
+  }
+
+  console.log(`[CCTower] 🤖 Received copypasta text analysis request for: "${spot_name || 'Unknown Spot'}"`);
+
+  let model = 'local-model';
+  try {
+    const cfg = getConfig();
+    if (cfg && cfg.detective_model) model = cfg.detective_model;
+  } catch {}
+
+  const systemMessage = `
+You are a high-precision JSON extraction engine for SK8Lytz, a premium roller-skating rink and skatepark directory.
+Analyze the raw, unstructured text copied from a venue's website and extract all relevant fields matching the database schema.
+
+Your task is to identify and structure the following fields:
+1. "opening_hours": JSON object mapping days of the week to session times, e.g., {"Monday": "3:00 PM - 5:00 PM", "Saturday": "1:00 PM - 4:00 PM, 7:00 PM - 11:00 PM"}. Only include days explicitly mentioned; use "Closed" if stated, otherwise set unmentioned days to null.
+2. "pricing_data": JSON object mapping fees: {"adult": number|null, "child": number|null, "senior": number|null, "spectator": number|null, "skate_rental": number|null}.
+3. "has_fee": boolean (true if admission fees are charged, false if free, null if not mentioned).
+4. "has_rental": boolean (true if skate rentals are mentioned, false or null if not).
+5. "price_range": string ("$" for <$8, "$$" for $8-$15, "$$$" for $15-$25, "$$$$" for >$25 based on adult admission, null if unknown).
+6. "has_adult_night": boolean (true if 18+/21+ adult sessions are explicitly mentioned, false/null otherwise).
+7. "adult_night_schedule": JSON object matching days of the week to adult night session times, e.g., {"Friday": "9:00 PM - 12:00 AM"}.
+8. "adult_night_details": string describing age requirements, music, cover charge, or drink policy for adult night.
+9. "surface_type": string (exactly: "wood", "maple", "concrete", "asphalt", "sport_court", "synthetic", "vinyl", or "unknown").
+10. "surface_quality": 3-7 word description of floor condition.
+11. "has_lights": boolean (true if cosmic/glow lighting is mentioned).
+12. "has_lockers": boolean (true if lockers are mentioned).
+13. "has_food": boolean (true if snack bar, cafe, or pizza is mentioned).
+14. "has_ac": boolean (true if climate control/AC is mentioned).
+15. "has_wifi": boolean (true if guest WiFi is mentioned).
+16. "has_toilets": boolean.
+17. "capacity": integer.
+18. "hosts_derby": boolean.
+19. "email_addresses": array of strings.
+20. "phone_number": string.
+22. "website": string.
+
+CRITICAL RULES:
+- Return ONLY a valid JSON object. DO NOT include any markdown code blocks, conversational text, explanations, or backticks (e.g., no \`\`\`json).
+- Do not fabricate data. If a field is not present in the text, omit it or set it to null.
+- Ensure the types are correct (booleans, numbers, or objects/arrays where specified).
+  `;
+
+  const userMessage = `
+Spot Name Context: ${spot_name || 'Unknown Spot'}
+Raw Text from Website:
+---
+${text}
+---
+  `;
+
+  const host = process.env.LM_STUDIO_HOST || 'host.docker.internal';
+  const port = 1234;
+  const LM_STUDIO_URL = `http://${host}:${port}/v1/chat/completions`;
+
+  try {
+    const fetchFn = require('node-fetch');
+    const response = await fetchFn(LM_STUDIO_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemMessage },
+          { role: 'user', content: userMessage }
+        ],
+        temperature: 0.1,
+        max_tokens: 1500,
+        stream: false
+      }),
+      timeout: 60000 // 60s timeout
+    });
+
+    if (!response.ok) {
+      throw new Error(`LM Studio returned status ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    const rawContent = data.choices?.[0]?.message?.content || '';
+    
+    // Clean up possible markdown code blocks from LLM
+    let cleanJSON = rawContent.trim();
+    if (cleanJSON.startsWith('```')) {
+      cleanJSON = cleanJSON.replace(/^```json\s*/i, '').replace(/```\s*$/, '').trim();
+    }
+
+    let parsedResult;
+    try {
+      parsedResult = JSON.parse(cleanJSON);
+    } catch (parseErr) {
+      console.warn('[CCTower] ⚠️ LLM returned invalid JSON. Attempting dynamic regex parsing...', cleanJSON);
+      // Fallback: search for first curly brace to last curly brace
+      const startIdx = cleanJSON.indexOf('{');
+      const endIdx = cleanJSON.lastIndexOf('}');
+      if (startIdx !== -1 && endIdx !== -1) {
+        try {
+          parsedResult = JSON.parse(cleanJSON.slice(startIdx, endIdx + 1));
+        } catch {
+          throw new Error('Could not parse LLM output as JSON. Output was: ' + rawContent);
+        }
+      } else {
+        throw new Error('LLM output does not contain valid JSON: ' + rawContent);
+      }
+    }
+
+    console.log('[CCTower] ✅ Successfully parsed copypasta text via LLM!');
+    res.json({ success: true, model, parsed: parsedResult });
+
+  } catch (error: any) {
+    console.error('[CCTower] ❌ Copypasta LLM extraction failed:', error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ─── Model VRAM Estimate (pre-load check) ────────────────────────────────────
 app.post('/api/llm/model/estimate', (req, res) => {
   res.json({
@@ -1613,7 +1732,7 @@ app.get('/api/field-registry', async (req, res) => {
 
 app.put('/api/field-registry/:id', async (req, res) => {
   try {
-    const { importance_level, priority_group, is_hard_gate, visual_glow } = req.body;
+    const { importance_level, priority_group, is_hard_gate, visual_glow, validation_rule } = req.body;
     
     const existing = getFieldRegistry().find(f => f.id === req.params.id);
     if (!existing) return res.status(404).json({ error: 'Field not found' });
@@ -1623,7 +1742,8 @@ app.put('/api/field-registry/:id', async (req, res) => {
       importance_level: importance_level !== undefined ? importance_level : existing.importance_level,
       priority_group: priority_group !== undefined ? priority_group : existing.priority_group,
       is_hard_gate: is_hard_gate !== undefined ? is_hard_gate : existing.is_hard_gate,
-      visual_glow: visual_glow !== undefined ? visual_glow : existing.visual_glow
+      visual_glow: visual_glow !== undefined ? visual_glow : existing.visual_glow,
+      validation_rule: validation_rule !== undefined ? validation_rule : existing.validation_rule
     };
     
     upsertFieldRegistryItem(updated);

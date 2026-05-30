@@ -183,6 +183,7 @@ db.exec(`
     priority_group INTEGER DEFAULT 10,
     is_hard_gate INTEGER DEFAULT 0,
     visual_glow INTEGER DEFAULT 0,
+    validation_rule TEXT DEFAULT 'NONE',
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   );
 `);
@@ -211,6 +212,9 @@ if (!fieldRegCheck.find(c => c.name === 'is_hard_gate')) {
 }
 if (!fieldRegCheck.find(c => c.name === 'visual_glow')) {
   db.exec(`ALTER TABLE pipeline_field_registry ADD COLUMN visual_glow INTEGER DEFAULT 0`);
+}
+if (!fieldRegCheck.find(c => c.name === 'validation_rule')) {
+  db.exec(`ALTER TABLE pipeline_field_registry ADD COLUMN validation_rule TEXT DEFAULT 'NONE'`);
 }
 
 // Fix stale field names from legacy migration (address → street_address, phone → phone_number)
@@ -333,8 +337,18 @@ const seedStmt = db.prepare(`
     data_type = excluded.data_type,
     sort_order = excluded.sort_order
 `);
+// Self-healing guard: clean corrupted NULL rows before seeding
+try {
+  db.exec('DELETE FROM pipeline_field_registry WHERE id IS NULL;');
+} catch (e: any) {
+  console.warn(`[LocalDB] Failed to run self-healing registry cleanup: ${e.message}`);
+}
 for (const seed of FIELD_SEEDS) {
-  seedStmt.run(seed);
+  const mappedParams: any = {};
+  for (const [k, v] of Object.entries(seed)) {
+    mappedParams['@' + k] = v;
+  }
+  seedStmt.run(mappedParams);
 }
 
 // DPPOS dynamic tier seeding — 7 tiers matching the 7-pass DetectiveEngine architecture
@@ -673,7 +687,7 @@ export const upsertLocalSpot = (spot: any) => {
 
   const id = spot.id || Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
-  stmt.run({
+  const rawParams = {
     id,
     name: spot.name,
     lat: spot.lat || null,
@@ -743,7 +757,13 @@ export const upsertLocalSpot = (spot: any) => {
     email_addresses: safeJsonStringify(spot.email_addresses),
     field_confidence: safeJsonStringify(spot.field_confidence),
     photo_coverage: safeJsonStringify(spot.photo_coverage),
-  });
+  };
+
+  const stmtParams: any = {};
+  for (const [k, v] of Object.entries(rawParams)) {
+    stmtParams['@' + k] = v;
+  }
+  stmt.run(stmtParams);
 
   return id;
 };
@@ -1129,8 +1149,8 @@ export function getFieldRegistry(): FieldRegistryItem[] {
 
 export function upsertFieldRegistryItem(item: any) {
   const stmt = db.prepare(`
-    INSERT INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order, importance_level, priority_group, is_hard_gate, visual_glow)
-    VALUES (@id, @field_name, @phase_id, @display_label, @data_type, @sort_order, COALESCE(@importance_level, 0), COALESCE(@priority_group, 10), COALESCE(@is_hard_gate, 0), COALESCE(@visual_glow, 0))
+    INSERT INTO pipeline_field_registry (id, field_name, phase_id, display_label, data_type, sort_order, importance_level, priority_group, is_hard_gate, visual_glow, validation_rule)
+    VALUES (@id, @field_name, @phase_id, @display_label, @data_type, @sort_order, COALESCE(@importance_level, 0), COALESCE(@priority_group, 10), COALESCE(@is_hard_gate, 0), COALESCE(@visual_glow, 0), COALESCE(@validation_rule, 'NONE'))
     ON CONFLICT(id) DO UPDATE SET
       field_name=excluded.field_name,
       phase_id=excluded.phase_id,
@@ -1140,8 +1160,13 @@ export function upsertFieldRegistryItem(item: any) {
       importance_level=excluded.importance_level,
       priority_group=excluded.priority_group,
       is_hard_gate=excluded.is_hard_gate,
-      visual_glow=excluded.visual_glow
+      visual_glow=excluded.visual_glow,
+      validation_rule=excluded.validation_rule
   `);
-  stmt.run(item);
+  const mappedParams: any = {};
+  for (const [k, v] of Object.entries(item)) {
+    mappedParams['@' + k] = v;
+  }
+  stmt.run(mappedParams);
 }
 

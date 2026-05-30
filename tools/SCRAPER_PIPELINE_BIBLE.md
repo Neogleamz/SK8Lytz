@@ -130,11 +130,22 @@ Stored as a TEXT column (`JSON.stringify`). Shows which categories have been fil
 Displayed in the dashboard as colored ✓/✗ chips on each DatabankCard.
 
 ### Collection Strategy (Priority Order)
-1. **Logo**: `apple-touch-icon` → `og:image` → `favicon` → `/logo` URL path
-2. **Priority categories** (exterior → interior → floor → pro_shop → action): website-first → Google refs (×10) → Instagram grid → Yelp tabs
-3. **Overflow pass**: remaining website candidates saved as `unknown` for manual tagging
-4. **Cap**: max 30 total photos per spot (6 targeted + up to 24 overflow)
-5. **Stock photo rejection**: domains like `shutterstock`, `getty`, `istock` always skipped
+1. **Logo**: `apple-touch-icon` → `og:image` → `favicon` → `/logo` URL path. Supported aspect ratio: `[0.8, 1.25]` (must be close to square). Minimum resolution: `120x120`.
+2. **Priority categories** (exterior → interior → floor → pro_shop → action): website-first → Google refs (×10) → Instagram grid → Yelp tab-specific inside & outside photos (up to 5 sorted photos each).
+3. **Overflow pass**: remaining website candidates sorted by resolution descending and saved as `unknown` for manual tagging.
+4. **Cap**: Max **50 total photos** per spot (with individual sub-caps raised to **10 interior** and **10 action** photos).
+5. **Stock photo rejection**: domains like `shutterstock`, `getty`, `istock` always skipped.
+
+### Fidelity & Quality Gates (Phase 3)
+To ensure only premium assets enter the databank:
+- **Resolution Gates:** Target of `1024x768`, fallback to `800x600`, absolute minimum `640x480` (logos `120x120`).
+- **Aspect Ratio Checks:** Landscape or square only (`[0.9, 1.8]`) for normal photos; close-to-square (`[0.8, 1.25]`) for logos.
+- **Saliency & Contrast Analysis:** Rejects flat layout assets or solid colors using standard deviation of RGB channels (`stdev >= 15`).
+
+### Source-of-Origin Boosts
+Auto-classification uses source origin boosts to bypass text-only ambiguities:
+- **Yelp Tab Scrapes:** `+10` boost for Yelp tabs (`yelp_inside` -> `interior`, `yelp_outside` -> `exterior`, `yelp_food` -> `pro_shop`).
+- **Instagram Grid:** `+8` boost for Instagram (`action` category).
 
 ### Compression
 All downloaded images are converted to **WebP at quality 82, max 1800px** via `sharp` (`libvips` native).
@@ -638,3 +649,13 @@ The following were absent before this session and caused regressions:
 1. **Pre-LLM Immunity Bypass**: Added `IMMUNITY_KEYWORDS` (`/(roller rink|skate center|skating rink|roller skating|skateland)/i`) to `DetectiveEngine.ts`. If a spot's text matches, it bypasses the Phase 2 Pre-LLM Toxicity Bouncer. This prevents fun centers with laser tag/mini golf from being falsely rejected.
 2. **LLM Forgiveness Prompt**: Updated the LLM TOXICITY instructions to explicitly allow multi-attraction fun centers if they contain a roller skating rink.
 3. **Missing Package Resolution**: Fixed `sharp` native bindings crashing the Photographer daemon by restoring missing Node module dependencies.
+
+---
+
+## §17 — What Changed (Session 4 — 2026-05-30)
+
+### Premium Photo Harvester & QA Upgrades
+1. **Resolution-Based Queue Sorting:** Integrated descending resolution `(w * h)` sorting for website and overflow candidate queues to prioritize the highest-fidelity assets.
+2. **Dynamic Fidelity Gates:** Enforced strict aspect ratio filters `[0.9, 1.8]`, contrast variance analysis (`stdev >= 15`), and multi-tier resolution gates (1024x768 target, 800x600 fallback, 640x480 minimum).
+3. **Yelp Tab Crawl Expansion:** Expanded Yelp scrapes to pull up to 5 images each from both the `inside` and `outside` Yelp photo tabs, using source-of-origin weight boosts (`+10`) for automated tagging.
+4. **Local Host Proxy Error Bypass:** Patched the headless browser console sniffer (`web-console-harvester.js`) to ignore localhost image proxy 404s (`/api/img-proxy`), preventing broken external image links from triggering false build-step failures during validation checks.

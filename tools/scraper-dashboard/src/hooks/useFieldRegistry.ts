@@ -13,6 +13,7 @@ export interface FieldConfig {
     priority_group?: number;
     is_hard_gate?: number;
     visual_glow?: number;
+    validation_rule?: string;
 }
 
 // Module-level global state cache

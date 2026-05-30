@@ -15,7 +15,10 @@ import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
 import fetch from 'node-fetch';
-import { db, getSpotsToSync, markSpotSynced, updateLocalSpot, getFieldRegistry } from './core/LocalDB';
+import { db, getSpotsToSync, markSpotSynced, updateLocalSpot, getFieldRegistry, getConfig } from './core/LocalDB';
+import { validateAndCleanField } from './core/ValidatorEngine';
+import { analyzePhotoWithVision } from './core/VisionLLM';
+import type { VisionLLMOptions } from './core/VisionLLM';
 
 // Load .env
 const envPaths = [
@@ -95,6 +98,25 @@ async function runPublisher() {
 
   while (true) {
     try {
+      // ── Phase Interlocking (Wait for other phases to finish) ──
+      try {
+        const statusRes = await fetch('http://localhost:5999/status').then((r: any) => r.json());
+        if (statusRes) {
+          const { scout, resolver, detective, photographer } = statusRes;
+          // We check if any of the active scraping phases are running.
+          // Note: resolver is Phase 2, detective is Phase 3, photographer is Phase 4, scout is Phase 1
+          const anyActive = scout?.alive || resolver?.alive || detective?.alive || photographer?.alive;
+          if (anyActive) {
+            console.log('[Publisher] ⏳ Waiting for other phases to finish before starting the Vision Pass...');
+            reportPulse(10000, 'WAITING', 'Other phases are active');
+            await sleep(10000);
+            continue;
+          }
+        }
+      } catch (err: any) {
+        console.error(`[Publisher] Failed to check master status: ${err.message}`);
+      }
+
       // Fetch up to 50 spots that need syncing
       const spotsToSync = getSpotsToSync(50);
 
@@ -107,31 +129,196 @@ async function runPublisher() {
       console.log(`[Publisher] Found ${spotsToSync.length} spot(s) pending sync.`);
 
       const fields = getFieldRegistry();
-      const requiredFields = fields.filter(f => f.is_hard_gate === 1).map(f => f.field_name);
+      const requiredFields = fields.filter(f => f.is_hard_gate === 1);
+
+      // ── Fetch Publisher Config from DB ──
+      const pubConfig = getConfig();
+      const visionEnabled = pubConfig.publisher_vision_enabled !== false;
+      const visionPrompt = pubConfig.publisher_vision_prompt || 'You are a photo analyst for a roller skating rink directory. Analyze this image and classify it.\n\nRespond with ONLY valid JSON:\n{\n  "category": "exterior|interior|floor|pro_shop|action|logo|flyer|reject",\n  "score": 1-10\n}';
+      const visionModelId = pubConfig.publisher_vision_model || 'qwen2.5-vl-7b-instruct';
+      const visionOpts: VisionLLMOptions = {
+        model: visionModelId,
+        temperature: pubConfig.publisher_vision_temperature ?? 0.1,
+        host: process.env.LM_STUDIO_HOST || 'localhost',
+      };
+      const visionMinScore = pubConfig.publisher_vision_min_score ?? 3;
+      const requiredPhotoTags: string[] = pubConfig.publisher_required_photo_tags || [];
+      const detectiveModel = pubConfig.detective_model || 'qwen2.5-7b-instruct-1m';
+
+      // ── AUTO MODEL SWAP: Load Vision Model ──
+      // JIT-load the vision model into LM Studio before processing photos.
+      // LM Studio auto-unloads the previous model when VRAM is constrained.
+      let visionModelReady = false;
+      if (visionEnabled) {
+        const lmsHost = process.env.LM_STUDIO_HOST || 'localhost';
+        const lmsPort = 1234;
+        console.log(`[Publisher] 🔄 AUTO-SWAP: Loading vision model "${visionModelId}" into LM Studio...`);
+        reportPulse(0, 'LOADING', `Swapping to vision model: ${visionModelId}`);
+
+        try {
+          // Send a JIT warmup request — LM Studio will auto-load the model
+          const warmupRes = await fetch(`http://${lmsHost}:${lmsPort}/v1/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: visionModelId,
+              messages: [{ role: 'user', content: [{ type: 'text', text: 'Respond with: READY' }] }],
+              max_tokens: 5,
+              temperature: 0,
+            }),
+          });
+
+          if (warmupRes.ok) {
+            const warmupData: any = await warmupRes.json();
+            const reply = warmupData?.choices?.[0]?.message?.content || '';
+            console.log(`[Publisher] ✅ Vision model loaded and responding: "${reply.trim().substring(0, 30)}"`);
+            visionModelReady = true;
+          } else {
+            const errText = await warmupRes.text();
+            console.error(`[Publisher] ⚠️ Vision model warmup failed (${warmupRes.status}): ${errText.substring(0, 200)}`);
+            console.log('[Publisher] ⏭️ Skipping Vision Pass — model not available. Proceeding with Guillotine only.');
+          }
+        } catch (swapErr: any) {
+          console.error(`[Publisher] ❌ Failed to connect to LM Studio for model swap: ${swapErr.message}`);
+          console.log('[Publisher] ⏭️ Skipping Vision Pass — LM Studio unreachable. Proceeding with Guillotine only.');
+        }
+      }
 
       for (const spot of spotsToSync) {
         reportPulse(0, spot.name);
 
+        // ═══════════════════════════════════════════════════════════
+        // PASS 1: VISION LLM — Photo Curation, Tagging & Scoring
+        // ═══════════════════════════════════════════════════════════
+        if (visionModelReady) {
+          let photos: any[] = [];
+          try {
+            photos = typeof spot.photos === 'string' ? JSON.parse(spot.photos) : (spot.photos || []);
+          } catch { photos = []; }
+
+          if (photos.length > 0) {
+            console.log(`[Publisher] 👁️ Vision Pass: Analyzing ${photos.length} photo(s) for [${spot.id}] ${spot.name}`);
+            const analyzedPhotos: any[] = [];
+
+            for (const photo of photos) {
+              const photoUrl = typeof photo === 'string' ? photo : photo?.url;
+              if (!photoUrl) { analyzedPhotos.push(photo); continue; }
+
+              // Read the local file as base64
+              const isLocal = photoUrl.startsWith('http://localhost:5999/api/photos');
+              if (!isLocal) {
+                // Remote/already-uploaded photo — keep as-is, can't analyze without downloading
+                analyzedPhotos.push(photo);
+                continue;
+              }
+
+              try {
+                const urlParts = photoUrl.split('/');
+                const filename = urlParts.pop() || '';
+                const id = urlParts.pop() || '';
+                const state = urlParts.pop() || '';
+                const localPath = path.resolve(__dirname, '../../.scraper-data/photos', state, id, filename);
+
+                if (!fs.existsSync(localPath)) {
+                  analyzedPhotos.push(photo);
+                  continue;
+                }
+
+                const imgBuf = fs.readFileSync(localPath);
+                const b64 = imgBuf.toString('base64');
+
+                const result = await analyzePhotoWithVision(b64, visionPrompt, visionOpts);
+
+                if (!result.valid) {
+                  console.log(`[Publisher]   🚫 Rejected: ${filename} (category: reject)`);
+                  continue; // Drop this photo entirely
+                }
+
+                if (result.score !== undefined && result.score < visionMinScore) {
+                  console.log(`[Publisher]   📉 Dropped low-score: ${filename} (score: ${result.score}, min: ${visionMinScore})`);
+                  continue; // Drop this photo
+                }
+
+                // Build the enriched photo object
+                const enrichedPhoto = typeof photo === 'string'
+                  ? { url: photo, type: result.category || 'unknown', source: 'vision', confidence: 1.0, signals: ['vision_llm'], visionScore: result.score || 5 }
+                  : { ...photo, type: result.category || photo.type || 'unknown', visionScore: result.score || 5, signals: [...(photo.signals || []), 'vision_llm'] };
+
+                console.log(`[Publisher]   ✅ ${filename} → ${result.category} (score: ${result.score})`);
+                analyzedPhotos.push(enrichedPhoto);
+              } catch (photoErr: any) {
+                console.warn(`[Publisher]   ⚠️ Vision analysis failed for photo: ${photoErr.message}`);
+                analyzedPhotos.push(photo); // Keep the photo on error
+              }
+            }
+
+            // Sort by visionScore descending — best photos first
+            analyzedPhotos.sort((a, b) => {
+              const scoreA = (typeof a === 'object' ? a.visionScore : 0) || 0;
+              const scoreB = (typeof b === 'object' ? b.visionScore : 0) || 0;
+              return scoreB - scoreA;
+            });
+
+            // Persist the curated, sorted photos back to local DB
+            spot.photos = JSON.stringify(analyzedPhotos);
+            updateLocalSpot(spot.id, { photos: spot.photos });
+            console.log(`[Publisher] 👁️ Vision Pass complete: ${analyzedPhotos.length}/${photos.length} photos kept for [${spot.id}]`);
+          }
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        // PASS 2: GUILLOTINE — Required Photo Tags Check
+        // ═══════════════════════════════════════════════════════════
+        if (requiredPhotoTags.length > 0) {
+          let photos: any[] = [];
+          try {
+            photos = typeof spot.photos === 'string' ? JSON.parse(spot.photos) : (spot.photos || []);
+          } catch { photos = []; }
+
+          const presentTags = new Set(photos.map((p: any) => typeof p === 'object' ? p.type : 'unknown'));
+          const missingTags = requiredPhotoTags.filter(tag => !presentTags.has(tag));
+
+          if (missingTags.length > 0) {
+            console.error(`[Publisher] 🛑 GUILLOTINE: Rejected [${spot.id}] ${spot.name} — missing required photo tags: ${missingTags.join(', ')}`);
+            markSpotSynced(spot.id);
+            continue;
+          }
+        }
+
         if (spot.is_published) {
-          // Guillotine Check: Verify all required fields are present
+          // Guillotine Check: Verify all required fields are present and valid
           let missingRequired = false;
           let missingFieldName = '';
+          let validationError = '';
+          let cleanUpdates: any = {};
+
           for (const rf of requiredFields) {
-            const val = spot[rf];
-            if (val === null || val === undefined || val === '' || 
-               (Array.isArray(val) && val.length === 0) || 
-               (typeof val === 'string' && val === '[]')) {
+            const rawVal = spot[rf.field_name];
+            
+            const vResult = validateAndCleanField(rawVal, rf.validation_rule || 'NONE');
+            if (!vResult.valid) {
               missingRequired = true;
-              missingFieldName = rf;
+              missingFieldName = rf.field_name;
+              validationError = vResult.reason || 'Invalid format';
               break;
+            } else if (vResult.cleanValue !== rawVal && vResult.cleanValue !== undefined) {
+              // The validator cleaned the value, queue it for local DB update
+              cleanUpdates[rf.field_name] = vResult.cleanValue;
+              spot[rf.field_name] = vResult.cleanValue; // Update local memory object before Supabase push
             }
           }
 
           if (missingRequired) {
-            console.error(`[Publisher] 🛑 GUILLOTINE: Rejected [${spot.id}] ${spot.name} (Missing required field: ${missingFieldName})`);
+            console.error(`[Publisher] 🛑 GUILLOTINE: Rejected [${spot.id}] ${spot.name} (${missingFieldName} - ${validationError})`);
             // updateLocalSpot(spot.id, { is_published: 0, pipeline_status: 'REJECTED', verification_status: 'REJECTED' });
             markSpotSynced(spot.id);
             continue;
+          }
+
+          // If the validator cleaned any fields, persist them back to LocalDB
+          if (Object.keys(cleanUpdates).length > 0) {
+            console.log(`[Publisher] 🧹 Auto-Formatting applied for [${spot.id}]:`, Object.keys(cleanUpdates));
+            updateLocalSpot(spot.id, cleanUpdates);
           }
 
           // Clean payload for Supabase insertion (exclude local-only columns if any)
@@ -262,6 +449,29 @@ async function runPublisher() {
         }
         
         await sleep(500); // Throttling Supabase API requests
+      }
+
+      // ── AUTO MODEL SWAP: Restore Detective Model ──
+      // After all spots are processed, swap back to the text model so
+      // Detective/Indexer can resume on the next cycle.
+      if (visionModelReady) {
+        const lmsHost = process.env.LM_STUDIO_HOST || 'localhost';
+        const lmsPort = 1234;
+        console.log(`[Publisher] 🔄 AUTO-SWAP: Restoring detective model "${detectiveModel}"...`);
+        try {
+          await fetch(`http://${lmsHost}:${lmsPort}/v1/chat/completions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: detectiveModel,
+              messages: [{ role: 'user', content: 'wake up' }],
+              max_tokens: 1,
+            }),
+          });
+          console.log(`[Publisher] ✅ Detective model "${detectiveModel}" restored.`);
+        } catch (restoreErr: any) {
+          console.warn(`[Publisher] ⚠️ Failed to restore detective model: ${restoreErr.message}. You may need to reload it manually in LM Studio.`);
+        }
       }
 
     } catch (err: any) {

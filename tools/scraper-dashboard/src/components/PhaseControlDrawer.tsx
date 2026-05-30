@@ -370,6 +370,7 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
                         <th style={{ padding: '8px' }}>Field</th>
                         <th style={{ padding: '8px' }}>Priority Group (Tier)</th>
                         <th style={{ padding: '8px', textAlign: 'center' }}>Hard Gate?</th>
+                        <th style={{ padding: '8px', textAlign: 'center' }}>Validation Rule</th>
                         <th style={{ padding: '8px', textAlign: 'center' }}>Visual Glow?</th>
                       </tr>
                     </thead>
@@ -405,6 +406,20 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
                               onChange={(e) => updateFieldConfig(f.id, { is_hard_gate: e.target.checked ? 1 : 0 })}
                               style={{ cursor: 'pointer', accentColor: colColor }}
                             />
+                          </td>
+                          <td style={{ padding: '8px', textAlign: 'center' }}>
+                            <select 
+                              value={f.validation_rule || 'NONE'} 
+                              onChange={(e) => updateFieldConfig(f.id, { validation_rule: e.target.value })}
+                              style={{ background: '#111', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '0.65rem', padding: '2px 6px', borderRadius: '4px', maxWidth: '90px' }}
+                            >
+                              <option value="NONE">NONE</option>
+                              <option value="PHONE">PHONE</option>
+                              <option value="URL">URL</option>
+                              <option value="JSON_ARRAY">JSON_ARRAY</option>
+                              <option value="STATE_CODE">STATE_CODE</option>
+                              <option value="ZIP_CODE">ZIP_CODE</option>
+                            </select>
                           </td>
                           <td style={{ padding: '8px', textAlign: 'center' }}>
                             <input 
@@ -700,63 +715,238 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
             </>
           )}
 
-          {/* Phase 4: PUBLISHER */}
+          {/* Phase 4: PUBLISHER — 3-Pass Pipeline */}
           {phaseId === 4 && (
             <>
+              {/* Data Acquisition Mapping (same as other phases) */}
               <div style={{ gridColumn: '1 / -1', background: 'rgba(0,212,255,0.05)', border: `1px solid ${colColor}44`, padding: '10px', borderRadius: '6px', marginBottom: '8px' }}>
                 <h4 style={{ margin: '0 0 6px 0', color: colColor, textTransform: 'uppercase', fontSize: '0.65rem' }}>Data Acquisition Mapping</h4>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', color: 'rgba(255,255,255,0.7)', fontSize: '0.6rem' }}>
                   {fields.filter(f => f.phase_id === 4).map(f => {
-  const isReq = f.importance_level === 2;
-  const isPri = f.importance_level === 1;
-  const icon = isReq ? '🛑' : isPri ? '⭐' : '⚪';
-  const color = isReq ? '#f44336' : isPri ? '#ffeb3b' : 'rgba(255,255,255,0.7)';
-  return (
-    <button key={f.id || f.field_name} onClick={() => toggleImportance(f.id, f.importance_level)} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', border: 'none', color, cursor: 'pointer', fontSize: '0.65rem' }}>
-      {icon} {f.field_name}
-    </button>
-  );
-})}
+                    const isReq = f.importance_level === 2;
+                    const isPri = f.importance_level === 1;
+                    const icon = isReq ? '🛑' : isPri ? '⭐' : '⚪';
+                    const color = isReq ? '#f44336' : isPri ? '#ffeb3b' : 'rgba(255,255,255,0.7)';
+                    return (
+                      <button key={f.id || f.field_name} onClick={() => toggleImportance(f.id, f.importance_level)} style={{ background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', border: 'none', color, cursor: 'pointer', fontSize: '0.65rem' }}>
+                        {icon} {f.field_name}
+                      </button>
+                    );
+                  })}
                   {registryLoading && <span>Loading registry...</span>}
                 </div>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <ToggleSwitch label="Master Auto-Publish Enabled" checked={config?.publisher_auto_publish_enabled} onChange={(v) => handleUpdate('publisher_auto_publish_enabled', v)} colColor={colColor} />
-                <div>
-                  <label style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: colColor, boxShadow: `0 0 8px ${colColor}` }} />
-  Auto Publish Threshold
-</label>
-                  <input type="number" value={config?.publisher_auto_publish_threshold || 80} onChange={(e) => handleUpdate('publisher_auto_publish_threshold', parseInt(e.target.value))} style={{ width: '100%', background: 'rgba(20, 20, 30, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)', borderBottom: `2px solid ${colColor}`, color: '#fff', padding: '10px 14px', borderRadius: '6px', fontSize: '0.75rem', fontFamily: 'Outfit, sans-serif', outline: 'none', transition: 'all 0.2s ease', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)', boxSizing: 'border-box' }} />
+
+              {/* ═══════════════════════════════════════════════════════════════
+                  PASS 1: VISION LLM — Photo Curation & Scoring
+                  ═══════════════════════════════════════════════════════════════ */}
+              <div style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, rgba(168,85,247,0.08) 0%, rgba(139,92,246,0.04) 100%)', border: '1px solid rgba(168,85,247,0.35)', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', boxShadow: '0 0 12px rgba(168,85,247,0.4)' }}>👁️</div>
+                    <div>
+                      <div style={{ color: '#a855f7', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Pass 1 — Vision LLM</div>
+                      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem' }}>AI photo curation, category tagging & quality scoring</div>
+                    </div>
+                  </div>
+                  <ToggleSwitch label="" checked={config?.publisher_vision_enabled ?? true} onChange={(v) => handleUpdate('publisher_vision_enabled', v)} colColor="#a855f7" />
                 </div>
-                <TagInput label="Required Schema Fields" tags={config?.publisher_required_fields || []} setTags={(t) => handleUpdate('publisher_required_fields', t)} colColor={colColor} />
+
+                {config?.publisher_vision_enabled !== false && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {/* Row 1: Model ID + Temperature + Min Score */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '10px' }}>
+                      <div>
+                        <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Vision Model ID</label>
+                        <input type="text" value={config?.publisher_vision_model || 'qwen2.5-vl-7b-instruct'} onChange={(e) => handleUpdate('publisher_vision_model', e.target.value)} style={{ width: '100%', background: 'rgba(10,5,20,0.6)', border: '1px solid rgba(168,85,247,0.25)', borderBottom: '2px solid #a855f7', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.72rem', fontFamily: 'Outfit, sans-serif', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                      <div>
+                        <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Temperature</label>
+                        <input type="number" step={0.1} min={0} max={2} value={config?.publisher_vision_temperature ?? 0.1} onChange={(e) => handleUpdate('publisher_vision_temperature', parseFloat(e.target.value))} style={{ width: '100%', background: 'rgba(10,5,20,0.6)', border: '1px solid rgba(168,85,247,0.25)', borderBottom: '2px solid #a855f7', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.72rem', fontFamily: 'Outfit, sans-serif', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                      <div>
+                        <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Min Score (1-10)</label>
+                        <input type="number" min={1} max={10} value={config?.publisher_vision_min_score ?? 3} onChange={(e) => handleUpdate('publisher_vision_min_score', parseInt(e.target.value))} style={{ width: '100%', background: 'rgba(10,5,20,0.6)', border: '1px solid rgba(168,85,247,0.25)', borderBottom: '2px solid #a855f7', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.72rem', fontFamily: 'Outfit, sans-serif', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                    </div>
+
+                    {/* Row 2: System Prompt */}
+                    <div>
+                      <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600, marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ color: '#a855f7' }}>🧠</span> Vision Analysis Prompt
+                        <span style={{ color: 'rgba(255,255,255,0.3)', fontWeight: 400, fontStyle: 'italic' }}>— tells the LLM exactly what to look for</span>
+                      </label>
+                      <textarea
+                        rows={6}
+                        value={config?.publisher_vision_prompt || `You are a photo analyst for a roller skating rink directory. Analyze this image and classify it.\n\nRespond with ONLY valid JSON:\n{\n  "category": "exterior|interior|floor|pro_shop|action|logo|flyer|reject",\n  "score": 1-10\n}\n\nCategories:\n- exterior: Outside view of the building, parking lot, entrance, signage\n- interior: Inside the rink, seating areas, arcade, party rooms\n- floor: The skating surface itself (wood, concrete, sport court)\n- pro_shop: Retail area selling skates, gear, accessories\n- action: Real people actively skating at THIS rink (not stock photos)\n- logo: Business logo, branding, mascot\n- flyer: Event poster, schedule, promotional material, menu\n- reject: Blurry, irrelevant, stock photo, unrelated to skating\n\nScore guide: 10=perfect hero shot, 7-9=great quality, 4-6=acceptable, 1-3=poor quality`}
+                        onChange={(e) => handleUpdate('publisher_vision_prompt', e.target.value)}
+                        style={{ width: '100%', background: 'rgba(10,5,20,0.6)', border: '1px solid rgba(168,85,247,0.25)', borderBottom: '2px solid #a855f7', color: '#fff', padding: '10px 14px', borderRadius: '6px', fontSize: '0.7rem', fontFamily: "'Fira Code', 'Consolas', monospace", outline: 'none', boxSizing: 'border-box', lineHeight: '1.5', resize: 'vertical' }}
+                      />
+                    </div>
+
+                    {/* Row 3: Active Categories (toggleable) */}
+                    <div>
+                      <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600, marginBottom: '6px', display: 'block' }}>Active Categories (click to toggle)</label>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {['exterior', 'interior', 'floor', 'pro_shop', 'action', 'logo', 'flyer'].map(cat => {
+                          const activeCats: string[] = config?.publisher_vision_categories || ['exterior', 'interior', 'floor', 'pro_shop', 'action', 'logo', 'flyer'];
+                          const isActive = activeCats.includes(cat);
+                          const emoji = cat === 'exterior' ? '🏢' : cat === 'interior' ? '🏟️' : cat === 'floor' ? '🛹' : cat === 'pro_shop' ? '🛒' : cat === 'action' ? '⚡' : cat === 'logo' ? '🎨' : '📄';
+                          return (
+                            <button
+                              key={cat}
+                              onClick={() => {
+                                const next = isActive ? activeCats.filter(c => c !== cat) : [...activeCats, cat];
+                                handleUpdate('publisher_vision_categories', next);
+                              }}
+                              style={{
+                                background: isActive ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.03)',
+                                border: `1px solid ${isActive ? 'rgba(168,85,247,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                                color: isActive ? '#c4b5fd' : 'rgba(255,255,255,0.3)',
+                                padding: '4px 12px', borderRadius: '14px', fontSize: '0.65rem', fontWeight: 600,
+                                cursor: 'pointer', transition: 'all 0.15s ease',
+                                textDecoration: isActive ? 'none' : 'line-through',
+                              }}
+                            >
+                              {emoji} {cat}
+                            </button>
+                          );
+                        })}
+                        <span style={{ background: 'rgba(255,60,60,0.12)', border: '1px solid rgba(255,60,60,0.3)', color: '#f87171', padding: '4px 12px', borderRadius: '14px', fontSize: '0.65rem', fontWeight: 600 }}>
+                          🚫 reject (always active)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div>
-                  <label style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: colColor, boxShadow: `0 0 8px ${colColor}` }} />
-  Upsert Strategy
-</label>
-                  <select value={config?.publisher_upsert_strategy || 'merge'} onChange={(e) => handleUpdate('publisher_upsert_strategy', e.target.value)} style={{ width: '100%', background: 'rgba(20, 20, 30, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)', borderBottom: `2px solid ${colColor}`, color: '#fff', padding: '10px 14px', borderRadius: '6px', fontSize: '0.75rem', fontFamily: 'Outfit, sans-serif', outline: 'none', transition: 'all 0.2s ease', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)', boxSizing: 'border-box' }}>
-  <option value="merge" style={{ background: '#111' }}>MERGE (Preserve existing)</option>
-  <option value="overwrite" style={{ background: '#111' }}>OVERWRITE (Force update)</option>
-</select>
+
+              {/* ═══════════════════════════════════════════════════════════════
+                  PASS 2: GUILLOTINE — Validation & Auto-Publish Gates
+                  ═══════════════════════════════════════════════════════════════ */}
+              <div style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, rgba(245,158,11,0.08) 0%, rgba(234,88,12,0.04) 100%)', border: '1px solid rgba(245,158,11,0.35)', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', boxShadow: '0 0 12px rgba(245,158,11,0.4)' }}>⚖️</div>
+                    <div>
+                      <div style={{ color: '#f59e0b', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Pass 2 — Guillotine</div>
+                      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem' }}>Field validation, required data gates & auto-publish rules</div>
+                    </div>
+                  </div>
+                  <ToggleSwitch label="" checked={config?.publisher_auto_publish_enabled} onChange={(v) => handleUpdate('publisher_auto_publish_enabled', v)} colColor="#f59e0b" />
                 </div>
-                <div>
-                  <label style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: colColor, boxShadow: `0 0 8px ${colColor}` }} />
-  Webhook Sync URL (Optional)
-</label>
-                  <input type="text" value={config?.publisher_webhook_url || ''} onChange={(e) => handleUpdate('publisher_webhook_url', e.target.value)} style={{ width: '100%', background: 'rgba(20, 20, 30, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)', borderBottom: `2px solid ${colColor}`, color: '#fff', padding: '10px 14px', borderRadius: '6px', fontSize: '0.75rem', fontFamily: 'Outfit, sans-serif', outline: 'none', transition: 'all 0.2s ease', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)', boxSizing: 'border-box' }} />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  {/* Left: Required Fields Gate — ALL PHASES */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ color: '#fbbf24', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>📋</span> Required Fields
+                      <span style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', color: '#fbbf24', padding: '1px 8px', borderRadius: '10px', fontSize: '0.6rem', fontWeight: 700 }}>
+                        {fields.filter(f => f.is_hard_gate === 1).length} gates
+                      </span>
+                    </div>
+                    <div style={{ background: 'rgba(10,5,0,0.3)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: '6px', padding: '10px', maxHeight: '320px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                      {(() => {
+                        const phaseNames: Record<number, { label: string; emoji: string }> = {
+                          1: { label: 'Scout', emoji: '🔍' },
+                          2: { label: 'Detective', emoji: '🕵️' },
+                          3: { label: 'Photographer', emoji: '📸' },
+                          4: { label: 'Publisher', emoji: '🚀' },
+                        };
+                        const phaseIds = [...new Set(fields.map(f => f.phase_id))].sort();
+                        return phaseIds.map(pid => {
+                          const phaseFields = fields.filter(f => f.phase_id === pid);
+                          if (phaseFields.length === 0) return null;
+                          const info = phaseNames[pid] || { label: `Phase ${pid}`, emoji: '⚙️' };
+                          return (
+                            <div key={pid} style={{ marginBottom: '6px' }}>
+                              <div style={{ color: 'rgba(255,255,255,0.35)', fontSize: '0.58rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', padding: '4px 0 2px 0', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '3px' }}>
+                                {info.emoji} {info.label}
+                              </div>
+                              {phaseFields.map(f => (
+                                <label key={f.id || f.field_name} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '3px 6px', borderRadius: '4px', background: f.is_hard_gate === 1 ? 'rgba(245,158,11,0.08)' : 'transparent', transition: 'background 0.15s' }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={f.is_hard_gate === 1}
+                                    onChange={(e) => updateFieldConfig(f.id, { is_hard_gate: e.target.checked ? 1 : 0 })}
+                                    style={{ accentColor: '#f59e0b', cursor: 'pointer' }}
+                                  />
+                                  <span style={{ color: f.is_hard_gate === 1 ? '#fbbf24' : 'rgba(255,255,255,0.5)', fontSize: '0.68rem', fontWeight: f.is_hard_gate === 1 ? 700 : 400 }}>{f.field_name}</span>
+                                  {f.validation_rule && f.validation_rule !== 'NONE' && (
+                                    <span style={{ background: 'rgba(245,158,11,0.12)', color: '#fbbf24', padding: '1px 6px', borderRadius: '8px', fontSize: '0.55rem', fontWeight: 700 }}>{f.validation_rule}</span>
+                                  )}
+                                </label>
+                              ))}
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+
+                  {/* Right: Required Photo Tags Gate */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ color: '#fbbf24', fontWeight: 700, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span>📸</span> Required Photo Tags
+                      <span style={{ background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.3)', color: '#fbbf24', padding: '1px 8px', borderRadius: '10px', fontSize: '0.6rem', fontWeight: 700 }}>
+                        {(config?.publisher_required_photo_tags || []).length} required
+                      </span>
+                    </div>
+                    <div style={{ background: 'rgba(10,5,0,0.3)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: '6px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {['exterior', 'interior', 'floor', 'pro_shop', 'action', 'logo', 'flyer'].map(tag => {
+                        const requiredTags: string[] = config?.publisher_required_photo_tags || [];
+                        const isChecked = requiredTags.includes(tag);
+                        const emoji = tag === 'exterior' ? '🏢' : tag === 'interior' ? '🏟️' : tag === 'floor' ? '🛹' : tag === 'pro_shop' ? '🛒' : tag === 'action' ? '⚡' : tag === 'logo' ? '🎨' : '📄';
+                        return (
+                          <label key={tag} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '4px 8px', borderRadius: '6px', background: isChecked ? 'rgba(245,158,11,0.08)' : 'transparent', transition: 'background 0.15s' }}>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                const next = isChecked ? requiredTags.filter(t => t !== tag) : [...requiredTags, tag];
+                                handleUpdate('publisher_required_photo_tags', next);
+                              }}
+                              style={{ accentColor: '#f59e0b', cursor: 'pointer' }}
+                            />
+                            <span style={{ fontSize: '0.75rem' }}>{emoji}</span>
+                            <span style={{ color: isChecked ? '#fbbf24' : 'rgba(255,255,255,0.5)', fontSize: '0.7rem', fontWeight: isChecked ? 700 : 400, textTransform: 'capitalize' }}>{tag.replace('_', ' ')}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+
+                    <div>
+                      <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Auto-Publish Threshold (%)</label>
+                      <input type="number" min={0} max={100} value={config?.publisher_auto_publish_threshold || 80} onChange={(e) => handleUpdate('publisher_auto_publish_threshold', parseInt(e.target.value))} style={{ width: '100%', background: 'rgba(10,5,0,0.4)', border: '1px solid rgba(245,158,11,0.25)', borderBottom: '2px solid #f59e0b', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.72rem', fontFamily: 'Outfit, sans-serif', outline: 'none', boxSizing: 'border-box' }} />
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label style={{ color: '#fff', fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.05em', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: colColor, boxShadow: `0 0 8px ${colColor}` }} />
-  Gatekeeper Rules (JSON)
-</label>
-                  <textarea rows={3} value={JSON.stringify(config?.publisher_gatekeeper_rules, null, 2)} onChange={(e) => {
-                    try { handleUpdate('publisher_gatekeeper_rules', JSON.parse(e.target.value)) } catch (e) {}
-                  }} style={{ width: '100%', background: 'rgba(20, 20, 30, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)', borderBottom: `2px solid ${colColor}`, color: '#fff', padding: '10px 14px', borderRadius: '6px', fontSize: '0.75rem', fontFamily: 'Outfit, sans-serif', outline: 'none', transition: 'all 0.2s ease', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.3)', boxSizing: 'border-box' }} />
+              </div>
+
+              {/* ═══════════════════════════════════════════════════════════════
+                  PASS 3: UPLINK — Sync to Production
+                  ═══════════════════════════════════════════════════════════════ */}
+              <div style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, rgba(34,197,94,0.08) 0%, rgba(16,185,129,0.04) 100%)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ background: 'linear-gradient(135deg, #22c55e 0%, #10b981 100%)', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', boxShadow: '0 0 12px rgba(34,197,94,0.4)' }}>🚀</div>
+                  <div>
+                    <div style={{ color: '#22c55e', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Pass 3 — Uplink</div>
+                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem' }}>Sync validated records to Supabase production</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Upsert Strategy</label>
+                    <select value={config?.publisher_upsert_strategy || 'merge'} onChange={(e) => handleUpdate('publisher_upsert_strategy', e.target.value)} style={{ width: '100%', background: 'rgba(5,15,5,0.6)', border: '1px solid rgba(34,197,94,0.25)', borderBottom: '2px solid #22c55e', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.72rem', fontFamily: 'Outfit, sans-serif', outline: 'none', boxSizing: 'border-box' }}>
+                      <option value="merge" style={{ background: '#111' }}>MERGE (Preserve existing)</option>
+                      <option value="overwrite" style={{ background: '#111' }}>OVERWRITE (Force update)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.65rem', fontWeight: 600, marginBottom: '4px', display: 'block' }}>Webhook Sync URL (Optional)</label>
+                    <input type="text" value={config?.publisher_webhook_url || ''} onChange={(e) => handleUpdate('publisher_webhook_url', e.target.value)} placeholder="https://hooks.example.com/..." style={{ width: '100%', background: 'rgba(5,15,5,0.6)', border: '1px solid rgba(34,197,94,0.25)', borderBottom: '2px solid #22c55e', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.72rem', fontFamily: 'Outfit, sans-serif', outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
                 </div>
               </div>
             </>

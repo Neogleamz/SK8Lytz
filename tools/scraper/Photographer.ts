@@ -68,7 +68,7 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type PhotoCategory = 'exterior' | 'interior' | 'floor' | 'pro_shop' | 'action' | 'logo' | 'unknown';
+export type PhotoCategory = 'exterior' | 'interior' | 'floor' | 'pro_shop' | 'action' | 'logo' | 'flyer' | 'unknown';
 
 export interface ImageCandidate {
   url: string;
@@ -91,6 +91,7 @@ export interface SavedPhoto {
   source: string;
   confidence: number;     // 0.0–1.0
   signals: string[];      // what triggered classification
+  visionScore?: number;   // 1-10 quality score from Vision LLM (set by Publisher Pass 1)
 }
 
 export interface PhotoCoverage {
@@ -389,6 +390,9 @@ async function compressAndSave(buf: Buffer, spotId: string, state: string, filen
       log('INFO', `  ⚠️ Rejecting flat layout asset (low contrast/variance: stdev = ${avgStdev.toFixed(2)}): ${filename}`);
       return null;
     }
+
+    // Vision LLM Verification is now handled by Publisher Pass 1 (VRAM isolation)
+    // Photos are saved here and analyzed later during the publishing phase.
 
     const dir = path.join(PHOTOS_DIR, state || 'US', spotId);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });

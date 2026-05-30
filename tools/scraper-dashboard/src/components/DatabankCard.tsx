@@ -333,7 +333,7 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
   const adultSched = spot.adult_night_schedule;
 
   const PHOTO_TYPES = [
-    'exterior', 'interior', 'floor', 'pro_shop', 'action', 'logo', 'unknown',
+    'exterior', 'interior', 'floor', 'pro_shop', 'action', 'logo', 'flyer', 'unknown',
   ];
 
   const PHOTO_TYPE_LABELS: Record<string, { icon: string; color: string }> = {
@@ -343,6 +343,7 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
     pro_shop:  { icon: '🛒', color: '#f06292' },
     action:    { icon: '🎉', color: '#ce93d8' },
     logo:      { icon: '🏷️', color: '#4fc3f7' },
+    flyer:     { icon: '📄', color: '#ffd54f' },
     unknown:   { icon: '❓', color: 'rgba(255,255,255,0.3)' },
   };
 
@@ -376,6 +377,7 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
   const currentPhotoObj = safePh[validPhotoIndex] as PhotoItem | undefined;
   const currentPhotoType = typeof currentPhotoObj === 'object' ? (currentPhotoObj?.type || 'unknown') : 'unknown';
   const currentTypeLabel = PHOTO_TYPE_LABELS[currentPhotoType] || PHOTO_TYPE_LABELS.unknown;
+  const currentVisionScore = typeof currentPhotoObj === 'object' ? (currentPhotoObj as any)?.visionScore : undefined;
 
   // Parse photo_coverage
   let photoCoverage: Record<string, boolean> = {};
@@ -384,7 +386,7 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
     if (raw && typeof raw === 'object') photoCoverage = raw as Record<string, boolean>;
     else if (typeof raw === 'string') photoCoverage = JSON.parse(raw);
   } catch {}
-  const coverageCategories = ['exterior', 'interior', 'floor', 'pro_shop', 'action'];
+  const coverageCategories = ['exterior', 'interior', 'floor', 'pro_shop', 'action', 'flyer'];
 
   if (variant === 'polaroid') {
     return (
@@ -524,8 +526,13 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
         {/* Photo type badge — shows what category the current photo is */}
         {photoCount > 0 && currentPhotoType !== 'unknown' && (
           <span style={{ position:'absolute', bottom:8, left:8, padding:'2px 7px', borderRadius:'4px', fontSize:'0.58rem', fontWeight:800, letterSpacing:'0.05em',
-            background: 'rgba(0,0,0,0.75)', color: currentTypeLabel.color, border: `1px solid ${currentTypeLabel.color}40` }}>
+            background: 'rgba(0,0,0,0.75)', color: currentTypeLabel.color, border: `1px solid ${currentTypeLabel.color}40`, display: 'flex', alignItems: 'center', gap: '4px' }}>
             {currentTypeLabel.icon} {currentPhotoType.replace('_',' ').toUpperCase()}
+            {currentVisionScore !== undefined && (
+              <span style={{ background: 'rgba(255,215,0,0.2)', border: '1px solid rgba(255,215,0,0.4)', color: '#ffd700', padding: '0 4px', borderRadius: '3px', fontSize: '0.52rem', fontWeight: 900 }}>
+                ★{currentVisionScore}
+              </span>
+            )}
           </span>
         )}
         {/* Open Now badge */}
