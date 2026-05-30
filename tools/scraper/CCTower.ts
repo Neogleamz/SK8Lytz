@@ -6,7 +6,7 @@ import path from 'path';
 import { EventEmitter } from 'events';
 import { exec, spawn, ChildProcess } from 'child_process';
 import { startGoogleSweep, stopGoogleSweep, isGoogleSweepActive } from './GoogleSweep';
-import { GooglePlacesProvider, RETAIL_BLOCKLIST } from './lib/providers/GooglePlacesProvider';
+import { GooglePlacesProvider, FacilityType, RETAIL_BLOCKLIST } from './lib/providers/GooglePlacesProvider';
 import { executeDetective } from './core/DetectiveEngine';
 import { HeuristicsEngine } from './core/HeuristicsEngine';
 import { db, getLocalSpots, getLocalCount, updateLocalSpot, deleteLocalSpot, upsertLocalSpot, getConfig, updateConfig, getBlocklist, addBlocklist, deleteBlocklist, addBlocklistKeyword, getPipelineStats, getFieldRegistry, upsertFieldRegistryItem, logFieldCorrection, getCorrectionStats } from './core/LocalDB';
@@ -971,7 +971,10 @@ app.post('/api/config/scope', async (req, res) => {
 
 // --- Sniper Bench End-to-End Pipeline Tracing ---
 app.post('/api/sniper/seed', async (req, res) => {
-  const { url, spot_name, spot_city } = req.body;
+  const { url, spot_name, spot_city, facility_type: reqFacilityType } = req.body;
+  const resolvedFacilityType: FacilityType = (['roller_rink', 'skate_shop', 'skate_park'] as const).includes(reqFacilityType)
+    ? reqFacilityType
+    : 'roller_rink';
   if (!url) return res.status(400).json({ error: 'URL is required' });
   if (!spot_name || !spot_city) return res.status(400).json({ error: 'spot_name and spot_city are required for Google Places lookup' });
 
@@ -1035,7 +1038,7 @@ app.post('/api/sniper/seed', async (req, res) => {
       user_ratings_total:   details.user_ratings_total ?? null,
       opening_hours:        details.opening_hours || null,
       operator_description: details.editorial_summary || null,
-      facility_type:        'roller_rink',
+      facility_type:        resolvedFacilityType,
       last_enriched_at:     new Date().toISOString(),
       raw_knowledge_panel:  { types: details.types || null },
       verification_status:  (url || details.website) ? 'SEEDED' : 'PENDING_WEBSITE',

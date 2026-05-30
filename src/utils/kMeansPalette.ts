@@ -45,7 +45,10 @@ export function extractKMeansPalette(pixels: RGB[], k = 3, maxIterations = 5): R
   // Iteration loop
   for (let iter = 0; iter < maxIterations; iter++) {
     // Clusters holds pixel lists for each centroid
-    const clusters: RGB[][] = Array.from({ length: k }, () => []);
+    const clusters: RGB[][] = [];
+    for (let i = 0; i < k; i++) {
+      clusters.push([]);
+    }
 
     // 2. Assign each pixel to the nearest centroid
     for (let i = 0; i < pixels.length; i++) {
@@ -92,7 +95,10 @@ export function extractKMeansPalette(pixels: RGB[], k = 3, maxIterations = 5): R
   }
 
   // Count the size of each cluster to sort them by dominance
-  const clusterCounts = Array.from({ length: k }, () => 0);
+  const clusterCounts: number[] = [];
+  for (let i = 0; i < k; i++) {
+    clusterCounts.push(0);
+  }
   for (let i = 0; i < pixels.length; i++) {
     const pixel = pixels[i];
     let minDistance = Infinity;

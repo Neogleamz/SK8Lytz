@@ -22,7 +22,7 @@ import { supabase } from './supabaseClient';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import type { CustomGroup, DeviceSettings } from '../types/dashboard.types';
-import type { Tables, TablesInsert } from '../types/supabase';
+import type { TablesInsert } from '../types/supabase';
 
 // ─── Local Supabase Insert Type Aliases ───────────────────────────────────────
 // Derived directly from generated types — stay in sync with schema automatically.
@@ -36,7 +36,6 @@ const GROUPS_KEY      = '@Sk8lytz_custom_groups';
 const TOMBSTONE_KEY   = '@Sk8lytz_deleted_macs';
 const PENDING_KEY       = '@Sk8lytz_pending_sync';
 const PENDING_GROUP_KEY = '@Sk8lytz_pending_group_sync';
-const PROCESSED_KEY     = '@Sk8lytz_processed_devices';
 // NOTE: '@Sk8lytz_last_group_patterns' is intentionally managed by useDashboardGroups
 // as a UI-local concern (last pattern picked per group). It is NOT part of this repo's SSOT.
 
@@ -551,6 +550,20 @@ class DeviceRepository {
         p_device_ids: dbDeviceIds,
       });
       if (error) throw error;
+
+      // BUG FIX: Also stamp the scalar group_id/group_name on each device row.
+      // The RPC only writes to registered_groups + junction — it never touches
+      // registered_devices.group_id. Without this, fresh installs (AsyncStorage wiped)
+      // see 'default-fleet' and the derivation filters out the group card.
+      if (dbDeviceIds.length > 0) {
+        await supabase
+          .from('registered_devices')
+          .update({ group_id: groupId, group_name: groupName })
+          .in('id', dbDeviceIds)
+          .then(({ error: updateErr }) => {
+            if (updateErr) AppLogger.warn('[DeviceRepository] group_id stamp failed (non-fatal)', { error: updateErr.message });
+          });
+      }
       
       return true;
     } catch (e) {
@@ -598,7 +611,18 @@ class DeviceRepository {
           l => l.device_mac.toUpperCase() === cloud.device_mac.toUpperCase()
         );
 
-        if (!local) return cloud;
+        if (!local) {
+          // BUG FIX: Reconstruct array group fields from scalar DB columns.
+          // Supabase registered_devices has group_id (scalar) but NOT group_ids (array).
+          // Without this, fresh installs lose group membership and cards vanish.
+          const scalarGroupId   = (row as Record<string, any>).group_id;
+          const scalarGroupName = (row as Record<string, any>).group_name;
+          return {
+            ...cloud,
+            group_ids:   scalarGroupId   ? [scalarGroupId]   : [],
+            group_names: scalarGroupName ? [scalarGroupName]  : [],
+          };
+        }
 
         const localHasPendingChanges = !!local.is_pending_sync;
         const localHasValidPoints    = (local.led_points ?? 0) > 0;
@@ -884,6 +908,7 @@ class DeviceRepository {
           });
           if (error) throw error;
         } catch (rpcErr) {
+          AppLogger.warn('[DeviceRepository] Group flush RPC failed, fallback:', rpcErr);
           // Fallback: direct group upsert without device membership
           try {
             await supabase.from('registered_groups').upsert({

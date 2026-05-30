@@ -79,7 +79,7 @@ export default function CameraTracker({
   }, []);
 
   // Frame processor GPU resizer configuration
-  const { resizer } = useResizer({
+  const { resizer, error } = useResizer({
     width: 50,
     height: 50,
     channelOrder: 'rgb',
@@ -87,6 +87,19 @@ export default function CameraTracker({
     scaleMode: 'cover',
     pixelLayout: 'interleaved',
   });
+
+  const resizerRef = useRef(resizer);
+  useEffect(() => {
+    resizerRef.current = resizer;
+  }, [resizer]);
+
+  useEffect(() => {
+    if (resizer) {
+      console.log('Camera Sniper: GPU Resizer loaded successfully!');
+    } else if (error) {
+      console.error('Camera Sniper: GPU Resizer failed to load:', error);
+    }
+  }, [resizer, error]);
 
   // Create worklet references to callbacks
   // Use runOnJS from react-native-worklets
@@ -109,42 +122,48 @@ export default function CameraTracker({
         }
         lastProcessedRef.current = now;
 
-        if (resizer != null) {
-          const resized = resizer.resize(frame);
-          const buffer = resized.getPixelBuffer();
-          const resizedArray = new Uint8Array(buffer);
-          
-          // Dynamically detect bytes per pixel to handle both RGB (3) and RGBA/BGRA (4) layouts
-          const channels = Math.floor(resizedArray.length / 2500);
+        const currentResizer = resizerRef.current;
+        if (currentResizer != null) {
+          const resized = currentResizer.resize(frame);
+          try {
+            const buffer = resized.getPixelBuffer();
+            const resizedArray = new Uint8Array(buffer);
+            
+            // Dynamically detect bytes per pixel to handle both RGB (3) and RGBA/BGRA (4) layouts
+            const channels = Math.floor(resizedArray.length / 2500);
 
-          if (resizedArray.length >= 7500) {
-            const currentSubMode = subModeRef.current;
+            if (resizedArray.length >= 7500) {
+              const currentSubMode = subModeRef.current;
 
-            if (currentSubMode === 'SNIPER') {
-              // 1. SNIPER mode: sampling center pixel (25x25 on a 50x50 grid)
-              const centerIdx = (25 * 50 + 25) * channels;
-              const r = resizedArray[centerIdx];
-              const g = resizedArray[centerIdx + 1];
-              const b = resizedArray[centerIdx + 2];
+              if (currentSubMode === 'SNIPER') {
+                // 1. SNIPER mode: sampling center pixel (25x25 on a 50x50 grid)
+                const centerIdx = (25 * 50 + 25) * channels;
+                const r = resizedArray[centerIdx];
+                const g = resizedArray[centerIdx + 1];
+                const b = resizedArray[centerIdx + 2];
 
-              runOnJSSniper(r, g, b);
-            } else {
-              // 2. VIBE mode: K-Means palette extraction (k=3)
-              const pixels: RGB[] = [];
-              for (let i = 0; i < resizedArray.length; i += channels) {
-                pixels.push({
-                  r: resizedArray[i],
-                  g: resizedArray[i + 1],
-                  b: resizedArray[i + 2],
-                });
+                runOnJSSniper(r, g, b);
+              } else {
+                // 2. VIBE mode: K-Means palette extraction (k=3)
+                const pixels: RGB[] = [];
+                for (let i = 0; i < resizedArray.length; i += channels) {
+                  pixels.push({
+                    r: resizedArray[i],
+                    g: resizedArray[i + 1],
+                    b: resizedArray[i + 2],
+                  });
+                }
+
+                const palette = extractKMeansPalette(pixels, 3, 5);
+                runOnJSVibe(palette);
               }
-
-              const palette = extractKMeansPalette(pixels, 3, 5);
-              runOnJSVibe(palette);
             }
+          } finally {
+            resized.dispose(); // CRITICAL: Dispose GPUFrame immediately to prevent leaks
           }
-          resized.dispose(); // CRITICAL: Dispose GPUFrame immediately to prevent leaks
         }
+      } catch (err) {
+        console.error('Camera Frame Processor Error:', err);
       } finally {
         frame.dispose(); // CRITICAL: Dispose Frame immediately to prevent stalls
       }

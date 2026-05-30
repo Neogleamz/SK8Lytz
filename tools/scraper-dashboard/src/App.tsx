@@ -579,7 +579,7 @@ function App() {
     if (['pipeline', 'graveyard'].includes(activeTab)) {
       fetchSpots(0, gridFilter, sortCol, sortDir, searchQuery, chips, stateChip);
     }
-  }, [activeTab, gridFilter, sortCol, sortDir, searchQuery, chips, stateChip]);
+  }, [activeTab, gridFilter, sortCol, sortDir, searchQuery, chips, stateChip, targetFacilities]);
 
   // --- Data Fetchers ---
   const fetchSystemStatus = async () => {
@@ -744,7 +744,8 @@ function App() {
         .join('&');
       const stateParam = activeState.length === 2 ? `&state=${activeState.toUpperCase()}` : '';
         const plStatus = activeTab === 'graveyard' ? '&pipeline_status=REJECTED' : '';
-        const url = `${API_BASE}/api/spots?limit=${rowsPerPage}&offset=${offset}&status=${filter}&sortCol=${col}&sortDir=${dir}&search=${encodeURIComponent(search)}${stateParam}${chipParams ? '&' + chipParams : ''}${plStatus}`;
+        const ftParam = targetFacilities.length > 0 ? `&facility_types=${targetFacilities.join(',')}` : '';
+        const url = `${API_BASE}/api/spots?limit=${rowsPerPage}&offset=${offset}&status=${filter}&sortCol=${col}&sortDir=${dir}&search=${encodeURIComponent(search)}${stateParam}${chipParams ? '&' + chipParams : ''}${plStatus}${ftParam}`;
       const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();

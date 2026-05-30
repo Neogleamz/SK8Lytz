@@ -881,6 +881,14 @@ export const getLocalSpots = (queryArgs: any = {}) => {
     params.push(queryArgs.state.toUpperCase());
   }
 
+  if (queryArgs.facility_types) {
+    const types = typeof queryArgs.facility_types === 'string' ? queryArgs.facility_types.split(',') : queryArgs.facility_types;
+    if (Array.isArray(types) && types.length > 0) {
+      query += ` AND facility_type IN (${types.map(() => '?').join(',')})`;
+      params.push(...types);
+    }
+  }
+
   if (queryArgs.has_photos) query += ` AND photos IS NOT NULL AND photos != '[]' AND photos != 'null'`;
   if (queryArgs.has_hours) query += ` AND opening_hours IS NOT NULL AND opening_hours != '{}' AND opening_hours != 'null'`;
   if (queryArgs.has_website) query += ` AND website IS NOT NULL AND website != ''`;
@@ -931,6 +939,14 @@ export const getLocalCount = (queryArgs: any = {}) => {
   if (queryArgs.state) {
     query += ` AND state = ?`;
     params.push(queryArgs.state.toUpperCase());
+  }
+
+  if (queryArgs.facility_types) {
+    const types = typeof queryArgs.facility_types === 'string' ? queryArgs.facility_types.split(',') : queryArgs.facility_types;
+    if (Array.isArray(types) && types.length > 0) {
+      query += ` AND facility_type IN (${types.map(() => '?').join(',')})`;
+      params.push(...types);
+    }
   }
 
   if (queryArgs.has_photos === 'true') query += ` AND photos IS NOT NULL AND photos != '[]' AND photos != 'null'`;

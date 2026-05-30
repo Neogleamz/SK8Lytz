@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -375,6 +375,39 @@ export type Database = {
           total_enriched?: number
         }
         Relationships: []
+      }
+      device_group_members: {
+        Row: {
+          created_at: string | null
+          device_id: string
+          group_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          device_id: string
+          group_id: string
+        }
+        Update: {
+          created_at?: string | null
+          device_id?: string
+          group_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "device_group_members_device_id_fkey"
+            columns: ["device_id"]
+            isOneToOne: false
+            referencedRelation: "registered_devices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "registered_groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       discovered_devices_telemetry: {
         Row: {
@@ -1899,6 +1932,7 @@ export type Database = {
           city: string | null
           created_at: string | null
           cultural_metadata: Json | null
+          email_addresses: Json | null
           facebook_url: string | null
           facility_type: string | null
           google_maps_url: string | null
@@ -1968,6 +2002,7 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           cultural_metadata?: Json | null
+          email_addresses?: Json | null
           facebook_url?: string | null
           facility_type?: string | null
           google_maps_url?: string | null
@@ -2039,6 +2074,7 @@ export type Database = {
           city?: string | null
           created_at?: string | null
           cultural_metadata?: Json | null
+          email_addresses?: Json | null
           facebook_url?: string | null
           facility_type?: string | null
           google_maps_url?: string | null
@@ -3240,6 +3276,7 @@ export type Database = {
           city: string | null
           created_at: string | null
           cultural_metadata: Json | null
+          email_addresses: Json | null
           facebook_url: string | null
           facility_type: string | null
           google_maps_url: string | null
@@ -3318,6 +3355,7 @@ export type Database = {
           city: string | null
           created_at: string | null
           cultural_metadata: Json | null
+          email_addresses: Json | null
           facebook_url: string | null
           facility_type: string | null
           google_maps_url: string | null
