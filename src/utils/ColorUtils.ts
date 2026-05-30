@@ -58,6 +58,76 @@ export const hexToRgb = (hex: string): { r: number; g: number; b: number } => {
 };
 
 /**
+ * Convert raw RGB values (0–255) to hex string (#RRGGBB). No color manipulation.
+ */
+export const rgbToHex = (r: number, g: number, b: number): string => {
+  const toHex = (v: number) => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+  return ('#' + toHex(r) + toHex(g) + toHex(b)).toUpperCase();
+};
+
+/**
+ * Boost captured camera RGB for maximum WS2812B LED vibrancy.
+ *
+ * Industry-standard HSV saturation maximization for camera → LED pipelines:
+ * 1. RGB → HSV (isolate hue from saturation/brightness)
+ * 2. Maximize Saturation (S=1.0) → forces RGB channels apart for vivid color
+ * 3. Maximize Value (V=1.0) → full LED brightness
+ * 4. Low neutral gate (HSV S < 0.05) → only truly achromatic pixels pass through
+ *
+ * WS2812B LEDs are additive RGB emitters: maximum color vibrancy occurs when
+ * at least one channel is near 0 and at least one is near 255.
+ * Raw camera pastels (all channels similar) produce washed-out near-white.
+ *
+ * References: Philips Hue ambient lighting, FastLED CHSV→CRGB, LIFX color pipeline
+ */
+export function boostForLED(r: number, g: number, b: number): { r: number; g: number; b: number } {
+  const rN = r / 255;
+  const gN = g / 255;
+  const bN = b / 255;
+  const cMax = Math.max(rN, gN, bN);
+  const cMin = Math.min(rN, gN, bN);
+  const delta = cMax - cMin;
+
+  // HSV Saturation: 0 = grayscale, 1 = pure color
+  const s = cMax === 0 ? 0 : delta / cMax;
+
+  // NEUTRAL GATE: Only truly achromatic pixels (S < 0.05) pass through.
+  // Pastels, tinted grays, and muted colors all get boosted to vivid.
+  if (s < 0.05) {
+    const gray = Math.round(cMax * 255);
+    return { r: gray, g: gray, b: gray };
+  }
+
+  // Hue extraction (standard HSV, always-positive formula)
+  let h = 0;
+  if (delta !== 0) {
+    if (cMax === rN)      h = ((gN - bN) / delta + 6) % 6;
+    else if (cMax === gN) h = (bN - rN) / delta + 2;
+    else                  h = (rN - gN) / delta + 4;
+  }
+  h *= 60; // degrees
+
+  // BOOST: S=1.0, V=1.0 for maximum LED chroma + brightness
+  const c = 1.0; // boostedV * boostedS
+  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
+  const m = 0;   // boostedV - c
+
+  let rO = 0, gO = 0, bO = 0;
+  if      (h < 60)  { rO = c; gO = x; }
+  else if (h < 120) { rO = x; gO = c; }
+  else if (h < 180) { gO = c; bO = x; }
+  else if (h < 240) { gO = x; bO = c; }
+  else if (h < 300) { rO = x; bO = c; }
+  else              { rO = c; bO = x; }
+
+  return {
+    r: Math.round((rO + m) * 255),
+    g: Math.round((gO + m) * 255),
+    b: Math.round((bO + m) * 255),
+  };
+}
+
+/**
  * Standard 10-color preset palette used by the color grid.
  */
 export const COLOR_PRESET_PALETTE = [

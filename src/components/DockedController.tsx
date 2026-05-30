@@ -32,8 +32,7 @@ import { useSessionTracking } from '../hooks/useSessionTracking';
 import { useStreetMode } from '../hooks/useStreetMode';
 import { useDeviceStateLedger } from '../hooks/useDeviceStateLedger';
 import type { BleConnectionState, DockedBus, IDeviceState, IFavoriteState, ModeType } from '../types/dashboard.types';
-import { getColorName, hexToHue, hueToHex, hexToRgb } from '../utils/ColorUtils';
-import { rgbToVividHex } from './CameraTracker';
+import { getColorName, hexToRgb, rgbToHex, boostForLED } from '../utils/ColorUtils';
 import type { RGB } from '../utils/kMeansPalette';
 
 
@@ -934,12 +933,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     }), [brightness, speed, selectedColor, points, hwSettings, fixedPatternId, fixedFgColor, fixedBgColor, fixedDirection, writeToDevice, writeStatus, applyFixedPattern]);
 
     const handleCameraColorDetected = React.useCallback((hex: string) => {
-      // Boost camera's dark/washed-out pixels to 100% pure neon saturation
-      const hue = hexToHue(hex);
-      const neonHex = hueToHex(hue);
-      setSelectedColor(neonHex);
-      const { r, g, b } = hexToRgb(neonHex);
-      sendColor(r, g, b);
+      // HSV saturation maximization for WS2812B LED vibrancy (industry standard)
+      const raw = hexToRgb(hex);
+      const boosted = boostForLED(raw.r, raw.g, raw.b);
+      const boostedHex = rgbToHex(boosted.r, boosted.g, boosted.b);
+      setSelectedColor(boostedHex);
+      sendColor(boosted.r, boosted.g, boosted.b);
     }, [sendColor, setSelectedColor]);
 
     const handleVibePaletteChange = React.useCallback((colors: RGB[]) => {
@@ -957,9 +956,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const handleVibeApply = React.useCallback((colors: RGB[], isFlow: boolean) => {
       // 1. Generate the BuilderNode[] payload
       const vibeNodes = [
-        { id: 'vibe_fg',     position: 0,   colorHex: rgbToVividHex(colors[0].r, colors[0].g, colors[0].b) },
-        { id: 'vibe_bg',     position: 50,  colorHex: rgbToVividHex(colors[1].r, colors[1].g, colors[1].b) },
-        { id: 'vibe_accent', position: 100, colorHex: rgbToVividHex(colors[2].r, colors[2].g, colors[2].b) },
+        { id: 'vibe_fg',     position: 0,   colorHex: (() => { const b = boostForLED(colors[0].r, colors[0].g, colors[0].b); return rgbToHex(b.r, b.g, b.b); })() },
+        { id: 'vibe_bg',     position: 50,  colorHex: (() => { const b = boostForLED(colors[1].r, colors[1].g, colors[1].b); return rgbToHex(b.r, b.g, b.b); })() },
+        { id: 'vibe_accent', position: 100, colorHex: (() => { const b = boostForLED(colors[2].r, colors[2].g, colors[2].b); return rgbToHex(b.r, b.g, b.b); })() },
       ];
       setBuilderNodes(vibeNodes);
       setBuilderTransitionType(isFlow ? 0x03 : 0x01);
@@ -985,8 +984,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         }
       }
 
-      // 3. Boost to vivid neon for hardware dispatch
-      const boostedColors = rgbColors.map(c => hexToRgb(rgbToVividHex(c.r, c.g, c.b)));
+      // 3. Boost to vivid for LED hardware dispatch (HSV saturation max)
+      const boostedColors = rgbColors.map(c => boostForLED(c.r, c.g, c.b));
 
       // 4. Dispatch BLE Static/Flow via 0x59
       setMultiColor(boostedColors, N, speed, 1, isFlow ? 0x03 : 0x01);

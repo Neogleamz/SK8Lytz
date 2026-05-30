@@ -10,10 +10,14 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Colors, Spacing } from '../theme/theme';
+import type { RGB } from '../utils/kMeansPalette';
 
 interface CameraTrackerProps {
   onColorDetected: (hex: string) => void;
+  onVibePaletteDetected?: (colors: RGB[]) => void;
+  subMode: 'SNIPER' | 'VIBE';
   isActive: boolean;
+  liveColorRef?: React.MutableRefObject<string>;
 }
 
 export default function CameraTracker(_props: CameraTrackerProps) {

@@ -6,6 +6,7 @@ import { runOnJS } from 'react-native-worklets';
 import { useResizer } from 'react-native-vision-camera-resizer';
 import { requestPermission } from '../services/PermissionService';
 import { Colors, Spacing } from '../theme/theme';
+import { rgbToHex } from '../utils/ColorUtils';
 import { extractKMeansPalette, RGB } from '../utils/kMeansPalette';
 
 export interface CameraTrackerProps {
@@ -16,46 +17,6 @@ export interface CameraTrackerProps {
   liveColorRef?: React.MutableRefObject<string>;
 }
 
-// ---------------------------------------------------------------------------
-// Extract vivid hue hex from raw RGB byte values (0–255)
-// ---------------------------------------------------------------------------
-export function rgbToVividHex(r: number, g: number, b: number): string {
-  const rN = r / 255;
-  const gN = g / 255;
-  const bN = b / 255;
-  const cMax = Math.max(rN, gN, bN);
-  const cMin = Math.min(rN, gN, bN);
-  const delta = cMax - cMin;
-
-  // NEUTRAL SNAPPING GATE: If delta < 0.15, snap to White to avoid noise jumping to Blue/Red
-  if (delta < 0.15) {
-    return '#FFFFFF';
-  }
-
-  let h = 0;
-  if (cMax === rN)      h = ((gN - bN) / delta) % 6;
-  else if (cMax === gN) h = (bN - rN) / delta + 2;
-  else                  h = (rN - gN) / delta + 4;
-  h = h * 60;
-  if (h < 0) h += 360;
-
-  // Boost to vivid neon (S=1.0, L=0.5)
-  const c = 1.0;
-  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
-  let rV = 0, gV = 0, bV = 0;
-  if      (h < 60)  { rV = c; gV = x; bV = 0; }
-  else if (h < 120) { rV = x; gV = c; bV = 0; }
-  else if (h < 180) { rV = 0; gV = c; bV = x; }
-  else if (h < 240) { rV = 0; gV = x; bV = c; }
-  else if (h < 300) { rV = x; gV = 0; bV = c; }
-  else              { rV = c; gV = 0; bV = x; }
-
-  const toHex = (v: number) => {
-    const s = Math.round(v * 255).toString(16);
-    return s.length === 1 ? '0' + s : s;
-  };
-  return ('#' + toHex(rV) + toHex(gV) + toHex(bV)).toUpperCase();
-}
 
 export default function CameraTracker({
   onColorDetected,
@@ -104,7 +65,7 @@ export default function CameraTracker({
   // The JS dispatch functions that receive the worklet threads values
   const dispatchSniperColor = useCallback((r: number, g: number, b: number) => {
     if (isNaN(r) || isNaN(g) || isNaN(b)) return;
-    const hex = rgbToVividHex(r, g, b);
+    const hex = rgbToHex(r, g, b);
     setLiveHex(hex);
     if (liveColorRef) {
       liveColorRef.current = hex;

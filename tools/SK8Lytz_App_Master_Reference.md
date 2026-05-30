@@ -363,8 +363,8 @@ The `CAMERA` mode provides real-time ambient lighting translation and dual-mode 
   - Hardened with explicit `frame.dispose()` invocation wrapped in a `try...finally` block inside the worklet thread to eliminate camera pipeline stalls. Dispatches are scheduled via `runOnJS` from `react-native-worklets` to transition back to the React JS thread.
 - **SNIPER Sub-Mode (Focus reticle)**:
   - Samples the center pixel `(25, 25)` from the 50x50 resized frame.
-  - Applies a strict color-distance delta gate (`delta < 0.15`) to snap neutral colors to pure #FFFFFF (preventing blue/green ambient noise).
-  - Taps the Shutter button to lock in the vivid-neon boosted color and dispatches it via a 0x59 Freeze command to the skates, saving swatches in a tactile 5-item history row.
+  - The GPU resizer (`react-native-vision-camera-resizer@5.0.10`) delivers accurate RGB bytes directly. The reticle displays the raw camera color (unmodified truth). No client-side vivid boost is applied in the frame processor — the captured color is the real scene color.
+  - On capture, `boostForLED()` (`src/utils/ColorUtils.ts`) applies industry-standard HSV saturation maximization (S=1.0, V=1.0) to translate the muted camera capture into vivid WS2812B-optimized output. Neutrals (HSV S < 0.05) pass through as white. The boosted color is dispatched via 0x59 Freeze to the skates and saved in the 5-item swatch history.
 - **VIBE Sub-Mode (Palette extractor)**:
   - Evaluates the 2,500 pixel array to extract the 3 most dominant colors via an optimized client-side K-Means clustering algorithm (k=3, 5 iterations max) with thread-safe `'worklet';` annotations.
   - Dominant colors populate FG/BG/ACCENT slots in the UI and generate a live liquid gradient preview.
