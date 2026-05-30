@@ -922,8 +922,8 @@ const crawledImageOcrCache = new Map<string, string>();
 
 // ─── Page Crawl Helper ───────────────────────────────────────────────────────
 
-async function crawlPage(page: any, url: string, onProgress: (m: string) => void): Promise<{ text:string; jsonLd:string; ogImage:string|null; images:Array<{src:string;alt:string;parentClass:string;w?:number;h?:number}>; iframes:string[]; links:Array<{href:string;text:string}>; mailtos:string[]; fullText:string; }> {
-  const empty = { text:'', jsonLd:'', ogImage:null, images:[], iframes:[], links:[], mailtos:[], fullText:'' };
+async function crawlPage(page: any, url: string, onProgress: (m: string) => void): Promise<{ text:string; jsonLd:string; ogImage:string|null; images:Array<{src:string;alt:string;parentClass:string;w?:number;h?:number}>; iframes:string[]; links:Array<{href:string;text:string}>; mailtos:string[]; fullText:string; detectedFlyerUrls?:string[]; }> {
+  const empty = { text:'', jsonLd:'', ogImage:null, images:[], iframes:[], links:[], mailtos:[], fullText:'', detectedFlyerUrls: [] };
   if (url.toLowerCase().endsWith('.pdf')) {
     try { const fetchFn = require('node-fetch'); const buf = await (await fetchFn(url)).buffer(); const pdfData = await (pdfParse as any)(buf); return { ...empty, text:`[PDF: ${url}]\n${pdfData.text}` }; } catch { return empty; }
   }
@@ -995,6 +995,7 @@ async function crawlPage(page: any, url: string, onProgress: (m: string) => void
 
     // Always-On OCR for large images on homepage / schedule URLs
     let ocrPrependText = '';
+    const detectedFlyerUrls: string[] = [];
     let isTargetPageForImageOcr = false;
     try {
       const parsed = new URL(url);
@@ -1013,6 +1014,10 @@ async function crawlPage(page: any, url: string, onProgress: (m: string) => void
             const cachedText = crawledImageOcrCache.get(img.src) || '';
             if (cachedText.trim().length > 0) {
               ocrPrependText += `\n\n[Always-On OCR (CACHED) from Large Image: ${img.src}]\n${cachedText}\n\n`;
+              const isScheduleFlyer = /monday|tuesday|wednesday|thursday|friday|saturday|sunday|admission|pricing|rates|fee|schedule|hours|session|times/i.test(cachedText);
+              if (isScheduleFlyer) {
+                detectedFlyerUrls.push(img.src);
+              }
             }
           } else {
             onProgress(`[Detective] 📸 Large image detected (${img.w}x${img.h}) on target page. Running Always-On Tesseract OCR...`);
@@ -1024,6 +1029,12 @@ async function crawlPage(page: any, url: string, onProgress: (m: string) => void
                   crawledImageOcrCache.set(img.src, text);
                   ocrPrependText += `\n\n[Always-On OCR from Large Image: ${img.src}]\n${text}\n\n`;
                   onProgress(`[Detective] ✓ Extracted OCR from large image: ${img.src}`);
+                  
+                  const isScheduleFlyer = /monday|tuesday|wednesday|thursday|friday|saturday|sunday|admission|pricing|rates|fee|schedule|hours|session|times/i.test(text);
+                  if (isScheduleFlyer) {
+                    detectedFlyerUrls.push(img.src);
+                    onProgress(`[Detective] 🎯 Tagged large image as verified schedule/flyer canvas: ${img.src}`);
+                  }
                 } else {
                   crawledImageOcrCache.set(img.src, '');
                 }
@@ -1040,7 +1051,7 @@ async function crawlPage(page: any, url: string, onProgress: (m: string) => void
     }
 
     const finalMergedText = ocrPrependText + d.text;
-    return {text:finalMergedText,jsonLd:d.jsonLd,ogImage:d.ogImage,images:d.images,iframes:d.iframes,links:d.links,mailtos:d.mailtos,fullText:d.fullText};
+    return {text:finalMergedText,jsonLd:d.jsonLd,ogImage:d.ogImage,images:d.images,iframes:d.iframes,links:d.links,mailtos:d.mailtos,fullText:d.fullText,detectedFlyerUrls};
   } catch { onProgress(`[Detective] Nav failed: ${url}`); return empty; }
 }
 
@@ -1239,6 +1250,9 @@ export async function executeDetective(
         if(!ogImage&&pg.ogImage&&!pg.ogImage.includes('placeholder')) ogImage=pg.ogImage;
         domImages.push(...pg.images.slice(0,5));
         flyerUrls.push(...pg.images.filter(i=>/schedule|pricing|flyer/i.test(i.src+i.alt)).map(i=>i.src));
+        if (pg.detectedFlyerUrls && pg.detectedFlyerUrls.length > 0) {
+          flyerUrls.push(...pg.detectedFlyerUrls);
+        }
         allLinks.push(...pg.links);
         allMailtos.push(...pg.mailtos);
         for(const iframe of pg.iframes){
@@ -1246,6 +1260,9 @@ export async function executeDetective(
           if(ig.text) {
             const igTxt = `\n\n[IFRAME:${iframe}]\n${condenseWebText(ig.text)}`;
             coreText+=igTxt; amenityText+=igTxt;
+          }
+          if (ig.detectedFlyerUrls && ig.detectedFlyerUrls.length > 0) {
+            flyerUrls.push(...ig.detectedFlyerUrls);
           }
         }
 
@@ -1884,6 +1901,9 @@ skipPass1B = Object.keys(schemaPass1B).length === 0;
     if(logo_url) candidatePhotos.logo_url=logo_url;
     // Fix #8: Inject Google Places photo references
     if(googlePhotoRefs.length > 0) candidatePhotos.google_refs = googlePhotoRefs;
+  }
+  if (flyerUrls.length > 0) {
+    candidatePhotos.detected_schedule_flyers = [...new Set(flyerUrls)];
   }
   if(Object.keys(candidatePhotos).length===0) candidatePhotos=null as any;
 
