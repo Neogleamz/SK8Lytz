@@ -401,7 +401,9 @@ export async function parseSitemap(websiteUrl: string): Promise<SitemapResult> {
   // If basic fetch discovered very few links (common on JS/Wix Client-Side Rendered sites)
   if (level1Links.length < 15) {
     try {
-      const puppeteer = require('puppeteer');
+      const puppeteer = require('puppeteer-extra');
+      const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+      puppeteer.use(StealthPlugin());
       const browser = await puppeteer.launch({
         headless: 'new',
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']

@@ -2345,6 +2345,45 @@ function App() {
             <span>⚙️</span> Pipeline & Stealth
           </h3>
 
+          {/* Stealth & Fallback Telemetry Badges */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', margin: '2px 0 6px 0' }}>
+            <span style={{
+              background: 'rgba(0, 255, 170, 0.08)',
+              border: '1px solid rgba(0, 255, 170, 0.3)',
+              color: '#00ffaa',
+              padding: '3px 8px',
+              borderRadius: '6px',
+              fontSize: '0.52rem',
+              fontWeight: 800,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 0 10px rgba(0, 255, 170, 0.05)',
+              letterSpacing: '0.02em',
+              textTransform: 'uppercase'
+            }}>
+              🛡️ Stealth Plugin: ACTIVE
+            </span>
+            <span style={{
+              background: identityRotation ? 'rgba(255, 179, 0, 0.08)' : 'rgba(255, 255, 255, 0.02)',
+              border: identityRotation ? '1px solid rgba(255, 179, 0, 0.3)' : '1px solid rgba(255, 255, 255, 0.1)',
+              color: identityRotation ? '#ffb300' : 'rgba(255, 255, 255, 0.3)',
+              padding: '3px 8px',
+              borderRadius: '6px',
+              fontSize: '0.52rem',
+              fontWeight: 800,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: identityRotation ? '0 0 10px rgba(255, 179, 0, 0.05)' : 'none',
+              letterSpacing: '0.02em',
+              textTransform: 'uppercase',
+              transition: 'all 0.3s ease'
+            }}>
+              🔍 Active Social Fallback: {identityRotation ? 'ARMED' : 'DISARMED'}
+            </span>
+          </div>
+
           {/* Daemons list */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <span style={{ fontSize: '0.56rem', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Active Phase Daemons</span>

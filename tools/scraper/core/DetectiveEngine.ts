@@ -5,7 +5,10 @@
  */
 
 import http from 'http';
-import puppeteer from 'puppeteer';
+import puppeteerExtra from 'puppeteer-extra';
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+puppeteerExtra.use(StealthPlugin());
+const puppeteer = puppeteerExtra;
 import Tesseract from 'tesseract.js';
 // Bypass Bun ESM resolution bug for pdf-parse
 const pdfParse = require('pdf-parse');
@@ -653,6 +656,70 @@ async function fetchYelpReviewsWithPuppeteer(browser: any, name: string, city: s
   }
 }
 
+async function fetchSocialLinksFromSearch(
+  browser: any,
+  name: string,
+  city: string,
+  state: string,
+  types: ('yelp' | 'facebook' | 'instagram')[],
+  onProgress?: (msg: string) => void
+): Promise<Record<string, string | null>> {
+  const results: Record<string, string | null> = { yelp_url: null, facebook_url: null, instagram_url: null };
+  if (!browser || types.length === 0) return results;
+
+  onProgress?.(`[Social-Fallback] 🔍 Missing profiles detected. Querying Google Search fallback for: ${types.join(', ')}...`);
+
+  const page = await browser.newPage();
+  try {
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+    await page.setViewport({ width: 1280, height: 800 });
+
+    for (const type of types) {
+      const q = `${name} ${city} ${state} ${type}`;
+      const url = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+      onProgress?.(`[Social-Fallback] Searching for ${type}: ${q}`);
+
+      try {
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 15000 }).catch(() => {});
+        await sleep(1500 + Math.random() * 1000);
+
+        const links = await page.evaluate(() => {
+          return Array.from(document.querySelectorAll('a'))
+            .map((a: any) => a.href || '')
+            .filter(href => href.startsWith('http'));
+        });
+
+        if (type === 'yelp') {
+          const found = links.find(l => l.includes('yelp.com/biz/'));
+          if (found) {
+            results.yelp_url = found.split('?')[0];
+            onProgress?.(`[Social-Fallback] ✓ Found Yelp link: ${results.yelp_url}`);
+          }
+        } else if (type === 'facebook') {
+          const found = links.find(l => l.includes('facebook.com/') && !l.includes('/sharer') && !l.includes('/login') && !l.includes('/pages'));
+          if (found) {
+            results.facebook_url = found.split('?')[0];
+            onProgress?.(`[Social-Fallback] ✓ Found Facebook link: ${results.facebook_url}`);
+          }
+        } else if (type === 'instagram') {
+          const found = links.find(l => l.includes('instagram.com/') && !l.includes('/p/') && !l.includes('/explore') && !l.includes('/tags'));
+          if (found) {
+            results.instagram_url = found.split('?')[0];
+            onProgress?.(`[Social-Fallback] ✓ Found Instagram link: ${results.instagram_url}`);
+          }
+        }
+      } catch (e: any) {
+        onProgress?.(`[Social-Fallback] ⚠️ Query failed for ${type}: ${e.message}`);
+      }
+      await sleep(1000);
+    }
+  } catch (err: any) {
+    onProgress?.(`[Social-Fallback] ⚠️ Browser error: ${err.message}`);
+  } finally {
+    try { await page.close(); } catch {}
+  }
+  return results;
+}
 
 async function fetchFacebookData(facebookUrl: string | null): Promise<{ text: string; cover_photo: string | null; photos_url: string | null }> {
   if (!facebookUrl) return { text: '', cover_photo: null, photos_url: null };
@@ -1044,10 +1111,30 @@ export async function executeDetective(
     // Run the Adaptive Sitemap Sibling Location Bouncer
     const targetLocationUrl = filterMultiLocationUrls(sitemap, spotContext, onProgress);
 
+    const isStealthRotation = aiConfig.identity_rotation_enabled !== false;
+    let selectedUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+    let selectedViewport = { width: 1280, height: 800 };
+
+    if (isStealthRotation) {
+      const uas = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36 OPR/109.0.0.0'
+      ];
+      selectedUA = uas[Math.floor(Math.random() * uas.length)];
+      selectedViewport = {
+        width: Math.floor(Math.random() * (1920 - 1024 + 1)) + 1024,
+        height: Math.floor(Math.random() * (1080 - 768 + 1)) + 768
+      };
+      onProgress(`[Detective] 🛡️ Stealth Plugin active. Viewport: ${selectedViewport.width}x${selectedViewport.height}, User-Agent: ${selectedUA}`);
+    }
+
     browser=await puppeteer.launch({headless:isHeadless?'new':false,protocolTimeout:60000,args:['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage']});
     const page=await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0 Safari/537.36');
-      await page.setViewport({width:1280,height:800});
+    await page.setUserAgent(selectedUA);
+    await page.setViewport(selectedViewport);
       // Fix #7: Include gallery_urls in targeted crawl (SitemapParser spider handles discovery)
       let crawlUrls: string[] = [];
       let targeted: string[] = [];
@@ -1511,6 +1598,31 @@ skipPass1B = Object.keys(schemaPass1B).length === 0;
           if (retry1B.pricing) pass1.pricing = retry1B.pricing;
           if (retry1B.has_fee !== undefined) pass1.has_fee = retry1B.has_fee;
           if (retry1B.has_rental !== undefined) pass1.has_rental = retry1B.has_rental;
+        }
+      }
+    }
+
+    // Active Social & Yelp Search Fallback
+    if (browser) {
+      const foundYelp = allLinks.some(l => l.href && l.href.includes('yelp.com/biz/'));
+      const foundFB = allLinks.some(l => l.href && l.href.includes('facebook.com/'));
+      const foundIG = allLinks.some(l => l.href && l.href.includes('instagram.com/'));
+
+      const missingSocials: ('yelp' | 'facebook' | 'instagram')[] = [];
+      if (!spotContext.yelp_url && !foundYelp) missingSocials.push('yelp');
+      if (!spotContext.facebook_url && !foundFB) missingSocials.push('facebook');
+      if (!spotContext.instagram_url && !foundIG) missingSocials.push('instagram');
+
+      if (missingSocials.length > 0) {
+        const fallbackSocials = await fetchSocialLinksFromSearch(browser, spotContext.name, spotContext.city, spotContext.state, missingSocials, onProgress);
+        if (fallbackSocials.yelp_url) {
+          spotContext.yelp_url = fallbackSocials.yelp_url;
+        }
+        if (fallbackSocials.facebook_url) {
+          spotContext.facebook_url = fallbackSocials.facebook_url;
+        }
+        if (fallbackSocials.instagram_url) {
+          spotContext.instagram_url = fallbackSocials.instagram_url;
         }
       }
     }
