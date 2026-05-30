@@ -51,9 +51,9 @@ const LOOP_COOLDOWN_MS = 800;
 const MIN_FILE_SIZE_BYTES = 30 * 1024;  // 30KB minimum before compression
 const MIN_IMG_WIDTH = 400;
 const MIN_IMG_HEIGHT = 300;
-const MAX_ACTION_PHOTOS = 4;
-const MAX_INTERIOR_PHOTOS = 3;
-const MAX_PHOTOS_TOTAL = 30;           // hard cap per spot (category fills first, then overflow for manual tagging)
+const MAX_ACTION_PHOTOS = 10;
+const MAX_INTERIOR_PHOTOS = 10;
+const MAX_PHOTOS_TOTAL = 50;           // hard cap per spot (category fills first, then overflow for manual tagging)
 const OVERFLOW_MAX = 20;               // extra unknown photos collected after categories are filled
 const WEBP_QUALITY = 82;              // WebP compression quality — ~65% smaller than raw JPEG
 const MAX_OUTPUT_DIMENSION = 1800;    // max width or height — downscale only, never upscale
@@ -81,6 +81,8 @@ export interface ImageCandidate {
   estimatedSize?: number;
   provisionalType?: PhotoCategory | null;
   typeConfidence?: number;
+  w?: number;             // extracted width for resolution sorting
+  h?: number;             // extracted height for resolution sorting
 }
 
 export interface SavedPhoto {
@@ -203,13 +205,35 @@ function inferPhotoTypeFromKeywords(candidate: ImageCandidate): { type: PhotoCat
     }
   }
 
-  // Source-based boosts (pageSource tells us a lot)
-  if (candidate.pageSource === 'google_refs') { scores.interior += 2; scores.action += 2; scores.floor += 2; }
-  if (candidate.pageSource === 'yelp_inside') { scores.interior += 5; }
-  if (candidate.pageSource === 'yelp_food')   { scores.pro_shop += 2; }
-  if (candidate.pageSource === 'instagram')   { scores.action += 4; }
-  if (candidate.pageSource === 'website_contact') { scores.exterior += 3; }
-  if (candidate.pageSource === 'website_og') { scores.floor += 3; scores.interior += 2; }
+  // Source-based boosts (pageSource tells us a lot, completely bypassing text-only blindspots)
+  if (candidate.pageSource === 'google_refs') {
+    scores.interior += 3; scores.action += 3; scores.floor += 3;
+    matchedSignals.push('source:google_refs');
+  }
+  if (candidate.pageSource === 'yelp_inside') {
+    scores.interior += 10;
+    matchedSignals.push('source:yelp_inside');
+  }
+  if (candidate.pageSource === 'yelp_outside') {
+    scores.exterior += 10;
+    matchedSignals.push('source:yelp_outside');
+  }
+  if (candidate.pageSource === 'yelp_food') {
+    scores.pro_shop += 10;
+    matchedSignals.push('source:yelp_food');
+  }
+  if (candidate.pageSource === 'instagram') {
+    scores.action += 8;
+    matchedSignals.push('source:instagram');
+  }
+  if (candidate.pageSource === 'website_contact') {
+    scores.exterior += 3;
+    matchedSignals.push('source:website_contact');
+  }
+  if (candidate.pageSource === 'website_og') {
+    scores.floor += 3; scores.interior += 2;
+    matchedSignals.push('source:website_og');
+  }
 
   const sorted = (Object.entries(scores) as Array<[PhotoCategory, number]>)
     .filter(([, v]) => v > 0)
@@ -336,6 +360,9 @@ async function compressAndSave(buf: Buffer, spotId: string, state: string, filen
       log('INFO', `  ⚠️ Rejecting ${filename} due to resolution too low: ${w}x${h} (min: ${minW}x${minH})`);
       return null;
     }
+
+    const fidelityStr = isLogo ? 'logo' : (w >= 1024 && h >= 768 ? 'high-fidelity' : (w >= 800 && h >= 600 ? 'medium-fidelity' : 'fallback-fidelity'));
+    log('INFO', `  📸 Processing ${filename} (${w}x${h}) as ${fidelityStr}...`);
 
     const aspectRatio = w / h;
     if (isLogo) {
@@ -565,6 +592,8 @@ async function crawlPageForImages(urls: string[], pageSourceLabel: string): Prom
                 nearestHeading: getNearestHeading(img),
                 pageUrl: pageUrlStr,
                 pageSource: source,
+                w,
+                h,
               });
             }
           });
@@ -665,7 +694,7 @@ async function scrapeInstagramGrid(instagramUrl: string): Promise<ImageCandidate
 
 // ─── Yelp Tab-Specific Scrape ─────────────────────────────────────────────────
 
-async function scrapeYelpTab(yelpUrl: string, tab: 'inside' | 'food'): Promise<ImageCandidate[]> {
+async function scrapeYelpTab(yelpUrl: string, tab: 'inside' | 'outside' | 'food'): Promise<ImageCandidate[]> {
   const tabUrl = `${yelpUrl.replace(/\/$/, '')}/photos?tab=${tab}`;
   try {
     return await crawlPageForImages([tabUrl], `yelp_${tab}`);
@@ -816,6 +845,14 @@ async function runPhotographerLoop() {
           websiteCandidates.push({ url: candidates.og_image, alt: 'og:image', filename: 'og-image', parentClass: 'meta', nearestHeading: '', pageUrl: websiteUrl, pageSource: 'website_og' });
         }
 
+        // Sort candidates by size (w * h) descending, prioritizing high-resolution images first
+        websiteCandidates.sort((a, b) => {
+          const areaA = (a.w || 0) * (a.h || 0);
+          const areaB = (b.w || 0) * (b.h || 0);
+          return areaB - areaA;
+        });
+        log('INFO', `  📷 Sorted ${websiteCandidates.length} website candidates by resolution.`);
+
         // Classify and collect
         for (const candidate of websiteCandidates) {
           const { type, confidence, signals } = await classifyImage(candidate);
@@ -907,19 +944,63 @@ async function runPhotographerLoop() {
     // ── PASS 4: Yelp tab-specific (last resort) ────────────────────────────────
     const yelpUrl = target.yelp_url || candidates.yelp_url;
     if (yelpUrl) {
-      if (!coverage.interior || photosByType.interior.length < 1) {
+      const needsExteriorYelp = !coverage.exterior || photosByType.exterior.length < 1;
+      const needsInteriorYelp = !coverage.interior || photosByType.interior.length < MAX_INTERIOR_PHOTOS;
+
+      if (needsInteriorYelp) {
         log('INFO', '  ⭐ Pass 4: Yelp inside tab...');
         const yelpInside = await scrapeYelpTab(yelpUrl, 'inside');
-        for (const c of yelpInside.slice(0, 2)) {
-          if (photosByType.interior.length >= MAX_INTERIOR_PHOTOS) break;
+        
+        // Sort by resolution descending
+        yelpInside.sort((a, b) => {
+          const areaA = (a.w || 0) * (a.h || 0);
+          const areaB = (b.w || 0) * (b.h || 0);
+          return areaB - areaA;
+        });
+
+        let savedCount = 0;
+        for (const c of yelpInside) {
+          if (photosByType.interior.length >= MAX_INTERIOR_PHOTOS || savedCount >= 5) break;
           const dl = await downloadImage(c.url);
           if (!dl) continue;
           const idx = photosByType.interior.length;
           const localUrl = await compressAndSave(dl.buffer, target.id, target.state || 'US', `interior_yelp_${idx}`);
           if (!localUrl) continue;
-          const saved: SavedPhoto = { url: localUrl, type: 'interior', source: 'yelp_inside', confidence: 0.88, signals: ['source:yelp-inside-tab'] };
-          savedPhotos.push(saved); photosByType.interior.push(saved); coverage.interior = true;
+          const saved: SavedPhoto = { url: localUrl, type: 'interior', source: 'yelp_inside', confidence: 0.95, signals: ['source:yelp-inside-tab'] };
+          savedPhotos.push(saved);
+          photosByType.interior.push(saved);
+          coverage.interior = true;
+          savedCount++;
           log('INFO', `  ✅ Yelp inside → interior`);
+        }
+      }
+
+      const needsExteriorYelpPostInside = !coverage.exterior || photosByType.exterior.length < 1;
+      if (needsExteriorYelpPostInside) {
+        log('INFO', '  ⭐ Pass 4: Yelp outside tab...');
+        const yelpOutside = await scrapeYelpTab(yelpUrl, 'outside');
+
+        // Sort by resolution descending
+        yelpOutside.sort((a, b) => {
+          const areaA = (a.w || 0) * (a.h || 0);
+          const areaB = (b.w || 0) * (b.h || 0);
+          return areaB - areaA;
+        });
+
+        let savedCount = 0;
+        for (const c of yelpOutside) {
+          if (photosByType.exterior.length >= 1 || savedCount >= 5) break;
+          const dl = await downloadImage(c.url);
+          if (!dl) continue;
+          const idx = photosByType.exterior.length;
+          const localUrl = await compressAndSave(dl.buffer, target.id, target.state || 'US', `exterior_yelp_${idx}`);
+          if (!localUrl) continue;
+          const saved: SavedPhoto = { url: localUrl, type: 'exterior', source: 'yelp_outside', confidence: 0.95, signals: ['source:yelp-outside-tab'] };
+          savedPhotos.push(saved);
+          photosByType.exterior.push(saved);
+          coverage.exterior = true;
+          savedCount++;
+          log('INFO', `  ✅ Yelp outside → exterior`);
         }
       }
     }
@@ -933,6 +1014,12 @@ async function runPhotographerLoop() {
         // Skip already-saved and stock photos
         if (STOCK_PHOTO_DOMAINS.some(d => c.url.includes(d))) return false;
         return !savedUrls.has(c.url);
+      });
+      // Sort overflow candidates by resolution descending prior to downloading
+      overflowCandidates.sort((a, b) => {
+        const areaA = (a.w || 0) * (a.h || 0);
+        const areaB = (b.w || 0) * (b.h || 0);
+        return areaB - areaA;
       });
       log('INFO', `  📦 Overflow pass: up to ${Math.min(overflowCandidates.length, OVERFLOW_MAX)} of ${overflowCandidates.length} remaining candidates for manual tagging...`);
       let overflowCount = 0;

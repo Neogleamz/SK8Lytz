@@ -181,6 +181,10 @@ async function run() {
         if (url && !url.includes('localhost') && !url.includes('127.0.0.1')) {
           return;
         }
+        // Ignore image proxy 404 errors as they depend on external content viability
+        if (url && url.includes('/api/img-proxy')) {
+          return;
+        }
         collectedErrors.push({ source: `network.${source}`, text: errorText });
         console.error(`  🔴 [Network/Log Error] ${errorText}`);
       } else if (level === 'warning') {
