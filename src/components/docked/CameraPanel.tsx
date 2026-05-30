@@ -2,7 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import React, { useState, useCallback, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import CameraTracker from '../CameraTracker';
 import { Spacing, Colors } from '../../theme/theme';
 import { RGB } from '../../utils/kMeansPalette';
@@ -16,7 +16,7 @@ interface CameraPanelProps {
 
 const MAX_SWATCHES = 5;
 
-// Helper to convert RGB to Hex
+/** Convert RGB struct to #RRGGBB hex string — no color manipulation. */
 function rgbToHexStr(color: RGB): string {
   const toHex = (v: number) => {
     const s = Math.round(v).toString(16);
@@ -25,9 +25,9 @@ function rgbToHexStr(color: RGB): string {
   return ('#' + toHex(color.r) + toHex(color.g) + toHex(color.b)).toUpperCase();
 }
 
-const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteChange, onSubModeChange }: CameraPanelProps) => {
+const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onSubModeChange }: CameraPanelProps) => {
   const [subMode, setSubMode] = useState<'SNIPER' | 'VIBE'>('SNIPER');
-  
+
   // SNIPER Mode State
   const [liveHex, setLiveHex] = useState<string>('#FFFFFF');
   const [swatches, setSwatches] = useState<string[]>([]);
@@ -41,10 +41,6 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
     { r: 0, g: 0, b: 255 },
   ]);
   const [isFlow, setIsFlow] = useState<boolean>(true);
-
-  // References to callbacks
-  const onVibePaletteChangeRef = useRef(onVibePaletteChange);
-  onVibePaletteChangeRef.current = onVibePaletteChange;
 
   // Intentional no-op: CameraTracker writes to liveColorRef.current directly
   // from the worklet thread via runOnJS(dispatchSniperColor). This callback
@@ -60,14 +56,7 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const capturedColor = liveColorRef.current;
     setLiveHex(capturedColor);
-    
-    // Add to swatches list (shift oldest out if max reached)
-    setSwatches(prev => {
-      const newSwatches = [capturedColor, ...prev.filter(c => c !== capturedColor)].slice(0, MAX_SWATCHES);
-      return newSwatches;
-    });
-    
-    // Auto-select the newly captured color and dispatch BLE
+    setSwatches(prev => [capturedColor, ...prev.filter(c => c !== capturedColor)].slice(0, MAX_SWATCHES));
     setActiveSwatch(capturedColor);
     onColorDetected(capturedColor);
   }, [onColorDetected]);
@@ -81,16 +70,12 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
   const handleModeToggle = useCallback((mode: 'SNIPER' | 'VIBE') => {
     Haptics.selectionAsync();
     setSubMode(mode);
-    if (onSubModeChange) {
-      onSubModeChange(mode);
-    }
+    if (onSubModeChange) onSubModeChange(mode);
   }, [onSubModeChange]);
 
   const handleVibeApplyPress = useCallback(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    if (onVibeApply) {
-      onVibeApply(vibePalette, isFlow);
-    }
+    if (onVibeApply) onVibeApply(vibePalette, isFlow);
   }, [onVibeApply, vibePalette, isFlow]);
 
   const toggleFlow = useCallback(() => {
@@ -100,7 +85,7 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
 
   return (
     <View style={styles.container}>
-      {/* Dynamic unified Camera Viewport */}
+      {/* ── Full-bleed Camera Viewfinder ─────────────────────────────── */}
       <CameraTracker
         isActive
         subMode={subMode}
@@ -109,129 +94,137 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
         liveColorRef={liveColorRef}
       />
 
-      <View style={styles.controlPanel}>
-        {/* iOS-Style Glassmorphic Segmented Toggle Switch */}
-        <View style={styles.subModeSwitchContainer}>
-          <TouchableOpacity
-            style={[styles.subModePill, subMode === 'SNIPER' && styles.subModePillActive]}
-            onPress={() => handleModeToggle('SNIPER')}
-            activeOpacity={0.8}
-          >
-            <MaterialCommunityIcons name="target" size={18} color={subMode === 'SNIPER' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
-            <Text style={[styles.subModeText, subMode === 'SNIPER' && styles.subModeTextActive]}>SNIPER</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.subModePill, subMode === 'VIBE' && styles.subModePillActive]}
-            onPress={() => handleModeToggle('VIBE')}
-            activeOpacity={0.8}
-          >
-            <MaterialCommunityIcons name="palette-swatch" size={18} color={subMode === 'VIBE' ? '#FFF' : 'rgba(255,255,255,0.4)'} />
-            <Text style={[styles.subModeText, subMode === 'VIBE' && styles.subModeTextActive]}>VIBE CATCHER</Text>
-          </TouchableOpacity>
+      {/* ── Floating Overlay — sits over the camera at full canvas size ── */}
+      {/* pointerEvents="box-none" lets untouched camera areas remain interactive */}
+      <View style={styles.overlayLayer} pointerEvents="box-none">
+
+        {/* ══ TOP CENTER: SNIPER / VIBE toggle ════════════════════════ */}
+        <View style={styles.topBar} pointerEvents="box-none">
+          <View style={styles.togglePill}>
+            <TouchableOpacity
+              style={[styles.toggleOption, subMode === 'SNIPER' && styles.toggleOptionActive]}
+              onPress={() => handleModeToggle('SNIPER')}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons
+                name="target"
+                size={15}
+                color={subMode === 'SNIPER' ? '#FFF' : 'rgba(255,255,255,0.5)'}
+              />
+              <Text style={[styles.toggleText, subMode === 'SNIPER' && styles.toggleTextActive]}>
+                SNIPER
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.toggleOption, subMode === 'VIBE' && styles.toggleOptionActive]}
+              onPress={() => handleModeToggle('VIBE')}
+              activeOpacity={0.8}
+            >
+              <MaterialCommunityIcons
+                name="palette-swatch"
+                size={15}
+                color={subMode === 'VIBE' ? '#FFF' : 'rgba(255,255,255,0.5)'}
+              />
+              <Text style={[styles.toggleText, subMode === 'VIBE' && styles.toggleTextActive]}>
+                VIBE
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {subMode === 'SNIPER' ? (
-          /* ================== SNIPER CONTROLS ================== */
-          <View style={styles.modeContainer}>
-            <Text style={styles.instructionText}>
-              Point reticle at a color, then tap capture to lock it in. Tap swatches to send to skates.
-            </Text>
+          /* ══ SNIPER BOTTOM ROW: Shutter (left) + Swatches (right) ══ */
+          <View style={styles.sniperBottomRow} pointerEvents="box-none">
 
-            <View style={styles.swatchRow}>
-              {/* iOS Camera-Style Concentric Shutter / Capture Button */}
-              <TouchableOpacity
-                activeOpacity={0.7}
-                onPress={handleCapture}
-                style={styles.shutterOuterRing}
-              >
-                <View style={[styles.shutterInnerButton, { backgroundColor: liveHex }]} />
-              </TouchableOpacity>
+            {/* Bottom-Left: Concentric shutter button */}
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={handleCapture}
+              style={styles.shutterOuter}
+            >
+              {/* Inner circle shows the live captured color */}
+              <View style={[styles.shutterInner, { backgroundColor: liveHex }]} />
+            </TouchableOpacity>
 
-              <View style={styles.divider} />
+            {/* Flex spacer — pushes swatches to the right */}
+            <View style={{ flex: 1 }} pointerEvents="none" />
 
-              {/* Saved Swatches History */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.swatchList}>
-                {swatches.map((swatch, index) => (
-                  <TouchableOpacity
-                    key={`${swatch}-${index}`}
-                    onPress={() => handleSelectSwatch(swatch)}
-                    style={[
-                      styles.swatchPill,
-                      { backgroundColor: swatch },
-                      activeSwatch === swatch && styles.swatchActive
-                    ]}
-                  />
-                ))}
-                {/* Empty placeholders */}
-                {Array.from({ length: Math.max(0, MAX_SWATCHES - swatches.length) }).map((_, index) => (
-                  <View key={`empty-${index}`} style={styles.swatchEmpty} />
-                ))}
-              </ScrollView>
-            </View>
-
-            <View style={styles.hexPill}>
-              <Text style={styles.hexText}>
-                TARGET: {liveHex} {activeSwatch ? `| SENDING: ${activeSwatch}` : ''}
-              </Text>
+            {/* Bottom-Right: Swatch dots, newest rightmost */}
+            <View style={styles.swatchStrip} pointerEvents="box-none">
+              {swatches.map((swatch, index) => (
+                <TouchableOpacity
+                  key={`swatch-${swatch}-${index}`}
+                  onPress={() => handleSelectSwatch(swatch)}
+                  style={[
+                    styles.swatchDot,
+                    { backgroundColor: swatch },
+                    activeSwatch === swatch && styles.swatchDotActive,
+                  ]}
+                />
+              ))}
+              {/* Empty placeholder dots */}
+              {Array.from({ length: Math.max(0, MAX_SWATCHES - swatches.length) }).map((_, i) => (
+                <View key={`empty-${i}`} style={styles.swatchDotEmpty} />
+              ))}
             </View>
           </View>
         ) : (
-          /* ================== VIBE CATCHER CONTROLS ================== */
-          <View style={styles.modeContainer}>
-            <Text style={styles.instructionText}>
-              Analyzing live frame. Dominant vibe palette extracted automatically below.
-            </Text>
+          /* ══ VIBE BOTTOM: Cards + gradient strip + apply button ════ */
+          <View style={styles.vibeBottomStack} pointerEvents="box-none">
 
-            {/* Liquid Gradient Preview Strip */}
-            <View style={styles.gradientPreviewWrapper}>
+            {/* Semi-transparent scrim so cards are legible over camera */}
+            <View style={styles.vibeScrim} pointerEvents="none" />
+
+            {/* Gradient preview strip */}
+            <View style={styles.gradientBar} pointerEvents="none">
               <LinearGradient
                 colors={vibePalette.map(rgbToHexStr) as [string, string, ...string[]]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
-                style={styles.gradientPreviewStrip}
+                style={StyleSheet.absoluteFillObject}
               />
             </View>
 
-            {/* Glassmorphic 3-Swatch Color Cards */}
-            <View style={styles.vibeCardRow}>
+            {/* 3 color cards: FG / BG / ACCENT */}
+            <View style={styles.vibeCardRow} pointerEvents="none">
               {vibePalette.map((color, index) => {
-                const label = index === 0 ? 'FG' : index === 1 ? 'BG' : 'ACCENT';
-                const hexStr = rgbToHexStr(color);
+                const label = ['FG', 'BG', 'ACCENT'][index];
+                const hex = rgbToHexStr(color);
                 return (
-                  <View key={`vibe-card-${index}`} style={styles.vibeCard}>
-                    <View style={[styles.vibeCardSwatch, { backgroundColor: hexStr }]} />
+                  <View key={`vcard-${index}`} style={styles.vibeCard}>
+                    <View style={[styles.vibeCardSwatch, { backgroundColor: hex }]} />
                     <Text style={styles.vibeCardLabel}>{label}</Text>
-                    <Text style={styles.vibeCardHex}>{hexStr}</Text>
+                    <Text style={styles.vibeCardHex}>{hex}</Text>
                   </View>
                 );
               })}
             </View>
 
-            <View style={styles.vibeFooterRow}>
-              {/* Premium Dial Style Flow/Static Toggle */}
+            {/* Flow toggle + Apply Vibe button */}
+            <View style={styles.vibeActionRow} pointerEvents="box-none">
               <TouchableOpacity
-                style={[styles.flowTogglePill, isFlow ? styles.flowTogglePillActive : styles.flowTogglePillStatic]}
+                style={[styles.flowPill, isFlow ? styles.flowPillOn : styles.flowPillOff]}
                 onPress={toggleFlow}
                 activeOpacity={0.8}
               >
                 <MaterialCommunityIcons
                   name={isFlow ? 'swap-horizontal' : 'play-pause'}
-                  size={16}
+                  size={13}
                   color="#FFF"
                 />
-                <Text style={styles.flowToggleText}>
-                  {isFlow ? 'FLOWING GRADIENT' : 'STATIC FREEZE'}
+                <Text style={styles.flowPillText}>
+                  {isFlow ? 'FLOW' : 'FREEZE'}
                 </Text>
               </TouchableOpacity>
 
-              {/* Shimmering "APPLY VIBE" Button */}
               <TouchableOpacity
-                style={styles.applyButton}
+                style={styles.applyVibeBtn}
                 onPress={handleVibeApplyPress}
                 activeOpacity={0.8}
               >
-                <MaterialCommunityIcons name="flash-outline" size={20} color="#FFF" />
-                <Text style={styles.applyButtonText}>APPLY VIBE</Text>
+                <MaterialCommunityIcons name="flash-outline" size={16} color="#FFF" />
+                <Text style={styles.applyVibeBtnText}>APPLY VIBE</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -242,233 +235,248 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
 });
 
 const styles = StyleSheet.create({
+  // ── Root container — gives camera ALL available flex space ──────────────
   container: {
     flex: 1,
   },
-  controlPanel: {
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
-    backgroundColor: '#050505',
+
+  // ── Overlay layer — floats over the camera at full canvas size ──────────
+  overlayLayer: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'space-between',
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.lg,
+    paddingHorizontal: Spacing.md,
+  },
+
+  // ── TOP BAR: mode toggle ────────────────────────────────────────────────
+  topBar: {
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#1A1A1A',
   },
-  subModeSwitchContainer: {
+  togglePill: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderRadius: 24,
-    padding: 4,
-    width: '100%',
-    marginBottom: Spacing.md,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 22,
+    padding: 3,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
-  },
-  subModePill: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: 20,
-    gap: 8,
-  },
-  subModePillActive: {
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: 'rgba(255,255,255,0.14)',
+    alignSelf: 'center',
     ...Platform.select({
-      web: { boxShadow: '0px 2px 6px rgba(0,0,0,0.4)' },
-      default: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.4, shadowRadius: 4, elevation: 4 }
-    })
+      web: { backdropFilter: 'blur(12px)', boxShadow: '0 4px 16px rgba(0,0,0,0.5)' },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.5,
+        shadowRadius: 10,
+        elevation: 10,
+      },
+    }),
   },
-  subModeText: {
-    color: 'rgba(255,255,255,0.4)',
-    fontSize: 12,
+  toggleOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 19,
+    gap: 6,
+  },
+  toggleOptionActive: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.22)',
+  },
+  toggleText: {
+    color: 'rgba(255,255,255,0.5)',
+    fontSize: 11,
     fontFamily: 'Righteous',
     letterSpacing: 1,
   },
-  subModeTextActive: {
+  toggleTextActive: {
     color: '#FFF',
   },
-  modeContainer: {
-    width: '100%',
-    alignItems: 'center',
-  },
-  instructionText: {
-    color: 'rgba(255,255,255,0.5)',
-    fontSize: 11,
-    fontFamily: 'Inter-Medium',
-    textAlign: 'center',
-    marginBottom: Spacing.md,
-    lineHeight: 16,
-  },
-  swatchRow: {
+
+  // ── SNIPER BOTTOM ROW ───────────────────────────────────────────────────
+  sniperBottomRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-    marginBottom: Spacing.md,
+    alignItems: 'flex-end',
   },
-  shutterOuterRing: {
-    width: 68,
-    height: 68,
-    borderRadius: 34,
+
+  // Shutter button — bottom-left, iOS camera style
+  shutterOuter: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
     borderWidth: 4,
     borderColor: '#FFF',
+    backgroundColor: 'rgba(0,0,0,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'transparent',
     ...Platform.select({
-      web: { boxShadow: '0px 0px 10px rgba(255,255,255,0.3)' },
-      default: { shadowColor: '#FFF', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.3, shadowRadius: 8 }
-    })
+      web: { boxShadow: '0 0 16px rgba(255,255,255,0.45)' },
+      default: {
+        shadowColor: '#FFF',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.45,
+        shadowRadius: 10,
+        elevation: 12,
+      },
+    }),
   },
-  shutterInnerButton: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 2,
-    borderColor: '#000',
-  },
-  divider: {
-    width: 1,
-    height: 48,
-    backgroundColor: '#222',
-    marginHorizontal: Spacing.md,
-  },
-  swatchList: {
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  swatchPill: {
+  shutterInner: {
     width: 48,
     height: 48,
     borderRadius: 24,
     borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(0,0,0,0.35)',
   },
-  swatchActive: {
-    borderColor: '#FFF',
-    transform: [{ scale: 1.1 }],
-    ...Platform.select({
-      web: { boxShadow: '0px 0px 12px rgba(255,255,255,0.5)' },
-      default: { shadowColor: '#FFF', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 12, elevation: 10 }
-    })
-  },
-  swatchEmpty: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: 2,
-    borderColor: '#181818',
-    borderStyle: 'dashed',
-    backgroundColor: '#0C0C0C',
-  },
-  hexPill: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  hexText: {
-    color: '#FFF',
-    fontSize: 11,
-    fontFamily: 'Inter-Bold',
-    letterSpacing: 1,
-  },
-  gradientPreviewWrapper: {
-    width: '100%',
-    height: 36,
-    borderRadius: 18,
-    overflow: 'hidden',
-    marginBottom: Spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  gradientPreviewStrip: {
-    flex: 1,
-  },
-  vibeCardRow: {
+
+  // Swatch dots — bottom-right
+  swatchStrip: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    gap: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
-  vibeCard: {
-    flex: 1,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 16,
-    padding: Spacing.sm,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    gap: Spacing.xs,
   },
-  vibeCardSwatch: {
+  swatchDot: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginBottom: Spacing.xs,
     borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.2)',
+    ...Platform.select({
+      web: { boxShadow: '0 2px 8px rgba(0,0,0,0.5)' },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.5,
+        shadowRadius: 6,
+        elevation: 8,
+      },
+    }),
+  },
+  swatchDotActive: {
+    borderColor: '#FFF',
+    transform: [{ scale: 1.15 }],
+    ...Platform.select({
+      web: { boxShadow: '0 0 14px rgba(255,255,255,0.65)' },
+      default: {
+        shadowColor: '#FFF',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.65,
+        shadowRadius: 12,
+        elevation: 14,
+      },
+    }),
+  },
+  swatchDotEmpty: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.13)',
+    borderStyle: 'dashed',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+  },
+
+  // ── VIBE MODE BOTTOM STACK ──────────────────────────────────────────────
+  vibeBottomStack: {
+    gap: Spacing.xs,
+  },
+  vibeScrim: {
+    position: 'absolute',
+    bottom: -Spacing.lg,
+    left: -Spacing.md,
+    right: -Spacing.md,
+    height: 240,
+    backgroundColor: 'rgba(0,0,0,0.52)',
+  },
+  gradientBar: {
+    height: 26,
+    borderRadius: 13,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.12)',
+  },
+  vibeCardRow: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+  },
+  vibeCard: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.42)',
+    borderRadius: 12,
+    padding: Spacing.xs,
+    alignItems: 'center',
+    borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
+  },
+  vibeCardSwatch: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginBottom: 3,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.12)',
   },
   vibeCardLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: 'Inter-Bold',
-    color: 'rgba(255,255,255,0.4)',
-    marginBottom: 2,
+    color: 'rgba(255,255,255,0.45)',
+    letterSpacing: 0.5,
   },
   vibeCardHex: {
-    fontSize: 10,
+    fontSize: 8,
     fontFamily: 'Righteous',
-    color: '#FFF',
+    color: 'rgba(255,255,255,0.8)',
   },
-  vibeFooterRow: {
+  vibeActionRow: {
     flexDirection: 'row',
-    width: '100%',
     gap: Spacing.sm,
-    marginTop: Spacing.xs,
+    alignItems: 'center',
   },
-  flowTogglePill: {
-    flex: 1.2,
+  flowPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 24,
-    gap: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 18,
+    gap: 5,
     borderWidth: 1,
   },
-  flowTogglePillActive: {
-    backgroundColor: 'rgba(0,255,128,0.1)',
-    borderColor: 'rgba(0,255,128,0.2)',
+  flowPillOn: {
+    backgroundColor: 'rgba(0,255,128,0.15)',
+    borderColor: 'rgba(0,255,128,0.3)',
   },
-  flowTogglePillStatic: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderColor: 'rgba(255,255,255,0.08)',
+  flowPillOff: {
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderColor: 'rgba(255,255,255,0.12)',
   },
-  flowToggleText: {
+  flowPillText: {
     color: '#FFF',
     fontSize: 10,
     fontFamily: 'Righteous',
     letterSpacing: 0.5,
   },
-  applyButton: {
+  applyVibeBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.primary,
-    paddingVertical: 12,
-    borderRadius: 24,
-    gap: 8,
+    paddingVertical: 10,
+    borderRadius: 18,
+    gap: 6,
     ...Platform.select({
-      web: { boxShadow: '0px 4px 10px rgba(255,0,128,0.3)' },
-      default: { shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 8 }
-    })
+      web: { boxShadow: '0 4px 14px rgba(255,0,128,0.45)' },
+      default: {
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.45,
+        shadowRadius: 10,
+        elevation: 10,
+      },
+    }),
   },
-  applyButtonText: {
+  applyVibeBtnText: {
     color: '#FFF',
     fontSize: 11,
     fontFamily: 'Righteous',
