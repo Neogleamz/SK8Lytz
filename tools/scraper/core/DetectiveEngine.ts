@@ -917,9 +917,12 @@ async function downloadImageBuffer(url: string): Promise<Buffer | null> {
   }
 }
 
+// Memory cache to prevent duplicate Tesseract OCR calls across pages or runs
+const crawledImageOcrCache = new Map<string, string>();
+
 // ─── Page Crawl Helper ───────────────────────────────────────────────────────
 
-async function crawlPage(page: any, url: string, onProgress: (m: string) => void): Promise<{ text:string; jsonLd:string; ogImage:string|null; images:Array<{src:string;alt:string;parentClass:string}>; iframes:string[]; links:Array<{href:string;text:string}>; mailtos:string[]; fullText:string; }> {
+async function crawlPage(page: any, url: string, onProgress: (m: string) => void): Promise<{ text:string; jsonLd:string; ogImage:string|null; images:Array<{src:string;alt:string;parentClass:string;w?:number;h?:number}>; iframes:string[]; links:Array<{href:string;text:string}>; mailtos:string[]; fullText:string; }> {
   const empty = { text:'', jsonLd:'', ogImage:null, images:[], iframes:[], links:[], mailtos:[], fullText:'' };
   if (url.toLowerCase().endsWith('.pdf')) {
     try { const fetchFn = require('node-fetch'); const buf = await (await fetchFn(url)).buffer(); const pdfData = await (pdfParse as any)(buf); return { ...empty, text:`[PDF: ${url}]\n${pdfData.text}` }; } catch { return empty; }
@@ -957,7 +960,11 @@ async function crawlPage(page: any, url: string, onProgress: (m: string) => void
       const ogImage=document.querySelector('meta[property="og:image"]')?.getAttribute('content')||null;
       const jsonLd=Array.from(document.querySelectorAll('script[type="application/ld+json"]')).map((e:any)=>e.innerText).join('\n');
       const iframes=Array.from(document.querySelectorAll('iframe')).map((e:any)=>e.src||'').filter((s:string)=>s.includes('calendar')||s.includes('ticket')||s.includes('centeredge')||s.includes('roller'));
-      const images=Array.from(document.querySelectorAll('img')).filter((i:any)=>{const w=i.naturalWidth||i.width||0,h=i.naturalHeight||i.height||0;return w>=400&&h>=300&&i.src&&(i.src.startsWith('http')||i.src.startsWith('//'));}).map((i:any)=>({src:i.src,alt:(i.alt||'').toLowerCase(),parentClass:(i.parentElement?.className||'').toLowerCase()}));
+      const images=Array.from(document.querySelectorAll('img')).filter((i:any)=>{const w=i.naturalWidth||i.width||0,h=i.naturalHeight||i.height||0;return w>=400&&h>=300&&i.src&&(i.src.startsWith('http')||i.src.startsWith('//'));}).map((i:any)=>{
+        const w=i.naturalWidth||i.width||0;
+        const h=i.naturalHeight||i.height||0;
+        return {src:i.src,alt:(i.alt||'').toLowerCase(),parentClass:(i.parentElement?.className||'').toLowerCase(),w,h};
+      });
       const links=Array.from(document.querySelectorAll('a')).map((a:any)=>({href:(a.href||'').toLowerCase(),text:(a.innerText||'').toLowerCase()})).filter((l:any)=>l.href&&(l.href.startsWith('http')||l.href.startsWith('//')));
       
       const mailtos=Array.from(document.querySelectorAll('a[href^="mailto:"]')).map((a:any)=>a.href.replace('mailto:','').split('?')[0].trim().toLowerCase()).filter((e:string)=>e&&e.includes('@'));
@@ -985,7 +992,55 @@ async function crawlPage(page: any, url: string, onProgress: (m: string) => void
       const text=document.body?.innerText?.trim()||'';
       return {ogImage,jsonLd,iframes,images,links,mailtos,text,fullText};
     }).catch(()=>({ogImage:null,jsonLd:'',iframes:[],images:[],links:[],mailtos:[],text:'',fullText:''}));
-    return {text:d.text,jsonLd:d.jsonLd,ogImage:d.ogImage,images:d.images,iframes:d.iframes,links:d.links,mailtos:d.mailtos,fullText:d.fullText};
+
+    // Always-On OCR for large images on homepage / schedule URLs
+    let ocrPrependText = '';
+    let isTargetPageForImageOcr = false;
+    try {
+      const parsed = new URL(url);
+      const path = parsed.pathname.toLowerCase();
+      const isHomepage = path === '' || path === '/';
+      const isHoursSchedule = /schedule|pricing|admission|rates|calendar|events|hours|session|times/i.test(url);
+      if (isHomepage || isHoursSchedule) {
+        isTargetPageForImageOcr = true;
+      }
+    } catch {}
+
+    if (isTargetPageForImageOcr && d.images) {
+      for (const img of d.images) {
+        if (img.w && img.h && img.w >= 500 && img.h >= 400 && img.src) {
+          if (crawledImageOcrCache.has(img.src)) {
+            const cachedText = crawledImageOcrCache.get(img.src) || '';
+            if (cachedText.trim().length > 0) {
+              ocrPrependText += `\n\n[Always-On OCR (CACHED) from Large Image: ${img.src}]\n${cachedText}\n\n`;
+            }
+          } else {
+            onProgress(`[Detective] 📸 Large image detected (${img.w}x${img.h}) on target page. Running Always-On Tesseract OCR...`);
+            const buf = await downloadImageBuffer(img.src);
+            if (buf && buf.length >= 2048 && isValidJpegOrPng(buf)) {
+              try {
+                const { data: { text } } = await Tesseract.recognize(buf, 'eng');
+                if (text && text.trim().length > 10) {
+                  crawledImageOcrCache.set(img.src, text);
+                  ocrPrependText += `\n\n[Always-On OCR from Large Image: ${img.src}]\n${text}\n\n`;
+                  onProgress(`[Detective] ✓ Extracted OCR from large image: ${img.src}`);
+                } else {
+                  crawledImageOcrCache.set(img.src, '');
+                }
+              } catch (err: any) {
+                onProgress(`[Detective] Tesseract failed for large image ${img.src}: ${err.message}`);
+                crawledImageOcrCache.set(img.src, '');
+              }
+            } else {
+              crawledImageOcrCache.set(img.src, '');
+            }
+          }
+        }
+      }
+    }
+
+    const finalMergedText = ocrPrependText + d.text;
+    return {text:finalMergedText,jsonLd:d.jsonLd,ogImage:d.ogImage,images:d.images,iframes:d.iframes,links:d.links,mailtos:d.mailtos,fullText:d.fullText};
   } catch { onProgress(`[Detective] Nav failed: ${url}`); return empty; }
 }
 

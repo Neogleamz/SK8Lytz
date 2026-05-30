@@ -323,6 +323,46 @@ async function downloadImage(url: string): Promise<{ buffer: Buffer; mimeType: s
  */
 async function compressAndSave(buf: Buffer, spotId: string, state: string, filename: string): Promise<string | null> {
   try {
+    // ── Quality Guard Checks (Phase 3) ──
+    const meta = await sharp(buf).metadata();
+    const w = meta.width || 0;
+    const h = meta.height || 0;
+
+    const isLogo = filename.startsWith('logo');
+    const minW = isLogo ? 120 : 640;
+    const minH = isLogo ? 120 : 480;
+
+    if (w < minW || h < minH) {
+      log('INFO', `  ⚠️ Rejecting ${filename} due to resolution too low: ${w}x${h} (min: ${minW}x${minH})`);
+      return null;
+    }
+
+    const aspectRatio = w / h;
+    if (isLogo) {
+      // Logos must be close to square: [0.8, 1.25]
+      if (aspectRatio < 0.8 || aspectRatio > 1.25) {
+        log('INFO', `  ⚠️ Rejecting logo due to aspect ratio out of bounds: ${aspectRatio.toFixed(2)} (allowed: 0.8 to 1.25)`);
+        return null;
+      }
+    } else {
+      // Category photos must be landscape or square: [0.9, 1.8] (covers 1:1, 4:3, 16:9)
+      if (aspectRatio < 0.9 || aspectRatio > 1.8) {
+        log('INFO', `  ⚠️ Rejecting ${filename} due to aspect ratio out of bounds: ${aspectRatio.toFixed(2)}:1 (allowed: 4:3 to 16:9 / 1:1 / 0.9 to 1.8)`);
+        return null;
+      }
+    }
+
+    // Visual saliency & contrast analysis
+    const stats = await sharp(buf).stats();
+    const channels = [stats.channels[0], stats.channels[1], stats.channels[2]].filter(Boolean);
+    const avgStdev = channels.reduce((sum, ch) => sum + ch.stdev, 0) / channels.length;
+
+    const minStdev = 15;
+    if (avgStdev < minStdev) {
+      log('INFO', `  ⚠️ Rejecting flat layout asset (low contrast/variance: stdev = ${avgStdev.toFixed(2)}): ${filename}`);
+      return null;
+    }
+
     const dir = path.join(PHOTOS_DIR, state || 'US', spotId);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
