@@ -60,13 +60,14 @@ export function useOptimisticBLE({
     // Phase 1: OPTIMISTIC — UI responds instantly unless globally disabled
     if (onOptimistic && !disableOptimisticUI) onOptimistic();
     setWriteStatus('PENDING');
-    pendingCount.current++;
 
     // Phase 2: Debounce rapid-fire writes (slider drags)
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
 
     return new Promise<boolean>((resolve) => {
       debounceTimer.current = setTimeout(async () => {
+        pendingCount.current++;
+        
         if (!writeToDevice) {
           pendingCount.current = Math.max(0, pendingCount.current - 1);
           setWriteStatus('IDLE');

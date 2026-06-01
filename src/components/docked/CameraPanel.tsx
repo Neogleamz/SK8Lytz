@@ -12,6 +12,8 @@ interface CameraPanelProps {
   onVibeApply?: (colors: RGB[], isFlow: boolean) => void;
   onVibePaletteChange?: (colors: RGB[]) => void;
   onSubModeChange?: (mode: 'SNIPER' | 'VIBE') => void;
+  swatches?: string[];
+  onSwatchesChange?: (swatches: string[]) => void;
 }
 
 const MAX_SWATCHES = 5;
@@ -25,12 +27,22 @@ function rgbToHexStr(color: RGB): string {
   return ('#' + toHex(color.r) + toHex(color.g) + toHex(color.b)).toUpperCase();
 }
 
-const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onSubModeChange }: CameraPanelProps) => {
+const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteChange, onSubModeChange, swatches: externalSwatches, onSwatchesChange }: CameraPanelProps) => {
   const [subMode, setSubMode] = useState<'SNIPER' | 'VIBE'>('SNIPER');
 
   // SNIPER Mode State
   const [liveHex, setLiveHex] = useState<string>('#FFFFFF');
-  const [swatches, setSwatches] = useState<string[]>([]);
+  const [localSwatches, setLocalSwatches] = useState<string[]>([]);
+  const swatches = externalSwatches ?? localSwatches;
+  
+  const handleSetSwatches = useCallback((newSwatches: string[] | ((prev: string[]) => string[])) => {
+    setLocalSwatches(prev => {
+      const next = typeof newSwatches === 'function' ? newSwatches(prev) : newSwatches;
+      if (onSwatchesChange) onSwatchesChange(next);
+      return next;
+    });
+  }, [onSwatchesChange]);
+
   const [activeSwatch, setActiveSwatch] = useState<string | null>(null);
   const liveColorRef = useRef<string>('#FFFFFF');
 
@@ -50,16 +62,22 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onSubModeChange 
 
   const handleLiveVibePaletteDetected = useCallback((colors: RGB[]) => {
     setVibePalette(colors);
-  }, []);
+    if (onVibePaletteChange) onVibePaletteChange(colors);
+  }, [onVibePaletteChange]);
 
   const handleCapture = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const capturedColor = liveColorRef.current;
     setLiveHex(capturedColor);
-    setSwatches(prev => [capturedColor, ...prev.filter(c => c !== capturedColor)].slice(0, MAX_SWATCHES));
+    
+    // Calculate new swatches based on the current PROPS swatches, not just local state
+    const currentSwatches = externalSwatches ?? localSwatches;
+    const newSwatches = [capturedColor, ...currentSwatches.filter(c => c !== capturedColor)].slice(0, MAX_SWATCHES);
+    handleSetSwatches(newSwatches);
+    
     setActiveSwatch(capturedColor);
     onColorDetected(capturedColor);
-  }, [onColorDetected]);
+  }, [onColorDetected, externalSwatches, localSwatches, handleSetSwatches]);
 
   const handleSelectSwatch = useCallback((hex: string) => {
     Haptics.selectionAsync();

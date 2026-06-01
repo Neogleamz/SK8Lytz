@@ -103,8 +103,8 @@ export default function CameraTracker({
 
   // Create worklet references to callbacks
   // Use runOnJS from react-native-worklets
-  const runOnJSSniper = runOnJS(dispatchSniperColor);
-  const runOnJSVibe = runOnJS(dispatchVibePalette);
+  const runOnJSSniper = React.useMemo(() => runOnJS(dispatchSniperColor), [dispatchSniperColor]);
+  const runOnJSVibe = React.useMemo(() => runOnJS(dispatchVibePalette), [dispatchVibePalette]);
 
   // Hard-throttled Frame Processor logic running at 5Hz (every 200ms)
   const lastProcessedRef = useRef<number>(0);

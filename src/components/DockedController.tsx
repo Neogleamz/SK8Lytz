@@ -203,6 +203,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const lastSentPayloadRef = useRef<number[]>([]);
     const [cameraSubMode, setCameraSubMode] = useState<'SNIPER' | 'VIBE'>('SNIPER');
     const [cameraVibePalette, setCameraVibePalette] = useState<string[]>([]);
+    const [cameraSwatches, setCameraSwatches] = useState<string[]>([]);
 
     /**
      * Snapshot of the full UI state captured immediately before each BLE write.
@@ -1223,6 +1224,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 onVibeApply={handleVibeApply}
                 onVibePaletteChange={handleVibePaletteChange}
                 onSubModeChange={setCameraSubMode}
+                swatches={cameraSwatches}
+                onSwatchesChange={setCameraSwatches}
               />
             )}
 
