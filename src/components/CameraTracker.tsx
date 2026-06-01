@@ -113,7 +113,8 @@ export default function CameraTracker({
             const resizedArray = new Uint8Array(buffer);
             
             // Dynamically detect bytes per pixel to handle both RGB (3) and RGBA/BGRA (4) layouts
-            const channels = Math.floor(resizedArray.length / 2500);
+            // Enforce a minimum of 3 to completely eliminate infinite loop hazards on zero-length buffers
+            const channels = Math.max(3, Math.floor(resizedArray.length / 2500));
 
             if (resizedArray.length >= 7500) {
               if (subMode === 'SNIPER') {

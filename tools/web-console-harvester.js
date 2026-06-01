@@ -84,9 +84,8 @@ async function run() {
     }
   }
 
-  // Find the page target
-  // Find the page target (prefer localhost page to avoid hijacking other active debugging crawls)
-  const pageTarget = targets.find(t => t.type === 'page' && (t.url.includes('localhost') || t.url.includes('127.0.0.1'))) || targets.find(t => t.type === 'page');
+  // Find the page target (prefer localhost page on port 8081 to avoid hijacking other active debugging crawls like scraper)
+  const pageTarget = targets.find(t => t.type === 'page' && t.url.includes('8081')) || targets.find(t => t.type === 'page' && (t.url.includes('localhost') || t.url.includes('127.0.0.1'))) || targets.find(t => t.type === 'page');
   if (!pageTarget) {
     console.error('❌ Error: No page target found in browser JSON list.');
     cleanupAndExit(1);
