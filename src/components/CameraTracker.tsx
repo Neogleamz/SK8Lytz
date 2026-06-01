@@ -19,7 +19,7 @@ export interface CameraTrackerProps {
 
 
 export default function CameraTracker({
-  onColorDetected,
+  onColorDetected: _onColorDetected,
   onVibePaletteDetected,
   subMode,
   isActive,
@@ -29,21 +29,11 @@ export default function CameraTracker({
   const { hasPermission, requestPermission: requestFromHook } = useCameraPermission();
   const [liveHex, setLiveHex] = useState<string>('#FFFFFF');
 
-  const onColorDetectedRef = useRef(onColorDetected);
   const onVibePaletteDetectedRef = useRef(onVibePaletteDetected);
-  const subModeRef = useRef(subMode);
-
-  useEffect(() => {
-    onColorDetectedRef.current = onColorDetected;
-  }, [onColorDetected]);
 
   useEffect(() => {
     onVibePaletteDetectedRef.current = onVibePaletteDetected;
   }, [onVibePaletteDetected]);
-
-  useEffect(() => {
-    subModeRef.current = subMode;
-  }, [subMode]);
 
   // Synchronize camera permission state on AppState change
   useEffect(() => {
@@ -88,11 +78,6 @@ export default function CameraTracker({
     pixelLayout: 'interleaved',
   });
 
-  const resizerRef = useRef(resizer);
-  useEffect(() => {
-    resizerRef.current = resizer;
-  }, [resizer]);
-
   useEffect(() => {
     if (resizer) {
       console.log('Camera Sniper: GPU Resizer loaded successfully!');
@@ -106,25 +91,23 @@ export default function CameraTracker({
   const runOnJSSniper = React.useMemo(() => runOnJS(dispatchSniperColor), [dispatchSniperColor]);
   const runOnJSVibe = React.useMemo(() => runOnJS(dispatchVibePalette), [dispatchVibePalette]);
 
-  // Hard-throttled Frame Processor logic running at 5Hz (every 200ms)
-  const lastProcessedRef = useRef<number>(0);
-
-  const frameOutput = useFrameOutput({
-    pixelFormat: 'yuv',
-    onFrame: (frame: Frame) => {
+  // Memoize the frame processor onFrame callback to persist throttled timestamp in closure
+  // and handle JSI worklet scopes without stale React Ref read failures.
+  const onFrame = React.useMemo(() => {
+    let lastProcessed = 0;
+    return (frame: Frame) => {
       'worklet';
 
       try {
         const now = Date.now();
         // 200ms interval = 5Hz execution cap
-        if (now - lastProcessedRef.current < 200) {
+        if (now - lastProcessed < 200) {
           return;
         }
-        lastProcessedRef.current = now;
+        lastProcessed = now;
 
-        const currentResizer = resizerRef.current;
-        if (currentResizer != null) {
-          const resized = currentResizer.resize(frame);
+        if (resizer != null) {
+          const resized = resizer.resize(frame);
           try {
             const buffer = resized.getPixelBuffer();
             const resizedArray = new Uint8Array(buffer);
@@ -133,9 +116,7 @@ export default function CameraTracker({
             const channels = Math.floor(resizedArray.length / 2500);
 
             if (resizedArray.length >= 7500) {
-              const currentSubMode = subModeRef.current;
-
-              if (currentSubMode === 'SNIPER') {
+              if (subMode === 'SNIPER') {
                 // 1. SNIPER mode: sampling center pixel (25x25 on a 50x50 grid)
                 const centerIdx = (25 * 50 + 25) * channels;
                 const r = resizedArray[centerIdx];
@@ -167,7 +148,12 @@ export default function CameraTracker({
       } finally {
         frame.dispose(); // CRITICAL: Dispose Frame immediately to prevent stalls
       }
-    },
+    };
+  }, [resizer, subMode, runOnJSSniper, runOnJSVibe]);
+
+  const frameOutput = useFrameOutput({
+    pixelFormat: 'yuv',
+    onFrame,
   });
 
   if (!hasPermission) {
