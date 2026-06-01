@@ -6,6 +6,17 @@ This document contains the archive of all successfully completed and merged task
 
 ## 📦 ARCHIVED SPRINT LOGS
 
+### Sprint: v3.7.3 — 2026-06-01 (camera-mode-white-only)
+
+- [x] **`fix/camera-mode-white-only`** — Resolved white-only camera capture bug by utilizing useResizer from react-native-vision-camera-resizer to properly downscale frames on the GPU to a 50x50 RGB buffer. Merged `283774f7`.
+  - **Tags:** `[✅ VERIFIED]` `[CORE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]`
+  - **Plan:** 📎 [PLAN-camera-mode-white-only.md](./plans/PLAN-camera-mode-white-only.md)
+  - **Source of Truth:** 📖 [CameraTracker.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/CameraTracker.tsx#L96) §onFrame
+  - **Goal:** Fix the camera frame processor crash that results in only capturing white colors.
+  - **Details:** COMPLETE — Disposed GPUFrame inside finally block to prevent VRAM memory leaks. Set minimum channel offset of 3 to eliminate potential infinite loop hazards. Prioritized port 8081 for CDP console sniffer.
+
+---
+
 ### Sprint: v3.6.3 — 2026-05-29 (grouping-architecture-overhaul)
 
 ### [BATCH:grouping-architecture-overhaul] (Active) — ⚡ Parallel-Safe
