@@ -127,7 +127,7 @@ export const RecordEditModal: React.FC<RecordEditModalProps> = ({ spot, onSave, 
     setExtractedData(null);
 
     try {
-      const response = await fetch('http://localhost:5999/api/llm/parse-copypasta', {
+      const response = await fetch('http://127.0.0.1:5999/api/llm/parse-copypasta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -391,8 +391,8 @@ const CANONICAL_VECTORS: Array<{key: string, prompt: string}> = [
 
   // ── TIER 2 / Pass 1B: Pricing & Fees ───────────────────────────────────
   { key: 'pricing_data', prompt: 'JSON: {"adult": number|null, "child": number|null, "senior": number|null, "spectator": number|null, "skate_rental": number|null}. Dollar amounts as numbers (e.g. 12.00). null if not listed. Example: {"adult": 12.00, "child": 8.00, "senior": null, "spectator": 3.00, "skate_rental": 5.00}. DO NOT assume $0 or free.' },
-  { key: 'has_fee', prompt: 'true if admission fees charged. false ONLY if explicitly stated as free entry. Keywords: "$", "admission", "entry fee", "per person". System null rule applies.' },
-  { key: 'has_rental', prompt: 'true if skate rentals available. Keywords: "skate rental", "rent skates", "$X rental", "rental included". System null rule applies.' },
+  { key: 'has_fee', prompt: 'true if there is ANY mention of admission fees, cover charges, tickets, or pricing. false ONLY if explicitly stated as free entry. Keywords: "$", "admission", "entry fee", "per person". System null rule applies.' },
+  { key: 'has_rental', prompt: 'true if skate rentals are mentioned OR if skate sizes/types (quads, inlines) are listed. false ONLY if explicitly states "no skate rentals" or "bring your own". Keywords: "skate rental", "rent skates", "$X rental", "rental included", "inline", "quads". System null rule applies.' },
   { key: 'price_range', prompt: '"$" (under $8), "$$" ($8-$15), "$$$" ($15-$25), "$$$$" (over $25) based on adult admission. null if no pricing found.' },
 
   // ── TIER 3 / Pass 1C: Adult Night ──────────────────────────────────────
@@ -1102,6 +1102,11 @@ export interface PipelineStats {
   on_hold: number;
   stalled: number;
   low_quality: number;
+  // Health metrics — surfaces the invisible gaps
+  no_photos_media_ready: number;   // MEDIA_READY with zero photos — needs Photographer re-run
+  photoless_with_website: number;  // MEDIA_READY + has website + no photos — re-queueable
+  media_ready_with_photos: number; // MEDIA_READY that actually has photos — truly publisher-ready
+  gap_fill_active: number;         // spots currently flagged as pipeline_status LIKE 'gap-fill%'
 }
 
 // --- PIPELINE STATS METHODS ---
@@ -1133,7 +1138,12 @@ export const getPipelineStats = (states: string[] = []): PipelineStats => {
       SUM(CASE WHEN verification_status = 'REJECTED' THEN 1 ELSE 0 END) as rejected,
       SUM(CASE WHEN verification_status = 'ON_HOLD' THEN 1 ELSE 0 END) as on_hold,
       SUM(CASE WHEN verification_status = 'STALLED' THEN 1 ELSE 0 END) as stalled,
-      SUM(CASE WHEN verification_status = 'LOW_QUALITY' THEN 1 ELSE 0 END) as low_quality
+      SUM(CASE WHEN verification_status = 'LOW_QUALITY' THEN 1 ELSE 0 END) as low_quality,
+      -- Health diagnostics
+      SUM(CASE WHEN verification_status = 'MEDIA_READY' AND (photos IS NULL OR photos = '[]' OR photos = '' OR photos = 'null') THEN 1 ELSE 0 END) as no_photos_media_ready,
+      SUM(CASE WHEN verification_status = 'MEDIA_READY' AND website IS NOT NULL AND website != '' AND (photos IS NULL OR photos = '[]' OR photos = '' OR photos = 'null') THEN 1 ELSE 0 END) as photoless_with_website,
+      SUM(CASE WHEN verification_status = 'MEDIA_READY' AND photos IS NOT NULL AND photos != '[]' AND photos != '' AND photos != 'null' THEN 1 ELSE 0 END) as media_ready_with_photos,
+      SUM(CASE WHEN pipeline_status LIKE 'gap-fill%' THEN 1 ELSE 0 END) as gap_fill_active
     FROM local_spots
     WHERE ${whereClause}
   `;

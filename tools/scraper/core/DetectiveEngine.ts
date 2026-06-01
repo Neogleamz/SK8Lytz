@@ -1580,9 +1580,9 @@ skipPass1B = Object.keys(schemaPass1B).length === 0;
     }
     
     // ── ESCALATION PROTOCOL ──
-    const needsEscalation = !earlyTerminated && (!skipPass1A || !skipPass1B) && (!pass1.hours || !pass1.pricing);
+    const needsEscalation = !earlyTerminated && (!skipPass1A || !skipPass1B) && (!pass1.hours || !pass1.pricing || pass1.has_fee === null || pass1.has_rental === null);
     if (needsEscalation) {
-      onProgress('[Detective] 🚨 ESCALATION PROTOCOL: Missing hours/pricing. Activating Hound Dog & OCR.');
+      onProgress('[Detective] 🚨 ESCALATION PROTOCOL: Missing hours/pricing/rental. Activating Hound Dog & OCR.');
       
       // 1. Gated Flyer OCR (runs only during escalation!)
       if (flyerUrls.length > 0) {

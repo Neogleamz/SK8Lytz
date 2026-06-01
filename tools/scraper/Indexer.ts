@@ -19,6 +19,13 @@ import path from 'path';
 import { executeDetective } from './core/DetectiveEngine';
 import { db, updateLocalSpot, getFieldRegistry } from './core/LocalDB';
 
+process.on('unhandledRejection', (reason, promise) => {
+  console.log('[Indexer v4] 🚨 Unhandled Rejection (likely fetch timeout):', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.log('[Indexer v4] 🚨 Uncaught Exception:', err);
+});
+
 if (process.env.SCRAPER_REGISTER_ONLY === 'true') {
   console.log('[Indexer] PM2 registration mode: exiting immediately.');
   process.exit(0);
@@ -140,6 +147,7 @@ async function runIndexer() {
   console.log('[Indexer v4] ℹ️  Core AI logic delegated to core/DetectiveEngine.ts');
 
   while (true) {
+    let target: any = null; // Hoisted above try so catch block can access it for circuit breaker
     try {
       // ── Fetch global AI config and headless preference ─────────────────
       const statusRes = await safeGet('http://localhost:5999/status', { isHeadless: true });
@@ -196,7 +204,7 @@ async function runIndexer() {
         continue;
       }
 
-      let target: any = null;
+      target = null;
 
       // sniper_target_id isolation
       if (aiConfig.sniper_target_id) {
@@ -215,17 +223,14 @@ async function runIndexer() {
 
       if (!target) {
         if (isGapFill) {
-          // Pick DEEP_CRAWLED or MEDIA_READY spots with any critical field still NULL
-          const NULL_FIELD_CHECK = `(
-            opening_hours IS NULL OR opening_hours = '' OR opening_hours = 'null' OR
-            pricing_data IS NULL OR pricing_data = '' OR pricing_data = 'null' OR
-            adult_night_schedule IS NULL OR adult_night_schedule = '' OR adult_night_schedule = 'null' OR
-            surface_type IS NULL OR surface_type = '' OR
-            operator_description IS NULL OR operator_description = ''
-          )`;
-          let gapQuery = `SELECT * FROM local_spots
-            WHERE verification_status IN ('DEEP_CRAWLED', 'MEDIA_READY')
-            AND ${NULL_FIELD_CHECK}`;
+            const registryFields = getFieldRegistry();
+            const hardGateFields = registryFields.filter((f: any) => f.is_hard_gate === 1).map((f: any) => f.field_name);
+            const nullChecks = hardGateFields.map((f: string) => `${f} IS NULL OR ${f} = '' OR ${f} = 'null'`).join(' OR ');
+            const NULL_FIELD_CHECK = `(${nullChecks || '1=0'})`;
+            
+            let gapQuery = `SELECT * FROM local_spots
+              WHERE verification_status IN ('DEEP_CRAWLED', 'MEDIA_READY')
+              AND ${NULL_FIELD_CHECK}`;
           if (priorityStates.length > 0) {
             gapQuery += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
           }
@@ -237,12 +242,22 @@ async function runIndexer() {
           }
         } else {
           // Standard pass: pick next SEEDED / PENDING spot
-          let query = `SELECT * FROM local_spots WHERE verification_status IN ('SEEDED', 'PENDING')`;
+          // Circuit breaker: skip records that have crashed too many times to prevent infinite cycling
+          const MAX_RETRIES = 5;
+          let query = `SELECT * FROM local_spots WHERE verification_status IN ('SEEDED', 'PENDING') AND (retry_count < ${MAX_RETRIES} OR retry_count IS NULL)`;
           if (priorityStates.length > 0) {
             query += ` AND state IN (${priorityStates.map((s: string) => `'${s}'`).join(',')})`;
           }
           query += ` ORDER BY last_attempted_at ASC NULLS FIRST LIMIT 1`;
           target = db.prepare(query).get();
+
+          // Auto-stall any records that exceeded the retry limit
+          if (!target) {
+            const stalled = db.prepare(`UPDATE local_spots SET verification_status = 'STALLED', pipeline_status = 'auto-stalled: exceeded max retries' WHERE verification_status IN ('SEEDED', 'PENDING') AND retry_count >= ${MAX_RETRIES}`).run();
+            if (stalled.changes > 0) {
+              console.log(`[Indexer] ⛔ Auto-stalled ${stalled.changes} record(s) that exceeded ${MAX_RETRIES} retries.`);
+            }
+          }
         }
       }
 
@@ -443,6 +458,21 @@ async function runIndexer() {
 
     } catch (err: any) {
       console.error('[Indexer Error]', err.message);
+
+      // Mark the failed record as STALLED if it has exceeded max retries
+      // This prevents infinite cycling on records whose websites crash Puppeteer
+      if (target && target.id) {
+        const currentRetry = (target.retry_count || 0) + 1; // +1 because we incremented at line 261
+        if (currentRetry >= 5) {
+          console.log(`[Indexer] ⛔ STALLING "${target.name}" after ${currentRetry} failed attempts: ${err.message}`);
+          updateLocalSpot(target.id, {
+            verification_status: 'STALLED',
+            pipeline_status: `auto-stalled: ${err.message.slice(0, 200)}`,
+            last_attempted_at: new Date().toISOString()
+          });
+        }
+      }
+
       const delay = 30000;
       reportPulse(delay);
       await sleep(delay);

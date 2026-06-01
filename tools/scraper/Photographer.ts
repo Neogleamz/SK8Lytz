@@ -619,6 +619,26 @@ async function crawlPageForImages(urls: string[], pageSourceLabel: string): Prom
             }
           });
 
+          // Lightbox / NextGen Gallery anchor tags pointing directly to high-res images
+          document.querySelectorAll('a').forEach((el: any) => {
+            const href = el.href || '';
+            const dataSrc = el.dataset?.src || '';
+            const targetUrl = [href, dataSrc].find(u => u.startsWith('http') && /.*\.(jpg|jpeg|png|webp)(\?.*)?$/i.test(u));
+            if (targetUrl) {
+              results.push({
+                url: targetUrl,
+                alt: 'lightbox-gallery-link',
+                filename: getFilename(targetUrl),
+                parentClass: (el.closest('[class]')?.className || '').toLowerCase().slice(0, 80),
+                nearestHeading: getNearestHeading(el),
+                pageUrl: pageUrlStr,
+                pageSource: source,
+                w: minW,
+                h: minH
+              });
+            }
+          });
+  
           return results;
         }, pageSourceLabel + ':' + url, url, MIN_IMG_WIDTH, MIN_IMG_HEIGHT);
 

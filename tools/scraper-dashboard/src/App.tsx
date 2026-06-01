@@ -10,7 +10,7 @@ import { DatabankCard } from './components/DatabankCard';
 import { RecordEditModal } from './components/RecordEditModal';
 import './App.css';
 
-const API_BASE = 'http://localhost:5999';
+const API_BASE = 'http://127.0.0.1:5999';
 
 // Route external photo URLs through CCTower proxy to avoid referrer/CORS blocks on localhost
 const proxyImg = (url: string | null) => {
@@ -21,8 +21,8 @@ const proxyImg = (url: string | null) => {
   if (url.startsWith('/local-bucket')) {
     return `${API_BASE}${url}`;
   }
-  // Local backend URLs (localhost:5999) — serve directly without proxying
-  if (url.includes('localhost:5999') || url.includes('127.0.0.1:5999')) {
+  // Local backend URLs (127.0.0.1:5999) — serve directly without proxying
+  if (url.includes('127.0.0.1:5999') || url.includes('127.0.0.1:5999')) {
     return url;
   }
   // Everything else (googleapis Street View, etc.) goes through the proxy

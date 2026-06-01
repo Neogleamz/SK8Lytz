@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-const API_BASE = 'http://localhost:5999';
+const API_BASE = 'http://127.0.0.1:5999';
 
 export default function DetectiveLab({
   aiSystemPrompt,

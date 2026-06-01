@@ -5,7 +5,7 @@ import { useScraperTelemetry } from '../hooks/useScraperTelemetry';
 import { useFieldRegistry } from '../hooks/useFieldRegistry';
 import type { SpotRecord } from './RecordEditModal';
 
-const CCTOWER = 'http://localhost:5999';
+const CCTOWER = 'http://127.0.0.1:5999';
 
 const STYLES = `
 /* ... styles remain the same ... */
@@ -115,6 +115,11 @@ export interface PipelineStats {
         on_hold?: number;
         stalled?: number;
         low_quality?: number;
+        // Health diagnostic fields
+        no_photos_media_ready?: number;
+        photoless_with_website?: number;
+        media_ready_with_photos?: number;
+        gap_fill_active?: number;
         [key: string]: unknown;
     };
     stats?: unknown[];
@@ -795,6 +800,67 @@ export const ScraperPipeline: React.FC<{
                     );
                 })}
             </div>
+
+            {/* ── TRIAGE INTELLIGENCE ROW ── */}
+            {pipelineStats?.summary && (
+                <div style={{
+                    margin: '0 16px 16px',
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    borderRadius: '10px',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.62rem', fontWeight: 900, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' }}>⚠ Pipeline Health Diagnostics</span>
+                        <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)' }}>all statuses · refreshes every 15s</span>
+                    </div>
+
+                    {/* Row 1: Problem statuses */}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {([
+                            { label: '🚫 REJECTED',       value: pipelineStats.summary.rejected,          color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.3)',   tip: 'Spots rejected by toxicity filter — not roller rinks' },
+                            { label: '🛑 STALLED',        value: pipelineStats.summary.stalled,           color: '#f97316', bg: 'rgba(249,115,22,0.1)',  border: 'rgba(249,115,22,0.3)',  tip: 'Spots that crashed 3+ times — need manual review' },
+                            { label: '⏸ ON HOLD',         value: pipelineStats.summary.on_hold,           color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.3)', tip: 'Manually frozen records' },
+                            { label: '🌐 SITE STALLED',   value: pipelineStats.summary.stalled_website,   color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.3)',  tip: 'Website resolver stalled — no URL found' },
+                            { label: '🔄 GAP FILL',        value: pipelineStats.summary.gap_fill_active,   color: '#22d3ee', bg: 'rgba(34,211,238,0.1)',  border: 'rgba(34,211,238,0.3)',  tip: 'Spots currently being re-enriched by gap-fill pass' },
+                        ] as {label:string;value:number|undefined;color:string;bg:string;border:string;tip:string}[]).map(({ label, value, color, bg, border, tip }) => value !== undefined && (
+                            <div key={label} title={tip} style={{
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                                background: bg, border: `1px solid ${border}`,
+                                borderRadius: '6px', padding: '4px 10px',
+                                cursor: 'default'
+                            }}>
+                                <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.06em' }}>{label}</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 900, color, fontFamily: 'JetBrains Mono, monospace' }}>{(value ?? 0).toLocaleString()}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Row 2: Photo health — surfaces the invisible no-photo MEDIA_READY problem */}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                        <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', fontWeight: 700, letterSpacing: '0.08em', alignSelf: 'center' }}>📸 PHOTO HEALTH</span>
+                        {([
+                            { label: '✅ HAS PHOTOS',         value: pipelineStats.summary.media_ready_with_photos, color: '#4ade80', bg: 'rgba(74,222,128,0.08)', border: 'rgba(74,222,128,0.25)', tip: 'MEDIA_READY spots with at least 1 photo — truly publisher-ready' },
+                            { label: '📷 NO PHOTOS',          value: pipelineStats.summary.no_photos_media_ready,   color: '#fb923c', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.3)',  tip: 'MEDIA_READY with ZERO photos — Publisher will still process them but may reject' },
+                            { label: '🌐 HAS SITE · NO PHOTO', value: pipelineStats.summary.photoless_with_website, color: '#f43f5e', bg: 'rgba(244,63,94,0.1)',   border: 'rgba(244,63,94,0.35)',  tip: 'MEDIA_READY + has website + no photos — RE-QUEUE to DEEP_CRAWLED to fix!' },
+                            { label: '📦 HAS CANDIDATES',      value: pipelineStats.summary.has_candidates,          color: '#a78bfa', bg: 'rgba(167,139,250,0.08)', border: 'rgba(167,139,250,0.2)', tip: 'Spots with candidate_photos queued but not yet downloaded by Photographer' },
+                        ] as {label:string;value:number|undefined;color:string;bg:string;border:string;tip:string}[]).map(({ label, value, color, bg, border, tip }) => value !== undefined && (
+                            <div key={label} title={tip} style={{
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                                background: bg, border: `1px solid ${border}`,
+                                borderRadius: '6px', padding: '4px 10px',
+                                cursor: 'default'
+                            }}>
+                                <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.06em' }}>{label}</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 900, color, fontFamily: 'JetBrains Mono, monospace' }}>{(value ?? 0).toLocaleString()}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
         </div>
     );

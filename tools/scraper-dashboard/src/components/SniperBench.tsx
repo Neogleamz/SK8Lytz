@@ -3,7 +3,7 @@ import { useFieldRegistry } from '../hooks/useFieldRegistry';
 import { DatabankCard } from './DatabankCard';
 import type { SpotRecord } from './DatabankCard';
 
-const API = 'http://localhost:5999';
+const API = 'http://127.0.0.1:5999';
 
 type RunState = 'idle' | 'running' | 'done' | 'error';
 
@@ -13,7 +13,7 @@ const proxyImg = (url: string | null) => {
   if (url.startsWith('/local-bucket')) {
     return `${API}${url}`;
   }
-  if (url.includes('localhost:5999') || url.includes('127.0.0.1:5999')) {
+  if (url.includes('127.0.0.1:5999') || url.includes('127.0.0.1:5999')) {
     return url;
   }
   return `${API}/api/img-proxy?url=${encodeURIComponent(url)}`;

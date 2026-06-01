@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useFieldRegistry } from '../hooks/useFieldRegistry';
-const API_BASE = 'http://localhost:5999';
+const API_BASE = 'http://127.0.0.1:5999';
 
 interface DrawerProps {
   phaseId: number;

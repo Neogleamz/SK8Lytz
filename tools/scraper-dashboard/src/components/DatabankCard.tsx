@@ -206,6 +206,12 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
   const [showTypeMenu, setShowTypeMenu] = useState(false);
   const [isCardHovered, setIsCardHovered] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  // Tracks when user last manually navigated — pauses auto-rotate for 5s after any click
+  const lastManualNavAt = React.useRef<number>(0);
+  const manualNav = (updater: (prev: number) => number) => {
+    lastManualNavAt.current = Date.now();
+    setPhotoIndex(updater);
+  };
 
   const isFieldEmpty = (fieldName: string): boolean => {
     switch (fieldName) {
@@ -274,7 +280,7 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Reset photo index if spot changes to avoid out-of-bounds
+  // Reset photo index if spot id changes
   React.useEffect(() => {
     setPhotoIndex(0);
   }, [spot.id]);
@@ -302,8 +308,21 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
       safeCd = _cd as CandidatePhotos | PhotoItem[];
     }
   }
-  
-  const validPhotoIndex = photoIndex >= safePh.length ? 0 : photoIndex;
+
+  const photoCount = safePh.length;
+  const candCount  = ((safeCd as CandidatePhotos)?.street_view_url ? 1 : 0);
+
+  // FIX: If a photo is deleted the array shrinks. Clamp the index in state so
+  // the validPhotoIndex derivation below is always in sync with actual state.
+  React.useEffect(() => {
+    if (photoCount > 0 && photoIndex >= photoCount) {
+      setPhotoIndex(0);
+    }
+  }, [photoCount, photoIndex]);
+
+  // Safe clamped index for rendering (guard against one-frame lag after the effect above)
+  const validPhotoIndex = photoCount > 0 ? Math.min(photoIndex, photoCount - 1) : 0;
+
   const rawPhoto = (typeof safePh[validPhotoIndex] === 'string' ? safePh[validPhotoIndex] : (safePh[validPhotoIndex] as PhotoItem)?.url) ?? 
     ((safeCd as CandidatePhotos)?.street_view_url ?? (Array.isArray(safeCd) ? (safeCd[0] as PhotoItem)?.url : null));
   const photo = proxyImg(rawPhoto);
@@ -312,14 +331,14 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
   const ratingNum  = spot.rating ? parseFloat(String(spot.rating)) : null;
   const proShop    = spot.has_pro_shop || spot.has_proshop;
   const adultNight = spot.has_adult_night;
-  const photoCount = (safePh.length);
-  const candCount  = ((safeCd as CandidatePhotos)?.street_view_url ? 1 : 0);
 
-  // Auto-rotate photos if photoCount > 1 and not card hovered
+  // Auto-rotate: only fires when card is NOT hovered AND user hasn't manually
+  // navigated in the last 5 seconds. Prevents timer from fighting arrow clicks.
   React.useEffect(() => {
     if (photoCount <= 1) return;
-    if (isCardHovered) return;
     const interval = setInterval(() => {
+      if (isCardHovered) return;
+      if (Date.now() - lastManualNavAt.current < 5000) return;
       setPhotoIndex(prev => (prev + 1) % photoCount);
     }, 3000);
     return () => clearInterval(interval);
@@ -414,9 +433,9 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
           }
           {photoCount > 1 && (
             <>
-              <button onClick={(e) => { e.stopPropagation(); setPhotoIndex(prev => (prev - 1 + photoCount) % photoCount); }} 
+              <button onClick={(e) => { e.stopPropagation(); manualNav(prev => (prev - 1 + photoCount) % photoCount); }} 
                 style={{ position:'absolute', top:'50%', left:2, transform:'translateY(-50%)', background:'rgba(0,0,0,0.6)', color:'white', border:'none', borderRadius:'50%', width:'20px', height:'20px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px' }}>&#10094;</button>
-              <button onClick={(e) => { e.stopPropagation(); setPhotoIndex(prev => (prev + 1) % photoCount); }} 
+              <button onClick={(e) => { e.stopPropagation(); manualNav(prev => (prev + 1) % photoCount); }} 
                 style={{ position:'absolute', top:'50%', right:2, transform:'translateY(-50%)', background:'rgba(0,0,0,0.6)', color:'white', border:'none', borderRadius:'50%', width:'20px', height:'20px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'10px' }}>&#10095;</button>
             </>
           )}
@@ -513,9 +532,9 @@ export const DatabankCard: React.FC<DatabankCardProps> = ({
         }
         {photoCount > 1 && (
           <>
-            <button onClick={(e) => { e.stopPropagation(); setPhotoIndex(prev => (prev - 1 + photoCount) % photoCount); }} 
+            <button onClick={(e) => { e.stopPropagation(); manualNav(prev => (prev - 1 + photoCount) % photoCount); }} 
               style={{ position:'absolute', top:'50%', left:5, transform:'translateY(-50%)', background:'rgba(0,0,0,0.5)', color:'white', border:'none', borderRadius:'50%', width:'28px', height:'28px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px' }}>&#10094;</button>
-            <button onClick={(e) => { e.stopPropagation(); setPhotoIndex(prev => (prev + 1) % photoCount); }} 
+            <button onClick={(e) => { e.stopPropagation(); manualNav(prev => (prev + 1) % photoCount); }} 
               style={{ position:'absolute', top:'50%', right:5, transform:'translateY(-50%)', background:'rgba(0,0,0,0.5)', color:'white', border:'none', borderRadius:'50%', width:'28px', height:'28px', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px' }}>&#10095;</button>
           </>
         )}

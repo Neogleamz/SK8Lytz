@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 
-const API = 'http://localhost:5999';
+const API = 'http://127.0.0.1:5999';
 
 export const HeuristicsControlCenter: React.FC = () => {
   const [ledger, setLedger] = useState<any>(null);
