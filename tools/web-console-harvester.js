@@ -185,6 +185,10 @@ async function run() {
         if (url && url.includes('/api/img-proxy')) {
           return;
         }
+        // Ignore favicon.ico default browser requests
+        if (url && url.includes('favicon.ico')) {
+          return;
+        }
         collectedErrors.push({ source: `network.${source}`, text: errorText });
         console.error(`  🔴 [Network/Log Error] ${errorText}`);
       } else if (level === 'warning') {
