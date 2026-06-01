@@ -141,6 +141,9 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
   const [isSandboxRunning, setIsSandboxRunning] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [loading, setLoading] = useState(true);
+  const [previewStats, setPreviewStats] = useState<any>(null);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isExecutingTarget, setIsExecutingTarget] = useState(false);
 
   const fetchConfig = async () => {
     try {
@@ -920,6 +923,89 @@ export const PhaseControlDrawer: React.FC<DrawerProps> = ({ phaseId, isOpen, onC
                       <input type="number" min={0} max={100} value={config?.publisher_auto_publish_threshold || 80} onChange={(e) => handleUpdate('publisher_auto_publish_threshold', parseInt(e.target.value))} style={{ width: '100%', background: 'rgba(10,5,0,0.4)', border: '1px solid rgba(245,158,11,0.25)', borderBottom: '2px solid #f59e0b', color: '#fff', padding: '8px 12px', borderRadius: '6px', fontSize: '0.72rem', fontFamily: 'Outfit, sans-serif', outline: 'none', boxSizing: 'border-box' }} />
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* ═══════════════════════════════════════════════════════════════
+                  PASS 2.5: TARGETED RELEASE ANALYSIS
+                  ═══════════════════════════════════════════════════════════════ */}
+              <div style={{ gridColumn: '1 / -1', background: 'linear-gradient(135deg, rgba(56,189,248,0.08) 0%, rgba(14,165,233,0.04) 100%)', border: '1px solid rgba(56,189,248,0.35)', borderRadius: '10px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ background: 'linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%)', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', boxShadow: '0 0 12px rgba(56,189,248,0.4)' }}>🎯</div>
+                  <div>
+                    <div style={{ color: '#38bdf8', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Pass 2.5 — Targeted Release Analysis</div>
+                    <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.6rem' }}>Live test current Guillotine gates against MEDIA_READY records</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', background: 'rgba(10,15,25,0.4)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(56,189,248,0.15)' }}>
+                  <button 
+                    onClick={async () => {
+                      setIsPreviewing(true);
+                      setPreviewStats(null);
+                      try {
+                        const payload = {
+                          required_photo_tags: config?.publisher_required_photo_tags || [],
+                          hard_gates: fields.filter(f => f.is_hard_gate === 1).map(f => f.field_name)
+                        };
+                        const res = await fetch(`${API_BASE}/api/publish-preview`, { 
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify(payload)
+                        });
+                        const data = await res.json();
+                        setPreviewStats(data);
+                      } catch (err: any) {
+                        setPreviewStats({ error: err.message });
+                      }
+                      setIsPreviewing(false);
+                    }}
+                    disabled={isPreviewing}
+                    style={{ background: 'linear-gradient(135deg, #38bdf8 0%, #0ea5e9 100%)', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '6px', fontWeight: 800, fontSize: '0.75rem', cursor: isPreviewing ? 'wait' : 'pointer', opacity: isPreviewing ? 0.7 : 1 }}
+                  >
+                    {isPreviewing ? 'ANALYZING...' : 'RUN LIVE ANALYSIS'}
+                  </button>
+
+                  {previewStats && !previewStats.error && (
+                    <div style={{ flex: 1, color: '#e0f2fe', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ background: 'rgba(56,189,248,0.1)', padding: '6px 12px', borderRadius: '6px', border: '1px solid rgba(56,189,248,0.3)' }}>
+                        <strong style={{ color: '#38bdf8', fontSize: '0.9rem' }}>{previewStats.total_passed}</strong> of <strong style={{ color: '#7dd3fc' }}>{previewStats.total_tested}</strong> ready to publish.
+                      </div>
+                      
+                      {previewStats.total_passed > 0 && (
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Are you sure you want to instantly promote these ${previewStats.total_passed} records?`)) return;
+                            setIsExecutingTarget(true);
+                            try {
+                              const payload = {
+                                required_photo_tags: config?.publisher_required_photo_tags || [],
+                                hard_gates: fields.filter(f => f.is_hard_gate === 1).map(f => f.field_name)
+                              };
+                              const res = await fetch(`${API_BASE}/api/publish-execute`, { 
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                              });
+                              const data = await res.json();
+                              alert(`Successfully promoted ${data.total_published} records!`);
+                              setPreviewStats(null);
+                            } catch (err: any) {
+                              alert(`Execution failed: ${err.message}`);
+                            }
+                            setIsExecutingTarget(false);
+                          }}
+                          disabled={isExecutingTarget}
+                          style={{ background: '#10b981', color: '#fff', border: 'none', padding: '6px 16px', borderRadius: '6px', fontWeight: 800, fontSize: '0.7rem', cursor: isExecutingTarget ? 'wait' : 'pointer', boxShadow: '0 0 10px rgba(16,185,129,0.3)', opacity: isExecutingTarget ? 0.7 : 1 }}
+                        >
+                          {isExecutingTarget ? 'PUBLISHING...' : `PUBLISH ${previewStats.total_passed} NOW`}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {previewStats?.error && (
+                    <div style={{ color: '#f87171', fontSize: '0.75rem' }}>Error: {previewStats.error}</div>
+                  )}
                 </div>
               </div>
 

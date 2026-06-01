@@ -1582,6 +1582,93 @@ app.post('/api/promote-state/:state', async (req, res) => {
   }
 });
 
+const filterSpotByGates = (spot: any, hardGates: any[], requiredPhotoTags: string[]) => {
+  // Check hard gates from field registry
+  for (const gate of hardGates) {
+    const val = spot[gate.field_name];
+    if (val === null || val === undefined || val === '' || val === 'null' || val === '{}' || val === '[]') {
+      return false; // Failed a hard gate
+    }
+    
+    // If the field is a boolean flag, require it to be true/1
+    if ((gate.field_name.startsWith('has_') || gate.field_name.startsWith('is_')) && 
+        (val === 0 || val === '0' || val === false || val === 'false')) {
+      return false;
+    }
+  }
+
+  // Check required photo tags
+  if (requiredPhotoTags && requiredPhotoTags.length > 0) {
+    let cov: any = {};
+    try { cov = typeof spot.photo_coverage === 'string' ? JSON.parse(spot.photo_coverage) : (spot.photo_coverage || {}); } catch(e){}
+    for (const tag of requiredPhotoTags) {
+      if (!cov[tag]) return false;
+    }
+  }
+  return true;
+};
+
+// ── Targeted Publishing Analysis & Execution ───────────────────────────────
+app.post('/api/publish-preview', async (req, res) => {
+  try {
+    const { getUnpublishedMediaReadySpots, getConfig, getFieldRegistry } = require('./core/LocalDB');
+    const spots = getUnpublishedMediaReadySpots();
+    const config = getConfig();
+    
+    // Read from body if client sent optimistic state, else fallback to db
+    let hardGates: any[] = [];
+    if (req.body.hard_gates && Array.isArray(req.body.hard_gates)) {
+      hardGates = req.body.hard_gates.map((name: string) => ({ field_name: name }));
+    } else {
+      const registry = getFieldRegistry();
+      hardGates = registry.filter((f: any) => f.is_hard_gate === 1);
+    }
+    
+    const requiredPhotoTags = req.body.required_photo_tags ?? config.publisher_required_photo_tags ?? [];
+    
+    const passed = spots.filter((s: any) => filterSpotByGates(s, hardGates, requiredPhotoTags));
+    
+    res.json({
+      success: true,
+      total_tested: spots.length,
+      total_passed: passed.length,
+      sample_passed: passed.slice(0, 5).map((s: any) => ({ id: s.id, name: s.name }))
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/publish-execute', async (req, res) => {
+  try {
+    const { getUnpublishedMediaReadySpots, bulkPublishSpots, getConfig, getFieldRegistry } = require('./core/LocalDB');
+    const spots = getUnpublishedMediaReadySpots();
+    const config = getConfig();
+    
+    let hardGates: any[] = [];
+    if (req.body.hard_gates && Array.isArray(req.body.hard_gates)) {
+      hardGates = req.body.hard_gates.map((name: string) => ({ field_name: name }));
+    } else {
+      const registry = getFieldRegistry();
+      hardGates = registry.filter((f: any) => f.is_hard_gate === 1);
+    }
+    
+    const requiredPhotoTags = req.body.required_photo_tags ?? config.publisher_required_photo_tags ?? [];
+    
+    const passed = spots.filter((s: any) => filterSpotByGates(s, hardGates, requiredPhotoTags));
+    
+    const idsToPublish = passed.map((s: any) => s.id);
+    const updatedCount = bulkPublishSpots(idsToPublish);
+    
+    res.json({
+      success: true,
+      total_published: updatedCount
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ── Field Correction Stats (AI Quality Monitoring) ────────────────────────────
 app.get('/api/correction-stats', async (req, res) => {
   try {

@@ -1029,6 +1029,27 @@ export const getSpotsToSync = (limit: number = 50) => {
   return rows.map(rowToObj);
 };
 
+export const getUnpublishedMediaReadySpots = () => {
+  // Fetch all fields so dynamic gate checking works against any column
+  const rows = db.prepare(`SELECT * FROM local_spots WHERE verification_status = 'MEDIA_READY' AND is_published = 0`).all();
+  return rows.map(rowToObj);
+};
+
+export const bulkPublishSpots = (ids: string[]) => {
+  if (!ids || ids.length === 0) return 0;
+  // SQLite limits bindings to 999, safely chunking if necessary
+  let updatedCount = 0;
+  const chunkSize = 500;
+  for (let i = 0; i < ids.length; i += chunkSize) {
+    const chunk = ids.slice(i, i + chunkSize);
+    const placeholders = chunk.map(() => '?').join(',');
+    const stmt = db.prepare(`UPDATE local_spots SET is_published = 1, sync_required = 1 WHERE id IN (${placeholders})`);
+    const info = stmt.run(...chunk);
+    updatedCount += info.changes;
+  }
+  return updatedCount;
+};
+
 // --- CONFIG METHODS ---
 export const getConfig = () => {
   let row = db.prepare(`SELECT config_json FROM scraper_config WHERE id = 1`).get() as any;
