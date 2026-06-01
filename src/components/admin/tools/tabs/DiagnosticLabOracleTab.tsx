@@ -562,15 +562,15 @@ export function DiagnosticLabOracleTab({
                       );
                     } else if (oracle51Format === 'extended') {
                       transmit(
-                        ZenggeProtocol.setCustomModeExtended([{ mode: id, speed: p41Speed, color1: p41Color1, color2: p41Color2, dir: 0x80 }]),
-                        `0x51 extended id=${id} spd=${p41Speed} dir=0x80`, '0x51'
+                        ZenggeProtocol.setCustomModeExtended([{ mode: id, speed: p41Speed, color1: p41Color1, color2: p41Color2, dir: 0x81 }]),
+                        `0x51 extended id=${id} spd=${p41Speed} dir=0x81`, '0x51'
                       );
                     } else {
-                      const rawPayload = ZenggeProtocol.setCustomModeExtended([{ mode: id, speed: p41Speed, color1: p41Color1, color2: p41Color2, dir: 0x80 }]);
+                      const rawPayload = ZenggeProtocol.setCustomModeExtended([{ mode: id, speed: p41Speed, color1: p41Color1, color2: p41Color2, dir: 0x81 }]);
                       const wrappedPayload = ZenggeProtocol.wrapCommand(rawPayload);
                       transmit(
                         wrappedPayload,
-                        `0x51 wrapped extended id=${id} spd=${p41Speed} dir=0x80`, '0x51'
+                        `0x51 wrapped extended id=${id} spd=${p41Speed} dir=0x81`, '0x51'
                       );
                     }
                   }}

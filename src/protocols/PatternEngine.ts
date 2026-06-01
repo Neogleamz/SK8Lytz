@@ -216,7 +216,7 @@ export function buildPatternPayload(
   // The 33 native hardware effects (IDs 201-233) must use 0x51.
   if (patternId >= 201 && patternId <= 233) {
     const hardwareModeId = patternId - 200; // 201 maps to mode 1
-    const hwFlags = direction === 1 ? 0x80 : 0x00;
+    const hwFlags = 0x80 | (direction === 1 ? 0x01 : 0x00);
     
     return ZenggeProtocol.setCustomModeExtendedCompact([{
       mode: hardwareModeId,
@@ -238,7 +238,7 @@ export function buildPatternPayload(
     if (patternId === 44) modeId = 26; // ZENGGE HW Mode 26: 7-Color Center-In Fill (But accepts custom colors via 0x51!)
     if (patternId === 72) modeId = direction === 1 ? 7 : 8; // Running, from middle to both ends (Center-Out)
 
-    const hwFlags = direction === 1 ? 0x80 : 0x00;
+    const hwFlags = 0x80 | (direction === 1 ? 0x01 : 0x00);
 
     // Use the 10-byte unpadded compact payload so the direction flag is respected!
     return ZenggeProtocol.setCustomModeExtendedCompact([{

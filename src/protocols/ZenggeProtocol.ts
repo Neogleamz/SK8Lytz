@@ -801,7 +801,7 @@ export class ZenggeProtocol {
     color1: { r: number; g: number; b: number };
     color2: { r: number; g: number; b: number };
     dir?: number;
-  }[], dir: number = 0x80): number[] { // 0x80 = forward + segment mirroring, 0x00 = reverse
+  }[], dir: number = 0x81): number[] { // 0x80 = segment mirroring, 0x01 = forward, 0x00 = reverse
     const TOTAL_SLOTS = 32;
     const raw: number[] = [0x51];
 

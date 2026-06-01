@@ -245,7 +245,7 @@ export function DiagnosticLabBuilderTab({
               onPress={() => {
                 const mode = Math.max(1, Math.min(44, parseInt(bld51Mode) || 1));
                 const speed = Math.max(1, Math.min(100, parseInt(bld51Speed) || 50));
-                const flags = bld51Dir === 1 ? 0x80 : 0x00;
+                const flags = (bld51Seg ? 0x80 : 0x00) | (bld51Dir === 1 ? 0x01 : 0x00);
                 transmit(
                   ZenggeProtocol.setCustomModeExtended([{ mode, speed, color1: bld51Color1, color2: bld51Color2, dir: flags }]),
                   `0x51 extended mode=${mode} spd=${speed} dir=0x${flags.toString(16).toUpperCase()}`,
@@ -260,7 +260,7 @@ export function DiagnosticLabBuilderTab({
               onPress={() => {
                 const mode = Math.max(1, Math.min(44, parseInt(bld51Mode) || 1));
                 const speed = Math.max(1, Math.min(100, parseInt(bld51Speed) || 50));
-                const flags = bld51Dir === 1 ? 0x80 : 0x00;
+                const flags = (bld51Seg ? 0x80 : 0x00) | (bld51Dir === 1 ? 0x01 : 0x00);
                 const rawPayload = ZenggeProtocol.setCustomModeExtended([{ mode, speed, color1: bld51Color1, color2: bld51Color2, dir: flags }]);
                 const wrappedPayload = ZenggeProtocol.wrapCommand(rawPayload);
                 transmit(
@@ -292,14 +292,14 @@ export function DiagnosticLabBuilderTab({
                       '0x51'
                     );
                   } else if (bld51Format === 'extended') {
-                    const flags = bld51Dir === 1 ? 0x80 : 0x00;
+                    const flags = (bld51Seg ? 0x80 : 0x00) | (bld51Dir === 1 ? 0x01 : 0x00);
                     transmit(
                       ZenggeProtocol.setCustomModeExtended([{ mode: id, speed, color1: bld51Color1, color2: bld51Color2, dir: flags }]),
                       `0x51 extended mode=${id} spd=${speed} dir=0x${flags.toString(16).toUpperCase()}`,
                       '0x51'
                     );
                   } else {
-                    const flags = bld51Dir === 1 ? 0x80 : 0x00;
+                    const flags = (bld51Seg ? 0x80 : 0x00) | (bld51Dir === 1 ? 0x01 : 0x00);
                     const rawPayload = ZenggeProtocol.setCustomModeExtended([{ mode: id, speed: bld51Color1 ? speed : speed, color1: bld51Color1, color2: bld51Color2, dir: flags }]);
                     const wrappedPayload = ZenggeProtocol.wrapCommand(rawPayload);
                     transmit(
