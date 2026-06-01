@@ -62,8 +62,8 @@ export function DiagnosticLabBuilderTab({
   // 0x73 isOn state for builder + Oracle fix
   const [bldMusicIsOn, setBldMusicIsOn] = useState(true);
 
-  // 0x51 format toggle: 'compact' = 9B/slot wrapCommand, 'extended' = 10B/slot×32 writeChunked
-  const [bld51Format, setBld51Format] = useState<'compact' | 'extended'>('compact');
+  // 0x51 format toggle: 'compact' = 9B/slot wrapCommand, 'extended' = 10B/slot×32 writeChunked, 'wrapped_extended' = 10B/slot×32 wrapped (331B)
+  const [bld51Format, setBld51Format] = useState<'compact' | 'extended' | 'wrapped_extended'>('compact');
 
   // Sync override with result whenever result changes (unless manually edited)
   useEffect(() => {
@@ -178,33 +178,48 @@ export function DiagnosticLabBuilderTab({
               onPress={() => setBld51Format('compact')}
             >
               <Text style={{ color: bld51Format === 'compact' ? '#00E676' : txtMuted, fontWeight: '900', fontSize: 11, textAlign: 'center' }}>COMPACT (9B)</Text>
-              <Text style={{ color: bld51Format === 'compact' ? '#00E676' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>wrapCommand · confirmed ✅</Text>
+              <Text style={{ color: bld51Format === 'compact' ? '#00E676' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>9B Slots · Wrapped</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[S.chip, bld51Format === 'extended' && { backgroundColor: '#FF950033', borderColor: '#FF9500' }, { flex: 1, paddingVertical: Spacing.md }]}
               onPress={() => setBld51Format('extended')}
             >
               <Text style={{ color: bld51Format === 'extended' ? '#FF9500' : txtMuted, fontWeight: '900', fontSize: 11, textAlign: 'center' }}>EXTENDED (323B)</Text>
-              <Text style={{ color: bld51Format === 'extended' ? '#FF9500' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>writeChunked · 0x40 framing</Text>
+              <Text style={{ color: bld51Format === 'extended' ? '#FF9500' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>10B Slots · Chunked</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[S.chip, bld51Format === 'wrapped_extended' && { backgroundColor: '#00F0FF33', borderColor: '#00F0FF' }, { flex: 1, paddingVertical: Spacing.md }]}
+              onPress={() => setBld51Format('wrapped_extended')}
+            >
+              <Text style={{ color: bld51Format === 'wrapped_extended' ? '#00F0FF' : txtMuted, fontWeight: '900', fontSize: 11, textAlign: 'center' }}>WRAPPED EXT (331B)</Text>
+              <Text style={{ color: bld51Format === 'wrapped_extended' ? '#00F0FF' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>10B Slots · Wrapped</Text>
             </TouchableOpacity>
           </View>
 
           {/* ── LIVE PAYLOAD BYTE PREVIEW ──────────────────────────────────── */}
-          <View style={{ backgroundColor: isDark ? '#05070a' : '#f9fafb', borderRadius: 8, padding: Spacing.md, marginBottom: Spacing.lg, borderColor: bld51Format === 'extended' ? '#FF9500' : '#00E676', borderWidth: 1 }}>
+          <View style={{ backgroundColor: isDark ? '#05070a' : '#f9fafb', borderRadius: 8, padding: Spacing.md, marginBottom: Spacing.lg, borderColor: bld51Format === 'wrapped_extended' ? '#00F0FF' : bld51Format === 'extended' ? '#FF9500' : '#00E676', borderWidth: 1 }}>
             {bld51Format === 'compact' ? (
               <Text style={{ color: cyan, fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
                 {`[0x51, 0xF0, 0x${(parseInt(bld51Mode)||1).toString(16).padStart(2,'0').toUpperCase()}, 0x${(Math.max(1,Math.min(100,parseInt(bld51Speed)||50))).toString(16).padStart(2,'0').toUpperCase()},`}
                 {`\n R1=${bld51Color1.r} G1=${bld51Color1.g} B1=${bld51Color1.b},`}
                 {`\n R2=${bld51Color2.r} G2=${bld51Color2.g} B2=${bld51Color2.b},`}
-                {`\n 0x0F, CS]  ← 12 bytes`}
+                {`\n 0x0F, CS]  ← 12 bytes raw, wrapped to 20 bytes`}
               </Text>
-            ) : (
+            ) : bld51Format === 'extended' ? (
               <Text style={{ color: '#FF9500', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
                 {`[0x51, 0xF0, 0x${(parseInt(bld51Mode)||1).toString(16).padStart(2,'0').toUpperCase()}, 0x${(Math.max(1,Math.min(100,parseInt(bld51Speed)||50))).toString(16).padStart(2,'0').toUpperCase()},`}
                 {`\n R1=${bld51Color1.r} G1=${bld51Color1.g} B1=${bld51Color1.b},`}
                 {`\n R2=${bld51Color2.r} G2=${bld51Color2.g} B2=${bld51Color2.b},`}
                 {`\n flags=0x${bld51Dir === 1 ? '80' : '00'} (${bld51Dir === 1 ? 'FWD+SEG' : 'REV'})]`}
-                {`\n + 31 empty slots + [0x0F, CS]  ← 323 bytes via 0x40 chunks`}
+                {`\n + 31 empty slots + [0x0F, CS]  ← 323 bytes raw via 0x40 chunks`}
+              </Text>
+            ) : (
+              <Text style={{ color: '#00F0FF', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+                {`[0x00, Seq, 0x80, 0x00, 0x01, 0x43, 0x44, 0x0B, 0x51, 0xF0, ...]`}
+                {`\n R1=${bld51Color1.r} G1=${bld51Color1.g} B1=${bld51Color1.b},`}
+                {`\n R2=${bld51Color2.r} G2=${bld51Color2.g} B2=${bld51Color2.b},`}
+                {`\n flags=0x${bld51Dir === 1 ? '80' : '00'} (${bld51Dir === 1 ? 'FWD+SEG' : 'REV'})]`}
+                {`\n + 31 empty slots + [0x0F, CS]  ← Wrapped 331 bytes total (bypasses chunking!)`}
               </Text>
             )}
           </View>
@@ -231,7 +246,6 @@ export function DiagnosticLabBuilderTab({
                 const mode = Math.max(1, Math.min(44, parseInt(bld51Mode) || 1));
                 const speed = Math.max(1, Math.min(100, parseInt(bld51Speed) || 50));
                 const flags = bld51Dir === 1 ? 0x80 : 0x00;
-                // Extended payload is 323B — writeToDevice will auto-route to writeChunked
                 transmit(
                   ZenggeProtocol.setCustomModeExtended([{ mode, speed, color1: bld51Color1, color2: bld51Color2, dir: flags }]),
                   `0x51 extended mode=${mode} spd=${speed} dir=0x${flags.toString(16).toUpperCase()}`,
@@ -240,6 +254,23 @@ export function DiagnosticLabBuilderTab({
               }}
             >
               <Text style={{ color: '#000', fontWeight: '900', fontSize: 11 }}>TX EXTENDED (323B)</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[S.txBtn, { flex: 1, backgroundColor: '#00F0FF', borderColor: '#00F0FF' }]}
+              onPress={() => {
+                const mode = Math.max(1, Math.min(44, parseInt(bld51Mode) || 1));
+                const speed = Math.max(1, Math.min(100, parseInt(bld51Speed) || 50));
+                const flags = bld51Dir === 1 ? 0x80 : 0x00;
+                const rawPayload = ZenggeProtocol.setCustomModeExtended([{ mode, speed, color1: bld51Color1, color2: bld51Color2, dir: flags }]);
+                const wrappedPayload = ZenggeProtocol.wrapCommand(rawPayload);
+                transmit(
+                  wrappedPayload,
+                  `0x51 wrapped extended mode=${mode} spd=${speed} dir=0x${flags.toString(16).toUpperCase()}`,
+                  '0x51'
+                );
+              }}
+            >
+              <Text style={{ color: '#000', fontWeight: '900', fontSize: 11 }}>TX WRAPPED (331B)</Text>
             </TouchableOpacity>
           </View>
 
@@ -260,11 +291,20 @@ export function DiagnosticLabBuilderTab({
                       `0x51 compact mode=${id} spd=${speed}`,
                       '0x51'
                     );
-                  } else {
+                  } else if (bld51Format === 'extended') {
                     const flags = bld51Dir === 1 ? 0x80 : 0x00;
                     transmit(
                       ZenggeProtocol.setCustomModeExtended([{ mode: id, speed, color1: bld51Color1, color2: bld51Color2, dir: flags }]),
                       `0x51 extended mode=${id} spd=${speed} dir=0x${flags.toString(16).toUpperCase()}`,
+                      '0x51'
+                    );
+                  } else {
+                    const flags = bld51Dir === 1 ? 0x80 : 0x00;
+                    const rawPayload = ZenggeProtocol.setCustomModeExtended([{ mode: id, speed: bld51Color1 ? speed : speed, color1: bld51Color1, color2: bld51Color2, dir: flags }]);
+                    const wrappedPayload = ZenggeProtocol.wrapCommand(rawPayload);
+                    transmit(
+                      wrappedPayload,
+                      `0x51 wrapped extended mode=${id} spd=${speed} dir=0x${flags.toString(16).toUpperCase()}`,
                       '0x51'
                     );
                   }

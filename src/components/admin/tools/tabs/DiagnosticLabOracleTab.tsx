@@ -62,6 +62,7 @@ export function DiagnosticLabOracleTab({
   const [p41Color1, setP41Color1]       = useState<{r:number;g:number;b:number}>({r:255,g:0,b:0});
   const [p41Color2, setP41Color2]       = useState<{r:number;g:number;b:number}>({r:0,g:0,b:255});
   const [p41SweepResults, setP41SweepResults] = useState<Record<string, 'WORKS'|'NO_EFFECT'|'CRASHED'>>({});
+  const [oracle51Format, setOracle51Format] = useState<'compact' | 'extended' | 'wrapped_extended'>('wrapped_extended');
   
   const [ttSweepResults, setTtSweepResults] = useState<Record<string, 'WORKS'|'NO_EFFECT'|'CRASHED'>>({});
   
@@ -509,6 +510,33 @@ export function DiagnosticLabOracleTab({
                 onChangeText={v => setP41Speed(Math.max(1, Math.min(100, parseInt(v) || 1)))} />
             </View>
           </View>
+
+          {/* ── ORACLE 0x51 FORMAT TOGGLE ──────────────────────────────────── */}
+          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, fontWeight: '900' }}>TEST FORMAT (0x51)</Text>
+          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
+            <TouchableOpacity
+              style={[S.chip, oracle51Format === 'compact' && { backgroundColor: '#00E67633', borderColor: '#00E676' }, { flex: 1, paddingVertical: Spacing.md }]}
+              onPress={() => setOracle51Format('compact')}
+            >
+              <Text style={{ color: oracle51Format === 'compact' ? '#00E676' : txtMuted, fontWeight: '900', fontSize: 11, textAlign: 'center' }}>COMPACT (9B)</Text>
+              <Text style={{ color: oracle51Format === 'compact' ? '#00E676' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>9B Slots</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[S.chip, oracle51Format === 'extended' && { backgroundColor: '#FF950033', borderColor: '#FF9500' }, { flex: 1, paddingVertical: Spacing.md }]}
+              onPress={() => setOracle51Format('extended')}
+            >
+              <Text style={{ color: oracle51Format === 'extended' ? '#FF9500' : txtMuted, fontWeight: '900', fontSize: 11, textAlign: 'center' }}>EXTENDED (323B)</Text>
+              <Text style={{ color: oracle51Format === 'extended' ? '#FF9500' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>10B slots · chunked</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[S.chip, oracle51Format === 'wrapped_extended' && { backgroundColor: '#00F0FF33', borderColor: '#00F0FF' }, { flex: 1, paddingVertical: Spacing.md }]}
+              onPress={() => setOracle51Format('wrapped_extended')}
+            >
+              <Text style={{ color: oracle51Format === 'wrapped_extended' ? '#00F0FF' : txtMuted, fontWeight: '900', fontSize: 11, textAlign: 'center' }}>WRAPPED EXT (331B)</Text>
+              <Text style={{ color: oracle51Format === 'wrapped_extended' ? '#00F0FF' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>10B slots · un-chunked</Text>
+            </TouchableOpacity>
+          </View>
+
           <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>FG COLOR</Text>
           <QuickColorGrid activeColor={p41Color1} onSelect={setP41Color1} />
           <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>BG COLOR</Text>
@@ -526,10 +554,26 @@ export function DiagnosticLabOracleTab({
               <View key={id} style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm,
                 borderBottomWidth: 1, borderBottomColor: border, paddingBottom: Spacing.sm }}>
                 <TouchableOpacity
-                  onPress={() => transmit(
-                    ZenggeProtocol.setCustomModeExtended([{ mode: id, speed: p41Speed, color1: p41Color1, color2: p41Color2, dir: 0x80 }]),
-                    `0x51 id=${id} spd=${p41Speed}`, '0x51'
-                  )}
+                  onPress={() => {
+                    if (oracle51Format === 'compact') {
+                      transmit(
+                        ZenggeProtocol.setCustomModeCompact([{ mode: id, speed: p41Speed, color1: p41Color1, color2: p41Color2 }]),
+                        `0x51 compact id=${id} spd=${p41Speed}`, '0x51'
+                      );
+                    } else if (oracle51Format === 'extended') {
+                      transmit(
+                        ZenggeProtocol.setCustomModeExtended([{ mode: id, speed: p41Speed, color1: p41Color1, color2: p41Color2, dir: 0x80 }]),
+                        `0x51 extended id=${id} spd=${p41Speed} dir=0x80`, '0x51'
+                      );
+                    } else {
+                      const rawPayload = ZenggeProtocol.setCustomModeExtended([{ mode: id, speed: p41Speed, color1: p41Color1, color2: p41Color2, dir: 0x80 }]);
+                      const wrappedPayload = ZenggeProtocol.wrapCommand(rawPayload);
+                      transmit(
+                        wrappedPayload,
+                        `0x51 wrapped extended id=${id} spd=${p41Speed} dir=0x80`, '0x51'
+                      );
+                    }
+                  }}
                   style={{ width: 48, height: 40, borderRadius: 8, backgroundColor: resColor + '22',
                     borderWidth: 1.5, borderColor: resColor, justifyContent: 'center', alignItems: 'center' }}
                 >
