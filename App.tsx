@@ -1,3 +1,4 @@
+/* global global, window */
 import React, { useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View, AppState, Text, LogBox, Platform } from 'react-native';
@@ -17,6 +18,7 @@ import * as Linking from 'expo-linking';
 import { ComplianceGate } from './src/providers/ComplianceGate';
 import { BLEProvider } from './src/context/BLEContext';
 import { FavoritesProvider } from './src/context/FavoritesContext';
+import { BluetoothGuard } from './src/providers/BluetoothGuard';
 
 
 LogBox.ignoreLogs([
@@ -25,7 +27,6 @@ LogBox.ignoreLogs([
 ]);
 
 const STORAGE_OFFLINE_SKIP   = '@Sk8lytz_offline_skip';
-const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';
 
 if (typeof (global as any).ErrorUtils !== 'undefined') {
   const defaultHandler = (global as any).ErrorUtils.getGlobalHandler();
@@ -175,7 +176,6 @@ function AppContent() {
     init();
 
     const { data } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-      const subscription = data?.subscription;
       AppLogger.log('SYNC', { context: 'auth_change', event: _event, hasSession: !!session });
       setSession(session);
       if (!session) {
@@ -199,11 +199,7 @@ function AppContent() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {isAuthenticated ? (
         <ComplianceGate isOfflineMode={offlineMode}>
-          <FavoritesProvider>
-            <BLEProvider>
-              <DashboardScreen isOfflineMode={offlineMode} onLogout={() => setOfflineMode(false)} />
-            </BLEProvider>
-          </FavoritesProvider>
+          <DashboardScreen isOfflineMode={offlineMode} onLogout={() => setOfflineMode(false)} />
         </ComplianceGate>
       ) : (
         <AuthScreen
@@ -261,8 +257,14 @@ export default function App() {
     <SafeErrorBoundary>
       <SafeAreaProvider>
         <ThemeProvider>
-          <AppContent />
-          <GlobalPermissionsModal />
+          <FavoritesProvider>
+            <BLEProvider>
+              <BluetoothGuard>
+                <AppContent />
+              </BluetoothGuard>
+              <GlobalPermissionsModal />
+            </BLEProvider>
+          </FavoritesProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </SafeErrorBoundary>
