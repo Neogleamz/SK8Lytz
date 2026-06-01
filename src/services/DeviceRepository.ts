@@ -23,6 +23,7 @@ import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import type { CustomGroup, DeviceSettings } from '../types/dashboard.types';
 import type { TablesInsert } from '../types/supabase';
+import GroupRepository from './GroupRepository';
 
 // ─── Local Supabase Insert Type Aliases ───────────────────────────────────────
 // Derived directly from generated types — stay in sync with schema automatically.
@@ -32,10 +33,8 @@ type GroupInsert     = Omit<TablesInsert<'registered_groups'>, 'created_at'>;
 // ─── Storage Keys ─────────────────────────────────────────────────────────────
 const DEVICES_KEY     = '@Sk8lytz_registered_devices';
 const CONFIGS_KEY     = '@Sk8lytz_device_configs';
-const GROUPS_KEY      = '@Sk8lytz_custom_groups';
 const TOMBSTONE_KEY   = '@Sk8lytz_deleted_macs';
 const PENDING_KEY       = '@Sk8lytz_pending_sync';
-const PENDING_GROUP_KEY = '@Sk8lytz_pending_group_sync';
 // NOTE: '@Sk8lytz_last_group_patterns' is intentionally managed by useDashboardGroups
 // as a UI-local concern (last pattern picked per group). It is NOT part of this repo's SSOT.
 
@@ -64,7 +63,6 @@ class DeviceRepository {
   // ── In-memory state ─────────────────────────────────────────────────────────
   private devices: RegisteredDevice[] = [];
   private configs: Record<string, DeviceSettings> = {};
-  private groups: CustomGroup[] = [];
   private tombstones: string[] = [];
   private isInitialized = false;
   private initPromise: Promise<void> | null = null;
@@ -73,7 +71,21 @@ class DeviceRepository {
   private listeners: Set<Listener> = new Set();
   private version = 0;
 
-  private constructor() {}
+  private constructor() {
+    GroupRepository.getInstance().setDeviceDelegate({
+      getCurrentDevices: () => this.devices,
+      updateDevicesInBulk: async (updated) => {
+        this.devices = updated;
+        await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(this.devices));
+      },
+      notifySubscribers: () => this._notifyListeners(),
+      getCurrentConfigs: () => this.configs,
+      updateConfigsInBulk: async (configs) => {
+        this.configs = configs;
+        await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs));
+      },
+    });
+  }
 
   static getInstance(): DeviceRepository {
     if (!DeviceRepository.instance) {
@@ -92,17 +104,21 @@ class DeviceRepository {
     if (this.isInitialized) return;
     if (this.initPromise) return this.initPromise;
 
-    this.initPromise = this._loadFromStorage();
+    this.initPromise = (async () => {
+      await Promise.all([
+        this._loadFromStorage(),
+        GroupRepository.getInstance().initialize(),
+      ]);
+    })();
     await this.initPromise;
     this.isInitialized = true;
   }
 
   private async _loadFromStorage(): Promise<void> {
     try {
-      const [devicesRaw, configsRaw, groupsRaw, tombRaw] = await Promise.all([
+      const [devicesRaw, configsRaw, tombRaw] = await Promise.all([
         AsyncStorage.getItem(DEVICES_KEY),
         AsyncStorage.getItem(CONFIGS_KEY),
-        AsyncStorage.getItem(GROUPS_KEY),
         AsyncStorage.getItem(TOMBSTONE_KEY),
       ]);
 
@@ -112,9 +128,6 @@ class DeviceRepository {
       if (configsRaw) {
         try { this.configs = JSON.parse(configsRaw); } catch { this.configs = {}; }
       }
-      if (groupsRaw) {
-        try { this.groups = JSON.parse(groupsRaw); } catch { this.groups = []; }
-      }
       if (tombRaw) {
         try { this.tombstones = JSON.parse(tombRaw); } catch { this.tombstones = []; }
       }
@@ -122,7 +135,6 @@ class DeviceRepository {
       AppLogger.warn('[DeviceRepository] initialized', {
         event: 'initialized',
         deviceCount: this.devices.length,
-        groupCount: this.groups.length,
         tombstoneCount: this.tombstones.length,
       });
     } catch (e) {
@@ -137,14 +149,14 @@ class DeviceRepository {
   // (push/index-set don't change Object.is identity), breaking group derivation and AccountModal.
   getDevices(): RegisteredDevice[] { return [...this.devices]; }
   getConfigs(): Record<string, DeviceSettings> { return { ...this.configs }; }
-  getGroups(): CustomGroup[] { return [...this.groups]; }
+  getGroups(): CustomGroup[] { return GroupRepository.getInstance().getGroups(); }
   getTombstones(): string[] { return this.tombstones; }
 
   getSnapshot(): DeviceRepositorySnapshot {
     return {
       devices: this.devices,
       configs: this.configs,
-      groups: this.groups,
+      groups: GroupRepository.getInstance().getGroups(),
       tombstones: this.tombstones,
     };
   }
@@ -405,68 +417,19 @@ class DeviceRepository {
    * Set groups directly (used by group derivation logic in useDashboardGroups).
    */
   async setGroups(groups: CustomGroup[]): Promise<void> {
-    this.groups = groups;
-    await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch((e) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/setGroups', error: String(e) }));
-    this._notifyListeners();
+    await GroupRepository.getInstance().setGroups(groups);
   }
 
   /**
-   * Remove a group by ID from local state and cloud (atomic via RPC).
-   * Phase 5: Uses delete_group_cascade RPC to clear device group_ids and
-   * delete the group row in a single server-side transaction.
+   * Remove a group by ID from local state and cloud.
    */
   async deleteGroup(groupId: string): Promise<void> {
-    // 1. Remove group row
-    this.groups = this.groups.filter(g => g.id !== groupId);
-    await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch((e) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/deleteGroup', error: String(e) }));
-
-    // 2. Clear group assignments from in-memory devices
-    let devicesChanged = false;
-    this.devices = this.devices.map(d => {
-      if (d.group_ids?.includes(groupId)) {
-        devicesChanged = true;
-        let newIds = d.group_ids.filter(id => id !== groupId);
-        let newNames = (d.group_names || []).filter(n => n !== groupId); // Name filter is approximate here since we don't know the exact name
-        if (newIds.length === 0) {
-          newIds = ['default-fleet'];
-          newNames = ['Default Fleet'];
-        }
-        return { ...d, group_ids: newIds, group_names: newNames };
-      }
-      return d;
-    });
-    if (devicesChanged) await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(this.devices));
-
-    // 3. Notify
-    this._notifyListeners();
-
-    // Cloud cleanup via atomic RPC
-    try {
-      const { error } = await supabase.rpc('delete_group_cascade', {
-        p_group_id: groupId,
-      });
-      if (error) throw error;
-    } catch (e) {
-      AppLogger.warn('[DeviceRepository] delete_group_cascade RPC failed, falling back:', e);
-      // Graceful fallback: direct row delete (membership cleared on next sync)
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          await supabase.from('registered_groups').delete()
-            .eq('id', groupId)
-            .eq('user_id', session.user.id);
-        }
-      } catch (fe) {
-        AppLogger.warn('[DeviceRepository] Cloud group delete fallback also failed:', fe);
-      }
-    }
+    await GroupRepository.getInstance().deleteGroup(groupId);
   }
 
   /**
    * Transactional group save: atomically upserts the group and bulk-assigns
-   * device membership in one RPC call (prevents partial-write corruption).
-   *
-   * Called by useDashboardGroups.saveGroup() for explicit group CRUD operations.
+   * device membership.
    */
   async saveGroupTransactional(
     groupId: string,
@@ -474,103 +437,7 @@ class DeviceRepository {
     deviceMacs: string[],  // Array of MAC addresses (frontend convention)
     type = 'device-fleet'
   ): Promise<boolean> {
-    // 1. Update local group state immediately (optimistic)
-    const existingIdx = this.groups.findIndex(g => g.id === groupId);
-    const updatedGroup: CustomGroup = existingIdx >= 0
-      ? { ...this.groups[existingIdx], id: groupId, name: groupName, deviceIds: deviceMacs }
-      : { id: groupId, name: groupName, isGroup: true, deviceIds: deviceMacs };
-
-    if (existingIdx >= 0) this.groups[existingIdx] = updatedGroup;
-    else this.groups.push(updatedGroup);
-    await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch((e) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/saveGroupTransactional', error: String(e) }));
-
-    // In-memory mapping: convert frontend MAC addresses to Supabase registered_devices PKs
-    // AND update in-memory devices for immediate UI rendering.
-    const normalizedMacs = deviceMacs.map(m => m.toUpperCase());
-    let devicesChanged = false;
-    const dbDeviceIds: string[] = [];
-
-    this.devices = this.devices.map(d => {
-      const mac = d.device_mac.toUpperCase();
-      // MIGRATION-SHIM: Remove after all devices re-registered via wizard (target: v3.9.0)
-      const currentIds: string[] = d.group_ids ?? (d.group_id ? [d.group_id] : []);
-      const currentNames: string[] = d.group_names ?? (d.group_name ? [d.group_name] : []);
-
-      // Case A: Part of the new group
-      if (normalizedMacs.includes(mac)) {
-        if (d.id) dbDeviceIds.push(d.id);
-        if (!currentIds.includes(groupId)) {
-          devicesChanged = true;
-          // Filter out default-fleet if we're adding a real group
-          const newIds = currentIds.filter(id => id !== 'default-fleet').concat(groupId);
-          const newNames = currentNames.filter(n => n !== 'Default Fleet').concat(groupName);
-          return { ...d, group_ids: newIds, group_names: newNames };
-        }
-      } 
-      // Case B: Booted out of this group
-      else if (currentIds.includes(groupId)) {
-        devicesChanged = true;
-        let newIds = currentIds.filter(id => id !== groupId);
-        let newNames = currentNames.filter(n => n !== groupName);
-        if (newIds.length === 0) {
-          newIds = ['default-fleet'];
-          newNames = ['Default Fleet'];
-        }
-        return { ...d, group_ids: newIds, group_names: newNames };
-      }
-      return d;
-    });
-
-    if (devicesChanged) await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(this.devices));
-    this._notifyListeners();
-
-    // 2. Cloud: atomic RPC transaction
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      // Fix Local/Cloud Split-Brain: If any device in the group has not yet been
-      // committed to the cloud (is_pending_sync = true), we MUST NOT run the RPC yet,
-      // because the foreign key (device.id) does not exist in Supabase, leading to an FK violation.
-      const hasPendingDevices = this.devices.some(d => 
-        normalizedMacs.includes(d.device_mac.toUpperCase()) && d.is_pending_sync
-      );
-
-      if (!user || hasPendingDevices) {
-        // Offline or blocked by pending device sync: queue for later sync
-        await this._queuePendingGroupSync(groupId, groupName, deviceMacs, type);
-        AppLogger.warn('[DeviceRepository] Offline or Pending Devices — group queued for sync', { groupId, hasPendingDevices });
-        return true; // Local write succeeded — return true
-      }
-
-      // RPC after supabase-mcp junction table migration
-      const { error } = await supabase.rpc('upsert_group_with_devices', {
-        p_group_id:   groupId,
-        p_group_name: groupName,
-        p_type:       type,
-        p_device_ids: dbDeviceIds,
-      });
-      if (error) throw error;
-
-      // BUG FIX: Also stamp the scalar group_id/group_name on each device row.
-      // The RPC only writes to registered_groups + junction — it never touches
-      // registered_devices.group_id. Without this, fresh installs (AsyncStorage wiped)
-      // see 'default-fleet' and the derivation filters out the group card.
-      if (dbDeviceIds.length > 0) {
-        await supabase
-          .from('registered_devices')
-          .update({ group_id: groupId, group_name: groupName })
-          .in('id', dbDeviceIds)
-          .then(({ error: updateErr }) => {
-            if (updateErr) AppLogger.warn('[DeviceRepository] group_id stamp failed (non-fatal)', { error: updateErr.message });
-          });
-      }
-      
-      return true;
-    } catch (e) {
-      AppLogger.warn('[DeviceRepository] saveGroupTransactional RPC failed, queuing:', e);
-      await this._queuePendingGroupSync(groupId, groupName, deviceMacs, type);
-      return false;
-    }
+    return GroupRepository.getInstance().saveGroupTransactional(groupId, groupName, deviceMacs, type);
   }
 
   // ── Cloud Sync ──────────────────────────────────────────────────────────────
@@ -661,7 +528,7 @@ class DeviceRepository {
 
       // Flush pending offline device registrations, group sync, and tombstone deletions
       await this._flushPendingSync(user.id);
-      await this._flushPendingGroupSync(user.id);
+      await GroupRepository.getInstance().flushPendingGroups(user.id, this.devices);
       await this._flushPendingTombstones(user.id);
 
       return finalDevices;
@@ -858,77 +725,7 @@ class DeviceRepository {
     }
   }
 
-  /**
-   * Queue a group for cloud sync when offline or RPC fails.
-   * Mirror of _queuePendingSync for groups.
-   */
-  private async _queuePendingGroupSync(
-    groupId: string,
-    groupName: string,
-    deviceMacs: string[],
-    type: string
-  ): Promise<void> {
-    try {
-      const raw = await AsyncStorage.getItem(PENDING_GROUP_KEY);
-      const queue: Array<{ groupId: string; groupName: string; deviceMacs: string[]; type: string }> =
-        raw ? JSON.parse(raw) : [];
-      const idx = queue.findIndex(q => q.groupId === groupId);
-      const entry = { groupId, groupName, deviceMacs, type };
-      if (idx >= 0) queue[idx] = entry; else queue.push(entry);
-      await AsyncStorage.setItem(PENDING_GROUP_KEY, JSON.stringify(queue));
-    } catch (e) {
-      AppLogger.warn('[DeviceRepository] Group queue failed:', e);
-    }
-  }
 
-  /**
-   * Flush all pending offline group saves to Supabase on login.
-   * Called by syncFromCloud() after _flushPendingSync().
-   */
-  private async _flushPendingGroupSync(userId: string): Promise<void> {
-    try {
-      const raw = await AsyncStorage.getItem(PENDING_GROUP_KEY);
-      if (!raw) return;
-      const queue: Array<{ groupId: string; groupName: string; deviceMacs: string[]; type: string }> =
-        JSON.parse(raw);
-      if (queue.length === 0) return;
-
-      for (const entry of queue) {
-        const dbDeviceIds = this.devices
-          .filter(d => entry.deviceMacs.map(m => m.toUpperCase()).includes(d.device_mac.toUpperCase()))
-          .map(d => d.id)
-          .filter(Boolean) as string[];
-
-        try {
-          const { error } = await supabase.rpc('upsert_group_with_devices', {
-            p_group_id:   entry.groupId,
-            p_group_name: entry.groupName,
-            p_type:       entry.type,
-            p_device_ids: dbDeviceIds,
-          });
-          if (error) throw error;
-        } catch (rpcErr) {
-          AppLogger.warn('[DeviceRepository] Group flush RPC failed, fallback:', rpcErr);
-          // Fallback: direct group upsert without device membership
-          try {
-            await supabase.from('registered_groups').upsert({
-              id: entry.groupId,
-              group_name: entry.groupName,
-              type: entry.type,
-              user_id: userId,
-            } satisfies GroupInsert, { onConflict: 'id' });
-          } catch (fbErr) {
-            AppLogger.warn('[DeviceRepository] Group flush fallback failed:', fbErr);
-          }
-        }
-      }
-
-      await AsyncStorage.removeItem(PENDING_GROUP_KEY);
-      AppLogger.warn('[DeviceRepository] Pending group sync flushed', { count: queue.length });
-    } catch (e) {
-      AppLogger.warn('[DeviceRepository] Group flush failed:', e);
-    }
-  }
 
   /**
    * Push any locally-tombstoned MACs to Supabase on login.

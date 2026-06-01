@@ -19,6 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import { AppLogger } from '../services/AppLogger';
 import DeviceRepository from '../services/DeviceRepository';
+import GroupRepository from '../services/GroupRepository';
 // NOTE: Direct supabase import removed — all cloud writes go through DeviceRepository SSOT.
 import type { CustomGroup, DeviceSettings, GroupModalState, GroupPatternSnapshot } from '../types/dashboard.types';
 
@@ -332,7 +333,7 @@ export function useDashboardGroups({
           text: "Forget Group Only", 
           onPress: async () => {
             // Phase 5: Atomic RPC-backed backend sync and instantaneous RAM cleanup
-            await repo.deleteGroup(id);
+            await GroupRepository.getInstance().deleteGroup(id);
             await _scrubGhostGroupFromLocal(groupToDelete);
             closeGroupModal();
           }
@@ -346,7 +347,7 @@ export function useDashboardGroups({
               await deregisterDevice(d.device_mac);
             }
             // Phase 5: Atomic RPC-backed cleanup follows the device removal
-            await repo.deleteGroup(id);
+            await GroupRepository.getInstance().deleteGroup(id);
             await _scrubGhostGroupFromLocal(groupToDelete);
             closeGroupModal();
           }
@@ -413,7 +414,7 @@ export function useDashboardGroups({
 
       // Phase 5 RPC Call: Atomically write new configuration 
       // (Handles both additions and removals dynamically)
-      await repo.saveGroupTransactional(finalGroupId, name, deviceIds);
+      await GroupRepository.getInstance().saveGroupTransactional(finalGroupId, name, deviceIds);
 
       // Local UI configs map cleanup (for disconnected state overlays)
       const removedIds = previousDeviceIds.filter(id => !deviceIds.includes(id));
