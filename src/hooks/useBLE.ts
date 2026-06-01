@@ -271,13 +271,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
    * @returns            hwConfig object (ledPoints, segments, icName, colorSortingName, rfMode)
    *                     or null if probe timed out / connection failed.
    */
-  const pingDevice = useCallback(async (
-    mac: string,
-    blinkPayload: number[],
-    options?: { probe?: boolean; duration?: number; turnOffAtEnd?: boolean }
-  ): Promise<PingResult | null> => {
-    return executePingDevice(bleManager, mac, blinkPayload, options);
-  }, [bleManager]);
+  // Moved pingDevice down below sweeper definition to enable scan preemption
 
   // --- Sub-Hooks ---
   const handleOrganicDisconnect = (error: any, deviceId: string) => {
@@ -344,6 +338,20 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   useEffect(() => {
     pendingRegistrationsSetterRef.current = scanner.setPendingRegistrations;
   }, [scanner.setPendingRegistrations]);
+
+  const pingDevice = useCallback(async (
+    mac: string,
+    blinkPayload: number[],
+    options?: { probe?: boolean; duration?: number; turnOffAtEnd?: boolean }
+  ): Promise<PingResult | null> => {
+    const wasSweeperActive = sweeper.isSweeperActive;
+    if (wasSweeperActive) sweeper.stopSweeper();
+    try {
+      return await executePingDevice(bleManager, mac, blinkPayload, options);
+    } finally {
+      if (wasSweeperActive && bleManager) sweeper.startSweeper();
+    }
+  }, [bleManager, sweeper]);
 
 
   // ─── Per-device MTU map ────────────────────────────────────────────────────

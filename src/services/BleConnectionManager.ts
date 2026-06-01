@@ -1,9 +1,9 @@
+import React from 'react';
 import { Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
 import { AppLogger } from './AppLogger';
 import { createGattSession } from './BleSessionFactory';
-import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 import { acquireGattLock } from '../hooks/ble/useBLEGattMutex';
 import { BleStateMachine, BLEPhaseTag } from './BleStateMachine';
 
@@ -252,6 +252,9 @@ export async function executeConnectToDevices(
           return merged;
         });
       }
+      
+      setGate('IDLE');
+      if (wasSweeperActive && bleManager) sweeper.startSweeper();
     } catch (e: any) {
       const errMsg = e?.message || String(e);
       if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
