@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSharedBLE } from '../context/BLEContext';
 import { checkPermission } from '../services/PermissionService';
 import { Spacing } from '../theme/theme';
+import { AppLogger } from '../services/AppLogger';
 
 export function BluetoothGuard({ children }: { children: React.ReactNode }) {
   const ble = useSharedBLE();
@@ -45,6 +46,13 @@ export function BluetoothGuard({ children }: { children: React.ReactNode }) {
       isRequestingRef.current = false;
     }
   };
+
+  useEffect(() => {
+    if (hasPermission === true && ble.isBluetoothEnabled && ble.isBluetoothSupported) {
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'bluetooth_guard_trigger_sweeper' });
+      ble.startSweeper();
+    }
+  }, [hasPermission, ble.isBluetoothEnabled, ble.isBluetoothSupported, ble.startSweeper]);
 
   if (checking) {
     return (
