@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { View, Text, TouchableOpacity, AppState, AppStateStatus, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, AppState, AppStateStatus, ActivityIndicator, StyleSheet, Alert, Linking } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSharedBLE } from '../context/BLEContext';
 import { checkPermission, requestPermission } from '../services/PermissionService';
@@ -43,7 +43,19 @@ export function BluetoothGuard({ children }: { children: React.ReactNode }) {
     isRequestingRef.current = true;
     try {
       const granted = await requestPermission('BLUETOOTH');
-      setHasPermission(granted);
+      if (granted) {
+        setHasPermission(true);
+      } else {
+        setHasPermission(false);
+        Alert.alert(
+          'Bluetooth Required',
+          'Bluetooth permission is permanently disabled. You must enable it in your device settings to use SK8Lytz.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() }
+          ]
+        );
+      }
     } finally {
       isRequestingRef.current = false;
     }

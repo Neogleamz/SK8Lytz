@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, View } from 'react-native';
 import EulaModal from '../components/modals/EulaModal';
 import { useTheme } from '../context/ThemeContext';
-import PermissionsOnboardingScreen from '../screens/Onboarding/PermissionsOnboardingScreen';
 import { AppSettingsService } from '../services/AppSettingsService';
 import { supabase } from '../services/supabaseClient';
 import { AppLogger } from '../services/AppLogger';
@@ -17,7 +16,6 @@ export function ComplianceGate({ children, isOfflineMode }: ComplianceGateProps)
   const { Colors } = useTheme();
   const [loading, setLoading] = useState(true);
   const [requiresEula, setRequiresEula] = useState(false);
-  const [requiresPermissions, setRequiresPermissions] = useState(false);
 
   useEffect(() => {
     checkCompliance();
@@ -26,11 +24,7 @@ export function ComplianceGate({ children, isOfflineMode }: ComplianceGateProps)
   const checkCompliance = async () => {
     setLoading(true);
     try {
-      // 1. Always evaluate local permissions requirement, even if offline
-      const hasSeenPermissions = await AsyncStorage.getItem('@Sk8lytz_has_seen_permissions');
-      if (!hasSeenPermissions) {
-        setRequiresPermissions(true);
-      }
+
 
       if (isOfflineMode || !supabase) {
         setLoading(false);
@@ -109,18 +103,7 @@ export function ComplianceGate({ children, isOfflineMode }: ComplianceGateProps)
     );
   }
 
-  if (requiresPermissions) {
-    return (
-      <View style={{ flex: 1, backgroundColor: Colors.background }}>
-        <PermissionsOnboardingScreen 
-          onComplete={async () => {
-            await AsyncStorage.setItem('@Sk8lytz_has_seen_permissions', 'true');
-            setRequiresPermissions(false);
-          }} 
-        />
-      </View>
-    );
-  }
+
 
   return <>{children}</>;
 }
