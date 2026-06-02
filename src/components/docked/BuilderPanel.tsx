@@ -26,6 +26,7 @@ interface BuilderPanelProps {
   setBuilderDirection: (dir: number) => void;
   fgColor: string;
   writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
+  onViewModeChange?: (mode: 'LIBRARY' | 'BUILDER') => void;
 }
 
 type ViewMode = 'LIBRARY' | 'BUILDER';
@@ -36,7 +37,7 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
   builderFillMode, setBuilderFillMode,
   builderTransitionType, setBuilderTransitionType,
   builderDirection, setBuilderDirection,
-  fgColor, writeToDevice,
+  fgColor, writeToDevice, onViewModeChange
 }) => {
   const { Colors, isDark } = useTheme();
   const { saveGradient } = useGradients();
@@ -48,6 +49,12 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
   const [presetNameInput, setPresetNameInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [suggestionChips, setSuggestionChips] = useState<string[]>([]);
+
+  React.useEffect(() => {
+    if (onViewModeChange) {
+      onViewModeChange(viewMode);
+    }
+  }, [viewMode, onViewModeChange]);
 
   const dispatchGradient = React.useCallback((preset: CustomBuilderPreset) => {
     // Guard: 0x00 is an undefined hardware opcode — always fall back to 0x01 (Static)

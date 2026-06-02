@@ -204,6 +204,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const [cameraSubMode, setCameraSubMode] = useState<'SNIPER' | 'VIBE'>('SNIPER');
     const [cameraVibePalette, setCameraVibePalette] = useState<string[]>([]);
     const [cameraSwatches, setCameraSwatches] = useState<string[]>([]);
+    const [isBuildingCustom, setIsBuildingCustom] = useState(false);
 
     /**
      * Snapshot of the full UI state captured immediately before each BLE write.
@@ -1192,6 +1193,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 setBuilderDirection={setBuilderDirection}
                 fgColor={selectedColor}
                 writeToDevice={writeToDevice}
+                onViewModeChange={(mode) => setIsBuildingCustom(mode === 'BUILDER')}
               />
             )}
 
@@ -1251,9 +1253,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
           </View>
 
-          {/* UNIVERSAL SLIDERS FOOTER - Hidden in FAVORITES only */}
+          {/* UNIVERSAL SLIDERS FOOTER - Hidden in FAVORITES only, and hidden when actively building a custom pattern */}
           {activeMode !== 'FAVORITES' && (
             <UniversalSlidersFooter
+              isBuildingCustom={isBuildingCustom}
               activeMode={activeMode}
               fixedSubMode={fixedSubMode}
               fixedColorMode={fixedColorMode}

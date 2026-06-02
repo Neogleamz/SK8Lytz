@@ -22,6 +22,7 @@ import type { FixedModePattern, ModeType, MotionState } from '../../types/dashbo
 export interface UniversalSlidersFooterProps {
   // ── Active mode context ─────────────────────────────────────────────────
   activeMode: ModeType;
+  isBuildingCustom?: boolean;
   fixedSubMode: string;
   fixedColorMode: 'FOREGROUND' | 'BACKGROUND';
   fixedModePattern: FixedModePattern;
@@ -346,7 +347,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
       )}
 
       {/* TACTICAL UNIVERSAL SLIDERS SECTIONS (50/50 Split) */}
-      {activeMode !== 'BUILDER' && (
+      {!(activeMode === 'BUILDER' && props.isBuildingCustom) && (
         <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, marginBottom: Spacing.xs, minHeight: 44 }}>
 
         {/* LEFT SLOT: Brightness (standard) / Mic Sensitivity (music) / Brake Sensitivity (street) */}
@@ -366,6 +367,15 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
               if (writeToDevice) {
                 if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
                   applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val, fixedDirection);
+                } else if ((activeMode === 'MULTIMODE' && fixedSubMode === 'BUILDER') || activeMode === 'BUILDER') {
+                  const factor = brtFactor(val);
+                  const rgbColors = multiColors.map(h => {
+                    const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
+                    const rawG = Math.round((parseInt(h.slice(3, 5), 16) || 0) * factor);
+                    const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
+                    return { r: rawR, g: rawG, b: rawB };
+                  });
+                  if (writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(speed), 1, multiTransition));
                 } else {
                   const factor = brtFactor(val);
                   const hex = selectedColor;
@@ -451,19 +461,17 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
             onSlidingComplete={(val: number) => {
               AppLogger.log('SPEED_CHANGED', { value: val, mode: activeMode });
               if (writeToDevice) {
-                if (activeMode === 'MULTIMODE') {
-                  if (fixedSubMode === 'PATTERN') {
-                    applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val, brightness, fixedDirection);
-                  } else if (fixedSubMode === 'BUILDER') {
-                    const factor = brtFactor(brightness);
-                    const rgbColors = multiColors.map(h => {
-                      const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
-                      const rawG = Math.round((parseInt(h.slice(3, 5), 16) || 0) * factor);
-                      const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
-                      return { r: rawR, g: rawG, b: rawB };
-                    });
-                    if (writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, multiTransition));
-                  }
+                if (activeMode === 'MULTIMODE' && fixedSubMode === 'PATTERN') {
+                  applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val, brightness, fixedDirection);
+                } else if ((activeMode === 'MULTIMODE' && fixedSubMode === 'BUILDER') || activeMode === 'BUILDER') {
+                  const factor = brtFactor(brightness);
+                  const rgbColors = multiColors.map(h => {
+                    const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
+                    const rawG = Math.round((parseInt(h.slice(3, 5), 16) || 0) * factor);
+                    const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
+                    return { r: rawR, g: rawG, b: rawB };
+                  });
+                  if (writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, multiTransition));
                 } else if (activeMode === 'STREET') {
                   applyStreetPattern(motionStateRef.current, brightness, val);
                 }
