@@ -18,6 +18,7 @@ import * as Linking from 'expo-linking';
 import { ComplianceGate } from './src/providers/ComplianceGate';
 import { BLEProvider } from './src/context/BLEContext';
 import { FavoritesProvider } from './src/context/FavoritesContext';
+import { SessionProvider } from './src/context/SessionContext';
 import { BluetoothGuard } from './src/providers/BluetoothGuard';
 
 
@@ -260,10 +261,12 @@ export default function App() {
       <SafeAreaProvider>
         <ThemeProvider>
           <FavoritesProvider>
-            <BLEProvider>
-              <AppContent />
-              <GlobalPermissionsModal />
-            </BLEProvider>
+            <SessionProvider>
+              <BLEProvider>
+                <AppContent />
+                <GlobalPermissionsModal />
+              </BLEProvider>
+            </SessionProvider>
           </FavoritesProvider>
         </ThemeProvider>
       </SafeAreaProvider>

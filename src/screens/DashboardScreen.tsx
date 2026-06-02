@@ -38,8 +38,7 @@ import { getDefaultGroupName } from '../utils/NamingUtils';
 import { getLocalProfileByPoints } from '../constants/ProductCatalog';
 import { RegisteredDevice, useRegistration } from '../hooks/useRegistration';
 import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
-import { useGlobalTelemetry } from '../hooks/useGlobalTelemetry';
-import { useHealthTelemetry } from '../hooks/useHealthTelemetry';
+import { useSession } from '../context/SessionContext';
 import { DashboardTelemetryHero } from '../components/dashboard/DashboardTelemetryHero';
 
 // ─── Phase 1 Domain Hooks ──────────────────────────────────────────────────────
@@ -463,16 +462,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   retriggerAutoConnectRef.current = retriggerAutoConnect;
 
   const [isControllerOpen, setIsControllerOpen] = useState(false);
-  // Logical session flag — NOT the raw BLE connection state.
-  // Starts when the user taps a group/device to connect, ends ONLY on explicit disconnect.
-  // This ensures a brief BLE hiccup never wipes the in-progress skate session.
-  const [isSkateSessionActive, setIsSkateSessionActive] = useState(false);
-
-  const { latestBpm, avgBpm, peakBpm, activeCalories } = useHealthTelemetry(isSkateSessionActive);
-
-  // ── Global Telemetry ──
-  // Pass `isSkateSessionActive` (logical) NOT `isActuallyConnected` (raw BLE).
-  // Session persists through BLE drops — only ends on explicit user disconnect.
+  
+  // ── Global Telemetry from SessionProvider ──
+  const { isSkateSessionActive, startSession, endSession, telemetry: sessionTelemetry, health } = useSession();
+  
   const {
     gpsSpeed,
     peakGForce,
@@ -480,7 +473,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     sessionDurationSec,
     sessionPeakSpeed,
     sessionAvgSpeed
-  } = useGlobalTelemetry(isSkateSessionActive, { avgBpm, peakBpm, activeCalories });
+  } = sessionTelemetry;
 
 
   // Voice command dispatch + notification init are now handled
@@ -532,11 +525,17 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     return sortedAllDevices.filter((d: DisplayDevice) => !macs.has(d.id?.toUpperCase() ?? ''));
   }, [sortedAllDevices, registeredDevices]);
 
+  // handleCloseController only closes the UI, it does NOT drop the BLE connection or end the session.
+  const handleCloseController = useCallback(() => {
+    setIsControllerOpen(false);
+  }, []);
+
+  // handleDisconnect actually drops BLE and ends the session
   const handleDisconnect = useCallback(async () => {
-    setIsSkateSessionActive(false);  // End the logical session → commits GPS data
-    setIsControllerOpen(false);      // Close UI instantly — feels snappy
-    disconnectFromDevice();          // Fire-and-forget BLE teardown
-  }, [disconnectFromDevice]);
+    endSession();
+    setIsControllerOpen(false);
+    disconnectFromDevice();
+  }, [disconnectFromDevice, endSession]);
 
   const handleCrewHubApplyCloudScene = useCallback((scene: Record<string, any>) => {
     dockedControllerRef.current?.applyCloudScene(scene);
@@ -547,7 +546,9 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     if (devicesToConnect.length > 0) {
       // Optimistic UI: Defer heavy controller mount by one frame to allow tap animation.
       requestAnimationFrame(() => {
-        setIsSkateSessionActive(true);
+        if (!isSkateSessionActive) {
+          startSession();
+        }
         startTransition(() => {
           setIsControllerOpen(true);
         });
@@ -574,7 +575,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
     if (devicesToConnect.length > 0) {
       connectToDevices(devicesToConnect);
-      setIsSkateSessionActive(true);
+      if (!isSkateSessionActive) startSession();
       startTransition(() => {
         setIsControllerOpen(true);
       });
@@ -589,7 +590,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
     if (devicesToConnect.length > 0) {
       connectToDevices(devicesToConnect);
-      setIsSkateSessionActive(true);
+      if (!isSkateSessionActive) startSession();
       startTransition(() => {
         setIsControllerOpen(true);
       });
@@ -621,7 +622,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
     if (devicesToConnect.length > 0) {
       connectToDevices(devicesToConnect);
-      setIsSkateSessionActive(true);
+      if (!isSkateSessionActive) startSession();
       startTransition(() => {
         setIsControllerOpen(true);
       });
@@ -661,8 +662,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       if (bleState === 'DISCONNECTING') {
         return true; // intercept and block multiple back presses during teardown
       }
-      if (isActuallyConnected) {
-        handleDisconnect();
+      if (isActuallyConnected || isSkateSessionActive) {
+        handleCloseController();
         return true; // intercept and exit to scanner
       }
       return false; // allow native exit
@@ -670,7 +671,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
     const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
     return () => backHandler.remove();
-  }, [isTestModeActive, isActuallyConnected, handleDisconnect, bleState]);
+  }, [isTestModeActive, isActuallyConnected, isSkateSessionActive, handleCloseController, bleState]);
 
   // Handle Swipe-to-Back natively for Visualizer screens (IOS & Android edge swipe)
   const edgePanResponder = useRef(
@@ -686,13 +687,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       onPanResponderRelease: (evt, gestureState) => {
         if (gestureState.dx > 60) {
           if (isTestModeActive) setIsTestModeActive(false);
-          else if (isActuallyConnected && bleState !== 'DISCONNECTING') handleDisconnect();
+          else if ((isActuallyConnected || isSkateSessionActive) && bleState !== 'DISCONNECTING') handleCloseController();
         }
       },
       onPanResponderTerminate: (evt, gestureState) => {
         if (gestureState.dx > 60) {
           if (isTestModeActive) setIsTestModeActive(false);
-          else if (isActuallyConnected && bleState !== 'DISCONNECTING') handleDisconnect();
+          else if ((isActuallyConnected || isSkateSessionActive) && bleState !== 'DISCONNECTING') handleCloseController();
         }
       }
     })
@@ -834,7 +835,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           // Optimistic UI: Defer heavy controller mount by one frame to allow tap animation.
           // Fire-and-forget the BLE connection so JS thread is not blocked.
           requestAnimationFrame(() => {
-            setIsSkateSessionActive(true);
+            if (!isSkateSessionActive) startSession();
             startTransition(() => {
               setIsControllerOpen(true);
             });
@@ -1035,8 +1036,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                     sessionDurationSec={sessionDurationSec} 
                     sessionPeakSpeed={sessionPeakSpeed}
                     sessionAvgSpeed={sessionAvgSpeed}
-                    healthBpm={latestBpm}
-                    healthCalories={activeCalories}
+                    healthBpm={health.latestBpm}
+                    healthCalories={health.activeCalories}
                   />
                 </View>
 

@@ -5,11 +5,15 @@
     "version": "3.7.2",
     "android": {
       "permissions": [
-        "android.permission.ACTIVITY_RECOGNITION"
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "plugins": [
-      "@config-plugins/detox"
+      "@config-plugins/detox",
+      "react-native-health",
+      "react-native-health-connect"
     ]
   }
 }

@@ -6,6 +6,7 @@ import { checkPermission, openGlobalPermissionsModal } from '../services/Permiss
 import { AppLogger } from '../services/AppLogger';
 import { crewService } from '../services/CrewService';
 import { SpeedTrackingService, ISessionSnapshot } from '../services/SpeedTrackingService';
+import { HealthSyncService } from '../services/HealthSyncService';
 
 export interface GlobalTelemetryState {
   gpsSpeed: number;
@@ -85,6 +86,9 @@ export function useGlobalTelemetry(
       try {
         await SpeedTrackingService.saveSession(snapshot);
         AppLogger.log('GLOBAL_SESSION_SAVED', { action: 'AUTO_SAVED_TO_DB', durationSec, distanceMiles });
+        
+        // Push to Apple Health / Google Health Connect
+        await HealthSyncService.saveWorkout(snapshot);
       } catch (err) {
         AppLogger.error('[useGlobalTelemetry] Failed to persist auto-session', err);
       }
