@@ -119,19 +119,19 @@ const PRESET_HUE_MAP: { [key: string]: number } = {
 
 const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props: UniversalSlidersFooterProps) {
   const {
-    activeMode, fixedSubMode, fixedColorMode, fixedModePattern,
+    activeMode, fixedSubMode, fixedColorMode,
     selectedColor, fixedFgColor, fixedBgColor, fixedHue,
     musicPrimaryColor, musicSecondaryColor, musicHue, musicSecondaryHue,
     selectedHue, musicColorFocus, streetCruiseColor,
     brightness, speed, micSensitivity, streetSensitivity,
-    fixedPatternId, selectedPatternId, musicPatternId, musicMatrixStyle, micSource,
+    fixedPatternId, musicPatternId, musicMatrixStyle, micSource,
     multiColors, multiTransition,
     setSelectedColor, setFixedFgColor, setFixedBgColor, setFixedHue,
     setMusicPrimaryColor, setMusicSecondaryColor, setMusicHue, setMusicSecondaryHue,
     setSelectedHue, setMusicColorFocus, setFixedColorMode, setStreetCruiseColor,
     setBrightness, setSpeed, setMicSensitivity, setStreetSensitivity,
     fixedDirection, setFixedDirection,
-    sendColor, applyFixedPattern, applyStaticModePattern, applyEmergencyPattern,
+    sendColor, applyFixedPattern,
     applyStreetPattern, handleMusicChange, clampSpeed, brtFactor,
     writeToDevice, hwSettings, motionStateRef,
   } = props;
@@ -346,7 +346,8 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
       )}
 
       {/* TACTICAL UNIVERSAL SLIDERS SECTIONS (50/50 Split) */}
-      <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, marginBottom: Spacing.xs, minHeight: 44 }}>
+      {activeMode !== 'BUILDER' && (
+        <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.sm, marginBottom: Spacing.xs, minHeight: 44 }}>
 
         {/* LEFT SLOT: Brightness (standard) / Mic Sensitivity (music) / Brake Sensitivity (street) */}
         {!(activeMode === 'STREET') && !(activeMode === 'MUSIC') && (
@@ -506,6 +507,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
           </View>
         )}
       </View>
+      )}
     </View>
   );
 });

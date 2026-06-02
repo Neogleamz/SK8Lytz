@@ -158,3 +158,5 @@ wsl_list.txt
 
 # Stale bucket list backups
 tools/SK8Lytz_Bucket_List_OLD*.md
+
+tools/scraper/core/scraper.db

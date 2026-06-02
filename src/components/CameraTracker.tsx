@@ -6,7 +6,7 @@ import { runOnJS } from 'react-native-worklets';
 import { useResizer } from 'react-native-vision-camera-resizer';
 import { requestPermission } from '../services/PermissionService';
 import { Colors, Spacing } from '../theme/theme';
-import { rgbToHex } from '../utils/ColorUtils';
+import { rgbToHex, boostForLED } from '../utils/ColorUtils';
 import { extractKMeansPalette, RGB } from '../utils/kMeansPalette';
 
 export interface CameraTrackerProps {
@@ -52,19 +52,22 @@ export default function CameraTracker({
     }
   }, [hasPermission, requestFromHook]);
 
-  // The JS dispatch functions that receive the worklet threads values
   const dispatchSniperColor = useCallback((r: number, g: number, b: number) => {
     if (isNaN(r) || isNaN(g) || isNaN(b)) return;
-    const hex = rgbToHex(r, g, b);
+    const boosted = boostForLED(r, g, b);
+    const hex = rgbToHex(boosted.r, boosted.g, boosted.b);
     setLiveHex(hex);
     if (liveColorRef) {
       liveColorRef.current = hex;
     }
-  }, [liveColorRef]);
+    _onColorDetected(hex);
+  }, [liveColorRef, _onColorDetected]);
+
 
   const dispatchVibePalette = useCallback((colors: RGB[]) => {
     if (onVibePaletteDetectedRef.current) {
-      onVibePaletteDetectedRef.current(colors);
+      const boostedColors = colors.map(c => boostForLED(c.r, c.g, c.b));
+      onVibePaletteDetectedRef.current(boostedColors);
     }
   }, []);
 
@@ -86,10 +89,8 @@ export default function CameraTracker({
     }
   }, [resizer, error]);
 
-  // Create worklet references to callbacks
-  // Use runOnJS from react-native-worklets
-  const runOnJSSniper = React.useMemo(() => runOnJS(dispatchSniperColor), [dispatchSniperColor]);
-  const runOnJSVibe = React.useMemo(() => runOnJS(dispatchVibePalette), [dispatchVibePalette]);
+  // Worklet JS dispatchers must be captured, but runOnJS MUST be called *inside* the worklet
+  // to ensure the JSI compiler correctly binds the C++ host function call.
 
   // Memoize the frame processor onFrame callback to persist throttled timestamp in closure
   // and handle JSI worklet scopes without stale React Ref read failures.
@@ -124,7 +125,7 @@ export default function CameraTracker({
                 const g = resizedArray[centerIdx + 1];
                 const b = resizedArray[centerIdx + 2];
 
-                runOnJSSniper(r, g, b);
+                runOnJS(dispatchSniperColor)(r, g, b);
               } else {
                 // 2. VIBE mode: K-Means palette extraction (k=3)
                 const pixels: RGB[] = [];
@@ -137,7 +138,7 @@ export default function CameraTracker({
                 }
 
                 const palette = extractKMeansPalette(pixels, 3, 5);
-                runOnJSVibe(palette);
+                runOnJS(dispatchVibePalette)(palette);
               }
             }
           } finally {
@@ -150,7 +151,7 @@ export default function CameraTracker({
         frame.dispose(); // CRITICAL: Dispose Frame immediately to prevent stalls
       }
     };
-  }, [resizer, subMode, runOnJSSniper, runOnJSVibe]);
+  }, [resizer, subMode, dispatchSniperColor, dispatchVibePalette]);
 
   const frameOutput = useFrameOutput({
     pixelFormat: 'yuv',

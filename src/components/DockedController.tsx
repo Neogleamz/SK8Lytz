@@ -962,7 +962,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         { id: 'vibe_accent', position: 100, colorHex: (() => { const b = boostForLED(colors[2].r, colors[2].g, colors[2].b); return rgbToHex(b.r, b.g, b.b); })() },
       ];
       setBuilderNodes(vibeNodes);
-      setBuilderTransitionType(isFlow ? 0x03 : 0x01);
+      setBuilderTransitionType(isFlow ? 0x02 : 0x01);
       setBuilderDirection(1);
 
       // 2. Map colors to a full canvas with 12-pixel minimum buffer defense
@@ -989,7 +989,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       const boostedColors = rgbColors.map(c => boostForLED(c.r, c.g, c.b));
 
       // 4. Dispatch BLE Static/Flow via 0x59
-      setMultiColor(boostedColors, N, speed, 1, isFlow ? 0x03 : 0x01);
+      setMultiColor(boostedColors, N, speed, 1, isFlow ? 0x02 : 0x01);
     }, [hwSettings?.ledPoints, points, speed, setMultiColor, setBuilderNodes, setBuilderTransitionType, setBuilderDirection]);
 
     // ── Mode change handler — wires DockedDock callbacks to local state ───────
@@ -1044,7 +1044,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       : builderNodes;
 
     const activeBuilderTransition = (activeMode === 'CAMERA' && cameraSubMode === 'VIBE')
-      ? 0x03
+      ? 0x02
       : builderTransitionType;
 
     return (

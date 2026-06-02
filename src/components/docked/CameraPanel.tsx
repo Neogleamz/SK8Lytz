@@ -54,11 +54,10 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
   ]);
   const [isFlow, setIsFlow] = useState<boolean>(true);
 
-  // Intentional no-op: CameraTracker writes to liveColorRef.current directly
-  // from the worklet thread via runOnJS(dispatchSniperColor). This callback
-  // satisfies the required onColorDetected prop contract but is NOT the data
-  // path. The capture button reads liveColorRef.current on tap.
-  const handleLiveColorDetected = useCallback((_hex: string) => {}, []);
+  // Update the liveHex state so the capture button previews the live color
+  const handleLiveColorDetected = useCallback((hex: string) => {
+    setLiveHex(hex);
+  }, []);
 
   const handleLiveVibePaletteDetected = useCallback((colors: RGB[]) => {
     setVibePalette(colors);
