@@ -20,7 +20,7 @@ interface PatternPickerTabProps {
   Colors: any;
 }
 
-const CATEGORIES = ['Solid', 'Rainbow', 'Sparkle', 'Chase', 'Marquee', 'Wave', 'Breathe', 'Test'];
+const CATEGORIES = ['Solid', 'Rainbow', 'Sparkle', 'Chase', 'Marquee', 'Wave', 'Breathe', 'SK8Lytz'];
 
 const CATEGORY_STYLES: Record<string, { icon: string, colors: string[], start?: any, end?: any }> = {
   Solid: { icon: 'format-color-fill', colors: ['#00F0FF', '#0080FF'] },
@@ -30,7 +30,7 @@ const CATEGORY_STYLES: Record<string, { icon: string, colors: string[], start?: 
   Marquee: { icon: 'dots-horizontal-circle-outline', colors: ['#FF9900', '#331100', '#FF9900'], start: {x: 0, y: 0}, end: {x: 1, y: 0} },
   Wave: { icon: 'waveform', colors: ['#0000FF', '#00FFFF', '#0000FF'], start: {x: 0, y: 0}, end: {x: 1, y: 0} },
   Breathe: { icon: 'weather-windy', colors: ['#00F0FF', '#002244', '#00F0FF'], start: {x: 0, y: 0}, end: {x: 1, y: 0} },
-  Test: { icon: 'test-tube', colors: ['#444444', '#111111'] },
+  SK8Lytz: { icon: 'star-shooting', colors: ['#FF00FF', '#00FFFF', '#FF0055'], start: {x: 0, y: 0}, end: {x: 1, y: 1} },
 };
 
 const AnimatedCategoryPill = ({ cat, isActive, onPress }: { cat: string, isActive: boolean, onPress: () => void }) => {
@@ -98,6 +98,7 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
 
   const filteredTemplates = SK8LYTZ_TEMPLATES.filter((effect) => {
     if (effect.group === 'Street') return false;
+    if (effect.isHidden) return false;
     return effect.group === activeCategory;
   });
 
