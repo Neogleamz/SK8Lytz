@@ -44,7 +44,7 @@ export const HealthSyncService = {
       } else if (Platform.OS === 'android') {
         const { insertRecords } = require('react-native-health-connect');
 
-        const records = [
+        const records: Array<Record<string, any>> = [
           {
             recordType: 'ExerciseSession',
             exerciseType: 71, // 71 = Skating in Health Connect API (approximate/closest match)
@@ -64,7 +64,7 @@ export const HealthSyncService = {
             startTime: startDate.toISOString(),
             endTime: endDate.toISOString(),
             energy: { value: snapshot.healthCalories, unit: 'kilocalories' }
-          } as any);
+          });
         }
 
         // Only add distance if > 0
@@ -73,8 +73,8 @@ export const HealthSyncService = {
              recordType: 'Distance',
              startTime: startDate.toISOString(),
              endTime: endDate.toISOString(),
-             distance: { value: snapshot.distanceMiles * 1609.34, unit: 'meters' }
-           } as any);
+            distance: { value: snapshot.distanceMiles * 1609.34, unit: 'meters' }
+           });
         }
 
         await insertRecords(records);
