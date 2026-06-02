@@ -12,12 +12,20 @@
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_LOCATION"
       ],
-      "package": "com.anonymous.sk8lytz"
+      "package": "com.neogleamz.sk8lytz"
     },
     "plugins": [
       "@config-plugins/detox",
       "react-native-health",
-      "react-native-health-connect"
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ]
     ]
   }
 }
