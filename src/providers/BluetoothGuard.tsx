@@ -2,12 +2,14 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, AppState, AppStateStatus, ActivityIndicator, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSharedBLE } from '../context/BLEContext';
-import { checkPermission } from '../services/PermissionService';
-import { Spacing } from '../theme/theme';
+import { checkPermission, requestPermission } from '../services/PermissionService';
+import { Layout, Spacing, ThemePalette } from '../theme/theme';
 import { AppLogger } from '../services/AppLogger';
+import { useTheme } from '../context/ThemeContext';
 
 export function BluetoothGuard({ children }: { children: React.ReactNode }) {
   const ble = useSharedBLE();
+  const { Colors } = useTheme();
   
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [checking, setChecking] = useState(true);
@@ -40,7 +42,7 @@ export function BluetoothGuard({ children }: { children: React.ReactNode }) {
     if (isRequestingRef.current) return;
     isRequestingRef.current = true;
     try {
-      const granted = await ble.requestPermissions();
+      const granted = await requestPermission('BLUETOOTH');
       setHasPermission(granted);
     } finally {
       isRequestingRef.current = false;
@@ -54,10 +56,12 @@ export function BluetoothGuard({ children }: { children: React.ReactNode }) {
     }
   }, [hasPermission, ble.isBluetoothEnabled, ble.isBluetoothSupported, ble.startSweeper]);
 
+  const styles = createStyles(Colors);
+
   if (checking) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0D0D0D', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#00f0ff" />
+      <View style={{ flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
   }
@@ -68,34 +72,65 @@ export function BluetoothGuard({ children }: { children: React.ReactNode }) {
 
   if (needsPermission || needsEnabled) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#0D0D0D', justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }}>
-        <View style={styles.pulseContainer}>
-          <MaterialCommunityIcons 
-            name={needsPermission ? "bluetooth-transfer" : "bluetooth-off"} 
-            size={64} 
-            color="#00f0ff" 
-          />
-        </View>
+      <View style={{ flex: 1, backgroundColor: Colors.background, padding: Spacing.xl, paddingTop: 100 }}>
         
-        <Text style={styles.title}>Bluetooth Required</Text>
-        
-        <Text style={styles.subtitle}>
-          {needsPermission 
-            ? "SK8Lytz requires Bluetooth scan permissions to discover, sync, and control your lights."
-            : "Bluetooth is currently turned off. Please enable Bluetooth in your system settings to connect to your skates."
-          }
-        </Text>
-
-        {needsPermission ? (
-          <TouchableOpacity style={styles.primaryBtn} onPress={handleRequestPermission}>
-            <Text style={styles.primaryBtnText}>GRANT BLUETOOTH ACCESS</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.waitingContainer}>
-            <ActivityIndicator size="small" color="#00f0ff" style={{ marginRight: 8 }} />
-            <Text style={styles.waitingText}>Waiting for Bluetooth to be turned on...</Text>
+        {/* Header matching PermissionsOnboardingScreen */}
+        <View style={{ marginBottom: Spacing.xxl }}>
+          <MaterialCommunityIcons name="shield-check" size={48} color={Colors.primary} style={{ marginBottom: Spacing.lg }} />
+          <Text style={styles.title}>Power Up SK8Lytz</Text>
+          <Text style={styles.subtitle}>
+            We just make cool skate apps. You have full control over what this app can access.
+          </Text>
+          
+          <View style={styles.privacyHero}>
+            <MaterialCommunityIcons name="lock-outline" size={16} color={Colors.textMuted} />
+            <Text style={styles.privacyText}>
+              No data sold. No trackers. Just SK8Lytz. We only use telemetry to make your lights smarter.
+            </Text>
           </View>
-        )}
+        </View>
+
+        {/* Card matching GranularPermissionsList required state */}
+        <View style={[styles.card, styles.cardDeniedRequired]}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconBox, styles.iconBoxRequired]}>
+              <MaterialCommunityIcons
+                name={needsPermission ? "bluetooth" : "bluetooth-off"}
+                size={24}
+                color="#FF6B6B"
+              />
+            </View>
+            <View style={styles.cardInfo}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+                <Text style={styles.cardTitle}>Heartbeat (Bluetooth)</Text>
+                <Text style={styles.badgeRequired}>REQUIRED</Text>
+              </View>
+              <Text style={styles.cardDesc}>Connects the app to your skates. The app cannot function without this.</Text>
+              <Text style={styles.requiredWarning}>
+                {needsPermission 
+                  ? "⚠ Required to use SK8Lytz. Tap Grant Access below."
+                  : "⚠ Bluetooth is currently turned off. Please enable it in system settings."
+                }
+              </Text>
+            </View>
+          </View>
+
+          {needsPermission ? (
+            <TouchableOpacity
+              style={styles.grantButton}
+              activeOpacity={0.8}
+              onPress={handleRequestPermission}
+            >
+              <MaterialCommunityIcons name="lock-open-outline" size={16} color="#000" />
+              <Text style={styles.grantButtonText}>Grant Access</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.waitingContainer}>
+              <ActivityIndicator size="small" color="#FF6B6B" style={{ marginRight: 8 }} />
+              <Text style={styles.waitingText}>Waiting for Bluetooth...</Text>
+            </View>
+          )}
+        </View>
       </View>
     );
   }
@@ -103,57 +138,76 @@ export function BluetoothGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-const styles = StyleSheet.create({
-  pulseContainer: {
-    marginBottom: Spacing.xl,
-    padding: Spacing.lg,
-    borderRadius: 50,
-    backgroundColor: 'rgba(0, 240, 255, 0.06)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(0, 240, 255, 0.25)',
-  },
-  title: {
-    color: '#FFF',
-    fontSize: 26,
-    fontWeight: '900',
-    textAlign: 'center',
-    marginBottom: Spacing.sm,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    color: '#888',
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: Spacing.xxl,
-    paddingHorizontal: Spacing.md,
-  },
-  primaryBtn: {
-    backgroundColor: '#00f0ff',
-    paddingVertical: Spacing.lg,
-    paddingHorizontal: Spacing.xxl,
-    borderRadius: 14,
-    width: '100%',
+const createStyles = (Colors: ThemePalette) => StyleSheet.create({
+  title: { fontSize: 32, fontWeight: '900', color: Colors.text, marginBottom: Spacing.sm, letterSpacing: -0.5 },
+  subtitle: { fontSize: 16, color: Colors.textMuted, lineHeight: 24, marginBottom: Spacing.xl },
+  privacyHero: {
+    flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#00f0ff',
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 5,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: Colors.surfaceHighlight,
+    padding: Spacing.lg,
+    borderRadius: Layout.borderRadius,
+    gap: Spacing.md,
   },
-  primaryBtnText: {
-    color: '#000',
-    fontWeight: '900',
-    fontSize: 14,
-    letterSpacing: 1,
+  privacyText: { flex: 1, fontSize: 13, color: Colors.textMuted, lineHeight: 20 },
+  
+  card: {
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.surfaceHighlight,
+    borderRadius: Layout.borderRadius,
+    padding: Spacing.lg,
+  },
+  cardDeniedRequired: {
+    borderColor: 'rgba(255, 107, 107, 0.4)',
+    backgroundColor: 'rgba(255, 107, 107, 0.04)',
+  },
+  cardHeader: { flexDirection: 'row', gap: Spacing.lg, marginBottom: Spacing.md },
+  iconBox: {
+    width: 48, height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    justifyContent: 'center', alignItems: 'center'
+  },
+  iconBoxRequired: {
+    backgroundColor: 'rgba(255, 107, 107, 0.12)',
+  },
+  cardInfo: { flex: 1 },
+  cardTitle: { fontSize: 16, fontWeight: 'bold', color: Colors.text, marginBottom: Spacing.xs },
+  cardDesc: { fontSize: 13, color: Colors.textMuted, lineHeight: 18, marginBottom: Spacing.sm },
+  badgeRequired: {
+    fontSize: 10, fontWeight: '800',
+    backgroundColor: 'rgba(255, 107, 107, 0.2)', color: '#FF6B6B',
+    paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xxs, borderRadius: 4, overflow: 'hidden'
+  },
+  requiredWarning: {
+    fontSize: 11, color: '#FF6B6B', fontWeight: '600', marginTop: Spacing.xs,
+  },
+  grantButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: '#FF6B6B',
+    paddingVertical: Spacing.md,
+    borderRadius: 8,
+    marginTop: Spacing.xs,
+  },
+  grantButtonText: {
+    fontSize: 14, fontWeight: '800', color: '#000', letterSpacing: 0.5,
   },
   waitingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.06)',
     padding: Spacing.md,
-    borderRadius: 12,
+    borderRadius: 8,
+    marginTop: Spacing.xs
   },
   waitingText: {
     color: '#888',

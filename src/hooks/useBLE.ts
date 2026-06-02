@@ -20,7 +20,7 @@ import { AppLogger } from '../services/AppLogger';
 import type { BleConnectionState, PendingRegistration, PingResult } from '../types/dashboard.types';
 import { BleStateMachine, BLEPhaseTag } from '../services/BleStateMachine';
 
-import { checkPermission, openGlobalPermissionsModal } from '../services/PermissionService';
+import { requestPermission } from '../services/PermissionService';
 import { supabase } from '../services/supabaseClient';
 import { useBLEScanner } from './ble/useBLEScanner';
 import { useBLEAutoRecovery } from './ble/useBLEAutoRecovery';
@@ -498,12 +498,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   return useMemo(() => ({
     requestPermissions: async () => {
-      const g = await checkPermission('BLUETOOTH');
-      if (!g) {
-        await openGlobalPermissionsModal();
-        return await checkPermission('BLUETOOTH');
-      }
-      return true;
+      return await requestPermission('BLUETOOTH');
     },
     connectToDevices,
     writeToDevice,

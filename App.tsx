@@ -199,7 +199,9 @@ function AppContent() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {isAuthenticated ? (
         <ComplianceGate isOfflineMode={offlineMode}>
-          <DashboardScreen isOfflineMode={offlineMode} onLogout={() => setOfflineMode(false)} />
+          <BluetoothGuard>
+            <DashboardScreen isOfflineMode={offlineMode} onLogout={() => setOfflineMode(false)} />
+          </BluetoothGuard>
         </ComplianceGate>
       ) : (
         <AuthScreen
@@ -259,9 +261,7 @@ export default function App() {
         <ThemeProvider>
           <FavoritesProvider>
             <BLEProvider>
-              <BluetoothGuard>
-                <AppContent />
-              </BluetoothGuard>
+              <AppContent />
               <GlobalPermissionsModal />
             </BLEProvider>
           </FavoritesProvider>
