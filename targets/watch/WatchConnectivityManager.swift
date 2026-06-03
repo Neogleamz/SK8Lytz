@@ -1,5 +1,6 @@
 import Foundation
 import WatchConnectivity
+import WatchKit
 
 /// Manages bidirectional WCSession communication between the watch app and the iOS host.
 /// Acts as the single source of truth for session state and telemetry pushed from the phone.
@@ -9,6 +10,9 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var isSessionActive: Bool = false
     @Published var currentSpeed: Double = 0.0
     @Published var activeCalories: Int = 0
+
+    /// Timer that periodically sends watch-side health data back to the phone
+    private var healthRelayTimer: Timer?
 
     private override init() {
         super.init()
@@ -21,15 +25,19 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
 
     func sendStartSession() {
         isSessionActive = true
+        WKInterfaceDevice.current().play(.start)
         send(["command": "START_SESSION"])
+        startHealthRelay()
     }
 
     func sendStopSession() {
         isSessionActive = false
+        WKInterfaceDevice.current().play(.stop)
         send(["command": "STOP_SESSION"])
+        stopHealthRelay()
     }
 
-    // MARK: - WCSessionDelegate — required on watchOS
+    // MARK: - WCSessionDelegate
 
     func session(_ session: WCSession,
                  activationDidCompleteWith activationState: WCSessionActivationState,
@@ -39,18 +47,6 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         } else {
             print("[WCSession] Activated — state: \(activationState.rawValue)")
         }
-    }
-
-    /// Required on watchOS — called when the paired iPhone becomes temporarily unavailable.
-    func sessionDidBecomeInactive(_ session: WCSession) {
-        print("[WCSession] Session became inactive")
-    }
-
-    /// Required on watchOS — called after sessionDidBecomeInactive.
-    /// Re-activate to support Watch handoff scenarios.
-    func sessionDidDeactivate(_ session: WCSession) {
-        print("[WCSession] Session deactivated — reactivating")
-        WCSession.default.activate()
     }
 
     // MARK: - Receive updates from phone (phone → watch)
@@ -88,12 +84,35 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
                 print("[WCSession] sendMessage failed: \(error.localizedDescription)")
             }
         } else {
-            // Phone not reachable in real-time — queue via application context
             do {
                 try activeSession.updateApplicationContext(message)
             } catch {
                 print("[WCSession] updateApplicationContext failed: \(error)")
             }
         }
+    }
+
+    // MARK: - Health Data Relay (watch → phone)
+
+    /// Starts a 5-second timer that periodically relays watch-side health data
+    /// (heart rate + calories from HealthKit) back to the phone.
+    private func startHealthRelay() {
+        stopHealthRelay()
+        healthRelayTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            let hr = HealthManager.shared.currentHeartRate
+            let cal = HealthManager.shared.activeCalories
+            guard hr > 0 || cal > 0 else { return }
+            self.send([
+                "healthUpdate": true,
+                "heartRate": Int(hr),
+                "calories": Int(cal)
+            ])
+        }
+    }
+
+    private func stopHealthRelay() {
+        healthRelayTimer?.invalidate()
+        healthRelayTimer = nil
     }
 }

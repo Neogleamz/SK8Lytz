@@ -46,7 +46,7 @@ class Sk8lytzWatchBridgeModule : Module() {
     override fun definition() = ModuleDefinition {
         Name("Sk8lytzWatchBridge")
 
-        Events("onWatchCommandReceived")
+        Events("onWatchCommandReceived", "onWatchHealthUpdate")
 
         // Register the inbound MessageClient listener when the module loads
         OnCreate {

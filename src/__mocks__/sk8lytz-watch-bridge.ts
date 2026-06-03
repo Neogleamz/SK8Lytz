@@ -10,18 +10,20 @@
  * Auto-loaded: via moduleNameMapper in jest.config.js
  */
 
-import type { WatchSessionState, WatchCommand } from '../../modules/sk8lytz-watch-bridge/src/index';
+import type { WatchSessionState, WatchCommand, WatchHealthUpdate } from '../../modules/sk8lytz-watch-bridge/src/index';
 
 const mockSyncSessionState = jest.fn().mockResolvedValue(undefined);
 const mockSendMetricUpdate = jest.fn().mockResolvedValue(undefined);
 const mockIsWatchReachable = jest.fn().mockResolvedValue(false);
 const mockAddWatchCommandListener = jest.fn().mockReturnValue(() => {});
+const mockAddWatchHealthListener = jest.fn().mockReturnValue(() => {});
 
 export const WatchBridge = {
   syncSessionState:        mockSyncSessionState,
   sendMetricUpdate:        mockSendMetricUpdate,
   isWatchReachable:        mockIsWatchReachable,
   addWatchCommandListener: mockAddWatchCommandListener,
+  addWatchHealthListener:  mockAddWatchHealthListener,
 };
 
-export type { WatchSessionState, WatchCommand };
+export type { WatchSessionState, WatchCommand, WatchHealthUpdate };

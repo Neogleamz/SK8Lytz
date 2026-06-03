@@ -17,7 +17,7 @@ public class Sk8lytzWatchBridgeModule: Module, WCSessionDelegate {
   public func definition() -> ModuleDefinition {
     Name("Sk8lytzWatchBridge")
 
-    Events("onWatchCommandReceived")
+    Events("onWatchCommandReceived", "onWatchHealthUpdate")
 
     OnCreate {
       if WCSession.isSupported() {
@@ -69,18 +69,28 @@ public class Sk8lytzWatchBridgeModule: Module, WCSessionDelegate {
     WCSession.default.activate()
   }
 
-  /// Receives commands sent from the Apple Watch (START_SESSION / STOP_SESSION)
+  /// Receives commands and health updates sent from the Apple Watch
   public func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
     if let command = message["command"] as? String {
       sendEvent("onWatchCommandReceived", ["command": command])
     }
+    if message["healthUpdate"] as? Bool == true {
+      let hr = message["heartRate"] as? Int ?? 0
+      let cal = message["calories"] as? Int ?? 0
+      sendEvent("onWatchHealthUpdate", ["heartRate": hr, "calories": cal])
+    }
   }
 
-  /// Also handle commands that arrive via applicationContext (watch not reachable in real-time)
+  /// Also handle commands/health that arrive via applicationContext (watch not reachable in real-time)
   public func session(_ session: WCSession,
                       didReceiveApplicationContext applicationContext: [String: Any]) {
     if let command = applicationContext["command"] as? String {
       sendEvent("onWatchCommandReceived", ["command": command])
+    }
+    if applicationContext["healthUpdate"] as? Bool == true {
+      let hr = applicationContext["heartRate"] as? Int ?? 0
+      let cal = applicationContext["calories"] as? Int ?? 0
+      sendEvent("onWatchHealthUpdate", ["heartRate": hr, "calories": cal])
     }
   }
 }

@@ -69,3 +69,14 @@ To maintain real-time visibility, broadcast status via the Discord Webhook bridg
 
 **⛔ Operational Rule**: NEVER create two worktrees in the same session from the same base commit and run the gatekeeper expecting both to merge cleanly in one pass. **Create worktree 1 → merge it → THEN create worktree 2.** Or rely on the rebase-before-merge step in the patched gatekeeper.
 
+### 🏆 VS-002: Gitignore Shadow Zone — Lost Wear OS Files (2026-06-03)
+**Symptom**: Files created via `write_to_file` inside `android/sk8lytzWear/` in a worktree pass all tooling successfully. But `git add .` silently ignores them. After the gatekeeper merges the worktree and deletes it, the files are permanently lost — zero trace in git history.
+
+**Root Cause**: Root `.gitignore` line 44 contained `/android` — a standard Expo managed workflow convention that ignores the entire generated `android/` directory. Git negation rules (`!android/sk8lytzWear/`) didn't override this because the parent directory was already excluded. The `android/.gitignore` (which had its own fine-grained rules) was never consulted because the root rule blocked the entire tree first.
+
+**Fix Applied**:
+1. Added `!/android/sk8lytzWear/` negation rule to root `.gitignore` (immediately after `/android`)
+2. Used `git add --force android/sk8lytzWear/` for the initial track (negation alone wasn't sufficient)
+3. Future commits track the directory normally after the initial force-add
+
+**⛔ Operational Rule**: Before committing in ANY worktree, ALWAYS run `git status --short` and verify the expected file count matches your changes. If files are missing, run `git check-ignore -v <path>` to diagnose. NEVER assume `git add .` captured everything — gitignore rules are silent killers.

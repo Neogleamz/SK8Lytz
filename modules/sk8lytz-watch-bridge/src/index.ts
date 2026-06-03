@@ -19,6 +19,12 @@ export interface WatchSessionState {
 /** Commands the watch can send back to the phone. */
 export type WatchCommand = 'START_SESSION' | 'STOP_SESSION';
 
+/** Health telemetry relayed from the watch's HealthKit sensors. */
+export interface WatchHealthUpdate {
+  heartRate: number;
+  calories: number;
+}
+
 /**
  * Subscription handle returned by NativeModule.addListener.
  * Defined locally to avoid importing the internal Subscription type.
@@ -88,6 +94,32 @@ export const WatchBridge = {
           if (cmd === 'START_SESSION' || cmd === 'STOP_SESSION') {
             handler(cmd);
           }
+        }
+      }
+    );
+    return () => subscription.remove();
+  },
+
+  /**
+   * Subscribe to health telemetry relayed from the watch (heart rate, calories).
+   * The watch sends updates every 5 seconds during an active session.
+   * Returns an unsubscribe function — call it in useEffect cleanup.
+   */
+  addWatchHealthListener: (handler: (update: WatchHealthUpdate) => void): (() => void) => {
+    const subscription = nativeModule.addListener(
+      'onWatchHealthUpdate',
+      (payload: unknown) => {
+        if (
+          payload !== null &&
+          typeof payload === 'object' &&
+          'heartRate' in payload &&
+          'calories' in payload
+        ) {
+          const p = payload as Record<string, unknown>;
+          handler({
+            heartRate: typeof p.heartRate === 'number' ? p.heartRate : 0,
+            calories: typeof p.calories === 'number' ? p.calories : 0,
+          });
         }
       }
     );
