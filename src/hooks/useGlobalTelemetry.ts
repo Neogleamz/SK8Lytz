@@ -200,6 +200,13 @@ export function useGlobalTelemetry(
                    }
                    crewService.sessionTelemetry.avgSpeedSamples.push(spdMph);
                 }
+
+                // Push live speed to connected watches (throttled internally to max 1/3s)
+                SpeedTrackingService.pushSpeedToWatch(
+                  spdMph,
+                  healthMetricsRef.current?.activeCalories ?? undefined,
+                  healthMetricsRef.current?.avgBpm ?? undefined,
+                );
               }
             );
         } catch (e) {

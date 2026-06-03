@@ -1,0 +1,36 @@
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+group = 'expo.modules.sk8lytzwatchbridge'
+version = '1.0.0'
+
+android {
+    namespace 'expo.modules.sk8lytzwatchbridge'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 24
+        targetSdk 36
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+dependencies {
+    // Expo modules core — required for Module base class
+    implementation project(':expo-modules-core')
+
+    // Wearable Data Layer API — DataClient + MessageClient + NodeClient
+    implementation 'com.google.android.gms:play-services-wearable:18.2.0'
+
+    // Coroutines — await() extension for Tasks API
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1'
+}

@@ -1,8 +1,8 @@
 package expo.modules.sk8lytzwatchbridge
 
 import android.util.Log
-import com.google.android.gms.wearable.DataClient
 import com.google.android.gms.wearable.MessageClient
+import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.PutDataMapRequest
 import com.google.android.gms.wearable.Wearable
 import expo.modules.kotlin.modules.Module
@@ -18,14 +18,17 @@ import org.json.JSONObject
 /**
  * Sk8lytzWatchBridgeModule — Android side of the watch bridge.
  *
- * Uses the Wearable Data Layer API to push state and metrics to the paired Wear OS watch.
+ * Uses the Wearable Data Layer API to push state and metrics to the paired Wear OS watch
+ * AND receive inbound commands (START_SESSION/STOP_SESSION) from the watch.
+ *
  * - syncSessionState → DataClient.putDataItem (reliable, survives unreachable watch)
  * - sendMetricUpdate  → MessageClient.sendMessage (real-time, best-effort)
  * - Inbound commands (START/STOP from watch) → emitted as 'onWatchCommandReceived' JS events
  *
  * Path contract (must match WearableCommunicationService on the watch):
- *   /sk8lytz/state   — DataClient item (persistent state)
- *   /sk8lytz/command — MessageClient message (ephemeral commands watch→phone)
+ *   /sk8lytz/state   — DataClient item (persistent state, phone → watch)
+ *   /sk8lytz/metrics — MessageClient message (real-time telemetry, phone → watch)
+ *   /sk8lytz/command — MessageClient message (ephemeral commands, watch → phone)
  */
 class Sk8lytzWatchBridgeModule : Module() {
 
@@ -37,15 +40,42 @@ class Sk8lytzWatchBridgeModule : Module() {
     private val PATH_COMMAND = "/sk8lytz/command"
     private val PATH_METRICS = "/sk8lytz/metrics"
 
+    // Inbound message listener — receives commands from the watch
+    private var messageListener: MessageClient.OnMessageReceivedListener? = null
+
     override fun definition() = ModuleDefinition {
         Name("Sk8lytzWatchBridge")
 
         Events("onWatchCommandReceived")
 
+        // Register the inbound MessageClient listener when the module loads
+        OnCreate {
+            val context = appContext.reactContext ?: return@OnCreate
+            messageListener = MessageClient.OnMessageReceivedListener { messageEvent ->
+                handleInboundMessage(messageEvent)
+            }
+            Wearable.getMessageClient(context).addListener(messageListener!!)
+            Log.d(TAG, "Registered MessageClient listener for watch → phone commands")
+        }
+
+        // Clean up listener on module destroy to prevent leaks
+        OnDestroy {
+            val context = appContext.reactContext ?: return@OnDestroy
+            messageListener?.let {
+                Wearable.getMessageClient(context).removeListener(it)
+                Log.d(TAG, "Removed MessageClient listener")
+            }
+            messageListener = null
+        }
+
         AsyncFunction("syncSessionState") { state: Map<String, Any>, promise: Promise ->
             scope.launch {
+                val context = appContext.reactContext
+                if (context == null) {
+                    promise.reject("NO_CONTEXT", "React context not available", null)
+                    return@launch
+                }
                 runCatching {
-                    val context = appContext.reactContext ?: return@launch
                     val request = PutDataMapRequest.create(PATH_STATE).apply {
                         dataMap.apply {
                             putString("status",    state["status"] as? String ?: "STOPPED")
@@ -70,9 +100,16 @@ class Sk8lytzWatchBridgeModule : Module() {
 
         AsyncFunction("sendMetricUpdate") { metrics: Map<String, Any>, promise: Promise ->
             scope.launch {
+                val context = appContext.reactContext
+                if (context == null) {
+                    promise.reject("NO_CONTEXT", "React context not available", null)
+                    return@launch
+                }
                 runCatching {
-                    val context = appContext.reactContext ?: return@launch
-                    val json = JSONObject(metrics as Map<*, *>).toString()
+                    val jsonMap = mutableMapOf<String, Any?>()
+                    metrics.forEach { (key, value) -> jsonMap[key] = value }
+                    val json = JSONObject(jsonMap).toString()
+
                     val nodes = Wearable.getNodeClient(context).connectedNodes.await()
                     nodes.forEach { node ->
                         Wearable.getMessageClient(context)
@@ -90,16 +127,32 @@ class Sk8lytzWatchBridgeModule : Module() {
 
         AsyncFunction("isWatchReachable") { promise: Promise ->
             scope.launch {
+                val context = appContext.reactContext
+                if (context == null) {
+                    promise.resolve(false)
+                    return@launch
+                }
                 runCatching {
-                    val context = appContext.reactContext ?: run {
-                        promise.resolve(false)
-                        return@launch
-                    }
                     val nodes = Wearable.getNodeClient(context).connectedNodes.await()
                     promise.resolve(nodes.isNotEmpty())
                 }.onFailure {
                     promise.resolve(false)
                 }
+            }
+        }
+    }
+
+    /**
+     * Handles inbound messages from the Wear OS watch.
+     * Commands arrive on PATH_COMMAND as UTF-8 strings: "START_SESSION" or "STOP_SESSION".
+     * Emits 'onWatchCommandReceived' JS event for SessionContext to handle.
+     */
+    private fun handleInboundMessage(messageEvent: MessageEvent) {
+        if (messageEvent.path == PATH_COMMAND) {
+            val command = String(messageEvent.data, Charsets.UTF_8)
+            Log.d(TAG, "Received command from watch: $command")
+            if (command == "START_SESSION" || command == "STOP_SESSION") {
+                sendEvent("onWatchCommandReceived", mapOf("command" to command))
             }
         }
     }
