@@ -1,6 +1,6 @@
 # SK8Lytz App Master Reference
 
-_Last Updated: 2026-05-29 | **BATCH:grouping-architecture-overhaul COMPLETE** — Many-to-many group membership migration, mixed-state UI (roller-skate icons red/green per-device), skatepark RSSI hijack prevention, offline auto-connect scalar→array migration, split-brain guard. v3.6.5 | Source of Truth: src/hooks/useDashboardAutoConnect.ts, src/services/DeviceRepository.ts_
+_Last Updated: 2026-06-03 | **Wearable Companion Architecture SHIPPED** — watchOS + Wear OS companion apps, Expo native bridge module (sk8lytz-watch-bridge), watch-preferred health priority system, bidirectional phone↔watch session sync, Speed push to watch, VS-002 gitignore fix. v3.8.2 | Source of Truth: modules/sk8lytz-watch-bridge/src/index.ts, src/hooks/useHealthTelemetry.ts, src/context/SessionContext.tsx_
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
 
@@ -13,6 +13,8 @@ This document is the **Canonical Reference** for all architecture, hardware cons
 7. [Session Telemetry Architecture](#7-session-telemetry-architecture)
 8. [Agentic PM Protocols](#8-agentic-pm-protocols-the-brain)
 9. [Sentinel Engineering Governance](#9-sentinel-engineering-governance-workflow-v6)
+10. [Environment & Build Ops](#10-environment--build-ops)
+11. [Wearable Companion Architecture](#11-wearable-companion-architecture)
 
 > [!CAUTION]
 > Do NOT append duplicate or conflicting protocol discoveries to this document. If a payload format changes, **overwrite** the existing entry to ensure this file remains a single, conflict-free source of truth.
@@ -134,11 +136,12 @@ These rules govern `src/components/VisualizerUnit.tsx`. **Do NOT apply to SOULZ 
 
 ---
 
-**Core Philosophies (The 3 Pillars):**
+**Core Philosophies (The 4 Pillars):**
 
 1. **Bulletproof BLE Transport:** The connection to Neogleamz hardware MUST be instantaneous and nearly sentient. Reconnects and pairing must handle GATT exceptions and MTU drift invisibly. "It just works, immediately."
 2. **Tactile, Glanceable UI:** High-contrast, Neogleamz standard aesthetics. Massive touch targets (>44px) for skaters in gear. One-tap access to Symphony effects and App-mic visualization.
 3. **No-Compromise Offline Flow:** Hardware control is a fundamental right. basic lighting and EEPROM configuration (0x62/0x63) never require cloud authentication.
+4. **Wrist Extension (Watch Companions):** The watch is a session HUD and health relay — NOT an LED controller. It mirrors speed, HR, and calories from the phone, relays on-wrist health sensor data back, and provides remote session start/stop. All BLE LED protocol commands originate exclusively from the phone app.
 
 **Anti-Goals (What we ruthlessly reject):**
 
@@ -830,6 +833,14 @@ To ensure scalability and maintain UI performance, the SK8Lytz app enforces a **
 | `useProductManager`  | `AdminToolsModal`        | Hardware catalog CRUD, `product_catalog` upserts, blank profile creation |
 | `useAdminSettings`   | `AdminToolsModal`        | Global remote feature flags, `AppSettingsService` read/write             |
 
+#### Watch & Health Domain (`src/hooks/`, `modules/`, `src/services/`)
+
+| Hook / Service            | Consumer           | Owns                                                                                              |
+| :------------------------ | :----------------- | :------------------------------------------------------------------------------------------------ |
+| `useHealthTelemetry`      | `SessionContext`   | Phone/watch health polling, watch-preferred priority logic, HR/cal/peak/avg state, `mergeWatchHealth()` |
+| `WatchBridge` (native module) | `SessionContext` | Phone↔watch session state sync, command relay (START/STOP), health data relay via native DataLayer/WCSession |
+| `SpeedTrackingService`    | `SessionContext`   | GPS speed push to watch via `WatchBridge.sendMetricUpdate()` during active sessions               |
+
 ---
 
 ### 📐 Shared Type Contract
@@ -1061,6 +1072,27 @@ _Shipped: v1.8.0 | Mandatory for App Store Governance_
 
 - **Supabase Auth (SignUp)**: Signup operations via `auth/v1/signup` may return `400 Bad Request` in local web/emulator environments due to strict redirect URI validation or rate limiting on development shards. Use "Continue Offline" or existing test credentials for UI/UX validation.
 
+### Wear OS Build Pipeline
+
+- **Module Path**: `android/sk8lytzWear/` — standalone Gradle subproject compiled as a Wear OS APK
+- **Gradle Injection**: `plugins/withWearOsModule.js` Expo config plugin injects `include ':sk8lytzWear'` into `settings.gradle` and `wearApp project(':sk8lytzWear')` dependency into `app/build.gradle` during `npx expo prebuild`
+- **Bundling**: The watch APK is automatically bundled inside the phone APK on install (Google Play requirement for Wear OS companion apps)
+- **Gitignore**: Root `.gitignore` contains `!/android/sk8lytzWear/` negation rule to prevent the `/android` exclusion from silently dropping watch files (see Victory Snapshot VS-002 in `safety-protocol.md`)
+
+### watchOS Build Pipeline
+
+- **Target Path**: `targets/watch/` — SwiftUI watch extension via Expo Targets
+- **Config**: `targets/watch/expo-target.config.js` defines bundleId, deployment target, and HealthKit entitlements
+- **Entitlements**: `com.apple.developer.healthkit`, `com.apple.developer.healthkit.background-delivery`
+- **Info.plist Keys**: `NSHealthShareUsageDescription`, `NSHealthUpdateUsageDescription` (required for HealthKit access)
+
+### Watch Bridge Module
+
+- **Module Path**: `modules/sk8lytz-watch-bridge/` — custom Expo native module
+- **Platforms**: iOS (Swift `WCSession`) + Android (Kotlin `DataClient`/`MessageClient`)
+- **TypeScript Entry**: `modules/sk8lytz-watch-bridge/src/index.ts`
+- **Jest Mock**: `src/__mocks__/sk8lytz-watch-bridge.ts` — prevents native module crashes in unit tests
+
 ---
 
 > [!IMPORTANT]
@@ -1069,7 +1101,189 @@ _Shipped: v1.8.0 | Mandatory for App Store Governance_
 
 ---
 
-## 10. ZENGGE PROTOCOL BIBLE (APK DECOMPILED)
+## 11. Wearable Companion Architecture
+
+_Shipped: v3.8.2 | 2026-06-03 | Commits: `5bb33b90`..`392b7496` (7 commits, 2142 insertions, 39 files)_
+
+### 11.1 Architecture Overview
+
+SK8Lytz companion apps for **Wear OS** (Android) and **watchOS** (Apple Watch) provide real-time session status, health telemetry, and remote session control. Both companions follow a **Display + Relay** architecture — they mirror the phone's session state and relay on-wrist health sensor data back.
+
+> [!IMPORTANT]
+> **BLE LED control is NOT on the watch roadmap.** Sending Bluetooth BLE commands directly from the watch is out of scope. The watch is a session HUD and health relay only. All LED protocol commands originate exclusively from the phone app.
+
+```
+Phone (SK8Lytz App)          ◄────────────────►          Watch (Companion)
+┌──────────────────┐         Data Layer API         ┌──────────────────┐
+│ SessionContext    │ ─── speed, status, HR, cal ──► │ DashboardScreen  │
+│ SpeedTracking     │          (push)               │ HealthTracker    │
+│ useHealthTelemetry│ ◄── heartRate, calories ────── │ HR Sensor (5s)   │
+│ WatchBridge module│         (relay)               │ MessageService   │
+└──────────────────┘                                └──────────────────┘
+```
+
+#### The Three Components
+
+| Component | Path | Language | Purpose |
+|:----------|:-----|:---------|:--------|
+| **watchOS companion** | `targets/watch/` | SwiftUI | Apple Watch app — session HUD, HealthKit workout, WCSession relay |
+| **Wear OS companion** | `android/sk8lytzWear/` | Kotlin + Compose | Wear OS app — session HUD, Health Services ExerciseClient, DataLayer relay |
+| **Expo bridge module** | `modules/sk8lytz-watch-bridge/` | Swift (iOS) + Kotlin (Android) + TypeScript | Cross-platform native bridge wiring watch events ↔ React Native |
+
+---
+
+### 11.2 watchOS Companion (`targets/watch/`)
+
+Built with SwiftUI as an Expo Targets watch extension.
+
+| File | Purpose |
+|:-----|:--------|
+| `index.swift` | App entry point |
+| `ContentView.swift` | Main session dashboard UI — speed, HR, calories, elapsed time, start/stop button |
+| `HealthManager.swift` | HealthKit `HKWorkoutSession` + `HKLiveWorkoutBuilder` lifecycle; continuous HR/cal sampling |
+| `WatchConnectivityManager.swift` | `WCSessionDelegate` — receives phone state pushes, relays HR/cal back to phone |
+| `expo-target.config.js` | Expo Targets configuration — bundleId, deploymentTarget, entitlements (HealthKit) |
+
+**Key Architecture Decisions:**
+- Uses `HKWorkoutSession` with activity type `.rollerSkating` (not figure skating) and location type `.outdoor`
+- HealthKit entitlements: `com.apple.developer.healthkit`, `com.apple.developer.healthkit.background-delivery`
+- `WCSession.sendMessage` relays `{ heartRate, calories }` back to phone every 5 seconds
+- The watch auto-starts a HealthKit workout when it receives `status: "ACTIVE"` from the phone
+- The watch can independently send `START_SESSION` / `STOP_SESSION` commands back to the phone
+
+---
+
+### 11.3 Wear OS Companion (`android/sk8lytzWear/`)
+
+Built with Jetpack Compose for Wear OS.
+
+| File | Purpose |
+|:-----|:--------|
+| `MainActivity.kt` | ComponentActivity entry point with Compose theme |
+| `DashboardScreen.kt` | Session HUD — speed, HR, calories, elapsed timer, start/stop button (244 lines) |
+| `SessionState.kt` | Data class for session state (status, speed, heartRate, calories, startTime) |
+| `WearMessageSender.kt` | Outbound `MessageClient` sender for START/STOP commands to phone |
+| `WearableCommunicationService.kt` | Inbound `WearableListenerService` — receives phone state via DataLayer |
+| `HealthTracker.kt` | Health Services `ExerciseClient` — continuous HR monitoring during active sessions |
+| `theme/Theme.kt` | SK8Lytz dark theme (neon magenta + dark backgrounds) |
+
+**Key Architecture Decisions:**
+- Uses Health Services `ExerciseClient` with `ExerciseType.SKATING` (roller skating)
+- Inbound data via `DataClient` DataLayer API (DataItems are durable, survive brief disconnects)
+- Outbound commands via `MessageClient` (fire-and-forget, requires reachability)
+- `HealthTracker` lifecycle: `startExercise()` on session start → `endExercise()` on session stop
+- Heart rate relay: DataLayer sends `{ heartRate, calories }` on `/sk8lytz/watch-health` path every 5s
+- The Wear OS module is injected into the Gradle build via `plugins/withWearOsModule.js` Expo config plugin
+
+---
+
+### 11.4 Watch Bridge Module (`modules/sk8lytz-watch-bridge/`)
+
+A custom Expo native module providing the TypeScript API for phone↔watch communication.
+
+**TypeScript API** (`src/index.ts`):
+
+```typescript
+WatchBridge.syncSessionState(state: WatchSessionState)     // Phone → Watch (session state push)
+WatchBridge.sendMetricUpdate(metrics)                        // Phone → Watch (live metric snapshot)
+WatchBridge.isWatchReachable(): Promise<boolean>             // Connection check
+WatchBridge.addWatchCommandListener(handler)                 // Watch → Phone (START/STOP commands)
+WatchBridge.addWatchHealthListener(handler)                  // Watch → Phone (HR/cal relay)
+```
+
+**Types:**
+
+```typescript
+interface WatchSessionState {
+  status: 'ACTIVE' | 'STOPPED';
+  speed?: number;
+  heartRate?: number;
+  calories?: number;
+  startTime?: string; // ISO 8601
+}
+
+type WatchCommand = 'START_SESSION' | 'STOP_SESSION';
+
+interface WatchHealthUpdate {
+  heartRate: number;
+  calories: number;
+}
+```
+
+**Native Implementations:**
+- **iOS** (`ios/Sk8lytzWatchBridgeModule.swift`): Uses `WCSession` for all communication
+- **Android** (`android/.../Sk8lytzWatchBridgeModule.kt`): Uses `DataClient` (push state) + `MessageClient` (commands)
+- **Mock** (`src/__mocks__/sk8lytz-watch-bridge.ts`): Jest mock for unit testing without native modules
+
+---
+
+### 11.5 Phone-Side Integration (SessionContext + SpeedTracking)
+
+**SessionContext** (`src/context/SessionContext.tsx`):
+- On session start: calls `WatchBridge.syncSessionState({ status: 'ACTIVE', startTime })`
+- On session stop: calls `WatchBridge.syncSessionState({ status: 'STOPPED' })`
+- Subscribes to `WatchBridge.addWatchCommandListener()` — watch can remotely start/stop sessions
+- Subscribes to `WatchBridge.addWatchHealthListener()` — relays to `mergeWatchHealth()`
+
+**SpeedTrackingService** (`src/services/SpeedTrackingService.ts`):
+- Pushes live GPS speed to watch via `WatchBridge.sendMetricUpdate({ speed })` during active sessions
+- Throttled to prevent BLE saturation
+
+---
+
+### 11.6 Health Data Priority Architecture (Watch-Preferred)
+
+_Lives in: `src/hooks/useHealthTelemetry.ts` | Shipped: commit `392b7496`_
+
+The health telemetry system implements a **watch-preferred** priority model:
+
+```
+🏋 Watch connected & sending data:
+   Watch HR/cal → mergeWatchHealth() → ALWAYS writes to state
+   Phone poll fires every 15s → sees isWatchHealthActive() = true → SKIPS
+   Result: Dashboard HUD shows 5s-fresh watch sensor data
+
+📱 Watch disconnected / out of range:
+   No watch relay for 15s → isWatchHealthActive() = false
+   Phone poll resumes → reads HealthKit (iOS) / Health Connect (Android)
+   Result: Seamless fallback — no user intervention needed
+```
+
+| Property | Value |
+|:---------|:------|
+| Phone poll interval | 15 seconds |
+| Watch relay interval | 5 seconds |
+| Watch expiry timeout | 15 seconds (`WATCH_EXPIRY_MS`) |
+| Priority logic | `lastWatchHealthMsRef` timestamp gating |
+| Telemetry event | `phone_health_poll_deferred` logged when watch suppresses phone |
+
+**Why watch wins:** The watch has a direct optical HR sensor on the wrist sampling every 1-5 seconds. Phone HealthKit/Health Connect polls synced data at 15s intervals — always staler. When both are available, the watch's real-time relay is the gold standard.
+
+**Consumers of health data (all read from `useHealthTelemetry` state):**
+- Dashboard HUD (controller top bar)
+- Session summary (`useSessionTracking`)
+- Crew Hub session telemetry
+- Street mode (G-force: phone accelerometer only — watch does NOT relay G-force)
+- `skate_sessions` Supabase writes
+
+> [!IMPORTANT]
+> **GPS Speed and G-Force remain phone-only.** The watch does NOT relay GPS or accelerometer data to save battery. Speed comes from `expo-location` on the phone. G-force comes from `expo-sensors` on the phone. The phone pushes speed TO the watch for display only.
+
+---
+
+### 11.7 Future Watch Enhancements (Planned)
+
+| Feature | Plan | Layer | Size | Platform |
+|:--------|:-----|:------|:-----|:---------|
+| Session Duration Timer | `tools/plans/PLAN-session-duration-timer.md` | UI | Snack | Both |
+| watchOS Complications | `tools/plans/PLAN-watchos-complications.md` | UI | Snack | watchOS |
+| Wear OS Tiles | `tools/plans/PLAN-wearos-tiles.md` | UI | Meal | Wear OS |
+| Wear OS Always-On Display | `tools/plans/PLAN-wearos-always-on.md` | UI | Snack | Wear OS |
+| Wear OS Ongoing Activity | `tools/plans/PLAN-wearos-ongoing-activity.md` | UI | Snack | Wear OS |
+
+---
+
+## 12. ZENGGE PROTOCOL BIBLE (APK DECOMPILED)
 
 # ZENGGE PROTOCOL BIBLE
 ## Authoritative Hardware Reference — Derived from Decompiled ZENGGE 1.5.0 APK
