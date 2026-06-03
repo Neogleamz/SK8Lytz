@@ -15,6 +15,7 @@ import { AppLogger } from '../../services/AppLogger';
 interface BuilderPanelProps {
   points?: number;
   speed: number;
+  brightness: number;
   direction?: number;
   builderNodes: BuilderNode[];
   setBuilderNodes: (nodes: BuilderNode[]) => void;
@@ -31,8 +32,11 @@ interface BuilderPanelProps {
 
 type ViewMode = 'LIBRARY' | 'BUILDER';
 
+const brtFactor = (brt: number): number =>
+  brt > 0 ? 0.10 + 0.90 * (brt / 100) : 0;
+
 export const BuilderPanel: React.FC<BuilderPanelProps> = ({
-  points = 16, speed, direction = 1,
+  points = 16, speed, brightness, direction = 1,
   builderNodes, setBuilderNodes,
   builderFillMode, setBuilderFillMode,
   builderTransitionType, setBuilderTransitionType,
@@ -62,10 +66,16 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
     setBuilderNodes(preset.nodes);
     setBuilderFillMode(preset.fill_mode);
     setBuilderTransitionType(safeTransition);
+    const factor = brtFactor(brightness);
     const generatedRgbArray = PositionalMathBuffer.generateArray(preset.nodes, points, preset.fill_mode === 'GRADIENT');
-    const mappedSpeed = Math.max(1, Math.min(31, Math.round((speed / 100) * 31)));
-    if (writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(generatedRgbArray, points, mappedSpeed, direction, safeTransition));
-  }, [points, speed, direction, setBuilderNodes, setBuilderFillMode, setBuilderTransitionType, writeToDevice]);
+    const scaledRgbArray = generatedRgbArray.map(c => ({
+      r: Math.round(c.r * factor),
+      g: Math.round(c.g * factor),
+      b: Math.round(c.b * factor),
+    }));
+    const mappedSpeed = Math.max(1, Math.min(100, Math.round(speed)));
+    if (writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(scaledRgbArray, points, mappedSpeed, direction, safeTransition));
+  }, [points, speed, brightness, direction, setBuilderNodes, setBuilderFillMode, setBuilderTransitionType, writeToDevice]);
 
   const openBuilder = (preset?: CustomBuilderPreset) => {
     if (preset) {
@@ -112,7 +122,7 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
     saveFavorite({
       mode: 'BUILDER',
       speed,
-      brightness: 100,
+      brightness,
       builderNodes,
       builderFillMode,
       builderTransitionType,
@@ -158,6 +168,7 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
             direction={builderDirection}
             onDirectionChange={setBuilderDirection}
             speed={speed}
+            brightness={brightness}
             deviceLedCount={points}
             selectedColor={fgColor}
             writeToDevice={writeToDevice}

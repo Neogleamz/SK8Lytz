@@ -18,17 +18,21 @@ interface Props {
   direction: number;
   onDirectionChange: (dir: number) => void;
   speed: number;
+  brightness?: number;
   deviceLedCount: number;
   selectedColor: string; // The universal color passed from DockedController
   writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
 }
+
+const brtFactor = (brt: number): number =>
+  brt > 0 ? 0.10 + 0.90 * (brt / 100) : 0;
 
 export default function PositionalGradientBuilder({ 
    nodes, onNodesChange, 
    fillMode, onFillModeChange, 
    transitionType, onTransitionTypeChange,
    direction, onDirectionChange,
-   speed, deviceLedCount, selectedColor, writeToDevice
+   speed, brightness = 100, deviceLedCount, selectedColor, writeToDevice
 }: Props) {
   const { Colors, isDark } = useTheme();
 
@@ -38,13 +42,18 @@ export default function PositionalGradientBuilder({
   // Dispatch payloads whenever parameters change (with throttle to prevent hardware blackout from BLE flood)
   useEffect(() => {
      const timeout = setTimeout(() => {
+         const factor = brtFactor(brightness);
          const generatedRgbArray = PositionalMathBuffer.generateArray(nodes, deviceLedCount, fillMode === 'GRADIENT');
-         // Normalize speed 0-100 to 0x01-0x1F (1-31)
-         const mappedSpeed = Math.max(1, Math.min(31, Math.round((speed / 100) * 31)));
-         if (writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(generatedRgbArray, deviceLedCount, mappedSpeed, direction, transitionType));
+         const scaledRgbArray = generatedRgbArray.map(c => ({
+             r: Math.round(c.r * factor),
+             g: Math.round(c.g * factor),
+             b: Math.round(c.b * factor),
+         }));
+         const mappedSpeed = Math.max(1, Math.min(100, Math.round(speed)));
+         if (writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(scaledRgbArray, deviceLedCount, mappedSpeed, direction, transitionType));
      }, 100);
      return () => clearTimeout(timeout);
-  }, [nodes, fillMode, transitionType, direction, speed, deviceLedCount, writeToDevice]);
+  }, [nodes, fillMode, transitionType, direction, speed, brightness, deviceLedCount, writeToDevice]);
 
   const addNode = () => {
       let newPosition = 50;

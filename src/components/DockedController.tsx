@@ -658,13 +658,15 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         
         // Auto-dispatch BUILDER payload instead of dead-loading
         if (favRaw.builderNodes && favRaw.builderNodes.length > 0) {
+          const factor = brtFactor(favRaw.brightness ?? 100);
           const rgbColors = favRaw.builderNodes.map((n: { colorHex: string }) => ({
-            r: parseInt(n.colorHex.slice(1, 3), 16) || 0,
-            g: parseInt(n.colorHex.slice(3, 5), 16) || 0,
-            b: parseInt(n.colorHex.slice(5, 7), 16) || 0,
+            r: Math.round((parseInt(n.colorHex.slice(1, 3), 16) || 0) * factor),
+            g: Math.round((parseInt(n.colorHex.slice(3, 5), 16) || 0) * factor),
+            b: Math.round((parseInt(n.colorHex.slice(5, 7), 16) || 0) * factor),
           }));
           const transition = favRaw.builderTransitionType ?? 1;
-          setMultiColor(rgbColors, hwSettings?.ledPoints || 16, clampSpeed(favRaw.speed ?? 50), 1, transition);
+          const speedVal = Math.max(1, Math.min(100, Math.round(favRaw.speed ?? 50)));
+          setMultiColor(rgbColors, hwSettings?.ledPoints || 16, speedVal, favRaw.builderDirection ?? 1, transition);
         }
       } else if (legacyMode === 'MULTI' || legacyMode === 'DIY' || legacyMode === 'MULTICOLOR') {
         setActiveMode('MULTIMODE');
@@ -677,12 +679,14 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         setMultiTransition(favRaw.multiTransition || 3);
         setMultiLength(favRaw.multiLength || 16);
         if (favRaw.multiColors) {
+          const factor = brtFactor(favRaw.brightness ?? 100);
           const rgbColors = favRaw.multiColors.map((h: string) => ({
-            r: parseInt(h.slice(1, 3), 16) || 0,
-            g: parseInt(h.slice(3, 5), 16) || 0,
-            b: parseInt(h.slice(5, 7), 16) || 0,
+            r: Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor),
+            g: Math.round((parseInt(h.slice(3, 5), 16) || 0) * factor),
+            b: Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor),
           }));
-          setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(favRaw.speed ?? 50), 1, favRaw.multiTransition ?? 3);
+          const speedVal = Math.max(1, Math.min(100, Math.round(favRaw.speed ?? 50)));
+          setMultiColor(rgbColors, hwSettings?.ledPoints || 12, speedVal, 1, favRaw.multiTransition ?? 3);
         }
       } else {
         // Unknown/legacy mode — best-effort color dispatch
@@ -1182,6 +1186,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               <BuilderPanel
                 points={points}
                 speed={speed}
+                brightness={brightness}
                 direction={builderDirection}
                 builderNodes={builderNodes}
                 setBuilderNodes={setBuilderNodes}
@@ -1312,6 +1317,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               motionStateRef={motionStateRef}
               fixedDirection={fixedDirection}
               setFixedDirection={setFixedDirection}
+              builderNodes={builderNodes}
+              builderFillMode={builderFillMode}
+              builderTransitionType={builderTransitionType}
+              builderDirection={builderDirection}
             />
           )}
         </View>

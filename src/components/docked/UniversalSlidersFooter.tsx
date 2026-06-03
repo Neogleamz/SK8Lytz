@@ -16,6 +16,7 @@ import { getActiveMusicProfile } from '../../hooks/useMusicMode';
 import NeonHueStrip from '../NeonHueStrip';
 import TacticalSlider from '../TacticalSlider';
 import type { FixedModePattern, ModeType, MotionState } from '../../types/dashboard.types';
+import { BuilderNode, PositionalMathBuffer } from '../../protocols/PositionalMathBuffer';
 
 // ── Props Interface ─────────────────────────────────────────────────────────
 
@@ -88,8 +89,11 @@ export interface UniversalSlidersFooterProps {
   hwSettings?: any;
   motionStateRef: React.MutableRefObject<MotionState>;
 
-  // ── Styling ─────────────────────────────────────────────────────────────
-  // styles prop removed — UniversalSlidersFooter now owns its own local StyleSheet.
+  // ── Custom Builder pattern state ─────────────────────────────────────────
+  builderNodes?: BuilderNode[];
+  builderFillMode?: 'GRADIENT' | 'SOLID';
+  builderTransitionType?: number;
+  builderDirection?: number;
 }
 
 // ── Helper: hue → hex ───────────────────────────────────────────────────────
@@ -135,6 +139,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
     sendColor, applyFixedPattern,
     applyStreetPattern, handleMusicChange, clampSpeed, brtFactor,
     writeToDevice, hwSettings, motionStateRef,
+    builderNodes, builderFillMode, builderTransitionType, builderDirection,
   } = props;
 
   return (
@@ -369,13 +374,30 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                   applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, speed, val, fixedDirection);
                 } else if ((activeMode === 'MULTIMODE' && fixedSubMode === 'BUILDER') || activeMode === 'BUILDER') {
                   const factor = brtFactor(val);
-                  const rgbColors = multiColors.map(h => {
-                    const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
-                    const rawG = Math.round((parseInt(h.slice(3, 5), 16) || 0) * factor);
-                    const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
-                    return { r: rawR, g: rawG, b: rawB };
-                  });
-                  if (writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(speed), 1, multiTransition));
+                  if (builderNodes && builderNodes.length > 0) {
+                    const ledPoints = hwSettings?.ledPoints || 16;
+                    const generatedRgbArray = PositionalMathBuffer.generateArray(
+                      builderNodes,
+                      ledPoints,
+                      builderFillMode === 'GRADIENT'
+                    );
+                    const scaledRgb = generatedRgbArray.map(c => ({
+                      r: Math.round(c.r * factor),
+                      g: Math.round(c.g * factor),
+                      b: Math.round(c.b * factor),
+                    }));
+                    const transition = builderTransitionType ?? 1;
+                    const dir = builderDirection ?? 1;
+                    writeToDevice(ZenggeProtocol.setMultiColor(scaledRgb, ledPoints, Math.round(speed), dir, transition));
+                  } else {
+                    const rgbColors = multiColors.map(h => {
+                      const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
+                      const rawG = Math.round((parseInt(h.slice(3, 5), 16) || 0) * factor);
+                      const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
+                      return { r: rawR, g: rawG, b: rawB };
+                    });
+                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(speed), 1, multiTransition));
+                  }
                 } else {
                   const factor = brtFactor(val);
                   const hex = selectedColor;
@@ -465,13 +487,30 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                   applyFixedPattern(fixedPatternId, fixedFgColor, fixedBgColor, val, brightness, fixedDirection);
                 } else if ((activeMode === 'MULTIMODE' && fixedSubMode === 'BUILDER') || activeMode === 'BUILDER') {
                   const factor = brtFactor(brightness);
-                  const rgbColors = multiColors.map(h => {
-                    const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
-                    const rawG = Math.round((parseInt(h.slice(3, 5), 16) || 0) * factor);
-                    const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
-                    return { r: rawR, g: rawG, b: rawB };
-                  });
-                  if (writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, multiTransition));
+                  if (builderNodes && builderNodes.length > 0) {
+                    const ledPoints = hwSettings?.ledPoints || 16;
+                    const generatedRgbArray = PositionalMathBuffer.generateArray(
+                      builderNodes,
+                      ledPoints,
+                      builderFillMode === 'GRADIENT'
+                    );
+                    const scaledRgb = generatedRgbArray.map(c => ({
+                      r: Math.round(c.r * factor),
+                      g: Math.round(c.g * factor),
+                      b: Math.round(c.b * factor),
+                    }));
+                    const transition = builderTransitionType ?? 1;
+                    const dir = builderDirection ?? 1;
+                    writeToDevice(ZenggeProtocol.setMultiColor(scaledRgb, ledPoints, Math.round(val), dir, transition));
+                  } else {
+                    const rgbColors = multiColors.map(h => {
+                      const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
+                      const rawG = Math.round((parseInt(h.slice(3, 5), 16) || 0) * factor);
+                      const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
+                      return { r: rawR, g: rawG, b: rawB };
+                    });
+                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, multiTransition));
+                  }
                 } else if (activeMode === 'STREET') {
                   applyStreetPattern(motionStateRef.current, brightness, val);
                 }
