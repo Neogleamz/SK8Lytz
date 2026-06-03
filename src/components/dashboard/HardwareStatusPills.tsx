@@ -14,8 +14,6 @@ export const HardwareStatusPills = ({ device }: HardwareStatusPillsProps) => {
   // Safe extraction with fallbacks
   const pts = device.points ?? device.led_points ?? (device.name?.toLowerCase().includes('soul') ? 43 : 8);
   const segs = device.segments ?? (device.name?.toLowerCase().includes('soul') ? 1 : 2);
-  const strip = device.stripType ?? device.ic_type ?? 'WS2812B';
-  const sort = device.sorting ?? device.color_sorting ?? 'GRB';
   const firmware = device.firmware_ver ? `v${device.firmware_ver}` : null;
   const rfMode = device.rf_mode || device.hwRfMode || null;
   const rfPairedCount = device.rf_paired_count ?? device.hwRfPairedCount ?? 0;
@@ -31,8 +29,6 @@ export const HardwareStatusPills = ({ device }: HardwareStatusPillsProps) => {
     <View style={styles.container}>
       {renderPill('led-strip', `${pts} L`, Colors.primary)}
       {renderPill('view-dashboard-outline', `${segs}S`, Colors.primary)}
-      {renderPill('chip', strip, Colors.textMuted)}
-      {renderPill('palette-swatch-outline', sort, Colors.textMuted)}
       {firmware && renderPill('cellphone-arrow-down', firmware, '#4ade80')}
       
       {rfMode && (
