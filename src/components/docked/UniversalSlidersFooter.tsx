@@ -437,22 +437,6 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
           );
         })()}
 
-        {activeMode === 'MUSIC' && (
-          <TacticalSlider
-            style={{ flex: 1 }}
-            iconName="microphone-outline"
-            label="MIC SENSITIVITY"
-            fillColor="#FF0055"
-            value={micSensitivity}
-            onValueChange={setMicSensitivity}
-            minimumValue={0}
-            maximumValue={100}
-            onSlidingComplete={(val: number) => {
-              AppLogger.log('MIC_SENSITIVITY_CHANGED', { value: val });
-              handleMusicChange(musicPatternId, val, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle);
-            }}
-          />
-        )}
 
         {activeMode === 'STREET' && (
           <TacticalSlider

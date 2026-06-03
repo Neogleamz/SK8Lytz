@@ -1214,11 +1214,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 micSensitivity={micSensitivity}
                 brightness={brightness}
                 musicPrimaryColor={musicPrimaryColor}
-                setMusicPrimaryColor={setMusicPrimaryColor}
                 musicSecondaryColor={musicSecondaryColor}
-                setMusicSecondaryColor={setMusicSecondaryColor}
-                speed={speed}
-                setSpeed={setSpeed}
                 handleMusicChange={handleMusicChange}
                 Colors={Colors}
               />

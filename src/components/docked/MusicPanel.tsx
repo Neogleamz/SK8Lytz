@@ -13,7 +13,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useCallback, useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import {
-  getActiveMusicProfile,
   getMusicPatternLabel,
   getMusicPatternMax,
 } from '../../hooks/useMusicMode';
@@ -29,11 +28,7 @@ interface MusicPanelProps {
   micSensitivity: number;
   brightness: number;
   musicPrimaryColor: string;
-  setMusicPrimaryColor: (hex: string) => void;
   musicSecondaryColor: string;
-  setMusicSecondaryColor: (hex: string) => void;
-  speed: number;
-  setSpeed: (v: number) => void;
   handleMusicChange: (...args: any[]) => void;
   Colors: any;
 }
@@ -50,18 +45,12 @@ const MusicPanel = React.memo(({
   micSensitivity,
   brightness,
   musicPrimaryColor,
-  setMusicPrimaryColor,
   musicSecondaryColor,
-  setMusicSecondaryColor,
-  speed,
-  setSpeed,
   handleMusicChange,
   Colors,
 }: MusicPanelProps) => {
   const styles = useMemo(() => createStyles(Colors), [Colors]);
 
-  // Active profile — resolves colorMode, name, etc.
-  const activeProfile = getActiveMusicProfile(musicMatrixStyle, musicPatternId);
   const patternMax = getMusicPatternMax(musicMatrixStyle);
 
   const onPrev = useCallback(() => {
@@ -154,7 +143,7 @@ const MusicPanel = React.memo(({
             }}
           >
             <View style={[styles.micIconCircle, micSource === 'APP' && { backgroundColor: Colors.primary }]}>
-              <MaterialCommunityIcons name="microphone-outline" size={20} color={micSource === 'APP' ? '#FFF' : Colors.textMuted} />
+              <MaterialCommunityIcons name="microphone-outline" size={18} color={micSource === 'APP' ? '#FFF' : Colors.textMuted} />
             </View>
             <Text style={[styles.micSubText, micSource === 'APP' && { color: Colors.primary, fontWeight: 'bold' }]}>APP MIC</Text>
           </TouchableOpacity>
@@ -164,7 +153,7 @@ const MusicPanel = React.memo(({
             onPress={() => handleMusicChange()}
           >
             <View style={styles.playIconInner}>
-              <MaterialCommunityIcons name="play" size={32} color="#FFF" />
+              <MaterialCommunityIcons name="play" size={26} color="#FFF" />
             </View>
           </TouchableOpacity>
 
@@ -176,7 +165,7 @@ const MusicPanel = React.memo(({
             }}
           >
             <View style={[styles.micIconCircle, micSource === 'DEVICE' && { backgroundColor: Colors.primary }]}>
-              <MaterialCommunityIcons name="bluetooth-audio" size={20} color={micSource === 'DEVICE' ? '#FFF' : Colors.textMuted} />
+              <MaterialCommunityIcons name="bluetooth-audio" size={18} color={micSource === 'DEVICE' ? '#FFF' : Colors.textMuted} />
             </View>
             <Text style={[styles.micSubText, micSource === 'DEVICE' && { color: Colors.primary, fontWeight: 'bold' }]}>DEVICE MIC</Text>
           </TouchableOpacity>
@@ -233,16 +222,16 @@ const createStyles = (Colors: any) => StyleSheet.create({
   micIconBtn: {
     flex: 1,
     alignItems: 'center',
-    padding: Spacing.sm,
+    padding: Spacing.xs,
     borderRadius: 12,
   },
   micBtnActive: {
     backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
   },
   micIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)',
     alignItems: 'center',
     justifyContent: 'center',
@@ -258,9 +247,9 @@ const createStyles = (Colors: any) => StyleSheet.create({
     fontWeight: '600',
   },
   playButtonMain: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 2,
     borderColor: Colors.primary,
     alignItems: 'center',
@@ -268,9 +257,9 @@ const createStyles = (Colors: any) => StyleSheet.create({
     marginHorizontal: Spacing.md,
   },
   playIconInner: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
