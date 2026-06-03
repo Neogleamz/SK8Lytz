@@ -1,0 +1,14 @@
+{
+  "name": "sk8lytz-watch-bridge",
+  "version": "1.0.0",
+  "description": "Expo native module bridging SessionContext to watchOS (WCSession) and Wear OS (Wearable Data Layer)",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": ["expo-module"],
+  "peerDependencies": {
+    "expo": "*"
+  }
+}
