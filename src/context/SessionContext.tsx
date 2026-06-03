@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useGlobalTelemetry, GlobalTelemetryState } from '../hooks/useGlobalTelemetry';
 import { useHealthTelemetry, HealthTelemetry } from '../hooks/useHealthTelemetry';
 import { AppLogger } from '../services/AppLogger';
+import { WatchBridge, WatchCommand } from 'sk8lytz-watch-bridge';
 
 interface SessionContextValue {
   isSkateSessionActive: boolean;
@@ -30,7 +31,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     activeCalories: health.activeCalories
   });
 
-  // 2. Initialize iOS categories
+  // 2. Initialize iOS categories + listen for watch commands
   useEffect(() => {
     if (Platform.OS === 'ios') {
       notifee.setNotificationCategories([
@@ -46,6 +47,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         },
       ]);
     }
+
+    // Listen for START_SESSION / STOP_SESSION commands sent from the watch
+    const unsubscribe = WatchBridge.addWatchCommandListener((command: WatchCommand) => {
+      AppLogger.log('APP_LOG', { event: 'watch_command_received', command });
+      if (command === 'START_SESSION') startSession();
+      else if (command === 'STOP_SESSION') endSession();
+    });
+    return unsubscribe;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 3. Synchronize React state with AsyncStorage on mount & App foreground transitions
@@ -157,6 +167,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       AppLogger.error('Failed to save session state to AsyncStorage', err);
     }
     AppLogger.log('APP_LOG', { event: 'session_started' });
+    // Notify both watches — fire-and-forget, safe if no watch paired
+    WatchBridge.syncSessionState({
+      status: 'ACTIVE',
+      startTime: new Date().toISOString(),
+    }).catch((err: unknown) =>
+      AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_start', error: String(err) })
+    );
   }, []);
 
   const endSession = useCallback(async () => {
@@ -170,6 +187,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (Platform.OS === 'android') {
       notifee.stopForegroundService();
     }
+    // Notify both watches the session stopped
+    WatchBridge.syncSessionState({ status: 'STOPPED' }).catch((err: unknown) =>
+      AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_stop', error: String(err) })
+    );
   }, []);
 
   // 5. Handle Foreground Event Buttons from Notifee

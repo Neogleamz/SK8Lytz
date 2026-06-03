@@ -20,6 +20,7 @@
 import { Platform } from 'react-native';
 import { AppLogger } from './AppLogger';
 import { supabase } from './supabaseClient';
+import { WatchBridge } from 'sk8lytz-watch-bridge';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -82,6 +83,9 @@ function estimateCalories(avgSpeedMph: number, durationSec: number): number {
 // ── Service ────────────────────────────────────────────────────────────────────
 
 class SpeedTrackingServiceClass {
+  /** Timestamp of last watch metric push — used to throttle to max once/3s */
+  private lastWatchSyncMs = 0;
+  private readonly WATCH_SYNC_THROTTLE_MS = 3000;
   /**
    * Saves a completed skating session to Supabase.
    * Called by DockedController when user taps "Save Session" in Street Mode.
@@ -154,6 +158,25 @@ class SpeedTrackingServiceClass {
       AppLogger.log('ERROR_CAUGHT', { message: `[SpeedTrackingService] Exception: ${err.message}` });
       return null;
     }
+  }
+
+  /**
+   * Pushes a live speed update to connected watches.
+   * Throttled to max once per 3 seconds to protect watch battery.
+   * Call this from DockedController on every GPS location update.
+   */
+  pushSpeedToWatch(speedMph: number, calories?: number, heartRateBpm?: number): void {
+    const now = Date.now();
+    if (now - this.lastWatchSyncMs < this.WATCH_SYNC_THROTTLE_MS) return;
+    this.lastWatchSyncMs = now;
+
+    WatchBridge.sendMetricUpdate({
+      speed:     speedMph,
+      calories:  calories,
+      heartRate: heartRateBpm,
+    }).catch((err: unknown) =>
+      AppLogger.warn('WATCH_BRIDGE', { event: 'metric_push_failed', error: String(err) })
+    );
   }
 
   /**

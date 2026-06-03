@@ -1,0 +1,8 @@
+{
+  "ios": {
+    "modules": ["Sk8lytzWatchBridgeModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.sk8lytzwatchbridge.Sk8lytzWatchBridgeModule"]
+  }
+}

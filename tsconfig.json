@@ -4,7 +4,11 @@
   "compilerOptions": {
     // Strict mode: catches null/undefined errors, implicit any, and unsafe operations
     "strict": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "paths": {
+      // Local Expo module — resolved without npm install via path alias
+      "sk8lytz-watch-bridge": ["./modules/sk8lytz-watch-bridge/src/index.ts"]
+    }
   },
   "exclude": [
     "node_modules",

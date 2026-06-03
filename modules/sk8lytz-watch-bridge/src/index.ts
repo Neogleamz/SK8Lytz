@@ -1,0 +1,96 @@
+import { requireNativeModule } from 'expo-modules-core';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+/** The session state payload pushed from phone → watch. */
+export interface WatchSessionState {
+  /** 'ACTIVE' or 'STOPPED' */
+  status: 'ACTIVE' | 'STOPPED';
+  /** Current GPS speed in mph */
+  speed?: number;
+  /** Live heart rate in bpm */
+  heartRate?: number;
+  /** Active calories burned */
+  calories?: number;
+  /** ISO 8601 session start timestamp */
+  startTime?: string;
+}
+
+/** Commands the watch can send back to the phone. */
+export type WatchCommand = 'START_SESSION' | 'STOP_SESSION';
+
+/**
+ * Subscription handle returned by NativeModule.addListener.
+ * Defined locally to avoid importing the internal Subscription type.
+ */
+interface Subscription {
+  remove(): void;
+}
+
+// ── Native Module Interface ───────────────────────────────────────────────────
+
+/**
+ * Raw interface for the native Expo module.
+ * NativeModule base is NOT typed generically here — we use nativeModule.addListener
+ * directly which is part of the NativeModule base class (no EventsMap constraint needed).
+ */
+interface Sk8lytzWatchBridgeNative {
+  syncSessionState(state: WatchSessionState): Promise<void>;
+  sendMetricUpdate(metrics: Pick<WatchSessionState, 'speed' | 'heartRate' | 'calories'>): Promise<void>;
+  isWatchReachable(): Promise<boolean>;
+  /** Provided by the expo-modules-core NativeModule base — wraps native event subscription. */
+  addListener(eventName: string, listener: (payload: unknown) => void): Subscription;
+}
+
+// ── Module Instantiation ──────────────────────────────────────────────────────
+
+const nativeModule = requireNativeModule<Sk8lytzWatchBridgeNative>('Sk8lytzWatchBridge');
+
+// ── Public API ────────────────────────────────────────────────────────────────
+
+export const WatchBridge = {
+  /**
+   * Push session state to all connected watches (fire-and-forget).
+   * Safe to call even when no watch is paired — silently no-ops on native side.
+   */
+  syncSessionState: (state: WatchSessionState): Promise<void> =>
+    nativeModule.syncSessionState(state),
+
+  /**
+   * Push a live metric snapshot to the watch.
+   * Caller is responsible for throttling (max once per 3 seconds).
+   */
+  sendMetricUpdate: (
+    metrics: Pick<WatchSessionState, 'speed' | 'heartRate' | 'calories'>
+  ): Promise<void> => nativeModule.sendMetricUpdate(metrics),
+
+  /** Returns true if at least one watch is paired and reachable right now. */
+  isWatchReachable: (): Promise<boolean> => nativeModule.isWatchReachable(),
+
+  /**
+   * Subscribe to commands sent from the watch (START_SESSION / STOP_SESSION).
+   * Returns an unsubscribe function — call it in useEffect cleanup.
+   *
+   * The native payload is { command: WatchCommand }; we extract and type-narrow here.
+   */
+  addWatchCommandListener: (handler: (command: WatchCommand) => void): (() => void) => {
+    const subscription = nativeModule.addListener(
+      'onWatchCommandReceived',
+      (payload: unknown) => {
+        // Type-narrow from unknown payload — safe, no `as any`
+        if (
+          payload !== null &&
+          typeof payload === 'object' &&
+          'command' in payload &&
+          typeof (payload as Record<string, unknown>).command === 'string'
+        ) {
+          const cmd = (payload as Record<string, unknown>).command as WatchCommand;
+          if (cmd === 'START_SESSION' || cmd === 'STOP_SESSION') {
+            handler(cmd);
+          }
+        }
+      }
+    );
+    return () => subscription.remove();
+  },
+};
