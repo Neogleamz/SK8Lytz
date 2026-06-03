@@ -39,6 +39,7 @@ import com.neogleamz.sk8lytzwear.presentation.theme.NeonMagenta
 import com.neogleamz.sk8lytzwear.presentation.theme.TrueBlack
 import com.neogleamz.sk8lytzwear.services.HealthTracker
 import com.neogleamz.sk8lytzwear.services.WearableCommunicationService
+import com.neogleamz.sk8lytzwear.services.OngoingActivityManager
 
 /**
  * DashboardScreen — Single-screen Wear OS UI for SK8Lytz.
@@ -116,6 +117,7 @@ fun DashboardScreen() {
                     // Anchor locally when session starts from the watch
                     WearableCommunicationService.sessionStartTimeMs = System.currentTimeMillis()
                     HealthTracker.startTracking(context)
+                    OngoingActivityManager.startOngoingActivity(context)
                     WearMessageSender.sendCommand(context, "START_SESSION")
                 }
             )
@@ -128,6 +130,7 @@ fun DashboardScreen() {
                     sessionState = SessionState.IDLE // Optimistic UI
                     WearableCommunicationService.sessionStartTimeMs = 0L
                     HealthTracker.stopTracking()
+                    OngoingActivityManager.stopOngoingActivity(context)
                     WearMessageSender.sendCommand(context, "STOP_SESSION")
                 }
             )

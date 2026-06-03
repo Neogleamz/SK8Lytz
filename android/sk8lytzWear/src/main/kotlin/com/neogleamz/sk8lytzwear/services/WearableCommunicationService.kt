@@ -94,11 +94,13 @@ class WearableCommunicationService : WearableListenerService() {
                     sessionStartTimeMs = 0L
                 }
 
-                // Start/stop HealthTracker when phone drives the session state
+                // Start/stop HealthTracker & OngoingActivity when phone drives the session state
                 if (currentState == SessionState.ACTIVE && previousState != SessionState.ACTIVE) {
                     HealthTracker.startTracking(this@WearableCommunicationService)
+                    OngoingActivityManager.startOngoingActivity(this@WearableCommunicationService)
                 } else if (currentState == SessionState.IDLE && previousState == SessionState.ACTIVE) {
                     HealthTracker.stopTracking()
+                    OngoingActivityManager.stopOngoingActivity(this@WearableCommunicationService)
                 }
 
                 Log.d(TAG, "DataClient state update: $status | speed=$speed hr=$hr cal=$cal")
