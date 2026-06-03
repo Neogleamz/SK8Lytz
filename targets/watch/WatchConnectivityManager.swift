@@ -122,14 +122,19 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
                 sessionStartTime = date
             }
         }
-        if let speed = payload["speed"] as? Double {
-            currentSpeed = speed
-        }
-        // Calories may arrive as Int or Double depending on source
-        if let calories = payload["calories"] as? Double {
-            activeCalories = Int(calories)
-        } else if let calories = payload["calories"] as? Int {
-            activeCalories = calories
+        // Only update live display vars from ACTIVE/PAUSED payloads —
+        // SUMMARY reuses the same field names for final metric values so we guard here
+        // to avoid clobbering the live session display state.
+        if !showingSummary {
+            if let speed = payload["speed"] as? Double {
+                currentSpeed = speed
+            }
+            // Calories may arrive as Int or Double depending on source
+            if let calories = payload["calories"] as? Double {
+                activeCalories = Int(calories)
+            } else if let calories = payload["calories"] as? Int {
+                activeCalories = calories
+            }
         }
     }
 
