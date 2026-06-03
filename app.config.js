@@ -77,7 +77,8 @@ module.exports = {
           neverForLocation: true
         }
       ],
-      "@bacons/apple-targets"
+      "@bacons/apple-targets",
+      "./plugins/withWearOsModule"
     ],
     extra: {
       eas: {
