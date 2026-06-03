@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import com.neogleamz.sk8lytzwear.presentation.WearMessageSender
 
 /**
  * HealthTracker — wraps Health Services ExerciseClient for live HR, calories,
@@ -30,6 +31,7 @@ object HealthTracker {
     private const val TAG = "HealthTracker"
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var exerciseClient: ExerciseClient? = null
+    private var trackingContext: Context? = null
     private var isTracking = false
 
     /** Callback for live health data — consumed by DashboardScreen */
@@ -41,6 +43,7 @@ object HealthTracker {
      */
     fun startTracking(context: Context) {
         if (isTracking) return
+        trackingContext = context.applicationContext
         scope.launch {
             runCatching {
                 val client = HealthServices.getClient(context).exerciseClient
@@ -81,6 +84,7 @@ object HealthTracker {
                 exerciseClient?.endExerciseAsync()?.await()
                 exerciseClient?.clearUpdateCallbackAsync(exerciseCallback)?.await()
                 isTracking = false
+                trackingContext = null
                 Log.d(TAG, "Exercise session ended")
             }.onFailure {
                 Log.e(TAG, "Failed to stop exercise tracking: ${it.message}", it)
@@ -98,6 +102,10 @@ object HealthTracker {
 
             if (hr > 0 || cal > 0) {
                 onHealthUpdate?.invoke(hr, cal)
+                // Relay health data back to the phone (5s throttled)
+                trackingContext?.let { ctx ->
+                    WearMessageSender.sendHealthUpdate(ctx, hr, cal)
+                }
             }
         }
 

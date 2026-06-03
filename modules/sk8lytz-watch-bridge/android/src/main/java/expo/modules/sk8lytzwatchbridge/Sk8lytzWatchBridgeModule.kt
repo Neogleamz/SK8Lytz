@@ -39,6 +39,7 @@ class Sk8lytzWatchBridgeModule : Module() {
     private val PATH_STATE   = "/sk8lytz/state"
     private val PATH_COMMAND = "/sk8lytz/command"
     private val PATH_METRICS = "/sk8lytz/metrics"
+    private val PATH_HEALTH  = "/sk8lytz/health"
 
     // Inbound message listener — receives commands from the watch
     private var messageListener: MessageClient.OnMessageReceivedListener? = null
@@ -145,15 +146,32 @@ class Sk8lytzWatchBridgeModule : Module() {
     /**
      * Handles inbound messages from the Wear OS watch.
      * Commands arrive on PATH_COMMAND as UTF-8 strings: "START_SESSION" or "STOP_SESSION".
-     * Emits 'onWatchCommandReceived' JS event for SessionContext to handle.
+     * Health data arrives on PATH_HEALTH as JSON: {"heartRate": N, "calories": N}.
      */
     private fun handleInboundMessage(messageEvent: MessageEvent) {
-        if (messageEvent.path == PATH_COMMAND) {
-            val command = String(messageEvent.data, Charsets.UTF_8)
-            Log.d(TAG, "Received command from watch: $command")
-            if (command == "START_SESSION" || command == "STOP_SESSION") {
-                sendEvent("onWatchCommandReceived", mapOf("command" to command))
+        when (messageEvent.path) {
+            PATH_COMMAND -> {
+                val command = String(messageEvent.data, Charsets.UTF_8)
+                Log.d(TAG, "Received command from watch: $command")
+                if (command == "START_SESSION" || command == "STOP_SESSION") {
+                    sendEvent("onWatchCommandReceived", mapOf("command" to command))
+                }
             }
+            PATH_HEALTH -> {
+                runCatching {
+                    val json = JSONObject(String(messageEvent.data, Charsets.UTF_8))
+                    val hr = json.optInt("heartRate", 0)
+                    val cal = json.optInt("calories", 0)
+                    Log.d(TAG, "Received health from watch: hr=$hr cal=$cal")
+                    sendEvent("onWatchHealthUpdate", mapOf(
+                        "heartRate" to hr,
+                        "calories" to cal
+                    ))
+                }.onFailure {
+                    Log.e(TAG, "Failed to parse watch health: ${it.message}", it)
+                }
+            }
+            else -> Log.w(TAG, "Unknown inbound path: ${messageEvent.path}")
         }
     }
 }
