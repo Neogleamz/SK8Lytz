@@ -8,17 +8,26 @@ $env:JAVA_HOME = $JdkPath
 $env:ANDROID_HOME = $SdkPath
 $env:PATH = "$JdkPath\bin;$SdkPath\cmdline-tools\latest\bin;$SdkPath\platform-tools;$env:PATH"
 
-# Move to android directory
-Set-Location android
+$PatcherProc = $null
+try {
+    Write-Host "### Starting Ninja Patcher Daemon in background... ###"
+    $PatcherProc = Start-Process powershell.exe -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$ProjectRoot\tools\ninja-patcher-daemon.ps1`" `"$ProjectRoot`"" -WindowStyle Hidden -PassThru
 
-Write-Host "### Starting Gradle Build (Release) ###"
-.\gradlew.bat assembleRelease
-if ($LASTEXITCODE -ne 0) {
-    Set-Location ..
-    Write-Error "### Gradle Build FAILED! Aborting. ###"
-    exit $LASTEXITCODE
+    # Move to android directory
+    Set-Location android
+
+    Write-Host "### Starting Gradle Build (Release) ###"
+    .\gradlew.bat assembleRelease
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "### Gradle Build FAILED! Aborting. ###"
+        exit $LASTEXITCODE
+    }
+} finally {
+    if ($PatcherProc) {
+        Write-Host "### Stopping Ninja Patcher Daemon... ###"
+        Stop-Process -Id $PatcherProc.Id -Force -ErrorAction SilentlyContinue
+    }
+    Set-Location $ProjectRoot
 }
-
-Set-Location ..
 
 Write-Host "### Build Finished! APK is at: android\app\build\outputs\apk\release\app-release.apk ###"
