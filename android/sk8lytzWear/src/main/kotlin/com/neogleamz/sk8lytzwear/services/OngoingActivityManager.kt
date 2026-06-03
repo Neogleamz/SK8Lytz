@@ -37,17 +37,16 @@ object OngoingActivityManager {
         )
 
         // Build the notification. Use our brandmark icon!
-        val notification = NotificationCompat.Builder(context, ONGOING_CHANNEL_ID)
+        val notificationBuilder = NotificationCompat.Builder(context, ONGOING_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_sk8lytz_brandmark)
             .setContentTitle("SK8Lytz")
             .setContentText("Skating session active")
             .setOngoing(true)
             .setCategory(NotificationCompat.CATEGORY_WORKOUT)
             .setContentIntent(pendingIntent)
-            .build()
 
         // Build OngoingActivity
-        val ongoingActivity = OngoingActivity.Builder(context, ONGOING_NOTIFICATION_ID, notification)
+        val ongoingActivity = OngoingActivity.Builder(context, ONGOING_NOTIFICATION_ID, notificationBuilder)
             .setStaticIcon(R.drawable.ic_sk8lytz_brandmark)
             .setTouchIntent(pendingIntent)
             .setStatus(
@@ -58,7 +57,7 @@ object OngoingActivityManager {
             .build()
 
         ongoingActivity.apply(context)
-        notificationManager?.notify(ONGOING_NOTIFICATION_ID, notification)
+        notificationManager?.notify(ONGOING_NOTIFICATION_ID, notificationBuilder.build())
     }
 
     fun stopOngoingActivity(context: Context) {

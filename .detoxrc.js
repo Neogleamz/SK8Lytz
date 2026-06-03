@@ -25,7 +25,7 @@ module.exports = {
     emulator: {
       type: 'android.emulator',
       device: {
-        avdName: 'Pixel_6_API_33'
+        avdName: 'SK8Lytz_Pixel7'
       }
     }
   },

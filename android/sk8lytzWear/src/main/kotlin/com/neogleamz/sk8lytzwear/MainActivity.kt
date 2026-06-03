@@ -3,7 +3,7 @@ package com.neogleamz.sk8lytzwear
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.wear.ambient.AmbientModeSupport
 import com.neogleamz.sk8lytzwear.presentation.DashboardScreen
@@ -16,7 +16,7 @@ import com.neogleamz.sk8lytzwear.services.WearableCommunicationService
  * MainActivity — Wear OS entry point.
  * Launches the single-screen dashboard (DashboardScreen) and handles Always-On Display.
  */
-class MainActivity : ComponentActivity(), AmbientModeSupport.AmbientCallbackProvider {
+class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvider {
 
     private lateinit var ambientController: AmbientModeSupport.AmbientController
 

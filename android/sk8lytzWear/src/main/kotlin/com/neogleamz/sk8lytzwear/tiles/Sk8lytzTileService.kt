@@ -4,6 +4,7 @@ import android.content.ComponentName
 import androidx.wear.protolayout.ActionBuilders
 import androidx.wear.protolayout.ColorBuilders.argb
 import androidx.wear.protolayout.DimensionBuilders.dp
+import androidx.wear.protolayout.DimensionBuilders.sp
 import androidx.wear.protolayout.DimensionBuilders.expand
 import androidx.wear.protolayout.LayoutElementBuilders
 import androidx.wear.protolayout.LayoutElementBuilders.Column
@@ -125,7 +126,7 @@ class Sk8lytzTileService : TileService() {
                     .setText("SK8Lytz")
                     .setFontStyle(
                         LayoutElementBuilders.FontStyle.Builder()
-                            .setSize(dp(18f))
+                            .setSize(sp(18f))
                             .setWeight(LayoutElementBuilders.FONT_WEIGHT_BOLD)
                             .setColor(argb(ELECTRIC_CYAN))
                             .build()
@@ -139,7 +140,7 @@ class Sk8lytzTileService : TileService() {
                     .setText("🛼")
                     .setFontStyle(
                         LayoutElementBuilders.FontStyle.Builder()
-                            .setSize(dp(28f))
+                            .setSize(sp(28f))
                             .build()
                     ).build()
             )
@@ -157,7 +158,7 @@ class Sk8lytzTileService : TileService() {
                     )
                     .setFontStyle(
                         LayoutElementBuilders.FontStyle.Builder()
-                            .setSize(dp(11f))
+                            .setSize(sp(11f))
                             .setWeight(LayoutElementBuilders.FONT_WEIGHT_BOLD)
                             .setColor(
                                 argb(when {
@@ -179,7 +180,7 @@ class Sk8lytzTileService : TileService() {
                             .setText(String.format("%.1f mph", speed))
                             .setFontStyle(
                                 LayoutElementBuilders.FontStyle.Builder()
-                                    .setSize(dp(14f))
+                                    .setSize(sp(14f))
                                     .setWeight(LayoutElementBuilders.FONT_WEIGHT_MEDIUM)
                                     .setColor(argb(WHITE))
                                     .build()

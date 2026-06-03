@@ -16,7 +16,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.guava.await
 import com.neogleamz.sk8lytzwear.presentation.WearMessageSender
 
 /**
@@ -49,12 +49,11 @@ object HealthTracker {
                 val client = HealthServices.getClient(context).exerciseClient
                 exerciseClient = client
 
-                // Check capabilities — does this watch support inline skating?
-                val capabilities = client.getCapabilitiesAsync().await()
-                val supported = capabilities.supportedExerciseTypes.contains(ExerciseType.INLINE_SKATING)
-                val exerciseType = if (supported) ExerciseType.INLINE_SKATING else ExerciseType.OTHER_WORKOUT
+                // Removed capability check due to Health Services alpha API differences.
+                // We'll catch UnsupportedExerciseTypeException in runCatching if not supported.
+                val exerciseType = ExerciseType.INLINE_SKATING
 
-                Log.d(TAG, "Using exercise type: $exerciseType (inline skating supported: $supported)")
+                Log.d(TAG, "Using exercise type: $exerciseType")
 
                 val config = ExerciseConfig.builder(exerciseType)
                     .setDataTypes(
@@ -94,11 +93,15 @@ object HealthTracker {
 
     private val exerciseCallback = object : ExerciseUpdateCallback {
         override fun onExerciseUpdateReceived(update: ExerciseUpdate) {
-            val hrPoints = update.latestMetrics[DataType.HEART_RATE_BPM]
-            val calPoints = update.latestMetrics[DataType.CALORIES_TOTAL]
+            val hrPoints = update.latestMetrics.getData(DataType.HEART_RATE_BPM)
+            val calTotal = update.latestMetrics.getData(DataType.CALORIES_TOTAL)
 
-            val hr = hrPoints?.lastOrNull()?.value?.toInt() ?: 0
-            val cal = calPoints?.lastOrNull()?.value?.toInt() ?: 0
+            val hr = hrPoints.lastOrNull()?.value?.toInt() ?: 0
+            val cal = when (calTotal) {
+                is Number -> calTotal.toInt()
+                is List<*> -> (calTotal.lastOrNull() as? androidx.health.services.client.data.SampleDataPoint<*>)?.value?.let { (it as? Number)?.toInt() } ?: 0
+                else -> 0
+            }
 
             if (hr > 0 || cal > 0) {
                 onHealthUpdate?.invoke(hr, cal)
@@ -114,9 +117,7 @@ object HealthTracker {
         }
 
         override fun onAvailabilityChanged(dataType: DataType<*, *>, availability: Availability) {
-            if (availability is DataTypeAvailability) {
-                Log.d(TAG, "Availability for $dataType: ${availability.availability}")
-            }
+            Log.d(TAG, "Availability changed for $dataType")
         }
 
         override fun onRegistered() {
