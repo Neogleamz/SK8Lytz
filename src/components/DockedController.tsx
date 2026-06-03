@@ -1259,6 +1259,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             <UniversalSlidersFooter
               isBuildingCustom={isBuildingCustom}
               activeMode={activeMode}
+              cameraSubMode={cameraSubMode}
+              cameraVibePalette={cameraVibePalette}
               fixedSubMode={fixedSubMode}
               fixedColorMode={fixedColorMode}
               fixedModePattern={fixedModePattern}

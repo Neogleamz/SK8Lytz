@@ -1,6 +1,7 @@
 const typescriptEslintParser = require("@typescript-eslint/parser");
 const typescriptEslintPlugin = require("@typescript-eslint/eslint-plugin");
 const unusedImportsPlugin = require("eslint-plugin-unused-imports");
+const reactHooksPlugin = require("eslint-plugin-react-hooks");
 
 module.exports = [
   {
@@ -51,7 +52,8 @@ module.exports = [
     },
     plugins: {
       "@typescript-eslint": typescriptEslintPlugin,
-      "unused-imports": unusedImportsPlugin
+      "unused-imports": unusedImportsPlugin,
+      "react-hooks": reactHooksPlugin
     },
     rules: {
       "no-undef": "error",
@@ -71,7 +73,9 @@ module.exports = [
       "@typescript-eslint/no-require-imports": "off",
       "@typescript-eslint/no-empty-object-type": "off",
       "@typescript-eslint/no-empty-function": "off",
-      "@typescript-eslint/no-unused-expressions": "off"
+      "@typescript-eslint/no-unused-expressions": "off",
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn"
     }
   }
 ];

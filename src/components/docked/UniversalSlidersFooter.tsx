@@ -24,6 +24,8 @@ export interface UniversalSlidersFooterProps {
   // ── Active mode context ─────────────────────────────────────────────────
   activeMode: ModeType;
   isBuildingCustom?: boolean;
+  cameraSubMode?: 'SNIPER' | 'VIBE';
+  cameraVibePalette?: string[];
   fixedSubMode: string;
   fixedColorMode: 'FOREGROUND' | 'BACKGROUND';
   fixedModePattern: FixedModePattern;
@@ -124,7 +126,7 @@ const PRESET_HUE_MAP: { [key: string]: number } = {
 
 const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props: UniversalSlidersFooterProps) {
   const {
-    activeMode, fixedSubMode, fixedColorMode,
+    activeMode, fixedSubMode, fixedColorMode, cameraSubMode, cameraVibePalette,
     selectedColor, fixedFgColor, fixedBgColor, fixedHue,
     musicPrimaryColor, musicSecondaryColor, musicHue, musicSecondaryHue,
     selectedHue, musicColorFocus, streetCruiseColor,
@@ -398,6 +400,17 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                     });
                     writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(speed), 1, multiTransition));
                   }
+                } else if (activeMode === 'CAMERA' && cameraSubMode === 'VIBE') {
+                  const factor = brtFactor(val);
+                  if (cameraVibePalette && cameraVibePalette.length > 0) {
+                    const rgbColors = cameraVibePalette.map(h => {
+                      const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
+                      const rawG = Math.round((parseInt(h.slice(3, 5), 16) || 0) * factor);
+                      const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
+                      return { r: rawR, g: rawG, b: rawB };
+                    });
+                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(speed), 1, 1));
+                  }
                 } else {
                   const factor = brtFactor(val);
                   const hex = selectedColor;
@@ -453,7 +466,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
         )}
 
         {/* RIGHT SLOT: Speed (standard) / Music uses both sensitivity + brightness */}
-        {!(activeMode === 'MUSIC' || activeMode === 'CAMERA') && (
+        {!(activeMode === 'MUSIC' || (activeMode === 'CAMERA' && cameraSubMode !== 'VIBE')) && (
           <TacticalSlider
             style={{ flex: 1 }}
             iconName="engine-outline"
@@ -494,6 +507,17 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                       return { r: rawR, g: rawG, b: rawB };
                     });
                     writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, multiTransition));
+                  }
+                } else if (activeMode === 'CAMERA' && cameraSubMode === 'VIBE') {
+                  const factor = brtFactor(brightness);
+                  if (cameraVibePalette && cameraVibePalette.length > 0) {
+                    const rgbColors = cameraVibePalette.map(h => {
+                      const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
+                      const rawG = Math.round((parseInt(h.slice(3, 5), 16) || 0) * factor);
+                      const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
+                      return { r: rawR, g: rawG, b: rawB };
+                    });
+                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, 1));
                   }
                 } else if (activeMode === 'STREET') {
                   applyStreetPattern(motionStateRef.current, brightness, val);
