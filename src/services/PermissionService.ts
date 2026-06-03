@@ -140,9 +140,7 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
 
           // 2. Request Health Connect permissions
           try {
-            const { initialize, requestPermission: requestHC } = require('react-native-health-connect');
-            const initialized = await initialize();
-            if (!initialized) return false;
+            const { requestPermission: requestHC } = require('react-native-health-connect');
 
             const permissionsToRequest = [
               { accessType: 'read', recordType: 'HeartRate' },
@@ -226,9 +224,7 @@ const checkPermissionNative = async (type: PermissionType): Promise<boolean> => 
 
           // 2. Check Health Connect permissions
           try {
-            const { initialize, getGrantedPermissions } = require('react-native-health-connect');
-            const initialized = await initialize();
-            if (!initialized) return false;
+            const { getGrantedPermissions } = require('react-native-health-connect');
             
             const granted = await getGrantedPermissions();
             const hasReadHR = granted.some((p: { accessType: string; recordType: string }) => p.accessType === 'read' && p.recordType === 'HeartRate');

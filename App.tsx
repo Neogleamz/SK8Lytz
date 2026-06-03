@@ -252,6 +252,19 @@ export default function App() {
     return () => subscription.remove();
   }, []);
 
+  useEffect(() => {
+    // FIX: Android requires Health Connect ActivityResultLauncher to be initialized early
+    // before the activity is RESUMED to avoid lateinit UninitializedPropertyAccessException
+    if (Platform.OS === 'android') {
+      try {
+        const { initialize } = require('react-native-health-connect');
+        initialize().catch((err: any) => AppLogger.warn('HEALTH_CONNECT', { event: 'init_failed', error: String(err) }));
+      } catch {
+        // Fallback if library missing
+      }
+    }
+  }, []);
+
   if (!fontsLoaded) return null;
 
   return (
