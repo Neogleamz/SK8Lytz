@@ -91,9 +91,9 @@ export function boostForLED(r: number, g: number, b: number): { r: number; g: nu
   // HSV Saturation: 0 = grayscale, 1 = pure color
   const s = cMax === 0 ? 0 : delta / cMax;
 
-  // NEUTRAL GATE: Only truly achromatic pixels (S < 0.05) pass through.
+  // NEUTRAL GATE: Only truly achromatic pixels (S < 0.20) pass through.
   // Pastels, tinted grays, and muted colors all get boosted to vivid.
-  if (s < 0.05) {
+  if (s < 0.20) {
     const gray = Math.round(cMax * 255);
     return { r: gray, g: gray, b: gray };
   }
