@@ -76,7 +76,7 @@ export function useDockedControllerState(
 
   // Music mode parameters
   const [musicPatternId, setMusicPatternId] = useState<number>(1);
-  const [micSource, setMicSource] = useState<'APP' | 'DEVICE'>('APP');
+  const [micSource, setMicSource] = useState<'APP' | 'DEVICE'>('DEVICE');
   const [musicMatrixStyle, setMusicMatrixStyle] = useState<number>(39);
   const [musicSecondaryHue, setMusicSecondaryHue] = useState<number>(300);
   const [musicPrimaryColor, setMusicPrimaryColor] = useState<string>('#FF00FF');
