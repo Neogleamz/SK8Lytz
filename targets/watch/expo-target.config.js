@@ -19,6 +19,13 @@ module.exports = _config => ({
       "SK8Lytz reads your heart rate during skating sessions to display live BPM on your wrist and sync it to your session history.",
     NSHealthUpdateUsageDescription:
       "SK8Lytz saves skating workouts to Apple Health so your activity rings reflect your skate sessions.",
+    // Complication registration — points ClockKit to our data source class
+    CLKComplicationPrincipalClass: "$(PRODUCT_MODULE_NAME).ComplicationController",
+    CLKComplicationSupportedFamilies: [
+      "CLKComplicationFamilyGraphicCircular",
+      "CLKComplicationFamilyModularSmall",
+      "CLKComplicationFamilyGraphicCorner",
+    ],
   },
   // Image assets bundled into the watch target's xcassets
   images: {

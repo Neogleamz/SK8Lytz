@@ -1,6 +1,7 @@
 import Foundation
 import WatchConnectivity
 import WatchKit
+import ClockKit
 
 /// Manages bidirectional WCSession communication between the watch app and the iOS host.
 /// Acts as the single source of truth for session state and telemetry pushed from the phone.
@@ -128,6 +129,8 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         if !showingSummary {
             if let speed = payload["speed"] as? Double {
                 currentSpeed = speed
+                // Reload complications so the speed gauge reflects the new value immediately
+                reloadComplications()
             }
             // Calories may arrive as Int or Double depending on source
             if let calories = payload["calories"] as? Double {
@@ -135,6 +138,15 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
             } else if let calories = payload["calories"] as? Int {
                 activeCalories = calories
             }
+        }
+    }
+
+    /// Tells ClockKit to refresh all active SK8Lytz complications with the latest data.
+    private func reloadComplications() {
+        let server = CLKComplicationServer.sharedInstance()
+        guard let active = server.activeComplications, !active.isEmpty else { return }
+        for complication in active {
+            server.reloadTimeline(for: complication)
         }
     }
 
