@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AppState, Platform } from 'react-native';
-import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
+import notifee, { AndroidImportance, EventType, AndroidForegroundServiceType } from '@notifee/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useGlobalTelemetry, GlobalTelemetryState } from '../hooks/useGlobalTelemetry';
 import { useHealthTelemetry, HealthTelemetry } from '../hooks/useHealthTelemetry';
@@ -77,7 +77,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // 4. Manage the Foreground Service (Android) / Background Notification (iOS)
   useEffect(() => {
-    let updateInterval: NodeJS.Timeout | null = null;
+    let updateInterval: ReturnType<typeof setInterval> | null = null;
 
     const setupNotification = async () => {
       if (!isSkateSessionActive) {
@@ -107,6 +107,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           android: {
             channelId: NOTIFICATION_CHANNEL_ID,
             asForegroundService: true,
+            foregroundServiceTypes: [AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_LOCATION],
             color: '#00F0FF',
             ongoing: true, // Cannot be dismissed by user swiping
             pressAction: {
@@ -148,16 +149,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, [isSkateSessionActive, telemetry.sessionDistanceMiles, telemetry.gpsSpeed]);
 
-  // 5. Handle Foreground Event Buttons from Notifee
-  useEffect(() => {
-    return notifee.onForegroundEvent(({ type, detail }) => {
-      if (type === EventType.ACTION_PRESS && detail.pressAction?.id === 'end-session') {
-        AppLogger.log('APP_LOG', { event: 'end_session_from_notification' });
-        endSession();
-      }
-    });
-  }, []);
-
   const startSession = useCallback(async () => {
     setIsSkateSessionActive(true);
     try {
@@ -180,6 +171,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       notifee.stopForegroundService();
     }
   }, []);
+
+  // 5. Handle Foreground Event Buttons from Notifee
+  useEffect(() => {
+    return notifee.onForegroundEvent(({ type, detail }) => {
+      if (type === EventType.ACTION_PRESS && detail.pressAction?.id === 'end-session') {
+        AppLogger.log('APP_LOG', { event: 'end_session_from_notification' });
+        endSession();
+      }
+    });
+  }, [endSession]);
+
+
 
   return (
     <SessionContext.Provider value={{ isSkateSessionActive, startSession, endSession, telemetry, health }}>
