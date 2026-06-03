@@ -51,6 +51,10 @@ import com.neogleamz.sk8lytzwear.services.OngoingActivityManager
  * State is driven by DataClient updates from the phone app
  * OR local watch button taps (optimistic command via WearMessageSender).
  */
+object DashboardScreenState {
+    var isAmbientMode by mutableStateOf(false)
+}
+
 @Composable
 fun DashboardScreen() {
     val context = LocalContext.current
@@ -110,30 +114,37 @@ fun DashboardScreen() {
             .background(TrueBlack),
         contentAlignment = Alignment.Center
     ) {
-        when (sessionState) {
-            SessionState.IDLE -> IdleView(
-                onStart = {
-                    sessionState = SessionState.ACTIVE // Optimistic UI
-                    // Anchor locally when session starts from the watch
-                    WearableCommunicationService.sessionStartTimeMs = System.currentTimeMillis()
-                    HealthTracker.startTracking(context)
-                    OngoingActivityManager.startOngoingActivity(context)
-                    WearMessageSender.sendCommand(context, "START_SESSION")
-                }
-            )
-            SessionState.ACTIVE -> ActiveView(
-                speed = speed,
-                heartRate = heartRate,
-                calories = calories,
-                elapsedSeconds = elapsedSeconds,
-                onStop = {
-                    sessionState = SessionState.IDLE // Optimistic UI
-                    WearableCommunicationService.sessionStartTimeMs = 0L
-                    HealthTracker.stopTracking()
-                    OngoingActivityManager.stopOngoingActivity(context)
-                    WearMessageSender.sendCommand(context, "STOP_SESSION")
-                }
-            )
+        if (DashboardScreenState.isAmbientMode && sessionState == SessionState.ACTIVE) {
+            AmbientView(speed = speed, elapsedSeconds = elapsedSeconds)
+        } else if (DashboardScreenState.isAmbientMode && sessionState == SessionState.IDLE) {
+            // Guard idle state: keep display 100% black in the unlikely event ambient triggers when idle
+            Box(modifier = Modifier.fillMaxSize().background(Color.Black))
+        } else {
+            when (sessionState) {
+                SessionState.IDLE -> IdleView(
+                    onStart = {
+                        sessionState = SessionState.ACTIVE // Optimistic UI
+                        // Anchor locally when session starts from the watch
+                        WearableCommunicationService.sessionStartTimeMs = System.currentTimeMillis()
+                        HealthTracker.startTracking(context)
+                        OngoingActivityManager.startOngoingActivity(context)
+                        WearMessageSender.sendCommand(context, "START_SESSION")
+                    }
+                )
+                SessionState.ACTIVE -> ActiveView(
+                    speed = speed,
+                    heartRate = heartRate,
+                    calories = calories,
+                    elapsedSeconds = elapsedSeconds,
+                    onStop = {
+                        sessionState = SessionState.IDLE // Optimistic UI
+                        WearableCommunicationService.sessionStartTimeMs = 0L
+                        HealthTracker.stopTracking()
+                        OngoingActivityManager.stopOngoingActivity(context)
+                        WearMessageSender.sendCommand(context, "STOP_SESSION")
+                    }
+                )
+            }
         }
     }
 }
@@ -292,4 +303,55 @@ private fun formatElapsed(totalSeconds: Int): String {
     val s = totalSeconds % 60
     return if (h > 0) String.format("%d:%02d:%02d", h, m, s)
     else String.format("%02d:%02d", m, s)
+}
+
+@Composable
+private fun AmbientView(speed: Double, elapsedSeconds: Int) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            // Speed HUD - Thin, monospace, white
+            Text(
+                text = String.format("%.1f", speed),
+                color = Color.White,
+                fontSize = 44.sp,
+                fontWeight = FontWeight.ExtraLight,
+                fontFamily = FontFamily.Monospace,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "SPEED MPH",
+                color = Color.DarkGray,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Timer HUD - Thin, monospace, white
+            Text(
+                text = formatElapsed(elapsedSeconds),
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Light,
+                fontFamily = FontFamily.Monospace,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "ELAPSED",
+                color = Color.DarkGray,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp
+            )
+        }
+    }
 }

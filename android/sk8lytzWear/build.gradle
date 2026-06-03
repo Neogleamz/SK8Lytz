@@ -60,6 +60,8 @@ dependencies {
 
     // Ongoing Activity — tappable indicator on watch face during workout
     implementation 'androidx.wear:wear-ongoing:1.0.0'
+    // Always-On Display (Ambient Mode) support
+    implementation 'androidx.wear:wear:1.3.0'
 
     // Lifecycle
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.2'
