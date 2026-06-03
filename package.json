@@ -14,6 +14,7 @@
     "verify": "node tools/verifiable-check-runner.js"
   },
   "dependencies": {
+    "@bacons/apple-targets": "^4.0.7",
     "@config-plugins/react-native-ble-plx": "^7.0.0",
     "@expo-google-fonts/righteous": "^0.4.1",
     "@expo/config-plugins": "^55.0.8",
