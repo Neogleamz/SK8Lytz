@@ -52,6 +52,20 @@
             </intent-filter>
         </service>
 
+        <!-- Tile Service — SK8Lytz tile in the watch tile carousel -->
+        <service
+            android:name=".tiles.Sk8lytzTileService"
+            android:label="SK8Lytz"
+            android:permission="com.google.android.wearable.permission.BIND_TILE_PROVIDER"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="androidx.wear.tiles.action.BIND_TILE_PROVIDER" />
+            </intent-filter>
+            <meta-data
+                android:name="androidx.wear.tiles.PREVIEW"
+                android:resource="@mipmap/ic_launcher" />
+        </service>
+
         <!-- Required for Health Services ExerciseClient capabilities query -->
         <meta-data
             android:name="com.google.android.gms.version"

@@ -30,10 +30,10 @@ class WearableCommunicationService : WearableListenerService() {
 
         // Thread-safe listener list for DashboardScreen to subscribe to
         private val stateListeners = mutableListOf<(SessionState, Double, Int, Int) -> Unit>()
-        private var currentSpeed = 0.0
+        internal var currentSpeed = 0.0
         private var currentHR = 0
         private var currentCalories = 0
-        private var currentState = SessionState.IDLE
+        internal var currentState = SessionState.IDLE
 
         /**
          * Phone-authoritative session start time as epoch millis.

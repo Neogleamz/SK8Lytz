@@ -63,6 +63,13 @@ dependencies {
     // Always-On Display (Ambient Mode) support
     implementation 'androidx.wear:wear:1.3.0'
 
+    // Wear OS Tiles API — glanceable tile in the tile carousel
+    implementation 'androidx.wear.tiles:tiles:1.4.1'
+    implementation 'androidx.wear.protolayout:protolayout:1.2.1'
+    implementation 'androidx.wear.protolayout:protolayout-material:1.2.1'
+    // Guava ListenableFuture — required by TileService API
+    implementation 'com.google.guava:guava:33.0.0-android'
+
     // Lifecycle
     implementation 'androidx.lifecycle:lifecycle-runtime-ktx:2.8.2'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-compose:2.8.2'
