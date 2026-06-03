@@ -15,6 +15,15 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     /// Nil when no session is active.
     @Published var sessionStartTime: Date?
 
+    // ── Post-session summary state ────────────────────────────────────────
+    @Published var showingSummary: Bool = false
+    @Published var summaryDurationSec: Int = 0
+    @Published var summaryDistanceMiles: Double = 0.0
+    @Published var summaryAvgSpeed: Double = 0.0
+    @Published var summaryCalories: Int = 0
+    @Published var summaryPeakHR: Int = 0
+    private var summaryDismissTimer: Timer?
+
     /// Timer that periodically sends watch-side health data back to the phone
     private var healthRelayTimer: Timer?
 
@@ -70,12 +79,40 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
 
     private func handlePayload(_ payload: [String: Any]) {
         if let status = payload["status"] as? String {
-            let nowActive = (status == "ACTIVE" || status == "PAUSED")
-            isSessionActive = nowActive
-            isPaused = (status == "PAUSED")
-            if !nowActive {
-                // Session stopped — clear the anchor so elapsed resets immediately
+            switch status {
+            case "ACTIVE":
+                // Resume normal session view
+                isSessionActive = true
+                isPaused = false
+                showingSummary = false
+                summaryDismissTimer?.invalidate()
+                summaryDismissTimer = nil
+            case "PAUSED":
+                isSessionActive = true
+                isPaused = true
+            case "SUMMARY":
+                // Capture metrics and show the summary card for 10 seconds
+                isSessionActive = false
+                isPaused = false
+                summaryDurationSec    = payload["totalDuration"] as? Int    ?? 0
+                summaryDistanceMiles  = payload["distance"]     as? Double  ?? 0.0
+                summaryAvgSpeed       = payload["avgSpeed"]     as? Double  ?? 0.0
+                summaryCalories       = payload["calories"]     as? Int     ?? 0
+                summaryPeakHR         = payload["peakHR"]       as? Int     ?? 0
+                sessionStartTime = nil   // Stop elapsed timer immediately
+                showingSummary = true
+                // Auto-dismiss after 10 seconds (matches phone's setTimeout + STOPPED push)
+                summaryDismissTimer?.invalidate()
+                summaryDismissTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
+                    DispatchQueue.main.async { self?.dismissSummary() }
+                }
+            default:  // "STOPPED" or unknown
+                isSessionActive = false
+                isPaused = false
                 sessionStartTime = nil
+                showingSummary = false
+                summaryDismissTimer?.invalidate()
+                summaryDismissTimer = nil
             }
         }
         // Parse phone-authoritative start timestamp (ISO-8601 UTC)
@@ -88,12 +125,19 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         if let speed = payload["speed"] as? Double {
             currentSpeed = speed
         }
-        // Calories may arrive as Int or Double depending on source (Health Connect sends Double)
+        // Calories may arrive as Int or Double depending on source
         if let calories = payload["calories"] as? Double {
             activeCalories = Int(calories)
         } else if let calories = payload["calories"] as? Int {
             activeCalories = calories
         }
+    }
+
+    /// Dismisses the summary card and resets summary state.
+    func dismissSummary() {
+        showingSummary = false
+        summaryDismissTimer?.invalidate()
+        summaryDismissTimer = nil
     }
 
     private func send(_ message: [String: Any]) {

@@ -41,6 +41,13 @@ class WearableCommunicationService : WearableListenerService() {
          */
         @Volatile var sessionStartTimeMs: Long = 0L
 
+        // ── Summary metric cache (populated when status == "SUMMARY") ─────────────
+        @Volatile var summaryDuration: Int = 0
+        @Volatile var summaryDistance: Double = 0.0
+        @Volatile var summaryAvgSpeed: Double = 0.0
+        @Volatile var summaryCalories: Int = 0
+        @Volatile var summaryPeakHR: Int = 0
+
         fun addStateListener(listener: (SessionState, Double, Int, Int) -> Unit) {
             synchronized(stateListeners) {
                 stateListeners.add(listener)
@@ -77,13 +84,23 @@ class WearableCommunicationService : WearableListenerService() {
 
                 val previousState = currentState
                 currentState = when (status) {
-                    "ACTIVE" -> SessionState.ACTIVE
-                    "PAUSED" -> SessionState.PAUSED
-                    else -> SessionState.IDLE
+                    "ACTIVE"  -> SessionState.ACTIVE
+                    "PAUSED"  -> SessionState.PAUSED
+                    "SUMMARY" -> SessionState.SUMMARY
+                    else      -> SessionState.IDLE
                 }
                 currentSpeed = speed
                 currentHR = hr
                 currentCalories = cal
+
+                // Cache summary metrics when the phone pushes the SUMMARY card
+                if (currentState == SessionState.SUMMARY) {
+                    summaryDuration  = dataMap.getInt("totalDuration", 0)
+                    summaryDistance  = dataMap.getDouble("distance", 0.0)
+                    summaryAvgSpeed  = dataMap.getDouble("avgSpeed", 0.0)
+                    summaryCalories  = dataMap.getInt("calories", 0)
+                    summaryPeakHR    = dataMap.getInt("peakHR", 0)
+                }
 
                 // Parse phone-authoritative start timestamp from ISO-8601 string
                 val startTimeStr = dataMap.getString("startTime", "")
@@ -106,6 +123,7 @@ class WearableCommunicationService : WearableListenerService() {
                     HealthTracker.startTracking(this@WearableCommunicationService)
                     OngoingActivityManager.startOngoingActivity(this@WearableCommunicationService)
                 } else if (!isRunning && wasRunning) {
+                    // SUMMARY and IDLE both stop the live tracking services
                     HealthTracker.stopTracking()
                     OngoingActivityManager.stopOngoingActivity(this@WearableCommunicationService)
                 }

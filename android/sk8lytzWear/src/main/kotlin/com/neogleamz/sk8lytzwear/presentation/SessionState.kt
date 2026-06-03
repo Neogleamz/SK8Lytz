@@ -17,5 +17,8 @@ enum class SessionState {
     ACTIVE,
 
     /** Paused skating session — shows live telemetry but displays paused status. */
-    PAUSED
+    PAUSED,
+
+    /** Post-session summary card — shows for 10 seconds then auto-transitions to IDLE. */
+    SUMMARY
 }

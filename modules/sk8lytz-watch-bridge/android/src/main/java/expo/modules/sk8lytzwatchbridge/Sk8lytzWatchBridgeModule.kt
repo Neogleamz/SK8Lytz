@@ -79,11 +79,16 @@ class Sk8lytzWatchBridgeModule : Module() {
                 runCatching {
                     val request = PutDataMapRequest.create(PATH_STATE).apply {
                         dataMap.apply {
-                            putString("status",    state["status"] as? String ?: "STOPPED")
-                            putDouble("speed",     (state["speed"] as? Number)?.toDouble() ?: 0.0)
-                            putInt("heartRate",    (state["heartRate"] as? Number)?.toInt() ?: 0)
-                            putInt("calories",     (state["calories"] as? Number)?.toInt() ?: 0)
-                            putString("startTime", state["startTime"] as? String ?: "")
+                            putString("status",        state["status"] as? String ?: "STOPPED")
+                            putDouble("speed",         (state["speed"] as? Number)?.toDouble() ?: 0.0)
+                            putInt("heartRate",        (state["heartRate"] as? Number)?.toInt() ?: 0)
+                            putInt("calories",         (state["calories"] as? Number)?.toInt() ?: 0)
+                            putString("startTime",     state["startTime"] as? String ?: "")
+                            // Summary-only fields (non-zero only when status == "SUMMARY")
+                            putInt("totalDuration",    (state["totalDuration"] as? Number)?.toInt() ?: 0)
+                            putDouble("distance",      (state["distance"] as? Number)?.toDouble() ?: 0.0)
+                            putDouble("avgSpeed",      (state["avgSpeed"] as? Number)?.toDouble() ?: 0.0)
+                            putInt("peakHR",           (state["peakHR"] as? Number)?.toInt() ?: 0)
                             // Force update even if data is identical (timestamp acts as dirty flag)
                             putLong("timestamp", System.currentTimeMillis())
                         }

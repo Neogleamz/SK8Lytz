@@ -5,8 +5,8 @@ import { Platform } from 'react-native';
 
 /** The session state payload pushed from phone → watch. */
 export interface WatchSessionState {
-  /** 'ACTIVE', 'STOPPED', or 'PAUSED' */
-  status: 'ACTIVE' | 'STOPPED' | 'PAUSED';
+  /** 'ACTIVE', 'PAUSED', 'SUMMARY' (post-session card, 10s), or 'STOPPED' */
+  status: 'ACTIVE' | 'STOPPED' | 'PAUSED' | 'SUMMARY';
   /** Current GPS speed in mph */
   speed?: number;
   /** Live heart rate in bpm */
@@ -15,6 +15,15 @@ export interface WatchSessionState {
   calories?: number;
   /** ISO 8601 session start timestamp */
   startTime?: string;
+  // ── Summary-only fields (status === 'SUMMARY') ──────────────────────────────
+  /** Total session duration in seconds */
+  totalDuration?: number;
+  /** Total distance skated in miles */
+  distance?: number;
+  /** Average speed across session in mph */
+  avgSpeed?: number;
+  /** Peak heart rate recorded during session in bpm */
+  peakHR?: number;
 }
 
 /** Commands the watch can send back to the phone. */

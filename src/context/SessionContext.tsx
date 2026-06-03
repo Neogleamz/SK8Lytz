@@ -24,6 +24,8 @@ const NOTIFICATION_ID = 'active-skate-session';
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [sessionPhase, setSessionPhase] = useState<'IDLE' | 'ACTIVE' | 'PAUSED'>('IDLE');
   const isSkateSessionActive = sessionPhase === 'ACTIVE' || sessionPhase === 'PAUSED';
+  // Ref for the delayed STOPPED push that follows the 10-second SUMMARY card
+  const summaryTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 1. Hook up the core telemetry
   const health = useHealthTelemetry(isSkateSessionActive);
@@ -235,6 +237,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [isSkateSessionActive, sessionPhase, telemetry.sessionDistanceMiles, telemetry.gpsSpeed]);
 
   const startSession = useCallback(async () => {
+    // Cancel any pending STOPPED push from a prior session summary
+    if (summaryTimeoutRef.current) {
+      clearTimeout(summaryTimeoutRef.current);
+      summaryTimeoutRef.current = null;
+    }
     setSessionPhase('ACTIVE');
     try {
       await AsyncStorage.setItem('@sk8lytz_session_active', 'true');
@@ -252,6 +259,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const endSession = useCallback(async () => {
+    // ── 1. Capture final metrics before state resets ──────────────────────────
+    const finalDurationSec = telemetry.sessionDurationSec ?? 0;
+    const finalDistanceMiles = telemetry.sessionDistanceMiles ?? 0;
+    const finalAvgSpeed =
+      finalDistanceMiles > 0 && finalDurationSec > 0
+        ? finalDistanceMiles / (finalDurationSec / 3600)
+        : 0;
+    const finalCalories = health.activeCalories ?? 0;
+    const finalPeakHR = health.peakBpm ?? 0;
+
+    // ── 2. Freeze local session immediately (phone HUD clears) ────────────────
     setSessionPhase('IDLE');
     try {
       await AsyncStorage.setItem('@sk8lytz_session_active', 'false');
@@ -262,11 +280,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (Platform.OS === 'android') {
       notifee.stopForegroundService();
     }
-    // Notify both watches the session stopped
-    WatchBridge.syncSessionState({ status: 'STOPPED' }).catch((err: unknown) =>
-      AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_stop', error: String(err) })
+
+    // ── 3. Push SUMMARY → both watches show the 10-second post-session card ───
+    WatchBridge.syncSessionState({
+      status: 'SUMMARY',
+      totalDuration: finalDurationSec,
+      distance: finalDistanceMiles,
+      avgSpeed: finalAvgSpeed,
+      calories: finalCalories,
+      peakHR: finalPeakHR,
+    }).catch((err: unknown) =>
+      AppLogger.warn('WATCH_BRIDGE', { event: 'summary_push_failed', error: String(err) })
     );
-  }, []);
+
+    // ── 4. Push STOPPED after 10s (matches watch card auto-dismiss timer) ─────
+    summaryTimeoutRef.current = setTimeout(() => {
+      WatchBridge.syncSessionState({ status: 'STOPPED' }).catch(() => {});
+      summaryTimeoutRef.current = null;
+    }, 10000);
+  }, [telemetry, health]);
 
   // 5. Handle Foreground Event Buttons from Notifee
   useEffect(() => {

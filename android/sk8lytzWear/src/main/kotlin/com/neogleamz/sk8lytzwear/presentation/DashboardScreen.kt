@@ -64,10 +64,24 @@ fun DashboardScreen() {
     var calories by remember { mutableStateOf(0) }
     // Live elapsed duration — derived from phone-authoritative anchor timestamp
     var elapsedSeconds by remember { mutableStateOf(0) }
+    // ── Summary snapshot (populated on SUMMARY transition) ─────────────────────
+    var summaryDuration by remember { mutableStateOf(0) }
+    var summaryDistance by remember { mutableStateOf(0.0) }
+    var summaryAvgSpeed by remember { mutableStateOf(0.0) }
+    var summaryCalories by remember { mutableStateOf(0) }
+    var summaryPeakHR by remember { mutableStateOf(0) }
 
     // Subscribe to state changes pushed from the phone via DataClient
     DisposableEffect(Unit) {
         val listener: (SessionState, Double, Int, Int) -> Unit = { state, spd, hr, cal ->
+            // When phone pushes SUMMARY, snapshot the cached summary metrics
+            if (state == SessionState.SUMMARY) {
+                summaryDuration  = WearableCommunicationService.summaryDuration
+                summaryDistance  = WearableCommunicationService.summaryDistance
+                summaryAvgSpeed  = WearableCommunicationService.summaryAvgSpeed
+                summaryCalories  = WearableCommunicationService.summaryCalories
+                summaryPeakHR    = WearableCommunicationService.summaryPeakHR
+            }
             sessionState = state
             speed = spd
             heartRate = hr
@@ -138,12 +152,26 @@ fun DashboardScreen() {
                     elapsedSeconds = elapsedSeconds,
                     isPaused = sessionState == SessionState.PAUSED,
                     onStop = {
-                        sessionState = SessionState.IDLE // Optimistic UI
+                        // Snapshot current telemetry for local watch-initiated stop
+                        summaryDuration  = elapsedSeconds
+                        summaryDistance  = 0.0       // phone-authoritative; shows 0 on watch-initiated stop
+                        summaryAvgSpeed  = speed      // last known speed as rough indicator
+                        summaryCalories  = calories
+                        summaryPeakHR    = heartRate
+                        sessionState = SessionState.SUMMARY // Optimistic: show summary card
                         WearableCommunicationService.sessionStartTimeMs = 0L
                         HealthTracker.stopTracking()
                         OngoingActivityManager.stopOngoingActivity(context)
                         WearMessageSender.sendCommand(context, "STOP_SESSION")
                     }
+                )
+                SessionState.SUMMARY -> SummaryScreen(
+                    durationSec   = summaryDuration,
+                    distanceMiles = summaryDistance,
+                    avgSpeedMph   = summaryAvgSpeed,
+                    calories      = summaryCalories,
+                    peakHR        = summaryPeakHR,
+                    onDismiss     = { sessionState = SessionState.IDLE }
                 )
             }
         }

@@ -12,7 +12,9 @@ struct ContentView: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            if watchManager.isSessionActive {
+            if watchManager.showingSummary {
+                summaryView
+            } else if watchManager.isSessionActive {
                 activeSessionView
             } else {
                 idleView
@@ -22,10 +24,11 @@ struct ContentView: View {
             healthManager.requestAuthorization()
         }
         .onReceive(ticker) { _ in
-            // Recompute elapsed from the phone-authoritative anchor every second.
-            // Falls back to zero gracefully when sessionStartTime is nil.
-            if watchManager.isPaused {
-                // If paused, freeze elapsedSeconds at its current value
+            // Only tick elapsed when an active (non-paused, non-summary) session is running
+            if watchManager.showingSummary {
+                // freeze: summary is displaying, don't update elapsed
+            } else if watchManager.isPaused {
+                // frozen at current value
             } else if let anchor = watchManager.sessionStartTime {
                 elapsedSeconds = Int(Date().timeIntervalSince(anchor))
             } else {
@@ -134,8 +137,8 @@ struct ContentView: View {
     }
 
     private func stopSession() {
-        // Anchor cleared in WatchConnectivityManager.handlePayload when STOPPED arrives;
-        // clear immediately here too for instant UI reset.
+        // Anchor cleared in WatchConnectivityManager when STOPPED arrives;
+        // clear immediately here too for instant elapsed reset.
         watchManager.sessionStartTime = nil
         elapsedSeconds = 0
         healthManager.stopWorkout()
@@ -153,6 +156,60 @@ struct ContentView: View {
             return String(format: "%d:%02d:%02d", h, m, s)
         }
         return String(format: "%02d:%02d", m, s)
+    }
+
+    // MARK: - Summary View
+
+    private var summaryView: some View {
+        VStack(spacing: 6) {
+            Text("SESSION COMPLETE 🎉")
+                .font(.caption)
+                .fontWeight(.heavy)
+                .foregroundColor(.cyan)
+                .multilineTextAlignment(.center)
+
+            summaryRow(label: "Duration",
+                       value: formatElapsed(watchManager.summaryDurationSec),
+                       valueColor: .white)
+
+            summaryRow(label: "Distance",
+                       value: String(format: "%.2f mi", watchManager.summaryDistanceMiles),
+                       valueColor: .white)
+
+            summaryRow(label: "Avg Speed",
+                       value: String(format: "%.1f mph", watchManager.summaryAvgSpeed),
+                       valueColor: .cyan)
+
+            summaryRow(label: "Calories",
+                       value: "\(watchManager.summaryCalories) kcal",
+                       valueColor: .orange)
+
+            summaryRow(label: "Peak HR",
+                       value: watchManager.summaryPeakHR > 0
+                           ? "\(watchManager.summaryPeakHR) bpm"
+                           : "-- bpm",
+                       valueColor: .red)
+
+            Text("tap to dismiss")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding(.horizontal, 4)
+        .onTapGesture { watchManager.dismissSummary() }
+    }
+
+    @ViewBuilder
+    private func summaryRow(label: String, value: String, valueColor: Color) -> some View {
+        HStack {
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(value)
+                .font(.callout)
+                .fontWeight(.bold)
+                .foregroundColor(valueColor)
+        }
     }
 }
 
