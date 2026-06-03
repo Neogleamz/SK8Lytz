@@ -60,8 +60,8 @@ module.exports = {
           "android": {
             "enableJetifier": true,
             "minSdkVersion": 26,
-            "compileSdkVersion": 34,
-            "targetSdkVersion": 34
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36
           }
         }
       ],
