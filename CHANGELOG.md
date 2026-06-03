@@ -1,3 +1,25 @@
+## [3.8.0] - 2026-06-02
+
+### ✨ Features
+- Global Background Session Daemon and Health Sync (`dce2c0b2`)
+- Redesign BluetoothGuard and remove global modal popup (`f0bcc2ab`)
+- Include missing UI slider fixes and native prebuild generation (`59021cc9`)
+
+### 🐛 Bug Fixes
+- Restore correct speed and brightness scaling for custom patterns (`96e0ca48`)
+- Hoist BluetoothGuard to app root and redesign card (`df4dc5c8`)
+- Resolve type safety issues in HealthSyncService (`4a5488bc`)
+- Camera color sync and builder layout (`ed672c36`)
+- Prioritize web port 8081 for console sniffer and add safety guard to channels (`283774f7`)
+- Resolve native worklet JSI thread isolation Ref read bug (`0c6a03c0`)
+
+### 🔧 Maintenance
+- Update android namespace and set minSdk to 26 for vision-camera (`9deee1f8`)
+- Apply pattern registry spreadsheet re-categorization (`113b3c2a`)
+- Archive completed fix/camera-mode-white-only sprint (`7aa1bbd9`)
+
+---
+
 ## [3.6.2] - 2026-05-26
 
 ### 🐛 Bug Fixes
