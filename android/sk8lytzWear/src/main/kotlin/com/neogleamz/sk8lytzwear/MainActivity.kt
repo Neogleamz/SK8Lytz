@@ -42,6 +42,9 @@ class MainActivity : FragmentActivity(), AmbientModeSupport.AmbientCallbackProvi
         // Register session state observer for screen-on policy
         WearableCommunicationService.addStateListener(stateListener)
 
+        // Proactively fetch initial state from DataClient in case app started AFTER phone
+        WearableCommunicationService.syncInitialState(this)
+
         // Request required runtime permissions
         val permissions = mutableListOf(
             android.Manifest.permission.BODY_SENSORS,

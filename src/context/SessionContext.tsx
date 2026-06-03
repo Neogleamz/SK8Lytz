@@ -222,7 +222,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
               channelId: NOTIFICATION_CHANNEL_ID,
               // Only trigger the native startForegroundService ONCE.
               // Subsequent updates just update the notification visually.
-              asForegroundService: !isForegroundServiceStarted && hasLocationPermission,
+              // CRITICAL (Android 14+): FGS can ONLY be started when the app is visibly in the foreground.
+              asForegroundService: !isForegroundServiceStarted && hasLocationPermission && AppState.currentState === 'active',
               ...(hasLocationPermission && {
                 foregroundServiceTypes: [AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_LOCATION],
               }),
@@ -250,7 +251,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             }
           });
           
-          if (hasLocationPermission) {
+          
+          if (hasLocationPermission && AppState.currentState === 'active') {
             isForegroundServiceStarted = true;
           }
         } catch (err: unknown) {

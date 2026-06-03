@@ -67,6 +67,45 @@ class WearableCommunicationService : WearableListenerService() {
                 stateListeners.forEach { it(currentState, currentSpeed, currentHR, currentCalories) }
             }
         }
+
+        fun syncInitialState(context: android.content.Context) {
+            com.google.android.gms.wearable.Wearable.getDataClient(context).dataItems
+                .addOnSuccessListener { dataItems ->
+                    dataItems.firstOrNull { it.uri.path == PATH_STATE }?.let { dataItem ->
+                        val dataMap = com.google.android.gms.wearable.DataMapItem.fromDataItem(dataItem).dataMap
+                        val status = dataMap.getString("status", "STOPPED")
+                        val speed = dataMap.getDouble("speed", 0.0)
+                        val hr = dataMap.getInt("heartRate", 0)
+                        val cal = dataMap.getInt("calories", 0)
+
+                        currentState = when (status) {
+                            "ACTIVE"  -> SessionState.ACTIVE
+                            "PAUSED"  -> SessionState.PAUSED
+                            "SUMMARY" -> SessionState.SUMMARY
+                            else      -> SessionState.IDLE
+                        }
+                        currentSpeed = speed
+                        currentHR = hr
+                        currentCalories = cal
+
+                        val startTimeStr = dataMap.getString("startTime", "")
+                        if (currentState == SessionState.ACTIVE && startTimeStr.isNotEmpty()) {
+                            runCatching {
+                                sessionStartTimeMs = Instant.parse(startTimeStr).toEpochMilli()
+                            }.onFailure {
+                                Log.w(TAG, "Failed to parse startTime ISO: $startTimeStr")
+                            }
+                        } else if (currentState == SessionState.IDLE) {
+                            sessionStartTimeMs = 0L
+                        }
+
+                        Log.d(TAG, "syncInitialState: Loaded $status from DataClient")
+                        notifyListeners()
+                    }
+                }.addOnFailureListener { e ->
+                    Log.e(TAG, "syncInitialState failed", e)
+                }
+        }
     }
 
     /**
@@ -130,6 +169,10 @@ class WearableCommunicationService : WearableListenerService() {
 
                 Log.d(TAG, "DataClient state update: $status | speed=$speed hr=$hr cal=$cal")
                 notifyListeners()
+                
+                // Force Tile refresh so it displays the absolute latest state
+                androidx.wear.tiles.TileService.getUpdater(this@WearableCommunicationService)
+                    .requestUpdate(com.neogleamz.sk8lytzwear.tiles.Sk8lytzTileService::class.java)
             }
         }
     }
@@ -149,6 +192,10 @@ class WearableCommunicationService : WearableListenerService() {
 
                     Log.d(TAG, "Metric update: speed=$currentSpeed hr=$currentHR cal=$currentCalories")
                     notifyListeners()
+                    
+                    // Force Tile refresh for live telemetry
+                    androidx.wear.tiles.TileService.getUpdater(this@WearableCommunicationService)
+                        .requestUpdate(com.neogleamz.sk8lytzwear.tiles.Sk8lytzTileService::class.java)
                 }.onFailure {
                     Log.e(TAG, "Failed to parse metric message: ${it.message}", it)
                 }
