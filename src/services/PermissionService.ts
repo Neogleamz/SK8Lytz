@@ -140,7 +140,13 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
 
           // 2. Request Health Connect permissions
           try {
-            const { requestPermission: requestHC } = require('react-native-health-connect');
+            const { initialize: initHC, requestPermission: requestHC } = require('react-native-health-connect');
+
+            // CRITICAL: initialize() registers the ActivityResultLauncher that
+            // the native HealthConnectPermissionDelegate stores in a lateinit var.
+            // Without this call, requestPermission() crashes with
+            // UninitializedPropertyAccessException on a native coroutine thread.
+            await initHC();
 
             const permissionsToRequest = [
               { accessType: 'read', recordType: 'HeartRate' },
@@ -224,7 +230,8 @@ const checkPermissionNative = async (type: PermissionType): Promise<boolean> => 
 
           // 2. Check Health Connect permissions
           try {
-            const { getGrantedPermissions } = require('react-native-health-connect');
+            const { initialize: initHC, getGrantedPermissions } = require('react-native-health-connect');
+            await initHC();
             
             const granted = await getGrantedPermissions();
             const hasReadHR = granted.some((p: { accessType: string; recordType: string }) => p.accessType === 'read' && p.recordType === 'HeartRate');

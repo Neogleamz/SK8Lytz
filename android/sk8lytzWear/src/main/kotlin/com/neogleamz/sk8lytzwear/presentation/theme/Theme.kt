@@ -17,6 +17,7 @@ import androidx.wear.compose.material.Colors
 val TrueBlack = Color(0xFF000000)
 val ElectricCyan = Color(0xFF00F0FF)
 val NeonMagenta = Color(0xFFFF2D7B)
+val BrandOrange = Color(0xFFF79320)
 val SurfaceDark = Color(0xFF1A1A1A)
 
 private val SK8LytzWearColors = Colors(

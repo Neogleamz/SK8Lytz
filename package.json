@@ -66,6 +66,7 @@
     "react-native-vision-camera-worklets": "^5.0.9",
     "react-native-web": "^0.21.2",
     "react-native-worklets": "^0.8.3",
+    "sk8lytz-watch-bridge": "file:modules/sk8lytz-watch-bridge",
     "string-similarity": "^4.0.4",
     "supercluster": "^8.0.1"
   },

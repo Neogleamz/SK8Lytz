@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -646,6 +646,51 @@ export type Database = {
         }
         Relationships: []
       }
+      inventory_adjustments_log: {
+        Row: {
+          avg_unit_cost: number
+          counted_stock: number
+          created_at: string
+          delta: number
+          id: string
+          item_key: string
+          notes: string | null
+          operator_email: string | null
+          operator_id: string | null
+          previous_stock: number
+          reason_code: string
+          valuation_impact: number
+        }
+        Insert: {
+          avg_unit_cost: number
+          counted_stock: number
+          created_at?: string
+          delta: number
+          id?: string
+          item_key: string
+          notes?: string | null
+          operator_email?: string | null
+          operator_id?: string | null
+          previous_stock: number
+          reason_code: string
+          valuation_impact: number
+        }
+        Update: {
+          avg_unit_cost?: number
+          counted_stock?: number
+          created_at?: string
+          delta?: number
+          id?: string
+          item_key?: string
+          notes?: string | null
+          operator_email?: string | null
+          operator_id?: string | null
+          previous_stock?: number
+          reason_code?: string
+          valuation_impact?: number
+        }
+        Relationships: []
+      }
       inventory_consumption: {
         Row: {
           assembly_consumed_qty: number | null
@@ -748,6 +793,33 @@ export type Database = {
           layout_json?: Json | null
           product_name?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      label_templates: {
+        Row: {
+          created_at: string | null
+          elements: Json | null
+          heightIn: number | null
+          id: string
+          name: string
+          widthIn: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          elements?: Json | null
+          heightIn?: number | null
+          id: string
+          name: string
+          widthIn?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          elements?: Json | null
+          heightIn?: number | null
+          id?: string
+          name?: string
+          widthIn?: number | null
         }
         Relationships: []
       }
@@ -2285,22 +2357,34 @@ export type Database = {
       }
       storefront_aliases: {
         Row: {
+          barcode_value: string | null
           created_at: string
           internal_recipe_name: string | null
+          is_primary: boolean | null
+          is_shopify_synced: boolean | null
           platform: string | null
-          storefront_sku: string
+          product_sku: string
+          shopify_sku: string | null
         }
         Insert: {
+          barcode_value?: string | null
           created_at?: string
           internal_recipe_name?: string | null
+          is_primary?: boolean | null
+          is_shopify_synced?: boolean | null
           platform?: string | null
-          storefront_sku: string
+          product_sku: string
+          shopify_sku?: string | null
         }
         Update: {
+          barcode_value?: string | null
           created_at?: string
           internal_recipe_name?: string | null
+          is_primary?: boolean | null
+          is_shopify_synced?: boolean | null
           platform?: string | null
-          storefront_sku?: string
+          product_sku?: string
+          shopify_sku?: string | null
         }
         Relationships: []
       }

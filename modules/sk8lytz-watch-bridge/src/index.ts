@@ -33,6 +33,8 @@ export type WatchCommand = 'START_SESSION' | 'STOP_SESSION';
 export interface WatchHealthUpdate {
   heartRate: number;
   calories: number;
+  status?: string;
+  startTimeMs?: number;
 }
 
 /**
@@ -54,6 +56,7 @@ interface Sk8lytzWatchBridgeNative {
   syncSessionState(state: WatchSessionState): Promise<void>;
   sendMetricUpdate(metrics: Pick<WatchSessionState, 'speed' | 'heartRate' | 'calories'>): Promise<void>;
   isWatchReachable(): Promise<boolean>;
+  startListening(): void;
   /** Provided by the expo-modules-core NativeModule base — wraps native event subscription. */
   addListener(eventName: string, listener: (payload: unknown) => void): Subscription;
 }
@@ -101,6 +104,7 @@ export const WatchBridge = {
    */
   addWatchCommandListener: (handler: (command: WatchCommand) => void): (() => void) => {
     if (!nativeModule) return () => {};
+    nativeModule.startListening();
     const subscription = nativeModule.addListener(
       'onWatchCommandReceived',
       (payload: unknown) => {
@@ -128,6 +132,7 @@ export const WatchBridge = {
    */
   addWatchHealthListener: (handler: (update: WatchHealthUpdate) => void): (() => void) => {
     if (!nativeModule) return () => {};
+    nativeModule.startListening();
     const subscription = nativeModule.addListener(
       'onWatchHealthUpdate',
       (payload: unknown) => {
@@ -141,6 +146,8 @@ export const WatchBridge = {
           handler({
             heartRate: typeof p.heartRate === 'number' ? p.heartRate : 0,
             calories: typeof p.calories === 'number' ? p.calories : 0,
+            status: typeof p.status === 'string' ? p.status : undefined,
+            startTimeMs: typeof p.startTimeMs === 'number' ? p.startTimeMs : undefined,
           });
         }
       }

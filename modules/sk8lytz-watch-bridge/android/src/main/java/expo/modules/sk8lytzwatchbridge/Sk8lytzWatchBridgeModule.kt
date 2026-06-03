@@ -49,14 +49,16 @@ class Sk8lytzWatchBridgeModule : Module() {
 
         Events("onWatchCommandReceived", "onWatchHealthUpdate")
 
-        // Register the inbound MessageClient listener when the module loads
-        OnCreate {
-            val context = appContext.reactContext ?: return@OnCreate
-            messageListener = MessageClient.OnMessageReceivedListener { messageEvent ->
-                handleInboundMessage(messageEvent)
+        // Register the inbound MessageClient listener explicitly from JS
+        Function("startListening") {
+            val context = appContext.reactContext ?: return@Function null
+            if (messageListener == null) {
+                messageListener = MessageClient.OnMessageReceivedListener { messageEvent ->
+                    handleInboundMessage(messageEvent)
+                }
+                Wearable.getMessageClient(context).addListener(messageListener!!)
+                Log.d(TAG, "Registered MessageClient listener for watch → phone commands")
             }
-            Wearable.getMessageClient(context).addListener(messageListener!!)
-            Log.d(TAG, "Registered MessageClient listener for watch → phone commands")
         }
 
         // Clean up listener on module destroy to prevent leaks
@@ -167,10 +169,14 @@ class Sk8lytzWatchBridgeModule : Module() {
                     val json = JSONObject(String(messageEvent.data, Charsets.UTF_8))
                     val hr = json.optInt("heartRate", 0)
                     val cal = json.optInt("calories", 0)
-                    Log.d(TAG, "Received health from watch: hr=$hr cal=$cal")
+                    val status = json.optString("status", "")
+                    val startTimeMs = json.optLong("startTimeMs", 0L)
+                    Log.d(TAG, "Received health from watch: hr=$hr cal=$cal status=$status")
                     sendEvent("onWatchHealthUpdate", mapOf(
                         "heartRate" to hr,
-                        "calories" to cal
+                        "calories" to cal,
+                        "status" to status,
+                        "startTimeMs" to startTimeMs
                     ))
                 }.onFailure {
                     Log.e(TAG, "Failed to parse watch health: ${it.message}", it)

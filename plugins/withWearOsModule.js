@@ -1,4 +1,4 @@
-const { withSettingsGradle, withAppBuildGradle } = require('@expo/config-plugins');
+const { withSettingsGradle, withAppBuildGradle, withAndroidManifest } = require('@expo/config-plugins');
 
 /**
  * Expo Config Plugin: withWearOsModule
@@ -46,6 +46,33 @@ project(':sk8lytzWear').projectDir = new File(rootProject.projectDir, 'sk8lytzWe
     }
 
     return gradleConfig;
+  });
+
+  // Step 3: Inject Notifee foregroundServiceType
+  config = withAndroidManifest(config, (manifestConfig) => {
+    const androidManifest = manifestConfig.modResults.manifest;
+    const application = androidManifest.application[0];
+    
+    if (!application.service) {
+      application.service = [];
+    }
+    
+    const notifeeService = application.service.find(s => s.$['android:name'] === 'app.notifee.core.ForegroundService');
+    
+    if (!notifeeService) {
+      application.service.push({
+        $: {
+          'android:name': 'app.notifee.core.ForegroundService',
+          'android:foregroundServiceType': 'location|health|connectedDevice|shortService|dataSync',
+          'tools:replace': 'android:foregroundServiceType'
+        }
+      });
+    } else {
+      notifeeService.$['android:foregroundServiceType'] = 'location|health|connectedDevice|shortService|dataSync';
+      notifeeService.$['tools:replace'] = 'android:foregroundServiceType';
+    }
+    
+    return manifestConfig;
   });
 
   return config;

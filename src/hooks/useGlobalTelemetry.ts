@@ -30,7 +30,8 @@ export interface GlobalTelemetryState {
  */
 export function useGlobalTelemetry(
   sessionPhase: 'IDLE' | 'ACTIVE' | 'PAUSED',
-  healthMetrics?: { avgBpm: number | null; peakBpm: number | null; activeCalories: number | null }
+  healthMetrics?: { avgBpm: number | null; peakBpm: number | null; activeCalories: number | null },
+  externalStartTimeMs?: number | null
 ): GlobalTelemetryState {
   const isSkateSessionActive = sessionPhase === 'ACTIVE' || sessionPhase === 'PAUSED';
   const [gpsSpeed, setGpsSpeed] = useState<number>(0);
@@ -54,7 +55,7 @@ export function useGlobalTelemetry(
   const lastGpsTimeRef = useRef<number | null>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
   const prevGRef = useRef(1.0);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Stable ref so commitSession never closes over stale peakGForce state
   const peakGForceRef = useRef(1.0);
@@ -171,7 +172,7 @@ export function useGlobalTelemetry(
     if (isSkateSessionActive) {
       // Start Session accumulators (idempotent — guards against double-fire)
       if (!sessionStartTimeRef.current) {
-        sessionStartTimeRef.current = Date.now();
+        sessionStartTimeRef.current = externalStartTimeMs || Date.now();
         sessionDistanceMilesRef.current = 0;
         sessionPeakGForceRef.current = 1.0;
         sessionPeakSpeedRef.current = 0;

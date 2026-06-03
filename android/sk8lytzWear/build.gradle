@@ -9,17 +9,27 @@ android {
     compileSdk 36
 
     defaultConfig {
-        applicationId "com.neogleamz.sk8lytzwear"
-        minSdk 30          // Wear OS 3.0 minimum (API 30)
+        applicationId "com.neogleamz.sk8lytz"
+        minSdk 26          // Wear OS minimum
         targetSdk 36
         versionCode 1
         versionName "1.0.0"
+    }
+
+    signingConfigs {
+        debug {
+            storeFile file('../app/debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.debug
         }
     }
 

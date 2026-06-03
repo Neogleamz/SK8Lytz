@@ -1,4 +1,5 @@
 {
+  "platforms": ["apple", "android"],
   "ios": {
     "modules": ["Sk8lytzWatchBridgeModule"]
   },

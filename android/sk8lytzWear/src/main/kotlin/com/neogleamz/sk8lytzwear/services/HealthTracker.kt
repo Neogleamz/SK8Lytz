@@ -18,6 +18,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.guava.await
 import com.neogleamz.sk8lytzwear.presentation.WearMessageSender
+import com.neogleamz.sk8lytzwear.presentation.SessionState
+import com.neogleamz.sk8lytzwear.services.WearableCommunicationService
 
 /**
  * HealthTracker — wraps Health Services ExerciseClient for live HR, calories,
@@ -43,6 +45,14 @@ object HealthTracker {
      */
     fun startTracking(context: Context) {
         if (isTracking) return
+        
+        // Prevent NoClassDefFoundError on Wear OS 2 (API < 30)
+        if (android.os.Build.VERSION.SDK_INT < 30) {
+            Log.w(TAG, "Health Services API requires Wear OS 3+ (API 30+). Skipping tracking.")
+            isTracking = true
+            return
+        }
+        
         trackingContext = context.applicationContext
         scope.launch {
             runCatching {
@@ -78,6 +88,12 @@ object HealthTracker {
     /** Stop the Health Services exercise session. */
     fun stopTracking() {
         if (!isTracking) return
+        
+        if (android.os.Build.VERSION.SDK_INT < 30) {
+            isTracking = false
+            return
+        }
+        
         scope.launch {
             runCatching {
                 exerciseClient?.endExerciseAsync()?.await()
@@ -107,7 +123,13 @@ object HealthTracker {
                 onHealthUpdate?.invoke(hr, cal)
                 // Relay health data back to the phone (5s throttled)
                 trackingContext?.let { ctx ->
-                    WearMessageSender.sendHealthUpdate(ctx, hr, cal)
+                    val statusStr = when (WearableCommunicationService.currentState) {
+                        SessionState.ACTIVE -> "ACTIVE"
+                        SessionState.PAUSED -> "PAUSED"
+                        SessionState.SUMMARY -> "SUMMARY"
+                        else -> "IDLE"
+                    }
+                    WearMessageSender.sendHealthUpdate(ctx, hr, cal, statusStr, WearableCommunicationService.sessionStartTimeMs)
                 }
             }
         }

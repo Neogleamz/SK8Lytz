@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AppState, Platform } from 'react-native';
+import * as Location from 'expo-location';
 import notifee, { AndroidImportance, EventType, AndroidForegroundServiceType } from '@notifee/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useGlobalTelemetry, GlobalTelemetryState } from '../hooks/useGlobalTelemetry';
@@ -23,6 +24,9 @@ const NOTIFICATION_ID = 'active-skate-session';
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [sessionPhase, setSessionPhase] = useState<'IDLE' | 'ACTIVE' | 'PAUSED'>('IDLE');
+  const [recoveredStartTimeMs, setRecoveredStartTimeMs] = useState<number | null>(null);
+  const sessionPhaseRef = React.useRef(sessionPhase);
+  useEffect(() => { sessionPhaseRef.current = sessionPhase; }, [sessionPhase]);
   const isSkateSessionActive = sessionPhase === 'ACTIVE' || sessionPhase === 'PAUSED';
   // Ref for the delayed STOPPED push that follows the 10-second SUMMARY card
   const summaryTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -33,7 +37,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     avgBpm: health.avgBpm,
     peakBpm: health.peakBpm,
     activeCalories: health.activeCalories
-  });
+  }, recoveredStartTimeMs);
 
   // 2. Initialize iOS categories + listen for watch commands
   useEffect(() => {
@@ -65,10 +69,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         event: 'watch_health_received',
         heartRate: update.heartRate,
         calories: update.calories,
+        status: update.status
       });
       // Merge into phone-side health telemetry — watch data takes precedence when available
       if (update.heartRate > 0) {
         health.mergeWatchHealth?.(update.heartRate, update.calories);
+      }
+      
+      // Auto-recover session if watch is active but phone is idle
+      if (update.status === 'ACTIVE' && sessionPhaseRef.current === 'IDLE') {
+        AppLogger.log('APP_LOG', { event: 'auto_recovering_session_from_watch_health' });
+        startSession(update.startTimeMs);
       }
     });
 
@@ -116,7 +127,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (sessionPhase !== 'ACTIVE' && sessionPhase !== 'PAUSED') return;
 
-    let timer: NodeJS.Timeout | null = null;
+    let timer: ReturnType<typeof setTimeout> | null = null;
 
     const checkAutoPause = async () => {
       try {
@@ -170,7 +181,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (!isSkateSessionActive) {
         if (updateInterval) clearInterval(updateInterval);
         if (Platform.OS === 'android') {
-          await notifee.stopForegroundService();
+          try { await notifee.stopForegroundService(); } catch { /* no FGS running — safe */ }
         } else {
           await notifee.cancelNotification(NOTIFICATION_ID);
         }
@@ -186,38 +197,65 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         });
       }
 
+      // Android 14+ crashes with SecurityException if we start a FGS with
+      // FOREGROUND_SERVICE_TYPE_LOCATION before the user has granted location.
+      // Check first — if not granted, show a plain notification (no FGS).
+      let hasLocationPermission = false;
+      if (Platform.OS === 'android') {
+        try {
+          const { status } = await Location.getForegroundPermissionsAsync();
+          hasLocationPermission = status === 'granted';
+        } catch {
+          hasLocationPermission = false;
+        }
+      }
+
+      let isForegroundServiceStarted = false;
+
       const displayNotification = async () => {
-        await notifee.displayNotification({
-          id: NOTIFICATION_ID,
-          title: sessionPhase === 'PAUSED' ? 'Skate Session Paused ⏸' : 'Skate Session Active 🟢',
-          body: `Distance: ${telemetry.sessionDistanceMiles.toFixed(2)} mi | Speed: ${telemetry.gpsSpeed.toFixed(1)} mph`,
-          android: {
-            channelId: NOTIFICATION_CHANNEL_ID,
-            asForegroundService: true,
-            foregroundServiceTypes: [AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_LOCATION],
-            color: '#00F0FF',
-            ongoing: true, // Cannot be dismissed by user swiping
-            pressAction: {
-              id: 'default',
-              launchActivity: 'default',
+        try {
+          await notifee.displayNotification({
+            id: NOTIFICATION_ID,
+            title: sessionPhase === 'PAUSED' ? 'Skate Session Paused ⏸' : 'Skate Session Active 🟢',
+            body: `Distance: ${telemetry.sessionDistanceMiles.toFixed(2)} mi | Speed: ${telemetry.gpsSpeed.toFixed(1)} mph`,
+            android: {
+              channelId: NOTIFICATION_CHANNEL_ID,
+              // Only trigger the native startForegroundService ONCE.
+              // Subsequent updates just update the notification visually.
+              asForegroundService: !isForegroundServiceStarted && hasLocationPermission,
+              ...(hasLocationPermission && {
+                foregroundServiceTypes: [AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_LOCATION],
+              }),
+              color: '#00F0FF',
+              ongoing: true,
+              pressAction: {
+                id: 'default',
+                launchActivity: 'default',
+              },
+              actions: [
+                {
+                  title: '🛑 END SESSION',
+                  pressAction: { id: 'end-session' }
+                }
+              ]
             },
-            actions: [
-              {
-                title: '🛑 END SESSION',
-                pressAction: { id: 'end-session' }
-              }
-            ]
-          },
-          ios: {
-            categoryId: 'session-actions',
-            foregroundPresentationOptions: {
-              badge: true,
-              sound: true,
-              banner: true,
-              list: true,
-            },
+            ios: {
+              categoryId: 'session-actions',
+              foregroundPresentationOptions: {
+                badge: true,
+                sound: true,
+                banner: true,
+                list: true,
+              },
+            }
+          });
+          
+          if (hasLocationPermission) {
+            isForegroundServiceStarted = true;
           }
-        });
+        } catch (err: unknown) {
+          AppLogger.error('Failed to display foreground service notification', err);
+        }
       };
 
       // Initial display
@@ -236,11 +274,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, [isSkateSessionActive, sessionPhase, telemetry.sessionDistanceMiles, telemetry.gpsSpeed]);
 
-  const startSession = useCallback(async () => {
+  const startSession = useCallback(async (externalStartTimeMs?: number) => {
     // Cancel any pending STOPPED push from a prior session summary
     if (summaryTimeoutRef.current) {
       clearTimeout(summaryTimeoutRef.current);
       summaryTimeoutRef.current = null;
+    }
+    if (externalStartTimeMs) {
+      setRecoveredStartTimeMs(externalStartTimeMs);
     }
     setSessionPhase('ACTIVE');
     try {
@@ -248,11 +289,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     } catch (err) {
       AppLogger.error('Failed to save session state to AsyncStorage', err);
     }
-    AppLogger.log('APP_LOG', { event: 'session_started' });
+    AppLogger.log('APP_LOG', { event: 'session_started', externalStartTimeMs });
+    
+    const isoStart = externalStartTimeMs 
+      ? new Date(externalStartTimeMs).toISOString() 
+      : new Date().toISOString();
+
     // Notify both watches — fire-and-forget, safe if no watch paired
     WatchBridge.syncSessionState({
       status: 'ACTIVE',
-      startTime: new Date().toISOString(),
+      startTime: isoStart,
     }).catch((err: unknown) =>
       AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_start', error: String(err) })
     );
@@ -271,6 +317,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     // ── 2. Freeze local session immediately (phone HUD clears) ────────────────
     setSessionPhase('IDLE');
+    setRecoveredStartTimeMs(null);
     try {
       await AsyncStorage.setItem('@sk8lytz_session_active', 'false');
     } catch (err) {

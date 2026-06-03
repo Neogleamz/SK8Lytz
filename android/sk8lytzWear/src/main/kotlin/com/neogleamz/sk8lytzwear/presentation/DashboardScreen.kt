@@ -37,6 +37,7 @@ import kotlinx.coroutines.delay
 import com.neogleamz.sk8lytzwear.presentation.theme.ElectricCyan
 import com.neogleamz.sk8lytzwear.presentation.theme.NeonMagenta
 import com.neogleamz.sk8lytzwear.presentation.theme.TrueBlack
+import com.neogleamz.sk8lytzwear.presentation.theme.BrandOrange
 import com.neogleamz.sk8lytzwear.services.HealthTracker
 import com.neogleamz.sk8lytzwear.services.WearableCommunicationService
 import com.neogleamz.sk8lytzwear.services.OngoingActivityManager
@@ -207,7 +208,7 @@ private fun IdleView(onStart: () -> Unit) {
         Button(
             onClick = onStart,
             modifier = Modifier.size(width = 120.dp, height = 44.dp),
-            colors = ButtonDefaults.buttonColors(backgroundColor = ElectricCyan)
+            colors = ButtonDefaults.buttonColors(backgroundColor = BrandOrange)
         ) {
             Text(
                 text = "▶  START",

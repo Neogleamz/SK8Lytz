@@ -42,7 +42,8 @@ export const HealthSyncService = {
         });
 
       } else if (Platform.OS === 'android') {
-        const { insertRecords } = require('react-native-health-connect');
+        const { initialize: initHC, insertRecords } = require('react-native-health-connect');
+        await initHC();
 
         const records: Array<Record<string, any>> = [
           {

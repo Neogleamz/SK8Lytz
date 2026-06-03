@@ -58,7 +58,7 @@ object WearMessageSender {
      * Throttled to max once per 5 seconds to match watchOS relay interval
      * and protect watch battery.
      */
-    fun sendHealthUpdate(context: Context, heartRate: Int, calories: Int) {
+    fun sendHealthUpdate(context: Context, heartRate: Int, calories: Int, sessionState: String, startTimeMs: Long) {
         val now = System.currentTimeMillis()
         if (now - lastHealthSendMs < HEALTH_THROTTLE_MS) return
         lastHealthSendMs = now
@@ -68,6 +68,8 @@ object WearMessageSender {
                 val json = JSONObject().apply {
                     put("heartRate", heartRate)
                     put("calories", calories)
+                    put("status", sessionState)
+                    put("startTimeMs", startTimeMs)
                 }.toString()
 
                 val nodes = Wearable.getNodeClient(context).connectedNodes.await()
