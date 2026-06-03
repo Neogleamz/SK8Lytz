@@ -68,10 +68,18 @@ class WearableCommunicationService : WearableListenerService() {
                 val hr = dataMap.getInt("heartRate", 0)
                 val cal = dataMap.getInt("calories", 0)
 
+                val previousState = currentState
                 currentState = if (status == "ACTIVE") SessionState.ACTIVE else SessionState.IDLE
                 currentSpeed = speed
                 currentHR = hr
                 currentCalories = cal
+
+                // Start/stop HealthTracker when phone drives the session state
+                if (currentState == SessionState.ACTIVE && previousState != SessionState.ACTIVE) {
+                    HealthTracker.startTracking(this@WearableCommunicationService)
+                } else if (currentState == SessionState.IDLE && previousState == SessionState.ACTIVE) {
+                    HealthTracker.stopTracking()
+                }
 
                 Log.d(TAG, "DataClient state update: $status | speed=$speed hr=$hr cal=$cal")
                 notifyListeners()

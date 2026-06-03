@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from '../services/AppLogger';
@@ -9,6 +9,8 @@ export interface HealthTelemetry {
   avgBpm: number | null;
   peakBpm: number | null;
   activeCalories: number | null;
+  /** Merge health data relayed from a paired watch into phone-side state. */
+  mergeWatchHealth?: (heartRate: number, calories: number) => void;
 }
 
 /**
@@ -157,5 +159,21 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
     };
   }, [sessionActive]);
 
-  return { latestBpm, avgBpm, peakBpm, activeCalories };
+  const mergeWatchHealth = useCallback((watchHR: number, watchCal: number) => {
+    // Only overwrite if the phone's own health polling hasn't provided data
+    if (latestBpm === null && watchHR > 0) {
+      setLatestBpm(watchHR);
+      bpmSamplesRef.current.push(watchHR);
+      const samples = bpmSamplesRef.current;
+      const max = samples.reduce((a: number, b: number) => (b > a ? b : a), samples[0]);
+      const avg = Math.round(samples.reduce((a: number, b: number) => a + b, 0) / samples.length);
+      setPeakBpm(max);
+      setAvgBpm(avg);
+    }
+    if (activeCalories === null && watchCal > 0) {
+      setActiveCalories(watchCal);
+    }
+  }, [latestBpm, activeCalories]);
+
+  return { latestBpm, avgBpm, peakBpm, activeCalories, mergeWatchHealth };
 }

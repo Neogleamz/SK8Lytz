@@ -51,7 +51,8 @@ struct ContentView: View {
                 Spacer()
 
                 VStack(spacing: 2) {
-                    Text("\(watchManager.activeCalories)")
+                    // Prefer watch-side HealthKit calories; fall back to phone-pushed value
+                    Text("\(healthManager.activeCalories > 0 ? Int(healthManager.activeCalories) : watchManager.activeCalories)")
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(.orange)
                     Text("kcal")

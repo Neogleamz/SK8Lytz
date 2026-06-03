@@ -34,6 +34,7 @@ import androidx.wear.compose.material.Text
 import com.neogleamz.sk8lytzwear.presentation.theme.ElectricCyan
 import com.neogleamz.sk8lytzwear.presentation.theme.NeonMagenta
 import com.neogleamz.sk8lytzwear.presentation.theme.TrueBlack
+import com.neogleamz.sk8lytzwear.services.HealthTracker
 import com.neogleamz.sk8lytzwear.services.WearableCommunicationService
 
 /**
@@ -63,8 +64,16 @@ fun DashboardScreen() {
             calories = cal
         }
         WearableCommunicationService.addStateListener(listener)
+
+        // Wire HealthTracker live updates into composable state
+        HealthTracker.onHealthUpdate = { hr, cal ->
+            if (hr > 0) heartRate = hr
+            if (cal > 0) calories = cal
+        }
+
         onDispose {
             WearableCommunicationService.removeStateListener(listener)
+            HealthTracker.onHealthUpdate = null
         }
     }
 
@@ -78,6 +87,7 @@ fun DashboardScreen() {
             SessionState.IDLE -> IdleView(
                 onStart = {
                     sessionState = SessionState.ACTIVE // Optimistic UI
+                    HealthTracker.startTracking(context)
                     WearMessageSender.sendCommand(context, "START_SESSION")
                 }
             )
@@ -87,6 +97,7 @@ fun DashboardScreen() {
                 calories = calories,
                 onStop = {
                     sessionState = SessionState.IDLE // Optimistic UI
+                    HealthTracker.stopTracking()
                     WearMessageSender.sendCommand(context, "STOP_SESSION")
                 }
             )

@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useGlobalTelemetry, GlobalTelemetryState } from '../hooks/useGlobalTelemetry';
 import { useHealthTelemetry, HealthTelemetry } from '../hooks/useHealthTelemetry';
 import { AppLogger } from '../services/AppLogger';
-import { WatchBridge, WatchCommand } from 'sk8lytz-watch-bridge';
+import { WatchBridge, WatchCommand, WatchHealthUpdate } from 'sk8lytz-watch-bridge';
 
 interface SessionContextValue {
   isSkateSessionActive: boolean;
@@ -49,12 +49,29 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     // Listen for START_SESSION / STOP_SESSION commands sent from the watch
-    const unsubscribe = WatchBridge.addWatchCommandListener((command: WatchCommand) => {
+    const unsubscribeCmd = WatchBridge.addWatchCommandListener((command: WatchCommand) => {
       AppLogger.log('APP_LOG', { event: 'watch_command_received', command });
       if (command === 'START_SESSION') startSession();
       else if (command === 'STOP_SESSION') endSession();
     });
-    return unsubscribe;
+
+    // Listen for health telemetry relayed from the watch's HealthKit/Health Services
+    const unsubscribeHealth = WatchBridge.addWatchHealthListener((update: WatchHealthUpdate) => {
+      AppLogger.log('APP_LOG', {
+        event: 'watch_health_received',
+        heartRate: update.heartRate,
+        calories: update.calories,
+      });
+      // Merge into phone-side health telemetry — watch data takes precedence when available
+      if (update.heartRate > 0) {
+        health.mergeWatchHealth?.(update.heartRate, update.calories);
+      }
+    });
+
+    return () => {
+      unsubscribeCmd();
+      unsubscribeHealth();
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
