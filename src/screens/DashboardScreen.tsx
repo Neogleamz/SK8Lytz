@@ -398,6 +398,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
 
   const wizardCheckedRef = React.useRef(false);
+  const hasAutoStartedSessionRef = React.useRef(false);
   const [pendingNewDevice, setPendingNewDevice] = React.useState<any | null>(null);
 
   // NOTE: auto-scan on mount is handled by the hasAutoScanned effect below (requires viewState === 'DASHBOARD')
@@ -415,6 +416,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       }
     }
   }, [isLoading, registeredDevices.length, viewState]);
+
+
 
   // 2. Continuous listener for new devices beyond FTUE
   useEffect(() => {
@@ -475,6 +478,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     sessionAvgSpeed
   } = sessionTelemetry;
 
+  // 1.5. Auto-start logical tracking session upon landing on the Dashboard
+  useEffect(() => {
+    if (viewState === 'DASHBOARD' && !isSkateSessionActive && !hasAutoStartedSessionRef.current) {
+      hasAutoStartedSessionRef.current = true;
+      startSession();
+    }
+  }, [viewState, isSkateSessionActive, startSession]);
 
   // Voice command dispatch + notification init are now handled
   // by useDashboardVoice and useDashboardProfile hooks respectively.

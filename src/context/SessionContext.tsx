@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { AppState, Platform } from 'react-native';
 import notifee, { AndroidImportance, EventType } from '@notifee/react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useGlobalTelemetry, GlobalTelemetryState } from '../hooks/useGlobalTelemetry';
 import { useHealthTelemetry, HealthTelemetry } from '../hooks/useHealthTelemetry';
 import { AppLogger } from '../services/AppLogger';
@@ -29,25 +30,74 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     activeCalories: health.activeCalories
   });
 
-  // 2. Manage the Android Foreground Service (Notifee)
+  // 2. Initialize iOS categories
   useEffect(() => {
-    if (Platform.OS !== 'android') return;
+    if (Platform.OS === 'ios') {
+      notifee.setNotificationCategories([
+        {
+          id: 'session-actions',
+          actions: [
+            {
+              id: 'end-session',
+              title: '🛑 End Session',
+              foreground: true,
+            },
+          ],
+        },
+      ]);
+    }
+  }, []);
 
+  // 3. Synchronize React state with AsyncStorage on mount & App foreground transitions
+  useEffect(() => {
+    const syncSessionState = async () => {
+      try {
+        const val = await AsyncStorage.getItem('@sk8lytz_session_active');
+        const isActive = val === 'true';
+        if (isActive !== isSkateSessionActive) {
+          setIsSkateSessionActive(isActive);
+        }
+      } catch (err) {
+        AppLogger.error('Failed to sync session state from AsyncStorage', err);
+      }
+    };
+
+    syncSessionState();
+
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        syncSessionState();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [isSkateSessionActive]);
+
+  // 4. Manage the Foreground Service (Android) / Background Notification (iOS)
+  useEffect(() => {
     let updateInterval: NodeJS.Timeout | null = null;
 
     const setupNotification = async () => {
       if (!isSkateSessionActive) {
         if (updateInterval) clearInterval(updateInterval);
-        await notifee.stopForegroundService();
+        if (Platform.OS === 'android') {
+          await notifee.stopForegroundService();
+        } else {
+          await notifee.cancelNotification(NOTIFICATION_ID);
+        }
         return;
       }
 
-      // Create channel (idempotent)
-      await notifee.createChannel({
-        id: NOTIFICATION_CHANNEL_ID,
-        name: 'Active Skate Session',
-        importance: AndroidImportance.LOW,
-      });
+      if (Platform.OS === 'android') {
+        // Create channel (idempotent)
+        await notifee.createChannel({
+          id: NOTIFICATION_CHANNEL_ID,
+          name: 'Active Skate Session',
+          importance: AndroidImportance.LOW,
+        });
+      }
 
       const displayNotification = async () => {
         await notifee.displayNotification({
@@ -59,12 +109,25 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             asForegroundService: true,
             color: '#00F0FF',
             ongoing: true, // Cannot be dismissed by user swiping
+            pressAction: {
+              id: 'default',
+              launchActivity: 'default',
+            },
             actions: [
               {
                 title: '🛑 END SESSION',
                 pressAction: { id: 'end-session' }
               }
             ]
+          },
+          ios: {
+            categoryId: 'session-actions',
+            foregroundPresentationOptions: {
+              badge: true,
+              sound: true,
+              banner: true,
+              list: true,
+            },
           }
         });
       };
@@ -85,7 +148,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     };
   }, [isSkateSessionActive, telemetry.sessionDistanceMiles, telemetry.gpsSpeed]);
 
-  // 3. Handle Background Action Buttons from Notifee
+  // 5. Handle Foreground Event Buttons from Notifee
   useEffect(() => {
     return notifee.onForegroundEvent(({ type, detail }) => {
       if (type === EventType.ACTION_PRESS && detail.pressAction?.id === 'end-session') {
@@ -95,13 +158,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const startSession = useCallback(() => {
+  const startSession = useCallback(async () => {
     setIsSkateSessionActive(true);
+    try {
+      await AsyncStorage.setItem('@sk8lytz_session_active', 'true');
+    } catch (err) {
+      AppLogger.error('Failed to save session state to AsyncStorage', err);
+    }
     AppLogger.log('APP_LOG', { event: 'session_started' });
   }, []);
 
-  const endSession = useCallback(() => {
+  const endSession = useCallback(async () => {
     setIsSkateSessionActive(false);
+    try {
+      await AsyncStorage.setItem('@sk8lytz_session_active', 'false');
+    } catch (err) {
+      AppLogger.error('Failed to save session state to AsyncStorage', err);
+    }
     AppLogger.log('APP_LOG', { event: 'session_ended' });
     if (Platform.OS === 'android') {
       notifee.stopForegroundService();

@@ -130,16 +130,39 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
             });
           });
         } else if (Platform.OS === 'android') {
-          // FIX: Use PermissionsAndroid.request() to show a native in-app popup —
-          // identical to how CAMERA, BLUETOOTH, and LOCATION work.
-          // The old code called react-native-health-connect's requestPermission()
-          // which opened the Health Connect app (navigating the user away!).
-          // Health Connect SDK data-level access is handled lazily by initialize()
-          // + readRecords() in useHealthTelemetry when a session actually starts.
-          const result = await PermissionsAndroid.request(
+          // 1. Request Activity Recognition permission first
+          const activityResult = await PermissionsAndroid.request(
             PermissionsAndroid.PERMISSIONS.ACTIVITY_RECOGNITION
           );
-          return result === PermissionsAndroid.RESULTS.GRANTED;
+          if (activityResult !== PermissionsAndroid.RESULTS.GRANTED) {
+            return false;
+          }
+
+          // 2. Request Health Connect permissions
+          try {
+            const { initialize, requestPermission: requestHC } = require('react-native-health-connect');
+            const initialized = await initialize();
+            if (!initialized) return false;
+
+            const permissionsToRequest = [
+              { accessType: 'read', recordType: 'HeartRate' },
+              { accessType: 'read', recordType: 'ActiveCaloriesBurned' },
+              { accessType: 'write', recordType: 'ExerciseSession' },
+              { accessType: 'write', recordType: 'TotalCaloriesBurned' },
+              { accessType: 'write', recordType: 'Distance' },
+            ];
+
+            const result = await requestHC(permissionsToRequest);
+            
+            // Check if both read permissions were granted
+            const hasReadHR = result.some((p: { accessType: string; recordType: string }) => p.accessType === 'read' && p.recordType === 'HeartRate');
+            const hasReadCal = result.some((p: { accessType: string; recordType: string }) => p.accessType === 'read' && p.recordType === 'ActiveCaloriesBurned');
+            
+            return hasReadHR && hasReadCal;
+          } catch (err) {
+            AppLogger.error('PERMISSION_SERVICE', { event: 'health_connect_request_failed', error: String(err) });
+            return false;
+          }
         }
         return false;
       }
@@ -197,7 +220,25 @@ const checkPermissionNative = async (type: PermissionType): Promise<boolean> => 
           // This is functionally safe: no crash, no error — just missing data.
           return true;
         } else if (Platform.OS === 'android') {
-          return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACTIVITY_RECOGNITION);
+          // 1. Check Activity Recognition permission
+          const activityGranted = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACTIVITY_RECOGNITION);
+          if (!activityGranted) return false;
+
+          // 2. Check Health Connect permissions
+          try {
+            const { initialize, getGrantedPermissions } = require('react-native-health-connect');
+            const initialized = await initialize();
+            if (!initialized) return false;
+            
+            const granted = await getGrantedPermissions();
+            const hasReadHR = granted.some((p: { accessType: string; recordType: string }) => p.accessType === 'read' && p.recordType === 'HeartRate');
+            const hasReadCal = granted.some((p: { accessType: string; recordType: string }) => p.accessType === 'read' && p.recordType === 'ActiveCaloriesBurned');
+            
+            return hasReadHR && hasReadCal;
+          } catch (err) {
+            AppLogger.warn('PERMISSION_SERVICE', { event: 'health_connect_check_failed', error: String(err) });
+            return false;
+          }
         }
         return false;
       }

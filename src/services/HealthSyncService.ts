@@ -5,7 +5,7 @@ import { checkPermission } from './PermissionService';
 
 export const HealthSyncService = {
   async saveWorkout(snapshot: ISessionSnapshot) {
-    if (snapshot.distanceMiles < 0.2 && snapshot.durationSec < 60) {
+    if (snapshot.distanceMiles < 0.1 && snapshot.durationSec < 60) {
       AppLogger.log('APP_LOG', { reason: 'session too short/short distance' });
       return;
     }
@@ -47,7 +47,7 @@ export const HealthSyncService = {
         const records: Array<Record<string, any>> = [
           {
             recordType: 'ExerciseSession',
-            exerciseType: 71, // 71 = Skating in Health Connect API (approximate/closest match)
+            exerciseType: 60, // 60 = Skating in Health Connect API
             startTime: startDate.toISOString(),
             endTime: endDate.toISOString(),
             startZoneOffset: null,

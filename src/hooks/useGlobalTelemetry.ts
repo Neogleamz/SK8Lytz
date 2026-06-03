@@ -6,7 +6,6 @@ import { checkPermission, openGlobalPermissionsModal } from '../services/Permiss
 import { AppLogger } from '../services/AppLogger';
 import { crewService } from '../services/CrewService';
 import { SpeedTrackingService, ISessionSnapshot } from '../services/SpeedTrackingService';
-import { HealthSyncService } from '../services/HealthSyncService';
 
 export interface GlobalTelemetryState {
   gpsSpeed: number;
@@ -65,8 +64,8 @@ export function useGlobalTelemetry(
     const durationSec = (Date.now() - sessionStartTimeRef.current) / 1000;
     const distanceMiles = sessionDistanceMilesRef.current;
 
-    // Only save if meaningful distance traveled
-    if (distanceMiles > 0.2) {
+    // Only save if meaningful distance traveled or duration elapsed
+    if (distanceMiles > 0.1 || durationSec > 60) {
       const samples = sessionSpeedSamplesRef.current;
       const avgSpeedMph = samples.length > 0
         ? samples.reduce((acc, s) => acc + s, 0) / samples.length
@@ -86,14 +85,11 @@ export function useGlobalTelemetry(
       try {
         await SpeedTrackingService.saveSession(snapshot);
         AppLogger.log('GLOBAL_SESSION_SAVED', { action: 'AUTO_SAVED_TO_DB', durationSec, distanceMiles });
-        
-        // Push to Apple Health / Google Health Connect
-        await HealthSyncService.saveWorkout(snapshot);
       } catch (err) {
         AppLogger.error('[useGlobalTelemetry] Failed to persist auto-session', err);
       }
     } else {
-       AppLogger.log('GLOBAL_SESSION_DISCARDED', { reason: 'distance < 0.2 miles', distanceMiles });
+       AppLogger.log('GLOBAL_SESSION_DISCARDED', { reason: 'insufficient distance/duration', distanceMiles, durationSec });
     }
 
     // Reset accumulators
