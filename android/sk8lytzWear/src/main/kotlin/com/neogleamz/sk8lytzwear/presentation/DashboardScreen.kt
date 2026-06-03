@@ -103,7 +103,7 @@ fun DashboardScreen() {
                 } else 0
                 delay(1000L)
             }
-        } else {
+        } else if (sessionState == SessionState.IDLE) {
             elapsedSeconds = 0
         }
     }
@@ -131,11 +131,12 @@ fun DashboardScreen() {
                         WearMessageSender.sendCommand(context, "START_SESSION")
                     }
                 )
-                SessionState.ACTIVE -> ActiveView(
+                SessionState.ACTIVE, SessionState.PAUSED -> ActiveView(
                     speed = speed,
                     heartRate = heartRate,
                     calories = calories,
                     elapsedSeconds = elapsedSeconds,
+                    isPaused = sessionState == SessionState.PAUSED,
                     onStop = {
                         sessionState = SessionState.IDLE // Optimistic UI
                         WearableCommunicationService.sessionStartTimeMs = 0L
@@ -196,6 +197,7 @@ private fun ActiveView(
     heartRate: Int,
     calories: Int,
     elapsedSeconds: Int,
+    isPaused: Boolean = false,
     onStop: () -> Unit
 ) {
     Column(
@@ -204,13 +206,23 @@ private fun ActiveView(
         verticalArrangement = Arrangement.SpaceEvenly
     ) {
         // Session active indicator
-        Text(
-            text = "SESSION ACTIVE",
-            color = ElectricCyan,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 2.sp
-        )
+        if (isPaused) {
+            Text(
+                text = "⏸ PAUSED",
+                color = Color(0xFFFFAA00), // Amber
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp
+            )
+        } else {
+            Text(
+                text = "SESSION ACTIVE",
+                color = ElectricCyan,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp
+            )
+        }
 
         // Elapsed duration — anchored to phone-authoritative start time
         Text(

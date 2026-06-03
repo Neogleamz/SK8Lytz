@@ -14,5 +14,8 @@ enum class SessionState {
     IDLE,
 
     /** Active skating session — shows live telemetry chips. */
-    ACTIVE
+    ACTIVE,
+
+    /** Paused skating session — shows live telemetry but displays paused status. */
+    PAUSED
 }

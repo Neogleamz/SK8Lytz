@@ -76,14 +76,18 @@ class WearableCommunicationService : WearableListenerService() {
                 val cal = dataMap.getInt("calories", 0)
 
                 val previousState = currentState
-                currentState = if (status == "ACTIVE") SessionState.ACTIVE else SessionState.IDLE
+                currentState = when (status) {
+                    "ACTIVE" -> SessionState.ACTIVE
+                    "PAUSED" -> SessionState.PAUSED
+                    else -> SessionState.IDLE
+                }
                 currentSpeed = speed
                 currentHR = hr
                 currentCalories = cal
 
                 // Parse phone-authoritative start timestamp from ISO-8601 string
                 val startTimeStr = dataMap.getString("startTime", "")
-                if (currentState == SessionState.ACTIVE && startTimeStr.isNotEmpty() && sessionStartTimeMs == 0L) {
+                if (currentState == SessionState.ACTIVE && startTimeStr.isNotEmpty()) {
                     runCatching {
                         sessionStartTimeMs = Instant.parse(startTimeStr).toEpochMilli()
                     }.onFailure {
@@ -95,10 +99,13 @@ class WearableCommunicationService : WearableListenerService() {
                 }
 
                 // Start/stop HealthTracker & OngoingActivity when phone drives the session state
-                if (currentState == SessionState.ACTIVE && previousState != SessionState.ACTIVE) {
+                val wasRunning = previousState == SessionState.ACTIVE || previousState == SessionState.PAUSED
+                val isRunning = currentState == SessionState.ACTIVE || currentState == SessionState.PAUSED
+
+                if (isRunning && !wasRunning) {
                     HealthTracker.startTracking(this@WearableCommunicationService)
                     OngoingActivityManager.startOngoingActivity(this@WearableCommunicationService)
-                } else if (currentState == SessionState.IDLE && previousState == SessionState.ACTIVE) {
+                } else if (!isRunning && wasRunning) {
                     HealthTracker.stopTracking()
                     OngoingActivityManager.stopOngoingActivity(this@WearableCommunicationService)
                 }

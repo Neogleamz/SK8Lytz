@@ -6,6 +6,7 @@ import { checkPermission, openGlobalPermissionsModal } from '../services/Permiss
 import { AppLogger } from '../services/AppLogger';
 import { crewService } from '../services/CrewService';
 import { SpeedTrackingService, ISessionSnapshot } from '../services/SpeedTrackingService';
+import { WatchBridge } from 'sk8lytz-watch-bridge';
 
 export interface GlobalTelemetryState {
   gpsSpeed: number;
@@ -28,9 +29,10 @@ export interface GlobalTelemetryState {
  * signal drops or OS-level connection management do NOT zero out the in-progress session.
  */
 export function useGlobalTelemetry(
-  isSkateSessionActive: boolean,
+  sessionPhase: 'IDLE' | 'ACTIVE' | 'PAUSED',
   healthMetrics?: { avgBpm: number | null; peakBpm: number | null; activeCalories: number | null }
 ): GlobalTelemetryState {
+  const isSkateSessionActive = sessionPhase === 'ACTIVE' || sessionPhase === 'PAUSED';
   const [gpsSpeed, setGpsSpeed] = useState<number>(0);
   const [peakGForce, setPeakGForce] = useState<number>(1.0);
   const [sessionDistanceMiles, setSessionDistanceMiles] = useState<number>(0);
@@ -57,11 +59,44 @@ export function useGlobalTelemetry(
   // Stable ref so commitSession never closes over stale peakGForce state
   const peakGForceRef = useRef(1.0);
 
+  const sessionPauseTimeRef = useRef<number | null>(null);
+  const prevSessionPhaseRef = useRef<'IDLE' | 'ACTIVE' | 'PAUSED'>('IDLE');
+
+  useEffect(() => {
+    const prevPhase = prevSessionPhaseRef.current;
+    if (prevPhase === 'ACTIVE' && sessionPhase === 'PAUSED') {
+      sessionPauseTimeRef.current = Date.now();
+      AppLogger.log('GLOBAL_TELEMETRY', { event: 'session_paused' });
+    } else if (prevPhase === 'PAUSED' && sessionPhase === 'ACTIVE') {
+      if (sessionPauseTimeRef.current && sessionStartTimeRef.current) {
+        const pauseDuration = Date.now() - sessionPauseTimeRef.current;
+        sessionStartTimeRef.current += pauseDuration;
+        AppLogger.log('GLOBAL_TELEMETRY', { event: 'anchor_shifted', pauseDurationMs: pauseDuration });
+
+        const newStartTimeIso = new Date(sessionStartTimeRef.current).toISOString();
+        WatchBridge.syncSessionState({
+          status: 'ACTIVE',
+          startTime: newStartTimeIso,
+        }).catch((err: unknown) =>
+          AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_resume', error: String(err) })
+        );
+      }
+      sessionPauseTimeRef.current = null;
+    } else if (sessionPhase === 'IDLE') {
+      sessionPauseTimeRef.current = null;
+    }
+    prevSessionPhaseRef.current = sessionPhase;
+  }, [sessionPhase]);
+
   // Commit session helper — called ONLY on explicit user disconnect
   const commitSession = useCallback(async () => {
     if (!sessionStartTimeRef.current) return;
 
-    const durationSec = (Date.now() - sessionStartTimeRef.current) / 1000;
+    let durationSec = (Date.now() - sessionStartTimeRef.current) / 1000;
+    if (sessionPauseTimeRef.current) {
+      const currentPauseDuration = Date.now() - sessionPauseTimeRef.current;
+      durationSec -= (currentPauseDuration / 1000);
+    }
     const distanceMiles = sessionDistanceMilesRef.current;
 
     // Only save if meaningful distance traveled or duration elapsed
@@ -116,7 +151,7 @@ export function useGlobalTelemetry(
     }
 
     timerRef.current = setInterval(() => {
-      if (sessionStartTimeRef.current) {
+      if (sessionStartTimeRef.current && sessionPhase === 'ACTIVE') {
         setSessionDurationSec(Math.floor((Date.now() - sessionStartTimeRef.current) / 1000));
       }
     }, 1000);
@@ -125,7 +160,7 @@ export function useGlobalTelemetry(
       if (timerRef.current) clearInterval(timerRef.current);
       timerRef.current = null;
     };
-  }, [isSkateSessionActive]);
+  }, [isSkateSessionActive, sessionPhase]);
 
   // ── Effect 2: GPS + Accelerometer sensors ────────────────────────────────
   // Dependency array NO LONGER includes peakGForce — removing the accelerometer
@@ -170,35 +205,39 @@ export function useGlobalTelemetry(
                   const hoursDelta = (now - lastGpsTimeRef.current) / 3600000;
                   if (hoursDelta > 0 && hoursDelta < 1) {
                     const distDelta = spdMph * hoursDelta;
-                    sessionDistanceMilesRef.current += distDelta;
-                    setSessionDistanceMiles(sessionDistanceMilesRef.current);
+                    if (sessionPhase === 'ACTIVE') {
+                      sessionDistanceMilesRef.current += distDelta;
+                      setSessionDistanceMiles(sessionDistanceMilesRef.current);
 
-                    // Inject to Crew Service if active
-                    if (crewService.currentSessionId) {
-                      crewService.sessionTelemetry.distanceMiles += distDelta;
+                      // Inject to Crew Service if active
+                      if (crewService.currentSessionId) {
+                        crewService.sessionTelemetry.distanceMiles += distDelta;
+                      }
                     }
                   }
                 }
                 lastGpsTimeRef.current = now;
 
-                sessionSpeedSamplesRef.current.push(spdMph);
-                if (spdMph > sessionPeakSpeedRef.current) {
-                  sessionPeakSpeedRef.current = spdMph;
-                  setSessionPeakSpeed(spdMph);
-                }
+                if (sessionPhase === 'ACTIVE') {
+                  sessionSpeedSamplesRef.current.push(spdMph);
+                  if (spdMph > sessionPeakSpeedRef.current) {
+                    sessionPeakSpeedRef.current = spdMph;
+                    setSessionPeakSpeed(spdMph);
+                  }
 
-                // Update average speed
-                const samples = sessionSpeedSamplesRef.current;
-                const avgSpeedMph = samples.length > 0
-                  ? samples.reduce((acc, s) => acc + s, 0) / samples.length
-                  : 0;
-                setSessionAvgSpeed(avgSpeedMph);
+                  // Update average speed
+                  const samples = sessionSpeedSamplesRef.current;
+                  const avgSpeedMph = samples.length > 0
+                    ? samples.reduce((acc, s) => acc + s, 0) / samples.length
+                    : 0;
+                  setSessionAvgSpeed(avgSpeedMph);
 
-                if (crewService.currentSessionId) {
-                   if (spdMph > crewService.sessionTelemetry.topSpeedMph) {
-                     crewService.sessionTelemetry.topSpeedMph = spdMph;
-                   }
-                   crewService.sessionTelemetry.avgSpeedSamples.push(spdMph);
+                  if (crewService.currentSessionId) {
+                     if (spdMph > crewService.sessionTelemetry.topSpeedMph) {
+                       crewService.sessionTelemetry.topSpeedMph = spdMph;
+                     }
+                     crewService.sessionTelemetry.avgSpeedSamples.push(spdMph);
+                  }
                 }
 
                 // Push live speed to connected watches (throttled internally to max 1/3s)
@@ -253,7 +292,7 @@ export function useGlobalTelemetry(
   // The accelerometer updates its own state internally. Including peakGForce
   // here would destroy and recreate this effect 12x/second while skating.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSkateSessionActive, commitSession]);
+  }, [isSkateSessionActive, sessionPhase, commitSession]);
 
   return {
     gpsSpeed,

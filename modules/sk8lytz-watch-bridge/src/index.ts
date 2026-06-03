@@ -1,11 +1,12 @@
 import { requireNativeModule } from 'expo-modules-core';
+import { Platform } from 'react-native';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 /** The session state payload pushed from phone → watch. */
 export interface WatchSessionState {
-  /** 'ACTIVE' or 'STOPPED' */
-  status: 'ACTIVE' | 'STOPPED';
+  /** 'ACTIVE', 'STOPPED', or 'PAUSED' */
+  status: 'ACTIVE' | 'STOPPED' | 'PAUSED';
   /** Current GPS speed in mph */
   speed?: number;
   /** Live heart rate in bpm */
@@ -50,7 +51,9 @@ interface Sk8lytzWatchBridgeNative {
 
 // ── Module Instantiation ──────────────────────────────────────────────────────
 
-const nativeModule = requireNativeModule<Sk8lytzWatchBridgeNative>('Sk8lytzWatchBridge');
+const nativeModule = Platform.OS !== 'web'
+  ? requireNativeModule<Sk8lytzWatchBridgeNative>('Sk8lytzWatchBridge')
+  : null;
 
 // ── Public API ────────────────────────────────────────────────────────────────
 
@@ -59,8 +62,10 @@ export const WatchBridge = {
    * Push session state to all connected watches (fire-and-forget).
    * Safe to call even when no watch is paired — silently no-ops on native side.
    */
-  syncSessionState: (state: WatchSessionState): Promise<void> =>
-    nativeModule.syncSessionState(state),
+  syncSessionState: (state: WatchSessionState): Promise<void> => {
+    if (!nativeModule) return Promise.resolve();
+    return nativeModule.syncSessionState(state);
+  },
 
   /**
    * Push a live metric snapshot to the watch.
@@ -68,10 +73,16 @@ export const WatchBridge = {
    */
   sendMetricUpdate: (
     metrics: Pick<WatchSessionState, 'speed' | 'heartRate' | 'calories'>
-  ): Promise<void> => nativeModule.sendMetricUpdate(metrics),
+  ): Promise<void> => {
+    if (!nativeModule) return Promise.resolve();
+    return nativeModule.sendMetricUpdate(metrics);
+  },
 
   /** Returns true if at least one watch is paired and reachable right now. */
-  isWatchReachable: (): Promise<boolean> => nativeModule.isWatchReachable(),
+  isWatchReachable: (): Promise<boolean> => {
+    if (!nativeModule) return Promise.resolve(false);
+    return nativeModule.isWatchReachable();
+  },
 
   /**
    * Subscribe to commands sent from the watch (START_SESSION / STOP_SESSION).
@@ -80,6 +91,7 @@ export const WatchBridge = {
    * The native payload is { command: WatchCommand }; we extract and type-narrow here.
    */
   addWatchCommandListener: (handler: (command: WatchCommand) => void): (() => void) => {
+    if (!nativeModule) return () => {};
     const subscription = nativeModule.addListener(
       'onWatchCommandReceived',
       (payload: unknown) => {
@@ -106,6 +118,7 @@ export const WatchBridge = {
    * Returns an unsubscribe function — call it in useEffect cleanup.
    */
   addWatchHealthListener: (handler: (update: WatchHealthUpdate) => void): (() => void) => {
+    if (!nativeModule) return () => {};
     const subscription = nativeModule.addListener(
       'onWatchHealthUpdate',
       (payload: unknown) => {

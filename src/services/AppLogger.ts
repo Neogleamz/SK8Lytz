@@ -167,6 +167,8 @@ export type EventType =
   | 'GLOBAL_SESSION_SAVED'
   | 'GLOBAL_SESSION_DISCARDED'
   | 'GLOBAL_TELEMETRY_STARTED'
+  | 'GLOBAL_TELEMETRY'
+  | 'AUTO_PAUSE_TOGGLED'
   // ── Admin Tools ─────────────────────────────────────────────────────────────
   | 'DATA_EXPORT'
   // ── Domain Service Telemetry ────────────────────────────────────────────────
@@ -416,7 +418,7 @@ class AppLoggerService {
     }
 
     // Non-hardware events bypass correlation
-    if (['APP_LOG', 'APP_OPENED', 'SCAN_STARTED', 'SCAN_COMPLETED', 'DEVICE_DISCOVERED', 'DEVICE_CONNECTED', 'DEVICE_DISCONNECTED'].includes(event)) {
+    if (['APP_LOG', 'APP_OPENED', 'SCAN_STARTED', 'SCAN_COMPLETED', 'DEVICE_DISCOVERED', 'DEVICE_CONNECTED', 'DEVICE_DISCONNECTED', 'GLOBAL_TELEMETRY', 'AUTO_PAUSE_TOGGLED'].includes(event)) {
       const entry: LogEntry = { t: Date.now(), e: event, d: payload };
       this.buffer.push(entry);
       this.persist();

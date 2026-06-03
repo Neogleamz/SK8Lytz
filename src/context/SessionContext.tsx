@@ -9,6 +9,7 @@ import { WatchBridge, WatchCommand, WatchHealthUpdate } from 'sk8lytz-watch-brid
 
 interface SessionContextValue {
   isSkateSessionActive: boolean;
+  sessionPhase: 'IDLE' | 'ACTIVE' | 'PAUSED';
   startSession: () => void;
   endSession: () => void;
   telemetry: GlobalTelemetryState;
@@ -21,11 +22,12 @@ const NOTIFICATION_CHANNEL_ID = 'sk8lytz-session';
 const NOTIFICATION_ID = 'active-skate-session';
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [isSkateSessionActive, setIsSkateSessionActive] = useState(false);
+  const [sessionPhase, setSessionPhase] = useState<'IDLE' | 'ACTIVE' | 'PAUSED'>('IDLE');
+  const isSkateSessionActive = sessionPhase === 'ACTIVE' || sessionPhase === 'PAUSED';
 
   // 1. Hook up the core telemetry
   const health = useHealthTelemetry(isSkateSessionActive);
-  const telemetry = useGlobalTelemetry(isSkateSessionActive, {
+  const telemetry = useGlobalTelemetry(sessionPhase, {
     avgBpm: health.avgBpm,
     peakBpm: health.peakBpm,
     activeCalories: health.activeCalories
@@ -81,8 +83,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       try {
         const val = await AsyncStorage.getItem('@sk8lytz_session_active');
         const isActive = val === 'true';
-        if (isActive !== isSkateSessionActive) {
-          setIsSkateSessionActive(isActive);
+        if (isActive) {
+          if (sessionPhase === 'IDLE') {
+            setSessionPhase('ACTIVE');
+          }
+        } else {
+          if (sessionPhase !== 'IDLE') {
+            setSessionPhase('IDLE');
+          }
         }
       } catch (err) {
         AppLogger.error('Failed to sync session state from AsyncStorage', err);
@@ -100,7 +108,57 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.remove();
     };
-  }, [isSkateSessionActive]);
+  }, [sessionPhase]);
+
+  // Auto-pause timer and setting check based on GPS speed
+  useEffect(() => {
+    if (sessionPhase !== 'ACTIVE' && sessionPhase !== 'PAUSED') return;
+
+    let timer: NodeJS.Timeout | null = null;
+
+    const checkAutoPause = async () => {
+      try {
+        const enabled = await AsyncStorage.getItem('@sk8lytz_auto_pause_enabled');
+        if (enabled === 'false') {
+          if (sessionPhase === 'PAUSED') {
+            setSessionPhase('ACTIVE');
+            await WatchBridge.syncSessionState({
+              status: 'ACTIVE',
+              startTime: new Date().toISOString(),
+            });
+          }
+          return;
+        }
+
+        if (telemetry.gpsSpeed < 0.2) {
+          if (sessionPhase === 'ACTIVE') {
+            timer = setTimeout(async () => {
+              setSessionPhase('PAUSED');
+              AppLogger.log('APP_LOG', { event: 'auto_pause_triggered' });
+              try {
+                await WatchBridge.syncSessionState({ status: 'PAUSED' });
+              } catch (err) {
+                AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_pause', error: String(err) });
+              }
+            }, 10000);
+          }
+        } else {
+          if (sessionPhase === 'PAUSED') {
+            setSessionPhase('ACTIVE');
+            AppLogger.log('APP_LOG', { event: 'auto_resume_triggered' });
+          }
+        }
+      } catch (err) {
+        AppLogger.error('Failed to run auto-pause check', err);
+      }
+    };
+
+    checkAutoPause();
+
+    return () => {
+      if (timer) clearTimeout(timer);
+    };
+  }, [sessionPhase, telemetry.gpsSpeed]);
 
   // 4. Manage the Foreground Service (Android) / Background Notification (iOS)
   useEffect(() => {
@@ -129,7 +187,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const displayNotification = async () => {
         await notifee.displayNotification({
           id: NOTIFICATION_ID,
-          title: 'Skate Session Active 🟢',
+          title: sessionPhase === 'PAUSED' ? 'Skate Session Paused ⏸' : 'Skate Session Active 🟢',
           body: `Distance: ${telemetry.sessionDistanceMiles.toFixed(2)} mi | Speed: ${telemetry.gpsSpeed.toFixed(1)} mph`,
           android: {
             channelId: NOTIFICATION_CHANNEL_ID,
@@ -174,10 +232,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       if (updateInterval) clearInterval(updateInterval);
     };
-  }, [isSkateSessionActive, telemetry.sessionDistanceMiles, telemetry.gpsSpeed]);
+  }, [isSkateSessionActive, sessionPhase, telemetry.sessionDistanceMiles, telemetry.gpsSpeed]);
 
   const startSession = useCallback(async () => {
-    setIsSkateSessionActive(true);
+    setSessionPhase('ACTIVE');
     try {
       await AsyncStorage.setItem('@sk8lytz_session_active', 'true');
     } catch (err) {
@@ -194,7 +252,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const endSession = useCallback(async () => {
-    setIsSkateSessionActive(false);
+    setSessionPhase('IDLE');
     try {
       await AsyncStorage.setItem('@sk8lytz_session_active', 'false');
     } catch (err) {
@@ -223,7 +281,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
 
   return (
-    <SessionContext.Provider value={{ isSkateSessionActive, startSession, endSession, telemetry, health }}>
+    <SessionContext.Provider value={{ isSkateSessionActive, sessionPhase, startSession, endSession, telemetry, health }}>
       {children}
     </SessionContext.Provider>
   );

@@ -24,7 +24,9 @@ struct ContentView: View {
         .onReceive(ticker) { _ in
             // Recompute elapsed from the phone-authoritative anchor every second.
             // Falls back to zero gracefully when sessionStartTime is nil.
-            if let anchor = watchManager.sessionStartTime {
+            if watchManager.isPaused {
+                // If paused, freeze elapsedSeconds at its current value
+            } else if let anchor = watchManager.sessionStartTime {
                 elapsedSeconds = Int(Date().timeIntervalSince(anchor))
             } else {
                 elapsedSeconds = 0
@@ -36,9 +38,15 @@ struct ContentView: View {
     // MARK: - Active Session View
     private var activeSessionView: some View {
         VStack(spacing: 10) {
-            Text("ACTIVE SESSION")
-                .font(.headline)
-                .foregroundColor(.green)
+            if watchManager.isPaused {
+                Text("⏸ PAUSED")
+                    .font(.headline)
+                    .foregroundColor(.orange)
+            } else {
+                Text("ACTIVE SESSION")
+                    .font(.headline)
+                    .foregroundColor(.green)
+            }
 
             // Elapsed duration — anchored to phone-authoritative start time
             Text(formatElapsed(elapsedSeconds))

@@ -63,6 +63,9 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   // Health Sync
   const [healthSyncEnabled, setHealthSyncEnabled] = useState(false);
 
+  // Auto Pause
+  const [autoPauseEnabled, setAutoPauseEnabled] = useState(true);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -70,13 +73,17 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
 
       // ── Phase A: Run auth lookup + notif prefs in parallel ──────────────────
       // Neither depends on the other, so fire both immediately.
-      const [authResult, rawNotifPrefs, hasHealth] = await Promise.all([
+      const [authResult, rawNotifPrefs, hasHealth, rawAutoPause] = await Promise.all([
         supabase.auth.getUser(),
         AsyncStorage.getItem(NOTIF_PREF_KEY).catch(e => {
           AppLogger.warn('Failed to load notification preferences from cache', e);
           return null;
         }),
         checkPermission('HEALTH'),
+        AsyncStorage.getItem('@sk8lytz_auto_pause_enabled').catch(e => {
+          AppLogger.warn('Failed to load auto-pause setting', e);
+          return null;
+        }),
       ]);
 
       const user = authResult.data?.user ?? null;
@@ -90,6 +97,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
         setNotifLeaderHandoff(prefs.leaderHandoff ?? true);
       }
       setHealthSyncEnabled(hasHealth);
+      setAutoPauseEnabled(rawAutoPause !== 'false');
 
       // ── Phase B: Fan-out all profile service calls in parallel ───────────────
       // Pass the already-resolved user/userId to avoid redundant auth token lookups.
@@ -216,6 +224,16 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     }
   };
 
+  const handleToggleAutoPause = async (enabled: boolean) => {
+    setAutoPauseEnabled(enabled);
+    try {
+      await AsyncStorage.setItem('@sk8lytz_auto_pause_enabled', String(enabled));
+      AppLogger.log('AUTO_PAUSE_TOGGLED', { enabled });
+    } catch (e) {
+      AppLogger.error('Failed to save auto-pause setting', e);
+    }
+  };
+
   // Crew handlers
   const handleCreateCrew = async () => {
     if (!newCrewName.trim()) { setCrewError('Enter a crew name'); return; }
@@ -283,5 +301,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     handleLeaveCrew,
     healthSyncEnabled,
     handleToggleHealthSync,
+    autoPauseEnabled,
+    handleToggleAutoPause,
   };
 }

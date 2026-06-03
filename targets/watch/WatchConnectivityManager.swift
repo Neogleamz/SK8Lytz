@@ -8,6 +8,7 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     static let shared = WatchConnectivityManager()
 
     @Published var isSessionActive: Bool = false
+    @Published var isPaused: Bool = false
     @Published var currentSpeed: Double = 0.0
     @Published var activeCalories: Int = 0
     /// Phone-authoritative session start timestamp — drives elapsed timer on watch.
@@ -28,6 +29,7 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
 
     func sendStartSession() {
         isSessionActive = true
+        isPaused = false
         WKInterfaceDevice.current().play(.start)
         send(["command": "START_SESSION"])
         startHealthRelay()
@@ -35,6 +37,7 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
 
     func sendStopSession() {
         isSessionActive = false
+        isPaused = false
         WKInterfaceDevice.current().play(.stop)
         send(["command": "STOP_SESSION"])
         stopHealthRelay()
@@ -67,8 +70,9 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
 
     private func handlePayload(_ payload: [String: Any]) {
         if let status = payload["status"] as? String {
-            let nowActive = (status == "ACTIVE")
+            let nowActive = (status == "ACTIVE" || status == "PAUSED")
             isSessionActive = nowActive
+            isPaused = (status == "PAUSED")
             if !nowActive {
                 // Session stopped — clear the anchor so elapsed resets immediately
                 sessionStartTime = nil
@@ -78,10 +82,7 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         if let startISO = payload["startTime"] as? String, !startISO.isEmpty {
             let formatter = ISO8601DateFormatter()
             if let date = formatter.date(from: startISO) {
-                // Only update if no anchor set yet — prevents re-anchoring on metric updates
-                if sessionStartTime == nil {
-                    sessionStartTime = date
-                }
+                sessionStartTime = date
             }
         }
         if let speed = payload["speed"] as? Double {

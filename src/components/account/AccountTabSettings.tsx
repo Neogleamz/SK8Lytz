@@ -19,6 +19,8 @@ export default function AccountTabSettings({
   handleDeleteAccount,
   healthSyncEnabled,
   handleToggleHealthSync,
+  autoPauseEnabled,
+  handleToggleAutoPause,
 }: any) {
   return (
     <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
@@ -54,6 +56,21 @@ export default function AccountTabSettings({
         <Switch
           value={healthSyncEnabled}
           onValueChange={handleToggleHealthSync}
+          trackColor={{ false: 'rgba(255,255,255,0.15)', true: Colors.primary }}
+          thumbColor="#FFF"
+        />
+      </View>
+
+      {/* Auto Pause */}
+      <Text style={[styles.sectionHeader, { marginTop: Spacing.xl }]}>SESSION TRACKING</Text>
+      <View style={styles.settingRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.settingLabel}>Auto-Pause Session</Text>
+          <Text style={styles.settingSubLabel}>Automatically pause workout when speed drops below 0.2 mph for 10s</Text>
+        </View>
+        <Switch
+          value={autoPauseEnabled}
+          onValueChange={handleToggleAutoPause}
           trackColor={{ false: 'rgba(255,255,255,0.15)', true: Colors.primary }}
           thumbColor="#FFF"
         />
