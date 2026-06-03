@@ -43,7 +43,10 @@ export const CustomEffectVisualizer: React.FC<CustomEffectVisualizerProps> = ({
     // 0x51 and 0x59 modes both map 1-100 speed slider differently natively,
     // but visually we approximate it as:
     const frameRate = Math.max(16, 200 - (speed * 1.8)); 
-    const tickIncrement = speed / 2000; // Faster speed = higher tick step
+    
+    // Scale down tick increment for breathing patterns so they don't strobe
+    const isBreathing = [16, 17, 24, 36, 207, 208, 209, 211].includes(effectId);
+    const tickIncrement = isBreathing ? (speed / 4000) : (speed / 2000);
     
     let currentTick = 0;
     const interval = setInterval(() => {

@@ -61,11 +61,17 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
 
       if (isPoweredOn && (mode === 'BUILDER' || mode === 'STREET' || mode === 'FAVORITES' || mode === 'MUSIC' || mode === 'MULTIMODE')) {
       animValue.setValue(0);
+      
+      const isBreathing = patternId != null && (
+        SK8LYTZ_TEMPLATES.find(t => t.id === patternId)?.group === 'Breathe' || 
+        SK8LYTZ_TEMPLATES.find(t => t.id === patternId)?.name.includes('Breath')
+      );
+
       const baseDuration =
         mode === 'MUSIC'    ? 800  :
-        mode === 'BUILDER'  ? (builderTransitionType === 0x03 ? 350 : 1500) :
+        mode === 'BUILDER'  ? (builderTransitionType === 0x03 ? 350 : (isBreathing ? 3000 : 1500)) :
         mode === 'MULTIMODE'? 1500 :
-        mode === 'STREET'   ? 1400 : 3000;
+        mode === 'STREET'   ? 1400 : (isBreathing ? 6000 : 3000);
       const duration = baseDuration / (0.4 + (speed / 100) * 2.1);
 
       Animated.loop(
