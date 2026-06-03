@@ -14,9 +14,20 @@ export interface HealthTelemetry {
 }
 
 /**
- * Polls Health APIs during an active session.
- * 
- * @param sessionActive - Whether a skate session is currently active
+ * Health Data Priority Architecture:
+ *
+ *   WATCH ACTIVE (received data in last 15s):
+ *     → Watch HR/cal writes directly to state (5s interval, fresher)
+ *     → Phone HealthKit/Health Connect polling is SUPPRESSED
+ *
+ *   WATCH INACTIVE (no data for 15s — disconnected/out of range):
+ *     → Phone polling auto-resumes as fallback (15s interval)
+ *     → Reads from HealthKit (iOS) or Health Connect (Android)
+ *
+ * Why watch wins: The watch has a direct optical HR sensor on the wrist
+ * sampling every 1-5 seconds. Phone HealthKit/Health Connect polls synced
+ * data at 15s intervals — always staler. When both are available, the
+ * watch's real-time relay is the superior source of truth.
  */
 export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
   const [latestBpm, setLatestBpm] = useState<number | null>(null);
@@ -28,13 +39,29 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
   const sessionStartTimeRef = useRef<Date | null>(null);
   const bpmSamplesRef = useRef<number[]>([]);
 
+  /**
+   * Watch health priority tracking.
+   * lastWatchHealthMs: timestamp of last watch health relay received.
+   * When Date.now() - lastWatchHealthMs < WATCH_EXPIRY_MS, the watch is
+   * considered "active" and phone polling defers to it.
+   */
+  const lastWatchHealthMsRef = useRef<number>(0);
+  const WATCH_EXPIRY_MS = 15000; // 15s — 3× the watch relay interval (5s)
+
+  /** Returns true if a watch has sent health data recently */
+  const isWatchHealthActive = useCallback((): boolean => {
+    return (Date.now() - lastWatchHealthMsRef.current) < WATCH_EXPIRY_MS;
+  }, []);
+
   useEffect(() => {
     if (sessionActive && !sessionStartTimeRef.current) {
       sessionStartTimeRef.current = new Date();
       bpmSamplesRef.current = [];
+      lastWatchHealthMsRef.current = 0; // Reset watch tracking on new session
     } else if (!sessionActive) {
       sessionStartTimeRef.current = null;
       setLatestBpm(null);
+      lastWatchHealthMsRef.current = 0;
       // We keep activeCalories, peakBpm, avgBpm until next session starts
     }
   }, [sessionActive]);
@@ -44,6 +71,19 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
 
     const pollHealthData = async () => {
       if (!sessionActive || !sessionStartTimeRef.current) return;
+
+      // ── Watch Priority Gate ──
+      // If a watch is actively relaying health data (received within last 15s),
+      // skip the phone-side poll entirely. The watch's direct sensor is fresher.
+      if (isWatchHealthActive()) {
+        AppLogger.log('APP_LOG', {
+          event: 'phone_health_poll_deferred',
+          reason: 'watch_active',
+          lastWatchMs: Date.now() - lastWatchHealthMsRef.current,
+        });
+        return;
+      }
+
       try {
         const hasPermission = await checkPermission('HEALTH');
         if (!hasPermission) return;
@@ -85,7 +125,7 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
             (err: string, results: Array<{ value: number }>) => {
               if (err) {
                 AppLogger.warn('HEALTH_TELEMETRY', { event: 'ios_hr_failed', error: err });
-              } else if (results && results.length > 0 && isActive) {
+              } else if (results && results.length > 0 && isActive && !isWatchHealthActive()) {
                 updateBpm(Math.round(results[0].value));
               }
             }
@@ -100,7 +140,7 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
             (err: string, results: Array<{ value: number }>) => {
               if (err) {
                 AppLogger.warn('HEALTH_TELEMETRY', { event: 'ios_energy_failed', error: err });
-              } else if (results && results.length > 0 && isActive) {
+              } else if (results && results.length > 0 && isActive && !isWatchHealthActive()) {
                 // Sum it up
                 const totalCals = results.reduce((acc, r) => acc + r.value, 0);
                 setActiveCalories(Math.round(totalCals));
@@ -113,8 +153,9 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
           try {
              // Auto-start SDK before reads
              await initialize();
-          } catch (e: any) {
-             AppLogger.warn('HEALTH_TELEMETRY', { event: 'init_failed', error: e.message });
+          } catch (e: unknown) {
+             const msg = e instanceof Error ? e.message : String(e);
+             AppLogger.warn('HEALTH_TELEMETRY', { event: 'init_failed', error: msg });
              return;
           }
 
@@ -126,7 +167,7 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
           };
 
           const hrResult = await readRecords('HeartRate', { timeRangeFilter });
-          if (hrResult && hrResult.length > 0 && hrResult[0].samples && isActive) {
+          if (hrResult && hrResult.length > 0 && hrResult[0].samples && isActive && !isWatchHealthActive()) {
              const samples = hrResult[hrResult.length - 1].samples; // Get most recent record
              if (samples.length > 0) {
                  updateBpm(Math.round(samples[samples.length - 1].beatsPerMinute));
@@ -134,13 +175,14 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
           }
 
           const calResult = await readRecords('ActiveCaloriesBurned', { timeRangeFilter });
-          if (calResult && calResult.length > 0 && isActive) {
-             const totalCals = calResult.reduce((acc: number, r: any) => acc + (r.energy?.inKilocalories || 0), 0);
+          if (calResult && calResult.length > 0 && isActive && !isWatchHealthActive()) {
+             const totalCals = calResult.reduce((acc: number, r: { energy?: { inKilocalories?: number } }) => acc + (r.energy?.inKilocalories || 0), 0);
              setActiveCalories(Math.round(totalCals));
           }
         }
-      } catch (e: any) {
-         AppLogger.warn('HEALTH_TELEMETRY', { event: 'poll_error', error: e.message });
+      } catch (e: unknown) {
+         const msg = e instanceof Error ? e.message : String(e);
+         AppLogger.warn('HEALTH_TELEMETRY', { event: 'poll_error', error: msg });
       }
     };
 
@@ -157,23 +199,36 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
       isActive = false;
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
-  }, [sessionActive]);
+  }, [sessionActive, isWatchHealthActive]);
 
+  /**
+   * mergeWatchHealth — called by SessionContext when watch relays HR/cal.
+   *
+   * ALWAYS overwrites phone-side state. The watch's optical HR sensor is
+   * the most accurate source when available. The lastWatchHealthMs timestamp
+   * gates the phone poll: as long as the watch keeps sending data every 5s,
+   * the phone's 15s poll will defer automatically.
+   */
   const mergeWatchHealth = useCallback((watchHR: number, watchCal: number) => {
-    // Only overwrite if the phone's own health polling hasn't provided data
-    if (latestBpm === null && watchHR > 0) {
+    // Mark watch as active — phone polling will defer to this
+    lastWatchHealthMsRef.current = Date.now();
+
+    if (watchHR > 0) {
       setLatestBpm(watchHR);
       bpmSamplesRef.current.push(watchHR);
       const samples = bpmSamplesRef.current;
-      const max = samples.reduce((a: number, b: number) => (b > a ? b : a), samples[0]);
-      const avg = Math.round(samples.reduce((a: number, b: number) => a + b, 0) / samples.length);
-      setPeakBpm(max);
-      setAvgBpm(avg);
+      if (samples.length > 0) {
+        const max = samples.reduce((a: number, b: number) => (b > a ? b : a), samples[0]);
+        const avg = Math.round(samples.reduce((a: number, b: number) => a + b, 0) / samples.length);
+        setPeakBpm(max);
+        setAvgBpm(avg);
+      }
     }
-    if (activeCalories === null && watchCal > 0) {
+    if (watchCal > 0) {
       setActiveCalories(watchCal);
     }
-  }, [latestBpm, activeCalories]);
+  }, []);
 
   return { latestBpm, avgBpm, peakBpm, activeCalories, mergeWatchHealth };
 }
+
