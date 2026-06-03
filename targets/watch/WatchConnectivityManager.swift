@@ -1,79 +1,99 @@
 import Foundation
 import WatchConnectivity
-import Combine
 
+/// Manages bidirectional WCSession communication between the watch app and the iOS host.
+/// Acts as the single source of truth for session state and telemetry pushed from the phone.
 class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     static let shared = WatchConnectivityManager()
-    
+
     @Published var isSessionActive: Bool = false
     @Published var currentSpeed: Double = 0.0
     @Published var activeCalories: Int = 0
-    
-    private var session: WCSession?
-    
+
     private override init() {
         super.init()
-        if WCSession.isSupported() {
-            session = WCSession.default
-            session?.delegate = self
-            session?.activate()
-        }
+        guard WCSession.isSupported() else { return }
+        WCSession.default.delegate = self
+        WCSession.default.activate()
     }
-    
-    func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
+
+    // MARK: - Public Commands (watch → phone)
+
+    func sendStartSession() {
+        isSessionActive = true
+        send(["command": "START_SESSION"])
+    }
+
+    func sendStopSession() {
+        isSessionActive = false
+        send(["command": "STOP_SESSION"])
+    }
+
+    // MARK: - WCSessionDelegate — required on watchOS
+
+    func session(_ session: WCSession,
+                 activationDidCompleteWith activationState: WCSessionActivationState,
+                 error: Error?) {
         if let error = error {
-            print("WCSession activation failed with error: \(error.localizedDescription)")
-            return
-        }
-        print("WCSession activated with state: \(activationState.rawValue)")
-    }
-    
-    func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) {
-        DispatchQueue.main.async {
-            self.handlePayload(payload: applicationContext)
+            print("[WCSession] Activation failed: \(error.localizedDescription)")
+        } else {
+            print("[WCSession] Activated — state: \(activationState.rawValue)")
         }
     }
-    
-    func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
-        DispatchQueue.main.async {
-            self.handlePayload(payload: message)
-        }
+
+    /// Required on watchOS — called when the paired iPhone becomes temporarily unavailable.
+    func sessionDidBecomeInactive(_ session: WCSession) {
+        print("[WCSession] Session became inactive")
     }
-    
-    private func handlePayload(payload: [String: Any]) {
+
+    /// Required on watchOS — called after sessionDidBecomeInactive.
+    /// Re-activate to support Watch handoff scenarios.
+    func sessionDidDeactivate(_ session: WCSession) {
+        print("[WCSession] Session deactivated — reactivating")
+        WCSession.default.activate()
+    }
+
+    // MARK: - Receive updates from phone (phone → watch)
+
+    func session(_ session: WCSession,
+                 didReceiveApplicationContext applicationContext: [String: Any]) {
+        DispatchQueue.main.async { self.handlePayload(applicationContext) }
+    }
+
+    func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
+        DispatchQueue.main.async { self.handlePayload(message) }
+    }
+
+    // MARK: - Private
+
+    private func handlePayload(_ payload: [String: Any]) {
         if let status = payload["status"] as? String {
-            self.isSessionActive = (status == "ACTIVE")
+            isSessionActive = (status == "ACTIVE")
         }
         if let speed = payload["speed"] as? Double {
-            self.currentSpeed = speed
+            currentSpeed = speed
         }
-        if let calories = payload["calories"] as? Int {
-            self.activeCalories = calories
+        // Calories may arrive as Int or Double depending on source (Health Connect sends Double)
+        if let calories = payload["calories"] as? Double {
+            activeCalories = Int(calories)
+        } else if let calories = payload["calories"] as? Int {
+            activeCalories = calories
         }
     }
-    
-    func sendStartSession() {
-        self.isSessionActive = true
-        sendMessage(["command": "START_SESSION"])
-    }
-    
-    func sendStopSession() {
-        self.isSessionActive = false
-        sendMessage(["command": "STOP_SESSION"])
-    }
-    
-    private func sendMessage(_ message: [String: Any]) {
-        guard let session = session, session.isReachable else {
-            // Fallback to updating application context if not reachable in real-time
-            do {
-                try self.session?.updateApplicationContext(message)
-            } catch {
-                print("Failed to update application context: \(error)")
+
+    private func send(_ message: [String: Any]) {
+        let activeSession = WCSession.default
+        if activeSession.isReachable {
+            activeSession.sendMessage(message, replyHandler: nil) { error in
+                print("[WCSession] sendMessage failed: \(error.localizedDescription)")
             }
-            return
-        }
-        session.sendMessage(message, replyHandler: nil) { error in
-            print("Failed to send message: \(error.localizedDescription)")
+        } else {
+            // Phone not reachable in real-time — queue via application context
+            do {
+                try activeSession.updateApplicationContext(message)
+            } catch {
+                print("[WCSession] updateApplicationContext failed: \(error)")
+            }
         }
     }
 }

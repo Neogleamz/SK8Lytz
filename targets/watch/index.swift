@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct watchEntry: App {
+struct SK8LytzWatchApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
