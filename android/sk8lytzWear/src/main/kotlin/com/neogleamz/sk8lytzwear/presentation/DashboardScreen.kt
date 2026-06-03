@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -31,6 +33,7 @@ import androidx.wear.compose.material.ButtonDefaults
 import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.Text
+import kotlinx.coroutines.delay
 import com.neogleamz.sk8lytzwear.presentation.theme.ElectricCyan
 import com.neogleamz.sk8lytzwear.presentation.theme.NeonMagenta
 import com.neogleamz.sk8lytzwear.presentation.theme.TrueBlack
@@ -54,6 +57,8 @@ fun DashboardScreen() {
     var speed by remember { mutableStateOf(0.0) }
     var heartRate by remember { mutableStateOf(0) }
     var calories by remember { mutableStateOf(0) }
+    // Live elapsed duration — derived from phone-authoritative anchor timestamp
+    var elapsedSeconds by remember { mutableStateOf(0) }
 
     // Subscribe to state changes pushed from the phone via DataClient
     DisposableEffect(Unit) {
@@ -77,6 +82,27 @@ fun DashboardScreen() {
         }
     }
 
+    // Tick elapsed time every second while ACTIVE, anchored to phone-authoritative start time.
+    // Using System.currentTimeMillis() means the timer instantly recovers the correct value
+    // if the watch app crashes or the user opens it mid-session.
+    LaunchedEffect(sessionState) {
+        if (sessionState == SessionState.ACTIVE) {
+            // Set local anchor if phone hasn't synced startTime yet
+            if (WearableCommunicationService.sessionStartTimeMs == 0L) {
+                WearableCommunicationService.sessionStartTimeMs = System.currentTimeMillis()
+            }
+            while (sessionState == SessionState.ACTIVE) {
+                val startMs = WearableCommunicationService.sessionStartTimeMs
+                elapsedSeconds = if (startMs > 0L) {
+                    ((System.currentTimeMillis() - startMs) / 1000).toInt()
+                } else 0
+                delay(1000L)
+            }
+        } else {
+            elapsedSeconds = 0
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -87,6 +113,8 @@ fun DashboardScreen() {
             SessionState.IDLE -> IdleView(
                 onStart = {
                     sessionState = SessionState.ACTIVE // Optimistic UI
+                    // Anchor locally when session starts from the watch
+                    WearableCommunicationService.sessionStartTimeMs = System.currentTimeMillis()
                     HealthTracker.startTracking(context)
                     WearMessageSender.sendCommand(context, "START_SESSION")
                 }
@@ -95,8 +123,10 @@ fun DashboardScreen() {
                 speed = speed,
                 heartRate = heartRate,
                 calories = calories,
+                elapsedSeconds = elapsedSeconds,
                 onStop = {
                     sessionState = SessionState.IDLE // Optimistic UI
+                    WearableCommunicationService.sessionStartTimeMs = 0L
                     HealthTracker.stopTracking()
                     WearMessageSender.sendCommand(context, "STOP_SESSION")
                 }
@@ -151,6 +181,7 @@ private fun ActiveView(
     speed: Double,
     heartRate: Int,
     calories: Int,
+    elapsedSeconds: Int,
     onStop: () -> Unit
 ) {
     Column(
@@ -167,7 +198,15 @@ private fun ActiveView(
             letterSpacing = 2.sp
         )
 
-        // Speed chip — hero metric
+        // Elapsed duration — anchored to phone-authoritative start time
+        Text(
+            text = formatElapsed(elapsedSeconds),
+            color = Color.White,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Medium,
+            fontFamily = FontFamily.Monospace
+        )
+
         TelemetryChip(
             label = "SPEED",
             value = String.format("%.1f", speed),
@@ -241,4 +280,13 @@ private fun TelemetryChip(
             }
         }
     )
+}
+
+/** Formats a raw second count into MM:SS (or H:MM:SS past 59:59). */
+private fun formatElapsed(totalSeconds: Int): String {
+    val h = totalSeconds / 3600
+    val m = (totalSeconds % 3600) / 60
+    val s = totalSeconds % 60
+    return if (h > 0) String.format("%d:%02d:%02d", h, m, s)
+    else String.format("%02d:%02d", m, s)
 }

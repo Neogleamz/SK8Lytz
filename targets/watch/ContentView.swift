@@ -5,6 +5,11 @@ struct ContentView: View {
     @ObservedObject private var watchManager = WatchConnectivityManager.shared
     @ObservedObject private var healthManager = HealthManager.shared
 
+    /// Live elapsed time derived from the phone-authoritative anchor timestamp.
+    /// Computed every second by the timer publisher below.
+    @State private var elapsedSeconds: Int = 0
+    private let ticker = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
     var body: some View {
         VStack(spacing: 16) {
             if watchManager.isSessionActive {
@@ -16,15 +21,29 @@ struct ContentView: View {
         .onAppear {
             healthManager.requestAuthorization()
         }
+        .onReceive(ticker) { _ in
+            // Recompute elapsed from the phone-authoritative anchor every second.
+            // Falls back to zero gracefully when sessionStartTime is nil.
+            if let anchor = watchManager.sessionStartTime {
+                elapsedSeconds = Int(Date().timeIntervalSince(anchor))
+            } else {
+                elapsedSeconds = 0
+            }
+        }
         .padding()
     }
 
     // MARK: - Active Session View
     private var activeSessionView: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 10) {
             Text("ACTIVE SESSION")
                 .font(.headline)
                 .foregroundColor(.green)
+
+            // Elapsed duration — anchored to phone-authoritative start time
+            Text(formatElapsed(elapsedSeconds))
+                .font(.system(size: 22, weight: .medium, design: .monospaced))
+                .foregroundColor(.white)
 
             HStack {
                 VStack(spacing: 2) {
@@ -97,13 +116,35 @@ struct ContentView: View {
 
     // MARK: - Actions
     private func startSession() {
+        // Anchor locally when the session is initiated from the watch itself.
+        // When initiated from the phone, the anchor arrives via handlePayload().
+        if watchManager.sessionStartTime == nil {
+            watchManager.sessionStartTime = Date()
+        }
         healthManager.startWorkout()
         watchManager.sendStartSession()
     }
 
     private func stopSession() {
+        // Anchor cleared in WatchConnectivityManager.handlePayload when STOPPED arrives;
+        // clear immediately here too for instant UI reset.
+        watchManager.sessionStartTime = nil
+        elapsedSeconds = 0
         healthManager.stopWorkout()
         watchManager.sendStopSession()
+    }
+
+    // MARK: - Helpers
+
+    /// Formats a raw second count into MM:SS (or H:MM:SS past 59:59).
+    private func formatElapsed(_ totalSeconds: Int) -> String {
+        let h = totalSeconds / 3600
+        let m = (totalSeconds % 3600) / 60
+        let s = totalSeconds % 60
+        if h > 0 {
+            return String(format: "%d:%02d:%02d", h, m, s)
+        }
+        return String(format: "%02d:%02d", m, s)
     }
 }
 

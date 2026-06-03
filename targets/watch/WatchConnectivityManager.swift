@@ -10,6 +10,9 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var isSessionActive: Bool = false
     @Published var currentSpeed: Double = 0.0
     @Published var activeCalories: Int = 0
+    /// Phone-authoritative session start timestamp — drives elapsed timer on watch.
+    /// Nil when no session is active.
+    @Published var sessionStartTime: Date?
 
     /// Timer that periodically sends watch-side health data back to the phone
     private var healthRelayTimer: Timer?
@@ -64,7 +67,22 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
 
     private func handlePayload(_ payload: [String: Any]) {
         if let status = payload["status"] as? String {
-            isSessionActive = (status == "ACTIVE")
+            let nowActive = (status == "ACTIVE")
+            isSessionActive = nowActive
+            if !nowActive {
+                // Session stopped — clear the anchor so elapsed resets immediately
+                sessionStartTime = nil
+            }
+        }
+        // Parse phone-authoritative start timestamp (ISO-8601 UTC)
+        if let startISO = payload["startTime"] as? String, !startISO.isEmpty {
+            let formatter = ISO8601DateFormatter()
+            if let date = formatter.date(from: startISO) {
+                // Only update if no anchor set yet — prevents re-anchoring on metric updates
+                if sessionStartTime == nil {
+                    sessionStartTime = date
+                }
+            }
         }
         if let speed = payload["speed"] as? Double {
             currentSpeed = speed

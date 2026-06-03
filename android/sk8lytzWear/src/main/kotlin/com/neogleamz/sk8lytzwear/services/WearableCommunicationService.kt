@@ -8,6 +8,7 @@ import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import com.neogleamz.sk8lytzwear.presentation.SessionState
 import org.json.JSONObject
+import java.time.Instant
 
 /**
  * WearableCommunicationService — phone → watch data receiver.
@@ -33,6 +34,12 @@ class WearableCommunicationService : WearableListenerService() {
         private var currentHR = 0
         private var currentCalories = 0
         private var currentState = SessionState.IDLE
+
+        /**
+         * Phone-authoritative session start time as epoch millis.
+         * 0L = no active session. DashboardScreen reads this to compute elapsed duration.
+         */
+        @Volatile var sessionStartTimeMs: Long = 0L
 
         fun addStateListener(listener: (SessionState, Double, Int, Int) -> Unit) {
             synchronized(stateListeners) {
@@ -73,6 +80,19 @@ class WearableCommunicationService : WearableListenerService() {
                 currentSpeed = speed
                 currentHR = hr
                 currentCalories = cal
+
+                // Parse phone-authoritative start timestamp from ISO-8601 string
+                val startTimeStr = dataMap.getString("startTime", "")
+                if (currentState == SessionState.ACTIVE && startTimeStr.isNotEmpty() && sessionStartTimeMs == 0L) {
+                    runCatching {
+                        sessionStartTimeMs = Instant.parse(startTimeStr).toEpochMilli()
+                    }.onFailure {
+                        Log.w(TAG, "Failed to parse startTime ISO: $startTimeStr")
+                    }
+                } else if (currentState == SessionState.IDLE) {
+                    // Clear anchor when session stops
+                    sessionStartTimeMs = 0L
+                }
 
                 // Start/stop HealthTracker when phone drives the session state
                 if (currentState == SessionState.ACTIVE && previousState != SessionState.ACTIVE) {
