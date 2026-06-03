@@ -19,7 +19,7 @@ module.exports = {
       },
       buildNumber: "15",
       config: {
-        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyDjioVcuz5mBpBhzlmUO9kSoTRhgoqMHrs"
+        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyBfvwN5fcyDbzUZp2Q7c2OfMLPFajVRPwA"
       }
     },
     android: {
@@ -43,7 +43,7 @@ module.exports = {
       package: "com.neogleamz.sk8lytz",
       config: {
         googleMaps: {
-          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyDjioVcuz5mBpBhzlmUO9kSoTRhgoqMHrs"
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyBfvwN5fcyDbzUZp2Q7c2OfMLPFajVRPwA"
         }
       }
     },
