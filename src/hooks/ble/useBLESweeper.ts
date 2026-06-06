@@ -13,6 +13,7 @@
  *
  * Design Decisions:
  *  - ScanMode.LowPower (not LowLatency) — battery safety
+ *  - Battery-adaptive 3-tier throttling (FULL > THROTTLED > PAUSED)
  *  - Raw MAC tracking in Ref, NOT React state — prevents render thrashing
  *  - Debounced setAllDevices — fires at most every 1500ms on new discovery
  *  - AppState lifecycle owned by DashboardScreen (no duplicate listener here)
@@ -23,6 +24,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Battery from 'expo-battery';
 import { Buffer } from 'buffer';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
@@ -53,6 +55,24 @@ const PROBE_TIMEOUT_MS = 3500;
 const PROBE_QUEUE_DELAY_MS = 2000;
 /** Faster probe during FTUE — no user BLE actions to interfere with, radio is idle */
 const PROBE_QUEUE_DELAY_MS_FTUE = 500;
+
+// ── Battery-Adaptive Scanning Tiers (BAT-01) ──────────────────────────────
+// Modeled after Tile's 3-tier battery strategy:
+//   FULL (>30%)      — continuous LowPower scan (current behavior)
+//   THROTTLED (15-30%) — intermittent: 10s scan, 20s pause (50% duty cycle)
+//   PAUSED (<15%)    — scanning stopped entirely, user-initiated connect only
+type BatteryTier = 'FULL' | 'THROTTLED' | 'PAUSED';
+const BATTERY_TIER_FULL_THRESHOLD = 0.30;     // above 30% → full scan
+const BATTERY_TIER_THROTTLED_THRESHOLD = 0.15; // 15-30% → throttled
+const THROTTLE_SCAN_ON_MS = 10_000;  // scan window during THROTTLED tier
+const THROTTLE_SCAN_OFF_MS = 20_000; // pause window during THROTTLED tier
+
+/** Classify battery level (0.0–1.0) into a scan tier. */
+function classifyBatteryTier(level: number): BatteryTier {
+  if (level >= BATTERY_TIER_FULL_THRESHOLD) return 'FULL';
+  if (level >= BATTERY_TIER_THROTTLED_THRESHOLD) return 'THROTTLED';
+  return 'PAUSED';
+}
 
 /** BLE device name prefixes that identify SK8Lytz/ZENGGE hardware */
 const ZENGGE_NAME_PREFIXES = ['lednet', 'sk8', 'zg', 'halo', 'soul'];
@@ -97,6 +117,10 @@ export function useBLESweeper({
   const probeQueueTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const burstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSweeperActiveRef = useRef(false);
+
+  // ── Battery-adaptive state ──────────────────────────────────────────────
+  const batteryTierRef = useRef<BatteryTier>('FULL');
+  const throttleCycleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Android 12+ Scan Budget Guard (AND-04) ──────────────────────────────
   // Android 12 (API 31) throttles background BLE scans to ~4 per 30-second window.
@@ -390,6 +414,37 @@ export function useBLESweeper({
     };
   }, [scheduleFlush, processProbeQueue]);
 
+  // ── Battery-Adaptive Duty Cycle (THROTTLED tier only) ────────────────────
+  // When battery is 15-30%, runs an intermittent scan cycle:
+  //   10s scan ON → 20s scan OFF → repeat (50% radio duty cycle).
+  // This halves BLE radio usage while still discovering devices.
+  const startThrottleCycle = useCallback(() => {
+    if (!bleManager) return;
+    // Clear any existing cycle
+    if (throttleCycleTimerRef.current) { clearTimeout(throttleCycleTimerRef.current); throttleCycleTimerRef.current = null; }
+
+    const runCycle = () => {
+      if (!isSweeperActiveRef.current || batteryTierRef.current !== 'THROTTLED') return;
+
+      // Scan ON phase
+      bleManager.stopDeviceScan();
+      bleManager.startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], { scanMode: 0 }, createScanCallback());
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_throttle_scan_on' });
+
+      throttleCycleTimerRef.current = setTimeout(() => {
+        if (!isSweeperActiveRef.current || batteryTierRef.current !== 'THROTTLED') return;
+
+        // Scan OFF phase
+        bleManager.stopDeviceScan();
+        AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_throttle_scan_off' });
+
+        throttleCycleTimerRef.current = setTimeout(runCycle, THROTTLE_SCAN_OFF_MS);
+      }, THROTTLE_SCAN_ON_MS);
+    };
+
+    runCycle();
+  }, [bleManager, createScanCallback]);
+
   // ── Start Sweeper ────────────────────────────────────────────────────────
   const startSweeper = useCallback(() => {
     if (Platform.OS === 'web' || !bleManager) return;
@@ -398,42 +453,75 @@ export function useBLESweeper({
     // Cancel any pending burst-revert timer to prevent double-start
     if (burstTimerRef.current) { clearTimeout(burstTimerRef.current); burstTimerRef.current = null; }
 
-    // CRITICAL: Stop any existing scan before starting (Android single-scan constraint)
-    bleManager.stopDeviceScan();
+    // ── Battery-Adaptive Gate (BAT-01) ────────────────────────────────────
+    // Check phone battery level before starting BLE radio.
+    Battery.getBatteryLevelAsync().then(level => {
+      const tier = classifyBatteryTier(level);
+      batteryTierRef.current = tier;
 
-    isSweeperActiveRef.current = true;
-    setIsSweeperActive(true);
-    AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_start' });
-
-    // ── Android 12+ Scan Budget Guard ─────────────────────────────────────
-    // Check if we have budget remaining before calling startDeviceScan.
-    // If budget is exhausted, defer start until the oldest entry expires.
-    if (Platform.OS === 'android' && (Platform.Version as number) >= 31) {
-      const now = Date.now();
-      // Prune timestamps outside the 30s window
-      scanStartTimestampsRef.current = scanStartTimestampsRef.current.filter(
-        ts => now - ts < SCAN_BUDGET_WINDOW_MS
-      );
-      if (scanStartTimestampsRef.current.length >= SCAN_BUDGET_MAX) {
-        // Budget exhausted: schedule a deferred start when the oldest entry expires
-        const oldestTs = scanStartTimestampsRef.current[0];
-        const msUntilBudgetResets = SCAN_BUDGET_WINDOW_MS - (now - oldestTs) + 100; // +100ms safety margin
+      if (tier === 'PAUSED') {
         AppLogger.log('BLE_STATE_CHANGE', {
-          event: 'sweeper_start_deferred_budget',
-          deferMs: msUntilBudgetResets,
-          budgetUsed: scanStartTimestampsRef.current.length,
+          event: 'sweeper_start_blocked_low_battery',
+          batteryLevel: Math.round(level * 100),
         });
-        setTimeout(() => {
-          if (isSweeperActiveRef.current) return; // Already started via another path
-          startSweeper();
-        }, msUntilBudgetResets);
-        return;
+        return; // Do NOT start scanning — battery too low
       }
-      scanStartTimestampsRef.current.push(now);
-    }
 
-    bleManager.startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], { scanMode: 0 }, createScanCallback());
-  }, [bleManager, createScanCallback]);
+      // CRITICAL: Stop any existing scan before starting (Android single-scan constraint)
+      bleManager.stopDeviceScan();
+
+      isSweeperActiveRef.current = true;
+      setIsSweeperActive(true);
+      AppLogger.log('BLE_STATE_CHANGE', {
+        event: 'sweeper_start',
+        batteryTier: tier,
+        batteryLevel: Math.round(level * 100),
+      });
+
+      // ── Android 12+ Scan Budget Guard ─────────────────────────────────
+      if (Platform.OS === 'android' && (Platform.Version as number) >= 31) {
+        const now = Date.now();
+        scanStartTimestampsRef.current = scanStartTimestampsRef.current.filter(
+          ts => now - ts < SCAN_BUDGET_WINDOW_MS
+        );
+        if (scanStartTimestampsRef.current.length >= SCAN_BUDGET_MAX) {
+          const oldestTs = scanStartTimestampsRef.current[0];
+          const msUntilBudgetResets = SCAN_BUDGET_WINDOW_MS - (now - oldestTs) + 100;
+          AppLogger.log('BLE_STATE_CHANGE', {
+            event: 'sweeper_start_deferred_budget',
+            deferMs: msUntilBudgetResets,
+            budgetUsed: scanStartTimestampsRef.current.length,
+          });
+          // Reset active state so deferred start can re-enter
+          isSweeperActiveRef.current = false;
+          setIsSweeperActive(false);
+          setTimeout(() => {
+            if (isSweeperActiveRef.current) return;
+            startSweeper();
+          }, msUntilBudgetResets);
+          return;
+        }
+        scanStartTimestampsRef.current.push(now);
+      }
+
+      if (tier === 'THROTTLED') {
+        // Intermittent scan: 10s on, 20s off
+        startThrottleCycle();
+      } else {
+        // FULL tier: continuous LowPower scan
+        bleManager.startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], { scanMode: 0 }, createScanCallback());
+      }
+    }).catch(err => {
+      // Battery API unavailable (e.g., simulator) — fall back to full scan
+      AppLogger.warn('[useBLESweeper] Battery level check failed, defaulting to FULL tier', { error: String(err) });
+      batteryTierRef.current = 'FULL';
+
+      bleManager.stopDeviceScan();
+      isSweeperActiveRef.current = true;
+      setIsSweeperActive(true);
+      bleManager.startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], { scanMode: 0 }, createScanCallback());
+    });
+  }, [bleManager, createScanCallback, startThrottleCycle]);
 
   /**
    * burstScan — Temporarily elevate to LowLatency scan for `durationMs`, then revert to LowPower.
@@ -486,12 +574,58 @@ export function useBLESweeper({
     if (probeQueueTimerRef.current) clearTimeout(probeQueueTimerRef.current);
     // FIX: Cancel pending burst-revert timer to prevent radio restart while app is backgrounded
     if (burstTimerRef.current) { clearTimeout(burstTimerRef.current); burstTimerRef.current = null; }
+    // Cancel THROTTLED duty cycle timer
+    if (throttleCycleTimerRef.current) { clearTimeout(throttleCycleTimerRef.current); throttleCycleTimerRef.current = null; }
     AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_stop' });
   }, [bleManager]);
 
   // NOTE: AppState listener is intentionally NOT here.
   // DashboardScreen owns the lifecycle: startSweeper on foreground, stopSweeper on background.
   // Having two listeners calling stopSweeper() was a duplicate responsibility violation.
+
+  // ── Battery Level Monitor (BAT-01) ──────────────────────────────────────
+  // Subscribe to battery level changes and adapt scanning tier in real-time.
+  // If battery drops below 15% while scanning → auto-stop.
+  // If battery recovers above 15% and sweeper was active → restart in appropriate tier.
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+
+    const subscription = Battery.addBatteryLevelListener(({ batteryLevel }) => {
+      const newTier = classifyBatteryTier(batteryLevel);
+      const oldTier = batteryTierRef.current;
+      if (newTier === oldTier) return;
+
+      batteryTierRef.current = newTier;
+      AppLogger.log('BLE_STATE_CHANGE', {
+        event: 'sweeper_battery_tier_changed',
+        oldTier,
+        newTier,
+        batteryLevel: Math.round(batteryLevel * 100),
+      });
+
+      if (!isSweeperActiveRef.current) return; // Not scanning — nothing to adapt
+
+      if (newTier === 'PAUSED') {
+        // Battery critically low — stop immediately
+        stopSweeper();
+        AppLogger.warn('[useBLESweeper] Battery critical — sweeper auto-paused', {
+          batteryLevel: Math.round(batteryLevel * 100),
+        });
+      } else if (newTier === 'THROTTLED' && oldTier === 'FULL') {
+        // Downgrade: full → throttled. Restart in duty-cycle mode.
+        bleManager?.stopDeviceScan();
+        if (throttleCycleTimerRef.current) { clearTimeout(throttleCycleTimerRef.current); throttleCycleTimerRef.current = null; }
+        startThrottleCycle();
+      } else if (newTier === 'FULL' && oldTier === 'THROTTLED') {
+        // Upgrade: throttled → full. Cancel duty cycle, restart continuous.
+        if (throttleCycleTimerRef.current) { clearTimeout(throttleCycleTimerRef.current); throttleCycleTimerRef.current = null; }
+        bleManager?.stopDeviceScan();
+        bleManager?.startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], { scanMode: 0 }, createScanCallback());
+      }
+    });
+
+    return () => { subscription.remove(); };
+  }, [bleManager, stopSweeper, startThrottleCycle, createScanCallback]);
 
   // ── Cleanup on unmount ───────────────────────────────────────────────────
   useEffect(() => {
