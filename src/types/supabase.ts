@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -499,6 +499,7 @@ export type Database = {
           is_3d_print: boolean | null
           is_filament: boolean | null
           item_name: string | null
+          item_uuid: string
           lot_multiplier: number | null
           moister_barrier_bag: number | null
           neogleamz_name: string | null
@@ -547,6 +548,7 @@ export type Database = {
           is_3d_print?: boolean | null
           is_filament?: boolean | null
           item_name?: string | null
+          item_uuid?: string
           lot_multiplier?: number | null
           moister_barrier_bag?: number | null
           neogleamz_name?: string | null
@@ -595,6 +597,7 @@ export type Database = {
           is_3d_print?: boolean | null
           is_filament?: boolean | null
           item_name?: string | null
+          item_uuid?: string
           lot_multiplier?: number | null
           moister_barrier_bag?: number | null
           neogleamz_name?: string | null
@@ -653,7 +656,7 @@ export type Database = {
           created_at: string
           delta: number
           id: string
-          item_key: string
+          item_uuid: string | null
           notes: string | null
           operator_email: string | null
           operator_id: string | null
@@ -667,7 +670,7 @@ export type Database = {
           created_at?: string
           delta: number
           id?: string
-          item_key: string
+          item_uuid?: string | null
           notes?: string | null
           operator_email?: string | null
           operator_id?: string | null
@@ -681,7 +684,7 @@ export type Database = {
           created_at?: string
           delta?: number
           id?: string
-          item_key?: string
+          item_uuid?: string | null
           notes?: string | null
           operator_email?: string | null
           operator_id?: string | null
@@ -689,13 +692,21 @@ export type Database = {
           reason_code?: string
           valuation_impact?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_inv_adj_item"
+            columns: ["item_uuid"]
+            isOneToOne: false
+            referencedRelation: "full_landed_costs"
+            referencedColumns: ["item_uuid"]
+          },
+        ]
       }
       inventory_consumption: {
         Row: {
           assembly_consumed_qty: number | null
           consumed_qty: number | null
-          item_key: string
+          item_uuid: string
           manual_adjustment: number | null
           min_stock: number | null
           produced_qty: number | null
@@ -709,7 +720,7 @@ export type Database = {
         Insert: {
           assembly_consumed_qty?: number | null
           consumed_qty?: number | null
-          item_key: string
+          item_uuid: string
           manual_adjustment?: number | null
           min_stock?: number | null
           produced_qty?: number | null
@@ -723,7 +734,7 @@ export type Database = {
         Update: {
           assembly_consumed_qty?: number | null
           consumed_qty?: number | null
-          item_key?: string
+          item_uuid?: string
           manual_adjustment?: number | null
           min_stock?: number | null
           produced_qty?: number | null
@@ -734,7 +745,15 @@ export type Database = {
           scrap_qty?: number | null
           sold_qty?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_inv_consumption_item"
+            columns: ["item_uuid"]
+            isOneToOne: true
+            referencedRelation: "full_landed_costs"
+            referencedColumns: ["item_uuid"]
+          },
+        ]
       }
       inventory_snapshots: {
         Row: {
@@ -769,7 +788,7 @@ export type Database = {
           id: string
           label_size: string | null
           layout_json: Json | null
-          product_name: string
+          product_item_uuid: string | null
           updated_at: string | null
         }
         Insert: {
@@ -780,7 +799,7 @@ export type Database = {
           id?: string
           label_size?: string | null
           layout_json?: Json | null
-          product_name: string
+          product_item_uuid?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -791,10 +810,18 @@ export type Database = {
           id?: string
           label_size?: string | null
           layout_json?: Json | null
-          product_name?: string
+          product_item_uuid?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_label_product"
+            columns: ["product_item_uuid"]
+            isOneToOne: false
+            referencedRelation: "full_landed_costs"
+            referencedColumns: ["item_uuid"]
+          },
+        ]
       }
       label_templates: {
         Row: {
@@ -803,6 +830,7 @@ export type Database = {
           heightIn: number | null
           id: string
           name: string
+          paper_profile: string | null
           widthIn: number | null
         }
         Insert: {
@@ -811,6 +839,7 @@ export type Database = {
           heightIn?: number | null
           id: string
           name: string
+          paper_profile?: string | null
           widthIn?: number | null
         }
         Update: {
@@ -819,6 +848,7 @@ export type Database = {
           heightIn?: number | null
           id?: string
           name?: string
+          paper_profile?: string | null
           widthIn?: number | null
         }
         Relationships: []
@@ -912,7 +942,7 @@ export type Database = {
           created_at: string | null
           id: string
           instruction_json: Json
-          internal_recipe_name: string
+          recipe_item_uuid: string
           required_box_sku: string | null
           updated_at: string | null
         }
@@ -920,7 +950,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           instruction_json?: Json
-          internal_recipe_name: string
+          recipe_item_uuid: string
           required_box_sku?: string | null
           updated_at?: string | null
         }
@@ -928,11 +958,19 @@ export type Database = {
           created_at?: string | null
           id?: string
           instruction_json?: Json
-          internal_recipe_name?: string
+          recipe_item_uuid?: string
           required_box_sku?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_pack_sop_recipe"
+            columns: ["recipe_item_uuid"]
+            isOneToOne: true
+            referencedRelation: "full_landed_costs"
+            referencedColumns: ["item_uuid"]
+          },
+        ]
       }
       parsed_session_stats: {
         Row: {
@@ -1051,7 +1089,7 @@ export type Database = {
           created_at: string | null
           id: string
           label: string | null
-          part_name: string
+          part_item_uuid: string | null
           qty: number
           started_at: string | null
           status: string
@@ -1063,7 +1101,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           label?: string | null
-          part_name: string
+          part_item_uuid?: string | null
           qty?: number
           started_at?: string | null
           status?: string
@@ -1075,14 +1113,22 @@ export type Database = {
           created_at?: string | null
           id?: string
           label?: string | null
-          part_name?: string
+          part_item_uuid?: string | null
           qty?: number
           started_at?: string | null
           status?: string
           wip_state?: Json | null
           wo_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_pq_part"
+            columns: ["part_item_uuid"]
+            isOneToOne: false
+            referencedRelation: "full_landed_costs"
+            referencedColumns: ["item_uuid"]
+          },
+        ]
       }
       product_catalog: {
         Row: {
@@ -1152,7 +1198,7 @@ export type Database = {
           affiliate_pct: number | null
           components: Json | null
           created_at: string | null
-          filament_item_key: string | null
+          filament_item_uuid: string | null
           is_3d_print: boolean | null
           is_label: boolean | null
           is_subassembly: boolean | null
@@ -1163,7 +1209,7 @@ export type Database = {
           old_msrp: number | null
           print_grams: number | null
           print_time_mins: number | null
-          product_name: string
+          product_item_uuid: string
           warranty_pct: number | null
           wholesale_price: number | null
         }
@@ -1171,7 +1217,7 @@ export type Database = {
           affiliate_pct?: number | null
           components?: Json | null
           created_at?: string | null
-          filament_item_key?: string | null
+          filament_item_uuid?: string | null
           is_3d_print?: boolean | null
           is_label?: boolean | null
           is_subassembly?: boolean | null
@@ -1182,7 +1228,7 @@ export type Database = {
           old_msrp?: number | null
           print_grams?: number | null
           print_time_mins?: number | null
-          product_name: string
+          product_item_uuid: string
           warranty_pct?: number | null
           wholesale_price?: number | null
         }
@@ -1190,7 +1236,7 @@ export type Database = {
           affiliate_pct?: number | null
           components?: Json | null
           created_at?: string | null
-          filament_item_key?: string | null
+          filament_item_uuid?: string | null
           is_3d_print?: boolean | null
           is_label?: boolean | null
           is_subassembly?: boolean | null
@@ -1201,29 +1247,52 @@ export type Database = {
           old_msrp?: number | null
           print_grams?: number | null
           print_time_mins?: number | null
-          product_name?: string
+          product_item_uuid?: string
           warranty_pct?: number | null
           wholesale_price?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_recipes_filament"
+            columns: ["filament_item_uuid"]
+            isOneToOne: false
+            referencedRelation: "full_landed_costs"
+            referencedColumns: ["item_uuid"]
+          },
+          {
+            foreignKeyName: "fk_recipes_product"
+            columns: ["product_item_uuid"]
+            isOneToOne: true
+            referencedRelation: "full_landed_costs"
+            referencedColumns: ["item_uuid"]
+          },
+        ]
       }
       production_sops: {
         Row: {
           created_at: string
-          product_name: string
+          product_item_uuid: string
           steps: Json | null
         }
         Insert: {
           created_at?: string
-          product_name: string
+          product_item_uuid: string
           steps?: Json | null
         }
         Update: {
           created_at?: string
-          product_name?: string
+          product_item_uuid?: string
           steps?: Json | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_prod_sop_product"
+            columns: ["product_item_uuid"]
+            isOneToOne: true
+            referencedRelation: "full_landed_costs"
+            referencedColumns: ["item_uuid"]
+          },
+        ]
       }
       projectz: {
         Row: {
@@ -1638,7 +1707,6 @@ export type Database = {
           fulfillment_status: string | null
           id: string
           internal_fulfillment_status: string | null
-          internal_recipe_name: string | null
           isFirstRow: boolean | null
           lineitem_compare_at_price: number | null
           lineitem_fulfillment_status: string | null
@@ -1649,6 +1717,7 @@ export type Database = {
           payment_method: string | null
           qa_cleared_at: string | null
           qty_sold: number | null
+          recipe_item_uuid: string | null
           refunded_amount: number | null
           risk_level: string | null
           sale_date: string | null
@@ -1691,7 +1760,6 @@ export type Database = {
           fulfillment_status?: string | null
           id?: string
           internal_fulfillment_status?: string | null
-          internal_recipe_name?: string | null
           isFirstRow?: boolean | null
           lineitem_compare_at_price?: number | null
           lineitem_fulfillment_status?: string | null
@@ -1702,6 +1770,7 @@ export type Database = {
           payment_method?: string | null
           qa_cleared_at?: string | null
           qty_sold?: number | null
+          recipe_item_uuid?: string | null
           refunded_amount?: number | null
           risk_level?: string | null
           sale_date?: string | null
@@ -1744,7 +1813,6 @@ export type Database = {
           fulfillment_status?: string | null
           id?: string
           internal_fulfillment_status?: string | null
-          internal_recipe_name?: string | null
           isFirstRow?: boolean | null
           lineitem_compare_at_price?: number | null
           lineitem_fulfillment_status?: string | null
@@ -1755,6 +1823,7 @@ export type Database = {
           payment_method?: string | null
           qa_cleared_at?: string | null
           qty_sold?: number | null
+          recipe_item_uuid?: string | null
           refunded_amount?: number | null
           risk_level?: string | null
           sale_date?: string | null
@@ -1776,7 +1845,15 @@ export type Database = {
           transaction_fees?: number | null
           transaction_type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_sl_recipe"
+            columns: ["recipe_item_uuid"]
+            isOneToOne: false
+            referencedRelation: "full_landed_costs"
+            referencedColumns: ["item_uuid"]
+          },
+        ]
       }
       shared_scenes: {
         Row: {
@@ -2359,34 +2436,48 @@ export type Database = {
         Row: {
           barcode_value: string | null
           created_at: string
-          internal_recipe_name: string | null
+          id: string
           is_primary: boolean | null
           is_shopify_synced: boolean | null
+          matched_shopify_sku: string | null
           platform: string | null
           product_sku: string
+          recipe_item_uuid: string | null
           shopify_sku: string | null
         }
         Insert: {
           barcode_value?: string | null
           created_at?: string
-          internal_recipe_name?: string | null
+          id?: string
           is_primary?: boolean | null
           is_shopify_synced?: boolean | null
+          matched_shopify_sku?: string | null
           platform?: string | null
           product_sku: string
+          recipe_item_uuid?: string | null
           shopify_sku?: string | null
         }
         Update: {
           barcode_value?: string | null
           created_at?: string
-          internal_recipe_name?: string | null
+          id?: string
           is_primary?: boolean | null
           is_shopify_synced?: boolean | null
+          matched_shopify_sku?: string | null
           platform?: string | null
           product_sku?: string
+          recipe_item_uuid?: string | null
           shopify_sku?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_sa_recipe"
+            columns: ["recipe_item_uuid"]
+            isOneToOne: false
+            referencedRelation: "full_landed_costs"
+            referencedColumns: ["item_uuid"]
+          },
+        ]
       }
       tagz: {
         Row: {
@@ -2923,7 +3014,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           label: string | null
-          product_name: string | null
+          product_item_uuid: string | null
           qty: number | null
           routing: Json | null
           started_at: string | null
@@ -2935,7 +3026,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           label?: string | null
-          product_name?: string | null
+          product_item_uuid?: string | null
           qty?: number | null
           routing?: Json | null
           started_at?: string | null
@@ -2947,7 +3038,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           label?: string | null
-          product_name?: string | null
+          product_item_uuid?: string | null
           qty?: number | null
           routing?: Json | null
           started_at?: string | null
@@ -2955,7 +3046,15 @@ export type Database = {
           wip_state?: Json | null
           wo_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_wo_product"
+            columns: ["product_item_uuid"]
+            isOneToOne: false
+            referencedRelation: "full_landed_costs"
+            referencedColumns: ["item_uuid"]
+          },
+        ]
       }
     }
     Views: {
@@ -3317,6 +3416,12 @@ export type Database = {
         Returns: boolean
       }
       geomfromewkt: { Args: { "": string }; Returns: unknown }
+      get_active_schema_tables: {
+        Args: never
+        Returns: {
+          table_name: string
+        }[]
+      }
       get_closest_skate_spot: {
         Args: { p_lat: number; p_lng: number; p_radius_meters: number }
         Returns: {
@@ -4330,3 +4435,4 @@ export const Constants = {
     },
   },
 } as const
+
