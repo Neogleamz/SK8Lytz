@@ -185,19 +185,28 @@ export async function executeConnectToDevices({
             manufacturerData: conn.manufacturerData ?? undefined,
           });
 
-          let negotiatedMtu = 23;
-          for (let mtuAttempt = 1; mtuAttempt <= 2; mtuAttempt++) {
-            try {
-              const negotiated = await conn.requestMTU(512);
-              negotiatedMtu = negotiated.mtu;
-              if (negotiatedMtu > 23) break;
-              AppLogger.warn(`[BLE] MTU glitch (23) for ${conn.id}. Retrying...`);
-              await new Promise(res => setTimeout(res, 200));
-            } catch {
-              await new Promise(res => setTimeout(res, 200));
+          // MTU negotiation: Android requests explicitly; iOS Core Bluetooth auto-negotiates.
+          // requestMTU() is a documented no-op on iOS (react-native-ble-plx v2) — reading
+          // conn.mtu directly gives the actual auto-negotiated value without a wasted call.
+          if (Platform.OS === 'android') {
+            let negotiatedMtu = 23;
+            for (let mtuAttempt = 1; mtuAttempt <= 2; mtuAttempt++) {
+              try {
+                const negotiated = await conn.requestMTU(512);
+                negotiatedMtu = negotiated.mtu;
+                if (negotiatedMtu > 23) break;
+                AppLogger.warn(`[BLE] MTU glitch (23) for ${conn.id}. Retrying...`);
+                await new Promise(res => setTimeout(res, 200));
+              } catch {
+                await new Promise(res => setTimeout(res, 200));
+              }
             }
+            mtuMapRef.current.set(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);
+          } else {
+            // iOS: read Core Bluetooth\u2019s auto-negotiated MTU from conn.mtu.
+            // Typed as `number` in ble-plx Device \u2014 no cast required.
+            mtuMapRef.current.set(conn.id, conn.mtu > 23 ? conn.mtu : 186);
           }
-          mtuMapRef.current.set(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);
           AppLogger.log('DEVICE_CONNECTED', {
             context: 'mtu_negotiated',
             mtu: mtuMapRef.current.get(conn.id),
