@@ -281,7 +281,8 @@ git log -1 --format="%h"
 
 
 - **Batch Progression Check**:
-  - IF there are MORE uncompleted tasks in the active batch:
+  - **⚡ Anti-Hallucination Board Guard**: You MUST call `view_file` on `tools/SK8Lytz_Bucket_List.md` right now to verify the current state of the active sprint. DO NOT guess the next task from memory.
+  - IF the file shows there are MORE uncompleted tasks in the active batch:
     - Ask the user: "Task complete. Shall I spin up the worktree for the next task in the batch?"
     - Do NOT archive yet — the batch header stays in ACTIVE SPRINT until ALL tasks are `[x]`
   - IF this was the LAST task in the active batch:

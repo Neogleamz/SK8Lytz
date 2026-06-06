@@ -258,6 +258,7 @@ On activation: Read `tools/SK8Lytz_Bucket_List.md` ACTIVE SPRINT section. Output
 - Any zombie tasks (tagged `[/]` with no active worktree)? → Flag them.
 - Any completed tasks not yet archived? → Archive them now.
 - Any tasks in ON DECK missing Decision Log? → Send them back to TRIAGE.
+**The Anti-Hallucination Board Guard**: You are STRICTLY FORBIDDEN from suggesting a "next task" to the user unless you have explicitly called `view_file` on `tools/SK8Lytz_Bucket_List.md` in your current context window. Do not trust conversational memory or checkpoint summaries.
 THEN proceed with the requested action.
 
 ### 🕵️ Scout — Reyes | Knowledge-First Rule
