@@ -1,15 +1,15 @@
-# Friction Ledger
-> **Owned by:** The entire team — any persona may file. Reyes reviews at session start. Alex reviews at wind-down.
+﻿# Friction Ledger
+> **Owned by:** The entire team â€” any persona may file. Reyes reviews at session start. Alex reviews at wind-down.
 >
 > **The Evolution Loop:**
-> `Observe → Document here → 3 strikes → Auto-propose rule fix → User approves → Implement → Victory Snapshot`
+> `Observe â†’ Document here â†’ 3 strikes â†’ Auto-propose rule fix â†’ User approves â†’ Implement â†’ Victory Snapshot`
 >
 > **Why this file exists:** Every time the team has to re-correct the same behavior, it costs time and trust.
 > This ledger closes that loop permanently. No pattern should appear here more than 3 times without a rule being updated.
 
 ---
 
-## ⚡ How to File a Friction Event (Any Persona)
+## âš¡ How to File a Friction Event (Any Persona)
 
 When you observe a recurring problem, add or increment an entry here:
 ```markdown
@@ -18,18 +18,18 @@ When you observe a recurring problem, add or increment an entry here:
 - **Observed By:** [persona name]
 - **Occurrences:** X / 3
 - **Trigger:** [what user said or what happened]
-- **Pattern:** [what behavior went wrong — be specific]
+- **Pattern:** [what behavior went wrong â€” be specific]
 - **Root Cause Theory:** [why this keeps happening mechanically]
-- **Impact:** [what it cost — time, re-work, confusion]
+- **Impact:** [what it cost â€” time, re-work, confusion]
 - **Status:** MONITORING | PROPOSAL SENT | RESOLVED
 ```
 
-**At 3 occurrences → AUTO-PROPOSAL TRIGGERED:**
+**At 3 occurrences â†’ AUTO-PROPOSAL TRIGGERED:**
 The observing persona immediately drafts a Rule Evolution Proposal and presents it to the user.
 
 ---
 
-## 🔴 Active Friction Events (Open — Under Monitoring)
+## ðŸ”´ Active Friction Events (Open â€” Under Monitoring)
 
 ### [FRICTION-013] Bucket List Split-Truth (Partial Stamp Pattern)
 - **First Observed:** 2026-06-06
@@ -37,41 +37,41 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Occurrences:** 2 / 3
 - **Trigger:** User: "why the fuck aren't we updating the bucketlist???" + "are we not archiving???"
 - **Pattern:** Agent stamps `[x]` in the ACTIVE SPRINT section on task completion, but leaves the identical task entry in the TRIAGE QUEUE as `[ ]`. Board shows the same task as both done and not done simultaneously.
-- **Root Cause (Updated):** `start-task.md` Phase 6 Step 5 **explicitly** mandates Steps A+B+C: (A) stamp `[x]`, (B) MOVE batch to ARCHIVED SPRINT LOG, (C) verify ACTIVE SPRINT has zero `[x]` tasks. This is a direct workflow violation — the workflow exists and was skipped.
+- **Root Cause (Updated):** `start-task.md` Phase 6 Step 5 **explicitly** mandates Steps A+B+C: (A) stamp `[x]`, (B) MOVE batch to ARCHIVED SPRINT LOG, (C) verify ACTIVE SPRINT has zero `[x]` tasks. This is a direct workflow violation â€” the workflow exists and was skipped.
 - **Impact:** Board is split-truth. 3 complete batches (19 tasks) sat un-archived. Every new session agent re-reads stale `[ ]` entries as work to do.
-- **Status:** MONITORING — At 3 strikes: auto-propose enforcement gate.
+- **Status:** MONITORING â€” At 3 strikes: auto-propose enforcement gate.
 
 ### [FRICTION-014] Phase 6 Archival Protocol Skipped (Explicit Workflow Step Ignored)
 - **First Observed:** 2026-06-06
-- **Observed By:** User (directly) — "is this not in the rules or workflows???"
+- **Observed By:** User (directly) â€” "is this not in the rules or workflows???"
 - **Occurrences:** 1 / 3
 - **Trigger:** User found completed batches were not moved to `SK8Lytz_Bucket_List_ARCHIVE.md`.
 - **Pattern:** `start-task.md` Phase 6 Step 5 B+C is **completely skipped** after every gatekeeper merge. The step reads: *"NON-NEGOTIABLE. A task is NOT considered done until ALL THREE are complete."* Three full batches (19 tasks across session-integrity, ble-connection-resilience, account-critical) were never moved to the archive file.
-- **Root Cause Theory:** Taylor (RM) is not being activated at end-of-batch. Agent goes directly from gatekeeper merge to next task without executing Phase 6 Step 5. Taylor's pre-gatekeeper micro-read in `prime-directive.md` does not include an archival check — the gate only covers `npm run verify` attestation, not completion stamping.
+- **Root Cause Theory:** Taylor (RM) is not being activated at end-of-batch. Agent goes directly from gatekeeper merge to next task without executing Phase 6 Step 5. Taylor's pre-gatekeeper micro-read in `prime-directive.md` does not include an archival check â€” the gate only covers `npm run verify` attestation, not completion stamping.
 - **Impact:** Archive perpetually stale. Bucket list bloats with dead entries. Session agents re-read closed tasks as open work.
-- **Status:** MONITORING — ⚡ EVOLUTION PROPOSAL TRIGGERED (see below)
+- **Status:** MONITORING â€” âš¡ EVOLUTION PROPOSAL TRIGGERED (see below)
 
 ---
 
-⚡ **EVOLUTION PROPOSAL — Phase 6 Archival Gate (FRICTION-014)**
-- **Observed:** 1 time (2026-06-06) — but severity is HIGH (explicit `[!IMPORTANT]` workflow step)
+âš¡ **EVOLUTION PROPOSAL â€” Phase 6 Archival Gate (FRICTION-014)**
+- **Observed:** 1 time (2026-06-06) â€” but severity is HIGH (explicit `[!IMPORTANT]` workflow step)
 - **Pattern:** `start-task.md` Phase 6 Step 5 archival is skipped after gatekeeper merge
-- **Root Cause:** Taylor's pre-gatekeeper micro-read in `prime-directive.md` only covers attestation — no archival check
+- **Root Cause:** Taylor's pre-gatekeeper micro-read in `prime-directive.md` only covers attestation â€” no archival check
 - **Proposed Fix:** Add to Taylor's pre-gatekeeper micro-read in `prime-directive.md`:
-  > *"I must: (4) after gatekeeper merge, execute Phase 6 Step 5 — stamp `[x]`, move completed batch to ARCHIVE, verify ACTIVE SPRINT has zero `[x]` tasks."*
-- **Files to Update:** `prime-directive.md` (Taylor pre-gatekeeper micro-read), `start-task.md` Phase 6 Step 5 (add visual `⛔ HARD STOP` callout)
-- **Impact if Approved:** Archival cannot be skipped — it's part of the same mental checklist Taylor runs before every merge
-- → **Approve with:** `"Ship the evolution"` | **Reject with:** `"Hold, here's why..."`
+  > *"I must: (4) after gatekeeper merge, execute Phase 6 Step 5 â€” stamp `[x]`, move completed batch to ARCHIVE, verify ACTIVE SPRINT has zero `[x]` tasks."*
+- **Files to Update:** `prime-directive.md` (Taylor pre-gatekeeper micro-read), `start-task.md` Phase 6 Step 5 (add visual `â›” HARD STOP` callout)
+- **Impact if Approved:** Archival cannot be skipped â€” it's part of the same mental checklist Taylor runs before every merge
+- â†’ **Approve with:** `"Ship the evolution"` | **Reject with:** `"Hold, here's why..."`
 
 
 ---
 
-## ✅ Resolved Patterns (Victory Snapshots)
+## âœ… Resolved Patterns (Victory Snapshots)
 
 > *Victory Snapshots are baked into the rules and moved here. The problem cannot recur.*
 
 ### [VICTORY-001] Documentation Drift (VS-003)
-- **Pattern:** New hooks/services added to codebase without updating Master Reference §3/§4.
+- **Pattern:** New hooks/services added to codebase without updating Master Reference Â§3/Â§4.
 - **Occurrences Before Fix:** 16 commits of drift (2026-06-06)
 - **Root Cause:** No automated parity check gate before merge.
 - **Fix Applied:** Added Avery's Parity-Scan-First to Phase 5.5 of `/start-task` + `agent-behavior.md` Rule 12 Documentation Parity Gate.
@@ -79,7 +79,7 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Date Resolved:** 2026-06-06
 
 ### [VICTORY-002] Session Re-Derivation Loops
-- **Pattern:** Agent re-investigates decisions already made in prior sessions, wasting 30–60 min per session.
+- **Pattern:** Agent re-investigates decisions already made in prior sessions, wasting 30â€“60 min per session.
 - **Root Cause:** SESSION_LOG was only written at wind-down, not after each decision in real-time.
 - **Fix Applied:** Reyes Knowledge-First Protocol (check SESSION_LOG BEFORE investigating), plus Rule 11 mandating live SESSION_LOG updates after every merge/decision.
 - **Filed To:** `agent-behavior.md` Rule 11, `team-roster.md`, all research workflows.
@@ -88,7 +88,7 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 ### [VICTORY-003] Nameless Analysis Sessions
 - **Pattern:** Agent reads files and researches without declaring which persona is active, causing session drift and inconsistent behavior.
 - **Root Cause:** No enforcement that free-form research requires a persona declaration.
-- **Fix Applied:** Rule 12 Free-Form Research Binding — any file read must be preceded by "🕵️ Scout — Reyes is investigating..."
+- **Fix Applied:** Rule 12 Free-Form Research Binding â€” any file read must be preceded by "ðŸ•µï¸ Scout â€” Reyes is investigating..."
 - **Filed To:** `agent-behavior.md` Rule 12
 - **Date Resolved:** 2026-06-06
 
@@ -102,19 +102,19 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 ### [VICTORY-005] No Constitutional Fallback
 - **Pattern:** When a situation matched no procedure in the workflows, agent reverted to generic behavior instead of reasoning from first principles.
 - **Root Cause:** Rules were all procedures ("in situation X, do Y") with no underlying principles for the agent to extrapolate from in novel situations.
-- **Fix Applied:** Created `.agents/rules/CONSTITUTION.md` — 5 priority-ordered principles (P1 Evidence > P2 Identity > P3 System > P4 Surgical > P5 Grow). Added as preamble to `agent-behavior.md`. Referenced in `prime-directive.md` and `team-roster.md`.
+- **Fix Applied:** Created `.agents/rules/CONSTITUTION.md` â€” 5 priority-ordered principles (P1 Evidence > P2 Identity > P3 System > P4 Surgical > P5 Grow). Added as preamble to `agent-behavior.md`. Referenced in `prime-directive.md` and `team-roster.md`.
 - **Filed To:** `.agents/rules/CONSTITUTION.md` (new), `agent-behavior.md` preamble, `prime-directive.md`, `team-roster.md`
 - **Date Resolved:** 2026-06-06
 
 ### [VICTORY-006] Invisible Session State (Identity Decay)
-- **Pattern:** Persona badges appeared at workflow start, then disappeared after 2–5 turns. Agent drifted to anonymous generic responses mid-workflow.
+- **Pattern:** Persona badges appeared at workflow start, then disappeared after 2â€“5 turns. Agent drifted to anonymous generic responses mid-workflow.
 - **Root Cause:** No enforcement mechanism for continuous identity declaration. Persona was declared once and never re-affirmed.
 - **Fix Applied:** Session State Header rule (Rule 0, Fix 2) added to `agent-behavior.md`. Every response during active workflow MUST begin with `[{badge} | {activity} | {task} | {cold/warm}]`. Added to `team-roster.md` header.
 - **Filed To:** `agent-behavior.md` Rule 0, `team-roster.md`
 - **Date Resolved:** 2026-06-06
 
 ### [VICTORY-007] Cold-Start Blindness
-- **Pattern:** New conversations started without onboarding — no SESSION_LOG read, no persona declared, no sprint context. Agent went straight to task execution in a context vacuum.
+- **Pattern:** New conversations started without onboarding â€” no SESSION_LOG read, no persona declared, no sprint context. Agent went straight to task execution in a context vacuum.
 - **Root Cause:** `/hello` was opt-in (user had to type it). Cold-start had no automatic trigger.
 - **Fix Applied:** Cold-Start Auto-Detection (Rule 0, Fix 3) added to `agent-behavior.md`. Agent now scans every first message for cold-start signals and auto-executes the hello protocol before responding.
 - **Filed To:** `agent-behavior.md` Rule 0
@@ -123,7 +123,7 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 ### [VICTORY-008] Placeholder Handoffs (Context Leakage Between Personas)
 - **Pattern:** Handoff blocks shipped with template placeholder text (`[list]`, `[summary]`, `[TBD]`). Receiving persona had no real context and re-derived it from scratch.
 - **Root Cause:** Handoff block format was a template but there was no enforcement that it was filled with real content before activation.
-- **Fix Applied:** Handoff Completeness Gate (Rule 0, Fix 4) added to `agent-behavior.md`. Any handoff with placeholder text is REJECTED — outgoing persona must fill it. Also added to `team-roster.md`.
+- **Fix Applied:** Handoff Completeness Gate (Rule 0, Fix 4) added to `agent-behavior.md`. Any handoff with placeholder text is REJECTED â€” outgoing persona must fill it. Also added to `team-roster.md`.
 - **Filed To:** `agent-behavior.md` Rule 0, `team-roster.md`
 - **Date Resolved:** 2026-06-06
 
@@ -137,15 +137,15 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 ### [VICTORY-010] Rules Without Reasoning (Mechanical Compliance Without Understanding)
 - **Pattern:** Agent followed rules in matched situations but couldn't extrapolate to similar-but-not-identical situations because the WHY was never documented.
 - **Root Cause:** Rules were stated as mandates without explaining the failure mode they prevented. The agent had no basis for reasoning about edge cases.
-- **Fix Applied:** "Because" annotations added to Rules 1–5 in `agent-behavior.md`. "Why It Exists" column added to all Hard Stops in `prime-directive.md`. Each rule now explains the specific failure mode it was designed to prevent.
-- **Filed To:** `agent-behavior.md` Rules 1–5, `prime-directive.md` Hard Stops table
+- **Fix Applied:** "Because" annotations added to Rules 1â€“5 in `agent-behavior.md`. "Why It Exists" column added to all Hard Stops in `prime-directive.md`. Each rule now explains the specific failure mode it was designed to prevent.
+- **Filed To:** `agent-behavior.md` Rules 1â€“5, `prime-directive.md` Hard Stops table
 - **Date Resolved:** 2026-06-06
 
 ### [VICTORY-011] Flat Workflow List (No Hierarchy = Apparent Duplication)
 - **Pattern:** 34 workflows presented as a flat list made unrelated tools look equivalent (e.g., /tdd and /start-stack appearing side-by-side). Users couldn't tell when to reach for which tool.
 - **Occurrences Before Fix:** Flagged by user 2026-06-06: "i feel like health sweep - smoke test - product alignment... ARE ALL VERY SIMILAR and confusing"
 - **Root Cause:** Cheat sheet used one flat alphabetical table. No tier grouping, no lifecycle position, no sequence context.
-- **Fix Applied:** Cheat sheet rebuilt with 7 color-coded tier groups (Session/Task/Dev/QA/Release/Maintenance/Infra). QA pipeline sequence visual added (smoke-test→isolated-test→diff-review→qa-tester). Each QA workflow now has a lifecycle position header (Step N of 4 + sequence breadcrumb).
+- **Fix Applied:** Cheat sheet rebuilt with 7 color-coded tier groups (Session/Task/Dev/QA/Release/Maintenance/Infra). QA pipeline sequence visual added (smoke-testâ†’isolated-testâ†’diff-reviewâ†’qa-tester). Each QA workflow now has a lifecycle position header (Step N of 4 + sequence breadcrumb).
 - **Filed To:** `tools/cheat-sheet.html`, `smoke-test.md`, `isolated-test.md`, `diff-review.md`, `qa-tester.md`
 - **Date Resolved:** 2026-06-06
 
@@ -158,17 +158,18 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 
 ---
 
-## 📊 Evolution Metrics
+## ðŸ“Š Evolution Metrics
 
 | Metric | Value |
 |---|---|
 | Total Friction Events Filed | 12 |
 | Resolved (Victory Snapshots) | 12 |
 | Open / Monitoring | 0 |
-| Rules Updated This Session | Rules 0–5, 12–14 + 34 workflows + team-roster.md + prime-directive.md |
+| Rules Updated This Session | Rules 0â€“5, 12â€“14 + 34 workflows + team-roster.md + prime-directive.md |
 | New Files Created | `CONSTITUTION.md`, `FRICTION_LEDGER.md`, `release-notes.md`, `cheat-sheet.html` |
-| Workflows Consolidated | `bundle-audit` → `audit-codebase` · `changelog`+`pr-summary` → `release-notes` |
-| System Capability Delta | +Constitution (P1-P5 fallback) · +JIT re-reads · +cold-start detection · +handoff gate · +state header · +7-tier cheat sheet · +QA pipeline sequence |
-| Re-Derivation Loops Prevented | ∞ (Reyes Knowledge-First + SESSION_LOG live updates) |
+| Workflows Consolidated | `bundle-audit` â†’ `audit-codebase` Â· `changelog`+`pr-summary` â†’ `release-notes` |
+| System Capability Delta | +Constitution (P1-P5 fallback) Â· +JIT re-reads Â· +cold-start detection Â· +handoff gate Â· +state header Â· +7-tier cheat sheet Â· +QA pipeline sequence |
+| Re-Derivation Loops Prevented | âˆž (Reyes Knowledge-First + SESSION_LOG live updates) |
 | Hounding Incidents Expected Going Forward | 0 (The No-Hounding Compact + P5 Grow the System) |
+
 
