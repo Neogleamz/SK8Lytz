@@ -6,14 +6,15 @@
  *
  * Priority Tiers:
  *   Priority 1 (USER)         — pingDevice, connectToDevices (manual user actions)
- *   Priority 2 (INTERROGATOR) — background EEPROM probes from useBLESweeper
- *   Priority 3 (SWEEPER)      — passive scan (no GATT connection, lowest priority)
+ *   Priority 2 (RECOVERY)     — auto-recovery reconnection (time-sensitive, user sees dimmed card)
+ *   Priority 3 (INTERROGATOR) — background EEPROM probes from useBLESweeper (deferrable)
+ *   Priority 4 (SWEEPER)      — passive scan (no GATT connection, lowest priority)
  *
- * P1 Preemption:
- *   When P1 arrives while P2 is in-flight, P1 signals the P2 holder via an
- *   AbortController. P2's Interrogator checks the signal at each async boundary
- *   and cancels its in-flight GATT connection, immediately releasing the lock.
- *   P1 then acquires without waiting the full 3.5s probe timeout.
+ * Preemption Chain (P1 > P2 > P3 > P4):
+ *   When a higher-priority caller arrives while a lower-priority holder is in-flight,
+ *   the higher-priority caller signals the holder via AbortController. The holder
+ *   checks signal.aborted at each async boundary and cancels its GATT operation.
+ *   P1 preempts P2 and P3. P2 (recovery) preempts P3 (interrogation).
  *
  * Usage:
  *   const { release, signal } = await acquireGattLock(1);
@@ -28,7 +29,7 @@
  */
 import { AppLogger } from '../../services/AppLogger';
 
-export type GattPriority = 1 | 2 | 3;
+export type GattPriority = 1 | 2 | 3 | 4;
 
 export interface GattLockHandle {
   /** Call in finally{} to release the lock */
@@ -45,48 +46,64 @@ const LOCK_MAX_WAIT_MS = 8000; // 8s max wait for background ops
  * Internal lock state — module-level singleton.
  */
 let _lockChain: Promise<void> = Promise.resolve();
-let _currentPriority: GattPriority = 3;
+let _currentPriority: GattPriority = 4;
 let _isLocked = false;
 
 /**
- * The AbortController for the current P2 holder.
- * When P1 arrives, it calls _currentHolderAbort?.abort() to signal P2 to stop.
+ * The AbortController for the current P2 or P3 holder.
+ * When a higher-priority caller arrives, it calls abort() to signal the holder to stop.
  */
 let _currentHolderAbortController: AbortController | null = null;
 
 /**
  * Acquire the GATT lock for a given priority operation.
  *
- * - P1 callers acquire immediately AND preempt any in-flight P2 via AbortController.
- * - P2 callers wait for any in-flight P1 operation to complete.
- * - P3 callers are advisory — they don't block, they check and bail.
+ * - P1 callers acquire immediately AND preempt any in-flight P2/P3 via AbortController.
+ * - P2 (recovery) callers preempt P3 (interrogation), wait for P1 to release.
+ * - P3 (interrogation) callers wait for P1/P2 to release, can be preempted by P1/P2.
+ * - P4 (sweeper) callers are advisory — they don't block, they check and bail.
  *
- * @param priority  1=User Action, 2=Background Probe, 3=Passive Sweep
+ * @param priority  1=User Action, 2=Auto-Recovery, 3=Interrogation, 4=Passive Sweep
  * @param timeoutMs Max wait time before giving up (P2/P3 only). Default: 8000ms.
- * @returns         A GattLockHandle { release, signal } or null if timed out (P2/P3).
+ * @returns         A GattLockHandle { release, signal } or null if timed out.
  */
 export async function acquireGattLock(
   priority: GattPriority,
   timeoutMs: number = LOCK_MAX_WAIT_MS
 ): Promise<GattLockHandle | null> {
-  // P3 (Sweeper): never blocks, never waits — advisory check only
-  if (priority === 3) {
-    if (_isLocked && _currentPriority <= 2) return null; // yield to P1/P2
-    // P3 doesn't actually lock — it's just a passive scan, no GATT
+  // P4 (Sweeper): never blocks, never waits — advisory check only
+  if (priority === 4) {
+    if (_isLocked && _currentPriority <= 3) return null; // yield to P1/P2/P3
+    // P4 doesn't actually lock — it's just a passive scan, no GATT
     return { release: () => {}, signal: new AbortController().signal };
   }
 
   const waitStart = Date.now();
   const ownAbortController = new AbortController();
 
-  // P1: Preempt any running P2 immediately
-  if (priority === 1 && _isLocked && _currentPriority === 2) {
+  // P1: Preempt any running P2 (recovery) or P3 (interrogation) immediately
+  if (priority === 1 && _isLocked && (_currentPriority === 2 || _currentPriority === 3)) {
     _currentHolderAbortController?.abort();
   }
 
-  // P2: Poll until the lock is free (or P1 releases it) or timeout
+  // P2 (Recovery): Preempt any running P3 (interrogation) immediately
+  if (priority === 2 && _isLocked && _currentPriority === 3) {
+    _currentHolderAbortController?.abort();
+  }
+
+  // P2 (Recovery): Poll until the lock is free (or P1 releases it) or timeout
   if (priority === 2) {
     while (_isLocked && _currentPriority <= 1) {
+      if (Date.now() - waitStart > timeoutMs) {
+        return null; // give up
+      }
+      await new Promise(r => setTimeout(r, LOCK_POLL_INTERVAL_MS));
+    }
+  }
+
+  // P3 (Interrogation): Poll until P1/P2 releases or timeout
+  if (priority === 3) {
+    while (_isLocked && _currentPriority <= 2) {
       if (Date.now() - waitStart > timeoutMs) {
         return null; // give up
       }
@@ -102,7 +119,8 @@ export async function acquireGattLock(
   _currentPriority = priority;
 
   // Register the AbortController so P1 can preempt this holder later
-  _currentHolderAbortController = priority === 2 ? ownAbortController : null;
+  // P2 (recovery) and P3 (interrogation) can both be preempted — register their AbortController
+  _currentHolderAbortController = (priority === 2 || priority === 3) ? ownAbortController : null;
 
   // Wait for previous operation to complete
   await prevChain.catch((e: unknown) => {
@@ -118,7 +136,7 @@ export async function acquireGattLock(
     signal: ownAbortController.signal,
     release: () => {
       _isLocked = false;
-      _currentPriority = 3;
+      _currentPriority = 4;
       _currentHolderAbortController = null;
       release();
     },

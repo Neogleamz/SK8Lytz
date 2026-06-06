@@ -206,7 +206,7 @@ export function useBLESweeper({
     if (registeredMacs.map(m => m.toUpperCase()).includes(mac.toUpperCase())) return;
 
     // ── Acquire GATT lock (P2) — gets AbortSignal for P1 preemption ────────
-    const lockHandle = await acquireGattLock(2);
+    const lockHandle = await acquireGattLock(3); // P3: interrogation (deferrable) — recovery P2 can preempt
     if (!lockHandle) {
       AppLogger.log('BLE_STATE_CHANGE', { event: 'interrogator_yield_p1_lock', mac });
       if (!probeQueueRef.current.includes(mac)) probeQueueRef.current.push(mac); // re-queue (deduped)
