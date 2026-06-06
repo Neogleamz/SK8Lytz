@@ -7,6 +7,10 @@ import GranularPermissionsList from '../permissions/GranularPermissionsList';
 export default function AccountTabSecurity({
   Colors,
   styles,
+  currentPwd,
+  setCurrentPwd,
+  showCurrentPwd,
+  setShowCurrentPwd,
   newPwd,
   setNewPwd,
   confirmPwd,
@@ -25,6 +29,17 @@ export default function AccountTabSecurity({
     <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
       {/* Change Password */}
       <Text style={styles.sectionHeader}>CHANGE PASSWORD</Text>
+
+      <Text style={styles.label}>CURRENT PASSWORD</Text>
+      <View style={styles.pwdRow}>
+        <TextInput style={[styles.input, { flex: 1, marginBottom: 0 }]}
+          value={currentPwd} onChangeText={setCurrentPwd}
+          placeholder="Required to change password" placeholderTextColor={Colors.textMuted}
+          secureTextEntry={!showCurrentPwd} autoCapitalize="none" />
+        <TouchableOpacity style={styles.eyeBtn} onPress={() => setShowCurrentPwd(!showCurrentPwd)}>
+          <MaterialCommunityIcons name={showCurrentPwd ? 'eye-off' : 'eye'} size={18} color={Colors.textMuted} />
+        </TouchableOpacity>
+      </View>
 
       <Text style={styles.label}>NEW PASSWORD</Text>
       <View style={styles.pwdRow}>

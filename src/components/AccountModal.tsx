@@ -15,16 +15,12 @@ import { Spacing } from '../theme/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator, Alert,
+    Alert,
     Animated,
-    Image,
     Modal,
     Platform,
-    ScrollView,
     StyleSheet,
-    Switch,
     Text,
-    TextInput,
     TouchableOpacity,
     View,
 } from 'react-native';
@@ -79,25 +75,6 @@ interface AccountModalProps {
   onProfileUpdated?: () => void;
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-import { STORAGE_PREFIX } from '../constants/AppConstants';
-import CustomSlider from './CustomSlider';
-
-const NOTIF_PREF_KEY = `${STORAGE_PREFIX}notif_prefs`;
-
-// hexToHue moved to hooks
-
-function initials(name: string | null) {
-  if (!name) return '?';
-  return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-}
-
-function formatDate(iso: string) {
-  if (!iso) return '';
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
 // ─── AccountModalSkeleton ─────────────────────────────────────────────────────
 
 function AccountModalSkeleton() {
@@ -148,7 +125,7 @@ function AccountModalSkeleton() {
 
 export default function AccountModal({
   visible, onClose, onSignOut,
-  onJoinCrewSession,
+  onJoinCrewSession: _onJoinCrewSession,
   registeredDevices = [],
   onDeviceRenamed,
   onDeviceForgotten,
@@ -312,14 +289,14 @@ export default function AccountModal({
 
 
   // Security state (Kept local for now as per Phase 3 scope)
-  const [_currentPwd, setCurrentPwd] = useState('');
+  const [currentPwd, setCurrentPwd] = useState('');
   const [newPwd, setNewPwd] = useState('');
   const [confirmPwd, setConfirmPwd] = useState('');
-  const [securityMsg, setSecurityMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+  const [_securityMsg, setSecurityMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
   const [savingPwd, setSavingPwd] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [savingEmail, setSavingEmail] = useState(false);
-  const [_showCurrentPwd, _setShowCurrentPwd] = useState(false);
+  const [showCurrentPwd, setShowCurrentPwd] = useState(false);
   const [showNewPwd, setShowNewPwd] = useState(false);
 
   // ── Profile handlers ──────────────────────────────────────────────────────
@@ -329,7 +306,7 @@ export default function AccountModal({
   // ── Notification prefs ────────────────────────────────────────────────────
 
   // Notification and Security handlers
-  const handleSaveNotifPrefs = (prefs: any) => saveNotifPrefs(prefs);
+  const _handleSaveNotifPrefs = (prefs: any) => saveNotifPrefs(prefs);
 
   const handleChangePassword = async () => {
     setSecurityMsg(null);
@@ -343,12 +320,24 @@ export default function AccountModal({
     }
     setSavingPwd(true);
     try {
+      const { error: reAuthError } = await supabase.auth.signInWithPassword({ 
+        email: userEmail || '', 
+        password: currentPwd 
+      });
+      if (reAuthError) {
+        setSecurityMsg({ type: 'error', text: 'Current password is incorrect' });
+        setCurrentPwd('');
+        setSavingPwd(false);
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({ password: newPwd });
       if (error) throw error;
       setCurrentPwd(''); setNewPwd(''); setConfirmPwd('');
       setSecurityMsg({ type: 'success', text: '✓ Password updated successfully' });
     } catch (e: any) {
       setSecurityMsg({ type: 'error', text: e.message || 'Could not change password' });
+      setCurrentPwd('');
     } finally {
       setSavingPwd(false);
     }
@@ -503,6 +492,7 @@ export default function AccountModal({
               Colors, styles, profilePhotoUri, profile, setProfile, avatarHue, setAvatarHue,
               userEmail, editName, setEditName, editUsername, setEditUsername, savingProfile,
               handleSaveProfile, handlePickProfilePhoto, crews, history, devices,
+              currentPwd, setCurrentPwd, showCurrentPwd, setShowCurrentPwd,
               newPwd, setNewPwd, confirmPwd, setConfirmPwd, showNewPwd, setShowNewPwd, savingPwd,
               handleChangePassword, newEmail, setNewEmail, savingEmail, handleChangeEmail,
               crewStep, setCrewStep, crewError, setCrewError, newCrewName, setNewCrewName, crewLoading,
