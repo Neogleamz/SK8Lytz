@@ -25,8 +25,18 @@ export function ComplianceGate({ children, isOfflineMode }: ComplianceGateProps)
     setLoading(true);
     try {
 
+      if (isOfflineMode) {
+        // Offline users still require EULA acceptance — check the local AsyncStorage record.
+        // This closes the bypass that previously let users skip legal compliance entirely.
+        const offlineEula = await AsyncStorage.getItem('@Sk8lytz_offline_eula_accepted');
+        if (!offlineEula) {
+          setRequiresEula(true);
+        }
+        setLoading(false);
+        return;
+      }
 
-      if (isOfflineMode || !supabase) {
+      if (!supabase) {
         setLoading(false);
         return;
       }
@@ -62,11 +72,22 @@ export function ComplianceGate({ children, isOfflineMode }: ComplianceGateProps)
 
   const handleAccept = async () => {
     try {
+      if (isOfflineMode) {
+        // Offline acceptance: write versioned record to AsyncStorage.
+        // No Supabase call — user has no account. ComplianceGate will pass through on next check.
+        await AsyncStorage.setItem(
+          '@Sk8lytz_offline_eula_accepted',
+          JSON.stringify({ version: 1, acceptedAt: new Date().toISOString() }),
+        );
+        setRequiresEula(false);
+        return;
+      }
+
       // 1. Fetch current required version
       const settings = await AppSettingsService.fetchAllSettings();
       const requiredVersion = parseInt(settings['required_eula_version'] || '1', 10);
 
-      // 2. Update user profile
+      // 2. Update user profile in Supabase
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       
@@ -77,7 +98,7 @@ export function ComplianceGate({ children, isOfflineMode }: ComplianceGateProps)
         
       setRequiresEula(false);
     } catch (e) {
-       Alert.alert("Error", "Could not save compliance status. Please try again.");
+       Alert.alert('Error', 'Could not save compliance status. Please try again.');
     }
   };
 
