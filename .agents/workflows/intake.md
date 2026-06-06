@@ -54,7 +54,18 @@ description: Intake an idea, draft a plan, generate the slug, and append to buck
       - **Source of Truth:** 📖 [Filename](file:///path#L123) §Section
       - **Details:** Architectural constraints, platform guards, protocol limits, dependencies.
     ```
-7. **Determine Placement**: Route to the correct section based on category:
+7. **Determine Placement**:
+
+   > [!IMPORTANT]
+   > **ON DECK Promotion Gate (Hard Rule)**: A task CANNOT be placed in `🔥 ON DECK` unless it has:
+   > - Status `[✅ READY]` — a complete `PLAN-*.md` file must exist
+   > - At minimum `[🤔 INFERRED]` verification status — `[❌ UNVERIFIED]` tasks are HARD BLOCKED from ON DECK
+   > - A filled `Decision Log:` field — evidence-backed, not speculative
+   >
+   > If any of these are missing: place in `🚑 TRIAGE QUEUE` or `🏗️ ROADMAP` with status `[📝 NEEDS PLAN]`.
+   > The task stays there until a spike and plan promote it. No exceptions.
+
+   Route to the correct section based on category:
    - `🚑 TRIAGE QUEUE`: Bugs and broken functionality.
    - `🏗️ THE ROADMAP`: New features and Epics.
    - `🧹 TECH DEBT`: Architectural issues and friction items.

@@ -35,6 +35,11 @@ You must execute this pipeline sequentially. **DO NOT BYPASS ANY GATES.** You mu
    ANALYSIS: <Key finding from Analysis field + what alternative was rejected>
    STARTING POINT: <Source of Truth file + line range>
    ```
+   - If **Analysis links to a PLAN-*.md file**: **open and read it**. Quote the chosen approach
+     verbatim in the Context Resume. This proves the plan was read, not assumed.
+   - If **task is in ON DECK but has no PLAN file**: STOP. This is a gate violation.
+     Tell the user: *"This task reached ON DECK without a plan file. We need to either draft
+     the plan now or move it back to ROADMAP. Which?"* Do not create the worktree until resolved.
    - If **Decision Log is missing**: STOP. Ask the user: *"This task has no Decision Log. What specific evidence or failure made this necessary?"* Update the task entry with the answer before proceeding.
    - If **Analysis is missing**: Note `"Analysis pending"` and proceed — flag it to the user.
    - This takes 60 seconds and prevents 30 minutes of re-derivation next session.
