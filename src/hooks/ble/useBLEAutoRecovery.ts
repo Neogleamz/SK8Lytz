@@ -51,15 +51,32 @@ export interface UseBLEAutoRecoveryProps {
 
 // After this many failures we give up and eject the device from the UI.
 // Prevents permanent dark-device limbo when a Zengge chip is in a hard soft-lock.
-// 720 attempts * ~5s backoff ceiling = ~60 minutes of background recovery attempts.
-export const MAX_RECOVERY_ATTEMPTS = 720;
+// 360 attempts × ~30s avg backoff ceiling = ~3 hours of background recovery.
+export const MAX_RECOVERY_ATTEMPTS = 360;
+
+/** Base backoff in ms — also the upper bound for the jitter term. */
+const RECOVERY_BASE_MS = 1500;
+/** Maximum delay per attempt, before jitter is added. */
+const RECOVERY_MAX_MS = 30_000;
 
 /**
  * Calculates the backoff delay in milliseconds for the given attempt number.
- * Linear backoff: starts at 1.5s, increases by 500ms per attempt, ceiling at 5s.
+ *
+ * Formula: exponential backoff with full jitter (AWS/Google IoT SDK standard).
+ *   delay = min(BASE * 1.5^attempt, MAX) + random(0, BASE)
+ *
+ * Full jitter spreads simultaneous group-dropout recovery loops across time,
+ * preventing the "stampeding herd" radio contention spike that occurred with
+ * the previous linear formula where 4 devices retried at identical intervals.
+ *
+ * Example delays (without jitter term):
+ *   attempt 0:  1 500ms | attempt 1:  2 250ms | attempt 2:  3 375ms
+ *   attempt 5:  7 594ms | attempt 10: 17 061ms | attempt 15+: 30 000ms
  */
 export const getRecoveryBackoffMs = (attempts: number): number => {
-  return Math.min(1500 + (attempts * 500), 5000);
+  const exponential = Math.min(RECOVERY_BASE_MS * Math.pow(1.5, attempts), RECOVERY_MAX_MS);
+  const jitter = Math.random() * RECOVERY_BASE_MS;
+  return Math.round(exponential + jitter);
 };
 
 /**
