@@ -18,7 +18,13 @@ powershell.exe -ExecutionPolicy Bypass -File "C:\Neogleamz\AG_SK8Lytz_App\SK8Lyt
 Set-Location "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"; npx expo start --web
 ```
 
-4. The AI must read `tools/SK8Lytz_Bucket_List.md` to determine the current project status.
+4. **Session Memory Read**: Read `tools/SESSION_LOG.md` — most recent entry only. Verbally summarize:
+   - What burned us last session (AI failure pattern)
+   - What the user pattern was
+   - What architecture decisions are locked (don't re-derive these)
+   This is the memory bridge. Never skip it.
+
+5. **Bucket List Status**: The AI must read `tools/SK8Lytz_Bucket_List.md` to determine the current project status.
 
 5. Verify Database Backup Status
    - Use PowerShell to check the `backups/` directory for the most recent `.sql` file: `Get-ChildItem -Path C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\backups -Filter "data_*.sql" | Sort-Object LastWriteTime -Descending | Select-Object -First 1`

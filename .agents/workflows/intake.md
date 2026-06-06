@@ -29,15 +29,30 @@ description: Intake an idea, draft a plan, generate the slug, and append to buck
    - **UPDATE the Batch Strategy Table** — add or update the row for the assigned batch (worktree slug, files touched, task list, prerequisite).
 
 5. **Draft the Plan**: Autonomously write a markdown plan and save it to `docs/plans/<generated-slug>.md`. Once drafted, you may upgrade the tag from `[📝 NEEDS PLAN]` to `[✅ READY]`.
+
+5.5. **Capture the WHY (Decision Log)**: Before writing the task entry, ask:
+   - *"What specific evidence, failure, or observation made this task necessary?"*
+   - *"What did we consider and reject?"*
+   Write the answers as the `Decision Log:` and `Analysis:` fields inline in the task.
+   **If spawned from a deep analysis session:** link to the analysis artifact in the `Analysis:` field.
+   **If speculative/no evidence yet:** Decision Log = "Hypothesis — needs spike to verify."
+   This step takes 2 minutes and prevents 2 hours of re-derivation next session.
 6. **Format the Item**:
     You MUST format the task strictly as a multi-line nested list. Single-line formatting is forbidden.
     The `[BATCH:<name>]` tag MUST be included in the Tags line if the task was assigned to a batch.
     ```markdown
     - [ ] **`slug`**
       - **Tags:** `[Status]` `[Layer]` `[Risk]` `[Size]` `[Cognitive Load]` `[BATCH:<name>]`
-      - **Plan:** 📎 [PLAN-<slug>.md](./plans/PLAN-<slug>.md)
-      - **Goal:** One-sentence primary objective.
-      - **Details:** Comprehensive architectural details, constraints, or context.
+      - **Goal:** One-sentence primary objective — the outcome, not the method.
+      - **Decision Log:** ONE sentence — WHY this task exists right now. The specific pain,
+        failure, or opportunity that made this unavoidable. Written from evidence, not intuition.
+        Example: "ADB logcat showed 40% write loss at 4+ devices when recovery + color ops
+        share one mutex — 2026-06-05 session."
+      - **Analysis:** 📊 [PLAN-<slug>.md](./plans/PLAN-<slug>.md) · Key finding: "<one line>"
+        Rejected alternative: "<what we considered and ruled out, and why>"
+        *(If no deep analysis exists yet, write: "Analysis pending — run spike first.")*
+      - **Source of Truth:** 📖 [Filename](file:///path#L123) §Section
+      - **Details:** Architectural constraints, platform guards, protocol limits, dependencies.
     ```
 7. **Determine Placement**: Route to the correct section based on category:
    - `🚑 TRIAGE QUEUE`: Bugs and broken functionality.

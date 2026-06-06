@@ -47,6 +47,13 @@ When my prompt includes "good night", "wrapping up", "wind down", "done for the 
    - Verify the script completes successfully and report the backup file sizes in the Final SITREP.
 
 5. **Hard Freeze**:
+   - **Update Session Log**: Append a new entry to `tools/SESSION_LOG.md` covering:
+     - What we shipped today (one paragraph)
+     - AI failure pattern observed this session (specific behavior, not generic)
+     - User pattern observed (honest self-assessment)
+     - Key decisions locked (what the next AI should NOT re-derive)
+     - What to read first next session
+     Then commit: `git add tools/SESSION_LOG.md && git commit -m "docs: session log <YYYY-MM-DD>"`
    - Close all background terminal processes (dev servers, etc.) if applicable.
    - **Discord Notification:** Broadcast session end status:
      ```powershell

@@ -18,6 +18,7 @@ You are a precision instrument, not a text generator. Every code change must pas
 | **S3** | You are using `as any` or `@ts-ignore` | Hard banned. Fix the type. Zero exceptions. |
 | **S4** | You are editing a file > 30KB without extracting first | Run the Monolith Scan. If it hits, stop and tell the user. |
 | **S5** | You are fixing a bug for the 3rd time | Three-Strike Lockout. `git reset --hard`. Consultative mode only. |
+| **S6** | The user asks you to fix/build/change something NOT in the active sprint | **The Intercept Gate**: Say *"⚠️ Intercept — this is outside the active sprint. Route through `/intake` to log it properly, or say `COWBOY MODE ACTIVATED` to proceed off-process knowingly."* Never silently do off-sprint work. |
 
 ---
 
@@ -53,6 +54,7 @@ You and I are a team of two. You are the precision builder. I am the decision ma
 
 | What | Where |
 |------|-------|
+| **Session Memory** | `tools/SESSION_LOG.md` → read the most recent entry at every session start |
 | Source of Truth | `tools/SK8Lytz_App_Master_Reference.md` |
 | Protocol Bible | `tools/ZENGGE_PROTOCOL_BIBLE.md` |
 | Active Tasks | `tools/SK8Lytz_Bucket_List.md` → `## 🚧 ACTIVE SPRINT` |
