@@ -12,7 +12,7 @@
  *   - cancelAllRecoveries() returns a Promise that resolves once all loops exit.
  */
 import { Buffer } from 'buffer';
-import { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import type { BleManager, Characteristic, Device, Subscription } from 'react-native-ble-plx';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
 import { AppLogger } from '../../services/AppLogger';
@@ -26,7 +26,7 @@ export interface UseBLEAutoRecoveryProps {
   handleNotification: (error: Error | null, characteristic: Characteristic | null, deviceId: string) => void;
   onOrganicDisconnect: (error: Error | null, deviceId: string) => void;
   /** Global connection gate semaphore — recovery waits for IDLE before touching radio */
-  bleGateRef: React.MutableRefObject<import('../../services/BleStateMachine').BleStateMachine>;
+  bleGateRef: React.MutableRefObject<any>; // MIGRATION-SHIM
   /**
    * Called after a successful reconnect with the resolved protocol adapter.
    * useBLE.ts uses this to update adapterMapRef so writeToDevice continues

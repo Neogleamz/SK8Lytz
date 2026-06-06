@@ -17,6 +17,7 @@ export interface UseBLEScannerProps {
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   /** Optional HW cache from useBLESweeper — enriches PendingRegistrations with real EEPROM data */
   hwCache?: Record<string, any>;
+  bleSend: (event: any) => void;
 }
 
 export function useBLEScanner({
@@ -24,8 +25,8 @@ export function useBLEScanner({
   allDevices,
   setAllDevices,
   hwCache = {},
+  bleSend,
 }: UseBLEScannerProps) {
-  const [scannerState, setScannerState] = useState<'IDLE' | 'SCANNING' | 'PROBING'>('IDLE');
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
 
   const allDevicesRef = useRef<Device[]>([]);
@@ -173,13 +174,13 @@ export function useBLEScanner({
       clearTimeout(scanTimerRef.current);
       scanTimerRef.current = null;
     }
-    setScannerState('IDLE');
+    bleSend({ type: 'SCAN_STOP' });
     scannerStateRef.current = 'IDLE';
   };
 
   const scanForPeripherals = (options?: { keepAlive?: boolean, disableProbing?: boolean }) => {
     if (scannerStateRef.current === 'SCANNING' || scannerStateRef.current === 'PROBING') return;
-    setScannerState('SCANNING');
+    bleSend({ type: 'SCAN_START' });
     scannerStateRef.current = 'SCANNING';
     
     if (!options?.keepAlive) {
@@ -229,12 +230,12 @@ export function useBLEScanner({
                } as PendingRegistration;
             });
             setPendingRegistrations(pendingMocks);
-            setScannerState('IDLE');
+            bleSend({ type: 'SCAN_STOP' });
             scannerStateRef.current = 'IDLE';
           }, 500);
         } else if (!bleManager) {
           setTimeout(() => {
-            setScannerState('IDLE');
+            bleSend({ type: 'SCAN_STOP' });
             scannerStateRef.current = 'IDLE';
           }, 500);
         }
@@ -243,7 +244,7 @@ export function useBLEScanner({
     } else {
       if (!bleManager) {
         setTimeout(() => {
-          setScannerState('IDLE');
+          bleSend({ type: 'SCAN_STOP' });
           scannerStateRef.current = 'IDLE';
         }, 500);
         return;
@@ -253,7 +254,7 @@ export function useBLEScanner({
     bleManager.startDeviceScan(null, null, (error: any, device: any) => {
       if (error) {
         AppLogger.error(error);
-        setScannerState('IDLE');
+        bleSend({ type: 'SCAN_STOP' });
         scannerStateRef.current = 'IDLE';
         return;
       }
@@ -366,14 +367,12 @@ export function useBLEScanner({
       bleManager.stopDeviceScan();
       scanTimerRef.current = null;
       // Scan window closed — go IDLE immediately. Hardware probing is on-demand only.
-      setScannerState('IDLE');
+      bleSend({ type: 'SCAN_STOP' });
       scannerStateRef.current = 'IDLE';
     }, 5000);
   };
 
   return {
-    scannerState,
-    setScannerState,
     pendingRegistrations,
     scanForPeripherals,
     stopScanner,

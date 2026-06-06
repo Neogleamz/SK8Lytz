@@ -15,7 +15,7 @@
  * Extracted from DashboardScreen.tsx (Phase 2 — God Object Surgery).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { Device } from 'react-native-ble-plx';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import { AppLogger } from '../services/AppLogger';
@@ -34,7 +34,7 @@ interface UseDashboardAutoConnectOptions {
   refreshProfile: () => Promise<void>;
   registeredDevices: RegisteredDevice[];
   /** Global connection gate semaphore — observer only connects when IDLE */
-  bleGateRef: React.MutableRefObject<import('../services/BleStateMachine').BleStateMachine>;
+  bleGateRef: React.MutableRefObject<any>; // MIGRATION-SHIM
   /** Gate the observer if setup wizard is active */
   isWizardActive?: boolean;
   /** Trigger a high-power active scan (from useBLESweeper) */

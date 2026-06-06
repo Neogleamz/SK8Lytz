@@ -82,7 +82,7 @@ export interface UseBLESweeperProps {
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   setPendingRegistrations: React.Dispatch<React.SetStateAction<PendingRegistration[]>>;
   /** The global BLE connection gate from useBLE — Interrogator checks this before probing */
-  bleGateRef: React.MutableRefObject<import('../../services/BleStateMachine').BleStateMachine>;
+  bleGateRef: React.MutableRefObject<any>; // MIGRATION-SHIM
   /** Registered Fleet MACs (uppercase) — Interrogator skips these, they're already known */
   registeredMacs: string[];
 }

@@ -18,7 +18,10 @@ import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
 import { AppLogger } from '../services/AppLogger';
 import type { BleConnectionState, PendingRegistration, PingResult } from '../types/dashboard.types';
-import { BleStateMachine, BLEPhaseTag } from '../services/BleStateMachine';
+import { BLEPhaseTag } from '../services/BleStateMachine';
+import { useMachine } from '@xstate/react';
+import { bleMachine } from '../services/ble/BleMachine';
+import { ActorRefFrom } from 'xstate';
 
 import { requestPermission } from '../services/PermissionService';
 import { supabase } from '../services/supabaseClient';
@@ -85,7 +88,8 @@ export interface BluetoothLowEnergyApi {
   ghostedDeviceIds: string[];
   bleState: BleConnectionState;
   /** Global connection gate semaphore — exposed for consumers that need gate-awareness */
-  bleGateRef: React.MutableRefObject<BleStateMachine>;
+  bleGateRef: React.MutableRefObject<any>; // MIGRATION-SHIM
+  bleActorRef: ActorRefFrom<typeof bleMachine>;
   // ── Overwatch BLE Engine API ───────────────────────────────────────────────
   /** Start the Silent Sweeper. Call once on Dashboard mount after BT permissions confirmed. */
   startSweeper(): void;
@@ -112,20 +116,19 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const [isBluetoothSupported, setIsBluetoothSupported] = useState(Platform.OS !== 'web');
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState(Platform.OS === 'web');
   const [droppedOutDeviceIds, setDroppedOutDeviceIds] = useState<string[]>([]);
-  // ── Connection Gate Semaphore ──────────────────────────────────────────────
+  // ── Connection Gate Semaphore (XState V5) ─────────────────────────────────
   // ALL BLE operations (scan, connect, disconnect, recovery) must acquire this
   // gate before touching the radio. Prevents the "stampeding herd" of competing
   // GATT operations that cause Android GATT 133 errors.
-  const bleGateRef = useRef<BleStateMachine>(new BleStateMachine());
-  const [bleGateState, setBleGateState] = useState<BLEPhaseTag>('IDLE');
+  const [bleSnapshot, bleSend, bleActorRef] = useMachine(bleMachine);
+  const bleGateState = typeof bleSnapshot.value === 'string' ? bleSnapshot.value : 'IDLE';
 
-  // Automatically sync FSM transitions into React state for re-renders
-  useEffect(() => {
-    const unsubscribe = bleGateRef.current.addListener((phase) => {
-      setBleGateState(phase.tag);
-    });
-    return unsubscribe;
-  }, []);
+  // Legacy compat: consumers that still check bleGateRef.current.tag
+  const bleGateRef = useRef<any>({ // MIGRATION-SHIM
+    get tag() { return bleActorRef.getSnapshot().value; },
+    transitionTo: (_phase: any) => bleSend({ type: 'FORCE_IDLE' }), // dummy
+    forceTransitionTo: (_phase: any) => bleSend({ type: 'FORCE_IDLE' }) // dummy
+  });
   // ── Pattern write debounce ─────────────────────────────────────────────────
   // Prevents BLE queue pile-up when user swipes rapidly through the pattern picker.
   // Critical writes (power, time sync) bypass this and go direct.
@@ -140,14 +143,12 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   // Helper: transition the gate which automatically syncs to state via the listener
   const setGate = useCallback((phase: BLEPhaseTag) => {
-    const success = bleGateRef.current.transitionTo({ tag: phase }, 'Manual Phase Change');
-    if (!success) {
-      AppLogger.error('[BLE] setGate failed — gate stuck in ' + bleGateRef.current.tag, {
-        attemptedPhase: phase,
-        currentPhase: bleGateRef.current.tag,
-      });
-    }
-  }, []);
+    // Map legacy phase tags to XState events if needed by legacy callers
+    if (phase === 'CONNECTING') bleSend({ type: 'CONNECT_REQUEST' });
+    else if (phase === 'DISCONNECTING') bleSend({ type: 'DISCONNECT_REQUEST' });
+    else if (phase === 'SCANNING') bleSend({ type: 'SCAN_START' });
+    else if (phase === 'IDLE') bleSend({ type: 'FORCE_IDLE' });
+  }, [bleSend]);
 
   useEffect(() => {
     if (__DEV__) {
@@ -369,6 +370,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     allDevices,
     setAllDevices,
     hwCache: sweeper.hwCache,
+    bleSend,
   });
 
   // Wire the real setter into the ref forwarder now that scanner is initialized.
@@ -564,8 +566,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const derivedBleState: BleConnectionState = 
     bleGateState === 'DISCONNECTING' ? 'DISCONNECTING' :
     bleGateState === 'CONNECTING' ? 'CONNECTING' :
-    scanner.scannerState === 'SCANNING' ? 'SCANNING' :
-    scanner.scannerState === 'PROBING' ? 'PROBING' :
+    bleGateState === 'SCANNING' ? 'SCANNING' :
     connectedDevices.length > 0 ? 'READY' : 'IDLE';
 
   return useMemo(() => ({
@@ -599,9 +600,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     pingDevice,
     getAdapterForDevice,
     executeProtocolResults,
-    ghostedDeviceIds: autoRecovery.ghostedDeviceIds,
+    ghostedDeviceIds: bleSnapshot.context.ghostedDeviceIds.length > 0 ? bleSnapshot.context.ghostedDeviceIds : autoRecovery.ghostedDeviceIds,
     bleState: derivedBleState,
     bleGateRef,
+    bleActorRef,
     startSweeper: sweeper.startSweeper,
     stopSweeper: sweeper.stopSweeper,
     burstScan: sweeper.burstScan,
@@ -626,7 +628,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   }), [
     allDevices,
     connectedDevices,
-    scanner.scannerState,
+    bleGateState,
     scanner.pendingRegistrations,
     isBluetoothSupported,
     isBluetoothEnabled,
