@@ -1,19 +1,31 @@
 ---
-description: Context Memory Compiler Rule
-trigger: always_on
+description: Context Memory Compiler — sync codebase architecture into SK8Lytz_App_Master_Reference.md
 ---
 
-# Context Memory Compiler Rule
+# Context Memory Compiler — "sync architecture", "update memory", "compile context"
 
-When I instruct you to "sync architecture", "update memory", or "compile context", you must execute the following workflow to ensure our project documentation matches the reality of the codebase:
+When prompted with "sync architecture", "update memory", or "compile context", execute the following workflow to synchronize `tools/SK8Lytz_App_Master_Reference.md` with the current codebase reality:
 
-1. **Analyze Codebase State**: Use your tools to briefly scan the `src/`, `services/`, and API directories to understand the current file structure and data flow.
-2. **Update the Blueprint**:
-   - Create or overwrite a file at `.agents/rules/architecture-map.md`.
-   - Write a high-level, extremely concise summary of the app's current architecture.
-   - Detail exactly how the front-end communicates with the Node.js backend, and how the backend manages the Bluetooth LE connections to the Zengge hardware.
-3. **Update the State Tree**: Include a markdown tree of the core project structure, noting what each primary directory is responsible for.
-4. **Commit the Memory**:
-   - Execute `git add .agents/rules/architecture-map.md`
-   - Execute `git commit -m "chore: update AI architecture memory map for universal agent context"`
-5. **Halt**: Output a message confirming the map has been updated and is now available to all SDE Sub-Agents globally.
+1. **Codebase Scan**: Use `view_file` and `list_dir` to survey:
+   - `src/hooks/` — count all hooks, identify new ones not in the Registry
+   - `src/hooks/ble/` — count all BLE sub-hooks
+   - `src/services/` — count all services
+   - `src/components/` — count all components
+   - `src/screens/` — list all screens
+
+2. **Hook & Service Registry Diff**: Compare the live file count against the Hook & Service Registry table in `tools/SK8Lytz_App_Master_Reference.md` §4. List every hook/service that is missing from the Registry.
+
+3. **Update the Master Reference**: For each missing entry, add it to the appropriate Registry table in §4 with:
+   - Name, file path, domain responsibility, and status
+   Update §2 System Architecture with any directory-level changes (new `src/` subdirectories, renamed modules, etc.)
+
+4. **Commit the Sync**:
+   ```powershell
+   Set-Location "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
+   git add tools/SK8Lytz_App_Master_Reference.md
+   git commit -m "docs: sync Master Reference architecture map with live codebase"
+   ```
+
+5. **Halt**: Report how many hooks/services were added to the Registry and confirm the Master Reference is now current.
+
+> Note: This workflow supersedes the old `architecture-map.md` approach. The Master Reference IS the architecture map.

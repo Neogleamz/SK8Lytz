@@ -50,6 +50,13 @@ export function <hookName>(): HookResult {
 }
 ```
 
-3. **Confirm** in chat: "Scaffolded `src/hooks/<hookName>.ts` with FSM state, VIP AppLogger telemetry, and typed result. Fill in the TODOs."
+4. **Update the Hook Registry**: Open `tools/SK8Lytz_App_Master_Reference.md` and find the §4 Hook & Service Registry table. Add a new row for the scaffolded hook:
+   - Name: `<hookName>`
+   - File: `src/hooks/<hookName>.ts`
+   - Domain: (fill in based on hook purpose)
+   - Status: `🟡 SCAFFOLDED — TODO: implement`
+   This satisfies Kanban Constitution Rule 12 (Documentation Parity Gate).
 
-4. **Do NOT** create a branch, commit, or start implementing logic. This is a scaffolding-only workflow.
+5. **Confirm** in chat: "Scaffolded `src/hooks/<hookName>.ts` with FSM state, VIP AppLogger telemetry, and typed result. Hook Registry updated in Master Reference. Fill in the TODOs."
+
+6. **Do NOT** create a branch, commit, or start implementing logic. This is a scaffolding-only workflow.

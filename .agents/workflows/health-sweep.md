@@ -1,0 +1,50 @@
+---
+description: Pre-release health sweep — npm audit + Supabase DB security advisors before any push
+---
+
+# Health Sweep Engine — "/health-sweep"
+
+// turbo-all
+
+When invoked via `/health-sweep` or as Phase 1 Step 1 of `/ship-it`, run all security and dependency health checks. This must pass before ANY release merge.
+
+### Step 1: Dependency Security Audit
+
+```powershell
+Set-Location "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
+npm audit --audit-level=moderate 2>&1 | Select-Object -Last 20
+Write-Host "=== npm audit complete ==="
+```
+
+- If ANY **critical** or **high** vulnerabilities are found: **HALT. Do NOT proceed to release.**
+- If only **moderate** vulnerabilities: Document them, proceed with user approval.
+- If clean: Continue.
+
+### Step 2: Outdated Dependency Check
+
+```powershell
+npm outdated 2>&1 | Select-Object -First 20
+```
+
+Log any packages >2 major versions behind into the `🧹 TECH DEBT` section of `tools/SK8Lytz_Bucket_List.md`.
+
+### Step 3: Supabase Database Security Advisors
+
+- Run the MCP tool `mcp_supabase-mcp-server_get_advisors` with `type: 'security'`.
+- If ANY security advisors are flagged: **HALT. Log to TRIAGE QUEUE and do NOT push.**
+
+### Step 4: Report
+
+Output a structured summary:
+
+```
+## 🛡️ Health Sweep Report
+
+| Check | Status | Notes |
+|-------|--------|-------|
+| npm audit | ✅ Clean / 🔴 CRITICAL / ⚠️ Moderate | <vuln count> |
+| npm outdated | ✅ Current / ⚠️ <N> packages behind | <list> |
+| Supabase Security | ✅ Clean / 🔴 Advisors found | <details> |
+
+**Verdict: PROCEED ✅ / BLOCKED 🔴**
+```

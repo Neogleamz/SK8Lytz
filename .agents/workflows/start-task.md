@@ -14,6 +14,10 @@ When I instruct you to do ANY of the following:
 You must execute this pipeline sequentially. **DO NOT BYPASS ANY GATES.** You must explicitly announce which Persona you are adopting at each phase.
 
 ### Phase 1: The Scrum Master (Triage & Setup)
+0. **Source of Truth Prime (Anti-Hallucination Gate)**: Before touching the bucket list, silently read:
+   - `tools/SK8Lytz_App_Master_Reference.md` §3 (BLE Protocol Library) and §4 (Hook & Service Registry)
+   - `tools/ZENGGE_PROTOCOL_BIBLE.md` §3 (Opcode Command Map)
+   This satisfies agent-behavior.md Rule 1 (First-Principles Audit). Skip if the task is `[UI]` or `[CLOUD]` only.
 1. **Target Identification (Batch-Aware)**: 
    - Parse `tools/SK8Lytz_Bucket_List.md`. Look strictly inside the `## 🚧 ACTIVE SPRINT` section.
    - If there is an active batch with uncompleted tasks, find the FIRST task that is NOT `[x]`. That is your target.
@@ -98,3 +102,7 @@ You must execute this pipeline sequentially. **DO NOT BYPASS ANY GATES.** You mu
   - IF this was the LAST task in the active batch:
     - Execute the full 3-step Archival Protocol above immediately
 
+- **Discord Notification:** Broadcast merge completion:
+  ```powershell
+  powershell.exe -ExecutionPolicy Bypass -File .\tools\discord-bridge\notify_discord.ps1 -Message "✅ Task <task-slug> merged to master. Tests passed. Master is green."
+  ```

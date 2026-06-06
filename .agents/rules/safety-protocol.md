@@ -19,7 +19,7 @@ trigger: always_on
 
 ## 3. Operations Guard
 - **⛔ Rule 10: Three-Strike Debugging Lockout**: If a bug fix fails 3 times, halt execution, run `git reset --hard`, and drop into consultative `/brainstorming` mode.
-- **⛔ Rule 11: The Override Key**: Bypassing Rules 10 and 11 is allowed ONLY if the user explicitly initiates the prompt with the passphrase: `COWBOY MODE ACTIVATED`.
+- **⛔ Rule 11: The Override Key**: Bypassing Rule 10 is allowed ONLY if the user explicitly initiates the prompt with the passphrase: `COWBOY MODE ACTIVATED`.
 
 ## 4. Tool Playbook — Proven Command Registry
 **MANDATORY RULE**: Before writing any complex terminal command, PowerShell pipeline, or search query, you MUST first check this document. Use the exact proven syntax.

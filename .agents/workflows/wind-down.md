@@ -33,6 +33,7 @@ When my prompt includes "good night", "wrapping up", "wind down", "done for the 
    - Parse `tools/SK8Lytz_Bucket_List.md`.
    - Ensure every task completed during the session is marked with `[x]`.
    - **Cleanup & Archiving**: Physically move all `[x]` items from their active Epic sections into the `## ✅ Completed Previously` archive at the bottom of the file to maintain a lean active backlog.
+   - **Icebox Sweep (Guillotine Protocol)**: Scan `🏗️ ROADMAP` and `🧹 TECH DEBT` sections. Any task older than 30 days that is still `[ ]` MUST be moved to the `❄️ ICEBOX` section. (This is the `/groom-backlog` protocol — running it inline here so it doesn't require a manual trigger.)
    - **Progress Sync**: Update the Mermaid `pie` charts in the `## 📊 Global System Readiness` and category headers to reflect the new completion counts.
    - **Prioritization**: Identify the next logical Task/Epic. Ask: "What is the absolute #1 priority for our next session?" and move that item to the top of the active list.
 
@@ -47,4 +48,8 @@ When my prompt includes "good night", "wrapping up", "wind down", "done for the 
 
 5. **Hard Freeze**:
    - Close all background terminal processes (dev servers, etc.) if applicable.
+   - **Discord Notification:** Broadcast session end status:
+     ```powershell
+     powershell.exe -ExecutionPolicy Bypass -File .\tools\discord-bridge\notify_discord.ps1 -Message "🌙 SK8Lytz session complete. Master is stable. Bucket list groomed. See you next time."
+     ```
    - Output a final, thematic SK8Lytz-style sign-off (e.g., "Skates docked. Lights dimmed. See you on the next session.").

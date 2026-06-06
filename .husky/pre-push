@@ -1,6 +1,10 @@
 #!/bin/sh
 set -e
-# Husky pre-push hook — Zero-Bypass QA Gate
+# Husky pre-push hook — Zero-Bypass QA Gate (Safety Protocol Rules 6 + 8)
 
 echo "[Husky] Pre-push verification triggered..."
 node tools/verifiable-check-runner.js --verify
+
+echo "[Husky] Running npm audit (Safety Rule 8)..."
+npm audit --audit-level=moderate
+echo "[Husky] Pre-push gate passed. Proceeding with push."

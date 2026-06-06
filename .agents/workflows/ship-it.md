@@ -17,17 +17,14 @@ When invoked via `/ship-it`, you must act as a strict state machine orchestratin
    ```powershell
    npm run verify
    ```
-3. **Automated Smoke Test:** Execute Detox E2E tests to autonomously guarantee the app UI renders without crashing:
-   ```powershell
-   npx detox test -c android.emu.debug
-   ```
+3. **Automated Smoke Test:** Execute the `/smoke-test` workflow to verify the app renders without a white screen or fatal crash.
+   > Note: Detox E2E is a devDependency but has no config yet — `/smoke-test` (headless browser check) is the current working alternative.
 4. **Bundle Audit:** Execute the `/bundle-audit` workflow.
 *(Pause and verify no errors exist before proceeding).*
 
 ### Phase 2: The Physical Proof (Test Before Merge)
 *Location: Still inside the worktree.*
-1. **Compile:** Execute the `/build-apk` workflow to compile the worktree's code into a physical `.apk`.
-2. **Deploy:** Execute the `/install-apk` workflow to push the build via ADB to the connected physical device.
+1. **Build & Deploy:** Execute the `/deploy-device` workflow to compile the worktree's code into a physical `.apk` and install it on the connected Android device.
 3. **The QA Halt:** You must enter a Strict Wait State. Ask the user: 
    > "Build deployed to physical device. Please perform manual QA. Type 'approve' to proceed to merge, or 'reject' to abort."
 
@@ -65,3 +62,7 @@ When invoked via `/ship-it`, you must act as a strict state machine orchestratin
    git push origin master --tags
    ```
 2. **Completion:** Announce successful release launch and exit the orchestrator.
+3. **Discord Notification:** Broadcast release status to the team:
+   ```powershell
+   powershell.exe -ExecutionPolicy Bypass -File .\tools\discord-bridge\notify_discord.ps1 -Message "🚀 SK8Lytz vX.Y.Z released to master and pushed. All gates passed."
+   ```
