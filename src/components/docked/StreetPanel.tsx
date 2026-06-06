@@ -39,7 +39,6 @@ interface StreetPanelProps {
   sessionStartTimeRef: React.MutableRefObject<number | null>;
   /** Injected from useSessionTracking — used for Avg Speed chip */
   sessionSpeedSamplesRef: React.MutableRefObject<number[]>;
-  Colors: any;
 }
 
 const StreetPanel = React.memo(({
@@ -55,7 +54,6 @@ const StreetPanel = React.memo(({
   stopSessionRecording,
   sessionStartTimeRef,
   sessionSpeedSamplesRef,
-  Colors,
 }: StreetPanelProps) => {
   const { height: windowHeight } = useWindowDimensions();
   const isShort = windowHeight < 720;
@@ -125,13 +123,13 @@ const StreetPanel = React.memo(({
           activeOpacity={0.7}
           style={{ position: 'absolute', right: 0, alignItems: 'center', paddingHorizontal: 6, paddingVertical: 2 }}
         >
-          <Text style={{ color: '#FF3D00', fontSize: 8, fontWeight: '900', letterSpacing: 1, marginBottom: 3 }}>
+          <Text style={{ color: '#F79320', fontSize: 8, fontWeight: '900', letterSpacing: 1, marginBottom: 3 }}>
             REC
           </Text>
           <Animated.View style={{
             width: 13, height: 13, borderRadius: 7,
-            backgroundColor: sessionActive ? '#FF3D00' : '#3D0A00',
-            shadowColor: '#FF3D00',
+            backgroundColor: sessionActive ? '#F79320' : '#4A2A05',
+            shadowColor: '#F79320',
             shadowOpacity: sessionActive ? 0.9 : 0,
             shadowRadius: 6,
             elevation: sessionActive ? 6 : 0,

@@ -177,7 +177,7 @@ const CrewHubSlab = React.memo(({
                   pulseAnim={new Animated.Value(1)}
                   handleJoinById={() => {}}
                   locationCoords={hub?.locationCoords ?? null}
-                  discoverRadiusMi={hub?.discoverRadiusMi ?? 20}
+                  discoverRadiusMi={hub?.discoverRadiusMi ?? 10}
                 />
                 <TouchableOpacity
                   style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
