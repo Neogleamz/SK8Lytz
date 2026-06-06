@@ -280,6 +280,12 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     autoRecovery.initiateRecovery(deviceId);
   };
 
+  // Stable ref-forwarder for connectToDevices — same pattern as pendingRegistrationsSetterRef.
+  // autoRecovery is initialised BEFORE connectToDevices exists, so we’d get a stale closure
+  // if we passed connectToDevices directly. The ref is updated immediately after connectToDevices
+  // is defined (see below).
+  const connectToDevicesRef = useRef<(devices: Device[]) => Promise<void>>(async () => {});
+
   const autoRecovery = useBLEAutoRecovery({
     bleManager,
     setConnectedDevices,
@@ -306,6 +312,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       mtuMapRef.current.set(deviceId, mtu);
       AppLogger.log('DEVICE_CONNECTED', { context: 'mtu_recovery_updated', mtu, deviceId });
     },
+    connectedDevicesRef,
+    onGroupDropout: async (devices: Device[]) => connectToDevicesRef.current(devices),
   });
 
   // ── Overwatch: Silent Sweeper + Interrogator Queue ────────────────────────
@@ -394,6 +402,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     setConnectedDevices,
     setGate,
   ]);
+
+  // Wire connectToDevicesRef immediately after connectToDevices is defined so the
+  // autoRecovery group coordinator always calls the latest version of the function.
+  connectToDevicesRef.current = connectToDevices;
 
   // ── State refs and setters for BleWriteDispatcher ─────────────────────────
   const stateRefs = useMemo<BleWriteStateRefs>(() => ({

@@ -45,6 +45,18 @@ export interface UseBLEAutoRecoveryProps {
    * silently fall back to the 186-byte default, potentially truncating large payloads.
    */
   onMtuNegotiated?: (deviceId: string, mtu: number) => void;
+  /**
+   * Ref to currently connected devices — used by the group dropout coordinator
+   * to look up Device objects by ID when building the reconnect batch.
+   */
+  connectedDevicesRef: React.MutableRefObject<Device[]>;
+  /**
+   * Called when 2+ devices ghost within the DEBOUNCE_WINDOW_MS window.
+   * Triggers a single coordinated group reconnect via connectToDevices() instead
+   * of N competing individual recovery loops (eliminates stampeding-herd GATT contention).
+   * Falls back to individual loops if omitted.
+   */
+  onGroupDropout?: (devices: Device[]) => Promise<void>;
 }
 
 
@@ -96,6 +108,8 @@ export function useBLEAutoRecovery({
   onAdapterResolved,
   onDeviceRecovered,
   onMtuNegotiated,
+  connectedDevicesRef,
+  onGroupDropout,
 }: UseBLEAutoRecoveryProps) {
   const [ghostedDeviceIds, setGhostedDeviceIds] = useState<string[]>([]);
   const ghostedRefs = useRef<string[]>([]);
@@ -108,20 +122,30 @@ export function useBLEAutoRecovery({
   // Track active recovery loop promises so cancelAllRecoveries can await them.
   const activeLoopsRef = useRef<Promise<void>[]>([]);
 
-  const initiateRecovery = useCallback((deviceId: string) => {
-    // If already recovering, ignore
-    if (ghostedRefs.current.includes(deviceId)) return;
+  // ── GROUP DROPOUT COORDINATOR refs ────────────────────────────────────────
+  /** Debounce timer for detecting simultaneous group dropouts. */
+  const ghostDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** Accumulated dropped Device objects within the debounce window. */
+  const ghostDebounceQueueRef = useRef<Device[]>([]);
+  /**
+   * How long to wait before deciding single-device vs group dropout.
+   * 1.5s is enough to capture near-simultaneous Zengge group disconnects
+   * while remaining fast enough to feel responsive for solo dropouts.
+   */
+  const DEBOUNCE_WINDOW_MS = 1500;
 
-    AppLogger.log('AUTO_RECOVERY_STARTED', { deviceId });
-
-    // 1. Add to ghost queue safely
-    ghostedRefs.current = [...ghostedRefs.current, deviceId];
-    setGhostedDeviceIds([...ghostedRefs.current]);
-
+  /**
+   * spawnRecoveryLoop — spawns the isolated async reconnect loop for a single device.
+   *
+   * Extracted from initiateRecovery so the group dropout coordinator can fall through
+   * to individual behavior when only 1 device ghosts in the debounce window.
+   * Zero logic changes from the original recovery loop.
+   */
+  const spawnRecoveryLoop = (deviceId: string) => {
     // Capture cancellation token at loop start
     const myToken = cancelTokenRef.current;
 
-    // 2. Spawn isolated async recovery loop
+    // Spawn isolated async recovery loop
     let attempts = 0;
     let gateWaitCount = 0;
     const attemptRecoveryLoop = async () => {
@@ -159,7 +183,7 @@ export function useBLEAutoRecovery({
           if (!lockHandle) {
             gateWaitCount++;
             AppLogger.log('AUTO_RECOVERY_GATE_WAIT', { deviceId, gate: 'GATT_MUTEX_BUSY', attempt: attempts, gateWaitCount });
-            
+
             if (gateWaitCount > 6) {
               AppLogger.warn(`[AutoRecovery] ${deviceId} hit Zombie Lock — lock busy for too long. Ejecting.`);
               ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
@@ -169,7 +193,7 @@ export function useBLEAutoRecovery({
             }
             continue; // Will sleep again via backoff at top of loop
           }
-          
+
           gateWaitCount = 0; // Reset gate wait count since we successfully locked
           const { release, signal } = lockHandle;
           releaseFn = release;
@@ -206,14 +230,15 @@ export function useBLEAutoRecovery({
             delete disconnectListeners.current[conn.id];
           }
 
-          disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {
+          disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: Error | null) => {
             onOrganicDisconnect(error, conn.id);
           });
 
           conn.monitorCharacteristicForService(
             recoveryAdapter.serviceUUID,
             recoveryAdapter.notifyCharacteristicUUID,
-            (error: any, characteristic: any) => handleNotification(error, characteristic, conn.id)
+            (error: Error | null, characteristic: import('react-native-ble-plx').Characteristic | null) =>
+              handleNotification(error, characteristic, conn.id)
           );
 
           // Send recovery ping using adapter — BanlanX has no EEPROM query (empty no-op),
@@ -225,7 +250,7 @@ export function useBLEAutoRecovery({
             await conn.writeCharacteristicWithoutResponseForService(
               recoveryAdapter.serviceUUID, recoveryAdapter.writeCharacteristicUUID,
               Buffer.from(pingResult.packets[0]).toString('base64')
-            ).catch((e: any) => AppLogger.warn('[useBLEAutoRecovery] Recovery ping failed', e));
+            ).catch((e: unknown) => AppLogger.warn('[useBLEAutoRecovery] Recovery ping failed', e));
           }
           if (signal.aborted) break;
 
@@ -241,12 +266,10 @@ export function useBLEAutoRecovery({
           onDeviceRecovered?.(conn.id);
           break;
 
-        } catch (e: any) {
+        } catch (e: unknown) {
           AppLogger.warn(`[AutoRecovery] Connection attempt failed for ${deviceId}, retrying with backoff`, e);
         } finally {
-          if (releaseFn) {
-            releaseFn();
-          }
+          if (releaseFn) releaseFn();
         }
       }
     };
@@ -257,13 +280,88 @@ export function useBLEAutoRecovery({
     loopPromise.finally(() => {
       activeLoopsRef.current = activeLoopsRef.current.filter(p => p !== loopPromise);
     });
-  }, [bleManager, disconnectListeners, handleNotification, onOrganicDisconnect, setConnectedDevices, bleGateRef]);
+  };
+
+  const initiateRecovery = useCallback((deviceId: string) => {
+    // If already recovering, ignore
+    if (ghostedRefs.current.includes(deviceId)) return;
+
+    AppLogger.log('AUTO_RECOVERY_STARTED', { deviceId });
+
+    // 1. Immediate UI update — ghost state is visible before any debounce fires
+    ghostedRefs.current = [...ghostedRefs.current, deviceId];
+    setGhostedDeviceIds([...ghostedRefs.current]);
+
+    // ── GROUP DROPOUT COORDINATOR ──────────────────────────────────────────
+    // When 2+ devices ghost within DEBOUNCE_WINDOW_MS, treat as a group dropout
+    // and call onGroupDropout() once (→ connectToDevices) instead of spawning
+    // N competing individual recovery loops. This eliminates the stampeding-herd
+    // GATT contention that caused 60-minute recovery storms on group disconnects.
+    const droppedDevice = connectedDevicesRef.current.find(d => d.id === deviceId);
+
+    if (onGroupDropout && droppedDevice) {
+      // Accumulate into the debounce queue
+      ghostDebounceQueueRef.current.push(droppedDevice);
+
+      // Restart the debounce window on every new dropout within the batch
+      if (ghostDebounceTimerRef.current) clearTimeout(ghostDebounceTimerRef.current);
+
+      ghostDebounceTimerRef.current = setTimeout(() => {
+        ghostDebounceTimerRef.current = null;
+        const batch = [...ghostDebounceQueueRef.current];
+        ghostDebounceQueueRef.current = [];
+
+        if (batch.length >= 2) {
+          // GROUP DROPOUT — clear ghost state for the batch then fire group reconnect.
+          // connectToDevices will re-add devices to connectedDevices on success.
+          ghostedRefs.current = ghostedRefs.current.filter(id => !batch.some(d => d.id === id));
+          setGhostedDeviceIds([...ghostedRefs.current]);
+
+          AppLogger.log('AUTO_RECOVERY_GROUP_COORDINATOR', {
+            event: 'group_dropout_detected',
+            count: batch.length,
+            devices: batch.map(d => d.id),
+          });
+
+          onGroupDropout(batch).catch((e: unknown) => {
+            // Fallback: if group reconnect fails, re-ghost and spawn individual loops
+            AppLogger.warn('[AutoRecovery] Group dropout reconnect failed — falling back to individual loops', e);
+            batch.forEach(d => {
+              if (!ghostedRefs.current.includes(d.id)) {
+                ghostedRefs.current = [...ghostedRefs.current, d.id];
+                spawnRecoveryLoop(d.id);
+              }
+            });
+            setGhostedDeviceIds([...ghostedRefs.current]);
+          });
+        } else {
+          // SINGLE DEVICE DROPOUT — fall through to existing individual recovery loop
+          AppLogger.log('AUTO_RECOVERY_GROUP_COORDINATOR', {
+            event: 'single_device_dropout',
+            deviceId: batch[0]?.id,
+          });
+          if (batch[0]) spawnRecoveryLoop(batch[0].id);
+        }
+      }, DEBOUNCE_WINDOW_MS);
+
+      return; // Loop is deferred to the debounce timer callback above
+    }
+
+    // Fallback: no coordinator wired (shouldn’t happen in production) — spawn directly
+    spawnRecoveryLoop(deviceId);
+  }, [bleManager, disconnectListeners, handleNotification, onOrganicDisconnect, setConnectedDevices, bleGateRef, onGroupDropout]);
 
   /**
    * Cancel all active recovery loops and wait for them to exit.
    * Returns a Promise that resolves once every loop has terminated.
    */
   const cancelAllRecoveries = useCallback(async () => {
+    // Kill the group dropout debounce timer so it can’t fire after cancel
+    if (ghostDebounceTimerRef.current) {
+      clearTimeout(ghostDebounceTimerRef.current);
+      ghostDebounceTimerRef.current = null;
+      ghostDebounceQueueRef.current = [];
+    }
     // Increment token — all active loops will see mismatch and break
     cancelTokenRef.current++;
     ghostedRefs.current = [];

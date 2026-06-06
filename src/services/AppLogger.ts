@@ -185,7 +185,9 @@ export type EventType =
   // ── FTUE (First-Time User Experience) ─────────────────────────────────────
   | 'FTUE_PHASE_3_COMPLETE'
   | 'FTUE_HARDWARE_WRITE'
-  | 'FTUE_HARDWARE_VERIFIED';
+  | 'FTUE_HARDWARE_VERIFIED'
+  // ── BLE Group Dropout Coordinator ────────────────────────────────────────
+  | 'AUTO_RECOVERY_GROUP_COORDINATOR';
 
 
 
