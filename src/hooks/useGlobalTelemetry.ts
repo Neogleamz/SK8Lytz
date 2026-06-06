@@ -29,11 +29,11 @@ export interface GlobalTelemetryState {
  * signal drops or OS-level connection management do NOT zero out the in-progress session.
  */
 export function useGlobalTelemetry(
-  sessionPhase: 'IDLE' | 'ACTIVE' | 'PAUSED',
+  sessionPhase: 'IDLE' | 'ACTIVE' | 'PAUSED' | 'ENDING',
   healthMetrics?: { avgBpm: number | null; peakBpm: number | null; activeCalories: number | null },
   externalStartTimeMs?: number | null
 ): GlobalTelemetryState {
-  const isSkateSessionActive = sessionPhase === 'ACTIVE' || sessionPhase === 'PAUSED';
+  const isSkateSessionActive = sessionPhase === 'ACTIVE' || sessionPhase === 'PAUSED' || sessionPhase === 'ENDING';
   const [gpsSpeed, setGpsSpeed] = useState<number>(0);
   const [peakGForce, setPeakGForce] = useState<number>(1.0);
   const [sessionDistanceMiles, setSessionDistanceMiles] = useState<number>(0);
@@ -61,7 +61,7 @@ export function useGlobalTelemetry(
   const peakGForceRef = useRef(1.0);
 
   const sessionPauseTimeRef = useRef<number | null>(null);
-  const prevSessionPhaseRef = useRef<'IDLE' | 'ACTIVE' | 'PAUSED'>('IDLE');
+  const prevSessionPhaseRef = useRef<'IDLE' | 'ACTIVE' | 'PAUSED' | 'ENDING'>('IDLE');
 
   useEffect(() => {
     const prevPhase = prevSessionPhaseRef.current;

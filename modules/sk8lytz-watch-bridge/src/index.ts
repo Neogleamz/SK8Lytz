@@ -3,7 +3,15 @@ import { Platform } from 'react-native';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-/** The session state payload pushed from phone → watch. */
+/**
+ * The session state payload pushed from phone → watch.
+ *
+ * CONTRACT: Every status value MUST be handled by BOTH native companions:
+ *   - watchOS: WatchConnectivityManager.swift → handlePayload()
+ *   - Wear OS: WearableCommunicationService.kt → onDataChanged()
+ * Adding a new status here requires updating both companions.
+ * Last audit: 2026-06-06 — all 4 states verified in both platforms.
+ */
 export interface WatchSessionState {
   /** 'ACTIVE', 'PAUSED', 'SUMMARY' (post-session card, 10s), or 'STOPPED' */
   status: 'ACTIVE' | 'STOPPED' | 'PAUSED' | 'SUMMARY';

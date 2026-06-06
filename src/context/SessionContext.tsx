@@ -10,7 +10,7 @@ import { WatchBridge, WatchCommand, WatchHealthUpdate } from 'sk8lytz-watch-brid
 
 interface SessionContextValue {
   isSkateSessionActive: boolean;
-  sessionPhase: 'IDLE' | 'ACTIVE' | 'PAUSED';
+  sessionPhase: 'IDLE' | 'ACTIVE' | 'PAUSED' | 'ENDING';
   startSession: () => void;
   endSession: () => void;
   telemetry: GlobalTelemetryState;
@@ -22,12 +22,34 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 const NOTIFICATION_CHANNEL_ID = 'sk8lytz-session';
 const NOTIFICATION_ID = 'active-skate-session';
 
+/** Persisted session phase for crash recovery. */
+type PersistedSessionPhase = 'active' | 'paused' | 'idle';
+const SESSION_PHASE_KEY = '@sk8lytz_session_phase';
+const SESSION_PAUSE_TIME_KEY = '@sk8lytz_session_pause_time';
+
+async function persistSessionPhase(phase: PersistedSessionPhase, pauseTimeMs?: number): Promise<void> {
+  try {
+    const pairs: [string, string][] = [
+      [SESSION_PHASE_KEY, phase],
+      ['@sk8lytz_session_active', phase === 'active' || phase === 'paused' ? 'true' : 'false'],
+    ];
+    if (phase === 'paused' && pauseTimeMs) {
+      pairs.push([SESSION_PAUSE_TIME_KEY, String(pauseTimeMs)]);
+    } else if (phase !== 'paused') {
+      pairs.push([SESSION_PAUSE_TIME_KEY, '']);
+    }
+    await AsyncStorage.multiSet(pairs);
+  } catch (err) {
+    AppLogger.error('Failed to persist session phase', err);
+  }
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [sessionPhase, setSessionPhase] = useState<'IDLE' | 'ACTIVE' | 'PAUSED'>('IDLE');
+  const [sessionPhase, setSessionPhase] = useState<'IDLE' | 'ACTIVE' | 'PAUSED' | 'ENDING'>('IDLE');
   const [recoveredStartTimeMs, setRecoveredStartTimeMs] = useState<number | null>(null);
   const sessionPhaseRef = React.useRef(sessionPhase);
   useEffect(() => { sessionPhaseRef.current = sessionPhase; }, [sessionPhase]);
-  const isSkateSessionActive = sessionPhase === 'ACTIVE' || sessionPhase === 'PAUSED';
+  const isSkateSessionActive = sessionPhase === 'ACTIVE' || sessionPhase === 'PAUSED' || sessionPhase === 'ENDING';
   // Ref for the delayed STOPPED push that follows the 10-second SUMMARY card
   const summaryTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -98,14 +120,34 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const syncSessionState = async () => {
       try {
-        const val = await AsyncStorage.getItem('@sk8lytz_session_active');
-        const isActive = val === 'true';
-        if (isActive) {
-          if (sessionPhase === 'IDLE') {
+        // Check if a background end was queued while we were backgrounded
+        const pendingBgEnd = await AsyncStorage.getItem('@sk8lytz_pending_bg_end');
+        if (pendingBgEnd === 'true') {
+          await AsyncStorage.removeItem('@sk8lytz_pending_bg_end');
+          if (sessionPhaseRef.current !== 'IDLE') {
+            AppLogger.log('APP_LOG', { event: 'deferred_bg_end_session' });
+            // Fire the full endSession teardown (Supabase save, GPS cleanup, etc.)
+            endSessionRef.current();
+          }
+          return; // Skip normal sync — endSession handles everything
+        }
+
+        const phase = await AsyncStorage.getItem(SESSION_PHASE_KEY);
+        if (phase === 'active') {
+          if (sessionPhaseRef.current === 'IDLE') {
             setSessionPhase('ACTIVE');
           }
+        } else if (phase === 'paused') {
+          if (sessionPhaseRef.current === 'IDLE') {
+            setSessionPhase('PAUSED');
+            // Recover pause timestamp for duration correction
+            const pauseTimeStr = await AsyncStorage.getItem(SESSION_PAUSE_TIME_KEY);
+            if (pauseTimeStr) {
+              AppLogger.log('APP_LOG', { event: 'recovered_paused_session', pauseTimeMs: Number(pauseTimeStr) });
+            }
+          }
         } else {
-          if (sessionPhase !== 'IDLE') {
+          if (sessionPhaseRef.current !== 'IDLE') {
             setSessionPhase('IDLE');
           }
         }
@@ -125,7 +167,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       subscription.remove();
     };
-  }, [sessionPhase]);
+  }, []);
 
   // Auto-pause timer and setting check based on GPS speed
   useEffect(() => {
@@ -139,10 +181,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         if (enabled === 'false') {
           if (sessionPhase === 'PAUSED') {
             setSessionPhase('ACTIVE');
-            await WatchBridge.syncSessionState({
-              status: 'ACTIVE',
-              startTime: new Date().toISOString(),
-            });
+            // Watch sync handled by useGlobalTelemetry PAUSED→ACTIVE transition
+            persistSessionPhase('active');
           }
           return;
         }
@@ -152,6 +192,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             timer = setTimeout(async () => {
               setSessionPhase('PAUSED');
               AppLogger.log('APP_LOG', { event: 'auto_pause_triggered' });
+              await persistSessionPhase('paused', Date.now());
               try {
                 await WatchBridge.syncSessionState({ status: 'PAUSED' });
               } catch (err) {
@@ -163,6 +204,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           if (sessionPhase === 'PAUSED') {
             setSessionPhase('ACTIVE');
             AppLogger.log('APP_LOG', { event: 'auto_resume_triggered' });
+            persistSessionPhase('active');
           }
         }
       } catch (err) {
@@ -220,7 +262,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         try {
           await notifee.displayNotification({
             id: NOTIFICATION_ID,
-            title: sessionPhase === 'PAUSED' ? 'Skate Session Paused ⏸' : 'Skate Session Active 🟢',
+            title: sessionPhase === 'PAUSED' ? 'Skate Session Paused ⏸' : sessionPhase === 'ENDING' ? 'Saving Session...' : 'Skate Session Active 🟢',
             body: `Distance: ${telemetry.sessionDistanceMiles.toFixed(2)} mi | Speed: ${telemetry.gpsSpeed.toFixed(1)} mph`,
             android: {
               channelId: NOTIFICATION_CHANNEL_ID,
@@ -290,11 +332,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setRecoveredStartTimeMs(externalStartTimeMs);
     }
     setSessionPhase('ACTIVE');
-    try {
-      await AsyncStorage.setItem('@sk8lytz_session_active', 'true');
-    } catch (err) {
-      AppLogger.error('Failed to save session state to AsyncStorage', err);
-    }
+    await persistSessionPhase('active');
     AppLogger.log('APP_LOG', { event: 'session_started', externalStartTimeMs });
     
     const isoStart = externalStartTimeMs 
@@ -322,32 +360,34 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const finalCalories = health.activeCalories ?? 0;
     const finalPeakHR = health.peakBpm ?? 0;
 
-    // ── 2. Freeze local session immediately (phone HUD clears) ────────────────
-    setSessionPhase('IDLE');
+    // ── 2. Transition to ENDING — phone HUD clears, but FGS stays alive ──────
+    setSessionPhase('ENDING');
     setRecoveredStartTimeMs(null);
+    await persistSessionPhase('idle');
+    AppLogger.log('APP_LOG', { event: 'session_ending' });
+
+    // ── 3. Push SUMMARY → wait for delivery before tearing down ──────────────
     try {
-      await AsyncStorage.setItem('@sk8lytz_session_active', 'false');
-    } catch (err) {
-      AppLogger.error('Failed to save session state to AsyncStorage', err);
+      await WatchBridge.syncSessionState({
+        status: 'SUMMARY',
+        totalDuration: finalDurationSec,
+        distance: finalDistanceMiles,
+        avgSpeed: finalAvgSpeed,
+        calories: finalCalories,
+        peakHR: finalPeakHR,
+      });
+    } catch (err: unknown) {
+      AppLogger.warn('WATCH_BRIDGE', { event: 'summary_push_failed', error: String(err) });
     }
+
+    // ── 4. NOW transition to IDLE — safe to tear down FGS ────────────────────
+    setSessionPhase('IDLE');
     AppLogger.log('APP_LOG', { event: 'session_ended' });
     if (Platform.OS === 'android') {
       notifee.stopForegroundService();
     }
 
-    // ── 3. Push SUMMARY → both watches show the 10-second post-session card ───
-    WatchBridge.syncSessionState({
-      status: 'SUMMARY',
-      totalDuration: finalDurationSec,
-      distance: finalDistanceMiles,
-      avgSpeed: finalAvgSpeed,
-      calories: finalCalories,
-      peakHR: finalPeakHR,
-    }).catch((err: unknown) =>
-      AppLogger.warn('WATCH_BRIDGE', { event: 'summary_push_failed', error: String(err) })
-    );
-
-    // ── 4. Push STOPPED after 10s (matches watch card auto-dismiss timer) ─────
+    // ── 5. Push STOPPED after 10s (matches watch card auto-dismiss timer) ────
     summaryTimeoutRef.current = setTimeout(() => {
       WatchBridge.syncSessionState({ status: 'STOPPED' }).catch(() => {});
       summaryTimeoutRef.current = null;
