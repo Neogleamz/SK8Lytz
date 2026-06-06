@@ -277,7 +277,7 @@ export async function executeConnectToDevices({
       };
 
       const handshakeResults = await Promise.all(rawConns.map(handshakeDevice));
-      const connectedGroup = handshakeResults.filter(Boolean);
+      const connectedGroup = handshakeResults.filter((c): c is Device => c !== null);
 
       if (connectedGroup.length > 0) {
         setConnectedDevices(prev => {

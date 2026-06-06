@@ -28,6 +28,7 @@ import { useBLESweeper } from './ble/useBLESweeper';
 
 import { executePingDevice } from '../services/BlePingService';
 import { executeWriteToDevice, executeWriteChunked, executeProtocolResults as executeProtocolResultsService, BleWriteStateRefs } from '../services/BleWriteDispatcher';
+import { clearWriteQueue } from '../services/BleWriteQueue';
 import { executeRealDisconnect, disconnectFromDevice as keepaliveDisconnect, forceDisconnect as keepaliveForceDisconnect } from '../services/BleLifecycleManager';
 import { executeConnectToDevices } from '../services/BleConnectionManager';
 
@@ -40,7 +41,6 @@ if (Platform.OS !== 'web') {
   State = blePlx.State;
 }
 
-let writeMutex: Promise<boolean | 'partial'> = Promise.resolve(true);
 let writeGeneration = 0; // Increments on every new write; stale debounce checks compare against this
 
 
@@ -415,14 +415,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   // ── State refs and setters for BleWriteDispatcher ─────────────────────────
   const stateRefs = useMemo<BleWriteStateRefs>(() => ({
-    get writeMutex() { return writeMutex; },
     get writeGeneration() { return writeGeneration; },
     writeDebounceTimerRef,
   }), []);
-
-  const setWriteMutex = useCallback((promise: Promise<boolean | 'partial'>) => {
-    writeMutex = promise;
-  }, []);
 
   const setWriteGeneration = useCallback((gen: number) => {
     writeGeneration = gen;
@@ -443,10 +438,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       mtuMapRef.current,
       adapterMapRef.current,
       stateRefs,
-      setWriteMutex,
       setWriteGeneration
     );
-  }, [bleManager, connectedDevices, autoRecovery.ghostedDeviceIds, stateRefs, setWriteMutex, setWriteGeneration]);
+  }, [bleManager, connectedDevices, autoRecovery.ghostedDeviceIds, stateRefs, setWriteGeneration]);
 
   const writeChunked = useCallback(async (
     payload: number[],
@@ -464,6 +458,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   // ── BleLifecycleManager bindings ──────────────────────────────────────────
   const realDisconnect = useCallback(async () => {
+    // Flush pending writes before tearing down GATT connections
+    clearWriteQueue();
     await executeRealDisconnect(
       bleManager,
       connectedDevicesRef,
@@ -502,10 +498,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       mtuMapRef.current,
       adapterMapRef.current,
       stateRefs,
-      setWriteMutex,
       setWriteGeneration
     );
-  }, [bleManager, connectedDevices, autoRecovery.ghostedDeviceIds, stateRefs, setWriteMutex, setWriteGeneration]);
+  }, [bleManager, connectedDevices, autoRecovery.ghostedDeviceIds, stateRefs, setWriteGeneration]);
 
   const derivedBleState: BleConnectionState = 
     bleGateState === 'DISCONNECTING' ? 'DISCONNECTING' :

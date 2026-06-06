@@ -3,9 +3,9 @@ import { Buffer } from 'buffer';
 import { AppLogger } from './AppLogger';
 import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 import type { ProtocolResult } from '../protocols/IControllerProtocol';
+import { enqueueWrite, resolveWritePriority, setWriteQueueGeneration } from './BleWriteQueue';
 
 export interface BleWriteStateRefs {
-  writeMutex: Promise<boolean | 'partial'>;
   writeGeneration: number;
   writeDebounceTimerRef: { current: ReturnType<typeof setTimeout> | null };
 }
@@ -24,7 +24,6 @@ export async function executeWriteToDevice(
   mtuMap: Map<string, number>,
   adapterMap: Map<string, any>,
   stateRefs: BleWriteStateRefs,
-  setWriteMutex: (promise: Promise<boolean | 'partial'>) => void,
   setWriteGeneration: (gen: number) => void
 ): Promise<boolean | 'partial'> {
   const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
@@ -39,6 +38,7 @@ export async function executeWriteToDevice(
     const thisGeneration = opts?.lowPriority ? stateRefs.writeGeneration : stateRefs.writeGeneration + 1;
     if (!opts?.lowPriority) {
       setWriteGeneration(thisGeneration);
+      setWriteQueueGeneration(thisGeneration);
     }
 
     return new Promise((resolve) => {
@@ -60,8 +60,7 @@ export async function executeWriteToDevice(
           ghostedDeviceIds,
           mtuMap,
           adapterMap,
-          stateRefs,
-          setWriteMutex
+          stateRefs
         );
         resolve(result);
       }, 50);
@@ -77,8 +76,7 @@ export async function executeWriteToDevice(
     ghostedDeviceIds,
     mtuMap,
     adapterMap,
-    stateRefs,
-    setWriteMutex
+    stateRefs
   );
 }
 
@@ -91,8 +89,7 @@ async function _executeWriteToDeviceInternal(
   ghostedDeviceIds: string[],
   mtuMap: Map<string, number>,
   adapterMap: Map<string, any>,
-  stateRefs: BleWriteStateRefs,
-  setWriteMutex: (promise: Promise<boolean | 'partial'>) => void
+  stateRefs: BleWriteStateRefs
 ): Promise<boolean | 'partial'> {
   const targets = targetDeviceId
     ? connectedDevices.filter(d => d.id === targetDeviceId)
@@ -164,13 +161,11 @@ async function _executeWriteToDeviceInternal(
     return allSucceeded;
   };
 
-  const currentWrite = (async () => {
-    await stateRefs.writeMutex.catch((e: any) => AppLogger.warn('[BLE] Write mutex pipeline failure', { error: String(e) }));
-    return executeWrite();
-  })();
-
-  setWriteMutex(currentWrite);
-  return currentWrite;
+  // Route through priority queue — priority determined by first opcode byte
+  const priority = capturedGeneration === 0
+    ? resolveWritePriority(payload[0])   // critical path: use opcode classification
+    : 'normal';                           // pattern write: always normal tier
+  return enqueueWrite(priority, executeWrite, capturedGeneration);
 }
 
 /**
@@ -239,23 +234,28 @@ export async function executeWriteChunked(
 
   AppLogger.log('BLE_CHUNKED_WRITE', { payloadLen: totalLen, numChunks: chunks.length, chunkSize });
 
-  for (const chunk of chunks) {
-    const b64 = Buffer.from(chunk).toString('base64');
-    await Promise.all(
-      targets
-        .filter(device => !ghostedDeviceIds.includes(device.id))
-        .map(device => {
-          const deviceAdapter = resolveProtocolForDevice(device.id, adapterMap);
-          return device.writeCharacteristicWithoutResponseForService(
-            deviceAdapter.serviceUUID, deviceAdapter.writeCharacteristicUUID, b64
-          ).catch((e: any) => {
-            AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: String(e) });
-          });
-        })
-    );
-    await new Promise(resolve => setTimeout(resolve, 8));
-  }
-  await new Promise(resolve => setTimeout(resolve, 50));
+  // Wrap entire chunk sequence as single 'bulk' queue entry — chunks must not
+  // be interleaved with other writes (ordering requirement of ZENGGE 0x40 framing).
+  await enqueueWrite('bulk', async () => {
+    for (const chunk of chunks) {
+      const b64 = Buffer.from(chunk).toString('base64');
+      await Promise.all(
+        targets
+          .filter(device => !ghostedDeviceIds.includes(device.id))
+          .map(device => {
+            const deviceAdapter = resolveProtocolForDevice(device.id, adapterMap);
+            return device.writeCharacteristicWithoutResponseForService(
+              deviceAdapter.serviceUUID, deviceAdapter.writeCharacteristicUUID, b64
+            ).catch((e: any) => {
+              AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: String(e) });
+            });
+          })
+      );
+      await new Promise(resolve => setTimeout(resolve, 8));
+    }
+    await new Promise(resolve => setTimeout(resolve, 50));
+    return true;
+  });
 }
 
 /**
@@ -270,7 +270,6 @@ export async function executeProtocolResults(
   mtuMap: Map<string, number>,
   adapterMap: Map<string, any>,
   stateRefs: BleWriteStateRefs,
-  setWriteMutex: (promise: Promise<boolean | 'partial'>) => void,
   setWriteGeneration: (gen: number) => void
 ): Promise<boolean> {
   if (payloads.length === 0) return true;
@@ -282,6 +281,7 @@ export async function executeProtocolResults(
     const thisGeneration = opts?.lowPriority ? stateRefs.writeGeneration : stateRefs.writeGeneration + 1;
     if (!opts?.lowPriority) {
       setWriteGeneration(thisGeneration);
+      setWriteQueueGeneration(thisGeneration);
     }
 
     return new Promise((resolve) => {
@@ -301,8 +301,7 @@ export async function executeProtocolResults(
           ghostedDeviceIds,
           mtuMap,
           adapterMap,
-          stateRefs,
-          setWriteMutex
+          stateRefs
         );
         resolve(res);
       }, 50);
@@ -316,8 +315,7 @@ export async function executeProtocolResults(
     ghostedDeviceIds,
     mtuMap,
     adapterMap,
-    stateRefs,
-    setWriteMutex
+    stateRefs
   );
 }
 
@@ -328,8 +326,7 @@ async function _executeProtocolResultsInternal(
   ghostedDeviceIds: string[],
   mtuMap: Map<string, number>,
   adapterMap: Map<string, any>,
-  stateRefs: BleWriteStateRefs,
-  setWriteMutex: (promise: Promise<boolean | 'partial'>) => void
+  stateRefs: BleWriteStateRefs
 ): Promise<boolean> {
   const executeWrite = async (): Promise<boolean> => {
     if (capturedGeneration !== 0 && capturedGeneration !== stateRefs.writeGeneration) {
@@ -370,13 +367,7 @@ async function _executeProtocolResultsInternal(
     return allSucceeded;
   };
 
-  const currentWrite = (async () => {
-    await stateRefs.writeMutex.catch((e: any) => {
-      AppLogger.warn('[BLE] executeProtocolResults mutex pipeline failure', e);
-    });
-    return executeWrite();
-  })();
-
-  setWriteMutex(currentWrite);
-  return currentWrite;
+  // Route through priority queue
+  const result = await enqueueWrite('normal', executeWrite as () => Promise<boolean | 'partial'>, capturedGeneration);
+  return result !== false;
 }

@@ -97,18 +97,12 @@ export async function createGattSession(
     try {
       const isConnected = await bleManager.isDeviceConnected(mac);
       if (isConnected) {
-        // Device is natively connected — reuse the handle
-        // Try deviceForDevice first (lightweight), fall back to connectedDevices
-        try {
-          conn = await bleManager.deviceForDevice(mac);
-        } catch {
-          // deviceForDevice not available on all platforms — use connectedDevices
-          const devicesList: Device[] = await bleManager.connectedDevices([]).catch(() => []);
-          conn = devicesList.find((d) => d.id === mac) ?? null;
-          if (!conn) {
-            // Last resort: just connect fresh
-            conn = await bleManager.connectToDevice(mac, { timeout });
-          }
+        // Device is natively connected — reuse the handle via connectedDevices lookup
+        const devicesList: Device[] = await bleManager.connectedDevices([]).catch(() => []);
+        conn = devicesList.find((d) => d.id === mac) ?? null;
+        if (!conn) {
+          // Not found in connected list — connect fresh
+          conn = await bleManager.connectToDevice(mac, { timeout });
         }
       } else {
         conn = await bleManager.connectToDevice(
@@ -130,10 +124,10 @@ export async function createGattSession(
         await bleManager.cancelDeviceConnection(mac).catch(() => {});
         await new Promise(resolve => setTimeout(resolve, delay));
       } else if (errStr.includes('already')) {
-        // "already connected" — not an error, grab the handle
-        try {
-          conn = await bleManager.deviceForDevice(mac);
-        } catch {
+        // "already connected" — not an error, grab the handle from connectedDevices
+        const devicesList: Device[] = await bleManager.connectedDevices([]).catch(() => []);
+        conn = devicesList.find((d) => d.id === mac) ?? null;
+        if (!conn) {
           conn = await bleManager.connectToDevice(mac, { timeout });
         }
         break;

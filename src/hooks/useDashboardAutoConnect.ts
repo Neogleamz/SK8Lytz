@@ -22,18 +22,12 @@ import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
 import type { RegisteredGroup, RegisteredDeviceRow } from '../types/ble.types';
 
-/** Minimal device shape needed from useBLE */
-interface BLEDevice {
-  id: string;
-  name?: string | null;
-}
-
 interface UseDashboardAutoConnectOptions {
   isBluetoothSupported: boolean;
   isBluetoothEnabled: boolean;
   isActuallyConnected: boolean;
-  allDevices: BLEDevice[];
-  connectedDevices: BLEDevice[];
+  allDevices: Device[];
+  connectedDevices: Device[];
   connectToDevices: (devices: Device[]) => Promise<void>;
   scanForPeripherals: (options?: { disableProbing?: boolean }) => void;
   requestPermissions: () => Promise<boolean>;
@@ -123,7 +117,7 @@ export function useDashboardAutoConnect({
   // ── Continuous observer: connect queued devices as they appear in scan ───
   // Debounce: batch devices that appear within 500ms into a single connectToDevices call.
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pendingBatchRef = useRef<BLEDevice[]>([]);
+  const pendingBatchRef = useRef<Device[]>([]);
 
   // Stable ref-forwarding: connectToDevices and scanForPeripherals are passed as
   // options and may change identity on re-render. The observer useEffect only depends

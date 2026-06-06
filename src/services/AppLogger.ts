@@ -187,7 +187,14 @@ export type EventType =
   | 'FTUE_HARDWARE_WRITE'
   | 'FTUE_HARDWARE_VERIFIED'
   // ── BLE Group Dropout Coordinator ────────────────────────────────────────
-  | 'AUTO_RECOVERY_GROUP_COORDINATOR';
+  | 'AUTO_RECOVERY_GROUP_COORDINATOR'
+  // ── Recovery Telemetry Aggregation ──────────────────────────────────────────
+  | 'AUTO_RECOVERY_SUMMARY'
+  | 'AUTO_RECOVERY'
+  // ── BLE Write Queue ──────────────────────────────────────────────────────────
+  | 'BLE_WRITE_QUEUE'
+  // ── GATT Mutex ───────────────────────────────────────────────────────────────
+  | 'GATT_LOCK_CONTENTION';
 
 
 
