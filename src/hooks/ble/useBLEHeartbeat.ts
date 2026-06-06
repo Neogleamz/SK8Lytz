@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import { Buffer } from 'buffer';
 import type { Device } from 'react-native-ble-plx';
@@ -30,24 +30,62 @@ export interface UseBLEHeartbeatParams {
 }
 
 /**
+ * pingConnectedDevice — Core liveness probe for a single BLE device.
+ *
+ * Exported as a pure async function for direct unit-testing (no React context
+ * required). Called by useBLEHeartbeat's setInterval on each tick.
+ *
+ * Strategy:
+ *   1. Zengge: sends 0x63 hardware-settings query via writeCharacteristicWithoutResponse.
+ *      Same payload used by recovery ping — proven safe, side-effect-free.
+ *   2. BanlanX / no adapter: readRSSIForDevice as a lightweight liveness probe.
+ *      A single GATT read that reliably surfaces broken links with GATT 133 / 8.
+ *   On any GATT error: cancel the stale handle + call onStaleLinkDetected.
+ */
+export async function pingConnectedDevice(
+  mac: string,
+  bleManager: any,
+  adapter: IControllerProtocol | undefined,
+  onStaleLinkDetected: (deviceId: string) => void,
+): Promise<void> {
+  try {
+    if (adapter) {
+      const queryResult = adapter.buildQuerySettings(false);
+      if (queryResult.packets.length > 0) {
+        const b64 = Buffer.from(queryResult.packets[0]).toString('base64');
+        await bleManager.writeCharacteristicWithoutResponseForDevice(
+          mac,
+          adapter.serviceUUID,
+          adapter.writeCharacteristicUUID,
+          b64,
+        );
+        AppLogger.log('DEVICE_DISCOVERED', { context: 'heartbeat_ping_ok', deviceId: mac });
+        return;
+      }
+    }
+    // BanlanX / unknown adapter fallback: RSSI read as a liveness probe
+    await bleManager.readRSSIForDevice(mac);
+    AppLogger.log('DEVICE_DISCOVERED', { context: 'heartbeat_rssi_ok', deviceId: mac });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    AppLogger.warn('[BLE Heartbeat] Stale link detected — initiating recovery', {
+      deviceId: mac,
+      error: message,
+    });
+    // Cancel the stale GATT handle so the OS releases it immediately.
+    // Swallow cancellation errors — we are already in a broken state.
+    await bleManager.cancelDeviceConnection(mac).catch(() => undefined);
+    // Signal the recovery engine.
+    onStaleLinkDetected(mac);
+  }
+}
+
+/**
  * useBLEHeartbeat — Stale GATT Link Detector
  *
- * Periodically pings each connected device every 45s to verify the BLE link is still
- * alive. On Samsung Galaxy A-series (and similar) Android devices, the OS silently
- * keeps a stale GATT handle alive for minutes after the physical device goes out of
- * range or powers off. Without this heartbeat, the stale link is only detected when
- * the user tries to write a colour — causing visible lag and a slow recovery cycle.
- *
- * Ping strategy (in order):
- *   1. Zengge devices  → sends the 0x63 hardware-settings query (5-byte EEPROM probe).
- *      Same payload used by the recovery ping — proven safe, side-effect-free.
- *   2. BanlanX / no adapter → `readRSSIForDevice` — a single GATT read that costs
- *      ~1ms on wire and reliably surfaces a broken link with GATT status 133 / 8.
- *
- * On any GATT error the hook:
- *   a) Cancels the device connection (clears the stale OS handle immediately).
- *   b) Calls `onStaleLinkDetected(deviceId)` so useBLEAutoRecovery can begin
- *      Phase 1 aggressive reconnection before the user ever opens the controller.
+ * Thin orchestrator: registers a 45s setInterval and calls pingConnectedDevice
+ * for each currently connected device. See pingConnectedDevice for the full
+ * ping strategy and failure handling.
  *
  * Issue ref: MISS-03 — ble_risk_analysis.md
  */
@@ -57,12 +95,6 @@ export function useBLEHeartbeat({
   adapterMapRef,
   onStaleLinkDetected,
 }: UseBLEHeartbeatParams): void {
-  // Capture stable callback ref to prevent stale closures in the interval.
-  const onStaleLinkRef = useRef(onStaleLinkDetected);
-  useEffect(() => {
-    onStaleLinkRef.current = onStaleLinkDetected;
-  }, [onStaleLinkDetected]);
-
   useEffect(() => {
     if (Platform.OS === 'web' || !bleManager) return;
 
@@ -70,56 +102,15 @@ export function useBLEHeartbeat({
       const devices = connectedDevicesRef.current;
       if (devices.length === 0) return;
 
-      // Ping all connected devices in parallel — failures are independent.
       await Promise.allSettled(
-        devices.map(async (device) => {
-          const mac = device.id;
-          const adapter = adapterMapRef.current.get(mac);
-
-          try {
-            if (adapter) {
-              // ── Zengge path: 0x63 hardware-settings query ──────────────────
-              const queryResult = adapter.buildQuerySettings(false);
-              if (queryResult.packets.length > 0) {
-                const b64 = Buffer.from(queryResult.packets[0]).toString('base64');
-                await bleManager.writeCharacteristicWithoutResponseForDevice(
-                  mac,
-                  adapter.serviceUUID,
-                  adapter.writeCharacteristicUUID,
-                  b64,
-                );
-                AppLogger.log('DEVICE_DISCOVERED', {
-                  context: 'heartbeat_ping_ok',
-                  deviceId: mac,
-                });
-                return;
-              }
-            }
-
-            // ── BanlanX / unknown adapter fallback: RSSI read ───────────────
-            // readRSSIForDevice is a single-packet GATT read — if the device is
-            // unreachable the stack throws synchronously with GATT 133 / 8.
-            await bleManager.readRSSIForDevice(mac);
-            AppLogger.log('DEVICE_DISCOVERED', {
-              context: 'heartbeat_rssi_ok',
-              deviceId: mac,
-            });
-          } catch (err: unknown) {
-            const message = err instanceof Error ? err.message : String(err);
-            AppLogger.warn('[BLE Heartbeat] Stale link detected — initiating recovery', {
-              deviceId: mac,
-              error: message,
-            });
-
-            // Cancel the stale GATT handle so the OS releases it immediately.
-            // Swallow cancellation errors — we are already in a broken state.
-            await bleManager.cancelDeviceConnection(mac).catch(() => undefined);
-
-            // Signal the recovery engine. useBLEAutoRecovery will begin Phase 1
-            // aggressive reconnection immediately.
-            onStaleLinkRef.current(mac);
-          }
-        }),
+        devices.map((device) =>
+          pingConnectedDevice(
+            device.id,
+            bleManager,
+            adapterMapRef.current.get(device.id),
+            onStaleLinkDetected,
+          )
+        ),
       );
     }, HEARTBEAT_INTERVAL_MS);
 
@@ -128,5 +119,5 @@ export function useBLEHeartbeat({
   // not in deps array; interval callback always reads .current at fire time.
   // bleManager is stable after mount (BleManager singleton).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bleManager]);
+  }, [bleManager, onStaleLinkDetected]);
 }

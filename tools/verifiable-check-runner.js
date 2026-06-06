@@ -108,13 +108,26 @@ if (gitStatus !== '') {
 const currentCommit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
 const timestamp = new Date().toISOString();
 
-// Ensure node_modules directory junction exists if inside a worktree
+// Ensure node_modules directory junction exists if inside a worktree.
+// fortressRoot is resolved to an absolute path so the mklink target is always correct
+// regardless of whether gitCommonDir is returned as a relative or absolute path.
 let fortressRoot = WORKTREE_ROOT;
 if (gitCommonDir !== '.git') {
-  fortressRoot = path.dirname(gitCommonDir);
-  if (!fs.existsSync(path.join(WORKTREE_ROOT, 'node_modules'))) {
-    console.log('[Verify] Re-linking node_modules directory junction...');
-    execSync(`cmd.exe /c "mklink /j node_modules \\"${fortressRoot}\\node_modules\\""`);
+  // Resolve to absolute path — gitCommonDir can be relative (e.g. "../../SK8Lytz/.git")
+  // which makes path.dirname() produce a wrong fortressRoot when used as an mklink target.
+  fortressRoot = path.resolve(gitCommonDir, '..');
+  const nodeModulesTarget = path.join(WORKTREE_ROOT, 'node_modules');
+  if (!fs.existsSync(nodeModulesTarget)) {
+    console.log('[Verify] Linking node_modules directory junction...');
+    try {
+      execSync(`cmd.exe /c "mklink /j "${nodeModulesTarget}" "${path.join(fortressRoot, 'node_modules')}""`);
+      console.log('[Verify] node_modules junction created.');
+    } catch (junctionErr) {
+      // "Cannot create a file when that file already exists" — junction was created between
+      // the existsSync check and the mklink call (race), or it is a real directory.
+      // Either way the junction is present; log and continue rather than crashing the suite.
+      console.log('[Verify] node_modules junction already present — skipping relink.');
+    }
   }
 }
 
