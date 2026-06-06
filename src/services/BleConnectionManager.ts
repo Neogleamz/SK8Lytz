@@ -134,21 +134,30 @@ export async function executeConnectToDevices({
 
         let conn: Device | null = null;
         let lastErr: Error | null = null;
-        for (let attempt = 1; attempt <= 2; attempt++) {
+        // Exponential backoff delays for GATT 133 recovery.
+        // Attempt 2: 500ms + refreshGatt (clears stale GATT cache via BluetoothGatt.refresh())
+        // Attempt 3: 1500ms + refreshGatt (gives Android BT controller time to fully reset)
+        // Attempt 4: 4000ms + refreshGatt (last resort — controller may need a full reset cycle)
+        const GATT_BACKOFF_MS = [500, 1500, 4000] as const;
+        for (let attempt = 1; attempt <= 3; attempt++) {
           try {
             const isConnected = await bleManager.isDeviceConnected(device.id);
-            conn = isConnected ? device : await bleManager.connectToDevice(device.id);
+            conn = isConnected ? device : await bleManager.connectToDevice(
+              device.id,
+              attempt > 1 ? { refreshGatt: 'OnConnected' } : undefined,
+            );
             break;
-          } catch (e: any) {
-            lastErr = e;
+          } catch (e: unknown) {
+            lastErr = e instanceof Error ? e : new Error(String(e));
             const errStr = String(e);
             const isTransient = errStr.includes('133') || errStr.includes('133 (0x85)')
               || errStr.includes('connection failed') || errStr.includes('timed out')
               || errStr.includes('Peer removed');
-            if (isTransient) {
-              AppLogger.warn(`[BLE] Transient error linking ${device.id}. Attempt ${attempt}/2...`, { error: errStr });
+            if (isTransient && attempt < 3) {
+              const delay = GATT_BACKOFF_MS[attempt - 1];
+              AppLogger.warn(`[BLE] GATT 133 on ${device.id}. Attempt ${attempt}/3 — retrying in ${delay}ms with refreshGatt`, { error: errStr });
               await bleManager.cancelDeviceConnection(device.id).catch(() => {});
-              await new Promise(resolve => setTimeout(resolve, 300));
+              await new Promise(resolve => setTimeout(resolve, delay));
             } else {
               break;
             }

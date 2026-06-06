@@ -84,6 +84,11 @@ export async function createGattSession(
   let conn: Device | null = null;
   let lastErr: Error | null = null;
 
+  // Exponential backoff delays for GATT 133 recovery (indexed by attempt-1).
+  // refreshGatt: 'OnConnected' triggers BluetoothGatt.refresh() via reflection,
+  // clearing the stale service table that causes Android GATT 133 (0x85) errors.
+  const GATT_BACKOFF_MS = [500, 1500] as const;
+
   for (let attempt = 1; attempt <= retries; attempt++) {
     if (signal?.aborted) {
       throw new Error(`[BleSessionFactory] Aborted before connect (${context})`);
@@ -93,33 +98,37 @@ export async function createGattSession(
       const isConnected = await bleManager.isDeviceConnected(mac);
       if (isConnected) {
         // Device is natively connected — reuse the handle
-        // Try deviceForDevice first (lightweight), fall back to the device itself
+        // Try deviceForDevice first (lightweight), fall back to connectedDevices
         try {
           conn = await bleManager.deviceForDevice(mac);
         } catch {
           // deviceForDevice not available on all platforms — use connectedDevices
           const devicesList: Device[] = await bleManager.connectedDevices([]).catch(() => []);
-          conn = devicesList.find((d) => d.id === mac);
+          conn = devicesList.find((d) => d.id === mac) ?? null;
           if (!conn) {
             // Last resort: just connect fresh
             conn = await bleManager.connectToDevice(mac, { timeout });
           }
         }
       } else {
-        conn = await bleManager.connectToDevice(mac, { timeout });
+        conn = await bleManager.connectToDevice(
+          mac,
+          attempt > 1 ? { timeout, refreshGatt: 'OnConnected' } : { timeout },
+        );
       }
       break;
-    } catch (e: any) {
-      lastErr = e;
+    } catch (e: unknown) {
+      lastErr = e instanceof Error ? e : new Error(String(e));
       const errStr = String(e);
       const isTransient = errStr.includes('133') || errStr.includes('133 (0x85)')
         || errStr.includes('connection failed') || errStr.includes('timed out')
         || errStr.includes('Peer removed');
 
-      if (isTransient) {
-        AppLogger.warn(`[BleSessionFactory] Transient error linking ${mac}. Attempt ${attempt}/${retries}...`, { context, error: errStr });
+      if (isTransient && attempt < retries) {
+        const delay = GATT_BACKOFF_MS[attempt - 1] ?? 1500;
+        AppLogger.warn(`[BleSessionFactory] GATT 133 on ${mac}. Attempt ${attempt}/${retries} — retrying in ${delay}ms with refreshGatt`, { context, error: errStr });
         await bleManager.cancelDeviceConnection(mac).catch(() => {});
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, delay));
       } else if (errStr.includes('already')) {
         // "already connected" — not an error, grab the handle
         try {
@@ -129,7 +138,7 @@ export async function createGattSession(
         }
         break;
       } else {
-        // Non-transient, non-recoverable error — don't retry
+        // Non-transient or final attempt — don't retry
         break;
       }
     }
