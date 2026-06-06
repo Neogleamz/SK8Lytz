@@ -155,6 +155,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const deviceRecoveredCallbackRef = useRef<((deviceId: string) => void) | undefined>(undefined);
   const hardwareProbedCallbackRef = useRef<((deviceId: string, config: any) => void) | undefined>(undefined);
   const connectedDevicesRef = useRef<Device[]>([]);
+  const allDevicesRef = useRef<Device[]>([]);
   const droppedOutDeviceIdsRef = useRef<string[]>([]);
   const blacklistedMacsRef = useRef<string[]>([]);
 
@@ -183,6 +184,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   useEffect(() => { 
     connectedDevicesRef.current = connectedDevices; 
   }, [connectedDevices]);
+
+  useEffect(() => {
+    allDevicesRef.current = allDevices;
+  }, [allDevices]);
 
   const handleNotification = (error: any, characteristic: any, deviceId: string) => {
     if (error) {
@@ -314,6 +319,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     },
     connectedDevicesRef,
     onGroupDropout: async (devices: Device[]) => connectToDevicesRef.current(devices),
+    getSweepedDevice: (deviceId: string) => allDevicesRef.current.find(d => d.id === deviceId),
   });
 
   // ── Overwatch: Silent Sweeper + Interrogator Queue ────────────────────────

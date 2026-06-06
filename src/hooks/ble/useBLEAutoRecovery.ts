@@ -57,6 +57,12 @@ export interface UseBLEAutoRecoveryProps {
    * Falls back to individual loops if omitted.
    */
   onGroupDropout?: (devices: Device[]) => Promise<void>;
+  /**
+   * Look up a device currently visible in the sweeper's allDevices scan results.
+   * Called in Phase 3 passive recovery mode every 5s — no GATT lock acquired.
+   * Returns the live Device object if the MAC is currently being advertised.
+   */
+  getSweepedDevice?: (deviceId: string) => Device | undefined;
 }
 
 
@@ -70,6 +76,16 @@ export const MAX_RECOVERY_ATTEMPTS = 360;
 const RECOVERY_BASE_MS = 1500;
 /** Maximum delay per attempt, before jitter is added. */
 const RECOVERY_MAX_MS = 30_000;
+
+// ── 3-Phase Recovery Boundaries ──────────────────────────────────────────────
+// Phase 1 (Aggressive):  attempts 0..PHASE_1_MAX → fast exponential backoff
+// Phase 2 (Moderate):    attempts PHASE_1_MAX+1..PHASE_2_MAX → flat 20s + jitter
+// Phase 3 (Passive):     exit GATT loop, watch sweeper for MAC re-advertisement
+const PHASE_1_MAX_ATTEMPTS = 12;        // ~0–2 minutes aggressive window
+const PHASE_2_MAX_ATTEMPTS = 35;        // ~2–10 minutes moderate window
+const PHASE_2_BACKOFF_MS = 20_000;      // flat 20s base + jitter in Phase 2
+const PHASE_3_POLL_INTERVAL_MS = 5_000; // 5s sweeper-watch tick (zero GATT)
+const PHASE_3_MAX_POLLS = 120;          // 120 × 5s = 10 min passive ceiling
 
 /**
  * Calculates the backoff delay in milliseconds for the given attempt number.
@@ -110,6 +126,7 @@ export function useBLEAutoRecovery({
   onMtuNegotiated,
   connectedDevicesRef,
   onGroupDropout,
+  getSweepedDevice,
 }: UseBLEAutoRecoveryProps) {
   const [ghostedDeviceIds, setGhostedDeviceIds] = useState<string[]>([]);
   const ghostedRefs = useRef<string[]>([]);
@@ -158,13 +175,22 @@ export function useBLEAutoRecovery({
 
         let releaseFn: (() => void) | null = null;
         try {
-          const backoff = getRecoveryBackoffMs(attempts);
+          // Phase-aware backoff: aggressive (Phase 1) or moderate (Phase 2)
+          const backoff = attempts <= PHASE_1_MAX_ATTEMPTS
+            ? getRecoveryBackoffMs(attempts)                              // Phase 1: exponential
+            : PHASE_2_BACKOFF_MS + Math.random() * RECOVERY_BASE_MS;     // Phase 2: flat 20s + jitter
           await new Promise(r => setTimeout(r, backoff));
 
           // Safety check after sleep — token or ghost list may have changed
           if (cancelTokenRef.current !== myToken) break;
           if (!ghostedRefs.current.includes(deviceId)) break;
           attempts++;
+
+          // Phase 2 ceiling — transition to Phase 3 passive mode
+          if (attempts > PHASE_2_MAX_ATTEMPTS) {
+            AppLogger.log('AUTO_RECOVERY', { deviceId, event: 'phase2_exhausted_entering_passive', attempts });
+            break; // exits while loop → falls to Phase 3 below
+          }
 
           // FIX: Hard ceiling — eject device after MAX_RECOVERY_ATTEMPTS failures.
           if (hasExceededMaxRecovery(attempts)) {
@@ -274,7 +300,89 @@ export function useBLEAutoRecovery({
       }
     };
 
-    const loopPromise = attemptRecoveryLoop();
+    // ── Phase 3: Passive sweeper-watch mode ────────────────────────────────
+    // Device is out of range. Stop GATT hammering. Watch sweeper allDevices
+    // for re-advertisement. Zero GATT lock acquisitions in this phase.
+    const phase3PassiveWatch = async () => {
+      // Only enter Phase 3 if the device is still ghosted (Phase 1/2 didn't recover it)
+      if (!ghostedRefs.current.includes(deviceId)) return;
+      if (cancelTokenRef.current !== myToken) return;
+
+      AppLogger.log('AUTO_RECOVERY', { phase: 3, deviceId, event: 'entering_passive_mode' });
+
+      let phase3Polls = 0;
+      while (ghostedRefs.current.includes(deviceId) && phase3Polls < PHASE_3_MAX_POLLS) {
+        if (cancelTokenRef.current !== myToken) return;
+        phase3Polls++;
+        await new Promise(r => setTimeout(r, PHASE_3_POLL_INTERVAL_MS));
+        if (cancelTokenRef.current !== myToken) return;
+        if (!ghostedRefs.current.includes(deviceId)) return; // cleared by another path
+
+        const sweepedDevice = getSweepedDevice?.(deviceId);
+        if (!sweepedDevice) continue; // not seen yet — keep polling
+
+        // MAC reappeared in scan results — attempt single GATT reconnect
+        AppLogger.log('AUTO_RECOVERY', { phase: 3, deviceId, event: 'mac_reappeared_attempting_reconnect' });
+        let releaseFn: (() => void) | null = null;
+        try {
+          const lockHandle = await acquireGattLock(2);
+          if (!lockHandle || cancelTokenRef.current !== myToken) break;
+          const { release, signal } = lockHandle;
+          releaseFn = release;
+
+          const { conn, adapter: recoveryAdapter } = await createGattSession(bleManager, deviceId, {
+            timeout: 3500, retries: 1, signal, context: 'autoRecoveryPhase3',
+          });
+          if (signal.aborted) break;
+
+          onAdapterResolved(conn.id, recoveryAdapter);
+
+          try {
+            const mtuResult = await conn.requestMTU(512);
+            onMtuNegotiated?.(conn.id, (mtuResult?.mtu ?? 186) > 23 ? (mtuResult?.mtu ?? 186) : 186);
+          } catch { /* non-fatal */ }
+
+          if (disconnectListeners.current[conn.id]) {
+            disconnectListeners.current[conn.id].remove();
+            delete disconnectListeners.current[conn.id];
+          }
+          disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: Error | null) => {
+            onOrganicDisconnect(error, conn.id);
+          });
+          conn.monitorCharacteristicForService(
+            recoveryAdapter.serviceUUID,
+            recoveryAdapter.notifyCharacteristicUUID,
+            (error: Error | null, characteristic: import('react-native-ble-plx').Characteristic | null) =>
+              handleNotification(error, characteristic, conn.id)
+          );
+
+          setConnectedDevices(prev => prev.map(d => d.id === deviceId ? conn : d));
+          ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
+          setGhostedDeviceIds([...ghostedRefs.current]);
+          AppLogger.log('AUTO_RECOVERY_SUCCESS', { deviceId, phase: 3 });
+          onDeviceRecovered?.(conn.id);
+          return; // success — exit Phase 3
+        } catch (e: unknown) {
+          AppLogger.warn('[AutoRecovery] Phase 3 reconnect failed — ejecting', { deviceId, error: String(e) });
+          break; // advertising but won't connect — give up
+        } finally {
+          if (releaseFn) releaseFn();
+        }
+      }
+
+      // Phase 3 exhausted OR reconnect failed — eject ghost entirely
+      if (ghostedRefs.current.includes(deviceId)) {
+        AppLogger.warn('AUTO_RECOVERY', { deviceId, event: 'phase3_exhausted_ejecting' });
+        ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
+        setGhostedDeviceIds([...ghostedRefs.current]);
+        setConnectedDevices(prev => prev.filter(d => d.id !== deviceId));
+      }
+    };
+
+    const loopPromise = (async () => {
+      await attemptRecoveryLoop();
+      await phase3PassiveWatch();
+    })();
     activeLoopsRef.current.push(loopPromise);
     // Clean up completed loops
     loopPromise.finally(() => {
