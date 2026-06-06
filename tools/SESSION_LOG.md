@@ -11,6 +11,50 @@
 
 ---
 
+## SESSION: 2026-06-06 (Second Block) — Agent System Overhaul + Workflow Consolidation
+
+### 🗂️ Artifacts Created This Session
+| Type | Link | Created | Summary |
+|------|------|---------|---------||
+| Rules | [CONSTITUTION.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.agents/rules/CONSTITUTION.md) | 06:00 | P1-P5 priority principles — the system fallback for all unscripted situations |
+| Rules | [agent-behavior.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.agents/rules/agent-behavior.md) | 06:00 | Rule 0 (session state header, cold-start detection, handoff gate), JIT micro-reads, 11-persona elite profiles, self-evolution loop |
+| Workflows | [release-notes.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.agents/workflows/release-notes.md) | 06:20 | Consolidated changelog+pr-summary into one workflow, two outputs |
+| Tool | [cheat-sheet.html](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/cheat-sheet.html) | 06:04 | User-facing reference: 7 tier groups, QA pipeline visual, magic words, all personas |
+| Ledger | [FRICTION_LEDGER.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/FRICTION_LEDGER.md) | 06:00 | 12 Victory Snapshots logged; 0 open events |
+
+---
+
+### [MERGE] 2026-06-06T06:28 — Agent System Overhaul @ `2fb2045f`
+**What shipped:**
+- `CONSTITUTION.md` (new) — P1 Evidence > P2 Identity > P3 System > P4 Surgical > P5 Grow
+- `agent-behavior.md` — Rule 0 (state header + cold-start + handoff gate), Rules 1–5 annotated with Derives-from + Because, JIT micro-reads, full 11-persona elite profiles, Peer Drift Watch table, self-evolution 3-strike loop
+- `prime-directive.md` — Fix 5 JIT micro-reads (5 personas × 3-point recite before action)
+- All 34 workflows — persona headers normalized, team-roster.md references updated
+- `audit-codebase.md` — bundle-audit Step 6 folded in (Bundle & Dependency Weight Check)
+- `release-notes.md` (new) — CHANGELOG + PR description in one pass
+- `ship-it.md` — Phase 1: bundle-audit → audit-codebase; Phase 3: changelog+pr-summary → release-notes
+- `smoke-test.md`, `isolated-test.md`, `diff-review.md`, `qa-tester.md` — QA Step N of 4 lifecycle headers
+- `product-alignment.md` — standalone-use clarification header
+- `bundle-audit.md`, `changelog.md`, `pr-summary.md` — deprecation redirect notices
+- `cheat-sheet.html` — 7-tier grouped layout replacing flat 34-item table
+- `FRICTION_LEDGER.md` (new) — 12 Victory Snapshots, 0 open events, evolution metrics
+**Verify result:** TSC ✅ | Jest 128/128 ✅ | Husky pre-commit ✅
+**Files touched:** 40 files changed, 2411 insertions, 298 deletions
+
+---
+
+### [EVENT] 2026-06-06T06:28 — Wind-Down
+**What shipped:**
+- See [MERGE] above — full agent system overhaul committed as `2fb2045f`
+**AI failure pattern:** Supabase log API returned 404 during health check (endpoint Not Found). This may indicate the project ID is mismatched or the project is paused. River noted it — add Supabase log endpoint verification to next session's `/hello` checklist.
+**User pattern:** User drove the entire session with clear improvement questions ("what are we missing?", "fix all 6", "look at ALL workflows not just those 10"). No hounding required — user spotted the gaps themselves but the system should have caught them via Reyes Knowledge-First.
+**Active sprint state:** No active worktree. Sprint slot AVAILABLE. Next priority: `ble/partial-group-connectivity-ui` (NEEDS PLAN) or fresh intake.
+**Master HEAD:** `2fb2045f`
+**Friction Audit:** 2 new Victory Snapshots filed (VICTORY-011, VICTORY-012) | 0 existing events incremented | 0 at 3 strikes | Friction Ledger: CLEAN ✅
+**System evolution:** CONSTITUTION.md created · agent-behavior.md Rules 0–5 + 12–14 upgraded · 34 workflows normalized · workflow consolidation (3 deprecated, 1 new) · cheat-sheet.html rebuilt with 7-tier taxonomy
+
+---
+
 ## SESSION: 2026-06-06 — BLE Resilience + Session Integrity + Ship-It
 
 ### 🗂️ Artifacts Created This Session

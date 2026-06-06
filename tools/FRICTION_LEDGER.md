@@ -110,18 +110,34 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Filed To:** `agent-behavior.md` Rules 1–5, `prime-directive.md` Hard Stops table
 - **Date Resolved:** 2026-06-06
 
+### [VICTORY-011] Flat Workflow List (No Hierarchy = Apparent Duplication)
+- **Pattern:** 34 workflows presented as a flat list made unrelated tools look equivalent (e.g., /tdd and /start-stack appearing side-by-side). Users couldn't tell when to reach for which tool.
+- **Occurrences Before Fix:** Flagged by user 2026-06-06: "i feel like health sweep - smoke test - product alignment... ARE ALL VERY SIMILAR and confusing"
+- **Root Cause:** Cheat sheet used one flat alphabetical table. No tier grouping, no lifecycle position, no sequence context.
+- **Fix Applied:** Cheat sheet rebuilt with 7 color-coded tier groups (Session/Task/Dev/QA/Release/Maintenance/Infra). QA pipeline sequence visual added (smoke-test→isolated-test→diff-review→qa-tester). Each QA workflow now has a lifecycle position header (Step N of 4 + sequence breadcrumb).
+- **Filed To:** `tools/cheat-sheet.html`, `smoke-test.md`, `isolated-test.md`, `diff-review.md`, `qa-tester.md`
+- **Date Resolved:** 2026-06-06
+
+### [VICTORY-012] Redundant Standalone Workflows (bundle-audit, changelog, pr-summary)
+- **Pattern:** `bundle-audit` was 80% duplicate of `audit-codebase`. `changelog` and `pr-summary` ran the same git commands against the same data for two different outputs but had to be called separately. `ship-it` called all three independently.
+- **Root Cause:** Workflows added incrementally over time without a consolidation review. No taxonomy existed to catch when a new workflow was subsumed by an existing one.
+- **Fix Applied:** `bundle-audit` folded into `audit-codebase` Step 6 (Bundle & Dependency Weight Check). `changelog` + `pr-summary` merged into new `release-notes.md` (two outputs, one workflow). `ship-it` updated to call consolidated workflows. Old files redirected with deprecation notices.
+- **Filed To:** `audit-codebase.md`, `release-notes.md` (new), `ship-it.md`, `bundle-audit.md`, `changelog.md`, `pr-summary.md`
+- **Date Resolved:** 2026-06-06
+
 ---
 
 ## 📊 Evolution Metrics
 
 | Metric | Value |
 |---|---|
-| Total Friction Events Filed | 10 |
-| Resolved (Victory Snapshots) | 10 |
+| Total Friction Events Filed | 12 |
+| Resolved (Victory Snapshots) | 12 |
 | Open / Monitoring | 0 |
 | Rules Updated This Session | Rules 0–5, 12–14 + 34 workflows + team-roster.md + prime-directive.md |
-| New Files Created | `CONSTITUTION.md`, `FRICTION_LEDGER.md` |
-| System Capability Delta | +Constitution (fallback for all unscripted situations), +JIT re-reads, +cold-start detection, +handoff completeness gate, +state header enforcement |
+| New Files Created | `CONSTITUTION.md`, `FRICTION_LEDGER.md`, `release-notes.md`, `cheat-sheet.html` |
+| Workflows Consolidated | `bundle-audit` → `audit-codebase` · `changelog`+`pr-summary` → `release-notes` |
+| System Capability Delta | +Constitution (P1-P5 fallback) · +JIT re-reads · +cold-start detection · +handoff gate · +state header · +7-tier cheat sheet · +QA pipeline sequence |
 | Re-Derivation Loops Prevented | ∞ (Reyes Knowledge-First + SESSION_LOG live updates) |
 | Hounding Incidents Expected Going Forward | 0 (The No-Hounding Compact + P5 Grow the System) |
 
