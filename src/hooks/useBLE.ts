@@ -26,6 +26,7 @@ import { useBLEScanner } from './ble/useBLEScanner';
 import { useBLEAutoRecovery } from './ble/useBLEAutoRecovery';
 import { useBLESweeper } from './ble/useBLESweeper';
 import { useBLEHeartbeat } from './ble/useBLEHeartbeat';
+import { useBLERSSIMonitor } from './ble/useBLERSSIMonitor';
 
 import { executePingDevice } from '../services/BlePingService';
 import { executeWriteToDevice, executeWriteChunked, executeProtocolResults as executeProtocolResultsService, BleWriteStateRefs } from '../services/BleWriteDispatcher';
@@ -96,6 +97,8 @@ export interface BluetoothLowEnergyApi {
   isSweeperActive: boolean;
   /** In-memory EEPROM cache keyed by uppercase MAC — populated by the Interrogator Queue */
   hwCache: Record<string, any>;
+  /** Live post-connect RSSI map keyed by device MAC — updated every 30s by useBLERSSIMonitor. */
+  rssiMap: Record<string, number>;
 }
 
 export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnergyApi {
@@ -399,6 +402,22 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     },
   });
 
+  // ── Post-Connect Signal Quality Monitor (BAT-02) ─────────────────────────
+  // Polls readRSSIForDevice every 30s to track live signal strength per device.
+  // Surfaces rssiMap to UI (device card wifi icon) and triggers proactive
+  // reconnect at -82 dBm to pick a better radio channel before the user notices.
+  const rssiMap = useBLERSSIMonitor({
+    bleManager,
+    connectedDevicesRef,
+    onCriticalSignal: (mac: string) => {
+      // Only reconnect if device is not already in the recovery queue.
+      if (!autoRecovery.ghostedDeviceIds.includes(mac)) {
+        AppLogger.warn('[BLE RSSI] Critical signal — proactive reconnect', { mac });
+        autoRecovery.initiateRecovery(mac);
+      }
+    },
+  });
+
   const connectToDevices = useCallback(async (devices: Device[]) => {
     await executeConnectToDevices({
       devices,
@@ -567,6 +586,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     burstScan: sweeper.burstScan,
     isSweeperActive: sweeper.isSweeperActive,
     hwCache: sweeper.hwCache,
+    rssiMap,
     // ── Overwatch-aware scanForPeripherals ─────────────────────────────────
     // When Sweeper is running: delegate to burstScan() (elevate scan mode 5s then revert).
     // When Sweeper is idle: fall through to the original useBLEScanner.scanForPeripherals.
@@ -595,5 +615,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     sweeper.isSweeperActive,
     sweeper.hwCache,
     sweeper.burstScan,
+    rssiMap,
   ]);
 }

@@ -105,6 +105,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     isSweeperActive,
     burstScan,
     ghostedDeviceIds,
+    rssiMap,
   } = ble;
 
   // ── Registration system ────────────────────────────────────────────────────
@@ -813,7 +814,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       const mergedItem = {
         ...item,
         ...cachedConfig,
-        name: item.device_name || cachedConfig.name || item.name // Map DB field to component prop
+        name: item.device_name || cachedConfig.name || item.name, // Map DB field to component prop
+        // Inject live post-connect RSSI so the wifi icon reflects current signal quality.
+        // Falls back to scan-time rssi on the raw item (stale after connect, but better than null).
+        rssi: rssiMap[mac] ?? item.rssi ?? null,
     };
     // Read last known pattern state from ledger for preview swatch (synchronous, in-memory only).
     const ledgerState = ledgerLoadSync(normalizeMac(mac));
@@ -865,7 +869,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       />
     </View>
     ); // close return
-  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs, allDevices, connectToDevices, scanForPeripherals, writeToDevice, ledgerLoadSync]);
+  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs, allDevices, connectToDevices, scanForPeripherals, writeToDevice, ledgerLoadSync, rssiMap]);
 
   const mappedRegisteredDevicesForModal = useMemo(() => registeredDevices.map((d) => ({
     // IDENTITY KEY: always use device_mac (BLE MAC address), NOT d.id (Supabase UUID).
