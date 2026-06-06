@@ -399,3 +399,11 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Rejected:** Incremental standalone component spike.
 **Don't re-derive:** The user explicitly requested a full implementation plan across all files rather than a safe isolated test. We are bypassing the spike phase and moving straight to full architecture planning.
 **Source:** User instruction 2026-06-06T16:25.
+### [MERGE] 2026-06-06T21:47 — ble/xstate-fsm-migration -> master @ 5cdeb702
+**What merged:** 
+- Migrated global BLE state management from scattered refs and BleStateMachine class to an XState v5 FSM.
+- Added BleMachine.ts and BleMachine.types.ts
+- Refactored orchestrator useBLE.ts and sub-hooks to dispatch events to leMachine.
+- Added legacy shim to leGateRef to satisfy typescript checks without breaking any untested workflows.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** src/hooks/useBLE.ts, src/hooks/ble/useBLEAutoRecovery.ts, src/hooks/ble/useBLEScanner.ts, src/hooks/ble/useBLESweeper.ts, src/hooks/useDashboardAutoConnect.ts, src/services/BleLifecycleManager.ts, src/services/ble/BleMachine.ts

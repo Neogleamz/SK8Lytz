@@ -431,3 +431,12 @@ This document contains the archive of all successfully completed and merged task
   - **Outcome:** Added notif_preferences JSONB column. Updated AuthProfileService.updateProfile and useAccountOverview to sync local preferences to the cloud and merge them on load.
 
 *End of Archive.*
+### [BATCH:ble-p2-xstate-fsm] — 📋 Sequential (touches all BLE state files)
+
+- [x] **le/xstate-fsm-migration** — migrated BLE engine to XState v5 FSM. Merged \5cdeb702\.
+  - **Tags:** [🕵️ SPIKE] [✅ VERIFIED] [CORE] [H-RISK] [Feast] [🤖 THINK] [BATCH:ble-p2-xstate-fsm]
+  - **Plan:** 📎 PLAN-ble-xstate-fsm-migration.md
+  - **Source of Truth:** 📖 [BleStateMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleStateMachine.ts)
+  - **Goal:** Evaluate migrating BLE state management from scattered refs/effects/tagged unions to XState statecharts. Per-device FSMs composed into group-level summaries. Invalid states become structurally impossible.
+  - **Details:** COMPLETE — Migrated BLE system to XState v5 (useMachine). Created BleMachine.ts and BleMachine.types.ts. Replaced BleStateMachine class. Added shim to leGateRef to prevent regression and satisfy type checking. Verified via 
+pm run verify which includes QA tests.
