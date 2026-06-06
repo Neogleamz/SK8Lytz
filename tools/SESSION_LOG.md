@@ -11,6 +11,20 @@
 
 ---
 
+## SESSION: 2026-06-06 (Third Block) — Account Hardening Batch
+
+### [MERGE] 2026-06-06T21:01 — BATCH:account-hardening (M-04) @ `60067804`
+**What merged:** M-04: Sync notification preferences to cloud
+- Applied `notif_preferences` JSONB column to `user_profiles`
+- Regenerated Supabase TS types via `/db-sync`
+- Updated `ProfileService.types.ts` `UserProfile` interface
+- Updated `AuthProfileService.updateProfile` to sync `notif_preferences` to Supabase
+- Updated `useAccountOverview.ts` `saveNotifPrefs` and `loadData` to sync and merge cloud preferences
+**Verify result:** TSC ✅, Jest ✅, Gates ✅
+**Files touched:** `useAccountOverview.ts`, `AuthProfileService.ts`, `ProfileService.types.ts`, `supabase.ts`, migration SQL file
+
+---
+
 ## SESSION: 2026-06-06 (Second Block) — Agent System Overhaul + Workflow Consolidation
 
 ### 🗂️ Artifacts Created This Session
