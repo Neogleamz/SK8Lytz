@@ -412,4 +412,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
  * * R e j e c t e d : * *   L e a v i n g   t h e   s c r i p t   v u l n e r a b l e   a n d   r e l y i n g   p u r e l y   o n   a g e n t   m e m o r y . 
  * * D o n ' t   r e - d e r i v e : * *   P o w e r S h e l l   $ E r r o r A c t i o n P r e f e r e n c e   =   ' S t o p '   d o e s   n o t   c a t c h   g i t . e x e   f a i l u r e s .   T h e   g a t e k e e p e r   r e l i e s   o n   c h e c k i n g   $ L A S T E X I T C O D E   f o r   E V E R Y   e x t e r n a l   c a l l . 
  * * S o u r c e : * *   t o o l s / f o r t r e s s - g a t e k e e p e r . p s 1 : 5  
+ # # #   [ D E C I S I O N ]   2 0 2 6 - 0 6 - 0 6 T 1 8 : 3 1      E n f o r c e d   A n t i - H a l l u c i n a t i o n   B o a r d   G u a r d 
+ * * D e c i s i o n : * *   U p d a t e d   t e a m - r o s t e r . m d ,   a g e n t - b e h a v i o r . m d ,   a n d   s t a r t - t a s k . m d   t o   s t r i c t l y   m a n d a t e   c a l l i n g   v i e w _ f i l e   o n   S K 8 L y t z _ B u c k e t _ L i s t . m d   b e f o r e   s u g g e s t i n g   t h e   n e x t   t a s k . 
+ * * R e j e c t e d : * *   R e l y i n g   o n   L L M   c h e c k p o i n t   m e m o r y   f o r   t a s k   s t a t e . 
+ * * D o n ' t   r e - d e r i v e : * *   M e m o r y   h a l l u c i n a t e d   t h a t   ' a c c o u n t - h a r d e n i n g '   w a s   i n c o m p l e t e   b e c a u s e   a   c h e c k p o i n t   s u m m a r y   a s s e r t e d   i t   w a s   ' N O T   S T A R T E D '   i n   a n   o l d e r   s t a t e .   F i l e s   a r e   t r u t h . 
+ * * S o u r c e : * *   . a g e n t s / r u l e s / a g e n t - b e h a v i o r . m d : 2 6 1  
  
