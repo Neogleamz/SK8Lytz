@@ -34,7 +34,10 @@ description: Intake an idea, draft a plan, generate the slug, and append to buck
    - *"What specific evidence, failure, or observation made this task necessary?"*
    - *"What did we consider and reject?"*
    Write the answers as the `Decision Log:` and `Analysis:` fields inline in the task.
-   **If spawned from a deep analysis session:** link to the analysis artifact in the `Analysis:` field.
+   **If spawned from a deep analysis session:** You MUST link to the source analysis artifact in BOTH:
+   - The **batch header** `Source Analysis:` field (one link per batch)
+   - Each **task's `Analysis:` field** (inline, before the PLAN link)
+   This is the evidence chain. Without it, future sessions cannot trace WHY a task exists.
    **If speculative/no evidence yet:** Decision Log = "Hypothesis — needs spike to verify."
    This step takes 2 minutes and prevents 2 hours of re-derivation next session.
 6. **Format the Item**:
@@ -48,7 +51,8 @@ description: Intake an idea, draft a plan, generate the slug, and append to buck
         failure, or opportunity that made this unavoidable. Written from evidence, not intuition.
         Example: "ADB logcat showed 40% write loss at 4+ devices when recovery + color ops
         share one mutex — 2026-06-05 session."
-      - **Analysis:** 📊 [PLAN-<slug>.md](./plans/PLAN-<slug>.md) · Key finding: "<one line>"
+      - **Analysis:** 📊 Source: [<analysis-artifact>.md](<artifact-link>) · Plan: [PLAN-<slug>.md](./plans/PLAN-<slug>.md)
+        Key finding: "<one line>"
         Rejected alternative: "<what we considered and ruled out, and why>"
         *(If no deep analysis exists yet, write: "Analysis pending — run spike first.")*
       - **Source of Truth:** 📖 [Filename](file:///path#L123) §Section
@@ -76,5 +80,6 @@ description: Intake an idea, draft a plan, generate the slug, and append to buck
        ```
        ### ⚡/⏳ [BATCH:<name>] — `<worktree-slug>` — <status>
        > **Worktree**: `<worktree-slug>` · **Type**: Sequential|Parallel · **Prerequisite**: <batch-name or None>
+       > **Source Analysis**: 📊 [<analysis-artifact>.md](<artifact-link>) — <one-line description of what spawned these tasks>
        ```
 8. **The Priority Override (Zero-Bypass Integration)**: If the user explicitly says "on deck" or "up next", draft the plan, mark it `[✅ READY]`, and place it in the correct `🔥 ON DECK` batch group. Do NOT create a branch or worktree — branch creation is gated by Safety Rule 6 and requires an explicit execution trigger phrase from the user.

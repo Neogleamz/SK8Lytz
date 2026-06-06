@@ -10,6 +10,48 @@ Purpose: bridge AI memory between sessions so we don't re-derive decisions.
 
 ---
 
+## 2026-06-06 (Late Night) — Connection & Session Architecture Deep Audit
+
+**What we did:**
+Ran a 3-agent parallel deep-dive audit of the ENTIRE BLE connection + session + group + auto-recovery architecture. 30+ source files read line-by-line. Identified 14 bugs/race conditions: 7 in the session system, 7 in BLE connection management. Wrote 14 implementation plans (`docs/plans/PLAN-fix-session-*.md` and `PLAN-fix-ble-*.md`). Logged all 14 to bucket list TRIAGE QUEUE as two sequential batches.
+
+**The "something is off" answer:**
+The BLE connection stack is solid (4-layer concurrency, 3-phase recovery, battery-adaptive scanning). **The session system is where things are broken.** BUG-S1 (stale closure) means every watch-initiated session stop captures zeroed telemetry. BUG-S4 means sessions ended from the background notification bar silently lose ALL data. BUG-S3 causes phone↔watch timer disagreement after auto-pause cycles.
+
+**Full analysis artifact:**
+📊 [Connection & Session Architecture Audit](file:///C:/Users/Magma/.gemini/antigravity/brain/25ac1742-4218-4218-91d4-cea42835db9b/analysis_results.md)
+— Contains: architecture map, what's working, what's broken, split-brain matrix, priority fix matrix.
+
+**Two new batches in TRIAGE QUEUE:**
+
+| Batch | Tasks | Worktree | Execution Order |
+|-------|-------|----------|----------------|
+| `[BATCH:session-integrity]` | 7 (sequential, all touch `SessionContext.tsx`) | `fix/session-integrity` | S1→S2→S3→S5→S4→S6→S7 |
+| `[BATCH:ble-connection-resilience]` | 7 (sequential, share `useBLE.ts`) | `fix/ble-connection-resilience` | RC-05→RC-01→RC-06→RC-02→RC-03→RC-04→RC-07 |
+
+Zero file overlap between batches — parallel-safe. Session batch should run FIRST (higher user impact).
+
+**Key decisions locked — DO NOT RE-DERIVE:**
+- Session system is 100% independent of BLE by design. This is correct.
+- BUG-S7 (cross-platform contract risk) turned out to be a non-issue — both Swift and Kotlin companions already handle all 4 states. Doc-only fix.
+- BUG-S4 fix uses hybrid approach: WatchBridge.syncSessionState from background handler (native, no React) + `@sk8lytz_pending_bg_end` flag for deferred full teardown on foreground. Headless JS task was rejected as overkill.
+- BUG-S1 fix uses the same ref pattern as `handleNotificationRef` in `useBLE.ts` — proven pattern, not experimental.
+- RC-02 fix drains on success not dispatch, with 3-retry exponential backoff before permanent eject.
+- RC-07 (single-group auto-connect) fix aggregates ALL groups' MACs, capped at 8 simultaneous BLE connections.
+
+**What to read first next session:**
+1. `tools/SESSION_LOG.md` (this entry)
+2. `tools/SK8Lytz_Bucket_List.md` → `## 🚑 TRIAGE QUEUE` — 14 new tasks in 2 batches
+3. [analysis_results.md](file:///C:/Users/Magma/.gemini/antigravity/brain/25ac1742-4218-4218-91d4-cea42835db9b/analysis_results.md) — full architecture audit with split-brain matrix
+4. Run `/start-task` on `fix/session-watch-stale-closure` (BUG-S1, CRITICAL, first in session-integrity batch)
+
+**Active sprint state (unchanged from earlier today):**
+- ⬜ `ble/partial-group-connectivity-ui` — NEEDS PLAN (still in ACTIVE SPRINT from earlier batch)
+- ⬜ `ble/predictive-reconnection` — SPIKE required (still in ACTIVE SPRINT from earlier batch)
+- 🆕 14 new tasks in TRIAGE QUEUE from tonight's audit — ready to execute tomorrow
+
+---
+
 ## 2026-06-06 — BLE Stability Sprint + Process Architecture Overhaul
 
 **What we shipped:**
@@ -41,8 +83,8 @@ Deliberately triggered the process discussion ("why does this keep happening?") 
 - ⬜ `ble/partial-group-connectivity-ui` — NEEDS PLAN before ON DECK gate allows execution
 - ⬜ `ble/predictive-reconnection` — SPIKE required, `[❌ UNVERIFIED]`
 
-**Supabase health:** MCP `project_id` undefined — could not pull logs. Add project_id to MCP config next session.
-**DB backup:** `SUPABASE_DB_PASSWORD` not in env — backup skipped. Check `.env` file next session.
+**Supabase health:** MCP `project_id` **FIXED** — added `--project-id qefmeivpjyaukbwadgaz` to `~/.gemini/config/mcp_config.json`. Requires Antigravity restart to take effect.
+**DB backup:** `SUPABASE_DB_PASSWORD` **key added** to `.env` — value is placeholder `REPLACE_WITH_YOUR_DB_PASSWORD`. User must fill in real password from Supabase dashboard → Project Settings → Database before running `backup_database.ps1`.
 
 
 **What we shipped:**
