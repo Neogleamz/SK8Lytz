@@ -3,7 +3,7 @@ module.exports = {
     name: "SK8Lytz",
     slug: "sk8lytz",
     scheme: "sk8lytz",
-    version: "3.9.0",
+    version: "3.9.1",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
@@ -17,13 +17,13 @@ module.exports = {
       infoPlist: {
         NSMicrophoneUsageDescription: "SK8Lytz needs microphone access to synchronize your lights to ambient music."
       },
-      buildNumber: "16",
+      buildNumber: "17",
       config: {
         googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyBfvwN5fcyDbzUZp2Q7c2OfMLPFajVRPwA"
       }
     },
     android: {
-      versionCode: 38,
+      versionCode: 39,
       predictiveBackGestureEnabled: false,
       allowBackup: false,
       permissions: [
