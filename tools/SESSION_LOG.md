@@ -132,6 +132,22 @@
 
 ---
 
+### [MERGE] 2026-06-06T05:24 — v3.9.1 → origin/master @ `ad3d7a4b` (tag: v3.9.1)
+**What shipped:**
+- `chore(release): v3.9.1` — version bump: package.json + app.config.js (semver 3.9.0→3.9.1, versionCode 38→39, buildNumber 16→17)
+**Ship-It pipeline result:**
+- Phase 1 Health Sweep: ✅ 0 npm vulns, ✅ Supabase no new advisors, ✅ bundle <200KB
+- Phase 1 Verify: ✅ TSC + 128/128 Jest + all 6 gates @ `69f65537`
+- Phase 2 APK: ✅ Built in 2m 51s, deployed to device `27131JEGR40625`, launched clean
+- Phase 2 QA Halt: ✅ **APPROVED** by user (physical device QA passed)
+- Phase 3 Version Bump: ✅ patch 3.9.0 → 3.9.1
+- Phase 3 Attestation Renewal: ✅ All 6 gates re-anchored to `ad3d7a4b`
+- Phase 4 Tag: ✅ `v3.9.1` created
+- Phase 5 Push: ✅ `master` + `v3.9.1` tag pushed to `origin` (Husky pre-push: attestation verified, 0 audit vulns)
+**Files touched:** `package.json`, `app.config.js`
+
+---
+
 ### [EVENT] 2026-06-06T05:16 — Session Log Redesign
 **Context:** User asked "how do we make the session log more like a conversation or chat log"
 **Action:** Redesigning SESSION_LOG format + updating `/wind-down` workflow + updating `agent-behavior.md` Rule 11 to mandate mid-session updates
