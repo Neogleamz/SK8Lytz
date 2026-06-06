@@ -55,6 +55,15 @@ export async function executeConnectToDevices({
     return;
   }
 
+  // ── PRE-LOCK GATE CHECK (optimization) ─────────────────────────────────────
+  // Skip the entire GATT lock acquisition if the gate is already non-IDLE.
+  // Saves the 8s poll cycle that acquireGattLock(1) would spend waiting.
+  // The post-lock gate check at L97 remains as a TOCTOU safety net.
+  if (bleGateRef.current.tag !== 'IDLE') {
+    AppLogger.warn('[BLE] connectToDevices SKIPPED (pre-lock) — gate is ' + bleGateRef.current.tag, { requestedDevices: devices.map(d => d.id) });
+    return;
+  }
+
   // ── GATT LOCK ACQUISITION: Priority 1 (User Action) ──
   const lockHandle = await acquireGattLock(1);
   if (!lockHandle) {
