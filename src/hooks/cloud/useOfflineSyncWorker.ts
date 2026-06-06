@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { AppLogger } from '../../services/AppLogger';
 import { ScenesService } from '../../services/ScenesService';
+import { SpeedTrackingService } from '../../services/SpeedTrackingService';
 
 const SYNC_INTERVAL_MS = 60000; // 60 seconds
 
@@ -21,6 +22,7 @@ export function useOfflineSyncWorker() {
     const runSync = async () => {
       try {
         await ScenesService.flushSyncQueue();
+        await SpeedTrackingService.flushPendingSessionQueue();
         await AppLogger.uploadLogsToSupabase();
       } catch (e) {
         // We catch everything here to prevent the worker loop from crashing the app

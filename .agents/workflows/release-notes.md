@@ -1,5 +1,5 @@
 ---
-description: Generate release notes — CHANGELOG entry + PR description — from semantic commits. Consolidates /changelog and /pr-summary.
+description: Generate release notes — CHANGELOG entry + PR description — from semantic commits. Consolidates the former `changelog` and `pr-summary` workflows.
 persona_entry: "🚀 RM — Taylor"
 team_roster: .agents/team-roster.md
 ---
@@ -8,7 +8,7 @@ team_roster: .agents/team-roster.md
 > *Taylor writes the paper trail. The CHANGELOG is the contract between versions. The PR description is the story of the branch. Both outputs come from the same commits — one workflow, two artifacts.*
 
 > **📍 WHEN TO USE:** Called automatically by `/ship-it` Phase 3. Call standalone when you need release notes without a full release run.
-> *Replaces: `/changelog` and `/pr-summary` (both consolidated here).*
+> *Replaces: `changelog` and `pr-summary` (both consolidated here).*
 
 // turbo-all
 
