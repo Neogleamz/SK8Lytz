@@ -85,3 +85,27 @@ Runs `npm run verify` check-runners, checks edge cases (`/qa-tester` hunt for 5 
 ## 10. Evolved Rules (SDE Closed-Loop Friction Feedback)
 - **Rule: Surgical Buffer Overflow Defense**: The agent must enforce a minimum length of 12 RGB pixels for all `0x59` Static Colorful payload dispatches. Payloads below 10 pixels cause physical controller EEPROM buffer lockouts on the `0xA3` chipset.
 - **Rule: Documentation Parity Gate (VS-003)**: When completing ANY task that creates new hooks, services, components, or modifies BLE architecture/protocol/types, the agent MUST update `tools/SK8Lytz_App_Master_Reference.md` BEFORE running the fortress gatekeeper. Failure to do so caused 16 commits of documentation drift (2026-06-06) requiring emergency remediation. See Kanban Constitution Rule 12 for the full specification.
+
+## 11. Session Log Live Update Protocol (The Context Bridge Mandate)
+The `tools/SESSION_LOG.md` is a **living chat log** updated throughout the session, NOT only at `/wind-down`. Failing to update it live means the next session agent re-derives decisions that already cost hours. This failure occurred repeatedly in the session of 2026-06-06.
+
+**Mandatory update triggers (write to SESSION_LOG immediately):**
+1. **After every `fortress-gatekeeper.ps1` success** → append a `[MERGE]` entry:
+   ```markdown
+   ### [MERGE] YYYY-MM-DDTHH:MM — <slug> → master @ <commit-hash>
+   **What merged:** (bullet list of what changed and why)
+   **Verify result:** TSC ✅/❌, Jest ✅/❌, gates ✅/❌
+   **Files touched:** (list)
+   ```
+2. **After any architectural decision, rejected alternative, or TypeScript pattern unlock** → append a `[DECISION]` entry:
+   ```markdown
+   ### [DECISION] YYYY-MM-DDTHH:MM — <short title>
+   **Decision:** (what was decided)
+   **Rejected:** (what was considered and rejected, and why)
+   **Don't re-derive:** (the exact reasoning the next agent must NOT repeat)
+   **Source:** (file + line number)
+   ```
+3. **After any analysis artifact is created** → add it to the session's `### 🗂️ Artifacts Created This Session` table.
+4. **At `/wind-down`** → final `[EVENT]` entry covering the full session summary.
+
+**Format:** Each entry must be a timestamped H3 with a type tag: `[EVENT]`, `[MERGE]`, `[DECISION]`, `[ARTIFACT]`. This is what makes the log searchable and reconstructable across sessions.

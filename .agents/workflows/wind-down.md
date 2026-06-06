@@ -47,13 +47,19 @@ When my prompt includes "good night", "wrapping up", "wind down", "done for the 
    - Verify the script completes successfully and report the backup file sizes in the Final SITREP.
 
 5. **Hard Freeze**:
-   - **Update Session Log**: Append a new entry to `tools/SESSION_LOG.md` covering:
-     - What we shipped today (one paragraph)
-     - AI failure pattern observed this session (specific behavior, not generic)
-     - User pattern observed (honest self-assessment)
-     - Key decisions locked (what the next AI should NOT re-derive)
-     - What to read first next session
+   - **Update Session Log**: Append a new `[EVENT]` entry to `tools/SESSION_LOG.md` using the **chat log format**:
+     ```markdown
+     ### [EVENT] YYYY-MM-DDTHH:MM — [Session Title]
+     **What shipped:** (bullet list of merges, each with commit hash)
+     **AI failure pattern:** (specific behavior this session, not generic)
+     **User pattern:** (honest self-assessment)
+     **Active sprint state:** (copy from Bucket List ACTIVE SPRINT)
+     **Master HEAD:** (git rev-parse --short HEAD)
+     ```
+     Additionally, ensure ALL `[DECISION]` entries made during the session are already in the log (they should have been written at decision time). If any are missing, add them now.
      Then commit: `git add tools/SESSION_LOG.md && git commit -m "docs: session log <YYYY-MM-DD>"`
+
+   **NOTE:** The session log should have been updated throughout the session after each merge (`[MERGE]` entries) and each architectural decision (`[DECISION]` entries). Wind-down is the FINAL update only, not the sole update.
    - Close all background terminal processes (dev servers, etc.) if applicable.
    - **Discord Notification:** Broadcast session end status:
      ```powershell
