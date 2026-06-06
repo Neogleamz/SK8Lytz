@@ -45,8 +45,8 @@ You must execute this pipeline sequentially. **DO NOT BYPASS ANY GATES.** You mu
    - This takes 60 seconds and prevents 30 minutes of re-derivation next session.
 
 2. **Worktree Isolation**: You are strictly forbidden from coding on `master`.
-   - The worktree is ALWAYS named after the specific target task slug: `git worktree add ../SK8Lytz-worktrees/<task-slug> -b <task-slug>`
-   - *Note: Even within sequential batches, every task gets its own isolated worktree based on its slug.*
+   - By default, the worktree is named after the target task slug: `git worktree add ../SK8Lytz-worktrees/<task-slug> -b <task-slug>`
+   - **Unified Batch Override**: If executing multiple `[Snack]`/`[Meal]` tasks from the same batch that share a domain, create a unified batch worktree instead: `git worktree add ../SK8Lytz-worktrees/<batch-slug>-batch -b <batch-slug>-batch`.
 
 ### Phase 2: The Systems Architect (Brainstorming & Theory)
 - **Mandatory Brainstorming**: Drop into a read-only consultative mode. Present your understanding of the task (informed by the Context Resume above) and ask the user to chat through the approach. Do not proceed until the user says "what's next" or asks for a plan.

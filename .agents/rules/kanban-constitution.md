@@ -9,9 +9,10 @@ trigger: always_on
 
 ## Hard Rules (Always Active)
 
-**1. The Active Sprint Mandate:**
+**1. The Active Sprint & Batching Mandate:**
 - STRICTLY FORBIDDEN from writing code for tasks outside `🚧 ACTIVE SPRINT`.
-- ONE task at a time. Every task MUST use a Git Worktree.
+- By default, ONE task at a time per Git Worktree.
+- **The Unified Batch Override:** If multiple tasks belong to the same `[BATCH:...]`, are tagged `[Snack]` or `[Meal]`, and share the same domain (no architectural conflicts), they MAY be executed in a single unified worktree (`<batch-slug>-batch`) and verified collectively.
 - Zero-Collateral Damage: No unsolicited refactoring. Log bugs to Triage; do not fix silently.
 
 **2. The Kanban Flow (Vocabulary):**
