@@ -64,6 +64,35 @@ const DEADLOCK_WATCHDOG_MS = 15_000;
 let _deadlockWatchdog: ReturnType<typeof setTimeout> | null = null;
 
 /**
+ * Hot Reload generation counter. Increments every time the module re-evaluates.
+ * Locks acquired by a previous generation are considered orphaned and released
+ * immediately on the next acquire attempt, avoiding the 15s watchdog stall.
+ */
+let _generation = 0;
+_generation++;
+
+// Hot Reload cleanup: wrapped in a function so TypeScript's control-flow analysis
+// cannot statically determine that _isLocked is always false here. Without the
+// function wrapper, TSC treats the if-body as dead code (since _isLocked=false at init)
+// and narrows all variables inside it to 'never', causing a type error on .abort().
+function _hotReloadCleanup(): void {
+  if (_isLocked) {
+    AppLogger.warn('[Mutex] Hot Reload detected with lock held — force-releasing orphaned lock');
+    _isLocked = false;
+    _currentPriority = 4;
+    if (_currentHolderAbortController) {
+      _currentHolderAbortController.abort();
+    }
+    _currentHolderAbortController = null;
+    if (_deadlockWatchdog) {
+      clearTimeout(_deadlockWatchdog);
+      _deadlockWatchdog = null;
+    }
+  }
+}
+_hotReloadCleanup();
+
+/**
  * Acquire the GATT lock for a given priority operation.
  *
  * - P1 callers acquire immediately AND preempt any in-flight P2/P3 via AbortController.
@@ -125,15 +154,33 @@ export async function acquireGattLock(
   _lockChain = new Promise<void>(res => { release = res; });
   _isLocked = true;
   _currentPriority = priority;
+  const acquiredGeneration = _generation;
 
   // Register the AbortController so P1 can preempt this holder later
   // P2 (recovery) and P3 (interrogation) can both be preempted — register their AbortController
   _currentHolderAbortController = (priority === 2 || priority === 3) ? ownAbortController : null;
 
-  // Wait for previous operation to complete
-  await prevChain.catch((e: unknown) => {
+  // Wait for previous operation to complete.
+  // Race with a 200ms timeout: if the previous chain is orphaned (Hot Reload),
+  // resolve quickly instead of waiting for the full 15s deadlock watchdog.
+  try {
+    await Promise.race([
+      prevChain,
+      new Promise<void>(r => setTimeout(r, 200)),
+    ]);
+  } catch (e: unknown) {
     AppLogger.warn('[Mutex] Previous operation in GATT lock chain rejected', e);
-  });
+  }
+
+  // If a Hot Reload happened between acquiring and waiting, skip the stale lock
+  if (acquiredGeneration !== _generation) {
+    AppLogger.warn('[Mutex] Stale lock detected after Hot Reload — releasing immediately');
+    _isLocked = false;
+    _currentPriority = 4;
+    _currentHolderAbortController = null;
+    release();
+    return null;
+  }
 
   const waitTime = Date.now() - waitStart;
   if (waitTime > 2000) {

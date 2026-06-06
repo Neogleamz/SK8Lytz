@@ -108,6 +108,12 @@ export function useDashboardAutoConnect({
 
   const hasAutoConnectedRef = useRef(false);
   const autoConnectIdsRef = useRef<string[]>([]);
+  /** Tracks retry counts per MAC for failed auto-connect attempts. RC-02 */
+  const autoConnectRetriesRef = useRef<Map<string, number>>(new Map());
+  /** Max retries before permanently abandoning a MAC. */
+  const MAX_AUTO_CONNECT_RETRIES = 3;
+  /** Base backoff in ms between retries (multiplied by attempt count). */
+  const AUTO_CONNECT_RETRY_BACKOFF_MS = 3000;
   // Stable ref to the cloud sync function — allows retriggerAutoConnect to call it
   // directly without needing to re-subscribe to the useEffect dependency array.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -174,12 +180,53 @@ export function useDashboardAutoConnect({
           devices: batch.map(d => d.name ?? d.id),
         });
 
-        connectToDevicesRef.current(batch).finally(() => {
-          if (autoConnectIdsRef.current.length > 0) {
-            AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_resume_scan' });
-            scanForPeripheralsRef.current({ disableProbing: true });
-          }
-        });
+        connectToDevicesRef.current(batch)
+          .then(() => {
+            // On success: clear retry counters for devices that connected
+            for (const d of batch) {
+              autoConnectRetriesRef.current.delete(d.id);
+            }
+          })
+          .catch((e: unknown) => {
+            AppLogger.warn('[AutoConnect] Batch connection failed — re-queueing', {
+              macs: batch.map(d => d.id),
+              error: String(e),
+            });
+
+            // Re-queue MACs that aren't already connected and haven't exceeded retries
+            const failedIds = batch
+              .filter(d => !connectedDevices.some(c => c.id === d.id))
+              .map(d => d.id);
+
+            for (const id of failedIds) {
+              const retries = (autoConnectRetriesRef.current.get(id) ?? 0) + 1;
+              autoConnectRetriesRef.current.set(id, retries);
+
+              if (retries <= MAX_AUTO_CONNECT_RETRIES) {
+                const backoff = AUTO_CONNECT_RETRY_BACKOFF_MS * retries;
+                AppLogger.log('BLE_STATE_CHANGE', {
+                  event: 'auto_connect_requeued',
+                  mac: id,
+                  retry: retries,
+                  backoffMs: backoff,
+                });
+                setTimeout(() => {
+                  if (!autoConnectIdsRef.current.includes(id)) {
+                    autoConnectIdsRef.current = [...autoConnectIdsRef.current, id];
+                  }
+                }, backoff);
+              } else {
+                AppLogger.warn('[AutoConnect] Max retries exceeded — abandoning', { mac: id, retries });
+                autoConnectRetriesRef.current.delete(id);
+              }
+            }
+          })
+          .finally(() => {
+            if (autoConnectIdsRef.current.length > 0) {
+              AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_resume_scan' });
+              scanForPeripheralsRef.current({ disableProbing: true });
+            }
+          });
       };
 
       debounceTimerRef.current = setTimeout(attemptConnection, 500); // 500ms debounce window
@@ -270,30 +317,36 @@ export function useDashboardAutoConnect({
               presentGroups = groupsToProcess.sort(
                 (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
               );
-              if (presentGroups.length > 0) {
-                const targetGroupId = presentGroups[0].id;
-                idsToConnect = (devices as RegisteredDeviceRow[])
-                  .filter((d) => {
-                    // Many-to-many: check group_ids array first, fall back to legacy scalar
-                    const dGroupIds: string[] = d.group_ids || (d.group_id ? [d.group_id] : []);
-                    return dGroupIds.includes(targetGroupId);
-                  })
-                  .map((d) => d.device_mac || d.id);
+              // Aggregate ALL device MACs across ALL groups (deduplicated) — RC-07
+              const allGroupIds = new Set(presentGroups.map(g => g.id));
+              const macSet = new Set<string>();
+              for (const d of devices as RegisteredDeviceRow[]) {
+                const dGroupIds: string[] = d.group_ids || (d.group_id ? [d.group_id] : []);
+                if (dGroupIds.some(gId => allGroupIds.has(gId))) {
+                  macSet.add(d.device_mac || d.id);
+                }
               }
+              idsToConnect = Array.from(macSet);
             }
           } else {
             presentGroups = groupsToProcess.sort(
               (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             );
-            if (presentGroups.length > 0) {
-              idsToConnect = presentGroups[0].deviceIds ?? [];
+            // Aggregate ALL device MACs across ALL offline groups (deduplicated) — RC-07
+            const macSet = new Set<string>();
+            for (const group of presentGroups) {
+              for (const mac of group.deviceIds ?? []) {
+                macSet.add(mac);
+              }
             }
+            idsToConnect = Array.from(macSet);
           }
 
           if (idsToConnect.length > 0) {
             AppLogger.log('BLE_STATE_CHANGE', {
               event: 'auto_connect_queued',
-              fleet: presentGroups[0]?.group_name,
+              fleets: presentGroups.map(g => g.group_name),
+              groupCount: presentGroups.length,
               count: idsToConnect.length,
             });
             autoConnectIdsRef.current = idsToConnect;
@@ -346,6 +399,7 @@ export function useDashboardAutoConnect({
       AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_retriggered' });
       hasAutoConnectedRef.current = false;
       autoConnectIdsRef.current = [];
+      autoConnectRetriesRef.current.clear();
       
       // Delay to allow Android/iOS Bluetooth stack to fully transition from suspended to active
       // before blasting a high-power burst scan.

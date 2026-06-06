@@ -299,11 +299,12 @@ export async function executeConnectToDevices({
          AppLogger.error('FAILED TO CONNECT TO GROUP', e);
          AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, context: 'group' });
       }
-      setGate('IDLE');
+      bleGateRef.current.forceTransitionTo({ tag: 'IDLE' }, 'Error recovery — inner connection failed');
       if (wasSweeperActive && bleManager) sweeper.startSweeper();
     }
   } catch (outerErr: any) {
     AppLogger.error('[BLE] connectToDevices outer failed', outerErr);
+    bleGateRef.current.forceTransitionTo({ tag: 'IDLE' }, 'Error recovery — outer connection failed');
   } finally {
     release();
   }

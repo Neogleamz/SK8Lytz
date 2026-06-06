@@ -140,7 +140,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   // Helper: transition the gate which automatically syncs to state via the listener
   const setGate = useCallback((phase: BLEPhaseTag) => {
-    bleGateRef.current.transitionTo({ tag: phase }, 'Manual Phase Change');
+    const success = bleGateRef.current.transitionTo({ tag: phase }, 'Manual Phase Change');
+    if (!success) {
+      AppLogger.error('[BLE] setGate failed — gate stuck in ' + bleGateRef.current.tag, {
+        attemptedPhase: phase,
+        currentPhase: bleGateRef.current.tag,
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -185,9 +191,17 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     AppLogger.updateKnownDevices(allDevices);
   }, [allDevices]);
 
-  useEffect(() => { 
-    connectedDevicesRef.current = connectedDevices; 
-  }, [connectedDevices]);
+  // Write-through setter: updates ref synchronously, then schedules React state update.
+  // Eliminates the 1-frame ref-vs-state lag that caused phantom heartbeat pings (RC-01).
+  const updateConnectedDevices: React.Dispatch<React.SetStateAction<Device[]>> = useCallback(
+    (action) => {
+      const prev = connectedDevicesRef.current;
+      const next = typeof action === 'function' ? action(prev) : action;
+      connectedDevicesRef.current = next;
+      setConnectedDevices(next);
+    },
+    [],
+  );
 
   useEffect(() => {
     allDevicesRef.current = allDevices;
@@ -247,7 +261,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
           const staleIds = liveChecks.filter(c => !c.connected).map(c => c.id);
           if (staleIds.length > 0) {
             AppLogger.log('BLE_STATE_CHANGE', { event: 'pruning_stale_connections_on_wake', count: staleIds.length });
-            setConnectedDevices(prev => prev.filter(p => !staleIds.includes(p.id)));
+            updateConnectedDevices(prev => prev.filter(p => !staleIds.includes(p.id)));
           }
         } catch (e) {
           AppLogger.warn('[BLE] Failed to audit connections on wake', e);
@@ -289,6 +303,12 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     autoRecovery.initiateRecovery(deviceId);
   };
 
+  // Stable ref-forwarder: the BLE disconnect listener captures this ref once,
+  // but it always delegates to the latest handleOrganicDisconnect. Same pattern
+  // as handleNotificationRef (L224-225). Eliminates RC-06 stale closure risk.
+  const handleOrganicDisconnectRef = useRef(handleOrganicDisconnect);
+  handleOrganicDisconnectRef.current = handleOrganicDisconnect;
+
   // Stable ref-forwarder for connectToDevices — same pattern as pendingRegistrationsSetterRef.
   // autoRecovery is initialised BEFORE connectToDevices exists, so we’d get a stale closure
   // if we passed connectToDevices directly. The ref is updated immediately after connectToDevices
@@ -297,10 +317,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   const autoRecovery = useBLEAutoRecovery({
     bleManager,
-    setConnectedDevices,
+    setConnectedDevices: updateConnectedDevices,
     disconnectListeners,
     handleNotification: (error: any, characteristic: any, deviceId: string) => handleNotificationRef.current(error, characteristic, deviceId),
-    onOrganicDisconnect: handleOrganicDisconnect,
+    onOrganicDisconnect: (error: any, deviceId: string) => handleOrganicDisconnectRef.current(error, deviceId),
     bleGateRef,
     onAdapterResolved: (deviceId: string, adapter: IControllerProtocol) => {
       // Keep adapterMapRef in sync when AutoRecovery reconnects a device.
@@ -395,7 +415,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     adapterMapRef,
     onStaleLinkDetected: (mac: string) => {
       // Drop the device from connected state so the controller closes gracefully.
-      setConnectedDevices(prev => prev.filter(d => d.id !== mac));
+      updateConnectedDevices(prev => prev.filter(d => d.id !== mac));
       // Immediately start Phase 1 aggressive recovery — don't wait for the next
       // organic disconnect event which could take minutes on stale handles.
       autoRecovery.initiateRecovery(mac);
@@ -434,8 +454,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       adapterMapRef,
       dataReceivedCallbackRef,
       handleNotificationRef,
-      handleOrganicDisconnect,
-      setConnectedDevices,
+      handleOrganicDisconnect: (error: any, deviceId: string) =>
+        handleOrganicDisconnectRef.current(error, deviceId),
+      setConnectedDevices: updateConnectedDevices,
       setGate,
     });
   }, [
@@ -506,10 +527,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       adapterMapRef,
       autoRecovery,
       bleGateRef,
-      setConnectedDevices,
+      updateConnectedDevices,
       setGate
     );
-  }, [bleManager, autoRecovery, setConnectedDevices, setGate]);
+  }, [bleManager, autoRecovery, updateConnectedDevices, setGate]);
 
   const disconnectFromDevice = useCallback(() => {
     keepaliveDisconnect(keepaliveTimerRef, KEEPALIVE_DURATION_MS, realDisconnect);

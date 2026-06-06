@@ -483,28 +483,26 @@ export function useBLEAutoRecovery({
         ghostDebounceQueueRef.current = [];
 
         if (batch.length >= 2) {
-          // GROUP DROPOUT — clear ghost state for the batch then fire group reconnect.
-          // connectToDevices will re-add devices to connectedDevices on success.
-          ghostedRefs.current = ghostedRefs.current.filter(id => !batch.some(d => d.id === id));
-          setGhostedDeviceIds([...ghostedRefs.current]);
-
           AppLogger.log('AUTO_RECOVERY_GROUP_COORDINATOR', {
             event: 'group_dropout_detected',
             count: batch.length,
             devices: batch.map(d => d.id),
           });
 
-          onGroupDropout(batch).catch((e: unknown) => {
-            // Fallback: if group reconnect fails, re-ghost and spawn individual loops
-            AppLogger.warn('[AutoRecovery] Group dropout reconnect failed — falling back to individual loops', e);
-            batch.forEach(d => {
-              if (!ghostedRefs.current.includes(d.id)) {
-                ghostedRefs.current = [...ghostedRefs.current, d.id];
+          onGroupDropout(batch)
+            .then(() => {
+              // SUCCESS: clear ghost state now that devices are confirmed reconnected
+              ghostedRefs.current = ghostedRefs.current.filter(id => !batch.some(d => d.id === id));
+              setGhostedDeviceIds([...ghostedRefs.current]);
+            })
+            .catch((e: unknown) => {
+              // FAILURE: ghost state was never cleared — devices stay dimmed.
+              // Fall back to individual recovery loops for each failed device.
+              AppLogger.warn('[AutoRecovery] Group dropout reconnect failed — falling back to individual loops', e);
+              batch.forEach(d => {
                 spawnRecoveryLoop(d.id);
-              }
+              });
             });
-            setGhostedDeviceIds([...ghostedRefs.current]);
-          });
         } else {
           // SINGLE DEVICE DROPOUT — fall through to existing individual recovery loop
           AppLogger.log('AUTO_RECOVERY_GROUP_COORDINATOR', {

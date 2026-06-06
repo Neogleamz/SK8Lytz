@@ -40,7 +40,17 @@ export class BleStateMachine {
 
     const isValid = this.validateTransition(from, to);
     if (!isValid) {
-      AppLogger.warn(`[BleStateMachine] INVALID TRANSITION: ${from} -> ${to} (Reason: ${reason})`);
+      const msg = `[BleStateMachine] INVALID TRANSITION: ${from} -> ${to} (Reason: ${reason})`;
+      AppLogger.error(msg);
+      AppLogger.log('BLE_STATE_CHANGE', {
+        event: 'fsm_invalid_transition',
+        from,
+        to,
+        reason,
+      });
+      if (typeof __DEV__ !== 'undefined' && __DEV__) {
+        throw new Error(msg);
+      }
       return false;
     }
 
@@ -72,7 +82,7 @@ export class BleStateMachine {
       case 'IDLE':
         return to === 'SCANNING' || to === 'CONNECTING' || to === 'DISCONNECTING' || to === 'RECOVERING';
       case 'SCANNING':
-        return to === 'IDLE' || to === 'CONNECTING';
+        return to === 'IDLE' || to === 'CONNECTING' || to === 'DISCONNECTING';
       case 'CONNECTING':
         return to === 'IDLE' || to === 'RECOVERING' || to === 'DISCONNECTING';
       case 'DISCONNECTING':
@@ -82,5 +92,23 @@ export class BleStateMachine {
       default:
         return false;
     }
+  }
+
+  /**
+   * Force-transitions to the given phase WITHOUT validation.
+   * Use ONLY in error recovery paths where the gate is known to be in an
+   * inconsistent state (e.g., connection failure cleanup).
+   */
+  forceTransitionTo(nextPhase: BLEPhase, reason: string): void {
+    const from = this._phase.tag;
+    AppLogger.warn(`[BleStateMachine] FORCE TRANSITION: ${from} -> ${nextPhase.tag} (Reason: ${reason})`);
+    AppLogger.log('BLE_STATE_CHANGE', {
+      event: 'fsm_force_transition',
+      from,
+      to: nextPhase.tag,
+      reason,
+    });
+    this._phase = nextPhase;
+    this.notify();
   }
 }

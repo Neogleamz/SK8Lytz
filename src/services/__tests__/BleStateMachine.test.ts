@@ -50,9 +50,32 @@ describe('BleStateMachine', () => {
 
     // IDLE -> RECOVERING is valid, wait, is SCANNING -> RECOVERING valid? No!
     fsm.transitionTo({ tag: 'SCANNING' }, 'start scanning');
-    const success = fsm.transitionTo({ tag: 'RECOVERING' }, 'attempt recovery');
+    // In dev mode __DEV__ may throw — wrap in try/catch
+    let success: boolean;
+    try {
+      success = fsm.transitionTo({ tag: 'RECOVERING' }, 'attempt recovery');
+    } catch {
+      // __DEV__ throw path — gate must still be unchanged
+      success = false;
+    }
     expect(success).toBe(false); // Rejected!
     expect(fsm.tag).toBe('SCANNING'); // State unchanged!
+  });
+
+  it('should allow SCANNING -> DISCONNECTING (RC-05)', () => {
+    const fsm = new BleStateMachine();
+    fsm.transitionTo({ tag: 'SCANNING' }, 'scan started');
+    const success = fsm.transitionTo({ tag: 'DISCONNECTING' }, 'user tapped disconnect while scanning');
+    expect(success).toBe(true);
+    expect(fsm.tag).toBe('DISCONNECTING');
+  });
+
+  it('forceTransitionTo should succeed regardless of current state (RC-05)', () => {
+    const fsm = new BleStateMachine();
+    fsm.transitionTo({ tag: 'SCANNING' }, 'scan started');
+    // SCANNING -> RECOVERING would normally be invalid
+    fsm.forceTransitionTo({ tag: 'RECOVERING' }, 'Error recovery — force reset');
+    expect(fsm.tag).toBe('RECOVERING');
   });
 
   it('should notify listeners upon successful transition', () => {
