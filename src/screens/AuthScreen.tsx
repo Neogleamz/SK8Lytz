@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView,
   Linking,
   Platform,
+  Text,
   TouchableOpacity,
   View
 } from 'react-native';
@@ -37,7 +38,7 @@ const showHelp = () => {
   }
 };
 
-export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuccess: () => void; onOfflineMode?: () => void }) {
+export default function AuthScreen({ onAuthSuccess, onOfflineMode, sessionExpired }: { onAuthSuccess: () => void; onOfflineMode?: () => void; sessionExpired?: boolean }) {
   const { isDark, toggleTheme, Colors } = useTheme();
   const styles = useAuthStyles();
 
@@ -117,6 +118,25 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode }: { onAuthSuc
       </View>
 
       <View style={styles.scrollContent}>
+        {sessionExpired && (
+          <View style={{
+            backgroundColor: 'rgba(255, 165, 0, 0.12)',
+            borderWidth: 1,
+            borderColor: 'rgba(255, 165, 0, 0.4)',
+            borderRadius: 10,
+            paddingVertical: 10,
+            paddingHorizontal: 14,
+            marginBottom: Spacing.md,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: Spacing.sm,
+          }}>
+            <Text style={{ fontSize: 16 }}>⏱️</Text>
+            <Text style={{ color: '#FFA500', fontSize: 13, flex: 1, lineHeight: 18 }}>
+              Your session expired. Please sign in again.
+            </Text>
+          </View>
+        )}
         <AuthHeader />
 
         {hasLoadedCreds && (

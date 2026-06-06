@@ -109,6 +109,7 @@ function AppContent() {
   const [session, setSession] = useState<Session | null>(null);
   const [sessionLoaded, setSessionLoaded] = useState(false);
   const [offlineMode, setOfflineMode] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
     if (!supabase) {
@@ -165,6 +166,12 @@ function AppContent() {
           return;
         }
 
+        // ── 3. No active session — check if user had a prior one (token expired) ──
+        const lastEmail = await AsyncStorage.getItem('@Sk8lytz_auth_last_email');
+        if (lastEmail) {
+          // Evidence of a prior session: show "session expired" banner on AuthScreen
+          setSessionExpired(true);
+        }
 
       } catch (err) {
         console.error('Initialization error:', err);
@@ -179,6 +186,10 @@ function AppContent() {
     const { data } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
       AppLogger.log('SYNC', { context: 'auth_change', event: _event, hasSession: !!session });
       setSession(session);
+      if (_event === 'SIGNED_IN') {
+        // User successfully authenticated — clear any expiry banner
+        setSessionExpired(false);
+      }
       if (!session) {
         setOfflineMode(false);
         AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP);
@@ -206,6 +217,7 @@ function AppContent() {
         <AuthScreen
           onAuthSuccess={() => {/* session change auto-handles via onAuthStateChange */}}
           onOfflineMode={() => setOfflineMode(true)}
+          sessionExpired={sessionExpired}
         />
       )}
     </View>
