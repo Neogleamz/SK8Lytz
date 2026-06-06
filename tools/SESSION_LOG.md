@@ -4,9 +4,46 @@ This file is committed to git after every session via `/wind-down`.
 It is read aloud at every `/hello` and `/start-task` Phase 0.
 Purpose: bridge AI memory between sessions so we don't re-derive decisions.
 
+This file is committed to git after every session via `/wind-down`.
+It is read aloud at every `/hello` and `/start-task` Phase 0.
+Purpose: bridge AI memory between sessions so we don't re-derive decisions.
+
 ---
 
-## 2026-06-06 — BLE Stability + Rule System Overhaul
+## 2026-06-06 — BLE Stability Sprint + Process Architecture Overhaul
+
+**What we shipped:**
+BLE P3 polish sprint: `useBLEHeartbeat` (7 tests), `useBLERSSIMonitor` + `ConnectionStrengthBadge` (9 tests), all merged. Then a full process overhaul: 14 enforcement gaps fixed, Gate 6 workflow reference validator added to `verifiable-check-runner.js` (caught phantom `/focus` on first run), ambient rules consolidated 424→246 lines, `SESSION_LOG.md` created, Intercept Gate (S6) added to `prime-directive.md`, Decision Log + Analysis fields added to task schema, ON DECK Promotion Gate added to `/intake`, Plan Read Gate added to `/start-task` step 1.5. 4 commits total. 16/16 tests passing.
+
+**AI failure pattern this session:**
+Drifted from the active BLE sprint into rule architecture analysis 4+ times without intercepting. Executed `/wind-down`-style changes (rule consolidation, workflow restructuring) as ad-hoc COWBOY MODE work instead of formal intake tasks. Corrupted `start-task.md` mid-session by applying two successive replacements with stale target content — required a full file overwrite to recover. Treated "add a SESSION_LOG" as a 10-second job while it actually needed careful wiring into 3 workflows.
+
+**User pattern this session:**
+Deliberately triggered the process discussion ("why does this keep happening?") which pulled the AI off the BLE sprint. Self-aware about not always following routines. Pushed for honest answers about AI friction points rather than accepting surface-level fixes. Good instincts — pushed back on complexity ("just make it practical").
+
+**Key decisions locked — DO NOT RE-DERIVE:**
+- Rule = behavioral constraint (always-on, ≤50 lines each). Workflow = procedural steps (trigger-invoked).
+- `prime-directive.md` is the single always-on anchor. All other rules = hard stops + vocabulary only.
+- Rule/workflow system is STABLE. Do NOT restructure again without a scheduled formal task in bucket list.
+- Gate 6 (workflow validator) is in `verifiable-check-runner.js` — phantom refs fail the build permanently.
+- Task schema requires Decision Log + Analysis — Evidence-backed, not speculative.
+- ON DECK requires complete PLAN file. No plan = stays in TRIAGE/ROADMAP.
+- SESSION_LOG is the memory bridge. Written at wind-down. Read at hello. Committed to git.
+
+**What to read first next session:**
+1. `tools/SESSION_LOG.md` (this file — most recent entry)
+2. `tools/SK8Lytz_Bucket_List.md` → `## 🚧 ACTIVE SPRINT` — 2 tasks remain in `ble-p3-polish`
+3. **#1 Priority**: Draft `PLAN-ble-partial-group-connectivity-ui.md` before touching any code
+
+**Active sprint state:**
+- ✅ `ble/connection-health-heartbeat` — merged `84e21bb3`
+- ✅ `ble/post-connect-rssi-monitoring` — merged `fd635db8`
+- ⬜ `ble/partial-group-connectivity-ui` — NEEDS PLAN before ON DECK gate allows execution
+- ⬜ `ble/predictive-reconnection` — SPIKE required, `[❌ UNVERIFIED]`
+
+**Supabase health:** MCP `project_id` undefined — could not pull logs. Add project_id to MCP config next session.
+**DB backup:** `SUPABASE_DB_PASSWORD` not in env — backup skipped. Check `.env` file next session.
+
 
 **What we shipped:**
 BLE heartbeat, RSSI monitor, 3-phase auto-recovery, GATT mutex priority split, write gap tuning, scan budget tracking — all merged to master. Full rule/workflow audit: fixed 14 enforcement gaps, created 3 missing workflows, added Gate 6 workflow reference validator to verifiable-check-runner.js, consolidated ambient rules from 424 → 246 lines.
