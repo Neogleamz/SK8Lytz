@@ -98,6 +98,17 @@ export function useBLESweeper({
   const burstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isSweeperActiveRef = useRef(false);
 
+  // ── Android 12+ Scan Budget Guard (AND-04) ──────────────────────────────
+  // Android 12 (API 31) throttles background BLE scans to ~4 per 30-second window.
+  // Rapid app background↔foreground cycles each call stop+start, burning the budget.
+  // After 4 cycles, Android silently throttles scans to once per 30s.
+  // We track startDeviceScan call timestamps in a 30s sliding window.
+  // Only applies on Android API 31+ — iOS and older Android are unguarded.
+  /** Timestamps of recent startDeviceScan calls for budget tracking (sliding 30s window). */
+  const scanStartTimestampsRef = useRef<number[]>([]);
+  const SCAN_BUDGET_MAX = 4;          // Android 12+ limit
+  const SCAN_BUDGET_WINDOW_MS = 30_000; // 30-second sliding window
+
   // ── In-memory HW cache ──────────────────────────────────────────────────
   const [hwCache, setHwCache] = useState<Record<string, PingResult>>({});
   const hwCacheRef = useRef<Record<string, PingResult>>({});
@@ -393,6 +404,33 @@ export function useBLESweeper({
     isSweeperActiveRef.current = true;
     setIsSweeperActive(true);
     AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_start' });
+
+    // ── Android 12+ Scan Budget Guard ─────────────────────────────────────
+    // Check if we have budget remaining before calling startDeviceScan.
+    // If budget is exhausted, defer start until the oldest entry expires.
+    if (Platform.OS === 'android' && (Platform.Version as number) >= 31) {
+      const now = Date.now();
+      // Prune timestamps outside the 30s window
+      scanStartTimestampsRef.current = scanStartTimestampsRef.current.filter(
+        ts => now - ts < SCAN_BUDGET_WINDOW_MS
+      );
+      if (scanStartTimestampsRef.current.length >= SCAN_BUDGET_MAX) {
+        // Budget exhausted: schedule a deferred start when the oldest entry expires
+        const oldestTs = scanStartTimestampsRef.current[0];
+        const msUntilBudgetResets = SCAN_BUDGET_WINDOW_MS - (now - oldestTs) + 100; // +100ms safety margin
+        AppLogger.log('BLE_STATE_CHANGE', {
+          event: 'sweeper_start_deferred_budget',
+          deferMs: msUntilBudgetResets,
+          budgetUsed: scanStartTimestampsRef.current.length,
+        });
+        setTimeout(() => {
+          if (isSweeperActiveRef.current) return; // Already started via another path
+          startSweeper();
+        }, msUntilBudgetResets);
+        return;
+      }
+      scanStartTimestampsRef.current.push(now);
+    }
 
     bleManager.startDeviceScan(null, { scanMode: 0 }, createScanCallback());
   }, [bleManager, createScanCallback]);
