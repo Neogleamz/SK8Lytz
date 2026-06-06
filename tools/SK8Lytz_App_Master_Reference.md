@@ -1,6 +1,6 @@
 # SK8Lytz App Master Reference
 
-_Last Updated: 2026-06-03 | **Wearable Companion Architecture SHIPPED** — watchOS + Wear OS companion apps, Expo native bridge module (sk8lytz-watch-bridge), watch-preferred health priority system, bidirectional phone↔watch session sync, Speed push to watch, VS-002 gitignore fix. v3.8.2 | Source of Truth: modules/sk8lytz-watch-bridge/src/index.ts, src/hooks/useHealthTelemetry.ts, src/context/SessionContext.tsx_
+_Last Updated: 2026-06-03 | **Wearable Companion Architecture SHIPPED** — watchOS + Wear OS companion apps, Expo native bridge module (sk8lytz-watch-bridge), watch-preferred health priority system, bidirectional phoneâ†”watch session sync, Speed push to watch, VS-002 gitignore fix. v3.8.2 | Source of Truth: modules/sk8lytz-watch-bridge/src/index.ts, src/hooks/useHealthTelemetry.ts, src/context/SessionContext.tsx_
 
 This document is the **Canonical Reference** for all architecture, hardware constraints, and BLE protocol definitions within the SK8Lytz application.
 
@@ -65,7 +65,7 @@ Every product has three distinct LED "counts" that mean different things:
 |:------|:-----|:-------------------|:-----------|
 | **1** | `ledPoints` | Addressable LEDs **per segment** — the design canvas | `hwSettings.ledPoints` |
 | **2** | `segments` | Number of hardware mirrors of Layer 1 | `hwSettings.segments` |
-| **3** | Physical LEDs | Total real LEDs in the world (`ledPoints × segments`, or × wiring factor) | Not stored — derived only |
+| **3** | Physical LEDs | Total real LEDs in the world (`ledPoints Ã— segments`, or Ã— wiring factor) | Not stored — derived only |
 
 > **Golden Rule**: All pixel arrays (`0x59`, `0x31`) MUST be built using `ledPoints` (Layer 1). Segments and wiring are the hardware's job, not the app's.
 
@@ -73,9 +73,9 @@ Every product has three distinct LED "counts" that mean different things:
 
 | Product | `ledPoints` | `segments` | Physical LEDs | Adjustable? | Architecture |
 |:--------|:-----------:|:----------:|:-------------:|:-----------:|:-------------|
-| **HALOZ** | **8** | **2** | 16 | ❌ Fixed | Ring. Hardware **auto-mirrors** the 8-point pattern to a 2nd segment. Always send 8-element arrays. |
-| **SOULZ** | **43** | **1** | 86* | ✅ Yes | Strip. No hardware mirroring. Controller drives one 43-point canvas. Physical doubling from Y-wire is transparent. |
-| **RAILZ** | **30** | **2** | 60 | ✅ Yes | Dual rail. Placeholder — confirm with hardware before shipping. |
+| **HALOZ** | **8** | **2** | 16 | âŒ Fixed | Ring. Hardware **auto-mirrors** the 8-point pattern to a 2nd segment. Always send 8-element arrays. |
+| **SOULZ** | **43** | **1** | 86* | âœ… Yes | Strip. No hardware mirroring. Controller drives one 43-point canvas. Physical doubling from Y-wire is transparent. |
+| **RAILZ** | **30** | **2** | 60 | âœ… Yes | Dual rail. Placeholder — confirm with hardware before shipping. |
 
 *SOULZ physical reality: 43 LEDs on LEFT skate (outside boot) + 43 LEDs on RIGHT skate (inside boot), both Y-wired to the same controller output. The controller is **oblivious to the doubling**.
 
@@ -85,7 +85,7 @@ SOULZ strips are cut-to-length. If a user physically cuts the strip shorter, the
 
 Every pixel array builder (`PatternEngine`, `applyEmergencyPattern`, etc.) must read `hwSettings.ledPoints` dynamically — NEVER hardcode 43.
 
-#### ⚠️ Previous Bug (Fixed 2026-04-22)
+#### âš ï¸ Previous Bug (Fixed 2026-04-22)
 
 `ProductCatalog.ts` previously had `HALOZ.defaultLedPoints = 16, segments = 1`. This was **wrong** — it caused:
 1. `applyEmergencyPattern` sending 16-element arrays to an 8-point device, bypassing the hardware segment mirror engine
@@ -93,22 +93,22 @@ Every pixel array builder (`PatternEngine`, `applyEmergencyPattern`, etc.) must 
 
 Fixed: `HALOZ.defaultLedPoints = 8, segments = 2`.
 
-#### ✅ HALOZ Ring Topology — Confirmed Physical LED Map (2026-04-25)
+#### âœ… HALOZ Ring Topology — Confirmed Physical LED Map (2026-04-25)
 
 ```
-              ╔══════════╗
-              ║   TOP    ║
-  L-pSlot 0 ══╬══════════╬══ R-pSlot 7    ← Left TOP = pSlot 0, Right TOP = pSlot 7
-  L-pSlot 1 ══╬          ╬══ R-pSlot 6
-  L-pSlot 2 ══╬          ╬══ R-pSlot 5
-  L-pSlot 3 ══╬  CENTER  ╬══ R-pSlot 4
-  L-pSlot 4 ══╬          ╬══ R-pSlot 3
-  L-pSlot 5 ══╬          ╬══ R-pSlot 2
-  L-pSlot 6 ══╬          ╬══ R-pSlot 1
-  L-pSlot 7 ══╬══════════╬══ R-pSlot 0    ← Left BOTTOM = pSlot 7, Right BOTTOM = pSlot 0
-              ║  BOTTOM  ║
-              ╚══════════╝
-  LEFT side: ↓ top→bottom     RIGHT side: ↑ bottom→top
+              â•”â•â•â•â•â•â•â•â•â•â•â•—
+              â•‘   TOP    â•‘
+  L-pSlot 0 â•â•â•¬â•â•â•â•â•â•â•â•â•â•â•¬â•â• R-pSlot 7    â† Left TOP = pSlot 0, Right TOP = pSlot 7
+  L-pSlot 1 â•â•â•¬          â•¬â•â• R-pSlot 6
+  L-pSlot 2 â•â•â•¬          â•¬â•â• R-pSlot 5
+  L-pSlot 3 â•â•â•¬  CENTER  â•¬â•â• R-pSlot 4
+  L-pSlot 4 â•â•â•¬          â•¬â•â• R-pSlot 3
+  L-pSlot 5 â•â•â•¬          â•¬â•â• R-pSlot 2
+  L-pSlot 6 â•â•â•¬          â•¬â•â• R-pSlot 1
+  L-pSlot 7 â•â•â•¬â•â•â•â•â•â•â•â•â•â•â•¬â•â• R-pSlot 0    â† Left BOTTOM = pSlot 7, Right BOTTOM = pSlot 0
+              â•‘  BOTTOM  â•‘
+              â•šâ•â•â•â•â•â•â•â•â•â•â•
+  LEFT side: â†“ top→bottom     RIGHT side: â†‘ bottom→top
   pSlot: 0,1,2,3,4,5,6,7      pSlot: 0,1,2,3,4,5,6,7
 ```
 
@@ -126,9 +126,9 @@ These rules govern `src/components/VisualizerUnit.tsx`. **Do NOT apply to SOULZ 
 | `numLeds` formula | `Math.floor(devicePoints)` — `ledPoints` IS the per-segment canvas | `Math.floor(devicePoints / deviceSegments)` — causes 4 LEDs, not 8 |
 | `devicePoints` fallback | `productProfile.defaultLedPoints` (8) | `productProfile.vizDefaultPoints` (was 16) — causes 16-color arcs |
 | `deviceSegments` fallback | `productProfile.defaultSegments` (2) | Hard-coded `1` — kills gap rendering |
-| `getVisualizerFrame` numLeds arg | `numLeds` (8) | `activeSegmentLedsHoisted` (32) — 4× oversampled palette |
+| `getVisualizerFrame` numLeds arg | `numLeds` (8) | `activeSegmentLedsHoisted` (32) — 4Ã— oversampled palette |
 | Product lookup guard | Guard `device.type !== 'undefined'` before `String()` | `String(undefined)` = `"undefined"` → SOULZ fallback → `vizShape='OVAL'` → RING inversion never fires |
-| Left arc pSlot direction | `rawFract` (inverted for i ≥ renderLeds/2 when `vizShape==='RING'`) | `segmentI / activeSegmentLeds` (never inverted) → both arcs identical |
+| Left arc pSlot direction | `rawFract` (inverted for i â‰¥ renderLeds/2 when `vizShape==='RING'`) | `segmentI / activeSegmentLeds` (never inverted) → both arcs identical |
 
 > **SOULZ Safety:** `rawFract` for SOULZ (`vizShape='OVAL'`) is NEVER inverted. Changing slot lookups to use `rawFract` instead of `segmentI/activeSegmentLeds` is identical for SOULZ — zero regression risk.
 
@@ -150,7 +150,7 @@ These rules govern `src/components/VisualizerUnit.tsx`. **Do NOT apply to SOULZ 
 - **Hardware-Cloud Gating:** We never lock essential local hardware features behind an internet authentication wall.
 - **Hardcoded Hardware Heuristics:** The UI layer must NEVER use explicit string literals (e.g. `type === 'HALOZ'`) or hardcoded binary logic to render products. All hardware metadata (shape, icons, colors) must be dynamically derived from `LOCAL_PRODUCT_CATALOG` (`src/constants/ProductCatalog.ts`) to ensure scalable, zero-code support for new OEM devices.
 
-### ❌ Condemned Opcodes — Never Use in Production
+### âŒ Condemned Opcodes — Never Use in Production
 
 > [!CAUTION]
 > The following BLE opcodes are PERMANENTLY CONDEMNED for production UI use.
@@ -186,7 +186,7 @@ Every pattern belongs to one of three tiers:
 |:-----|:-------|:-----:|:------------|
 | **Tier 1** | ge.* Java class reversal | 33 | Settled Mode effects. `0x41` was originally reverse-engineered, but test patterns 201-233 now utilize native `0x41` hardware routing for byte parity checks. |
 | **Tier 2** | Programs Mode reversal | ~28 | Standard LED strip effects. Each Programs effect is reimplemented in TypeScript. `0x42` is NEVER called. |
-| **Tier 3** | SK8Lytz originals | ∞ | Effects only possible because we own the payload. Positional gradients, reactive splits, sport sequences, etc. |
+| **Tier 3** | SK8Lytz originals | âˆž | Effects only possible because we own the payload. Positional gradients, reactive splits, sport sequences, etc. |
 
 **Current total**: 81 templates (43 spatial/temporal + 5 street + 33 Multimode Pro Effects), all in one unified picker.
 
@@ -236,7 +236,7 @@ Controls which color pickers the UI renders for a given pattern:
 3. Add case to `src/protocols/VisualizerEngine.ts` `getVisualizerFrame()`
 4. Add entry to `src/protocols/PatternEngine.ts` `SK8LYTZ_TEMPLATES` with correct colorMode/tier/sourceRef
 5. For test patterns (201-233): dispatch via `ZenggeProtocol.setCustomModeCompact()` — NOT `0x41`, NOT 10B extended
-6. Verify: ProductVisualizer shows the effect ← identical to hardware via 0x59 (or 0x51 for test modes)
+6. Verify: ProductVisualizer shows the effect â† identical to hardware via 0x59 (or 0x51 for test modes)
 7. Hardware test on HALOZ: tap pattern → LED ring matches visualizer
 ```
 
@@ -267,7 +267,7 @@ Controls which color pickers the UI renders for a given pattern:
 > - ~~`ng_custom_groups`~~ → migrated to `@Sk8lytz_custom_groups`
 > - ~~`ng_processed_devices`~~ → DELETED (one-shot cleanup on boot)
 
-## Build Config & Troubleshooting 🛠️
+## Build Config & Troubleshooting ðŸ› ï¸
 
 ### Android Build Requirements
 
@@ -317,7 +317,7 @@ The **Admin Tools Hub** (`AdminToolsModal`) is the unified gateway for all syste
 
 ### Optimistic BLE Write Pipeline ("The Ghost Standard")
 
-The BLE write path uses an **Optimistic UI** architecture to eliminate perceived 80–500ms hardware latency:
+The BLE write path uses an **Optimistic UI** architecture to eliminate perceived 80—500ms hardware latency:
 
 | Phase             | Status FSM                   | Behavior                                                  |
 | :---------------- | :--------------------------- | :-------------------------------------------------------- |
@@ -387,13 +387,13 @@ All byte definitions below represent the inner payload _before_ the V2 BLE packe
 ### Confirmed Hardware Identity (APK-Verified 2026-04-21)
 
 > [!IMPORTANT]
-> All 3 physical SK8Lytz devices confirmed as **`Ctrl_Mini_RGB_Symphony_new_0xA3`** (product_id: **163 = 0xA3**). Confirmed from `discovered_devices_telemetry` across MACs `08:65:F0:9A:C2:3C`, `08:65:F0:9A:5E:06`, `08:65:F0:5F:03:B1`. Firmware: v45–46, BLE: 5, LED version: 3.
+> All 3 physical SK8Lytz devices confirmed as **`Ctrl_Mini_RGB_Symphony_new_0xA3`** (product_id: **163 = 0xA3**). Confirmed from `discovered_devices_telemetry` across MACs `08:65:F0:9A:C2:3C`, `08:65:F0:9A:5E:06`, `08:65:F0:5F:03:B1`. Firmware: v45—46, BLE: 5, LED version: 3.
 >
 > **Key implications of 0xA3 vs 0xA2:**
-> - `0x59` Static Colorful tab **IS available** on 0xA3 (not available on 0xA2) ✅
-> - `0x51` Custom Scene — **9B compact format (291B) WORKS** on 0xA3 via our standard `wrapCommand` ✅
+> - `0x59` Static Colorful tab **IS available** on 0xA3 (not available on 0xA2) âœ…
+> - `0x51` Custom Scene — **9B compact format (291B) WORKS** on 0xA3 via our standard `wrapCommand` âœ…
 > - `0x51` 10B extended format (323B) does NOT work via our wrapper — requires ZENGGE chunked framing header (see Protocol Bible Section 11)
-> - `0x42` effect ceiling: **1–100** (same as 0xA2). Effect 101 plays an undocumented effect (ceiling is soft).
+> - `0x42` effect ceiling: **1—100** (same as 0xA2). Effect 101 plays an undocumented effect (ceiling is soft).
 > - `0x43` Multi-Sequence: **DO NOT USE** — Oracle test caused hardware LED shutoff (state machine crash). ZENGGE app uses `0x51` for multi-step effects, not `0x43`.
 > - `0x41` Settled Mode: **DO NOT USE for IDs 201-233.** `0x41` and `0x51` share the same effectId range (1-33) but are different hardware engines producing different visuals. Using `0x41` for test patterns destroys parity. It is available in DiagnosticLab only. See Protocol Bible §0x41 and the AGENT SENTINEL warning in §0x51 Pattern Index.
 > - Source: Oracle Lab + live BLE HCI sniff (2026-04-22), `ZENGGE_PROTOCOL_BIBLE.md` Section 11
@@ -407,14 +407,14 @@ Every GATT connection fires this sequence before the device is added to React st
 3. **React state update** — `setConnectedDevices()` fires _after_ GATT is booted to prevent UI from blasting payloads during MTU queries.
 
 <!-- AST_COMPILER_START: ZENGGE_CONSTANTS -->
-#### 📝 Auto-Compiled Zengge Protocol Constants (AST Compiler)
+#### ðŸ“ Auto-Compiled Zengge Protocol Constants (AST Compiler)
 
-##### 🔌 BLE UUIDs
+##### ðŸ”Œ BLE UUIDs
 - **Service UUID**: `0000ffff-0000-1000-8000-00805f9b34fb` (`ZENGGE_SERVICE_UUID`)
 - **Write Characteristic UUID**: `0000ff01-0000-1000-8000-00805f9b34fb` (`ZENGGE_CHARACTERISTIC_UUID`)
 - **Notification Characteristic UUID**: `0000ff02-0000-1000-8000-00805f9b34fb` (`ZENGGE_NOTIFY_UUID`)
 
-##### 🛠️ Hardware Constraints
+##### ðŸ› ï¸ Hardware Constraints
 | Constraint | Value | Description |
 |:---|:---:|:---|
 | `maxPoints` | 300 | Maximum addressable points per segment |
@@ -425,7 +425,7 @@ Every GATT connection fires this sequence before the device is added to React st
 | `defaultPoints` | 30 | Fallback default point count |
 | `defaultSegments` | 10 | Fallback default segment count |
 
-##### 📟 IC Chip Types (`IC_TYPES`)
+##### ðŸ“Ÿ IC Chip Types (`IC_TYPES`)
 | Key | Chip Type |
 |:---:|:---|
 | 1 | WS2812B |
@@ -440,7 +440,7 @@ Every GATT connection fires this sequence before the device is added to React st
 | 10 | JY1903 |
 | 11 | WS2812E |
 
-##### 🎨 Color Sorting RGB (`COLOR_SORTING_RGB`)
+##### ðŸŽ¨ Color Sorting RGB (`COLOR_SORTING_RGB`)
 | Key | RGB Order |
 |:---:|:---|
 | 0 | RGB |
@@ -454,13 +454,13 @@ Every GATT connection fires this sequence before the device is added to React st
 
 ### writeChunked — 0x51 Extended Payload Framing
 
-Required for 323-byte 0x51 Extended Scene Builder payloads (32 steps × 10B + 3B header).
+Required for 323-byte 0x51 Extended Scene Builder payloads (32 steps Ã— 10B + 3B header).
 
 - **Function**: `useBLE.writeChunked(payload: number[], chunkSize = 20): Promise<void>`
 - **Framing**: `[0x40, seqByte, 0x00, 0x00, 0x01, 0x43, 0xBD, 0x0B, ...data]`
 - **12 bytes data per 20-byte BLE chunk** (8-byte header overhead)
 - **20ms inter-chunk delay** — prevents BLE TX buffer overflow on Android
-- **⚠️ Framing signature `[0x01, 0x43, 0xBD, 0x0B]` needs Oracle Lab HCI sniff** before wiring to production Scene Builder UI
+- **âš ï¸ Framing signature `[0x01, 0x43, 0xBD, 0x0B]` needs Oracle Lab HCI sniff** before wiring to production Scene Builder UI
 - Exported in `BluetoothLowEnergyApi` interface (commit `fdc0ff3`)
 
 ### BLE Stability Constraints & GATT Error Prevention
@@ -468,41 +468,93 @@ Required for 323-byte 0x51 Extended Scene Builder payloads (32 steps × 10B + 3B
 > [!CAUTION]
 > React Native BLE PLX and the Android native `BluetoothAdapter` suffer from extreme race conditions. To avoid GATT 133 exceptions, UI freezes, and buffer overflows, all logic must follow these architectural constraints:
 
-1. **Global Connection Gate (`bleGateRef`):** A `useRef` semaphore with states `IDLE | SCANNING | CONNECTING | DISCONNECTING | RECOVERING`. ALL BLE operations must check/acquire the gate before touching the radio. Only one operation class at a time.
-2. **Parallel Writes and Teardowns (`Promise.all`):** Previous sequential constraints caused massive UI lag. Group-wide commands (sliders) and teardowns (`cancelDeviceConnection`) MUST be wrapped in `Promise.all` loops to eliminate staggered latency.
-3. **The GATT 133 Retry Bumper:** `connectToDevice` MUST be wrapped in a 2-attempt retry loop that explicitly catches `133` routing errors and applies a 200ms thread-sleep before the second attempt to silently absorb Android RF congestion.
-4. **High-Priority Channel Escalation:** Upon resolving connection on Android, the `requestConnectionPriorityForDevice(conn.id, 1)` command must be instantly fired. This throttles the kernel polling interval to ~11.25ms to defend against crowded RF environments.
-5. **Lean Connection Loops:** `connectToDevices` strictly establishes MTU (request 512 bytes) and notification pipes. Do NOT execute 600ms latency buffers, firmware loads, or 0x63 hardware settings queries during the connection stack, as this artificially bloats the boot sequence by 2.5s per device.
+1. **Global Connection Gate (`bleGateRef`):** A `BleStateMachine` FSM ref with phases `IDLE | SCANNING | CONNECTING | DISCONNECTING | RECOVERING`. ALL BLE operations must check/acquire the gate before touching the radio. Only one operation class at a time. The gate auto-syncs to React state via `addListener` for re-renders.
+2. **GATT Mutex with 4-Tier Priority (`useBLEGattMutex`):** Fine-grained GATT operation serialization. Priority tiers: `P1_CRITICAL` (power, user writes), `P2_RECOVERY` (auto-reconnect — preempts lower tiers via AbortController), `P3_INTERROGATION` (EEPROM probes), `P4_MAINTENANCE` (heartbeat, RSSI polls). Higher priority requests abort in-progress lower-priority locks. 15s deadlock watchdog auto-releases orphaned locks and logs telemetry.
+3. **The GATT 133 Exponential Backoff:** `connectToDevice` is wrapped in a 3-attempt retry loop with exponential delays `[500ms, 1500ms, 4000ms]` + `refreshGatt: 'OnConnected'` on each retry to silently absorb Android RF congestion. _(Previously: 2-attempt, flat 200ms delay.)_
+4. **Connection Priority Downgrade after Handshake:** On Android, `requestConnectionPriority(HIGH)` fires immediately on connect for fast MTU/handshake. After the first successful write, priority is downgraded to `BALANCED` — saves 2—3Ã— battery on fire-and-forget traffic. _(Previously: stayed at HIGH permanently.)_
+5. **Pre-Lock Gate Check:** `connectToDevices` now checks `bleGateRef !== IDLE` _before_ acquiring the GATT lock. If the gate is already busy (scanning, recovering), the connect attempt is skipped immediately instead of blocking in an 8s polling loop.
+6. **Lean Connection Loops:** `connectToDevices` strictly establishes MTU (request 512 bytes) and notification pipes. Do NOT execute 600ms latency buffers, firmware loads, or 0x63 hardware settings queries during the connection stack.
+7. **50ms Inter-Device Write Gap:** All multi-device group writes in `BleWriteDispatcher` enforce a 50ms pause between per-device GATT writes. Prevents silent GATT drops on Qualcomm Snapdragon 665/675 and MediaTek Helio chipsets. _(Previously: 20ms — insufficient for budget chipsets.)_
+8. **Priority FIFO Write Queue (`BleWriteQueue.ts`):** All BLE writes are serialized through a priority queue with backpressure. Critical writes (power, time sync) bypass the debounce. Pattern writes are deduplicated by generation counter. Queue depth is capped to prevent memory pressure.
+9. **Parallel Writes and Teardowns (`Promise.all`):** Group-wide commands (sliders) and teardowns (`cancelDeviceConnection`) MUST be wrapped in `Promise.all` loops to eliminate staggered latency.
 
 ### The Transport Wrapper (`wrapCommand`)
 
 Every inner protocol payload must be wrapped using the standard 8-byte Zengge V2 framing:
 `[0x00, SequenceNum, 0x80, 0x00, LenHi, LenLo, Len+1, 0x0B, ...innerPayload]`
 
-### Auto-Recovery System (Gate-Coordinated)
+### Auto-Recovery System (3-Phase, Gate-Coordinated)
 
-_Refactored: 2026-04-17 | Lives in: `src/hooks/ble/useBLEAutoRecovery.ts`_
+_Refactored: 2026-06-05 | Lives in: `src/hooks/ble/useBLEAutoRecovery.ts`_
 
-The **Auto-Recovery** system monitors GATT-connected devices for organic disconnects (dropout events). When a device drops, recovery automatically attempts reconnection with gate coordination.
+The **Auto-Recovery** system monitors GATT-connected devices for organic disconnects and stale-link heartbeat failures. When a device drops, recovery automatically attempts reconnection through a 3-phase escalation strategy with gate coordination.
+
+#### 3-Phase Recovery Architecture
+
+| Phase | Name | Duration | Backoff | GATT Lock | Behavior |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Phase 1** | Aggressive | 0—2 min | `1500ms Ã— 1.5^attempt` + jitter(0—1500ms), capped 30s | Acquires `P2_RECOVERY` | Rapid reconnect. Best chance of success while device is nearby. |
+| **Phase 2** | Moderate | 2—10 min | Same formula, longer natural gaps | Acquires `P2_RECOVERY` | Reduced frequency. Device may have moved out of range temporarily. |
+| **Phase 3** | Passive | 10 min+ | **No active polling** | **No GATT lock** | Zero-cost watch mode. Delegates to Sweeper — if the device reappears in scan results, recovery is re-initiated from Phase 1. |
+
+#### Group Dropout Coordinator
+
+_Lives in: `useBLEAutoRecovery.ts` → `onGroupDropout` callback_
+
+When 2+ devices disconnect within a 1.5s debounce window (common when a user powers off both skates), the coordinator batches them into a single `connectToDevices([...devices])` call instead of spawning N competing recovery loops. Eliminates the "stampeding herd" race condition that caused cascading GATT 133 errors.
+
+#### Recovery Properties
 
 | Property | Value |
 | :--- | :--- |
-| **Trigger** | Organic `onDisconnected` event from BLE PLX |
-| **Gate coordination** | Skips recovery attempts when `bleGateRef ≠ IDLE` (e.g., during manual connections) |
-| **Retry sequence** | 1. Set gate → `RECOVERING` → 2. `connectToDevice` (3500ms timeout) → 3. `discoverAllServicesAndCharacteristics` → 4. Resolve adapter via `conn.services()` → re-register `adapter.notifyCharacteristicUUID` monitor → 5. `onAdapterResolved` callback fires (updates `adapterMapRef` in `useBLE.ts`) → 6. Release gate → `IDLE` |
+| **Trigger** | Organic `onDisconnected` event from BLE PLX, OR `useBLEHeartbeat` stale-link detection |
+| **Gate coordination** | Uses GATT mutex `P2_RECOVERY` priority — preempts interrogation/maintenance, yields to critical writes |
+| **Retry backoff** | `1500ms Ã— 1.5^attempt` + random jitter `[0, 1500ms]`, ceiling 30s |
 | **Cancellation** | AbortController-style token — incrementing counter instantly breaks all active loops |
-| **Max retries** | `5` with exponential delay: `2s, 4s, 8s, 16s, 30s` |
-| **Ghosting** | Failed recovery adds device to `ghostedDeviceIds` — UI dims card, `writeToDevice` skips it |
+| **Ghosting** | Failed recovery (all phases exhausted) adds device to `ghostedDeviceIds` — UI dims card, `writeToDevice` skips it |
+| **Auto-Recovery Summary** | `AUTO_RECOVERY_SUMMARY` telemetry event with lifetime success rate, avg recovery time, and per-phase stats aggregated per device |
 
 **Telemetry Events:**
 - `AUTO_RECOVERY_STARTED` — emitted when recovery loop begins for a device
 - `AUTO_RECOVERY_SUCCESS` — device reconnected and services restored
-- `AUTO_RECOVERY_FAILED` — all retries exhausted, device is now ghosted
+- `AUTO_RECOVERY_FAILED` — all phases exhausted, device is now ghosted
 - `AUTO_RECOVERY_CANCELLED` — recovery loop cancelled (user-initiated disconnect)
 - `AUTO_RECOVERY_GATE_WAIT` — recovery attempt skipped because gate is busy
+- `AUTO_RECOVERY_SUMMARY` — per-device aggregate telemetry (success rate, avg time, phase breakdown)
 
-> [!IMPORTANT]
-> **DELETED (2026-04-17):** The legacy `useBLEWatchdog.ts` heartbeat system has been completely removed. Its functionality (30s polling + silentRelatch) is replaced by the reactive `onDisconnected` observer in `useBLEAutoRecovery`. The watchdog created GATT collisions by issuing writes (`0x63`) during active user operations.
+> [!NOTE]
+> **History:** The legacy `useBLEWatchdog.ts` (flat 30s polling + silentRelatch) was deleted 2026-04-17 because it caused GATT collisions during active user writes. The new `useBLEHeartbeat` (added 2026-06-06) solves the same problem correctly — it uses the GATT mutex at `P4_MAINTENANCE` priority, sends a lightweight 0x63 query, and only fires every 45s. Stale links detected by heartbeat are routed to `autoRecovery.initiateRecovery(mac)`.
+
+### Connection Health Heartbeat
+
+_Added: 2026-06-06 | Lives in: `src/hooks/ble/useBLEHeartbeat.ts`_
+
+Pings every connected device every 45s via a 0x63 EEPROM query to detect stale GATT handles early. Samsung Galaxy A-series can hold stale handles alive for minutes after the physical device powers off — without heartbeat, the stale link is only discovered on the next user write.
+
+| Property | Value |
+| :--- | :--- |
+| **Interval** | 45s (`HEARTBEAT_INTERVAL_MS`) |
+| **Probe** | `0x63` hardware query via adapter — same query used by EEPROM interrogation |
+| **Fallback** | If adapter doesn't support `0x63` (BanlanX), falls back to `readRSSIForDevice` |
+| **On failure** | Drops device from `connectedDevices`, immediately calls `autoRecovery.initiateRecovery(mac)` |
+| **GATT priority** | `P4_MAINTENANCE` — yields to all user writes, recovery, and interrogation |
+| **Testability** | `pingConnectedDevice()` exported as pure async fn — tested without React context |
+
+### Post-Connect RSSI Monitor
+
+_Added: 2026-06-06 | Lives in: `src/hooks/ble/useBLERSSIMonitor.ts`_
+
+Polls `readRSSIForDevice` every 30s on all connected devices. Surfaces live signal strength as `rssiMap: Record<string, number>` keyed by device MAC.
+
+| Property | Value |
+| :--- | :--- |
+| **Interval** | 30s (`RSSI_POLL_INTERVAL_MS`) |
+| **Weak threshold** | -75 dBm (`RSSI_WEAK_THRESHOLD`) — UI badge turns orange |
+| **Critical threshold** | -82 dBm (`RSSI_CRITICAL_THRESHOLD`) — triggers proactive reconnect |
+| **Proactive reconnect** | Calls `autoRecovery.initiateRecovery(mac)` if device not already in `ghostedDeviceIds` — forces GATT tear-down + fresh reconnect, which often picks a better radio channel |
+| **UI integration** | `rssiMap[mac]` injected into `mergedItem.rssi` in `DashboardScreen.renderItem` — existing wifi icon auto-updates to reflect live post-connect signal quality |
+| **Badge component** | `ConnectionStrengthBadge` — 3-bar signal icon using pure View rectangles (no SVG). 4-tier colour: green (â‰¥-60), amber (-60 to -75), orange (-75 to -82), red (<-82). Hidden when rssi is null. |
+| **Testability** | `readDeviceRSSI()` exported as pure async fn — 9 unit tests |
 
 ### Auto-Connect Observer (Debounced)
 
@@ -510,9 +562,12 @@ _Lives in: `src/hooks/useDashboardAutoConnect.ts`_
 
 The dashboard auto-connect observer watches `allDevices` for registered peripherals that appear during passive scanning. It is hardened with:
 - **500ms debounce** — batches devices discovered within 500ms into a single `connectToDevices` call
-- **Gate check** — skips connection when `bleGateRef ≠ IDLE`
+- **Gate check** — skips connection when `bleGateRef â‰  IDLE`
+- **Pre-lock gate check** — checks gate state _before_ entering the 8s GATT lock poll (RC-04)
+- **Ref-forwarded closures** — `connectToDevices` and `scanForPeripherals` are captured via stable refs to eliminate stale closure bugs on re-render (RC-02)
 - **Prevents stampeding herd** — no concurrent auto-connect attempts
-- **Group-IDs array aware (2026-05-29)**: The offline fallback `processLocalDevices()` iterates `d.group_ids` (array, post-migration) with a scalar `d.group_id` fallback for legacy persisted rows. The cloud path similarly checks `d.group_ids.includes(targetGroupId)` before the scalar. **Never assume `d.group_id` is populated on newly-registered devices.**
+- **Sweeper-aware** — when Sweeper is active, routes through `burstScan()` instead of `startDeviceScan()` to avoid dual scan conflicts
+- **Group-IDs array aware (2026-05-29)**: The offline fallback `processLocalDevices()` iterates `d.group_ids` (array, post-migration) with a scalar `d.group_id` fallback for legacy persisted rows. **Never assume `d.group_id` is populated on newly-registered devices.**
 
 ### RSSI Proximity Gating (Setup Wizard)
 
@@ -523,6 +578,44 @@ To prevent skatepark BLE noise from hijacking the Setup Wizard, the scanner enfo
 - **Unregistered devices** (not yet claimed): `hw_setup_rssi_threshold` from `@sk8lytz_app_settings` (default -70 dBm) — tunable via Admin → App Manager → Hardware section
 - Threshold is loaded **once on scanner mount** from AsyncStorage. Changing it mid-session requires app restart to take effect.
 - Admin stepper control: `ControlsRegistry.ts` key `hw_setup_rssi_threshold`, type `number_stepper`, range -100 to -30 dBm, step 1.
+
+### iOS Platform Guards
+
+_Added: 2026-06-05 (iOS-01, iOS-03)_
+
+| Guard | File | Fix |
+| :--- | :--- | :--- |
+| **MTU Platform Guard** | `BleConnectionManager.ts` | `requestMTU()` wrapped in `Platform.OS === 'android'` block — iOS negotiates MTU automatically during GATT connection. Calling `requestMTU` on iOS throws. On iOS, `conn.mtu` is read directly (typed `number` in `react-native-ble-plx`). |
+| **UUID Filter in `startDeviceScan`** | `useBLESweeper.ts` | `startDeviceScan(null, ...)` replaced with `startDeviceScan([ZENGGE_SERVICE_UUID], ...)`. Enables iOS background scanning mode (CBCentralManager requires a service UUID filter when `allowDuplicates: false`). Also reduces Android scan noise. |
+
+### Android Platform Guards
+
+_Added: 2026-06-05 (AND-02, AND-03, AND-04)_
+
+| Guard | File | Fix |
+| :--- | :--- | :--- |
+| **Connection Priority Downgrade** | `BleConnectionManager.ts` | After handshake, `requestConnectionPriority(BALANCED)` fired to save 2—3Ã— battery. Only on Android (iOS manages its own priority). |
+| **50ms Inter-Device Write Gap** | `BleWriteDispatcher.ts` | Increased from 20ms → 50ms. Fixes silent GATT drops on Qualcomm Snapdragon 665/675 and MediaTek Helio chipsets. |
+| **Scan Budget Guard** | `useBLESweeper.ts` | Tracks `startDeviceScan` calls against Android 12+'s 4-per-30s budget. If exhausted, defers the scan start until the budget window resets. Prevents silent throttling where Android OS stops delivering scan results with zero error feedback. |
+
+### Battery-Adaptive Sweeper (The Silent Sweeper)
+
+_Added: 2026-06-05 | Lives in: `src/hooks/ble/useBLESweeper.ts` (BAT-01)_
+
+The Silent Sweeper is a persistent background LowPower BLE scan that runs after dashboard mount. It handles:
+1. **Background device discovery** — no manual scan button needed
+2. **Interrogator Queue** — queues EEPROM probes (0x63) for newly-discovered devices, populates `hwCache`
+3. **Battery-adaptive throttling** — 3-tier system adjusts scan intensity based on phone battery level
+
+| Tier | Battery Level | Scan Interval | Behavior |
+| :--- | :--- | :--- | :--- |
+| **Normal** | â‰¥30% | Continuous LowPower | Full scan, all features active |
+| **Conservative** | 15—30% | Reduced frequency | Longer gaps between scan windows |
+| **Critical** | <15% | Minimal scanning | Sweeper pauses non-essential scans, only responds to burst requests |
+
+- **burstScan(durationMs)**: Elevates to `LowLatency` for a timed burst (default 5s), then reverts to `LowPower`. Used by the Wizard and auto-connect observer instead of calling `startDeviceScan` directly. Prevents dual-scan conflicts.
+- **`hwCache: Record<string, any>`**: In-memory EEPROM settings cache keyed by uppercase MAC. Populated by Interrogator Queue. Consumed by `useBLEScanner` and `DashboardScreen`.
+- Sweeper is paused during `AppState.background` and resumed on foreground via `startSweeper()`/`stopSweeper()` in `useBLE.ts`.
 
 ---
 
@@ -553,7 +646,7 @@ Dispatch chain: `useControllerDispatch.ts` → `PatternEngine.ts` (Synthesizer) 
 
 **Archetypes & Auto-Routing:**
 - **Spatial Mode (`0x59` CASCADE/FREEZE):** Synthesizes full 300-pixel RGB arrays client-side using waveform math (sine waves, pulse trains, alternating grids). Automatically routed to `<ProductVisualizer>` and `<CustomEffectVisualizer>` without duplicative business logic.
-  > **⚠️ 0x59 SPATIAL LIMITATION (Center-Out Reality):** The hardware `0x59` command ONLY supports autonomous scrolling (`0x02 Running`). It CANNOT mathematically expand or contract pixels from a center point. Center-Out math functions generate static arrays that merely scroll, creating visual duplicates of standard Wipes/Comets. Furthermore, HALOZ hardware physically mirrors left/right segments (both wipe Heel-to-Toe), meaning a standard Wipe natively behaves as a Center-Out effect. Thus, Center-Out pattern math is redundant and incompatible with `0x59`.
+  > **âš ï¸ 0x59 SPATIAL LIMITATION (Center-Out Reality):** The hardware `0x59` command ONLY supports autonomous scrolling (`0x02 Running`). It CANNOT mathematically expand or contract pixels from a center point. Center-Out math functions generate static arrays that merely scroll, creating visual duplicates of standard Wipes/Comets. Furthermore, HALOZ hardware physically mirrors left/right segments (both wipe Heel-to-Toe), meaning a standard Wipe natively behaves as a Center-Out effect. Thus, Center-Out pattern math is redundant and incompatible with `0x59`.
 - **Temporal Mode (`0x51` STEP_JUMP/GRADUAL):** For whole-strip temporal patterns (Jump, Strobe, Breathe), the engine MUST route to the `0x51` 32-step hardware scheduler. `0x59` is the wrong tool for whole-strip temporals because evaluating a Jump/Strobe equation at a static `seedTick` produces an un-animatable solid color or pure black frame that the hardware cannot jump/strobe properly. For patterns that require sub-millisecond fade interpolations (e.g., `Breath`, `Strobe`), the engine automatically routes to the `0x51` 32-step hardware scheduler to prevent BLE bus saturation.
 
 > [!NOTE]
@@ -561,7 +654,7 @@ Dispatch chain: `useControllerDispatch.ts` → `PatternEngine.ts` (Synthesizer) 
 
 #### RBM Built-in Patterns (100 Modes)
 
-Source of truth: `src/utils/RbmDictionary.ts` — IDs 1–100, mapped 1:1 to Zengge `SymphonyBuild` string table.
+Source of truth: `src/utils/RbmDictionary.ts` — IDs 1—100, mapped 1:1 to Zengge `SymphonyBuild` string table.
 Visualizer: `src/utils/RbmSimulator.ts` (pixel-perfect frame generation).
 Protocol: `0x42` (`setCustomRbm`) or `0x61` (legacy APK path — same pattern table).
 
@@ -588,9 +681,9 @@ _Writes custom segments, IC type, and max LED points permanently to the controll
 - **CRITICAL ENDIANNESS:** Uses **Big-Endian format**: `ptsHigh = (points >> 8) & 0xFF`, `ptsLow = points & 0xFF`.
 
 > [!NOTE]
-> **`points` ≠ total LEDs.** `points` = LEDs per segment. `segments` = number of parallel mirrors.
-> Total physical LEDs = `points × segments`. The hardware's segment engine mirrors the pattern automatically.
-> **HALOZ example**: 22 bulbs = 11 points × 2 segments. All pattern commands use 11, not 22.
+> **`points` â‰  total LEDs.** `points` = LEDs per segment. `segments` = number of parallel mirrors.
+> Total physical LEDs = `points Ã— segments`. The hardware's segment engine mirrors the pattern automatically.
+> **HALOZ example**: 22 bulbs = 11 points Ã— 2 segments. All pattern commands use 11, not 22.
 > The `0x51` slot `flags=0x80` byte enables segment mirroring ("section toggle"). `flags=0x00` disables it.
 > Full model documented in `ZENGGE_PROTOCOL_BIBLE.md` under `0x62`.
 
@@ -603,8 +696,8 @@ _Primary command for all IC-strip patterns. Sends a per-pixel RGB array that the
 > [!IMPORTANT]
 > **SEGMENT MODEL — Array Length Must Use `ledPoints`, NOT Total LEDs.**
 > The ZENGGE hardware segment engine automatically mirrors the `ledPoints` pattern across all segments.
-> For HALOZ (22 bulbs = 11 points × 2 segments), send an array of **11** pixels, not 22.
-> Sending `ledPoints × segments` pixels bypasses the hardware mirror and fills both segments manually.
+> For HALOZ (22 bulbs = 11 points Ã— 2 segments), send an array of **11** pixels, not 22.
+> Sending `ledPoints Ã— segments` pixels bypasses the hardware mirror and fills both segments manually.
 > Source: BLE sniff observation (2026-04-22) — ZENGGE Multi-Color creator uses `points` exclusively.
 
 - **Format:** `[0x59, totalLenHi, totalLenLo, [R1,G1,B1...], numLEDsHi, numLEDsLo, transitionType, speed, direction, checksum]`
@@ -612,21 +705,21 @@ _Primary command for all IC-strip patterns. Sends a per-pixel RGB array that the
 - **Minimum Payload:** 12 pixels. Payloads <10 cause **hardware memory lock glitching**.
 - **TransitionType Bytes (APK Verified Truth: `StaticColorfulMode.java`):**
 
-> ⚠️ **0xA3 HARDWARE LIMITATION:** The `0x59` command is a spatial payload. The ZENGGE app explicitly *hides* Breathe and Twinkly from the `0x59` UI for the `0xA3` chip because the hardware cannot calculate temporal math over a 450-byte custom array. Strobe and Jump are also known to fail. **For temporal transitions (Breathe, Jump, Strobe), use the `0x51` Scene Sequencer instead!**
+> âš ï¸ **0xA3 HARDWARE LIMITATION:** The `0x59` command is a spatial payload. The ZENGGE app explicitly *hides* Breathe and Twinkly from the `0x59` UI for the `0xA3` chip because the hardware cannot calculate temporal math over a 450-byte custom array. Strobe and Jump are also known to fail. **For temporal transitions (Breathe, Jump, Strobe), use the `0x51` Scene Sequencer instead!**
 
 | Byte | Name | Behavior | 0xA3 Status |
 |:---|:---|:---|:---|
-| `0x01` | Static | Freeze in place | ✅ **Fully Supported** |
-| `0x02` | Running Water | Continuous hardware scroll | ✅ **Fully Supported** |
-| `0x03` | Strobe | Flash effect | ❌ Fails (Requires `0x51`) |
-| `0x04` | Jump | Hard color jump | ❌ Fails (Requires `0x51`) |
-| `0x05` | Breathe | Breathe fade effect | ⛔ **Firmware Locked/Hidden** (Use `0x51`) |
-| `0x06` | Twinkly | Twinkle effect | ⛔ **Firmware Locked/Hidden** |
+| `0x01` | Static | Freeze in place | âœ… **Fully Supported** |
+| `0x02` | Running Water | Continuous hardware scroll | âœ… **Fully Supported** |
+| `0x03` | Strobe | Flash effect | âŒ Fails (Requires `0x51`) |
+| `0x04` | Jump | Hard color jump | âŒ Fails (Requires `0x51`) |
+| `0x05` | Breathe | Breathe fade effect | â›” **Firmware Locked/Hidden** (Use `0x51`) |
+| `0x06` | Twinkly | Twinkle effect | â›” **Firmware Locked/Hidden** |
 
 > [!IMPORTANT]
 > **Tick Settings (Point Count) Mismatch Flaw**: The `numLEDsHi` and `numLEDsLo` bytes at the end of the `0x59` payload dictate the **physical hardware strip length** that the transition effect will span across. Our previous implementation clamped this value to the RGB array length (max 54). If the hardware has 150 LEDs, clamping this to 54 causes transitions to truncate because the hardware thinks the spatial size is only 54! To bypass MTU limits while preserving spatial effects, we must decouple the RGB array length from the hardware point count sent in the payload.
 
-- **Speed:** UI 0–100 → HW 1–31. Formula: `max(1, min(31, round(uiSpeed / 100 × 30) + 1))`. Source: APK `Protocol/n.java: ad.e.a(f, 1, 31)`.
+- **Speed:** UI 0—100 → HW 1—31. Formula: `max(1, min(31, round(uiSpeed / 100 Ã— 30) + 1))`. Source: APK `Protocol/n.java: ad.e.a(f, 1, 31)`.
 - **Direction:** `0x01` Forward, `0x00` Reverse.
 - **Solid Mode Replication:** A single 1-pixel padded array with `transitionType=0x01` (FREEZE) safely replicates Solid Mode without `0x31` flickering glitches.
 
@@ -647,8 +740,8 @@ _Sends up to 32 animation steps. Hardware loops through active steps autonomousl
 [ACTIVE_FLAG, effectId, speed, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b, flags]
 ```
 - `ACTIVE_FLAG`: `0xF0` = active step, `0x0F` = inactive (skip).
-- `effectId`: SymphonyEffect ID 1–33
-- `speed`: 0–100 (direct, no scaling)
+- `effectId`: SymphonyEffect ID 1—33
+- `speed`: 0—100 (direct, no scaling)
 - `FG.RGB`: Foreground color (ignored for NO_COLOR/rainbow effects)
 - `BG.RGB`: Background color (ignored for NO_COLOR/rainbow effects)
 - `flags`: `0x80` = forward + section toggle enabled, `0x00` = reverse
@@ -665,9 +758,9 @@ _Sends up to 32 animation steps. Hardware loops through active steps autonomousl
 | `0x3A` | `STEP_JUMP` | Hard cut between FG and BG colors |
 | `0x3B` | `STEP_GRADUAL` | Smooth cross-fade between FG and BG |
 | `0x3C` | `STEP_STROBE` | Rapid flash between FG and BG |
-| `0x01`–`0x2C` | Custom Effects 1–44 | Hardware `SymphonyEffect` IDs. Full mapping documented in `ZENGGE_PROTOCOL_BIBLE.md` |
+| `0x01`—`0x2C` | Custom Effects 1—44 | Hardware `SymphonyEffect` IDs. Full mapping documented in `ZENGGE_PROTOCOL_BIBLE.md` |
 
-- **Speed:** Full 1–100 range valid (unlike `0x59` which is capped at 31).
+- **Speed:** Full 1—100 range valid (unlike `0x59` which is capped at 31).
 - **Max slots:** 32 active steps.
 - **Source of Truth:** `ZenggeProtocol.setCustomMode()` — current 9B format is production-safe.
 
@@ -675,8 +768,8 @@ _Sends up to 32 animation steps. Hardware loops through active steps autonomousl
 
 ### Basic Control Commands
 
-- **Power ON (0x71):** `[0x71, 0x23, 0x0F, 0xA3]` — checksum `0xA3` = sum of first 3 bytes ✅
-- **Power OFF (0x71):** `[0x71, 0x24, 0x0F, 0xA4]` — checksum `0xA4` = sum of first 3 bytes ✅
+- **Power ON (0x71):** `[0x71, 0x23, 0x0F, 0xA3]` — checksum `0xA3` = sum of first 3 bytes âœ…
+- **Power OFF (0x71):** `[0x71, 0x24, 0x0F, 0xA4]` — checksum `0xA4` = sum of first 3 bytes âœ…
 - **Source:** `C14184b.m4796M()` via `C7780q.m20873a()` — 0xA3 is NOT a legacy device → always uses `0x71`, never `0x3B`.
 
 ### Command: Settled Mode — FG + BG Dual Color (0x41)
@@ -684,7 +777,7 @@ _Sends up to 32 animation steps. Hardware loops through active steps autonomousl
 _Triggers one of 33 Symphony effects with explicit foreground and background colors._
 
 - **Format:** `[0x41, effectId, FG.r, FG.g, FG.b, BG.r, BG.g, BG.b, speed, direction, 0x00, 0xF0, checksum]` (13 bytes)
-- **effectId range:** 1–33 (SymphonyEffect IDs)
+- **effectId range:** 1—33 (SymphonyEffect IDs)
 - **direction:** `0x00` = forward, `0x01` = reverse
 - **Source:** `C7775l.java` → `m20877a()`, called by `SettledModeFragment`
 
@@ -701,9 +794,9 @@ _APK-documented format below is preserved for reference only:_
 
 _Triggers one of 100 hardware-native RBM patterns by ID. The controller runs the animation internally — no pixel array needed._
 
-- **Format:** `[0x42, patternId(1–100), speed(1–100), brightness(1–100), checksum]`
+- **Format:** `[0x42, patternId(1—100), speed(1—100), brightness(1—100), checksum]`
 - **Source of Truth:** `ZenggeProtocol.setCustomRbm()`
-- **Pattern IDs:** 1–100 mapped 1:1 to Zengge `SymphonyBuild` string table. Full dictionary in `src/utils/RbmDictionary.ts`.
+- **Pattern IDs:** 1—100 mapped 1:1 to Zengge `SymphonyBuild` string table. Full dictionary in `src/utils/RbmDictionary.ts`.
 
 ### Command: Symphony Multi-Color / RBM Legacy (0x61)
 
@@ -724,18 +817,18 @@ _Configures the hardware's music-reactive mode with mode type (Bar vs Screen), p
 - **Format (13 bytes):** `[0x73, isOn, modeType, effectId, dropR, dropG, dropB, colR, colG, colB, sensitivity, brightness, checksum]`
 - **isOn:** `0x01` = Device Mic Active (Hardware processes audio). `0x00` = App Mic Active (Hardware mic OFF, waits for `0x74` magnitude streams).
 - **modeType:** `0x26` (38) = Light Bar Mode (16 built-in patterns). `0x27` (39) = Light Screen Mode (30 built-in patterns).
-- **effectId:** 1–30 music-reactive pattern IDs (mapped in `MusicDictionary.ts`)
+- **effectId:** 1—30 music-reactive pattern IDs (mapped in `MusicDictionary.ts`)
 - **dropR, dropG, dropB (Bytes 4-6):** Drop Color (controlled by `sb_point` in the native app). Verified via `strings.xml` translation `<string name="point_color">drop color</string>`.
 - **colR, colG, colB (Bytes 7-9):** Sound Column Color (controlled by `sb_col` in the native app). Verified via `strings.xml` translation `<string name="col_color">sound column color</string>`.
   - *Light Bar (0x26) specific behavior*: The native ZENGGE app clones the primary color to **both** the Drop Color and Sound Column Color slots inside the `0x73` payload to prevent hardware rendering confusion.
-- **sensitivity / brightness:** 0–255
+- **sensitivity / brightness:** 0—255
 - **Source of Truth:** `ZenggeProtocol.setMusicConfig()` (decompiler trace: `C7789z.java`, `MusicModeFragment.java` line 752)
 
 ### Command: App Mic Magnitude (0x74)
 
 _Streams real-time audio magnitude from the app's microphone to drive hardware music-reactive LEDs._
 
-- **Format:** `[0x74, magnitude(0–255), checksum]` (3 bytes)
+- **Format:** `[0x74, magnitude(0—255), checksum]` (3 bytes)
 - **Used when:** `isOn = 0x00` (App mic) in the `0x73` music config.
 - **Source:** `C7788y.java` → `m20863a()`, `useAppMicrophone.ts` → `ZenggeProtocol.sendMusicMagnitude()`
 
@@ -743,8 +836,8 @@ _Streams real-time audio magnitude from the app's microphone to drive hardware m
 
 _Streams one row of real-time pixel data per call. Used for live bitmap/image projection onto LEDs._
 
-- **Format (variable):** `[0x53, totalLen_hi, totalLen_lo, R, G, B, ...(numLEDs × RGB)..., numLEDs_hi, numLEDs_lo, checksum]`
-- **totalLen:** `(numLEDs × 3) + 6`
+- **Format (variable):** `[0x53, totalLen_hi, totalLen_lo, R, G, B, ...(numLEDs Ã— RGB)..., numLEDs_hi, numLEDs_lo, checksum]`
+- **totalLen:** `(numLEDs Ã— 3) + 6`
 - **Rate-limited:** Hardware uses AtomicBoolean gate — must wait for ACK before next frame.
 - **Behavior:** Sends one bitmap row. Call repeatedly in a loop to stream animation frames.
 - **APK Source:** Built inline `SceneModeFragment.m18748Z2(int[] iArr)` — no dedicated Protocol class.
@@ -761,7 +854,7 @@ _EEPROM-based scene storage and playback control._
 **Activate Scene + Set Speed/Brightness (0x57) — 5 bytes:**
 ```
 [0x57, sceneIndex, speed, brightness, checksum]
-// sceneIndex: 0–9 for specific slot, 0xFF (-1 as byte) to replay ALL
+// sceneIndex: 0—9 for specific slot, 0xFF (-1 as byte) to replay ALL
 ```
 
 **Scene State Query (0x58) — 3 bytes:**
@@ -779,20 +872,39 @@ The app implements a **Mathematical Consumption Modeling** system using real-tim
 ## 4. Domain-Driven Architecture
 
 > [!IMPORTANT]
-> **DDA Refactor Shipped: 2026-04-14** — The architecture was refactored from a monolithic component model to a Hook-First domain model. All 18 domain hooks are live on `master`. The audit resolved 4 bugs (2x P0, 2x P1). TSC exit 0.
+> **DDA Refactor Shipped: 2026-04-14** — The architecture was refactored from a monolithic component model to a Hook-First domain model. **BLE Engine Refactor: 2026-06-05** — `useBLE.ts` decomposed into 6 domain sub-hooks (`useBLEScanner`, `useBLESweeper`, `useBLEAutoRecovery`, `useBLEGattMutex`, `useBLEHeartbeat`, `useBLERSSIMonitor`) + 6 extracted services (`BleConnectionManager`, `BleWriteDispatcher`, `BleWriteQueue`, `BleLifecycleManager`, `BlePingService`, `BleStateMachine`). `useBLE.ts` is now a thin orchestrator (~600 lines).
 
 To ensure scalability and maintain UI performance, the SK8Lytz app enforces a **Hook-First** architecture. Complex business logic, hardware protocols, and Supabase data fetching must be extracted from UI components into decoupled domain hooks. UI components must focus strictly on rendering.
 
 ---
 
-### ⚡ Critical Architectural Constraint: BLE Co-location
+### âš¡ Critical Architectural Constraint: BLE Co-location
 
 > [!CAUTION]
 > **BLE state (`connectedDevices`, `writeToDevice`, `setOnDataReceived`) MUST remain co-located in `DashboardScreen.tsx`.** Do NOT move these into any domain hook. The BLE lifecycle manager is a singleton with hardware-level race conditions (GATT 133). Distributing it across multiple hook contexts would create multiple competing subscribers which cause silent write failures and GATT exceptions. All domain hooks receive BLE context via **prop injection** only.
 
 ---
 
-### 🗺️ Complete Hook Registry (All 18 Hooks)
+### ðŸ—ºï¸ Complete Hook & Service Registry
+
+#### BLE Engine Domain (`src/hooks/ble/`, `src/services/`)
+
+_All BLE sub-hooks are orchestrated by `useBLE.ts` (the thin orchestrator). They are NEVER consumed directly by UI components._
+
+| Hook / Service | File | Owns |
+| :--- | :--- | :--- |
+| `useBLEScanner` | `src/hooks/ble/useBLEScanner.ts` | Peripheral discovery, RSSI proximity gating, pending registrations |
+| `useBLESweeper` | `src/hooks/ble/useBLESweeper.ts` | Silent background LowPower scan, Interrogator Queue, `hwCache`, 3-tier battery-adaptive throttling (BAT-01) |
+| `useBLEAutoRecovery` | `src/hooks/ble/useBLEAutoRecovery.ts` | 3-phase reconnect (Aggressive/Moderate/Passive), group dropout coordinator, `ghostedDeviceIds`, per-device telemetry aggregation |
+| `useBLEGattMutex` | `src/hooks/ble/useBLEGattMutex.ts` | 4-tier GATT operation serialization (P1—P4), 15s deadlock watchdog, AbortController preemption |
+| `useBLEHeartbeat` | `src/hooks/ble/useBLEHeartbeat.ts` | 45s connection health ping via 0x63 query, stale-link detection → recovery (MISS-03) |
+| `useBLERSSIMonitor` | `src/hooks/ble/useBLERSSIMonitor.ts` | 30s post-connect RSSI polling, `rssiMap`, proactive reconnect at -82 dBm (BAT-02) |
+| `BleStateMachine` | `src/services/BleStateMachine.ts` | FSM gate (`IDLEâ”‚SCANNINGâ”‚CONNECTINGâ”‚DISCONNECTINGâ”‚RECOVERING`), listener-based React state sync |
+| `BleConnectionManager` | `src/services/BleConnectionManager.ts` | GATT connect flow: MTU negotiation, adapter resolution, notification wiring, priority downgrade |
+| `BleWriteDispatcher` | `src/services/BleWriteDispatcher.ts` | Serialized group writes with 50ms inter-device gap, debounce, generation counter |
+| `BleWriteQueue` | `src/services/BleWriteQueue.ts` | Priority FIFO write queue with backpressure (WRITE-01) |
+| `BleLifecycleManager` | `src/services/BleLifecycleManager.ts` | Keepalive timer (60s), `realDisconnect`, `forceDisconnect` |
+| `BlePingService` | `src/services/BlePingService.ts` | Wizard-exclusive atomic GATT session (Connect→Blink→Probe→Disconnect) |
 
 #### Dashboard Screen Domain (`src/hooks/`)
 
@@ -800,7 +912,7 @@ To ensure scalability and maintain UI performance, the SK8Lytz app enforces a **
 | :-------------------- | :---------------- | :----------------------------------------------------------------- |
 | `useDashboardProfile` | `DashboardScreen` | User profile, `displayName`, `avatarUrl`, Supabase profile fetch   |
 | `useDashboardGroups`  | `DashboardScreen` | `customGroups`, `deviceConfigs` AsyncStorage load/save, group CRUD |
-| `useDashboardVoice`   | `DashboardScreen` | Voice command engine, mic permissions, command resolution          |
+| `useDashboardAutoConnect` | `DashboardScreen` | Debounced auto-connect observer, gate-checked, ref-forwarded closures |
 
 #### DockedController Domain (`src/hooks/`)
 
@@ -812,7 +924,7 @@ To ensure scalability and maintain UI performance, the SK8Lytz app enforces a **
 | `useSessionTracking`       | `DockedController` | Session FSM (`IDLE → RECORDING → SUMMARY`), duration, distance, peak speed, session summary modal                                     |
 | `useMusicMode`             | `DockedController` | Owns 0x73 music config dispatch, pattern names, pattern navigation.                                                                   |
 | `useCuratedPicks`          | `DockedController` | Fetches and caches SK8Lytz Picks (curated presets) from Supabase.                                                                     |
-| `useAppMicrophone`         | `DockedController` | Manages the expo-av Audio.Recording lifecycle for APP MIC mode. Streams normalized magnitude (0–1).                                   |
+| `useAppMicrophone`         | `DockedController` | Manages the expo-av Audio.Recording lifecycle for APP MIC mode. Streams normalized magnitude (0—1).                                   |
 | `useControllerAnalytics`   | `DockedController` | Debounced telemetry logging for mode, pattern, color, brightness, speed changes.                                                      |
 
 #### AccountModal Domain (`src/hooks/`)
@@ -838,12 +950,12 @@ To ensure scalability and maintain UI performance, the SK8Lytz app enforces a **
 | Hook / Service            | Consumer           | Owns                                                                                              |
 | :------------------------ | :----------------- | :------------------------------------------------------------------------------------------------ |
 | `useHealthTelemetry`      | `SessionContext`   | Phone/watch health polling, watch-preferred priority logic, HR/cal/peak/avg state, `mergeWatchHealth()` |
-| `WatchBridge` (native module) | `SessionContext` | Phone↔watch session state sync, command relay (START/STOP), health data relay via native DataLayer/WCSession |
+| `WatchBridge` (native module) | `SessionContext` | Phoneâ†”watch session state sync, command relay (START/STOP), health data relay via native DataLayer/WCSession |
 | `SpeedTrackingService`    | `SessionContext`   | GPS speed push to watch via `WatchBridge.sendMetricUpdate()` during active sessions               |
 
 ---
 
-### 📐 Shared Type Contract
+### ðŸ“ Shared Type Contract
 
 All FSM states and shared interfaces live in **`src/types/dashboard.types.ts`**. Never re-declare these types in individual hooks or components.
 
@@ -855,6 +967,14 @@ All FSM states and shared interfaces live in **`src/types/dashboard.types.ts`**.
 | `MusicColorFocus`     | `'PRIMARY' \| 'SECONDARY'`                                                    |
 | `DeviceSettingsState` | FSM: `'IDLE' \| 'LOADING' \| 'READY' \| 'ERROR'`                              |
 | `IDeviceConfigEntry`  | `{ name, type, points, segments, sorting, stripType, group_ids: string[], group_names: string[] }` — **NOTE**: scalar `groupId` removed in many-to-many migration (2026-05-28). |
+
+**BLE Domain Types** — `src/types/ble.types.ts` _(added P2 type-safety pipeline, 2026-06-05)_:
+
+| Type | Purpose |
+| :--- | :--- |
+| `BleConnectionRequest` | Replaces 13 `any` params in `executeConnectToDevices` with a single typed interface. Fields: `devices`, `bleManager`, `connectedDevicesRef`, `blacklistedMacsRef`, `keepaliveTimerRef`, `disconnectListeners`, `sweeper`, `scanner`, `autoRecovery`, `bleGateRef`, `mtuMapRef`, `adapterMapRef`, `dataReceivedCallbackRef`, `handleNotificationRef`, `handleOrganicDisconnect`, `setConnectedDevices`, `setGate`. |
+| `GattPriority` | `'P1_CRITICAL' \| 'P2_RECOVERY' \| 'P3_INTERROGATION' \| 'P4_MAINTENANCE'` — 4-tier GATT mutex priority enum |
+| `BleWriteStateRefs` | Typed refs for `BleWriteDispatcher`: `writeGeneration`, `writeDebounceTimerRef` |
 
 ---
 
@@ -896,8 +1016,8 @@ _Project ID:_ `qefmeivpjyaukbwadgaz`
 | `product_id_confirmed_at`   | TIMESTAMPTZ| When product_id was confirmed via BLE (added 2026-04-22)|
 | `rf_mode`                   | TEXT       | RF remote auth policy                                |
 | `rf_paired_count`           | INT        | Number of paired RF remotes                          |
-| `group_id`                  | TEXT       | **⚠️ LEGACY — do not use for new code.** Superseded by junction table `device_group_members`. Still present in cloud rows for backward compat. |
-| `group_name`                | TEXT       | **⚠️ LEGACY — do not use for new code.** Superseded by `registered_groups.group_name`. |
+| `group_id`                  | TEXT       | **âš ï¸ LEGACY — do not use for new code.** Superseded by junction table `device_group_members`. Still present in cloud rows for backward compat. |
+| `group_name`                | TEXT       | **âš ï¸ LEGACY — do not use for new code.** Superseded by `registered_groups.group_name`. |
 | `registered_at`             | TIMESTAMPTZ| First registration timestamp                         |
 | `updated_at`                | TIMESTAMPTZ| Last modification timestamp                          |
 | `rssi_at_register`          | INT        | Signal strength at registration                      |
@@ -1113,13 +1233,13 @@ SK8Lytz companion apps for **Wear OS** (Android) and **watchOS** (Apple Watch) p
 > **BLE LED control is NOT on the watch roadmap.** Sending Bluetooth BLE commands directly from the watch is out of scope. The watch is a session HUD and health relay only. All LED protocol commands originate exclusively from the phone app.
 
 ```
-Phone (SK8Lytz App)          ◄────────────────►          Watch (Companion)
-┌──────────────────┐         Data Layer API         ┌──────────────────┐
-│ SessionContext    │ ─── speed, status, HR, cal ──► │ DashboardScreen  │
-│ SpeedTracking     │          (push)               │ HealthTracker    │
-│ useHealthTelemetry│ ◄── heartRate, calories ────── │ HR Sensor (5s)   │
-│ WatchBridge module│         (relay)               │ MessageService   │
-└──────────────────┘                                └──────────────────┘
+Phone (SK8Lytz App)          â—„â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º          Watch (Companion)
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”         Data Layer API         â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚ SessionContext    â”‚ â”€â”€â”€ speed, status, HR, cal â”€â”€â–º â”‚ DashboardScreen  â”‚
+â”‚ SpeedTracking     â”‚          (push)               â”‚ HealthTracker    â”‚
+â”‚ useHealthTelemetryâ”‚ â—„â”€â”€ heartRate, calories â”€â”€â”€â”€â”€â”€ â”‚ HR Sensor (5s)   â”‚
+â”‚ WatchBridge moduleâ”‚         (relay)               â”‚ MessageService   â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜                                â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 #### The Three Components
@@ -1128,7 +1248,7 @@ Phone (SK8Lytz App)          ◄────────────────
 |:----------|:-----|:---------|:--------|
 | **watchOS companion** | `targets/watch/` | SwiftUI | Apple Watch app — session HUD, HealthKit workout, WCSession relay |
 | **Wear OS companion** | `android/sk8lytzWear/` | Kotlin + Compose | Wear OS app — session HUD, Health Services ExerciseClient, DataLayer relay |
-| **Expo bridge module** | `modules/sk8lytz-watch-bridge/` | Swift (iOS) + Kotlin (Android) + TypeScript | Cross-platform native bridge wiring watch events ↔ React Native |
+| **Expo bridge module** | `modules/sk8lytz-watch-bridge/` | Swift (iOS) + Kotlin (Android) + TypeScript | Cross-platform native bridge wiring watch events â†” React Native |
 
 ---
 
@@ -1179,7 +1299,7 @@ Built with Jetpack Compose for Wear OS.
 
 ### 11.4 Watch Bridge Module (`modules/sk8lytz-watch-bridge/`)
 
-A custom Expo native module providing the TypeScript API for phone↔watch communication.
+A custom Expo native module providing the TypeScript API for phoneâ†”watch communication.
 
 **TypeScript API** (`src/index.ts`):
 
@@ -1237,17 +1357,15 @@ _Lives in: `src/hooks/useHealthTelemetry.ts` | Shipped: commit `392b7496`_
 
 The health telemetry system implements a **watch-preferred** priority model:
 
-```
-🏋 Watch connected & sending data:
-   Watch HR/cal → mergeWatchHealth() → ALWAYS writes to state
-   Phone poll fires every 15s → sees isWatchHealthActive() = true → SKIPS
+🏃 Watch connected & sending data:
+   Watch HR/cal —> mergeWatchHealth() —> ALWAYS writes to state
+   Phone poll fires every 15s —> sees isWatchHealthActive() = true —> SKIPS
    Result: Dashboard HUD shows 5s-fresh watch sensor data
 
 📱 Watch disconnected / out of range:
-   No watch relay for 15s → isWatchHealthActive() = false
-   Phone poll resumes → reads HealthKit (iOS) / Health Connect (Android)
+   No watch relay for 15s —> isWatchHealthActive() = false
+   Phone poll resumes —> reads HealthKit (iOS) / Health Connect (Android)
    Result: Seamless fallback — no user intervention needed
-```
 
 | Property | Value |
 |:---------|:------|
@@ -1283,876 +1401,17 @@ The health telemetry system implements a **watch-preferred** priority model:
 
 ---
 
-## 12. ZENGGE PROTOCOL BIBLE (APK DECOMPILED)
+## 12. ZENGGE PROTOCOL BIBLE (Canonical Reference)
 
-# ZENGGE PROTOCOL BIBLE
-## Authoritative Hardware Reference — Derived from Decompiled ZENGGE 1.5.0 APK
-
-> **Source Authority**: All entries in this document are traced to exact Java class files in
-> `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\ZENGGE_APK\ZENGGE_DECOMPILED\sources\`
-> No community docs, no guesses. Every byte is APK-verified.
-
-> **Last Updated**: 2026-04-22 (Oracle Hardware Validation Session + Live BLE Sniff)
-> **Confirmed Hardware**: `Ctrl_Mini_RGB_Symphony_new_0xA3` (product_id: 163 = 0xA3)
-> **Source Files**: `tc/C14184b.java`, `tc/C14187d.java`, `com/zengge/wifi/COMM/Protocol/C77*.java`,
->   `com/zengge/wifi/activity/NewSymphony/fragment/*.java`
-
----
-
-## SECTION 1: DEVICE IDENTITY
-
-### Confirmed Controller: `0xA3` (163 decimal)
-
-| Property | Value | Source |
-|:---------|:------|:-------|
-| Java Class | `Ctrl_Mini_RGB_Symphony_new_0xa2.java` (0xA3 extends 0xA2) | `Device/Type/` |
-| `mo20320T()` return | `163` (0xA3) | `C14184b` branch check |
-| product_id in telemetry | `163` — confirmed across ALL 3 device MACs | Supabase `discovered_devices_telemetry` |
-| firmware_ver | `45` or `46` | Telemetry |
-| ble_version | `5` | Telemetry |
-| led_version | `3` | Telemetry |
-| Device MACs (ours) | `08:65:F0:9A:C2:3C`, `08:65:F0:9A:5E:06`, `08:65:F0:5F:03:B1` | Telemetry |
-
-### Key Difference: 0xA2 vs 0xA3
-
-| Feature | 0xA2 | **0xA3 (OURS)** |
-|:--------|:-----|:----------------|
-| Function Mode effects (0x42) | 1–100 | **1–100 (same)** |
-| `0x59` Static Colorful tab | ❌ NOT available | **✅ AVAILABLE** |
-| `0x51` custom scene format | 291B (9B/slot) | **323B (10B/slot with direction flag)** |
-| `mo20320T()` | 162 | **163** |
-| `C7760a` LED count branch | n/a | `== 167` check → standard count for 0xA3 |
-
-### Power Command Routing — CONFIRMED
-
-`C7780q.m20873a()` is the definitive power dispatcher:
-```java
-if (baseDeviceInfo.m20497E()) {  // true = legacy device ONLY
-    return C14187d.m4725c(PowerType.code, 0,0,0,0,0,0,0);  // → 0x3B (NOT for us)
-}
-return C14184b.m4796M(z, false);  // → 0x71 (THIS IS OURS)
-```
-**0xA3 is NOT a legacy device → always uses `0x71`.**
-
----
-
-## SECTION 2: TRANSPORT WRAPPER
-
-### V2 BLE Packet Framing (Applied to ALL commands)
-
-```
-[0x00, SeqNum, 0x80, 0x00, LenHi, LenLo, Len+1, 0x0B, ...innerPayload]
-```
-
-Every inner payload listed below is wrapped in this before transmission.
-
-### Checksum Algorithm
-
-Source: `C14184b.m4780b(byte[] bArr, int i)`
-```java
-// Sum of all bytes 0..i-1, return as byte (truncated, NOT XOR)
-int sum = 0;
-for (int j = 0; j < i; j++) { sum += bArr[j] & 0xFF; }
-return (byte) sum;
-```
-**CRITICAL:** This is a simple SUM checksum, NOT XOR. Always passed as `m4780b(bArr, payloadLen - 1)`.
-
----
-
-## SECTION 3: COMPLETE OPCODE MAP
-
-### 0x11 — Time Sync
-- **Builder**: `C14184b.m4760m(boolean z)` and `C14184b.m4787V(boolean z, boolean z2)`
-- **Format**: 7 bytes containing time data
-- **Used by**: Timer/scheduler system
-- **SK8Lytz relevance**: Low — automated timer functions only
-
----
-
-### 0x21 — Timer Command
-- **Builder**: `C14184b.m4794O()`, `m4793P()`, `m4792Q()`, `m4791R()`, `m4790S()`
-- **Used by**: Timer scheduler — multiple variants depending on timer type
-- **SK8Lytz relevance**: Low
-
----
-
-### 0x31 — Solid Color (RGB static)
-- **Builder**: `C14184b.m4798K(r, g, b, brightness)` and several others
-- **Format**: `[0x31, r, g, b, brightness, 0x0F, checksum]` (7 bytes)
-- **Called by**: Color pickers, single-color solid commands
-- **SK8Lytz relevance**: MEDIUM — legacy solid color path. Currently causes flicker on Symphony hardware. Use `0x59` with FREEZE instead.
-
----
-
-### 0x36 — CCT (Warm/Cold White)
-- **Builder**: `C14184b.m4781a0(isRGB, r, g, b, ledCount)`
-- **Format**: 9 bytes
-- **Used by**: CCT-capable devices only (warm/cool temperature control)
-- **SK8Lytz relevance**: LOW — only for white-tunable CCT products, not our RGB skate hardware
-
----
-
-### 0x37 — Global Brightness
-- **Builder**: `C14184b.m4779b0(int brightness)`
-- **Format**: `[0x37, brightness(0-100), 0, checksum]` (4 bytes)
-- **SK8Lytz relevance**: MEDIUM — global brightness override independent of pattern
-
----
-
-### 0x41 — Settled Mode (FG + BG dual color)
-- **Builder**: `C7775l.java` → `m20877a(effectId, fgColor, bgColor, speed, dir, device)`
-- **Called by**: `SettledModeFragment.m18679m2()`
-- **Format**: 13 bytes
-```
-[0x41, effectId, FG.R, FG.G, FG.B, BG.R, BG.G, BG.B, speed, dir(0=fwd/1=rev), 0, 0xF0, checksum]
-```
-- **effectId range**: 1–33 (SymphonyEffect IDs, same as `0x51` effect column)
-- **dir**: `0` = forward, `1` = reverse
-- **SK8Lytz relevance**: HIGH — dual-palette animated effects with FG/BG color control
-
----
-
-### 0x42 — Function Mode (Built-in RBM patterns)
-- **Builder**: `C7776m.java` → `m20876a(effectId, brightness, speed, device)`
-- **Called by**: `FunctionModeFragment.m18912P1()`
-- **Format**: 5 bytes
-```
-[0x42, effectId(1-100), speed(1-100), brightness(1-100), checksum]
-```
-- **effectId range for 0xA3**: 1–100 (confirmed from `Ctrl_Mini_RGB_Symphony_new_0xa2`)
-- **Speed range**: 0–100 (full range, different from 0x59 which caps at 31)
-- **SK8Lytz relevance**: **CRITICAL** — this is the primary RBM effect command. Our `setCustomRbm()` calls this. ✅ CORRECT in current codebase.
-
-> **CORRECTION FROM EARLIER SESSION**: `0x38` is NOT used by our device for effects.
-> `0x38` appears only in `C14187d.m4724d()` which routes to legacy/other device types.
-> `0x42` is confirmed as the correct opcode for our 0xA3.
-
----
-
-### 0x43 — Multi-Effect Sequence (up to 50 effect IDs)
-- **Builder**: `C7778o.java` → `m20874a(effectIdList, speed, brightness, device)`
-- **Called by**: `FunctionModeFragment.m18913O1()` (when no single effect selected, f28108u0 == -1)
-- **Format**: 54 bytes
-```
-[0x43, effectId[0]...effectId[49](pad 0 if fewer), speed, brightness, checksum]
-// effectId bytes: up to 50 sequential pattern IDs that loop
-```
-- **SK8Lytz relevance**: MEDIUM — useful for auto-cycling effect sequences without BLE resend
-
-> **⚠️ ORACLE LAB RESULT (2026-04-22)**: Sending our hypothesized `0x43` payload caused the hardware to **cut all LEDs** (state machine crash/reset). The payload structure from the APK decompile was NOT accepted by our firmware.
+> [!IMPORTANT]
+> The **authoritative** Zengge Protocol Bible lives in the standalone file:
+> **`tools/ZENGGE_PROTOCOL_BIBLE.md`**
 >
-> **BLE SNIFF FINDING**: The ZENGGE app's "Customize Tab" (multi-step effects) actually uses **`0x51`** — NOT `0x43`. The `0x43` opcode may be unused in our firmware revision, reserved for a newer OEM variant, or require a different wrapping protocol. **Do NOT use `0x43` in production until confirmed via future sniff with a different BLE connection setup.**
-
----
-
-### 0x47 — State Query
-- **Builder**: `C14184b.m4764j(int i)`
-- **Format**: `[0x47, queryParam, checksum]` (3 bytes)
-- **Returns**: Current device state
-- **SK8Lytz relevance**: MEDIUM — use to confirm power/mode state
-
----
-
-### 0x51 — Custom Scene (Save/Play from device EEPROM)
-- **Builder**: `C7787x.java` → `m20864c()` (extended) or `m20865b()` (short)
-- **Called by**: `CustomModeFragment` via `ActivityCustomSymphonyEdit`
-
-> **🔬 ORACLE + BLE SNIFF GROUND TRUTH (2026-04-22)**: Both Oracle Lab tests AND live BLE capture of the official ZENGGE app confirm the following. See Section 11 for full raw bytes.
-
-**HARDWARE REALITY (contradicts APK branch logic):**
-- The `9B compact` format (`setCustomMode`, 291B) **fires correctly** on our 0xA3 hardware ✅
-- The `10B extended` format (`setCustomModeExtended`, 323B) **does nothing** on our 0xA3 hardware ❌
-- **HOWEVER**: Live BLE sniff of the ZENGGE app reveals it sends **10-byte slots** for `0x51`, reaching the hardware via a DIFFERENT BLE framing header.
-
-**CONCLUSION**: Our `setCustomModeExtended` fails not because the hardware rejects 10B slots, but because our **BLE framing/wrapper is wrong** for multi-packet `0x51` payloads. The ZENGGE app uses a chunked framing protocol with header `[40 seq 00 00 01 43 BD 0B]` before the opcode.
-
-```
-CONFIRMED 10-BYTE SLOT STRUCTURE (from live BLE sniff):
-[0x51, slot[0](10B)...slot[31](10B), checksum]
-
-Active slot (10 bytes):
-[0xF0, effectId, speed, FG.R, FG.G, FG.B, BG.R, BG.G, BG.B, flags]
-  0xF0   = active slot marker
-  effectId = SymphonyEffect ID 1-33
-  speed  = 0x00-0x64 (0-100)
-  FG.RGB = foreground color (ignored for NO_COLOR effects)
-  BG.RGB = background color (ignored for NO_COLOR effects)
-  flags  = 0x80 (forward+section_toggle) | 0x00 (reverse)
-
-Empty slot (10 bytes):
-[0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
-  0x0F   = empty/null slot marker
-```
-
-**ZENGGE BLE Chunked Framing Header** (precedes opcode for large payloads):
-```
-[0x40, seqNum, offset_lo, offset_hi, 0x01, 0x43, 0xBD, 0x0B, opcode=0x51, ...payload]
-Chunk 1: offset = 0x0000
-Chunk 2: offset = 0x0180
-seqNum increments per save operation (0x04, 0x05, 0x06...)
-```
-
-**ZENGGE App UI → Protocol Mapping (confirmed from sniff):**
-| ZENGGE UI | Opcode | Notes |
-|:---|:---|:---|
-| Customize Tab (multi-step effects) | `0x51` | 10B slots, F0=active, 0F=empty |
-| Multi-Color → Create (live editor) | `0x31` | Continuous frame stream while editing |
-| Multi-Color → Save/Play | `0x31` | Final frame sent to hardware |
-
-- **Slot active flag**: `0xF0` = active, `0x0F` = empty slot
-- **Max slots**: 32
-- **SK8Lytz relevance**: **CRITICAL** — `setCustomMode` (9B compact) works via our current wrapper. To use 10B slots correctly, the BLE chunked framing header must also be replicated.
-
----
-
-### 0x53 — Live Pixel Streaming (real-time bitmap row send)
-- **Builder**: Built inline in `SceneModeFragment.m18748Z2(int[] iArr)` — NO protocol class
-- **Format**: Variable length
-```
-[0x53, totalLen_hi, totalLen_lo, R, G, B, ...(numLEDs × RGB triplets)..., numLEDs_hi, numLEDs_lo, checksum]
-totalLen = (numLEDs × 3) + 6
-```
-- **Behavior**: Sends ONE row of pixel data from a bitmap, called rapidly in a loop to stream animation frames
-- **Rate-limiting**: `f28247B0` AtomicBoolean gates concurrent sends — one frame at a time
-- **SK8Lytz relevance**: HIGH — this is the live "scene streaming" protocol for real-time pixel updates. Different from `0x59` which sends a full static array.
-
----
-
-### 0x56 — Delete Scene Slot
-- **Builder**: Built inline in `SceneModeFragment.m18778K2(int i, ...)`
-- **Format**:
-```
-[0x56, slotIndex, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, checksum]
-// Total: 15 bytes. slotIndex = 0-based scene slot number
-```
-- **SK8Lytz relevance**: MEDIUM — for EEPROM scene management
-
----
-
-### 0x57 — Select/Activate Scene + Speed + Brightness
-- **Builder**: Built inline in `SceneModeFragment.m18750Y2(int i)`
-- **Format**:
-```
-[0x57, sceneIndex, speed, brightness, checksum]
-// Total: 5 bytes
-// sceneIndex = 0xFF (255 / -1 as byte) to replay ALL scenes
-// sceneIndex = 0-9 to activate specific slot
-```
-- **SK8Lytz relevance**: HIGH — activates a scene stored in EEPROM by slot number
-
----
-
-### 0x58 — State Query Flag
-- **Builder**: `C14184b.m4769g0(boolean z)`
-- **Format**:
-```
-[0x58, 0xF0 (if z=true) | 0x0F (if z=false), checksum]
-// Total: 3 bytes
-```
-- **Used by**: Scene state request — queries which scene is currently active
-- **SK8Lytz relevance**: MEDIUM — diagnostic use
-
----
-
-### 0x59 — Static Colorful Pixel Array
-- **Builder**: `C7760a.java` → `m20886a(numLEDs, pixelColors, transitionType, speed, direction)`
-- **Called by**: `C8856x.m17452i2()` (the "Static Colorful" tab, 0xA3 ONLY)
-- **Format**: Variable length
-```
-[0x59, totalLen_hi, totalLen_lo,
- R, G, B, ...(numLEDs × RGB triplets)...,
- numLEDs_hi, numLEDs_lo,
- transitionType, speed, direction,
- checksum]
-
-totalLen = (numLEDs × 3) + 9
-```
-- **Transition Types** (hardware-confirmed):
-
-| Byte | Name | Behavior |
-|:-----|:-----|:---------|
-| `0x00` | CASCADE | Continuous hardware scroll |
-| `0x01` | FREEZE | Static locked in place |
-| `0x02` | STROBE | Flash (implementation varies) |
-| `0x03` | RUNNING_WATER | One-shot trigger, hard jump marquee |
-
-- **Speed**: 0–100 UI → 1–31 HW. Formula: `max(1, min(31, round(uiSpeed/100 × 30) + 1))`
-- **Direction**: `0x01` = forward, `0x00` = reverse
-- **Minimum pixels**: 12 (hardware glitches below 10)
-- **LED count branch** in `C7760a` line 23: `if (mo20320T() == 167)` → different LED count constant (for 0xA7 variant). Our 0xA3 (163) takes the ELSE branch = standard LED count path.
-- **SK8Lytz relevance**: **CRITICAL** — primary pixel array command. ✅ Available on 0xA3.
-
----
-
-### 0xFF — Passive Telemetry (Manufacturer Specific Data)
-ZENGGE hardware constantly broadcasts its identity in BLE Advertisement packets (`type 0xFF`), enabling passive identification without an active connection.
-- **Source of Truth**: [ZGHBDevice.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/com/zengge/hagallbjarkan/device/ZGHBDevice.java) (`setDeviceInfo`)
-- **Format**:
-  - `bArr[3]`: BLE Version (Typically `5`)
-  - `bArr[4]` to `bArr[9]`: MAC Address
-  - `bArr[10]` & `bArr[11]`: Product ID (Big-Endian `(bArr[10] << 8) | bArr[11]`). SK8Lytz is `163` (`0xA3`).
-  - `bArr[12]` & `bArr[14]`: Firmware Version
-  - `bArr[13]`: LED Version
-
----
-
-### RF Remote Configuration
-RF Remotes are completely decoupled from the native `C14184b` Java protocol layer.
-- **Source of Truth**: [FlutterNewControlPlugin.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/com/zengge/wifi/flutter/plugin/FlutterNewControlPlugin.java)
-- **Mechanism**: The "Allow All / Allow Paired / Allow None" logic is sent via JSON payloads over Flutter `MethodChannel`. It does not use standard hex `0x64` opcodes.
-- **SK8Lytz relevance**: We must intercept these Flutter events via logcat to replicate remote pairing.
-
----
-
-### 0x62 — IC Config Write (EEPROM)
-
-- **Source of Truth**: [C14184b.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/tc/C14184b.java) (`m4806C()`) and [C9021i.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/p067dd/C9021i.java)
-- **Format (11 bytes)**:
-
-```
-[0x62, ptsHi, ptsLo, segHi, segLo, icType, sorting, micPts, micSegs, 0xF0, checksum]
-```
-
-- **Endianness**: Big-Endian (`ptsHi = points >> 8`, `ptsLo = points & 0xFF`)
-- **SK8Lytz relevance**: CRITICAL — hardware provisioning (LED count, IC type, strip config)
-
-> **🔬 EXTREME DETAIL: THE 0x62 BYTE MAPPINGS**
+> That file is the single source of truth for all hardware opcodes, transport framing, EEPROM commands, chipset constraints, and Oracle Lab validation results. Do NOT duplicate protocol content here — reference the standalone Bible by section number (e.g., "See Protocol Bible §3 0x59" or "See Protocol Bible §11 Oracle Validation").
 >
-> 1. **`ptsHi` / `ptsLo`**: The number of addressable LEDs **per segment** (Big-Endian).
-> 2. **`segHi` / `segLo`**: The number of identical physical copies that mirror the pattern in parallel (Big-Endian). Total physical LEDs = `points × segments`.
-> 3. **`icType`**: Defines the hardware chip. Mapped directly from [C9021i.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/p067dd/C9021i.java):
->    - `1` = UCS1903, `2` = SM16703, `3` = WS2811, `4` = WS2812B, `5` = SK6812, `6` = INK1003, `7` = WS2801, `8` = LB1914.
->    *(SK8Lytz defaults to `4` / WS2812B)*
-> 4. **`sorting`**: The RGB color order. 
->    - `1` = RGB, `2` = RBG, `3` = GRB, `4` = GBR, `5` = BRG, `6` = BGR.
-> 5. **`micPts` / `micSegs`**: Same segment logic, but specifically sets the bounds for when `0x73` Music Mode is active.
-
-> **🔬 SEGMENT MODEL DISCOVERY (2026-04-22 — BLE Sniff Observation)**
->
-> `points` and `segments` are NOT equivalent to total LED count. The hardware treats them as:
-> - **`points`** = number of addressable LEDs **per segment** (the design canvas)
-> - **`segments`** = number of identical physical copies that mirror the pattern in parallel
-> - **Total physical LEDs** = `points × segments`
->
-> **Example — HALOZ (22 bulbs, 11 points, 2 segments):**
-> The ZENGGE Multi-Color creator shows 11 color positions (= `points`), NOT 22.
-> The hardware automatically mirrors the 11-LED pattern onto the second segment.
-> The app never exposes segments to the user — it is hardware-transparent.
->
-> **Critical Implication for `0x59` and `0x51`:**
-> All pixel array commands (`0x59`, `0x31`) should be built using `ledPoints` (11), NOT `ledPoints × segments` (22).
-> Sending 22 pixels to a 2-segment device bypasses the hardware's segment mirror engine and fills both segments manually, which may produce unexpected results.
->
-> **The `0x51` `flags=0x80` connection:**
-> The "section toggle" bit in the `0x51` slot flags byte (`0x80`) is believed to control segment mirroring:
-> - `flags = 0x80` → pattern mirrors across ALL segments (hardware duplication ON)
-> - `flags = 0x00` → pattern plays linearly, ignoring segment boundaries
-
----
-
-### 0x63 — IC Config Query (EEPROM read)
-- **Builder**: `C14184b.m4771f0(boolean z)` (confirmed 5 bytes: `[0x63, 0x12, 0x21, 0x0F, checksum]`)
-- **Response**: Contains ledPoints (little-endian swapped!): `((payload[9] & 0xFF) << 8) | (payload[8] & 0xFF)`
-- **SK8Lytz relevance**: CRITICAL — hardware config read during probing
-
----
-
-### 0x71 — Power ON/OFF ✅ OUR DEVICE
-- **Builder**: `C14184b.m4796M(boolean isOn, boolean z2)`
-- **Called by**: `C7780q.m20873a()` for all non-legacy devices (including 0xA3)
-- **Format**: 4 bytes
-```
-Power ON:  [0x71, 0x23, 0x0F, checksum]  → checksum = 0x71+0x23+0x0F = 0xA3 ✓
-Power OFF: [0x71, 0x24, 0x0F, checksum]  → checksum = 0x71+0x24+0x0F = 0xA4 ✓
-```
-- **SK8Lytz relevance**: **CRITICAL** ✅ Confirmed correct in codebase.
-
----
-
-### 0x72 — Power with Duration (timed power)
-- **Builder**: `C14184b.m4797L(boolean isOn, float duration, boolean z2)`
-- **Called by**: `CommandPackagePowerOverDuraion` second constructor
-- **Format**: 7 bytes (includes duration field)
-- **SK8Lytz relevance**: LOW — timer-based power only
-
----
-
-### 0x73 — Music Mode Configuration ✅ OUR DEVICE
-- **Builder**: `C7789z.java` (full 13B), `C7774k.java` (5B short form)
-- **Called by**: `MusicModeFragment`, confirmed for 0xA2 and 0xA3
-- **Format (13 bytes)**:
-```
-[0x73, isOn(1=on/0=off), modeType, effectId,
- FG.R, FG.G, FG.B, BG.R, BG.G, BG.B,
- sensitivity, brightness, checksum]
-```
-- **modeType**: `0x26` (38) = Light Bar Matrix (16 modes) vs `0x27` (39) = Light Screen Matrix (30 modes)
-- **Mic Behavior**: The device microphone is *always* active when a `0x73` mode is running, *unless* the app starts sending a rapid stream of `0x74` magnitude packets (which overrides the hardware mic with the app/phone mic).
-
----
-
-### 0x74 — Music Magnitude Stream ✅ OUR DEVICE
-- **Builder**: `C7788y.java` → `m20863a(int magnitude, device)`
-- **Format**: 3 bytes
-```
-[0x74, magnitude(0-255), checksum]
-```
-- **Used when**: micSource = `0x26` (app mic) in the `0x73` config
-- **SK8Lytz relevance**: **CRITICAL** ✅ Used by `useAppMicrophone.ts`
-
----
-
-### 0x75 — Multi-Zone Power
-- **Builder**: `C14184b.m4808A(int i, boolean z)`
-- **Format**: 7 bytes
-- **Used by**: Multi-zone/segmented controllers
-- **SK8Lytz relevance**: LOW unless we implement zone-level power control
-
----
-
-## SECTION 4: COMMANDS NOT IN SYMPHONY FRAGMENTS (Background/System)
-
-These exist in `C14184b` but are NOT called by any Symphony fragment for our device:
-
-| Opcode | Decimal | Method | Purpose |
-|:-------|:--------|:-------|:--------|
-| `0x11` | 17 | `m4760m` | Time sync |
-| `0x10` | 16 | Unknown (ZENGGE app init) | **Session Time Sync** — sent as ATT Write REQUEST (expects response) on connection. Payload contains year/month/day/time. Checksum-verified from sniff. |
-| `0x22` | 34 | `m4639q0` | Mic/sensor config |
-| `0x34` | 52 | `m4788U` | LED count query shorthand |
-| `0x3A` | 58 | `m4767h0` | Plant light mode |
-| `0x61` | 97 | `m4795N`, `m4778c` | Legacy built-in pattern (older firmware) |
-| `0x72` | 114 | `m4797L` | Timed power |
-| `0x75` | 117 | `m4808A` | Multi-zone power |
-
----
-
-## SECTION 5: SYMPHONY EFFECT IDs (0xA2/0xA3)
-
-Per `Ctrl_Mini_RGB_Symphony_new_0xa2.java` and `FunctionModeFragment`:
-
-- **0x42 effect range**: `1–100` for 0xA2/0xA3
-- **0x41 effect range**: `1–33` (SymphonyEffect IDs, same as the APK's SymphonyEffect enum)
-- **0x51 effectId column**: `1–33` (per C7787x slot structure using C9273c effect model)
-
-### SymphonyEffect Color UI Mapping — HARDWARE OBSERVED GROUND TRUTH
+> **Last verified: 2026-06-06** — All opcode documentation, bug verdicts, and Oracle ground-truth findings are current in the standalone file.
 
 > [!CAUTION]
-> **The APK-derived `SymphonyEffectUIType` mapping does NOT match what the ZENGGE app shows on 0xA3 hardware.**
-> The user directly tested all 33 effects in the ZENGGE Customize Tab (2026-04-22).
-> **Hardware observation is the source of truth. APK enum is reference only.**
+> **DEDUPLICATION NOTE (2026-06-06):** The previous inline copy of the Protocol Bible (870+ lines) was removed from this file to eliminate drift risk. The standalone `ZENGGE_PROTOCOL_BIBLE.md` was diverging from the inline copy silently. All protocol lookups must reference the standalone file exclusively.
 
-**HARDWARE-OBSERVED mapping (ZENGGE app, Customize Tab, 0xA3 firmware):**
-
-| Effect IDs | Color Input Available | Notes |
-|:-----------|:---------------------|:------|
-| 1–6, 17–19, 25, 31, 32 | **FG + BG both** | Full two-color picker |
-| 7 | **FG only** | Single foreground color picker |
-| 8–13, 15–16, 20–24, 26–30, 33 | **No color picker** | Rainbow / multicolor / algorithmic |
-| 14 | Unknown | Not reported — needs manual check |
-
-> **CONFLICT WITH APK**: `C9021i.java` assigns `UIType_ForegroundColor_BackgroundColor` to effects 5–18, but hardware only shows color pickers on 1–6, 17–19. The APK UIType reflects a different firmware variant. **Do NOT use the APK table to drive SK8Lytz UI behavior.**
-
-**APK-derived `SymphonyEffectUIType` enum (reference only — not HW truth for 0xA3):**
-```java
-enum SymphonyEffectUIType {
-    UIType_ForegroundColor_BackgroundColor,  // APK claims 5–18
-    UIType_StartColor_EndColor,              // APK claims 1, 3, 4
-    UIType_FirstColor_SecondColor,           // APK claims 19–26
-    UIType_Only_ForegroundColor,             // APK claims 2
-    UIType_Only_BackgroundColor,             // APK claims 27–28
-    IType_NoColor                            // APK claims 29–44
-}
-```
-
----
-
-## SECTION 6: MANUFACTURER DATA ADVERTISEMENT PARSING
-
-Our scanner reads `productId` from advertisement via `ZenggeProtocol.parseFirmwareFromAdvertisement()`:
-```typescript
-const productId = ((buffer[10] & 0xFF) << 8) | (buffer[11] & 0xFF);
-```
-
-Sample confirmed manufacturer data (base64): `AFpWBQhl8JrCPACjLgMBAiMkAR8AAP8AAwALAAA=`
-Decoded relevant fields: `product_id = 163` (0xA3), `firmware_ver = 46`, `ble_ver = 5`, `led_ver = 3`
-
-**Symphony detection byte**: `mfBuf[9] === 0x33 || mfBuf[9] === 0xBF` — our scanner reads this correctly.
-
-> **BLE Characteristic Confirmation (2026-04-22)**: Our app writes to `ZENGGE_CHARACTERISTIC_UUID = '0000ff01-...'` (FF01). Live BLE sniff confirms the ZENGGE app writes to ATT handle `0x0017` on this device. Both apps resolve the same GATT service table, so handle `0x0017` = FF01 on our hardware. **Our write characteristic is correct.** ✅
-
----
-
-## SECTION 7: PROTOCOL CLASS → OPCODE CROSS-REFERENCE
-
-| Class | Opcode | Called From | Notes |
-|:------|:-------|:-----------|:------|
-| `C7775l` | `0x41` | `SettledModeFragment` | FG+BG settled effects |
-| `C7776m` | `0x42` | `FunctionModeFragment` | RBM built-in patterns |
-| `C7778o` | `0x43` | `FunctionModeFragment` | Multi-effect sequence |
-| inline `m18748Z2` | `0x53` | `SceneModeFragment` | Live pixel streaming |
-| inline `m18778K2` | `0x56` | `SceneModeFragment` | Delete scene slot |
-| inline `m18750Y2` | `0x57` | `SceneModeFragment` | Activate scene slot |
-| `C14184b.m4769g0` | `0x58` | `SceneModeFragment.m18781I2` | Scene state query |
-| `C7760a` | `0x59` | `C8856x` (0xA3 tab only) | Static Colorful pixel array |
-| `C14184b.m4807B` etc. | `0x62` | Programmer/Settings | EEPROM write |
-| `C14184b.m4771f0` | `0x63` | Programmer/Settings | EEPROM read |
-| `C7780q` → `m4796M` | `0x71` | Power button / toolbar | Power ON/OFF |
-| `C14184b.m4797L` | `0x72` | Timer system | Timed power |
-| `C7789z` | `0x73` | `MusicModeFragment` | Music config (13B) |
-| `C7788y` | `0x74` | `MusicModeFragment` | Mic magnitude |
-| `C7787x.m20864c` | `0x51` (323B) | `ActivityCustomSymphonyEdit` | 0xA3 extended scene |
-| `C7787x.m20865b` | `0x51` (291B) | same | 0xA2 short scene |
-
----
-
-## SECTION 8: KNOWN BUGS IN CURRENT SK8LYTZ CODEBASE
-
-### BUG-1: `0x51` Slot Format — UPDATED VERDICT (2026-04-22)
-- **Previous diagnosis**: 10B extended (323B) required for 0xA3 per APK
-- **Oracle Lab result**: 9B compact (291B) WORKS ✅ — 10B extended (323B via our wrapper) does NOTHING ❌
-- **Root cause**: The 10B extended format requires the ZENGGE chunked BLE framing header (`40 seq 00 00 01 43 BD 0B`) which our `wrapCommand` does not emit
-- **Current status**: 9B compact format is safe and functional for production use
-- **Future work**: Replicate ZENGGE chunked framing to unlock true 10B slot support
-- **Impact**: LOW (current scenes work) — track as enhancement, not critical bug
-
-### BUG-2: `0x73` micSource Wrong Values (HIGH SEVERITY) — ✅ RESOLVED (2026-05-26)
-- **Resolved**: Verified the exact `0x26`/`0x27` matrix routing and completed the true-up of Drop and Sound Column color sliders (Bytes 4-6 and Bytes 7-9).
-- **APK Source**: `strings.xml` + `C7789z.java`. Fixed inverted sliders and implemented Light Bar `0x26` fallback cloning.
-
-### BUG-3: Mock Product ID (LOW SEVERITY)
-- **Location**: `useBLEScanner.ts` line 313
-- **Current value**: `product_id: 115` in mock device injection
-- **Correct value**: `163` (0xA3)
-
-### BUG-4: `0x42` Effect Count Ceiling Not Enforced (MEDIUM)
-- **Current behavior**: Unknown — may allow effect IDs > 100
-- **Hardware limit**: 1–100 for 0xA3
-- **Impact**: Effects above 100 may cause undefined hardware behavior
-
-### BUG-5: `0x38` in Any Legacy Path (VERIFY)
-- **Risk**: If `0x38` appears anywhere in our codebase as an effect command, it is WRONG for 0xA3
-- **Corrected opcode**: `0x42`
-
----
-
-## SECTION 9: DIAGNOSTIC LAB — MISSING PROTOCOL TESTS
-
-The current `Sk8LytzDiagnosticLab.tsx` should expose test panels for:
-
-| Opcode | Test Panel Needed | Priority |
-|:-------|:-----------------|:---------|
-| `0x41` | Settled Mode: effectId + FG/BG color pickers + speed/dir | HIGH |
-| `0x42` | RBM: effectId 1-100 + speed/brightness sliders | ✅ Exists |
-| `0x43` | Multi-Effect Sequence: up to 50 IDs + speed/brightness | MEDIUM |
-| `0x51` | Custom Scene: 32-slot builder (323B for 0xA3) | HIGH |
-| `0x53` | Live Pixel Stream: color array + numLEDs | HIGH |
-| `0x56` | Delete Scene Slot: slot index input | LOW |
-| `0x57` | Activate Scene: slot index + speed/brightness | MEDIUM |
-| `0x58` | Scene State Query (no params) | LOW |
-| `0x59` | Static Colorful: pixel array + transition/speed/dir | ✅ Exists |
-| `0x62` | EEPROM Write: all config fields | ✅ Exists |
-| `0x63` | EEPROM Query (no params) | ✅ Exists |
-| `0x71` | Power ON/OFF toggle | HIGH (power bugs) |
-| `0x73` | Music Config: all 13 params with correct mic values | ✅ Exists |
-| `0x74` | Mag stream: magnitude slider | ✅ Exists |
-
----
-
-## SECTION 10: CALL CHAIN SUMMARY (0xA3 Exclusive Path)
-
-```
-Physical User Action → UI Fragment → Protocol Class → C14184b utility → BLE bytes
-
-Power:          Toolbar tap → C7780q → C14184b.m4796M → [0x71, 0x23/24, 0x0F, chk]
-RBM Effect:     FunctionModeFragment → C7776m → [0x42, id, spd, bri, chk]
-Effect Seq:     FunctionModeFragment → C7778o → [0x43, id×50, spd, bri, chk]  
-Settled:        SettledModeFragment → C7775l → [0x41, id, FGR,G,B, BGR,G,B, spd, dir, 0, 0xF0, chk]
-Custom Scene:   ActivityCustomSymphonyEdit → C7787x.m20864c → [0x51, slot×10×32, 0x0F, chk]
-Scene Delete:   SceneModeFragment.m18778K2 → inline → [0x56, idx, 0×12, chk]
-Scene Select:   SceneModeFragment.m18750Y2 → inline → [0x57, idx, spd, bri, chk]
-Scene Query:    SceneModeFragment.m18781I2 → C14184b.m4769g0 → [0x58, 0xF0/0x0F, chk]
-Pixel Array:    StaticColorfulTab (C8856x) → C7760a → [0x59, lenHi,Lo, R,G,B×N, numHi,Lo, trans, spd, dir, chk]
-Stream Frame:   SceneModeFragment.m18748Z2 → inline → [0x53, lenHi,Lo, R,G,B×N, numHi,Lo, chk]
-Music Config:   MusicModeFragment → C7789z → [0x73, on, 0x26/27, id, FG, BG, sens, bri, chk]
-Mic Magnitude:  RecordService → C7788y → [0x74, magnitude, chk]
-Custom Scene:   ZENGGE App Customize Tab → chunked 0x51 → [40 seq 00 00 01 43 BD 0B 51 slot×10×32 chk]
-Custom Scene:   SK8Lytz setCustomMode() → standard wrap → [0x51 slot×9×32 0x0F chk]  ← 9B works on HW
-Multi-Color:    ZENGGE App Multi-Color Tab → live 0x31 stream → per-frame pixel array
-
----
-
-## SECTION 11: ORACLE HARDWARE VALIDATION — GROUND TRUTH (2026-04-22)
-
-All results from physical hardware testing using `Sk8LytzDiagnosticLab` Oracle tab + live BLE HCI sniff.
-Device: Pixel 7 (Android 16), HCI log extracted via `adb bugreport`.
-
-### Power (0x71) — ✅ VERIFIED
-- PWR ON and PWR OFF both work correctly. No surprises.
-
-### RBM Ceiling (0x42) — ✅ VERIFIED  
-- Effect IDs 1–100 all work correctly.
-- Effect ID 101 (over ceiling): hardware **accepts it** and plays an undocumented effect. The ceiling is soft, not enforced.
-
-### Music Mode (0x73) — ✅ TRUE-UP COMPLETED
-
-**The `0x73` payload is strictly a 13-byte configuration command.** It dictates the active music visualization mode, its colors, and whether the hardware microphone is active. It does **not** transmit magnitude data (that is `0x74`).
-
-**Format (13 Bytes)**: `[0x73, isOn, modeType, modeId, dropR, dropG, dropB, colR, colG, colB, sensitivity, brightness, checksum]`
-
-- **`isOn` (Byte 1)**: `0x01` activates music mode. `0x00` disables it.
-- **`modeType` (Byte 2)**: Defines the hardware pattern matrix.
-  - `0x26`: Light Bar Matrix (16 modes)
-  - `0x27`: Light Screen Matrix (30 modes)
-- **`modeId` (Byte 3)**: The specific effect ID (1-16 or 1-30).
-- **`drop` and `col` (Bytes 4-9)**:
-  - **Bytes 4-6 (Drop Color)**: Controlled by `sb_point`. Verified via `strings.xml` translation `<string name="point_color">drop color</string>`.
-  - **Bytes 7-9 (Sound Column Color)**: Controlled by `sb_col`. Verified via `strings.xml` translation `<string name="col_color">sound column color</string>`.
-  - **Light Bar `0x26` Fallback**: Discovered in `C7789z.java` - the ZENGGE app explicitly passes the identical primary color (`sb_color`) into BOTH the Bytes 4-6 and Bytes 7-9 slots for Light Bar matrices to prevent hardware confusion.
-- **`sensitivity` (Byte 10)**: 0-100 (hardware range).
-- **`brightness` (Byte 11)**: 0-100 (hardware range).
-
-> ⚠️ **The "micSource" Hallucination:** Previous documentation incorrectly assumed `modeType` was `micSource`. In reality, the device mic *always* listens when a `0x27` or `0x26` mode is active *unless* it is overridden by rapid `0x74` magnitude streams from the app mic.
-
-### 🚨 Live Audio Streaming Protocol (0x74) — NEW DISCOVERY
-When the user toggles "App Mic" in the ZENGGE app, it uses the phone's microphone to analyze the audio spectrum and continuously firehoses a rapid **3-byte** volume magnitude stream directly to the hardware.
-
-**Format (3 Bytes)**: `[0x74, magnitude, checksum]`
-- `magnitude` (Byte 2): Scaled volume/frequency value from 0-150.
-
-This allows the hardware to respond instantly to high-quality audio captured directly by the mobile device, bypassing the cheap built-in microphone on the `0xA3` controller.
-
-
-#### Light Bar Modes (`0x26`) — 16 Total
-| ID | Mode Name | FG (Sound) | BG (Drop) | Banner Image Asset |
-|:---|:---|:---:|:---:|:---|
-| 1-10, 12, 13, 16 | Generative / Spectrum | ❌ | ❌ | `music_ic_[ID].png` |
-| 11, 14, 15 | Monochromatic Rhythm | ✅ | ❌ | `music_ic_[ID].png` |
-
-#### Light Screen Modes (`0x27`) — 30 Total
-| ID | Mode Name | FG (Sound) | BG (Drop) | Banner Image Asset |
-|:---|:---|:---:|:---:|:---|
-| 1-18, 25-27 | Advanced Spectrum | ❌ | ❌ | `banner_[ID]_1.png` / `banner_[ID]_2.png` |
-| 19-24, 28-30 | Custom Matrix Rhythm | ✅ | ✅ | `banner_[ID]_1.png` / `banner_[ID]_2.png` |
-
-### The Parity Bridge (0x59 vs 0x51) — ARCHITECTURAL MANDATES
-1. **The Spatial-Temporal Fallacy:** `0x59` is mathematically locked out of temporal effects (Breathe, Jump, Twinkly). We cannot send a custom 150-pixel segment array and ask the hardware to "Breathe" it natively. The hardware firmware rejects it and forces Static (`0x01`) or Running (`0x02`).
-2. **The "Software Ticking" Imperative:** To achieve custom sub-segment temporal effects, the App's `PatternEngine` must act as a Software Sequencer, manually calculating frames and streaming `0x59` spatial payloads at 15-30 FPS over BLE.
-3. **The 512-Byte MTU Mandate:** To fix spatial truncation (where `0x59` freezes on strips longer than the MTU constraint), we MUST negotiate a 512-byte MTU (`device.requestMTU(512)`) in React Native BLE Plx. The previous `numPoints=54` tiling hack has been proven mathematically invalid for the `0xA3` controller.
-4. **Scene Sequencer (0x51) is King:** For whole-strip temporal transitions (Breathe/Jump/Strobe), the `PatternEngine` MUST bypass `0x59` and route the request to a 9-byte `0x51` Scene Sequence.
-5. **The MTU Chunking Protocol (Reverse-Engineered 2026-04-24):** Any payload larger than `MTU - 3` bytes MUST be chunked using the ZENGGE `LowerTransportLayerEncoder` algorithm. The first chunk requires an 8-byte header (`0x40`, sequence, `0x00 0x00`, total length, chunk length, `0x0B`). Subsequent chunks require a 5-byte header, with the final chunk setting the `0x8000` bitmask on the index to trigger execution. Hardcoded chunk signatures (e.g., `0x01, 0x43, 0xBD, 0x0B`) will instantly crash the hardware state machine if the device negotiated a smaller MTU (like 23). See `ZENGGE_PROTOCOL_BIBLE.md` for the exact binary structure.
-
-### Custom Scene (0x51) — ✅ 9B COMPACT WORKS
-| Test | Result |
-|:-----|:-------|
-| 9B compact format (current production) | ✅ PASS — Red/blue animated pattern fires correctly |
-| 10B extended format (via our wrapCommand) | ❌ FAIL — Does nothing |
-
-> **SEE BUG-1 UPDATE**: 10B extended fails due to our wrapper mismatch, not the hardware rejecting 10B slots.
-
-#### 0x51 Sequence Modes (The 44 Baked Hardware Effects / SymphonyEffects)
-The ZENGGE `0x51` sequence editor (`ActivityCustomSymphonyEdit.java`) relies on 44 baked-in hardware effects (known internally as `SymphonyEffect` 1-44). 
-
-We extracted the actual English string translations for all 44 modes from the APK's `strings.xml`:
-
-**Single/Dual Color Modifiable (1-34):**
-1. Change gradually *(Crossfade/Breathe between FG and BG)*
-2. Bright up and Fade gradually *(Pulse to black)*
-3. Change quickly *(Hard Jump)*
-4. Strobe-flash
-5. Running, 1point from start to end
-6. Running, 1point from end to start
-7. Running, 1point from the middle to the both ends
-8. Running, 1point from the both ends to the middle
-9. Overlay, from start to end
-10. Overlay, from end to start
-11. Overlay, from the middle to the both ends
-12. Overlay, from the both ends to the middle
-13. Fading and running, 1point from start to end
-14. Fading and running, 1point from end to start
-15. Olivary Flowing, from start to end
-16. Olivary Flowing, from end to start
-17. Running, 1point w/background from start to end
-18. Running, 1point w/background from end to start
-19. 2 colors run, multi points w/black background from start to end
-20. 2 colors run, multi points w/black background from end to start
-21. 2 colors run alternately, fading from start to end
-22. 2 colors run alternately, fading from end to start
-23. 2 colors run alternately, multi points from start to end
-24. 2 colors run alternately, multi points from end to start
-25. Fading out Flows, from start to end
-26. Fading out Flows, from end to start
-27. 7 colors run alternately, 1 point with multi points background, from start to end
-28. 7 colors run alternately, 1 point with multi points background, from end to start
-29. 7 colors run alternately, 1 point from start to end
-30. 7 colors run alternately, 1 point from end to start
-31. 7 colors run alternately, multi points from start to end
-32. 7 colors run alternately, multi points from end to start
-33. 7 colors overlay, multi points from start to end
-34. 7 colors overlay, multi points from end to start
-
-**7-Color Generative / No-Color (35-44):**
-35. 7 colors overlay, multi points from the middle to the both ends
-36. 7 colors overlay, multi points from the both ends to the middle
-37. 7 colors flow gradually, from start to end
-38. 7 colors flow gradually, from end to start
-39. Fading out run, 7 colors from start to end
-40. Fading out run, 7 colors from end to start
-41. Runs in olivary, 7 colors from start to end
-42. Runs in olivary, 7 colors from end to start
-43. Fading out run, 7 colors start with white color from start to end
-44. Fading out run, 7 colors start with white color from end to start
-
-Below is the definitive UI gating logic (`C9273c.java`) dictating which features each effect supports:
-
-If a feature is ❌, the hardware ignores that byte in the `0x51` slot.
-
-| Effect ID (1-44) | Foreground Color | Background Color | Direction | Segment / Section |
-|:---|:---:|:---:|:---:|:---:|
-| 1, 2, 3, 6, 17, 18, 19, 31 | ✅ | ✅ | ✅ | ✅ |
-| 4, 5 | ✅ | ✅ | ❌ | ✅ |
-| 7, 14 | ✅ | ❌ | ❌ | ❌ |
-| 8, 9, 10, 11, 12, 13, 15, 16 | ❌ | ❌ | ❌ | ❌ |
-| 20, 21, 22 | ❌ | ❌ | ✅ | ❌ |
-| 23, 26, 30 | ❌ | ❌ | ❌ | ✅ |
-| 24, 28, 29 | ❌ | ❌ | ✅ | ✅ |
-| 25, 32 | ✅ | ✅ | ✅ | ❌ |
-| 27 | ❌ | ❌ | ✅ | ❌ |
-| 33, 34 | ❌ | ✅ | ✅ | ✅ |
-| 35-44 (IType_NoColor) | ❌ | ❌ | ✅ | ✅ |
-
-*Note: Speed is supported by ALL 44 effects.*
-
-### Parity Bridge Implementation Strategy
-To achieve perfect visualizer-to-hardware parity for temporal effects (Breathe, Jump, Strobe) without triggering `0x59` MTU lag, `PatternEngine.ts` must intercept these specific selections and route them through `0x51` instead:
-- **Color Breathing**: Intercept `PatternEngine` ID 24 -> Route to `0x51` `SymphonyEffect` ID **1** (Change gradually)
-- **Strobe Flash**: Intercept `PatternEngine` ID 26 -> Route to `0x51` `SymphonyEffect` ID **4** (Strobe-flash)
-- **Jump**: Re-add to `PatternEngine` -> Route to `0x51` `SymphonyEffect` ID **3** (Change quickly)
-
-
-### Phase 2 Extended Panels — ❌ ALL FAILED via our wrapper
-| Opcode | Test | Result | Notes |
-|:-------|:-----|:-------|:------|
-| `0x41` Settled Mode | TX effectId=1, red/blue | ❌ No response | Our payload format doesn't match actual firmware expectation |
-| `0x43` Multi-Sequence | TX effectIds 1,2,3 | ❌ LEDs SHUT OFF | Hardware state machine crash — packet rejected |
-| `0x53` Live Pixel Stream | Gradient animation | ❌ No response | Hardware likely doesn't support live pixel streaming |
-
-### Live BLE Sniff — Raw Packet Evidence
-Capture 1: 1-step customize (Effect 6, Speed 50%, White FG, Black BG):
-```
-ATT Write 0x0017: 40 04 00 00 01 43 BD 0B 51 F0 06 32 FF FF FF 00 00 00 80 [0F×31] D6
-```
-
-Capture 2: 3-step customize (Effect 3 Speed 25% Red/Blue, Effect 10 Speed 75%, Effect 20 Speed 50%):
-```
-ATT Write 0x0017: 40 06 00 00 01 43 BD 0B 51
-  F0 03 19 FF 00 00 00 00 FF 80   ← Effect 3, Speed 0x19=25%, FG=Red, BG=Blue, Forward
-  F0 0A 4B FF FF FF 00 00 00 80   ← Effect 10, Speed 0x4B=75%, FG=White (ignored), Forward
-  F0 14 32 FF FF FF 00 00 00 80   ← Effect 20, Speed 0x32=50%, FG=White (ignored), Forward
-  [0F×29 empty slots]
-  D? checksum
-```
-
-> **NOTE (corrected by SymphonyEffect map)**: Effects 10 and 20 are NOT `IType_NoColor` — they are `UIType_ForegroundColor_BackgroundColor` and `UIType_FirstColor_SecondColor` respectively and DO accept colors. The `FF FF FF` / `00 00 00` in this capture were the default unconfigured values, not proof of NoColor type.
-
-### Confirmed 10-Byte Slot Byte Map
-
-```
-Offset  Field          Notes
-[0]     ACTIVE_FLAG    0xF0 = active, 0x0F = empty
-[1]     effectId       SymphonyEffect 1–44 (29–44 = NoColor, 1–28 = color-accepting)
-[2]     speed          0x00–0x64 (0–100)
-[3]     FG.R           Foreground Red   (ignored for effects 29–44)
-[4]     FG.G           Foreground Green (ignored for effects 29–44)
-[5]     FG.B           Foreground Blue  (ignored for effects 29–44)
-[6]     BG.R           Background Red   (ignored for effects 29–44)
-[7]     BG.G           Background Green (ignored for effects 29–44)
-[8]     BG.B           Background Blue  (ignored for effects 29–44)
-[9]     flags          0x80 = forward+section_toggle ON, 0x00 = reverse/no-toggle
-```
-
-### Mystery Session Init Packets — Partial Decode
-
-These ~3 packets appear in EVERY capture BEFORE any LED commands. Sent by ZENGGE app immediately on connection.
-
-**[12157] ATT Write REQUEST (0x12, expects response)**:
-```
-Raw: 00 01 80 00 00 0C 0D 0B 10 14 1A 04 16 00 04 2B 03 00 0F | 99
-Header:  [00 01 80 00 00 0C 0D 0B] (standard 8-byte ZENGGE wrapper) ✓
-Inner:   10 14 1A 04 16 00 04 2B 03 00 0F  (11 bytes)
-Chksum:  99 = (10+14+1A+04+16+00+04+2B+03+00+0F) & 0xFF ✓ VERIFIED
-Opcode:  0x10 = SESSION TIME SYNC (variant of 0x11)
-Payload: 0x1A=26(year), 0x04=04(April), 0x16=22(day), remainder=time/weekday
-Note:    Uses ATT WRITE REQUEST (not Write Without Response) — device ACKs this.
-```
-
-**[12169] and [12178]** — Use a DIFFERENT framing (byte 7 ≠ `0x0B`). Possibly a lightweight 7-byte or proprietary init packet format. Opcodes cannot be confirmed without the matching framing spec. Marked as **PARTIALLY DECODED**.
-
-> **HYPOTHESIS**: These 3 packets are the ZENGGE app's session handshake sequence: (1) time sync to the device, (2) firmware version exchange, (3) ack/response. The mandatory time sync enables timer schedules stored in device EEPROM.
-
-### Music Mode — The "Play" Button Explained
-
-> **🔬 DISCOVERY (2026-04-22)**: The ZENGGE app has a separate "Play" button in the Music Mode tab. Here's why:
->
-> - Sending `0x73` (music config) alone sets the MODE and mic routing but sends NO audio magnitude data
-> - The hardware sits in music mode but receives no `0x74` magnitude packets → LEDs don't react
-> - Pressing **Play** in the ZENGGE app starts the mic recording and the continuous `0x74` stream
->
-> **SK8Lytz behavior** (`useAppMicrophone.ts`): automatically starts the `0x74` stream the moment `activeMode === 'MUSIC' && micSource === 'APP' && isPoweredOn` — effectively merging "configure" and "play" into one action.
->
-> This is WHY music mode felt "fully enabled" during Oracle tests — the `useAppMicrophone` hook fires `0x74` the moment you're in MUSIC mode, masking any delays from the manual test panel.
-EEPROM Write:   Programmer → C14184b.m4807B etc → [0x62, ...]
-EEPROM Read:    Programmer → C14184b.m4771f0 → [0x63, 0x12, 0x21, 0x0F, chk]
-```
-
-
-### SECTION 12: CAMERA MODE V2 (SNIPER & VIBE CATCHER)
-
-#### 🔬 Architectural Design & Frame Processing Flow
-
-To replace the unstable native camera snapshot pipeline, Camera Mode v2 implements a GPU-accelerated **VisionCamera v5 Frame Processor** utilizing the Nitro/JSI architecture.
-
-```mermaid
-graph TD
-    A[Native Camera Buffer] --> B[GPU Resizer useResizer]
-    B -->|GPU Vulkan/Metal| C[50x50 Interleaved RGB Grid]
-    C -->|5Hz Throttle 200ms| D{Sub-mode Selector}
-    D -->|SNIPER| E[Center Pixel Sample 25,25]
-    D -->|VIBE| F[extractKMeansPalette]
-    E --> G[Neutral White Snap delta < 0.15]
-    G --> H[Vivid Neon Boost S=1, L=0.5]
-    H --> I[UI Telemetry & Swatch History]
-    F -->|k=3, Iter=5| J[3 Dominant RGB Swatches]
-    J --> K[Liquid Gradient Preview]
-    I -->|Shutter Tap| L[0x59 spatial write]
-    K -->|Apply Vibe Tap| M[0x59 spatial write]
-    L --> N[12-Pixel EEPROM Defense]
-    M --> N
-    N -->|padded colors| O[0xA3 Controller]
-```
-
-1. **V5 GPU Resizer**: Scaled down to a `50x50` interleaved `HWC` RGB grid via `react-native-vision-camera-resizer` (Vulkan on Android, Metal on iOS) in `< 1ms`. Memory is safely managed by calling `resized.dispose()` in the worklet thread to avoid VRAM leakage.
-2. **CPU Worklet Rate-Limiting**: Frame processing is hard-throttled to **5Hz (every 200ms)** to preserve the JS main thread and eliminate UI stutters.
-3. **Dual Sub-Modes**:
-   * **SNIPER**: Coordinates center-pixel sampling `(25, 25) * 3` in the grid.
-     * *Neutral Snapping Gate*: If RGB delta $|Max(RGB) - Min(RGB)| < 0.15$, the color is snapped to `#FFFFFF` to prevent noisy color drifts in low-light environments.
-     * *Vivid Neon Boost*: Amplifies saturation to pure neon ($S=1.0$, $L=0.5$ in HSL) for high-impact visual representation.
-   * **VIBE**: Feeds the 2,500 scaled RGB pixels to the deterministic K-Means worklet ($k=3$ clusters, Euclidean distance metric in 3D RGB space, 5 iterations max) to extract the Foreground, Background, and Accent swatches sorted by dominance.
-
-#### 🚨 BLE Safeguards & Protocol Mapping
-
-* **BLE Mutex Preservation**: Active frames only update the visual UI layers (viewfinder, concentric reticle ring, palette swatches, and liquid gradient preview strip). BLE payloads are **only** sent to the hardware on explicit user actions (shutter tap in SNIPER, "APPLY VIBE" button in VIBE).
-* **The 12-Pixel Buffer Overflow Defense**: The `0xA3` controller suffers physical EEPROM buffer locks on custom spatial dispatches of size $< 10$ pixels.
-  * We enforce a **minimum length of 12 RGB pixels** for all `0x59` Static Colorful payload dispatches.
-  * If the device `ledPoints < 12` (such as HALOZ which has `ledPoints = 8`), the payload array is duplicated or padded up to **12** to prevent chipset freezes.
-  * If `ledPoints >= 12` (such as SOULZ which has `ledPoints = 43`), the three K-Means colors are interpolated across the full canvas size to form a smooth gradient.
-* **Transition Mode Mapping**: VIBE supports two state behaviors via `0x59`:
-  * `Static` (`0x01` transitionType): Freezes the spatial K-Means gradient across the strips.
-  * `Flow` (`0x03` transitionType): Automatically scrolls the custom gradient across the addressable strips.
-
-
-### 🚨 SDE Autonomous Fuzzer Discoveries (Auto-Documented)
-- **Opcode**: `0x59` (Static Colorful)
-- **Constraint**: Array sizes between 2 and 9 elements cause physical EEPROM buffer lockout on the `0xA3` chipset.
-- **Rule**: Minimum safe payload length is 12 RGB pixels. (See Rule: Surgical Buffer Overflow Defense in agent-behavior.md).
 
