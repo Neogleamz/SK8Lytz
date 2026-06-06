@@ -31,9 +31,9 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { useAccountOverview } from '../hooks/useAccountOverview';
 import { useSkateStats } from '../hooks/useSkateStats';
-import { PermanentCrew } from '../services/ProfileService';
-import { supabase } from '../services/supabaseClient';
 import EulaModal from './modals/EulaModal';
+import { profileService, PermanentCrew } from '../services/ProfileService';
+import { supabase } from '../services/supabaseClient';
 import { AdvancedHardwareModal } from './admin/AdvancedHardwareModal';
 import AccountTabProfile from './account/AccountTabProfile';
 import AccountTabSecurity from './account/AccountTabSecurity';
@@ -204,7 +204,15 @@ export default function AccountModal({
         {
           text: 'Delete Forever', style: 'destructive',
           onPress: async () => {
-            await leaveCrewHook(crew.id);
+            try {
+              // Use profileService.deleteCrew (hard-delete crew + cascade memberships)
+              // NOT leaveCrewHook — that only removes the owner's membership, leaving an orphaned crew row
+              await profileService.deleteCrew(crew.id);
+              setCrews(prev => prev.filter(c => c.id !== crew.id));
+              AppLogger.log('CREW_PERMANENT_DELETED', { crewId: crew.id, crewName: crew.name });
+            } catch (e: any) {
+              Alert.alert('Error', e.message || 'Could not delete crew');
+            }
           },
         },
       ]
