@@ -236,6 +236,15 @@ export async function executeConnectToDevices({
           }
 
           AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name });
+          // Downgrade HIGH \u2192 BALANCED after all handshake writes are complete.
+          // HIGH (11.25ms poll interval) is 2\u20133\u00d7 battery drain vs BALANCED (30ms).
+          // Fire-and-forget BLE writes don\u2019t need HIGH after initial setup.
+          // Apple HomeKit mandates BALANCED within 5s of connection establishment.
+          if (Platform.OS === 'android') {
+            bleManager.requestConnectionPriorityForDevice(conn.id, 0).catch((e: unknown) => {
+              AppLogger.warn('[BLE] Priority BALANCED downgrade failed (non-fatal)', e);
+            });
+          }
           return conn;
         } catch (deviceError: any) {
           const errMsg = deviceError?.message || String(deviceError);
