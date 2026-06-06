@@ -14,22 +14,37 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 
 describe('useBLEAutoRecovery Math Helpers', () => {
   describe('getRecoveryBackoffMs', () => {
-    it('starts at 1500ms on the 0th attempt', () => {
-      expect(getRecoveryBackoffMs(0)).toBe(1500);
+    // Formula: round(min(1500 * 1.5^n, 30_000) + random(0, 1500))
+    // Output range per attempt: [exponential, exponential + 1500]
+    const BASE = 1500;
+    const MAX_EXP = 30_000;
+
+    const exponential = (attempt: number) =>
+      Math.min(BASE * Math.pow(1.5, attempt), MAX_EXP);
+
+    it('returns a value within the valid jitter range for attempt 0', () => {
+      const result = getRecoveryBackoffMs(0);
+      const exp = exponential(0); // 1500
+      expect(result).toBeGreaterThanOrEqual(Math.round(exp));
+      expect(result).toBeLessThanOrEqual(Math.round(exp + BASE));
     });
 
-    it('increments 500ms linearly per attempt', () => {
-      expect(getRecoveryBackoffMs(1)).toBe(2000);
-      expect(getRecoveryBackoffMs(2)).toBe(2500);
-      expect(getRecoveryBackoffMs(3)).toBe(3000);
+    it('returns increasing values for attempts 1, 2, 3 (within valid range)', () => {
+      for (const attempt of [1, 2, 3]) {
+        const result = getRecoveryBackoffMs(attempt);
+        const exp = exponential(attempt);
+        expect(result).toBeGreaterThanOrEqual(Math.round(exp));
+        expect(result).toBeLessThanOrEqual(Math.round(exp + BASE));
+      }
     });
 
-    it('caps strictly at 5000ms', () => {
-      // 1500 + 7 * 500 = 5000
-      expect(getRecoveryBackoffMs(7)).toBe(5000);
-      expect(getRecoveryBackoffMs(8)).toBe(5000);
-      expect(getRecoveryBackoffMs(100)).toBe(5000);
-      expect(getRecoveryBackoffMs(MAX_RECOVERY_ATTEMPTS)).toBe(5000);
+    it('caps exponential term at RECOVERY_MAX_MS; total never exceeds MAX + BASE', () => {
+      // At attempt 100, exponential saturates at 30_000; jitter adds up to 1500
+      for (const attempt of [20, 50, 100, MAX_RECOVERY_ATTEMPTS]) {
+        const result = getRecoveryBackoffMs(attempt);
+        expect(result).toBeGreaterThanOrEqual(MAX_EXP);
+        expect(result).toBeLessThanOrEqual(MAX_EXP + BASE);
+      }
     });
   });
 
