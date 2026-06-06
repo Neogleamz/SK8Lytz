@@ -9,6 +9,7 @@ import { supabase } from '../services/supabaseClient';
 import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
 import { checkPermission, requestPermission, setPermissionOptOut } from '../services/PermissionService';
+import { useAuth } from '../context/AuthContext';
 
 const NOTIF_PREF_KEY = `${STORAGE_PREFIX}notif_prefs`;
 
@@ -35,6 +36,7 @@ function hexToHue(hex: string | null | undefined): number {
 }
 
 export function useAccountOverview(visible: boolean, onProfileUpdated?: () => void) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [editName, setEditName] = useState('');
@@ -71,10 +73,8 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     try {
       AppLogger.log('ACCOUNT_MODAL_LOAD_START');
 
-      // ── Phase A: Run auth lookup + notif prefs in parallel ──────────────────
-      // Neither depends on the other, so fire both immediately.
-      const [authResult, rawNotifPrefs, hasHealth, rawAutoPause] = await Promise.all([
-        supabase.auth.getUser(),
+      // ── Phase A: Run async local/permission lookups in parallel ───────────────
+      const [rawNotifPrefs, hasHealth, rawAutoPause] = await Promise.all([
         AsyncStorage.getItem(NOTIF_PREF_KEY).catch(e => {
           AppLogger.warn('Failed to load notification preferences from cache', e);
           return null;
@@ -86,7 +86,6 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
         }),
       ]);
 
-      const user = authResult.data?.user ?? null;
       if (user) setUserEmail(user.email ?? '');
 
       // Apply notif prefs as soon as they resolve (Phase A complete)
@@ -138,7 +137,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     if (visible) {
       loadData();
     }
-  }, [visible, loadData]);
+  }, [visible, loadData]); // Note: loadData implicitly depends on `user` now via useAuth
 
   const handleSaveProfile = async () => {
     if (!editName.trim()) return;
@@ -148,7 +147,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       if (editUsername.trim()) updates.username = editUsername.trim().toLowerCase();
       // Persist staged avatar_color from the slider (set locally via setProfile during drag)
       if (profile?.avatar_color) updates.avatar_color = profile.avatar_color;
-      await profileService.updateProfile(updates);
+      await profileService.updateProfile(user?.id, updates);
       setProfile(p => p ? { ...p, ...updates } : p);
       AppLogger.log('PROFILE_UPDATED', { fields: Object.keys(updates) });
       onProfileUpdated?.();
@@ -178,7 +177,6 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     setProfilePhotoUri(asset.uri);
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
       const ext = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
@@ -194,7 +192,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
 
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path);
 
-      await profileService.updateProfile({ avatar_url: publicUrl });
+      await profileService.updateProfile(user?.id, { avatar_url: publicUrl });
       setProfile(p => p ? { ...p, avatar_url: publicUrl } : p);
       AppLogger.log('PROFILE_UPDATED', { field: 'photo', bucket: 'avatars', path });
       onProfileUpdated?.();

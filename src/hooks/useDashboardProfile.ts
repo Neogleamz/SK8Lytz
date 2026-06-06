@@ -18,6 +18,7 @@ import { AppSettingsMap, AppSettingsService } from '../services/AppSettingsServi
 import { notificationService } from '../services/NotificationService';
 import { profileService, UserProfile } from '../services/ProfileService';
 import { supabase } from '../services/supabaseClient';
+import { useAuth } from '../context/AuthContext';
 
 interface UseDashboardProfileOptions {
   /**
@@ -50,6 +51,7 @@ export interface UseDashboardProfileResult {
 export function useDashboardProfile({
   onCrewJoinNotification,
 }: UseDashboardProfileOptions): UseDashboardProfileResult {
+  const { session } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [appSettings, setAppSettings] = useState<AppSettingsMap>({});
   const [authUsername, setAuthUsername] = useState<string | null>(null);
@@ -98,15 +100,13 @@ export function useDashboardProfile({
   // ── Stage 2: derive reactively from userProfile + auth session ──────────
   useEffect(() => {
     if (!supabase) return;
-    supabase.auth.getSession().then(({ data: { session } }: { data: { session: any } }) => {
-      const dbDisplay = userProfile?.display_name?.trim();
-      const dbUser = userProfile?.username?.trim();
-      const sessionEmailPrefix = session?.user?.email?.split('@')[0];
-      const fallback = dbDisplay || dbUser || sessionEmailPrefix || 'GUEST';
-      setAuthUsername(fallback);
-      AsyncStorage.setItem('@Sk8lytz_auth_username', fallback).catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_auth_username', event: 'save_failed', error: String(e) }));
-    }).catch((e) => AppLogger.warn('PERSISTENCE', { event: 'auth_session_failed', error: String(e) }));
-  }, [userProfile]);
+    const dbDisplay = userProfile?.display_name?.trim();
+    const dbUser = userProfile?.username?.trim();
+    const sessionEmailPrefix = session?.user?.email?.split('@')[0];
+    const fallback = dbDisplay || dbUser || sessionEmailPrefix || 'GUEST';
+    setAuthUsername(fallback);
+    AsyncStorage.setItem('@Sk8lytz_auth_username', fallback).catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_auth_username', event: 'save_failed', error: String(e) }));
+  }, [userProfile, session]);
 
   const handleLogout = async (): Promise<void> => {
     try {
@@ -119,7 +119,7 @@ export function useDashboardProfile({
 
   const refreshProfile = async (): Promise<void> => {
     try {
-      const profile = await profileService.fetchOrCreateProfile();
+      const profile = await profileService.fetchOrCreateProfile(session?.user);
       if (profile?.is_banned) {
         Alert.alert(
           'Account Suspended',

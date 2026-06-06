@@ -17,13 +17,7 @@ class AuthProfileService {
    * if the database trigger failed to set them during signup.
    * @param cachedUser Optional pre-fetched user object to avoid redundant network calls
    */
-  async fetchOrCreateProfile(cachedUser?: any): Promise<UserProfile | null> {
-    let user = cachedUser;
-    if (!user) {
-      const { data: authData } = await supabase.auth.getUser();
-      user = authData.user;
-    }
-    
+  async fetchOrCreateProfile(user?: any | null): Promise<UserProfile | null> {
     if (!user) return null;
 
     const { data: existing } = await supabase
@@ -82,12 +76,11 @@ class AuthProfileService {
   /**
    * Update display name and/or avatar color for the current user.
    */
-  async updateProfile(fields: { display_name?: string | null; avatar_color?: string; username?: string | null; avatar_url?: string | null }): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error('Not authenticated');
+  async updateProfile(userId: string | undefined, fields: { display_name?: string | null; avatar_color?: string; username?: string | null; avatar_url?: string | null }): Promise<void> {
+    if (!userId) throw new Error('Not authenticated');
 
     // Strip null/undefined values to avoid overwriting with null
-    const cleanFields: Record<string, any> = {};
+    const cleanFields: Partial<UserProfile> = {};
     if (fields.display_name != null) cleanFields.display_name = fields.display_name;
     if (fields.avatar_color != null) cleanFields.avatar_color = fields.avatar_color;
     if (fields.username != null) cleanFields.username = fields.username.toLowerCase();
@@ -95,7 +88,7 @@ class AuthProfileService {
 
     const { error } = await supabase
       .from('user_profiles')
-      .upsert({ user_id: user.id, ...cleanFields }, { onConflict: 'user_id' });
+      .upsert({ user_id: userId, ...cleanFields }, { onConflict: 'user_id' });
 
     if (error) throw error;
   }
@@ -104,13 +97,8 @@ class AuthProfileService {
    * Return the last 20 crew sessions the current user was part of.
    * @param cachedUserId Optional pre-fetched user ID to avoid redundant network calls
    */
-  async getSessionHistory(cachedUserId?: string): Promise<SessionHistoryItem[]> {
-    let userId = cachedUserId;
-    if (!userId) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
-      userId = user.id;
-    }
+  async getSessionHistory(userId?: string): Promise<SessionHistoryItem[]> {
+    if (!userId) return [];
 
     const { data, error } = await supabase
       .from('crew_members')

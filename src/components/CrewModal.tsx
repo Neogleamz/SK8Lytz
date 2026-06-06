@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { CrewRole, CrewSession } from '../services/CrewService';
 import { supabase } from '../services/supabaseClient';
 import { profileService } from '../services/ProfileService';
+import { useAuth } from '../context/AuthContext';
 import { createStyles } from './crew/CrewStyles';
 
 import { useCrewHub } from '../hooks/useCrewHub';
@@ -77,6 +78,8 @@ export function CrewModal({
   const [errorMsg, setErrorMsg] = useState('');
   const [confirmAction, setConfirmAction] = useState<'end' | 'leave' | null>(null);
 
+  const { user } = useAuth();
+
   const [currentUserId, setCurrentUserId] = useState('');
   const [displayName, setDisplayName] = useState('');
 
@@ -90,14 +93,13 @@ export function CrewModal({
   const [inviteCode, setInviteCode] = useState(initialInviteCode || '');
 
   useEffect(() => {
-    supabase.auth.getUser().then(async (res: any) => {
-      if (res?.data?.user) {
-        setCurrentUserId(res.data.user.id);
-        const profile = await profileService.fetchOrCreateProfile(res.data.user);
-        setDisplayName(profile?.display_name || res.data.user.user_metadata?.display_name || 'Skater');
-      }
-    });
-  }, []);
+    if (user) {
+      setCurrentUserId(user.id);
+      profileService.fetchOrCreateProfile(user).then((profile) => {
+        setDisplayName(profile?.display_name || user.user_metadata?.display_name || 'Skater');
+      }).catch(e => console.warn('[CrewModal] fetch profile failed', e));
+    }
+  }, [user]);
 
   useEffect(() => {
     if (visible && activeSession) setStep('controller');

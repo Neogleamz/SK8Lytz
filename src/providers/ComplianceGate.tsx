@@ -7,12 +7,14 @@ import { AppSettingsService } from '../services/AppSettingsService';
 import { supabase } from '../services/supabaseClient';
 import { AppLogger } from '../services/AppLogger';
 
+import { useAuth } from '../context/AuthContext';
+
 interface ComplianceGateProps {
   children: React.ReactNode;
-  isOfflineMode: boolean;
 }
 
-export function ComplianceGate({ children, isOfflineMode }: ComplianceGateProps) {
+export function ComplianceGate({ children }: ComplianceGateProps) {
+  const { isOfflineMode, user } = useAuth();
   const { Colors } = useTheme();
   const [loading, setLoading] = useState(true);
   const [requiresEula, setRequiresEula] = useState(false);
@@ -46,7 +48,6 @@ export function ComplianceGate({ children, isOfflineMode }: ComplianceGateProps)
       const requiredVersion = parseInt(settings['required_eula_version'] || '1', 10);
 
       // 2. Fetch user's accepted version
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setLoading(false);
         return;
@@ -88,7 +89,6 @@ export function ComplianceGate({ children, isOfflineMode }: ComplianceGateProps)
       const requiredVersion = parseInt(settings['required_eula_version'] || '1', 10);
 
       // 2. Update user profile in Supabase
-      const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       
       await supabase

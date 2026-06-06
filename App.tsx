@@ -1,8 +1,7 @@
 /* global global, window */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View, AppState, Text, LogBox, Platform } from 'react-native';
-import { Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import DashboardScreen from './src/screens/DashboardScreen';
 import AuthScreen from './src/screens/AuthScreen';
@@ -12,14 +11,13 @@ import { useFonts, Righteous_400Regular } from '@expo-google-fonts/righteous';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppLogger } from './src/services/AppLogger';
 import { warmLedgerCache } from './src/hooks/useDeviceStateLedger';
-import { supabase } from './src/services/supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Linking from 'expo-linking';
 import { ComplianceGate } from './src/providers/ComplianceGate';
 import { BLEProvider } from './src/context/BLEContext';
 import { FavoritesProvider } from './src/context/FavoritesContext';
 import { SessionProvider } from './src/context/SessionContext';
 import { BluetoothGuard } from './src/providers/BluetoothGuard';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 
 
 LogBox.ignoreLogs([
@@ -27,7 +25,7 @@ LogBox.ignoreLogs([
   'props.pointerEvents is deprecated'
 ]);
 
-const STORAGE_OFFLINE_SKIP   = '@Sk8lytz_offline_skip';
+const STORAGE_OFFLINE_SKIP = '@Sk8lytz_offline_skip';
 
 if (typeof (global as any).ErrorUtils !== 'undefined') {
   const defaultHandler = (global as any).ErrorUtils.getGlobalHandler();
@@ -106,117 +104,31 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function AppContent() {
   const { Colors, isDark } = useTheme();
-  const [session, setSession] = useState<Session | null>(null);
-  const [sessionLoaded, setSessionLoaded] = useState(false);
-  const [offlineMode, setOfflineMode] = useState(false);
-  const [sessionExpired, setSessionExpired] = useState(false);
-
-  useEffect(() => {
-    if (!supabase) {
-      console.warn('[SK8Lytz] Supabase not configured — offline-only mode.');
-      setSessionLoaded(true);
-      return;
-    }
-
-    const handleDeepLink = async ({ url }: { url: string }) => {
-      if (!url) return;
-      try {
-        if (url.includes('#access_token=')) {
-          const hashString = url.split('#')[1];
-          const params = hashString.split('&').reduce((acc, current) => {
-            const [key, value] = current.split('=');
-            acc[key] = decodeURIComponent(value);
-            return acc;
-          }, {} as Record<string, string>);
-
-          if (params.access_token && params.refresh_token) {
-            const { error } = await supabase.auth.setSession({ 
-              access_token: params.access_token, 
-              refresh_token: params.refresh_token 
-            });
-            if (error) {
-              AppLogger.log('ERROR_CAUGHT', { context: 'deep_link', message: error.message });
-            }
-          }
-        }
-      } catch (err) {
-        console.error('Deep link parsed error', err);
-      }
-    };
-
-    const linkSubscription = Linking.addEventListener('url', handleDeepLink);
-    Linking.getInitialURL().then(url => {
-      if (url) handleDeepLink({ url });
-    });
-
-    const init = async () => {
-      try {
-        // ── 1. Check if user previously chose Continue Offline ──
-        const offlineSkip = await AsyncStorage.getItem(STORAGE_OFFLINE_SKIP);
-        if (offlineSkip === 'true') {
-          setOfflineMode(true);
-          return;
-        }
-
-        // ── 2. Check active Supabase session ──
-        const { data } = await supabase.auth.getSession();
-        const existing = data?.session;
-        if (existing) {
-          setSession(existing);
-          return;
-        }
-
-        // ── 3. No active session — check if user had a prior one (token expired) ──
-        const lastEmail = await AsyncStorage.getItem('@Sk8lytz_auth_last_email');
-        if (lastEmail) {
-          // Evidence of a prior session: show "session expired" banner on AuthScreen
-          setSessionExpired(true);
-        }
-
-      } catch (err) {
-        console.error('Initialization error:', err);
-        AppLogger.log('ERROR_CAUGHT', { message: 'Initialization failed', info: err, context: 'App.init' });
-      } finally {
-        setSessionLoaded(true);
-      }
-    };
-
-    init();
-
-    const { data } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-      AppLogger.log('SYNC', { context: 'auth_change', event: _event, hasSession: !!session });
-      setSession(session);
-      if (_event === 'SIGNED_IN') {
-        // User successfully authenticated — clear any expiry banner
-        setSessionExpired(false);
-      }
-      if (!session) {
-        setOfflineMode(false);
-        AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP);
-      }
-    });
-
-    return () => {
-      if (data?.subscription) data.subscription.unsubscribe();
-      linkSubscription.remove();
-    };
-  }, []);
+  const {
+    isAuthenticated,
+    isOfflineMode,
+    sessionLoaded,
+    sessionExpired,
+    setIsOfflineMode,
+    clearOfflineMode,
+  } = useAuth();
 
   if (!sessionLoaded) return null;
-
-  const isAuthenticated = (session && session.user) || !supabase || offlineMode;
 
   return (
     <View style={[styles.container, { backgroundColor: Colors.background }]}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {isAuthenticated ? (
-        <ComplianceGate isOfflineMode={offlineMode}>
-          <DashboardScreen isOfflineMode={offlineMode} onLogout={() => setOfflineMode(false)} />
+        <ComplianceGate>
+          <DashboardScreen isOfflineMode={isOfflineMode} onLogout={clearOfflineMode} />
         </ComplianceGate>
       ) : (
         <AuthScreen
-          onAuthSuccess={() => {/* session change auto-handles via onAuthStateChange */}}
-          onOfflineMode={() => setOfflineMode(true)}
+          onAuthSuccess={() => {/* session change auto-handles via onAuthStateChange in AuthProvider */}}
+          onOfflineMode={() => {
+            setIsOfflineMode(true);
+            AsyncStorage.setItem(STORAGE_OFFLINE_SKIP, 'true').catch(() => {});
+          }}
           sessionExpired={sessionExpired}
         />
       )}
@@ -283,16 +195,18 @@ export default function App() {
     <SafeErrorBoundary>
       <SafeAreaProvider>
         <ThemeProvider>
-          <FavoritesProvider>
-            <SessionProvider>
-              <BLEProvider>
-                <BluetoothGuard>
-                  <AppContent />
-                  <GlobalPermissionsModal />
-                </BluetoothGuard>
-              </BLEProvider>
-            </SessionProvider>
-          </FavoritesProvider>
+          <AuthProvider>
+            <FavoritesProvider>
+              <SessionProvider>
+                <BLEProvider>
+                  <BluetoothGuard>
+                    <AppContent />
+                    <GlobalPermissionsModal />
+                  </BluetoothGuard>
+                </BLEProvider>
+              </SessionProvider>
+            </FavoritesProvider>
+          </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </SafeErrorBoundary>
