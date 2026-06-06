@@ -1,10 +1,15 @@
 ---
 description: Pre-release health sweep — npm audit + Supabase DB security advisors before any push
+persona_entry: "🩺 SRE — River"
+team_roster: .agents/team-roster.md
 ---
 
 # Health Sweep Engine — "/health-sweep"
 
 // turbo-all
+
+> **🩺 SRE — River | Health Sweep Active**
+> *River runs the pre-flight checklist. A critical vulnerability in npm audit is a NO-GO for release, full stop. Security advisors on Supabase get the same treatment.*
 
 When invoked via `/health-sweep` or as Phase 1 Step 1 of `/ship-it`, run all security and dependency health checks. This must pass before ANY release merge.
 

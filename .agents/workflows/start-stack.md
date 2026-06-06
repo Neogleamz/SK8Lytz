@@ -1,6 +1,11 @@
 ---
 description: Start the entire SK8Lytz Scraper Stack — CCTower API, Vite Dashboard, and Discord Bridge via Docker Compose.
+persona_entry: "🌙 Ops — Alex"
+team_roster: .agents/team-roster.md
 ---
+
+> **🌙 Ops — Alex | Stack Startup Active**
+> *Alex orchestrates the full Docker stack. CCTower, Dashboard, Discord Bridge — all up or none up. Verify health before declaring success.*
 
 // turbo
 

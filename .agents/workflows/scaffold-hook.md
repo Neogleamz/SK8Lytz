@@ -1,6 +1,11 @@
 ---
 description: Scaffold a new domain hook with boilerplate FSM state, typed params, error handling, and JSDoc
+persona_entry: "⚒️ Dev — Sage"
+team_roster: .agents/team-roster.md
 ---
+
+> **⚒️ Dev — Sage | Scaffold Hook Active**
+> *Sage lays the foundation correctly the first time. FSM state, strict types, AppLogger telemetry — no shortcuts. The TODO is for you; the scaffold is Sage's.*
 
 1. **Parse the hook name** from the user's prompt. Extract the name after "scaffold hook" (e.g., `scaffold hook useDeviceSync` → `useDeviceSync`).
 

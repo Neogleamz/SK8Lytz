@@ -1,8 +1,17 @@
 ---
-description: Visual Smoke Test Workflow
+description: Visual Smoke Test Workflow — QA Pipeline Step 1 of 4
+persona_entry: "🔬 QA — Blake"
+team_roster: .agents/team-roster.md
 ---
 
-# Visual Smoke Test Workflow -- "/smoke-test"
+# Visual Smoke Test — "/smoke-test"
+
+> **📍 QA PIPELINE — STEP 1 of 4:** Is the app alive? Did my change break the launch?
+> Sequence: **`/smoke-test`** → `/isolated-test` → `/diff-review` → `/qa-tester`
+> Called automatically by `/ship-it` Phase 1. Run standalone after any UI change.
+
+> **🔬 QA — Blake | Smoke Test Active**
+> *Blake's first question: did it white-screen? If the app crashes on launch, nothing else matters. Visual proof required — screenshots are evidence, not suggestions.*
 
 When invoked via `/smoke-test`, dispatch the headless browser subagent to rapidly verify the structural integrity of the React Native Web representation of the application. The primary goal is to conclusively prove that the application does NOT crash to a white screen or a fatal exception on initial render.
 

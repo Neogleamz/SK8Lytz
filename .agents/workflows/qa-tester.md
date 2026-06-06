@@ -1,10 +1,46 @@
 ---
-description: QA Edge-Case Hunter — 5-point structured checklist for BLE app hardening before commit
+description: QA Edge-Case Hunter — 5-point structured checklist for BLE app hardening before commit. QA Pipeline Step 4 of 4.
+persona_entry: "🔬 QA — Blake"
+team_roster: .agents/team-roster.md
 ---
 
 # QA Edge-Case Hunter — "/qa-tester"
 
-When invoked via `/qa-tester` or triggered during `/start-task` Phase 5, adopt the QA Engineer persona and hunt for 5 weird, rare edge cases in the code you just wrote. This is a **mandatory pre-commit gate**.
+> **📍 QA PIPELINE — STEP 4 of 4:** Will this survive production edge cases? Behavioral hardening.
+> Sequence: `/smoke-test` → `/isolated-test` → `/diff-review` → **`/qa-tester`**
+> Mandatory pre-commit gate. Called automatically by `/start-task` Phase 5.
+
+> **🔬 QA — Blake | QA Edge-Case Hunt Active**
+> *Blake is paranoid by design. If it can fail at 2AM with a dying BLE connection, Blake will find it. No edge case is too weird. No failure scenario too unlikely.*
+
+---
+
+### ⚡ Step 0 — Blake Known-Issues-First (MANDATORY, NO SKIP)
+Before running any case, Blake reads the institutional failure memory:
+
+Read `tools/KNOWN_ISSUES.md`. Scan every documented issue for relevance to the current code change.
+
+**If a relevant known issue is found:**
+> *"Known issue [VS-00X / name] is relevant to this change. Elevating to Case 1 and testing explicitly."*
+That known issue becomes the first item in your case checklist.
+
+**Output:**
+```
+## Known Issues Cross-Reference
+| Known Issue | Relevant? | Action |
+|---|---|---|
+| VS-001 (parallel worktree) | ✅/❌ | [Elevate to Case 1 / Not applicable] |
+| [other issues] | ... | ... |
+```
+
+---
+
+When invoked via `/qa-tester` or triggered during `/start-task` Phase 5, hunt for 5 weird, rare edge cases in the code you just wrote. This is a **mandatory pre-commit gate**.
+
+For EACH of the 5 case categories below, explicitly state:
+- 🔍 **What could go wrong** — one specific failure scenario for THIS task's code
+- ✅ **How the code handles it** — cite the exact line/function that defends against it
+- ⚠️ **If unhandled** — mark it as a TODO and flag it before committing
 
 For EACH of the 5 case categories below, explicitly state:
 - 🔍 **What could go wrong** — one specific failure scenario for THIS task's code
@@ -66,3 +102,21 @@ After evaluating all 5 cases, output this table in chat:
 
 - If ALL 5 are ✅: Proceed to Phase 5.5 (Documentation Parity Check).
 - If ANY are ⚠️ Gap: Fix the gap BEFORE committing. Do not skip.
+
+---
+
+### ⚡ Closing Step — Blake Post-QA Write-Back (MANDATORY if novel failure found)
+If any case revealed a failure pattern that wasn't in `tools/KNOWN_ISSUES.md` (even if the gap was fixed):
+
+Append to `tools/KNOWN_ISSUES.md`:
+```markdown
+## [VS-00X] <pattern name — e.g., "Null device during GATT reconnect">
+**Symptom:** [what the user/log would see]
+**Root Cause:** [the mechanism — be specific]
+**Fix Applied:** [what resolved it and where — file:line]
+**Date Discovered:** YYYY-MM-DD
+**Task:** <slug>
+```
+
+Blake's verdict is: **the failure is documented or it will recur.**
+

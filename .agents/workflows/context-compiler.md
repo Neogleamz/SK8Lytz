@@ -1,8 +1,44 @@
 ---
 description: Context Memory Compiler — sync codebase architecture into SK8Lytz_App_Master_Reference.md
+persona_entry: "📋 Docs — Avery"
+team_roster: .agents/team-roster.md
 ---
 
 # Context Memory Compiler — "sync architecture", "update memory", "compile context"
+
+> **📋 Docs — Avery | Context Compiler Active**
+> *Avery does not tolerate documentation drift. Every hook, service, and component in the live codebase gets a row in the Master Reference. No exceptions. No lazy "TODO: document later".*
+
+---
+
+### ⚡ Step 0 — Avery Parity-Scan-First (MANDATORY, NO SKIP)
+Before any manual sync, Avery runs an automated parity delta:
+
+```powershell
+# Count live hooks vs. registered hooks
+$liveHooks = (Get-ChildItem -Path src/hooks -Recurse -Filter "*.ts" | Measure-Object).Count
+Write-Host "Live hooks: $liveHooks"
+
+# Find new files not yet in registry (proxy: files newer than last commit to Master Reference)
+git log --oneline -1 -- tools/SK8Lytz_App_Master_Reference.md
+```
+
+Then grep the `src/` diff for unregistered exports:
+- New `export function use*` in `src/hooks/` → potential missing Hook Registry rows
+- New files in `src/services/` → potential missing Service Registry rows
+- New files in `src/protocols/` → potential missing BLE Protocol Library entries
+
+**Output the delta before proceeding:**
+```
+## 📋 Parity Pre-Scan
+| Category | Live Count | Registered Count | Delta |
+|---|---|---|---|
+| Hooks | X | Y | Z unregistered |
+| Services | X | Y | Z unregistered |
+| BLE Commands | X | Y | Z undocumented |
+```
+
+---
 
 When prompted with "sync architecture", "update memory", or "compile context", execute the following workflow to synchronize `tools/SK8Lytz_App_Master_Reference.md` with the current codebase reality:
 

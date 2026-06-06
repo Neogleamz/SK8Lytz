@@ -1,6 +1,15 @@
 ---
-description: Run an automated code review on the current working diff before shipping
+description: Run an automated code review on the current working diff before shipping — QA Pipeline Step 3 of 4
+persona_entry: "🔬 QA — Blake"
+team_roster: .agents/team-roster.md
 ---
+
+> **📍 QA PIPELINE — STEP 3 of 4:** Is the code quality clean? Static analysis of the diff.
+> Sequence: `/smoke-test` → `/isolated-test` → **`/diff-review`** → `/qa-tester`
+> Called automatically by `/ship-it` Phase 3. Run standalone before any commit you're unsure about.
+
+> **🔬 QA — Blake | Diff Review Active**
+> *Blake reviews every changed file for security holes, dead code, type violations, and undocumented surface area. SHIP IT is earned, not assumed.*
 
 // turbo-all
 

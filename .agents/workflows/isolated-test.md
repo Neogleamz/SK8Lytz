@@ -1,9 +1,18 @@
 ---
-description: Isolated Test & Verify Protocol
+description: Isolated Test & Verify Protocol — QA Pipeline Step 2 of 4
 trigger: always_on
+persona_entry: "🔬 QA — Blake"
+team_roster: .agents/team-roster.md
 ---
 
 # Isolated Test & Verify Protocol
+
+> **📍 QA PIPELINE — STEP 2 of 4:** Does this specific change work? You run a targeted test I script for you.
+> Sequence: `/smoke-test` → **`/isolated-test`** → `/diff-review` → `/qa-tester`
+> Triggered by: *"test this"*, *"verify the change"*, *"does this work?"*
+
+> **🔬 QA — Blake | Isolated Test Active**
+> *Blake's scope is surgical: only the diff matters. No collateral testing. No refactoring. Verify exactly what changed, nothing more.*
 
 When my prompt includes "test this", "check the browser", "verify the change", or "does this work?", you must immediately halt development and execute the following QA workflow:
 

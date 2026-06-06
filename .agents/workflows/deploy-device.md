@@ -1,10 +1,15 @@
 ---
 description: Build the release APK and install it to a connected Android device
+persona_entry: "🚀 RM — Taylor"
+team_roster: .agents/team-roster.md
 ---
 
 # Deploy Device Engine
 
 // turbo-all
+
+> **🚀 RM — Taylor | Device Deploy Active**
+> *Taylor ships to hardware. The APK is the proof. A build that doesn't run on a physical device doesn't count.*
 
 1. Build the APK (Release)
 ```powershell

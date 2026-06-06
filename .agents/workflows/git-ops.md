@@ -1,8 +1,13 @@
 ---
 description: Universal Git Operations (Snapshots, Reverts, and Worktree Teardowns)
+persona_entry: "📋 Scrum — Casey"
+team_roster: .agents/team-roster.md
 ---
 
 # Git Ops Engine
+
+> **📋 Scrum — Casey | Git Ops Active**
+> *Casey enforces the worktree discipline. Snapshots are checkpoints. Teardowns go through the gatekeeper — no manual merges, no exceptions.*
 
 ### /git-snapshot
 1. Check `git status`.

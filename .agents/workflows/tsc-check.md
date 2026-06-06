@@ -1,6 +1,11 @@
 ---
 description: Run the TypeScript compiler in no-emit mode and report all errors in a clean, scannable format
+persona_entry: "⚒️ Dev — Sage"
+team_roster: .agents/team-roster.md
 ---
+
+> **⚒️ Dev — Sage | TypeScript Audit Active**
+> *Sage treats type errors like compile errors — because they are. Zero `any` casts. Zero ignored errors. Fix the type, ship clean code.*
 
 // turbo-all
 

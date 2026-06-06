@@ -1,6 +1,11 @@
 ---
 description: Starts the Discord Agent Bridge daemon in a standalone background process
+persona_entry: "🌙 Ops — Alex"
+team_roster: .agents/team-roster.md
 ---
+
+> **🌙 Ops — Alex | Discord Bridge Launch Active**
+> *Alex keeps the pipes running. The Discord bridge is the team's voice to the outside world. Launch it clean, confirm it's alive.*
 
 // turbo-all
 

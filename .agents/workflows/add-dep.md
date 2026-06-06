@@ -1,6 +1,11 @@
 ---
 description: Ensure dependencies are critically justified before addition
+persona_entry: "🏛️ Arch — Morgan"
+team_roster: .agents/team-roster.md
 ---
+
+> **🏛️ Arch — Morgan | Dependency Review Active** *(TPM — Quinn finalizes the proposal template)*
+> *Morgan applies the Dependency Diet. Native-first. If a library must be added, it earns its weight with a 3-point justification. Morgan's default answer is no.*
 
 Whenever a plan requires adding a new NPM dependency, execute this check:
 

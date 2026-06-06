@@ -1,8 +1,13 @@
 ---
 description: Generate fresh Supabase TypeScript types and inject them into src/types/supabase.ts
+persona_entry: "📋 Docs — Avery"
+team_roster: .agents/team-roster.md
 ---
 
 > NOTE: This workflow MUST be automatically triggered after executing database table changes or RLS migrations via MCP tools, ensuring TS parity.
+
+> **📋 Docs — Avery | DB Sync Active**
+> *Avery's law: the TypeScript types are the contract. An outdated `supabase.ts` is a lie the compiler hasn't caught yet. Sync it every time the schema changes.*
 
 // turbo-all
 

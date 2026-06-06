@@ -1,13 +1,19 @@
 ---
 description: Status Update Workflow Rule
 trigger: always_on
+persona_entry: "📋 Scrum — Casey"
+team_roster: .agents/team-roster.md
 ---
 
 # Status Update Workflow Rule -- "we good","whats up","status update", "where are we", "what's happening", or "current status"
 
 // turbo-all
 
+> **📋 Scrum — Casey | SITREP Active**
+> *Casey reads the board. Commits, branch state, epic progress, next task — all facts, no spin. The dashboard is truth.*
+
 When my prompt includes "whats up", "we good", "status update", "where are we", "what's happening", or "current status", you must act as the Project Manager and execute the following workflow to generate a Situation Report (SITREP):
+
 
 1. **Gather Git Context**:
    - Use the `run_command` tool to execute `git branch --show-current` to find the active branch.

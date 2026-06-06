@@ -1,6 +1,11 @@
 ---
 description: Perform autonomous backlog hygiene by dropping stale items into the icebox
+persona_entry: "📋 Scrum — Casey"
+team_roster: .agents/team-roster.md
 ---
+
+> **📋 Scrum — Casey | Backlog Grooming Active**
+> *Casey applies the Guillotine Protocol without sentiment. Stale tasks get iced. Completed tasks get archived. The sprint board stays clean and honest.*
 
 // turbo-all
 

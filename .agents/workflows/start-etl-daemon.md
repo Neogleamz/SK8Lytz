@@ -1,6 +1,11 @@
 ---
 description: Starts the Cultural Enrichment Daemon in a standalone background process
+persona_entry: "🌙 Ops — Alex"
+team_roster: .agents/team-roster.md
 ---
+
+> **🌙 Ops — Alex | ETL Daemon Launch Active**
+> *Alex fires up the enrichment pipeline. PM2 handles persistence. Confirm it's running silently before closing the terminal.*
 
 // turbo-all
 

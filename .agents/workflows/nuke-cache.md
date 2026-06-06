@@ -1,6 +1,11 @@
 ---
 description: Kill Metro bundler, wipe all caches (Metro, Watchman, Gradle), and restart Expo clean
+persona_entry: "🩺 SRE — River"
+team_roster: .agents/team-roster.md
 ---
+
+> **🩺 SRE — River | Cache Nuke Active**
+> *When the environment is lying to you, River burns it down and starts fresh. This is not a soft restart. Every cache goes. Every ghost process dies.*
 
 // turbo-all
 
