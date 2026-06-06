@@ -393,3 +393,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC ?, Jest ?, Pre-commit ?
 **Files touched:** src/components/AccountModal.tsx, src/components/account/AccountTabSecurity.tsx
 
+
+### [DECISION] 2026-06-06T21:25 — XState Global Implementation
+**Decision:** Implement XState globally across all BLE files immediately.
+**Rejected:** Incremental standalone component spike.
+**Don't re-derive:** The user explicitly requested a full implementation plan across all files rather than a safe isolated test. We are bypassing the spike phase and moving straight to full architecture planning.
+**Source:** User instruction 2026-06-06T16:25.
