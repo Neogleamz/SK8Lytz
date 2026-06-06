@@ -31,6 +31,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // Ref for the delayed STOPPED push that follows the 10-second SUMMARY card
   const summaryTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Refs to always-current session functions — avoids stale closures in stable listeners
+  const startSessionRef = React.useRef<(externalStartTimeMs?: number) => void>(() => {});
+  const endSessionRef = React.useRef<() => void>(() => {});
+
   // 1. Hook up the core telemetry
   const health = useHealthTelemetry(isSkateSessionActive);
   const telemetry = useGlobalTelemetry(sessionPhase, {
@@ -59,8 +63,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // Listen for START_SESSION / STOP_SESSION commands sent from the watch
     const unsubscribeCmd = WatchBridge.addWatchCommandListener((command: WatchCommand) => {
       AppLogger.log('APP_LOG', { event: 'watch_command_received', command });
-      if (command === 'START_SESSION') startSession();
-      else if (command === 'STOP_SESSION') endSession();
+      if (command === 'START_SESSION') startSessionRef.current();
+      else if (command === 'STOP_SESSION') endSessionRef.current();
     });
 
     // Listen for health telemetry relayed from the watch's HealthKit/Health Services
@@ -79,7 +83,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       // Auto-recover session if watch is active but phone is idle
       if (update.status === 'ACTIVE' && sessionPhaseRef.current === 'IDLE') {
         AppLogger.log('APP_LOG', { event: 'auto_recovering_session_from_watch_health' });
-        startSession(update.startTimeMs);
+        startSessionRef.current(update.startTimeMs);
       }
     });
 
@@ -305,6 +309,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_start', error: String(err) })
     );
   }, []);
+  startSessionRef.current = startSession;
 
   const endSession = useCallback(async () => {
     // ── 1. Capture final metrics before state resets ──────────────────────────
@@ -348,6 +353,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       summaryTimeoutRef.current = null;
     }, 10000);
   }, [telemetry, health]);
+  endSessionRef.current = endSession;
 
   // 5. Handle Foreground Event Buttons from Notifee
   useEffect(() => {
