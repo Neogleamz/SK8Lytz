@@ -137,7 +137,7 @@ async function _executeWriteToDeviceInternal(
     let allSucceeded = true;
     const base64Full = Buffer.from(payload).toString('base64');
 
-    // FIX: 20ms inter-device gap prevents GATT 133 on Android multi-device groups.
+    // FIX: 50ms inter-device gap prevents GATT 133 on Android multi-device groups.
     // writeCharacteristicWithoutResponse resolves when the write is SENT, not RECEIVED.
     // Without a gap, device 1's incoming GATT notification collides with device 2's
     // in-flight write, causing a buffer overflow → organic disconnect → auto-recovery cascade.
@@ -152,7 +152,7 @@ async function _executeWriteToDeviceInternal(
         );
         // Only delay between devices, not after the last one
         if (i < liveTargets.length - 1) {
-          await new Promise(r => setTimeout(r, 20));
+          await new Promise(r => setTimeout(r, 50));
         }
       } catch (writeError: any) {
         AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError?.message);
