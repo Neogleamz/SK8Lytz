@@ -18,6 +18,7 @@ import * as Linking from 'expo-linking';
 import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from '../services/supabaseClient';
 import { AppLogger } from '../services/AppLogger';
+import { migrateAuthTokensToSecureStore } from '../utils/migrateAuthTokens';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -106,6 +107,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // ── Cold-start: restore session or detect expiry ──────────────────────────
     const init = async () => {
       try {
+        // 0. Migrate auth tokens to SecureStore
+        await migrateAuthTokensToSecureStore();
+
         // 1. Check if user previously chose Continue Offline
         const offlineSkip = await AsyncStorage.getItem(STORAGE_OFFLINE_SKIP);
         if (offlineSkip === 'true') {
