@@ -251,7 +251,10 @@ git log -1 --format="%h"
    > [!IMPORTANT]
    > Since the commit hash changes upon commit, you MUST execute `npm run verify` immediately *after* your final commit to anchor the attestation to the exact HEAD hash!
 
-3. **Execute Gatekeeper:** Context switch back to the master fortress (`C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`) and run:
+3. **Execute Gatekeeper:** 
+   > [!CAUTION]
+   > **CRITICAL CWD REQUIREMENT:** You MUST set the `Cwd` parameter of your `run_command` tool to exactly `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`. Running this from inside the worktree directory will cause a silent failure loop.
+
    ```powershell
    powershell.exe -ExecutionPolicy Bypass -File .\tools\fortress-gatekeeper.ps1
    ```

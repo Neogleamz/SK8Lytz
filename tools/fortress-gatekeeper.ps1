@@ -4,6 +4,10 @@
 $ErrorActionPreference = "Stop"
 $FORTRESS_ROOT = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
 
+if ((Get-Location).Path -ne $FORTRESS_ROOT) {
+    Write-Host "GATEKEEPER HALT: Must be run from the master root directory: $FORTRESS_ROOT" -ForegroundColor Red
+    exit 1
+}
 # Resolve active worktree list
 Write-Host "Scanning active worktrees..." -ForegroundColor Cyan
 $WorktreeList = git worktree list | Where-Object { $_ -match "SK8Lytz-worktrees" }
@@ -35,6 +39,10 @@ foreach ($Line in $WorktreeList) {
         # 2. Run verification on the local attestation file
         Write-Host "Executing cryptographic verification..." -ForegroundColor Yellow
         node tools/verifiable-check-runner.js --verify
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Error: Test attestation verification failed." -ForegroundColor Red
+            exit 1
+        }
         
         Write-Host "Proof of Execution verified! Cleared for merge." -ForegroundColor Green
     }
@@ -59,6 +67,12 @@ foreach ($Line in $WorktreeList) {
 
     # 4. Perform Fast-Forward Merge (now guaranteed to succeed post-rebase)
     Write-Host "Merging branch '$Branch' into master..." -ForegroundColor Yellow
+    git checkout master 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "GATEKEEPER HALT: Could not checkout master." -ForegroundColor Red
+        exit 1
+    }
+    
     $MergeResult = git merge $Branch --ff-only 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Host "" -ForegroundColor Red
@@ -84,10 +98,18 @@ foreach ($Line in $WorktreeList) {
 
     Write-Host "Tearing down worktree..." -ForegroundColor Yellow
     git worktree remove $Path --force
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "GATEKEEPER HALT: Failed to tear down worktree $Path" -ForegroundColor Red
+        exit 1
+    }
     
     # 6. Delete Branch
     Write-Host "Deleting branch '$Branch'..." -ForegroundColor Yellow
     git branch -D $Branch
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "GATEKEEPER HALT: Failed to delete branch $Branch" -ForegroundColor Red
+        exit 1
+    }
     
     Write-Host "Successfully validated, merged, and cleaned up $Branch!" -ForegroundColor Green
 }

@@ -18,6 +18,9 @@ team_roster: .agents/team-roster.md
 1. Verify no uncommitted changes exist in the worktree.
 2. Ensure you are currently IN the master fortress directory (`cd C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`).
 3. Execute the automated gatekeeper to verify cryptographic attestations, merge cleanly, and tear down:
+   > [!CAUTION]
+   > **CRITICAL CWD REQUIREMENT:** You MUST set the `Cwd` parameter of your `run_command` tool to exactly `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`. Running this from inside the worktree directory will cause a silent failure loop.
+
    ```powershell
    powershell.exe -ExecutionPolicy Bypass -File .\tools\fortress-gatekeeper.ps1
    ```

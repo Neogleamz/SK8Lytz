@@ -53,6 +53,9 @@ When invoked via `/ship-it`, you must act as a strict state machine orchestratin
 *Location: Context switch back to the main directory (`C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`)*
 1. **Prepare Master:** Change directory to the master fortress.
 2. **Validate and Merge:** Execute the automated gatekeeper script to verify the cryptographic attestation, confirm commit correlation and freshness, perform a fast-forward merge into master, dismantle the worktree, and prune the local feature branch:
+   > [!CAUTION]
+   > **CRITICAL CWD REQUIREMENT:** You MUST set the `Cwd` parameter of your `run_command` tool to exactly `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`. Running this from inside the worktree directory will cause a silent failure loop.
+
    ```powershell
    powershell.exe -ExecutionPolicy Bypass -File .\tools\fortress-gatekeeper.ps1
    ```
