@@ -125,6 +125,15 @@ export function useDashboardAutoConnect({
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingBatchRef = useRef<BLEDevice[]>([]);
 
+  // Stable ref-forwarding: connectToDevices and scanForPeripherals are passed as
+  // options and may change identity on re-render. The observer useEffect only depends
+  // on [allDevices, connectedDevices], so it would capture a stale closure. The ref
+  // always holds the latest version. (Same pattern as connectToDevicesRef in useBLE.ts.)
+  const connectToDevicesRef = useRef(connectToDevices);
+  connectToDevicesRef.current = connectToDevices;
+  const scanForPeripheralsRef = useRef(scanForPeripherals);
+  scanForPeripheralsRef.current = scanForPeripherals;
+
   useEffect(() => {
     if (autoConnectIdsRef.current.length === 0) return;
     if (isWizardActive) return;
@@ -171,10 +180,10 @@ export function useDashboardAutoConnect({
           devices: batch.map(d => d.name ?? d.id),
         });
 
-        connectToDevices(batch).finally(() => {
+        connectToDevicesRef.current(batch).finally(() => {
           if (autoConnectIdsRef.current.length > 0) {
             AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_resume_scan' });
-            scanForPeripherals({ disableProbing: true });
+            scanForPeripheralsRef.current({ disableProbing: true });
           }
         });
       };
