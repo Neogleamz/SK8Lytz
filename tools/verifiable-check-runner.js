@@ -237,8 +237,69 @@ try {
   console.error('❌ Type safety scan failed to run:', e.message);
 }
 
+// Gate 6 — Workflow Reference Validator
+// Scans all .agents/ markdown files for /workflow-name references and verifies
+// each referenced workflow file actually exists. Kills phantom references at commit time.
+let workflowRefOutput = '';
+let workflowRefStatus = 'FAILED';
+console.log('⏳ Running Workflow Reference Validator...');
+try {
+  const agentsDir = path.join(WORKTREE_ROOT, '.agents');
+  const workflowsDir = path.join(agentsDir, 'workflows');
+
+  // Collect all existing workflow slugs (filenames without .md)
+  const existingWorkflows = new Set(
+    fs.readdirSync(workflowsDir)
+      .filter(f => f.endsWith('.md'))
+      .map(f => f.replace(/\.md$/, ''))
+  );
+
+  // Walk all .agents/ markdown files and extract /slug references
+  function collectMarkdownFiles(dir) {
+    const results = [];
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) results.push(...collectMarkdownFiles(full));
+      else if (entry.name.endsWith('.md')) results.push(full);
+    }
+    return results;
+  }
+
+  const mdFiles = collectMarkdownFiles(agentsDir);
+  const phantoms = [];
+
+  // Match /slug patterns — e.g. `/ship-it`, `/qa-tester`, `/deploy-device`
+  const refPattern = /`\/([a-z][a-z0-9-]+)`|['"]\/([a-z][a-z0-9-]+)['"]|execute the `?\/([a-z][a-z0-9-]+)`?|Execute the `?'?\/([a-z][a-z0-9-]+)'?`?/gi;
+
+  for (const mdFile of mdFiles) {
+    const content = fs.readFileSync(mdFile, 'utf8');
+    const relPath = path.relative(WORKTREE_ROOT, mdFile).replace(/\\/g, '/');
+    let match;
+    refPattern.lastIndex = 0;
+    while ((match = refPattern.exec(content)) !== null) {
+      const slug = match[1] || match[2] || match[3] || match[4];
+      if (slug && !existingWorkflows.has(slug)) {
+        phantoms.push(`  ${relPath}: references '/${slug}' but .agents/workflows/${slug}.md does not exist`);
+      }
+    }
+  }
+
+  if (phantoms.length === 0) {
+    workflowRefStatus = 'SUCCESS';
+    console.log('✅ All workflow references are valid!');
+  } else {
+    workflowRefOutput = phantoms.join('\n');
+    console.error(`❌ Workflow Reference Validator FAILED — ${phantoms.length} phantom reference(s) found:`);
+    console.error(workflowRefOutput);
+    console.error('\n👉 Fix: Create the missing .md workflow file or remove the reference.');
+  }
+} catch (e) {
+  workflowRefOutput = e.message;
+  console.error('❌ Workflow reference scan failed to run:', e.message);
+}
+
 // Create cryptographic package
-const combinedOutput = tscOutput + jestOutput + browserConsoleOutput + astOutput + typeSafetyOutput;
+const combinedOutput = tscOutput + jestOutput + browserConsoleOutput + astOutput + typeSafetyOutput + workflowRefOutput;
 const stdoutHash = crypto.createHash('sha256').update(combinedOutput).digest('hex');
 
 const dataToSign = `${currentCommit}:${timestamp}:${tscStatus}:${jestStatus}:${browserConsoleStatus}:${astStatus}:${typeSafetyStatus}:${stdoutHash}`;
@@ -256,14 +317,15 @@ const attestationData = {
   astStatus,
   astDurationMs: Date.now() - astStart,
   typeSafetyStatus,
-  typeSafetyDurationMs: Date.now() - typeSafetyStart,
+  workflowRefStatus,
+  workflowRefDurationMs: Date.now() - typeSafetyStart,
   stdoutHash,
   signature
 };
 
 fs.writeFileSync(attestationPath, JSON.stringify(attestationData, null, 2), 'utf8');
 
-if (tscStatus === 'SUCCESS' && jestStatus === 'SUCCESS' && browserConsoleStatus === 'SUCCESS' && astStatus === 'SUCCESS' && typeSafetyStatus === 'SUCCESS') {
+if (tscStatus === 'SUCCESS' && jestStatus === 'SUCCESS' && browserConsoleStatus === 'SUCCESS' && astStatus === 'SUCCESS' && typeSafetyStatus === 'SUCCESS' && workflowRefStatus === 'SUCCESS') {
   console.log('\n🔒 Cryptographic Attestation written to .test-attestation.json successfully!');
   console.log('✅ QA Hardening checks passed cleanly.');
   process.exit(0);
