@@ -25,6 +25,7 @@ import { supabase } from '../services/supabaseClient';
 import { useBLEScanner } from './ble/useBLEScanner';
 import { useBLEAutoRecovery } from './ble/useBLEAutoRecovery';
 import { useBLESweeper } from './ble/useBLESweeper';
+import { useBLEHeartbeat } from './ble/useBLEHeartbeat';
 
 import { executePingDevice } from '../services/BlePingService';
 import { executeWriteToDevice, executeWriteChunked, executeProtocolResults as executeProtocolResultsService, BleWriteStateRefs } from '../services/BleWriteDispatcher';
@@ -379,6 +380,24 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // Cleared on disconnect. Falls back to getDefaultProtocol() if device not found.
   // Enables mixed-protocol group writes: Zengge + BanlanX skates in the same group.
   const adapterMapRef = useRef<Map<string, IControllerProtocol>>(new Map());
+
+  // ── Connection Health Heartbeat (MISS-03) ─────────────────────────────────
+  // Pings every connected device every 45s to detect stale GATT handles early.
+  // Samsung Galaxy A-series can hold stale handles alive for minutes after the
+  // physical device powers off. Without this, the stale link is only discovered
+  // on the next user write — triggering the slow ghost→recovery cycle mid-session.
+  useBLEHeartbeat({
+    bleManager,
+    connectedDevicesRef,
+    adapterMapRef,
+    onStaleLinkDetected: (mac: string) => {
+      // Drop the device from connected state so the controller closes gracefully.
+      setConnectedDevices(prev => prev.filter(d => d.id !== mac));
+      // Immediately start Phase 1 aggressive recovery — don't wait for the next
+      // organic disconnect event which could take minutes on stale handles.
+      autoRecovery.initiateRecovery(mac);
+    },
+  });
 
   const connectToDevices = useCallback(async (devices: Device[]) => {
     await executeConnectToDevices({
