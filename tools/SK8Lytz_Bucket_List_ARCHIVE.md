@@ -411,19 +411,23 @@ This document contains the archive of all successfully completed and merged task
   - **Outcome:** Audit finding was incorrect. `DeviceRepository._flushPendingSync(userId)` already receives `userId` from auth-gated `syncFromCloud()`. `dbRow.user_id = userId` at L704 stamps correctly at flush time. No null path exists.
 
 
+
 ### [BATCH:account-hardening] — ✅ Completed 2026-06-06
 
-- [x] **efactor/auth-context-provider**
-  - **Goal:** Extract auth state from App.tsx into AuthContext so all screens share auth state and reduce getUser() calls.
+- [x] **`refactor/auth-context-provider`** — merged 64daf01d | C-02 CLOSED
+  - **Tags:** [✅ VERIFIED] [UI] [M-RISK] [Meal] [🤖 PRO-HIGH] [BATCH:account-hardening]
+  - **Outcome:** Extracted auth state from App.tsx into AuthContext. Replaced independent getUser() calls across services and hooks with useAuth().user to prevent race conditions and redundant lookups.
 
-- [x] **ix/auth-tokens-secure-store**
-  - **Goal:** Replace AsyncStorage with expo-secure-store as the Supabase token storage adapter.
+- [x] **`fix/auth-tokens-secure-store`** — merged 738ba170 | M-01 CLOSED
+  - **Tags:** [✅ VERIFIED] [CLOUD] [M-RISK] [Snack] [🤖 FLASH] [BATCH:account-hardening]
+  - **Outcome:** Replaced AsyncStorage with expo-secure-store for Supabase auth token storage adapter. Added migration logic to move existing tokens on first launch.
 
-- [x] **ix/password-change-reauth**
-  - **Goal:** Require current password verification before allowing password change in AccountModal.
+- [x] **`fix/password-change-reauth`** — merged 363b9808 | M-03 CLOSED
+  - **Tags:** [✅ VERIFIED] [CLOUD] [M-RISK] [Snack] [🤖 FLASH] [BATCH:account-hardening]
+  - **Outcome:** Added "Current Password" verification to AccountModal.tsx before allowing a password update. signInWithPassword gate added before updateUser.
 
-- [x] **eat/notif-prefs-cloud-sync**
-  - **Goal:** Sync notification preferences to user_profiles.notif_preferences JSONB.
+- [x] **`feat/notif-prefs-cloud-sync`** — merged 60067804 | M-04 CLOSED
+  - **Tags:** [✅ VERIFIED] [CLOUD] [M-RISK] [Snack] [🤖 FLASH] [BATCH:account-hardening]
+  - **Outcome:** Added notif_preferences JSONB column. Updated AuthProfileService.updateProfile and useAccountOverview to sync local preferences to the cloud and merge them on load.
 
 *End of Archive.*
-
