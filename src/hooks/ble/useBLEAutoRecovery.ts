@@ -114,6 +114,64 @@ export const hasExceededMaxRecovery = (attempts: number): boolean => {
   return attempts > MAX_RECOVERY_ATTEMPTS;
 };
 
+// ── Recovery Telemetry Aggregation ───────────────────────────────────────────
+// Per-device stats tracked across recovery loops. Module-level so data survives
+// hook re-mounts. Answers: "Which devices fail most? What's the average recovery time?"
+interface RecoveryStats {
+  totalAttempts: number;
+  successCount: number;
+  failCount: number;
+  totalRecoveryMs: number;
+  lastFailReason: string | null;
+  lastPhaseReached: 1 | 2 | 3;
+}
+const _recoveryStats = new Map<string, RecoveryStats>();
+
+function getOrCreateStats(deviceId: string): RecoveryStats {
+  let stats = _recoveryStats.get(deviceId);
+  if (!stats) {
+    stats = { totalAttempts: 0, successCount: 0, failCount: 0, totalRecoveryMs: 0, lastFailReason: null, lastPhaseReached: 1 };
+    _recoveryStats.set(deviceId, stats);
+  }
+  return stats;
+}
+
+function logRecoverySummary(deviceId: string, outcome: 'success' | 'ejected' | 'group_fallback', phase: 1 | 2 | 3, attempts: number, durationMs: number, reason?: string) {
+  const stats = getOrCreateStats(deviceId);
+  stats.totalAttempts += attempts;
+  stats.totalRecoveryMs += durationMs;
+  stats.lastPhaseReached = phase;
+  if (outcome === 'success') {
+    stats.successCount++;
+  } else {
+    stats.failCount++;
+    stats.lastFailReason = reason ?? null;
+  }
+  AppLogger.log('AUTO_RECOVERY_SUMMARY', {
+    deviceId,
+    outcome,
+    phase,
+    attempts,
+    durationMs,
+    reason: reason ?? undefined,
+    lifetime: {
+      totalAttempts: stats.totalAttempts,
+      successRate: stats.successCount + stats.failCount > 0
+        ? Math.round((stats.successCount / (stats.successCount + stats.failCount)) * 100)
+        : 0,
+      avgRecoveryMs: stats.successCount > 0
+        ? Math.round(stats.totalRecoveryMs / (stats.successCount + stats.failCount))
+        : 0,
+      lastFailReason: stats.lastFailReason,
+    },
+  });
+}
+
+/** Expose recovery stats for debugging/telemetry consumers */
+export function getRecoveryStats(): ReadonlyMap<string, Readonly<RecoveryStats>> {
+  return _recoveryStats;
+}
+
 export function useBLEAutoRecovery({
   bleManager,
   setConnectedDevices,
@@ -163,6 +221,7 @@ export function useBLEAutoRecovery({
     const myToken = cancelTokenRef.current;
 
     // Spawn isolated async recovery loop
+    const loopStartMs = Date.now();
     let attempts = 0;
     let gateWaitCount = 0;
     const attemptRecoveryLoop = async () => {
@@ -196,6 +255,7 @@ export function useBLEAutoRecovery({
           if (hasExceededMaxRecovery(attempts)) {
             AppLogger.warn(`[AutoRecovery] ${deviceId} failed after ${attempts} attempts — ejecting from UI`);
             AppLogger.log('AUTO_RECOVERY_FAILED', { deviceId, attempts });
+            logRecoverySummary(deviceId, 'ejected', attempts <= PHASE_1_MAX_ATTEMPTS ? 1 : 2, attempts, Date.now() - loopStartMs, 'max_attempts_exceeded');
             ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
             setGhostedDeviceIds([...ghostedRefs.current]);
             setConnectedDevices(prev => prev.filter(d => d.id !== deviceId));
@@ -287,6 +347,7 @@ export function useBLEAutoRecovery({
           setGhostedDeviceIds([...ghostedRefs.current]);
 
           AppLogger.log('AUTO_RECOVERY_SUCCESS', { deviceId, attempts });
+          logRecoverySummary(deviceId, 'success', attempts <= PHASE_1_MAX_ATTEMPTS ? 1 : 2, attempts, Date.now() - loopStartMs);
 
           // Notify consumers (e.g. DashboardScreen) so they can replay last pattern state
           onDeviceRecovered?.(conn.id);
@@ -360,6 +421,7 @@ export function useBLEAutoRecovery({
           ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
           setGhostedDeviceIds([...ghostedRefs.current]);
           AppLogger.log('AUTO_RECOVERY_SUCCESS', { deviceId, phase: 3 });
+          logRecoverySummary(deviceId, 'success', 3, attempts, Date.now() - loopStartMs);
           onDeviceRecovered?.(conn.id);
           return; // success — exit Phase 3
         } catch (e: unknown) {
@@ -373,6 +435,7 @@ export function useBLEAutoRecovery({
       // Phase 3 exhausted OR reconnect failed — eject ghost entirely
       if (ghostedRefs.current.includes(deviceId)) {
         AppLogger.warn('AUTO_RECOVERY', { deviceId, event: 'phase3_exhausted_ejecting' });
+        logRecoverySummary(deviceId, 'ejected', 3, attempts, Date.now() - loopStartMs, 'phase3_exhausted');
         ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
         setGhostedDeviceIds([...ghostedRefs.current]);
         setConnectedDevices(prev => prev.filter(d => d.id !== deviceId));
