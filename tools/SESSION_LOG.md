@@ -407,3 +407,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - Added legacy shim to leGateRef to satisfy typescript checks without breaking any untested workflows.
 **Verify result:** TSC ✅, Jest ✅, gates ✅
 **Files touched:** src/hooks/useBLE.ts, src/hooks/ble/useBLEAutoRecovery.ts, src/hooks/ble/useBLEScanner.ts, src/hooks/ble/useBLESweeper.ts, src/hooks/useDashboardAutoConnect.ts, src/services/BleLifecycleManager.ts, src/services/ble/BleMachine.ts
+# # #   [ D E C I S I O N ]   2 0 2 6 - 0 6 - 0 6 T 1 8 : 2 5      H a r d e n e d   f o r t r e s s - g a t e k e e p e r 
+ * * D e c i s i o n : * *   A d d e d   s t r i c t   C w d   c h e c k s   a n d   e x t e r n a l   e x i t   c o d e   c a t c h e s   t o   f o r t r e s s - g a t e k e e p e r . p s 1 .   A d d e d   b r i g h t   r e d   w a r n i n g   a l e r t s   t o   s t a r t - t a s k ,   g i t - o p s ,   a n d   s h i p - i t   w o r k f l o w s   r e g a r d i n g   C w d . 
+ * * R e j e c t e d : * *   L e a v i n g   t h e   s c r i p t   v u l n e r a b l e   a n d   r e l y i n g   p u r e l y   o n   a g e n t   m e m o r y . 
+ * * D o n ' t   r e - d e r i v e : * *   P o w e r S h e l l   $ E r r o r A c t i o n P r e f e r e n c e   =   ' S t o p '   d o e s   n o t   c a t c h   g i t . e x e   f a i l u r e s .   T h e   g a t e k e e p e r   r e l i e s   o n   c h e c k i n g   $ L A S T E X I T C O D E   f o r   E V E R Y   e x t e r n a l   c a l l . 
+ * * S o u r c e : * *   t o o l s / f o r t r e s s - g a t e k e e p e r . p s 1 : 5  
+ 
