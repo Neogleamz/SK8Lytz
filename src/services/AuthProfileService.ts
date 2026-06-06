@@ -76,7 +76,7 @@ class AuthProfileService {
   /**
    * Update display name and/or avatar color for the current user.
    */
-  async updateProfile(userId: string | undefined, fields: { display_name?: string | null; avatar_color?: string; username?: string | null; avatar_url?: string | null }): Promise<void> {
+  async updateProfile(userId: string | undefined, fields: { display_name?: string | null; avatar_color?: string; username?: string | null; avatar_url?: string | null; notif_preferences?: any }): Promise<void> {
     if (!userId) throw new Error('Not authenticated');
 
     // Strip null/undefined values to avoid overwriting with null
@@ -85,6 +85,7 @@ class AuthProfileService {
     if (fields.avatar_color != null) cleanFields.avatar_color = fields.avatar_color;
     if (fields.username != null) cleanFields.username = fields.username.toLowerCase();
     if (fields.avatar_url != null) cleanFields.avatar_url = fields.avatar_url;
+    if (fields.notif_preferences !== undefined) cleanFields.notif_preferences = fields.notif_preferences;
 
     const { error } = await supabase
       .from('user_profiles')

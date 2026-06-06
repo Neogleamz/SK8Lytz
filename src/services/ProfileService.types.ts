@@ -18,6 +18,7 @@ export interface UserProfile {
   is_banned?: boolean;
   ban_reason?: string | null;
   role?: 'user' | 'moderator' | 'admin';
+  notif_preferences?: any;
 }
 
 export interface PermanentCrew {

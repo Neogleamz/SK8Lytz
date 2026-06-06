@@ -123,6 +123,13 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
         setEditUsername(p.username ?? '');
         if (p.avatar_url) setProfilePhotoUri(p.avatar_url);
         if (p.avatar_color) setAvatarHue(hexToHue(p.avatar_color));
+
+        if (p.notif_preferences) {
+          const cloudPrefs = typeof p.notif_preferences === 'string' ? JSON.parse(p.notif_preferences) : p.notif_preferences;
+          setNotifCrewInvites(cloudPrefs.crewInvites ?? true);
+          setNotifSessionReminders(cloudPrefs.sessionReminders ?? true);
+          setNotifLeaderHandoff(cloudPrefs.leaderHandoff ?? true);
+        }
       }
       setCrews(c);
       setHistory(h);
@@ -131,7 +138,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (visible) {
@@ -204,6 +211,11 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
 
   const saveNotifPrefs = async (prefs: { crewInvites: boolean; sessionReminders: boolean; leaderHandoff: boolean }) => {
     await AsyncStorage.setItem(NOTIF_PREF_KEY, JSON.stringify(prefs)).catch(e => AppLogger.warn('Failed to persist notification preferences', e));
+    if (user?.id) {
+      profileService.updateProfile(user.id, { notif_preferences: prefs }).catch((e: any) => 
+        AppLogger.warn('Failed to cloud sync notification preferences', e)
+      );
+    }
   };
 
   const handleToggleHealthSync = async (enabled: boolean) => {

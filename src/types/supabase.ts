@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -2939,6 +2939,7 @@ export type Database = {
           is_banned: boolean
           lifetime_distance_miles: number | null
           lifetime_top_speed_mph: number | null
+          notif_preferences: Json | null
           role: Database["public"]["Enums"]["user_role"]
           updated_at: string
           user_id: string
@@ -2954,6 +2955,7 @@ export type Database = {
           is_banned?: boolean
           lifetime_distance_miles?: number | null
           lifetime_top_speed_mph?: number | null
+          notif_preferences?: Json | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
           user_id: string
@@ -2969,6 +2971,7 @@ export type Database = {
           is_banned?: boolean
           lifetime_distance_miles?: number | null
           lifetime_top_speed_mph?: number | null
+          notif_preferences?: Json | null
           role?: Database["public"]["Enums"]["user_role"]
           updated_at?: string
           user_id?: string
