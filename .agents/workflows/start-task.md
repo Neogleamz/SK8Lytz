@@ -46,6 +46,17 @@ You must execute this pipeline sequentially. **DO NOT BYPASS ANY GATES.** You mu
 - List 5 weird, rare edge cases (e.g., backgrounding the app, BLE drops, null states).
 - Verify the code explicitly handles these edge cases.
 
+### Phase 5.5: Documentation Parity Check
+- Before committing, scan the files you changed and determine if any of the following occurred:
+  - New hooks, services, or components were created
+  - BLE architecture was modified (GATT mutex, recovery, sweeper, heartbeat, RSSI, write pipeline)
+  - Platform guards (iOS/Android) were added or changed
+  - The `BluetoothLowEnergyApi` interface or shared type contracts were modified
+  - Protocol commands or hardware constraints changed
+- **If YES to any**: Update the relevant sections in `tools/SK8Lytz_App_Master_Reference.md` (§3 BLE Protocol Library, §4 Hook & Service Registry, §4 Shared Type Contract, §2 AsyncStorage Key Registry, §5 Database Schemas).
+- **If NO to all**: Explicitly state `"Documentation parity check: no architectural changes — docs gate skipped"`.
+- See Kanban Constitution Rule 12 for the full enforcement specification.
+
 ### Phase 6: The Release Manager (Cryptographic Attestation & Gatekeeper Merge)
 1. **Verification Check (PoE):** Run the unified check runner locally in the worktree root to execute TypeScript compilation and Jest tests, compiling a cryptographically signed proof of execution:
    ```powershell

@@ -84,4 +84,4 @@ Runs `npm run verify` check-runners, checks edge cases (`/qa-tester` hunt for 5 
 
 ## 10. Evolved Rules (SDE Closed-Loop Friction Feedback)
 - **Rule: Surgical Buffer Overflow Defense**: The agent must enforce a minimum length of 12 RGB pixels for all `0x59` Static Colorful payload dispatches. Payloads below 10 pixels cause physical controller EEPROM buffer lockouts on the `0xA3` chipset.
-
+- **Rule: Documentation Parity Gate (VS-003)**: When completing ANY task that creates new hooks, services, components, or modifies BLE architecture/protocol/types, the agent MUST update `tools/SK8Lytz_App_Master_Reference.md` BEFORE running the fortress gatekeeper. Failure to do so caused 16 commits of documentation drift (2026-06-06) requiring emergency remediation. See Kanban Constitution Rule 12 for the full specification.

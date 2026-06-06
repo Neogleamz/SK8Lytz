@@ -80,3 +80,17 @@ To maintain real-time visibility, broadcast status via the Discord Webhook bridg
 3. Future commits track the directory normally after the initial force-add
 
 **⛔ Operational Rule**: Before committing in ANY worktree, ALWAYS run `git status --short` and verify the expected file count matches your changes. If files are missing, run `git check-ignore -v <path>` to diagnose. NEVER assume `git add .` captured everything — gitignore rules are silent killers.
+
+### 🏆 VS-003: Documentation Drift — 16 Commits of Silent Staleness (2026-06-06)
+**Symptom**: `tools/SK8Lytz_App_Master_Reference.md` declared the heartbeat system "DELETED" while live code had a brand new `useBLEHeartbeat` hook. The Hook Registry claimed "All 18 Hooks" when 24+ existed. The Auto-Recovery section documented "5 retries with 2s,4s,8s,16s,30s" when the actual implementation used 3-phase exponential backoff with jitter. The inline Protocol Bible copy (870 lines) was silently diverging from the standalone file.
+
+**Root Cause**: **Zero documentation gates existed** in the entire pipeline. Every checkpoint (Kanban Constitution §7, §10, `/start-task` Phase 6, `/ship-it` Phase 3, `/diff-review`, Safety Protocol §2) verified CODE correctness (TypeScript, Jest, ADB logcat) but NONE checked documentation correctness. The Boy Scout Rule applied only to code files being edited, not to docs. This allowed 16 consecutive commits of architectural changes (6 BLE sub-hooks, 6 extracted services, 4 platform guards, write queue, heartbeat, RSSI monitor) to land on master with zero documentation updates.
+
+**Fix Applied**:
+1. **Kanban Constitution Rule 12** ("Documentation Parity Gate") — hard gate on task `[x]` stamping requiring Master Reference update for any architectural change
+2. **`/start-task` Phase 5.5** — explicit documentation parity check inserted between QA and Release Manager phases
+3. **`/diff-review` checklist** — added "📖 Documentation Parity" row to automated code review
+4. **`agent-behavior.md` Rule 10** — added VS-003 evolved rule reference for always-on visibility
+5. Deduplicated the inline Protocol Bible (§12) — replaced 870 lines with canonical pointer to standalone file
+
+**⛔ Operational Rule**: When completing ANY task that creates new hooks, services, components, or modifies BLE architecture/protocol/types, you MUST update `tools/SK8Lytz_App_Master_Reference.md` BEFORE running the fortress gatekeeper. Explicitly state: `"Documentation parity check: [sections updated]"` or `"Documentation parity check: no architectural changes — docs gate skipped"`.

@@ -26,6 +26,7 @@ git diff HEAD
    - 🎨 **Naming**: Vague variable names (`data`, `temp`, `x`, `result`)
    - 🏗️ **Architecture**: Business logic in UI components, missing hook extraction
    - 💾 **Console Artifacts**: Leftover `console.log` statements
+   - 📖 **Documentation Parity**: New hooks/services/components created but `SK8Lytz_App_Master_Reference.md` not updated (Kanban Rule 12)
 
 4. **Output a structured review** in chat:
 

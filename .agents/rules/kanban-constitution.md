@@ -129,4 +129,25 @@ When stamping a task `[x]`, the `[Verification Status]` tag in the task header M
 - Change `[❌ UNVERIFIED]` → `[✅ VERIFIED]` only if physical device testing OR direct source file evidence confirms correct behavior.
 - Change `[🤔 INFERRED]` → `[✅ VERIFIED]` only if the implementation was validated by a concrete test result (ADB log, Supabase row, Jest pass, or UI screenshot).
 - ⛔ **FORBIDDEN**: Marking `[✅ VERIFIED]` based solely on TypeScript compilation or Jest passing. Those prove the code is syntactically valid, not that the hardware/UI/cloud behavior is correct.
-- If physical verification is not yet possible (e.g., no device connected), the tag stays `[🤔 INFERRED]` and a note is logged: `"Needs physical device smoke test to promote to VERIFIED."` 
+- If physical verification is not yet possible (e.g., no device connected), the tag stays `[🤔 INFERRED]` and a note is logged: `"Needs physical device smoke test to promote to VERIFIED."`
+
+**12. Documentation Parity Gate (Mandatory on `[x]` — Part of Step A):**
+When stamping a task `[x]`, the agent MUST check if the completed work introduced or modified any of the following:
+- New hooks, services, or components
+- Changes to BLE architecture (GATT mutex, recovery, sweeper, heartbeat, RSSI)
+- New platform guards (iOS/Android)
+- Changes to the `BluetoothLowEnergyApi` interface or any shared type contract
+- New protocol commands, opcode behavior changes, or hardware constraints
+- New AsyncStorage keys, Supabase tables, or API endpoints
+
+If **ANY** of the above apply, the agent MUST update the relevant sections in `tools/SK8Lytz_App_Master_Reference.md` before the task is considered complete. Specifically:
+- **§3 BLE Protocol Library**: Connection handshake, stability constraints, auto-recovery, heartbeat, RSSI, sweeper, write pipeline, platform guards
+- **§4 Domain-Driven Architecture**: Hook & Service Registry table, Shared Type Contract
+- **§2 System Architecture**: AsyncStorage Key Registry
+- **§5 Database Schemas**: If Supabase tables/columns changed
+
+The documentation update MUST be included in the same commit or as an immediately-following `docs:` commit before the gatekeeper runs.
+
+- ⛔ **STRICTLY FORBIDDEN**: Running the fortress gatekeeper when the task introduced new hooks, services, or architectural changes without a corresponding Master Reference update.
+- **Exception — `[🤖 FLASH]` + `[L-RISK]` + `[Snack]`**: Pure bug fixes that don't change architecture (e.g., fixing a typo, adjusting a constant, fixing a test) may skip the docs gate.
+- After documentation parity is verified, the agent MUST explicitly state: `"Documentation parity check: [sections updated] or [no architectural changes — docs gate skipped]"` before running the gatekeeper.
