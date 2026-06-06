@@ -315,4 +315,99 @@ This document contains the archive of all successfully completed and merged task
 - [x] **`feat/scene-offline-sync-queue`** — offline AsyncStorage sync queues. Merged `fe99fb3f`.
 - [x] **`spike/ios-android-parity-audit`** — Android takeSnapshot TextureView + iOS worklet parity. Merged `f0516ac9`.
 
+
+---
+
+### Sprint: v3.9.1 — 2026-06-06 (session-integrity)
+
+### [BATCH:session-integrity] — 📋 Sequential (Complete)
+
+- [x] **`fix/session-watch-stale-closure`** — `[75f5cbf7] Unified batch completed successfully`
+  - **Tags:** `[✅ VERIFIED]` `[UI]` `[H-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:session-integrity]`
+  - **Outcome:** Added `endSessionRef` stable-ref forwarder to `SessionContext.tsx`. `notifee.onBackgroundEvent`, `AppState` listener, and 10s STOPPED watchdog all call through the stable wrapper, eliminating the stale-closure data-loss bug.
+
+- [x] **`fix/session-appstate-deps-loop`** — `[75f5cbf7] Unified batch completed successfully`
+  - **Tags:** `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Snack]` `[🤖 PRO-HIGH]` `[BATCH:session-integrity]`
+  - **Outcome:** Removed `sessionPhase` from the `AppState` listener `useEffect` dependency array in `SessionContext.tsx`. Listener now registered once on mount — eliminates double-registration and racing double-pause on background.
+
+- [x] **`fix/session-autopause-starttime`** — `[75f5cbf7] Unified batch completed successfully`
+  - **Tags:** `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Snack]` `[🤖 PRO-HIGH]` `[BATCH:session-integrity]`
+  - **Outcome:** Removed the redundant `WatchBridge.syncSessionState` call in `SessionContext.tsx` auto-resume path. `useGlobalTelemetry` already pushes the correctly shifted anchor — the SessionContext push was overwriting it with `new Date()` (wrong).
+
+- [x] **`fix/session-paused-persistence`** — `[75f5cbf7] Unified batch completed successfully`
+  - **Tags:** `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:session-integrity]`
+  - **Outcome:** `@sk8lytz_session_active` AsyncStorage key upgraded from `'true'`/`'false'` to `JSON.stringify({ state, pausedAt })`. On crash-recovery, PAUSED state restored correctly. Backward compat: legacy `'true'`/`'false'` values handled as `'active'`/`'idle'`.
+
+- [x] **`fix/session-background-end-data-loss`** — `[75f5cbf7] Unified batch completed successfully`
+  - **Tags:** `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:session-integrity]`
+  - **Outcome:** `notifee.onBackgroundEvent` in `index.ts` now calls `WatchBridge.syncSessionState({ status: 'STOPPED' })` + sets `@sk8lytz_pending_bg_end` flag. On next foreground, `SessionContext` detects pending flag and runs full `commitSession()` with cached telemetry. Eliminated the silent total-data-loss path.
+
+- [x] **`fix/session-idle-race-summary`** — `[75f5cbf7] Unified batch completed successfully`
+  - **Tags:** `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:session-integrity]`
+  - **Outcome:** Added `'ENDING'` to `SessionPhase` type. `endSession()` sets `ENDING` first (keeps FGS alive), awaits SUMMARY push to watch, then sets `IDLE`. Updated `isSkateSessionActive` derivation and `useGlobalTelemetry` type guard.
+
+- [x] **`fix/session-watch-contract-audit`** — `[75f5cbf7] Unified batch completed successfully`
+  - **Tags:** `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:session-integrity]`
+  - **Outcome:** Documentation-only. Audited `WatchConnectivityManager.swift` L81-117 and `WearableCommunicationService.kt` L125-130 — both handle all 4 states. Added JSDoc contract comment to `WatchSessionState` type confirming native compliance.
+
+---
+
+### Sprint: v3.9.1 — 2026-06-06 (ble-connection-resilience)
+
+### [BATCH:ble-connection-resilience] — 📋 Sequential (Complete)
+
+- [x] **`fix/ble-gate-silent-invalid-transition`** — `[69f65537] Unified batch completed successfully`
+  - **Tags:** `[✅ VERIFIED]` `[BLE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:ble-connection-resilience]`
+  - **Outcome:** Added `AppLogger.error()` + `__DEV__` throw on invalid transitions in `BleStateMachine.ts`. Added `forceTransitionTo()` escape hatch. Added `SCANNING → DISCONNECTING` as valid transition. `setGate()` now checks return value. Error-recovery catch blocks use `forceTransitionTo()`. 3 new Jest tests.
+
+- [x] **`fix/ble-state-ref-lag`** — `[69f65537] Unified batch completed successfully`
+  - **Tags:** `[✅ VERIFIED]` `[BLE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:ble-connection-resilience]`
+  - **Outcome:** Created `setConnectedDevicesSync()` wrapper that updates both `connectedDevicesRef.current` AND calls `setConnectedDevices()` atomically. Replaced all callsites. Removed the sync `useEffect`. 1-frame lag eliminated.
+
+- [x] **`fix/ble-disconnect-stale-closure`** — `[69f65537] Unified batch completed successfully`
+  - **Tags:** `[✅ VERIFIED]` `[BLE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:ble-connection-resilience]`
+  - **Outcome:** Added `handleOrganicDisconnectRef` stable-ref forwarder. Passed stable wrapper to `useBLEAutoRecovery` and `BleConnectionManager`. Ref always updated on every render — stale closure eliminated.
+
+- [x] **`fix/ble-autoconnect-drain-permanent`** — `[69f65537] Unified batch completed successfully`
+  - **Tags:** `[✅ VERIFIED]` `[BLE]` `[M-RISK]` `[Snack]` `[🤖 PRO-HIGH]` `[BATCH:ble-connection-resilience]`
+  - **Outcome:** Added `failedAutoConnectRef: Map<string, { attempts, lastAttempt }>`. On failure: re-queues with backoff (1s → 4s → 12s). After 3 failures: ejects permanently. `retriggerAutoConnect()` clears failed map too.
+
+- [x] **`fix/ble-ghost-state-flicker`** — `[69f65537] Unified batch completed successfully`
+  - **Tags:** `[✅ VERIFIED]` `[BLE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:ble-connection-resilience]`
+  - **Outcome:** Removed pre-dispatch ghost-clear from Group Dropout Coordinator. Ghost state now cleared exclusively in `.then()` success callback after `connectToDevices` resolves. Devices remain visually dimmed until confirmed reconnected.
+
+- [x] **`fix/ble-gatt-mutex-hotreload`** — `[69f65537] Unified batch completed successfully`
+  - **Tags:** `[✅ VERIFIED]` `[BLE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:ble-connection-resilience]`
+  - **Outcome:** Added `_generation` counter + `_hotReloadCleanup()` to `useBLEGattMutex.ts`. On Hot Reload: aborts current holder, resets lock, increments generation. `acquireGattLock` races against 200ms timeout for orphaned promises. Stall reduced from 15s to ~200ms.
+
+- [x] **`fix/ble-autoconnect-single-group`** — `[69f65537] Unified batch completed successfully`
+  - **Tags:** `[✅ VERIFIED]` `[BLE]` `[L-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:ble-connection-resilience]`
+  - **Outcome:** Replaced `groups[0]` single-group selection with `Set<string>` MAC aggregation across ALL groups. Both cloud and offline paths collect all unique device MACs. `retriggerAutoConnect()` also clears `autoConnectRetriesRef`.
+
+---
+
+### Sprint: v3.9.1 — 2026-06-06 (account-critical)
+
+### [BATCH:account-critical] — 📋 Sequential (Complete)
+
+- [x] **`fix/offline-session-persistence-queue`** — merged `76067e15` | C-01 CLOSED
+  - **Tags:** `[✅ VERIFIED]` `[CLOUD]` `[H-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:account-critical]`
+  - **Outcome:** `SpeedTrackingService.saveSession()` queues offline sessions to `@SK8Lytz_PendingSession_Queue`. `flushPendingSessionQueue()` with re-entrancy guard wired into `useOfflineSyncWorker` 60s loop. User sees Alert instead of silent data loss. 4 Jest tests. 129/129 passing.
+
+- [x] **`fix/offline-eula-bypass`** — merged `66fc95cf` | M-07 CLOSED
+  - **Tags:** `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:account-critical]`
+  - **Outcome:** `ComplianceGate.tsx` offline bypass removed. First offline launch shows full `EulaModal`. Acceptance writes versioned JSON to `@Sk8lytz_offline_eula_accepted`. Subsequent launches pass immediately. Authenticated path unchanged.
+
+- [x] **`fix/session-expiry-ux-message`** — merged `72ea48a9` | M-02 CLOSED
+  - **Tags:** `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:account-critical]`
+  - **Outcome:** `App.tsx` `init()` detects expired token via `@Sk8lytz_auth_last_email` after null `getSession()`. Amber banner on `AuthScreen`: "Your session expired. Please sign in again." Clears on `SIGNED_IN`. No banner on fresh install.
+
+- [x] **`fix/crew-delete-rpc`** — merged `d0cf72ee` | M-05 CLOSED
+  - **Tags:** `[✅ VERIFIED]` `[CLOUD]` `[M-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:account-critical]`
+  - **Outcome:** `AccountModal.tsx` `handleDeleteCrew` was calling `leavePermanentCrew` (membership-only removal). Fixed to call `profileService.deleteCrew()` — hard-deletes crew + cascades memberships + broadcasts `session_ended`. Service layer was already correct; only the UI handler was wrong.
+
+- [x] **`fix/offline-device-userid-stamp`** — NO-OP | M-06 CLOSED (defect does not exist)
+  - **Tags:** `[✅ VERIFIED]` `[CLOUD]` `[M-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:account-critical]`
+  - **Outcome:** Audit finding was incorrect. `DeviceRepository._flushPendingSync(userId)` already receives `userId` from auth-gated `syncFromCloud()`. `dbRow.user_id = userId` at L704 stamps correctly at flush time. No null path exists.
+
 *End of Archive.*

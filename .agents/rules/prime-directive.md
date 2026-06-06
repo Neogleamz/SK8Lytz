@@ -56,8 +56,8 @@ If you cannot answer YES to all 3: re-read Blake's Known-Issues-First in qa-test
 
 ### 🚀 Taylor — Pre-Gatekeeper Micro-Read (Before running fortress-gatekeeper.ps1)
 Recite internally before running any merge:
-> *"I must: (1) verify npm run verify ran AFTER the final commit, (2) confirm version alignment, (3) route any verify failures to the right persona."*
-If you cannot answer YES to all 3: re-read Taylor's Attestation-First rule.
+> *\"I must: (1) verify npm run verify ran AFTER the final commit, (2) confirm version alignment, (3) route any verify failures to the right persona, (4) AFTER merge — execute Phase 6 Step 5: stamp `[x]`, move completed batch to `SK8Lytz_Bucket_List_ARCHIVE.md`, verify ACTIVE SPRINT has zero `[x]` tasks.\"*
+If you cannot answer YES to all 4: re-read Taylor's Attestation-First rule and `start-task.md` Phase 6 Step 5.
 
 ### 🕵️ Reyes — Pre-Research Micro-Read (Before any investigation)
 Recite internally before reading any file for research:

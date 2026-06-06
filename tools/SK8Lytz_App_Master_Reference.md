@@ -906,6 +906,14 @@ _All BLE sub-hooks are orchestrated by `useBLE.ts` (the thin orchestrator). They
 | `BleLifecycleManager` | `src/services/BleLifecycleManager.ts` | Keepalive timer (60s), `realDisconnect`, `forceDisconnect` |
 | `BlePingService` | `src/services/BlePingService.ts` | Wizard-exclusive atomic GATT session (Connect→Blink→Probe→Disconnect) |
 
+#### Auth Domain (`src/context/`, `src/providers/`)
+
+| Hook / Provider | Consumer | Owns |
+| :--- | :--- | :--- |
+| `AuthProvider` | `App.tsx` | Global authentication state (`session`, `user`, `isOfflineMode`, `isAuthenticated`). Eliminates N parallel `supabase.auth.getUser()` calls. |
+| `useAuth` | Global | Exposes auth state to components and hooks. |
+| `ComplianceGate` | `App.tsx` | EULA version enforcement. Decoupled from `supabase.auth.getUser()`, reads `user` and `isOfflineMode` strictly from `useAuth()`. |
+
 #### Dashboard Screen Domain (`src/hooks/`)
 
 | Hook                  | Consumer          | Owns                                                               |

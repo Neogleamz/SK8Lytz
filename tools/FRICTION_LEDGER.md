@@ -31,7 +31,38 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 
 ## 🔴 Active Friction Events (Open — Under Monitoring)
 
-> *No active friction events. Add entries here as patterns emerge.*
+### [FRICTION-013] Bucket List Split-Truth (Partial Stamp Pattern)
+- **First Observed:** 2026-06-06
+- **Observed By:** User (directly)
+- **Occurrences:** 2 / 3
+- **Trigger:** User: "why the fuck aren't we updating the bucketlist???" + "are we not archiving???"
+- **Pattern:** Agent stamps `[x]` in the ACTIVE SPRINT section on task completion, but leaves the identical task entry in the TRIAGE QUEUE as `[ ]`. Board shows the same task as both done and not done simultaneously.
+- **Root Cause (Updated):** `start-task.md` Phase 6 Step 5 **explicitly** mandates Steps A+B+C: (A) stamp `[x]`, (B) MOVE batch to ARCHIVED SPRINT LOG, (C) verify ACTIVE SPRINT has zero `[x]` tasks. This is a direct workflow violation — the workflow exists and was skipped.
+- **Impact:** Board is split-truth. 3 complete batches (19 tasks) sat un-archived. Every new session agent re-reads stale `[ ]` entries as work to do.
+- **Status:** MONITORING — At 3 strikes: auto-propose enforcement gate.
+
+### [FRICTION-014] Phase 6 Archival Protocol Skipped (Explicit Workflow Step Ignored)
+- **First Observed:** 2026-06-06
+- **Observed By:** User (directly) — "is this not in the rules or workflows???"
+- **Occurrences:** 1 / 3
+- **Trigger:** User found completed batches were not moved to `SK8Lytz_Bucket_List_ARCHIVE.md`.
+- **Pattern:** `start-task.md` Phase 6 Step 5 B+C is **completely skipped** after every gatekeeper merge. The step reads: *"NON-NEGOTIABLE. A task is NOT considered done until ALL THREE are complete."* Three full batches (19 tasks across session-integrity, ble-connection-resilience, account-critical) were never moved to the archive file.
+- **Root Cause Theory:** Taylor (RM) is not being activated at end-of-batch. Agent goes directly from gatekeeper merge to next task without executing Phase 6 Step 5. Taylor's pre-gatekeeper micro-read in `prime-directive.md` does not include an archival check — the gate only covers `npm run verify` attestation, not completion stamping.
+- **Impact:** Archive perpetually stale. Bucket list bloats with dead entries. Session agents re-read closed tasks as open work.
+- **Status:** MONITORING — ⚡ EVOLUTION PROPOSAL TRIGGERED (see below)
+
+---
+
+⚡ **EVOLUTION PROPOSAL — Phase 6 Archival Gate (FRICTION-014)**
+- **Observed:** 1 time (2026-06-06) — but severity is HIGH (explicit `[!IMPORTANT]` workflow step)
+- **Pattern:** `start-task.md` Phase 6 Step 5 archival is skipped after gatekeeper merge
+- **Root Cause:** Taylor's pre-gatekeeper micro-read in `prime-directive.md` only covers attestation — no archival check
+- **Proposed Fix:** Add to Taylor's pre-gatekeeper micro-read in `prime-directive.md`:
+  > *"I must: (4) after gatekeeper merge, execute Phase 6 Step 5 — stamp `[x]`, move completed batch to ARCHIVE, verify ACTIVE SPRINT has zero `[x]` tasks."*
+- **Files to Update:** `prime-directive.md` (Taylor pre-gatekeeper micro-read), `start-task.md` Phase 6 Step 5 (add visual `⛔ HARD STOP` callout)
+- **Impact if Approved:** Archival cannot be skipped — it's part of the same mental checklist Taylor runs before every merge
+- → **Approve with:** `"Ship the evolution"` | **Reject with:** `"Hold, here's why..."`
+
 
 ---
 

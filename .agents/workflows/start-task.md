@@ -260,7 +260,7 @@ git log -1 --format="%h"
   - Any temp scripts → DELETE them, do not commit
 5. **Apply Completion Stamp + MANDATORY ARCHIVAL** (3 steps — ALL required, in order):
    > [!IMPORTANT]
-   > Steps A, B, and C are NON-NEGOTIABLE. A task is NOT considered done until ALL THREE are complete.
+   > ⛔ HARD STOP — DO NOT move to the next task, Discord notification, or wind-down until Steps A, B, and C are ALL complete. This is the most commonly skipped step. A task is NOT considered done until ALL THREE are complete. Taylor's pre-gatekeeper micro-read point (4) enforces this.
 
    **A. Stamp the task `[x]`** in `SK8Lytz_Bucket_List.md` inside the `## 🚧 ACTIVE SPRINT` section:
    - Replace `- [ ]` with `- [x]`
@@ -270,10 +270,12 @@ git log -1 --format="%h"
 
    **B. MOVE the completed batch** out of `## 🚧 ACTIVE SPRINT` entirely:
    - Cut the entire batch header + all its `[x]` tasks from `## 🚧 ACTIVE SPRINT`
-   - Paste them into `## 📦 ARCHIVED SPRINT LOG` under: `### Sprint: vX.Y.Z — YYYY-MM-DD (<batch-name>)`
+   - Paste them into `tools/SK8Lytz_Bucket_List_ARCHIVE.md` under: `### Sprint: vX.Y.Z — YYYY-MM-DD (<batch-name>)`
+   - Also cut any matching `[ ]` → now `[x]` entries from `## 🚑 TRIAGE QUEUE` if the batch originated there
    - Leave `## 🚧 ACTIVE SPRINT` with `*(empty — all tasks complete)*` when fully cleared
 
    **C. Verify the move** by scanning `## 🚧 ACTIVE SPRINT` — it must contain ZERO `[x]` tasks after archival
+
 
 - **Batch Progression Check**:
   - IF there are MORE uncompleted tasks in the active batch:
