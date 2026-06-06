@@ -56,6 +56,14 @@ let _isLocked = false;
 let _currentHolderAbortController: AbortController | null = null;
 
 /**
+ * Deadlock watchdog timer. If the lock is held for >15s, auto-release and log.
+ * Protects against unhandled exceptions that skip finally{release()} and Hot Reload
+ * orphaning the lock chain (module re-evaluates, old lock never resolves).
+ */
+const DEADLOCK_WATCHDOG_MS = 15_000;
+let _deadlockWatchdog: ReturnType<typeof setTimeout> | null = null;
+
+/**
  * Acquire the GATT lock for a given priority operation.
  *
  * - P1 callers acquire immediately AND preempt any in-flight P2/P3 via AbortController.
@@ -132,9 +140,31 @@ export async function acquireGattLock(
     AppLogger.warn('GATT_LOCK_CONTENTION', { waitTime, priority });
   }
 
+  // Start deadlock watchdog — if the lock is held for >15s, something is stuck.
+  if (_deadlockWatchdog) clearTimeout(_deadlockWatchdog);
+  _deadlockWatchdog = setTimeout(() => {
+    AppLogger.error('GATT_DEADLOCK_DETECTED', {
+      priority,
+      heldForMs: DEADLOCK_WATCHDOG_MS,
+      action: 'auto_release',
+    });
+    // Force-abort the current holder if it's listening
+    _currentHolderAbortController?.abort();
+    // Force-release the lock
+    _isLocked = false;
+    _currentPriority = 4;
+    _currentHolderAbortController = null;
+    _deadlockWatchdog = null;
+    release();
+  }, DEADLOCK_WATCHDOG_MS);
+
   return {
     signal: ownAbortController.signal,
     release: () => {
+      if (_deadlockWatchdog) {
+        clearTimeout(_deadlockWatchdog);
+        _deadlockWatchdog = null;
+      }
       _isLocked = false;
       _currentPriority = 4;
       _currentHolderAbortController = null;
