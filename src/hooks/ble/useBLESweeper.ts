@@ -432,7 +432,7 @@ export function useBLESweeper({
       scanStartTimestampsRef.current.push(now);
     }
 
-    bleManager.startDeviceScan(null, { scanMode: 0 }, createScanCallback());
+    bleManager.startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], { scanMode: 0 }, createScanCallback());
   }, [bleManager, createScanCallback]);
 
   /**
@@ -465,7 +465,7 @@ export function useBLESweeper({
       // NOTE: lastSeenRef is preserved — timestamps from the previous low-power sweep
       // ensure devices that burst can't hear yet aren't pruned prematurely.
 
-      bleManager.startDeviceScan(null, { scanMode: 2 }, createScanCallback());
+      bleManager.startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], { scanMode: 2 }, createScanCallback());
 
       burstTimerRef.current = setTimeout(() => {
         burstTimerRef.current = null;
