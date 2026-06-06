@@ -13,18 +13,18 @@
  */
 import { Buffer } from 'buffer';
 import { useCallback, useRef, useState } from 'react';
-import type { Device, Subscription } from 'react-native-ble-plx';
+import type { BleManager, Characteristic, Device, Subscription } from 'react-native-ble-plx';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
 import { AppLogger } from '../../services/AppLogger';
 import { createGattSession } from '../../services/BleSessionFactory';
 import { acquireGattLock } from './useBLEGattMutex';
 
 export interface UseBLEAutoRecoveryProps {
-  bleManager: any;
+  bleManager: BleManager;
   setConnectedDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   disconnectListeners: React.MutableRefObject<Record<string, Subscription>>;
-  handleNotification: (error: any, characteristic: any, deviceId: string) => void;
-  onOrganicDisconnect: (error: any, deviceId: string) => void;
+  handleNotification: (error: Error | null, characteristic: Characteristic | null, deviceId: string) => void;
+  onOrganicDisconnect: (error: Error | null, deviceId: string) => void;
   /** Global connection gate semaphore — recovery waits for IDLE before touching radio */
   bleGateRef: React.MutableRefObject<import('../../services/BleStateMachine').BleStateMachine>;
   /**

@@ -367,7 +367,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const adapterMapRef = useRef<Map<string, IControllerProtocol>>(new Map());
 
   const connectToDevices = useCallback(async (devices: Device[]) => {
-    await executeConnectToDevices(
+    await executeConnectToDevices({
       devices,
       bleManager,
       connectedDevicesRef,
@@ -384,15 +384,15 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       handleNotificationRef,
       handleOrganicDisconnect,
       setConnectedDevices,
-      setGate
-    );
+      setGate,
+    });
   }, [
     bleManager,
     sweeper,
     scanner,
     autoRecovery,
     setConnectedDevices,
-    setGate
+    setGate,
   ]);
 
   // ── State refs and setters for BleWriteDispatcher ─────────────────────────

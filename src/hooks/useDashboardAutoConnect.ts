@@ -16,9 +16,11 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useRef } from 'react';
+import type { Device } from 'react-native-ble-plx';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
+import type { RegisteredGroup, RegisteredDeviceRow } from '../types/ble.types';
 
 /** Minimal device shape needed from useBLE */
 interface BLEDevice {
@@ -32,8 +34,7 @@ interface UseDashboardAutoConnectOptions {
   isActuallyConnected: boolean;
   allDevices: BLEDevice[];
   connectedDevices: BLEDevice[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  connectToDevices: (devices: any[]) => Promise<void>;
+  connectToDevices: (devices: Device[]) => Promise<void>;
   scanForPeripherals: (options?: { disableProbing?: boolean }) => void;
   requestPermissions: () => Promise<boolean>;
   refreshProfile: () => Promise<void>;
@@ -188,7 +189,7 @@ export function useDashboardAutoConnect({
       if ((hasAutoConnectedRef.current && !isRetrigger) || !isBluetoothSupported || !isBluetoothEnabled) return;
       hasAutoConnectedRef.current = true;
 
-      let groupsToProcess: any[] = [];
+      let groupsToProcess: RegisteredGroup[] = [];
       let isOffline = true;
       let cloudUserId: string | null = null;
 
@@ -203,7 +204,7 @@ export function useDashboardAutoConnect({
             AppLogger.warn('Failed to refresh profile on dashboard load', { error: String(e) });
           }
 
-          let groups: any[] | null = null;
+          let groups: RegisteredGroup[] | null = null;
           try {
             const result = await supabase
               .from('registered_groups')
@@ -254,7 +255,7 @@ export function useDashboardAutoConnect({
           // and skips them. Starting scan after setting the ref guarantees every
           // discovered device is evaluated against a populated target list.
 
-          let presentGroups: any[] = [];
+          let presentGroups: RegisteredGroup[] = [];
           let idsToConnect: string[] = [];
 
           if (!isOffline && supabase && cloudUserId) {
@@ -264,25 +265,25 @@ export function useDashboardAutoConnect({
               .eq('user_id', cloudUserId);
             if (devices) {
               presentGroups = groupsToProcess.sort(
-                (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
               );
               if (presentGroups.length > 0) {
                 const targetGroupId = presentGroups[0].id;
-                idsToConnect = devices
-                  .filter((d: any) => {
+                idsToConnect = (devices as RegisteredDeviceRow[])
+                  .filter((d) => {
                     // Many-to-many: check group_ids array first, fall back to legacy scalar
                     const dGroupIds: string[] = d.group_ids || (d.group_id ? [d.group_id] : []);
                     return dGroupIds.includes(targetGroupId);
                   })
-                  .map((d: any) => d.device_mac || d.id);
+                  .map((d) => d.device_mac || d.id);
               }
             }
           } else {
             presentGroups = groupsToProcess.sort(
-              (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             );
             if (presentGroups.length > 0) {
-              idsToConnect = presentGroups[0].deviceIds;
+              idsToConnect = presentGroups[0].deviceIds ?? [];
             }
           }
 

@@ -1,36 +1,36 @@
-import React from 'react';
 import { Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
+import type { Device } from 'react-native-ble-plx';
 import { AppLogger } from './AppLogger';
 import { createGattSession } from './BleSessionFactory';
 import { acquireGattLock } from '../hooks/ble/useBLEGattMutex';
-import { BleStateMachine, BLEPhaseTag } from './BleStateMachine';
+import type { BleConnectionRequest } from '../types/ble.types';
 
 /**
  * executeConnectToDevices — Group connection manager.
  * Serializes connection acquisition to protect Android stack, then parallelizes
  * MTU and Time-Sync handshakes for sub-second boot times.
  */
-export async function executeConnectToDevices(
-  devices: any[],
-  bleManager: any,
-  connectedDevicesRef: React.MutableRefObject<any[]>,
-  blacklistedMacsRef: React.MutableRefObject<string[]>,
-  keepaliveTimerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>,
-  disconnectListeners: React.MutableRefObject<Record<string, any>>,
-  sweeper: any,
-  scanner: any,
-  autoRecovery: any,
-  bleGateRef: React.MutableRefObject<BleStateMachine>,
-  mtuMapRef: React.MutableRefObject<Map<string, number>>,
-  adapterMapRef: React.MutableRefObject<Map<string, any>>,
-  dataReceivedCallbackRef: React.MutableRefObject<((deviceId: string, data: number[]) => void) | undefined>,
-  handleNotificationRef: React.MutableRefObject<(error: any, characteristic: any, deviceId: string) => void>,
-  handleOrganicDisconnect: (error: any, deviceId: string) => void,
-  setConnectedDevices: React.Dispatch<React.SetStateAction<any[]>>,
-  setGate: (phase: BLEPhaseTag) => void
-): Promise<void> {
+export async function executeConnectToDevices({
+  devices,
+  bleManager,
+  connectedDevicesRef,
+  blacklistedMacsRef,
+  keepaliveTimerRef,
+  disconnectListeners,
+  sweeper,
+  scanner,
+  autoRecovery: _autoRecovery,
+  bleGateRef,
+  mtuMapRef,
+  adapterMapRef,
+  dataReceivedCallbackRef,
+  handleNotificationRef,
+  handleOrganicDisconnect,
+  setConnectedDevices,
+  setGate,
+}: BleConnectionRequest): Promise<void> {
   if (devices.length === 0) return;
 
   // ── HARDWARE BLACKLIST GUARD ──────────────────────────────────────────────
@@ -126,14 +126,14 @@ export async function executeConnectToDevices(
       scanner.stopScanner();
       if (wasSweeperActive) sweeper.stopSweeper();
 
-      const rawConns: any[] = [];
+      const rawConns: Device[] = [];
       for (const device of devices) {
         if (retainedDevices.some(r => r.id === device.id)) {
-          continue; 
+          continue;
         }
 
-        let conn: any = null;
-        let lastErr: any = null;
+        let conn: Device | null = null;
+        let lastErr: Error | null = null;
         for (let attempt = 1; attempt <= 2; attempt++) {
           try {
             const isConnected = await bleManager.isDeviceConnected(device.id);
@@ -162,7 +162,7 @@ export async function executeConnectToDevices(
         }
       }
 
-      const handshakeDevice = async (conn: any): Promise<any | null> => {
+      const handshakeDevice = async (conn: Device): Promise<Device | null> => {
         try {
           if (Platform.OS === 'android') {
             await bleManager.requestConnectionPriorityForDevice(conn.id, 1).catch((e: any) => {

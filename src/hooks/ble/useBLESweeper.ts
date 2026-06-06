@@ -26,7 +26,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
-import type { Device } from 'react-native-ble-plx';
+import type { BleManager, Device } from 'react-native-ble-plx';
 import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
 import { AppLogger } from '../../services/AppLogger';
@@ -58,7 +58,7 @@ const PROBE_QUEUE_DELAY_MS_FTUE = 500;
 const ZENGGE_NAME_PREFIXES = ['lednet', 'sk8', 'zg', 'halo', 'soul'];
 
 export interface UseBLESweeperProps {
-  bleManager: any;
+  bleManager: BleManager;
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   setPendingRegistrations: React.Dispatch<React.SetStateAction<PendingRegistration[]>>;
   /** The global BLE connection gate from useBLE — Interrogator checks this before probing */

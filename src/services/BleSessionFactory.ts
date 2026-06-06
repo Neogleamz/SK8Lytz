@@ -23,6 +23,7 @@
  *   - No notification setup — caller-specific
  *   - Retry logic with GATT 133 / transient error handling baked in
  */
+import type { BleManager, Device } from 'react-native-ble-plx';
 import type { IControllerProtocol } from '../protocols/IControllerProtocol';
 import { resolveProtocol, getDefaultProtocol, getProtocolById } from '../protocols/ControllerRegistry';
 import { AppLogger } from './AppLogger';
@@ -31,7 +32,7 @@ import { BleCharacteristicCache } from './BleCharacteristicCache';
 /** Result of a successful GATT session creation */
 export interface GattSessionResult {
   /** The connected + discovered device handle */
-  conn: any;
+  conn: Device;
   /** Resolved protocol adapter (from cache or fresh service UUID enumeration) */
   adapter: IControllerProtocol;
   /** Whether the adapter was resolved from the BleCharacteristicCache */
@@ -67,7 +68,7 @@ export interface CreateGattSessionOptions {
  * @throws If connection fails after all retries, or if AbortSignal is triggered
  */
 export async function createGattSession(
-  bleManager: any,
+  bleManager: BleManager,
   mac: string,
   options: CreateGattSessionOptions = {},
 ): Promise<GattSessionResult> {
@@ -80,8 +81,8 @@ export async function createGattSession(
   } = options;
 
   // ── Step 1: Connect (with retry loop) ──────────────────────────────────
-  let conn: any = null;
-  let lastErr: any = null;
+  let conn: Device | null = null;
+  let lastErr: Error | null = null;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     if (signal?.aborted) {
@@ -97,8 +98,8 @@ export async function createGattSession(
           conn = await bleManager.deviceForDevice(mac);
         } catch {
           // deviceForDevice not available on all platforms — use connectedDevices
-          const devicesList = await bleManager.connectedDevices([]).catch(() => []);
-          conn = devicesList.find((d: any) => d.id === mac);
+          const devicesList: Device[] = await bleManager.connectedDevices([]).catch(() => []);
+          conn = devicesList.find((d) => d.id === mac);
           if (!conn) {
             // Last resort: just connect fresh
             conn = await bleManager.connectToDevice(mac, { timeout });
@@ -165,7 +166,7 @@ export async function createGattSession(
   if (!adapter) {
     try {
       const svcs = await conn.services();
-      const svcUUIDs = svcs.map((s: any) => s.uuid as string);
+      const svcUUIDs: string[] = svcs.map((s: { uuid: string }) => s.uuid);
       adapter = resolveProtocol(svcUUIDs, manufacturerData) ?? getDefaultProtocol();
     } catch (_e: any) {
       AppLogger.warn(`[BleSessionFactory] Failed resolving service UUIDs for ${mac}, falling back to default protocol`, { context, error: String(_e) });
