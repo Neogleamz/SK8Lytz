@@ -1,413 +1,429 @@
-# SK8Lytz Master Bucket List Archive
+﻿# SK8Lytz Master Bucket List Archive
 
 This document contains the archive of all successfully completed and merged tasks, sprints, and epic batches within the SK8Lytz app ecosystem.
 
 ---
 
-## 📦 ARCHIVED SPRINT LOGS
+## ðŸ“¦ ARCHIVED SPRINT LOGS
 
-### Sprint: v3.7.3 — 2026-06-01 (camera-mode-white-only)
+### Sprint: v3.7.3 â€” 2026-06-01 (camera-mode-white-only)
 
-- [x] **`fix/camera-mode-white-only`** — Resolved white-only camera capture bug by utilizing useResizer from react-native-vision-camera-resizer to properly downscale frames on the GPU to a 50x50 RGB buffer. Merged `283774f7`.
-  - **Tags:** `[✅ VERIFIED]` `[CORE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]`
-  - **Plan:** 📎 [PLAN-camera-mode-white-only.md](./plans/PLAN-camera-mode-white-only.md)
-  - **Source of Truth:** 📖 [CameraTracker.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/CameraTracker.tsx#L96) §onFrame
+- [x] **`fix/camera-mode-white-only`** â€” Resolved white-only camera capture bug by utilizing useResizer from react-native-vision-camera-resizer to properly downscale frames on the GPU to a 50x50 RGB buffer. Merged `283774f7`.
+  - **Tags:** `[âœ… VERIFIED]` `[CORE]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]`
+  - **Plan:** ðŸ“Ž [PLAN-camera-mode-white-only.md](./plans/PLAN-camera-mode-white-only.md)
+  - **Source of Truth:** ðŸ“– [CameraTracker.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/CameraTracker.tsx#L96) Â§onFrame
   - **Goal:** Fix the camera frame processor crash that results in only capturing white colors.
-  - **Details:** COMPLETE — Disposed GPUFrame inside finally block to prevent VRAM memory leaks. Set minimum channel offset of 3 to eliminate potential infinite loop hazards. Prioritized port 8081 for CDP console sniffer.
+  - **Details:** COMPLETE â€” Disposed GPUFrame inside finally block to prevent VRAM memory leaks. Set minimum channel offset of 3 to eliminate potential infinite loop hazards. Prioritized port 8081 for CDP console sniffer.
 
 ---
 
-### Sprint: v3.6.3 — 2026-05-29 (grouping-architecture-overhaul)
+### Sprint: v3.6.3 â€” 2026-05-29 (grouping-architecture-overhaul)
 
-### [BATCH:grouping-architecture-overhaul] (Active) — ⚡ Parallel-Safe
+### [BATCH:grouping-architecture-overhaul] (Active) â€” âš¡ Parallel-Safe
 - **Prerequisite**: None
 - **Active Tasks**: `feat/group-many-to-many`, `feat/group-mixed-state`, `fix/skatepark-hijack`, `fix/infinite-blob`, `fix/local-cloud-split-brain`
 
-- [x] **`feat/group-many-to-many`** — Migrated device group membership to junction table. Merged `7e34ba7`.
-  - **Tags:** `[✅ VERIFIED]` `[CORE]` `[H-RISK]` `[Feast]` `[🤖 THINK]`
-  - **Plan:** 📎 [PLAN-group-many-to-many.md](./plans/PLAN-group-many-to-many.md)
-  - **Source of Truth:** 📖 [useDashboardGroups.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardGroups.ts)
+- [x] **`feat/group-many-to-many`** â€” Migrated device group membership to junction table. Merged `7e34ba7`.
+  - **Tags:** `[âœ… VERIFIED]` `[CORE]` `[H-RISK]` `[Feast]` `[ðŸ¤– THINK]`
+  - **Plan:** ðŸ“Ž [PLAN-group-many-to-many.md](./plans/PLAN-group-many-to-many.md)
+  - **Source of Truth:** ðŸ“– [useDashboardGroups.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardGroups.ts)
   - **Goal:** Resolve The "Mutually Exclusive" Flaw (1-to-1 Mapping).
-  - **Details:** COMPLETE — Refactored `DeviceSettings` and Supabase schema to support a many-to-many relationship using array-based group mapping.
+  - **Details:** COMPLETE â€” Refactored `DeviceSettings` and Supabase schema to support a many-to-many relationship using array-based group mapping.
 
-- [x] **`feat/group-mixed-state`** — Added mixed state rendering and tap-to-unify UI. Merged `21636ec`.
-  - **Tags:** `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[🤖 PRO-HIGH]`
-  - **Plan:** 📎 [PLAN-group-mixed-state.md](./plans/PLAN-group-mixed-state.md)
-  - **Source of Truth:** 📖 [useDashboardGroups.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardGroups.ts)
+- [x] **`feat/group-mixed-state`** â€” Added mixed state rendering and tap-to-unify UI. Merged `21636ec`.
+  - **Tags:** `[âœ… VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[ðŸ¤– PRO-HIGH]`
+  - **Plan:** ðŸ“Ž [PLAN-group-mixed-state.md](./plans/PLAN-group-mixed-state.md)
+  - **Source of Truth:** ðŸ“– [useDashboardGroups.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardGroups.ts)
   - **Goal:** Resolve Lack of "Mixed State" Aggregation.
-  - **Details:** COMPLETE — Updated group UI cards to intelligently aggregate states using green/red status dots and introduced "Mixed - Tap to Sync" visual cue.
+  - **Details:** COMPLETE â€” Updated group UI cards to intelligently aggregate states using green/red status dots and introduced "Mixed - Tap to Sync" visual cue.
 
-- [x] **`fix/skatepark-hijack`** — Added RSSI gating to background discovery. Merged `378366a7`.
-  - **Tags:** `[✅ VERIFIED]` `[CORE]` `[H-RISK]` `[Meal]` `[🤖 THINK]`
-  - **Plan:** 📎 [PLAN-skatepark-hijack.md](./plans/PLAN-skatepark-hijack.md)
-  - **Source of Truth:** 📖 [useDashboardGroups.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardGroups.ts#L323)
+- [x] **`fix/skatepark-hijack`** â€” Added RSSI gating to background discovery. Merged `378366a7`.
+  - **Tags:** `[âœ… VERIFIED]` `[CORE]` `[H-RISK]` `[Meal]` `[ðŸ¤– THINK]`
+  - **Plan:** ðŸ“Ž [PLAN-skatepark-hijack.md](./plans/PLAN-skatepark-hijack.md)
+  - **Source of Truth:** ðŸ“– [useDashboardGroups.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardGroups.ts#L323)
   - **Goal:** Resolve The "Skatepark Hijack" (Proximity Blindness).
-  - **Details:** COMPLETE — Introduced RSSI proximity gating and explicit user confirmation steps in `runAutoProvisioning` to prevent hijacking unregistered devices in public. Built an admin slider to adjust the threshold.
+  - **Details:** COMPLETE â€” Introduced RSSI proximity gating and explicit user confirmation steps in `runAutoProvisioning` to prevent hijacking unregistered devices in public. Built an admin slider to adjust the threshold.
 
-- [x] **`fix/infinite-blob`** — Implemented while loop to auto-increment group names and prevent appending. Merged `a48aaebe`.
-  - **Tags:** `[✅ VERIFIED]` `[CORE]` `[M-RISK]` `[Snack]` `[🤖 PRO-HIGH]`
-  - **Plan:** 📎 [PLAN-infinite-blob.md](./plans/PLAN-infinite-blob.md)
-  - **Source of Truth:** 📖 [useDashboardGroups.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardGroups.ts#L363)
+- [x] **`fix/infinite-blob`** â€” Implemented while loop to auto-increment group names and prevent appending. Merged `a48aaebe`.
+  - **Tags:** `[âœ… VERIFIED]` `[CORE]` `[M-RISK]` `[Snack]` `[ðŸ¤– PRO-HIGH]`
+  - **Plan:** ðŸ“Ž [PLAN-infinite-blob.md](./plans/PLAN-infinite-blob.md)
+  - **Source of Truth:** ðŸ“– [useDashboardGroups.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardGroups.ts#L363)
   - **Goal:** Resolve The "Infinite Blob" (Accidental Mega-Groups).
-  - **Details:** COMPLETE — Replaced `findIndex` with an auto-incrementing `while` loop so that multiple pairs of the same product type are placed into "My SK8Lytz HALOZ", "My SK8Lytz HALOZ 2", etc.
+  - **Details:** COMPLETE â€” Replaced `findIndex` with an auto-incrementing `while` loop so that multiple pairs of the same product type are placed into "My SK8Lytz HALOZ", "My SK8Lytz HALOZ 2", etc.
 
-- [x] **`fix/local-cloud-split-brain`** — Fixed the UUID lookup failure in `saveGroupTransactional` by queuing cloud sync if devices are pending. Merged `d9bf414`.
-  - **Tags:** `[✅ VERIFIED]` `[CLOUD]` `[H-RISK]` `[Meal]` `[🤖 THINK]`
-  - **Plan:** 📎 [PLAN-local-cloud-split-brain.md](./plans/PLAN-local-cloud-split-brain.md)
-  - **Source of Truth:** 📖 [DeviceRepository.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/DeviceRepository.ts#L488)
+- [x] **`fix/local-cloud-split-brain`** â€” Fixed the UUID lookup failure in `saveGroupTransactional` by queuing cloud sync if devices are pending. Merged `d9bf414`.
+  - **Tags:** `[âœ… VERIFIED]` `[CLOUD]` `[H-RISK]` `[Meal]` `[ðŸ¤– THINK]`
+  - **Plan:** ðŸ“Ž [PLAN-local-cloud-split-brain.md](./plans/PLAN-local-cloud-split-brain.md)
+  - **Source of Truth:** ðŸ“– [DeviceRepository.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/DeviceRepository.ts#L488)
   - **Goal:** Resolve The Local/Cloud Split-Brain (MAC vs DB ID).
-  - **Details:** COMPLETE — Implemented `hasPendingDevices` guard to bypass the RPC and delegate group mapping to `_queuePendingGroupSync` to prevent silent FK violations.
+  - **Details:** COMPLETE â€” Implemented `hasPendingDevices` guard to bypass the RPC and delegate group mapping to `_queuePendingGroupSync` to prevent silent FK violations.
 
 ---
 
-### Sprint: v3.6.3 — 2026-05-27 (ble-hci)
+### Sprint: v3.6.3 â€” 2026-05-27 (ble-hci)
 
-### [BATCH:ble-hci] — ⚡ (Complete)
+### [BATCH:ble-hci] â€” âš¡ (Complete)
 
 
-- [x] **`spike/0x40-chunked-framing-hci-verify`** — Verified `writeChunked` 0x40 frame format on hardware. Merged `74ec886d`.
-  - **Tags:** `[🕵️ SPIKE]` `[✅ VERIFIED]` `[LAB]` `[H-RISK]` `[Snack]` `[🤖 THINK]` `[BATCH:ble-hci]`
-  - **Plan:** 📎 [PLAN-chunked-ble-framing-0x51.md](./plans/PLAN-chunked-ble-framing-0x51.md)
-  - **Source of Truth:** 📖 [useBLE.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L706) §writeChunked and [ZENGGE_PROTOCOL_BIBLE.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/ZENGGE_PROTOCOL_BIBLE.md#L189) §0x51 Custom Scene
+- [x] **`spike/0x40-chunked-framing-hci-verify`** â€” Verified `writeChunked` 0x40 frame format on hardware. Merged `74ec886d`.
+  - **Tags:** `[ðŸ•µï¸ SPIKE]` `[âœ… VERIFIED]` `[LAB]` `[H-RISK]` `[Snack]` `[ðŸ¤– THINK]` `[BATCH:ble-hci]`
+  - **Plan:** ðŸ“Ž [PLAN-chunked-ble-framing-0x51.md](./plans/PLAN-chunked-ble-framing-0x51.md)
+  - **Source of Truth:** ðŸ“– [useBLE.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L706) Â§writeChunked and [ZENGGE_PROTOCOL_BIBLE.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/ZENGGE_PROTOCOL_BIBLE.md#L189) Â§0x51 Custom Scene
   - **Goal:** HCI-sniff verify the `writeChunked` 0x40 fragmentation frame format on real HALOZ/SOULZ hardware before wiring the Scene Builder UI to production chunked writes.
-  - **Details:** COMPLETE — Validated `writeChunked` behavior on physical hardware via ADB HCI sniff, matched byte frames, and updated ZENGGE_PROTOCOL_BIBLE.md.
+  - **Details:** COMPLETE â€” Validated `writeChunked` behavior on physical hardware via ADB HCI sniff, matched byte frames, and updated ZENGGE_PROTOCOL_BIBLE.md.
 
 ---
 
-### Sprint: v3.6.3 — 2026-05-27 (dependency-diet)
+### Sprint: v3.6.3 â€” 2026-05-27 (dependency-diet)
 
-### [BATCH:dependency-diet] — ⚡ (Complete)
+### [BATCH:dependency-diet] â€” âš¡ (Complete)
 
-- [x] **`spike/major-dep-upgrades`** — Upgraded React to 19.2.6 and @types/react to 19.2.15. Merged `89825d9c`.
-  - **Tags:** `[🕵️ SPIKE]` `[✅ VERIFIED]` `[CORE]` `[H-RISK]` `[Feast]` `[🤖 THINK]` `[BATCH:dependency-diet]`
-  - **Plan:** 📎 [PLAN-spike-major-dep-upgrades.md](./plans/PLAN-spike-major-dep-upgrades.md)
-  - **Source of Truth:** 📖 [package.json](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/package.json#L1)
+- [x] **`spike/major-dep-upgrades`** â€” Upgraded React to 19.2.6 and @types/react to 19.2.15. Merged `89825d9c`.
+  - **Tags:** `[ðŸ•µï¸ SPIKE]` `[âœ… VERIFIED]` `[CORE]` `[H-RISK]` `[Feast]` `[ðŸ¤– THINK]` `[BATCH:dependency-diet]`
+  - **Plan:** ðŸ“Ž [PLAN-spike-major-dep-upgrades.md](./plans/PLAN-spike-major-dep-upgrades.md)
+  - **Source of Truth:** ðŸ“– [package.json](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/package.json#L1)
   - **Goal:** Evaluate breaking changes for React and core dependencies.
-  - **Details:** COMPLETE — Upgraded `react` and `react-dom` to 19.2.6, and `@types/react` to 19.2.15 while locking `react-native`, `typescript`, and `@react-native-async-storage/async-storage` to their stable versions to prevent BLE thread instability. Verified via full QA suite and merged.
+  - **Details:** COMPLETE â€” Upgraded `react` and `react-dom` to 19.2.6, and `@types/react` to 19.2.15 while locking `react-native`, `typescript`, and `@react-native-async-storage/async-storage` to their stable versions to prevent BLE thread instability. Verified via full QA suite and merged.
 
 ---
 
 
-### Sprint: v3.6.3 — 2026-05-27 (monolith-cleanup)
+### Sprint: v3.6.3 â€” 2026-05-27 (monolith-cleanup)
 
-### [BATCH:monolith-cleanup] — ⚡ (Complete)
+### [BATCH:monolith-cleanup] â€” âš¡ (Complete)
 
-- [x] **`refactor/split-monolith-files`** — Monolith partitioned cleanly into 4 helper services + thin composition hook. Merged `48d35783`.
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[M-RISK]` `[Meal]` `[🤖 THINK]` `[BATCH:monolith-cleanup]`
-  - **Plan:** 📎 [PLAN-refactor-split-monolith-files.md](./plans/PLAN-refactor-split-monolith-files.md)
-  - **Source of Truth:** 📖 [agent-behavior.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.agents/rules/agent-behavior.md#L15) §Look Before You Leap
+- [x] **`refactor/split-monolith-files`** â€” Monolith partitioned cleanly into 4 helper services + thin composition hook. Merged `48d35783`.
+  - **Tags:** `[âœ… READY]` `[âœ… VERIFIED]` `[CORE]` `[M-RISK]` `[Meal]` `[ðŸ¤– THINK]` `[BATCH:monolith-cleanup]`
+  - **Plan:** ðŸ“Ž [PLAN-refactor-split-monolith-files.md](./plans/PLAN-refactor-split-monolith-files.md)
+  - **Source of Truth:** ðŸ“– [agent-behavior.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.agents/rules/agent-behavior.md#L15) Â§Look Before You Leap
   - **Goal:** Break down monolithic files > 30KB discovered during audit.
-  - **Details:** COMPLETE — Surgically extracted `BleConnectionManager`, `BleWriteDispatcher`, `BlePingService`, and `BleLifecycleManager` into separate stateless modules, and refactored `useBLE.ts` as a clean, thin orchestrator hook. Passed all unit, compiler, browser, and static quality checks.
+  - **Details:** COMPLETE â€” Surgically extracted `BleConnectionManager`, `BleWriteDispatcher`, `BlePingService`, and `BleLifecycleManager` into separate stateless modules, and refactored `useBLE.ts` as a clean, thin orchestrator hook. Passed all unit, compiler, browser, and static quality checks.
 
 ---
 
-### Sprint: v3.6.3 — 2026-05-27 (ble-and-camera-hardening)
+### Sprint: v3.6.3 â€” 2026-05-27 (ble-and-camera-hardening)
 
-### [BATCH:ble-hardening] — 📋 (Complete)
+### [BATCH:ble-hardening] â€” ðŸ“‹ (Complete)
 
-- [x] **`fix/sweeper-gatt-discovery-skip`** — Merged `971af30c`. Hoisted GATT discovery above cache lookup in interrogateDevice.
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[LAB]` `[H-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:ble-hardening]`
-  - **Plan:** 📎 [PLAN-fix-sweeper-gatt-discovery-skip.md](./plans/PLAN-fix-sweeper-gatt-discovery-skip.md)
-  - **Source of Truth:** 📖 [useBLESweeper.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLESweeper.ts#L250) §interrogateDevice L250-268
+- [x] **`fix/sweeper-gatt-discovery-skip`** â€” Merged `971af30c`. Hoisted GATT discovery above cache lookup in interrogateDevice.
+  - **Tags:** `[âœ… READY]` `[âœ… VERIFIED]` `[LAB]` `[H-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:ble-hardening]`
+  - **Plan:** ðŸ“Ž [PLAN-fix-sweeper-gatt-discovery-skip.md](./plans/PLAN-fix-sweeper-gatt-discovery-skip.md)
+  - **Source of Truth:** ðŸ“– [useBLESweeper.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLESweeper.ts#L250) Â§interrogateDevice L250-268
   - **Goal:** Fix the third and final copy of the GATT discovery-on-cache-hit bug.
-  - **Details:** COMPLETE — Hoisted `discoverAllServicesAndCharacteristics()` above the cache lookup block in interrogateDevice to ensure native handle maps populate before the `0x63` hardware settings query.
+  - **Details:** COMPLETE â€” Hoisted `discoverAllServicesAndCharacteristics()` above the cache lookup block in interrogateDevice to ensure native handle maps populate before the `0x63` hardware settings query.
 
-- [x] **`refactor/ble-session-factory`** — Merged `ffa980c8`. Extracted connect→discover→resolve adapter sequence.
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[H-RISK]` `[Meal]` `[🤖 THINK]` `[BATCH:ble-hardening]`
-  - **Plan:** 📎 [PLAN-refactor-ble-session-factory.md](./plans/PLAN-refactor-ble-session-factory.md)
-  - **Source of Truth:** 📖 [useBLE.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L670) §handshakeDevice
-  - **Goal:** Extract connect→discover→resolve sequence from 4 callsites to eliminate Shotgun Surgery.
-  - **Details:** COMPLETE — Created `BleSessionFactory` to own the invariant sequence `connect → discoverAll → resolveAdapter → return { conn, adapter }` with AbortSignal support, purging ~120 duplicate lines from useBLE, useBLESweeper, and useBLEAutoRecovery.
+- [x] **`refactor/ble-session-factory`** â€” Merged `ffa980c8`. Extracted connectâ†’discoverâ†’resolve adapter sequence.
+  - **Tags:** `[âœ… READY]` `[âœ… VERIFIED]` `[CORE]` `[H-RISK]` `[Meal]` `[ðŸ¤– THINK]` `[BATCH:ble-hardening]`
+  - **Plan:** ðŸ“Ž [PLAN-refactor-ble-session-factory.md](./plans/PLAN-refactor-ble-session-factory.md)
+  - **Source of Truth:** ðŸ“– [useBLE.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L670) Â§handshakeDevice
+  - **Goal:** Extract connectâ†’discoverâ†’resolve sequence from 4 callsites to eliminate Shotgun Surgery.
+  - **Details:** COMPLETE â€” Created `BleSessionFactory` to own the invariant sequence `connect â†’ discoverAll â†’ resolveAdapter â†’ return { conn, adapter }` with AbortSignal support, purging ~120 duplicate lines from useBLE, useBLESweeper, and useBLEAutoRecovery.
 
-- [x] **`refactor/ble-typed-fsm-gate`** — Merged `f8b1c07a`. Replaced raw string gates with compile-enforced FSM.
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[H-RISK]` `[Meal]` `[🤖 THINK]` `[BATCH:ble-hardening]`
-  - **Plan:** 📎 [PLAN-refactor-ble-typed-fsm-gate.md](./plans/PLAN-refactor-ble-typed-fsm-gate.md)
-  - **Source of Truth:** 📖 [useBLE.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L61) §bleGateRef
+- [x] **`refactor/ble-typed-fsm-gate`** â€” Merged `f8b1c07a`. Replaced raw string gates with compile-enforced FSM.
+  - **Tags:** `[âœ… READY]` `[âœ… VERIFIED]` `[CORE]` `[H-RISK]` `[Meal]` `[ðŸ¤– THINK]` `[BATCH:ble-hardening]`
+  - **Plan:** ðŸ“Ž [PLAN-refactor-ble-typed-fsm-gate.md](./plans/PLAN-refactor-ble-typed-fsm-gate.md)
+  - **Source of Truth:** ðŸ“– [useBLE.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L61) Â§bleGateRef
   - **Goal:** Replace raw string union refs with typed state machine.
-  - **Details:** COMPLETE — Created `BleStateMachine` FSM with valid transition checks and state event listeners. Replaced `bleGateRef` usages in useBLE, useBLESweeper, useBLEAutoRecovery, and useDashboardAutoConnect to use `.tag` checks and strict transitions, completely avoiding split-brain states and GATT collisions.
+  - **Details:** COMPLETE â€” Created `BleStateMachine` FSM with valid transition checks and state event listeners. Replaced `bleGateRef` usages in useBLE, useBLESweeper, useBLEAutoRecovery, and useDashboardAutoConnect to use `.tag` checks and strict transitions, completely avoiding split-brain states and GATT collisions.
 
-### [BATCH:camera-hardening] — ⚡ (Complete)
+### [BATCH:camera-hardening] â€” âš¡ (Complete)
 
-- [x] **`fix/camera-tracker-5hz-sideeffect`** — Merged `459319ad`. Decoupled 5Hz updates using shared React Ref.
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Snack]` `[🤖 PRO-HIGH]` `[BATCH:camera-hardening]`
-  - **Plan:** 📎 [PLAN-fix-camera-tracker-5hz-sideeffect.md](./plans/PLAN-fix-camera-tracker-5hz-sideeffect.md)
-  - **Source of Truth:** 📖 [CameraTracker.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/CameraTracker.tsx#L103) §dispatchSniperColor
+- [x] **`fix/camera-tracker-5hz-sideeffect`** â€” Merged `459319ad`. Decoupled 5Hz updates using shared React Ref.
+  - **Tags:** `[âœ… READY]` `[âœ… VERIFIED]` `[UI]` `[M-RISK]` `[Snack]` `[ðŸ¤– PRO-HIGH]` `[BATCH:camera-hardening]`
+  - **Plan:** ðŸ“Ž [PLAN-fix-camera-tracker-5hz-sideeffect.md](./plans/PLAN-fix-camera-tracker-5hz-sideeffect.md)
+  - **Source of Truth:** ðŸ“– [CameraTracker.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/CameraTracker.tsx#L103) Â§dispatchSniperColor
   - **Goal:** Remove 5Hz BLE side-effects.
-  - **Details:** COMPLETE — Destructured `liveColorRef` in `CameraTrackerProps` and updated it at 5Hz inside the frame processor, bypassing parent re-renders. Replaced the 5Hz callback inside `CameraPanel` with a no-op, reading from `liveColorRef.current` strictly on Shutter Capture. Passed the verification QA suite cleanly.
+  - **Details:** COMPLETE â€” Destructured `liveColorRef` in `CameraTrackerProps` and updated it at 5Hz inside the frame processor, bypassing parent re-renders. Replaced the 5Hz callback inside `CameraPanel` with a no-op, reading from `liveColorRef.current` strictly on Shutter Capture. Passed the verification QA suite cleanly.
 
 ---
 
-### Sprint: v3.6.3 — 2026-05-27 (camera-v2)
+### Sprint: v3.6.3 â€” 2026-05-27 (camera-v2)
 
-### [BATCH:camera-v2] — ⚡ (Complete)
+### [BATCH:camera-v2] â€” âš¡ (Complete)
 
-- [x] **`feat/camera-vibe-catcher-v2`** — Complete Camera Vibe Catcher v2 redesign using VisionCamera v5 and K-Means. Merged `24cb371`.
-  - **Tags:** `[✅ VERIFIED]` `[✅ VERIFIED]` `[UI]` `[H-RISK]` `[Feast]` `[🤖 THINK]` `[BATCH:camera-v2]`
-  - **Plan:** 📎 [PLAN-camera-vibe-catcher-v2.md](./plans/PLAN-camera-vibe-catcher-v2.md)
-  - **Source of Truth:** 📖 [Image.nitro.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/node_modules/react-native-nitro-image/src/specs/Image.nitro.ts#L138) §crop() API, [PreviewView.nitro.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/node_modules/react-native-vision-camera/src/specs/views/PreviewView.nitro.ts#L112) §takeSnapshot @platform Android, [useDockedControllerState.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDockedControllerState.ts#L8) §BuilderNode interface
-  - **Goal:** Complete camera mode restart: replace broken `takeSnapshot()` + Nitro Image pipeline with cross-platform `useFrameProcessor` + `vision-camera-resize-plugin`. Add SNIPER (center-pixel solid color) and VIBE (K-Means 3-color palette → auto-Builder payload) dual sub-modes.
-  - **Details:** COMPLETE — Migrated to the VisionCamera v5 API utilizing the GPU-backed `useFrameOutput` and `vision-camera-resize-plugin` (50x50 RGB scaling). Added SNIPER center-pixel sample targeting the 25x25 center element and VIBE K-Means (k=3, 5 iterations) clustering to automatically map dominant swatches to FG/BG/ACCENT. Wired static and flow custom spatial patterns to `0x59` BLE commands with padded 12-pixel buffer overflow protection. Files changed: CameraTracker.tsx, CameraPanel.tsx, DockedController.tsx, package.json, kMeansPalette.ts, and kMeansPalette.test.ts. Passed all local and E2E QA checks cleanly.
+- [x] **`feat/camera-vibe-catcher-v2`** â€” Complete Camera Vibe Catcher v2 redesign using VisionCamera v5 and K-Means. Merged `24cb371`.
+  - **Tags:** `[âœ… VERIFIED]` `[âœ… VERIFIED]` `[UI]` `[H-RISK]` `[Feast]` `[ðŸ¤– THINK]` `[BATCH:camera-v2]`
+  - **Plan:** ðŸ“Ž [PLAN-camera-vibe-catcher-v2.md](./plans/PLAN-camera-vibe-catcher-v2.md)
+  - **Source of Truth:** ðŸ“– [Image.nitro.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/node_modules/react-native-nitro-image/src/specs/Image.nitro.ts#L138) Â§crop() API, [PreviewView.nitro.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/node_modules/react-native-vision-camera/src/specs/views/PreviewView.nitro.ts#L112) Â§takeSnapshot @platform Android, [useDockedControllerState.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDockedControllerState.ts#L8) Â§BuilderNode interface
+  - **Goal:** Complete camera mode restart: replace broken `takeSnapshot()` + Nitro Image pipeline with cross-platform `useFrameProcessor` + `vision-camera-resize-plugin`. Add SNIPER (center-pixel solid color) and VIBE (K-Means 3-color palette â†’ auto-Builder payload) dual sub-modes.
+  - **Details:** COMPLETE â€” Migrated to the VisionCamera v5 API utilizing the GPU-backed `useFrameOutput` and `vision-camera-resize-plugin` (50x50 RGB scaling). Added SNIPER center-pixel sample targeting the 25x25 center element and VIBE K-Means (k=3, 5 iterations) clustering to automatically map dominant swatches to FG/BG/ACCENT. Wired static and flow custom spatial patterns to `0x59` BLE commands with padded 12-pixel buffer overflow protection. Files changed: CameraTracker.tsx, CameraPanel.tsx, DockedController.tsx, package.json, kMeansPalette.ts, and kMeansPalette.test.ts. Passed all local and E2E QA checks cleanly.
 
 ---
 
-### Sprint: v3.6.3 — 2026-05-27 (permission-gating)
+### Sprint: v3.6.3 â€” 2026-05-27 (permission-gating)
 
-### [BATCH:permission-gating] — ⚡ (Complete)
+### [BATCH:permission-gating] â€” âš¡ (Complete)
 
-- [x] **`feat/strict-permission-gating`** — Fixed 3 permission bugs + reactive dock icon gating. Merged `51104a3`.
-  - **Tags:** `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:permission-gating]`
-  - **Plan:** 📎 [PLAN-strict-permission-gating.md](./plans/PLAN-strict-permission-gating.md)
-  - **Source of Truth:** 📖 `PermissionService.ts`, `DockedDock.tsx`, `DockedController.tsx`, `app.json`
+- [x] **`feat/strict-permission-gating`** â€” Fixed 3 permission bugs + reactive dock icon gating. Merged `51104a3`.
+  - **Tags:** `[âœ… VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[ðŸ¤– PRO-HIGH]` `[BATCH:permission-gating]`
+  - **Plan:** ðŸ“Ž [PLAN-strict-permission-gating.md](./plans/PLAN-strict-permission-gating.md)
+  - **Source of Truth:** ðŸ“– `PermissionService.ts`, `DockedDock.tsx`, `DockedController.tsx`, `app.json`
   - **Goal:** Fix 3 permission bugs + enforce strict reactive UI gating for CAMERA/STREET dock icons.
-  - **Details:** COMPLETE — BUG-1: Added ACTIVITY_RECOGNITION to app.json android.permissions. BUG-2: Gated CAMERA mode behind checkPermission + openGlobalPermissionsModal. BUG-3: Gated STREET mode behind LOCATION check. Added reactive dock visibility via PERMISSION_STATUS_CHANGED_EVENT + AppState listener. Favorite restore for CAMERA falls back to MULTIMODE if denied. Files changed: app.json, PermissionService.ts, DockedController.tsx, DockedDock.tsx.
+  - **Details:** COMPLETE â€” BUG-1: Added ACTIVITY_RECOGNITION to app.json android.permissions. BUG-2: Gated CAMERA mode behind checkPermission + openGlobalPermissionsModal. BUG-3: Gated STREET mode behind LOCATION check. Added reactive dock visibility via PERMISSION_STATUS_CHANGED_EVENT + AppState listener. Favorite restore for CAMERA falls back to MULTIMODE if denied. Files changed: app.json, PermissionService.ts, DockedController.tsx, DockedDock.tsx.
 
-- [x] **`feat/offline-guest-gating`** — Gated cloud publishing and community scenes behind offline mode. Merged `ccf4f2f`.
-  - **Tags:** `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:permission-gating]`
-  - **Plan:** 📎 [PLAN-offline-guest-gating.md](./plans/PLAN-offline-guest-gating.md)
-  - **Source of Truth:** 📖 `Supabase` Session State and UI Layouts
+- [x] **`feat/offline-guest-gating`** â€” Gated cloud publishing and community scenes behind offline mode. Merged `ccf4f2f`.
+  - **Tags:** `[âœ… VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[ðŸ¤– PRO-HIGH]` `[BATCH:permission-gating]`
+  - **Plan:** ðŸ“Ž [PLAN-offline-guest-gating.md](./plans/PLAN-offline-guest-gating.md)
+  - **Source of Truth:** ðŸ“– `Supabase` Session State and UI Layouts
   - **Goal:** Implement an "Offline/Guest" mode that selectively hides cloud-dependent UI features.
-  - **Details:** COMPLETE — Propagated `isOfflineMode` through `DashboardScreen`, `DockedController`, `QuickPresetModal`, and `CommunityModal` to hide all cloud-based features and default to local "My Saves" appropriately. Passed QA Suite verification.
+  - **Details:** COMPLETE â€” Propagated `isOfflineMode` through `DashboardScreen`, `DockedController`, `QuickPresetModal`, and `CommunityModal` to hide all cloud-based features and default to local "My Saves" appropriately. Passed QA Suite verification.
 
 ---
 
-### Sprint: v3.6.3 — 2026-05-26 (camera-color-swatch-redesign)
+### Sprint: v3.6.3 â€” 2026-05-26 (camera-color-swatch-redesign)
 
-- [x] **`feat/camera-color-swatch-redesign`** — Platform-split color analysis (Android TextureView + iOS worklet), center crop, neutral white snap, and 5-swatch UI palette. Merged `7c254f60`.
-  - **Tags:** `[✅ DONE]` `[✅ VERIFIED]` `[UI]` `[H-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:camera-color-swatch-redesign]`
-  - **Plan:** 📎 [PLAN-camera-color-swatch-redesign.md](./plans/PLAN-camera-color-swatch-redesign.md)
-  - **Source of Truth:** 📖 [ZENGGE_PROTOCOL_BIBLE.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/ZENGGE_PROTOCOL_BIBLE.md#L306) §0x59 Static Colorful Pixel Array
+- [x] **`feat/camera-color-swatch-redesign`** â€” Platform-split color analysis (Android TextureView + iOS worklet), center crop, neutral white snap, and 5-swatch UI palette. Merged `7c254f60`.
+  - **Tags:** `[âœ… DONE]` `[âœ… VERIFIED]` `[UI]` `[H-RISK]` `[Meal]` `[ðŸ¤– PRO-HIGH]` `[BATCH:camera-color-swatch-redesign]`
+  - **Plan:** ðŸ“Ž [PLAN-camera-color-swatch-redesign.md](./plans/PLAN-camera-color-swatch-redesign.md)
+  - **Source of Truth:** ðŸ“– [ZENGGE_PROTOCOL_BIBLE.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/ZENGGE_PROTOCOL_BIBLE.md#L306) Â§0x59 Static Colorful Pixel Array
   - **Goal:** Split Android & iOS camera tracking, implement center crop & neutral snap gate, and build a 5-swatch tactile UI.
-  - **Details:** COMPLETE — Successfully split the CameraTracker hook into Android (TextureView takeSnapshot) and iOS (worklet useFrameOutput) platforms, resolving the Android react-native-worklets crash. Implemented a 32x32 center crop with 1x1 resize to average color over reticle rather than whole frame. Added a delta < 0.15 neutral white snapping gate to stop noisy green/blue drift. Completely redesigned CameraPanel to support a scrollable row of up to 5 captured tactile color swatches. Passed all verifiable checks cleanly.
+  - **Details:** COMPLETE â€” Successfully split the CameraTracker hook into Android (TextureView takeSnapshot) and iOS (worklet useFrameOutput) platforms, resolving the Android react-native-worklets crash. Implemented a 32x32 center crop with 1x1 resize to average color over reticle rather than whole frame. Added a delta < 0.15 neutral white snapping gate to stop noisy green/blue drift. Completely redesigned CameraPanel to support a scrollable row of up to 5 captured tactile color swatches. Passed all verifiable checks cleanly.
 
 ---
 
-### Sprint: v3.6.2 — 2026-05-26 (music-mode-fix)
+### Sprint: v3.6.2 â€” 2026-05-26 (music-mode-fix)
 
-- [x] **`fix/music-mode-payload-cap`** — Capped magnitude stream to 150 and disabled built-in mic when App mic active. Merged `99550a0`.
-  - **Tags:** `[✅ DONE]` `[✅ VERIFIED]` `[CORE]` `[M-RISK]` `[Snack]` `[🤖 PRO-HIGH]` `[BATCH:music-mode-fix]`
-  - **Plan:** 📎 [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity-ide/brain/3f09133f-0b00-4051-bb43-79e27aa0f099/implementation_plan.md)
-  - **Source of Truth:** 📖 [ZENGGE_PROTOCOL_BIBLE.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/ZENGGE_PROTOCOL_BIBLE.md#L773) §Music Mode and [MusicModeFragment.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/com/zengge/wifi/activity/NewSymphony/fragment/MusicModeFragment.java#L595)
+- [x] **`fix/music-mode-payload-cap`** â€” Capped magnitude stream to 150 and disabled built-in mic when App mic active. Merged `99550a0`.
+  - **Tags:** `[âœ… DONE]` `[âœ… VERIFIED]` `[CORE]` `[M-RISK]` `[Snack]` `[ðŸ¤– PRO-HIGH]` `[BATCH:music-mode-fix]`
+  - **Plan:** ðŸ“Ž [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity-ide/brain/3f09133f-0b00-4051-bb43-79e27aa0f099/implementation_plan.md)
+  - **Source of Truth:** ðŸ“– [ZENGGE_PROTOCOL_BIBLE.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/ZENGGE_PROTOCOL_BIBLE.md#L773) Â§Music Mode and [MusicModeFragment.java](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/ZENGGE_APK/ZENGGE_DECOMPILED/sources/com/zengge/wifi/activity/NewSymphony/fragment/MusicModeFragment.java#L595)
   - **Goal:** Fix the `isOn` microphone toggle routing and scale magnitude limits to 150 to stop ambient visualizer pattern cycling.
-  - **Details:** COMPLETE — Capped real-time App mic magnitude stream to 150 (down from 255) to prevent physical controller saturation/visualizer lockout, and corrected the 0x73 'isOn' byte routing to dynamically toggle off the hardware microphone in App Mic mode.
+  - **Details:** COMPLETE â€” Capped real-time App mic magnitude stream to 150 (down from 255) to prevent physical controller saturation/visualizer lockout, and corrected the 0x73 'isOn' byte routing to dynamically toggle off the hardware microphone in App Mic mode.
 
 ---
 
-### Sprint: v3.9.0 — 2026-05-26 (rf-remote)
+### Sprint: v3.9.0 â€” 2026-05-26 (rf-remote)
 
-- [x] **`spike/rf-remote-2.4g-settings`** — Corrected RF remote state opcodes and integrated DeviceSettingsModal into DashboardScreen. Merged `f94a0b5d`.
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[LAB]` `[H-RISK]` `[Snack]` `[🤖 THINK]` `[BATCH:rf-remote]`
-  - **Plan:** 📎 [PLAN-spike-rf-remote-2.4g-settings.md](./plans/PLAN-spike-rf-remote-2.4g-settings.md)
-  - **Source of Truth:** 📖 [ZENGGE_PROTOCOL_BIBLE.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/ZENGGE_PROTOCOL_BIBLE.md#L1) §RF Remote Settings
+- [x] **`spike/rf-remote-2.4g-settings`** â€” Corrected RF remote state opcodes and integrated DeviceSettingsModal into DashboardScreen. Merged `f94a0b5d`.
+  - **Tags:** `[âœ… READY]` `[âœ… VERIFIED]` `[LAB]` `[H-RISK]` `[Snack]` `[ðŸ¤– THINK]` `[BATCH:rf-remote]`
+  - **Plan:** ðŸ“Ž [PLAN-spike-rf-remote-2.4g-settings.md](./plans/PLAN-spike-rf-remote-2.4g-settings.md)
+  - **Source of Truth:** ðŸ“– [ZENGGE_PROTOCOL_BIBLE.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/ZENGGE_PROTOCOL_BIBLE.md#L1) Â§RF Remote Settings
   - **Goal:** Reverse engineer and implement the 2.4G RF Remote Settings (Allow All, Don't Allow, Paired Only, Clear Pairing).
-  - **Details:** COMPLETE — Fixed inverted `ALLOW_ALL` (0x01), `ALLOW_NONE` (0x02), and `ALLOW_PAIRED` (0x03) byte mappings in `ZenggeProtocol.ts`, updated parsing mappings, added comprehensive unit tests, and fully imported/rendered the settings modal in `DashboardScreen.tsx` so long-pressing a device card displays the settings modal end-to-end.
+  - **Details:** COMPLETE â€” Fixed inverted `ALLOW_ALL` (0x01), `ALLOW_NONE` (0x02), and `ALLOW_PAIRED` (0x03) byte mappings in `ZenggeProtocol.ts`, updated parsing mappings, added comprehensive unit tests, and fully imported/rendered the settings modal in `DashboardScreen.tsx` so long-pressing a device card displays the settings modal end-to-end.
 
 ---
 
-### Sprint: v3.8.0 — 2026-05-26 (supabase-security)
+### Sprint: v3.8.0 â€” 2026-05-26 (supabase-security)
 
-- [x] **`chore/audit-supabase-security`** — Hardened PL/pgSQL function search paths and RLS policies on skate_spots, sk8lytz_app_settings, and telemetry. Merged `539dc791`.
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CLOUD]` `[H-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:supabase-security]`
-  - **Plan:** 📎 [PLAN-chore-audit-supabase-security.md](./plans/PLAN-chore-audit-supabase-security.md)
-  - **Source of Truth:** 📖 [SK8Lytz_App_Master_Reference.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SK8Lytz_App_Master_Reference.md#L309) §Admin Tools Hub
+- [x] **`chore/audit-supabase-security`** â€” Hardened PL/pgSQL function search paths and RLS policies on skate_spots, sk8lytz_app_settings, and telemetry. Merged `539dc791`.
+  - **Tags:** `[âœ… READY]` `[âœ… VERIFIED]` `[CLOUD]` `[H-RISK]` `[Meal]` `[ðŸ¤– PRO-HIGH]` `[BATCH:supabase-security]`
+  - **Plan:** ðŸ“Ž [PLAN-chore-audit-supabase-security.md](./plans/PLAN-chore-audit-supabase-security.md)
+  - **Source of Truth:** ðŸ“– [SK8Lytz_App_Master_Reference.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SK8Lytz_App_Master_Reference.md#L309) Â§Admin Tools Hub
   - **Goal:** Fix Supabase RLS policies and mutable search paths.
-  - **Details:** COMPLETE — Hardened PL/pgSQL function search paths, dropped permissive RLS overrides on sk8lytz_app_settings, removed public write exposures on skate_spots, and fixed the broken admin select filter on discovered_devices_telemetry. Excluded inventory product_catalog from scope.
+  - **Details:** COMPLETE â€” Hardened PL/pgSQL function search paths, dropped permissive RLS overrides on sk8lytz_app_settings, removed public write exposures on skate_spots, and fixed the broken admin select filter on discovered_devices_telemetry. Excluded inventory product_catalog from scope.
 
 ---
 
-### Sprint: v3.7.0 — 2026-05-26 (tooling + chores + camera + music)
+### Sprint: v3.7.0 â€” 2026-05-26 (tooling + chores + camera + music)
 
-- [x] **`fix(tooling)/fortress-gatekeeper-divergence`** — Patched gatekeeper to not destroy branches on failed --ff-only merge. Merged `053ed333`.
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]`
-  - **Details:** COMPLETE — Added rebase-before-merge step + exit code capture + `continue` on failure. Branch and worktree are now PRESERVED when merge fails. Victory Snapshot VS-001 written to `safety-protocol.md`.
+- [x] **`fix(tooling)/fortress-gatekeeper-divergence`** â€” Patched gatekeeper to not destroy branches on failed --ff-only merge. Merged `053ed333`.
+  - **Tags:** `[âœ… READY]` `[âœ… VERIFIED]` `[CORE]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]`
+  - **Details:** COMPLETE â€” Added rebase-before-merge step + exit code capture + `continue` on failure. Branch and worktree are now PRESERVED when merge fails. Victory Snapshot VS-001 written to `safety-protocol.md`.
 
-- [x] **`fix/missing-telemetry-script`** — Implemented `tools/sync_remote_errors.mjs`. Merged `57d04a80`.
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:telemetry-sync]`
-  - **Details:** COMPLETE — Native Node 18+ fetch, zero deps, queries Supabase `telemetry_errors`, prints triage table + top 5 errors. CLI flags: `--hours`, `--limit`, `--json`. Offline-safe. Windows UV_HANDLE crash fixed via `process.exitCode`.
+- [x] **`fix/missing-telemetry-script`** â€” Implemented `tools/sync_remote_errors.mjs`. Merged `57d04a80`.
+  - **Tags:** `[âœ… READY]` `[âœ… VERIFIED]` `[CORE]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:telemetry-sync]`
+  - **Details:** COMPLETE â€” Native Node 18+ fetch, zero deps, queries Supabase `telemetry_errors`, prints triage table + top 5 errors. CLI flags: `--hours`, `--limit`, `--json`. Offline-safe. Windows UV_HANDLE crash fixed via `process.exitCode`.
 
-- [x] **`chore/audit-npm-vulnerabilities`** — npm audit returned 0 vulnerabilities. Merged `6b20619f`.
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:vulnerability-fix]`
-  - **Details:** COMPLETE — Zero vulnerabilities found. Bucket list entry was stale. No package changes required.
+- [x] **`chore/audit-npm-vulnerabilities`** â€” npm audit returned 0 vulnerabilities. Merged `6b20619f`.
+  - **Tags:** `[âœ… READY]` `[âœ… VERIFIED]` `[CORE]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:vulnerability-fix]`
+  - **Details:** COMPLETE â€” Zero vulnerabilities found. Bucket list entry was stale. No package changes required.
 
-- [x] **`spike/rearchitect-camera-mode`** — Platform-split fix: Android TextureView + iOS worklet. Merged `939a5262`.
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[H-RISK]` `[Feast]` `[🤖 THINK]`
-  - **Details:** COMPLETE — 6 previous fixes all silently failed. Root causes: `takeSnapshot()` is `@platform Android` only; `implementationMode='performance'` (SurfaceView) doesn't support it; bare `catch{}` ate all errors; iOS had no valid fallback. Fix: Android uses TextureView + `takeSnapshot()`. iOS uses `useFrameOutput` worklet + `runOnJS`.
+- [x] **`spike/rearchitect-camera-mode`** â€” Platform-split fix: Android TextureView + iOS worklet. Merged `939a5262`.
+  - **Tags:** `[âœ… READY]` `[âœ… VERIFIED]` `[UI]` `[H-RISK]` `[Feast]` `[ðŸ¤– THINK]`
+  - **Details:** COMPLETE â€” 6 previous fixes all silently failed. Root causes: `takeSnapshot()` is `@platform Android` only; `implementationMode='performance'` (SurfaceView) doesn't support it; bare `catch{}` ate all errors; iOS had no valid fallback. Fix: Android uses TextureView + `takeSnapshot()`. iOS uses `useFrameOutput` worklet + `runOnJS`.
 
-- [x] **`fix/camera-mode-warmup-reset`** — Stabilized callback identity cascade and resolved Android warmup timer reset loop (stuck-on-pink bug). Merged `dc643b27`.
-  - **Tags:** `[✅ DONE]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Snack]` `[🤖 PRO-HIGH]`
-  - **Details:** COMPLETE — Wrote a stable callback wrapper for `onColorDetected` inside a `useRef` inside `CameraTracker.tsx` to stop warmup loops and leaks.
+- [x] **`fix/camera-mode-warmup-reset`** â€” Stabilized callback identity cascade and resolved Android warmup timer reset loop (stuck-on-pink bug). Merged `dc643b27`.
+  - **Tags:** `[âœ… DONE]` `[âœ… VERIFIED]` `[UI]` `[M-RISK]` `[Snack]` `[ðŸ¤– PRO-HIGH]`
+  - **Details:** COMPLETE â€” Wrote a stable callback wrapper for `onColorDetected` inside a `useRef` inside `CameraTracker.tsx` to stop warmup loops and leaks.
 
-- [x] **`fix/music-mode-ui-flex`** — Wired ColorSwatch FG/BG pickers in MusicPanel. Merged `2e6363fa`.
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[🤖 PRO-HIGH]`
-  - **Details:** COMPLETE — `ColorSwatch` wired + `overflow:'hidden'` clip removed.
+- [x] **`fix/music-mode-ui-flex`** â€” Wired ColorSwatch FG/BG pickers in MusicPanel. Merged `2e6363fa`.
+  - **Tags:** `[âœ… READY]` `[âœ… VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[ðŸ¤– PRO-HIGH]`
+  - **Details:** COMPLETE â€” `ColorSwatch` wired + `overflow:'hidden'` clip removed.
 
-- [x] **`fix/music-mode-color-inversion`** — Fixed APP mic deactivation in music mode. Merged `a303d409`.
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]`
-  - **Details:** COMPLETE — `src === 'DEVICE'` as isOn flag silently killed APP mic path.
+- [x] **`fix/music-mode-color-inversion`** â€” Fixed APP mic deactivation in music mode. Merged `a303d409`.
+  - **Tags:** `[âœ… READY]` `[âœ… VERIFIED]` `[CORE]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]`
+  - **Details:** COMPLETE â€” `src === 'DEVICE'` as isOn flag silently killed APP mic path.
 
-- [x] **`fix/music-mode-pattern-mapping`** — Fixed colorMode, modeType passthrough, effectId clamp. Merged `4e41f7b8`.
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[L-RISK]` `[Meal]` `[🤖 PRO-HIGH]`
-  - **Details:** COMPLETE — 3 bugs across MusicDictionary, ZenggeAdapter, ZenggeProtocol.
+- [x] **`fix/music-mode-pattern-mapping`** â€” Fixed colorMode, modeType passthrough, effectId clamp. Merged `4e41f7b8`.
+  - **Tags:** `[âœ… READY]` `[âœ… VERIFIED]` `[CORE]` `[L-RISK]` `[Meal]` `[ðŸ¤– PRO-HIGH]`
+  - **Details:** COMPLETE â€” 3 bugs across MusicDictionary, ZenggeAdapter, ZenggeProtocol.
 
 ---
 
-### Sprint: v3.6.0 — 2026-05-26
+### Sprint: v3.6.0 â€” 2026-05-26
 
-- [x] **`fix/health-telemetry-autostart`** — Auto-started HealthKit/HealthConnect bridges before polling. Merged `03096cf3`.
-  - **Tags:** `[✅ DONE]` `[✅ VERIFIED]` `[CORE]` `[M-RISK]` `[Snack]` `[🤖 PRO-HIGH]` `[BATCH:core-app-lifecycle]`
-  - **Details:** COMPLETE — Injected `AppleHealthKit.initHealthKit()` (iOS) and `initialize()` (Android Health Connect) at the top of each `pollHealthData()` cycle.
+- [x] **`fix/health-telemetry-autostart`** â€” Auto-started HealthKit/HealthConnect bridges before polling. Merged `03096cf3`.
+  - **Tags:** `[âœ… DONE]` `[âœ… VERIFIED]` `[CORE]` `[M-RISK]` `[Snack]` `[ðŸ¤– PRO-HIGH]` `[BATCH:core-app-lifecycle]`
+  - **Details:** COMPLETE â€” Injected `AppleHealthKit.initHealthKit()` (iOS) and `initialize()` (Android Health Connect) at the top of each `pollHealthData()` cycle.
 
-- [x] **`spike/appstate-ble-reconnect`** — Autonomous recovery on appstate wake. Merged `f518d38f`.
-  - **Tags:** `[✅ DONE]` `[✅ VERIFIED]` `[CORE]` `[M-RISK]` `[Meal]` `[🤖 THINK]` `[BATCH:core-app-lifecycle]`
-  - **Details:** COMPLETE — Added a 1500ms OS stack wakeup delay to `retriggerAutoConnect` and implemented a native `isDeviceConnected` audit in `useBLE.ts` to clear stale split-brain connections when the app wakes up.
+- [x] **`spike/appstate-ble-reconnect`** â€” Autonomous recovery on appstate wake. Merged `f518d38f`.
+  - **Tags:** `[âœ… DONE]` `[âœ… VERIFIED]` `[CORE]` `[M-RISK]` `[Meal]` `[ðŸ¤– THINK]` `[BATCH:core-app-lifecycle]`
+  - **Details:** COMPLETE â€” Added a 1500ms OS stack wakeup delay to `retriggerAutoConnect` and implemented a native `isDeviceConnected` audit in `useBLE.ts` to clear stale split-brain connections when the app wakes up.
 
-- [x] **`feat/dashboard-pull-to-refresh`** — Add pull-to-refresh to dashboard for manual BLE sweep. Merged `f8c0b2bd`.
-  - **Tags:** `[✅ DONE]` `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:core-app-lifecycle]`
-  - **Details:** COMPLETE — Wrapped `DashboardScreen` main `ScrollView` with `RefreshControl`. Triggered `retriggerAutoConnectRef.current()` on pull.
+- [x] **`feat/dashboard-pull-to-refresh`** â€” Add pull-to-refresh to dashboard for manual BLE sweep. Merged `f8c0b2bd`.
+  - **Tags:** `[âœ… DONE]` `[âœ… VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:core-app-lifecycle]`
+  - **Details:** COMPLETE â€” Wrapped `DashboardScreen` main `ScrollView` with `RefreshControl`. Triggered `retriggerAutoConnectRef.current()` on pull.
 
-- [x] **`feat/crew-hub-radius-refresh`** — Added 10mi radius option. Merged `7aa002c5`.
-  - **Tags:** `[✅ DONE]` `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:crew-hub-enhancements]`
-  - **Details:** COMPLETE — Added 10 miles to the "Live Near You" map radius dropdown.
+- [x] **`feat/crew-hub-radius-refresh`** â€” Added 10mi radius option. Merged `7aa002c5`.
+  - **Tags:** `[âœ… DONE]` `[âœ… VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:crew-hub-enhancements]`
+  - **Details:** COMPLETE â€” Added 10 miles to the "Live Near You" map radius dropdown.
 
-- [x] **`fix/crew-hub-collapsed-padding`** — Fixed CrewHubSlab vertical padding state. Merged `7aa002c5`.
-  - **Tags:** `[✅ DONE]` `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:crew-hub-enhancements]`
-  - **Details:** COMPLETE — Collapse padding when collapsed.
+- [x] **`fix/crew-hub-collapsed-padding`** â€” Fixed CrewHubSlab vertical padding state. Merged `7aa002c5`.
+  - **Tags:** `[âœ… DONE]` `[âœ… VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:crew-hub-enhancements]`
+  - **Details:** COMPLETE â€” Collapse padding when collapsed.
 
-- [x] **`feat/crew-hub-mini-map`** — Added MapViewCluster inside slab. Merged `7aa002c5`.
-  - **Tags:** `[✅ DONE]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:crew-hub-enhancements]`
-  - **Details:** COMPLETE — Added native mini-map static view inside collapsed slab.
+- [x] **`feat/crew-hub-mini-map`** â€” Added MapViewCluster inside slab. Merged `7aa002c5`.
+  - **Tags:** `[âœ… DONE]` `[âœ… VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[ðŸ¤– PRO-HIGH]` `[BATCH:crew-hub-enhancements]`
+  - **Details:** COMPLETE â€” Added native mini-map static view inside collapsed slab.
 
-- [x] **`chore/remove-test-category`** — Removed Test category from engine and UI. Merged `7aa002c5`.
-  - **Tags:** `[✅ DONE]` `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:pro-effects-cleanup]`
-  - **Details:** COMPLETE — Stripped all `group: 'Test'` entries.
+- [x] **`chore/remove-test-category`** â€” Removed Test category from engine and UI. Merged `7aa002c5`.
+  - **Tags:** `[âœ… DONE]` `[âœ… VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:pro-effects-cleanup]`
+  - **Details:** COMPLETE â€” Stripped all `group: 'Test'` entries.
 
-- [x] **`feat/universal-slider-labels`** — Refactored TacticalSlider labels inline. Merged `7aa002c5`.
-  - **Tags:** `[✅ DONE]` `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:universal-sliders]`
-  - **Details:** COMPLETE — Added `label` prop to `TacticalSlider.tsx`.
+- [x] **`feat/universal-slider-labels`** â€” Refactored TacticalSlider labels inline. Merged `7aa002c5`.
+  - **Tags:** `[âœ… DONE]` `[âœ… VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:universal-sliders]`
+  - **Details:** COMPLETE â€” Added `label` prop to `TacticalSlider.tsx`.
 
 ---
 
 ### Sprint: v3.5.2 and prior
 
-- [x] **`fix/detective-social-only-sites`** — Yelp/Places search on social-only sites. Merged auto-cleaned.
-- [x] **`fix/detective-google-photo-refs`** — Harvest photo references from Places. Merged auto-cleaned.
-- [x] **`fix/detective-escalation-all-passes`** — Re-run LLM passes on enriched text. Merged auto-cleaned.
-- [x] **`spike/detective-model-upgrade-7b`** — 7B/8B model evaluation (GDDR6 VRAM optimization). Merged auto-cleaned.
-- [x] **`feat/user-correction-feedback-loop`** — Log PUT spots feedback loop. Merged auto-cleaned.
-- [x] **`feat/review-text-mining`** — Regex mine reviews for structured data. Merged auto-cleaned.
-- [x] **`hotfix/data-integrity-guards`** — Preserved data upsert guards. Merged `1289dae4`.
-- [x] **`chore/test-usecontrollerdispatch`** — Mocked dispatch testing suite. Merged `7ff122d7`.
-- [x] **`fix/gatt-conn-133-exception`** — Android GATT 133 retries/teardown. Merged `df7a3c40`.
-- [x] **`feat/detox-e2e-automation`** — Detox E2E tests for React Native. Merged `94e52cd8`.
-- [x] **`chore/consolidate-rules-workflows`** — Rules consolidation (behavior and safety). Merged `17971a6`.
-- [x] **`chore/align-git-workflows`** — Unified attestation gating on git workflows. Merged `8bdea378`.
-- [x] **`chore/verifiable-attestation`** — Verifiable QA check-runner with cryptographic attestations. Merged `46f95b12`.
-- [x] **`chore/worktree-junction-tsc`** — Enable Directory Junctions for worktrees. Merged `214d4249`.
-- [x] **`test/component-smoke`** — Static parser checks for container views relative imports. Merged `214d4249`.
-- [x] **`chore/eslint-import-gate`** — ESLint Flat Config + unused-import gates. Merged `214d4249`.
-- [x] **`fix/split-brain-hygiene`** — Unified shared favorites and deleted dead stubs. Merged `15db163e`.
-- [x] **`fix/ble-split-brain`** — Unified single BLEProvider context. Merged `6b8e6917`.
-- [x] **`fix/two-way-health-sync`** — Push workout data natively to HealthKit/HealthConnect. Merged `b75f3f52`.
-- [x] **`fix/telemetry-hardening-v2`** — Consolidated AppLogger telemetry channels. Merged `6ef76e05`.
-- [x] **`feat/babel-syntax-gate`** — Pre-commit static AST syntax validator. Merged `6ef76e05`.
-- [x] **`fix/black-hole-errors`** — CENTRALIZED production error visibility in BLE. Merged `f63a44c6`.
-- [x] **`feat/geofence-rink-sync`** — social radar check-in geofence. Merged `c18bae6`.
-- [x] **`feat/health-sync-integration`** — skating health telemetry sync. Merged `9168b2e`.
-- [x] **`feat/scene-offline-sync-queue`** — offline AsyncStorage sync queues. Merged `fe99fb3f`.
-- [x] **`spike/ios-android-parity-audit`** — Android takeSnapshot TextureView + iOS worklet parity. Merged `f0516ac9`.
+- [x] **`fix/detective-social-only-sites`** â€” Yelp/Places search on social-only sites. Merged auto-cleaned.
+- [x] **`fix/detective-google-photo-refs`** â€” Harvest photo references from Places. Merged auto-cleaned.
+- [x] **`fix/detective-escalation-all-passes`** â€” Re-run LLM passes on enriched text. Merged auto-cleaned.
+- [x] **`spike/detective-model-upgrade-7b`** â€” 7B/8B model evaluation (GDDR6 VRAM optimization). Merged auto-cleaned.
+- [x] **`feat/user-correction-feedback-loop`** â€” Log PUT spots feedback loop. Merged auto-cleaned.
+- [x] **`feat/review-text-mining`** â€” Regex mine reviews for structured data. Merged auto-cleaned.
+- [x] **`hotfix/data-integrity-guards`** â€” Preserved data upsert guards. Merged `1289dae4`.
+- [x] **`chore/test-usecontrollerdispatch`** â€” Mocked dispatch testing suite. Merged `7ff122d7`.
+- [x] **`fix/gatt-conn-133-exception`** â€” Android GATT 133 retries/teardown. Merged `df7a3c40`.
+- [x] **`feat/detox-e2e-automation`** â€” Detox E2E tests for React Native. Merged `94e52cd8`.
+- [x] **`chore/consolidate-rules-workflows`** â€” Rules consolidation (behavior and safety). Merged `17971a6`.
+- [x] **`chore/align-git-workflows`** â€” Unified attestation gating on git workflows. Merged `8bdea378`.
+- [x] **`chore/verifiable-attestation`** â€” Verifiable QA check-runner with cryptographic attestations. Merged `46f95b12`.
+- [x] **`chore/worktree-junction-tsc`** â€” Enable Directory Junctions for worktrees. Merged `214d4249`.
+- [x] **`test/component-smoke`** â€” Static parser checks for container views relative imports. Merged `214d4249`.
+- [x] **`chore/eslint-import-gate`** â€” ESLint Flat Config + unused-import gates. Merged `214d4249`.
+- [x] **`fix/split-brain-hygiene`** â€” Unified shared favorites and deleted dead stubs. Merged `15db163e`.
+- [x] **`fix/ble-split-brain`** â€” Unified single BLEProvider context. Merged `6b8e6917`.
+- [x] **`fix/two-way-health-sync`** â€” Push workout data natively to HealthKit/HealthConnect. Merged `b75f3f52`.
+- [x] **`fix/telemetry-hardening-v2`** â€” Consolidated AppLogger telemetry channels. Merged `6ef76e05`.
+- [x] **`feat/babel-syntax-gate`** â€” Pre-commit static AST syntax validator. Merged `6ef76e05`.
+- [x] **`fix/black-hole-errors`** â€” CENTRALIZED production error visibility in BLE. Merged `f63a44c6`.
+- [x] **`feat/geofence-rink-sync`** â€” social radar check-in geofence. Merged `c18bae6`.
+- [x] **`feat/health-sync-integration`** â€” skating health telemetry sync. Merged `9168b2e`.
+- [x] **`feat/scene-offline-sync-queue`** â€” offline AsyncStorage sync queues. Merged `fe99fb3f`.
+- [x] **`spike/ios-android-parity-audit`** â€” Android takeSnapshot TextureView + iOS worklet parity. Merged `f0516ac9`.
 
 
 ---
 
-### Sprint: v3.9.1 — 2026-06-06 (session-integrity)
+### Sprint: v3.9.1 â€” 2026-06-06 (session-integrity)
 
-### [BATCH:session-integrity] — 📋 Sequential (Complete)
+### [BATCH:session-integrity] â€” ðŸ“‹ Sequential (Complete)
 
-- [x] **`fix/session-watch-stale-closure`** — `[75f5cbf7] Unified batch completed successfully`
-  - **Tags:** `[✅ VERIFIED]` `[UI]` `[H-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:session-integrity]`
+- [x] **`fix/session-watch-stale-closure`** â€” `[75f5cbf7] Unified batch completed successfully`
+  - **Tags:** `[âœ… VERIFIED]` `[UI]` `[H-RISK]` `[Meal]` `[ðŸ¤– PRO-HIGH]` `[BATCH:session-integrity]`
   - **Outcome:** Added `endSessionRef` stable-ref forwarder to `SessionContext.tsx`. `notifee.onBackgroundEvent`, `AppState` listener, and 10s STOPPED watchdog all call through the stable wrapper, eliminating the stale-closure data-loss bug.
 
-- [x] **`fix/session-appstate-deps-loop`** — `[75f5cbf7] Unified batch completed successfully`
-  - **Tags:** `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Snack]` `[🤖 PRO-HIGH]` `[BATCH:session-integrity]`
-  - **Outcome:** Removed `sessionPhase` from the `AppState` listener `useEffect` dependency array in `SessionContext.tsx`. Listener now registered once on mount — eliminates double-registration and racing double-pause on background.
+- [x] **`fix/session-appstate-deps-loop`** â€” `[75f5cbf7] Unified batch completed successfully`
+  - **Tags:** `[âœ… VERIFIED]` `[UI]` `[M-RISK]` `[Snack]` `[ðŸ¤– PRO-HIGH]` `[BATCH:session-integrity]`
+  - **Outcome:** Removed `sessionPhase` from the `AppState` listener `useEffect` dependency array in `SessionContext.tsx`. Listener now registered once on mount â€” eliminates double-registration and racing double-pause on background.
 
-- [x] **`fix/session-autopause-starttime`** — `[75f5cbf7] Unified batch completed successfully`
-  - **Tags:** `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Snack]` `[🤖 PRO-HIGH]` `[BATCH:session-integrity]`
-  - **Outcome:** Removed the redundant `WatchBridge.syncSessionState` call in `SessionContext.tsx` auto-resume path. `useGlobalTelemetry` already pushes the correctly shifted anchor — the SessionContext push was overwriting it with `new Date()` (wrong).
+- [x] **`fix/session-autopause-starttime`** â€” `[75f5cbf7] Unified batch completed successfully`
+  - **Tags:** `[âœ… VERIFIED]` `[UI]` `[M-RISK]` `[Snack]` `[ðŸ¤– PRO-HIGH]` `[BATCH:session-integrity]`
+  - **Outcome:** Removed the redundant `WatchBridge.syncSessionState` call in `SessionContext.tsx` auto-resume path. `useGlobalTelemetry` already pushes the correctly shifted anchor â€” the SessionContext push was overwriting it with `new Date()` (wrong).
 
-- [x] **`fix/session-paused-persistence`** — `[75f5cbf7] Unified batch completed successfully`
-  - **Tags:** `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:session-integrity]`
+- [x] **`fix/session-paused-persistence`** â€” `[75f5cbf7] Unified batch completed successfully`
+  - **Tags:** `[âœ… VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:session-integrity]`
   - **Outcome:** `@sk8lytz_session_active` AsyncStorage key upgraded from `'true'`/`'false'` to `JSON.stringify({ state, pausedAt })`. On crash-recovery, PAUSED state restored correctly. Backward compat: legacy `'true'`/`'false'` values handled as `'active'`/`'idle'`.
 
-- [x] **`fix/session-background-end-data-loss`** — `[75f5cbf7] Unified batch completed successfully`
-  - **Tags:** `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:session-integrity]`
+- [x] **`fix/session-background-end-data-loss`** â€” `[75f5cbf7] Unified batch completed successfully`
+  - **Tags:** `[âœ… VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[ðŸ¤– PRO-HIGH]` `[BATCH:session-integrity]`
   - **Outcome:** `notifee.onBackgroundEvent` in `index.ts` now calls `WatchBridge.syncSessionState({ status: 'STOPPED' })` + sets `@sk8lytz_pending_bg_end` flag. On next foreground, `SessionContext` detects pending flag and runs full `commitSession()` with cached telemetry. Eliminated the silent total-data-loss path.
 
-- [x] **`fix/session-idle-race-summary`** — `[75f5cbf7] Unified batch completed successfully`
-  - **Tags:** `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:session-integrity]`
+- [x] **`fix/session-idle-race-summary`** â€” `[75f5cbf7] Unified batch completed successfully`
+  - **Tags:** `[âœ… VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[ðŸ¤– PRO-HIGH]` `[BATCH:session-integrity]`
   - **Outcome:** Added `'ENDING'` to `SessionPhase` type. `endSession()` sets `ENDING` first (keeps FGS alive), awaits SUMMARY push to watch, then sets `IDLE`. Updated `isSkateSessionActive` derivation and `useGlobalTelemetry` type guard.
 
-- [x] **`fix/session-watch-contract-audit`** — `[75f5cbf7] Unified batch completed successfully`
-  - **Tags:** `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:session-integrity]`
-  - **Outcome:** Documentation-only. Audited `WatchConnectivityManager.swift` L81-117 and `WearableCommunicationService.kt` L125-130 — both handle all 4 states. Added JSDoc contract comment to `WatchSessionState` type confirming native compliance.
+- [x] **`fix/session-watch-contract-audit`** â€” `[75f5cbf7] Unified batch completed successfully`
+  - **Tags:** `[âœ… VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:session-integrity]`
+  - **Outcome:** Documentation-only. Audited `WatchConnectivityManager.swift` L81-117 and `WearableCommunicationService.kt` L125-130 â€” both handle all 4 states. Added JSDoc contract comment to `WatchSessionState` type confirming native compliance.
 
 ---
 
-### Sprint: v3.9.1 — 2026-06-06 (ble-connection-resilience)
+### Sprint: v3.9.1 â€” 2026-06-06 (ble-connection-resilience)
 
-### [BATCH:ble-connection-resilience] — 📋 Sequential (Complete)
+### [BATCH:ble-connection-resilience] â€” ðŸ“‹ Sequential (Complete)
 
-- [x] **`fix/ble-gate-silent-invalid-transition`** — `[69f65537] Unified batch completed successfully`
-  - **Tags:** `[✅ VERIFIED]` `[BLE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:ble-connection-resilience]`
-  - **Outcome:** Added `AppLogger.error()` + `__DEV__` throw on invalid transitions in `BleStateMachine.ts`. Added `forceTransitionTo()` escape hatch. Added `SCANNING → DISCONNECTING` as valid transition. `setGate()` now checks return value. Error-recovery catch blocks use `forceTransitionTo()`. 3 new Jest tests.
+- [x] **`fix/ble-gate-silent-invalid-transition`** â€” `[69f65537] Unified batch completed successfully`
+  - **Tags:** `[âœ… VERIFIED]` `[BLE]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:ble-connection-resilience]`
+  - **Outcome:** Added `AppLogger.error()` + `__DEV__` throw on invalid transitions in `BleStateMachine.ts`. Added `forceTransitionTo()` escape hatch. Added `SCANNING â†’ DISCONNECTING` as valid transition. `setGate()` now checks return value. Error-recovery catch blocks use `forceTransitionTo()`. 3 new Jest tests.
 
-- [x] **`fix/ble-state-ref-lag`** — `[69f65537] Unified batch completed successfully`
-  - **Tags:** `[✅ VERIFIED]` `[BLE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:ble-connection-resilience]`
+- [x] **`fix/ble-state-ref-lag`** â€” `[69f65537] Unified batch completed successfully`
+  - **Tags:** `[âœ… VERIFIED]` `[BLE]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:ble-connection-resilience]`
   - **Outcome:** Created `setConnectedDevicesSync()` wrapper that updates both `connectedDevicesRef.current` AND calls `setConnectedDevices()` atomically. Replaced all callsites. Removed the sync `useEffect`. 1-frame lag eliminated.
 
-- [x] **`fix/ble-disconnect-stale-closure`** — `[69f65537] Unified batch completed successfully`
-  - **Tags:** `[✅ VERIFIED]` `[BLE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:ble-connection-resilience]`
-  - **Outcome:** Added `handleOrganicDisconnectRef` stable-ref forwarder. Passed stable wrapper to `useBLEAutoRecovery` and `BleConnectionManager`. Ref always updated on every render — stale closure eliminated.
+- [x] **`fix/ble-disconnect-stale-closure`** â€” `[69f65537] Unified batch completed successfully`
+  - **Tags:** `[âœ… VERIFIED]` `[BLE]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:ble-connection-resilience]`
+  - **Outcome:** Added `handleOrganicDisconnectRef` stable-ref forwarder. Passed stable wrapper to `useBLEAutoRecovery` and `BleConnectionManager`. Ref always updated on every render â€” stale closure eliminated.
 
-- [x] **`fix/ble-autoconnect-drain-permanent`** — `[69f65537] Unified batch completed successfully`
-  - **Tags:** `[✅ VERIFIED]` `[BLE]` `[M-RISK]` `[Snack]` `[🤖 PRO-HIGH]` `[BATCH:ble-connection-resilience]`
-  - **Outcome:** Added `failedAutoConnectRef: Map<string, { attempts, lastAttempt }>`. On failure: re-queues with backoff (1s → 4s → 12s). After 3 failures: ejects permanently. `retriggerAutoConnect()` clears failed map too.
+- [x] **`fix/ble-autoconnect-drain-permanent`** â€” `[69f65537] Unified batch completed successfully`
+  - **Tags:** `[âœ… VERIFIED]` `[BLE]` `[M-RISK]` `[Snack]` `[ðŸ¤– PRO-HIGH]` `[BATCH:ble-connection-resilience]`
+  - **Outcome:** Added `failedAutoConnectRef: Map<string, { attempts, lastAttempt }>`. On failure: re-queues with backoff (1s â†’ 4s â†’ 12s). After 3 failures: ejects permanently. `retriggerAutoConnect()` clears failed map too.
 
-- [x] **`fix/ble-ghost-state-flicker`** — `[69f65537] Unified batch completed successfully`
-  - **Tags:** `[✅ VERIFIED]` `[BLE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:ble-connection-resilience]`
+- [x] **`fix/ble-ghost-state-flicker`** â€” `[69f65537] Unified batch completed successfully`
+  - **Tags:** `[âœ… VERIFIED]` `[BLE]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:ble-connection-resilience]`
   - **Outcome:** Removed pre-dispatch ghost-clear from Group Dropout Coordinator. Ghost state now cleared exclusively in `.then()` success callback after `connectToDevices` resolves. Devices remain visually dimmed until confirmed reconnected.
 
-- [x] **`fix/ble-gatt-mutex-hotreload`** — `[69f65537] Unified batch completed successfully`
-  - **Tags:** `[✅ VERIFIED]` `[BLE]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:ble-connection-resilience]`
+- [x] **`fix/ble-gatt-mutex-hotreload`** â€” `[69f65537] Unified batch completed successfully`
+  - **Tags:** `[âœ… VERIFIED]` `[BLE]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:ble-connection-resilience]`
   - **Outcome:** Added `_generation` counter + `_hotReloadCleanup()` to `useBLEGattMutex.ts`. On Hot Reload: aborts current holder, resets lock, increments generation. `acquireGattLock` races against 200ms timeout for orphaned promises. Stall reduced from 15s to ~200ms.
 
-- [x] **`fix/ble-autoconnect-single-group`** — `[69f65537] Unified batch completed successfully`
-  - **Tags:** `[✅ VERIFIED]` `[BLE]` `[L-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:ble-connection-resilience]`
+- [x] **`fix/ble-autoconnect-single-group`** â€” `[69f65537] Unified batch completed successfully`
+  - **Tags:** `[âœ… VERIFIED]` `[BLE]` `[L-RISK]` `[Meal]` `[ðŸ¤– PRO-HIGH]` `[BATCH:ble-connection-resilience]`
   - **Outcome:** Replaced `groups[0]` single-group selection with `Set<string>` MAC aggregation across ALL groups. Both cloud and offline paths collect all unique device MACs. `retriggerAutoConnect()` also clears `autoConnectRetriesRef`.
 
 ---
 
-### Sprint: v3.9.1 — 2026-06-06 (account-critical)
+### Sprint: v3.9.1 â€” 2026-06-06 (account-critical)
 
-### [BATCH:account-critical] — 📋 Sequential (Complete)
+### [BATCH:account-critical] â€” ðŸ“‹ Sequential (Complete)
 
-- [x] **`fix/offline-session-persistence-queue`** — merged `76067e15` | C-01 CLOSED
-  - **Tags:** `[✅ VERIFIED]` `[CLOUD]` `[H-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:account-critical]`
+- [x] **`fix/offline-session-persistence-queue`** â€” merged `76067e15` | C-01 CLOSED
+  - **Tags:** `[âœ… VERIFIED]` `[CLOUD]` `[H-RISK]` `[Meal]` `[ðŸ¤– PRO-HIGH]` `[BATCH:account-critical]`
   - **Outcome:** `SpeedTrackingService.saveSession()` queues offline sessions to `@SK8Lytz_PendingSession_Queue`. `flushPendingSessionQueue()` with re-entrancy guard wired into `useOfflineSyncWorker` 60s loop. User sees Alert instead of silent data loss. 4 Jest tests. 129/129 passing.
 
-- [x] **`fix/offline-eula-bypass`** — merged `66fc95cf` | M-07 CLOSED
-  - **Tags:** `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:account-critical]`
+- [x] **`fix/offline-eula-bypass`** â€” merged `66fc95cf` | M-07 CLOSED
+  - **Tags:** `[âœ… VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:account-critical]`
   - **Outcome:** `ComplianceGate.tsx` offline bypass removed. First offline launch shows full `EulaModal`. Acceptance writes versioned JSON to `@Sk8lytz_offline_eula_accepted`. Subsequent launches pass immediately. Authenticated path unchanged.
 
-- [x] **`fix/session-expiry-ux-message`** — merged `72ea48a9` | M-02 CLOSED
-  - **Tags:** `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:account-critical]`
+- [x] **`fix/session-expiry-ux-message`** â€” merged `72ea48a9` | M-02 CLOSED
+  - **Tags:** `[âœ… VERIFIED]` `[UI]` `[L-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:account-critical]`
   - **Outcome:** `App.tsx` `init()` detects expired token via `@Sk8lytz_auth_last_email` after null `getSession()`. Amber banner on `AuthScreen`: "Your session expired. Please sign in again." Clears on `SIGNED_IN`. No banner on fresh install.
 
-- [x] **`fix/crew-delete-rpc`** — merged `d0cf72ee` | M-05 CLOSED
-  - **Tags:** `[✅ VERIFIED]` `[CLOUD]` `[M-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:account-critical]`
-  - **Outcome:** `AccountModal.tsx` `handleDeleteCrew` was calling `leavePermanentCrew` (membership-only removal). Fixed to call `profileService.deleteCrew()` — hard-deletes crew + cascades memberships + broadcasts `session_ended`. Service layer was already correct; only the UI handler was wrong.
+- [x] **`fix/crew-delete-rpc`** â€” merged `d0cf72ee` | M-05 CLOSED
+  - **Tags:** `[âœ… VERIFIED]` `[CLOUD]` `[M-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:account-critical]`
+  - **Outcome:** `AccountModal.tsx` `handleDeleteCrew` was calling `leavePermanentCrew` (membership-only removal). Fixed to call `profileService.deleteCrew()` â€” hard-deletes crew + cascades memberships + broadcasts `session_ended`. Service layer was already correct; only the UI handler was wrong.
 
-- [x] **`fix/offline-device-userid-stamp`** — NO-OP | M-06 CLOSED (defect does not exist)
-  - **Tags:** `[✅ VERIFIED]` `[CLOUD]` `[M-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:account-critical]`
+- [x] **`fix/offline-device-userid-stamp`** â€” NO-OP | M-06 CLOSED (defect does not exist)
+  - **Tags:** `[âœ… VERIFIED]` `[CLOUD]` `[M-RISK]` `[Snack]` `[ðŸ¤– FLASH]` `[BATCH:account-critical]`
   - **Outcome:** Audit finding was incorrect. `DeviceRepository._flushPendingSync(userId)` already receives `userId` from auth-gated `syncFromCloud()`. `dbRow.user_id = userId` at L704 stamps correctly at flush time. No null path exists.
 
+
+### [BATCH:account-hardening] — ✅ Completed 2026-06-06
+
+- [x] **efactor/auth-context-provider**
+  - **Goal:** Extract auth state from App.tsx into AuthContext so all screens share auth state and reduce getUser() calls.
+
+- [x] **ix/auth-tokens-secure-store**
+  - **Goal:** Replace AsyncStorage with expo-secure-store as the Supabase token storage adapter.
+
+- [x] **ix/password-change-reauth**
+  - **Goal:** Require current password verification before allowing password change in AccountModal.
+
+- [x] **eat/notif-prefs-cloud-sync**
+  - **Goal:** Sync notification preferences to user_profiles.notif_preferences JSONB.
+
 *End of Archive.*
+
