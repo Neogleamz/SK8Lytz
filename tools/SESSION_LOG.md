@@ -501,3 +501,12 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/components/DockedController.tsx, src/components/docked/FavoritesPanel.tsx, src/screens/DashboardScreen.tsx, src/components/crew/CrewJoinScreen.tsx
 
+
+### [MERGE] 2026-06-07T09:36 — refactor-deep-dive-os-permissions -> master @ 14dff9da
+**What merged:** 
+- Addressed conflicting location permissions in AndroidManifest.xml (removed redundant uses-permission-sdk-23 definitions).
+- Added missing Android 14+ FOREGROUND_SERVICE flags: FOREGROUND_SERVICE_LOCATION and FOREGROUND_SERVICE_CONNECTED_DEVICE.
+- Added try/catch wrapper around AsyncStorage.setItem() in PermissionService.ts to prevent telemetry drops.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** android/app/src/main/AndroidManifest.xml, src/services/PermissionService.ts
+
