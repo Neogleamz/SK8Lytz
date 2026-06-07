@@ -342,7 +342,7 @@ export function useBLEAutoRecovery({
               message: error.message,
               stack: error.stack,
               name: error.name,
-              status: (error as any).errorCode || (error as any).status || (error.message.includes('133') ? 133 : null)
+              status: (error as { errorCode?: number, status?: number }).errorCode || (error as { errorCode?: number, status?: number }).status || (error.message.includes('133') ? 133 : null)
             } : null;
             callbacksRef.current.onOrganicDisconnect(contextError, conn.id);
           });
@@ -439,7 +439,7 @@ export function useBLEAutoRecovery({
               message: error.message,
               stack: error.stack,
               name: error.name,
-              status: (error as any).errorCode || (error as any).status || (error.message.includes('133') ? 133 : null)
+              status: (error as { errorCode?: number, status?: number }).errorCode || (error as { errorCode?: number, status?: number }).status || (error.message.includes('133') ? 133 : null)
             } : null;
             callbacksRef.current.onOrganicDisconnect(contextError, conn.id);
           });
