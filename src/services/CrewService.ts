@@ -58,6 +58,10 @@ const MAX_MEMBERS_PER_SESSION  = 20;
 class CrewService {
   private channel: RealtimeChannel | null = null;
   private broadcastTimer: ReturnType<typeof setTimeout> | null = null;
+  private listeners: Set<() => void> = new Set();
+
+  /** The full session object this service instance is currently tracking. */
+  public currentSession: CrewSession | null = null;
   /** The session ID this service instance is currently tracking. */
   public currentSessionId: string | null = null;
   /** The role of the signed-in user in the current session. Set by createSession/joinSession. */
@@ -108,9 +112,11 @@ class CrewService {
     });
 
     await this._persistSession(session);
+    this.currentSession = session;
     this.currentSessionId = session.id;
     this.currentRole = 'leader';
     this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
+    this.emit();
     return session;
   }
 
@@ -190,9 +196,11 @@ class CrewService {
     if (memberErr) throw memberErr;
 
     await this._persistSession(session);
+    this.currentSession = session as CrewSession;
     this.currentSessionId = session.id;
     this.currentRole = user.id === session.leader_user_id ? 'leader' : 'member';
     this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
+    this.emit();
     return session as CrewSession;
   }
 
@@ -225,9 +233,11 @@ class CrewService {
     }, { onConflict: 'session_id,user_id' });
 
     await this._persistSession(session);
+    this.currentSession = session as CrewSession;
     this.currentSessionId = sessionId;
     this.currentRole = user.id === session.leader_user_id ? 'leader' : 'member';
     this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
+    this.emit();
     return session as CrewSession;
   }
 
@@ -396,8 +406,10 @@ class CrewService {
     // Delay channel teardown so the session_ended broadcast can propagate to members
     const channelRef = this.channel;
     this.channel = null;
+    this.currentSession = null;
     this.currentSessionId = null;
     this.currentRole = null;
+    this.emit();
     setTimeout(() => {
       if (channelRef) supabase.removeChannel(channelRef);
       AppLogger.log('CREW_SESSION_ENDED', { action: 'channel_torn_down' });
@@ -439,8 +451,10 @@ class CrewService {
     } catch (err) {
       AppLogger.warn('[CrewService] Failed to multiRemove on leaveSession', { error: err instanceof Error ? err.message : String(err) });
     }
+    this.currentSession = null;
     this.currentSessionId = null;
     this.currentRole = null;
+    this.emit();
   }
 
   /** Transfer leadership to another crew member. Leader only. */
@@ -454,6 +468,10 @@ class CrewService {
 
     if (error) throw error;
     this.currentRole = 'member';
+    if (this.currentSession) {
+      this.currentSession.leader_user_id = newLeaderId;
+    }
+    this.emit();
   }
 
   /** Fetch all members for a session (for lobby UI). */
@@ -523,9 +541,11 @@ class CrewService {
         }, { onConflict: 'session_id,user_id' });
       }
 
+      this.currentSession = typedSession;
       this.currentSessionId = sessionId;
       this.currentRole = user.id === typedSession.leader_user_id ? 'leader' : 'member';
       this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
+      this.emit();
       return { session: typedSession, role: this.currentRole };
     } catch {
       return null;
@@ -572,8 +592,10 @@ class CrewService {
       .on('broadcast', { event: 'session_ended' }, () => {
         AppLogger.log('CREW_SESSION_LEFT', { reason: 'leader_ended_session', role: 'member' });
         this.unsubscribe();
+        this.currentSession = null;
         this.currentSessionId = null;
         this.currentRole = null;
+        this.emit();
         try {
           AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
         } catch (err) {
@@ -639,6 +661,15 @@ class CrewService {
   }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
+
+  public subscribe(callback: () => void): () => void {
+    this.listeners.add(callback);
+    return () => this.listeners.delete(callback);
+  }
+
+  private emit(): void {
+    this.listeners.forEach(cb => cb());
+  }
 
   get sessionId() { return this.currentSessionId; }
   get role() { return this.currentRole; }

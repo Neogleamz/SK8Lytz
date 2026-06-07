@@ -20,9 +20,7 @@ interface UseDashboardCrewOptions {
 
 export interface UseDashboardCrewResult {
   crewSession: CrewSession | null;
-  setCrewSession: (s: CrewSession | null) => void;
   crewRole: CrewRole;
-  setCrewRole: (r: CrewRole) => void;
   isCrewModalVisible: boolean;
   setIsCrewModalVisible: (v: boolean) => void;
   crewModeSummary: string | undefined;
@@ -36,12 +34,19 @@ export interface UseDashboardCrewResult {
 export function useDashboardCrew({
   onApplyScene,
 }: UseDashboardCrewOptions): UseDashboardCrewResult {
-  const [crewSession, setCrewSession] = useState<CrewSession | null>(null);
-  const [crewRole, setCrewRole] = useState<CrewRole>(null);
+  const [crewSession, setCrewSession] = useState<CrewSession | null>(crewService.currentSession);
+  const [crewRole, setCrewRole] = useState<CrewRole>(crewService.currentRole);
   const [isCrewModalVisible, setIsCrewModalVisible] = useState(false);
   const [crewModeSummary, setCrewModeSummary] = useState<string | undefined>(undefined);
   const [lastLeaderScene, setLastLeaderScene] = useState<Record<string, any> | null>(null);
   const [pendingJoinCrewId, setPendingJoinCrewId] = useState<string | null>(null);
+
+  useEffect(() => {
+    return crewService.subscribe(() => {
+      setCrewSession(crewService.currentSession);
+      setCrewRole(crewService.currentRole);
+    });
+  }, []);
 
   const { user } = useAuth();
   const hasTriedRejoinRef = React.useRef(false);
@@ -58,8 +63,6 @@ export function useDashboardCrew({
         if (!result) return;
 
         const { session, role } = result;
-        setCrewSession(session);
-        setCrewRole(role);
 
         if (role === 'leader') {
           crewService.subscribeAsLeader(session.id, () => {});
@@ -87,9 +90,7 @@ export function useDashboardCrew({
 
   return {
     crewSession,
-    setCrewSession,
     crewRole,
-    setCrewRole,
     isCrewModalVisible,
     setIsCrewModalVisible,
     crewModeSummary,

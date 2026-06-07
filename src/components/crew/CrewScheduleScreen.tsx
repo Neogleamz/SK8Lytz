@@ -55,8 +55,6 @@ export function CrewScheduleScreen() {
         // Optional notifications logic can be added later
         setStep('landing');
       } else {
-        session.setCurrentSession(newSession);
-        session.setCurrentRole('leader');
         setStep('controller');
       }
     } catch (e) {

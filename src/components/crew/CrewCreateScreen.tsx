@@ -59,8 +59,6 @@ export function CrewCreateScreen() {
       if (scheduled && scheduled > new Date()) {
         // Optional notifications logic can be added later
       } else {
-        session.setCurrentSession(newSession);
-        session.setCurrentRole('leader');
         setStep('controller');
       }
     } catch (e) {

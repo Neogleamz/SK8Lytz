@@ -297,9 +297,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // 🔶 Crew Hub state & auto-rejoin → useDashboardCrew
   const {
     crewSession,
-    setCrewSession,
     crewRole,
-    setCrewRole,
     isCrewModalVisible,
     setIsCrewModalVisible,
     crewModeSummary,
@@ -757,8 +755,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     crewSession,
     crewRole,
     lastLeaderScene,
-    setCrewSession,
-    setCrewRole,
     setLastLeaderScene,
     setCrewModeSummary,
     dockedControllerRef,
@@ -1003,9 +999,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 {/* SLAB 2: CREW HUB */}
                 <DashboardCrewPanel
                   crewSession={crewSession}
-                  setCrewSession={setCrewSession}
                   crewRole={crewRole}
-                  setCrewRole={setCrewRole}
                   isCrewModalVisible={isCrewModalVisible}
                   setIsCrewModalVisible={setIsCrewModalVisible}
                   crewModeSummary={crewModeSummary}

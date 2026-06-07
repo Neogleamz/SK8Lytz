@@ -16,8 +16,6 @@ export interface UseDashboardControllerProps {
   crewSession: any;
   crewRole: any;
   lastLeaderScene: any;
-  setCrewSession: (s: any) => void;
-  setCrewRole: (r: any) => void;
   setLastLeaderScene: (s: any) => void;
   setCrewModeSummary: (s: any | undefined) => void;
   dockedControllerRef: React.RefObject<DockedControllerHandle | null>;
@@ -60,8 +58,6 @@ export function useDashboardController({
   crewSession,
   crewRole,
   lastLeaderScene,
-  setCrewSession,
-  setCrewRole,
   setLastLeaderScene,
   setCrewModeSummary,
   dockedControllerRef,
@@ -161,8 +157,6 @@ export function useDashboardController({
           currentScene={lastLeaderScene}
           onLeave={async () => {
             await crewService.leaveSession().catch(() => {});
-            setCrewSession(null);
-            setCrewRole(null);
             setLastLeaderScene(null);
             setCrewModeSummary(undefined);
           }}
@@ -237,7 +231,7 @@ export function useDashboardController({
     isTestModeActive, activeHwSettings, crewRole, crewSession, lastLeaderScene, bleState, 
     ledgerSave, gpsSpeed, peakGForce, sessionDistanceMiles, sessionDurationSec, sessionAvgSpeed, sessionActive, startSession, stopSessionRecording,
     appSettings, customGroups, dockedControllerRef, edgePanResponder, handleDisconnect, 
-    handlePowerToggle, lastGroupPatterns, setCrewModeSummary, setCrewRole, setCrewSession, 
+    handlePowerToggle, lastGroupPatterns, setCrewModeSummary,
     setLastGroupPattern, setLastLeaderScene
   ]);
 

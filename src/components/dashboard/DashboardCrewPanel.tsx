@@ -7,9 +7,7 @@ import { useCrewProximityRadar, RadarAlert } from '../../hooks/useCrewProximityR
 
 interface DashboardCrewPanelProps {
   crewSession: CrewSession | null;
-  setCrewSession: (s: CrewSession | null) => void;
   crewRole: CrewRole;
-  setCrewRole: (r: CrewRole) => void;
   isCrewModalVisible: boolean;
   setIsCrewModalVisible: (v: boolean) => void;
   crewModeSummary: string | undefined;
@@ -33,9 +31,7 @@ interface DashboardCrewPanelProps {
 
 export default React.memo(function DashboardCrewPanel({
   crewSession,
-  setCrewSession,
   crewRole,
-  setCrewRole,
   isCrewModalVisible,
   setIsCrewModalVisible,
   crewModeSummary,
@@ -102,8 +98,6 @@ export default React.memo(function DashboardCrewPanel({
           currentModeSummary={crewModeSummary}
           lastLeaderScene={lastLeaderScene}
           onSessionReady={(session: CrewSession, role: CrewRole, lastScene: Record<string, any> | null) => {
-            setCrewSession(session);
-            setCrewRole(role);
             if (role === 'leader') {
               crewService.subscribeAsLeader(session.id, () => {});
             } else {
@@ -111,9 +105,7 @@ export default React.memo(function DashboardCrewPanel({
                 onApplyCloudScene(scene);
                 setLastLeaderScene(scene); // track for member dashboard
               }, () => {
-                // session_ended callback — leader ended the session
-                setCrewSession(null);
-                setCrewRole(null);
+                // session_ended callback - leader ended the session
                 setCrewModeSummary(undefined);
                 setIsCrewModalVisible(false);
                 Alert.alert('Session Ended', 'The crew leader has ended this session. Your skates will keep the current pattern.');
@@ -125,17 +117,13 @@ export default React.memo(function DashboardCrewPanel({
             }
           }}
           onSessionLeft={() => {
-            // Member left voluntarily — clear session and return to hub landing
-            setCrewSession(null);
-            setCrewRole(null);
+            // Member left voluntarily - clear session and return to hub landing
             setCrewModeSummary(undefined);
             // Don't close modal — CrewModal will reset step to 'landing' via its useEffect
             // so the user lands back at the hub page naturally
           }}
           onSessionEnded={() => {
-            // Leader ended the session — clear all session state
-            setCrewSession(null);
-            setCrewRole(null);
+            // Leader ended the session - clear all session state
             setCrewModeSummary(undefined);
             // Don't force-close — CrewModal resets step to 'landing' via activeSession→null
           }}

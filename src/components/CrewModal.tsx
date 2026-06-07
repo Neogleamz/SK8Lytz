@@ -109,7 +109,6 @@ export function CrewModal({
   const hub = useCrewHub(visible, step);
   const manage = useCrewManage(hub.myCrews);
   const session = useCrewSession(
-    activeSession, activeRole, currentUserId,
     onSessionReady, onSessionLeft, onSessionEnded,
     hub.refreshNearby, () => setStep('landing'), setErrorMsg
   );
