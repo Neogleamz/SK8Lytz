@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { makeRedirectUri } from 'expo-auth-session';
 import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../services/supabaseClient';
+import { AppLogger } from '../../services/AppLogger';
 import { Spacing } from '../../theme/theme';
 import { useAuthStyles } from './AuthStyles';
 
@@ -32,15 +33,22 @@ export function AuthFormForgotPassword({ onModeChange }: AuthFormForgotPasswordP
     setErrorMessage('');
     setLoading(true);
 
-    const redirectUrl = makeRedirectUri({ path: 'auth' });
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: redirectUrl });
-    
-    setLoading(false);
+    try {
+      const redirectUrl = makeRedirectUri({ path: 'auth' });
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: redirectUrl });
+      
+      setLoading(false);
 
-    if (error) {
-      showError(error.message);
-    } else {
-      showSuccess('📧 Password reset link sent! Check your inbox.');
+      if (error) {
+        showError(error.message);
+      } else {
+        showSuccess('📧 Password reset link sent! Check your inbox.');
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('AuthFormForgotPassword', 'Password reset exception', { error: msg });
+      setLoading(false);
+      showError('A network or internal error occurred. Please try again.');
     }
   };
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Text, TextInput, TouchableOpacity, View, Platform } from 'react-native';
 
 const WebFormWrapper = Platform.OS === 'web' 
-  ? (props: any) => React.createElement('form', { onSubmit: (e: any) => e.preventDefault(), style: { width: '100%', margin: 0, padding: 0, display: 'flex', flexDirection: 'column' } }, props.children) 
+  ? (props: React.PropsWithChildren<{}>) => React.createElement('form', { onSubmit: (e: { preventDefault: () => void }) => e.preventDefault(), style: { width: '100%', margin: 0, padding: 0, display: 'flex', flexDirection: 'column' } }, props.children) 
   : React.Fragment;
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -10,6 +10,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { supabase } from '../../services/supabaseClient';
 import { Spacing } from '../../theme/theme';
 import { useAuthStyles } from './AuthStyles';
+import { AppLogger } from '../../services/AppLogger';
 
 import { STORAGE_REMEMBER_CREDS, STORAGE_OFFLINE_SKIP } from '../../constants/storageKeys';
 
@@ -59,29 +60,43 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
           return;
         }
         loginEmail = data as string;
-      } catch {
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        AppLogger.error('AuthFormSignIn', 'Username lookup failed', { error: msg });
         setLoading(false);
         showError('Could not look up username. Please use your email to sign in.');
         return;
       }
     }
 
-    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
-    setLoading(false);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
+      setLoading(false);
 
-    if (error) {
-      const msg = error.message.toLowerCase().includes('invalid login')
-        ? 'Incorrect email or password. Please try again.'
-        : error.message;
-      showError(msg);
-    } else {
-      setErrorMessage('');
-      if (rememberMe) {
-        await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: loginEmail, rememberMe: true }));
+      if (error) {
+        const msg = error.message.toLowerCase().includes('invalid login')
+          ? 'Incorrect email or password. Please try again.'
+          : error.message;
+        showError(msg);
       } else {
-        await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: loginEmail, rememberMe: false }));
+        setErrorMessage('');
+        try {
+          if (rememberMe) {
+            await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: loginEmail, rememberMe: true }));
+          } else {
+            await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: loginEmail, rememberMe: false }));
+          }
+          await AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          AppLogger.error('AuthFormSignIn', 'Failed to save offline/remember settings', { error: msg });
+        }
       }
-      await AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('AuthFormSignIn', 'Sign in exception', { error: msg });
+      setLoading(false);
+      showError('A network or internal error occurred. Please try again.');
     }
   };
 

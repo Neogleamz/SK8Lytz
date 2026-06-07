@@ -64,3 +64,27 @@ export const Layout = {
   padding: Spacing.lg,
   borderRadius: Spacing.xl,
 };
+
+import { Platform, ViewStyle, TextStyle } from 'react-native';
+
+export const Shadows = {
+  soft: Platform.select<ViewStyle>({
+    ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4 },
+    android: { elevation: 3 }
+  }) as ViewStyle,
+  medium: Platform.select<ViewStyle>({
+    ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 },
+    android: { elevation: 5 }
+  }) as ViewStyle,
+  glow: (color: string): ViewStyle => Platform.select<ViewStyle>({
+    ios: { shadowColor: color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 8 },
+    android: { shadowColor: color, elevation: 8 }
+  }) as ViewStyle,
+};
+
+export const TextShadows = {
+  glow: (color: string, radius: number = 10): TextStyle => Platform.select<TextStyle>({
+    web: { textShadow: `0 0 ${radius}px ${color}` } as TextStyle,
+    default: { textShadowColor: color, textShadowRadius: radius, textShadowOffset: { width: 0, height: 0 } }
+  }) as TextStyle
+};

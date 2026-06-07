@@ -17,11 +17,12 @@ module.exports = {
       infoPlist: {
         NSMicrophoneUsageDescription: "SK8Lytz needs microphone access to synchronize your lights to ambient music.",
         NSCameraUsageDescription: "SK8Lytz needs camera access to sample colors from your environment for LED synchronization.",
-        NSHealthShareUsageDescription: "SK8Lytz reads step count and heart rate to synchronize light patterns with your fitness metrics."
+        NSHealthShareUsageDescription: "SK8Lytz reads step count and heart rate to synchronize light patterns with your fitness metrics.",
+        NSLocationWhenInUseUsageDescription: "SK8Lytz requires location services for Bluetooth Low Energy scanning to find your skates."
       },
       buildNumber: "17",
       config: {
-        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyBfvwN5fcyDbzUZp2Q7c2OfMLPFajVRPwA"
+        googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
       }
     },
     android: {
@@ -40,12 +41,13 @@ module.exports = {
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.ACTIVITY_RECOGNITION",
         "android.permission.FOREGROUND_SERVICE",
-        "android.permission.FOREGROUND_SERVICE_LOCATION"
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"
       ],
       package: "com.neogleamz.sk8lytz",
       config: {
         googleMaps: {
-          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyBfvwN5fcyDbzUZp2Q7c2OfMLPFajVRPwA"
+          apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
         }
       }
     },

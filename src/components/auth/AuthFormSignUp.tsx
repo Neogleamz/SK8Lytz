@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Text, TextInput, TouchableOpacity, View, Platform } from 'react-native';
 
 const WebFormWrapper = Platform.OS === 'web' 
-  ? (props: any) => React.createElement('form', { onSubmit: (e: any) => e.preventDefault(), style: { width: '100%', margin: 0, padding: 0, display: 'flex', flexDirection: 'column' } }, props.children) 
+  ? (props: React.PropsWithChildren<{}>) => React.createElement('form', { onSubmit: (e: { preventDefault: () => void }) => e.preventDefault(), style: { width: '100%', margin: 0, padding: 0, display: 'flex', flexDirection: 'column' } }, props.children) 
   : React.Fragment;
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { makeRedirectUri } from 'expo-auth-session';
@@ -85,36 +85,50 @@ export function AuthFormSignUp({ onModeChange }: AuthFormSignUpProps) {
 
     setErrorMessage('');
     setHibpChecking(true);
-    const hibp = await checkHIBP(password);
-    setHibpChecking(false);
+    try {
+      const hibp = await checkHIBP(password);
+      setHibpChecking(false);
 
-    if (hibp.pwned) {
-      showError(`⚠️ This password has appeared in ${hibp.count.toLocaleString()} data breaches. Please choose a different password.`);
-      return;
+      if (hibp.pwned) {
+        showError(`⚠️ This password has appeared in ${hibp.count.toLocaleString()} data breaches. Please choose a different password.`);
+        return;
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('AuthFormSignUp', 'HIBP Check failed', { error: msg });
+      setHibpChecking(false);
+      // We don't block sign up on HIBP failure
     }
 
     setLoading(true);
-    const redirectUrl = makeRedirectUri({ path: 'auth' });
-    const { error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-      options: { 
-        data: { 
-          username: username.trim(), 
-          display_name: username.trim(), 
-          accepted_eula_version: 1 
+    try {
+      const redirectUrl = makeRedirectUri({ path: 'auth' });
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { 
+          data: { 
+            username: username.trim(), 
+            display_name: username.trim(), 
+            accepted_eula_version: 1 
+          },
+          emailRedirectTo: redirectUrl
         },
-        emailRedirectTo: redirectUrl
-      },
-    });
-    setLoading(false);
-    
-    if (error) {
-      showError(error.message);
-    } else {
-      AppLogger.log('EULA_ACCEPTED', { policy_version: 'v1.0.0' });
-      showSuccess('✅ Account created! Check your email for a verification link, then log in.');
-      setTimeout(() => onModeChange('LOGIN'), 3000);
+      });
+      setLoading(false);
+      
+      if (error) {
+        showError(error.message);
+      } else {
+        AppLogger.log('EULA_ACCEPTED', { policy_version: 'v1.0.0' });
+        showSuccess('✅ Account created! Check your email for a verification link, then log in.');
+        setTimeout(() => onModeChange('LOGIN'), 3000);
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('AuthFormSignUp', 'Sign up exception', { error: msg });
+      setLoading(false);
+      showError('A network or internal error occurred. Please try again.');
     }
   };
 
