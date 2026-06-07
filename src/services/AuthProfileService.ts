@@ -87,10 +87,13 @@ class AuthProfileService {
     if (fields.avatar_url != null) cleanFields.avatar_url = fields.avatar_url;
     if (fields.notif_preferences !== undefined) cleanFields.notif_preferences = fields.notif_preferences;
 
+    if (Object.keys(cleanFields).length === 0) return;
+
     try {
       const { error } = await supabase
         .from('user_profiles')
-        .upsert({ user_id: userId, ...cleanFields }, { onConflict: 'user_id' });
+        .update(cleanFields)
+        .eq('user_id', userId);
 
       if (error) throw error;
     } catch (e: any) {
