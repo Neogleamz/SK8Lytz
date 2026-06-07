@@ -146,6 +146,7 @@ export type EventType =
   | 'APP_LOG'
   // ── Hardware Watchdog ──────────────────────────────────────
   | 'BLE_STATE_CHANGE'
+  | 'BLE_RESTORE_STATE'
   | 'WATCHDOG_MISS'
   | 'WATCHDOG_RELATCH'
   // ── Auto-Recovery Extended ─────────────────────────────────

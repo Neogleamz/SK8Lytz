@@ -2850,33 +2850,7 @@ export type Database = {
         }
         Relationships: []
       }
-      telemetry_snapshots: {
-        Row: {
-          created_at: string | null
-          device_id: string | null
-          event_type: string
-          id: string
-          metadata: Json | null
-          session_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          device_id?: string | null
-          event_type: string
-          id?: string
-          metadata?: Json | null
-          session_id: string
-        }
-        Update: {
-          created_at?: string | null
-          device_id?: string | null
-          event_type?: string
-          id?: string
-          metadata?: Json | null
-          session_id?: string
-        }
-        Relationships: []
-      }
+
       template_subtasks: {
         Row: {
           estimated_minutes: number | null

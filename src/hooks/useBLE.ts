@@ -106,9 +106,36 @@ export interface BluetoothLowEnergyApi {
 }
 
 export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnergyApi {
+  // Stable ref-forwarder for connectToDevices.
+  // autoRecovery is initialised BEFORE connectToDevices exists, so we’d get a stale closure
+  // if we passed connectToDevices directly. The ref is updated immediately after connectToDevices
+  // is defined (see below).
+  const connectToDevicesRef = useRef<(devices: Device[]) => Promise<void>>(async () => {});
+
   const bleManager = useMemo(() => {
     if (Platform.OS === 'web') return null;
-    return new BleManager();
+    return new BleManager({
+      restoreStateIdentifier: 'SK8LytzRestoreState',
+      restoreStateFunction: async (bleRestoredState: { connectedPeripherals: Device[] } | null) => {
+        if (bleRestoredState !== null) {
+          // Identify peripherals preserved by iOS
+          const peripherals = bleRestoredState.connectedPeripherals;
+          if (peripherals && peripherals.length > 0) {
+            // Devices are already physically connected. 
+            // We just need to re-discover their services and map them to our Context.
+            AppLogger.log('BLE_RESTORE_STATE', { count: peripherals.length });
+            
+            // Note: Since `connectToDevices` handles the service discovery and adapter mapping,
+            // we can pass these restored peripherals directly to `connectToDevices()`.
+            // But we must do it carefully to avoid GATT 133 conflicts.
+            // We will enqueue a background reconnect.
+            setTimeout(() => {
+                connectToDevicesRef.current(peripherals);
+            }, 1000);
+          }
+        }
+      }
+    });
   }, []);
 
   const [allDevices, setAllDevices] = useState<Device[]>([]);
@@ -307,11 +334,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const handleOrganicDisconnectRef = useRef(handleOrganicDisconnect);
   handleOrganicDisconnectRef.current = handleOrganicDisconnect;
 
-  // Stable ref-forwarder for connectToDevices — same pattern as pendingRegistrationsSetterRef.
-  // autoRecovery is initialised BEFORE connectToDevices exists, so we’d get a stale closure
-  // if we passed connectToDevices directly. The ref is updated immediately after connectToDevices
-  // is defined (see below).
-  const connectToDevicesRef = useRef<(devices: Device[]) => Promise<void>>(async () => {});
+
 
   const autoRecovery = useBLEAutoRecovery({
     bleManager,
