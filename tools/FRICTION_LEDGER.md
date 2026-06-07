@@ -31,6 +31,16 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 
 ## ðŸ”´ Active Friction Events (Open â€” Under Monitoring)
 
+### [FRICTION-015] Cowboy Hotfixes on Master
+- **First Observed:** 2026-06-07
+- **Observed By:** River
+- **Occurrences:** 1 / 3
+- **Trigger:** User: "why are we stashing this??? what changes did we fucking loose???"
+- **Pattern:** Agent fixed an organically discovered bug directly on `master` without creating a formal task worktree, violating Safety Protocol Rule 1. Later `/ship-it` invocation forced a stash/pop migration to a worktree which alarmed the user.
+- **Root Cause Theory:** Reactive urgency overrides the `/start-task` branching workflow when answering organic mid-conversation user questions about broken features.
+- **Impact:** User alarm over "lost code", stash collision risks, and bypassed task definition.
+- **Status:** MONITORING
+
 ### [FRICTION-013] Bucket List Split-Truth (Partial Stamp Pattern)
 - **First Observed:** 2026-06-06
 - **Observed By:** User (directly)
