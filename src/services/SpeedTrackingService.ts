@@ -25,6 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from './AppLogger';
 import { supabase } from './supabaseClient';
 import { WatchBridge } from 'sk8lytz-watch-bridge';
+import { PENDING_SESSION_QUEUE_KEY } from '../constants/storageKeys';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -51,9 +52,6 @@ export interface PendingSessionRecord extends ISessionSnapshot {
   calories: number;
   queued_at: string; // ISO timestamp
 }
-
-/** AsyncStorage key for the offline session queue. */
-export const PENDING_SESSION_QUEUE_KEY = '@SK8Lytz_PendingSession_Queue';
 
 /** Soft cap threshold — warn when queue exceeds this (but never discard). */
 const PENDING_QUEUE_SOFT_CAP = 50;

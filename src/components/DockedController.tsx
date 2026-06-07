@@ -27,7 +27,6 @@ import { useSharedFavorites } from '../context/FavoritesContext';
 import { useControllerDispatch } from '../hooks/useControllerDispatch';
 import { getMusicPatternLabel } from '../hooks/useMusicMode';
 import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
-import { useSessionTracking } from '../hooks/useSessionTracking';
 import { useStreetMode } from '../hooks/useStreetMode';
 import { useDeviceStateLedger } from '../hooks/useDeviceStateLedger';
 import type { BleConnectionState, DockedBus, IDeviceState, IFavoriteState, ModeType } from '../types/dashboard.types';
@@ -59,7 +58,6 @@ import CommunityModal from './CommunityModal';
 
 import DockedDock from './docked/DockedDock';
 import QuickPresetModal from './docked/QuickPresetModal';
-import SessionSummaryModal from './SessionSummaryModal';
 // NOTE: useGlobalTelemetry intentionally NOT imported here.
 // GPS + accelerometer sensors are owned exclusively by DashboardScreen via
 // useGlobalTelemetry(isSkateSessionActive). The 4 telemetry values are threaded
@@ -161,6 +159,12 @@ interface Sk8lytzControllerProps {
   sessionDistanceMiles?: number;
   /** Elapsed session duration in seconds */
   sessionDurationSec?: number;
+  /** Average speed this session */
+  sessionAvgSpeed?: number;
+  /** Session control props */
+  sessionActive?: boolean;
+  startSession?: () => void;
+  stopSessionRecording?: () => void;
   /** Called when a pattern is applied — lets DashboardScreen persist the group pattern snapshot + ledger entry. */
   onPatternChanged?: (patternName: string, snapshot: import('../types/dashboard.types').GroupPatternSnapshot, lastPayload?: number[]) => void;
 }
@@ -180,7 +184,7 @@ export type DockedControllerHandle = {
 // MarqueeText moved to standalone component MarqueeText.tsx
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
-  function DockedController({ isOfflineMode = false, hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onPowerToggle, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {}, gpsSpeed = 0, peakGForce = 1.0, sessionDistanceMiles = 0, sessionDurationSec = 0 }: Sk8lytzControllerProps, ref) {
+  function DockedController({ isOfflineMode = false, hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onPowerToggle, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {}, gpsSpeed = 0, peakGForce = 1.0, sessionDistanceMiles = 0, sessionDurationSec = 0, sessionAvgSpeed = 0, sessionActive = false, startSession = () => {}, stopSessionRecording = () => {} }: Sk8lytzControllerProps, ref) {
     const { Colors, isDark } = useTheme();
     const { height: windowHeight } = useWindowDimensions();
     const isShort = windowHeight < 720;
@@ -363,22 +367,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       deleteFavorite,
       saveQuickPreset
     } = useSharedFavorites();
-
-    const {
-      sessionState,
-      startSession,
-      stopSession: stopSessionRecording,
-      dismissModal: dismissSessionModal,
-      sessionSummary,
-      showSessionModal,
-      setShowSessionModal,
-      saveSession,
-      sessionStartTimeRef,
-      sessionSpeedSamplesRef,
-      sessionDistanceMilesRef,
-      sessionPeakGForceRef,
-      sessionPeakSpeedRef,
-    } = useSessionTracking();
     
     const {
       streetSensitivity,
@@ -482,8 +470,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
 
     // (useStreetMode and useSessionTracking placed higher up context)
-    /** Convenience alias for JSX readability */
-    const sessionActive = sessionState === 'RECORDING';
+    // sessionActive prop is injected from DashboardScreen
 
 
     // ── Crew Leader Broadcast ────────────────────────────────────────────────
@@ -1228,8 +1215,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 sessionActive={sessionActive}
                 startSession={startSession}
                 stopSessionRecording={stopSessionRecording}
-                sessionStartTimeRef={sessionStartTimeRef}
-                sessionSpeedSamplesRef={sessionSpeedSamplesRef}
+                sessionDurationSec={sessionDurationSec}
+                sessionAvgSpeed={sessionAvgSpeed}
               />
             )}
 
@@ -1354,19 +1341,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           onDelete={() => { deleteFavorite(favPromptTargetId!); closePrompt(); }}
           onCancel={() => closePrompt()}
           onSave={handleConfirmSaveFavorite}
-        />
-        {/* Session Summary Modal */}
-        <SessionSummaryModal
-          visible={showSessionModal}
-          snapshot={sessionSummary}
-          onSave={async () => {
-            await saveSession();
-            dismissSessionModal();
-          }}
-          onDiscard={() => {
-            AppLogger.log('SESSION_SAVED', { action: 'DISCARDED' });
-            dismissSessionModal();
-          }}
         />
 
       </View>

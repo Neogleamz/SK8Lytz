@@ -56,10 +56,10 @@ jest.mock('../../src/services/AppLogger', () => ({
 
 import {
   SpeedTrackingService,
-  PENDING_SESSION_QUEUE_KEY,
   type PendingSessionRecord,
   type ISessionSnapshot,
 } from '../../src/services/SpeedTrackingService';
+import { PENDING_SESSION_QUEUE_KEY } from '../../src/constants/storageKeys';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 const mockUserId = 'user_offline_mock';

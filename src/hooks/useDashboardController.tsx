@@ -33,6 +33,10 @@ export interface UseDashboardControllerProps {
   peakGForce: number;
   sessionDistanceMiles: number;
   sessionDurationSec: number;
+  sessionAvgSpeed: number;
+  sessionActive: boolean;
+  startSession: () => void;
+  stopSessionRecording: () => void;
   customGroups: any[];
   lastGroupPatterns: Record<string, any>;
   setLastGroupPattern: (groupId: string, snapshot: GroupPatternSnapshot) => void;
@@ -73,6 +77,10 @@ export function useDashboardController({
   peakGForce,
   sessionDistanceMiles,
   sessionDurationSec,
+  sessionAvgSpeed,
+  sessionActive,
+  startSession,
+  stopSessionRecording,
   customGroups,
   lastGroupPatterns,
   setLastGroupPattern,
@@ -189,6 +197,10 @@ export function useDashboardController({
             peakGForce={peakGForce}
             sessionDistanceMiles={sessionDistanceMiles}
             sessionDurationSec={sessionDurationSec}
+            sessionAvgSpeed={sessionAvgSpeed}
+            sessionActive={sessionActive}
+            startSession={startSession}
+            stopSessionRecording={stopSessionRecording}
             onPatternChanged={(patternName: string, snapshot: GroupPatternSnapshot, lastPayload?: number[]) => {
               const deviceMac = displayConnectedDevices[0]?.id?.toUpperCase();
               const matchingGroup = customGroups.find(g => g.deviceIds.includes(deviceMac ?? ''));
@@ -223,7 +235,7 @@ export function useDashboardController({
   }, [
     isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, 
     isTestModeActive, activeHwSettings, crewRole, crewSession, lastLeaderScene, bleState, 
-    ledgerSave, gpsSpeed, peakGForce, sessionDistanceMiles, sessionDurationSec,
+    ledgerSave, gpsSpeed, peakGForce, sessionDistanceMiles, sessionDurationSec, sessionAvgSpeed, sessionActive, startSession, stopSessionRecording,
     appSettings, customGroups, dockedControllerRef, edgePanResponder, handleDisconnect, 
     handlePowerToggle, lastGroupPatterns, setCrewModeSummary, setCrewRole, setCrewSession, 
     setLastGroupPattern, setLastLeaderScene

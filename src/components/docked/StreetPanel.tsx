@@ -35,10 +35,10 @@ interface StreetPanelProps {
   sessionActive: boolean;
   startSession: () => void;
   stopSessionRecording: () => void;
-  /** Injected from useSessionTracking — used for Session Time chip */
-  sessionStartTimeRef: React.MutableRefObject<number | null>;
-  /** Injected from useSessionTracking — used for Avg Speed chip */
-  sessionSpeedSamplesRef: React.MutableRefObject<number[]>;
+  /** Injected from telemetry */
+  sessionDurationSec: number;
+  /** Injected from telemetry */
+  sessionAvgSpeed: number;
 }
 
 const StreetPanel = React.memo(({
@@ -52,8 +52,8 @@ const StreetPanel = React.memo(({
   sessionActive,
   startSession,
   stopSessionRecording,
-  sessionStartTimeRef,
-  sessionSpeedSamplesRef,
+  sessionDurationSec,
+  sessionAvgSpeed,
 }: StreetPanelProps) => {
   const { height: windowHeight } = useWindowDimensions();
   const isShort = windowHeight < 720;
@@ -79,14 +79,9 @@ const StreetPanel = React.memo(({
   // ── Metric chip computations ──────────────────────────────────────────────
   const topSpeed = crewService.sessionTelemetry.topSpeedMph.toFixed(1);
   const distance = crewService.sessionTelemetry.distanceMiles.toFixed(2);
-  const avgSpeed = (() => {
-    const samples = sessionSpeedSamplesRef.current;
-    if (samples.length === 0) return '0.0';
-    const sum = samples.reduce((a, b) => a + b, 0);
-    return (sum / samples.length).toFixed(1);
-  })();
-  const sessionTime = sessionStartTimeRef.current
-    ? formatElapsedTime(Date.now() - sessionStartTimeRef.current)
+  const avgSpeed = sessionAvgSpeed.toFixed(1);
+  const sessionTime = sessionActive
+    ? formatElapsedTime(sessionDurationSec * 1000)
     : '--:--';
 
   // ── Motion state label & color ────────────────────────────────────────────
