@@ -11,7 +11,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "prepare": "husky",
-    "verify": "node tools/verifiable-check-runner.js"
+    "blast-radius": "node tools/blast-radius-scanner.js",
+    "verify": "npm run blast-radius -- --worktree && node tools/verifiable-check-runner.js"
   },
   "dependencies": {
     "@bacons/apple-targets": "^4.0.7",

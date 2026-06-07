@@ -1,0 +1,69 @@
+{
+  "rules": [
+    {
+      "trigger": "src/protocols/ZenggeProtocol.ts",
+      "requires": ["src/protocols/IControllerProtocol.ts", "src/services/BleWriteDispatcher.ts"],
+      "description": "BLE PAYLOADS: Modifying hardware protocol payload structures requires verifying the IController interface and the Dispatcher that chunks and routes the final bytes."
+    },
+    {
+      "trigger": "src/protocols/PatternEngine.ts",
+      "requires": ["src/protocols/SpatialEngine.ts", "src/protocols/SymphonyEngine.ts", "src/protocols/VisualizerEngine.ts", "src/components/ProductVisualizer.tsx"],
+      "description": "PATTERN PARITY: Any new pattern template added to the Engine must have corresponding spatial/symphony math and visualizer rendering parity."
+    },
+    {
+      "trigger": "src/services/BleConnectionManager.ts",
+      "requires": ["src/hooks/useBLE.ts", "src/hooks/ble/useBLEAutoRecovery.ts", "src/hooks/ble/useBLEGattMutex.ts"],
+      "description": "CONNECTIVITY: Changes to the core Connection Manager impact all GATT lifecycle hooks. Ensure AutoRecovery and the GATT Mutex are not deadlocking."
+    },
+    {
+      "trigger": "src/services/BleStateMachine.ts",
+      "requires": ["src/hooks/useBLE.ts", "src/hooks/useOptimisticBLE.ts"],
+      "description": "STATES: If the global BLE state machine transitions change (IDLE/SCANNING/RECOVERING), the Optimistic Ghost UI must know how to render it."
+    },
+    {
+      "trigger": "src/hooks/ble/useBLEGattMutex.ts",
+      "requires": ["src/hooks/ble/useBLEHeartbeat.ts", "src/hooks/ble/useBLEAutoRecovery.ts"],
+      "description": "GATT MUTEX: Priority tier changes (P1_CRITICAL to P4_MAINTENANCE) directly impact background heartbeat polling and recovery timeouts."
+    },
+    {
+      "trigger": "src/services/DeviceRepository.ts",
+      "requires": ["src/hooks/useDashboardGroups.ts", "src/hooks/useDashboardDeviceConfig.ts"],
+      "description": "DEVICES & GROUPING: The shift to Many-to-Many group_ids means any change to Device storage requires updating the dashboard hooks that merge hardware configs with UI groups."
+    },
+    {
+      "trigger": "src/services/GroupRepository.ts",
+      "requires": ["src/hooks/useDashboardGroups.ts", "src/components/DashboardGroupList.tsx"],
+      "description": "GROUPING: If the structure of Custom Groups changes, the Dashboard UI rendering the group pills must be verified."
+    },
+    {
+      "trigger": "src/services/AuthProfileService.ts",
+      "requires": ["src/context/AuthContext.tsx", "src/hooks/useDashboardProfile.ts"],
+      "description": "USER ACCOUNTS: Changes to Supabase Auth profiles or context MUST reflect in the Dashboard Profile UI, especially regarding Offline/Guest mode fallback."
+    },
+    {
+      "trigger": "src/services/CrewService.ts",
+      "requires": ["src/hooks/useCrewHub.ts", "src/hooks/useCrewManage.ts", "src/context/CrewContext.tsx"],
+      "description": "CLOUD CREWS: Modifying how Crews sync to Supabase requires updating the CrewHub hooks to ensure Optimistic UI state isn't broken."
+    },
+    {
+      "trigger": "src/hooks/useControllerDispatch.ts",
+      "requires": ["src/hooks/useDockedControllerState.ts", "src/components/DockedController.tsx"],
+      "description": "UI DISPATCH: The unified controller dispatch routes all UI events to BLE. Changes here must be verified across the Docked Controller UI surface."
+    },
+    {
+      "trigger": "src/constants/ProductCatalog.ts",
+      "requires": ["src/components/VisualizerUnit.tsx", "src/hooks/ble/useBLEScanner.ts"],
+      "description": "HARDWARE CATALOG: Hardware catalog changes (e.g., HALOZ/SOULZ LED defaults) instantly impact how the visualizer renders and how the scanner filters."
+    },
+    {
+      "trigger": "modules/sk8lytz-watch-bridge/src/",
+      "requires": ["src/hooks/useHealthTelemetry.ts", "src/context/SessionContext.tsx"],
+      "description": "WEARABLES: The Watch Bridge native module is deeply coupled with HealthTelemetry and SessionContext for bidirectional sync."
+    },
+    {
+      "trigger": "src/types/supabase.ts",
+      "requires": ["supabase/migrations/"],
+      "description": "DATABASE: TypeScript DB types cannot change unless a corresponding Supabase SQL migration exists to back it."
+    }
+  ]
+}

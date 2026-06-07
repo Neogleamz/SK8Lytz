@@ -36,6 +36,14 @@ foreach ($Line in $WorktreeList) {
             exit 1
         }
 
+        # 1.5 Blast Radius Scan
+        Write-Host "Executing Blast Radius Scan..." -ForegroundColor Yellow
+        node tools/blast-radius-scanner.js --branch $Branch
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Error: Blast Radius Scan failed. Missing architectural dependencies." -ForegroundColor Red
+            exit 1
+        }
+
         # 2. Run verification on the local attestation file
         Write-Host "Executing cryptographic verification..." -ForegroundColor Yellow
         node tools/verifiable-check-runner.js --verify
