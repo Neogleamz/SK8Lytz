@@ -566,3 +566,14 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Rejected:** Adding a "Skip" button or feature.
 **Don't re-derive:** The writeToDevice function implicitly skips offline devices, so a physical "Skip" button adds unnecessary cognitive load and clutter to the UI. The user explicitly rejected the "Skip" button idea in favor of silent operation with visual health indicators.
 **Source:** N/A (UI Decision)
+
+### [MERGE] 2026-06-07T19:02 — ble-partial-group-connectivity-ui → master @ 9034fb44
+**What merged:**
+- Modified DashboardHeader.tsx to render inline roller-skate icons mapped to the group deviceIds.
+- Implemented +X more truncation for groups with >4 devices.
+- Attached onReconnectDevice handler to disconnected grey skate icons.
+- Modified DashboardScreen.tsx to define handleDeviceReconnect and cleaned up unused destructured variables per the Boy Scout rule.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:**
+- src/components/dashboard/DashboardHeader.tsx
+- src/screens/DashboardScreen.tsx

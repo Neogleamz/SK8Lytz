@@ -23,6 +23,7 @@ import * as ExpoLinking from 'expo-linking';
 import DeviceItem from '../components/DeviceItem';
 import { useTheme } from '../context/ThemeContext';
 import { BLEContext } from '../context/BLEContext';
+import type { Device } from 'react-native-ble-plx';
 import { Layout } from '../theme/theme';
 
 import { DockedControllerHandle } from '../components/DockedController';
@@ -549,7 +550,20 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, [allDevices, connectToDevices, scanForPeripherals]);
 
   const handleGroupPress = useCallback((group: CustomGroup) => {
-    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
+    let devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
+    
+    // Web Demo Mock Fallback
+    // If the user's Supabase groups contain real MAC addresses, they won't match the
+    // sim-DE: mock devices in allDevices. We inject mock Device objects here so the
+    // web demo can still mount the controller for UI testing.
+    if (Platform.OS === 'web' && devicesToConnect.length === 0) {
+      devicesToConnect = group.deviceIds.map(id => ({
+        id,
+        name: `Demo Skate`,
+        rssi: -50,
+      } as unknown as Device));
+    }
+
     if (devicesToConnect.length > 0) {
       // Optimistic UI: Defer heavy controller mount by one frame to allow tap animation.
       requestAnimationFrame(() => {
