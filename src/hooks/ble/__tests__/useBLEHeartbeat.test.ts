@@ -27,6 +27,10 @@ jest.mock('../../../services/AppLogger', () => ({
 import type { IControllerProtocol } from '../../../protocols/IControllerProtocol';
 import { pingConnectedDevice } from '../useBLEHeartbeat';
 
+jest.mock('../../../services/BleWriteQueue', () => ({
+  enqueueWrite: jest.fn((priority, operation) => operation()),
+}));
+
 // ── Shared mocks ─────────────────────────────────────────────────────────────
 const MAC = 'AA:BB:CC:DD:EE:FF';
 

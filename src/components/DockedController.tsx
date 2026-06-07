@@ -236,14 +236,14 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       disableHaptics: appSettings['global_haptics_enabled'] === false,
     });
 
-    const writeToDevice = React.useCallback(async (payload: number[], override?: Record<string, any>) => {
+    const writeToDevice = React.useCallback(async (payload: number[], overrideOrType?: 'Response' | 'NoResponse' | Record<string, any>) => {
       // Gate: only write if the parent BLE write function exists (same pattern as Pro Effects).
       // Previously used `bleState !== 'READY'` which was too aggressive — the derived bleState
       // transiently leaves 'READY' during background rescans/probing even while devices are
       // fully connected and writable, silently dropping fixed mode, solid color, and camera writes.
       // The BLE stack in useBLE.writeToDevice already handles connection-level safety internally.
       if (!parentWriteToDevice) return;
-      lastConfirmedStateRef.current = captureEntireStateRef.current(override);
+      const override = typeof overrideOrType === "object" ? overrideOrType : undefined; lastConfirmedStateRef.current = captureEntireStateRef.current(override);
 
       // vizLock is now a derived useMemo — no manual update needed here.
       // The visualizer automatically reflects the current UI state.
