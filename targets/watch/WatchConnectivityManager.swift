@@ -165,7 +165,11 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
             }
         } else {
             do {
-                try activeSession.updateApplicationContext(message)
+                var newContext = activeSession.applicationContext
+                for (key, value) in message {
+                    newContext[key] = value
+                }
+                try activeSession.updateApplicationContext(newContext)
             } catch {
                 print("[WCSession] updateApplicationContext failed: \(error)")
             }

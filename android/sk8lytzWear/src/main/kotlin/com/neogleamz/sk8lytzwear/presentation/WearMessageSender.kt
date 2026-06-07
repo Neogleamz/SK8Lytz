@@ -53,6 +53,25 @@ object WearMessageSender {
         }
     }
 
+    private const val PREFS_NAME = "telemetry_buffer_prefs"
+    private const val KEY_BUFFER = "health_buffer"
+
+    private fun getPendingTelemetry(context: Context): org.json.JSONArray {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val jsonStr = prefs.getString(KEY_BUFFER, "[]")
+        return try { org.json.JSONArray(jsonStr) } catch (e: Exception) { org.json.JSONArray() }
+    }
+
+    private fun savePendingTelemetry(context: Context, jsonArray: org.json.JSONArray) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putString(KEY_BUFFER, jsonArray.toString()).apply()
+    }
+
+    private fun clearPendingTelemetry(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().remove(KEY_BUFFER).apply()
+    }
+
     /**
      * Relay live health data from the watch's ExerciseClient back to the phone.
      * Throttled to max once per 5 seconds to match watchOS relay interval
@@ -65,20 +84,37 @@ object WearMessageSender {
 
         scope.launch {
             runCatching {
-                val json = JSONObject().apply {
+                val jsonObj = JSONObject().apply {
                     put("heartRate", heartRate)
                     put("calories", calories)
                     put("status", sessionState)
                     put("startTimeMs", startTimeMs)
-                }.toString()
+                }
 
                 val nodes = Wearable.getNodeClient(context).connectedNodes.await()
-                nodes.forEach { node ->
-                    Wearable.getMessageClient(context)
-                        .sendMessage(node.id, PATH_HEALTH, json.toByteArray(Charsets.UTF_8))
-                        .await()
+                if (nodes.isEmpty()) {
+                    val buffer = getPendingTelemetry(context)
+                    buffer.put(jsonObj)
+                    savePendingTelemetry(context, buffer)
+                    Log.d(TAG, "Phone disconnected. Buffered health update. Queue size: ${buffer.length()}")
+                } else {
+                    val buffer = getPendingTelemetry(context)
+                    buffer.put(jsonObj)
+                    
+                    var allSent = true
+                    for (i in 0 until buffer.length()) {
+                        val payload = buffer.getJSONObject(i).toString().toByteArray(Charsets.UTF_8)
+                        nodes.forEach { node ->
+                            Wearable.getMessageClient(context)
+                                .sendMessage(node.id, PATH_HEALTH, payload)
+                                .await()
+                        }
+                    }
+                    if (allSent) {
+                        clearPendingTelemetry(context)
+                        Log.d(TAG, "Health relay flushed ${buffer.length()} items → ${nodes.size} node(s)")
+                    }
                 }
-                Log.d(TAG, "Health relay: hr=$heartRate cal=$calories → ${nodes.size} node(s)")
             }.onFailure {
                 Log.e(TAG, "Health relay failed: ${it.message}", it)
             }

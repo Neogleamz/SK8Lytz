@@ -1,6 +1,7 @@
 CREATE TABLE telemetry_snapshots (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT now(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   session_id TEXT NOT NULL,
   device_id TEXT,
   event_type TEXT NOT NULL,

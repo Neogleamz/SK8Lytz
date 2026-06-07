@@ -80,16 +80,20 @@ Deno.serve(async (req: Request) => {
   // 3. Send via Expo Push API (batches of 100 max)
   const batchSize = 100;
   let sent = 0;
-  for (let i = 0; i < messages.length; i += batchSize) {
-    const batch = messages.slice(i, i + batchSize);
-    const resp = await fetch(EXPO_PUSH_URL, {
-      method:  "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body:    JSON.stringify(batch),
-    });
+  try {
+    for (let i = 0; i < messages.length; i += batchSize) {
+      const batch = messages.slice(i, i + batchSize);
+      const resp = await fetch(EXPO_PUSH_URL, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body:    JSON.stringify(batch),
+      });
 
-    if (resp.ok) sent += batch.length;
-    else console.error(`[notify-crew-session] Expo error:`, await resp.text());
+      if (resp.ok) sent += batch.length;
+      else console.error(`[notify-crew-session] Expo error:`, await resp.text());
+    }
+  } catch (error) {
+    console.error(`[notify-crew-session] Network fetch failed:`, error);
   }
 
   return new Response(JSON.stringify({ sent }), {
