@@ -82,6 +82,9 @@ export function useStreetMode({
   const motionStateRef = useRef<MotionState>('STOPPED');
   const lastGpsSpeeds = useRef<number[]>([]);
 
+  const writeToDeviceRef = useRef(writeToDevice);
+  writeToDeviceRef.current = writeToDevice;
+
   const clampSpeed = useCallback((uiSpeed: number): number =>
     normalizeUISpeedToHardware(uiSpeed), []);
 
@@ -93,7 +96,7 @@ export function useStreetMode({
     brt: number = brightness,
     spd: number = speed,
   ) => {
-    if (!writeToDevice) return;
+    if (!writeToDeviceRef.current) return;
 
     const pts = hwSettings?.ledPoints || points || 16;
     const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === activeProduct) || LOCAL_PRODUCT_CATALOG[0];
@@ -130,9 +133,9 @@ export function useStreetMode({
     );
 
     if (payload) {
-      writeToDevice(payload);
+      writeToDeviceRef.current(payload);
     }
-  }, [writeToDevice, hwSettings, points, activeProduct, streetCruiseColor, brightness, speed, streetDistribution, isStreetBraking]);
+  }, [hwSettings, points, activeProduct, streetCruiseColor, brightness, speed, streetDistribution, isStreetBraking]);
 
   const updateMotion = useCallback((newState: MotionState) => {
     if (newState !== motionStateRef.current) {

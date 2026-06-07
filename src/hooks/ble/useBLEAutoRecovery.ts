@@ -13,6 +13,7 @@
  */
 import { Buffer } from 'buffer';
 import React, { useCallback, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 import type { BleManager, Characteristic, Device, Subscription } from 'react-native-ble-plx';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
 import { AppLogger } from '../../services/AppLogger';
@@ -322,10 +323,14 @@ export function useBLEAutoRecovery({
           AppLogger.log('AUTO_RECOVERY_ADAPTER', { deviceId: conn.id, protocolId: recoveryAdapter.protocolId });
 
           try {
-            const mtuResult = await conn.requestMTU(512);
-            if (signal.aborted) break;
-            const negotiatedMtu = mtuResult?.mtu ?? 186;
-            callbacksRef.current.onMtuNegotiated?.(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);
+            if (Platform.OS === 'android') {
+              const mtuResult = await conn.requestMTU(512);
+              if (signal.aborted) break;
+              const negotiatedMtu = mtuResult?.mtu ?? 186;
+              callbacksRef.current.onMtuNegotiated?.(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);
+            } else {
+              callbacksRef.current.onMtuNegotiated?.(conn.id, 186);
+            }
           } catch (e) {
             AppLogger.warn('[AutoRecovery] MTU negotiation failed', { deviceId, error: String(e) });
           }
@@ -426,8 +431,12 @@ export function useBLEAutoRecovery({
           callbacksRef.current.onAdapterResolved(conn.id, recoveryAdapter);
 
           try {
-            const mtuResult = await conn.requestMTU(512);
-            callbacksRef.current.onMtuNegotiated?.(conn.id, (mtuResult?.mtu ?? 186) > 23 ? (mtuResult?.mtu ?? 186) : 186);
+            if (Platform.OS === 'android') {
+              const mtuResult = await conn.requestMTU(512);
+              callbacksRef.current.onMtuNegotiated?.(conn.id, (mtuResult?.mtu ?? 186) > 23 ? (mtuResult?.mtu ?? 186) : 186);
+            } else {
+              callbacksRef.current.onMtuNegotiated?.(conn.id, 186);
+            }
           } catch { /* non-fatal */ }
 
           if (disconnectListeners.current[conn.id]) {

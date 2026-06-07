@@ -108,7 +108,7 @@ export interface BleConnectionRequest {
     deviceId: string,
   ) => void>;
   /** Called on organic (unexpected) GATT disconnect */
-  handleOrganicDisconnect: (error: Record<string, any> | null, deviceId: string) => void;
+  handleOrganicDisconnect: (error: Error | null, deviceId: string) => void;
   /** FIFO Serial Queue handle to prevent direct GATT write collisions */
   enqueueWrite?: (priority: 'critical' | 'normal' | 'bulk', operation: () => Promise<boolean | 'partial'>, generation?: number) => Promise<boolean | 'partial'>;
   /** React state setter for connected devices */

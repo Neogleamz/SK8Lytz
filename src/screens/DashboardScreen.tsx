@@ -282,8 +282,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       const rd = registeredDevices.find(
         (r: RegisteredDevice) => r.device_mac?.toUpperCase() === mac
       );
-      const resolvedType = cfg.type || (d as DisplayDevice).type || rd?.product_type || undefined;
-      return { ...d, ...cfg, ...(resolvedType ? { type: resolvedType } : {}) } as DisplayDevice;
+      const resolvedType = cfg.type || (d as unknown as DisplayDevice).type || rd?.product_type || undefined;
+      return { ...d, ...cfg, ...(resolvedType ? { type: resolvedType } : {}) } as unknown as DisplayDevice;
     });
   }, [connectedDevices, deviceConfigs, registeredDevices]);
 
@@ -739,7 +739,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     if (selectedIds.length === 0) return;
     const selectedDevices = allDevices.filter(d => selectedIds.includes(d.id));
     // Catalog-driven type resolution — replaces name.includes('soul') heuristic.
-    const resolveType = (d: DisplayDevice) => getLocalProfileByPoints(d.points ?? 0).id;
+    const resolveType = (d: any) => getLocalProfileByPoints(d.points ?? 0).id;
     const firstType = resolveType(selectedDevices[0]);
     const allSame = selectedDevices.every(d => resolveType(d) === firstType);
 
@@ -838,7 +838,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           }
           // Resolve the live BLE peripheral by MAC.
           const bleDevice = allDevices.find(
-            (d: DisplayDevice) => (d.id || '').toUpperCase() === mac
+            (d) => (d.id || '').toUpperCase() === mac
           );
           if (!bleDevice) {
             // Device not yet discovered — trigger a scan. useDashboardAutoConnect
@@ -1192,7 +1192,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           visible={isAdminToolsVisible}
           onClose={() => setIsAdminToolsVisible(false)}
           allDevices={allDevices}
-          connectedDevices={connectedDevices as DisplayDevice[]}
+          connectedDevices={connectedDevices as unknown as DisplayDevice[]}
           bleState={bleState}
           handleScan={() => scanForPeripherals()}
           liveRxPayload={lastRawNotification}

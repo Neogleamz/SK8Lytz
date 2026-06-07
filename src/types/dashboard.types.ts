@@ -243,7 +243,7 @@ export interface IDeviceState {
   points?: number;
   segments?: number;
   sorting?: 'RGB' | 'GRB' | 'BRG' | 'RBG' | 'BGR' | 'GBR';
-  [key: string]: any; // safe loose fallback for undocumented BLE peripheral keys
+  [key: string]: unknown; // safe loose fallback for undocumented BLE peripheral keys
 }
 
 /**
@@ -279,7 +279,7 @@ export interface DisplayDevice {
   /** Product type resolved from deviceConfigs → BLE → registeredDevices chain */
   type?: string;
   // ── Safe catch-all for undocumented BLE / config fields ───
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 /** A saved light preset (user favorite or SK8Lytz Pick). */
@@ -312,7 +312,7 @@ export interface IFavoriteState {
   builderTransitionType?: number;
   builderDirection?: number;
   // ── SCENE mode persistence ─────────────
-  sceneSteps?: any[];
+  sceneSteps?: unknown[];
 }
 
 /** A quick color preset for the Builder sub-mode. */
@@ -336,7 +336,7 @@ export interface IQuickPreset {
 export interface DockedBus {
   // ── Write pipeline ────────────────────────────────────────────────────────
   /** Debounced + mutex-guarded BLE write. Use for all non-critical writes. */
-  writeToDevice: (payload: number[], writeTypeOrOverride?: 'Response' | 'NoResponse' | Record<string, any>) => Promise<void>;
+  writeToDevice: (payload: number[], writeTypeOrOverride?: 'Response' | 'NoResponse' | Record<string, unknown>) => Promise<void>;
   /** Current BLE write status — drives the status indicator dot in the visualizer. */
   writeStatus: import('../hooks/useOptimisticBLE').BLEWriteStatus;
   // ── Shared display parameters ─────────────────────────────────────────────
@@ -344,7 +344,7 @@ export interface DockedBus {
   speed: number;
   selectedColor: string;
   points?: number;
-  hwSettings?: any;
+  hwSettings?: IHardwareSettings;
   // ── ProEffects / MULTIMODE panel ─────────────────────────────────────────
   fixedPatternId: number;
   setFixedPatternId: (id: number) => void;

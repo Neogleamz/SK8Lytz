@@ -1,3 +1,7 @@
+jest.mock('react-native', () => ({
+  Platform: { OS: 'android' }
+}));
+
 import { getRecoveryBackoffMs, hasExceededMaxRecovery, MAX_RECOVERY_ATTEMPTS } from '../useBLEAutoRecovery';
 
 jest.mock('../../../services/AppLogger', () => ({

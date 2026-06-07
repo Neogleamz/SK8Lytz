@@ -15,7 +15,9 @@ module.exports = {
     ios: {
       supportsTablet: true,
       infoPlist: {
-        NSMicrophoneUsageDescription: "SK8Lytz needs microphone access to synchronize your lights to ambient music."
+        NSMicrophoneUsageDescription: "SK8Lytz needs microphone access to synchronize your lights to ambient music.",
+        NSCameraUsageDescription: "SK8Lytz needs camera access to sample colors from your environment for LED synchronization.",
+        NSHealthShareUsageDescription: "SK8Lytz reads step count and heart rate to synchronize light patterns with your fitness metrics."
       },
       buildNumber: "17",
       config: {
@@ -54,6 +56,7 @@ module.exports = {
       "@config-plugins/detox",
       "react-native-health",
       "react-native-health-connect",
+      "react-native-vision-camera",
       [
         "expo-build-properties",
         {

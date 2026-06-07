@@ -2,8 +2,8 @@ export class TelemetryService {
   /**
    * Extracts standard context (payload size, operation type, etc) from raw BLE errors.
    */
-  static extractBleContext(payload: Record<string, any>): Record<string, any> {
-    const context: Record<string, any> = { ...payload };
+  static extractBleContext(payload: Record<string, unknown>): Record<string, unknown> {
+    const context: Record<string, unknown> = { ...payload };
 
     // Attempt to determine payload size if hex or payload buffer is present
     if (context.hex && typeof context.hex === 'string') {

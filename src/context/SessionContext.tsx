@@ -385,6 +385,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     AppLogger.log('APP_LOG', { event: 'session_ended' });
     if (Platform.OS === 'android') {
       notifee.stopForegroundService();
+    } else {
+      notifee.cancelNotification(NOTIFICATION_ID);
     }
 
     // ── 5. Push STOPPED after 10s (matches watch card auto-dismiss timer) ────

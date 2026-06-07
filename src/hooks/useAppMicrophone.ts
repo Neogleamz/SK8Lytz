@@ -44,6 +44,9 @@ export function useAppMicrophone({
   const [hasMicPermission, setHasMicPermission] = useState<boolean>(true);
   const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
 
+  const writeToDeviceRef = useRef(writeToDevice);
+  writeToDeviceRef.current = writeToDevice;
+
   const startRecording = async () => {
     try {
       const isGranted = await checkPermission('MIC');
@@ -86,7 +89,7 @@ export function useAppMicrophone({
 
           // Send to hardware — 0x74 expects 0-150 (ZENGGE §11 decompiler limit)
           const deviceMag = Math.floor(smoothed * 150);
-          if (writeToDevice) writeToDevice(ZenggeProtocol.sendMusicMagnitude(deviceMag));
+          if (writeToDeviceRef.current) writeToDeviceRef.current(ZenggeProtocol.sendMusicMagnitude(deviceMag));
         }
       }, 50); // 20Hz — hardware needs continuous stream to stay in app-mic mode
     } catch (err) {
