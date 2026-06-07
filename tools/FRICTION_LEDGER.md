@@ -184,3 +184,13 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Impact:** User confusion, cluttered sprint board, potential duplicate work.
 - **Status:** MONITORING
 
+
+### [FRICTION-008] Ghost Tasks Left in Bucket List
+- **First Observed:** 2026-06-07
+- **Observed By:** PM - Jordan
+- **Occurrences:** 2 / 3
+- **Trigger:** User asked why bucket list is "full of crap" despite completing tasks.
+- **Pattern:** Agent checks off [x] for tasks but forgets to manually move the entire block from SK8Lytz_Bucket_List.md to SK8Lytz_Bucket_List_ARCHIVE.md.
+- **Root Cause Theory:** The workflow step "Phase 6 Step 5" is manual text manipulation and easily forgotten amidst merge tasks.
+- **Impact:** Severe context clutter, user frustration, duplicate work parsing.
+- **Status:** MONITORING

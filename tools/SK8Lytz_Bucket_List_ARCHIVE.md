@@ -456,3 +456,119 @@ pm run verify which includes QA tests.
   - **Source of Truth:** 📖 `useBLE.ts` — RSSI checked only during scan, never after connection established
   - **Goal:** Poll RSSI every 30s on connected devices. If RSSI drops below -75 dBm, show a "weak connection" warning badge on the device card. If it drops below -82 dBm, preemptively disconnect and reconnect.
   - **Details:** COMPLETE — Created `src/hooks/ble/useBLERSSIMonitor.ts` with `readDeviceRSSI()` (pure testable fn) and `useBLERSSIMonitor()` (30s polling hook, returns `Record<string,number>`). Created `src/components/ConnectionStrengthBadge.tsx` (3-bar pure-View signal icon, no SVG dep). Wired `rssiMap` into `BluetoothLowEnergyApi` + `useBLE.ts` return. In `DashboardScreen.tsx` `renderItem`, live `rssiMap[mac]` overrides stale scan-time `device.rssi` — existing wifi icon auto-updates. Preemptive reconnect guard uses verified `ghostedDeviceIds.includes(mac)`. 9 tests. Needs physical device smoke test to confirm badge updates within 30s of signal degradation.
+
+
+#### Batch Strategy Table — Deep-Dive Code Audit (2026-06-07)
+
+---
+
+*(account-hardening batch complete — archived @ Sprint v3.9.1)*
+*(account-critical batch complete — archived @ Sprint v3.9.1)*
+
+## 🚧 ACTIVE SPRINT
+
+---
+
+> ✅ All triage items from this audit have been completed and archived in `tools/SK8Lytz_Bucket_List_ARCHIVE.md` under Sprint v3.9.1 (2026-06-06).
+> 3 research agents × 30+ files × every line read. 14 issues identified across session lifecycle and BLE connection resilience.
+> 📊 **Source Analysis**: [Connection & Session Architecture Audit (2026-06-06)](file:///C:/Users/Magma/.gemini/antigravity/brain/25ac1742-4218-4218-91d4-cea42835db9b/analysis_results.md)
+
+## 🚑 TRIAGE QUEUE (Bugs & Hotfixes)
+
+---
+
+> The constitution is located in `.agents/rules/kanban-constitution.md` for universal agent context injection.
+> ⚠️ AI AGENT DIRECTIVES (THE CONSTITUTION)
+
+# SK8Lytz Master Bucket List
+
+
+
+#### Batch Strategy Table — Deep-Dive Code Audit (2026-06-07)
+
+> Identified violations from the Deep-Dive Code Audit (Rule 16 + Offline Telemetry).
+
+| Batch | Type | Tasks | File Overlap | Prerequisite |
+|-------|------|-------|-------------|-------------|
+| `[BATCH:deep-dive-regressions]` | 📋 Sequential | 1 | Touches 25+ files | None |
+
+---
+
+### ⚡ [BATCH:deep-dive-regressions] — `refactor/deep-dive-regressions` — 🔴 Critical (Active)
+> **Worktree**: `refactor/deep-dive-regressions` · **Type**: Sequential · **Prerequisite**: None
+> **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1f13c375-3bed-42bc-9c4f-245d16fb8e06/system_audit_report.md) — 16-agent deep dive exposed numerous Rule 16 violations (missing try/catch, `any` casts, inline functions) and critical offline telemetry dropping.
+
+- [x] **`refactor/deep-dive-telemetry`** — merged @ 256d3257 (Added robust setTimeout debounce to AppLogger and wrapped I/O in try/catch)
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[DATA]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 PRO-HIGH]` `[BATCH:deep-dive-regressions]`
+  - **Goal:** Fix offline telemetry drops in `DATA_LAYER`, `SESSION_TRACKING`, and `AppLogger.ts`.
+  - **Decision Log:** Critical I/O operations lack try/catch wrappers, causing silent failures when the app goes offline. Replaced faulty manual debounce with true setTimeout buffer and forced offline persists.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1f13c375-3bed-42bc-9c4f-245d16fb8e06/system_audit_report.md) · Plan: [PLAN-refactor-deep-dive-telemetry.md](docs/plans/PLAN-refactor-deep-dive-telemetry.md)
+  - **Source of Truth:** 📖 `src/services/AppLogger.ts`
+
+- [x] **`refactor/deep-dive-type-safety`** — merged @ 9ca523d3 (Eliminated `any` casts in AccountModal and CrewTab, enforced strict types via `React.Dispatch<React.SetStateAction<...>>`)
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[CORE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 PRO-HIGH]` `[BATCH:deep-dive-regressions]`
+  - **Goal:** Eradicate all `any` casts from `NOTIFICATIONS_&_ROUTING`, `GROUP_SYNC`, `HARDWARE_PROTOCOLS`, and `IDENTITY`.
+  - **Decision Log:** Pervasive use of `any` casts bypasses TypeScript safety during crashes, violating Rule 16.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1f13c375-3bed-42bc-9c4f-245d16fb8e06/system_audit_report.md) · Plan: [PLAN-refactor-deep-dive-type-safety.md](docs/plans/PLAN-refactor-deep-dive-type-safety.md)
+  - **Source of Truth:** 📖 `src/components/crew/CrewLandingScreen.tsx` + `CONSTITUTION.md`
+
+- [x] **`refactor/deep-dive-perf`** — merged @ e72ff390 (Extracted inline styles to StyleSheet.create and moved inline mappings and renderItem to useCallback/useMemo across UI components)
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[⚠️ M-RISK]` `[🍱 Meal]` `[🤖 PRO-HIGH]` `[BATCH:deep-dive-regressions]`
+  - **Goal:** Resolve performance leaks caused by inline functions and styles in FlatLists across `UI_CONTROLS` and `GROUP_SYNC`.
+  - **Decision Log:** Widespread inline styles/functions cause severe re-render thrashing.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1f13c375-3bed-42bc-9c4f-245d16fb8e06/system_audit_report.md) · Plan: [PLAN-refactor-deep-dive-perf.md](docs/plans/PLAN-refactor-deep-dive-perf.md)
+  - **Source of Truth:** 📖 `src/components/DockedController.tsx`
+
+- [x] **`refactor/deep-dive-ble-core`** — merged @ 0718bb3b (Fixed stale closures in AutoRecovery, added offline AsyncStorage telemetry queues, removed any casts in useBLESweeper)
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[CORE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 PRO-HIGH]` `[BATCH:deep-dive-regressions]`
+  - **Goal:** Fix stale closures in `useBLEAutoRecovery.ts`, missing offline queues in `useBLEScanner.ts`, and `any` casts in `useBLESweeper.ts`.
+  - **Decision Log:** BLE components have critical stale closures and lack offline persistence for discovered devices.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1f13c375-3bed-42bc-9c4f-245d16fb8e06/system_audit_report.md) · Plan: [PLAN-refactor-deep-dive-ble-core.md](docs/plans/PLAN-refactor-deep-dive-ble-core.md)
+  - **Source of Truth:** 📖 `src/hooks/ble/useBLEAutoRecovery.ts`
+
+- [x] **`refactor/deep-dive-os-permissions`** — merged @ 14dff9da (Fixed Android 14+ FOREGROUND_SERVICE location flags in AndroidManifest.xml and wrapped AsyncStorage permissions telemetry)
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[NATIVE]` `[⚠️ M-RISK]` `[🍱 Meal]` `[🤖 PRO-HIGH]` `[BATCH:deep-dive-regressions]`
+  - **Goal:** Fix missing Android 14+ FOREGROUND_SERVICE flags and conflicting location permissions in `AndroidManifest.xml`.
+  - **Decision Log:** Missing OS-level foreground service definitions for Android 14+ will cause background execution crashes.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1f13c375-3bed-42bc-9c4f-245d16fb8e06/system_audit_report.md) · Plan: [PLAN-refactor-deep-dive-os-permissions.md](docs/plans/PLAN-refactor-deep-dive-os-permissions.md)
+  - **Source of Truth:** 📖 `android/app/src/main/AndroidManifest.xml`
+
+- [x] **`refactor/deep-dive-native-cloud`** — merged @ c03b83e5 (Fixed telemetry overwrites in WatchConnectivity, buffered WearMessageSender, added try/catch to edge functions, and safely casted SQL JSON metrics)
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[CLOUD]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 PRO-HIGH]` `[BATCH:deep-dive-regressions]`
+  - **Goal:** Fix telemetry overwrites in WatchConnectivityManager, dropouts in WearMessageSender, and missing try/catch in Supabase Edge Functions.
+  - **Decision Log:** Native watch targets and cloud edge functions drop data due to unhandled exceptions and payload overwriting.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1f13c375-3bed-42bc-9c4f-245d16fb8e06/system_audit_report.md) · Plan: [PLAN-refactor-deep-dive-native-cloud.md](docs/plans/PLAN-refactor-deep-dive-native-cloud.md)
+  - **Source of Truth:** 📖 `targets/watch/WatchConnectivityManager.swift`
+
+---
+
+
+
+### 🔴 Tier 1: Critical System Integrity
+
+#### Batch Strategy Table — Constitutional Audit Burn-Down
+
+> Identified violations from the Deep-Dive System Audit (2026-06-06).
+
+| Batch | Type | Tasks | File Overlap | Prerequisite |
+|-------|------|-------|-------------|-------------|
+| `[BATCH:burn-down-audit-failures]` | 📋 Sequential | 1 | Touches 25+ files (BLE & Auth) | None |
+
+---
+
+### ⚡ [BATCH:burn-down-audit-failures] — `refactor/burn-down-audit-failures` — 🔴 Critical
+> **Worktree**: `refactor/burn-down-audit-failures` · **Type**: Sequential · **Prerequisite**: None
+> **Source Analysis**: 📊 [audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/25ac1742-4218-4218-91d4-cea42835db9b/audit_report.md) — 3-agent deep dive exposed 14 new `any` casts, faked XState shims, and 16 AuthContext bypasses.
+
+- [/] **`refactor/burn-down-audit-failures`**
+  - **Tags:** `[🚧 IN PROGRESS]` `[🤔 INFERRED]` `[CORE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 PRO-HIGH]` `[BATCH:burn-down-audit-failures]`
+  - **Goal:** Eradicate 14 injected `any` casts, finalize the split-brain XState migration, and enforce AuthContext globally across 16 bypassed hooks/services.
+  - **Decision Log:** Deep dive audit by 3 subagents found 14 injected `any` casts, split-brain XState migration, and 16 bypassed AuthContext hooks/services. Pushed on 2026-06-06 as 'completed' but failed constitutional laws.
+  - **Analysis:** 📊 Source: [audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/25ac1742-4218-4218-91d4-cea42835db9b/audit_report.md) · Plan: [PLAN-refactor-burn-down-audit-failures.md](docs/plans/PLAN-refactor-burn-down-audit-failures.md)
+    Key finding: "XState migration faked via `any` shims. 16 files bypass AuthContext. 14 new `any` casts violated Rule 1."
+    Rejected alternative: "Leaving them as Tech Debt. This violates core rules and causes cascading type failures."
+  - **Source of Truth:** 📖 `src/context/AuthContext.tsx:9-10` + `CONSTITUTION.md` Rule 1.
+  - **Details:** 3-phase burn down: 1. Purge `any` casts. 2. Rip out `BleStateMachine.ts` and fake `bleGateRef` shims. 3. Delete `supabase.auth.getUser` from 8 hooks and 8 services, forcing context/prop passing.
+
+---
+
