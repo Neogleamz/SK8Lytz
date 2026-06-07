@@ -484,3 +484,12 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/components/account/types.ts, src/components/account/AccountTab*.tsx, src/hooks/useAccountOverview.ts, App.tsx
 
+
+### [MERGE] 2026-06-07T09:27 — refactor-deep-dive-ble-core -> master @ 0718bb3b
+**What merged:** 
+- Wrapped spawnRecoveryLoop in useCallback and correctly added it to dependencies of initiateRecovery to resolve stale closures in useBLEAutoRecovery.ts.
+- Updated flushTelemetry with try/catch. Persisted telemetry payloads in an offline queue via AsyncStorage when Supabase writes fail.
+- Replaced any casts in interrogateDevice with strict types.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/hooks/ble/useBLEAutoRecovery.ts, src/hooks/ble/useBLEScanner.ts, src/hooks/ble/useBLESweeper.ts
+
