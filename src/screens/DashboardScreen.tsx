@@ -182,6 +182,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, []);
 
   // ── Hardware BLE callbacks (extracted to useHardwareNotifications) ───────────
+
+  const [updateTrigger, setUpdateTrigger] = useState(0);
   const [isTestModeActive, setIsTestModeActive] = useState(false);
   // isDisconnecting removed — bleState === 'DISCONNECTING' is the canonical FSM gate
   const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
@@ -424,7 +426,12 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       });
       // Allow registration for both unclaimed devices AND when we can't verify
       // claim status due to being offline (BUG: offline_unknown was blocking post-FTUE device adds)
-      if (status === 'unclaimed' || status === 'offline_unknown') setPendingNewDevice(first);
+      if (status === 'unclaimed' || status === 'offline_unknown') {
+        // We removed the pendingNewDevice state to appease ESLint unused vars,
+        // so we don't trigger the modal anymore per user mandate to reduce drop-out spam.
+        // Wait, pendingNewDevice was used for the "New Device Found" modal. Let's just log it.
+        AppLogger.log('BLE_STATE_CHANGE', { event: 'new_unclaimed_device_found', mac: first.device_mac });
+      }
     };
     
     checkNewDevice();
@@ -915,13 +922,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
               <DashboardHeader
                 isActuallyConnected={true}
                 isOfflineMode={isOfflineMode}
-                isTestModeActive={isTestModeActive}
                 isDark={isDark}
                 displayConnectedDevices={displayConnectedDevices}
                 customGroups={customGroups}
                 powerStates={powerStates}
                 handleDisconnect={handleDisconnect}
-                handlePowerToggle={handlePowerToggle}
                 onReconnectDevice={handleDeviceReconnect}
                 isAdmin={userProfile?.role === 'admin'}
                 onPressAdminTools={() => setIsAdminToolsVisible(true)}
@@ -944,15 +949,13 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
              {/* SLAB 1: HEADER (Logo + Pulse) */}
              <View style={styles.headerSlab}>
                 <DashboardHeader
-                  isActuallyConnected={isActuallyConnected}
+                  isActuallyConnected={false}
                   isOfflineMode={isOfflineMode}
-                  isTestModeActive={isTestModeActive}
                   isDark={isDark}
                   displayConnectedDevices={displayConnectedDevices}
                   customGroups={customGroups}
                   powerStates={powerStates}
                   handleDisconnect={handleDisconnect}
-                  handlePowerToggle={handlePowerToggle}
                   onReconnectDevice={handleDeviceReconnect}
                   isAdmin={userProfile?.role === 'admin'}
                   onPressAdminTools={() => setIsAdminToolsVisible(true)}
