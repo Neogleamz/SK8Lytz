@@ -572,3 +572,21 @@ pm run verify which includes QA tests.
 
 ---
 
+
+
+### [BATCH:ble-p1-ios-platform] — ? Parallel (zero file overlap)
+
+> ?? **P2 — Planned Improvements.** iOS-specific fixes.
+
+- **Prerequisite**: None
+- **Active Tasks**: le/ios-state-restoration
+
+- [x] **le/ios-state-restoration** (Merged @ f6af517d — Implemented react-native-ble-plx restoreStateIdentifier for silent iOS CoreBluetooth connection recovery)
+  - **Tags:** [?? NEEDS PLAN] [?? INFERRED] [LAB] [M-RISK] [Meal] [?? THINK] [BATCH:ble-p1-ios-platform]
+  - **Plan:** ?? PLAN-ble-ios-state-restoration.md *(pending)*
+  - **Source of Truth:** ?? Apple [State Preservation and Restoration docs](https://developer.apple.com/library/archive/documentation/NetworkingInternetWeb/Conceptual/CoreBluetooth_concepts/CoreBluetoothBackgroundProcessingForIOSApps/PerformingTasksWhileYourAppIsInTheBackground.html)
+  - **Goal:** Implement Core Bluetooth State Preservation and Restoration via a small native module (~30 lines Swift) so iOS can restore pending BLE connections when the app is terminated and relaunched.
+  - **Details:** Issue iOS-02. If iOS kills the app while in Music/Street mode, BLE connections are silently dropped with no recovery. Core Bluetooth provides CBCentralManagerOptionRestoreIdentifierKey — the system saves pending connections and restores them on relaunch. Nanoleaf and LIFX both implement this. Requires: register restore identifier in native BLE init, implement centralManager:willRestoreState: delegate, bridge restored peripheral IDs back to JS via eact-native-ble-plx configuration or a small custom native module.
+
+---
+

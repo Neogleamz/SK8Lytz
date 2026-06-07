@@ -520,3 +520,12 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** targets/watch/WatchConnectivityManager.swift, android/sk8lytzWear/WearMessageSender.kt, supabase/functions/notify-crew-session/index.ts, supabase/migrations/20260414_consolidate_telemetry.sql, supabase/migrations/20260506000001_god_tier_telemetry.sql
 
+
+### [MERGE] 2026-06-07T10:14 — ble/ios-state-restoration -> master @ f6af517d
+**What merged:** 
+- Implemented iOS CoreBluetooth state restoration using react-native-ble-plx \estoreStateIdentifier\ in useBLE.ts.
+- Added \BLE_RESTORE_STATE\ to AppLogger.ts EventType union.
+- Removed duplicate \	elemetry_snapshots\ block from src/types/supabase.ts to fix TSC.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/hooks/useBLE.ts, src/services/AppLogger.ts, src/types/supabase.ts
+
