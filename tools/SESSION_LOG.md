@@ -602,3 +602,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Decoupled BLE scanner into useBLEBatterySweep.ts and useBLEInterrogator.ts. Resolved split-brain persistence logic by dropping useControllerPersistence in favor of useDeviceStateLedger.
 **Verify result:** TSC ?, Jest ? (126/126 passed), guards ?
 **Files touched:** src/hooks/ble/*, src/hooks/useBLE.ts, src/components/DockedController.tsx, src/services/BleConnectionManager.ts, tools/SK8Lytz_App_Master_Reference.md
+
+### [EVENT] 2026-06-07T15:08 — FRICTION-013 Resolved: Automated Archival
+**Action:** Shipped rule evolution proposal for [FRICTION-013]. Automated the bucket list archival phase inside `fortress-gatekeeper.ps1` using a new Node script (`auto-archiver.js`).
+**Impact:** The agent no longer has to manually manipulate the Bucket List text file to check off tasks and archive them. This removes the manual context-window burden and prevents Split-Truth boards.
