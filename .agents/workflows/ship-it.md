@@ -25,6 +25,7 @@ When invoked via `/ship-it`, you must act as a strict state machine orchestratin
 3. **Automated Smoke Test:** Execute the `/smoke-test` workflow to verify the app renders without a white screen or fatal crash.
    > Note: Detox E2E is a devDependency but has no config yet — `/smoke-test` (headless browser check) is the current working alternative.
 4. **Codebase & Bundle Audit:** Execute the `/audit-codebase` workflow (includes bundle weight check).
+5. **Codebase Deep Dive (Regression Hunt):** Execute the `/deepdive-code` workflow to deploy the 16 QA Auditor nodes across all domains to guarantee zero active regressions or guardrail violations.
 *(Pause and verify no errors exist before proceeding).*
 
 ### Phase 2: The Physical Proof (Test Before Merge)
