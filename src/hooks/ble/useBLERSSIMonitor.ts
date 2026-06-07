@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Platform } from 'react-native';
 import type { Device } from 'react-native-ble-plx';
 import { AppLogger } from '../../services/AppLogger';
@@ -76,29 +76,36 @@ export function useBLERSSIMonitor({
   onCriticalSignal,
 }: UseBLERSSIMonitorParams): Record<string, number> {
   const [rssiMap, setRssiMap] = useState<Record<string, number>>({});
+  const _isRunningRef = useRef(false);
 
   useEffect(() => {
     if (Platform.OS === 'web' || !bleManager) return;
 
     const intervalId = setInterval(async () => {
-      const devices = connectedDevicesRef.current;
-      if (devices.length === 0) return;
+      if (_isRunningRef.current) return;
+      _isRunningRef.current = true;
+      try {
+        const devices = connectedDevicesRef.current;
+        if (devices.length === 0) return;
 
-      for (const device of devices) {
-        const mac = device.id;
-        const rssi = await readDeviceRSSI(mac, bleManager);
+        for (const device of devices) {
+          const mac = device.id;
+          const rssi = await readDeviceRSSI(mac, bleManager);
 
-        if (rssi === null) continue; // GATT error — heartbeat handles dead links
+          if (rssi === null) continue; // GATT error — heartbeat handles dead links
 
-        setRssiMap(prev => ({ ...prev, [mac]: rssi }));
+          setRssiMap(prev => ({ ...prev, [mac]: rssi }));
 
-        if (rssi < RSSI_CRITICAL_THRESHOLD) {
-          AppLogger.warn('[BLE RSSI] Critical signal — proactive reconnect', { mac, rssi });
-          onCriticalSignal?.(mac, rssi);
-        } else if (rssi < RSSI_WEAK_THRESHOLD) {
-          AppLogger.warn('[BLE RSSI] Weak signal detected', { mac, rssi });
-          onWeakSignal?.(mac, rssi);
+          if (rssi < RSSI_CRITICAL_THRESHOLD) {
+            AppLogger.warn('[BLE RSSI] Critical signal — proactive reconnect', { mac, rssi });
+            onCriticalSignal?.(mac, rssi);
+          } else if (rssi < RSSI_WEAK_THRESHOLD) {
+            AppLogger.warn('[BLE RSSI] Weak signal detected', { mac, rssi });
+            onWeakSignal?.(mac, rssi);
+          }
         }
+      } finally {
+        _isRunningRef.current = false;
       }
     }, RSSI_POLL_INTERVAL_MS);
 

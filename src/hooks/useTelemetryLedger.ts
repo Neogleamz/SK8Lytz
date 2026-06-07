@@ -26,6 +26,7 @@ export function useTelemetryLedger() {
   const payloadBuffer = useRef<TelemetryPayload>({});
   const activeState = useRef<{ type: 'pattern' | 'color' | 'mode', id: string, startTime: number } | null>(null);
   const sessionStartTime = useRef<number>(Date.now());
+  const _isFlushingRef = useRef(false);
 
   // Helper to merge payloads locally
   const mergeIntoBuffer = (incoming: TelemetryPayload) => {
@@ -104,10 +105,13 @@ export function useTelemetryLedger() {
   }, []);
 
   const flushToDatabase = useCallback(async () => {
+    if (_isFlushingRef.current) return;
     if (!supabase) return;
     
-    // 1. Close any active stopwatch
-    closeCurrentState();
+    _isFlushingRef.current = true;
+    try {
+      // 1. Close any active stopwatch
+      closeCurrentState();
 
     // 2. Add total app time since last flush
     const elapsedAppTime = Math.round((Date.now() - sessionStartTime.current) / 1000);
@@ -153,6 +157,9 @@ export function useTelemetryLedger() {
       } catch (storageErr) {
         // Fatal storage error
       }
+    }
+    } finally {
+      _isFlushingRef.current = false;
     }
   }, [closeCurrentState]);
 

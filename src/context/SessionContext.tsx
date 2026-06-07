@@ -257,8 +257,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }
 
       let isForegroundServiceStarted = false;
+      let isDisplaying = false;
 
       const displayNotification = async () => {
+        if (isDisplaying) return;
+        isDisplaying = true;
         try {
           await notifee.displayNotification({
             id: NOTIFICATION_ID,
@@ -303,6 +306,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           }
         } catch (err: unknown) {
           AppLogger.error('Failed to display foreground service notification', err);
+        } finally {
+          isDisplaying = false;
         }
       };
 

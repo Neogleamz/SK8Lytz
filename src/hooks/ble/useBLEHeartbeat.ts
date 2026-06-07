@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 import { Buffer } from 'buffer';
 import type { Device } from 'react-native-ble-plx';
@@ -99,20 +99,28 @@ export function useBLEHeartbeat({
   adapterMapRef,
   onStaleLinkDetected,
 }: UseBLEHeartbeatParams): void {
+  const _isRunningRef = useRef(false);
+
   useEffect(() => {
     if (Platform.OS === 'web' || !bleManager) return;
 
     const intervalId = setInterval(async () => {
-      const devices = connectedDevicesRef.current;
-      if (devices.length === 0) return;
+      if (_isRunningRef.current) return;
+      _isRunningRef.current = true;
+      try {
+        const devices = connectedDevicesRef.current;
+        if (devices.length === 0) return;
 
-      for (const device of devices) {
-        await pingConnectedDevice(
-          device.id,
-          bleManager,
-          adapterMapRef.current.get(device.id),
-          onStaleLinkDetected,
-        );
+        for (const device of devices) {
+          await pingConnectedDevice(
+            device.id,
+            bleManager,
+            adapterMapRef.current.get(device.id),
+            onStaleLinkDetected,
+          );
+        }
+      } finally {
+        _isRunningRef.current = false;
       }
     }, HEARTBEAT_INTERVAL_MS);
 

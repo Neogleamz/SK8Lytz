@@ -110,6 +110,10 @@ export function useDashboardAutoConnect({
 }: UseDashboardAutoConnectOptions): { clearAutoConnectQueue: () => void; retriggerAutoConnect: () => void } {
 
   const { session } = useAuth();
+  const sessionRef = useRef(session);
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
   
   const hasAutoConnectedRef = useRef(false);
   const autoConnectIdsRef = useRef<string[]>([]);
@@ -254,8 +258,8 @@ export function useDashboardAutoConnect({
       let cloudUserId: string | null = null;
 
       if (supabase) {
-        if (session?.user) {
-          cloudUserId = session.user.id;
+        if (sessionRef.current?.user) {
+          cloudUserId = sessionRef.current.user.id;
 
           try {
             await refreshProfile();

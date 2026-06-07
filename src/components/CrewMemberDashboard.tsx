@@ -142,11 +142,15 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
   const [members, setMembers] = useState<CrewMember[]>([]);
   const [elapsed, setElapsed] = useState('');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const _isFlushingRef = useRef(false);
 
   // ── Load members ────────────────────────────────────────────────────────────
   useEffect(() => {
     const loadMembers = async () => {
-      const { data } = await supabase
+      if (_isFlushingRef.current) return;
+      _isFlushingRef.current = true;
+      try {
+        const { data } = await supabase
         .from('crew_members')
         .select(`
           user_id, role, joined_at,
@@ -154,14 +158,17 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
         `)
         .eq('session_id', session.id);
 
-      if (data) {
-        setMembers(data.map((r: any) => ({
-          user_id: r.user_id,
-          role: r.role ?? 'member',
-          joined_at: r.joined_at,
-          display_name: r.user_profiles?.display_name ?? null,
-          avatar_color: r.user_profiles?.avatar_color ?? null,
-        })));
+        if (data) {
+          setMembers(data.map((r: any) => ({
+            user_id: r.user_id,
+            role: r.role ?? 'member',
+            joined_at: r.joined_at,
+            display_name: r.user_profiles?.display_name ?? null,
+            avatar_color: r.user_profiles?.avatar_color ?? null,
+          })));
+        }
+      } finally {
+        _isFlushingRef.current = false;
       }
     };
     loadMembers();

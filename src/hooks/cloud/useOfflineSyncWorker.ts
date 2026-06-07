@@ -18,19 +18,29 @@ import { useAuth } from '../../context/AuthContext';
 export function useOfflineSyncWorker() {
   const { user } = useAuth();
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const userRef = useRef(user);
+  const _isFlushingSyncRef = useRef(false);
+
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
 
   useEffect(() => {
     AppLogger.debug('[OfflineSyncWorker] Started background sync loop');
 
     const runSync = async () => {
+      if (_isFlushingSyncRef.current) return;
+      _isFlushingSyncRef.current = true;
       try {
-        if (!user) return; // Prevent flush loop if unauthenticated
+        if (!userRef.current) return; // Prevent flush loop if unauthenticated
         await ScenesService.flushSyncQueue();
-        await SpeedTrackingService.flushPendingSessionQueue(user.id);
+        await SpeedTrackingService.flushPendingSessionQueue(userRef.current.id);
         await AppLogger.uploadLogsToSupabase();
       } catch (e) {
         // We catch everything here to prevent the worker loop from crashing the app
         AppLogger.warn('[OfflineSyncWorker] Sync cycle encountered an error', { error: String(e) });
+      } finally {
+        _isFlushingSyncRef.current = false;
       }
     };
 
