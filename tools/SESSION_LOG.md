@@ -493,3 +493,11 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/hooks/ble/useBLEAutoRecovery.ts, src/hooks/ble/useBLEScanner.ts, src/hooks/ble/useBLESweeper.ts
 
+
+### [MERGE] 2026-06-07T09:29 — refactor-deep-dive-perf -> master @ e72ff390
+**What merged:** 
+- Extracted inline styles to StyleSheet.create and moved inline mappings and renderItem to useCallback/useMemo.
+- Fixed severe re-render thrashing across FlatLists in UI controls and Group Sync screens.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/components/DockedController.tsx, src/components/docked/FavoritesPanel.tsx, src/screens/DashboardScreen.tsx, src/components/crew/CrewJoinScreen.tsx
+
