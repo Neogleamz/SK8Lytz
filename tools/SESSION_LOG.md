@@ -577,3 +577,23 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Files touched:**
 - src/components/dashboard/DashboardHeader.tsx
 - src/screens/DashboardScreen.tsx
+### [MERGE] 2026-06-07T14:45 — deep-dive-remediation-batch ? master @ e465d08a
+**What merged:** 
+- Enforced BLE write queue across AutoRecovery logic.
+- Serialized connection handshakes in BleConnectionManager to resolve GATT 133 Android crashes.
+- Added reconnect backoff jitter to prevent device stamps in useDashboardAutoConnect.
+- Refactored chunk dispatching in BleWriteDispatcher to leverage concurrent mapped structures.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** 
+- src/hooks/ble/useBLEAutoRecovery.ts
+- src/services/BleConnectionManager.ts
+- src/hooks/useDashboardAutoConnect.ts
+- src/services/BleWriteDispatcher.ts
+- src/hooks/useBLE.ts
+- src/hooks/ble/useBLEGattMutex.ts
+- src/hooks/ble/useBLEHeartbeat.ts
+
+### [EVENT] 2026-06-07T19:48 - Vector Gamma Implementation & Split-Brain Plan
+**Action:** Updated .agents/workflows/deepdive-code.md to introduce the **Vector Gamma (Structural Snipers)** fleet targeted exclusively at detecting Split-Brain Code Duplication (R-21).
+**Action:** Drafted detailed Implementation Plan for qa/fix-split-brain-and-offline-first to satisfy the **S4 Monolith Rule** (decomposing useBLESweeper.ts rather than merging it directly into useBLEScanner.ts).
+
