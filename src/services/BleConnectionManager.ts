@@ -6,6 +6,7 @@ import { AppLogger } from './AppLogger';
 import { createGattSession } from './BleSessionFactory';
 import { acquireGattLock } from '../hooks/ble/useBLEGattMutex';
 import type { BleConnectionRequest } from '../types/ble.types';
+import { jitteredDelay } from '../utils/backoff';
 
 /**
  * executeConnectToDevices — Group connection manager.
@@ -163,7 +164,8 @@ export async function executeConnectToDevices({
               || errStr.includes('connection failed') || errStr.includes('timed out')
               || errStr.includes('Peer removed');
             if (isTransient && attempt < 3) {
-              const delay = GATT_BACKOFF_MS[attempt - 1];
+              const baseDelay = GATT_BACKOFF_MS[attempt - 1];
+              const delay = jitteredDelay(baseDelay, 500);
               AppLogger.warn(`[BLE] GATT 133 on ${device.id}. Attempt ${attempt}/3 — retrying in ${delay}ms with refreshGatt`, { error: errStr });
               await bleManager.cancelDeviceConnection(device.id).catch(() => {});
               await new Promise(resolve => setTimeout(resolve, delay));

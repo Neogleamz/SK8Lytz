@@ -21,6 +21,7 @@ import type { RegisteredDevice } from '../hooks/useRegistration';
 import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { jitteredDelay } from '../utils/backoff';
 import type { RegisteredGroup, RegisteredDeviceRow } from '../types/ble.types';
 
 interface UseDashboardAutoConnectOptions {
@@ -127,6 +128,7 @@ export function useDashboardAutoConnect({
   // Debounce: batch devices that appear within 500ms into a single connectToDevices call.
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingBatchRef = useRef<Device[]>([]);
+  const gateRetryCountRef = useRef(0);
 
   // Stable ref-forwarding: connectToDevices and scanForPeripherals are passed as
   // options and may change identity on re-render. The observer useEffect only depends
@@ -165,11 +167,15 @@ export function useDashboardAutoConnect({
             gate: getGate(),
             batchSize: pendingBatchRef.current.length,
           });
-          // BUG-02 Fix: Do not wipe pendingBatchRef. Instead, retry in 1000ms.
-          debounceTimerRef.current = setTimeout(attemptConnection, 1000);
+          // BUG-02 Fix: Do not wipe pendingBatchRef. Instead, retry with jittered exponential backoff.
+          gateRetryCountRef.current += 1;
+          const backoffMs = Math.min(1000 * Math.pow(1.5, gateRetryCountRef.current), 10000);
+          const delay = jitteredDelay(backoffMs, backoffMs * 0.25);
+          debounceTimerRef.current = setTimeout(attemptConnection, delay);
           return;
         }
 
+        gateRetryCountRef.current = 0;
         const batch = [...pendingBatchRef.current];
         pendingBatchRef.current = [];
 
@@ -206,7 +212,7 @@ export function useDashboardAutoConnect({
               autoConnectRetriesRef.current.set(id, retries);
 
               if (retries <= MAX_AUTO_CONNECT_RETRIES) {
-                const backoff = (AUTO_CONNECT_RETRY_BACKOFF_MS * retries) + Math.floor(Math.random() * 500);
+                const backoff = jitteredDelay(AUTO_CONNECT_RETRY_BACKOFF_MS * retries, 500);
                 AppLogger.log('BLE_STATE_CHANGE', {
                   event: 'auto_connect_requeued',
                   mac: id,

@@ -35,6 +35,7 @@ import { executeWriteToDevice, executeWriteChunked, executeProtocolResults as ex
 import { clearWriteQueue, enqueueWrite, resolveWritePriority } from '../services/BleWriteQueue';
 import { executeRealDisconnect, disconnectFromDevice as keepaliveDisconnect, forceDisconnect as keepaliveForceDisconnect } from '../services/BleLifecycleManager';
 import { executeConnectToDevices } from '../services/BleConnectionManager';
+import { jitteredDelay } from '../utils/backoff';
 
 let BleManager: any;
 let State: any;
@@ -128,9 +129,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
             // we can pass these restored peripherals directly to `connectToDevices()`.
             // But we must do it carefully to avoid GATT 133 conflicts.
             // We will enqueue a background reconnect.
+            const delay = jitteredDelay(1000, 500);
             setTimeout(() => {
                 connectToDevicesRef.current(peripherals);
-            }, 1000);
+            }, delay);
           }
         }
       }
