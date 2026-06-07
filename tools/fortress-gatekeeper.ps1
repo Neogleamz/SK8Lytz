@@ -85,7 +85,7 @@ foreach ($Line in $WorktreeList) {
 
     # 4. Perform Fast-Forward Merge (now guaranteed to succeed post-rebase)
     Write-Host "Merging branch '$Branch' into master..." -ForegroundColor Yellow
-    git checkout master 2>&1 | Out-Null
+    git checkout master --quiet
     if ($LASTEXITCODE -ne 0) {
         Write-Host "GATEKEEPER HALT: Could not checkout master." -ForegroundColor Red
         exit 1
