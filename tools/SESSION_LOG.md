@@ -597,3 +597,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Action:** Updated .agents/workflows/deepdive-code.md to introduce the **Vector Gamma (Structural Snipers)** fleet targeted exclusively at detecting Split-Brain Code Duplication (R-21).
 **Action:** Drafted detailed Implementation Plan for qa/fix-split-brain-and-offline-first to satisfy the **S4 Monolith Rule** (decomposing useBLESweeper.ts rather than merging it directly into useBLEScanner.ts).
 
+
+### [MERGE] 2026-06-07T15:02 — split-brain-offline-first -> master @ 8191a9f3
+**What merged:** Decoupled BLE scanner into useBLEBatterySweep.ts and useBLEInterrogator.ts. Resolved split-brain persistence logic by dropping useControllerPersistence in favor of useDeviceStateLedger.
+**Verify result:** TSC ?, Jest ? (126/126 passed), guards ?
+**Files touched:** src/hooks/ble/*, src/hooks/useBLE.ts, src/components/DockedController.tsx, src/services/BleConnectionManager.ts, tools/SK8Lytz_App_Master_Reference.md
