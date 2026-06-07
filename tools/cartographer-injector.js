@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const masterRefPath = 'c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SK8Lytz_App_Master_Reference.md';
-const scratchDir = 'C:/Users/Magma/.gemini/antigravity/brain/3b181b41-6ca5-443f-b4ae-b5b701d0f34c/scratch';
+const scratchDir = 'C:/Users/Magma/.gemini/antigravity/brain/79cf6856-67a1-49d0-aadc-9079eee6c7ae/scratch';
 
 const domains = [
   'IDENTITY', 'BLE_CORE', 'GROUP_SYNC', 'UI_CONTROLS', 'DATA_LAYER',

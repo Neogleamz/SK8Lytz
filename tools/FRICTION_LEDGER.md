@@ -60,18 +60,56 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Proposed Fix:** Add to Taylor's pre-gatekeeper micro-read in `prime-directive.md`:
   > *"I must: (4) after gatekeeper merge, execute Phase 6 Step 5 â€” stamp `[x]`, move completed batch to ARCHIVE, verify ACTIVE SPRINT has zero `[x]` tasks."*
 - **Files to Update:** `prime-directive.md` (Taylor pre-gatekeeper micro-read), `start-task.md` Phase 6 Step 5 (add visual `â›” HARD STOP` callout)
-- **Impact if Approved:** Archival cannot be skipped â€” it's part of the same mental checklist Taylor runs before every merge
-- â†’ **Approve with:** `"Ship the evolution"` | **Reject with:** `"Hold, here's why..."`
-
+- **Status:** MONITORING — At 3 strikes: auto-propose enforcement gate.
 
 ---
 
-## âœ… Resolved Patterns (Victory Snapshots)
+### [FRICTION-007] Zombie Tasks Remaining in Bucket List
+- **First Observed:** 2026-06-07  
+- **Observed By:** PM - Jordan
+- **Occurrences:** 1 / 3
+- **Trigger:** User asked why BATCH:account-polish was still in the Bucket List when it was completed.
+- **Pattern:** The agent completing a task (Debugging Account Avatar Issues session) merged the work but failed to update the Bucket List to check off the task and remove the completed batch, leaving zombie tasks in the active sprint.
+- **Root Cause Theory:** The agent might have skipped Phase 6 Step 5 of the start-task workflow, or lacked the explicit instruction to remove the batch entirely after all internal items were completed.
+- **Impact:** User confusion, cluttered sprint board, potential duplicate work.
+- **Status:** MONITORING
+
+
+### [FRICTION-014] Absolute Path Master Collision
+- **First Observed:** 2026-06-07  
+- **Observed By:** ⚒️ Sage
+- **Occurrences:** 1 / 3
+- **Trigger:** Using `multi_replace_file_content` or `view_file` while a worktree is active.
+- **Pattern:** Passing `C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/...` instead of `C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz-worktrees/<slug>/src/...` causing edits to directly modify the locked `master` branch.
+- **Root Cause Theory:** AI tools require absolute paths and naturally default to the project root, ignoring the current Git worktree context unless explicitly reminded.
+- **Impact:** Broken Master Fortress Lock, failed gatekeeper merges, required manual git cherry-pick recovery.
+- **Status:** MONITORING
+
+### [FRICTION-013] Ghost Dependency Injection Bucket List
+- **First Observed:** 2026-06-07
+- **Observed By:** PM - Jordan
+- **Occurrences:** 2 / 3
+- **Trigger:** User asked why bucket list is "full of crap" despite completing tasks.
+- **Pattern:** Agent checks off [x] for tasks but forgets to manually move the entire block from SK8Lytz_Bucket_List.md to SK8Lytz_Bucket_List_ARCHIVE.md.
+- **Root Cause Theory:** The workflow step "Phase 6 Step 5" is manual text manipulation and easily forgotten amidst merge tasks.
+- **Impact:** Severe context clutter, user frustration, duplicate work parsing.
+- **Status:** MONITORING
+
+---
+
+## ✅ Resolved Patterns (Victory Snapshots)
 
 > *Victory Snapshots are baked into the rules and moved here. The problem cannot recur.*
 
+### [VICTORY-012] No-Placeholder Plan Law Regression (VS-013)
+- **Pattern:** Agent completed `/deepdive-code` workflow and immediately routed the output into the Bucket List as unverified tasks, overriding the Kanban Constitution Rule 7.
+- **Root Cause:** A localized workflow instruction (`deepdive-code.md`) conflicted with the global Kanban Constitution (Rule 7), instructing the agent to draft the batch directly into the bucket list.
+- **Fix Applied:** Modified `.agents/workflows/deepdive-code.md` to explicitly forbid direct bucket list appending without generating `PLAN-*.md` files first.
+- **Filed To:** `.agents/workflows/deepdive-code.md`
+- **Date Resolved:** 2026-06-07
+
 ### [VICTORY-001] Documentation Drift (VS-003)
-- **Pattern:** New hooks/services added to codebase without updating Master Reference Â§3/Â§4.
+- **Pattern:** New hooks/services added to codebase without updating Master Reference §3/§4.
 - **Occurrences Before Fix:** 16 commits of drift (2026-06-06)
 - **Root Cause:** No automated parity check gate before merge.
 - **Fix Applied:** Added Avery's Parity-Scan-First to Phase 5.5 of `/start-task` + `agent-behavior.md` Rule 12 Documentation Parity Gate.
@@ -193,3 +231,5 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Root Cause Theory:** `kanban-constitution.md` mentions `[❌ UNVERIFIED]` means a spike is needed, but it lacked a hard prohibition on writing such unverified tasks directly into the Triage Queue.
 - **Impact:** Cluttered, unactionable Bucket List filled with tasks that cannot be started because they lack real plans.
 - **Status:** RESOLVED — ⚡ EVOLUTION IMPLEMENTED (Rule 7 added to Kanban Constitution).
+
+

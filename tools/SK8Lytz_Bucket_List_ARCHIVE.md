@@ -1,4 +1,4 @@
-﻿### ⚡ [BATCH:deep-dive-remediation] — `deep-dive-remediation-batch` — 🟢 Completed
+### ⚡ [BATCH:deep-dive-remediation] — `deep-dive-remediation-batch` — 🟢 Completed
 
 - [x] **`qa/r06-r08-type-and-error-safety`**
 - [x] **`qa/r11-r12-r16-async-and-closures`**
@@ -11,7 +11,24 @@ This document contains the archive of all successfully completed and merged task
 
 ---
 
-## Ã°Å¸â€œÂ¦ ARCHIVED SPRINT LOGS
+## 📦 ARCHIVED SPRINT LOGS
+
+### Sprint: v3.9.1 — 2026-06-07 (ble-p3-polish)
+
+### [BATCH:ble-p3-polish] (Complete)
+- **Prerequisite**: `[BATCH:ble-p2-architecture]` merged ✅
+- **Active Tasks**: `ble/partial-group-connectivity-ui`, `ble/predictive-reconnection`
+
+- [x] **`ble/partial-group-connectivity-ui`**
+  - **Tags:** `[✅ DONE]` `[UI]` `[L-RISK]` `[Snack]` `[BATCH:ble-p3-polish]`
+  - **Plan:** 📎 `PLAN-ble-partial-group-connectivity-ui.md`
+  - **Outcome:** Replaced header connection string with interactive skate icons per group. Merged @ 9034fb44.
+  - **Source of Truth:** 📖 [DashboardScreen.tsx:652-664] — auto-close guard; ghosted devices silently skipped by writeToDevice
+
+- [x] **`ble/predictive-reconnection`** (CANCELLED)
+  - **Tags:** `[❌ ICED]` `[CORE]` `[L-RISK]` `[Feast]` `[BATCH:ble-p3-polish]`
+  - **Outcome:** Cancelled by user. Decided not to implement predictive reconnection to save complexity.
+
 
 ### Sprint: v3.7.3 Ã¢â‚¬â€ 2026-06-01 (camera-mode-white-only)
 

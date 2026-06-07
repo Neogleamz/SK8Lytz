@@ -67,4 +67,4 @@ Blake executes invoke_subagent twice: once for Vector Alpha, once for Vector Bet
 Once all sub-agents (Domains + Snipers) report back:
 1. Blake dedupes the findings (Snipers and Domain Agents will often flag the same exact line).
 2. Blake synthesizes the unique findings into system_audit_report.md.
-3. Blake drafts a formatted [BATCH:deep-dive-remediation] containing ALL identified issues and pipes them directly into 	ools/SK8Lytz_Bucket_List.md under the TRIAGE QUEUE, strictly following Kanban rules.
+3. Blake drafts a formatted [BATCH:deep-dive-remediation] containing ALL identified issues. Do NOT append tasks directly to the Bucket List. You must first route all findings through the `/intake` workflow or explicitly generate `PLAN-*.md` files in `docs/plans/` before appending verified tasks to the Triage Queue.

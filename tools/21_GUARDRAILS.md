@@ -1,0 +1,21 @@
+- **[R-01] Queue Enforcement**: Bypassing BleWriteQueue.
+- **[R-02] Fire-and-Forget**: Missing WRITE_TYPE_NO_RESPONSE.
+- **[R-03] Auto-Reconnects**: Missing backoff/jitter.
+- **[R-04] Telemetry Context**: Errors logged without payload_size/ssi.
+- **[R-05] Offline-First**: Bypassing AsyncStorage caching.
+- **[R-06] Error Handling**: Missing standard e instanceof Error unwrapping.
+- **[R-07] Performance Guardrails**: Inline functions/styles in FlatList.
+- **[R-08] Type Safety**: Hunting any casts or @ts-ignore.
+- **[R-09] PII Scrubbing**: Leaking emails/names in AppLogger.
+- **[R-10] Group Connectivity**: Sequential group writes instead of concurrent mapped writes.
+- **[R-11] Promise/IO Safety**: Missing try/catch on async networks.
+- **[R-12] Stale Closures**: Missing useRef in intervals/listeners.
+- **[R-13] GATT Collision**: Promise.all used on device connections.
+- **[R-14] State Matrix**: Missing Loading/Error/Empty UI states.
+- **[R-15] Auth Context Bypassing**: Direct supabase.auth.getUser() calls.
+- **[R-16] Hardcoded Delays**: setTimeout used instead of queue delays.
+- **[R-17] Event Listener Leaks**: Missing useEffect cleanups.
+- **[R-18] Boolean Traps**: Scattered booleans instead of FSMs (isConnecting && !hasError).
+- **[R-19] HAL Enclosure**: Raw byte arrays (0x59) constructed outside src/protocols/.
+- **[R-20] OS Variance Parity**: Missing Platform.select(), blind cross-platform assumptions.
+- **[R-21] Split-Brain & Duplication**: Hunting for duplicate functions, hooks, state variables, or redundant API calls.
