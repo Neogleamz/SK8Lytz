@@ -5,6 +5,7 @@ import { createGattSession } from './BleSessionFactory';
 import { acquireGattLock } from '../hooks/ble/useBLEGattMutex';
 import { type PingResult, isPingResult } from '../types/dashboard.types';
 import { enqueueWrite } from './BleWriteQueue';
+import { scrubPII } from '../utils/piiScrubber';
 
 /**
  * executePingDevice — Wizard-exclusive atomic GATT session.
@@ -51,7 +52,7 @@ export async function executePingDevice(
       );
       return true;
     }).catch((e: any) => {
-      AppLogger.warn('[BLE] pingDevice blink write failed (non-fatal)', { mac, error: e?.message });
+      AppLogger.warn('[BLE] pingDevice blink write failed (non-fatal)', { deviceId: scrubPII(mac), error: e?.message });
     });
 
     let hwConfig: PingResult | null = null;
@@ -64,10 +65,10 @@ export async function executePingDevice(
         const timer = setTimeout(() => {
           sub.remove();
           if (accumulatedTelemetry) {
-            AppLogger.warn(`[BLE pingDevice] Partial telemetry for ${mac}. Returning partial.`);
+            AppLogger.warn(`[BLE pingDevice] Partial telemetry for ${scrubPII(mac)}. Returning partial.`);
             resolve(isPingResult(accumulatedTelemetry) ? accumulatedTelemetry : null);
           } else {
-            AppLogger.warn(`[BLE pingDevice] Probe timed out for ${mac} after 3500ms.`);
+            AppLogger.warn(`[BLE pingDevice] Probe timed out for ${scrubPII(mac)} after 3500ms.`);
             resolve(null);
           }
         }, 3500);
@@ -94,7 +95,7 @@ export async function executePingDevice(
               if (accumulatedTelemetry?.detected && accumulatedTelemetry?.rfMode) {
                 clearTimeout(timer);
                 sub.remove();
-                AppLogger.log('DEVICE_DISCOVERED', { context: 'pingDevice_probe_success', deviceId: mac });
+                AppLogger.log('DEVICE_DISCOVERED', { context: 'pingDevice_probe_success', deviceId: scrubPII(mac) });
                 if (isPingResult(accumulatedTelemetry)) resolve(accumulatedTelemetry);
               }
             } catch (e) {
@@ -150,19 +151,19 @@ export async function executePingDevice(
           );
           return true;
         }).catch((e: any) => {
-          AppLogger.warn('[BLE] pingDevice turn-off write failed (non-fatal)', { mac, error: e?.message });
+          AppLogger.warn('[BLE] pingDevice turn-off write failed (non-fatal)', { deviceId: scrubPII(mac), error: e?.message });
         });
       }
     }
 
     return hwConfig;
   } catch (err: any) {
-    AppLogger.warn(`[BLE pingDevice] Failed for ${mac}:`, { error: String(err) });
+    AppLogger.warn(`[BLE pingDevice] Failed for ${scrubPII(mac)}:`, { error: String(err) });
     return null;
   } finally {
     // ── Step 6: Always disconnect cleanly ────────────────────────────────────
     await bleManager.cancelDeviceConnection(mac).catch((e: any) => {
-      AppLogger.warn('[BLE] pingDevice cancelDeviceConnection failed', { mac, error: e?.message });
+      AppLogger.warn('[BLE] pingDevice cancelDeviceConnection failed', { deviceId: scrubPII(mac), error: e?.message });
     });
     release();
   }

@@ -28,6 +28,8 @@ import type { IControllerProtocol } from '../protocols/IControllerProtocol';
 import { resolveProtocol, getDefaultProtocol, getProtocolById } from '../protocols/ControllerRegistry';
 import { AppLogger } from './AppLogger';
 import { BleCharacteristicCache } from './BleCharacteristicCache';
+import { scrubPII } from '../utils/piiScrubber';
+
 
 /** Result of a successful GATT session creation */
 export interface GattSessionResult {
@@ -120,7 +122,7 @@ export async function createGattSession(
 
       if (isTransient && attempt < retries) {
         const delay = GATT_BACKOFF_MS[attempt - 1] ?? 1500;
-        AppLogger.warn(`[BleSessionFactory] GATT 133 on ${mac}. Attempt ${attempt}/${retries} — retrying in ${delay}ms with refreshGatt`, { context, error: errStr });
+        AppLogger.warn(`[BleSessionFactory] GATT 133 on ${scrubPII(mac)}. Attempt ${attempt}/${retries} — retrying in ${delay}ms with refreshGatt`, { context, error: errStr });
         await bleManager.cancelDeviceConnection(mac).catch(() => {});
         await new Promise(resolve => setTimeout(resolve, delay));
       } else if (errStr.includes('already')) {
@@ -162,7 +164,7 @@ export async function createGattSession(
     adapter = getProtocolById(cachedGatt.protocolId);
     if (adapter) {
       usedCache = true;
-      AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context, mac });
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'gatt_cache_hit', context, deviceId: scrubPII(mac) });
     }
   }
 
@@ -172,7 +174,7 @@ export async function createGattSession(
       const svcUUIDs: string[] = svcs.map((s: { uuid: string }) => s.uuid);
       adapter = resolveProtocol(svcUUIDs, manufacturerData) ?? getDefaultProtocol();
     } catch (_e: unknown) {
-      AppLogger.warn(`[BleSessionFactory] Failed resolving service UUIDs for ${mac}, falling back to default protocol`, { context, error: _e instanceof Error ? _e.message : String(_e) });
+      AppLogger.warn(`[BleSessionFactory] Failed resolving service UUIDs for ${scrubPII(mac)}, falling back to default protocol`, { context, error: _e instanceof Error ? _e.message : String(_e) });
       adapter = getDefaultProtocol();
     }
     await BleCharacteristicCache.set(mac, adapter.protocolId);

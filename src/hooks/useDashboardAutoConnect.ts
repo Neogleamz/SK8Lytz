@@ -23,6 +23,7 @@ import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { jitteredDelay } from '../utils/backoff';
 import type { RegisteredGroup, RegisteredDeviceRow } from '../types/ble.types';
+import { scrubPII } from '../utils/piiScrubber';
 
 interface UseDashboardAutoConnectOptions {
   isBluetoothSupported: boolean;
@@ -215,7 +216,7 @@ export function useDashboardAutoConnect({
                 const backoff = jitteredDelay(AUTO_CONNECT_RETRY_BACKOFF_MS * retries, 500);
                 AppLogger.log('BLE_STATE_CHANGE', {
                   event: 'auto_connect_requeued',
-                  mac: id,
+                  deviceId: scrubPII(id),
                   retry: retries,
                   backoffMs: backoff,
                 });
@@ -225,7 +226,7 @@ export function useDashboardAutoConnect({
                   }
                 }, backoff);
               } else {
-                AppLogger.warn('[AutoConnect] Max retries exceeded — abandoning', { mac: id, retries });
+                AppLogger.warn('[AutoConnect] Max retries exceeded — abandoning', { deviceId: scrubPII(id), retries });
                 autoConnectRetriesRef.current.delete(id);
               }
             }

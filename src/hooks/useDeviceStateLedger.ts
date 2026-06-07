@@ -20,8 +20,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback } from 'react';
 import { AppLogger } from '../services/AppLogger';
 import type { DevicePatternState } from '../types/dashboard.types';
+import { scrubPII } from '../utils/piiScrubber';
 
 import { AppState } from 'react-native';
+
 
 const KEY_PREFIX = '@SK8Lytz_DeviceState_v2_';
 
@@ -159,7 +161,7 @@ export function useDeviceStateLedger() {
       memoryCache.set(key, parsed);
       return parsed;
     } catch (e) {
-      AppLogger.error('Failed to read device state ledger entry from storage', e, { mac: key });
+      AppLogger.error('Failed to read device state ledger entry from storage', e, { deviceId: scrubPII(key) });
       return null;
     }
   }, []);

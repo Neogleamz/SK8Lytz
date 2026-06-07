@@ -19,6 +19,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from './AppLogger';
 import { supabase } from './supabaseClient';
+import { scrubPII } from '../utils/piiScrubber';
+
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import type { CustomGroup, DeviceSettings } from '../types/dashboard.types';
@@ -217,7 +219,7 @@ class DeviceRepository {
       if (this.tombstones.includes(normalizedMac)) {
         this.tombstones = this.tombstones.filter(t => t !== normalizedMac);
         await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(this.tombstones)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'TOMBSTONE_KEY', error: e instanceof Error ? e.message : String(e) }));
-        AppLogger.warn('[DeviceRepository] Tombstone cleared on re-add', { mac: normalizedMac });
+        AppLogger.warn('[DeviceRepository] Tombstone cleared on re-add', { deviceId: scrubPII(normalizedMac) });
       }
 
       // 2. Persist to AsyncStorage
@@ -349,7 +351,7 @@ class DeviceRepository {
 
       // Step 5: Remove from Supabase
       if (user) {
-        AppLogger.warn('[DeviceRepository] DEREGISTER_ATTEMPT', { mac: normalizedMac, userId: user.id });
+        AppLogger.warn('[DeviceRepository] DEREGISTER_ATTEMPT', { deviceId: scrubPII(normalizedMac), userId: user.id });
         const { error, count } = await supabase
           .from('registered_devices')
           .delete({ count: 'exact' })
@@ -357,11 +359,11 @@ class DeviceRepository {
           .ilike('device_mac', normalizedMac);
 
         if (error) {
-          AppLogger.warn('[DeviceRepository] DB delete error (RLS?)', { mac: normalizedMac, error: error.message });
+          AppLogger.warn('[DeviceRepository] DB delete error (RLS?)', { deviceId: scrubPII(normalizedMac), error: error.message });
           throw error;
         }
 
-        AppLogger.warn('[DeviceRepository] DEREGISTER_RESULT', { mac: normalizedMac, rowsDeleted: count });
+        AppLogger.warn('[DeviceRepository] DEREGISTER_RESULT', { deviceId: scrubPII(normalizedMac), rowsDeleted: count });
       }
     } catch (e: unknown) {
       const errorMsg = e instanceof Error ? e.message : String(e);
@@ -747,12 +749,12 @@ class DeviceRepository {
 
         if (!error) {
           synced.push(mac);
-          AppLogger.warn('[DeviceRepository] Tombstone synced to cloud', { mac });
+          AppLogger.warn('[DeviceRepository] Tombstone synced to cloud', { deviceId: scrubPII(mac) });
         } else {
-          AppLogger.warn('[DeviceRepository] Tombstone cloud delete failed', { mac, error: error.message });
+          AppLogger.warn('[DeviceRepository] Tombstone cloud delete failed', { deviceId: scrubPII(mac), error: error.message });
         }
       } catch (e: unknown) {
-        AppLogger.warn('[DeviceRepository] Tombstone flush error', { mac, error: e instanceof Error ? e.message : String(e) });
+        AppLogger.warn('[DeviceRepository] Tombstone flush error', { deviceId: scrubPII(mac), error: e instanceof Error ? e.message : String(e) });
       }
     }
 

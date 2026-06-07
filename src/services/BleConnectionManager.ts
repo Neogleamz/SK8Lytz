@@ -4,6 +4,7 @@ import { Buffer } from 'buffer';
 import type { Device } from 'react-native-ble-plx';
 import { AppLogger } from './AppLogger';
 import { createGattSession } from './BleSessionFactory';
+import { scrubPII } from '../utils/piiScrubber';
 import { acquireGattLock } from '../hooks/ble/useBLEGattMutex';
 import type { BleConnectionRequest } from '../types/ble.types';
 import { jitteredDelay } from '../utils/backoff';
@@ -96,9 +97,9 @@ export async function executeConnectToDevices({
         }
         try {
           await bleManager.cancelDeviceConnection(stale.id);
-          AppLogger.log('BLE_STATE_CHANGE', { event: 'stale_device_flushed', mac: stale.id });
+          AppLogger.log('BLE_STATE_CHANGE', { event: 'stale_device_flushed', deviceId: scrubPII(stale.id) });
         } catch (e) {
-          AppLogger.warn('Failed to flush stale device', { mac: stale.id, error: String(e) });
+          AppLogger.warn('Failed to flush stale device', { deviceId: scrubPII(stale.id), error: String(e) });
         }
       }
       await new Promise(resolve => setTimeout(resolve, 100));

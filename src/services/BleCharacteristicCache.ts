@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from './AppLogger';
+import { scrubPII } from '../utils/piiScrubber';
 
 export interface BleCacheEntry {
   mac: string;
@@ -27,7 +28,7 @@ export class BleCharacteristicCache {
       }
       return entry;
     } catch (e) {
-      AppLogger.warn('[BleCache] Failed to read GATT cache', { mac, error: String(e) });
+      AppLogger.warn('[BleCache] Failed to read GATT cache', { deviceId: scrubPII(mac), error: String(e) });
       return null;
     }
   }
@@ -41,7 +42,7 @@ export class BleCharacteristicCache {
       };
       await AsyncStorage.setItem(`${CACHE_PREFIX}${mac.toUpperCase()}`, JSON.stringify(entry));
     } catch (e) {
-      AppLogger.warn('[BleCache] Failed to write GATT cache', { mac, error: String(e) });
+      AppLogger.warn('[BleCache] Failed to write GATT cache', { deviceId: scrubPII(mac), error: String(e) });
     }
   }
 }

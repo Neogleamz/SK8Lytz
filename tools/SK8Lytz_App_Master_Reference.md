@@ -1175,6 +1175,15 @@ _Shipped: v1.8.0 | Mandatory for App Store Governance_
 - **AppLogger Dispatch**: Every permission change and EULA acceptance fires an immutable cloud event (`PERMISSION_OPT_IN`, `PERMISSION_OPT_OUT`, `EULA_ACCEPTED`) with a forced timestamp.
 - **Legal Defense**: Provides a non-repudiable log of when a user accepted terms.
 
+### 9.5 PII Scrubbing & Telemetry Hardening
+_Shipped: v3.9.1 | Mandatory for GDPR/CCPA Compliance_
+
+**Deterministic Hashing (`scrubPII`)**:
+- **Source of Truth**: `src/utils/piiScrubber.ts`
+- **Behavior**: Irreversibly hashes raw Bluetooth MAC addresses and sensitive strings using a deterministic 32-bit FNV-1a algorithm before they enter the telemetry stream (`AppLogger`).
+- **Log Correlation**: The 8-character hex output (e.g., `a1b2c3d4`) allows engineering to correlate session failures and connection drops for a specific device without ever knowing its true identity or tracking it spatially.
+- **Rule**: Variables named `mac` must NEVER be passed as raw payload values. Use `{ deviceId: scrubPII(mac) }`.
+
 ### Priority Hierarchy
 
 1. **CRITICAL**: Stability & Security.

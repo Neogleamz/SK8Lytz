@@ -22,6 +22,7 @@ import type { BLEPhaseTag } from '../services/ble/BleMachine.types';
 import { useMachine } from '@xstate/react';
 import { bleMachine } from '../services/ble/BleMachine';
 import { ActorRefFrom } from 'xstate';
+import { scrubPII } from '../utils/piiScrubber';
 
 import { requestPermission } from '../services/PermissionService';
 import { supabase } from '../services/supabaseClient';
@@ -441,7 +442,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     onCriticalSignal: (mac: string) => {
       // Only reconnect if device is not already in the recovery queue.
       if (!autoRecovery.ghostedDeviceIds.includes(mac)) {
-        AppLogger.warn('[BLE RSSI] Critical signal — proactive reconnect', { mac });
+        AppLogger.warn('[BLE RSSI] Critical signal — proactive reconnect', { deviceId: scrubPII(mac) });
         autoRecovery.initiateRecovery(mac);
       }
     },

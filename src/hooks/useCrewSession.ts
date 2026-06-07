@@ -95,7 +95,7 @@ export function useCrewSession(
   const handleHandoffLeadership = async (member: CrewMember): Promise<boolean> => {
     try {
       await crewService.transferLeadership(member.user_id);
-      AppLogger.log('CREW_LEADERSHIP_TRANSFERRED', { newLeaderName: member.display_name });
+      AppLogger.log('CREW_LEADERSHIP_TRANSFERRED', { newLeaderId: member.user_id });
       setIsHandoffMode(false);
       setTimeout(loadMembers, 500);
       return true;

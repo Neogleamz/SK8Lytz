@@ -64,6 +64,9 @@ import MySkatesSlab from '../components/dashboard/MySkatesSlab';
 import RegisteredFleetSlab from '../components/dashboard/RegisteredFleetSlab';
 import SupportModal from '../components/dashboard/SupportModal';
 import { createDashboardStyles } from '../styles/DashboardStyles';
+import { scrubPII } from '../utils/piiScrubber';
+
+
 
 export default function DashboardScreen({ isOfflineMode = false, onLogout }: { isOfflineMode?: boolean; onLogout?: () => void } = {}) {
   const { Colors, isDark, toggleTheme } = useTheme();
@@ -426,10 +429,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       // Allow registration for both unclaimed devices AND when we can't verify
       // claim status due to being offline (BUG: offline_unknown was blocking post-FTUE device adds)
       if (status === 'unclaimed' || status === 'offline_unknown') {
-        // We removed the pendingNewDevice state to appease ESLint unused vars,
-        // so we don't trigger the modal anymore per user mandate to reduce drop-out spam.
         // Wait, pendingNewDevice was used for the "New Device Found" modal. Let's just log it.
-        AppLogger.log('BLE_STATE_CHANGE', { event: 'new_unclaimed_device_found', mac: first.device_mac });
+        AppLogger.log('BLE_STATE_CHANGE', { event: 'new_unclaimed_device_found', deviceId: scrubPII(first.device_mac) });
       }
     };
     
@@ -542,7 +543,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     if (bleDevice) {
       connectToDevices([bleDevice]);
     } else {
-      AppLogger.log('BLE_STATE_CHANGE', { event: 'manual_reconnect_scan_triggered', mac });
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'manual_reconnect_scan_triggered', deviceId: scrubPII(mac) });
       scanForPeripherals();
     }
   }, [allDevices, connectToDevices, scanForPeripherals]);
@@ -829,7 +830,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           if (!bleDevice) {
             // Device not yet discovered — trigger a scan. useDashboardAutoConnect
             // observer will connect it automatically when it appears.
-            AppLogger.log('BLE_STATE_CHANGE', { event: 'manual_connect_scan_triggered', mac });
+            AppLogger.log('BLE_STATE_CHANGE', { event: 'manual_connect_scan_triggered', deviceId: scrubPII(mac) });
             scanForPeripherals();
             return;
           }
