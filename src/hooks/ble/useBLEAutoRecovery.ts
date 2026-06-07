@@ -237,7 +237,7 @@ export function useBLEAutoRecovery({
    * to individual behavior when only 1 device ghosts in the debounce window.
    * Zero logic changes from the original recovery loop.
    */
-  const spawnRecoveryLoop = (deviceId: string) => {
+  const spawnRecoveryLoop = useCallback((deviceId: string) => {
     // Capture cancellation token at loop start
     const myToken = cancelTokenRef.current;
 
@@ -484,7 +484,7 @@ export function useBLEAutoRecovery({
     loopPromise.finally(() => {
       activeLoopsRef.current = activeLoopsRef.current.filter(p => p !== loopPromise);
     });
-  };
+  }, [bleManager, disconnectListeners]);
 
   const initiateRecovery = useCallback((deviceId: string) => {
     // If already recovering, ignore
@@ -551,7 +551,7 @@ export function useBLEAutoRecovery({
 
     // Fallback: no coordinator wired (shouldn’t happen in production) — spawn directly
     spawnRecoveryLoop(deviceId);
-  }, [bleManager, disconnectListeners, connectedDevicesRef]);
+  }, [connectedDevicesRef, spawnRecoveryLoop]);
 
   /**
    * Cancel all active recovery loops and wait for them to exit.

@@ -28,7 +28,7 @@ import * as Battery from 'expo-battery';
 import { Buffer } from 'buffer';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
-import type { BleManager, Device } from 'react-native-ble-plx';
+import type { BleManager, Device, BleError, Characteristic } from 'react-native-ble-plx';
 import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
 import { AppLogger } from '../../services/AppLogger';
@@ -270,7 +270,7 @@ export function useBLESweeper({
 
         const sub = bleManager.monitorCharacteristicForDevice(
           mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.notifyCharacteristicUUID,
-          (err: any, char: any) => {
+          (err: BleError | null, char: Characteristic | null) => {
             // ── P1 preemption check inside notification handler ───────────
             if (signal.aborted) {
               clearTimeout(timer);
@@ -306,7 +306,7 @@ export function useBLESweeper({
                 mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.writeCharacteristicUUID, b64HW
               );
               return true;
-            }).catch((e: any) => AppLogger.warn('[useBLESweeper] Interrogator HW query failed', { error: String(e) }));
+            }).catch((e: unknown) => AppLogger.warn('[useBLESweeper] Interrogator HW query failed', { error: String(e) }));
           }
           setTimeout(() => {
             if (signal.aborted) return;
@@ -318,7 +318,7 @@ export function useBLESweeper({
                   mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.writeCharacteristicUUID, b64RF
                 );
                 return true;
-              }).catch((e: any) => AppLogger.warn('[useBLESweeper] Interrogator RF query failed', { error: String(e) }));
+              }).catch((e: unknown) => AppLogger.warn('[useBLESweeper] Interrogator RF query failed', { error: String(e) }));
             }
           }, 200);
         }, 400);
@@ -336,16 +336,16 @@ export function useBLESweeper({
           return current;
         });
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (!signal.aborted) {
         AppLogger.warn(`[Sweeper] Interrogator failed for ${mac}`, { error: String(err) });
       }
     } finally {
       probingMacsRef.current.delete(mac);
       release();
-      await bleManager.cancelDeviceConnection(mac).catch((e: any) => AppLogger.warn('[useBLESweeper] Interrogator disconnect failed', { error: String(e) }));
+      await bleManager.cancelDeviceConnection(mac).catch((e: unknown) => AppLogger.warn('[useBLESweeper] Interrogator disconnect failed', { error: String(e) }));
     }
-  }, [bleManager, registeredMacs, classifyForRegistrations]);
+  }, [bleManager, registeredMacs, classifyForRegistrations, setAllDevices]);
 
   // ── Probe queue processor ───────────────────────────────────────────────
   const processProbeQueue = useCallback(() => {
@@ -363,7 +363,7 @@ export function useBLESweeper({
 
   // ── Shared scan callback (used by both startSweeper and burstScan) ───────
   const createScanCallback = useCallback(() => {
-    return (error: any, device: any) => {
+    return (error: BleError | null, device: Device | null) => {
       if (error) { AppLogger.warn('[Sweeper] Scan error', { error: String(error) }); return; }
       if (!device) return;
 

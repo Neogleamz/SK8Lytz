@@ -66,6 +66,7 @@ export function useBLEScanner({
     telemetryBatchRef.current = [];
 
     InteractionManager.runAfterInteractions(async () => {
+      let payloads: TelemetryInsert[] = [];
       try {
         if (!supabase) return;
         let locString = null;
@@ -74,23 +75,34 @@ export function useBLEScanner({
           locString = `SRID=4326;POINT(${loc.lng} ${loc.lat})`;
         }
         
-        const payloads = batch.map(d => ({
-          device_mac: d.id,
-          rssi: d.rssi,
-          product_type: d.type,
-          manufacturer_data: d.manufacturerData,
-          firmware_ver: d.firmwareVer,
-          ble_version: d.bleVersion,
-          product_id: d.productId,
-          led_version: d.ledVersion,
+        payloads = batch.map((d: Record<string, unknown>) => ({
+          device_mac: String(d.id),
+          rssi: Number(d.rssi),
+          product_type: String(d.type),
+          manufacturer_data: d.manufacturerData ? String(d.manufacturerData) : null,
+          firmware_ver: d.firmwareVer ? Number(d.firmwareVer) : null,
+          ble_version: d.bleVersion ? Number(d.bleVersion) : null,
+          product_id: d.productId ? Number(d.productId) : null,
+          led_version: d.ledVersion ? Number(d.ledVersion) : null,
           location: locString
-        }));
+        })) as unknown as TelemetryInsert[];
 
         // TYPE-OVERRIDE: Supabase generated Insert type lags schema — discovered_devices_telemetry
         // has optional BLE advert fields not reflected in the generated type. Remove at next /db-sync.
-        await supabase.from('discovered_devices_telemetry').insert(payloads as TelemetryInsert[]); // TYPE-OVERRIDE: schema lag
+        const { error } = await supabase.from('discovered_devices_telemetry').insert(payloads as TelemetryInsert[]); // TYPE-OVERRIDE: schema lag
+        if (error) throw new Error(error.message);
       } catch (_e) {
         AppLogger.warn('[Scanner] Ambient telemetry flush failed', { error: String(_e) });
+        if (payloads.length > 0) {
+          try {
+            const raw = await AsyncStorage.getItem('@sk8lytz_scanner_telemetry_queue');
+            const queue = raw ? JSON.parse(raw) : [];
+            queue.push(...payloads);
+            await AsyncStorage.setItem('@sk8lytz_scanner_telemetry_queue', JSON.stringify(queue));
+          } catch (storageErr) {
+            AppLogger.warn('[Scanner] Failed to enqueue telemetry offline', { error: String(storageErr) });
+          }
+        }
       }
     });
   };
