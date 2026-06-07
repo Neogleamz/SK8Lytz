@@ -666,3 +666,23 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Added pub/sub EventEmitter to CrewService and eliminated useState duplication across hooks.
 **Verify result:** TSC Passed, Jest Passed.
 **Files touched:** CrewService.ts, useDashboardCrew.ts, useCrewSession.ts, CrewModal.tsx, DashboardCrewPanel.tsx, CrewCreateScreen.tsx, CrewScheduleScreen.tsx, DashboardScreen.tsx, useDashboardController.tsx.
+
+### [MERGE] 2026-06-07T23:20 — fix/pii-scrub-telemetry -> master @ 97a53034
+**What merged:**
+- Created scrubPII() hash utility in piiScrubber.ts
+- Scrubbed raw MAC addresses and display_name strings from 49 AppLogger telemetry call sites to comply with GDPR/CCPA.
+- Updated SK8Lytz_App_Master_Reference.md to document the PII Scrubbing rules.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:**
+- src/hooks/useCrewSession.ts
+- src/hooks/useBLE.ts
+- src/hooks/useDashboardAutoConnect.ts
+- src/hooks/useDeviceStateLedger.ts
+- src/screens/DashboardScreen.tsx
+- src/services/BleCharacteristicCache.ts
+- src/services/BleConnectionManager.ts
+- src/services/BlePingService.ts
+- src/services/BleSessionFactory.ts
+- src/services/DeviceRepository.ts
+- src/utils/piiScrubber.ts
+- tools/SK8Lytz_App_Master_Reference.md
