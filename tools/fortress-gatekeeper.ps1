@@ -1,6 +1,11 @@
 # SK8Lytz Fortress Gatekeeper
 # Validates worktree attestations and gates fast-forward merges safely.
 
+param (
+    [string]$ArchiveTask = "",
+    [switch]$IgnoreBlast
+)
+
 $ErrorActionPreference = "Stop"
 $FORTRESS_ROOT = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
 
@@ -48,7 +53,11 @@ foreach ($Line in $WorktreeList) {
 
         # 1.5 Blast Radius Scan
         Write-Host "Executing Blast Radius Scan..." -ForegroundColor Yellow
-        node tools/blast-radius-scanner.js --branch $Branch
+        if ($IgnoreBlast) {
+            node tools/blast-radius-scanner.js --branch $Branch --ignore-blast
+        } else {
+            node tools/blast-radius-scanner.js --branch $Branch
+        }
         if ($LASTEXITCODE -ne 0) {
             Write-Host "Error: Blast Radius Scan failed. Missing architectural dependencies." -ForegroundColor Red
             exit 1
@@ -135,3 +144,12 @@ foreach ($Line in $WorktreeList) {
 # Final Fortress Sweep
 Write-Host "--------------------------------------------------------" -ForegroundColor DarkCyan
 Write-Host "All worktrees merged successfully. Fortress state clean." -ForegroundColor Green
+
+if ($ArchiveTask) {
+    Write-Host "Automated Archiver: Processing task '$ArchiveTask'..." -ForegroundColor Yellow
+    $CommitHash = git rev-parse --short HEAD
+    node tools/auto-archiver.js --task $ArchiveTask --commit $CommitHash
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "GATEKEEPER WARNING: Auto-archiver failed for task '$ArchiveTask'." -ForegroundColor Red
+    }
+}

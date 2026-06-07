@@ -252,42 +252,22 @@ git log -1 --format="%h"
    > [!IMPORTANT]
    > Since the commit hash changes upon commit, you MUST execute `npm run verify` immediately *after* your final commit to anchor the attestation to the exact HEAD hash!
 
-3. **Execute Gatekeeper:** 
-   > [!CAUTION]
-   > **CRITICAL CWD REQUIREMENT:** You MUST set the `Cwd` parameter of your `run_command` tool to exactly `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`. Running this from inside the worktree directory will cause a silent failure loop.
-
+3. **Merge via Gatekeeper**: Execute the merge via PowerShell script with the ArchiveTask flag. This script is non-interactive.
    ```powershell
-   powershell.exe -ExecutionPolicy Bypass -File .\tools\fortress-gatekeeper.ps1
+   powershell.exe -ExecutionPolicy Bypass -File .\tools\fortress-gatekeeper.ps1 -ArchiveTask <task-slug>
    ```
 4. **Clean Slate Check**: Run `git status -s` on master immediately after merge.
-  - Any modified plan files (`tools/plans/*.md`) → stage and commit as `docs(plans): commit AI-First plan for <task-slug>`
-  - Any temp scripts → DELETE them, do not commit
-5. **Apply Completion Stamp + MANDATORY ARCHIVAL** (3 steps — ALL required, in order):
-   > [!IMPORTANT]
-   > ⛔ HARD STOP — DO NOT move to the next task, Discord notification, or wind-down until Steps A, B, and C are ALL complete. This is the most commonly skipped step. A task is NOT considered done until ALL THREE are complete. Taylor's pre-gatekeeper micro-read point (4) enforces this.
-
-   **A. Stamp the task `[x]`** in `SK8Lytz_Bucket_List.md` inside the `## 🚧 ACTIVE SPRINT` section:
-   - Replace `- [ ]` with `- [x]`
-   - Append `— <one-line outcome>. Merged \`<7-char-hash>\`` to the slug line
-   - Update `**Details:**` to start with `COMPLETE —` and summarize key decisions and files changed
-   - Get the hash via: `git log -1 --format="%h"`
-
-   **B. MOVE the completed batch** out of `## 🚧 ACTIVE SPRINT` entirely:
-   - Cut the entire batch header + all its `[x]` tasks from `## 🚧 ACTIVE SPRINT`
-   - Paste them into `tools/SK8Lytz_Bucket_List_ARCHIVE.md` under: `### Sprint: vX.Y.Z — YYYY-MM-DD (<batch-name>)`
-   - Also cut any matching `[ ]` → now `[x]` entries from `## 🚑 TRIAGE QUEUE` if the batch originated there
-   - Leave `## 🚧 ACTIVE SPRINT` with `*(empty — all tasks complete)*` when fully cleared
-
-   **C. Verify the move** by scanning `## 🚧 ACTIVE SPRINT` — it must contain ZERO `[x]` tasks after archival
-
+  - Any modified plan files (`tools/plans/*.md`) -> stage and commit as `docs(plans): commit AI-First plan for <task-slug>`
+  - Any temp scripts -> DELETE them, do not commit
+5. **Automated Archival Confirmed**:
+   - The gatekeeper script automatically runs `tools/auto-archiver.js` which modifies `SK8Lytz_Bucket_List.md`, marks the task `[x]`, and appends it to `SK8Lytz_Bucket_List_ARCHIVE.md`. No manual editing is required.
 
 - **Batch Progression Check**:
-  - **⚡ Anti-Hallucination Board Guard**: You MUST call `view_file` on `tools/SK8Lytz_Bucket_List.md` right now to verify the current state of the active sprint. DO NOT guess the next task from memory.
+  - **🚨 Anti-Hallucination Board Guard**: You MUST call `view_file` on `tools/SK8Lytz_Bucket_List.md` right now to verify the current state of the active sprint. DO NOT guess the next task from memory.
   - IF the file shows there are MORE uncompleted tasks in the active batch:
     - Ask the user: "Task complete. Shall I spin up the worktree for the next task in the batch?"
-    - Do NOT archive yet — the batch header stays in ACTIVE SPRINT until ALL tasks are `[x]`
   - IF this was the LAST task in the active batch:
-    - Execute the full 3-step Archival Protocol above immediately
+    - The batch is fully complete. Proceed to the next batch or wait for user input.
 
 - **Discord Notification:** Broadcast merge completion:
   ```powershell

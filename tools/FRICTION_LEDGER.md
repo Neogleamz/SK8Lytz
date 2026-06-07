@@ -44,12 +44,12 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 ### [FRICTION-013] Bucket List Split-Truth (Partial Stamp Pattern)
 - **First Observed:** 2026-06-06
 - **Observed By:** User (directly)
-- **Occurrences:** 2 / 3
-- **Trigger:** User: "why the fuck aren't we updating the bucketlist???" + "are we not archiving???"
-- **Pattern:** Agent stamps `[x]` in the ACTIVE SPRINT section on task completion, but leaves the identical task entry in the TRIAGE QUEUE as `[ ]`. Board shows the same task as both done and not done simultaneously.
-- **Root Cause (Updated):** `start-task.md` Phase 6 Step 5 **explicitly** mandates Steps A+B+C: (A) stamp `[x]`, (B) MOVE batch to ARCHIVED SPRINT LOG, (C) verify ACTIVE SPRINT has zero `[x]` tasks. This is a direct workflow violation â€” the workflow exists and was skipped.
-- **Impact:** Board is split-truth. 3 complete batches (19 tasks) sat un-archived. Every new session agent re-reads stale `[ ]` entries as work to do.
-- **Status:** MONITORING â€” At 3 strikes: auto-propose enforcement gate.
+- **Occurrences:** 3 / 3
+- **Trigger:** User: "WTF!!!! you didnt update bucketlist!!!!!!!!!!!"
+- **Pattern:** Agent stamped `[x]` but left tasks in ACTIVE SPRINT, and forgot to update the bucket list entirely after merge until yelled at.
+- **Root Cause (Updated):** Manual workflow instructions (Phase 6 Step 5) and micro-reads in `prime-directive.md` are insufficient to combat context-window fatigue during complex merges. Text-based rules are being ignored.
+- **Impact:** User fury. Board is split-truth. 3 complete batches (19 tasks) sat un-archived.
+- **Status:** PROPOSAL SENT
 
 ---
 
