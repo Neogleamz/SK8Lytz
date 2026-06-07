@@ -14,6 +14,14 @@
 
 ## SESSION: 2026-06-07 (First Block) — BLE GATT Queue Hardening
 
+### [MERGE] 2026-06-07T21:48 — BATCH:ble-gatt-hardening (fix/ble-pixel-buffer-clamp) @ `7156f1d4`
+**What merged:** 
+- Enforced 12-pixel minimum buffer clamp (`Math.max(12, pts)`) across 5 diagnostic lab files.
+- Refactored 3 diagnostic tools to construct `0x59` payloads via `ZenggeProtocol.setMultiColor` instead of manually mapping hex bytes, conforming to the HAL.
+- Executed `npm run verify` and fixed subsequent ESLint `unused-imports` errors (Boy Scout Protocol).
+**Verify result:** TSC ✅, Jest ✅, Gates ✅, QA Tester ✅
+**Files touched:** `Sk8LytzDiagnosticLab.tsx`, `DiagnosticLabBuilderTab.tsx`, `DiagnosticLabColorTab.tsx`, `DiagnosticLabTransitionTab.tsx`, `DiagnosticLabOracleTab.tsx`
+
 ### [MERGE] 2026-06-07T21:42 — BATCH:ble-gatt-hardening (fix/ble-gatt-queue-hardening) @ `1f22f260`
 **What merged:** 
 - Enforced `enqueueWrite` requirement in `BleConnectionRequest` to close queue bypass

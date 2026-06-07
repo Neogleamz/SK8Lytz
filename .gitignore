@@ -163,3 +163,9 @@ wsl_list.txt
 tools/SK8Lytz_Bucket_List_OLD*.md
 
 tools/scraper/core/scraper.db
+
+# DeepDive Scripts & Artifacts
+artifacts/
+ast_r14_scanner.js
+scratch_r11.js
+tools/find_unused_deps.js
