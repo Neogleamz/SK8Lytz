@@ -229,3 +229,4 @@ export function isGattBusy(): boolean {
 export function currentGattPriority(): GattPriority {
   return _currentPriority;
 }
+// Blast radius verification anchor
