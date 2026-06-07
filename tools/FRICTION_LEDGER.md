@@ -154,7 +154,17 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Status:** MONITORING
 
 
-### [FRICTION-008] Ghost Tasks Left in Bucket List
+### [FRICTION-014] Absolute Path Master Collision
+- **First Observed:** 2026-06-07  
+- **Observed By:** ⚒️ Sage
+- **Occurrences:** 1 / 3
+- **Trigger:** Using `multi_replace_file_content` or `view_file` while a worktree is active.
+- **Pattern:** Passing `C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/...` instead of `C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz-worktrees/<slug>/src/...` causing edits to directly modify the locked `master` branch.
+- **Root Cause Theory:** AI tools require absolute paths and naturally default to the project root, ignoring the current Git worktree context unless explicitly reminded.
+- **Impact:** Broken Master Fortress Lock, failed gatekeeper merges, required manual git cherry-pick recovery.
+- **Status:** MONITORING
+
+### [FRICTION-013] Ghost Dependency Injection Bucket List
 - **First Observed:** 2026-06-07
 - **Observed By:** PM - Jordan
 - **Occurrences:** 2 / 3
