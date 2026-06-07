@@ -560,3 +560,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC ✅, Jest ✅, gates ✅
 **Files touched:** dashboard.types.ts, ble.types.ts, useAppMicrophone.ts, useStreetMode.ts, index.ts, app.config.js, SessionContext.tsx, useBLEAutoRecovery.ts, DeviceRepository.ts, useDashboardGroups.ts, useDashboardDeviceConfig.ts
 
+
+### [DECISION] 2026-06-07T13:10 - Chose inline header skate icons over Skip Button
+**Decision:** Reuse the existing colored roller skate status icons in the DockedController header for partial group connectivity, mapping tapping actions to individual device reconnection.
+**Rejected:** Adding a "Skip" button or feature.
+**Don't re-derive:** The writeToDevice function implicitly skips offline devices, so a physical "Skip" button adds unnecessary cognitive load and clutter to the UI. The user explicitly rejected the "Skip" button idea in favor of silent operation with visual health indicators.
+**Source:** N/A (UI Decision)

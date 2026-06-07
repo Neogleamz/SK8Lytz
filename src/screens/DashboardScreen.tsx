@@ -23,7 +23,7 @@ import * as ExpoLinking from 'expo-linking';
 import DeviceItem from '../components/DeviceItem';
 import { useTheme } from '../context/ThemeContext';
 import { BLEContext } from '../context/BLEContext';
-import { Layout, Spacing } from '../theme/theme';
+import { Layout } from '../theme/theme';
 
 import { DockedControllerHandle } from '../components/DockedController';
 import GroupSettingsModal from '../components/GroupSettingsModal';
@@ -93,7 +93,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     setOnDataReceived,
     setOnHardwareProbed,
     setOnDeviceRecovered,
-    droppedOutDeviceIds,
     pendingRegistrations,
     clearPendingRegistrations,
     setPendingRegistrations,
@@ -102,7 +101,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     pingDevice,
     startSweeper,
     stopSweeper,
-    isSweeperActive,
     burstScan,
     ghostedDeviceIds,
     rssiMap,
@@ -115,7 +113,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     saveAllRegisteredDevices,
     deregisterDevice,
     checkDeviceClaimed,
-    hasCloudRegistrations,
     migrateLegacyGroups,
     isLoading,
   } = useRegistration();
@@ -141,8 +138,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     setIsAdminToolsVisible,
     isSupportModalVisible,
     setIsSupportModalVisible,
-    isMapVisible,
-    setIsMapVisible,
   } = useDashboardProfile({
     onCrewJoinNotification: (crewId: string) => {
       setPendingJoinCrewId(crewId);
@@ -187,8 +182,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   }, []);
 
   // ── Hardware BLE callbacks (extracted to useHardwareNotifications) ───────────
-
-  const [updateTrigger, setUpdateTrigger] = useState(0);
   const [isTestModeActive, setIsTestModeActive] = useState(false);
   // isDisconnecting removed — bleState === 'DISCONNECTING' is the canonical FSM gate
   const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
@@ -235,9 +228,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     selectedIds,
     isSelectionMode,
     toggleDeviceSelection,
-    clearSelection,
-    isDeviceListCollapsed,
-    setIsDeviceListCollapsed,
     isRegisteredCollapsed,
     setIsRegisteredCollapsed,
     handleRegistrationComplete,
@@ -370,7 +360,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     // Start sweeper on first render when BT is already ready,
     // or when BT transitions from disabled to enabled.
     startSweeper();
-  }, [isBluetoothEnabled, isBluetoothSupported]);
+  }, [isBluetoothEnabled, isBluetoothSupported, startSweeper]);
 
   useEffect(() => {
     if (Platform.OS === 'web') return;
@@ -400,7 +390,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   const wizardCheckedRef = React.useRef(false);
   const hasAutoStartedSessionRef = React.useRef(false);
-  const [pendingNewDevice, setPendingNewDevice] = React.useState<any | null>(null);
 
   // NOTE: auto-scan on mount is handled by the hasAutoScanned effect below (requires viewState === 'DASHBOARD')
 
@@ -439,7 +428,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     };
     
     checkNewDevice();
-  }, [pendingRegistrations]);
+  }, [pendingRegistrations, checkDeviceClaimed, viewState]);
 
   // handleRegistrationComplete is now provided by useDashboardGroups hook
 
@@ -447,7 +436,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   // We no longer spam the user when hardware connections drop out organically.
 
   // ── Cloud Sync & BLE Auto-Connect (extracted to useDashboardAutoConnect) ──
-  const { clearAutoConnectQueue, retriggerAutoConnect } = useDashboardAutoConnect({
+  const { retriggerAutoConnect } = useDashboardAutoConnect({
     isBluetoothSupported,
     isBluetoothEnabled,
     isActuallyConnected,
@@ -511,7 +500,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   useEffect(() => {
     customGroupsRef.current = customGroups;
-  }, [customGroups]); // Keep ref in sync with hook-managed state
+  }, [customGroups, customGroupsRef]); // Keep ref in sync with hook-managed state
 
 
 
@@ -525,16 +514,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         return { ...d, ...cfg } as DisplayDevice;
       });
   }, [allDevices, deviceConfigs]);
-
-  const registeredDevicesData = useMemo(() => {
-    const macs = new Set(registeredDevices.map((d: RegisteredDevice) => d.device_mac?.toUpperCase() ?? ''));
-    return sortedAllDevices.filter((d: DisplayDevice) => macs.has(d.id?.toUpperCase() ?? ''));
-  }, [sortedAllDevices, registeredDevices]);
-
-  const availableDevicesData = useMemo(() => {
-    const macs = new Set(registeredDevices.map((d: RegisteredDevice) => d.device_mac?.toUpperCase() ?? ''));
-    return sortedAllDevices.filter((d: DisplayDevice) => !macs.has(d.id?.toUpperCase() ?? ''));
-  }, [sortedAllDevices, registeredDevices]);
 
   // handleCloseController only closes the UI, it does NOT drop the BLE connection or end the session.
   const handleCloseController = useCallback(() => {
@@ -551,6 +530,16 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const handleCrewHubApplyCloudScene = useCallback((scene: Record<string, any>) => {
     dockedControllerRef.current?.applyCloudScene(scene);
   }, []);
+
+  const handleDeviceReconnect = useCallback((mac: string) => {
+    const bleDevice = allDevices.find(d => d.id.toUpperCase() === mac.toUpperCase());
+    if (bleDevice) {
+      connectToDevices([bleDevice]);
+    } else {
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'manual_reconnect_scan_triggered', mac });
+      scanForPeripherals();
+    }
+  }, [allDevices, connectToDevices, scanForPeripherals]);
 
   const handleGroupPress = useCallback((group: CustomGroup) => {
     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
@@ -570,7 +559,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       AppLogger.log('BLE_STATE_CHANGE', { event: 'group_tap_no_ble_devices', groupId: group.id, expectedMacs: group.deviceIds });
       retriggerAutoConnectRef.current();
     }
-  }, [allDevices, connectToDevices]);
+  }, [allDevices, connectToDevices, isSkateSessionActive, startSession]);
 
   const handleGroupLongPress = useCallback((id: string) => {
     openGroupRename(id);
@@ -595,7 +584,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     } else {
       retriggerAutoConnectRef.current();
     }
-  }, [allDevices, connectToDevices]);
+  }, [allDevices, connectToDevices, isSkateSessionActive, startSession]);
 
   const handleGroupCameraPress = useCallback((group: CustomGroup) => {
     const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
@@ -609,7 +598,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     } else {
       retriggerAutoConnectRef.current();
     }
-  }, [allDevices, connectToDevices]);
+  }, [allDevices, connectToDevices, isSkateSessionActive, startSession]);
 
   const handleGroupFavoritePress = useCallback(async (group: CustomGroup, _snapshot: any) => {
     // Load the last-used IFavoriteState from AsyncStorage (same key as useFavorites)
@@ -623,7 +612,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           lastFav = favs[favs.length - 1];
         }
       }
-    } catch (e) { /* ignore parse errors */ }
+    } catch (_e) { /* ignore parse errors */ }
 
     if (!lastFav) {
       Alert.alert('No Favorites', 'You haven\'t saved any favorites yet. Open the controller and tap the ❤️ to save one.');
@@ -643,7 +632,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     } else {
       retriggerAutoConnectRef.current();
     }
-  }, [allDevices, connectToDevices]);
+  }, [allDevices, connectToDevices, isSkateSessionActive, startSession]);
 
   const handleToggleRegisteredCollapse = useCallback(() => {
     setIsRegisteredCollapsed(!isRegisteredCollapsed);
@@ -729,34 +718,10 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     handlePowerToggle(group.deviceIds);
   }, [handlePowerToggle]);
 
-  const handleDeviceTap = (id: string) => {
-    toggleDeviceSelection(id);
-  };
-
   // toggleSelect replaced by toggleDeviceSelection from useDashboardGroups
-
-  const openCreateGroup = () => {
-    if (selectedIds.length === 0) return;
-    const selectedDevices = allDevices.filter(d => selectedIds.includes(d.id));
-    // Catalog-driven type resolution — replaces name.includes('soul') heuristic.
-    const resolveType = (d: any) => getLocalProfileByPoints(d.points ?? 0).id;
-    const firstType = resolveType(selectedDevices[0]);
-    const allSame = selectedDevices.every(d => resolveType(d) === firstType);
-
-    if (!allSame) {
-      alert(`Please only group devices of the same type (e.g. two ${firstType}).`);
-      return;
-    }
-
-    openGroupCreate();
-  };
-
-  // ── handleGroupDelete and saveGroup now live in useDashboardGroups ────────────
-
-
-
-
-    const {
+  // handleGroupDelete and saveGroup now live in useDashboardGroups
+  
+  const {
     MemoizedSk8lytzController,
     activeHwSettings,
     isSettingsVisible,
@@ -957,6 +922,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 powerStates={powerStates}
                 handleDisconnect={handleDisconnect}
                 handlePowerToggle={handlePowerToggle}
+                onReconnectDevice={handleDeviceReconnect}
                 isAdmin={userProfile?.role === 'admin'}
                 onPressAdminTools={() => setIsAdminToolsVisible(true)}
                 onPressSupport={() => setIsSupportModalVisible(true)}
@@ -987,6 +953,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   powerStates={powerStates}
                   handleDisconnect={handleDisconnect}
                   handlePowerToggle={handlePowerToggle}
+                  onReconnectDevice={handleDeviceReconnect}
                   isAdmin={userProfile?.role === 'admin'}
                   onPressAdminTools={() => setIsAdminToolsVisible(true)}
                   onPressSupport={() => setIsSupportModalVisible(true)}

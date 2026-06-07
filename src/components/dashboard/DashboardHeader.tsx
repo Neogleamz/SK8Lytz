@@ -16,7 +16,6 @@ import { Layout, Spacing } from '../../theme/theme';
 interface DashboardHeaderProps {
   isActuallyConnected: boolean;
   isOfflineMode: boolean;
-  isTestModeActive: boolean;
   isDark: boolean;
   isAdmin: boolean;
   // Connected variant
@@ -24,7 +23,7 @@ interface DashboardHeaderProps {
   customGroups: any[];
   powerStates: Record<string, boolean>;
   handleDisconnect: () => void;
-  handlePowerToggle: (ids: string[], force?: boolean) => void;
+  onReconnectDevice?: (mac: string) => void;
   onPressAdminTools: () => void;
   onPressSupport: () => void;
   onPressTheme: () => void;
@@ -40,14 +39,13 @@ interface DashboardHeaderProps {
 const DashboardHeader = React.memo(({
   isActuallyConnected,
   isOfflineMode,
-  isTestModeActive,
   isDark,
   isAdmin,
   displayConnectedDevices,
   customGroups,
   powerStates,
   handleDisconnect,
-  handlePowerToggle,
+  onReconnectDevice,
   onPressAdminTools,
   onPressSupport,
   onPressTheme,
@@ -57,8 +55,6 @@ const DashboardHeader = React.memo(({
   insetTop,
   Colors,
 }: DashboardHeaderProps) => {
-  const allOn = displayConnectedDevices.every(d => powerStates[d.id] ?? true);
-
   return (
     <View style={{
       paddingHorizontal: Layout.padding,
@@ -105,19 +101,59 @@ const DashboardHeader = React.memo(({
               const connectedCount = displayConnectedDevices.length;
               let expectedCount = 1;
               const firstDevice = displayConnectedDevices[0];
+              let groupIds: string[] = [];
+
               if (firstDevice?.grouped && firstDevice?.groupId) {
                 const group = customGroups.find(g => g.id === firstDevice.groupId);
-                if (group) expectedCount = group.deviceIds.length;
+                if (group) {
+                  expectedCount = group.deviceIds.length;
+                  groupIds = group.deviceIds;
+                }
               }
-              const statusColor = connectedCount === 0 ? Colors.error
-                : connectedCount < expectedCount ? '#FFA500'
-                : Colors.success;
+
+              // Solo Device View
+              if (expectedCount <= 1) {
+                const statusColor = connectedCount === 0 ? Colors.error : Colors.success;
+                return (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.xxs }}>
+                    <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: statusColor, marginRight: Spacing.xs }} />
+                    <Text style={{ color: statusColor, fontSize: 8, fontWeight: 'bold', letterSpacing: 0.5 }}>
+                      CONNECTED
+                    </Text>
+                  </View>
+                );
+              }
+
+              // Group Device View - Render Inline Skate Icons
+              const visibleGroupIds = groupIds.length > 4 ? groupIds.slice(0, 4) : groupIds;
+              const remainingCount = groupIds.length > 4 ? groupIds.length - 4 : 0;
+
               return (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.xxs }}>
-                  <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: statusColor, marginRight: Spacing.xs }} />
-                  <Text style={{ color: statusColor, fontSize: 8, fontWeight: 'bold', letterSpacing: 0.5 }}>
-                    CONNECTED ({connectedCount})
-                  </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: Spacing.xxs, gap: 4 }}>
+                  {visibleGroupIds.map((mac) => {
+                    const isConnected = displayConnectedDevices.some(d => d.id.toUpperCase() === mac.toUpperCase());
+                    const iconColor = isConnected ? Colors.success : '#555555';
+                    
+                    return (
+                      <TouchableOpacity 
+                        key={`header-skate-${mac}`} 
+                        disabled={isConnected || !onReconnectDevice}
+                        onPress={() => onReconnectDevice && onReconnectDevice(mac)}
+                        hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
+                      >
+                        <MaterialCommunityIcons 
+                          name="roller-skate" 
+                          size={12} 
+                          color={iconColor}
+                        />
+                      </TouchableOpacity>
+                    );
+                  })}
+                  {remainingCount > 0 && (
+                    <Text style={{ color: Colors.textMuted, fontSize: 9, fontWeight: 'bold', marginLeft: 2 }}>
+                      +{remainingCount}
+                    </Text>
+                  )}
                 </View>
               );
             })()}
