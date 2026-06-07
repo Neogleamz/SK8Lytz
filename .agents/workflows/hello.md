@@ -43,10 +43,7 @@ Output: *"Friction Ledger: [X] active patterns | [Y] resolved victories | Watchi
 
 ---
 
-1. Launch the Scraper Stack (CCTower, Dashboard, Discord Bridge via PM2 — no popup windows)
-```powershell
-powershell.exe -ExecutionPolicy Bypass -File "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\tools\scraper\start-scraper-stack.ps1"
-```
+
 
 2. Synchronize Supabase TypeScript definitions
    - Execute the `mcp_supabase-mcp-server_generate_typescript_types` MCP tool using project ID `qefmeivpjyaukbwadgaz`.

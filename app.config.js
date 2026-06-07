@@ -56,7 +56,6 @@ module.exports = {
       "@config-plugins/detox",
       "react-native-health",
       "react-native-health-connect",
-      "react-native-vision-camera",
       [
         "expo-build-properties",
         {

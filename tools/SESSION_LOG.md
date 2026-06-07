@@ -551,3 +551,12 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What:** Generated PLAN-qa-r06-r08 PLAN-qa-r11-r12-r16 PLAN-qa-r20 PLAN-qa-r09.\
 **Result:** 4 verified tasks moved to ON DECK.\
 
+### [MERGE] 2026-06-07T10:51 — deep-dive-remediation-batch → master @ f3e0f609
+**What merged:**
+- R-06/R-08: Replaced any casts/catch generic unwrapping with unknown and e instanceof Error in core services.
+- R-11/R-12/R-16: Eliminated unhandled async promises, captured state dynamically with refs to fix stale closures.
+- R-20: Aligned OS-specific permissions in app.config.js.
+- R-09: Updated AppLogger telemetry to scrub unrecognized literals preventing PII leaks.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** dashboard.types.ts, ble.types.ts, useAppMicrophone.ts, useStreetMode.ts, index.ts, app.config.js, SessionContext.tsx, useBLEAutoRecovery.ts, DeviceRepository.ts, useDashboardGroups.ts, useDashboardDeviceConfig.ts
+

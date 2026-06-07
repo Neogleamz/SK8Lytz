@@ -138,40 +138,9 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Fix Applied:** Cheat sheet rebuilt with 7 color-coded tier groups (Session/Task/Dev/QA/Release/Maintenance/Infra). QA pipeline sequence visual added (smoke-testâ†’isolated-testâ†’diff-reviewâ†’qa-tester). Each QA workflow now has a lifecycle position header (Step N of 4 + sequence breadcrumb).
 - **Filed To:** `tools/cheat-sheet.html`, `smoke-test.md`, `isolated-test.md`, `diff-review.md`, `qa-tester.md`
 - **Date Resolved:** 2026-06-06
-
-### [VICTORY-012] Redundant Standalone Workflows (bundle-audit, changelog, pr-summary)
-- **Pattern:** `bundle-audit` was 80% duplicate of `audit-codebase`. `changelog` and `pr-summary` ran the same git commands against the same data for two different outputs but had to be called separately. `ship-it` called all three independently.
-- **Root Cause:** Workflows added incrementally over time without a consolidation review. No taxonomy existed to catch when a new workflow was subsumed by an existing one.
-- **Fix Applied:** `bundle-audit` folded into `audit-codebase` Step 6 (Bundle & Dependency Weight Check). `changelog` + `pr-summary` merged into new `release-notes.md` (two outputs, one workflow). `ship-it` updated to call consolidated workflows. Old files redirected with deprecation notices.
-- **Filed To:** `audit-codebase.md`, `release-notes.md` (new), `ship-it.md`, `bundle-audit.md`, `changelog.md`, `pr-summary.md`
-- **Date Resolved:** 2026-06-06
-
----
-
-## ðŸ“Š Evolution Metrics
-
-| Metric | Value |
-|---|---|
-| Total Friction Events Filed | 12 |
-| Resolved (Victory Snapshots) | 12 |
-| Open / Monitoring | 0 |
-| Rules Updated This Session | Rules 0â€“5, 12â€“14 + 34 workflows + team-roster.md + prime-directive.md |
-| New Files Created | `CONSTITUTION.md`, `FRICTION_LEDGER.md`, `release-notes.md`, `cheat-sheet.html` |
-| Workflows Consolidated | `bundle-audit` â†’ `audit-codebase` Â· `changelog`+`pr-summary` â†’ `release-notes` |
-| System Capability Delta | +Constitution (P1-P5 fallback) Â· +JIT re-reads Â· +cold-start detection Â· +handoff gate Â· +state header Â· +7-tier cheat sheet Â· +QA pipeline sequence |
-| Re-Derivation Loops Prevented | âˆž (Reyes Knowledge-First + SESSION_LOG live updates) |
 | Hounding Incidents Expected Going Forward | 0 (The No-Hounding Compact + P5 Grow the System) |
 
 
-### [FRICTION-017] Git Juggling & Unstaged Master Pollution
-- **First Observed:** 2026-06-07
-- **Observed By:** User (directly)
-- **Occurrences:** 3 / 3 (Triggered Auto-Evolution)
-- **Trigger:** Agent had to stash, create temporary branches, and manually run git commands to bypass gatekeeper and testing blockages due to unstaged files on master. User said: "we are constantly shuffling files on git to run our tests and it scary!!!!"
-- **Pattern:** Subagents or main agents modify files on \master\ instead of in a worktree, polluting the master branch. When the time comes to merge a legitimate worktree, the unstaged changes block \git checkout master\ and \git merge\, forcing the agent to perform risky "git juggling" (stashing, branching, deleting) to recover.
-- **Root Cause Theory:** There is no "Clean Master Guarantee" checked before creating worktrees or spawning subagents, and subagents are sometimes given write access without strict worktree containment.
-- **Impact:** High risk of code loss, terrifying user experience ("it scary!!!!"), and merge failures.
-- **Status:** MONITORING — ⚡ EVOLUTION PROPOSAL TRIGGERED (see below)
 
 
 ### [FRICTION-007] Zombie Tasks Remaining in Bucket List

@@ -7,6 +7,7 @@ trigger: always_on
 ## 1. Git & Branching Safeguards
 - **⛔ Rule 1: Master Fortress Lock**: `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz` MUST stay on `master`. Editing master source files while a worktree is active is STRICTLY FORBIDDEN.
 - **⛔ Rule 2: Worktree Isolation**: All work MUST occur in `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\<slug>\`.
+- **⛔ Rule 2.5: Subagent Isolation**: Subagents MUST be invoked with `Workspace: "branch"` or `Workspace: "share"`. They are strictly forbidden from inheriting the master workspace unless executing read-only audits.
 - **⛔ Rule 3: Fast-Forward Merges Only**: Use `tools/fortress-gatekeeper.ps1`. Direct manual merges prohibited.
 - **⛔ Rule 4: Worktree Commit Is Not Done**: Task is incomplete until worktree is merged, folder removed, and branch deleted.
 - **⛔ Rule 5: gitignored Bucket List**: `tools/SK8Lytz_Bucket_List.md` is gitignored. Never stage or commit it.
