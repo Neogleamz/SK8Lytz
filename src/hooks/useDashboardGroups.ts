@@ -185,7 +185,7 @@ export function useDashboardGroups({
       }
       return prevConfigs;
     });
-  }, [registeredDevices]);
+  }, [registeredDevices, repo]);
 
 
 
@@ -221,7 +221,7 @@ export function useDashboardGroups({
     });
 
     return unsubscribe;
-  }, []);
+  }, [repo]);
 
   // ─── Power states map ──────────────────────────────────────────────────────
   const [powerStates, setPowerStates] = useState<Record<string, boolean>>({});
@@ -479,4 +479,4 @@ export function useDashboardGroups({
     handleGroupDelete,
   };
 }
-// Blast radius verification anchor
+// Blast radius verification anchor modified
