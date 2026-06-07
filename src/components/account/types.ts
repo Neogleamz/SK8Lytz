@@ -1,4 +1,4 @@
-import { Tables } from '../../types/supabase';
+import React from 'react';
 import { PermanentCrew, UserProfile } from '../../services/ProfileService';
 import { ILifetimeStats, ISkateSession } from '../../services/SpeedTrackingService';
 import { SessionHistoryItem } from '../../services/ProfileService';
