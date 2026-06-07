@@ -1,4 +1,5 @@
 import { AccountTabCrewzProps } from './types';
+import { PermanentCrew } from '../../services/ProfileService';
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -22,7 +23,7 @@ export default function AccountTabCrewz({
   handleDeleteCrew,
   handleLeaveCrew,
 }: AccountTabCrewzProps) {
-  if (crewStep === 'create') return (
+  if (crewStep === 'create' || crewStep === 'manage') return (
     <View style={styles.body}>
       <TouchableOpacity style={styles.backBtn} onPress={() => { setCrewStep('list'); setCrewError(''); }}>
         <MaterialCommunityIcons name="chevron-left" size={20} color={Colors.textMuted} />

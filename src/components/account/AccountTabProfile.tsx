@@ -77,13 +77,13 @@ export default function AccountTabProfile({
       <View style={{ flexShrink: 0, minHeight: 40, marginBottom: Spacing.xl }}>
         <CustomSlider
           gradientTrack={true}
-          value={avatarHue}
+          value={avatarHue || 0}
           onValueChange={(hue) => {
-            setAvatarHue(hue);
+            setAvatarHue?.(hue);
             const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
             const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
             const newHex = rgb2hex(f(5), f(3), f(1));
-            setProfile((p: import('../../types/supabase').Tables<'profile'> | null) => p ? { ...p, avatar_color: newHex } : p);
+            setProfile?.((p: import('../../services/ProfileService').UserProfile | null) => p ? { ...p, avatar_color: newHex } : p);
           }}
           // onSlidingComplete: no-op — color is already staged in profile.avatar_color
           // via onValueChange → setProfile above. Persisted to Supabase on "Save Profile" press.

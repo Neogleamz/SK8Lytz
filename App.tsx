@@ -27,16 +27,13 @@ LogBox.ignoreLogs([
 
 import { STORAGE_OFFLINE_SKIP } from './src/constants/storageKeys';
 
-declare global {
-  var ErrorUtils: {
-    getGlobalHandler: () => ((error: unknown, isFatal?: boolean) => void) | undefined;
-    setGlobalHandler: (handler: (error: unknown, isFatal?: boolean) => void) => void;
-  } | undefined;
-}
 
-if (typeof global.ErrorUtils !== 'undefined') {
-  const defaultHandler = global.ErrorUtils.getGlobalHandler();
-  global.ErrorUtils.setGlobalHandler(async (error: unknown, isFatal?: boolean) => {
+
+interface GlobalWithErrorUtils { ErrorUtils?: { getGlobalHandler: () => ((error: unknown, isFatal?: boolean) => void) | undefined; setGlobalHandler: (handler: (error: unknown, isFatal?: boolean) => void) => void; } }
+const g = global as unknown as GlobalWithErrorUtils;
+if (g.ErrorUtils) {
+  const defaultHandler = g.ErrorUtils.getGlobalHandler();
+  g.ErrorUtils.setGlobalHandler(async (error: unknown, isFatal?: boolean) => {
     const err = error as Error | undefined;
     await AppLogger.log('ERROR_CAUGHT', { message: err?.message || 'Unhandled JS Exception', stack: err?.stack, isFatal });
     await AppLogger.uploadLogsToSupabase();

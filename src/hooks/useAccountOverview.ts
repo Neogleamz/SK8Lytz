@@ -48,7 +48,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
 
   // Crews state
   const [crews, setCrews] = useState<PermanentCrew[]>([]);
-  const [crewStep, setCrewStep] = useState<'list' | 'create' | 'join'>('list');
+  const [crewStep, setCrewStep] = useState<'list' | 'create' | 'join' | 'manage'>('list');
   const [newCrewName, setNewCrewName] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [crewLoading, setCrewLoading] = useState(false);

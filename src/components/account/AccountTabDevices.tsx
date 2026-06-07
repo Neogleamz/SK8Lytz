@@ -39,7 +39,7 @@ export default function AccountTabDevices({
           <Text style={styles.emptySubtitle}>Pair your SK8Lytz skates from the main screen to see them here.</Text>
         </View>
       ) : (
-        Object.entries(groupedDevices).map(([groupName, groupDevs]: [string, import('../../types/ble.types').RegisteredDeviceRow[]]) => {
+        Object.entries(groupedDevices).map(([groupName, groupDevs]: [string, import('../AccountModal').StoredDevice[]]) => {
           if (groupDevs.length === 0) return null;
           const isUngrouped = groupName === "_Ungrouped";
 
@@ -53,7 +53,7 @@ export default function AccountTabDevices({
                       value={groupNewName} onChangeText={setGroupNewName}
                       placeholder={groupName} placeholderTextColor={Colors.textMuted}
                       autoFocus maxLength={32} returnKeyType="done"
-                      onSubmitEditing={() => handleRenameGroup(groupName)}
+                      onSubmitEditing={() => handleRenameGroup?.(groupName)}
                     />
                   ) : (
                     <Text style={{ fontSize: 16, fontWeight: 'bold', color: Colors.text, textTransform: 'uppercase' }}>
@@ -64,19 +64,19 @@ export default function AccountTabDevices({
                   <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
                     {editingGroupId === groupName ? (
                       <>
-                        <TouchableOpacity style={styles.deviceSaveBtn} onPress={() => handleRenameGroup(groupName)}>
+                        <TouchableOpacity style={styles.deviceSaveBtn} onPress={() => handleRenameGroup?.(groupName)}>
                           <MaterialCommunityIcons name="check" size={16} color="#000" />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => { setEditingGroupId(null); setGroupNewName(''); }}>
+                        <TouchableOpacity onPress={() => { setEditingGroupId?.(null); setGroupNewName?.(''); }}>
                           <MaterialCommunityIcons name="close" size={18} color={Colors.textMuted} />
                         </TouchableOpacity>
                       </>
                     ) : (
                       <>
-                        <TouchableOpacity onPress={() => { setEditingGroupId(groupName); setGroupNewName(groupName); }}>
+                        <TouchableOpacity onPress={() => { setEditingGroupId?.(groupName); setGroupNewName?.(groupName); }}>
                           <MaterialCommunityIcons name="pencil" size={18} color={Colors.textMuted} />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => handleForgetGroup(groupName)}>
+                        <TouchableOpacity onPress={() => handleForgetGroup?.(groupName)}>
                           <MaterialCommunityIcons name="trash-can-outline" size={18} color="#FF4444" />
                         </TouchableOpacity>
                       </>
@@ -85,7 +85,7 @@ export default function AccountTabDevices({
                 </View>
               )}
 
-              {groupDevs.map((device: import('../../types/ble.types').RegisteredDeviceRow) => (
+              {groupDevs.map((device: import('../AccountModal').StoredDevice) => (
                 <View key={device.id} style={styles.deviceCard}>
                   <MaterialCommunityIcons
                     name={device.type === 'SOULZ' ? 'skate' : 'lightning-bolt-circle'}
@@ -99,7 +99,7 @@ export default function AccountTabDevices({
                         placeholderTextColor={Colors.textMuted}
                         autoFocus maxLength={32}
                         returnKeyType="done"
-                        onSubmitEditing={() => handleRenameDevice(device)}
+                        onSubmitEditing={() => handleRenameDevice?.(device)}
                       />
                     ) : (
                       <>
@@ -121,28 +121,28 @@ export default function AccountTabDevices({
                   <View style={{ flexDirection: 'row', gap: Spacing.sm, alignItems: 'center' }}>
                     {editingDeviceId === device.id ? (
                       <>
-                        <TouchableOpacity style={styles.deviceSaveBtn} onPress={() => handleRenameDevice(device)}>
+                        <TouchableOpacity style={styles.deviceSaveBtn} onPress={() => handleRenameDevice?.(device)}>
                           <MaterialCommunityIcons name="check" size={16} color="#000" />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => { setEditingDeviceId(null); setDeviceNewName(''); }}>
+                        <TouchableOpacity onPress={() => { setEditingDeviceId?.(null); setDeviceNewName?.(''); }}>
                           <MaterialCommunityIcons name="close" size={18} color={Colors.textMuted} />
                         </TouchableOpacity>
                       </>
                     ) : (
                       <>
                         <TouchableOpacity style={styles.deviceIconBtn} onPress={() => {
-                          setEditingDeviceId(device.id);
-                          setDeviceNewName(device.customName || device.name);
+                          setEditingDeviceId?.(device.id);
+                          setDeviceNewName?.(device.customName || device.name);
                         }}>
                           <MaterialCommunityIcons name="pencil" size={16} color={Colors.textMuted} />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.deviceIconBtn} onPress={() => {
-                          setAdvancedModalDevice(device);
-                          setAdvancedModalVisible(true);
+                          setAdvancedModalDevice?.(device);
+                          setAdvancedModalVisible?.(true);
                         }}>
                           <MaterialCommunityIcons name="chip" size={16} color={Colors.primary} />
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.deviceIconBtn} onPress={() => handleForgetDevice(device)}>
+                        <TouchableOpacity style={styles.deviceIconBtn} onPress={() => handleForgetDevice?.(device)}>
                           <MaterialCommunityIcons name="trash-can-outline" size={16} color="#FF4444" />
                         </TouchableOpacity>
                       </>

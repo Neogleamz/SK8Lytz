@@ -1,17 +1,34 @@
 import { Tables } from '../../types/supabase';
-import { PermanentCrew } from '../../services/ProfileService';
-import { SessionData } from '../../services/TelemetryService.types';
-import { RegisteredDeviceRow } from '../../types/ble.types';
+import { PermanentCrew, UserProfile } from '../../services/ProfileService';
+import { ILifetimeStats, ISkateSession } from '../../services/SpeedTrackingService';
+import { SessionHistoryItem } from '../../services/ProfileService';
+import { StoredDevice } from '../AccountModal';
+
 
 export interface BaseTabProps {
-  Colors: Record<string, string>;
+  Colors: {
+    background: string;
+    surface: string;
+    surfaceHighlight: string;
+    primary: string;
+    secondary: string;
+    accent: string;
+    text: string;
+    textMuted: string;
+    textDim: string;
+    border: string;
+    success: string;
+    error: string;
+    warning: string;
+    isDark: boolean;
+  };
   styles: Record<string, object>;
 }
 
 export interface AccountTabProfileProps extends BaseTabProps {
   profilePhotoUri: string | null;
-  profile: Tables<'profile'> | null;
-  setProfile: (update: (prev: Tables<'profile'> | null) => Tables<'profile'> | null) => void;
+  profile: UserProfile | null;
+  setProfile: React.Dispatch<React.SetStateAction<UserProfile | null>>;
   avatarHue: number;
   setAvatarHue: (val: number) => void;
   userEmail: string;
@@ -23,15 +40,15 @@ export interface AccountTabProfileProps extends BaseTabProps {
   handleSaveProfile: () => Promise<void>;
   handlePickProfilePhoto: () => Promise<void>;
   crews: PermanentCrew[];
-  history: SessionData[];
-  devices: RegisteredDeviceRow[];
+  history: SessionHistoryItem[];
+  devices: StoredDevice[];
   setShowEula: (val: boolean) => void;
   handleSignOut: () => Promise<void>;
 }
 
 export interface AccountTabCrewzProps extends BaseTabProps {
   crewStep: 'list' | 'create' | 'join' | 'manage';
-  setCrewStep: (val: 'list' | 'create' | 'join' | 'manage') => void;
+  setCrewStep: React.Dispatch<React.SetStateAction<'list' | 'create' | 'join' | 'manage'>>;
   crewError: string;
   setCrewError: (val: string) => void;
   newCrewName: string;
@@ -42,61 +59,72 @@ export interface AccountTabCrewzProps extends BaseTabProps {
   setJoinCode: (val: string) => void;
   handleJoinCrew: () => Promise<void>;
   crews: PermanentCrew[];
-  handleDeleteCrew: (crew: PermanentCrew) => Promise<void>;
-  handleLeaveCrew: (crew: PermanentCrew) => Promise<void>;
+  handleDeleteCrew: (crew: PermanentCrew) => void;
+  handleLeaveCrew: (crew: PermanentCrew) => void;
 }
 
 export interface AccountTabDevicesProps extends BaseTabProps {
-  devices: RegisteredDeviceRow[];
-  groupedDevices: Record<string, RegisteredDeviceRow[]>;
+  devices: StoredDevice[];
+  groupedDevices: Record<string, StoredDevice[]>;
   editingGroupId: string | null;
   groupNewName: string;
   setGroupNewName: (val: string) => void;
-  handleRenameGroup: (oldName: string) => Promise<void>;
+  handleRenameGroup: (oldName: string) => void;
   setEditingGroupId: (val: string | null) => void;
-  handleForgetGroup: (groupName: string) => Promise<void>;
+  handleForgetGroup: (groupName: string) => void;
   editingDeviceId: string | null;
   deviceNewName: string;
   setDeviceNewName: (val: string) => void;
-  handleRenameDevice: (device: RegisteredDeviceRow) => Promise<void>;
+  handleRenameDevice: (device: StoredDevice) => void;
   setEditingDeviceId: (val: string | null) => void;
-  setAdvancedModalDevice: (val: RegisteredDeviceRow | null) => void;
+  setAdvancedModalDevice: (val: StoredDevice | null) => void;
   setAdvancedModalVisible: (val: boolean) => void;
-  handleForgetDevice: (device: RegisteredDeviceRow) => Promise<void>;
+  handleForgetDevice: (device: StoredDevice) => void;
 }
 
 export interface AccountTabStatsProps extends BaseTabProps {
-  loadingStats: boolean;
-  history: SessionData[];
-  formatDate: (iso: string) => string;
+  statsLoading: boolean;
+  lifetimeStats: ILifetimeStats | null;
+  recentSessions: ISkateSession[];
+  crews: PermanentCrew[];
+  history: SessionHistoryItem[];
+  devices: StoredDevice[];
 }
 
 export interface AccountTabSettingsProps extends BaseTabProps {
-  isPushEnabled: boolean;
-  handleTogglePush: () => Promise<void>;
-  hasHealthConnect: boolean;
-  isHealthEnabled: boolean;
-  toggleHealthConnect: () => Promise<void>;
+  notifCrewInvites: boolean;
+  setNotifCrewInvites: (val: boolean) => void;
+  notifSessionReminders: boolean;
+  setNotifSessionReminders: (val: boolean) => void;
+  notifLeaderHandoff: boolean;
+  setNotifLeaderHandoff: (val: boolean) => void;
+  saveNotifPrefs: (prefs: any) => Promise<void>;
   isDark: boolean;
   toggleTheme: () => void;
+  healthSyncEnabled: boolean;
+  handleToggleHealthSync: (val: boolean) => void;
+  autoPauseEnabled: boolean;
+  handleToggleAutoPause: (val: boolean) => void;
+  setShowEula: (val: boolean) => void;
+  handleDeleteAccount: () => void;
 }
 
 export interface AccountTabSecurityProps extends BaseTabProps {
   currentPwd?: string;
   setCurrentPwd: (val: string) => void;
-  showCurrentPwd?: boolean;
+  showCurrentPwd: boolean;
   setShowCurrentPwd: (val: boolean) => void;
   newPwd?: string;
   setNewPwd: (val: string) => void;
   confirmPwd?: string;
   setConfirmPwd: (val: string) => void;
-  showNewPwd?: boolean;
+  showNewPwd: boolean;
   setShowNewPwd: (val: boolean) => void;
-  savingPwd?: boolean;
+  savingPwd: boolean;
   handleChangePassword: () => Promise<void>;
-  userEmail?: string;
+  userEmail: string;
   newEmail?: string;
   setNewEmail: (val: string) => void;
-  savingEmail?: boolean;
-  handleChangeEmail?: () => Promise<void>;
+  savingEmail: boolean;
+  handleChangeEmail: () => Promise<void>;
 }

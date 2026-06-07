@@ -27,7 +27,7 @@ export default function AccountTabStats({
   if (statsLoading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: Spacing.giant }}>
-        <MaterialCommunityIcons name="lightning-bolt" size={32} color={Colors.primary} />
+        <MaterialCommunityIcons name="lightning-bolt" size={32} color={String(Colors.primary)} />
         <Text style={{ color: Colors.textMuted, marginTop: Spacing.md, fontSize: 13 }}>Loading your stats…</Text>
       </View>
     );
@@ -59,7 +59,7 @@ export default function AccountTabStats({
       {history?.length > 0 && (
         <View style={{ marginBottom: Spacing.xl }}>
           <Text style={styles.sectionHeader}>RECENT CREW SESSIONS</Text>
-          {history.slice(0, 5).map((item: import('../../services/TelemetryService.types').SessionData, i: number) => (
+          {(history || []).slice(0, 5).map((item: import('../../services/ProfileService').SessionHistoryItem, i: number) => (
             <View key={`h-${i}`} style={styles.historyRow}>
               <View style={[styles.historyDot, { backgroundColor: item.role === 'leader' ? '#FFAA00' : '#00AAFF' }]} />
               <View style={{ flex: 1 }}>
@@ -76,7 +76,7 @@ export default function AccountTabStats({
 
       {noData ? (
         <View style={{ alignItems: 'center', paddingVertical: Spacing.huge }}>
-          <MaterialCommunityIcons name="skate" size={48} color={Colors.textMuted} />
+          <MaterialCommunityIcons name="skate" size={48} color={String(Colors.textMuted)} />
           <Text style={[styles.hint, { textAlign: 'center', marginTop: Spacing.lg, fontSize: 14 }]}>
             No sessions saved yet.{`\n`}Enable Street Mode and skate to record your first session!
           </Text>
@@ -100,7 +100,7 @@ export default function AccountTabStats({
                 width: '47%', backgroundColor: 'rgba(255,255,255,0.05)',
                 borderRadius: 16, padding: Spacing.lg, alignItems: 'center',
               }}>
-                <MaterialCommunityIcons name={icon as keyof typeof MaterialCommunityIcons.glyphMap} size={20} color={Colors.primary} />
+                <MaterialCommunityIcons name={icon as keyof typeof MaterialCommunityIcons.glyphMap} size={20} color={String(Colors.primary)} />
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.xxs, marginTop: Spacing.sm }}>
                   <Text style={{ color: '#FFF', fontSize: 22, fontWeight: '900' }}>{val}</Text>
                   {unit ? <Text style={{ color: Colors.primary, fontSize: 10, fontWeight: '700', marginBottom: Spacing.xxs }}>{unit}</Text> : null}
@@ -111,10 +111,10 @@ export default function AccountTabStats({
           </View>
 
           {/* ── Recent sessions list ── */}
-          {recentSessions.length > 0 && (
+          {(recentSessions || []).length > 0 && (
             <>
               <Text style={[styles.sectionHeader, { marginTop: Spacing.sm }]}>RECENT SESSIONS</Text>
-              {recentSessions.map((s: import('../../services/TelemetryService.types').SessionData) => (
+              {(recentSessions || []).map((s: import('../../services/SpeedTrackingService').ISkateSession) => (
                 <View key={s.id} style={{
                   backgroundColor: 'rgba(255,255,255,0.04)',
                   borderRadius: 14, padding: Spacing.lg, marginBottom: Spacing.sm,
