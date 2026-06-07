@@ -510,3 +510,13 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** android/app/src/main/AndroidManifest.xml, src/services/PermissionService.ts
 
+
+### [MERGE] 2026-06-07T09:43 — refactor-deep-dive-native-cloud -> master @ c03b83e5
+**What merged:** 
+- Updated updateApplicationContext in WatchConnectivityManager to buffer instead of blind overwrite.
+- Added a local SharedPreferences persistence buffer for health telemetry in Android WearMessageSender.
+- Wrapped EXPO_PUSH_URL fetch loop in a try/catch block inside notify-crew-session edge function.
+- Fixed 20260414_consolidate_telemetry.sql migration constraint and safely cast JSON text via ::NUMERIC in 20260506000001_god_tier_telemetry.sql.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** targets/watch/WatchConnectivityManager.swift, android/sk8lytzWear/WearMessageSender.kt, supabase/functions/notify-crew-session/index.ts, supabase/migrations/20260414_consolidate_telemetry.sql, supabase/migrations/20260506000001_god_tier_telemetry.sql
+
