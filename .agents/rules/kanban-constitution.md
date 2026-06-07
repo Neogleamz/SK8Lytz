@@ -38,3 +38,7 @@ trigger: always_on
 Every task needs exactly one from each: `[Status]` `[Verification Status]` `[Layer]` `[Risk]` `[Size]` `[Cognitive Load]`
 Full tag definitions and task schema → see `/intake` workflow.
 Completion stamp protocol + pre-merge verification matrix → see `/start-task` workflow Phase 6.
+
+**7. The No-Placeholder Plan Law (VS-013):**
+- Tasks MUST NOT be appended to the Bucket List with `*(pending)*` plans or `[❌ UNVERIFIED]` status.
+- Every new task MUST go through an explicit planning workflow (like `/intake`) to generate an approved `PLAN-*.md` BEFORE it enters the `TRIAGE QUEUE`. No unverified brain-dumps.

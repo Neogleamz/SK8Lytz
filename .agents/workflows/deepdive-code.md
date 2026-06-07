@@ -25,7 +25,7 @@ The codebase is audited orthogonally.
 1. IDENTITY | 2. BLE_CORE | 3. GROUP_SYNC | 4. UI_CONTROLS | 5. DATA_LAYER | 6. UTILS | 7. NATIVE_&_WATCH | 8. NOTIFICATIONS_&_ROUTING | 9. SESSION_TRACKING | 10. HARDWARE_PROTOCOLS | 11. CLOUD_FUNCTIONS | 12. THEME_&_ASSETS | 13. SIMULATION_&_MOCKS | 14. BUILD_CONFIG_&_OTA | 15. OS_PERMISSIONS | 16. DEPENDENCY_AUDIT
 
 #### Vector Beta (Rule Snipers)
-1 agent per rule (currently 19 and growing). They scan the ENTIRE codebase globally for their specific anti-pattern.
+1 agent per rule (currently 21 and growing). They scan the ENTIRE codebase globally for their specific anti-pattern.
 - **[R-01] Queue Enforcement**: Bypassing BleWriteQueue.
 - **[R-02] Fire-and-Forget**: Missing WRITE_TYPE_NO_RESPONSE.
 - **[R-03] Auto-Reconnects**: Missing backoff/jitter.
@@ -46,6 +46,7 @@ The codebase is audited orthogonally.
 - **[R-18] Boolean Traps**: Scattered booleans instead of FSMs (isConnecting && !hasError).
 - **[R-19] HAL Enclosure**: Raw byte arrays ( x59) constructed outside src/protocols/.
 - **[R-20] OS Variance Parity**: Missing Platform.select(), blind cross-platform assumptions (e.g., assuming Android's 20-byte MTU applies to iOS, or missing Foreground Service checks).
+- **[R-21] Split-Brain & Duplication**: Hunting for duplicate functions, hooks, state variables, or redundant API calls. Flag legacy/abandoned implementations, ensure only the single source of truth is used, and queue tasks to consolidate or delete stale duplicates.
 
 ---
 
@@ -54,7 +55,7 @@ The codebase is audited orthogonally.
 Blake executes invoke_subagent twice: once for Vector Alpha, once for Vector Beta.
 
 **Vector Alpha Directive (Domain Agents):**
-> You are a QA Auditor Node assigned to the [DOMAIN_NAME] domain. Read the Protocol Bibles. View EVERY file in your domain. Audit them against ALL 19 Guardrails. Output a strict Bug Checklist.
+> You are a QA Auditor Node assigned to the [DOMAIN_NAME] domain. Read the Protocol Bibles. View EVERY file in your domain. Audit them against ALL 21 Guardrails. Output a strict Bug Checklist.
 
 **Vector Beta Directive (Rule Snipers):**
 > You are a QA Sniper Node. Your ONLY target is Rule [R-XX]. Use grep_search and AST analysis across the ENTIRE src/ directory to hunt for this exact anti-pattern. You do not care about context; you are a ruthless bounty hunter for this specific violation. Output a strict Bug Checklist.

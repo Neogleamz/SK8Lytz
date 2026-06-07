@@ -1,4 +1,4 @@
-﻿# Friction Ledger
+# Friction Ledger
 > **Owned by:** The entire team â€” any persona may file. Reyes reviews at session start. Alex reviews at wind-down.
 >
 > **The Evolution Loop:**
@@ -194,3 +194,13 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Root Cause Theory:** The workflow step "Phase 6 Step 5" is manual text manipulation and easily forgotten amidst merge tasks.
 - **Impact:** Severe context clutter, user frustration, duplicate work parsing.
 - **Status:** MONITORING
+
+### [FRICTION-018] No-Placeholder Plan Law (Bucket List Brain-Dump)
+- **First Observed:** 2026-06-07
+- **Observed By:** User (directly)
+- **Occurrences:** 3 / 3 (Triggered Auto-Evolution)
+- **Trigger:** Agent dumped 7 `[❌ UNVERIFIED]` tasks onto the bucket list with `*(pending)*` plans after an automated QA audit. User said: "why the fuck did you again add these task to the bucket list with no verification or plans???"
+- **Pattern:** Agent skips the explicit planning and verification phases (like `/intake`), dumping raw audit findings directly into the Bucket List as tasks with fake pending plans.
+- **Root Cause Theory:** `kanban-constitution.md` mentions `[❌ UNVERIFIED]` means a spike is needed, but it lacked a hard prohibition on writing such unverified tasks directly into the Triage Queue.
+- **Impact:** Cluttered, unactionable Bucket List filled with tasks that cannot be started because they lack real plans.
+- **Status:** RESOLVED — ⚡ EVOLUTION IMPLEMENTED (Rule 7 added to Kanban Constitution).

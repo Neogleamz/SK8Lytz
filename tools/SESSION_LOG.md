@@ -529,3 +529,25 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/hooks/useBLE.ts, src/services/AppLogger.ts, src/types/supabase.ts
 
+
+### [EVENT] 2026-06-07T05:22 — Master Reference Cartographer Sweep
+**What happened:** Executed /deepdive-docs workflow. Spawned 16 Map-Reduce nodes to rebuild SK8Lytz_App_Master_Reference.md.
+**Artifacts updated:** tools/SK8Lytz_App_Master_Reference.md
+**Archival:** Cleaned up 12+ domains with stale records, appending them to the Historical Archive.
+
+ \
+### [ARTIFACT] 2026-06-07T10:28:00 — System Audit Report generated from Map-Reduce Fleet\
+**What:** Deduped and synthesized 20-Guardrail QA audit findings across all domains and Rule Snipers.\
+**Result:** 6 new tasks appended to SK8Lytz_Bucket_List.md under [BATCH:deep-dive-remediation] covering type safety auth bypasses BLE collisions state matrices closures and OS parity.\
+
+
+### [DECISION] 2026-06-07T05:29 â€” Added Rule Sniper R-21 for Split-Brain Detection
+**Decision:** Updated .agents/workflows/deepdive-code.md to add Rule 21 (Split-Brain & Duplication), ensuring the orthogonal QA fleet specifically hunts for redundant hooks, states, and API calls during its next execution.
+**Rejected:** Having domain agents manually check for duplication.
+**Don't re-derive:** Duplication requires a global view across all domains. A dedicated sniper using AST and grep_search across the entire src/ directory is the only way to reliably find split-brain logic without being distracted by domain-specific feature logic.
+**Source:** .agents/workflows/deepdive-code.md
+ \
+### [ARTIFACT] 2026-06-07T10:35:00 — 4 PLAN-* files generated via /intake\
+**What:** Generated PLAN-qa-r06-r08 PLAN-qa-r11-r12-r16 PLAN-qa-r20 PLAN-qa-r09.\
+**Result:** 4 verified tasks moved to ON DECK.\
+
