@@ -3,11 +3,26 @@
 > **How to read this file:**
 > - Read the most recent `## SESSION` header first
 > - Then scan `[DECISION]` entries Ã¢â‚¬â€ these are locked conclusions the AI must NOT re-derive
+> - Then scan `[DECISION]` entries â€” these are locked conclusions the AI must NOT re-derive
 > - `[MERGE]` entries tell you exactly what shipped and when
 > - `[ARTIFACT]` entries link to everything created this session
 > - This file is updated **after every gatekeeper merge** AND at `/wind-down` â€” not just once per night
 >
 > **Update triggers:** (1) After `fortress-gatekeeper.ps1` succeeds, (2) After any architectural decision, (3) At `/wind-down`
+
+---
+
+## SESSION: 2026-06-07 (First Block) â€” BLE GATT Queue Hardening
+
+### [MERGE] 2026-06-07T21:42 â€” BATCH:ble-gatt-hardening (fix/ble-gatt-queue-hardening) @ `1f22f260`
+**What merged:** 
+- Enforced `enqueueWrite` requirement in `BleConnectionRequest` to close queue bypass
+- Serialized `BleWriteDispatcher` multi-device and chunked writes (50ms gap)
+- Serialized `BleLifecycleManager` disconnects (250ms gap)
+- Serialized `useBLE` connection and heartbeat checks
+- Serialized `useBLERSSIMonitor` signal strength polls
+**Verify result:** TSC âœ…, Jest âœ…, Gates âœ…
+**Files touched:** `ble.types.ts`, `BleConnectionManager.ts`, `BleWriteDispatcher.ts`, `BleLifecycleManager.ts`, `useBLE.ts`, `useBLEHeartbeat.ts`, `useBLERSSIMonitor.ts`
 
 ---
 
@@ -469,13 +484,13 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Files touched:** src/components/DockedController.tsx, src/types/dashboard.types.ts, src/hooks/ble/useBLEHeartbeat.ts, src/hooks/ble/useBLEAutoRecovery.ts, src/services/BleConnectionManager.ts, src/services/GroupRepository.ts, src/components/DashboardGroupList.tsx, src/services/TelemetryService.ts, supabase/migrations/..., and tests.
 
 
-### [MERGE] 2026-06-07T08:53 — refactor-burn-down-audit-failures ? pending manual gatekeeper merge
+### [MERGE] 2026-06-07T08:53 ï¿½ refactor-burn-down-audit-failures ? pending manual gatekeeper merge
 **What merged:** Systematically eliminated rogue supabase.auth queries from all services (ScenesService, CrewService, DeviceRepository, GroupRepository, NotificationService) and injected userId from hooks.
 **Verify result:** TSC bypassed (missing module), Jest bypassed (missing module), Gatekeeper bypassed. Production type safety clean.
 **Files touched:** src/services/*, src/hooks/*, src/components/CommunityModal.tsx
 
 
-### [MERGE] 2026-06-07T09:19 — refactor-deep-dive-type-safety -> master @ 9ca523d3
+### [MERGE] 2026-06-07T09:19 ï¿½ refactor-deep-dive-type-safety -> master @ 9ca523d3
 **What merged:** 
 - Eliminated ny casts in AccountModal.tsx and all AccountTab* components.
 - Enforced strict types via React.Dispatch<React.SetStateAction<...>>.
@@ -485,7 +500,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Files touched:** src/components/account/types.ts, src/components/account/AccountTab*.tsx, src/hooks/useAccountOverview.ts, App.tsx
 
 
-### [MERGE] 2026-06-07T09:27 — refactor-deep-dive-ble-core -> master @ 0718bb3b
+### [MERGE] 2026-06-07T09:27 ï¿½ refactor-deep-dive-ble-core -> master @ 0718bb3b
 **What merged:** 
 - Wrapped spawnRecoveryLoop in useCallback and correctly added it to dependencies of initiateRecovery to resolve stale closures in useBLEAutoRecovery.ts.
 - Updated flushTelemetry with try/catch. Persisted telemetry payloads in an offline queue via AsyncStorage when Supabase writes fail.
@@ -494,7 +509,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Files touched:** src/hooks/ble/useBLEAutoRecovery.ts, src/hooks/ble/useBLEScanner.ts, src/hooks/ble/useBLESweeper.ts
 
 
-### [MERGE] 2026-06-07T09:29 — refactor-deep-dive-perf -> master @ e72ff390
+### [MERGE] 2026-06-07T09:29 ï¿½ refactor-deep-dive-perf -> master @ e72ff390
 **What merged:** 
 - Extracted inline styles to StyleSheet.create and moved inline mappings and renderItem to useCallback/useMemo.
 - Fixed severe re-render thrashing across FlatLists in UI controls and Group Sync screens.
@@ -502,7 +517,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Files touched:** src/components/DockedController.tsx, src/components/docked/FavoritesPanel.tsx, src/screens/DashboardScreen.tsx, src/components/crew/CrewJoinScreen.tsx
 
 
-### [MERGE] 2026-06-07T09:36 — refactor-deep-dive-os-permissions -> master @ 14dff9da
+### [MERGE] 2026-06-07T09:36 ï¿½ refactor-deep-dive-os-permissions -> master @ 14dff9da
 **What merged:** 
 - Addressed conflicting location permissions in AndroidManifest.xml (removed redundant uses-permission-sdk-23 definitions).
 - Added missing Android 14+ FOREGROUND_SERVICE flags: FOREGROUND_SERVICE_LOCATION and FOREGROUND_SERVICE_CONNECTED_DEVICE.
@@ -511,7 +526,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Files touched:** android/app/src/main/AndroidManifest.xml, src/services/PermissionService.ts
 
 
-### [MERGE] 2026-06-07T09:43 — refactor-deep-dive-native-cloud -> master @ c03b83e5
+### [MERGE] 2026-06-07T09:43 ï¿½ refactor-deep-dive-native-cloud -> master @ c03b83e5
 **What merged:** 
 - Updated updateApplicationContext in WatchConnectivityManager to buffer instead of blind overwrite.
 - Added a local SharedPreferences persistence buffer for health telemetry in Android WearMessageSender.
@@ -521,7 +536,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Files touched:** targets/watch/WatchConnectivityManager.swift, android/sk8lytzWear/WearMessageSender.kt, supabase/functions/notify-crew-session/index.ts, supabase/migrations/20260414_consolidate_telemetry.sql, supabase/migrations/20260506000001_god_tier_telemetry.sql
 
 
-### [MERGE] 2026-06-07T10:14 — ble/ios-state-restoration -> master @ f6af517d
+### [MERGE] 2026-06-07T10:14 ï¿½ ble/ios-state-restoration -> master @ f6af517d
 **What merged:** 
 - Implemented iOS CoreBluetooth state restoration using react-native-ble-plx \estoreStateIdentifier\ in useBLE.ts.
 - Added \BLE_RESTORE_STATE\ to AppLogger.ts EventType union.
@@ -530,13 +545,13 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Files touched:** src/hooks/useBLE.ts, src/services/AppLogger.ts, src/types/supabase.ts
 
 
-### [EVENT] 2026-06-07T05:22 — Master Reference Cartographer Sweep
+### [EVENT] 2026-06-07T05:22 ï¿½ Master Reference Cartographer Sweep
 **What happened:** Executed /deepdive-docs workflow. Spawned 16 Map-Reduce nodes to rebuild SK8Lytz_App_Master_Reference.md.
 **Artifacts updated:** tools/SK8Lytz_App_Master_Reference.md
 **Archival:** Cleaned up 12+ domains with stale records, appending them to the Historical Archive.
 
  \
-### [ARTIFACT] 2026-06-07T10:28:00 — System Audit Report generated from Map-Reduce Fleet\
+### [ARTIFACT] 2026-06-07T10:28:00 ï¿½ System Audit Report generated from Map-Reduce Fleet\
 **What:** Deduped and synthesized 20-Guardrail QA audit findings across all domains and Rule Snipers.\
 **Result:** 6 new tasks appended to SK8Lytz_Bucket_List.md under [BATCH:deep-dive-remediation] covering type safety auth bypasses BLE collisions state matrices closures and OS parity.\
 
@@ -547,7 +562,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Don't re-derive:** Duplication requires a global view across all domains. A dedicated sniper using AST and grep_search across the entire src/ directory is the only way to reliably find split-brain logic without being distracted by domain-specific feature logic.
 **Source:** .agents/workflows/deepdive-code.md
  \
-### [ARTIFACT] 2026-06-07T10:35:00 — 4 PLAN-* files generated via /intake\
+### [ARTIFACT] 2026-06-07T10:35:00 ï¿½ 4 PLAN-* files generated via /intake\
 **What:** Generated PLAN-qa-r06-r08 PLAN-qa-r11-r12-r16 PLAN-qa-r20 PLAN-qa-r09.\
 **Result:** 4 verified tasks moved to ON DECK.\
 
@@ -577,7 +592,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Files touched:**
 - src/components/dashboard/DashboardHeader.tsx
 - src/screens/DashboardScreen.tsx
-### [MERGE] 2026-06-07T14:45 — deep-dive-remediation-batch ? master @ e465d08a
+### [MERGE] 2026-06-07T14:45 ï¿½ deep-dive-remediation-batch ? master @ e465d08a
 **What merged:** 
 - Enforced BLE write queue across AutoRecovery logic.
 - Serialized connection handshakes in BleConnectionManager to resolve GATT 133 Android crashes.
@@ -598,11 +613,23 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Action:** Drafted detailed Implementation Plan for qa/fix-split-brain-and-offline-first to satisfy the **S4 Monolith Rule** (decomposing useBLESweeper.ts rather than merging it directly into useBLEScanner.ts).
 
 
-### [MERGE] 2026-06-07T15:02 — split-brain-offline-first -> master @ 8191a9f3
+### [MERGE] 2026-06-07T15:02 ï¿½ split-brain-offline-first -> master @ 8191a9f3
 **What merged:** Decoupled BLE scanner into useBLEBatterySweep.ts and useBLEInterrogator.ts. Resolved split-brain persistence logic by dropping useControllerPersistence in favor of useDeviceStateLedger.
 **Verify result:** TSC ?, Jest ? (126/126 passed), guards ?
 **Files touched:** src/hooks/ble/*, src/hooks/useBLE.ts, src/components/DockedController.tsx, src/services/BleConnectionManager.ts, tools/SK8Lytz_App_Master_Reference.md
 
-### [EVENT] 2026-06-07T15:08 — FRICTION-013 Resolved: Automated Archival
+### [EVENT] 2026-06-07T15:08 ï¿½ FRICTION-013 Resolved: Automated Archival
 **Action:** Shipped rule evolution proposal for [FRICTION-013]. Automated the bucket list archival phase inside `fortress-gatekeeper.ps1` using a new Node script (`auto-archiver.js`).
 **Impact:** The agent no longer has to manually manipulate the Bucket List text file to check off tasks and archive them. This removes the manual context-window burden and prevents Split-Truth boards.
+
+### [MERGE] 2026-06-07T20:18 â€” BATCH:deep-dive-remediation â†’ master @ 86edaf43
+**What merged:** 
+- Centralized TextShadows into theme.ts to fix UI parity bugs.
+- Wrapped async Supabase auth and AsyncStorage calls with try/catch and AppLogger error dispatching.
+**Verify result:** TSC âœ…, Jest âœ…, TypeSafety âœ… (cleared 3 forbidden s any casts).
+**Files touched:** src/theme/theme.ts, src/components/dashboard/DashboardTelemetryHero.tsx, src/components/auth/AuthFormSignIn.tsx, src/components/auth/AuthFormSignUp.tsx, app.config.js
+
+### [DECISION] 2026-06-07T15:22 â€” Map-Reduce Architecture for deepdive-code
+**Decision:** Split the monolithic `.agents/workflows/deepdive-code.md` into two separate workflows (`deepdive-code-hunt.md` and `deepdive-code-synthesis.md`).
+**Reasoning:** Executing 37 sub-agents simultaneously via Claude would violate token limits and balloon API costs. The new architecture enforces a "Split-Brain" execution: Gemini handles the high-context/high-speed "Hunt" mapping (writing to disk), and Claude handles the high-reasoning "Synthesis" reduction (reading from disk).
+**Files touched:** `.agents/workflows/deepdive-code-hunt.md` [NEW], `.agents/workflows/deepdive-code-synthesis.md` [NEW], `.agents/workflows/ship-it.md` [MODIFIED], `.agents/workflows/deepdive-code.md` [DELETED].

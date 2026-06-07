@@ -62,16 +62,13 @@ export function DiagnosticLabTransitionTab({
         <TouchableOpacity key={tt.byte}
           style={[S.transBtn, { borderColor: tt.color, backgroundColor: cardBg }]}
           onPress={() => {
-            const numPoints = hwPts;
-            const totalLen = numPoints * 3 + 9;
-            const raw = new Array(totalLen).fill(0);
-            raw[0] = 0x59; raw[1] = (totalLen >> 8) & 0xFF; raw[2] = totalLen & 0xFF;
-            let idx = 3;
-            for (let i=0; i<numPoints; i++) { raw[idx++] = bldColors[0]?.r||0; raw[idx++] = bldColors[0]?.g||0; raw[idx++] = bldColors[0]?.b||0; }
-            raw[idx++] = (numPoints >> 8) & 0xFF; raw[idx++] = numPoints & 0xFF;
-            raw[idx++] = tt.byte & 0xFF; raw[idx++] = bldSpeed; raw[idx++] = 1;
-            raw[idx] = ZenggeProtocol.calculateChecksum(raw.slice(0, totalLen - 1));
-            transmit(ZenggeProtocol.wrapCommand(raw), `transitionType=0x0${tt.byte.toString(16).toUpperCase()} ${tt.label}`);
+            const numPoints = Math.max(12, hwPts);
+            const r = bldColors[0]?.r || 0;
+            const g = bldColors[0]?.g || 0;
+            const b = bldColors[0]?.b || 0;
+            const pixels = Array(numPoints).fill({ r, g, b });
+            const payload = ZenggeProtocol.setMultiColor(pixels, numPoints, bldSpeed, 1, tt.byte);
+            transmit(payload, `transitionType=0x0${tt.byte.toString(16).toUpperCase()} ${tt.label}`);
           }}>
           <View style={[S.transByteBadge, { backgroundColor: tt.color + '22', borderColor: tt.color }]}>
             <Text style={{ color: tt.color, fontWeight: '900', fontSize: 14 }}>0x0{tt.byte.toString(16).toUpperCase()}</Text>

@@ -17,14 +17,12 @@
  */
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
-    FlatList, Platform,
+    Platform,
     SafeAreaView,
-    ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -32,16 +30,13 @@ import type { Device } from 'react-native-ble-plx';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../context/ThemeContext';
 import {
-    OpcodeStatus,
-    TRACKED_OPCODES,
-    TestVerdict,
     useDiagnosticLog,
 } from '../../../hooks/useDiagnosticLog';
 import { useProtocolBuilder } from '../../../hooks/useProtocolBuilder';
 import { useRegistration } from '../../../hooks/useRegistration';
-import { ZenggeProtocol } from '../../../protocols/ZenggeProtocol';
+
 import { Spacing, Typography } from '../../../theme/theme';
-import CustomEffectVisualizer from '../../CustomEffectVisualizer';
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -92,10 +87,8 @@ export default function Sk8LytzDiagnosticLab({
   isDiagnosticsMode, onToggleDiagnostics,
 }: LabProps) {
 
-  const { Colors, isDark } = useTheme();
+  const { Colors } = useTheme();
   const bg      = Colors.background;
-  const cardBg  = Colors.surface;
-  const txtPri  = Colors.text;
   const txtMuted= Colors.textMuted;
   const border  = Colors.surfaceHighlight;
   const cyan    = '#00f0ff';
@@ -173,55 +166,7 @@ export default function Sk8LytzDiagnosticLab({
     bldResult
   };
 
-  // ─── Solid color test helper ────────────────────────────────────────────────
-  const sendSolid = (r: number, g: number, b: number, pts: number, trans: number, note: string) => {
-    const pixels = Array(pts).fill({ r, g, b });
-    const numPoints = pixels.length;
-    const totalLen = numPoints * 3 + 9;
-    const raw = new Array(totalLen).fill(0);
-    raw[0] = 0x59; raw[1] = (totalLen >> 8) & 0xFF; raw[2] = totalLen & 0xFF;
-    let idx = 3;
-    for (const p of pixels) { raw[idx++] = p.r; raw[idx++] = p.g; raw[idx++] = p.b; }
-    raw[idx++] = (numPoints >> 8) & 0xFF; raw[idx++] = numPoints & 0xFF;
-    raw[idx++] = trans & 0xFF; raw[idx++] = 1; raw[idx++] = 1;
-    raw[idx] = ZenggeProtocol.calculateChecksum(raw.slice(0, totalLen - 1));
-    transmit(ZenggeProtocol.wrapCommand(raw), note);
-  };
 
-  // ─── Render helpers ─────────────────────────────────────────────────────────
-
-  const MonoText = ({ children, color = '#00f0ff' }: {children:string; color?:string}) => (
-    <Text style={{ color, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', fontSize: 11 }}>
-      {children}
-    </Text>
-  );
-
-  const renderHwBadge = () => {
-    const targetName = targetDeviceId ? connectedDevices.find(d => d.id === targetDeviceId)?.name || targetDeviceId.slice(-6) : null;
-    return (
-      <View style={S.hwBadge}>
-        <Text style={S.hwBadgeLabel}>TARGET: </Text>
-        {targetDeviceId ? (
-          <>
-            <Text style={[S.hwBadgeVal, { color: '#00ccff', paddingRight: Spacing.sm }]}>{targetName}</Text>
-            {hwSettings?.detected ? (
-              <>
-                <Text style={[S.hwBadgeVal, { color: '#00CC88' }]}>{hwSettings.ledPoints ?? '?'} LEDs</Text>
-                <Text style={S.hwBadgeLabel}> · </Text>
-                <Text style={[S.hwBadgeVal, { color: '#FF9500' }]}>{hwSettings.colorSortingName ?? '?'}</Text>
-                <Text style={S.hwBadgeLabel}> · </Text>
-                <Text style={[S.hwBadgeVal, { color: '#c084fc' }]}>{hwSettings.icName ?? '?'}</Text>
-              </>
-            ) : (
-             <Text style={[S.hwBadgeVal, { color: '#FF4040' }]}>WAITING 0x63...</Text>
-            )}
-          </>
-        ) : (
-          <Text style={[S.hwBadgeVal, { color: '#FF4040' }]}>NO DEVICE TARGETED (GO TO DEVICES TAB)</Text>
-        )}
-      </View>
-    );
-  };
 
 
   // ── Root render ───────────────────────────────────────────────────

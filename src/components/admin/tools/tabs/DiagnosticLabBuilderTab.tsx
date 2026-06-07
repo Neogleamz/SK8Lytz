@@ -71,17 +71,10 @@ export function DiagnosticLabBuilderTab({
   }, [bldResult]);
 
   const sendSolid = (r: number, g: number, b: number, pts: number, trans: number, note: string) => {
-    const pixels = Array(pts).fill({ r, g, b });
-    const numPoints = pixels.length;
-    const totalLen = numPoints * 3 + 9;
-    const raw = new Array(totalLen).fill(0);
-    raw[0] = 0x59; raw[1] = (totalLen >> 8) & 0xFF; raw[2] = totalLen & 0xFF;
-    let idx = 3;
-    for (const p of pixels) { raw[idx++] = p.r; raw[idx++] = p.g; raw[idx++] = p.b; }
-    raw[idx++] = (numPoints >> 8) & 0xFF; raw[idx++] = numPoints & 0xFF;
-    raw[idx++] = trans & 0xFF; raw[idx++] = 1; raw[idx++] = 1;
-    raw[idx] = ZenggeProtocol.calculateChecksum(raw.slice(0, totalLen - 1));
-    transmit(ZenggeProtocol.wrapCommand(raw), note);
+    const safePts = Math.max(12, pts);
+    const pixels = Array(safePts).fill({ r, g, b });
+    const payload = ZenggeProtocol.setMultiColor(pixels, safePts, 1, 1, trans);
+    transmit(payload, note);
   };
 
   return (

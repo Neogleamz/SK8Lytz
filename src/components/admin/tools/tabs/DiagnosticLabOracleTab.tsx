@@ -439,18 +439,10 @@ export function DiagnosticLabOracleTab({
                   </View>
                   <TouchableOpacity
                     onPress={() => {
-                      const numPoints = hwPts;
-                      const totalLen = numPoints * 3 + 9;
-                      const raw = new Array(totalLen).fill(0);
-                      raw[0] = 0x59; raw[1] = (totalLen >> 8) & 0xFF; raw[2] = totalLen & 0xFF;
-                      let idx = 3;
-                      for (let i = 0; i < numPoints; i++) {
-                        raw[idx++] = p41Color1.r; raw[idx++] = p41Color1.g; raw[idx++] = p41Color1.b;
-                      }
-                      raw[idx++] = (numPoints >> 8) & 0xFF; raw[idx++] = numPoints & 0xFF;
-                      raw[idx++] = tt.byte & 0xFF; raw[idx++] = 50; raw[idx++] = 1;
-                      raw[idx] = ZenggeProtocol.calculateChecksum(raw.slice(0, totalLen - 1));
-                      transmit(ZenggeProtocol.wrapCommand(raw), `0x59 transType=${key} ${tt.label}`, '0x59');
+                      const numPoints = Math.max(12, hwPts);
+                      const pixels = Array(numPoints).fill(p41Color1);
+                      const payload = ZenggeProtocol.setMultiColor(pixels, numPoints, 50, 1, tt.byte);
+                      transmit(payload, `0x59 transType=${key} ${tt.label}`, '0x59');
                     }}
                     style={{ backgroundColor: tt.color + '22', borderWidth: 1, borderColor: tt.color, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderRadius: 8 }}
                   >

@@ -628,3 +628,16 @@ pm run verify which includes QA tests.
   - **Plan:** ?? [PLAN-fix-split-brain-and-offline-first.md](docs/plans/PLAN-fix-split-brain-and-offline-first.md)
   - **Source of Truth:** ?? `system_audit_report.md`
   - **Goal:** Unify telemetry hooks, fix useBLEScanner/useBLESweeper duality, kill useControllerPersistence in favor of useDeviceStateLedger. Fix R-05 blocking network calls in useProductCatalog/ScenesService.
+
+
+- [x] **`qa/fix-error-handling-and-io-safety`** 🚀 Merged in 86edaf43
+  - **Tags:** `[🔴 TRIAGE]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Meal]` `[🤖 FAST]`
+  - **Plan:** 📎 [PLAN-fix-error-handling-and-io-safety.md](docs/plans/PLAN-fix-error-handling-and-io-safety.md)
+  - **Source of Truth:** 📖 `system_audit_report.md`
+  - **Goal:** Standardize `e instanceof Error` unwrapping across the app (R-06). Wrap unhandled async networks in `try/catch` (R-11). Eliminate `any` casts (R-08).
+
+- [x] **`qa/fix-os-parity-and-build-config`** 🚀 Merged in 86edaf43
+  - **Tags:** `[🔴 TRIAGE]` `[✅ VERIFIED]` `[NATIVE]` `[H-RISK]` `[Snack]` `[🤖 PRO-HIGH]`
+  - **Plan:** 📎 [PLAN-fix-os-parity-and-build-config.md](docs/plans/PLAN-fix-os-parity-and-build-config.md)
+  - **Source of Truth:** 📖 `system_audit_report.md`
+  - **Goal:** Fix R-20 missing Foreground Service Types and iOS Location usage descriptions in `app.config.js`. Scrub API keys. Fix shadowColor/elevation parity.

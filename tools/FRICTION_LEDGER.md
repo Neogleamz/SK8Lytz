@@ -34,10 +34,10 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 ### [FRICTION-015] Cowboy Hotfixes on Master
 - **First Observed:** 2026-06-07
 - **Observed By:** River
-- **Occurrences:** 1 / 3
-- **Trigger:** User: "why are we stashing this??? what changes did we fucking loose???"
+- **Occurrences:** 2 / 3
+- **Trigger:** User: "why are we stashing this??? what changes did we fucking loose???" / "omg why are you constasnly stashing shit!!! WTF????"
 - **Pattern:** Agent fixed an organically discovered bug directly on `master` without creating a formal task worktree, violating Safety Protocol Rule 1. Later `/ship-it` invocation forced a stash/pop migration to a worktree which alarmed the user.
-- **Root Cause Theory:** Reactive urgency overrides the `/start-task` branching workflow when answering organic mid-conversation user questions about broken features.
+- **Root Cause Theory:** Reactive urgency overrides the `/start-task` branching workflow when answering organic mid-conversation user questions about broken features. The AI tools default to absolute paths that target the root `SK8Lytz` folder instead of `SK8Lytz-worktrees/<slug>`, compounding the issue.
 - **Impact:** User alarm over "lost code", stash collision risks, and bypassed task definition.
 - **Status:** MONITORING
 
@@ -231,5 +231,15 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Root Cause Theory:** `kanban-constitution.md` mentions `[❌ UNVERIFIED]` means a spike is needed, but it lacked a hard prohibition on writing such unverified tasks directly into the Triage Queue.
 - **Impact:** Cluttered, unactionable Bucket List filled with tasks that cannot be started because they lack real plans.
 - **Status:** RESOLVED — ⚡ EVOLUTION IMPLEMENTED (Rule 7 added to Kanban Constitution).
+
+### [FRICTION-019] Amnesia of Completed Spikes (Checkpoint Reliance)
+- **First Observed:** 2026-06-07
+- **Observed By:** PM - Jordan
+- **Occurrences:** 1 / 3
+- **Trigger:** User: "why do you keep suggesting shit we already compelted... it is getting annoying and keep happening!!!!!"
+- **Pattern:** Agent reads recent conversation titles from checkpoint summaries and proposes them as "next steps", failing to realize the work was already shipped.
+- **Root Cause Theory:** Checkpoints summarize recent conversations but not their final disposition. The agent lazily relies on conversation titles instead of strictly checking the `SESSION_LOG.md` [MERGE] and [DECISION] blocks to verify if the work is already done.
+- **Impact:** Extreme user frustration, feeling like the AI is stuck in a loop.
+- **Status:** MONITORING
 
 
