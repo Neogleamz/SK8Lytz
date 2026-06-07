@@ -1,3 +1,4 @@
+import { AccountTabStatsProps } from './types';
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -13,7 +14,7 @@ export default function AccountTabStats({
   crews,
   history,
   devices,
-}: any) {
+}: AccountTabStatsProps) {
   /** Formats seconds into e.g. "1h 23m" */
   const fmtDuration = (sec: number) => {
     const h = Math.floor(sec / 3600);
@@ -58,7 +59,7 @@ export default function AccountTabStats({
       {history?.length > 0 && (
         <View style={{ marginBottom: Spacing.xl }}>
           <Text style={styles.sectionHeader}>RECENT CREW SESSIONS</Text>
-          {history.slice(0, 5).map((item: any, i: number) => (
+          {history.slice(0, 5).map((item: import('../../services/TelemetryService.types').SessionData, i: number) => (
             <View key={`h-${i}`} style={styles.historyRow}>
               <View style={[styles.historyDot, { backgroundColor: item.role === 'leader' ? '#FFAA00' : '#00AAFF' }]} />
               <View style={{ flex: 1 }}>
@@ -113,7 +114,7 @@ export default function AccountTabStats({
           {recentSessions.length > 0 && (
             <>
               <Text style={[styles.sectionHeader, { marginTop: Spacing.sm }]}>RECENT SESSIONS</Text>
-              {recentSessions.map((s: any) => (
+              {recentSessions.map((s: import('../../services/TelemetryService.types').SessionData) => (
                 <View key={s.id} style={{
                   backgroundColor: 'rgba(255,255,255,0.04)',
                   borderRadius: 14, padding: Spacing.lg, marginBottom: Spacing.sm,

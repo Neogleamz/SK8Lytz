@@ -1,3 +1,4 @@
+import { AccountTabDevicesProps } from './types';
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -28,7 +29,7 @@ export default function AccountTabDevices({
   setAdvancedModalDevice,
   setAdvancedModalVisible,
   handleForgetDevice,
-}: any) {
+}: AccountTabDevicesProps) {
   return (
     <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
       {devices.length === 0 ? (
@@ -38,7 +39,7 @@ export default function AccountTabDevices({
           <Text style={styles.emptySubtitle}>Pair your SK8Lytz skates from the main screen to see them here.</Text>
         </View>
       ) : (
-        Object.entries(groupedDevices).map(([groupName, groupDevs]: [string, any]) => {
+        Object.entries(groupedDevices).map(([groupName, groupDevs]: [string, import('../../types/ble.types').RegisteredDeviceRow[]]) => {
           if (groupDevs.length === 0) return null;
           const isUngrouped = groupName === "_Ungrouped";
 
@@ -84,7 +85,7 @@ export default function AccountTabDevices({
                 </View>
               )}
 
-              {groupDevs.map((device: any) => (
+              {groupDevs.map((device: import('../../types/ble.types').RegisteredDeviceRow) => (
                 <View key={device.id} style={styles.deviceCard}>
                   <MaterialCommunityIcons
                     name={device.type === 'SOULZ' ? 'skate' : 'lightning-bolt-circle'}

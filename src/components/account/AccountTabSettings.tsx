@@ -1,3 +1,4 @@
+import { AccountTabSettingsProps } from './types';
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -21,7 +22,7 @@ export default function AccountTabSettings({
   handleToggleHealthSync,
   autoPauseEnabled,
   handleToggleAutoPause,
-}: any) {
+}: AccountTabSettingsProps) {
   return (
     <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
       {/* Notification preferences */}

@@ -1,3 +1,4 @@
+import { AccountTabCrewzProps } from './types';
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -20,7 +21,7 @@ export default function AccountTabCrewz({
   crews,
   handleDeleteCrew,
   handleLeaveCrew,
-}: any) {
+}: AccountTabCrewzProps) {
   if (crewStep === 'create') return (
     <View style={styles.body}>
       <TouchableOpacity style={styles.backBtn} onPress={() => { setCrewStep('list'); setCrewError(''); }}>
@@ -72,7 +73,7 @@ export default function AccountTabCrewz({
           <Text style={styles.emptySubtitle}>Create or join a permanent crew to get notified when sessions start.</Text>
         </View>
       ) : (
-        crews.map((crew: any) => (
+        crews.map((crew: PermanentCrew) => (
           <View key={crew.id} style={styles.crewCard}>
             <View style={styles.crewCardIcon}>
               <MaterialCommunityIcons

@@ -27,10 +27,18 @@ LogBox.ignoreLogs([
 
 import { STORAGE_OFFLINE_SKIP } from './src/constants/storageKeys';
 
-if (typeof (global as any).ErrorUtils !== 'undefined') {
-  const defaultHandler = (global as any).ErrorUtils.getGlobalHandler();
-  (global as any).ErrorUtils.setGlobalHandler(async (error: any, isFatal: boolean) => {
-    await AppLogger.log('ERROR_CAUGHT', { message: error?.message || 'Unhandled JS Exception', stack: error?.stack, isFatal });
+declare global {
+  var ErrorUtils: {
+    getGlobalHandler: () => ((error: unknown, isFatal?: boolean) => void) | undefined;
+    setGlobalHandler: (handler: (error: unknown, isFatal?: boolean) => void) => void;
+  } | undefined;
+}
+
+if (typeof global.ErrorUtils !== 'undefined') {
+  const defaultHandler = global.ErrorUtils.getGlobalHandler();
+  global.ErrorUtils.setGlobalHandler(async (error: unknown, isFatal?: boolean) => {
+    const err = error as Error | undefined;
+    await AppLogger.log('ERROR_CAUGHT', { message: err?.message || 'Unhandled JS Exception', stack: err?.stack, isFatal });
     await AppLogger.uploadLogsToSupabase();
     if (defaultHandler) defaultHandler(error, isFatal);
   });
@@ -45,8 +53,8 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
 
 // ── Console.error monkey-patch: pipe third-party library errors to telemetry ──
 const _originalConsoleError = console.error;
-console.error = (...args: any[]) => {
-  AppLogger.warn('[console.error]', { args: args.map((a: any) => String(a)).slice(0, 3).join(' ') });
+console.error = (...args: unknown[]) => {
+  AppLogger.warn('[console.error]', { args: args.map((a: unknown) => String(a)).slice(0, 3).join(' ') });
   _originalConsoleError.apply(console, args);
 };
 
@@ -183,7 +191,7 @@ export default function App() {
     if (Platform.OS === 'android') {
       try {
         const { initialize } = require('react-native-health-connect');
-        initialize().catch((err: any) => AppLogger.warn('HEALTH_CONNECT', { event: 'init_failed', error: String(err) }));
+        initialize().catch((err: unknown) => AppLogger.warn('HEALTH_CONNECT', { event: 'init_failed', error: String(err) }));
       } catch {
         // Fallback if library missing
       }

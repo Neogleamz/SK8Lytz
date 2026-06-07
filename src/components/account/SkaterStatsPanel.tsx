@@ -16,7 +16,7 @@ type JsonMap = Record<string, number>;
 const toMap = (v: LifetimeStats['pattern_time_map']): JsonMap =>
   (v && typeof v === 'object' && !Array.isArray(v) ? v : {}) as JsonMap;
 
-export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
+export default function SkaterStatsPanel({ Colors }: { Colors: Record<string, string> }) {
   const { user } = useAuth();
   const [stats, setStats] = useState<LifetimeStats | null>(null);
   const [loading, setLoading] = useState(true);

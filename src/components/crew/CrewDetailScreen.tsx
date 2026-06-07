@@ -47,7 +47,7 @@ export function CrewDetailScreen() {
       await profileService.leavePermanentCrew(crew.id);
       AppLogger.log('CREW_PERMANENT_LEFT', { crewId: crew.id, crewName: crew.name, method: 'leave_btn' });
       hub.setMyCrews(prev => prev.filter(c => c.id !== crew.id));
-      hub.setPermanentCrews(prev => prev.filter((c: any) => c.id !== crew.id));
+      hub.setPermanentCrews(prev => prev.filter((c: PermanentCrew) => c.id !== crew.id));
       setSelectedCrewDetail(null);
       setConfirmingLeaveCrewId(null);
     } catch (err) { const e = err instanceof Error ? err : new Error(String(err)); Alert.alert('Error', e.message); }
@@ -58,7 +58,7 @@ export function CrewDetailScreen() {
       await profileService.deleteCrew(crew.id);
       AppLogger.log('CREW_PERMANENT_DELETED', { crewId: crew.id, crewName: crew.name });
       hub.setMyCrews(prev => prev.filter(c => c.id !== crew.id));
-      hub.setPermanentCrews(prev => prev.filter((c: any) => c.id !== crew.id));
+      hub.setPermanentCrews(prev => prev.filter((c: PermanentCrew) => c.id !== crew.id));
       setSelectedCrewDetail(null);
       setConfirmingDeleteCrewId(null);
     } catch (err) { const e = err instanceof Error ? err : new Error(String(err)); Alert.alert('Error', e.message); }
