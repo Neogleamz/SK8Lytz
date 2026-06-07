@@ -890,6 +890,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     color_sorting: d.color_sorting,
   })), [registeredDevices]);
 
+  const mappedDevicesForGroupModal = useMemo(() => registeredDevices.map(rd => ({
+    id: rd.device_mac.toUpperCase(),
+    name: rd.custom_name || rd.device_name || rd.device_mac,
+    connected: allDevices.some(d => d.id.toUpperCase() === rd.device_mac.toUpperCase()),
+  })), [registeredDevices, allDevices]);
 
 
   const BluetoothWarningBanner = useMemo(() => {
@@ -1092,11 +1097,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           onDelete={groupModalState === 'RENAME' && editingGroupId ? () => handleGroupDelete(editingGroupId) : undefined}
           initialName={groupModalState === 'RENAME' ? customGroups.find(g => g.id === editingGroupId)?.name : getDefaultGroupName()}
           initialDeviceIds={groupModalState === 'RENAME' ? customGroups.find(g => g.id === editingGroupId)?.deviceIds : selectedIds}
-          allDevices={useMemo(() => registeredDevices.map(rd => ({
-            id: rd.device_mac.toUpperCase(),
-            name: rd.custom_name || rd.device_name || rd.device_mac,
-            connected: allDevices.some(d => d.id.toUpperCase() === rd.device_mac.toUpperCase()),
-          })), [registeredDevices, allDevices])}
+          allDevices={mappedDevicesForGroupModal}
         />
 
         <DeviceSettingsModal
