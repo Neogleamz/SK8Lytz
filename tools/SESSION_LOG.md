@@ -474,3 +474,13 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC bypassed (missing module), Jest bypassed (missing module), Gatekeeper bypassed. Production type safety clean.
 **Files touched:** src/services/*, src/hooks/*, src/components/CommunityModal.tsx
 
+
+### [MERGE] 2026-06-07T09:19 — refactor-deep-dive-type-safety -> master @ 9ca523d3
+**What merged:** 
+- Eliminated ny casts in AccountModal.tsx and all AccountTab* components.
+- Enforced strict types via React.Dispatch<React.SetStateAction<...>>.
+- Resolved compiler null-check errors and ErrorUtils global redeclaration issues.
+- Fixed TS interface mismatches causing Cannot invoke an object which is possibly 'undefined'.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/components/account/types.ts, src/components/account/AccountTab*.tsx, src/hooks/useAccountOverview.ts, App.tsx
+
