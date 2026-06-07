@@ -8,6 +8,16 @@ if ((Get-Location).Path -ne $FORTRESS_ROOT) {
     Write-Host "GATEKEEPER HALT: Must be run from the master root directory: $FORTRESS_ROOT" -ForegroundColor Red
     exit 1
 }
+
+# 0. Master Cleanliness Guard (FRICTION-017)
+$MasterStatus = git status --short
+if ($MasterStatus) {
+    Write-Host "GATEKEEPER HALT: The master branch has uncommitted changes." -ForegroundColor Red
+    Write-Host "Worktrees cannot be merged safely until master is clean. Resolve these files first:" -ForegroundColor Yellow
+    Write-Host $MasterStatus -ForegroundColor Gray
+    exit 1
+}
+
 # Resolve active worktree list
 Write-Host "Scanning active worktrees..." -ForegroundColor Cyan
 $WorktreeList = git worktree list | Where-Object { $_ -match "SK8Lytz-worktrees" }

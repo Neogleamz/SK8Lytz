@@ -192,3 +192,21 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
  -   * * I m p a c t : * *   U s e r   f r u s t r a t i o n ,   l o s s   o f   t r u s t ,   w a s t e d   t u r n s   c l a r i f y i n g   s p r i n t   s t a t e . 
  -   * * S t a t u s : * *   M O N I T O R I N G  
  
+
+### [FRICTION-017] Git Juggling & Unstaged Master Pollution
+- **First Observed:** 2026-06-07
+- **Observed By:** User (directly)
+- **Occurrences:** 3 / 3 (Triggered Auto-Evolution)
+- **Trigger:** Agent had to stash, create temporary branches, and manually run git commands to bypass gatekeeper and testing blockages due to unstaged files on master. User said: "we are constantly shuffling files on git to run our tests and it scary!!!!"
+- **Pattern:** Subagents or main agents modify files on \master\ instead of in a worktree, polluting the master branch. When the time comes to merge a legitimate worktree, the unstaged changes block \git checkout master\ and \git merge\, forcing the agent to perform risky "git juggling" (stashing, branching, deleting) to recover.
+- **Root Cause Theory:** There is no "Clean Master Guarantee" checked before creating worktrees or spawning subagents, and subagents are sometimes given write access without strict worktree containment.
+- **Impact:** High risk of code loss, terrifying user experience ("it scary!!!!"), and merge failures.
+- **Status:** MONITORING — ⚡ EVOLUTION PROPOSAL TRIGGERED (see below)
+
+⚡ **EVOLUTION PROPOSAL — The Clean Master Gate (FRICTION-017)**
+- **Observed:** 3 times (2026-06-07)
+- **Pattern:** Agent manually juggles git states (stash, branch, delete) on master to bypass gatekeeper errors caused by unstaged files.
+- **Root Cause:** No explicit check to ensure \master\ is clean before starting work or merging, leading to collisions.
+- **Proposed Fix:** Add a strict "Clean Master Guard" to \/start-task\ Phase 3 (Worktree Creation) and \ortress-gatekeeper.ps1\. If \git status\ on master is not clean, the agent is FORBIDDEN from using \git stash\ or branching to hide the files. It must HALT and resolve the unstaged files with the user first.
+- **Files to Update:** \start-task.md\, \ortress-gatekeeper.ps1\
+- **Impact if Approved:** Zero terrifying "git juggling". Master remains an untouched fortress. Worktrees are only spawned from a truly clean baseline.
