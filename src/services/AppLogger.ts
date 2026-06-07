@@ -244,22 +244,36 @@ class AppLoggerService {
     this.loaded = true;
   }
 
-  private async persist() {
-    try {
-      // Rotate — keep last MAX_ENTRIES
-      if (this.buffer.length > MAX_ENTRIES) {
-        this.buffer = this.buffer.slice(-MAX_ENTRIES);
+  private persistTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  private persist(force = false) {
+    if (force) {
+      if (this.persistTimeout) {
+        clearTimeout(this.persistTimeout);
+        this.persistTimeout = null;
       }
-      // ── Batch gate: skip write unless 10 new entries OR 2 s have elapsed ──
-      const now = Date.now();
-      const newEntries = this.buffer.length - this.lastPersistedLength;
-      if (newEntries < 10 && (now - this.lastPersistTime) < 2000) return;
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(this.buffer));
-      this.lastPersistedLength = this.buffer.length;
-      this.lastPersistTime = now;
-    } catch (e) {
-      if (__DEV__) console.warn('[AppLogger] persist failed', e);
+      this.executePersist().catch(e => {
+        if (__DEV__) console.warn('[AppLogger] persist failed', e instanceof Error ? e.message : String(e));
+      });
+      return;
     }
+
+    if (this.persistTimeout) return;
+    this.persistTimeout = setTimeout(() => {
+      this.persistTimeout = null;
+      this.executePersist().catch(e => {
+        if (__DEV__) console.warn('[AppLogger] persist failed', e instanceof Error ? e.message : String(e));
+      });
+    }, 500);
+  }
+
+  private async executePersist() {
+    if (this.buffer.length > MAX_ENTRIES) {
+      this.buffer = this.buffer.slice(-MAX_ENTRIES);
+    }
+    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(this.buffer));
+    this.lastPersistedLength = this.buffer.length;
+    this.lastPersistTime = Date.now();
   }
 
   private txPayloadQueue: { hex: string, timestamp: number } | null = null;
@@ -489,7 +503,11 @@ class AppLoggerService {
     this.buffer = [];
     this.activeDevices = [];
     this.pendingLogQueue = null;
-    await AsyncStorage.removeItem(STORAGE_KEY);
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEY);
+    } catch (e) {
+      if (__DEV__) console.warn('[AppLogger] clearLogs remove failed', e instanceof Error ? e.message : String(e));
+    }
     
     if (supabase) {
       // Must compute both potential filenames since state could be paired or unpaired
@@ -588,10 +606,11 @@ class AppLoggerService {
       if (successfulCount > 0) {
         // Only remove the successfully uploaded logs, preserving any new ones added during the await
         this.buffer = this.buffer.slice(successfulCount);
-        await this.persist();
+        this.persist(true); // Force persist to ensure remaining buffer is safely stored
         if (__DEV__) console.log(`[AppLogger] Ingestion complete. ${successfulCount} items uploaded.`);
       } else {
         if (__DEV__) console.log('[AppLogger] Ingestion failed or no items uploaded. Buffer preserved.');
+        this.persist(true); // Force persist to guarantee dropped upload buffer is on disk
       }
       
     } catch (err: unknown) {
