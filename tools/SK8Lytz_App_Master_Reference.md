@@ -586,7 +586,7 @@ _Added: 2026-06-05 (iOS-01, iOS-03)_
 | Guard | File | Fix |
 | :--- | :--- | :--- |
 | **MTU Platform Guard** | `BleConnectionManager.ts` | `requestMTU()` wrapped in `Platform.OS === 'android'` block — iOS negotiates MTU automatically during GATT connection. Calling `requestMTU` on iOS throws. On iOS, `conn.mtu` is read directly (typed `number` in `react-native-ble-plx`). |
-| **UUID Filter in `startDeviceScan`** | `useBLESweeper.ts` | `startDeviceScan(null, ...)` replaced with `startDeviceScan([ZENGGE_SERVICE_UUID], ...)`. Enables iOS background scanning mode (CBCentralManager requires a service UUID filter when `allowDuplicates: false`). Also reduces Android scan noise. |
+| **UUID Filter in `startDeviceScan`** | `useBLEBatterySweep.ts/useBLEInterrogator.ts` | `startDeviceScan(null, ...)` replaced with `startDeviceScan([ZENGGE_SERVICE_UUID], ...)`. Enables iOS background scanning mode (CBCentralManager requires a service UUID filter when `allowDuplicates: false`). Also reduces Android scan noise. |
 
 ### Android Platform Guards
 
@@ -596,11 +596,11 @@ _Added: 2026-06-05 (AND-02, AND-03, AND-04)_
 | :--- | :--- | :--- |
 | **Connection Priority Downgrade** | `BleConnectionManager.ts` | After handshake, `requestConnectionPriority(BALANCED)` fired to save 2—3Ã— battery. Only on Android (iOS manages its own priority). |
 | **50ms Inter-Device Write Gap** | `BleWriteDispatcher.ts` | Increased from 20ms → 50ms. Fixes silent GATT drops on Qualcomm Snapdragon 665/675 and MediaTek Helio chipsets. |
-| **Scan Budget Guard** | `useBLESweeper.ts` | Tracks `startDeviceScan` calls against Android 12+'s 4-per-30s budget. If exhausted, defers the scan start until the budget window resets. Prevents silent throttling where Android OS stops delivering scan results with zero error feedback. |
+| **Scan Budget Guard** | `useBLEBatterySweep.ts/useBLEInterrogator.ts` | Tracks `startDeviceScan` calls against Android 12+'s 4-per-30s budget. If exhausted, defers the scan start until the budget window resets. Prevents silent throttling where Android OS stops delivering scan results with zero error feedback. |
 
 ### Battery-Adaptive Sweeper (The Silent Sweeper)
 
-_Added: 2026-06-05 | Lives in: `src/hooks/ble/useBLESweeper.ts` (BAT-01)_
+_Added: 2026-06-05 | Lives in: `src/hooks/ble/useBLEBatterySweep.ts/useBLEInterrogator.ts` (BAT-01)_
 
 The Silent Sweeper is a persistent background LowPower BLE scan that runs after dashboard mount. It handles:
 1. **Background device discovery** — no manual scan button needed
@@ -872,7 +872,7 @@ The app implements a **Mathematical Consumption Modeling** system using real-tim
 ## 4. Domain-Driven Architecture
 
 > [!IMPORTANT]
-> **DDA Refactor Shipped: 2026-04-14** — The architecture was refactored from a monolithic component model to a Hook-First domain model. **BLE Engine Refactor: 2026-06-05** — `useBLE.ts` decomposed into 6 domain sub-hooks (`useBLEScanner`, `useBLESweeper`, `useBLEAutoRecovery`, `useBLEGattMutex`, `useBLEHeartbeat`, `useBLERSSIMonitor`) + 6 extracted services (`BleConnectionManager`, `BleWriteDispatcher`, `BleWriteQueue`, `BleLifecycleManager`, `BlePingService`, `BleStateMachine`). `useBLE.ts` is now a thin orchestrator (~600 lines).
+> **DDA Refactor Shipped: 2026-04-14** — The architecture was refactored from a monolithic component model to a Hook-First domain model. **BLE Engine Refactor: 2026-06-05** — `useBLE.ts` decomposed into 6 domain sub-hooks (`useBLEScanner`, `useBLEBatterySweep + useBLEInterrogator`, `useBLEAutoRecovery`, `useBLEGattMutex`, `useBLEHeartbeat`, `useBLERSSIMonitor`) + 6 extracted services (`BleConnectionManager`, `BleWriteDispatcher`, `BleWriteQueue`, `BleLifecycleManager`, `BlePingService`, `BleStateMachine`). `useBLE.ts` is now a thin orchestrator (~600 lines).
 
 To ensure scalability and maintain UI performance, the SK8Lytz app enforces a **Hook-First** architecture. Complex business logic, hardware protocols, and Supabase data fetching must be extracted from UI components into decoupled domain hooks. UI components must focus strictly on rendering.
 
@@ -894,7 +894,7 @@ _All BLE sub-hooks are orchestrated by `useBLE.ts` (the thin orchestrator). They
 | Hook / Service | File | Owns |
 | :--- | :--- | :--- |
 | `useBLEScanner` | `src/hooks/ble/useBLEScanner.ts` | Peripheral discovery, RSSI proximity gating, pending registrations |
-| `useBLESweeper` | `src/hooks/ble/useBLESweeper.ts` | Silent background LowPower scan, Interrogator Queue, `hwCache`, 3-tier battery-adaptive throttling (BAT-01) |
+| `useBLEBatterySweep + useBLEInterrogator` | `src/hooks/ble/useBLEBatterySweep.ts/useBLEInterrogator.ts` | Silent background LowPower scan, Interrogator Queue, `hwCache`, 3-tier battery-adaptive throttling (BAT-01) |
 | `useBLEAutoRecovery` | `src/hooks/ble/useBLEAutoRecovery.ts` | 3-phase reconnect (Aggressive/Moderate/Passive), group dropout coordinator, `ghostedDeviceIds`, per-device telemetry aggregation |
 | `useBLEGattMutex` | `src/hooks/ble/useBLEGattMutex.ts` | 4-tier GATT operation serialization (P1—P4), 15s deadlock watchdog, AbortController preemption |
 | `useBLEHeartbeat` | `src/hooks/ble/useBLEHeartbeat.ts` | 45s connection health ping via 0x63 query, stale-link detection → recovery (MISS-03) |
@@ -1513,7 +1513,7 @@ I have completed the structural audit of the `BLE_CORE` domain. Here is the requ
 *   **`src/hooks/ble/useBLEHeartbeat.ts`**: Connection health monitor that pings active devices every 45s (via `0x63` EEPROM query or RSSI) to sniff out and flush stale Android handles.
 *   **`src/hooks/ble/useBLERSSIMonitor.ts`**: Post-connect signal quality scanner polling device RSSI every 30s to trigger live UI badge metrics and proactive channel reconnections.
 *   **`src/hooks/ble/useBLEScanner.ts`**: Legacy peripheral discovery loop providing RSSI proximity gating and populating pending registrations for the FTUE Setup Wizard.
-*   **`src/hooks/ble/useBLESweeper.ts`**: An always-on, battery-adaptive background listener that 
+*   **`src/hooks/ble/useBLEBatterySweep.ts/useBLEInterrogator.ts`**: An always-on, battery-adaptive background listener that 
 <truncated 4153 bytes>
 )
     participant Q as Interrogator Queue

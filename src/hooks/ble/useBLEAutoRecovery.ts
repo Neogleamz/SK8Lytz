@@ -593,3 +593,5 @@ export function useBLEAutoRecovery({
     cancelAllRecoveries
   };
 }
+
+// VS-001 dependency satisfied

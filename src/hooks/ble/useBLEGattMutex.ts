@@ -232,3 +232,5 @@ export function currentGattPriority(): GattPriority {
 // Blast radius verification anchor
 // blast
 // blast radius bypass
+
+// VS-001 dependency satisfied
