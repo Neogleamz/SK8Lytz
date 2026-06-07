@@ -23,7 +23,6 @@ import { useAppMicrophone } from '../hooks/useAppMicrophone';
 import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
 import { useCuratedPicks } from '../hooks/useCuratedPicks';
 import { useDockedControllerState } from '../hooks/useDockedControllerState';
-import { useControllerPersistence } from '../hooks/useControllerPersistence';
 import { useSharedFavorites } from '../context/FavoritesContext';
 import { useControllerDispatch } from '../hooks/useControllerDispatch';
 import { getMusicPatternLabel } from '../hooks/useMusicMode';
@@ -768,18 +767,6 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       }
     }, [lockedProduct]);
 
-    // ── Persistence: load/save controller state via extracted hook ──────────
-    useControllerPersistence(
-      { activeMode, selectedColor, selectedPatternId, brightness, speed,
-        micSensitivity, musicHue, musicSecondaryHue, musicPrimaryColor, musicSecondaryColor,
-        musicMatrixStyle, musicPatternId, micSource, musicSetting,
-        fixedPatternId, fixedColorMode, fixedFgColor, fixedBgColor, fixedHue },
-      { setSelectedColor, setSelectedPatternId, setBrightness, setSpeed,
-        setMicSensitivity, setMusicHue, setMusicSecondaryHue, setMusicPrimaryColor,
-        setMusicSecondaryColor, setMusicMatrixStyle, setMusicPatternId, setMicSource,
-        setMusicSetting, setFixedPatternId, setFixedColorMode, setFixedFgColor,
-        setFixedBgColor, setFixedHue }
-    );
 
 
     // ── Music Mode: fire on mode entry AND on settings change ────────────────

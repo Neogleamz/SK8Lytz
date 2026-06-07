@@ -52,6 +52,8 @@ export interface BleSweeperHandle {
 /** Scanner handle — only method used by BleConnectionManager */
 export interface BleScannerHandle {
   stopScanner(): void;
+  isSweeperActive?: boolean;
+  startSweeper?: () => void;
 }
 
 /** Auto-recovery handle — kept in request shape for future cancel-on-connect use */
@@ -84,8 +86,6 @@ export interface BleConnectionRequest {
   keepaliveTimerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
   /** Per-device disconnect subscription map */
   disconnectListeners: React.MutableRefObject<Record<string, Subscription>>;
-  /** Sweeper handle — stopped before connect, restarted after */
-  sweeper: BleSweeperHandle;
   /** Scanner handle — stopped before connect */
   scanner: BleScannerHandle;
   /** Auto-recovery handle (reserved for future cancel-on-connect pattern) */

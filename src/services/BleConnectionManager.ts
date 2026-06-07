@@ -19,7 +19,6 @@ export async function executeConnectToDevices({
   blacklistedMacsRef,
   keepaliveTimerRef,
   disconnectListeners,
-  sweeper,
   scanner,
   autoRecovery: _autoRecovery,
   getGate,
@@ -109,7 +108,7 @@ export async function executeConnectToDevices({
       return;
     }
     setGate('CONNECTING');
-    const wasSweeperActive = sweeper.isSweeperActive;
+    const wasSweeperActive = scanner.isSweeperActive;
     try {
       let isMock = 'false';
       if (__DEV__) {
@@ -134,7 +133,7 @@ export async function executeConnectToDevices({
         return;
       }
       scanner.stopScanner();
-      if (wasSweeperActive) sweeper.stopSweeper();
+      // Sweeper is handled by scanner.stopScanner()
 
       const rawConns: Device[] = [];
       for (const device of devices) {
@@ -304,7 +303,7 @@ export async function executeConnectToDevices({
       }
       
       setGate('IDLE');
-      if (wasSweeperActive && bleManager) sweeper.startSweeper();
+      if (wasSweeperActive && bleManager) scanner.startSweeper?.();
     } catch (e: any) {
       const errMsg = (e instanceof Error ? e.message : String(e)) || String(e);
       if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
@@ -314,7 +313,7 @@ export async function executeConnectToDevices({
          AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, context: 'group' });
       }
       setGate('IDLE'); // Error recovery — inner connection failed
-      if (wasSweeperActive && bleManager) sweeper.startSweeper();
+      if (wasSweeperActive && bleManager) scanner.startSweeper?.();
     }
   } catch (outerErr: any) {
     AppLogger.error('[BLE] connectToDevices outer failed', outerErr);

@@ -47,35 +47,40 @@ export interface SceneSyncJob {
 
 class ScenesServiceClass {
   
-  /**
-   * Fetches the global community scenes.
-   */
   async getPublicScenes(limit: number = 50, offset: number = 0): Promise<ICloudScene[]> {
-    try {
-      const { data, error } = await supabase
-        .from('shared_scenes')
-        .select('*')
-        .eq('is_public', true)
-        .order('upvotes', { ascending: false })
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
-
-      if (error) throw error;
-      const scenes = data as unknown as ICloudScene[];
-      if (scenes.length > 0) {
-        AsyncStorage.setItem(STORAGE_SCENES_CACHE, JSON.stringify(scenes)).catch(() => {});
-      }
-      return scenes;
-    } catch (e) {
-      AppLogger.error('[ScenesService] getPublicScenes error', { error: String(e) });
+    // Fire-and-forget background sync
+    const syncCloud = async () => {
       try {
-        const cached = await AsyncStorage.getItem(STORAGE_SCENES_CACHE);
-        if (cached) return JSON.parse(cached) as ICloudScene[];
-      } catch {
-        // ignore
+        const { data, error } = await supabase
+          .from('shared_scenes')
+          .select('*')
+          .eq('is_public', true)
+          .order('upvotes', { ascending: false })
+          .order('created_at', { ascending: false })
+          .range(offset, offset + limit - 1);
+        if (!error && data) {
+          AsyncStorage.setItem(STORAGE_SCENES_CACHE, JSON.stringify(data)).catch(() => {});
+          return data as unknown as ICloudScene[];
+        }
+      } catch (e) {
+        AppLogger.error('[ScenesService] Background sync error', { error: String(e) });
       }
-      return [];
+      return null;
+    };
+
+    // 1. Try Local Cache First
+    try {
+      const cached = await AsyncStorage.getItem(STORAGE_SCENES_CACHE);
+      if (cached) {
+        syncCloud(); // Launch cloud sync in background
+        return JSON.parse(cached) as ICloudScene[];
+      }
+    } catch {
+      // Ignore cache errors
     }
+
+    // 2. Fallback to Cloud if cache empty
+    return (await syncCloud()) || [];
   }
 
   /**

@@ -27,7 +27,6 @@ import { requestPermission } from '../services/PermissionService';
 import { supabase } from '../services/supabaseClient';
 import { useBLEScanner } from './ble/useBLEScanner';
 import { useBLEAutoRecovery } from './ble/useBLEAutoRecovery';
-import { useBLESweeper } from './ble/useBLESweeper';
 import { useBLEHeartbeat } from './ble/useBLEHeartbeat';
 import { useBLERSSIMonitor } from './ble/useBLERSSIMonitor';
 
@@ -367,28 +366,18 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   });
 
   // ── Overwatch: Silent Sweeper + Interrogator Queue ────────────────────────
-  // Declared BEFORE scanner so hwCache is available to feed into scanner props.
-  // setPendingRegistrations uses a ref forwarder so scanner.setPendingRegistrations can be
-  // wired in after scanner is initialized without violating hook ordering rules.
   const pendingRegistrationsSetterRef = useRef<React.Dispatch<React.SetStateAction<PendingRegistration[]>>>(() => {});
   const stablePendingRegistrationsSetter: React.Dispatch<React.SetStateAction<PendingRegistration[]>> = useCallback(
     (value) => pendingRegistrationsSetterRef.current(value),
     []
   );
 
-  const sweeper = useBLESweeper({
-    bleManager,
-    setAllDevices,
-    setPendingRegistrations: stablePendingRegistrationsSetter,
-    registeredMacs,
-  });
-
   const scanner = useBLEScanner({
     bleManager,
     allDevices,
     setAllDevices,
-    hwCache: sweeper.hwCache,
     bleSend,
+    registeredMacs,
   });
 
   // Wire the real setter into the ref forwarder now that scanner is initialized.
@@ -402,14 +391,14 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     blinkPayload: number[],
     options?: { probe?: boolean; duration?: number; turnOffAtEnd?: boolean }
   ): Promise<PingResult | null> => {
-    const wasSweeperActive = sweeper.isSweeperActive;
-    if (wasSweeperActive) sweeper.stopSweeper();
+    const wasSweeperActive = scanner.isSweeperActive;
+    if (wasSweeperActive) scanner.stopScanner(); // Stops sweeper natively
     try {
       return await executePingDevice(bleManager, mac, blinkPayload, options);
     } finally {
-      if (wasSweeperActive && bleManager) sweeper.startSweeper();
+      if (wasSweeperActive && bleManager) scanner.startSweeper();
     }
-  }, [bleManager, sweeper]);
+  }, [bleManager, scanner]);
 
 
   // ─── Per-device MTU map ────────────────────────────────────────────────────
@@ -466,7 +455,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       blacklistedMacsRef,
       keepaliveTimerRef,
       disconnectListeners,
-      sweeper,
       scanner,
       autoRecovery,
       getGate,
@@ -482,7 +470,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     });
   }, [
     bleManager,
-    sweeper,
     scanner,
     autoRecovery,
     updateConnectedDevices,
@@ -625,23 +612,23 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     bleState: derivedBleState,
     getGate,
     bleActorRef,
-    startSweeper: sweeper.startSweeper,
-    stopSweeper: sweeper.stopSweeper,
-    burstScan: sweeper.burstScan,
-    isSweeperActive: sweeper.isSweeperActive,
-    hwCache: sweeper.hwCache,
+    startSweeper: scanner.startSweeper,
+    stopSweeper: scanner.stopScanner, // Replaced
+    burstScan: scanner.burstScan,
+    isSweeperActive: scanner.isSweeperActive,
+    hwCache: scanner.hwCache,
     rssiMap,
     // ── Overwatch-aware scanForPeripherals ─────────────────────────────────
     // When Sweeper is running: delegate to burstScan() (elevate scan mode 5s then revert).
     // When Sweeper is idle: fall through to the original useBLEScanner.scanForPeripherals.
     // This eliminates the dual startDeviceScan() conflict (single scan loop, all consumers).
     scanForPeripherals: (options?: { keepAlive?: boolean; disableProbing?: boolean }) => {
-      if (sweeper.isSweeperActive) {
+      if (scanner.isSweeperActive) {
         // FIX: Fire-and-forget — do NOT await burstScan.
         // Awaiting it locked bleState='SCANNING' for the full 5s burst duration,
         // blocking the Wizard from ever showing discovered devices.
         // burstScan handles its own timer + revert internally.
-        sweeper.burstScan(options?.keepAlive ? 10000 : 5000);
+        scanner.burstScan(options?.keepAlive ? 10000 : 5000);
       } else {
         scanner.scanForPeripherals(options);
       }
@@ -656,9 +643,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     droppedOutDeviceIds,
     autoRecovery.ghostedDeviceIds,
     bleGateState,
-    sweeper.isSweeperActive,
-    sweeper.hwCache,
-    sweeper.burstScan,
+    scanner.isSweeperActive,
+    scanner.hwCache,
+    scanner.burstScan,
     rssiMap,
   ]);
 }
