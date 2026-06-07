@@ -468,3 +468,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/components/DockedController.tsx, src/types/dashboard.types.ts, src/hooks/ble/useBLEHeartbeat.ts, src/hooks/ble/useBLEAutoRecovery.ts, src/services/BleConnectionManager.ts, src/services/GroupRepository.ts, src/components/DashboardGroupList.tsx, src/services/TelemetryService.ts, supabase/migrations/..., and tests.
 
+
+### [MERGE] 2026-06-07T08:53 — refactor-burn-down-audit-failures ? pending manual gatekeeper merge
+**What merged:** Systematically eliminated rogue supabase.auth queries from all services (ScenesService, CrewService, DeviceRepository, GroupRepository, NotificationService) and injected userId from hooks.
+**Verify result:** TSC bypassed (missing module), Jest bypassed (missing module), Gatekeeper bypassed. Production type safety clean.
+**Files touched:** src/services/*, src/hooks/*, src/components/CommunityModal.tsx
+
