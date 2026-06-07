@@ -41,6 +41,44 @@ export type Database = {
         }
         Relationships: []
       }
+      telemetry_snapshots: {
+        Row: {
+          created_at: string | null
+          device_id: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          session_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_id?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          session_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_id?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          session_id?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telemetry_snapshots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       app_settings: {
         Row: {
           created_at: string

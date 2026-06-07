@@ -65,20 +65,20 @@ BEGIN
     )
     VALUES (
         v_user_id,
-        COALESCE((payload->>'total_app_time_sec')::NUMERIC::INT, 0),
-        COALESCE((payload->>'total_distance_meters')::NUMERIC::FLOAT, 0),
-        COALESCE((payload->>'lifetime_top_speed_mph')::NUMERIC::FLOAT, 0),
-        COALESCE((payload->>'total_street_sessions')::NUMERIC::INT, 0),
+        COALESCE((payload->>'total_app_time_sec')::INT, 0),
+        COALESCE((payload->>'total_distance_meters')::FLOAT, 0),
+        COALESCE((payload->>'lifetime_top_speed_mph')::FLOAT, 0),
+        COALESCE((payload->>'total_street_sessions')::INT, 0),
         '{}'::jsonb,
         '{}'::jsonb,
         '{}'::jsonb
     )
     ON CONFLICT (user_id) DO UPDATE
     SET 
-        total_app_time_sec = public.user_lifetime_stats.total_app_time_sec + COALESCE((payload->>'total_app_time_sec')::NUMERIC::INT, 0),
-        total_distance_meters = public.user_lifetime_stats.total_distance_meters + COALESCE((payload->>'total_distance_meters')::NUMERIC::FLOAT, 0),
-        lifetime_top_speed_mph = GREATEST(public.user_lifetime_stats.lifetime_top_speed_mph, COALESCE((payload->>'lifetime_top_speed_mph')::NUMERIC::FLOAT, 0)),
-        total_street_sessions = public.user_lifetime_stats.total_street_sessions + COALESCE((payload->>'total_street_sessions')::NUMERIC::INT, 0),
+        total_app_time_sec = public.user_lifetime_stats.total_app_time_sec + COALESCE((payload->>'total_app_time_sec')::INT, 0),
+        total_distance_meters = public.user_lifetime_stats.total_distance_meters + COALESCE((payload->>'total_distance_meters')::FLOAT, 0),
+        lifetime_top_speed_mph = GREATEST(public.user_lifetime_stats.lifetime_top_speed_mph, COALESCE((payload->>'lifetime_top_speed_mph')::FLOAT, 0)),
+        total_street_sessions = public.user_lifetime_stats.total_street_sessions + COALESCE((payload->>'total_street_sessions')::INT, 0),
         updated_at = NOW();
 
     -- 2. Fetch the newly upserted row to get the current JSONB state
