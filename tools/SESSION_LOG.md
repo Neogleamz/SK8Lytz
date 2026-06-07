@@ -641,3 +641,28 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Decision:** Split the monolithic `.agents/workflows/deepdive-code.md` into two separate workflows (`deepdive-code-hunt.md` and `deepdive-code-synthesis.md`).
 **Reasoning:** Executing 37 sub-agents simultaneously via Claude would violate token limits and balloon API costs. The new architecture enforces a "Split-Brain" execution: Gemini handles the high-context/high-speed "Hunt" mapping (writing to disk), and Claude handles the high-reasoning "Synthesis" reduction (reading from disk).
 **Files touched:** `.agents/workflows/deepdive-code-hunt.md` [NEW], `.agents/workflows/deepdive-code-synthesis.md` [NEW], `.agents/workflows/ship-it.md` [MODIFIED], `.agents/workflows/deepdive-code.md` [DELETED].
+
+### [MERGE] 2026-06-07T21:54 — ble-jitter-backoff → master @ 5f895783
+**What merged:** 
+- Applied randomized jitter exponential backoff to `useBLE.ts`, `useDashboardAutoConnect.ts`, and `BleConnectionManager.ts`.
+- Created `jitteredDelay` utility in `src/utils/backoff.ts`.
+- Decohere simultaneous GATT 133 reconnect stampedes.
+**Verify result:** TSC ✅, Jest ✅, QA Hardening ✅
+**Files touched:** src/hooks/useBLE.ts, src/hooks/useDashboardAutoConnect.ts, src/services/BleConnectionManager.ts, src/utils/backoff.ts
+
+### [DECISION] 2026-06-07T17:03 � Split-Brain Eradication Phase 1 Complete
+**Decision:** Refactored ZenggeProtocol to use instance methods for sequence counter management while maintaining a namespace proxy for static consumers.
+**Rejected:** Abandoned attempting to modify all 25 legacy static consumers, which would have carried unacceptable blast radius risk.
+**Don't re-derive:** ZenggeAdapter now instantiates its own 	his.protocol to isolate GATT sequence numbers and prevent hardware command collisions across multiple connections.
+**Source:** src/protocols/ZenggeAdapter.ts:167
+
+
+### [MERGE] 2026-06-07T17:10 - Phase 2 Split-Brain Eradication
+**What merged:** Removed useSessionTracking and centralized telemetry persistence to SpeedTrackingService.
+**Verify result:** TSC Passed, Jest Passed.
+**Files touched:** DockedController.tsx, StreetPanel.tsx, DashboardScreen.tsx, useDashboardController.tsx, useSessionTracking.ts (deleted).
+
+### [MERGE] 2026-06-07T17:14 - Phase 3 Split-Brain Eradication
+**What merged:** Added pub/sub EventEmitter to CrewService and eliminated useState duplication across hooks.
+**Verify result:** TSC Passed, Jest Passed.
+**Files touched:** CrewService.ts, useDashboardCrew.ts, useCrewSession.ts, CrewModal.tsx, DashboardCrewPanel.tsx, CrewCreateScreen.tsx, CrewScheduleScreen.tsx, DashboardScreen.tsx, useDashboardController.tsx.

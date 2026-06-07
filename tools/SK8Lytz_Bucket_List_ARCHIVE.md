@@ -13,6 +13,33 @@ This document contains the archive of all successfully completed and merged task
 
 ## 📦 ARCHIVED SPRINT LOGS
 
+### Sprint: v3.9.1 — 2026-06-07 (ble-gatt-hardening)
+
+### [BATCH:ble-gatt-hardening] (Complete)
+- **Prerequisite**: None
+- **Active Tasks**: 3 tasks
+
+- [x] **`fix/ble-gatt-queue-hardening`** (Merged: 1f22f260)
+  - **Source of Truth:** 📖 `src/services/BleWriteDispatcher.ts:141`, `src/services/BleConnectionManager.ts:252`, `src/hooks/ble/useBLEHeartbeat.ts:109` | Audit: `R-01_findings.json`, `R-13_findings.json`
+  - **Goal:** Serialize all multi-device BLE GATT operations. Close the BleWriteQueue conditional bypass. Replace all `Promise.all(devices.map(...))` write paths with sequential `for...of` loops.
+  - **Details:** R-01 found a conditional bypass in BleConnectionManager that allows direct `writeOp()` calls without queue protection. R-13 found 6 concurrent `Promise.all` write/disconnect patterns. Combined effect is GATT 133 error storms on multi-device operations. 7 files, 7 surgical edits.
+
+- [x] **`fix/ble-pixel-buffer-clamp`** (Merged: 7156f1d4)
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[H-RISK]` `[Snack]` `[🤖 PRO-HIGH]`
+  - **Plan:** 📎 [PLAN-BLE-PIXEL-BUFFER-CLAMP.md](docs/plans/PLAN-BLE-PIXEL-BUFFER-CLAMP.md)
+  - **Source of Truth:** 📖 `src/components/admin/tools/Sk8LytzDiagnosticLab.tsx:178`, `src/components/admin/tools/tabs/DiagnosticLabBuilderTab.tsx:73` | Audit: `R-10_findings.json`
+  - **Goal:** Enforce 12-pixel minimum for all `0x59` Static Colorful dispatches in diagnostic lab. Add `Math.max(12, pts)` guard to 5 diagnostic lab files.
+  - **Details:** Hardware safety rule — payloads below 10 pixels cause physical EEPROM buffer lockouts on 0xA3 chipset. 5 files, 5 one-line guards.
+
+- [x] **`fix/ble-jitter-backoff`** (Merged: 5f895783)
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[M-RISK]` `[Snack]` `[🤖 PRO-MED]`
+  - **Plan:** 📎 [PLAN-BLE-JITTER-BACKOFF.md](docs/plans/PLAN-BLE-JITTER-BACKOFF.md)
+  - **Source of Truth:** 📖 `src/hooks/useBLE.ts:131`, `src/hooks/useDashboardAutoConnect.ts:169`, `src/services/BleConnectionManager.ts:150` | Audit: `R-03_findings.json`
+  - **Goal:** Add ±500ms jitter to all BLE reconnect retry timers to decoheres simultaneous multi-device reconnect stampedes.
+  - **Details:** 3 fixed-interval retry paths with no jitter. Group reconnect after BLE drop causes synchronized retry burst every 1000ms, amplifying GATT 133 collisions. 1 utility function + 3 surgical edits.
+
+---
+
 ### Sprint: v3.9.1 — 2026-06-07 (ble-p3-polish)
 
 ### [BATCH:ble-p3-polish] (Complete)
