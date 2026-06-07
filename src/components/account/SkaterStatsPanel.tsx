@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../services/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 import { Spacing } from '../../theme/theme';
 import type { Tables } from '../../types/supabase';
 import { AppLogger } from '../../services/AppLogger';
@@ -16,10 +17,16 @@ const toMap = (v: LifetimeStats['pattern_time_map']): JsonMap =>
   (v && typeof v === 'object' && !Array.isArray(v) ? v : {}) as JsonMap;
 
 export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
+  const { user } = useAuth();
   const [stats, setStats] = useState<LifetimeStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     async function fetchStats() {
       const CACHE_KEY = '@sk8lytz_lifetime_stats_cache';
       
@@ -31,19 +38,16 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
         AppLogger.warn('Failed to load skater stats cache from AsyncStorage', e);
       }
 
-      if (!supabase) {
+      if (!user || !supabase) {
         setLoading(false);
         return;
       }
 
       try {
-        const { data: authData } = await supabase.auth.getUser();
-        if (!authData.user) return;
-        
         const { data, error } = await supabase
           .from('user_lifetime_stats')
           .select('*')
-          .eq('user_id', authData.user.id)
+          .eq('user_id', user.id)
           .single();
           
         if (data && !error) {
@@ -58,7 +62,7 @@ export default function SkaterStatsPanel({ Colors }: { Colors: any }) {
       }
     }
     fetchStats();
-  }, []);
+  }, [user]);
 
   if (loading) {
     return (

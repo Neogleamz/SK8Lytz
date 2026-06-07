@@ -113,6 +113,8 @@ function AppContent() {
     clearOfflineMode,
   } = useAuth();
 
+  useOfflineSyncWorker();
+
   if (!sessionLoaded) return null;
 
   return (
@@ -144,7 +146,7 @@ export default function App() {
     'Righteous': Righteous_400Regular,
   });
 
-  useOfflineSyncWorker();
+
 
   useEffect(() => {
     if (fontsLoaded) {

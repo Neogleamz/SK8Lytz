@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AppLogger } from '../services/AppLogger';
 import { CrewMember, CrewRole, crewService, CrewSession } from '../services/CrewService';
 import { supabase } from '../services/supabaseClient';
+import { useAuth } from '../context/AuthContext';
 
 export function useCrewSession(
   activeSession: CrewSession | null,
@@ -14,6 +15,7 @@ export function useCrewSession(
   goToLanding: () => void,
   setErrorMsg: (msg: string) => void
 ) {
+  const { user } = useAuth();
   const [currentSession, setCurrentSession] = useState<CrewSession | null>(activeSession);
   const [currentRole, setCurrentRole] = useState<CrewRole>(activeRole);
   const [members, setMembers] = useState<CrewMember[]>([]);
@@ -56,7 +58,6 @@ export function useCrewSession(
       AppLogger.log('CREW_SESSION_ENDED', { sessionId: currentSessionId, crewName: currentSession?.name, role: 'leader', reason: 'explicit_end' });
       if (currentSessionId) {
         // Telemetry
-        const { data: { user } } = await supabase.auth.getUser();
         if (user && (crewService.sessionTelemetry.distanceMiles > 0 || crewService.sessionTelemetry.topSpeedMph > 0)) {
           const { data: profile } = await supabase
             .from('user_profiles')

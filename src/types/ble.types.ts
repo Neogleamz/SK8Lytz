@@ -9,7 +9,7 @@
  */
 import type React from 'react';
 import type { BleManager, Characteristic, Device, Subscription } from 'react-native-ble-plx';
-import type { BLEPhaseTag } from '../services/BleStateMachine';
+import type { BLEPhaseTag } from '../services/ble/BleMachine.types';
 import type { IControllerProtocol } from '../protocols/IControllerProtocol';
 
 // Re-export library types so consumers import from one place
@@ -87,8 +87,8 @@ export interface BleConnectionRequest {
   scanner: BleScannerHandle;
   /** Auto-recovery handle (reserved for future cancel-on-connect pattern) */
   autoRecovery: BleAutoRecoveryHandle;
-  /** Global BLE connection gate semaphore */
-  bleGateRef: React.MutableRefObject<any>; // MIGRATION-SHIM
+  /** Getter for the current BLE phase tag */
+  getGate: () => BLEPhaseTag;
   /** Per-device negotiated MTU map */
   mtuMapRef: React.MutableRefObject<Map<string, number>>;
   /** Per-device resolved protocol adapter map */

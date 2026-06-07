@@ -28,3 +28,5 @@ export type BleMachineState =
   | { value: 'READY'; context: BleMachineContext }
   | { value: 'DISCONNECTING'; context: BleMachineContext }
   | { value: 'RECOVERING'; context: BleMachineContext };
+
+export type BLEPhaseTag = BleMachineState['value'];

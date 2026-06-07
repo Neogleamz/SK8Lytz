@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react';
 import { ILifetimeStats, ISkateSession, SpeedTrackingService } from '../services/SpeedTrackingService';
 import { AppLogger } from '../services/AppLogger';
+import { useAuth } from '../context/AuthContext';
 
 export function useSkateStats(visible: boolean) {
+  const { user } = useAuth();
+  const userId = user?.id || null;
   const [lifetimeStats, setLifetimeStats] = useState<ILifetimeStats | null>(null);
   const [recentSessions, setRecentSessions] = useState<ISkateSession[]>([]);
   const [statsLoading, setStatsLoading] = useState(false);
 
   useEffect(() => {
-    if (visible) {
+    if (visible && userId) {
       setStatsLoading(true);
       Promise.all([
-        SpeedTrackingService.fetchLifetimeStats(),
-        SpeedTrackingService.fetchRecentSessions(10),
+        SpeedTrackingService.fetchLifetimeStats(userId),
+        SpeedTrackingService.fetchRecentSessions(userId, 10),
       ])
         .then(([stats, sessions]) => {
           setLifetimeStats(stats);

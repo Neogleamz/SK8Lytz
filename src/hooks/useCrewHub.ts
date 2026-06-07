@@ -5,10 +5,12 @@ import { crewService, CrewSession } from '../services/CrewService';
 import { locationService, NearbySession, NearbySkateSpot } from '../services/LocationService';
 import { PermanentCrew, profileService } from '../services/ProfileService';
 import { AppLogger } from '../services/AppLogger';
+import { useAuth } from '../context/AuthContext';
 
 const RADIUS_STORAGE_KEY = '@Sk8lytz_RadiusPreference';
 
 export function useCrewHub(visible: boolean, step: string) {
+  const { user } = useAuth();
   const [discoverRadiusMi, _setDiscoverRadiusMi] = useState<number | null>(20);
 
   useEffect(() => {
@@ -103,7 +105,7 @@ export function useCrewHub(visible: boolean, step: string) {
         // Isolated queries — one failing must NOT nuke the other.
         // Previously used Promise.all which is atomic: if getNearbyPublicSessions
         // threw (stale auth, network), setNearbySpots was never called → no pins.
-        const sessionsP = locationService.getNearbyPublicSessions(discoverRadiusMi, userCoords)
+        const sessionsP = locationService.getNearbyPublicSessions(discoverRadiusMi, userCoords, user?.id || null)
           .catch(err => { AppLogger.warn('[useCrewHub] sessions query failed', err); return [] as NearbySession[]; });
         const spotsP = locationService.getNearbySkateSpots(discoverRadiusMi, userCoords)
           .catch(err => { AppLogger.warn('[useCrewHub] spots query failed', err); return [] as NearbySkateSpot[]; });

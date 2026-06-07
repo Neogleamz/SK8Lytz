@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { useProductCatalog } from '../hooks/useProductCatalog';
 import { supabase } from '../services/supabaseClient';
 import { AppLogger } from '../services/AppLogger';
+import { useAuth } from '../context/AuthContext';
 import type { ProductProfile } from '../types/ProductCatalog';
 
 /**
@@ -33,6 +34,7 @@ export const createBlankProfile = (): ProductProfile => ({
  * useProductManager — Domain hook for administrative management of the hardware product catalog.
  */
 export function useProductManager() {
+  const { session } = useAuth();
   const { allProfiles, saveProfile: saveToCloud, syncFromCloud } = useProductCatalog();
   const [editingProfile, setEditingProfile] = useState<ProductProfile | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -59,7 +61,6 @@ export function useProductManager() {
     setIsSaving(true);
     try {
       // Direct session check to ensure we aren't 401ing
-      const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         Alert.alert('Session Expired', 'Please log in as an admin.');
         return false;

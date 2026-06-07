@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { checkPermission, openGlobalPermissionsModal } from '../services/PermissionService';
 import { AppLogger } from '../services/AppLogger';
+import { useAuth } from '../context/AuthContext';
 import { crewService } from '../services/CrewService';
 import { SpeedTrackingService, ISessionSnapshot } from '../services/SpeedTrackingService';
 import { WatchBridge } from 'sk8lytz-watch-bridge';
@@ -33,6 +34,7 @@ export function useGlobalTelemetry(
   healthMetrics?: { avgBpm: number | null; peakBpm: number | null; activeCalories: number | null },
   externalStartTimeMs?: number | null
 ): GlobalTelemetryState {
+  const { user } = useAuth();
   const isSkateSessionActive = sessionPhase === 'ACTIVE' || sessionPhase === 'PAUSED' || sessionPhase === 'ENDING';
   const [gpsSpeed, setGpsSpeed] = useState<number>(0);
   const [peakGForce, setPeakGForce] = useState<number>(1.0);
@@ -119,7 +121,7 @@ export function useGlobalTelemetry(
       };
 
       try {
-        await SpeedTrackingService.saveSession(snapshot);
+        await SpeedTrackingService.saveSession(snapshot, user?.id || null);
         AppLogger.log('GLOBAL_SESSION_SAVED', { action: 'AUTO_SAVED_TO_DB', durationSec, distanceMiles });
       } catch (err) {
         AppLogger.error('[useGlobalTelemetry] Failed to persist auto-session', err);

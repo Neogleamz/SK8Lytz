@@ -22,7 +22,7 @@ export async function executeConnectToDevices({
   sweeper,
   scanner,
   autoRecovery: _autoRecovery,
-  bleGateRef,
+  getGate,
   mtuMapRef,
   adapterMapRef,
   dataReceivedCallbackRef,
@@ -59,8 +59,8 @@ export async function executeConnectToDevices({
   // Skip the entire GATT lock acquisition if the gate is already non-IDLE.
   // Saves the 8s poll cycle that acquireGattLock(1) would spend waiting.
   // The post-lock gate check at L97 remains as a TOCTOU safety net.
-  if (bleGateRef.current.tag !== 'IDLE') {
-    AppLogger.warn('[BLE] connectToDevices SKIPPED (pre-lock) — gate is ' + bleGateRef.current.tag, { requestedDevices: devices.map(d => d.id) });
+  if (getGate() !== 'IDLE') {
+    AppLogger.warn('[BLE] connectToDevices SKIPPED (pre-lock) — gate is ' + getGate(), { requestedDevices: devices.map(d => d.id) });
     return;
   }
 
@@ -103,8 +103,8 @@ export async function executeConnectToDevices({
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 
-    if (bleGateRef.current.tag !== 'IDLE') {
-      AppLogger.warn('[BLE] connectToDevices REJECTED — gate is ' + bleGateRef.current.tag, { requestedDevices: devices.map(d => d.id) });
+    if (getGate() !== 'IDLE') {
+      AppLogger.warn('[BLE] connectToDevices REJECTED — gate is ' + getGate(), { requestedDevices: devices.map(d => d.id) });
       return;
     }
     setGate('CONNECTING');
@@ -299,12 +299,12 @@ export async function executeConnectToDevices({
          AppLogger.error('FAILED TO CONNECT TO GROUP', e);
          AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, context: 'group' });
       }
-      bleGateRef.current.forceTransitionTo({ tag: 'IDLE' }, 'Error recovery — inner connection failed');
+      setGate('IDLE'); // Error recovery — inner connection failed
       if (wasSweeperActive && bleManager) sweeper.startSweeper();
     }
   } catch (outerErr: any) {
     AppLogger.error('[BLE] connectToDevices outer failed', outerErr);
-    bleGateRef.current.forceTransitionTo({ tag: 'IDLE' }, 'Error recovery — outer connection failed');
+    setGate('IDLE'); // Error recovery — outer connection failed
   } finally {
     release();
   }

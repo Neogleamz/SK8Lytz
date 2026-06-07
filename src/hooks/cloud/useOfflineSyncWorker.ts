@@ -13,7 +13,10 @@ const SYNC_INTERVAL_MS = 60000; // 60 seconds
  * to Supabase. If the app is offline, these flushes gracefully fail and retry
  * on the next interval.
  */
+import { useAuth } from '../../context/AuthContext';
+
 export function useOfflineSyncWorker() {
+  const { user } = useAuth();
   const syncIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
@@ -21,8 +24,9 @@ export function useOfflineSyncWorker() {
 
     const runSync = async () => {
       try {
+        if (!user) return; // Prevent flush loop if unauthenticated
         await ScenesService.flushSyncQueue();
-        await SpeedTrackingService.flushPendingSessionQueue();
+        await SpeedTrackingService.flushPendingSessionQueue(user.id);
         await AppLogger.uploadLogsToSupabase();
       } catch (e) {
         // We catch everything here to prevent the worker loop from crashing the app

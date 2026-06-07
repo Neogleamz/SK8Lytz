@@ -25,6 +25,17 @@ jest.mock('../../services/AppLogger', () => ({
   getAppLogger: () => ({ log: jest.fn(), warn: jest.fn(), error: jest.fn() }),
 }));
 
+jest.mock('expo-linking', () => ({
+  addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+  getInitialURL: jest.fn().mockResolvedValue(null),
+}));
+
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: jest.fn().mockResolvedValue(null),
+  setItemAsync: jest.fn().mockResolvedValue(null),
+  deleteItemAsync: jest.fn().mockResolvedValue(null),
+}));
+
 jest.mock('../../services/supabaseClient', () => ({
   supabase: { auth: { getUser: jest.fn().mockResolvedValue({ data: { user: null } }) } },
 }));

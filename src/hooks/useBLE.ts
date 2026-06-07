@@ -18,7 +18,7 @@ import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
 import { AppLogger } from '../services/AppLogger';
 import type { BleConnectionState, PendingRegistration, PingResult } from '../types/dashboard.types';
-import { BLEPhaseTag } from '../services/BleStateMachine';
+import type { BLEPhaseTag } from '../services/ble/BleMachine.types';
 import { useMachine } from '@xstate/react';
 import { bleMachine } from '../services/ble/BleMachine';
 import { ActorRefFrom } from 'xstate';
@@ -87,8 +87,8 @@ export interface BluetoothLowEnergyApi {
   setPendingRegistrations: React.Dispatch<React.SetStateAction<PendingRegistration[]>>;
   ghostedDeviceIds: string[];
   bleState: BleConnectionState;
-  /** Global connection gate semaphore — exposed for consumers that need gate-awareness */
-  bleGateRef: React.MutableRefObject<any>; // MIGRATION-SHIM
+  getGate: () => BLEPhaseTag;
+
   bleActorRef: ActorRefFrom<typeof bleMachine>;
   // ── Overwatch BLE Engine API ───────────────────────────────────────────────
   /** Start the Silent Sweeper. Call once on Dashboard mount after BT permissions confirmed. */
@@ -112,7 +112,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   }, []);
 
   const [allDevices, setAllDevices] = useState<Device[]>([]);
-  const [connectedDevices, setConnectedDevices] = useState<Device[]>([]);
   const [isBluetoothSupported, setIsBluetoothSupported] = useState(Platform.OS !== 'web');
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState(Platform.OS === 'web');
   const [droppedOutDeviceIds, setDroppedOutDeviceIds] = useState<string[]>([]);
@@ -122,13 +121,11 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // GATT operations that cause Android GATT 133 errors.
   const [bleSnapshot, bleSend, bleActorRef] = useMachine(bleMachine);
   const bleGateState = typeof bleSnapshot.value === 'string' ? bleSnapshot.value : 'IDLE';
+  const connectedDevices = bleSnapshot.context.connectedDevices;
 
-  // Legacy compat: consumers that still check bleGateRef.current.tag
-  const bleGateRef = useRef<any>({ // MIGRATION-SHIM
-    get tag() { return bleActorRef.getSnapshot().value; },
-    transitionTo: (_phase: any) => bleSend({ type: 'FORCE_IDLE' }), // dummy
-    forceTransitionTo: (_phase: any) => bleSend({ type: 'FORCE_IDLE' }) // dummy
-  });
+  const getGate = useCallback((): BLEPhaseTag => {
+    return bleActorRef.getSnapshot().value as BLEPhaseTag;
+  }, [bleActorRef]);
   // ── Pattern write debounce ─────────────────────────────────────────────────
   // Prevents BLE queue pile-up when user swipes rapidly through the pattern picker.
   // Critical writes (power, time sync) bypass this and go direct.
@@ -199,9 +196,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       const prev = connectedDevicesRef.current;
       const next = typeof action === 'function' ? action(prev) : action;
       connectedDevicesRef.current = next;
-      setConnectedDevices(next);
+      bleSend({ type: 'UPDATE_CONNECTED_DEVICES', devices: next });
     },
-    [],
+    [bleSend],
   );
 
   useEffect(() => {
@@ -322,7 +319,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     disconnectListeners,
     handleNotification: (error: any, characteristic: any, deviceId: string) => handleNotificationRef.current(error, characteristic, deviceId),
     onOrganicDisconnect: (error: any, deviceId: string) => handleOrganicDisconnectRef.current(error, deviceId),
-    bleGateRef,
     onAdapterResolved: (deviceId: string, adapter: IControllerProtocol) => {
       // Keep adapterMapRef in sync when AutoRecovery reconnects a device.
       // The recovery hook resolves the adapter fresh from conn.services() after
@@ -361,7 +357,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     bleManager,
     setAllDevices,
     setPendingRegistrations: stablePendingRegistrationsSetter,
-    bleGateRef,
     registeredMacs,
   });
 
@@ -451,7 +446,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       sweeper,
       scanner,
       autoRecovery,
-      bleGateRef,
+      getGate,
       mtuMapRef,
       adapterMapRef,
       dataReceivedCallbackRef,
@@ -466,8 +461,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     sweeper,
     scanner,
     autoRecovery,
-    setConnectedDevices,
+    updateConnectedDevices,
     setGate,
+    getGate,
   ]);
 
   // Wire connectToDevicesRef immediately after connectToDevices is defined so the
@@ -528,7 +524,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       mtuMapRef,
       adapterMapRef,
       autoRecovery,
-      bleGateRef,
+      getGate,
       updateConnectedDevices,
       setGate
     );
@@ -602,7 +598,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     executeProtocolResults,
     ghostedDeviceIds: bleSnapshot.context.ghostedDeviceIds.length > 0 ? bleSnapshot.context.ghostedDeviceIds : autoRecovery.ghostedDeviceIds,
     bleState: derivedBleState,
-    bleGateRef,
+    getGate,
     bleActorRef,
     startSweeper: sweeper.startSweeper,
     stopSweeper: sweeper.stopSweeper,

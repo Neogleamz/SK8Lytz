@@ -93,7 +93,7 @@ class LocationService {
    * Fetch active public sessions sorted by distance from current position.
    * Falls back to creation-date order if location permission denied.
    */
-  async getNearbyPublicSessions(radiusMi?: number | null, userCoords?: { lat: number; lng: number } | null): Promise<NearbySession[]> {
+  async getNearbyPublicSessions(radiusMi?: number | null, userCoords?: { lat: number; lng: number } | null, userId?: string | null): Promise<NearbySession[]> {
 
     const SESSION_SELECT = 'id, name, invite_code, location_label, location_coords, scheduled_at, created_at, is_public, crew_id, crew_members(count), crews(name, avatar_url, avatar_icon, avatar_color)';
 
@@ -111,12 +111,11 @@ class LocationService {
     // We look at `crew_members` (session membership) not `crew_memberships` (permanent crew membership).
     let privateData: any[] = [];
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
+      if (userId) {
         // Fetch sessions where user is a permanent crew member OR an active session participant
         const [mRes, sRes] = await Promise.all([
-          supabase.from('crew_memberships').select('crew_id').eq('user_id', user.id),
-          supabase.from('crew_members').select('session_id').eq('user_id', user.id)
+          supabase.from('crew_memberships').select('crew_id').eq('user_id', userId),
+          supabase.from('crew_members').select('session_id').eq('user_id', userId)
         ]);
 
         const myCrewIds = (mRes.data ?? []).map((m: any) => m.crew_id).filter(Boolean);

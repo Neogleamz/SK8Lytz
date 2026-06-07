@@ -20,6 +20,7 @@ import type { Device } from 'react-native-ble-plx';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import { AppLogger } from '../services/AppLogger';
 import { supabase } from '../services/supabaseClient';
+import { useAuth } from '../context/AuthContext';
 import type { RegisteredGroup, RegisteredDeviceRow } from '../types/ble.types';
 
 interface UseDashboardAutoConnectOptions {
@@ -34,7 +35,7 @@ interface UseDashboardAutoConnectOptions {
   refreshProfile: () => Promise<void>;
   registeredDevices: RegisteredDevice[];
   /** Global connection gate semaphore — observer only connects when IDLE */
-  bleGateRef: React.MutableRefObject<any>; // MIGRATION-SHIM
+  getGate: () => string;
   /** Gate the observer if setup wizard is active */
   isWizardActive?: boolean;
   /** Trigger a high-power active scan (from useBLESweeper) */
@@ -101,11 +102,13 @@ export function useDashboardAutoConnect({
   requestPermissions,
   refreshProfile,
   registeredDevices,
-  bleGateRef,
+  getGate,
   isWizardActive,
   burstScan,
 }: UseDashboardAutoConnectOptions): { clearAutoConnectQueue: () => void; retriggerAutoConnect: () => void } {
 
+  const { session } = useAuth();
+  
   const hasAutoConnectedRef = useRef(false);
   const autoConnectIdsRef = useRef<string[]>([]);
   /** Tracks retry counts per MAC for failed auto-connect attempts. RC-02 */
@@ -156,10 +159,10 @@ export function useDashboardAutoConnect({
 
       const attemptConnection = () => {
         // ── GATE CHECK: Only connect when no other BLE operation is in-flight ──
-        if (bleGateRef.current.tag !== 'IDLE') {
+        if (getGate() !== 'IDLE') {
           AppLogger.log('BLE_STATE_CHANGE', {
             event: 'auto_connect_observer_gate_blocked_retrying',
-            gate: bleGateRef.current.tag,
+            gate: getGate(),
             batchSize: pendingBatchRef.current.length,
           });
           // BUG-02 Fix: Do not wipe pendingBatchRef. Instead, retry in 1000ms.
@@ -244,7 +247,6 @@ export function useDashboardAutoConnect({
       let cloudUserId: string | null = null;
 
       if (supabase) {
-        const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           cloudUserId = session.user.id;
 

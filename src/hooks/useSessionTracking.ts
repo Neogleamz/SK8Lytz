@@ -13,6 +13,7 @@
  */
 import { useCallback, useRef, useState } from 'react';
 import { AppLogger } from '../services/AppLogger';
+import { useAuth } from '../context/AuthContext';
 import type { ISessionSnapshot } from '../services/SpeedTrackingService';
 import { useTelemetryLedger } from './useTelemetryLedger';
 import { SpeedTrackingService } from '../services/SpeedTrackingService';
@@ -50,6 +51,7 @@ export interface UseSessionTrackingResult {
 }
 
 export function useSessionTracking(): UseSessionTrackingResult {
+  const { user } = useAuth();
   const telemetry = useTelemetryLedger();
   const [sessionState, setSessionState] = useState<SessionState>('IDLE');
   const [sessionSummary, setSessionSummary] = useState<ISessionSnapshot | null>(null);
@@ -114,7 +116,7 @@ export function useSessionTracking(): UseSessionTrackingResult {
     if (!sessionSummary) return;
 
     try {
-      await SpeedTrackingService.saveSession(sessionSummary);
+      await SpeedTrackingService.saveSession(sessionSummary, user?.id || null);
       AppLogger.log('SESSION_SAVED', { action: 'SAVED_TO_DB', durationSec: sessionSummary.durationSec });
     } catch (err) {
       AppLogger.error('[useSessionTracking] Failed to persist session to Supabase', err);

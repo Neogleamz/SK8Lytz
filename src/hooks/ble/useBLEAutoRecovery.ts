@@ -25,8 +25,7 @@ export interface UseBLEAutoRecoveryProps {
   disconnectListeners: React.MutableRefObject<Record<string, Subscription>>;
   handleNotification: (error: Error | null, characteristic: Characteristic | null, deviceId: string) => void;
   onOrganicDisconnect: (error: Error | null, deviceId: string) => void;
-  /** Global connection gate semaphore — recovery waits for IDLE before touching radio */
-  bleGateRef: React.MutableRefObject<any>; // MIGRATION-SHIM
+
   /**
    * Called after a successful reconnect with the resolved protocol adapter.
    * useBLE.ts uses this to update adapterMapRef so writeToDevice continues
@@ -178,7 +177,7 @@ export function useBLEAutoRecovery({
   disconnectListeners,
   handleNotification,
   onOrganicDisconnect,
-  bleGateRef,
+
   onAdapterResolved,
   onDeviceRecovered,
   onMtuNegotiated,
@@ -518,7 +517,7 @@ export function useBLEAutoRecovery({
 
     // Fallback: no coordinator wired (shouldn’t happen in production) — spawn directly
     spawnRecoveryLoop(deviceId);
-  }, [bleManager, disconnectListeners, handleNotification, onOrganicDisconnect, setConnectedDevices, bleGateRef, onGroupDropout]);
+  }, [bleManager, disconnectListeners, handleNotification, onOrganicDisconnect, setConnectedDevices, onGroupDropout]);
 
   /**
    * Cancel all active recovery loops and wait for them to exit.

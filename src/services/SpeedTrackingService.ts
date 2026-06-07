@@ -114,7 +114,7 @@ class SpeedTrackingServiceClass {
    *
    * @returns The inserted session ID on success, null on failure.
    */
-  async saveSession(snapshot: ISessionSnapshot): Promise<string | null> {
+  async saveSession(snapshot: ISessionSnapshot, userId: string | null): Promise<string | null> {
     if (!supabase) {
       AppLogger.log('ERROR_CAUGHT', { message: '[SpeedTrackingService] Supabase not configured.' });
       return null;
@@ -126,9 +126,7 @@ class SpeedTrackingServiceClass {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
+      if (!userId) {
         // ── Offline Queue ────────────────────────────────────────────────────────
         // User is unauthenticated. Serialize this session to the local queue so
         // useOfflineSyncWorker can flush it to Supabase once auth is available.
@@ -168,7 +166,7 @@ class SpeedTrackingServiceClass {
       const { data, error } = await supabase
         .from('skate_sessions')
         .insert({
-          user_id: user.id,
+          user_id: userId,
           duration_sec: Math.round(snapshot.durationSec),
           distance_miles: parseFloat(snapshot.distanceMiles.toFixed(3)),
           avg_speed_mph: parseFloat(snapshot.avgSpeedMph.toFixed(2)),
@@ -224,7 +222,7 @@ class SpeedTrackingServiceClass {
    * - Failed records stay in queue for the next flush cycle
    * - No session → return silently, keep queue intact
    */
-  async flushPendingSessionQueue(): Promise<void> {
+  async flushPendingSessionQueue(userId: string | null): Promise<void> {
     if (!supabase) return;
     if (this._isFlushingSessionQueue) return;
     this._isFlushingSessionQueue = true;
@@ -234,14 +232,10 @@ class SpeedTrackingServiceClass {
       const queue: PendingSessionRecord[] = raw ? JSON.parse(raw) : [];
       if (queue.length === 0) return;
 
-      // Auth check — mirror ScenesService.flushSyncQueue() L342-346 pattern exactly
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session?.user) {
+      if (!userId) {
         // Not authenticated — keep queue, retry on next cycle
         return;
       }
-
-      const userId = sessionData.session.user.id;
       const remainingQueue: PendingSessionRecord[] = [];
       let successCount = 0;
 
@@ -312,16 +306,15 @@ class SpeedTrackingServiceClass {
    * Fetches the N most recent sessions for the current user.
    * Returns an empty array on error or if unauthenticated.
    */
-  async fetchRecentSessions(limit = 20): Promise<ISkateSession[]> {
+  async fetchRecentSessions(userId: string | null, limit = 20): Promise<ISkateSession[]> {
     if (!supabase) return [];
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return [];
+      if (!userId) return [];
 
       const { data, error } = await supabase
         .from('skate_sessions')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('session_date', { ascending: false })
         .limit(limit);
 
@@ -380,7 +373,7 @@ class SpeedTrackingServiceClass {
   /**
    * Aggregates lifetime statistics from all stored sessions for the current user.
    */
-  async fetchLifetimeStats(): Promise<ILifetimeStats> {
+  async fetchLifetimeStats(userId: string | null): Promise<ILifetimeStats> {
     const empty: ILifetimeStats = {
       totalSessions: 0, totalDistanceMiles: 0, totalDurationSec: 0,
       lifetimePeakSpeedMph: 0, lifetimeAvgSpeedMph: 0, lifetimePeakGForce: 0, lifetimeCalories: 0,
@@ -389,13 +382,12 @@ class SpeedTrackingServiceClass {
     if (!supabase) return empty;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return empty;
+      if (!userId) return empty;
 
       const { data, error } = await supabase
         .from('skate_sessions')
         .select('duration_sec, distance_miles, avg_speed_mph, peak_speed_mph, peak_gforce, calories, peak_bpm')
-        .eq('user_id', user.id);
+        .eq('user_id', userId);
 
       if (error || !data || data.length === 0) return empty;
 

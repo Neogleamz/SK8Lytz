@@ -187,7 +187,8 @@ export default function AccountModal({
               await profileService.deleteCrew(crew.id);
               setCrews(prev => prev.filter(c => c.id !== crew.id));
               AppLogger.log('CREW_PERMANENT_DELETED', { crewId: crew.id, crewName: crew.name });
-            } catch (e: any) {
+            } catch (err) {
+              const e = err instanceof Error ? err : new Error(String(err));
               Alert.alert('Error', e.message || 'Could not delete crew');
             }
           },
@@ -335,7 +336,8 @@ export default function AccountModal({
       if (error) throw error;
       setCurrentPwd(''); setNewPwd(''); setConfirmPwd('');
       setSecurityMsg({ type: 'success', text: '✓ Password updated successfully' });
-    } catch (e: any) {
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
       setSecurityMsg({ type: 'error', text: e.message || 'Could not change password' });
       setCurrentPwd('');
     } finally {
@@ -354,7 +356,8 @@ export default function AccountModal({
       if (error) throw error;
       setSecurityMsg({ type: 'success', text: `✓ Confirmation sent to ${newEmail}. Check your inbox.` });
       setNewEmail('');
-    } catch (e: any) {
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
       setSecurityMsg({ type: 'error', text: e.message || 'Could not update email' });
     } finally {
       setSavingEmail(false);
@@ -417,7 +420,8 @@ export default function AccountModal({
                       await supabase.auth.signOut();
                       onSignOut();
                       onClose();
-                    } catch (e: any) {
+                    } catch (err) {
+                      const e = err instanceof Error ? err : new Error(String(err));
                       Alert.alert('Deletion Failed', e.message);
                     }
                   },

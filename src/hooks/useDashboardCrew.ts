@@ -8,10 +8,10 @@
  *
  * Extracted from DashboardScreen.tsx (chore/refactor-dashboard-monolith).
  */
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { CrewRole, crewService, CrewSession } from '../services/CrewService';
 import { AppLogger } from '../services/AppLogger';
-import { supabase } from '../services/supabaseClient';
+import { useAuth } from '../context/AuthContext';
 
 interface UseDashboardCrewOptions {
   /** Called when the crew pushes a live scene update (member role only). */
@@ -43,12 +43,16 @@ export function useDashboardCrew({
   const [lastLeaderScene, setLastLeaderScene] = useState<Record<string, any> | null>(null);
   const [pendingJoinCrewId, setPendingJoinCrewId] = useState<string | null>(null);
 
+  const { user } = useAuth();
+  const hasTriedRejoinRef = React.useRef(false);
+
   // ── Auto-rejoin on launch ──────────────────────────────────────────────────
   useEffect(() => {
+    if (!user || hasTriedRejoinRef.current) return;
+
     const tryRejoin = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        hasTriedRejoinRef.current = true;
         const displayName = user.email?.split('@')[0] || 'Skater';
         const result = await crewService.tryAutoRejoin(displayName);
         if (!result) return;
@@ -79,7 +83,7 @@ export function useDashboardCrew({
     return () => clearTimeout(t);
     // onApplyScene is a stable callback — intentionally excluded from deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   return {
     crewSession,

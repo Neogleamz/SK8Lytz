@@ -19,6 +19,7 @@ import type * as NotificationsType from 'expo-notifications';
 import { Platform } from 'react-native';
 import { AppLogger } from './AppLogger';
 import { profileService } from './ProfileService';
+import { supabase } from './supabaseClient';
 
 let Notifications: typeof NotificationsType | null = null;
 if (Platform.OS !== 'web') {
@@ -80,7 +81,8 @@ class NotificationService {
       AppLogger.log('NOTIFICATION_SERVICE', { event: 'token_acquired', tokenPrefix: this.token.slice(0, 12) });
 
       const platform = Platform.OS as 'ios' | 'android' | 'web';
-      await profileService.registerPushToken(this.token, platform);
+      const { data: { user } } = await supabase.auth.getUser();
+      await profileService.registerPushToken(this.token, platform, user?.id || null);
       AppLogger.log('PUSH_TOKEN_REGISTERED', { platform, tokenPrefix: this.token.slice(0, 12) });
     } catch (err) {
       AppLogger.warn('NOTIFICATION_SERVICE', { event: 'push_token_unavailable', error: String(err) });
@@ -106,7 +108,8 @@ class NotificationService {
     this.responseSub = null;
 
     if (this.token) {
-      await profileService.unregisterPushToken(this.token);
+      const { data: { user } } = await supabase.auth.getUser();
+      await profileService.unregisterPushToken(this.token, user?.id || null);
       this.token = null;
     }
   }

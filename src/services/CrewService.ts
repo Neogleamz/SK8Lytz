@@ -256,9 +256,9 @@ class CrewService {
 
     if (error || !data) return [];
 
-    return data.map((s: any) => ({
+    return data.map((s: Record<string, unknown>) => ({
       ...s,
-      member_count: s.crew_members?.[0]?.count ?? 0,
+      member_count: (s.crew_members as { count?: number }[])?.[0]?.count ?? 0,
     } as CrewSession));
   }
 
@@ -304,9 +304,9 @@ class CrewService {
       .order('created_at', { ascending: false })
       .limit(20);
 
-    return (data ?? []).map((s: any) => ({
+    return (data ?? []).map((s: Record<string, unknown>) => ({
       ...s,
-      member_count: s.crew_members?.[0]?.count ?? 0,
+      member_count: (s.crew_members as { count?: number }[])?.[0]?.count ?? 0,
     } as CrewSession));
   }
 

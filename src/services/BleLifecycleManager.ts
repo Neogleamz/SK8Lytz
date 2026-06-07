@@ -1,7 +1,7 @@
 import type React from 'react';
 import { Platform } from 'react-native';
 import { AppLogger } from './AppLogger';
-import { BLEPhaseTag } from './BleStateMachine';
+import { BLEPhaseTag } from './ble/BleMachine.types';
 
 /**
  * executeRealDisconnect — The actual GATT connection cancellation and state resets.
@@ -13,11 +13,11 @@ export async function executeRealDisconnect(
   mtuMapRef: React.MutableRefObject<Map<string, number>>,
   adapterMapRef: React.MutableRefObject<Map<string, any>>,
   autoRecovery: any,
-  bleGateRef: React.MutableRefObject<any>, // MIGRATION-SHIM
+  getGate: () => BLEPhaseTag,
   setConnectedDevices: React.Dispatch<React.SetStateAction<any[]>>,
   setGate: (phase: BLEPhaseTag) => void
 ): Promise<void> {
-  if (bleGateRef.current.tag === 'DISCONNECTING') return;
+  if (getGate() === 'DISCONNECTING') return;
   setGate('DISCONNECTING');
   await autoRecovery.cancelAllRecoveries();
 

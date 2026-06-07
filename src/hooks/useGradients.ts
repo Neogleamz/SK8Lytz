@@ -4,16 +4,12 @@ import { GradientsService } from '../services/GradientsService';
 import { CustomBuilderPreset } from '../protocols/PositionalMathBuffer';
 import { AppLogger } from '../services/AppLogger';
 import { useTelemetryLedger } from './useTelemetryLedger';
+import { useAuth } from '../context/AuthContext';
 
 export function useGradients() {
   const telemetry = useTelemetryLedger();
-  const [userId, setUserId] = useState<string | undefined>();
-  
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserId(session?.user?.id);
-    });
-  }, []);
+  const { user } = useAuth();
+  const userId = user?.id;
   
   const [gradients, setGradients] = useState<CustomBuilderPreset[]>([]);
   const [isLoading, setIsLoading] = useState(true);

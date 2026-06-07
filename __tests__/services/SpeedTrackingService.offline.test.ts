@@ -62,6 +62,7 @@ import {
 } from '../../src/services/SpeedTrackingService';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
+const mockUserId = 'user_offline_mock';
 
 const mockSnapshot: ISessionSnapshot = {
   durationSec: 1800,
@@ -93,7 +94,7 @@ describe('saveSession() — offline queue', () => {
   it('A: queues session to AsyncStorage when user is null', async () => {
     mockGetUser.mockResolvedValueOnce({ data: { user: null } });
 
-    const result = await SpeedTrackingService.saveSession(mockSnapshot);
+    const result = await SpeedTrackingService.saveSession(mockSnapshot, null);
 
     // Returns null (did not save to Supabase)
     expect(result).toBeNull();
@@ -148,7 +149,7 @@ describe('flushPendingSessionQueue() — happy path', () => {
     // Supabase insert succeeds
     mockInsert.mockResolvedValueOnce({ error: null });
 
-    await SpeedTrackingService.flushPendingSessionQueue();
+    await SpeedTrackingService.flushPendingSessionQueue(mockSessionUser.id);
 
     // Insert was called exactly once
     expect(mockFrom).toHaveBeenCalledWith('skate_sessions');
@@ -189,8 +190,8 @@ describe('flushPendingSessionQueue() — re-entrancy guard', () => {
 
     // Fire both without await — second should be blocked by guard
     const [, ] = await Promise.all([
-      SpeedTrackingService.flushPendingSessionQueue(),
-      SpeedTrackingService.flushPendingSessionQueue(),
+      SpeedTrackingService.flushPendingSessionQueue(mockSessionUser.id),
+      SpeedTrackingService.flushPendingSessionQueue(mockSessionUser.id),
     ]);
 
     expect(mockInsert).toHaveBeenCalledTimes(1);
@@ -213,7 +214,7 @@ describe('flushPendingSessionQueue() — no auth session', () => {
       data: { session: null },
     });
 
-    await SpeedTrackingService.flushPendingSessionQueue();
+    await SpeedTrackingService.flushPendingSessionQueue(null);
 
     // Insert NOT called
     expect(mockInsert).not.toHaveBeenCalled();

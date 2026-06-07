@@ -81,8 +81,7 @@ export interface UseBLESweeperProps {
   bleManager: BleManager;
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   setPendingRegistrations: React.Dispatch<React.SetStateAction<PendingRegistration[]>>;
-  /** The global BLE connection gate from useBLE — Interrogator checks this before probing */
-  bleGateRef: React.MutableRefObject<any>; // MIGRATION-SHIM
+
   /** Registered Fleet MACs (uppercase) — Interrogator skips these, they're already known */
   registeredMacs: string[];
 }
@@ -102,7 +101,7 @@ export function useBLESweeper({
   bleManager,
   setAllDevices,
   setPendingRegistrations,
-  bleGateRef: _bleGateRef,
+
   registeredMacs,
 }: UseBLESweeperProps): UseBLESweeperReturn {
   const [isSweeperActive, setIsSweeperActive] = useState(false);

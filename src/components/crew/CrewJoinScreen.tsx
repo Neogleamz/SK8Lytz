@@ -37,7 +37,8 @@ export function CrewJoinScreen() {
         `You're now a member of "${crew.name}". When they start a session you'll see it under My Crews.`,
         [{ text: 'Nice!' }]
       );
-    } catch (e: any) {
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
       AppLogger.log('CREW_ERROR', { action: 'join_crew_by_code', error: e.message });
       setErrorMsg(e.message || 'Crew not found — check the code and try again.');
     } finally { setIsLoading(false); }
@@ -50,7 +51,8 @@ export function CrewJoinScreen() {
       AppLogger.log('CREW_SESSION_JOINED', { sessionId: sess.id, crewName: sess.name, method: 'browse' });
       await handleSessionJoined(sess);
       setStep('controller');
-    } catch (e: any) {
+    } catch (err) {
+      const e = err instanceof Error ? err : new Error(String(err));
       AppLogger.log('CREW_ERROR', { action: 'join_id', error: e.message });
       setErrorMsg(e.message || 'Failed to join session');
     } finally { setIsLoading(false); }

@@ -76,7 +76,7 @@ class AuthProfileService {
   /**
    * Update display name and/or avatar color for the current user.
    */
-  async updateProfile(userId: string | undefined, fields: { display_name?: string | null; avatar_color?: string; username?: string | null; avatar_url?: string | null; notif_preferences?: any }): Promise<void> {
+  async updateProfile(userId: string | undefined, fields: { display_name?: string | null; avatar_color?: string; username?: string | null; avatar_url?: string | null; notif_preferences?: Record<string, boolean> }): Promise<void> {
     if (!userId) throw new Error('Not authenticated');
 
     // Strip null/undefined values to avoid overwriting with null
@@ -96,8 +96,8 @@ class AuthProfileService {
         .eq('user_id', userId);
 
       if (error) throw error;
-    } catch (e: any) {
-      if (e?.code === '23505') throw new Error('Username already taken');
+    } catch (e: unknown) {
+      if (typeof e === 'object' && e !== null && 'code' in e && (e as { code: string }).code === '23505') throw new Error('Username already taken');
       throw e;
     }
   }

@@ -2,17 +2,13 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { Scene, ScenesService } from '../services/ScenesService';
 import { AppLogger } from '../services/AppLogger';
+import { useAuth } from '../context/AuthContext';
 
 export function useScenes() {
   const [localScenes, setLocalScenes] = useState<Scene[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [userId, setUserId] = useState<string | undefined>();
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUserId(session?.user?.id);
-    });
-  }, []);
+  const { user } = useAuth();
+  const userId = user?.id;
 
   const loadScenes = useCallback(async () => {
     setIsLoading(true);

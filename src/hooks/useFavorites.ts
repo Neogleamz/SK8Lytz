@@ -10,7 +10,10 @@ const STORAGE_PREFIX = '@Sk8lytz_';
 
 export type FavoritesPromptState = 'HIDDEN' | 'NAMING_FAVORITE' | 'NAMING_PRESET';
 
+import { useAuth } from '../context/AuthContext';
+
 export function useFavorites() {
+  const { user } = useAuth();
   const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
   const [activeFavoriteId, setActiveFavoriteId] = useState<string | null>(null);
 
@@ -54,19 +57,19 @@ export function useFavorites() {
             });
             setFavorites(localFavorites);
           }
-        } catch (e) { AppLogger.warn('[Favorites] Failed to parse saved favorites', { error: String(e) }); }
-      }
-    }).finally(() => {
-      // 2. Fetch Cloud and merge
-      supabase.auth.getUser().then(async ({ data: userData }) => {
-        if (!userData?.user) return;
+      } catch (e) { AppLogger.warn('[Favorites] Failed to parse saved favorites', { error: String(e) }); }
+    }
+
+    // 2. Fetch Cloud and merge
+    if (user) {
+      const fetchCloudFavs = async () => {
         try {
           const { data, error } = await supabase
             .from('user_saved_presets')
             .select('*')
-            .eq('user_id', userData.user.id)
+            .eq('user_id', user.id)
             .eq('fill_mode', 'FAVORITE');
-
+          
           if (!error && data) {
             const cloudFavs = data.map(d => ({
               id: d.id,
@@ -81,12 +84,14 @@ export function useFavorites() {
             
             const finalFavs = Array.from(mergedMap.values());
             setFavorites(finalFavs);
-            await AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(finalFavs));
+            AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(finalFavs));
           }
         } catch (err) {
           AppLogger.warn('[Favorites] Failed to fetch cloud favorites', { error: String(err) });
         }
-      });
+      };
+      fetchCloudFavs();
+    }
     });
 
     AsyncStorage.getItem(`${STORAGE_PREFIX}QuickPresets`).then((saved) => {
@@ -97,7 +102,7 @@ export function useFavorites() {
         } catch (e) { AppLogger.warn('[Favorites] Failed to parse quick presets', { error: String(e) }); }
       }
     });
-  }, []);
+  }, [user]);
 
   const openFavoritePrompt = useCallback((targetId?: string, defaultName: string = '') => {
     setFavPromptTargetId(targetId || null);
@@ -139,7 +144,6 @@ export function useFavorites() {
     
     // 2. Save Cloud
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         // Strip out id/name from capturedState so we just store the pure payload in nodes
         const { id: _id, name: _name, ...payload } = newFav;
@@ -170,7 +174,6 @@ export function useFavorites() {
     
     // 2. Delete Cloud
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase.from('user_saved_presets').delete().eq('id', id).eq('user_id', user.id);
       }

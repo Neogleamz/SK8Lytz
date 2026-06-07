@@ -98,7 +98,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     clearPendingRegistrations,
     setPendingRegistrations,
     bleState,
-    bleGateRef,
+    getGate,
     pingDevice,
     startSweeper,
     stopSweeper,
@@ -458,7 +458,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     requestPermissions,
     refreshProfile,
     registeredDevices,
-    bleGateRef,
+    getGate,
     isWizardActive: viewState === 'SETUP_WIZARD',
     burstScan,
   });
