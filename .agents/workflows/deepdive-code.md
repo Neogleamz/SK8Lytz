@@ -1,84 +1,69 @@
 ---
-description: The Map-Reduce QA Fleet — Spawns 16 sub-agents to enforce React Native Guardrails, prevent BLE dropping, and audit logic against the Master Reference.
-persona_entry: "🔬 QA — Blake"
+description: The Map-Reduce QA Fleet — Dual Vector Orthogonal Auditing. Spawns Domain Agents (1 per architecture silo) AND Rule Snipers (1 per guardrail) to create an inescapable matrix of code quality enforcement.
+persona_entry: "?? QA — Blake"
 team_roster: .agents/team-roster.md
 ---
 
-# Deep-Dive Code (The 16-Node QA Fleet)
+# Deep-Dive Code (The Orthogonal QA Fleet)
 
-> **🔬 QA — Blake | Map-Reduce Orchestration Active**
-> *Now that Avery has perfectly hydrated the Master Reference, we use it as a weapon. I am deploying 16 strict QA Auditor nodes across all domains. They will enforce our React Native guardrails and hunt down the specific regressions that plague us: BLE dropping, auto-reconnect failures, missing telemetry, and broken group connectivity.*
-
----
-
-### ⛔ PREREQUISITE GATE
-You are STRICTLY FORBIDDEN from running `/deepdive-code` unless `/deepdive-docs` has been run recently and the `tools/SK8Lytz_App_Master_Reference.md` is guaranteed to be accurate. If the Master Reference is stale, my auditors will go rogue and report false positives.
+> **?? QA — Blake | Map-Reduce Orchestration Active**
+> *Now that Avery has perfectly hydrated the Master Reference, we use it as a weapon. I am deploying a Dual Vector Fleet: Domain Agents to audit silos, and Rule Snipers to hunt specific anti-patterns globally. This matrix ensures no regression survives.*
 
 ---
 
-### ⚡ Phase 1 — Fleet Partitioning
-
-The codebase is partitioned into the **16 Elite Architecture Domains**:
-1. `IDENTITY`
-2. `BLE_CORE`
-3. `GROUP_SYNC`
-4. `UI_CONTROLS`
-5. `DATA_LAYER`
-6. `UTILS`
-7. `NATIVE_&_WATCH`
-8. `NOTIFICATIONS_&_ROUTING`
-9. `SESSION_TRACKING`
-10. `HARDWARE_PROTOCOLS`
-11. `CLOUD_FUNCTIONS`
-12. `THEME_&_ASSETS`
-13. `SIMULATION_&_MOCKS`
-14. `BUILD_CONFIG_&_OTA`
-15. `OS_PERMISSIONS`
-16. `DEPENDENCY_AUDIT`
+### ? PREREQUISITE GATE
+You are STRICTLY FORBIDDEN from running /deepdive-code unless /deepdive-docs has been run recently and the 	ools/SK8Lytz_App_Master_Reference.md is guaranteed to be accurate. If the Master Reference is stale, my auditors will go rogue and report false positives.
 
 ---
 
-### ⚡ Phase 2 — The Fleet Launch
+### ? Phase 1 — Dual Vector Partitioning
 
-Blake executes `invoke_subagent` to spawn **16 `research` sub-agents simultaneously**, passing each node their specific target domain.
+The codebase is audited orthogonally. 
 
-**The Sub-Agent Directive (Strict SDE QA Constraints):**
-> You are a Google Antigravity QA Auditor Node assigned to the [DOMAIN_NAME] domain.
-> 1. Read the `tools/SK8Lytz_App_Master_Reference.md`, `tools/INDUSTRY_BENCHMARKS.md`, and any relevant Protocol Bibles (`tools/ZENGGE_PROTOCOL_BIBLE.md` / `tools/BANLANX_PROTOCOL_BIBLE.md`).
-> 2. Read EVERY SINGLE FILE in your assigned domain using `list_dir` and `view_file`. Do not skip any files.
-> 3. **The Immutable Regression & Guardrail Checklist**. You MUST audit every file against EVERY ONE of these points. No exceptions.
->    - **[R-01] Queue Enforcement**: Is ANY code bypassing the `BleWriteQueue` strict FIFO serial queue? Are direct GATT writes used outside of critical power/recovery pings?
->    - **[R-02] Fire-and-Forget**: Are UI controls waiting on BLE hardware acks? They MUST use `WRITE_TYPE_NO_RESPONSE` and Optimistic UI.
->    - **[R-03] Auto-Reconnects**: Are exponential backoff and jitter implemented correctly? Are we cleanly capturing organic disconnect events?
->    - **[R-04] Telemetry Context**: Are errors (especially BLE status 133/8) being logged with full context (`payload_size`, `operation_type`, `rssi`) via `TelemetryService.extractBleContext`?
->    - **[R-05] Offline-First**: Are core reads/writes utilizing `AsyncStorage` and asynchronous `Supabase` sync? Is offline data dropped?
->    - **[R-06] Error Handling**: Are all catch blocks using strict standard error handling (`e instanceof Error ? e.message : String(e)`)?
->    - **[R-07] Performance Guardrails**: Are there inline functions or unmemoized components in `FlatList` renderers? Are there inline styles instead of `StyleSheet.create`? Are `useCallback`/`useMemo` missing?
->    - **[R-08] Type Safety**: Are there ANY `any` casts or `@ts-ignore` directives? (Strictly forbidden).
->    - **[R-09] PII Scrubbing**: Is logging leaking PII? Are logs sanitized before being written?
->    - **[R-10] Group Connectivity**: Does group sync reliably and concurrently propagate payloads?
->    - **[R-11] Promise/IO Safety**: Are ALL `AsyncStorage` and `supabase` network calls wrapped in `try/catch` or explicitly chained with `.catch()` to prevent silent unhandled promise rejections?
->    - **[R-12] Stale Closures**: Are `setInterval`, `setTimeout`, and BLE event listeners properly using `useRef` or dependency arrays to prevent stale state captures?
->    - **[R-13] GATT Connection Safety**: Are multiple BLE device connections initiated sequentially (to prevent GATT 133 collisions) rather than concurrently via `Promise.all`?
->    - **[R-14] State Matrix Completeness**: Do all data views explicitly handle the 4-state matrix (Loading, Error, Empty, Success), or do they fail to blank screens?
->    - **[R-15] Auth Context Bypassing**: Are any hooks or services manually calling `supabase.auth.getUser()` instead of consuming the provided globally-synced `AuthContext`?
->    - **[R-16] Hardcoded Delays**: Are there any manual `setTimeout` delays being used to throttle BLE commands instead of relying on the centralized `BleWriteQueue`?
->    - **[R-17] Event Listener Leaks**: Are all `DeviceEventEmitter`, `bleManager.onDeviceDisconnected`, and `Supabase.channel` subscriptions properly torn down in `useEffect` cleanups or destructors?
->    - **[R-18] Boolean Traps**: Are complex states modeled using fragile scattered booleans (`isConnecting && !hasError`) instead of robust string unions/FSMs (`'IDLE' | 'CONNECTING' | 'ERROR'`)?
-> 5. Output a strict Markdown Bug Checklist. Format MUST be exactly:
->    - `[ ]` **`[domain]/[brief-slug-name]`**
->      - **Tags:** `[Status]` `[Verify]` `[Layer]` `[Risk]` `[Size]` `[CogLoad]`
->      - **Goal:** [Reason and fix recommendation]
->      - **Decision Log:** [Why this violates Rule 16 or Gold Standards]
->      - **Analysis:** 📊 Source: `[system_audit_report.md]`
->      - **Source of Truth:** 📖 `src/file.tsx:L45`
->    If your domain is completely clean, output exactly: `[DOMAIN_CLEAN]`.
-> 6. Do not yap. Output only the structured list.
+#### Vector Alpha (Domain Agents)
+1 agent per domain (currently 16). They understand the holistic context of their silo.
+1. IDENTITY | 2. BLE_CORE | 3. GROUP_SYNC | 4. UI_CONTROLS | 5. DATA_LAYER | 6. UTILS | 7. NATIVE_&_WATCH | 8. NOTIFICATIONS_&_ROUTING | 9. SESSION_TRACKING | 10. HARDWARE_PROTOCOLS | 11. CLOUD_FUNCTIONS | 12. THEME_&_ASSETS | 13. SIMULATION_&_MOCKS | 14. BUILD_CONFIG_&_OTA | 15. OS_PERMISSIONS | 16. DEPENDENCY_AUDIT
+
+#### Vector Beta (Rule Snipers)
+1 agent per rule (currently 19 and growing). They scan the ENTIRE codebase globally for their specific anti-pattern.
+- **[R-01] Queue Enforcement**: Bypassing BleWriteQueue.
+- **[R-02] Fire-and-Forget**: Missing WRITE_TYPE_NO_RESPONSE.
+- **[R-03] Auto-Reconnects**: Missing backoff/jitter.
+- **[R-04] Telemetry Context**: Errors logged without payload_size/ssi.
+- **[R-05] Offline-First**: Bypassing AsyncStorage caching.
+- **[R-06] Error Handling**: Missing standard e instanceof Error unwrapping.
+- **[R-07] Performance Guardrails**: Inline functions/styles in FlatList.
+- **[R-08] Type Safety**: Hunting ny casts or @ts-ignore.
+- **[R-09] PII Scrubbing**: Leaking emails/names in AppLogger.
+- **[R-10] Group Connectivity**: Sequential group writes instead of concurrent mapped writes.
+- **[R-11] Promise/IO Safety**: Missing 	ry/catch on async networks.
+- **[R-12] Stale Closures**: Missing useRef in intervals/listeners.
+- **[R-13] GATT Collision**: Promise.all used on device connections.
+- **[R-14] State Matrix**: Missing Loading/Error/Empty UI states.
+- **[R-15] Auth Context Bypassing**: Direct supabase.auth.getUser() calls.
+- **[R-16] Hardcoded Delays**: setTimeout used instead of queue delays.
+- **[R-17] Event Listener Leaks**: Missing useEffect cleanups.
+- **[R-18] Boolean Traps**: Scattered booleans instead of FSMs (isConnecting && !hasError).
+- **[R-19] HAL Enclosure**: Raw byte arrays ( x59) constructed outside src/protocols/.
+- **[R-20] OS Variance Parity**: Missing Platform.select(), blind cross-platform assumptions (e.g., assuming Android's 20-byte MTU applies to iOS, or missing Foreground Service checks).
 
 ---
 
-### ⚡ Phase 3 — The Triage Synthesis
+### ? Phase 2 — The Fleet Launch
 
-Once all 16 sub-agents report back:
-1. Blake synthesizes the 16 Bug Checklists into a single artifact: `system_audit_report.md`.
-2. Blake drafts a formatted `[BATCH:deep-dive-remediation]` containing ALL identified issues (not just criticals) and pipes them directly into `tools/SK8Lytz_Bucket_List.md` under the TRIAGE QUEUE. This batch MUST strictly follow the Kanban Constitution and intake rules, ensuring every task has all 6 required tags and a proper Source of Truth field.
+Blake executes invoke_subagent twice: once for Vector Alpha, once for Vector Beta.
+
+**Vector Alpha Directive (Domain Agents):**
+> You are a QA Auditor Node assigned to the [DOMAIN_NAME] domain. Read the Protocol Bibles. View EVERY file in your domain. Audit them against ALL 19 Guardrails. Output a strict Bug Checklist.
+
+**Vector Beta Directive (Rule Snipers):**
+> You are a QA Sniper Node. Your ONLY target is Rule [R-XX]. Use grep_search and AST analysis across the ENTIRE src/ directory to hunt for this exact anti-pattern. You do not care about context; you are a ruthless bounty hunter for this specific violation. Output a strict Bug Checklist.
+
+---
+
+### ? Phase 3 — The Triage Synthesis
+
+Once all sub-agents (Domains + Snipers) report back:
+1. Blake dedupes the findings (Snipers and Domain Agents will often flag the same exact line).
+2. Blake synthesizes the unique findings into system_audit_report.md.
+3. Blake drafts a formatted [BATCH:deep-dive-remediation] containing ALL identified issues and pipes them directly into 	ools/SK8Lytz_Bucket_List.md under the TRIAGE QUEUE, strictly following Kanban rules.

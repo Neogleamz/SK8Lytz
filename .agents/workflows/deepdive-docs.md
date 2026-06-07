@@ -51,11 +51,12 @@ Avery executes `invoke_subagent` to spawn 16 `research` sub-agents simultaneousl
 **The Base Sub-Agent Directive (All Nodes):**
 > You are an SDE Cartographer Node.
 > 1. Read EVERY file in your assigned domain. Do NOT modify any code.
-> 2. Build 4 "Elite Architecture" base sections for your domain:
+> 2. Build 5 "Elite Architecture" base sections for your domain:
 >    - **File Manifest**: Every file listed with a 1-sentence architectural purpose.
 >    - **Blast Radius**: What this domain imports, and what imports it.
 >    - **Context Matrix**: What React Contexts are consumed or provided.
 >    - **Hook/Service I/O Registry**: Inputs, outputs, and side-effects.
+>    - **OS Variance Matrix**: Explicitly document any code paths that branch between iOS and Android (e.g., `Platform.OS === 'ios'`, native module bridging, MTU negotiations, foreground services).
 > 3. **ARCHIVAL INSTRUCTION**: If you find stale documentation for your domain in the Master Reference, tag it with `[MOVE_TO_ARCHIVE]`.
 > 4. **SEQUENCE DIAGRAM**: If your domain contains a complex multi-step process (e.g., Crew Creation, BLE Connection, OTA Update), you MUST generate a Mermaid Sequence Diagram (`sequenceDiagram`) detailing the exact actor-to-actor flow.
 > 5. Send your final Markdown Payload back to me in a message. Do not attempt to edit any files.

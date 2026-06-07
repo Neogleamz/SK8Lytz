@@ -41,16 +41,6 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Impact:** Board is split-truth. 3 complete batches (19 tasks) sat un-archived. Every new session agent re-reads stale `[ ]` entries as work to do.
 - **Status:** MONITORING â€” At 3 strikes: auto-propose enforcement gate.
 
-### [FRICTION-014] Phase 6 Archival Protocol Skipped (Explicit Workflow Step Ignored)
-- **First Observed:** 2026-06-06
-- **Observed By:** User (directly) â€” "is this not in the rules or workflows???"
-- **Occurrences:** 1 / 3
-- **Trigger:** User found completed batches were not moved to `SK8Lytz_Bucket_List_ARCHIVE.md`.
-- **Pattern:** `start-task.md` Phase 6 Step 5 B+C is **completely skipped** after every gatekeeper merge. The step reads: *"NON-NEGOTIABLE. A task is NOT considered done until ALL THREE are complete."* Three full batches (19 tasks across session-integrity, ble-connection-resilience, account-critical) were never moved to the archive file.
-- **Root Cause Theory:** Taylor (RM) is not being activated at end-of-batch. Agent goes directly from gatekeeper merge to next task without executing Phase 6 Step 5. Taylor's pre-gatekeeper micro-read in `prime-directive.md` does not include an archival check â€” the gate only covers `npm run verify` attestation, not completion stamping.
-- **Impact:** Archive perpetually stale. Bucket list bloats with dead entries. Session agents re-read closed tasks as open work.
-- **Status:** MONITORING â€” âš¡ EVOLUTION PROPOSAL TRIGGERED (see below)
-
 ---
 
 âš¡ **EVOLUTION PROPOSAL â€” Phase 6 Archival Gate (FRICTION-014)**
@@ -173,26 +163,6 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 | Hounding Incidents Expected Going Forward | 0 (The No-Hounding Compact + P5 Grow the System) |
 
 
-# # #   [ F R I C T I O N - 0 1 5 ]   G a t e k e e p e r   D i r e c t o r y   &   E x i t   C o d e   T r a p 
- -   * * F i r s t   O b s e r v e d : * *   2 0 2 6 - 0 6 - 0 6 
- -   * * O b s e r v e d   B y : * *   >�z�  S R E      R i v e r 
- -   * * O c c u r r e n c e s : * *   3   /   3   ( T r i g g e r e d   A u t o - E v o l u t i o n ) 
- -   * * T r i g g e r : * *   G a t e k e e p e r   e x e c u t e d   f r o m   i n s i d e   w o r k t r e e 
- -   * * P a t t e r n : * *   G a t e k e e p e r   s i l e n t l y   f a i l s   t o   m e r g e   b u t   r e p o r t s   s u c c e s s   b e c a u s e   g i t   m e r g e   i n t o   i t s e l f   r e t u r n s   e x i t   c o d e   0 .   T e a r d o w n   e r r o r s   a r e   s w a l l o w e d . 
- -   * * R o o t   C a u s e   T h e o r y : * *   S c r i p t   d o e s   n o t   e n f o r c e   $ P W D   - e q   ,   a n d   P o w e r S h e l l ' s   $ E r r o r A c t i o n P r e f e r e n c e   =   ' S t o p '   d o e s   n o t   c a t c h   e x t e r n a l   e x e   n o n - z e r o   e x i t   c o d e s . 
- -   * * I m p a c t : * *   E n t i r e   b a t c h   o f   c o d e   ( X S t a t e   m i g r a t i o n )   s t r a n d e d   o n   o r p h a n e d   b r a n c h   w h i l e   s y s t e m   b e l i e v e d   i t   w a s   s u c c e s s f u l l y   m e r g e d . 
- -   * * S t a t u s : * *   R E S O L V E D   ( G a t e k e e p e r   p a t c h e d   w i t h   C w d   e n f o r c e m e n t   a n d   e x p l i c i t   e x i t   c o d e   c h e c k s .   W o r k f l o w s   h a r d e n e d . )  
- # # #   [ F R I C T I O N - 0 1 6 ]   M e m o r y - B a s e d   T a s k   S u g g e s t i o n 
- -   * * F i r s t   O b s e r v e d : * *   2 0 2 6 - 0 6 - 0 6 
- -   * * O b s e r v e d   B y : * *   <د�  P M      J o r d a n 
- -   * * O c c u r r e n c e s : * *   3   /   3   ( T r i g g e r e d   A u t o - E v o l u t i o n ) 
- -   * * T r i g g e r : * *   A g e n t   a s k e d   u s e r   i f   t h e y   s h o u l d   p r o c e e d   t o   B A T C H : a c c o u n t - h a r d e n i n g ,   w h i c h   w a s   a l r e a d y   c o m p l e t e d . 
- -   * * P a t t e r n : * *   A g e n t   s u g g e s t s   c o m p l e t e d   o r   a r c h i v e d   t a s k s   a s   ' n e x t   s t e p s '   a t   t h e   e n d   o f   w o r k f l o w s . 
- -   * * R o o t   C a u s e   T h e o r y : * *   A g e n t   r e l i e d   o n   L L M   c o n v e r s a t i o n   h i s t o r y / c h e c k p o i n t   s u m m a r i e s   f o r   ' N e x t   S t e p s '   i n s t e a d   o f   e x e c u t i n g   t h e   B o a r d - F i r s t   R u l e   ( r e a d i n g   S K 8 L y t z _ B u c k e t _ L i s t . m d )   b e f o r e   s p e a k i n g .   M e m o r y   i s   f a l l i b l e ;   f i l e s   a r e   t r u t h   ( C o n s t i t u t i o n   P 1   v i o l a t i o n ) . 
- -   * * I m p a c t : * *   U s e r   f r u s t r a t i o n ,   l o s s   o f   t r u s t ,   w a s t e d   t u r n s   c l a r i f y i n g   s p r i n t   s t a t e . 
- -   * * S t a t u s : * *   M O N I T O R I N G  
- 
-
 ### [FRICTION-017] Git Juggling & Unstaged Master Pollution
 - **First Observed:** 2026-06-07
 - **Observed By:** User (directly)
@@ -203,10 +173,3 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Impact:** High risk of code loss, terrifying user experience ("it scary!!!!"), and merge failures.
 - **Status:** MONITORING — ⚡ EVOLUTION PROPOSAL TRIGGERED (see below)
 
-⚡ **EVOLUTION PROPOSAL — The Clean Master Gate (FRICTION-017)**
-- **Observed:** 3 times (2026-06-07)
-- **Pattern:** Agent manually juggles git states (stash, branch, delete) on master to bypass gatekeeper errors caused by unstaged files.
-- **Root Cause:** No explicit check to ensure \master\ is clean before starting work or merging, leading to collisions.
-- **Proposed Fix:** Add a strict "Clean Master Guard" to \/start-task\ Phase 3 (Worktree Creation) and \ortress-gatekeeper.ps1\. If \git status\ on master is not clean, the agent is FORBIDDEN from using \git stash\ or branching to hide the files. It must HALT and resolve the unstaged files with the user first.
-- **Files to Update:** \start-task.md\, \ortress-gatekeeper.ps1\
-- **Impact if Approved:** Zero terrifying "git juggling". Master remains an untouched fortress. Worktrees are only spawned from a truly clean baseline.

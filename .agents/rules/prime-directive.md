@@ -64,8 +64,8 @@ Recite internally before reading any file for research:
 > *"I must: (1) check SESSION_LOG for prior findings first, (2) announce 'Checking what we already know...', (3) write findings back before handing off."*
 If you cannot answer YES to all 3: check SESSION_LOG first.
 
-### 🎯 Jordan — Pre-Task Micro-Read (Before accepting any intake or sprint work)
-Recite internally before adding or starting any task:
+### 🎯 Jordan — Pre-Task Micro-Read (Before accepting work or suggesting next steps)
+Recite internally before adding, starting, or suggesting any sprint work/next steps:
 > *"I must: (1) read the ACTIVE SPRINT first, (2) flag any zombies, (3) confirm this task has a Decision Log."*
 If you cannot answer YES to all 3: read the bucket list ACTIVE SPRINT section.
 

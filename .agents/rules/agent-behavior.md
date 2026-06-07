@@ -452,3 +452,12 @@ The agent team must strictly adhere to the following industry-leading React Nati
 5. **Hollow Shell Architecture**:
    - UI components should be "dumb". They receive props and render.
    - Complex business logic, state machines, and data fetching must be extracted into custom hooks (e.g. `useCrewSession`) or service singletons (e.g. `CrewService.ts`).
+
+
+## 14. The Hardware Abstraction Layer (HAL) Parity Mandate
+*Because: SK8Lytz must seamlessly control multiple disparate BLE chipsets (Zengge, BanlanX, etc.) under a unified UI and Pattern Engine without fragmentation.*
+- **Strict Enclosure**: UI components, Dashboard hooks, and core BLE managers MUST NEVER construct raw byte arrays or reference specific device opcodes (e.g.  x59,  x63).
+- **Semantic Invocation**: All BLE interactions must invoke semantic methods on the IControllerProtocol interface (e.g. dapter.buildColorPayload(), dapter.buildPowerCommand()).
+- **Protocol Isolation**: Device-specific byte math, checksums, and timing logic MUST be completely isolated inside classes implementing IControllerProtocol (e.g. ZenggeProtocol.ts).
+- **Feature Parity**: New visualizers or pattern engines must be defined generically. The protocol adapters are responsible for translating the generic intent into hardware-specific bytecode.
+

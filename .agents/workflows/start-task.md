@@ -75,6 +75,7 @@ Context: SoT is primed. Casey takes over sprint coordination from this point.
    - This takes 60 seconds and prevents 30 minutes of re-derivation next session.
 
 2. **Worktree Isolation**: You are strictly forbidden from coding on `master`.
+   - ⚡ **Clean Master Guard**: Before branching, run `git status -s` on master. If it is NOT clean, you are FORBIDDEN from branching or using `git stash`. HALT and resolve the unstaged files with the user.
    - By default, the worktree is named after the target task slug: `git worktree add ../SK8Lytz-worktrees/<task-slug> -b <task-slug>`
    - **Unified Batch Override**: If executing multiple `[Snack]`/`[Meal]` tasks from the same batch that share a domain, create a unified batch worktree instead: `git worktree add ../SK8Lytz-worktrees/<batch-slug>-batch -b <batch-slug>-batch`.
 
