@@ -44,7 +44,11 @@ export const getOptOutLedger = async (): Promise<Record<PermissionType, boolean>
 export const setPermissionOptOut = async (type: PermissionType, isOptedOut: boolean): Promise<void> => {
   const ledger = await getOptOutLedger();
   ledger[type] = isOptedOut;
-  await AsyncStorage.setItem(OPTOUT_LEDGER_KEY, JSON.stringify(ledger));
+  try {
+    await AsyncStorage.setItem(OPTOUT_LEDGER_KEY, JSON.stringify(ledger));
+  } catch (error) {
+    AppLogger.error('PERMISSION_SERVICE', { event: 'opt_out_save_failed', error: String(error) });
+  }
   
   // Immutably log to Cloud Ledger
   AppLogger.log(isOptedOut ? 'PERMISSION_OPT_OUT' : 'PERMISSION_OPT_IN', { feature: type, source: 'app_toggle' });
