@@ -9,8 +9,8 @@
  * files should go through the ControllerRegistry or IControllerProtocol.
  *
  * NOTE: For backward compatibility, the 25 existing consumers still call
- * ZenggeProtocol.setMultiColor() etc. statically. Those static calls delegate
- * to ZenggeProtocol._instance (the shared singleton). ZenggeAdapter uses its
+ * this.protocol.setMultiColor() etc. statically. Those static calls delegate
+ * to this.protocol._instance (the shared singleton). ZenggeAdapter uses its
  * OWN instance so adapter writes have an independent sequence counter — this
  * prevents sequence number corruption when both paths are active simultaneously.
  *
@@ -43,7 +43,7 @@ import {
 export class ZenggeAdapter implements IControllerProtocol {
   // ─── Instance ──────────────────────────────────────────────────────────────
   // Own ZenggeProtocol instance with independent sequence counter.
-  // DO NOT use ZenggeProtocol.static* methods from here — use this.protocol.*
+  // DO NOT use this.protocol.static* methods from here — use this.protocol.*
   private readonly protocol = new ZenggeProtocol();
 
   // ─── Identity ──────────────────────────────────────────────────────────────
@@ -95,12 +95,12 @@ export class ZenggeAdapter implements IControllerProtocol {
    * Without it, timing-sensitive effects may drift or misfire.
    */
   getHandshakePayloads(): ProtocolResult {
-    return this.toResult(ZenggeProtocol.setSessionTime());
+    return this.toResult(this.protocol.setSessionTime());
   }
 
   // ─── Hardware Settings (EEPROM) ────────────────────────────────────────────
   buildQuerySettings(hasMic: boolean = false): ProtocolResult {
-    return this.toResult(ZenggeProtocol.queryHardwareSettings(hasMic));
+    return this.toResult(this.protocol.queryHardwareSettings(hasMic));
   }
 
   parseSettingsResponse(raw: number[]): HardwareSettingsResult | null {
@@ -113,7 +113,7 @@ export class ZenggeAdapter implements IControllerProtocol {
     icType: number,
     sorting: number
   ): ProtocolResult {
-    return this.toResult(ZenggeProtocol.writeHardwareSettings(points, segments, icType, sorting));
+    return this.toResult(this.protocol.writeHardwareSettings(points, segments, icType, sorting));
   }
 
   buildWriteSettingsByName(
@@ -122,20 +122,20 @@ export class ZenggeAdapter implements IControllerProtocol {
     stripTypeName: string,
     sortingName: string
   ): ProtocolResult {
-    return this.toResult(ZenggeProtocol.writeHardwareSettingsByName(points, segments, stripTypeName, sortingName));
+    return this.toResult(this.protocol.writeHardwareSettingsByName(points, segments, stripTypeName, sortingName));
   }
 
   // ─── RF Remote ─────────────────────────────────────────────────────────────
   buildQueryRfRemoteState(): ProtocolResult {
-    return this.toResult(ZenggeProtocol.queryRfRemoteState());
+    return this.toResult(this.protocol.queryRfRemoteState());
   }
 
   buildSetRfRemoteState(mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED', autoSave: boolean): ProtocolResult {
-    return this.toResult(ZenggeProtocol.setRfRemoteState(mode, autoSave));
+    return this.toResult(this.protocol.setRfRemoteState(mode, autoSave));
   }
 
   buildClearRfRemotes(mode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED'): ProtocolResult {
-    return this.toResult(ZenggeProtocol.clearRfRemotes(mode));
+    return this.toResult(this.protocol.clearRfRemotes(mode));
   }
 
   parseRfRemoteState(raw: number[]): RfRemoteState | null {
@@ -150,7 +150,7 @@ export class ZenggeAdapter implements IControllerProtocol {
    * opcode, not power control. 0x71 is the confirmed power toggle opcode.
    */
   buildPowerOn(): ProtocolResult {
-    return this.toResult(ZenggeProtocol.turnOn());
+    return this.toResult(this.protocol.turnOn());
   }
 
   /**
@@ -159,12 +159,12 @@ export class ZenggeAdapter implements IControllerProtocol {
    * ⚠️ CRITICAL BUG FIX: Prior adapter used 0x56 0xAB. See buildPowerOn().
    */
   buildPowerOff(): ProtocolResult {
-    return this.toResult(ZenggeProtocol.turnOff());
+    return this.toResult(this.protocol.turnOff());
   }
 
   // ─── Color & Pattern Commands ──────────────────────────────────────────────
   buildSolidColor(r: number, g: number, b: number): ProtocolResult {
-    return this.toResult(ZenggeProtocol.setMultiColor([{ r, g, b }], 12, 1, 1, 0x01), false);
+    return this.toResult(this.protocol.setMultiColor([{ r, g, b }], 12, 1, 1, 0x01), false);
   }
 
   buildMultiColor(
@@ -174,11 +174,11 @@ export class ZenggeAdapter implements IControllerProtocol {
     direction: number,
     transitionType: number = 0x02
   ): ProtocolResult {
-    return this.toResult(ZenggeProtocol.setMultiColor(colors, ledPoints, speed, direction, transitionType), true);
+    return this.toResult(this.protocol.setMultiColor(colors, ledPoints, speed, direction, transitionType), true);
   }
 
   buildCustomMode(steps: CustomModeStep[]): ProtocolResult {
-    return this.toResult(ZenggeProtocol.setCustomMode(steps), true);
+    return this.toResult(this.protocol.setCustomMode(steps), true);
   }
 
   /**
@@ -188,7 +188,7 @@ export class ZenggeAdapter implements IControllerProtocol {
    */
   buildCustomModeExtended(steps: CustomModeStep[], direction: number = 0x80): ProtocolResult {
     const extSteps = steps.map(s => ({ mode: s.mode, speed: s.speed, color1: s.color1, color2: s.color2, dir: s.dir ?? direction }));
-    return this.toResult(ZenggeProtocol.setCustomModeExtended(extSteps, direction), true);
+    return this.toResult(this.protocol.setCustomModeExtended(extSteps, direction), true);
   }
 
   /**
@@ -196,15 +196,15 @@ export class ZenggeAdapter implements IControllerProtocol {
    * Note: 0x42 is deprecated in production UI — DiagnosticLab only.
    */
   buildEffect(effectId: number, speed: number, brightness: number): ProtocolResult {
-    return this.toResult(ZenggeProtocol.setCustomRbm(effectId, speed, brightness), false);
+    return this.toResult(this.protocol.setCustomRbm(effectId, speed, brightness), false);
   }
 
   buildCandleMode(r: number, g: number, b: number, speed: number, brightness: number, amplitude: number): ProtocolResult {
-    return this.toResult(ZenggeProtocol.setCandleMode(r, g, b, speed, brightness, amplitude), false);
+    return this.toResult(this.protocol.setCandleMode(r, g, b, speed, brightness, amplitude), false);
   }
 
   buildStreamPixelFrame(pixels: RGB[]): ProtocolResult {
-    return this.toResult(ZenggeProtocol.streamPixelFrame(pixels), false);
+    return this.toResult(this.protocol.streamPixelFrame(pixels), false);
   }
 
   // ─── Music ─────────────────────────────────────────────────────────────────
@@ -214,7 +214,7 @@ export class ZenggeAdapter implements IControllerProtocol {
     // matrixStyle is set by useMusicMode based on the user's matrix toggle.
     // Refer to ZENGGE_PROTOCOL_BIBLE.md
     return this.toResult(
-      ZenggeProtocol.setMusicConfig(
+      this.protocol.setMusicConfig(
         config.patternId,
         config.matrixStyle as 0x26 | 0x27,
         config.isOn ?? true,
@@ -232,7 +232,7 @@ export class ZenggeAdapter implements IControllerProtocol {
    * Called at the app's FFT frame rate (30-60fps) — NOT rate-limited.
    */
   buildMusicMagnitude(magnitude: number): ProtocolResult {
-    return this.toResult(ZenggeProtocol.sendMusicMagnitude(magnitude), false);
+    return this.toResult(this.protocol.sendMusicMagnitude(magnitude), false);
   }
 
   // ─── Transport Preparation ─────────────────────────────────────────────────

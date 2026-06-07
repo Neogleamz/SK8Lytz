@@ -144,13 +144,7 @@ export class ZenggeProtocol {
   // All 25 existing consumers call ZenggeProtocol.method() statically.
   // These facades delegate to the singleton instance with zero behavior change.
 
-  public static calculateChecksum(payload: number[]): number {
-    return ZenggeProtocol._instance.calculateChecksum(payload);
-  }
 
-  public static wrapCommand(rawPayload: number[], cmdFamily: number = 0x0b): number[] {
-    return ZenggeProtocol._instance.wrapCommand(rawPayload, cmdFamily);
-  }
 
   // ─── HARDWARE SETTINGS: QUERY (0x63) ───────────────────────────────────────
   /**
@@ -159,7 +153,7 @@ export class ZenggeProtocol {
    *
    * @param hasMic true if device has built-in mic (always false for HALOZ/SOULZ)
    */
-  public static queryHardwareSettings(hasMic: boolean = false): number[] {
+  public queryHardwareSettings(hasMic: boolean = false): number[] {
     const raw = [0x63, 0x12, 0x21, hasMic ? 0xF0 : 0x0F];
     raw.push(this.calculateChecksum(raw));
     return this.wrapCommand(raw);
@@ -314,7 +308,7 @@ export class ZenggeProtocol {
    *   segments: 1 to 2048/points
    *   micPoints: 1-150, micPoints × micSegments ≤ 960
    */
-  public static writeHardwareSettings(
+  public writeHardwareSettings(
     points: number,
     segments: number,
     icType: number,
@@ -361,7 +355,7 @@ export class ZenggeProtocol {
    * @param icName    IC type string e.g. 'WS2812B', 'SM16703', 'SK6812'
    * @param sortingName Color order string e.g. 'GRB', 'RGB', 'BGR'
    */
-  public static writeHardwareSettingsByName(
+  public writeHardwareSettingsByName(
     points: number,
     segments: number,
     icName: string,
@@ -434,7 +428,7 @@ export class ZenggeProtocol {
    * @param speed     1–255 (hardware native range)
    * @param direction 0=forward, 1=reverse
    */
-  static setSettledMode(
+  public setSettledMode(
     effectId: number,
     fg: { r: number; g: number; b: number },
     bg: { r: number; g: number; b: number },
@@ -465,7 +459,7 @@ export class ZenggeProtocol {
    * has been superseded by 0x59 PatternEngine. Kept for DiagnosticLab forensic use only.
    * Do NOT call from any production UI path.
    */
-  static setCustomRbm(patternId: number, speed: number, brightness: number): number[] {
+  public setCustomRbm(patternId: number, speed: number, brightness: number): number[] {
     // FIX: Clamp effectId to confirmed 0xA3 hardware range (1–100).
     // IDs >100 are outside verified range — behavior is undefined on 0xA3.
     const clampedId = Math.min(100, Math.max(1, Math.round(patternId)));
@@ -489,7 +483,7 @@ export class ZenggeProtocol {
    *
    * @see tools/ZENGGE_PROTOCOL_BIBLE.md — 0x43 condemned section
    */
-  static setEffectSequence(
+  public setEffectSequence(
     effectIds: number[],
     speed: number,
     brightness: number
@@ -510,7 +504,7 @@ export class ZenggeProtocol {
     return this.wrapCommand(cmd);
   }
 
-  public static setCandleMode(r: number, g: number, b: number, speed: number, brightness: number, amplitude: number): number[] {
+  public setCandleMode(r: number, g: number, b: number, speed: number, brightness: number, amplitude: number): number[] {
     const cleanR = Math.max(0, Math.min(255, Math.round(r)));
     const cleanG = Math.max(0, Math.min(255, Math.round(g)));
     const cleanB = Math.max(0, Math.min(255, Math.round(b)));
@@ -539,7 +533,7 @@ export class ZenggeProtocol {
    *   FG (color1): Sound Column color
    *   BG (color2): Drop color (ignored by hardware for NONE/FG_ONLY modes)
    */
-  static setMusicConfig(
+  public setMusicConfig(
     musicMode: number,
     modeType: 0x26 | 0x27,
     isOn: boolean,
@@ -585,7 +579,7 @@ export class ZenggeProtocol {
     return this.wrapCommand(payload);
   }
 
-  static sendMusicMagnitude(magnitude: number): number[] {
+  public sendMusicMagnitude(magnitude: number): number[] {
     const payload = [0x74, magnitude & 0xFF];
     const checksum = this.calculateChecksum(payload);
     return this.wrapCommand([...payload, checksum]);
@@ -606,7 +600,7 @@ export class ZenggeProtocol {
    *
    * @param pixels  Array of RGB pixels. Max 54 (safe MTU limit).
    */
-  static streamPixelFrame(pixels: { r: number; g: number; b: number }[]): number[] {
+  public streamPixelFrame(pixels: { r: number; g: number; b: number }[]): number[] {
     const MAX_PX = 54;
     const safePx = pixels.slice(0, MAX_PX);
     const dataLen = safePx.length * 3;
@@ -644,7 +638,7 @@ export class ZenggeProtocol {
    *   0x06 = Twinkly — twinkle
    *   ⚠️ 0x00 is NOT valid — sends undefined commandType to hardware.
    */
-  static setMultiColor(
+  public setMultiColor(
     colors: { r: number, g: number, b: number }[],
     hardwareLedPoints: number,
     speed: number,
@@ -667,7 +661,7 @@ export class ZenggeProtocol {
     // Speed mapping: user-facing 0–100 → hardware 1–31.
     // Previously 0x00 (CASCADE) was HARDCODED to speed=1 — that was wrong, made animations look frozen.
     // Fix: pass speed through for ALL transition types, properly clamped to 1–31.
-    const safeSpeed = Math.max(this.ANIM_SPEED_MIN, Math.min(this.ANIM_SPEED_MAX, Math.round(speed) || 16));
+    const safeSpeed = Math.max(ZenggeProtocol.ANIM_SPEED_MIN, Math.min(ZenggeProtocol.ANIM_SPEED_MAX, Math.round(speed) || 16));
     const hwDir = direction === 1 ? 1 : 0;
 
     const totalLen = (numPoints * 3) + 9;
@@ -696,7 +690,7 @@ export class ZenggeProtocol {
    * Old fixed 32-step custom mode packet logic removed. 
    * Now proxies directly to setCustomModeCompact to ensure safe MTU size.
    */
-  static setCustomMode(steps: {
+  public setCustomMode(steps: {
     mode: number;  // 1-33 (0x01-0x21) for Custom Effects, or 0x3A, 0x3B, 0x3C for Standard
     speed: number; // 1–100
     color1: { r: number, g: number, b: number }; // foreground
@@ -711,7 +705,7 @@ export class ZenggeProtocol {
    * Format: [0x51, step0(9), step1(9), ..., 0x0F, checksum]
    * For 1 step: 12 bytes raw → 20 bytes wrapped — fits ANY BLE MTU.
    */
-  static setCustomModeCompact(steps: {
+  public setCustomModeCompact(steps: {
     mode: number;
     speed: number;
     color1: { r: number, g: number, b: number };
@@ -746,7 +740,7 @@ export class ZenggeProtocol {
    * Format: [0x51, step0(10), step1(10), ..., 0x0F, checksum]
    * For 1 step: 13 bytes raw -> 21 bytes wrapped — fits ANY BLE MTU.
    */
-  static setCustomModeExtendedCompact(steps: {
+  public setCustomModeExtendedCompact(steps: {
     mode: number;
     speed: number;
     color1: { r: number, g: number, b: number };
@@ -795,7 +789,7 @@ export class ZenggeProtocol {
    * @param steps Active steps (1–32). Remaining slots zero-filled as inactive.
    * @param dir   Default direction byte for all slots. Default 0x01 (forward).
    */
-  static setCustomModeExtended(steps: {
+  public setCustomModeExtended(steps: {
     mode: number;
     speed: number;
     color1: { r: number; g: number; b: number };
@@ -831,11 +825,11 @@ export class ZenggeProtocol {
     return raw; // Do NOT wrap - writeChunked handles the 0x40 chunk framing envelope
   }
 
-  static turnOn(): number[] {
+  public turnOn(): number[] {
     return this.wrapCommand([0x71, 0x23, 0x0f, 0xa3]);
   }
 
-  static turnOff(): number[] {
+  public turnOff(): number[] {
     return this.wrapCommand([0x71, 0x24, 0x0f, 0xa4]);
   }
 
@@ -843,7 +837,7 @@ export class ZenggeProtocol {
    * Convenience alias — use in Diagnostic Lab and UI code for readability.
    * Delegates to turnOn() / turnOff().
    */
-  static setPower(on: boolean): number[] {
+  public setPower(on: boolean): number[] {
     return on ? this.turnOn() : this.turnOff();
   }
 
@@ -859,7 +853,7 @@ export class ZenggeProtocol {
    * Format (8 bytes + checksum):
    *   [0x10, year-2000, month(1-12), day(1-31), hour(0-23), min(0-59), sec(0-59), weekday(0=Sun), checksum]
    */
-  static setSessionTime(): number[] {
+  public setSessionTime(): number[] {
     const now = new Date();
     const raw = [
       0x10,
@@ -912,7 +906,7 @@ export class ZenggeProtocol {
   // 5 seconds of boot — cannot be triggered over BLE. Only mode changes and
   // clearing are possible via BLE.
   //
-  public static setRfRemoteState(
+  public setRfRemoteState(
     authMode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED',
     clearRemotes: boolean = false
   ): number[] {
@@ -927,12 +921,12 @@ export class ZenggeProtocol {
   }
 
   /** Convenience: clear all paired remotes while keeping same auth mode */
-  public static clearRfRemotes(currentMode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED' = 'ALLOW_PAIRED'): number[] {
+  public clearRfRemotes(currentMode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED' = 'ALLOW_PAIRED'): number[] {
     return this.setRfRemoteState(currentMode, true);
   }
 
   /** Query current RF remote auth mode — device responds with 0x2B packet */
-  public static queryRfRemoteState(): number[] {
+  public queryRfRemoteState(): number[] {
     const cmd = [0x2B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     const checksum = this.calculateChecksum(cmd);
     return this.wrapCommand([...cmd, checksum]);
@@ -978,4 +972,39 @@ export class ZenggeProtocol {
 
     return { mode, modeName: modeNames[mode], pairedCount, pairedRemoteIds };
   }
+}
+
+export namespace ZenggeProtocol {
+  const _shared = new ZenggeProtocol();
+
+  export function calculateChecksum(payload: number[]): number { return _shared.calculateChecksum(payload); }
+  export function wrapCommand(rawPayload: number[], cmdFamily: number = 0x0b): number[] { return _shared.wrapCommand(rawPayload, cmdFamily); }
+
+  export function queryHardwareSettings(hasMic: boolean = false): number[] { return _shared.queryHardwareSettings(hasMic); }
+  export function writeHardwareSettings(points: number, segments: number, icType: number, sorting: number, micPoints?: number, micSegments?: number): number[] { return _shared.writeHardwareSettings(points, segments, icType, sorting, micPoints, micSegments); }
+  export function writeHardwareSettingsByName(points: number, segments: number, icName: string, sortingName: string): number[] { return _shared.writeHardwareSettingsByName(points, segments, icName, sortingName); }
+  
+  export function setSettledMode(effectId: number, fg: { r: number; g: number; b: number }, bg: { r: number; g: number; b: number }, speed: number, direction: 0 | 1 = 0): number[] { return _shared.setSettledMode(effectId, fg, bg, speed, direction); }
+  export function setCustomRbm(patternId: number, speed: number, brightness: number): number[] { return _shared.setCustomRbm(patternId, speed, brightness); }
+  export function setEffectSequence(effectIds: number[], speed: number, brightness: number): number[] { return _shared.setEffectSequence(effectIds, speed, brightness); }
+  export function setCandleMode(r: number, g: number, b: number, speed: number, brightness: number, amplitude: number): number[] { return _shared.setCandleMode(r, g, b, speed, brightness, amplitude); }
+  
+  export function setMusicConfig(musicMode: number, modeType: 0x26 | 0x27, isOn: boolean, color1: { r: number; g: number; b: number }, color2: { r: number; g: number; b: number }, sensitivity: number, brightness: number): number[] { return _shared.setMusicConfig(musicMode, modeType, isOn, color1, color2, sensitivity, brightness); }
+  export function sendMusicMagnitude(magnitude: number): number[] { return _shared.sendMusicMagnitude(magnitude); }
+  export function streamPixelFrame(pixels: { r: number; g: number; b: number }[]): number[] { return _shared.streamPixelFrame(pixels); }
+  
+  export function setMultiColor(colors: { r: number, g: number, b: number }[], hardwareLedPoints: number, speed: number, direction: number, transitionType: number = 0x01): number[] { return _shared.setMultiColor(colors, hardwareLedPoints, speed, direction, transitionType); }
+  export function setCustomMode(steps: { mode: number; speed: number; color1: { r: number, g: number, b: number }; color2: { r: number, g: number, b: number }; }[]): number[] { return _shared.setCustomMode(steps); }
+  export function setCustomModeCompact(steps: { mode: number; speed: number; color1: { r: number, g: number, b: number }; color2: { r: number, g: number, b: number }; }[]): number[] { return _shared.setCustomModeCompact(steps); }
+  export function setCustomModeExtendedCompact(steps: { mode: number; speed: number; color1: { r: number, g: number, b: number }; color2: { r: number, g: number, b: number }; dir?: number; }[]): number[] { return _shared.setCustomModeExtendedCompact(steps); }
+  export function setCustomModeExtended(steps: { mode: number; speed: number; color1: { r: number; g: number; b: number }; color2: { r: number; g: number; b: number }; dir?: number; }[], dir: number = 0x81): number[] { return _shared.setCustomModeExtended(steps, dir); }
+  
+  export function turnOn(): number[] { return _shared.turnOn(); }
+  export function turnOff(): number[] { return _shared.turnOff(); }
+  export function setPower(on: boolean): number[] { return _shared.setPower(on); }
+  export function setSessionTime(): number[] { return _shared.setSessionTime(); }
+  
+  export function setRfRemoteState(authMode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED', clearRemotes: boolean = false): number[] { return _shared.setRfRemoteState(authMode, clearRemotes); }
+  export function clearRfRemotes(currentMode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED' = 'ALLOW_PAIRED'): number[] { return _shared.clearRfRemotes(currentMode); }
+  export function queryRfRemoteState(): number[] { return _shared.queryRfRemoteState(); }
 }
