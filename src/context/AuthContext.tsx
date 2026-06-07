@@ -111,7 +111,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await migrateAuthTokensToSecureStore();
 
         // 1. Check if user previously chose Continue Offline
-        const offlineSkip = await AsyncStorage.getItem(STORAGE_OFFLINE_SKIP);
+        let offlineSkip = null;
+        try {
+          offlineSkip = await AsyncStorage.getItem(STORAGE_OFFLINE_SKIP);
+        } catch (e) {
+          AppLogger.warn('[AuthContext] Failed to read offline skip', e);
+        }
         if (offlineSkip === 'true') {
           setIsOfflineMode(true);
           return;
@@ -126,7 +131,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         // 3. No active session — check if user had a prior one (token expired)
-        const lastEmail = await AsyncStorage.getItem('@Sk8lytz_auth_last_email');
+        let lastEmail = null;
+        try {
+          lastEmail = await AsyncStorage.getItem('@Sk8lytz_auth_last_email');
+        } catch (e) {
+          AppLogger.warn('[AuthContext] Failed to read last email', e);
+        }
         if (lastEmail) {
           setSessionExpired(true);
         }
@@ -148,7 +158,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       if (!newSession) {
         setIsOfflineMode(false);
-        AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP);
+        AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP).catch(e => {
+          AppLogger.warn('[AuthContext] Failed to remove offline skip', e);
+        });
       }
     });
 

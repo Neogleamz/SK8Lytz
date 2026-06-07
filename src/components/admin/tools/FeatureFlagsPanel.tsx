@@ -62,9 +62,9 @@ export function FeatureFlagsPanel({
 
       if (error) throw error;
       setFlags(data as FeatureFlag[]);
-    } catch (e: any) {
+    } catch (e) {
       AppLogger.error('Failed to fetch feature flags', e);
-      Alert.alert('Error', 'Failed to fetch feature flags: ' + e.message);
+      Alert.alert('Error', 'Failed to fetch feature flags: ' + (e instanceof Error ? e.message : String(e)));
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -101,8 +101,8 @@ export function FeatureFlagsPanel({
       setNewKey('');
       setNewUserId('');
       fetchFlags();
-    } catch (err: any) {
-      Alert.alert('Failed to Create', err.message);
+    } catch (e) {
+      Alert.alert('Failed to Create', (e instanceof Error ? e.message : String(e)));
     } finally {
       setIsSubmitting(false);
     }
@@ -117,8 +117,8 @@ export function FeatureFlagsPanel({
 
       if (error) throw error;
       fetchFlags(); // Optimistic update would be better, but this is safer
-    } catch (err: any) {
-      Alert.alert('Failed to Update', err.message);
+    } catch (e) {
+      Alert.alert('Failed to Update', (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -136,8 +136,8 @@ export function FeatureFlagsPanel({
               const { error } = await supabase.from('feature_flags').delete().eq('id', id);
               if (error) throw error;
               fetchFlags();
-            } catch (err: any) {
-              Alert.alert('Failed', err.message);
+            } catch (e) {
+              Alert.alert('Failed', (e instanceof Error ? e.message : String(e)));
             }
           },
         },

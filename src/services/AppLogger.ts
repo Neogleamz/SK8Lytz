@@ -71,7 +71,12 @@ export type EventType =
   | 'BLE_AUTO_REQUEST_RESULT'
   // ── HAL / Protocol Debug ────────────────────────────────
   | 'ZENGGE_MUSIC_CONFIG'
+  | 'ZENGGE_MUSIC_CONFIG_13B'
   | 'ZENGGE_CUSTOM_MODE_COMPACT'
+  | 'ZENGGE_CUSTOM_MODE_EXT_COMPACT'
+  | 'ZENGGE_CUSTOM_MODE_323B'
+  | 'ZENGGE_SETTLED_MODE_0x41'
+  | 'ZENGGE_EFFECT_SEQ_0x43_DIAGNOSTIC_ONLY'
   | 'SCREEN_OPENED'
   | 'APP_BACKGROUNDED'
   | 'APP_FOREGROUNDED'
@@ -418,7 +423,7 @@ class AppLoggerService {
             ...payload,
             host_device_id: Device.osInternalBuildId || Device.modelId || 'unknown'
           }
-        }).then(({ error }: any) => {
+        }).then(({ error }) => {
           if (error) console.warn('[AppLogger] VIP Fast-Lane failed:', error.message);
         });
       }
@@ -458,18 +463,19 @@ class AppLoggerService {
     this.log('APP_LOG', { level: 'info', message, ...context });
   }
 
-  warn(message: string, context?: Record<string, any> | any) {
+  warn(message: string, context?: Record<string, unknown> | unknown) {
     const safeContext = context && typeof context === 'object' && !Array.isArray(context)
-      ? context as Record<string, any>
+      ? context as Record<string, unknown>
       : { value: String(context) };
     this.log('APP_LOG', { level: 'warn', message, ...safeContext });
   }
 
-  error(message: string, errorObj?: any, context?: Record<string, any>) {
+  error(message: string, errorObj?: unknown, context?: Record<string, unknown>) {
+    const errorMessage = errorObj instanceof Error ? errorObj.message : String(errorObj);
     this.log('ERROR_CAUGHT', { 
       level: 'error', 
       message, 
-      error: errorObj?.message || String(errorObj),
+      error: errorMessage,
       ...context 
     });
   }
@@ -551,6 +557,7 @@ class AppLoggerService {
 
       if (__DEV__) console.log(`[AppLogger] Pushing ${currentRunLogs.length} events to telemetry_snapshots...`);
 
+      let successfulCount = 0;
       const CHUNK = 500;
       for (let i = 0; i < currentRunLogs.length; i += CHUNK) {
         const chunk = currentRunLogs.slice(i, i + CHUNK);
@@ -572,17 +579,24 @@ class AppLoggerService {
 
         const { error } = await supabase.from('telemetry_snapshots').insert(dbPayload);
         if (error) {
-           // Silently swallow RLS failures on Web to prevent console pollution.
-           // Data will continue to rotate locally until the DB permissions are fixed.
+           if (__DEV__) console.warn('[AppLogger] Chunk push failed:', error.message);
+           break; // Stop uploading if a chunk fails, preserve remaining in buffer
         }
+        successfulCount += chunk.length;
       }
 
-      this.buffer = [];
-      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify([]));
-      if (__DEV__) console.log('[AppLogger] Ingestion complete. Local buffer cleared.');
+      if (successfulCount > 0) {
+        // Only remove the successfully uploaded logs, preserving any new ones added during the await
+        this.buffer = this.buffer.slice(successfulCount);
+        await this.persist();
+        if (__DEV__) console.log(`[AppLogger] Ingestion complete. ${successfulCount} items uploaded.`);
+      } else {
+        if (__DEV__) console.log('[AppLogger] Ingestion failed or no items uploaded. Buffer preserved.');
+      }
       
-    } catch (err: any) {
-      if (__DEV__) console.warn('[AppLogger] Ingestion exception (safely caught):', err?.message || String(err));
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      if (__DEV__) console.warn('[AppLogger] Ingestion exception (safely caught):', errorMsg);
       // Swallow error to preserve UI stability on connection drops
     }
   }

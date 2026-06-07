@@ -84,7 +84,7 @@ export function useCrewSession(
       onSessionEnded();
       goToLanding();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Could not end session';
+      const msg = e instanceof Error ? (e instanceof Error ? e.message : String(e)) : 'Could not end session';
       AppLogger.log('CREW_ERROR', { action: 'end_session', error: msg });
       setErrorMsg(msg);
     }
@@ -109,7 +109,7 @@ export function useCrewSession(
       setIsHandoffMode(false);
       setTimeout(loadMembers, 500);
       return true;
-    } catch (e: any) { 
+    } catch (e) { 
       return false; 
     }
   };

@@ -38,7 +38,7 @@ export async function executeRealDisconnect(
         await bleManager.cancelDeviceConnection(device.id).catch((e: any) =>
           AppLogger.warn(`[BLE] Disconnect soft fail for ${device.id}`, e)
         );
-      } catch (e: any) {
+      } catch (e) {
         AppLogger.error(`[BLE] Fatal disconnect fault for ${device.id}`, e);
       }
     });

@@ -366,8 +366,8 @@ export function useDashboardAutoConnect({
               AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_burst_scan_triggered' });
               const scanResult = burstScan(8000);
               if (scanResult && typeof (scanResult as Promise<void>).catch === 'function') {
-                (scanResult as Promise<void>).catch((e: any) => {
-                  AppLogger.warn('Auto-connect burst scan failed', e);
+                (scanResult as Promise<void>).catch((e: unknown) => {
+                  AppLogger.warn('Auto-connect burst scan failed', e instanceof Error ? e.message : String(e));
                 });
               }
             }

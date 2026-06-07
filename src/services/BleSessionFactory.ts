@@ -171,8 +171,8 @@ export async function createGattSession(
       const svcs = await conn.services();
       const svcUUIDs: string[] = svcs.map((s: { uuid: string }) => s.uuid);
       adapter = resolveProtocol(svcUUIDs, manufacturerData) ?? getDefaultProtocol();
-    } catch (_e: any) {
-      AppLogger.warn(`[BleSessionFactory] Failed resolving service UUIDs for ${mac}, falling back to default protocol`, { context, error: String(_e) });
+    } catch (_e: unknown) {
+      AppLogger.warn(`[BleSessionFactory] Failed resolving service UUIDs for ${mac}, falling back to default protocol`, { context, error: _e instanceof Error ? _e.message : String(_e) });
       adapter = getDefaultProtocol();
     }
     await BleCharacteristicCache.set(mac, adapter.protocolId);

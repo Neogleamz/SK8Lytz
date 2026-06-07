@@ -12,12 +12,12 @@ import { Buffer } from 'buffer';
 // Lazy AppLogger to avoid circular/early-init crashes on Android release builds.
 // ZenggeProtocol is evaluated at bundle load time — AppLogger depends on
 // supabase + expo-device + AsyncStorage which may not be ready yet.
-let _appLogger: any;
+let _appLogger: typeof import('../services/AppLogger').AppLogger | typeof console | undefined;
 function getAppLogger() {
   if (!_appLogger) {
     try { _appLogger = require('../services/AppLogger').AppLogger; } catch { _appLogger = console; }
   }
-  return _appLogger;
+  return _appLogger!;
 }
 
 export const ZENGGE_SERVICE_UUID = '0000ffff-0000-1000-8000-00805f9b34fb';

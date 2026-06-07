@@ -2,22 +2,27 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
 import React, { useEffect, useRef, useState } from 'react';
 import { Platform, InteractionManager } from 'react-native';
-import type { Device } from 'react-native-ble-plx';
+import type { Device, BleManager, BleError } from 'react-native-ble-plx';
 import { LOCAL_PRODUCT_CATALOG, getLocalProfileByPoints } from '../../constants/ProductCatalog';
 import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { AppLogger } from '../../services/AppLogger';
 import { supabase } from '../../services/supabaseClient';
 import { locationService } from '../../services/LocationService';
 import type { PendingRegistration } from '../../types/dashboard.types';
-import { mapDeviceToRegistration } from '../../utils/classifyBLEDevice';
+import { mapDeviceToRegistration, type HWCacheEntry } from '../../utils/classifyBLEDevice';
+import type { Database } from '../../types/supabase';
+import type { EventFrom } from 'xstate';
+import type { bleMachine } from '../../services/ble/BleMachine';
+
+type TelemetryInsert = Database['public']['Tables']['discovered_devices_telemetry']['Insert'];
 
 export interface UseBLEScannerProps {
-  bleManager: any;
+  bleManager: BleManager | null;
   allDevices: Device[];
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   /** Optional HW cache from useBLESweeper — enriches PendingRegistrations with real EEPROM data */
-  hwCache?: Record<string, any>;
-  bleSend: (event: any) => void;
+  hwCache?: Record<string, HWCacheEntry>;
+  bleSend: (event: EventFrom<typeof bleMachine>) => void;
 }
 
 export function useBLEScanner({
@@ -51,7 +56,7 @@ export function useBLEScanner({
   }, []);
 
   const telemetryCacheRef = useRef<Map<string, number>>(new Map());
-  const telemetryBatchRef = useRef<any[]>([]);
+  const telemetryBatchRef = useRef<Record<string, unknown>[]>([]);
   // eslint-disable-next-line no-undef
   const telemetryTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -83,7 +88,7 @@ export function useBLEScanner({
 
         // TYPE-OVERRIDE: Supabase generated Insert type lags schema — discovered_devices_telemetry
         // has optional BLE advert fields not reflected in the generated type. Remove at next /db-sync.
-        await supabase.from('discovered_devices_telemetry').insert(payloads as any); // TYPE-OVERRIDE: schema lag
+        await supabase.from('discovered_devices_telemetry').insert(payloads as TelemetryInsert[]); // TYPE-OVERRIDE: schema lag
       } catch (_e) {
         AppLogger.warn('[Scanner] Ambient telemetry flush failed', { error: String(_e) });
       }
@@ -209,10 +214,10 @@ export function useBLEScanner({
               { id: 'sim-DE:M0:HA:L0:00:02', name: 'HALOZ Right Skate', type: 'HALOZ', points: 11, segments: 2, sorting: 'GRB', stripType: 'WS2812B', rssi: -55, serviceUUIDs: [ZENGGE_SERVICE_UUID], manufacturerData: 'AAAAAAAAAAAz' },
               { id: 'sim-DE:M0:S0:UL:00:01', name: 'SOULZ Left Skate', type: 'SOULZ', points: 43, segments: 1, sorting: 'GRB', stripType: 'WS2812B', rssi: -42, serviceUUIDs: [ZENGGE_SERVICE_UUID], manufacturerData: 'AAAAAAAAAAAz' },
               { id: 'sim-DE:M0:S0:UL:00:02', name: 'SOULZ Right Skate', type: 'SOULZ', points: 43, segments: 1, sorting: 'GRB', stripType: 'WS2812B', rssi: -85, serviceUUIDs: [ZENGGE_SERVICE_UUID], manufacturerData: 'AAAAAAAAAAAz' }
-            ] as any[]; // DEV-ONLY: mock devices have custom props (points, type) not on Device
+            ] as unknown as Device[]; // DEV-ONLY: mock devices have custom props (points, type) not on Device
             setAllDevices(mockDevices);
             
-            const pendingMocks = mockDevices.map(device => {
+            const pendingMocks = (mockDevices as unknown as {id: string, name: string, type: string, points: number, segments: number, sorting: string, stripType: string, rssi: number}[]).map(device => {
                AppLogger.log('DEVICE_DISCOVERED', { id: device.id, name: device.name, rssi: device.rssi, points: device.points });
                return {
                  device_mac: device.id,
@@ -251,9 +256,9 @@ export function useBLEScanner({
       }
     }
 
-    bleManager.startDeviceScan(null, null, (error: any, device: any) => {
+    bleManager?.startDeviceScan(null, null, (error: BleError | null, device: Device | null) => {
       if (error) {
-        AppLogger.error(error);
+        AppLogger.error(error.message);
         bleSend({ type: 'SCAN_STOP' });
         scannerStateRef.current = 'IDLE';
         return;
@@ -364,10 +369,10 @@ export function useBLEScanner({
 
     if (scanTimerRef.current) clearTimeout(scanTimerRef.current);
     scanTimerRef.current = setTimeout(() => {
-      bleManager.stopDeviceScan();
+      bleManager?.stopDeviceScan();
       scanTimerRef.current = null;
       // Scan window closed — go IDLE immediately. Hardware probing is on-demand only.
-      bleSend({ type: 'SCAN_STOP' });
+      bleSend({ type: 'SCAN_STOP' } as EventFrom<typeof bleMachine>);
       scannerStateRef.current = 'IDLE';
     }, 5000);
   };

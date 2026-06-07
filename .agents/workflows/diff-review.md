@@ -26,7 +26,9 @@ git diff --stat HEAD
 git diff HEAD
 ```
 
-3. **Act as a Senior Code Reviewer.** Analyze every changed file in the diff and check for:
+3. **Act as a Senior Code Reviewer.** For small diffs, review the files yourself. For large diffs (>5 files or complex architectural changes), leverage the Sub-Agent Swarm Protocol: invoke parallel `self` sub-agents using `invoke_subagent`, assigning each a specific file or module to review concurrently.
+   
+   Analyze every changed file in the diff and check for:
 
    - 🔒 **Security**: Hardcoded secrets, API keys, MAC addresses, or tokens
    - ⚠️ **Error Handling**: Missing try/catch on async operations, swallowed errors

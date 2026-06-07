@@ -159,9 +159,9 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       AppLogger.log('PROFILE_UPDATED', { fields: Object.keys(updates) });
       onProfileUpdated?.();
       Alert.alert('Saved', 'Profile updated successfully.');
-    } catch (e: any) {
+    } catch (e) {
       AppLogger.error('[AccountOverview] handleSaveProfile failed', { error: String(e) });
-      Alert.alert('Error', e.message || 'Could not save profile');
+      Alert.alert('Error', (e instanceof Error ? e.message : String(e)) || 'Could not save profile');
     } finally {
       setSavingProfile(false);
     }
@@ -203,9 +203,9 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       setProfile(p => p ? { ...p, avatar_url: publicUrl } : p);
       AppLogger.log('PROFILE_UPDATED', { field: 'photo', bucket: 'avatars', path });
       onProfileUpdated?.();
-    } catch (e: any) {
+    } catch (e) {
       AppLogger.error('[AccountOverview] handlePickProfilePhoto failed', { error: String(e) });
-      Alert.alert('Upload failed', e.message ?? 'Could not upload photo. Try again.');
+      Alert.alert('Upload failed', (e instanceof Error ? e.message : String(e)) ?? 'Could not upload photo. Try again.');
     }
   };
 
@@ -257,9 +257,9 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       setCrews(prev => [...prev, crew]);
       setNewCrewName(''); setCrewStep('list');
       AppLogger.log('CREW_PERMANENT_CREATED', { crewName: newCrewName.trim() });
-    } catch (e: any) {
+    } catch (e) {
       AppLogger.warn('[AccountOverview] handleCreateCrew failed', { error: String(e) });
-      setCrewError(e.message ?? 'Failed to create crew');
+      setCrewError((e instanceof Error ? e.message : String(e)) ?? 'Failed to create crew');
     } finally { setCrewLoading(false); }
   };
 
@@ -271,9 +271,9 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       setCrews(prev => prev.find(c => c.id === crew.id) ? prev : [...prev, crew]);
       setJoinCode(''); setCrewStep('list');
       AppLogger.log('CREW_PERMANENT_JOINED', { crewId: crew.id });
-    } catch (e: any) {
+    } catch (e) {
       AppLogger.warn('[AccountOverview] handleJoinCrew failed', { error: String(e) });
-      setCrewError(e.message ?? 'Failed to join crew');
+      setCrewError((e instanceof Error ? e.message : String(e)) ?? 'Failed to join crew');
     } finally { setCrewLoading(false); }
   };
 
@@ -282,9 +282,9 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       await profileService.leavePermanentCrew(crewId);
       setCrews(prev => prev.filter(c => c.id !== crewId));
       AppLogger.log('CREW_PERMANENT_LEFT', { crewId });
-    } catch (e: any) { 
+    } catch (e) { 
       AppLogger.error('[AccountOverview] handleLeaveCrew failed', { crewId, error: String(e) });
-      Alert.alert('Error', e.message); 
+      Alert.alert('Error', (e instanceof Error ? e.message : String(e))); 
     }
   };
 

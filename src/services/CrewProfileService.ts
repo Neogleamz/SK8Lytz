@@ -11,6 +11,7 @@
  */
 
 import { supabase } from './supabaseClient';
+import type { Database } from '../types/supabase';
 import type { PermanentCrew, CrewMemberDisplay, CrewMemberFull } from './ProfileService.types';
 import { AppLogger } from './AppLogger';
 
@@ -44,17 +45,20 @@ class CrewProfileService {
     if (error || !data) return [];
 
     const crews = data
-      .map((row: any) => row.crews)
-      .filter(Boolean);
+      .map((row: unknown) => (row as { crews: unknown }).crews)
+      .filter((c) => c !== null);
       
     const filteredCrews = updatedSince 
-      ? crews.filter((c: any) => c.updated_at && (new Date(c.updated_at) > new Date(updatedSince)))
+      ? crews.filter((c: unknown) => { const cr = c as { updated_at: string }; return cr.updated_at && (new Date(cr.updated_at) > new Date(updatedSince)); })
       : crews;
 
-    return filteredCrews.map((crew: any) => ({
-      ...crew,
-      is_owner: crew.owner_id === userId,
-    })) as PermanentCrew[];
+    return filteredCrews.map((crew: unknown) => {
+      const c = crew as PermanentCrew & { owner_id: string };
+      return {
+        ...c,
+        is_owner: c.owner_id === userId,
+      } as PermanentCrew;
+    });
   }
 
   /**
@@ -64,7 +68,7 @@ class CrewProfileService {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const insertData: any = { name, owner_id: user.id };
+    const insertData = { name, owner_id: user.id } as Record<string, unknown>;
     if (opts?.isPublic    !== undefined) insertData.is_public    = opts.isPublic;
     if (opts?.avatarColor)               insertData.avatar_color = opts.avatarColor;
     if (opts?.avatarIcon)                insertData.avatar_icon  = opts.avatarIcon;
@@ -75,7 +79,7 @@ class CrewProfileService {
 
     const { data: crew, error: crewErr } = await supabase
       .from('crews')
-      .insert(insertData)
+      .insert(insertData as Database['public']['Tables']['crews']['Insert'])
       .select()
       .single();
 
@@ -187,7 +191,7 @@ class CrewProfileService {
 
     if (error || !data) return { count: 0, avatarColors: [] };
     const colors = data
-      .map((row: any) => row.user_profiles?.avatar_color)
+      .map((row: unknown) => (row as { user_profiles: { avatar_color: string | null } | null }).user_profiles?.avatar_color)
       .filter(Boolean) as string[];
     const { count } = await supabase
       .from('crew_memberships')
@@ -207,7 +211,7 @@ class CrewProfileService {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error('Not authenticated');
 
-    const updates: any = {};
+    const updates = {} as Record<string, unknown>;
     if (fields.name        !== undefined) updates.name         = fields.name;
     if (fields.isPublic    !== undefined) updates.is_public    = fields.isPublic;
     if (fields.avatarColor !== undefined) updates.avatar_color = fields.avatarColor;
@@ -219,7 +223,7 @@ class CrewProfileService {
 
     const { error } = await supabase
       .from('crews')
-      .update(updates)
+      .update(updates as Database['public']['Tables']['crews']['Update'])
       .eq('id', crewId)
       .eq('owner_id', user.id);  // owner-only guard
 
@@ -239,7 +243,10 @@ class CrewProfileService {
 
     if (error || !data) return [];
     const { data: { user } } = await supabase.auth.getUser();
-    return data.map((crew: any) => ({ ...crew, is_owner: crew.owner_id === user?.id })) as PermanentCrew[];
+    return data.map((crew: unknown) => {
+      const c = crew as PermanentCrew & { owner_id: string };
+      return { ...c, is_owner: c.owner_id === user?.id } as PermanentCrew;
+    });
   }
 
   /**
@@ -349,11 +356,11 @@ class CrewProfileService {
         .in('crew_session_id', sessionIds);
 
       if (skateData && skateData.length > 0) {
-        totalDistanceMiles = skateData.reduce((s: number, r: any) => s + Number(r.distance_miles ?? 0), 0);
-        totalDurationSec = skateData.reduce((s: number, r: any) => s + Number(r.duration_sec ?? 0), 0);
-        peakSpeedMph = Math.max(0, ...skateData.map((r: any) => Number(r.peak_speed_mph ?? 0)));
-        peakGForce = Math.max(0, ...skateData.map((r: any) => Number(r.peak_gforce ?? 0)));
-        avgSpeedMph = skateData.reduce((s: number, r: any) => s + Number(r.avg_speed_mph ?? 0), 0) / skateData.length;
+        totalDistanceMiles = skateData.reduce((s: number, r: unknown) => s + Number((r as {distance_miles: number}).distance_miles ?? 0), 0);
+        totalDurationSec = skateData.reduce((s: number, r: unknown) => s + Number((r as {duration_sec: number}).duration_sec ?? 0), 0);
+        peakSpeedMph = Math.max(0, ...skateData.map((r: unknown) => Number((r as {peak_speed_mph: number}).peak_speed_mph ?? 0)));
+        peakGForce = Math.max(0, ...skateData.map((r: unknown) => Number((r as {peak_gforce: number}).peak_gforce ?? 0)));
+        avgSpeedMph = skateData.reduce((s: number, r: unknown) => s + Number((r as {avg_speed_mph: number}).avg_speed_mph ?? 0), 0) / skateData.length;
       }
     }
 
@@ -389,14 +396,17 @@ class CrewProfileService {
 
     if (error || !data) return [];
 
-    return data.map((row: any) => ({
-      membership_id: row.id,
-      user_id:      row.user_id,
-      display_name: row.user_profiles?.display_name ?? null,
-      avatar_color: row.user_profiles?.avatar_color ?? '#888',
-      role:         (row.role ?? 'member') as 'owner' | 'member',
-      joined_at:    row.joined_at,
-    })) as CrewMemberFull[];
+    return data.map((row: unknown) => {
+      const r = row as { id: string; user_id: string; role: string; joined_at: string; user_profiles: { display_name: string | null; avatar_color: string | null } | null };
+      return {
+        membership_id: r.id,
+        user_id:      r.user_id,
+        display_name: r.user_profiles?.display_name ?? null,
+        avatar_color: r.user_profiles?.avatar_color ?? '#888',
+        role:         (r.role ?? 'member') as 'owner' | 'member',
+        joined_at:    r.joined_at,
+      } as CrewMemberFull;
+    });
   }
 
   /**

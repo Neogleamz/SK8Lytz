@@ -57,9 +57,9 @@ export function AdminRosterPanel({
 
       if (error) throw error;
       setAdmins(data as AdminProfile[]);
-    } catch (e: any) {
+    } catch (e) {
       AppLogger.error('Failed to fetch admins for roster panel', e);
-      Alert.alert('Error', 'Failed to fetch admins: ' + e.message);
+      Alert.alert('Error', 'Failed to fetch admins: ' + (e instanceof Error ? e.message : String(e)));
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -90,8 +90,8 @@ export function AdminRosterPanel({
               if (error) throw error;
               Alert.alert('Success', 'User has been demoted to regular user.');
               fetchAdmins();
-            } catch (err: any) {
-              Alert.alert('Failed', err.message);
+            } catch (e) {
+              Alert.alert('Failed', (e instanceof Error ? e.message : String(e)));
             }
           },
         },

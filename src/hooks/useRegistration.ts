@@ -133,9 +133,9 @@ export function useRegistration() {
     try {
       await repo.deleteDevice(deviceMac);
       setRegisteredDevices(repo.getDevices());
-    } catch (e: any) {
+    } catch (e) {
       AppLogger.warn('[Registration] Deregister failed:', e);
-      Alert.alert('Delete Failed', `Could not remove device: ${e.message || String(e)}`);
+      Alert.alert('Delete Failed', `Could not remove device: ${(e instanceof Error ? e.message : String(e)) || String(e)}`);
     }
   }, []);
 

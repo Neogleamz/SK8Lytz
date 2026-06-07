@@ -13,8 +13,22 @@
 
 ## SESSION: 2026-06-06 (Third Block) — Account Hardening Batch
 
+ ### [ARTIFACT] 2026-06-06T19:12 — Burn-Down Plan 
+ **Link:** [PLAN-refactor-burn-down-audit-failures.md](../docs/plans/PLAN-refactor-burn-down-audit-failures.md) 
+ **Purpose:** Eradicate 14 any casts, finalize split-brain XState, enforce global AuthContext. 
+
 ### [ARTIFACT] 2026-06-06T19:07 — [PLAN-fix-account-avatar-and-polish.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-fix-account-avatar-and-polish.md)
 **Summary:** Plan drafted to fix the destructive `upsert` bug in `AuthProfileService.updateProfile` which caused avatar photos and colors to overwrite each other. Integrated the fix into the existing `chore/account-polish-sweep` task.
+
+
+### [DECISION] 2026-06-07T00:41 — 3 Failure Points for deep-dive-regressions (Brainstorm)
+**Decision:** We are executing a massive sweep to fix 50+ Rule 16 violations (missing try/catch, `any` casts). We must guard against 3 failure points:
+1. **The Silent Swallow**: Adding `try/catch` blindly might swallow critical errors. All new catches must use `AppLogger.error()` or propagate properly so we don't mask bugs.
+2. **The Type Cascade**: Replacing `any` with strict types will cause TS errors to bubble up to parent components. We must fix the full chain, not just use `as unknown as Type`.
+3. **The Offline Flush Race**: Adding offline queues for telemetry could cause race conditions if the app regains network while the queue is being flushed. We must mirror the `_isFlushingSessionQueue` re-entrancy guard that we used for Session Tracking yesterday.
+**Rejected:** Just using generic `catch (e: any)` everywhere. We must type the error or use `if (e instanceof Error)`.
+**Don't re-derive:** This plan touches 25+ files. We must strictly adhere to the `system_audit_report.md` checklist and verify each file surgically.
+**Source:** `system_audit_report.md` + 16-agent fleet findings.
 
 
 ### [MERGE] 2026-06-06T21:01 — BATCH:account-hardening (M-04) @ `60067804`

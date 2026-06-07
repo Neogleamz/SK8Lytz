@@ -39,7 +39,7 @@ interface BLERawDevice {
 }
 
 /** Shape of an individual EEPROM cache entry from useBLESweeper. */
-interface HWCacheEntry {
+export interface HWCacheEntry {
   detected?: boolean;
   ledPoints?: number;
   segments?: number;

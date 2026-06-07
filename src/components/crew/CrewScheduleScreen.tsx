@@ -59,8 +59,8 @@ export function CrewScheduleScreen() {
         session.setCurrentRole('leader');
         setStep('controller');
       }
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Failed to create session');
+    } catch (e) {
+      setErrorMsg((e instanceof Error ? e.message : String(e)) || 'Failed to create session');
     } finally {
       setIsLoading(false);
     }

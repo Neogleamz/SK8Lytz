@@ -94,6 +94,19 @@ class LocationService {
    * Falls back to creation-date order if location permission denied.
    */
   async getNearbyPublicSessions(radiusMi?: number | null, userCoords?: { lat: number; lng: number } | null, userId?: string | null): Promise<NearbySession[]> {
+    interface DB_CrewSession {
+      id: string;
+      name: string;
+      invite_code: string;
+      location_label: string | null;
+      location_coords: { lat?: number; lng?: number } | null;
+      scheduled_at: string | null;
+      created_at: string;
+      is_public: boolean;
+      crew_id: string | null;
+      crew_members?: { count: number }[];
+      crews?: { name: string; avatar_url: string | null; avatar_icon: string | null; avatar_color: string | null } | null;
+    }
 
     const SESSION_SELECT = 'id, name, invite_code, location_label, location_coords, scheduled_at, created_at, is_public, crew_id, crew_members(count), crews(name, avatar_url, avatar_icon, avatar_color)';
 
@@ -109,7 +122,7 @@ class LocationService {
     // ── Query 2: Active sessions the user is a session-member of (private crew sessions) ──
     // This covers private sessions from crews the user belongs to.
     // We look at `crew_members` (session membership) not `crew_memberships` (permanent crew membership).
-    let privateData: any[] = [];
+    let privateData: DB_CrewSession[] = [];
     try {
       if (userId) {
         // Fetch sessions where user is a permanent crew member OR an active session participant
@@ -118,8 +131,8 @@ class LocationService {
           supabase.from('crew_members').select('session_id').eq('user_id', userId)
         ]);
 
-        const myCrewIds = (mRes.data ?? []).map((m: any) => m.crew_id).filter(Boolean);
-        const mySessionIds = (sRes.data ?? []).map((s: any) => s.session_id).filter(Boolean);
+        const myCrewIds = (mRes.data ?? []).map((m: { crew_id: string }) => m.crew_id).filter(Boolean);
+        const mySessionIds = (sRes.data ?? []).map((s: { session_id: string }) => s.session_id).filter(Boolean);
 
         if (myCrewIds.length > 0 || mySessionIds.length > 0) {
           let query = supabase
@@ -137,7 +150,7 @@ class LocationService {
             .or(orParts.join(','))
             .order('created_at', { ascending: false });
 
-          privateData = memberSessions ?? [];
+          privateData = (memberSessions as unknown as DB_CrewSession[]) ?? [];
         }
       }
     } catch (err) {
@@ -145,9 +158,9 @@ class LocationService {
     }
 
     // ── Merge + deduplicate by session id ────────────────────────────────────
-    const combined = [...(publicData ?? []), ...privateData];
+    const combined = [...((publicData as unknown as DB_CrewSession[]) ?? []), ...privateData];
     const seen = new Set<string>();
-    const unique = combined.filter((s: any) => {
+    const unique = combined.filter((s: DB_CrewSession) => {
       if (seen.has(s.id)) return false;
       seen.add(s.id);
       return true;
@@ -159,7 +172,7 @@ class LocationService {
     const userLat = userCoords?.lat ?? null;
     const userLng = userCoords?.lng ?? null;
 
-    const sessions: NearbySession[] = unique.map((s: any) => {
+    const sessions: NearbySession[] = unique.map((s: DB_CrewSession) => {
       const coords = s.location_coords as { lat?: number; lng?: number } | null;
       let distanceMi: number | null = null;
       let distanceLabel = '';
@@ -227,12 +240,12 @@ class LocationService {
     const userLat = userCoords?.lat ?? null;
     const userLng = userCoords?.lng ?? null;
 
-    const spots: NearbySkateSpot[] = data.map((spot: any) => {
+    const spots: NearbySkateSpot[] = data.map((spot: Record<string, unknown>) => {
       let distanceMi: number | null = null;
       let distanceLabel = '';
 
       if (userLat !== null && userLng !== null && spot.lat && spot.lng) {
-        distanceMi = this.haversineMi(userLat, userLng, spot.lat, spot.lng);
+        distanceMi = this.haversineMi(userLat, userLng, Number(spot.lat), Number(spot.lng));
         distanceLabel = distanceMi < 0.1
           ? 'Here now'
           : distanceMi < 1
@@ -241,18 +254,18 @@ class LocationService {
       }
 
       return {
-        id: spot.id,
-        name: spot.name,
-        lat: spot.lat,
-        lng: spot.lng,
-        city: spot.city,
-        state: spot.state,
-        zip: spot.zip,
-        phone: spot.phone,
-        facility_type: spot.facility_type ?? null,
-        surface_type: spot.surface_type,
-        is_indoor: spot.is_indoor,
-        vibe_rating: spot.vibe_rating,
+        id: spot.id as string,
+        name: spot.name as string,
+        lat: spot.lat as number,
+        lng: spot.lng as number,
+        city: (spot.city as string) ?? null,
+        state: (spot.state as string) ?? null,
+        zip: (spot.zip as string) ?? null,
+        phone: (spot.phone as string) ?? null,
+        facility_type: (spot.facility_type as string) ?? null,
+        surface_type: (spot.surface_type as 'wood' | 'concrete' | 'asphalt' | 'sport_court' | 'unknown') ?? null,
+        is_indoor: (spot.is_indoor as boolean) ?? null,
+        vibe_rating: (spot.vibe_rating as number) ?? null,
         distanceMi,
         distanceLabel,
       } as NearbySkateSpot;

@@ -8,6 +8,7 @@
 
 import { supabase } from './supabaseClient';
 import type { UserProfile, SessionHistoryItem } from './ProfileService.types';
+import type { User } from '@supabase/supabase-js';
 
 class AuthProfileService {
 
@@ -17,7 +18,7 @@ class AuthProfileService {
    * if the database trigger failed to set them during signup.
    * @param cachedUser Optional pre-fetched user object to avoid redundant network calls
    */
-  async fetchOrCreateProfile(user?: any | null): Promise<UserProfile | null> {
+  async fetchOrCreateProfile(user?: User | null): Promise<UserProfile | null> {
     if (!user) return null;
 
     const { data: existing } = await supabase
@@ -127,14 +128,15 @@ class AuthProfileService {
 
     if (error || !data) return [];
 
-    return data.map((row: any) => {
-      const session = row.crew_sessions;
+    return data.map((row: unknown) => {
+      const r = row as { joined_at: string; crew_sessions: { id: string; name: string; expires_at: string; leader_user_id: string; crews: { name: string } | null } | null };
+      const session = r.crew_sessions;
       return {
         session_id:   session?.id ?? '',
         session_name: session?.name ?? 'Crew Session',
         crew_name:    session?.crews?.name ?? null,
         role:         session?.leader_user_id === userId ? 'leader' : 'member',
-        joined_at:    row.joined_at,
+        joined_at:    r.joined_at,
         expires_at:   session?.expires_at ?? '',
       } as SessionHistoryItem;
     });

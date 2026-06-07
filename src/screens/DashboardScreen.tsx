@@ -806,15 +806,16 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
    * Renders a single device item card, merging registration data 
    * with live discovered BLE configs.
    */
-  const renderItem = useCallback(({ item }: { item: RegisteredDevice | any }) => {
+  const renderItem = useCallback(({ item }: { item: RegisteredDevice & Record<string, unknown> }) => {
     // IDENTITY FIX: Always resolve to BLE MAC address for all lookups.
     // RegisteredDevice.id is a Supabase composite key (MAC+userId).
     const mac = (item.device_mac || item.id || '').toUpperCase();
-      const cachedConfig = (deviceConfigs[item.id] || {}) as Partial<DeviceSettings>;
+      const cachedConfig = (deviceConfigs[item.id as string] || {}) as Partial<DeviceSettings>;
       const mergedItem = {
         ...item,
         ...cachedConfig,
-        name: item.device_name || cachedConfig.name || item.name, // Map DB field to component prop
+        id: mac,
+        name: (item.device_name || cachedConfig.name || item.name) as string | null, // Map DB field to component prop
         // Inject live post-connect RSSI so the wifi icon reflects current signal quality.
         // Falls back to scan-time rssi on the raw item (stale after connect, but better than null).
         rssi: rssiMap[mac] ?? item.rssi ?? null,
@@ -837,7 +838,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           }
           // Resolve the live BLE peripheral by MAC.
           const bleDevice = allDevices.find(
-            (d: any) => (d.id || '').toUpperCase() === mac
+            (d: DisplayDevice) => (d.id || '').toUpperCase() === mac
           );
           if (!bleDevice) {
             // Device not yet discovered — trigger a scan. useDashboardAutoConnect
@@ -1156,8 +1157,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           }}
           registeredDevices={mappedRegisteredDevicesForModal}
           onDeviceRenamed={async (deviceId, newName) => {
-            setAllDevices((prev: any[]) => prev.map((d: any) =>
-              d.id === deviceId ? { ...d, customName: newName } : d
+            setAllDevices((prev) => prev.map(d =>
+              d.id === deviceId ? ({ ...d, customName: newName } as unknown as any) : d
             ));
             const rd = registeredDevices.find(r => r.device_mac === deviceId);
             if (rd) {
@@ -1165,7 +1166,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
             }
           }}
           onDeviceForgotten={async (deviceId) => {
-            setAllDevices((prev: any[]) => prev.filter((d: any) => d.id !== deviceId));
+            setAllDevices((prev) => prev.filter(d => d.id !== deviceId));
             await deregisterDevice(deviceId);
           }}
           onGroupRenamed={async (oldGroupName, newGroupName) => {

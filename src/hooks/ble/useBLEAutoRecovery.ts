@@ -188,6 +188,28 @@ export function useBLEAutoRecovery({
   const [ghostedDeviceIds, setGhostedDeviceIds] = useState<string[]>([]);
   const ghostedRefs = useRef<string[]>([]);
 
+  // Refs for callbacks to prevent stale closures in long-running async loops
+  const callbacksRef = useRef({
+    onOrganicDisconnect,
+    handleNotification,
+    onAdapterResolved,
+    onDeviceRecovered,
+    onMtuNegotiated,
+    onGroupDropout,
+    setConnectedDevices,
+    getSweepedDevice
+  });
+  callbacksRef.current = {
+    onOrganicDisconnect,
+    handleNotification,
+    onAdapterResolved,
+    onDeviceRecovered,
+    onMtuNegotiated,
+    onGroupDropout,
+    setConnectedDevices,
+    getSweepedDevice
+  };
+
   // AbortController-style cancellation: incrementing token.
   // When cancelAllRecoveries() is called, the token increments.
   // Each recovery loop captures the token at start — if it changes, the loop exits.
@@ -257,7 +279,7 @@ export function useBLEAutoRecovery({
             logRecoverySummary(deviceId, 'ejected', attempts <= PHASE_1_MAX_ATTEMPTS ? 1 : 2, attempts, Date.now() - loopStartMs, 'max_attempts_exceeded');
             ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
             setGhostedDeviceIds([...ghostedRefs.current]);
-            setConnectedDevices(prev => prev.filter(d => d.id !== deviceId));
+            callbacksRef.current.setConnectedDevices(prev => prev.filter(d => d.id !== deviceId));
             break;
           }
 
@@ -273,7 +295,7 @@ export function useBLEAutoRecovery({
               AppLogger.warn(`[AutoRecovery] ${deviceId} hit Zombie Lock — lock busy for too long. Ejecting.`);
               ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
               setGhostedDeviceIds([...ghostedRefs.current]);
-              setConnectedDevices(prev => prev.filter(d => d.id !== deviceId));
+              callbacksRef.current.setConnectedDevices(prev => prev.filter(d => d.id !== deviceId));
               break;
             }
             continue; // Will sleep again via backoff at top of loop
@@ -296,14 +318,14 @@ export function useBLEAutoRecovery({
           });
           if (signal.aborted) break;
 
-          onAdapterResolved(conn.id, recoveryAdapter);
+          callbacksRef.current.onAdapterResolved(conn.id, recoveryAdapter);
           AppLogger.log('AUTO_RECOVERY_ADAPTER', { deviceId: conn.id, protocolId: recoveryAdapter.protocolId });
 
           try {
             const mtuResult = await conn.requestMTU(512);
             if (signal.aborted) break;
             const negotiatedMtu = mtuResult?.mtu ?? 186;
-            onMtuNegotiated?.(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);
+            callbacksRef.current.onMtuNegotiated?.(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);
           } catch (e) {
             AppLogger.warn('[AutoRecovery] MTU negotiation failed', { deviceId, error: String(e) });
           }
@@ -316,14 +338,14 @@ export function useBLEAutoRecovery({
           }
 
           disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: Error | null) => {
-            onOrganicDisconnect(error, conn.id);
+            callbacksRef.current.onOrganicDisconnect(error, conn.id);
           });
 
           conn.monitorCharacteristicForService(
             recoveryAdapter.serviceUUID,
             recoveryAdapter.notifyCharacteristicUUID,
             (error: Error | null, characteristic: import('react-native-ble-plx').Characteristic | null) =>
-              handleNotification(error, characteristic, conn.id)
+              callbacksRef.current.handleNotification(error, characteristic, conn.id)
           );
 
           // Send recovery ping using adapter — BanlanX has no EEPROM query (empty no-op),
@@ -340,7 +362,7 @@ export function useBLEAutoRecovery({
           if (signal.aborted) break;
 
           // Publish back to UI and clear ghost state
-          setConnectedDevices(prev => prev.map(d => d.id === deviceId ? conn : d));
+          callbacksRef.current.setConnectedDevices(prev => prev.map(d => d.id === deviceId ? conn : d));
 
           ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
           setGhostedDeviceIds([...ghostedRefs.current]);
@@ -349,7 +371,7 @@ export function useBLEAutoRecovery({
           logRecoverySummary(deviceId, 'success', attempts <= PHASE_1_MAX_ATTEMPTS ? 1 : 2, attempts, Date.now() - loopStartMs);
 
           // Notify consumers (e.g. DashboardScreen) so they can replay last pattern state
-          onDeviceRecovered?.(conn.id);
+          callbacksRef.current.onDeviceRecovered?.(conn.id);
           break;
 
         } catch (e: unknown) {
@@ -378,7 +400,7 @@ export function useBLEAutoRecovery({
         if (cancelTokenRef.current !== myToken) return;
         if (!ghostedRefs.current.includes(deviceId)) return; // cleared by another path
 
-        const sweepedDevice = getSweepedDevice?.(deviceId);
+        const sweepedDevice = callbacksRef.current.getSweepedDevice?.(deviceId);
         if (!sweepedDevice) continue; // not seen yet — keep polling
 
         // MAC reappeared in scan results — attempt single GATT reconnect
@@ -395,11 +417,11 @@ export function useBLEAutoRecovery({
           });
           if (signal.aborted) break;
 
-          onAdapterResolved(conn.id, recoveryAdapter);
+          callbacksRef.current.onAdapterResolved(conn.id, recoveryAdapter);
 
           try {
             const mtuResult = await conn.requestMTU(512);
-            onMtuNegotiated?.(conn.id, (mtuResult?.mtu ?? 186) > 23 ? (mtuResult?.mtu ?? 186) : 186);
+            callbacksRef.current.onMtuNegotiated?.(conn.id, (mtuResult?.mtu ?? 186) > 23 ? (mtuResult?.mtu ?? 186) : 186);
           } catch { /* non-fatal */ }
 
           if (disconnectListeners.current[conn.id]) {
@@ -407,21 +429,21 @@ export function useBLEAutoRecovery({
             delete disconnectListeners.current[conn.id];
           }
           disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: Error | null) => {
-            onOrganicDisconnect(error, conn.id);
+            callbacksRef.current.onOrganicDisconnect(error, conn.id);
           });
           conn.monitorCharacteristicForService(
             recoveryAdapter.serviceUUID,
             recoveryAdapter.notifyCharacteristicUUID,
             (error: Error | null, characteristic: import('react-native-ble-plx').Characteristic | null) =>
-              handleNotification(error, characteristic, conn.id)
+              callbacksRef.current.handleNotification(error, characteristic, conn.id)
           );
 
-          setConnectedDevices(prev => prev.map(d => d.id === deviceId ? conn : d));
+          callbacksRef.current.setConnectedDevices(prev => prev.map(d => d.id === deviceId ? conn : d));
           ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
           setGhostedDeviceIds([...ghostedRefs.current]);
           AppLogger.log('AUTO_RECOVERY_SUCCESS', { deviceId, phase: 3 });
           logRecoverySummary(deviceId, 'success', 3, attempts, Date.now() - loopStartMs);
-          onDeviceRecovered?.(conn.id);
+          callbacksRef.current.onDeviceRecovered?.(conn.id);
           return; // success — exit Phase 3
         } catch (e: unknown) {
           AppLogger.warn('[AutoRecovery] Phase 3 reconnect failed — ejecting', { deviceId, error: String(e) });
@@ -437,7 +459,7 @@ export function useBLEAutoRecovery({
         logRecoverySummary(deviceId, 'ejected', 3, attempts, Date.now() - loopStartMs, 'phase3_exhausted');
         ghostedRefs.current = ghostedRefs.current.filter(id => id !== deviceId);
         setGhostedDeviceIds([...ghostedRefs.current]);
-        setConnectedDevices(prev => prev.filter(d => d.id !== deviceId));
+        callbacksRef.current.setConnectedDevices(prev => prev.filter(d => d.id !== deviceId));
       }
     };
 
@@ -469,7 +491,7 @@ export function useBLEAutoRecovery({
     // GATT contention that caused 60-minute recovery storms on group disconnects.
     const droppedDevice = connectedDevicesRef.current.find(d => d.id === deviceId);
 
-    if (onGroupDropout && droppedDevice) {
+    if (callbacksRef.current.onGroupDropout && droppedDevice) {
       // Accumulate into the debounce queue
       ghostDebounceQueueRef.current.push(droppedDevice);
 
@@ -488,7 +510,7 @@ export function useBLEAutoRecovery({
             devices: batch.map(d => d.id),
           });
 
-          onGroupDropout(batch)
+          callbacksRef.current.onGroupDropout?.(batch)
             .then(() => {
               // SUCCESS: clear ghost state now that devices are confirmed reconnected
               ghostedRefs.current = ghostedRefs.current.filter(id => !batch.some(d => d.id === id));
@@ -517,7 +539,7 @@ export function useBLEAutoRecovery({
 
     // Fallback: no coordinator wired (shouldn’t happen in production) — spawn directly
     spawnRecoveryLoop(deviceId);
-  }, [bleManager, disconnectListeners, handleNotification, onOrganicDisconnect, setConnectedDevices, onGroupDropout]);
+  }, [bleManager, disconnectListeners, connectedDevicesRef]);
 
   /**
    * Cancel all active recovery loops and wait for them to exit.

@@ -404,7 +404,11 @@ class CrewService {
     }, 600);
 
     if (this.broadcastTimer) { clearTimeout(this.broadcastTimer); this.broadcastTimer = null; }
-    await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
+    try {
+      await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
+    } catch (err) {
+      AppLogger.warn('[CrewService] Failed to multiRemove on endSession', { error: err instanceof Error ? err.message : String(err) });
+    }
     AppLogger.log('CREW_SESSION_ENDED', { reason: 'leader_ended', sessionId });
   }
 
@@ -430,7 +434,11 @@ class CrewService {
       .eq('user_id', user.id);
 
     this.unsubscribe();
-    await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
+    try {
+      await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
+    } catch (err) {
+      AppLogger.warn('[CrewService] Failed to multiRemove on leaveSession', { error: err instanceof Error ? err.message : String(err) });
+    }
     this.currentSessionId = null;
     this.currentRole = null;
   }
@@ -477,7 +485,11 @@ class CrewService {
 
       if (!sessionId || !expiresAt) return null;
       if (new Date(expiresAt) < new Date()) {
-        await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
+        try {
+          await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
+        } catch (err) {
+          AppLogger.warn('[CrewService] Failed to multiRemove expired session', { error: err instanceof Error ? err.message : String(err) });
+        }
         return null;
       }
 
@@ -562,7 +574,11 @@ class CrewService {
         this.unsubscribe();
         this.currentSessionId = null;
         this.currentRole = null;
-        AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
+        try {
+          AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
+        } catch (err) {
+          AppLogger.warn('[CrewService] Failed to multiRemove on session_ended broadcast', { error: err instanceof Error ? err.message : String(err) });
+        }
         onSessionEnded?.();
       })
       .subscribe();
@@ -629,10 +645,14 @@ class CrewService {
   get isInCrew() { return this.currentSessionId !== null; }
 
   private async _persistSession(session: CrewSession): Promise<void> {
-    await AsyncStorage.multiSet([
-      [STORAGE_LAST_SESSION_ID,  session.id],
-      [STORAGE_LAST_SESSION_EXP, session.expires_at],
-    ]);
+    try {
+      await AsyncStorage.multiSet([
+        [STORAGE_LAST_SESSION_ID,  session.id],
+        [STORAGE_LAST_SESSION_EXP, session.expires_at],
+      ]);
+    } catch (err) {
+      AppLogger.warn('[CrewService] Failed to multiSet session data', { error: err instanceof Error ? err.message : String(err) });
+    }
   }
 
   private _ensureUnsubscribed(): void {

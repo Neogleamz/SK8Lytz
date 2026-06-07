@@ -11,7 +11,8 @@
  *  - No BLE interaction occurs in this hook.
  *  - Depends on: SpeedTrackingService (Supabase), AppLogger
  */
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from '../services/AppLogger';
 import { useAuth } from '../context/AuthContext';
 import type { ISessionSnapshot } from '../services/SpeedTrackingService';
@@ -19,6 +20,9 @@ import { useTelemetryLedger } from './useTelemetryLedger';
 import { SpeedTrackingService } from '../services/SpeedTrackingService';
 
 export type SessionState = 'IDLE' | 'RECORDING' | 'COMPLETE';
+
+const PENDING_SESSION_QUEUE_KEY = '@sk8lytz_pending_sessions';
+let _isFlushingSessionQueue = false;
 
 export interface UseSessionTrackingResult {
   /** FSM-based session state — replaces scattered boolean flags */
@@ -112,16 +116,61 @@ export function useSessionTracking(): UseSessionTrackingResult {
     telemetry.injectStreetSummary(distanceMeters, snapshot.peakSpeedMph);
   }, [sessionState, telemetry]);
 
+  const flushOfflineSessions = useCallback(async () => {
+    if (_isFlushingSessionQueue) return;
+    _isFlushingSessionQueue = true;
+    try {
+      const raw = await AsyncStorage.getItem(PENDING_SESSION_QUEUE_KEY);
+      if (!raw) return;
+      const queue: ISessionSnapshot[] = JSON.parse(raw);
+      if (queue.length === 0) return;
+
+      const remaining = [];
+      for (const session of queue) {
+        try {
+          await SpeedTrackingService.saveSession(session, user?.id || null);
+        } catch (e) {
+          remaining.push(session);
+        }
+      }
+      
+      if (remaining.length !== queue.length) {
+        await AsyncStorage.setItem(PENDING_SESSION_QUEUE_KEY, JSON.stringify(remaining));
+      }
+    } catch (e) {
+      AppLogger.error('[useSessionTracking] Flush failed', e);
+    } finally {
+      _isFlushingSessionQueue = false;
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    // Attempt flush on mount if user is logged in
+    flushOfflineSessions();
+  }, [flushOfflineSessions]);
+
   const saveSession = useCallback(async () => {
     if (!sessionSummary) return;
 
     try {
       await SpeedTrackingService.saveSession(sessionSummary, user?.id || null);
       AppLogger.log('SESSION_SAVED', { action: 'SAVED_TO_DB', durationSec: sessionSummary.durationSec });
+      // If we succeed, attempt to flush any pending queue
+      flushOfflineSessions();
     } catch (err) {
-      AppLogger.error('[useSessionTracking] Failed to persist session to Supabase', err);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      AppLogger.error('[useSessionTracking] Failed to persist session to Supabase, queueing offline', err);
+      
+      try {
+        const raw = await AsyncStorage.getItem(PENDING_SESSION_QUEUE_KEY);
+        const queue: ISessionSnapshot[] = raw ? JSON.parse(raw) : [];
+        queue.push(sessionSummary);
+        await AsyncStorage.setItem(PENDING_SESSION_QUEUE_KEY, JSON.stringify(queue));
+      } catch (e) {
+        AppLogger.error('[useSessionTracking] Failed to queue session offline', e);
+      }
     }
-  }, [sessionSummary]);
+  }, [sessionSummary, user?.id, flushOfflineSessions]);
 
   const dismissModal = useCallback(() => {
     setShowSessionModal(false);

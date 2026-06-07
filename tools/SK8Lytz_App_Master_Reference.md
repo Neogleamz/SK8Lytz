@@ -1423,3 +1423,1225 @@ The health telemetry system implements a **watch-preferred** priority model:
 > **DEDUPLICATION NOTE (2026-06-06):** The previous inline copy of the Protocol Bible (870+ lines) was removed from this file to eliminate drift risk. The standalone `ZENGGE_PROTOCOL_BIBLE.md` was diverging from the inline copy silently. All protocol lookups must reference the standalone file exclusively.
 
 
+
+## 12. Auto-Compiled Domain Architecture
+
+> [!NOTE]
+> This section is strictly managed by the Google Antigravity /deepdive-docs Cartographer Fleet.
+
+### 12.1 Identity & Auth
+<!-- CARTOGRAPHER_START: IDENTITY -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:03:52Z sender=ab9d53a3-2064-45b8-8d02-1d714d15627a priority=MESSAGE_PRIORITY_HIGH content=[🕵️ Reyes | SDE Cartographer | IDENTITY Domain Mapping | cold]
+
+Here is the Elite Architecture map for the **IDENTITY** domain (`src/context/`, `src/services/`, `src/components/account/`).
+
+### 1. File Manifest
+- **`src/context/AuthContext.tsx`**: Centralized authentication state provider managing the Supabase session, user object, and offline-mode flags.
+- **`src/services/AuthProfileService.ts`**: Manages user profile CRUD operations, session history retrieval, and auto-healing of missing metadata.
+- **`src/services/CrewProfileService.ts`**: Handles permanent crew management, including creation, joining, stat aggregation, and member role assignment.
+- **`src/services/ProfileService.ts`**: A barrel re-export facade that maintains the original Profile API surface to prevent call-site changes after the God-object decomposition.
+- **`src/services/ProfileService.types.ts`**: Shared type contracts (`UserProfile`, `PermanentCrew`, etc.) to prevent circular dependencies between the decomposed profile services.
+- **`src/components/account/AccountTabProfile.tsx`**: UI component for viewing/editing display name, username, and computing the user's avatar color/photo.
+- **`src/components/account/AccountTabCrewz.tsx`**: UI tab for managing permanent crew memberships (creating, joining via invite codes, leaving, and deleting crews).
+- **`src/components/account/AccountTabDevices.tsx`**: UI tab displaying registered hardware, grouping devices, hardware capabilities (LED pills), and rename/forget functionalities.
+- **`src/components/account/AccountTabSecurity.tsx`**: UI tab for changing the user's password, updating email, and toggling granular privacy permissions.
+- **`src/components/account/AccountTabSettings.tsx`**: UI tab for push notificatio
+<truncated 1765 bytes>
+agic links via `Linking`.
+- **`AuthProfileService`**:
+  - `fetchOrCreateProfile(user)`: Takes `User`, returns `UserProfile`. Side-effect: Triggers DB insertions/updates to self-heal missing metadata.
+  - `updateProfile(userId, fields)`: Takes `Partial<UserProfile>`. Side-effect: Patches `user_profiles` table.
+- **`CrewProfileService`**:
+  - `createPermanentCrew(name, opts)`: Takes metadata, returns `PermanentCrew`. Side-effect: Inserts into `crews` and auto-adds creator to `crew_memberships`.
+  - `getCrewStats(crewId)`: Takes ID, returns computed stats. Side-effect: Multi-table aggregation spanning `crew_sessions` and `skate_sessions`.
+
+### ARCHIVAL INSTRUCTION
+`[MOVE_TO_ARCHIVE]` The `SK8Lytz_App_Master_Reference.md` likely contains stale references describing `ProfileService` as a monolithic God-object. These references must be archived and updated to reflect the "Meal 1: ProfileService split" where it is strictly a barrel re-export facade over `AuthProfileService`, `CrewProfileService`, and `PushTokenService`.
+
+### SEQUENCE DIAGRAM: Profile Auto-Healing & Creation Flow
+```mermaid
+sequenceDiagram
+    participant App as App Initialization
+    participant Auth as AuthContext (useAuth)
+    participant APS as AuthProfileService
+    participant Supabase as Supabase DB
+
+    App->>Auth: Check Auth State
+    Auth-->>App: Return User Object
+    App->>APS: fetchOrCreateProfile(user)
+    APS->>Supabase: SELECT * FROM user_profiles WHERE user_id = user.id
+    alt Profile Exists
+        Supabase-->>APS: return existingProfile
+        alt Missing display_name or username
+            APS->>APS: Extract from user_metadata
+            APS->>Supabase: UPDATE user_profiles (Self-Heal)
+        end
+        APS-->>App: return profile (healed)
+    else Profile Missing
+        Supabase-->>APS: return null
+        APS->>APS: Derive defaultName (metadata or email prefix)
+        APS->>Supabase: INSERT INTO user_profiles
+        Supabase-->>APS: return createdProfile
+        APS-->>App: return createdProfile
+    end
+```
+
+<!-- CARTOGRAPHER_END: IDENTITY -->
+
+### 12.2 BLE Protocol Core
+<!-- CARTOGRAPHER_START: BLE_CORE -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:03:58Z sender=d0ef790f-fd3f-4b76-b932-c6787e32b803 priority=MESSAGE_PRIORITY_HIGH content=[🕵️ Scout — Reyes | cartography | BLE_CORE | cold]
+
+# 🗺️ Elite Architecture Cartography: BLE_CORE Domain
+
+## 1. File Manifest
+- `src/hooks/useBLE.ts`: Thin Orchestrator hook wrapping `react-native-ble-plx` that delegates scanning, recovery, and connection management to domain-specific sub-hooks.
+- `src/hooks/ble/useBLEScanner.ts`: Manages active scanning for hardware, RSSI gating, telemetry harvesting, and device classification during setup.
+- `src/hooks/ble/useBLESweeper.ts`: Battery-adaptive passive BLE listener and background Interrogator Queue for silent hardware discovery.
+- `src/hooks/ble/useBLEAutoRecovery.ts`: 3-Phase exponential backoff recovery engine for organic disconnects, featuring a group dropout coordinator.
+- `src/hooks/ble/useBLEGattMutex.ts`: Module-level GATT traffic cop providing 4-tier priority async mutex locks to prevent Android GATT 133 collisions.
+- `src/hooks/ble/useBLEHeartbeat.ts`: Stale GATT link detector that pings connected devices every 45s via a `0x63` query or RSSI read.
+- `src/hooks/ble/useBLERSSIMonitor.ts`: Post-connect signal quality monitor polling every 30s to update UI badges and trigger preemptive reconnects.
+- `src/services/ble/BleMachine.ts`: XState v5 state machine defining the strict BLE connection state transitions and gate coordination.
+- `src/services/ble/BleMachine.types.ts`: Typings, Context, and Events for the `BleMachine` XState implementation.
+- `src/services/ble/README.md`: Domain documentation containing the Co-Location Law and strict architectural tripwires.
+
+## 2. Blast Radius
+**What this domain imports (Dependencies):**
+- **External:** `react-native-ble-plx` (BLE Engine), `expo-battery` (Adaptive Sweeper), `@react-native-async-storage/async-storage` (HW Cache), `b
+<truncated 2877 bytes>
+   participant M as useBLEGattMutex
+    participant B as BleManager (plx)
+    participant R as AutoRecovery
+
+    UI->>UBLE: connectToDevices([devices])
+    UBLE->>M: acquireGattLock(Priority: 1)
+    M-->>UBLE: lockHandle (release, signal)
+    UBLE->>B: connectToDevice(mac)
+    B-->>UBLE: connected
+    UBLE->>B: discoverAllServicesAndCharacteristics()
+    UBLE->>B: requestMTU(512)
+    UBLE->>M: release()
+    UBLE-->>UI: Connected State
+
+    Note over B, R: Organic Disconnect Event
+    B-->>R: onDeviceDisconnected(mac)
+    R->>R: 1.5s Debounce (Group Coordinator)
+    alt Single Device
+        R->>M: acquireGattLock(Priority: 2)
+        M-->>R: lockHandle
+        R->>B: Reconnect Loop (Phase 1/2)
+        R->>M: release()
+    else Group Dropout
+        R->>UBLE: onGroupDropout([devices])
+        UBLE->>M: acquireGattLock(Priority: 1)
+        UBLE->>B: Batch Reconnect
+        UBLE->>M: release()
+    end
+```
+
+## 7. FSM Map (DOMAIN-SPECIFIC ELITE DIRECTIVE)
+```mermaid
+stateDiagram-v2
+    [*] --> IDLE
+
+    IDLE --> SCANNING : SCAN_START
+    IDLE --> CONNECTING : CONNECT_REQUEST
+    IDLE --> DISCONNECTING : DISCONNECT_REQUEST
+    IDLE --> RECOVERING : RECOVERY_START
+
+    SCANNING --> IDLE : SCAN_STOP
+    SCANNING --> CONNECTING : CONNECT_REQUEST
+    SCANNING --> DISCONNECTING : DISCONNECT_REQUEST
+
+    CONNECTING --> READY : CONNECT_SUCCESS
+    CONNECTING --> IDLE : CONNECT_FAIL
+    CONNECTING --> RECOVERING : RECOVERY_START
+    CONNECTING --> DISCONNECTING : DISCONNECT_REQUEST
+
+    READY --> DISCONNECTING : DISCONNECT_REQUEST
+    READY --> RECOVERING : RECOVERY_START
+    READY --> IDLE : UPDATE_CONNECTED_DEVICES (0 devices)
+
+    DISCONNECTING --> IDLE : DISCONNECT_COMPLETE
+
+    RECOVERING --> READY : RECOVERY_COMPLETE (>0 devices)
+    RECOVERING --> IDLE : RECOVERY_COMPLETE (0 devices)
+    RECOVERING --> CONNECTING : CONNECT_REQUEST
+    RECOVERING --> IDLE : RECOVERY_FAIL
+
+    note left of IDLE
+        FORCE_IDLE event
+        from ANY state
+        forces transition
+        back to IDLE
+    end note
+```
+
+<!-- CARTOGRAPHER_END: BLE_CORE -->
+
+### 12.3 Group Sync & Swarm
+<!-- CARTOGRAPHER_START: GROUP_SYNC -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:04:01Z sender=da0e43e1-023d-4e96-9b20-c44dc59eb1fc priority=MESSAGE_PRIORITY_HIGH content=[🕵️ Reyes | Cartographer Analysis | GROUP_SYNC mapping | warm]
+
+Here is the domain mapping payload for `GROUP_SYNC`.
+
+# Domain Architecture: GROUP_SYNC
+
+## 1. File Manifest
+* **`src/services/GroupRepository.ts`**: Single Source of Truth for local-first device fleet groupings, handling AsyncStorage caching and Supabase synchronization via junction table RPCs.
+* **`src/services/CrewService.ts`**: Manages real-time, ephemeral crew session lifecycle (create/join/leave) and broadcasts `scene_update` payloads via Supabase Realtime.
+* **`src/services/CrewProfileService.ts`**: Permanent crew persistence layer (CRUD) providing cross-session roster management, stats, and role-based access control.
+* **`src/context/CrewContext.tsx`**: The unified React Context boundary that aggregates state from domain hooks to power all Crew-related UI.
+* **`src/components/crew/CrewLandingScreen.tsx`**: Primary Hub entry point listing user's permanent crews, an interactive map of nearby sessions, and quick actions.
+* **`src/components/crew/CrewControllerScreen.tsx`**: Active session dashboard rendering the live member list, sync status, and leadership handoff controls.
+* **`src/components/crew/CrewCreateScreen.tsx`**: Form UI for creating new permanent crews or starting spontaneous live sessions.
+* **`src/components/crew/CrewManageScreen.tsx`**: UI for owners to manage crew metadata, edit members, and securely delete crews.
+* **`src/components/crew/CrewDetailScreen.tsx`**: Detailed view of a crew's stats and roster for both members and non-members.
+* **`src/components/crew/CrewJoinScreen.tsx`**: UI for joining a private crew via a 6-character invite code.
+* **`src/components/crew/CrewLandingMap.tsx`**: Map visualization showing geographical proximity of ne
+<truncated 2603 bytes>
+*: Formatted lists (`myCrews`, `activeSessions`, `nearbySpots`), loading booleans, modal navigation step state.
+  * **Side-Effects**: Debounced search queries to `user_profiles`, passive location caching via `expo-location`, periodic background polling for nearby nodes.
+
+## 5. Sequence Diagram: Live Session Lifecycle
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Leader
+    participant CrewController
+    participant CrewService
+    participant Supabase DB
+    participant RealtimeChannel
+    actor Member
+
+    Leader->>CrewController: Start Session (Location, Name)
+    CrewController->>CrewService: createSession()
+    CrewService->>Supabase DB: Cleanup legacy sessions
+    CrewService->>Supabase DB: INSERT crew_sessions & auto-join
+    Supabase DB-->>CrewService: Session ID returned
+    CrewService->>RealtimeChannel: channel("crew:{id}").subscribe()
+    CrewController-->>Leader: Show Controller Dashboard
+    
+    Note over Leader, RealtimeChannel: Scene Broadcasting (Sync Mode)
+    Leader->>CrewController: Changes LED Scene/Color
+    CrewController->>CrewService: broadcastScene(payload)
+    CrewService->>RealtimeChannel: send(type: 'broadcast', event: 'scene_update')
+    RealtimeChannel-->>Member: receives scene_update
+    Member->>Member: Applies identical payload to Skates
+    
+    Note over Leader, RealtimeChannel: Session Teardown
+    Leader->>CrewController: Taps "End Session"
+    CrewController->>CrewService: endSession()
+    CrewService->>Supabase DB: UPDATE status = 'ended', active = false
+    CrewService->>RealtimeChannel: send(event: 'session_ended')
+    RealtimeChannel-->>Member: receives session_ended (force disconnect)
+    CrewService->>RealtimeChannel: unsubscribe()
+```
+
+## 6. Archival Instruction
+[MOVE_TO_ARCHIVE] Stale `GROUP_SYNC` architecture documentation discovered in `tools/SK8Lytz_App_Master_Reference.md` (specifically lines 1579-1648 and 2145-2157 regarding older offline sync mechanisms and references). This should be reconciled with the newly analyzed file architecture.
+
+<!-- CARTOGRAPHER_END: GROUP_SYNC -->
+
+### 12.4 Control Surfaces
+<!-- CARTOGRAPHER_START: UI_CONTROLS -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:03:57Z sender=45bf9530-5777-467d-9b3e-cc8de30ffbc5 priority=MESSAGE_PRIORITY_HIGH content=### 🗺️ SDE Cartographer Payload: `UI_CONTROLS`
+
+#### 1. File Manifest
+*   **`src/screens/AuthScreen.tsx`**: Orchestrates the authentication boundary, mode toggling (Login/Signup/MagicLink), offline sandbox overrides, and session expiration states.
+*   **`src/screens/DashboardScreen.tsx`**: The root application monolith that serves as the primary BLE connection lifecycle manager, global telemetry host, and 4-slab layout renderer (Header, Crew Hub, My Skates, Hardware Fleet).
+*   **`src/components/DockedController.tsx`**: The primary routing shell for the LED control interface, managing the BLE write bus, optimistic UI dispatch, mode FSM, and delegating sub-panel rendering via the `DockedBus`.
+*   **`src/screens/Onboarding/HardwareSetupWizardScreen.tsx`**: Handles the 3-step First Time User Experience (FTUE) for scanning, physically identifying via atomic ping/probe, and registering LED controllers into the local fleet.
+*   **`src/screens/Onboarding/PermissionsOnboardingScreen.tsx`**: Manages required OS permissions (Bluetooth, Camera, Location) with auto-prompt strategies before gating the user into the main application.
+
+#### 2. Blast Radius
+*   **Imports**:
+    *   **Domain Hooks**: `useDashboardAutoConnect`, `useDashboardGroups`, `useDashboardProfile`, `useDashboardCrew`, `useHardwareNotifications`, `useDockedControllerState`, `useControllerDispatch`, `useStreetMode`, `useOptimisticBLE`, `useRegistration`.
+    *   **Contexts**: `ThemeContext`, `BLEContext`, `SessionContext`, `FavoritesContext`.
+    *   **UI Components**: Modals (`AdminToolsModal`, `AccountModal`, `GroupSettingsModal`), Docked Panels (`DockedDock`, `MusicPanel`, `ProEffectsPanel`, `BuilderPanel`), Dashboard Slabs (`HardwareStatusPills`, `DashboardCrewPanel`).
+  
+<truncated 3270 bytes>
+aster_Reference.md`, the section under `#### DockedController Domain (src/hooks/)` describing `useStreetMode` and `useSessionTracking` states that they own the "Accelerometer subscription, G-force calculation... GPS speed sampling."
+This is strictly **stale and inaccurate** per BUG-01 fix (2026-05-08). The `DashboardScreen` now exclusively owns `useGlobalTelemetry`/`useSession` and threads `gpsSpeed` and `peakGForce` down to `DockedController` as props to prevent double-sensor battery drain. The documentation must be updated to reflect that `DockedController` acts solely as a display/dispatch consumer for these metrics.
+
+#### 7. Domain-Specific Elite Directive: Design System & Token Manifest
+
+The `UI_CONTROLS` domain strictly enforces a programmatic React Native StyleSheet-based design system (no Tailwind). All styling relies on the `ThemePalette` injected via `useTheme()`.
+
+**Token Manifest:**
+*   **Base Colors (`Colors` Object)**:
+    *   `background`: App root wrapper `#0D0D0D`
+    *   `surface`: Base panel backgrounds
+    *   `surfaceHighlight`: Selected states and borders
+    *   `primary`: Brand Cyan (`#00f0ff`)
+    *   `text`: Pure white or high-contrast body (`#ffffff`)
+    *   `textMuted`: Secondary readable text (`#888888`)
+*   **Semantic Accents (Hardcoded in Components)**:
+    *   Success Green: `#4ade80`
+    *   Error / Warning Red: `#ff4444` / `#FF6B6B`
+    *   Warning Amber: `rgba(255, 165, 0, 0.12)`
+*   **Spacing (`Spacing` Object)**:
+    *   `xxs`, `xs`, `sm`, `md`, `lg`, `xl`, `xxxl`
+    *   Used universally for padding, margins, and flex gaps (`gap: Spacing.sm`).
+*   **Layout / Typography**:
+    *   `Layout.borderRadius`: Standardized component rounding.
+    *   `Typography.title`: Standardized screen headers.
+*   **UI Components**: Buttons rely on full-width styling (`width: '100%'`), heavy weights (`fontWeight: '900'`), and large touch targets (`paddingVertical: Spacing.lg`). Drop shadows are used generously for glowing UI elements (`shadowColor: '#00f0ff'`, `elevation: 4`).
+
+<!-- CARTOGRAPHER_END: UI_CONTROLS -->
+
+### 12.5 Data & Telemetry
+<!-- CARTOGRAPHER_START: DATA_LAYER -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:03:52Z sender=0b8c108b-ea01-4152-a9b1-66a31aabbe6c priority=MESSAGE_PRIORITY_HIGH content=[🕵️ Scout — Reyes | Cartographer Architecture Scan | DATA_LAYER | warm]
+
+# 🗺️ Elite Architecture: DATA_LAYER
+
+## 1. File Manifest
+- `src/services/DeviceRepository.ts`: The Single Source of Truth (SSOT) for device and group persistence. A singleton service orchestrating local-first reads/writes via AsyncStorage, anti-resurrection tombstones, and background synchronization to Supabase.
+- `src/services/TelemetryService.ts`: **[MOVE_TO_ARCHIVE]** This file does not exist. The architecture is natively hook-driven (`useGlobalTelemetry`, `useAdminTelemetry`). Documentation referencing it is stale.
+- `src/types/supabase.ts`: Autogenerated TypeScript definitions enforcing strict type parity with the Supabase PostgREST schema (tables, views, enums).
+- `src/services/supabaseClient.ts`: Supabase client initializer wrapping `expo-secure-store` for Auth state persistence, equipped with built-in mock fallbacks for seamless offline-mode execution.
+
+## 2. Blast Radius
+- **`DeviceRepository.ts`**: High impact. Any modification to its immutable array spread patterns (`[...this.devices]`) or pub-sub triggers (`_notifyListeners`) will instantly ripple to downstream hooks (`useRegistration`, `useDashboardGroups`), potentially breaking UI React reference-identity re-renders.
+- **`supabaseClient.ts`**: Critical impact. Modifying the Auth storage adapter or its initialization parameters risks breaking user session persistence, triggering RLS failures across all authenticated database queries.
+- **`supabase.ts`**: Schema impact. Regenerating this file forces structural type updates across all hooks, RPC calls, and Supabase interaction surfaces.
+
+## 3. Context Matrix
+- **Consumed Contexts**: Runs entirely independent of React Context.
+- **Provided C
+<truncated 1525 bytes>
+ is Online & Authenticated
+        Repo->>DB: rpc('upsert_group_with_devices')
+        Repo->>DB: upsert('registered_devices')
+    else User is Offline
+        Repo->>Local: _queuePendingSync(PENDING_KEY)
+    end
+    
+    Note over Repo,DB: On next syncFromCloud() boot:
+    Repo->>DB: select * from registered_devices
+    DB-->>Repo: Cloud Rows
+    Repo->>Repo: Filter by Local Tombstones
+    Repo->>Repo: Smart Merge (Preserve Local-only & Pending)
+    Repo->>Local: AsyncStorage.setItem(DEVICES_KEY)
+    Repo->>UI: _notifyListeners()
+    Repo->>DB: _flushPendingSync() (Push Offline Queue)
+    Repo->>DB: _flushPendingTombstones() (Push Deletions)
+```
+
+## 6. Database Schema & RLS Policies
+### Database Schema
+- **`registered_devices`**: Hardware bounds ledger mapped by `user_id` and `device_mac`. Defines physical LED topology (`led_points`, `segments`, `strip_type`, `sorting`).
+- **`registered_groups`**: Organizational fleet units keyed by `id` and `user_id`.
+- **`device_group_members`**: Join table binding `device_id` to `group_id`.
+- **`admin_audit_logs` / `discovered_devices_telemetry`**: Ephemeral telemetry and secure audit logs.
+
+### RLS Policies
+- **Tenant Isolation**: Core DML (Data Manipulation Language) queries strictly filter via Row Level Security `user_id = auth.uid()` to enforce rigid user data siloing.
+- **Atomic Transactions**: To circumvent orphaned records during RLS validation sweeps, groups and devices are synchronized atomically via the `upsert_group_with_devices` RPC.
+- **Evasion / Overrides**: Selected tables and cascading events (like `delete_account`) utilize `SECURITY DEFINER` RPCs to deliberately bypass default RLS restrictions for privileged architectural operations.
+
+## 7. Environment & Secrets Manifest
+- **`EXPO_PUBLIC_SUPABASE_URL`**: Target endpoint for the Supabase network plane.
+- **`EXPO_PUBLIC_SUPABASE_ANON_KEY`**: Client-side anonymous role key. Without this environment variable present, the `supabaseClient` automatically drops into its offline proxy implementation.
+
+<!-- CARTOGRAPHER_END: DATA_LAYER -->
+
+### 12.6 Utilities & Types
+<!-- CARTOGRAPHER_START: UTILS -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:03:47Z sender=f3f179dd-db87-40cf-81ed-8e7daaa6d91e priority=MESSAGE_PRIORITY_HIGH content=# SDE Cartographer Node Payload
+**DOMAIN**: UTILS (`src/utils/*`, `src/types/*`)
+
+## 1. File Manifest
+
+*   **`src/utils/BlePayloadParser.ts`**: Deterministically parses Zengge V1/V2 BLE configuration and RF payload bytes without crashing the UI thread.
+*   **`src/utils/ColorUtils.ts`**: Pure mathematical color conversion utilities for hue/hex/rgb mapping and camera-to-LED vibrancy boosting.
+*   **`src/utils/MusicDictionary.ts`**: Authoritative registry mapping hardware music profiles (IDs 1-30) to UI color picker modes (`NONE`, `FG_ONLY`, `FG_BG`).
+*   **`src/utils/NamingUtils.ts`**: Centralizes deterministic fallback names for hardware groups and BLE devices to prevent UI/DB drift.
+*   **`src/utils/NormalizationUtils.ts`**: Normalizes user-facing UI speeds (0-100) into safe hardware-compatible speed ranges (1-31).
+*   **`src/utils/classifyBLEDevice.ts`**: Core logic mapping raw BLE scan records and EEPROM cache entries into structured `PendingRegistration` objects.
+*   **`src/utils/kMeansPalette.ts`**: High-performance worklet for extracting k-dominant colors from an RGB pixel array using K-Means clustering.
+*   **`src/utils/migrateAuthTokens.ts`**: Asynchronously migrates legacy Supabase authentication tokens from insecure AsyncStorage to SecureStore.
+*   **`src/utils/presetColorUtils.ts`**: Single source of truth for resolving dominant glow and gradient colors for preset and group UI cards.
+*   **`src/types/ProductCatalog.ts`**: Defines the `ProductProfile` shape and visualization parameters for dynamic hardware catalog entries.
+*   **`src/types/ble.types.ts`**: Centralizes domain-specific BLE connection interfaces and re-exports `react-native-ble-plx` types to eliminate `any` casts.
+*   **`src/types/dashboard.types.ts`**: Shared d
+<truncated 3188 bytes>
+efaults (Priority 3)
+    U-->>S: Return PendingRegistration (SSOT)
+    end
+```
+
+```mermaid
+sequenceDiagram
+    participant App as App Boot Sequence
+    participant M as migrateAuthTokens.ts
+    participant AS as AsyncStorage (Legacy)
+    participant SS as SecureStore (Encrypted)
+    
+    rect rgb(30, 30, 30)
+    Note over App,SS: Legacy Token Vault Migration
+    App->>M: migrateAuthTokensToSecureStore()
+    M->>AS: Check @Sk8lytz_auth_migration_v1
+    alt Not Migrated
+        M->>AS: Get 'supabase.auth.token'
+        AS-->>M: Return legacyToken
+        M->>SS: Check existing 'supabase.auth.token'
+        alt No Secure Token Found
+            M->>SS: setItemAsync(legacyToken)
+        end
+        M->>AS: removeItem('supabase.auth.token')
+        M->>AS: setItem('@Sk8lytz_auth_migration_v1', 'true')
+    end
+    M-->>App: Promise Resolved
+    end
+```
+
+---
+
+## DOMAIN-SPECIFIC ELITE DIRECTIVE: Design System & Token Manifest
+
+**Core Color Engine (`ColorUtils.ts`):**
+*   **Palette Definition (`COLOR_PRESET_PALETTE`)**:
+    *   `#FF0000` (Red), `#FF8000` (Orange), `#FFFF00` (Yellow), `#00FF00` (Green), `#00FFFF` (Cyan), `#0000FF` (Blue), `#800080` (Purple), `#FF00FF` (Magenta), `#FFFFFF` (White), `#000000` (Black).
+*   **Hue Lock (`PRESET_HUE_MAP`)**: Synchronizes exact hex defaults to 0-360 hue slider values instantly.
+*   **Camera Vibe Boost**: Enforces `S=1.0`, `V=1.0` (HSV) maximization while gating pure grays/pastels (`S < 0.20`) for LED pipeline translation.
+
+**Generative & Preset Card Token Mapping (`presetColorUtils.ts`):**
+*   **Generative Rainbow**: `#FF0000`, `#FF7F00`, `#FFFF00`, `#00FF00`, `#00BFFF`, `#0000FF`, `#8B00FF`. (Replaces bogus single colors on `GENERATIVE` patterns for visual hardware parity).
+*   **Theme UI Mapping (`resolveGradientColors`)**:
+    *   `FG_ONLY`: Yields `[fg, fg]`
+    *   `FG_BG`: Yields `[fg, bg]`
+    *   `BUILDER`: Yields `[n1, n2, ...]` (Multi-node gradients)
+    *   `MUSIC`: Yields `[primary, secondary]`
+    *   `GENERATIVE`: Yields `GENERATIVE_RAINBOW` array.
+
+<!-- CARTOGRAPHER_END: UTILS -->
+
+### NATIVE & WATCH\n<!-- CARTOGRAPHER_START: NATIVE_&_WATCH -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:04:41Z sender=a72efdd0-4754-489a-8bd6-ce6304e9d773 priority=MESSAGE_PRIORITY_HIGH content=[🕵️ Scout — Reyes | Cartography & Research | NATIVE_&_WATCH | warm]
+
+Here is the Elite Architecture Markdown Payload for the `NATIVE_&_WATCH` domain, spanning Android, iOS, Wear OS, watchOS, and the React Native Bridge. 
+
+**Stale Documentation Notice:**
+The existing `NATIVE_&_WATCH` section in `SK8Lytz_App_Master_Reference.md` (lines 1802-1837) is missing the entire Wear OS Android companion (`android/sk8lytzWear/`) and the React Native Bridge (`modules/sk8lytz-watch-bridge/`). I am tagging it for archival.
+
+`[MOVE_TO_ARCHIVE] - Master Reference Section 12.6 NATIVE_&_WATCH (Stale: Missing Wear OS & Bridge)`
+
+---
+
+# NATIVE & WATCH DOMAIN ARCHITECTURE
+
+## 1. File Manifest
+**Android Core**
+- `android/app/src/main/java/com/neogleamz/sk8lytz/MainActivity.kt`: React Native Activity entry point coordinating splash screen, Fabric architecture, and HealthConnect permissions.
+- `android/app/src/main/java/com/neogleamz/sk8lytz/MainApplication.kt`: Core ReactApplication class setting up ExpoReactHostFactory and application lifecycle.
+
+**Native Watch Bridge (`modules/sk8lytz-watch-bridge`)**
+- `src/index.ts`: React Native bridge API exposing methods for syncing session state, metric updates, and listening to watch commands (`WatchSessionState`).
+- `android/src/main/java/expo/modules/sk8lytzwatchbridge/Sk8lytzWatchBridgeModule.kt`: Android implementation of the Expo module bridging React Native to the Google Play Wearable Data/Message Layer API.
+- `ios/Sk8lytzWatchBridgeModule.swift`: iOS implementation of the Expo module bridging React Native to `WCSession`.
+
+**watchOS Companion (`targets/watch/`)**
+- `ContentView.swift`: Main watchOS dashboard UI rendering live speed, heart rate, calories, and phone-anchored elapsed timer.
+- `WatchConnecti
+<truncated 2661 bytes>
+N*: `addWatchHealthListener(update: WatchHealthUpdate)`, `addWatchCommandListener(command: WatchCommand)`
+  - *OUT*: `syncSessionState(state: WatchSessionState)`, `sendMetricUpdate(metrics)`
+- **`WatchConnectivityManager` (watchOS)**
+  - *IN (from Phone)*: `didReceiveApplicationContext` / `didReceiveMessage` → `{ status, speed, ... }`
+  - *OUT (to Phone)*: `send(["command": "START_SESSION"])`, `send(["healthUpdate": true, ...])`
+- **`WearableCommunicationService` (Wear OS)**
+  - *IN (from Phone)*: `onDataChanged` (Path: `/sk8lytz/state`), `onMessageReceived` (Path: `/sk8lytz/metrics`)
+  - *OUT (to Phone)*: WearMessageSender broadcasts `PATH_COMMAND` or `PATH_HEALTH`.
+- **`HealthTracker` (Wear OS) & `HealthManager` (watchOS)**
+  - *IN*: `startTracking()` / `startWorkout()`
+  - *OUT*: Real-time HR and Calorie integer values published to communication managers.
+
+## 5. Sequence Diagram: Phone-to-Watch Bidirectional Session Sync
+```mermaid
+sequenceDiagram
+    actor Skater
+    participant RN as Phone App (React Native)
+    participant Bridge as Sk8lytzWatchBridge
+    participant Wear as watchOS / Wear OS Companion
+    participant Health as HealthManager / HealthTracker
+    
+    Skater->>RN: Starts Skate Session
+    RN->>Bridge: syncSessionState({status: 'ACTIVE'})
+    Bridge->>Wear: DataClient / WCSession Update
+    Wear->>Health: startWorkout() / startTracking()
+    
+    loop Every 3 seconds (Phone -> Watch)
+        RN->>Bridge: sendMetricUpdate({ speed: 12.5 })
+        Bridge->>Wear: MessageClient / WCSession Message
+        Wear->>Wear: Update Speed UI
+    end
+    
+    loop Every 5 seconds (Watch -> Phone)
+        Health-->>Wear: live HR & Calories
+        Wear->>Bridge: Send healthUpdate payload
+        Bridge-->>RN: emit 'onWatchHealthUpdate'
+        RN->>RN: Update Phone Dashboard UI
+    end
+    
+    Skater->>RN: Stops Session
+    RN->>Bridge: syncSessionState({status: 'SUMMARY', totalDuration...})
+    Bridge->>Wear: Show Summary Card (10s)
+    Wear->>Health: stopWorkout() / stopTracking()
+```
+
+<!-- CARTOGRAPHER_END: NATIVE_&_WATCH -->\n\n### NOTIFICATIONS & ROUTING\n<!-- CARTOGRAPHER_START: NOTIFICATIONS_&_ROUTING -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:04:08Z sender=2bb792b8-bc10-496d-a9d6-2ce172cc62cc priority=MESSAGE_PRIORITY_HIGH content=# 🗺️ SDE Cartographer Node Payload: NOTIFICATIONS_&_ROUTING
+
+> **Note:** The `src/navigation/` directory does not exist. Application routing is driven entirely by conditional rendering in `App.tsx` based on global state (Context).
+
+## 1. File Manifest
+- `App.tsx`: The root application boundary that initializes contexts, orchestrates global state-based routing between Auth and Dashboard, and wraps the component tree in core providers (Compliance, Bluetooth, etc.).
+- `src/providers/BluetoothGuard.tsx`: A global blocking gate that intercepts the UI lifecycle if Bluetooth permissions are missing or the adapter is disabled, ensuring no child components execute without core connectivity.
+- `src/providers/ComplianceGate.tsx`: A blocking provider that enforces EULA acceptance (querying Supabase or offline storage) before granting the user access to the main application.
+- `src/services/NotificationService.ts`: A singleton service wrapping `expo-notifications` to orchestrate Expo Push Token registration, local scheduling for session alerts, and handling foreground notification responses.
+
+## 2. Blast Radius
+- **App.tsx**: 
+  - **Imports**: `DashboardScreen`, `AuthScreen`, Contexts (`ThemeContext`, `AuthContext`, `BLEContext`, `FavoritesContext`, `SessionContext`), `ComplianceGate`, `BluetoothGuard`, `AppLogger`, `useOfflineSyncWorker`, `warmLedgerCache`.
+  - **Imported By**: Expo entry point.
+- **src/providers/BluetoothGuard.tsx**:
+  - **Imports**: `BLEContext`, `PermissionService`, `ThemeContext`, `AppLogger`.
+  - **Imported By**: `App.tsx`.
+- **src/providers/ComplianceGate.tsx**:
+  - **Imports**: `AuthContext`, `ThemeContext`, `AppSettingsService`, `supabaseClient`, `EulaModal`, `AppLogger`, `AsyncStorage`.
+  - **Imported By**: `App.tsx
+<truncated 1040 bytes>
+ invoked when user taps a crew session notification.
+- **`cleanup()`** → `Promise<void>`
+  - **Side-effects**: Unregisters push token from Supabase and removes OS notification event listeners.
+- **`sendCrewInviteNotification(...)`, `sendSessionLiveAlert(...)`** → `Promise<void>`
+  - **Side-effects**: Dispatches immediate local notifications via `expo-notifications`.
+- **`sendSessionStartingSoon(...)`** → `Promise<string | null>`
+  - **Side-effects**: Schedules a local notification 15 minutes before the session starts.
+
+## 5. Sequence Diagram: App Boot & Routing Pipeline
+```mermaid
+sequenceDiagram
+    participant User
+    participant App
+    participant AuthContext
+    participant ComplianceGate
+    participant BluetoothGuard
+    participant Dashboard
+
+    User->>App: Launch Application
+    App->>AuthContext: Check authentication state
+    AuthContext-->>App: isAuthenticated
+
+    alt Not Authenticated
+        App->>User: Render <AuthScreen>
+    else Authenticated
+        App->>ComplianceGate: Render <ComplianceGate>
+        ComplianceGate->>ComplianceGate: Verify EULA version
+        
+        alt Outdated or Missing EULA
+            ComplianceGate->>User: Show EulaModal
+            User->>ComplianceGate: Accept EULA
+        end
+        
+        ComplianceGate->>BluetoothGuard: Render <BluetoothGuard>
+        BluetoothGuard->>BluetoothGuard: Verify BLE Permissions & Adapter
+        
+        alt BLE Missing or Off
+            BluetoothGuard->>User: Show Permissions UI Intercept
+            User->>BluetoothGuard: Grant / Enable Bluetooth
+        end
+        
+        BluetoothGuard->>Dashboard: Render <DashboardScreen>
+    end
+```
+
+## 6. Archival Tag
+`[MOVE_TO_ARCHIVE]` The legacy documentation for NOTIFICATIONS_&_ROUTING found in `tools/SK8Lytz_App_Master_Reference.md` (lines 1837-1873) is stale and should be archived. It incorrectly lists `PushTokenService` as part of this exact directory group and misses the state-based routing elements like `App.tsx`, `BluetoothGuard`, and `ComplianceGate`.
+
+<!-- CARTOGRAPHER_END: NOTIFICATIONS_&_ROUTING -->\n\n### SESSION TRACKING\n<!-- CARTOGRAPHER_START: SESSION_TRACKING -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:03:44Z sender=b1859595-d3da-4f33-9a0f-9ab0ebe34601 priority=MESSAGE_PRIORITY_HIGH content=[🕵️ Reyes | architectural-mapping | SESSION_TRACKING | cold]
+
+Here is the Elite Architecture mapped for the `SESSION_TRACKING` domain.
+
+> [!WARNING]
+> **Missing File Found:** The requested `src/services/SessionTrackingService.ts` does not exist in the current codebase. Its responsibilities are split between `src/hooks/useSessionTracking.ts` (state/accumulator) and `src/services/SpeedTrackingService.ts` (Supabase persistence). Both alternatives have been analyzed to fulfill the domain architecture.
+
+### 1. File Manifest
+
+- **`src/context/SessionContext.tsx`**: Orchestrates the global session state machine (IDLE, ACTIVE, PAUSED, ENDING), ties together phone/watch telemetry, persists phase to AsyncStorage for crash recovery, and manages Android 14+ Foreground Services via Notifee.
+- **`src/hooks/useSessionTracking.ts`**: Manages the local recording state and provides injected mutable refs (speed, distance, G-force) for high-frequency GPS accumulation without re-renders.
+- **`src/services/SpeedTrackingService.ts`**: Manages the persistence layer for sessions, including Supabase REST INSERTs, calorie estimation, lifetime aggregations, and an offline queue mechanism (`PENDING_SESSION_QUEUE_KEY`).
+
+### 2. Blast Radius
+
+**Imports (Upstream dependencies):**
+- `expo-location`, `@notifee/react-native`, `@react-native-async-storage/async-storage`
+- `sk8lytz-watch-bridge` (WatchCommand, WatchHealthUpdate)
+- `../hooks/useGlobalTelemetry`, `../hooks/useHealthTelemetry`
+- `supabaseClient`, `AppLogger`
+
+**Exported to (Downstream consumers):**
+- `src/screens/DashboardScreen.tsx` (consumes `useSession`)
+- `src/components/DockedController.tsx` (consumes `useSessionTracking`)
+- `src/components/docked/StreetPanel.tsx` (displays chips based on tracking
+<truncated 1246 bytes>
+ssionSnapshot`, `userId` | `Promise<string | null>` (session UUID) | Executes Supabase INSERT. If offline, pushes to `PENDING_SESSION_QUEUE_KEY`. Triggers `HealthSyncService` workout persistence (Apple/Google Health). |
+
+### 5. Archival Instruction
+
+**[NO_STALE_DOCS]**: The `SK8Lytz_App_Master_Reference.md` correctly aligns with the existing codebase (WatchBridge architecture, auto-recovering session mechanisms). The documentation makes no false references to `SessionTrackingService.ts`. No `[MOVE_TO_ARCHIVE]` required for the Master Reference.
+
+### 6. Sequence Diagram: Session Lifecycle & Auto-Pause Flow
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Watch as WatchBridge
+    participant App as SessionContext
+    participant FGS as Notifee / Android
+    participant Telemetry as useGlobalTelemetry
+    participant DB as AsyncStorage
+
+    User->>App: startSession()
+    App->>DB: persistSessionPhase('active')
+    App->>App: setSessionPhase('ACTIVE')
+    App->>Watch: syncSessionState({status: 'ACTIVE'})
+    App->>FGS: displayNotification(FGS + Location Type)
+
+    loop Every 5 Seconds
+        App->>FGS: Update Distance & Speed
+    end
+
+    note over App, Telemetry: Auto-Pause Triggered by Low Speed
+    Telemetry-->>App: gpsSpeed < 0.2 mph for 10s
+    App->>App: setSessionPhase('PAUSED')
+    App->>DB: persistSessionPhase('paused', Date.now())
+    App->>Watch: syncSessionState({status: 'PAUSED'})
+    App->>FGS: updateNotification("Skate Session Paused")
+
+    note over App, Telemetry: Resume Triggered by Movement
+    Telemetry-->>App: gpsSpeed >= 0.2 mph
+    App->>App: setSessionPhase('ACTIVE')
+    App->>DB: persistSessionPhase('active')
+
+    User->>App: endSession()
+    App->>App: setSessionPhase('ENDING')
+    App->>DB: persistSessionPhase('idle')
+    App->>Watch: syncSessionState({status: 'SUMMARY', stats...})
+    App->>App: setSessionPhase('IDLE')
+    App->>FGS: stopForegroundService()
+    
+    note over App: 10s Auto-Dismiss Delay
+    App->>Watch: syncSessionState({status: 'STOPPED'})
+```
+
+<!-- CARTOGRAPHER_END: SESSION_TRACKING -->\n\n### HARDWARE PROTOCOLS\n<!-- CARTOGRAPHER_START: HARDWARE_PROTOCOLS -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:04:07Z sender=9442851c-bc62-4193-ae40-c4ec9f6febf8 priority=MESSAGE_PRIORITY_HIGH content=# 🗺️ SDE Cartographer Payload: HARDWARE_PROTOCOLS
+
+## 1. File Manifest
+- **`BanlanxAdapter.ts`**: HAL adapter translating unified commands to the BanlanX SP621E native `0xA0` prefix opcode format.
+- **`ControllerRegistry.ts`**: Runtime registry and discovery resolver matching BLE advertisement UUIDs to their corresponding `IControllerProtocol` adapter.
+- **`IControllerProtocol.ts`**: The unified Hardware Abstraction Layer (HAL) interface defining capability flags, EEPROM mappings, and packet builders for all hardware targets.
+- **`PatternEngine.ts`**: The mathematical synthesizer serving as the SSOT for `SK8LYTZ_TEMPLATES` registry and routing UI effects to either `0x51` or `0x59` hardware pathways.
+- **`PositionalMathBuffer.ts`**: Generates mathematically interpolated LED color arrays to safely bypass positional bounds in the hardware's `0x59` spatial chunker.
+- **`SpatialEngine.ts`**: Core DSP library implementing mathematical wave functions, spatial chasing, and color fading generators for spatial `0x59` and `0x51` LED arrays.
+- **`SymphonyEngine.ts`**: Audio-reactive generative engine producing discrete pixel opacities and matrices based on 0.0-1.0 magnitude inputs and temporal `0x51` states.
+- **`VisualizerEngine.ts`**: Connects mathematical pattern buffers to the React `ProductVisualizer`, orchestrating array rotations and fractional ticks for physical parity rendering.
+- **`ZenggeAdapter.ts`**: Primary HAL protocol handler managing ZENGGE connection lifecycles, MTU-aware `0x40` packet fragmentation, and protocol result wrapping.
+- **`ZenggeProtocol.ts`**: The monolithic low-level binary framing engine mapping directly to the `ZENGGE_PROTOCOL_BIBLE` opcodes (`0x51`, `0x59`, `0x62`, `0x63`, `0x73`).
+
+## 2. Blast Radius
+- **I
+<truncated 2547 bytes>
+.., 0x0F]`. Custom extended slots encode active flag (`0xF0`), mode, speed, 2x RGB colors, and explicit direction byte.
+- **Music Config (`0x73`)**: `[0x73, isOn, matrixType(0x26/0x27), modeId, D_r, D_g, D_b, S_r, S_g, S_b, sensitivity, brightness]`.
+
+### BANLANX Protocol (SP621E)
+- **Base Packet Frame**: `[0xA0, OPCODE, dataLen, <Payload>]`.
+- **Effect Selector (`0x53/0x54`)**: Requires dual dispatches with strict 20ms delays. Effect = `[0xA0, 0x53, 0x01, effectId]`. Speed = `[0xA0, 0x54, 0x01, speed(1-10)]`.
+- **Native Mic Engine (`0x59/0x5A`)**: Offloads FFT logic entirely. `[0xA0, 0x59, 0x01, 0x00]` enables internal mic. `[0xA0, 0x5A, 0x01, gain]` maps sensitivity.
+
+## 6. Complex Process: MTU Fragmentation & Dispatch Flow
+```mermaid
+sequenceDiagram
+    participant App as App Layer (Hooks)
+    participant ZAd as ZenggeAdapter
+    participant ZPr as ZenggeProtocol
+    participant BLE as BLE Transport
+    participant HW as 0xA3 Controller
+    
+    App->>ZAd: buildCustomModeExtended(steps)
+    ZAd->>ZPr: setCustomModeExtended(steps)
+    ZPr-->>ZAd: Raw 323B Payload [0x51, slots...]
+    ZAd-->>App: ProtocolResult (isRateLimited: true)
+    
+    App->>ZAd: prepareForTransmission(result, mtu)
+    alt Payload > MTU (e.g. 186) - 3
+        Note over ZAd: Generates 0x40 Fragment Headers
+        ZAd-->>App: Chunk 0 [0x40, 0, 2, ...], Chunk 1 [0x40, 1, 2, ...]
+    else Payload <= MTU - 3
+        ZAd-->>App: Original Packet
+    end
+    
+    loop Per Chunk
+        App->>BLE: dispatch(packet)
+        BLE->>HW: Write Characteristic
+        Note over BLE: 8ms inter-packet delay
+    end
+    HW-->>BLE: ACK
+```
+
+## 7. Archival Tags
+[MOVE_TO_ARCHIVE] The Master Reference sections referencing `0x41 Settled Mode`, `0x42 RBM Programs Mode`, and `0x43` Multi-Sequence Mode should be flagged. The protocol codebase has explicitly marked them as `@deprecated Since v2.8.0` or `@HARDWARE-DANGER` due to state machine crashes and testing limitations, being fully superseded by `0x51` Pattern Engine and `0x59` Spatial routines.
+
+<!-- CARTOGRAPHER_END: HARDWARE_PROTOCOLS -->\n\n### CLOUD FUNCTIONS\n<!-- CARTOGRAPHER_START: CLOUD_FUNCTIONS -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:04:50Z sender=d5aa263f-ef05-474a-be2e-eb3851a59012 priority=MESSAGE_PRIORITY_HIGH content=# Elite Architecture: CLOUD_FUNCTIONS Domain
+
+## 1. File Manifest
+- `supabase/functions/notify-crew-session/index.ts`: Edge function that dispatches push notifications via Expo to crew members when a session starts.
+- `supabase/migrations/20260413_hardening_sweep.sql`: Optimizes database performance with foreign key indexes and secures RLS policies for user profiles and telemetry.
+- `supabase/migrations/20260414111600_add_factory_name.sql`: Adds telemetry preservation columns (`factory_name`, `manufacturer_data`, `ble_version`) to registered devices.
+- `supabase/migrations/20260414_account_deletion_rpc.sql`: Implements a secure RPC `delete_account()` for users to completely erase their accounts and cascade-delete their data.
+- `supabase/migrations/20260414_consolidate_telemetry.sql`: Replaces individual parsed logs tables with a consolidated `telemetry_snapshots` table utilizing a JSONB payload.
+- `supabase/migrations/20260417_add_skate_spot_id.sql`: Links `skate_sessions` to `skate_spots` by adding a foreign key and index to track where sessions occurred.
+- `supabase/migrations/20260417_cleanup_stale_skate_spots.sql`: Removes legacy skate spots lacking fundamental facility type and address schemas to prevent map ghosting.
+- `supabase/migrations/20260418041100_add_unique_mac.sql`: Deduplicates `registered_devices` and enforces a unique constraint on `(user_id, device_mac)`.
+- `supabase/migrations/20260418044500_normalize_macs_and_dedupe.sql`: Normalizes `device_mac` strings to uppercase to eliminate case-mismatch duplication.
+- `supabase/migrations/20260418045900_add_missing_delete_policies.sql`: Adds missing DELETE RLS policies to `registered_devices` and `registered_groups` to resolve ghost device bugs.
+- `supabase/migrations/202604
+<truncated 5385 bytes>
+ackend Domain)
+  - This domain executes entirely server-side within the Supabase Postgres runtime and Edge Network environment. React Contexts are not applicable here.
+
+## 4. Hook/Service I/O Registry
+### `notify-crew-session` Edge Function
+- **Inputs:**
+  - `Request Headers`: JWT Bearer Token in `Authorization` header.
+  - `JSON Payload`: `{ crewId: string, sessionId: string, sessionName: string, leaderName: string }`.
+- **Outputs:**
+  - `JSON Response`: `{ sent: number, reason?: string }` (Returns 401 Unauthorized or 400 Invalid on bad requests).
+- **Side-effects:**
+  - Queries `crew_memberships` to retrieve peer `user_id`s, explicitly filtering out the caller.
+  - Queries `push_tokens` table for Expo push notification IDs corresponding to those users.
+  - Issues external `POST` requests directly to `https://exp.host/--/api/v2/push/send` to dispatch mass batched push notifications.
+
+---
+
+### Sequence Diagram: Crew Session Notification Flow
+
+```mermaid
+sequenceDiagram
+    participant User as Session Leader
+    participant App as SK8Lytz App
+    participant EdgeFn as notify-crew-session
+    participant DB as Supabase DB
+    participant Expo as Expo Push API
+    participant Member as Crew Member
+
+    User->>App: Starts Crew Session
+    App->>EdgeFn: POST /notify-crew-session (Payload: crewId, sessionId...)
+    EdgeFn->>DB: auth.getUser(JWT Bearer)
+    DB-->>EdgeFn: Returns authenticated User Object
+    EdgeFn->>DB: Query crew_memberships (WHERE crew_id = crewId AND user_id != caller_id)
+    DB-->>EdgeFn: Returns member IDs
+    EdgeFn->>DB: Query push_tokens (IN member IDs)
+    DB-->>EdgeFn: Returns device push tokens
+    EdgeFn->>Expo: POST /v2/push/send (Batched Push Message Array)
+    Expo-->>EdgeFn: HTTP 200 OK (Push Receipt)
+    EdgeFn-->>App: HTTP 200 OK (JSON: { sent: count })
+    Expo->>Member: Push Notification: "🛼 Crew is Live!"
+```
+
+### Archival Status
+- No stale documentation relating to Cloud Functions or Migrations tagged with `[MOVE_TO_ARCHIVE]` was found in the Master Reference.
+
+<!-- CARTOGRAPHER_END: CLOUD_FUNCTIONS -->\n\n### THEME & ASSETS\n<!-- CARTOGRAPHER_START: THEME_&_ASSETS -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:03:47Z sender=c5dbb40e-8fd6-455c-b86b-588006f7a4fa priority=MESSAGE_PRIORITY_HIGH content=[🕵️ Reyes | Cartographer Analysis | THEME_&_ASSETS | cold]
+
+# THEME_&_ASSETS Domain Architecture
+
+## 1. File Manifest
+- `src/theme/theme.ts`: Defines the core design system including light/dark color palettes, standard typography (`Righteous` font), layout rules, and spacing constants.
+- `src/styles/DashboardStyles.ts`: Implements the 4-slab vertical layout architecture for the main dashboard and dynamically computes component styles and pattern gradients based on the active theme.
+- `src/constants/AppConstants.ts`: Houses immutable global application constants, storage prefix definitions, and maximum hardware speed limits.
+- `src/constants/ControlsRegistry.ts`: Defines the unified registry of administrative controls, risk levels, and UI interaction schemas used within the Admin Tools Hub.
+- `src/constants/ProductCatalog.ts`: Serves as the offline-safe source of truth for hardware product profiles, visualization geometry, and default physical LED limits.
+- `src/constants/storageKeys.ts`: Maintains the global inventory of AsyncStorage keys to prevent namespace collisions and enforce offline persistence contracts.
+
+## 2. Blast Radius
+- **Imports**: `react-native` (for StyleSheet creation), local types (`ThemePalette`, `ProductProfile`).
+- **Exported To**: 
+  - `theme.ts`: Consumed universally via `ThemeContext`, `DashboardStyles.ts`, and individual UI components.
+  - `DashboardStyles.ts`: Imported directly by `DashboardScreen` and corresponding visual sub-components.
+  - `ControlsRegistry.ts`: Imported by `AdminToolsModal` and `AppSettingsService`.
+  - `ProductCatalog.ts`: Consumed by `DeviceRepository`, `VisualizerUnit`, `PatternEngine`, and `ProductVisualizer` to render accurate device representations.
+  - `storageKeys.ts` / `App
+<truncated 1120 bytes>
+fe fallback).
+  - **Side-Effects**: None (Pure function). Provides pre-sync hardware classification.
+
+## 5. Master Reference Archival Operations
+- [MOVE_TO_ARCHIVE] The "Dashboard UI Layout (4-Slab Architecture)" and "UI Design Patterns & Branding" sections located in `SK8Lytz_App_Master_Reference.md` are tagged as stale documentation drift and should be archived or fully relocated to `DashboardStyles.ts` and `theme.ts`.
+
+## 6. Sequence Diagram: Product Catalog Sync Architecture
+```mermaid
+sequenceDiagram
+    participant App as App Boot Sequence
+    participant Catalog as LOCAL_PRODUCT_CATALOG
+    participant Storage as AsyncStorage (Cache)
+    participant Cloud as Supabase DB
+
+    App->>Catalog: Request initial hardware profiles (Offline)
+    Catalog-->>App: Return local fallback profiles instantly
+    Note over App,Catalog: Zero-latency boot (Offline First)
+    App->>Storage: Read cached catalog merge
+    Storage-->>App: Return cached product profiles
+    App->>App: Reconcile local vs cache (hydrate UI)
+    App-)Cloud: Background async fetch (product_catalog table)
+    Cloud-->>App: Return active cloud profiles
+    App->>App: Merge rules: Supabase rows win on ID conflict
+    App->>Storage: Persist updated catalog state
+    App->>App: Trigger UI update with merged catalog
+```
+
+## 7. Design System & Token Manifest
+- **Brand Colors**: Blue `#1B4279`, `#245596`, Orange `#FF5A00`, Amber `#FFB800`.
+- **Theme Palette (Light/Dark Symmetric)**:
+  - `background`, `surface`, `surfaceHighlight`
+  - `primary`, `secondary`, `accent`
+  - `text`, `textMuted`, `textDim`
+  - `border`, `success`, `error`, `warning`
+- **Typography Scale** (Family: `Righteous`):
+  - `header`: 24px, uppercase, letterSpacing: 2
+  - `title`: 16px, letterSpacing: 0.5
+  - `body`: 14px
+  - `caption`: 11px
+- **Spacing Scale (px)**:
+  - `xxs`: 2, `xs`: 4, `sm`: 8, `md`: 12, `lg`: 16, `xl`: 24, `xxl`: 32, `xxxl`: 40, `huge`: 48, `giant`: 64
+- **Layout Definitions**:
+  - `padding`: `Spacing.lg` (16px)
+  - `borderRadius`: `Spacing.xl` (24px)
+
+<!-- CARTOGRAPHER_END: THEME_&_ASSETS -->\n\n### SIMULATION & MOCKS\n<!-- CARTOGRAPHER_START: SIMULATION_&_MOCKS -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:03:58Z sender=2cb8a9e9-dfa0-4bb8-847d-a08ae9408210 priority=MESSAGE_PRIORITY_HIGH content=[🕵️ Scout — Reyes | Cartography / Research | SIMULATION_&_MOCKS | cold]
+
+Here is the Elite Architecture cartography payload for the `SIMULATION_&_MOCKS` domain based on my comprehensive review of `src/mocks/*`, `src/__mocks__/*`, `e2e/*`, and `__tests__/*`.
+
+### Existing Documentation Status
+[MOVE_TO_ARCHIVE] The existing documentation for this domain in `SK8Lytz_App_Master_Reference.md` (lines 2039-2080) is stale (it is missing the `useAnimatedStyle` hook in the worklets mock and lacks the flow diagram for the offline syncing logic) and should be archived.
+
+---
+
+## 1. File Manifest
+- **`src/mocks/react-native-vision-camera-worklets.web.js`**
+  Empty module stub that prevents Metro bundler from crashing on native vision camera dependencies during web compilation.
+- **`src/mocks/react-native-worklets.web.js`**
+  No-op shim for `react-native-worklets-core` to safely bypass native worklet dependencies (e.g., `TurboModuleRegistry.getEnforcing`) for web targets.
+- **`src/__mocks__/sk8lytz-watch-bridge.ts`**
+  Jest mock for the Expo `sk8lytz-watch-bridge` native module, allowing unit tests to invoke bridge functions without crashing and enabling payload assertions.
+- **`e2e/init.ts`**
+  Detox global setup/teardown hook that launches a new instance of the app before all tests and reloads React Native before each test.
+- **`e2e/jest.config.js`**
+  Jest configuration tailored for Detox End-to-End tests, wiring up the Detox test environment, runners, and timeouts.
+- **`e2e/smoke.test.ts`**
+  Detox End-to-End test that validates the app's critical launch path by verifying the dashboard screen mounts and becomes visible successfully.
+- **`__tests__/services/SpeedTrackingService.offline.test.ts`**
+  Jest test suite verifying offline-first s
+<truncated 1206 bytes>
+dStyle`**: Input: `none` | Output: `{}` | Side-effects: None.
+* **`runOnJS`**: Input: `fn` | Output: `fn` | Side-effects: Identity passthrough.
+* **`runOnUI`**: Input: `fn` | Output: `fn` | Side-effects: Identity passthrough.
+
+**Mock: `sk8lytz-watch-bridge`**
+* **`syncSessionState`**: Input: `WatchSessionState` | Output: `Promise<undefined>` | Side-effects: Tracks calls for Jest assertions.
+* **`sendMetricUpdate`**: Input: `WatchHealthUpdate` | Output: `Promise<undefined>` | Side-effects: Tracks calls for Jest assertions.
+* **`isWatchReachable`**: Input: `none` | Output: `Promise<false>` | Side-effects: None.
+* **`addWatchCommandListener`**: Input: `callback` | Output: `function (unsubscribe)` | Side-effects: Returns a no-op teardown function.
+* **`addWatchHealthListener`**: Input: `callback` | Output: `function (unsubscribe)` | Side-effects: Returns a no-op teardown function.
+
+---
+
+## 5. Sequence Diagram: Offline Session Queue Flush Flow
+As reverse-engineered from the test logic inside `SpeedTrackingService.offline.test.ts`, this details the multi-step queue flush operation handling optimistic caching and data sync.
+
+```mermaid
+sequenceDiagram
+    participant App as SpeedTrackingService
+    participant AS as AsyncStorage
+    participant Auth as Supabase Auth
+    participant DB as Supabase DB
+
+    Note over App, DB: Scenario A: User Unauthenticated
+    App->>Auth: getUser()
+    Auth-->>App: { user: null }
+    App->>AS: setItem(PENDING_SESSION_QUEUE_KEY, [session])
+    Note right of App: Alert: Session Saved Locally
+    
+    Note over App, DB: Scenario B: Happy Path Flush (Sync)
+    App->>AS: getItem(PENDING_SESSION_QUEUE_KEY)
+    AS-->>App: [pending_session]
+    App->>Auth: getSession()
+    Auth-->>App: { session: { user: mockSessionUser } }
+    
+    Note right of App: Re-entrancy Guard Active
+    App->>DB: from('skate_sessions').insert(payload)
+    DB-->>App: { error: null }
+    
+    App->>AS: setItem(PENDING_SESSION_QUEUE_KEY, [])
+    Note right of App: Queue cleared after successful flush
+```
+
+<!-- CARTOGRAPHER_END: SIMULATION_&_MOCKS -->\n\n### BUILD CONFIG & OTA\n<!-- CARTOGRAPHER_START: BUILD_CONFIG_&_OTA -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:03:42Z sender=03983464-2053-41f7-8875-592ccab7b265 priority=MESSAGE_PRIORITY_HIGH content=[🕵️ Scout — Reyes | File Inspection | BUILD_CONFIG_&_OTA Domain Mapping | cold]
+
+I have read and analyzed the build config and OTA domain files (`app.config.js`, `eas.json`, `metro.config.js`, `babel.config.js`, `package.json`). Here is the generated Markdown Payload for the Elite Architecture sections.
+
+Note: No stale documentation was found in the Master Reference, so `[MOVE_TO_ARCHIVE]` tagging was unnecessary. Since OTA is not implemented (missing `expo-updates`), a sequence diagram for updates is not applicable.
+
+### BUILD_CONFIG_&_OTA
+
+## 1. File Manifest
+*   **`app.config.js`**: Core Expo configuration defining app metadata (version 3.9.1, versionCode 39), iOS/Android native permissions, custom config plugins (`react-native-ble-plx`, health, detox, `apple-targets`, `withWearOsModule`), and the EAS project ID link.
+*   **`eas.json`**: Expo Application Services build configurations. Specifies CLI rules (`appVersionSource: "remote"`, `requireCommit: true`) and defines three build profiles (`development`, `preview`, `production`) to map artifact types (`apk`, `app-bundle`, simulator).
+*   **`metro.config.js`**: Custom Metro bundler configuration. Implements a web-platform resolver to alias native-only modules (`react-native-worklets`, `react-native-vision-camera-worklets`) to local no-op stubs (`src/mocks/*.web.js`), preventing Expo Web compilation crashes.
+*   **`babel.config.js`**: Babel compiler configuration. Registers `babel-preset-expo` and the `react-native-worklets/plugin` necessary for Vision Camera / frame processors.
+*   **`package.json`**: NPM dependencies and script runner configurations (`start`, `verify`, `blast-radius`). Uses Expo SDK 55. Features linked workspace dependencies (`sk8lytz-watch-bridge`) and hea
+<truncated 1436 bytes>
+ribes the CLI tooling).*
+*   **EAS Build I/O**:
+    *   *Inputs:* CLI command `eas build --profile <development|preview|production>`
+    *   *Outputs:* Distributable artifacts (.apk, .aab, .tar.gz for iOS simulator)
+*   **Metro Resolver (`resolveRequest`)**:
+    *   *Inputs:* Module import request context (`moduleName`, `platform`)
+    *   *Outputs:* If `platform === 'web'` and module is blacklisted in `WEB_SHIMS` ➔ intercepts and returns local `src/mocks/...` source file. Otherwise ➔ falls through to standard Expo resolver.
+
+## 5. Domain-Specific Elite Directive (Release Channels, EAS Update & Native Modules)
+*   **Release Channel Configurations**: `eas.json` manages 3 strict profiles:
+    *   `development`: Internal testing `apk` with `developmentClient: true` (Expo Go / Dev Menu).
+    *   `preview`: Internal testing `apk`, plus an iOS `simulator` target.
+    *   `production`: Distribution-ready `app-bundle` (AAB) for Play Store. Uses `appVersionSource: "remote"` to manage build numbers via EAS servers.
+*   **EAS Update / OTA Logic**: **No OTA update mechanism is currently implemented.** 
+    *   The project lacks the `expo-updates` dependency in `package.json`.
+    *   There is no configured `updates.url` in `app.config.js`. 
+    *   Updates are currently distributed strictly via native Play Store binary releases.
+*   **Native Module Requirements**:
+    *   **BLE (`react-native-ble-plx`)**: Requires Android location and bluetooth permissions (`BLUETOOTH_CONNECT`, `ACCESS_FINE_LOCATION`, etc.), and `background` execution enabled via `app.config.js` plugin args.
+    *   **Health (`react-native-health-connect`)**: Native dependencies managed via Expo plugins for fitness tracking intents.
+    *   **Wear OS (`withWearOsModule`)**: Custom local plugin that injects the standalone watch binaries into the main Android release bundle.
+    *   **Android Build Constraints**: Enforces SDK 36 `targetSdkVersion` and SDK 26 `minSdkVersion`, with `enableJetifier: true` required for AndroidX compatibility.
+
+<!-- CARTOGRAPHER_END: BUILD_CONFIG_&_OTA -->\n\n## 13. Historical Archive (The Graveyard)
+
+> [!NOTE]
+> This section is strictly managed by ?? Docs � Avery. It contains condemned opcodes, legacy architectural decisions, and features that have been removed from the live codebase. 
+> 
+> **THE PRIME DIRECTIVE:** We never delete history. If a Cartographer agent finds that a documented feature no longer exists in src/, they move the documentation block here instead of deleting it. This preserves the "Why" long after the "What" is gone.
+
+
+
+> [MOVE_TO_ARCHIVE] - 2026-06-07 (Cartographer Sweep)
+> **Domain:** UTILS
+> Stale Reference: `src/utils/RbmDictionary.ts` and `src/utils/RbmSimulator.ts` no longer exist in the working directory tree.
+
+> [MOVE_TO_ARCHIVE] - 2026-06-07 (Cartographer Sweep)
+> **Domain:** BLE_CORE
+> Stale Reference: Priority 4 `P4_MAINTENANCE` regarding GATT Mutex for liveness checks. The code shows neither `useBLEHeartbeat.ts` nor `useBLERSSIMonitor.ts` acquire the GATT mutex at any priority.
+
+> [MOVE_TO_ARCHIVE] - 2026-06-07 (Cartographer Sweep)
+> **Domain:** UI_CONTROLS
+> Stale Reference: `BleStateMachine` class. This was ripped out for XState v5.
+
+> [MOVE_TO_ARCHIVE] - 2026-06-07 (Cartographer Sweep)
+> **Domain:** GROUP_SYNC
+> Stale Reference: "Automatic _MM/DD suffix enforced in CrewModal.handleCreate". `CrewModal` no longer directly handles creation logic. All references to `GroupSyncService.ts` should be `CrewService.ts`.
+
+### Archived on 2026-06-06 (V2 Data Audit)
+
+- **Domain: IDENTITY** 
+  - The existing `IDENTITY` section in `tools/SK8Lytz_App_Master_Reference.md` (lines 1432-1460) is stale. It lacks file tracking for `src/services/ProfileService.types.ts` and all component files within `src/components/account/*.tsx`. It also fails to provide the rigorous `Context Matrix` and `Blast Radius` schemas required by Cartographer node specifications.
+
+- **Domain: BLE_CORE**
+  - *Stale Claim:* "Priority tiers: ... `P4_MAINTENANCE` (heartbeat, RSSI polls)."
+  - *Truth:* `useBLEGattMutex.ts` clearly labels Priority 4 as "SWEEPER" (Passive Scan). Neither `useBLEHeartbeat.ts` nor `useBLERSSIMonitor.ts` acquire the `GattMutex` at any priority (Heartbeat calls `writeCharacteristicWithoutResponse`, RSSI calls `readRSSIForDevice` directly). Line 1610 previously flagged this partially, but Line 472 remains stale.
+
+- **Domain: GROUP_SYNC**
+  - *Stale Reference:* "Automatic _MM/DD suffix enforced in CrewModal.handleCreate". CrewModal no longer directly handles creation logic. All references to GroupSyncService.ts should be CrewService.ts.
+
+- **Domain: UI_CONTROLS**
+  - *Stale Reference:* `pingDevice: Orchestrates an atomic connection: GATT -> green blink -> EEPROM probe -> sever GATT.`
+  - *Reason:* Dashboard `runAutoProvisioning` was deleted; Setup Wizard now exclusively owns all device claiming, rendering this reference stale in the core `DashboardScreen` UI_CONTROLS block.
+
+- **Domain: DATA_LAYER**
+  - Any architectural documentation or plans referencing `src/services/TelemetryService.ts`. The codebase explicitly notes that this file does not exist, as telemetry is natively hook-driven.
+
+
+### 15. OS_PERMISSIONS
+<!-- CARTOGRAPHER_START: OS_PERMISSIONS -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:03:56Z sender=b8b03ec8-435e-487b-9d91-ba8b28886102 priority=MESSAGE_PRIORITY_HIGH content=[🕵️ Reyes | Cartographer | OS_PERMISSIONS | warm]
+
+I have completed the mapping of the `OS_PERMISSIONS` domain as requested. 
+
+**Note on Target Directories:** The `ios` directory does not exist because this is an Expo managed project; iOS `Info.plist` properties are generated dynamically via `app.config.js`. 
+
+**Archival Instruction Executed:** I found existing stale documentation for `OS_PERMISSIONS` in `tools/SK8Lytz_App_Master_Reference.md` (lines 2168-2230). I have tagged it with `[MOVE_TO_ARCHIVE]` below.
+
+Here is the Elite Architecture Markdown Payload for the domain:
+
+```markdown
+[MOVE_TO_ARCHIVE] Note: Stale documentation for OS_PERMISSIONS exists in `tools/SK8Lytz_App_Master_Reference.md` (lines 2168-2230).
+
+### 15. OS_PERMISSIONS
+<!-- CARTOGRAPHER_START: OS_PERMISSIONS -->
+
+## 1. File Manifest
+- `android/app/src/main/AndroidManifest.xml`: Core native Android permission definitions (Bluetooth, Location, Camera, Audio, Notifications, Foreground Services, Activity Recognition).
+- `app.config.js`: Cross-platform configuration defining Expo's Android permission arrays, iOS `Info.plist` usage descriptions (e.g., `NSMicrophoneUsageDescription`), and plugin configurations (e.g., `react-native-ble-plx` `neverForLocation` flag).
+- `src/services/PermissionService.ts`: The unified abstraction layer for OS normalization, legacy fixes, and the user-level `@sk8lytz_permissions_optout` ledger.
+
+## 2. Blast Radius
+- **Imports:** `expo-audio`, `expo-location`, `expo-notifications`, `react-native-health`, `react-native-health-connect`, `react-native` (PermissionsAndroid, DeviceEventEmitter), `@react-native-async-storage/async-storage`.
+- **Dependents & Side-Effects:** Extensively imported by UI components and services (e.g., `DockedContro
+<truncated 2627 bytes>
+ unusable without it. iOS uses automatic prompt on first GATT activity via `react-native-ble-plx`. |
+| **Microphone (`RECORD_AUDIO`, `NSMicrophoneUsageDescription`)** | Powers "Vibe Reactivity" (Music/Symphony mode) to sync skate LEDs to ambient sound. | iOS `Info.plist` strings in `app.config.js` explicitly declare: *"SK8Lytz needs microphone access to synchronize your lights to ambient music."* |
+| **Camera (`CAMERA`)** | Powers the Vibe Catcher / Sniper mode to sample real-world colors and extract dynamic palettes. | Handled gracefully. If denied, the mode is dynamically removed from the UI to prevent broken UX. |
+| **Notifications (`POST_NOTIFICATIONS`)** | Alerts users when crew sessions start or when receiving crew invitations. | Decoupled request; requires explicit user initiation to prevent OS prompts blocking app launch. |
+| **Activity (`ACTIVITY_RECOGNITION`) & Health** | Enables Wear OS/watchOS companions to act as a session HUD (HR, Calories). | We only request specific records (`HeartRate`, `ActiveCaloriesBurned`). Explicitly decoupled from core hardware features. |
+
+## 6. Sequence Diagram: Android Health Connect Request Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant App as Application
+    participant PS as PermissionService
+    participant PA as PermissionsAndroid
+    participant HC as react-native-health-connect
+    
+    App->>PS: requestPermission('HEALTH')
+    PS->>PA: request(ACTIVITY_RECOGNITION)
+    PA-->>PS: Granted
+    
+    rect rgb(60, 20, 20)
+    note right of HC: CRITICAL: initialize() must be called to register the<br/>ActivityResultLauncher before requesting permissions.
+    PS->>HC: initialize()
+    end
+    
+    PS->>HC: requestPermission([HeartRate, ActiveCaloriesBurned, etc.])
+    HC->>User: Displays OS Health Connect Prompt
+    User-->>HC: Approves Read/Write
+    HC-->>PS: Returns granted array
+    PS->>PS: Validates HeartRate & ActiveCaloriesBurned present
+    PS-->>App: Returns true
+```
+<!-- CARTOGRAPHER_END: OS_PERMISSIONS -->
+```
+
+<!-- CARTOGRAPHER_END: OS_PERMISSIONS -->
+
+### 16. DEPENDENCY_AUDIT
+<!-- CARTOGRAPHER_START: DEPENDENCY_AUDIT -->
+
+not actually sent by the user. It is provided by the system as important information to pay attention to.
+
+<SYSTEM_MESSAGE>
+[Message] timestamp=2026-06-07T04:03:32Z sender=a711df96-a6f3-41d3-b216-faf9a69c9936 priority=MESSAGE_PRIORITY_HIGH content=🎯 SDE Cartographer Node — DEPENDENCY_AUDIT
+
+### 1. File Manifest
+- `package.json`: The singular source of truth for all external NPM packages, Expo plugins, and native module links, dictating the dependency tree and build scripts.
+- `tools/blast-radius-scanner.js` *(referenced)*: Custom dependency boundaries and worktree validation script triggered during CI/CD (`npm run verify`).
+- `tools/verifiable-check-runner.js` *(referenced)*: Validation script that executes the final CI gate before merges.
+
+### 2. Blast Radius
+- **Imports (Upstream):** 46 production dependencies, 21 dev dependencies, including core frameworks (React Native 0.83.2, Expo 55), hardware integrations (BLE PLX, Vision Camera), and UI utilities.
+- **Imported By (Downstream):** The entire application. Every `node_modules` import in `.ts/.tsx` files is governed by this manifest. Modifying versions here has a global blast radius causing potential native auto-linking rebuilds (CocoaPods/Gradle).
+
+### 3. Context Matrix (Dependency-Provided Contexts)
+*While `package.json` itself is not a React Context, it provisions the architectural Context Providers injected at the app root:*
+- `@supabase/supabase-js` → `SupabaseProvider` (Cloud state context)
+- `@react-native-async-storage/async-storage` → Local caching context/persistence layer
+- `@xstate/react` → FSM Machine Providers (Global State)
+- `react-native-safe-area-context` → `SafeAreaProvider` (UI layout context)
+
+### 4. Hook/Service I/O Registry (3rd-Party I/O Boundaries)
+- **`react-native-ble-plx`**: I/O side-effects directly talk to the OS Bluetooth stack. Inputs: BLE commands/hex payloads. Outputs: connection states, byte arrays.
+- **`@supabase/supabase-js`**: Network I/O side-effects. Inputs: REST/Realtime 
+<truncated 1126 bytes>
+ustering math.
+
+#### 🧟 Potential "Zombie" or Redundant Packages
+1. **`jpeg-js`**: Pure JS JPEG encoder/decoder. **CRITICAL FLAG:** Pure JS image processing on React Native is brutally slow and blocks the JS thread. Given that `react-native-nitro-image` and `expo-image-manipulator` are also installed, `jpeg-js` is almost certainly redundant tech debt that should be stripped.
+2. **`string-similarity`**: Very small utility (~2kb), likely used for matching BLE device names. Should be evaluated for replacement with a native JS equivalent (e.g., Levenshtein distance function taking ~15 lines of code) to save an unnecessary dependency.
+3. **`react-native-url-polyfill`**: Often no longer required in modern Expo 55 / React Native 0.83+ as the `URL` API is heavily supported natively now. Should test removing it.
+
+---
+
+### 5. ARCHIVAL INSTRUCTION
+- **[MOVE_TO_ARCHIVE]**: Any documentation in `SK8Lytz_App_Master_Reference.md` referencing legacy pure-JS image processing (via `jpeg-js`) or older state management libraries superseded by `xstate` should be archived.
+
+---
+
+### 6. SEQUENCE DIAGRAM: Dependency Validation & Verify Pipeline
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant Git as Git Worktree
+    participant CLI as package.json scripts
+    participant BR as blast-radius-scanner.js
+    participant VC as verifiable-check-runner.js
+    participant Husky as pre-push / Husky
+
+    Dev->>CLI: npm run verify
+    CLI->>BR: node tools/blast-radius-scanner.js --worktree
+    activate BR
+    BR->>Git: git diff --name-only HEAD
+    Git-->>BR: Modified Files
+    BR->>BR: Analyze Dependency Graph limits
+    BR-->>CLI: Pass / Fail
+    deactivate BR
+    CLI->>VC: node tools/verifiable-check-runner.js
+    activate VC
+    VC->>VC: Type Check (TSC)
+    VC->>VC: Jest Tests
+    VC-->>CLI: Pass / Fail
+    deactivate VC
+    CLI-->>Dev: Pipeline Green
+    Dev->>Git: git push
+    Git->>Husky: trigger pre-push
+    Husky->>CLI: npm audit
+    CLI-->>Husky: Vuln Check
+    Husky-->>Git: Allow Push
+```
+
+<!-- CARTOGRAPHER_END: DEPENDENCY_AUDIT -->
+
+## 13. 🪦 The Graveyard
+
+### Batch 2026-06-07T04:05:25.387Z
+- **Domain: IDENTITY**: ` The `SK8Lytz_App_Master_Reference.md` likely contains stale references describing `ProfileService` as a monolithic God-object. These references must be archived and updated to reflect the "Meal 1: ProfileService split" where it is strictly a barrel re-export facade over `AuthProfileService`, `CrewProfileService`, and `PushTokenService`.
+
+- **Domain: GROUP_SYNC**: Stale `GROUP_SYNC` architecture documentation discovered in `tools/SK8Lytz_App_Master_Reference.md` (specifically lines 1579-1648 and 2145-2157 regarding older offline sync mechanisms and references). This should be reconciled with the newly analyzed file architecture.
+
+- **Domain: DATA_LAYER**: ** This file does not exist. The architecture is natively hook-driven (`useGlobalTelemetry`, `useAdminTelemetry`). Documentation referencing it is stale.
+- `src/types/supabase.ts`: Autogenerated TypeScript definitions enforcing strict type parity with the Supabase PostgREST schema (tables, views, enums).
+- `src/services/supabaseClient.ts`: Supabase client initializer wrapping `expo-secure-store` for Auth state persistence, equipped with built-in mock fallbacks for seamless offline-mode execution.
+
+- **Domain: NATIVE_&_WATCH**: - Master Reference Section 12.6 NATIVE_&_WATCH (Stale: Missing Wear OS & Bridge)`
+
+---
+
+- **Domain: NOTIFICATIONS_&_ROUTING**: ` The legacy documentation for NOTIFICATIONS_&_ROUTING found in `tools/SK8Lytz_App_Master_Reference.md` (lines 1837-1873) is stale and should be archived. It incorrectly lists `PushTokenService` as part of this exact directory group and misses the state-based routing elements like `App.tsx`, `BluetoothGuard`, and `ComplianceGate`.
+
+- **Domain: SESSION_TRACKING**: ` required for the Master Reference.
+
+- **Domain: HARDWARE_PROTOCOLS**: The Master Reference sections referencing `0x41 Settled Mode`, `0x42 RBM Programs Mode`, and `0x43` Multi-Sequence Mode should be flagged. The protocol codebase has explicitly marked them as `@deprecated Since v2.8.0` or `@HARDWARE-DANGER` due to state machine crashes and testing limitations, being fully superseded by `0x51` Pattern Engine and `0x59` Spatial routines.
+
+- **Domain: CLOUD_FUNCTIONS**: ` was found in the Master Reference.
+
+- **Domain: THEME_&_ASSETS**: The "Dashboard UI Layout (4-Slab Architecture)" and "UI Design Patterns & Branding" sections located in `SK8Lytz_App_Master_Reference.md` are tagged as stale documentation drift and should be archived or fully relocated to `DashboardStyles.ts` and `theme.ts`.
+
+- **Domain: SIMULATION_&_MOCKS**: The existing documentation for this domain in `SK8Lytz_App_Master_Reference.md` (lines 2039-2080) is stale (it is missing the `useAnimatedStyle` hook in the worklets mock and lacks the flow diagram for the offline syncing logic) and should be archived.
+
+---
+
+- **Domain: BUILD_CONFIG_&_OTA**: ` tagging was unnecessary. Since OTA is not implemented (missing `expo-updates`), a sequence diagram for updates is not applicable.
+
+- **Domain: OS_PERMISSIONS**: ` below.
+
+Here is the Elite Architecture Markdown Payload for the domain:
+
+```markdown
+
+- **Domain: OS_PERMISSIONS**: Note: Stale documentation for OS_PERMISSIONS exists in `tools/SK8Lytz_App_Master_Reference.md` (lines 2168-2230).
+
+- **Domain: DEPENDENCY_AUDIT**: **: Any documentation in `SK8Lytz_App_Master_Reference.md` referencing legacy pure-JS image processing (via `jpeg-js`) or older state management libraries superseded by `xstate` should be archived.
+
+---
+
+- **Domain: DEPENDENCY_AUDIT**
+  - Any legacy documentation concerning Web fallbacks for BLE (Optical Simulation Mode for Expo Web). While the Master Reference cites it as a developer tool, maintaining react-native-web compatibility alongside heavy native packages like react-native-nitro-modules often leads to extreme configuration friction.
+  - Remove any lingering workflow references or offline caches regarding @react-native-voice/voice. The package was confirmed deleted, so all bridging stubs relating to it should be eliminated.
+
+- **Domain: OS_PERMISSIONS**
+  - OS Sync: `syncSystemPermissions()` runs on boot/foreground to reconcile the ledger with native OS settings. If OS is "Denied", App ledger is forced to "Opt-Out". (This contradicts the actual implementation in PermissionService.ts, where aggressive sweeping was deprecated because it falsely locked out fresh installs).
+
+
+- **Domain: NATIVE_&_WATCH**
+  - Stale Reference: Master Reference Section 11.7 Future Watch Enhancements (Planned) lists "Session Duration Timer" and "watchOS Complications" as planned features. Both are fully shipped and active in targets/watch/ContentView.swift and targets/watch/ComplicationController.swift.
+
+- **Domain: THEME_&_ASSETS**
+  - Mention of "Master Reference §2 — FTUE Threshold Classification" in ProductCatalog.ts (this section is missing or stale in the current Master Reference).
+  - "Dashboard UI Layout (4-Slab Architecture)" and "UI Design Patterns & Branding" located in SK8Lytz_App_Master_Reference.md (layout details should be strictly contained within DashboardStyles.ts and theme.ts to prevent domain drift).
+
+- **Domain: HARDWARE_PROTOCOLS**
+  - The entry in the "Condemned Opcodes" table: `0x41` Settled Mode (Symphony Effects). Cartographer Audit Reality: PatternEngine.ts explicitly intercepts test pattern IDs 201-233 and fires them via ZenggeProtocol.setCustomModeExtendedCompact() (which is a 0x51 opcode pipeline). The Master Reference directly contradicts itself later on line 398 warning against 0x41 usage, confirming the table row is stale legacy text.
+
+- **Domain: SESSION_TRACKING**
+  - Section 7 (Session Telemetry Architecture) contains a stale skate_sessions schema missing fields like avg_bpm, peak_gforce, crew_session_id, and has no documentation of the PENDING_SESSION_QUEUE_KEY offline fallback architecture.
+

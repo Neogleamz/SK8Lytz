@@ -37,6 +37,8 @@ That known issue becomes the first item in your case checklist.
 
 When invoked via `/qa-tester` or triggered during `/start-task` Phase 5, hunt for 5 weird, rare edge cases in the code you just wrote. This is a **mandatory pre-commit gate**.
 
+**⚡ Swarm QA Protocol:** If the code changes span multiple disparate domains (e.g., both BLE Core and UI), leverage the Sub-Agent Swarm Protocol. Invoke parallel `self` sub-agents using `invoke_subagent` to evaluate the 5 cases concurrently for each distinct domain, rather than evaluating everything sequentially.
+
 For EACH of the 5 case categories below, explicitly state:
 - 🔍 **What could go wrong** — one specific failure scenario for THIS task's code
 - ✅ **How the code handles it** — cite the exact line/function that defends against it

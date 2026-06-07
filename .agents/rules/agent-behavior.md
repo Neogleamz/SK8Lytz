@@ -227,6 +227,7 @@ The `tools/SESSION_LOG.md` is a **living chat log** updated throughout the sessi
    **Rejected:** (what was considered and rejected, and why)
    **Don't re-derive:** (the exact reasoning the next agent must NOT repeat)
    **Source:** (file + line number)
+   **ADR Link:** (If this changes core architecture, you MUST draft a `docs/ADR/` file and link it here)
    ```
 3. **After any analysis artifact is created** → add it to the session's `### 🗂️ Artifacts Created This Session` table.
 4. **At `/wind-down`** → final `[EVENT]` entry covering the full session summary.
@@ -418,3 +419,36 @@ The agent's job is not just to execute tasks. It is to make the SYSTEM better wi
 3. No rule was forgotten without a Friction Event being filed
 4. The next session agent can start from SESSION_LOG alone without re-deriving anything
 
+## 15. The Sub-Agent Swarm Protocol (Parallel Delegation)
+All personas MUST leverage sub-agents (via `invoke_subagent` and `define_subagent` tools) to parallelize complex or isolated tasks, preventing context bloat and accelerating execution.
+- **When to spawn:** 
+  - 🕵️ **Reyes (Research)**: When investigating multiple files, tracking down a bug across different layers, or mapping out a large feature. Spawn parallel 'research' subagents for each domain.
+  - 🔬 **Blake (QA)**: When running multiple edge-case checks or testing separate isolated components simultaneously.
+  - 📐 **Quinn (TPM)**: When drafting complex plans that require deep-diving into separate areas (e.g., UI vs BLE protocol).
+- **Execution Rule**: You do NOT need to wait or poll for sub-agents to finish. Spawn them concurrently via a single `invoke_subagent` call with multiple entries, then proceed with other work or stop calling tools. The system will automatically wake you when they message back.
+- **Communication**: Use `send_message` to give running sub-agents further instructions or ask for status. Do NOT use `send_message` to talk to the user.
+- **Workspace Branching**: Use `Workspace: 'share'` when subagents need isolated branches but don't want to duplicate storage, or `Workspace: 'inherit'` to work in the parent's directory.
+
+## 16. React Native & Code Quality Guardrails (Top-Tier Standards)
+The agent team must strictly adhere to the following industry-leading React Native and code quality standards to ensure performance, type safety, and maintainability.
+
+1. **Strict Type Safety (No Enums, No Anys)**: 
+   - **Forbid `enum`**: TypeScript enums bloat the bundle and create reverse-mapping overhead. Use string unions exclusively (e.g., `type ConnectionState = 'IDLE' | 'CONNECTING' | 'CONNECTED';`).
+   - **No `any` Casts**: As stated in Rule 1, `any` is forbidden. Use `unknown` and type-narrowing if the shape is uncertain.
+
+2. **Render Optimization (Performance Guard)**:
+   - **No Inline Functions in Lists**: Never pass inline anonymous functions to `FlatList` `renderItem` props or component event handlers. Always extract them using `useCallback`.
+   - **Memoization Strictness**: Heavy computational functions and derived UI states must be wrapped in `useMemo`. 
+   - **Stable References**: Arrays and objects passed as props must be stabilized (memoized or defined outside the component) to prevent render storms.
+
+3. **Defensive Network & IO**:
+   - **Wrap and Log**: Every call to Supabase, external APIs, or the BLE hardware must be wrapped in a `try/catch` block.
+   - **Silent Fails Forbidden**: The `catch` block must explicitly invoke `AppLogger` to record the failure. Silent failures or generic `console.error` calls are banned.
+
+4. **Styling Strictness**:
+   - **No Inline Styles**: Never use inline objects for the `style` prop (e.g. `style={{ marginTop: 10 }}`). It causes unnecessary object allocations per render. 
+   - **Strict StyleSheet**: All styles must be defined using `StyleSheet.create` at the bottom of the file or in a dedicated `.styles.ts` file, and must consume the global `ThemePalette` rather than hardcoded hex values.
+
+5. **Hollow Shell Architecture**:
+   - UI components should be "dumb". They receive props and render.
+   - Complex business logic, state machines, and data fetching must be extracted into custom hooks (e.g. `useCrewSession`) or service singletons (e.g. `CrewService.ts`).

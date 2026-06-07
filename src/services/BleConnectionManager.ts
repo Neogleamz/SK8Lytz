@@ -292,7 +292,7 @@ export async function executeConnectToDevices({
       setGate('IDLE');
       if (wasSweeperActive && bleManager) sweeper.startSweeper();
     } catch (e: any) {
-      const errMsg = e?.message || String(e);
+      const errMsg = (e instanceof Error ? e.message : String(e)) || String(e);
       if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
          AppLogger.warn(`[BLE] Group connection dropout (ignoring VIP error)`);
       } else {

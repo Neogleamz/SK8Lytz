@@ -11,32 +11,28 @@ team_roster: .agents/team-roster.md
 > **🩺 SRE — River | Health Sweep Active**
 > *River runs the pre-flight checklist. A critical vulnerability in npm audit is a NO-GO for release, full stop. Security advisors on Supabase get the same treatment.*
 
-When invoked via `/health-sweep` or as Phase 1 Step 1 of `/ship-it`, run all security and dependency health checks. This must pass before ANY release merge.
+When invoked via `/health-sweep` or as Phase 1 Step 1 of `/ship-it`, leverage the Sub-Agent Swarm Protocol to run all security and dependency health checks concurrently. This must pass before ANY release merge.
 
-### Step 1: Dependency Security Audit
+### Phase 1: Swarm Execution
 
-```powershell
-Set-Location "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
-npm audit --audit-level=moderate 2>&1 | Select-Object -Last 20
-Write-Host "=== npm audit complete ==="
-```
+Invoke 2 parallel `self` sub-agents using `invoke_subagent`:
 
-- If ANY **critical** or **high** vulnerabilities are found: **HALT. Do NOT proceed to release.**
-- If only **moderate** vulnerabilities: Document them, proceed with user approval.
-- If clean: Continue.
+**Sub-agent 1 (NPM Health):**
+- Runs `npm audit --audit-level=moderate 2>&1 | Select-Object -Last 20`
+- Runs `npm outdated 2>&1 | Select-Object -First 20`
+- Reports back the exact results.
 
-### Step 2: Outdated Dependency Check
+**Sub-agent 2 (Cloud Security):**
+- Runs the MCP tool `mcp_supabase-mcp-server_get_advisors` with `type: 'security'`.
+- Reports back any security advisors flagged.
 
-```powershell
-npm outdated 2>&1 | Select-Object -First 20
-```
+### Phase 2: Triage & Synthesis
 
-Log any packages >2 major versions behind into the `🧹 TECH DEBT` section of `tools/SK8Lytz_Bucket_List.md`.
+Once the swarm reports back, synthesize the results:
 
-### Step 3: Supabase Database Security Advisors
-
-- Run the MCP tool `mcp_supabase-mcp-server_get_advisors` with `type: 'security'`.
-- If ANY security advisors are flagged: **HALT. Log to TRIAGE QUEUE and do NOT push.**
+- **npm audit**: If ANY **critical** or **high** vulnerabilities are found: **HALT. Do NOT proceed to release.** If only **moderate**: Document them, proceed with user approval.
+- **npm outdated**: Log any packages >2 major versions behind into the `🧹 TECH DEBT` section of `tools/SK8Lytz_Bucket_List.md`.
+- **Supabase Security**: If ANY security advisors are flagged: **HALT. Log to TRIAGE QUEUE and do NOT push.**
 
 ### Step 4: Report
 

@@ -29,40 +29,20 @@ This prevents filing the same TECH DEBT tasks every session.
 
 ---
 
-When I say "run health check", "audit codebase", or "clean the house", execute this sweep:
+When I say "run health check", "audit codebase", or "clean the house", execute this sweep by leveraging the Sub-Agent Swarm Protocol (`invoke_subagent`):
 
-1. **Dependency Audit**: Run `npm outdated` and `npm audit --audit-level=moderate 2>&1 | Select-Object -Last 20`.
-2. **The TODO Hunt**: Search `src/` for `TODO:`, `FIXME:`, or `HACK:`.
-3. **Database Security Audit**: Run `mcp_supabase-mcp-server_get_advisors` tool with `type: 'security'`.
-4. **Architectural Smell Scan**: Scan `src/` for files exceeding 30KB.
-5. **God Object Scan**: Flag components with excessive hook usage (> 15 hook calls).
-6. **Bundle & Dependency Weight Check** *(consolidated from /bundle-audit)*:
-   ```powershell
-   Set-Location "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
+### ⚡ Phase 1 — The Fleet Launch
+Invoke 3 parallel sub-agents (Role: "Auditor", TypeName: "self") to partition the work:
 
-   # Top 15 largest source files (proxy for bundle weight)
-   Get-ChildItem -Path src -Recurse -File -Include *.ts,*.tsx |
-     Sort-Object Length -Descending |
-     Select-Object -First 15 |
-     Select-Object Name, @{Name="SizeKB";Expression={ [math]::Round($_.Length/1KB, 1) }}, DirectoryName |
-     Format-Table -AutoSize
+- **Sub-Agent 1 (Dependencies & Cloud)**: Runs `npm outdated`, `npm audit --audit-level=moderate`, bundle/dependency weight checks (using powershell to find top 15 largest source files and node_modules >5MB), and calls `mcp_supabase-mcp-server_get_advisors`.
+- **Sub-Agent 2 (Code Maintenance)**: Searches `src/` for `TODO:`, `FIXME:`, or `HACK:`, and flags God Objects (components with >15 hook calls) and Architectural Smells (files >30KB).
+- **Sub-Agent 3 (Telemetry Sync)**: Runs `node tools/sync_remote_errors.mjs --hours 48 --limit 50 --json` to fetch live production errors from Supabase.
 
-   # Flag any single package directory over 5MB
-   Get-ChildItem -Path node_modules -Directory |
-     Where-Object { (Get-ChildItem $_.FullName -Recurse -File | Measure-Object -Property Length -Sum).Sum -gt 5MB } |
-     Select-Object Name, @{Name="SizeMB";Expression={
-       [math]::Round((Get-ChildItem $_.FullName -Recurse -File | Measure-Object -Property Length -Sum).Sum/1MB, 1)
-     }} |
-     Sort-Object SizeMB -Descending |
-     Select-Object -First 10 |
-     Format-Table -AutoSize
-   ```
-   - Flag any source file over 100KB as a TECH DEBT item.
-   - Flag any single node_module over 5MB in the report.
-   - Do NOT block release for bundle size alone unless a single source file exceeds 200KB.
-7. **Telemetry Sync**: Run `node tools/sync_remote_errors.mjs` to query the Supabase `telemetry_errors` table and print a triage summary. Flags: `--hours 48` (window), `--limit 50`, `--json` (raw output). Non-fatal if Supabase is offline.
-8. **Bucket List Integration**:
+*Note: You do NOT need to wait or poll. Spawn them concurrently via a single `invoke_subagent` call and stop calling tools. The system will wake you when they message back.*
+
+### ⚡ Phase 2 — Synthesis
+1. **Bucket List Integration**:
    - Pipe all findings into `tools/SK8Lytz_Bucket_List.md` under the `🧹 TECH DEBT` queue.
    - You MUST strictly format the injected tasks according to the nested multi-line Task Schema defined in the AI AGENT DIRECTIVES.
-9. **Report**: Output a summary to the chat detailing vulnerabilities, crashes, TODOs, smells, and bundle weight.
+2. **Report**: Output a summary to the chat detailing vulnerabilities, crashes, TODOs, smells, and bundle weight.
 

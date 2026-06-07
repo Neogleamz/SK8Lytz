@@ -42,12 +42,10 @@ Then grep the `src/` diff for unregistered exports:
 
 When prompted with "sync architecture", "update memory", or "compile context", execute the following workflow to synchronize `tools/SK8Lytz_App_Master_Reference.md` with the current codebase reality:
 
-1. **Codebase Scan**: Use `view_file` and `list_dir` to survey:
-   - `src/hooks/` — count all hooks, identify new ones not in the Registry
-   - `src/hooks/ble/` — count all BLE sub-hooks
-   - `src/services/` — count all services
-   - `src/components/` — count all components
-   - `src/screens/` — list all screens
+1. **Codebase Scan**: Leverage the Sub-Agent Swarm Protocol. Invoke parallel `research` sub-agents using `invoke_subagent` to survey distinct directories simultaneously:
+   - Sub-agent 1: `src/hooks/` and `src/hooks/ble/` — count all hooks, identify new ones not in the Registry
+   - Sub-agent 2: `src/services/` — count all services
+   - Sub-agent 3: `src/components/` and `src/screens/` — count all components and screens
 
 2. **Hook & Service Registry Diff**: Compare the live file count against the Hook & Service Registry table in `tools/SK8Lytz_App_Master_Reference.md` §4. List every hook/service that is missing from the Registry.
 

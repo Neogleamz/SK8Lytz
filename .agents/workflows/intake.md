@@ -19,6 +19,15 @@ Read `tools/SK8Lytz_Bucket_List.md` — specifically ACTIVE SPRINT and ON DECK.
 
 ---
 
+### 🕵️ Scout — Reyes (Step 0.5): The Benchmarking Gate
+Before any feature classification or planning begins, Reyes MUST establish the industry gold standard.
+1. Use `search_web` to research how 5 top-tier companies/apps solve this exact problem (e.g., Govee, LIFX, Strava, Sonos, Discord, Philips Hue).
+2. Synthesize their approaches into a new entry in `tools/INDUSTRY_BENCHMARKS.md`.
+3. If no clear gold standard exists, extract the closest analog.
+4. Output a summary: *"Industry Benchmark complete. Govee does X, Sonos does Y. We will adopt Z as our gold standard."*
+
+---
+
 ### 🎯 PM — Jordan (Steps 1–3): Product Intercept & Classification
 
 1. **The Intercept**: If the user asks for a feature/fix casually, halt and route it through intake: "Intercepting request. Routing through formal intake..."
