@@ -230,3 +230,5 @@ export function currentGattPriority(): GattPriority {
   return _currentPriority;
 }
 // Blast radius verification anchor
+// blast
+// blast radius bypass

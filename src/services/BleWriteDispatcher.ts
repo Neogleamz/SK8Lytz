@@ -138,8 +138,7 @@ async function _executeWriteToDeviceInternal(
     // writeCharacteristicWithoutResponse resolves when the write is SENT, not RECEIVED.
     // Without a gap, device 1's incoming GATT notification collides with device 2's
     // in-flight write, causing a buffer overflow → organic disconnect → auto-recovery cascade.
-    for (let i = 0; i < liveTargets.length; i++) {
-      const device = liveTargets[i];
+    await Promise.all(liveTargets.map(async (device) => {
       const deviceAdapter = resolveProtocolForDevice(device.id, adapterMap);
       try {
         await device.writeCharacteristicWithoutResponseForService(
@@ -147,15 +146,11 @@ async function _executeWriteToDeviceInternal(
           deviceAdapter.writeCharacteristicUUID,
           base64Full
         );
-        // Only delay between devices, not after the last one
-        if (i < liveTargets.length - 1) {
-          await new Promise(r => setTimeout(r, 50));
-        }
       } catch (writeError: any) {
         AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError?.message);
         allSucceeded = false;
       }
-    }
+    }));
 
     if (skippedGhosted > 0 && allSucceeded) return 'partial';
     return allSucceeded;

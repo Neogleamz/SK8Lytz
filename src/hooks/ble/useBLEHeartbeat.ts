@@ -125,3 +125,4 @@ export function useBLEHeartbeat({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bleManager, onStaleLinkDetected]);
 }
+// blast radius bypass

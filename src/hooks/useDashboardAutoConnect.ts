@@ -206,7 +206,7 @@ export function useDashboardAutoConnect({
               autoConnectRetriesRef.current.set(id, retries);
 
               if (retries <= MAX_AUTO_CONNECT_RETRIES) {
-                const backoff = AUTO_CONNECT_RETRY_BACKOFF_MS * retries;
+                const backoff = (AUTO_CONNECT_RETRY_BACKOFF_MS * retries) + Math.floor(Math.random() * 500);
                 AppLogger.log('BLE_STATE_CHANGE', {
                   event: 'auto_connect_requeued',
                   mac: id,

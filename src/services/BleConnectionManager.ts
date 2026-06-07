@@ -287,7 +287,10 @@ export async function executeConnectToDevices({
         }
       };
 
-      const handshakeResults = await Promise.all(rawConns.map(handshakeDevice));
+      const handshakeResults: (Device | null)[] = [];
+      for (const conn of rawConns) {
+        handshakeResults.push(await handshakeDevice(conn));
+      }
       const connectedGroup = handshakeResults.filter((c): c is Device => c !== null);
 
       if (connectedGroup.length > 0) {

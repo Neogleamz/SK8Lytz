@@ -19,6 +19,7 @@ import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
 import { AppLogger } from '../../services/AppLogger';
 import { createGattSession } from '../../services/BleSessionFactory';
 import { acquireGattLock } from './useBLEGattMutex';
+import { enqueueWrite } from '../../services/BleWriteQueue';
 
 export interface UseBLEAutoRecoveryProps {
   bleManager: BleManager;
@@ -365,10 +366,13 @@ export function useBLEAutoRecovery({
           if (signal.aborted) break;
           const pingResult = recoveryAdapter.buildQuerySettings(false);
           if (pingResult.packets.length > 0) {
-            await conn.writeCharacteristicWithoutResponseForService(
-              recoveryAdapter.serviceUUID, recoveryAdapter.writeCharacteristicUUID,
-              Buffer.from(pingResult.packets[0]).toString('base64')
-            ).catch((e: unknown) => AppLogger.warn('[useBLEAutoRecovery] Recovery ping failed', e));
+            await enqueueWrite('critical', async () => {
+              await conn.writeCharacteristicWithoutResponseForService(
+                recoveryAdapter.serviceUUID, recoveryAdapter.writeCharacteristicUUID,
+                Buffer.from(pingResult.packets[0]).toString('base64')
+              ).catch((e: unknown) => AppLogger.warn('[useBLEAutoRecovery] Recovery ping failed', e));
+              return true;
+            });
           }
           if (signal.aborted) break;
 
