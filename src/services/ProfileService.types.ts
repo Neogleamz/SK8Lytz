@@ -19,6 +19,9 @@ export interface UserProfile {
   ban_reason?: string | null;
   role?: 'user' | 'moderator' | 'admin';
   notif_preferences?: any;
+  accepted_eula_version?: number;
+  lifetime_distance_miles?: number;
+  lifetime_top_speed_mph?: number;
 }
 
 export interface PermanentCrew {

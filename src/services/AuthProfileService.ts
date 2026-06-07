@@ -87,11 +87,16 @@ class AuthProfileService {
     if (fields.avatar_url != null) cleanFields.avatar_url = fields.avatar_url;
     if (fields.notif_preferences !== undefined) cleanFields.notif_preferences = fields.notif_preferences;
 
-    const { error } = await supabase
-      .from('user_profiles')
-      .upsert({ user_id: userId, ...cleanFields }, { onConflict: 'user_id' });
+    try {
+      const { error } = await supabase
+        .from('user_profiles')
+        .upsert({ user_id: userId, ...cleanFields }, { onConflict: 'user_id' });
 
-    if (error) throw error;
+      if (error) throw error;
+    } catch (e: any) {
+      if (e?.code === '23505') throw new Error('Username already taken');
+      throw e;
+    }
   }
 
   /**

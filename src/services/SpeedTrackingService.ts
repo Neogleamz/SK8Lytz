@@ -325,7 +325,7 @@ class SpeedTrackingServiceClass {
         .order('session_date', { ascending: false })
         .limit(limit);
 
-      if (error || !data) return [];
+      if (error || !data) return this._getOfflineFallbackSessions();
 
       // Boy Scout: type the mapped row to avoid Record<string, any>
       type SkateSessionRow = {
@@ -334,7 +334,7 @@ class SpeedTrackingServiceClass {
         calories: number | null; avg_bpm: number | null; peak_bpm: number | null;
         location_label: string | null;
       };
-      return (data as unknown as SkateSessionRow[]).map((r) => ({
+      const mapped = (data as unknown as SkateSessionRow[]).map((r) => ({
         id: r.id,
         sessionDate: r.session_date,
         durationSec: r.duration_sec,
@@ -346,6 +346,31 @@ class SpeedTrackingServiceClass {
         avgBpm: r.avg_bpm ?? null,
         peakBpm: r.peak_bpm ?? null,
         locationLabel: r.location_label,
+      }));
+      return mapped.length > 0 ? mapped : this._getOfflineFallbackSessions();
+    } catch {
+      return this._getOfflineFallbackSessions();
+    }
+  }
+
+  // NOTE: Requires PLAN-fix-offline-session-persistence-queue to fully work.
+  private async _getOfflineFallbackSessions(): Promise<ISkateSession[]> {
+    try {
+      const raw = await AsyncStorage.getItem(PENDING_SESSION_QUEUE_KEY);
+      if (!raw) return [];
+      const queue: PendingSessionRecord[] = JSON.parse(raw);
+      return queue.map(r => ({
+        id: `offline_${r.queued_at}`,
+        sessionDate: r.queued_at,
+        durationSec: r.durationSec,
+        distanceMiles: r.distanceMiles,
+        avgSpeedMph: r.avgSpeedMph,
+        peakSpeedMph: r.peakSpeedMph,
+        peakGForce: r.peakGForce,
+        calories: r.calories,
+        avgBpm: r.healthBpm ?? null,
+        peakBpm: r.healthPeakBpm ?? null,
+        locationLabel: r.locationLabel ?? null
       }));
     } catch {
       return [];

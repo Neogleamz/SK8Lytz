@@ -6,7 +6,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
 import { useAuthStyles } from './AuthStyles';
 
-const STORAGE_OFFLINE_SKIP = '@Sk8lytz_offline_skip';
+import { STORAGE_OFFLINE_SKIP, STORAGE_DEMO_HALO, STORAGE_DEMO_SOUL } from '../../constants/storageKeys';
 
 interface AuthFooterActionsProps {
   mode: 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
@@ -64,8 +64,8 @@ export function AuthFooterActions({ mode, onOfflineMode, isSandboxEnabled, setEr
             flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm
           }}
           onPress={async () => {
-            await AsyncStorage.setItem('@Sk8lytz_demo_halo', 'true');
-            await AsyncStorage.setItem('@Sk8lytz_demo_soul', 'true');
+            await AsyncStorage.setItem(STORAGE_DEMO_HALO, 'true');
+            await AsyncStorage.setItem(STORAGE_DEMO_SOUL, 'true');
             onOfflineMode();
           }}
         >

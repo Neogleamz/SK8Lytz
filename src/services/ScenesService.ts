@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_SCENES_CACHE } from '../constants/storageKeys';
 import type { Database } from '../types/supabase';
 import { AppLogger } from './AppLogger';
 
@@ -60,9 +61,19 @@ class ScenesServiceClass {
         .range(offset, offset + limit - 1);
 
       if (error) throw error;
-      return data as unknown as ICloudScene[];
+      const scenes = data as unknown as ICloudScene[];
+      if (scenes.length > 0) {
+        AsyncStorage.setItem(STORAGE_SCENES_CACHE, JSON.stringify(scenes)).catch(() => {});
+      }
+      return scenes;
     } catch (e) {
       AppLogger.error('[ScenesService] getPublicScenes error', { error: String(e) });
+      try {
+        const cached = await AsyncStorage.getItem(STORAGE_SCENES_CACHE);
+        if (cached) return JSON.parse(cached) as ICloudScene[];
+      } catch {
+        // ignore
+      }
       return [];
     }
   }

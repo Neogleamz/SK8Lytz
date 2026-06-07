@@ -25,7 +25,7 @@ LogBox.ignoreLogs([
   'props.pointerEvents is deprecated'
 ]);
 
-const STORAGE_OFFLINE_SKIP = '@Sk8lytz_offline_skip';
+import { STORAGE_OFFLINE_SKIP } from './src/constants/storageKeys';
 
 if (typeof (global as any).ErrorUtils !== 'undefined') {
   const defaultHandler = (global as any).ErrorUtils.getGlobalHandler();
@@ -124,7 +124,6 @@ function AppContent() {
         </ComplianceGate>
       ) : (
         <AuthScreen
-          onAuthSuccess={() => {/* session change auto-handles via onAuthStateChange in AuthProvider */}}
           onOfflineMode={() => {
             setIsOfflineMode(true);
             AsyncStorage.setItem(STORAGE_OFFLINE_SKIP, 'true').catch(() => {});

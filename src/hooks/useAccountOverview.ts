@@ -11,7 +11,7 @@ import { decode } from 'base64-arraybuffer';
 import { checkPermission, requestPermission, setPermissionOptOut } from '../services/PermissionService';
 import { useAuth } from '../context/AuthContext';
 
-const NOTIF_PREF_KEY = `${STORAGE_PREFIX}notif_prefs`;
+import { NOTIF_PREF_KEY } from '../constants/storageKeys';
 
 function hexToHue(hex: string | null | undefined): number {
   if (!hex) return 30; // default orange
@@ -210,7 +210,10 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   };
 
   const saveNotifPrefs = async (prefs: { crewInvites: boolean; sessionReminders: boolean; leaderHandoff: boolean }) => {
-    await AsyncStorage.setItem(NOTIF_PREF_KEY, JSON.stringify(prefs)).catch(e => AppLogger.warn('Failed to persist notification preferences', e));
+    await AsyncStorage.setItem(NOTIF_PREF_KEY, JSON.stringify(prefs)).catch(e => {
+      AppLogger.warn('Failed to persist notification preferences', e);
+      Alert.alert('Settings Error', 'Failed to save notification preference.');
+    });
     if (user?.id) {
       profileService.updateProfile(user.id, { notif_preferences: prefs }).catch((e: any) => 
         AppLogger.warn('Failed to cloud sync notification preferences', e)
@@ -227,6 +230,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       } else {
         // Automatically flips back to false if denied
         setHealthSyncEnabled(false);
+        Alert.alert('Health Access Required', 'Please enable Health access in your device Settings.');
       }
     } else {
       await setPermissionOptOut('HEALTH', true);

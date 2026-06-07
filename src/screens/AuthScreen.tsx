@@ -38,7 +38,7 @@ const showHelp = () => {
   }
 };
 
-export default function AuthScreen({ onAuthSuccess, onOfflineMode, sessionExpired }: { onAuthSuccess: () => void; onOfflineMode?: () => void; sessionExpired?: boolean }) {
+export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflineMode?: () => void; sessionExpired?: boolean }) {
   const { isDark, toggleTheme, Colors } = useTheme();
   const styles = useAuthStyles();
 
@@ -145,7 +145,6 @@ export default function AuthScreen({ onAuthSuccess, onOfflineMode, sessionExpire
               <AuthFormSignIn 
                 initialEmail={initialEmail} 
                 initialRememberMe={initialRememberMe} 
-                onAuthSuccess={onAuthSuccess} 
                 onModeChange={setMode} 
               />
             )}

@@ -344,7 +344,7 @@ export default function AccountModal({
   };
 
   const handleChangeEmail = async () => {
-    if (!newEmail.includes('@')) {
+    if (!/.+@.+\..+/.test(newEmail)) {
       setSecurityMsg({ type: 'error', text: 'Enter a valid email address' });
       return;
     }
@@ -396,7 +396,7 @@ export default function AccountModal({
           onPress: () => {
             Alert.alert(
               'Are you absolutely sure?',
-              'Type "DELETE" to confirm account deletion.',
+              'Tap Delete to permanently remove your account.',
               [
                 { text: 'Cancel', style: 'cancel' },
                 {

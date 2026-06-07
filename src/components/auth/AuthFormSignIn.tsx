@@ -11,19 +11,17 @@ import { supabase } from '../../services/supabaseClient';
 import { Spacing } from '../../theme/theme';
 import { useAuthStyles } from './AuthStyles';
 
-const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';
-const STORAGE_OFFLINE_SKIP = '@Sk8lytz_offline_skip';
+import { STORAGE_REMEMBER_CREDS, STORAGE_OFFLINE_SKIP } from '../../constants/storageKeys';
 
 const isValidEmail = (str: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str.trim());
 
 interface AuthFormSignInProps {
   initialEmail: string;
   initialRememberMe: boolean;
-  onAuthSuccess: () => void;
   onModeChange: (mode: 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK') => void;
 }
 
-export function AuthFormSignIn({ initialEmail, initialRememberMe, onAuthSuccess, onModeChange }: AuthFormSignInProps) {
+export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }: AuthFormSignInProps) {
   const { Colors } = useTheme();
   const styles = useAuthStyles();
 
@@ -84,7 +82,6 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onAuthSuccess,
         await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: loginEmail, rememberMe: false }));
       }
       await AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP);
-      onAuthSuccess();
     }
   };
 

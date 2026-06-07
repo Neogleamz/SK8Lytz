@@ -418,3 +418,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
  * * D o n ' t   r e - d e r i v e : * *   M e m o r y   h a l l u c i n a t e d   t h a t   ' a c c o u n t - h a r d e n i n g '   w a s   i n c o m p l e t e   b e c a u s e   a   c h e c k p o i n t   s u m m a r y   a s s e r t e d   i t   w a s   ' N O T   S T A R T E D '   i n   a n   o l d e r   s t a t e .   F i l e s   a r e   t r u t h . 
  * * S o u r c e : * *   . a g e n t s / r u l e s / a g e n t - b e h a v i o r . m d : 2 6 1  
  
+### [MERGE] 2026-06-06T19:00 — chore/blast-radius-engine -> master @ d2b48c24
+**What merged:** Implemented the Code-Enforced Blast Radius Engine (ARCH_DEPENDENCY_MAP.json, blast-radius-scanner.js) to block partial architectural commits.
+**Verify result:** TSC ✅, Jest ✅, Pipeline ✅
+**Files touched:** ARCH_DEPENDENCY_MAP.json, blast-radius-scanner.js, .husky/pre-commit, package.json, tools/fortress-gatekeeper.ps1
+
