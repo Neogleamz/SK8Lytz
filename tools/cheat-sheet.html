@@ -765,6 +765,21 @@
 
   </div>
 
+  <!-- ─── THE IRON GATES (SYSTEM SAFEGUARDS) ──────────────── -->
+  <div class="card grid-full" style="--accent: var(--red);">
+    <h2><span class="icon">🛡️</span> The Iron Gates (System Safeguards & Overrides)</h2>
+    <table>
+      <thead><tr><th>Gate / Override</th><th>What It Does</th><th>Enforcement</th></tr></thead>
+      <tbody>
+        <tr><td>Anti-Hallucination Board Guard</td><td>Forces Jordan to read <code>SK8Lytz_Bucket_List.md</code> before suggesting tasks. Stops hallucinated task states.</td><td>Rule (agent-behavior.md)</td></tr>
+        <tr><td>Planning Firewall</td><td>Tasks must have a Decision Log to enter ON DECK. Blocks any coding without a plan.</td><td>Rule (start-task.md)</td></tr>
+        <tr><td>Documentation Parity Gate</td><td>Blocks gatekeeper merges if new hooks, services, or architecture aren't documented in Master Reference §3/§4.</td><td>Rule (Avery)</td></tr>
+        <tr><td>Blast Radius Engine</td><td>Blocks partial architectural commits across domain boundaries.</td><td>Pre-commit hook + ARCH_DEPENDENCY_MAP.json</td></tr>
+        <tr><td><span class="tag tag-green">Override</span> Unified Batch Override</td><td>Allows grouping multiple <code>[Snack]</code> or <code>[Meal]</code> tasks from the same domain into one worktree, bypassing the 1-task rule.</td><td>Kanban Constitution</td></tr>
+      </tbody>
+    </table>
+  </div>
+
   <!-- ─── THE SELF-EVOLUTION SYSTEM ───────────────────────── -->
   <div class="card grid-wide" style="--accent: var(--taylor);">
     <h2><span class="icon">⚡</span> The Self-Evolution System</h2>

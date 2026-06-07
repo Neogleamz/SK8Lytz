@@ -1,4 +1,4 @@
-﻿# SK8Lytz Master Bucket List Archive
+# SK8Lytz Master Bucket List Archive
 
 This document contains the archive of all successfully completed and merged tasks, sprints, and epic batches within the SK8Lytz app ecosystem.
 
@@ -440,3 +440,19 @@ This document contains the archive of all successfully completed and merged task
   - **Goal:** Evaluate migrating BLE state management from scattered refs/effects/tagged unions to XState statecharts. Per-device FSMs composed into group-level summaries. Invalid states become structurally impossible.
   - **Details:** COMPLETE — Migrated BLE system to XState v5 (useMachine). Created BleMachine.ts and BleMachine.types.ts. Replaced BleStateMachine class. Added shim to leGateRef to prevent regression and satisfy type checking. Verified via 
 pm run verify which includes QA tests.
+
+### [BATCH:ble-p3-polish] — ⚡ Parallel (Completed Tasks)
+
+- [x] **`ble/connection-health-heartbeat`** — `pingConnectedDevice` hook + 7 Jest tests. Merged `84e21bb3`.
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[LAB]` `[L-RISK]` `[Snack]` `[🤖 PRO-HIGH]` `[BATCH:ble-p3-polish]`
+  - **Plan:** 📎 [PLAN-ble-connection-health-heartbeat.md](file:///C:/Users/Magma/.gemini/antigravity/brain/acebf202-b9db-4779-8e51-e3ed33ab835d/PLAN-ble-connection-health-heartbeat.md)
+  - **Source of Truth:** 📖 `useBLE.ts` — no periodic connection liveness check; stale GATT handles survive for minutes on Samsung Galaxy A-series
+  - **Goal:** Add a lightweight BLE ping every 45-60s to connected devices to verify the connection is actually alive. If ping fails, preemptively trigger recovery instead of waiting for the next write to fail.
+  - **Details:** COMPLETE — Created `src/hooks/ble/useBLEHeartbeat.ts` with `pingConnectedDevice()` (pure exported fn, testable) and `useBLEHeartbeat` (thin setInterval orchestrator). Wired into `useBLE.ts`. 7 tests in `useBLEHeartbeat.test.ts` cover Zengge happy path, BanlanX fallback, empty-packets fallback, GATT 133 error, code 8 error, cancel-throws safety, success no-op. Also fixed: `verifiable-check-runner.js` junction relink idempotency + `jest.config.js` `transformIgnorePatterns` expanded for `expo-*` packages. Needs physical device smoke test to confirm stale link recovery fires correctly in the field.
+
+- [x] **`ble/post-connect-rssi-monitoring`** — `useBLERSSIMonitor` + live rssiMap on device cards. Merged `fd635db8`.
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[LAB]` `[L-RISK]` `[Snack]` `[🤖 FLASH]` `[BATCH:ble-p3-polish]`
+  - **Plan:** 📎 [PLAN-ble-post-connect-rssi-monitoring.md](file:///C:/Users/Magma/.gemini/antigravity/brain/acebf202-b9db-4779-8e51-e3ed33ab835d/PLAN-ble-post-connect-rssi-monitoring.md)
+  - **Source of Truth:** 📖 `useBLE.ts` — RSSI checked only during scan, never after connection established
+  - **Goal:** Poll RSSI every 30s on connected devices. If RSSI drops below -75 dBm, show a "weak connection" warning badge on the device card. If it drops below -82 dBm, preemptively disconnect and reconnect.
+  - **Details:** COMPLETE — Created `src/hooks/ble/useBLERSSIMonitor.ts` with `readDeviceRSSI()` (pure testable fn) and `useBLERSSIMonitor()` (30s polling hook, returns `Record<string,number>`). Created `src/components/ConnectionStrengthBadge.tsx` (3-bar pure-View signal icon, no SVG dep). Wired `rssiMap` into `BluetoothLowEnergyApi` + `useBLE.ts` return. In `DashboardScreen.tsx` `renderItem`, live `rssiMap[mac]` overrides stale scan-time `device.rssi` — existing wifi icon auto-updates. Preemptive reconnect guard uses verified `ghostedDeviceIds.includes(mac)`. 9 tests. Needs physical device smoke test to confirm badge updates within 30s of signal degradation.
