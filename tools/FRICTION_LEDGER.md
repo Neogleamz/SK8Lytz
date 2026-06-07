@@ -173,3 +173,14 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Impact:** High risk of code loss, terrifying user experience ("it scary!!!!"), and merge failures.
 - **Status:** MONITORING — ⚡ EVOLUTION PROPOSAL TRIGGERED (see below)
 
+
+### [FRICTION-007] Zombie Tasks Remaining in Bucket List
+- **First Observed:** 2026-06-07  
+- **Observed By:** PM - Jordan
+- **Occurrences:** 1 / 3
+- **Trigger:** User asked why BATCH:account-polish was still in the Bucket List when it was completed.
+- **Pattern:** The agent completing a task (Debugging Account Avatar Issues session) merged the work but failed to update the Bucket List to check off the task and remove the completed batch, leaving zombie tasks in the active sprint.
+- **Root Cause Theory:** The agent might have skipped Phase 6 Step 5 of the start-task workflow, or lacked the explicit instruction to remove the batch entirely after all internal items were completed.
+- **Impact:** User confusion, cluttered sprint board, potential duplicate work.
+- **Status:** MONITORING
+
