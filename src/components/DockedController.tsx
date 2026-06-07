@@ -108,22 +108,24 @@ const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segme
   }, [fullArray, offset]);
 
   return (
-    <View style={{ flex: 1, marginRight: Spacing.sm, height: 8, overflow: 'hidden' }}>
-      <View style={{ flex: 1, flexDirection: 'row', gap: Spacing.xxs }}>
+    <View style={fixedPatternStyles.container}>
+      <View style={fixedPatternStyles.row}>
         {displayedDots.slice(0, 10).map((c, i) => (
           <View
             key={i}
-            style={{
-              flex: 1,
-              borderRadius: 4,
-              backgroundColor: c
-            }}
+            style={[fixedPatternStyles.dot, { backgroundColor: c }]}
           />
         ))}
       </View>
     </View>
   );
 };
+
+const fixedPatternStyles = StyleSheet.create({
+  container: { flex: 1, marginRight: Spacing.sm, height: 8, overflow: 'hidden' },
+  row: { flex: 1, flexDirection: 'row', gap: Spacing.xxs },
+  dot: { flex: 1, borderRadius: 4 }
+});
 
 
 // IDeviceState, IFavoriteState, IQuickPreset — canonical source: '../types/dashboard.types'
@@ -1084,15 +1086,18 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         <View style={styles.visualizerWrapper}>
           {/* BLE Write Status Indicator */}
           {writeStatus === 'PENDING' && (
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#00F0FF', opacity: 0.7, position: 'absolute', right: 8, top: 8, zIndex: 10 }} />
+            <View style={styles.blePendingIndicator} />
           )}
           {writeStatus === 'RECONCILED' && (
-            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF4444', position: 'absolute', right: 8, top: 8, zIndex: 10 }} />
+            <View style={styles.bleReconciledIndicator} />
           )}
-          <View style={{ marginBottom: Spacing.sm, width: '100%' }}>
+          <View style={styles.visualizerContent}>
             {/* Power Toggle Button (Left) */}
             <TouchableOpacity
-              style={{ position: 'absolute', top: 12, left: 16, zIndex: 100, backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.15)' : 'rgba(255, 68, 68, 0.15)', padding: Spacing.sm, borderRadius: 20, borderWidth: 1, borderColor: isPoweredOn ? 'rgba(0, 240, 255, 0.3)' : 'rgba(255, 68, 68, 0.3)' }}
+              style={[
+                styles.powerBtn,
+                isPoweredOn ? styles.powerBtnOn : styles.powerBtnOff
+              ]}
               onPress={() => {
                 if (onPowerToggle) onPowerToggle();
                 else setPower(!isPoweredOn);
@@ -1103,7 +1108,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
             {/* Favorite Button (Right) */}
             <TouchableOpacity
-              style={{ position: 'absolute', top: 12, right: 16, zIndex: 100, backgroundColor: 'rgba(255,255,255,0.1)', padding: Spacing.sm, borderRadius: 20 }}
+              style={styles.favoriteBtn}
               onPress={handleSaveFavoriteClick}
             >
               <MaterialCommunityIcons name="heart-plus-outline" size={22} color={Colors.primary} />
@@ -1155,8 +1160,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
         {/* Removed Active Mode Header to save vertical space */}
 
-        <View style={[styles.controlsContainer, { padding: Spacing.xs, overflow: 'hidden' }]}>
-          <View style={[styles.activeModeContainer, { flex: 1, justifyContent: 'space-evenly' }]}>
+        <View style={[styles.controlsContainer, styles.controlsContainerPadding]}>
+          <View style={[styles.activeModeContainer, styles.activeModeFlex]}>
             {activeMode === 'FAVORITES' && (
               <FavoritesPanel
                 favorites={favorites}
@@ -1439,4 +1444,31 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     flex: 1,
     overflow: 'hidden',
   },
+  blePendingIndicator: {
+    width: 6, height: 6, borderRadius: 3, backgroundColor: '#00F0FF', opacity: 0.7, position: 'absolute', right: 8, top: 8, zIndex: 10
+  },
+  bleReconciledIndicator: {
+    width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF4444', position: 'absolute', right: 8, top: 8, zIndex: 10
+  },
+  visualizerContent: {
+    marginBottom: Spacing.sm, width: '100%'
+  },
+  powerBtn: {
+    position: 'absolute', top: 12, left: 16, zIndex: 100, padding: Spacing.sm, borderRadius: 20, borderWidth: 1
+  },
+  powerBtnOn: {
+    backgroundColor: 'rgba(0, 240, 255, 0.15)', borderColor: 'rgba(0, 240, 255, 0.3)'
+  },
+  powerBtnOff: {
+    backgroundColor: 'rgba(255, 68, 68, 0.15)', borderColor: 'rgba(255, 68, 68, 0.3)'
+  },
+  favoriteBtn: {
+    position: 'absolute', top: 12, right: 16, zIndex: 100, backgroundColor: 'rgba(255,255,255,0.1)', padding: Spacing.sm, borderRadius: 20
+  },
+  controlsContainerPadding: {
+    padding: Spacing.xs, overflow: 'hidden'
+  },
+  activeModeFlex: {
+    flex: 1, justifyContent: 'space-evenly'
+  }
 });

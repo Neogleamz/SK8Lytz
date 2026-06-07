@@ -340,6 +340,24 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     backgroundColor: 'rgba(255,255,255,0.02)',
     borderRadius: 16,
     padding: isShort ? 4 : 8,
-  }
+  },
+  loadingContainer: { backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' },
+  btBanner: { 
+    backgroundColor: Colors.error, 
+    padding: Spacing.lg, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    flexDirection: 'row', 
+    gap: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.2)'
+  },
+  btBannerText: { color: '#FFF', fontWeight: '900', fontSize: 14, textTransform: 'uppercase', letterSpacing: 0.5 },
+  controllerWrap: { flex: 1 },
+  controllerHeaderWrap: { paddingBottom: Spacing.lg, zIndex: 100, elevation: 100 },
+  controllerBodyWrap: { flex: 1 },
+  dashboardWrap: { flex: 1, backgroundColor: Colors.background },
+  scrollView: { flex: 1 },
+  flexibleSpacer: { flex: 1, minHeight: windowHeight < 720 ? 0 : 20 }
 });
 };

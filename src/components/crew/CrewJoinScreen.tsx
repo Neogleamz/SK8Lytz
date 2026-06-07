@@ -58,16 +58,16 @@ export function CrewJoinScreen() {
     } finally { setIsLoading(false); }
   };
 
-  const renderActiveSessionCard = ({ item }: { item: CrewSession }) => {
+  const renderActiveSessionCard = React.useCallback(({ item }: { item: CrewSession }) => {
     const isOwn = item.leader_user_id === currentUserId;
     return (
       <TouchableOpacity style={styles.sessionCard} onPress={() => handleJoinById(item.id)}
         disabled={isLoading} activeOpacity={0.75}>
-        <View style={{ flex: 1 }}>
+        <View style={localStyles.flex1}>
           <Text style={styles.sessionCardName}>{item.name}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginTop: Spacing.xxs }}>
+          <View style={localStyles.sessionMetaContainer}>
             {item.location_label && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.xxs }}>
+              <View style={localStyles.locationContainer}>
                 <MaterialCommunityIcons name="map-marker" size={12} color={Colors.textMuted} />
                 <Text style={styles.sessionCardMeta} numberOfLines={1}>{item.location_label}</Text>
               </View>
@@ -78,14 +78,14 @@ export function CrewJoinScreen() {
           </View>
         </View>
         <View style={styles.sessionCardRight}>
-          {isOwn && <Text style={{ fontSize: 14 }}>👑</Text>}
+          {isOwn && <Text style={localStyles.isOwnEmoji}>👑</Text>}
           <View style={styles.joinPill}>
             <Text style={styles.joinPillText}>{isOwn ? 'Rejoin' : 'Join'}</Text>
           </View>
         </View>
       </TouchableOpacity>
     );
-  };
+  }, [currentUserId, handleJoinById, isLoading, Colors.textMuted, styles]);
 
   return (
 <View style={{ flex: 1 }}>
@@ -101,17 +101,17 @@ export function CrewJoinScreen() {
           placeholder="Display name" placeholderTextColor={Colors.textMuted} maxLength={24} />
 
         {/* Live sessions browser */}
-        <View style={{ width: '100%', marginTop: Spacing.lg }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
+        <View style={localStyles.browserContainer}>
+          <View style={localStyles.browserHeader}>
             <Text style={styles.label}>🟢 CREWS SKATING NOW</Text>
             <TouchableOpacity onPress={loadActiveSessions}>
               <MaterialCommunityIcons name="refresh" size={15} color={Colors.textMuted} />
             </TouchableOpacity>
           </View>
           {isLoadingSessions ? (
-            <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.lg }} />
+            <ActivityIndicator color={Colors.primary} style={localStyles.spinner} />
           ) : activeSessions.length === 0 ? (
-            <Text style={[styles.subtitle, { marginTop: 0, fontSize: 12 }]}>No active crews right now. Be the first!</Text>
+            <Text style={[styles.subtitle, localStyles.emptyText]}>No active crews right now. Be the first!</Text>
           ) : (
             <FlatList data={activeSessions} keyExtractor={s => s.id}
               renderItem={renderActiveSessionCard} scrollEnabled={false} />
@@ -141,3 +141,14 @@ export function CrewJoinScreen() {
 
   );
 }
+
+const localStyles = {
+  flex1: { flex: 1 },
+  sessionMetaContainer: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: Spacing.sm, marginTop: Spacing.xxs },
+  locationContainer: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: Spacing.xxs },
+  isOwnEmoji: { fontSize: 14 },
+  browserContainer: { width: '100%' as const, marginTop: Spacing.lg },
+  browserHeader: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, marginBottom: Spacing.sm },
+  spinner: { marginVertical: Spacing.lg },
+  emptyText: { marginTop: 0, fontSize: 12 }
+};

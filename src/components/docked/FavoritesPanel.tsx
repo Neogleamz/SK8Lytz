@@ -33,63 +33,67 @@ const FavoritesPanel = React.memo(({
   const cardWidth = (Dimensions.get('window').width - (Layout.padding * 2)) / 3.5;
   const localStyles = React.useMemo(() => createStyles(Colors), [Colors]);
 
-  const emptyPlaceholder = (keyPrefix: string) => (
-    <View style={[localStyles.presetCard, { width: cardWidth, marginHorizontal: Spacing.xs, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }]} />
-  );
+  const emptyPlaceholder = React.useCallback((keyPrefix: string) => (
+    <View style={[localStyles.presetCard, localStyles.emptyPlaceholder, { width: cardWidth }]} />
+  ), [localStyles, cardWidth]);
+
+  const renderYoursItem = React.useCallback(({ item: fav }: { item: IFavoriteState }) => {
+    if (!fav) return emptyPlaceholder('yours');
+    return (
+      <PresetCard
+        preset={fav}
+        onPress={() => onLoadFavorite(fav)}
+        showEditButton
+        onEdit={() => onEditFavorite(fav.id, fav.name)}
+        accentFallback={Colors.primary}
+        cardWidth={cardWidth}
+        styles={localStyles}
+        Colors={Colors}
+      />
+    );
+  }, [Colors, cardWidth, localStyles, onEditFavorite, onLoadFavorite, emptyPlaceholder]);
+
+  const renderPicksItem = React.useCallback(({ item: fav }: { item: IFavoriteState }) => {
+    if (!fav) return emptyPlaceholder('picks');
+    return (
+      <PresetCard
+        preset={fav}
+        onPress={() => onLoadFavorite(fav, 'PICK')}
+        accentFallback={Colors.secondary}
+        cardWidth={cardWidth}
+        styles={localStyles}
+        Colors={Colors}
+      />
+    );
+  }, [Colors, cardWidth, localStyles, onLoadFavorite, emptyPlaceholder]);
 
   return (
-    <View style={{ flex: 1, paddingVertical: Layout.padding, paddingBottom: Spacing.xl, justifyContent: 'space-between' }}>
+    <View style={localStyles.container}>
       {/* ── YOURS Section ── */}
-      <View style={{ flex: 1 }}>
-        <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, paddingHorizontal: Layout.padding, marginBottom: Spacing.sm }]}>YOURS</Text>
+      <View style={localStyles.section}>
+        <Text style={[Typography.title, isDark && localStyles.textWhite, localStyles.sectionTitle]}>YOURS</Text>
         <FlatList
-          style={{ flex: 1 }}
+          style={localStyles.list}
           horizontal
           showsHorizontalScrollIndicator={false}
           data={favorites.length > 0 ? favorites : [null as unknown as IFavoriteState]}
           keyExtractor={(item, index) => item ? item.id : `empty-yours-${index}`}
-          contentContainerStyle={{ paddingHorizontal: Layout.padding, flexGrow: 1 }}
-          renderItem={({ item: fav }) => {
-            if (!fav) return emptyPlaceholder('yours');
-            return (
-              <PresetCard
-                preset={fav}
-                onPress={() => onLoadFavorite(fav)}
-                showEditButton
-                onEdit={() => onEditFavorite(fav.id, fav.name)}
-                accentFallback={Colors.primary}
-                cardWidth={cardWidth}
-                styles={localStyles}
-                Colors={Colors}
-              />
-            );
-          }}
+          contentContainerStyle={localStyles.listContent}
+          renderItem={renderYoursItem}
         />
       </View>
 
       {/* ── SK8Lytz Picks Section ── */}
-      <View style={{ flex: 1, marginTop: Spacing.lg }}>
-        <Text style={[Typography.title, isDark && { color: '#FFF' }, { fontSize: 13, paddingHorizontal: Layout.padding, marginBottom: Spacing.sm }]}>SK8Lytz Picks</Text>
+      <View style={[localStyles.section, localStyles.picksSection]}>
+        <Text style={[Typography.title, isDark && localStyles.textWhite, localStyles.sectionTitle]}>SK8Lytz Picks</Text>
         <FlatList
-          style={{ flex: 1 }}
+          style={localStyles.list}
           horizontal
           showsHorizontalScrollIndicator={false}
           data={curatedPresets.length > 0 ? curatedPresets : [null as unknown as IFavoriteState]}
           keyExtractor={(item, index) => item ? item.id : `empty-picks-${index}`}
-          contentContainerStyle={{ paddingHorizontal: Layout.padding, flexGrow: 1 }}
-          renderItem={({ item: fav }) => {
-            if (!fav) return emptyPlaceholder('picks');
-            return (
-              <PresetCard
-                preset={fav}
-                onPress={() => onLoadFavorite(fav, 'PICK')}
-                accentFallback={Colors.secondary}
-                cardWidth={cardWidth}
-                styles={localStyles}
-                Colors={Colors}
-              />
-            );
-          }}
+          contentContainerStyle={localStyles.listContent}
+          renderItem={renderPicksItem}
         />
       </View>
     </View>
@@ -114,4 +118,12 @@ const createStyles = (Colors: any) => ({
     fontWeight: 'bold' as const,
     color: Colors.text,
   },
+  container: { flex: 1, paddingVertical: Layout.padding, paddingBottom: Spacing.xl, justifyContent: 'space-between' as const },
+  section: { flex: 1 },
+  picksSection: { marginTop: Spacing.lg },
+  sectionTitle: { fontSize: 13, paddingHorizontal: Layout.padding, marginBottom: Spacing.sm },
+  textWhite: { color: '#FFF' },
+  list: { flex: 1 },
+  listContent: { paddingHorizontal: Layout.padding, flexGrow: 1 },
+  emptyPlaceholder: { marginHorizontal: Spacing.xs, borderWidth: 1.5, borderStyle: 'dashed' as const, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }
 });

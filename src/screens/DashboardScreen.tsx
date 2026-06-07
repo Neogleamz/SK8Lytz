@@ -897,20 +897,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     return (
       <TouchableOpacity 
         onPress={() => Linking.openSettings()}
-        style={{ 
-          backgroundColor: Colors.error, 
-          padding: Spacing.lg, 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          flexDirection: 'row', 
-          gap: Spacing.md,
-          borderBottomWidth: 1,
-          borderBottomColor: 'rgba(255,255,255,0.2)'
-        }}
+        style={styles.btBanner}
         activeOpacity={0.9}
       >
         <MaterialCommunityIcons name="alert-circle" size={24} color="#FFF" />
-        <Text style={{ color: '#FFF', fontWeight: '900', fontSize: 14, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+        <Text style={styles.btBannerText}>
           Bluetooth Disabled or Permissions Denied!
         </Text>
         <MaterialCommunityIcons name="chevron-right" size={20} color="#FFF" />
@@ -921,7 +912,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   switch (viewState) {
     case 'LOADING_REGS':
       return (
-        <View style={[styles.container, { backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <View style={[styles.container, styles.loadingContainer]}>
           <ActivityIndicator color={Colors.primary} size="large" />
         </View>
       );
@@ -949,8 +940,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
       <View style={styles.container}>
 
         {isControllerOpen && (
-          <View style={{ flex: 1 }}>
-            <View pointerEvents="box-none" style={{ paddingBottom: Spacing.lg, zIndex: 100, elevation: 100 }}>
+          <View style={styles.controllerWrap}>
+            <View pointerEvents="box-none" style={styles.controllerHeaderWrap}>
               <DashboardHeader
                 isActuallyConnected={true}
                 isOfflineMode={isOfflineMode}
@@ -971,14 +962,14 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 Colors={Colors}
               />
             </View>
-            <View style={{ flex: 1 }}>
+            <View style={styles.controllerBodyWrap}>
               {MemoizedSk8lytzController}
             </View>
           </View>
         )}
         {!isControllerOpen && (
           /* ── 4-SLAB VERTICAL HIERARCHY ── */
-          <View style={{ flex: 1, backgroundColor: Colors.background }}>
+          <View style={styles.dashboardWrap}>
              {/* SLAB 1: HEADER (Logo + Pulse) */}
              <View style={styles.headerSlab}>
                 <DashboardHeader
@@ -1004,7 +995,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
              </View>
 
              <ScrollView 
-               style={{ flex: 1 }} 
+               style={styles.scrollView} 
                contentContainerStyle={{ paddingBottom: insets.bottom + 60, flexGrow: 1 }}
                showsVerticalScrollIndicator={false}
                refreshControl={
@@ -1077,7 +1068,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                 />
 
                 {/* Flexible spacer — only pushes content on large screens */}
-                <View style={{ flex: 1, minHeight: windowHeight < 720 ? 0 : 20 }} />
+                <View style={styles.flexibleSpacer} />
 
                 {/* SLAB 4: REGISTERED FLEET */}
                 <RegisteredFleetSlab
@@ -1101,15 +1092,11 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           onDelete={groupModalState === 'RENAME' && editingGroupId ? () => handleGroupDelete(editingGroupId) : undefined}
           initialName={groupModalState === 'RENAME' ? customGroups.find(g => g.id === editingGroupId)?.name : getDefaultGroupName()}
           initialDeviceIds={groupModalState === 'RENAME' ? customGroups.find(g => g.id === editingGroupId)?.deviceIds : selectedIds}
-          allDevices={registeredDevices.map(rd => ({
-            // Use the registered fleet as the pool — NOT the BLE scan.
-            // BLE scan (allDevices) only has currently-connected/discovered devices.
-            // Group membership is a persistent concept that must survive being offline.
+          allDevices={useMemo(() => registeredDevices.map(rd => ({
             id: rd.device_mac.toUpperCase(),
             name: rd.custom_name || rd.device_name || rd.device_mac,
-            // Show connection status as a hint — doesn't gate visibility
             connected: allDevices.some(d => d.id.toUpperCase() === rd.device_mac.toUpperCase()),
-          }))}
+          })), [registeredDevices, allDevices])}
         />
 
         <DeviceSettingsModal
