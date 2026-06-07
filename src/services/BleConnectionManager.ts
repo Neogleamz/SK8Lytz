@@ -246,11 +246,8 @@ export async function executeConnectToDevices({
                 return true;
               };
               
-              if (enqueueWrite) {
-                await enqueueWrite('critical', writeOp);
-              } else {
-                await writeOp();
-              }
+              if (!enqueueWrite) throw new Error('[BLE] enqueueWrite not provided to connection request');
+              await enqueueWrite('critical', writeOp);
               
               if (i < handshake.packets.length - 1 && handshake.interPacketDelayMs > 0) {
                 await new Promise(res => setTimeout(res, handshake.interPacketDelayMs));

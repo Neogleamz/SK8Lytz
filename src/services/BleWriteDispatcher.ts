@@ -138,7 +138,7 @@ async function _executeWriteToDeviceInternal(
     // writeCharacteristicWithoutResponse resolves when the write is SENT, not RECEIVED.
     // Without a gap, device 1's incoming GATT notification collides with device 2's
     // in-flight write, causing a buffer overflow → organic disconnect → auto-recovery cascade.
-    await Promise.all(liveTargets.map(async (device) => {
+    for (const device of liveTargets) {
       const deviceAdapter = resolveProtocolForDevice(device.id, adapterMap);
       try {
         await device.writeCharacteristicWithoutResponseForService(
@@ -150,7 +150,8 @@ async function _executeWriteToDeviceInternal(
         AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError?.message);
         allSucceeded = false;
       }
-    }));
+      await new Promise(res => setTimeout(res, 50));
+    }
 
     if (skippedGhosted > 0 && allSucceeded) return 'partial';
     return allSucceeded;
@@ -234,18 +235,18 @@ export async function executeWriteChunked(
   await enqueueWrite('bulk', async () => {
     for (const chunk of chunks) {
       const b64 = Buffer.from(chunk).toString('base64');
-      await Promise.all(
-        targets
-          .filter(device => !ghostedDeviceIds.includes(device.id))
-          .map(device => {
-            const deviceAdapter = resolveProtocolForDevice(device.id, adapterMap);
-            return device.writeCharacteristicWithoutResponseForService(
-              deviceAdapter.serviceUUID, deviceAdapter.writeCharacteristicUUID, b64
-            ).catch((e: any) => {
-              AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: String(e) });
-            });
-          })
-      );
+      for (const device of targets) {
+        if (ghostedDeviceIds.includes(device.id)) continue;
+        const deviceAdapter = resolveProtocolForDevice(device.id, adapterMap);
+        try {
+          await device.writeCharacteristicWithoutResponseForService(
+            deviceAdapter.serviceUUID, deviceAdapter.writeCharacteristicUUID, b64
+          );
+        } catch (e: any) {
+          AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: String(e) });
+        }
+        await new Promise(res => setTimeout(res, 50));
+      }
       await new Promise(resolve => setTimeout(resolve, 8));
     }
     await new Promise(resolve => setTimeout(resolve, 50));

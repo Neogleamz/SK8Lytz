@@ -110,7 +110,7 @@ export interface BleConnectionRequest {
   /** Called on organic (unexpected) GATT disconnect */
   handleOrganicDisconnect: (error: Error | null, deviceId: string) => void;
   /** FIFO Serial Queue handle to prevent direct GATT write collisions */
-  enqueueWrite?: (priority: 'critical' | 'normal' | 'bulk', operation: () => Promise<boolean | 'partial'>, generation?: number) => Promise<boolean | 'partial'>;
+  enqueueWrite: (priority: 'critical' | 'normal' | 'bulk', operation: () => Promise<boolean | 'partial'>, generation?: number) => Promise<boolean | 'partial'>;
   /** React state setter for connected devices */
   setConnectedDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   /** Gate phase setter */

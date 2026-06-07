@@ -33,7 +33,7 @@ export async function executeRealDisconnect(
   const staleDevices = [...connectedDevicesRef.current];
 
   if (staleDevices.length > 0 && Platform.OS !== 'web') {
-    const disconnectPromises = staleDevices.map(async (device) => {
+    for (const device of staleDevices) {
       try {
         await bleManager.cancelDeviceConnection(device.id).catch((e: any) =>
           AppLogger.warn(`[BLE] Disconnect soft fail for ${device.id}`, e)
@@ -41,8 +41,7 @@ export async function executeRealDisconnect(
       } catch (e) {
         AppLogger.error(`[BLE] Fatal disconnect fault for ${device.id}`, e);
       }
-    });
-    await Promise.all(disconnectPromises);
+    }
     await new Promise(resolve => setTimeout(resolve, 250));
   }
 

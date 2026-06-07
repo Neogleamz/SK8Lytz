@@ -276,12 +276,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     const appStateSub = AppState.addEventListener('change', async (nextState) => {
       if (nextState === 'active' && connectedDevicesRef.current.length > 0) {
         try {
-          const liveChecks = await Promise.all(
-            connectedDevicesRef.current.map(async d => ({
-              id: d.id,
-              connected: await bleManager.isDeviceConnected(d.id)
-            }))
-          );
+          const liveChecks: { id: string; connected: boolean }[] = [];
+          for (const d of connectedDevicesRef.current) {
+            liveChecks.push({ id: d.id, connected: await bleManager.isDeviceConnected(d.id) });
+          }
           const staleIds = liveChecks.filter(c => !c.connected).map(c => c.id);
           if (staleIds.length > 0) {
             AppLogger.log('BLE_STATE_CHANGE', { event: 'pruning_stale_connections_on_wake', count: staleIds.length });

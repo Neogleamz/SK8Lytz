@@ -106,16 +106,14 @@ export function useBLEHeartbeat({
       const devices = connectedDevicesRef.current;
       if (devices.length === 0) return;
 
-      await Promise.allSettled(
-        devices.map((device) =>
-          pingConnectedDevice(
-            device.id,
-            bleManager,
-            adapterMapRef.current.get(device.id),
-            onStaleLinkDetected,
-          )
-        ),
-      );
+      for (const device of devices) {
+        await pingConnectedDevice(
+          device.id,
+          bleManager,
+          adapterMapRef.current.get(device.id),
+          onStaleLinkDetected,
+        );
+      }
     }, HEARTBEAT_INTERVAL_MS);
 
     return () => clearInterval(intervalId);
