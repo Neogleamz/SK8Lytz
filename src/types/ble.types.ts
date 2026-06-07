@@ -57,6 +57,9 @@ export interface BleScannerHandle {
 /** Auto-recovery handle — kept in request shape for future cancel-on-connect use */
 export interface BleAutoRecoveryHandle {
   cancelAllRecoveries(): Promise<void>;
+  baseMs?: number;
+  maxMs?: number;
+  jitter?: boolean;
 }
 
 // ── Primary connection contract ────────────────────────────────────────────────
@@ -105,7 +108,9 @@ export interface BleConnectionRequest {
     deviceId: string,
   ) => void>;
   /** Called on organic (unexpected) GATT disconnect */
-  handleOrganicDisconnect: (error: Error | null, deviceId: string) => void;
+  handleOrganicDisconnect: (error: Record<string, any> | null, deviceId: string) => void;
+  /** FIFO Serial Queue handle to prevent direct GATT write collisions */
+  enqueueWrite?: (priority: 'critical' | 'normal' | 'bulk', operation: () => Promise<boolean | 'partial'>, generation?: number) => Promise<boolean | 'partial'>;
   /** React state setter for connected devices */
   setConnectedDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   /** Gate phase setter */

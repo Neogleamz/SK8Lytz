@@ -24,7 +24,7 @@ export interface UseBLEAutoRecoveryProps {
   setConnectedDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   disconnectListeners: React.MutableRefObject<Record<string, Subscription>>;
   handleNotification: (error: Error | null, characteristic: Characteristic | null, deviceId: string) => void;
-  onOrganicDisconnect: (error: Error | null, deviceId: string) => void;
+  onOrganicDisconnect: (error: Record<string, any> | null, deviceId: string) => void;
 
   /**
    * Called after a successful reconnect with the resolved protocol adapter.
@@ -338,7 +338,13 @@ export function useBLEAutoRecovery({
           }
 
           disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: Error | null) => {
-            callbacksRef.current.onOrganicDisconnect(error, conn.id);
+            const contextError = error ? {
+              message: error.message,
+              stack: error.stack,
+              name: error.name,
+              status: (error as any).errorCode || (error as any).status || (error.message.includes('133') ? 133 : null)
+            } : null;
+            callbacksRef.current.onOrganicDisconnect(contextError, conn.id);
           });
 
           conn.monitorCharacteristicForService(
@@ -429,7 +435,13 @@ export function useBLEAutoRecovery({
             delete disconnectListeners.current[conn.id];
           }
           disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: Error | null) => {
-            callbacksRef.current.onOrganicDisconnect(error, conn.id);
+            const contextError = error ? {
+              message: error.message,
+              stack: error.stack,
+              name: error.name,
+              status: (error as any).errorCode || (error as any).status || (error.message.includes('133') ? 133 : null)
+            } : null;
+            callbacksRef.current.onOrganicDisconnect(contextError, conn.id);
           });
           conn.monitorCharacteristicForService(
             recoveryAdapter.serviceUUID,

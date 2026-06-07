@@ -30,6 +30,7 @@ export async function executeConnectToDevices({
   handleOrganicDisconnect,
   setConnectedDevices,
   setGate,
+  enqueueWrite,
 }: BleConnectionRequest): Promise<void> {
   if (devices.length === 0) return;
 
@@ -239,9 +240,19 @@ export async function executeConnectToDevices({
             const handshake = adapter.getHandshakePayloads();
             for (let i = 0; i < handshake.packets.length; i++) {
               const b64 = Buffer.from(handshake.packets[i]).toString('base64');
-              await conn.writeCharacteristicWithoutResponseForService(
-                adapter.serviceUUID, adapter.writeCharacteristicUUID, b64
-              );
+              const writeOp = async () => {
+                await conn.writeCharacteristicWithoutResponseForService(
+                  adapter.serviceUUID, adapter.writeCharacteristicUUID, b64
+                );
+                return true;
+              };
+              
+              if (enqueueWrite) {
+                await enqueueWrite('critical', writeOp);
+              } else {
+                await writeOp();
+              }
+              
               if (i < handshake.packets.length - 1 && handshake.interPacketDelayMs > 0) {
                 await new Promise(res => setTimeout(res, handshake.interPacketDelayMs));
               }

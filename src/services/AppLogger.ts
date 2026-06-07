@@ -29,6 +29,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Battery from 'expo-battery';
 import * as Device from 'expo-device';
 import { supabase } from './supabaseClient';
+import { TelemetryService } from './TelemetryService';
 
 const STORAGE_KEY = '@Sk8lytz_logs';         // canonical casing — matches @Sk8lytz_ convention
 const LEGACY_KEY  = '@sk8lytz_logs';          // old lowercase key — migrated on first load
@@ -362,7 +363,7 @@ class AppLoggerService {
   }
 
   // ── Black Box Standard: Structured Payload Formatting ──
-  private formatPayload(payload: Record<string, any>): Record<string, any> {
+  private formatPayload(payload: Record<string, any>, event?: EventType): Record<string, any> {
     // 1. Shallow copy to avoid mutating the caller's object.
     //    Previous impl used JSON.parse(JSON.stringify()) — a full deep-clone + double
     //    serialization on every log call. Replaced with spread + targeted recursive walk.
@@ -381,6 +382,11 @@ class AppLoggerService {
         if (!clean.mtu && primary.mtu !== undefined) clean.mtu = primary.mtu;
         if (!clean.battery_level && primary.batteryLevel !== undefined) clean.battery_level = primary.batteryLevel;
       }
+    }
+
+    // 2.5 Gold Standard BLE Telemetry Context
+    if (event && event.startsWith('BLE_')) {
+      clean = TelemetryService.extractBleContext(clean);
     }
 
     // 3. PII Scrubbing — targeted recursive key-walk (no round-trip serialize)
@@ -415,7 +421,7 @@ class AppLoggerService {
     await this.ensureLoaded();
     
     // Apply Black Box Standardization early
-    const payload = this.formatPayload(rawPayload);
+    const payload = this.formatPayload(rawPayload, event);
 
     // VIP Fast-Lane: Critical errors bypass the queue and physical storage to guarantee delivery
     const CRITICAL_EVENTS: EventType[] = ['ERROR_CAUGHT', 'PROTOCOL_ERROR', 'BLE_WRITE_ERROR', 'BLE_CONNECTION_ERROR', 'CREW_ERROR'];
@@ -436,12 +442,19 @@ class AppLoggerService {
           raw_context: {
             ...payload,
             host_device_id: Device.osInternalBuildId || Device.modelId || 'unknown'
-          }
+          },
+          payload_size: payload.payload_size || null,
+          operation_type: payload.operation_type || null
         }).then(({ error }) => {
           if (error) console.warn('[AppLogger] VIP Fast-Lane failed:', error.message);
         });
       }
       if (__DEV__) console.log(`[AppLogger VIP] ${event}`, payload);
+      
+      // GOLD STANDARD FIX: Push to local buffer so it's not lost offline
+      const entry: LogEntry = { t: Date.now(), e: event, d: payload };
+      this.buffer.push(entry);
+      this.persist();
       return; 
     }
 

@@ -4,6 +4,7 @@ import { Buffer } from 'buffer';
 import type { Device } from 'react-native-ble-plx';
 import { AppLogger } from '../../services/AppLogger';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
+import { enqueueWrite } from '../../services/BleWriteQueue';
 
 /** 45 seconds — long enough not to spam, short enough to catch stale links before the user notices. */
 const HEARTBEAT_INTERVAL_MS = 45_000;
@@ -53,12 +54,15 @@ export async function pingConnectedDevice(
       const queryResult = adapter.buildQuerySettings(false);
       if (queryResult.packets.length > 0) {
         const b64 = Buffer.from(queryResult.packets[0]).toString('base64');
-        await bleManager.writeCharacteristicWithoutResponseForDevice(
-          mac,
-          adapter.serviceUUID,
-          adapter.writeCharacteristicUUID,
-          b64,
-        );
+        await enqueueWrite('normal', async () => {
+          await bleManager.writeCharacteristicWithoutResponseForDevice(
+            mac,
+            adapter.serviceUUID,
+            adapter.writeCharacteristicUUID,
+            b64,
+          );
+          return true;
+        });
         AppLogger.log('DEVICE_DISCOVERED', { context: 'heartbeat_ping_ok', deviceId: mac });
         return;
       }

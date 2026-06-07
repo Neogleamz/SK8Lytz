@@ -36,6 +36,7 @@ import { createGattSession } from '../../services/BleSessionFactory';
 import { type PendingRegistration, type PingResult, isPingResult } from '../../types/dashboard.types';
 import { mapDeviceToRegistration } from '../../utils/classifyBLEDevice';
 import { acquireGattLock } from './useBLEGattMutex';
+import { enqueueWrite } from '../../services/BleWriteQueue';
 
 /** AsyncStorage key prefix for per-device HW cache */
 const HW_CACHE_KEY = (mac: string) => `@sk8_hw_${mac.toUpperCase()}`;
@@ -300,18 +301,24 @@ export function useBLESweeper({
           const hwQuery = interrogatorAdapter.buildQuerySettings(false);
           if (hwQuery.packets.length > 0) {
             const b64HW = Buffer.from(hwQuery.packets[0]).toString('base64');
-            bleManager.writeCharacteristicWithoutResponseForDevice(
-              mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.writeCharacteristicUUID, b64HW
-            ).catch((e: any) => AppLogger.warn('[useBLESweeper] Interrogator HW query failed', { error: String(e) }));
+            enqueueWrite('normal', async () => {
+              await bleManager.writeCharacteristicWithoutResponseForDevice(
+                mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.writeCharacteristicUUID, b64HW
+              );
+              return true;
+            }).catch((e: any) => AppLogger.warn('[useBLESweeper] Interrogator HW query failed', { error: String(e) }));
           }
           setTimeout(() => {
             if (signal.aborted) return;
             const rfQuery = interrogatorAdapter.buildQueryRfRemoteState();
             if (rfQuery.packets.length > 0) {
               const b64RF = Buffer.from(rfQuery.packets[0]).toString('base64');
-              bleManager.writeCharacteristicWithoutResponseForDevice(
-                mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.writeCharacteristicUUID, b64RF
-              ).catch((e: any) => AppLogger.warn('[useBLESweeper] Interrogator RF query failed', { error: String(e) }));
+              enqueueWrite('normal', async () => {
+                await bleManager.writeCharacteristicWithoutResponseForDevice(
+                  mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.writeCharacteristicUUID, b64RF
+                );
+                return true;
+              }).catch((e: any) => AppLogger.warn('[useBLESweeper] Interrogator RF query failed', { error: String(e) }));
             }
           }, 200);
         }, 400);

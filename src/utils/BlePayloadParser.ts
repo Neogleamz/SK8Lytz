@@ -80,7 +80,10 @@ export const BlePayloadParser = {
         },
       };
     } catch (error) {
-      AppLogger.warn('[BlePayloadParser] Malformed payload dropped', error);
+      AppLogger.warn('[BlePayloadParser] Malformed Led payload dropped', {
+        error: error instanceof Error ? error.message : String(error),
+        payload: Array.isArray(payload) ? payload.join(',') : 'unknown'
+      });
       return null;
     }
   },
@@ -99,7 +102,11 @@ export const BlePayloadParser = {
         rfMode: rfState.mode,
         rfRemotes: rfState.pairedRemoteIds,
       };
-    } catch {
+    } catch (error) {
+      AppLogger.warn('[BlePayloadParser] Malformed RF payload dropped', {
+        error: error instanceof Error ? error.message : String(error),
+        payload: Array.isArray(payload) ? payload.join(',') : 'unknown'
+      });
       return null;
     }
   },

@@ -4,6 +4,7 @@ import { AppLogger } from './AppLogger';
 import { createGattSession } from './BleSessionFactory';
 import { acquireGattLock } from '../hooks/ble/useBLEGattMutex';
 import { type PingResult, isPingResult } from '../types/dashboard.types';
+import { enqueueWrite } from './BleWriteQueue';
 
 /**
  * executePingDevice — Wizard-exclusive atomic GATT session.
@@ -44,9 +45,12 @@ export async function executePingDevice(
 
     // ── Step 2: Write Blink (channel is now hot — no Phantom Blink) ───────────
     const b64Blink = Buffer.from(blinkPayload).toString('base64');
-    await bleManager.writeCharacteristicWithoutResponseForDevice(
-      mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64Blink
-    ).catch((e: any) => {
+    await enqueueWrite('critical', async () => {
+      await bleManager.writeCharacteristicWithoutResponseForDevice(
+        mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64Blink
+      );
+      return true;
+    }).catch((e: any) => {
       AppLogger.warn('[BLE] pingDevice blink write failed (non-fatal)', { mac, error: e?.message });
     });
 
@@ -106,18 +110,24 @@ export async function executePingDevice(
           const queryResult = pingAdapter.buildQuerySettings(false);
           if (queryResult.packets.length > 0) {
             const b64HW = Buffer.from(queryResult.packets[0]).toString('base64');
-            bleManager.writeCharacteristicWithoutResponseForDevice(
-              mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64HW
-            ).catch((e: any) => AppLogger.warn('[BLE pingDevice] HW query write failed', { error: String(e) }));
+            enqueueWrite('critical', async () => {
+              await bleManager.writeCharacteristicWithoutResponseForDevice(
+                mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64HW
+              );
+              return true;
+            }).catch((e: any) => AppLogger.warn('[BLE pingDevice] HW query write failed', { error: String(e) }));
           }
 
           setTimeout(() => {
             const rfResult = pingAdapter.buildQueryRfRemoteState();
             if (rfResult.packets.length > 0) {
               const b64RF = Buffer.from(rfResult.packets[0]).toString('base64');
-              bleManager.writeCharacteristicWithoutResponseForDevice(
-                mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64RF
-              ).catch((e: any) => AppLogger.warn('[BLE pingDevice] RF query write failed', { error: String(e) }));
+              enqueueWrite('critical', async () => {
+                await bleManager.writeCharacteristicWithoutResponseForDevice(
+                  mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64RF
+                );
+                return true;
+              }).catch((e: any) => AppLogger.warn('[BLE pingDevice] RF query write failed', { error: String(e) }));
             }
           }, 200);
         }, 400);
@@ -133,10 +143,13 @@ export async function executePingDevice(
     if (turnOffAtEnd) {
       const offResult = pingAdapter.buildPowerOff();
       if (offResult.packets.length > 0) {
-        await bleManager.writeCharacteristicWithoutResponseForDevice(
-          mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID,
-          Buffer.from(offResult.packets[0]).toString('base64')
-        ).catch((e: any) => {
+        await enqueueWrite('critical', async () => {
+          await bleManager.writeCharacteristicWithoutResponseForDevice(
+            mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID,
+            Buffer.from(offResult.packets[0]).toString('base64')
+          );
+          return true;
+        }).catch((e: any) => {
           AppLogger.warn('[BLE] pingDevice turn-off write failed (non-fatal)', { mac, error: e?.message });
         });
       }

@@ -2779,6 +2779,8 @@ export type Database = {
           error_message: string
           event_type: string
           id: string
+          operation_type: string | null
+          payload_size: number | null
           raw_context: Json | null
           session_id: string | null
           stack_trace: string | null
@@ -2789,6 +2791,8 @@ export type Database = {
           error_message: string
           event_type: string
           id?: string
+          operation_type?: string | null
+          payload_size?: number | null
           raw_context?: Json | null
           session_id?: string | null
           stack_trace?: string | null
@@ -2799,6 +2803,8 @@ export type Database = {
           error_message?: string
           event_type?: string
           id?: string
+          operation_type?: string | null
+          payload_size?: number | null
           raw_context?: Json | null
           session_id?: string | null
           stack_trace?: string | null

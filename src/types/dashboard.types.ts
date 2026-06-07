@@ -336,7 +336,7 @@ export interface IQuickPreset {
 export interface DockedBus {
   // ── Write pipeline ────────────────────────────────────────────────────────
   /** Debounced + mutex-guarded BLE write. Use for all non-critical writes. */
-  writeToDevice: (payload: number[]) => Promise<void>;
+  writeToDevice: (payload: number[], writeType?: 'Response' | 'NoResponse') => Promise<void>;
   /** Current BLE write status — drives the status indicator dot in the visualizer. */
   writeStatus: import('../hooks/useOptimisticBLE').BLEWriteStatus;
   // ── Shared display parameters ─────────────────────────────────────────────

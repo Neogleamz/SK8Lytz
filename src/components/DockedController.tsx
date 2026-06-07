@@ -440,23 +440,16 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       const ledgerState = primaryMac ? ledger.loadSync(primaryMac) : null;
       if (!ledgerState || ledgerState.rawPayload.length === 0) return;
       hasReplayedRef.current = true;
-      // Stagger writes across all connected devices (100ms apart) to avoid GATT contention.
-      // For a solo device there is only one iteration. For a group, each device gets
-      // a targeted write — avoids overwriting an in-flight pattern on a partner device.
+      // BleWriteQueue now handles concurrent write serialization safely.
       const devicesToReplay = devices ?? [];
       devicesToReplay.forEach((d, idx) => {
-        const timer = setTimeout(() => {
-          parentWriteToDevice(ledgerState.rawPayload, d.id, { lowPriority: true }).catch((e: any) => AppLogger.warn('BLE_TRANSPORT', { event: 'ledger_replay_write_failed', deviceId: d.id, error: String(e) }));
-          if (idx === 0) {
-            AppLogger.log('LEDGER_RECONNECT_REPLAY', {
-              macs: devicesToReplay.map(x => x.id),
-              payloadLen: ledgerState.rawPayload.length,
-            });
-          }
-        }, 300 + idx * 100);
-        // Note: cleanup only cancels idx=0 timer — acceptable since the effect
-        // has already set hasReplayedRef.current = true before any timer fires.
-        if (idx === 0) return () => clearTimeout(timer);
+        parentWriteToDevice(ledgerState.rawPayload, d.id, { lowPriority: true }).catch((e: any) => AppLogger.warn('BLE_TRANSPORT', { event: 'ledger_replay_write_failed', deviceId: d.id, error: String(e) }));
+        if (idx === 0) {
+          AppLogger.log('LEDGER_RECONNECT_REPLAY', {
+            macs: devicesToReplay.map(x => x.id),
+            payloadLen: ledgerState.rawPayload.length,
+          });
+        }
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isActuallyPairedOrConnected]);
@@ -692,9 +685,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         // Unknown/legacy mode — best-effort color dispatch
         if (favRaw.color) {
           const fallbackColor = favRaw.color;
-          setTimeout(() => {
-            sendColor(parseInt(fallbackColor.slice(1, 3), 16) || 0, parseInt(fallbackColor.slice(3, 5), 16) || 0, parseInt(fallbackColor.slice(5, 7), 16) || 0);
-          }, 100);
+          sendColor(parseInt(fallbackColor.slice(1, 3), 16) || 0, parseInt(fallbackColor.slice(3, 5), 16) || 0, parseInt(fallbackColor.slice(5, 7), 16) || 0);
         }
       }
       

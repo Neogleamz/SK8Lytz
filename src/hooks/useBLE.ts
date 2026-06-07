@@ -33,7 +33,7 @@ import { useBLERSSIMonitor } from './ble/useBLERSSIMonitor';
 
 import { executePingDevice } from '../services/BlePingService';
 import { executeWriteToDevice, executeWriteChunked, executeProtocolResults as executeProtocolResultsService, BleWriteStateRefs } from '../services/BleWriteDispatcher';
-import { clearWriteQueue } from '../services/BleWriteQueue';
+import { clearWriteQueue, enqueueWrite, resolveWritePriority } from '../services/BleWriteQueue';
 import { executeRealDisconnect, disconnectFromDevice as keepaliveDisconnect, forceDisconnect as keepaliveForceDisconnect } from '../services/BleLifecycleManager';
 import { executeConnectToDevices } from '../services/BleConnectionManager';
 
@@ -453,6 +453,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       handleNotificationRef,
       handleOrganicDisconnect: (error: any, deviceId: string) =>
         handleOrganicDisconnectRef.current(error, deviceId),
+      enqueueWrite,
       setConnectedDevices: updateConnectedDevices,
       setGate,
     });
@@ -483,9 +484,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const writeToDevice = useCallback(async (
     payload: number[],
     targetDeviceId?: string,
-    opts?: { lowPriority?: boolean }
+    opts?: { lowPriority?: boolean, writeType?: 'Response' | 'NoResponse' }
   ): Promise<boolean | 'partial'> => {
-    return executeWriteToDevice(
+    const priority = resolveWritePriority(payload[0] || 0);
+    return enqueueWrite(priority, () => executeWriteToDevice(
       payload,
       targetDeviceId,
       opts,
@@ -496,21 +498,21 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       adapterMapRef.current,
       stateRefs,
       setWriteGeneration
-    );
+    ));
   }, [bleManager, connectedDevices, autoRecovery.ghostedDeviceIds, stateRefs, setWriteGeneration]);
 
   const writeChunked = useCallback(async (
     payload: number[],
     targetDeviceId?: string
   ): Promise<void> => {
-    return executeWriteChunked(
+    await enqueueWrite('bulk', () => executeWriteChunked(
       payload,
       targetDeviceId,
       connectedDevices,
       autoRecovery.ghostedDeviceIds,
       mtuMapRef.current,
       adapterMapRef.current
-    );
+    ).then(() => true));
   }, [connectedDevices, autoRecovery.ghostedDeviceIds]);
 
   // ── BleLifecycleManager bindings ──────────────────────────────────────────
