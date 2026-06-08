@@ -870,3 +870,12 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - AdminToolsModal.tsx: Collapsed 11 separate isXVisible booleans into a single activePanel union type (AdminPanel | null), fixing state management bug.
 **Verify result:** TSC ? Jest ? gates ?
 **Files touched:** src/components/admin/AdminToolsModal.tsx
+
+### [MERGE] 2026-06-08T21:26 - fix/state-matrix-error-ui -> master @ 6e5e2601
+**What merged:**
+- SkaterStatsPanel.tsx: Added error state and retry logic for offline-first resilience.
+- useScenes.ts: Added error return value mapped from ScenesService.
+- useGradients.ts: Added error return value mapped from GradientsService.
+- GradientLibraryTab.tsx: Added error UI component for missing/failed gradients.
+**Verify result:** TSC ? Jest ? gates ?
+**Files touched:** src/components/account/SkaterStatsPanel.tsx, src/hooks/useScenes.ts, src/hooks/useGradients.ts, src/components/patterns/GradientLibraryTab.tsx

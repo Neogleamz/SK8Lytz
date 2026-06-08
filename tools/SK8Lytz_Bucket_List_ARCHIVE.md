@@ -805,3 +805,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "Applying FSM to all 16 affected files at once — rejected as too broad; start with AdminToolsModal as proof of pattern."
   - **Source of Truth:** 📖 [R-18_findings.json](artifacts/deepdive_raw/R-18_findings.json) · `src/components/admin/AdminToolsModal.tsx:65-75`
   - **Details:** 1 file. Define `AdminPanel` union type, replace 11 useState with 1, update all call sites and conditional renders. ~30 lines changed.
+
+- [x] **`fix/state-matrix-error-ui`** 🚀 Merged in 6e5e2601
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[M-RISK]` `[Meal]` `[🤖 PRO-MED]` `[BATCH:deepdive-synthesis-2026-06-08]`
+  - **Goal:** Add explicit Error UI state to ~18 data-driven components that silently render stale/empty data on fetch failure, completing the 4-state matrix (Loading, Error, Empty, Success).
+  - **Decision Log:** R-14 + DOMAIN_IDENTITY confirmed `SkaterStatsPanel.tsx` swallows `fetchStats` errors and renders zero-value stats silently. `useScenes.ts` and `useGradients.ts` have no error state returned to consumers. Per Offline-First mandate (agent-behavior.md §4), all data views MUST implement the full 4-state matrix. Evidence: `R-14_findings.json`, `DOMAIN_IDENTITY_findings.json:116` (2026-06-08).
+  - **Analysis:** 📊 Source: [system_audit_report.md](artifacts/system_audit_report.md) · Plan: [PLAN-state-matrix-error-ui.md](docs/plans/PLAN-state-matrix-error-ui.md)
+    Key finding: "~18 components missing error state. P0: SkaterStatsPanel (silently shows zeros), useScenes (empty list on failure), useGradients (no error feedback)."
+    Rejected alternative: "Global error boundary only — rejected because per-component error states provide granular UX (retry button, specific message) that a generic boundary cannot."
+  - **Source of Truth:** 📖 [R-14_findings.json](artifacts/deepdive_raw/R-14_findings.json) · `agent-behavior.md §4`
+  - **Details:** Add `error: string | null` state + retry callback to each affected hook. Consumers render `<ErrorState />`. Use existing error component if one exists.
