@@ -770,3 +770,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "AbortController — rejected because these are not fetch calls; a simple boolean ref is cleaner and zero-dependency."
   - **Source of Truth:** 📖 [R-26_findings.json](artifacts/deepdive_raw/R-26_findings.json) · [DOMAIN_IDENTITY_findings.json](artifacts/deepdive_raw/DOMAIN_IDENTITY_findings.json)
   - **Details:** Pattern: `let isActive = true; return () => { isActive = false; }` in useEffect. For event listeners: `useRef(false)` guard checked at function entry, cleared in finally. 3 files, ~15 lines of change total.
+
+- [x] **`fix/auth-context-bypass`** 🚀 Merged in ac739bc6
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[AUTH]` `[M-RISK]` `[Snack]` `[🤖 PRO-MED]` `[BATCH:deepdive-synthesis-2026-06-08]`
+  - **Goal:** Route all 4 direct `supabase.auth.*` calls in UI components through `AuthContext` methods, enabling centralized auth testing and removing the scattered auth bypass smell.
+  - **Decision Log:** R-15 + DOMAIN_IDENTITY confirmed `AuthFormSignIn.tsx:73`, `AuthFormSignUp.tsx:106`, `AuthFormForgotPassword.tsx:38`, `useDashboardProfile.ts:113` all bypass the `AuthContext` abstraction and call Supabase directly. This makes auth behavior untestable and creates split-brain risk if auth session handling changes. Evidence: `DOMAIN_IDENTITY_findings.json` lines 122–148 (2026-06-08).
+  - **Analysis:** 📊 Source: [system_audit_report.md](artifacts/system_audit_report.md) · Plan: [PLAN-auth-context-bypass-fix.md](docs/plans/PLAN-auth-context-bypass-fix.md)
+    Key finding: "4 UI components bypass AuthContext for signIn, signUp, resetPassword, signOut. AuthContext already exists — these calls just aren't routed through it."
+    Rejected alternative: "Creating a separate AuthService class — rejected because AuthContext already serves this purpose; adding another abstraction layer is unnecessary complexity."
+  - **Source of Truth:** 📖 [DOMAIN_IDENTITY_findings.json](artifacts/deepdive_raw/DOMAIN_IDENTITY_findings.json) · `src/context/AuthContext.tsx`
+  - **Details:** May require adding `resetPassword` and `signUp` as exported methods on AuthContext if not already present. 4 files, small change each.

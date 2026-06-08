@@ -841,3 +841,14 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **R-26 overflow:** 4 remaining instances (SessionContext, DashboardScreen, useHealthTelemetry, useCrewProximityRadar) triaged as fix/re-entrancy-guards-phase-2
 **Verify result:** TSC ? Jest 126/126 ? Blast bypassed (no API contract modified)
 **Files touched:** useRegistration.ts, SkaterStatsPanel.tsx, AuthContext.tsx, AdminToolsModal.tsx, Sk8LytzProgrammer.tsx
+
+### [MERGE] 2026-06-08T20:18 - fix/auth-context-bypass -> master @ ac739bc6
+**What merged:**
+- AuthContext.tsx: added signIn(), signUp(), resetPassword(), signOut() to AuthContextValue interface + AuthProvider implementation
+- AuthFormSignIn.tsx: supabase.auth.signInWithPassword -> context signIn() [supabase import retained for supabase.rpc username lookup]
+- AuthFormSignUp.tsx: supabase.auth.signUp -> context signUp(email, password, options)
+- AuthFormForgotPassword.tsx: supabase.auth.resetPasswordForEmail -> context resetPassword(email, redirectTo)
+- useDashboardProfile.ts: supabase.auth.signOut -> context signOut()
+- Zero supabase.auth.* calls remain in the UI/hook layer (verified by grep scan)
+**Verify result:** TSC ? Jest 126/126 ? gates ?
+**Files touched:** AuthContext.tsx, AuthFormSignIn.tsx, AuthFormSignUp.tsx, AuthFormForgotPassword.tsx, useDashboardProfile.ts
