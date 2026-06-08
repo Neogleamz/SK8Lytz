@@ -43,8 +43,9 @@ export function CrewDetailScreen() {
   // or convert them. For now, the structure guarantees safe parsing context injection.
 
   const executeLeaveCrew = async (crew: PermanentCrew) => {
+    if (!currentUserId) return;
     try {
-      await profileService.leavePermanentCrew(crew.id);
+      await profileService.leavePermanentCrew(crew.id, currentUserId);
       AppLogger.log('CREW_PERMANENT_LEFT', { crewId: crew.id, crewName: crew.name, method: 'leave_btn' });
       hub.setMyCrews(prev => prev.filter(c => c.id !== crew.id));
       hub.setPermanentCrews(prev => prev.filter((c) => c.id !== crew.id));
@@ -54,8 +55,9 @@ export function CrewDetailScreen() {
   };
 
   const executeDeleteCrew = async (crew: PermanentCrew) => {
+    if (!currentUserId) return;
     try {
-      await profileService.deleteCrew(crew.id);
+      await profileService.deleteCrew(crew.id, currentUserId);
       AppLogger.log('CREW_PERMANENT_DELETED', { crewId: crew.id, crewName: crew.name });
       hub.setMyCrews(prev => prev.filter(c => c.id !== crew.id));
       hub.setPermanentCrews(prev => prev.filter((c) => c.id !== crew.id));
@@ -97,6 +99,7 @@ export function CrewDetailScreen() {
 
   const handleSaveCrew = async (crew: PermanentCrew) => {
     if (!editCrewName.trim()) return;
+    if (!currentUserId) return;
     setIsSavingCrew(true);
     try {
       await profileService.updateCrew(crew.id, {
@@ -105,7 +108,7 @@ export function CrewDetailScreen() {
         city: editCrewCity.trim() || undefined,
         state: editCrewState.trim() || undefined,
         description: editCrewDesc.trim() || undefined,
-      });
+      }, currentUserId);
       const updated = {
         ...crew, name: editCrewName.trim(), is_public: editCrewIsPublic,
         city: editCrewCity.trim() || undefined, state: editCrewState.trim() || undefined,

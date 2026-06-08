@@ -44,6 +44,7 @@ export function CrewManageScreen() {
 
   const handleCreateCrew = async () => {
     if (!newCrewName.trim()) { setCreateCrewError('Enter a crew name'); return; }
+    if (!currentUserId) { setCreateCrewError('Not logged in'); return; }
     setIsCreatingCrew(true); setCreateCrewError('');
     try {
       const crew = await profileService.createPermanentCrew(newCrewName.trim(), {
@@ -55,12 +56,12 @@ export function CrewManageScreen() {
         description: newCrewDescription || undefined,
         inviteCode: !newCrewIsPublic ? newCrewCode : undefined,
         members: selectedMembers.map(m => m.user_id)
-      });
+      }, currentUserId);
       AppLogger.log('CREW_PERMANENT_CREATED', {
         crewId: crew.id, crewName: crew.name, isPublic: newCrewIsPublic,
         city: newCrewCity || null
       });
-      const updated = await profileService.getMyCrew();
+      const updated = await profileService.getMyCrew(undefined, currentUserId);
       hub.setMyCrews(updated);
       hub.setPermanentCrews(updated.map(c => ({ id: c.id, name: c.name })));
       

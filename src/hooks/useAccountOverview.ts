@@ -106,14 +106,14 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
           AppLogger.warn('[AccountOverview] fetchOrCreateProfile failed', { error: String(e) });
           return null;
         }),
-        profileService.getMyCrew(undefined, user?.id).catch((e) => {
+        user?.id ? profileService.getMyCrew(undefined, user.id).catch((e) => {
           AppLogger.warn('[AccountOverview] getMyCrew failed', { error: String(e) });
           return [] as import('../services/ProfileService').PermanentCrew[];
-        }),
-        profileService.getSessionHistory(user?.id).catch((e) => {
+        }) : Promise.resolve([]),
+        user?.id ? profileService.getSessionHistory(user.id).catch((e) => {
           AppLogger.warn('[AccountOverview] getSessionHistory failed', { error: String(e) });
           return [] as import('../services/ProfileService').SessionHistoryItem[];
-        }),
+        }) : Promise.resolve([]),
       ]);
       AppLogger.log('ACCOUNT_MODAL_DATA_RESOLVED', { hasProfile: !!p, crewCount: c?.length || 0, historyCount: h?.length || 0 });
       if (p) {
@@ -250,9 +250,10 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   // Crew handlers
   const handleCreateCrew = async () => {
     if (!newCrewName.trim()) { setCrewError('Enter a crew name'); return; }
+    if (!user?.id) { setCrewError('Not logged in'); return; }
     setCrewLoading(true); setCrewError('');
     try {
-      const crew = await profileService.createPermanentCrew(newCrewName.trim(), undefined, user?.id);
+      const crew = await profileService.createPermanentCrew(newCrewName.trim(), undefined, user.id);
       setCrews(prev => [...prev, crew]);
       setNewCrewName(''); setCrewStep('list');
       AppLogger.log('CREW_PERMANENT_CREATED', { crewName: newCrewName.trim() });
@@ -264,9 +265,10 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
 
   const handleJoinCrew = async () => {
     if (joinCode.trim().length < 4) { setCrewError('Enter the invite code'); return; }
+    if (!user?.id) { setCrewError('Not logged in'); return; }
     setCrewLoading(true); setCrewError('');
     try {
-      const crew = await profileService.joinPermanentCrew(joinCode.trim(), user?.id);
+      const crew = await profileService.joinPermanentCrew(joinCode.trim(), user.id);
       setCrews(prev => prev.find(c => c.id === crew.id) ? prev : [...prev, crew]);
       setJoinCode(''); setCrewStep('list');
       AppLogger.log('CREW_PERMANENT_JOINED', { crewId: crew.id });
@@ -277,8 +279,9 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   };
 
   const handleLeaveCrew = async (crewId: string) => {
+    if (!user?.id) return;
     try {
-      await profileService.leavePermanentCrew(crewId, user?.id);
+      await profileService.leavePermanentCrew(crewId, user.id);
       setCrews(prev => prev.filter(c => c.id !== crewId));
       AppLogger.log('CREW_PERMANENT_LEFT', { crewId });
     } catch (e: unknown) { 
@@ -288,6 +291,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   };
 
   return {
+    user,
     loading,
     profile, setProfile,
     editName, setEditName,

@@ -33,7 +33,7 @@ export function useOfflineSyncWorker() {
       _isFlushingSyncRef.current = true;
       try {
         if (!userRef.current) return; // Prevent flush loop if unauthenticated
-        await ScenesService.flushSyncQueue();
+        await ScenesService.flushSyncQueue(userRef.current.id);
         await SpeedTrackingService.flushPendingSessionQueue(userRef.current.id);
         await AppLogger.uploadLogsToSupabase();
       } catch (e: unknown) {

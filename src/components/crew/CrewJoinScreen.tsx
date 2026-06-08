@@ -23,11 +23,12 @@ export function CrewJoinScreen() {
 
   const handleJoinByCode = async () => {
     if (inviteCode.trim().length < 6) { setErrorMsg('Enter the 6-character crew invite code'); return; }
+    if (!currentUserId) { setErrorMsg('Not logged in'); return; }
     setIsLoading(true); setErrorMsg('');
     try {
-      const crew = await profileService.joinPermanentCrew(inviteCode.trim(), currentUserId ?? undefined);
+      const crew = await profileService.joinPermanentCrew(inviteCode.trim(), currentUserId);
       AppLogger.log('CREW_SESSION_JOINED', { crewId: crew.id, crewName: crew.name, method: 'permanent_code' });
-      const updatedCrews = await profileService.getMyCrew(undefined, currentUserId ?? undefined);
+      const updatedCrews = await profileService.getMyCrew(undefined, currentUserId);
       hub.setMyCrews(updatedCrews);
       hub.setPermanentCrews(updatedCrews.map((c: any) => ({ id: c.id, name: c.name })));
       setShowCodeEntry(false);

@@ -349,7 +349,7 @@ class ScenesServiceClass {
     }
   }
 
-  async flushSyncQueue() {
+  async flushSyncQueue(userId: string) {
     if (!supabase) return;
     try {
       const rawQueue = await AsyncStorage.getItem(LOCAL_SCENE_SYNC_QUEUE_KEY);
@@ -357,8 +357,7 @@ class ScenesServiceClass {
       
       if (queue.length === 0) return;
       
-      const { data: session } = await supabase.auth.getSession();
-      if (!session?.session?.user) {
+      if (!userId) {
         // Can't sync without auth, keep in queue
         return;
       }

@@ -25,14 +25,9 @@ class CrewProfileService {
    * @param updatedSince Timestamp string for delta sync
    * @param cachedUserId Optional pre-fetched user ID to avoid redundant network calls
    */
-  async getMyCrew(updatedSince?: string, cachedUserId?: string): Promise<PermanentCrew[]> {
+  async getMyCrew(updatedSince: string | undefined, userId: string): Promise<PermanentCrew[]> {
     try {
-      let userId = cachedUserId;
-      if (!userId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return [];
-        userId = user.id;
-      }
+      if (!userId) return [];
 
       const query = supabase
         .from('crew_memberships')
@@ -70,13 +65,9 @@ class CrewProfileService {
   /**
    * Create a new permanent crew and auto-join the creator as member.
    */
-  async createPermanentCrew(name: string, opts?: { isPublic?: boolean; avatarColor?: string; avatarIcon?: string; city?: string; state?: string; description?: string; inviteCode?: string; members?: string[] }, userId?: string): Promise<PermanentCrew> {
+  async createPermanentCrew(name: string, opts: { isPublic?: boolean; avatarColor?: string; avatarIcon?: string; city?: string; state?: string; description?: string; inviteCode?: string; members?: string[] } | undefined, userId: string): Promise<PermanentCrew> {
     try {
-      if (!userId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
-        userId = user.id;
-      }
+      if (!userId) throw new Error('Not authenticated');
 
       const insertData = { name, owner_id: userId } as Record<string, unknown>;
       if (opts?.isPublic    !== undefined) insertData.is_public    = opts.isPublic;
@@ -122,13 +113,9 @@ class CrewProfileService {
   /**
    * Join a permanent crew by its 6-char invite code.
    */
-  async joinPermanentCrew(inviteCode: string, userId?: string): Promise<PermanentCrew> {
+  async joinPermanentCrew(inviteCode: string, userId: string): Promise<PermanentCrew> {
     try {
-      if (!userId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
-        userId = user.id;
-      }
+      if (!userId) throw new Error('Not authenticated');
 
       const { data: crew, error: findErr } = await supabase
         .from('crews')
@@ -156,13 +143,9 @@ class CrewProfileService {
    * Join a PUBLIC permanent crew directly by its crew ID (no invite code needed).
    * Only works if is_public = true. Throws if crew is private or not found.
    */
-  async joinPublicCrewById(crewId: string, userId?: string): Promise<PermanentCrew> {
+  async joinPublicCrewById(crewId: string, userId: string): Promise<PermanentCrew> {
     try {
-      if (!userId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
-        userId = user.id;
-      }
+      if (!userId) throw new Error('Not authenticated');
 
       const { data: crew, error: findErr } = await supabase
         .from('crews')
@@ -190,13 +173,9 @@ class CrewProfileService {
   /**
    * Leave a permanent crew (removes membership; doesn't delete crew).
    */
-  async leavePermanentCrew(crewId: string, userId?: string): Promise<void> {
+  async leavePermanentCrew(crewId: string, userId: string): Promise<void> {
     try {
-      if (!userId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        userId = user.id;
-      }
+      if (!userId) return;
 
       await supabase
         .from('crew_memberships')
@@ -260,13 +239,9 @@ class CrewProfileService {
     name?: string; isPublic?: boolean; avatarColor?: string;
     avatarIcon?: string; avatarUrl?: string | null;
     city?: string; state?: string; description?: string;
-  }, userId?: string): Promise<void> {
+  }, userId: string): Promise<void> {
     try {
-      if (!userId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
-        userId = user.id;
-      }
+      if (!userId) throw new Error('Not authenticated');
 
       const updates = {} as Record<string, unknown>;
       if (fields.name        !== undefined) updates.name         = fields.name;
@@ -305,10 +280,7 @@ class CrewProfileService {
         .limit(50);
 
       if (error || !data) return [];
-      if (!userId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        userId = user?.id;
-      }
+      
       return data.map((crew: unknown) => {
         const c = crew as PermanentCrew & { owner_id: string };
         return { ...c, is_owner: c.owner_id === userId } as PermanentCrew;
@@ -324,13 +296,9 @@ class CrewProfileService {
    * Delete a crew — owner only. Cascades memberships via DB FK.
    * Safely drops any active Realtime sessions tied to this crew before deletion.
    */
-  async deleteCrew(crewId: string, userId?: string): Promise<void> {
+  async deleteCrew(crewId: string, userId: string): Promise<void> {
     try {
-      if (!userId) {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('Not authenticated');
-        userId = user.id;
-      }
+      if (!userId) throw new Error('Not authenticated');
 
       // 1. Proactively end any active sessions for this crew so users aren't left in a ghost state
       const { data: activeSessions } = await supabase

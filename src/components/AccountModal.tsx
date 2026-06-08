@@ -144,6 +144,7 @@ export default function AccountModal({
 
   // --- Domain Hooks ---
   const {
+    user,
     loading: accountLoading,
     profile, setProfile,
     editName, setEditName,
@@ -184,9 +185,10 @@ export default function AccountModal({
           text: 'Delete Forever', style: 'destructive',
           onPress: async () => {
             try {
+              if (!user?.id) return;
               // Use profileService.deleteCrew (hard-delete crew + cascade memberships)
               // NOT leaveCrewHook — that only removes the owner's membership, leaving an orphaned crew row
-              await profileService.deleteCrew(crew.id);
+              await profileService.deleteCrew(crew.id, user.id);
               setCrews(prev => prev.filter(c => c.id !== crew.id));
               AppLogger.log('CREW_PERMANENT_DELETED', { crewId: crew.id, crewName: crew.name });
             } catch (err: unknown) {

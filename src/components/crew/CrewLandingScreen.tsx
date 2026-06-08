@@ -83,11 +83,12 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Leave', style: 'destructive', onPress: async () => {
+            if (!currentUserId) return;
             setIsLoading(true);
             try {
-              await profileService.leavePermanentCrew(crew.id, currentUserId ?? undefined);
+              await profileService.leavePermanentCrew(crew.id, currentUserId);
               AppLogger.log('CREW_LEFT', { crewId: crew.id, crewName: crew.name });
-              const updated = await profileService.getMyCrew(undefined, currentUserId ?? undefined);
+              const updated = await profileService.getMyCrew(undefined, currentUserId);
               hub.setMyCrews(updated);
               hub.setPermanentCrews(updated.map(c => ({ id: c.id, name: c.name })));
             } catch (err: unknown) {
@@ -103,11 +104,12 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
   };
 
   const executeDeleteCrew = async (crew: PermanentCrew) => {
+    if (!currentUserId) return;
     setIsLoading(true);
     try {
-      await profileService.deleteCrew(crew.id, currentUserId ?? undefined);
+      await profileService.deleteCrew(crew.id, currentUserId);
       AppLogger.log('CREW_DELETED', { crewId: crew.id, crewName: crew.name });
-      const updated = await profileService.getMyCrew(undefined, currentUserId ?? undefined);
+      const updated = await profileService.getMyCrew(undefined, currentUserId);
       hub.setMyCrews(updated);
       hub.setPermanentCrews(updated.map(c => ({ id: c.id, name: c.name })));
       manage.setConfirmingDeleteCrewId(null);
@@ -121,11 +123,12 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
 
   const handleJoinByCode = async () => {
     if (inviteCode.trim().length < 6) { setErrorMsg('Enter the 6-character crew invite code'); return; }
+    if (!currentUserId) { setErrorMsg('Not logged in'); return; }
     setIsLoading(true); setErrorMsg('');
     try {
-      const crew = await profileService.joinPermanentCrew(inviteCode.trim(), currentUserId ?? undefined);
+      const crew = await profileService.joinPermanentCrew(inviteCode.trim(), currentUserId);
       AppLogger.log('CREW_SESSION_JOINED', { crewId: crew.id, crewName: crew.name, method: 'permanent_code' });
-      const updatedCrews = await profileService.getMyCrew(undefined, currentUserId ?? undefined);
+      const updatedCrews = await profileService.getMyCrew(undefined, currentUserId);
       hub.setMyCrews(updatedCrews);
       hub.setPermanentCrews(updatedCrews.map(c => ({ id: c.id, name: c.name })));
       setShowCodeEntry(false);
