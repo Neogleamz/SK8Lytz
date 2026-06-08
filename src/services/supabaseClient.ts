@@ -56,6 +56,7 @@ export const supabase = supabaseUrl && supabaseAnonKey
       from: () => ({
         select: () => ({ eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }), order: async () => ({ data: [] }) }), maybeSingle: async () => ({ data: null }), order: async () => ({ data: [] }) }), maybeSingle: async () => ({ data: null }), order: async () => ({ data: [] }) }),
         upsert: async () => ({ error: null }),
+        insert: async () => ({ error: null }),
         delete: () => ({ eq: () => ({ eq: async () => ({ error: null }), delete: async () => ({ error: null }) }) })
       })
     } as unknown as ReturnType<typeof createClient<Database>>);
