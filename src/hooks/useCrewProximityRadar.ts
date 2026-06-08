@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { locationService } from '../services/LocationService';
 import { AppLogger } from '../services/AppLogger';
@@ -21,10 +21,14 @@ const RADAR_RADIUS_MI = 0.5;
 export function useCrewProximityRadar() {
   const [radarAlert, setRadarAlert] = useState<RadarAlert | null>(null);
 
+  const isScanningRef = useRef(false);
+
   useEffect(() => {
     let mounted = true;
 
     async function scan() {
+      if (isScanningRef.current) return;
+      isScanningRef.current = true;
       try {
         // 1. Get user foreground location (silently handles permissions internally)
         const userLoc = await locationService.getSessionLocation();
@@ -111,6 +115,8 @@ export function useCrewProximityRadar() {
         const errMsg = err instanceof Error ? err.message : String(err);
         AppLogger.warn('[useCrewProximityRadar] scan failed', { error: errMsg });
         if (mounted) setRadarAlert({ matchType: 'NONE', venueName: '', distanceMi: 0 });
+      } finally {
+        isScanningRef.current = false;
       }
     }
 

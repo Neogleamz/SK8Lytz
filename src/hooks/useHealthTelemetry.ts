@@ -66,11 +66,14 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
     }
   }, [sessionActive]);
 
+  const isPollingRef = useRef(false);
   useEffect(() => {
     let isActive = true;
 
     const pollHealthData = async () => {
       if (!sessionActive || !sessionStartTimeRef.current) return;
+      if (isPollingRef.current) return;
+      isPollingRef.current = true;
 
       // ── Watch Priority Gate ──
       // If a watch is actively relaying health data (received within last 15s),
@@ -182,6 +185,8 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
       } catch (e: unknown) {
          const msg = e instanceof Error ? e.message : String(e);
          AppLogger.warn('HEALTH_TELEMETRY', { event: 'poll_error', error: msg });
+      } finally {
+         isPollingRef.current = false;
       }
     };
 

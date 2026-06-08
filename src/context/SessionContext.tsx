@@ -122,8 +122,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // 3. Synchronize React state with AsyncStorage on mount & App foreground transitions
+  const isSyncingSessionState = React.useRef(false);
   useEffect(() => {
     const syncSessionState = async () => {
+      if (isSyncingSessionState.current) return;
+      isSyncingSessionState.current = true;
       try {
         // Check if a background end was queued while we were backgrounded
         const pendingBgEnd = await AsyncStorage.getItem(STORAGE_PENDING_BG_END);
@@ -157,8 +160,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (err: unknown) {
-      const safeErr = err instanceof Error ? err : new Error(String(err));
         AppLogger.error('Failed to sync session state from AsyncStorage', err instanceof Error ? err.message : String(err));
+      } finally {
+        isSyncingSessionState.current = false;
       }
     };
 
@@ -176,12 +180,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Auto-pause timer and setting check based on GPS speed
+  const isCheckingAutoPause = React.useRef(false);
   useEffect(() => {
     if (sessionPhase !== 'ACTIVE' && sessionPhase !== 'PAUSED') return;
 
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     const checkAutoPause = async () => {
+      if (isCheckingAutoPause.current) return;
+      isCheckingAutoPause.current = true;
       try {
         const enabled = await AsyncStorage.getItem(STORAGE_AUTO_PAUSE_ENABLED);
         if (enabled === 'false') {
@@ -202,7 +209,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
               try {
                 await WatchBridge.syncSessionState({ status: 'PAUSED' });
               } catch (err: unknown) {
-      const safeErr = err instanceof Error ? err : new Error(String(err));
                 AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_pause', error: err instanceof Error ? err.message : String(err)  });
               }
             }, 10000);
@@ -215,8 +221,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (err: unknown) {
-      const safeErr = err instanceof Error ? err : new Error(String(err));
         AppLogger.error('Failed to run auto-pause check', err instanceof Error ? err.message : String(err));
+      } finally {
+        isCheckingAutoPause.current = false;
       }
     };
 
