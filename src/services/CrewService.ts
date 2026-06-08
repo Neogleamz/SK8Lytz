@@ -372,7 +372,7 @@ class CrewService {
       const sessionId = explicitSessionId ?? this.currentSessionId;
       if (!sessionId) throw new Error('No active session to end');
 
-      AppLogger.log('CREW_END_SESSION', { sessionId, userId });
+      AppLogger.log('CREW_END_SESSION', { sessionId });
 
       // ── Single update filtered by id AND leader_user_id ──────────────────────
       // RLS-safe: Supabase only matches rows the policy allows.

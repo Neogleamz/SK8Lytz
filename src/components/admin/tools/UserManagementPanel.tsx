@@ -219,7 +219,7 @@ export function UserManagementPanel({
       
       // In a real app we'd save to file. Here we'll just show it or log it, or save using Expo FileSystem.
       // Since FileSystem isn't imported, let's just log it and alert for now, or display in a simple modal.
-      AppLogger.log('DATA_EXPORT', { userId, data });
+      AppLogger.log('DATA_EXPORT', { byteLength: JSON.stringify(data).length });
       Alert.alert('Data Exported', `Data for ${displayName || userId} has been fetched and logged to the telemetry stream. (Length: ${JSON.stringify(data).length} bytes)`);
     } catch (e: unknown) {
       Alert.alert('Export Failed', (e instanceof Error ? e.message : String(e)));

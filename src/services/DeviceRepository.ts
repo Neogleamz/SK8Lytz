@@ -355,7 +355,7 @@ class DeviceRepository {
 
       // Step 5: Remove from Supabase
       if (user) {
-        AppLogger.warn('[DeviceRepository] DEREGISTER_ATTEMPT', { deviceId: scrubPII(normalizedMac), userId: user.id });
+        AppLogger.warn('[DeviceRepository] DEREGISTER_ATTEMPT', { deviceId: scrubPII(normalizedMac) });
         const { error, count } = await supabase
           .from('registered_devices')
           .delete({ count: 'exact' })
