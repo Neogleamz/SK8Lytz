@@ -81,12 +81,14 @@ function AccountModalSkeleton() {
   const pulse = useRef(new Animated.Value(0.4)).current;
 
   useEffect(() => {
-    Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1, duration: 700, useNativeDriver: true }),
         Animated.timing(pulse, { toValue: 0.4, duration: 700, useNativeDriver: true }),
       ])
-    ).start();
+    );
+    loop.start();
+    return () => loop.stop();
   }, [pulse]);
 
   const SkeletonBar = ({ w = '100%', h = 14, mb = 12, br = 8 }: { w?: string | number; h?: number; mb?: number; br?: number }) => (

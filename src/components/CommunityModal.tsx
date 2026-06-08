@@ -30,15 +30,16 @@ function LedStripPreview({ colors, mode }: { colors: string[], mode: string }) {
 
   useEffect(() => {
     if (!isAnimated || colors.length === 0) return;
-    Animated.loop(
+    const loop = Animated.loop(
       Animated.timing(anim, {
         toValue: 1,
         duration: 2000,
         easing: Easing.linear,
         useNativeDriver: false,
       })
-    ).start();
-    return () => anim.stopAnimation();
+    );
+    loop.start();
+    return () => loop.stop();
   }, [colors, isAnimated]);
 
   const displayColors = colors.length > 0 ? colors : ['#1a1a1a', '#2a2a2a', '#1a1a1a'];

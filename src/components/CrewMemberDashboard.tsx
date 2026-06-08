@@ -100,12 +100,14 @@ function MiniVisualizer({ scene }: { scene: Record<string, any> | null }) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 1.12, duration: 600, useNativeDriver: true }),
         Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
       ])
-    ).start();
+    );
+    loop.start();
+    return () => loop.stop();
   }, []);
 
   return (

@@ -14,7 +14,7 @@ const MarqueeText = ({ children, style, containerStyle }: MarqueeTextProps) => {
 
   useEffect(() => {
     if (textWidth > containerWidth && containerWidth > 0) {
-      Animated.loop(
+      const loop = Animated.loop(
         Animated.sequence([
           Animated.delay(1500),
           Animated.timing(anim, {
@@ -29,7 +29,9 @@ const MarqueeText = ({ children, style, containerStyle }: MarqueeTextProps) => {
             useNativeDriver: true,
           })
         ])
-      ).start();
+      );
+      loop.start();
+      return () => loop.stop();
     } else {
       anim.setValue(0);
       anim.stopAnimation();

@@ -74,13 +74,15 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
         mode === 'STREET'   ? 1400 : (isBreathing ? 6000 : 3000);
       const duration = baseDuration / (0.4 + (speed / 100) * 2.1);
 
-      Animated.loop(
+      const loop = Animated.loop(
         Animated.timing(animValue, {
           toValue: 1,
           duration: duration,
           useNativeDriver: false,
         })
-      ).start();
+      );
+      loop.start();
+      return () => loop.stop();
     } else {
       animValue.setValue(1);
     }
