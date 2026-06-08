@@ -780,3 +780,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "Creating a separate AuthService class — rejected because AuthContext already serves this purpose; adding another abstraction layer is unnecessary complexity."
   - **Source of Truth:** 📖 [DOMAIN_IDENTITY_findings.json](artifacts/deepdive_raw/DOMAIN_IDENTITY_findings.json) · `src/context/AuthContext.tsx`
   - **Details:** May require adding `resetPassword` and `signUp` as exported methods on AuthContext if not already present. 4 files, small change each.
+
+- [x] **`refactor/ble-delay-constants`** 🚀 Merged in d647af14
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[H-RISK]` `[Snack]` `[🤖 PRO-MED]` `[BATCH:deepdive-synthesis-2026-06-08]`
+  - **Goal:** Extract all hardcoded millisecond delay values in the BLE pipeline into named constants in `src/constants/bleTimingConstants.ts`, making timing tunable without hunting magic numbers.
+  - **Decision Log:** R-16 sniper found ~85 setTimeout usages codebase-wide; after scrubbing UI debounce and tests, ~30 HIGH-risk instances remain in the BLE write pipeline with hardcoded ms values (`50`, `100`, `200`, `250`, `400`, `600`). These are undocumented and impossible to tune safely. Evidence: `R-16_findings.json` BLE service entries (2026-06-08).
+  - **Analysis:** 📊 Source: [system_audit_report.md](artifacts/system_audit_report.md) · Plan: [PLAN-ble-delay-constants.md](docs/plans/PLAN-ble-delay-constants.md)
+    Key finding: "`BleConnectionManager.ts`, `BleWriteDispatcher.ts`, `BleSessionFactory.ts`, `BlePingService.ts`, `useBLEAutoRecovery.ts`, `BleLifecycleManager.ts` all contain magic ms numbers in BLE pipeline delays."
+    Rejected alternative: "Configurable runtime delays — rejected because these are protocol-level timing constraints that should be compile-time constants, not runtime settings."
+  - **Source of Truth:** 📖 [R-16_findings.json](artifacts/deepdive_raw/R-16_findings.json) · `tools/ZENGGE_PROTOCOL_BIBLE.md`
+  - **Details:** Create `BLE_TIMING` const object. 6 files touched. No logic changes — purely naming. Low execution risk despite H-RISK domain tag.

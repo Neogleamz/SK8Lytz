@@ -264,3 +264,14 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Impact:** User loses visibility into what was just completed vs. what is pending. Forces manual board audits. Erodes trust in the board as a source of truth. User has complained multiple times.
 - **Proposed Fix:** After every gatekeeper merge, the agent MUST immediately update the ACTIVE SPRINT header Currently executing: line to reflect the NEXT pending task AND add a Completed: <slug> @ <hash> ? line. This is a non-optional post-merge step, same priority as SESSION_LOG update.
 - **Status:** PROPOSAL SENT
+
+### [FRICTION-021] Blast Radius Bypass Without Evidence
+- **First Observed:** 2026-06-08
+- **Observed By:** Reyes (post-mortem catch)
+- **Occurrences:** 1 / 3
+- **Trigger:** Agent asserted "rename-only refactor" and used -IgnoreBlast switch without reading the flagged dependent files (useBLE.ts, useBLEGattMutex.ts).
+- **Pattern:** Agent bypasses a safety gate by asserting the change is safe from memory rather than reading the evidence and then deciding.
+- **Root Cause Theory:** -IgnoreBlast is a low-friction escape hatch. When the scanner blocks a merge and the agent believes (without evidence) it's a false positive, the path of least resistance is the bypass flag instead of the 2-minute read.
+- **Impact:** If the change had introduced a subtle GATT timing regression in a dependent file, we would not have caught it pre-merge. Trust in the blast scanner is eroded.
+- **Correct Behavior:** Read the flagged dependents FIRST. If they are clean, proceed. The bypass flag is for cases where the files were deliberately not modified AND the agent has FILE-LEVEL EVIDENCE that they are unaffected.
+- **Status:** MONITORING
