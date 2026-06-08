@@ -6,20 +6,36 @@
 > - Then scan `[DECISION]` entries â€” these are locked conclusions the AI must NOT re-derive
 > - `[MERGE]` entries tell you exactly what shipped and when
 > - `[ARTIFACT]` entries link to everything created this session
-> - This file is updated **after every gatekeeper merge** AND at `/wind-down` â€” not just once per night
+# SK8Lytz Session Log — Conversation Memory Bridge
+
+> **How to read this file:**
+> - Read the most recent `## SESSION` header first
+> - Then scan `[DECISION]` entries — these are locked conclusions the AI must NOT re-derive
+> - Then scan `[DECISION]` entries â€” these are locked conclusions the AI must NOT re-derive
+> - `[MERGE]` entries tell you exactly what shipped and when
+> - `[ARTIFACT]` entries link to everything created this session
+> - This file is updated **after every gatekeeper merge** AND at `/wind-down` — not just once per night
 >
 > **Update triggers:** (1) After `fortress-gatekeeper.ps1` succeeds, (2) After any architectural decision, (3) At `/wind-down`
 
 ---
 
-## SESSION: 2026-06-07 (First Block) â€” BLE GATT Queue Hardening
+## SESSION: 2026-06-07 (First Block) — BLE GATT Queue Hardening
+
+### [MERGE] 2026-06-08T16:04 — fix/stale-closure-fixes → master @ ed533317
+**What merged:**
+- useGlobalTelemetry.ts: Fixed anonymous session saving by replacing stale closure with stable `userIdRef`.
+- CustomEffectVisualizer.tsx: Added missing `effectId` to useEffect deps.
+- SessionContext.tsx: Decoupled FGS notification interval from 1Hz GPS ticks by reading latest telemetry from `telemetryRef`, fixing 1-second interval thrashing.
+**Verify result:** TSC ✅, Jest ✅, TypeSafety ✅, Workflow ✅
+**Files touched:** src/hooks/useGlobalTelemetry.ts, src/components/CustomEffectVisualizer.tsx, src/context/SessionContext.tsx
 
 ### [MERGE] 2026-06-08T07:11 — fix/pii-scrubber-hardening ? master @ 2924dce6
 **What merged:**
 - AppLogger.ts: Replaced piiKeys Set with PII_KEY_PATTERNS array using .toLowerCase().includes() substring matching — catches accessToken, refreshToken, lat, lng, latitude, longitude, label, auth*, refresh*, access*, secret*, credential*
 - AppLogger.ts: Replaced !Array.isArray guard with full recursion — arrays of PII objects now redacted
 - AppLogger.ts: Boy Scout — Record<string,any> ? Record<string,unknown> on obfuscate signature
-- LocationService.ts: Renamed label ? ddress: label in PERFORMANCE_METRIC log context so scrubber catches street addresses
+- LocationService.ts: Renamed label ?  ddress: label in PERFORMANCE_METRIC log context so scrubber catches street addresses
 - AndroidManifest.xml: Hardcoded Maps API key AIzaSyBfvwN5fcyDbzUZp2Q7c2OfMLPFajVRPwA removed (committed via C:/W worktree ba4a4419)
 **Verify result:** TSC ?, Jest ?, Browser ?, TypeSafety ?, Workflow ?
 **Files touched:** src/services/AppLogger.ts, src/services/LocationService.ts, android/app/src/main/AndroidManifest.xml
