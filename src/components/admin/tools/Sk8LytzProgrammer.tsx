@@ -28,8 +28,8 @@ import { STORAGE_PROGRAMMER_PROFILES } from '../../../constants/storageKeys';
 
 interface ScannedDevice {
   id: string;
-  name: string;
-  rssi: number;
+  name: string | null;
+  rssi: number | null;
 }
 
 interface Sk8LytzProgrammerModalProps {
@@ -37,7 +37,7 @@ interface Sk8LytzProgrammerModalProps {
   onClose: () => void;
   onExitToLogs?: () => void;
   allDevices: ScannedDevice[];
-  deviceConfigs?: Record<string, HardwareSettings>;       // pre-populated from scan probe
+  deviceConfigs?: Record<string, import('../../../types/dashboard.types').DeviceSettings>;       // pre-populated from scan probe
   connectToDevice?: (d: ScannedDevice) => Promise<void>;
   disconnectFromDevice?: (id: string) => Promise<void>;
   bleState?: string;
@@ -53,7 +53,7 @@ type ActiveProfileType = string;
 
 export default function Sk8LytzProgrammer({
   visible, onClose, allDevices,
-  deviceConfigs = {},
+  deviceConfigs = {} as Record<string, import('../../../types/dashboard.types').DeviceSettings>,
   connectToDevice, disconnectFromDevice,
   bleState = 'IDLE', handleScan
 }: Sk8LytzProgrammerModalProps) {
@@ -402,7 +402,7 @@ export default function Sk8LytzProgrammer({
                         {/* Show detected hw from scan probe */}
                         {detected && (
                           <Text style={{ color: '#00cc88', fontSize: 10, marginTop: Spacing.xxs }}>
-                            ✓ {detected.ledPoints ?? (detected as unknown as { points?: number }).points ?? '?'}pts · {detected.segments ?? '?'}seg · {detected.icName ?? (detected as unknown as { stripType?: string }).stripType ?? '?'} · {detected.colorSortingName ?? (detected as unknown as { sorting?: string }).sorting ?? '?'}
+                            ✓ {detected.points ?? '?'}pts · {detected.segments ?? '?'}seg · {detected.stripType ?? '?'} · {detected.sorting ?? '?'}
                           </Text>
                         )}
                      </View>

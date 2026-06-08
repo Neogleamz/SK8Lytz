@@ -3,7 +3,7 @@ import * as Location from 'expo-location';
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { Spacing } from '../theme/theme';
+import { Spacing , ThemePalette } from '../theme/theme';
 import { LocationMarker, LocationPickerMap } from './LocationPickerMap';
 import { useRecentSpots, RecentSpot } from '../hooks/useRecentSpots';
 import { AppLogger } from '../services/AppLogger';
@@ -215,7 +215,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   );
 };
 
-const createStyles = (Colors: any) => StyleSheet.create({
+const createStyles = (Colors: ThemePalette) => StyleSheet.create({
   container: {
     marginBottom: Spacing.xl,
     width: '100%',

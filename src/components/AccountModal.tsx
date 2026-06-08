@@ -1,4 +1,4 @@
-import { Spacing } from '../theme/theme';
+import { Spacing , ThemePalette } from '../theme/theme';
 /**
  * AccountModal.tsx — SK8Lytz Account Management
  *
@@ -407,7 +407,7 @@ export default function AccountModal({
                   onPress: async () => {
                     try {
                       // Attempt to run the dedicated Account Deletion RPC
-                      const { error } = await (supabase as unknown as { rpc: (fn: string) => Promise<{ error: any }> }).rpc('delete_account');
+                      const { error } = await supabase.rpc('delete_account');
                       if (error) {
                         AppLogger.error('ACCOUNT_MGMT', { event: 'delete_account_rpc_failed', error: (error instanceof Error ? error.message : String(error)) });
                         throw new Error('Database rejection. Please contact support.');
@@ -541,7 +541,7 @@ export default function AccountModal({
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const createStyles = (Colors: any) => StyleSheet.create({
+const createStyles = (Colors: ThemePalette) => StyleSheet.create({
   overlay:    { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: Colors.background ?? '#0D0D0D',

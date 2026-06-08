@@ -732,3 +732,16 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - Completed Boy Scout cleanups for unused variables across 4 components.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/constants/storageKeys.ts, src/components/admin/tools/Sk8LytzProgrammer.tsx, src/hooks/useProductCatalog.ts, src/components/auth/AuthSandboxToggle.tsx, src/context/SessionContext.tsx, src/hooks/useDashboardGroups.ts, src/hooks/ble/useBLEScanner.ts, tools/SK8Lytz_App_Master_Reference.md
+
+### [MERGE] 2026-06-08T01:34 — fix/async-error-hardening ? master @ 027bc694
+**What merged:**
+- Wrapped 120+ naked await operations in try/catch across src directory.
+- Fixed 72+ catch blocks missing 'e instanceof Error' unwrapping.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** Over 80 files across src/hooks, src/components, and src/services including BleConnectionManager.ts, useAdminTelemetry.ts, and AdminToolsModal.tsx.
+
+
+### [MERGE] 2026-06-07T21:40 — fix/type-safety-any-cast-phase1 ? master
+**What merged:** Swept and eliminated `any` casts across Admin tools, Modals, and all components using `createStyles(Colors: any)`. Properly strictly typed with `ThemePalette`, `ScannedDevice`, and `DeviceSettings`.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** AdminToolsModal.tsx, CommunityModal.tsx, Sk8LytzProgrammer.tsx, ProductManager.tsx, GlobalAnalyticsPanel.tsx, supabase.ts, and 20+ UI components.

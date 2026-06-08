@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { FlatList, NativeScrollEvent, NativeSyntheticEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { Spacing } from '../theme/theme';
+import { Spacing , ThemePalette } from '../theme/theme';
 
 const ITEM_HEIGHT = 44;
 
@@ -145,7 +145,7 @@ const VerticalPatternDrum = ({
      );
    }
    
-   const createStyles = (Colors: any) => StyleSheet.create({
+   const createStyles = (Colors: ThemePalette) => StyleSheet.create({
      containerWrap: {
        shadowColor: '#00D4FF',
        shadowOpacity: 0.15,

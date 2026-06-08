@@ -16,7 +16,7 @@ import {
   getMusicPatternLabel,
   getMusicPatternMax,
 } from '../../hooks/useMusicMode';
-import { Spacing, Typography } from '../../theme/theme';
+import { Spacing, Typography , ThemePalette } from '../../theme/theme';
 
 interface MusicPanelProps {
   musicPatternId: number;
@@ -30,7 +30,7 @@ interface MusicPanelProps {
   musicPrimaryColor: string;
   musicSecondaryColor: string;
   handleMusicChange: (...args: any[]) => void;
-  Colors: any;
+  Colors: ThemePalette;
 }
 
 
@@ -178,7 +178,7 @@ const MusicPanel = React.memo(({
 
 export default MusicPanel;
 
-const createStyles = (Colors: any) => StyleSheet.create({
+const createStyles = (Colors: ThemePalette) => StyleSheet.create({
   musicToggleHeader: {
     flexDirection: 'row',
     backgroundColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : Colors.surfaceHighlight,

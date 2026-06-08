@@ -1,3 +1,4 @@
+import { ThemePalette } from '../../theme/theme';
 import React from 'react';
 import { Alert } from 'react-native';
 import { CrewRole, CrewSession, crewService } from '../../services/CrewService';
@@ -19,7 +20,7 @@ interface DashboardCrewPanelProps {
   isOfflineMode: boolean;
   appSettings: any;
   windowHeight: number;
-  Colors: any;
+  Colors: ThemePalette;
   styles: any;
   
   onApplyCloudScene: (scene: Record<string, any>) => void;

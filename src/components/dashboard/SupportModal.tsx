@@ -9,12 +9,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Linking, Modal, Text, TouchableOpacity, View } from 'react-native';
-import { Typography, Spacing } from '../../theme/theme';
+import { Typography, Spacing , ThemePalette } from '../../theme/theme';
 
 interface SupportModalProps {
   visible: boolean;
   onClose: () => void;
-  Colors: any;
+  Colors: ThemePalette;
   styles: any;
 }
 

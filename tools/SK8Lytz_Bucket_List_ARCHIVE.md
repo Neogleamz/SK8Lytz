@@ -689,3 +689,11 @@ pm run verify which includes QA tests.
 ### [BATCH:offline-first-sweep] ?? LOW | (Archived)
 - [x] **`feat/offline-first-cache-layer`** (Merged in aa5ad615)
   - **Goal:** Added AsyncStorage cache-first layer to 6 Supabase fetch paths. Cache serves immediately; network sync runs in background. Fixed offline experience for hardware_blacklist, app settings, gradients, scenes, and skate spots.
+
+
+- [x] **`fix/async-error-hardening`** 🚀 Merged in 027bc694
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[Services]` `[M-RISK]` `[Banquet]` `[🤖 PRO-LOW]`
+  - **Plan:** 📎 [PLAN-ASYNC-ERROR-HARDENING.md](docs/plans/PLAN-ASYNC-ERROR-HARDENING.md)
+  - **Source of Truth:** 📖 `src/services/CrewProfileService.ts:31-461`, `src/services/CrewService.ts:76-597`, `src/services/DeviceRepository.ts:140-724` | Audit: `R-11_findings.json` (120+ findings), `R-06_findings.json` (72+ findings)
+  - **Goal:** Wrap 120+ naked `await` operations in try/catch and fix 72+ catch blocks missing `e instanceof Error` unwrapping. ~192 total surgical edits across ~30 files.
+  - **Details:** `CrewProfileService.ts` alone has 55 naked awaits. `DeviceRepository.ts` has 8 untyped catch blocks. These are all LOW-cognitive-load, high-volume pattern fixes ideal for a lesser model to execute with this plan as the SoT.

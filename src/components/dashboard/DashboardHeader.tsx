@@ -11,7 +11,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Image, Text, TouchableOpacity, View, Platform } from 'react-native';
-import { Layout, Spacing } from '../../theme/theme';
+import { Layout, Spacing , ThemePalette } from '../../theme/theme';
 
 interface DashboardHeaderProps {
   isActuallyConnected: boolean;
@@ -33,7 +33,7 @@ interface DashboardHeaderProps {
   onPressAccount: () => void;
   // Safe area
   insetTop: number;
-  Colors: any;
+  Colors: ThemePalette;
 }
 
 const DashboardHeader = React.memo(({

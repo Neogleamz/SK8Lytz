@@ -4278,6 +4278,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      delete_account: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       project_status: "On Track" | "At Risk" | "Off Track"

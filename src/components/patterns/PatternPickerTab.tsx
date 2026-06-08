@@ -3,7 +3,7 @@ import { ScrollView, FlatList, StyleSheet, View, Text, TouchableOpacity, Animate
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
-import { Spacing } from '../../theme/theme';
+import { Spacing , ThemePalette } from '../../theme/theme';
 import { PatternCard } from './PatternCard';
 
 
@@ -17,7 +17,7 @@ interface PatternPickerTabProps {
   points: number;
   direction: number;
   onSelect: (id: number) => void;
-  Colors: any;
+  Colors: ThemePalette;
 }
 
 const CATEGORIES = ['Solid', 'Rainbow', 'Sparkle', 'Chase', 'Marquee', 'Wave', 'Breathe', 'SK8Lytz'];

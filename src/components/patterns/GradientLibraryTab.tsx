@@ -2,12 +2,12 @@ import React, { useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Spacing } from '../../theme/theme';
+import { Spacing , ThemePalette } from '../../theme/theme';
 import { useGradients } from '../../hooks/useGradients';
 import { CustomBuilderPreset, PositionalMathBuffer } from '../../protocols/PositionalMathBuffer';
 
 interface GradientLibraryTabProps {
-  Colors: any;
+  Colors: ThemePalette;
   onOpenBuilder: (preset?: CustomBuilderPreset) => void;
   onApplyGradient: (preset: CustomBuilderPreset) => void;
 }

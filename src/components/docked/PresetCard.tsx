@@ -8,7 +8,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
-import { Spacing } from '../../theme/theme';
+import { Spacing , ThemePalette } from '../../theme/theme';
 import type { IFavoriteState } from '../../types/dashboard.types';
 import MarqueeText from '../MarqueeText';
 import { resolveGlowColor, resolveGradientColors, resolveModeIcon, GENERATIVE_RAINBOW } from '../../utils/presetColorUtils';
@@ -27,7 +27,7 @@ interface PresetCardProps {
     presetCard: any;
     presetTitle: any;
   };
-  Colors: any;
+  Colors: ThemePalette;
 }
 
 

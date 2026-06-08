@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { SkateSpot, SkateSpotsService } from '../services/SkateSpotsService';
-import { Spacing } from '../theme/theme';
+import { Spacing , ThemePalette } from '../theme/theme';
 
 interface BottomSheetProps {
   visible: boolean;
@@ -108,7 +108,7 @@ export const SkateSpotBottomSheet: React.FC<BottomSheetProps> = ({ visible, onCl
   );
 };
 
-const createStyles = (Colors: any) => StyleSheet.create({
+const createStyles = (Colors: ThemePalette) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',

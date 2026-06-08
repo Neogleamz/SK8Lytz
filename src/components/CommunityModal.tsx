@@ -13,14 +13,14 @@ import {
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { ICloudScene, ScenesService } from '../services/ScenesService';
-import { Layout, Spacing, Typography } from '../theme/theme';
+import { ICloudScene, Scene, ScenesService } from '../services/ScenesService';
+import { Layout, Spacing, Typography , ThemePalette } from '../theme/theme';
 
 interface Props {
   isOfflineMode?: boolean;
   isVisible: boolean;
   onClose: () => void;
-  onApplyScene: (payload: any) => void;
+  onApplyScene: (payload: Scene | Record<string, unknown>) => void;
 }
 
 // --- Animated LED Strip Preview ---
@@ -134,7 +134,7 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
   };
 
   const renderItem = useCallback(({ item }: { item: ICloudScene }) => {
-    const p: any = item.scene_payload || {};
+    const p = (item.scene_payload as unknown as Record<string, any>) || {};
     const mode: string = p.activeMode || p.fixedSubMode || 'UNKNOWN';
     const isOwner = activeTab === 'PERSONAL';
 
@@ -277,7 +277,7 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
   );
 }
 
-const createStyles = (Colors: any) => StyleSheet.create({
+const createStyles = (Colors: ThemePalette) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',

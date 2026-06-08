@@ -8,7 +8,7 @@
  */
 import React from 'react';
 import { Dimensions, FlatList, Text, View } from 'react-native';
-import { Layout, Spacing, Typography } from '../../theme/theme';
+import { Layout, Spacing, Typography , ThemePalette } from '../../theme/theme';
 import type { IFavoriteState } from '../../types/dashboard.types';
 import PresetCard from './PresetCard';
 
@@ -19,7 +19,7 @@ interface FavoritesPanelProps {
   onLoadFavorite: (fav: IFavoriteState, context?: 'FAVORITE' | 'PICK' | 'COMMUNITY') => void;
   onEditFavorite: (id: string, name: string) => void;
   isDark: boolean;
-  Colors: any;
+  Colors: ThemePalette;
 }
 
 const FavoritesPanel = React.memo(({
@@ -102,7 +102,7 @@ const FavoritesPanel = React.memo(({
 
 export default FavoritesPanel;
 
-const createStyles = (Colors: any) => ({
+const createStyles = (Colors: ThemePalette) => ({
   presetCard: {
     width: '48%' as import('react-native').DimensionValue,
     minHeight: 80,

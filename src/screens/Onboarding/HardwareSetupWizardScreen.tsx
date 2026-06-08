@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { getDefaultProtocol } from '../../protocols/ControllerRegistry';
-import { Spacing, Typography } from '../../theme/theme';
+import { Spacing, Typography , ThemePalette } from '../../theme/theme';
 
 import { LOCAL_PRODUCT_CATALOG, getLocalProfileById } from '../../constants/ProductCatalog';
 import { RegisteredDevice } from '../../hooks/useRegistration';
@@ -687,7 +687,7 @@ export default function HardwareSetupWizardScreen({
   );
 }
 
-function createStyles(Colors: any) {
+function createStyles(Colors: ThemePalette) {
   return StyleSheet.create({
     container: { flex: 1, backgroundColor: Colors.background || '#0D0D0D' },
     content: { flex: 1, padding: Spacing.md, justifyContent: 'center', alignItems: 'center' },

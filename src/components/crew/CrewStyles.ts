@@ -1,8 +1,8 @@
 import { Dimensions, Platform, StyleSheet } from 'react-native';
-import { Spacing } from '../../theme/theme';
+import { Spacing , ThemePalette } from '../../theme/theme';
 const { width } = Dimensions.get('window');
 
-export const createStyles = (Colors: any) => StyleSheet.create({
+export const createStyles = (Colors: ThemePalette) => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: Colors.background || '#0D0D0D',

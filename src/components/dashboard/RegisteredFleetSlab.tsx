@@ -1,4 +1,4 @@
-import { Spacing } from '../../theme/theme';
+import { Spacing , ThemePalette } from '../../theme/theme';
 /**
  * RegisteredFleetSlab.tsx — "REGISTERED DEVICES" Fleet Slab
  *
@@ -17,7 +17,7 @@ interface RegisteredFleetSlabProps {
   onToggleCollapse: () => void;
   onSetupWizard: () => void;
   renderItem: (info: { item: any }) => React.ReactElement | null;
-  Colors: any;
+  Colors: ThemePalette;
   styles: any;
 }
 

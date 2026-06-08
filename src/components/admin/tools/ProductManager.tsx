@@ -1,8 +1,9 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { SafeAreaView, ScrollView, Switch, Text, TextInput, TextStyle, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { SafeAreaView, ScrollView, Switch, Text, TextInput, TextStyle, TouchableOpacity, View, ViewStyle, KeyboardTypeOptions } from 'react-native';
 import { Spacing } from '../../../theme/theme';
 import { adminStyles as styles } from '../adminStyles';
+import type { ProductProfile } from '../../../types/ProductCatalog';
 
 export interface ProductManagerProps {
   visible: boolean;
@@ -12,11 +13,11 @@ export interface ProductManagerProps {
   borderColor: string;
   textPrimary: string;
   textMuted: string;
-  allProfiles: any[];
-  editingProfile: any;
-  startEditing: (p: any) => void;
+  allProfiles: ProductProfile[];
+  editingProfile: ProductProfile | null;
+  startEditing: (p: ProductProfile) => void;
   createNew: () => void;
-  patchEdit: (d: any) => void;
+  patchEdit: (d: Partial<ProductProfile>) => void;
   saveProduct: () => Promise<boolean>;
   productSaving: boolean;
 }
@@ -30,7 +31,7 @@ export const ProductManager = React.memo(({
   const fieldLabelStyle: TextStyle = { color: textMuted, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', marginBottom: Spacing.sm, letterSpacing: 0.5 };
   const fieldInputStyle: TextStyle = { color: textPrimary, fontSize: 16, padding: 0, fontWeight: '600' };
 
-  const renderField = (label: string, key: string, placeholder: string, keyboardType: any = 'default') => (
+  const renderField = (label: string, key: keyof ProductProfile, placeholder: string, keyboardType: KeyboardTypeOptions = 'default') => (
     <View style={fieldWrapperStyle}>
       <Text style={fieldLabelStyle}>{label}</Text>
       <TextInput
@@ -51,7 +52,7 @@ export const ProductManager = React.memo(({
     </View>
   );
 
-  const renderToggle = (label: string, key: string, desc: string) => (
+  const renderToggle = (label: string, key: keyof ProductProfile, desc: string) => (
     <View style={[fieldWrapperStyle, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}>
       <View style={{ flex: 1, paddingRight: Spacing.md }}>
         <Text style={fieldLabelStyle}>{label}</Text>
@@ -82,7 +83,7 @@ export const ProductManager = React.memo(({
           {/* ── PILL SELECTOR ── */}
           <View style={{ borderBottomWidth: 1, borderBottomColor: borderColor }}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, gap: Spacing.md }}>
-              {allProfiles.map((p: any) => {
+              {allProfiles.map((p: ProductProfile) => {
                 const isActive = editingProfile?.id === p.id;
                 return (
                   <TouchableOpacity key={p.id} onPress={() => startEditing(p)}

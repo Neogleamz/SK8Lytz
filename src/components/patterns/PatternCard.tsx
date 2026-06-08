@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
-import { Spacing } from '../../theme/theme';
+import { Spacing , ThemePalette } from '../../theme/theme';
 import { LEDStripPreview } from '../LEDStripPreview';
 
 interface PatternCardProps {
@@ -15,7 +15,7 @@ interface PatternCardProps {
   direction: number;
   points: number;
   onSelect: (id: number) => void;
-  Colors: any;
+  Colors: ThemePalette;
   /** Controls whether the LEDStripPreview animation is running (visibility gate) */
   autoPlay?: boolean;
 }

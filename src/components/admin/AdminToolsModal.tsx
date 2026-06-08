@@ -43,16 +43,16 @@ export interface AdminToolsModalProps {
   onClose: () => void;
   isDiagnosticsMode?: boolean;
   onToggleDiagnostics?: () => void;
-  hwSettings?: any;
+  hwSettings?: import('../../protocols/ZenggeProtocol').HardwareSettings;
   onDisconnectFromDevice?: (id: string) => Promise<void>;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
   connectedDevices?: { id: string, name: string | null }[];
-  allDevices?: any[];
+  allDevices?: import('react-native-ble-plx').Device[];
   bleState?: string;
   handleScan?: () => void;
   onClearAll?: () => void;
   onConnectToDevice?: (device: { id: string; name: string | null; rssi?: number | null }) => Promise<void>;
-  liveDeviceConfigs?: Record<string, any>;
+  liveDeviceConfigs?: Record<string, import('../../types/dashboard.types').DeviceSettings>;
 }
 
 export default function AdminToolsModal({ 
@@ -96,7 +96,7 @@ export default function AdminToolsModal({
     }
   }, [updateSetting]);
 
-  const [deviceConfigs, setDeviceConfigs] = useState<Record<string, any>>({});
+  const [deviceConfigs, setDeviceConfigs] = useState<Record<string, import('../../types/dashboard.types').DeviceSettings>>({});
 
   useEffect(() => {
     const loadConfigs = async () => {

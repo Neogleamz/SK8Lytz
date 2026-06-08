@@ -1,4 +1,4 @@
-import { Spacing } from '../../theme/theme';
+import { Spacing , ThemePalette } from '../../theme/theme';
 /**
  * CrewHubSlab.tsx — SLAB 2: Crew Hub 4-State UI
  *
@@ -27,7 +27,7 @@ interface CrewHubSlabProps {
   onToggleCollapse: () => void;
   radarAlert?: RadarAlert | null;
   onRadarAction?: (alert: RadarAlert) => void;
-  Colors: any;
+  Colors: ThemePalette;
   styles: any;
 }
 

@@ -29,7 +29,7 @@ import { useTheme } from '../context/ThemeContext';
 import { CrewRole, CrewSession } from '../services/CrewService';
 import { shareSessionInvite } from '../services/SessionShareService';
 import { supabase } from '../services/supabaseClient';
-import { Spacing } from '../theme/theme';
+import { Spacing , ThemePalette } from '../theme/theme';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -361,7 +361,7 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
-const createStyles = (Colors: any) => StyleSheet.create({
+const createStyles = (Colors: ThemePalette) => StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background ?? '#0D0D0D' },
 
   header: {

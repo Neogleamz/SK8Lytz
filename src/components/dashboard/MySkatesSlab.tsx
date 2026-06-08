@@ -1,4 +1,4 @@
-import { Spacing } from '../../theme/theme';
+import { Spacing , ThemePalette } from '../../theme/theme';
 /**
  * MySkatesSlab.tsx — "MY SKATES" Group Cards Slab
  *
@@ -30,7 +30,7 @@ interface MySkatesSlabProps {
   onGroupMusicPress: (group: CustomGroup) => void;
   onGroupCameraPress: (group: CustomGroup) => void;
   onGroupFavoritePress: (group: CustomGroup, snapshot: any) => Promise<void> | void;
-  Colors: any;
+  Colors: ThemePalette;
   styles: any;
 }
 
