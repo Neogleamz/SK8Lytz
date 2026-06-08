@@ -14,6 +14,16 @@
 
 ## SESSION: 2026-06-07 (First Block) â€” BLE GATT Queue Hardening
 
+### [MERGE] 2026-06-08T07:11 — fix/pii-scrubber-hardening ? master @ 2924dce6
+**What merged:**
+- AppLogger.ts: Replaced piiKeys Set with PII_KEY_PATTERNS array using .toLowerCase().includes() substring matching — catches accessToken, refreshToken, lat, lng, latitude, longitude, label, auth*, refresh*, access*, secret*, credential*
+- AppLogger.ts: Replaced !Array.isArray guard with full recursion — arrays of PII objects now redacted
+- AppLogger.ts: Boy Scout — Record<string,any> ? Record<string,unknown> on obfuscate signature
+- LocationService.ts: Renamed label ? ddress: label in PERFORMANCE_METRIC log context so scrubber catches street addresses
+- AndroidManifest.xml: Hardcoded Maps API key AIzaSyBfvwN5fcyDbzUZp2Q7c2OfMLPFajVRPwA removed (committed via C:/W worktree ba4a4419)
+**Verify result:** TSC ?, Jest ?, Browser ?, TypeSafety ?, Workflow ?
+**Files touched:** src/services/AppLogger.ts, src/services/LocationService.ts, android/app/src/main/AndroidManifest.xml
+**?? MANUAL ACTION REQUIRED:** Rotate API key AIzaSyBfvwN5fcyDbzUZp2Q7c2OfMLPFajVRPwA in Google Cloud Console — it is in git history. Update .env with new key.
 ### [MERGE] 2026-06-07T21:48 â€” BATCH:ble-gatt-hardening (fix/ble-pixel-buffer-clamp) @ `7156f1d4`
 **What merged:** 
 - Enforced 12-pixel minimum buffer clamp (`Math.max(12, pts)`) across 5 diagnostic lab files.
