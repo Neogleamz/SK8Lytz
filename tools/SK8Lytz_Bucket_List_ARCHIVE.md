@@ -5,6 +5,18 @@
 - [x] **`qa/r20-os-variance-parity-and-config`**
 - [x] **`qa/r09-pii-scrubbing-leaks`**
 
+### ⚡ [BATCH:error-handling-sweep] — 🟢 Completed
+
+- [x] **`fix/type-safety-any-cast-phase1`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI]` `[M-RISK]` `[Banquet]` `[🤖 PRO-MED]`
+  - **Details:** Phase 1: Fix structural `supabase as unknown as { rpc: any }` chain casts (2 files) + ProductManager interface `any[]` (6 violations) + `createStyles(Colors: any)` sweep. 294 total any-cast violations found. Phase 1 targeted the highest-structural-risk 30.
+
+### ⚡ [BATCH:dep-diet-sweep] — 🟢 Completed
+
+- [x] **`chore/dead-dependency-prune`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[Build]` `[L-RISK]` `[Snack]` `[🤖 PRO-LOW]`
+  - **Details:** Removed 7 fully unutilized dependencies: `string-similarity`, `supercluster`, `jpeg-js`, `expo-speech`, `expo-image-manipulator`, `expo-blur`, and `react-native-nitro-image`. `react-native-vision-camera-worklets` and `react-native-nitro-modules` were retained as they inject necessary type definitions for Frame objects.
+
 # SK8Lytz Master Bucket List Archive
 
 This document contains the archive of all successfully completed and merged tasks, sprints, and epic batches within the SK8Lytz app ecosystem.

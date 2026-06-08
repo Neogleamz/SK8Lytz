@@ -745,3 +745,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Swept and eliminated `any` casts across Admin tools, Modals, and all components using `createStyles(Colors: any)`. Properly strictly typed with `ThemePalette`, `ScannedDevice`, and `DeviceSettings`.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** AdminToolsModal.tsx, CommunityModal.tsx, Sk8LytzProgrammer.tsx, ProductManager.tsx, GlobalAnalyticsPanel.tsx, supabase.ts, and 20+ UI components.
+
+### [MERGE] 2026-06-07T21:46 — chore/dead-dependency-prune ? master
+**What merged:** Removed 7 completely unused dependencies (string-similarity, supercluster, jpeg-js, expo-speech, expo-image-manipulator, expo-blur, react-native-nitro-image). Retained react-native-vision-camera-worklets and react-native-nitro-modules as they provide required typings for Frame objects.
+**Verify result:** TSC ?, Jest ?, blast-radius ?
+**Files touched:** package.json, package-lock.json
