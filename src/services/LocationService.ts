@@ -11,8 +11,9 @@
 import * as Location from 'expo-location';
 import { AppLogger } from './AppLogger';
 import { supabase } from './supabaseClient';
-import { checkPermission, openGlobalPermissionsModal } from './PermissionService';
+import { openGlobalPermissionsModal, checkPermission } from './PermissionService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SkateSpotsService } from './SkateSpotsService';
 
 export interface SessionLocation {
   label: string;          // "SkateCity OP, Olathe KS"
@@ -229,60 +230,8 @@ class LocationService {
    * Fetch static skate spots sorted by distance from current position.
    */
   async getNearbySkateSpots(radiusMi?: number | null, userCoords?: { lat: number; lng: number } | null): Promise<NearbySkateSpot[]> {
-    const CACHE_KEY = '@Sk8lytz_skate_spots_cache';
-    const TTL = 24 * 60 * 60 * 1000;
-    let spotsData: Record<string, unknown>[] = [];
-    let cacheValid = false;
-
-    try {
-      const cached = await AsyncStorage.getItem(CACHE_KEY);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed.data)) {
-          spotsData = parsed.data;
-          if (parsed.timestamp && Date.now() - parsed.timestamp < TTL) {
-            cacheValid = true;
-          }
-        }
-      }
-    } catch (e: unknown) {}
-
-    const syncCloud = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('skate_spots')
-          .select('*')
-          .eq('is_published', true)
-          .limit(500); // For MVP
-        if (!error && data && data.length > 0) {
-          try {
-            await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
-          } catch (e: unknown) {}
-        }
-      } catch (e: unknown) {}
-    };
-
-    if (!cacheValid) {
-      if (spotsData.length === 0) {
-        // Blocking fetch if no cache exists
-        try {
-          const { data } = await supabase
-            .from('skate_spots')
-            .select('*')
-            .eq('is_published', true)
-            .limit(500);
-          if (data && data.length > 0) {
-            spotsData = data as Record<string, unknown>[];
-            try {
-              await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
-            } catch (e: unknown) {}
-          }
-        } catch (e: unknown) {}
-      } else {
-        // Non-blocking sync if cache is stale
-        syncCloud();
-      }
-    }
+    const rawSpots = await SkateSpotsService.getCachedSpots();
+    const spotsData = rawSpots as Record<string, unknown>[];
 
     if (!spotsData || spotsData.length === 0) return [];
 

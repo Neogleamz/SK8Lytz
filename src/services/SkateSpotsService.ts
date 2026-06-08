@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Database } from '../types/supabase';
 import { AppLogger } from './AppLogger';
 import { supabase } from './supabaseClient';
+import { STORAGE_SKATE_SPOTS_CACHE } from '../constants/storageKeys';
 
 export type SkateSpot = Database['public']['Tables']['skate_spots']['Row'];
 
@@ -14,17 +15,16 @@ interface BoundingBox {
 
 export const SkateSpotsService = {
   /**
-   * Fetch verified or community-created skate spots from our native DB
-   * within a given map bounding box.
+   * Fetch all cached spots from DB (with background sync).
+   * SoT owner for STORAGE_SKATE_SPOTS_CACHE.
    */
-  async getNativeSpots(bbox: BoundingBox): Promise<SkateSpot[]> {
-    const CACHE_KEY = '@Sk8lytz_skate_spots_cache';
+  async getCachedSpots(): Promise<SkateSpot[]> {
     const TTL = 24 * 60 * 60 * 1000;
     let localData: SkateSpot[] = [];
     let cacheValid = false;
 
     try {
-      const cachedStr = await AsyncStorage.getItem(CACHE_KEY);
+      const cachedStr = await AsyncStorage.getItem(STORAGE_SKATE_SPOTS_CACHE);
       if (cachedStr) {
         const parsed = JSON.parse(cachedStr);
         if (Array.isArray(parsed.data)) {
@@ -36,16 +36,11 @@ export const SkateSpotsService = {
       }
     } catch (e: unknown) {}
 
-    const filterByBbox = (spots: SkateSpot[]) => spots.filter(s => 
-      s.lat >= bbox.minLat && s.lat <= bbox.maxLat && 
-      s.lng >= bbox.minLng && s.lng <= bbox.maxLng
-    );
-
     const syncCloud = async () => {
       try {
         const { data, error } = await supabase.from('skate_spots').select('*').eq('is_published', true).limit(500);
         if (!error && data) {
-          AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data })).catch(() => {});
+          AsyncStorage.setItem(STORAGE_SKATE_SPOTS_CACHE, JSON.stringify({ timestamp: Date.now(), data })).catch(() => {});
         }
       } catch (e: unknown) {}
     };
@@ -61,15 +56,30 @@ export const SkateSpotsService = {
             .limit(500);
           if (!error && data) {
             localData = data as SkateSpot[];
-            AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data })).catch(() => {});
+            AsyncStorage.setItem(STORAGE_SKATE_SPOTS_CACHE, JSON.stringify({ timestamp: Date.now(), data })).catch(() => {});
           }
         } catch (e: unknown) {
-          AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Error fetching native spots', info: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) });
+          AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Error fetching native spots', info: e instanceof Error ? e.message : String(e) });
         }
       } else {
         syncCloud();
       }
     }
+
+    return localData;
+  },
+
+  /**
+   * Fetch verified or community-created skate spots from our native DB
+   * within a given map bounding box.
+   */
+  async getNativeSpots(bbox: BoundingBox): Promise<SkateSpot[]> {
+    const localData = await this.getCachedSpots();
+
+    const filterByBbox = (spots: SkateSpot[]) => spots.filter(s => 
+      s.lat >= bbox.minLat && s.lat <= bbox.maxLat && 
+      s.lng >= bbox.minLng && s.lng <= bbox.maxLng
+    );
 
     return filterByBbox(localData);
   },

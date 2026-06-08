@@ -13,4 +13,6 @@ export const STORAGE_PRODUCT_CATALOG = '@Sk8lytz_product_catalog';
 export const STORAGE_PENDING_BG_END = '@sk8lytz_pending_bg_end';
 export const STORAGE_LAST_GROUP_PATTERNS = '@Sk8lytz_last_group_patterns';
 export const STORAGE_SCANNER_TELEMETRY_QUEUE = '@sk8lytz_scanner_telemetry_queue';
-
+export const STORAGE_SKATE_SPOTS_CACHE = '@Sk8lytz_skate_spots_cache';
+export const STORAGE_APP_SETTINGS = '@sk8lytz_app_settings';
+export const STORAGE_GROUPS_MIGRATED_V2 = '@Sk8lytz_groups_migrated_v2';
