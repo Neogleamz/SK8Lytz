@@ -749,4 +749,14 @@ pm run verify which includes QA tests.
   - **Plan:** 📎 [PLAN-animated-loop-leak-sweep.md](docs/plans/PLAN-animated-loop-leak-sweep.md)
   - **Source of Truth:** 📖 `src/components/AccountModal.tsx:84` | `src/components/CrewMemberDashboard.tsx:103` | `src/components/ProductVisualizer.tsx:77` | `src/components/patterns/PatternCard.tsx:37` | `src/components/MarqueeText.tsx:17` | `src/components/CommunityModal.tsx:33` | Audit: `R-22_findings.json → MEM-001 through MEM-006`
   - **Goal:** Add `return () => loop.stop()` cleanup to 6 `Animated.loop().start()` useEffect calls that currently have no cleanup. Prevents background animation loops after component unmount.
-  - **Details:** Identical single-line fix pattern across 6 files. Unified Batch Override authorized. CPU leak on every modal close/card unmount.
+  - **Details:** Identical single-line fix pattern across 6 files. Unified Batch Override authorized. CPU leak on every modal close/card unmount.
+
+- [x] **`fix/pii-scrub-sweep`** 🚀 Merged in 1ecea5d6
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[AUTH]` `[H-RISK]` `[Snack]` `[🤖 PRO-MED]` `[BATCH:deepdive-synthesis-2026-06-08]`
+  - **Goal:** Remove user account identifiers (email, display name, user IDs) from 4 AppLogger call sites. MAC addresses explicitly excluded — local-only telemetry, BLE controller MACs are not user-linkable.
+  - **Decision Log:** R-09 found 23 raw-ID instances but the indefensible subset is 4: `UserManagementPanel.tsx:222` (full profile object with email+name), `CrewService.ts:375` (userId), `useCrewSession.ts:98` (userId), `DeviceRepository.ts:358` (user.id). MAC address scrubbing excluded by user decision 2026-06-08 — AppLogger is local-only and BLE controller MACs are not personally linkable. Evidence: `R-09_findings.json` (2026-06-08).
+  - **Analysis:** 📊 Source: [system_audit_report.md](artifacts/system_audit_report.md) · Plan: [PLAN-pii-scrub-sweep.md](docs/plans/PLAN-pii-scrub-sweep.md)
+    Key finding: "4 indefensible PII leaks: 1 full profile object (email+name), 3 raw user IDs. The 19 MAC address instances are excluded per local-only telemetry decision."
+    Rejected alternative: "Scrubbing all 23 instances including MACs — rejected 2026-06-08, AppLogger is local-only and BLE controller MACs are not user-linkable in practice."
+  - **Source of Truth:** 📖 [R-09_findings.json](artifacts/deepdive_raw/R-09_findings.json) · `src/components/admin/tools/UserManagementPanel.tsx:222` · `src/services/CrewService.ts:375` · `src/hooks/useCrewSession.ts:98` · `src/services/DeviceRepository.ts:358`
+  - **Details:** 4 files, ~4 line changes total. `UserManagementPanel.tsx:222` — replace full `data` object log with `{ count: data.length }`. The 3 userId refs — remove from log payload (crew/session IDs provide sufficient debug context). Post-fix grep: `grep -rn "AppLogger" src/ | grep -E "(email|display_name|user\.id|userId)" | grep -v "MAC"` must return zero.

@@ -820,3 +820,13 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Don't re-derive:** Do not attempt to run Android Gradle builds inside \SK8Lytz-worktrees\ due to the 260-character Windows limit. If physical QA fails on master, leave the flawed code locally and spin up a new fix branch (Fix-Forward).
 **Source:** .agents/workflows/ship-it.md
 
+
+### [MERGE] 2026-06-08T19:58 — fix/pii-scrub-sweep ? master @ 1ecea5d6
+**What merged:**
+- UserManagementPanel.tsx:222 — replaced { userId, data } export log with { byteLength }
+- CrewService.ts:375 — removed userId from CREW_END_SESSION log
+- useCrewSession.ts:98 — removed member.user_id from CREW_LEADERSHIP_TRANSFERRED log
+- DeviceRepository.ts:358 — removed user.id from DEREGISTER_ATTEMPT log
+**MAC addresses excluded:** local-only telemetry, BLE controller MACs not user-linkable (decision 2026-06-08)
+**Verify result:** TSC ?, Jest 126/126 ?, Blast bypassed (log-only change, no API contract modified)
+**Files touched:** UserManagementPanel.tsx, CrewService.ts, useCrewSession.ts, DeviceRepository.ts
