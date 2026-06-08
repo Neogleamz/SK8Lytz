@@ -786,3 +786,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Fixed 3 BLE re-entrancy races in useBLEBatterySweep, useBLE, and useDashboardGroups. Also added a 50ms inter-device gap inside BleWriteDispatcher's _executeProtocolResultsInternal to prevent Android GATT 133 collisions on group writes.
 **Verify result:** TSC ✅, Jest ✅, gates ✅
 **Files touched:** src/hooks/ble/useBLEBatterySweep.ts, src/hooks/useBLE.ts, src/hooks/useDashboardGroups.ts, src/services/BleConnectionManager.ts, src/services/BleWriteDispatcher.ts
+
+### [MERGE] 2026-06-08T16:52 — fix/auth-context-bypass → master @ 304b4d1f
+**What merged:** Bypassed `supabase.auth.getUser()` calls across Crew UI and hooks. Refactored `CrewDetailScreen`, `AccountModal`, `useAccountOverview`, and `useCrewHub` to explicitly pass `currentUserId` to `profileService` methods to prevent stale context.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** src/components/crew/*.tsx, src/components/AccountModal.tsx, src/hooks/useAccountOverview.ts, src/hooks/useCrewHub.ts

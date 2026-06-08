@@ -1,5 +1,11 @@
 ### ⚡ [BATCH:deep-dive-remediation] — `deep-dive-remediation-batch` — 🟢 Completed
 
+- [x] **`fix/auth-context-bypass`** - Merged 304b4d1f: Bypassed auth context in services.
+  - **Tags:** `[✅ DONE]` `[✅ VERIFIED]` `[Services]` `[M-RISK]` `[Meal]` `[🤖 PRO-MED]`
+  - **Plan:** 📎 [PLAN-auth-context-bypass.md](docs/plans/PLAN-auth-context-bypass.md)
+  - **Source of Truth:** 📖 `src/services/CrewProfileService.ts` | `src/services/GroupRepository.ts` | `src/services/ScenesService.ts` | Audit: `R-15_findings.json`
+  - **Goal:** Remove all 10 direct `supabase.auth.getUser()` / `getSession()` calls from service layer. Require callers to pass `userId` as a parameter sourced from AuthContext.
+  - **Details:** 8 methods in CrewProfileService + GroupRepository.deleteGroup + ScenesService.flushSyncQueue all bypass AuthContext. Silent stale auth possible if token expires between calls.
 - [x] **`qa/r06-r08-type-and-error-safety`**
 - [x] **`qa/r11-r12-r16-async-and-closures`**
 - [x] **`qa/r20-os-variance-parity-and-config`**
