@@ -26,7 +26,9 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import type { Device } from 'react-native-ble-plx';
+import { Device } from 'react-native-ble-plx';
+import { DeviceHardwareConfig } from './tabs/DiagnosticLabTypes';
+import { RegisteredDevice } from '../../../hooks/useRegistration';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../context/ThemeContext';
 import {
@@ -57,7 +59,8 @@ interface LabProps {
   bleState?: string;
   handleScan?: () => void;
   connectToDevice?: (device: Device) => Promise<void>;
-  liveDeviceConfigs?: Record<string, any>;
+  liveDeviceConfigs?: Record<string, DeviceHardwareConfig>;
+  registeredDevices?: RegisteredDevice[];
   isDiagnosticsMode?: boolean;
   onToggleDiagnostics?: () => void;
 }

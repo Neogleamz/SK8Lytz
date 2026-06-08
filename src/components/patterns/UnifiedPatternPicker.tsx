@@ -4,6 +4,7 @@ import { buildPatternPayload } from '../../protocols/PatternEngine';
 import { useTheme } from '../../context/ThemeContext';
 import { hexToRgb } from '../../utils/ColorUtils';
 import { PatternPickerTab } from './PatternPickerTab';
+import { IHardwareSettings } from '../../types/dashboard.types';
 
 interface UnifiedPatternPickerProps {
   writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
@@ -12,7 +13,7 @@ interface UnifiedPatternPickerProps {
   speed: number;
   brightness?: number;
   direction?: number;
-  hwSettings?: any;
+  hwSettings?: IHardwareSettings;
   /** FG color — owned by DockedController via fixedFgColor. Do NOT shadow with local state. */
   fgColor: string;
   /** BG color — owned by DockedController via fixedBgColor. Do NOT shadow with local state. */

@@ -8,13 +8,15 @@ import { TRANSITION_TYPES } from './DiagnosticLabConstants';
 import { QuickColorGrid } from './DiagnosticLabQuickColorGrid';
 import { ZenggeProtocol } from '../../../../protocols/ZenggeProtocol';
 import CustomEffectVisualizer from '../../../CustomEffectVisualizer';
+import { ProtocolBuilderContext } from '../../../../hooks/useProtocolBuilder';
+import { DiagnosticDevice, DiagnosticHwSettings } from './DiagnosticLabTypes';
 
 interface BuilderTabProps {
   targetDeviceId: string | null;
-  connectedDevices: any[];
-  hwSettings: any;
+  connectedDevices: DiagnosticDevice[];
+  hwSettings: DiagnosticHwSettings | undefined;
   hwPts: number;
-  builderCtx: any;
+  builderCtx: ProtocolBuilderContext;
   transmit: (cmd: number[], label: string, opcode?: string) => void;
   sendRawHex: (hex: string, label?: string) => void;
 }
@@ -315,13 +317,13 @@ export function DiagnosticLabBuilderTab({
           <Text style={[S.subTitle, { color: txtPri, marginTop: 0 }]}>PIXEL COLORS (0x59)</Text>
           <Text style={[S.hint, { color: txtMuted }]}>Colors will be repeated to fill the LED count.</Text>
           
-          {bldColors.map((c: any, i: number) => (
+          {bldColors.map((c: {r: number, g: number, b: number}, i: number) => (
              <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm, gap: Spacing.sm }}>
                 <View style={{ width: 24, height: 24, backgroundColor: `rgb(${c.r},${c.g},${c.b})`, borderRadius: 6, borderWidth: 1, borderColor: border }} />
                 <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={c.r.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].r = parseInt(v)||0; setBldColors(cur); }} placeholder="R" placeholderTextColor={txtMuted} />
                 <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={c.g.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].g = parseInt(v)||0; setBldColors(cur); }} placeholder="G" placeholderTextColor={txtMuted} />
                 <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={c.b.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].b = parseInt(v)||0; setBldColors(cur); }} placeholder="B" placeholderTextColor={txtMuted} />
-                <TouchableOpacity onPress={() => setBldColors(bldColors.filter((_: any, idx: number)=>idx!==i))} style={{ padding: Spacing.sm }}>
+                <TouchableOpacity onPress={() => setBldColors(bldColors.filter((_: {r:number, g:number, b:number}, idx: number)=>idx!==i))} style={{ padding: Spacing.sm }}>
                   <MaterialCommunityIcons name="delete" color="#ff4040" size={18} />
                 </TouchableOpacity>
              </View>

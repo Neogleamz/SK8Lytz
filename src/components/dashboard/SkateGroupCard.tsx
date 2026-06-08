@@ -16,7 +16,7 @@ interface SkateGroupCardProps {
   userProfile: any;
   powerStates: Record<string, boolean>;
   Colors: ThemePalette;
-  styles: any;
+  styles: Record<string, import('react-native').StyleProp<import('react-native').ViewStyle | import('react-native').TextStyle>>;
   onPowerPress?: () => void;
   onMusicPress?: () => void;
   onCameraPress?: () => void;

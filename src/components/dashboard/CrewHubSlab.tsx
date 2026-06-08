@@ -28,7 +28,7 @@ interface CrewHubSlabProps {
   radarAlert?: RadarAlert | null;
   onRadarAction?: (alert: RadarAlert) => void;
   Colors: ThemePalette;
-  styles: any;
+  styles: Record<string, import('react-native').StyleProp<import('react-native').ViewStyle | import('react-native').TextStyle>>;
 }
 
 const CrewHubSlab = React.memo(({

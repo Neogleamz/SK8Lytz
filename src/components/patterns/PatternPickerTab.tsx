@@ -1,8 +1,8 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react';
-import { ScrollView, FlatList, StyleSheet, View, Text, TouchableOpacity, Animated, Platform } from 'react-native';
+import { ScrollView, FlatList, StyleSheet, View, Text, TouchableOpacity, Animated, Platform, ViewToken } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
+import { SK8LYTZ_TEMPLATES, SK8LytzTemplate } from '../../protocols/PatternEngine';
 import { Spacing , ThemePalette } from '../../theme/theme';
 import { PatternCard } from './PatternCard';
 
@@ -22,7 +22,7 @@ interface PatternPickerTabProps {
 
 const CATEGORIES = ['Solid', 'Rainbow', 'Sparkle', 'Chase', 'Marquee', 'Wave', 'Breathe', 'SK8Lytz'];
 
-const CATEGORY_STYLES: Record<string, { icon: string, colors: string[], start?: any, end?: any }> = {
+const CATEGORY_STYLES: Record<string, { icon: string, colors: string[], start?: {x: number, y: number}, end?: {x: number, y: number} }> = {
   Solid: { icon: 'format-color-fill', colors: ['#00F0FF', '#0080FF'] },
   Rainbow: { icon: 'palette', colors: ['#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF'], start: {x: 0, y: 0}, end: {x: 1, y: 0} },
   Sparkle: { icon: 'star-four-points', colors: ['#222222', '#666666', '#222222'], start: {x: 0, y: 0}, end: {x: 1, y: 1} },
@@ -86,9 +86,13 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
   const [activeCategory, setActiveCategory] = useState<string>('Solid');
   const [visibleIds, setVisibleIds] = useState<Set<number>>(new Set());
 
-  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
     const next = new Set<number>();
-    viewableItems.forEach((v: any) => next.add(v.item.id));
+    viewableItems.forEach((v) => {
+      if (v.item && typeof v.item.id === 'number') {
+        next.add(v.item.id);
+      }
+    });
     setVisibleIds(next);
   }).current;
 
@@ -105,7 +109,7 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
   const propsRef = useRef({ selectedEffectId, fgColor, bgColor, speed, brightness, direction, points, onSelect, Colors, visibleIds });
   propsRef.current = { selectedEffectId, fgColor, bgColor, speed, brightness, direction, points, onSelect, Colors, visibleIds };
 
-  const renderItem = useCallback(({ item: effect }: any) => {
+  const renderItem = useCallback(({ item: effect }: { item: SK8LytzTemplate }) => {
     const p = propsRef.current;
     return (
       <View style={{ width: '48%' }}>

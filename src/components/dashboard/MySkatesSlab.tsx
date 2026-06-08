@@ -29,9 +29,9 @@ interface MySkatesSlabProps {
   onGroupPowerPress: (group: CustomGroup) => void;
   onGroupMusicPress: (group: CustomGroup) => void;
   onGroupCameraPress: (group: CustomGroup) => void;
-  onGroupFavoritePress: (group: CustomGroup, snapshot: any) => Promise<void> | void;
+  onGroupFavoritePress: (group: CustomGroup, snapshot: import('../../types/dashboard.types').GroupPatternSnapshot) => Promise<void> | void;
   Colors: ThemePalette;
-  styles: any;
+  styles: Record<string, import('react-native').StyleProp<import('react-native').ViewStyle | import('react-native').TextStyle>>;
 }
 
 const MySkatesSlab = React.memo(({

@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { TextShadows, Shadows } from '../../theme/theme';
 
 // Wrapper to strip the 'collapsable' prop injected by Animated which causes DOM errors on Web
-const CircleWrapper = React.forwardRef((props: any, ref) => {
+const CircleWrapper = React.forwardRef<any, any>((props: any, ref) => {
   const { collapsable, ...rest } = props;
   return <Circle ref={ref} {...rest} />;
 });

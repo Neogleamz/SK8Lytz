@@ -131,7 +131,7 @@ export type { IDeviceState, IFavoriteState, IQuickPreset } from '../types/dashbo
 
 interface Sk8lytzControllerProps {
   isOfflineMode?: boolean;
-  hwSettings?: any;
+  hwSettings?: import('../types/dashboard.types').IHardwareSettings;
   lockedProduct?: ProductType;
   isPaired?: boolean;
   bleState?: BleConnectionState;
@@ -170,12 +170,12 @@ interface Sk8lytzControllerProps {
 }
 
 export type DockedControllerHandle = {
-  applyCloudScene: (scenePayload: any) => void;
+  applyCloudScene: (scenePayload: Record<string, unknown>) => void;
   loadFavorite: (fav: IFavoriteState) => void;
   setActiveMode: (mode: ModeType) => void;
   setBrightness: (val: number) => void;
   setSpeed: (val: number) => void;
-  applySpatialSegments: (segments: any[]) => void;
+  applySpatialSegments: (segments: unknown[]) => void;
   replayStateToDevice: (deviceId: string) => void;
 };
 
@@ -432,7 +432,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       // BleWriteQueue now handles concurrent write serialization safely.
       const devicesToReplay = devices ?? [];
       devicesToReplay.forEach((d, idx) => {
-        parentWriteToDevice(ledgerState.rawPayload, d.id, { lowPriority: true }).catch((e: any) => AppLogger.warn('BLE_TRANSPORT', { event: 'ledger_replay_write_failed', deviceId: d.id, error: String(e) }));
+        parentWriteToDevice(ledgerState.rawPayload, d.id, { lowPriority: true }).catch((e: unknown) => AppLogger.warn('BLE_TRANSPORT', { event: 'ledger_replay_write_failed', deviceId: d.id, error: String(e) }));
         if (idx === 0) {
           AppLogger.log('LEDGER_RECONNECT_REPLAY', {
             macs: devicesToReplay.map(x => x.id),
@@ -464,7 +464,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         // before the last user selection, not the current one.
         if (!lastSentPayloadRef.current || lastSentPayloadRef.current.length === 0) return;
         AppLogger.log('BLE_QUEUE_REPLAY', { deviceId, payloadLen: lastSentPayloadRef.current.length });
-        optimisticWrite(lastSentPayloadRef.current, undefined, deviceId).catch((e: any) => AppLogger.warn('BLE_TRANSPORT', { event: 'ghost_replay_write_failed', deviceId, error: String(e) }));
+        optimisticWrite(lastSentPayloadRef.current, undefined, deviceId).catch((e: unknown) => AppLogger.warn('BLE_TRANSPORT', { event: 'ghost_replay_write_failed', deviceId, error: String(e) }));
       }
     }), [speed, brightness, writeToDevice, optimisticWrite]);
 

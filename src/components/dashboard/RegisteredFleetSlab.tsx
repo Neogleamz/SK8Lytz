@@ -18,7 +18,7 @@ interface RegisteredFleetSlabProps {
   onSetupWizard: () => void;
   renderItem: (info: { item: any }) => React.ReactElement | null;
   Colors: ThemePalette;
-  styles: any;
+  styles: Record<string, import('react-native').StyleProp<import('react-native').ViewStyle | import('react-native').TextStyle>>;
 }
 
 const RegisteredFleetSlab = React.memo(({

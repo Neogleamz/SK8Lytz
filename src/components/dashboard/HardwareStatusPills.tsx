@@ -6,6 +6,7 @@ import { Spacing, Typography } from '../../theme/theme';
 
 interface HardwareStatusPillsProps {
   device: any;
+  small?: boolean;
 }
 
 export const HardwareStatusPills = ({ device }: HardwareStatusPillsProps) => {
@@ -18,7 +19,7 @@ export const HardwareStatusPills = ({ device }: HardwareStatusPillsProps) => {
   const rfMode = device.rf_mode || device.hwRfMode || null;
   const rfPairedCount = device.rf_paired_count ?? device.hwRfPairedCount ?? 0;
 
-  const renderPill = (icon: any, text: string, color: string = Colors.textMuted) => (
+  const renderPill = (icon: keyof typeof import('@expo/vector-icons').MaterialCommunityIcons.glyphMap, text: string, color: string = Colors.textMuted) => (
     <View style={[styles.pill, { borderColor: color, backgroundColor: `${color}1A` }]}>
        <MaterialCommunityIcons name={icon} size={10} color={color} style={{ marginRight: 4 }} />
        <Text style={[styles.pillText, { color }]}>{text}</Text>
@@ -33,7 +34,7 @@ export const HardwareStatusPills = ({ device }: HardwareStatusPillsProps) => {
       
       {rfMode && (
          renderPill(
-            rfMode === 'ALLOW_ALL' ? 'remote' : rfMode === 'ALLOW_PAIRED' ? 'remote-lock' : 'remote-off',
+            rfMode === 'ALLOW_ALL' ? 'remote' : rfMode === 'ALLOW_PAIRED' ? 'lock' : 'remote-off',
             rfMode === 'ALLOW_ALL' ? 'All RF' : rfMode === 'ALLOW_PAIRED' ? `${rfPairedCount} RF Paired` : 'RF Blocked',
             rfMode === 'ALLOW_ALL' ? Colors.success : rfMode === 'ALLOW_PAIRED' ? '#FFA500' : Colors.error
          )

@@ -5,10 +5,12 @@ import { useDiagnosticLabStyles } from './DiagnosticLabStyles';
 import { DiagnosticLabHwBadge } from './DiagnosticLabHwBadge';
 import { ZenggeProtocol } from '../../../../protocols/ZenggeProtocol';
 
+import { DiagnosticDevice, DiagnosticHwSettings } from './DiagnosticLabTypes';
+
 interface ColorTabProps {
   targetDeviceId: string | null;
-  connectedDevices: any[];
-  hwSettings: any;
+  connectedDevices: DiagnosticDevice[];
+  hwSettings: DiagnosticHwSettings | undefined;
   hwPts: number;
   transmit: (cmd: number[], label: string, opcode?: string) => void;
 }

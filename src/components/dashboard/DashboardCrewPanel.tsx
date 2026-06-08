@@ -18,10 +18,10 @@ interface DashboardCrewPanelProps {
   initialDeepLinkCode: string | null;
   
   isOfflineMode: boolean;
-  appSettings: any;
+  appSettings: Record<string, string | boolean>;
   windowHeight: number;
   Colors: ThemePalette;
-  styles: any;
+  styles: Record<string, import('react-native').StyleProp<import('react-native').ViewStyle | import('react-native').TextStyle>>;
   
   onApplyCloudScene: (scene: Record<string, any>) => void;
   crewInitialStep: 'landing' | 'join' | 'create' | 'map';

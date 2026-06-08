@@ -2,19 +2,30 @@ import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { Spacing } from '../../../../theme/theme';
 import { useDiagnosticLabStyles } from './DiagnosticLabStyles';
+import { DiagnosticDevice, DiagnosticHwSettings, DeviceHardwareConfig } from './DiagnosticLabTypes';
+import type { Device } from 'react-native-ble-plx';
+import { RegisteredDevice } from '../../../../hooks/useRegistration';
+
+type ExtendedDevice = Device & {
+  points?: number;
+  segments?: number;
+  sorting?: number;
+  stripType?: string;
+  owner_ids?: string[];
+};
 
 interface DevicesTabProps {
   bleState: string;
   handleScan?: () => void;
-  allDevices: any[];
-  connectedDevices: any[];
-  liveDeviceConfigs: any;
-  registeredDevices: any[];
+  allDevices: Device[];
+  connectedDevices: DiagnosticDevice[];
+  liveDeviceConfigs: Record<string, DeviceHardwareConfig>;
+  registeredDevices: RegisteredDevice[];
   targetDeviceId: string | null;
   setTargetDeviceId: (id: string | null) => void;
-  liveRxPayload?: any;
-  connectToDevice?: (device: any) => void;
-  hwSettings: any;
+  liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
+  connectToDevice?: (device: Device) => void;
+  hwSettings: DiagnosticHwSettings | undefined;
 }
 
 export function DiagnosticLabDevicesTab({
@@ -50,27 +61,29 @@ export function DiagnosticLabDevicesTab({
         <Text style={S.hint}>No devices found. Tap START SCAN to begin.</Text>
       )}
 
-      {allDevices?.map((d: any, idx) => {
+      {allDevices?.map((d: Device, idx) => {
+        const extD = d as ExtendedDevice; // MIGRATION-SHIM: Some payloads pass metadata on the device object
         const cfg = { ...(liveDeviceConfigs?.[d.id] || {}) };
-        const points   = cfg.points    ?? d.points    ?? null;
-        const segments = cfg.segments  ?? d.segments  ?? null;
-        const sorting  = cfg.sorting   ?? d.sorting   ?? cfg.colorSortingName ?? null;
-        const stripType= cfg.stripType ?? d.stripType ?? cfg.icName           ?? null;
-        const isConn   = connectedDevices?.some((c: any) => c.id === d.id);
+        const points   = cfg.points    ?? extD.points    ?? null;
+        const segments = cfg.segments  ?? extD.segments  ?? null;
+        const sorting  = cfg.sorting   ?? extD.sorting   ?? cfg.colorSortingName ?? null;
+        const stripType= cfg.stripType ?? extD.stripType ?? cfg.icName           ?? null;
+        const isConn   = connectedDevices?.some((c: DiagnosticDevice) => c.id === d.id);
         const isTarget = targetDeviceId === d.id;
+        const isReg    = registeredDevices?.some((r: RegisteredDevice) => r.device_mac === d.id);
 
         return (
           <View key={d.id || idx} style={[S.diagBox, isTarget && { borderColor: cyan, borderWidth: 1.5 }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: txtPri, fontWeight: 'bold', fontSize: 13 }} numberOfLines={1}>
-                  {cfg.name || d.name || 'Unknown Device'}
+                  {extD.name || 'Unknown Device'}
                 </Text>
                 {registeredDevices.some(rd => rd.device_mac === d.id) ? (
                   <Text style={{ color: '#FFD700', fontSize: 10, fontWeight: '700', marginTop: Spacing.xxs }}>★ REGISTERED TO YOU</Text>
-                ) : (d.owner_ids && d.owner_ids.length > 0) ? (
+                ) : (extD.owner_ids && extD.owner_ids.length > 0) ? (
                   <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: '700', marginTop: Spacing.xxs }}>
-                    🔒 CLAIMED BY: {d.owner_ids.length > 1 ? `${d.owner_ids.length} USERS` : `${d.owner_ids[0].substring(0,8)}...`}
+                    🔒 CLAIMED BY: {extD.owner_ids.length > 1 ? `${extD.owner_ids.length} USERS` : `${extD.owner_ids[0].substring(0,8)}...`}
                   </Text>
                 ) : (
                   <Text style={{ color: txtMuted, fontSize: 10, fontStyle: 'italic', marginTop: Spacing.xxs }}>Unregistered (Telemetry Active)</Text>

@@ -15,7 +15,7 @@ interface SupportModalProps {
   visible: boolean;
   onClose: () => void;
   Colors: ThemePalette;
-  styles: any;
+  styles: Record<string, import('react-native').StyleProp<import('react-native').ViewStyle | import('react-native').TextStyle>>;
 }
 
 const SupportModal = React.memo(({ visible, onClose, Colors, styles }: SupportModalProps) => (

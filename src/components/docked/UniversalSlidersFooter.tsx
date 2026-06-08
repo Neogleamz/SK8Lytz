@@ -88,7 +88,7 @@ export interface UniversalSlidersFooterProps {
   clampSpeed: (v: number) => number;
   brtFactor: (brt: number) => number;
   writeToDevice?: (payload: number[]) => void;
-  hwSettings?: any;
+  hwSettings?: import('../../types/dashboard.types').IHardwareSettings;
   motionStateRef: React.MutableRefObject<MotionState>;
 
   // ── Custom Builder pattern state ─────────────────────────────────────────

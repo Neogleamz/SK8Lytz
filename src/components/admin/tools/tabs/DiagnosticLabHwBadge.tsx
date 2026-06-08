@@ -2,18 +2,12 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { Spacing } from '../../../../theme/theme';
 import { useDiagnosticLabStyles } from './DiagnosticLabStyles';
+import { DiagnosticDevice, DiagnosticHwSettings } from './DiagnosticLabTypes';
 
 interface HwBadgeProps {
   targetDeviceId: string | null;
-  connectedDevices: any[];
-  hwSettings?: {
-    ledPoints?: number;
-    colorSorting?: number;
-    colorSortingName?: string;
-    icName?: string;
-    segments?: number;
-    detected?: boolean;
-  };
+  connectedDevices: DiagnosticDevice[];
+  hwSettings: DiagnosticHwSettings | undefined;
 }
 
 export function DiagnosticLabHwBadge({ targetDeviceId, connectedDevices, hwSettings }: HwBadgeProps) {

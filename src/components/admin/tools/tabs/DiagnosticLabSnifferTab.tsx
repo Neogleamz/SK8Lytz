@@ -2,9 +2,10 @@ import React from 'react';
 import { FlatList, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { Spacing } from '../../../../theme/theme';
 import { useDiagnosticLabStyles } from './DiagnosticLabStyles';
+import { BleLog } from '../../../../hooks/useDiagnosticLog';
 
 interface SnifferTabProps {
-  logs: any[];
+  logs: BleLog[];
   clearLogs: () => void;
 }
 

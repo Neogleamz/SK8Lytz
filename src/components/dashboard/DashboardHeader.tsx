@@ -19,8 +19,8 @@ interface DashboardHeaderProps {
   isDark: boolean;
   isAdmin: boolean;
   // Connected variant
-  displayConnectedDevices: any[];
-  customGroups: any[];
+  displayConnectedDevices: import('../../types/dashboard.types').DisplayDevice[];
+  customGroups: import('../../types/dashboard.types').CustomGroup[];
   powerStates: Record<string, boolean>;
   handleDisconnect: () => void;
   onReconnectDevice?: (mac: string) => void;

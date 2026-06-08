@@ -8,14 +8,16 @@ import { QuickColorGrid } from './DiagnosticLabQuickColorGrid';
 import { ZenggeProtocol } from '../../../../protocols/ZenggeProtocol';
 import { SK8LYTZ_TEMPLATES } from '../../../../protocols/PatternEngine';
 import { OpcodeStatus, TRACKED_OPCODES, TestVerdict } from '../../../../hooks/useDiagnosticLog';
+import { DiagnosticDevice, DiagnosticHwSettings } from './DiagnosticLabTypes';
+import { TestLogEntry } from '../../../../hooks/useDiagnosticLog';
 
 interface OracleTabProps {
   targetDeviceId: string | null;
-  connectedDevices: any[];
-  hwSettings: any;
+  connectedDevices: DiagnosticDevice[];
+  hwSettings: DiagnosticHwSettings | undefined;
   hwPts: number;
   coverage: Record<string, OpcodeStatus>;
-  testLog: any[];
+  testLog: TestLogEntry[];
   setVerdict: (id: string, opcode: string, verdict: TestVerdict) => void;
   setLastVerdict: (opcode: string, verdict: TestVerdict) => void;
   clearTestLog: () => void;

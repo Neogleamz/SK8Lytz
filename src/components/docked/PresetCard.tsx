@@ -24,8 +24,8 @@ interface PresetCardProps {
   cardWidth: number;
   /** Styles from createStyles for presetCard and presetTitle. */
   styles: {
-    presetCard: any;
-    presetTitle: any;
+    presetCard: import('react-native').StyleProp<import('react-native').ViewStyle>;
+    presetTitle: import('react-native').StyleProp<import('react-native').TextStyle>;
   };
   Colors: ThemePalette;
 }

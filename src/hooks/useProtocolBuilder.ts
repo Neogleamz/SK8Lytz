@@ -154,3 +154,5 @@ export const useProtocolBuilder = (_hwPts: number = 16) => {
     bldResult,
   };
 };
+
+export type ProtocolBuilderContext = ReturnType<typeof useProtocolBuilder>;

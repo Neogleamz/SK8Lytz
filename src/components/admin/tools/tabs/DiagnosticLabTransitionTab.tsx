@@ -7,10 +7,12 @@ import { DiagnosticLabHwBadge } from './DiagnosticLabHwBadge';
 import { TRANSITION_TYPES } from './DiagnosticLabConstants';
 import { ZenggeProtocol } from '../../../../protocols/ZenggeProtocol';
 
+import { DiagnosticDevice, DiagnosticHwSettings } from './DiagnosticLabTypes';
+
 interface TransitionTabProps {
   targetDeviceId: string | null;
-  connectedDevices: any[];
-  hwSettings: any;
+  connectedDevices: DiagnosticDevice[];
+  hwSettings: DiagnosticHwSettings | undefined;
   hwPts: number;
   bldColors: { r: number; g: number; b: number }[];
   bldSpeed: number;
