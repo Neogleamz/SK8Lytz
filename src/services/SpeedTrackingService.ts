@@ -146,6 +146,7 @@ class SpeedTrackingServiceClass {
 
           AppLogger.info('[SpeedTrackingService] Session queued for offline sync', { queueLength: queue.length });
         } catch (queueErr: unknown) {
+      const safeErr = queueErr instanceof Error ? queueErr : new Error(String(queueErr));
           AppLogger.log('ERROR_CAUGHT', { message: `[SpeedTrackingService] Failed to queue offline session: ${String(queueErr)}` });
         }
 
@@ -200,11 +201,13 @@ class SpeedTrackingServiceClass {
         };
         await HealthSyncService.saveWorkout(enrichedSnapshot);
       } catch (healthErr: unknown) {
+      const safeErr = healthErr instanceof Error ? healthErr : new Error(String(healthErr));
         AppLogger.warn('HEALTH_TELEMETRY', { event: 'health_sync_delegation_failed', error: healthErr instanceof Error ? healthErr.message : String(healthErr) });
       }
 
       return data.id;
     } catch (err: unknown) {
+      const safeErr = err instanceof Error ? err : new Error(String(err));
       AppLogger.log('ERROR_CAUGHT', { message: `[SpeedTrackingService] Exception: ${err instanceof Error ? err.message : String(err)}` });
       return null;
     }
@@ -275,6 +278,7 @@ class SpeedTrackingServiceClass {
         });
       }
     } catch (e: unknown) {
+      const safeErr = e instanceof Error ? e : new Error(String(e));
       AppLogger.log('ERROR_CAUGHT', { message: `[SpeedTrackingService] flushPendingSessionQueue error: ${String(e)}` });
     } finally {
       this._isFlushingSessionQueue = false;

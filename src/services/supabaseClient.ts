@@ -18,7 +18,8 @@ class SecureStoreAdapter implements SupportedStorage {
     try {
       await SecureStore.setItemAsync(key, value);
     } catch (e: unknown) {
-      console.error('SecureStore setItem failed', e);
+      const safeErr = e instanceof Error ? e : new Error(String(e));
+      console.error('SecureStore setItem failed', e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -26,7 +27,8 @@ class SecureStoreAdapter implements SupportedStorage {
     try {
       await SecureStore.deleteItemAsync(key);
     } catch (e: unknown) {
-      console.error('SecureStore removeItem failed', e);
+      const safeErr = e instanceof Error ? e : new Error(String(e));
+      console.error('SecureStore removeItem failed', e instanceof Error ? e.message : String(e));
     }
   }
 }

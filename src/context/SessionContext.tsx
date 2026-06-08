@@ -41,6 +41,7 @@ async function persistSessionPhase(phase: PersistedSessionPhase, pauseTimeMs?: n
     }
     await AsyncStorage.multiSet(pairs);
   } catch (err: unknown) {
+      const safeErr = err instanceof Error ? err : new Error(String(err));
     AppLogger.error('Failed to persist session phase', err instanceof Error ? err.message : String(err));
   }
 }
@@ -153,6 +154,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (err: unknown) {
+      const safeErr = err instanceof Error ? err : new Error(String(err));
         AppLogger.error('Failed to sync session state from AsyncStorage', err instanceof Error ? err.message : String(err));
       }
     };
@@ -197,6 +199,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
               try {
                 await WatchBridge.syncSessionState({ status: 'PAUSED' });
               } catch (err: unknown) {
+      const safeErr = err instanceof Error ? err : new Error(String(err));
                 AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_pause', error: err instanceof Error ? err.message : String(err) });
               }
             }, 10000);
@@ -209,6 +212,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (err: unknown) {
+      const safeErr = err instanceof Error ? err : new Error(String(err));
         AppLogger.error('Failed to run auto-pause check', err instanceof Error ? err.message : String(err));
       }
     };
@@ -306,6 +310,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             isForegroundServiceStarted = true;
           }
         } catch (err: unknown) {
+      const safeErr = err instanceof Error ? err : new Error(String(err));
           AppLogger.error('Failed to display foreground service notification', err instanceof Error ? err.message : String(err));
         } finally {
           isDisplaying = false;
@@ -383,6 +388,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         peakHR: finalPeakHR,
       });
     } catch (err: unknown) {
+      const safeErr = err instanceof Error ? err : new Error(String(err));
       AppLogger.warn('WATCH_BRIDGE', { event: 'summary_push_failed', error: String(err) });
     }
 

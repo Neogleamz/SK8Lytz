@@ -85,7 +85,7 @@ export default function CameraTracker({
     if (resizer) {
       console.log('Camera Sniper: GPU Resizer loaded successfully!');
     } else if (error) {
-      console.error('Camera Sniper: GPU Resizer failed to load:', error);
+      console.error('Camera Sniper: GPU Resizer failed to load:', error instanceof Error ? error.message : String(error));
     }
   }, [resizer, error]);
 
@@ -146,7 +146,8 @@ export default function CameraTracker({
           }
         }
       } catch (err: unknown) {
-        console.error('Camera Frame Processor Error:', err);
+      const safeErr = err instanceof Error ? err : new Error(String(err));
+        console.error('Camera Frame Processor Error:', err instanceof Error ? err.message : String(err));
       } finally {
         frame.dispose(); // CRITICAL: Dispose Frame immediately to prevent stalls
       }

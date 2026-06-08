@@ -23,6 +23,7 @@ export async function migrateAuthTokensToSecureStore() {
 
     await AsyncStorage.setItem(MIGRATION_FLAG, 'true');
   } catch (e: unknown) {
-    console.error('Failed to migrate auth tokens', e);
+      const safeErr = e instanceof Error ? e : new Error(String(e));
+    console.error('Failed to migrate auth tokens', e instanceof Error ? e.message : String(e));
   }
 }

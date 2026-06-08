@@ -177,6 +177,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           setIsCrewModalVisible(true);
         }
       } catch (err: unknown) {
+      const safeErr = err instanceof Error ? err : new Error(String(err));
         AppLogger.error('DEEP_LINK', { event: 'parse_failed', url, error: (err instanceof Error ? err.message : String(err)) });
       }
     };
@@ -632,7 +633,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           lastFav = favs[favs.length - 1];
         }
       }
-    } catch (_e: unknown) { /* ignore parse errors */ }
+    } catch (_e: unknown) {
+      const safeErr = _e instanceof Error ? _e : new Error(String(_e)); /* ignore parse errors */ }
 
     if (!lastFav) {
       Alert.alert('No Favorites', 'You haven\'t saved any favorites yet. Open the controller and tap the ❤️ to save one.');

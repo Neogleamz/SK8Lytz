@@ -177,6 +177,7 @@ async function _drain(): Promise<void> {
       const result = await entry.execute();
       entry.resolve(result);
     } catch (err: unknown) {
+      const safeErr = err instanceof Error ? err : new Error(String(err));
       if (isTransientGattError(err)) {
         AppLogger.warn('[BleWriteQueue] Transient GATT error — retrying in 100ms', { error: String(err) });
         await new Promise(r => setTimeout(r, 100));
@@ -184,6 +185,7 @@ async function _drain(): Promise<void> {
           const retryResult = await entry.execute();
           entry.resolve(retryResult);
         } catch (retryErr: unknown) {
+      const safeErr = retryErr instanceof Error ? retryErr : new Error(String(retryErr));
           AppLogger.warn('[BleWriteQueue] Retry failed', { error: String(retryErr) });
           entry.resolve(false);
         }

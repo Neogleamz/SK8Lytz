@@ -41,6 +41,7 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
           try {
             loaded[mac] = JSON.parse(val);
           } catch (e: unknown) {
+      const safeErr = e instanceof Error ? e : new Error(String(e));
             AppLogger.warn('[useBLEInterrogator] Malformed HW cache', { mac, error: e instanceof Error ? e.message : String(e) });
           }
         }
@@ -118,6 +119,7 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
                 if (isPingResult(accumulated)) resolve(accumulated);
               }
             } catch (e: unknown) {
+      const safeErr = e instanceof Error ? e : new Error(String(e));
               AppLogger.warn('[useBLEInterrogator] Protocol parse failed', { mac, error: e instanceof Error ? e.message : String(e) });
             }
           }
@@ -160,6 +162,7 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
         onDeviceInterrogated();
       }
     } catch (err: unknown) {
+      const safeErr = err instanceof Error ? err : new Error(String(err));
       if (!signal.aborted) {
         AppLogger.warn(`[Interrogator] Failed for ${mac}`, { error: String(err) });
       }

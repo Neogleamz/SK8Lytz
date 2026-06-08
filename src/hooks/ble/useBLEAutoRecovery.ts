@@ -333,6 +333,7 @@ export function useBLEAutoRecovery({
               callbacksRef.current.onMtuNegotiated?.(conn.id, 186);
             }
           } catch (e: unknown) {
+      const safeErr = e instanceof Error ? e : new Error(String(e));
             AppLogger.warn('[AutoRecovery] MTU negotiation failed', { deviceId, error: e instanceof Error ? e.message : String(e) });
           }
           if (signal.aborted) break;
@@ -390,6 +391,7 @@ export function useBLEAutoRecovery({
           break;
 
         } catch (e: unknown) {
+      const safeErr = e instanceof Error ? e : new Error(String(e));
           AppLogger.warn(`[AutoRecovery] Connection attempt failed for ${deviceId}, retrying with backoff`, e);
         } finally {
           if (releaseFn) releaseFn();
@@ -471,6 +473,7 @@ export function useBLEAutoRecovery({
           callbacksRef.current.onDeviceRecovered?.(conn.id);
           return; // success — exit Phase 3
         } catch (e: unknown) {
+      const safeErr = e instanceof Error ? e : new Error(String(e));
           AppLogger.warn('[AutoRecovery] Phase 3 reconnect failed — ejecting', { deviceId, error: String(e) });
           break; // advertising but won't connect — give up
         } finally {

@@ -206,6 +206,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
           blacklistedMacsRef.current = JSON.parse(cached);
         }
         } catch (e: unknown) {
+      const safeErr = e instanceof Error ? e : new Error(String(e));
           // Ignore cache read errors
         }
 
@@ -216,9 +217,11 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
           blacklistedMacsRef.current = macs;
           try {
             await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(macs));
-          } catch (e: unknown) {}
+          } catch (e: unknown) {
+      const safeErr = e instanceof Error ? e : new Error(String(e));}
         }
       } catch (e: unknown) {
+      const safeErr = e instanceof Error ? e : new Error(String(e));
         AppLogger.log('ERROR', { context: 'useBLE', message: 'Failed background blacklist fetch', info: e instanceof Error ? e.message : String(e) });
       }
     };
@@ -269,6 +272,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
             dataReceivedCallbackRef.current(deviceId, data);
         }
       } catch (e: unknown) {
+      const safeErr = e instanceof Error ? e : new Error(String(e));
         AppLogger.error('Failed to parse notification', e instanceof Error ? e.message : String(e));
         AppLogger.log('PROTOCOL_ERROR', { error: (e instanceof Error ? e.message : String(e)) || String(e), deviceId, context: 'parse' });
       }
@@ -304,6 +308,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
             updateConnectedDevices(prev => prev.filter(p => !staleIds.includes(p.id)));
           }
         } catch (e: unknown) {
+      const safeErr = e instanceof Error ? e : new Error(String(e));
           AppLogger.warn('[BLE] Failed to audit connections on wake', e instanceof Error ? e.message : String(e));
         }
       }
