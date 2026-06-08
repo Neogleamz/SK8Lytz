@@ -65,6 +65,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setSessionRef = useRef(setSession);
   setSessionRef.current = setSession;
 
+  // Re-entrancy guard — prevents concurrent deep link processing on rapid-fire events
+  const isHandlingDeepLinkRef = useRef(false);
+
   useEffect(() => {
     if (!supabase) {
       AppLogger.warn('[AuthContext] Supabase not configured — offline-only mode.');
@@ -75,6 +78,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // ── Deep link handler (magic link / OAuth callback) ──────────────────────
     const handleDeepLink = async ({ url }: { url: string }) => {
       if (!url) return;
+      // Re-entrancy guard: drop duplicate concurrent deep link events
+      if (isHandlingDeepLinkRef.current) return;
+      isHandlingDeepLinkRef.current = true;
       try {
         if (url.includes('#access_token=')) {
           const hashString = url.split('#')[1];
@@ -96,6 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch (err: unknown) {
         AppLogger.warn('[AuthContext] Deep link parse error', { error: err instanceof Error ? err.message : String(err) });
+      } finally {
+        isHandlingDeepLinkRef.current = false;
       }
     };
 

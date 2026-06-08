@@ -79,12 +79,15 @@ export function useRegistration() {
 
   // ── Boot: initialize repo, load local, then sync from cloud ─────────────────
   useEffect(() => {
+    let isActive = true;
     const boot = async () => {
       await repo.initialize();
+      if (!isActive) return;
       setRegisteredDevices(repo.getDevices());
 
       // Cloud sync — updates repo in-memory, then we pull fresh state
       const merged = await repo.syncFromCloud(userId);
+      if (!isActive) return;
       setRegisteredDevices(merged);
       setIsLoading(false);
     };
@@ -92,9 +95,13 @@ export function useRegistration() {
 
     // Subscribe to repo changes (from other callers)
     const unsub = repo.subscribe(() => {
+      if (!isActive) return;
       setRegisteredDevices(repo.getDevices());
     });
-    return unsub;
+    return () => {
+      isActive = false;
+      unsub();
+    };
   }, []);
 
 

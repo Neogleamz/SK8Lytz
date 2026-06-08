@@ -27,19 +27,21 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
       return;
     }
 
+    let isActive = true;
+
     async function fetchStats() {
       const CACHE_KEY = '@sk8lytz_lifetime_stats_cache';
       
       // 1. Instantly load from cache for offline-first zero-latency
       try {
         const cached = await AsyncStorage.getItem(CACHE_KEY);
-        if (cached) setStats(JSON.parse(cached));
+        if (cached && isActive) setStats(JSON.parse(cached));
       } catch (e: unknown) {
         AppLogger.warn('Failed to load skater stats cache from AsyncStorage', e instanceof Error ? e.message : String(e));
       }
 
       if (!user || !supabase) {
-        setLoading(false);
+        if (isActive) setLoading(false);
         return;
       }
 
@@ -50,7 +52,7 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
           .eq('user_id', user.id)
           .single();
           
-        if (data && !error) {
+        if (data && !error && isActive) {
           setStats(data);
           // 2. Save fresh cloud data to offline cache
           await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(e => AppLogger.warn('Failed to cache skater stats', e));
@@ -58,11 +60,13 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
       } catch (e: unknown) {
         AppLogger.error('Failed to load skater stats from Supabase', e instanceof Error ? e.message : String(e));
       } finally {
-        setLoading(false);
+        if (isActive) setLoading(false);
       }
     }
     fetchStats();
+    return () => { isActive = false; };
   }, [user]);
+
 
   if (loading) {
     return (

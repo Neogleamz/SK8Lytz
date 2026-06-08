@@ -99,14 +99,18 @@ export default function AdminToolsModal({
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, import('../../types/dashboard.types').DeviceSettings>>({});
 
   useEffect(() => {
+    if (!visible) return;
+    let isActive = true;
     const loadConfigs = async () => {
       try {
         const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
-        if (stored) setDeviceConfigs(JSON.parse(stored) || {});
+        if (stored && isActive) setDeviceConfigs(JSON.parse(stored) || {});
       } catch (e: unknown) {}
     };
-    if (visible) loadConfigs();
+    loadConfigs();
+    return () => { isActive = false; };
   }, [visible]);
+
 
   const handleExport = async () => {
     await exportLogs();

@@ -140,6 +140,8 @@ export default function Sk8LytzProgrammer({
 
   // ─── Load Profiles ──────────────────────────────────────────────────────────
   useEffect(() => {
+      if (!visible) return;
+      let isActive = true;
       const load = async () => {
           try {
               // One-time data migration from banned ng_ namespace
@@ -149,13 +151,15 @@ export default function Sk8LytzProgrammer({
                   await AsyncStorage.removeItem('ng_programmer_profiles');
               }
               const saved = await AsyncStorage.getItem(STORAGE_PROGRAMMER_PROFILES);
-              if (saved) setProfiles(JSON.parse(saved));
+              if (saved && isActive) setProfiles(JSON.parse(saved));
           } catch (e: unknown) {
               AppLogger.error('[Sk8LytzProgrammer] Failed to migrate or load profiles', { error: (e instanceof Error ? e.message : String(e)) });
           }
       };
-      if (visible) load();
+      load();
+      return () => { isActive = false; };
   }, [visible]);
+
 
   // ─── Save Profiles ──────────────────────────────────────────────────────────
   const saveProfileChange = async (newProfiles: Record<ActiveProfileType, HardwareSettings>) => {
