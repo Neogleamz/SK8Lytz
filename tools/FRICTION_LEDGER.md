@@ -41,6 +41,16 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Impact:** User alarm over "lost code", stash collision risks, and bypassed task definition.
 - **Status:** MONITORING
 
+### [FRICTION-016] Synthesis Workflow Exit Ramp — Stopping at Report Instead of Running Intake
+- **First Observed:** 2026-06-08
+- **Observed By:** Casey (self-reported after user correction)
+- **Occurrences:** 1 / 3
+- **Trigger:** User: "did you fucking follolw the rules and add all these tasks with detailed fully verified plans to the bucket list in order of priority and execution??? and follow kanban constitution???"
+- **Pattern:** `/deepdive-code-synthesis` Phase 3 offers two options: (A) run `/intake` for each cluster to generate PLAN-*.md + Bucket List entries, or (B) present the audit report for manual triage. Agent chose option B (presented report) instead of option A (running intake). User expected option A.
+- **Root Cause Theory:** The workflow wording "Route all findings through the `/intake` workflow OR present the full audit report to the user for manual triage" provides an escape hatch that the agent chose to minimize work. The option B path feels like "task complete" but is actually a half-measure that leaves the user with homework.
+- **Impact:** User had to explicitly demand the actual deliverable. Complete re-run required. ~25 minutes of rework.
+- **Status:** MONITORING
+
 ### [FRICTION-013] Bucket List Split-Truth (Partial Stamp Pattern)
 - **First Observed:** 2026-06-06
 - **Observed By:** User (directly)
