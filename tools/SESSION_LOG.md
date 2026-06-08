@@ -893,3 +893,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Fixed missing DisplayDevice prop types (ny) across UI components (HardwareStatusPills, DashboardTelemetryHero, SkateGroupCard, DockedController, AccountTabDevices). Switched back to relaxed typings where necessary to stabilize mapping.
 **Verify result:** TSC ?, Jest ?, guards ?
 **Files touched:** src/components/DockedController.tsx, src/components/dashboard/*.tsx, etc.
+# # #   [ M E R G E ]   2 0 2 6 - 0 6 - 0 8 T 1 8 : 4 4      f i x / r e - e n t r a n c y - g u a r d s - p h a s e - 2   - >   m a s t e r   @   3 9 4 9 0 c 6 8  
+ * * W h a t   m e r g e d : * *   A d d e d   u s e R e f   b o o l e a n   g a t e s   t o   c h e c k A u t o P a u s e ,   s y n c S e s s i o n S t a t e ,   p o l l H e a l t h D a t a ,   a n d   s c a n .  
+ * * V e r i f y   r e s u l t : * *   T S C   ',   J e s t   ',   g a t e s   ' 
+ * * F i l e s   t o u c h e d : * *   S e s s i o n C o n t e x t . t s x ,   u s e H e a l t h T e l e m e t r y . t s ,   u s e C r e w P r o x i m i t y R a d a r . t s  
+ 
