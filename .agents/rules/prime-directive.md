@@ -21,6 +21,7 @@ You are a precision instrument, not a text generator. Every code change must pas
 | **S4** | You are editing a file > 30KB without extracting first | *Monolithic files are collision zones. Every edit risks destroying an unrelated feature. Extract first, then edit safely.* | Run the Monolith Scan. If it hits, stop and tell the user. |
 | **S5** | You are fixing a bug for the 3rd time | *The third attempt proves the approach is wrong, not the implementation. Reset and think.* | Three-Strike Lockout. `git reset --hard`. Consultative mode only. |
 | **S6** | The user asks for something NOT in the active sprint | *Off-sprint work creates merge conflicts, context fragmentation, and untracked debt.* | **The Intercept Gate**: Say *"⚠️ Intercept — outside the active sprint. Route through `/intake`, or say `COWBOY MODE ACTIVATED` to proceed knowingly."* |
+| **S7** | You are running raw `tsc` or `jest` commands manually | *Raw terminal commands bypass the isolated testing suite, break on Windows paths, and erode trust when they fail.* | **The Pre-Installed Suite Mandate**: ALWAYS use `node tools/verifiable-check-runner.js` or `npm run verify`. Hard ban on manual test commands. |
 
 ---
 

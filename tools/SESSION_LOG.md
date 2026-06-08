@@ -879,3 +879,13 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - GradientLibraryTab.tsx: Added error UI component for missing/failed gradients.
 **Verify result:** TSC ? Jest ? gates ?
 **Files touched:** src/components/account/SkaterStatsPanel.tsx, src/hooks/useScenes.ts, src/hooks/useGradients.ts, src/components/patterns/GradientLibraryTab.tsx
+# # #   [ M E R G E ]   2 0 2 6 - 0 6 - 0 8 T 1 6 : 3 7      r e f a c t o r / t y p e - s a f e t y - d a t a - l a y e r   - >   m a s t e r   @   7 6 a c 0 9 1 1 
+ * * W h a t   m e r g e d : * *   R e m o v e d    s   u n k n o w n   a s   d o u b l e - c a s t s   a n d   e n f o r c e d   . r e t u r n s < T > ( )   i n   d a t a   l a y e r   s e r v i c e s . 
+ * * V e r i f y   r e s u l t : * *   T S C   ',   J e s t   ',   g a t e s   '
+ * * F i l e s   t o u c h e d : * *   S c e n e s S e r v i c e . t s ,   G r a d i e n t s S e r v i c e . t s ,   S p e e d T r a c k i n g S e r v i c e . t s ,   D e v i c e R e p o s i t o r y . t s ,   u s e F a v o r i t e s . t s ,   u s e C u r a t e d P i c k s . t s ,   Q u i c k P r e s e t M o d a l . t s x  
+ # # #   [ D E C I S I O N ]   2 0 2 6 - 0 6 - 0 8 T 1 6 : 3 7      s u p a b a s e C l i e n t . t s   m o c k   e x e m p t i o n 
+ * * D e c i s i o n : * *   K e p t    s   u n k n o w n   a s   R e t u r n T y p e < t y p e o f   c r e a t e C l i e n t < D a t a b a s e > >   a t   s u p a b a s e C l i e n t . t s : 6 4 . 
+ * * R e j e c t e d : * *   R e f a c t o r i n g   t h e   e n t i r e   m o c k   t o   a v o i d   d o u b l e - c a s t i n g . 
+ * * D o n ' t   r e - d e r i v e : * *   T y p e S c r i p t   r e q u i r e s   d o u b l e - c a s t i n g   w h e n   c o n s t r u c t i n g   p r o x y / m o c k   o b j e c t s   t h a t   d o n ' t   s a t i s f y   1 0 0 %   o f   a   m a s s i v e   c l a s s   s i g n a t u r e .   I t ' s   a   v a l i d   p a t t e r n   f o r   t h e   o f f l i n e   m o c k   f a l l b a c k . 
+ * * S o u r c e : * *   s r c / s e r v i c e s / s u p a b a s e C l i e n t . t s : 6 4  
+ 
