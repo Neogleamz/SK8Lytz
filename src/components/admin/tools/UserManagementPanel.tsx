@@ -322,7 +322,7 @@ export function UserManagementPanel({
         {loading && !isRefreshing ? (
           <ActivityIndicator size="large" color="#00f0ff" style={{ marginTop: Spacing.xl }} />
         ) : (
-          <FlatList
+          <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={filteredUsers}
             renderItem={renderItem}
             keyExtractor={(i) => i.user_id}

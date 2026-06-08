@@ -22,7 +22,7 @@ export function DiagnosticLabSnifferTab({
           <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: '900' }}>CLEAR</Text>
         </TouchableOpacity>
       </View>
-      <FlatList
+      <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
         data={logs}
         keyExtractor={(_, i) => i.toString()}
         style={{ flex: 1, backgroundColor: isDark ? '#05070a' : '#f9fafb', borderRadius: 12, padding: Spacing.sm, borderWidth: 1, borderColor: border }}

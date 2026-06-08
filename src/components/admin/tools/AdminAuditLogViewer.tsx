@@ -152,7 +152,7 @@ export function AdminAuditLogViewer({
         {loading && !isRefreshing ? (
           <ActivityIndicator size="large" color="#00f0ff" style={{ marginTop: Spacing.xl }} />
         ) : (
-          <FlatList
+          <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={logs}
             renderItem={renderItem}
             keyExtractor={(i) => i.id}

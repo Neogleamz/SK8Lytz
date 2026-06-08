@@ -72,7 +72,7 @@ const FavoritesPanel = React.memo(({
       {/* ── YOURS Section ── */}
       <View style={localStyles.section}>
         <Text style={[Typography.title, isDark && localStyles.textWhite, localStyles.sectionTitle]}>YOURS</Text>
-        <FlatList
+        <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
           style={localStyles.list}
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -86,7 +86,7 @@ const FavoritesPanel = React.memo(({
       {/* ── SK8Lytz Picks Section ── */}
       <View style={[localStyles.section, localStyles.picksSection]}>
         <Text style={[Typography.title, isDark && localStyles.textWhite, localStyles.sectionTitle]}>SK8Lytz Picks</Text>
-        <FlatList
+        <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
           style={localStyles.list}
           horizontal
           showsHorizontalScrollIndicator={false}

@@ -218,7 +218,7 @@ export function FeatureFlagsPanel({
         {loading && !isRefreshing ? (
           <ActivityIndicator size="large" color="#00f0ff" style={{ marginTop: Spacing.xl }} />
         ) : (
-          <FlatList
+          <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={flags}
             renderItem={renderItem}
             keyExtractor={(i) => i.id}

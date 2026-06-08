@@ -207,7 +207,7 @@ export function HardwareBlacklistPanel({
         {loading && !isRefreshing ? (
           <ActivityIndicator size="large" color="#ff4040" style={{ marginTop: Spacing.xl }} />
         ) : (
-          <FlatList
+          <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={blacklist}
             renderItem={renderItem}
             keyExtractor={(i) => i.mac_address}

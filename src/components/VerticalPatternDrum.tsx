@@ -95,7 +95,7 @@ const VerticalPatternDrum = ({
                <View style={styles.reticleGlassBox} />
              </View>
    
-             <FlatList
+             <FlatList removeClippedSubviews={true}
                ref={flatListRef}
                data={items}
                keyExtractor={(item) => item.id}

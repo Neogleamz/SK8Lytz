@@ -146,7 +146,7 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
         </ScrollView>
       </View>
 
-      <FlatList
+      <FlatList removeClippedSubviews={true}
         data={filteredTemplates}
         keyExtractor={(item) => item.id.toString()}
         numColumns={2}

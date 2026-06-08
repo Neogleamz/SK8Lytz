@@ -113,7 +113,7 @@ export function CrewJoinScreen() {
           ) : activeSessions.length === 0 ? (
             <Text style={[styles.subtitle, localStyles.emptyText]}>No active crews right now. Be the first!</Text>
           ) : (
-            <FlatList data={activeSessions} keyExtractor={s => s.id}
+            <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5} data={activeSessions} keyExtractor={s => s.id}
               renderItem={renderActiveSessionCard} scrollEnabled={false} />
           )}
         </View>

@@ -137,7 +137,7 @@ export function AdminRosterPanel({
         {loading && !isRefreshing ? (
           <ActivityIndicator size="large" color="#FFD700" style={{ marginTop: Spacing.xl }} />
         ) : (
-          <FlatList
+          <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={admins}
             renderItem={renderItem}
             keyExtractor={(i) => i.user_id}

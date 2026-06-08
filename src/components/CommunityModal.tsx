@@ -254,7 +254,7 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
             <Text style={{ color: Colors.textMuted, marginTop: Spacing.md, fontSize: 13 }}>Loading scenes...</Text>
           </View>
         ) : (
-          <FlatList
+          <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={scenes}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}

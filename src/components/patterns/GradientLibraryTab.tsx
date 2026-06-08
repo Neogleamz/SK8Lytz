@@ -113,7 +113,7 @@ export const GradientLibraryTab: React.FC<GradientLibraryTabProps> = ({ Colors, 
           <Text style={[styles.emptySubtitle, { color: Colors.textMuted }]}>Tap "Create" to build your first</Text>
         </View>
       ) : (
-        <FlatList
+        <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
           data={gradients}
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
