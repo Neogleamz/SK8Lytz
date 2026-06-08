@@ -18,7 +18,8 @@ module.exports = {
         NSMicrophoneUsageDescription: "SK8Lytz needs microphone access to synchronize your lights to ambient music.",
         NSCameraUsageDescription: "SK8Lytz needs camera access to sample colors from your environment for LED synchronization.",
         NSHealthShareUsageDescription: "SK8Lytz reads step count and heart rate to synchronize light patterns with your fitness metrics.",
-        NSLocationWhenInUseUsageDescription: "SK8Lytz requires location services for Bluetooth Low Energy scanning to find your skates."
+        NSHealthUpdateUsageDescription: "SK8Lytz writes your skating sessions to Apple Health to track fitness activity.",
+        NSLocationWhenInUseUsageDescription: "SK8Lytz uses your location to discover nearby skate spots and map your skating routes."
       },
       buildNumber: "17",
       config: {
