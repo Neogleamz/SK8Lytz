@@ -198,13 +198,28 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   useEffect(() => {
     const fetchBlacklist = async () => {
+      const CACHE_KEY = '@Sk8lytz_hardware_blacklist';
+      
+      try {
+        const cached = await AsyncStorage.getItem(CACHE_KEY);
+        if (cached) {
+          blacklistedMacsRef.current = JSON.parse(cached);
+        }
+      } catch (e) {
+        // Ignore cache read errors
+      }
+
       try {
         const { data, error } = await supabase.from('hardware_blacklist').select('mac_address');
         if (data && !error) {
-          blacklistedMacsRef.current = data.map(d => d.mac_address.toUpperCase());
+          const macs = data.map(d => d.mac_address.toUpperCase());
+          blacklistedMacsRef.current = macs;
+          try {
+            await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(macs));
+          } catch (e) {}
         }
       } catch (e) {
-        AppLogger.error('[BLE] Failed to fetch hardware blacklist on boot', e);
+        AppLogger.log('ERROR', { context: 'useBLE', message: 'Failed background blacklist fetch', info: e });
       }
     };
     fetchBlacklist();

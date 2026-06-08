@@ -28,38 +28,46 @@ export const AppSettingsService = {
    * Caches the results locally for offline mode.
    */
   async fetchAllSettings(): Promise<AppSettingsMap> {
+    let settingsMap: AppSettingsMap = {};
+    
+    // 1. Return cache immediately
     try {
-      const { data, error } = await supabase
-        .from('sk8lytz_app_settings')
-        .select('setting_key, setting_value');
-
-      if (error) throw error;
-
-      const settingsMap: AppSettingsMap = {};
-      if (data) {
-        for (const row of data) {
-          settingsMap[row.setting_key] = row.setting_value;
-        }
+      const cached = await AsyncStorage.getItem(CACHE_KEY);
+      if (cached) {
+        settingsMap = JSON.parse(cached) as AppSettingsMap;
       }
-
-      // Cache locally
-      await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(settingsMap));
-      return settingsMap;
-    } catch (err: any) {
-      AppLogger.log('ERROR_CAUGHT', { message: 'Failed to fetch app settings', error: err.message });
-      
-      // Fallback to cache if offline
-        try {
-        const cached = await AsyncStorage.getItem(CACHE_KEY);
-        if (cached) {
-          return JSON.parse(cached) as AppSettingsMap;
-        }
-      } catch (e) {
-        AppLogger.log('ERROR_CAUGHT', { message: 'Failed to access cached app settings' });
-      }
-
-      return {}; // return empty if completely failed and no cache
+    } catch (e) {
+      AppLogger.log('ERROR_CAUGHT', { message: 'Failed to access cached app settings' });
     }
+
+    // 2. Background network sync (non-blocking)
+    const syncCloud = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('sk8lytz_app_settings')
+          .select('setting_key, setting_value');
+
+        if (error) {
+          AppLogger.log('ERROR', { context: 'AppSettingsService', message: 'Fetch settings failed', info: error });
+          return;
+        }
+
+        const newSettings: Record<string, any> = {};
+        for (const row of (data || [])) {
+          newSettings[row.setting_key] = row.setting_value;
+        }
+
+        try {
+          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(newSettings));
+        } catch (e) {}
+      } catch (err) {
+        AppLogger.log('ERROR', { context: 'AppSettingsService', message: 'Settings sync failed', info: err });
+      }
+    };
+
+    syncCloud();
+
+    return settingsMap;
   },
 
   /**

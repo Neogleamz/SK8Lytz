@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Database } from '../types/supabase';
 import { AppLogger } from './AppLogger';
 import { supabase } from './supabaseClient';
@@ -17,25 +18,60 @@ export const SkateSpotsService = {
    * within a given map bounding box.
    */
   async getNativeSpots(bbox: BoundingBox): Promise<SkateSpot[]> {
-    try {
-      const { data, error } = await supabase
-        .from('skate_spots')
-        .select('*')
-        .eq('is_published', true)
-        .gte('lat', bbox.minLat)
-        .lte('lat', bbox.maxLat)
-        .gte('lng', bbox.minLng)
-        .lte('lng', bbox.maxLng);
+    const CACHE_KEY = '@Sk8lytz_skate_spots_cache';
+    const TTL = 24 * 60 * 60 * 1000;
+    let localData: SkateSpot[] = [];
+    let cacheValid = false;
 
-      if (error) {
-        AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Failed to fetch native spots', info: error });
-        return [];
+    try {
+      const cachedStr = await AsyncStorage.getItem(CACHE_KEY);
+      if (cachedStr) {
+        const parsed = JSON.parse(cachedStr);
+        if (Array.isArray(parsed.data)) {
+          localData = parsed.data;
+          if (parsed.timestamp && Date.now() - parsed.timestamp < TTL) {
+            cacheValid = true;
+          }
+        }
       }
-      return data || [];
-    } catch (err: any) {
-      AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Error fetching native spots', info: err });
-      return [];
+    } catch (e) {}
+
+    const filterByBbox = (spots: SkateSpot[]) => spots.filter(s => 
+      s.lat >= bbox.minLat && s.lat <= bbox.maxLat && 
+      s.lng >= bbox.minLng && s.lng <= bbox.maxLng
+    );
+
+    const syncCloud = async () => {
+      try {
+        const { data, error } = await supabase.from('skate_spots').select('*').eq('is_published', true).limit(500);
+        if (!error && data) {
+          AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data })).catch(() => {});
+        }
+      } catch (e) {}
+    };
+
+    if (!cacheValid) {
+      if (localData.length === 0) {
+        // Blocking fetch if no cache exists
+        try {
+          const { data, error } = await supabase
+            .from('skate_spots')
+            .select('*')
+            .eq('is_published', true)
+            .limit(500);
+          if (!error && data) {
+            localData = data as SkateSpot[];
+            AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data })).catch(() => {});
+          }
+        } catch (e) {
+          AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Error fetching native spots', info: e });
+        }
+      } else {
+        syncCloud();
+      }
     }
+
+    return filterByBbox(localData);
   },
 
   /**

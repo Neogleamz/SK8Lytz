@@ -10,42 +10,9 @@ const LOCAL_GRADIENTS_KEY = '@Sk8lytz_Builder_Presets';
 
 class GradientsServiceClass {
   async getSavedGradients(userId?: string): Promise<CustomBuilderPreset[]> {
-    let globalPresets: CustomBuilderPreset[] = [];
-    let userCloudPresets: CustomBuilderPreset[] = [];
-    
-    // 1. Fetch Globals (custom_builder_presets)
-    try {
-      const { data, error } = await supabase
-        .from('custom_builder_presets')
-        .select('*')
-        .neq('fill_mode', 'SCENE');
-        
-      if (!error && data) {
-        globalPresets = (data as unknown as CustomBuilderPreset[]).filter(p => p && p.id && p.name && Array.isArray(p.nodes));
-      }
-    } catch (err) {
-      AppLogger.warn('GRADIENT_SYNC_FAIL', err);
-    }
-
-    // 2. Fetch User Cloud (user_saved_presets)
-    if (userId) {
-      try {
-        const { data, error } = await supabase
-          .from('user_saved_presets')
-          .select('*')
-          .eq('user_id', userId)
-          .neq('fill_mode', 'SCENE');
-          
-        if (!error && data) {
-          userCloudPresets = (data as unknown as CustomBuilderPreset[]).filter(p => p && p.id && p.name && Array.isArray(p.nodes));
-        }
-      } catch (err) {
-        AppLogger.warn('GRADIENT_SYNC_FAIL', err);
-      }
-    }
-    
-    // 3. Read Local (only the user's private saves, globals aren't cached locally to allow OTA updates)
     let localPresets: CustomBuilderPreset[] = [];
+    
+    // 1. Read Local (now caches globals as well for offline support)
     try {
       const localData = await AsyncStorage.getItem(LOCAL_GRADIENTS_KEY);
       if (localData) {
@@ -57,20 +24,56 @@ class GradientsServiceClass {
     } catch (e) {
       AppLogger.error('GRADIENT_LOCAL_READ_FAIL', e);
     }
-    
-    // 4. Merge deduplicating by ID 
-    const mergedMap = new Map<string, CustomBuilderPreset>();
-    localPresets.forEach(p => mergedMap.set(p.id, p));
-    userCloudPresets.forEach(p => mergedMap.set(p.id, p)); // User cloud wins over local
-    
-    // Update Local cache with merged user results
-    const finalUserSaved = Array.from(mergedMap.values());
-    try {
-      await AsyncStorage.setItem(LOCAL_GRADIENTS_KEY, JSON.stringify(finalUserSaved));
-    } catch (e) {}
 
-    // Globals are appended to the top but NOT cached to local storage
-    return [...globalPresets, ...finalUserSaved];
+    // 2. Background Sync
+    const syncCloud = async () => {
+      let globalPresets: CustomBuilderPreset[] = [];
+      let userCloudPresets: CustomBuilderPreset[] = [];
+      
+      try {
+        const { data, error } = await supabase
+          .from('custom_builder_presets')
+          .select('*')
+          .neq('fill_mode', 'SCENE');
+          
+        if (!error && data) {
+          globalPresets = (data as unknown as CustomBuilderPreset[]).filter(p => p && p.id && p.name && Array.isArray(p.nodes));
+        }
+      } catch (err) {
+        AppLogger.warn('GRADIENT_SYNC_FAIL', err);
+      }
+
+      if (userId) {
+        try {
+          const { data, error } = await supabase
+            .from('user_saved_presets')
+            .select('*')
+            .eq('user_id', userId)
+            .neq('fill_mode', 'SCENE');
+            
+          if (!error && data) {
+            userCloudPresets = (data as unknown as CustomBuilderPreset[]).filter(p => p && p.id && p.name && Array.isArray(p.nodes));
+          }
+        } catch (err) {
+          AppLogger.warn('GRADIENT_SYNC_FAIL', err);
+        }
+      }
+
+      // Merge and update Local cache
+      const mergedMap = new Map<string, CustomBuilderPreset>();
+      localPresets.forEach(p => mergedMap.set(p.id, p));
+      globalPresets.forEach(p => mergedMap.set(p.id, p));
+      userCloudPresets.forEach(p => mergedMap.set(p.id, p)); // User cloud wins over local/global
+      
+      const finalMerged = Array.from(mergedMap.values());
+      try {
+        await AsyncStorage.setItem(LOCAL_GRADIENTS_KEY, JSON.stringify(finalMerged));
+      } catch (e) {}
+    };
+
+    syncCloud(); // Fire and forget
+
+    return localPresets;
   }
 
   async saveGradient(preset: Partial<CustomBuilderPreset>, userId?: string): Promise<CustomBuilderPreset> {

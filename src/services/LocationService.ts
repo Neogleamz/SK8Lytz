@@ -12,6 +12,7 @@ import * as Location from 'expo-location';
 import { AppLogger } from './AppLogger';
 import { supabase } from './supabaseClient';
 import { checkPermission, openGlobalPermissionsModal } from './PermissionService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface SessionLocation {
   label: string;          // "SkateCity OP, Olathe KS"
@@ -228,19 +229,69 @@ class LocationService {
    * Fetch static skate spots sorted by distance from current position.
    */
   async getNearbySkateSpots(radiusMi?: number | null, userCoords?: { lat: number; lng: number } | null): Promise<NearbySkateSpot[]> {
-    const { data } = await supabase
-      .from('skate_spots')
-      .select('*')
-      .eq('is_published', true)
-      .limit(500); // For MVP, grab a reasonable chunk. (Requires PostGIS bounding box for scale)
+    const CACHE_KEY = '@Sk8lytz_skate_spots_cache';
+    const TTL = 24 * 60 * 60 * 1000;
+    let spotsData: Record<string, unknown>[] = [];
+    let cacheValid = false;
 
-    if (!data || data.length === 0) return [];
+    try {
+      const cached = await AsyncStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed.data)) {
+          spotsData = parsed.data;
+          if (parsed.timestamp && Date.now() - parsed.timestamp < TTL) {
+            cacheValid = true;
+          }
+        }
+      }
+    } catch (e) {}
+
+    const syncCloud = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('skate_spots')
+          .select('*')
+          .eq('is_published', true)
+          .limit(500); // For MVP
+        if (!error && data && data.length > 0) {
+          try {
+            await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
+          } catch (e) {}
+        }
+      } catch (e) {}
+    };
+
+    if (!cacheValid) {
+      if (spotsData.length === 0) {
+        // Blocking fetch if no cache exists
+        try {
+          const { data } = await supabase
+            .from('skate_spots')
+            .select('*')
+            .eq('is_published', true)
+            .limit(500);
+          if (data && data.length > 0) {
+            spotsData = data as Record<string, unknown>[];
+            try {
+              await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
+            } catch (e) {}
+          }
+        } catch (e) {}
+      } else {
+        // Non-blocking sync if cache is stale
+        syncCloud();
+      }
+    }
+
+    if (!spotsData || spotsData.length === 0) return [];
+
 
     // GPS provided by caller — no acquisition race here
     const userLat = userCoords?.lat ?? null;
     const userLng = userCoords?.lng ?? null;
 
-    const spots: NearbySkateSpot[] = data.map((spot: Record<string, unknown>) => {
+    const spots: NearbySkateSpot[] = spotsData.map((spot: Record<string, unknown>) => {
       let distanceMi: number | null = null;
       let distanceLabel = '';
 

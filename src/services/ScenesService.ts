@@ -190,54 +190,9 @@ class ScenesServiceClass {
    * Get all user and global saved scenes.
    */
   async getSavedScenes(userId?: string): Promise<Scene[]> {
-    let globalScenes: Scene[] = [];
-    let userCloudScenes: Scene[] = [];
-    
-    // 1. Fetch Globals (custom_builder_presets)
-    try {
-      const { data, error } = await supabase
-        .from('custom_builder_presets')
-        .select('*')
-        .eq('fill_mode', 'SCENE');
-        
-      if (!error && data) {
-        globalScenes = data.map(p => ({
-          id: p.id,
-          name: p.name,
-          steps: Array.isArray(p.nodes) ? p.nodes as unknown as SceneStep[] : [],
-          created_at: p.created_at ?? '',
-          user_id: p.user_id ?? undefined
-        }));
-      }
-    } catch (err) {
-      AppLogger.warn('[ScenesService] Global sync fail', { error: String(err) });
-    }
-
-    // 2. Fetch User Cloud (user_saved_presets)
-    if (userId) {
-      try {
-        const { data, error } = await supabase
-          .from('user_saved_presets')
-          .select('*')
-          .eq('user_id', userId)
-          .eq('fill_mode', 'SCENE');
-          
-        if (!error && data) {
-          userCloudScenes = data.map(p => ({
-            id: p.id,
-            name: p.name,
-            steps: Array.isArray(p.nodes) ? p.nodes as unknown as SceneStep[] : [],
-            created_at: p.created_at ?? '',
-            user_id: p.user_id ?? undefined
-          }));
-        }
-      } catch (err) {
-        AppLogger.warn('[ScenesService] User cloud sync fail', { error: String(err) });
-      }
-    }
-
-    // 3. Read Local (only the user's private saves)
     let localScenes: Scene[] = [];
+    
+    // 1. Read Local (now caches globals as well for offline support)
     try {
       const localData = await AsyncStorage.getItem(LOCAL_SCENES_KEY);
       if (localData) {
@@ -250,19 +205,68 @@ class ScenesServiceClass {
       AppLogger.error('[ScenesService] Local read fail', { error: String(e) });
     }
 
-    // 4. Merge deduplicating by ID 
-    const mergedMap = new Map<string, Scene>();
-    localScenes.forEach(s => mergedMap.set(s.id, s));
-    userCloudScenes.forEach(s => mergedMap.set(s.id, s)); // User cloud wins over local
-    
-    // Update Local cache with merged user results
-    const finalUserSaved = Array.from(mergedMap.values());
-    try {
-      await AsyncStorage.setItem(LOCAL_SCENES_KEY, JSON.stringify(finalUserSaved));
-    } catch (e) {}
+    // 2. Background Sync
+    const syncCloud = async () => {
+      let globalScenes: Scene[] = [];
+      let userCloudScenes: Scene[] = [];
+      
+      try {
+        const { data, error } = await supabase
+          .from('custom_builder_presets')
+          .select('*')
+          .eq('fill_mode', 'SCENE');
+          
+        if (!error && data) {
+          globalScenes = data.map(p => ({
+            id: p.id,
+            name: p.name,
+            steps: Array.isArray(p.nodes) ? p.nodes as unknown as SceneStep[] : [],
+            created_at: p.created_at ?? '',
+            user_id: p.user_id ?? undefined
+          }));
+        }
+      } catch (err) {
+        AppLogger.warn('[ScenesService] Global sync fail', { error: String(err) });
+      }
 
-    // Globals are appended to the top but NOT cached to local storage
-    return [...globalScenes, ...finalUserSaved];
+      if (userId) {
+        try {
+          const { data, error } = await supabase
+            .from('user_saved_presets')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('fill_mode', 'SCENE');
+            
+          if (!error && data) {
+            userCloudScenes = data.map(p => ({
+              id: p.id,
+              name: p.name,
+              steps: Array.isArray(p.nodes) ? p.nodes as unknown as SceneStep[] : [],
+              created_at: p.created_at ?? '',
+              user_id: p.user_id ?? undefined
+            }));
+          }
+        } catch (err) {
+          AppLogger.warn('[ScenesService] User cloud sync fail', { error: String(err) });
+        }
+      }
+
+      // Merge deduplicating by ID 
+      const mergedMap = new Map<string, Scene>();
+      localScenes.forEach(s => mergedMap.set(s.id, s));
+      globalScenes.forEach(s => mergedMap.set(s.id, s));
+      userCloudScenes.forEach(s => mergedMap.set(s.id, s)); // User cloud wins over local/global
+      
+      // Update Local cache with merged results
+      const finalUserSaved = Array.from(mergedMap.values());
+      try {
+        await AsyncStorage.setItem(LOCAL_SCENES_KEY, JSON.stringify(finalUserSaved));
+      } catch (e) {}
+    };
+
+    syncCloud(); // Fire and forget
+
+    return localScenes;
   }
 
   /**
