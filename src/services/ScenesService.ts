@@ -38,11 +38,14 @@ export interface ICloudScene {
 const LOCAL_SCENES_KEY = '@Sk8lytz_Scenes';
 const LOCAL_SCENE_SYNC_QUEUE_KEY = '@Sk8lytz_Scene_Sync_Queue';
 
-export interface SceneSyncJob {
-  id: string;
-  type: 'upsert_user_scene' | 'delete_user_scene' | 'publish_community_scene';
-  payload: any;
-  timestamp: number;
+export type SceneSyncJob = 
+  | { id: string; type: 'upsert_user_scene'; payload: Database['public']['Tables']['user_saved_presets']['Insert']; timestamp: number; }
+  | { id: string; type: 'delete_user_scene'; payload: { id: string }; timestamp: number; }
+  | { id: string; type: 'publish_community_scene'; payload: Database['public']['Tables']['shared_scenes']['Insert']; timestamp: number; };
+
+function isSceneStepArray(nodes: unknown): nodes is SceneStep[] {
+  if (!Array.isArray(nodes)) return false;
+  return nodes.every(n => typeof n === 'object' && n !== null && 'id' in n && 'effectId' in n && typeof (n as Record<string, unknown>).id === 'string' && typeof (n as Record<string, unknown>).effectId === 'number');
 }
 
 class ScenesServiceClass {
@@ -57,10 +60,11 @@ class ScenesServiceClass {
           .eq('is_public', true)
           .order('upvotes', { ascending: false })
           .order('created_at', { ascending: false })
-          .range(offset, offset + limit - 1);
+          .range(offset, offset + limit - 1)
+          .returns<ICloudScene[]>();
         if (!error && data) {
           AsyncStorage.setItem(STORAGE_SCENES_CACHE, JSON.stringify(data)).catch(() => {});
-          return data as unknown as ICloudScene[];
+          return data;
         }
       } catch (e: unknown) {
         AppLogger.error('[ScenesService] Background sync error', { error: (e instanceof Error ? e.message : String(e)) });
@@ -94,10 +98,11 @@ class ScenesServiceClass {
         .from('shared_scenes')
         .select('*')
         .eq('author_id', userId)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .returns<ICloudScene[]>();
 
       if (error) throw error;
-      return data as unknown as ICloudScene[];
+      return data;
     } catch (e: unknown) {
       AppLogger.error('[ScenesService] getMyScenes error', { error: (e instanceof Error ? e.message : String(e)) });
       return [];
@@ -107,7 +112,7 @@ class ScenesServiceClass {
   /**
    * Publishes or saves a scene to the cloud.
    */
-  async publishScene(name: string, payload: any, isPublic: boolean = false, userId?: string, username?: string): Promise<boolean> {
+  async publishScene(name: string, payload: Scene | Record<string, unknown>, isPublic: boolean = false, userId?: string, username?: string): Promise<boolean> {
     try {
       if (!userId) {
         AppLogger.warn('[ScenesService] Skipping cloud publish (not logged in)');
@@ -116,11 +121,11 @@ class ScenesServiceClass {
 
       const safeUsername = username || 'Anonymous Skater';
 
-      const jobPayload = {
+      const jobPayload: Database['public']['Tables']['shared_scenes']['Insert'] = {
         author_id: userId,
         author_username: safeUsername,
         name: name,
-        scene_payload: payload,
+        scene_payload: payload as Database['public']['Tables']['shared_scenes']['Insert']['scene_payload'],
         is_public: isPublic
       };
 
@@ -218,7 +223,7 @@ class ScenesServiceClass {
           globalScenes = data.map(p => ({
             id: p.id,
             name: p.name,
-            steps: Array.isArray(p.nodes) ? p.nodes as unknown as SceneStep[] : [],
+            steps: isSceneStepArray(p.nodes) ? p.nodes : [],
             created_at: p.created_at ?? '',
             user_id: p.user_id ?? undefined
           }));
@@ -239,7 +244,7 @@ class ScenesServiceClass {
             userCloudScenes = data.map(p => ({
               id: p.id,
               name: p.name,
-              steps: Array.isArray(p.nodes) ? p.nodes as unknown as SceneStep[] : [],
+              steps: isSceneStepArray(p.nodes) ? p.nodes : [],
               created_at: p.created_at ?? '',
               user_id: p.user_id ?? undefined
             }));
@@ -295,7 +300,7 @@ class ScenesServiceClass {
         payload: {
           id: scene.id,
           name: scene.name,
-          nodes: scene.steps,
+          nodes: scene.steps as unknown as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
           fill_mode: 'SCENE',
           transition_type: 0,
           user_id: userId,
@@ -372,7 +377,7 @@ class ScenesServiceClass {
             const { error } = await supabase.from('shared_scenes').insert([job.payload]);
             if (!error) success = true;
           } else if (job.type === 'upsert_user_scene') {
-            const { error } = await supabase.from('user_saved_presets').upsert(job.payload as unknown as Database['public']['Tables']['user_saved_presets']['Insert']);
+            const { error } = await supabase.from('user_saved_presets').upsert(job.payload);
             if (!error) success = true;
           } else if (job.type === 'delete_user_scene') {
             const { error } = await supabase.from('user_saved_presets').delete().eq('id', job.payload.id);

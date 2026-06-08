@@ -34,10 +34,11 @@ class GradientsServiceClass {
         const { data, error } = await supabase
           .from('custom_builder_presets')
           .select('*')
-          .neq('fill_mode', 'SCENE');
+          .neq('fill_mode', 'SCENE')
+          .returns<CustomBuilderPreset[]>();
           
         if (!error && data) {
-          globalPresets = (data as unknown as CustomBuilderPreset[]).filter(p => p && p.id && p.name && Array.isArray(p.nodes));
+          globalPresets = data.filter(p => p && p.id && p.name && Array.isArray(p.nodes));
         }
       } catch (err: unknown) {
         AppLogger.warn('GRADIENT_SYNC_FAIL', err instanceof Error ? err.message : String(err));
@@ -49,10 +50,11 @@ class GradientsServiceClass {
             .from('user_saved_presets')
             .select('*')
             .eq('user_id', userId)
-            .neq('fill_mode', 'SCENE');
+            .neq('fill_mode', 'SCENE')
+            .returns<CustomBuilderPreset[]>();
             
           if (!error && data) {
-            userCloudPresets = (data as unknown as CustomBuilderPreset[]).filter(p => p && p.id && p.name && Array.isArray(p.nodes));
+            userCloudPresets = data.filter(p => p && p.id && p.name && Array.isArray(p.nodes));
           }
         } catch (err: unknown) {
           AppLogger.warn('GRADIENT_SYNC_FAIL', err instanceof Error ? err.message : String(err));
@@ -106,7 +108,16 @@ class GradientsServiceClass {
     // 2. Save Cloud (user_saved_presets)
     if (userId) {
       try {
-        const { error } = await supabase.from('user_saved_presets').upsert({ ...newPreset, created_at: new Date().toISOString() } as unknown as Database['public']['Tables']['user_saved_presets']['Insert']);
+        const payload: Database['public']['Tables']['user_saved_presets']['Insert'] = {
+          id: newPreset.id,
+          name: newPreset.name,
+          nodes: newPreset.nodes as unknown as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
+          fill_mode: newPreset.fill_mode || 'GRADIENT',
+          transition_type: newPreset.transition_type || 0x01,
+          user_id: userId,
+          created_at: new Date().toISOString()
+        };
+        const { error } = await supabase.from('user_saved_presets').upsert(payload);
         if (error) throw error;
       } catch (err: unknown) {
         AppLogger.warn('GRADIENT_CLOUD_SAVE_FAIL', err instanceof Error ? err.message : String(err));

@@ -158,7 +158,7 @@ export function useFavorites() {
           name,
           fill_mode: 'FAVORITE',
           transition_type: 0,
-          nodes: payload as unknown as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
+          nodes: payload as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
           created_at: new Date().toISOString()
         });
       }

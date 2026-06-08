@@ -12,6 +12,7 @@ import { STORAGE_PREFIX } from '../constants/AppConstants';
 import { supabase } from '../services/supabaseClient';
 import { AppLogger } from '../services/AppLogger';
 import type { IFavoriteState } from '../types/dashboard.types';
+import type { Database } from '../types/supabase';
 
 /**
  * Fetches and caches SK8Lytz Picks (curated presets) from the Supabase
@@ -49,7 +50,8 @@ export function useCuratedPicks() {
           .eq('is_active', true)
           .or(`active_from.is.null,active_from.lte.${today}`)
           .or(`active_until.is.null,active_until.gte.${today}`)
-          .order('sort_order', { ascending: true });
+          .order('sort_order', { ascending: true })
+          .returns<Database['public']['Tables']['sk8lytz_picks']['Row'][]>();
 
         if (error) {
           AppLogger.error('[SK8Lytz Picks] Failed to fetch from DB', error instanceof Error ? error.message : String(error));
@@ -59,27 +61,27 @@ export function useCuratedPicks() {
         if (data && Array.isArray(data)) {
           AppLogger.log('PICK_LOADED', { source: 'supabase', count: data.length });
           // Map snake_case DB columns → IFavoriteState camelCase
-          const mapped: IFavoriteState[] = data.map((row: any) => ({
+          const mapped: IFavoriteState[] = data.map((row) => ({
             id: row.id,
             name: row.name,
-            customName: row.custom_name,
-            mode: row.mode,
-            color: row.color,
-            patternId: row.pattern_id,
+            customName: row.custom_name ?? undefined,
+            mode: row.mode as IFavoriteState['mode'],
+            color: row.color ?? undefined,
+            patternId: row.pattern_id ?? undefined,
             speed: row.speed ?? 50,
             brightness: row.brightness ?? 90,
-            fixedColorMode: row.fixed_color_mode,
-            fixedFgColor: row.fixed_fg_color,
-            fixedBgColor: row.fixed_bg_color,
-            fixedHue: row.fixed_hue,
-            multiColors: row.multi_colors ?? undefined,
-            multiTransition: row.multi_transition,
-            multiLength: row.multi_length,
-            musicPrimaryColor: row.music_primary_color,
-            musicSecondaryColor: row.music_secondary_color,
-            micSensitivity: row.mic_sensitivity,
-            micSource: row.mic_source,
-            musicMatrixStyle: row.music_matrix_style,
+            fixedColorMode: (row.fixed_color_mode as IFavoriteState['fixedColorMode']) ?? undefined,
+            fixedFgColor: row.fixed_fg_color ?? undefined,
+            fixedBgColor: row.fixed_bg_color ?? undefined,
+            fixedHue: row.fixed_hue ?? undefined,
+            multiColors: Array.isArray(row.multi_colors) ? row.multi_colors.map(String) : undefined,
+            multiTransition: row.multi_transition ?? undefined,
+            multiLength: row.multi_length ?? undefined,
+            musicPrimaryColor: row.music_primary_color ?? undefined,
+            musicSecondaryColor: row.music_secondary_color ?? undefined,
+            micSensitivity: row.mic_sensitivity ?? undefined,
+            micSource: (row.mic_source as IFavoriteState['micSource']) ?? undefined,
+            musicMatrixStyle: (row.music_matrix_style as IFavoriteState['musicMatrixStyle']) ?? undefined,
           }));
 
           // Only update and re-render if the fetched data differs to prevent flicker

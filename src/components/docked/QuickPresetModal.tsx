@@ -15,7 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_PREFIX } from '../../constants/AppConstants';
 import { AppLogger } from '../../services/AppLogger';
 import { containsProfanity } from '../../services/AuthUtils';
-import { ScenesService } from '../../services/ScenesService';
+import { ScenesService, Scene } from '../../services/ScenesService';
 import { useAuth } from '../../context/AuthContext';
 import { Spacing } from '../../theme/theme';
 import type { ThemePalette } from '../../theme/theme';
@@ -40,7 +40,7 @@ interface QuickPresetModalProps {
   isPublishingCloud: boolean;
   setIsPublishingCloud: (v: boolean) => void;
   /** Returns full scene snapshot for cloud publish. Stable callback from captureEntireState. */
-  captureEntireState: () => Record<string, any>;
+  captureEntireState: () => Record<string, unknown>;
   multiColors: string[];
   multiTransition: number;
   closePrompt: () => void;

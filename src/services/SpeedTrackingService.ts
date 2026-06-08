@@ -313,15 +313,6 @@ class SpeedTrackingServiceClass {
     try {
       if (!userId) return [];
 
-      const { data, error } = await supabase
-        .from('skate_sessions')
-        .select('*')
-        .eq('user_id', userId)
-        .order('session_date', { ascending: false })
-        .limit(limit);
-
-      if (error || !data) return this._getOfflineFallbackSessions();
-
       // Boy Scout: type the mapped row to avoid Record<string, any>
       type SkateSessionRow = {
         id: string; session_date: string; duration_sec: number; distance_miles: number;
@@ -329,7 +320,18 @@ class SpeedTrackingServiceClass {
         calories: number | null; avg_bpm: number | null; peak_bpm: number | null;
         location_label: string | null;
       };
-      const mapped = (data as unknown as SkateSessionRow[]).map((r) => ({
+      
+      const { data, error } = await supabase
+        .from('skate_sessions')
+        .select('*')
+        .eq('user_id', userId)
+        .order('session_date', { ascending: false })
+        .limit(limit)
+        .returns<SkateSessionRow[]>();
+
+      if (error || !data) return this._getOfflineFallbackSessions();
+
+      const mapped = data.map((r) => ({
         id: r.id,
         sessionDate: r.session_date,
         durationSec: r.duration_sec,
@@ -386,19 +388,21 @@ class SpeedTrackingServiceClass {
     try {
       if (!userId) return empty;
 
-      const { data, error } = await supabase
-        .from('skate_sessions')
-        .select('duration_sec, distance_miles, avg_speed_mph, peak_speed_mph, peak_gforce, calories, peak_bpm')
-        .eq('user_id', userId);
-
-      if (error || !data || data.length === 0) return empty;
-
       // Boy Scout: type the aggregate row to avoid Record<string, any>
       type AggRow = {
         duration_sec: number; distance_miles: number; avg_speed_mph: number;
         peak_speed_mph: number; peak_gforce: number | null; calories: number | null; peak_bpm: number | null;
       };
-      const rows = data as unknown as AggRow[];
+      
+      const { data, error } = await supabase
+        .from('skate_sessions')
+        .select('duration_sec, distance_miles, avg_speed_mph, peak_speed_mph, peak_gforce, calories, peak_bpm')
+        .eq('user_id', userId)
+        .returns<AggRow[]>();
+
+      if (error || !data || data.length === 0) return empty;
+
+      const rows = data;
       const totalSessions = rows.length;
       const totalDistanceMiles = rows.reduce((s, r) => s + Number(r.distance_miles), 0);
       const totalDurationSec = rows.reduce((s, r) => s + Number(r.duration_sec), 0);

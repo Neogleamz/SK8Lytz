@@ -510,9 +510,9 @@ class DeviceRepository {
           segments:      (localHasPendingChanges || localHasValidSegments)  ? local.segments      : cloud.segments,
           ic_type:       (localHasPendingChanges || localHasValidIcType)    ? local.ic_type       : cloud.ic_type,
           color_sorting: (localHasPendingChanges || localHasValidSorting)   ? local.color_sorting : cloud.color_sorting,
-          // MIGRATION-SHIM: cloud row type predates group_ids — access via unknown cast. Remove at v3.9.0.
-          group_ids:      (cloud as unknown as RegisteredDevice).group_ids ?? local.group_ids ?? [],
-          group_names:    (cloud as unknown as RegisteredDevice).group_names ?? local.group_names ?? [],
+          // MIGRATION-SHIM: cloud row type predates group_ids — access safely. Remove at v3.9.0.
+          group_ids:     cloud.group_ids ?? local.group_ids ?? [],
+          group_names:   cloud.group_names ?? local.group_names ?? [],
           device_name:   cloud.device_name || local.device_name,
           is_pending_sync: localHasPendingChanges,
         };
