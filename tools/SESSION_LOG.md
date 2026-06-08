@@ -864,3 +864,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - Updated SK8Lytz_App_Master_Reference.md §A.2 with 6 new undocumented keys.
 **Verify result:** TSC ? Jest ? gates ?
 **Files touched:** AdminToolsModal.tsx, storageKeys.ts, AuthContext.tsx, useBLEScanner.ts, useAccountOverview.ts, AuthScreen.tsx, SK8Lytz_App_Master_Reference.md
+
+### [MERGE] 2026-06-08T20:49 - refactor/boolean-fsm-admin-tools -> master @ 07f94b36
+**What merged:**
+- AdminToolsModal.tsx: Collapsed 11 separate isXVisible booleans into a single activePanel union type (AdminPanel | null), fixing state management bug.
+**Verify result:** TSC ? Jest ? gates ?
+**Files touched:** src/components/admin/AdminToolsModal.tsx

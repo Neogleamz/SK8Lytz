@@ -794,3 +794,14 @@ pm run verify which includes QA tests.
   - **Tags:** \[? READY]\ \[?? INFERRED]\ \[Services]\ \[L-RISK]\ \[Feast]\ \[?? PRO-MED]\ \[BATCH:deepdive-synthesis-2026-06-08]\
   - **Goal:** Add \instanceof Error\ unwrapping to all ~190 catch blocks that pass raw \e: unknown\ directly to AppLogger, replacing \[object Object]\ telemetry with readable error messages.
   - **Decision Log:** R-06 sniper found 2130 raw entries (~190 unique) of \catch (e: unknown)\ blocks that log \e\ directly without unwrapping. This produces \[object Object]\ in production telemetry, making debugging impossible. The pattern \e instanceof Error ? e.message : String(e)\ is already used correctly in ~60% of the codebase � the other 40% needs to catch up. Evidence: \R-06_findings.json\ (2026-06-08).
+
+
+- [x] **`refactor/boolean-fsm-admin-tools`** 🚀 Merged in 07f94b36
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[L-RISK]` `[Snack]` `[🤖 PRO-MED]` `[BATCH:deepdive-synthesis-2026-06-08]`
+  - **Goal:** Collapse 11 independent boolean visibility states in `AdminToolsModal.tsx` into a single `activePanel: AdminPanel | null` union type, making panel navigation deterministic and eliminating impossible states.
+  - **Decision Log:** R-18 sniper found `AdminToolsModal.tsx` declares 11 separate `isXVisible` booleans (lines 65–75). With 11 booleans there are 2^11 = 2048 possible states — only 12 are valid. This is a correctness hazard and a cognitive load tax. Evidence: `R-18_findings.json` lines 59–121 (2026-06-08).
+  - **Analysis:** 📊 Source: [system_audit_report.md](artifacts/system_audit_report.md) · Plan: [PLAN-boolean-fsm-admin-tools.md](docs/plans/PLAN-boolean-fsm-admin-tools.md)
+    Key finding: "11 booleans → 1 union type. DashboardScreen has 5 booleans but is a monolith (H-RISK) — AdminToolsModal is the safe Snack entry point for this pattern."
+    Rejected alternative: "Applying FSM to all 16 affected files at once — rejected as too broad; start with AdminToolsModal as proof of pattern."
+  - **Source of Truth:** 📖 [R-18_findings.json](artifacts/deepdive_raw/R-18_findings.json) · `src/components/admin/AdminToolsModal.tsx:65-75`
+  - **Details:** 1 file. Define `AdminPanel` union type, replace 11 useState with 1, update all call sites and conditional renders. ~30 lines changed.
