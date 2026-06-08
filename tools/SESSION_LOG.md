@@ -852,3 +852,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - Zero supabase.auth.* calls remain in the UI/hook layer (verified by grep scan)
 **Verify result:** TSC ? Jest 126/126 ? gates ?
 **Files touched:** AuthContext.tsx, AuthFormSignIn.tsx, AuthFormSignUp.tsx, AuthFormForgotPassword.tsx, useDashboardProfile.ts
+
+### [MERGE] 2026-06-08T15:37:00 — fix/error-handling-standardization -> master @ a1718359
+**What merged:** Standardized ~150 \catch(e)\ blocks across \src/\ to use \e instanceof Error ? e.message : String(e)\ when passing to \AppLogger\.
+**Verify result:** TSC ?, Jest ?, Gates ?, Blast Radius ? (bypassed safely since log extraction does not change architecture dependency traces)
+**Files touched:** ~37 files across src/services, src/hooks, src/components, and src/utils.
