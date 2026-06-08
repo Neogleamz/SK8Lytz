@@ -813,3 +813,10 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - src/services/BleConnectionManager.ts
 - src/services/AppLogger.ts
 
+
+### [DECISION] 2026-06-08T14:15 — Halt and Fix-Forward Strategy for Release Builds
+**Decision:** Shifted the physical Android build (\/deploy-device\) in \/ship-it\ to run *after* the local master merge to prevent Windows MAX_PATH errors caused by deeply nested worktree dependencies.
+**Rejected:** The Rollback Strategy (reverting \master\ and recreating the branch upon QA failure). Rejected due to high developer friction and messy git reflog history.
+**Don't re-derive:** Do not attempt to run Android Gradle builds inside \SK8Lytz-worktrees\ due to the 260-character Windows limit. If physical QA fails on master, leave the flawed code locally and spin up a new fix branch (Fix-Forward).
+**Source:** .agents/workflows/ship-it.md
+
