@@ -49,3 +49,17 @@ Moved from `safety-protocol.md` to reduce ambient context overhead.
 5. `/scaffold-hook` — Hook Registry update step added
 
 **⛔ Operational Rule**: When completing ANY task that creates new hooks, services, components, or modifies BLE architecture/protocol/types, update `tools/SK8Lytz_App_Master_Reference.md` BEFORE running the gatekeeper. State: `"Documentation parity check: [sections updated]"` or `"no architectural changes — docs gate skipped"`.
+
+---
+
+## 🏆 VS-004: ProGuard Stripping of Native Modules (2026-06-08)
+
+**Symptom**: The Android release build compiles perfectly and installs, but native features like BLE scanning silently fail. The OS registers the hardware events, but the callbacks to JavaScript are never fired.
+
+**Root Cause**: Release builds use ProGuard/R8 to minify the app. If a native module uses reflection or passes callbacks to JS dynamically without explicitly declaring them, R8 strips them as `unused` code.
+
+**Fix Applied**:
+1. Created a root `proguard-rules.pro` file containing explicit `-keep` directives for `react-native-ble-plx`, `RxAndroidBle`, `reanimated`, `vision-camera`, and `nitro-modules`.
+2. Added `"android": { "extraProguardRules": "./proguard-rules.pro" }` to `app.config.js` to ensure Expo injects it during builds.
+
+**⛔ Operational Rule**: Whenever introducing a new native module (especially hardware or background services), ALWAYS check if it requires ProGuard rules. Do NOT assume it will work in release just because it works in dev mode. Add its rules to `proguard-rules.pro`.

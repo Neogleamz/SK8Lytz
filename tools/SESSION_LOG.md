@@ -750,3 +750,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Removed 7 completely unused dependencies (string-similarity, supercluster, jpeg-js, expo-speech, expo-image-manipulator, expo-blur, react-native-nitro-image). Retained react-native-vision-camera-worklets and react-native-nitro-modules as they provide required typings for Frame objects.
 **Verify result:** TSC ?, Jest ?, blast-radius ?
 **Files touched:** package.json, package-lock.json
+
+### [MERGE] 2026-06-08T04:29 — release-v3.9.2 ? master @ a0561e4e
+**What merged:** Successfully built Android release APK for v3.9.2 and fixed CMake path constraints by building from C:\W. Shipped and installed via ADB.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** android build configuration.
