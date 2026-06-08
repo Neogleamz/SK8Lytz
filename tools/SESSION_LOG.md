@@ -719,3 +719,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 ### [DOCS] 2026-06-08T00:32 - AsyncStorage Key Registry Updated
 **Files touched:** tools/SK8Lytz_App_Master_Reference.md
 **Summary:** Added @Sk8lytz_hardware_blacklist, @Sk8lytz_Builder_Presets, @Sk8lytz_Scenes, @Sk8lytz_Scene_Sync_Queue, and @Sk8lytz_skate_spots_cache.
+
+### [MERGE] 2026-06-07T19:45 -- auth-context-bypass-batch -> master @ eef897e
+**What merged:** Injected userId parameter into DeviceRepository, CrewService, and CrewProfileService to bypass supabase.auth.getUser() and rely on React context.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/services/DeviceRepository.ts, src/services/CrewService.ts, src/services/CrewProfileService.ts, src/hooks/useDashboardCrew.ts, src/hooks/useDashboardController.tsx, src/hooks/useCrewSession.ts, src/components/crew/CrewCreateScreen.tsx, src/components/crew/CrewScheduleScreen.tsx, src/components/crew/CrewLandingScreen.tsx, src/components/crew/CrewJoinScreen.tsx, src/hooks/useAccountOverview.ts, src/hooks/useCrewHub.ts, src/components/CommunityModal.tsx, src/services/__tests__/GroupRepository.test.ts

@@ -7,6 +7,7 @@ import { useGlobalTelemetry, GlobalTelemetryState } from '../hooks/useGlobalTele
 import { useHealthTelemetry, HealthTelemetry } from '../hooks/useHealthTelemetry';
 import { AppLogger } from '../services/AppLogger';
 import { WatchBridge, WatchCommand, WatchHealthUpdate } from 'sk8lytz-watch-bridge';
+import { STORAGE_AUTO_PAUSE_ENABLED, STORAGE_PENDING_BG_END } from '../constants/storageKeys';
 
 interface SessionContextValue {
   isSkateSessionActive: boolean;
@@ -121,9 +122,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const syncSessionState = async () => {
       try {
         // Check if a background end was queued while we were backgrounded
-        const pendingBgEnd = await AsyncStorage.getItem('@sk8lytz_pending_bg_end');
+        const pendingBgEnd = await AsyncStorage.getItem(STORAGE_PENDING_BG_END);
         if (pendingBgEnd === 'true') {
-          await AsyncStorage.removeItem('@sk8lytz_pending_bg_end');
+          await AsyncStorage.removeItem(STORAGE_PENDING_BG_END);
           if (sessionPhaseRef.current !== 'IDLE') {
             AppLogger.log('APP_LOG', { event: 'deferred_bg_end_session' });
             // Fire the full endSession teardown (Supabase save, GPS cleanup, etc.)
@@ -177,7 +178,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     const checkAutoPause = async () => {
       try {
-        const enabled = await AsyncStorage.getItem('@sk8lytz_auto_pause_enabled');
+        const enabled = await AsyncStorage.getItem(STORAGE_AUTO_PAUSE_ENABLED);
         if (enabled === 'false') {
           if (sessionPhase === 'PAUSED') {
             setSessionPhase('ACTIVE');

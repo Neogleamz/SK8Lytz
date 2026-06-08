@@ -20,6 +20,7 @@ import type { RegisteredDevice } from '../hooks/useRegistration';
 import { AppLogger } from '../services/AppLogger';
 import DeviceRepository from '../services/DeviceRepository';
 import GroupRepository from '../services/GroupRepository';
+import { STORAGE_LAST_GROUP_PATTERNS } from '../constants/storageKeys';
 // NOTE: Direct supabase import removed — all cloud writes go through DeviceRepository SSOT.
 import type { CustomGroup, DeviceSettings, GroupModalState, GroupPatternSnapshot } from '../types/dashboard.types';
 
@@ -241,17 +242,17 @@ export function useDashboardGroups({
   const [lastGroupPatterns, setLastGroupPatterns] = useState<Record<string, GroupPatternSnapshot>>({});
 
   useEffect(() => {
-    AsyncStorage.getItem('@Sk8lytz_last_group_patterns').then(saved => {
+    AsyncStorage.getItem(STORAGE_LAST_GROUP_PATTERNS).then(saved => {
       if (saved) {
         try { setLastGroupPatterns(JSON.parse(saved)); } catch (e) { AppLogger.warn('[Groups] Failed to parse last group patterns', { error: String(e) }); }
       }
-    }).catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_last_group_patterns', event: 'load_failed', error: String(e) }));
+    }).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_LAST_GROUP_PATTERNS, event: 'load_failed', error: String(e) }));
   }, []);
 
   const setLastGroupPattern = async (groupId: string, snapshot: GroupPatternSnapshot): Promise<void> => {
     const updated = { ...lastGroupPatterns, [groupId]: snapshot };
     setLastGroupPatterns(updated);
-    await AsyncStorage.setItem('@Sk8lytz_last_group_patterns', JSON.stringify(updated)).catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_last_group_patterns', event: 'save_failed', error: String(e) }));
+    await AsyncStorage.setItem(STORAGE_LAST_GROUP_PATTERNS, JSON.stringify(updated)).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_LAST_GROUP_PATTERNS, event: 'save_failed', error: String(e) }));
   };
 
   // ─── Group modal FSM ──────────────────────────────────────────────────────

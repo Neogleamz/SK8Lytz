@@ -20,9 +20,8 @@ import {
 } from '../constants/ProductCatalog';
 import { supabase } from '../services/supabaseClient';
 import { AppLogger } from '../services/AppLogger';
+import { STORAGE_PRODUCT_CATALOG } from '../constants/storageKeys';
 import type { ProductProfile } from '../types/ProductCatalog';
-
-const CATALOG_CACHE_KEY = 'ng_product_catalog';
 
 // ─── Supabase row → ProductProfile mapper ─────────────────────────────────────
 
@@ -64,7 +63,13 @@ export function useProductCatalog() {
 
   const loadCachedCatalog = async () => {
     try {
-      const raw = await AsyncStorage.getItem(CATALOG_CACHE_KEY);
+      // One-time data migration from banned ng_ namespace
+      const old = await AsyncStorage.getItem('ng_product_catalog');
+      if (old) {
+        await AsyncStorage.setItem(STORAGE_PRODUCT_CATALOG, old);
+        await AsyncStorage.removeItem('ng_product_catalog');
+      }
+      const raw = await AsyncStorage.getItem(STORAGE_PRODUCT_CATALOG);
       if (raw) {
         const cached: ProductProfile[] = JSON.parse(raw);
         if (cached.length > 0) setAllProfiles(cached);
@@ -92,7 +97,7 @@ export function useProductCatalog() {
       const merged = [...cloudProfiles, ...localOnly];
 
       setAllProfiles(merged);
-      await AsyncStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify(merged));
+      await AsyncStorage.setItem(STORAGE_PRODUCT_CATALOG, JSON.stringify(merged));
     } catch (e) {
       AppLogger.warn('[ProductCatalog] Cloud sync failed (offline?)', { error: String(e) });
     }
@@ -144,7 +149,7 @@ export function useProductCatalog() {
       if (error) throw error;
 
       // Invalidate cache and re-sync to pick up the saved row
-      await AsyncStorage.removeItem(CATALOG_CACHE_KEY);
+      await AsyncStorage.removeItem(STORAGE_PRODUCT_CATALOG);
       await syncFromCloud();
       return true;
     } catch (e) {

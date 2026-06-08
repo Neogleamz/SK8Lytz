@@ -18,11 +18,11 @@ import {
     COLOR_SORTING_RGB,
     HardwareSettings,
     IC_TYPES,
-    ZenggeProtocol,
 } from '../../../protocols/ZenggeProtocol';
 import { AppLogger } from '../../../services/AppLogger';
 import { Spacing, Typography } from '../../../theme/theme';
 import { useProtocolDispatch } from '../../../hooks/useProtocolDispatch';
+import { STORAGE_PROGRAMMER_PROFILES } from '../../../constants/storageKeys';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,8 +44,6 @@ interface Sk8LytzProgrammerModalProps {
   handleScan: () => void;
 }
 
-const PROFILES_STORAGE_KEY = 'ng_programmer_profiles';
-
 const IC_LIST = Object.entries(IC_TYPES).map(([k, v]) => ({ index: Number(k), name: v }));
 const SORTING_LIST = Object.entries(COLOR_SORTING_RGB).map(([k, v]) => ({ index: Number(k), name: v }));
 
@@ -54,13 +52,13 @@ type ActiveProfileType = string;
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function Sk8LytzProgrammer({
-  visible, onClose, onExitToLogs, allDevices,
+  visible, onClose, allDevices,
   deviceConfigs = {},
   connectToDevice, disconnectFromDevice,
   bleState = 'IDLE', handleScan
 }: Sk8LytzProgrammerModalProps) {
   const dispatch = useProtocolDispatch();
-  const { Colors, isDark } = useTheme();
+  const { Colors } = useTheme();
   const insets = useSafeAreaInsets();
 
   const bg       = Colors.background;
@@ -72,10 +70,11 @@ export default function Sk8LytzProgrammer({
   const orange   = Colors.primary;
   const amber    = Colors.secondary;
 
+  const green    = '#00e887';
+
   useEffect(() => {
     if (visible) AppLogger.log('SCREEN_OPENED', { screenName: 'Device Auto-Programmer' });
   }, [visible]);
-  const green    = '#00e887';
 
   // ─── State ──────────────────────────────────────────────────────────────────
   const [scannedDevices, setScannedDevices] = useState<ScannedDevice[]>([]);
@@ -125,7 +124,7 @@ export default function Sk8LytzProgrammer({
   useEffect(() => {
     setPointsText(String(profiles[activeProfile].ledPoints));
     setSegmentsText(String(profiles[activeProfile].segments));
-  }, [activeProfile]);
+  }, [activeProfile, profiles]);
 
   // Commit typed points/segments to profile state on blur
   const commitPoints = () => {
@@ -143,9 +142,17 @@ export default function Sk8LytzProgrammer({
   useEffect(() => {
       const load = async () => {
           try {
-              const saved = await AsyncStorage.getItem(PROFILES_STORAGE_KEY);
+              // One-time data migration from banned ng_ namespace
+              const old = await AsyncStorage.getItem('ng_programmer_profiles');
+              if (old) {
+                  await AsyncStorage.setItem(STORAGE_PROGRAMMER_PROFILES, old);
+                  await AsyncStorage.removeItem('ng_programmer_profiles');
+              }
+              const saved = await AsyncStorage.getItem(STORAGE_PROGRAMMER_PROFILES);
               if (saved) setProfiles(JSON.parse(saved));
-          } catch(e) {}
+          } catch(e) {
+              AppLogger.error('[Sk8LytzProgrammer] Failed to migrate or load profiles', { error: String(e) });
+          }
       };
       if (visible) load();
   }, [visible]);
@@ -154,7 +161,7 @@ export default function Sk8LytzProgrammer({
   const saveProfileChange = async (newProfiles: Record<ActiveProfileType, HardwareSettings>) => {
       setProfiles(newProfiles);
       try {
-          await AsyncStorage.setItem(PROFILES_STORAGE_KEY, JSON.stringify(newProfiles));
+          await AsyncStorage.setItem(STORAGE_PROGRAMMER_PROFILES, JSON.stringify(newProfiles));
       } catch (e) {
           AppLogger.error('[Sk8LytzProgrammer] persist failed', { error: String(e) });
       }
@@ -190,7 +197,7 @@ export default function Sk8LytzProgrammer({
               }
               setFlashStatus(prev => ({ ...prev, [id]: 'success' }));
               AppLogger.log('PERFORMANCE_METRIC', { metricName: 'HW_CONFIG_FLASHED', value: 1, unit: id, deviceId: id });
-          } catch (e) {
+          } catch {
               setFlashStatus(prev => ({ ...prev, [id]: 'failed' }));
           }
       }

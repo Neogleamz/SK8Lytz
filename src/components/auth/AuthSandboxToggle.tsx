@@ -1,8 +1,8 @@
-import React from 'react';
-import { TouchableOpacity, Text, View, Alert } from 'react-native';
+import { TouchableOpacity, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStyles } from './AuthStyles';
+import { STORAGE_DEMO_MODE } from '../../constants/storageKeys';
 
 interface AuthSandboxToggleProps {
   isSandboxEnabled: boolean;
@@ -20,7 +20,7 @@ export function AuthSandboxToggle({ isSandboxEnabled, setIsSandboxEnabled }: Aut
         onPress={async () => {
           const nextState = !isSandboxEnabled;
           setIsSandboxEnabled(nextState);
-          await AsyncStorage.setItem('@Sk8lytz_demo_mode', String(nextState));
+          await AsyncStorage.setItem(STORAGE_DEMO_MODE, String(nextState));
           import('react-native').then(rn => {
             rn.Alert.alert(
               'Developer Sandbox', 

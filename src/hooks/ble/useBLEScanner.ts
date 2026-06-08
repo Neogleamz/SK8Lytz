@@ -1,9 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, InteractionManager } from 'react-native';
+import { InteractionManager } from 'react-native';
 import type { Device, BleManager, BleError } from 'react-native-ble-plx';
-import { LOCAL_PRODUCT_CATALOG, getLocalProfileByPoints } from '../../constants/ProductCatalog';
 import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
 import { AppLogger } from '../../services/AppLogger';
@@ -14,6 +13,7 @@ import { mapDeviceToRegistration } from '../../utils/classifyBLEDevice';
 import type { Database } from '../../types/supabase';
 import type { EventFrom } from 'xstate';
 import type { bleMachine } from '../../services/ble/BleMachine';
+import { STORAGE_SCANNER_TELEMETRY_QUEUE } from '../../constants/storageKeys';
 
 import { useBLEBatterySweep } from './useBLEBatterySweep';
 import { useBLEInterrogator } from './useBLEInterrogator';
@@ -60,7 +60,7 @@ export function useBLEScanner({
           if (parsed.hw_setup_rssi_threshold !== undefined) {
              setupRssiThresholdRef.current = parseInt(String(parsed.hw_setup_rssi_threshold), 10);
           }
-        } catch (e) {}
+        } catch {}
       }
     });
   }, []);
@@ -102,10 +102,10 @@ export function useBLEScanner({
         AppLogger.warn('[Scanner] Ambient telemetry flush failed', { error: String(_e) });
         if (payloads.length > 0) {
           try {
-            const raw = await AsyncStorage.getItem('@sk8lytz_scanner_telemetry_queue');
+            const raw = await AsyncStorage.getItem(STORAGE_SCANNER_TELEMETRY_QUEUE);
             const queue = raw ? JSON.parse(raw) : [];
             queue.push(...payloads);
-            await AsyncStorage.setItem('@sk8lytz_scanner_telemetry_queue', JSON.stringify(queue));
+            await AsyncStorage.setItem(STORAGE_SCANNER_TELEMETRY_QUEUE, JSON.stringify(queue));
           } catch (storageErr) {
             AppLogger.warn('[Scanner] Failed to enqueue telemetry offline', { error: String(storageErr) });
           }
