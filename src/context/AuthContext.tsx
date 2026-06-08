@@ -41,6 +41,14 @@ export interface AuthContextValue {
   setIsOfflineMode: (value: boolean) => void;
   /** Clears offline mode flag and removes the AsyncStorage skip key. */
   clearOfflineMode: () => void;
+  /** Sign in with email + password via Supabase. Centralised so all auth goes through context. */
+  signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+  /** Sign up a new user. Options forwarded directly to supabase.auth.signUp. */
+  signUp: (email: string, password: string, options?: Parameters<NonNullable<typeof supabase>['auth']['signUp']>[0]['options']) => Promise<{ error: Error | null }>;
+  /** Send a password-reset email via Supabase. */
+  resetPassword: (email: string, redirectTo?: string) => Promise<{ error: Error | null }>;
+  /** Sign the current user out via Supabase. */
+  signOut: () => Promise<void>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -183,6 +191,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP).catch(() => {});
   };
 
+  // ── Centralised auth action methods ──────────────────────────────────────────
+  const signIn = async (email: string, password: string): Promise<{ error: Error | null }> => {
+    if (!supabase) return { error: new Error('Supabase not configured') };
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error ?? null };
+  };
+
+  const signUp = async (
+    email: string,
+    password: string,
+    options?: Parameters<NonNullable<typeof supabase>['auth']['signUp']>[0]['options']
+  ): Promise<{ error: Error | null }> => {
+    if (!supabase) return { error: new Error('Supabase not configured') };
+    const { error } = await supabase.auth.signUp({ email, password, options });
+    return { error: error ?? null };
+  };
+
+  const resetPassword = async (email: string, redirectTo?: string): Promise<{ error: Error | null }> => {
+    if (!supabase) return { error: new Error('Supabase not configured') };
+    const { error } = await supabase.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
+    return { error: error ?? null };
+  };
+
+  const signOut = async (): Promise<void> => {
+    if (!supabase) return;
+    try {
+      await supabase.auth.signOut();
+    } catch (e: unknown) {
+      AppLogger.error('[AuthContext] signOut failed', e instanceof Error ? e.message : String(e));
+    }
+  };
+
   const user = session?.user ?? null;
   const isAuthenticated = !!(session && session.user) || !supabase || isOfflineMode;
 
@@ -195,6 +235,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     sessionExpired,
     setIsOfflineMode,
     clearOfflineMode,
+    signIn,
+    signUp,
+    resetPassword,
+    signOut,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

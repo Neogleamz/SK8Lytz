@@ -8,7 +8,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { makeRedirectUri } from 'expo-auth-session';
 import EulaModal from '../modals/EulaModal';
 import { useTheme } from '../../context/ThemeContext';
-import { supabase } from '../../services/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 import { AppLogger } from '../../services/AppLogger';
 import {
   checkHIBP,
@@ -29,6 +29,7 @@ interface AuthFormSignUpProps {
 export function AuthFormSignUp({ onModeChange }: AuthFormSignUpProps) {
   const { Colors } = useTheme();
   const styles = useAuthStyles();
+  const { signUp } = useAuth();
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -103,17 +104,13 @@ export function AuthFormSignUp({ onModeChange }: AuthFormSignUpProps) {
     setLoading(true);
     try {
       const redirectUrl = makeRedirectUri({ path: 'auth' });
-      const { error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: { 
-          data: { 
-            username: username.trim(), 
-            display_name: username.trim(), 
-            accepted_eula_version: 1 
-          },
-          emailRedirectTo: redirectUrl
+      const { error } = await signUp(email.trim(), password, {
+        data: {
+          username: username.trim(),
+          display_name: username.trim(),
+          accepted_eula_version: 1
         },
+        emailRedirectTo: redirectUrl
       });
       setLoading(false);
       

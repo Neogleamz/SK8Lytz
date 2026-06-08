@@ -7,6 +7,7 @@ const WebFormWrapper = Platform.OS === 'web'
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabaseClient';
 import { Spacing } from '../../theme/theme';
 import { useAuthStyles } from './AuthStyles';
@@ -25,6 +26,7 @@ interface AuthFormSignInProps {
 export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }: AuthFormSignInProps) {
   const { Colors } = useTheme();
   const styles = useAuthStyles();
+  const { signIn } = useAuth();
 
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
@@ -70,7 +72,7 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
     }
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
+      const { error } = await signIn(loginEmail, password);
       setLoading(false);
 
       if (error) {

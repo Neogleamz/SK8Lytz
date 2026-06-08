@@ -3,7 +3,7 @@ import { ActivityIndicator, Text, TextInput, TouchableOpacity, View } from 'reac
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { makeRedirectUri } from 'expo-auth-session';
 import { useTheme } from '../../context/ThemeContext';
-import { supabase } from '../../services/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 import { AppLogger } from '../../services/AppLogger';
 import { Spacing } from '../../theme/theme';
 import { useAuthStyles } from './AuthStyles';
@@ -17,6 +17,7 @@ interface AuthFormForgotPasswordProps {
 export function AuthFormForgotPassword({ onModeChange }: AuthFormForgotPasswordProps) {
   const { Colors } = useTheme();
   const styles = useAuthStyles();
+  const { resetPassword } = useAuth();
 
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -35,7 +36,7 @@ export function AuthFormForgotPassword({ onModeChange }: AuthFormForgotPasswordP
 
     try {
       const redirectUrl = makeRedirectUri({ path: 'auth' });
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: redirectUrl });
+      const { error } = await resetPassword(email.trim(), redirectUrl);
       
       setLoading(false);
 

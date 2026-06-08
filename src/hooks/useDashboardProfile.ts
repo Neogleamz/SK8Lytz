@@ -51,7 +51,7 @@ export interface UseDashboardProfileResult {
 export function useDashboardProfile({
   onCrewJoinNotification,
 }: UseDashboardProfileOptions): UseDashboardProfileResult {
-  const { session } = useAuth();
+  const { session, signOut } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [appSettings, setAppSettings] = useState<AppSettingsMap>({});
   const [authUsername, setAuthUsername] = useState<string | null>(null);
@@ -109,12 +109,8 @@ export function useDashboardProfile({
   }, [userProfile, session]);
 
   const handleLogout = async (): Promise<void> => {
-    try {
-      await supabase.auth.signOut();
-      // App.tsx onAuthStateChange detects session=null and redirects to AuthScreen
-    } catch (e: unknown) {
-      AppLogger.error('Logout error:', e instanceof Error ? e.message : String(e));
-    }
+    await signOut();
+    // App.tsx onAuthStateChange detects session=null and redirects to AuthScreen
   };
 
   const refreshProfile = async (): Promise<void> => {
