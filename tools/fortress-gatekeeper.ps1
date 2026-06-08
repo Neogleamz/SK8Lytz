@@ -25,7 +25,7 @@ if ($MasterStatus) {
 
 # Resolve active worktree list
 Write-Host "Scanning active worktrees..." -ForegroundColor Cyan
-$WorktreeList = git worktree list | Where-Object { $_ -match "SK8Lytz-worktrees" }
+$WorktreeList = git worktree list | Where-Object { $_ -match "SK8Lytz-worktrees" -or $_ -match "C:/W" }
 
 if (-not $WorktreeList) {
     Write-Host "Master fortress is clear of worktrees. Nothing to merge." -ForegroundColor Green
