@@ -4,6 +4,7 @@ import { AppLogger } from './AppLogger';
 import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 import type { ProtocolResult } from '../protocols/IControllerProtocol';
 import { enqueueWrite, resolveWritePriority, setWriteQueueGeneration } from './BleWriteQueue';
+import { BLE_TIMING } from '../constants/bleTimingConstants';
 
 export interface BleWriteStateRefs {
   writeGeneration: number;
@@ -63,7 +64,7 @@ export async function executeWriteToDevice(
           stateRefs
         );
         resolve(result);
-      }, 50);
+      }, BLE_TIMING.WRITE_DEBOUNCE_MS);
     });
   }
 
@@ -150,7 +151,7 @@ async function _executeWriteToDeviceInternal(
         AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError instanceof Error ? writeError.message : String(writeError));
         allSucceeded = false;
       }
-      await new Promise(res => setTimeout(res, 50));
+      await new Promise(res => setTimeout(res, BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
     }
 
     if (skippedGhosted > 0 && allSucceeded) return 'partial';
@@ -245,11 +246,11 @@ export async function executeWriteChunked(
         } catch (e: unknown) {
           AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: e instanceof Error ? e.message : String(e) });
         }
-        await new Promise(res => setTimeout(res, 50));
+        await new Promise(res => setTimeout(res, BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
       }
-      await new Promise(resolve => setTimeout(resolve, 8));
+      await new Promise(resolve => setTimeout(resolve, BLE_TIMING.WRITE_CHUNK_INTER_GAP_MS));
     }
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await new Promise(resolve => setTimeout(resolve, BLE_TIMING.WRITE_CHUNK_FINAL_SETTLE_MS));
     return true;
   });
 }
@@ -300,7 +301,7 @@ export async function executeProtocolResults(
           stateRefs
         );
         resolve(res);
-      }, 50);
+      }, BLE_TIMING.WRITE_DEBOUNCE_MS);
     });
   }
 
@@ -360,7 +361,7 @@ async function _executeProtocolResultsInternal(
         }
       }
       // FIX: 50ms inter-device gap prevents GATT 133 on Android multi-device groups.
-      await new Promise(res => setTimeout(res, 50));
+      await new Promise(res => setTimeout(res, BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
     }
     return allSucceeded;
   };

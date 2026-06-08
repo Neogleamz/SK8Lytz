@@ -9,6 +9,7 @@ import { scrubPII } from '../utils/piiScrubber';
 import { acquireGattLock } from '../hooks/ble/useBLEGattMutex';
 import type { BleConnectionRequest } from '../types/ble.types';
 import { jitteredDelay } from '../utils/backoff';
+import { BLE_TIMING } from '../constants/bleTimingConstants';
 
 /**
  * executeConnectToDevices — Group connection manager.
@@ -105,7 +106,7 @@ export async function executeConnectToDevices({
           AppLogger.warn('Failed to flush stale device', { deviceId: scrubPII(stale.id), error: e instanceof Error ? e.message : String(e) });
         }
       }
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise(resolve => setTimeout(resolve, BLE_TIMING.STALE_FLUSH_SETTLE_MS));
     }
 
     if (getGate() !== 'IDLE') {
@@ -211,9 +212,9 @@ export async function executeConnectToDevices({
                 negotiatedMtu = negotiated.mtu;
                 if (negotiatedMtu > 23) break;
                 AppLogger.warn(`[BLE] MTU glitch (23) for ${conn.id}. Retrying...`);
-                await new Promise(res => setTimeout(res, 200));
+                await new Promise(res => setTimeout(res, BLE_TIMING.MTU_RETRY_SETTLE_MS));
               } catch {
-                await new Promise(res => setTimeout(res, 200));
+                await new Promise(res => setTimeout(res, BLE_TIMING.MTU_RETRY_SETTLE_MS));
               }
             }
             mtuMapRef.current.set(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);

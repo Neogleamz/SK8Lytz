@@ -2,6 +2,7 @@ import type React from 'react';
 import { Platform } from 'react-native';
 import { AppLogger } from './AppLogger';
 import { BLEPhaseTag } from './ble/BleMachine.types';
+import { BLE_TIMING } from '../constants/bleTimingConstants';
 
 /**
  * executeRealDisconnect — The actual GATT connection cancellation and state resets.
@@ -42,7 +43,7 @@ export async function executeRealDisconnect(
         AppLogger.error(`[BLE] Fatal disconnect fault for ${device.id}`, e instanceof Error ? e.message : String(e));
       }
     }
-    await new Promise(resolve => setTimeout(resolve, 250));
+    await new Promise(resolve => setTimeout(resolve, BLE_TIMING.DISCONNECT_SETTLE_MS));
   }
 
   mtuMapRef.current.clear();

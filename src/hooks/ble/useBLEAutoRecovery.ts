@@ -20,6 +20,7 @@ import { AppLogger } from '../../services/AppLogger';
 import { createGattSession } from '../../services/BleSessionFactory';
 import { acquireGattLock } from './useBLEGattMutex';
 import { enqueueWrite } from '../../services/BleWriteQueue';
+import { BLE_TIMING } from '../../constants/bleTimingConstants';
 
 export interface UseBLEAutoRecoveryProps {
   bleManager: BleManager;
@@ -363,7 +364,7 @@ export function useBLEAutoRecovery({
 
           // Send recovery ping using adapter — BanlanX has no EEPROM query (empty no-op),
           // Zengge sends 0x63 queryHardwareSettings to realign hardware state.
-          await new Promise(r => setTimeout(r, 600));
+          await new Promise(r => setTimeout(r, BLE_TIMING.RECOVERY_PING_SETTLE_MS));
           if (signal.aborted) break;
           const pingResult = recoveryAdapter.buildQuerySettings(false);
           if (pingResult.packets.length > 0) {
