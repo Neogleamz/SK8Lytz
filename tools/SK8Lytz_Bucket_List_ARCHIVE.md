@@ -678,4 +678,11 @@ pm run verify which includes QA tests.
   - **Plan:** 🔗 [PLAN-PII-SCRUB-TELEMETRY.md](docs/plans/PLAN-PII-SCRUB-TELEMETRY.md)
   - **Source of Truth:** 📍 `src/hooks/useCrewSession.ts:107`, `src/hooks/useBLE.ts:444`, `src/hooks/useDashboardAutoConnect.ts:222`, `src/hooks/useDeviceStateLedger.ts:162`, `src/screens/DashboardScreen.tsx:434` | Audit: `R-09_findings.json`
   - **Goal:** Remove raw MAC addresses and user display_names from all AppLogger telemetry calls. Implement `scrubPII()` hash helper. 49 total call sites (5 primary + 44 sweep).
-  - **Details:** GDPR compliance risk. MAC addresses and display names are leaking into cloud telemetry logs. Primary fix: implement `scrubPII()` deterministic hash, apply to 5 verified high-severity sites, then grep-sweep remaining 44.
+  - **Details:** GDPR compliance risk. MAC addresses and display names are leaking into cloud telemetry logs. Primary fix: implement `scrubPII()` deterministic hash, apply to 5 verified high-severity sites, then grep-sweep remaining 44.
+
+- [x] **`fix/stale-closure-intervals`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[Hooks]` `[H-RISK]` `[Meal]` `[🤖 PRO-MED]`
+  - **Plan:** 📎 [PLAN-STALE-CLOSURE-INTERVALS.md](docs/plans/PLAN-STALE-CLOSURE-INTERVALS.md)
+  - **Source of Truth:** 📖 `src/hooks/cloud/useOfflineSyncWorker.ts:36`, `src/hooks/useDashboardAutoConnect.ts:169`, `src/hooks/useTelemetryLedger.ts:169`, `src/hooks/ble/useBLEHeartbeat.ts:105` | Audit: `R-12_findings.json`, `R-26_findings.json`
+  - **Goal:** Fix 2 stale closure intervals that capture null user/session (preventing offline sync from ever running). Add `_isRunning` boolean ref guards to 6 async interval callbacks to prevent concurrent execution and duplicate DB writes.
+  - **Details:** `useOfflineSyncWorker` captures stale `user=null` in empty-dep `useEffect` — offline queue never flushes post-login. R-26 found 7 intervals firing async callbacks concurrently, causing double DB inserts, duplicate GATT reads, and duplicate notifee calls on slow networks.

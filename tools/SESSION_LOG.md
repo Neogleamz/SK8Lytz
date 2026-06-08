@@ -686,3 +686,17 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - src/services/DeviceRepository.ts
 - src/utils/piiScrubber.ts
 - tools/SK8Lytz_App_Master_Reference.md
+
+### [MERGE] 2026-06-07T23:29 — fix/stale-closure-intervals -> master
+**What merged:**
+- Added userRef and sessionRef synced via useEffect to useOfflineSyncWorker and useDashboardAutoConnect to fix stale closure silent sync failures.
+- Added standard _isFlushingRef / _isRunningRef boolean re-entrancy guards to useTelemetryLedger, useBLEHeartbeat, useBLERSSIMonitor, CrewMemberDashboard, and SessionContext intervals.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:**
+- src/hooks/cloud/useOfflineSyncWorker.ts
+- src/hooks/useDashboardAutoConnect.ts
+- src/hooks/useTelemetryLedger.ts
+- src/hooks/ble/useBLEHeartbeat.ts
+- src/hooks/ble/useBLERSSIMonitor.ts
+- src/components/CrewMemberDashboard.tsx
+- src/context/SessionContext.tsx
