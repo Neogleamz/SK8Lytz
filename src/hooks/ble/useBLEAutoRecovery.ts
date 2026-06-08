@@ -332,8 +332,8 @@ export function useBLEAutoRecovery({
             } else {
               callbacksRef.current.onMtuNegotiated?.(conn.id, 186);
             }
-          } catch (e) {
-            AppLogger.warn('[AutoRecovery] MTU negotiation failed', { deviceId, error: String(e) });
+          } catch (e: unknown) {
+            AppLogger.warn('[AutoRecovery] MTU negotiation failed', { deviceId, error: e instanceof Error ? e.message : String(e) });
           }
           if (signal.aborted) break;
 

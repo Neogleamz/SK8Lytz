@@ -46,8 +46,8 @@ export const setPermissionOptOut = async (type: PermissionType, isOptedOut: bool
   ledger[type] = isOptedOut;
   try {
     await AsyncStorage.setItem(OPTOUT_LEDGER_KEY, JSON.stringify(ledger));
-  } catch (error) {
-    AppLogger.error('PERMISSION_SERVICE', { event: 'opt_out_save_failed', error: String(error) });
+  } catch (error: unknown) {
+    AppLogger.error('PERMISSION_SERVICE', { event: 'opt_out_save_failed', error: (error instanceof Error ? error.message : String(error)) });
   }
   
   // Immutably log to Cloud Ledger
@@ -167,8 +167,8 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
             const hasReadCal = result.some((p: { accessType: string; recordType: string }) => p.accessType === 'read' && p.recordType === 'ActiveCaloriesBurned');
             
             return hasReadHR && hasReadCal;
-          } catch (err) {
-            AppLogger.error('PERMISSION_SERVICE', { event: 'health_connect_request_failed', error: String(err) });
+          } catch (err: unknown) {
+            AppLogger.error('PERMISSION_SERVICE', { event: 'health_connect_request_failed', error: (err instanceof Error ? err.message : String(err)) });
             return false;
           }
         }
@@ -177,8 +177,8 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
       default:
         return false;
     }
-  } catch (error) {
-    AppLogger.error('PERMISSION_SERVICE', { event: 'request_failed', type, error: String(error) });
+  } catch (error: unknown) {
+    AppLogger.error('PERMISSION_SERVICE', { event: 'request_failed', type, error: (error instanceof Error ? error.message : String(error)) });
     return false;
   }
 };
@@ -242,8 +242,8 @@ const checkPermissionNative = async (type: PermissionType): Promise<boolean> => 
             const hasReadCal = granted.some((p: { accessType: string; recordType: string }) => p.accessType === 'read' && p.recordType === 'ActiveCaloriesBurned');
             
             return hasReadHR && hasReadCal;
-          } catch (err) {
-            AppLogger.warn('PERMISSION_SERVICE', { event: 'health_connect_check_failed', error: String(err) });
+          } catch (err: unknown) {
+            AppLogger.warn('PERMISSION_SERVICE', { event: 'health_connect_check_failed', error: (err instanceof Error ? err.message : String(err)) });
             return false;
           }
         }
@@ -252,8 +252,8 @@ const checkPermissionNative = async (type: PermissionType): Promise<boolean> => 
       default:
         return false;
     }
-  } catch (error) {
-    AppLogger.warn('PERMISSION_SERVICE', { event: 'check_failed', type, error: String(error) });
+  } catch (error: unknown) {
+    AppLogger.warn('PERMISSION_SERVICE', { event: 'check_failed', type, error: (error instanceof Error ? error.message : String(error)) });
     return false;
   }
 };

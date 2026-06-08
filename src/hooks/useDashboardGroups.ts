@@ -181,7 +181,7 @@ export function useDashboardGroups({
 
       if (configsChanged) {
         // Persist via DeviceRepository singleton (canonical write path)
-        repo.setConfigs(nextConfigs).catch((e) => AppLogger.warn('PERSISTENCE', { event: 'repo_set_configs_failed', error: String(e) }));
+        repo.setConfigs(nextConfigs).catch((e) => AppLogger.warn('PERSISTENCE', { event: 'repo_set_configs_failed', error: (e instanceof Error ? e.message : String(e)) }));
         return nextConfigs;
       }
       return prevConfigs;
@@ -204,7 +204,7 @@ export function useDashboardGroups({
       if (Object.keys(configs).length > 0) {
         setDeviceConfigs(configs);
       }
-    }).catch((e) => AppLogger.warn('PERSISTENCE', { event: 'repo_initialize_failed', error: String(e) }));
+    }).catch((e) => AppLogger.warn('PERSISTENCE', { event: 'repo_initialize_failed', error: (e instanceof Error ? e.message : String(e)) }));
 
     // Subscribe: re-read configs on every repo mutation (saveDevice, updateConfig, etc.)
     const unsubscribe = repo.subscribe(() => {
@@ -244,15 +244,15 @@ export function useDashboardGroups({
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_LAST_GROUP_PATTERNS).then(saved => {
       if (saved) {
-        try { setLastGroupPatterns(JSON.parse(saved)); } catch (e) { AppLogger.warn('[Groups] Failed to parse last group patterns', { error: String(e) }); }
+        try { setLastGroupPatterns(JSON.parse(saved)); } catch (e: unknown) { AppLogger.warn('[Groups] Failed to parse last group patterns', { error: (e instanceof Error ? e.message : String(e)) }); }
       }
-    }).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_LAST_GROUP_PATTERNS, event: 'load_failed', error: String(e) }));
+    }).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_LAST_GROUP_PATTERNS, event: 'load_failed', error: (e instanceof Error ? e.message : String(e)) }));
   }, []);
 
   const setLastGroupPattern = async (groupId: string, snapshot: GroupPatternSnapshot): Promise<void> => {
     const updated = { ...lastGroupPatterns, [groupId]: snapshot };
     setLastGroupPatterns(updated);
-    await AsyncStorage.setItem(STORAGE_LAST_GROUP_PATTERNS, JSON.stringify(updated)).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_LAST_GROUP_PATTERNS, event: 'save_failed', error: String(e) }));
+    await AsyncStorage.setItem(STORAGE_LAST_GROUP_PATTERNS, JSON.stringify(updated)).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_LAST_GROUP_PATTERNS, event: 'save_failed', error: (e instanceof Error ? e.message : String(e)) }));
   };
 
   // ─── Group modal FSM ──────────────────────────────────────────────────────
@@ -378,8 +378,8 @@ export function useDashboardGroups({
           await repo.setConfigs(configs);
           setDeviceConfigs(configs);
         }
-      } catch (e) {
-        AppLogger.warn('Failed to scrub ghost group from device configs', { error: String(e) });
+      } catch (e: unknown) {
+        AppLogger.warn('Failed to scrub ghost group from device configs', { error: (e instanceof Error ? e.message : String(e)) });
       }
     }
   };
@@ -447,8 +447,8 @@ export function useDashboardGroups({
         setDeviceConfigs(configs);
         closeGroupModal();
       }
-    } catch (e) {
-      AppLogger.warn('Failed to sync group cache changes', { error: String(e) });
+    } catch (e: unknown) {
+      AppLogger.warn('Failed to sync group cache changes', { error: (e instanceof Error ? e.message : String(e)) });
     }
   };
 

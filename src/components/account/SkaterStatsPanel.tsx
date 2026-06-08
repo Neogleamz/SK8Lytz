@@ -34,8 +34,8 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
       try {
         const cached = await AsyncStorage.getItem(CACHE_KEY);
         if (cached) setStats(JSON.parse(cached));
-      } catch (e) {
-        AppLogger.warn('Failed to load skater stats cache from AsyncStorage', e);
+      } catch (e: unknown) {
+        AppLogger.warn('Failed to load skater stats cache from AsyncStorage', e instanceof Error ? e.message : String(e));
       }
 
       if (!user || !supabase) {
@@ -55,8 +55,8 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
           // 2. Save fresh cloud data to offline cache
           await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(e => AppLogger.warn('Failed to cache skater stats', e));
         }
-      } catch (e) {
-        AppLogger.error('Failed to load skater stats from Supabase', e);
+      } catch (e: unknown) {
+        AppLogger.error('Failed to load skater stats from Supabase', e instanceof Error ? e.message : String(e));
       } finally {
         setLoading(false);
       }

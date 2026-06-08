@@ -21,8 +21,8 @@ class GradientsServiceClass {
           localPresets = parsed.filter(p => p && p.id && p.name && Array.isArray(p.nodes));
         }
       }
-    } catch (e) {
-      AppLogger.error('GRADIENT_LOCAL_READ_FAIL', e);
+    } catch (e: unknown) {
+      AppLogger.error('GRADIENT_LOCAL_READ_FAIL', e instanceof Error ? e.message : String(e));
     }
 
     // 2. Background Sync
@@ -39,8 +39,8 @@ class GradientsServiceClass {
         if (!error && data) {
           globalPresets = (data as unknown as CustomBuilderPreset[]).filter(p => p && p.id && p.name && Array.isArray(p.nodes));
         }
-      } catch (err) {
-        AppLogger.warn('GRADIENT_SYNC_FAIL', err);
+      } catch (err: unknown) {
+        AppLogger.warn('GRADIENT_SYNC_FAIL', err instanceof Error ? err.message : String(err));
       }
 
       if (userId) {
@@ -54,8 +54,8 @@ class GradientsServiceClass {
           if (!error && data) {
             userCloudPresets = (data as unknown as CustomBuilderPreset[]).filter(p => p && p.id && p.name && Array.isArray(p.nodes));
           }
-        } catch (err) {
-          AppLogger.warn('GRADIENT_SYNC_FAIL', err);
+        } catch (err: unknown) {
+          AppLogger.warn('GRADIENT_SYNC_FAIL', err instanceof Error ? err.message : String(err));
         }
       }
 
@@ -68,7 +68,7 @@ class GradientsServiceClass {
       const finalMerged = Array.from(mergedMap.values());
       try {
         await AsyncStorage.setItem(LOCAL_GRADIENTS_KEY, JSON.stringify(finalMerged));
-      } catch (e) {}
+      } catch (e: unknown) {}
     };
 
     syncCloud(); // Fire and forget
@@ -99,8 +99,8 @@ class GradientsServiceClass {
         userPresets.push(newPreset);
       }
       await AsyncStorage.setItem(LOCAL_GRADIENTS_KEY, JSON.stringify(userPresets));
-    } catch (e) {
-      AppLogger.error('GRADIENT_LOCAL_SAVE_FAIL', e);
+    } catch (e: unknown) {
+      AppLogger.error('GRADIENT_LOCAL_SAVE_FAIL', e instanceof Error ? e.message : String(e));
     }
 
     // 2. Save Cloud (user_saved_presets)
@@ -108,8 +108,8 @@ class GradientsServiceClass {
       try {
         const { error } = await supabase.from('user_saved_presets').upsert({ ...newPreset, created_at: new Date().toISOString() } as unknown as Database['public']['Tables']['user_saved_presets']['Insert']);
         if (error) throw error;
-      } catch (err) {
-        AppLogger.warn('GRADIENT_CLOUD_SAVE_FAIL', err);
+      } catch (err: unknown) {
+        AppLogger.warn('GRADIENT_CLOUD_SAVE_FAIL', err instanceof Error ? err.message : String(err));
       }
     }
 
@@ -124,16 +124,16 @@ class GradientsServiceClass {
       let userPresets: CustomBuilderPreset[] = localData ? JSON.parse(localData) : [];
       userPresets = userPresets.filter(p => p.id !== id);
       await AsyncStorage.setItem(LOCAL_GRADIENTS_KEY, JSON.stringify(userPresets));
-    } catch (e) {
-      AppLogger.error('GRADIENT_LOCAL_DEL_FAIL', e);
+    } catch (e: unknown) {
+      AppLogger.error('GRADIENT_LOCAL_DEL_FAIL', e instanceof Error ? e.message : String(e));
     }
 
     // 2. Delete Cloud (user_saved_presets)
     if (userId) {
       try {
         await supabase.from('user_saved_presets').delete().eq('id', id);
-      } catch (err) {
-        AppLogger.warn('GRADIENT_CLOUD_DEL_FAIL', err);
+      } catch (err: unknown) {
+        AppLogger.warn('GRADIENT_CLOUD_DEL_FAIL', err instanceof Error ? err.message : String(err));
       }
     }
 

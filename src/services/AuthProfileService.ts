@@ -8,6 +8,7 @@
 
 import { supabase } from './supabaseClient';
 import type { UserProfile, SessionHistoryItem } from './ProfileService.types';
+import { AppLogger } from './AppLogger';
 import type { User } from '@supabase/supabase-js';
 
 class AuthProfileService {
@@ -19,59 +20,66 @@ class AuthProfileService {
    * @param cachedUser Optional pre-fetched user object to avoid redundant network calls
    */
   async fetchOrCreateProfile(user?: User | null): Promise<UserProfile | null> {
-    if (!user) return null;
+    try {
+      if (!user) return null;
 
-    const { data: existing } = await supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
+      const { data: existing } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
-    if (existing) {
-      // Self-heal: If display_name or username is missing, patch from auth metadata
-      const profile = existing as UserProfile;
+      if (existing) {
+        // Self-heal: If display_name or username is missing, patch from auth metadata
+        const profile = existing as UserProfile;
+        const metaUsername = user.user_metadata?.username;
+        const metaDisplayName = user.user_metadata?.display_name;
+        
+        if ((metaUsername || metaDisplayName) && (!profile.display_name || !profile.username)) {
+          const updateData: Partial<UserProfile> = {};
+          
+          if (!profile.display_name && (metaDisplayName || metaUsername)) {
+            updateData.display_name = metaDisplayName || metaUsername;
+          }
+          
+          if (!profile.username && metaUsername) {
+            updateData.username = metaUsername.toLowerCase();
+          }
+          
+          if (Object.keys(updateData).length > 0) {
+            await supabase
+              .from('user_profiles')
+              .update(updateData)
+              .eq('user_id', user.id);
+              
+            return { ...profile, ...updateData };
+          }
+        }
+        return profile;
+      }
+
+      // Auto-create using auth metadata username, falling back to email prefix
       const metaUsername = user.user_metadata?.username;
       const metaDisplayName = user.user_metadata?.display_name;
+      const defaultName = metaDisplayName ?? metaUsername ?? user.email?.split('@')[0] ?? 'Sk8r';
       
-      if ((metaUsername || metaDisplayName) && (!profile.display_name || !profile.username)) {
-        const updateData: Partial<UserProfile> = {};
-        
-        if (!profile.display_name && (metaDisplayName || metaUsername)) {
-          updateData.display_name = metaDisplayName || metaUsername;
-        }
-        
-        if (!profile.username && metaUsername) {
-          updateData.username = metaUsername.toLowerCase();
-        }
-        
-        if (Object.keys(updateData).length > 0) {
-          await supabase
-            .from('user_profiles')
-            .update(updateData)
-            .eq('user_id', user.id);
-            
-          return { ...profile, ...updateData };
-        }
-      }
-      return profile;
+      const { data: created } = await supabase
+        .from('user_profiles')
+        .insert({ 
+          user_id: user.id, 
+          display_name: defaultName,
+          username: metaUsername ? metaUsername.toLowerCase() : undefined
+        })
+        .select()
+        .single();
+
+      return created as UserProfile | null;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      // AuthProfileService isn't allowed to import AppLogger currently? Actually it doesn't import it.
+      // Wait, let's look at line 12. It doesn't import AppLogger. I should import it.
+      throw new Error(msg);
     }
-
-    // Auto-create using auth metadata username, falling back to email prefix
-    const metaUsername = user.user_metadata?.username;
-    const metaDisplayName = user.user_metadata?.display_name;
-    const defaultName = metaDisplayName ?? metaUsername ?? user.email?.split('@')[0] ?? 'Sk8r';
-    
-    const { data: created } = await supabase
-      .from('user_profiles')
-      .insert({ 
-        user_id: user.id, 
-        display_name: defaultName,
-        username: metaUsername ? metaUsername.toLowerCase() : undefined
-      })
-      .select()
-      .single();
-
-    return created as UserProfile | null;
   }
 
   /**
@@ -108,38 +116,44 @@ class AuthProfileService {
    * @param cachedUserId Optional pre-fetched user ID to avoid redundant network calls
    */
   async getSessionHistory(userId?: string): Promise<SessionHistoryItem[]> {
-    if (!userId) return [];
+    try {
+      if (!userId) return [];
 
-    const { data, error } = await supabase
-      .from('crew_members')
-      .select(`
-        joined_at,
-        crew_sessions (
-          id,
-          name,
-          expires_at,
-          leader_user_id,
-          crews ( name )
-        )
-      `)
-      .eq('user_id', userId)
-      .order('joined_at', { ascending: false })
-      .limit(20);
+      const { data, error } = await supabase
+        .from('crew_members')
+        .select(`
+          joined_at,
+          crew_sessions (
+            id,
+            name,
+            expires_at,
+            leader_user_id,
+            crews ( name )
+          )
+        `)
+        .eq('user_id', userId)
+        .order('joined_at', { ascending: false })
+        .limit(20);
 
-    if (error || !data) return [];
+      if (error || !data) return [];
 
-    return data.map((row: unknown) => {
-      const r = row as { joined_at: string; crew_sessions: { id: string; name: string; expires_at: string; leader_user_id: string; crews: { name: string } | null } | null };
-      const session = r.crew_sessions;
-      return {
-        session_id:   session?.id ?? '',
-        session_name: session?.name ?? 'Crew Session',
-        crew_name:    session?.crews?.name ?? null,
-        role:         session?.leader_user_id === userId ? 'leader' : 'member',
-        joined_at:    r.joined_at,
-        expires_at:   session?.expires_at ?? '',
-      } as SessionHistoryItem;
-    });
+      return data.map((row: unknown) => {
+        const r = row as { joined_at: string; crew_sessions: { id: string; name: string; expires_at: string; leader_user_id: string; crews: { name: string } | null } | null };
+        const session = r.crew_sessions;
+        return {
+          session_id:   session?.id ?? '',
+          session_name: session?.name ?? 'Crew Session',
+          crew_name:    session?.crews?.name ?? null,
+          role:         session?.leader_user_id === userId ? 'leader' : 'member',
+          joined_at:    r.joined_at,
+          expires_at:   session?.expires_at ?? '',
+        } as SessionHistoryItem;
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('[AuthProfileService] getSessionHistory failed', { error: msg });
+      return [];
+    }
   }
 }
 

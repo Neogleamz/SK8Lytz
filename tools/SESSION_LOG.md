@@ -724,3 +724,11 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Injected userId parameter into DeviceRepository, CrewService, and CrewProfileService to bypass supabase.auth.getUser() and rely on React context.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/services/DeviceRepository.ts, src/services/CrewService.ts, src/services/CrewProfileService.ts, src/hooks/useDashboardCrew.ts, src/hooks/useDashboardController.tsx, src/hooks/useCrewSession.ts, src/components/crew/CrewCreateScreen.tsx, src/components/crew/CrewScheduleScreen.tsx, src/components/crew/CrewLandingScreen.tsx, src/components/crew/CrewJoinScreen.tsx, src/hooks/useAccountOverview.ts, src/hooks/useCrewHub.ts, src/components/CommunityModal.tsx, src/services/__tests__/GroupRepository.test.ts
+
+### [MERGE] 2026-06-08T01:15 — fix/async-storage-key-registry ? master @ b707386d
+**What merged:**
+- Migrated ng_programmer_profiles and ng_product_catalog to @Sk8lytz_ namespace.
+- Consolidated magic strings in SessionContext, AuthSandboxToggle, useDashboardGroups, and useBLEScanner.
+- Completed Boy Scout cleanups for unused variables across 4 components.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/constants/storageKeys.ts, src/components/admin/tools/Sk8LytzProgrammer.tsx, src/hooks/useProductCatalog.ts, src/components/auth/AuthSandboxToggle.tsx, src/context/SessionContext.tsx, src/hooks/useDashboardGroups.ts, src/hooks/ble/useBLEScanner.ts, tools/SK8Lytz_App_Master_Reference.md

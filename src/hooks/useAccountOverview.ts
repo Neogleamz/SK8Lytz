@@ -132,8 +132,8 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       }
       setCrews(c);
       setHistory(h);
-    } catch (e) {
-      AppLogger.warn('[AccountOverview] loadData error', { error: String(e) });
+    } catch (e: unknown) {
+      AppLogger.warn('[AccountOverview] loadData error', { error: e instanceof Error ? e.message : String(e) });
     } finally {
       setLoading(false);
     }
@@ -158,8 +158,8 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       AppLogger.log('PROFILE_UPDATED', { fields: Object.keys(updates) });
       onProfileUpdated?.();
       Alert.alert('Saved', 'Profile updated successfully.');
-    } catch (e) {
-      AppLogger.error('[AccountOverview] handleSaveProfile failed', { error: String(e) });
+    } catch (e: unknown) {
+      AppLogger.error('[AccountOverview] handleSaveProfile failed', { error: e instanceof Error ? e.message : String(e) });
       Alert.alert('Error', (e instanceof Error ? e.message : String(e)) || 'Could not save profile');
     } finally {
       setSavingProfile(false);
@@ -202,8 +202,8 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       setProfile(p => p ? { ...p, avatar_url: publicUrl } : p);
       AppLogger.log('PROFILE_UPDATED', { field: 'photo', bucket: 'avatars', path });
       onProfileUpdated?.();
-    } catch (e) {
-      AppLogger.error('[AccountOverview] handlePickProfilePhoto failed', { error: String(e) });
+    } catch (e: unknown) {
+      AppLogger.error('[AccountOverview] handlePickProfilePhoto failed', { error: e instanceof Error ? e.message : String(e) });
       Alert.alert('Upload failed', (e instanceof Error ? e.message : String(e)) ?? 'Could not upload photo. Try again.');
     }
   };
@@ -242,8 +242,8 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     try {
       await AsyncStorage.setItem('@sk8lytz_auto_pause_enabled', String(enabled));
       AppLogger.log('AUTO_PAUSE_TOGGLED', { enabled });
-    } catch (e) {
-      AppLogger.error('Failed to save auto-pause setting', e);
+    } catch (e: unknown) {
+      AppLogger.error('Failed to save auto-pause setting', e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -256,8 +256,8 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       setCrews(prev => [...prev, crew]);
       setNewCrewName(''); setCrewStep('list');
       AppLogger.log('CREW_PERMANENT_CREATED', { crewName: newCrewName.trim() });
-    } catch (e) {
-      AppLogger.warn('[AccountOverview] handleCreateCrew failed', { error: String(e) });
+    } catch (e: unknown) {
+      AppLogger.warn('[AccountOverview] handleCreateCrew failed', { error: e instanceof Error ? e.message : String(e) });
       setCrewError((e instanceof Error ? e.message : String(e)) ?? 'Failed to create crew');
     } finally { setCrewLoading(false); }
   };
@@ -270,8 +270,8 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       setCrews(prev => prev.find(c => c.id === crew.id) ? prev : [...prev, crew]);
       setJoinCode(''); setCrewStep('list');
       AppLogger.log('CREW_PERMANENT_JOINED', { crewId: crew.id });
-    } catch (e) {
-      AppLogger.warn('[AccountOverview] handleJoinCrew failed', { error: String(e) });
+    } catch (e: unknown) {
+      AppLogger.warn('[AccountOverview] handleJoinCrew failed', { error: e instanceof Error ? e.message : String(e) });
       setCrewError((e instanceof Error ? e.message : String(e)) ?? 'Failed to join crew');
     } finally { setCrewLoading(false); }
   };
@@ -281,8 +281,8 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       await profileService.leavePermanentCrew(crewId, user?.id);
       setCrews(prev => prev.filter(c => c.id !== crewId));
       AppLogger.log('CREW_PERMANENT_LEFT', { crewId });
-    } catch (e) { 
-      AppLogger.error('[AccountOverview] handleLeaveCrew failed', { crewId, error: String(e) });
+    } catch (e: unknown) { 
+      AppLogger.error('[AccountOverview] handleLeaveCrew failed', { crewId, error: e instanceof Error ? e.message : String(e) });
       Alert.alert('Error', (e instanceof Error ? e.message : String(e))); 
     }
   };

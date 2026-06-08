@@ -150,8 +150,8 @@ export default function Sk8LytzProgrammer({
               }
               const saved = await AsyncStorage.getItem(STORAGE_PROGRAMMER_PROFILES);
               if (saved) setProfiles(JSON.parse(saved));
-          } catch(e) {
-              AppLogger.error('[Sk8LytzProgrammer] Failed to migrate or load profiles', { error: String(e) });
+          } catch (e: unknown) {
+              AppLogger.error('[Sk8LytzProgrammer] Failed to migrate or load profiles', { error: (e instanceof Error ? e.message : String(e)) });
           }
       };
       if (visible) load();
@@ -162,8 +162,8 @@ export default function Sk8LytzProgrammer({
       setProfiles(newProfiles);
       try {
           await AsyncStorage.setItem(STORAGE_PROGRAMMER_PROFILES, JSON.stringify(newProfiles));
-      } catch (e) {
-          AppLogger.error('[Sk8LytzProgrammer] persist failed', { error: String(e) });
+      } catch (e: unknown) {
+          AppLogger.error('[Sk8LytzProgrammer] persist failed', { error: (e instanceof Error ? e.message : String(e)) });
       }
   };
 

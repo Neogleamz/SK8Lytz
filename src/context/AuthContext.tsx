@@ -94,8 +94,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
           }
         }
-      } catch (err) {
-        AppLogger.warn('[AuthContext] Deep link parse error', { error: String(err) });
+      } catch (err: unknown) {
+        AppLogger.warn('[AuthContext] Deep link parse error', { error: err instanceof Error ? err.message : String(err) });
       }
     };
 
@@ -114,8 +114,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         let offlineSkip = null;
         try {
           offlineSkip = await AsyncStorage.getItem(STORAGE_OFFLINE_SKIP);
-        } catch (e) {
-          AppLogger.warn('[AuthContext] Failed to read offline skip', e);
+        } catch (e: unknown) {
+          AppLogger.warn('[AuthContext] Failed to read offline skip', e instanceof Error ? e.message : String(e));
         }
         if (offlineSkip === 'true') {
           setIsOfflineMode(true);
@@ -134,14 +134,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         let lastEmail = null;
         try {
           lastEmail = await AsyncStorage.getItem('@Sk8lytz_auth_last_email');
-        } catch (e) {
-          AppLogger.warn('[AuthContext] Failed to read last email', e);
+        } catch (e: unknown) {
+          AppLogger.warn('[AuthContext] Failed to read last email', e instanceof Error ? e.message : String(e));
         }
         if (lastEmail) {
           setSessionExpired(true);
         }
-      } catch (err) {
-        AppLogger.log('ERROR_CAUGHT', { message: 'AuthContext init failed', info: err, context: 'AuthContext.init' });
+      } catch (err: unknown) {
+        AppLogger.log('ERROR_CAUGHT', { message: 'AuthContext init failed', info: err instanceof Error ? err.message : String(err), context: 'AuthContext.init' });
       } finally {
         setSessionLoaded(true);
       }

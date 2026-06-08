@@ -140,7 +140,8 @@ class DeviceRepository {
         tombstoneCount: this.tombstones.length,
       });
     } catch (e: unknown) {
-      AppLogger.warn('[DeviceRepository] Storage load failed:', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.warn('[DeviceRepository] Storage load failed:', { error: msg });
     }
   }
 
@@ -238,8 +239,9 @@ class DeviceRepository {
             p_type:       'device-fleet',
             p_device_ids: [deviceId],
           });
-        } catch (_rpc) {
-          AppLogger.warn('[DeviceRepository] upsert_group_with_devices RPC failed, falling back:', _rpc);
+        } catch (_rpc: unknown) {
+          const msg = _rpc instanceof Error ? _rpc.message : String(_rpc);
+          AppLogger.warn('[DeviceRepository] upsert_group_with_devices RPC failed, falling back:', { error: msg });
           try {
             await supabase.from('registered_groups').upsert({
               id: fullDevice.group_ids && fullDevice.group_ids[0] ? fullDevice.group_ids[0] : 'default-fleet',
@@ -247,8 +249,9 @@ class DeviceRepository {
               type: 'device-fleet',
               user_id: user.id
             } satisfies GroupInsert, { onConflict: 'id' });
-          } catch (_fk) {
-            AppLogger.warn('[DeviceRepository] Group FK fallback also failed:', _fk);
+          } catch (_fk: unknown) {
+            const msg = _fk instanceof Error ? _fk.message : String(_fk);
+            AppLogger.warn('[DeviceRepository] Group FK fallback also failed:', { error: msg });
           }
         }
 
@@ -303,7 +306,8 @@ class DeviceRepository {
 
       return true;
     } catch (e: unknown) {
-      AppLogger.warn('[DeviceRepository] Save failed, queuing offline:', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.warn('[DeviceRepository] Save failed, queuing offline:', { error: msg });
       await this._queuePendingSync(device);
       return false;
     }
@@ -537,7 +541,8 @@ class DeviceRepository {
 
       return finalDevices;
     } catch (e: unknown) {
-      AppLogger.warn('[DeviceRepository] Cloud sync failed (offline?):', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.warn('[DeviceRepository] Cloud sync failed (offline?):', { error: msg });
       return this.devices;
     }
   }
@@ -587,7 +592,8 @@ class DeviceRepository {
 
       return data.user_id === user?.id ? 'claimed_by_self' : 'claimed_by_other';
     } catch (e: unknown) {
-      AppLogger.warn('[DeviceRepository] Claim check failed (offline?):', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.warn('[DeviceRepository] Claim check failed (offline?):', { error: msg });
       return 'offline_unknown';
     }
   }
@@ -608,7 +614,9 @@ class DeviceRepository {
         .eq('user_id', user.id);
 
       return (count ?? 0) > 0;
-    } catch {
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.warn('[DeviceRepository] hasRegistrations failed', { error: msg });
       return false;
     }
   }
@@ -616,16 +624,21 @@ class DeviceRepository {
   // ── Swap Positions ──────────────────────────────────────────────────────────
 
   async swapPositions(mac1: string, mac2: string): Promise<void> {
-    const d1 = this.findDevice(mac1);
-    const d2 = this.findDevice(mac2);
-    if (!d1 || !d2) return;
+    try {
+      const d1 = this.findDevice(mac1);
+      const d2 = this.findDevice(mac2);
+      if (!d1 || !d2) return;
 
-    const tmp = d1.position;
-    d1.position = d2.position;
-    d2.position = tmp;
+      const tmp = d1.position;
+      d1.position = d2.position;
+      d2.position = tmp;
 
-    await this.saveDevice(d1);
-    await this.saveDevice(d2);
+      await this.saveDevice(d1);
+      await this.saveDevice(d2);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('[DeviceRepository] swapPositions failed', { error: msg });
+    }
   }
 
   // ── Subscribe / Notify (for useSyncExternalStore) ───────────────────────────
@@ -661,7 +674,8 @@ class DeviceRepository {
       if (idx >= 0) queue[idx] = marked; else queue.push(marked);
       await AsyncStorage.setItem(PENDING_KEY, JSON.stringify(queue)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'PENDING_KEY', error: e instanceof Error ? e.message : String(e) }));
     } catch (e: unknown) {
-      AppLogger.warn('[DeviceRepository] Queue failed:', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.warn('[DeviceRepository] Queue failed:', { error: msg });
     }
   }
 
@@ -681,8 +695,9 @@ class DeviceRepository {
             type: 'device-fleet',
             user_id: userId
           } satisfies GroupInsert, { onConflict: 'id' });
-        } catch (_fk) {
-          AppLogger.error('[DeviceRepository] FK fallback failed', { error: String(_fk) });
+        } catch (_fk: unknown) {
+          const msg = _fk instanceof Error ? _fk.message : String(_fk);
+          AppLogger.error('[DeviceRepository] FK fallback failed', { error: msg });
         }
 
         const dbRow: DeviceInsertRow = {
@@ -726,7 +741,8 @@ class DeviceRepository {
 
       await AsyncStorage.removeItem(PENDING_KEY).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage remove failed', { key: 'PENDING_KEY', error: e instanceof Error ? e.message : String(e) }));
     } catch (e: unknown) {
-      AppLogger.warn('[DeviceRepository] Flush failed:', e);
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.warn('[DeviceRepository] Flush failed:', { error: msg });
     }
   }
 

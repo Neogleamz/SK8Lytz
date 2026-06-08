@@ -20,8 +20,8 @@ export default function GlobalAnalyticsPanel({ Colors }: { Colors: Record<string
       try {
         const { data, error } = await (supabase as unknown as { rpc: (fn: string) => Promise<{ data: any, error: any }> }).rpc('admin_get_global_telemetry');
         if (data && !error) setData(data);
-      } catch (e) {
-        AppLogger.error('[GlobalAnalytics] RPC failed', { error: String(e) });
+      } catch (e: unknown) {
+        AppLogger.error('[GlobalAnalytics] RPC failed', { error: (e instanceof Error ? e.message : String(e)) });
       } finally {
         setLoading(false);
       }

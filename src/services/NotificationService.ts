@@ -83,8 +83,8 @@ class NotificationService {
       const platform = Platform.OS as 'ios' | 'android' | 'web';
       await profileService.registerPushToken(this.token, platform, userId || null);
       AppLogger.log('PUSH_TOKEN_REGISTERED', { platform, tokenPrefix: this.token.slice(0, 12) });
-    } catch (err) {
-      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'push_token_unavailable', error: String(err) });
+    } catch (err: unknown) {
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'push_token_unavailable', error: (err instanceof Error ? err.message : String(err)) });
       return null;
     }
 
@@ -139,8 +139,8 @@ class NotificationService {
         trigger: null, // immediate
       });
       AppLogger.log('PUSH_NOTIFICATION_SENT', { type: 'crew_invite', crewId: opts.crewId });
-    } catch (err) {
-      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'crew_invite_notification_failed', error: String(err) });
+    } catch (err: unknown) {
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'crew_invite_notification_failed', error: (err instanceof Error ? err.message : String(err)) });
     }
   }
 
@@ -189,8 +189,8 @@ class NotificationService {
         },
         trigger: null,
       });
-    } catch (err) {
-      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'session_live_alert_failed', error: String(err) });
+    } catch (err: unknown) {
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'session_live_alert_failed', error: (err instanceof Error ? err.message : String(err)) });
     }
   }
 
@@ -214,8 +214,8 @@ class NotificationService {
       });
       AppLogger.log('PUSH_NOTIFICATION_SENT', { type: 'session_reminder', subtype: 'scheduled', sessionId: opts.sessionId, trigger: trigger?.date?.toISOString() });
       return id;
-    } catch (err) {
-      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'schedule_session_alert_failed', error: String(err) });
+    } catch (err: unknown) {
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'schedule_session_alert_failed', error: (err instanceof Error ? err.message : String(err)) });
       return null;
     }
   }

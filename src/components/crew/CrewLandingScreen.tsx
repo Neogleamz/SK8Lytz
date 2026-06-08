@@ -56,8 +56,8 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
       const sessionData = await crewService.joinSessionById(sessionId, displayName.trim(), currentUserId ?? undefined);
       AppLogger.log('CREW_SESSION_JOINED', { sessionId: sessionData.id, crewName: sessionData.name, method: 'browse' });
       await handleSessionJoined(sessionData);
-    } catch (err) {
-      const e = err instanceof Error ? err : new Error(String(err));
+    } catch (err: unknown) {
+      const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       AppLogger.log('CREW_ERROR', { action: 'join_id', error: e.message });
       setErrorMsg(e.message || 'Could not join that crew');
     } finally { 
@@ -90,8 +90,8 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
               const updated = await profileService.getMyCrew(undefined, currentUserId ?? undefined);
               hub.setMyCrews(updated);
               hub.setPermanentCrews(updated.map(c => ({ id: c.id, name: c.name })));
-            } catch (err) {
-              const e = err instanceof Error ? err : new Error(String(err));
+            } catch (err: unknown) {
+              const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
               Alert.alert('Error', e.message || 'Could not leave crew');
             } finally {
               setIsLoading(false);
@@ -111,8 +111,8 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
       hub.setMyCrews(updated);
       hub.setPermanentCrews(updated.map(c => ({ id: c.id, name: c.name })));
       manage.setConfirmingDeleteCrewId(null);
-    } catch (err) {
-      const e = err instanceof Error ? err : new Error(String(err));
+    } catch (err: unknown) {
+      const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       Alert.alert('Error', e.message || 'Could not delete crew');
     } finally {
       setIsLoading(false);
@@ -135,8 +135,8 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
         `You're now a member of "${crew.name}". When they start a session you'll see it under My Crews.`,
         [{ text: 'Nice!' }]
       );
-    } catch (err) {
-      const e = err instanceof Error ? err : new Error(String(err));
+    } catch (err: unknown) {
+      const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       AppLogger.log('CREW_ERROR', { action: 'join_crew_by_code', error: e.message });
       setErrorMsg(e.message || 'Crew not found — check the code and try again.');
     } finally { setIsLoading(false); }
@@ -399,8 +399,8 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
                                     // Refresh member list
                                     const updated = await profileService.getCrewMembersWithNames(crew.id);
                                     setCardMembers(prev => ({ ...prev, [crew.id]: updated }));
-                                  } catch (err) {
-                                    const e = err instanceof Error ? err : new Error(String(err));
+                                  } catch (err: unknown) {
+                                    const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
                                     Alert.alert('Error', e.message ?? 'Could not update role');
                                   } finally {
                                     setMakingOwnerFor(null);

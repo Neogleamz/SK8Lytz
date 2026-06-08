@@ -22,7 +22,7 @@ export async function migrateAuthTokensToSecureStore() {
     }
 
     await AsyncStorage.setItem(MIGRATION_FLAG, 'true');
-  } catch (e) {
+  } catch (e: unknown) {
     console.error('Failed to migrate auth tokens', e);
   }
 }

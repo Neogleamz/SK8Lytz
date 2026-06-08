@@ -93,8 +93,8 @@ export function AuthFormSignUp({ onModeChange }: AuthFormSignUpProps) {
         showError(`⚠️ This password has appeared in ${hibp.count.toLocaleString()} data breaches. Please choose a different password.`);
         return;
       }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
       AppLogger.error('AuthFormSignUp', 'HIBP Check failed', { error: msg });
       setHibpChecking(false);
       // We don't block sign up on HIBP failure
@@ -124,8 +124,8 @@ export function AuthFormSignUp({ onModeChange }: AuthFormSignUpProps) {
         showSuccess('✅ Account created! Check your email for a verification link, then log in.');
         setTimeout(() => onModeChange('LOGIN'), 3000);
       }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
       AppLogger.error('AuthFormSignUp', 'Sign up exception', { error: msg });
       setLoading(false);
       showError('A network or internal error occurred. Please try again.');

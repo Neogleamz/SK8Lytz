@@ -109,8 +109,8 @@ export function useRegistration() {
       setRegisteredDevices(repo.getDevices());
       if (!ok) setHasPendingSync(true);
       return ok;
-    } catch (e) {
-      AppLogger.warn('[Registration] Save failed:', e);
+    } catch (e: unknown) {
+      AppLogger.warn('[Registration] Save failed:', e instanceof Error ? e.message : String(e));
       setHasPendingSync(true);
       return false;
     }
@@ -137,9 +137,9 @@ export function useRegistration() {
     try {
       await repo.deleteDevice(deviceMac, userId);
       setRegisteredDevices(repo.getDevices());
-    } catch (e) {
-      AppLogger.warn('[Registration] Deregister failed:', e);
-      Alert.alert('Delete Failed', `Could not remove device: ${(e instanceof Error ? e.message : String(e)) || String(e)}`);
+    } catch (e: unknown) {
+      AppLogger.warn('[Registration] Deregister failed:', e instanceof Error ? e.message : String(e));
+      Alert.alert('Delete Failed', `Could not remove device: ${(e instanceof Error ? e.message : String(e)) || (e instanceof Error ? e.message : String(e))}`);
     }
   }, []);
 
@@ -206,8 +206,8 @@ export function useRegistration() {
           migrated.push(rd);
         }
       }
-    } catch (e) {
-      AppLogger.warn('[Registration] Legacy migration failed:', e);
+    } catch (e: unknown) {
+      AppLogger.warn('[Registration] Legacy migration failed:', e instanceof Error ? e.message : String(e));
     }
     return migrated;
   }, []);

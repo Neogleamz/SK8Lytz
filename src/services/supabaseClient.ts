@@ -17,7 +17,7 @@ class SecureStoreAdapter implements SupportedStorage {
   async setItem(key: string, value: string): Promise<void> {
     try {
       await SecureStore.setItemAsync(key, value);
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('SecureStore setItem failed', e);
     }
   }
@@ -25,7 +25,7 @@ class SecureStoreAdapter implements SupportedStorage {
   async removeItem(key: string): Promise<void> {
     try {
       await SecureStore.deleteItemAsync(key);
-    } catch (e) {
+    } catch (e: unknown) {
       console.error('SecureStore removeItem failed', e);
     }
   }

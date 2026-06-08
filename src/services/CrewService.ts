@@ -78,165 +78,193 @@ class CrewService {
     opts?: { locationLabel?: string; locationCoords?: { lat: number; lng: number }; scheduledAt?: string; isPublic?: boolean; crewId?: string; skateSpotId?: string },
     userId?: string
   ): Promise<CrewSession> {
-    if (!userId) throw new Error('Must be signed in to create a crew');
+    try {
+      if (!userId) throw new Error('Must be signed in to create a crew');
 
-    // Proactively end any previous active sessions by this leader
-    await this.cleanupLegacySessions(userId);
+      // Proactively end any previous active sessions by this leader
+      await this.cleanupLegacySessions(userId);
 
-    const insertData: Partial<Database['public']['Tables']['crew_sessions']['Insert']> & Record<string, unknown> = {
-      name,
-      leader_user_id: userId,
-      status: opts?.scheduledAt ? 'scheduled' : 'active',
-    };
-    if (opts?.locationLabel)  insertData.location_label  = opts.locationLabel;
-    if (opts?.locationCoords) insertData.location_coords = opts.locationCoords;
-    if (opts?.scheduledAt)    insertData.scheduled_at    = opts.scheduledAt;
-    if (opts?.isPublic !== undefined) insertData.is_public = opts.isPublic;
-    if (opts?.crewId)         insertData.crew_id         = opts.crewId;
-    if (opts?.skateSpotId)    insertData.skate_spot_id   = opts.skateSpotId;
+      const insertData: Partial<Database['public']['Tables']['crew_sessions']['Insert']> & Record<string, unknown> = {
+        name,
+        leader_user_id: userId,
+        status: opts?.scheduledAt ? 'scheduled' : 'active',
+      };
+      if (opts?.locationLabel)  insertData.location_label  = opts.locationLabel;
+      if (opts?.locationCoords) insertData.location_coords = opts.locationCoords;
+      if (opts?.scheduledAt)    insertData.scheduled_at    = opts.scheduledAt;
+      if (opts?.isPublic !== undefined) insertData.is_public = opts.isPublic;
+      if (opts?.crewId)         insertData.crew_id         = opts.crewId;
+      if (opts?.skateSpotId)    insertData.skate_spot_id   = opts.skateSpotId;
 
-    const { data, error } = await supabase
-      .from('crew_sessions')
-      .insert(insertData as Database['public']['Tables']['crew_sessions']['Insert'])
-      .select()
-      .single();
+      const { data, error } = await supabase
+        .from('crew_sessions')
+        .insert(insertData as Database['public']['Tables']['crew_sessions']['Insert'])
+        .select()
+        .single();
 
-    if (error) throw error;
-    const session = data as CrewSession;
+      if (error) throw error;
+      const session = data as CrewSession;
 
-    // Auto-join as leader member
-    await supabase.from('crew_members').insert({
-      session_id: session.id,
-      user_id: userId,
-      display_name: displayName || 'Leader',
-    });
+      // Auto-join as leader member
+      await supabase.from('crew_members').insert({
+        session_id: session.id,
+        user_id: userId,
+        display_name: displayName || 'Leader',
+      });
 
-    await this._persistSession(session);
-    this.currentSession = session;
-    this.currentSessionId = session.id;
-    this.currentRole = 'leader';
-    this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
-    this.emit();
-    return session;
+      await this._persistSession(session);
+      this.currentSession = session;
+      this.currentSessionId = session.id;
+      this.currentRole = 'leader';
+      this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
+      this.emit();
+      return session;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('[CrewService] createSession failed', { error: msg });
+      throw new Error(msg);
+    }
   }
 
   /** Proactively deactivate any existing active sessions by this user. */
   async cleanupLegacySessions(userId: string): Promise<void> {
-    const { error } = await supabase
-      .from('crew_sessions')
-      .update({
-        is_active: false,
-        status: 'ended',
-        ended_at: new Date().toISOString(),
-      })
-      .eq('leader_user_id', userId)
-      .eq('is_active', true);
+    try {
+      const { error } = await supabase
+        .from('crew_sessions')
+        .update({
+          is_active: false,
+          status: 'ended',
+          ended_at: new Date().toISOString(),
+        })
+        .eq('leader_user_id', userId)
+        .eq('is_active', true);
 
-    if (error) {
-      AppLogger.warn('[CrewService] cleanupLegacySessions failed', { error: error.message });
-      AppLogger.log('CREW_ERROR', { action: 'cleanupLegacySessions', error: error.message });
+      if (error) {
+        AppLogger.warn('[CrewService] cleanupLegacySessions failed', { error: error.message });
+        AppLogger.log('CREW_ERROR', { action: 'cleanupLegacySessions', error: error.message });
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('[CrewService] cleanupLegacySessions threw exception', { error: msg });
     }
   }
 
   /** Global cleanup for any sessions that are active but past their expiry. */
   async cleanupExpiredSessions(): Promise<void> {
-    const now = new Date().toISOString();
-    const { error } = await supabase
-      .from('crew_sessions')
-      .update({
-        is_active: false,
-        status: 'ended',
-        ended_at: now,
-      })
-      .eq('is_active', true)
-      .lt('expires_at', now);
+    try {
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from('crew_sessions')
+        .update({
+          is_active: false,
+          status: 'ended',
+          ended_at: now,
+        })
+        .eq('is_active', true)
+        .lt('expires_at', now);
 
-    if (error) {
-      AppLogger.warn('[CrewService] cleanupExpiredSessions failed', { error: error.message });
-    } else {
-      AppLogger.log('CREW_CLEANUP', { action: 'cleanupExpiredSessions', status: 'complete' });
+      if (error) {
+        AppLogger.warn('[CrewService] cleanupExpiredSessions failed', { error: error.message });
+      } else {
+        AppLogger.log('CREW_CLEANUP', { action: 'cleanupExpiredSessions', status: 'complete' });
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('[CrewService] cleanupExpiredSessions threw exception', { error: msg });
     }
   }
 
   /** Join an existing session by 6-char invite code. */
   async joinSession(inviteCode: string, displayName: string, userId?: string): Promise<CrewSession> {
-    if (!userId) throw new Error('Must be signed in to join a crew');
+    try {
+      if (!userId) throw new Error('Must be signed in to join a crew');
 
-    const code = inviteCode.trim().toUpperCase();
+      const code = inviteCode.trim().toUpperCase();
 
-    const { data: _sessionData, error: sessionErr } = await supabase
-      .from('crew_sessions')
-      .select('*')
-      .eq('invite_code', code)
-      .eq('is_active', true)
-      .gt('expires_at', new Date().toISOString())
-      .single();
-    const session = _sessionData as CrewSession;
+      const { data: _sessionData, error: sessionErr } = await supabase
+        .from('crew_sessions')
+        .select('*')
+        .eq('invite_code', code)
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString())
+        .single();
+      const session = _sessionData as CrewSession;
 
-    if (sessionErr || !session) throw new Error('Crew not found or session expired');
+      if (sessionErr || !session) throw new Error('Crew not found or session expired');
 
-    // Check capacity
-    const { count } = await supabase
-      .from('crew_members')
-      .select('id', { count: 'exact', head: true })
-      .eq('session_id', session.id);
+      // Check capacity
+      const { count } = await supabase
+        .from('crew_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('session_id', session.id);
 
-    if ((count ?? 0) >= MAX_MEMBERS_PER_SESSION) {
-      throw new Error('Crew is full (max 20 members)');
+      if ((count ?? 0) >= MAX_MEMBERS_PER_SESSION) {
+        throw new Error('Crew is full (max 20 members)');
+      }
+
+      // Upsert membership (idempotent re-join)
+      const { error: memberErr } = await supabase.from('crew_members').upsert({
+        session_id: session.id,
+        user_id: userId,
+        display_name: displayName || 'Skater',
+      }, { onConflict: 'session_id,user_id' });
+
+      if (memberErr) throw memberErr;
+
+      await this._persistSession(session);
+      this.currentSession = session as CrewSession;
+      this.currentSessionId = session.id;
+      this.currentRole = userId === session.leader_user_id ? 'leader' : 'member';
+      this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
+      this.emit();
+      return session as CrewSession;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('[CrewService] joinSession failed', { error: msg });
+      throw new Error(msg);
     }
-
-    // Upsert membership (idempotent re-join)
-    const { error: memberErr } = await supabase.from('crew_members').upsert({
-      session_id: session.id,
-      user_id: userId,
-      display_name: displayName || 'Skater',
-    }, { onConflict: 'session_id,user_id' });
-
-    if (memberErr) throw memberErr;
-
-    await this._persistSession(session);
-    this.currentSession = session as CrewSession;
-    this.currentSessionId = session.id;
-    this.currentRole = userId === session.leader_user_id ? 'leader' : 'member';
-    this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
-    this.emit();
-    return session as CrewSession;
   }
 
   /** Join a session directly by ID (from the active sessions browser). */
   async joinSessionById(sessionId: string, displayName: string, userId?: string): Promise<CrewSession> {
-    if (!userId) throw new Error('Must be signed in to join a crew');
+    try {
+      if (!userId) throw new Error('Must be signed in to join a crew');
 
-    const { data: _sessionDataById, error } = await supabase
-      .from('crew_sessions')
-      .select('*')
-      .eq('id', sessionId)
-      .eq('is_active', true)
-      .gt('expires_at', new Date().toISOString())
-      .single();
-    const session = _sessionDataById as CrewSession;
+      const { data: _sessionDataById, error } = await supabase
+        .from('crew_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString())
+        .single();
+      const session = _sessionDataById as CrewSession;
 
-    if (error || !session) throw new Error('Session not found or expired');
+      if (error || !session) throw new Error('Session not found or expired');
 
-    const { count } = await supabase
-      .from('crew_members')
-      .select('id', { count: 'exact', head: true })
-      .eq('session_id', sessionId);
-    if ((count ?? 0) >= MAX_MEMBERS_PER_SESSION) throw new Error('Crew is full');
+      const { count } = await supabase
+        .from('crew_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('session_id', sessionId);
+      if ((count ?? 0) >= MAX_MEMBERS_PER_SESSION) throw new Error('Crew is full');
 
-    await supabase.from('crew_members').upsert({
-      session_id: sessionId,
-      user_id: userId,
-      display_name: displayName,
-    }, { onConflict: 'session_id,user_id' });
+      await supabase.from('crew_members').upsert({
+        session_id: sessionId,
+        user_id: userId,
+        display_name: displayName,
+      }, { onConflict: 'session_id,user_id' });
 
-    await this._persistSession(session);
-    this.currentSession = session as CrewSession;
-    this.currentSessionId = sessionId;
-    this.currentRole = userId === session.leader_user_id ? 'leader' : 'member';
-    this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
-    this.emit();
-    return session as CrewSession;
+      await this._persistSession(session);
+      this.currentSession = session as CrewSession;
+      this.currentSessionId = sessionId;
+      this.currentRole = userId === session.leader_user_id ? 'leader' : 'member';
+      this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
+      this.emit();
+      return session as CrewSession;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('[CrewService] joinSessionById failed', { error: msg });
+      throw new Error(msg);
+    }
   }
 
   /**
@@ -245,29 +273,35 @@ class CrewService {
    * Delta Sync: Supply updatedSince to only fetch modified sessions.
    */
   async fetchActiveSessions(updatedSince?: string): Promise<CrewSession[]> {
-    // Proactively clean up expired records first
-    await this.cleanupExpiredSessions();
+    try {
+      // Proactively clean up expired records first
+      await this.cleanupExpiredSessions();
 
-    let query = supabase
-      .from('crew_sessions')
-      .select('*, crew_members(count)')
-      .eq('is_active', true)
-      .gt('expires_at', new Date().toISOString());
+      let query = supabase
+        .from('crew_sessions')
+        .select('*, crew_members(count)')
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString());
 
-    if (updatedSince) {
-      query = query.gt('updated_at', updatedSince);
+      if (updatedSince) {
+        query = query.gt('updated_at', updatedSince);
+      }
+
+      const { data, error } = await query
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error || !data) return [];
+
+      return data.map((s: Record<string, unknown>) => ({
+        ...s,
+        member_count: (s.crew_members as { count?: number }[])?.[0]?.count ?? 0,
+      } as CrewSession));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('[CrewService] fetchActiveSessions failed', { error: msg });
+      return [];
     }
-
-    const { data, error } = await query
-      .order('created_at', { ascending: false })
-      .limit(20);
-
-    if (error || !data) return [];
-
-    return data.map((s: Record<string, unknown>) => ({
-      ...s,
-      member_count: (s.crew_members as { count?: number }[])?.[0]?.count ?? 0,
-    } as CrewSession));
   }
 
   /**
@@ -294,28 +328,36 @@ class CrewService {
           is_public: true,
         })) as unknown as CrewSession[];
       }
-    } catch {}
-
-    // Fallback: filter from crew_sessions directly
-    let query = supabase
-      .from('crew_sessions')
-      .select('*, crew_members(count)')
-      .eq('is_active', true)
-      .eq('is_public', true)
-      .gt('expires_at', new Date().toISOString());
-
-    if (updatedSince) {
-      query = query.gt('updated_at', updatedSince);
+    } catch (e: unknown) {
+      AppLogger.warn('[CrewService] public_sessions view failed, using fallback', { error: e instanceof Error ? e.message : String(e) });
     }
 
-    const { data } = await query
-      .order('created_at', { ascending: false })
-      .limit(20);
+    try {
+      // Fallback: filter from crew_sessions directly
+      let query = supabase
+        .from('crew_sessions')
+        .select('*, crew_members(count)')
+        .eq('is_active', true)
+        .eq('is_public', true)
+        .gt('expires_at', new Date().toISOString());
 
-    return (data ?? []).map((s: Record<string, unknown>) => ({
-      ...s,
-      member_count: (s.crew_members as { count?: number }[])?.[0]?.count ?? 0,
-    } as CrewSession));
+      if (updatedSince) {
+        query = query.gt('updated_at', updatedSince);
+      }
+
+      const { data } = await query
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      return (data ?? []).map((s: Record<string, unknown>) => ({
+        ...s,
+        member_count: (s.crew_members as { count?: number }[])?.[0]?.count ?? 0,
+      } as CrewSession));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('[CrewService] fetchPublicSessions fallback failed', { error: msg });
+      return [];
+    }
   }
 
   /**
@@ -324,162 +366,191 @@ class CrewService {
    * (e.g. modal was rebuilt after a navigation change).
    */
   async endSession(explicitSessionId?: string, userId?: string): Promise<void> {
-    if (!userId) throw new Error('Not authenticated');
-
-    const sessionId = explicitSessionId ?? this.currentSessionId;
-    if (!sessionId) throw new Error('No active session to end');
-
-    AppLogger.log('CREW_END_SESSION', { sessionId, userId });
-
-    // ── Single update filtered by id AND leader_user_id ──────────────────────
-    // RLS-safe: Supabase only matches rows the policy allows.
-    // If count === 0, this user is not the leader (or session already ended).
-    // We try the full update (needs migration 006: status + ended_at columns).
-    const avgSpeed = this.sessionTelemetry.avgSpeedSamples.length
-      ? this.sessionTelemetry.avgSpeedSamples.reduce((a, b) => a + b, 0) / this.sessionTelemetry.avgSpeedSamples.length
-      : 0;
-
-    const { error: fullError, data: fullData } = await supabase
-      .from('crew_sessions')
-      .update({
-        status: 'ended',
-        is_active: false,
-        ended_at: new Date().toISOString(),
-        top_speed_mph: this.sessionTelemetry.topSpeedMph || 0,
-        avg_speed_mph: avgSpeed || 0,
-        total_distance_miles: this.sessionTelemetry.distanceMiles || 0,
-      })
-      .eq('id', sessionId)
-      .eq('leader_user_id', userId)   // ← RLS-safe leader gate
-      .select('id');
-
-    if (fullError) {
-      AppLogger.warn('[CrewService] Full update failed, trying fallback', { error: fullError.message });
-      // Fallback: just flip is_active — works even without migration 006
-      const { error: fallbackError, data: fallbackData } = await supabase
-        .from('crew_sessions')
-        .update({ is_active: false })
-        .eq('id', sessionId)
-        .eq('leader_user_id', userId)
-        .select('id');
-
-      if (fallbackError) throw new Error(`Could not end session: ${fallbackError.message}`);
-      if (!fallbackData || fallbackData.length === 0) {
-        throw new Error('Only the session leader can end the session');
-      }
-    } else if (!fullData || fullData.length === 0) {
-      // 0 rows → either not leader or session doesn't exist
-      // Try fallback before giving up (handles column-missing scenario)
-      const { error: fbErr, data: fbData } = await supabase
-        .from('crew_sessions')
-        .update({ is_active: false })
-        .eq('id', sessionId)
-        .eq('leader_user_id', userId)
-        .select('id');
-      if (fbErr || !fbData || fbData.length === 0) {
-        throw new Error('Only the session leader can end the session');
-      }
-    }
-
-    AppLogger.log('CREW_SESSION_ENDED', { reason: 'db_update_succeeded', action: 'broadcasting_ended' });
-
-    // Broadcast END event so members know the session is over.
-    // IMPORTANT: Do NOT call unsubscribe() immediately after send() — the Realtime
-    // channel needs ~500ms for the broadcast to propagate before the socket closes.
-    this.channel?.send({
-      type: 'broadcast',
-      event: 'session_ended',
-      payload: { sessionId },
-    });
-
-    // Clean up all crew_members rows for this session (no CASCADE in schema)
-    // Fire-and-forget: not critical if this fails — records expire naturally
-    supabase
-      .from('crew_members')
-      .delete()
-      .eq('session_id', sessionId)
-      .then(() => AppLogger.log('CREW_CLEANUP', { action: 'crew_members_deleted', sessionId }));
-
-    // Delay channel teardown so the session_ended broadcast can propagate to members
-    const channelRef = this.channel;
-    this.channel = null;
-    this.currentSession = null;
-    this.currentSessionId = null;
-    this.currentRole = null;
-    this.emit();
-    setTimeout(() => {
-      if (channelRef) supabase.removeChannel(channelRef);
-      AppLogger.log('CREW_SESSION_ENDED', { action: 'channel_torn_down' });
-    }, 600);
-
-    if (this.broadcastTimer) { clearTimeout(this.broadcastTimer); this.broadcastTimer = null; }
     try {
-      await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
-    } catch (err) {
-      AppLogger.warn('[CrewService] Failed to multiRemove on endSession', { error: err instanceof Error ? err.message : String(err) });
+      if (!userId) throw new Error('Not authenticated');
+
+      const sessionId = explicitSessionId ?? this.currentSessionId;
+      if (!sessionId) throw new Error('No active session to end');
+
+      AppLogger.log('CREW_END_SESSION', { sessionId, userId });
+
+      // ── Single update filtered by id AND leader_user_id ──────────────────────
+      // RLS-safe: Supabase only matches rows the policy allows.
+      // If count === 0, this user is not the leader (or session already ended).
+      // We try the full update (needs migration 006: status + ended_at columns).
+      const avgSpeed = this.sessionTelemetry.avgSpeedSamples.length
+        ? this.sessionTelemetry.avgSpeedSamples.reduce((a, b) => a + b, 0) / this.sessionTelemetry.avgSpeedSamples.length
+        : 0;
+
+      const { error: fullError, data: fullData } = await supabase
+        .from('crew_sessions')
+        .update({
+          status: 'ended',
+          is_active: false,
+          ended_at: new Date().toISOString(),
+          top_speed_mph: this.sessionTelemetry.topSpeedMph || 0,
+          avg_speed_mph: avgSpeed || 0,
+          total_distance_miles: this.sessionTelemetry.distanceMiles || 0,
+        })
+        .eq('id', sessionId)
+        .eq('leader_user_id', userId)   // ← RLS-safe leader gate
+        .select('id');
+
+      if (fullError) {
+        AppLogger.warn('[CrewService] Full update failed, trying fallback', { error: fullError.message });
+        // Fallback: just flip is_active — works even without migration 006
+        const { error: fallbackError, data: fallbackData } = await supabase
+          .from('crew_sessions')
+          .update({ is_active: false })
+          .eq('id', sessionId)
+          .eq('leader_user_id', userId)
+          .select('id');
+
+        if (fallbackError) throw new Error(`Could not end session: ${fallbackError.message}`);
+        if (!fallbackData || fallbackData.length === 0) {
+          throw new Error('Only the session leader can end the session');
+        }
+      } else if (!fullData || fullData.length === 0) {
+        // 0 rows → either not leader or session doesn't exist
+        // Try fallback before giving up (handles column-missing scenario)
+        const { error: fbErr, data: fbData } = await supabase
+          .from('crew_sessions')
+          .update({ is_active: false })
+          .eq('id', sessionId)
+          .eq('leader_user_id', userId)
+          .select('id');
+        if (fbErr || !fbData || fbData.length === 0) {
+          throw new Error('Only the session leader can end the session');
+        }
+      }
+
+      AppLogger.log('CREW_SESSION_ENDED', { reason: 'db_update_succeeded', action: 'broadcasting_ended' });
+
+      // Broadcast END event so members know the session is over.
+      // IMPORTANT: Do NOT call unsubscribe() immediately after send() — the Realtime
+      // channel needs ~500ms for the broadcast to propagate before the socket closes.
+      this.channel?.send({
+        type: 'broadcast',
+        event: 'session_ended',
+        payload: { sessionId },
+      });
+
+      // Clean up all crew_members rows for this session (no CASCADE in schema)
+      // Fire-and-forget: not critical if this fails — records expire naturally
+      supabase
+        .from('crew_members')
+        .delete()
+        .eq('session_id', sessionId)
+        .then(() => AppLogger.log('CREW_CLEANUP', { action: 'crew_members_deleted', sessionId }));
+
+      // Delay channel teardown so the session_ended broadcast can propagate to members
+      const channelRef = this.channel;
+      this.channel = null;
+      this.currentSession = null;
+      this.currentSessionId = null;
+      this.currentRole = null;
+      this.emit();
+      setTimeout(() => {
+        if (channelRef) supabase.removeChannel(channelRef);
+        AppLogger.log('CREW_SESSION_ENDED', { action: 'channel_torn_down' });
+      }, 600);
+
+      if (this.broadcastTimer) { clearTimeout(this.broadcastTimer); this.broadcastTimer = null; }
+      try {
+        await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
+      } catch (err: unknown) {
+        AppLogger.warn('[CrewService] Failed to multiRemove on endSession', { error: err instanceof Error ? err.message : String(err) });
+      }
+      AppLogger.log('CREW_SESSION_ENDED', { reason: 'leader_ended', sessionId });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('[CrewService] endSession failed', { error: msg });
+      throw new Error(msg);
     }
-    AppLogger.log('CREW_SESSION_ENDED', { reason: 'leader_ended', sessionId });
   }
 
   /** Fetch the last scene snapshot from a session (for late-arrival sync). */
   async fetchLastScene(sessionId: string): Promise<Record<string, any> | null> {
-    const { data } = await supabase
-      .from('crew_sessions')
-      .select('last_scene')
-      .eq('id', sessionId)
-      .single();
-    return (data?.last_scene as Record<string, any>) ?? null;
+    try {
+      const { data } = await supabase
+        .from('crew_sessions')
+        .select('last_scene')
+        .eq('id', sessionId)
+        .single();
+      return (data?.last_scene as Record<string, any>) ?? null;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('[CrewService] fetchLastScene failed', { error: msg });
+      return null;
+    }
   }
 
   /** Leave current session and unsubscribe. */
   async leaveSession(userId?: string): Promise<void> {
-    if (!userId || !this.currentSessionId) return;
-
-    await supabase
-      .from('crew_members')
-      .delete()
-      .eq('session_id', this.currentSessionId)
-      .eq('user_id', userId);
-
-    this.unsubscribe();
     try {
-      await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
-    } catch (err) {
-      AppLogger.warn('[CrewService] Failed to multiRemove on leaveSession', { error: err instanceof Error ? err.message : String(err) });
+      if (!userId || !this.currentSessionId) return;
+
+      await supabase
+        .from('crew_members')
+        .delete()
+        .eq('session_id', this.currentSessionId)
+        .eq('user_id', userId);
+
+      this.unsubscribe();
+      try {
+        await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
+      } catch (err: unknown) {
+        AppLogger.warn('[CrewService] Failed to multiRemove on leaveSession', { error: err instanceof Error ? err.message : String(err) });
+      }
+      this.currentSession = null;
+      this.currentSessionId = null;
+      this.currentRole = null;
+      this.emit();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('[CrewService] leaveSession failed', { error: msg });
     }
-    this.currentSession = null;
-    this.currentSessionId = null;
-    this.currentRole = null;
-    this.emit();
   }
 
   /** Transfer leadership to another crew member. Leader only. */
   async transferLeadership(newLeaderId: string): Promise<void> {
-    if (!this.currentSessionId || this.currentRole !== 'leader') return;
+    try {
+      if (!this.currentSessionId || this.currentRole !== 'leader') return;
 
-    const { error } = await supabase
-      .from('crew_sessions')
-      .update({ leader_user_id: newLeaderId })
-      .eq('id', this.currentSessionId);
+      const { error } = await supabase
+        .from('crew_sessions')
+        .update({ leader_user_id: newLeaderId })
+        .eq('id', this.currentSessionId);
 
-    if (error) throw error;
-    this.currentRole = 'member';
-    if (this.currentSession) {
-      this.currentSession.leader_user_id = newLeaderId;
+      if (error) throw error;
+      this.currentRole = 'member';
+      if (this.currentSession) {
+        this.currentSession.leader_user_id = newLeaderId;
+      }
+      this.emit();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('[CrewService] transferLeadership failed', { error: msg });
+      throw new Error(msg);
     }
-    this.emit();
   }
 
   /** Fetch all members for a session (for lobby UI). */
   async fetchMembers(sessionId: string): Promise<CrewMember[]> {
-    const { data, error } = await supabase
-      .from('crew_members')
-      .select('*')
-      .eq('session_id', sessionId)
-      .order('joined_at', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('crew_members')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('joined_at', { ascending: true });
 
-    if (error) throw error;
-    return (data ?? []) as CrewMember[];
+      if (error) throw error;
+      return (data ?? []) as CrewMember[];
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('[CrewService] fetchMembers failed', { error: msg });
+      return [];
+    }
   }
 
   // ── Auto-rejoin ───────────────────────────────────────────────────────────
@@ -501,7 +572,7 @@ class CrewService {
       if (new Date(expiresAt) < new Date()) {
         try {
           await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
-        } catch (err) {
+        } catch (err: unknown) {
           AppLogger.warn('[CrewService] Failed to multiRemove expired session', { error: err instanceof Error ? err.message : String(err) });
         }
         return null;
@@ -593,7 +664,7 @@ class CrewService {
         this.emit();
         try {
           AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
-        } catch (err) {
+        } catch (err: unknown) {
           AppLogger.warn('[CrewService] Failed to multiRemove on session_ended broadcast', { error: err instanceof Error ? err.message : String(err) });
         }
         onSessionEnded?.();
@@ -633,12 +704,17 @@ class CrewService {
     if (!this.currentSessionId || this.currentRole !== 'leader') return;
     if (this._lastScenePersistTimer) return; // already scheduled
     this._lastScenePersistTimer = setTimeout(async () => {
-      this._lastScenePersistTimer = null;
-      if (!this.currentSessionId) return;
-      await supabase
-        .from('crew_sessions')
-        .update({ last_scene: scene })
-        .eq('id', this.currentSessionId);
+      try {
+        this._lastScenePersistTimer = null;
+        if (!this.currentSessionId) return;
+        await supabase
+          .from('crew_sessions')
+          .update({ last_scene: scene })
+          .eq('id', this.currentSessionId);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        AppLogger.error('[CrewService] _persistLastScene failed', { error: msg });
+      }
     }, 5000);
   }
 
@@ -675,7 +751,7 @@ class CrewService {
         [STORAGE_LAST_SESSION_ID,  session.id],
         [STORAGE_LAST_SESSION_EXP, session.expires_at],
       ]);
-    } catch (err) {
+    } catch (err: unknown) {
       AppLogger.warn('[CrewService] Failed to multiSet session data', { error: err instanceof Error ? err.message : String(err) });
     }
   }

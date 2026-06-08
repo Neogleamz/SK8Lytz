@@ -24,8 +24,8 @@ export async function executeRealDisconnect(
   Object.values(disconnectListeners.current).forEach((sub: any) => {
     try {
       sub.remove();
-    } catch (e) {
-      AppLogger.warn('[BLE] Failed to remove disconnect listener', { error: String(e) });
+    } catch (e: unknown) {
+      AppLogger.warn('[BLE] Failed to remove disconnect listener', { error: e instanceof Error ? e.message : String(e) });
     }
   });
   disconnectListeners.current = {};
@@ -35,11 +35,11 @@ export async function executeRealDisconnect(
   if (staleDevices.length > 0 && Platform.OS !== 'web') {
     for (const device of staleDevices) {
       try {
-        await bleManager.cancelDeviceConnection(device.id).catch((e: any) =>
-          AppLogger.warn(`[BLE] Disconnect soft fail for ${device.id}`, e)
+        await bleManager.cancelDeviceConnection(device.id).catch((e: unknown) =>
+          AppLogger.warn(`[BLE] Disconnect soft fail for ${device.id}`, e instanceof Error ? e.message : String(e))
         );
-      } catch (e) {
-        AppLogger.error(`[BLE] Fatal disconnect fault for ${device.id}`, e);
+      } catch (e: unknown) {
+        AppLogger.error(`[BLE] Fatal disconnect fault for ${device.id}`, e instanceof Error ? e.message : String(e));
       }
     }
     await new Promise(resolve => setTimeout(resolve, 250));

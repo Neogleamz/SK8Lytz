@@ -74,8 +74,8 @@ export function useProductCatalog() {
         const cached: ProductProfile[] = JSON.parse(raw);
         if (cached.length > 0) setAllProfiles(cached);
       }
-    } catch (e) {
-      AppLogger.warn('[ProductCatalog] Cache load failed', { error: String(e) });
+    } catch (e: unknown) {
+      AppLogger.warn('[ProductCatalog] Cache load failed', { error: (e instanceof Error ? e.message : String(e)) });
     }
   };
 
@@ -98,8 +98,8 @@ export function useProductCatalog() {
 
       setAllProfiles(merged);
       await AsyncStorage.setItem(STORAGE_PRODUCT_CATALOG, JSON.stringify(merged));
-    } catch (e) {
-      AppLogger.warn('[ProductCatalog] Cloud sync failed (offline?)', { error: String(e) });
+    } catch (e: unknown) {
+      AppLogger.warn('[ProductCatalog] Cloud sync failed (offline?)', { error: (e instanceof Error ? e.message : String(e)) });
     }
   };
 
@@ -152,8 +152,8 @@ export function useProductCatalog() {
       await AsyncStorage.removeItem(STORAGE_PRODUCT_CATALOG);
       await syncFromCloud();
       return true;
-    } catch (e) {
-      AppLogger.warn('[ProductCatalog] Save failed', { error: String(e) });
+    } catch (e: unknown) {
+      AppLogger.warn('[ProductCatalog] Save failed', { error: (e instanceof Error ? e.message : String(e)) });
       return false;
     }
   }, []);

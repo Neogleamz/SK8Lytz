@@ -183,11 +183,11 @@ export default function HardwareSetupWizardScreen({
             : r
         ));
         // Cache the result so repeat wizard visits are instant
-        AsyncStorage.setItem(`@sk8_hw_${deviceMac}`, JSON.stringify(hwConfig)).catch(e => AppLogger.warn('Failed to cache probed hardware config', e));
+        AsyncStorage.setItem(`@sk8_hw_${deviceMac}`, JSON.stringify(hwConfig)).catch(e => AppLogger.warn('Failed to cache probed hardware config', e instanceof Error ? e.message : String(e)));
         AppLogger.log('DEVICE_DISCOVERED', { context: 'pingDevice_complete', deviceId: deviceMac, ledPoints: hwConfig.ledPoints });
       }
-    } catch (e) {
-      AppLogger.warn('[FTUE] Blink test failed', { error: String(e) });
+    } catch (e: unknown) {
+      AppLogger.warn('[FTUE] Blink test failed', { error: (e instanceof Error ? e.message : String(e)) });
     } finally {
       // pingDevice handles the off command — just reset the button state
       setIsBlinking(null);

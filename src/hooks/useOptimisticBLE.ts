@@ -113,7 +113,7 @@ export function useOptimisticBLE({
             setTimeout(() => setWriteStatus('IDLE'), 1000);
             resolve(false);
           }
-        } catch (err) {
+        } catch (err: unknown) {
           pendingCount.current = Math.max(0, pendingCount.current - 1);
           setWriteStatus('IDLE');
           resolve(false);

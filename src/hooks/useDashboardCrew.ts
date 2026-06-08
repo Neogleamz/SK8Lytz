@@ -76,8 +76,8 @@ export function useDashboardCrew({
             setTimeout(() => onApplyScene(lastScene), 500);
           }
         }
-      } catch (e) {
-        AppLogger.warn('[useDashboardCrew] auto-rejoin failed', { error: String(e) });
+      } catch (e: unknown) {
+        AppLogger.warn('[useDashboardCrew] auto-rejoin failed', { error: (e instanceof Error ? e.message : String(e)) });
       }
     };
 

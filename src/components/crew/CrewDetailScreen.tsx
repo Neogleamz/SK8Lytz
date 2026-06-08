@@ -50,7 +50,7 @@ export function CrewDetailScreen() {
       hub.setPermanentCrews(prev => prev.filter((c) => c.id !== crew.id));
       setSelectedCrewDetail(null);
       setConfirmingLeaveCrewId(null);
-    } catch (err) { const e = err instanceof Error ? err : new Error(String(err)); Alert.alert('Error', e.message); }
+    } catch (err: unknown) { const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err))); Alert.alert('Error', e.message); }
   };
 
   const executeDeleteCrew = async (crew: PermanentCrew) => {
@@ -61,7 +61,7 @@ export function CrewDetailScreen() {
       hub.setPermanentCrews(prev => prev.filter((c) => c.id !== crew.id));
       setSelectedCrewDetail(null);
       setConfirmingDeleteCrewId(null);
-    } catch (err) { const e = err instanceof Error ? err : new Error(String(err)); Alert.alert('Error', e.message); }
+    } catch (err: unknown) { const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err))); Alert.alert('Error', e.message); }
   };
 
   const handleStartEdit = (crew: PermanentCrew) => {
@@ -87,8 +87,8 @@ export function CrewDetailScreen() {
       setUserSearchQuery('');
       setCardMembers(prev => { const next = { ...prev }; delete next[crewId]; return next; });
       loadCrewMembers(crewId);
-    } catch (err) {
-      const e = err instanceof Error ? err : new Error(String(err));
+    } catch (err: unknown) {
+      const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       Alert.alert('Error', e.message ?? 'Could not add members to crew.');
     } finally {
       setIsAddingMembersTo(null);
@@ -115,8 +115,8 @@ export function CrewDetailScreen() {
       setSelectedCrewDetail(updated);
       setEditingCrewId(null);
       AppLogger.log('CREW_PERMANENT_UPDATED', { crewId: crew.id, crewName: editCrewName.trim(), isPublic: editCrewIsPublic });
-    } catch (err) {
-      const e = err instanceof Error ? err : new Error(String(err));
+    } catch (err: unknown) {
+      const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       AppLogger.log('CREW_ERROR', { action: 'save_crew', crewId: crew.id, error: e.message });
       Alert.alert('Save failed', e.message ?? 'Unknown error');
     } finally {
@@ -348,8 +348,8 @@ export function CrewDetailScreen() {
                                   else await profileService.assignCrewOwner(crew.id, member.user_id);
                                   const updated = await profileService.getCrewMembersWithNames(crew.id);
                                   setCardMembers(prev => ({ ...prev, [crew.id]: updated }));
-                                } catch (err) {
-                                  const e = err instanceof Error ? err : new Error(String(err));
+                                } catch (err: unknown) {
+                                  const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
                                   Alert.alert('Error', e.message ?? 'Could not update role');
                                 } finally {
                                   setMakingOwnerFor(null);
@@ -378,8 +378,8 @@ export function CrewDetailScreen() {
                                           if (!prevCount) return prev;
                                           return { ...prev, [crew.id]: { ...prevCount, count: Math.max(0, prevCount.count - 1) } };
                                         });
-                                      } catch (err) {
-                                        const e = err instanceof Error ? err : new Error(String(err));
+                                      } catch (err: unknown) {
+                                        const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
                                         Alert.alert('Error', e.message ?? 'Could not remove member');
                                       } finally {
                                         setIsRemovingUserFor(null);

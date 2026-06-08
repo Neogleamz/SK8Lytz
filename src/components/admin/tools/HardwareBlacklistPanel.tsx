@@ -59,8 +59,8 @@ export function HardwareBlacklistPanel({
 
       if (error) throw error;
       setBlacklist(data as BlacklistedDevice[]);
-    } catch (e) {
-      AppLogger.error('Failed to fetch hardware blacklist', e);
+    } catch (e: unknown) {
+      AppLogger.error('Failed to fetch hardware blacklist', e instanceof Error ? e.message : String(e));
       Alert.alert('Error', 'Failed to fetch hardware blacklist: ' + (e instanceof Error ? e.message : String(e)));
     } finally {
       setLoading(false);
@@ -102,7 +102,7 @@ export function HardwareBlacklistPanel({
       setNewMac('');
       setNewReason('');
       fetchBlacklist();
-    } catch (e) {
+    } catch (e: unknown) {
       Alert.alert('Failed to Add', (e instanceof Error ? e.message : String(e)));
     } finally {
       setIsSubmitting(false);
@@ -126,7 +126,7 @@ export function HardwareBlacklistPanel({
               if (error) throw error;
               Alert.alert('Success', 'Device removed from blacklist.');
               fetchBlacklist();
-            } catch (e) {
+            } catch (e: unknown) {
               Alert.alert('Failed', (e instanceof Error ? e.message : String(e)));
             }
           },

@@ -75,7 +75,7 @@ AppState.addEventListener('change', (next) => {
       clearTimeout(timer);
       const entry = memoryCache.get(key);
       if (entry) {
-        AsyncStorage.setItem(`${KEY_PREFIX}${key}`, JSON.stringify(entry)).catch(e => AppLogger.error('Failed to write device state ledger entry', e));
+        AsyncStorage.setItem(`${KEY_PREFIX}${key}`, JSON.stringify(entry)).catch(e => AppLogger.error('Failed to write device state ledger entry', e instanceof Error ? e.message : String(e)));
       }
     }
     debounceTimers.clear();
@@ -102,12 +102,12 @@ export async function warmLedgerCache(): Promise<void> {
         if (parsed?.deviceMac) {
           memoryCache.set(normalizeMac(parsed.deviceMac), parsed);
         }
-      } catch (e) {
-        AppLogger.warn('Failed to parse ledger entry from storage during cache warm', e);
+      } catch (e: unknown) {
+        AppLogger.warn('Failed to parse ledger entry from storage during cache warm', e instanceof Error ? e.message : String(e));
       }
     });
-  } catch (e) {
-    AppLogger.error('Failed to warm ledger cache from AsyncStorage', e);
+  } catch (e: unknown) {
+    AppLogger.error('Failed to warm ledger cache from AsyncStorage', e instanceof Error ? e.message : String(e));
   }
 }
 
@@ -131,7 +131,7 @@ export function useDeviceStateLedger() {
 
     const timer = setTimeout(() => {
       AsyncStorage.setItem(`${KEY_PREFIX}${key}`, JSON.stringify(entry)).catch((e) => {
-        AppLogger.warn('PERSISTENCE', { key: `${KEY_PREFIX}${key}`, event: 'ledger_write_failed', error: String(e) });
+        AppLogger.warn('PERSISTENCE', { key: `${KEY_PREFIX}${key}`, event: 'ledger_write_failed', error: (e instanceof Error ? e.message : String(e)) });
       });
       debounceTimers.delete(key);
     }, 500);
@@ -160,7 +160,7 @@ export function useDeviceStateLedger() {
       // Warm the cache for future synchronous reads
       memoryCache.set(key, parsed);
       return parsed;
-    } catch (e) {
+    } catch (e: unknown) {
       AppLogger.error('Failed to read device state ledger entry from storage', e, { deviceId: scrubPII(key) });
       return null;
     }
@@ -190,7 +190,7 @@ export function useDeviceStateLedger() {
     }
 
     memoryCache.delete(key);
-    await AsyncStorage.removeItem(`${KEY_PREFIX}${key}`).catch((e) => AppLogger.warn('PERSISTENCE', { key: `${KEY_PREFIX}${key}`, event: 'ledger_clear_failed', error: String(e) }));
+    await AsyncStorage.removeItem(`${KEY_PREFIX}${key}`).catch((e) => AppLogger.warn('PERSISTENCE', { key: `${KEY_PREFIX}${key}`, event: 'ledger_clear_failed', error: (e instanceof Error ? e.message : String(e)) }));
   }, []);
 
   return { save, load, loadSync, clear };

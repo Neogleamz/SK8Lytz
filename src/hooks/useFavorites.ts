@@ -57,7 +57,7 @@ export function useFavorites() {
             });
             setFavorites(localFavorites);
           }
-      } catch (e) { AppLogger.warn('[Favorites] Failed to parse saved favorites', { error: String(e) }); }
+      } catch (e: unknown) { AppLogger.warn('[Favorites] Failed to parse saved favorites', { error: (e instanceof Error ? e.message : String(e)) }); }
     }
 
     // 2. Fetch Cloud and merge
@@ -86,8 +86,8 @@ export function useFavorites() {
             setFavorites(finalFavs);
             AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(finalFavs));
           }
-        } catch (err) {
-          AppLogger.warn('[Favorites] Failed to fetch cloud favorites', { error: String(err) });
+        } catch (err: unknown) {
+          AppLogger.warn('[Favorites] Failed to fetch cloud favorites', { error: (err instanceof Error ? err.message : String(err)) });
         }
       };
       fetchCloudFavs();
@@ -99,7 +99,7 @@ export function useFavorites() {
         try {
           const parsed = JSON.parse(saved);
           if (parsed && parsed.length > 0) setQuickPresets(parsed);
-        } catch (e) { AppLogger.warn('[Favorites] Failed to parse quick presets', { error: String(e) }); }
+        } catch (e: unknown) { AppLogger.warn('[Favorites] Failed to parse quick presets', { error: (e instanceof Error ? e.message : String(e)) }); }
       }
     });
   }, [user]);
@@ -140,7 +140,12 @@ export function useFavorites() {
 
     // 1. Save Local
     setFavorites(newFavorites);
-    await AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(newFavorites));
+    try {
+      await AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(newFavorites));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
+      AppLogger.warn('[Favorites] Local save failed', { error: msg });
+    }
     
     // 2. Save Cloud
     try {
@@ -157,8 +162,9 @@ export function useFavorites() {
           created_at: new Date().toISOString()
         });
       }
-    } catch (err) {
-      AppLogger.warn('[Favorites] Cloud save failed', { error: String(err) });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : (err instanceof Error ? err.message : String(err));
+      AppLogger.warn('[Favorites] Cloud save failed', { error: msg });
     }
 
     closePrompt();
@@ -170,15 +176,21 @@ export function useFavorites() {
     if (activeFavoriteId === id) setActiveFavoriteId(null);
     
     // 1. Delete Local
-    await AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(newFavorites));
+    try {
+      await AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(newFavorites));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
+      AppLogger.warn('[Favorites] Local delete failed', { error: msg });
+    }
     
     // 2. Delete Cloud
     try {
       if (user) {
         await supabase.from('user_saved_presets').delete().eq('id', id).eq('user_id', user.id);
       }
-    } catch (err) {
-      AppLogger.warn('[Favorites] Cloud delete failed', { error: String(err) });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : (err instanceof Error ? err.message : String(err));
+      AppLogger.warn('[Favorites] Cloud delete failed', { error: msg });
     }
   }, [favorites, activeFavoriteId]);
 
@@ -186,7 +198,12 @@ export function useFavorites() {
     const newArr = [...quickPresets];
     newArr[index] = preset;
     setQuickPresets(newArr);
-    await AsyncStorage.setItem(`${STORAGE_PREFIX}QuickPresets`, JSON.stringify(newArr));
+    try {
+      await AsyncStorage.setItem(`${STORAGE_PREFIX}QuickPresets`, JSON.stringify(newArr));
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
+      AppLogger.warn('[Favorites] Local quick preset save failed', { error: msg });
+    }
     closePrompt();
   }, [quickPresets, closePrompt]);
 

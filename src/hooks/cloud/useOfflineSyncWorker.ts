@@ -36,9 +36,9 @@ export function useOfflineSyncWorker() {
         await ScenesService.flushSyncQueue();
         await SpeedTrackingService.flushPendingSessionQueue(userRef.current.id);
         await AppLogger.uploadLogsToSupabase();
-      } catch (e) {
+      } catch (e: unknown) {
         // We catch everything here to prevent the worker loop from crashing the app
-        AppLogger.warn('[OfflineSyncWorker] Sync cycle encountered an error', { error: String(e) });
+        AppLogger.warn('[OfflineSyncWorker] Sync cycle encountered an error', { error: (e instanceof Error ? e.message : String(e)) });
       } finally {
         _isFlushingSyncRef.current = false;
       }

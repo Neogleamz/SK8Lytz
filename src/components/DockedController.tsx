@@ -518,7 +518,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         } else {
           defaultName = currentStatusText || `${activeMode} Preset`;
         }
-      } catch (e) { 
+      } catch (e: unknown) { 
         defaultName = `${activeMode} Preset`; 
       }
       openFavoritePrompt(undefined, defaultName);
@@ -526,7 +526,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
     const handleConfirmSaveFavorite = () => {
       let defaultName = '';
-      try { defaultName = currentStatusText || `${activeMode} Preset`; } catch (e) { defaultName = `${activeMode} Preset`; }
+      try { defaultName = currentStatusText || `${activeMode} Preset`; } catch (e: unknown) { defaultName = `${activeMode} Preset`; }
       const name = promptName.trim() || defaultName;
 
       const capturedState = {

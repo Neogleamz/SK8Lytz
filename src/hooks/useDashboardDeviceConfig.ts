@@ -142,8 +142,8 @@ export function useDashboardDeviceConfig({
           newName:  settings.name,
         });
       }
-    } catch (e) {
-      AppLogger.error('Failed to persist settings', e);
+    } catch (e: unknown) {
+      AppLogger.error('Failed to persist settings', e instanceof Error ? e.message : String(e));
     }
 
     setIsSettingsVisible(false);

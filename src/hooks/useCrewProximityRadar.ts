@@ -107,7 +107,7 @@ export function useCrewProximityRadar() {
             distanceMi: distance,
           });
         }
-      } catch (err) {
+      } catch (err: unknown) {
         AppLogger.warn('[useCrewProximityRadar] scan failed', { err });
         if (mounted) setRadarAlert({ matchType: 'NONE', venueName: '', distanceMi: 0 });
       }

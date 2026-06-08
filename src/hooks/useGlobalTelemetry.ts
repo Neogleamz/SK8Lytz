@@ -81,7 +81,7 @@ export function useGlobalTelemetry(
           status: 'ACTIVE',
           startTime: newStartTimeIso,
         }).catch((err: unknown) =>
-          AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_resume', error: String(err) })
+          AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_resume', error: (err instanceof Error ? err.message : String(err)) })
         );
       }
       sessionPauseTimeRef.current = null;
@@ -123,8 +123,8 @@ export function useGlobalTelemetry(
       try {
         await SpeedTrackingService.saveSession(snapshot, user?.id || null);
         AppLogger.log('GLOBAL_SESSION_SAVED', { action: 'AUTO_SAVED_TO_DB', durationSec, distanceMiles });
-      } catch (err) {
-        AppLogger.error('[useGlobalTelemetry] Failed to persist auto-session', err);
+      } catch (err: unknown) {
+        AppLogger.error('[useGlobalTelemetry] Failed to persist auto-session', err instanceof Error ? err.message : String(err));
       }
     } else {
        AppLogger.log('GLOBAL_SESSION_DISCARDED', { reason: 'insufficient distance/duration', distanceMiles, durationSec });
@@ -251,8 +251,8 @@ export function useGlobalTelemetry(
                 );
               }
             );
-        } catch (e) {
-          AppLogger.error('[useGlobalTelemetry] Location permission denied or unavailable', e);
+        } catch (e: unknown) {
+          AppLogger.error('[useGlobalTelemetry] Location permission denied or unavailable', e instanceof Error ? e.message : String(e));
         }
       })();
 

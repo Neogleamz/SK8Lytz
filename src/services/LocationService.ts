@@ -62,8 +62,8 @@ class LocationService {
       });
 
       return location;
-    } catch (err) {
-      AppLogger.warn('[LocationService] Error acquiring location', err);
+    } catch (err: unknown) {
+      AppLogger.warn('[LocationService] Error acquiring location', err instanceof Error ? err.message : (err instanceof Error ? err.message : String(err)));
       return null;
     }
   }
@@ -84,7 +84,7 @@ class LocationService {
         return { lat: pos.coords.latitude, lng: pos.coords.longitude };
       }
       return null;
-    } catch (err) {
+    } catch (err: unknown) {
       // Don't clutter logs during passive scanning
       return null;
     }
@@ -154,8 +154,8 @@ class LocationService {
           privateData = (memberSessions as unknown as DB_CrewSession[]) ?? [];
         }
       }
-    } catch (err) {
-      AppLogger.warn('[LocationService] Private session fetch failed', err);
+    } catch (err: unknown) {
+      AppLogger.warn('[LocationService] Private session fetch failed', err instanceof Error ? err.message : (err instanceof Error ? err.message : String(err)));
     }
 
     // ── Merge + deduplicate by session id ────────────────────────────────────
@@ -245,7 +245,7 @@ class LocationService {
           }
         }
       }
-    } catch (e) {}
+    } catch (e: unknown) {}
 
     const syncCloud = async () => {
       try {
@@ -257,9 +257,9 @@ class LocationService {
         if (!error && data && data.length > 0) {
           try {
             await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
-          } catch (e) {}
+          } catch (e: unknown) {}
         }
-      } catch (e) {}
+      } catch (e: unknown) {}
     };
 
     if (!cacheValid) {
@@ -275,9 +275,9 @@ class LocationService {
             spotsData = data as Record<string, unknown>[];
             try {
               await AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data }));
-            } catch (e) {}
+            } catch (e: unknown) {}
           }
-        } catch (e) {}
+        } catch (e: unknown) {}
       } else {
         // Non-blocking sync if cache is stale
         syncCloud();

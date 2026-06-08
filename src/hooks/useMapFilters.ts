@@ -36,8 +36,8 @@ export function useMapFilters() {
           setFilters({ ...DEFAULT_FILTERS, ...parsed });
         }
         if (isMounted) setStatus('ready');
-      } catch (err) {
-        AppLogger.warn('[MapFilters] Failed to load from AsyncStorage', { error: String(err) });
+      } catch (err: unknown) {
+        AppLogger.warn('[MapFilters] Failed to load from AsyncStorage', { error: (err instanceof Error ? err.message : String(err)) });
         if (isMounted) setStatus('error');
       }
     };
@@ -50,8 +50,8 @@ export function useMapFilters() {
     setFilters(nextState);
     try {
       await AsyncStorage.setItem(FILTER_PERSIST_KEY, JSON.stringify(nextState));
-    } catch (err) {
-      AppLogger.warn('[MapFilters] Failed to persist filters', { error: String(err) });
+    } catch (err: unknown) {
+      AppLogger.warn('[MapFilters] Failed to persist filters', { error: (err instanceof Error ? err.message : String(err)) });
     }
   };
 

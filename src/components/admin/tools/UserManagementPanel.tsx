@@ -65,8 +65,8 @@ export function UserManagementPanel({
 
       if (error) throw error;
       setUsers(data as AdminUserProfile[]);
-    } catch (e) {
-      AppLogger.error('Failed to fetch users for admin panel', e);
+    } catch (e: unknown) {
+      AppLogger.error('Failed to fetch users for admin panel', e instanceof Error ? e.message : String(e));
       Alert.alert('Error', 'Failed to fetch users: ' + (e instanceof Error ? e.message : String(e)));
     } finally {
       setLoading(false);
@@ -102,7 +102,7 @@ export function UserManagementPanel({
               if (error) throw error;
               Alert.alert('Success', 'User has been banned.');
               fetchUsers();
-            } catch (e) {
+            } catch (e: unknown) {
               Alert.alert('Ban Failed', (e instanceof Error ? e.message : String(e)));
             }
           },
@@ -125,7 +125,7 @@ export function UserManagementPanel({
             if (error) throw error;
             Alert.alert('Success', 'Ban revoked.');
             fetchUsers();
-          } catch (e) {
+          } catch (e: unknown) {
             Alert.alert('Failed', (e instanceof Error ? e.message : String(e)));
           }
         },
@@ -149,7 +149,7 @@ export function UserManagementPanel({
               });
               if (error) throw error;
               Alert.alert('Success', 'Password scrambled.');
-            } catch (e) {
+            } catch (e: unknown) {
               Alert.alert('Failed', (e instanceof Error ? e.message : String(e)));
             }
           },
@@ -175,7 +175,7 @@ export function UserManagementPanel({
               if (error) throw error;
               Alert.alert('Success', 'User soft deleted.');
               fetchUsers();
-            } catch (e) {
+            } catch (e: unknown) {
               Alert.alert('Failed', (e instanceof Error ? e.message : String(e)));
             }
           },
@@ -200,7 +200,7 @@ export function UserManagementPanel({
               });
               if (error) throw error;
               Alert.alert('Success', 'All sessions revoked.');
-            } catch (e) {
+            } catch (e: unknown) {
               Alert.alert('Failed', (e instanceof Error ? e.message : String(e)));
             }
           },
@@ -221,7 +221,7 @@ export function UserManagementPanel({
       // Since FileSystem isn't imported, let's just log it and alert for now, or display in a simple modal.
       AppLogger.log('DATA_EXPORT', { userId, data });
       Alert.alert('Data Exported', `Data for ${displayName || userId} has been fetched and logged to the telemetry stream. (Length: ${JSON.stringify(data).length} bytes)`);
-    } catch (e) {
+    } catch (e: unknown) {
       Alert.alert('Export Failed', (e instanceof Error ? e.message : String(e)));
     } finally {
       setLoading(false);

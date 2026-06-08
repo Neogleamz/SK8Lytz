@@ -92,8 +92,8 @@ export function useAppMicrophone({
           if (writeToDeviceRef.current) writeToDeviceRef.current(ZenggeProtocol.sendMusicMagnitude(deviceMag));
         }
       }, 50); // 20Hz — hardware needs continuous stream to stay in app-mic mode
-    } catch (err) {
-      AppLogger.error('Failed to start recording', err);
+    } catch (err: unknown) {
+      AppLogger.error('Failed to start recording', err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -106,7 +106,7 @@ export function useAppMicrophone({
       if (recorder.isRecording) {
         await recorder.stop();
       }
-    } catch (_e) { /* swallow */ }
+    } catch (_e: unknown) { /* swallow */ }
   };
 
   // Lifecycle: auto-start/stop recording based on Music mode + APP mic

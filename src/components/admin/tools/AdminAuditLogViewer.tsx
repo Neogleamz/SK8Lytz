@@ -88,8 +88,8 @@ export function AdminAuditLogViewer({
         }
       }
 
-    } catch (e) {
-      AppLogger.error('Failed to fetch audit logs', e);
+    } catch (e: unknown) {
+      AppLogger.error('Failed to fetch audit logs', e instanceof Error ? e.message : String(e));
       Alert.alert('Error', 'Failed to fetch audit logs: ' + (e instanceof Error ? e.message : String(e)));
     } finally {
       setLoading(false);

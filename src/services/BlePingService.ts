@@ -51,8 +51,8 @@ export async function executePingDevice(
         mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64Blink
       );
       return true;
-    }).catch((e: any) => {
-      AppLogger.warn('[BLE] pingDevice blink write failed (non-fatal)', { deviceId: scrubPII(mac), error: e?.message });
+    }).catch((e: unknown) => {
+      AppLogger.warn('[BLE] pingDevice blink write failed (non-fatal)', { deviceId: scrubPII(mac), error: e instanceof Error ? e.message : String(e) });
     });
 
     let hwConfig: PingResult | null = null;
@@ -98,8 +98,8 @@ export async function executePingDevice(
                 AppLogger.log('DEVICE_DISCOVERED', { context: 'pingDevice_probe_success', deviceId: scrubPII(mac) });
                 if (isPingResult(accumulatedTelemetry)) resolve(accumulatedTelemetry);
               }
-            } catch (e) {
-              AppLogger.warn('[BLE] Parse error during pingDevice telemetry monitor', e);
+            } catch (e: unknown) {
+              AppLogger.warn('[BLE] Parse error during pingDevice telemetry monitor', e instanceof Error ? e.message : String(e));
             }
           }
         );
@@ -116,7 +116,7 @@ export async function executePingDevice(
                 mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64HW
               );
               return true;
-            }).catch((e: any) => AppLogger.warn('[BLE pingDevice] HW query write failed', { error: String(e) }));
+            }).catch((e: unknown) => AppLogger.warn('[BLE pingDevice] HW query write failed', { error: e instanceof Error ? e.message : String(e) }));
           }
 
           setTimeout(() => {
@@ -128,7 +128,7 @@ export async function executePingDevice(
                   mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64RF
                 );
                 return true;
-              }).catch((e: any) => AppLogger.warn('[BLE pingDevice] RF query write failed', { error: String(e) }));
+              }).catch((e: unknown) => AppLogger.warn('[BLE pingDevice] RF query write failed', { error: e instanceof Error ? e.message : String(e) }));
             }
           }, 200);
         }, 400);
@@ -150,20 +150,20 @@ export async function executePingDevice(
             Buffer.from(offResult.packets[0]).toString('base64')
           );
           return true;
-        }).catch((e: any) => {
-          AppLogger.warn('[BLE] pingDevice turn-off write failed (non-fatal)', { deviceId: scrubPII(mac), error: e?.message });
+        }).catch((e: unknown) => {
+          AppLogger.warn('[BLE] pingDevice turn-off write failed (non-fatal)', { deviceId: scrubPII(mac), error: e instanceof Error ? e.message : String(e) });
         });
       }
     }
 
     return hwConfig;
-  } catch (err: any) {
-    AppLogger.warn(`[BLE pingDevice] Failed for ${scrubPII(mac)}:`, { error: String(err) });
+  } catch (err: unknown) {
+    AppLogger.warn(`[BLE pingDevice] Failed for ${scrubPII(mac)}:`, { error: err instanceof Error ? err.message : String(err) });
     return null;
   } finally {
     // ── Step 6: Always disconnect cleanly ────────────────────────────────────
-    await bleManager.cancelDeviceConnection(mac).catch((e: any) => {
-      AppLogger.warn('[BLE] pingDevice cancelDeviceConnection failed', { deviceId: scrubPII(mac), error: e?.message });
+    await bleManager.cancelDeviceConnection(mac).catch((e: unknown) => {
+      AppLogger.warn('[BLE] pingDevice cancelDeviceConnection failed', { deviceId: scrubPII(mac), error: e instanceof Error ? e.message : String(e) });
     });
     release();
   }

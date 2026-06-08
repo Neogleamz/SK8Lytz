@@ -199,13 +199,13 @@ class SpeedTrackingServiceClass {
           healthCalories: calories,
         };
         await HealthSyncService.saveWorkout(enrichedSnapshot);
-      } catch (healthErr: any) {
-        AppLogger.warn('HEALTH_TELEMETRY', { event: 'health_sync_delegation_failed', error: healthErr.message });
+      } catch (healthErr: unknown) {
+        AppLogger.warn('HEALTH_TELEMETRY', { event: 'health_sync_delegation_failed', error: healthErr instanceof Error ? healthErr.message : String(healthErr) });
       }
 
       return data.id;
-    } catch (err: any) {
-      AppLogger.log('ERROR_CAUGHT', { message: `[SpeedTrackingService] Exception: ${err.message}` });
+    } catch (err: unknown) {
+      AppLogger.log('ERROR_CAUGHT', { message: `[SpeedTrackingService] Exception: ${err instanceof Error ? err.message : String(err)}` });
       return null;
     }
   }
@@ -296,7 +296,7 @@ class SpeedTrackingServiceClass {
       calories:  calories,
       heartRate: heartRateBpm,
     }).catch((err: unknown) =>
-      AppLogger.warn('WATCH_BRIDGE', { event: 'metric_push_failed', error: String(err) })
+      AppLogger.warn('WATCH_BRIDGE', { event: 'metric_push_failed', error: (err instanceof Error ? err.message : String(err)) })
     );
   }
 

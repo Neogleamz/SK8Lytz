@@ -98,8 +98,13 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
           <TouchableOpacity 
             style={[styles.topBtn, { borderColor: 'rgba(255,0,0,0.5)', backgroundColor: 'rgba(255,0,0,0.1)' }]} 
             onPress={async () => {
-               await AsyncStorage.clear();
-               Alert.alert("☢️ Storage Nuked", "All persistent Sandbox/Offline state has been flushed.");
+               try {
+                 await AsyncStorage.clear();
+                 Alert.alert("☢️ Storage Nuked", "All persistent Sandbox/Offline state has been flushed.");
+               } catch (e: unknown) {
+                 const msg = e instanceof Error ? e.message : String(e);
+                 AppLogger.error('Failed to nuke storage', { error: msg });
+               }
             }}
           >
             <MaterialCommunityIcons name="nuke" size={18} color="red" />

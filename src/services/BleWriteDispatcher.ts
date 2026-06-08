@@ -146,8 +146,8 @@ async function _executeWriteToDeviceInternal(
           deviceAdapter.writeCharacteristicUUID,
           base64Full
         );
-      } catch (writeError: any) {
-        AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError?.message);
+      } catch (writeError: unknown) {
+        AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError instanceof Error ? writeError.message : String(writeError));
         allSucceeded = false;
       }
       await new Promise(res => setTimeout(res, 50));
@@ -242,8 +242,8 @@ export async function executeWriteChunked(
           await device.writeCharacteristicWithoutResponseForService(
             deviceAdapter.serviceUUID, deviceAdapter.writeCharacteristicUUID, b64
           );
-        } catch (e: any) {
-          AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: String(e) });
+        } catch (e: unknown) {
+          AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: e instanceof Error ? e.message : String(e) });
         }
         await new Promise(res => setTimeout(res, 50));
       }
@@ -353,8 +353,8 @@ async function _executeProtocolResultsInternal(
           if (i < preparedResult.packets.length - 1 && preparedResult.interPacketDelayMs > 0) {
             await new Promise(res => setTimeout(res, preparedResult.interPacketDelayMs));
           }
-        } catch (e) {
-          AppLogger.warn(`[BLE] executeProtocolResults failed for ${targetDeviceId}`, e);
+        } catch (e: unknown) {
+          AppLogger.warn(`[BLE] executeProtocolResults failed for ${targetDeviceId}`, e instanceof Error ? e.message : String(e));
           allSucceeded = false;
           break;
         }

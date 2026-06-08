@@ -263,8 +263,9 @@ export function useDashboardAutoConnect({
 
           try {
             await refreshProfile();
-          } catch (e) {
-            AppLogger.warn('Failed to refresh profile on dashboard load', { error: String(e) });
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            AppLogger.warn('Failed to refresh profile on dashboard load', { error: msg });
           }
 
           let groups: RegisteredGroup[] | null = null;
@@ -275,8 +276,9 @@ export function useDashboardAutoConnect({
               .eq('user_id', cloudUserId);
             groups = result.data;
             isOffline = !!result.error;
-          } catch (e) {
-            AppLogger.warn('Failed to query registered groups from Supabase, entering offline mode', e);
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            AppLogger.warn('Failed to query registered groups from Supabase, entering offline mode', { error: msg });
             isOffline = true;
           }
 
@@ -297,14 +299,15 @@ export function useDashboardAutoConnect({
         if (registeredDevices && registeredDevices.length > 0) {
           processLocalDevices(registeredDevices);
         } else {
-          const localDevicesStr = await AsyncStorage.getItem('@Sk8lytz_registered_devices');
-          if (localDevicesStr) {
-            try {
+          try {
+            const localDevicesStr = await AsyncStorage.getItem('@Sk8lytz_registered_devices');
+            if (localDevicesStr) {
               const parsed = JSON.parse(localDevicesStr);
               processLocalDevices(parsed);
-            } catch (e) {
-              AppLogger.warn('Failed to parse offline registered_devices', { error: String(e) });
             }
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            AppLogger.warn('Failed to read or parse offline registered_devices', { error: msg });
           }
         }
       }
@@ -322,24 +325,32 @@ export function useDashboardAutoConnect({
           let idsToConnect: string[] = [];
 
           if (!isOffline && supabase && cloudUserId) {
-            const { data: devices } = await supabase
-              .from('registered_devices')
-              .select('*')
-              .eq('user_id', cloudUserId);
-            if (devices) {
-              presentGroups = groupsToProcess.sort(
-                (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-              );
-              // Aggregate ALL device MACs across ALL groups (deduplicated) — RC-07
-              const allGroupIds = new Set(presentGroups.map(g => g.id));
-              const macSet = new Set<string>();
-              for (const d of devices as RegisteredDeviceRow[]) {
-                const dGroupIds: string[] = d.group_ids || (d.group_id ? [d.group_id] : []);
-                if (dGroupIds.some(gId => allGroupIds.has(gId))) {
-                  macSet.add(d.device_mac || d.id);
+            try {
+              const { data: devices, error } = await supabase
+                .from('registered_devices')
+                .select('*')
+                .eq('user_id', cloudUserId);
+              
+              if (error) throw error;
+
+              if (devices) {
+                presentGroups = groupsToProcess.sort(
+                  (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                );
+                // Aggregate ALL device MACs across ALL groups (deduplicated) — RC-07
+                const allGroupIds = new Set(presentGroups.map(g => g.id));
+                const macSet = new Set<string>();
+                for (const d of devices as RegisteredDeviceRow[]) {
+                  const dGroupIds: string[] = d.group_ids || (d.group_id ? [d.group_id] : []);
+                  if (dGroupIds.some(gId => allGroupIds.has(gId))) {
+                    macSet.add(d.device_mac || d.id);
+                  }
                 }
+                idsToConnect = Array.from(macSet);
               }
-              idsToConnect = Array.from(macSet);
+            } catch (e: unknown) {
+              const msg = e instanceof Error ? e.message : String(e);
+              AppLogger.warn('[AutoConnect] Failed to query registered devices', { error: msg });
             }
           } else {
             presentGroups = groupsToProcess.sort(

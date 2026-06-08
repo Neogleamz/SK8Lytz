@@ -89,8 +89,8 @@ class GroupRepository {
         event: 'initialized',
         groupCount: this.groups.length,
       });
-    } catch (e) {
-      AppLogger.warn('[GroupRepository] Storage load failed:', e);
+    } catch (e: unknown) {
+      AppLogger.warn('[GroupRepository] Storage load failed:', e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)));
     }
   }
 
@@ -101,7 +101,7 @@ class GroupRepository {
   async setGroups(groups: CustomGroup[]): Promise<void> {
     this.groups = groups;
     await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch((e) =>
-      AppLogger.warn('[GroupRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/setGroups', error: e instanceof Error ? e.message : String(e) })
+      AppLogger.warn('[GroupRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/setGroups', error: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) })
     );
     this.getDelegate().notifySubscribers();
   }
@@ -113,7 +113,7 @@ class GroupRepository {
     // 1. Remove group row
     this.groups = this.groups.filter((g) => g.id !== groupId);
     await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch((e) =>
-      AppLogger.warn('[GroupRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/deleteGroup', error: e instanceof Error ? e.message : String(e) })
+      AppLogger.warn('[GroupRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/deleteGroup', error: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) })
     );
 
     // 2. Clear group assignments from in-memory devices via delegate
@@ -148,8 +148,8 @@ class GroupRepository {
         p_group_id: groupId,
       });
       if (error) throw error;
-    } catch (e) {
-      AppLogger.warn('[GroupRepository] delete_group_cascade RPC failed, falling back:', { error: e instanceof Error ? e.message : String(e) });
+    } catch (e: unknown) {
+      AppLogger.warn('[GroupRepository] delete_group_cascade RPC failed, falling back:', { error: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) });
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
@@ -157,8 +157,8 @@ class GroupRepository {
             .eq('id', groupId)
             .eq('user_id', session.user.id);
         }
-      } catch (fe) {
-        AppLogger.warn('[GroupRepository] Cloud group delete fallback failed:', { error: fe instanceof Error ? fe.message : String(fe) });
+      } catch (fe: unknown) {
+        AppLogger.warn('[GroupRepository] Cloud group delete fallback failed:', { error: fe instanceof Error ? fe.message : (fe instanceof Error ? fe.message : String(fe)) });
       }
     }
   }
@@ -184,7 +184,7 @@ class GroupRepository {
     if (existingIdx >= 0) this.groups[existingIdx] = updatedGroup;
     else this.groups.push(updatedGroup);
     await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch((e) =>
-      AppLogger.warn('[GroupRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/saveGroupTransactional', error: e instanceof Error ? e.message : String(e) })
+      AppLogger.warn('[GroupRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/saveGroupTransactional', error: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) })
     );
 
     const delegate = this.getDelegate();
@@ -261,8 +261,8 @@ class GroupRepository {
       }
 
       return true;
-    } catch (e) {
-      AppLogger.warn('[GroupRepository] saveGroupTransactional RPC failed, queuing:', { error: e instanceof Error ? e.message : String(e) });
+    } catch (e: unknown) {
+      AppLogger.warn('[GroupRepository] saveGroupTransactional RPC failed, queuing:', { error: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) });
       await this._queuePendingGroupSync(groupId, groupName, deviceMacs, type);
       return false;
     }
@@ -284,8 +284,8 @@ class GroupRepository {
       if (idx >= 0) queue[idx] = entry;
       else queue.push(entry);
       await AsyncStorage.setItem(PENDING_GROUP_KEY, JSON.stringify(queue));
-    } catch (e) {
-      AppLogger.warn('[GroupRepository] Group queue failed:', { error: e instanceof Error ? e.message : String(e) });
+    } catch (e: unknown) {
+      AppLogger.warn('[GroupRepository] Group queue failed:', { error: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) });
     }
   }
 
@@ -313,8 +313,8 @@ class GroupRepository {
             p_device_ids: dbDeviceIds,
           });
           if (error) throw error;
-        } catch (rpcErr) {
-          AppLogger.warn('[GroupRepository] Group flush RPC failed, fallback:', { error: rpcErr instanceof Error ? rpcErr.message : String(rpcErr) });
+        } catch (rpcErr: unknown) {
+          AppLogger.warn('[GroupRepository] Group flush RPC failed, fallback:', { error: rpcErr instanceof Error ? rpcErr.message : (rpcErr instanceof Error ? rpcErr.message : String(rpcErr)) });
           try {
             await supabase.from('registered_groups').upsert({
               id: entry.groupId,
@@ -322,16 +322,16 @@ class GroupRepository {
               type: entry.type,
               user_id: userId,
             } satisfies GroupInsert, { onConflict: 'id' });
-          } catch (fbErr) {
-            AppLogger.warn('[GroupRepository] Group flush fallback failed:', { error: fbErr instanceof Error ? fbErr.message : String(fbErr) });
+          } catch (fbErr: unknown) {
+            AppLogger.warn('[GroupRepository] Group flush fallback failed:', { error: fbErr instanceof Error ? fbErr.message : (fbErr instanceof Error ? fbErr.message : String(fbErr)) });
           }
         }
       }
 
       await AsyncStorage.removeItem(PENDING_GROUP_KEY);
       AppLogger.warn('[GroupRepository] Pending group sync flushed', { count: queue.length });
-    } catch (e) {
-      AppLogger.warn('[GroupRepository] Group flush failed:', { error: e instanceof Error ? e.message : String(e) });
+    } catch (e: unknown) {
+      AppLogger.warn('[GroupRepository] Group flush failed:', { error: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) });
     }
   }
 }

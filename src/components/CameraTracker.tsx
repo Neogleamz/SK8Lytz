@@ -145,7 +145,7 @@ export default function CameraTracker({
             resized.dispose(); // CRITICAL: Dispose GPUFrame immediately to prevent leaks
           }
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error('Camera Frame Processor Error:', err);
       } finally {
         frame.dispose(); // CRITICAL: Dispose Frame immediately to prevent stalls

@@ -34,7 +34,7 @@ export const SkateSpotsService = {
           }
         }
       }
-    } catch (e) {}
+    } catch (e: unknown) {}
 
     const filterByBbox = (spots: SkateSpot[]) => spots.filter(s => 
       s.lat >= bbox.minLat && s.lat <= bbox.maxLat && 
@@ -47,7 +47,7 @@ export const SkateSpotsService = {
         if (!error && data) {
           AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data })).catch(() => {});
         }
-      } catch (e) {}
+      } catch (e: unknown) {}
     };
 
     if (!cacheValid) {
@@ -63,8 +63,8 @@ export const SkateSpotsService = {
             localData = data as SkateSpot[];
             AsyncStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), data })).catch(() => {});
           }
-        } catch (e) {
-          AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Error fetching native spots', info: e });
+        } catch (e: unknown) {
+          AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Error fetching native spots', info: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) });
         }
       } else {
         syncCloud();
@@ -97,8 +97,8 @@ export const SkateSpotsService = {
         return null;
       }
       return data;
-    } catch (err: any) {
-      AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Error claiming spot', info: err });
+    } catch (err: unknown) {
+      AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Error claiming spot', info: err instanceof Error ? err.message : String(err) });
       return null;
     }
   },
@@ -135,8 +135,8 @@ export const SkateSpotsService = {
           is_verified: false
         } as Partial<SkateSpot>;
       });
-    } catch (err) {
-      AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'OSM fetch error', info: err });
+    } catch (err: unknown) {
+      AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'OSM fetch error', info: err instanceof Error ? err.message : String(err) });
       return [];
     }
   }

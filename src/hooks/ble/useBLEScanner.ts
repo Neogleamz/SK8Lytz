@@ -98,16 +98,16 @@ export function useBLEScanner({
 
         const { error } = await supabase.from('discovered_devices_telemetry').insert(payloads as TelemetryInsert[]);
         if (error) throw new Error(error.message);
-      } catch (_e) {
-        AppLogger.warn('[Scanner] Ambient telemetry flush failed', { error: String(_e) });
+      } catch (_e: unknown) {
+        AppLogger.warn('[Scanner] Ambient telemetry flush failed', { error: (_e instanceof Error ? _e.message : String(_e)) });
         if (payloads.length > 0) {
           try {
             const raw = await AsyncStorage.getItem(STORAGE_SCANNER_TELEMETRY_QUEUE);
             const queue = raw ? JSON.parse(raw) : [];
             queue.push(...payloads);
             await AsyncStorage.setItem(STORAGE_SCANNER_TELEMETRY_QUEUE, JSON.stringify(queue));
-          } catch (storageErr) {
-            AppLogger.warn('[Scanner] Failed to enqueue telemetry offline', { error: String(storageErr) });
+          } catch (storageErr: unknown) {
+            AppLogger.warn('[Scanner] Failed to enqueue telemetry offline', { error: (storageErr instanceof Error ? storageErr.message : String(storageErr)) });
           }
         }
       }
@@ -178,7 +178,7 @@ export function useBLEScanner({
   }, [flushStagedDevices, registeredMacs.length]);
 
   const scanCallback = useCallback((error: BleError | null, device: Device | null) => {
-    if (error) { AppLogger.warn('[Sweeper] Scan error', { error: String(error) }); return; }
+    if (error) { AppLogger.warn('[Sweeper] Scan error', { error: (error instanceof Error ? error.message : String(error)) }); return; }
     if (!device) return;
 
     const nameLower = device.name?.toLowerCase() || '';
@@ -191,7 +191,7 @@ export function useBLEScanner({
       try {
         const buf = Buffer.from(mfData, 'base64');
         if (buf.length > 9 && (buf[9] === 0x33 || buf[9] === 0xBF)) isSymphony = true;
-      } catch (e) { AppLogger.warn('[useBLEScanner] Failed parsing manufacturerData base64', e); }
+      } catch (e: unknown) { AppLogger.warn('[useBLEScanner] Failed parsing manufacturerData base64', e instanceof Error ? e.message : String(e)); }
     }
 
     const isKnownPrefix = ZENGGE_NAME_PREFIXES.some(p => nameLower.startsWith(p));
@@ -236,7 +236,7 @@ export function useBLEScanner({
               firmwareVer, ledVersion, bleVersion, productId
             });
           }
-        } catch (e) { AppLogger.warn('[Scanner] Failed to parse firmware', { mac, error: String(e) }); }
+        } catch (e: unknown) { AppLogger.warn('[Scanner] Failed to parse firmware', { mac, error: e instanceof Error ? e.message : String(e) }); }
       }
 
       const now = Date.now();

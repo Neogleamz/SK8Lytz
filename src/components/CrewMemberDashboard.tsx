@@ -167,6 +167,10 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
             avatar_color: r.user_profiles?.avatar_color ?? null,
           })));
         }
+      } catch (e: unknown) {
+        import('../services/AppLogger').then(({ AppLogger }) => {
+          AppLogger.warn('[CrewMemberDashboard] failed to load members', { error: e instanceof Error ? e.message : String(e) });
+        });
       } finally {
         _isFlushingRef.current = false;
       }

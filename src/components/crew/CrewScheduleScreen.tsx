@@ -57,7 +57,7 @@ export function CrewScheduleScreen() {
       } else {
         setStep('controller');
       }
-    } catch (e) {
+    } catch (e: unknown) {
       setErrorMsg((e instanceof Error ? e.message : String(e)) || 'Failed to create session');
     } finally {
       setIsLoading(false);

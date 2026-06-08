@@ -84,15 +84,15 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
               const delta = searchRadiusMi / 69;
               viewbox = `&viewbox=${lon - delta},${lat + delta},${lon + delta},${lat - delta}&bounded=1`;
             }
-          } catch (locErr) {}
+          } catch (locErr: unknown) {}
         }
 
         const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=5&addressdetails=1${viewbox}`;
         const res = await fetch(url, { headers: { 'User-Agent': 'SK8Lytz App' } });
         const data = await res.json();
         setSuggestions(data || []);
-      } catch (err) {
-        AppLogger.warn('[LocationPicker] OSM fetch error', { error: String(err) });
+      } catch (err: unknown) {
+        AppLogger.warn('[LocationPicker] OSM fetch error', { error: (err instanceof Error ? err.message : String(err)) });
       } finally {
         setIsSearching(false);
       }

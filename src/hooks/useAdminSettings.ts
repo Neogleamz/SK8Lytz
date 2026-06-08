@@ -14,8 +14,8 @@ export function useAdminSettings(visible: boolean) {
     try {
       const settings = await AppSettingsService.fetchAllSettings();
       setAppSettings(settings);
-    } catch (err) {
-      AppLogger.warn('[AdminSettings] Failed to fetch app settings', { error: String(err) });
+    } catch (err: unknown) {
+      AppLogger.warn('[AdminSettings] Failed to fetch app settings', { error: (err instanceof Error ? err.message : String(err)) });
     } finally {
       setIsLoading(false);
     }
@@ -36,8 +36,8 @@ export function useAdminSettings(visible: boolean) {
       } else {
         AppLogger.log('HARDWARE_CONFIG_CHANGED', { key, value });
       }
-    } catch (err) {
-      AppLogger.warn(`[AdminSettings] Failed to update setting ${key}`, { error: String(err) });
+    } catch (err: unknown) {
+      AppLogger.warn(`[AdminSettings] Failed to update setting ${key}`, { error: (err instanceof Error ? err.message : String(err)) });
       loadSettings();
     }
   }, [loadSettings]);

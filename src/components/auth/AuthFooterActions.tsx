@@ -27,10 +27,15 @@ export function AuthFooterActions({ mode, onOfflineMode, isSandboxEnabled, setEr
         <View style={{ alignItems: 'center' }}>
           <TouchableOpacity
             onPress={async () => {
-              if (rememberOffline) {
-                await AsyncStorage.setItem(STORAGE_OFFLINE_SKIP, 'true');
+              try {
+                if (rememberOffline) {
+                  await AsyncStorage.setItem(STORAGE_OFFLINE_SKIP, 'true');
+                }
+                onOfflineMode();
+              } catch (e: unknown) {
+                const msg = e instanceof Error ? e.message : String(e);
+                setErrorMessage('Failed to set offline skip: ' + msg);
               }
-              onOfflineMode();
             }}
             style={styles.offlineButton}
             activeOpacity={0.7}
@@ -64,9 +69,14 @@ export function AuthFooterActions({ mode, onOfflineMode, isSandboxEnabled, setEr
             flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm
           }}
           onPress={async () => {
-            await AsyncStorage.setItem(STORAGE_DEMO_HALO, 'true');
-            await AsyncStorage.setItem(STORAGE_DEMO_SOUL, 'true');
-            onOfflineMode();
+            try {
+              await AsyncStorage.setItem(STORAGE_DEMO_HALO, 'true');
+              await AsyncStorage.setItem(STORAGE_DEMO_SOUL, 'true');
+              onOfflineMode();
+            } catch (e: unknown) {
+              const msg = e instanceof Error ? e.message : String(e);
+              setErrorMessage('Failed to enable DEV MODE: ' + msg);
+            }
           }}
         >
           <MaterialCommunityIcons name="developer-board" size={16} color="#00f0ff" />
@@ -88,8 +98,13 @@ export function AuthFooterActions({ mode, onOfflineMode, isSandboxEnabled, setEr
             borderColor: 'rgba(255, 0, 0, 0.4)'
           }}
           onPress={async () => {
-            await AsyncStorage.clear();
-            setErrorMessage('APP RESET: ALL DATA CLEARED. PLEASE RESTART APP.');
+            try {
+              await AsyncStorage.clear();
+              setErrorMessage('APP RESET: ALL DATA CLEARED. PLEASE RESTART APP.');
+            } catch (e: unknown) {
+              const msg = e instanceof Error ? e.message : String(e);
+              setErrorMessage('Failed to clear data: ' + msg);
+            }
           }}
         >
           <Text style={{ color: '#FF4444', fontWeight: 'bold', fontSize: 12 }}>☢️ NUKE APP CACHE</Text>

@@ -105,8 +105,8 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
       });
       setSaveModalVisible(false);
       setViewMode('LIBRARY');
-    } catch (err) {
-      AppLogger.error('BUILDER_PANEL', { event: 'save_preset_failed', name: presetNameInput, error: String(err) });
+    } catch (err: unknown) {
+      AppLogger.error('BUILDER_PANEL', { event: 'save_preset_failed', name: presetNameInput, error: (err instanceof Error ? err.message : String(err)) });
     } finally {
       setIsSaving(false);
     }

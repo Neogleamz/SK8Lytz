@@ -40,8 +40,8 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
           const mac = key.replace('@sk8_hw_', '').toUpperCase();
           try {
             loaded[mac] = JSON.parse(val);
-          } catch (e) {
-            AppLogger.warn('[useBLEInterrogator] Malformed HW cache', { mac, error: String(e) });
+          } catch (e: unknown) {
+            AppLogger.warn('[useBLEInterrogator] Malformed HW cache', { mac, error: e instanceof Error ? e.message : String(e) });
           }
         }
         if (Object.keys(loaded).length > 0) {
@@ -117,8 +117,8 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
                 sub.remove();
                 if (isPingResult(accumulated)) resolve(accumulated);
               }
-            } catch (e) {
-              AppLogger.warn('[useBLEInterrogator] Protocol parse failed', { mac, error: String(e) });
+            } catch (e: unknown) {
+              AppLogger.warn('[useBLEInterrogator] Protocol parse failed', { mac, error: e instanceof Error ? e.message : String(e) });
             }
           }
         );

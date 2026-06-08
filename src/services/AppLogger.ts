@@ -240,7 +240,7 @@ class AppLoggerService {
         }
       }
       this.buffer = raw ? JSON.parse(raw) : [];
-    } catch {
+    } catch (e: unknown) {
       this.buffer = [];
     }
     this.loaded = true;
@@ -303,7 +303,7 @@ class AppLoggerService {
         };
         batteryState = stateMap[stateEnum] ?? 'UNKNOWN';
       }
-    } catch(_e) {}
+    } catch(_e: unknown) {}
 
     const deviceTypeMap: Record<number, string> = {
       0: 'UNKNOWN', 1: 'PHONE', 2: 'TABLET', 3: 'DESKTOP', 4: 'TV'
@@ -371,7 +371,7 @@ class AppLoggerService {
     let clean: Record<string, any>;
     try {
       clean = { ...(payload || {}) };
-    } catch {
+    } catch (_e: unknown) {
       return { _unparseable: true };
     }
 
@@ -431,7 +431,7 @@ class AppLoggerService {
         let safeErrorString = 'Unknown error';
         try {
           safeErrorString = String(payload.message || payload.error || payload.errorMessage || JSON.stringify(payload));
-        } catch {
+        } catch (_e: unknown) {
           safeErrorString = '[Circular or Unparseable Error Object]';
         }
 
@@ -519,7 +519,7 @@ class AppLoggerService {
     this.pendingLogQueue = null;
     try {
       await AsyncStorage.removeItem(STORAGE_KEY);
-    } catch (e) {
+    } catch (e: unknown) {
       if (__DEV__) console.warn('[AppLogger] clearLogs remove failed', e instanceof Error ? e.message : String(e));
     }
     
@@ -533,8 +533,8 @@ class AppLoggerService {
 
       try {
         await supabase.storage.from('sk8lytz-logs').remove([`logs_${bleMac}.json`, `logs_${deviceId}.json`]);
-      } catch(e) {
-        if (__DEV__) console.warn('Failed cloud wipe', e);
+      } catch(e: unknown) {
+        if (__DEV__) console.warn('Failed cloud wipe', e instanceof Error ? e.message : String(e));
       }
     }
   }
@@ -571,7 +571,7 @@ class AppLoggerService {
           if (settings.global_telemetry_enabled === false || settings.global_telemetry_enabled === 'false') {
             telemetryEnabled = false;
           }
-        } catch(e) {}
+        } catch(e: unknown) {}
       }
 
       if (!telemetryEnabled) {
@@ -685,7 +685,7 @@ class AppLoggerService {
         totalStorageEstimate += size;
         if (key === STORAGE_KEY) storageBytesEstimate = size;
       });
-    } catch(e) {}
+    } catch(e: unknown) {}
 
     let totalLoadTime = 0;
     let loadTimeCount = 0;
@@ -721,7 +721,7 @@ class AppLoggerService {
         batteryLevel = await Battery.getBatteryLevelAsync();
         isLowPowerMode = await Battery.isLowPowerModeEnabledAsync();
       }
-    } catch(e) {}
+    } catch(e: unknown) {}
 
     return { 
       modeUsage, patternUsage: finalPatternUsage, colorUsage, devicesDiscovered, 

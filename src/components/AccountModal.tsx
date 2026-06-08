@@ -187,8 +187,8 @@ export default function AccountModal({
               await profileService.deleteCrew(crew.id);
               setCrews(prev => prev.filter(c => c.id !== crew.id));
               AppLogger.log('CREW_PERMANENT_DELETED', { crewId: crew.id, crewName: crew.name });
-            } catch (err) {
-              const e = err instanceof Error ? err : new Error(String(err));
+            } catch (err: unknown) {
+              const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
               Alert.alert('Error', e.message || 'Could not delete crew');
             }
           },
@@ -336,8 +336,8 @@ export default function AccountModal({
       if (error) throw error;
       setCurrentPwd(''); setNewPwd(''); setConfirmPwd('');
       setSecurityMsg({ type: 'success', text: '✓ Password updated successfully' });
-    } catch (err) {
-      const e = err instanceof Error ? err : new Error(String(err));
+    } catch (err: unknown) {
+      const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       setSecurityMsg({ type: 'error', text: e.message || 'Could not change password' });
       setCurrentPwd('');
     } finally {
@@ -356,8 +356,8 @@ export default function AccountModal({
       if (error) throw error;
       setSecurityMsg({ type: 'success', text: `✓ Confirmation sent to ${newEmail}. Check your inbox.` });
       setNewEmail('');
-    } catch (err) {
-      const e = err instanceof Error ? err : new Error(String(err));
+    } catch (err: unknown) {
+      const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       setSecurityMsg({ type: 'error', text: e.message || 'Could not update email' });
     } finally {
       setSavingEmail(false);
@@ -409,7 +409,7 @@ export default function AccountModal({
                       // Attempt to run the dedicated Account Deletion RPC
                       const { error } = await (supabase as unknown as { rpc: (fn: string) => Promise<{ error: any }> }).rpc('delete_account');
                       if (error) {
-                        AppLogger.error('ACCOUNT_MGMT', { event: 'delete_account_rpc_failed', error: String(error) });
+                        AppLogger.error('ACCOUNT_MGMT', { event: 'delete_account_rpc_failed', error: (error instanceof Error ? error.message : String(error)) });
                         throw new Error('Database rejection. Please contact support.');
                       }
 
@@ -420,8 +420,8 @@ export default function AccountModal({
                       await supabase.auth.signOut();
                       onSignOut();
                       onClose();
-                    } catch (err) {
-                      const e = err instanceof Error ? err : new Error(String(err));
+                    } catch (err: unknown) {
+                      const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
                       Alert.alert('Deletion Failed', e.message);
                     }
                   },

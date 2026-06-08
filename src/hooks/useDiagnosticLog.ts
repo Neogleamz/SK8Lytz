@@ -83,10 +83,10 @@ export const useDiagnosticLog = ({
           }
         }
         setCoverage(cov);
-      } catch (e) {
-        AppLogger.warn('[useDiagnosticLog] Failed to parse verdict log', { error: String(e) });
+      } catch (e: unknown) {
+        AppLogger.warn('[useDiagnosticLog] Failed to parse verdict log', { error: (e instanceof Error ? e.message : String(e)) });
       }
-    }).catch(e => AppLogger.warn('[useDiagnosticLog] Failed to load verdict log from storage', e));
+    }).catch(e => AppLogger.warn('[useDiagnosticLog] Failed to load verdict log from storage', e instanceof Error ? e.message : String(e)));
   }, []);
 
   // ── RX listener ──────────────────────────────────────────────────────────
@@ -122,7 +122,7 @@ export const useDiagnosticLog = ({
     opcode?: string
   ) => {
     await dispatch.executeRawPayload(bytes, targetDeviceId ?? undefined, { lowPriority: true }).catch(e =>
-      AppLogger.error('[useDiagnosticLog] write failed', e)
+      AppLogger.error('[useDiagnosticLog] write failed', e instanceof Error ? e.message : String(e))
     );
     const hexStr = bytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
     const entryId = `${opcode ?? 'raw'}-${Date.now()}`;
@@ -159,7 +159,7 @@ export const useDiagnosticLog = ({
   const setVerdict = useCallback((entryId: string, opcode: string, verdict: TestVerdict) => {
     setTestLog(prev => {
       const updated = prev.map(e => e.id === entryId ? { ...e, verdict } : e);
-      AsyncStorage.setItem(VERDICT_LOG_KEY, JSON.stringify(updated)).catch(e => AppLogger.warn('[useDiagnosticLog] Failed to save verdict log', e));
+      AsyncStorage.setItem(VERDICT_LOG_KEY, JSON.stringify(updated)).catch(e => AppLogger.warn('[useDiagnosticLog] Failed to save verdict log', e instanceof Error ? e.message : String(e)));
       return updated;
     });
     if (TRACKED_OPCODES.includes(opcode as TrackedOpcode) && verdict) {
@@ -178,7 +178,7 @@ export const useDiagnosticLog = ({
   const clearTestLog = useCallback(() => {
     setTestLog([]);
     setCoverage(Object.fromEntries(TRACKED_OPCODES.map(op => [op, 'UNTESTED'])) as Record<TrackedOpcode, OpcodeStatus>);
-    AsyncStorage.removeItem(VERDICT_LOG_KEY).catch(e => AppLogger.warn('[useDiagnosticLog] Failed to remove verdict log', e));
+    AsyncStorage.removeItem(VERDICT_LOG_KEY).catch(e => AppLogger.warn('[useDiagnosticLog] Failed to remove verdict log', e instanceof Error ? e.message : String(e)));
   }, []);
 
   return {

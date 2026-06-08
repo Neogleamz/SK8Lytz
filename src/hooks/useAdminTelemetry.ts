@@ -86,8 +86,8 @@ export function useAdminTelemetry(visible: boolean) {
       ]);
       setLogs(allLogs);
       setStats(allStats);
-    } catch (err) {
-      AppLogger.warn('[AdminTelemetry] Failed to load telemetry', { error: String(err) });
+    } catch (err: unknown) {
+      AppLogger.warn('[AdminTelemetry] Failed to load telemetry', { error: (err instanceof Error ? err.message : String(err)) });
     }
   }, []);
 
@@ -106,8 +106,8 @@ export function useAdminTelemetry(visible: boolean) {
     try {
       await AppLogger.uploadLogsToSupabase();
       Alert.alert('Upload Complete', 'Telemetry synced to Supabase.');
-    } catch (err: any) {
-      Alert.alert('Upload Failed', err?.message || String(err));
+    } catch (err: unknown) {
+      Alert.alert('Upload Failed', err instanceof Error ? err.message : String(err));
     } finally {
       setIsUploading(false);
     }
@@ -117,8 +117,8 @@ export function useAdminTelemetry(visible: boolean) {
     const json = await AppLogger.exportJSON();
     try {
       await Share.share({ message: json, title: 'SK8Lytz Logs' });
-    } catch (e) {
-      Alert.alert('Export failed', String(e));
+    } catch (e: unknown) {
+      Alert.alert('Export failed', (e instanceof Error ? e.message : String(e)));
     }
   }, []);
 

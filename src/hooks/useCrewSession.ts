@@ -99,7 +99,7 @@ export function useCrewSession(
       setIsHandoffMode(false);
       setTimeout(loadMembers, 500);
       return true;
-    } catch (e) { 
+    } catch (e: unknown) { 
       return false; 
     }
   };

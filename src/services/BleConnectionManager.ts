@@ -90,16 +90,16 @@ export async function executeConnectToDevices({
         if (disconnectListeners.current[stale.id]) {
            try {
              disconnectListeners.current[stale.id].remove();
-           } catch (e) {
-             AppLogger.warn('[BLE] Failed to remove disconnect listener during stale device flush', e);
+           } catch (e: unknown) {
+             AppLogger.warn('[BLE] Failed to remove disconnect listener during stale device flush', e instanceof Error ? e.message : String(e));
            }
            delete disconnectListeners.current[stale.id];
         }
         try {
           await bleManager.cancelDeviceConnection(stale.id);
           AppLogger.log('BLE_STATE_CHANGE', { event: 'stale_device_flushed', deviceId: scrubPII(stale.id) });
-        } catch (e) {
-          AppLogger.warn('Failed to flush stale device', { deviceId: scrubPII(stale.id), error: String(e) });
+        } catch (e: unknown) {
+          AppLogger.warn('Failed to flush stale device', { deviceId: scrubPII(stale.id), error: e instanceof Error ? e.message : String(e) });
         }
       }
       await new Promise(resolve => setTimeout(resolve, 100));
@@ -186,8 +186,8 @@ export async function executeConnectToDevices({
       const handshakeDevice = async (conn: Device): Promise<Device | null> => {
         try {
           if (Platform.OS === 'android') {
-            await bleManager.requestConnectionPriorityForDevice(conn.id, 1).catch((e: any) => {
-              AppLogger.warn('[BLE] requestConnectionPriorityForDevice failed', e);
+            await bleManager.requestConnectionPriorityForDevice(conn.id, 1).catch((e: unknown) => {
+              AppLogger.warn('[BLE] requestConnectionPriorityForDevice failed', e instanceof Error ? e.message : String(e));
             });
           }
           const { adapter } = await createGattSession(bleManager, conn.id, {
@@ -259,8 +259,8 @@ export async function executeConnectToDevices({
             if (handshake.packets.length > 0) {
               AppLogger.log('BLE_TIME_SYNC', { deviceId: conn.id, protocolId: adapter.protocolId, timestamp: Date.now() });
             }
-          } catch (handshakeErr: any) {
-            AppLogger.warn('[BLE] Handshake write failed (non-fatal)', { error: String(handshakeErr), deviceId: conn.id });
+          } catch (handshakeErr: unknown) {
+            AppLogger.warn('[BLE] Handshake write failed (non-fatal)', { error: handshakeErr instanceof Error ? handshakeErr.message : String(handshakeErr), deviceId: conn.id });
           }
 
           AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name });
@@ -274,8 +274,8 @@ export async function executeConnectToDevices({
             });
           }
           return conn;
-        } catch (deviceError: any) {
-          const errMsg = deviceError?.message || String(deviceError);
+        } catch (deviceError: unknown) {
+          const errMsg = deviceError instanceof Error ? deviceError.message : String(deviceError);
           if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
             AppLogger.warn(`[BLE] Connection dropout for ${conn.id} (ignoring VIP error)`);
           } else {
@@ -304,8 +304,8 @@ export async function executeConnectToDevices({
       
       setGate('IDLE');
       if (wasSweeperActive && bleManager) scanner.startSweeper?.();
-    } catch (e: any) {
-      const errMsg = (e instanceof Error ? e.message : String(e)) || String(e);
+    } catch (e: unknown) {
+      const errMsg = e instanceof Error ? e.message : String(e);
       if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
          AppLogger.warn(`[BLE] Group connection dropout (ignoring VIP error)`);
       } else {
@@ -315,8 +315,8 @@ export async function executeConnectToDevices({
       setGate('IDLE'); // Error recovery — inner connection failed
       if (wasSweeperActive && bleManager) scanner.startSweeper?.();
     }
-  } catch (outerErr: any) {
-    AppLogger.error('[BLE] connectToDevices outer failed', outerErr);
+  } catch (outerErr: unknown) {
+    AppLogger.error('[BLE] connectToDevices outer failed', outerErr instanceof Error ? outerErr.message : String(outerErr));
     setGate('IDLE'); // Error recovery — outer connection failed
   } finally {
     release();

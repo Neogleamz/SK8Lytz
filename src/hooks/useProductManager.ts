@@ -72,8 +72,8 @@ export function useProductManager() {
         return true;
       }
       return false;
-    } catch (err) {
-      AppLogger.error('Save failed', err);
+    } catch (err: unknown) {
+      AppLogger.error('Save failed', err instanceof Error ? err.message : String(err));
       return false;
     } finally {
       setIsSaving(false);

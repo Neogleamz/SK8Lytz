@@ -15,8 +15,8 @@ export function useScenes() {
     try {
       const scenes = await ScenesService.getSavedScenes(userId);
       setLocalScenes(scenes);
-    } catch (e) {
-      AppLogger.error('SCENE_SERVICE', { event: 'load_scenes_failed', error: String(e) });
+    } catch (e: unknown) {
+      AppLogger.error('SCENE_SERVICE', { event: 'load_scenes_failed', error: (e instanceof Error ? e.message : String(e)) });
     } finally {
       setIsLoading(false);
     }

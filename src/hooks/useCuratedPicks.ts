@@ -34,8 +34,8 @@ export function useCuratedPicks() {
             setPicksLoading(false);
           }
         }
-      } catch (e) {
-        AppLogger.error('[SK8Lytz Picks] Cache read error', e);
+      } catch (e: unknown) {
+        AppLogger.error('[SK8Lytz Picks] Cache read error', e instanceof Error ? e.message : String(e));
       }
     };
 
@@ -91,10 +91,10 @@ export function useCuratedPicks() {
           });
 
           // Update cache asynchronously
-          AsyncStorage.setItem(CACHE_KEY, JSON.stringify(mapped)).catch(e => AppLogger.warn('Failed to cache curated picks', e));
+          AsyncStorage.setItem(CACHE_KEY, JSON.stringify(mapped)).catch(e => AppLogger.warn('Failed to cache curated picks', e instanceof Error ? e.message : String(e)));
         }
-      } catch (e) {
-        AppLogger.error('[SK8Lytz Picks] Exception fetching from DB', e);
+      } catch (e: unknown) {
+        AppLogger.error('[SK8Lytz Picks] Exception fetching from DB', e instanceof Error ? e.message : String(e));
       } finally {
         setPicksLoading(false);
       }

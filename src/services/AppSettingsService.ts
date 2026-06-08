@@ -36,8 +36,8 @@ export const AppSettingsService = {
       if (cached) {
         settingsMap = JSON.parse(cached) as AppSettingsMap;
       }
-    } catch (e) {
-      AppLogger.log('ERROR_CAUGHT', { message: 'Failed to access cached app settings' });
+    } catch (e: unknown) {
+      AppLogger.log('ERROR_CAUGHT', { message: 'Failed to access cached app settings', info: e instanceof Error ? e.message : String(e) });
     }
 
     // 2. Background network sync (non-blocking)
@@ -59,9 +59,11 @@ export const AppSettingsService = {
 
         try {
           await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(newSettings));
-        } catch (e) {}
-      } catch (err) {
-        AppLogger.log('ERROR', { context: 'AppSettingsService', message: 'Settings sync failed', info: err });
+        } catch (e: unknown) {
+          AppLogger.warn('AppSettingsService cache write failed', e instanceof Error ? e.message : String(e));
+        }
+      } catch (err: unknown) {
+        AppLogger.log('ERROR', { context: 'AppSettingsService', message: 'Settings sync failed', info: err instanceof Error ? err.message : String(err) });
       }
     };
 
@@ -91,11 +93,13 @@ export const AppSettingsService = {
         const cached = cachedStr ? JSON.parse(cachedStr) : {};
         cached[key] = value;
         await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(cached));
-      } catch (e) {}
+      } catch (e: unknown) {
+        AppLogger.warn('AppSettingsService cache update failed', e instanceof Error ? e.message : String(e));
+      }
 
       return true;
-    } catch (err: any) {
-      AppLogger.log('ERROR_CAUGHT', { message: `Failed to update setting ${key}`, error: err.message });
+    } catch (err: unknown) {
+      AppLogger.log('ERROR_CAUGHT', { message: `Failed to update setting ${key}`, error: err instanceof Error ? err.message : String(err) });
       return false;
     }
   }

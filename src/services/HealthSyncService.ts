@@ -81,8 +81,8 @@ export const HealthSyncService = {
         await insertRecords(records);
         AppLogger.log('APP_LOG', { platform: 'android', event: 'HEALTH_SYNC_SUCCESS' });
       }
-    } catch (e) {
-      AppLogger.error('Health sync failed', e);
+    } catch (e: unknown) {
+      AppLogger.error('Health sync failed', e instanceof Error ? e.message : String(e));
     }
   }
 };

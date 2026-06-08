@@ -36,11 +36,11 @@ export function CrewControllerScreen({ onClose, currentModeSummary, lastLeaderSc
   const { currentSession, isHandoffMode, setIsHandoffMode, currentRole, members, executeLeaveSession, executeEndSession, handleHandoffLeadership } = session;
   
   const handleLeave = async () => {
-    try { await executeLeaveSession(); } catch (e) { AppLogger.warn('CREW_SESSION', { event: 'leave_failed', error: String(e) }); }
+    try { await executeLeaveSession(); } catch (e: unknown) { AppLogger.warn('CREW_SESSION', { event: 'leave_failed', error: (e instanceof Error ? e.message : String(e)) }); }
   };
   
   const handleEndSession = async () => {
-    try { await executeEndSession(); } catch (e) { AppLogger.warn('CREW_SESSION', { event: 'end_failed', error: String(e) }); }
+    try { await executeEndSession(); } catch (e: unknown) { AppLogger.warn('CREW_SESSION', { event: 'end_failed', error: (e instanceof Error ? e.message : String(e)) }); }
   };
 
   const renderMemberRow = ({ item }: { item: CrewMember }) => {

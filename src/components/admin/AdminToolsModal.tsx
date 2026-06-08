@@ -103,7 +103,7 @@ export default function AdminToolsModal({
       try {
         const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
         if (stored) setDeviceConfigs(JSON.parse(stored) || {});
-      } catch(e) {}
+      } catch (e: unknown) {}
     };
     if (visible) loadConfigs();
   }, [visible]);
@@ -126,8 +126,8 @@ export default function AdminToolsModal({
     try {
       await uploadLogs();
       Alert.alert('Upload Complete', 'Logs successfully uploaded to sk8lytz-logs bucket on Supabase.');
-    } catch (err: any) {
-      Alert.alert('Upload Failed', err?.message || String(err));
+    } catch (err: unknown) {
+      Alert.alert('Upload Failed', err instanceof Error ? err.message : String(err));
     }
   };
 

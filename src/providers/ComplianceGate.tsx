@@ -64,8 +64,9 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
       if (userVersion < requiredVersion) {
         setRequiresEula(true);
       }
-    } catch (e) {
-      AppLogger.warn('[ComplianceGate] check error', { error: String(e) });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.warn('[ComplianceGate] check error', { error: msg });
     } finally {
       setLoading(false);
     }
@@ -97,14 +98,21 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
         .eq('user_id', user.id);
         
       setRequiresEula(false);
-    } catch (e) {
+    } catch (e: unknown) {
+       const msg = e instanceof Error ? e.message : String(e);
+       AppLogger.error('[ComplianceGate] Accept failed', { error: msg });
        Alert.alert('Error', 'Could not save compliance status. Please try again.');
     }
   };
 
   const handleDecline = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
+    try {
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.warn('[ComplianceGate] Sign out failed', { error: msg });
     }
   };
 

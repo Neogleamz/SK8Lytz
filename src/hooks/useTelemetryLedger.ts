@@ -127,7 +127,7 @@ export function useTelemetryLedger() {
         const offlineData: TelemetryPayload = JSON.parse(offlineRaw);
         mergeIntoBuffer(offlineData);
       }
-    } catch (e) {
+    } catch (e: unknown) {
       // Ignore parse error
     }
 
@@ -147,14 +147,14 @@ export function useTelemetryLedger() {
       await AsyncStorage.removeItem(TELEMETRY_BUFFER_KEY);
       AppLogger.debug('Telemetry flushed successfully');
       
-    } catch (err) {
+    } catch (err: unknown) {
       // Failed (e.g., offline). Save back to AsyncStorage to retry later.
       AppLogger.warn('Telemetry flush failed, buffering locally', err);
       try {
         await AsyncStorage.setItem(TELEMETRY_BUFFER_KEY, JSON.stringify(payloadToUpload));
         // Reset memory buffer so we don't accumulate duplicates if it stays running
         payloadBuffer.current = {};
-      } catch (storageErr) {
+      } catch (storageErr: unknown) {
         // Fatal storage error
       }
     }

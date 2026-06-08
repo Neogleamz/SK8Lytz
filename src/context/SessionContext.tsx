@@ -40,8 +40,8 @@ async function persistSessionPhase(phase: PersistedSessionPhase, pauseTimeMs?: n
       pairs.push([SESSION_PAUSE_TIME_KEY, '']);
     }
     await AsyncStorage.multiSet(pairs);
-  } catch (err) {
-    AppLogger.error('Failed to persist session phase', err);
+  } catch (err: unknown) {
+    AppLogger.error('Failed to persist session phase', err instanceof Error ? err.message : String(err));
   }
 }
 
@@ -152,8 +152,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             setSessionPhase('IDLE');
           }
         }
-      } catch (err) {
-        AppLogger.error('Failed to sync session state from AsyncStorage', err);
+      } catch (err: unknown) {
+        AppLogger.error('Failed to sync session state from AsyncStorage', err instanceof Error ? err.message : String(err));
       }
     };
 
@@ -196,8 +196,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
               await persistSessionPhase('paused', Date.now());
               try {
                 await WatchBridge.syncSessionState({ status: 'PAUSED' });
-              } catch (err) {
-                AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_pause', error: String(err) });
+              } catch (err: unknown) {
+                AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_pause', error: err instanceof Error ? err.message : String(err) });
               }
             }, 10000);
           }
@@ -208,8 +208,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             persistSessionPhase('active');
           }
         }
-      } catch (err) {
-        AppLogger.error('Failed to run auto-pause check', err);
+      } catch (err: unknown) {
+        AppLogger.error('Failed to run auto-pause check', err instanceof Error ? err.message : String(err));
       }
     };
 
@@ -306,7 +306,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             isForegroundServiceStarted = true;
           }
         } catch (err: unknown) {
-          AppLogger.error('Failed to display foreground service notification', err);
+          AppLogger.error('Failed to display foreground service notification', err instanceof Error ? err.message : String(err));
         } finally {
           isDisplaying = false;
         }

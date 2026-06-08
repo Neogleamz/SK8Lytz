@@ -60,8 +60,8 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
           return;
         }
         loginEmail = data as string;
-      } catch (e) {
-        const msg = e instanceof Error ? e.message : String(e);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
         AppLogger.error('AuthFormSignIn', 'Username lookup failed', { error: msg });
         setLoading(false);
         showError('Could not look up username. Please use your email to sign in.');
@@ -87,13 +87,13 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
             await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: loginEmail, rememberMe: false }));
           }
           await AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP);
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
           AppLogger.error('AuthFormSignIn', 'Failed to save offline/remember settings', { error: msg });
         }
       }
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
       AppLogger.error('AuthFormSignIn', 'Sign in exception', { error: msg });
       setLoading(false);
       showError('A network or internal error occurred. Please try again.');

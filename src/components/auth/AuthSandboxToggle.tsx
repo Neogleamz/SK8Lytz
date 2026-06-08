@@ -18,15 +18,21 @@ export function AuthSandboxToggle({ isSandboxEnabled, setIsSandboxEnabled }: Aut
     <View style={styles.topLeftButtons}>
       <TouchableOpacity
         onPress={async () => {
-          const nextState = !isSandboxEnabled;
-          setIsSandboxEnabled(nextState);
-          await AsyncStorage.setItem(STORAGE_DEMO_MODE, String(nextState));
-          import('react-native').then(rn => {
-            rn.Alert.alert(
-              'Developer Sandbox', 
-              `Virtual Skates & Demo features are now ${nextState ? 'ENABLED' : 'DISABLED'}. Restart Bluetooth or refresh to apply.`
-            );
-          });
+          try {
+            const nextState = !isSandboxEnabled;
+            setIsSandboxEnabled(nextState);
+            await AsyncStorage.setItem(STORAGE_DEMO_MODE, String(nextState));
+            import('react-native').then(rn => {
+              rn.Alert.alert(
+                'Developer Sandbox', 
+                `Virtual Skates & Demo features are now ${nextState ? 'ENABLED' : 'DISABLED'}. Restart Bluetooth or refresh to apply.`
+              );
+            });
+          } catch (e: unknown) {
+            import('react-native').then(rn => {
+              rn.Alert.alert('Error', 'Failed to toggle sandbox mode');
+            });
+          }
         }}
         style={[styles.topLeftBtn, { 
           borderColor: isSandboxEnabled ? 'rgba(0,255,0,0.5)' : 'rgba(255,255,0,0.5)', 

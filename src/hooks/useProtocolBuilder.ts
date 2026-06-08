@@ -122,8 +122,8 @@ export const useProtocolBuilder = (_hwPts: number = 16) => {
         const wrapped = adapter.buildWriteSettingsByName(pts, seg, bldIc, bldOrder).packets[0];
         setBldResult({ raw: wrapped, wrapped, hex: wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' '), annotations: ['[0x62] EEPROM Write', `IC: ${bldIc} Order: ${bldOrder}`, `LEDs: ${pts} Seg: ${seg}`] });
       }
-    } catch(e) { 
-      AppLogger.error('[useProtocolBuilder] Build failed', e);
+    } catch (e: unknown) { 
+      AppLogger.error('[useProtocolBuilder] Build failed', e instanceof Error ? e.message : String(e));
     }
   }, [bldProtocol, bldColors, bldTrans, bldSpeed, bldPoints, bldDir, bldPatternId, bldBright, bldMic, bldMusicMode, bldSens, bldC2, bldMatrixStyle, bldIc, bldOrder, bldSegs, bld51Mode, bld51Speed, bld51Color1, bld51Color2]);
 

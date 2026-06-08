@@ -205,9 +205,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
         if (cached) {
           blacklistedMacsRef.current = JSON.parse(cached);
         }
-      } catch (e) {
-        // Ignore cache read errors
-      }
+        } catch (e: unknown) {
+          // Ignore cache read errors
+        }
 
       try {
         const { data, error } = await supabase.from('hardware_blacklist').select('mac_address');
@@ -216,10 +216,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
           blacklistedMacsRef.current = macs;
           try {
             await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(macs));
-          } catch (e) {}
+          } catch (e: unknown) {}
         }
-      } catch (e) {
-        AppLogger.log('ERROR', { context: 'useBLE', message: 'Failed background blacklist fetch', info: e });
+      } catch (e: unknown) {
+        AppLogger.log('ERROR', { context: 'useBLE', message: 'Failed background blacklist fetch', info: e instanceof Error ? e.message : String(e) });
       }
     };
     fetchBlacklist();
@@ -268,8 +268,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
         if (dataReceivedCallbackRef.current) {
             dataReceivedCallbackRef.current(deviceId, data);
         }
-      } catch (e: any) {
-        AppLogger.error('Failed to parse notification', e);
+      } catch (e: unknown) {
+        AppLogger.error('Failed to parse notification', e instanceof Error ? e.message : String(e));
         AppLogger.log('PROTOCOL_ERROR', { error: (e instanceof Error ? e.message : String(e)) || String(e), deviceId, context: 'parse' });
       }
     }
@@ -303,8 +303,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
             AppLogger.log('BLE_STATE_CHANGE', { event: 'pruning_stale_connections_on_wake', count: staleIds.length });
             updateConnectedDevices(prev => prev.filter(p => !staleIds.includes(p.id)));
           }
-        } catch (e) {
-          AppLogger.warn('[BLE] Failed to audit connections on wake', e);
+        } catch (e: unknown) {
+          AppLogger.warn('[BLE] Failed to audit connections on wake', e instanceof Error ? e.message : String(e));
         }
       }
     });
