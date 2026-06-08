@@ -67,6 +67,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     activeCalories: health.activeCalories
   }, recoveredStartTimeMs);
 
+  const telemetryRef = React.useRef(telemetry);
+  useEffect(() => { telemetryRef.current = telemetry; }, [telemetry]);
+
   // 2. Initialize iOS categories + listen for watch commands
   useEffect(() => {
     if (Platform.OS === 'ios') {
@@ -270,8 +273,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         try {
           await notifee.displayNotification({
             id: NOTIFICATION_ID,
-            title: sessionPhase === 'PAUSED' ? 'Skate Session Paused ⏸' : sessionPhase === 'ENDING' ? 'Saving Session...' : 'Skate Session Active 🟢',
-            body: `Distance: ${telemetry.sessionDistanceMiles.toFixed(2)} mi | Speed: ${telemetry.gpsSpeed.toFixed(1)} mph`,
+            title: sessionPhaseRef.current === 'PAUSED' ? 'Skate Session Paused ⏸' : sessionPhaseRef.current === 'ENDING' ? 'Saving Session...' : 'Skate Session Active 🟢',
+            body: `Distance: ${telemetryRef.current.sessionDistanceMiles.toFixed(2)} mi | Speed: ${telemetryRef.current.gpsSpeed.toFixed(1)} mph`,
             android: {
               channelId: NOTIFICATION_CHANNEL_ID,
               // Only trigger the native startForegroundService ONCE.
@@ -331,7 +334,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => {
       if (updateInterval) clearInterval(updateInterval);
     };
-  }, [isSkateSessionActive, sessionPhase, telemetry.sessionDistanceMiles, telemetry.gpsSpeed]);
+  }, [isSkateSessionActive, sessionPhase]);
 
   const startSession = useCallback(async (externalStartTimeMs?: number) => {
     // Cancel any pending STOPPED push from a prior session summary

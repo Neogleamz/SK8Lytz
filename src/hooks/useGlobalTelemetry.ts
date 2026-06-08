@@ -54,6 +54,11 @@ export function useGlobalTelemetry(
     healthMetricsRef.current = healthMetrics;
   }, [healthMetrics]);
 
+  const userIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    userIdRef.current = user?.id ?? null;
+  }, [user]);
+
   const lastGpsTimeRef = useRef<number | null>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
   const prevGRef = useRef(1.0);
@@ -121,7 +126,7 @@ export function useGlobalTelemetry(
       };
 
       try {
-        await SpeedTrackingService.saveSession(snapshot, user?.id || null);
+        await SpeedTrackingService.saveSession(snapshot, userIdRef.current);
         AppLogger.log('GLOBAL_SESSION_SAVED', { action: 'AUTO_SAVED_TO_DB', durationSec, distanceMiles });
       } catch (err: unknown) {
         AppLogger.error('[useGlobalTelemetry] Failed to persist auto-session', err instanceof Error ? err.message : String(err));

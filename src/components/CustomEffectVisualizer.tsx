@@ -55,7 +55,7 @@ export const CustomEffectVisualizer: React.FC<CustomEffectVisualizerProps> = ({
     }, frameRate);
     
     return () => clearInterval(interval);
-  }, [speed, autoPlay]);
+  }, [speed, autoPlay, effectId]);
 
   const displayedDots = useMemo(() => {
     const fgRgb = hexToRgb(fgColorHex);
