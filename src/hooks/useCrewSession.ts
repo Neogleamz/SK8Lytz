@@ -70,7 +70,7 @@ export function useCrewSession(
             }
           }
         }
-        await crewService.endSession(currentSessionId);
+        await crewService.endSession(currentSessionId, user?.id);
         refreshNearby();
       }
       setIsHandoffMode(false);
@@ -85,7 +85,7 @@ export function useCrewSession(
 
   const executeLeaveSession = async () => {
     AppLogger.log('CREW_SESSION_LEFT', { sessionId: currentSession?.id, role: currentRole });
-    await crewService.leaveSession();
+    await crewService.leaveSession(user?.id);
     refreshNearby();
     setIsHandoffMode(false);
     onSessionLeft();

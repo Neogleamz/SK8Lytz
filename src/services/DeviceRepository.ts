@@ -184,9 +184,9 @@ class DeviceRepository {
    * Save (upsert) a device to local storage and optionally to Supabase.
    * This is the canonical write path — all hooks delegate here.
    */
-  async saveDevice(device: Partial<RegisteredDevice> & { device_mac: string }): Promise<boolean> {
+  async saveDevice(device: Partial<RegisteredDevice> & { device_mac: string }, userId?: string): Promise<boolean> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = userId ? { id: userId } : null;
       const now = new Date().toISOString();
       const normalizedMac = device.device_mac.toUpperCase();
       const deviceId = device.id || `${normalizedMac.replace(/:/g, '')}-${user?.id?.slice(0, 8) || 'offline'}`;
@@ -312,10 +312,10 @@ class DeviceRepository {
   /**
    * Save multiple devices atomically (used by wizard completion).
    */
-  async saveAllDevices(devices: RegisteredDevice[]): Promise<boolean> {
+  async saveAllDevices(devices: RegisteredDevice[], userId?: string): Promise<boolean> {
     let allOk = true;
     for (const d of devices) {
-      const ok = await this.saveDevice(d);
+      const ok = await this.saveDevice(d, userId);
       if (!ok) allOk = false;
     }
     return allOk;
@@ -324,11 +324,11 @@ class DeviceRepository {
   /**
    * Delete a device by MAC address. Writes tombstone, removes locally, then syncs to cloud.
    */
-  async deleteDevice(deviceMac: string): Promise<void> {
+  async deleteDevice(deviceMac: string, userId?: string): Promise<void> {
     const normalizedMac = deviceMac.toUpperCase();
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = userId ? { id: userId } : null;
 
       // Step 1: Write tombstone (prevents cloud resurrection)
       if (!this.tombstones.includes(normalizedMac)) {
@@ -438,9 +438,10 @@ class DeviceRepository {
     groupId: string,
     groupName: string,
     deviceMacs: string[],  // Array of MAC addresses (frontend convention)
-    type = 'device-fleet'
+    type = 'device-fleet',
+    userId?: string
   ): Promise<boolean> {
-    return GroupRepository.getInstance().saveGroupTransactional(groupId, groupName, deviceMacs, type);
+    return GroupRepository.getInstance().saveGroupTransactional(groupId, groupName, deviceMacs, type, userId);
   }
 
   // ── Cloud Sync ──────────────────────────────────────────────────────────────
@@ -449,10 +450,10 @@ class DeviceRepository {
    * Sync registered devices from Supabase, applying tombstone filter
    * and local-first smart merge.
    */
-  async syncFromCloud(): Promise<RegisteredDevice[]> {
+  async syncFromCloud(userId?: string): Promise<RegisteredDevice[]> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return this.devices;
+      if (!userId) return this.devices;
+      const user = { id: userId };
 
       const { data, error } = await supabase
         .from('registered_devices')
@@ -548,7 +549,8 @@ class DeviceRepository {
    */
   async checkDeviceClaimed(
     deviceMac: string,
-    fingerprint?: { firmwareVer?: number; ledVersion?: number; productId?: number }
+    fingerprint?: { firmwareVer?: number; ledVersion?: number; productId?: number },
+    userId?: string
   ): Promise<'unclaimed' | 'claimed_by_self' | 'claimed_by_other' | 'offline_unknown'> {
     try {
       // Fast path: check local
@@ -558,7 +560,7 @@ class DeviceRepository {
       }
 
       // Network path: check Supabase
-      const { data: { user } } = await supabase.auth.getUser();
+      const user = userId ? { id: userId } : null;
       const { data, error } = await supabase
         .from('registered_devices')
         .select('user_id')
@@ -593,12 +595,12 @@ class DeviceRepository {
   /**
    * Check if user has ANY registered devices (cloud or local).
    */
-  async hasRegistrations(): Promise<boolean> {
+  async hasRegistrations(userId?: string): Promise<boolean> {
     if (this.devices.length > 0) return true;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return false;
+      if (!userId) return false;
+      const user = { id: userId };
 
       const { count } = await supabase
         .from('registered_devices')

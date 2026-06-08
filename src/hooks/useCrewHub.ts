@@ -43,7 +43,7 @@ export function useCrewHub(visible: boolean, step: string) {
   useEffect(() => {
     if (!visible) return;
     if (step !== 'landing' && step !== 'create' && step !== 'schedule' && step !== 'manage') return;
-    profileService.getMyCrew().then((crews: PermanentCrew[]) => {
+    profileService.getMyCrew(undefined, user?.id).then((crews: PermanentCrew[]) => {
       setMyCrews(crews);
       setPermanentCrews(crews.map(c => ({ id: c.id, name: c.name })));
     }).catch((e) => { AppLogger.error('[useCrewHub] Failed to load my crews', e); });

@@ -175,7 +175,7 @@ describe('GroupRepository', () => {
     it('performs transactional save and updates bi-directional references', async () => {
       const deviceMacs = ['08:65:F0:9A:C2:3C', '08:65:F0:9A:5E:06'];
 
-      const success = await repository.saveGroupTransactional('new-group-id', 'Neogleamz Fleet', deviceMacs);
+      const success = await repository.saveGroupTransactional('new-group-id', 'Neogleamz Fleet', deviceMacs, 'device-fleet', 'test-user-id');
 
       expect(success).toBe(true);
 
@@ -208,7 +208,7 @@ describe('GroupRepository', () => {
       (supabase.auth.getUser as jest.Mock).mockResolvedValueOnce({ data: { user: null } });
 
       const deviceMacs = ['08:65:F0:9A:C2:3C'];
-      const success = await repository.saveGroupTransactional('offline-group', 'Offline Group', deviceMacs);
+      const success = await repository.saveGroupTransactional('offline-group', 'Offline Group', deviceMacs, 'device-fleet', undefined);
 
       // Should succeed locally and return true
       expect(success).toBe(true);

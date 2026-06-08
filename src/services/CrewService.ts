@@ -75,17 +75,17 @@ class CrewService {
   async createSession(
     name: string,
     displayName: string,
-    opts?: { locationLabel?: string; locationCoords?: { lat: number; lng: number }; scheduledAt?: string; isPublic?: boolean; crewId?: string; skateSpotId?: string }
+    opts?: { locationLabel?: string; locationCoords?: { lat: number; lng: number }; scheduledAt?: string; isPublic?: boolean; crewId?: string; skateSpotId?: string },
+    userId?: string
   ): Promise<CrewSession> {
-    const user = (await supabase.auth.getUser()).data.user;
-    if (!user) throw new Error('Must be signed in to create a crew');
+    if (!userId) throw new Error('Must be signed in to create a crew');
 
     // Proactively end any previous active sessions by this leader
-    await this.cleanupLegacySessions(user.id);
+    await this.cleanupLegacySessions(userId);
 
     const insertData: Partial<Database['public']['Tables']['crew_sessions']['Insert']> & Record<string, unknown> = {
       name,
-      leader_user_id: user.id,
+      leader_user_id: userId,
       status: opts?.scheduledAt ? 'scheduled' : 'active',
     };
     if (opts?.locationLabel)  insertData.location_label  = opts.locationLabel;
@@ -107,7 +107,7 @@ class CrewService {
     // Auto-join as leader member
     await supabase.from('crew_members').insert({
       session_id: session.id,
-      user_id: user.id,
+      user_id: userId,
       display_name: displayName || 'Leader',
     });
 
@@ -159,9 +159,8 @@ class CrewService {
   }
 
   /** Join an existing session by 6-char invite code. */
-  async joinSession(inviteCode: string, displayName: string): Promise<CrewSession> {
-    const user = (await supabase.auth.getUser()).data.user;
-    if (!user) throw new Error('Must be signed in to join a crew');
+  async joinSession(inviteCode: string, displayName: string, userId?: string): Promise<CrewSession> {
+    if (!userId) throw new Error('Must be signed in to join a crew');
 
     const code = inviteCode.trim().toUpperCase();
 
@@ -189,7 +188,7 @@ class CrewService {
     // Upsert membership (idempotent re-join)
     const { error: memberErr } = await supabase.from('crew_members').upsert({
       session_id: session.id,
-      user_id: user.id,
+      user_id: userId,
       display_name: displayName || 'Skater',
     }, { onConflict: 'session_id,user_id' });
 
@@ -198,16 +197,15 @@ class CrewService {
     await this._persistSession(session);
     this.currentSession = session as CrewSession;
     this.currentSessionId = session.id;
-    this.currentRole = user.id === session.leader_user_id ? 'leader' : 'member';
+    this.currentRole = userId === session.leader_user_id ? 'leader' : 'member';
     this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
     this.emit();
     return session as CrewSession;
   }
 
   /** Join a session directly by ID (from the active sessions browser). */
-  async joinSessionById(sessionId: string, displayName: string): Promise<CrewSession> {
-    const user = (await supabase.auth.getUser()).data.user;
-    if (!user) throw new Error('Must be signed in to join a crew');
+  async joinSessionById(sessionId: string, displayName: string, userId?: string): Promise<CrewSession> {
+    if (!userId) throw new Error('Must be signed in to join a crew');
 
     const { data: _sessionDataById, error } = await supabase
       .from('crew_sessions')
@@ -228,14 +226,14 @@ class CrewService {
 
     await supabase.from('crew_members').upsert({
       session_id: sessionId,
-      user_id: user.id,
+      user_id: userId,
       display_name: displayName,
     }, { onConflict: 'session_id,user_id' });
 
     await this._persistSession(session);
     this.currentSession = session as CrewSession;
     this.currentSessionId = sessionId;
-    this.currentRole = user.id === session.leader_user_id ? 'leader' : 'member';
+    this.currentRole = userId === session.leader_user_id ? 'leader' : 'member';
     this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
     this.emit();
     return session as CrewSession;
@@ -325,14 +323,13 @@ class CrewService {
    * Accepts an explicit sessionId override in case the singleton state is stale
    * (e.g. modal was rebuilt after a navigation change).
    */
-  async endSession(explicitSessionId?: string): Promise<void> {
-    const user = (await supabase.auth.getUser()).data.user;
-    if (!user) throw new Error('Not authenticated');
+  async endSession(explicitSessionId?: string, userId?: string): Promise<void> {
+    if (!userId) throw new Error('Not authenticated');
 
     const sessionId = explicitSessionId ?? this.currentSessionId;
     if (!sessionId) throw new Error('No active session to end');
 
-    AppLogger.log('CREW_END_SESSION', { sessionId, userId: user.id });
+    AppLogger.log('CREW_END_SESSION', { sessionId, userId });
 
     // ── Single update filtered by id AND leader_user_id ──────────────────────
     // RLS-safe: Supabase only matches rows the policy allows.
@@ -353,7 +350,7 @@ class CrewService {
         total_distance_miles: this.sessionTelemetry.distanceMiles || 0,
       })
       .eq('id', sessionId)
-      .eq('leader_user_id', user.id)   // ← RLS-safe leader gate
+      .eq('leader_user_id', userId)   // ← RLS-safe leader gate
       .select('id');
 
     if (fullError) {
@@ -363,7 +360,7 @@ class CrewService {
         .from('crew_sessions')
         .update({ is_active: false })
         .eq('id', sessionId)
-        .eq('leader_user_id', user.id)
+        .eq('leader_user_id', userId)
         .select('id');
 
       if (fallbackError) throw new Error(`Could not end session: ${fallbackError.message}`);
@@ -377,7 +374,7 @@ class CrewService {
         .from('crew_sessions')
         .update({ is_active: false })
         .eq('id', sessionId)
-        .eq('leader_user_id', user.id)
+        .eq('leader_user_id', userId)
         .select('id');
       if (fbErr || !fbData || fbData.length === 0) {
         throw new Error('Only the session leader can end the session');
@@ -435,15 +432,14 @@ class CrewService {
   }
 
   /** Leave current session and unsubscribe. */
-  async leaveSession(): Promise<void> {
-    const user = (await supabase.auth.getUser()).data.user;
-    if (!user || !this.currentSessionId) return;
+  async leaveSession(userId?: string): Promise<void> {
+    if (!userId || !this.currentSessionId) return;
 
     await supabase
       .from('crew_members')
       .delete()
       .eq('session_id', this.currentSessionId)
-      .eq('user_id', user.id);
+      .eq('user_id', userId);
 
     this.unsubscribe();
     try {
@@ -492,7 +488,7 @@ class CrewService {
    * Check if there's a persisted active session from a previous launch.
    * Returns the session if still valid, null otherwise.
    */
-  async tryAutoRejoin(displayName: string): Promise<{ session: CrewSession; role: CrewRole } | null> {
+  async tryAutoRejoin(displayName: string, userId?: string): Promise<{ session: CrewSession; role: CrewRole } | null> {
     try {
       const [savedId, savedExp] = await AsyncStorage.multiGet([
         STORAGE_LAST_SESSION_ID,
@@ -511,8 +507,7 @@ class CrewService {
         return null;
       }
 
-      const user = (await supabase.auth.getUser()).data.user;
-      if (!user) return null;
+      if (!userId) return null;
 
       const { data: session } = await supabase
         .from('crew_sessions')
@@ -529,21 +524,21 @@ class CrewService {
         .from('crew_members')
         .select('id')
         .eq('session_id', sessionId)
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .single();
 
       if (!membership) {
         // Re-join as member
         await supabase.from('crew_members').upsert({
           session_id: sessionId,
-          user_id: user.id,
+          user_id: userId,
           display_name: displayName,
         }, { onConflict: 'session_id,user_id' });
       }
 
       this.currentSession = typedSession;
       this.currentSessionId = sessionId;
-      this.currentRole = user.id === typedSession.leader_user_id ? 'leader' : 'member';
+      this.currentRole = userId === typedSession.leader_user_id ? 'leader' : 'member';
       this.sessionTelemetry = { distanceMiles: 0, topSpeedMph: 0, avgSpeedSamples: [] };
       this.emit();
       return { session: typedSession, role: this.currentRole };
@@ -611,13 +606,12 @@ class CrewService {
    * Debounced 150ms to avoid flooding on slider drags.
    * Also persists last_scene to DB (throttled 5s) for late-arrival sync.
    */
-  broadcastScene(scene: Record<string, any>): void {
+  broadcastScene(scene: Record<string, any>, userId?: string): void {
     if (!this.channel || this.currentRole !== 'leader') return;
 
     if (this.broadcastTimer) clearTimeout(this.broadcastTimer);
     this.broadcastTimer = setTimeout(async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const leaderId = user?.id ?? '';
+      const leaderId = userId ?? '';
       this.channel?.send({
         type: 'broadcast',
         event: 'scene_update',

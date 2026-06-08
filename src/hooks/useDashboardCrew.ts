@@ -59,7 +59,7 @@ export function useDashboardCrew({
       try {
         hasTriedRejoinRef.current = true;
         const displayName = user.email?.split('@')[0] || 'Skater';
-        const result = await crewService.tryAutoRejoin(displayName);
+        const result = await crewService.tryAutoRejoin(displayName, user.id);
         if (!result) return;
 
         const { session, role } = result;

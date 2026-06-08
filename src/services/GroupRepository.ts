@@ -171,7 +171,8 @@ class GroupRepository {
     groupId: string,
     groupName: string,
     deviceMacs: string[],
-    type = 'device-fleet'
+    type = 'device-fleet',
+    userId?: string
   ): Promise<boolean> {
     // 1. Update local group state immediately (optimistic)
     const existingIdx = this.groups.findIndex((g) => g.id === groupId);
@@ -225,12 +226,11 @@ class GroupRepository {
 
     // 2. Cloud: atomic RPC transaction
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       const hasPendingDevices = updatedDevices.some(
         (d) => normalizedMacs.includes(d.device_mac.toUpperCase()) && d.is_pending_sync
       );
 
-      if (!user || hasPendingDevices) {
+      if (!userId || hasPendingDevices) {
         await this._queuePendingGroupSync(groupId, groupName, deviceMacs, type);
         AppLogger.warn('[GroupRepository] Offline or Pending Devices — group queued for sync', {
           groupId,

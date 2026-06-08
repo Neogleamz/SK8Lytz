@@ -86,15 +86,14 @@ class ScenesServiceClass {
   /**
    * Fetches scenes authored by the current authenticated user.
    */
-  async getMyScenes(): Promise<ICloudScene[]> {
+  async getMyScenes(userId: string): Promise<ICloudScene[]> {
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData?.user) throw new Error('Not authenticated');
+      if (!userId) throw new Error('Not authenticated');
 
       const { data, error } = await supabase
         .from('shared_scenes')
         .select('*')
-        .eq('author_id', userData.user.id)
+        .eq('author_id', userId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -108,19 +107,18 @@ class ScenesServiceClass {
   /**
    * Publishes or saves a scene to the cloud.
    */
-  async publishScene(name: string, payload: any, isPublic: boolean = false): Promise<boolean> {
+  async publishScene(name: string, payload: any, isPublic: boolean = false, userId?: string, username?: string): Promise<boolean> {
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
-      if (userError || !userData?.user) {
+      if (!userId) {
         AppLogger.warn('[ScenesService] Skipping cloud publish (not logged in)');
         return false;
       }
 
-      const username = userData.user.user_metadata?.username || 'Anonymous Skater';
+      const safeUsername = username || 'Anonymous Skater';
 
       const jobPayload = {
-        author_id: userData.user.id,
-        author_username: username,
+        author_id: userId,
+        author_username: safeUsername,
         name: name,
         scene_payload: payload,
         is_public: isPublic

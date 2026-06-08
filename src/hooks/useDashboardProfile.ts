@@ -77,12 +77,12 @@ export function useDashboardProfile({
       onCrewJoinNotification(crewId);
     });
 
-    notificationService.init(false).catch(e =>
+    notificationService.init(false, session?.user?.id).catch(e =>
       AppLogger.log('SYNC', { context: 'push_notification_init_skipped', error: String(e) })
     );
 
     return () => {
-      notificationService.cleanup().catch((e) => AppLogger.warn('NOTIFICATION_SERVICE', { event: 'cleanup_failed', error: String(e) }));
+      notificationService.cleanup(session?.user?.id).catch((e) => AppLogger.warn('NOTIFICATION_SERVICE', { event: 'cleanup_failed', error: String(e) }));
     };
     // onCrewJoinNotification is a stable callback ref — intentionally excluded from deps
     // to avoid re-registering the notification service on every render.

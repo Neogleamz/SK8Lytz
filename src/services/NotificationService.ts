@@ -63,7 +63,7 @@ class NotificationService {
    *   4. Register token with Supabase
    *   5. Wire foreground + response handlers
    */
-  async init(autoRequest: boolean = false): Promise<string | null> {
+  async init(autoRequest: boolean = false, userId?: string): Promise<string | null> {
     await this._setupAndroidChannel();
 
     const granted = await this._requestPermissions(autoRequest);
@@ -81,8 +81,7 @@ class NotificationService {
       AppLogger.log('NOTIFICATION_SERVICE', { event: 'token_acquired', tokenPrefix: this.token.slice(0, 12) });
 
       const platform = Platform.OS as 'ios' | 'android' | 'web';
-      const { data: { user } } = await supabase.auth.getUser();
-      await profileService.registerPushToken(this.token, platform, user?.id || null);
+      await profileService.registerPushToken(this.token, platform, userId || null);
       AppLogger.log('PUSH_TOKEN_REGISTERED', { platform, tokenPrefix: this.token.slice(0, 12) });
     } catch (err) {
       AppLogger.warn('NOTIFICATION_SERVICE', { event: 'push_token_unavailable', error: String(err) });
@@ -101,15 +100,14 @@ class NotificationService {
   }
 
   /** Remove all listeners and unregister token from Supabase. */
-  async cleanup(): Promise<void> {
+  async cleanup(userId?: string): Promise<void> {
     this.foregroundSub?.remove();
     this.responseSub?.remove();
     this.foregroundSub = null;
     this.responseSub = null;
 
     if (this.token) {
-      const { data: { user } } = await supabase.auth.getUser();
-      await profileService.unregisterPushToken(this.token, user?.id || null);
+      await profileService.unregisterPushToken(this.token, userId || null);
       this.token = null;
     }
   }

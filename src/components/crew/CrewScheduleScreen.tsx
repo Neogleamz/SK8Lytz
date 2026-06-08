@@ -45,7 +45,7 @@ export function CrewScheduleScreen() {
       if (locationSpotId) opts.skateSpotId = locationSpotId;
       if (scheduled) opts.scheduledAt = scheduled.toISOString();
 
-      const newSession = await crewService.createSession(sessionName, displayName.trim(), opts);
+      const newSession = await crewService.createSession(sessionName, displayName.trim(), opts, currentUserId ?? undefined);
       AppLogger.log('CREW_SESSION_SCHEDULED', {
         sessionId: newSession.id, crewName: sessionName,
         hasLocation: !!locationLabel, scheduled: !!scheduled, isPublic: isSessionPublic,

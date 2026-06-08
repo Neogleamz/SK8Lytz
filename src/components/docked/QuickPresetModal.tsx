@@ -16,6 +16,7 @@ import { STORAGE_PREFIX } from '../../constants/AppConstants';
 import { AppLogger } from '../../services/AppLogger';
 import { containsProfanity } from '../../services/AuthUtils';
 import { ScenesService } from '../../services/ScenesService';
+import { useAuth } from '../../context/AuthContext';
 import { Spacing } from '../../theme/theme';
 import type { ThemePalette } from '../../theme/theme';
 
@@ -65,6 +66,7 @@ const QuickPresetModal = React.memo(function QuickPresetModal({
   Colors,
 }: QuickPresetModalProps) {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+  const { user } = useAuth();
 
   const handleDelete = () => {
     const newArr = [...quickPresets];
@@ -106,7 +108,9 @@ const QuickPresetModal = React.memo(function QuickPresetModal({
     const success = await ScenesService.publishScene(
       safeName,
       captureEntireState(),
-      cloudPublicToggle
+      cloudPublicToggle,
+      user?.id,
+      user?.user_metadata?.username
     );
     if (success) {
       Alert.alert(

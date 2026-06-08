@@ -8,6 +8,7 @@ import { crewService } from '../services/CrewService';
 import { normalizeMac } from '../hooks/useDeviceStateLedger';
 import { useDashboardDeviceConfig } from './useDashboardDeviceConfig';
 import type { DisplayDevice, IDeviceState, GroupPatternSnapshot, BleConnectionState } from '../types/dashboard.types';
+import { useAuth } from '../context/AuthContext';
 
 export interface UseDashboardControllerProps {
   isOfflineMode: boolean;
@@ -91,6 +92,8 @@ export function useDashboardController({
   saveRegisteredDevice,
   setUpdateTrigger
 }: UseDashboardControllerProps) {
+  const { session } = useAuth();
+  const userId = session?.user?.id;
 
   // ── Settings Modal State ──
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
@@ -156,7 +159,7 @@ export function useDashboardController({
           role={crewRole}
           currentScene={lastLeaderScene}
           onLeave={async () => {
-            await crewService.leaveSession().catch(() => {});
+            await crewService.leaveSession(userId).catch(() => {});
             setLastLeaderScene(null);
             setCrewModeSummary(undefined);
           }}
@@ -185,7 +188,7 @@ export function useDashboardController({
             onDisconnect={handleDisconnect}
             crewRole={crewRole}
             appSettings={appSettings}
-            onCrewSceneChange={(scene: Record<string, any>) => crewService.broadcastScene(scene)}
+            onCrewSceneChange={(scene: Record<string, any>) => crewService.broadcastScene(scene, userId)}
             bleState={bleState as BleConnectionState}
             gpsSpeed={gpsSpeed}
             peakGForce={peakGForce}
@@ -232,7 +235,7 @@ export function useDashboardController({
     ledgerSave, gpsSpeed, peakGForce, sessionDistanceMiles, sessionDurationSec, sessionAvgSpeed, sessionActive, startSession, stopSessionRecording,
     appSettings, customGroups, dockedControllerRef, edgePanResponder, handleDisconnect, 
     handlePowerToggle, lastGroupPatterns, setCrewModeSummary,
-    setLastGroupPattern, setLastLeaderScene
+    setLastGroupPattern, setLastLeaderScene, userId
   ]);
 
   return {

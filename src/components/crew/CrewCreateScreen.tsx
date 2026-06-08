@@ -50,7 +50,7 @@ export function CrewCreateScreen() {
       if (locationCoords) opts.locationCoords = locationCoords;
       if (scheduled) opts.scheduledAt = scheduled.toISOString();
 
-      const newSession = await crewService.createSession(sessionName, displayName.trim(), opts);
+      const newSession = await crewService.createSession(sessionName, displayName.trim(), opts, currentUserId ?? undefined);
       AppLogger.log('CREW_SESSION_CREATED', {
         sessionId: newSession.id, crewName: sessionName,
         hasLocation: !!locationLabel, scheduled: !!scheduled, isPublic: isSessionPublic,

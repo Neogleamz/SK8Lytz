@@ -252,7 +252,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     if (!newCrewName.trim()) { setCrewError('Enter a crew name'); return; }
     setCrewLoading(true); setCrewError('');
     try {
-      const crew = await profileService.createPermanentCrew(newCrewName.trim());
+      const crew = await profileService.createPermanentCrew(newCrewName.trim(), undefined, user?.id);
       setCrews(prev => [...prev, crew]);
       setNewCrewName(''); setCrewStep('list');
       AppLogger.log('CREW_PERMANENT_CREATED', { crewName: newCrewName.trim() });
@@ -266,7 +266,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     if (joinCode.trim().length < 4) { setCrewError('Enter the invite code'); return; }
     setCrewLoading(true); setCrewError('');
     try {
-      const crew = await profileService.joinPermanentCrew(joinCode.trim());
+      const crew = await profileService.joinPermanentCrew(joinCode.trim(), user?.id);
       setCrews(prev => prev.find(c => c.id === crew.id) ? prev : [...prev, crew]);
       setJoinCode(''); setCrewStep('list');
       AppLogger.log('CREW_PERMANENT_JOINED', { crewId: crew.id });
@@ -278,7 +278,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
 
   const handleLeaveCrew = async (crewId: string) => {
     try {
-      await profileService.leavePermanentCrew(crewId);
+      await profileService.leavePermanentCrew(crewId, user?.id);
       setCrews(prev => prev.filter(c => c.id !== crewId));
       AppLogger.log('CREW_PERMANENT_LEFT', { crewId });
     } catch (e) { 

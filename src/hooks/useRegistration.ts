@@ -22,6 +22,7 @@ import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { AppLogger } from '../services/AppLogger';
 import DeviceRepository from '../services/DeviceRepository';
 import { getDefaultDeviceName } from '../utils/NamingUtils';
+import { useAuth } from '../context/AuthContext';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -71,6 +72,9 @@ export function useRegistration() {
   const [isLoading, setIsLoading]                 = useState(true);
   const [hasPendingSync, setHasPendingSync]       = useState(false);
 
+  const { session } = useAuth();
+  const userId = session?.user?.id;
+
   const repo = DeviceRepository.getInstance();
 
   // ── Boot: initialize repo, load local, then sync from cloud ─────────────────
@@ -80,7 +84,7 @@ export function useRegistration() {
       setRegisteredDevices(repo.getDevices());
 
       // Cloud sync — updates repo in-memory, then we pull fresh state
-      const merged = await repo.syncFromCloud();
+      const merged = await repo.syncFromCloud(userId);
       setRegisteredDevices(merged);
       setIsLoading(false);
     };
@@ -101,7 +105,7 @@ export function useRegistration() {
    */
   const saveRegisteredDevice = async (device: Partial<RegisteredDevice> & { device_mac: string }) => {
     try {
-      const ok = await repo.saveDevice(device);
+      const ok = await repo.saveDevice(device, userId);
       setRegisteredDevices(repo.getDevices());
       if (!ok) setHasPendingSync(true);
       return ok;
@@ -114,7 +118,7 @@ export function useRegistration() {
 
   // ── Save multiple devices at once (first-time wizard) ───────────────────────
   const saveAllRegisteredDevices = useCallback(async (devices: RegisteredDevice[]): Promise<boolean> => {
-    const ok = await repo.saveAllDevices(devices);
+    const ok = await repo.saveAllDevices(devices, userId);
     setRegisteredDevices(repo.getDevices());
     if (!ok) setHasPendingSync(true);
     return ok;
@@ -125,13 +129,13 @@ export function useRegistration() {
     deviceMac: string,
     fingerprint?: { firmwareVer?: number; ledVersion?: number; productId?: number }
   ): Promise<ClaimStatus> => {
-    return repo.checkDeviceClaimed(deviceMac, fingerprint);
-  }, []);
+    return repo.checkDeviceClaimed(deviceMac, fingerprint, userId);
+  }, [userId]);
 
   // ── Deregister (release ownership) ───────────────────────────────────────────
   const deregisterDevice = useCallback(async (deviceMac: string): Promise<void> => {
     try {
-      await repo.deleteDevice(deviceMac);
+      await repo.deleteDevice(deviceMac, userId);
       setRegisteredDevices(repo.getDevices());
     } catch (e) {
       AppLogger.warn('[Registration] Deregister failed:', e);
@@ -155,15 +159,15 @@ export function useRegistration() {
     d1.device_name = `${getDefaultDeviceName(d1.device_mac)}${d1.position ? ` ${d1.position}` : ''}`;
     d2.device_name = `${getDefaultDeviceName(d2.device_mac)}${d2.position ? ` ${d2.position}` : ''}`;
 
-    await repo.saveDevice(d1);
-    await repo.saveDevice(d2);
+    await repo.saveDevice(d1, userId);
+    await repo.saveDevice(d2, userId);
     setRegisteredDevices(repo.getDevices());
-  }, []);
+  }, [userId]);
 
   // ── Check if user has ANY registered devices (cloud or local) ────────────────
   const hasCloudRegistrations = useCallback(async (): Promise<boolean> => {
-    return repo.hasRegistrations();
-  }, []);
+    return repo.hasRegistrations(userId);
+  }, [userId]);
 
   // ── Migrate legacy local groups into registered_devices ──────────────────────
   const migrateLegacyGroups = useCallback(async (
@@ -210,9 +214,9 @@ export function useRegistration() {
 
   // ── Cloud re-sync (exposed for manual refresh) ──────────────────────────────
   const syncFromCloud = useCallback(async () => {
-    const merged = await repo.syncFromCloud();
+    const merged = await repo.syncFromCloud(userId);
     setRegisteredDevices(merged);
-  }, []);
+  }, [userId]);
 
   return {
     registeredDevices,

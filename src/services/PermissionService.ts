@@ -89,7 +89,7 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
         if (status === 'granted') {
           // Import inline to avoid circular dependency issues at the module level
           const { notificationService } = require('./NotificationService');
-          notificationService.init(true).catch(() => {});
+          notificationService.init(true, undefined).catch(() => {});
         }
         return status === 'granted';
       }

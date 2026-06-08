@@ -11,6 +11,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ICloudScene, ScenesService } from '../services/ScenesService';
 import { Layout, Spacing, Typography } from '../theme/theme';
@@ -73,6 +74,7 @@ function LedStripPreview({ colors, mode }: { colors: string[], mode: string }) {
 // --- Main Component ---
 export default function CommunityModal({ isOfflineMode = false, isVisible, onClose, onApplyScene }: Props) {
   const { Colors } = useTheme();
+  const { user } = useAuth();
   const styles = createStyles(Colors);
 
   const [activeTab, setActiveTab] = useState<'COMMUNITY' | 'PERSONAL'>(isOfflineMode ? 'PERSONAL' : 'COMMUNITY');
@@ -96,7 +98,7 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
     }
     const data = activeTab === 'COMMUNITY'
       ? await ScenesService.getPublicScenes()
-      : await ScenesService.getMyScenes();
+      : await ScenesService.getMyScenes(user?.id ?? '');
     setScenes(data);
     setLoading(false);
   };
