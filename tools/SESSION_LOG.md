@@ -700,3 +700,22 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - src/hooks/ble/useBLERSSIMonitor.ts
 - src/components/CrewMemberDashboard.tsx
 - src/context/SessionContext.tsx
+
+### [MERGE] 2026-06-08T00:32 - feat/offline-first-cache-layer -> master @ aa5ad615
+**What merged:**
+- Applied cache-first pattern to LocationService and SkateSpotsService.
+- Updated AsyncStorage Key Registry in Master Reference with 5 new offline cache keys.
+- Replaced PromiseLike .then chains with async/await in AppSettingsService and useBLE to fix TypeScript compilation failures.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:**
+- src/services/LocationService.ts
+- src/services/SkateSpotsService.ts
+- src/services/ScenesService.ts
+- src/hooks/useBLE.ts
+- src/services/AppSettingsService.ts
+- src/services/GradientsService.ts
+- tools/SK8Lytz_App_Master_Reference.md
+
+### [DOCS] 2026-06-08T00:32 - AsyncStorage Key Registry Updated
+**Files touched:** tools/SK8Lytz_App_Master_Reference.md
+**Summary:** Added @Sk8lytz_hardware_blacklist, @Sk8lytz_Builder_Presets, @Sk8lytz_Scenes, @Sk8lytz_Scene_Sync_Queue, and @Sk8lytz_skate_spots_cache.
