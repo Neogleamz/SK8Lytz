@@ -709,3 +709,38 @@ pm run verify which includes QA tests.
   - **Source of Truth:** 📖 `src/services/CrewProfileService.ts:31-461`, `src/services/CrewService.ts:76-597`, `src/services/DeviceRepository.ts:140-724` | Audit: `R-11_findings.json` (120+ findings), `R-06_findings.json` (72+ findings)
   - **Goal:** Wrap 120+ naked `await` operations in try/catch and fix 72+ catch blocks missing `e instanceof Error` unwrapping. ~192 total surgical edits across ~30 files.
   - **Details:** `CrewProfileService.ts` alone has 55 naked awaits. `DeviceRepository.ts` has 8 untyped catch blocks. These are all LOW-cognitive-load, high-volume pattern fixes ideal for a lesser model to execute with this plan as the SoT.
+
+- [x] **`fix/gatt-race-conditions`** (Merged @ accf781c) 🚀 Merged in accf781c
+  - **Tags:** `[⚪ READY]` `[✅ VERIFIED]` `[BLE]` `[H-RISK]` `[Meal]` `[🤖 THINK]`
+  - **Plan:** 📎 [PLAN-gatt-race-conditions.md](docs/plans/PLAN-gatt-race-conditions.md)
+  - **Source of Truth:** 📖 `src/hooks/ble/useBLEBatterySweep.ts:135` | `src/hooks/useBLE.ts:410` | `src/services/BleConnectionManager.ts:47` | `src/hooks/useDashboardGroups.ts:235` | `src/components/admin/tools/Sk8LytzDiagnosticLab.tsx:178` | `src/components/admin/tools/tabs/DiagnosticLabBuilderTab.tsx:73` | Audit: `R-26_findings.json` + `R-10_findings.json`
+  - **Goal:** Fix 4 re-entrancy race conditions (burstTimer overwrite, pingDevice sweeper race, GATT lock pre-check, double-tap power toggle) and 2 DiagLab `Promise.all` concurrent write collisions → GATT 133.
+  - **Details:** GATT 133 errors on Android are directly caused by these races. Rapid battery sweep, rapid ping, and DiagLab group commands all trigger the issue today.
+
+- [x] **`fix/flatlist-perf-sweep`** - Merged 5fcdb090: Injected removeClippedSubviews and initialNumToRender performance props to all flatlists. 🚀 Merged in 5fcdb090
+  - **Tags:** `[⚪ READY]` `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Meal]` `[🤖 PRO-LOW]` `[BATCH]`
+  - **Plan:** 📎 `(generate on `/start-task`)`
+  - **Source of Truth:** 📖 `src/components/docked/FavoritesPanel.tsx:80,94` | `src/components/patterns/GradientLibraryTab.tsx:118,121,125` | `src/components/patterns/PatternPickerTab.tsx:151,153,154` | `src/components/CommunityModal.tsx:258,262` | `src/components/VerticalPatternDrum.tsx:101,115,116` | `src/components/admin/tools/tabs/DiagnosticLabSnifferTab.tsx:27,28,29` | Audit: `R-07_findings.json → PERF-R07-001 through PERF-R07-016`
+  - **Goal:** Extract 16 inline FlatList props (`keyExtractor`, `renderItem`, `contentContainerStyle`, `columnWrapperStyle`, `getItemLayout`, `ListEmptyComponent`) to stable `useCallback`/`StyleSheet.create` references across 6 components.
+  - **Details:** Every inline prop re-creates a new object/function reference on each render, causing FlatList to re-render its entire item list. Pattern picker and gradient library performance is directly affected.
+
+- [x] **`fix/error-handling-sweep`** - Merged 165f7be7: Applied instanceof Error type safety checks to catch blocks. 🚀 Merged in 165f7be7
+  - **Tags:** `[⚪ READY]` `[✅ VERIFIED]` `[Services]` `[L-RISK]` `[Meal]` `[🤖 PRO-LOW]` `[BATCH]`
+  - **Plan:** 📎 `(generate on /start-task)`
+  - **Source of Truth:** 📖 `src/services/supabaseClient.ts:21,29` | `src/utils/migrateAuthTokens.ts:26` | `src/components/CameraTracker.tsx:149` | `src/components/DockedController.tsx:435,467` | `src/hooks/ble/useBLEAutoRecovery.ts:474` | `src/hooks/useCrewManage.ts:62` | `src/services/SpeedTrackingService.ts:149,278` | `src/services/BleWriteQueue.ts:181` | `src/context/SessionContext.tsx:353,386` | Audit: `R-06_findings.json` + `DOMAIN_NATIVE_&_WATCH_findings.json`
+  - **Goal:** Replace 17 raw `console.error(e)` and bare `String(e)` error log patterns with the standard `e instanceof Error ? e.message : String(e)` pattern. Replace 1 silent swallow `catch (e) {}` with `AppLogger.warn`.
+  - **Details:** 4 HIGH severity `console.error(rawError)` calls can log [object Object] instead of message. Standard error pattern is enforced codebase-wide but these 17 instances were missed.
+
+- [x] **`fix/os-permissions-config`** - Merged: Added missing iOS descriptors and removed redundant Android intents.
+  - **Tags:** `[⚪ READY]` `[✅ VERIFIED]` `[BUILD]` `[M-RISK]` `[Snack]` `[🤖 PRO-MED]`
+  - **Plan:** 📎 [PLAN-os-permissions-config.md](docs/plans/PLAN-os-permissions-config.md)
+  - **Source of Truth:** 📖 `app.config.js:17,21` | `android/app/src/main/AndroidManifest.xml:49` | Audit: `DOMAIN_OS_PERMISSIONS_findings.json → OS_PERM-001, OS_PERM-002, OS_PERM-003`
+  - **Goal:** Add missing `NSHealthUpdateUsageDescription` (iOS crash fix), correct inaccurate `NSLocationWhenInUseUsageDescription` (App Store rejection fix), remove 4 duplicate AndroidManifest intent-filter entries.
+  - **Details:** Missing `NSHealthUpdateUsageDescription` will crash iOS when Health permissions are requested. Inaccurate location description will trigger App Store review rejection. Both are pre-release blockers.
+
+- [x] **`fix/animated-loop-leak-sweep`** - Merged: Fixed 6 component animation leak bugs with loop.stop() cleanup.
+  - **Tags:** `[⚪ READY]` `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Meal]` `[🤖 PRO-LOW]` `[BATCH]`
+  - **Plan:** 📎 [PLAN-animated-loop-leak-sweep.md](docs/plans/PLAN-animated-loop-leak-sweep.md)
+  - **Source of Truth:** 📖 `src/components/AccountModal.tsx:84` | `src/components/CrewMemberDashboard.tsx:103` | `src/components/ProductVisualizer.tsx:77` | `src/components/patterns/PatternCard.tsx:37` | `src/components/MarqueeText.tsx:17` | `src/components/CommunityModal.tsx:33` | Audit: `R-22_findings.json → MEM-001 through MEM-006`
+  - **Goal:** Add `return () => loop.stop()` cleanup to 6 `Animated.loop().start()` useEffect calls that currently have no cleanup. Prevents background animation loops after component unmount.
+  - **Details:** Identical single-line fix pattern across 6 files. Unified Batch Override authorized. CPU leak on every modal close/card unmount.

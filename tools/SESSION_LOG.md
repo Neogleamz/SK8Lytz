@@ -781,3 +781,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Successfully built Android release APK for v3.9.2 and fixed CMake path constraints by building from C:\W. Shipped and installed via ADB.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** android build configuration.
+
+### [MERGE] 2026-06-08T16:40 — fix/gatt-race-conditions → master @ accf781c
+**What merged:** Fixed 3 BLE re-entrancy races in useBLEBatterySweep, useBLE, and useDashboardGroups. Also added a 50ms inter-device gap inside BleWriteDispatcher's _executeProtocolResultsInternal to prevent Android GATT 133 collisions on group writes.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** src/hooks/ble/useBLEBatterySweep.ts, src/hooks/useBLE.ts, src/hooks/useDashboardGroups.ts, src/services/BleConnectionManager.ts, src/services/BleWriteDispatcher.ts
