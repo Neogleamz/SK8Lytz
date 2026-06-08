@@ -184,11 +184,7 @@ export function useBLEScanner({
     const nameLower = device.name?.toLowerCase() || '';
     const hasZenggeService = device.serviceUUIDs?.includes(ZENGGE_SERVICE_UUID);
     const hasBanlanxService = device.serviceUUIDs?.includes(BANLANX_SERVICE_UUID);
-    const FCF1_UUID = '0000fcf1-0000-1000-8000-00805f9b34fb';
-    const fcf1Data = device.serviceData ? device.serviceData[FCF1_UUID] : null;
-    const hasFcf1Service = !!fcf1Data;
-
-    const mfData = device.manufacturerData || fcf1Data;
+    const mfData = device.manufacturerData;
     let isSymphony = false;
     
     if (mfData) {
@@ -199,7 +195,7 @@ export function useBLEScanner({
     }
 
     const isKnownPrefix = ZENGGE_NAME_PREFIXES.some(p => nameLower.startsWith(p));
-    if (!isSymphony && !isKnownPrefix && !hasZenggeService && !hasBanlanxService && !hasFcf1Service) {
+    if (!isSymphony && !isKnownPrefix && !hasZenggeService && !hasBanlanxService) {
       if (!rejectedMacsRef.current.has(device.id)) {
         rejectedMacsRef.current.add(device.id);
         if (device.name || (device.serviceUUIDs && device.serviceUUIDs.length > 0)) {
