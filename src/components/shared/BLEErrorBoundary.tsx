@@ -36,11 +36,10 @@ export class BLEErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    AppLogger.error(`[ErrorBoundary] ${this.props.componentName} crashed`, {
-      error: error?.message || JSON.stringify(error),
-      stack: error.stack?.slice(0, 500),
+    AppLogger.error(`[ErrorBoundary] ${this.props.componentName} crashed`, { 
+      error: error instanceof Error ? error.message : String(error) || JSON.stringify(error),
       componentStack: info.componentStack?.slice(0, 500),
-    });
+     });
   }
 
   handleRecover = () => {

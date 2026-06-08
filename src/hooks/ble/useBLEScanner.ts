@@ -240,7 +240,7 @@ export function useBLEScanner({
               firmwareVer, ledVersion, bleVersion, productId
             });
           }
-        } catch (e: unknown) { AppLogger.warn('[Scanner] Failed to parse firmware', { mac, error: e instanceof Error ? e.message : String(e) }); }
+        } catch (e: unknown) { AppLogger.warn('[Scanner] Failed to parse firmware', { mac, error: e instanceof Error ? e.message : String(e)  }); }
       }
 
       const now = Date.now();

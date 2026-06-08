@@ -120,7 +120,7 @@ export function CrewDetailScreen() {
       AppLogger.log('CREW_PERMANENT_UPDATED', { crewId: crew.id, crewName: editCrewName.trim(), isPublic: editCrewIsPublic });
     } catch (err: unknown) {
       const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
-      AppLogger.log('CREW_ERROR', { action: 'save_crew', crewId: crew.id, error: e.message });
+      AppLogger.log('CREW_ERROR', { action: 'save_crew', crewId: crew.id, error: e instanceof Error ? e.message : String(e)  });
       Alert.alert('Save failed', e.message ?? 'Unknown error');
     } finally {
       setIsSavingCrew(false);

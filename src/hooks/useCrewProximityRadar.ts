@@ -108,7 +108,8 @@ export function useCrewProximityRadar() {
           });
         }
       } catch (err: unknown) {
-        AppLogger.warn('[useCrewProximityRadar] scan failed', { err });
+        const errMsg = err instanceof Error ? err.message : String(err);
+        AppLogger.warn('[useCrewProximityRadar] scan failed', { error: errMsg });
         if (mounted) setRadarAlert({ matchType: 'NONE', venueName: '', distanceMi: 0 });
       }
     }

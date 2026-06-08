@@ -52,7 +52,7 @@ export function useCuratedPicks() {
           .order('sort_order', { ascending: true });
 
         if (error) {
-          AppLogger.error('[SK8Lytz Picks] Failed to fetch from DB', error);
+          AppLogger.error('[SK8Lytz Picks] Failed to fetch from DB', error instanceof Error ? error.message : String(error));
           return;
         }
 

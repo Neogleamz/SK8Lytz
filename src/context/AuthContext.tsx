@@ -109,7 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch (err: unknown) {
-        AppLogger.warn('[AuthContext] Deep link parse error', { error: err instanceof Error ? err.message : String(err) });
+        AppLogger.warn('[AuthContext] Deep link parse error', { error: err instanceof Error ? err.message : String(err)  });
       } finally {
         isHandlingDeepLinkRef.current = false;
       }
@@ -175,7 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!newSession) {
         setIsOfflineMode(false);
         AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP).catch(e => {
-          AppLogger.warn('[AuthContext] Failed to remove offline skip', e);
+          AppLogger.warn('[AuthContext] Failed to remove offline skip', e instanceof Error ? e.message : String(e));
         });
       }
     });
@@ -204,7 +204,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     options?: Parameters<NonNullable<typeof supabase>['auth']['signUp']>[0]['options']
   ): Promise<{ error: Error | null }> => {
     if (!supabase) return { error: new Error('Supabase not configured') };
-    const { error } = await supabase.auth.signUp({ email, password, options });
+    const { error } = await supabase.auth.signUp({ email, password, options  });
     return { error: error ?? null };
   };
 

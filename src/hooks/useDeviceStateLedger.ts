@@ -161,7 +161,7 @@ export function useDeviceStateLedger() {
       memoryCache.set(key, parsed);
       return parsed;
     } catch (e: unknown) {
-      AppLogger.error('Failed to read device state ledger entry from storage', e, { deviceId: scrubPII(key) });
+      AppLogger.error('Failed to read device state ledger entry from storage', e instanceof Error ? e.message : String(e), { deviceId: scrubPII(key) });
       return null;
     }
   }, []);

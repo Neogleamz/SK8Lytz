@@ -140,8 +140,8 @@ class CrewService {
         .eq('is_active', true);
 
       if (error) {
-        AppLogger.warn('[CrewService] cleanupLegacySessions failed', { error: error.message });
-        AppLogger.log('CREW_ERROR', { action: 'cleanupLegacySessions', error: error.message });
+        AppLogger.warn('[CrewService] cleanupLegacySessions failed', { error: error instanceof Error ? error.message : String(error)  });
+        AppLogger.log('CREW_ERROR', { action: 'cleanupLegacySessions', error: error instanceof Error ? error.message : String(error)  });
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -164,7 +164,7 @@ class CrewService {
         .lt('expires_at', now);
 
       if (error) {
-        AppLogger.warn('[CrewService] cleanupExpiredSessions failed', { error: error.message });
+        AppLogger.warn('[CrewService] cleanupExpiredSessions failed', { error: error instanceof Error ? error.message : String(error)  });
       } else {
         AppLogger.log('CREW_CLEANUP', { action: 'cleanupExpiredSessions', status: 'complete' });
       }
@@ -329,7 +329,7 @@ class CrewService {
         })) as unknown as CrewSession[];
       }
     } catch (e: unknown) {
-      AppLogger.warn('[CrewService] public_sessions view failed, using fallback', { error: e instanceof Error ? e.message : String(e) });
+      AppLogger.warn('[CrewService] public_sessions view failed, using fallback', { error: e instanceof Error ? e.message : String(e)  });
     }
 
     try {
@@ -459,7 +459,7 @@ class CrewService {
       try {
         await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
       } catch (err: unknown) {
-        AppLogger.warn('[CrewService] Failed to multiRemove on endSession', { error: err instanceof Error ? err.message : String(err) });
+        AppLogger.warn('[CrewService] Failed to multiRemove on endSession', { error: err instanceof Error ? err.message : String(err)  });
       }
       AppLogger.log('CREW_SESSION_ENDED', { reason: 'leader_ended', sessionId });
     } catch (e: unknown) {
@@ -500,7 +500,7 @@ class CrewService {
       try {
         await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
       } catch (err: unknown) {
-        AppLogger.warn('[CrewService] Failed to multiRemove on leaveSession', { error: err instanceof Error ? err.message : String(err) });
+        AppLogger.warn('[CrewService] Failed to multiRemove on leaveSession', { error: err instanceof Error ? err.message : String(err)  });
       }
       this.currentSession = null;
       this.currentSessionId = null;
@@ -573,7 +573,7 @@ class CrewService {
         try {
           await AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
         } catch (err: unknown) {
-          AppLogger.warn('[CrewService] Failed to multiRemove expired session', { error: err instanceof Error ? err.message : String(err) });
+          AppLogger.warn('[CrewService] Failed to multiRemove expired session', { error: err instanceof Error ? err.message : String(err)  });
         }
         return null;
       }
@@ -665,7 +665,7 @@ class CrewService {
         try {
           AsyncStorage.multiRemove([STORAGE_LAST_SESSION_ID, STORAGE_LAST_SESSION_EXP]);
         } catch (err: unknown) {
-          AppLogger.warn('[CrewService] Failed to multiRemove on session_ended broadcast', { error: err instanceof Error ? err.message : String(err) });
+          AppLogger.warn('[CrewService] Failed to multiRemove on session_ended broadcast', { error: err instanceof Error ? err.message : String(err)  });
         }
         onSessionEnded?.();
       })
@@ -752,7 +752,7 @@ class CrewService {
         [STORAGE_LAST_SESSION_EXP, session.expires_at],
       ]);
     } catch (err: unknown) {
-      AppLogger.warn('[CrewService] Failed to multiSet session data', { error: err instanceof Error ? err.message : String(err) });
+      AppLogger.warn('[CrewService] Failed to multiSet session data', { error: err instanceof Error ? err.message : String(err)  });
     }
   }
 

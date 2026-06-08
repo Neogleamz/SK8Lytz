@@ -203,7 +203,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                 await WatchBridge.syncSessionState({ status: 'PAUSED' });
               } catch (err: unknown) {
       const safeErr = err instanceof Error ? err : new Error(String(err));
-                AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_pause', error: err instanceof Error ? err.message : String(err) });
+                AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_pause', error: err instanceof Error ? err.message : String(err)  });
               }
             }, 10000);
           }

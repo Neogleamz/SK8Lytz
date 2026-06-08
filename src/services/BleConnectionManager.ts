@@ -103,7 +103,7 @@ export async function executeConnectToDevices({
           await bleManager.cancelDeviceConnection(stale.id);
           AppLogger.log('BLE_STATE_CHANGE', { event: 'stale_device_flushed', deviceId: scrubPII(stale.id) });
         } catch (e: unknown) {
-          AppLogger.warn('Failed to flush stale device', { deviceId: scrubPII(stale.id), error: e instanceof Error ? e.message : String(e) });
+          AppLogger.warn('Failed to flush stale device', { deviceId: scrubPII(stale.id), error: e instanceof Error ? e.message : String(e)  });
         }
       }
       await new Promise(resolve => setTimeout(resolve, BLE_TIMING.STALE_FLUSH_SETTLE_MS));
@@ -264,7 +264,7 @@ export async function executeConnectToDevices({
               AppLogger.log('BLE_TIME_SYNC', { deviceId: conn.id, protocolId: adapter.protocolId, timestamp: Date.now() });
             }
           } catch (handshakeErr: unknown) {
-            AppLogger.warn('[BLE] Handshake write failed (non-fatal)', { error: handshakeErr instanceof Error ? handshakeErr.message : String(handshakeErr), deviceId: conn.id });
+            AppLogger.warn('[BLE] Handshake write failed (non-fatal)', { error: handshakeErr instanceof Error ? handshakeErr.message : String(handshakeErr), deviceId: conn.id  });
           }
 
           AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name });
@@ -274,7 +274,7 @@ export async function executeConnectToDevices({
           // Apple HomeKit mandates BALANCED within 5s of connection establishment.
           if (Platform.OS === 'android') {
             bleManager.requestConnectionPriorityForDevice(conn.id, 0).catch((e: unknown) => {
-              AppLogger.warn('[BLE] Priority BALANCED downgrade failed (non-fatal)', e);
+              AppLogger.warn('[BLE] Priority BALANCED downgrade failed (non-fatal)', e instanceof Error ? e.message : String(e));
             });
           }
           return conn;
@@ -283,7 +283,7 @@ export async function executeConnectToDevices({
           if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
             AppLogger.warn(`[BLE] Connection dropout for ${conn.id} (ignoring VIP error)`);
           } else {
-            AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${conn.id}`, deviceError);
+            AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${conn.id}`, deviceError instanceof Error ? deviceError.message : String(deviceError));
             AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, deviceId: conn.id, context: 'group_sync_fail' });
           }
           return null;
@@ -313,7 +313,7 @@ export async function executeConnectToDevices({
       if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
          AppLogger.warn(`[BLE] Group connection dropout (ignoring VIP error)`);
       } else {
-         AppLogger.error('FAILED TO CONNECT TO GROUP', e);
+         AppLogger.error('FAILED TO CONNECT TO GROUP', e instanceof Error ? e.message : String(e));
          AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, context: 'group' });
       }
       setGate('IDLE'); // Error recovery — inner connection failed

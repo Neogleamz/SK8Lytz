@@ -97,7 +97,7 @@ export function CrewModal({
       setCurrentUserId(user.id);
       profileService.fetchOrCreateProfile(user).then((profile) => {
         setDisplayName(profile?.display_name || user.user_metadata?.display_name || 'Skater');
-      }).catch(e => console.warn('[CrewModal] fetch profile failed', e));
+      }).catch(e => console.warn('[CrewModal] fetch profile failed', e instanceof Error ? e.message : String(e)));
     }
   }, [user]);
 

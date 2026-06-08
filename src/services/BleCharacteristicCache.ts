@@ -28,7 +28,7 @@ export class BleCharacteristicCache {
       }
       return entry;
     } catch (e: unknown) {
-      AppLogger.warn('[BleCache] Failed to read GATT cache', { deviceId: scrubPII(mac), error: e instanceof Error ? e.message : String(e) });
+      AppLogger.warn('[BleCache] Failed to read GATT cache', { deviceId: scrubPII(mac), error: e instanceof Error ? e.message : String(e)  });
       return null;
     }
   }
@@ -42,7 +42,7 @@ export class BleCharacteristicCache {
       };
       await AsyncStorage.setItem(`${CACHE_PREFIX}${mac.toUpperCase()}`, JSON.stringify(entry));
     } catch (e: unknown) {
-      AppLogger.warn('[BleCache] Failed to write GATT cache', { deviceId: scrubPII(mac), error: e instanceof Error ? e.message : String(e) });
+      AppLogger.warn('[BleCache] Failed to write GATT cache', { deviceId: scrubPII(mac), error: e instanceof Error ? e.message : String(e)  });
     }
   }
 }

@@ -48,7 +48,7 @@ export const AppSettingsService = {
           .select('setting_key, setting_value');
 
         if (error) {
-          AppLogger.log('ERROR', { context: 'AppSettingsService', message: 'Fetch settings failed', info: error });
+          AppLogger.log('ERROR', { context: 'AppSettingsService', message: 'Fetch settings failed', info: error instanceof Error ? error.message : String(error) });
           return;
         }
 
@@ -99,7 +99,7 @@ export const AppSettingsService = {
 
       return true;
     } catch (err: unknown) {
-      AppLogger.log('ERROR_CAUGHT', { message: `Failed to update setting ${key}`, error: err instanceof Error ? err.message : String(err) });
+      AppLogger.log('ERROR_CAUGHT', { message: `Failed to update setting ${key}`, error: err instanceof Error ? err.message : String(err)  });
       return false;
     }
   }

@@ -181,7 +181,7 @@ class SpeedTrackingServiceClass {
         .single();
 
       if (error) {
-        AppLogger.log('ERROR_CAUGHT', { message: `[SpeedTrackingService] Save failed: ${error.message}` });
+        AppLogger.log('ERROR_CAUGHT', { message: `[SpeedTrackingService] Save failed: ${error instanceof Error ? error.message : String(error)}` });
         return null;
       }
 

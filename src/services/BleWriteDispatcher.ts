@@ -244,7 +244,7 @@ export async function executeWriteChunked(
             deviceAdapter.serviceUUID, deviceAdapter.writeCharacteristicUUID, b64
           );
         } catch (e: unknown) {
-          AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: e instanceof Error ? e.message : String(e) });
+          AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: e instanceof Error ? e.message : String(e)  });
         }
         await new Promise(res => setTimeout(res, BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
       }

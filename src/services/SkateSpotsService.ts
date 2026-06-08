@@ -103,7 +103,7 @@ export const SkateSpotsService = {
         .single();
 
       if (error) {
-        AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Failed to claim spot', info: error });
+        AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Failed to claim spot', info: error instanceof Error ? error.message : String(error) });
         return null;
       }
       return data;

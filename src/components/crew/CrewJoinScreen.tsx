@@ -40,7 +40,7 @@ export function CrewJoinScreen() {
       );
     } catch (err: unknown) {
       const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
-      AppLogger.log('CREW_ERROR', { action: 'join_crew_by_code', error: e.message });
+      AppLogger.log('CREW_ERROR', { action: 'join_crew_by_code', error: e instanceof Error ? e.message : String(e)  });
       setErrorMsg(e.message || 'Crew not found — check the code and try again.');
     } finally { setIsLoading(false); }
   };
@@ -54,7 +54,7 @@ export function CrewJoinScreen() {
       setStep('controller');
     } catch (err: unknown) {
       const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
-      AppLogger.log('CREW_ERROR', { action: 'join_id', error: e.message });
+      AppLogger.log('CREW_ERROR', { action: 'join_id', error: e instanceof Error ? e.message : String(e)  });
       setErrorMsg(e.message || 'Failed to join session');
     } finally { setIsLoading(false); }
   };

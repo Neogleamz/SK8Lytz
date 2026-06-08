@@ -149,7 +149,7 @@ export function useTelemetryLedger() {
       
     } catch (err: unknown) {
       // Failed (e.g., offline). Save back to AsyncStorage to retry later.
-      AppLogger.warn('Telemetry flush failed, buffering locally', err);
+      AppLogger.warn('Telemetry flush failed, buffering locally', err instanceof Error ? err.message : String(err));
       try {
         await AsyncStorage.setItem(TELEMETRY_BUFFER_KEY, JSON.stringify(payloadToUpload));
         // Reset memory buffer so we don't accumulate duplicates if it stays running

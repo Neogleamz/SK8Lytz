@@ -22,7 +22,7 @@ export function useSkateStats(visible: boolean) {
           setRecentSessions(sessions);
         })
         .catch((err) => {
-          AppLogger.error('[useSkateStats] Failed to fetch stats', err);
+          AppLogger.error('[useSkateStats] Failed to fetch stats', err instanceof Error ? err.message : String(err));
         })
         .finally(() => setStatsLoading(false));
     }

@@ -35,7 +35,7 @@ export const HealthSyncService = {
 
         AppleHealthKit.saveWorkout(options, (err: Object, result: Object) => {
           if (err) {
-            AppLogger.error('Health sync failed', err, { platform: 'ios' });
+            AppLogger.error('Health sync failed', (err instanceof Error ? err.message : String(err)), { platform: 'ios' });
             return;
           }
           AppLogger.log('APP_LOG', { platform: 'ios', result, event: 'HEALTH_SYNC_SUCCESS' });

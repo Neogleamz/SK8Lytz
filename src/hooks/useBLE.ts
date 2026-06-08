@@ -263,7 +263,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
         return;
       }
       
-      AppLogger.warn('Notification Error', error);
+      AppLogger.warn('Notification Error', error instanceof Error ? error.message : String(error));
       AppLogger.log('PROTOCOL_ERROR', { error: errMsg, deviceId, context: 'notification' });
       return;
     }
@@ -346,7 +346,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // --- Sub-Hooks ---
   const handleOrganicDisconnect = (error: any, deviceId: string) => {
     AppLogger.warn(`[BLE] Organic disconnect/dropout for ${deviceId}`);
-    AppLogger.log('DEVICE_DISCONNECTED', { id: deviceId, reason: 'dropout', error: error?.message });
+      AppLogger.log('DEVICE_DISCONNECTED', { id: deviceId, reason: 'dropout', error: error instanceof Error ? error.message : String(error) });
     autoRecovery.initiateRecovery(deviceId);
   };
 

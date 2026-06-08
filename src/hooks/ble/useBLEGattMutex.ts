@@ -169,7 +169,7 @@ export async function acquireGattLock(
       new Promise<void>(r => setTimeout(r, 200)),
     ]);
   } catch (e: unknown) {
-    AppLogger.warn('[Mutex] Previous operation in GATT lock chain rejected', e);
+    AppLogger.warn('[Mutex] Previous operation in GATT lock chain rejected', e instanceof Error ? e.message : String(e));
   }
 
   // If a Hot Reload happened between acquiring and waiting, skip the stale lock

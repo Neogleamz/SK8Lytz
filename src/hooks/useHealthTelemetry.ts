@@ -76,8 +76,7 @@ export function useHealthTelemetry(sessionActive: boolean): HealthTelemetry {
       // If a watch is actively relaying health data (received within last 15s),
       // skip the phone-side poll entirely. The watch's direct sensor is fresher.
       if (isWatchHealthActive()) {
-        AppLogger.log('APP_LOG', {
-          event: 'phone_health_poll_deferred',
+        AppLogger.log('APP_LOG', { event: 'phone_health_poll_deferred',
           reason: 'watch_active',
           lastWatchMs: Date.now() - lastWatchHealthMsRef.current,
         });

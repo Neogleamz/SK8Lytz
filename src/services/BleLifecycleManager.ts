@@ -26,7 +26,7 @@ export async function executeRealDisconnect(
     try {
       sub.remove();
     } catch (e: unknown) {
-      AppLogger.warn('[BLE] Failed to remove disconnect listener', { error: e instanceof Error ? e.message : String(e) });
+      AppLogger.warn('[BLE] Failed to remove disconnect listener', { error: e instanceof Error ? e.message : String(e)  });
     }
   });
   disconnectListeners.current = {};

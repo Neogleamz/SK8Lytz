@@ -78,13 +78,13 @@ class DeviceRepository {
       getCurrentDevices: () => this.devices,
       updateDevicesInBulk: async (updated) => {
         this.devices = updated;
-        await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(this.devices)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'DEVICES_KEY', error: e instanceof Error ? e.message : String(e) }));
+        await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(this.devices)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'DEVICES_KEY', error: e instanceof Error ? e.message : String(e)  }));
       },
       notifySubscribers: () => this._notifyListeners(),
       getCurrentConfigs: () => this.configs,
       updateConfigsInBulk: async (configs) => {
         this.configs = configs;
-        await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'CONFIGS_KEY', error: e instanceof Error ? e.message : String(e) }));
+        await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'CONFIGS_KEY', error: e instanceof Error ? e.message : String(e)  }));
       },
     });
   }
@@ -219,12 +219,12 @@ class DeviceRepository {
       // 1.5. Purge from tombstone on re-add (Fix: BUG-14 — permanent tombstone lock)
       if (this.tombstones.includes(normalizedMac)) {
         this.tombstones = this.tombstones.filter(t => t !== normalizedMac);
-        await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(this.tombstones)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'TOMBSTONE_KEY', error: e instanceof Error ? e.message : String(e) }));
+        await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(this.tombstones)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'TOMBSTONE_KEY', error: e instanceof Error ? e.message : String(e)  }));
         AppLogger.warn('[DeviceRepository] Tombstone cleared on re-add', { deviceId: scrubPII(normalizedMac) });
       }
 
       // 2. Persist to AsyncStorage
-      await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(this.devices)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'DEVICES_KEY/saveDevice', error: e instanceof Error ? e.message : String(e) }));
+      await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(this.devices)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'DEVICES_KEY/saveDevice', error: e instanceof Error ? e.message : String(e)  }));
 
       // 3. Notify subscribers
       this._notifyListeners();
@@ -337,17 +337,17 @@ class DeviceRepository {
       // Step 1: Write tombstone (prevents cloud resurrection)
       if (!this.tombstones.includes(normalizedMac)) {
         this.tombstones.push(normalizedMac);
-        await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(this.tombstones)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'TOMBSTONE_KEY', error: e instanceof Error ? e.message : String(e) }));
+        await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(this.tombstones)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'TOMBSTONE_KEY', error: e instanceof Error ? e.message : String(e)  }));
       }
 
       // Step 2: Remove from in-memory devices
       this.devices = this.devices.filter(d => d.device_mac.toUpperCase() !== normalizedMac);
-      await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(this.devices)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'DEVICES_KEY/deleteDevice', error: e instanceof Error ? e.message : String(e) }));
+      await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(this.devices)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'DEVICES_KEY/deleteDevice', error: e instanceof Error ? e.message : String(e)  }));
 
       // Step 3: Scrub device config
       if (this.configs[normalizedMac]) {
         delete this.configs[normalizedMac];
-        await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'CONFIGS_KEY', error: e instanceof Error ? e.message : String(e) }));
+        await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'CONFIGS_KEY', error: e instanceof Error ? e.message : String(e)  }));
       }
 
       // Step 4: Notify subscribers
@@ -363,7 +363,7 @@ class DeviceRepository {
           .ilike('device_mac', normalizedMac);
 
         if (error) {
-          AppLogger.warn('[DeviceRepository] DB delete error (RLS?)', { deviceId: scrubPII(normalizedMac), error: error.message });
+          AppLogger.warn('[DeviceRepository] DB delete error (RLS?)', { deviceId: scrubPII(normalizedMac), error: error instanceof Error ? error.message : String(error)  });
           throw error;
         }
 
@@ -393,7 +393,7 @@ class DeviceRepository {
     }
 
     this.configs[key] = { ...(this.configs[key] || {} as DeviceSettings), ...patch };
-    await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'CONFIGS_KEY/updateConfig', error: e instanceof Error ? e.message : String(e) }));
+    await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'CONFIGS_KEY/updateConfig', error: e instanceof Error ? e.message : String(e)  }));
     this._notifyListeners();
   }
 
@@ -402,7 +402,7 @@ class DeviceRepository {
    */
   async setConfigs(configs: Record<string, DeviceSettings>): Promise<void> {
     this.configs = configs;
-    await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'CONFIGS_KEY/setConfigs', error: e instanceof Error ? e.message : String(e) }));;
+    await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'CONFIGS_KEY/setConfigs', error: e instanceof Error ? e.message : String(e)  }));;
     this._notifyListeners();
   }
 
@@ -413,7 +413,7 @@ class DeviceRepository {
     const key = mac.toUpperCase();
     if (this.configs[key]) {
       delete this.configs[key];
-      await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'CONFIGS_KEY/deleteConfig', error: e instanceof Error ? e.message : String(e) }));
+      await AsyncStorage.setItem(CONFIGS_KEY, JSON.stringify(this.configs)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'CONFIGS_KEY/deleteConfig', error: e instanceof Error ? e.message : String(e)  }));
       this._notifyListeners();
     }
   }
@@ -474,8 +474,7 @@ class DeviceRepository {
       );
 
       if (cloudRows.length < data.length) {
-        AppLogger.warn('[DeviceRepository] syncFromCloud tombstone filtered', {
-          skipped: data.length - cloudRows.length,
+        AppLogger.warn('[DeviceRepository] syncFromCloud tombstone filtered', { skipped: data.length - cloudRows.length,
         });
       }
 
@@ -531,7 +530,7 @@ class DeviceRepository {
 
       // Update in-memory state
       this.devices = finalDevices;
-      await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(finalDevices)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'DEVICES_KEY/syncFromCloud', error: e instanceof Error ? e.message : String(e) }));
+      await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(finalDevices)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'DEVICES_KEY/syncFromCloud', error: e instanceof Error ? e.message : String(e)  }));
       this._notifyListeners();
 
       // Flush pending offline device registrations, group sync, and tombstone deletions
@@ -672,7 +671,7 @@ class DeviceRepository {
         is_pending_sync: true,
       };
       if (idx >= 0) queue[idx] = marked; else queue.push(marked);
-      await AsyncStorage.setItem(PENDING_KEY, JSON.stringify(queue)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'PENDING_KEY', error: e instanceof Error ? e.message : String(e) }));
+      await AsyncStorage.setItem(PENDING_KEY, JSON.stringify(queue)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'PENDING_KEY', error: e instanceof Error ? e.message : String(e)  }));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.warn('[DeviceRepository] Queue failed:', { error: msg });
@@ -739,7 +738,7 @@ class DeviceRepository {
         if (error) AppLogger.warn('[DeviceRepository] Flush error for ' + device.device_mac, { error: error.message });
       }
 
-      await AsyncStorage.removeItem(PENDING_KEY).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage remove failed', { key: 'PENDING_KEY', error: e instanceof Error ? e.message : String(e) }));
+      await AsyncStorage.removeItem(PENDING_KEY).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage remove failed', { key: 'PENDING_KEY', error: e instanceof Error ? e.message : String(e)  }));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.warn('[DeviceRepository] Flush failed:', { error: msg });
@@ -769,10 +768,10 @@ class DeviceRepository {
           synced.push(mac);
           AppLogger.warn('[DeviceRepository] Tombstone synced to cloud', { deviceId: scrubPII(mac) });
         } else {
-          AppLogger.warn('[DeviceRepository] Tombstone cloud delete failed', { deviceId: scrubPII(mac), error: error.message });
+          AppLogger.warn('[DeviceRepository] Tombstone cloud delete failed', { deviceId: scrubPII(mac), error: error instanceof Error ? error.message : String(error)  });
         }
       } catch (e: unknown) {
-        AppLogger.warn('[DeviceRepository] Tombstone flush error', { deviceId: scrubPII(mac), error: e instanceof Error ? e.message : String(e) });
+        AppLogger.warn('[DeviceRepository] Tombstone flush error', { deviceId: scrubPII(mac), error: e instanceof Error ? e.message : String(e)  });
       }
     }
 
@@ -780,7 +779,7 @@ class DeviceRepository {
       // Tombstones that were successfully deleted from cloud can be cleared locally.
       // We KEEP any we failed to sync so the next boot retries them.
       this.tombstones = this.tombstones.filter(t => !synced.includes(t));
-      await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(this.tombstones)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'TOMBSTONE_KEY/flushPendingTombstones', error: e instanceof Error ? e.message : String(e) }));
+      await AsyncStorage.setItem(TOMBSTONE_KEY, JSON.stringify(this.tombstones)).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'TOMBSTONE_KEY/flushPendingTombstones', error: e instanceof Error ? e.message : String(e)  }));
     }
   }
 }

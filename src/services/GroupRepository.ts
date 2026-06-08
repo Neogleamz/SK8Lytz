@@ -85,8 +85,7 @@ class GroupRepository {
           this.groups = [];
         }
       }
-      AppLogger.warn('[GroupRepository] initialized', {
-        event: 'initialized',
+      AppLogger.warn('[GroupRepository] initialized', { event: 'initialized',
         groupCount: this.groups.length,
       });
     } catch (e: unknown) {
@@ -101,7 +100,7 @@ class GroupRepository {
   async setGroups(groups: CustomGroup[]): Promise<void> {
     this.groups = groups;
     await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch((e) =>
-      AppLogger.warn('[GroupRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/setGroups', error: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) })
+      AppLogger.warn('[GroupRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/setGroups', error: e instanceof Error ? e.message : String(e)  })
     );
     this.getDelegate().notifySubscribers();
   }
@@ -113,7 +112,7 @@ class GroupRepository {
     // 1. Remove group row
     this.groups = this.groups.filter((g) => g.id !== groupId);
     await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch((e) =>
-      AppLogger.warn('[GroupRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/deleteGroup', error: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) })
+      AppLogger.warn('[GroupRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/deleteGroup', error: e instanceof Error ? e.message : String(e)  })
     );
 
     // 2. Clear group assignments from in-memory devices via delegate
@@ -149,7 +148,7 @@ class GroupRepository {
       });
       if (error) throw error;
     } catch (e: unknown) {
-      AppLogger.warn('[GroupRepository] delete_group_cascade RPC failed, falling back:', { error: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) });
+      AppLogger.warn('[GroupRepository] delete_group_cascade RPC failed, falling back:', { error: e instanceof Error ? e.message : String(e)  });
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
@@ -184,7 +183,7 @@ class GroupRepository {
     if (existingIdx >= 0) this.groups[existingIdx] = updatedGroup;
     else this.groups.push(updatedGroup);
     await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch((e) =>
-      AppLogger.warn('[GroupRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/saveGroupTransactional', error: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) })
+      AppLogger.warn('[GroupRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/saveGroupTransactional', error: e instanceof Error ? e.message : String(e)  })
     );
 
     const delegate = this.getDelegate();
@@ -232,8 +231,7 @@ class GroupRepository {
 
       if (!userId || hasPendingDevices) {
         await this._queuePendingGroupSync(groupId, groupName, deviceMacs, type);
-        AppLogger.warn('[GroupRepository] Offline or Pending Devices — group queued for sync', {
-          groupId,
+        AppLogger.warn('[GroupRepository] Offline or Pending Devices — group queued for sync', { groupId,
           hasPendingDevices,
         });
         return true;
@@ -262,7 +260,7 @@ class GroupRepository {
 
       return true;
     } catch (e: unknown) {
-      AppLogger.warn('[GroupRepository] saveGroupTransactional RPC failed, queuing:', { error: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) });
+      AppLogger.warn('[GroupRepository] saveGroupTransactional RPC failed, queuing:', { error: e instanceof Error ? e.message : String(e)  });
       await this._queuePendingGroupSync(groupId, groupName, deviceMacs, type);
       return false;
     }
@@ -285,7 +283,7 @@ class GroupRepository {
       else queue.push(entry);
       await AsyncStorage.setItem(PENDING_GROUP_KEY, JSON.stringify(queue));
     } catch (e: unknown) {
-      AppLogger.warn('[GroupRepository] Group queue failed:', { error: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) });
+      AppLogger.warn('[GroupRepository] Group queue failed:', { error: e instanceof Error ? e.message : String(e)  });
     }
   }
 
@@ -331,7 +329,7 @@ class GroupRepository {
       await AsyncStorage.removeItem(PENDING_GROUP_KEY);
       AppLogger.warn('[GroupRepository] Pending group sync flushed', { count: queue.length });
     } catch (e: unknown) {
-      AppLogger.warn('[GroupRepository] Group flush failed:', { error: e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)) });
+      AppLogger.warn('[GroupRepository] Group flush failed:', { error: e instanceof Error ? e.message : String(e)  });
     }
   }
 }

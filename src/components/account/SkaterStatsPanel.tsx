@@ -55,7 +55,7 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
         if (data && !error && isActive) {
           setStats(data);
           // 2. Save fresh cloud data to offline cache
-          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(e => AppLogger.warn('Failed to cache skater stats', e));
+          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(e => AppLogger.warn('Failed to cache skater stats', e instanceof Error ? e.message : String(e)));
         }
       } catch (e: unknown) {
         AppLogger.error('Failed to load skater stats from Supabase', e instanceof Error ? e.message : String(e));

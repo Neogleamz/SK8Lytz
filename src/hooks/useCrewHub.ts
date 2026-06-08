@@ -47,7 +47,7 @@ export function useCrewHub(visible: boolean, step: string) {
     profileService.getMyCrew(undefined, user.id).then((crews: PermanentCrew[]) => {
       setMyCrews(crews);
       setPermanentCrews(crews.map(c => ({ id: c.id, name: c.name })));
-    }).catch((e) => { AppLogger.error('[useCrewHub] Failed to load my crews', e); });
+    }).catch((e) => { AppLogger.error('[useCrewHub] Failed to load my crews', e instanceof Error ? e.message : String(e)); });
   }, [visible, step]);
 
   // Load member counts for My Crews
@@ -57,7 +57,7 @@ export function useCrewHub(visible: boolean, step: string) {
       if (crewMemberCounts[crew.id]) return;
       profileService.getCrewMembersForDisplay(crew.id).then(info => {
         setCrewMemberCounts(prev => ({ ...prev, [crew.id]: info }));
-      }).catch((e) => { AppLogger.error('[useCrewHub] Failed to load member counts', e); });
+      }).catch((e) => { AppLogger.error('[useCrewHub] Failed to load member counts', e instanceof Error ? e.message : String(e)); });
     });
   }, [visible, step, myCrews]);
 
@@ -107,9 +107,9 @@ export function useCrewHub(visible: boolean, step: string) {
         // Previously used Promise.all which is atomic: if getNearbyPublicSessions
         // threw (stale auth, network), setNearbySpots was never called → no pins.
         const sessionsP = locationService.getNearbyPublicSessions(discoverRadiusMi, userCoords, user?.id || null)
-          .catch(err => { AppLogger.warn('[useCrewHub] sessions query failed', err); return [] as NearbySession[]; });
+          .catch(err => { AppLogger.warn('[useCrewHub] sessions query failed', err instanceof Error ? err.message : String(err)); return [] as NearbySession[]; });
         const spotsP = locationService.getNearbySkateSpots(discoverRadiusMi, userCoords)
-          .catch(err => { AppLogger.warn('[useCrewHub] spots query failed', err); return [] as NearbySkateSpot[]; });
+          .catch(err => { AppLogger.warn('[useCrewHub] spots query failed', err instanceof Error ? err.message : String(err)); return [] as NearbySkateSpot[]; });
 
         return Promise.all([sessionsP, spotsP]);
       })
@@ -118,7 +118,7 @@ export function useCrewHub(visible: boolean, step: string) {
         setNearbySpots(spots);
       })
       .catch((err) => {
-        AppLogger.warn('[useCrewHub] refreshNearby failed', err);
+        AppLogger.warn('[useCrewHub] refreshNearby failed', err instanceof Error ? err.message : String(err));
       })
       .finally(() => setIsLoadingNearby(false));
   }, [discoverRadiusMi, locationCoords]);

@@ -149,8 +149,7 @@ function logRecoverySummary(deviceId: string, outcome: 'success' | 'ejected' | '
     stats.failCount++;
     stats.lastFailReason = reason ?? null;
   }
-  AppLogger.log('AUTO_RECOVERY_SUMMARY', {
-    deviceId,
+  AppLogger.log('AUTO_RECOVERY_SUMMARY', { deviceId,
     outcome,
     phase,
     attempts,
@@ -335,7 +334,7 @@ export function useBLEAutoRecovery({
             }
           } catch (e: unknown) {
       const safeErr = e instanceof Error ? e : new Error(String(e));
-            AppLogger.warn('[AutoRecovery] MTU negotiation failed', { deviceId, error: e instanceof Error ? e.message : String(e) });
+            AppLogger.warn('[AutoRecovery] MTU negotiation failed', { deviceId, error: e instanceof Error ? e.message : String(e)  });
           }
           if (signal.aborted) break;
 
@@ -372,7 +371,7 @@ export function useBLEAutoRecovery({
               await conn.writeCharacteristicWithoutResponseForService(
                 recoveryAdapter.serviceUUID, recoveryAdapter.writeCharacteristicUUID,
                 Buffer.from(pingResult.packets[0]).toString('base64')
-              ).catch((e: unknown) => AppLogger.warn('[useBLEAutoRecovery] Recovery ping failed', e));
+              ).catch((e: unknown) => AppLogger.warn('[useBLEAutoRecovery] Recovery ping failed', e instanceof Error ? e.message : String(e)));
               return true;
             });
           }
@@ -393,7 +392,7 @@ export function useBLEAutoRecovery({
 
         } catch (e: unknown) {
       const safeErr = e instanceof Error ? e : new Error(String(e));
-          AppLogger.warn(`[AutoRecovery] Connection attempt failed for ${deviceId}, retrying with backoff`, e);
+          AppLogger.warn(`[AutoRecovery] Connection attempt failed for ${deviceId}, retrying with backoff`, e instanceof Error ? e.message : String(e));
         } finally {
           if (releaseFn) releaseFn();
         }
@@ -548,7 +547,7 @@ export function useBLEAutoRecovery({
             .catch((e: unknown) => {
               // FAILURE: ghost state was never cleared — devices stay dimmed.
               // Fall back to individual recovery loops for each failed device.
-              AppLogger.warn('[AutoRecovery] Group dropout reconnect failed — falling back to individual loops', e);
+              AppLogger.warn('[AutoRecovery] Group dropout reconnect failed — falling back to individual loops', e instanceof Error ? e.message : String(e));
               batch.forEach(d => {
                 spawnRecoveryLoop(d.id);
               });
