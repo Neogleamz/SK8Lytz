@@ -359,6 +359,8 @@ async function _executeProtocolResultsInternal(
           break;
         }
       }
+      // FIX: 50ms inter-device gap prevents GATT 133 on Android multi-device groups.
+      await new Promise(res => setTimeout(res, 50));
     }
     return allSucceeded;
   };

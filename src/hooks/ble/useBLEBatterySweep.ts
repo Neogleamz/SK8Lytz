@@ -26,6 +26,7 @@ export interface UseBLEBatterySweepProps {
 export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySweepProps) {
   const [isSweeperActive, setIsSweeperActive] = useState(false);
   const isSweeperActiveRef = useRef(false);
+  const activeBurstRef = useRef<Promise<void> | null>(null);
 
   const batteryTierRef = useRef<BatteryTier>('FULL');
   const throttleCycleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -114,12 +115,16 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
     isSweeperActiveRef.current = false;
     setIsSweeperActive(false);
     if (burstTimerRef.current) { clearTimeout(burstTimerRef.current); burstTimerRef.current = null; }
+    activeBurstRef.current = null;
     if (throttleCycleTimerRef.current) { clearTimeout(throttleCycleTimerRef.current); throttleCycleTimerRef.current = null; }
     AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_stop' });
   }, [bleManager]);
 
   const burstScan = useCallback((durationMs: number = 5000, onBurstStart?: () => void): Promise<void> => {
-    return new Promise((resolve) => {
+    if (activeBurstRef.current) {
+      return activeBurstRef.current;
+    }
+    const burstPromise = new Promise<void>((resolve) => {
       if (Platform.OS === 'web' || !bleManager) {
         resolve();
         return;
@@ -134,11 +139,14 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
 
       burstTimerRef.current = setTimeout(() => {
         burstTimerRef.current = null;
+        activeBurstRef.current = null;
         AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_burst_end_revert' });
         startSweeper();
         resolve();
       }, durationMs);
     });
+    activeBurstRef.current = burstPromise;
+    return burstPromise;
   }, [bleManager, scanCallback, startSweeper]);
 
   useEffect(() => {

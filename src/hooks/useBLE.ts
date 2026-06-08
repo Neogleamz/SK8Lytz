@@ -30,6 +30,7 @@ import { useBLEScanner } from './ble/useBLEScanner';
 import { useBLEAutoRecovery } from './ble/useBLEAutoRecovery';
 import { useBLEHeartbeat } from './ble/useBLEHeartbeat';
 import { useBLERSSIMonitor } from './ble/useBLERSSIMonitor';
+import { acquireGattLock } from './ble/useBLEGattMutex';
 
 import { executePingDevice } from '../services/BlePingService';
 import { executeWriteToDevice, executeWriteChunked, executeProtocolResults as executeProtocolResultsService, BleWriteStateRefs } from '../services/BleWriteDispatcher';
@@ -412,12 +413,17 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     blinkPayload: number[],
     options?: { probe?: boolean; duration?: number; turnOffAtEnd?: boolean }
   ): Promise<PingResult | null> => {
+    const lockHandle = await acquireGattLock(2); // ping priority
+    if (!lockHandle) return null;
+    const { release } = lockHandle;
+
     const wasSweeperActive = scanner.isSweeperActive;
     if (wasSweeperActive) scanner.stopScanner(); // Stops sweeper natively
     try {
       return await executePingDevice(bleManager, mac, blinkPayload, options);
     } finally {
       if (wasSweeperActive && bleManager) scanner.startSweeper();
+      release();
     }
   }, [bleManager, scanner]);
 

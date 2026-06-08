@@ -44,18 +44,7 @@ export async function executeConnectToDevices({
   }
 
   // ── CONNECTION CACHING GUARD (Optimistic UI) ──────────────────────────────
-  const allRequestedAlreadyConnected = devices.every(requested => 
-    connectedDevicesRef.current.some(connected => connected.id === requested.id)
-  );
-
-  if (allRequestedAlreadyConnected) {
-    AppLogger.log('BLE_STATE_CHANGE', { event: 'connectToDevices_cached_hit_skip' });
-    if (keepaliveTimerRef.current) {
-      clearTimeout(keepaliveTimerRef.current);
-      keepaliveTimerRef.current = null;
-    }
-    return;
-  }
+  // Moved inside the lock below to prevent TOCTOU race conditions.
 
   // ── PRE-LOCK GATE CHECK (optimization) ─────────────────────────────────────
   // Skip the entire GATT lock acquisition if the gate is already non-IDLE.
@@ -75,6 +64,19 @@ export async function executeConnectToDevices({
   const { release } = lockHandle;
 
   try {
+    const allRequestedAlreadyConnected = devices.every(requested => 
+      connectedDevicesRef.current.some(connected => connected.id === requested.id)
+    );
+
+    if (allRequestedAlreadyConnected) {
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'connectToDevices_cached_hit_skip' });
+      if (keepaliveTimerRef.current) {
+        clearTimeout(keepaliveTimerRef.current);
+        keepaliveTimerRef.current = null;
+      }
+      return;
+    }
+
     const retainedDevices = connectedDevicesRef.current.filter(c => devices.some(d => d.id === c.id));
     setConnectedDevices(retainedDevices);
 

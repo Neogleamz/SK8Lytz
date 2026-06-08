@@ -232,10 +232,12 @@ export function useDashboardGroups({
    * DashboardScreen is responsible for firing the actual BLE write after calling this.
    */
   const setPowerState = (deviceIds: string[], forceState?: boolean) => {
-    const targetState = forceState !== undefined ? forceState : !(powerStates[deviceIds[0]] ?? true);
-    const newStates = { ...powerStates };
-    deviceIds.forEach(id => { newStates[id] = targetState; });
-    setPowerStates(newStates);
+    setPowerStates(prev => {
+      const targetState = forceState !== undefined ? forceState : !(prev[deviceIds[0]] ?? true);
+      const newStates = { ...prev };
+      deviceIds.forEach(id => { newStates[id] = targetState; });
+      return newStates;
+    });
   };
 
   // ─── Last group patterns — persisted color snapshot per group ───────────────
