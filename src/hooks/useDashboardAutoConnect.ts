@@ -15,6 +15,7 @@
  * Extracted from DashboardScreen.tsx (Phase 2 — God Object Surgery).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import DeviceRepository from '../services/DeviceRepository';
 import React, { useEffect, useRef } from 'react';
 import type { Device } from 'react-native-ble-plx';
 import type { RegisteredDevice } from '../hooks/useRegistration';
@@ -300,10 +301,9 @@ export function useDashboardAutoConnect({
           processLocalDevices(registeredDevices);
         } else {
           try {
-            const localDevicesStr = await AsyncStorage.getItem('@Sk8lytz_registered_devices');
-            if (localDevicesStr) {
-              const parsed = JSON.parse(localDevicesStr);
-              processLocalDevices(parsed);
+            const localDevices = DeviceRepository.getInstance().getDevices();
+            if (localDevices && localDevices.length > 0) {
+              processLocalDevices(localDevices);
             }
           } catch (e: unknown) {
             const msg = e instanceof Error ? e.message : String(e);

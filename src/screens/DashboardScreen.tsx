@@ -117,7 +117,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     saveAllRegisteredDevices,
     deregisterDevice,
     checkDeviceClaimed,
-    migrateLegacyGroups,
+
     isLoading,
   } = useRegistration();
 
@@ -245,7 +245,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     registeredDevices,
     saveAllRegisteredDevices,
     saveRegisteredDevice,
-    migrateLegacyGroups,
+
     clearPendingRegistrations,
     getAllScannedDevices: () => allDevicesRef.current,
     setAllDevices,

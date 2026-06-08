@@ -22,8 +22,9 @@ import { AuthFormForgotPassword } from '../components/auth/AuthFormForgotPasswor
 import { AuthFooterActions } from '../components/auth/AuthFooterActions';
 import { AuthSandboxToggle } from '../components/auth/AuthSandboxToggle';
 
+import { STORAGE_REMEMBER_CREDS, STORAGE_DEMO_MODE } from '../constants/storageKeys';
+
 const STORAGE_LAST_EMAIL    = '@Sk8lytz_auth_last_email';
-const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';
 
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
 
@@ -53,7 +54,7 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
 
   useEffect(() => {
     AppLogger.log('SCREEN_OPENED', { screen: 'AuthScreen' });
-    AsyncStorage.getItem('@Sk8lytz_demo_mode').then(val => {
+    AsyncStorage.getItem(STORAGE_DEMO_MODE).then(val => {
       setIsSandboxEnabled(val === 'true');
     });
   }, []);

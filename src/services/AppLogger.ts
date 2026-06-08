@@ -26,6 +26,7 @@
  * Platform: React Native (Android + Web)
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_APP_SETTINGS } from '../constants/storageKeys';
 import * as Battery from 'expo-battery';
 import * as Device from 'expo-device';
 import { supabase } from './supabaseClient';
@@ -574,7 +575,7 @@ class AppLoggerService {
 
     try {
       // ── [TELEMETRY MASTER GATE] ─────────────────────────────────────────────
-      const settingsStr = await AsyncStorage.getItem('@sk8lytz_app_settings');
+      const settingsStr = await AsyncStorage.getItem(STORAGE_APP_SETTINGS);
       let telemetryEnabled = true;
       if (settingsStr) {
         try {

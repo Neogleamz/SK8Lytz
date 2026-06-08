@@ -1,5 +1,6 @@
 import { Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_DEMO_MODE } from '../constants/storageKeys';
 import { Buffer } from 'buffer';
 import type { Device } from 'react-native-ble-plx';
 import { AppLogger } from './AppLogger';
@@ -116,7 +117,7 @@ export async function executeConnectToDevices({
     try {
       let isMock = 'false';
       if (__DEV__) {
-         isMock = await AsyncStorage.getItem('@Sk8lytz_demo_mode') || 'false';
+         isMock = await AsyncStorage.getItem(STORAGE_DEMO_MODE) || 'false';
       }
 
       if (Platform.OS === 'web' || isMock === 'true') {

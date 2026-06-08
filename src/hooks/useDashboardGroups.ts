@@ -34,7 +34,7 @@ interface UseDashboardGroupsOptions {
   saveAllRegisteredDevices: (devices: RegisteredDevice[]) => Promise<boolean | void>;
   /** Saves a single registered device to cloud + local. Used by group CRUD. */
   saveRegisteredDevice: (device: RegisteredDevice) => Promise<boolean>;
-  migrateLegacyGroups: (allDevices: any[], deviceConfigs: Record<string, DeviceSettings>) => Promise<RegisteredDevice[]>;
+
   clearPendingRegistrations: () => void;
   /** Called after FTUE setup completes to hide the SetupWizard. */
   onRegistrationComplete: () => void;
@@ -84,7 +84,7 @@ export function useDashboardGroups({
   registeredDevices,
   saveAllRegisteredDevices,
   saveRegisteredDevice: _saveRegisteredDevice,
-  migrateLegacyGroups: _migrateLegacyGroups,
+
   clearPendingRegistrations,
   onRegistrationComplete,
   getAllScannedDevices: _getAllScannedDevices,

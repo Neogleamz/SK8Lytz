@@ -12,6 +12,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, AppState } from 'react-native';
+import { STORAGE_DEMO_MODE } from '../constants/storageKeys';
 import { Buffer } from 'buffer';
 import type { Device } from 'react-native-ble-plx';
 import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
@@ -179,7 +180,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   useEffect(() => {
     if (__DEV__) {
-      AsyncStorage.getItem('@Sk8lytz_demo_mode').then((isMock) => {
+      AsyncStorage.getItem(STORAGE_DEMO_MODE).then((isMock) => {
         if (Platform.OS === 'web' || isMock === 'true') {
           setIsBluetoothSupported(true);
           setIsBluetoothEnabled(true);
