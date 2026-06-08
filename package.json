@@ -55,6 +55,7 @@
     "react-native-health-connect": "^3.5.3",
     "react-native-map-clustering": "^4.0.0",
     "react-native-maps": "1.27.2",
+    "react-native-nitro-image": "^0.14.0",
     "react-native-nitro-modules": "^0.35.9",
     "react-native-safe-area-context": "^5.7.0",
     "react-native-svg": "^15.15.4",
