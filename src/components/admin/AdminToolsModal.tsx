@@ -39,6 +39,19 @@ import GlobalAnalyticsPanel from './tools/GlobalAnalyticsPanel';
 
 type Tab = 'timeline' | 'stats' | 'device' | 'tools';
 
+export type AdminPanel =
+  | 'productManager'
+  | 'picksScheduler'
+  | 'appManager'
+  | 'userManagement'
+  | 'programmer'
+  | 'lab'
+  | 'roster'
+  | 'audit'
+  | 'blacklist'
+  | 'featureFlags'
+  | 'globalAnalytics';
+
 export interface AdminToolsModalProps {
   visible: boolean;
   onClose: () => void;
@@ -63,17 +76,7 @@ export default function AdminToolsModal({
 }: AdminToolsModalProps) {
   const { isDark } = useTheme();
   const [tab, setTab] = useState<Tab>('timeline');
-  const [isProductManagerVisible, setIsProductManagerVisible] = useState(false);
-  const [isPicksSchedulerVisible, setIsPicksSchedulerVisible] = useState(false);
-  const [isAppManagerVisible, setIsAppManagerVisible] = useState(false);
-  const [isUserManagementVisible, setIsUserManagementVisible] = useState(false);
-  const [isProgrammerVisible, setIsProgrammerVisible] = useState(false);
-  const [isLabVisible, setIsLabVisible] = useState(false);
-  const [isRosterVisible, setIsRosterVisible] = useState(false);
-  const [isAuditVisible, setIsAuditVisible] = useState(false);
-  const [isBlacklistVisible, setIsBlacklistVisible] = useState(false);
-  const [isFeatureFlagsVisible, setIsFeatureFlagsVisible] = useState(false);
-  const [isGlobalAnalyticsVisible, setIsGlobalAnalyticsVisible] = useState(false);
+  const [activePanel, setActivePanel] = useState<AdminPanel | null>(null);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
 
   // ── Domain Hooks ────────────────────────────────────────────────────────────
@@ -84,7 +87,7 @@ export default function AdminToolsModal({
     startEditing, createNew, patchEdit, saveProduct 
   } = useProductManager();
 
-  const { appSettings, updateSetting } = useAdminSettings(isAppManagerVisible);
+  const { appSettings, updateSetting } = useAdminSettings(activePanel === 'appManager');
 
   const handlePolicyToggle = useCallback((key: string, nextValue: boolean, title: string, message: string) => {
     if (nextValue) {
@@ -197,17 +200,17 @@ export default function AdminToolsModal({
       case 'tools':
         return (
           <AdminTab 
-            onOpenProgrammer={() => setIsProgrammerVisible(true)} 
-            onOpenLab={() => setIsLabVisible(true)} 
-            setIsPicksSchedulerVisible={setIsPicksSchedulerVisible}
-            setIsProductManagerVisible={setIsProductManagerVisible}
-            setIsAppManagerVisible={setIsAppManagerVisible}
-            setIsUserManagementVisible={setIsUserManagementVisible}
-            setIsRosterVisible={setIsRosterVisible}
-            setIsAuditVisible={setIsAuditVisible}
-            setIsBlacklistVisible={setIsBlacklistVisible}
-            setIsFeatureFlagsVisible={setIsFeatureFlagsVisible}
-            setIsGlobalAnalyticsVisible={setIsGlobalAnalyticsVisible}
+            onOpenProgrammer={() => setActivePanel('programmer')} 
+            onOpenLab={() => setActivePanel('lab')} 
+            setIsPicksSchedulerVisible={(v) => setActivePanel(v ? 'picksScheduler' : null)}
+            setIsProductManagerVisible={(v) => setActivePanel(v ? 'productManager' : null)}
+            setIsAppManagerVisible={(v) => setActivePanel(v ? 'appManager' : null)}
+            setIsUserManagementVisible={(v) => setActivePanel(v ? 'userManagement' : null)}
+            setIsRosterVisible={(v) => setActivePanel(v ? 'roster' : null)}
+            setIsAuditVisible={(v) => setActivePanel(v ? 'audit' : null)}
+            setIsBlacklistVisible={(v) => setActivePanel(v ? 'blacklist' : null)}
+            setIsFeatureFlagsVisible={(v) => setActivePanel(v ? 'featureFlags' : null)}
+            setIsGlobalAnalyticsVisible={(v) => setActivePanel(v ? 'globalAnalytics' : null)}
             textMuted={textMuted} 
             textPrimary={textPrimary} 
             cardBg={cardBg} 
@@ -222,51 +225,51 @@ export default function AdminToolsModal({
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       
-      {isAppManagerVisible ? (
+      {activePanel === 'appManager' ? (
         <AppManager 
-          visible={isAppManagerVisible} 
-          onClose={() => setIsAppManagerVisible(false)}
+          visible={true} 
+          onClose={() => setActivePanel(null)}
           appSettings={appSettings}
           handlePolicyToggle={handlePolicyToggle}
           updateSetting={updateSetting}
           bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
         />
-      ) : isUserManagementVisible ? (
+      ) : activePanel === 'userManagement' ? (
         <UserManagementPanel
-          visible={isUserManagementVisible}
-          onClose={() => setIsUserManagementVisible(false)}
+          visible={true}
+          onClose={() => setActivePanel(null)}
           bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
         />
-      ) : isRosterVisible ? (
+      ) : activePanel === 'roster' ? (
         <AdminRosterPanel
-          visible={isRosterVisible}
-          onClose={() => setIsRosterVisible(false)}
+          visible={true}
+          onClose={() => setActivePanel(null)}
           bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
         />
-      ) : isAuditVisible ? (
+      ) : activePanel === 'audit' ? (
         <AdminAuditLogViewer
-          visible={isAuditVisible}
-          onClose={() => setIsAuditVisible(false)}
+          visible={true}
+          onClose={() => setActivePanel(null)}
           bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
         />
-      ) : isBlacklistVisible ? (
+      ) : activePanel === 'blacklist' ? (
         <HardwareBlacklistPanel
-          visible={isBlacklistVisible}
-          onClose={() => setIsBlacklistVisible(false)}
+          visible={true}
+          onClose={() => setActivePanel(null)}
           bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
         />
-      ) : isFeatureFlagsVisible ? (
+      ) : activePanel === 'featureFlags' ? (
         <FeatureFlagsPanel
-          visible={isFeatureFlagsVisible}
-          onClose={() => setIsFeatureFlagsVisible(false)}
+          visible={true}
+          onClose={() => setActivePanel(null)}
           bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
         />
-      ) : isGlobalAnalyticsVisible ? (
+      ) : activePanel === 'globalAnalytics' ? (
         <GlobalAnalyticsPanel Colors={Colors} />
-      ) : isProductManagerVisible ? (
+      ) : activePanel === 'productManager' ? (
          <ProductManager 
-           visible={isProductManagerVisible} 
-           onClose={() => setIsProductManagerVisible(false)}
+           visible={true} 
+           onClose={() => setActivePanel(null)}
            allProfiles={allProfiles}
            editingProfile={editingProfile}
            startEditing={startEditing}
@@ -276,13 +279,13 @@ export default function AdminToolsModal({
            productSaving={productSaving}
            bg={bg} cardBg={cardBg} borderColor={borderColor} textPrimary={textPrimary} textMuted={textMuted}
          />
-      ) : isPicksSchedulerVisible ? (
-        <AdminPicksScheduler visible={isPicksSchedulerVisible} onClose={() => setIsPicksSchedulerVisible(false)} />
-      ) : isProgrammerVisible ? (
+      ) : activePanel === 'picksScheduler' ? (
+        <AdminPicksScheduler visible={true} onClose={() => setActivePanel(null)} />
+      ) : activePanel === 'programmer' ? (
         <Sk8LytzProgrammer 
-          visible={isProgrammerVisible} 
-          onClose={() => setIsProgrammerVisible(false)} 
-          onExitToLogs={() => setIsProgrammerVisible(false)}
+          visible={true} 
+          onClose={() => setActivePanel(null)} 
+          onExitToLogs={() => setActivePanel(null)}
           allDevices={allDevices || []}
           deviceConfigs={liveDeviceConfigs}
           connectToDevice={async (d) => { if (onConnectToDevice) await onConnectToDevice(d); }}
@@ -290,12 +293,12 @@ export default function AdminToolsModal({
           bleState={bleState || 'IDLE'}
           handleScan={handleScan || (() => {})}
         />
-      ) : isLabVisible ? (
+      ) : activePanel === 'lab' ? (
         <Sk8LytzDiagnosticLab
-          visible={isLabVisible}
+          visible={true}
           isDiagnosticsMode={isDiagnosticsMode}
           onToggleDiagnostics={onToggleDiagnostics}
-          onClose={() => setIsLabVisible(false)}
+          onClose={() => setActivePanel(null)}
           connectedDevices={connectedDevices}
           liveRxPayload={liveRxPayload}
           hwSettings={hwSettings}
