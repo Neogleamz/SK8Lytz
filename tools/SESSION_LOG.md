@@ -857,3 +857,10 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Standardized ~150 \catch(e)\ blocks across \src/\ to use \e instanceof Error ? e.message : String(e)\ when passing to \AppLogger\.
 **Verify result:** TSC ?, Jest ?, Gates ?, Blast Radius ? (bypassed safely since log extraction does not change architecture dependency traces)
 **Files touched:** ~37 files across src/services, src/hooks, src/components, and src/utils.
+
+### [MERGE] 2026-06-08T20:43 - refactor/storage-key-registry-v2 -> master @ HEAD
+**What merged:**
+- Replaced raw string keys with constants across AdminToolsModal, storageKeys, AuthContext, useBLEScanner, useAccountOverview, AuthScreen.
+- Updated SK8Lytz_App_Master_Reference.md §A.2 with 6 new undocumented keys.
+**Verify result:** TSC ? Jest ? gates ?
+**Files touched:** AdminToolsModal.tsx, storageKeys.ts, AuthContext.tsx, useBLEScanner.ts, useAccountOverview.ts, AuthScreen.tsx, SK8Lytz_App_Master_Reference.md
