@@ -1,3 +1,13 @@
+### [FRICTION-012] Audit Sniper Method Name Confusion
+- **First Observed:** 2026-06-08
+- **Observed By:** Reyes (Scout)
+- **Occurrences:** 1 / 3
+- **Trigger:** DOMAIN_PATTERN_ENGINE sniper flagged `setCustomModeExtendedCompact` as requiring 0x40 chunk framing — same as `setCustomModeExtended`
+- **Pattern:** Sniper matched on method NAME (ExtendedCompact) and assumed it was the 323-byte chunked format, without reading the implementation body. P1 violation — assertion without source citation.
+- **Root Cause Theory:** The naming `setCustomModeExtendedCompact` vs `setCustomModeExtended` is ambiguous to text-pattern-matching agents. Future snipers targeting BLE method names need to read implementations, not just signatures.
+- **Impact:** A CRITICAL task was created that would have BROKEN direction support for all 0x51 patterns if executed. Switching to `setCustomModeCompact` drops the 10th `dir` byte intentionally present.
+- **Status:** MONITORING
+
 # Friction Ledger
 > **Owned by:** The entire team â€” any persona may file. Reyes reviews at session start. Alex reviews at wind-down.
 >
@@ -25,26 +35,6 @@ When you observe a recurring problem, add or increment an entry here:
 ```
 
 **At 3 occurrences â†’ AUTO-PROPOSAL TRIGGERED:**
-The observing persona immediately drafts a Rule Evolution Proposal and presents it to the user.
-
----
-
-## ðŸ”´ Active Friction Events (Open â€” Under Monitoring)
-
-### [FRICTION-015] Cowboy Hotfixes on Master
-- **First Observed:** 2026-06-07
-- **Observed By:** River
-- **Occurrences:** 2 / 3
-- **Trigger:** User: "why are we stashing this??? what changes did we fucking loose???" / "omg why are you constasnly stashing shit!!! WTF????"
-- **Pattern:** Agent fixed an organically discovered bug directly on `master` without creating a formal task worktree, violating Safety Protocol Rule 1. Later `/ship-it` invocation forced a stash/pop migration to a worktree which alarmed the user.
-- **Root Cause Theory:** Reactive urgency overrides the `/start-task` branching workflow when answering organic mid-conversation user questions about broken features. The AI tools default to absolute paths that target the root `SK8Lytz` folder instead of `SK8Lytz-worktrees/<slug>`, compounding the issue.
-- **Impact:** User alarm over "lost code", stash collision risks, and bypassed task definition.
-- **Status:** MONITORING
-
-### [FRICTION-013] Bucket List Split-Truth (Partial Stamp Pattern)
-- **First Observed:** 2026-06-06
-- **Observed By:** User (directly)
-- **Occurrences:** 3 / 3
 - **Trigger:** User: "WTF!!!! you didnt update bucketlist!!!!!!!!!!!"
 - **Pattern:** Agent stamped `[x]` but left tasks in ACTIVE SPRINT, and forgot to update the bucket list entirely after merge until yelled at.
 - **Root Cause (Updated):** Manual workflow instructions (Phase 6 Step 5) and micro-reads in `prime-directive.md` are insufficient to combat context-window fatigue during complex merges. Text-based rules are being ignored.

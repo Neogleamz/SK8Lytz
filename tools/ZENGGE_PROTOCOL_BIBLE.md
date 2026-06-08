@@ -731,14 +731,28 @@ Decoded relevant fields: `product_id = 163` (0xA3), `firmware_ver = 46`, `ble_ve
 
 ## SECTION 8: KNOWN BUGS IN CURRENT SK8LYTZ CODEBASE
 
-### BUG-1: `0x51` Slot Format — UPDATED VERDICT (2026-04-22)
+### BUG-1: `0x51` Slot Format — UPDATED VERDICT (2026-04-22, amended 2026-06-08)
 
 - **Previous diagnosis**: 10B extended (323B) required for 0xA3 per APK
 - **Oracle Lab result**: 9B compact (291B) WORKS ✅ — 10B extended (323B via our wrapper) does NOTHING ❌
-- **Root cause**: The 10B extended format requires the ZENGGE chunked BLE framing header (`40 seq 00 00 01 43 BD 0B`) which our `wrapCommand` does not emit
-- **Current status**: 9B compact format is safe and functional for production use
-- **Future work**: Replicate ZENGGE chunked framing to unlock true 10B slot support
+- **Root cause**: The 323B format (`setCustomModeExtended`) requires the ZENGGE chunked BLE framing header (`40 seq 00 00 01 43 BD 0B`) which our `wrapCommand` does not emit
+- **Current status**: Production uses TWO working formats — see table below.
+- **Future work**: Replicate ZENGGE chunked framing to unlock the full 323B 32-slot format
 - **Impact**: LOW (current scenes work) — track as enhancement, not critical bug
+
+> ⚠️ **CRITICAL NAMING DISTINCTION — DO NOT CONFUSE (2026-06-08):**
+>
+> There are THREE `0x51` methods in `ZenggeProtocol.ts`. They are NOT interchangeable:
+>
+> | Method | Size | Format | Production? | Notes |
+> |:---|:---|:---|:---|:---|
+> | `setCustomModeCompact` | 21B (1 step) | `[0x51, 0xF0, mode, spd, R1,G1,B1, R2,G2,B2, 0x0F, chk]` | ✅ YES | 9B per slot, NO direction byte |
+> | `setCustomModeExtendedCompact` | 22B (1 step) | `[0x51, 0xF0, mode, spd, R1,G1,B1, R2,G2,B2, dir, 0x0F, chk]` | ✅ YES | 10B per slot, WITH direction byte. Used by PatternEngine for IDs 17/18/24/26/44/72 and 201-233. |
+> | `setCustomModeExtended` | 323B (32 slots) | `[0x51, slot×10×32, 0x0F, chk]` | ❌ NO | Requires 0x40 chunk framing header. Raw bytes returned — NOT wrapped. |
+>
+> **The `dir` (direction) byte in `setCustomModeExtendedCompact` is intentional and required.** It is the 10th byte of each slot. Removing it (switching to `setCustomModeCompact`) would break direction support for all 0x51 patterns. Source: `ZenggeProtocol.ts:736-771`, `PatternEngine.ts:244` comment.
+>
+> The audit sniper false positive (FRICTION-012, 2026-06-08) arose from confusing `ExtendedCompact` (21-22B, direct GATT write, ✅ works) with `Extended` (323B, requires chunked framing, ❌ NOT production). **Do not repeat this mistake.**
 
 ### BUG-2: `0x73` micSource Wrong Values (HIGH SEVERITY)
 
@@ -806,7 +820,8 @@ Stream Frame:   SceneModeFragment.m18748Z2 → inline → [0x53, lenHi,Lo, R,G,B
 Music Config:   MusicModeFragment → C7789z → [0x73, on, 0x26/27, id, FG, BG, sens, bri, chk]
 Mic Magnitude:  RecordService → C7788y → [0x74, magnitude, chk]
 Custom Scene:   ZENGGE App Customize Tab → chunked 0x51 → [40 seq 00 00 01 43 BD 0B 51 slot×10×32 chk]
-Custom Scene:   SK8Lytz setCustomMode() → standard wrap → [0x51 slot×9×32 0x0F chk]  ← 9B works on HW
+Custom Scene:   SK8Lytz setCustomModeCompact() → standard wrap → [0x51, 0xF0, mode, spd, R1,G1,B1, R2,G2,B2, 0x0F, chk]  ← 9B, no dir flag
+Temporal/Named: SK8Lytz setCustomModeExtendedCompact() → standard wrap → [0x51, 0xF0, mode, spd, R1,G1,B1, R2,G2,B2, dir, 0x0F, chk]  ← 10B, WITH direction byte. PatternEngine IDs 17/18/24/26/44/72 + 201-233
 Multi-Color:    ZENGGE App Multi-Color Tab → live 0x31 stream → per-frame pixel array
 
 ---
@@ -869,13 +884,14 @@ This allows the hardware to respond instantly to high-quality audio captured dir
 3. **The 512-Byte MTU Mandate:** To fix spatial truncation (where `0x59` freezes on strips longer than the MTU constraint), we MUST negotiate a 512-byte MTU (`device.requestMTU(512)`) in React Native BLE Plx. The previous `numPoints=54` tiling hack has been proven mathematically invalid for the `0xA3` controller.
 4. **Scene Sequencer (0x51) is King:** For whole-strip temporal transitions (Breathe/Jump/Strobe), the `PatternEngine` MUST bypass `0x59` and route the request to a 9-byte `0x51` Scene Sequence.
 
-### Custom Scene (0x51) — ✅ 9B COMPACT WORKS
-| Test | Result |
-|:-----|:-------|
-| 9B compact format (current production) | ✅ PASS — Red/blue animated pattern fires correctly |
-| 10B extended format (via our wrapCommand) | ❌ FAIL — Does nothing |
+### Custom Scene (0x51) — Format Verification Results
+| Test | Result | Notes |
+|:-----|:-------|:------|
+| 9B compact (`setCustomModeCompact`) | ✅ PASS | Direct GATT write. Red/blue pattern fires correctly. No direction byte. |
+| 10B compact with dir byte (`setCustomModeExtendedCompact`) | ✅ PASS | Direct GATT write. 22B for 1 step. Direction byte respected. Used by PatternEngine IDs 17/18/24/26/44/72 + 201-233. |
+| 10B extended 323B (`setCustomModeExtended`) | ❌ FAIL | Requires `0x40` chunked framing header — our `wrapCommand` doesn't emit it. Raw bytes returned (not wrapped). |
 
-> **SEE BUG-1 UPDATE**: 10B extended fails due to our wrapper mismatch, not the hardware rejecting 10B slots.
+> **SEE BUG-1 UPDATE**: 323B extended fails due to our wrapper mismatch, not the hardware rejecting 10B slots. The `setCustomModeExtendedCompact` is the correct way to send a 10B-per-slot command without chunked framing.
 
 #### 0x51 Sequence Modes (The 44 Baked Hardware Effects / SymphonyEffects)
 The ZENGGE `0x51` sequence editor (`ActivityCustomSymphonyEdit.java`) relies on 44 baked-in hardware effects (known internally as `SymphonyEffect` 1-44). 
