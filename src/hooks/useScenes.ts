@@ -7,16 +7,20 @@ import { useAuth } from '../context/AuthContext';
 export function useScenes() {
   const [localScenes, setLocalScenes] = useState<Scene[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const userId = user?.id;
 
   const loadScenes = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const scenes = await ScenesService.getSavedScenes(userId);
       setLocalScenes(scenes);
     } catch (e: unknown) {
-      AppLogger.error('SCENE_SERVICE', { event: 'load_scenes_failed', error: (e instanceof Error ? e.message : String(e)) });
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('SCENE_SERVICE', { event: 'load_scenes_failed', error: msg });
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -37,6 +41,7 @@ export function useScenes() {
   return {
     localScenes,
     isLoading,
+    error,
     loadScenes,
     deleteScene
   };

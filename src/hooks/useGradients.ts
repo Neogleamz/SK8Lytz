@@ -13,14 +13,18 @@ export function useGradients() {
   
   const [gradients, setGradients] = useState<CustomBuilderPreset[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadGradients = useCallback(async () => {
     try {
       setIsLoading(true);
+      setError(null);
       const data = await GradientsService.getSavedGradients(userId);
       setGradients(data);
     } catch (e: unknown) {
-      AppLogger.error('USE_GRADIENTS_LOAD_ERROR', e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('USE_GRADIENTS_LOAD_ERROR', msg);
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -58,6 +62,7 @@ export function useGradients() {
   return {
     gradients,
     isLoading,
+    error,
     saveGradient,
     deleteGradient,
     refreshGradients: loadGradients

@@ -20,6 +20,8 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
   const { user } = useAuth();
   const [stats, setStats] = useState<LifetimeStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCounter, setRetryCounter] = useState(0);
 
   useEffect(() => {
     if (!user) {
@@ -30,6 +32,7 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
     let isActive = true;
 
     async function fetchStats() {
+      setError(null);
       const CACHE_KEY = '@sk8lytz_lifetime_stats_cache';
       
       // 1. Instantly load from cache for offline-first zero-latency
@@ -58,20 +61,39 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
           await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(e => AppLogger.warn('Failed to cache skater stats', e instanceof Error ? e.message : String(e)));
         }
       } catch (e: unknown) {
-        AppLogger.error('Failed to load skater stats from Supabase', e instanceof Error ? e.message : String(e));
+        const msg = e instanceof Error ? e.message : String(e);
+        AppLogger.error('Failed to load skater stats from Supabase', msg);
+        if (isActive) setError('Failed to load stats.');
       } finally {
         if (isActive) setLoading(false);
       }
     }
     fetchStats();
     return () => { isActive = false; };
-  }, [user]);
+  }, [user, retryCounter]);
 
 
   if (loading) {
     return (
       <View style={{ padding: Spacing.xl, alignItems: 'center' }}>
         <ActivityIndicator color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={{ padding: Spacing.xl, alignItems: 'center' }}>
+        <Text style={{ color: Colors.error, fontSize: 14, marginBottom: Spacing.md }}>{error}</Text>
+        <Text 
+          style={{ color: Colors.primary, fontSize: 14, fontWeight: 'bold' }} 
+          onPress={() => {
+            setLoading(true);
+            setRetryCounter(c => c + 1);
+          }}
+        >
+          Tap to retry
+        </Text>
       </View>
     );
   }
