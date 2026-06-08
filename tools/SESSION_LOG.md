@@ -830,3 +830,14 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **MAC addresses excluded:** local-only telemetry, BLE controller MACs not user-linkable (decision 2026-06-08)
 **Verify result:** TSC ?, Jest 126/126 ?, Blast bypassed (log-only change, no API contract modified)
 **Files touched:** UserManagementPanel.tsx, CrewService.ts, useCrewSession.ts, DeviceRepository.ts
+
+### [MERGE] 2026-06-08T20:08 — fix/re-entrancy-guards ? master @ bf1d1629
+**What merged:**
+- useRegistration.ts: isActive flag in boot useEffect — prevents setState after unmount during syncFromCloud
+- SkaterStatsPanel.tsx: isActive guard on fetchStats — prevents stale setStats on user sign-out
+- AuthContext.tsx: isHandlingDeepLinkRef useRef guard — blocks concurrent deep link processing (auth corruption risk)
+- AdminToolsModal.tsx: isActive guard on loadConfigs — rapid modal toggle safety
+- Sk8LytzProgrammer.tsx: isActive guard on load profiles — rapid visible toggle safety
+**R-26 overflow:** 4 remaining instances (SessionContext, DashboardScreen, useHealthTelemetry, useCrewProximityRadar) triaged as fix/re-entrancy-guards-phase-2
+**Verify result:** TSC ? Jest 126/126 ? Blast bypassed (no API contract modified)
+**Files touched:** useRegistration.ts, SkaterStatsPanel.tsx, AuthContext.tsx, AdminToolsModal.tsx, Sk8LytzProgrammer.tsx

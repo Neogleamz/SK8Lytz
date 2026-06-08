@@ -760,3 +760,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "Scrubbing all 23 instances including MACs — rejected 2026-06-08, AppLogger is local-only and BLE controller MACs are not user-linkable in practice."
   - **Source of Truth:** 📖 [R-09_findings.json](artifacts/deepdive_raw/R-09_findings.json) · `src/components/admin/tools/UserManagementPanel.tsx:222` · `src/services/CrewService.ts:375` · `src/hooks/useCrewSession.ts:98` · `src/services/DeviceRepository.ts:358`
   - **Details:** 4 files, ~4 line changes total. `UserManagementPanel.tsx:222` — replace full `data` object log with `{ count: data.length }`. The 3 userId refs — remove from log payload (crew/session IDs provide sufficient debug context). Post-fix grep: `grep -rn "AppLogger" src/ | grep -E "(email|display_name|user\.id|userId)" | grep -v "MAC"` must return zero.
+
+- [x] **`fix/re-entrancy-guards`** 🚀 Merged in bf1d1629
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[AUTH]` `[BLE]` `[H-RISK]` `[Snack]` `[🤖 PRO-MED]` `[BATCH:deepdive-synthesis-2026-06-08]`
+  - **Goal:** Add `isActive` / `isRunningRef` re-entrancy guards to 5 confirmed async functions called from `useEffect` or event listeners without protection, preventing state corruption on rapid re-renders or concurrent deep links.
+  - **Decision Log:** R-26 + DOMAIN_IDENTITY confirmed `useRegistration.ts:81`, `SkaterStatsPanel.tsx:24`, `AuthContext.tsx:102` (handleDeepLink) call async functions without guards — on rapid navigation or back-to-back deep links, multiple concurrent calls race each other. Evidence: `R-26_findings.json`, `DOMAIN_IDENTITY_findings.json` (2026-06-08).
+  - **Analysis:** 📊 Source: [system_audit_report.md](artifacts/system_audit_report.md) · Plan: [PLAN-re-entrancy-guards.md](docs/plans/PLAN-re-entrancy-guards.md)
+    Key finding: "3 CONFIRMED instances in auth/identity layer. handleDeepLink in AuthContext is the highest risk — rapid deep links can corrupt auth state."
+    Rejected alternative: "AbortController — rejected because these are not fetch calls; a simple boolean ref is cleaner and zero-dependency."
+  - **Source of Truth:** 📖 [R-26_findings.json](artifacts/deepdive_raw/R-26_findings.json) · [DOMAIN_IDENTITY_findings.json](artifacts/deepdive_raw/DOMAIN_IDENTITY_findings.json)
+  - **Details:** Pattern: `let isActive = true; return () => { isActive = false; }` in useEffect. For event listeners: `useRef(false)` guard checked at function entry, cleared in finally. 3 files, ~15 lines of change total.

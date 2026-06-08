@@ -1452,6 +1452,12 @@ The health telemetry system implements a **watch-preferred** priority model:
 
 ## 1. File Manifest
 - **`src/context/AuthContext.tsx`**: Centralized authentication state provider managing Supabase sessions, deep links, and offline mode gating.
+  - **`AuthContextValue` API** (exported via `useAuth()`):
+    - State: `session`, `user`, `isOfflineMode`, `isAuthenticated`, `sessionLoaded`, `sessionExpired`
+    - Setters: `setIsOfflineMode(value)`, `clearOfflineMode()`
+    - **Auth Actions (added fix/auth-context-bypass @ `1fc96fb9`)**: `signIn(email, password)`, `signUp(email, password, options?)`, `resetPassword(email, redirectTo?)`, `signOut()`
+  - **Rule**: All UI components and hooks MUST call these context methods. Direct `supabase.auth.*` calls in the UI layer are forbidden. Zero bypasses confirmed post-merge.
+
 - **`src/services/AuthProfileService.ts`**: Handles user profile CRUD, auto-creation/self-healing on missing metadata, and fetching session history.
 - **`src/services/CrewProfileService.ts`**: Manages permanent crew lifecycle (CRUD), multi-owner member management, search, and session statistics.
 - **`src/services/ProfileService.ts`**: Barrel re-export facade preserving the legacy monolithic API surface while delegating to specialized Auth, Crew, and PushToken services.
