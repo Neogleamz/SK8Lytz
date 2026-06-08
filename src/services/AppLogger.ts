@@ -391,17 +391,28 @@ class AppLoggerService {
     }
 
     // 3. PII Scrubbing — targeted recursive key-walk (no round-trip serialize)
-    const piiKeys = new Set(['email', 'name', 'password', 'token', 'phone', 'address', 'fullname']);
+    // Substring match catches partials: accessToken, refreshToken, lat, lng, etc.
+    const PII_KEY_PATTERNS = [
+      'email', 'name', 'password', 'token', 'phone', 'address', 'fullname',
+      'lat', 'lng', 'latitude', 'longitude', 'label',
+      'auth', 'refresh', 'access', 'secret', 'credential',
+    ];
     const seen = new WeakSet();
 
-    const obfuscate = (obj: Record<string, any>) => {
+    const obfuscate = (obj: Record<string, unknown>) => {
       if (seen.has(obj)) return;
       seen.add(obj);
       for (const key in obj) {
-        if (piiKeys.has(key.toLowerCase()) && typeof obj[key] === 'string') {
+        if (PII_KEY_PATTERNS.some(pattern => key.toLowerCase().includes(pattern)) && typeof obj[key] === 'string') {
           obj[key] = '[REDACTED]';
-        } else if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
-          obfuscate(obj[key] as Record<string, any>);
+        } else if (obj[key] && typeof obj[key] === 'object') {
+          if (Array.isArray(obj[key])) {
+            obj[key] = (obj[key] as unknown[]).map(
+              item => (item && typeof item === 'object') ? obfuscate(item as Record<string, unknown>) : item
+            );
+          } else {
+            obfuscate(obj[key] as Record<string, unknown>);
+          }
         }
       }
     };

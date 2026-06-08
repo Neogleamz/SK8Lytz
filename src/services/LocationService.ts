@@ -57,7 +57,7 @@ class LocationService {
       AppLogger.log('PERFORMANCE_METRIC', {
         metricName: 'LOCATION_ACQUIRED',
         value: 1,
-        label,
+        address: label,
         accuracy: pos.coords.accuracy,
       });
 
