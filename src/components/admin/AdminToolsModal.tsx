@@ -1,5 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CONFIGS_KEY } from '../../constants/storageKeys';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
     Alert,
@@ -103,7 +104,7 @@ export default function AdminToolsModal({
     let isActive = true;
     const loadConfigs = async () => {
       try {
-        const stored = await AsyncStorage.getItem('@Sk8lytz_device_configs');
+        const stored = await AsyncStorage.getItem(CONFIGS_KEY);
         if (stored && isActive) setDeviceConfigs(JSON.parse(stored) || {});
       } catch (e: unknown) {}
     };

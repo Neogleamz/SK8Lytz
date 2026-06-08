@@ -10,7 +10,7 @@ import { decode } from 'base64-arraybuffer';
 import { checkPermission, requestPermission, setPermissionOptOut } from '../services/PermissionService';
 import { useAuth } from '../context/AuthContext';
 
-import { NOTIF_PREF_KEY } from '../constants/storageKeys';
+import { NOTIF_PREF_KEY, STORAGE_AUTO_PAUSE_ENABLED } from '../constants/storageKeys';
 
 function hexToHue(hex: string | null | undefined): number {
   if (!hex) return 30; // default orange
@@ -79,7 +79,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
           return null;
         }),
         checkPermission('HEALTH'),
-        AsyncStorage.getItem('@sk8lytz_auto_pause_enabled').catch(e => {
+        AsyncStorage.getItem(STORAGE_AUTO_PAUSE_ENABLED).catch(e => {
           AppLogger.warn('Failed to load auto-pause setting', e instanceof Error ? e.message : String(e));
           return null;
         }),
@@ -240,7 +240,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   const handleToggleAutoPause = async (enabled: boolean) => {
     setAutoPauseEnabled(enabled);
     try {
-      await AsyncStorage.setItem('@sk8lytz_auto_pause_enabled', String(enabled));
+      await AsyncStorage.setItem(STORAGE_AUTO_PAUSE_ENABLED, String(enabled));
       AppLogger.log('AUTO_PAUSE_TOGGLED', { enabled });
     } catch (e: unknown) {
       AppLogger.error('Failed to save auto-pause setting', e instanceof Error ? e.message : String(e));

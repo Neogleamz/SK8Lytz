@@ -13,7 +13,7 @@ import { mapDeviceToRegistration } from '../../utils/classifyBLEDevice';
 import type { Database } from '../../types/supabase';
 import type { EventFrom } from 'xstate';
 import type { bleMachine } from '../../services/ble/BleMachine';
-import { STORAGE_SCANNER_TELEMETRY_QUEUE } from '../../constants/storageKeys';
+import { STORAGE_SCANNER_TELEMETRY_QUEUE, STORAGE_APP_SETTINGS } from '../../constants/storageKeys';
 
 import { useBLEBatterySweep } from './useBLEBatterySweep';
 import { useBLEInterrogator } from './useBLEInterrogator';
@@ -53,7 +53,7 @@ export function useBLEScanner({
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    AsyncStorage.getItem('@sk8lytz_app_settings').then(cached => {
+    AsyncStorage.getItem(STORAGE_APP_SETTINGS).then(cached => {
       if (cached) {
         try {
           const parsed = JSON.parse(cached);

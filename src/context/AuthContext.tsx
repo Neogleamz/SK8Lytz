@@ -19,6 +19,7 @@ import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from '../services/supabaseClient';
 import { AppLogger } from '../services/AppLogger';
 import { migrateAuthTokensToSecureStore } from '../utils/migrateAuthTokens';
+import { STORAGE_LAST_EMAIL, STORAGE_OFFLINE_SKIP } from '../constants/storageKeys';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -55,7 +56,7 @@ export interface AuthContextValue {
 // Context
 // ─────────────────────────────────────────────────────────────────────────────
 
-const STORAGE_OFFLINE_SKIP = '@Sk8lytz_offline_skip';
+// STORAGE_OFFLINE_SKIP imported from constants
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -149,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // 3. No active session — check if user had a prior one (token expired)
         let lastEmail = null;
         try {
-          lastEmail = await AsyncStorage.getItem('@Sk8lytz_auth_last_email');
+          lastEmail = await AsyncStorage.getItem(STORAGE_LAST_EMAIL);
         } catch (e: unknown) {
           AppLogger.warn('[AuthContext] Failed to read last email', e instanceof Error ? e.message : String(e));
         }

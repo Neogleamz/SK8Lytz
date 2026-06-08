@@ -22,9 +22,7 @@ import { AuthFormForgotPassword } from '../components/auth/AuthFormForgotPasswor
 import { AuthFooterActions } from '../components/auth/AuthFooterActions';
 import { AuthSandboxToggle } from '../components/auth/AuthSandboxToggle';
 
-import { STORAGE_REMEMBER_CREDS, STORAGE_DEMO_MODE } from '../constants/storageKeys';
-
-const STORAGE_LAST_EMAIL    = '@Sk8lytz_auth_last_email';
+import { STORAGE_REMEMBER_CREDS, STORAGE_DEMO_MODE, STORAGE_LAST_EMAIL } from '../constants/storageKeys';
 
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
 

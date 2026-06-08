@@ -16,3 +16,5 @@ export const STORAGE_SCANNER_TELEMETRY_QUEUE = '@sk8lytz_scanner_telemetry_queue
 export const STORAGE_SKATE_SPOTS_CACHE = '@Sk8lytz_skate_spots_cache';
 export const STORAGE_APP_SETTINGS = '@sk8lytz_app_settings';
 export const STORAGE_GROUPS_MIGRATED_V2 = '@Sk8lytz_groups_migrated_v2';
+export const CONFIGS_KEY = '@Sk8lytz_device_configs';
+export const STORAGE_LAST_EMAIL = '@Sk8lytz_auth_last_email';
