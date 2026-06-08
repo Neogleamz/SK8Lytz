@@ -253,3 +253,14 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Status:** MONITORING
 
 
+
+### [FRICTION-020] Auto-Archiver Erases Completed Tasks Without Leaving [x] Stamp
+- **First Observed:** 2026-06-08
+- **Observed By:** Casey / River
+- **Occurrences:** 2 / 3
+- **Trigger:** User: "why is my damn bucket list out of date??? we have talked about this so many damn times!!!!!!"
+- **Pattern:** ortress-gatekeeper.ps1 calls uto-archiver.js which silently removes the completed task entry from SK8Lytz_Bucket_List.md entirely. The ACTIVE SPRINT header is never updated. From the user's perspective: tasks vanish without a trace and the "Currently executing" banner becomes stale/wrong after every merge.
+- **Root Cause Theory:** The auto-archiver was designed to move entries to ARCHIVE to keep the file clean, but it leaves no [x] stamp or progress indicator in the ACTIVE SPRINT block. The "Currently executing" line in the ACTIVE SPRINT header is never auto-updated — it must be manually edited, which the agent forgets to do under the post-merge rush.
+- **Impact:** User loses visibility into what was just completed vs. what is pending. Forces manual board audits. Erodes trust in the board as a source of truth. User has complained multiple times.
+- **Proposed Fix:** After every gatekeeper merge, the agent MUST immediately update the ACTIVE SPRINT header Currently executing: line to reflect the NEXT pending task AND add a Completed: <slug> @ <hash> ? line. This is a non-optional post-merge step, same priority as SESSION_LOG update.
+- **Status:** PROPOSAL SENT

@@ -259,8 +259,12 @@ git log -1 --format="%h"
 4. **Clean Slate Check**: Run `git status -s` on master immediately after merge.
   - Any modified plan files (`tools/plans/*.md`) -> stage and commit as `docs(plans): commit AI-First plan for <task-slug>`
   - Any temp scripts -> DELETE them, do not commit
-5. **Automated Archival Confirmed**:
-   - The gatekeeper script automatically runs `tools/auto-archiver.js` which modifies `SK8Lytz_Bucket_List.md`, marks the task `[x]`, and appends it to `SK8Lytz_Bucket_List_ARCHIVE.md`. No manual editing is required.
+5. **Board Sync (MANDATORY — FRICTION-020 Fix)**:
+   - The gatekeeper auto-archiver removes the task entry from the list but does NOT update the ACTIVE SPRINT header.
+   - You MUST immediately edit `tools/SK8Lytz_Bucket_List.md` after every merge:
+     - Update `> Currently executing: **\`<slug>\`**` → next pending task slug
+     - Add `> Completed: \`<completed-slug>\` @ <commit-hash> ✅` line to the header
+   - This is non-optional. Skipping it causes user-visible board staleness. See FRICTION-020.
 
 - **Batch Progression Check**:
   - **🚨 Anti-Hallucination Board Guard**: You MUST call `view_file` on `tools/SK8Lytz_Bucket_List.md` right now to verify the current state of the active sprint. DO NOT guess the next task from memory.
