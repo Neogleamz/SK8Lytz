@@ -387,22 +387,21 @@ The `CAMERA` mode provides real-time ambient lighting translation and dual-mode 
 > [!IMPORTANT]
 > **Dynamic Catalog Migration (2026-04-11)**: All hardware profile logic—including default LED counts, visualization themes, and discovery categorization—is now handled strictly via `LOCAL_PRODUCT_CATALOG` (`src/constants/ProductCatalog.ts`).
 
+All byte definitions below represent the inner payload _before_ the V2 BLE packet wrapper is applied.
+
 ### Confirmed Hardware Identity (APK-Verified 2026-04-21)
 
 > [!IMPORTANT]
 > All 3 physical SK8Lytz devices confirmed as **`Ctrl_Mini_RGB_Symphony_new_0xA3`** (product_id: **163 = 0xA3**). Confirmed from `discovered_devices_telemetry` across MACs `08:65:F0:9A:C2:3C`, `08:65:F0:9A:5E:06`, `08:65:F0:5F:03:B1`. Firmware: v45—46, BLE: 5, LED version: 3.
 >
 > **Key implications of 0xA3 vs 0xA2:**
-> - `0x59` Static Colorful tab **IS available** on 0xA3 (not available on 0xA2) ✅
-> - `0x51` Custom Scene — THREE formats exist; TWO are production-safe (see BUG-1 in Protocol Bible §SECTION 8):
->   - `setCustomModeCompact` — 9B per slot, **direct GATT write, works** ✅. No direction byte.
->   - `setCustomModeExtendedCompact` — 10B per slot WITH direction byte, **direct GATT write, works** ✅. Used by `PatternEngine` for IDs 17/18/24/26/44/72 and 201-233. (`ZenggeProtocol.ts:743-771`, `PatternEngine.ts:244`)
->   - `setCustomModeExtended` — 323B (32 fixed slots), requires `0x40` ZENGGE chunked framing header, **NOT production-safe** ❌. Do not call from production UI.
-> - **AGENT SENTINEL — DO NOT CONFUSE `ExtendedCompact` with `Extended`:** They share a name prefix but are completely different. `ExtendedCompact` is a compact variable-length direct GATT write (21-22B). `Extended` is a 323B monster requiring chunked BLE framing. This confusion caused a false CRITICAL audit finding (FRICTION-012, 2026-06-08).
+> - `0x59` Static Colorful tab **IS available** on 0xA3 (not available on 0xA2) âœ…
+> - `0x51` Custom Scene — **9B compact format (291B) WORKS** on 0xA3 via our standard `wrapCommand` âœ…
+> - `0x51` 10B extended format (323B) does NOT work via our wrapper — requires ZENGGE chunked framing header (see Protocol Bible Section 11)
 > - `0x42` effect ceiling: **1—100** (same as 0xA2). Effect 101 plays an undocumented effect (ceiling is soft).
 > - `0x43` Multi-Sequence: **DO NOT USE** — Oracle test caused hardware LED shutoff (state machine crash). ZENGGE app uses `0x51` for multi-step effects, not `0x43`.
 > - `0x41` Settled Mode: **DO NOT USE for IDs 201-233.** `0x41` and `0x51` share the same effectId range (1-33) but are different hardware engines producing different visuals. Using `0x41` for test patterns destroys parity. It is available in DiagnosticLab only. See Protocol Bible §0x41 and the AGENT SENTINEL warning in §0x51 Pattern Index.
-> - Source: Oracle Lab + live BLE HCI sniff (2026-04-22), `ZENGGE_PROTOCOL_BIBLE.md` Section 8 (BUG-1) + Section 11
+> - Source: Oracle Lab + live BLE HCI sniff (2026-04-22), `ZENGGE_PROTOCOL_BIBLE.md` Section 11
 
 ### BLE Connection Handshake (2026-04-22)
 
@@ -413,14 +412,14 @@ Every GATT connection fires this sequence before the device is added to React st
 3. **React state update** — `setConnectedDevices()` fires _after_ GATT is booted to prevent UI from blasting payloads during MTU queries.
 
 <!-- AST_COMPILER_START: ZENGGE_CONSTANTS -->
-#### 🤖 Auto-Compiled Zengge Protocol Constants (AST Compiler)
+#### ðŸ“ Auto-Compiled Zengge Protocol Constants (AST Compiler)
 
-##### 🔌 BLE UUIDs
+##### ðŸ”Œ BLE UUIDs
 - **Service UUID**: `0000ffff-0000-1000-8000-00805f9b34fb` (`ZENGGE_SERVICE_UUID`)
 - **Write Characteristic UUID**: `0000ff01-0000-1000-8000-00805f9b34fb` (`ZENGGE_CHARACTERISTIC_UUID`)
 - **Notification Characteristic UUID**: `0000ff02-0000-1000-8000-00805f9b34fb` (`ZENGGE_NOTIFY_UUID`)
 
-##### 🛠 Hardware Constraints
+##### ðŸ› ï¸ Hardware Constraints
 | Constraint | Value | Description |
 |:---|:---:|:---|
 | `maxPoints` | 300 | Maximum addressable points per segment |
@@ -431,7 +430,7 @@ Every GATT connection fires this sequence before the device is added to React st
 | `defaultPoints` | 30 | Fallback default point count |
 | `defaultSegments` | 10 | Fallback default segment count |
 
-##### 🖨 IC Chip Types (`IC_TYPES`)
+##### ðŸ“Ÿ IC Chip Types (`IC_TYPES`)
 | Key | Chip Type |
 |:---:|:---|
 | 1 | WS2812B |
@@ -446,7 +445,7 @@ Every GATT connection fires this sequence before the device is added to React st
 | 10 | JY1903 |
 | 11 | WS2812E |
 
-##### 🎨 Color Sorting RGB (`COLOR_SORTING_RGB`)
+##### ðŸŽ¨ Color Sorting RGB (`COLOR_SORTING_RGB`)
 | Key | RGB Order |
 |:---:|:---|
 | 0 | RGB |
@@ -460,13 +459,13 @@ Every GATT connection fires this sequence before the device is added to React st
 
 ### writeChunked — 0x51 Extended Payload Framing
 
-Required for 323-byte 0x51 Extended Scene Builder payloads (32 steps — 10B + 3B header).
+Required for 323-byte 0x51 Extended Scene Builder payloads (32 steps Ã— 10B + 3B header).
 
 - **Function**: `useBLE.writeChunked(payload: number[], chunkSize = 20): Promise<void>`
 - **Framing**: `[0x40, seqByte, 0x00, 0x00, 0x01, 0x43, 0xBD, 0x0B, ...data]`
 - **12 bytes data per 20-byte BLE chunk** (8-byte header overhead)
 - **20ms inter-chunk delay** — prevents BLE TX buffer overflow on Android
-- **⚠️ Framing signature `[0x01, 0x43, 0xBD, 0x0B]` needs Oracle Lab HCI sniff** before wiring to production Scene Builder UI
+- **âš ï¸ Framing signature `[0x01, 0x43, 0xBD, 0x0B]` needs Oracle Lab HCI sniff** before wiring to production Scene Builder UI
 - Exported in `BluetoothLowEnergyApi` interface (commit `fdc0ff3`)
 
 ### BLE Stability Constraints & GATT Error Prevention
@@ -477,7 +476,7 @@ Required for 323-byte 0x51 Extended Scene Builder payloads (32 steps — 10B + 3
 1. **Global Connection Gate (`bleGateRef`):** A `BleStateMachine` FSM ref with phases `IDLE | SCANNING | CONNECTING | DISCONNECTING | RECOVERING`. ALL BLE operations must check/acquire the gate before touching the radio. Only one operation class at a time. The gate auto-syncs to React state via `addListener` for re-renders.
 2. **GATT Mutex with 4-Tier Priority (`useBLEGattMutex`):** Fine-grained GATT operation serialization. Priority tiers: `P1_CRITICAL` (power, user writes), `P2_RECOVERY` (auto-reconnect — preempts lower tiers via AbortController), `P3_INTERROGATION` (EEPROM probes), `P4_MAINTENANCE` (heartbeat, RSSI polls). Higher priority requests abort in-progress lower-priority locks. 15s deadlock watchdog auto-releases orphaned locks and logs telemetry.
 3. **The GATT 133 Exponential Backoff:** `connectToDevice` is wrapped in a 3-attempt retry loop with exponential delays `[500ms, 1500ms, 4000ms]` + `refreshGatt: 'OnConnected'` on each retry to silently absorb Android RF congestion. _(Previously: 2-attempt, flat 200ms delay.)_
-4. **Connection Priority Downgrade after Handshake:** On Android, `requestConnectionPriority(HIGH)` fires immediately on connect for fast MTU/handshake. After the first successful write, priority is downgraded to `BALANCED` — saves 2—3× battery on fire-and-forget traffic. _(Previously: stayed at HIGH permanently.)_
+4. **Connection Priority Downgrade after Handshake:** On Android, `requestConnectionPriority(HIGH)` fires immediately on connect for fast MTU/handshake. After the first successful write, priority is downgraded to `BALANCED` — saves 2—3Ã— battery on fire-and-forget traffic. _(Previously: stayed at HIGH permanently.)_
 5. **Pre-Lock Gate Check:** `connectToDevices` now checks `bleGateRef !== IDLE` _before_ acquiring the GATT lock. If the gate is already busy (scanning, recovering), the connect attempt is skipped immediately instead of blocking in an 8s polling loop.
 6. **Lean Connection Loops:** `connectToDevices` strictly establishes MTU (request 512 bytes) and notification pipes. Do NOT execute 600ms latency buffers, firmware loads, or 0x63 hardware settings queries during the connection stack.
 7. **50ms Inter-Device Write Gap:** All multi-device group writes in `BleWriteDispatcher` enforce a 50ms pause between per-device GATT writes. Prevents silent GATT drops on Qualcomm Snapdragon 665/675 and MediaTek Helio chipsets. _(Previously: 20ms — insufficient for budget chipsets.)_
@@ -499,7 +498,7 @@ The **Auto-Recovery** system monitors GATT-connected devices for organic disconn
 
 | Phase | Name | Duration | Backoff | GATT Lock | Behavior |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **Phase 1** | Aggressive | 0—2 min | `1500ms × 1.5^attempt` + jitter(0—1500ms), capped 30s | Acquires `P2_RECOVERY` | Rapid reconnect. Best chance of success while device is nearby. |
+| **Phase 1** | Aggressive | 0—2 min | `1500ms Ã— 1.5^attempt` + jitter(0—1500ms), capped 30s | Acquires `P2_RECOVERY` | Rapid reconnect. Best chance of success while device is nearby. |
 | **Phase 2** | Moderate | 2—10 min | Same formula, longer natural gaps | Acquires `P2_RECOVERY` | Reduced frequency. Device may have moved out of range temporarily. |
 | **Phase 3** | Passive | 10 min+ | **No active polling** | **No GATT lock** | Zero-cost watch mode. Delegates to Sweeper — if the device reappears in scan results, recovery is re-initiated from Phase 1. |
 
@@ -515,7 +514,7 @@ When 2+ devices disconnect within a 1.5s debounce window (common when a user pow
 | :--- | :--- |
 | **Trigger** | Organic `onDisconnected` event from BLE PLX, OR `useBLEHeartbeat` stale-link detection |
 | **Gate coordination** | Uses GATT mutex `P2_RECOVERY` priority — preempts interrogation/maintenance, yields to critical writes |
-| **Retry backoff** | `1500ms × 1.5^attempt` + random jitter `[0, 1500ms]`, ceiling 30s |
+| **Retry backoff** | `1500ms Ã— 1.5^attempt` + random jitter `[0, 1500ms]`, ceiling 30s |
 | **Cancellation** | AbortController-style token — incrementing counter instantly breaks all active loops |
 | **Ghosting** | Failed recovery (all phases exhausted) adds device to `ghostedDeviceIds` — UI dims card, `writeToDevice` skips it |
 | **Auto-Recovery Summary** | `AUTO_RECOVERY_SUMMARY` telemetry event with lifetime success rate, avg recovery time, and per-phase stats aggregated per device |
@@ -559,7 +558,7 @@ Polls `readRSSIForDevice` every 30s on all connected devices. Surfaces live sign
 | **Critical threshold** | -82 dBm (`RSSI_CRITICAL_THRESHOLD`) — triggers proactive reconnect |
 | **Proactive reconnect** | Calls `autoRecovery.initiateRecovery(mac)` if device not already in `ghostedDeviceIds` — forces GATT tear-down + fresh reconnect, which often picks a better radio channel |
 | **UI integration** | `rssiMap[mac]` injected into `mergedItem.rssi` in `DashboardScreen.renderItem` — existing wifi icon auto-updates to reflect live post-connect signal quality |
-| **Badge component** | `ConnectionStrengthBadge` — 3-bar signal icon using pure View rectangles (no SVG). 4-tier colour: green (≥-60), amber (-60 to -75), orange (-75 to -82), red (<-82). Hidden when rssi is null. |
+| **Badge component** | `ConnectionStrengthBadge` — 3-bar signal icon using pure View rectangles (no SVG). 4-tier colour: green (â‰¥-60), amber (-60 to -75), orange (-75 to -82), red (<-82). Hidden when rssi is null. |
 | **Testability** | `readDeviceRSSI()` exported as pure async fn — 9 unit tests |
 
 ### Auto-Connect Observer (Debounced)
@@ -568,7 +567,7 @@ _Lives in: `src/hooks/useDashboardAutoConnect.ts`_
 
 The dashboard auto-connect observer watches `allDevices` for registered peripherals that appear during passive scanning. It is hardened with:
 - **500ms debounce** — batches devices discovered within 500ms into a single `connectToDevices` call
-- **Gate check** — skips connection when `bleGateRef ≠ IDLE`
+- **Gate check** — skips connection when `bleGateRef â‰  IDLE`
 - **Pre-lock gate check** — checks gate state _before_ entering the 8s GATT lock poll (RC-04)
 - **Ref-forwarded closures** — `connectToDevices` and `scanForPeripherals` are captured via stable refs to eliminate stale closure bugs on re-render (RC-02)
 - **Prevents stampeding herd** — no concurrent auto-connect attempts
@@ -600,7 +599,7 @@ _Added: 2026-06-05 (AND-02, AND-03, AND-04)_
 
 | Guard | File | Fix |
 | :--- | :--- | :--- |
-| **Connection Priority Downgrade** | `BleConnectionManager.ts` | After handshake, `requestConnectionPriority(BALANCED)` fired to save 2—3× battery. Only on Android (iOS manages its own priority). |
+| **Connection Priority Downgrade** | `BleConnectionManager.ts` | After handshake, `requestConnectionPriority(BALANCED)` fired to save 2—3Ã— battery. Only on Android (iOS manages its own priority). |
 | **50ms Inter-Device Write Gap** | `BleWriteDispatcher.ts` | Increased from 20ms → 50ms. Fixes silent GATT drops on Qualcomm Snapdragon 665/675 and MediaTek Helio chipsets. |
 | **Scan Budget Guard** | `useBLEBatterySweep.ts/useBLEInterrogator.ts` | Tracks `startDeviceScan` calls against Android 12+'s 4-per-30s budget. If exhausted, defers the scan start until the budget window resets. Prevents silent throttling where Android OS stops delivering scan results with zero error feedback. |
 
@@ -615,7 +614,7 @@ The Silent Sweeper is a persistent background LowPower BLE scan that runs after 
 
 | Tier | Battery Level | Scan Interval | Behavior |
 | :--- | :--- | :--- | :--- |
-| **Normal** | ≥30% | Continuous LowPower | Full scan, all features active |
+| **Normal** | â‰¥30% | Continuous LowPower | Full scan, all features active |
 | **Conservative** | 15—30% | Reduced frequency | Longer gaps between scan windows |
 | **Critical** | <15% | Minimal scanning | Sweeper pauses non-essential scans, only responds to burst requests |
 
@@ -652,7 +651,7 @@ Dispatch chain: `useControllerDispatch.ts` → `PatternEngine.ts` (Synthesizer) 
 
 **Archetypes & Auto-Routing:**
 - **Spatial Mode (`0x59` CASCADE/FREEZE):** Synthesizes full 300-pixel RGB arrays client-side using waveform math (sine waves, pulse trains, alternating grids). Automatically routed to `<ProductVisualizer>` and `<CustomEffectVisualizer>` without duplicative business logic.
-  > **⚠️ 0x59 SPATIAL LIMITATION (Center-Out Reality):** The hardware `0x59` command ONLY supports autonomous scrolling (`0x02 Running`). It CANNOT mathematically expand or contract pixels from a center point. Center-Out math functions generate static arrays that merely scroll, creating visual duplicates of standard Wipes/Comets. Furthermore, HALOZ hardware physically mirrors left/right segments (both wipe Heel-to-Toe), meaning a standard Wipe natively behaves as a Center-Out effect. Thus, Center-Out pattern math is redundant and incompatible with `0x59`.
+  > **âš ï¸ 0x59 SPATIAL LIMITATION (Center-Out Reality):** The hardware `0x59` command ONLY supports autonomous scrolling (`0x02 Running`). It CANNOT mathematically expand or contract pixels from a center point. Center-Out math functions generate static arrays that merely scroll, creating visual duplicates of standard Wipes/Comets. Furthermore, HALOZ hardware physically mirrors left/right segments (both wipe Heel-to-Toe), meaning a standard Wipe natively behaves as a Center-Out effect. Thus, Center-Out pattern math is redundant and incompatible with `0x59`.
 - **Temporal Mode (`0x51` STEP_JUMP/GRADUAL):** For whole-strip temporal patterns (Jump, Strobe, Breathe), the engine MUST route to the `0x51` 32-step hardware scheduler. `0x59` is the wrong tool for whole-strip temporals because evaluating a Jump/Strobe equation at a static `seedTick` produces an un-animatable solid color or pure black frame that the hardware cannot jump/strobe properly. For patterns that require sub-millisecond fade interpolations (e.g., `Breath`, `Strobe`), the engine automatically routes to the `0x51` 32-step hardware scheduler to prevent BLE bus saturation.
 
 > [!NOTE]
@@ -687,9 +686,9 @@ _Writes custom segments, IC type, and max LED points permanently to the controll
 - **CRITICAL ENDIANNESS:** Uses **Big-Endian format**: `ptsHigh = (points >> 8) & 0xFF`, `ptsLow = points & 0xFF`.
 
 > [!NOTE]
-> **`points` ≠ total LEDs.** `points` = LEDs per segment. `segments` = number of parallel mirrors.
-> Total physical LEDs = `points × segments`. The hardware's segment engine mirrors the pattern automatically.
-> **HALOZ example**: 22 bulbs = 11 points × 2 segments. All pattern commands use 11, not 22.
+> **`points` â‰  total LEDs.** `points` = LEDs per segment. `segments` = number of parallel mirrors.
+> Total physical LEDs = `points Ã— segments`. The hardware's segment engine mirrors the pattern automatically.
+> **HALOZ example**: 22 bulbs = 11 points Ã— 2 segments. All pattern commands use 11, not 22.
 > The `0x51` slot `flags=0x80` byte enables segment mirroring ("section toggle"). `flags=0x00` disables it.
 > Full model documented in `ZENGGE_PROTOCOL_BIBLE.md` under `0x62`.
 
@@ -702,8 +701,8 @@ _Primary command for all IC-strip patterns. Sends a per-pixel RGB array that the
 > [!IMPORTANT]
 > **SEGMENT MODEL — Array Length Must Use `ledPoints`, NOT Total LEDs.**
 > The ZENGGE hardware segment engine automatically mirrors the `ledPoints` pattern across all segments.
-> For HALOZ (22 bulbs = 11 points × 2 segments), send an array of **11** pixels, not 22.
-> Sending `ledPoints × segments` pixels bypasses the hardware mirror and fills both segments manually.
+> For HALOZ (22 bulbs = 11 points Ã— 2 segments), send an array of **11** pixels, not 22.
+> Sending `ledPoints Ã— segments` pixels bypasses the hardware mirror and fills both segments manually.
 > Source: BLE sniff observation (2026-04-22) — ZENGGE Multi-Color creator uses `points` exclusively.
 
 - **Format:** `[0x59, totalLenHi, totalLenLo, [R1,G1,B1...], numLEDsHi, numLEDsLo, transitionType, speed, direction, checksum]`
@@ -711,21 +710,21 @@ _Primary command for all IC-strip patterns. Sends a per-pixel RGB array that the
 - **Minimum Payload:** 12 pixels. Payloads <10 cause **hardware memory lock glitching**.
 - **TransitionType Bytes (APK Verified Truth: `StaticColorfulMode.java`):**
 
-> ⚠️ **0xA3 HARDWARE LIMITATION:** The `0x59` command is a spatial payload. The ZENGGE app explicitly *hides* Breathe and Twinkly from the `0x59` UI for the `0xA3` chip because the hardware cannot calculate temporal math over a 450-byte custom array. Strobe and Jump are also known to fail. **For temporal transitions (Breathe, Jump, Strobe), use the `0x51` Scene Sequencer instead!**
+> âš ï¸ **0xA3 HARDWARE LIMITATION:** The `0x59` command is a spatial payload. The ZENGGE app explicitly *hides* Breathe and Twinkly from the `0x59` UI for the `0xA3` chip because the hardware cannot calculate temporal math over a 450-byte custom array. Strobe and Jump are also known to fail. **For temporal transitions (Breathe, Jump, Strobe), use the `0x51` Scene Sequencer instead!**
 
 | Byte | Name | Behavior | 0xA3 Status |
 |:---|:---|:---|:---|
-| `0x01` | Static | Freeze in place | ✅ **Fully Supported** |
-| `0x02` | Running Water | Continuous hardware scroll | ✅ **Fully Supported** |
-| `0x03` | Strobe | Flash effect | ❌ Fails (Requires `0x51`) |
-| `0x04` | Jump | Hard color jump | ❌ Fails (Requires `0x51`) |
-| `0x05` | Breathe | Breathe fade effect | 🚫 **Firmware Locked/Hidden** (Use `0x51`) |
-| `0x06` | Twinkly | Twinkle effect | 🚫 **Firmware Locked/Hidden** |
+| `0x01` | Static | Freeze in place | âœ… **Fully Supported** |
+| `0x02` | Running Water | Continuous hardware scroll | âœ… **Fully Supported** |
+| `0x03` | Strobe | Flash effect | âŒ Fails (Requires `0x51`) |
+| `0x04` | Jump | Hard color jump | âŒ Fails (Requires `0x51`) |
+| `0x05` | Breathe | Breathe fade effect | â›” **Firmware Locked/Hidden** (Use `0x51`) |
+| `0x06` | Twinkly | Twinkle effect | â›” **Firmware Locked/Hidden** |
 
 > [!IMPORTANT]
 > **Tick Settings (Point Count) Mismatch Flaw**: The `numLEDsHi` and `numLEDsLo` bytes at the end of the `0x59` payload dictate the **physical hardware strip length** that the transition effect will span across. Our previous implementation clamped this value to the RGB array length (max 54). If the hardware has 150 LEDs, clamping this to 54 causes transitions to truncate because the hardware thinks the spatial size is only 54! To bypass MTU limits while preserving spatial effects, we must decouple the RGB array length from the hardware point count sent in the payload.
 
-- **Speed:** UI 0—100 → HW 1—31. Formula: `max(1, min(31, round(uiSpeed / 100 × 30) + 1))`. Source: APK `Protocol/n.java: ad.e.a(f, 1, 31)`.
+- **Speed:** UI 0—100 → HW 1—31. Formula: `max(1, min(31, round(uiSpeed / 100 Ã— 30) + 1))`. Source: APK `Protocol/n.java: ad.e.a(f, 1, 31)`.
 - **Direction:** `0x01` Forward, `0x00` Reverse.
 - **Solid Mode Replication:** A single 1-pixel padded array with `transitionType=0x01` (FREEZE) safely replicates Solid Mode without `0x31` flickering glitches.
 
@@ -736,17 +735,10 @@ _Primary command for all IC-strip patterns. Sends a per-pixel RGB array that the
 _Sends up to 32 animation steps. Hardware loops through active steps autonomously. Steps are stored in device EEPROM._
 
 > [!IMPORTANT]
-> **ORACLE + BLE SNIFF CONFIRMED (2026-04-22, amended 2026-06-08):** Two formats work in production. One does not.
->
-> | Format | Method | Size (1 step) | Works? | Direction Byte? |
-> |:---|:---|:---|:---|:---|
-> | 9B compact | `setCustomModeCompact()` | 21B wrapped | ✅ YES | ❌ No |
-> | 10B compact + dir | `setCustomModeExtendedCompact()` | 22B wrapped | ✅ YES | ✅ Yes (byte 9 of slot) |
-> | 323B full extended | `setCustomModeExtended()` | 323B raw | ❌ NO | Requires `0x40` chunk framing |
->
-> **`PatternEngine.buildPatternPayload()` uses `setCustomModeExtendedCompact`** for all 0x51 interceptions (IDs 17/18/24/26/44/72 and 201-233) specifically to preserve the direction byte. Switching to `setCustomModeCompact` would silently drop direction support. Source: `PatternEngine.ts:244` comment, `ZenggeProtocol.ts:736-771`.
->
-> Full evidence in `ZENGGE_PROTOCOL_BIBLE.md` Section 8 (BUG-1).
+> **ORACLE + BLE SNIFF CONFIRMED (2026-04-22)**: The 9B compact format (291B) fired by our current `setCustomMode()` **works correctly** on 0xA3 hardware. The 10B extended format via our `wrapCommand` does nothing. The ZENGGE app sends 10B slots using a different chunked BLE framing header. Full evidence in `ZENGGE_PROTOCOL_BIBLE.md` Section 11.
+
+- **Format (current working):** `[0x51, Step0(9B)...Step31(9B), 0x0F_Terminator, checksum]` (291 bytes)
+- **Format (ZENGGE app, requires chunked framing):** `[0x51, Step0(10B)...Step31(10B), checksum]` (via `[40 seq 00 00 01 43 BD 0B]` header)
 
 **Step Structure — Hardware-Confirmed 10-Byte (from live BLE sniff):**
 ```

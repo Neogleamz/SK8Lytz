@@ -1,11 +1,3 @@
-SESSION: 2026-06-08 -- Deep-Dive Code Synthesis
-ARTIFACT 2026-06-08T06:38 -- Synthesis Complete
-153 confirmed findings, 22pct dedup, 8 PLAN files created, 12 triage tasks added to Bucket List
----
-SESSION: 2026-06-08 -- Deep-Dive Code Synthesis
-ARTIFACT 2026-06-08T06:38 -- Synthesis Complete
-153 confirmed findings, 22pct dedup, 8 PLAN files created, 12 triage tasks added to Bucket List
----
 # SK8Lytz Session Log Ã¢â‚¬â€ Conversation Memory Bridge
 
 > **How to read this file:**
@@ -658,7 +650,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC âœ…, Jest âœ…, QA Hardening âœ…
 **Files touched:** src/hooks/useBLE.ts, src/hooks/useDashboardAutoConnect.ts, src/services/BleConnectionManager.ts, src/utils/backoff.ts
 
-### [DECISION] 2026-06-07T17:03 ï¿½ Split-Brain Eradication Phase 1 Complete
+### [DECISION] 2026-06-07T17:03 — Split-Brain Eradication Phase 1 Complete
 **Decision:** Refactored ZenggeProtocol to use instance methods for sequence counter management while maintaining a namespace proxy for static consumers.
 **Rejected:** Abandoned attempting to modify all 25 legacy static consumers, which would have carried unacceptable blast radius risk.
 **Don't re-derive:** ZenggeAdapter now instantiates its own 	his.protocol to isolate GATT sequence numbers and prevent hardware command collisions across multiple connections.
@@ -675,7 +667,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC Passed, Jest Passed.
 **Files touched:** CrewService.ts, useDashboardCrew.ts, useCrewSession.ts, CrewModal.tsx, DashboardCrewPanel.tsx, CrewCreateScreen.tsx, CrewScheduleScreen.tsx, DashboardScreen.tsx, useDashboardController.tsx.
 
-### [MERGE] 2026-06-07T23:20 ï¿½ fix/pii-scrub-telemetry -> master @ 97a53034
+### [MERGE] 2026-06-07T23:20 — fix/pii-scrub-telemetry -> master @ 97a53034
 **What merged:**
 - Created scrubPII() hash utility in piiScrubber.ts
 - Scrubbed raw MAC addresses and display_name strings from 49 AppLogger telemetry call sites to comply with GDPR/CCPA.
@@ -695,7 +687,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - src/utils/piiScrubber.ts
 - tools/SK8Lytz_App_Master_Reference.md
 
-### [MERGE] 2026-06-07T23:29 ï¿½ fix/stale-closure-intervals -> master
+### [MERGE] 2026-06-07T23:29 — fix/stale-closure-intervals -> master
 **What merged:**
 - Added userRef and sessionRef synced via useEffect to useOfflineSyncWorker and useDashboardAutoConnect to fix stale closure silent sync failures.
 - Added standard _isFlushingRef / _isRunningRef boolean re-entrancy guards to useTelemetryLedger, useBLEHeartbeat, useBLERSSIMonitor, CrewMemberDashboard, and SessionContext intervals.
@@ -733,7 +725,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/services/DeviceRepository.ts, src/services/CrewService.ts, src/services/CrewProfileService.ts, src/hooks/useDashboardCrew.ts, src/hooks/useDashboardController.tsx, src/hooks/useCrewSession.ts, src/components/crew/CrewCreateScreen.tsx, src/components/crew/CrewScheduleScreen.tsx, src/components/crew/CrewLandingScreen.tsx, src/components/crew/CrewJoinScreen.tsx, src/hooks/useAccountOverview.ts, src/hooks/useCrewHub.ts, src/components/CommunityModal.tsx, src/services/__tests__/GroupRepository.test.ts
 
-### [MERGE] 2026-06-08T01:15 ï¿½ fix/async-storage-key-registry ? master @ b707386d
+### [MERGE] 2026-06-08T01:15 — fix/async-storage-key-registry ? master @ b707386d
 **What merged:**
 - Migrated ng_programmer_profiles and ng_product_catalog to @Sk8lytz_ namespace.
 - Consolidated magic strings in SessionContext, AuthSandboxToggle, useDashboardGroups, and useBLEScanner.
@@ -741,7 +733,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/constants/storageKeys.ts, src/components/admin/tools/Sk8LytzProgrammer.tsx, src/hooks/useProductCatalog.ts, src/components/auth/AuthSandboxToggle.tsx, src/context/SessionContext.tsx, src/hooks/useDashboardGroups.ts, src/hooks/ble/useBLEScanner.ts, tools/SK8Lytz_App_Master_Reference.md
 
-### [MERGE] 2026-06-08T01:34 ï¿½ fix/async-error-hardening ? master @ 027bc694
+### [MERGE] 2026-06-08T01:34 — fix/async-error-hardening ? master @ 027bc694
 **What merged:**
 - Wrapped 120+ naked await operations in try/catch across src directory.
 - Fixed 72+ catch blocks missing 'e instanceof Error' unwrapping.
@@ -749,30 +741,17 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Files touched:** Over 80 files across src/hooks, src/components, and src/services including BleConnectionManager.ts, useAdminTelemetry.ts, and AdminToolsModal.tsx.
 
 
-### [MERGE] 2026-06-07T21:40 ï¿½ fix/type-safety-any-cast-phase1 ? master
+### [MERGE] 2026-06-07T21:40 — fix/type-safety-any-cast-phase1 ? master
 **What merged:** Swept and eliminated `any` casts across Admin tools, Modals, and all components using `createStyles(Colors: any)`. Properly strictly typed with `ThemePalette`, `ScannedDevice`, and `DeviceSettings`.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** AdminToolsModal.tsx, CommunityModal.tsx, Sk8LytzProgrammer.tsx, ProductManager.tsx, GlobalAnalyticsPanel.tsx, supabase.ts, and 20+ UI components.
 
-### [MERGE] 2026-06-07T21:46 ï¿½ chore/dead-dependency-prune ? master
+### [MERGE] 2026-06-07T21:46 — chore/dead-dependency-prune ? master
 **What merged:** Removed 7 completely unused dependencies (string-similarity, supercluster, jpeg-js, expo-speech, expo-image-manipulator, expo-blur, react-native-nitro-image). Retained react-native-vision-camera-worklets and react-native-nitro-modules as they provide required typings for Frame objects.
 **Verify result:** TSC ?, Jest ?, blast-radius ?
 **Files touched:** package.json, package-lock.json
 
-### [MERGE] 2026-06-08T04:29 ï¿½ release-v3.9.2 ? master @ a0561e4e
+### [MERGE] 2026-06-08T04:29 — release-v3.9.2 ? master @ a0561e4e
 **What merged:** Successfully built Android release APK for v3.9.2 and fixed CMake path constraints by building from C:\W. Shipped and installed via ADB.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** android build configuration.
-
-### [MERGE] 2026-06-08T04:41 â€” fix/release-ble-proguard -> master @ 7b18a5e6
-**What merged:**
-- Created root proguard-rules.pro with keep directives for BLE and camera libraries.
-- Hooked proguard-rules.pro into app.config.js extraProguardRules.
-- Documented VS-004 in KNOWN_ISSUES.md.
-**Verify result:** TSC OK, Jest OK, Gatekeeper OK
-**Files touched:** app.config.js, proguard-rules.pro, tools/KNOWN_ISSUES.md, tools/SK8Lytz_Bucket_List.md
-
-### [DECISION] 2026-06-08T06:27 â€” BLE Scanner drops nameless devices in Release
-**Decision:** Updated useBLEScanner.ts to rely on the 0xFCF1 Service Data UUID rather than just device name.
-**Reasoning:** Android 12+ aggressively strips mDeviceName from BLE scan results unless explicitly connected or if certain permissions are granted in a specific context. In release mode, Zengge devices were returning name=null and manufacturerData=null. However, they successfully broadcast their manufacturer payload inside mServiceData under the FCF1 UUID. We now explicitly extract device.serviceData["0000fcf1-0000-1000-8000-00805f9b34fb"] and use it as mfData to parse firmware and bypass the name filter.
-**Source:** src/hooks/ble/useBLEScanner.ts
