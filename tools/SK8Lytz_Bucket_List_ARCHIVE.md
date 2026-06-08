@@ -815,3 +815,69 @@ pm run verify which includes QA tests.
     Rejected alternative: "Global error boundary only — rejected because per-component error states provide granular UX (retry button, specific message) that a generic boundary cannot."
   - **Source of Truth:** 📖 [R-14_findings.json](artifacts/deepdive_raw/R-14_findings.json) · `agent-behavior.md §4`
   - **Details:** Add `error: string | null` state + retry callback to each affected hook. Consumers render `<ErrorState />`. Use existing error component if one exists.
+### [BATCH:deepdive-synthesis-2026-06-08] — Priority-Ordered Sweep | From `/deepdive-code-synthesis`
+
+> **Worktree**: Sequential execution — one task at a time. **Type**: Sequential. **Prerequisite**: None.
+> **Source Analysis**: 📊 [system_audit_report.md](artifacts/system_audit_report.md) — 48-agent deep-dive, ~875 unique verified findings across 26 anti-pattern rules.
+
+#### ~~🔴 CRITICAL~~ ❌ VOIDED — FALSE POSITIVE
+
+- [x] ~~**`feat/pattern-engine-protocol-fix`**~~ — **CANCELLED: AUDIT AGENT MISINFORMATION**
+  - **Tags:** `[❌ VOIDED]` `[FALSE-POSITIVE]` `[BLE]` `[H-RISK]` `[Snack]`
+  - **Plan:** 📎 [PLAN-pattern-engine-protocol-fix.md](docs/plans/PLAN-pattern-engine-protocol-fix.md) *(INVALID — do not execute)*
+  - **Void Reason (2026-06-08):** The audit agent (DOMAIN_PATTERN_ENGINE sniper) confused `setCustomModeExtendedCompact` with `setCustomModeExtended`. These are entirely different methods. `setCustomModeExtendedCompact` emits a **21-byte compact 0x51 packet** (direct GATT write, no chunking) — the 10th byte is the **direction flag**, intentionally included. Switching to `setCustomModeCompact` would **break direction support** for all 0x51 patterns. Hardware is functioning correctly. The `dir` field is required, not dead code. Evidence: `ZenggeProtocol.ts:736-771` (method JSDoc + implementation), `PatternEngine.ts:244` comment: *"Use the 10-byte unpadded compact payload so the direction flag is respected!"*
+
+---
+
+#### 🔴 P1 — CRITICAL Security
+
+- [x] **`fix/pii-scrubber-hardening`** — Merged 2924dce6: Expanded PII key coverage to location/auth patterns via substring matching, added array recursion to obfuscate, renamed LocationService label→address, removed hardcoded Maps API key from AndroidManifest.
+
+
+---
+
+#### 🟠 P2 — High Correctness
+
+
+
+
+---
+
+#### 🟡 P3 — Medium Priority / Architecture Hygiene
+
+
+- [x] **`refactor/storage-key-registry-v2`** @ a2fdee53 - Standardized AsyncStorage keys across codebase and updated Master Reference.
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[Services]` `[M-RISK]` `[Meal]` `[🤖 PRO-MED]` `[BATCH:deepdive-synthesis-2026-06-08]`
+  - **Goal:** Fix 4 raw AsyncStorage string usages bypassing constants, and document 6+ undocumented keys in Master Reference §A.2, completing the storage key registry started by `fix/async-storage-key-registry`.
+  - **Decision Log:** R-24 sniper found `AdminToolsModal.tsx:104` uses `'@Sk8lytz_device_configs'` as a raw string while `DeviceRepository.ts` uses `CONFIGS_KEY` constant for the same key. Same split in `useBLEScanner.ts`, `useAccountOverview.ts`, `AuthContext.tsx`. 6 keys used but absent from Master Reference §A.2. Prior merge (b707386d) fixed `ng_` namespace keys but missed these. Evidence: `R-24_findings.json` (2026-06-08).
+  - **Analysis:** 📊 Source: [system_audit_report.md](artifacts/system_audit_report.md) · Plan: [PLAN-storage-key-registry-v2.md](docs/plans/PLAN-storage-key-registry-v2.md)
+    Key finding: "4 raw string key violations, 6 undocumented keys. Prior merge missed these secondary violations."
+    Rejected alternative: "Automated key validation at runtime — rejected as over-engineering; static constants enforced at import time is sufficient."
+  - **Source of Truth:** 📖 [R-24_findings.json](artifacts/deepdive_raw/R-24_findings.json) · `src/constants/storageKeys.ts` · `tools/SK8Lytz_App_Master_Reference.md`
+  - **Details:** 4 raw string fixes + Master Reference §A.2 update. Must update docs per VS-003 rule before running gatekeeper.
+
+
+
+---
+
+#### 🔵 P4 — Type Safety Sweeps (Large Scope)
+
+- [x] **`refactor/type-safety-data-layer`** @ 76ac0911 — Replaced all double-casts with `.returns<T>()` and strict guards
+  - **Tags:** `[✅ COMPLETED]` `[🤔 INFERRED]` `[Services]` `[M-RISK]` `[Meal]` `[🤖 THINK]` `[BATCH:deepdive-synthesis-2026-06-08]`
+  - **Goal:** Fix `as unknown as` type laundering and `payload: any` in 6 core data layer service files by replacing unsafe double-casts with proper type guards or correctly typed Supabase queries.
+  - **Decision Log:** DOMAIN_DATA_LAYER + R-08 confirmed 20+ type laundering instances. Fixed via strict Supabase interface alignment.
+  - **Analysis:** 📊 Source: [system_audit_report.md](artifacts/system_audit_report.md) · Plan: [PLAN-type-safety-data-layer.md](docs/plans/PLAN-type-safety-data-layer.md)
+  - **Source of Truth:** 📖 [DOMAIN_DATA_LAYER_findings.json](artifacts/deepdive_raw/DOMAIN_DATA_LAYER_findings.json) · `src/types/supabase.ts`
+  - **Details:** Prerequisite for `refactor/type-safety-ui-layer` is now cleared.
+
+- [x] **`refactor/type-safety-ui-layer`** @ 38d792dd - Resolved prop `any` types across UI layer and stabilized display device mapping.
+  - **Tags:** `[✅ COMPLETED]` `[🤔 INFERRED]` `[UI]` `[M-RISK]` `[Feast]` `[🤖 PRO-MED]` `[BATCH:deepdive-synthesis-2026-06-08]`
+  - **Goal:** Fix `: any` prop type annotations across Dashboard UI, Admin Diagnostic Lab tabs, and Docked components — replacing prop `any` with explicit types from the domain model.
+  - **Decision Log:** R-08 sniper found ~380 total `any` instances across 253 files. UI layer accounts for ~180 of these, primarily in Admin Diagnostic Lab tab components (25) and Dashboard slabs (15). These are prop interfaces lacking domain type imports. Blocked by data layer task — service types must be clean first to avoid cascading errors. Evidence: `R-08_findings.json` (2026-06-08).
+  - **Analysis:** 📊 Source: [system_audit_report.md](artifacts/system_audit_report.md) · Plan: [PLAN-type-safety-ui-layer.md](docs/plans/PLAN-type-safety-ui-layer.md)
+    Key finding: "UI layer `any` casts are primarily prop interface gaps — import the right type from `src/types/` and the fix is trivial."
+    Rejected alternative: "One giant sweep of all 380 instances — rejected as too high collision risk. Sequential: data layer → UI layer."
+  - **Source of Truth:** 📖 [R-08_findings.json](artifacts/deepdive_raw/R-08_findings.json) · `src/types/`
+  - **Details:** Execute in 4 sub-batches (Diagnostic Lab tabs → Dashboard slabs → Docked → Remaining). Commit + TSC check after each sub-batch. **Blocked by `refactor/type-safety-data-layer`.**
+
+---
