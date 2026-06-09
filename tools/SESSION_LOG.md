@@ -918,3 +918,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC clean, Jest 126/126, all 6 gates, blast radius clean
 **Files touched:** src/hooks/ble/useBLEScanner.ts
 **Strike log:** Strike 2 of 3. This was the third attempt. Root cause identified and confirmed: async startSweeper race. Previous 2 fixes patched symptoms (timeout/RSSI) not the race.
+### [MERGE] 2026-06-08T20:02 - fix/audit-fixes-auth -> master @ e732f8fe
+**What merged:** Fixed offline pc crash on username login, silent profile error swallowing, and removed dead safeErr variables.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/services/supabaseClient.ts, src/context/SessionContext.tsx, src/services/AuthProfileService.ts, src/components/auth/AuthFormSignIn.tsx, src/components/auth/AuthFormSignUp.tsx
