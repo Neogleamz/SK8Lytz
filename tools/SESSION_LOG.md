@@ -1264,3 +1264,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Decoupled Dev Sandbox toggle and Virtual Skates injection from __DEV__ for Platform.OS === 'web' to fix the containerized web demo.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/components/auth/AuthSandboxToggle.tsx, src/hooks/useBLE.ts, src/hooks/ble/useBLEScanner.ts, src/services/BleConnectionManager.ts, index.ts, src/components/GlobalErrorBoundary.tsx
+
+### [MERGE] 2026-06-09T22:16 — feat-dev-sandbox-ux -> master @ 759e0aca
+**What merged:** Restructured Dev Sandbox UX. Replaced scattered Nuke and Bypass buttons with a unified DevSandboxDrawer at the bottom of AuthScreen.tsx, including explicit Load/Unload Virtual Skates controls and a Soft Nuke option.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/components/auth/DevSandboxDrawer.tsx, src/screens/AuthScreen.tsx, src/components/auth/AuthFooterActions.tsx, src/components/auth/AuthSandboxToggle.tsx (deleted)
