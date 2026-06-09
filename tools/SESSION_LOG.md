@@ -996,3 +996,12 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Rejected:** Native React table (Anti-Bloat Protocol).
 **Don't re-derive:** The user explicitly requested an exception to the anti-bloat rule because building a highly interactive, beautiful, multi-layered filtering databank natively would require reinventing the wheel when AG-Grid provides the exact enterprise-grade UI requested.
 **Source:** User Request
+
+### [EVENT] 2026-06-08T23:45 — Dynamic Fleet Map & Dashboard Merge
+**What shipped:** Merged Command Center and Scraper dashboard into a single unified Dockerized Vite application. Refactored Sidebar Navigation. Upgraded Fleet Map with AG-Grid databank and bi-directional dynamic filtering.
+**AI failure pattern:** Offloading terminal commands to the user (Friction 025), failing to resolve MCP cached config crash resulting in manual DB execution.
+**User pattern:** Active override of architecture guidelines (Anti-bloat) for necessary UX features (AG-Grid).
+**Active sprint state:** N/A (Sprint clean)
+**Master HEAD:** c09d6275
+**Friction Audit:** 1 new event (025), 0 resolved.
+**System evolution:** None
