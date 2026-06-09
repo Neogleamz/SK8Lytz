@@ -1,5 +1,6 @@
 import type React from 'react';
 import { Platform } from 'react-native';
+import type { BleManager, Subscription, Device } from 'react-native-ble-plx';
 import { AppLogger } from './AppLogger';
 import { BLEPhaseTag, BleMachineEvent } from './ble/BleMachine.types';
 import { BLE_TIMING } from '../constants/bleTimingConstants';
@@ -8,14 +9,14 @@ import { BLE_TIMING } from '../constants/bleTimingConstants';
  * executeRealDisconnect — The actual GATT connection cancellation and state resets.
  */
 export async function executeRealDisconnect(
-  bleManager: any,
-  connectedDevicesRef: React.MutableRefObject<any[]>,
-  disconnectListeners: React.MutableRefObject<Record<string, any>>,
+  bleManager: BleManager | null,
+  connectedDevicesRef: React.MutableRefObject<Device[]>,
+  disconnectListeners: React.MutableRefObject<Record<string, Subscription>>,
   mtuMapRef: React.MutableRefObject<Map<string, number>>,
   adapterMapRef: React.MutableRefObject<Map<string, any>>,
-  autoRecovery: any,
+  autoRecovery: { cancelAllRecoveries: () => Promise<void> },
   getGate: () => BLEPhaseTag,
-  setConnectedDevices: React.Dispatch<React.SetStateAction<any[]>>,
+  setConnectedDevices: React.Dispatch<React.SetStateAction<Device[]>>,
   setGate: (phase: BLEPhaseTag) => void,
   bleSend: (event: BleMachineEvent) => void
 ): Promise<void> {
@@ -37,7 +38,7 @@ export async function executeRealDisconnect(
   if (staleDevices.length > 0 && Platform.OS !== 'web') {
     for (const device of staleDevices) {
       try {
-        await bleManager.cancelDeviceConnection(device.id).catch((e: unknown) =>
+        await bleManager?.cancelDeviceConnection(device.id).catch((e: unknown) =>
           AppLogger.warn(`[BLE] Disconnect soft fail for ${device.id}`, e instanceof Error ? e.message : String(e))
         );
       } catch (e: unknown) {

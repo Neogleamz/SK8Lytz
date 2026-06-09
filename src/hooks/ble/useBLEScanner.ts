@@ -266,7 +266,7 @@ export function useBLEScanner({
     }
   }, [scheduleFlush, queueDeviceForInterrogation, hwCacheRef]);
 
-  const { isSweeperActive, startSweeper, stopSweeper: _stopSweeper, burstScan: _burstScan } = useBLEBatterySweep({
+  const { isSweeperActive, startSweeper, stopSweeper: _stopSweeper, burstScan: _burstScan, batteryTier } = useBLEBatterySweep({
     bleManager,
     scanCallback
   });
@@ -310,6 +310,7 @@ export function useBLEScanner({
     if (isSweeperActive) {
       burstScan(options?.keepAlive ? 10000 : 5000);
     } else {
+      if (scannerStateRef.current === 'SCANNING') return;
       bleSend({ type: 'SCAN_START' });
       scannerStateRef.current = 'SCANNING';
       bleManager?.startDeviceScan(null, null, scanCallback);
@@ -328,6 +329,7 @@ export function useBLEScanner({
     setPendingRegistrations,
     classifyProbeResults,
     isSweeperActive,
+    batteryTier,
     startSweeper,
     burstScan,
     hwCache

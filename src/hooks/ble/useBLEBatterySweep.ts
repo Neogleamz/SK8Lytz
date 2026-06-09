@@ -25,6 +25,7 @@ export interface UseBLEBatterySweepProps {
 
 export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySweepProps) {
   const [isSweeperActive, setIsSweeperActive] = useState(false);
+  const [batteryTier, setBatteryTier] = useState<BatteryTier>('FULL');
   const isSweeperActiveRef = useRef(false);
   const activeBurstRef = useRef<Promise<void> | null>(null);
 
@@ -65,6 +66,7 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
     Battery.getBatteryLevelAsync().then(level => {
       const tier = classifyBatteryTier(level);
       batteryTierRef.current = tier;
+      setBatteryTier(tier);
 
       if (tier === 'PAUSED') {
         AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_start_blocked_low_battery', batteryLevel: Math.round(level * 100) });
@@ -102,6 +104,7 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
     }).catch(err => {
       AppLogger.warn('[useBLEBatterySweep] Battery check failed', { error: String(err) });
       batteryTierRef.current = 'FULL';
+      setBatteryTier('FULL');
       bleManager.stopDeviceScan();
       isSweeperActiveRef.current = true;
       setIsSweeperActive(true);
@@ -157,6 +160,7 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
       if (newTier === oldTier) return;
 
       batteryTierRef.current = newTier;
+      setBatteryTier(newTier);
       AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_battery_tier_changed', oldTier, newTier, batteryLevel: Math.round(batteryLevel * 100) });
 
       if (!isSweeperActiveRef.current) return;
@@ -181,5 +185,5 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
     return () => { stopSweeper(); };
   }, [stopSweeper]);
 
-  return { isSweeperActive, startSweeper, stopSweeper, burstScan };
+  return { isSweeperActive, startSweeper, stopSweeper, burstScan, batteryTier };
 }

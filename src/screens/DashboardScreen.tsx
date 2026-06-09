@@ -886,6 +886,18 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   })), [registeredDevices, allDevices]);
 
 
+  const BatteryWarningBanner = useMemo(() => {
+    if (ble?.batteryTier !== 'PAUSED') return null;
+    return (
+      <View style={styles.btBanner}>
+        <MaterialCommunityIcons name="battery-alert" size={24} color="#FFF" />
+        <Text style={styles.btBannerText}>
+          Scanning paused. Battery below 15%.
+        </Text>
+      </View>
+    );
+  }, [ble?.batteryTier]);
+
   const BluetoothWarningBanner = useMemo(() => {
     if (isBluetoothEnabled || Platform.OS === 'web') return null;
     return (
@@ -931,6 +943,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   return (
     <SafeAreaView testID="dashboard-screen" style={styles.safeArea}>
       {BluetoothWarningBanner}
+      {BatteryWarningBanner}
       <View style={styles.container}>
 
         {isControllerOpen && (
@@ -1131,7 +1144,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
           registeredDevices={mappedRegisteredDevicesForModal}
           onDeviceRenamed={async (deviceId, newName) => {
             setAllDevices((prev) => prev.map(d =>
-              d.id === deviceId ? ({ ...d, customName: newName } as unknown as any) : d
+              d.id === deviceId ? ({ ...d, customName: newName } as unknown as Device) : d
             ));
             const rd = registeredDevices.find(r => r.device_mac === deviceId);
             if (rd) {

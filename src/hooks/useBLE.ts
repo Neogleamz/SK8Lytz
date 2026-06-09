@@ -102,6 +102,7 @@ export interface BluetoothLowEnergyApi {
   burstScan(durationMs?: number): void;
   /** True while the Silent Sweeper is actively scanning */
   isSweeperActive: boolean;
+  batteryTier: 'FULL' | 'THROTTLED' | 'PAUSED';
   /** In-memory EEPROM cache keyed by uppercase MAC — populated by the Interrogator Queue */
   hwCache: Record<string, any>;
   /** Live post-connect RSSI map keyed by device MAC — updated every 30s by useBLERSSIMonitor. */
@@ -648,6 +649,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     stopSweeper: scanner.stopScanner, // Replaced
     burstScan: scanner.burstScan,
     isSweeperActive: scanner.isSweeperActive,
+    batteryTier: scanner.batteryTier,
     hwCache: scanner.hwCache,
     rssiMap,
     // ── Overwatch-aware scanForPeripherals ─────────────────────────────────
@@ -676,6 +678,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     autoRecovery.ghostedDeviceIds,
     bleGateState,
     scanner.isSweeperActive,
+    scanner.batteryTier,
     scanner.hwCache,
     scanner.burstScan,
     rssiMap,
