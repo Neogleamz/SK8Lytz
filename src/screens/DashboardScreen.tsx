@@ -944,8 +944,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
       {BluetoothWarningBanner}
       {BatteryWarningBanner}
       <View style={styles.container}>
-
-        {isControllerOpen && (
+        {isControllerOpen ? (
           <View style={styles.controllerWrap}>
             <View pointerEvents={Platform.OS !== 'web' ? 'box-none' : undefined} style={[styles.controllerHeaderWrap, Platform.OS === 'web' ? { pointerEvents: 'none' as unknown as any } : undefined]}>
               <DashboardHeader
@@ -971,11 +970,8 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
               {MemoizedSk8lytzController}
             </View>
           </View>
-        )}
-        {!isControllerOpen && (
-          /* ── 4-SLAB VERTICAL HIERARCHY ── */
+        ) : (
           <View style={styles.dashboardWrap}>
-             {/* SLAB 1: HEADER (Logo + Pulse) */}
              <View style={styles.headerSlab}>
                 <DashboardHeader
                   isActuallyConnected={false}

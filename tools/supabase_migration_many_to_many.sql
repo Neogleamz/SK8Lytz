@@ -43,9 +43,9 @@ SECURITY DEFINER
 AS $$
 BEGIN
     -- 1. Upsert the group in `registered_groups`
-    INSERT INTO public.registered_groups (id, name, type, user_id)
+    INSERT INTO public.registered_groups (id, group_name, type, user_id)
     VALUES (p_group_id, p_group_name, p_type, auth.uid())
-    ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, type = EXCLUDED.type;
+    ON CONFLICT (id) DO UPDATE SET group_name = EXCLUDED.group_name, type = EXCLUDED.type;
 
     -- 2. Delete existing memberships for this group
     DELETE FROM public.device_group_members WHERE group_id = p_group_id;

@@ -35,7 +35,7 @@ function determineFactoryName(device: Device): string | undefined {
       try {
         const buf = Buffer.from(device.manufacturerData, 'base64');
         if (buf.toString('hex').includes('5053')) return 'BanlanX';
-      } catch (e) {}
+      } catch {}
     }
     return 'BanlanX';
   }
@@ -314,6 +314,7 @@ export function useBLEScanner({
     if (!options?.keepAlive) {
       setPendingRegistrations([]);
       rejectedMacsRef.current.clear();
+      seenMacsRef.current.clear();
       setAllDevices([]);
       allDevicesRef.current = [];
     }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Switch } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Switch, DeviceEventEmitter } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../services/supabaseClient';
@@ -23,6 +23,7 @@ export function DevSandboxDrawer({ onOfflineMode, setErrorMessage }: DevSandboxD
     try {
       await AsyncStorage.setItem(STORAGE_DEMO_MODE, value ? 'true' : 'false');
       setIsVirtualSkatesEnabled(value);
+      DeviceEventEmitter.emit('TOGGLE_VIRTUAL_SKATES', value);
       setErrorMessage(value ? 'VIRTUAL SKATES ENABLED' : 'VIRTUAL SKATES DISABLED');
       if (value) onOfflineMode?.();
     } catch (e: unknown) {

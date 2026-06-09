@@ -11,7 +11,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform, AppState } from 'react-native';
+import { Platform, AppState, DeviceEventEmitter } from 'react-native';
 import { STORAGE_DEMO_MODE } from '../constants/storageKeys';
 import { Buffer } from 'buffer';
 import type { Device } from 'react-native-ble-plx';
@@ -181,15 +181,26 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   }, [bleSend]);
 
   useEffect(() => {
+    // 1. Initial Load
     if ((typeof __DEV__ !== 'undefined' && __DEV__) || Platform.OS === 'web') {
       AsyncStorage.getItem(STORAGE_DEMO_MODE).then((isMock) => {
-        if (Platform.OS === 'web' || isMock === 'true') {
-          setIsBluetoothSupported(true);
-          setIsBluetoothEnabled(true);
-          setIsSandboxEnabled(true);
+        const enabled = isMock === 'true';
+        if (Platform.OS === 'web') {
+           setIsBluetoothSupported(true);
+           setIsBluetoothEnabled(true);
         }
+        setIsSandboxEnabled(enabled);
       });
     }
+
+    // 2. Dynamic Update Listener (from DevSandboxDrawer)
+    const sub = DeviceEventEmitter.addListener('TOGGLE_VIRTUAL_SKATES', (enabled: boolean) => {
+       setIsSandboxEnabled(enabled);
+    });
+
+    return () => {
+       sub.remove();
+    };
   }, []);
 
   const disconnectListeners = useRef<Record<string, import('react-native-ble-plx').Subscription>>({});
@@ -673,20 +684,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   }), [
     allDevices,
     connectedDevices,
-    bleGateState,
-    scanner.pendingRegistrations,
     isBluetoothSupported,
     isBluetoothEnabled,
+    bleSnapshot.context.ghostedDeviceIds,
     droppedOutDeviceIds,
     autoRecovery.ghostedDeviceIds,
-    bleGateState,
-    scanner.isSweeperActive,
-    scanner.batteryTier,
-    scanner.hwCache,
-    scanner.burstScan,
     rssiMap,
     bleActorRef,
-    autoRecovery.ghostedDeviceIds,
     connectToDevices,
     derivedBleState,
     disconnectFromDevice,
