@@ -1232,3 +1232,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Master HEAD:** 1a3959cd
 **Friction Audit:** (1 new events | 0 incremented | 0 resolved | Proposals due: none)
 **System evolution:** Added FRICTION-028 (Placeholder Data Prop).
+
+### [DECISION] 2026-06-09T16:05 — Command Center SK8Lytz App Simulator
+**Decision:** Embed the SK8Lytz Expo web app into the Command Center via an iframe wrapping localhost:8081, combined with a selectable CSS-based Device Silhouette (iPhone, Pixel, etc.) and a postMessage-based live console interceptor.
+**Rejected:** Monorepo/Micro-frontend injection. Rejected because it merges two entirely different bundlers (Vite + Metro Webpack), instantly breaking hot-reloading and introducing severe dependency hell.
+**Don't re-derive:** The iframe approach provides 100% process isolation. The Expo web server runs inside Docker independently. Communication MUST occur exclusively over window.postMessage.
