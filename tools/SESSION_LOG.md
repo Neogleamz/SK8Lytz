@@ -1279,3 +1279,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Replaced Load/Unload Virtual Skates buttons with a single React Native Switch per user request.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/components/auth/DevSandboxDrawer.tsx
+
+### [MERGE] 2026-06-09T22:36 — fix-sandbox-mock-identity -> master
+**What merged:** Expanded Mock Injection to 4 discrete Virtual Skates (Haloz L/R, Soulz L/R). Added Product Manager default profiles (product_type, hwPoints) directly to the mock payloads to bypass EEPROM interrogation classification failures on generic mocks.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/hooks/ble/useBLEScanner.ts
