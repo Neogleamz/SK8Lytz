@@ -927,3 +927,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What was filed:** Built the global admin command center, migrating admin tools out of the mobile app into a dedicated React/Vite web application deployed on the scraper container (port 5997).  
 **Files touched:** tools/command-center/*, src/components/admin/* (deleted), src/screens/DashboardScreen.tsx, src/components/AccountModal.tsx  
 **Gatekeeper Status:** feat/global-admin-dashboard worktree is verified clean and ready, but gatekeeper is temporarily blocked by uncommitted changes in fix/audit-fixes-ble-protocol. 
+
+### [MERGE] 2026-06-08T20:24 - fix/audit-fixes-ble-signal -> master
+**What merged:** Implemented CONNECT_SUCCESS and DISCONNECT_COMPLETE BLE FSM events. Fixed RSSI stale prune bug by updating dependencies to connectedDeviceIds. Bumped priority for Advanced Power Payload (0x71).
+**Verify result:** TSC u{2705}, Jest u{2705}, Gates u{2705}
+**Files touched:** src/hooks/ble/useBLERSSIMonitor.ts, src/hooks/useBLE.ts, src/services/BleConnectionManager.ts, src/services/BleLifecycleManager.ts, src/services/BleWriteQueue.ts, src/types/ble.types.ts
+
