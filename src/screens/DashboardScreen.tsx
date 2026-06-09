@@ -30,8 +30,6 @@ import { DockedControllerHandle } from '../components/DockedController';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 
-import AdminToolsModal from '../components/admin/AdminToolsModal';
-
 import { AppLogger } from '../services/AppLogger';
 
 import AccountModal, { StoredDevice } from '../components/AccountModal';
@@ -1184,24 +1182,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         />
       )}
       
-      {/* Admin Tools Hub (Replaces LogViewerModal) */}
-      {isAdminToolsVisible && userProfile?.role === 'admin' && (
-        <AdminToolsModal
-          visible={isAdminToolsVisible}
-          onClose={() => setIsAdminToolsVisible(false)}
-          allDevices={allDevices}
-          connectedDevices={connectedDevices as unknown as DisplayDevice[]}
-          bleState={bleState}
-          handleScan={() => scanForPeripherals()}
-          liveRxPayload={lastRawNotification}
-          liveDeviceConfigs={deviceConfigs}
-          onConnectToDevice={async (d: any) => { await connectToDevices([d]); }}
-          onDisconnectFromDevice={async (_id: string) => { forceDisconnect(); }}
-          isDiagnosticsMode={isDiagnosticsMode}
-          onToggleDiagnostics={() => setIsDiagnosticsMode(!isDiagnosticsMode)}
-          hwSettings={activeHwSettings}
-        />
-      )}
+      {/* Admin Tools Migrated to Web Command Center */}
 
 
     </SafeAreaView>

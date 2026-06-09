@@ -77,8 +77,6 @@ export interface AccountTabDevicesProps extends BaseTabProps {
   setDeviceNewName: (val: string) => void;
   handleRenameDevice: (device: StoredDevice) => void;
   setEditingDeviceId: (val: string | null) => void;
-  setAdvancedModalDevice: (val: StoredDevice | null) => void;
-  setAdvancedModalVisible: (val: boolean) => void;
   handleForgetDevice: (device: StoredDevice) => void;
 }
 

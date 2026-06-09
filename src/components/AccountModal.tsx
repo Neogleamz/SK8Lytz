@@ -30,7 +30,6 @@ import { useSkateStats } from '../hooks/useSkateStats';
 import EulaModal from './modals/EulaModal';
 import { profileService, PermanentCrew } from '../services/ProfileService';
 import { supabase } from '../services/supabaseClient';
-import { AdvancedHardwareModal } from './admin/AdvancedHardwareModal';
 import AccountTabProfile from './account/AccountTabProfile';
 import AccountTabSecurity from './account/AccountTabSecurity';
 import AccountTabCrewz from './account/AccountTabCrewz';
@@ -229,9 +228,6 @@ export default function AccountModal({
   const [deviceNewName, setDeviceNewName] = useState('');
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [groupNewName, setGroupNewName] = useState('');
-  
-  const [advancedModalVisible, setAdvancedModalVisible] = useState(false);
-  const [advancedModalDevice, setAdvancedModalDevice] = useState<StoredDevice | null>(null);
 
   const groupedDevices = React.useMemo(() => {
     const groups: { [key: string]: StoredDevice[] } = { "_Ungrouped": [] };
@@ -507,7 +503,7 @@ export default function AccountModal({
               handleCreateCrew, joinCode, setJoinCode, handleJoinCrew, handleDeleteCrew, handleLeaveCrew,
               groupedDevices, editingGroupId, groupNewName, setGroupNewName, handleRenameGroup, setEditingGroupId,
               handleForgetGroup, editingDeviceId, deviceNewName, setDeviceNewName, handleRenameDevice, setEditingDeviceId,
-              setAdvancedModalDevice, setAdvancedModalVisible, handleForgetDevice,
+              handleForgetDevice,
               notifCrewInvites, setNotifCrewInvites, notifSessionReminders, setNotifSessionReminders,
               notifLeaderHandoff, setNotifLeaderHandoff, saveNotifPrefs, isDark, toggleTheme, setShowEula,
               handleSignOut, handleDeleteAccount, statsLoading, lifetimeStats, recentSessions,
@@ -528,17 +524,6 @@ export default function AccountModal({
           })()}
         </View>
       </View>
-
-      {/* Child Modals */}
-      <AdvancedHardwareModal 
-        visible={advancedModalVisible}
-        onClose={() => setAdvancedModalVisible(false)}
-        targetDeviceId={advancedModalDevice?.mac || advancedModalDevice?.id || null}
-        currentPoints={advancedModalDevice?.led_points}
-        currentSegments={advancedModalDevice?.segments}
-        currentIcType={advancedModalDevice?.ic_type}
-        currentSorting={advancedModalDevice?.color_sorting}
-      />
     </Modal>
   );
 }

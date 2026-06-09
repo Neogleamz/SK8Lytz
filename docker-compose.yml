@@ -9,6 +9,7 @@ services:
     ports:
       - "5999:5999" # CCTower API & Dashboard Backend
       - "5998:5998" # Vite Frontend Dashboard
+      - "5997:5997" # Telemetry Command Center
     volumes:
       # Map logs directly to Windows filesystem so user can read them in IDE
       - ./tools/scraper/logs:/app/tools/scraper/logs

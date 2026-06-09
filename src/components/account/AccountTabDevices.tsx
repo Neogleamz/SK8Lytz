@@ -26,8 +26,6 @@ export default function AccountTabDevices({
   setDeviceNewName,
   handleRenameDevice,
   setEditingDeviceId,
-  setAdvancedModalDevice,
-  setAdvancedModalVisible,
   handleForgetDevice,
 }: AccountTabDevicesProps) {
   return (
@@ -135,12 +133,6 @@ export default function AccountTabDevices({
                           setDeviceNewName?.(device.customName || device.name);
                         }}>
                           <MaterialCommunityIcons name="pencil" size={16} color={Colors.textMuted} />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.deviceIconBtn} onPress={() => {
-                          setAdvancedModalDevice?.(device);
-                          setAdvancedModalVisible?.(true);
-                        }}>
-                          <MaterialCommunityIcons name="chip" size={16} color={Colors.primary} />
                         </TouchableOpacity>
                         <TouchableOpacity style={styles.deviceIconBtn} onPress={() => handleForgetDevice?.(device)}>
                           <MaterialCommunityIcons name="trash-can-outline" size={16} color="#FF4444" />
