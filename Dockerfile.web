@@ -16,4 +16,4 @@ COPY . .
 EXPOSE 8081
 
 # Start Expo in web mode on all interfaces
-CMD ["npx", "expo", "start", "--web", "--port", "8081", "--host", "0.0.0.0"]
+CMD ["npx", "expo", "start", "--web", "--port", "8081"]
