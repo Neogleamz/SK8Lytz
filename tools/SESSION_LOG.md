@@ -1215,3 +1215,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Implemented BLE signature fingerprinting in \useBLEScanner\ to automatically map Zengge and BanlanX devices to their respective \actory_name\ strings on discovery.
 **Verify result:** TSC ?, Jest ?, Gatekeeper ?
 **Files touched:** src/hooks/ble/useBLEScanner.ts, src/utils/classifyBLEDevice.ts
+
+### [MERGE] 2026-06-09T15:49 — ui/embed-cheat-sheet -> master @ 8efa0a34
+**What merged:** Embedded Cheat Sheet into Command Center UI.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** tools/command-center/src/App.tsx, tools/command-center/public/cheat-sheet.html, tools/command-center/src/components/widgets/CheatSheetWidget.tsx
