@@ -226,7 +226,7 @@ export const RecordEditModal: React.FC<RecordEditModalProps> = ({ spot, onSave, 
           {Object.entries(val).map(([type, price]) => (
             price !== null && (
               <span key={type} style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.3)', borderRadius: '4px', color: '#f43f5e' }}>
-                {type}: <strong style={{ color: '#fff' }}>${price}</strong>
+                {type}: <strong style={{ color: '#fff' }}>${String(price)}</strong>
               </span>
             )
           ))}

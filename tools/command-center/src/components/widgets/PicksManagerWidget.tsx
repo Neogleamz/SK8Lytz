@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase';
-import { Edit2, Trash2, Plus, X, Save, ToggleLeft, ToggleRight, List } from 'lucide-react';
+import { Edit2, Trash2, Plus, X, Save, ToggleLeft, ToggleRight, List, ChevronUp, ChevronDown } from 'lucide-react';
+import { WebProductVisualizer } from './visualizers/WebProductVisualizer';
+import WebPositionalGradientBuilder from './WebPositionalGradientBuilder';
+import type { BuilderNode } from '../../protocols/PositionalMathBuffer';
+import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 
 export interface Sk8LytzPick {
   id: string;
@@ -15,6 +19,7 @@ export interface Sk8LytzPick {
   fixed_color_mode: string | null;
   fixed_fg_color: string | null;
   fixed_bg_color: string | null;
+  fixed_direction: number | null;
   fixed_hue: number | null;
   multi_colors: string[] | null;
   multi_transition: number | null;
@@ -24,6 +29,10 @@ export interface Sk8LytzPick {
   mic_sensitivity: number | null;
   mic_source: string | null;
   music_matrix_style: number | null;
+  builder_nodes: any[] | null;
+  builder_transition_type: number | null;
+  builder_direction: number | null;
+  builder_fill_mode: string | null;
   is_active: boolean;
 }
 
@@ -73,9 +82,36 @@ export default function PicksManagerWidget() {
     }
   };
 
+  const movePick = async (index: number, direction: 'up' | 'down') => {
+    const newPicks = [...picks];
+    if (direction === 'up' && index > 0) {
+      const tempOrder = newPicks[index].sort_order;
+      newPicks[index].sort_order = newPicks[index - 1].sort_order;
+      newPicks[index - 1].sort_order = tempOrder;
+      [newPicks[index], newPicks[index - 1]] = [newPicks[index - 1], newPicks[index]];
+    } else if (direction === 'down' && index < newPicks.length - 1) {
+      const tempOrder = newPicks[index].sort_order;
+      newPicks[index].sort_order = newPicks[index + 1].sort_order;
+      newPicks[index + 1].sort_order = tempOrder;
+      [newPicks[index], newPicks[index + 1]] = [newPicks[index + 1], newPicks[index]];
+    } else {
+      return;
+    }
+    setPicks(newPicks);
+    // Background sync
+    const updates = newPicks.map(p => ({
+      id: p.id, 
+      sort_order: p.sort_order,
+      // Need to include required fields for an upsert, or just update individually.
+      // Update individually is safer.
+    }));
+    for (const u of updates) {
+      await supabase.from('sk8lytz_picks').update({ sort_order: u.sort_order }).eq('id', u.id);
+    }
+  };
+
   const savePick = async (pickToSave: Partial<Sk8LytzPick>) => {
     if (pickToSave.id) {
-      // Update
       const { data, error } = await supabase
         .from('sk8lytz_picks')
         .update(pickToSave)
@@ -83,13 +119,12 @@ export default function PicksManagerWidget() {
         .select()
         .single();
       if (!error && data) {
-        setPicks(picks.map(p => p.id === data.id ? (data as Sk8LytzPick) : p));
+        setPicks(picks.map(p => p.id === data.id ? (data as Sk8LytzPick) : p).sort((a,b) => a.sort_order - b.sort_order));
         setEditingPick(null);
       } else {
         alert('Failed to save: ' + error?.message);
       }
     } else {
-      // Insert
       const { data, error } = await supabase
         .from('sk8lytz_picks')
         .insert([pickToSave as unknown as Sk8LytzPick])
@@ -127,7 +162,7 @@ export default function PicksManagerWidget() {
             <thead>
               <tr className="bg-slate-900/50 border-b border-slate-800">
                 <th className="p-4 text-slate-300 font-medium w-16">Active</th>
-                <th className="p-4 text-slate-300 font-medium w-16">Order</th>
+                <th className="p-4 text-slate-300 font-medium w-24 text-center">Order</th>
                 <th className="p-4 text-slate-300 font-medium">Name</th>
                 <th className="p-4 text-slate-300 font-medium">Mode</th>
                 <th className="p-4 text-slate-300 font-medium">Color</th>
@@ -148,7 +183,13 @@ export default function PicksManagerWidget() {
                       {pick.is_active ? <ToggleRight size={24} /> : <ToggleLeft size={24} />}
                     </button>
                   </td>
-                  <td className="p-4 font-mono text-slate-400">{pick.sort_order}</td>
+                  <td className="p-4">
+                    <div className="flex flex-col items-center gap-1 text-slate-400 font-mono">
+                      <button onClick={() => movePick(i, 'up')} disabled={i === 0} className="hover:text-white disabled:opacity-30"><ChevronUp size={16} /></button>
+                      <span className="text-xs">{pick.sort_order}</span>
+                      <button onClick={() => movePick(i, 'down')} disabled={i === picks.length - 1} className="hover:text-white disabled:opacity-30"><ChevronDown size={16} /></button>
+                    </div>
+                  </td>
                   <td className="p-4">
                     <div className="font-semibold text-white">{pick.name}</div>
                     {pick.custom_name && <div className="text-xs text-slate-400">"{pick.custom_name}"</div>}
@@ -161,7 +202,7 @@ export default function PicksManagerWidget() {
                     </div>
                   </td>
                   <td className="p-4 text-slate-400 text-sm">{pick.speed} / {pick.brightness}</td>
-                  <td className="p-4 text-right flex justify-end gap-2">
+                  <td className="p-4 text-right flex justify-end gap-2 items-center">
                     <button onClick={() => setEditingPick(pick)} className="p-2 text-slate-400 hover:text-cyan-400 transition-colors">
                       <Edit2 size={18} />
                     </button>
@@ -189,9 +230,11 @@ export default function PicksManagerWidget() {
 
 function EditorModal({ pick, onClose, onSave }: { pick: Partial<Sk8LytzPick>, onClose: () => void, onSave: (p: Partial<Sk8LytzPick>) => void }) {
   const [formData, setFormData] = useState<Partial<Sk8LytzPick>>(pick);
+  const [validationError, setValidationError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    setValidationError('');
     if (type === 'number') {
       setFormData({ ...formData, [name]: value === '' ? null : Number(value) });
     } else if (type === 'checkbox') {
@@ -204,20 +247,41 @@ function EditorModal({ pick, onClose, onSave }: { pick: Partial<Sk8LytzPick>, on
 
   const handleArrayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    // expect comma separated hex codes
-    const arr = value.split(',').map(s => s.trim()).filter(Boolean);
+    setValidationError('');
+    const arr = value.split(',').map(s => s.trim().toUpperCase()).filter(Boolean);
     setFormData({ ...formData, [name]: arr.length > 0 ? arr : null });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate Hex Colors
+    const hexRegex = /^#[0-9A-Fa-f]{6}$/;
+    if (formData.color && !hexRegex.test(formData.color)) return setValidationError('Base color must be a valid hex code (e.g., #FFFFFF).');
+    
+    if (formData.mode === 'FIXED' || formData.mode === 'GENERATIVE') {
+      if (formData.fixed_fg_color && !hexRegex.test(formData.fixed_fg_color)) return setValidationError('Foreground color must be a valid hex code.');
+      if (formData.fixed_bg_color && !hexRegex.test(formData.fixed_bg_color)) return setValidationError('Background color must be a valid hex code.');
+    }
+    
+    if (formData.mode === 'MULTIMODE' && formData.multi_colors) {
+      for (const hex of formData.multi_colors) {
+        if (!hexRegex.test(hex)) return setValidationError(`Multi color '${hex}' is not a valid hex code.`);
+      }
+    }
+    
+    if (formData.mode === 'MUSIC') {
+      if (formData.music_primary_color && !hexRegex.test(formData.music_primary_color)) return setValidationError('Primary music color must be a valid hex code.');
+      if (formData.music_secondary_color && !hexRegex.test(formData.music_secondary_color)) return setValidationError('Secondary music color must be a valid hex code.');
+    }
+
     onSave(formData);
   };
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-[#0f172a] border border-slate-700 rounded-2xl w-full max-w-4xl shadow-2xl relative my-8">
-        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white">
+        <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white z-10">
           <X size={24} />
         </button>
         
@@ -226,7 +290,36 @@ function EditorModal({ pick, onClose, onSave }: { pick: Partial<Sk8LytzPick>, on
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[75vh] overflow-y-auto custom-scrollbar">
+            
+            {/* Live Preview */}
+            <div className="col-span-full">
+              <WebProductVisualizer 
+                product="HALOZ"
+                color={formData.color || '#000000'}
+                mode={formData.mode || 'FIXED'}
+                patternId={formData.pattern_id || 1}
+                speed={formData.speed || 80}
+                brightness={formData.brightness || 100}
+                fixedFgColor={formData.fixed_fg_color || formData.color || undefined}
+                fixedBgColor={formData.fixed_bg_color || '#000000'}
+                fixedDirection={formData.fixed_direction ?? 1}
+                multiColors={formData.multi_colors || []}
+                multiTransition={formData.multi_transition || 0}
+                builderNodes={formData.builder_nodes || undefined}
+                builderFillMode={(formData.builder_fill_mode as 'GRADIENT' | 'SOLID') || 'GRADIENT'}
+                builderTransitionType={formData.builder_transition_type ?? 1}
+                builderDirection={formData.builder_direction ?? 1}
+              />
+            </div>
+
+            {/* Error Message */}
+            {validationError && (
+              <div className="col-span-full bg-red-900/50 border border-red-500/50 text-red-200 p-3 rounded">
+                {validationError}
+              </div>
+            )}
+
             {/* Core Fields */}
             <div className="col-span-full mb-2">
               <h4 className="text-cyan-400 font-semibold border-b border-slate-800 pb-2">Core Configuration</h4>
@@ -247,8 +340,22 @@ function EditorModal({ pick, onClose, onSave }: { pick: Partial<Sk8LytzPick>, on
                 <input required type="number" name="sort_order" value={formData.sort_order ?? 100} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full" />
               </div>
               <div>
-                <label className="block text-sm text-slate-400 mb-1">Pattern ID (0-255)</label>
-                <input required type="number" name="pattern_id" value={formData.pattern_id ?? 1} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full" />
+                <label className="block text-sm text-slate-400 mb-1">Pattern</label>
+                <select name="pattern_id" value={formData.pattern_id ?? 1} onChange={(e) => setFormData({...formData, pattern_id: Number(e.target.value)})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full">
+                  {Array.from(new Set(SK8LYTZ_TEMPLATES.map(t => t.group))).map(group => (
+                    <optgroup key={group} label={group}>
+                      {SK8LYTZ_TEMPLATES.filter(t => t.group === group && !t.isHidden).map(t => (
+                        <option key={t.id} value={t.id}>{t.icon} {t.name} (ID: {t.id})</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                  {/* Catch-all for hidden/system patterns that might be set */}
+                  {SK8LYTZ_TEMPLATES.filter(t => t.isHidden).some(t => t.id === formData.pattern_id) && (
+                    <optgroup label="System/Hidden">
+                      <option value={formData.pattern_id}>{SK8LYTZ_TEMPLATES.find(t => t.id === formData.pattern_id)?.name} (ID: {formData.pattern_id})</option>
+                    </optgroup>
+                  )}
+                </select>
               </div>
             </div>
 
@@ -260,6 +367,7 @@ function EditorModal({ pick, onClose, onSave }: { pick: Partial<Sk8LytzPick>, on
                   <option value="GENERATIVE">GENERATIVE</option>
                   <option value="MULTIMODE">MULTIMODE</option>
                   <option value="MUSIC">MUSIC</option>
+                  <option value="BUILDER">BUILDER</option>
                   <option value="CUSTOM">CUSTOM</option>
                 </select>
               </div>
@@ -285,71 +393,130 @@ function EditorModal({ pick, onClose, onSave }: { pick: Partial<Sk8LytzPick>, on
               </div>
             </div>
 
-            {/* Fixed Mode Overrides */}
-            <div className="col-span-full mt-4 mb-2">
-              <h4 className="text-purple-400 font-semibold border-b border-slate-800 pb-2">Fixed / Generative Specifics</h4>
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Fixed Color Mode</label>
-              <select name="fixed_color_mode" value={formData.fixed_color_mode || ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full">
-                <option value="">-- None --</option>
-                <option value="SOLID">SOLID</option>
-                <option value="GENERATIVE">GENERATIVE</option>
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-slate-400 mb-1">Foreground Color</label>
-                <input type="text" name="fixed_fg_color" value={formData.fixed_fg_color || ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full font-mono" placeholder="#FF0000" />
-              </div>
-              <div>
-                <label className="block text-sm text-slate-400 mb-1">Background Color</label>
-                <input type="text" name="fixed_bg_color" value={formData.fixed_bg_color || ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full font-mono" placeholder="#000000" />
-              </div>
-            </div>
+            {/* DYNAMIC PATTERN CONTROLS */}
+            {(() => {
+              const template = SK8LYTZ_TEMPLATES.find(t => t.id === formData.pattern_id);
+              if (!template) return null;
+              
+              // Only show if the mode is FIXED/GENERATIVE or MULTIMODE (in some cases). But realistically these controls are bound to the fixed_fg_color/fixed_bg_color which means they apply broadly to the active pattern.
+              return (
+                <>
+                  <div className="col-span-full mt-4 mb-2">
+                    <h4 className="text-purple-400 font-semibold border-b border-slate-800 pb-2">Pattern Parameters</h4>
+                  </div>
+                  <div className="col-span-full flex gap-4 text-xs font-mono text-slate-500 mb-2">
+                    <span className="bg-slate-800 px-2 py-1 rounded">Mode: {template.colorMode}</span>
+                    {template.requiresForeground && <span className="bg-slate-800 px-2 py-1 rounded">Supports FG</span>}
+                    {template.requiresBackground && <span className="bg-slate-800 px-2 py-1 rounded">Supports BG</span>}
+                    {template.supportsDirection && <span className="bg-slate-800 px-2 py-1 rounded">Supports Dir</span>}
+                  </div>
+                  
+                  {formData.mode === 'FIXED' || formData.mode === 'GENERATIVE' ? (
+                    <div className="col-span-full mb-4">
+                      <label className="block text-sm text-slate-400 mb-1">Fixed Color Mode Overlay (Optional)</label>
+                      <select name="fixed_color_mode" value={formData.fixed_color_mode || ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full max-w-xs">
+                        <option value="">-- None --</option>
+                        <option value="SOLID">SOLID</option>
+                        <option value="GENERATIVE">GENERATIVE</option>
+                      </select>
+                    </div>
+                  ) : null}
 
-            {/* Multimode Fields */}
-            <div className="col-span-full mt-4 mb-2">
-              <h4 className="text-pink-400 font-semibold border-b border-slate-800 pb-2">Multimode Sequence</h4>
-            </div>
-            <div className="col-span-full">
-              <label className="block text-sm text-slate-400 mb-1">Multi Colors (Comma separated hex codes)</label>
-              <input type="text" name="multi_colors" value={(formData.multi_colors || []).join(', ')} onChange={handleArrayChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full font-mono" placeholder="#FF0000, #00FF00, #0000FF" />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Multi Transition Type</label>
-              <input type="number" name="multi_transition" value={formData.multi_transition ?? ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full" placeholder="e.g. 1" />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Multi Segment Length</label>
-              <input type="number" name="multi_length" value={formData.multi_length ?? ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full" placeholder="e.g. 5" />
-            </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    {template.requiresForeground && (
+                      <div>
+                        <label className="block text-sm text-slate-400 mb-1">Foreground Color</label>
+                        <input type="text" name="fixed_fg_color" value={formData.fixed_fg_color || ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full font-mono uppercase" placeholder="#FF0000" />
+                      </div>
+                    )}
+                    {template.requiresBackground && (
+                      <div>
+                        <label className="block text-sm text-slate-400 mb-1">Background Color</label>
+                        <input type="text" name="fixed_bg_color" value={formData.fixed_bg_color || ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full font-mono uppercase" placeholder="#000000" />
+                      </div>
+                    )}
+                    {template.supportsDirection && (
+                      <div>
+                        <label className="block text-sm text-slate-400 mb-1">Direction</label>
+                        <select name="fixed_direction" value={formData.fixed_direction ?? 1} onChange={(e) => setFormData({...formData, fixed_direction: Number(e.target.value)})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full">
+                          <option value={1}>Forward (1)</option>
+                          <option value={0}>Reverse (0)</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
 
-            {/* Music Mode Fields */}
-            <div className="col-span-full mt-4 mb-2">
-              <h4 className="text-green-400 font-semibold border-b border-slate-800 pb-2">Music Sync Specifics</h4>
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Matrix Style (0-255)</label>
-              <input type="number" name="music_matrix_style" value={formData.music_matrix_style ?? ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full" />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Mic Source</label>
-              <select name="mic_source" value={formData.mic_source || ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full">
-                <option value="">-- None --</option>
-                <option value="INTERNAL">INTERNAL</option>
-                <option value="EXTERNAL">EXTERNAL</option>
-                <option value="PHONE">PHONE</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Primary Music Color</label>
-              <input type="text" name="music_primary_color" value={formData.music_primary_color || ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full font-mono" />
-            </div>
-            <div>
-              <label className="block text-sm text-slate-400 mb-1">Secondary Music Color</label>
-              <input type="text" name="music_secondary_color" value={formData.music_secondary_color || ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full font-mono" />
-            </div>
+            {/* CONDITIONAL RENDER: MULTIMODE */}
+            {formData.mode === 'MULTIMODE' && (
+              <>
+                <div className="col-span-full mt-4 mb-2">
+                  <h4 className="text-pink-400 font-semibold border-b border-slate-800 pb-2">Multimode Sequence</h4>
+                </div>
+                <div className="col-span-full">
+                  <label className="block text-sm text-slate-400 mb-1">Multi Colors (Comma separated hex codes)</label>
+                  <input type="text" name="multi_colors" value={(formData.multi_colors || []).join(', ')} onChange={handleArrayChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full font-mono uppercase" placeholder="#FF0000, #00FF00, #0000FF" />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Multi Transition Type</label>
+                  <input type="number" name="multi_transition" value={formData.multi_transition ?? ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full" placeholder="e.g. 1" />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Multi Segment Length</label>
+                  <input type="number" name="multi_length" value={formData.multi_length ?? ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full" placeholder="e.g. 5" />
+                </div>
+              </>
+            )}
+
+            {/* CONDITIONAL RENDER: MUSIC */}
+            {formData.mode === 'MUSIC' && (
+              <>
+                <div className="col-span-full mt-4 mb-2">
+                  <h4 className="text-green-400 font-semibold border-b border-slate-800 pb-2">Music Sync Specifics</h4>
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Matrix Style (0-255)</label>
+                  <input type="number" name="music_matrix_style" value={formData.music_matrix_style ?? ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full" />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Mic Source</label>
+                  <select name="mic_source" value={formData.mic_source || ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full">
+                    <option value="">-- None --</option>
+                    <option value="INTERNAL">INTERNAL</option>
+                    <option value="EXTERNAL">EXTERNAL</option>
+                    <option value="PHONE">PHONE</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Primary Music Color</label>
+                  <input type="text" name="music_primary_color" value={formData.music_primary_color || ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full font-mono uppercase" placeholder="#FF0000" />
+                </div>
+                <div>
+                  <label className="block text-sm text-slate-400 mb-1">Secondary Music Color</label>
+                  <input type="text" name="music_secondary_color" value={formData.music_secondary_color || ''} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full font-mono uppercase" placeholder="#000000" />
+                </div>
+              </>
+            )}
+
+            {/* CONDITIONAL RENDER: BUILDER */}
+            {formData.mode === 'BUILDER' && (
+              <div className="col-span-full mt-4">
+                <h4 className="text-amber-400 font-semibold border-b border-slate-800 pb-4 mb-4">Payload Builder Configuration</h4>
+                <WebPositionalGradientBuilder 
+                  nodes={formData.builder_nodes || [{ id: 'node_init', position: 0, colorHex: formData.color || '#FFFFFF' }]}
+                  onNodesChange={(nodes) => setFormData({ ...formData, builder_nodes: nodes })}
+                  fillMode={(formData.builder_fill_mode as 'GRADIENT' | 'SOLID') || 'GRADIENT'}
+                  onFillModeChange={(mode) => setFormData({ ...formData, builder_fill_mode: mode })}
+                  transitionType={formData.builder_transition_type ?? 1}
+                  onTransitionTypeChange={(type) => setFormData({ ...formData, builder_transition_type: type })}
+                  direction={formData.builder_direction ?? 1}
+                  onDirectionChange={(dir) => setFormData({ ...formData, builder_direction: dir })}
+                  selectedColor={formData.color || '#FFFFFF'}
+                />
+              </div>
+            )}
 
             {/* Status */}
             <div className="col-span-full mt-4 mb-2">

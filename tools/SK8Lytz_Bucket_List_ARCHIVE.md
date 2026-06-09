@@ -928,3 +928,43 @@ pm run verify which includes QA tests.
     Rejected alternative: "Dropping the functions — rejected because they are required for admin operations."
   - **Source of Truth:** 📖 `tools/SK8Lytz_App_Master_Reference.md` § Supabase Security Rules
   - **Details:** Fix migrations and edge function authorization checks.
+
+- [x] **`refactor/triage-type-safety`**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[UI]` `[L-RISK]` `[Batch]` `[🤖 PRO-MED]` `[BATCH:triage-sweep]`
+  - **Goal:** Replace dangerous `any` casts with `unknown` or specific interfaces across UI and BLE hooks.
+  - **Decision Log (2026-06-08):** Flagged during deep-dive synthesis: multiple direct `any` bypasses in core components.
+  - **Analysis:** 📊 Source: [system_audit_report.md](artifacts/system_audit_report.md) · Plan: [PLAN-triage-type-safety.md](docs/plans/PLAN-triage-type-safety.md)
+    Key finding: "Strict type violations (any) used extensively to bypass TS compilation errors."
+    Rejected alternative: "Using @ts-ignore — rejected as it violates the same rule."
+  - **Source of Truth:** 📖 `.agents/rules/prime-directive.md` S3
+  - **Details:** Surgical replacements only. Do not refactor actual logic.
+
+- [x] **`fix/wizard-ftue-scan`** `[MERGE: 54cc1111]`
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[H-RISK]` `[Snack]` `[🤖 PRO-HIGH]`
+  - **Goal:** Fix the async sweeper race that leaves new users stuck on "Scanning for devices..." forever in the Hardware Setup Wizard — app is non-functional for all new installs.
+  - **Decision Log (2026-06-09):** Confirmed Strike 2 on this bug. Previous Fix 1 patched 5s→10s timeout. Previous Fix 2 adjusted RSSI. Neither fixed the root cause: `startSweeper()` is async (calls `Battery.getBatteryLevelAsync()`), so `isSweeperActive` is still `false` when the wizard synchronously calls `scanForPeripherals()`. Wizard hits the raw 5s scan → hard stop → no retry on step 1 → infinite "Scanning..." state. Industry standard (Govee, LIFX, Hue, Sonos): discovery is a service-level concern, wizard is a passive subscriber. Fix routes FTUE through `startSweeper()` directly, bypassing the race.
+  - **Analysis:** 📊 Source: Direct read 2026-06-09 · Plan: [PLAN-wizard-ftue-scan.md](docs/plans/PLAN-wizard-ftue-scan.md)
+    Key finding: "`scanForPeripherals()` checks `isSweeperActive` synchronously but `startSweeper()` resolves async (battery check). Race = 5s raw scan + hard stop + no step-1 keepAlive retry = wizard stuck forever."
+    Rejected alternatives: "Increase timeout (Fix 1 — failed). Adjust RSSI (Fix 2 — failed). Both missed the async race root cause."
+  - **Source of Truth:** 📖 [useBLEScanner.ts:291-307](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts#L291-L307) · [useBLEBatterySweep.ts:65](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEBatterySweep.ts#L65) · [HardwareSetupWizardScreen.tsx:113](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx#L113)
+  - **Details:** 2-file surgical fix. `useBLEScanner.ts`: add `registeredMacs.length === 0` FTUE branch that calls `startSweeper()` and returns immediately — eliminates the race entirely. `HardwareSetupWizardScreen.tsx`: change `step === 2` to `(step === 1 || step === 2)` in keepAlive gate — belt-and-suspenders fallback ensures retry fires even when stuck on step 1. **⚠️ Three-Strike rule active — verify `startSweeper()` is idempotent in Step 3 of the plan BEFORE writing any code.**
+
+- [x] **`fix/audit-fixes-auth`** - merged @ e732f8f (Offline rpc crash fixed)
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[Auth]` `[H-RISK]` `[Meal]` `[🤖 PRO-MED]` `[BATCH:audit-fixes-auth]`
+  - **Goal:** Fix 4 confirmed auth path bugs: offline `rpc` crash (HIGH), silent profile error swallowing (MEDIUM), dead `safeErr` variables (LOW), duplicated ternary dead code (LOW).
+  - **Decision Log (2026-06-09):** Offline stub at `supabaseClient.ts:48-64` has no `rpc` method. `AuthFormSignIn.tsx:57` calls `supabase.rpc('get_email_by_username', ...)` for username login — throws `TypeError: supabase.rpc is not a function` in offline mode. Confirmed by reading both files in the 2026-06-09 audit. Highest priority auth finding.
+  - **Analysis:** 📊 Source: [functional_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/8a264849-d4ac-4256-8a34-6d95511cb1d0/functional_audit_report.md) · Plan: [PLAN-audit-fixes-auth.md](docs/plans/PLAN-audit-fixes-auth.md)
+    Key finding: "Offline stub missing `rpc` method — username login crashes in offline mode (H1). AuthProfileService.ts:79 comment acknowledges missing AppLogger call (M5)."
+    Rejected alternative: "Null-checking the rpc call site — rejected because every future offline rpc call would also need a guard; fixing the stub is the single-source fix."
+  - **Source of Truth:** 📖 [supabaseClient.ts:48-64](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/supabaseClient.ts#L48-L64) · [AuthFormSignIn.tsx:57](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/auth/AuthFormSignIn.tsx#L57) · [AuthProfileService.ts:77-82](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/AuthProfileService.ts#L77-L82) · [SessionContext.tsx:44,323,401](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/context/SessionContext.tsx#L44)
+  - **Details:** 4 atomic fixes in one worktree. Step 1 (H1 — add `rpc` stub) is the only user-facing crash risk. Steps 2-4 are Boy Scout cleanups. No changes outside auth domain. `DashboardScreen.tsx` is explicitly out of scope (God Object lock).
+
+- [x] **`fix/audit-fixes-ble-protocol`** @ 3af6b482 - UI dispatches now route through the proper device adapter
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[H-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:audit-fixes-ble-protocol]`
+  - **Goal:** Route pattern dispatch through the per-device `IControllerProtocol` adapter so BanlanX devices in mixed groups receive correct protocol bytes instead of Zengge 0x59 packets.
+  - **Decision Log (2026-06-09):** `useControllerDispatch.ts:17-21` imports and calls `ZenggeProtocol.setMultiColor()` directly. Comment at lines 10-11 explicitly bans calling `useProtocolDispatch()` (orphan BLE instance risk). `PatternEngine.ts:192` also calls Zengge static. BLE Payload Dispatch auditor confirmed: solo BanlanX ✅, solo Zengge ✅, mixed group ❌. Fix routes through `adapterMapRef` (already populated at connection time by `createGattSession` — same map used by BleWriteDispatcher.ts:143).
+  - **Analysis:** 📊 Source: [functional_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/8a264849-d4ac-4256-8a34-6d95511cb1d0/functional_audit_report.md) · Plan: [PLAN-audit-fixes-ble-protocol.md](docs/plans/PLAN-audit-fixes-ble-protocol.md)
+    Key finding: "Two parallel dispatch chains exist. Chain B (DockedController → useControllerDispatch) bypasses IControllerProtocol adapter entirely — BanlanX in mixed groups receives Zengge 0x59 packets."
+    Rejected alternative: "Calling useProtocolDispatch() from useControllerDispatch — banned by comment at useControllerDispatch.ts:10-11 (creates orphan useBLE instance). Rejected."
+  - **Source of Truth:** 📖 [useControllerDispatch.ts:17-21](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useControllerDispatch.ts#L17-L21) · [PatternEngine.ts:192](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/PatternEngine.ts#L192) · [IControllerProtocol.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/IControllerProtocol.ts) · [BleWriteDispatcher.ts:143](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleWriteDispatcher.ts#L143)
+  - **Details:** Adds `getAdapterForDevice` + `primaryDeviceId` to `UseControllerDispatchParams`. Adds optional `protocol` param to `buildPatternPayload` with Zengge as default (zero regression for existing solo-Zengge users). `DockedController.tsx` changes are surgical — only the `useControllerDispatch` call site (lines 551-560). God Object lock still applies — no other changes in that file.

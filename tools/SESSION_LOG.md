@@ -978,3 +978,21 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Built full-stack CMS in Command Center to manage sk8lytz_picks. Includes a rich data table view and a comprehensive editor modal for all preset variables (Fixed, Generative, Multimode, Music parameters).
 **Verify result:** TSC ?, Build ?
 **Files touched:** PicksManagerWidget.tsx, App.tsx
+
+
+### [MERGE] 2026-06-09T03:57 — refactor/triage-type-safety ? master @ 5d7b5f69
+**What merged:** Replaced dangerous any casts with specific TypeScript interfaces and unknown types across UI and BLE hooks (AccountModal, CustomSlider, DeviceSettingsModal, VerticalPatternDrum, VisualizerUnit).
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/components/AccountModal.tsx, src/components/CustomSlider.tsx, src/components/DeviceSettingsModal.tsx, src/components/VerticalPatternDrum.tsx, src/components/VisualizerUnit.tsx
+
+### [DECISION] 2026-06-09T04:10 — Decoupled Web Visualizer for CMS
+**Decision:** Ported Mobile Visualizer Engine natively into React DOM without using canvas or WebGL. Utilized stacked box-shadows for 3-layer bloom effect on standard divs.
+**Rejected:** Mapbox map-style integration (per user constraint to maintain precise photorealism), and Canvas/WebGL (unnecessary complexity for 54-pixel arrays).
+**Don't re-derive:** The PatternEngine hardware payload builders rely on ZenggeProtocol Node.js dependencies. When compiling for Vite web, the hardware dispatch (buildPatternPayload) must be entirely stripped from PatternEngine to avoid node buffer errors.
+**Source:** C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\tools\command-center\src\protocols\PatternEngine.ts
+
+### [DECISION] 2026-06-08T23:28 â€” AG-Grid Installation
+**Decision:** Install ag-grid-react and ag-grid-community for the Fleet Map.
+**Rejected:** Native React table (Anti-Bloat Protocol).
+**Don't re-derive:** The user explicitly requested an exception to the anti-bloat rule because building a highly interactive, beautiful, multi-layered filtering databank natively would require reinventing the wheel when AG-Grid provides the exact enterprise-grade UI requested.
+**Source:** User Request

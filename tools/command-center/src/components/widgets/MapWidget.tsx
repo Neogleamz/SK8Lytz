@@ -1,22 +1,35 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '../../services/supabase';
 import USAMap from './USMap';
+import { AgGridReact } from 'ag-grid-react';
+import { ModuleRegistry, ClientSideRowModelModule } from 'ag-grid-community';
+import type { ColDef } from 'ag-grid-community';
 
-interface CrewSession {
+// AG-Grid > 31 requires manual module registration
+ModuleRegistry.registerModules([ClientSideRowModelModule]);
+
+import 'ag-grid-community/styles/ag-grid.css';
+import 'ag-grid-community/styles/ag-theme-alpine.css';
+
+interface DeviceData {
   id: string;
-  is_active: boolean;
-  location_coords: { lat: number; lng: number } | null;
-  top_speed_mph: string;
-  total_distance_miles: string;
-  location_label?: string;
+  user_id: string;
+  custom_name: string;
+  product_type: string | null;
+  firmware_ver: number | null;
+  is_pending_sync: boolean | null;
+  ic_type: string | null;
+  last_lat: number | null;
+  last_lng: number | null;
+  device_mac: string | null;
+  registered_at: string | null;
+  points: number;
 }
 
 // Very naive projection to map lat/lng to percentage across the SVG bounding box
 function latLngToXY(lat: number, lng: number) {
-  // Approximate US Bounding Box: Lng -125 to -66, Lat 24 to 50
   const xPercent = ((lng - -125) / (-66 - -125)) * 100;
   const yPercent = ((50 - lat) / (50 - 24)) * 100;
-  
   return { 
     left: `${Math.max(0, Math.min(100, xPercent))}%`, 
     top: `${Math.max(0, Math.min(100, yPercent))}%` 
@@ -24,47 +37,116 @@ function latLngToXY(lat: number, lng: number) {
 }
 
 export default function MapWidget() {
-  const [sessions, setSessions] = useState<CrewSession[]>([]);
+  const [devices, setDevices] = useState<DeviceData[]>([]);
+  const [filteredDevices, setFilteredDevices] = useState<DeviceData[]>([]);
+  const gridRef = useRef<AgGridReact>(null);
 
-  useEffect(() => {
-    fetchSessions();
+  const fetchDevices = async () => {
+    // 1. Fetch devices
+    const { data: rawDevices, error: devError } = await supabase
+      .from('registered_devices')
+      .select('id, user_id, custom_name, product_type, firmware_ver, is_pending_sync, ic_type, last_lat, last_lng, device_mac, registered_at, points');
 
-    const subscription = supabase
-      .channel('public:crew_sessions')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'crew_sessions' }, () => {
-        fetchSessions();
-      })
-      .subscribe();
+    if (devError || !rawDevices) return;
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+    // 2. Identify devices needing fallback coordinates
+    const usersNeedingFallback = Array.from(new Set(
+      rawDevices.filter(d => d.last_lat === null || d.last_lng === null).map(d => d.user_id)
+    ));
 
-  const fetchSessions = async () => {
-    // We'll fetch all sessions for visual purposes, but highlight active ones
-    const { data, error } = await supabase
-      .from('crew_sessions')
-      .select('id, is_active, location_coords, top_speed_mph, total_distance_miles, location_label')
-      .not('location_coords', 'is', null);
-      
-    if (data && !error) {
-      setSessions(data as unknown as CrewSession[]);
+    // 3. Fetch latest active or recent sessions for those users (Fallback to Option A)
+    const fallbackMap: Record<string, { lat: number, lng: number }> = {};
+    if (usersNeedingFallback.length > 0) {
+      const { data: sessions } = await supabase
+        .from('crew_sessions')
+        .select('user_id, location_coords, updated_at')
+        .not('location_coords', 'is', null)
+        .in('user_id', usersNeedingFallback)
+        .order('updated_at', { ascending: false }) as any;
+
+      if (sessions) {
+        sessions.forEach((sess: any) => {
+          // Since it's ordered by updated_at descending, we only grab the first (latest)
+          if (!fallbackMap[sess.user_id] && sess.location_coords) {
+            // @ts-ignore
+            fallbackMap[sess.user_id] = {
+              lat: sess.location_coords.lat,
+              lng: sess.location_coords.lng
+            };
+          }
+        });
+      }
     }
+
+    // 4. Merge coordinates (Option B falls back to Option A)
+    const mergedDevices = rawDevices.map(d => {
+      let lat = d.last_lat;
+      let lng = d.last_lng;
+      if (lat === null || lng === null) {
+        if (fallbackMap[d.user_id]) {
+          lat = fallbackMap[d.user_id].lat;
+          lng = fallbackMap[d.user_id].lng;
+        }
+      }
+      return { ...d, last_lat: lat, last_lng: lng };
+    });
+
+    setDevices(mergedDevices as DeviceData[]);
+    setFilteredDevices(mergedDevices as DeviceData[]);
   };
 
-  const activeCount = sessions.filter(s => s.is_active).length;
+  useEffect(() => {
+    fetchDevices();
+  }, []);
+
+  const onFilterChanged = useCallback(() => {
+    if (gridRef.current) {
+      const filtered: DeviceData[] = [];
+      gridRef.current.api.forEachNodeAfterFilter((node) => {
+        if (node.data) filtered.push(node.data);
+      });
+      setFilteredDevices(filtered);
+    }
+  }, []);
+
+  const [colDefs] = useState<ColDef<DeviceData>[]>([
+    { field: 'custom_name', headerName: 'Name', filter: 'agTextColumnFilter', flex: 1 },
+    { field: 'device_mac', headerName: 'MAC Address', filter: 'agTextColumnFilter' },
+    { field: 'product_type', headerName: 'Product', filter: 'agTextColumnFilter' },
+    { field: 'firmware_ver', headerName: 'FW Ver', filter: 'agNumberColumnFilter' },
+    { field: 'ic_type', headerName: 'IC Type', filter: 'agTextColumnFilter' },
+    { field: 'points', headerName: 'LEDs', filter: 'agNumberColumnFilter' },
+    { field: 'is_pending_sync', headerName: 'Syncing', filter: 'agSetColumnFilter' },
+    { 
+      field: 'registered_at', 
+      headerName: 'Registered', 
+      filter: 'agDateColumnFilter',
+      valueFormatter: (p) => p.value ? new Date(p.value).toLocaleDateString() : '' 
+    }
+  ]);
+
+  const defaultColDef = useMemo(() => ({
+    sortable: true,
+    filter: true,
+    resizable: true,
+  }), []);
+
+  const activeCount = filteredDevices.length;
+  const mapDevices = filteredDevices.filter(d => d.last_lat !== null && d.last_lng !== null);
 
   return (
-    <div className="h-full flex flex-col gap-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-white">Global Fleet Ops Map</h2>
+    <div className="h-full flex flex-col gap-6 overflow-y-auto pr-2 pb-10">
+      
+      {/* Top Header */}
+      <div className="flex justify-between items-center shrink-0">
+        <h2 className="text-2xl font-bold text-white">Dynamic Fleet Ops</h2>
         <div className="glass-panel px-4 py-2 rounded text-cyan-400 font-medium border border-cyan-500/30 bg-cyan-500/10">
-          {activeCount} Active Sessions
+          {activeCount} Devices Found
         </div>
       </div>
       
-      <div className="glass-panel flex-1 rounded-xl relative overflow-hidden border border-slate-800 bg-[#0f172a] flex items-center justify-center p-4">
+      {/* Map Section */}
+      <div className="glass-panel rounded-xl relative overflow-hidden border border-slate-800 bg-[#0f172a] flex items-center justify-center p-4 shrink-0 min-h-[400px]">
         <div className="relative w-full max-w-4xl opacity-80" style={{ aspectRatio: '959/593' }}>
           
           <USAMap 
@@ -76,28 +158,27 @@ export default function MapWidget() {
           />
 
           {/* Overlay Pings */}
-          {sessions.map(session => {
-            if (!session.location_coords) return null;
-            const pos = latLngToXY(session.location_coords.lat, session.location_coords.lng);
-            
+          {mapDevices.map(dev => {
+            const pos = latLngToXY(dev.last_lat!, dev.last_lng!);
             return (
               <div 
-                key={session.id}
+                key={dev.id}
                 className="absolute transform -translate-x-1/2 -translate-y-1/2 group z-10"
                 style={pos}
               >
                 {/* Ping Dot */}
-                <div className={`w-3 h-3 rounded-full ${session.is_active ? 'bg-cyan-400 animate-pulse' : 'bg-slate-500'} border border-[#0f172a] shadow-[0_0_8px_rgba(34,211,238,0.8)]`} />
+                <div className="w-3 h-3 rounded-full bg-cyan-400 border border-[#0f172a] shadow-[0_0_8px_rgba(34,211,238,0.8)] cursor-pointer" />
                 
                 {/* Tooltip */}
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-900 border border-slate-700 rounded-lg p-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl z-50">
-                  <div className="text-xs font-bold text-white mb-1">
-                    {session.location_label || 'Unknown Location'}
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-900 border border-slate-700 rounded-lg p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl z-50">
+                  <div className="text-sm font-bold text-white mb-1">
+                    {dev.custom_name}
                   </div>
-                  <div className="text-[10px] text-slate-400">
-                    Status: <span className={session.is_active ? 'text-cyan-400' : 'text-slate-500'}>{session.is_active ? 'ACTIVE' : 'OFFLINE'}</span><br/>
-                    Speed: {session.top_speed_mph} mph<br/>
-                    Distance: {session.total_distance_miles} mi
+                  <div className="text-xs text-slate-400 leading-relaxed">
+                    Product: <span className="text-cyan-400">{dev.product_type}</span><br/>
+                    FW: {dev.firmware_ver}<br/>
+                    LEDs: {dev.points}<br/>
+                    MAC: {dev.device_mac}
                   </div>
                 </div>
               </div>
@@ -105,15 +186,32 @@ export default function MapWidget() {
           })}
         </div>
         
-        {sessions.length === 0 && (
+        {mapDevices.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm z-20">
             <div className="text-slate-400 flex flex-col items-center gap-2">
               <span className="text-3xl">📡</span>
-              <span className="font-medium">Awaiting Telemetry Pings...</span>
+              <span className="font-medium">No Coordinates Found for Active Filter</span>
             </div>
           </div>
         )}
       </div>
+
+      {/* AG-Grid Databank Section */}
+      <div className="flex flex-col flex-1 shrink-0 min-h-[500px]">
+        <h3 className="text-xl font-semibold text-white mb-4">Fleet Databank</h3>
+        <div className="ag-theme-alpine-dark flex-1 w-full rounded-xl overflow-hidden border border-slate-800" style={{ '--ag-background-color': '#1e293b', '--ag-header-background-color': '#0f172a', '--ag-border-color': '#334155' } as any}>
+          <AgGridReact
+            ref={gridRef}
+            rowData={devices}
+            columnDefs={colDefs}
+            defaultColDef={defaultColDef}
+            onFilterChanged={onFilterChanged}
+            animateRows={true}
+            rowSelection="multiple"
+          />
+        </div>
+      </div>
+
     </div>
   );
 }

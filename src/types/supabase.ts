@@ -2001,11 +2001,16 @@ export type Database = {
           active_from: string | null
           active_until: string | null
           brightness: number
+          builder_direction: number | null
+          builder_fill_mode: string | null
+          builder_nodes: Json | null
+          builder_transition_type: number | null
           color: string | null
           created_at: string
           custom_name: string | null
           fixed_bg_color: string | null
           fixed_color_mode: string | null
+          fixed_direction: number | null
           fixed_fg_color: string | null
           fixed_hue: number | null
           id: string
@@ -2029,11 +2034,16 @@ export type Database = {
           active_from?: string | null
           active_until?: string | null
           brightness?: number
+          builder_direction?: number | null
+          builder_fill_mode?: string | null
+          builder_nodes?: Json | null
+          builder_transition_type?: number | null
           color?: string | null
           created_at?: string
           custom_name?: string | null
           fixed_bg_color?: string | null
           fixed_color_mode?: string | null
+          fixed_direction?: number | null
           fixed_fg_color?: string | null
           fixed_hue?: number | null
           id?: string
@@ -2057,11 +2067,16 @@ export type Database = {
           active_from?: string | null
           active_until?: string | null
           brightness?: number
+          builder_direction?: number | null
+          builder_fill_mode?: string | null
+          builder_nodes?: Json | null
+          builder_transition_type?: number | null
           color?: string | null
           created_at?: string
           custom_name?: string | null
           fixed_bg_color?: string | null
           fixed_color_mode?: string | null
+          fixed_direction?: number | null
           fixed_fg_color?: string | null
           fixed_hue?: number | null
           id?: string
