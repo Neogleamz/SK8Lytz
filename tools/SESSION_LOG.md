@@ -1093,3 +1093,21 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Master HEAD:** 1ebc727
 **Friction Audit:** [0] new events | [0] incremented | [0] resolved | Proposals due: none
 **System evolution:** none
+
+### [MERGE] 2026-06-09T07:17 — feat/device-location-persistence -> master @ c9b64382
+**What merged:** 
+- Wired expo-location to saveDevice in DeviceRepository to capture native lat/lng silently.
+- Updated MapWidget to correctly fall back to database coordinates if live telemetry is unavailable.
+- Backfilled missing last_lat and last_lng types in supabase.ts
+- Mocked expo-location and expo-audio in Jest tests to bypass node_modules syntax parsing errors.
+**Verify result:** TSC ?, Jest ?, guards ?
+**Files touched:** src/services/DeviceRepository.ts, src/components/widgets/MapWidget.tsx, src/types/supabase.ts, jest.config.js, src/__mocks__/expo-location.ts, src/__mocks__/expo-audio.ts
+### [EVENT] 2026-06-09T07:19 â€” MMKV Telemetry Web Mock Patch & Wind Down
+**What shipped:**
+- feat/telemetry-mmkv-upgrade -> Unmerged (clean and attested)
+**AI failure pattern:** Failed to use native view_file correctly due to mime-type bug, falling back to Get-Content safely.
+**User pattern:** Excellent guidance and fast feedback loop for Web Demo tests.
+**Active sprint state:** fix/db-telemetry-drift is up next.
+**Master HEAD:** 154c3740
+**Friction Audit:** [0] new events | [0] incremented | [0] resolved | Proposals due: none
+**System evolution:** Updated SK8Lytz_App_Master_Reference.md to document the MMKV telemetry architecture and VIP Fast Lane.
