@@ -100,12 +100,20 @@ export default function MapWidget() {
     const macsNeedingFallback = validDevices
       .filter(d => !fallbackMap[d.user_id] && d.device_mac)
       .map(d => d.device_mac) as string[];
+      
     if (macsNeedingFallback.length > 0) {
+      // Supabase .in() is case sensitive. Add upper and lower variants to guarantee a hit
+      const searchMacs = [
+        ...macsNeedingFallback,
+        ...macsNeedingFallback.map(m => m.toLowerCase()),
+        ...macsNeedingFallback.map(m => m.toUpperCase())
+      ];
+      
       const { data: telemetry } = await supabase
         .from('discovered_devices_telemetry')
         .select('device_mac, location')
         .not('location', 'is', null)
-        .in('device_mac', macsNeedingFallback) as any;
+        .in('device_mac', searchMacs) as any;
 
       if (telemetry) {
         telemetry.forEach((t: any) => {
@@ -127,7 +135,8 @@ export default function MapWidget() {
             }
 
             if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
-              const owner = validDevices.find(d => d.device_mac === t.device_mac);
+              // Case insensitive match to find the owner
+              const owner = validDevices.find(d => d.device_mac?.toLowerCase() === t.device_mac?.toLowerCase());
               if (owner) {
                 fallbackMap[owner.user_id] = { lat, lng };
               }
@@ -153,7 +162,8 @@ export default function MapWidget() {
 
     // Dynamically set ALL columns if we have data
     if (mergedDevices.length > 0) {
-      const keys = Object.keys(mergedDevices[0]).filter(k => k !== 'last_lat' && k !== 'last_lng');
+      // DO NOT filter out last_lat and last_lng so the user can see them in the databank
+      const keys = Object.keys(mergedDevices[0]);
       const dynamicCols: ColDef<any>[] = keys.map(k => ({
         field: k,
         headerName: k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
