@@ -53,6 +53,7 @@ COPY package.json ./
 COPY tools/scraper/package.json ./tools/scraper/
 COPY tools/scraper-dashboard/package.json ./tools/scraper-dashboard/
 COPY tools/discord-bridge/package.json ./tools/discord-bridge/
+COPY tools/command-center/package.json ./tools/command-center/
 
 # Install root dependencies
 RUN bun install
@@ -61,6 +62,7 @@ RUN bun install
 RUN cd tools/scraper && bun install --trust better-sqlite3 --trust sharp
 RUN cd tools/scraper-dashboard && bun install
 RUN cd tools/discord-bridge && bun install
+RUN cd tools/command-center && bun install
 
 # Download the exact Chrome version expected by Puppeteer (21.9.0) and install dependencies (requires fresh apt-get update)
 RUN apt-get update && cd tools/scraper && bunx puppeteer browsers install chrome --install-deps && rm -rf /var/lib/apt/lists/*
@@ -74,6 +76,7 @@ RUN mkdir -p tools/scraper/logs
 # Expose CCTower and Dashboard Ports
 EXPOSE 5999
 EXPOSE 5998
+EXPOSE 5997
 
-# Set the entrypoint to the newly refactored CCTower master process
-CMD ["bun", "run", "tools/scraper/CCTower.ts"]
+# Set the entrypoint to launch both the Vite Command Center and the CCTower master process
+CMD ["sh", "-c", "cd tools/command-center && bun run dev --host 0.0.0.0 --port 5997 & cd /app && bun run tools/scraper/CCTower.ts"]
