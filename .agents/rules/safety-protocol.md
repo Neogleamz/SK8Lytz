@@ -37,3 +37,7 @@ Three critical failure patterns with operational rules — see [`KNOWN_ISSUES.md
 - **VS-001**: Parallel worktree gatekeeper divergence → always create worktrees sequentially
 - **VS-002**: Gitignore shadow zone → always run `git status --short` before committing
 - **VS-003**: Documentation drift → always update Master Reference before running gatekeeper
+
+## 6. Bucket List Archival Guard (VS-004)
+- **? Rule 12: Mandatory Archival Execution**: You are strictly forbidden from handing off to another workflow or continuing to the next task if the SK8Lytz_Bucket_List.md contains ANY tasks marked [x]. The active persona MUST run 
+ode tools/auto-archiver.js --task <slug> and verify the task is moved to the archive before proceeding.

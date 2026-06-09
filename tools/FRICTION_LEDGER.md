@@ -285,3 +285,13 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Root Cause Theory:** The agent's baseline knowledge defaults to standard web-dev patterns (`npm run tsc` or `npx tsc`) for quick checks, ignoring the custom project wrapper.
 - **Impact:** Cluttered terminal, wasted turns, and severe user frustration from watching the agent repeat the same failure pattern.
 - **Status:** RESOLVED — ⚡ EVOLUTION IMPLEMENTED (Rule S7 added to Prime Directive).
+
+### [FRICTION-023] Missing Bucket List Archival
+- **First Observed:** 2026-06-08
+- **Observed By:** User (directly)
+- **Occurrences:** 3 / 3 (Triggered Auto-Evolution)
+- **Trigger:** User says: "we need to cleanup and archive the bucketlist!!!! why ahvent we been doing that again???"
+- **Pattern:** Agent ignores the Proactive Behavior #1 for PM Jordan ("Any completed tasks not yet archived? ? Archive them now") and fails to execute the auto-archiver on completed tasks.
+- **Root Cause Theory:** The agent focuses on task completion but forgets the subsequent cleanup phase because the uto-archiver.js fails with exact string matching if the task slug has BATCH: or doesn't match perfectly, causing the agent to quietly abandon the cleanup step instead of fixing the issue.
+- **Impact:** Cluttered Bucket List, loss of Kanban discipline, and user frustration from repeating process rules.
+- **Status:** RESOLVED � ? EVOLUTION IMPLEMENTED
