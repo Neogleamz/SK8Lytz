@@ -54,6 +54,7 @@ COPY tools/scraper/package.json ./tools/scraper/
 COPY tools/scraper-dashboard/package.json ./tools/scraper-dashboard/
 COPY tools/discord-bridge/package.json ./tools/discord-bridge/
 COPY tools/command-center/package.json ./tools/command-center/
+COPY modules/ ./modules/
 
 # Install root dependencies
 RUN bun install
