@@ -2703,3 +2703,6 @@ Here is the Elite Architecture Markdown Payload for the domain:
 - **Domain: SESSION_TRACKING**
   - Section 7 (Session Telemetry Architecture) contains a stale skate_sessions schema missing fields like avg_bpm, peak_gforce, crew_session_id, and has no documentation of the PENDING_SESSION_QUEUE_KEY offline fallback architecture.
 
+
+### Hook Registry Updates
+- useWebDemoConsoleBridge: Web Demo specific hook to pipe console logs to Command Center.
