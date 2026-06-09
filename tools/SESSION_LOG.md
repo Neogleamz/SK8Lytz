@@ -1237,3 +1237,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Decision:** Embed the SK8Lytz Expo web app into the Command Center via an iframe wrapping localhost:8081, combined with a selectable CSS-based Device Silhouette (iPhone, Pixel, etc.) and a postMessage-based live console interceptor.
 **Rejected:** Monorepo/Micro-frontend injection. Rejected because it merges two entirely different bundlers (Vite + Metro Webpack), instantly breaking hot-reloading and introducing severe dependency hell.
 **Don't re-derive:** The iframe approach provides 100% process isolation. The Expo web server runs inside Docker independently. Communication MUST occur exclusively over window.postMessage.
+
+### [MERGE] 2026-06-09T16:10 — feat/docker-web-demo -> master
+**What merged:** Dockerized Expo Web Demo (port 8081) with embedded Command Center Device Simulator and Live Console bridge.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** Dockerfile.web, docker-compose.yml, App.tsx, src/hooks/dev/useWebDemoConsoleBridge.ts, Command Center Simulator components.

@@ -1036,4 +1036,10 @@ pm run verify which includes QA tests.
   - **Details:** Must parse `device.serviceUUIDs` and `device.manufacturerData` to determine the brand before yielding to the UI state.
 ### ⚡ [BATCH:fleet-map-ops] — `feat/map-relational-drilldown` — [✅ READY]
 > **Worktree**: `feat/map-relational-drilldown` · **Type**: Standalone · **Prerequisite**: None
-> **Source Analysis**: 📊 [SESSION_LOG.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SESSION_LOG.md) — Map transitioning to a relational inspector with realtime telemetry.
+> **Source Analysis**: 📊 [SESSION_LOG.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SESSION_LOG.md) — Map transitioning to a relational inspector with realtime telemetry.
+
+- [x] **`feat/docker-web-demo`**
+  - **Tags:** `[🚧 ACTIVE]` `[✅ VERIFIED]` `[TOOLING]` `[L-RISK]` `[Snack]` `[🤖 PRO-MED]` `[BATCH:docker-web-demo]`
+  - **Goal:** Containerize the Expo Web Demo using Docker to resolve manual boot friction.
+  - **Decision Log:** User experienced persistent friction restarting the web demo manually on port 8081. Transitioning to a Docker service within the existing `docker-compose.yml` stack to match Command Center/Scraper behavior.
+  - **Source of Truth:** 📖 `docker-compose.yml`, `Dockerfile.web` (to be created)
