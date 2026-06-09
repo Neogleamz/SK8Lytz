@@ -918,3 +918,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "Modifying the firmware — rejected as it's outside our control; client must pad."
   - **Source of Truth:** 📖 `.agents/rules/agent-behavior.md` Rule 10
   - **Details:** Must pad 0x59 payloads < 12 pixels.
+
+- [x] **`cloud/triage-cloud-security`** `[MERGE: e38ca42f]`
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[CLOUD]` `[H-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:triage-sweep]`
+  - **Goal:** Fix IDOR/Privilege Escalation edge function vulnerability and Search Path Hijacking in migrations.
+  - **Decision Log (2026-06-08):** Flagged during deep-dive synthesis: SECURITY DEFINER functions missing path resets.
+  - **Analysis:** 📊 Source: [system_audit_report.md](artifacts/system_audit_report.md) · Plan: [PLAN-triage-cloud-security.md](docs/plans/PLAN-triage-cloud-security.md)
+    Key finding: "Multiple SECURITY DEFINER functions omit SET search_path = public."
+    Rejected alternative: "Dropping the functions — rejected because they are required for admin operations."
+  - **Source of Truth:** 📖 `tools/SK8Lytz_App_Master_Reference.md` § Supabase Security Rules
+  - **Details:** Fix migrations and edge function authorization checks.

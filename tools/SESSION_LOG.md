@@ -967,3 +967,14 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/services/BleWriteDispatcher.ts
 
+
+### [MERGE] 2026-06-09T03:51 — cloud-triage-cloud-security ? master @ e38ca42f
+**What merged:** Fixed Search Path Hijacking in admin user management migrations and patched IDOR in notify-crew-session Edge Function.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** supabase/migrations/20260418061000_admin_user_management.sql, supabase/functions/notify-crew-session/index.ts
+
+
+### [EVENT] 2026-06-08T22:52 — SK8Lytz Picks CMS Implementation
+**What merged:** Built full-stack CMS in Command Center to manage sk8lytz_picks. Includes a rich data table view and a comprehensive editor modal for all preset variables (Fixed, Generative, Multimode, Music parameters).
+**Verify result:** TSC ?, Build ?
+**Files touched:** PicksManagerWidget.tsx, App.tsx

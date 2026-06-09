@@ -317,3 +317,14 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Root Cause Theory:** Agent forgot the Free-Form Research Binding rule during initial exploration.
 - **Impact:** Broken identity protocol, user had to correct the agent.
 - **Status:** MONITORING
+
+
+### [FRICTION-025] Agent Offloading Executable Work
+- **First Observed:** 2026-06-08
+- **Observed By:** User
+- **Occurrences:** 1 / 3
+- **Trigger:** Agent provided bash commands for the user to run instead of running them directly.
+- **Pattern:** Agent asked the user to run docker-compose up manually despite having the run_command tool.
+- **Root Cause Theory:** The agent incorrectly assumed terminal execution of infrastructure commands should be left to the user.
+- **Impact:** User annoyance and unnecessary friction.
+- **Status:** MONITORING

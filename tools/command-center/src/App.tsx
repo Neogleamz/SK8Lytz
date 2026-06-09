@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { supabase, checkAdminStatus } from './services/supabase';
-import { LayoutDashboard, Users, ShieldAlert, Activity, Settings, Map, Bug, Database } from 'lucide-react';
+import { LayoutDashboard, Users, ShieldAlert, Activity, Settings, Map, Bug, Database, Palette } from 'lucide-react';
 import ScraperApp from './scraper/ScraperApp';
 import MapWidget from './components/widgets/MapWidget';
 import FleetHealthWidget from './components/widgets/FleetHealthWidget';
@@ -10,6 +10,7 @@ import ControlTowerWidget from './components/widgets/ControlTowerWidget';
 import HardwareBanWidget from './components/widgets/HardwareBanWidget';
 import UserManagementWidget from './components/widgets/UserManagementWidget';
 import { LiveDebuggerWidget } from './components/widgets/LiveDebuggerWidget';
+import PicksManagerWidget from './components/widgets/PicksManagerWidget';
 import './index.css';
 
 const AdminLayout = ({ children }: { children: React.ReactNode }) => (
@@ -24,6 +25,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => (
         <Link to="/settings" className="nav-link"><Settings size={18} /> Control Tower</Link>
         <Link to="/scraper" className="nav-link"><Database size={18} /> Scraper Dashboard</Link>
         <Link to="/hardware" className="nav-link"><ShieldAlert size={18} /> Hardware Ban</Link>
+        <Link to="/picks-manager" className="nav-link"><Palette size={18} /> Picks Manager</Link>
         <Link to="/users" className="nav-link"><Users size={18} /> User Mgmt</Link>
       </nav>
       <div className="sidebar-footer">
@@ -134,6 +136,7 @@ export default function App() {
           <Route path="/scraper" element={<div className="scraper-legacy-root w-full h-full"><ScraperApp /></div>} />
           <Route path="/settings" element={<ControlTowerWidget />} />
           <Route path="/hardware" element={<HardwareBanWidget />} />
+          <Route path="/picks-manager" element={<div className="p-6"><PicksManagerWidget /></div>} />
           <Route path="/users" element={<UserManagementWidget />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
