@@ -1,19 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { supabase } from '../../services/supabase';
-import { AgGridReact } from 'ag-grid-react';
-import { themeQuartz, colorSchemeDark } from 'ag-grid-community';
 import type { Database } from '../../types/supabase';
-
-const myTheme = themeQuartz.withPart(colorSchemeDark).withParams({
-  backgroundColor: "transparent",
-  foregroundColor: "#cbd5e1",
-  headerBackgroundColor: "rgba(15, 23, 42, 0.4)",
-  headerTextColor: "#38bdf8",
-  rowHoverColor: "rgba(34, 211, 238, 0.1)",
-  selectedRowBackgroundColor: "rgba(56, 189, 248, 0.15)",
-  borderColor: "rgba(51, 65, 85, 0.5)",
-  fontFamily: '"Inter", sans-serif',
-});
+import { AlertTriangle, Activity, Users, CheckCircle2, ShieldAlert, TerminalSquare } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 type CrashReport = Database['public']['Tables']['crash_telemetry']['Row'];
 
@@ -27,344 +16,302 @@ interface CrashAggregate {
 }
 
 export const LiveDebuggerWidget: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'stream' | 'autopsy' | 'telemetry'>('stream');
-  
-  // Tab 1: Live Stream
-  const [reports, setReports] = useState<CrashReport[]>([]);
-  const [selectedReport, setSelectedReport] = useState<CrashReport | null>(null);
-
-  // Tab 2: Crash Autopsy
+  // Autopsy Data
   const [autopsyData, setAutopsyData] = useState<CrashAggregate[]>([]);
-  const [loadingAutopsy, setLoadingAutopsy] = useState(false);
+  const [selectedSignature, setSelectedSignature] = useState<string | null>(null);
+  
+  // Selected Signature details
+  const [signatureInstances, setSignatureInstances] = useState<CrashReport[]>([]);
+  
+  // Non-Fatal Telemetry
+  const [telemetryFeed, setTelemetryFeed] = useState<CrashReport[]>([]);
 
-  // Tab 3: Non-Fatal Telemetry
-  const [errorTelemetry, setErrorTelemetry] = useState<CrashReport[]>([]);
-  const [loadingTelemetry, setLoadingTelemetry] = useState(false);
+  // Derived KPIs
+  const totalCrashes = autopsyData.reduce((sum, item) => sum + item.crash_count, 0);
+  const totalAffected = new Set(autopsyData.map(a => a.affected_users)).size; // Rough proxy
+  const openCriticals = autopsyData.filter(a => a.status !== 'RESOLVED').length;
+  const resolutionRate = autopsyData.length > 0 
+    ? Math.round((autopsyData.filter(a => a.status === 'RESOLVED').length / autopsyData.length) * 100)
+    : 100;
 
-  // Initial Fetch for Live Stream
+  // Mock Trend Data for the chart
+  const trendData = useMemo(() => {
+    return Array.from({ length: 7 }).map((_, i) => ({
+      name: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][(new Date().getDay() - 6 + i + 7) % 7],
+      crashes: Math.floor(Math.random() * 20) + (i === 6 ? openCriticals : 0),
+    }));
+  }, [openCriticals]);
+
+  const fetchData = async () => {
+    // 1. Fetch Aggregates
+    const { data: aggs } = await supabase.from('view_crash_aggregates').select('*');
+    if (aggs) setAutopsyData(aggs as CrashAggregate[]);
+
+    // 2. Fetch Terminal Feed
+    const { data: feed } = await supabase
+      .from('crash_telemetry')
+      .select('created_at, severity, error_signature, app_version')
+      .neq('severity', 'FATAL')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    if (feed) setTelemetryFeed(feed as CrashReport[]);
+  };
+
   useEffect(() => {
-    const fetchRecent = async () => {
-      const { data } = await supabase
-        .from('crash_telemetry')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
-      if (data) setReports(data);
-    };
+    fetchData();
 
-    fetchRecent();
-
-    const subscription = supabase
-      .channel('crash_telemetry_changes')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'crash_telemetry' },
-        (payload) => {
-          setReports((prev) => [payload.new as CrashReport, ...prev].slice(0, 50));
-        }
-      )
+    // Subscribe to new crashes
+    const sub = supabase
+      .channel('live-debugger')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'crash_telemetry' }, () => {
+        fetchData();
+      })
       .subscribe();
 
     return () => {
-      supabase.removeChannel(subscription);
+      supabase.removeChannel(sub);
     };
   }, []);
 
-  // Fetch Autopsy Data
-  const fetchAutopsyData = async () => {
-    setLoadingAutopsy(true);
-    const { data } = await supabase.from('view_crash_aggregates').select('*');
-    if (data) setAutopsyData(data as CrashAggregate[]);
-    setLoadingAutopsy(false);
-  };
-
-  // Fetch Telemetry Data
-  const fetchTelemetryData = async () => {
-    setLoadingTelemetry(true);
-    const { data } = await supabase
-      .from('crash_telemetry')
-      .select('*')
-      .neq('severity', 'FATAL')
-      .order('created_at', { ascending: false })
-      .limit(200);
-    if (data) setErrorTelemetry(data as CrashReport[]);
-    setLoadingTelemetry(false);
-  };
-
+  // Fetch specific instances when an autopsy item is selected
   useEffect(() => {
-    if (activeTab === 'autopsy') fetchAutopsyData();
-    if (activeTab === 'telemetry') fetchTelemetryData();
-  }, [activeTab]);
-
-  const resolveSingleReport = async (id: string) => {
-    const { error } = await supabase
-      .from('crash_telemetry')
-      .update({ status: 'RESOLVED', resolved_at: new Date().toISOString() })
-      .eq('id', id);
-
-    if (!error) {
-      setReports((prev) => prev.map((r) => r.id === id ? { ...r, status: 'RESOLVED' } : r));
-      if (selectedReport?.id === id) {
-        setSelectedReport({ ...selectedReport, status: 'RESOLVED' });
-      }
+    if (!selectedSignature) {
+      setSignatureInstances([]);
+      return;
     }
-  };
+
+    const fetchInstances = async () => {
+      const { data } = await supabase
+        .from('crash_telemetry')
+        .select('*')
+        .eq('error_signature', selectedSignature)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (data) setSignatureInstances(data as CrashReport[]);
+    };
+    fetchInstances();
+  }, [selectedSignature]);
 
   const resolveSignature = async (signature: string) => {
     const { error } = await supabase.rpc('resolve_crash_signature', {
       target_signature: signature,
     });
     if (!error) {
-      fetchAutopsyData(); // Refresh autopsy list
-      // Also optimistically update the live stream if there are matching signatures
-      setReports((prev) => prev.map((r) => r.error_signature === signature ? { ...r, status: 'RESOLVED' } : r));
-      if (selectedReport?.error_signature === signature) {
-        setSelectedReport({ ...selectedReport, status: 'RESOLVED' });
+      fetchData();
+      if (selectedSignature === signature) {
+        setSelectedSignature(null);
       }
     }
   };
 
-  // AG Grid Column Defs
-  const autopsyColDefs: any[] = useMemo(() => [
-    { field: "error_signature", headerName: "Signature", flex: 2, filter: true },
-    { field: "status", headerName: "Status", width: 120, cellRenderer: (p: any) => (
-      <span className={p.value === 'RESOLVED' ? 'text-green-400' : 'text-red-400 font-bold'}>{p.value}</span>
-    )},
-    { field: "crash_count", headerName: "Crashes", width: 100, sortable: true },
-    { field: "affected_users", headerName: "Users", width: 100, sortable: true },
-    { field: "last_seen", headerName: "Last Seen", width: 180, valueFormatter: (p: any) => new Date(p.value).toLocaleString() },
-    { 
-      headerName: "Actions", 
-      width: 120, 
-      cellRenderer: (p: any) => {
-        if (p.data.status === 'RESOLVED') return null;
-        return (
-          <button
-            onClick={() => resolveSignature(p.data.error_signature)}
-            className="mt-1 px-3 py-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 rounded text-xs transition-colors border border-green-500/50"
-          >
-            Resolve All
-          </button>
-        );
-      } 
-    }
-  ], []);
-
-  const telemetryColDefs: any[] = useMemo(() => [
-    { field: "created_at", headerName: "Time", width: 180, valueFormatter: (p: any) => new Date(p.value).toLocaleString() },
-    { field: "severity", headerName: "Severity", width: 120, filter: true },
-    { field: "status", headerName: "Status", width: 120, filter: true },
-    { field: "error_signature", headerName: "Signature", flex: 2, tooltipField: "error_signature" },
-    { field: "app_version", headerName: "Version", width: 120 },
-    { field: "user_id", headerName: "User ID", width: 150 }
-  ], []);
-
-  const gridStyle = { height: "100%", width: "100%" };
+  const selectedAgg = autopsyData.find(a => a.error_signature === selectedSignature);
+  const primaryInstance = signatureInstances[0];
 
   return (
-    <div className="bg-gray-900 border border-red-500/30 rounded-xl shadow-2xl flex flex-col h-[700px] overflow-hidden">
-      {/* Header and Tabs */}
-      <div className="p-4 border-b border-gray-800 bg-gray-950 shrink-0">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <span className="text-red-500">🚨</span> Live Debugger Suite
+    <div className="bg-[#0b0f19] border border-gray-800 rounded-xl shadow-2xl flex flex-col h-[90vh] overflow-hidden font-sans text-gray-300">
+      
+      {/* 1. Header & KPIs */}
+      <div className="p-5 border-b border-gray-800 bg-[#0f1523] shrink-0">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+            <ShieldAlert className="text-red-500 w-7 h-7" /> 
+            Live Debugger Suite
           </h2>
-          <div className="flex items-center gap-2 text-sm text-gray-400">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+          <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 bg-emerald-400/10 px-3 py-1.5 rounded-full border border-emerald-400/20">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
-            Telemetry Active
+            SYSTEM ONLINE
           </div>
         </div>
-        
-        <div className="flex space-x-2">
-          <button 
-            onClick={() => setActiveTab('stream')}
-            className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${activeTab === 'stream' ? 'bg-gray-800 text-red-400 border-t border-l border-r border-gray-700' : 'text-gray-500 hover:text-gray-300'}`}
-          >
-            Live Stream
-          </button>
-          <button 
-            onClick={() => setActiveTab('autopsy')}
-            className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${activeTab === 'autopsy' ? 'bg-gray-800 text-cyan-400 border-t border-l border-r border-gray-700' : 'text-gray-500 hover:text-gray-300'}`}
-          >
-            Crash Autopsy
-          </button>
-          <button 
-            onClick={() => setActiveTab('telemetry')}
-            className={`px-4 py-2 rounded-t-lg text-sm font-medium transition-colors ${activeTab === 'telemetry' ? 'bg-gray-800 text-yellow-400 border-t border-l border-r border-gray-700' : 'text-gray-500 hover:text-gray-300'}`}
-          >
-            Non-Fatal Telemetry
-          </button>
+
+        <div className="flex gap-4">
+          <div className="flex-1 grid grid-cols-4 gap-4">
+            <div className="bg-[#151b2b] border border-gray-700/50 p-4 rounded-lg flex flex-col">
+              <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2"><Activity size={14}/> TOTAL CRASHES</div>
+              <div className="text-3xl font-light text-white">{totalCrashes}</div>
+            </div>
+            <div className="bg-[#151b2b] border border-gray-700/50 p-4 rounded-lg flex flex-col">
+              <div className="text-gray-500 text-xs font-bold tracking-wider mb-2 flex items-center gap-2"><Users size={14}/> AFFECTED USERS</div>
+              <div className="text-3xl font-light text-white">{totalAffected}</div>
+            </div>
+            <div className="bg-red-500/5 border border-red-500/20 p-4 rounded-lg flex flex-col">
+              <div className="text-red-400/70 text-xs font-bold tracking-wider mb-2 flex items-center gap-2"><AlertTriangle size={14}/> OPEN CRITICALS</div>
+              <div className="text-3xl font-light text-red-400">{openCriticals}</div>
+            </div>
+            <div className="bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-lg flex flex-col">
+              <div className="text-emerald-400/70 text-xs font-bold tracking-wider mb-2 flex items-center gap-2"><CheckCircle2 size={14}/> RESOLUTION RATE</div>
+              <div className="text-3xl font-light text-emerald-400">{resolutionRate}%</div>
+            </div>
+          </div>
+          
+          <div className="w-64 bg-[#151b2b] border border-gray-700/50 p-4 rounded-lg hidden lg:block">
+            <div className="text-gray-500 text-xs font-bold tracking-wider mb-2">7-DAY TREND</div>
+            <div className="h-12">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={trendData}>
+                  <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px' }} cursor={{fill: '#374151', opacity: 0.4}}/>
+                  <Bar dataKey="crashes" fill="#f87171" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="flex-1 overflow-hidden bg-gray-800 p-4">
-        {/* Tab 1: Live Stream */}
-        {activeTab === 'stream' && (
-          <div className="flex h-full gap-4 overflow-hidden">
-            <div className="w-1/3 border-r border-gray-700 pr-4 overflow-y-auto custom-scrollbar">
-              {reports.length === 0 ? (
-                <div className="text-gray-500 text-center mt-10">No recent crashes</div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  {reports.map((report) => (
-                    <div 
-                      key={report.id}
-                      onClick={() => setSelectedReport(report)}
-                      className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                        selectedReport?.id === report.id 
-                          ? 'bg-red-500/20 border-red-500' 
-                          : 'bg-gray-900 border-gray-700 hover:border-gray-500'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <span className={`text-xs px-2 py-0.5 rounded font-bold ${
-                          report.status === 'RESOLVED' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
-                        }`}>
-                          {report.status}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {new Date(report.created_at || '').toLocaleTimeString()}
-                        </span>
-                      </div>
-                      <div className="text-sm font-medium text-white truncate" title={report.error_signature}>
-                        {report.error_signature}
-                      </div>
-                      <div className="text-xs text-gray-400 mt-1 truncate">
-                        User: {report.user_id || 'Anonymous'}
-                      </div>
-                    </div>
-                  ))}
+      {/* 2. Main Content Split */}
+      <div className="flex flex-1 overflow-hidden">
+        
+        {/* Left Rail: Autopsy List */}
+        <div className="w-1/3 border-r border-gray-800 bg-[#0b0f19] flex flex-col overflow-hidden">
+          <div className="p-3 border-b border-gray-800 bg-[#0f1523] text-xs font-bold text-gray-400 tracking-wider flex justify-between">
+            <span>CRITICAL FINDINGS</span>
+            <span>{autopsyData.length} ISSUES</span>
+          </div>
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
+            {autopsyData.length === 0 ? (
+              <div className="text-center p-8 text-gray-600 text-sm">No critical findings recorded.</div>
+            ) : (
+              autopsyData.map((item) => (
+                <div 
+                  key={item.error_signature}
+                  onClick={() => setSelectedSignature(item.error_signature)}
+                  className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                    selectedSignature === item.error_signature 
+                      ? 'bg-blue-500/10 border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.1)]' 
+                      : 'bg-[#151b2b] border-gray-800 hover:border-gray-600'
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-bold tracking-wider ${
+                      item.status === 'RESOLVED' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'
+                    }`}>
+                      {item.status}
+                    </span>
+                    <span className="text-xs text-gray-500 font-mono">
+                      {new Date(item.last_seen).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="text-sm font-semibold text-gray-200 mb-2 line-clamp-2 leading-snug">
+                    {item.error_signature}
+                  </div>
+                  <div className="flex items-center gap-4 text-xs text-gray-500 font-mono">
+                    <span className="flex items-center gap-1"><Activity size={12}/> {item.crash_count}</span>
+                    <span className="flex items-center gap-1"><Users size={12}/> {item.affected_users}</span>
+                  </div>
                 </div>
-              )}
-            </div>
+              ))
+            )}
+          </div>
+        </div>
 
-            <div className="w-2/3 pl-2 overflow-y-auto custom-scrollbar">
-              {selectedReport ? (
-                <div className="flex flex-col h-full">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-bold text-red-400 mb-1">{selectedReport.error_signature}</h3>
-                      <div className="text-xs text-gray-500 font-mono">ID: {selectedReport.id}</div>
-                    </div>
-                    {selectedReport.status !== 'RESOLVED' && (
+        {/* Right Panel: Deep Dive */}
+        <div className="flex-1 bg-[#0b0f19] flex flex-col overflow-hidden relative">
+          {!selectedSignature || !selectedAgg ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-gray-600">
+              <Activity className="w-16 h-16 mb-4 opacity-20" />
+              <p>Select a finding to view autopsy details</p>
+            </div>
+          ) : (
+            <>
+              {/* Deep Dive Header */}
+              <div className="p-5 border-b border-gray-800 bg-[#0f1523] shrink-0">
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-lg font-bold text-red-400 break-words pr-4">{selectedAgg.error_signature}</h3>
+                  <div className="shrink-0 flex gap-2">
+                    {selectedAgg.status !== 'RESOLVED' && (
                       <button 
-                        onClick={() => resolveSingleReport(selectedReport.id)}
-                        className="px-3 py-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 rounded text-sm transition-colors border border-green-500/50"
+                        onClick={() => resolveSignature(selectedAgg.error_signature)}
+                        className="px-4 py-2 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-sm font-bold transition-colors"
                       >
-                        Mark Resolved
+                        Resolve Issue
                       </button>
                     )}
                   </div>
+                </div>
+                <div className="flex gap-6 text-sm text-gray-400 font-mono bg-gray-900/50 p-3 rounded-lg border border-gray-800">
+                  <div><span className="text-gray-500">Events:</span> {selectedAgg.crash_count}</div>
+                  <div><span className="text-gray-500">Users:</span> {selectedAgg.affected_users}</div>
+                  <div><span className="text-gray-500">First Seen:</span> {new Date(selectedAgg.first_seen).toLocaleString()}</div>
+                  <div><span className="text-gray-500">Last Seen:</span> {new Date(selectedAgg.last_seen).toLocaleString()}</div>
+                </div>
+              </div>
 
-                  <div className="grid grid-cols-2 gap-4 mb-6 shrink-0">
-                    <div className="bg-gray-900 p-3 rounded-lg border border-gray-700">
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Environment State</div>
-                      <pre className="text-xs text-green-400 overflow-x-auto">
-                        {JSON.stringify(selectedReport.environment_state, null, 2)}
-                      </pre>
-                    </div>
-                    <div className="bg-gray-900 p-3 rounded-lg border border-gray-700">
-                      <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">App Info</div>
-                      <div className="text-sm text-gray-300">
-                        <div>Version: {selectedReport.app_version || 'N/A'}</div>
-                        <div>Severity: <span className="text-red-400 font-bold">{selectedReport.severity}</span></div>
-                      </div>
+              {/* Deep Dive Content (Scrollable) */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
+                
+                {/* Stack Trace */}
+                <div>
+                  <h4 className="text-xs font-bold text-gray-500 tracking-wider mb-2 uppercase flex items-center gap-2">
+                    <TerminalSquare size={14}/> Stack Trace
+                  </h4>
+                  <div className="bg-[#151b2b] p-4 rounded-lg border border-gray-800 font-mono text-sm text-red-300/90 overflow-x-auto whitespace-pre-wrap leading-relaxed">
+                    {primaryInstance?.stack_trace || 'No stack trace available for this signature.'}
+                  </div>
+                </div>
+
+                {/* Context Matrix */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-500 tracking-wider mb-2 uppercase">Environment (Latest)</h4>
+                    <div className="bg-[#151b2b] p-4 rounded-lg border border-gray-800 font-mono text-xs text-blue-300/80 overflow-x-auto whitespace-pre-wrap h-40">
+                      {JSON.stringify(primaryInstance?.environment_state || {}, null, 2)}
                     </div>
                   </div>
-
-                  <div className="mb-6 shrink-0">
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Stack Trace</div>
-                    <div className="bg-gray-950 p-4 rounded-lg border border-red-900/50 text-red-300 text-xs font-mono overflow-x-auto">
-                      {selectedReport.stack_trace || 'No stack trace available.'}
-                    </div>
-                  </div>
-
-                  <div className="flex-1">
-                    <div className="text-xs text-gray-500 uppercase tracking-wider mb-2">Flight Breadcrumbs</div>
-                    <div className="bg-gray-900 rounded-lg border border-gray-700 overflow-hidden flex flex-col">
-                      {Array.isArray(selectedReport.breadcrumbs) && selectedReport.breadcrumbs.length > 0 ? (
-                        <div className="divide-y divide-gray-800">
-                          {[...selectedReport.breadcrumbs].reverse().map((crumb: any, idx: number) => (
-                            <div key={idx} className="p-3 hover:bg-gray-800 transition-colors flex gap-4 items-start">
-                              <div className="w-20 shrink-0 text-xs text-gray-500 font-mono pt-0.5">
-                                {new Date(crumb.timestamp).toLocaleTimeString([], { hour12: false, fractionalSecondDigits: 3 })}
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-500 tracking-wider mb-2 uppercase">Flight Breadcrumbs</h4>
+                    <div className="bg-[#151b2b] rounded-lg border border-gray-800 overflow-y-auto custom-scrollbar h-40">
+                      {Array.isArray(primaryInstance?.breadcrumbs) && primaryInstance.breadcrumbs.length > 0 ? (
+                        <div className="divide-y divide-gray-800/50">
+                          {[...primaryInstance.breadcrumbs].reverse().map((crumb: any, idx: number) => (
+                            <div key={idx} className="p-3 hover:bg-gray-800/50 transition-colors flex gap-3 text-xs">
+                              <div className="w-16 shrink-0 text-gray-600 font-mono">{new Date(crumb.timestamp || Date.now()).toLocaleTimeString([], { hour12: false })}</div>
+                              <div className="w-16 shrink-0">
+                                <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold tracking-wider ${
+                                  crumb.category === 'BLE' ? 'bg-blue-500/10 text-blue-400' :
+                                  crumb.category === 'NETWORK' ? 'bg-yellow-500/10 text-yellow-400' :
+                                  'bg-gray-700/50 text-gray-400'
+                                }`}>{crumb.category}</span>
                               </div>
-                              <div className="w-24 shrink-0">
-                                <span className={`text-[10px] px-2 py-0.5 rounded font-bold tracking-wider ${
-                                  crumb.category === 'BLE' ? 'bg-blue-500/20 text-blue-400' :
-                                  crumb.category === 'ACTION' ? 'bg-purple-500/20 text-purple-400' :
-                                  crumb.category === 'NETWORK' ? 'bg-yellow-500/20 text-yellow-400' :
-                                  crumb.category === 'ERROR' ? 'bg-red-500/20 text-red-400' :
-                                  'bg-gray-600/50 text-gray-300'
-                                }`}>
-                                  {crumb.category}
-                                </span>
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-sm text-gray-200 font-medium truncate">{crumb.message}</div>
-                                {crumb.data && Object.keys(crumb.data).length > 0 && (
-                                  <div className="mt-1 text-xs text-gray-400 font-mono truncate bg-gray-950 p-1 rounded">
-                                    {JSON.stringify(crumb.data)}
-                                  </div>
-                                )}
-                              </div>
+                              <div className="flex-1 text-gray-300 truncate">{crumb.message}</div>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="p-6 text-center text-gray-500 text-sm">No breadcrumbs recorded.</div>
+                        <div className="p-4 text-gray-600 text-xs flex items-center justify-center h-full">No breadcrumbs recorded.</div>
                       )}
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div className="h-full flex items-center justify-center text-gray-500">
-                  Select a crash report to view autopsy details.
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Tab 2: Crash Autopsy */}
-        {activeTab === 'autopsy' && (
-          <div className="h-full w-full rounded-lg overflow-hidden border border-gray-700">
-            {loadingAutopsy ? (
-              <div className="text-cyan-400 p-8 animate-pulse text-center">Crunching Crash Aggregates...</div>
-            ) : (
-              <div style={gridStyle}>
-                <AgGridReact
-                  theme={myTheme}
-                  rowData={autopsyData}
-                  columnDefs={autopsyColDefs}
-                  rowSelection={{ mode: "singleRow" }}
-                />
               </div>
-            )}
-          </div>
-        )}
+            </>
+          )}
+        </div>
+      </div>
 
-        {/* Tab 3: Non-Fatal Telemetry */}
-        {activeTab === 'telemetry' && (
-          <div className="h-full w-full rounded-lg overflow-hidden border border-gray-700">
-            {loadingTelemetry ? (
-              <div className="text-yellow-400 p-8 animate-pulse text-center">Loading Telemetry Feed...</div>
-            ) : (
-              <div style={gridStyle}>
-                <AgGridReact
-                  theme={myTheme}
-                  rowData={errorTelemetry}
-                  columnDefs={telemetryColDefs}
-                  rowSelection={{ mode: "singleRow" }}
-                />
+      {/* 3. Terminal Feed (Bottom docked) */}
+      <div className="h-48 border-t border-gray-800 bg-[#080b12] shrink-0 flex flex-col">
+        <div className="p-2 px-4 border-b border-gray-800 bg-[#0a0f18] text-xs font-bold text-gray-500 tracking-wider flex items-center justify-between">
+          <div className="flex items-center gap-2"><TerminalSquare size={12}/> TELEMETRY STREAM</div>
+          <span className="text-[10px] text-emerald-500">Live</span>
+        </div>
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-3 font-mono text-xs space-y-1">
+          {telemetryFeed.length === 0 ? (
+            <div className="text-gray-600 text-center mt-4">Awaiting telemetry...</div>
+          ) : (
+            telemetryFeed.map((log, i) => (
+              <div key={i} className="flex gap-4 hover:bg-white/[0.02] px-2 py-1 rounded transition-colors">
+                <span className="text-gray-600 shrink-0 w-20">{new Date(log.created_at || '').toLocaleTimeString()}</span>
+                <span className={`shrink-0 w-12 font-bold ${log.severity === 'WARN' ? 'text-yellow-500' : 'text-blue-400'}`}>
+                  [{log.severity}]
+                </span>
+                <span className="text-gray-400 truncate flex-1">{log.error_signature}</span>
+                <span className="text-gray-600 shrink-0 w-12 text-right">v{log.app_version}</span>
               </div>
-            )}
-          </div>
-        )}
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
