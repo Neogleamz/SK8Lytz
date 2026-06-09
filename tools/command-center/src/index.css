@@ -1,5 +1,4 @@
-@tailwind components;
-@tailwind utilities;
+@import './tailwind-compiled.css';
 
 :root {
   --bg-dark: #0f172a; /* slate-950 */
