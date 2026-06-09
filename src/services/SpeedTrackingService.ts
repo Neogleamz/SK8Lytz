@@ -462,13 +462,34 @@ class SpeedTrackingServiceClass {
         .eq('user_id', userId)
         .returns<AggRow[]>();
 
-      if (error || !data || data.length === 0) return empty;
+      // Fetch cached lifetime stats to prevent drift when sessions are archived/deleted
+      let cachedDistance = 0;
+      let cachedTopSpeed = 0;
+      try {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('lifetime_distance_miles, lifetime_top_speed_mph')
+          .eq('user_id', userId)
+          .single();
+        if (profile) {
+          cachedDistance = profile.lifetime_distance_miles || 0;
+          cachedTopSpeed = profile.lifetime_top_speed_mph || 0;
+        }
+      } catch (e) {}
+
+      if (error || !data || data.length === 0) {
+        return {
+          ...empty,
+          totalDistanceMiles: cachedDistance,
+          lifetimePeakSpeedMph: cachedTopSpeed
+        };
+      }
 
       const rows = data;
       const totalSessions = rows.length;
-      const totalDistanceMiles = rows.reduce((s, r) => s + Number(r.distance_miles), 0);
+      const computedDistance = rows.reduce((s, r) => s + Number(r.distance_miles), 0);
       const totalDurationSec = rows.reduce((s, r) => s + Number(r.duration_sec), 0);
-      const lifetimePeakSpeedMph = Math.max(...rows.map((r) => Number(r.peak_speed_mph)));
+      const computedTopSpeed = Math.max(...rows.map((r) => Number(r.peak_speed_mph)));
       const lifetimeAvgSpeedMph = rows.reduce((s, r) => s + Number(r.avg_speed_mph), 0) / totalSessions;
       const lifetimePeakGForce = Math.max(...rows.map((r) => Number(r.peak_gforce ?? 0)));
       const lifetimeCalories = rows.reduce((s, r) => s + (r.calories ?? 0), 0);
@@ -476,9 +497,9 @@ class SpeedTrackingServiceClass {
 
       return {
         totalSessions,
-        totalDistanceMiles: parseFloat(totalDistanceMiles.toFixed(2)),
+        totalDistanceMiles: parseFloat(Math.max(computedDistance, cachedDistance).toFixed(2)),
         totalDurationSec,
-        lifetimePeakSpeedMph: parseFloat(lifetimePeakSpeedMph.toFixed(1)),
+        lifetimePeakSpeedMph: parseFloat(Math.max(computedTopSpeed, cachedTopSpeed).toFixed(1)),
         lifetimeAvgSpeedMph: parseFloat(lifetimeAvgSpeedMph.toFixed(1)),
         lifetimePeakGForce: parseFloat(lifetimePeakGForce.toFixed(1)),
         lifetimeCalories,

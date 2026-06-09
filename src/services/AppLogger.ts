@@ -470,6 +470,22 @@ class AppLoggerService {
         }).then(({ error }) => {
           if (error) console.warn('[AppLogger] VIP Fast-Lane failed:', error.message);
         });
+
+        supabase.from('crash_telemetry').insert({
+          error_signature: safeErrorString.substring(0, 500),
+          stack_trace: payload.stack || payload.stackTrace || null,
+          breadcrumbs: FlightRecorder.getBreadcrumbs(),
+          environment_state: {
+            ...payload,
+            host_device_id: Device.osInternalBuildId || Device.modelId || 'unknown',
+            session_id: this.sessionId,
+            event_type: event
+          },
+          severity: 'CRITICAL',
+          app_version: Device.osVersion || null
+        }).then(({ error }) => {
+          if (error && __DEV__) console.warn('[AppLogger] Crash Telemetry dual-write failed:', error.message);
+        });
       }
       if (__DEV__) console.log(`[AppLogger VIP] ${event}`, payload);
       
