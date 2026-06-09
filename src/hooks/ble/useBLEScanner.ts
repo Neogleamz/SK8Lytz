@@ -318,25 +318,13 @@ export function useBLEScanner({
       allDevicesRef.current = [];
     }
 
-    // FTUE path: no registered devices — bypass isSweeperActive race.
-    // startSweeper() is async (Battery.getBatteryLevelAsync) so isSweeperActive
-    // is still false when the wizard calls scanForPeripherals() on mount.
-    // Route through startSweeper() directly — it is idempotent (early-returns
-    // if already running) and runs persistently until hardware is found.
-    if (registeredMacs.length === 0 && !options?.keepAlive) {
-      AppLogger.log('BLE_STATE_CHANGE', { event: 'ftue_persistent_scan_start' });
-      startSweeper();
-      return;
-    }
+    const isSandboxMocking = ((typeof __DEV__ !== 'undefined' && __DEV__) || Platform.OS === 'web') && isSandboxEnabled;
 
-    if (isSweeperActive) {
-      burstScan(options?.keepAlive ? 10000 : 5000);
-    } else {
-      if (scannerStateRef.current === 'SCANNING') return;
-      bleSend({ type: 'SCAN_START' });
-      scannerStateRef.current = 'SCANNING';
-      
-      if (((typeof __DEV__ !== 'undefined' && __DEV__) || Platform.OS === 'web') && isSandboxEnabled) {
+    if (isSandboxMocking) {
+      if (scannerStateRef.current !== 'SCANNING') {
+        bleSend({ type: 'SCAN_START' });
+        scannerStateRef.current = 'SCANNING';
+        
         setTimeout(() => {
           const halozMock = {
             id: 'VIRTUAL-HALOZ-123',
@@ -356,9 +344,34 @@ export function useBLEScanner({
           scanCallback(null, halozMock);
           scanCallback(null, soulzMock);
         }, 1000);
-      } else {
-        bleManager?.startDeviceScan(null, null, scanCallback);
+
+        setTimeout(() => {
+          bleSend({ type: 'SCAN_STOP' });
+          scannerStateRef.current = 'IDLE';
+        }, 5000);
       }
+      
+      if (Platform.OS === 'web') return; // Early return for web so it doesn't hit native sweeper
+    }
+
+    // FTUE path: no registered devices — bypass isSweeperActive race.
+    // startSweeper() is async (Battery.getBatteryLevelAsync) so isSweeperActive
+    // is still false when the wizard calls scanForPeripherals() on mount.
+    // Route through startSweeper() directly — it is idempotent (early-returns
+    // if already running) and runs persistently until hardware is found.
+    if (registeredMacs.length === 0 && !options?.keepAlive) {
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'ftue_persistent_scan_start' });
+      startSweeper();
+      return;
+    }
+
+    if (isSweeperActive) {
+      burstScan(options?.keepAlive ? 10000 : 5000);
+    } else if (!isSandboxMocking) {
+      if (scannerStateRef.current === 'SCANNING') return;
+      bleSend({ type: 'SCAN_START' });
+      scannerStateRef.current = 'SCANNING';
+      bleManager?.startDeviceScan(null, null, scanCallback);
 
       setTimeout(() => {
         bleManager?.stopDeviceScan();
@@ -366,7 +379,7 @@ export function useBLEScanner({
         scannerStateRef.current = 'IDLE';
       }, 5000);
     }
-  }, [registeredMacs.length, startSweeper, isSweeperActive, burstScan, bleManager, scanCallback, bleSend, setAllDevices]);
+  }, [registeredMacs.length, startSweeper, isSweeperActive, burstScan, bleManager, scanCallback, bleSend, setAllDevices, isSandboxEnabled]);
 
   return {
     pendingRegistrations,
