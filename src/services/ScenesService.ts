@@ -304,7 +304,8 @@ class ScenesServiceClass {
           fill_mode: 'SCENE',
           transition_type: 0,
           user_id: userId,
-          created_at: scene.created_at || new Date().toISOString()
+          created_at: scene.created_at || new Date().toISOString(),
+          updated_at: new Date().toISOString()
         },
         timestamp: Date.now()
       });

@@ -65,7 +65,7 @@ class CrewProfileService {
   /**
    * Create a new permanent crew and auto-join the creator as member.
    */
-  async createPermanentCrew(name: string, opts: { isPublic?: boolean; avatarColor?: string; avatarIcon?: string; city?: string; state?: string; description?: string; inviteCode?: string; members?: string[] } | undefined, userId: string): Promise<PermanentCrew> {
+  async createPermanentCrew(name: string, opts: { isPublic?: boolean; avatarColor?: string; avatarIcon?: string; avatarUrl?: string | null; city?: string; state?: string; description?: string; inviteCode?: string; members?: string[] } | undefined, userId: string): Promise<PermanentCrew> {
     try {
       if (!userId) throw new Error('Not authenticated');
 
@@ -73,6 +73,7 @@ class CrewProfileService {
       if (opts?.isPublic    !== undefined) insertData.is_public    = opts.isPublic;
       if (opts?.avatarColor)               insertData.avatar_color = opts.avatarColor;
       if (opts?.avatarIcon)                insertData.avatar_icon  = opts.avatarIcon;
+      if (opts?.avatarUrl !== undefined)   insertData.avatar_url   = opts.avatarUrl;
       if (opts?.city)                      insertData.city         = opts.city;
       if (opts?.state)                     insertData.state        = opts.state;
       if (opts?.description)               insertData.description  = opts.description;
@@ -87,13 +88,13 @@ class CrewProfileService {
       if (crewErr || !crew) throw crewErr ?? new Error('Failed to create crew');
 
       // Auto-join creator as first member
-      const memberships = [{ crew_id: crew.id, user_id: userId }];
+      const memberships = [{ crew_id: crew.id, user_id: userId, role: 'owner' }];
       
       // Add additional members if provided
       if (opts?.members && opts.members.length > 0) {
         opts.members.forEach(memberId => {
           if (memberId !== userId) {
-            memberships.push({ crew_id: crew.id, user_id: memberId });
+            memberships.push({ crew_id: crew.id, user_id: memberId, role: 'member' });
           }
         });
       }
@@ -535,7 +536,7 @@ class CrewProfileService {
   async addCrewMembers(crewId: string, userIds: string[]): Promise<void> {
     try {
       if (!userIds.length) return;
-      const memberships = userIds.map(id => ({ crew_id: crewId, user_id: id }));
+      const memberships = userIds.map(id => ({ crew_id: crewId, user_id: id, role: 'member' }));
       
       const { error } = await supabase
         .from('crew_memberships')
@@ -545,6 +546,33 @@ class CrewProfileService {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.error('[CrewProfileService] addCrewMembers failed', { error: msg });
+      throw new Error(msg);
+    }
+  }
+
+  /**
+   * Hand off session leadership.
+   * Promotes new leader and demotes old leader (unless they are the owner).
+   */
+  async transferSessionLeadership(crewId: string, newLeaderUserId: string, oldLeaderUserId: string): Promise<void> {
+    try {
+      const { error: err1 } = await supabase
+        .from('crew_memberships')
+        .update({ role: 'leader' })
+        .eq('crew_id', crewId)
+        .eq('user_id', newLeaderUserId);
+      if (err1) throw err1;
+
+      const { error: err2 } = await supabase
+        .from('crew_memberships')
+        .update({ role: 'member' })
+        .eq('crew_id', crewId)
+        .eq('user_id', oldLeaderUserId)
+        .neq('role', 'owner');
+      if (err2) throw err2;
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.error('[CrewProfileService] transferSessionLeadership failed', { error: msg });
       throw new Error(msg);
     }
   }

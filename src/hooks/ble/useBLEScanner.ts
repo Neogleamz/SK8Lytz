@@ -95,7 +95,8 @@ export function useBLEScanner({
           ble_version: d.bleVersion ? Number(d.bleVersion) : null,
           product_id: d.productId ? Number(d.productId) : null,
           led_version: d.ledVersion ? Number(d.ledVersion) : null,
-          location: locString
+          location: locString,
+          is_claimed: Boolean(d.is_claimed)
         })) as unknown as TelemetryInsert[];
 
         const { error } = await supabase.from('discovered_devices_telemetry').insert(payloads as TelemetryInsert[]);
@@ -253,7 +254,7 @@ export function useBLEScanner({
            id: mac, rssi: deviceRssi,
            type: nameLower.includes('halo') ? 'HALOZ' : (nameLower.includes('soul') ? 'SOULZ' : 'UNKNOWN'),
            manufacturerData: mfData || null, firmwareVer: firmwareVer || null, bleVersion: bleVersion || null,
-           productId: productId || null, ledVersion: ledVersion || null
+           productId: productId || null, ledVersion: ledVersion || null, is_claimed: isRegistered
         });
         if (telemetryBatchRef.current.length >= 25) {
            flushTelemetry();

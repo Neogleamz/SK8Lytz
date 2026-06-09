@@ -2100,7 +2100,7 @@ export type Database = {
       }
       skate_sessions: {
         Row: {
-          active_calories: number | null
+
           avg_bpm: number | null
           avg_speed_mph: number
           calories: number | null
@@ -2121,7 +2121,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          active_calories?: number | null
+
           avg_bpm?: number | null
           avg_speed_mph?: number
           calories?: number | null
@@ -2142,7 +2142,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          active_calories?: number | null
+
           avg_bpm?: number | null
           avg_speed_mph?: number
           calories?: number | null

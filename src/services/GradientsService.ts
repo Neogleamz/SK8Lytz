@@ -115,7 +115,8 @@ class GradientsServiceClass {
           fill_mode: newPreset.fill_mode || 'GRADIENT',
           transition_type: newPreset.transition_type || 0x01,
           user_id: userId,
-          created_at: new Date().toISOString()
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         };
         const { error } = await supabase.from('user_saved_presets').upsert(payload);
         if (error) throw error;
