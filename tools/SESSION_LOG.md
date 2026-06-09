@@ -1194,3 +1194,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 
 ### [ARTIFACT] 2026-06-09T13:57 — PLAN-live-debugger-suite.md
 **Decision:** Evolve Live Debugger into a robust 3-tab Diagnostic Suite grouping crash_telemetry and telemetry_errors with a 90-day retention and DB-status resolution flow.
+
+### [MERGE] 2026-06-09T19:05 — chore/clean-dashboard ? master @ 8aea2a08
+**What merged:** Cleaned up 75 linting errors in DashboardScreen and App.tsx, resolving tech debt blocking future merges.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/screens/DashboardScreen.tsx, App.tsx
