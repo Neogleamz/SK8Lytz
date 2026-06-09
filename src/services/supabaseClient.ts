@@ -18,7 +18,6 @@ class SecureStoreAdapter implements SupportedStorage {
     try {
       await SecureStore.setItemAsync(key, value);
     } catch (e: unknown) {
-      const safeErr = e instanceof Error ? e : new Error(String(e));
       console.error('SecureStore setItem failed', e instanceof Error ? e.message : String(e));
     }
   }
@@ -27,7 +26,6 @@ class SecureStoreAdapter implements SupportedStorage {
     try {
       await SecureStore.deleteItemAsync(key);
     } catch (e: unknown) {
-      const safeErr = e instanceof Error ? e : new Error(String(e));
       console.error('SecureStore removeItem failed', e instanceof Error ? e.message : String(e));
     }
   }
@@ -52,6 +50,10 @@ export const supabase = supabaseUrl && supabaseAnonKey
         signInWithPassword: async () => ({ data: null, error: new Error('Offline mode') }),
         signOut: async () => ({ error: null }),
       },
+      rpc: async (_fn: string, _args?: object) => ({
+        data: null,
+        error: new Error('Offline mode — network unavailable. Please use email to sign in.'),
+      }),
       channel: () => ({
         on: () => ({ subscribe: () => ({ unsubscribe: () => {} }) }),
       }),

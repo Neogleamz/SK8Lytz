@@ -76,8 +76,7 @@ class AuthProfileService {
       return created as UserProfile | null;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      // AuthProfileService isn't allowed to import AppLogger currently? Actually it doesn't import it.
-      // Wait, let's look at line 12. It doesn't import AppLogger. I should import it.
+      AppLogger.error('[AuthProfileService] fetchOrCreateProfile failed', { error: msg });
       throw new Error(msg);
     }
   }

@@ -95,7 +95,7 @@ export function AuthFormSignUp({ onModeChange }: AuthFormSignUpProps) {
         return;
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
       AppLogger.error('AuthFormSignUp', 'HIBP Check failed', { error: msg });
       setHibpChecking(false);
       // We don't block sign up on HIBP failure
@@ -122,7 +122,7 @@ export function AuthFormSignUp({ onModeChange }: AuthFormSignUpProps) {
         setTimeout(() => onModeChange('LOGIN'), 3000);
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
       AppLogger.error('AuthFormSignUp', 'Sign up exception', { error: msg });
       setLoading(false);
       showError('A network or internal error occurred. Please try again.');

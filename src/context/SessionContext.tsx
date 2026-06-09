@@ -41,7 +41,6 @@ async function persistSessionPhase(phase: PersistedSessionPhase, pauseTimeMs?: n
     }
     await AsyncStorage.multiSet(pairs);
   } catch (err: unknown) {
-      const safeErr = err instanceof Error ? err : new Error(String(err));
     AppLogger.error('Failed to persist session phase', err instanceof Error ? err.message : String(err));
   }
 }
@@ -320,7 +319,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             isForegroundServiceStarted = true;
           }
         } catch (err: unknown) {
-      const safeErr = err instanceof Error ? err : new Error(String(err));
           AppLogger.error('Failed to display foreground service notification', err instanceof Error ? err.message : String(err));
         } finally {
           isDisplaying = false;
@@ -398,7 +396,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         peakHR: finalPeakHR,
       });
     } catch (err: unknown) {
-      const safeErr = err instanceof Error ? err : new Error(String(err));
       AppLogger.warn('WATCH_BRIDGE', { event: 'summary_push_failed', error: String(err) });
     }
 

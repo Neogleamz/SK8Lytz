@@ -63,7 +63,7 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
         }
         loginEmail = data as string;
       } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
+        const msg = e instanceof Error ? e.message : String(e);
         AppLogger.error('AuthFormSignIn', 'Username lookup failed', { error: msg });
         setLoading(false);
         showError('Could not look up username. Please use your email to sign in.');
@@ -90,12 +90,12 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
           }
           await AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP);
         } catch (e: unknown) {
-          const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
+          const msg = e instanceof Error ? e.message : String(e);
           AppLogger.error('AuthFormSignIn', 'Failed to save offline/remember settings', { error: msg });
         }
       }
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
       AppLogger.error('AuthFormSignIn', 'Sign in exception', { error: msg });
       setLoading(false);
       showError('A network or internal error occurred. Please try again.');
