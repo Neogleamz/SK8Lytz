@@ -561,6 +561,44 @@ class DeviceRepository {
     }
   }
 
+  // ── Product ID Confirmation ───────────────────────────────────────────────────
+
+  /**
+   * Called when a 0x63 EEPROM query successfully identifies the product ID.
+   * Persists the confirmation timestamp locally and syncs to Supabase.
+   */
+  async confirmProductId(deviceMac: string): Promise<void> {
+    const normalizedMac = deviceMac.toUpperCase();
+    const device = this.devices.find(d => d.device_mac.toUpperCase() === normalizedMac);
+    
+    // Only confirm if registered and not already confirmed
+    if (!device || device.product_id_confirmed_at) return;
+
+    const now = new Date().toISOString();
+    device.product_id_confirmed_at = now;
+    
+    // Update local SSOT and notify listeners
+    await AsyncStorage.setItem(DEVICES_KEY, JSON.stringify(this.devices)).catch(e => 
+      AppLogger.warn('[DeviceRepository] AsyncStorage write failed', { key: 'DEVICES_KEY/confirmProductId', error: e instanceof Error ? e.message : String(e) })
+    );
+    this._notifyListeners();
+
+    try {
+      if (!device.user_id) return;
+      const { error } = await supabase
+        .from('registered_devices')
+        .update({ product_id_confirmed_at: now })
+        .eq('user_id', device.user_id)
+        .ilike('device_mac', normalizedMac);
+        
+      if (error) throw error;
+      AppLogger.log('PRODUCT_CONFIRMED', { deviceId: scrubPII(normalizedMac) });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.warn('[DeviceRepository] Failed to confirm product ID', { error: msg });
+    }
+  }
+
   // ── Claim Check ─────────────────────────────────────────────────────────────
 
   /**

@@ -51,6 +51,7 @@ export interface RegisteredDevice {
   led_version?: number;
   ble_version?: number;
   product_id?: number;
+  product_id_confirmed_at?: string | null;
   rf_mode?: string;
   rf_paired_count?: number;
   factory_name?: string;

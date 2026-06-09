@@ -125,6 +125,9 @@ export function useHardwareNotifications({
         return;
       }
 
+      // EEPROM parsing was successful — lock the product identification
+      DeviceRepository.getInstance().confirmProductId(deviceId);
+
       // ── [Delta Check] Only update state/disk if data fundamentally changed ──
       const existingCfg = deviceConfigsRef.current[deviceId] || {};
       const isDirty = 
@@ -177,6 +180,7 @@ export function useHardwareNotifications({
         const next = { ...prev, [deviceId]: merged };
         // Persist probe config via DeviceRepository SSOT (updateConfig merges internally)
         DeviceRepository.getInstance().updateConfig(deviceId, cfg).catch(e => AppLogger.warn('Failed to persist probed config', e instanceof Error ? e.message : String(e)));
+        DeviceRepository.getInstance().confirmProductId(deviceId);
         return next;
       });
       setAllDevices(prev => prev.map(d =>
