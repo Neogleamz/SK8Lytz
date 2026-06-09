@@ -18,5 +18,8 @@ services:
       - ./.scraper-data/photos:/app/.scraper-data/photos
       # Photographer bucket — CCTower writes to /app/.scraper-data/bucket (__dirname/../../.scraper-data/bucket)
       - ./.scraper-data/bucket:/app/.scraper-data/bucket
+      # Command Center Source — Mount local src so Vite dev server inside Docker can hot-reload your changes!
+      - ./tools/command-center/src:/app/tools/command-center/src
+      - ./tools/command-center/vite.config.ts:/app/tools/command-center/vite.config.ts
     env_file:
       - .env

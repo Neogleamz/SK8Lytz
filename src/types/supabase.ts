@@ -2109,6 +2109,10 @@ export type Database = {
           duration_sec: number
           id: string
           location_label: string | null
+          location_coords: Json | null
+          start_coords: Json | null
+          end_coords: Json | null
+          path_coords: Json | null
           peak_bpm: number | null
           peak_gforce: number | null
           peak_speed_mph: number
@@ -2126,6 +2130,10 @@ export type Database = {
           duration_sec?: number
           id?: string
           location_label?: string | null
+          location_coords?: Json | null
+          start_coords?: Json | null
+          end_coords?: Json | null
+          path_coords?: Json | null
           peak_bpm?: number | null
           peak_gforce?: number | null
           peak_speed_mph?: number
@@ -2143,6 +2151,10 @@ export type Database = {
           duration_sec?: number
           id?: string
           location_label?: string | null
+          location_coords?: Json | null
+          start_coords?: Json | null
+          end_coords?: Json | null
+          path_coords?: Json | null
           peak_bpm?: number | null
           peak_gforce?: number | null
           peak_speed_mph?: number

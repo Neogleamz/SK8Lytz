@@ -1015,3 +1015,12 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Master HEAD:** c09d627
 **Friction Audit:** 0 new events | 0 incremented | 0 resolved | Proposals due: none
 **System evolution:** none
+
+### [DECISION] 2026-06-09T00:16 — Restore Virtual Skates Dev Sandbox
+**Decision:** We will restore the Virtual Skates (Demo mode) feature using Dependency Injection in `useBLEScanner.ts`, gated strictly by `__DEV__`.
+**Rejected:** Complete library mock via `jest.mock`. Rejected because we need the sandbox to function in the actual Expo app for UI/UX testing, not just in test runners.
+**Don't re-derive:** The legacy implementation fragmented state between `STORAGE_DEMO_MODE`, `STORAGE_DEMO_HALO`, and `STORAGE_DEMO_SOUL`, but the scanner never read any of them. We will consolidate to `STORAGE_DEMO_MODE`.
+**Source:** `src/hooks/ble/useBLEScanner.ts`
+
+### [ARTIFACT] 2026-06-09T00:16 — `PLAN-restore-virtual-skates.md`
+**What:** Created implementation plan to restore virtual mock devices for local development testing.

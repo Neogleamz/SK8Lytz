@@ -7,7 +7,10 @@ export default defineConfig({
   server: {
     port: 5997,
     host: '0.0.0.0', // Needed for Docker to expose the port correctly
-    strictPort: true
+    strictPort: true,
+    watch: {
+      usePolling: true, // Fix for Windows file events not propagating to Docker containers
+    }
   },
   envDir: '../../',
   envPrefix: ['VITE_', 'EXPO_PUBLIC_']

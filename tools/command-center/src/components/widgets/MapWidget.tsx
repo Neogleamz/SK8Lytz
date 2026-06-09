@@ -8,8 +8,9 @@ import type { ColDef } from 'ag-grid-community';
 // AG-Grid > 31 requires manual module registration
 ModuleRegistry.registerModules([ClientSideRowModelModule]);
 
+// Force Vite to bundle and inject these styles for the component via HMR
 import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-alpine.css';
+import 'ag-grid-community/styles/ag-theme-quartz.css';
 
 interface DeviceData {
   id: string;
@@ -42,34 +43,40 @@ export default function MapWidget() {
   const gridRef = useRef<AgGridReact>(null);
 
   const fetchDevices = async () => {
-    // 1. Fetch devices
+    // 1. Fetch devices (ALL fields)
     const { data: rawDevices, error: devError } = await supabase
       .from('registered_devices')
-      .select('id, user_id, custom_name, product_type, firmware_ver, is_pending_sync, ic_type, last_lat, last_lng, device_mac, registered_at, points');
+      .select('*');
 
-    if (devError || !rawDevices) return;
+    if (devError) {
+      console.error("MapWidget devError:", devError);
+      setFilteredDevices([{ custom_name: `Error: ${devError.message}`, id: 'error', user_id: 'error' } as any]);
+      return;
+    }
+    if (!rawDevices) return;
+
+    // Satisfy TypeScript that rawDevices is definitely not null here
+    const validDevices = rawDevices as any[];
 
     // 2. Identify devices needing fallback coordinates
     const usersNeedingFallback = Array.from(new Set(
-      rawDevices.filter(d => d.last_lat === null || d.last_lng === null).map(d => d.user_id)
+      validDevices.map(d => d.user_id)
     ));
 
-    // 3. Fetch latest active or recent sessions for those users (Fallback to Option A)
+    // 3. Fetch latest active or recent sessions for those users
     const fallbackMap: Record<string, { lat: number, lng: number }> = {};
     if (usersNeedingFallback.length > 0) {
       const { data: sessions } = await supabase
         .from('crew_sessions')
-        .select('user_id, location_coords, updated_at')
+        .select('leader_user_id, location_coords, updated_at')
         .not('location_coords', 'is', null)
-        .in('user_id', usersNeedingFallback)
+        .in('leader_user_id', usersNeedingFallback)
         .order('updated_at', { ascending: false }) as any;
 
       if (sessions) {
         sessions.forEach((sess: any) => {
-          // Since it's ordered by updated_at descending, we only grab the first (latest)
-          if (!fallbackMap[sess.user_id] && sess.location_coords) {
-            // @ts-ignore
-            fallbackMap[sess.user_id] = {
+          if (!fallbackMap[sess.leader_user_id] && sess.location_coords) {
+            fallbackMap[sess.leader_user_id] = {
               lat: sess.location_coords.lat,
               lng: sess.location_coords.lng
             };
@@ -78,21 +85,72 @@ export default function MapWidget() {
       }
     }
 
-    // 4. Merge coordinates (Option B falls back to Option A)
-    const mergedDevices = rawDevices.map(d => {
-      let lat = d.last_lat;
-      let lng = d.last_lng;
-      if (lat === null || lng === null) {
-        if (fallbackMap[d.user_id]) {
-          lat = fallbackMap[d.user_id].lat;
-          lng = fallbackMap[d.user_id].lng;
-        }
+    // 3.5 Fallback to discovered_devices_telemetry using MAC Address
+    const macsNeedingFallback = validDevices
+      .filter(d => !fallbackMap[d.user_id] && d.device_mac)
+      .map(d => d.device_mac) as string[];
+    if (macsNeedingFallback.length > 0) {
+      const { data: telemetry } = await supabase
+        .from('discovered_devices_telemetry')
+        .select('device_mac, location')
+        .not('location', 'is', null)
+        .in('device_mac', macsNeedingFallback) as any;
+
+      if (telemetry) {
+        telemetry.forEach((t: any) => {
+          if (t.location) {
+            let lat = null;
+            let lng = null;
+            if (t.location.lat !== undefined) {
+              lat = t.location.lat;
+              lng = t.location.lng !== undefined ? t.location.lng : t.location.lon;
+            } else if (t.location.coordinates && Array.isArray(t.location.coordinates)) {
+              lng = t.location.coordinates[0];
+              lat = t.location.coordinates[1];
+            } else if (typeof t.location === 'string' && t.location.includes('POINT')) {
+               const match = t.location.match(/POINT\(([^ ]+)\s+([^ ]+)\)/);
+               if (match) {
+                 lng = parseFloat(match[1]);
+                 lat = parseFloat(match[2]);
+               }
+            }
+
+            if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
+              const owner = validDevices.find(d => d.device_mac === t.device_mac);
+              if (owner) {
+                fallbackMap[owner.user_id] = { lat, lng };
+              }
+            }
+          }
+        });
+      }
+    }
+
+    // 4. Merge coordinates
+    const mergedDevices = validDevices.map(d => {
+      let lat = null;
+      let lng = null;
+      if (fallbackMap[d.user_id]) {
+        lat = fallbackMap[d.user_id].lat;
+        lng = fallbackMap[d.user_id].lng;
       }
       return { ...d, last_lat: lat, last_lng: lng };
     });
 
     setDevices(mergedDevices as DeviceData[]);
     setFilteredDevices(mergedDevices as DeviceData[]);
+
+    // Dynamically set ALL columns if we have data
+    if (mergedDevices.length > 0) {
+      const keys = Object.keys(mergedDevices[0]).filter(k => k !== 'last_lat' && k !== 'last_lng');
+      const dynamicCols: ColDef<any>[] = keys.map(k => ({
+        field: k,
+        headerName: k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        filter: true,
+        sortable: true
+      }));
+      setColDefs(dynamicCols);
+    }
   };
 
   useEffect(() => {
@@ -109,26 +167,14 @@ export default function MapWidget() {
     }
   }, []);
 
-  const [colDefs] = useState<ColDef<DeviceData>[]>([
-    { field: 'custom_name', headerName: 'Name', filter: 'agTextColumnFilter', flex: 1 },
-    { field: 'device_mac', headerName: 'MAC Address', filter: 'agTextColumnFilter' },
-    { field: 'product_type', headerName: 'Product', filter: 'agTextColumnFilter' },
-    { field: 'firmware_ver', headerName: 'FW Ver', filter: 'agNumberColumnFilter' },
-    { field: 'ic_type', headerName: 'IC Type', filter: 'agTextColumnFilter' },
-    { field: 'points', headerName: 'LEDs', filter: 'agNumberColumnFilter' },
-    { field: 'is_pending_sync', headerName: 'Syncing', filter: 'agSetColumnFilter' },
-    { 
-      field: 'registered_at', 
-      headerName: 'Registered', 
-      filter: 'agDateColumnFilter',
-      valueFormatter: (p) => p.value ? new Date(p.value).toLocaleDateString() : '' 
-    }
-  ]);
+  const [colDefs, setColDefs] = useState<ColDef<any>[]>([]);
 
   const defaultColDef = useMemo(() => ({
     sortable: true,
     filter: true,
+    floatingFilter: true, // Show filter inputs under headers
     resizable: true,
+    minWidth: 150, // Prevents squishing, enables horizontal scroll
   }), []);
 
   const activeCount = filteredDevices.length;
@@ -136,18 +182,18 @@ export default function MapWidget() {
 
   return (
     <div className="h-full flex flex-col gap-6 overflow-y-auto pr-2 pb-10">
-      
+
       {/* Top Header */}
       <div className="flex justify-between items-center shrink-0">
         <h2 className="text-2xl font-bold text-white">Dynamic Fleet Ops</h2>
-        <div className="glass-panel px-4 py-2 rounded text-cyan-400 font-medium border border-cyan-500/30 bg-cyan-500/10">
+        <div className="glass-panel px-4 py-2 rounded text-cyan-400 font-medium border border-cyan-500/30 bg-cyan-500/10 shadow-[0_0_15px_rgba(34,211,238,0.15)]">
           {activeCount} Devices Found
         </div>
       </div>
       
       {/* Map Section */}
-      <div className="glass-panel rounded-xl relative overflow-hidden border border-slate-800 bg-[#0f172a] flex items-center justify-center p-4 shrink-0 min-h-[400px]">
-        <div className="relative w-full max-w-4xl opacity-80" style={{ aspectRatio: '959/593' }}>
+      <div className="glass-panel rounded-xl relative overflow-hidden border border-slate-800/50 bg-[#0f172a]/80 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center justify-center p-4 shrink-0 min-h-[400px]">
+        <div className="relative w-full max-w-4xl opacity-90" style={{ aspectRatio: '959/593' }}>
           
           <USAMap 
             width="100%" 
@@ -167,48 +213,31 @@ export default function MapWidget() {
                 style={pos}
               >
                 {/* Ping Dot */}
-                <div className="w-3 h-3 rounded-full bg-cyan-400 border border-[#0f172a] shadow-[0_0_8px_rgba(34,211,238,0.8)] cursor-pointer" />
-                
-                {/* Tooltip */}
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-900 border border-slate-700 rounded-lg p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-xl z-50">
-                  <div className="text-sm font-bold text-white mb-1">
-                    {dev.custom_name}
-                  </div>
-                  <div className="text-xs text-slate-400 leading-relaxed">
-                    Product: <span className="text-cyan-400">{dev.product_type}</span><br/>
-                    FW: {dev.firmware_ver}<br/>
-                    LEDs: {dev.points}<br/>
-                    MAC: {dev.device_mac}
-                  </div>
-                </div>
+                <div className="w-3 h-3 rounded-full bg-cyan-400 border border-[#0f172a] shadow-[0_0_12px_rgba(34,211,238,0.9)] cursor-pointer hover:scale-150 transition-transform duration-200" />
               </div>
             );
           })}
         </div>
-        
-        {mapDevices.length === 0 && (
-          <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm z-20">
-            <div className="text-slate-400 flex flex-col items-center gap-2">
-              <span className="text-3xl">📡</span>
-              <span className="font-medium">No Coordinates Found for Active Filter</span>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* AG-Grid Databank Section */}
       <div className="flex flex-col flex-1 shrink-0 min-h-[500px]">
-        <h3 className="text-xl font-semibold text-white mb-4">Fleet Databank</h3>
-        <div className="ag-theme-alpine-dark flex-1 w-full rounded-xl overflow-hidden border border-slate-800" style={{ '--ag-background-color': '#1e293b', '--ag-header-background-color': '#0f172a', '--ag-border-color': '#334155' } as any}>
-          <AgGridReact
-            ref={gridRef}
-            rowData={devices}
-            columnDefs={colDefs}
-            defaultColDef={defaultColDef}
-            onFilterChanged={onFilterChanged}
-            animateRows={true}
-            rowSelection="multiple"
-          />
+        <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 mb-4 tracking-wide">Fleet Databank</h3>
+        <div className="glass-panel p-1 rounded-xl border border-cyan-900/40 shadow-2xl bg-[#0f172a]/60 backdrop-blur-xl">
+          <div className="ag-theme-quartz-dark rounded-lg overflow-hidden" style={{ height: 500, width: '100%' }}>
+            <AgGridReact
+              ref={gridRef}
+              rowData={devices}
+              columnDefs={colDefs}
+              defaultColDef={defaultColDef}
+              onFilterChanged={onFilterChanged}
+              animateRows={true}
+              rowSelection="multiple"
+              suppressHorizontalScroll={false}
+              pagination={true}
+              paginationPageSize={10}
+            />
+          </div>
         </div>
       </div>
 

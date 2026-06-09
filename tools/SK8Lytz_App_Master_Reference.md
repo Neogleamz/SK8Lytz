@@ -567,7 +567,7 @@ _Lives in: `src/hooks/useDashboardAutoConnect.ts`_
 
 The dashboard auto-connect observer watches `allDevices` for registered peripherals that appear during passive scanning. It is hardened with:
 - **500ms debounce** — batches devices discovered within 500ms into a single `connectToDevices` call
-- **Gate check** — skips connection when `bleGateRef â‰  IDLE`
+- **Gate check** — skips connection when `bleGateRef ≠ IDLE`
 - **Pre-lock gate check** — checks gate state _before_ entering the 8s GATT lock poll (RC-04)
 - **Ref-forwarded closures** — `connectToDevices` and `scanForPeripherals` are captured via stable refs to eliminate stale closure bugs on re-render (RC-02)
 - **Prevents stampeding herd** — no concurrent auto-connect attempts
