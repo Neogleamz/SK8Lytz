@@ -35,8 +35,8 @@ CREATE POLICY "Admins can view and manage crash reports"
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM user_roles
-            WHERE user_roles.user_id = auth.uid() AND user_roles.role = 'admin'
+            SELECT 1 FROM public.user_profiles
+            WHERE public.user_profiles.user_id = auth.uid() AND public.user_profiles.role = 'admin'
         )
     );
 
