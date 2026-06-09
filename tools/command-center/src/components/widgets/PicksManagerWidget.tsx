@@ -6,35 +6,9 @@ import WebPositionalGradientBuilder from './WebPositionalGradientBuilder';
 import type { BuilderNode } from '../../protocols/PositionalMathBuffer';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 
-export interface Sk8LytzPick {
-  id: string;
-  sort_order: number;
-  name: string;
-  custom_name: string | null;
-  mode: string;
-  color: string;
-  pattern_id: number;
-  speed: number;
-  brightness: number;
-  fixed_color_mode: string | null;
-  fixed_fg_color: string | null;
-  fixed_bg_color: string | null;
-  fixed_direction: number | null;
-  fixed_hue: number | null;
-  multi_colors: string[] | null;
-  multi_transition: number | null;
-  multi_length: number | null;
-  music_primary_color: string | null;
-  music_secondary_color: string | null;
-  mic_sensitivity: number | null;
-  mic_source: string | null;
-  music_matrix_style: number | null;
-  builder_nodes: any[] | null;
-  builder_transition_type: number | null;
-  builder_direction: number | null;
-  builder_fill_mode: string | null;
-  is_active: boolean;
-}
+import type { Database } from '../../types/supabase';
+
+export type Sk8LytzPick = Database['public']['Tables']['sk8lytz_picks']['Row'];
 
 const DEFAULT_PICK: Partial<Sk8LytzPick> = {
   sort_order: 100,
@@ -265,7 +239,8 @@ function EditorModal({ pick, onClose, onSave }: { pick: Partial<Sk8LytzPick>, on
     }
     
     if (formData.mode === 'MULTIMODE' && formData.multi_colors) {
-      for (const hex of formData.multi_colors) {
+      const colorsArray = formData.multi_colors as string[];
+      for (const hex of colorsArray) {
         if (!hexRegex.test(hex)) return setValidationError(`Multi color '${hex}' is not a valid hex code.`);
       }
     }
@@ -304,9 +279,9 @@ function EditorModal({ pick, onClose, onSave }: { pick: Partial<Sk8LytzPick>, on
                 fixedFgColor={formData.fixed_fg_color || formData.color || undefined}
                 fixedBgColor={formData.fixed_bg_color || '#000000'}
                 fixedDirection={formData.fixed_direction ?? 1}
-                multiColors={formData.multi_colors || []}
+                multiColors={(formData.multi_colors as string[]) || []}
                 multiTransition={formData.multi_transition || 0}
-                builderNodes={formData.builder_nodes || undefined}
+                builderNodes={(formData.builder_nodes as any[]) || undefined}
                 builderFillMode={(formData.builder_fill_mode as 'GRADIENT' | 'SOLID') || 'GRADIENT'}
                 builderTransitionType={formData.builder_transition_type ?? 1}
                 builderDirection={formData.builder_direction ?? 1}
@@ -337,11 +312,11 @@ function EditorModal({ pick, onClose, onSave }: { pick: Partial<Sk8LytzPick>, on
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm text-slate-400 mb-1">Sort Order</label>
-                <input required type="number" name="sort_order" value={formData.sort_order ?? 100} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full" />
+                <input required type="number" name="sort_order" value={formData.sort_order === null || formData.sort_order === undefined ? '' : formData.sort_order} onChange={handleChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full" />
               </div>
               <div>
                 <label className="block text-sm text-slate-400 mb-1">Pattern</label>
-                <select name="pattern_id" value={formData.pattern_id ?? 1} onChange={(e) => setFormData({...formData, pattern_id: Number(e.target.value)})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full">
+                <select name="pattern_id" value={formData.pattern_id === null || formData.pattern_id === undefined ? '' : formData.pattern_id} onChange={(e) => setFormData({...formData, pattern_id: Number(e.target.value)})} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full">
                   {Array.from(new Set(SK8LYTZ_TEMPLATES.map(t => t.group))).map(group => (
                     <optgroup key={group} label={group}>
                       {SK8LYTZ_TEMPLATES.filter(t => t.group === group && !t.isHidden).map(t => (
@@ -352,7 +327,7 @@ function EditorModal({ pick, onClose, onSave }: { pick: Partial<Sk8LytzPick>, on
                   {/* Catch-all for hidden/system patterns that might be set */}
                   {SK8LYTZ_TEMPLATES.filter(t => t.isHidden).some(t => t.id === formData.pattern_id) && (
                     <optgroup label="System/Hidden">
-                      <option value={formData.pattern_id}>{SK8LYTZ_TEMPLATES.find(t => t.id === formData.pattern_id)?.name} (ID: {formData.pattern_id})</option>
+                      <option value={formData.pattern_id ?? undefined}>{SK8LYTZ_TEMPLATES.find(t => t.id === formData.pattern_id)?.name} (ID: {formData.pattern_id})</option>
                     </optgroup>
                   )}
                 </select>
@@ -457,7 +432,7 @@ function EditorModal({ pick, onClose, onSave }: { pick: Partial<Sk8LytzPick>, on
                 </div>
                 <div className="col-span-full">
                   <label className="block text-sm text-slate-400 mb-1">Multi Colors (Comma separated hex codes)</label>
-                  <input type="text" name="multi_colors" value={(formData.multi_colors || []).join(', ')} onChange={handleArrayChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full font-mono uppercase" placeholder="#FF0000, #00FF00, #0000FF" />
+                  <input type="text" name="multi_colors" value={((formData.multi_colors as string[]) || []).join(', ')} onChange={handleArrayChange} className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full font-mono uppercase" placeholder="#FF0000, #00FF00, #0000FF" />
                 </div>
                 <div>
                   <label className="block text-sm text-slate-400 mb-1">Multi Transition Type</label>
@@ -505,8 +480,8 @@ function EditorModal({ pick, onClose, onSave }: { pick: Partial<Sk8LytzPick>, on
               <div className="col-span-full mt-4">
                 <h4 className="text-amber-400 font-semibold border-b border-slate-800 pb-4 mb-4">Payload Builder Configuration</h4>
                 <WebPositionalGradientBuilder 
-                  nodes={formData.builder_nodes || [{ id: 'node_init', position: 0, colorHex: formData.color || '#FFFFFF' }]}
-                  onNodesChange={(nodes) => setFormData({ ...formData, builder_nodes: nodes })}
+                  nodes={(formData.builder_nodes as unknown as BuilderNode[]) || [{ id: 'node_init', position: 0, colorHex: formData.color || '#FFFFFF' }]}
+                  onNodesChange={(nodes) => setFormData({ ...formData, builder_nodes: nodes as any })}
                   fillMode={(formData.builder_fill_mode as 'GRADIENT' | 'SOLID') || 'GRADIENT'}
                   onFillModeChange={(mode) => setFormData({ ...formData, builder_fill_mode: mode })}
                   transitionType={formData.builder_transition_type ?? 1}

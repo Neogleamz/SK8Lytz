@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -14,52 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-
-      crash_telemetry: {
-        Row: {
-          id: string
-          user_id: string | null
-          error_signature: string
-          stack_trace: string | null
-          breadcrumbs: Json | null
-          environment_state: Json | null
-          severity: string | null
-          status: string | null
-          app_version: string | null
-          created_at: string | null
-          resolved_at: string | null
-          resolved_by: string | null
-        }
-        Insert: {
-          id?: string
-          user_id?: string | null
-          error_signature: string
-          stack_trace?: string | null
-          breadcrumbs?: Json | null
-          environment_state?: Json | null
-          severity?: string | null
-          status?: string | null
-          app_version?: string | null
-          created_at?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-        }
-        Update: {
-          id?: string
-          user_id?: string | null
-          error_signature?: string
-          stack_trace?: string | null
-          breadcrumbs?: Json | null
-          environment_state?: Json | null
-          severity?: string | null
-          status?: string | null
-          app_version?: string | null
-          created_at?: string | null
-          resolved_at?: string | null
-          resolved_by?: string | null
-        }
-        Relationships: []
-      }
       admin_audit_logs: {
         Row: {
           action: string
@@ -87,44 +41,6 @@ export type Database = {
         }
         Relationships: []
       }
-      telemetry_snapshots: {
-        Row: {
-          created_at: string | null
-          device_id: string | null
-          event_type: string
-          id: string
-          metadata: Json | null
-          session_id: string
-          user_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          device_id?: string | null
-          event_type: string
-          id?: string
-          metadata?: Json | null
-          session_id: string
-          user_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          device_id?: string | null
-          event_type?: string
-          id?: string
-          metadata?: Json | null
-          session_id?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "telemetry_snapshots_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       app_settings: {
         Row: {
           created_at: string
@@ -140,6 +56,51 @@ export type Database = {
           created_at?: string
           setting_key?: string
           setting_value?: Json | null
+        }
+        Relationships: []
+      }
+      crash_telemetry: {
+        Row: {
+          app_version: string | null
+          breadcrumbs: Json | null
+          created_at: string | null
+          environment_state: Json | null
+          error_signature: string
+          id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string | null
+          stack_trace: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          app_version?: string | null
+          breadcrumbs?: Json | null
+          created_at?: string | null
+          environment_state?: Json | null
+          error_signature: string
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
+          stack_trace?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          app_version?: string | null
+          breadcrumbs?: Json | null
+          created_at?: string | null
+          environment_state?: Json | null
+          error_signature?: string
+          id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
+          stack_trace?: string | null
+          status?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1981,6 +1942,33 @@ export type Database = {
         }
         Relationships: []
       }
+      shopify_webhook_logs: {
+        Row: {
+          created_at: string
+          id: string
+          payload: Json
+          shopify_event_id: string
+          status: string
+          topic: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          payload: Json
+          shopify_event_id: string
+          status?: string
+          topic?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payload?: Json
+          shopify_event_id?: string
+          status?: string
+          topic?: string | null
+        }
+        Relationships: []
+      }
       sk8lytz_app_settings: {
         Row: {
           created_at: string
@@ -1992,17 +1980,17 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          setting_key: string
           description?: string | null
           is_enabled?: boolean | null
+          setting_key: string
           setting_value?: Json | null
           updated_at?: string
         }
         Update: {
           created_at?: string
-          setting_key?: string
           description?: string | null
           is_enabled?: boolean | null
+          setting_key?: string
           setting_value?: Json | null
           updated_at?: string
         }
@@ -2112,53 +2100,62 @@ export type Database = {
       }
       skate_sessions: {
         Row: {
-          active_calories: number | null
           avg_bpm: number | null
           avg_speed_mph: number
           calories: number | null
           crew_session_id: string | null
           distance_miles: number
           duration_sec: number
+          end_coords: Json | null
           id: string
+          location_coords: Json | null
           location_label: string | null
+          path_coords: Json | null
           peak_bpm: number | null
           peak_gforce: number | null
           peak_speed_mph: number
           session_date: string
+          start_coords: Json | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
-          active_calories?: number | null
           avg_bpm?: number | null
           avg_speed_mph?: number
           calories?: number | null
           crew_session_id?: string | null
           distance_miles?: number
           duration_sec?: number
+          end_coords?: Json | null
           id?: string
+          location_coords?: Json | null
           location_label?: string | null
+          path_coords?: Json | null
           peak_bpm?: number | null
           peak_gforce?: number | null
           peak_speed_mph?: number
           session_date?: string
+          start_coords?: Json | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
-          active_calories?: number | null
           avg_bpm?: number | null
           avg_speed_mph?: number
           calories?: number | null
           crew_session_id?: string | null
           distance_miles?: number
           duration_sec?: number
+          end_coords?: Json | null
           id?: string
+          location_coords?: Json | null
           location_label?: string | null
+          path_coords?: Json | null
           peak_bpm?: number | null
           peak_gforce?: number | null
           peak_speed_mph?: number
           session_date?: string
+          start_coords?: Json | null
           updated_at?: string | null
           user_id?: string
         }
@@ -2923,7 +2920,36 @@ export type Database = {
         }
         Relationships: []
       }
-
+      telemetry_snapshots: {
+        Row: {
+          created_at: string | null
+          device_id: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          session_id: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          device_id?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          session_id: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          device_id?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          session_id?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       template_subtasks: {
         Row: {
           estimated_minutes: number | null
@@ -3211,6 +3237,17 @@ export type Database = {
         }
         Relationships: []
       }
+      view_crash_aggregates: {
+        Row: {
+          affected_users: number | null
+          crash_count: number | null
+          error_signature: string | null
+          first_seen: string | null
+          last_seen: string | null
+          status: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       _postgis_deprecate: {
@@ -3377,6 +3414,7 @@ export type Database = {
         Args: { p_target_user_id: string }
         Returns: undefined
       }
+      delete_account: { Args: never; Returns: undefined }
       delete_group_cascade: { Args: { p_group_id: string }; Returns: undefined }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
@@ -3709,6 +3747,7 @@ export type Database = {
         Returns: undefined
       }
       increment_scene_upvote: { Args: { scene_id: string }; Returns: undefined }
+      is_admin: { Args: never; Returns: boolean }
       longtransactionsenabled: { Args: never; Returns: boolean }
       populate_geometry_columns:
         | { Args: { tbl_oid: unknown; use_typmod?: boolean }; Returns: number }
@@ -3750,6 +3789,10 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      resolve_crash_signature: {
+        Args: { resolver_id?: string; target_signature: string }
+        Returns: undefined
+      }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
@@ -4349,10 +4392,6 @@ export type Database = {
           p_group_name: string
           p_type: string
         }
-        Returns: undefined
-      }
-      delete_account: {
-        Args: Record<PropertyKey, never>
         Returns: undefined
       }
     }
