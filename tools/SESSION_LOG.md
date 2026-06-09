@@ -1024,3 +1024,17 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 
 ### [ARTIFACT] 2026-06-09T00:16 � `PLAN-restore-virtual-skates.md`
 **What:** Created implementation plan to restore virtual mock devices for local development testing.
+
+
+### [MERGE] 2026-06-09T05:32 — feat/restore-virtual-skates → master @ ad7c4094
+**What merged:** 
+- Restored Virtual Skates Sandbox for Dev mode UI testing.
+- Consolidated demo state flags to single \STORAGE_DEMO_MODE\.
+- Mock devices injected into BLE Scanner loop dynamically under \__DEV__\ guard.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:**
+- \src/components/auth/AuthFooterActions.tsx\n- \src/hooks/ble/useBLEScanner.ts\n- \src/hooks/useBLE.ts\n
+### [DECISION] 2026-06-09T00:33 - Command Center AG Grid 35 styling
+**Decision:** Migrated AG Grid to JS Theme API (	hemeQuartz.withParams) and enabled AllCommunityModule.
+**Rejected:** Legacy CSS imports and class-based styling, because AG Grid v35 strictly forbids mixed styling (Error 106) and throws Error 200 without strict module registration.
+**Don't re-derive:** Never use g-grid.css with g-theme-* classes in v35+. Always use JS Theme API and AllCommunityModule.

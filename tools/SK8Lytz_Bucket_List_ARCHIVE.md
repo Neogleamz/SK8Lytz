@@ -968,3 +968,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "Calling useProtocolDispatch() from useControllerDispatch — banned by comment at useControllerDispatch.ts:10-11 (creates orphan useBLE instance). Rejected."
   - **Source of Truth:** 📖 [useControllerDispatch.ts:17-21](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useControllerDispatch.ts#L17-L21) · [PatternEngine.ts:192](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/PatternEngine.ts#L192) · [IControllerProtocol.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/IControllerProtocol.ts) · [BleWriteDispatcher.ts:143](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleWriteDispatcher.ts#L143)
   - **Details:** Adds `getAdapterForDevice` + `primaryDeviceId` to `UseControllerDispatchParams`. Adds optional `protocol` param to `buildPatternPayload` with Zengge as default (zero regression for existing solo-Zengge users). `DockedController.tsx` changes are surgical — only the `useControllerDispatch` call site (lines 551-560). God Object lock still applies — no other changes in that file.
+
+- [x] **`feat/restore-virtual-skates`** — merged @ 0aca27c1 (restored virtual skates DI)
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🤖 PRO-HIGH]` `[BATCH:virtual-skates]`
+  - **Goal:** Restore the Dev Sandbox Virtual Skates by injecting Mock devices into the BLE Scanner engine.
+  - **Decision Log:** The UI toggle correctly sets the DEMO flag, but the scanner engine currently drops the connection loop because it never intercepts the physical scan. This restores local testing velocity without actual hardware.
+  - **Analysis:** 📊 Plan: [PLAN-restore-virtual-skates.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/plans/PLAN-restore-virtual-skates.md)
+    Key finding: "The previous implementation set STORAGE_DEMO_HALO/SOUL but the scanner never read them. We will unify under STORAGE_DEMO_MODE."
+    Rejected alternative: "Mocking the BleManager library completely via jest.mock — rejected because it breaks the iOS build and doesn't run in the actual Expo Go app."
+  - **Source of Truth:** 📖 `src/hooks/ble/useBLEScanner.ts`
+  - **Details:** Must strictly enforce `__DEV__` gating. Use Dependency Injection in the scanner to yield fake Device objects instead of triggering the Bluetooth radio.
