@@ -27,6 +27,57 @@ export async function executeWriteToDevice(
   stateRefs: BleWriteStateRefs,
   setWriteGeneration: (gen: number) => void
 ): Promise<boolean | 'partial'> {
+  // BEGIN BUFFER LOCKOUT DEFENSE (Rule 10)
+  if (payload[0] === 0x59 && payload.length >= 10) {
+    const totalLen = (payload[1] << 8) | payload[2];
+    const numLEDs = Math.floor((totalLen - 9) / 3);
+    
+    if (numLEDs > 0 && numLEDs < 12) {
+      const paddingPixels = 12 - numLEDs;
+      const paddingBytes = paddingPixels * 3;
+      const newTotalLen = totalLen + paddingBytes;
+      
+      const newPayload = new Array(newTotalLen + 1).fill(0);
+      newPayload[0] = 0x59;
+      newPayload[1] = (newTotalLen >> 8) & 0xFF;
+      newPayload[2] = newTotalLen & 0xFF;
+      
+      let srcIdx = 3;
+      let dstIdx = 3;
+      const existingRgbBytes = numLEDs * 3;
+      for (let i = 0; i < existingRgbBytes; i++) {
+        newPayload[dstIdx++] = payload[srcIdx++];
+      }
+      
+      for (let i = 0; i < paddingBytes; i++) {
+        newPayload[dstIdx++] = 0x00;
+      }
+      
+      const footerStart = srcIdx;
+      // Safety check in case payload is truncated
+      if (footerStart + 4 < payload.length) {
+        const origLedPoints = (payload[footerStart] << 8) | payload[footerStart + 1];
+        const safeLedPoints = Math.max(12, origLedPoints);
+        
+        newPayload[dstIdx++] = (safeLedPoints >> 8) & 0xFF;
+        newPayload[dstIdx++] = safeLedPoints & 0xFF;
+        
+        newPayload[dstIdx++] = payload[footerStart + 2];
+        newPayload[dstIdx++] = payload[footerStart + 3];
+        newPayload[dstIdx++] = payload[footerStart + 4];
+        
+        let checksum = 0;
+        for (let i = 0; i < dstIdx; i++) {
+          checksum += newPayload[i];
+        }
+        newPayload[dstIdx] = checksum & 0xFF;
+        
+        payload = newPayload;
+      }
+    }
+  }
+  // END BUFFER LOCKOUT DEFENSE
+
   const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
   AppLogger.setLastTxPayload(hexString);
 
