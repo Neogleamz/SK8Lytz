@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useRef, useState } from 'react';
-import { LayoutChangeEvent, PanResponder, StyleSheet, View } from 'react-native';
+import { LayoutChangeEvent, PanResponder, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
 interface CustomSliderProps {
@@ -9,7 +9,7 @@ interface CustomSliderProps {
   onSlidingComplete?: (val: number) => void;
   minimumValue?: number;
   maximumValue?: number;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
   gradientTrack?: boolean;
   step?: number;
   thumbTintColor?: string;

@@ -32,7 +32,36 @@ function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-export const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, hwSettings, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1, fixedDirection = 1, streetDistribution = [0.3, 0.4, 0.3] }: any) => {
+export interface VisualizerUnitProps {
+  device?: { type?: string; name?: string; points?: number; segments?: number };
+  color: string;
+  mode: string;
+  patternId?: number | null;
+  animValue: Animated.Value;
+  fallbackProduct?: string;
+  fallbackPoints?: number;
+  hwSettings?: { ledPoints?: number; segments?: number };
+  onLongPress?: (device: unknown) => void;
+  fixedFgColor?: string;
+  fixedBgColor?: string;
+  brightness?: number;
+  speed?: number;
+  isPoweredOn?: boolean;
+  audioMagnitude?: number;
+  multiColors?: string[];
+  multiTransition?: number;
+  isStreetBraking?: boolean;
+  streetCruiseColor?: string;
+  motionState?: string;
+  builderNodes?: unknown[];
+  builderFillMode?: string;
+  builderTransitionType?: number;
+  builderDirection?: number;
+  fixedDirection?: number;
+  streetDistribution?: [number, number, number];
+}
+
+export const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, hwSettings, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1, fixedDirection = 1, streetDistribution = [0.3, 0.4, 0.3] }: VisualizerUnitProps) => {
   const { isDark: _isDark } = useTheme();
   // Guard against String(undefined)='undefined' which causes silent SOULZ fallback for HALOZ devices
   const product = (device?.type && device.type !== 'undefined') ? String(device.type) : String(fallbackProduct || 'SOULZ');
@@ -92,7 +121,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
   // ── PATH GEOMETRY (expensive) — only recomputes on shape/product change, NEVER on animTick ──
   const pathGeometry = useMemo(() => {
     const numSamples = 5000;
-    const pathSamples: any[] = [];
+    const pathSamples: { top: number; left: number; length: number }[] = [];
     let totalLength = 0;
 
     // SCALE FACTOR (SHRUNK)
@@ -270,8 +299,8 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
       const fract = Math.floor(rawFract * numLeds) / numLeds;
       const mirroredFract = fract <= 0.5 ? fract * 2 : (1 - fract) * 2;
 
-      let dotColor: any = isPoweredOn ? color : '#333333';
-      let dotOpacity: any = isPoweredOn ? 1 : 0.2;
+      let dotColor: string | Animated.AnimatedInterpolation<string> = isPoweredOn ? color : '#333333';
+      let dotOpacity: number | Animated.AnimatedInterpolation<number> = isPoweredOn ? 1 : 0.2;
 
       // RING: use rawFract directly — (rawFract * deviceSegments) % 1 creates phantom gaps at arc midpoints for HALOZ (deviceSegments=2).
       // SOULZ: deviceSegments=1 so isGap is always false regardless — no impact.
@@ -348,7 +377,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
           if (!builderNodes || builderNodes.length === 0) {
             builderPixels = Array.from({ length: activeSegmentLeds }).map(() => ({ r: 255, g: 0, b: 0 }));
           } else {
-            builderPixels = PositionalMathBuffer.generateArray(builderNodes, activeSegmentLeds, builderFillMode === 'GRADIENT');
+            builderPixels = PositionalMathBuffer.generateArray(builderNodes as any[], activeSegmentLeds, builderFillMode === 'GRADIENT');
           }
 
           // 0x02=Running, 0x04=Jump → scroll the pixel array using animTick
@@ -520,7 +549,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
           style={{ color: isPoweredOn ? 'white' : '#888', fontWeight: 'bold', fontSize: 11, textAlign: 'center', opacity: isPoweredOn ? 1.0 : 0.4 }}
           numberOfLines={2}
         >
-          {device.name || product}
+          {device?.name || product}
         </Text>
       </View>
     </TouchableOpacity>

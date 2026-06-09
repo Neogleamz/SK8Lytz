@@ -15,7 +15,7 @@ interface DeviceSettingsModalProps {
   onClose: () => void;
   onSave: (settings: DeviceSettings) => void | Promise<void>;
   initialSettings: DeviceSettings;
-  groups?: any[];
+  groups?: { id: string; name: string }[];
   writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
   /** If provided, shows a "Forget Device" button that deregisters and closes the modal */
   onDeregister?: () => void;

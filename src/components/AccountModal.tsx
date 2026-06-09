@@ -306,8 +306,7 @@ export default function AccountModal({
 
   // ── Notification prefs ────────────────────────────────────────────────────
 
-  // Notification and Security handlers
-  const _handleSaveNotifPrefs = (prefs: any) => saveNotifPrefs(prefs);
+  const _handleSaveNotifPrefs = (prefs: unknown) => saveNotifPrefs(prefs as Parameters<typeof saveNotifPrefs>[0]);
 
   const handleChangePassword = async () => {
     setSecurityMsg(null);

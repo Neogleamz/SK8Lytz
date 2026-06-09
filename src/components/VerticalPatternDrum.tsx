@@ -114,7 +114,7 @@ const VerticalPatternDrum = ({
                ListFooterComponent={<View style={{ height: padCount * ITEM_HEIGHT }} />}
                getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
                renderItem={({ item }) => {
-                 const itemVal = (item as unknown as { val: any }).val;
+                 const itemVal = (item as unknown as { val: number }).val;
                  const isSelected = itemVal === localVal;
                  
                  return (
