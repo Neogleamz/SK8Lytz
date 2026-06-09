@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Switch } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../services/supabaseClient';
@@ -13,6 +13,22 @@ interface DevSandboxDrawerProps {
 
 export function DevSandboxDrawer({ onOfflineMode, setErrorMessage }: DevSandboxDrawerProps) {
   const [expanded, setExpanded] = useState(false);
+  const [isVirtualSkatesEnabled, setIsVirtualSkatesEnabled] = useState(false);
+
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_DEMO_MODE).then(val => setIsVirtualSkatesEnabled(val === 'true'));
+  }, []);
+
+  const toggleVirtualSkates = async (value: boolean) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_DEMO_MODE, value ? 'true' : 'false');
+      setIsVirtualSkatesEnabled(value);
+      setErrorMessage(value ? 'VIRTUAL SKATES ENABLED' : 'VIRTUAL SKATES DISABLED');
+      if (value) onOfflineMode?.();
+    } catch (e: unknown) {
+      setErrorMessage('Failed to toggle Virtual Skates: ' + String(e));
+    }
+  };
 
   // Hidden in production entirely
   if (!__DEV__ && typeof window === 'undefined') {
@@ -44,37 +60,17 @@ export function DevSandboxDrawer({ onOfflineMode, setErrorMessage }: DevSandboxD
         <Text style={styles.headerText}>DEV SANDBOX TOOLS</Text>
       </TouchableOpacity>
 
-      <View style={styles.buttonRow}>
-        <TouchableOpacity
-          style={[styles.actionBtn, { borderColor: '#00FF00', backgroundColor: 'rgba(0,255,0,0.1)' }]}
-          onPress={async () => {
-            try {
-              await AsyncStorage.setItem(STORAGE_DEMO_MODE, 'true');
-              setErrorMessage('VIRTUAL SKATES LOADED');
-              onOfflineMode?.();
-            } catch (e: unknown) {
-              setErrorMessage('Failed to load Virtual Skates: ' + String(e));
-            }
-          }}
-        >
-          <MaterialCommunityIcons name="skate" size={18} color="#00FF00" />
-          <Text style={[styles.actionText, { color: '#00FF00' }]}>LOAD VIRTUAL SKATES</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionBtn, { borderColor: '#FFBB00', backgroundColor: 'rgba(255,187,0,0.1)' }]}
-          onPress={async () => {
-            try {
-              await AsyncStorage.setItem(STORAGE_DEMO_MODE, 'false');
-              setErrorMessage('VIRTUAL SKATES UNLOADED');
-            } catch (e: unknown) {
-              setErrorMessage('Failed to unload Virtual Skates: ' + String(e));
-            }
-          }}
-        >
-          <MaterialCommunityIcons name="skate-off" size={18} color="#FFBB00" />
-          <Text style={[styles.actionText, { color: '#FFBB00' }]}>UNLOAD VIRTUAL SKATES</Text>
-        </TouchableOpacity>
+      <View style={[styles.buttonRow, { alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(255,255,255,0.05)', padding: Spacing.md, borderRadius: 8, marginBottom: Spacing.sm }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
+          <MaterialCommunityIcons name="skate" size={20} color={isVirtualSkatesEnabled ? '#00FF00' : '#888'} />
+          <Text style={{ color: isVirtualSkatesEnabled ? '#00FF00' : '#888', fontWeight: 'bold' }}>VIRTUAL SKATES</Text>
+        </View>
+        <Switch 
+          value={isVirtualSkatesEnabled} 
+          onValueChange={toggleVirtualSkates}
+          trackColor={{ false: '#444', true: 'rgba(0,255,0,0.5)' }}
+          thumbColor={isVirtualSkatesEnabled ? '#00FF00' : '#888'}
+        />
       </View>
 
       <View style={styles.buttonRow}>
