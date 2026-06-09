@@ -25,6 +25,23 @@ const RSSI_THRESHOLD = -80;
 const DEBOUNCE_MS = 1500;
 const DEBOUNCE_MS_FTUE = 800;
 
+function determineFactoryName(device: Device): string | undefined {
+  const FFD5_UUID = '0000ffd5-0000-1000-8000-00805f9b34fb';
+  if (device.serviceUUIDs?.includes(ZENGGE_SERVICE_UUID) || device.serviceUUIDs?.includes(FFD5_UUID)) {
+    return 'Zengge';
+  }
+  if (device.serviceUUIDs?.includes(BANLANX_SERVICE_UUID)) {
+    if (device.manufacturerData) {
+      try {
+        const buf = Buffer.from(device.manufacturerData, 'base64');
+        if (buf.toString('hex').includes('5053')) return 'BanlanX';
+      } catch (e) {}
+    }
+    return 'BanlanX';
+  }
+  return undefined;
+}
+
 export interface UseBLEScannerProps {
   bleManager: BleManager | null;
   allDevices: Device[];
@@ -245,6 +262,8 @@ export function useBLEScanner({
           }
         } catch (e: unknown) { AppLogger.warn('[Scanner] Failed to parse firmware', { mac, error: e instanceof Error ? e.message : String(e)  }); }
       }
+
+      Object.assign(device, { factoryName: determineFactoryName(device) });
 
       const now = Date.now();
       const lastSeenTel = telemetryCacheRef.current.get(mac);

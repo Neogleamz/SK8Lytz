@@ -36,6 +36,7 @@ interface BLERawDevice {
   hwRfMode?: string;
   hwRfPairedCount?: number;
   product_type?: string;
+  factoryName?: string;
 }
 
 /** Shape of an individual EEPROM cache entry from useBLESweeper. */
@@ -93,7 +94,7 @@ export function mapDeviceToRegistration(
   return {
     device_mac:         mac,
     device_name:        `SK8Lytz-${deviceIdShort}`,
-    factory_name:       device.name || 'Unknown',
+    factory_name:       device.factoryName || device.name || 'Unknown',
     manufacturer_data:  device.manufacturerData ?? undefined,
     ble_version:        device.bleVersion,
     product_type:       resolvedType as PendingRegistration['product_type'],
