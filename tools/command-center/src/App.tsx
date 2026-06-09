@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { supabase, checkAdminStatus } from './services/supabase';
-import { LayoutDashboard, Users, ShieldAlert, Activity, Settings, Map, Bug, Database, Palette, ChevronDown, ChevronRight, Radar, Megaphone, ScrollText, Truck, Smartphone } from 'lucide-react';
+import { LayoutDashboard, Users, ShieldAlert, Activity, Settings, Map, Bug, Database, Palette, ChevronDown, ChevronRight, Radar, Megaphone, ScrollText, Truck, Smartphone, BookOpen } from 'lucide-react';
 import ScraperApp from './scraper/ScraperApp';
 import MapWidget from './components/widgets/MapWidget';
 import FleetHealthWidget from './components/widgets/FleetHealthWidget';
@@ -14,6 +14,7 @@ import PicksManagerWidget from './components/widgets/PicksManagerWidget';
 import ReleaseRadarWidget from './components/widgets/ReleaseRadarWidget';
 import AuditLogsWidget from './components/widgets/AuditLogsWidget';
 import PromoBlastWidget from './components/widgets/PromoBlastWidget';
+import CheatSheetWidget from './components/widgets/CheatSheetWidget';
 import './index.css';
 
 const NavGroup = ({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) => {
@@ -63,6 +64,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => (
 
         <NavGroup title="Content & Data" icon={Database}>
           <Link to="/scraper" className="nav-link"><Database size={16} /> Scraper Dashboard</Link>
+          <Link to="/cheat-sheet" className="nav-link"><BookOpen size={16} /> Protocol Cheat Sheet</Link>
         </NavGroup>
       </nav>
       <div className="sidebar-footer">
@@ -178,6 +180,7 @@ export default function App() {
           <Route path="/release-radar" element={<ReleaseRadarWidget />} />
           <Route path="/audit-logs" element={<AuditLogsWidget />} />
           <Route path="/promo-blast" element={<PromoBlastWidget />} />
+          <Route path="/cheat-sheet" element={<div className="p-6 h-full"><CheatSheetWidget /></div>} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AdminLayout>

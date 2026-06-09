@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SK8Lytz — AI Team Cheat Sheet</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap');
+
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a26;
+      --border: #2a2a3e;
+      --border-bright: #3a3a5c;
+      --text: #e8e8f0;
+      --muted: #8888aa;
+      --reyes:   #a78bfa;
+      --jordan:  #fb923c;
+      --casey:   #38bdf8;
+      --morgan:  #a3e635;
+      --quinn:   #818cf8;
+      --sage:    #34d399;
+      --blake:   #f472b6;
+      --avery:   #fbbf24;
+      --taylor:  #c084fc;
+      --river:   #f87171;
+      --alex:    #94a3b8;
+      --green:   #34d399;
+      --yellow:  #fbbf24;
+      --red:     #f87171;
+      --blue:    #60a5fa;
+      --t1: #f87171;
+      --t2: #fb923c;
+      --t3: #34d399;
+      --t4: #f472b6;
+      --t5: #c084fc;
+      --t6: #60a5fa;
+      --t7: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      line-height: 1.5;
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .page-header h1 {
+      font-size: 26px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #a78bfa, #38bdf8, #34d399);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+    }
+    .page-header p {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .grid-wide { grid-column: span 2; }
+    .grid-full { grid-column: span 3; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent, var(--border-bright));
+    }
+
+    .card h2 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .card h2 .icon { font-size: 14px; }
+
+    /* Command rows */
+    .cmd-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .cmd-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+    .cmd {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--surface2);
+      border: 1px solid var(--border-bright);
+      padding: 3px 8px;
+      border-radius: 5px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      color: var(--text);
+    }
+    .cmd.magic {
+      background: rgba(167, 139, 250, 0.15);
+      border-color: var(--reyes);
+      color: var(--reyes);
+    }
+    .cmd.danger {
+      background: rgba(248, 113, 113, 0.12);
+      border-color: var(--red);
+      color: var(--red);
+    }
+    .cmd.go {
+      background: rgba(52, 211, 153, 0.12);
+      border-color: var(--green);
+      color: var(--green);
+    }
+    .cmd.warn {
+      background: rgba(251, 191, 36, 0.12);
+      border-color: var(--yellow);
+      color: var(--yellow);
+    }
+
+    .cmd-desc {
+      color: var(--muted);
+      font-size: 12px;
+      padding-top: 3px;
+    }
+    .cmd-desc strong { color: var(--text); font-weight: 600; }
+
+    /* Persona chips */
+    .persona-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .persona-chip {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 9px 11px;
+      border-left: 3px solid var(--color);
+    }
+    .persona-chip .name {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--color);
+      margin-bottom: 3px;
+    }
+    .persona-chip .trigger {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.4;
+    }
+    .persona-chip .trigger em {
+      color: var(--text);
+      font-style: italic;
+    }
+
+    /* Tier workflow tables */
+    .tier-section {
+      margin-bottom: 0;
+    }
+    .tier-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      padding: 5px 0 8px 0;
+      color: var(--tier-color);
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 8px;
+    }
+    .tier-label .tier-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--tier-color);
+      flex-shrink: 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 4px;
+    }
+    th {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      padding: 5px 7px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      font-size: 12px;
+      padding: 6px 7px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+      color: var(--muted);
+    }
+    td:first-child {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    tr:last-child td { border-bottom: none; }
+    .tag {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+    .tag-green { background: rgba(52,211,153,.12); border-color: var(--green); color: var(--green); }
+    .tag-red   { background: rgba(248,113,113,.12); border-color: var(--red);   color: var(--red);   }
+    .tag-blue  { background: rgba(96,165,250,.12);  border-color: var(--blue);  color: var(--blue);  }
+    .tag-purple { background: rgba(167,139,250,.12); border-color: var(--reyes); color: var(--reyes); }
+
+    /* QA Pipeline visual */
+    .qa-pipeline {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin: 8px 0 12px 0;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+    .qa-step {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .qa-bubble {
+      background: rgba(244, 114, 182, 0.12);
+      border: 1px solid var(--blake);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--blake);
+      font-family: 'JetBrains Mono', monospace;
+      white-space: nowrap;
+    }
+    .qa-num {
+      font-size: 10px;
+      color: var(--muted);
+      font-weight: 700;
+      margin-right: 2px;
+    }
+    .qa-arrow {
+      color: var(--border-bright);
+      font-size: 14px;
+    }
+    .qa-label {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    /* Pipeline flow */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .pipe-step {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .pipe-bubble {
+      background: var(--surface2);
+      border: 1px solid var(--border-bright);
+      border-radius: 6px;
+      padding: 5px 9px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .pipe-arrow {
+      color: var(--border-bright);
+      font-size: 14px;
+      padding: 0 2px;
+    }
+
+    /* Tip / alert boxes */
+    .tip {
+      background: rgba(52,211,153,.08);
+      border: 1px solid rgba(52,211,153,.3);
+      border-left: 3px solid var(--green);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--text);
+      margin-top: 10px;
+    }
+    .tip strong { color: var(--green); }
+    .warn-box {
+      background: rgba(251,191,36,.07);
+      border: 1px solid rgba(251,191,36,.3);
+      border-left: 3px solid var(--yellow);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: var(--text);
+      margin-top: 10px;
+    }
+    .warn-box strong { color: var(--yellow); }
+
+    /* Phase pipeline (start-task) */
+    .phase-list { list-style: none; }
+    .phase-list li {
+      display: flex;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      align-items: flex-start;
+    }
+    .phase-list li:last-child { border-bottom: none; }
+    .phase-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: var(--surface2);
+      border: 1px solid var(--border-bright);
+      color: var(--muted);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .phase-body { font-size: 12px; }
+    .phase-body strong { color: var(--text); display: block; font-size: 12px; margin-bottom: 2px; }
+    .phase-body span { color: var(--muted); }
+    .phase-body .you {
+      display: inline-block;
+      margin-top: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--green);
+      background: rgba(52,211,153,.1);
+      border: 1px solid rgba(52,211,153,.3);
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 24px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    footer a { color: var(--reyes); text-decoration: none; }
+
+    .deprecated {
+      text-decoration: line-through;
+      opacity: 0.4;
+    }
+    .new-badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      background: rgba(52,211,153,.2);
+      border: 1px solid var(--green);
+      color: var(--green);
+      padding: 1px 5px;
+      border-radius: 3px;
+      margin-left: 4px;
+      vertical-align: middle;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>⚡ SK8Lytz AI Team — User Cheat Sheet</h1>
+  <p>What to say, when to say it, and what happens next &nbsp;·&nbsp; Keep this tab pinned.</p>
+</div>
+
+<div class="grid">
+
+  <!-- ─── SESSION CONTROL ─────────────────────────────────── -->
+  <div class="card" style="--accent: var(--alex);">
+    <h2><span class="icon">🌙</span> Session Control</h2>
+    <div class="cmd-row">
+      <span class="cmd go">/hello</span>
+      <span class="cmd-desc"><strong>Start every session.</strong> Kicks off worktree scan, board health, friction ledger review, and memory load. Always first.</span>
+    </div>
+    <div class="cmd-row">
+      <span class="cmd">/wind-down</span>
+      <span class="cmd-desc"><strong>End the session.</strong> Also triggered by: <em>"good night"</em>, <em>"wrapping up"</em>, <em>"done for the day"</em></span>
+    </div>
+    <div class="cmd-row">
+      <span class="cmd danger">/panic-button</span>
+      <span class="cmd-desc"><strong>Emergency triage.</strong> Something is on fire. Read-only assessment + safe escape route.</span>
+    </div>
+    <div class="tip">
+      <strong>Cold start?</strong> If you open a new chat and type anything before <code>/hello</code>, the agent auto-detects the cold start and runs the hello protocol anyway.
+    </div>
+  </div>
+
+  <!-- ─── MAGIC WORDS ─────────────────────────────────────── -->
+  <div class="card" style="--accent: var(--reyes);">
+    <h2><span class="icon">✨</span> Magic Words — Exact Phrases</h2>
+    <div class="cmd-row">
+      <span class="cmd go">proceed</span>
+      <span class="cmd-desc">After Quinn generates a plan and you've reviewed it. <strong>Hands off to Sage to start coding.</strong></span>
+    </div>
+    <div class="cmd-row">
+      <span class="cmd magic">Ship the evolution</span>
+      <span class="cmd-desc">Approves a Rule Evolution Proposal. <strong>The AI updates its own rules.</strong></span>
+    </div>
+    <div class="cmd-row">
+      <span class="cmd warn">Hold, here's why...</span>
+      <span class="cmd-desc">Rejects a Rule Evolution Proposal. Add your reason after the ellipsis.</span>
+    </div>
+    <div class="cmd-row">
+      <span class="cmd danger">COWBOY MODE ACTIVATED</span>
+      <span class="cmd-desc">Bypasses the sprint intercept gate. <strong>Use when you want off-sprint work done knowingly.</strong></span>
+    </div>
+    <div class="warn-box">
+      <strong>Never needed:</strong> "remember when I told you..." = automatic Friction Event + system fix.
+    </div>
+  </div>
+
+  <!-- ─── PERSONAS ─────────────────────────────────────────── -->
+  <div class="card" style="--accent: var(--reyes);">
+    <h2><span class="icon">👥</span> Who Activates When</h2>
+    <div class="persona-grid">
+      <div class="persona-chip" style="--color: var(--jordan)">
+        <div class="name">🎯 Jordan — PM</div>
+        <div class="trigger">Feature ideas, priorities, <em>"what's next"</em>, task intake</div>
+      </div>
+      <div class="persona-chip" style="--color: var(--reyes)">
+        <div class="name">🕵️ Reyes — Scout</div>
+        <div class="trigger">Any research, question, <em>"how does"</em>, <em>"where is"</em>, file reading</div>
+      </div>
+      <div class="persona-chip" style="--color: var(--casey)">
+        <div class="name">📋 Casey — Scrum</div>
+        <div class="trigger">Sprint questions, worktrees, batch routing, <em>"what's in sprint"</em></div>
+      </div>
+      <div class="persona-chip" style="--color: var(--morgan)">
+        <div class="name">🏛️ Morgan — Arch</div>
+        <div class="trigger">Design decisions, architecture, <em>"how should we"</em></div>
+      </div>
+      <div class="persona-chip" style="--color: var(--quinn)">
+        <div class="name">📐 Quinn — TPM</div>
+        <div class="trigger">Auto-activates in start-task Phase 3. Plan generation.</div>
+      </div>
+      <div class="persona-chip" style="--color: var(--sage)">
+        <div class="name">⚒️ Sage — Dev</div>
+        <div class="trigger">Auto-activates after you say <em>"proceed"</em>. All code writing.</div>
+      </div>
+      <div class="persona-chip" style="--color: var(--blake)">
+        <div class="name">🔬 Blake — QA</div>
+        <div class="trigger">Auto post-code. QA pipeline (smoke→isolated→diff→qa-tester)</div>
+      </div>
+      <div class="persona-chip" style="--color: var(--river)">
+        <div class="name">🩺 River — SRE</div>
+        <div class="trigger">Bugs, crashes, <em>"it's broken"</em>, stack traces, <code>/debug</code></div>
+      </div>
+      <div class="persona-chip" style="--color: var(--avery)">
+        <div class="name">📋 Avery — Docs</div>
+        <div class="trigger">Auto post-QA. Also: <code>/context-compiler</code>, <code>/db-sync</code></div>
+      </div>
+      <div class="persona-chip" style="--color: var(--taylor)">
+        <div class="name">🚀 Taylor — RM</div>
+        <div class="trigger">Auto at merge. <code>/ship-it</code>, <code>/deploy-device</code>, <code>/release-notes</code></div>
+      </div>
+      <div class="persona-chip" style="--color: var(--alex)">
+        <div class="name">🌙 Alex — Ops</div>
+        <div class="trigger"><em>"Good night"</em>, <em>"wrapping up"</em>, <code>/wind-down</code>, stack ops</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── START-TASK LIFECYCLE ────────────────────────────── -->
+  <div class="card grid-wide" style="--accent: var(--sage);">
+    <h2><span class="icon">⚙️</span> The Full Task Lifecycle — What Happens After /start-task</h2>
+    <ul class="phase-list">
+      <li>
+        <span class="phase-num">P0</span>
+        <div class="phase-body">
+          <strong>🕵️ Reyes — Source of Truth Prime</strong>
+          <span>Reads SESSION_LOG + Master Reference + Protocol Bible. Outputs a Knowledge State. Automatic.</span>
+        </div>
+      </li>
+      <li>
+        <span class="phase-num">P1</span>
+        <div class="phase-body">
+          <strong>📋 Casey — Sprint Gate</strong>
+          <span>Confirms task is in sprint, creates worktree, confirms branch isolation. Automatic.</span>
+        </div>
+      </li>
+      <li>
+        <span class="phase-num">P2</span>
+        <div class="phase-body">
+          <strong>🏛️ Morgan — Brainstorm</strong>
+          <span>Presents design approach, raises failure scenarios, checks rejection register.</span>
+          <span class="you">You say: "what's next" or ask for a plan when ready</span>
+        </div>
+      </li>
+      <li>
+        <span class="phase-num">P3</span>
+        <div class="phase-body">
+          <strong>📐 Quinn — Plan</strong>
+          <span>Generates step-by-step plan artifact. HALTS. Waits for your review.</span>
+          <span class="you">You say: "proceed" to execute, or give feedback to revise</span>
+        </div>
+      </li>
+      <li>
+        <span class="phase-num">P4</span>
+        <div class="phase-body">
+          <strong>⚒️ Sage — Code</strong>
+          <span>Reads every line before touching it. Implements exactly the plan. Automatic.</span>
+        </div>
+      </li>
+      <li>
+        <span class="phase-num">P5</span>
+        <div class="phase-body">
+          <strong>🔬 Blake — QA (4-step pipeline)</strong>
+          <span>smoke-test → isolated-test → diff-review → qa-tester. Automatic.</span>
+        </div>
+      </li>
+      <li>
+        <span class="phase-num">P5.5</span>
+        <div class="phase-body">
+          <strong>📋 Avery — Docs Gate</strong>
+          <span>Greps the diff. Updates Master Reference §3/§4 if needed. Automatic.</span>
+        </div>
+      </li>
+      <li>
+        <span class="phase-num">P6</span>
+        <div class="phase-body">
+          <strong>🚀 Taylor — Release</strong>
+          <span>npm run verify → commits → gatekeeper merge → Discord notification. Automatic.</span>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ─── WORKFLOW vs JUST ASK ────────────────────────────── -->
+  <div class="card" style="--accent: var(--blue);">
+    <h2><span class="icon">🤔</span> Workflow vs. Just Ask</h2>
+    <table>
+      <thead><tr><th>Situation</th><th>Type</th></tr></thead>
+      <tbody>
+        <tr><td>"How does the BLE scanner work?"</td><td><span class="tag tag-green">Just ask</span></td></tr>
+        <tr><td>"Where is the GATT reconnect logic?"</td><td><span class="tag tag-green">Just ask</span></td></tr>
+        <tr><td>"What's the status of the sprint?"</td><td><span class="tag tag-green">Just ask</span></td></tr>
+        <tr><td>New feature idea or bug</td><td><span class="tag tag-blue">→ /intake</span></td></tr>
+        <tr><td>Start building a task</td><td><span class="tag tag-blue">→ /start-task</span></td></tr>
+        <tr><td>Something is broken</td><td><span class="tag tag-blue">→ /debug</span></td></tr>
+        <tr><td>Session start / end</td><td><span class="tag tag-blue">→ /hello · /wind-down</span></td></tr>
+        <tr><td>Releasing to device</td><td><span class="tag tag-blue">→ /ship-it</span></td></tr>
+        <tr><td>Docs feel stale</td><td><span class="tag tag-blue">→ /audit-codebase</span></td></tr>
+      </tbody>
+    </table>
+    <div class="tip">
+      <strong>Rule of thumb:</strong> Changes code, adds a task, or starts/ends a session → use a workflow. Everything else → just talk.
+    </div>
+  </div>
+
+  <!-- ─── ALL WORKFLOWS BY TIER ───────────────────────────── -->
+  <div class="card grid-full" style="--accent: var(--quinn);">
+    <h2><span class="icon">📋</span> All Workflows — Grouped by When You Use Them</h2>
+
+    <!-- TIER 1 -->
+    <div class="tier-section" style="--tier-color: var(--t1)">
+      <div class="tier-label"><span class="tier-dot"></span>🔴 SESSION CONTROL — Always the bookends</div>
+      <table>
+        <thead><tr><th>Command</th><th>What It Does</th><th>Persona</th></tr></thead>
+        <tbody>
+          <tr><td>/hello</td><td>Session start — sprint health, memory load, environment check</td><td style="color:var(--casey)">Casey + Jordan + Reyes</td></tr>
+          <tr><td>/wind-down</td><td>Session end — commit, test, backup, session log, Discord</td><td style="color:var(--alex)">Alex</td></tr>
+          <tr><td>/panic-button</td><td>Emergency triage — read-only assessment, safe escape route, hold state</td><td style="color:var(--river)">River + Casey</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <br/>
+
+    <!-- TIER 2 -->
+    <div class="tier-section" style="--tier-color: var(--t2)">
+      <div class="tier-label"><span class="tier-dot"></span>🟡 TASK LIFECYCLE — Most of your time</div>
+      <table>
+        <thead><tr><th>Command</th><th>What It Does</th><th>Persona</th></tr></thead>
+        <tbody>
+          <tr><td>/intake [idea]</td><td>Add any idea/feature/bug → classify → slug → backlog placement</td><td style="color:var(--jordan)">Jordan → Casey → Quinn → Reyes</td></tr>
+          <tr><td>/start-task [slug]</td><td>Full 8-phase dev pipeline for a task</td><td style="color:var(--sage)">All 11 personas in sequence</td></tr>
+          <tr><td>/status-update</td><td>Sprint SITREP — branch, last commit, epic progress, next up</td><td style="color:var(--casey)">Casey + Jordan</td></tr>
+          <tr><td>/groom-backlog</td><td>Guillotine Protocol: stale → icebox, completed → archive</td><td style="color:var(--casey)">Casey</td></tr>
+          <tr><td>/product-alignment</td><td>Gut-check idea vs. Product Bible Anti-Goals (without creating a task)</td><td style="color:var(--jordan)">Jordan</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <br/>
+
+    <!-- TIER 3 -->
+    <div class="tier-section" style="--tier-color: var(--t3)">
+      <div class="tier-label"><span class="tier-dot"></span>🟢 DEV TOOLS — During task execution</div>
+      <table>
+        <thead><tr><th>Command</th><th>What It Does</th><th>Persona</th></tr></thead>
+        <tbody>
+          <tr><td>/scaffold-hook</td><td>New hook file — FSM boilerplate, typed params, JSDoc, Hook Registry entry</td><td style="color:var(--sage)">Sage</td></tr>
+          <tr><td>/dev-server</td><td>Kill ghost Node processes → start Expo with --clear</td><td style="color:var(--sage)">Sage</td></tr>
+          <tr><td>/tsc-check</td><td>TypeScript errors — grouped by file, smallest-first fix suggestions</td><td style="color:var(--sage)">Sage</td></tr>
+          <tr><td>/tdd</td><td>Test-driven development — write test first, fail state, implement, verify</td><td style="color:var(--sage)">Sage + Blake</td></tr>
+          <tr><td>/add-dep</td><td>Native alternative check → 3-point justification → approval gate before any npm install</td><td style="color:var(--morgan)">Morgan + Quinn</td></tr>
+          <tr><td>/ble-lab [opcode]</td><td>BLE protocol research — hex math, Master Reference cite, code cross-reference</td><td style="color:var(--reyes)">Reyes</td></tr>
+          <tr><td>/echo-protocol</td><td>Alignment check — forces AI to synthesize understanding, state assumptions, name gaps</td><td style="color:var(--reyes)">Reyes</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <br/>
+
+    <!-- TIER 4 -->
+    <div class="tier-section" style="--tier-color: var(--t4)">
+      <div class="tier-label"><span class="tier-dot"></span>🔵 QA PIPELINE — Before every commit (in this order)</div>
+
+      <div class="qa-pipeline">
+        <div class="qa-step">
+          <span class="qa-num">①</span>
+          <span class="qa-bubble">/smoke-test</span>
+        </div>
+        <span class="qa-arrow">→</span>
+        <div class="qa-step">
+          <span class="qa-num">②</span>
+          <span class="qa-bubble">/isolated-test</span>
+        </div>
+        <span class="qa-arrow">→</span>
+        <div class="qa-step">
+          <span class="qa-num">③</span>
+          <span class="qa-bubble">/diff-review</span>
+        </div>
+        <span class="qa-arrow">→</span>
+        <div class="qa-step">
+          <span class="qa-num">④</span>
+          <span class="qa-bubble">/qa-tester</span>
+        </div>
+      </div>
+
+      <table>
+        <thead><tr><th>Step</th><th>Command</th><th>Question It Answers</th><th>How</th></tr></thead>
+        <tbody>
+          <tr><td>① Visual</td><td>/smoke-test</td><td>Did I break the app launch?</td><td>Browser subagent takes screenshot</td></tr>
+          <tr><td>② Targeted</td><td>/isolated-test</td><td>Does this specific change work?</td><td>I write you a 3-step test script to run</td></tr>
+          <tr><td>③ Static</td><td>/diff-review</td><td>Is the code quality clean?</td><td>AI reads git diff — security, typing, dead code</td></tr>
+          <tr><td>④ Behavioral</td><td>/qa-tester</td><td>Will this survive production?</td><td>5 edge-case scenarios — BLE drop, race conditions, etc.</td></tr>
+          <tr><td>+</td><td>/tsc-check</td><td>TypeScript errors to fix?</td><td>Run any time TS errors appear — not part of the sequence</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <br/>
+
+    <!-- TIER 5 -->
+    <div class="tier-section" style="--tier-color: var(--t5)">
+      <div class="tier-label"><span class="tier-dot"></span>🟣 RELEASE — When shipping</div>
+      <table>
+        <thead><tr><th>Command</th><th>What It Does</th><th>Persona</th></tr></thead>
+        <tbody>
+          <tr><td>/ship-it</td><td>Full release: health-sweep → verify → smoke-test → audit-codebase → deploy-device → diff-review → release-notes → gatekeeper → push</td><td style="color:var(--taylor)">Taylor (orchestrates all)</td></tr>
+          <tr><td>/deploy-device</td><td>Build release APK + install to connected device (called by ship-it Phase 2)</td><td style="color:var(--taylor)">Taylor</td></tr>
+          <tr><td>/health-sweep</td><td>Fast security check: npm audit + Supabase advisors only (called by ship-it Phase 1)</td><td style="color:var(--river)">River</td></tr>
+          <tr>
+            <td>/release-notes<span class="new-badge">consolidated</span></td>
+            <td>CHANGELOG entry + PR description from commits — two outputs, one workflow (was: /changelog + /pr-summary)</td>
+            <td style="color:var(--taylor)">Taylor</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <br/>
+
+    <!-- TIER 6 -->
+    <div class="tier-section" style="--tier-color: var(--t6)">
+      <div class="tier-label"><span class="tier-dot"></span>⚫ MAINTENANCE — Periodic, between tasks</div>
+      <table>
+        <thead><tr><th>Command</th><th>What It Does</th><th>Persona</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>/audit-codebase<span class="new-badge">+bundle</span></td>
+            <td>Full sweep: npm audit, TODO hunt, Supabase advisors, smell scan, bundle weight check, telemetry, bucket list injection (absorbs /bundle-audit)</td>
+            <td style="color:var(--reyes)">Reyes + Avery</td>
+          </tr>
+          <tr><td>/context-compiler</td><td>Scan live codebase → diff against Master Reference §4 → update Hook/Service Registry</td><td style="color:var(--avery)">Avery</td></tr>
+          <tr><td>/db-sync</td><td>Generate fresh Supabase TypeScript types → inject into src/types/supabase.ts</td><td style="color:var(--avery)">Avery</td></tr>
+          <tr><td>/debug</td><td>Structured diagnosis — 3 theories → approval gate → fix → post-mortem to SESSION_LOG</td><td style="color:var(--river)">River</td></tr>
+          <tr><td>/nuke-cache</td><td>Kill Metro + wipe all caches (Metro, Expo, Gradle) + restart clean</td><td style="color:var(--river)">River</td></tr>
+          <tr><td>/git-ops</td><td>Snapshots (/git-snapshot) and worktree teardowns (/gitcleanup → gatekeeper)</td><td style="color:var(--casey)">Casey</td></tr>
+          <tr><td>/scaffold-hook</td><td>New hook boilerplate — see 🟢 Dev Tools above</td><td style="color:var(--sage)">Sage</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <br/>
+
+    <!-- TIER 7 -->
+    <div class="tier-section" style="--tier-color: var(--t7)">
+      <div class="tier-label"><span class="tier-dot"></span>⬛ INFRASTRUCTURE — Rare, Alex-level</div>
+      <table>
+        <thead><tr><th>Command</th><th>What It Does</th><th>Persona</th></tr></thead>
+        <tbody>
+          <tr><td>/start-stack</td><td>Docker compose up → verify CCTower, Dashboard, Discord Bridge</td><td style="color:var(--alex)">Alex</td></tr>
+          <tr><td>/start-discord-bridge</td><td>Launch Discord Bridge microservice via PM2</td><td style="color:var(--alex)">Alex</td></tr>
+          <tr><td>/start-etl-daemon</td><td>Launch Cultural Enrichment Daemon via PM2</td><td style="color:var(--alex)">Alex</td></tr>
+          <tr><td>/dev-server</td><td>Start Expo dev server — see 🟢 Dev Tools above</td><td style="color:var(--sage)">Sage</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ─── THE IRON GATES (SYSTEM SAFEGUARDS) ──────────────── -->
+  <div class="card grid-full" style="--accent: var(--red);">
+    <h2><span class="icon">🛡️</span> The Iron Gates (System Safeguards & Overrides)</h2>
+    <table>
+      <thead><tr><th>Gate / Override</th><th>What It Does</th><th>Enforcement</th></tr></thead>
+      <tbody>
+        <tr><td>Anti-Hallucination Board Guard</td><td>Forces Jordan to read <code>SK8Lytz_Bucket_List.md</code> before suggesting tasks. Stops hallucinated task states.</td><td>Rule (agent-behavior.md)</td></tr>
+        <tr><td>Planning Firewall</td><td>Tasks must have a Decision Log to enter ON DECK. Blocks any coding without a plan.</td><td>Rule (start-task.md)</td></tr>
+        <tr><td>Documentation Parity Gate</td><td>Blocks gatekeeper merges if new hooks, services, or architecture aren't documented in Master Reference §3/§4.</td><td>Rule (Avery)</td></tr>
+        <tr><td>Blast Radius Engine</td><td>Blocks partial architectural commits across domain boundaries.</td><td>Pre-commit hook + ARCH_DEPENDENCY_MAP.json</td></tr>
+        <tr><td><span class="tag tag-green">Override</span> Unified Batch Override</td><td>Allows grouping multiple <code>[Snack]</code> or <code>[Meal]</code> tasks from the same domain into one worktree, bypassing the 1-task rule.</td><td>Kanban Constitution</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─── THE SELF-EVOLUTION SYSTEM ───────────────────────── -->
+  <div class="card grid-wide" style="--accent: var(--taylor);">
+    <h2><span class="icon">⚡</span> The Self-Evolution System</h2>
+    <div class="cmd-row">
+      <div>
+        <div style="font-size:12px; font-weight:600; margin-bottom: 6px;">How the AI evolves itself:</div>
+        <div class="pipeline">
+          <div class="pipe-step">
+            <span class="pipe-bubble">Friction observed</span>
+            <span class="pipe-arrow">→</span>
+          </div>
+          <div class="pipe-step">
+            <span class="pipe-bubble">Filed to Ledger</span>
+            <span class="pipe-arrow">→</span>
+          </div>
+          <div class="pipe-step">
+            <span class="pipe-bubble">3 strikes</span>
+            <span class="pipe-arrow">→</span>
+          </div>
+          <div class="pipe-step">
+            <span class="pipe-bubble" style="border-color: var(--reyes); color: var(--reyes)">Proposal auto-generated</span>
+            <span class="pipe-arrow">→</span>
+          </div>
+          <div class="pipe-step">
+            <span class="pipe-bubble go">You: "Ship the evolution"</span>
+            <span class="pipe-arrow">→</span>
+          </div>
+          <div class="pipe-step">
+            <span class="pipe-bubble" style="border-color: var(--green); color: var(--green)">Rule updated ✅</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:12px; font-size:12px; color: var(--muted);">
+      The AI <strong style="color:var(--text)">files its own friction events</strong>. You'll only see a proposal when a pattern has been observed 3 times. At that point, one word from you bakes the fix into the rules permanently.
+    </div>
+    <div class="tip" style="margin-top:10px">
+      <strong>Your job:</strong> Just notice if something felt wrong. You don't have to remember it — the AI tracks it. To manually trigger: <em>"File a friction event for [thing that went wrong]."</em>
+    </div>
+  </div>
+
+  <!-- ─── WHAT TO EXPECT ───────────────────────────────────── -->
+  <div class="card" style="--accent: var(--green);">
+    <h2><span class="icon">✅</span> Drift Signals — What to Watch For</h2>
+    <div class="cmd-row" style="flex-direction:column; gap:6px;">
+      <div style="display:flex; gap:8px; align-items:flex-start;">
+        <span class="tag tag-green">Normal</span>
+        <span class="cmd-desc">Every response starts with <code>[🎯 Jordan | hello | session | cold]</code>. If you don't see a badge header, something's wrong.</span>
+      </div>
+      <div style="display:flex; gap:8px; align-items:flex-start; margin-top:6px;">
+        <span class="tag tag-green">Research</span>
+        <span class="cmd-desc">Reyes always says: <em>"Checking what we already know..."</em> before investigating. If skipped → drift.</span>
+      </div>
+      <div style="display:flex; gap:8px; align-items:flex-start; margin-top:6px;">
+        <span class="tag tag-green">Bug</span>
+        <span class="cmd-desc">River always outputs <strong>3 theories</strong> before touching code. Jump straight to fixing → wrong.</span>
+      </div>
+      <div style="display:flex; gap:8px; align-items:flex-start; margin-top:6px;">
+        <span class="tag tag-green">Plan</span>
+        <span class="cmd-desc">Quinn always HALTS and waits for <code>proceed</code>. Code starts without your word → wrong.</span>
+      </div>
+      <div style="display:flex; gap:8px; align-items:flex-start; margin-top:6px;">
+        <span class="tag tag-red">Red flag</span>
+        <span class="cmd-desc">Anonymous response with no persona badge. Say: <em>"Who is speaking right now?"</em> → system resets.</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  SK8Lytz AI Team Cheat Sheet &nbsp;·&nbsp; Keep updated as workflows evolve &nbsp;·&nbsp;
+  <a href="file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.agents/rules/CONSTITUTION.md">Constitution</a> ·
+  <a href="file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/FRICTION_LEDGER.md">Friction Ledger</a> ·
+  <a href="file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.agents/team-roster.md">Team Roster</a>
+</footer>
+
+</body>
+</html>
