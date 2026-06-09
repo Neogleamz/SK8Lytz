@@ -1116,3 +1116,49 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Dual-write crash telemetry to Supabase and fixed lifetime stats computation drift in solo sessions.
 **Verify result:** TSC ?, Jest ?, QA Gatekeeper ?
 **Files touched:** src/services/AppLogger.ts, src/services/SpeedTrackingService.ts
+
+### [MERGE] 2026-06-09T07:38:00Z — fix/eeprom-product-confirm -> master @ 9962954a
+**What merged:** Persist product_id_confirmed_at on EEPROM 0x63 payloads to act as an architectural lock for registered devices.
+**Verify result:** TSC OK, Jest OK, QA Gatekeeper OK
+**Files touched:** src/hooks/useRegistration.ts, src/hooks/useHardwareNotifications.ts, src/services/DeviceRepository.ts, src/services/AppLogger.ts
+
+### [ARTIFACT] 2026-06-09T03:06 — docs/plans/PLAN-auto-factory-tagging.md
+**What:** Implementation Plan for BLE signature fingerprinting to automatically populate factory_name.
+**Why:** User noted that manufacturer_data in the DB is a raw base64 string, not the human-readable brand. We need to infer factory_name dynamically at the scanner layer using ZENGGE/BANLANX Service UUIDs and Manufacturer IDs.
+### [DECISION] 2026-06-09T03:20 — MapWidget Tailwind CSS Bypass
+**Decision:** Hardcode raw inline React CSS (style={{ position: 'absolute', ... }}) for all Map dots in Command Center.
+**Rejected:** Using standard Tailwind utility classes (g-green-400, bsolute, w-4). Rejected because command-center completely lacks Tailwind CSS in its package.json. The classes were silently doing nothing, causing dots to fall into static document flow and rendering as a vertical list below the SVG.
+**Don't re-derive:** Do not attempt to use Tailwind classes in the Command Center unless Tailwind is explicitly installed and configured. Rely on the custom App.css and index.css utility classes (glass-panel) or strictly use inline React styles.
+**Source:** src/components/widgets/MapWidget.tsx
+
+### [EVENT] 2026-06-09T03:20 — Debugging Fleet Map Connectivity Complete
+**What shipped:**
+- Fixed coordinate parsing logic in MapWidget to accept direct Supabase float injections.
+- Fixed map rendering bug by ripping out useMemo caching layer that caused stale closure blocking.
+- Identified the "CSS Camouflage Bug" and "Missing Tailwind" architecture where Tailwind classes were silently failing in the Command Center project, resolving the list-rendering bug by injecting raw inline CSS.
+**System evolution:** Added [DECISION] rule to never use Tailwind classes in Command Center.
+### [DECISION] 2026-06-09T03:28 — Native SVG Clustering & Zoom Architecture
+**Decision:** Implemented a zero-dependency 30x30 spatial grid clustering algorithm natively using React useMemo, combined with a custom click-to-zoom engine manipulating the <USAMap> via CSS 	ransform: scale(). Toggles were replaced with color-coded Pills.
+**Rejected:** Installing eact-leaflet, mapbox-gl, or eact-zoom-pan-pinch.
+**Don't re-derive:** The SK8Lytz stack adheres strictly to the Anti-Bloat Protocol. We must solve mapping scaling issues mathematically using JS before reaching for a giant geospatial library. The spatial binning algorithm successfully compresses thousands of points into single DOM nodes, keeping the map fast and offline-capable.
+**Source:** src/components/widgets/MapWidget.tsx
+
+### [EVENT] 2026-06-09T03:28 — MapWidget Enhancements Complete
+**What shipped:**
+- Ported the Scraper's SectionHdr component for the exact ? show / ? hide collapsible interface.
+- Implemented Click-to-Zoom logic with dynamic translation calculations.
+- Added a floating Reset Zoom button that renders conditionally when zoom.scale > 1.
+- Built the 2D grid clustering engine with visual heatmap scaling (larger circles with exact sub-point counts).
+- Transformed the layer toggles into interactive opacity Pills.
+### [EVENT] 2026-06-09T03:34 — Debugging Fleet Map Connectivity
+**What shipped:**
+- MapWidget spatial heatmap clustering (Grid 30x30, point averaging, color-blending logic)
+- MapWidget click-to-zoom engine (SVG native transforms)
+- MapWidget UI overhaul (Pill toggles instead of checkboxes, Scraper parity SectionHdr)
+- Fixed coordinate parsing allowing raw DB floats
+**AI failure pattern:** Failed to recognize that Command Center lacked Tailwind CSS in package.json, resulting in an initial deployment of styling that collapsed entirely into raw document flow. Corrected via inline React CSS.
+**User pattern:** Excellent product requirements and immediate feedback on UI styling.
+**Active sprint state:** (Empty sprint - pending next pull)
+**Master HEAD:** (untracked local changes in tools/command-center)
+**Friction Audit:** [1] new events | [0] incremented | [0] resolved | Proposals due: none
+**System evolution:** Added [DECISION] rule to explicitly ban Tailwind assumptions in Command Center.
