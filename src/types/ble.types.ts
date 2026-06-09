@@ -9,7 +9,7 @@
  */
 import type React from 'react';
 import type { BleManager, Characteristic, Device, Subscription } from 'react-native-ble-plx';
-import type { BLEPhaseTag } from '../services/ble/BleMachine.types';
+import type { BLEPhaseTag, BleMachineEvent } from '../services/ble/BleMachine.types';
 import type { IControllerProtocol } from '../protocols/IControllerProtocol';
 
 // Re-export library types so consumers import from one place
@@ -115,4 +115,6 @@ export interface BleConnectionRequest {
   setConnectedDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   /** Gate phase setter */
   setGate: (phase: BLEPhaseTag) => void;
+  /** State machine event dispatcher */
+  bleSend: (event: BleMachineEvent) => void;
 }

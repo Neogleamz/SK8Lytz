@@ -50,6 +50,7 @@ function isTransientGattError(err: unknown): boolean {
 export function resolveWritePriority(opcodeByte: number): WritePriority {
   switch (opcodeByte) {
     case 0xCC: // Power ON/OFF
+    case 0x71: // Advanced Power payload
     case 0x63: // Hardware query / recovery ping
       return 'critical';
     case 0x51: // Scene Builder (large, chunked)

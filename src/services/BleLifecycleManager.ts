@@ -1,7 +1,7 @@
 import type React from 'react';
 import { Platform } from 'react-native';
 import { AppLogger } from './AppLogger';
-import { BLEPhaseTag } from './ble/BleMachine.types';
+import { BLEPhaseTag, BleMachineEvent } from './ble/BleMachine.types';
 import { BLE_TIMING } from '../constants/bleTimingConstants';
 
 /**
@@ -16,7 +16,8 @@ export async function executeRealDisconnect(
   autoRecovery: any,
   getGate: () => BLEPhaseTag,
   setConnectedDevices: React.Dispatch<React.SetStateAction<any[]>>,
-  setGate: (phase: BLEPhaseTag) => void
+  setGate: (phase: BLEPhaseTag) => void,
+  bleSend: (event: BleMachineEvent) => void
 ): Promise<void> {
   if (getGate() === 'DISCONNECTING') return;
   setGate('DISCONNECTING');
@@ -50,6 +51,7 @@ export async function executeRealDisconnect(
   adapterMapRef.current.clear();
   setConnectedDevices([]);
   setGate('IDLE');
+  bleSend({ type: 'DISCONNECT_COMPLETE' });
   AppLogger.log('BLE_STATE_CHANGE', { event: 'keepalive_expired_disconnect' });
 }
 

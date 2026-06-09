@@ -15,6 +15,8 @@ export interface UseBLERSSIMonitorParams {
   bleManager: any;
   /** Stable ref to the current connected device list — read lazily inside interval. */
   connectedDevicesRef: React.MutableRefObject<Device[]>;
+  /** Array of active device IDs to trigger prune when disconnected */
+  connectedDeviceIds: string[];
   /**
    * Called when a device's RSSI drops below RSSI_WEAK_THRESHOLD (-75 dBm).
    * Purely informational — use for UI badge updates or logging.
@@ -72,6 +74,7 @@ export async function readDeviceRSSI(
 export function useBLERSSIMonitor({
   bleManager,
   connectedDevicesRef,
+  connectedDeviceIds,
   onWeakSignal,
   onCriticalSignal,
 }: UseBLERSSIMonitorParams): Record<string, number> {
@@ -118,20 +121,14 @@ export function useBLERSSIMonitor({
 
   // Clear rssiMap when devices disconnect to avoid stale entries in the badge.
   useEffect(() => {
-    const currentMacs = new Set(connectedDevicesRef.current.map(d => d.id));
     setRssiMap(prev => {
-      const next: Record<string, number> = {};
-      for (const [mac, rssi] of Object.entries(prev)) {
-        if (currentMacs.has(mac)) next[mac] = rssi;
-      }
-      return next;
+      const pruned = { ...prev };
+      Object.keys(pruned).forEach(mac => {
+        if (!connectedDeviceIds.includes(mac)) delete pruned[mac];
+      });
+      return pruned;
     });
-  // Re-run when connected devices list changes to prune stale entries.
-  // connectedDevicesRef.current doesn't trigger re-renders — we depend on
-  // bleManager as a proxy for "BLE engine is alive". The prune runs on
-  // bleManager changes and initial mount, which is sufficient.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bleManager]);
+  }, [connectedDeviceIds]);
 
   return rssiMap;
 }

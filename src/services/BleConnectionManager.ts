@@ -34,6 +34,7 @@ export async function executeConnectToDevices({
   setConnectedDevices,
   setGate,
   enqueueWrite,
+  bleSend,
 }: BleConnectionRequest): Promise<void> {
   if (devices.length === 0) return;
 
@@ -307,6 +308,7 @@ export async function executeConnectToDevices({
       }
       
       setGate('IDLE');
+      bleSend({ type: 'CONNECT_SUCCESS', devices: connectedGroup });
       if (wasSweeperActive && bleManager) scanner.startSweeper?.();
     } catch (e: unknown) {
       const errMsg = e instanceof Error ? e.message : String(e);

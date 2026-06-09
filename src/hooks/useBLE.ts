@@ -466,6 +466,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const rssiMap = useBLERSSIMonitor({
     bleManager,
     connectedDevicesRef,
+    connectedDeviceIds: connectedDevices.map(d => d.id),
     onCriticalSignal: (mac: string) => {
       // Only reconnect if device is not already in the recovery queue.
       if (!autoRecovery.ghostedDeviceIds.includes(mac)) {
@@ -495,6 +496,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       enqueueWrite,
       setConnectedDevices: updateConnectedDevices,
       setGate,
+      bleSend,
     });
   }, [
     bleManager,
@@ -503,6 +505,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     updateConnectedDevices,
     setGate,
     getGate,
+    bleSend,
   ]);
 
   // Wire connectToDevicesRef immediately after connectToDevices is defined so the
@@ -566,9 +569,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       autoRecovery,
       getGate,
       updateConnectedDevices,
-      setGate
+      setGate,
+      bleSend
     );
-  }, [bleManager, autoRecovery, updateConnectedDevices, setGate]);
+  }, [bleManager, autoRecovery, updateConnectedDevices, setGate, bleSend]);
 
   const disconnectFromDevice = useCallback(() => {
     keepaliveDisconnect(keepaliveTimerRef, KEEPALIVE_DURATION_MS, realDisconnect);
