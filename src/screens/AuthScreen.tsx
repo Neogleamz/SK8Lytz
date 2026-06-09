@@ -20,9 +20,9 @@ import { AuthFormSignIn } from '../components/auth/AuthFormSignIn';
 import { AuthFormSignUp } from '../components/auth/AuthFormSignUp';
 import { AuthFormForgotPassword } from '../components/auth/AuthFormForgotPassword';
 import { AuthFooterActions } from '../components/auth/AuthFooterActions';
-import { AuthSandboxToggle } from '../components/auth/AuthSandboxToggle';
+import { DevSandboxDrawer } from '../components/auth/DevSandboxDrawer';
 
-import { STORAGE_REMEMBER_CREDS, STORAGE_DEMO_MODE, STORAGE_LAST_EMAIL } from '../constants/storageKeys';
+import { STORAGE_REMEMBER_CREDS, STORAGE_LAST_EMAIL } from '../constants/storageKeys';
 
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
 
@@ -42,7 +42,6 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
   const styles = useAuthStyles();
 
   const [mode, setMode] = useState<AuthMode>('SIGNUP');
-  const [isSandboxEnabled, setIsSandboxEnabled] = useState(false);
   
   // Stored Credentials state
   const [initialEmail, setInitialEmail] = useState('');
@@ -52,9 +51,6 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
 
   useEffect(() => {
     AppLogger.log('SCREEN_OPENED', { screen: 'AuthScreen' });
-    AsyncStorage.getItem(STORAGE_DEMO_MODE).then(val => {
-      setIsSandboxEnabled(val === 'true');
-    });
   }, []);
 
   useEffect(() => {
@@ -87,28 +83,7 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <AuthSandboxToggle 
-        isSandboxEnabled={isSandboxEnabled} 
-        setIsSandboxEnabled={setIsSandboxEnabled} 
-      />
-
       <View style={styles.topButtons}>
-        {isSandboxEnabled && (
-          <TouchableOpacity 
-            style={[styles.topBtn, { borderColor: 'rgba(255,0,0,0.5)', backgroundColor: 'rgba(255,0,0,0.1)' }]} 
-            onPress={async () => {
-               try {
-                 await AsyncStorage.clear();
-                 Alert.alert("☢️ Storage Nuked", "All persistent Sandbox/Offline state has been flushed.");
-               } catch (e: unknown) {
-                 const msg = e instanceof Error ? e.message : String(e);
-                 AppLogger.error('Failed to nuke storage', { error: msg });
-               }
-            }}
-          >
-            <MaterialCommunityIcons name="nuke" size={18} color="red" />
-          </TouchableOpacity>
-        )}
         <TouchableOpacity style={styles.topBtn} onPress={toggleTheme}>
           <MaterialCommunityIcons
             name={isDark ? 'weather-sunny' : 'weather-night'}
@@ -145,6 +120,11 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
 
         {hasLoadedCreds && (
           <>
+            {!!errorMessage && (
+              <Text style={{ color: '#FF4444', textAlign: 'center', marginBottom: Spacing.md }}>
+                {errorMessage}
+              </Text>
+            )}
             {mode === 'LOGIN' && (
               <AuthFormSignIn 
                 initialEmail={initialEmail} 
@@ -165,11 +145,11 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
           <AuthFooterActions 
             mode={mode} 
             onOfflineMode={onOfflineMode} 
-            isSandboxEnabled={isSandboxEnabled} 
             setErrorMessage={setErrorMessage}
           />
         </View>
       </View>
+      <DevSandboxDrawer onOfflineMode={onOfflineMode} setErrorMessage={setErrorMessage} />
     </KeyboardAvoidingView>
   );
 }

@@ -1,21 +1,20 @@
 import React, { useState } from 'react';
-import { Text, TouchableOpacity, View, Alert } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
 import { useAuthStyles } from './AuthStyles';
 
-import { STORAGE_OFFLINE_SKIP, STORAGE_DEMO_MODE } from '../../constants/storageKeys';
+import { STORAGE_OFFLINE_SKIP } from '../../constants/storageKeys';
 
 interface AuthFooterActionsProps {
   mode: 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
   onOfflineMode?: () => void;
-  isSandboxEnabled: boolean;
   setErrorMessage: (msg: string) => void;
 }
 
-export function AuthFooterActions({ mode, onOfflineMode, isSandboxEnabled, setErrorMessage }: AuthFooterActionsProps) {
+export function AuthFooterActions({ mode, onOfflineMode, setErrorMessage }: AuthFooterActionsProps) {
   const { Colors } = useTheme();
   const styles = useAuthStyles();
   const [rememberOffline, setRememberOffline] = useState(false);
@@ -59,56 +58,6 @@ export function AuthFooterActions({ mode, onOfflineMode, isSandboxEnabled, setEr
         </View>
       )}
 
-      {/* DEV MODE - Virtual Skates Bypass */}
-      {isSandboxEnabled && (mode === 'LOGIN') && onOfflineMode && (
-        <TouchableOpacity
-          style={{ 
-            marginTop: Spacing.lg, paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md, 
-            borderWidth: 1, borderColor: 'rgba(0,240,255,0.4)', borderRadius: 12, 
-            backgroundColor: 'rgba(0,240,255,0.05)', alignItems: 'center',
-            flexDirection: 'row', justifyContent: 'center', gap: Spacing.sm
-          }}
-          onPress={async () => {
-            try {
-              await AsyncStorage.setItem(STORAGE_DEMO_MODE, 'true');
-              onOfflineMode();
-            } catch (e: unknown) {
-              const msg = e instanceof Error ? e.message : String(e);
-              setErrorMessage('Failed to enable DEV MODE: ' + msg);
-            }
-          }}
-        >
-          <MaterialCommunityIcons name="developer-board" size={16} color="#00f0ff" />
-          <Text style={{ color: '#00f0ff', fontWeight: 'bold', fontSize: 13, letterSpacing: 1 }}>DEV MODE: VIRTUAL SKATES</Text>
-        </TouchableOpacity>
-      )}
-
-      {/* The Nuke Button */}
-      {isSandboxEnabled && (
-        <TouchableOpacity
-          style={{
-            marginTop: Spacing.md,
-            alignSelf: 'center',
-            backgroundColor: 'rgba(255, 0, 0, 0.1)',
-            paddingVertical: Spacing.md,
-            paddingHorizontal: Spacing.xl,
-            borderRadius: 8,
-            borderWidth: 1,
-            borderColor: 'rgba(255, 0, 0, 0.4)'
-          }}
-          onPress={async () => {
-            try {
-              await AsyncStorage.clear();
-              setErrorMessage('APP RESET: ALL DATA CLEARED. PLEASE RESTART APP.');
-            } catch (e: unknown) {
-              const msg = e instanceof Error ? e.message : String(e);
-              setErrorMessage('Failed to clear data: ' + msg);
-            }
-          }}
-        >
-          <Text style={{ color: '#FF4444', fontWeight: 'bold', fontSize: 12 }}>☢️ NUKE APP CACHE</Text>
-        </TouchableOpacity>
-      )}
     </>
   );
 }
