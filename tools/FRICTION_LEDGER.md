@@ -349,3 +349,14 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Impact:** User frustration, loss of trust, and broken UI rendering.
 - **Status:** MONITORING
 
+
+### [FRICTION-005] Unverified Framework Assumption
+- **First Observed:** 2026-06-09
+- **Observed By:** Sage
+- **Occurrences:** 1 / 3
+- **Trigger:** Wrote a UI component using Tailwind CSS classes without checking if the project actually had Tailwind installed.
+- **Pattern:** Agent uses arbitrary frameworks/libraries in code generation assuming they exist globally, leading to unstyled or broken components.
+- **Root Cause Theory:** Skipping the package.json verification step before writing UI code.
+- **Impact:** Shipped a completely unstyled, broken-looking widget to master, severely damaging user trust and requiring a hotfix.
+- **Status:** MONITORING
+
