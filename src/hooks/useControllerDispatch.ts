@@ -16,6 +16,7 @@ import { useCallback } from 'react';
 import { getLocalProfileById } from '../constants/ProductCatalog';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { buildPatternPayload } from '../protocols/PatternEngine';
+import { IControllerProtocol } from '../protocols/IControllerProtocol';
 import { AppLogger } from '../services/AppLogger';
 import { hexToRgb } from '../utils/ColorUtils';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
@@ -33,13 +34,15 @@ interface UseControllerDispatchParams {
   writeToDevice?: WriteFn;
   hwSettings?: any;
   points?: number;
+  getAdapterForDevice?: (mac: string) => IControllerProtocol | undefined;
+  primaryDeviceId?: string;
 }
 
 /**
  * Provides stable BLE dispatch functions for sending solid colors, patterns,
  * music configs, and emergency lighting to connected devices.
  */
-export function useControllerDispatch({ writeToDevice, hwSettings, points }: UseControllerDispatchParams) {
+export function useControllerDispatch({ writeToDevice, hwSettings, points, getAdapterForDevice, primaryDeviceId }: UseControllerDispatchParams) {
   /** Resolve LED count from hw config or fallback */
   const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
 
@@ -117,6 +120,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
         patternPayloadCache.delete(cacheKey);
         patternPayloadCache.set(cacheKey, payload);
       } else {
+        const adapter = getAdapterForDevice?.(primaryDeviceId ?? '');
         payload = buildPatternPayload(
           patternId,
           fgRaw,
@@ -124,7 +128,10 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
           numLEDs,
           spd,
           dir,
-          brt
+          brt,
+          undefined, // options
+          undefined, // hardwareLedPoints
+          adapter    // protocol
         ) ?? undefined;
         if (payload) {
           patternPayloadCache.set(cacheKey, payload);
@@ -138,7 +145,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
 
       if (payload) writeToDevice(payload);
     },
-    [writeToDevice, sendColor, clampSpeed, numLEDs]
+    [writeToDevice, sendColor, clampSpeed, numLEDs, getAdapterForDevice, primaryDeviceId]
   );
 
   /** Apply static/strobe/blink mode pattern */
@@ -167,16 +174,28 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       if (pat === 'STATIC') {
         sendColor(tR, tG, tB);
       } else if (pat === 'STROBE') {
-        writeToDevice(ZenggeProtocol.setCustomModeCompact([
-          { mode: ZenggeProtocol.STEP_STROBE, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }
-        ]));
+        const adapter = getAdapterForDevice?.(primaryDeviceId ?? '');
+        if (adapter) {
+          const result = adapter.buildCustomMode([{ mode: ZenggeProtocol.STEP_STROBE, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }]);
+          result.packets.forEach(p => writeToDevice(p));
+        } else {
+          writeToDevice(ZenggeProtocol.setCustomModeCompact([
+            { mode: ZenggeProtocol.STEP_STROBE, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }
+          ]));
+        }
       } else if (pat === 'BLINK') {
-        writeToDevice(ZenggeProtocol.setCustomModeCompact([
-          { mode: ZenggeProtocol.STEP_JUMP, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }
-        ]));
+        const adapter = getAdapterForDevice?.(primaryDeviceId ?? '');
+        if (adapter) {
+          const result = adapter.buildCustomMode([{ mode: ZenggeProtocol.STEP_JUMP, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }]);
+          result.packets.forEach(p => writeToDevice(p));
+        } else {
+          writeToDevice(ZenggeProtocol.setCustomModeCompact([
+            { mode: ZenggeProtocol.STEP_JUMP, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }
+          ]));
+        }
       }
     },
-    [writeToDevice, sendColor]
+    [writeToDevice, sendColor, getAdapterForDevice, primaryDeviceId]
   );
 
   /**
@@ -221,9 +240,15 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       }
 
       // 0x02 = Running: hardware scrolls the array natively
-      writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSettings?.ledPoints || numLEDs, hwSpd, 1, 0x02));
+      const adapter = getAdapterForDevice?.(primaryDeviceId ?? '');
+      if (adapter) {
+        const result = adapter.buildMultiColor(arr, hwSettings?.ledPoints || numLEDs, hwSpd, 1, 0x02);
+        result.packets.forEach(p => writeToDevice(p));
+      } else {
+        writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSettings?.ledPoints || numLEDs, hwSpd, 1, 0x02));
+      }
     },
-    [writeToDevice, hwSettings, numLEDs]
+    [writeToDevice, hwSettings, numLEDs, getAdapterForDevice, primaryDeviceId]
   );
 
   /** Send music mode configuration to hardware */
@@ -248,49 +273,76 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points }: Use
       AppLogger.log("MUSIC_CONFIG_REQUESTED", { patternId, src, c1Hex: color1Hex, c2Hex: color2Hex, matrix });
 
       // BUG FIX: Previously passed `src === 'DEVICE'` as the `isOn` byte, which
-      // disabled music mode (isOn=false → 0x00) whenever APP mic was selected.
-      // Per ZENGGE_PROTOCOL_BIBLE.md §0x73 §11 Oracle (2026-04-22):
+      // disabled music mode (isOn=false -> 0x00) whenever APP mic was selected.
+      // Per ZENGGE_PROTOCOL_BIBLE.md § 0x73 § 11 Oracle (2026-04-22):
       //   isOn (byte 1): 0x01 = activate music mode, 0x00 = deactivate
       //   Mic routing is NOT controlled here — APP mic is activated by streaming
       //   0x74 magnitude packets. DEVICE mic listens natively when 0x74 is absent.
       //   isOn must be true ONLY when Device Mic is selected (built-in hardware mic).
       //   In App Mic mode, isOn must be false (0x00) so the onboard mic is disabled
       //   and the controller expects 0x74 magnitude packets.
-      writeToDevice(ZenggeProtocol.setMusicConfig(
-        patternId,
-        matrix === 0x27 ? 0x27 : 0x26,
-        src === 'DEVICE',  // isOn: true for DEVICE mic, false for APP mic
-        c1,
-        c2,
-        sens,
-        bright
-      ), { micSource: src });
+      const adapter = getAdapterForDevice?.(primaryDeviceId ?? '');
+      if (adapter) {
+        const result = adapter.buildMusicConfig({
+          patternId,
+          matrixStyle: matrix === 0x27 ? 0x27 : 0x26,
+          isOn: src === 'DEVICE',
+          color1: c1,
+          color2: c2,
+          micSensitivity: sens,
+          brightness: bright,
+          speed: 50 // Default speed for music mode fallback
+        });
+        result.packets.forEach(p => writeToDevice(p, { micSource: src }));
+      } else {
+        writeToDevice(ZenggeProtocol.setMusicConfig(
+          patternId,
+          matrix === 0x27 ? 0x27 : 0x26,
+          src === 'DEVICE',  // isOn: true for DEVICE mic, false for APP mic
+          c1,
+          c2,
+          sens,
+          bright
+        ), { micSource: src });
+      }
     },
-    [writeToDevice]
+    [writeToDevice, getAdapterForDevice, primaryDeviceId]
   );
 
   /** Send power on/off command */
   const setPower = useCallback(
     (isOn: boolean) => {
       if (!writeToDevice) {
-        if (__DEV__) console.error("🔴 [BLE DEAD WIRE] setPower called but writeToDevice is undefined — writes are silently dropping!");
+        if (__DEV__) console.error("🚨 [BLE DEAD WIRE] setPower called but writeToDevice is undefined — writes are silently dropping!");
         return;
       }
-      writeToDevice(isOn ? ZenggeProtocol.turnOn() : ZenggeProtocol.turnOff());
+      const adapter = getAdapterForDevice?.(primaryDeviceId ?? '');
+      if (adapter) {
+        const result = isOn ? adapter.buildPowerOn() : adapter.buildPowerOff();
+        result.packets.forEach(p => writeToDevice(p));
+      } else {
+        writeToDevice(isOn ? ZenggeProtocol.turnOn() : ZenggeProtocol.turnOff());
+      }
     },
-    [writeToDevice]
+    [writeToDevice, getAdapterForDevice, primaryDeviceId]
   );
 
   /** Send multi-color array (used by BUILDER mode, favorites restore) */
   const setMultiColor = useCallback(
     (colors: { r: number; g: number; b: number }[], ledPoints: number, speed: number, direction: number, transitionType?: number) => {
       if (!writeToDevice) {
-        if (__DEV__) console.error("🔴 [BLE DEAD WIRE] setMultiColor called but writeToDevice is undefined — writes are silently dropping!");
+        if (__DEV__) console.error("🚨 [BLE DEAD WIRE] setMultiColor called but writeToDevice is undefined — writes are silently dropping!");
         return;
       }
-      writeToDevice(ZenggeProtocol.setMultiColor(colors, ledPoints, speed, direction, transitionType));
+      const adapter = getAdapterForDevice?.(primaryDeviceId ?? '');
+      if (adapter) {
+        const result = adapter.buildMultiColor(colors, ledPoints, speed, direction, transitionType);
+        result.packets.forEach(p => writeToDevice(p));
+      } else {
+        writeToDevice(ZenggeProtocol.setMultiColor(colors, ledPoints, speed, direction, transitionType));
+      }
     },
-    [writeToDevice]
+    [writeToDevice, getAdapterForDevice, primaryDeviceId]
   );
 
   return {

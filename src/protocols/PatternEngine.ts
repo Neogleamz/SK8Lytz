@@ -9,6 +9,7 @@
 
 
 import { ZenggeProtocol } from './ZenggeProtocol';
+import { IControllerProtocol } from './IControllerProtocol';
 import { getPatternTransitionType, getHardwarePixelArray } from './SpatialEngine';
 import { getVisualizerFrame } from './VisualizerEngine';
 import { getMusicVisualizerFrame, getSymphonyVisualizerFrame } from './SymphonyEngine';
@@ -172,7 +173,8 @@ export function buildMultiColorPayload(
   direction: number = 1,
   brightness: number = 100,
   options?: PatternOptions,
-  hardwareLedPoints?: number
+  hardwareLedPoints?: number,
+  protocol?: IControllerProtocol
 ): number[] | null {
   const pixels = getHardwarePixelArray(patternId, fg, bg, numLEDs, options);
   if (!pixels) return null;
@@ -189,6 +191,10 @@ export function buildMultiColorPayload(
   // Pass hardwareLedPoints separately so the 0x59 footer correctly encodes the
   // physical strip length — decoupled from the BLE-safe pixel array cap (MAX_PIXELS=54).
   const transitionType = getPatternTransitionType(patternId);
+  if (protocol) {
+    const result = protocol.buildMultiColor(scaledPixels, hardwareLedPoints ?? numLEDs, speed, direction, transitionType);
+    return result.packets.length > 0 ? result.packets[0] : null;
+  }
   return ZenggeProtocol.setMultiColor(scaledPixels, hardwareLedPoints ?? numLEDs, speed, direction, transitionType);
 }
 
@@ -211,14 +217,25 @@ export function buildPatternPayload(
   direction: number = 1,
   brightness: number = 100,
   options?: PatternOptions,
-  hardwareLedPoints?: number
+  hardwareLedPoints?: number,
+  protocol?: IControllerProtocol
 ): number[] | null {
-  // ── GROUP 10: NATIVE 0x51 TEMPORAL INTERCEPTION ──
+  // ⚡ GROUP 10: NATIVE 0x51 TEMPORAL INTERCEPTION ⚡
   // The 33 native hardware effects (IDs 201-233) must use 0x51.
   if (patternId >= 201 && patternId <= 233) {
     const hardwareModeId = patternId - 200; // 201 maps to mode 1
     const hwFlags = 0x80 | (direction === 1 ? 0x01 : 0x00);
     
+    if (protocol) {
+      const result = protocol.buildCustomModeExtended([{
+        mode: hardwareModeId,
+        speed,
+        color1: fg,
+        color2: bg,
+        dir: hwFlags
+      }]);
+      return result.packets.length > 0 ? result.packets[0] : null;
+    }
     return ZenggeProtocol.setCustomModeExtendedCompact([{
       mode: hardwareModeId,
       speed,
@@ -242,6 +259,16 @@ export function buildPatternPayload(
     const hwFlags = 0x80 | (direction === 1 ? 0x01 : 0x00);
 
     // Use the 10-byte unpadded compact payload so the direction flag is respected!
+    if (protocol) {
+      const result = protocol.buildCustomModeExtended([{
+        mode: modeId,
+        speed,
+        color1: fg,
+        color2: bg,
+        dir: hwFlags
+      }]);
+      return result.packets.length > 0 ? result.packets[0] : null;
+    }
     return ZenggeProtocol.setCustomModeExtendedCompact([{
       mode: modeId,
       speed,
@@ -251,7 +278,7 @@ export function buildPatternPayload(
     }]);
   }
 
-  return buildMultiColorPayload(patternId, fg, bg, numLEDs, speed, direction, brightness, options, hardwareLedPoints);
+  return buildMultiColorPayload(patternId, fg, bg, numLEDs, speed, direction, brightness, options, hardwareLedPoints, protocol);
 }
 
 // ─── MUSIC MODE VISUALIZER ────────────────────────────────────────────────────

@@ -24,6 +24,7 @@ import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
 import { useCuratedPicks } from '../hooks/useCuratedPicks';
 import { useDockedControllerState } from '../hooks/useDockedControllerState';
 import { useSharedFavorites } from '../context/FavoritesContext';
+import { useSharedBLE } from '../context/BLEContext';
 import { useControllerDispatch } from '../hooks/useControllerDispatch';
 import { getMusicPatternLabel } from '../hooks/useMusicMode';
 import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
@@ -548,6 +549,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     };
 
 
+    const { getAdapterForDevice } = useSharedBLE();
+
     const {
       sendColor,
       applyFixedPattern,
@@ -557,7 +560,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       clampSpeed,
       setPower,
       setMultiColor,
-    } = useControllerDispatch({ writeToDevice, hwSettings, points });
+    } = useControllerDispatch({ writeToDevice, hwSettings, points, getAdapterForDevice, primaryDeviceId: primaryMac });
 
     /** Convenience wrapper — pre-binds selectedColor and speed for callers */
     const applyStaticModePattern = (pat: typeof fixedModePattern, r?: number, g?: number, b?: number, spd?: number) =>
