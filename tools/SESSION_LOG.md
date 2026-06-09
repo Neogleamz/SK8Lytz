@@ -922,3 +922,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Fixed offline pc crash on username login, silent profile error swallowing, and removed dead safeErr variables.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/services/supabaseClient.ts, src/context/SessionContext.tsx, src/services/AuthProfileService.ts, src/components/auth/AuthFormSignIn.tsx, src/components/auth/AuthFormSignUp.tsx
+  
+### [ARTIFACT] 2026-06-09T01:08 - Global Admin Command Center Walkthrough  
+**What was filed:** Built the global admin command center, migrating admin tools out of the mobile app into a dedicated React/Vite web application deployed on the scraper container (port 5997).  
+**Files touched:** tools/command-center/*, src/components/admin/* (deleted), src/screens/DashboardScreen.tsx, src/components/AccountModal.tsx  
+**Gatekeeper Status:** feat/global-admin-dashboard worktree is verified clean and ready, but gatekeeper is temporarily blocked by uncommitted changes in fix/audit-fixes-ble-protocol. 
