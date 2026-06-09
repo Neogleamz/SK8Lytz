@@ -14,7 +14,15 @@ if ((Get-Location).Path -ne $FORTRESS_ROOT) {
     exit 1
 }
 
-# 0. Master Cleanliness Guard (FRICTION-017)
+# 0. Agent State Auto-Commit Guard (FRICTION-027)
+$LogStatus = git status --short tools/SESSION_LOG.md tools/SK8Lytz_Bucket_List_ARCHIVE.md tools/FRICTION_LEDGER.md 2>$null
+if ($LogStatus) {
+    Write-Host "Auto-committing agent state logs before merge..." -ForegroundColor Yellow
+    git add tools/SESSION_LOG.md tools/SK8Lytz_Bucket_List_ARCHIVE.md tools/FRICTION_LEDGER.md
+    git commit -m "chore(logs): save session state before merge" --quiet
+}
+
+# 0.5. Master Cleanliness Guard (FRICTION-017)
 $MasterStatus = git status --short
 if ($MasterStatus) {
     Write-Host "GATEKEEPER HALT: The master branch has uncommitted changes." -ForegroundColor Red
