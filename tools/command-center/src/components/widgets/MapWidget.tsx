@@ -8,8 +8,20 @@ import type { ColDef } from 'ag-grid-community';
 // AG Grid v35+ strict module registration
 ModuleRegistry.registerModules([AllCommunityModule]);
 
-// Force Dark Mode via JS Theme API
-const myTheme = themeQuartz.withPart(colorSchemeDark);
+// Force Dark Mode via JS Theme API with SK8Lytz Glassmorphism Cyan styling
+const myTheme = themeQuartz.withPart(colorSchemeDark).withParams({
+  backgroundColor: 'transparent',
+  foregroundColor: '#cbd5e1', // slate-300
+  headerBackgroundColor: 'rgba(15, 23, 42, 0.4)', // slate-900 transparent
+  headerTextColor: '#22d3ee', // cyan-400
+  borderColor: 'rgba(51, 65, 85, 0.5)', // slate-700
+  rowBorderColor: 'rgba(51, 65, 85, 0.3)',
+  rowHoverColor: 'rgba(34, 211, 238, 0.1)', // cyan-400 transparent
+  accentColor: '#22d3ee', // cyan-400
+  fontFamily: '"Inter", sans-serif',
+  headerFontSize: '14px',
+  wrapperBorderRadius: '8px',
+});
 
 interface DeviceData {
   id: string;
