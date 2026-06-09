@@ -2,15 +2,14 @@ import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { supabase } from '../../services/supabase';
 import USAMap from './USMap';
 import { AgGridReact } from 'ag-grid-react';
-import { ModuleRegistry, ClientSideRowModelModule } from 'ag-grid-community';
+import { ModuleRegistry, AllCommunityModule, themeQuartz, colorSchemeDark } from 'ag-grid-community';
 import type { ColDef } from 'ag-grid-community';
 
-// AG-Grid > 31 requires manual module registration
-ModuleRegistry.registerModules([ClientSideRowModelModule]);
+// AG Grid v35+ strict module registration
+ModuleRegistry.registerModules([AllCommunityModule]);
 
-// Force Vite to bundle and inject these styles for the component via HMR
-import 'ag-grid-community/styles/ag-grid.css';
-import 'ag-grid-community/styles/ag-theme-quartz.css';
+// Force Dark Mode via JS Theme API
+const myTheme = themeQuartz.withPart(colorSchemeDark);
 
 interface DeviceData {
   id: string;
@@ -224,9 +223,10 @@ export default function MapWidget() {
       <div className="flex flex-col flex-1 shrink-0 min-h-[500px]">
         <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 mb-4 tracking-wide">Fleet Databank</h3>
         <div className="glass-panel p-1 rounded-xl border border-cyan-900/40 shadow-2xl bg-[#0f172a]/60 backdrop-blur-xl">
-          <div className="ag-theme-quartz-dark rounded-lg overflow-hidden" style={{ height: 500, width: '100%' }}>
+          <div className="rounded-lg overflow-hidden" style={{ height: 500, width: '100%' }}>
             <AgGridReact
               ref={gridRef}
+              theme={myTheme}
               rowData={devices}
               columnDefs={colDefs}
               defaultColDef={defaultColDef}
