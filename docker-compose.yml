@@ -36,6 +36,8 @@ services:
     volumes:
       - ./src:/app/src
       - ./assets:/app/assets
+      - ./App.tsx:/app/App.tsx
+      - ./index.ts:/app/index.ts
       - ./app.config.js:/app/app.config.js
       - ./babel.config.js:/app/babel.config.js
       - ./metro.config.js:/app/metro.config.js
