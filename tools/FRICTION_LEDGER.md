@@ -328,3 +328,13 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Root Cause Theory:** The agent incorrectly assumed terminal execution of infrastructure commands should be left to the user.
 - **Impact:** User annoyance and unnecessary friction.
 - **Status:** MONITORING
+
+### [FRICTION-026] Snippet Over-Optimization
+- **First Observed:** 2026-06-09
+- **Observed By:** Sage
+- **Occurrences:** 1 / 3
+- **Trigger:** User ran a partial SQL snippet pasted in chat instead of the full file.
+- **Pattern:** Agent provided a 'core logic' snippet in the chat which stripped the required CTE (WITH clause), leading the user to copy-paste unrunnable code.
+- **Root Cause Theory:** Attempting to be helpful by summarizing code in chat, which created a copy-paste hazard.
+- **Impact:** SQL syntax error, user frustration ("you are just making up tables!!! WTF???").
+- **Status:** MONITORING

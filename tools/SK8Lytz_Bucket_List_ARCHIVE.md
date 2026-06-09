@@ -1000,3 +1000,9 @@ pm run verify which includes QA tests.
   - **Decision Log:** Dual-write pattern approved to safely hydrate crash_telemetry without breaking legacy dashboards.
   - **Source of Truth:** 📖 `src/services/AppLogger.ts`, `src/services/SpeedTrackingService.ts`
   - **Details:** Worktree active. See PLAN-db-telemetry-fix.md for payload mapping.
+
+- [x] **`fix/eeprom-product-confirm`**
+  - **Tags:** `[🔥 ON DECK]` `[❌ UNVERIFIED]` `[BLE/DB]` `[M-RISK]` `[Snack]` `[🤖 PRO-LOW]` `[BATCH:db-hygiene]`
+  - **Goal:** Ensure `product_id_confirmed_at` is populated correctly.
+  - **Decision Log:** EEPROM 0x63 responses successfully identify product IDs but fail to persist the confirmation back to registered_devices. This task wires that persistence.
+  - **Source of Truth:** 📖 `src/hooks/useControllerDispatch.ts`, `src/services/DeviceRepository.ts`

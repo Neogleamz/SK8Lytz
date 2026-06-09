@@ -1162,3 +1162,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Master HEAD:** (untracked local changes in tools/command-center)
 **Friction Audit:** [1] new events | [0] incremented | [0] resolved | Proposals due: none
 **System evolution:** Added [DECISION] rule to explicitly ban Tailwind assumptions in Command Center.
+
+### [DECISION] 2026-06-09T03:46 — Relational Map Drilldown Architecture
+**Decision:** We are building a "Spider-Web Drill Down" map capability to visually connect users to their hardware and crews using SVG vectors, alongside dynamic Crew Geofences and Supabase Realtime subscriptions for live telemetry movement.
+**Rejected:** Displaying historical skate paths (polylines) — rejected because the user deemed it too invasive.
+**Don't re-derive:** The map is transitioning from a static point plotter to a lazy-loaded relational inspector. We will only fetch full relational graphs (egistered_devices, crew_memberships) when a specific cluster/pin is clicked, to avoid overwhelming the client with the entire database graph.
+**Source:** User feedback during brainstorming session.
