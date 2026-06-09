@@ -37,19 +37,61 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => (
 const AuthScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
+  const [isError, setIsError] = useState(false);
+
+  const displayMessage = (msg: string, error: boolean = false) => {
+    setMessage(msg);
+    setIsError(error);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    await supabase.auth.signInWithPassword({ email, password });
+    displayMessage('');
+    if (!email || !password) return displayMessage('Email and password required', true);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) displayMessage(error.message, true);
+  };
+
+  const handleSignUp = async () => {
+    displayMessage('');
+    if (!email || !password) return displayMessage('Email and password required', true);
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) displayMessage(error.message, true);
+    else displayMessage('Sign up successful! You may now log in.');
+  };
+
+  const handleResetPassword = async () => {
+    displayMessage('');
+    if (!email) return displayMessage('Enter your email first to reset password', true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/',
+    });
+    if (error) displayMessage(error.message, true);
+    else displayMessage('Password reset email sent! Check your inbox.');
   };
 
   return (
     <div className="auth-container">
-      <form onSubmit={handleLogin} className="auth-form glass-panel">
+      <form className="auth-form glass-panel">
         <h2 className="auth-title">Admin Login</h2>
+        
+        {message && (
+          <div style={{ color: isError ? '#ff6b6b' : '#51cf66', marginBottom: '15px', fontSize: '14px', textAlign: 'center' }}>
+            {message}
+          </div>
+        )}
+
         <input type="email" placeholder="Email" className="auth-input" value={email} onChange={e => setEmail(e.target.value)} />
         <input type="password" placeholder="Password" className="auth-input" value={password} onChange={e => setPassword(e.target.value)} />
-        <button type="submit" className="auth-button glass-btn">Authenticate</button>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <button type="button" onClick={handleLogin} className="auth-button glass-btn">Login</button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button type="button" onClick={handleSignUp} className="auth-button glass-btn" style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>Sign Up</button>
+            <button type="button" onClick={handleResetPassword} className="auth-button glass-btn" style={{ flex: 1, background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', color: '#aaa' }}>Reset Password</button>
+          </div>
+        </div>
       </form>
     </div>
   );
