@@ -1259,3 +1259,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Rejected:** Leaving them strictly behind __DEV__, which completely broke the web demo once containerized in production mode.
 **Don't re-derive:** The web version of SK8Lytz cannot scan physical BLE anyway; it is explicitly a demo dashboard that relies on virtual hardware. It must always have sandbox access regardless of NODE_ENV.
 **Source:** src/hooks/useBLE.ts:184
+
+### [MERGE] 2026-06-09T22:02 — hotfix-sandbox -> master @ 9e098351
+**What merged:** Decoupled Dev Sandbox toggle and Virtual Skates injection from __DEV__ for Platform.OS === 'web' to fix the containerized web demo.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/components/auth/AuthSandboxToggle.tsx, src/hooks/useBLE.ts, src/hooks/ble/useBLEScanner.ts, src/services/BleConnectionManager.ts, index.ts, src/components/GlobalErrorBoundary.tsx

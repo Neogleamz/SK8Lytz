@@ -44,14 +44,23 @@ export const LiveDebuggerWidget: React.FC = () => {
 
   const fetchData = async () => {
     // 1. Fetch Aggregates
-    const { data: aggs } = await supabase.from('view_crash_aggregates').select('*');
-    if (aggs) setAutopsyData(aggs as CrashAggregate[]);
+    const { data: aggs } = await supabase
+      .from('view_crash_aggregates')
+      .select('*')
+      .order('status', { ascending: true }) // OPEN before RESOLVED
+      .order('crash_count', { ascending: false }) // Most frequent first
+      .order('last_seen', { ascending: false }); // Most recent first
+    if (aggs) {
+      setAutopsyData(aggs as CrashAggregate[]);
+      if (aggs.length > 0 && !selectedSignature) {
+        setSelectedSignature((aggs[0] as CrashAggregate).error_signature);
+      }
+    }
 
     // 2. Fetch Terminal Feed
     const { data: feed } = await supabase
       .from('crash_telemetry')
       .select('created_at, severity, error_signature, app_version')
-      .neq('severity', 'FATAL')
       .order('created_at', { ascending: false })
       .limit(50);
     if (feed) setTelemetryFeed(feed as CrashReport[]);
