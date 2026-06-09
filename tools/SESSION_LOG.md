@@ -1111,3 +1111,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Master HEAD:** 154c3740
 **Friction Audit:** [0] new events | [0] incremented | [0] resolved | Proposals due: none
 **System evolution:** Updated SK8Lytz_App_Master_Reference.md to document the MMKV telemetry architecture and VIP Fast Lane.
+
+### [MERGE] 2026-06-09T02:29:51Z — fix/db-telemetry-drift -> master @ 47610f4a
+**What merged:** Dual-write crash telemetry to Supabase and fixed lifetime stats computation drift in solo sessions.
+**Verify result:** TSC ?, Jest ?, QA Gatekeeper ?
+**Files touched:** src/services/AppLogger.ts, src/services/SpeedTrackingService.ts

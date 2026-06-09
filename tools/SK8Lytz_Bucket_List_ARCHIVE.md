@@ -993,3 +993,10 @@ pm run verify which includes QA tests.
   - **Decision Log:** See PLAN-db-hygiene-batch.md for BLE deduplication logic and health metrics calories mapping rules.
   - **Source of Truth:** 📖 `src/types/supabase.ts`
   - **Details:** Updating payloads across multiple services to achieve 1:1 parity with database schema.
+
+- [x] **`fix/db-telemetry-drift`** 2026-06-09 merged dual-write and drift fix
+  - **Tags:** `[📦 ARCHIVE]` `[✅ VERIFIED]` `[CLOUD/BLE]` `[H-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:telemetry-drift]`
+  - **Goal:** Dual-write crash logs, fix location data black hole, and fix solo lifetime stats drift.
+  - **Decision Log:** Dual-write pattern approved to safely hydrate crash_telemetry without breaking legacy dashboards.
+  - **Source of Truth:** 📖 `src/services/AppLogger.ts`, `src/services/SpeedTrackingService.ts`
+  - **Details:** Worktree active. See PLAN-db-telemetry-fix.md for payload mapping.
