@@ -44,6 +44,7 @@ CREATE OR REPLACE FUNCTION public.admin_ban_user(p_target_user_id UUID, p_reason
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     caller_role public.user_role;
@@ -69,6 +70,7 @@ CREATE OR REPLACE FUNCTION public.admin_revoke_ban(p_target_user_id UUID)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     caller_role public.user_role;
@@ -94,6 +96,7 @@ CREATE OR REPLACE FUNCTION public.admin_force_password_reset(p_target_user_id UU
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     caller_role public.user_role;
@@ -122,6 +125,7 @@ CREATE OR REPLACE FUNCTION public.admin_soft_delete_user(p_target_user_id UUID)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
     caller_role public.user_role;
@@ -159,6 +163,7 @@ CREATE OR REPLACE FUNCTION public.handle_auto_promotion()
 RETURNS TRIGGER 
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
     -- This trigger fires AFTER INSERT on auth.users.

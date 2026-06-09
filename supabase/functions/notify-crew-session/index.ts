@@ -41,6 +41,18 @@ Deno.serve(async (req: Request) => {
     return new Response("Missing crewId or sessionId", { status: 400 });
   }
 
+  // Verify caller is a member of the crew
+  const { data: callerMembership, error: callerErr } = await supabase
+    .from("crew_memberships")
+    .select("role")
+    .eq("crew_id", crewId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (callerErr || !callerMembership) {
+    return new Response("Forbidden: Not a member of this crew", { status: 403 });
+  }
+
   // 1. Get all permanent crew members (exclude the leader)
   const { data: members, error: membersErr } = await supabase
     .from("crew_memberships")
