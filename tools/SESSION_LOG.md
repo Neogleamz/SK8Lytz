@@ -1199,3 +1199,14 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Cleaned up 75 linting errors in DashboardScreen and App.tsx, resolving tech debt blocking future merges.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/screens/DashboardScreen.tsx, App.tsx
+
+### [MERGE] 2026-06-09T15:37 — feat/live-debugger-suite -> master
+**What merged:** Implemented the Sentry-style layout for the Live Debugger Widget using pure Tailwind v3 CSS, and migrated all historical 	elemetry_errors to crash_telemetry so the DB aggregates seamlessly.
+**Verify result:** TSC ?, Jest ?, UI Styles ?
+**Files touched:** LiveDebuggerWidget.tsx, tailwind.config.js, postcss.config.js, index.css
+
+### [DECISION] 2026-06-09T15:37 — Static CSS injection for Tailwind
+**Decision:** We compiled the Tailwind CSS down to a static 	ailwind-compiled.css file and imported it directly in index.css instead of relying on PostCSS runtime in Vite.
+**Rejected:** Relying on PostCSS config directly (rejected because the live Vite dev server caches dependencies, causing unstyled components unless the user forcefully restarts their local docker/node environment).
+**Don't re-derive:** Always compile and inject static CSS for immediate hotfixes if we are introducing a new CSS framework to a running environment to bypass caching constraints.
+**Source:** tools/command-center/src/index.css

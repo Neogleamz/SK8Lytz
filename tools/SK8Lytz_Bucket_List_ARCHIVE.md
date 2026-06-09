@@ -1016,3 +1016,11 @@ pm run verify which includes QA tests.
     Rejected alternative: "Showing historical skate paths (polylines) — rejected due to privacy/invasiveness."
   - **Source of Truth:** 📖 `src/types/supabase.ts` & `MapWidget.tsx`
   - **Details:** Must implement Supabase `.channel()` for real-time `telemetry_snapshots` inserts to move pins without refresh.
+
+- [x] **`feat/live-debugger-suite`**
+  - **Tags:** `[? READY]` `[? VERIFIED]` `[UI/DB]` `[M-RISK]` `[Meal]` `[?? PRO-MED]` `[BATCH:live-debugger-suite]`
+  - **Goal:** Evolve the Live Debugger into a 3-tab Diagnostic Suite (Live Stream, Crash Autopsy, Non-Fatal Diagnostics) with alerting and grouping.
+  - **Decision Log:** The initial Live Debugger is a basic feed; user requires a robust interface to triage, group, and resolve errors (90-day retention, simple DB status updates) using crash and error telemetry.
+  - **Analysis:** ?? Plan: [PLAN-live-debugger-suite.md](../../docs/plans/PLAN-live-debugger-suite.md)
+  - **Source of Truth:** ?? `src/components/widgets/LiveDebuggerWidget.tsx`, `crash_telemetry`, `telemetry_errors`
+  - **Details:** Requires creating a Supabase View `view_crash_aggregates`, updating `LiveDebuggerWidget.tsx` with AG Grid, and adding specific highlighting for spike thresholds (>10 crashes/hour).
