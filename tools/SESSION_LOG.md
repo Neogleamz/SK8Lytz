@@ -1220,3 +1220,15 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Embedded Cheat Sheet into Command Center UI.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** tools/command-center/src/App.tsx, tools/command-center/public/cheat-sheet.html, tools/command-center/src/components/widgets/CheatSheetWidget.tsx
+
+### [EVENT] 2026-06-09T15:55 — Diagnostic Suite & Auto-Factory Tagging Session
+**What shipped:**
+- feat/live-debugger-suite @ 1a3959cd
+- feat/auto-factory-tagging @ cf3e9a28
+- ui/embed-cheat-sheet @ 8efa0a34
+**AI failure pattern:** Used empty data placeholders instead of connecting real Supabase data, leading to a blank UI and user frustration (FRICTION-028). Used a framework (Tailwind) that required static CSS compilation before verifying it worked in Vite dev server caching (FRICTION-005).
+**User pattern:** Extremely clear direction, corrected the AI immediately when UI was broken.
+**Active sprint state:** (Empty)
+**Master HEAD:** 1a3959cd
+**Friction Audit:** (1 new events | 0 incremented | 0 resolved | Proposals due: none)
+**System evolution:** Added FRICTION-028 (Placeholder Data Prop).

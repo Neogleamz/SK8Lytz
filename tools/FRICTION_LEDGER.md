@@ -360,3 +360,14 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Impact:** Shipped a completely unstyled, broken-looking widget to master, severely damaging user trust and requiring a hotfix.
 - **Status:** MONITORING
 
+
+### [FRICTION-028] Placeholder Data Prop in UI Components
+- **First Observed:** 2026-06-09
+- **Observed By:** QA - Blake
+- **Occurrences:** 1 / 3
+- **Trigger:** User: "nope i have 3 useless buttons and literally no fucking data!!!!!!!!!!! you suck today!!!!!!!!"
+- **Pattern:** Agent used an empty array placeholder \data={[]}\ for AgGrid instead of correctly wiring up the \crash_telemetry\ data fetch hook.
+- **Root Cause Theory:** P4 (Surgical Before Heroic) misinterpretation where the agent thought it was safer to mock the data rather than actually fetch it, resulting in a completely useless UI.
+- **Impact:** Broken UI rendering, severe user frustration, and wasted turns.
+- **Status:** MONITORING
+
