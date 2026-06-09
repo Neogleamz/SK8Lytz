@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '../../services/supabase';
 import USAMap from './USMap';
-import { EntityInspectorSidebar } from './EntityInspectorSidebar';
 import { AgGridReact } from 'ag-grid-react';
 import { ModuleRegistry, AllCommunityModule, themeQuartz, colorSchemeDark } from 'ag-grid-community';
 import type { ColDef } from 'ag-grid-community';
@@ -52,7 +51,6 @@ interface MapPoint {
   lng: number;
   label: string;
   type: 'skate' | 'crew' | 'device' | 'telemetry';
-  user_id?: string;
 }
 
 function latLngToXY(lat: number, lng: number) {
@@ -71,7 +69,6 @@ export default function MapWidget() {
   const gridRef = useRef<AgGridReact>(null);
 
   // Map Data
-  const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [skatePoints, setSkatePoints] = useState<MapPoint[]>([]);
   const [crewPoints, setCrewPoints] = useState<MapPoint[]>([]);
   const [devicePoints, setDevicePoints] = useState<MapPoint[]>([]);
@@ -196,8 +193,7 @@ export default function MapWidget() {
             lat: latVal,
             lng: lngVal,
             label: `Device: ${d.custom_name || d.device_mac || d.id}`,
-            type: 'device',
-            user_id: d.user_id
+            type: 'device'
           });
         }
       });
@@ -232,8 +228,7 @@ export default function MapWidget() {
             lat: coords.lat,
             lng: coords.lng,
             label: `User Session: ${s.user_id}`,
-            type: 'skate',
-            user_id: s.user_id
+            type: 'skate'
           });
         }
       });
@@ -292,29 +287,6 @@ export default function MapWidget() {
 
   useEffect(() => {
     fetchData();
-
-    // Supabase Realtime Firehose
-    const channel = supabase.channel('telemetry_firehose')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'telemetry_snapshots' }, (payload) => {
-        const newPoint = payload.new as any;
-        setDevicePoints(prev => prev.map(p => {
-          if (newPoint.metadata?.location && p.type === 'device') {
-             let lat = null;
-             let lng = null;
-             if (newPoint.metadata.location.lat !== undefined) {
-               lat = newPoint.metadata.location.lat;
-               lng = newPoint.metadata.location.lng !== undefined ? newPoint.metadata.location.lng : newPoint.metadata.location.lon;
-             }
-             if (lat !== null && lng !== null) {
-               return { ...p, lat, lng };
-             }
-          }
-          return p;
-        }));
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const onFilterChanged = useCallback(() => {
