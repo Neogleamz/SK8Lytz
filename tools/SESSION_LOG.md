@@ -1084,3 +1084,12 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Rejected:** Attempting to force MMKV to run on IndexedDB or stripping out the web bundler.
 **Don't re-derive:** React Native MMKV strictly uses native C++ JSI bindings and will fatally crash the Metro web bundler if imported directly on the web target without conditionally intercepting it.
 **Source:** src/services/AppLogger.ts:39
+### [EVENT] 2026-06-09T07:10 — DB Hygiene Batch Sweep & Wind Down
+**What shipped:**
+- fix/db-hygiene-batch -> master @ 467d8fb3
+**AI failure pattern:** Failed to use native view_file correctly due to mime-type bug, falling back to Get-Content safely.
+**User pattern:** Excellent kanban discipline and explicit approval of implementation plans.
+**Active sprint state:** (Empty sprint - pending next pull)
+**Master HEAD:** 1ebc727
+**Friction Audit:** [0] new events | [0] incremented | [0] resolved | Proposals due: none
+**System evolution:** none
