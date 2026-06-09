@@ -912,3 +912,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - docs/plans/PLAN-audit-fixes-ble-signal.md
 - docs/plans/PLAN-audit-fixes-scanner.md
 **Source:** functional_audit_report.md @ C:\Users\Magma\.gemini\antigravity\brain\8a264849-d4ac-4256-8a34-6d95511cb1d0\
+
+### [MERGE] 2026-06-09T00:56 - fix/wizard-ftue-scan -> master @ 54cc1111
+**What merged:** Fixed P0 onboarding blocker — async sweeper race in HardwareSetupWizardScreen. Added FTUE branch in scanForPeripherals: when registeredMacs.length === 0, calls startSweeper() directly (persistent, idempotent) instead of checking isSweeperActive (which was still false during async battery check). Eliminates the 5s raw scan + hard stop + no-retry loop.
+**Verify result:** TSC clean, Jest 126/126, all 6 gates, blast radius clean
+**Files touched:** src/hooks/ble/useBLEScanner.ts
+**Strike log:** Strike 2 of 3. This was the third attempt. Root cause identified and confirmed: async startSweeper race. Previous 2 fixes patched symptoms (timeout/RSSI) not the race.
