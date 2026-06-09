@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../services/supabaseClient';
+import { supabase } from '../../services/supabase';
 import type { Database } from '../../types/supabase';
 
 type CrashReport = Database['public']['Tables']['crash_telemetry']['Row'];
