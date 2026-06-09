@@ -14,6 +14,52 @@ export type Database = {
   }
   public: {
     Tables: {
+
+      crash_telemetry: {
+        Row: {
+          id: string
+          user_id: string | null
+          error_signature: string
+          stack_trace: string | null
+          breadcrumbs: Json | null
+          environment_state: Json | null
+          severity: string | null
+          status: string | null
+          app_version: string | null
+          created_at: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          error_signature: string
+          stack_trace?: string | null
+          breadcrumbs?: Json | null
+          environment_state?: Json | null
+          severity?: string | null
+          status?: string | null
+          app_version?: string | null
+          created_at?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          error_signature?: string
+          stack_trace?: string | null
+          breadcrumbs?: Json | null
+          environment_state?: Json | null
+          severity?: string | null
+          status?: string | null
+          app_version?: string | null
+          created_at?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+        }
+        Relationships: []
+      }
       admin_audit_logs: {
         Row: {
           action: string

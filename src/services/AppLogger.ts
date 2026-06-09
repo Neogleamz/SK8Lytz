@@ -31,6 +31,7 @@ import * as Battery from 'expo-battery';
 import * as Device from 'expo-device';
 import { supabase } from './supabaseClient';
 import { TelemetryService } from './TelemetryService';
+import { FlightRecorder, Breadcrumb } from '../utils/FlightRecorder';
 
 const STORAGE_KEY = '@Sk8lytz_logs';         // canonical casing — matches @Sk8lytz_ convention
 const LEGACY_KEY  = '@sk8lytz_logs';          // old lowercase key — migrated on first load
@@ -435,6 +436,14 @@ class AppLoggerService {
     
     // Apply Black Box Standardization early
     const payload = this.formatPayload(rawPayload, event);
+
+    let category: Breadcrumb['category'] = 'ACTION';
+    if (event.startsWith('BLE_') || event.startsWith('DEVICE_') || event.startsWith('ZENGGE_')) category = 'BLE';
+    else if (event === 'ERROR_CAUGHT' || event.includes('ERROR') || event.includes('FAIL')) category = 'ERROR';
+    else if (event.includes('FETCH') || event.includes('CLOUD') || event.includes('SYNC')) category = 'NETWORK';
+    else if (event === 'SCREEN_OPENED' || event.includes('NAV')) category = 'NAVIGATION';
+    
+    FlightRecorder.leaveBreadcrumb(category, event, payload);
 
     // VIP Fast-Lane: Critical errors bypass the queue and physical storage to guarantee delivery
     const CRITICAL_EVENTS: EventType[] = ['ERROR_CAUGHT', 'PROTOCOL_ERROR', 'BLE_WRITE_ERROR', 'BLE_CONNECTION_ERROR', 'CREW_ERROR'];

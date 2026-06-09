@@ -7,6 +7,7 @@ import DashboardScreen from './src/screens/DashboardScreen';
 import AuthScreen from './src/screens/AuthScreen';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { GlobalPermissionsModal } from './src/components/modals/GlobalPermissionsModal';
+import { GlobalErrorBoundary } from './src/components/GlobalErrorBoundary';
 import { useFonts, Righteous_400Regular } from '@expo-google-fonts/righteous';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppLogger } from './src/services/AppLogger';
@@ -56,55 +57,6 @@ console.error = (...args: unknown[]) => {
 };
 
 /** ── Global Error Boundary to prevent White Screens ────────────────────────────────── */
-class SafeErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    AppLogger.log('ERROR_CAUGHT', { message: error.message, stack: error.stack, info: errorInfo }).then(() => {
-        AppLogger.uploadLogsToSupabase();
-    });
-    console.error('FATAL_RECOVERY', error, errorInfo);
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <View style={{ flex: 1, backgroundColor: '#0A0E14', justifyContent: 'center', alignItems: 'center', padding: 20 }}>
-          <Text style={{ fontSize: 40, marginBottom: 20 }}>⚠️</Text>
-          <Text style={{ color: '#FFF', fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>Something went wrong</Text>
-          <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, textAlign: 'center', marginBottom: 30 }}>
-            An unexpected error occurred. Tap below to reset the connection.
-          </Text>
-          <View style={{ backgroundColor: 'rgba(255,107,107,0.1)', padding: 10, borderRadius: 8, marginBottom: 30, borderWidth: 1, borderColor: 'rgba(255,107,107,0.2)' }}>
-             <Text style={{ color: '#FF6B6B', fontSize: 12, fontStyle: 'italic' }}>{this.state.error?.message?.slice(0, 100)}...</Text>
-          </View>
-          <View style={{ gap: 12, width: '100%' }}>
-            <View style={{ backgroundColor: '#00F0FF', borderRadius: 12, overflow: 'hidden' }}>
-              <View style={{ backgroundColor: 'transparent', padding: 16, alignItems: 'center' }}>
-                <Text 
-                  style={{ color: '#000', fontWeight: 'bold' }}
-                  onPress={async () => {
-                    await AsyncStorage.multiRemove([STORAGE_OFFLINE_SKIP, '@Sk8lytz_logs', '@Sk8lytz_device_configs']);
-                    // Reload app (native reload is preferred but this serves as a reset)
-                    this.setState({ hasError: false });
-                  }}
-                >
-                  RESET & RE-SYNC APP
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      );
-    }
-    return this.props.children;
-  }
-}
-
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
 function AppContent() {
@@ -198,7 +150,7 @@ export default function App() {
   if (!fontsLoaded) return null;
 
   return (
-    <SafeErrorBoundary>
+    <GlobalErrorBoundary>
       <SafeAreaProvider>
         <ThemeProvider>
           <AuthProvider>
@@ -215,7 +167,7 @@ export default function App() {
           </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>
-    </SafeErrorBoundary>
+    </GlobalErrorBoundary>
   );
 }
 
