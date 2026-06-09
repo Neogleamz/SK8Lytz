@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '../../services/supabase';
 import USAMap from './USMap';
+import { EntityInspectorSidebar } from './EntityInspectorSidebar';
 import { AgGridReact } from 'ag-grid-react';
 import { ModuleRegistry, AllCommunityModule, themeQuartz, colorSchemeDark } from 'ag-grid-community';
 import type { ColDef } from 'ag-grid-community';
@@ -43,6 +44,7 @@ interface ClusterNode {
   count: number;
   type: string;
   types: string[];
+  userIds: string[];
 }
 
 interface MapPoint {
@@ -51,6 +53,7 @@ interface MapPoint {
   lng: number;
   label: string;
   type: 'skate' | 'crew' | 'device' | 'telemetry';
+  user_id?: string;
 }
 
 function latLngToXY(lat: number, lng: number) {
@@ -69,6 +72,7 @@ export default function MapWidget() {
   const gridRef = useRef<AgGridReact>(null);
 
   // Map Data
+  const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [skatePoints, setSkatePoints] = useState<MapPoint[]>([]);
   const [crewPoints, setCrewPoints] = useState<MapPoint[]>([]);
   const [devicePoints, setDevicePoints] = useState<MapPoint[]>([]);
@@ -193,7 +197,8 @@ export default function MapWidget() {
             lat: latVal,
             lng: lngVal,
             label: `Device: ${d.custom_name || d.device_mac || d.id}`,
-            type: 'device'
+            type: 'device',
+            user_id: d.user_id
           });
         }
       });
@@ -228,7 +233,8 @@ export default function MapWidget() {
             lat: coords.lat,
             lng: coords.lng,
             label: `User Session: ${s.user_id}`,
-            type: 'skate'
+            type: 'skate',
+            user_id: s.user_id
           });
         }
       });
@@ -287,6 +293,29 @@ export default function MapWidget() {
 
   useEffect(() => {
     fetchData();
+
+    // Supabase Realtime Firehose
+    const channel = supabase.channel('telemetry_firehose')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'telemetry_snapshots' }, (payload) => {
+        const newPoint = payload.new as any;
+        setDevicePoints(prev => prev.map(p => {
+          if (newPoint.metadata?.location && p.type === 'device') {
+             let lat = null;
+             let lng = null;
+             if (newPoint.metadata.location.lat !== undefined) {
+               lat = newPoint.metadata.location.lat;
+               lng = newPoint.metadata.location.lng !== undefined ? newPoint.metadata.location.lng : newPoint.metadata.location.lon;
+             }
+             if (lat !== null && lng !== null) {
+               return { ...p, lat, lng };
+             }
+          }
+          return p;
+        }));
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const onFilterChanged = useCallback(() => {
@@ -345,12 +374,14 @@ export default function MapWidget() {
           lng: points[0].lng,
           count: 1,
           type: points[0].type,
-          types: [points[0].type]
+          types: [points[0].type],
+          userIds: points[0].user_id ? [points[0].user_id] : []
         });
       } else {
         const avgLat = points.reduce((s, p) => s + p.lat, 0) / points.length;
         const avgLng = points.reduce((s, p) => s + p.lng, 0) / points.length;
         const types = points.map(p => p.type);
+        const userIds = points.filter(p => p.user_id).map(p => p.user_id as string);
         const typeCounts = types.reduce((acc, t) => ({...acc, [t]: (acc[t] || 0) + 1}), {} as Record<string, number>);
         const uniqueTypes = Object.keys(typeCounts);
         
@@ -360,7 +391,8 @@ export default function MapWidget() {
           lng: avgLng,
           count: points.length,
           type: uniqueTypes.length === 1 ? uniqueTypes[0] : 'mixed',
-          types: uniqueTypes
+          types: uniqueTypes,
+          userIds
         });
       }
     });
@@ -391,8 +423,9 @@ export default function MapWidget() {
       
       {/* Map Section */}
       {!isMapCollapsed && (
-        <div className="glass-panel rounded-xl relative overflow-hidden border border-slate-800/50 bg-[#0f172a]/80 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex flex-col shrink-0 min-h-[400px]">
-          
+        <div className="flex flex-row w-full min-h-[400px] gap-4">
+          <div className="glass-panel flex-1 rounded-xl relative overflow-hidden border border-slate-800/50 bg-[#0f172a]/80 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex flex-col shrink-0">
+            
           {/* Pill Layer Controls */}
           <div 
             style={{ 
@@ -529,6 +562,9 @@ export default function MapWidget() {
                     onClick={(e) => {
                       e.stopPropagation();
                       handleZoom(pt.lat, pt.lng);
+                      if (pt.userIds && pt.userIds.length > 0) {
+                        setActiveUserId(pt.userIds[0]);
+                      }
                     }}
                   >
                     {/* Ping Node / Heatmap Blended */}
@@ -571,6 +607,8 @@ export default function MapWidget() {
             </div>
           </div>
         </div>
+        <EntityInspectorSidebar activeUserId={activeUserId} onClose={() => setActiveUserId(null)} />
+      </div>
       )}
 
       {/* AG-Grid Databank Section */}
