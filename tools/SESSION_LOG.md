@@ -1269,3 +1269,13 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Restructured Dev Sandbox UX. Replaced scattered Nuke and Bypass buttons with a unified DevSandboxDrawer at the bottom of AuthScreen.tsx, including explicit Load/Unload Virtual Skates controls and a Soft Nuke option.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/components/auth/DevSandboxDrawer.tsx, src/screens/AuthScreen.tsx, src/components/auth/AuthFooterActions.tsx, src/components/auth/AuthSandboxToggle.tsx (deleted)
+
+### [MERGE] 2026-06-09T22:31 — fix-sandbox-mock-race -> master @ 0c610b9d
+**What merged:** Fixed FTUE Web early-return bug that blocked Mock Injection during Hardware Setup. Moved Mock Injection block above the FTUE sweeper bypass.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/hooks/ble/useBLEScanner.ts
+
+### [MERGE] 2026-06-09T22:32 — feat-sandbox-toggle -> master @ 408e3fe6
+**What merged:** Replaced Load/Unload Virtual Skates buttons with a single React Native Switch per user request.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/components/auth/DevSandboxDrawer.tsx
