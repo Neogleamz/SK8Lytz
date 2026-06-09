@@ -1,0 +1,19 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies required for some native modules during npm install
+RUN apk add --no-cache python3 make g++
+
+COPY package.json ./
+
+# Install dependencies safely
+RUN npm install --legacy-peer-deps
+
+# Copy the rest of the workspace
+COPY . .
+
+EXPOSE 8081
+
+# Start Expo in web mode on all interfaces
+CMD ["npx", "expo", "start", "--web", "--port", "8081", "--host", "0.0.0.0"]

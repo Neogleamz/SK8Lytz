@@ -97,8 +97,10 @@ function AppContent() {
 const appStartTime = Date.now();
 
 import { useOfflineSyncWorker } from './src/hooks/cloud/useOfflineSyncWorker';
+import { useWebDemoConsoleBridge } from './src/hooks/dev/useWebDemoConsoleBridge';
 
 export default function App() {
+  useWebDemoConsoleBridge();
   const [fontsLoaded] = useFonts({
     'Righteous': Righteous_400Regular,
   });

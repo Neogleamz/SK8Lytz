@@ -23,3 +23,23 @@ services:
       - ./tools/command-center/vite.config.ts:/app/tools/command-center/vite.config.ts
     env_file:
       - .env
+
+  webdemo:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: sk8lytz-webdemo
+    restart: always
+    init: true
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./src:/app/src
+      - ./assets:/app/assets
+      - ./app.config.js:/app/app.config.js
+      - ./babel.config.js:/app/babel.config.js
+      - ./metro.config.js:/app/metro.config.js
+      - ./package.json:/app/package.json
+      - ./tsconfig.json:/app/tsconfig.json
+    env_file:
+      - .env

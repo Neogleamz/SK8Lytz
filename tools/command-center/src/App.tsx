@@ -15,6 +15,7 @@ import ReleaseRadarWidget from './components/widgets/ReleaseRadarWidget';
 import AuditLogsWidget from './components/widgets/AuditLogsWidget';
 import PromoBlastWidget from './components/widgets/PromoBlastWidget';
 import CheatSheetWidget from './components/widgets/CheatSheetWidget';
+import AppManagerWidget from './components/widgets/AppManagerWidget';
 import './index.css';
 
 const NavGroup = ({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) => {
@@ -49,6 +50,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => (
         </NavGroup>
 
         <NavGroup title="App Manager" icon={Smartphone}>
+          <Link to="/app-simulator" className="nav-link text-blue-400"><Smartphone size={16} /> SK8Lytz APP</Link>
           <Link to="/performance" className="nav-link"><LayoutDashboard size={16} /> App Performance</Link>
           <Link to="/live-debugger" className="nav-link text-red-400"><Bug size={16} /> Live Debugger</Link>
           <Link to="/settings" className="nav-link"><Settings size={16} /> Control Tower</Link>
@@ -181,6 +183,7 @@ export default function App() {
           <Route path="/audit-logs" element={<AuditLogsWidget />} />
           <Route path="/promo-blast" element={<PromoBlastWidget />} />
           <Route path="/cheat-sheet" element={<div className="p-6 h-full"><CheatSheetWidget /></div>} />
+          <Route path="/app-simulator" element={<AppManagerWidget />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </AdminLayout>
