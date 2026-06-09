@@ -288,9 +288,9 @@ class DeviceRepository {
           ic_type:         validIcType   ?? null,
           color_sorting:   validSorting  ?? null,
           // Unused hardware metadata fields — not tracked at registration time
-          ble_version:     null,
-          factory_name:    null,
-          manufacturer_data: null,
+          ble_version:     fullDevice.ble_version ?? null,
+          factory_name:    fullDevice.factory_name ?? null,
+          manufacturer_data: fullDevice.manufacturer_data ?? null,
           is_pending_sync: false,
           product_id_confirmed_at: null,
         };
@@ -725,9 +725,9 @@ class DeviceRepository {
           updated_at:      new Date().toISOString(),
           registered_at:   device.registered_at ?? null,
           // Unused hardware metadata fields — not tracked at registration time
-          ble_version:     null,
-          factory_name:    null,
-          manufacturer_data: null,
+          ble_version:     device.ble_version ?? null,
+          factory_name:    device.factory_name ?? null,
+          manufacturer_data: device.manufacturer_data ?? null,
           is_pending_sync: true,
           product_id_confirmed_at: null,
         };

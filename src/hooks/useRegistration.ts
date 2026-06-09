@@ -49,9 +49,12 @@ export interface RegisteredDevice {
   // Secondary fingerprint for MAC-rotation fallback
   firmware_ver?: number;
   led_version?: number;
+  ble_version?: number;
   product_id?: number;
   rf_mode?: string;
   rf_paired_count?: number;
+  factory_name?: string;
+  manufacturer_data?: string;
   // Offline sync state
   is_pending_sync?: boolean;
   registered_at?: string;
