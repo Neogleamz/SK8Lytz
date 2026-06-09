@@ -55,6 +55,9 @@ export interface RegisteredDevice {
   rf_paired_count?: number;
   factory_name?: string;
   manufacturer_data?: string;
+  // Location natively captured during registration
+  last_lat?: number;
+  last_lng?: number;
   // Offline sync state
   is_pending_sync?: boolean;
   registered_at?: string;

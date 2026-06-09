@@ -20,6 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from './AppLogger';
 import { supabase } from './supabaseClient';
 import { scrubPII } from '../utils/piiScrubber';
+import { locationService } from './LocationService';
 
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import type { RegisteredDevice } from '../hooks/useRegistration';
@@ -193,6 +194,16 @@ class DeviceRepository {
       const deviceId = device.id || `${normalizedMac.replace(/:/g, '')}-${user?.id?.slice(0, 8) || 'offline'}`;
       const groupIds = device.group_ids || (device.group_names ? device.group_names.map(n => n.toLowerCase().replace(/\s+/g, '-')) : ['default-fleet']);
 
+      let lat = device.last_lat;
+      let lng = device.last_lng;
+      if (lat === undefined || lng === undefined) {
+        const loc = await locationService.getSilentLocation();
+        if (loc) {
+          lat = loc.lat;
+          lng = loc.lng;
+        }
+      }
+
       const fullDevice: RegisteredDevice = {
         device_name: device.device_name || 'Unknown Device',
         product_type: device.product_type || LOCAL_PRODUCT_CATALOG[0].id,
@@ -203,6 +214,8 @@ class DeviceRepository {
         id: deviceId,
         group_ids: groupIds,
         user_id: user?.id,
+        last_lat: lat,
+        last_lng: lng,
         updated_at: now,
         registered_at: device.registered_at || now,
         is_pending_sync: false,
@@ -273,6 +286,8 @@ class DeviceRepository {
           id:              fullDevice.id || deviceId,
           updated_at:      now,
           registered_at:   fullDevice.registered_at || null,
+          last_lat:        fullDevice.last_lat ?? null,
+          last_lng:        fullDevice.last_lng ?? null,
           rssi_at_register: fullDevice.rssi_at_register ?? null,
           firmware_ver:    fullDevice.firmware_ver ?? null,
           led_version:     fullDevice.led_version ?? null,
@@ -724,6 +739,8 @@ class DeviceRepository {
           id:              device.id || `${device.device_mac.toUpperCase().replace(/:/g, '')}-${userId.slice(0, 8)}`,
           updated_at:      new Date().toISOString(),
           registered_at:   device.registered_at ?? null,
+          last_lat:        device.last_lat ?? null,
+          last_lng:        device.last_lng ?? null,
           // Unused hardware metadata fields — not tracked at registration time
           ble_version:     device.ble_version ?? null,
           factory_name:    device.factory_name ?? null,
