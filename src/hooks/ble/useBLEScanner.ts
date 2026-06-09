@@ -31,6 +31,7 @@ export interface UseBLEScannerProps {
   setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
   bleSend: (event: EventFrom<typeof bleMachine>) => void;
   registeredMacs: string[];
+  isSandboxEnabled?: boolean;
 }
 
 export function useBLEScanner({
@@ -39,6 +40,7 @@ export function useBLEScanner({
   setAllDevices,
   bleSend,
   registeredMacs,
+  isSandboxEnabled,
 }: UseBLEScannerProps) {
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
 
@@ -313,7 +315,31 @@ export function useBLEScanner({
       if (scannerStateRef.current === 'SCANNING') return;
       bleSend({ type: 'SCAN_START' });
       scannerStateRef.current = 'SCANNING';
-      bleManager?.startDeviceScan(null, null, scanCallback);
+      
+      if (typeof __DEV__ !== 'undefined' && __DEV__ && isSandboxEnabled) {
+        setTimeout(() => {
+          const halozMock = {
+            id: 'VIRTUAL-HALOZ-123',
+            name: 'SK8-HALOZ-DEV',
+            rssi: -50,
+            manufacturerData: 'MwHwMwEBKwE=',
+            serviceUUIDs: [ZENGGE_SERVICE_UUID],
+          } as unknown as Device;
+          const soulzMock = {
+            id: 'VIRTUAL-SOULZ-456',
+            name: 'SK8-SOULZ-DEV',
+            rssi: -55,
+            manufacturerData: 'MwHwMwEBKwE=',
+            serviceUUIDs: [ZENGGE_SERVICE_UUID],
+          } as unknown as Device;
+          
+          scanCallback(null, halozMock);
+          scanCallback(null, soulzMock);
+        }, 1000);
+      } else {
+        bleManager?.startDeviceScan(null, null, scanCallback);
+      }
+
       setTimeout(() => {
         bleManager?.stopDeviceScan();
         bleSend({ type: 'SCAN_STOP' });

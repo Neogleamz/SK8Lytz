@@ -146,6 +146,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const [allDevices, setAllDevices] = useState<Device[]>([]);
   const [isBluetoothSupported, setIsBluetoothSupported] = useState(Platform.OS !== 'web');
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState(Platform.OS === 'web');
+  const [isSandboxEnabled, setIsSandboxEnabled] = useState(false);
   const [droppedOutDeviceIds, setDroppedOutDeviceIds] = useState<string[]>([]);
   // ── Connection Gate Semaphore (XState V5) ─────────────────────────────────
   // ALL BLE operations (scan, connect, disconnect, recovery) must acquire this
@@ -185,6 +186,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
         if (Platform.OS === 'web' || isMock === 'true') {
           setIsBluetoothSupported(true);
           setIsBluetoothEnabled(true);
+          setIsSandboxEnabled(true);
         }
       });
     }
@@ -402,6 +404,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     setAllDevices,
     bleSend,
     registeredMacs,
+    isSandboxEnabled,
   });
 
   // Wire the real setter into the ref forwarder now that scanner is initialized.

@@ -6,7 +6,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
 import { useAuthStyles } from './AuthStyles';
 
-import { STORAGE_OFFLINE_SKIP, STORAGE_DEMO_HALO, STORAGE_DEMO_SOUL } from '../../constants/storageKeys';
+import { STORAGE_OFFLINE_SKIP, STORAGE_DEMO_MODE } from '../../constants/storageKeys';
 
 interface AuthFooterActionsProps {
   mode: 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
@@ -70,8 +70,7 @@ export function AuthFooterActions({ mode, onOfflineMode, isSandboxEnabled, setEr
           }}
           onPress={async () => {
             try {
-              await AsyncStorage.setItem(STORAGE_DEMO_HALO, 'true');
-              await AsyncStorage.setItem(STORAGE_DEMO_SOUL, 'true');
+              await AsyncStorage.setItem(STORAGE_DEMO_MODE, 'true');
               onOfflineMode();
             } catch (e: unknown) {
               const msg = e instanceof Error ? e.message : String(e);
