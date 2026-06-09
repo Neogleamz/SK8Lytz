@@ -1064,3 +1064,23 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Rejected:** Rewriting all existing telemetry pipelines to the new sink instantly, which risked breaking the admin dashboard downstream.
 **Don't re-derive:** The skate_sessions table expects GPS coordinates in JSON fields, which we track in memory via useGlobalTelemetry.ts instead of relying entirely on the BLE hardware for location data. The dual-write pattern allows us to shift sinks safely without halting legacy dashboard viewers.
 **Source:** src/services/AppLogger.ts:55, src/hooks/useGlobalTelemetry.ts:53
+### [MERGE] 2026-06-09T06:53 — fix/db-hygiene-batch -> master @ 467d8fb3
+**What merged:**
+- Added updated_at timestamps to upsert payloads in GradientsService and ScenesService.
+- Injected is_claimed boolean explicitly into discovered_devices_telemetry uploads using hwCache.
+- Created SQL migration dropping the orphaned active_calories column and aligned the TS types.
+- Updated CrewProfileService to handle insert with avatar_url.
+- Updated CrewProfileService to automatically map the crew creator to the owner role.
+- Implemented transferSessionLeadership in CrewProfileService to support temporary leadership handoffs.
+**Verify result:** TSC OK, Jest OK, gates OK
+**Files touched:** src/services/GradientsService.ts, src/services/ScenesService.ts, src/hooks/ble/useBLEScanner.ts, src/types/supabase.ts, src/services/CrewProfileService.ts, supabase/migrations/20260609050000_drop_active_calories.sql
+### [DECISION] 2026-06-09T01:55 - Telemetry Storage Engine Swapped to MMKV
+**Decision:** Switched AppLogger telemetry queue from AsyncStorage to MMKV to resolve bridge serialization stutter during rapid BLE state updates, expanding local cache limits to 5000.
+**Rejected:** Replacing all AsyncStorage operations app-wide immediately, which violated the Anti-Bloat and Surgical Strike protocols. Added to Icebox instead.
+**Don't re-derive:** react-native-mmkv v4+ uses createMMKV() not new MMKV() and requires remove() instead of delete(). Native client recompilation is strictly required for this to work in Expo.
+**Source:** src/services/AppLogger.ts:35
+### [DECISION] 2026-06-09T01:59 - MMKV Web Mock Architecture
+**Decision:** Implemented a `Platform.OS === 'web'` mock for MMKV in AppLogger.ts to prevent Web Demo crashes. On the web, `telemetryStorage.getString()` always returns `undefined`, which naturally forces the legacy `AsyncStorage` block to take over. `telemetryStorage.set/remove` safely pipes into `AsyncStorage.setItem`.
+**Rejected:** Attempting to force MMKV to run on IndexedDB or stripping out the web bundler.
+**Don't re-derive:** React Native MMKV strictly uses native C++ JSI bindings and will fatally crash the Metro web bundler if imported directly on the web target without conditionally intercepting it.
+**Source:** src/services/AppLogger.ts:39

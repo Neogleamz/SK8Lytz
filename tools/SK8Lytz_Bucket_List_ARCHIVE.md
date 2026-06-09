@@ -986,3 +986,10 @@ pm run verify which includes QA tests.
   - **Plan:** 📎 [PLAN-split-brain-telemetry-drop.md](docs/plans/PLAN-split-brain-telemetry-drop.md)
   - **Source of Truth:** 📖 `src/services/DeviceRepository.ts`
   - **Details:** Revert dashboard join workarounds and fix the root cause in the mobile app persistence layer.
+
+- [x] **`fix/db-hygiene-batch`**
+  - **Tags:** `[🚧 ACTIVE]` `[✅ VERIFIED]` `[CLOUD]` `[M-RISK]` `[Meal]` `[🤖 PRO-HIGH]` `[BATCH:db-hygiene]`
+  - **Goal:** Fix 5 orphaned database fields (presets updated_at, scanner is_claimed, remove active_calories, crew role mapping, crew avatar URL).
+  - **Decision Log:** See PLAN-db-hygiene-batch.md for BLE deduplication logic and health metrics calories mapping rules.
+  - **Source of Truth:** 📖 `src/types/supabase.ts`
+  - **Details:** Updating payloads across multiple services to achieve 1:1 parity with database schema.

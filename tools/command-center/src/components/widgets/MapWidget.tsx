@@ -148,8 +148,8 @@ export default function MapWidget() {
 
     // 4. Merge coordinates
     const mergedDevices = validDevices.map(d => {
-      let lat = null;
-      let lng = null;
+      let lat = d.last_lat ?? null;
+      let lng = d.last_lng ?? null;
       if (fallbackMap[d.user_id]) {
         lat = fallbackMap[d.user_id].lat;
         lng = fallbackMap[d.user_id].lng;
