@@ -36,6 +36,13 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn().mockResolvedValue(null),
 }));
 
+jest.mock('react-native', () => ({
+  Platform: { OS: 'ios' },
+  DeviceEventEmitter: { addListener: jest.fn() },
+  PermissionsAndroid: { request: jest.fn(), check: jest.fn(), PERMISSIONS: {} },
+  NativeModules: {},
+}));
+
 jest.mock('../../services/supabaseClient', () => ({
   supabase: { auth: { getUser: jest.fn().mockResolvedValue({ data: { user: null } }) } },
 }));
