@@ -58,9 +58,17 @@ export async function executeConnectToDevices({
     return;
   }
 
+  // PRE-LOCK SYNCHRONOUS STATE UPDATE
+  // We must set the gate to CONNECTING synchronously before awaiting the GATT lock.
+  // Otherwise, React re-renders DashboardScreen with isControllerOpen=true,
+  // connectedDevices=[], and bleState='IDLE', causing the AutoRecovery
+  // fallback effect to instantly close the controller UI.
+  setGate('CONNECTING');
+
   // ── GATT LOCK ACQUISITION: Priority 1 (User Action) ──
   const lockHandle = await acquireGattLock(1);
   if (!lockHandle) {
+    setGate('IDLE');
     AppLogger.warn('[BLE] connectToDevices REJECTED — could not acquire GATT lock', { requestedDevices: devices.map(d => d.id) });
     return;
   }
@@ -72,6 +80,7 @@ export async function executeConnectToDevices({
     );
 
     if (allRequestedAlreadyConnected) {
+      setGate('IDLE');
       AppLogger.log('BLE_STATE_CHANGE', { event: 'connectToDevices_cached_hit_skip' });
       if (keepaliveTimerRef.current) {
         clearTimeout(keepaliveTimerRef.current);
@@ -110,11 +119,10 @@ export async function executeConnectToDevices({
       await new Promise(resolve => setTimeout(resolve, BLE_TIMING.STALE_FLUSH_SETTLE_MS));
     }
 
-    if (getGate() !== 'IDLE') {
+    if (getGate() !== 'CONNECTING') {
       AppLogger.warn('[BLE] connectToDevices REJECTED — gate is ' + getGate(), { requestedDevices: devices.map(d => d.id) });
       return;
     }
-    setGate('CONNECTING');
     const wasSweeperActive = scanner.isSweeperActive;
     try {
       let isMock = 'false';
