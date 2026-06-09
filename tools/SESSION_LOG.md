@@ -1242,3 +1242,20 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Dockerized Expo Web Demo (port 8081) with embedded Command Center Device Simulator and Live Console bridge.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Dockerfile.web, docker-compose.yml, App.tsx, src/hooks/dev/useWebDemoConsoleBridge.ts, Command Center Simulator components.
+
+### [MERGE] 2026-06-09T16:42 — fix-auth-context-crash -> master
+**What merged:** 
+- Swapped \AppConfigProvider\ to be nested inside \AuthProvider\ in \App.tsx\ to resolve \useAuth\ null context crash.
+- Cleaned up unused variables (\Text\, \clearOfflineMode\) satisfying Boy Scout rule.
+**Verify result:** TSC ?, Jest ?, ESLint ?
+**Files touched:** App.tsx
+
+### [DECISION] 2026-06-09T16:42 — nuke-cache & Docker limitations
+**Decision:** The \/nuke-cache\ workflow is confirmed incompatible with the new Dockerized Web Demo (which copies files into the image and runs isolated Metro).
+**Don't re-derive:** Killing host Node processes or deleting Windows \%TEMP%\ folders does nothing to the Dockerized Vite/Expo bundle. To clear cache or load new files, the container must be rebuilt.
+
+### [DECISION] 2026-06-09T21:55 — Sandbox Bypass for Web Demo Container
+**Decision:** Decoupled the Dev Sandbox toggle and mock device injection from __DEV__ strictly when Platform.OS === 'web'.
+**Rejected:** Leaving them strictly behind __DEV__, which completely broke the web demo once containerized in production mode.
+**Don't re-derive:** The web version of SK8Lytz cannot scan physical BLE anyway; it is explicitly a demo dashboard that relies on virtual hardware. It must always have sandbox access regardless of NODE_ENV.
+**Source:** src/hooks/useBLE.ts:184

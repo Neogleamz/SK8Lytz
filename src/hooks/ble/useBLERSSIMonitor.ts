@@ -122,11 +122,15 @@ export function useBLERSSIMonitor({
   // Clear rssiMap when devices disconnect to avoid stale entries in the badge.
   useEffect(() => {
     setRssiMap(prev => {
+      let changed = false;
       const pruned = { ...prev };
       Object.keys(pruned).forEach(mac => {
-        if (!connectedDeviceIds.includes(mac)) delete pruned[mac];
+        if (!connectedDeviceIds.includes(mac)) {
+          delete pruned[mac];
+          changed = true;
+        }
       });
-      return pruned;
+      return changed ? pruned : prev;
     });
   }, [connectedDeviceIds]);
 

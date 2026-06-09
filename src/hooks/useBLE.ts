@@ -181,7 +181,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   }, [bleSend]);
 
   useEffect(() => {
-    if (__DEV__) {
+    if ((typeof __DEV__ !== 'undefined' && __DEV__) || Platform.OS === 'web') {
       AsyncStorage.getItem(STORAGE_DEMO_MODE).then((isMock) => {
         if (Platform.OS === 'web' || isMock === 'true') {
           setIsBluetoothSupported(true);
@@ -211,7 +211,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
           blacklistedMacsRef.current = JSON.parse(cached);
         }
         } catch (e: unknown) {
-      const safeErr = e instanceof Error ? e : new Error(String(e));
+      const _safeErr = e instanceof Error ? e : new Error(String(e));
           // Ignore cache read errors
         }
 
@@ -223,10 +223,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
           try {
             await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(macs));
           } catch (e: unknown) {
-      const safeErr = e instanceof Error ? e : new Error(String(e));}
+      const _safeErr = e instanceof Error ? e : new Error(String(e));}
         }
       } catch (e: unknown) {
-      const safeErr = e instanceof Error ? e : new Error(String(e));
+      const _safeErr = e instanceof Error ? e : new Error(String(e));
         AppLogger.log('ERROR', { context: 'useBLE', message: 'Failed background blacklist fetch', info: e instanceof Error ? e.message : String(e) });
       }
     };
@@ -277,7 +277,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
             dataReceivedCallbackRef.current(deviceId, data);
         }
       } catch (e: unknown) {
-      const safeErr = e instanceof Error ? e : new Error(String(e));
+      const _safeErr = e instanceof Error ? e : new Error(String(e));
         AppLogger.error('Failed to parse notification', e instanceof Error ? e.message : String(e));
         AppLogger.log('PROTOCOL_ERROR', { error: (e instanceof Error ? e.message : String(e)) || String(e), deviceId, context: 'parse' });
       }
@@ -313,7 +313,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
             updateConnectedDevices(prev => prev.filter(p => !staleIds.includes(p.id)));
           }
         } catch (e: unknown) {
-      const safeErr = e instanceof Error ? e : new Error(String(e));
+      const _safeErr = e instanceof Error ? e : new Error(String(e));
           AppLogger.warn('[BLE] Failed to audit connections on wake', e instanceof Error ? e.message : String(e));
         }
       }
@@ -323,7 +323,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       subscription.remove();
       appStateSub.remove();
     };
-  }, [bleManager]);
+  }, [bleManager, updateConnectedDevices]);
 
 
   /**
@@ -393,10 +393,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   // ── Overwatch: Silent Sweeper + Interrogator Queue ────────────────────────
   const pendingRegistrationsSetterRef = useRef<React.Dispatch<React.SetStateAction<PendingRegistration[]>>>(() => {});
-  const stablePendingRegistrationsSetter: React.Dispatch<React.SetStateAction<PendingRegistration[]>> = useCallback(
-    (value) => pendingRegistrationsSetterRef.current(value),
-    []
-  );
 
   const scanner = useBLEScanner({
     bleManager,
@@ -467,17 +463,21 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // Polls readRSSIForDevice every 30s to track live signal strength per device.
   // Surfaces rssiMap to UI (device card wifi icon) and triggers proactive
   // reconnect at -82 dBm to pick a better radio channel before the user notices.
+  const connectedDeviceIds = useMemo(() => connectedDevices.map(d => d.id), [connectedDevices]);
+  
+  const handleCriticalSignal = useCallback((mac: string) => {
+    // Only reconnect if device is not already in the recovery queue.
+    if (!autoRecovery.ghostedDeviceIds.includes(mac)) {
+      AppLogger.warn('[BLE RSSI] Critical signal — proactive reconnect', { deviceId: scrubPII(mac) });
+      autoRecovery.initiateRecovery(mac);
+    }
+  }, [autoRecovery]);
+
   const rssiMap = useBLERSSIMonitor({
     bleManager,
     connectedDevicesRef,
-    connectedDeviceIds: connectedDevices.map(d => d.id),
-    onCriticalSignal: (mac: string) => {
-      // Only reconnect if device is not already in the recovery queue.
-      if (!autoRecovery.ghostedDeviceIds.includes(mac)) {
-        AppLogger.warn('[BLE RSSI] Critical signal — proactive reconnect', { deviceId: scrubPII(mac) });
-        autoRecovery.initiateRecovery(mac);
-      }
-    },
+    connectedDeviceIds,
+    onCriticalSignal: handleCriticalSignal,
   });
 
   const connectToDevices = useCallback(async (devices: Device[]) => {
@@ -576,7 +576,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       setGate,
       bleSend
     );
-  }, [bleManager, autoRecovery, updateConnectedDevices, setGate, bleSend]);
+  }, [bleManager, autoRecovery, updateConnectedDevices, setGate, bleSend, getGate]);
 
   const disconnectFromDevice = useCallback(() => {
     keepaliveDisconnect(keepaliveTimerRef, KEEPALIVE_DURATION_MS, realDisconnect);
@@ -685,6 +685,19 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     scanner.hwCache,
     scanner.burstScan,
     rssiMap,
+    bleActorRef,
+    autoRecovery.ghostedDeviceIds,
+    connectToDevices,
+    derivedBleState,
+    disconnectFromDevice,
+    executeProtocolResults,
+    forceDisconnect,
+    getAdapterForDevice,
+    getGate,
+    pingDevice,
+    scanner,
+    writeChunked,
+    writeToDevice,
   ]);
 }
 // blast

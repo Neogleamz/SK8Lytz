@@ -1,13 +1,17 @@
 
+/* eslint-disable no-undef */
 import { createClient, SupportedStorage } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import 'react-native-url-polyfill/auto';
 
 import { Database } from '../types/supabase';
 
+import { Platform } from 'react-native';
+
 class SecureStoreAdapter implements SupportedStorage {
   async getItem(key: string): Promise<string | null> {
     try {
+      if (Platform.OS === 'web') return localStorage.getItem(key);
       return await SecureStore.getItemAsync(key);
     } catch {
       return null;
@@ -16,7 +20,11 @@ class SecureStoreAdapter implements SupportedStorage {
 
   async setItem(key: string, value: string): Promise<void> {
     try {
-      await SecureStore.setItemAsync(key, value);
+      if (Platform.OS === 'web') {
+        localStorage.setItem(key, value);
+      } else {
+        await SecureStore.setItemAsync(key, value);
+      }
     } catch (e: unknown) {
       console.error('SecureStore setItem failed', e instanceof Error ? e.message : String(e));
     }
@@ -24,7 +32,11 @@ class SecureStoreAdapter implements SupportedStorage {
 
   async removeItem(key: string): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(key);
+      if (Platform.OS === 'web') {
+        localStorage.removeItem(key);
+      } else {
+        await SecureStore.deleteItemAsync(key);
+      }
     } catch (e: unknown) {
       console.error('SecureStore removeItem failed', e instanceof Error ? e.message : String(e));
     }

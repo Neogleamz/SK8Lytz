@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { InteractionManager } from 'react-native';
+import { InteractionManager, Platform } from 'react-native';
 import type { Device, BleManager, BleError } from 'react-native-ble-plx';
 import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
@@ -336,7 +336,7 @@ export function useBLEScanner({
       bleSend({ type: 'SCAN_START' });
       scannerStateRef.current = 'SCANNING';
       
-      if (typeof __DEV__ !== 'undefined' && __DEV__ && isSandboxEnabled) {
+      if (((typeof __DEV__ !== 'undefined' && __DEV__) || Platform.OS === 'web') && isSandboxEnabled) {
         setTimeout(() => {
           const halozMock = {
             id: 'VIRTUAL-HALOZ-123',

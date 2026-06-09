@@ -1,4 +1,4 @@
-import { TouchableOpacity, Text, View } from 'react-native';
+import { TouchableOpacity, Text, View, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStyles } from './AuthStyles';
@@ -12,7 +12,7 @@ interface AuthSandboxToggleProps {
 export function AuthSandboxToggle({ isSandboxEnabled, setIsSandboxEnabled }: AuthSandboxToggleProps) {
   const styles = useAuthStyles();
 
-  if (!__DEV__) return null;
+  if ((typeof __DEV__ === 'undefined' || !__DEV__) && Platform.OS !== 'web') return null;
 
   return (
     <View style={styles.topLeftButtons}>

@@ -118,7 +118,7 @@ export async function executeConnectToDevices({
     const wasSweeperActive = scanner.isSweeperActive;
     try {
       let isMock = 'false';
-      if (__DEV__) {
+      if ((typeof __DEV__ !== 'undefined' && __DEV__) || Platform.OS === 'web') {
          isMock = await AsyncStorage.getItem(STORAGE_DEMO_MODE) || 'false';
       }
 

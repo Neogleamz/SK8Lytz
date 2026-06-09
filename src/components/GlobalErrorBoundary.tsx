@@ -1,7 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Platform } from 'react-native';
-import { FlightRecorder } from '../utils/FlightRecorder';
-import { supabase } from '../services/supabaseClient';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import { logFatalCrash } from '../utils/CrashReporter';
 
 interface Props {
   children: ReactNode;
@@ -28,45 +27,9 @@ export class GlobalErrorBoundary extends Component<Props, State> {
   }
 
   async logCrashToSupabase(error: Error, errorInfo: ErrorInfo) {
-    try {
-      const breadcrumbs = FlightRecorder.getBreadcrumbs();
-      
-      const { data: { user } } = await supabase.auth.getUser();
-
-      const environmentState = {
-        platform: Platform.OS,
-        version: Platform.Version,
-        timestamp: new Date().toISOString()
-      };
-
-      const { data, error: insertError } = await supabase
-        .from('crash_telemetry')
-        .insert({
-          user_id: user?.id || null,
-          error_signature: error.message || error.toString(),
-          stack_trace: errorInfo.componentStack,
-          breadcrumbs: breadcrumbs.map(b => ({
-            timestamp: b.timestamp,
-            category: b.category,
-            message: b.message,
-            data: b.data ? JSON.parse(JSON.stringify(b.data)) : undefined
-          })),
-          environment_state: environmentState,
-          severity: 'FATAL',
-          status: 'OPEN'
-        })
-        .select()
-        .single();
-
-      if (data) {
-        this.setState({ eventId: data.id });
-      }
-      
-      if (insertError) {
-        console.error('Failed to log crash to Supabase:', insertError);
-      }
-    } catch (e) {
-      console.error('Failed to execute logCrashToSupabase:', e);
+    const eventId = await logFatalCrash(error, errorInfo.componentStack || 'No component stack available');
+    if (eventId) {
+      this.setState({ eventId });
     }
   }
 
