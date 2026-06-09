@@ -1623,6 +1623,8 @@ export type Database = {
           ic_type: string | null
           id: string
           is_pending_sync: boolean | null
+          last_lat: number | null
+          last_lng: number | null
           led_points: number | null
           led_version: number | null
           manufacturer_data: string | null
@@ -1655,6 +1657,8 @@ export type Database = {
           ic_type?: string | null
           id: string
           is_pending_sync?: boolean | null
+          last_lat?: number | null
+          last_lng?: number | null
           led_points?: number | null
           led_version?: number | null
           manufacturer_data?: string | null
@@ -1687,6 +1691,8 @@ export type Database = {
           ic_type?: string | null
           id?: string
           is_pending_sync?: boolean | null
+          last_lat?: number | null
+          last_lng?: number | null
           led_points?: number | null
           led_version?: number | null
           manufacturer_data?: string | null
