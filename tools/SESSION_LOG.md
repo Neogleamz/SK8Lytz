@@ -933,3 +933,12 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC u{2705}, Jest u{2705}, Gates u{2705}
 **Files touched:** src/hooks/ble/useBLERSSIMonitor.ts, src/hooks/useBLE.ts, src/services/BleConnectionManager.ts, src/services/BleLifecycleManager.ts, src/services/BleWriteQueue.ts, src/types/ble.types.ts
 
+
+### [MERGE] 2026-06-08T20:38 — fix/audit-fixes-scanner -> master @ 6d5f9130
+**What merged:**
+- Fixed 'any' typing in BleLifecycleManager.ts
+- Added battery PAUSED banner to UI when <15%
+- Added double-start guard for scanner in useBLEScanner.ts
+- Replaced unknown casting with Device in DashboardScreen.tsx
+**Verify result:** TSC ?, Jest ?, Ast ?, BrowserConsole ? (Expected: Local server offline)
+**Files touched:** BleLifecycleManager.ts, useBLEBatterySweep.ts, useBLEScanner.ts, useBLE.ts, DashboardScreen.tsx
