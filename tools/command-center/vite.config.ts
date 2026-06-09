@@ -8,5 +8,7 @@ export default defineConfig({
     port: 5997,
     host: '0.0.0.0', // Needed for Docker to expose the port correctly
     strictPort: true
-  }
+  },
+  envDir: '../../',
+  envPrefix: ['VITE_', 'EXPO_PUBLIC_']
 })
