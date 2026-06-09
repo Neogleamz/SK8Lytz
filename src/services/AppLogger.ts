@@ -474,13 +474,13 @@ class AppLoggerService {
         supabase.from('crash_telemetry').insert({
           error_signature: safeErrorString.substring(0, 500),
           stack_trace: payload.stack || payload.stackTrace || null,
-          breadcrumbs: FlightRecorder.getBreadcrumbs(),
+          breadcrumbs: FlightRecorder.getBreadcrumbs() as unknown as import('../types/supabase').Json,
           environment_state: {
             ...payload,
             host_device_id: Device.osInternalBuildId || Device.modelId || 'unknown',
             session_id: this.sessionId,
             event_type: event
-          },
+          } as unknown as import('../types/supabase').Json,
           severity: 'CRITICAL',
           app_version: Device.osVersion || null
         }).then(({ error }) => {
