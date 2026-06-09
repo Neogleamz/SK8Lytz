@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { supabase, checkAdminStatus } from './services/supabase';
-import { LayoutDashboard, Users, ShieldAlert, Activity, Settings, Map, Bug, Database, Palette, ChevronDown, ChevronRight, Radar, Megaphone, ScrollText, Truck, Smartphone, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Users, ShieldAlert, Activity, Settings, Map, Bug, Database, Palette, ChevronDown, ChevronRight, Radar, Megaphone, ScrollText, Truck, Smartphone, BookOpen, Box } from 'lucide-react';
 import ScraperApp from './scraper/ScraperApp';
 import MapWidget from './components/widgets/MapWidget';
 import FleetHealthWidget from './components/widgets/FleetHealthWidget';
@@ -16,6 +16,7 @@ import AuditLogsWidget from './components/widgets/AuditLogsWidget';
 import PromoBlastWidget from './components/widgets/PromoBlastWidget';
 import CheatSheetWidget from './components/widgets/CheatSheetWidget';
 import AppManagerWidget from './components/widgets/AppManagerWidget';
+import ProductCatalogWidget from './components/widgets/ProductCatalogWidget';
 import './index.css';
 
 const NavGroup = ({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) => {
@@ -56,6 +57,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => (
           <Link to="/settings" className="nav-link"><Settings size={16} /> Control Tower</Link>
           <Link to="/release-radar" className="nav-link"><Radar size={16} /> Release Radar</Link>
           <Link to="/picks-manager" className="nav-link"><Palette size={16} /> Picks Manager</Link>
+          <Link to="/product-catalog" className="nav-link"><Box size={16} /> Product Catalog</Link>
           <Link to="/promo-blast" className="nav-link"><Megaphone size={16} /> Promo Blast</Link>
         </NavGroup>
 
@@ -178,6 +180,7 @@ export default function App() {
           <Route path="/settings" element={<ControlTowerWidget />} />
           <Route path="/hardware" element={<HardwareBanWidget />} />
           <Route path="/picks-manager" element={<div className="p-6"><PicksManagerWidget /></div>} />
+          <Route path="/product-catalog" element={<div className="p-6"><ProductCatalogWidget /></div>} />
           <Route path="/users" element={<UserManagementWidget />} />
           <Route path="/release-radar" element={<ReleaseRadarWidget />} />
           <Route path="/audit-logs" element={<AuditLogsWidget />} />

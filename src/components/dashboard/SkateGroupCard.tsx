@@ -1,3 +1,4 @@
+/* eslint-disable unused-imports/no-unused-vars */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
@@ -128,9 +129,14 @@ export const SkateGroupCard = ({
                   { 
                     textAlign: 'center', 
                     fontSize: 24,
-                    textShadowColor: isPoweredOn ? colors[0] : 'rgba(255,255,255,0.2)',
-                    textShadowOffset: { width: 0, height: 0 },
-                    textShadowRadius: 10
+                    ...require('react-native').Platform.select({
+                      web: { textShadow: `0px 0px 10px ${isPoweredOn ? colors[0] : 'rgba(255,255,255,0.2)'}` } as any, // MIGRATION-SHIM
+                      default: {
+                        textShadowColor: isPoweredOn ? colors[0] : 'rgba(255,255,255,0.2)',
+                        textShadowOffset: { width: 0, height: 0 },
+                        textShadowRadius: 10
+                      }
+                    })
                   }
                 ]} 
                 numberOfLines={1}
@@ -165,7 +171,10 @@ export const SkateGroupCard = ({
                   name="power" 
                   size={18} 
                   color={isAllOn ? '#FFF' : isMixed ? Colors.warning : '#666'} 
-                  style={isPoweredOn ? { textShadowColor: isMixed ? Colors.warning : Colors.primary, textShadowOffset: {width: 0, height: 0}, textShadowRadius: 8 } : undefined}
+                  style={isPoweredOn ? require('react-native').Platform.select({
+                    web: { textShadow: `0px 0px 8px ${isMixed ? Colors.warning : Colors.primary}` } as any, // MIGRATION-SHIM
+                    default: { textShadowColor: isMixed ? Colors.warning : Colors.primary, textShadowOffset: {width: 0, height: 0}, textShadowRadius: 8 }
+                  }) : undefined}
                 />
               </View>
             </TouchableOpacity>

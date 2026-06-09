@@ -1,8 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
-import { Typography, Spacing, Layout } from '../../theme/theme';
+import { Spacing } from '../../theme/theme';
 
 interface LiveTelemetryHUDProps {
   gpsSpeed: number;
@@ -62,11 +62,16 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
     borderRadius: 16,
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    ...require('react-native').Platform.select({
+      web: { boxShadow: '0px 2px 4px rgba(0,0,0,0.1)' } as any, // MIGRATION-SHIM
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 2,
+      }
+    }),
   },
   metric: {
     flexDirection: 'row',

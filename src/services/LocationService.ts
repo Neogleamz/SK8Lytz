@@ -1,3 +1,4 @@
+/* eslint-disable unused-imports/no-unused-vars */
 /**
  * LocationService.ts — SK8Lytz Location Tagging
  *
@@ -12,7 +13,6 @@ import * as Location from 'expo-location';
 import { AppLogger } from './AppLogger';
 import { supabase } from './supabaseClient';
 import { openGlobalPermissionsModal, checkPermission } from './PermissionService';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SkateSpotsService } from './SkateSpotsService';
 
 export interface SessionLocation {
@@ -27,6 +27,9 @@ class LocationService {
    * should handle gracefully (session proceeds without location).
    */
   async getSessionLocation(): Promise<SessionLocation | null> {
+    if (require('react-native').Platform.OS === 'web') {
+      return { label: 'Web Demo Area', coords: { lat: 38.9, lng: -94.6 } };
+    }
     try {
       let isGranted = await checkPermission('LOCATION');
       if (!isGranted) {

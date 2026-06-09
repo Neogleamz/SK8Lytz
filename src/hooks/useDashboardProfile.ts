@@ -40,8 +40,7 @@ export interface UseDashboardProfileResult {
   // ── Modal visibility ──────────────────────────────────────────────────────
   isAccountModalVisible: boolean;
   setIsAccountModalVisible: (v: boolean) => void;
-  isAdminToolsVisible: boolean;
-  setIsAdminToolsVisible: (v: boolean) => void;
+
   isSupportModalVisible: boolean;
   setIsSupportModalVisible: (v: boolean) => void;
   isMapVisible: boolean;
@@ -58,7 +57,7 @@ export function useDashboardProfile({
 
   // ── Modal visibility state ───────────────────────────────────────────────
   const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
-  const [isAdminToolsVisible, setIsAdminToolsVisible] = useState(false);
+
   const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
   const [isMapVisible, setIsMapVisible] = useState(false);
 
@@ -138,8 +137,7 @@ export function useDashboardProfile({
     handleLogout,
     isAccountModalVisible,
     setIsAccountModalVisible,
-    isAdminToolsVisible,
-    setIsAdminToolsVisible,
+
     isSupportModalVisible,
     setIsSupportModalVisible,
     isMapVisible,

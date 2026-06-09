@@ -14,9 +14,11 @@
  *
  * Platform: React Native (Android + Web)
  */
+/* eslint-disable unused-imports/no-unused-vars, react-hooks/exhaustive-deps */
+/* global global, requestAnimationFrame */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { startTransition, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo, startTransition } from 'react';
 import { ActivityIndicator, Alert, AppState, AppStateStatus, BackHandler, Linking, PanResponder, Platform, SafeAreaView, ScrollView, Text, TouchableOpacity, View, useWindowDimensions, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ExpoLinking from 'expo-linking';
@@ -138,7 +140,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     handleLogout,
     isAccountModalVisible,
     setIsAccountModalVisible,
-    setIsAdminToolsVisible,
+
     isSupportModalVisible,
     setIsSupportModalVisible,
   } = useDashboardProfile({
@@ -166,9 +168,9 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   // ── Hardware BLE callbacks (extracted to useHardwareNotifications) ───────────
 
   const [updateTrigger, setUpdateTrigger] = useState(0);
+  const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
   const [isTestModeActive, setIsTestModeActive] = useState(false);
   // isDisconnecting removed — bleState === 'DISCONNECTING' is the canonical FSM gate
-  const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
   const [isDiagnosticsMode] = useState(false);
 
   // ── Phase 1: Fleet Groups, Device Configs, Power States → useDashboardGroups ───────
@@ -940,7 +942,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
 
         {isControllerOpen && (
           <View style={styles.controllerWrap}>
-            <View pointerEvents="box-none" style={styles.controllerHeaderWrap}>
+            <View pointerEvents={Platform.OS !== 'web' ? 'box-none' : undefined} style={[styles.controllerHeaderWrap, Platform.OS === 'web' ? { pointerEvents: 'none' as unknown as any } : undefined]}> {/* MIGRATION-SHIM */}
               <DashboardHeader
                 isActuallyConnected={true}
                 isOfflineMode={isOfflineMode}
@@ -951,7 +953,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
                 handleDisconnect={handleDisconnect}
                 onReconnectDevice={handleDeviceReconnect}
                 isAdmin={userProfile?.role === 'admin'}
-                onPressAdminTools={() => setIsAdminToolsVisible(true)}
+                onPressAdminTools={() => Alert.alert('Admin Tools Migrated', 'The admin tools have been moved to the Web Command Center. Please access them via your desktop browser.')}
                 onPressSupport={() => setIsSupportModalVisible(true)}
                 onPressTheme={toggleTheme}
                 authUsername={authUsername}
@@ -980,7 +982,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
                   handleDisconnect={handleDisconnect}
                   onReconnectDevice={handleDeviceReconnect}
                   isAdmin={userProfile?.role === 'admin'}
-                  onPressAdminTools={() => setIsAdminToolsVisible(true)}
+                  onPressAdminTools={() => Alert.alert('Admin Tools Migrated', 'The admin tools have been moved to the Web Command Center. Please access them via your desktop browser.')}
                   onPressSupport={() => setIsSupportModalVisible(true)}
                   onPressTheme={toggleTheme}
                   authUsername={authUsername}

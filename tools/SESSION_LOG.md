@@ -1284,3 +1284,20 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Expanded Mock Injection to 4 discrete Virtual Skates (Haloz L/R, Soulz L/R). Added Product Manager default profiles (product_type, hwPoints) directly to the mock payloads to bypass EEPROM interrogation classification failures on generic mocks.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/hooks/ble/useBLEScanner.ts
+
+### [MERGE] 2026-06-09T22:48 - hotfix-mock-connection-race -> master @ 23ca7fc1
+**What merged:** Fixed race condition where controller instantly closes by synchronously updating bleState before acquiring lock.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/services/BleConnectionManager.ts
+
+### [DECISION] 2026-06-09T17:55 — Restore Domain Admin Auto-Promotion
+**Decision:** Restored auto-promotion for @neogleamz.com and @sk8lytz.com domains and manually promoted existing users.
+**Rejected:** Security fix from 20260512 that disabled domain wildcards. The team requires all @neogleamz.com members to have admin access immediately.
+**Don't re-derive:** The user explicitly requested domain-based promotion. Do not remove it.
+**Source:** C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\supabase\migrations\20260609175500_restore_domain_admin_promotion.sql
+
+
+### [EVENT] 2026-06-09T17:58 — Fixed Dead Admin Tools UI Button
+**What merged:** Fixed a dead link on the dashboard header logo. The setIsAdminToolsVisible(true) state was being called, but the modal was removed during the Command Center migration, making the button do nothing. Replaced with a React Native Alert informing the user that Admin Tools are now located in the Web Command Center.
+**Files touched:** src/screens/DashboardScreen.tsx, src/hooks/useDashboardProfile.ts
+

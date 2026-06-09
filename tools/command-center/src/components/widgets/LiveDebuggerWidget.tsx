@@ -48,7 +48,7 @@ export const LiveDebuggerWidget: React.FC = () => {
     // 1. Fetch Aggregates
     const viewName = activeTab === 'FATAL_CRASHES' ? 'view_crash_aggregates' : 'view_telemetry_errors_aggregates';
     const { data: aggs } = await supabase
-      .from(viewName)
+      .from(viewName as any)
       .select('*')
       .order('status', { ascending: true }) // OPEN before RESOLVED
       .order('crash_count', { ascending: false }) // Most frequent first
@@ -69,7 +69,7 @@ export const LiveDebuggerWidget: React.FC = () => {
       : 'created_at, event_type, error_message, operation_type';
 
     const { data: feed } = await supabase
-      .from(tableName)
+      .from(tableName as any)
       .select(feedSelect)
       .order('created_at', { ascending: false })
       .limit(50);
@@ -107,9 +107,9 @@ export const LiveDebuggerWidget: React.FC = () => {
       const colName = activeTab === 'FATAL_CRASHES' ? 'error_signature' : 'error_message';
 
       const { data } = await supabase
-        .from(tableName)
+        .from(tableName as any)
         .select('*')
-        .eq(colName, selectedSignature)
+        .eq(colName as any, selectedSignature)
         .order('created_at', { ascending: false })
         .limit(10);
       if (data) setSignatureInstances(data);
@@ -119,7 +119,7 @@ export const LiveDebuggerWidget: React.FC = () => {
 
   const resolveSignature = async (signature: string) => {
     const rpcName = activeTab === 'FATAL_CRASHES' ? 'resolve_crash_signature' : 'resolve_telemetry_error';
-    const { error } = await supabase.rpc(rpcName, {
+    const { error } = await supabase.rpc(rpcName as any, {
       target_signature: signature,
     });
     if (!error) {
