@@ -46,26 +46,8 @@ export default function FleetHealthWidget() {
       supabase.from('registered_groups').select('*', { count: 'exact', head: true })
     ]);
       
-    if (registeredData && telemetryData) {
-      // Create a lookup map of the latest telemetry per MAC
-      const telemetryMap = new Map();
-      telemetryData.forEach(t => {
-        if (t.device_mac) {
-          telemetryMap.set(t.device_mac, t);
-        }
-      });
-
-      // Enrich registered data with telemetry fallback
-      const enrichedData = registeredData.map(d => {
-        const t = d.device_mac ? telemetryMap.get(d.device_mac) : null;
-        return {
-          ...d,
-          ble_version: d.ble_version || t?.ble_version || null,
-          firmware_ver: d.firmware_ver || t?.firmware_ver || null,
-        };
-      });
-
-      setData(enrichedData as DeviceData[]);
+    if (registeredData) {
+      setData(registeredData as DeviceData[]);
     }
     
     if (telemetryData) {
