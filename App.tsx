@@ -79,7 +79,7 @@ function AppContent() {
       <StatusBar style={isDark ? 'light' : 'dark'} />
       {isAuthenticated ? (
         <ComplianceGate>
-          <DashboardScreen isOfflineMode={isOfflineMode} onLogout={clearOfflineMode} />
+          <DashboardScreen isOfflineMode={isOfflineMode} />
         </ComplianceGate>
       ) : (
         <AuthScreen

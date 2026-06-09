@@ -34,7 +34,7 @@ import { AppLogger } from '../services/AppLogger';
 
 import AccountModal, { StoredDevice } from '../components/AccountModal';
 import { getDefaultGroupName } from '../utils/NamingUtils';
-import { getLocalProfileByPoints } from '../constants/ProductCatalog';
+// Removed getLocalProfileByPoints as it is unused
 import { RegisteredDevice, useRegistration } from '../hooks/useRegistration';
 import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
 import { useSession } from '../context/SessionContext';
@@ -67,7 +67,7 @@ import { scrubPII } from '../utils/piiScrubber';
 
 
 
-export default function DashboardScreen({ isOfflineMode = false, onLogout }: { isOfflineMode?: boolean; onLogout?: () => void } = {}) {
+export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMode?: boolean; } = {}) {
   const { isVisibilityAllowed } = useAppConfig();
   const { Colors, isDark, toggleTheme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -138,7 +138,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     handleLogout,
     isAccountModalVisible,
     setIsAccountModalVisible,
-    isAdminToolsVisible,
     setIsAdminToolsVisible,
     isSupportModalVisible,
     setIsSupportModalVisible,
@@ -162,29 +161,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     AppLogger.log('SCREEN_OPENED', { screen: 'DashboardScreen' });
   }, []);
 
-  // ── Deep Link Handling ─────────────────────────────────────────────────────
-  const [initialDeepLinkCode, setInitialDeepLinkCode] = useState<string | null>(null);
-  useEffect(() => {
-    const handleDeepLink = ({ url }: { url: string }) => {
-      if (!url) return;
-      try {
-        const parsed = ExpoLinking.parse(url) as { path?: string; queryParams?: Record<string, string> };
-        if (parsed.path === 'crew/join' && parsed.queryParams?.code) {
-          const inviteCode = String(parsed.queryParams.code).toUpperCase();
-          AppLogger.log('DEEP_LINK', { action: 'crew_join', inviteCode });
-          setInitialDeepLinkCode(inviteCode);
-          setCrewInitialStep('join');
-          setIsCrewModalVisible(true);
-        }
-      } catch (err: unknown) {
-      const safeErr = err instanceof Error ? err : new Error(String(err));
-        AppLogger.error('DEEP_LINK', { event: 'parse_failed', url, error: (err instanceof Error ? err.message : String(err)) });
-      }
-    };
-    const linkSubscription = Linking.addEventListener('url', handleDeepLink);
-    Linking.getInitialURL().then(url => { if (url) handleDeepLink({ url }); });
-    return () => linkSubscription.remove();
-  }, []);
+  // Deep link effect moved below useDashboardCrew
 
   // ── Hardware BLE callbacks (extracted to useHardwareNotifications) ───────────
 
@@ -192,7 +169,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   const [isTestModeActive, setIsTestModeActive] = useState(false);
   // isDisconnecting removed — bleState === 'DISCONNECTING' is the canonical FSM gate
   const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
-  const [isDiagnosticsMode, setIsDiagnosticsMode] = useState(false);
+  const [isDiagnosticsMode] = useState(false);
 
   // ── Phase 1: Fleet Groups, Device Configs, Power States → useDashboardGroups ───────
   // Declare refs before domain hooks that consume them
@@ -229,7 +206,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
     setLastGroupPattern,
     groupModalState,
     editingGroupId,
-    openGroupCreate,
     openGroupRename,
     closeGroupModal,
     selectedIds,
@@ -317,6 +293,29 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   const [crewInitialStep, setCrewInitialStep] = useState<'landing' | 'join' | 'create' | 'map'>('landing');
   const [isCrewHubCollapsed, setIsCrewHubCollapsed] = useState(false);
+
+  // ── Deep Link Handling ─────────────────────────────────────────────────────
+  const [initialDeepLinkCode, setInitialDeepLinkCode] = useState<string | null>(null);
+  useEffect(() => {
+    const handleDeepLink = ({ url }: { url: string }) => {
+      if (!url) return;
+      try {
+        const parsed = ExpoLinking.parse(url) as { path?: string; queryParams?: Record<string, string> };
+        if (parsed.path === 'crew/join' && parsed.queryParams?.code) {
+          const inviteCode = String(parsed.queryParams.code).toUpperCase();
+          AppLogger.log('DEEP_LINK', { action: 'crew_join', inviteCode });
+          setInitialDeepLinkCode(inviteCode);
+          setCrewInitialStep('join');
+          setIsCrewModalVisible(true);
+        }
+      } catch (err: unknown) {
+        AppLogger.error('DEEP_LINK', { event: 'parse_failed', url, error: (err instanceof Error ? err.message : String(err)) });
+      }
+    };
+    const linkSubscription = Linking.addEventListener('url', handleDeepLink);
+    Linking.getInitialURL().then(url => { if (url) handleDeepLink({ url }); });
+    return () => linkSubscription.remove();
+  }, [setIsCrewModalVisible]);
 
   // Load Crew Hub collapsed state on mount
   useEffect(() => {
@@ -514,14 +513,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
   // displayConnectedDevices, isActuallyConnected, isGrouped hoisted to top of component (after useDashboardGroups).
 
-  const sortedAllDevices = useMemo(() => {
-    return [...allDevices]
-      .sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999))
-      .map(d => {
-        const cfg = (deviceConfigs[d.id] || {}) as Partial<DeviceSettings>;
-        return { ...d, ...cfg } as DisplayDevice;
-      });
-  }, [allDevices, deviceConfigs]);
+  // sortedAllDevices removed as it was unused
 
   // handleCloseController only closes the UI, it does NOT drop the BLE connection or end the session.
   const handleCloseController = useCallback(() => {
@@ -566,7 +558,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
 
     if (devicesToConnect.length > 0) {
       // Optimistic UI: Defer heavy controller mount by one frame to allow tap animation.
-      requestAnimationFrame(() => {
+      global.requestAnimationFrame(() => {
         if (!isSkateSessionActive) {
           startSession();
         }
@@ -634,7 +626,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
         }
       }
     } catch (_e: unknown) {
-      const safeErr = _e instanceof Error ? _e : new Error(String(_e)); /* ignore parse errors */ }
+      /* ignore parse errors */ 
+    }
 
     if (!lastFav) {
       Alert.alert('No Favorites', 'You haven\'t saved any favorites yet. Open the controller and tap the ❤️ to save one.');
@@ -745,7 +738,6 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
   
   const {
     MemoizedSk8lytzController,
-    activeHwSettings,
     isSettingsVisible,
     setIsSettingsVisible,
     selectedDeviceForSettings,
