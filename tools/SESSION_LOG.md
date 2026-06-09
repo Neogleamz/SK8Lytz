@@ -1168,3 +1168,29 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Rejected:** Displaying historical skate paths (polylines) — rejected because the user deemed it too invasive.
 **Don't re-derive:** The map is transitioning from a static point plotter to a lazy-loaded relational inspector. We will only fetch full relational graphs (egistered_devices, crew_memberships) when a specific cluster/pin is clicked, to avoid overwhelming the client with the entire database graph.
 **Source:** User feedback during brainstorming session.
+
+### [MERGE] 2026-06-09T08:57 â€” feat/map-relational-drilldown â†’ master @ 2188ff2a
+**What merged:** Map Relational Drilldown Epic with Sidebar Inspector, Crew Zones, Supabase Realtime Telemetry overlay, and preserved visual clustering.
+**Verify result:** TSC âœ…, Jest âœ…, gates âœ…
+**Files touched:** MapWidget.tsx, EntityInspectorSidebar.tsx
+### [EVENT] 2026-06-09T04:33:31Z - Map Drilldown Enhancements Complete
+**What shipped:**
+- Fixed MapWidget scale locking by tying GRID_SIZE to dynamic zoom scale.
+- Added deep-zoom capability with exponential scaling multipliers to allow infinite unclustering.
+- Synchronized map toggle pills exactly to the 5 DB relationships requested (Users, Registered Devices, Skate Sessions, Crews, Crew Sessions) utilizing dynamic array grouping.
+- Resolved 'telemetryPoints is not defined' crash by thoroughly purging orphaned UI chunks.
+
+### [DECISION] 2026-06-09T13:16 - Cleanup deprecated crash_telemetry_logs table
+**Decision:** Dropped public.crash_telemetry_logs from Supabase and deleted scratch/create_crash_table.ts. Updated scratch/check_data.ts.
+**Reason:** This table was a manual patch from a previous outage, superseded by the proper 20260609000000_crash_telemetry.sql migration. User invoked Cowboy Mode for immediate removal.
+
+### [EVENT] 2026-06-09T13:47 — Emergency DB Recovery
+**What happened:** User accidentally deleted their admin profile in public.user_profiles during a cleanup.
+**Fix applied:** Re-inserted the UUID (d806e985-3ba1-4b8c-9d2d-3197eb60e416) directly into Supabase via execute_sql with the 'admin' role.
+
+### [MERGE] 2026-06-09T13:52 — feat/audit-logs-tab
+**What merged:** Implemented AuditLogsWidget.tsx using ag-grid-react via Cowboy Mode override.
+**Reason:** Tab was blank (Under Construction) and user requested UI parity with RelationalDataBank.
+
+### [ARTIFACT] 2026-06-09T13:57 — PLAN-live-debugger-suite.md
+**Decision:** Evolve Live Debugger into a robust 3-tab Diagnostic Suite grouping crash_telemetry and telemetry_errors with a 90-day retention and DB-status resolution flow.

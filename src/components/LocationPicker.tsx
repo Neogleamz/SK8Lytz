@@ -7,6 +7,7 @@ import { Spacing , ThemePalette } from '../theme/theme';
 import { LocationMarker, LocationPickerMap } from './LocationPickerMap';
 import { useRecentSpots, RecentSpot } from '../hooks/useRecentSpots';
 import { AppLogger } from '../services/AppLogger';
+import { useAppConfig } from '../context/AppConfigContext';
 
 interface LocationPickerProps {
   locationLabel: string;
@@ -31,6 +32,8 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
   const { recentSpots, addRecentSpot } = useRecentSpots();
+  const { isVisibilityAllowed } = useAppConfig();
+  const showMap = isVisibilityAllowed('visibility_maps_tab');
   
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -181,35 +184,44 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
 
       {/* Map Thumbnail */}
       {locationCoords && (
-        <View style={styles.mapContainer}>
-          <LocationPickerMap
-            style={styles.map}
-            initialRegion={{
-              latitude: locationCoords.lat,
-              longitude: locationCoords.lng,
-              latitudeDelta: 0.005,
-              longitudeDelta: 0.005,
-            }}
-            region={{
-              latitude: locationCoords.lat,
-              longitude: locationCoords.lng,
-              latitudeDelta: 0.005,
-              longitudeDelta: 0.005,
-            }}
-            liteMode={true}
-            scrollEnabled={false}
-            zoomEnabled={false}
-            pitchEnabled={false}
-            rotateEnabled={false}
-          >
-            <LocationMarker coordinate={{ latitude: locationCoords.lat, longitude: locationCoords.lng }} pinColor={Colors.primary} />
-          </LocationPickerMap>
-          <View style={styles.mapOverlay}>
-            <Text style={styles.mapOverlayText}>
-              ✓ GPS coordinates attached
+        showMap ? (
+          <View style={styles.mapContainer}>
+            <LocationPickerMap
+              style={styles.map}
+              initialRegion={{
+                latitude: locationCoords.lat,
+                longitude: locationCoords.lng,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+              }}
+              region={{
+                latitude: locationCoords.lat,
+                longitude: locationCoords.lng,
+                latitudeDelta: 0.005,
+                longitudeDelta: 0.005,
+              }}
+              liteMode={true}
+              scrollEnabled={false}
+              zoomEnabled={false}
+              pitchEnabled={false}
+              rotateEnabled={false}
+            >
+              <LocationMarker coordinate={{ latitude: locationCoords.lat, longitude: locationCoords.lng }} pinColor={Colors.primary} />
+            </LocationPickerMap>
+            <View style={styles.mapOverlay}>
+              <Text style={styles.mapOverlayText}>
+                ✓ GPS coordinates attached
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View style={{ marginTop: Spacing.md, padding: Spacing.md, backgroundColor: 'rgba(0, 200, 100, 0.1)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0, 200, 100, 0.3)', flexDirection: 'row', alignItems: 'center' }}>
+            <MaterialCommunityIcons name="check-circle" size={16} color="#00C864" style={{ marginRight: Spacing.sm }} />
+            <Text style={{ color: '#00C864', fontSize: 13, fontWeight: '600' }}>
+              Address selected successfully
             </Text>
           </View>
-        </View>
+        )
       )}
     </View>
   );

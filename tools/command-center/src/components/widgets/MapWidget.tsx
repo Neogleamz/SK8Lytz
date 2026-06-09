@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import { supabase } from '../../services/supabase';
 import USAMap from './USMap';
-import { EntityInspectorSidebar } from './EntityInspectorSidebar';
+import { EntityCardOverlay } from './EntityCardOverlay';
+import RelationalDataBankWidget from './RelationalDataBankWidget';
+import type { FilteredIds } from './RelationalDataBankWidget';
 import { AgGridReact } from 'ag-grid-react';
 import { ModuleRegistry, AllCommunityModule, themeQuartz, colorSchemeDark } from 'ag-grid-community';
 import type { ColDef } from 'ag-grid-community';
@@ -18,89 +20,63 @@ const myTheme = themeQuartz.withPart(colorSchemeDark).withParams({
   borderColor: 'rgba(51, 65, 85, 0.5)', // slate-700
   accentColor: '#22d3ee', // cyan-400
   fontFamily: '"Inter", sans-serif',
-  headerFontSize: '14px',
-  wrapperBorderRadius: '8px',
+  rowHoverColor: 'rgba(34, 211, 238, 0.1)', // cyan-400 with opacity
+  selectedRowBackgroundColor: 'rgba(34, 211, 238, 0.2)',
 });
+
+export interface MapPoint {
+  id: string;
+  lat: number;
+  lng: number;
+  label?: string;
+  type: 'users' | 'registeredDevices' | 'skateSessions' | 'crews' | 'crewSessions';
+  user_id?: string;
+}
 
 interface DeviceData {
   id: string;
   user_id: string;
+  device_mac: string;
   custom_name: string;
-  product_type: string | null;
-  firmware_ver: number | null;
-  is_pending_sync: boolean | null;
-  ic_type: string | null;
+  firmware_version: string;
+  battery_level: number;
   last_lat: number | null;
   last_lng: number | null;
-  device_mac: string | null;
-  registered_at: string | null;
-  points: number;
+  last_long?: number | null; // for fallback
+  is_online: boolean;
+  last_seen: string;
 }
 
-interface ClusterNode {
-  id: string;
-  lat: number;
-  lng: number;
-  count: number;
-  type: string;
-  types: string[];
-  userIds: string[];
-}
-
-interface MapPoint {
-  id: string;
-  lat: number;
-  lng: number;
-  label: string;
-  type: 'skate' | 'crew' | 'device' | 'telemetry';
-  user_id?: string;
-}
-
-function latLngToXY(lat: number, lng: number) {
-  const xPercent = ((lng - -125) / (-66 - -125)) * 100;
-  const yPercent = ((50 - lat) / (50 - 24)) * 100;
-  return { 
-    left: `${Math.max(0, Math.min(100, xPercent))}%`, 
-    top: `${Math.max(0, Math.min(100, yPercent))}%` 
-  };
-}
-
-export default function MapWidget() {
-  // Grid Data
+export const MapWidget: React.FC = () => {
   const [devices, setDevices] = useState<DeviceData[]>([]);
   const [filteredDevices, setFilteredDevices] = useState<DeviceData[]>([]);
-  const gridRef = useRef<AgGridReact>(null);
+  const [colDefs, setColDefs] = useState<ColDef<any>[]>([]);
+  const [activeEntity, setActiveEntity] = useState<{ id: string; type: MapPoint['type'] } | null>(null);
 
-  // Map Data
-  const [activeUserId, setActiveUserId] = useState<string | null>(null);
+  // Separate Map Layers
+  const [userPoints, setUserPoints] = useState<MapPoint[]>([]);
+  const [devicePoints, setDevicePoints] = useState<MapPoint[]>([]);
   const [skatePoints, setSkatePoints] = useState<MapPoint[]>([]);
   const [crewPoints, setCrewPoints] = useState<MapPoint[]>([]);
-  const [devicePoints, setDevicePoints] = useState<MapPoint[]>([]);
-  const [telemetryPoints, setTelemetryPoints] = useState<MapPoint[]>([]);
+  const [crewSessionPoints, setCrewSessionPoints] = useState<MapPoint[]>([]);
 
-  // Toggles
   const [layers, setLayers] = useState({
-    skate: true,
-    crew: true,
-    device: true,
-    telemetry: true,
+    users: true,
+    registeredDevices: true,
+    skateSessions: true,
+    crews: true,
+    crewSessions: true,
   });
 
-  
-  const [zoom, setZoom] = useState({ scale: 1, x: 50, y: 50 });
+  const [zoom, setZoom] = useState({ scale: 1, x: 0, y: 0 });
+  const [filteredIds, setFilteredIds] = useState<FilteredIds | null>(null);
 
-  const handleZoom = (lat: number, lng: number) => {
-    const pos = latLngToXY(lat, lng);
-    setZoom({ scale: 4, x: parseFloat(pos.left), y: parseFloat(pos.top) });
-  };
+  const [selectedCluster, setSelectedCluster] = useState<MapPoint[] | null>(null);
+  const mapRef = useRef<HTMLDivElement>(null);
 
-  const handleResetZoom = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setZoom({ scale: 1, x: 50, y: 50 });
-  };
-
-  const SectionHdr = ({ label, color = 'rgba(255,255,255,0.5)', right }: { label: React.ReactNode; color?: string; right?: React.ReactNode }) => (
-    <div onClick={() => setIsMapCollapsed(!isMapCollapsed)} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', cursor:'pointer', userSelect:'none', padding:'6px 0', marginBottom: isMapCollapsed ? 0 : '0.5rem' }}>
+  // Helper for Section Headers (Reused from FleetDashboard)
+  const SectionHdr = ({ label, color, right }: { label: string, color: string, right?: React.ReactNode }) => (
+    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:`1px solid ${color}40`, paddingBottom:'6px', marginBottom:'16px' }}>
       <span style={{ color, fontWeight:800, fontSize:'0.85rem', textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</span>
       <span style={{ display:'flex', alignItems:'center', gap:'10px' }}>
         {right}
@@ -113,9 +89,26 @@ export default function MapWidget() {
     return localStorage.getItem('map_collapsed') === 'true';
   });
 
+  const [hoveredCluster, setHoveredCluster] = useState<number | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     localStorage.setItem('map_collapsed', isMapCollapsed.toString());
   }, [isMapCollapsed]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? 0.85 : 1.15;
+      setZoom(z => ({ ...z, scale: Math.max(1, Math.min(z.scale * delta, 64)) }));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [containerRef.current]);
 
   // JSON location parsing helper
   const parseJsonLocation = (locInput: any): { lat: number, lng: number } | null => {
@@ -128,9 +121,12 @@ export default function MapWidget() {
     if (Array.isArray(loc)) {
       lng = loc[0];
       lat = loc[1];
-    } else if (loc.lat !== undefined) {
-      lat = loc.lat;
-      lng = loc.lng !== undefined ? loc.lng : (loc.lon !== undefined ? loc.lon : loc.long);
+    } else if (loc.type === 'Point' && Array.isArray(loc.coordinates)) {
+      lng = loc.coordinates[0];
+      lat = loc.coordinates[1];
+    } else if (loc.lat !== undefined || loc.latitude !== undefined) {
+      lat = loc.lat !== undefined ? loc.lat : loc.latitude;
+      lng = loc.lng !== undefined ? loc.lng : (loc.lon !== undefined ? loc.lon : (loc.long !== undefined ? loc.long : loc.longitude));
     }
     if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
       return { lat: Number(lat), lng: Number(lng) };
@@ -141,14 +137,13 @@ export default function MapWidget() {
   const parseStringLocation = (locStr: string): { lat: number, lng: number } | null => {
     if (typeof locStr === 'string') {
       if (locStr.includes('POINT')) {
-        const match = locStr.match(/POINT\(([^ ]+)\s+([^ ]+)\)/);
+        const match = locStr.match(/POINT\s*\(\s*([^\s]+)\s+([^\s]+)\s*\)/i);
         if (match) {
           const lng = parseFloat(match[1]);
           const lat = parseFloat(match[2]);
           if (!isNaN(lat) && !isNaN(lng)) return { lat, lng };
         }
       } else {
-        // Fallback for raw "lat, lng" string inputs
         const parts = locStr.split(',');
         if (parts.length === 2) {
           const lat = parseFloat(parts[0].trim());
@@ -160,51 +155,57 @@ export default function MapWidget() {
     return null;
   };
 
-  const fetchData = async () => {
-    // 1. Fetch Registered Devices (for Grid + Map)
-    const { data: rawDevices, error: devError } = await supabase
-      .from('registered_devices')
-      .select('*');
+  const [debugData, setDebugData] = useState<any>(null);
 
-    if (devError) {
-      console.error("MapWidget devError:", devError);
-      setDevices([]);
-      setFilteredDevices([]);
-    } else if (rawDevices) {
-      const devs = rawDevices as DeviceData[];
+  const fetchData = async () => {
+
+  const jitter = () => (Math.random() - 0.5) * 0.0005;
+    const uPoints: MapPoint[] = [];
+    const seenUsers = new Set();
+    
+    // Default US Center for missing coordinates
+    const DEFAULT_LAT = 39.8283;
+    const DEFAULT_LNG = -98.5795;
+
+    // 1. Fetch Registered Devices
+    const { data: rawDevices } = await supabase.from('registered_devices').select('*');
+    if (rawDevices) {
+      const devs = rawDevices as unknown as DeviceData[];
       setDevices(devs);
       setFilteredDevices(devs);
       
-      const parseCoordinate = (val: any) => {
-        if (val === null || val === undefined || val === '') return null;
-        if (typeof val === 'number') return !isNaN(val) ? val : null;
-        if (typeof val === 'string') {
-          const cleaned = val.replace(',', '.').trim();
-          const parsed = parseFloat(cleaned);
-          return !isNaN(parsed) ? parsed : null;
-        }
-        return null;
-      };
-
       const dPoints: MapPoint[] = [];
       devs.forEach((d: any) => {
-        const latVal = parseCoordinate(d.last_lat);
-        const lngVal = parseCoordinate(d.last_lng !== undefined && d.last_lng !== null ? d.last_lng : d.last_long);
+        let latVal = DEFAULT_LAT;
+        let lngVal = DEFAULT_LNG;
+        if (d.last_lat !== undefined && d.last_lat !== null) latVal = Number(d.last_lat);
+        if (d.last_lng !== undefined && d.last_lng !== null) lngVal = Number(d.last_lng);
         
-        if (latVal !== null && lngVal !== null) {
+        if (!isNaN(latVal) && !isNaN(lngVal)) {
           dPoints.push({
             id: d.id,
-            lat: latVal,
-            lng: lngVal,
+            lat: latVal + jitter() * 20, // Spread them out more if they are stacked
+            lng: lngVal + jitter() * 20,
             label: `Device: ${d.custom_name || d.device_mac || d.id}`,
-            type: 'device',
+            type: 'registeredDevices',
             user_id: d.user_id
           });
+
+          if (d.user_id && !seenUsers.has(d.user_id)) {
+            seenUsers.add(d.user_id);
+            uPoints.push({
+              id: `user_${d.user_id}`,
+              lat: latVal + jitter() * 20,
+              lng: lngVal + jitter() * 20,
+              label: `User: ${d.user_id}`,
+              type: 'users',
+              user_id: d.user_id
+            });
+          }
         }
       });
       setDevicePoints(dPoints);
       
-      // Dynamic columns for Grid
       if (devs.length > 0) {
         const keys = Object.keys(devs[0]);
         const dynamicCols: ColDef<any>[] = keys.map(k => ({
@@ -217,423 +218,480 @@ export default function MapWidget() {
       }
     }
 
-    // 2. Fetch Skate Sessions
-    const { data: sSessions } = await supabase
-      .from('skate_sessions')
-      .select('id, user_id, location_coords')
-      .not('location_coords', 'is', null) as any;
-    
+    // 2. Fetch Skate Sessions (proxy for Users as well)
+    const { data: sSessions, error: sError } = await supabase.from('skate_sessions').select('*').limit(200) as any;
+    if (sSessions && sSessions.length > 0) {
+      setDebugData(sSessions[0]);
+    }
+    const sPoints: MapPoint[] = [];
     if (sSessions) {
-      const sPoints: MapPoint[] = [];
       sSessions.forEach((s: any) => {
-        const coords = parseJsonLocation(s.location_coords) || parseStringLocation(s.location_coords);
+        const coords = parseJsonLocation(s.start_coords) || parseJsonLocation(s.location_coords) || parseStringLocation(s.location_coords) || { lat: DEFAULT_LAT, lng: DEFAULT_LNG };
         if (coords) {
           sPoints.push({
             id: `skate_${s.id}`,
-            lat: coords.lat,
-            lng: coords.lng,
-            label: `User Session: ${s.user_id}`,
-            type: 'skate',
+            lat: coords.lat + jitter() * 20,
+            lng: coords.lng + jitter() * 20,
+            label: `Skate Session: ${s.user_id}`,
+            type: 'skateSessions',
             user_id: s.user_id
           });
+          
+          if (s.user_id && !seenUsers.has(s.user_id)) {
+            seenUsers.add(s.user_id);
+            uPoints.push({
+              id: `user_${s.user_id}`,
+              lat: coords.lat + jitter() * 20,
+              lng: coords.lng + jitter() * 20,
+              label: `User: ${s.user_id}`,
+              type: 'users',
+              user_id: s.user_id
+            });
+          }
         }
       });
-      setSkatePoints(sPoints);
     }
+    setSkatePoints(sPoints);
+    setUserPoints(uPoints);
 
-    // 3. Fetch Crew Sessions
-    const { data: cSessions } = await supabase
-      .from('crew_sessions')
-      .select('id, name, location_coords')
-      .not('location_coords', 'is', null) as any;
-      
+    // 3. Fetch Crew Sessions (proxy for Crews as well)
+    const { data: cSessions } = await supabase.from('crew_sessions').select('id, crew_id, leader_user_id, name, location_coords').order('created_at', { ascending: false }).limit(100) as any;
     if (cSessions) {
       const cPoints: MapPoint[] = [];
+      const crewPts: MapPoint[] = [];
+      const seenCrews = new Set();
+
       cSessions.forEach((c: any) => {
-        const coords = parseJsonLocation(c.location_coords) || parseStringLocation(c.location_coords);
+        const coords = parseJsonLocation(c.location_coords) || parseStringLocation(c.location_coords) || { lat: DEFAULT_LAT, lng: DEFAULT_LNG };
         if (coords) {
           cPoints.push({
-            id: `crew_${c.id}`,
-            lat: coords.lat,
-            lng: coords.lng,
-            label: `Crew: ${c.name || c.id}`,
-            type: 'crew'
+            id: `crew_session_${c.id}`,
+            lat: coords.lat + jitter() * 20,
+            lng: coords.lng + jitter() * 20,
+            label: `Crew Session: ${c.name || c.id}`,
+            type: 'crewSessions',
+            user_id: c.leader_user_id
           });
+          
+          if (c.crew_id && !seenCrews.has(c.crew_id)) {
+            seenCrews.add(c.crew_id);
+            crewPts.push({
+              id: `crew_${c.crew_id}`,
+              lat: coords.lat + jitter() * 20,
+              lng: coords.lng + jitter() * 20,
+              label: `Crew: ${c.crew_id}`,
+              type: 'crews',
+              user_id: c.leader_user_id
+            });
+          }
         }
       });
-      setCrewPoints(cPoints);
-    }
-
-    // 4. Fetch Telemetry
-    const { data: telemetry } = await supabase
-      .from('discovered_devices_telemetry')
-      .select('id, device_mac, location')
-      .not('location', 'is', null) as any;
-      
-    if (telemetry) {
-      const tPoints: MapPoint[] = [];
-      telemetry.forEach((t: any) => {
-        let coords = parseJsonLocation(t.location) || parseStringLocation(t.location);
-        if (!coords && t.location?.coordinates) {
-            coords = parseJsonLocation(t.location.coordinates);
-        }
-        if (coords) {
-          tPoints.push({
-            id: `tel_${t.id}`,
-            lat: coords.lat,
-            lng: coords.lng,
-            label: `Ping: ${t.device_mac}`,
-            type: 'telemetry'
-          });
-        }
-      });
-      setTelemetryPoints(tPoints);
+      setCrewSessionPoints(cPoints);
+      setCrewPoints(crewPts);
     }
   };
 
   useEffect(() => {
     fetchData();
-
-    // Supabase Realtime Firehose
-    const channel = supabase.channel('telemetry_firehose')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'telemetry_snapshots' }, (payload) => {
-        const newPoint = payload.new as any;
-        setDevicePoints(prev => prev.map(p => {
-          if (newPoint.metadata?.location && p.type === 'device') {
-             let lat = null;
-             let lng = null;
-             if (newPoint.metadata.location.lat !== undefined) {
-               lat = newPoint.metadata.location.lat;
-               lng = newPoint.metadata.location.lng !== undefined ? newPoint.metadata.location.lng : newPoint.metadata.location.lon;
-             }
-             if (lat !== null && lng !== null) {
-               return { ...p, lat, lng };
-             }
-          }
-          return p;
-        }));
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
   }, []);
 
-  const onFilterChanged = useCallback(() => {
-    if (gridRef.current) {
-      const filtered: DeviceData[] = [];
-      gridRef.current.api.forEachNodeAfterFilter((node) => {
-        if (node.data) filtered.push(node.data);
-      });
-      setFilteredDevices(filtered);
-    }
-  }, []);
+  const visibleUserPoints = useMemo(() => filteredIds ? userPoints.filter(p => p.user_id && filteredIds.users.has(p.user_id)) : userPoints, [userPoints, filteredIds]);
+  const visibleDevicePoints = useMemo(() => filteredIds ? devicePoints.filter(p => filteredIds.devices.has(p.id)) : devicePoints, [devicePoints, filteredIds]);
+  const visibleSkatePoints = useMemo(() => filteredIds ? skatePoints.filter(p => filteredIds.sessions.has(p.id.replace('skate_', ''))) : skatePoints, [skatePoints, filteredIds]);
+  const visibleCrewPoints = useMemo(() => filteredIds ? crewPoints.filter(p => filteredIds.crews.has(p.id.replace('crew_', ''))) : crewPoints, [crewPoints, filteredIds]);
+  const visibleCrewSessionPoints = useMemo(() => filteredIds ? crewSessionPoints.filter(p => filteredIds.crewSessions.has(p.id.replace('crew_session_', ''))) : crewSessionPoints, [crewSessionPoints, filteredIds]);
 
-  const [colDefs, setColDefs] = useState<ColDef<any>[]>([]);
-
-  const defaultColDef = useMemo(() => ({
-    sortable: true,
-    filter: true,
-    floatingFilter: true, // Show filter inputs under headers
-    resizable: true,
-    minWidth: 150, // Prevents squishing, enables horizontal scroll
-  }), []);
-
-  const activeCount = filteredDevices.length;
-  
   const activeMapPoints: MapPoint[] = [];
-  if (layers.device) activeMapPoints.push(...devicePoints);
-  if (layers.skate) activeMapPoints.push(...skatePoints);
-  if (layers.crew) activeMapPoints.push(...crewPoints);
-  if (layers.telemetry) activeMapPoints.push(...telemetryPoints);
+  if (layers.users) activeMapPoints.push(...visibleUserPoints);
+  if (layers.registeredDevices) activeMapPoints.push(...visibleDevicePoints);
+  if (layers.skateSessions) activeMapPoints.push(...visibleSkatePoints);
+  if (layers.crews) activeMapPoints.push(...visibleCrewPoints);
+  if (layers.crewSessions) activeMapPoints.push(...visibleCrewSessionPoints);
 
-
-
-  
-  const GRID_SIZE = 30; // 30x30 grid
-  const clusters = useMemo(() => {
-    const bins = new Map<string, MapPoint[]>();
-    activeMapPoints.forEach(pt => {
-      const pos = latLngToXY(pt.lat, pt.lng);
-      const px = parseFloat(pos.left); 
-      const py = parseFloat(pos.top);  
-      
-      const gridX = Math.floor((px / 100) * GRID_SIZE);
-      const gridY = Math.floor((py / 100) * GRID_SIZE);
-      const key = `${gridX}_${gridY}`;
-      
-      if (!bins.has(key)) bins.set(key, []);
-      bins.get(key)!.push(pt);
+  const GRID_SIZE = Math.floor(30 * zoom.scale);
+  const clusteredPoints = useMemo(() => {
+    if (activeMapPoints.length === 0) return [];
+    
+    let minLat = Infinity, maxLat = -Infinity;
+    let minLng = Infinity, maxLng = -Infinity;
+    
+    activeMapPoints.forEach(p => {
+      if (p.lat < minLat) minLat = p.lat;
+      if (p.lat > maxLat) maxLat = p.lat;
+      if (p.lng < minLng) minLng = p.lng;
+      if (p.lng > maxLng) maxLng = p.lng;
     });
 
-    const result: ClusterNode[] = [];
-    bins.forEach((points, key) => {
-      if (points.length === 1) {
-        result.push({
-          id: points[0].id,
-          lat: points[0].lat,
-          lng: points[0].lng,
-          count: 1,
-          type: points[0].type,
-          types: [points[0].type],
-          userIds: points[0].user_id ? [points[0].user_id] : []
-        });
-      } else {
-        const avgLat = points.reduce((s, p) => s + p.lat, 0) / points.length;
-        const avgLng = points.reduce((s, p) => s + p.lng, 0) / points.length;
-        const types = points.map(p => p.type);
-        const userIds = points.filter(p => p.user_id).map(p => p.user_id as string);
-        const typeCounts = types.reduce((acc, t) => ({...acc, [t]: (acc[t] || 0) + 1}), {} as Record<string, number>);
-        const uniqueTypes = Object.keys(typeCounts);
-        
-        result.push({
-          id: `cluster_${key}`,
-          lat: avgLat,
-          lng: avgLng,
-          count: points.length,
-          type: uniqueTypes.length === 1 ? uniqueTypes[0] : 'mixed',
-          types: uniqueTypes,
-          userIds
-        });
+    if (minLat === Infinity) return [];
+    
+    const latStep = (maxLat - minLat) / GRID_SIZE || 0.1;
+    const lngStep = (maxLng - minLng) / GRID_SIZE || 0.1;
+
+    const clusters = new Map<string, { count: number; lat: number; lng: number; types: Set<string>; users: Set<string>; id: string; user_id?: string; points: MapPoint[] }>();
+
+    activeMapPoints.forEach(p => {
+      const gridX = Math.floor((p.lng - minLng) / lngStep);
+      const gridY = Math.floor((p.lat - minLat) / latStep);
+      const key = `${gridX},${gridY}`;
+      
+      if (!clusters.has(key)) {
+        clusters.set(key, { count: 0, lat: 0, lng: 0, types: new Set(), users: new Set(), id: p.id, user_id: p.user_id, points: [] });
       }
+      const cluster = clusters.get(key)!;
+      cluster.count += 1;
+      cluster.lat += p.lat;
+      cluster.lng += p.lng;
+      cluster.types.add(p.type);
+      cluster.points.push(p);
+      if (p.user_id) cluster.users.add(p.user_id);
     });
-    return result;
-  }, [activeMapPoints, GRID_SIZE]);
 
-  const rowSelectionConfig = useMemo(() => ({ mode: 'multiRow' as const }), []);
+    return Array.from(clusters.values()).map(c => ({
+      count: c.count,
+      lat: c.lat / c.count,
+      lng: c.lng / c.count,
+      types: Array.from(c.types),
+      users: Array.from(c.users),
+      id: c.id,
+      user_id: c.user_id,
+      points: c.points
+    }));
+  }, [activeMapPoints, zoom.scale]);
+
+  const handleZoomIn = useCallback((e: React.MouseEvent | React.TouchEvent, cluster: any) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    
+    if (zoom.scale >= 32 || cluster.points.length > 15) {
+      setSelectedCluster(cluster.points);
+      return;
+    }
+    
+    if (cluster.points.length === 1) {
+      setSelectedCluster(cluster.points);
+      const pX = (cluster.lng + 125) * (100 / 58);
+      const pY = (50 - cluster.lat) * (100 / 25);
+      setZoom({ scale: 64, x: (50 - pX) * 9.59, y: (50 - pY) * 5.93 });
+      return;
+    }
+
+    const lats = cluster.points.map((p:any) => p.lat);
+    const lngs = cluster.points.map((p:any) => p.lng);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+    
+    const dLat = maxLat - minLat;
+    const dLng = maxLng - minLng;
+    const targetScale = Math.min(64, Math.max(zoom.scale * 2.5, 2 / Math.max(dLat, dLng, 0.0001)));
+    
+    const cLng = (minLng + maxLng) / 2;
+    const cLat = (minLat + maxLat) / 2;
+    const pX = (cLng + 125) * (100 / 58);
+    const pY = (50 - cLat) * (100 / 25);
+    
+    setZoom({ scale: targetScale, x: (50 - pX) * 9.59, y: (50 - pY) * 5.93 });
+  }, [zoom.scale]);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    setIsDragging(true);
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+  }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStartRef.current.x;
+    const dy = e.clientY - dragStartRef.current.y;
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    setZoom(z => ({ ...z, x: z.x + dx / z.scale, y: z.y + dy / z.scale }));
+  }, [isDragging]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleResetZoom = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    setZoom({ scale: 1, x: 0, y: 0 });
+    setActiveEntity(null);
+  }, []);
+
+  const getMarkerColor = (types: string[]) => {
+    if (types.length > 1) return '#e2e8f0'; 
+    if (types.includes('users')) return '#4ade80';
+    if (types.includes('registeredDevices')) return '#22d3ee';
+    if (types.includes('skateSessions')) return '#facc15';
+    if (types.includes('crews')) return '#c084fc';
+    if (types.includes('crewSessions')) return '#f472b6';
+    return '#94a3b8';
+  };
+
+  const handleEntityClick = (id: string, type: MapPoint['type']) => {
+    setActiveEntity({ id, type });
+  };
+
   const paginationPageSizeSelector = useMemo(() => [10, 20, 50, 100], []);
 
   return (
     <div className="h-full flex flex-col gap-6 overflow-y-auto pr-2 pb-10">
-
-      {/* Top Header via SectionHdr */}
       <SectionHdr 
         label="Dynamic Fleet Ops" 
         color="#22d3ee" 
         right={
-          zoom.scale > 1 && (
-            <button 
-              onClick={handleResetZoom}
-              className="bg-slate-800 text-slate-300 border border-slate-600 px-2 py-1 rounded text-xs hover:bg-slate-700 transition-colors z-50 mr-4"
-            >
-              Reset Zoom
-            </button>
-          )
+          <>
+            <div className="flex items-center gap-2 mr-4 bg-slate-800 px-2 py-1 rounded border border-slate-600">
+              <span className="text-[10px] text-slate-400">ZOOM</span>
+              <input 
+                type="range" 
+                min="1" 
+                max="64" 
+                step="0.5" 
+                value={zoom.scale} 
+                onChange={(e) => setZoom(z => ({ ...z, scale: parseFloat(e.target.value) }))}
+                className="w-20 h-1 bg-slate-600 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+            {zoom.scale > 1 && (
+              <button 
+                onClick={handleResetZoom}
+                className="bg-slate-800 text-slate-300 border border-slate-600 px-2 py-1 rounded text-xs hover:bg-slate-700 transition-colors z-50 mr-4"
+              >
+                Reset Zoom
+              </button>
+            )}
+          </>
         } 
       />
       
-      {/* Map Section */}
+      
+      {selectedCluster && (
+        <div className="absolute top-0 right-0 w-80 h-full bg-slate-900/95 backdrop-blur border-l border-slate-700 z-50 p-4 overflow-y-auto shadow-2xl flex flex-col animate-in slide-in-from-right-8 duration-300">
+          <div className="flex justify-between items-center mb-4 border-b border-slate-700 pb-2">
+            <h3 className="text-white font-bold text-sm">Cluster Contents ({selectedCluster.length})</h3>
+            <button onClick={() => setSelectedCluster(null)} className="text-slate-400 hover:text-white">&times;</button>
+          </div>
+          <div className="flex flex-col gap-2">
+            {selectedCluster.map((p, i) => (
+              <div 
+                key={i} 
+                className="p-3 bg-slate-800 rounded border border-slate-700 hover:border-cyan-500 cursor-pointer transition-colors"
+                onClick={() => {
+                  setSelectedCluster(null);
+                  setActiveEntity({ id: p.id, type: p.type });
+                }}
+              >
+                <div className="text-xs text-cyan-400 font-mono mb-1">{p.type.toUpperCase()}</div>
+                <div className="text-sm text-white font-semibold truncate">{p.label}</div>
+                <div className="text-[10px] text-slate-400 mt-1">Lat: {p.lat.toFixed(4)} | Lng: {p.lng.toFixed(4)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      
       {!isMapCollapsed && (
+
         <div className="flex flex-row w-full min-h-[400px] gap-4">
           <div className="glass-panel flex-1 rounded-xl relative overflow-hidden border border-slate-800/50 bg-[#0f172a]/80 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex flex-col shrink-0">
             
-          {/* Pill Layer Controls */}
-          <div 
-            style={{ 
-              position: 'absolute', 
-              top: '16px', 
-              left: '50%', 
-              transform: 'translateX(-50%)', 
-              zIndex: 30, 
-              display: 'flex', 
-              gap: '12px', 
-              flexDirection: 'row',
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: 'rgba(15, 23, 42, 0.7)',
-              backdropFilter: 'blur(8px)',
-              padding: '8px 16px',
-              borderRadius: '9999px',
-              border: '1px solid rgba(51, 65, 85, 0.5)',
-              boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-              width: 'max-content'
-            }}
-          >
-            <div 
-              onClick={() => setLayers(l => ({...l, skate: !l.skate}))}
-              style={{
-                backgroundColor: layers.skate ? '#4ade80' : 'transparent',
-                borderColor: '#4ade80', borderWidth: '1px', borderStyle: 'solid',
-                color: layers.skate ? '#0f172a' : '#4ade80',
-                opacity: layers.skate ? 1 : 0.6, cursor: 'pointer',
-                padding: '6px 16px', borderRadius: '9999px', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap'
-              }}
-            >
-              Skate ({skatePoints.length})
-            </div>
-            <div 
-              onClick={() => setLayers(l => ({...l, crew: !l.crew}))}
-              style={{
-                backgroundColor: layers.crew ? '#c084fc' : 'transparent',
-                borderColor: '#c084fc', borderWidth: '1px', borderStyle: 'solid',
-                color: layers.crew ? '#0f172a' : '#c084fc',
-                opacity: layers.crew ? 1 : 0.6, cursor: 'pointer',
-                padding: '6px 16px', borderRadius: '9999px', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap'
-              }}
-            >
-              Crew ({crewPoints.length})
-            </div>
-            <div 
-              onClick={() => setLayers(l => ({...l, device: !l.device}))}
-              style={{
-                backgroundColor: layers.device ? '#22d3ee' : 'transparent',
-                borderColor: '#22d3ee', borderWidth: '1px', borderStyle: 'solid',
-                color: layers.device ? '#0f172a' : '#22d3ee',
-                opacity: layers.device ? 1 : 0.6, cursor: 'pointer',
-                padding: '6px 16px', borderRadius: '9999px', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap'
-              }}
-            >
-              Devices ({devicePoints.length})
-            </div>
-            <div 
-              onClick={() => setLayers(l => ({...l, telemetry: !l.telemetry}))}
-              style={{
-                backgroundColor: layers.telemetry ? '#f43f5e' : 'transparent',
-                borderColor: '#f43f5e', borderWidth: '1px', borderStyle: 'solid',
-                color: layers.telemetry ? '#0f172a' : '#f43f5e',
-                opacity: layers.telemetry ? 1 : 0.6, cursor: 'pointer',
-                padding: '6px 16px', borderRadius: '9999px', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap'
-              }}
-            >
-              Telemetry ({telemetryPoints.length})
-            </div>
-          </div>
-
-          {/* Map Pan/Zoom Container */}
-          <div style={{ position: 'relative', width: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', overflow: 'hidden' }}>
+            {/* Pill Layer Controls */}
             <div 
               style={{ 
-                position: 'relative', 
-                width: '100%', 
-                maxWidth: '56rem', 
-                opacity: 0.9, 
-                aspectRatio: '959/593',
-                transform: `scale(${zoom.scale})`,
-                transformOrigin: `${zoom.x}% ${zoom.y}%`,
-                transition: 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)'
+                position: 'absolute', 
+                top: '16px', 
+                left: '50%', 
+                transform: 'translateX(-50%)', 
+                zIndex: 30, 
+                display: 'flex', 
+                gap: '12px', 
+                flexDirection: 'row',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backgroundColor: 'rgba(15, 23, 42, 0.7)',
+                backdropFilter: 'blur(8px)',
+                padding: '8px 16px',
+                borderRadius: '9999px',
+                border: '1px solid rgba(51, 65, 85, 0.5)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                width: 'max-content'
               }}
             >
-              <USAMap 
-                width="100%" 
-                height="100%" 
-                defaultFill="#1e293b" 
-                customize={{}} 
-                onClick={() => {}} 
-              />
+              <div 
+                onClick={() => setLayers(l => ({...l, users: !l.users}))}
+                style={{
+                  backgroundColor: layers.users ? '#4ade80' : 'transparent',
+                  borderColor: '#4ade80', borderWidth: '1px', borderStyle: 'solid',
+                  color: layers.users ? '#0f172a' : '#4ade80',
+                  opacity: layers.users ? 1 : 0.6, cursor: 'pointer',
+                  padding: '6px 16px', borderRadius: '9999px', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap'
+                }}
+              >
+                Users ({visibleUserPoints.length === userPoints.length ? userPoints.length : `${visibleUserPoints.length}/${userPoints.length}`})
+              </div>
+              <div 
+                onClick={() => setLayers(l => ({...l, registeredDevices: !l.registeredDevices}))}
+                style={{
+                  backgroundColor: layers.registeredDevices ? '#22d3ee' : 'transparent',
+                  borderColor: '#22d3ee', borderWidth: '1px', borderStyle: 'solid',
+                  color: layers.registeredDevices ? '#0f172a' : '#22d3ee',
+                  opacity: layers.registeredDevices ? 1 : 0.6, cursor: 'pointer',
+                  padding: '6px 16px', borderRadius: '9999px', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap'
+                }}
+              >
+                 Devices ({visibleDevicePoints.length === devicePoints.length ? devicePoints.length : `${visibleDevicePoints.length}/${devicePoints.length}`})
+              </div>
+              <div 
+                onClick={() => setLayers(l => ({...l, skateSessions: !l.skateSessions}))}
+                style={{
+                  backgroundColor: layers.skateSessions ? '#facc15' : 'transparent',
+                  borderColor: '#facc15', borderWidth: '1px', borderStyle: 'solid',
+                  color: layers.skateSessions ? '#0f172a' : '#facc15',
+                  opacity: layers.skateSessions ? 1 : 0.6, cursor: 'pointer',
+                  padding: '6px 16px', borderRadius: '9999px', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap'
+                }}
+              >
+                 Sessions ({visibleSkatePoints.length === skatePoints.length ? skatePoints.length : `${visibleSkatePoints.length}/${skatePoints.length}`})
+              </div>
+              <div 
+                onClick={() => setLayers(l => ({...l, crews: !l.crews}))}
+                style={{
+                  backgroundColor: layers.crews ? '#c084fc' : 'transparent',
+                  borderColor: '#c084fc', borderWidth: '1px', borderStyle: 'solid',
+                  color: layers.crews ? '#0f172a' : '#c084fc',
+                  opacity: layers.crews ? 1 : 0.6, cursor: 'pointer',
+                  padding: '6px 16px', borderRadius: '9999px', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap'
+                }}
+              >
+                Crews ({visibleCrewPoints.length === crewPoints.length ? crewPoints.length : `${visibleCrewPoints.length}/${crewPoints.length}`})
+              </div>
+              <div 
+                onClick={() => setLayers(l => ({...l, crewSessions: !l.crewSessions}))}
+                style={{
+                  backgroundColor: layers.crewSessions ? '#f472b6' : 'transparent',
+                  borderColor: '#f472b6', borderWidth: '1px', borderStyle: 'solid',
+                  color: layers.crewSessions ? '#0f172a' : '#f472b6',
+                  opacity: layers.crewSessions ? 1 : 0.6, cursor: 'pointer',
+                  padding: '6px 16px', borderRadius: '9999px', fontSize: '13px', fontWeight: 'bold', transition: 'all 0.2s',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', whiteSpace: 'nowrap'
+                }}
+              >
+                Crew Sessions ({visibleCrewSessionPoints.length === crewSessionPoints.length ? crewSessionPoints.length : `${visibleCrewSessionPoints.length}/${crewSessionPoints.length}`})
+              </div>
+            </div>
 
-              {/* Overlay Clusters */}
-              {clusters.map((pt, i) => {
-                const pos = latLngToXY(pt.lat, pt.lng);
+            <div 
+              ref={containerRef}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              style={{ position: 'relative', width: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', overflow: 'hidden', cursor: isDragging ? 'grabbing' : 'grab' }}
+            >
+              <div 
+                style={{ 
+                  position: 'relative', 
+                  width: '100%', 
+                  maxWidth: '56rem', 
+                  opacity: 0.9, 
+                  aspectRatio: '959/593',
+                  transform: `scale(${zoom.scale}) translate(${zoom.x}px, ${zoom.y}px)`,
+                  transformOrigin: 'center center',
+                  transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+                }}
+                ref={mapRef}
+              >
+                <USAMap onClick={() => {}} />
                 
-                // Colors
-                let bgValue = '#22d3ee';
-                let shadowColor = 'rgba(34,211,238,0.9)';
-                if (pt.type === 'mixed') {
-                  const colorMap: Record<string, string> = { skate: '#4ade80', crew: '#c084fc', device: '#22d3ee', telemetry: '#f43f5e' };
-                  const gradientColors = pt.types.map(t => colorMap[t] || '#fbbf24').join(', ');
-                  bgValue = `linear-gradient(135deg, ${gradientColors})`;
-                  shadowColor = 'rgba(255,255,255,0.4)';
-                } else {
-                  if (pt.type === 'skate') { bgValue = '#4ade80'; shadowColor = 'rgba(74,222,128,0.9)'; }
-                  else if (pt.type === 'crew') { bgValue = '#c084fc'; shadowColor = 'rgba(192,132,252,0.9)'; }
-                  else if (pt.type === 'telemetry') { bgValue = '#f43f5e'; shadowColor = 'rgba(244,63,94,0.9)'; }
-                  else if (pt.type === 'device') { bgValue = '#22d3ee'; shadowColor = 'rgba(34,211,238,0.9)'; }
-                }
+                {clusteredPoints.map((cluster, i) => {
+                  const x = (cluster.lng + 125) * (100 / 58);
+                  const y = (50 - cluster.lat) * (100 / 25);
+                  
+                  if (x < 0 || x > 100 || y < 0 || y > 100) return null;
 
-                // Scale sizes and blur based on density to mimic heatmap
-                const baseSize = 16;
-                const sizeBonus = Math.min(24, pt.count * 2);
-                const finalSize = baseSize + sizeBonus;
-                const opacity = pt.count > 1 ? 0.8 : 1;
-
-                return (
-                  <div 
-                    key={`${pt.id}_${i}`}
-                    style={{ 
-                      position: 'absolute',
-                      transform: 'translate(-50%, -50%)',
-                      zIndex: pt.type === 'telemetry' ? 40 : 50,
-                      ...pos 
-                    }}
-                    title={`${pt.type} - ${pt.count} points`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleZoom(pt.lat, pt.lng);
-                      if (pt.userIds && pt.userIds.length > 0) {
-                        setActiveUserId(pt.userIds[0]);
-                      }
-                    }}
-                  >
-                    {/* Ping Node / Heatmap Blended */}
-                    <div 
-                      style={{ 
-                        width: `${finalSize}px`, 
-                        height: `${finalSize}px`, 
-                        borderRadius: '50%', 
-                        backgroundColor: pt.type !== 'mixed' ? bgValue : undefined,
-                        backgroundImage: pt.type === 'mixed' ? bgValue : undefined,
-                        border: '1px solid rgba(15,23,42,0.5)',
-                        cursor: 'pointer',
-                        opacity: opacity,
-                        boxShadow: `0 0 ${12 + sizeBonus}px ${shadowColor}`,
+                  return (
+                    <div
+                      key={i}
+                      onMouseEnter={() => setHoveredCluster(i)}
+                      onMouseLeave={() => setHoveredCluster(null)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (cluster.count > 1) {
+                          handleZoomIn(e, cluster);
+                        } else {
+                          const p = cluster.points[0];
+                          if (p) handleEntityClick(p.id, p.type);
+                        }
+                      }}
+                      style={{
+                        position: 'absolute',
+                        left: `${x}%`,
+                        top: `${y}%`,
+                        transform: `translate(-50%, -50%) scale(${1 / zoom.scale})`,
+                        width: cluster.count > 1 ? '24px' : '12px',
+                        height: cluster.count > 1 ? '24px' : '12px',
+                        backgroundColor: getMarkerColor(cluster.types),
+                        borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        transition: 'all 0.3s',
                         color: '#0f172a',
-                        fontWeight: 'bold',
-                        fontSize: pt.count > 1 ? '10px' : '0px'
+                        fontWeight: 800,
+                        fontSize: cluster.count > 1 ? '10px' : '0px',
+                        cursor: 'pointer',
+                        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3)',
+                        border: '1.5px solid rgba(255,255,255,0.4)',
+                        zIndex: hoveredCluster === i ? 50 : 10
                       }}
-                      onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
-                      onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
                     >
-                      {pt.count > 1 ? pt.count : ''}
+                      {cluster.count > 1 && cluster.count}
+                      
+                      {hoveredCluster === i && (
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '100%',
+                          left: '50%',
+                          transform: 'translate(-50%, -6px)',
+                          background: 'rgba(15, 23, 42, 0.95)',
+                          border: '1px solid #334155',
+                          color: '#f8fafc',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          whiteSpace: 'nowrap',
+                          pointerEvents: 'none',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                        }}>
+                          {cluster.count > 1 ? `${cluster.count} Items` : (cluster.points?.[0]?.label || 'Item')}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
               
-              {activeMapPoints.length === 0 && (
-                <div className="absolute inset-0 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm z-30 rounded-xl pointer-events-none">
-                  <div className="text-slate-400 flex flex-col items-center gap-2">
-                    <span className="text-3xl">📡</span>
-                    <span className="font-medium text-sm">No Active Coordinates in Selected Layers</span>
-                  </div>
-                </div>
+              {activeEntity && (
+                <EntityCardOverlay activeEntity={activeEntity} onClose={() => setActiveEntity(null)} />
               )}
             </div>
           </div>
         </div>
-        <EntityInspectorSidebar activeUserId={activeUserId} onClose={() => setActiveUserId(null)} />
-      </div>
       )}
 
-      {/* AG-Grid Databank Section */}
-      <div className="flex flex-col flex-1 shrink-0 min-h-[500px]">
-        <h3 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 mb-4 tracking-wide">Fleet Databank</h3>
-        <div className="glass-panel p-1 rounded-xl border border-cyan-900/40 shadow-2xl bg-[#0f172a]/60 backdrop-blur-xl">
-          <div className="rounded-lg overflow-hidden" style={{ height: 500, width: '100%' }}>
-            <AgGridReact
-              ref={gridRef}
-              theme={myTheme}
-              rowData={devices}
-              columnDefs={colDefs}
-              defaultColDef={defaultColDef}
-              onFilterChanged={onFilterChanged}
-              animateRows={true}
-              rowSelection={rowSelectionConfig}
-              suppressHorizontalScroll={false}
-              pagination={true}
-              paginationPageSize={10}
-              paginationPageSizeSelector={paginationPageSizeSelector}
-            />
-          </div>
-        </div>
+      {/* Relational DataBank Section */}
+      <div className="flex flex-col gap-2 mt-4" style={{ paddingLeft: '1rem', paddingRight: '1rem' }}>
+        <RelationalDataBankWidget 
+          activeEntity={activeEntity}
+          onEntitySelected={setActiveEntity}
+          onFilteredIdsChange={setFilteredIds}
+        />
       </div>
-
     </div>
   );
-}
+};
+
+export default MapWidget;

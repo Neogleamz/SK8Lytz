@@ -19,7 +19,7 @@ import { FavoritesProvider } from './src/context/FavoritesContext';
 import { SessionProvider } from './src/context/SessionContext';
 import { BluetoothGuard } from './src/providers/BluetoothGuard';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
-
+import { AppConfigProvider } from './src/context/AppConfigContext';
 
 LogBox.ignoreLogs([
   '"shadow*" style props are deprecated',
@@ -153,18 +153,20 @@ export default function App() {
     <GlobalErrorBoundary>
       <SafeAreaProvider>
         <ThemeProvider>
-          <AuthProvider>
-            <FavoritesProvider>
-              <SessionProvider>
-                <BLEProvider>
-                  <BluetoothGuard>
-                    <AppContent />
-                    <GlobalPermissionsModal />
-                  </BluetoothGuard>
-                </BLEProvider>
-              </SessionProvider>
-            </FavoritesProvider>
-          </AuthProvider>
+          <AppConfigProvider>
+            <AuthProvider>
+              <FavoritesProvider>
+                <SessionProvider>
+                  <BLEProvider>
+                    <BluetoothGuard>
+                      <AppContent />
+                      <GlobalPermissionsModal />
+                    </BluetoothGuard>
+                  </BLEProvider>
+                </SessionProvider>
+              </FavoritesProvider>
+            </AuthProvider>
+          </AppConfigProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GlobalErrorBoundary>

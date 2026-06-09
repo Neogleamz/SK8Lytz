@@ -7,6 +7,7 @@ import { MapFiltersTray } from './MapFiltersTray';
 import { useMapFilters } from '../../hooks/useMapFilters';
 import { useCrewContext } from '../../context/CrewContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useAppConfig } from '../../context/AppConfigContext';
 import { AppLogger } from '../../services/AppLogger';
 import { crewService, CrewSession } from '../../services/CrewService';
 import { PermanentCrew, profileService } from '../../services/ProfileService';
@@ -24,6 +25,8 @@ function timeAgo(iso: string): string {
 export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => void, showOnlyMap?: boolean }) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
+  const { isVisibilityAllowed } = useAppConfig();
+  const showMap = isVisibilityAllowed('visibility_maps_tab');
   const { filters, toggleFilter, applyFilters } = useMapFilters();
   
   const context = useCrewContext();
@@ -548,79 +551,88 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
         </View>
 
         {/* Unified Map Filters Bar */}
-        <View
-          style={{ width: '100%', marginBottom: Spacing.sm, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          
-          {/* Radius Dropdown — Option C: inline absolute dropdown */}
-          <View style={{ position: 'relative' }}>
-            <TouchableOpacity 
-              style={[styles.radiusPill, { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', paddingVertical: 6, paddingHorizontal: 10, gap: 4 }]} 
-              onPress={() => setShowRadiusPicker(p => !p)}>
-              <MaterialCommunityIcons name="radar" size={14} color="#FFF" />
-              <Text style={[styles.radiusPillTextActive, { fontSize: 11, fontWeight: '700' }]}>
-                {discoverRadiusMi === null ? 'All' : `${discoverRadiusMi} mi`}
-              </Text>
-              <MaterialCommunityIcons name={showRadiusPicker ? 'chevron-up' : 'chevron-down'} size={11} color="#FFAA00" />
-            </TouchableOpacity>
+        {showMap && (
+          <View
+            style={{ width: '100%', marginBottom: Spacing.sm, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            
+            {/* Radius Dropdown — Option C: inline absolute dropdown */}
+            <View style={{ position: 'relative' }}>
+              <TouchableOpacity 
+                style={[styles.radiusPill, { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.1)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)', paddingVertical: 6, paddingHorizontal: 10, gap: 4 }]} 
+                onPress={() => setShowRadiusPicker(p => !p)}>
+                <MaterialCommunityIcons name="radar" size={14} color="#FFF" />
+                <Text style={[styles.radiusPillTextActive, { fontSize: 11, fontWeight: '700' }]}>
+                  {discoverRadiusMi === null ? 'All' : `${discoverRadiusMi} mi`}
+                </Text>
+                <MaterialCommunityIcons name={showRadiusPicker ? 'chevron-up' : 'chevron-down'} size={11} color="#FFAA00" />
+              </TouchableOpacity>
 
-            {showRadiusPicker && (
-              <View style={{
-                position: 'absolute',
-                top: 38,
-                left: 0,
-                backgroundColor: '#1A1A1A',
-                borderRadius: 10,
-                borderWidth: 1,
-                borderColor: 'rgba(255,170,0,0.35)',
-                zIndex: 200,
-                minWidth: 110,
-                overflow: 'hidden',
-              }}>
-                {([10, 20, 50, 100, 250, null] as (number | null)[]).map((r, idx) => {
-                  const isActive = discoverRadiusMi === r;
-                  const label = r != null ? `${r} mi` : 'All';
-                  return (
-                    <TouchableOpacity
-                      key={String(r)}
-                      style={[
-                        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 9 },
-                        isActive && { backgroundColor: 'rgba(255,170,0,0.1)' },
-                        idx < 5 && { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-                      ]}
-                      onPress={() => { setDiscoverRadiusMi(r); setShowRadiusPicker(false); }}
-                    >
-                      <Text style={{ color: isActive ? '#FFAA00' : '#CCC', fontSize: 13, fontWeight: '600' }}>{label}</Text>
-                      {isActive && <MaterialCommunityIcons name="check" size={12} color="#FFAA00" />}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              {showRadiusPicker && (
+                <View style={{
+                  position: 'absolute',
+                  top: 38,
+                  left: 0,
+                  backgroundColor: '#1A1A1A',
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,170,0,0.35)',
+                  zIndex: 200,
+                  minWidth: 110,
+                  overflow: 'hidden',
+                }}>
+                  {([10, 20, 50, 100, 250, null] as (number | null)[]).map((r, idx) => {
+                    const isActive = discoverRadiusMi === r;
+                    const label = r != null ? `${r} mi` : 'All';
+                    return (
+                      <TouchableOpacity
+                        key={String(r)}
+                        style={[
+                          { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 9 },
+                          isActive && { backgroundColor: 'rgba(255,170,0,0.1)' },
+                          idx < 5 && { borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+                        ]}
+                        onPress={() => { setDiscoverRadiusMi(r); setShowRadiusPicker(false); }}
+                      >
+                        <Text style={{ color: isActive ? '#FFAA00' : '#CCC', fontSize: 13, fontWeight: '600' }}>{label}</Text>
+                        {isActive && <MaterialCommunityIcons name="check" size={12} color="#FFAA00" />}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+            
+            {/* Map Filters */}
+            <MapFiltersTray filters={filters} toggleFilter={toggleFilter} />
+
+          </View>
+        )}
+
+        {showMap ? (
+          <View style={{ height: 350, width: '100%', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginBottom: Spacing.md }}>
+            {isLoadingNearby ? (
+               <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                 <ActivityIndicator color={Colors.primary} />
+               </View>
+            ) : (
+              <>
+                <CrewLandingMap
+                   nearbySpots={applyFilters(nearbySpots)}
+                   nearbySessions={filters.showCrewSessions ? nearbySessions : []}
+                   pulseAnim={pulseAnim}
+                   handleJoinById={handleJoinById}
+                   locationCoords={locationCoords ?? null}
+                   discoverRadiusMi={discoverRadiusMi}
+                 />
+              </>
             )}
           </View>
-          
-          {/* Map Filters */}
-          <MapFiltersTray filters={filters} toggleFilter={toggleFilter} />
-
-        </View>
-
-         <View style={{ height: 350, width: '100%', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', marginBottom: Spacing.md }}>
-          {isLoadingNearby ? (
-             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-               <ActivityIndicator color={Colors.primary} />
-             </View>
-          ) : (
-            <>
-              <CrewLandingMap
-                 nearbySpots={applyFilters(nearbySpots)}
-                 nearbySessions={filters.showCrewSessions ? nearbySessions : []}
-                 pulseAnim={pulseAnim}
-                 handleJoinById={handleJoinById}
-                 locationCoords={locationCoords ?? null}
-                 discoverRadiusMi={discoverRadiusMi}
-               />
-            </>
-          )}
-        </View>
+        ) : (
+          <View style={{ marginBottom: Spacing.md, padding: Spacing.lg, backgroundColor: 'rgba(255, 255, 255, 0.05)', borderRadius: 16, alignItems: 'center' }}>
+            <MaterialCommunityIcons name="map-marker-off-outline" size={32} color={Colors.textMuted} style={{ marginBottom: Spacing.sm }} />
+            <Text style={{ color: Colors.textMuted, fontSize: 13, fontWeight: '600', textAlign: 'center' }}>Map View Disabled</Text>
+          </View>
+        )}
 
         {nearbySessions.length === 0 && !isLoadingNearby && (
           <View style={[styles.hubEmptyCard, { marginTop: 0 }]}>

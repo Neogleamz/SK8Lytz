@@ -1006,3 +1006,13 @@ pm run verify which includes QA tests.
   - **Goal:** Ensure `product_id_confirmed_at` is populated correctly.
   - **Decision Log:** EEPROM 0x63 responses successfully identify product IDs but fail to persist the confirmation back to registered_devices. This task wires that persistence.
   - **Source of Truth:** 📖 `src/hooks/useControllerDispatch.ts`, `src/services/DeviceRepository.ts`
+
+- [x] **`feat/map-relational-drilldown`** 🚀 Merged in 2188ff2a
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI/CLOUD]` `[M-RISK]` `[Meal]` `[🤖 PRO-MED]` `[BATCH:fleet-map-ops]`
+  - **Goal:** Transform the Command Center map into a lazy-loaded relational inspector with spider-web vectors, Crew Zones, and Supabase Realtime telemetry firehose.
+  - **Decision Log:** Brainstorming session confirmed the user wants interactive relational drill-downs connecting users to hardware/crews visually, plus live moving telemetry via WebSockets. Historical polylines were rejected as too invasive.
+  - **Analysis:** 📊 Plan: [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/26f16420-6723-4436-a1a4-3544dd1b501f/implementation_plan.md)
+    Key finding: "We must use lazy-loaded Supabase queries on click to prevent overwhelming the browser with the full relational graph."
+    Rejected alternative: "Showing historical skate paths (polylines) — rejected due to privacy/invasiveness."
+  - **Source of Truth:** 📖 `src/types/supabase.ts` & `MapWidget.tsx`
+  - **Details:** Must implement Supabase `.channel()` for real-time `telemetry_snapshots` inserts to move pins without refresh.

@@ -58,6 +58,7 @@ import { useProtocolDispatch } from '../hooks/useProtocolDispatch';
 import DashboardCrewPanel from '../components/dashboard/DashboardCrewPanel';
 import { useDashboardController } from '../hooks/useDashboardController';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
+import { useAppConfig } from '../context/AppConfigContext';
 import MySkatesSlab from '../components/dashboard/MySkatesSlab';
 import RegisteredFleetSlab from '../components/dashboard/RegisteredFleetSlab';
 import SupportModal from '../components/dashboard/SupportModal';
@@ -67,6 +68,7 @@ import { scrubPII } from '../utils/piiScrubber';
 
 
 export default function DashboardScreen({ isOfflineMode = false, onLogout }: { isOfflineMode?: boolean; onLogout?: () => void } = {}) {
+  const { isVisibilityAllowed } = useAppConfig();
   const { Colors, isDark, toggleTheme } = useTheme();
   const insets = useSafeAreaInsets();
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
@@ -1011,7 +1013,8 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                }
              >
                 {/* SLAB 2: CREW HUB */}
-                <DashboardCrewPanel
+                {isVisibilityAllowed('visibility_crew_hub') && (
+                  <DashboardCrewPanel
                   crewSession={crewSession}
                   crewRole={crewRole}
                   isCrewModalVisible={isCrewModalVisible}
@@ -1032,6 +1035,7 @@ export default function DashboardScreen({ isOfflineMode = false, onLogout }: { i
                   isCrewHubCollapsed={isCrewHubCollapsed}
                   toggleCrewHubCollapse={toggleCrewHubCollapse}
                 />
+                )}
 
 
                 {/* SLAB 2.5: LIVE TELEMETRY HUD */}

@@ -1984,6 +1984,8 @@ export type Database = {
       sk8lytz_app_settings: {
         Row: {
           created_at: string
+          description: string | null
+          is_enabled: boolean | null
           setting_key: string
           setting_value: Json | null
           updated_at: string
@@ -1991,12 +1993,16 @@ export type Database = {
         Insert: {
           created_at?: string
           setting_key: string
+          description?: string | null
+          is_enabled?: boolean | null
           setting_value?: Json | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           setting_key?: string
+          description?: string | null
+          is_enabled?: boolean | null
           setting_value?: Json | null
           updated_at?: string
         }

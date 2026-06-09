@@ -24,6 +24,7 @@ import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
 import { useCuratedPicks } from '../hooks/useCuratedPicks';
 import { useDockedControllerState } from '../hooks/useDockedControllerState';
 import { useSharedFavorites } from '../context/FavoritesContext';
+import { useAppConfig } from '../context/AppConfigContext';
 import { useSharedBLE } from '../context/BLEContext';
 import { useControllerDispatch } from '../hooks/useControllerDispatch';
 import { getMusicPatternLabel } from '../hooks/useMusicMode';
@@ -187,6 +188,7 @@ export type DockedControllerHandle = {
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
   function DockedController({ isOfflineMode = false, hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onPowerToggle, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {}, gpsSpeed = 0, peakGForce = 1.0, sessionDistanceMiles = 0, sessionDurationSec = 0, sessionAvgSpeed = 0, sessionActive = false, startSession = () => {}, stopSessionRecording = () => {} }: Sk8lytzControllerProps, ref) {
     const { Colors, isDark } = useTheme();
+    const { isVisibilityAllowed } = useAppConfig();
     const { height: windowHeight } = useWindowDimensions();
     const isShort = windowHeight < 720;
     const gaugeSize = isShort ? 100 : 120;
@@ -728,9 +730,14 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       const hasCam = await checkPermission('CAMERA');
       const hasLoc = await checkPermission('LOCATION');
       if (!hasCam) hidden.push('CAMERA');
+      
       if (!hasLoc) hidden.push('STREET');
+      
+      // Global App Settings (Visibility Overrides)
+      if (!isVisibilityAllowed('visibility_street_mode') && !hidden.includes('STREET')) hidden.push('STREET');
+      
       setHiddenModes(hidden);
-    }, []);
+    }, [isVisibilityAllowed]);
 
     // Initial check on mount
     useEffect(() => {

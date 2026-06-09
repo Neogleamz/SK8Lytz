@@ -338,3 +338,14 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Root Cause Theory:** Attempting to be helpful by summarizing code in chat, which created a copy-paste hazard.
 - **Impact:** SQL syntax error, user frustration ("you are just making up tables!!! WTF???").
 - **Status:** MONITORING
+
+### [FRICTION-002] Hallucinated DB Fields
+- **First Observed:** 2026-06-09
+- **Observed By:** River
+- **Occurrences:** 1 / 3
+- **Trigger:** Rendering Entity Cards without checking supabase schema
+- **Pattern:** Agent guessed field names like 'battery_level' based on general knowledge instead of reading src/types/supabase.ts
+- **Root Cause Theory:** P1 (Evidence Before Action) was bypassed for speed.
+- **Impact:** User frustration, loss of trust, and broken UI rendering.
+- **Status:** MONITORING
+

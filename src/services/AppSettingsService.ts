@@ -6,13 +6,11 @@ import { supabase } from './supabaseClient';
  * Valid known keys for App Settings
  */
 export type AppSettingKey = 
-  | 'global_crew_hub_locked'
-  | 'global_community_hub_locked'
-  | 'global_maps_locked'
+  | 'visibility_street_mode'
+  | 'visibility_maps_tab'
+  | 'visibility_crew_hub'
+  | 'visibility_community_hub'
   | 'global_telemetry_enabled'
-  | 'offline_crew_hub_hidden'
-  | 'offline_community_hub_hidden'
-  | 'offline_maps_hidden'
   | 'required_eula_version'
   | string;
 
@@ -45,7 +43,7 @@ export const AppSettingsService = {
       try {
         const { data, error } = await supabase
           .from('sk8lytz_app_settings')
-          .select('setting_key, setting_value');
+          .select('setting_key, setting_value, is_enabled');
 
         if (error) {
           AppLogger.log('ERROR', { context: 'AppSettingsService', message: 'Fetch settings failed', info: error instanceof Error ? error.message : String(error) });
@@ -54,7 +52,10 @@ export const AppSettingsService = {
 
         const newSettings: Record<string, any> = {};
         for (const row of (data || [])) {
-          newSettings[row.setting_key] = row.setting_value;
+          // Only apply the override if the setting is enabled globally
+          if (row.is_enabled !== false) {
+            newSettings[row.setting_key] = row.setting_value;
+          }
         }
 
         try {
