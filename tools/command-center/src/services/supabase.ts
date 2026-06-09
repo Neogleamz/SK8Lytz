@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Database } from '../types/supabase';
+import type { Database } from '../types/supabase';
 
 // Use standard Vite environment variables
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
