@@ -54,9 +54,9 @@ export const LiveDebuggerWidget: React.FC = () => {
       .order('crash_count', { ascending: false }) // Most frequent first
       .order('last_seen', { ascending: false }); // Most recent first
     if (aggs) {
-      setAutopsyData(aggs as CrashAggregate[]);
+      setAutopsyData(aggs as unknown as CrashAggregate[]);
       if (aggs.length > 0 && !selectedSignature) {
-        setSelectedSignature((aggs[0] as CrashAggregate).error_signature);
+        setSelectedSignature((aggs[0] as unknown as CrashAggregate).error_signature);
       } else if (aggs.length === 0) {
         setSelectedSignature(null);
       }

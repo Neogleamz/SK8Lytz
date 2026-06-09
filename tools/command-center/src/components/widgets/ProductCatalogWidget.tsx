@@ -215,11 +215,11 @@ function EditorModal({ profile, isNew, onClose, onSave }: { profile: Partial<Pro
     onSave(formData);
   };
 
-  const renderField = (label: string, name: keyof ProductCatalogRow, type: 'text' | 'number' = 'text', placeholder?: string) => (
+  const renderField = (label: string, name: keyof ProductCatalogRow, type: 'text' | 'number' = 'text', placeholder?: string, isRequired: boolean = false) => (
     <div>
       <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</label>
       <input 
-        required={type === 'text'} 
+        required={isRequired} 
         type={type} 
         name={name} 
         value={(formData[name] as string | number) ?? ''} 
@@ -227,6 +227,62 @@ function EditorModal({ profile, isNew, onClose, onSave }: { profile: Partial<Pro
         className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white w-full font-semibold focus:border-[#9D4EFF] outline-none transition-colors" 
         placeholder={placeholder}
       />
+    </div>
+  );
+
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    setValidationError('');
+    try {
+      const ext = file.name.split('.').pop();
+      const fileName = `product-icon-${Date.now()}.${ext}`;
+      const filePath = `product-icons/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+      
+      setFormData(prev => ({ ...prev, brand_icon: publicUrl }));
+    } catch (err: any) {
+      setValidationError('Failed to upload image: ' + err.message);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const renderIconField = () => (
+    <div>
+      <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Brand Icon</label>
+      <div className="flex gap-2">
+        <input 
+          type="text" 
+          name="brand_icon" 
+          value={(formData.brand_icon as string) ?? ''} 
+          onChange={handleChange} 
+          className="bg-slate-900 border border-slate-700 rounded px-3 py-2 text-white flex-1 font-semibold focus:border-[#9D4EFF] outline-none transition-colors" 
+          placeholder="Icon name or URL"
+        />
+        <label className={`bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded px-4 py-2 cursor-pointer transition-colors flex items-center justify-center ${uploadingImage ? 'opacity-50 pointer-events-none' : ''}`}>
+          <span className="text-sm font-bold text-slate-300">{uploadingImage ? '...' : 'Upload'}</span>
+          <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+        </label>
+      </div>
+      {formData.brand_icon && formData.brand_icon.startsWith('http') && (
+        <div className="mt-2 p-2 bg-slate-900/50 rounded border border-slate-800 flex items-center gap-3">
+          <img src={formData.brand_icon} alt="Preview" className="w-8 h-8 object-contain" />
+          <span className="text-xs text-slate-400 truncate flex-1">{formData.brand_icon}</span>
+        </div>
+      )}
     </div>
   );
 
@@ -247,13 +303,13 @@ function EditorModal({ profile, isNew, onClose, onSave }: { profile: Partial<Pro
   );
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-[#0f172a] border-l-4 border-[#9D4EFF] border-y border-r border-slate-700 rounded-xl w-full max-w-3xl shadow-2xl relative flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex justify-center p-4 overflow-y-auto items-start pt-16 pb-16">
+      <div className="bg-[#0f172a] border-l-4 border-[#9D4EFF] border-y border-r border-slate-700 rounded-xl w-full max-w-3xl shadow-2xl relative">
         <button type="button" onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-white z-10">
           <X size={24} />
         </button>
         
-        <div className="p-6 border-b border-slate-800 shrink-0">
+        <div className="p-6 border-b border-slate-800">
           <h3 className="text-xl font-bold text-white flex items-center gap-2">
             <Box size={20} className="text-[#9D4EFF]" />
             {isNew ? 'NEW HARDWARE PROFILE' : 'EDIT PROFILE'}
@@ -261,8 +317,8 @@ function EditorModal({ profile, isNew, onClose, onSave }: { profile: Partial<Pro
           <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">Edit hardware product catalog entries</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col min-h-0 flex-1">
-          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto custom-scrollbar flex-1">
+        <form onSubmit={handleSubmit}>
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
             
             {validationError && (
               <div className="col-span-full bg-red-900/50 border border-red-500/50 text-red-200 p-3 rounded">
@@ -288,19 +344,19 @@ function EditorModal({ profile, isNew, onClose, onSave }: { profile: Partial<Pro
                 placeholder="e.g. SK8LYTZ_V2" 
               />
             </div>
-            {renderField('Display Name', 'display_name', 'text', 'e.g. SK8Lytz Pro')}
-            {renderField('Brand Icon', 'brand_icon', 'text', 'e.g. circle-double')}
-            {renderField('Brand Color Hex', 'viz_theme_color', 'text', 'e.g. #FF5A00')}
+            {renderField('Display Name', 'display_name', 'text', 'e.g. SK8Lytz Pro', true)}
+            {renderIconField()}
+            {renderField('Brand Color Hex', 'viz_theme_color', 'text', 'e.g. #FF5A00', false)}
 
             {/* Hardware Defaults */}
             <div className="col-span-full mt-4 mb-[-10px]">
               <h4 className="text-slate-200 font-bold border-b border-slate-800 pb-2 text-sm tracking-widest uppercase">Hardware Defaults</h4>
             </div>
-            {renderField('Default LEDs', 'default_led_points', 'number')}
-            {renderField('Virtual Segments', 'default_segments', 'number')}
-            {renderField('IC Type (1=WS2812B)', 'default_ic_type', 'number')}
-            {renderField('Color Sorting (2=GRB)', 'default_color_sorting', 'number')}
-            {renderField('Battery Capacity (mAh)', 'battery_capacity_milli_ampere_hour', 'number')}
+            {renderField('Default LEDs', 'default_led_points', 'number', undefined, true)}
+            {renderField('Virtual Segments', 'default_segments', 'number', undefined, true)}
+            {renderField('IC Type (1=WS2812B)', 'default_ic_type', 'number', undefined, true)}
+            {renderField('Color Sorting (2=GRB)', 'default_color_sorting', 'number', undefined, true)}
+            {renderField('Battery Capacity (mAh)', 'battery_capacity_milli_ampere_hour', 'number', undefined, false)}
             
             <div className="col-span-full">
               {renderToggle('Customizable Profile', 'hardware_allows_custom_points', 'Allow user to cut and set custom length')}
@@ -310,21 +366,21 @@ function EditorModal({ profile, isNew, onClose, onSave }: { profile: Partial<Pro
             <div className="col-span-full mt-4 mb-[-10px]">
               <h4 className="text-slate-200 font-bold border-b border-slate-800 pb-2 text-sm tracking-widest uppercase">Autodetect Thresholds</h4>
             </div>
-            {renderField('Min HW Points', 'detect_min_points', 'number')}
-            {renderField('Max HW Points', 'detect_max_points', 'number')}
+            {renderField('Min HW Points', 'detect_min_points', 'number', undefined, true)}
+            {renderField('Max HW Points', 'detect_max_points', 'number', undefined, true)}
 
             {/* Visualizer Geometry */}
             <div className="col-span-full mt-4 mb-[-10px]">
               <h4 className="text-slate-200 font-bold border-b border-slate-800 pb-2 text-sm tracking-widest uppercase">Visualizer Geometry</h4>
             </div>
-            {renderField('Canvas Shape', 'viz_shape', 'text', 'OVAL | RING | DUAL_STRIP')}
-            {renderField('Visualizer Default Points', 'viz_default_points', 'number')}
-            {renderField('Base Width', 'viz_base_width', 'number')}
-            {renderField('Base Height', 'viz_base_height', 'number')}
-            {renderField('Blob Diameter (mm)', 'viz_blob_diameter_mm', 'number')}
-            {renderField('Strip Count (Railz)', 'viz_strip_count', 'number')}
-            {renderField('Strip Separation (Railz)', 'viz_strip_separation', 'number')}
-            {renderField('Strip Orientation', 'viz_strip_orientation', 'text', 'VERTICAL | HORIZONTAL')}
+            {renderField('Canvas Shape', 'viz_shape', 'text', 'OVAL | RING | DUAL_STRIP', true)}
+            {renderField('Visualizer Default Points', 'viz_default_points', 'number', undefined, true)}
+            {renderField('Base Width', 'viz_base_width', 'number', undefined, true)}
+            {renderField('Base Height', 'viz_base_height', 'number', undefined, true)}
+            {renderField('Blob Diameter (mm)', 'viz_blob_diameter_mm', 'number', undefined, true)}
+            {renderField('Strip Count (Railz)', 'viz_strip_count', 'number', undefined, false)}
+            {renderField('Strip Separation (Railz)', 'viz_strip_separation', 'number', undefined, false)}
+            {renderField('Strip Orientation', 'viz_strip_orientation', 'text', 'VERTICAL | HORIZONTAL', false)}
 
             <div className="col-span-full">
               {renderToggle('Mirrored Render', 'viz_is_mirrored', 'Mirror Seg2 over Seg1')}
@@ -336,7 +392,7 @@ function EditorModal({ profile, isNew, onClose, onSave }: { profile: Partial<Pro
             </div>
             
           </div>
-          <div className="p-4 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-3 rounded-b-xl shrink-0">
+          <div className="p-4 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-3 rounded-b-xl">
             <button type="button" onClick={onClose} className="px-4 py-2 rounded text-slate-400 hover:text-white font-semibold transition-colors">
               Cancel
             </button>

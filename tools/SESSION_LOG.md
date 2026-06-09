@@ -1301,3 +1301,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Fixed a dead link on the dashboard header logo. The setIsAdminToolsVisible(true) state was being called, but the modal was removed during the Command Center migration, making the button do nothing. Replaced with a React Native Alert informing the user that Admin Tools are now located in the Web Command Center.
 **Files touched:** src/screens/DashboardScreen.tsx, src/hooks/useDashboardProfile.ts
 
+
+### [EVENT] 2026-06-09T18:04 — EMERGENCY ROLLBACK: Admin Tools Reinstatement
+**What merged:** Performed an emergency surgical rollback of the 'deprecate mobile admin tools' commit (fca1b6ef). Restored the src/components/admin/ directory entirely via git checkout fca1b6ef~1 -- src/components/admin. Re-integrated AdminToolsModal into DashboardScreen.tsx and restored the isAdminToolsVisible, ctiveHwSettings, and setIsDiagnosticsMode states to the component and useDashboardProfile.ts. The build is now green and the Admin Tools modal is accessible via the dashboard logo again.
+**Files touched:** src/components/admin/*, src/screens/DashboardScreen.tsx, src/hooks/useDashboardProfile.ts
+

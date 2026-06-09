@@ -32,6 +32,8 @@ import { DockedControllerHandle } from '../components/DockedController';
 import GroupSettingsModal from '../components/GroupSettingsModal';
 import DeviceSettingsModal from '../components/DeviceSettingsModal';
 
+import AdminToolsModal from '../components/admin/AdminToolsModal';
+
 import { AppLogger } from '../services/AppLogger';
 
 import AccountModal, { StoredDevice } from '../components/AccountModal';
@@ -140,6 +142,8 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     handleLogout,
     isAccountModalVisible,
     setIsAccountModalVisible,
+    isAdminToolsVisible,
+    setIsAdminToolsVisible,
 
     isSupportModalVisible,
     setIsSupportModalVisible,
@@ -171,7 +175,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
   const [isTestModeActive, setIsTestModeActive] = useState(false);
   // isDisconnecting removed — bleState === 'DISCONNECTING' is the canonical FSM gate
-  const [isDiagnosticsMode] = useState(false);
+  const [isDiagnosticsMode, setIsDiagnosticsMode] = useState(false);
 
   // ── Phase 1: Fleet Groups, Device Configs, Power States → useDashboardGroups ───────
   // Declare refs before domain hooks that consume them
@@ -740,6 +744,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   
   const {
     MemoizedSk8lytzController,
+    activeHwSettings,
     isSettingsVisible,
     setIsSettingsVisible,
     selectedDeviceForSettings,
@@ -942,7 +947,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
 
         {isControllerOpen && (
           <View style={styles.controllerWrap}>
-            <View pointerEvents={Platform.OS !== 'web' ? 'box-none' : undefined} style={[styles.controllerHeaderWrap, Platform.OS === 'web' ? { pointerEvents: 'none' as unknown as any } : undefined]}> {/* MIGRATION-SHIM */}
+            <View pointerEvents={Platform.OS !== 'web' ? 'box-none' : undefined} style={[styles.controllerHeaderWrap, Platform.OS === 'web' ? { pointerEvents: 'none' as unknown as any } : undefined]}>
               <DashboardHeader
                 isActuallyConnected={true}
                 isOfflineMode={isOfflineMode}
@@ -953,7 +958,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
                 handleDisconnect={handleDisconnect}
                 onReconnectDevice={handleDeviceReconnect}
                 isAdmin={userProfile?.role === 'admin'}
-                onPressAdminTools={() => Alert.alert('Admin Tools Migrated', 'The admin tools have been moved to the Web Command Center. Please access them via your desktop browser.')}
+                onPressAdminTools={() => setIsAdminToolsVisible(true)}
                 onPressSupport={() => setIsSupportModalVisible(true)}
                 onPressTheme={toggleTheme}
                 authUsername={authUsername}
@@ -982,7 +987,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
                   handleDisconnect={handleDisconnect}
                   onReconnectDevice={handleDeviceReconnect}
                   isAdmin={userProfile?.role === 'admin'}
-                  onPressAdminTools={() => Alert.alert('Admin Tools Migrated', 'The admin tools have been moved to the Web Command Center. Please access them via your desktop browser.')}
+                  onPressAdminTools={() => setIsAdminToolsVisible(true)}
                   onPressSupport={() => setIsSupportModalVisible(true)}
                   onPressTheme={toggleTheme}
                   authUsername={authUsername}
@@ -1180,7 +1185,24 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
         />
       )}
       
-      {/* Admin Tools Migrated to Web Command Center */}
+      {/* Admin Tools Hub (Replaces LogViewerModal) */}
+      {isAdminToolsVisible && userProfile?.role === 'admin' && (
+        <AdminToolsModal
+          visible={isAdminToolsVisible}
+          onClose={() => setIsAdminToolsVisible(false)}
+          allDevices={allDevices}
+          connectedDevices={connectedDevices as unknown as DisplayDevice[]}
+          bleState={bleState}
+          handleScan={() => scanForPeripherals()}
+          liveRxPayload={lastRawNotification}
+          liveDeviceConfigs={deviceConfigs}
+          onConnectToDevice={async (d: any) => { await connectToDevices([d]); }}
+          onDisconnectFromDevice={async (_id: string) => { handleDisconnect(); }}
+          isDiagnosticsMode={isDiagnosticsMode}
+          onToggleDiagnostics={() => setIsDiagnosticsMode(!isDiagnosticsMode)}
+          hwSettings={activeHwSettings}
+        />
+      )}
 
 
     </SafeAreaView>
