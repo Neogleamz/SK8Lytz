@@ -1024,3 +1024,16 @@ pm run verify which includes QA tests.
   - **Analysis:** ?? Plan: [PLAN-live-debugger-suite.md](../../docs/plans/PLAN-live-debugger-suite.md)
   - **Source of Truth:** ?? `src/components/widgets/LiveDebuggerWidget.tsx`, `crash_telemetry`, `telemetry_errors`
   - **Details:** Requires creating a Supabase View `view_crash_aggregates`, updating `LiveDebuggerWidget.tsx` with AG Grid, and adding specific highlighting for spike thresholds (>10 crashes/hour).
+
+- [x] **`feat/auto-factory-tagging`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[BLE]` `[✅ L-RISK]` `[Snack]` `[🤖 PRO-MED]` `[BATCH:ble-discovery]`
+  - **Goal:** Add BLE signature fingerprinting to `useBLEScanner.ts` to automatically populate the `factory_name` property during discovery.
+  - **Decision Log:** User noted `manufacturer_data` is a raw Base64 string and asked for "Zengge" or "BanlanX" mapping. We need to infer `factory_name` natively on the scanner layer.
+  - **Analysis:** 📊 Plan: [PLAN-auto-factory-tagging.md](../../docs/plans/PLAN-auto-factory-tagging.md)
+    Key finding: "Zengge and BanlanX emit specific service UUIDs (FFE5 vs FFE0+0x5053) which we can map to factory_name."
+    Rejected alternative: "Storing the raw base64 string in factory_name — rejected because it is not human-readable and violates DB schema intent."
+  - **Source of Truth:** 📖 `src/hooks/ble/useBLEScanner.ts`
+  - **Details:** Must parse `device.serviceUUIDs` and `device.manufacturerData` to determine the brand before yielding to the UI state.
+### ⚡ [BATCH:fleet-map-ops] — `feat/map-relational-drilldown` — [✅ READY]
+> **Worktree**: `feat/map-relational-drilldown` · **Type**: Standalone · **Prerequisite**: None
+> **Source Analysis**: 📊 [SESSION_LOG.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SESSION_LOG.md) — Map transitioning to a relational inspector with realtime telemetry.

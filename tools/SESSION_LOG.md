@@ -1210,3 +1210,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Rejected:** Relying on PostCSS config directly (rejected because the live Vite dev server caches dependencies, causing unstyled components unless the user forcefully restarts their local docker/node environment).
 **Don't re-derive:** Always compile and inject static CSS for immediate hotfixes if we are introducing a new CSS framework to a running environment to bypass caching constraints.
 **Source:** tools/command-center/src/index.css
+
+### [MERGE] 2026-06-09T15:41 — feat/auto-factory-tagging -> master
+**What merged:** Implemented BLE signature fingerprinting in \useBLEScanner\ to automatically map Zengge and BanlanX devices to their respective \actory_name\ strings on discovery.
+**Verify result:** TSC ?, Jest ?, Gatekeeper ?
+**Files touched:** src/hooks/ble/useBLEScanner.ts, src/utils/classifyBLEDevice.ts
