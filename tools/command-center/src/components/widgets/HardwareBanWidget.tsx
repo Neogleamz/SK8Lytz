@@ -31,7 +31,7 @@ export default function HardwareBanWidget() {
     
     const { data, error } = await supabase
       .from('hardware_blacklist')
-      .insert([{ mac_address: newMac, reason: newReason }])
+      .insert([{ mac_address: newMac, reason: newReason, added_by: 'system' }])
       .select()
       .single();
       

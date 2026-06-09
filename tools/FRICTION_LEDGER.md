@@ -295,3 +295,25 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Root Cause Theory:** The agent focuses on task completion but forgets the subsequent cleanup phase because the uto-archiver.js fails with exact string matching if the task slug has BATCH: or doesn't match perfectly, causing the agent to quietly abandon the cleanup step instead of fixing the issue.
 - **Impact:** Cluttered Bucket List, loss of Kanban discipline, and user frustration from repeating process rules.
 - **Status:** RESOLVED — ? EVOLUTION IMPLEMENTED
+
+### [FRICTION-014] Skipped Plan Validation Steps
+- **First Observed:** 2026-06-08
+- **Observed By:** PM - Jordan
+- **Occurrences:** 1 / 3
+- **Trigger:** Generated PLAN files and Bucket List items without following strict intake.md schema.
+- **Pattern:** Agent skipped the 'Verify', 'Source', and 'Out of Scope' fields in the plans, and the 'Analysis' block in the Bucket List.
+- **Root Cause Theory:** Rushed batch generation of triage items. The script output was converted directly to markdown without consulting the TPM persona formatting rules.
+- **Impact:** User trust hit. Required rework and user correction.
+- **Status:** MONITORING
+
+
+
+### [FRICTION-024] Persona Drift on Research
+- **First Observed:** 2026-06-08
+- **Observed By:** User
+- **Occurrences:** 1 / 3
+- **Trigger:** Agent researched files without using Reyes.
+- **Pattern:** Agent defaulted to Morgan (Arch) instead of Reyes (Scout) when researching paths to merge dashboards.
+- **Root Cause Theory:** Agent forgot the Free-Form Research Binding rule during initial exploration.
+- **Impact:** Broken identity protocol, user had to correct the agent.
+- **Status:** MONITORING

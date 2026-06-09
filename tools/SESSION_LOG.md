@@ -942,3 +942,22 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - Replaced unknown casting with Device in DashboardScreen.tsx
 **Verify result:** TSC ?, Jest ?, Ast ?, BrowserConsole ? (Expected: Local server offline)
 **Files touched:** BleLifecycleManager.ts, useBLEBatterySweep.ts, useBLEScanner.ts, useBLE.ts, DashboardScreen.tsx
+### [MERGE] 2026-06-08T22:18 — fix/vite-env-vars & feat/admin-signup ? master
+**What merged:** 
+- Configured Vite to parse EXPO_PUBLIC_ env vars properly to fix Supabase URL errors
+- Replaced bare AuthScreen with full Login, Sign Up, and Reset Password flows in App.tsx
+- Retroactively upgraded existing team users to admin role via raw database query bypass
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** tools/command-center/vite.config.ts, tools/command-center/src/App.tsx, tools/command-center/src/services/supabase.ts
+
+### [DECISION] 2026-06-08T22:34 â€” Reject Anti-Bloat for xstate
+**Decision:** Keep xstate dependency.
+**Rejected:** Removing xstate to save bundle weight.
+**Don't re-derive:** User explicitly stated 'we just fucking added it!!!'. Do not propose removing xstate again.
+**Source:** N/A
+
+
+### [EVENT] 2026-06-08T22:40 — Command Center Widgets Recovery
+**What merged:** Rip out Mapbox, port Scraper Dashboard USMap SVG. Run raw SQL to generate missing crash_telemetry_logs table.
+**Verify result:** TSC ?, Build ?
+**Files touched:** MapWidget.tsx, AppPerformanceWidget.tsx, FleetHealthWidget.tsx, ControlTowerWidget.tsx, HardwareBanWidget.tsx, UserManagementWidget.tsx

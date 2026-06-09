@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface DeviceData {
-  firmware_ver: string;
-  ble_version: string;
-  product_type: string;
+  firmware_ver: string | null;
+  ble_version: string | null;
+  product_type: string | null;
 }
 
 const COLORS = ['#22d3ee', '#3b82f6', '#6366f1', '#a855f7', '#ec4899', '#f43f5e'];
@@ -53,29 +53,36 @@ export default function FleetHealthWidget() {
   }
 
   const renderChart = (title: string, chartData: any[]) => (
-    <div className="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col items-center">
+    <div className="glass-panel p-4 rounded-xl border border-slate-800 flex flex-col items-center relative">
       <h3 className="text-lg font-semibold text-white mb-4">{title}</h3>
       <div className="w-full h-64">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={chartData}
-              innerRadius={60}
-              outerRadius={80}
-              paddingAngle={5}
-              dataKey="value"
-            >
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip 
-              contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff', borderRadius: '8px' }}
-              itemStyle={{ color: '#22d3ee' }}
-            />
-            <Legend wrapperStyle={{ color: '#94a3b8' }} />
-          </PieChart>
-        </ResponsiveContainer>
+        {chartData.length > 0 ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={chartData}
+                innerRadius={60}
+                outerRadius={80}
+                paddingAngle={5}
+                dataKey="value"
+              >
+                {chartData.map((_, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff', borderRadius: '8px' }}
+                itemStyle={{ color: '#22d3ee' }}
+              />
+              <Legend wrapperStyle={{ color: '#94a3b8' }} />
+            </PieChart>
+          </ResponsiveContainer>
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center flex-col text-slate-500 mt-8">
+            <span className="text-2xl mb-2">📊</span>
+            <span>Awaiting Scan Data</span>
+          </div>
+        )}
       </div>
     </div>
   );

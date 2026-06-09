@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../services/supabase';
-import { ToggleLeft, ToggleRight, Save } from 'lucide-react';
+import { ToggleLeft, ToggleRight } from 'lucide-react';
 
 interface AppSetting {
   setting_key: string;
@@ -30,8 +30,8 @@ export default function ControlTowerWidget() {
       supabase.from('feature_flags').select('*')
     ]);
     
-    if (settingsRes.data) setSettings(settingsRes.data as AppSetting[]);
-    if (flagsRes.data) setFlags(flagsRes.data as FeatureFlag[]);
+    if (settingsRes.data) setSettings(settingsRes.data as unknown as AppSetting[]);
+    if (flagsRes.data) setFlags(flagsRes.data as unknown as FeatureFlag[]);
     setLoading(false);
   };
 
