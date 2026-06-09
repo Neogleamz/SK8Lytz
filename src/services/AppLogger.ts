@@ -630,7 +630,20 @@ class AppLoggerService {
           };
         });
 
-        const { error } = await supabase.from('telemetry_snapshots').insert(dbPayload);
+        let userId: string | undefined = undefined;
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          userId = user?.id;
+        } catch {
+          // ignore
+        }
+
+        const batch = dbPayload.map(s => ({
+          ...s,
+          user_id: userId
+        }));
+
+        const { error } = await supabase.from('telemetry_snapshots').insert(batch);
         if (error) {
            if (__DEV__) console.warn('[AppLogger] Chunk push failed:', error.message);
            break; // Stop uploading if a chunk fails, preserve remaining in buffer

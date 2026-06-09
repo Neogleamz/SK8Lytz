@@ -37,6 +37,10 @@ export interface ISessionSnapshot {
   peakSpeedMph: number;
   peakGForce: number;
   locationLabel?: string;
+  locationCoords?: { lat: number; lng: number };
+  startCoords?: { lat: number; lng: number };
+  endCoords?: { lat: number; lng: number };
+  pathCoords?: Array<{ lat: number; lng: number }>;
   crewSessionId?: string;
   healthBpm?: number;
   healthPeakBpm?: number;
@@ -175,6 +179,10 @@ class SpeedTrackingServiceClass {
           avg_bpm: snapshot.healthBpm ?? null,
           peak_bpm: snapshot.healthPeakBpm ?? null,
           location_label: snapshot.locationLabel ?? null,
+          location_coords: snapshot.locationCoords ?? null,
+          start_coords: snapshot.startCoords ?? null,
+          end_coords: snapshot.endCoords ?? null,
+          path_coords: snapshot.pathCoords ?? null,
           crew_session_id: snapshot.crewSessionId ?? null,
         })
         .select('id')
@@ -203,6 +211,29 @@ class SpeedTrackingServiceClass {
       } catch (healthErr: unknown) {
       const safeErr = healthErr instanceof Error ? healthErr : new Error(String(healthErr));
         AppLogger.warn('HEALTH_TELEMETRY', { event: 'health_sync_delegation_failed', error: healthErr instanceof Error ? healthErr.message : String(healthErr) });
+      }
+
+      // --- UPDATE LIFETIME STATS (DRIFT FIX) ---
+      try {
+        if (userId && (snapshot.distanceMiles > 0 || snapshot.peakSpeedMph > 0)) {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('lifetime_top_speed_mph, lifetime_distance_miles')
+            .eq('user_id', userId)
+            .single();
+          if (profile) {
+            const newDistance = (profile.lifetime_distance_miles || 0) + snapshot.distanceMiles;
+            const newTopSpeed = Math.max((profile.lifetime_top_speed_mph || 0), snapshot.peakSpeedMph);
+            if (newDistance > (profile.lifetime_distance_miles || 0) || newTopSpeed > (profile.lifetime_top_speed_mph || 0)) {
+               await supabase.from('user_profiles').update({
+                 lifetime_distance_miles: parseFloat(newDistance.toFixed(3)),
+                 lifetime_top_speed_mph: parseFloat(newTopSpeed.toFixed(2))
+               }).eq('user_id', userId);
+            }
+          }
+        }
+      } catch (statsErr: unknown) {
+        AppLogger.warn('STATS_TELEMETRY', { event: 'lifetime_stats_update_failed', error: statsErr instanceof Error ? statsErr.message : String(statsErr) });
       }
 
       return data.id;
@@ -239,6 +270,8 @@ class SpeedTrackingServiceClass {
       }
       const remainingQueue: PendingSessionRecord[] = [];
       let successCount = 0;
+      let totalFlushedDistance = 0;
+      let maxFlushedTopSpeed = 0;
 
       for (const record of queue) {
         try {
@@ -255,11 +288,19 @@ class SpeedTrackingServiceClass {
               avg_bpm: record.healthBpm ?? null,
               peak_bpm: record.healthPeakBpm ?? null,
               location_label: record.locationLabel ?? null,
+              location_coords: record.locationCoords ?? null,
+              start_coords: record.startCoords ?? null,
+              end_coords: record.endCoords ?? null,
+              path_coords: record.pathCoords ?? null,
               crew_session_id: record.crewSessionId ?? null,
             });
 
           if (!error) {
             successCount++;
+            totalFlushedDistance += record.distanceMiles;
+            if (record.peakSpeedMph > maxFlushedTopSpeed) {
+              maxFlushedTopSpeed = record.peakSpeedMph;
+            }
           } else {
             remainingQueue.push(record);
           }
@@ -276,6 +317,27 @@ class SpeedTrackingServiceClass {
           successCount,
           remaining: remainingQueue.length,
         });
+        
+        // --- UPDATE LIFETIME STATS (DRIFT FIX) ---
+        if (userId && (totalFlushedDistance > 0 || maxFlushedTopSpeed > 0)) {
+          try {
+            const { data: profile } = await supabase
+              .from('user_profiles')
+              .select('lifetime_top_speed_mph, lifetime_distance_miles')
+              .eq('user_id', userId)
+              .single();
+            if (profile) {
+              const newDistance = (profile.lifetime_distance_miles || 0) + totalFlushedDistance;
+              const newTopSpeed = Math.max((profile.lifetime_top_speed_mph || 0), maxFlushedTopSpeed);
+              if (newDistance > (profile.lifetime_distance_miles || 0) || newTopSpeed > (profile.lifetime_top_speed_mph || 0)) {
+                 await supabase.from('user_profiles').update({
+                   lifetime_distance_miles: parseFloat(newDistance.toFixed(3)),
+                   lifetime_top_speed_mph: parseFloat(newTopSpeed.toFixed(2))
+                 }).eq('user_id', userId);
+              }
+            }
+          } catch (e) {}
+        }
       }
     } catch (e: unknown) {
       const safeErr = e instanceof Error ? e : new Error(String(e));

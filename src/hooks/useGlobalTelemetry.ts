@@ -49,6 +49,10 @@ export function useGlobalTelemetry(
   const sessionPeakSpeedRef = useRef<number>(0);
   const sessionSpeedSamplesRef = useRef<number[]>([]);
   const healthMetricsRef = useRef(healthMetrics);
+  
+  const sessionStartCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
+  const sessionEndCoordsRef = useRef<{ lat: number; lng: number } | null>(null);
+  const sessionPathCoordsRef = useRef<Array<{ lat: number; lng: number }>>([]);
 
   useEffect(() => {
     healthMetricsRef.current = healthMetrics;
@@ -123,6 +127,10 @@ export function useGlobalTelemetry(
         healthBpm: healthMetricsRef.current?.avgBpm ?? undefined,
         healthPeakBpm: healthMetricsRef.current?.peakBpm ?? undefined,
         healthCalories: healthMetricsRef.current?.activeCalories ?? undefined,
+        startCoords: sessionStartCoordsRef.current ?? undefined,
+        endCoords: sessionEndCoordsRef.current ?? undefined,
+        locationCoords: sessionStartCoordsRef.current ?? undefined,
+        pathCoords: sessionPathCoordsRef.current.length > 0 ? sessionPathCoordsRef.current : undefined,
       };
 
       try {
@@ -141,6 +149,9 @@ export function useGlobalTelemetry(
     sessionPeakGForceRef.current = 1.0;
     sessionPeakSpeedRef.current = 0;
     sessionSpeedSamplesRef.current = [];
+    sessionStartCoordsRef.current = null;
+    sessionEndCoordsRef.current = null;
+    sessionPathCoordsRef.current = [];
     setSessionDistanceMiles(0);
     setSessionDurationSec(0);
     setSessionPeakSpeed(0);
@@ -184,6 +195,9 @@ export function useGlobalTelemetry(
         sessionPeakGForceRef.current = 1.0;
         sessionPeakSpeedRef.current = 0;
         sessionSpeedSamplesRef.current = [];
+        sessionStartCoordsRef.current = null;
+        sessionEndCoordsRef.current = null;
+        sessionPathCoordsRef.current = [];
         setSessionDistanceMiles(0);
         setSessionDurationSec(0);
         setSessionPeakSpeed(0);
@@ -207,6 +221,17 @@ export function useGlobalTelemetry(
                 const spdMpS = pos.coords.speed || 0;
                 const spdMph = Math.max(0, spdMpS * 2.23694);
                 setGpsSpeed(spdMph);
+
+                const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                if (sessionPhase === 'ACTIVE') {
+                  if (!sessionStartCoordsRef.current) {
+                    sessionStartCoordsRef.current = coords;
+                  }
+                  sessionEndCoordsRef.current = coords;
+                  // Throttle path storage to avoid giant JSON arrays (e.g. only 1 point per 3 seconds if interval is 1s)
+                  // but Location.watchPositionAsync distanceInterval: 1 means it only triggers on movement > 1m.
+                  sessionPathCoordsRef.current.push(coords);
+                }
 
                 const now = pos.timestamp;
                 if (lastGpsTimeRef.current) {
