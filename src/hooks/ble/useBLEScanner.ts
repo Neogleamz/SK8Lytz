@@ -326,23 +326,15 @@ export function useBLEScanner({
         scannerStateRef.current = 'SCANNING';
         
         setTimeout(() => {
-          const halozMock = {
-            id: 'VIRTUAL-HALOZ-123',
-            name: 'SK8-HALOZ-DEV',
-            rssi: -50,
-            manufacturerData: 'MwHwMwEBKwE=',
-            serviceUUIDs: [ZENGGE_SERVICE_UUID],
-          } as unknown as Device;
-          const soulzMock = {
-            id: 'VIRTUAL-SOULZ-456',
-            name: 'SK8-SOULZ-DEV',
-            rssi: -55,
-            manufacturerData: 'MwHwMwEBKwE=',
-            serviceUUIDs: [ZENGGE_SERVICE_UUID],
-          } as unknown as Device;
+          const halozL = { id: 'VIRTUAL-HALOZ-L', name: 'SK8-HALOZ-L-DEV', rssi: -50, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 } as unknown as Device;
+          const halozR = { id: 'VIRTUAL-HALOZ-R', name: 'SK8-HALOZ-R-DEV', rssi: -52, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 } as unknown as Device;
+          const soulzL = { id: 'VIRTUAL-SOULZ-L', name: 'SK8-SOULZ-L-DEV', rssi: -55, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'SOULZ', hwPoints: 43 } as unknown as Device;
+          const soulzR = { id: 'VIRTUAL-SOULZ-R', name: 'SK8-SOULZ-R-DEV', rssi: -57, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'SOULZ', hwPoints: 43 } as unknown as Device;
           
-          scanCallback(null, halozMock);
-          scanCallback(null, soulzMock);
+          scanCallback(null, halozL);
+          scanCallback(null, halozR);
+          scanCallback(null, soulzL);
+          scanCallback(null, soulzR);
         }, 1000);
 
         setTimeout(() => {
