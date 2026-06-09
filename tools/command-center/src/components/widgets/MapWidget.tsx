@@ -244,10 +244,11 @@ export default function MapWidget() {
               defaultColDef={defaultColDef}
               onFilterChanged={onFilterChanged}
               animateRows={true}
-              rowSelection="multiple"
+              rowSelection={{ mode: 'multiRow' }}
               suppressHorizontalScroll={false}
               pagination={true}
               paginationPageSize={10}
+              paginationPageSizeSelector={[10, 20, 50, 100]}
             />
           </div>
         </div>
