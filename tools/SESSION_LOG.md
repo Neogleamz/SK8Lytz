@@ -1054,3 +1054,13 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Rejected:** Joining registered_devices with discovered_devices_telemetry in the UI to piece together the missing metadata. Rejected because it's a UI workaround for a persistence layer bug, and it breaks when offline or when telemetry data expires.
 **Don't re-derive:** DeviceRepository.ts MUST map all hardware metadata into dbRow during saveDevice and _flushPendingSync. Do not strip fields just because they aren't explicitly rendered in the app's settings screen; they are critical for backend analytics and dashboard fragmentation tracking.
 **Source:** src/services/DeviceRepository.ts:290
+  
+### [ARTIFACT] 2026-06-09T06:14 - Telemetry Audit  
+**Artifact:** telemetry_audit.md  
+**Summary:** Comprehensive breakdown of telemetry, crash reporting, breadcrumb, user, device, session, and crew data handling (Supabase Offline-First pipeline). 
+
+### [DECISION] 2026-06-09T01:15 - Dual-Write Telemetry Pattern & Coordinate Fix
+**Decision:** Adopted a dual-write pattern for critical telemetry errors (writing to both 	elemetry_errors and crash_telemetry) to prevent data loss during migration. We also mapped new GPS coordinate fields (location_coords, start_coords, end_coords, path_coords) in SpeedTrackingService.ts and updated the user_profiles lifetime stats immediately after saving solo sessions.
+**Rejected:** Rewriting all existing telemetry pipelines to the new sink instantly, which risked breaking the admin dashboard downstream.
+**Don't re-derive:** The skate_sessions table expects GPS coordinates in JSON fields, which we track in memory via useGlobalTelemetry.ts instead of relying entirely on the BLE hardware for location data. The dual-write pattern allows us to shift sinks safely without halting legacy dashboard viewers.
+**Source:** src/services/AppLogger.ts:55, src/hooks/useGlobalTelemetry.ts:53
