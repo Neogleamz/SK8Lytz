@@ -1,0 +1,873 @@
+import React from 'react';
+import BeltNode from './BeltNode';
+
+import { useScraperTelemetry } from '../hooks/useScraperTelemetry';
+import { useFieldRegistry } from '../hooks/useFieldRegistry';
+import type { SpotRecord } from './RecordEditModal';
+
+const CCTOWER = 'http://127.0.0.1:5999';
+
+const STYLES = `
+/* ... styles remain the same ... */
+.pipeline-dashboard-container {
+
+    --neon-scout: #00ffaa;
+    --neon-crawl: #9d4edd;
+    --neon-detective: #ff6a00;
+    --neon-photo: #ff007f;
+    --neon-publish: #00d4ff;
+    font-family: 'Outfit', sans-serif; 
+}
+.pipeline-dashboard-container .glass-panel { 
+    background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.05); 
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+    border-radius: 20px; backdrop-filter: blur(20px);
+}
+.pipeline-dashboard-container .data-font { font-family: 'JetBrains Mono', monospace; }
+
+.pipeline-dashboard-container .assembly-line { display: grid; grid-template-columns: 1fr 60px auto 60px 1fr 300px; align-items: center; justify-items: center; width: 100%; padding: 10px 0 30px; position: relative; gap: 0 20px; }
+
+.pipeline-dashboard-container .mini-card { min-width: 160px; max-width: 160px; height: 60px; background: rgba(10,10,15,0.9); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; z-index: 1; display: flex; flex-direction: column; justify-content: center; padding: 0 16px; opacity: 0.5; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+.pipeline-dashboard-container .mini-card .title { font-size: 0.6rem; font-weight: 900; color: #fff; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pipeline-dashboard-container .mini-card .subtitle { font-size: 0.55rem; font-family: 'JetBrains Mono', monospace; color: rgba(255,255,255,0.4); margin-top: 4px; }
+
+/* Detailed Output Card */
+.pipeline-dashboard-container .detailed-card { min-width: 320px; max-width: 360px; background: rgba(10,10,15,0.95); border: 1px solid var(--col-color); border-radius: 12px; z-index: 1; display: flex; flex-direction: column; padding: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.6), inset 0 0 20px rgba(var(--col-color-rgb), 0.15); flex-shrink: 0; position: relative; overflow: hidden; }
+.pipeline-dashboard-container .detailed-card::before { content: '✓'; position: absolute; top: -10px; right: -10px; width: 24px; height: 24px; background: var(--col-color); color: #000; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 12px; box-shadow: 0 0 15px var(--col-color); }
+.pipeline-dashboard-container .detailed-card-header { font-size: 0.75rem; font-weight: 900; color: #fff; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 12px; display: flex; justify-content: space-between; position: relative; z-index: 2; }
+
+.pipeline-dashboard-container .data-grid { display: grid; grid-template-columns: 100px 1fr; gap: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; position: relative; z-index: 2; }
+.pipeline-dashboard-container .data-key { color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: bold; }
+.pipeline-dashboard-container .data-val { color: rgba(255,255,255,0.9); word-break: break-all; }
+.pipeline-dashboard-container .data-val.missing { color: #ff3366; font-style: italic; opacity: 0.8; }
+.pipeline-dashboard-container .data-val.success { color: var(--col-color); font-weight: bold; }
+
+/* Active Machine Node */
+.pipeline-dashboard-container .active-machine-node { width: 380px; flex-shrink: 0; background: linear-gradient(180deg, rgba(20,20,30,0.95) 0%, rgba(10,10,15,0.98) 100%); border: 1px solid var(--col-color); border-radius: 16px; position: relative; z-index: 10; box-shadow: 0 0 40px rgba(var(--col-color-rgb), 0.2), inset 0 0 20px rgba(var(--col-color-rgb), 0.1); display: flex; flex-direction: column; }
+.pipeline-dashboard-container .active-machine-node::before { content: ''; position: absolute; top: -1px; left: 50%; transform: translateX(-50%); width: 50%; height: 2px; background: var(--col-color); box-shadow: 0 0 15px var(--col-color); }
+.pipeline-dashboard-container .machine-header { padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); border-radius: 16px 16px 0 0; }
+.pipeline-dashboard-container .machine-body { padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+.pipeline-dashboard-container .processing-indicator { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 50%; border: 2px dashed var(--col-color); animation: spin 4s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
+
+/* Flow Animations */
+@keyframes flowRight { 0% { transform: translateX(-5px); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateX(5px); opacity: 0; } }
+.pipeline-dashboard-container .flow-arrow-right { animation: flowRight 1.5s infinite linear; font-size: 2rem; color: var(--col-color); opacity: 0.6; text-shadow: 0 0 15px var(--col-color); display: flex; align-items: center; justify-content: center; width: 60px; }
+
+@keyframes flowDown { 0% { transform: translateY(-3px); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(3px); opacity: 0; } }
+.pipeline-dashboard-container .flow-arrow-down { animation: flowDown 1.5s infinite linear; font-size: 1.5rem; color: var(--col-color); opacity: 0.6; text-shadow: 0 0 10px var(--col-color); text-align: center; line-height: 1; }
+
+/* Checklist */
+.pipeline-dashboard-container .targeting-list { margin-top: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; color: #a8b2d1; display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.pipeline-dashboard-container .targeting-title { font-size: 0.65rem; text-transform: uppercase; font-weight: 900; color: var(--col-color); margin-bottom: 8px; letter-spacing: 0.1em; grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; }
+
+/* Gatekeeper Rules */
+.pipeline-dashboard-container .gatekeeper-rules { margin-top: 10px; background: rgba(255,51,102,0.05); border: 1px solid rgba(255,51,102,0.2); padding: 12px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; display: flex; flex-direction: column; gap: 4px; }
+.pipeline-dashboard-container .gatekeeper-title { font-size: 0.65rem; text-transform: uppercase; font-weight: 900; color: #ff3366; margin-bottom: 4px; letter-spacing: 0.1em; display: flex; align-items: center; gap: 4px; }
+.pipeline-dashboard-container .rule-item { color: rgba(255,255,255,0.7); display: flex; align-items: center; gap: 6px; }
+.pipeline-dashboard-container .rule-item::before { content: '■'; color: #ff3366; font-size: 8px; }
+
+.pipeline-dashboard-container .target-item { display: flex; align-items: center; gap: 6px; }
+.pipeline-dashboard-container .target-item::before { content: '[ ]'; color: rgba(255,255,255,0.3); font-weight: bold; }
+.pipeline-dashboard-container .target-item.done::before { content: '[✓]'; color: var(--col-color); }
+.pipeline-dashboard-container .target-item.fail::before { content: '[✗]'; color: #ff3366; }
+.pipeline-dashboard-container .target-item.done { color: #fff; }
+
+.pipeline-dashboard-container .phase-map-container { background: rgba(10,10,15,0.8); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; overflow: hidden; margin-left: 20px; box-shadow: inset 50px 0 50px -50px var(--col-color), 0 10px 30px rgba(0,0,0,0.5); }
+.pipeline-dashboard-container .phase-map-container::before { content: ''; position: absolute; top: 0; left: 0; width: 2px; height: 100%; background: var(--col-color); box-shadow: 0 0 20px var(--col-color); }
+.pipeline-dashboard-container .map-svg path { fill: rgba(255,255,255,0.02); stroke: var(--col-color); stroke-width: 0.5; stroke-opacity: 0.3; transition: all 0.3s; }
+.pipeline-dashboard-container .map-svg path.active { fill: var(--col-color); fill-opacity: 0.4; stroke-opacity: 1; }
+.pipeline-dashboard-container .belt-wrapper { display: flex; gap: 20px; align-items: stretch; position: relative; padding: 20px 0; border-bottom: 1px dashed rgba(255,255,255,0.05); }
+.pipeline-dashboard-container .belt-flow-area { flex: 1; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+`;
+
+const generateUniformBelt = (idx: number, id: number, name: string, color: string, rgb: string, daemon: string, job: string, target: string, inputStatus: string, outputStatus: string, states: string[]) => ({
+  id, name, color, rgb, activeStates: states, job, daemon, target, inputStatus, outputStatus,
+  inQ: [],
+  status: 'IDLE',
+  gatekeeper: [],
+  attempting: [] as [string, string, string?][],
+  outCards: []
+});
+
+// Belt id → app tab mapping
+const BELT_TAB: Record<number, string> = { 1: 'phase1', 0: 'phase1', 2: 'phase2', 3: 'phase3', 4: 'phase4', 5: 'sniper' };
+
+export interface PipelineStats {
+    summary?: {
+        total?: number;
+        seeded?: number;
+        enriched?: number;
+        has_website?: number;
+        detective_queue?: number;
+        deep_crawled_count?: number;
+        deep_crawled_ever?: number;
+        has_candidates?: number;
+        photographer_queue?: number;
+        has_photos?: number;
+        media_ready?: number;
+        publisher_queue?: number;
+        published?: number;
+        pending_website?: number;
+        stalled_website?: number;
+        rejected?: number;
+        on_hold?: number;
+        stalled?: number;
+        low_quality?: number;
+        // Health diagnostic fields
+        no_photos_media_ready?: number;
+        photoless_with_website?: number;
+        media_ready_with_photos?: number;
+        gap_fill_active?: number;
+        [key: string]: unknown;
+    };
+    stats?: unknown[];
+}
+
+export interface PhaseQueues {
+    phase1?: SpotRecord[];
+    phase2?: SpotRecord[];
+    phase3?: SpotRecord[];
+    phase4?: SpotRecord[];
+    ['detective-recent']?: SpotRecord[];
+    published?: SpotRecord[];
+    [key: string]: SpotRecord[] | undefined;
+}
+
+export interface DaemonStatus {
+    isHarvestingActive?: boolean;
+    isGoogleSweepActive?: boolean;
+    currentTarget?: string;
+    [key: string]: unknown;
+}
+
+export interface TelemetryLiveData {
+    active_record?: Record<string, unknown> | null;
+    active_job?: string;
+    target?: string;
+    alive?: boolean;
+    in_q?: string[];
+    [key: string]: unknown;
+}
+
+export const ScraperPipeline: React.FC<{
+    headerControls?: React.ReactNode;
+    belowHeader?: React.ReactNode;
+    heartbeatMatrix?: React.ReactNode;
+    pipelineStats?: PipelineStats;
+    phaseQueues?: PhaseQueues;
+    onPhaseNav?: (tab: string) => void;
+    // Daemon control props
+    status?: DaemonStatus;
+    triggerSpecificDaemon?: (name: string, action: 'start' | 'stop') => void;
+    triggerHarvest?: (type: string, states?: string[]) => void;
+    onBlockSpot?: (id: string, name: string) => void; // optional refresh callback after block
+    onPurgeSpot?: (id: string, name: string) => void;
+    onSetHero?: (spotId: string, photoIndex: number) => void;
+    onDeletePhoto?: (spotId: string, photoIndex: number) => void;
+    onAssignPhotoType?: (spotId: string, photoIndex: number, fieldType: string) => void;
+    onUploadPhoto?: (spotId: string, file: File) => void;
+    seedProvider?: 'osm' | 'google' | 'website-resolver';
+    onProviderChange?: (p: 'osm' | 'google' | 'website-resolver') => void;
+    scrapeScope?: string;
+    onScopeChange?: (s: string) => void;
+    liveStreamText?: string;
+    isStreaming?: boolean;
+    currentAnalyzingSpot?: string;
+    logs?: {type: string, message: string, source?: string}[];
+    historyLogs?: string[];
+    fetchHistory?: () => void;
+}> = ({ headerControls, belowHeader, heartbeatMatrix, pipelineStats, phaseQueues, onPhaseNav, status, triggerSpecificDaemon, triggerHarvest, onBlockSpot, onPurgeSpot, onSetHero, onDeletePhoto, onAssignPhotoType, onUploadPhoto, seedProvider, onProviderChange, liveStreamText, isStreaming, currentAnalyzingSpot, logs, historyLogs, fetchHistory, scrapeScope, onScopeChange }) => {
+    const { telemetry, config, loading, pulse } = useScraperTelemetry(2000);
+    const { fields } = useFieldRegistry();
+
+    const initialStatsRef = React.useRef<{
+        seeded?: number;
+        deep_crawled_ever?: number;
+        media_ready?: number;
+        published?: number;
+    } | null>(null);
+
+    React.useEffect(() => {
+        if (pipelineStats?.summary && !initialStatsRef.current) {
+            const summary = pipelineStats.summary;
+            initialStatsRef.current = {
+                seeded: summary.seeded ?? 0,
+                deep_crawled_ever: summary.deep_crawled_ever ?? 0,
+                media_ready: summary.media_ready ?? 0,
+                published: summary.published ?? 0,
+            };
+        }
+    }, [pipelineStats]);
+
+    const [controlsOpen, setControlsOpen] = React.useState(false);
+    const [sniperSearch, setSniperSearch] = React.useState('');
+    const [sniperResults, setSniperResults] = React.useState<SpotRecord[]>([]);
+
+    // Effect for sniper search
+    React.useEffect(() => {
+        const t = setTimeout(async () => {
+            if (!sniperSearch || sniperSearch.length < 2) {
+                setSniperResults([]);
+                return;
+            }
+            try {
+                const res = await fetch(`${CCTOWER}/api/spots/search?q=${encodeURIComponent(sniperSearch)}`);
+                const data = await res.json();
+                setSniperResults(data.spots || []);
+            } catch (e) { console.error(e); }
+        }, 500);
+        return () => clearTimeout(t);
+    }, [sniperSearch]);
+
+    const handleSetSniper = async (id: string) => {
+        try {
+            await fetch(`${CCTOWER}/api/sniper`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ target_id: id })
+            });
+            setSniperSearch('');
+            setSniperResults([]);
+            pulse();
+        } catch (e) { console.error(e); }
+    };
+
+    const [sniperActiveSpot, setSniperActiveSpot] = React.useState<SpotRecord | null>(null);
+
+    // Fetch active sniper spot details
+    React.useEffect(() => {
+        const id = config?.sniper_target_id;
+        if (!id) {
+            Promise.resolve().then(() => {
+                setSniperActiveSpot(null);
+            });
+            return;
+        }
+        fetch(`${CCTOWER}/api/sniper/poll/${id}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.success && data.spot) setSniperActiveSpot(data.spot);
+            })
+            .catch(e => console.error(e));
+    }, [config?.sniper_target_id]);
+
+    const handleClearSniper = async () => {
+        try {
+            await fetch(`${CCTOWER}/api/sniper`, { method: 'DELETE' });
+            pulse();
+        } catch (e) { console.error(e); }
+    };
+
+    // outCards show OUTPUT (completed) records for each belt.
+    // The output of phase N = the input of phase N+1, so we read the next phase queue.
+    const getSpotsForPhase = (beltId: number, count: number = 2): SpotRecord[] => {
+        let spots: SpotRecord[] = [];
+        if (beltId === 0) spots = phaseQueues?.stalled_website || [];
+        else if (beltId === 1) spots = phaseQueues?.phase1 || [];              // Sweep out  = SEEDED (Detective input)
+        else if (beltId === 2) spots = phaseQueues?.['detective-recent'] || []; // Detective out = DEEP_CRAWLED (Photographer input)
+        else if (beltId === 3) spots = phaseQueues?.phase4 || [];              // Photographer out = MEDIA_READY (Publisher input)
+        else if (beltId === 4) spots = phaseQueues?.published || [];              // Publisher out = PUBLISHED
+        return spots.slice(0, count);
+    };
+
+    const getQueueNames = (phase: string, count: number = 3): string[] => {
+        let activeTarget = '';
+        if (phase === 'phase1') activeTarget = telemetry.scout?.target || telemetry.resolver?.target || '';
+        else if (phase === 'phase2') activeTarget = telemetry.detective?.target || '';
+        else if (phase === 'phase3') activeTarget = telemetry.photographer?.target || '';
+        else if (phase === 'phase4') activeTarget = telemetry.publisher?.target || '';
+
+        return (phaseQueues?.[phase] || [])
+            .filter((s: SpotRecord) => {
+                const name = String(s.name || s.url || s.target || '');
+                return name !== activeTarget;
+            })
+            .slice(0, count)
+            .map((s: SpotRecord) => String(s.name || s.url || s.target || ''));
+    };
+
+    // Fields to NEVER show in belt output cards — too bulky, use Phase drawer instead
+    const CARD_SKIP_FIELDS = new Set([
+        'candidate_photos', 'photos', 'ai_metadata', 'raw_data',
+        'candidate_links', 'raw_knowledge_panel', 'flyer_urls', 'dom_images',
+        'field_confidence'
+    ]);
+
+    const buildPhaseCards = (phaseId: number, spots: SpotRecord[]) => {
+        return spots.map(spot => {
+            const data: [string, React.ReactNode, string][] = [];
+            const bool = (v: unknown) => (v === true ? 'YES' : v === false ? 'NO' : 'N/A');
+            const val  = (v: unknown, fallback = 'NULL') => v != null ? String(v) : fallback;
+            const ok   = (v: unknown): string => (v != null && v !== '' && v !== false) ? 'success' : 'missing';
+            const boolOk = (v: unknown): string => (v === true ? 'success' : 'missing');
+
+            // ▶ CURRENT STATUS badge
+            if (phaseId === 1) {
+                const s1 = spot.verification_status || 'SEEDED';
+                data.push(['\u25b6 CURRENT STATUS', s1, s1 === 'SEEDED' ? 'success' : 'warning']);
+            } else if (phaseId === 2) {
+                const s3 = spot.verification_status || 'DEEP_CRAWLED';
+                data.push(['\u25b6 CURRENT STATUS', s3, s3 === 'DEEP_CRAWLED' ? 'success' : 'warning']);
+            } else if (phaseId === 3) {
+                const s4 = spot.verification_status || 'MEDIA_READY';
+                data.push(['\u25b6 CURRENT STATUS', s4, s4 === 'MEDIA_READY' ? 'success' : 'warning']);
+            } else if (phaseId === 4) {
+                const s5 = spot.verification_status || 'PUBLISHED';
+                data.push(['\u25b6 CURRENT STATUS', s5, s5 === 'PUBLISHED' ? 'success' : 'warning']);
+            }
+
+            // DYNAMIC FIELDS — skip bloat fields, compact all values to single lines
+            const phaseFields = fields.filter(f => f.phase_id === phaseId && !CARD_SKIP_FIELDS.has(f.field_name));
+            phaseFields.forEach(f => {
+                if (f.field_name?.toLowerCase().includes('confidence') || (f.display_label?.toLowerCase().includes('confidence'))) return;
+
+                let displayVal: React.ReactNode = 'NULL';
+                let status = 'missing';
+
+                const rawVal = spot[f.field_name];
+                const clVal = spot.candidate_links?.[f.field_name];
+
+                if (f.field_name === 'email_addresses') {
+                    const emails = (() => {
+                        if (!rawVal) return [];
+                        if (Array.isArray(rawVal)) return rawVal.filter(Boolean);
+                        try {
+                            const parsed = JSON.parse(rawVal as string);
+                            return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+                        } catch {
+                            return String(rawVal).split(',').map((e: string) => e.trim()).filter(Boolean);
+                        }
+                    })();
+                    if (emails.length > 0) {
+                        displayVal = (
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                {emails.map((e: string) => (
+                                    <a key={e} href={`mailto:${e}`} style={{
+                                        background: 'rgba(168,85,247,0.15)',
+                                        border: '1px solid rgba(168,85,247,0.3)',
+                                        color: '#c084fc',
+                                        padding: '1px 5px',
+                                        borderRadius: '4px',
+                                        textDecoration: 'none',
+                                        fontSize: '0.6rem',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '2px'
+                                    }} title={e}>
+                                        <span>📧</span>
+                                        <span>{e}</span>
+                                    </a>
+                                ))}
+                            </div>
+                        );
+                        status = 'success';
+                    } else {
+                        displayVal = 'NULL';
+                        status = 'missing';
+                    }
+                } else if (f.data_type === 'boolean') {
+                    displayVal = bool(rawVal);
+                    status = boolOk(rawVal);
+                } else if (f.data_type === 'number') {
+                    displayVal = val(rawVal);
+                    status = ok(rawVal);
+                } else if (f.data_type === 'date') {
+                    displayVal = rawVal ? new Date(rawVal as string | number | Date).toLocaleDateString() : 'NEVER';
+                    status = rawVal ? 'val' : 'missing';
+                } else if (f.data_type === 'json') {
+                    // Unroll full JSON stringified block
+                    if (rawVal && typeof rawVal === 'object') {
+                        const valObj = rawVal as Record<string, unknown>;
+                        const keys = Object.keys(valObj).filter(k => valObj[k] != null && valObj[k] !== '');
+                        displayVal = keys.length > 0
+                            ? <pre style={{margin:0, fontSize:'0.65rem', whiteSpace:'pre-wrap', color:'#a5d6ff', background:'rgba(0,0,0,0.3)', padding:'4px', borderRadius:'4px'}}>{JSON.stringify(rawVal, null, 2)}</pre>
+                            : 'EMPTY';
+                        status = keys.length > 0 ? 'success' : 'missing';
+                    } else if (typeof rawVal === 'string' && rawVal.startsWith('{')) {
+                        try {
+                            const parsed = JSON.parse(rawVal);
+                            const keys = Object.keys(parsed).filter(k => parsed[k] != null && parsed[k] !== '');
+                            displayVal = keys.length > 0 ? <pre style={{margin:0, fontSize:'0.65rem', whiteSpace:'pre-wrap', color:'#a5d6ff', background:'rgba(0,0,0,0.3)', padding:'4px', borderRadius:'4px'}}>{JSON.stringify(parsed, null, 2)}</pre> : 'EMPTY';
+                            status = keys.length > 0 ? 'success' : 'missing';
+                        } catch { displayVal = 'PARSE ERR'; status = 'missing'; }
+                    } else {
+                        displayVal = rawVal ? String(rawVal).slice(0, 60) : 'NULL';
+                        status = rawVal ? 'success' : 'missing';
+                    }
+                } else if (f.data_type === 'url_check') {
+                    const target = (clVal || rawVal) as string;
+                    displayVal = target ? <a href={target} target="_blank" rel="noreferrer" style={{color: 'inherit', textDecoration: 'underline'}}>{String(target).replace(/^https?:\/\//, '').slice(0, 40)}</a> : 'NULL';
+                    status = ok(target);
+                } else if (f.data_type === 'json_array') {
+                    // Compact: show count + preview of first item only
+                    const arr = Array.isArray(rawVal) ? rawVal
+                        : rawVal && typeof rawVal === 'object' ? Object.values(rawVal)
+                        : typeof rawVal === 'string' ? (() => { try { const p = JSON.parse(rawVal); return Array.isArray(p) ? p : []; } catch { return []; } })()
+                        : [];
+                    if (arr.length > 0) {
+                        const first = String(arr[0]).slice(0, 50);
+                        displayVal = arr.length === 1 ? first : `${arr.length} items · ${first}${first.length === 50 ? '…' : ''}`;
+                        status = 'success';
+                    } else {
+                        displayVal = 'NULL'; status = 'missing';
+                    }
+                } else {
+                    // String: truncate to 60 chars
+                    const target = clVal || rawVal;
+                    if (target && typeof target === 'string' && target.startsWith('http')) {
+                        displayVal = <a href={target} target="_blank" rel="noreferrer" style={{color: 'inherit', textDecoration: 'underline'}}>{target.replace(/^https?:\/\//, '').slice(0, 40)}</a>;
+                    } else {
+                        displayVal = target ? String(target).slice(0, 80) : 'NULL';
+                    }
+                    status = ok(target);
+                }
+                data.push([f.display_label, displayVal, status]);
+            });
+
+            return {
+                title: spot.name,
+                status: (spot.status || spot.verification_status || 'PROCESSED') as string,
+                type: 'success' as const,
+                spotId: spot.id,
+                spotName: spot.name,
+                rawSpot: spot,
+                data
+            };
+        });
+    };
+
+
+    const baseBelts = [
+        generateUniformBelt(1, 1, 'Phase 1 │ Scout (Seed Engine)  IN: null → OUT: SEEDED', '--neon-scout', '0, 255, 170', 'Daemon_v2', 'PROCESSING...', 'Waiting', 'PENDING', 'SEEDED', getQueueNames('phase1')),
+        generateUniformBelt(2, 2, 'Phase 2 │ Detective (AI Crawl)  IN: SEEDED → OUT: DEEP_CRAWLED', '--neon-detective', '255, 106, 0', config?.detective_model || 'Llama3.2-8b', 'PROCESSING...', 'Waiting', 'SEEDED', 'DEEP_CRAWLED', getQueueNames('phase2')),
+        generateUniformBelt(3, 3, 'Phase 3 │ Photographer  IN: DEEP_CRAWLED → OUT: MEDIA_READY', '--neon-photo', '255, 0, 127', 'Vision_v1', 'PROCESSING...', 'Waiting', 'DEEP_CRAWLED', 'MEDIA_READY', getQueueNames('phase3')),
+        generateUniformBelt(4, 4, 'Phase 4 │ Publisher  IN: MEDIA_READY → OUT: PUBLISHED', '--neon-publish', '0, 212, 255', 'Sync_v4', 'PROCESSING...', 'Waiting', 'MEDIA_READY', 'PUBLISHED', getQueueNames('phase4'))
+    ];
+
+    // Dynamically pull attempting checkmarks from the field_registry
+    baseBelts[0].attempting = seedProvider === 'website-resolver'
+      ? [ ['website', 'pending', '🛑'] ]
+      : fields.filter(f => f.phase_id === 1).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]);
+
+    // Phase 2 Detective: Registry fields + dynamic AI vectors
+    const aiVectors = config?.ai_target_vectors || [];
+    baseBelts[1].attempting = [
+      ...fields.filter(f => f.phase_id === 2).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]),
+      ...aiVectors.map((v: unknown) => [typeof v === 'object' && v !== null && 'key' in v ? String((v as { key: string }).key) : String(v), 'pending', '⚪'] as [string, string, string])
+    ];
+
+    // Phase 3 Photographer: Registry fields + photo categories
+    const photoCategories = config?.photo_categories || [];
+    baseBelts[2].attempting = [
+      ...fields.filter(f => f.phase_id === 3).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]),
+      ...photoCategories.map((c: string) => [c, 'pending', '⚪'] as [string, string, string])
+    ];
+
+    // Phase 4 Publisher: Registry fields
+    baseBelts[3].attempting = fields.filter(f => f.phase_id === 4).map(f => [f.field_name, 'pending', f.importance_level === 2 ? '🛑' : f.importance_level === 1 ? '⭐' : '⚪'] as [string, string, string]);
+
+    const mergedBelts = baseBelts.map(belt => {
+        let liveData: TelemetryLiveData | null = null;
+        if (belt.id === 1) {
+            const scoutData = telemetry.scout || null;
+            const resolverData = telemetry.resolver || null;
+            if (seedProvider === 'website-resolver' && resolverData?.active_job) {
+                liveData = resolverData;
+            } else {
+                liveData = scoutData || resolverData;
+            }
+        }
+        if (belt.id === 2) liveData = telemetry.detective || null;
+        if (belt.id === 3) liveData = telemetry.photographer || null;
+        if (belt.id === 4) liveData = telemetry.publisher || null;
+
+        // Populate fields from real DB spots
+        const specificSpots = getSpotsForPhase(belt.id, 2);
+        const dynamicCards = buildPhaseCards(belt.id, specificSpots);
+
+        const sessionCompleted = {
+            scouted: Math.max(0, (pipelineStats?.summary?.seeded ?? 0) - (initialStatsRef.current?.seeded ?? 0)),
+            deep_crawled: Math.max(0, (pipelineStats?.summary?.deep_crawled_ever ?? 0) - (initialStatsRef.current?.deep_crawled_ever ?? 0)),
+            media_ready: Math.max(0, (pipelineStats?.summary?.media_ready ?? 0) - (initialStatsRef.current?.media_ready ?? 0)),
+            published: Math.max(0, (pipelineStats?.summary?.published ?? 0) - (initialStatsRef.current?.published ?? 0)),
+        };
+
+        // Per-belt count badges from live telemetry + pipelineStats using Option B Vector Flow
+        const countBadges: {label: string; value: string}[] = [];
+        if (belt.id === 1) {
+            countBadges.push({ label: '⏳ QUEUED', value: `${(status?.pendingCount ?? 0).toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '✓ SEEDED', value: `${(pipelineStats?.summary?.seeded ?? 0).toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '⚡ SESSION', value: `+${sessionCompleted.scouted}` });
+            
+            if (pipelineStats?.summary?.pending_website || pipelineStats?.summary?.stalled_website) {
+                countBadges.push({ label: '│', value: '' });
+                countBadges.push({ label: '🔍 RESOLVING', value: `${(pipelineStats?.summary?.pending_website ?? 0)}` });
+                countBadges.push({ label: '🛑 STALLED', value: `${(pipelineStats?.summary?.stalled_website ?? 0)}` });
+            }
+        } else if (belt.id === 2) {
+            const qCount = pipelineStats?.summary?.detective_queue ?? 0;
+            countBadges.push({ label: '⏳ QUEUED', value: `${qCount.toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '✓ CRAWLED', value: `${(pipelineStats?.summary?.deep_crawled_ever ?? 0).toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '⚡ SESSION', value: `+${sessionCompleted.deep_crawled}` });
+        } else if (belt.id === 3) {
+            const qCount = pipelineStats?.summary?.photographer_queue ?? 0;
+            countBadges.push({ label: '⏳ QUEUED', value: `${qCount.toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '✓ IMAGED', value: `${(pipelineStats?.summary?.media_ready ?? 0).toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '⚡ SESSION', value: `+${sessionCompleted.media_ready}` });
+        } else if (belt.id === 4) {
+            const qCount = pipelineStats?.summary?.publisher_queue ?? 0;
+            countBadges.push({ label: '⏳ QUEUED', value: `${qCount.toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '✓ PUBLISHED', value: `${(pipelineStats?.summary?.published ?? 0).toLocaleString()}` });
+            countBadges.push({ label: '──►', value: '' });
+            countBadges.push({ label: '⚡ SESSION', value: `+${sessionCompleted.published}` });
+        }
+
+        if (liveData) {
+            const activeRecord = liveData.active_record;
+            let dynamicAttempting = belt.attempting;
+            
+            if (activeRecord) {
+                dynamicAttempting = belt.attempting.map(([fieldName, , oldIcon]) => {
+                    const rawVal = activeRecord[fieldName];
+                    let clVal = null;
+                    try {
+                        const cl = activeRecord['candidate_links'];
+                        clVal = typeof cl === 'string' 
+                            ? JSON.parse(cl)?.[fieldName] 
+                            : (cl as Record<string, unknown>)?.[fieldName];
+                    } catch {
+                        /* ignore parsing errors */
+                    }
+                    
+                    const target = clVal || rawVal;
+                    let newStatus = 'missing';
+                    if (target != null && target !== '' && target !== false && target !== '[]' && target !== '{}') {
+                        newStatus = 'success';
+                    }
+                    return [fieldName, newStatus, oldIcon] as [string, string, string?];
+                });
+            }
+
+            const rawInQ = liveData.in_q || [];
+            const activeJob = liveData.active_job;
+            const activeTarget = liveData.target;
+            const cleanInQ = rawInQ.filter((name: string) => name !== activeJob && name !== activeTarget);
+
+            return {
+                ...belt,
+                attempting: dynamicAttempting,
+                job: liveData.active_job || 'IDLE',
+                target: liveData.target || (cleanInQ[0] ? `Next: ${cleanInQ[0]}` : 'WAITING...'),
+                status: liveData.active_job ? 'PROCESSING' : (liveData.alive ? 'WAITING' : 'OFFLINE'),
+                inQ: cleanInQ.slice(0, 3),
+                outCards: dynamicCards.length > 0 ? dynamicCards : belt.outCards,
+                countBadges,
+                activeRecord: activeRecord || null,
+            };
+        }
+        return {
+            ...belt,
+            outCards: dynamicCards.length > 0 ? dynamicCards : belt.outCards,
+            countBadges,
+        };
+    });
+
+    // Per-belt daemon control mappings
+    const beltDaemon: Record<number, { active: boolean; hasDaemon: boolean; onStart: () => void; onStop: () => void }> = {
+        1: {
+            hasDaemon: true,
+            active: seedProvider === 'website-resolver'
+                ? !!(status?.currentTarget?.includes('Website Resolver: online'))
+                : !!(status?.isHarvestingActive || status?.isGoogleSweepActive),
+            onStart: () => triggerHarvest?.('start-all'),
+            onStop: () => triggerHarvest?.('stop-all')
+        },
+        2: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Indexer: online')),     onStart: () => triggerSpecificDaemon?.('indexer', 'start'),     onStop: () => triggerSpecificDaemon?.('indexer', 'stop') },
+        3: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Photographer: online')), onStart: () => triggerSpecificDaemon?.('photographer', 'start'), onStop: () => triggerSpecificDaemon?.('photographer', 'stop') },
+        4: { hasDaemon: true,  active: !!(status?.currentTarget?.includes('Publisher: online')),    onStart: () => triggerSpecificDaemon?.('publisher', 'start'),    onStop: () => triggerSpecificDaemon?.('publisher', 'stop') },
+        5: { hasDaemon: false, active: false, onStart: () => {}, onStop: () => {} },
+    };
+
+    // ☠ Block & Purge — called from any belt card button
+    const handleBlockSpot = async (spotId: string, spotName: string) => {
+        if (!window.confirm(`☠ Block & purge "${spotName}" from the entire pipeline?\n\nThis will:\n• Delete all matching records from the database\n• Prevent future re-ingestion\n\nThis cannot be undone.`)) return;
+        try {
+            const res = await fetch(`${CCTOWER}/api/scraper/blocklist`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ keyword: spotName })
+            });
+            const data = await res.json();
+            if (data.success) {
+                alert(`✅ Blocked "${spotName}" — purged ${data.count ?? 0} matching record(s) from the database.`);
+                pulse();
+                onBlockSpot?.('', spotName); // trigger parent refresh if provided
+            } else {
+                alert('Block failed: ' + JSON.stringify(data));
+            }
+        } catch (e) {
+            alert('CCTower unreachable: ' + (e instanceof Error ? e.message : String(e)));
+        }
+    };
+
+    const handleRestartSpot = async (spotId: string) => {
+        if (!window.confirm(`Force restart this spot to SEEDED and purge AI data?`)) return;
+        try {
+            const res = await fetch(`${CCTOWER}/api/spots/${spotId}/reset`, { method: 'POST' });
+            if ((await res.json()).success) {
+                pulse();
+                onBlockSpot?.(spotId, ''); // trigger refresh
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    const handleFreezeSpot = async (spotId: string) => {
+        if (!window.confirm(`Freeze this spot to ON_HOLD?`)) return;
+        try {
+            const res = await fetch(`${CCTOWER}/api/skate_spots/${spotId}/freeze`, { method: 'POST' });
+            if ((await res.json()).success) {
+                pulse();
+                onBlockSpot?.(spotId, ''); // trigger refresh
+            }
+        } catch (e) { console.error(e); }
+    };
+
+    return (
+        <div className="pipeline-dashboard-container w-full min-h-screen flex flex-col text-white relative" style={{ gap: 0 }}>
+            <style>{STYLES}</style>
+
+            {/* ── SLIM MISSION CONTROL HUD ── */}
+            <div style={{
+                position: 'sticky', top: 0, zIndex: 100,
+                background: 'rgba(8,8,14,0.97)',
+                borderBottom: '1px solid rgba(59, 130, 246, 0.25)',
+                backdropFilter: 'blur(20px)',
+                boxShadow: '0 4px 30px rgba(0,0,0,0.6)',
+            }}>
+                {/* Top row: branding + stats + controls toggle */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 0, padding: '10px 20px', minHeight: 64 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.1, flexShrink: 0, marginRight: 18, marginTop: -2 }}>
+                        <img src="/sk8lytz-logo.png" alt="SK8Lytz" style={{ height: '38px', objectFit: 'contain', alignSelf: 'flex-start', filter: 'drop-shadow(0 0 8px rgba(59,130,246,0.3))' }} />
+                        <span style={{ 
+                            fontSize: '0.62rem', 
+                            fontWeight: 900, 
+                            background: 'linear-gradient(90deg, #3b82f6 0%, #ff5a00 100%)', 
+                            WebkitBackgroundClip: 'text', 
+                            WebkitTextFillColor: 'transparent',
+                            textTransform: 'uppercase', 
+                            letterSpacing: '0.15em', 
+                            marginTop: '3px', 
+                            marginLeft: '2px',
+                            textShadow: '0 0 10px rgba(59, 130, 246, 0.2)'
+                        }}>SK8 SPOTZ</span>
+                    </div>
+                    {heartbeatMatrix}
+                    <div style={{ flex: 1 }} />
+
+                    {/* 🎯 SNIPER MISSION CONTROL (Main Header) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginRight: '20px' }}>
+                        <div style={{ position: 'relative', width: 200 }}>
+                            <input 
+                                type="text" 
+                                placeholder="🎯 Sniper Search..."
+                                value={sniperSearch}
+                                onChange={(e) => setSniperSearch(e.target.value)}
+                                style={{ 
+                                    width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(59, 130, 246, 0.3)', 
+                                    color: '#fff', fontSize: '0.6rem', padding: '5px 10px', borderRadius: '20px',
+                                    fontFamily: 'JetBrains Mono, monospace', outline: 'none'
+                                }}
+                            />
+                            {sniperResults.length > 0 && (
+                                <div style={{ 
+                                    position: 'absolute', top: '100%', left: 0, width: '220px', background: '#0a0a0f', 
+                                    border: '1px solid rgba(59, 130, 246, 0.4)', borderRadius: '8px', zIndex: 1000,
+                                    boxShadow: '0 10px 30px rgba(0,0,0,0.8)', overflow: 'hidden', marginTop: '5px'
+                                }}>
+                                    {sniperResults.map(s => (
+                                        <div 
+                                            key={s.id} 
+                                            onClick={() => handleSetSniper(s.id)}
+                                            style={{ padding: '8px 12px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.02)' }}
+                                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(59, 130, 246, 0.1)'}
+                                            onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                                        >
+                                            <div style={{ fontSize: '0.65rem', fontWeight: 900, color: '#3b82f6' }}>{s.name}</div>
+                                            <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.5)' }}>{s.city}, {s.state}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {config?.sniper_target_id && (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255, 90, 0, 0.08)', padding: '3px 10px', borderRadius: '20px', border: '1px solid rgba(255, 90, 0, 0.3)' }}>
+                                <span style={{ fontSize: '0.55rem', fontWeight: 900, color: '#ff5a00', whiteSpace: 'nowrap' }}>
+                                    🎯 SNIPING: {sniperActiveSpot ? `${sniperActiveSpot.name} (${sniperActiveSpot.city}, ${sniperActiveSpot.state})` : config.sniper_target_id.slice(0, 8)}
+                                </span>
+                                <button onClick={() => handleRestartSpot(config.sniper_target_id)} style={{ background: 'rgba(255, 90, 0, 0.2)', border: 'none', color: '#ff5a00', padding: '2px 6px', borderRadius: '4px', fontSize: '0.5rem', fontWeight: 900, cursor: 'pointer' }}>RESET</button>
+                                <button onClick={handleClearSniper} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', padding: '0 4px', fontSize: '0.7rem', cursor: 'pointer' }}>×</button>
+                            </div>
+                        )}
+                    </div>
+                    <button
+                        onClick={() => setControlsOpen(o => !o)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 6,
+                            padding: '5px 14px', borderRadius: 20,
+                            border: `1px solid ${controlsOpen ? 'rgba(59, 130, 246, 0.4)' : 'rgba(255,255,255,0.1)'}`,
+                            background: controlsOpen ? 'rgba(59, 130, 246, 0.08)' : 'rgba(255,255,255,0.04)',
+                            color: controlsOpen ? '#3b82f6' : 'rgba(255,255,255,0.5)',
+                            cursor: 'pointer', fontSize: '0.6rem', fontWeight: 800,
+                            textTransform: 'uppercase', letterSpacing: '0.1em',
+                            transition: 'all 0.2s', flexShrink: 0, marginLeft: 12,
+                        }}
+                    >
+                        <span>⚙</span> Global Controls <span style={{ fontSize: '0.65rem', opacity: 0.6 }}>{controlsOpen ? '▲' : '▼'}</span>
+                    </button>
+                </div>
+
+                {/* Collapsible Global Controls drawer */}
+                {controlsOpen && (
+                    <div style={{
+                        borderTop: '1px solid rgba(255,255,255,0.06)',
+                        background: 'rgba(4,4,10,0.98)',
+                        padding: '10px 20px',
+                        display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 14px',
+                    }}>
+
+                        {headerControls}
+                    </div>
+                )}
+            </div>
+
+            {/* Region Pulse — below sticky HUD */}
+            {belowHeader}
+
+            {/* ── BELT ROWS ── */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '14px 16px' }}>
+                {mergedBelts.map(b => {
+                    const dc = beltDaemon[b.id];
+                    // Build live status string from belt telemetry
+                    const isActive = dc?.active;
+                    const statusLabel = b.status === 'PROCESSING' ? 'PROCESSING' : 'IDLE';
+                    const activeRecordStatus = (b as any).activeRecord?.pipeline_status as string | undefined;
+                    const daemonName = b.id === 1 ? (seedProvider === 'website-resolver' ? 'RESOLVER' : 'SCOUT') : b.id === 2 ? 'DETECTIVE' : b.id === 3 ? 'PHOTOGRAPHER' : 'PUBLISHER';
+                    const daemonStatus = activeRecordStatus
+                        ? `[${daemonName}] ${activeRecordStatus}`
+                        : b.target && b.target !== 'WAITING...'
+                            ? `${statusLabel}: ${b.target}`
+                            : b.job && b.job !== 'IDLE'
+                                ? b.job
+                                : isActive ? 'RUNNING \u2014 WAITING FOR QUEUE' : 'IDLE \u2014 AWAITING JOB';
+                    return (
+                        <BeltNode
+                            key={b.id}
+                            {...b}
+                            onPhaseNav={onPhaseNav ? () => onPhaseNav(BELT_TAB[b.id] ?? 'phase1') : undefined}
+                            daemonActive={dc?.active}
+                            hasDaemon={dc?.hasDaemon ?? true}
+                            onDaemonStart={dc?.onStart}
+                            onDaemonStop={dc?.onStop}
+                            daemonStatus={daemonStatus}
+                            onBlockSpot={onBlockSpot || handleBlockSpot}
+                            onRestartSpot={handleRestartSpot}
+                            onFreezeSpot={handleFreezeSpot}
+                            carouselSpots={b.id === 3 ? phaseQueues?.phase4 : (b.id === 4 ? phaseQueues?.['published'] : undefined)}
+                            onPurgeSpot={onPurgeSpot}
+                            onSetHero={onSetHero}
+                            onDeletePhoto={onDeletePhoto}
+                            onAssignPhotoType={onAssignPhotoType}
+                            onUploadPhoto={onUploadPhoto}
+                            seedProvider={b.id === 1 ? seedProvider : undefined}
+                            onProviderChange={b.id === 1 ? onProviderChange : undefined}
+                            scrapeScope={b.id === 2 ? scrapeScope : undefined}
+                            onScopeChange={b.id === 2 ? onScopeChange : undefined}
+                            liveStreamText={liveStreamText}
+                            isStreaming={isStreaming}
+                            currentAnalyzingSpot={currentAnalyzingSpot}
+                            logs={logs}
+                        />
+                    );
+                })}
+            </div>
+
+            {/* ── TRIAGE INTELLIGENCE ROW ── */}
+            {pipelineStats?.summary && (
+                <div style={{
+                    margin: '0 16px 16px',
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(255,255,255,0.07)',
+                    borderRadius: '10px',
+                    padding: '12px 16px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.62rem', fontWeight: 900, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' }}>⚠ Pipeline Health Diagnostics</span>
+                        <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)' }}>all statuses · refreshes every 15s</span>
+                    </div>
+
+                    {/* Row 1: Problem statuses */}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        {([
+                            { label: '🚫 REJECTED',       value: pipelineStats.summary.rejected,          color: '#ef4444', bg: 'rgba(239,68,68,0.1)',   border: 'rgba(239,68,68,0.3)',   tip: 'Spots rejected by toxicity filter — not roller rinks' },
+                            { label: '🛑 STALLED',        value: pipelineStats.summary.stalled,           color: '#f97316', bg: 'rgba(249,115,22,0.1)',  border: 'rgba(249,115,22,0.3)',  tip: 'Spots that crashed 3+ times — need manual review' },
+                            { label: '⏸ ON HOLD',         value: pipelineStats.summary.on_hold,           color: '#a78bfa', bg: 'rgba(167,139,250,0.1)', border: 'rgba(167,139,250,0.3)', tip: 'Manually frozen records' },
+                            { label: '🌐 SITE STALLED',   value: pipelineStats.summary.stalled_website,   color: '#fbbf24', bg: 'rgba(251,191,36,0.1)',  border: 'rgba(251,191,36,0.3)',  tip: 'Website resolver stalled — no URL found' },
+                            { label: '🔄 GAP FILL',        value: pipelineStats.summary.gap_fill_active,   color: '#22d3ee', bg: 'rgba(34,211,238,0.1)',  border: 'rgba(34,211,238,0.3)',  tip: 'Spots currently being re-enriched by gap-fill pass' },
+                        ] as {label:string;value:number|undefined;color:string;bg:string;border:string;tip:string}[]).map(({ label, value, color, bg, border, tip }) => value !== undefined && (
+                            <div key={label} title={tip} style={{
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                                background: bg, border: `1px solid ${border}`,
+                                borderRadius: '6px', padding: '4px 10px',
+                                cursor: 'default'
+                            }}>
+                                <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.06em' }}>{label}</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 900, color, fontFamily: 'JetBrains Mono, monospace' }}>{(value ?? 0).toLocaleString()}</span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Row 2: Photo health — surfaces the invisible no-photo MEDIA_READY problem */}
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', paddingTop: '6px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                        <span style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.25)', fontWeight: 700, letterSpacing: '0.08em', alignSelf: 'center' }}>📸 PHOTO HEALTH</span>
+                        {([
+                            { label: '✅ HAS PHOTOS',         value: pipelineStats.summary.media_ready_with_photos, color: '#4ade80', bg: 'rgba(74,222,128,0.08)', border: 'rgba(74,222,128,0.25)', tip: 'MEDIA_READY spots with at least 1 photo — truly publisher-ready' },
+                            { label: '📷 NO PHOTOS',          value: pipelineStats.summary.no_photos_media_ready,   color: '#fb923c', bg: 'rgba(251,146,60,0.1)',  border: 'rgba(251,146,60,0.3)',  tip: 'MEDIA_READY with ZERO photos — Publisher will still process them but may reject' },
+                            { label: '🌐 HAS SITE · NO PHOTO', value: pipelineStats.summary.photoless_with_website, color: '#f43f5e', bg: 'rgba(244,63,94,0.1)',   border: 'rgba(244,63,94,0.35)',  tip: 'MEDIA_READY + has website + no photos — RE-QUEUE to DEEP_CRAWLED to fix!' },
+                            { label: '📦 HAS CANDIDATES',      value: pipelineStats.summary.has_candidates,          color: '#a78bfa', bg: 'rgba(167,139,250,0.08)', border: 'rgba(167,139,250,0.2)', tip: 'Spots with candidate_photos queued but not yet downloaded by Photographer' },
+                        ] as {label:string;value:number|undefined;color:string;bg:string;border:string;tip:string}[]).map(({ label, value, color, bg, border, tip }) => value !== undefined && (
+                            <div key={label} title={tip} style={{
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                                background: bg, border: `1px solid ${border}`,
+                                borderRadius: '6px', padding: '4px 10px',
+                                cursor: 'default'
+                            }}>
+                                <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', letterSpacing: '0.06em' }}>{label}</span>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 900, color, fontFamily: 'JetBrains Mono, monospace' }}>{(value ?? 0).toLocaleString()}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+        </div>
+    );
+}
+
+export default ScraperPipeline;
+
+
+
+

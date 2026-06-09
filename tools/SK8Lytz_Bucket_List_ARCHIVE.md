@@ -908,3 +908,13 @@ pm run verify which includes QA tests.
   - **Goal:** Add re-entrancy guards to 4 remaining R-26 instances NOT covered in phase 1: `SessionContext.tsx` (checkAutoPause GPS flood + syncSessionState AppState race), `DashboardScreen.tsx` (checkNewDevice — monolith, extract first), `useHealthTelemetry.ts` (setInterval pattern), `useCrewProximityRadar.ts` (partially guarded).
   - **Decision Log (2026-06-08):** These were found in R-26 during fix/re-entrancy-guards execution. DashboardScreen is blocked by monolith extraction (>30KB rule). SessionContext is high-risk — requires spike to understand GPS speed dependency chain before touching. Filed to TRIAGE per zero-collateral-damage rule.
   - **Source of Truth:** 📖 [R-26_findings.json](artifacts/deepdive_raw/R-26_findings.json) entries 2–5
+
+- [x] **`fix/triage-ble-buffer-lockout`** `[MERGE: 3b9eca9f]`
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[BLE]` `[H-RISK]` `[Snack]` `[🤖 PRO-HIGH]` `[BATCH:triage-sweep]`
+  - **Goal:** Enforce 12-pixel minimum length constraint for 0x59 payloads to prevent A3 chipset EEPROM buffer lockouts.
+  - **Decision Log (2026-06-08):** Flagged during deep-dive synthesis: payloads below 10 pixels lock the A3 buffer.
+  - **Analysis:** 📊 Source: [system_audit_report.md](artifacts/system_audit_report.md) · Plan: [PLAN-triage-ble-buffer-lockout.md](docs/plans/PLAN-triage-ble-buffer-lockout.md)
+    Key finding: "BleWriteDispatcher.ts fails to enforce a minimum length constraint for 0x59 payloads."
+    Rejected alternative: "Modifying the firmware — rejected as it's outside our control; client must pad."
+  - **Source of Truth:** 📖 `.agents/rules/agent-behavior.md` Rule 10
+  - **Details:** Must pad 0x59 payloads < 12 pixels.

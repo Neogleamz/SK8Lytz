@@ -961,3 +961,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Rip out Mapbox, port Scraper Dashboard USMap SVG. Run raw SQL to generate missing crash_telemetry_logs table.
 **Verify result:** TSC ?, Build ?
 **Files touched:** MapWidget.tsx, AppPerformanceWidget.tsx, FleetHealthWidget.tsx, ControlTowerWidget.tsx, HardwareBanWidget.tsx, UserManagementWidget.tsx
+
+### [MERGE] 2026-06-09T03:44 — fix-triage-ble-buffer-lockout ? master @ 3b9eca9f
+**What merged:** Enforced 12-pixel minimum payload buffer defense for 0x59 commands in BleWriteDispatcher to prevent 0xA3 hardware EEPROM memory lock.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/services/BleWriteDispatcher.ts
+
