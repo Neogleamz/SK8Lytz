@@ -1,7 +1,7 @@
 /* global global, window */
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View, AppState, Text, LogBox, Platform } from 'react-native';
+import { View, StyleSheet, LogBox, AppState, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import DashboardScreen from './src/screens/DashboardScreen';
 import AuthScreen from './src/screens/AuthScreen';
@@ -67,7 +67,6 @@ function AppContent() {
     sessionLoaded,
     sessionExpired,
     setIsOfflineMode,
-    clearOfflineMode,
   } = useAuth();
 
   useOfflineSyncWorker();
@@ -155,8 +154,8 @@ export default function App() {
     <GlobalErrorBoundary>
       <SafeAreaProvider>
         <ThemeProvider>
-          <AppConfigProvider>
-            <AuthProvider>
+          <AuthProvider>
+            <AppConfigProvider>
               <FavoritesProvider>
                 <SessionProvider>
                   <BLEProvider>
@@ -167,8 +166,8 @@ export default function App() {
                   </BLEProvider>
                 </SessionProvider>
               </FavoritesProvider>
-            </AuthProvider>
-          </AppConfigProvider>
+            </AppConfigProvider>
+          </AuthProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GlobalErrorBoundary>
@@ -178,3 +177,4 @@ export default function App() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
 });
+
