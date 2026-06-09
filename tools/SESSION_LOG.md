@@ -1038,3 +1038,19 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Decision:** Migrated AG Grid to JS Theme API (	hemeQuartz.withParams) and enabled AllCommunityModule.
 **Rejected:** Legacy CSS imports and class-based styling, because AG Grid v35 strictly forbids mixed styling (Error 106) and throws Error 200 without strict module registration.
 **Don't re-derive:** Never use g-grid.css with g-theme-* classes in v35+. Always use JS Theme API and AllCommunityModule.
+### [MERGE] 2026-06-09T06:11 — split-brain-telemetry-drop ? master @ 5ec149be
+**What merged:** 
+- Corrected DeviceRepository to stop stripping ble_version, factory_name, and manufacturer_data on save.
+- Added missing hardware metadata fields to RegisteredDevice type.
+- Updated FleetHealthWidget dashboard to natively query registered_devices for fragmentation metrics instead of relying on joined telemetry data.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:**
+- src/services/DeviceRepository.ts
+- src/hooks/useRegistration.ts
+- tools/command-center/src/components/widgets/FleetHealthWidget.tsx
+
+### [DECISION] 2026-06-09T06:11 — Native Telemetry Persistence
+**Decision:** Stop stripping BLE hardware metadata at the DeviceRepository persistence layer and save it natively to the registered_devices table. Update Dashboard to rely on this canonical source.
+**Rejected:** Joining registered_devices with discovered_devices_telemetry in the UI to piece together the missing metadata. Rejected because it's a UI workaround for a persistence layer bug, and it breaks when offline or when telemetry data expires.
+**Don't re-derive:** DeviceRepository.ts MUST map all hardware metadata into dbRow during saveDevice and _flushPendingSync. Do not strip fields just because they aren't explicitly rendered in the app's settings screen; they are critical for backend analytics and dashboard fragmentation tracking.
+**Source:** src/services/DeviceRepository.ts:290

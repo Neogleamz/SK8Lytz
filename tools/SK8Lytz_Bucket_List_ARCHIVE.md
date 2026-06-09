@@ -978,3 +978,11 @@ pm run verify which includes QA tests.
     Rejected alternative: "Mocking the BleManager library completely via jest.mock — rejected because it breaks the iOS build and doesn't run in the actual Expo Go app."
   - **Source of Truth:** 📖 `src/hooks/ble/useBLEScanner.ts`
   - **Details:** Must strictly enforce `__DEV__` gating. Use Dependency Injection in the scanner to yield fake Device objects instead of triggering the Bluetooth radio.
+
+- [x] **`bug/split-brain-telemetry-drop`**
+  - **Tags:** `[⚪ TRIAGE]` `[❌ UNVERIFIED]` `[BLE]` `[M-RISK]` `[Snack]` `[🤖 PRO-HIGH]`
+  - **Goal:** Fix `DeviceRepository.saveDevice` to properly capture and persist `ble_version`, `factory_name`, and `manufacturer_data` to `registered_devices` during the registration flow instead of hardcoding `null`.
+  - **Decision Log (2026-06-09):** The global admin dashboard revealed that `registered_devices` drops BLE chipset version data. A spike confirmed that the BLE scanner captures it, but `DeviceRepository.ts` strips it.
+  - **Plan:** 📎 [PLAN-split-brain-telemetry-drop.md](docs/plans/PLAN-split-brain-telemetry-drop.md)
+  - **Source of Truth:** 📖 `src/services/DeviceRepository.ts`
+  - **Details:** Revert dashboard join workarounds and fix the root cause in the mobile app persistence layer.
