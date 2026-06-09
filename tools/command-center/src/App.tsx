@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { supabase, checkAdminStatus } from './services/supabase';
-import { LayoutDashboard, Users, ShieldAlert, Activity, Settings, Map, Bug } from 'lucide-react';
+import { LayoutDashboard, Users, ShieldAlert, Activity, Settings, Map, Bug, Database } from 'lucide-react';
+import ScraperApp from './scraper/ScraperApp';
 import MapWidget from './components/widgets/MapWidget';
 import FleetHealthWidget from './components/widgets/FleetHealthWidget';
 import AppPerformanceWidget from './components/widgets/AppPerformanceWidget';
@@ -21,6 +22,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => (
         <Link to="/performance" className="nav-link"><LayoutDashboard size={18} /> App Performance</Link>
         <Link to="/live-debugger" className="nav-link text-red-400"><Bug size={18} /> Live Debugger</Link>
         <Link to="/settings" className="nav-link"><Settings size={18} /> Control Tower</Link>
+        <Link to="/scraper" className="nav-link"><Database size={18} /> Scraper Dashboard</Link>
         <Link to="/hardware" className="nav-link"><ShieldAlert size={18} /> Hardware Ban</Link>
         <Link to="/users" className="nav-link"><Users size={18} /> User Mgmt</Link>
       </nav>
@@ -129,6 +131,7 @@ export default function App() {
           <Route path="/fleet-health" element={<FleetHealthWidget />} />
           <Route path="/performance" element={<AppPerformanceWidget />} />
           <Route path="/live-debugger" element={<div className="p-6"><LiveDebuggerWidget /></div>} />
+          <Route path="/scraper" element={<div className="scraper-legacy-root w-full h-full"><ScraperApp /></div>} />
           <Route path="/settings" element={<ControlTowerWidget />} />
           <Route path="/hardware" element={<HardwareBanWidget />} />
           <Route path="/users" element={<UserManagementWidget />} />

@@ -51,7 +51,6 @@ COPY package.json ./
 
 # Copy all the sub-project package.jsons so we can install their dependencies
 COPY tools/scraper/package.json ./tools/scraper/
-COPY tools/scraper-dashboard/package.json ./tools/scraper-dashboard/
 COPY tools/discord-bridge/package.json ./tools/discord-bridge/
 COPY tools/command-center/package.json ./tools/command-center/
 COPY modules/ ./modules/
@@ -61,7 +60,6 @@ RUN bun install
 
 # Install sub-project dependencies (trust native modules: better-sqlite3, sharp)
 RUN cd tools/scraper && bun install --trust better-sqlite3 --trust sharp
-RUN cd tools/scraper-dashboard && bun install
 RUN cd tools/discord-bridge && bun install
 RUN cd tools/command-center && bun install
 
