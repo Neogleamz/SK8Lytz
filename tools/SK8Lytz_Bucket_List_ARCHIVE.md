@@ -1042,4 +1042,14 @@ pm run verify which includes QA tests.
   - **Tags:** `[🚧 ACTIVE]` `[✅ VERIFIED]` `[TOOLING]` `[L-RISK]` `[Snack]` `[🤖 PRO-MED]` `[BATCH:docker-web-demo]`
   - **Goal:** Containerize the Expo Web Demo using Docker to resolve manual boot friction.
   - **Decision Log:** User experienced persistent friction restarting the web demo manually on port 8081. Transitioning to a Docker service within the existing `docker-compose.yml` stack to match Command Center/Scraper behavior.
-  - **Source of Truth:** 📖 `docker-compose.yml`, `Dockerfile.web` (to be created)
+  - **Source of Truth:** 📖 `docker-compose.yml`, `Dockerfile.web` (to be created)
+
+- [x] **`refactor/ble-p3-connect-service`** — merged `e92c63c6`
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[M-RISK]` `[Meal]` `[🧠 HIGH]` `[BATCH:ble-xstate-pipeline]`
+  - **Goal:** Move GATT connection pipeline into a `fromPromise` XState service invoked by CONNECTING state. `BleConnectionManager.ts` deleted. Machine owns full connect lifecycle.
+  - **Decision Log (2026-06-10):** Audit found 7 call sites of `connectToDevices` in `DashboardScreen.tsx` (lines 543, 574, 596, 611, 645, 845, 1195) — all routing through `BleConnectionManager.ts:42`. Manual `CONNECT_SUCCESS`/`CONNECT_FAIL` bleSend calls require the caller to correctly bracket the state machine, which it doesn't always do under async pressure. XState `invoke.onDone`/`onError` is atomic.
+  - **Analysis:** 📊 Source: [BLE_AUDIT_REPORT.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_REPORT.md) §3 Async Path Map · Plan: [PLAN-ble-p3-connect-service.md](./plans/PLAN-ble-p3-connect-service.md)
+    Key finding: "Device Connection entry trigger `BleConnectionManager.ts:42` — exit cleanup `BleConnectionManager.ts:88` — no abort signal propagated to intermediate GATT awaits"
+    Rejected alternative: "Fix cancellation in BleConnectionManager — rejected because the root problem is that the machine does not own the lifecycle; fixing the manager leaves the structural gap"
+  - **Source of Truth:** 📖 [BleConnectionManager.ts:42-88](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleConnectionManager.ts#L42) · [BleSessionFactory.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleSessionFactory.ts)
+  - **Details:** Pure GATT helpers (GATT 133 retry, MTU negotiation, handshake) move to `ConnectService.ts` or `BleSessionFactory.ts`. Double-tap gating is now free — machine in CONNECTING ignores CONNECT_REQUEST.

@@ -1338,3 +1338,12 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Rejected:** Keeping scanner files with dead-commented radio calls — rejected because commented code is a confusion vector that gets copied and re-enabled by future engineers.
 **Don't re-derive:** useBLEBatterySweep.ts no longer takes scanCallback in its interface. It takes leSend. The hook is now purely a battery observer that signals state changes to the machine.
 **Source:** src/hooks/ble/useBLEBatterySweep.ts:23, src/hooks/ble/useBLEScanner.ts:291
+### [MERGE] 2026-06-10T06:45 — ble-p3-connect-service -> master @ e92c63c6
+**What merged:**
+- Created src/services/ble/ConnectService.ts as a fromPromise XState actor
+- Refactored BleMachine.ts to invoke ConnectService during the CONNECTING state
+- Deleted src/services/BleConnectionManager.ts (GATT connection logic relocated)
+- Updated useBLE.ts to remove legacy connection manager dependencies and forward all connection intent through bleSend({ type: 'CONNECT_REQUEST' })
+- Added acquireGattLock protection to prevent stampeding herd concurrent connect attempts
+**Verify result:** TSC ?, Jest ?, TypeSafety ?, Workflows ?, Auth ?
+**Files touched:** src/services/ble/ConnectService.ts, src/services/ble/BleMachine.ts, src/services/ble/BleMachine.types.ts, src/hooks/useBLE.ts, src/services/BleConnectionManager.ts
