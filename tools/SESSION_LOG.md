@@ -1670,3 +1670,15 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Source:** docs/plans/PLAN-monolith-extraction-audit.md — Audit Results 2026-06-10 section
 **Cross-checked:** Wave 1 exception-masking agent warned about DockedController lines 438/470
 
+
+### [MERGE] 2026-06-10T20:15 — Wave 1 of deepdive-sweep → master @ 559dcaaf
+**What merged:**
+- latlist-render-sweep @ 3bf9e046 — 11 files, 17 FlatList inline props stabilized with useCallback
+- hal-enclosure-sweep @ 855cc7d5 — 7 files, 0x59/0x40 byte construction moved to ZenggeProtocol, MAC PII scrubbed from 3 call sites, group writes parallelized
+- exception-masking-sweep @ 559dcaaf — 10 files, 17 silent catches fixed with canonical e instanceof Error pattern
+- monolith-extraction-audit — read-only, 13/14 files confirmed monoliths, advisory written to PLAN file
+**Verify result:** TSC ✅ Jest 203/203 ✅ All 8 gates ✅ on all 3 code tasks
+**Files touched:** 28 files total, ~346 lines net change across 3 merge commits
+**Wave 2 status:** UNLOCKED — promise-safety-sweep ready to start
+**FRICTION-029:** Blast radius scanner false-positived 2x on ZenggeProtocol.ts catch-block edits. Filed. Monitoring for 3rd occurrence before proposing scanner fix.
+**Key advisory for Wave 2-6:** DockedController.tsx (65.6KB/50 hooks) hook zone strictly off-limits. Safe zones: JSX lines 900+. DashboardScreen.tsx safe for leaf/JSX edits only.

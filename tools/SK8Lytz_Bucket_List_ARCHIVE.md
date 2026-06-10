@@ -1353,3 +1353,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "Direct Bucket List insertion — rejected; tasks must be presented for user review first."
   - **Source of Truth:** 📖 `self_healing_audit_system.md` §6.1, §6.2
   - **Details:** Output string must strictly match SK8Lytz Kanban Schema.
+
+- [x] **chore/exception-masking-sweep** 🚀 Merged in 559dcaaf
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[CORE]` `[✅ L-RISK]` `[🍱 Meal]` `[🤖 PRO-MED]` `[BATCH:deepdive-sweep]` `[WAVE:1]`
+  - **Goal:** Fix 17 empty catch blocks and `String(e)` misuses across 12 files. Protocol files (`ZenggeProtocol.ts`, `BanlanxAdapter.ts`) are silently swallowing errors that should be logged. Apply canonical `e instanceof Error ? e.message : String(e)` pattern throughout.
+  - **Decision Log (2026-06-10):** Fleet found 3 silent catches in `ZenggeProtocol.ts:18,192,393` — protocol-level errors are swallowed with zero visibility. `BanlanxAdapter.ts:95` same pattern. `SessionContext.tsx:366,399` uses raw `String(err)` instead of proper unwrapping.
+  - **Analysis:** 📊 Source: `artifacts/system_audit_report.md` · CLUSTER-04 (17 findings, R-06)
+    Key finding: "Protocol-level silent catches are the highest priority — they hide BLE command failures with zero observability."
+    Rejected alternative: "Bare re-throw — rejected, crashes the caller instead of gracefully logging."
+  - **Plan:** 📎 [PLAN-exception-masking-sweep.md](docs/plans/PLAN-exception-masking-sweep.md)
+  - **Source of Truth:** 📖 `src/protocols/ZenggeProtocol.ts:18,192,393` · `src/protocols/BanlanxAdapter.ts:95` · `src/context/SessionContext.tsx:366,399`

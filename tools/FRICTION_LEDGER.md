@@ -406,3 +406,6 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Status:** MONITORING
 - **Proposed Fix (at 3 occurrences):** Add suppression annotations or a scanner config option for: (a) changes to static class members only, (b) changes confined to AppLogger.* call sites with no method signature delta.
 
+
+  **2nd Occurrence — 2026-06-10 — exception-masking-sweep:** ZenggeProtocol.ts lines 18, 192, 393 — catch block body changes only (added AppLogger.warn + e: unknown typing). Zero protocol/interface/dispatch changes. -IgnoreBlast required.
+  **Occurrences updated:** 2 / 3
