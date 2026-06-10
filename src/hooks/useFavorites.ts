@@ -84,7 +84,7 @@ export function useFavorites() {
             
             const finalFavs = Array.from(mergedMap.values());
             setFavorites(finalFavs);
-            AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(finalFavs));
+            AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(finalFavs)).catch((err: unknown) => AppLogger.warn('[useFavorites] Failed to persist favorites', err instanceof Error ? err.message : String(err)));
           }
         } catch (err: unknown) {
           AppLogger.warn('[Favorites] Failed to fetch cloud favorites', { error: (err instanceof Error ? err.message : String(err)) });

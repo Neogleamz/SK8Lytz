@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { DarkColors, LightColors, ThemePalette } from '../theme/theme';
+import { AppLogger } from '../services/AppLogger';
 
 const THEME_KEY = '@Sk8lytz_ThemeMode';
 const CONTROL_THEME_KEY = '@Sk8lytz_ControlUITheme';
@@ -37,7 +38,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleTheme = useCallback(() => {
     setIsDark((prev) => {
       const next = !prev;
-      AsyncStorage.setItem(THEME_KEY, next ? 'dark' : 'light');
+      AsyncStorage.setItem(THEME_KEY, next ? 'dark' : 'light').catch((err: unknown) => AppLogger.warn('[ThemeContext] Failed to persist THEME_KEY', err instanceof Error ? err.message : String(err)));
       return next;
     });
   }, []);
@@ -45,7 +46,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleControlUITheme = useCallback(() => {
     setControlUITheme((prev) => {
       const next = prev === 'CLASSIC' ? 'DOCKED' : 'CLASSIC';
-      AsyncStorage.setItem(CONTROL_THEME_KEY, next);
+      AsyncStorage.setItem(CONTROL_THEME_KEY, next).catch((err: unknown) => AppLogger.warn('[ThemeContext] Failed to persist CONTROL_THEME_KEY', err instanceof Error ? err.message : String(err)));
       return next;
     });
   }, []);

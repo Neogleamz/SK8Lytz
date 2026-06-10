@@ -334,7 +334,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }, 5000);
     };
 
-    setupNotification();
+    setupNotification().catch(err => AppLogger.error('[SessionContext] setupNotification failed', err instanceof Error ? err.message : String(err)));
 
     return () => {
       if (updateInterval) clearInterval(updateInterval);

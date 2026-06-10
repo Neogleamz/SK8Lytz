@@ -72,7 +72,7 @@ const QuickPresetModal = React.memo(function QuickPresetModal({
     const newArr = [...quickPresets];
     newArr.splice(quickPromptTargetIndex, 1);
     setQuickPresets(newArr);
-    AsyncStorage.setItem(`${STORAGE_PREFIX}QuickPresets`, JSON.stringify(newArr));
+    AsyncStorage.setItem(`${STORAGE_PREFIX}QuickPresets`, JSON.stringify(newArr)).catch((err: unknown) => AppLogger.warn('[QuickPresetModal] Failed to persist quick preset', err instanceof Error ? err.message : String(err)));
     AppLogger.log('BUILDER_PRESET_DELETED', { index: quickPromptTargetIndex });
     closePrompt();
   };
@@ -86,7 +86,7 @@ const QuickPresetModal = React.memo(function QuickPresetModal({
       newArr[quickPromptTargetIndex].name = safeName;
     }
     setQuickPresets(newArr);
-    AsyncStorage.setItem(`${STORAGE_PREFIX}QuickPresets`, JSON.stringify(newArr));
+    AsyncStorage.setItem(`${STORAGE_PREFIX}QuickPresets`, JSON.stringify(newArr)).catch((err: unknown) => AppLogger.warn('[QuickPresetModal] Failed to persist quick preset', err instanceof Error ? err.message : String(err)));
     AppLogger.log('BUILDER_PRESET_SAVED', {
       name: safeName,
       isOverwrite: quickPromptTargetIndex !== -1,

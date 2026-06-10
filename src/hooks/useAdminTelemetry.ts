@@ -96,8 +96,12 @@ export function useAdminTelemetry(visible: boolean) {
   }, [visible, load]);
 
   const clearLogs = useCallback(async () => {
-    await AppLogger.clearLogs();
-    await load();
+    try {
+      await AppLogger.clearLogs();
+      await load();
+    } catch (err: unknown) {
+      AppLogger.warn('[AdminTelemetry] Failed to clear logs', err instanceof Error ? err.message : String(err));
+    }
   }, [load]);
 
   const uploadLogs = useCallback(async () => {
@@ -114,11 +118,12 @@ export function useAdminTelemetry(visible: boolean) {
   }, [isUploading]);
 
   const exportLogs = useCallback(async () => {
-    const json = await AppLogger.exportJSON();
     try {
+      const json = await AppLogger.exportJSON();
       await Share.share({ message: json, title: 'SK8Lytz Logs' });
     } catch (e: unknown) {
       Alert.alert('Export failed', (e instanceof Error ? e.message : String(e)));
+      AppLogger.error('[AdminTelemetry] Failed to export logs', e instanceof Error ? e.message : String(e));
     }
   }, []);
 

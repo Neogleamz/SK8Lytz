@@ -55,6 +55,7 @@ export default function HardwareSetupWizardScreen({
   const [isBlinking, setIsBlinking] = useState<string | null>(null);
   const [isClaiming, setIsClaiming] = useState(false);
   const [selectedDeviceMacs, setSelectedDeviceMacs] = useState<Set<string>>(new Set());
+  const [setupError, setSetupError] = useState<string | null>(null);
   
   // Step 3 State
   const [groupName, setGroupName] = useState('');
@@ -78,7 +79,12 @@ export default function HardwareSetupWizardScreen({
        const colorArray = Array(points).fill(color);
        
        const payloadResult = adapter.buildMultiColor(colorArray, points, 1, 1, 0x00);
-       await pingDevice(device.device_mac, payloadResult.packets[0], { probe: false, duration: 500, turnOffAtEnd: false });
+       try {
+         await pingDevice(device.device_mac, payloadResult.packets[0], { probe: false, duration: 500, turnOffAtEnd: false });
+       } catch (err: unknown) {
+         AppLogger.error('[FTUE] pingDevice failed in orientation test', err instanceof Error ? err.message : String(err));
+         setSetupError('Device not responding, retrying...');
+       }
     }
   };
 
@@ -510,6 +516,12 @@ export default function HardwareSetupWizardScreen({
           </View>
         ) : step === 1 ? (
           <>
+            {setupError && (
+              <View style={[styles.errorBox, { marginBottom: Spacing.md }]}>
+                <MaterialCommunityIcons name="alert-circle" size={20} color="#ff4444" />
+                <Text style={styles.errorText}>{setupError}</Text>
+              </View>
+            )}
             {pendingRegistrations.length > 0 && bleState !== 'SCANNING' ? (
               <TouchableOpacity 
                 style={styles.primaryBtn} 
@@ -544,6 +556,7 @@ export default function HardwareSetupWizardScreen({
             style={[styles.primaryBtn, (isClaiming || selectedDeviceMacs.size === 0) && styles.primaryBtnDisabled]} 
             disabled={isClaiming || selectedDeviceMacs.size === 0}
             onPress={() => {
+               setSetupError(null);
                const selected = pendingRegistrations.filter(r => selectedDeviceMacs.has(r.device_mac));
                const configs: Record<string, any> = {};
                let leftAssigned = false;
@@ -601,6 +614,7 @@ export default function HardwareSetupWizardScreen({
             onPress={async () => {
                AppLogger.log('FTUE_PHASE_3_COMPLETE', { action: 'transition_to_phase_4' });
                setIsClaiming(true);
+               setSetupError(null);
                try {
                  const selected = pendingRegistrations.filter(r => selectedDeviceMacs.has(r.device_mac));
                  
@@ -655,6 +669,9 @@ export default function HardwareSetupWizardScreen({
                    };
                  });
                  await onSetupComplete(finalizedDevices);
+               } catch (err: unknown) {
+                 AppLogger.error('[FTUE] Setup completion failed', err instanceof Error ? err.message : String(err));
+                 setSetupError(err instanceof Error ? err.message : 'Setup failed');
                } finally {
                  setIsClaiming(false);
                }
