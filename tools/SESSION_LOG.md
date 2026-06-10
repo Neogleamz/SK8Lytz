@@ -1,3 +1,15 @@
+### [MERGE] 2026-06-10T09:56 — ble-t4-recovery-service-tests → master @ 4fae3d5b
+**What merged:**
+- Added 13 Jest unit tests covering all 5 groups for `RecoveryService.ts` in `src/services/ble/__tests__/RecoveryService.test.ts`.
+- Group A: Regression guard — `clearWriteQueue()` called synchronously before first GATT attempt (commit `2276ac8a` fix guard).
+- Group B: RECOVERY_COMPLETE path — GATT success, `adapterMapRef` update, `monitorCharacteristicForService` re-registration, `onOrganicDisconnect` disconnect subscription rewiring, MTU re-negotiation on Android.
+- Group C: RECOVERY_FAIL paths — empty `ghostedDeviceIds`, Phase 1+2 exhaustion (35 attempts), Phase 3 poll exhaustion (120 polls).
+- Group D: Phase 3 happy path — `getSweepedDevice` returns device → GATT reconnect → RECOVERY_COMPLETE; Phase 3 GATT failure → RECOVERY_FAIL.
+- Group E: `cancel()` during Phase 1 backoff and Phase 3 poll — exits cleanly with no events sent.
+**Verify result:** TSC ✅, Jest ✅, all 8 gates green ✅
+**Files touched:** src/services/ble/__tests__/RecoveryService.test.ts
+**Pattern:** XState v5 `fromCallback.config` direct invocation with mock `sendBack` — same `(actorLogic as any).config(...)` technique established for callback actors.
+
 ### [MERGE] 2026-06-10T09:39 — ble-t3-connect-service-tests → master @ 43377f8c
 **What merged:**
 - Added 18 comprehensive Jest unit tests covering single device connect, group connect sequential flow, cache hit logic, transient GATT 133 retries with backoff, stale device flush, MTU negotiation retries/fallbacks, adapter mapping, and `onOrganicDisconnect` wiring in `src/services/ble/__tests__/ConnectService.test.ts`.

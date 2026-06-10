@@ -1080,3 +1080,12 @@ pm run verify which includes QA tests.
   - **Plan:** 📎 [PLAN-ble-t3-connect-service-tests.md](docs/plans/PLAN-ble-t3-connect-service-tests.md)
   - **Source of Truth:** 📖 `src/services/ble/ConnectService.ts` · `tools/BLE_AUDIT_2/02_connectService.md`
   - **Details:** 18 test cases across 7 groups. Mock `bleManager`, `createGattSession`, and capture `onDeviceDisconnected` callback to verify `onOrganicDisconnect` fires.
+
+- [x] **test/ble-t4-recovery-service-tests** — RecoveryService unit tests
+  - **Tags:** [✅ READY] [✅ VERIFIED] [BLE] [M-RISK] [Meal] [🧠 MED] [BATCH:ble-test-hardening]
+  - **Goal:** Write unit tests for RecoveryService.ts covering Phase 1/2/3 backoff, clearWriteQueue regression guard, RECOVERY_COMPLETE/FAIL events, and re-registration of notifications + adapter after reconnect.
+  - **Decision Log (2026-06-10):** The clearWriteQueue() fix (2276ac8a) also has no regression guard. The 3-phase recovery loop is the most complex async flow in the codebase — zero tests means any breakage is silent.
+  - **Analysis:** 📊 Source: [BLE_AUDIT_2/03_recoveryService.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/03_recoveryService.md)
+  - **Plan:** 📎 [PLAN-ble-t4-recovery-service-tests.md](docs/plans/PLAN-ble-t4-recovery-service-tests.md)
+  - **Source of Truth:** 📖 `src/services/ble/RecoveryService.ts` · `tools/BLE_AUDIT_2/03_recoveryService.md`
+  - **Details:** 13 test cases across 5 groups. Use `jest.useFakeTimers()` to fast-forward backoff delays. Assert `clearWriteQueue` called as first action.
