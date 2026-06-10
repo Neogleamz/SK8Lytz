@@ -355,6 +355,13 @@ export function useBLEScanner({
     }
   }, [registeredMacs.length, startSweeper, isSweeperActive, burstScan, scanCallback, bleSend, setAllDevices, isSandboxEnabled]);
 
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+      if (telemetryTimerRef.current) clearTimeout(telemetryTimerRef.current);
+    };
+  }, []);
+
   return {
     pendingRegistrations,
     scanForPeripherals,

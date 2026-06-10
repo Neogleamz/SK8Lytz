@@ -16,7 +16,23 @@ export interface TelemetryPayload {
   engagement_counters?: Record<string, number>;
 }
 
-let globalFlushTimer: ReturnType<typeof setInterval> | null = null;
+let _sharedFlushTimer: ReturnType<typeof setInterval> | null = null;
+const _registeredFlushCallbacks = new Set<() => void>();
+
+function startSharedTimer() {
+  if (_sharedFlushTimer === null) {
+    _sharedFlushTimer = setInterval(() => {
+      _registeredFlushCallbacks.forEach(cb => cb());
+    }, 15 * 60 * 1000);
+  }
+}
+
+function stopSharedTimer() {
+  if (_registeredFlushCallbacks.size === 0 && _sharedFlushTimer !== null) {
+    clearInterval(_sharedFlushTimer);
+    _sharedFlushTimer = null;
+  }
+}
 
 /**
  * God-Tier Telemetry Engine
@@ -172,18 +188,13 @@ export function useTelemetryLedger() {
     });
 
     // 15-Minute Heartbeat flush
-    if (!globalFlushTimer) {
-      globalFlushTimer = setInterval(() => {
-        flushToDatabase();
-      }, 15 * 60 * 1000);
-    }
+    _registeredFlushCallbacks.add(flushToDatabase);
+    startSharedTimer();
 
     return () => {
       subscription.remove();
-      if (globalFlushTimer) {
-        clearInterval(globalFlushTimer);
-        globalFlushTimer = null;
-      }
+      _registeredFlushCallbacks.delete(flushToDatabase);
+      stopSharedTimer();
     };
   }, [flushToDatabase]);
 

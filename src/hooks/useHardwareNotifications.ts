@@ -170,6 +170,10 @@ export function useHardwareNotifications({
         return newD;
       }));
     });
+
+    return () => {
+      setOnDataReceived(() => {});
+    };
   }, [setOnDataReceived, setAllDevices, setDeviceConfigs, isDiagnosticsMode]);
 
   // ── 2. Hardware probe callback: merge scanned config before first connect ───
@@ -199,5 +203,9 @@ export function useHardwareNotifications({
           : d
       ));
     });
+
+    return () => {
+      setOnHardwareProbed(() => {});
+    };
   }, [setOnHardwareProbed, setDeviceConfigs, setAllDevices]);
 }
