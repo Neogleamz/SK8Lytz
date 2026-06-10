@@ -5,6 +5,7 @@ import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 import type { ProtocolResult } from '../protocols/IControllerProtocol';
 import { enqueueWrite, resolveWritePriority, setWriteQueueGeneration } from './BleWriteQueue';
 import { BLE_TIMING } from '../constants/bleTimingConstants';
+import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 
 export interface BleWriteStateRefs {
   writeGeneration: number;
@@ -27,56 +28,9 @@ export async function executeWriteToDevice(
   stateRefs: BleWriteStateRefs,
   setWriteGeneration: (gen: number) => void
 ): Promise<boolean | 'partial'> {
-  // BEGIN BUFFER LOCKOUT DEFENSE (Rule 10)
-  if (payload[0] === 0x59 && payload.length >= 10) {
-    const totalLen = (payload[1] << 8) | payload[2];
-    const numLEDs = Math.floor((totalLen - 9) / 3);
-    
-    if (numLEDs > 0 && numLEDs < 12) {
-      const paddingPixels = 12 - numLEDs;
-      const paddingBytes = paddingPixels * 3;
-      const newTotalLen = totalLen + paddingBytes;
-      
-      const newPayload = new Array(newTotalLen + 1).fill(0);
-      newPayload[0] = 0x59;
-      newPayload[1] = (newTotalLen >> 8) & 0xFF;
-      newPayload[2] = newTotalLen & 0xFF;
-      
-      let srcIdx = 3;
-      let dstIdx = 3;
-      const existingRgbBytes = numLEDs * 3;
-      for (let i = 0; i < existingRgbBytes; i++) {
-        newPayload[dstIdx++] = payload[srcIdx++];
-      }
-      
-      for (let i = 0; i < paddingBytes; i++) {
-        newPayload[dstIdx++] = 0x00;
-      }
-      
-      const footerStart = srcIdx;
-      // Safety check in case payload is truncated
-      if (footerStart + 4 < payload.length) {
-        const origLedPoints = (payload[footerStart] << 8) | payload[footerStart + 1];
-        const safeLedPoints = Math.max(12, origLedPoints);
-        
-        newPayload[dstIdx++] = (safeLedPoints >> 8) & 0xFF;
-        newPayload[dstIdx++] = safeLedPoints & 0xFF;
-        
-        newPayload[dstIdx++] = payload[footerStart + 2];
-        newPayload[dstIdx++] = payload[footerStart + 3];
-        newPayload[dstIdx++] = payload[footerStart + 4];
-        
-        let checksum = 0;
-        for (let i = 0; i < dstIdx; i++) {
-          checksum += newPayload[i];
-        }
-        newPayload[dstIdx] = checksum & 0xFF;
-        
-        payload = newPayload;
-      }
-    }
-  }
-  // END BUFFER LOCKOUT DEFENSE
+  // BUFFER LOCKOUT DEFENSE (R-19): delegated to ZenggeProtocol.padStaticColorfulPayload()
+  // Source: tools/ZENGGE_PROTOCOL_BIBLE.md §0x59 MINIMUM PIXELS
+  payload = ZenggeProtocol.padStaticColorfulPayload(payload);
 
   const hexString = payload.map(x => x.toString(16).toUpperCase().padStart(2, '0')).join(' ');
   AppLogger.setLastTxPayload(hexString);
@@ -239,48 +193,12 @@ export async function executeWriteChunked(
   const safeMtu = targetDeviceId ? getDeviceMtu(targetDeviceId) - 3 : Math.min(...targets.map(d => getDeviceMtu(d.id))) - 3;
   const chunkSize = Math.max(20, safeMtu);
 
-  const totalLen = payload.length;
   const seqByte = Math.floor(Math.random() * 256) & 0xFF;
+  // 0x40 frame construction delegated to ZenggeProtocol.buildChunkedFrames() (R-19)
+  // Source: tools/ZENGGE_PROTOCOL_BIBLE.md §0x51 ZENGGE BLE Chunked Framing
+  const chunks = ZenggeProtocol.buildChunkedFrames(payload, chunkSize, seqByte);
 
-  const chunks: number[][] = [];
-  let offset = 0;
-  let segmentIndex = 0;
-
-  while (offset < totalLen) {
-    const isFirstChunk = segmentIndex === 0;
-    const headerSize = isFirstChunk ? 8 : 5;
-    const maxDataLen = chunkSize - headerSize;
-    const dataLen = Math.min(maxDataLen, totalLen - offset);
-    const isLastChunk = (offset + dataLen) >= totalLen;
-
-    let indexWord = segmentIndex;
-    if (isLastChunk) {
-      indexWord |= 0x8000;
-    }
-
-    const chunk = [
-      0x40,
-      seqByte,
-      (indexWord >> 8) & 0xFF,
-      indexWord & 0xFF,
-    ];
-
-    if (isFirstChunk) {
-      chunk.push((totalLen >> 8) & 0xFF);
-      chunk.push(totalLen & 0xFF);
-      chunk.push((dataLen + 1) & 0xFF); // ZENGGE counts the 0x0B byte in the data length
-      chunk.push(0x0B);
-    } else {
-      chunk.push(dataLen & 0xFF);
-    }
-
-    chunk.push(...payload.slice(offset, offset + dataLen));
-    chunks.push(chunk);
-    offset += dataLen;
-    segmentIndex++;
-  }
-
-  AppLogger.log('BLE_CHUNKED_WRITE', { payloadLen: totalLen, numChunks: chunks.length, chunkSize });
+  AppLogger.log('BLE_CHUNKED_WRITE', { payloadLen: payload.length, numChunks: chunks.length, chunkSize });
 
   // Wrap entire chunk sequence as single 'bulk' queue entry — chunks must not
   // be interleaved with other writes (ordering requirement of ZENGGE 0x40 framing).
@@ -384,36 +302,39 @@ async function _executeProtocolResultsInternal(
     let allSucceeded = true;
     const getDeviceMtu = (id: string) => mtuMap.get(id) ?? 186;
 
-    for (const { targetDeviceId, result } of payloads) {
-      if (ghostedDeviceIds.includes(targetDeviceId)) continue;
+    // Parallelize per-device writes — each targetDeviceId is a distinct device.
+    // Packet ordering within a single device is preserved by the sequential inner loop.
+    const writeResults = await Promise.all(
+      payloads
+        .filter(({ targetDeviceId }) => !ghostedDeviceIds.includes(targetDeviceId))
+        .map(async ({ targetDeviceId, result }) => {
+          const device = connectedDevices.find(d => d.id === targetDeviceId);
+          if (!device) return true;
 
-      const device = connectedDevices.find(d => d.id === targetDeviceId);
-      if (!device) continue;
+          const adapter = resolveProtocolForDevice(targetDeviceId, adapterMap);
+          const mtu = getDeviceMtu(targetDeviceId);
+          const preparedResult = adapter.prepareForTransmission(result, mtu);
 
-      const adapter = resolveProtocolForDevice(targetDeviceId, adapterMap);
-      const mtu = getDeviceMtu(targetDeviceId);
-      const preparedResult = adapter.prepareForTransmission(result, mtu);
-
-      for (let i = 0; i < preparedResult.packets.length; i++) {
-        const base64 = Buffer.from(preparedResult.packets[i]).toString('base64');
-        try {
-          await device.writeCharacteristicWithoutResponseForService(
-            adapter.serviceUUID,
-            adapter.writeCharacteristicUUID,
-            base64
-          );
-          if (i < preparedResult.packets.length - 1 && preparedResult.interPacketDelayMs > 0) {
-            await new Promise(res => setTimeout(res, preparedResult.interPacketDelayMs));
+          for (let i = 0; i < preparedResult.packets.length; i++) {
+            const base64 = Buffer.from(preparedResult.packets[i]).toString('base64');
+            try {
+              await device.writeCharacteristicWithoutResponseForService(
+                adapter.serviceUUID,
+                adapter.writeCharacteristicUUID,
+                base64
+              );
+              if (i < preparedResult.packets.length - 1 && preparedResult.interPacketDelayMs > 0) {
+                await new Promise(res => setTimeout(res, preparedResult.interPacketDelayMs));
+              }
+            } catch (e: unknown) {
+              AppLogger.warn(`[BLE] executeProtocolResults failed for ${targetDeviceId}`, e instanceof Error ? e.message : String(e));
+              return false;
+            }
           }
-        } catch (e: unknown) {
-          AppLogger.warn(`[BLE] executeProtocolResults failed for ${targetDeviceId}`, e instanceof Error ? e.message : String(e));
-          allSucceeded = false;
-          break;
-        }
-      }
-      // FIX: 50ms inter-device gap prevents GATT 133 on Android multi-device groups.
-      await new Promise(res => setTimeout(res, BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
-    }
+          return true;
+        })
+    );
+    allSucceeded = writeResults.every(Boolean);
     return allSucceeded;
   };
 

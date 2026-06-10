@@ -1,4 +1,6 @@
+import { AppLogger } from '../services/AppLogger';
+
 export const logFatalCrash = async (error: Error, stack: string) => {
-  console.error("Fatal Crash", error, stack);
+  AppLogger.error('Fatal Crash', { message: error.message, stack });
   return 'dummy-event-id';
 };

@@ -96,7 +96,7 @@ export function useOptimisticBLE({
             setWriteStatus('RECONCILED');
             AppLogger.warn('[OptimisticBLE] Write failed — triggering reconciliation');
             AppLogger.log('BLE_WRITE_ERROR', {
-              payloadLen: payload.length,
+              payload_size: payload.length,
               payloadHead: payload.slice(0, 4).map(b => b.toString(16)).join(' '),
               source: 'optimistic_reconcile',
             });

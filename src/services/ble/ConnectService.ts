@@ -164,7 +164,7 @@ export const connectService = fromPromise<
           if (isTransient && attempt < 3) {
             const baseDelay = GATT_BACKOFF_MS[attempt - 1];
             const delay = jitteredDelay(baseDelay, 500);
-            AppLogger.warn(`[BLE] GATT 133 on ${mac}. Attempt ${attempt}/3 — retrying in ${delay}ms with refreshGatt`, { error: errStr });
+            AppLogger.warn('[BLE] GATT 133 — transient connect error, retrying', { attempt, maxAttempts: 3, delayMs: delay, deviceId: mac, error: errStr });
             await bleManager.cancelDeviceConnection(mac).catch(() => {});
             await new Promise(resolve => setTimeout(resolve, delay));
           } else {
@@ -175,7 +175,7 @@ export const connectService = fromPromise<
       if (conn && conn.id) {
         rawConns.push(conn);
       } else {
-        AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${mac}`, lastErr);
+        AppLogger.error('FAILED TO CONNECT TO INDIVIDUAL DEVICE', { deviceId: mac, error: lastErr?.message || String(lastErr) });
         AppLogger.log('BLE_CONNECTION_ERROR', { error: lastErr?.message || String(lastErr), deviceId: mac, context: 'group_sync_fail' });
       }
     }
