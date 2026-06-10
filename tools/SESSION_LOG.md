@@ -1631,3 +1631,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - observatory-pipeline-batch (Part 2): Implemented build collectors, report generator, self-heal workflow, auto-heal library, and tests for the Self-Healing Observatory pipeline.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** tools/observatory/collectors/*.mjs, tools/observatory/core/*.ts, tools/observatory/reports/*.md, .agents/workflows/self-heal.md
+### [MERGE] 2026-06-10T17:25 — fix/auth-context-fsm ? master @ 461e16d6f591884c9e0f3ed222f340600c4f704c
+**What merged:** 
+- Refactored AuthContext.tsx to use a strict Finite State Machine (AuthStatus) instead of overlapping booleans (sessionLoaded, isOfflineMode, sessionExpired).
+- Maintained Zero Blast Radius by computing the legacy boolean variables dynamically from the new status state, preventing cascading refactors across 50+ components.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/context/AuthContext.tsx
