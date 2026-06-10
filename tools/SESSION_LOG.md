@@ -1,3 +1,20 @@
+### [MERGE] 2026-06-10T09:25 — ble-t1-machine-tests → master @ c30039e1
+**What merged:**
+- Added 18 comprehensive Jest unit tests covering all 6 state transitions, context assertions, and organic disconnect recovery trigger guards in `src/services/ble/__tests__/BleMachine.test.ts`.
+- Fixed `BleMachine.ts` `setConnectedDevices` action to correctly map XState promise resolution `event.output.devices` inside `onDone` actor callbacks.
+- Eliminated context `input: any` cast in `BleMachine.ts` by explicitly typing the signature using `Omit<BleMachineContext, 'connectedDevices' | 'ghostedDeviceIds'>`.
+- Aligned `enqueueWrite` signature declarations in `BleMachine.types.ts` and `ConnectService.ts` to resolve TS compilation type mismatch issues.
+- Implemented clean actor lifecycle teardowns in `afterEach` for `BleMachine.test.ts` to solve Jest timer leaks.
+**Verify result:** TSC ✅, Jest 134/134 PASS ✅, all 8 gates green ✅
+**Files touched:** src/services/ble/BleMachine.ts, src/services/ble/BleMachine.types.ts, src/services/ble/ConnectService.ts, src/services/ble/__tests__/BleMachine.test.ts
+
+### [DECISION] 2026-06-10T09:25 — XState actor promise output mapping and global __DEV__ mock
+**Decision:**
+1. Promise actor resolution yields output on `event.output`, not `event.devices`. Reusable FSM actions must verify the `xstate.done.actor.*` event structure to preserve context on transition.
+2. Async timeouts in global singleton instances (like `AppLogger.ts` flush queues) run outside Jest's React/hook environments and throw `ReferenceError: __DEV__ is not defined` if `__DEV__` isn't globally mock-declared. Injecting `(global as unknown as { __DEV__: boolean }).__DEV__ = true` at the test root surgically fixes this without editing production log modules.
+**Don't re-derive:** Use `snapshot.value` instead of `snapshot.matches` inside unit tests where actor logic is provided via `.provide()` to bypass TypeScript matches type restrictions.
+**Source:** src/services/ble/BleMachine.ts:L24-30, src/services/ble/__tests__/BleMachine.test.ts:L1-20
+
 ### [MERGE] 2026-06-10T09:11 — ble-t2-static-guards → master @ 50a60012
 **What merged:**
 - Added Guard A: Direct `startDeviceScan` call detector using regex `\.startDeviceScan\(` (excludes `BleMachine.ts` and `__tests__` folders) to permanently prevent dual-scan regressions.
