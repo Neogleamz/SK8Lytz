@@ -1,4 +1,14 @@
-﻿### [MERGE] 2026-06-10T09:00 — ble-master-ref-sync → master @ c8f221af
+### [MERGE] 2026-06-10T09:11 — ble-t2-static-guards → master @ 50a60012
+**What merged:**
+- Added Guard A: Direct `startDeviceScan` call detector using regex `\.startDeviceScan\(` (excludes `BleMachine.ts` and `__tests__` folders) to permanently prevent dual-scan regressions.
+- Added Guard B: `onOrganicDisconnect` wiring validator to prevent silent recovery drops in `useBLE.ts`.
+- Wired both guards into the cryptographic attestation chain of `verifiable-check-runner.js`.
+- Fixed `auto-archiver.js` regexp matching logic to support prefix namespaces (fix/, test/) and optional backticks in task headers.
+- Moved `BATCH:ble-test-hardening` tasks to active sprint in `tools/SK8Lytz_Bucket_List.md`.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** tools/verifiable-check-runner.js, tools/auto-archiver.js, tools/SK8Lytz_Bucket_List.md
+
+### [MERGE] 2026-06-10T09:00 — ble-master-ref-sync → master @ c8f221af
 **What merged:**
 - docs(master-ref): Fix VS-003 parity violation — Master Reference BLE section fully updated to XState pipeline
 - §3 BLE Stability Constraints: items 1+2 now describe BleMachine (XState) + BleWriteQueue (priority tiers), not deleted BleStateMachine/GattMutex
