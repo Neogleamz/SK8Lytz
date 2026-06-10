@@ -1620,3 +1620,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - hal-oracle-tab-enclosure-batch: Centralized raw byte array literals in DiagnosticLabOracleTab to ZenggeProtocol factory methods.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/repositories/GroupRepository.ts, src/repositories/DeviceRepository.ts, src/hooks/useDashboardGroups.ts, src/components/DeviceSettingsModal.tsx, src/protocols/ZenggeProtocol.ts, src/screens/admin/DiagnosticLabOracleTab.tsx
+### [MERGE] 2026-06-10T12:53 — Wave 5 & 6 Sweep Batches ? master @ 83feb803e4511fad99933de527feee45d384a3b9
+**What merged:** 
+- ui-state-matrix-batch: Implemented complete 4-state matrix (Loading/Error/Empty/Success) across 9 major UI screens including AdminAuditLogViewer and SkateSpotBottomSheet.
+- observatory-pipeline-batch (Part 1): Implemented UnifiedErrorRecord schema and BaseCollector class. Added 6 local file-parsing collectors (naked_errors, known_issues, friction_events, etc.).
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/components/ErrorCard.tsx, src/components/EmptyState.tsx, src/components/admin/tools/*.tsx, src/components/crew/*.tsx, tools/observatory/schema/UnifiedErrorRecord.ts, tools/observatory/collectors/*.mjs
