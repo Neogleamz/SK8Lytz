@@ -1,3 +1,20 @@
+### [MERGE] 2026-06-10T10:11 — ble-t5-heartbeat-service-tests → master @ 5d7c387f
+**What merged:**
+- Added 12 Jest unit tests for `HeartbeatService.ts` in `src/services/ble/__tests__/HeartbeatService.test.ts`.
+- Group A: 45s interval timing — fires at exactly 45s, not immediately.
+- Group B: Zengge 0x63 opcode bytes validated via `enqueueWrite` + `writeCharacteristicWithoutResponseForDevice`.
+- Group C: RSSI fallback for unknown/BanlanX adapters (`readRSSIForDevice` called directly, NOT via enqueueWrite).
+- Group D: `HEARTBEAT_FAIL` + `cancelDeviceConnection` call-order regression guard.
+- Group E: Two-device sequential tick, first-device-fail does not block second device.
+- Group F: `clearInterval` cleanup — orphaned timer cannot fire `HEARTBEAT_FAIL`.
+- Fixed `RecoveryService.test.ts` infra: AppLogger silence mock (ENOBUFS fix) + `jest.clearAllTimers()` in afterEach (timer leak fix).
+**Verify result:** TSC ✅, Jest ✅ (177 tests), all 8 gates green ✅
+**Files touched:** `src/services/ble/__tests__/HeartbeatService.test.ts` (new), `src/services/ble/__tests__/RecoveryService.test.ts` (infra fixes)
+**Patterns established:**
+- `setInterval` actors: use `jest.advanceTimersByTime(N)` + `flushAsyncQueue()` — NOT `runAllTimersAsync()` (infinite loop)
+- AppLogger silence mock: `jest.mock('../../AppLogger', ...)` prevents ENOBUFS in all future service tests
+- `jest.clearAllTimers()` before `jest.useRealTimers()` in afterEach prevents post-suite flush queue leak
+
 ### [MERGE] 2026-06-10T09:56 — ble-t4-recovery-service-tests → master @ 4fae3d5b
 **What merged:**
 - Added 13 Jest unit tests covering all 5 groups for `RecoveryService.ts` in `src/services/ble/__tests__/RecoveryService.test.ts`.

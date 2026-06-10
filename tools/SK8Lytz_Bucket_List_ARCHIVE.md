@@ -1089,3 +1089,12 @@ pm run verify which includes QA tests.
   - **Plan:** 📎 [PLAN-ble-t4-recovery-service-tests.md](docs/plans/PLAN-ble-t4-recovery-service-tests.md)
   - **Source of Truth:** 📖 `src/services/ble/RecoveryService.ts` · `tools/BLE_AUDIT_2/03_recoveryService.md`
   - **Details:** 13 test cases across 5 groups. Use `jest.useFakeTimers()` to fast-forward backoff delays. Assert `clearWriteQueue` called as first action.
+
+- [x] **test/ble-t5-heartbeat-service-tests** — HeartbeatService unit tests
+  - **Tags:** [✅ READY] [✅ VERIFIED] [BLE] [L-RISK] [Meal] [🧠 MED] [BATCH:ble-test-hardening]
+  - **Goal:** Write unit tests for HeartbeatService.ts covering 45s tick, exact 0x63 opcode bytes, HEARTBEAT_FAIL event, RSSI fallback path, multi-device sequential loop, and clearInterval cleanup.
+  - **Decision Log (2026-06-10):** HeartbeatService is the liveness detector for connected devices. A broken heartbeat means dead skates that appear connected. Zero tests.
+  - **Analysis:** 📊 Source: [BLE_AUDIT_2/04_heartbeatService.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/04_heartbeatService.md)
+  - **Plan:** 📎 [PLAN-ble-t5-heartbeat-service-tests.md](docs/plans/PLAN-ble-t5-heartbeat-service-tests.md)
+  - **Source of Truth:** 📖 `src/services/ble/HeartbeatService.ts` · `tools/BLE_AUDIT_2/04_heartbeatService.md`
+  - **Details:** 12 test cases across 6 groups. Verify exact opcode bytes [0x63, 0x12, 0x21, 0x0F, 0xA5] from audit. Use fake timers.
