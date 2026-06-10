@@ -40,6 +40,7 @@ export type BleMachineEvent =
   | { type: 'RECOVERY_FAIL' }
   | { type: 'UPDATE_CONNECTED_DEVICES'; devices: Device[] }
   | { type: 'HEARTBEAT_FAIL'; deviceId: string }
+  | { type: 'RECOVERY_PERMANENTLY_FAILED'; deviceId: string }
   | { type: 'FORCE_IDLE' };
 
 export type BleMachineState =

@@ -76,6 +76,11 @@ export function getQueueDepth(): number {
   return _queue.length;
 }
 
+/** Returns true if any operation is currently executing or pending in the queue. */
+export const isWriteQueueActive = (): boolean => {
+  return _isRunning || _queue.length > 0;
+};
+
 /**
  * Flush all pending writes. Call on disconnect or cancelAllRecoveries
  * to prevent stale writes firing after teardown.

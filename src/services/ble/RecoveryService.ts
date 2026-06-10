@@ -7,18 +7,18 @@ import { createGattSession } from '../BleSessionFactory';
 import { enqueueWrite, clearWriteQueue } from '../BleWriteQueue';
 import { BLE_TIMING } from '../../constants/bleTimingConstants';
 
-export const MAX_RECOVERY_ATTEMPTS = 360;
+export const MAX_RECOVERY_ATTEMPTS = 5;
 const RECOVERY_BASE_MS = 1500;
 const RECOVERY_MAX_MS = 30_000;
 const PHASE_1_MAX_ATTEMPTS = 12;
-const PHASE_2_MAX_ATTEMPTS = 35;
+const PHASE_2_MAX_ATTEMPTS = 5;
 const PHASE_2_BACKOFF_MS = 20_000;
 const PHASE_3_POLL_INTERVAL_MS = 5_000;
 const PHASE_3_MAX_POLLS = 120;
 
 export const getRecoveryBackoffMs = (attempts: number): number => {
   const exponential = Math.min(RECOVERY_BASE_MS * Math.pow(1.5, attempts), RECOVERY_MAX_MS);
-  const jitter = Math.random() * RECOVERY_BASE_MS;
+  const jitter = Math.random() * exponential * 0.3;
   return Math.round(exponential + jitter);
 };
 
@@ -162,7 +162,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
     }
 
     // --- Phase 3: Passive sweeper-watch mode ---
-    if (!reconnectedDevice && !cancelled && !hasExceededMaxRecovery(attempts)) {
+    if (!reconnectedDevice && !cancelled) {
       AppLogger.log('AUTO_RECOVERY', { phase: 3, deviceId, event: 'entering_passive_mode' });
       let phase3Polls = 0;
       while (!cancelled && phase3Polls < PHASE_3_MAX_POLLS) {
@@ -230,6 +230,8 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
 
     if (reconnectedDevice) {
       sendBack({ type: 'RECOVERY_COMPLETE', devices: [reconnectedDevice] });
+    } else if (hasExceededMaxRecovery(attempts)) {
+      sendBack({ type: 'RECOVERY_PERMANENTLY_FAILED', deviceId });
     } else {
       sendBack({ type: 'RECOVERY_FAIL' });
     }

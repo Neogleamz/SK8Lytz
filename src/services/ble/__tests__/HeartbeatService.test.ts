@@ -44,6 +44,7 @@ jest.mock('react-native', () => ({
 // Path: from __tests__/ go up two levels to reach src/services/BleWriteQueue.ts
 jest.mock('../../BleWriteQueue', () => ({
   enqueueWrite: jest.fn(async (_priority: any, op: () => Promise<any>) => op()),
+  isWriteQueueActive: jest.fn().mockReturnValue(false),
 }));
 
 // Silence AppLogger to prevent console noise from overflowing verifiable-check-runner.js pipe
@@ -210,7 +211,7 @@ describe('HeartbeatService test suite', () => {
 
   // ─── Group C: Fallback (BanlanX / Unknown Adapter) ────────────────────────
 
-  it('5. No adapter in adapterMap → readRSSIForDevice called directly (NOT via enqueueWrite)', async () => {
+  it('5. No adapter in adapterMap → readRSSIForDevice called via enqueueWrite', async () => {
     const mockSendBack = jest.fn();
     // Remove adapter from map so device falls through to RSSI fallback
     mockInput.adapterMap = new Map();
@@ -220,7 +221,7 @@ describe('HeartbeatService test suite', () => {
     jest.advanceTimersByTime(HEARTBEAT_INTERVAL_MS);
     await flushAsyncQueue();
 
-    expect(enqueueWrite).not.toHaveBeenCalled();
+    expect(enqueueWrite).toHaveBeenCalledWith('normal', expect.any(Function));
     expect(mockBleManager.readRSSIForDevice).toHaveBeenCalledWith('MAC1');
   });
 

@@ -3,7 +3,7 @@ import { Buffer } from 'buffer';
 import type { Device } from 'react-native-ble-plx';
 import { AppLogger } from '../../services/AppLogger';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
-import { enqueueWrite } from '../BleWriteQueue';
+import { enqueueWrite, isWriteQueueActive } from '../BleWriteQueue';
 
 /** 45 seconds — long enough not to spam, short enough to catch stale links before the user notices. */
 const HEARTBEAT_INTERVAL_MS = 45_000;
@@ -20,6 +20,9 @@ export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(({ inpu
 
   const interval = setInterval(async () => {
     if (isRunning) return;
+    // Skip this heartbeat cycle if any GATT operation is in-flight or pending.
+    // The in-flight write proves the connection is alive; no ping needed.
+    if (isWriteQueueActive()) return;
     isRunning = true;
     try {
       if (connectedDevices.length === 0) return;
@@ -47,7 +50,10 @@ export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(({ inpu
             }
           }
           // BanlanX / unknown adapter fallback: RSSI read as a liveness probe
-          await bleManager.readRSSIForDevice(mac);
+          await enqueueWrite('normal', async () => {
+            await bleManager.readRSSIForDevice(mac);
+            return true;
+          });
           AppLogger.log('DEVICE_DISCOVERED', { context: 'heartbeat_rssi_ok', deviceId: mac });
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);

@@ -253,18 +253,18 @@ describe('RecoveryService test suite', () => {
     expect(createGattSession).not.toHaveBeenCalled();
   });
 
-  it('8. All Phase 1+2 GATT attempts exhausted → RECOVERY_FAIL', async () => {
+  it('8. All Phase 1+2 GATT attempts exhausted → RECOVERY_PERMANENTLY_FAILED', async () => {
     (createGattSession as jest.Mock).mockRejectedValue(new Error('GATT connection failed'));
 
     const mockSendBack = jest.fn();
     callRecoveryService(mockInput, mockSendBack);
-    // Fast-forward all Phase 1+2 backoff delays (35 attempts)
+    // Fast-forward all Phase 1+2 backoff delays
     await jest.runAllTimersAsync();
 
-    expect(mockSendBack).toHaveBeenCalledWith({ type: 'RECOVERY_FAIL' });
+    expect(mockSendBack).toHaveBeenCalledWith({ type: 'RECOVERY_PERMANENTLY_FAILED', deviceId: 'MAC1' });
   });
 
-  it('9. Phase 3: getSweepedDevice never returns device → RECOVERY_FAIL after poll exhaustion', async () => {
+  it('9. Phase 3: getSweepedDevice never returns device → RECOVERY_PERMANENTLY_FAILED after poll exhaustion', async () => {
     (createGattSession as jest.Mock).mockRejectedValue(new Error('GATT fail'));
     mockInput.getSweepedDevice = jest.fn().mockReturnValue(undefined);
 
@@ -272,7 +272,7 @@ describe('RecoveryService test suite', () => {
     callRecoveryService(mockInput, mockSendBack);
     await jest.runAllTimersAsync();
 
-    expect(mockSendBack).toHaveBeenCalledWith({ type: 'RECOVERY_FAIL' });
+    expect(mockSendBack).toHaveBeenCalledWith({ type: 'RECOVERY_PERMANENTLY_FAILED', deviceId: 'MAC1' });
   });
 
   // ─── Group D: Phase 3 Happy Path ──────────────────────────────────────────
@@ -281,8 +281,8 @@ describe('RecoveryService test suite', () => {
     let gattCallCount = 0;
     (createGattSession as jest.Mock).mockImplementation(() => {
       gattCallCount++;
-      // Phase 1+2: first 35 calls fail; Phase 3 call succeeds
-      if (gattCallCount <= 35) {
+      // Phase 1+2: first 5 calls fail; Phase 3 call succeeds
+      if (gattCallCount <= 5) {
         return Promise.reject(new Error('Phase 1/2 fail'));
       }
       return Promise.resolve({ conn: mockConn, adapter: mockAdapter });
@@ -305,7 +305,7 @@ describe('RecoveryService test suite', () => {
     });
   });
 
-  it('11. Phase 3: createGattSession fails → immediate RECOVERY_FAIL (no further Phase 3 retries)', async () => {
+  it('11. Phase 3: createGattSession fails → immediate RECOVERY_PERMANENTLY_FAILED (no further Phase 3 retries)', async () => {
     // All GATT attempts fail (Phase 1+2 AND Phase 3)
     (createGattSession as jest.Mock).mockRejectedValue(new Error('always fail'));
     // But sweeper finds the device immediately → enters Phase 3 reconnect attempt → fails
@@ -315,7 +315,7 @@ describe('RecoveryService test suite', () => {
     callRecoveryService(mockInput, mockSendBack);
     await jest.runAllTimersAsync();
 
-    expect(mockSendBack).toHaveBeenCalledWith({ type: 'RECOVERY_FAIL' });
+    expect(mockSendBack).toHaveBeenCalledWith({ type: 'RECOVERY_PERMANENTLY_FAILED', deviceId: 'MAC1' });
   });
 
   // ─── Group E: Cancellation ────────────────────────────────────────────────

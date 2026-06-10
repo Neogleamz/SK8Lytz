@@ -12,6 +12,8 @@ export const bleMachine = setup({
   },
   actors: { connectService, recoveryService, heartbeatService },
   actions: {
+    setDeviceUnreachable: () => {},
+    notifyUserDeviceFailed: () => {},
     logTransition: (_, params: { from: string; to: string; reason?: string }) => {
       AppLogger.log('BLE_STATE_CHANGE', {
         event: 'fsm_transition',
@@ -258,6 +260,10 @@ export const bleMachine = setup({
         CONNECT_REQUEST: {
           target: 'CONNECTING',
           actions: ['setTargetMacs', { type: 'logTransition', params: { from: 'RECOVERING', to: 'CONNECTING' } }]
+        },
+        RECOVERY_PERMANENTLY_FAILED: {
+          target: 'IDLE',
+          actions: ['setDeviceUnreachable', 'notifyUserDeviceFailed', 'clearGhostedMacs', { type: 'logTransition', params: { from: 'RECOVERING', to: 'IDLE', reason: 'permanent_fail' } }]
         },
         RECOVERY_FAIL: {
           target: 'IDLE',
