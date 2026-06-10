@@ -1364,3 +1364,20 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Don't re-derive:** This eliminates manual lifecycle management and integrates it with XState READY transitions.
 **Source:** src/hooks/ble/useBLEHeartbeat.ts:12,44,62
 
+
+### [MERGE] 2026-06-10T02:13 — refactor/ble-p6-cleanup ? master @ 6268051a
+**What merged:**
+- Deleted 4 legacy BLE lifecycle hooks/services: BleLifecycleManager, useBLEAutoRecovery, useBLEHeartbeat, useBLEGattMutex.
+- Gutted useBLE.ts of ~300 lines of obsolete boilerplate, redirecting disconnects and ping to XState machine and isolated services.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/hooks/useBLE.ts, src/services/ble/RecoveryService.ts, src/services/BlePingService.ts, and 6 deleted files.
+
+### [FRICTION-002] Direct Commit to Master
+- **First Observed:** 2026-06-10
+- **Observed By:** ?? Sage
+- **Occurrences:** 1 / 3
+- **Trigger:** I committed the Phase 6 cleanup directly to the 'master' branch instead of using the worktree 'ble-p6-cleanup'.
+- **Pattern:** Failure to verify current working directory (pwd) and git branch --show-current before running git commit. 
+- **Root Cause Theory:** I assumed I was inside SK8Lytz-worktrees/ble-p6-cleanup but my terminal CWD was actually C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz.
+- **Impact:** Violated Safety Rule 1 (Master Fortress Lock). Risk of master branch instability.
+- **Status:** MONITORING
