@@ -1393,3 +1393,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "Global error boundary only — rejected, doesn't expose the error to the specific UI widget that needs it."
   - **Plan:** 📎 [PLAN-state-matrix-sweep.md](docs/plans/PLAN-state-matrix-sweep.md)
   - **Source of Truth:** 📖 `src/hooks/useCuratedPicks.ts:112` · `src/components/docked/FavoritesPanel.tsx:100` · `src/screens/DashboardScreen.tsx:197` · `src/constants/storageKeys.ts`
+
+- [x] **chore/misc-guardrail-sweep** 🚀 Merged in 2a682c5b
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[CORE]` `[⚠️ M-RISK]` `[🍱 Meal]` `[🤖 PRO-MED]` `[BATCH:deepdive-sweep]` `[WAVE:5]`
+  - **Goal:** Fix 27 findings across 8 minor guardrails: PII MAC leaks (R-09), Android BT permission flag (R-20), memory leaks (R-22), re-entrancy races (R-26), context depth (R-27), event listener leak (R-17), stale closure (R-12), split-brain duplication (R-21).
+  - **Decision Log (2026-06-10):** Highest urgency within this cluster is `AndroidManifest.xml:8` — `BLUETOOTH_SCAN` missing `neverForLocation` forces Android 12+ users to grant Location permission just to find their skates. Second priority: MAC PII leak in `DeviceRepository.ts:793`. These two are 1-line fixes with outsized impact.
+  - **Analysis:** 📊 Source: `artifacts/system_audit_report.md` · CLUSTER-09 (27 findings)
+    Key finding: "Missing `neverForLocation` on BLUETOOTH_SCAN is a UX regression — users will see an unexpected Location permission prompt on fresh installs."
+    Rejected alternative: "Accept the Location permission — rejected, violates user trust and App Store privacy guidelines."
+  - **Plan:** 📎 [PLAN-misc-guardrail-sweep.md](docs/plans/PLAN-misc-guardrail-sweep.md)
+  - **Source of Truth:** 📖 `android/app/src/main/AndroidManifest.xml:8` · `src/services/DeviceRepository.ts:793` · `src/hooks/useDashboardCrew.ts:70` · `artifacts/system_audit_report.md CLUSTER-09`

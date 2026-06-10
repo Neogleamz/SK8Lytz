@@ -1708,3 +1708,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Don't re-derive:** The user explicitly placed Hard Rules forbidding the modification of hook declarations in DashboardScreen.tsx and the DockedController.tsx hook zone to prevent monolith fragmentation bugs. Additionally, useDashboardController.tsx already acts as the composite context aggregator for the controller.
 **Source:** PLAN-misc-guardrail-sweep.md:51
 
+
+### [MERGE] 2026-06-10T21:54 — misc-guardrail-sweep -> master @ 2a682c5b
+**What merged:** Fixed various guardrails including R-20 OS variance, R-21 Split brain, R-22 memory leaks, and R-17 event listener leaks.
+**Verify result:** TSC u{2705}, Jest u{2705}, gates u{2705}
+**Files touched:** src/hooks/useControllerDispatch.ts, src/hooks/useDeviceStateLedger.ts, src/components/DockedController.tsx, src/hooks/__tests__/*, etc.
