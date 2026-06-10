@@ -4,6 +4,7 @@ import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } fr
 import { useTheme } from '../context/ThemeContext';
 import { SkateSpot, SkateSpotsService } from '../services/SkateSpotsService';
 import { Spacing , ThemePalette } from '../theme/theme';
+import { ErrorCard } from './ErrorCard';
 
 interface BottomSheetProps {
   visible: boolean;
@@ -17,6 +18,7 @@ export const SkateSpotBottomSheet: React.FC<BottomSheetProps> = ({ visible, onCl
   const styles = createStyles(Colors);
   
   const [isUpdating, setIsUpdating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedSurface, setSelectedSurface] = useState<string>(spot?.surface_type || 'unknown');
   const [isIndoor, setIsIndoor] = useState<boolean>(spot?.is_indoor ?? true);
 
@@ -26,17 +28,23 @@ export const SkateSpotBottomSheet: React.FC<BottomSheetProps> = ({ visible, onCl
 
   const handleClaim = async () => {
     setIsUpdating(true);
-    const result = await SkateSpotsService.claimAndUpdateSpot({
-      ...spot,
-      surface_type: selectedSurface as 'wood' | 'concrete' | 'asphalt' | 'sport_court' | 'unknown',
-      is_indoor: isIndoor
-    });
-    setIsUpdating(false);
-    
-    if (result && onSpotUpdated) {
-      onSpotUpdated(result);
+    setError(null);
+    try {
+      const result = await SkateSpotsService.claimAndUpdateSpot({
+        ...spot,
+        surface_type: selectedSurface as 'wood' | 'concrete' | 'asphalt' | 'sport_court' | 'unknown',
+        is_indoor: isIndoor
+      });
+      
+      if (result && onSpotUpdated) {
+        onSpotUpdated(result);
+      }
+      onClose();
+    } catch (e) {
+      setError('Failed to load. Tap to retry.');
+    } finally {
+      setIsUpdating(false);
     }
-    onClose();
   };
 
   const SurfaceChip = ({ type, label }: { type: string, label: string }) => (
@@ -66,6 +74,8 @@ export const SkateSpotBottomSheet: React.FC<BottomSheetProps> = ({ visible, onCl
           <Text style={styles.subtitle}>
             {isVerifiedNative ? 'Verified Community Spot' : 'Unverified (Sourced from OSM)'}
           </Text>
+
+          {error && <View style={{ marginBottom: Spacing.xl }}><ErrorCard message={error} onRetry={handleClaim} /></View>}
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Surface Type</Text>

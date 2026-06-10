@@ -37,6 +37,7 @@ function hexToHue(hex: string | null | undefined): number {
 export function useAccountOverview(visible: boolean, onProfileUpdated?: () => void) {
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [editName, setEditName] = useState('');
   const [editUsername, setEditUsername] = useState('');
@@ -69,6 +70,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setAccountError(null);
     try {
       AppLogger.log('ACCOUNT_MODAL_LOAD_START');
 
@@ -134,6 +136,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       setHistory(h);
     } catch (e: unknown) {
       AppLogger.warn('[AccountOverview] loadData error', { error: e instanceof Error ? e.message : String(e)  });
+      setAccountError('Failed to load. Tap to retry.');
     } finally {
       setLoading(false);
     }
@@ -320,5 +323,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     handleToggleHealthSync,
     autoPauseEnabled,
     handleToggleAutoPause,
+    accountError,
+    loadData,
   };
 }

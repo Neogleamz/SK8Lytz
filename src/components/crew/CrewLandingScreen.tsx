@@ -13,6 +13,8 @@ import { crewService, CrewSession } from '../../services/CrewService';
 import { PermanentCrew, profileService } from '../../services/ProfileService';
 import { Spacing } from '../../theme/theme';
 import { createStyles } from './CrewStyles';
+import { ErrorCard } from '../ErrorCard';
+import { EmptyState } from '../EmptyState';
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -38,6 +40,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
   const [inviteCode, setInviteCode] = useState('');
   const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
   const [showRadiusPicker, setShowRadiusPicker] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -63,6 +66,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
       const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       AppLogger.log('CREW_ERROR', { action: 'join_id', error: e instanceof Error ? e.message : String(e)  });
       setErrorMsg(e.message || 'Could not join that crew');
+      setError('Failed to load. Tap to retry.');
     } finally { 
       setIsLoading(false); 
       setJoiningSessionId(null);
@@ -145,6 +149,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
       const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       AppLogger.log('CREW_ERROR', { action: 'join_crew_by_code', error: e instanceof Error ? e.message : String(e)  });
       setErrorMsg(e.message || 'Crew not found — check the code and try again.');
+      setError('Failed to load. Tap to retry.');
     } finally { setIsLoading(false); }
   };
 
@@ -172,6 +177,8 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
             </TouchableOpacity>
           )}
         </View>
+
+        {error && <ErrorCard message={error} onRetry={() => setError(null)} />}
 
         {/* ── MY CREWS ── */}
         {!showOnlyMap && (
@@ -526,7 +533,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
               autoCapitalize="characters"
               autoFocus
             />
-            {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
+            {errorMsg ? <ErrorCard message={errorMsg} onRetry={handleJoinByCode} /> : null}
             <TouchableOpacity
               style={[styles.primaryBtn, isLoading && { opacity: 0.5 }, { marginTop: Spacing.xs }]}
               onPress={handleJoinByCode}
@@ -636,11 +643,11 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
 
         {nearbySessions.length === 0 && !isLoadingNearby && (
           <View style={[styles.hubEmptyCard, { marginTop: 0 }]}>
-            <Text style={styles.hubEmptyText}>
-              {discoverRadiusMi != null
+            <EmptyState message={
+              discoverRadiusMi != null
                 ? `No live sessions within ${discoverRadiusMi} mi`
-                : 'No live sessions near you right now'}
-            </Text>
+                : 'No live sessions near you right now'
+            } />
             <Text style={[styles.hubEmptyText, { fontSize: 11, marginTop: Spacing.xs }]}>Start one and skaters nearby will see it!</Text>
           </View>
         )}

@@ -15,6 +15,8 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ICloudScene, Scene, ScenesService } from '../services/ScenesService';
 import { Layout, Spacing, Typography , ThemePalette } from '../theme/theme';
+import { ErrorCard } from './ErrorCard';
+import { EmptyState } from './EmptyState';
 
 interface Props {
   isOfflineMode?: boolean;
@@ -81,6 +83,7 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
   const [activeTab, setActiveTab] = useState<'COMMUNITY' | 'PERSONAL'>(isOfflineMode ? 'PERSONAL' : 'COMMUNITY');
   const [scenes, setScenes] = useState<ICloudScene[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -92,16 +95,22 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
 
   const fetchScenes = async () => {
     setLoading(true);
+    setError(null);
     if (activeTab === 'COMMUNITY' && isOfflineMode) {
       setScenes([]);
       setLoading(false);
       return;
     }
-    const data = activeTab === 'COMMUNITY'
-      ? await ScenesService.getPublicScenes()
-      : await ScenesService.getMyScenes(user?.id ?? '');
-    setScenes(data);
-    setLoading(false);
+    try {
+      const data = activeTab === 'COMMUNITY'
+        ? await ScenesService.getPublicScenes()
+        : await ScenesService.getMyScenes(user?.id ?? '');
+      setScenes(data);
+    } catch (e) {
+      setError('Failed to load. Tap to retry.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleApply = async (scene: ICloudScene) => {
@@ -253,6 +262,10 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
             <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={{ color: Colors.textMuted, marginTop: Spacing.md, fontSize: 13 }}>Loading scenes...</Text>
           </View>
+        ) : error ? (
+          <View style={{ padding: Spacing.xl }}>
+            <ErrorCard message={error} onRetry={fetchScenes} />
+          </View>
         ) : (
           <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={scenes}
@@ -261,15 +274,11 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={() => (
-              <View style={styles.emptyContainer}>
-                <MaterialCommunityIcons name="cloud-off-outline" size={60} color="#333" />
-                <Text style={styles.emptyTitle}>No Scenes Yet</Text>
-                <Text style={styles.emptyText}>
-                  {activeTab === 'COMMUNITY'
-                    ? 'Be the first to publish a scene to the community!'
-                    : 'Save a preset to the cloud from the controller.'}
-                </Text>
-              </View>
+              <EmptyState message={
+                activeTab === 'COMMUNITY'
+                  ? 'Be the first to publish a scene to the community!'
+                  : 'Save a preset to the cloud from the controller.'
+              } />
             )}
           />
         )}

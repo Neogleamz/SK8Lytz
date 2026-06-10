@@ -15,6 +15,8 @@ import {
 import { AppLogger } from '../../../services/AppLogger';
 import { supabase } from '../../../services/supabaseClient';
 import { Spacing, Typography } from '../../../theme/theme';
+import { ErrorCard } from '../../ErrorCard';
+import { EmptyState } from '../../EmptyState';
 
 export interface UserManagementPanelProps {
   visible: boolean;
@@ -50,10 +52,12 @@ export function UserManagementPanel({
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
+      setError(null);
       // Notice: auth.users email is not directly readable via select from public.user_profiles unless linked.
       // We will just fetch profiles. Since this is an admin panel, we can join with RPC if we need emails, 
       // or we just show display names.
@@ -67,7 +71,7 @@ export function UserManagementPanel({
       setUsers(data as AdminUserProfile[]);
     } catch (e: unknown) {
       AppLogger.error('Failed to fetch users for admin panel', e instanceof Error ? e.message : String(e));
-      Alert.alert('Error', 'Failed to fetch users: ' + (e instanceof Error ? e.message : String(e)));
+      setError('Failed to load. Tap to retry.');
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -321,9 +325,12 @@ export function UserManagementPanel({
 
         {loading && !isRefreshing ? (
           <ActivityIndicator size="large" color="#00f0ff" style={{ marginTop: Spacing.xl }} />
+        ) : error ? (
+          <ErrorCard message={error} onRetry={fetchUsers} />
         ) : (
           <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={filteredUsers}
+            ListEmptyComponent={<EmptyState message="No users found" />}
             renderItem={renderItem}
             keyExtractor={(i) => i.user_id}
             contentContainerStyle={styles.list}

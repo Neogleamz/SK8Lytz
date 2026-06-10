@@ -19,6 +19,8 @@ import { useTheme } from '../../../context/ThemeContext';
 import { BuilderNode } from '../../../protocols/PositionalMathBuffer';
 import { supabase } from '../../../services/supabaseClient';
 import PositionalGradientBuilder from '../../PositionalGradientBuilder';
+import { ErrorCard } from '../../ErrorCard';
+import { EmptyState } from '../../EmptyState';
 
 interface Sk8LytzPick {
   id: string;
@@ -39,6 +41,7 @@ interface AdminPicksSchedulerProps {
 export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSchedulerProps) {
   const [picks, setPicks] = useState<Sk8LytzPick[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [datePickerConfig, setDatePickerConfig] = useState<{
     visible: boolean;
     pickId: string;
@@ -129,6 +132,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
 
   const fetchPicks = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const { data, error } = await supabase
         .from('sk8lytz_picks')
@@ -138,8 +142,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
       if (error) throw error;
       if (data) setPicks(data as Sk8LytzPick[]);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      Alert.alert('Load Error', msg);
+      setError('Failed to load. Tap to retry.');
     } finally {
       setIsLoading(false);
     }
@@ -266,6 +269,10 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
 
           {isLoading && picks.length === 0 ? (
             <Text style={{ textAlign: 'center', marginTop: Spacing.xxxl, color: textMuted }}>Loading picks...</Text>
+          ) : error ? (
+            <ErrorCard message={error} onRetry={fetchPicks} />
+          ) : picks.length === 0 ? (
+            <EmptyState message="No items found" />
           ) : (
             picks.map((pick) => (
               <View key={pick.id} style={[styles.card, { backgroundColor: cardBg, borderColor }]}>

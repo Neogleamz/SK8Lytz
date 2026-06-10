@@ -14,6 +14,8 @@ import {
 import { AppLogger } from '../../../services/AppLogger';
 import { supabase } from '../../../services/supabaseClient';
 import { Spacing, Typography } from '../../../theme/theme';
+import { ErrorCard } from '../../ErrorCard';
+import { EmptyState } from '../../EmptyState';
 
 export interface AdminAuditLogViewerProps {
   visible: boolean;
@@ -51,10 +53,12 @@ export function AdminAuditLogViewer({
   const [profiles, setProfiles] = useState<ProfileMap>({});
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchLogs = async () => {
     try {
       setLoading(true);
+      setError(null);
       const { data, error } = await supabase
         .from('admin_audit_logs')
         .select('*')
@@ -90,7 +94,7 @@ export function AdminAuditLogViewer({
 
     } catch (e: unknown) {
       AppLogger.error('Failed to fetch audit logs', e instanceof Error ? e.message : String(e));
-      Alert.alert('Error', 'Failed to fetch audit logs: ' + (e instanceof Error ? e.message : String(e)));
+      setError('Failed to load. Tap to retry.');
     } finally {
       setLoading(false);
       setIsRefreshing(false);
@@ -151,9 +155,12 @@ export function AdminAuditLogViewer({
 
         {loading && !isRefreshing ? (
           <ActivityIndicator size="large" color="#00f0ff" style={{ marginTop: Spacing.xl }} />
+        ) : error ? (
+          <ErrorCard message={error} onRetry={fetchLogs} />
         ) : (
           <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={logs}
+            ListEmptyComponent={<EmptyState message="No items found" />}
             renderItem={renderItem}
             keyExtractor={(i) => i.id}
             contentContainerStyle={styles.list}

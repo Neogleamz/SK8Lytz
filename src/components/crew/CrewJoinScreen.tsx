@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { AppLogger } from '../../services/AppLogger';
@@ -9,6 +9,8 @@ import { Spacing } from '../../theme/theme';
 
 import { useCrewContext } from '../../context/CrewContext';
 import { createStyles } from './CrewStyles';
+import { ErrorCard } from '../ErrorCard';
+import { EmptyState } from '../EmptyState';
 
 export function CrewJoinScreen() {
   const { Colors } = useTheme();
@@ -20,6 +22,7 @@ export function CrewJoinScreen() {
   const { currentSession, isHandoffMode, executeLeaveSession, executeEndSession, handleHandoffLeadership, handleSessionJoined } = session;
   
   const { inviteCode, setInviteCode } = formState;
+  const [error, setError] = useState<string | null>(null);
 
   const handleJoinByCode = async () => {
     if (inviteCode.trim().length < 6) { setErrorMsg('Enter the 6-character crew invite code'); return; }
@@ -42,6 +45,7 @@ export function CrewJoinScreen() {
       const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       AppLogger.log('CREW_ERROR', { action: 'join_crew_by_code', error: e instanceof Error ? e.message : String(e)  });
       setErrorMsg(e.message || 'Crew not found — check the code and try again.');
+      setError('Failed to load. Tap to retry.');
     } finally { setIsLoading(false); }
   };
 
@@ -56,6 +60,7 @@ export function CrewJoinScreen() {
       const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       AppLogger.log('CREW_ERROR', { action: 'join_id', error: e instanceof Error ? e.message : String(e)  });
       setErrorMsg(e.message || 'Failed to join session');
+      setError('Failed to load. Tap to retry.');
     } finally { setIsLoading(false); }
   };
 
@@ -111,8 +116,10 @@ export function CrewJoinScreen() {
           </View>
           {isLoadingSessions ? (
             <ActivityIndicator color={Colors.primary} style={localStyles.spinner} />
+          ) : error ? (
+            <ErrorCard message={error} onRetry={loadActiveSessions} />
           ) : activeSessions.length === 0 ? (
-            <Text style={[styles.subtitle, localStyles.emptyText]}>No active crews right now. Be the first!</Text>
+            <EmptyState message="No active crews right now. Be the first!" />
           ) : (
             <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5} data={activeSessions} keyExtractor={s => s.id}
               renderItem={renderActiveSessionCard} scrollEnabled={false} />
@@ -130,7 +137,7 @@ export function CrewJoinScreen() {
           value={inviteCode} onChangeText={t => setInviteCode(t.toUpperCase())}
           placeholder="ABC123" placeholderTextColor={Colors.textMuted}
           maxLength={6} autoCapitalize="characters" />
-        {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}
+        {errorMsg ? <ErrorCard message={errorMsg} onRetry={handleJoinByCode} /> : null}
 
         <TouchableOpacity style={[styles.primaryBtn, isLoading && { opacity: 0.5 }]}
           onPress={handleJoinByCode} disabled={isLoading}>

@@ -32,6 +32,7 @@ import { profileService, PermanentCrew } from '../services/ProfileService';
 import { supabase } from '../services/supabaseClient';
 import AccountTabProfile from './account/AccountTabProfile';
 import AccountTabSecurity from './account/AccountTabSecurity';
+import { ErrorCard } from './ErrorCard';
 import AccountTabCrewz from './account/AccountTabCrewz';
 import AccountTabDevices from './account/AccountTabDevices';
 import AccountTabSettings from './account/AccountTabSettings';
@@ -172,6 +173,8 @@ export default function AccountModal({
     handleToggleHealthSync,
     autoPauseEnabled,
     handleToggleAutoPause,
+    accountError,
+    loadData,
   } = useAccountOverview(visible, onProfileUpdated);
 
   const handleDeleteCrew = (crew: PermanentCrew) => {
@@ -511,6 +514,7 @@ export default function AccountModal({
             };
 
             if (accountLoading) return <AccountModalSkeleton />;
+            if (accountError) return <View style={{ padding: Spacing.xl }}><ErrorCard message={accountError} onRetry={loadData} /></View>;
             switch (tab) {
               case 'profile':  return <AccountTabProfile {...tabProps} />;
               case 'security': return <AccountTabSecurity {...tabProps} />;

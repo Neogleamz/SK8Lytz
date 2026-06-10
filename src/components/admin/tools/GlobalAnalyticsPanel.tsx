@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator, ScrollView, StyleSheet } from 'react-nat
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../../../services/supabaseClient';
 import { AppLogger } from '../../../services/AppLogger';
+import { ErrorCard } from '../../ErrorCard';
 
 interface GlobalAnalyticsSummary {
   fleet_total_distance_meters?: number;
@@ -13,19 +14,25 @@ interface GlobalAnalyticsSummary {
 export default function GlobalAnalyticsPanel({ Colors }: { Colors: Record<string, string> }) {
   const [data, setData] = useState<GlobalAnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadGlobalStats = async () => {
+    if (!supabase) return;
+    try {
+      setLoading(true);
+      setError(null);
+      const { data, error } = await supabase.rpc('admin_get_global_telemetry');
+      if (error) throw error;
+      if (data) setData(data as unknown as GlobalAnalyticsSummary);
+    } catch (e: unknown) {
+      AppLogger.error('[GlobalAnalytics] RPC failed', { error: (e instanceof Error ? e.message : String(e)) });
+      setError('Failed to load. Tap to retry.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function loadGlobalStats() {
-      if (!supabase) return;
-      try {
-        const { data, error } = await supabase.rpc('admin_get_global_telemetry');
-        if (data && !error) setData(data as unknown as GlobalAnalyticsSummary);
-      } catch (e: unknown) {
-        AppLogger.error('[GlobalAnalytics] RPC failed', { error: (e instanceof Error ? e.message : String(e)) });
-      } finally {
-        setLoading(false);
-      }
-    }
     loadGlobalStats();
   }, []);
 
@@ -35,6 +42,10 @@ export default function GlobalAnalyticsPanel({ Colors }: { Colors: Record<string
         <ActivityIndicator color={Colors.primary} size="large" />
       </View>
     );
+  }
+
+  if (error) {
+    return <ErrorCard message={error} onRetry={loadGlobalStats} />;
   }
 
   const distance = data?.fleet_total_distance_meters 
