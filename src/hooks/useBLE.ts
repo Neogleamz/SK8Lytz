@@ -5,9 +5,14 @@
  * Custom React hook that wraps react-native-ble-plx to provide all
  * BLE hardware interactions for the SK8Lytz LED controller ecosystem.
  *
- * Refactored using Domain-Driven Architecture (DDA):
- * This hook is now a Thin Orchestrator, dynamically routing scanning to useBLEScanner
- * and auto-recovery to useBLEAutoRecovery.
+ * Architecture: Thin Orchestrator over XState BleMachine.
+ *   - Scan lifecycle      → BleMachine SCANNING state (entry/exit actions)
+ *   - Connection pipeline → ConnectService (invoked actor in CONNECTING)
+ *   - Recovery loop       → RecoveryService (invoked actor in RECOVERING)
+ *   - Heartbeat           → HeartbeatService (invoked actor in READY)
+ *   - RSSI monitoring     → RSSIService via useBLERSSIMonitor
+ *   - Hardware probe      → InterrogatorService via useBLEInterrogator
+ *   - Write serialization → BleWriteQueue (priority FIFO singleton)
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';

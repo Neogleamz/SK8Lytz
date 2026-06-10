@@ -7,13 +7,10 @@
  * Re-exports the official react-native-ble-plx types alongside our own
  * domain-specific interfaces.
  */
-import type React from 'react';
-import type { BleManager, Characteristic, Device, Subscription } from 'react-native-ble-plx';
-import type { BLEPhaseTag, BleMachineEvent } from '../services/ble/BleMachine.types';
-import type { IControllerProtocol } from '../protocols/IControllerProtocol';
+import type { BleManager, Device, Subscription } from 'react-native-ble-plx';
 
 // Re-export library types so consumers import from one place
-export type { BleManager, Characteristic, Device, Subscription };
+export type { BleManager, Device, Subscription };
 
 // ── Supabase row shapes ────────────────────────────────────────────────────────
 
@@ -39,82 +36,7 @@ export interface RegisteredDeviceRow {
 }
 
 // ── Duck-typed BLE sub-system handles ─────────────────────────────────────────
-// These interfaces let BleConnectionManager depend only on the specific
-// methods it calls, without importing the full hook return type (circular).
-
-/** Sweeper handle — only methods used by BleConnectionManager */
-export interface BleSweeperHandle {
-  isSweeperActive: boolean;
-  stopSweeper(): void;
-  startSweeper(): void;
-}
-
-/** Scanner handle — only method used by BleConnectionManager */
-export interface BleScannerHandle {
-  stopScanner(): void;
-  isSweeperActive?: boolean;
-  startSweeper?: () => void;
-}
-
-/** Auto-recovery handle — kept in request shape for future cancel-on-connect use */
-export interface BleAutoRecoveryHandle {
-  cancelAllRecoveries(): Promise<void>;
-  baseMs?: number;
-  maxMs?: number;
-  jitter?: boolean;
-}
-
-// ── Primary connection contract ────────────────────────────────────────────────
-
-/**
- * BleConnectionRequest — replaces the 13 positional `any` parameters of
- * executeConnectToDevices() with a single typed options object.
- *
- * Grouping logically related refs/callbacks makes call sites self-documenting
- * and lets TypeScript catch wrong argument types at compile time.
- */
-export interface BleConnectionRequest {
-  /** Devices to connect (from allDevices scan list) */
-  devices: Device[];
-  /** The react-native-ble-plx BleManager singleton */
-  bleManager: BleManager;
-  /** Ref holding currently connected Device objects */
-  connectedDevicesRef: React.MutableRefObject<Device[]>;
-  /** MACs (uppercase) that are hardware-blacklisted */
-  blacklistedMacsRef: React.MutableRefObject<string[]>;
-  /** Keepalive timer ref — cancelled on reconnect */
-  keepaliveTimerRef: React.MutableRefObject<ReturnType<typeof setTimeout> | null>;
-  /** Per-device disconnect subscription map */
-  disconnectListeners: React.MutableRefObject<Record<string, Subscription>>;
-  /** Scanner handle — stopped before connect */
-  scanner: BleScannerHandle;
-  /** Auto-recovery handle (reserved for future cancel-on-connect pattern) */
-  autoRecovery: BleAutoRecoveryHandle;
-  /** Getter for the current BLE phase tag */
-  getGate: () => BLEPhaseTag;
-  /** Per-device negotiated MTU map */
-  mtuMapRef: React.MutableRefObject<Map<string, number>>;
-  /** Per-device resolved protocol adapter map */
-  adapterMapRef: React.MutableRefObject<Map<string, IControllerProtocol>>;
-  /** Raw notification data callback (wired to monitor) */
-  dataReceivedCallbackRef: React.MutableRefObject<((deviceId: string, data: number[]) => void) | undefined>;
-  /**
-   * Notification handler for GATT characteristic changes.
-   * `error` is null on success; `characteristic` is null on error.
-   */
-  handleNotificationRef: React.MutableRefObject<(
-    error: Error | null,
-    characteristic: Characteristic | null,
-    deviceId: string,
-  ) => void>;
-  /** Called on organic (unexpected) GATT disconnect */
-  handleOrganicDisconnect: (error: Error | null, deviceId: string) => void;
-  /** FIFO Serial Queue handle to prevent direct GATT write collisions */
-  enqueueWrite: (priority: 'critical' | 'normal' | 'bulk', operation: () => Promise<boolean | 'partial'>, generation?: number) => Promise<boolean | 'partial'>;
-  /** React state setter for connected devices */
-  setConnectedDevices: React.Dispatch<React.SetStateAction<Device[]>>;
-  /** Gate phase setter */
-  setGate: (phase: BLEPhaseTag) => void;
-  /** State machine event dispatcher */
-  bleSend: (event: BleMachineEvent) => void;
-}
+// NOTE: BleConnectionRequest, BleSweeperHandle, BleScannerHandle, and
+// BleAutoRecoveryHandle have been removed. They were scaffolding for
+// BleConnectionManager.ts which was replaced by ConnectService.ts (Phase 3).
+// Connection is now fully owned by the XState BleMachine.
