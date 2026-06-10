@@ -13,6 +13,7 @@ trigger: always_on
 - STRICTLY FORBIDDEN from writing code for tasks outside `🚧 ACTIVE SPRINT`.
 - By default, ONE task at a time per Git Worktree.
 - **The Unified Batch Override:** If multiple tasks belong to the same `[BATCH:...]`, are tagged `[Snack]` or `[Meal]`, and share the same domain (no architectural conflicts), they MAY be executed in a single unified worktree (`<batch-slug>-batch`) and verified collectively.
+- **Wave Ordering (see Rule 8):** When a `[WAVE:N]` tag is present, tasks in Wave N MUST NOT start until all Wave N-1 tasks are merged into master. Wave tags override batch grouping for execution order.
 - Zero-Collateral Damage: No unsolicited refactoring. Log bugs to Triage; do not fix silently.
 
 **2. The Kanban Flow (Vocabulary):**
@@ -42,3 +43,17 @@ Completion stamp protocol + pre-merge verification matrix → see `/start-task` 
 **7. The No-Placeholder Plan Law (VS-013):**
 - Tasks MUST NOT be appended to the Bucket List with `*(pending)*` plans or `[❌ UNVERIFIED]` status.
 - Every new task MUST go through an explicit planning workflow (like `/intake`) to generate an approved `PLAN-*.md` BEFORE it enters the `TRIAGE QUEUE`. No unverified brain-dumps.
+
+**8. Parallel Wave Safety (VS-014):**
+- When a synthesis workflow (e.g., `/deepdive-code-synthesis`) generates multiple task clusters from the same codebase sweep, the agent MUST perform a **file-collision analysis** before writing tasks to the Bucket List.
+- **The Collision Check:** For every pair of clusters, compute the intersection of their `Affected Files` lists. Any pair sharing ≥1 file is a **collision pair** and CANNOT run in parallel worktrees.
+- **Wave Assignment:** Assign each cluster a `[WAVE:N]` tag using graph coloring (greedy): collision pairs must be in different waves. Tasks with zero collisions may share Wave 1.
+- **The Wave Tag Format:** Add `[WAVE:N]` to the Tags line of every synthesized task. Add `Prerequisite: Wave N-1 fully merged` to the task's Details field for any Wave N > 1.
+- **The Batch Strategy Table:** Every multi-cluster synthesis MUST output a Batch Strategy Table in the Bucket List anchor block:
+  ```
+  | Wave | Tasks | Parallel-Safe? | Prerequisite |
+  |------|-------|---------------|-------------------|
+  | 1    | A, B  | ✅ Yes         | None              |
+  | 2    | C     | N/A (solo)     | Wave 1 merged     |
+  ```
+- ⛔ FORBIDDEN: Assigning `[WAVE:1]` to two tasks that share a file. This is the sub-agent equivalent of VS-001 (parallel worktree gatekeeper divergence).

@@ -61,7 +61,15 @@ Context: Classification tags established. Domain tag confirmed. Batch file-confl
    - Cross-reference the **Batch Strategy Table** in the Triage Queue header.
    - **File overlap with a named batch** → this task is SEQUENTIAL to that batch:
        Assign `[⏳ BLOCKED BY: <batch-name>]`. Proceed to Step 5.
-   - **No file overlap** → task is PARALLEL-SAFE. Proceed to Step 4.6.
+   - **No file overlap** → task is PARALLEL-SAFE. Proceed to Step 4.5b.
+
+4.5b **[WAVE COMPATIBILITY CHECK]** If the task carries a `[WAVE:N]` tag (assigned by synthesis):
+   - Verify that NO OTHER task already assigned `[WAVE:N]` touches any of the same files.
+   - **Conflict found** → bump this task to `[WAVE:N+1]` and update the Batch Strategy Table.
+   - **No conflict** → wave assignment confirmed. Proceed to Step 4.6.
+   - If the task has NO `[WAVE:N]` tag (manually intaked task, not from synthesis):
+       - Scan all existing wave-1 tasks for file overlap. If clean → assign `[WAVE:1]`. If conflict → assign the lowest wave with no conflict.
+       - Add the assignment to the Batch Strategy Table.
 
 4.6 **[BATCH GROUP ASSIGNMENT]** Determine batch membership:
    - **Parallel-safe with an existing ON DECK batch** (same epic, same worktree intention) → reuse `[BATCH:<name>]` tag.
@@ -136,9 +144,10 @@ Context: Evidence chain is locked. Casey formats the task entry per schema and r
 6. **Format the Item**:
     You MUST format the task strictly as a multi-line nested list. Single-line formatting is forbidden.
     The `[BATCH:<name>]` tag MUST be included in the Tags line if the task was assigned to a batch.
+    The `[WAVE:N]` tag MUST be included for any task that is part of a multi-cluster synthesis sweep.
     ```markdown
     - [ ] **`slug`**
-      - **Tags:** `[Status]` `[Layer]` `[Risk]` `[Size]` `[Cognitive Load]` `[BATCH:<name>]`
+      - **Tags:** `[Status]` `[Layer]` `[Risk]` `[Size]` `[Cognitive Load]` `[BATCH:<name>]` `[WAVE:N]`
       - **Goal:** One-sentence primary objective — the outcome, not the method.
       - **Decision Log:** ONE sentence — WHY this task exists right now. The specific pain,
         failure, or opportunity that made this unavoidable. Written from evidence, not intuition.
@@ -150,6 +159,7 @@ Context: Evidence chain is locked. Casey formats the task entry per schema and r
         *(If no deep analysis exists yet, write: "Analysis pending — run spike first.")*
       - **Source of Truth:** 📖 [Filename](file:///path#L123) §Section
       - **Details:** Architectural constraints, platform guards, protocol limits, dependencies.
+        *(For Wave N > 1):* `Prerequisite: Wave N-1 fully merged into master before this worktree is created.`
     ```
 7. **Determine Placement**:
 

@@ -109,6 +109,39 @@ Write this report to `artifacts/system_audit_report.md` as the header section.
 
 ---
 
+### 🌊 Phase 2.75 — Parallel Wave Assignment (MANDATORY before Phase 3)
+
+This phase prevents VS-014 (parallel worktree file collision). It MUST run before any task is written to the Bucket List.
+
+#### Step 1: Build the File Manifest
+For every task cluster drafted in Phase 3 Step 2, collect the complete list of files it will modify (from the cluster's `Affected Files` list in the audit report).
+
+#### Step 2: Compute the Collision Matrix
+For every pair of clusters A and B:
+- Compute `intersection(A.files, B.files)`.
+- If `|intersection| ≥1` → they are a **collision pair** (cannot run in parallel worktrees).
+- Log all collision pairs.
+
+#### Step 3: Graph Coloring → Wave Assignment
+Model the clusters as graph nodes. Add an edge between every collision pair. Apply greedy graph coloring:
+- Wave 1 = all nodes with no edges to each other (parallel-safe)
+- Wave 2 = next independent set after removing Wave 1 nodes
+- Continue until all clusters are assigned
+
+#### Step 4: Output the Batch Strategy Table
+Write the following table into the `artifacts/system_audit_report.md` before the triage section, AND into the Bucket List anchor block when tasks are appended:
+```
+| Wave | Task Clusters | Parallel-Safe? | Prerequisite |
+|------|--------------|---------------|-------------------|
+| 1    | cluster-A, cluster-B | ✅ Yes | None |
+| 2    | cluster-C    | N/A (solo)     | Wave 1 merged |
+```
+
+#### Step 5: Assign `[WAVE:N]` Tags
+Every cluster gets a `[WAVE:N]` tag before being written to the Bucket List. No cluster may be written without a wave assignment.
+
+---
+
 ### 📋 Phase 3 — Triage Routing
 
 #### Step 1: Generate the Audit Report
@@ -121,16 +154,26 @@ Append to `artifacts/system_audit_report.md` (after the metrics header):
 Group related findings into logical task clusters (e.g., all R-08 violations → one `[BATCH:type-safety-sweep]` task, all R-17 violations → one `[BATCH:listener-leak-sweep]` task).
 
 For each task cluster, draft a task summary with:
-- Affected files list
+- Affected files list (REQUIRED — used by Phase 2.75 collision check)
 - Rule violations addressed
 - Estimated size tag (`[Snack]` for <5 files, `[Meal]` for 5-15, `[Feast]` for 15+)
 - Risk tag based on domain (`[H-RISK]` for BLE/protocol, `[M-RISK]` for UI, `[L-RISK]` for utils/docs)
+- **`[WAVE:N]` tag** — assigned from Phase 2.75 graph coloring. REQUIRED on all synthesized tasks.
+- **`Prerequisite: Wave N-1 fully merged`** — added to Details for any Wave N > 1.
 
 #### Step 3: The Bucket List Guardrail
 **⛔ Do NOT append tasks directly to the Bucket List.** You must first:
 1. Generate `PLAN-*.md` files in `docs/plans/` for each task cluster.
-2. Route all findings through the `/intake` workflow OR present the full audit report to the user for manual triage.
-3. Only tasks with approved plans and verified SoT fields may enter the Triage Queue.
+2. Complete Phase 2.75 — every task MUST have a `[WAVE:N]` tag before it can be appended.
+3. Write the **Batch Strategy Table** into the Bucket List anchor block (see Rule 8 of Kanban Constitution).
+4. Route all findings through the `/intake` workflow OR present the full audit report to the user for manual triage.
+5. Only tasks with approved plans, verified SoT fields, AND `[WAVE:N]` tags may enter the Triage Queue.
+
+> ⚠️ **Do not stop after generating the report.** The synthesis workflow is complete only when:
+> - All PLAN files are written to `docs/plans/`
+> - All tasks are in the Bucket List with `[WAVE:N]` tags
+> - The Batch Strategy Table is written to the anchor block
+> Stopping at "report generated" is an incomplete execution.
 
 #### Step 4: Final Summary
 Output to the user:
