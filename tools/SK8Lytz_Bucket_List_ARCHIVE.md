@@ -1383,3 +1383,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "useReducer for every component — rejected as over-engineering for simple 3-state flows."
   - **Plan:** 📎 [PLAN-fsm-boolean-trap-sweep.md](docs/plans/PLAN-fsm-boolean-trap-sweep.md)
   - **Source of Truth:** 📖 `src/screens/DashboardScreen.tsx:178` · `src/screens/Onboarding/HardwareSetupWizardScreen.tsx:53-55` · `src/components/auth/AuthFormSignUp.tsx:37` · `artifacts/system_audit_report.md CLUSTER-03`
+
+- [x] **chore/state-matrix-sweep** 🚀 Merged in 0374dc4c
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[UI]` `[⚠️ M-RISK]` `[🍱 Meal]` `[🤖 PRO-MED]` `[BATCH:deepdive-sweep]` `[WAVE:4]`
+  - **Goal:** Expose missing `isLoading`/`error` states from hooks (R-14). Audit and normalize all AsyncStorage keys to consistent namespace (R-24). Replace hardcoded `setTimeout` in BLE + splash flows with proper lifecycle events (R-16).
+  - **Decision Log (2026-06-10):** Fleet confirmed `useCuratedPicks.ts:112` catches Supabase errors and logs them but never exposes `error` state to consumers — the UI renders stale data silently. `FavoritesPanel` declares `picksLoading` prop but ignores it. `DashboardScreen.tsx:197` uses `setTimeout` where `InteractionManager` should be used.
+  - **Analysis:** 📊 Source: `artifacts/system_audit_report.md` · CLUSTER-08 (21 findings, R-14+R-24+R-16)
+    Key finding: "`useCuratedPicks` hiding errors means admins never see failed spot fetches — offline-first promise broken."
+    Rejected alternative: "Global error boundary only — rejected, doesn't expose the error to the specific UI widget that needs it."
+  - **Plan:** 📎 [PLAN-state-matrix-sweep.md](docs/plans/PLAN-state-matrix-sweep.md)
+  - **Source of Truth:** 📖 `src/hooks/useCuratedPicks.ts:112` · `src/components/docked/FavoritesPanel.tsx:100` · `src/screens/DashboardScreen.tsx:197` · `src/constants/storageKeys.ts`
