@@ -1373,3 +1373,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "Global unhandledRejection handler — rejected, masks root causes and violates surgical principle."
   - **Plan:** 📎 [PLAN-promise-safety-sweep.md](docs/plans/PLAN-promise-safety-sweep.md)
   - **Source of Truth:** 📖 `src/screens/Onboarding/HardwareSetupWizardScreen.tsx:64,601` · `src/context/SessionContext.tsx:240` · `src/hooks/useAdminTelemetry.ts:49,55` · `src/services/PushTokenService.ts:22,36`
+
+- [x] **chore/fsm-boolean-trap-sweep** — ✅ Merged @ bd3a0435. Refactored 18 target files to use strict status string unions ('idle' | 'loading' | 'success' | 'error'), eliminating impossible race states. Deferred Hook Zones in DashboardScreen/DockedController to avoid collateral damage per surgical rules.
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[UI]` `[⚠️ M-RISK]` `[🍱 Meal]` `[🤖 PRO-HIGH]` `[BATCH:deepdive-sweep]` `[WAVE:3]`
+  - **Goal:** Replace scattered boolean flag triplets (`isLoading + isError + isSuccess`) in 18 files with single FSM string union state (`'idle' | 'loading' | 'error' | 'success'`).
+  - **Decision Log (2026-06-10):** Fleet found 18 files with boolean traps including root screens (`DashboardScreen.tsx:178`) and critical flows (`HardwareSetupWizardScreen.tsx:53-55`, `AuthFormSignUp.tsx:37`). Scattered booleans allow `isLoading && isSuccess` to be simultaneously true — a logically impossible race state.
+  - **Analysis:** 📊 Source: `artifacts/system_audit_report.md` · CLUSTER-03 (18 findings, R-18)
+    Key finding: "DashboardScreen, DockedController, and the Hardware Wizard all have boolean traps — the three highest-traffic screens."
+    Rejected alternative: "useReducer for every component — rejected as over-engineering for simple 3-state flows."
+  - **Plan:** 📎 [PLAN-fsm-boolean-trap-sweep.md](docs/plans/PLAN-fsm-boolean-trap-sweep.md)
+  - **Source of Truth:** 📖 `src/screens/DashboardScreen.tsx:178` · `src/screens/Onboarding/HardwareSetupWizardScreen.tsx:53-55` · `src/components/auth/AuthFormSignUp.tsx:37` · `artifacts/system_audit_report.md CLUSTER-03`
