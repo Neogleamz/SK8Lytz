@@ -106,7 +106,11 @@ export function useAppMicrophone({
       if (recorder.isRecording) {
         await recorder.stop();
       }
-    } catch (_e: unknown) { /* swallow */ }
+    } catch (_e: unknown) {
+      AppLogger.debug('[useAppMicrophone] recorder.stop() failed — already stopped or recorder torn down', {
+        error: _e instanceof Error ? _e.message : String(_e),
+      });
+    }
   };
 
   // Lifecycle: auto-start/stop recording based on Music mode + APP mic

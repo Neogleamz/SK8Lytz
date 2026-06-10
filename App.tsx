@@ -141,9 +141,12 @@ export default function App() {
     if (Platform.OS === 'android') {
       try {
         const { initialize } = require('react-native-health-connect');
-        initialize().catch((err: unknown) => AppLogger.warn('HEALTH_CONNECT', { event: 'init_failed', error: String(err) }));
-      } catch {
-        // Fallback if library missing
+        initialize().catch((err: unknown) => AppLogger.warn('HEALTH_CONNECT', { event: 'init_failed', error: err instanceof Error ? err.message : String(err) }));
+      } catch (_e: unknown) {
+        // Fallback if library missing — expected on simulator / non-Health Connect builds
+        AppLogger.debug('[App] react-native-health-connect not available', {
+          error: _e instanceof Error ? _e.message : String(_e),
+        });
       }
     }
   }, []);

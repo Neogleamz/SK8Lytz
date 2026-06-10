@@ -2,6 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { AppLogger } from '../services/AppLogger';
 import { SkateSpot, SkateSpotsService } from '../services/SkateSpotsService';
 import { Spacing , ThemePalette } from '../theme/theme';
 import { ErrorCard } from './ErrorCard';
@@ -40,7 +41,10 @@ export const SkateSpotBottomSheet: React.FC<BottomSheetProps> = ({ visible, onCl
         onSpotUpdated(result);
       }
       onClose();
-    } catch (e) {
+    } catch (e: unknown) {
+      AppLogger.warn('[SkateSpotBottomSheet] claimAndUpdateSpot failed', {
+        error: e instanceof Error ? e.message : String(e),
+      });
       setError('Failed to load. Tap to retry.');
     } finally {
       setIsUpdating(false);

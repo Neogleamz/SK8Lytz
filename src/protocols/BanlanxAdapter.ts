@@ -92,7 +92,12 @@ export class BanlanxAdapter implements IControllerProtocol {
       try {
         const buf = Buffer.from(manufacturerData, 'base64');
         if (buf.length >= 2 && buf[0] === 0x53 && buf[1] === 0x50) return true;
-      } catch { /* malformed base64 — ignore */ }
+      } catch (e: unknown) {
+        // Malformed base64 in manufacturer data — not unexpected during BLE scans
+        if (typeof require !== 'undefined') {
+          try { require('../services/AppLogger').AppLogger.warn('BanlanxAdapter', 'matchesAdvertisement: malformed manufacturerData base64', { error: e instanceof Error ? e.message : String(e) }); } catch { /* logger not ready */ }
+        }
+      }
     }
 
     return false;

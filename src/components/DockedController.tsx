@@ -435,7 +435,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       // BleWriteQueue now handles concurrent write serialization safely.
       const devicesToReplay = devices ?? [];
       devicesToReplay.forEach((d, idx) => {
-        parentWriteToDevice(ledgerState.rawPayload, d.id, { lowPriority: true }).catch((e: unknown) => AppLogger.warn('BLE_TRANSPORT', { event: 'ledger_replay_write_failed', deviceId: d.id, error: String(e) }));
+        parentWriteToDevice(ledgerState.rawPayload, d.id, { lowPriority: true }).catch((e: unknown) => AppLogger.warn('BLE_TRANSPORT', { event: 'ledger_replay_write_failed', deviceId: d.id, error: e instanceof Error ? e.message : String(e) }));
         if (idx === 0) {
           AppLogger.log('LEDGER_RECONNECT_REPLAY', {
             macs: devicesToReplay.map(x => x.id),
@@ -467,7 +467,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         // before the last user selection, not the current one.
         if (!lastSentPayloadRef.current || lastSentPayloadRef.current.length === 0) return;
         AppLogger.log('BLE_QUEUE_REPLAY', { deviceId, payloadLen: lastSentPayloadRef.current.length });
-        optimisticWrite(lastSentPayloadRef.current, undefined, deviceId).catch((e: unknown) => AppLogger.warn('BLE_TRANSPORT', { event: 'ghost_replay_write_failed', deviceId, error: String(e) }));
+        optimisticWrite(lastSentPayloadRef.current, undefined, deviceId).catch((e: unknown) => AppLogger.warn('BLE_TRANSPORT', { event: 'ghost_replay_write_failed', deviceId, error: e instanceof Error ? e.message : String(e) }));
       }
     }), [speed, brightness, writeToDevice, optimisticWrite]);
 
@@ -522,8 +522,10 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           defaultName = currentStatusText || `${activeMode} Preset`;
         }
       } catch (e: unknown) {
-      const safeErr = e instanceof Error ? e : new Error(String(e)); 
-        defaultName = `${activeMode} Preset`; 
+        AppLogger.warn('[DockedController] handleSaveFavoriteClick: failed to build defaultName', {
+          error: e instanceof Error ? e.message : String(e),
+        });
+        defaultName = `${activeMode} Preset`;
       }
       openFavoritePrompt(undefined, defaultName);
     };
@@ -531,7 +533,11 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const handleConfirmSaveFavorite = () => {
       let defaultName = '';
       try { defaultName = currentStatusText || `${activeMode} Preset`; } catch (e: unknown) {
-      const safeErr = e instanceof Error ? e : new Error(String(e)); defaultName = `${activeMode} Preset`; }
+        AppLogger.warn('[DockedController] handleConfirmSaveFavorite: failed to build defaultName', {
+          error: e instanceof Error ? e.message : String(e),
+        });
+        defaultName = `${activeMode} Preset`;
+      }
       const name = promptName.trim() || defaultName;
 
       const capturedState = {

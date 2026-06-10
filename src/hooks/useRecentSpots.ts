@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
+import { AppLogger } from '../services/AppLogger';
 
 const STORAGE_KEY = '@Sk8lytz_RecentLocations';
 
@@ -22,7 +23,11 @@ export function useRecentSpots() {
     try {
       const data = await AsyncStorage.getItem(STORAGE_KEY);
       if (data) setRecentSpots(JSON.parse(data));
-    } catch {}
+    } catch (e: unknown) {
+      AppLogger.warn('[useRecentSpots] Failed to load recent spots from storage', {
+        error: e instanceof Error ? e.message : String(e),
+      });
+    }
   };
 
   const addRecentSpot = useCallback(async (spot: Omit<RecentSpot, 'addedAt'>) => {

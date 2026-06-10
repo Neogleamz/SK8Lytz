@@ -15,7 +15,7 @@ import { Buffer } from 'buffer';
 let _appLogger: typeof import('../services/AppLogger').AppLogger | typeof console | undefined;
 function getAppLogger() {
   if (!_appLogger) {
-    try { _appLogger = require('../services/AppLogger').AppLogger; } catch { _appLogger = console; }
+    try { _appLogger = require('../services/AppLogger').AppLogger; } catch (_e: unknown) { _appLogger = console; /* intentional: AppLogger not ready yet — console is the safe fallback */ }
   }
   return _appLogger!;
 }
@@ -189,7 +189,7 @@ export class ZenggeProtocol {
           isJsonFormat = true;
         }
       }
-    } catch {
+    } catch (_e: unknown) {
       // Not JSON format — fall through to binary parse
     }
 
@@ -390,7 +390,10 @@ export class ZenggeProtocol {
       const productId = ((buffer[10] & 0xFF) << 8) | (buffer[11] & 0xFF);
 
       return { firmwareVer, ledVersion, bleVersion, productId };
-    } catch {
+    } catch (e: unknown) {
+      getAppLogger().warn('[ZenggeProtocol] parseFirmwareFromAdvertisement failed', {
+        error: e instanceof Error ? e.message : String(e),
+      });
       return null;
     }
   }

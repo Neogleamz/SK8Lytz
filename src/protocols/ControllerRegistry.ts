@@ -18,7 +18,7 @@ import { ZenggeAdapter } from './ZenggeAdapter';
 let _appLogger: typeof import('../services/AppLogger').AppLogger | typeof console | undefined;
 function getAppLogger() {
   if (!_appLogger) {
-    try { _appLogger = require('../services/AppLogger').AppLogger; } catch { _appLogger = console; }
+    try { _appLogger = require('../services/AppLogger').AppLogger; } catch (_e: unknown) { _appLogger = console; /* intentional: AppLogger not ready yet */ }
   }
   return _appLogger!;
 }

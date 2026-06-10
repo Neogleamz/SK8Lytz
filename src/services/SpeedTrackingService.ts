@@ -150,8 +150,9 @@ class SpeedTrackingServiceClass {
 
           AppLogger.info('[SpeedTrackingService] Session queued for offline sync', { queueLength: queue.length });
         } catch (queueErr: unknown) {
-      const safeErr = queueErr instanceof Error ? queueErr : new Error(String(queueErr));
-          AppLogger.log('ERROR_CAUGHT', { message: `[SpeedTrackingService] Failed to queue offline session: ${String(queueErr)}` });
+          AppLogger.warn('[SpeedTrackingService] Failed to queue offline session', {
+            error: queueErr instanceof Error ? queueErr.message : String(queueErr),
+          });
         }
 
         Alert.alert(
@@ -209,7 +210,6 @@ class SpeedTrackingServiceClass {
         };
         await HealthSyncService.saveWorkout(enrichedSnapshot);
       } catch (healthErr: unknown) {
-      const safeErr = healthErr instanceof Error ? healthErr : new Error(String(healthErr));
         AppLogger.warn('HEALTH_TELEMETRY', { event: 'health_sync_delegation_failed', error: healthErr instanceof Error ? healthErr.message : String(healthErr) });
       }
 
@@ -238,8 +238,9 @@ class SpeedTrackingServiceClass {
 
       return data.id;
     } catch (err: unknown) {
-      const safeErr = err instanceof Error ? err : new Error(String(err));
-      AppLogger.log('ERROR_CAUGHT', { message: `[SpeedTrackingService] Exception: ${err instanceof Error ? err.message : String(err)}` });
+      AppLogger.warn('[SpeedTrackingService] saveSession exception', {
+        error: err instanceof Error ? err.message : String(err),
+      });
       return null;
     }
   }
@@ -336,12 +337,17 @@ class SpeedTrackingServiceClass {
                  }).eq('user_id', userId);
               }
             }
-          } catch (e) {}
+          } catch (e: unknown) {
+            AppLogger.warn('[SpeedTrackingService] Lifetime stats update failed during queue flush', {
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
         }
       }
     } catch (e: unknown) {
-      const safeErr = e instanceof Error ? e : new Error(String(e));
-      AppLogger.log('ERROR_CAUGHT', { message: `[SpeedTrackingService] flushPendingSessionQueue error: ${String(e)}` });
+      AppLogger.warn('[SpeedTrackingService] flushPendingSessionQueue error', {
+        error: e instanceof Error ? e.message : String(e),
+      });
     } finally {
       this._isFlushingSessionQueue = false;
     }
@@ -407,7 +413,10 @@ class SpeedTrackingServiceClass {
         locationLabel: r.location_label,
       }));
       return mapped.length > 0 ? mapped : this._getOfflineFallbackSessions();
-    } catch {
+    } catch (e: unknown) {
+      AppLogger.warn('[SpeedTrackingService] fetchRecentSessions failed — falling back to offline queue', {
+        error: e instanceof Error ? e.message : String(e),
+      });
       return this._getOfflineFallbackSessions();
     }
   }
@@ -431,7 +440,10 @@ class SpeedTrackingServiceClass {
         peakBpm: r.healthPeakBpm ?? null,
         locationLabel: r.locationLabel ?? null
       }));
-    } catch {
+    } catch (e: unknown) {
+      AppLogger.warn('[SpeedTrackingService] _getOfflineFallbackSessions: failed to parse offline queue', {
+        error: e instanceof Error ? e.message : String(e),
+      });
       return [];
     }
   }
@@ -475,7 +487,11 @@ class SpeedTrackingServiceClass {
           cachedDistance = profile.lifetime_distance_miles || 0;
           cachedTopSpeed = profile.lifetime_top_speed_mph || 0;
         }
-      } catch (e) {}
+      } catch (e: unknown) {
+        AppLogger.warn('[SpeedTrackingService] fetchLifetimeStats: user_profiles cache read failed', {
+          error: e instanceof Error ? e.message : String(e),
+        });
+      }
 
       if (error || !data || data.length === 0) {
         return {
@@ -505,7 +521,10 @@ class SpeedTrackingServiceClass {
         lifetimeCalories,
         lifetimePeakBpm: lifetimePeakBpm > 0 ? lifetimePeakBpm : null,
       };
-    } catch {
+    } catch (e: unknown) {
+      AppLogger.warn('[SpeedTrackingService] fetchLifetimeStats failed', {
+        error: e instanceof Error ? e.message : String(e),
+      });
       return empty;
     }
   }

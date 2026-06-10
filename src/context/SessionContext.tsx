@@ -363,7 +363,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       status: 'ACTIVE',
       startTime: isoStart,
     }).catch((err: unknown) =>
-      AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_start', error: String(err) })
+      AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_start', error: err instanceof Error ? err.message : String(err) })
     );
   }, []);
   startSessionRef.current = startSession;
@@ -396,7 +396,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         peakHR: finalPeakHR,
       });
     } catch (err: unknown) {
-      AppLogger.warn('WATCH_BRIDGE', { event: 'summary_push_failed', error: String(err) });
+      AppLogger.warn('WATCH_BRIDGE', { event: 'summary_push_failed', error: err instanceof Error ? err.message : String(err) });
     }
 
     // ── 4. NOW transition to IDLE — safe to tear down FGS ────────────────────
