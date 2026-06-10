@@ -445,8 +445,8 @@ class DeviceRepository {
   /**
    * Remove a group by ID from local state and cloud.
    */
-  async deleteGroup(groupId: string): Promise<void> {
-    await GroupRepository.getInstance().deleteGroup(groupId);
+  async deleteGroup(groupId: string, userId?: string): Promise<void> {
+    await GroupRepository.getInstance().deleteGroup(groupId, userId);
   }
 
   /**

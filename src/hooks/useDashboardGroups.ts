@@ -15,6 +15,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../context/AuthContext';
 
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import { AppLogger } from '../services/AppLogger';
@@ -92,6 +93,7 @@ export function useDashboardGroups({
   allDevicesRef: _allDevicesRef,
   deregisterDevice,
 }: UseDashboardGroupsOptions): UseDashboardGroupsResult {
+  const { user } = useAuth();
 
   const repo = DeviceRepository.getInstance();
 
@@ -336,7 +338,7 @@ export function useDashboardGroups({
           text: "Forget Group Only", 
           onPress: async () => {
             // Phase 5: Atomic RPC-backed backend sync and instantaneous RAM cleanup
-            await GroupRepository.getInstance().deleteGroup(id);
+            await GroupRepository.getInstance().deleteGroup(id, user?.id);
             await _scrubGhostGroupFromLocal(groupToDelete);
             closeGroupModal();
           }
@@ -350,7 +352,7 @@ export function useDashboardGroups({
               await deregisterDevice(d.device_mac);
             }
             // Phase 5: Atomic RPC-backed cleanup follows the device removal
-            await GroupRepository.getInstance().deleteGroup(id);
+            await GroupRepository.getInstance().deleteGroup(id, user?.id);
             await _scrubGhostGroupFromLocal(groupToDelete);
             closeGroupModal();
           }

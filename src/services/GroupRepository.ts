@@ -108,7 +108,7 @@ class GroupRepository {
   /**
    * Remove a group by ID from local state and cloud.
    */
-  async deleteGroup(groupId: string): Promise<void> {
+  async deleteGroup(groupId: string, userId?: string): Promise<void> {
     // 1. Remove group row
     this.groups = this.groups.filter((g) => g.id !== groupId);
     await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch((e) =>
@@ -150,11 +150,10 @@ class GroupRepository {
     } catch (e: unknown) {
       AppLogger.warn('[GroupRepository] delete_group_cascade RPC failed, falling back:', { error: e instanceof Error ? e.message : String(e)  });
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
+        if (userId) {
           await supabase.from('registered_groups').delete()
             .eq('id', groupId)
-            .eq('user_id', session.user.id);
+            .eq('user_id', userId);
         }
       } catch (fe: unknown) {
         AppLogger.warn('[GroupRepository] Cloud group delete fallback failed:', { error: fe instanceof Error ? fe.message : (fe instanceof Error ? fe.message : String(fe)) });
