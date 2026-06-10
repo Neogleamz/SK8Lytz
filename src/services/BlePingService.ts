@@ -3,7 +3,7 @@ import { Buffer } from 'buffer';
 import { AppLogger } from './AppLogger';
 import { createGattSession } from './BleSessionFactory';
 import { type PingResult, isPingResult } from '../types/dashboard.types';
-import { enqueueWrite } from './BleWriteQueue';
+import { enqueueWrite, enqueueDelay } from './BleWriteQueue';
 import { scrubPII } from '../utils/piiScrubber';
 
 /**
@@ -99,31 +99,31 @@ export async function executePingDevice(
         // Fire queries after giving the notification monitor 400ms to set up.
         // Uses adapter's polymorphic parse methods — Zengge parses EEPROM,
         // BanlanX returns null for both.
-        setTimeout(() => {
-          const queryResult = pingAdapter.buildQuerySettings(false);
-          if (queryResult.packets.length > 0) {
-            const b64HW = Buffer.from(queryResult.packets[0]).toString('base64');
-            enqueueWrite('critical', async () => {
-              await bleManager.writeCharacteristicWithoutResponseForDevice(
-                mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64HW
-              );
-              return true;
-            }).catch((e: unknown) => AppLogger.warn('[BLE pingDevice] HW query write failed', { error: e instanceof Error ? e.message : String(e)  }));
-          }
+        enqueueDelay('critical', 400);
 
-          setTimeout(() => {
-            const rfResult = pingAdapter.buildQueryRfRemoteState();
-            if (rfResult.packets.length > 0) {
-              const b64RF = Buffer.from(rfResult.packets[0]).toString('base64');
-              enqueueWrite('critical', async () => {
-                await bleManager.writeCharacteristicWithoutResponseForDevice(
-                  mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64RF
-                );
-                return true;
-              }).catch((e: unknown) => AppLogger.warn('[BLE pingDevice] RF query write failed', { error: e instanceof Error ? e.message : String(e)  }));
-            }
-          }, 200);
-        }, 400);
+        const queryResult = pingAdapter.buildQuerySettings(false);
+        if (queryResult.packets.length > 0) {
+          const b64HW = Buffer.from(queryResult.packets[0]).toString('base64');
+          enqueueWrite('critical', async () => {
+            await bleManager.writeCharacteristicWithoutResponseForDevice(
+              mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64HW
+            );
+            return true;
+          }).catch((e: unknown) => AppLogger.warn('[BLE pingDevice] HW query write failed', { error: e instanceof Error ? e.message : String(e)  }));
+        }
+
+        enqueueDelay('critical', 200);
+
+        const rfResult = pingAdapter.buildQueryRfRemoteState();
+        if (rfResult.packets.length > 0) {
+          const b64RF = Buffer.from(rfResult.packets[0]).toString('base64');
+          enqueueWrite('critical', async () => {
+            await bleManager.writeCharacteristicWithoutResponseForDevice(
+              mac, pingAdapter.serviceUUID, pingAdapter.writeCharacteristicUUID, b64RF
+            );
+            return true;
+          }).catch((e: unknown) => AppLogger.warn('[BLE pingDevice] RF query write failed', { error: e instanceof Error ? e.message : String(e)  }));
+        }
       });
     }
 

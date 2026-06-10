@@ -158,6 +158,22 @@ export function enqueueWrite(
   });
 }
 
+/**
+ * Enqueue an explicit delay into the priority queue.
+ * Useful for pacing sequential writes that require a physical gap (e.g., handshake, query staggered delays).
+ */
+export function enqueueDelay(
+  priority: WritePriority,
+  delayMs: number,
+  generation: number = 0
+): Promise<boolean | 'partial'> {
+  return enqueueWrite(
+    priority,
+    () => new Promise(res => setTimeout(() => res(true), delayMs)),
+    generation
+  );
+}
+
 async function _drain(): Promise<void> {
   if (_isRunning) return;
   _isRunning = true;

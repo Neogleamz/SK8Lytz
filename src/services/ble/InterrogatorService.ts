@@ -17,7 +17,7 @@ import { Buffer } from 'buffer';
 import type { BleManager, BleError, Characteristic } from 'react-native-ble-plx';
 import { AppLogger } from '../AppLogger';
 import { createGattSession } from '../BleSessionFactory';
-import { enqueueWrite } from '../BleWriteQueue';
+import { enqueueWrite, enqueueDelay } from '../BleWriteQueue';
 import { type PingResult, isPingResult } from '../../types/dashboard.types';
 
 const HW_CACHE_KEY = (mac: string) => `@sk8_hw_${mac.toUpperCase()}`;
@@ -108,30 +108,31 @@ export async function interrogateDevice(
         }
       );
 
-      setTimeout(() => {
-        const hwQuery = interrogatorAdapter.buildQuerySettings(false);
-        if (hwQuery.packets.length > 0) {
-          const b64HW = Buffer.from(hwQuery.packets[0]).toString('base64');
-          enqueueWrite('normal', async () => {
-            await bleManager.writeCharacteristicWithoutResponseForDevice(
-              mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.writeCharacteristicUUID, b64HW
-            );
-            return true;
-          }).catch((e: unknown) => AppLogger.warn('[InterrogatorService] HW query write failed', { error: String(e) }));
-        }
-        setTimeout(() => {
-          const rfQuery = interrogatorAdapter.buildQueryRfRemoteState();
-          if (rfQuery.packets.length > 0) {
-            const b64RF = Buffer.from(rfQuery.packets[0]).toString('base64');
-            enqueueWrite('normal', async () => {
-              await bleManager.writeCharacteristicWithoutResponseForDevice(
-                mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.writeCharacteristicUUID, b64RF
-              );
-              return true;
-            }).catch((e: unknown) => AppLogger.warn('[InterrogatorService] RF query write failed', { error: String(e) }));
-          }
-        }, 200);
-      }, 400);
+      enqueueDelay('normal', 400);
+
+      const hwQuery = interrogatorAdapter.buildQuerySettings(false);
+      if (hwQuery.packets.length > 0) {
+        const b64HW = Buffer.from(hwQuery.packets[0]).toString('base64');
+        enqueueWrite('normal', async () => {
+          await bleManager.writeCharacteristicWithoutResponseForDevice(
+            mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.writeCharacteristicUUID, b64HW
+          );
+          return true;
+        }).catch((e: unknown) => AppLogger.warn('[InterrogatorService] HW query write failed', { error: String(e) }));
+      }
+
+      enqueueDelay('normal', 200);
+
+      const rfQuery = interrogatorAdapter.buildQueryRfRemoteState();
+      if (rfQuery.packets.length > 0) {
+        const b64RF = Buffer.from(rfQuery.packets[0]).toString('base64');
+        enqueueWrite('normal', async () => {
+          await bleManager.writeCharacteristicWithoutResponseForDevice(
+            mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.writeCharacteristicUUID, b64RF
+          );
+          return true;
+        }).catch((e: unknown) => AppLogger.warn('[InterrogatorService] RF query write failed', { error: String(e) }));
+      }
     });
 
     if (hwConfig) {

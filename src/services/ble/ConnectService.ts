@@ -10,7 +10,7 @@ import { scrubPII } from '../../utils/piiScrubber';
 import { jitteredDelay } from '../../utils/backoff';
 import { BLE_TIMING } from '../../constants/bleTimingConstants';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
-import { WritePriority } from '../BleWriteQueue';
+import { WritePriority, enqueueDelay } from '../BleWriteQueue';
 
 export interface ConnectServiceInput {
   bleManager: BleManager;
@@ -252,7 +252,7 @@ export const connectService = fromPromise<
             await enqueueWrite('critical', writeOp);
             
             if (i < handshake.packets.length - 1 && handshake.interPacketDelayMs > 0) {
-              await new Promise(res => setTimeout(res, handshake.interPacketDelayMs));
+              await enqueueDelay('critical', handshake.interPacketDelayMs);
             }
           }
           if (handshake.packets.length > 0) {
