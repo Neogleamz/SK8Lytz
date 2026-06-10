@@ -7,7 +7,6 @@ import type { Device, BleManager } from 'react-native-ble-plx';
 import { createGattSession } from '../BleSessionFactory';
 import { AppLogger } from '../AppLogger';
 import { scrubPII } from '../../utils/piiScrubber';
-import { acquireGattLock } from '../../hooks/ble/useBLEGattMutex';
 import { jitteredDelay } from '../../utils/backoff';
 import { BLE_TIMING } from '../../constants/bleTimingConstants';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
@@ -51,14 +50,6 @@ export const connectService = fromPromise<
     Alert.alert('Connection Blocked', 'One or more devices have been restricted and cannot be connected.');
     throw new Error('hardware_blacklist');
   }
-
-  // ── GATT LOCK ACQUISITION: Priority 1 (User Action) ──
-  const lockHandle = await acquireGattLock(1);
-  if (!lockHandle) {
-    AppLogger.warn('[BLE] connectService REJECTED — could not acquire GATT lock', { requestedDevices: targetMacs });
-    throw new Error('gatt_lock_failed');
-  }
-  const { release } = lockHandle;
 
   try {
     if (signal.aborted) throw new Error('connect_aborted');
@@ -292,7 +283,5 @@ export const connectService = fromPromise<
   } catch (outerErr: unknown) {
     AppLogger.error('[BLE] connectService outer failed', outerErr instanceof Error ? outerErr.message : String(outerErr));
     throw outerErr;
-  } finally {
-    release();
   }
 });

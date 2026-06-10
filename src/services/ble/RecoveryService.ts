@@ -4,7 +4,6 @@ import { Buffer } from 'buffer';
 import type { BleManager, Device } from 'react-native-ble-plx';
 import { AppLogger } from '../AppLogger';
 import { createGattSession } from '../BleSessionFactory';
-import { acquireGattLock } from '../../hooks/ble/useBLEGattMutex';
 import { enqueueWrite } from '../BleWriteQueue';
 import { BLE_TIMING } from '../../constants/bleTimingConstants';
 
@@ -40,7 +39,11 @@ interface RecoveryInput {
 
 export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBack }) => {
   let cancelled = false;
-  const cancel = () => { cancelled = true; };
+  const abortController = new AbortController();
+  const cancel = () => { 
+    cancelled = true; 
+    abortController.abort();
+  };
 
   async function run() {
     const { 
@@ -54,14 +57,11 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
     }
 
     const deviceId = ghostedDeviceIds[0];
-    const loopStartMs = Date.now();
     let attempts = 0;
-    let gateWaitCount = 0;
     let reconnectedDevice: Device | null = null;
 
     // --- Phase 1 & 2: GATT hammering ---
     while (!cancelled && attempts <= PHASE_2_MAX_ATTEMPTS && !hasExceededMaxRecovery(attempts)) {
-      let releaseFn: (() => void) | null = null;
       try {
         const backoff = attempts <= PHASE_1_MAX_ATTEMPTS
           ? getRecoveryBackoffMs(attempts)
@@ -78,20 +78,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
 
         if (!bleManager) break;
 
-        const lockHandle = await acquireGattLock(2);
-        if (!lockHandle) {
-          gateWaitCount++;
-          if (gateWaitCount > 6) {
-            AppLogger.warn(`[RecoveryService] ${deviceId} hit Zombie Lock — lock busy for too long.`);
-            break; // Eject
-          }
-          continue;
-        }
-
-        gateWaitCount = 0;
-        const { release, signal } = lockHandle;
-        releaseFn = release;
-
+        const signal = abortController.signal;
         if (signal.aborted || cancelled) break;
 
         const { conn, adapter: recoveryAdapter } = await createGattSession(bleManager, deviceId, {
@@ -161,8 +148,6 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
 
       } catch (e: unknown) {
         AppLogger.warn(`[RecoveryService] Connection attempt failed for ${deviceId}`, e instanceof Error ? e.message : String(e));
-      } finally {
-        if (releaseFn) releaseFn();
       }
     }
 
@@ -179,12 +164,9 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
         if (!sweepedDevice) continue;
 
         AppLogger.log('AUTO_RECOVERY', { phase: 3, deviceId, event: 'mac_reappeared_attempting_reconnect' });
-        let releaseFn: (() => void) | null = null;
         try {
-          const lockHandle = await acquireGattLock(2);
-          if (!lockHandle || cancelled) break;
-          const { release, signal } = lockHandle;
-          releaseFn = release;
+          if (cancelled) break;
+          const signal = abortController.signal;
 
           const { conn, adapter: recoveryAdapter } = await createGattSession(bleManager, deviceId, {
             timeout: 3500, retries: 1, signal, context: 'autoRecoveryPhase3',
@@ -229,8 +211,6 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
         } catch (e: unknown) {
           AppLogger.warn('[RecoveryService] Phase 3 reconnect failed', { deviceId, error: String(e) });
           break; // Give up
-        } finally {
-          if (releaseFn) releaseFn();
         }
       }
     }

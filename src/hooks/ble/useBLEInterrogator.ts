@@ -5,7 +5,6 @@ import { Buffer } from 'buffer';
 import type { BleManager, BleError, Characteristic } from 'react-native-ble-plx';
 import { AppLogger } from '../../services/AppLogger';
 import { createGattSession } from '../../services/BleSessionFactory';
-import { acquireGattLock } from './useBLEGattMutex';
 import { enqueueWrite } from '../../services/BleWriteQueue';
 import { type PingResult, isPingResult } from '../../types/dashboard.types';
 
@@ -62,34 +61,16 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
     // The hwCache check above is the correct deduplication — if we have data, skip;
     // if we don't, probe regardless of registration status.
 
-    const lockHandle = await acquireGattLock(3);
-    if (!lockHandle) {
-      AppLogger.log('BLE_STATE_CHANGE', { event: 'interrogator_yield_p1_lock', mac });
-      if (!probeQueueRef.current.includes(mac)) probeQueueRef.current.push(mac);
-      return;
-    }
-
-    const { release, signal } = lockHandle;
     probingMacsRef.current.add(mac);
     AppLogger.log('BLE_STATE_CHANGE', { event: 'interrogator_start', mac });
 
     try {
-      if (signal.aborted) {
-        AppLogger.log('BLE_STATE_CHANGE', { event: 'interrogator_preempted_pre_connect', mac });
-        return;
-      }
 
       const { adapter: interrogatorAdapter } = await createGattSession(bleManager, mac, {
         timeout: 6000,
         retries: 2,
-        signal,
         context: 'interrogateDevice',
       });
-
-      if (signal.aborted) {
-        AppLogger.log('BLE_STATE_CHANGE', { event: 'interrogator_preempted_post_discover', mac });
-        return;
-      }
 
       const hwConfig = await new Promise<PingResult | null>(resolve => {
         let accumulated: Partial<PingResult> | null = null;
@@ -101,12 +82,6 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
         const sub = bleManager.monitorCharacteristicForDevice(
           mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.notifyCharacteristicUUID,
           (err: BleError | null, char: Characteristic | null) => {
-            if (signal.aborted) {
-              clearTimeout(timer);
-              sub.remove();
-              resolve(null);
-              return;
-            }
             if (err || !char?.value) return;
             try {
               const raw = Array.from(Buffer.from(char.value, 'base64')) as number[];
@@ -126,7 +101,6 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
         );
 
         setTimeout(() => {
-          if (signal.aborted) { clearTimeout(timer); sub.remove(); resolve(null); return; }
           const hwQuery = interrogatorAdapter.buildQuerySettings(false);
           if (hwQuery.packets.length > 0) {
             const b64HW = Buffer.from(hwQuery.packets[0]).toString('base64');
@@ -138,7 +112,6 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
             }).catch((e: unknown) => AppLogger.warn('[useBLEInterrogator] HW query failed', { error: String(e) }));
           }
           setTimeout(() => {
-            if (signal.aborted) return;
             const rfQuery = interrogatorAdapter.buildQueryRfRemoteState();
             if (rfQuery.packets.length > 0) {
               const b64RF = Buffer.from(rfQuery.packets[0]).toString('base64');
@@ -153,7 +126,7 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
         }, 400);
       });
 
-      if (hwConfig && !signal.aborted) {
+      if (hwConfig) {
         AsyncStorage.setItem(HW_CACHE_KEY(mac), JSON.stringify(hwConfig)).catch(e => AppLogger.warn('[useBLEInterrogator] Failed to cache hw config', { error: String(e) }));
         hwCacheRef.current[mac] = hwConfig;
         setHwCache(prev => ({ ...prev, [mac]: hwConfig }));
@@ -162,12 +135,9 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
         onDeviceInterrogated();
       }
     } catch (err: unknown) {
-      if (!signal.aborted) {
-        AppLogger.warn(`[Interrogator] Failed for ${mac}`, { error: String(err) });
-      }
+      AppLogger.warn(`[Interrogator] Failed for ${mac}`, { error: String(err) });
     } finally {
       probingMacsRef.current.delete(mac);
-      release();
       await bleManager.cancelDeviceConnection(mac).catch((e: unknown) => AppLogger.warn('[useBLEInterrogator] Disconnect failed', { error: String(e) }));
     }
   }, [bleManager, onDeviceInterrogated]);

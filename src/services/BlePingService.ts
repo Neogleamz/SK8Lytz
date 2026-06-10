@@ -2,7 +2,6 @@ import { Platform } from 'react-native';
 import { Buffer } from 'buffer';
 import { AppLogger } from './AppLogger';
 import { createGattSession } from './BleSessionFactory';
-import { acquireGattLock } from '../hooks/ble/useBLEGattMutex';
 import { type PingResult, isPingResult } from '../types/dashboard.types';
 import { enqueueWrite } from './BleWriteQueue';
 import { scrubPII } from '../utils/piiScrubber';
@@ -28,13 +27,6 @@ export async function executePingDevice(
   const probe = options?.probe ?? true;
   const duration = options?.duration ?? 8000;
   const turnOffAtEnd = options?.turnOffAtEnd ?? true;
-
-  const lockHandle = await acquireGattLock(1);
-  if (!lockHandle) {
-    AppLogger.warn(`[BLE] pingDevice rejected — could not acquire GATT lock`);
-    return null;
-  }
-  const { release } = lockHandle;
 
   try {
     // ── BleSessionFactory: connect → discover → resolve (single source of truth) ──
@@ -165,6 +157,5 @@ export async function executePingDevice(
     await bleManager.cancelDeviceConnection(mac).catch((e: unknown) => {
       AppLogger.warn('[BLE] pingDevice cancelDeviceConnection failed', { deviceId: scrubPII(mac), error: e instanceof Error ? e.message : String(e)  });
     });
-    release();
   }
 }

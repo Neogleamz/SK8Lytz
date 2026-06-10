@@ -31,15 +31,10 @@ import { scrubPII } from '../utils/piiScrubber';
 import { requestPermission } from '../services/PermissionService';
 import { supabase } from '../services/supabaseClient';
 import { useBLEScanner } from './ble/useBLEScanner';
-import { useBLEAutoRecovery } from './ble/useBLEAutoRecovery';
-
+import { enqueueWrite, resolveWritePriority } from '../services/BleWriteQueue';
 import { useBLERSSIMonitor } from './ble/useBLERSSIMonitor';
-import { acquireGattLock } from './ble/useBLEGattMutex';
-
 import { executePingDevice } from '../services/BlePingService';
 import { executeWriteToDevice, executeWriteChunked, executeProtocolResults as executeProtocolResultsService, BleWriteStateRefs } from '../services/BleWriteDispatcher';
-import { clearWriteQueue, enqueueWrite, resolveWritePriority } from '../services/BleWriteQueue';
-import { executeRealDisconnect, disconnectFromDevice as keepaliveDisconnect, forceDisconnect as keepaliveForceDisconnect } from '../services/BleLifecycleManager';
 import { jitteredDelay } from '../utils/backoff';
 
 let BleManager: any;
@@ -193,22 +188,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // Prevents BLE queue pile-up when user swipes rapidly through the pattern picker.
   // Critical writes (power, time sync) bypass this and go direct.
   const writeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // ── GATT Keepalive Timer ───────────────────────────────────────────────────
-  // When the controller closes, we defer the real GATT teardown by 60s.
-  // If the user re-opens within that window, we cancel the timer and reuse the
-  // existing connection (zero GATT re-negotiation, zero MTU exchange, zero time-sync).
-  // forceDisconnect() bypasses this for AppState background events.
-  const KEEPALIVE_DURATION_MS = 60_000;
-  const keepaliveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Helper: transition the gate which automatically syncs to state via the listener
-  const setGate = useCallback((phase: BLEPhaseTag) => {
-    // Map legacy phase tags to XState events if needed by legacy callers
-    if (phase === 'CONNECTING') bleSend({ type: 'CONNECT_REQUEST' });
-    else if (phase === 'DISCONNECTING') bleSend({ type: 'DISCONNECT_REQUEST' });
-    else if (phase === 'SCANNING') bleSend({ type: 'SCAN_START' });
-    else if (phase === 'IDLE') bleSend({ type: 'FORCE_IDLE' });
-  }, [bleSend]);
 
   useEffect(() => {
     // 1. Initial Load
@@ -380,44 +359,12 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // --- Sub-Hooks ---
   const handleOrganicDisconnect = (error: any, deviceId: string) => {
     AppLogger.warn(`[BLE] Organic disconnect/dropout for ${deviceId}`);
-      AppLogger.log('DEVICE_DISCONNECTED', { id: deviceId, reason: 'dropout', error: error instanceof Error ? error.message : String(error) });
-    bleSend({ type: 'RECOVERY_START', ghostedMacs: [deviceId] });
+    AppLogger.log('DEVICE_DISCONNECTED', { id: deviceId, reason: 'dropout', error: error instanceof Error ? error.message : String(error) });
+    // The machine handles this organically via handleOrganicDisconnect callback in bleMachine input.
+    // The machine handles RECOVERY_START internally for organic drops.
   };
 
-  // Stable ref-forwarder: the BLE disconnect listener captures this ref once,
-  // but it always delegates to the latest handleOrganicDisconnect. Same pattern
-  // as handleNotificationRef (L224-225). Eliminates RC-06 stale closure risk.
   handleOrganicDisconnectRef.current = handleOrganicDisconnect;
-
-  const autoRecovery = useBLEAutoRecovery({
-    bleManager,
-    setConnectedDevices: updateConnectedDevices,
-    disconnectListeners,
-    handleNotification: (error: any, characteristic: any, deviceId: string) => handleNotificationRef.current(error, characteristic, deviceId),
-    onOrganicDisconnect: (error: any, deviceId: string) => handleOrganicDisconnectRef.current(error, deviceId),
-    onAdapterResolved: (deviceId: string, adapter: IControllerProtocol) => {
-      // Keep adapterMapRef in sync when AutoRecovery reconnects a device.
-      // The recovery hook resolves the adapter fresh from conn.services() after
-      // GATT reconnect, then reports it here so writeToDevice keeps using the
-      // correct protocol UUIDs without re-discovering from scratch.
-      adapterMapRef.current.set(deviceId, adapter);
-    },
-    onDeviceRecovered: (deviceId: string) => {
-      // Relay to consumers (DashboardScreen) so they can replay the last
-      // pattern/color state to the recovered device after dropout.
-      deviceRecoveredCallbackRef.current?.(deviceId);
-    },
-    onMtuNegotiated: (deviceId: string, mtu: number) => {
-      // Persist the MTU negotiated during auto-recovery back into mtuMapRef.
-      // Without this, post-recovery writes silently use the 186-byte fallback
-      // even if the device negotiated a higher MTU (e.g. 517 bytes on Android).
-      mtuMapRef.current.set(deviceId, mtu);
-      AppLogger.log('DEVICE_CONNECTED', { context: 'mtu_recovery_updated', mtu, deviceId });
-    },
-    connectedDevicesRef,
-    onGroupDropout: async (devices: Device[]) => connectToDevicesRef.current(devices),
-    getSweepedDevice: (deviceId: string) => allDevicesRef.current.find(d => d.id === deviceId),
-  });
 
   // ── Overwatch: Silent Sweeper + Interrogator Queue ────────────────────────
   const pendingRegistrationsSetterRef = useRef<React.Dispatch<React.SetStateAction<PendingRegistration[]>>>(() => {});
@@ -443,17 +390,12 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     blinkPayload: number[],
     options?: { probe?: boolean; duration?: number; turnOffAtEnd?: boolean }
   ): Promise<PingResult | null> => {
-    const lockHandle = await acquireGattLock(2); // ping priority
-    if (!lockHandle) return null;
-    const { release } = lockHandle;
-
     const wasSweeperActive = scanner.isSweeperActive;
     if (wasSweeperActive) scanner.stopScanner(); // Stops sweeper natively
     try {
       return await executePingDevice(bleManager, mac, blinkPayload, options);
     } finally {
       if (wasSweeperActive && bleManager) scanner.startSweeper();
-      release();
     }
   }, [bleManager, scanner]);
 
@@ -536,30 +478,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     ).then(() => true));
   }, [connectedDevices, bleSnapshot.context.ghostedDeviceIds]);
 
-  // ── BleLifecycleManager bindings ──────────────────────────────────────────
-  const realDisconnect = useCallback(async () => {
-    // Flush pending writes before tearing down GATT connections
-    clearWriteQueue();
-    await executeRealDisconnect(
-      bleManager,
-      connectedDevicesRef,
-      disconnectListeners,
-      mtuMapRef,
-      adapterMapRef,
-      getGate,
-      updateConnectedDevices,
-      setGate,
-      bleSend
-    );
-  }, [bleManager, updateConnectedDevices, setGate, bleSend, getGate]);
-
   const disconnectFromDevice = useCallback(() => {
-    keepaliveDisconnect(keepaliveTimerRef, KEEPALIVE_DURATION_MS, realDisconnect);
-  }, [realDisconnect]);
+    bleSend({ type: 'DISCONNECT_REQUEST' });
+  }, [bleSend]);
 
   const forceDisconnect = useCallback(() => {
-    keepaliveForceDisconnect(keepaliveTimerRef, realDisconnect);
-  }, [realDisconnect]);
+    bleSend({ type: 'FORCE_IDLE' });
+  }, [bleSend]);
 
   const getAdapterForDevice = useCallback((deviceId: string): IControllerProtocol => {
     return resolveProtocolForDevice(deviceId, adapterMapRef.current);
@@ -650,7 +575,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     connectedDevices,
     isBluetoothSupported,
     isBluetoothEnabled,
-    bleSnapshot.context.ghostedDeviceIds,
     droppedOutDeviceIds,
     bleSnapshot.context.ghostedDeviceIds,
     rssiMap,
