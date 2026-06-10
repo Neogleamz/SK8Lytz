@@ -155,7 +155,19 @@ class LocationService {
             .or(orParts.join(','))
             .order('created_at', { ascending: false });
 
-          privateData = (memberSessions as unknown as DB_CrewSession[]) ?? [];
+          privateData = (memberSessions ?? []).map((row: any) => ({
+            id: row.id,
+            name: row.name,
+            invite_code: row.invite_code,
+            location_label: row.location_label,
+            location_coords: row.location_coords,
+            scheduled_at: row.scheduled_at,
+            created_at: row.created_at,
+            is_public: row.is_public,
+            crew_id: row.crew_id,
+            crew_members: row.crew_members,
+            crews: row.crews,
+          }));
         }
       }
     } catch (err: unknown) {
@@ -163,7 +175,20 @@ class LocationService {
     }
 
     // ── Merge + deduplicate by session id ────────────────────────────────────
-    const combined = [...((publicData as unknown as DB_CrewSession[]) ?? []), ...privateData];
+    const mappedPublicData = (publicData ?? []).map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      invite_code: row.invite_code,
+      location_label: row.location_label,
+      location_coords: row.location_coords,
+      scheduled_at: row.scheduled_at,
+      created_at: row.created_at,
+      is_public: row.is_public,
+      crew_id: row.crew_id,
+      crew_members: row.crew_members,
+      crews: row.crews,
+    }));
+    const combined = [...mappedPublicData, ...privateData];
     const seen = new Set<string>();
     const unique = combined.filter((s: DB_CrewSession) => {
       if (seen.has(s.id)) return false;

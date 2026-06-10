@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
+import { webStyle } from '../../utils/webStyles';
 
 interface LiveTelemetryHUDProps {
   gpsSpeed: number;
@@ -63,7 +64,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     ...require('react-native').Platform.select({
-      web: { boxShadow: '0px 2px 4px rgba(0,0,0,0.1)' } as any, // MIGRATION-SHIM
+      web: webStyle({ boxShadow: '0px 2px 4px rgba(0,0,0,0.1)' }), // MIGRATION-SHIM
       default: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },

@@ -114,11 +114,14 @@ export const connectService = fromPromise<
 
     if (Platform.OS === 'web' || isMock === 'true') {
       // Mock flow
-      const mockDevices = targetMacs.map(mac => ({
-        id: mac,
-        name: 'MOCK_DEVICE',
-        rssi: -50,
-      } as unknown as Device));
+      const mockDevices = targetMacs.map(mac => {
+        const d: Partial<Device> = {
+          id: mac,
+          name: 'MOCK_DEVICE',
+          rssi: -50,
+        };
+        return d as Device;
+      });
       
       mockDevices.forEach(d => {
         AppLogger.log('DEVICE_CONNECTED', { id: d.id, name: d.name, firmware: 'v2.0.1.DEMO' });

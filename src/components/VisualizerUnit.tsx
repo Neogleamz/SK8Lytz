@@ -5,7 +5,7 @@ import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { useTheme } from '../context/ThemeContext';
 import type { PatternId, RGB } from '../protocols/PatternEngine';
 import { getVisualizerFrame, getMusicVisualizerFrame, SK8LYTZ_TEMPLATES } from '../protocols/PatternEngine';
-import { PositionalMathBuffer } from '../protocols/PositionalMathBuffer';
+import { PositionalMathBuffer, BuilderNode } from '../protocols/PositionalMathBuffer';
 import { Spacing } from '../theme/theme';
 
 // Convert HSL to Hex manually as React Native Interpolate handles strict string maps better
@@ -377,7 +377,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
           if (!builderNodes || builderNodes.length === 0) {
             builderPixels = Array.from({ length: activeSegmentLeds }).map(() => ({ r: 255, g: 0, b: 0 }));
           } else {
-            builderPixels = PositionalMathBuffer.generateArray(builderNodes as any[], activeSegmentLeds, builderFillMode === 'GRADIENT');
+            builderPixels = PositionalMathBuffer.generateArray(builderNodes as BuilderNode[], activeSegmentLeds, builderFillMode === 'GRADIENT');
           }
 
           // 0x02=Running, 0x04=Jump → scroll the pixel array using animTick

@@ -102,7 +102,7 @@ export function useBLEScanner({
           locString = `SRID=4326;POINT(${loc.lng} ${loc.lat})`;
         }
         
-        payloads = batch.map((d: Record<string, unknown>) => ({
+        payloads = batch.map((d: Record<string, unknown>): TelemetryInsert => ({
           device_mac: String(d.id),
           rssi: Number(d.rssi),
           product_type: String(d.type),
@@ -113,7 +113,7 @@ export function useBLEScanner({
           led_version: d.ledVersion ? Number(d.ledVersion) : null,
           location: locString,
           is_claimed: Boolean(d.is_claimed)
-        })) as unknown as TelemetryInsert[];
+        }));
 
         const { error } = await supabase.from('discovered_devices_telemetry').insert(payloads as TelemetryInsert[]);
         if (error) throw new Error(error.message);
@@ -316,10 +316,10 @@ export function useBLEScanner({
       bleSend({ type: 'SCAN_START' });
 
       setTimeout(() => {
-        const halozL = { id: 'VIRTUAL-HALOZ-L', name: 'SK8-HALOZ-L-DEV', rssi: -50, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 } as unknown as Device;
-        const halozR = { id: 'VIRTUAL-HALOZ-R', name: 'SK8-HALOZ-R-DEV', rssi: -52, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 } as unknown as Device;
-        const soulzL = { id: 'VIRTUAL-SOULZ-L', name: 'SK8-SOULZ-L-DEV', rssi: -55, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'SOULZ', hwPoints: 43 } as unknown as Device;
-        const soulzR = { id: 'VIRTUAL-SOULZ-R', name: 'SK8-SOULZ-R-DEV', rssi: -57, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'SOULZ', hwPoints: 43 } as unknown as Device;
+        const halozL = { id: 'VIRTUAL-HALOZ-L', name: 'SK8-HALOZ-L-DEV', rssi: -50, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 } as Partial<Device> & { product_type: string; hwPoints: number } as Device;
+        const halozR = { id: 'VIRTUAL-HALOZ-R', name: 'SK8-HALOZ-R-DEV', rssi: -52, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 } as Partial<Device> & { product_type: string; hwPoints: number } as Device;
+        const soulzL = { id: 'VIRTUAL-SOULZ-L', name: 'SK8-SOULZ-L-DEV', rssi: -55, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'SOULZ', hwPoints: 43 } as Partial<Device> & { product_type: string; hwPoints: number } as Device;
+        const soulzR = { id: 'VIRTUAL-SOULZ-R', name: 'SK8-SOULZ-R-DEV', rssi: -57, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'SOULZ', hwPoints: 43 } as Partial<Device> & { product_type: string; hwPoints: number } as Device;
 
         scanCallback(null, halozL);
         scanCallback(null, halozR);

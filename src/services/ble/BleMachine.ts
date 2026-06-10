@@ -27,9 +27,8 @@ export const bleMachine = setup({
         if (event.type === 'CONNECT_SUCCESS' || event.type === 'UPDATE_CONNECTED_DEVICES') {
           return event.devices;
         }
-        const doneEvent = event as unknown as { type: string; output?: { devices: import('react-native-ble-plx').Device[] } };
-        if (doneEvent.type.startsWith('xstate.done.actor.') && doneEvent.output?.devices) {
-          return doneEvent.output.devices;
+        if (event.type === 'xstate.done.actor.connectService' && event.output?.devices) {
+          return event.output.devices;
         }
         return [];
       }
@@ -140,6 +139,7 @@ export const bleMachine = setup({
     },
     CONNECTING: {
       invoke: {
+        id: 'connectService',
         src: 'connectService',
         input: ({ context }) => ({
           bleManager: context.bleManager,

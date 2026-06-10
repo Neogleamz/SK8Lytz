@@ -44,6 +44,8 @@ import HardwareSetupWizardScreen from './Onboarding/HardwareSetupWizardScreen';
 import { useSession } from '../context/SessionContext';
 import { DashboardTelemetryHero } from '../components/dashboard/DashboardTelemetryHero';
 
+import { webStyle } from '../utils/webStyles';
+
 // ─── Phase 1 Domain Hooks ──────────────────────────────────────────────────────
 import { useDashboardAutoConnect } from '../hooks/useDashboardAutoConnect';
 import { useDashboardGroups } from '../hooks/useDashboardGroups';
@@ -261,8 +263,9 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
       const rd = registeredDevices.find(
         (r: RegisteredDevice) => r.device_mac?.toUpperCase() === mac
       );
-      const resolvedType = cfg.type || (d as unknown as DisplayDevice).type || rd?.product_type || undefined;
-      return { ...d, ...cfg, ...(resolvedType ? { type: resolvedType } : {}) } as unknown as DisplayDevice;
+      const resolvedType = cfg.type || (d as typeof d & { type?: string }).type || rd?.product_type || undefined;
+      const result: DisplayDevice = { ...d, ...cfg, ...(resolvedType ? { type: resolvedType } : {}) };
+      return result;
     });
   }, [connectedDevices, deviceConfigs, registeredDevices]);
 
@@ -555,11 +558,14 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     // sim-DE: mock devices in allDevices. We inject mock Device objects here so the
     // web demo can still mount the controller for UI testing.
     if (Platform.OS === 'web' && devicesToConnect.length === 0) {
-      devicesToConnect = group.deviceIds.map(id => ({
-        id,
-        name: `Demo Skate`,
-        rssi: -50,
-      } as unknown as Device));
+      devicesToConnect = group.deviceIds.map(id => {
+        const d: Partial<Device> = {
+          id,
+          name: `Demo Skate`,
+          rssi: -50,
+        };
+        return d as Device;
+      });
     }
 
     if (devicesToConnect.length > 0) {
@@ -946,7 +952,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
       <View style={styles.container}>
         {isControllerOpen ? (
           <View style={styles.controllerWrap}>
-            <View pointerEvents={Platform.OS !== 'web' ? 'box-none' : undefined} style={[styles.controllerHeaderWrap, Platform.OS === 'web' ? { pointerEvents: 'none' as unknown as any } : undefined]}>
+            <View pointerEvents={Platform.OS !== 'web' ? 'box-none' : undefined} style={[styles.controllerHeaderWrap, Platform.OS === 'web' ? webStyle({ pointerEvents: 'none' }) : undefined]}>
               <DashboardHeader
                 isActuallyConnected={true}
                 isOfflineMode={isOfflineMode}
@@ -1141,7 +1147,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
           registeredDevices={mappedRegisteredDevicesForModal}
           onDeviceRenamed={async (deviceId, newName) => {
             setAllDevices((prev) => prev.map(d =>
-              d.id === deviceId ? ({ ...d, customName: newName } as unknown as Device) : d
+              d.id === deviceId ? ({ ...d, customName: newName } as Device & { customName?: string }) : d
             ));
             const rd = registeredDevices.find(r => r.device_mac === deviceId);
             if (rd) {
@@ -1187,7 +1193,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
           visible={isAdminToolsVisible}
           onClose={() => setIsAdminToolsVisible(false)}
           allDevices={allDevices}
-          connectedDevices={connectedDevices as unknown as DisplayDevice[]}
+          connectedDevices={displayConnectedDevices}
           bleState={bleState}
           handleScan={() => scanForPeripherals()}
           liveRxPayload={lastRawNotification}

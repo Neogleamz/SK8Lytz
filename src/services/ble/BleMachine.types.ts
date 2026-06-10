@@ -41,7 +41,8 @@ export type BleMachineEvent =
   | { type: 'UPDATE_CONNECTED_DEVICES'; devices: Device[] }
   | { type: 'HEARTBEAT_FAIL'; deviceId: string }
   | { type: 'RECOVERY_PERMANENTLY_FAILED'; deviceId: string }
-  | { type: 'FORCE_IDLE' };
+  | { type: 'FORCE_IDLE' }
+  | { type: 'xstate.done.actor.connectService'; output: { devices: Device[] } };
 
 export type BleMachineState =
   | { value: 'IDLE'; context: BleMachineContext }

@@ -323,10 +323,30 @@ class CrewService {
       const { data, error } = await pubQuery.limit(30);
 
       if (!error && data) {
-        return data.map((s) => ({
-          ...s,
+        const rows = data as Record<string, unknown>[];
+        return rows.map((s) => ({
+          id: (s.id as string) ?? '',
+          name: (s.crew_name as string) ?? (s.id as string) ?? '',
+          invite_code: (s.invite_code as string) ?? '',
+          location_label: (s.location_label as string) ?? null,
+          location_coords: (s.location_coords as Record<string, unknown>) ?? null,
+          scheduled_at: (s.scheduled_at as string) ?? null,
+          created_at: (s.created_at as string) ?? new Date().toISOString(),
           is_public: true,
-        })) as unknown as CrewSession[];
+          crew_id: (s.crew_id as string) ?? null,
+          is_active: true,
+          expires_at: (s.expires_at as string) ?? new Date().toISOString(),
+          leader_user_id: '',
+          status: (s.status as string) ?? 'active',
+          updated_at: (s.updated_at as string) ?? null,
+          ended_at: null,
+          total_distance_miles: 0,
+          top_speed_mph: 0,
+          avg_speed_mph: 0,
+          last_scene: null,
+          skate_spot_id: null,
+          member_count: (s.member_count as number) ?? 0,
+        }) as CrewSession);
       }
     } catch (e: unknown) {
       AppLogger.warn('[CrewService] public_sessions view failed, using fallback', { error: e instanceof Error ? e.message : String(e)  });
