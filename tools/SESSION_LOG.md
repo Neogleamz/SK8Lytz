@@ -1,3 +1,10 @@
+### [MERGE] 2026-06-10T09:39 — ble-t3-connect-service-tests → master @ 43377f8c
+**What merged:**
+- Added 18 comprehensive Jest unit tests covering single device connect, group connect sequential flow, cache hit logic, transient GATT 133 retries with backoff, stale device flush, MTU negotiation retries/fallbacks, adapter mapping, and `onOrganicDisconnect` wiring in `src/services/ble/__tests__/ConnectService.test.ts`.
+- Refactored tests to run the `connectService` Promise Actor Logic via XState v5 `createActor`, subscribing to state transition snapshots to assert output or capture rejections without unhandled exceptions.
+**Verify result:** TSC ✅, Jest 152/152 PASS ✅, all 8 gates green ✅
+**Files touched:** src/services/ble/__tests__/ConnectService.test.ts
+
 ### [MERGE] 2026-06-10T09:25 — ble-t1-machine-tests → master @ c30039e1
 **What merged:**
 - Added 18 comprehensive Jest unit tests covering all 6 state transitions, context assertions, and organic disconnect recovery trigger guards in `src/services/ble/__tests__/BleMachine.test.ts`.

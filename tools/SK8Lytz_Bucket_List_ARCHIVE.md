@@ -1071,3 +1071,12 @@ pm run verify which includes QA tests.
   - **Plan:** 📎 [PLAN-ble-t1-machine-tests.md](docs/plans/PLAN-ble-t1-machine-tests.md)
   - **Source of Truth:** 📖 `src/services/ble/BleMachine.ts` · `src/hooks/useBLE.ts:L182-187`
   - **Details:** 18 test cases across 3 groups: state transitions, organic disconnect regression guard, context assertions. Use XState `createActor` with mocked service stubs.
+
+- [x] **test/ble-t3-connect-service-tests** — ConnectService unit tests 🚀 Merged in 43377f8c
+  - **Tags:** [✅ READY] [✅ VERIFIED] [BLE] [M-RISK] [Meal] [🧠 MED] [BATCH:ble-test-hardening]
+  - **Goal:** Write unit tests for ConnectService.ts covering group connect, GATT 133 retry, stale device flush, MTU negotiation, adapter mapping, notification registration, and the onOrganicDisconnect disconnect subscription.
+  - **Decision Log (2026-06-10):** Post-migration audit confirmed zero tests for ConnectService. This is the most complex actor (288 lines, 3 retry loops, MTU negotiation, multi-device sequential flow). Any regression is invisible until hardware fails in the field.
+  - **Analysis:** 📊 Source: [BLE_AUDIT_2/02_connectService.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/02_connectService.md)
+  - **Plan:** 📎 [PLAN-ble-t3-connect-service-tests.md](docs/plans/PLAN-ble-t3-connect-service-tests.md)
+  - **Source of Truth:** 📖 `src/services/ble/ConnectService.ts` · `tools/BLE_AUDIT_2/02_connectService.md`
+  - **Details:** 18 test cases across 7 groups. Mock `bleManager`, `createGattSession`, and capture `onDeviceDisconnected` callback to verify `onOrganicDisconnect` fires.
