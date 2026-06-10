@@ -14,14 +14,14 @@ export class CrossRefEngine {
 
   process(records) {
     for (const r of records) {
-      const matchIssue = this.knownIssues.find(k => r.message.includes(k.keyword));
+      const matchIssue = this.knownIssues.find(k => r.message && r.message.includes(k.keyword));
       if (matchIssue) {
         r.trend = 'REGRESSION';
         r.knownIssueMatch = matchIssue.id;
         r.message += ` ⚠️ REGRESSION of ${matchIssue.id}`;
       }
       
-      const matchFriction = this.frictionLedger.find(f => r.message.includes(f.keyword));
+      const matchFriction = this.frictionLedger.find(f => r.message && r.message.includes(f.keyword));
       if (matchFriction) {
         r.frictionMatch = matchFriction.id;
       }

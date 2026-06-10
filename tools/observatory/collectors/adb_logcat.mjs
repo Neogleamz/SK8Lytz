@@ -5,10 +5,10 @@ export async function collectAdbLogcat() {
   const records = [];
   try {
     const devices = execSync('adb devices').toString();
-    if (!devices.includes('\\tdevice')) return records;
+    if (!devices.includes('\tdevice')) return records;
     
     const logcat = execSync('adb logcat -d -s "ReactNativeJS:V" "AndroidRuntime:E"').toString();
-    const lines = logcat.split('\\n');
+    const lines = logcat.split('\n');
     
     for (const line of lines) {
       if (line.includes('FATAL EXCEPTION') || line.includes('Error:')) {

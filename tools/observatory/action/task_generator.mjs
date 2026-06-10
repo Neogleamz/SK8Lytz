@@ -35,7 +35,8 @@ export class TaskGenerator {
   generateSlug(rootCause) {
     if (!rootCause) return 'unknown-error';
     const clean = rootCause.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-    return clean.replace(/-+/g, '-').substring(0, 40).replace(/^-|-$/g, '');
+    const finalSlug = clean.replace(/-+/g, '-').substring(0, 40).replace(/^-|-$/g, '');
+    return finalSlug || 'unknown-error';
   }
 
   generateTags(cluster) {
