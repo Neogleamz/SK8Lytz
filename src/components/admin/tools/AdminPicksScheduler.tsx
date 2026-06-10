@@ -184,7 +184,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
   };
 
   const onDateChanged = async (event: any, selectedDate?: Date) => {
-    if (Platform.OS !== 'ios') {
+    if (Platform.OS === 'android') {
        // Android closes immediately after selection
        setDatePickerConfig(null);
     }

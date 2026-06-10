@@ -28,7 +28,7 @@ import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
  */
 const patternPayloadCache = new Map<string, number[]>();
 
-type WriteFn = (payload: number[], override?: Record<string, any>) => Promise<boolean | 'partial' | void>;
+type WriteFn = (payload: number[], targetDeviceId?: string | Record<string, any>, override?: Record<string, any>) => Promise<boolean | 'partial' | void>;
 
 interface UseControllerDispatchParams {
   writeToDevice?: WriteFn;
@@ -36,13 +36,14 @@ interface UseControllerDispatchParams {
   points?: number;
   getAdapterForDevice?: (mac: string) => IControllerProtocol | undefined;
   primaryDeviceId?: string;
+  connectedDevices?: { id: string }[];
 }
 
 /**
  * Provides stable BLE dispatch functions for sending solid colors, patterns,
  * music configs, and emergency lighting to connected devices.
  */
-export function useControllerDispatch({ writeToDevice, hwSettings, points, getAdapterForDevice, primaryDeviceId }: UseControllerDispatchParams) {
+export function useControllerDispatch({ writeToDevice, hwSettings, points, getAdapterForDevice, primaryDeviceId, connectedDevices = [] }: UseControllerDispatchParams) {
   /** Resolve LED count from hw config or fallback */
   const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
 
@@ -71,11 +72,19 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
         if (__DEV__) console.error("🔴 [BLE DEAD WIRE] sendColor called but writeToDevice is undefined — writes are silently dropping!");
         return;
       }
-      // 0x59 FREEZE is the true architectural ghost standard for Solid Replication without glitching/failing
-      const arr = Array.from({ length: numLEDs }, () => ({ r, g, b }));
-      await writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSettings?.ledPoints || points || 16, 31, 1, 0x01)); // 0x01 = FREEZE
+      const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
+      targets.forEach(device => {
+        const adapter = getAdapterForDevice?.(device.id);
+        if (adapter) {
+          const result = adapter.buildSolidColor(r, g, b);
+          result.packets.forEach(p => writeToDevice(p, device.id));
+        } else {
+          const arr = Array.from({ length: numLEDs }, () => ({ r, g, b }));
+          writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSettings?.ledPoints || points || 16, 31, 1, 0x01), device.id); // 0x01 = FREEZE
+        }
+      });
     },
-    [writeToDevice, numLEDs, hwSettings, points]
+    [writeToDevice, numLEDs, hwSettings, points, connectedDevices, getAdapterForDevice, primaryDeviceId]
   );
 
   /**
@@ -112,40 +121,43 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       const spd = clampSpeed(currentSpeed ?? 50);
       const brt = currentBrightness ?? 100;
       const dir = currentDirection ?? 1;
-      const cacheKey = `${patternId}_${fgRaw.r}_${fgRaw.g}_${fgRaw.b}_${bgRaw.r}_${bgRaw.g}_${bgRaw.b}_${numLEDs}_${spd}_${brt}_${dir}`;
+      const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
+      
+      targets.forEach(device => {
+        const adapter = getAdapterForDevice?.(device.id);
+        const protocolKey = adapter ? adapter.constructor.name : 'ZenggeProtocol';
+        const cacheKey = `${protocolKey}_${patternId}_${fgRaw.r}_${fgRaw.g}_${fgRaw.b}_${bgRaw.r}_${bgRaw.g}_${bgRaw.b}_${numLEDs}_${spd}_${brt}_${dir}`;
 
-      let payload = patternPayloadCache.get(cacheKey);
-      if (payload) {
-        // Refresh LRU position
-        patternPayloadCache.delete(cacheKey);
-        patternPayloadCache.set(cacheKey, payload);
-      } else {
-        const adapter = getAdapterForDevice?.(primaryDeviceId ?? '');
-        payload = buildPatternPayload(
-          patternId,
-          fgRaw,
-          bgRaw,
-          numLEDs,
-          spd,
-          dir,
-          brt,
-          undefined, // options
-          undefined, // hardwareLedPoints
-          adapter    // protocol
-        ) ?? undefined;
+        let payload = patternPayloadCache.get(cacheKey);
         if (payload) {
+          patternPayloadCache.delete(cacheKey);
           patternPayloadCache.set(cacheKey, payload);
-          // Evict oldest if exceeding capacity
-          if (patternPayloadCache.size > 8) {
-            const firstKey = patternPayloadCache.keys().next().value;
-            if (firstKey) patternPayloadCache.delete(firstKey);
+        } else {
+          payload = buildPatternPayload(
+            patternId,
+            fgRaw,
+            bgRaw,
+            numLEDs,
+            spd,
+            dir,
+            brt,
+            undefined, // options
+            undefined, // hardwareLedPoints
+            adapter    // protocol
+          ) ?? undefined;
+          if (payload) {
+            patternPayloadCache.set(cacheKey, payload);
+            if (patternPayloadCache.size > 8) {
+              const firstKey = patternPayloadCache.keys().next().value;
+              if (firstKey) patternPayloadCache.delete(firstKey);
+            }
           }
         }
-      }
 
-      if (payload) writeToDevice(payload);
+        if (payload) writeToDevice(payload, device.id);
+      });
     },
-    [writeToDevice, sendColor, clampSpeed, numLEDs, getAdapterForDevice, primaryDeviceId]
+    [writeToDevice, sendColor, clampSpeed, numLEDs, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
 
   /** Apply static/strobe/blink mode pattern */
@@ -171,31 +183,35 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       const tB = b !== undefined ? Math.max(0, Math.min(255, b | 0)) : (isNaN(pB) ? 255 : pB);
       const tSpd = normalizeUISpeedToHardware(spd !== undefined ? spd : speed);
 
-      if (pat === 'STATIC') {
-        sendColor(tR, tG, tB);
-      } else if (pat === 'STROBE') {
-        const adapter = getAdapterForDevice?.(primaryDeviceId ?? '');
-        if (adapter) {
-          const result = adapter.buildCustomMode([{ mode: ZenggeProtocol.STEP_STROBE, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }]);
-          result.packets.forEach(p => writeToDevice(p));
-        } else {
-          writeToDevice(ZenggeProtocol.setCustomModeCompact([
-            { mode: ZenggeProtocol.STEP_STROBE, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }
-          ]));
+      const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
+      
+      targets.forEach(device => {
+        if (pat === 'STATIC') {
+          sendColor(tR, tG, tB);
+        } else if (pat === 'STROBE') {
+          const adapter = getAdapterForDevice?.(device.id);
+          if (adapter) {
+            const result = adapter.buildCustomMode([{ mode: ZenggeProtocol.STEP_STROBE, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }]);
+            result.packets.forEach(p => writeToDevice(p, device.id));
+          } else {
+            writeToDevice(ZenggeProtocol.setCustomModeCompact([
+              { mode: ZenggeProtocol.STEP_STROBE, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }
+            ]), device.id);
+          }
+        } else if (pat === 'BLINK') {
+          const adapter = getAdapterForDevice?.(device.id);
+          if (adapter) {
+            const result = adapter.buildCustomMode([{ mode: ZenggeProtocol.STEP_JUMP, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }]);
+            result.packets.forEach(p => writeToDevice(p, device.id));
+          } else {
+            writeToDevice(ZenggeProtocol.setCustomModeCompact([
+              { mode: ZenggeProtocol.STEP_JUMP, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }
+            ]), device.id);
+          }
         }
-      } else if (pat === 'BLINK') {
-        const adapter = getAdapterForDevice?.(primaryDeviceId ?? '');
-        if (adapter) {
-          const result = adapter.buildCustomMode([{ mode: ZenggeProtocol.STEP_JUMP, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }]);
-          result.packets.forEach(p => writeToDevice(p));
-        } else {
-          writeToDevice(ZenggeProtocol.setCustomModeCompact([
-            { mode: ZenggeProtocol.STEP_JUMP, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }
-          ]));
-        }
-      }
+      });
     },
-    [writeToDevice, sendColor, getAdapterForDevice, primaryDeviceId]
+    [writeToDevice, sendColor, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
 
   /**
@@ -240,15 +256,19 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       }
 
       // 0x02 = Running: hardware scrolls the array natively
-      const adapter = getAdapterForDevice?.(primaryDeviceId ?? '');
-      if (adapter) {
-        const result = adapter.buildMultiColor(arr, hwSettings?.ledPoints || numLEDs, hwSpd, 1, 0x02);
-        result.packets.forEach(p => writeToDevice(p));
-      } else {
-        writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSettings?.ledPoints || numLEDs, hwSpd, 1, 0x02));
-      }
+      const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
+      
+      targets.forEach(device => {
+        const adapter = getAdapterForDevice?.(device.id);
+        if (adapter) {
+          const result = adapter.buildMultiColor(arr, hwSettings?.ledPoints || numLEDs, hwSpd, 1, 0x02);
+          result.packets.forEach(p => writeToDevice(p, device.id));
+        } else {
+          writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSettings?.ledPoints || numLEDs, hwSpd, 1, 0x02), device.id);
+        }
+      });
     },
-    [writeToDevice, hwSettings, numLEDs, getAdapterForDevice, primaryDeviceId]
+    [writeToDevice, hwSettings, numLEDs, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
 
   /** Send music mode configuration to hardware */
@@ -281,32 +301,36 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       //   isOn must be true ONLY when Device Mic is selected (built-in hardware mic).
       //   In App Mic mode, isOn must be false (0x00) so the onboard mic is disabled
       //   and the controller expects 0x74 magnitude packets.
-      const adapter = getAdapterForDevice?.(primaryDeviceId ?? '');
-      if (adapter) {
-        const result = adapter.buildMusicConfig({
-          patternId,
-          matrixStyle: matrix === 0x27 ? 0x27 : 0x26,
-          isOn: src === 'DEVICE',
-          color1: c1,
-          color2: c2,
-          micSensitivity: sens,
-          brightness: bright,
-          speed: 50 // Default speed for music mode fallback
-        });
-        result.packets.forEach(p => writeToDevice(p, { micSource: src }));
-      } else {
-        writeToDevice(ZenggeProtocol.setMusicConfig(
-          patternId,
-          matrix === 0x27 ? 0x27 : 0x26,
-          src === 'DEVICE',  // isOn: true for DEVICE mic, false for APP mic
-          c1,
-          c2,
-          sens,
-          bright
-        ), { micSource: src });
-      }
+      const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
+      
+      targets.forEach(device => {
+        const adapter = getAdapterForDevice?.(device.id);
+        if (adapter) {
+          const result = adapter.buildMusicConfig({
+            patternId,
+            matrixStyle: matrix === 0x27 ? 0x27 : 0x26,
+            isOn: src === 'DEVICE',
+            color1: c1,
+            color2: c2,
+            micSensitivity: sens,
+            brightness: bright,
+            speed: 50
+          });
+          result.packets.forEach(p => writeToDevice(p, device.id, { micSource: src }));
+        } else {
+          writeToDevice(ZenggeProtocol.setMusicConfig(
+            patternId,
+            matrix === 0x27 ? 0x27 : 0x26,
+            src === 'DEVICE',
+            c1,
+            c2,
+            sens,
+            bright
+          ), device.id, { micSource: src });
+        }
+      });
     },
-    [writeToDevice, getAdapterForDevice, primaryDeviceId]
+    [writeToDevice, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
 
   /** Send power on/off command */
@@ -316,15 +340,19 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
         if (__DEV__) console.error("🚨 [BLE DEAD WIRE] setPower called but writeToDevice is undefined — writes are silently dropping!");
         return;
       }
-      const adapter = getAdapterForDevice?.(primaryDeviceId ?? '');
-      if (adapter) {
-        const result = isOn ? adapter.buildPowerOn() : adapter.buildPowerOff();
-        result.packets.forEach(p => writeToDevice(p));
-      } else {
-        writeToDevice(isOn ? ZenggeProtocol.turnOn() : ZenggeProtocol.turnOff());
-      }
+      const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
+      
+      targets.forEach(device => {
+        const adapter = getAdapterForDevice?.(device.id);
+        if (adapter) {
+          const result = isOn ? adapter.buildPowerOn() : adapter.buildPowerOff();
+          result.packets.forEach(p => writeToDevice(p, device.id));
+        } else {
+          writeToDevice(isOn ? ZenggeProtocol.turnOn() : ZenggeProtocol.turnOff(), device.id);
+        }
+      });
     },
-    [writeToDevice, getAdapterForDevice, primaryDeviceId]
+    [writeToDevice, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
 
   /** Send multi-color array (used by BUILDER mode, favorites restore) */
@@ -334,15 +362,19 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
         if (__DEV__) console.error("🚨 [BLE DEAD WIRE] setMultiColor called but writeToDevice is undefined — writes are silently dropping!");
         return;
       }
-      const adapter = getAdapterForDevice?.(primaryDeviceId ?? '');
-      if (adapter) {
-        const result = adapter.buildMultiColor(colors, ledPoints, speed, direction, transitionType);
-        result.packets.forEach(p => writeToDevice(p));
-      } else {
-        writeToDevice(ZenggeProtocol.setMultiColor(colors, ledPoints, speed, direction, transitionType));
-      }
+      const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
+      
+      targets.forEach(device => {
+        const adapter = getAdapterForDevice?.(device.id);
+        if (adapter) {
+          const result = adapter.buildMultiColor(colors, ledPoints, speed, direction, transitionType);
+          result.packets.forEach(p => writeToDevice(p, device.id));
+        } else {
+          writeToDevice(ZenggeProtocol.setMultiColor(colors, ledPoints, speed, direction, transitionType), device.id);
+        }
+      });
     },
-    [writeToDevice, getAdapterForDevice, primaryDeviceId]
+    [writeToDevice, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
 
   return {

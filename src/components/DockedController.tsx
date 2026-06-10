@@ -244,21 +244,29 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       disableHaptics: appSettings['global_haptics_enabled'] === false,
     });
 
-    const writeToDevice = React.useCallback(async (payload: number[], overrideOrType?: 'Response' | 'NoResponse' | Record<string, any>) => {
+    const writeToDevice = React.useCallback(async (
+      payload: number[],
+      targetDeviceIdOrOverride?: string | Record<string, any>,
+      opts?: Record<string, any>
+    ) => {
       // Gate: only write if the parent BLE write function exists (same pattern as Pro Effects).
       // Previously used `bleState !== 'READY'` which was too aggressive — the derived bleState
       // transiently leaves 'READY' during background rescans/probing even while devices are
       // fully connected and writable, silently dropping fixed mode, solid color, and camera writes.
       // The BLE stack in useBLE.writeToDevice already handles connection-level safety internally.
       if (!parentWriteToDevice) return;
-      const override = typeof overrideOrType === "object" ? overrideOrType : undefined; lastConfirmedStateRef.current = captureEntireStateRef.current(override);
+      
+      const targetDeviceId = typeof targetDeviceIdOrOverride === 'string' ? targetDeviceIdOrOverride : undefined;
+      const override = typeof targetDeviceIdOrOverride === 'object' ? targetDeviceIdOrOverride : opts;
+
+      lastConfirmedStateRef.current = captureEntireStateRef.current(override);
 
       // vizLock is now a derived useMemo — no manual update needed here.
       // The visualizer automatically reflects the current UI state.
 
       setLastSentPayload([...payload]);
       lastSentPayloadRef.current = [...payload]; // sync update — ref is always current for replayStateToDevice
-      await optimisticWrite(payload);
+      await optimisticWrite(payload, undefined, targetDeviceId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [parentWriteToDevice, optimisticWrite]);
 
@@ -568,7 +576,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       clampSpeed,
       setPower,
       setMultiColor,
-    } = useControllerDispatch({ writeToDevice, hwSettings, points, getAdapterForDevice, primaryDeviceId: primaryMac });
+    } = useControllerDispatch({ writeToDevice, hwSettings, points, getAdapterForDevice, primaryDeviceId: primaryMac, connectedDevices: devices || [] });
 
     /** Convenience wrapper — pre-binds selectedColor and speed for callers */
     const applyStaticModePattern = (pat: typeof fixedModePattern, r?: number, g?: number, b?: number, spd?: number) =>

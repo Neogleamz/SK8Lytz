@@ -27,14 +27,13 @@ import { STORAGE_REMEMBER_CREDS, STORAGE_LAST_EMAIL } from '../constants/storage
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
 
 const showHelp = () => {
-  if (Platform.OS === 'web') {
-    Linking.openURL('mailto:support@sk8lytz.com?subject=SK8Lytz%20Support');
-  } else {
-    Alert.alert(
+  Platform.select({
+    web: () => Linking.openURL('mailto:support@sk8lytz.com?subject=SK8Lytz%20Support'),
+    default: () => Alert.alert(
       'SK8Lytz Support',
-      'Need help?\n\n• Email: support@sk8lytz.com\n• Docs: sk8lytz.com/help\n• Discord: discord.gg/sk8lytz'
-    );
-  }
+      'Need help?\n\n👉 Email: support@sk8lytz.com\n👉 Docs: sk8lytz.com/help\n👉 Discord: discord.gg/sk8lytz'
+    )
+  })();
 };
 
 export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflineMode?: () => void; sessionExpired?: boolean }) {

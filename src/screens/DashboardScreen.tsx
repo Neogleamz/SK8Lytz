@@ -369,7 +369,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   // Start on Dashboard mount once BT is confirmed ready.
   // Stop on background (battery safety) and resume on foreground.
   useEffect(() => {
-    if (!isBluetoothEnabled || !isBluetoothSupported || Platform.OS === 'web') return;
+    if (!isBluetoothEnabled || !isBluetoothSupported || Platform.select({ web: true, default: false })) return;
     // Start sweeper on first render when BT is already ready,
     // or when BT transitions from disabled to enabled.
     startSweeper();

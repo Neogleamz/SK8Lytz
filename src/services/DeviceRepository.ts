@@ -790,7 +790,7 @@ class DeviceRepository {
         const { error } = await supabase
           .from('registered_devices')
           .upsert(dbRow, { onConflict: 'user_id,device_mac' });
-        if (error) AppLogger.warn('[DeviceRepository] Flush error', { deviceId: device.device_mac, error: error.message });
+        if (error) AppLogger.warn('[DeviceRepository] Flush error', { deviceId: scrubPII(device.device_mac), error: error.message });
       }
 
       await AsyncStorage.removeItem(PENDING_KEY).catch((e: unknown) => AppLogger.warn('[DeviceRepository] AsyncStorage remove failed', { key: 'PENDING_KEY', error: e instanceof Error ? e.message : String(e)  }));

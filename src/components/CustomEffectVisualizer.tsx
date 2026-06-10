@@ -35,27 +35,29 @@ export const CustomEffectVisualizer: React.FC<CustomEffectVisualizerProps> = ({
   autoPlay = true,
 }) => {
   const [tick, setTick] = useState(0);
+  const currentTickRef = React.useRef(0);
+  const callbackRef = React.useRef<() => void>(() => {});
 
   useEffect(() => {
-    // autoPlay gate: when false (e.g. card is off-screen), no interval is created.
-    // This completely suspends the animation budget for hidden cards.
-    if (!autoPlay) return;
-    // 0x51 and 0x59 modes both map 1-100 speed slider differently natively,
-    // but visually we approximate it as:
-    const frameRate = Math.max(16, 200 - (speed * 1.8)); 
-    
-    // Scale down tick increment for breathing patterns so they don't strobe
     const isBreathing = [16, 17, 24, 36, 207, 208, 209, 211].includes(effectId);
     const tickIncrement = isBreathing ? (speed / 4000) : (speed / 2000);
     
-    let currentTick = 0;
+    callbackRef.current = () => {
+      currentTickRef.current = (currentTickRef.current + tickIncrement) % 1;
+      setTick(currentTickRef.current);
+    };
+  }, [speed, effectId]);
+
+  useEffect(() => {
+    if (!autoPlay) return;
+    const frameRate = Math.max(16, 200 - (speed * 1.8)); 
+    
     const interval = setInterval(() => {
-      currentTick = (currentTick + tickIncrement) % 1;
-      setTick(currentTick);
+      callbackRef.current();
     }, frameRate);
     
     return () => clearInterval(interval);
-  }, [speed, autoPlay, effectId]);
+  }, [speed, autoPlay]);
 
   const displayedDots = useMemo(() => {
     const fgRgb = hexToRgb(fgColorHex);

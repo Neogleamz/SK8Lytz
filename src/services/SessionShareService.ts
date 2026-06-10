@@ -14,7 +14,11 @@ import { AppLogger } from './AppLogger';
 // App store / download links — update when app is published
 const APP_LINK_IOS     = 'https://apps.apple.com/app/sk8lytz';
 const APP_LINK_ANDROID = 'https://play.google.com/store/apps/details?id=com.neogleamz.sk8lytz';
-const APP_LINK = Platform.OS === 'ios' ? APP_LINK_IOS : APP_LINK_ANDROID;
+const APP_LINK = Platform.select({
+  ios: APP_LINK_IOS,
+  android: APP_LINK_ANDROID,
+  default: APP_LINK_ANDROID
+}) || APP_LINK_ANDROID;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

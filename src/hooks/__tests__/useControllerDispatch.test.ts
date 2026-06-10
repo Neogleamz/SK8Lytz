@@ -29,11 +29,7 @@ function expectPayloadMatch(mockFn: jest.Mock, expectedPayload: number[], extraA
   if (expectedPayload) {
     expectedPayload[1] = expect.any(Number) as any;
   }
-  if (extraArgs.length > 0) {
-    expect(mockFn).toHaveBeenCalledWith(expectedPayload, ...extraArgs);
-  } else {
-    expect(mockFn).toHaveBeenCalledWith(expectedPayload);
-  }
+  expect(mockFn).toHaveBeenCalledWith(expectedPayload, "", ...extraArgs);
 }
 
 describe('useControllerDispatch', () => {

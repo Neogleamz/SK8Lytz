@@ -70,6 +70,12 @@ export default React.memo(function DashboardCrewPanel({
     }
   };
 
+  React.useEffect(() => {
+    return () => {
+      crewService.unsubscribe();
+    };
+  }, []);
+
   return (
     <>
       <CrewHubSlab

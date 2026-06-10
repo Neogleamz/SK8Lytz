@@ -55,19 +55,19 @@ export function useDashboardCrew({
   useEffect(() => {
     if (!sessionLoaded || !user || hasTriedRejoinRef.current) return;
 
-    const tryRejoin = async () => {
+    const tryRejoin = async (): Promise<(() => void) | undefined> => {
       try {
         hasTriedRejoinRef.current = true;
         const displayName = user.email?.split('@')[0] || 'Skater';
         const result = await crewService.tryAutoRejoin(displayName, user.id);
-        if (!result) return;
+        if (!result) return undefined;
 
         const { session, role } = result;
 
         if (role === 'leader') {
-          crewService.subscribeAsLeader(session.id, () => {});
+          return crewService.subscribeAsLeader(session.id, () => {});
         } else {
-          crewService.subscribeAsMember(session.id, (scene) => {
+          const unsub = crewService.subscribeAsMember(session.id, (scene) => {
             onApplyScene(scene);
           });
           // Apply last known scene immediately on rejoin
@@ -75,13 +75,18 @@ export function useDashboardCrew({
           if (lastScene) {
             setTimeout(() => onApplyScene(lastScene), 500);
           }
+          return unsub;
         }
       } catch (e: unknown) {
         AppLogger.warn('[useDashboardCrew] auto-rejoin failed', { error: (e instanceof Error ? e.message : String(e)) });
       }
     };
 
-    tryRejoin();
+    let unsub: (() => void) | undefined;
+    tryRejoin().then(u => { unsub = u; });
+    return () => {
+      if (unsub) unsub();
+    };
     // onApplyScene is a stable callback — intentionally excluded from deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, sessionLoaded]);

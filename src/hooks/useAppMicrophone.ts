@@ -43,11 +43,14 @@ export function useAppMicrophone({
   const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
   const [hasMicPermission, setHasMicPermission] = useState<boolean>(true);
   const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
+  const isCapturingRef = useRef(false);
 
   const writeToDeviceRef = useRef(writeToDevice);
   writeToDeviceRef.current = writeToDevice;
 
   const startRecording = async () => {
+    if (isCapturingRef.current) return;
+    isCapturingRef.current = true;
     try {
       const isGranted = await checkPermission('MIC');
       setHasMicPermission(isGranted);
@@ -55,7 +58,10 @@ export function useAppMicrophone({
         await openGlobalPermissionsModal();
         const reG = await checkPermission('MIC');
         setHasMicPermission(reG);
-        if (!reG) return;
+        if (!reG) {
+          isCapturingRef.current = false;
+          return;
+        }
       }
 
       await setAudioModeAsync({
@@ -94,10 +100,12 @@ export function useAppMicrophone({
       }, 50); // 20Hz — hardware needs continuous stream to stay in app-mic mode
     } catch (err: unknown) {
       AppLogger.error('Failed to start recording', err instanceof Error ? err.message : String(err));
+      isCapturingRef.current = false;
     }
   };
 
   const stopRecording = async () => {
+    if (!isCapturingRef.current) return;
     if (magnitudeInterval.current) {
       clearInterval(magnitudeInterval.current);
       magnitudeInterval.current = null;
@@ -110,6 +118,8 @@ export function useAppMicrophone({
       AppLogger.debug('[useAppMicrophone] recorder.stop() failed — already stopped or recorder torn down', {
         error: _e instanceof Error ? _e.message : String(_e),
       });
+    } finally {
+      isCapturingRef.current = false;
     }
   };
 

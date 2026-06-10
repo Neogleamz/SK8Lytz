@@ -647,7 +647,7 @@ class CrewService {
   subscribeAsLeader(
     sessionId: string,
     onMemberChange: (members: CrewMember[]) => void,
-  ): void {
+  ): (() => void) {
     this._ensureUnsubscribed();
 
     this.channel = supabase
@@ -656,6 +656,8 @@ class CrewService {
         this.fetchMembers(sessionId).then(onMemberChange);
       })
       .subscribe();
+      
+    return () => this.unsubscribe();
   }
 
   /**
@@ -666,7 +668,7 @@ class CrewService {
     sessionId: string,
     onScene: (scene: Record<string, any>) => void,
     onSessionEnded?: () => void,
-  ): void {
+  ): (() => void) {
     this._ensureUnsubscribed();
 
     this.channel = supabase
@@ -690,6 +692,8 @@ class CrewService {
         onSessionEnded?.();
       })
       .subscribe();
+      
+    return () => this.unsubscribe();
   }
 
   /**

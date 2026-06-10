@@ -101,8 +101,10 @@ export function useGlobalTelemetry(
   }, [sessionPhase]);
 
   // Commit session helper — called ONLY on explicit user disconnect
+  const isCommittingRef = useRef(false);
   const commitSession = useCallback(async () => {
-    if (!sessionStartTimeRef.current) return;
+    if (!sessionStartTimeRef.current || isCommittingRef.current) return;
+    isCommittingRef.current = true;
 
     let durationSec = (Date.now() - sessionStartTimeRef.current) / 1000;
     if (sessionPauseTimeRef.current) {
@@ -156,6 +158,8 @@ export function useGlobalTelemetry(
     setSessionDurationSec(0);
     setSessionPeakSpeed(0);
     setSessionAvgSpeed(0);
+    
+    isCommittingRef.current = false;
   }, []);
 
   // ── Effect 1: Isolated 1-second UI timer ──────────────────────────────────

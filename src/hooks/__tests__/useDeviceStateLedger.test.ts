@@ -19,6 +19,7 @@ jest.mock('../../services/AppLogger', () => ({
 jest.mock('react', () => ({
   ...jest.requireActual('react'),
   useCallback: (fn: any) => fn,
+  useEffect: jest.fn((fn: any) => fn()),
 }));
 
 jest.mock('@react-native-async-storage/async-storage', () => ({

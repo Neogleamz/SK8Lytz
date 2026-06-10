@@ -17,12 +17,11 @@
  * For UI widget state, see `useControllerPersistence.ts`.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import { AppLogger } from '../services/AppLogger';
 import type { DevicePatternState } from '../types/dashboard.types';
 import { scrubPII } from '../utils/piiScrubber';
-
-import { AppState } from 'react-native';
 
 
 const KEY_PREFIX = '@SK8Lytz_DeviceState_v2_';
@@ -66,21 +65,7 @@ if (__DEV__) {
   globalAny.__sk8lytz_ledger_timers = debounceTimers;
 }
 
-// ── Background Data Loss Preventer ──
-// If the OS backgrounds the app, synchronously flush all pending AsyncStorage writes 
-// so user slider changes are not lost if the process is killed before the 500ms debounce fires.
-AppState.addEventListener('change', (next) => {
-  if (next === 'background') {
-    for (const [key, timer] of debounceTimers.entries()) {
-      clearTimeout(timer);
-      const entry = memoryCache.get(key);
-      if (entry) {
-        AsyncStorage.setItem(`${KEY_PREFIX}${key}`, JSON.stringify(entry)).catch(e => AppLogger.error('Failed to write device state ledger entry', e instanceof Error ? e.message : String(e)));
-      }
-    }
-    debounceTimers.clear();
-  }
-});
+// Moved to useEffect inside useDeviceStateLedger
 
 /**
  * Warm the in-memory cache from AsyncStorage on app boot.
@@ -113,6 +98,22 @@ export async function warmLedgerCache(): Promise<void> {
 
 export function useDeviceStateLedger() {
   // debounceTimers is now module-level (shared singleton) — see top of file.
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
+      if (next === 'background') {
+        for (const [key, timer] of debounceTimers.entries()) {
+          clearTimeout(timer);
+          const entry = memoryCache.get(key);
+          if (entry) {
+            AsyncStorage.setItem(`${KEY_PREFIX}${key}`, JSON.stringify(entry)).catch(e => AppLogger.error('Failed to write device state ledger entry on background', e instanceof Error ? e.message : String(e)));
+          }
+        }
+        debounceTimers.clear();
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   /**
    * Save device pattern state to ledger.
