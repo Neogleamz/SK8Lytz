@@ -8,6 +8,7 @@ export const bleMachine = setup({
   types: {
     context: {} as BleMachineContext,
     events: {} as BleMachineEvent,
+    input: {} as Omit<BleMachineContext, 'connectedDevices' | 'ghostedDeviceIds'>,
   },
   actors: { connectService, recoveryService, heartbeatService },
   actions: {
@@ -23,6 +24,10 @@ export const bleMachine = setup({
       connectedDevices: ({ event }) => {
         if (event.type === 'CONNECT_SUCCESS' || event.type === 'UPDATE_CONNECTED_DEVICES') {
           return event.devices;
+        }
+        const doneEvent = event as unknown as { type: string; output?: { devices: import('react-native-ble-plx').Device[] } };
+        if (doneEvent.type.startsWith('xstate.done.actor.') && doneEvent.output?.devices) {
+          return doneEvent.output.devices;
         }
         return [];
       }
@@ -57,7 +62,7 @@ export const bleMachine = setup({
 }).createMachine({
   id: 'bleMachine',
   initial: 'IDLE',
-  context: ({ input }: { input: any }) => ({
+  context: ({ input }) => ({
     ...input,
     connectedDevices: [],
     ghostedDeviceIds: [],

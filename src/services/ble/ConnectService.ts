@@ -10,6 +10,7 @@ import { scrubPII } from '../../utils/piiScrubber';
 import { jitteredDelay } from '../../utils/backoff';
 import { BLE_TIMING } from '../../constants/bleTimingConstants';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
+import { WritePriority } from '../BleWriteQueue';
 
 export interface ConnectServiceInput {
   bleManager: BleManager;
@@ -31,7 +32,11 @@ export interface ConnectServiceInput {
    */
   onOrganicDisconnect: (deviceId: string) => void;
   handleNotification: (error: any, characteristic: any, deviceId: string) => void;
-  enqueueWrite: (priority: string, op: () => Promise<boolean>) => Promise<boolean | 'partial'>;
+  enqueueWrite: (
+    priority: WritePriority,
+    op: () => Promise<boolean | 'partial'>,
+    generation?: number
+  ) => Promise<boolean | 'partial'>;
 }
 
 export const connectService = fromPromise<

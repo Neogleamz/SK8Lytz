@@ -1,4 +1,5 @@
 import { BleError, BleManager, Device, ScanMode } from 'react-native-ble-plx';
+import { WritePriority } from '../BleWriteQueue';
 
 export interface BleMachineContext {
   bleManager: BleManager;
@@ -17,7 +18,11 @@ export interface BleMachineContext {
   /** Fires when a device drops unexpectedly — wired by useBLE.ts to send RECOVERY_START */
   onOrganicDisconnect: (deviceId: string) => void;
   handleNotification: (error: any, characteristic: any, deviceId: string) => void;
-  enqueueWrite: (priority: string, op: () => Promise<boolean>) => Promise<boolean | 'partial'>;
+  enqueueWrite: (
+    priority: WritePriority,
+    op: () => Promise<boolean | 'partial'>,
+    generation?: number
+  ) => Promise<boolean | 'partial'>;
 }
 
 export type BleMachineEvent =
