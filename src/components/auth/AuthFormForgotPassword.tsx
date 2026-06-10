@@ -47,7 +47,7 @@ export function AuthFormForgotPassword({ onModeChange }: AuthFormForgotPasswordP
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
-      AppLogger.error('AuthFormForgotPassword', 'Password reset exception', { error: msg });
+      AppLogger.error('AuthFormForgotPassword', 'Password reset exception', { error: msg , payload_size: 0, ssi: 0 });
       setLoading(false);
       showError('A network or internal error occurred. Please try again.');
     }

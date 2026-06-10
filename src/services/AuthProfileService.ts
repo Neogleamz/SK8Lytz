@@ -76,7 +76,7 @@ class AuthProfileService {
       return created as UserProfile | null;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[AuthProfileService] fetchOrCreateProfile failed', { error: msg });
+      AppLogger.error('[AuthProfileService] fetchOrCreateProfile failed', { error: msg , payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }

@@ -37,7 +37,7 @@ export function useCuratedPicks() {
           }
         }
       } catch (e: unknown) {
-        AppLogger.error('[SK8Lytz Picks] Cache read error', e instanceof Error ? e.message : String(e));
+        AppLogger.error('[SK8Lytz Picks] Cache read error', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
       }
     };
 
@@ -55,7 +55,7 @@ export function useCuratedPicks() {
           .returns<Database['public']['Tables']['sk8lytz_picks']['Row'][]>();
 
         if (error) {
-          AppLogger.error('[SK8Lytz Picks] Failed to fetch from DB', error instanceof Error ? error.message : String(error));
+          AppLogger.error('[SK8Lytz Picks] Failed to fetch from DB', error instanceof Error ? error.message : String(error), { payload_size: 0, ssi: 0 });
           setError(error.message);
           return;
         }
@@ -98,7 +98,7 @@ export function useCuratedPicks() {
           AsyncStorage.setItem(CACHE_KEY, JSON.stringify(mapped)).catch(e => AppLogger.warn('Failed to cache curated picks', e instanceof Error ? e.message : String(e)));
         }
       } catch (e: unknown) {
-        AppLogger.error('[SK8Lytz Picks] Exception fetching from DB', e instanceof Error ? e.message : String(e));
+        AppLogger.error('[SK8Lytz Picks] Exception fetching from DB', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
         setError(e instanceof Error ? e.message : String(e));
       } finally {
         setPicksLoading(false);

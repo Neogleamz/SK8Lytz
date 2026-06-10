@@ -103,7 +103,7 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
       setRequiresEula(false);
     } catch (e: unknown) {
        const msg = e instanceof Error ? e.message : String(e);
-       AppLogger.error('[ComplianceGate] Accept failed', { error: msg });
+       AppLogger.error('[ComplianceGate] Accept failed', { error: msg , payload_size: 0, ssi: 0 });
        Alert.alert('Error', 'Could not save compliance status. Please try again.');
     }
   };

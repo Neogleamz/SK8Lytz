@@ -318,7 +318,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
           setIsCrewModalVisible(true);
         }
       } catch (err: unknown) {
-        AppLogger.error('DEEP_LINK', { event: 'parse_failed', url, error: (err instanceof Error ? err.message : String(err)) });
+        AppLogger.error('DEEP_LINK', { event: 'parse_failed', url, error: (err instanceof Error ? err.message : String(err)) , payload_size: 0, ssi: 0 });
       }
     };
     const linkSubscription = Linking.addEventListener('url', handleDeepLink);

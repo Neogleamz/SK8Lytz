@@ -19,7 +19,7 @@ export function useScenes() {
       setLocalScenes(scenes);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('SCENE_SERVICE', { event: 'load_scenes_failed', error: msg });
+      AppLogger.error('SCENE_SERVICE', { event: 'load_scenes_failed', error: msg , payload_size: 0, ssi: 0 });
       setError(msg);
     } finally {
       setIsLoading(false);

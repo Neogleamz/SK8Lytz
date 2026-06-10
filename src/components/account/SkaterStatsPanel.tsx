@@ -62,7 +62,7 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
         }
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        AppLogger.error('Failed to load skater stats from Supabase', msg);
+        AppLogger.error('Failed to load skater stats from Supabase', msg, { payload_size: 0, ssi: 0 });
         if (isActive) setError('Failed to load stats.');
       } finally {
         if (isActive) setLoading(false);

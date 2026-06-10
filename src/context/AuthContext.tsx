@@ -232,7 +232,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await supabase.auth.signOut();
     } catch (e: unknown) {
-      AppLogger.error('[AuthContext] signOut failed', e instanceof Error ? e.message : String(e));
+      AppLogger.error('[AuthContext] signOut failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
     }
   };
 

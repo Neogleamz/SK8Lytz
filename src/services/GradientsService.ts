@@ -22,7 +22,7 @@ class GradientsServiceClass {
         }
       }
     } catch (e: unknown) {
-      AppLogger.error('GRADIENT_LOCAL_READ_FAIL', e instanceof Error ? e.message : String(e));
+      AppLogger.error('GRADIENT_LOCAL_READ_FAIL', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
     }
 
     // 2. Background Sync
@@ -102,7 +102,7 @@ class GradientsServiceClass {
       }
       await AsyncStorage.setItem(LOCAL_GRADIENTS_KEY, JSON.stringify(userPresets));
     } catch (e: unknown) {
-      AppLogger.error('GRADIENT_LOCAL_SAVE_FAIL', e instanceof Error ? e.message : String(e));
+      AppLogger.error('GRADIENT_LOCAL_SAVE_FAIL', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
     }
 
     // 2. Save Cloud (user_saved_presets)
@@ -137,7 +137,7 @@ class GradientsServiceClass {
       userPresets = userPresets.filter(p => p.id !== id);
       await AsyncStorage.setItem(LOCAL_GRADIENTS_KEY, JSON.stringify(userPresets));
     } catch (e: unknown) {
-      AppLogger.error('GRADIENT_LOCAL_DEL_FAIL', e instanceof Error ? e.message : String(e));
+      AppLogger.error('GRADIENT_LOCAL_DEL_FAIL', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
     }
 
     // 2. Delete Cloud (user_saved_presets)

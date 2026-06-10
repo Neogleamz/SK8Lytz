@@ -123,7 +123,7 @@ export function useAdminTelemetry(visible: boolean) {
       await Share.share({ message: json, title: 'SK8Lytz Logs' });
     } catch (e: unknown) {
       Alert.alert('Export failed', (e instanceof Error ? e.message : String(e)));
-      AppLogger.error('[AdminTelemetry] Failed to export logs', e instanceof Error ? e.message : String(e));
+      AppLogger.error('[AdminTelemetry] Failed to export logs', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
     }
   }, []);
 

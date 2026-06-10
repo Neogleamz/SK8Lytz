@@ -143,7 +143,7 @@ export function useDashboardDeviceConfig({
         });
       }
     } catch (e: unknown) {
-      AppLogger.error('Failed to persist settings', e instanceof Error ? e.message : String(e));
+      AppLogger.error('Failed to persist settings', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
     }
 
     setIsSettingsVisible(false);

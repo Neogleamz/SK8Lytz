@@ -73,7 +73,7 @@ export function useProductManager() {
       }
       return false;
     } catch (err: unknown) {
-      AppLogger.error('Save failed', err instanceof Error ? err.message : String(err));
+      AppLogger.error('Save failed', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
       return false;
     } finally {
       setIsSaving(false);

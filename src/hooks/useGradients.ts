@@ -25,7 +25,7 @@ export function useGradients() {
       setGradients(data);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('USE_GRADIENTS_LOAD_ERROR', msg);
+      AppLogger.error('USE_GRADIENTS_LOAD_ERROR', msg, { payload_size: 0, ssi: 0 });
       setError(msg);
       setStatus('error');
     } finally {
@@ -47,7 +47,7 @@ export function useGradients() {
         telemetry.incrementCounter('favorites_created');
       }
     } catch (e: unknown) {
-      AppLogger.error('USE_GRADIENTS_SAVE_ERROR', e instanceof Error ? e.message : String(e));
+      AppLogger.error('USE_GRADIENTS_SAVE_ERROR', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
       throw e;
     }
   };
@@ -57,7 +57,7 @@ export function useGradients() {
       await GradientsService.deleteGradient(id, userId);
       await loadGradients();
     } catch (e: unknown) {
-      AppLogger.error('USE_GRADIENTS_DELETE_ERROR', e instanceof Error ? e.message : String(e));
+      AppLogger.error('USE_GRADIENTS_DELETE_ERROR', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
       throw e;
     }
   };

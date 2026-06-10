@@ -52,7 +52,7 @@ export function useCrewHub(visible: boolean, step: string) {
     profileService.getMyCrew(undefined, user.id).then((crews: PermanentCrew[]) => {
       setMyCrews(crews);
       setPermanentCrews(crews.map(c => ({ id: c.id, name: c.name })));
-    }).catch((e) => { AppLogger.error('[useCrewHub] Failed to load my crews', e instanceof Error ? e.message : String(e)); });
+    }).catch((e) => { AppLogger.error('[useCrewHub] Failed to load my crews', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 }); });
   }, [visible, step]);
 
   // Load member counts for My Crews
@@ -62,7 +62,7 @@ export function useCrewHub(visible: boolean, step: string) {
       if (crewMemberCounts[crew.id]) return;
       profileService.getCrewMembersForDisplay(crew.id).then(info => {
         setCrewMemberCounts(prev => ({ ...prev, [crew.id]: info }));
-      }).catch((e) => { AppLogger.error('[useCrewHub] Failed to load member counts', e instanceof Error ? e.message : String(e)); });
+      }).catch((e) => { AppLogger.error('[useCrewHub] Failed to load member counts', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 }); });
     });
   }, [visible, step, myCrews]);
 

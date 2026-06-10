@@ -689,7 +689,7 @@ class DeviceRepository {
       await this.saveDevice(d2);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[DeviceRepository] swapPositions failed', { error: msg });
+      AppLogger.error('[DeviceRepository] swapPositions failed', { error: msg , payload_size: 0, ssi: 0 });
     }
   }
 
@@ -749,7 +749,7 @@ class DeviceRepository {
           } satisfies GroupInsert, { onConflict: 'id' });
         } catch (_fk: unknown) {
           const msg = _fk instanceof Error ? _fk.message : String(_fk);
-          AppLogger.error('[DeviceRepository] FK fallback failed', { error: msg });
+          AppLogger.error('[DeviceRepository] FK fallback failed', { error: msg , payload_size: 0, ssi: 0 });
         }
 
         const dbRow: DeviceInsertRow = {

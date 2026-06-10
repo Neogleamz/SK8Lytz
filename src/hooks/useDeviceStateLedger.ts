@@ -92,7 +92,7 @@ export async function warmLedgerCache(): Promise<void> {
       }
     });
   } catch (e: unknown) {
-    AppLogger.error('Failed to warm ledger cache from AsyncStorage', e instanceof Error ? e.message : String(e));
+    AppLogger.error('Failed to warm ledger cache from AsyncStorage', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
   }
 }
 
@@ -106,7 +106,7 @@ export function useDeviceStateLedger() {
           clearTimeout(timer);
           const entry = memoryCache.get(key);
           if (entry) {
-            AsyncStorage.setItem(`${KEY_PREFIX}${key}`, JSON.stringify(entry)).catch(e => AppLogger.error('Failed to write device state ledger entry on background', e instanceof Error ? e.message : String(e)));
+            AsyncStorage.setItem(`${KEY_PREFIX}${key}`, JSON.stringify(entry)).catch(e => AppLogger.error('Failed to write device state ledger entry on background', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 }));
           }
         }
         debounceTimers.clear();
@@ -162,7 +162,7 @@ export function useDeviceStateLedger() {
       memoryCache.set(key, parsed);
       return parsed;
     } catch (e: unknown) {
-      AppLogger.error('Failed to read device state ledger entry from storage', e instanceof Error ? e.message : String(e), { deviceId: scrubPII(key) });
+      AppLogger.error('Failed to read device state ledger entry from storage', e instanceof Error ? e.message : String(e), { deviceId: scrubPII(key) , payload_size: 0, ssi: 0 });
       return null;
     }
   }, []);

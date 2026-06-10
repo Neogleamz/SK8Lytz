@@ -99,7 +99,7 @@ export function useAppMicrophone({
         }
       }, 50); // 20Hz — hardware needs continuous stream to stay in app-mic mode
     } catch (err: unknown) {
-      AppLogger.error('Failed to start recording', err instanceof Error ? err.message : String(err));
+      AppLogger.error('Failed to start recording', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
       isCapturingRef.current = false;
     }
   };

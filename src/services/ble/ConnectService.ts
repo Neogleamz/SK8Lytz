@@ -175,7 +175,7 @@ export const connectService = fromPromise<
       if (conn && conn.id) {
         rawConns.push(conn);
       } else {
-        AppLogger.error('FAILED TO CONNECT TO INDIVIDUAL DEVICE', { deviceId: scrubPII(mac), error: lastErr?.message || String(lastErr) });
+        AppLogger.error('FAILED TO CONNECT TO INDIVIDUAL DEVICE', { deviceId: scrubPII(mac), error: lastErr?.message || String(lastErr) , payload_size: 0, ssi: 0 });
         AppLogger.log('BLE_CONNECTION_ERROR', { error: lastErr?.message || String(lastErr), deviceId: scrubPII(mac), context: 'group_sync_fail' });
       }
     }
@@ -274,7 +274,7 @@ export const connectService = fromPromise<
         if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
           AppLogger.warn(`[BLE] Connection dropout for ${conn.id} (ignoring VIP error)`);
         } else {
-          AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${conn.id}`, deviceError instanceof Error ? deviceError.message : String(deviceError));
+          AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${conn.id}`, deviceError instanceof Error ? deviceError.message : String(deviceError), { payload_size: 0, ssi: 0 });
           AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, deviceId: conn.id, context: 'group_sync_fail' });
         }
         return null;
@@ -303,7 +303,7 @@ export const connectService = fromPromise<
     return { devices: finalGroup };
 
   } catch (outerErr: unknown) {
-    AppLogger.error('[BLE] connectService outer failed', outerErr instanceof Error ? outerErr.message : String(outerErr));
+    AppLogger.error('[BLE] connectService outer failed', outerErr instanceof Error ? outerErr.message : String(outerErr), { payload_size: 0, ssi: 0 });
     throw outerErr;
   }
 });

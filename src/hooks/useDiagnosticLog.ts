@@ -122,7 +122,7 @@ export const useDiagnosticLog = ({
     opcode?: string
   ) => {
     await dispatch.executeRawPayload(bytes, targetDeviceId ?? undefined, { lowPriority: true }).catch(e =>
-      AppLogger.error('[useDiagnosticLog] write failed', e instanceof Error ? e.message : String(e))
+      AppLogger.error('[useDiagnosticLog] write failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 })
     );
     const hexStr = bytes.map(b => b.toString(16).toUpperCase().padStart(2, '0')).join(' ');
     const entryId = `${opcode ?? 'raw'}-${Date.now()}`;

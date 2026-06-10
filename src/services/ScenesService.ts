@@ -67,7 +67,7 @@ class ScenesServiceClass {
           return data;
         }
       } catch (e: unknown) {
-        AppLogger.error('[ScenesService] Background sync error', { error: (e instanceof Error ? e.message : String(e)) });
+        AppLogger.error('[ScenesService] Background sync error', { error: (e instanceof Error ? e.message : String(e)) , payload_size: 0, ssi: 0 });
       }
       return null;
     };
@@ -104,7 +104,7 @@ class ScenesServiceClass {
       if (error) throw error;
       return data;
     } catch (e: unknown) {
-      AppLogger.error('[ScenesService] getMyScenes error', { error: (e instanceof Error ? e.message : String(e)) });
+      AppLogger.error('[ScenesService] getMyScenes error', { error: (e instanceof Error ? e.message : String(e)) , payload_size: 0, ssi: 0 });
       return [];
     }
   }
@@ -138,7 +138,7 @@ class ScenesServiceClass {
 
       return true;
     } catch (e: unknown) {
-      AppLogger.error('[ScenesService] publishScene error', { error: (e instanceof Error ? e.message : String(e)) });
+      AppLogger.error('[ScenesService] publishScene error', { error: (e instanceof Error ? e.message : String(e)) , payload_size: 0, ssi: 0 });
       return false;
     }
   }
@@ -156,7 +156,7 @@ class ScenesServiceClass {
        if (error) throw error;
        return true;
      } catch (e: unknown) {
-       AppLogger.error('[ScenesService] deleteScene error', { error: (e instanceof Error ? e.message : String(e)) });
+       AppLogger.error('[ScenesService] deleteScene error', { error: (e instanceof Error ? e.message : String(e)) , payload_size: 0, ssi: 0 });
        return false;
      }
   }
@@ -170,7 +170,7 @@ class ScenesServiceClass {
        if (error) throw error;
        return true;
      } catch (e: unknown) {
-       AppLogger.error('[ScenesService] upvoteScene error', { error: (e instanceof Error ? e.message : String(e)) });
+       AppLogger.error('[ScenesService] upvoteScene error', { error: (e instanceof Error ? e.message : String(e)) , payload_size: 0, ssi: 0 });
        return false;
      }
   }
@@ -184,7 +184,7 @@ class ScenesServiceClass {
        if (error) throw error;
        return true;
      } catch (e: unknown) {
-       AppLogger.error('[ScenesService] downloadScene error', { error: (e instanceof Error ? e.message : String(e)) });
+       AppLogger.error('[ScenesService] downloadScene error', { error: (e instanceof Error ? e.message : String(e)) , payload_size: 0, ssi: 0 });
        return false;
      }
   }
@@ -205,7 +205,7 @@ class ScenesServiceClass {
         }
       }
     } catch (e: unknown) {
-      AppLogger.error('[ScenesService] Local read fail', { error: (e instanceof Error ? e.message : String(e)) });
+      AppLogger.error('[ScenesService] Local read fail', { error: (e instanceof Error ? e.message : String(e)) , payload_size: 0, ssi: 0 });
     }
 
     // 2. Background Sync
@@ -289,7 +289,7 @@ class ScenesServiceClass {
       }
       await AsyncStorage.setItem(LOCAL_SCENES_KEY, JSON.stringify(userScenes));
     } catch (e: unknown) {
-      AppLogger.error('[ScenesService] saveLocalScene error', { error: (e instanceof Error ? e.message : String(e)) });
+      AppLogger.error('[ScenesService] saveLocalScene error', { error: (e instanceof Error ? e.message : String(e)) , payload_size: 0, ssi: 0 });
     }
 
     // 2. Save Cloud (user_saved_presets) via Queue
@@ -325,7 +325,7 @@ class ScenesServiceClass {
       userScenes = userScenes.filter(s => s.id !== sceneId);
       await AsyncStorage.setItem(LOCAL_SCENES_KEY, JSON.stringify(userScenes));
     } catch (e: unknown) {
-      AppLogger.error('[ScenesService] deleteLocalScene error', { error: (e instanceof Error ? e.message : String(e)) });
+      AppLogger.error('[ScenesService] deleteLocalScene error', { error: (e instanceof Error ? e.message : String(e)) , payload_size: 0, ssi: 0 });
     }
 
     // 2. Delete Cloud (user_saved_presets) via Queue
@@ -351,7 +351,7 @@ class ScenesServiceClass {
       await AsyncStorage.setItem(LOCAL_SCENE_SYNC_QUEUE_KEY, JSON.stringify(queue));
       AppLogger.debug('[ScenesService] Enqueued sync job', { jobType: job.type, jobId: job.id });
     } catch (e: unknown) {
-      AppLogger.error('[ScenesService] Enqueue fail', { error: (e instanceof Error ? e.message : String(e)) });
+      AppLogger.error('[ScenesService] Enqueue fail', { error: (e instanceof Error ? e.message : String(e)) , payload_size: 0, ssi: 0 });
     }
   }
 
@@ -401,7 +401,7 @@ class ScenesServiceClass {
         AppLogger.info('[ScenesService] Sync queue flushed', { successCount, remaining: remainingQueue.length });
       }
     } catch (e: unknown) {
-      AppLogger.error('[ScenesService] Flush fail', { error: (e instanceof Error ? e.message : String(e)) });
+      AppLogger.error('[ScenesService] Flush fail', { error: (e instanceof Error ? e.message : String(e)) , payload_size: 0, ssi: 0 });
     }
   }
 }

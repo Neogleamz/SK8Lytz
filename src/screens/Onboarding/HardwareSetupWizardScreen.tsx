@@ -87,7 +87,7 @@ export default function HardwareSetupWizardScreen({
          try {
            await pingDevice(device.device_mac, payloadResult.packets[0], { probe: false, duration: 500, turnOffAtEnd: false });
          } catch (err: unknown) {
-           AppLogger.error('[FTUE] pingDevice failed in orientation test', err instanceof Error ? err.message : String(err));
+           AppLogger.error('[FTUE] pingDevice failed in orientation test', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
            setSetupError('Device not responding, retrying...');
          }
       }
@@ -678,7 +678,7 @@ export default function HardwareSetupWizardScreen({
                  });
                  await onSetupComplete(finalizedDevices);
                } catch (err: unknown) {
-                 AppLogger.error('[HardwareSetup] finish configuration failed', err instanceof Error ? err.message : String(err));
+                 AppLogger.error('[HardwareSetup] finish configuration failed', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
                  setSetupError(err instanceof Error ? err.message : 'Setup failed');
                  setActionStatus('error');
                } finally {

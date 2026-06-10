@@ -57,7 +57,7 @@ class CrewProfileService {
       });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] getMyCrew failed', { error: msg });
+      AppLogger.error('[CrewProfileService] getMyCrew failed', { error: msg , payload_size: 0, ssi: 0 });
       return [];
     }
   }
@@ -106,7 +106,7 @@ class CrewProfileService {
       return { ...crew, is_owner: true } as PermanentCrew;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] createPermanentCrew failed', { error: msg });
+      AppLogger.error('[CrewProfileService] createPermanentCrew failed', { error: msg , payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }
@@ -135,7 +135,7 @@ class CrewProfileService {
       return { ...crew, is_owner: crew.owner_id === userId } as PermanentCrew;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] joinPermanentCrew failed', { error: msg });
+      AppLogger.error('[CrewProfileService] joinPermanentCrew failed', { error: msg , payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }
@@ -166,7 +166,7 @@ class CrewProfileService {
       return { ...crew, is_owner: crew.owner_id === userId } as PermanentCrew;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] joinPublicCrewById failed', { error: msg });
+      AppLogger.error('[CrewProfileService] joinPublicCrewById failed', { error: msg , payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }
@@ -185,7 +185,7 @@ class CrewProfileService {
         .eq('user_id', userId);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] leavePermanentCrew failed', { error: msg });
+      AppLogger.error('[CrewProfileService] leavePermanentCrew failed', { error: msg , payload_size: 0, ssi: 0 });
     }
   }
 
@@ -201,7 +201,7 @@ class CrewProfileService {
       return count ?? 0;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] getCrewMemberCount failed', { error: msg });
+      AppLogger.error('[CrewProfileService] getCrewMemberCount failed', { error: msg , payload_size: 0, ssi: 0 });
       return 0;
     }
   }
@@ -228,7 +228,7 @@ class CrewProfileService {
       return { count: count ?? colors.length, avatarColors: colors };
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] getCrewMembersForDisplay failed', { error: msg });
+      AppLogger.error('[CrewProfileService] getCrewMembersForDisplay failed', { error: msg , payload_size: 0, ssi: 0 });
       return { count: 0, avatarColors: [] };
     }
   }
@@ -263,7 +263,7 @@ class CrewProfileService {
       if (error) throw error;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] updateCrew failed', { error: msg });
+      AppLogger.error('[CrewProfileService] updateCrew failed', { error: msg , payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }
@@ -288,7 +288,7 @@ class CrewProfileService {
       });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] getPublicCrews failed', { error: msg });
+      AppLogger.error('[CrewProfileService] getPublicCrews failed', { error: msg , payload_size: 0, ssi: 0 });
       return [];
     }
   }
@@ -344,7 +344,7 @@ class CrewProfileService {
       if (error) throw error;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] deleteCrew failed', { error: msg });
+      AppLogger.error('[CrewProfileService] deleteCrew failed', { error: msg , payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }
@@ -426,7 +426,7 @@ class CrewProfileService {
       };
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] getCrewStats failed', { error: msg });
+      AppLogger.error('[CrewProfileService] getCrewStats failed', { error: msg , payload_size: 0, ssi: 0 });
       return { sessionCount: 0, lastActive: null, topScene: null, totalDistanceMiles: 0, avgSpeedMph: 0, peakSpeedMph: 0, peakGForce: 0, totalDurationSec: 0 };
     }
   }
@@ -465,7 +465,7 @@ class CrewProfileService {
       });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] getCrewMembersWithNames failed', { error: msg });
+      AppLogger.error('[CrewProfileService] getCrewMembersWithNames failed', { error: msg , payload_size: 0, ssi: 0 });
       return [];
     }
   }
@@ -505,7 +505,7 @@ class CrewProfileService {
       if (error) throw error;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] revokeCrewOwner failed', { error: msg });
+      AppLogger.error('[CrewProfileService] revokeCrewOwner failed', { error: msg , payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }
@@ -525,7 +525,7 @@ class CrewProfileService {
       if (error) throw error;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] removeCrewMember failed', { error: msg });
+      AppLogger.error('[CrewProfileService] removeCrewMember failed', { error: msg , payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }
@@ -545,7 +545,7 @@ class CrewProfileService {
       if (error) throw error;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] addCrewMembers failed', { error: msg });
+      AppLogger.error('[CrewProfileService] addCrewMembers failed', { error: msg , payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }
@@ -596,7 +596,7 @@ class CrewProfileService {
       return data ?? [];
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] searchUsers failed', { error: msg });
+      AppLogger.error('[CrewProfileService] searchUsers failed', { error: msg , payload_size: 0, ssi: 0 });
       return [];
     }
   }

@@ -125,7 +125,7 @@ const QuickPresetModal = React.memo(function QuickPresetModal({
         Alert.alert('Error', 'Could not save scene. Are you logged in?');
       }
     } catch (e: unknown) {
-      AppLogger.error('QuickPresetModal', 'handlePublish failed', { error: e instanceof Error ? e.message : String(e) });
+      AppLogger.error('QuickPresetModal', 'handlePublish failed', { error: e instanceof Error ? e.message : String(e) , payload_size: 0, ssi: 0 });
       Alert.alert('Error', 'Failed to publish scene.');
     } finally {
       setIsPublishingCloud(false);

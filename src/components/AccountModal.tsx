@@ -414,7 +414,7 @@ export default function AccountModal({
                       setModalStatus('deleting');
                       const { error } = await supabase.rpc('delete_account');
                       if (error) {
-                        AppLogger.error('ACCOUNT_MGMT', { event: 'delete_account_rpc_failed', error: (error instanceof Error ? error.message : String(error)) });
+                        AppLogger.error('ACCOUNT_MGMT', { event: 'delete_account_rpc_failed', error: (error instanceof Error ? error.message : String(error)) , payload_size: 0, ssi: 0 });
                         throw new Error('Database rejection. Please contact support.');
                       }
 

@@ -262,7 +262,7 @@ class LocationService {
     try {
       rawSpots = await SkateSpotsService.getCachedSpots();
     } catch (e: unknown) {
-      AppLogger.error('LocationService', 'getCachedSpots failed', { error: e instanceof Error ? e.message : String(e) });
+      AppLogger.error('LocationService', 'getCachedSpots failed', { error: e instanceof Error ? e.message : String(e) , payload_size: 0, ssi: 0 });
       return [];
     }
     const spotsData = rawSpots as Record<string, unknown>[];

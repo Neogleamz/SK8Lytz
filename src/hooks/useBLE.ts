@@ -301,7 +301,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
         }
       } catch (e: unknown) {
         const parseErrMsg = e instanceof Error ? e.message : String(e);
-        AppLogger.error('Failed to parse notification', parseErrMsg);
+        AppLogger.error('Failed to parse notification', parseErrMsg, { payload_size: 0, ssi: 0 });
         AppLogger.log('PROTOCOL_ERROR', { error: parseErrMsg, deviceId, context: 'parse', payload_size: characteristic.value?.length ?? 0 });
       }
     }

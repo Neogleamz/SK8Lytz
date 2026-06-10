@@ -35,7 +35,7 @@ export const HealthSyncService = {
 
         AppleHealthKit.saveWorkout(options, (err: Object, result: Object) => {
           if (err) {
-            AppLogger.error('Health sync failed', (err instanceof Error ? err.message : String(err)), { platform: 'ios' });
+            AppLogger.error('Health sync failed', (err instanceof Error ? err.message : String(err)), { platform: 'ios' , payload_size: 0, ssi: 0 });
             return;
           }
           AppLogger.log('APP_LOG', { platform: 'ios', result, event: 'HEALTH_SYNC_SUCCESS' });
@@ -82,7 +82,7 @@ export const HealthSyncService = {
         AppLogger.log('APP_LOG', { platform: 'android', event: 'HEALTH_SYNC_SUCCESS' });
       }
     } catch (e: unknown) {
-      AppLogger.error('Health sync failed', e instanceof Error ? e.message : String(e));
+      AppLogger.error('Health sync failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
     }
   }
 };

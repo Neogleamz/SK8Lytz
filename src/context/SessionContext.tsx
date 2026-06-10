@@ -220,7 +220,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (err: unknown) {
-        AppLogger.error('Failed to run auto-pause check', err instanceof Error ? err.message : String(err));
+        AppLogger.error('Failed to run auto-pause check', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
       } finally {
         isCheckingAutoPause.current = false;
       }
@@ -319,7 +319,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             isForegroundServiceStarted = true;
           }
         } catch (err: unknown) {
-          AppLogger.error('Failed to display foreground service notification', err instanceof Error ? err.message : String(err));
+          AppLogger.error('Failed to display foreground service notification', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
         } finally {
           isDisplaying = false;
         }

@@ -28,7 +28,7 @@ class PushTokenService {
           { onConflict: 'user_id,token' }
         );
     } catch (e: unknown) {
-      AppLogger.error('PushTokenService', 'registerPushToken failed', { error: e instanceof Error ? e.message : String(e) });
+      AppLogger.error('PushTokenService', 'registerPushToken failed', { error: e instanceof Error ? e.message : String(e) , payload_size: 0, ssi: 0 });
     }
   }
 
@@ -45,7 +45,7 @@ class PushTokenService {
         .eq('user_id', userId)
         .eq('token', token);
     } catch (e: unknown) {
-      AppLogger.error('PushTokenService', 'unregisterPushToken failed', { error: e instanceof Error ? e.message : String(e) });
+      AppLogger.error('PushTokenService', 'unregisterPushToken failed', { error: e instanceof Error ? e.message : String(e) , payload_size: 0, ssi: 0 });
     }
   }
 }

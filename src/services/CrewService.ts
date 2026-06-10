@@ -500,7 +500,7 @@ class CrewService {
       return (data?.last_scene as Record<string, any>) ?? null;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewService] fetchLastScene failed', { error: msg });
+      AppLogger.error('[CrewService] fetchLastScene failed', { error: msg , payload_size: 0, ssi: 0 });
       return null;
     }
   }
@@ -550,7 +550,7 @@ class CrewService {
       this.emit();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewService] transferLeadership failed', { error: msg });
+      AppLogger.error('[CrewService] transferLeadership failed', { error: msg , payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }
@@ -568,7 +568,7 @@ class CrewService {
       return (data ?? []) as CrewMember[];
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewService] fetchMembers failed', { error: msg });
+      AppLogger.error('[CrewService] fetchMembers failed', { error: msg , payload_size: 0, ssi: 0 });
       return [];
     }
   }
@@ -737,7 +737,7 @@ class CrewService {
           .eq('id', this.currentSessionId);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        AppLogger.error('[CrewService] _persistLastScene failed', { error: msg });
+        AppLogger.error('[CrewService] _persistLastScene failed', { error: msg , payload_size: 0, ssi: 0 });
       }
     }, 5000);
   }
