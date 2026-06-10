@@ -47,10 +47,10 @@ if (isVerifyMode) {
     process.exit(1);
   }
 
-  const { commit, timestamp, tscStatus, jestStatus, browserConsoleStatus, astStatus, typeSafetyStatus, stdoutHash, signature } = attestation;
+  const { commit, timestamp, tscStatus, jestStatus, browserConsoleStatus, astStatus, typeSafetyStatus, bleArchStatus, bleOrganicDisconnectStatus, stdoutHash, signature } = attestation;
 
   // 1. Recalculate signature
-  const dataToSign = `${commit}:${timestamp}:${tscStatus}:${jestStatus}:${browserConsoleStatus || 'FAILED'}:${astStatus || 'FAILED'}:${typeSafetyStatus || 'FAILED'}:${stdoutHash}`;
+  const dataToSign = `${commit}:${timestamp}:${tscStatus}:${jestStatus}:${browserConsoleStatus || 'FAILED'}:${astStatus || 'FAILED'}:${typeSafetyStatus || 'FAILED'}:${bleArchStatus || 'SUCCESS'}:${bleOrganicDisconnectStatus || 'SUCCESS'}:${stdoutHash}`;
   const expectedSignature = crypto.createHmac('sha256', salt).update(dataToSign).digest('hex');
 
   if (signature !== expectedSignature) {
@@ -59,8 +59,8 @@ if (isVerifyMode) {
   }
 
   // 2. Verify status values
-  if (tscStatus !== 'SUCCESS' || jestStatus !== 'SUCCESS' || browserConsoleStatus !== 'SUCCESS' || astStatus !== 'SUCCESS' || (typeSafetyStatus && typeSafetyStatus !== 'SUCCESS')) {
-    console.error('❌ Error: Stored attestation indicates failed checks (TSC/Jest/BrowserConsole/AST/TypeSafety).');
+  if (tscStatus !== 'SUCCESS' || jestStatus !== 'SUCCESS' || browserConsoleStatus !== 'SUCCESS' || astStatus !== 'SUCCESS' || (typeSafetyStatus && typeSafetyStatus !== 'SUCCESS') || (bleArchStatus && bleArchStatus !== 'SUCCESS') || (bleOrganicDisconnectStatus && bleOrganicDisconnectStatus !== 'SUCCESS')) {
+    console.error('❌ Error: Stored attestation indicates failed checks (TSC/Jest/BrowserConsole/AST/TypeSafety/BLEArch/OrganicDisconnect).');
     process.exit(1);
   }
 
@@ -187,6 +187,52 @@ try {
   console.error(astOutput);
 }
 
+console.log('⏳ Running BLE Architecture Invariant Guard...');
+let bleArchStatus = 'FAILED';
+let bleArchOutput = '';
+try {
+  // Grep for startDeviceScan method calls in all TS files EXCEPT BleMachine.ts and test directories
+  const result = execSync(
+    'git grep -rn "\\.startDeviceScan(" -- "*.ts" "*.tsx" ":!src/services/ble/BleMachine.ts" ":!*__tests__*"',
+    { stdio: 'pipe', encoding: 'utf8', cwd: WORKTREE_ROOT }
+  );
+  if (result.trim().length > 0) {
+    throw new Error(`Direct startDeviceScan call found outside BleMachine.ts:\n${result}`);
+  }
+  bleArchStatus = 'SUCCESS';
+  console.log('✅ BLE Architecture Invariant Guard passed!');
+} catch (e) {
+  if (e.status === 1) {
+    // git grep exit 1 = no matches = GOOD
+    bleArchStatus = 'SUCCESS';
+    console.log('✅ BLE Architecture Invariant Guard passed!');
+  } else {
+    bleArchOutput = e.stdout || e.message;
+    console.error('❌ BLE Architecture violation:\n', bleArchOutput);
+  }
+}
+
+console.log('⏳ Running Organic Disconnect Wiring Guard...');
+let bleOrganicDisconnectStatus = 'FAILED';
+let bleOrganicDisconnectOutput = '';
+try {
+  const useBLEContent = fs.readFileSync(
+    path.join(WORKTREE_ROOT, 'src/hooks/useBLE.ts'), 'utf8'
+  );
+  if (!useBLEContent.includes('onOrganicDisconnect:')) {
+    throw new Error(
+      'CRITICAL: onOrganicDisconnect is missing from useBLE.ts. ' +
+      'Organic device drops will silently die — recovery will never start. ' +
+      'See SESSION_LOG [DECISION] 2026-06-10T08:38.'
+    );
+  }
+  bleOrganicDisconnectStatus = 'SUCCESS';
+  console.log('✅ Organic disconnect wiring guard passed!');
+} catch (e) {
+  bleOrganicDisconnectOutput = e.message;
+  console.error('❌ Organic disconnect wiring FAILED:', bleOrganicDisconnectOutput);
+}
+
 let typeSafetyOutput = '';
 let typeSafetyStatus = 'FAILED';
 const typeSafetyStart = Date.now();
@@ -299,10 +345,10 @@ try {
 }
 
 // Create cryptographic package
-const combinedOutput = tscOutput + jestOutput + browserConsoleOutput + astOutput + typeSafetyOutput + workflowRefOutput;
+const combinedOutput = tscOutput + jestOutput + browserConsoleOutput + astOutput + bleArchOutput + bleOrganicDisconnectOutput + typeSafetyOutput + workflowRefOutput;
 const stdoutHash = crypto.createHash('sha256').update(combinedOutput).digest('hex');
 
-const dataToSign = `${currentCommit}:${timestamp}:${tscStatus}:${jestStatus}:${browserConsoleStatus}:${astStatus}:${typeSafetyStatus}:${stdoutHash}`;
+const dataToSign = `${currentCommit}:${timestamp}:${tscStatus}:${jestStatus}:${browserConsoleStatus}:${astStatus}:${typeSafetyStatus}:${bleArchStatus}:${bleOrganicDisconnectStatus}:${stdoutHash}`;
 const signature = crypto.createHmac('sha256', salt).update(dataToSign).digest('hex');
 
 const attestationData = {
@@ -316,6 +362,8 @@ const attestationData = {
   browserConsoleDurationMs: Date.now() - browserConsoleStart,
   astStatus,
   astDurationMs: Date.now() - astStart,
+  bleArchStatus,
+  bleOrganicDisconnectStatus,
   typeSafetyStatus,
   workflowRefStatus,
   workflowRefDurationMs: Date.now() - typeSafetyStart,
@@ -325,7 +373,7 @@ const attestationData = {
 
 fs.writeFileSync(attestationPath, JSON.stringify(attestationData, null, 2), 'utf8');
 
-if (tscStatus === 'SUCCESS' && jestStatus === 'SUCCESS' && browserConsoleStatus === 'SUCCESS' && astStatus === 'SUCCESS' && typeSafetyStatus === 'SUCCESS' && workflowRefStatus === 'SUCCESS') {
+if (tscStatus === 'SUCCESS' && jestStatus === 'SUCCESS' && browserConsoleStatus === 'SUCCESS' && astStatus === 'SUCCESS' && bleArchStatus === 'SUCCESS' && bleOrganicDisconnectStatus === 'SUCCESS' && typeSafetyStatus === 'SUCCESS' && workflowRefStatus === 'SUCCESS') {
   console.log('\n🔒 Cryptographic Attestation written to .test-attestation.json successfully!');
   console.log('✅ QA Hardening checks passed cleanly.');
   process.exit(0);
