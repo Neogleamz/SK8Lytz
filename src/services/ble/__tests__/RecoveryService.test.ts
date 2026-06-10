@@ -50,6 +50,18 @@ jest.mock('../../BleSessionFactory', () => ({
   createGattSession: jest.fn(),
 }));
 
+// Silence AppLogger to prevent ENOBUFS buffer overflow in verifiable-check-runner.js
+// Phase 1+2 exhaustion emits 35+ warn entries per test — too much stdout for spawn buffer
+jest.mock('../../AppLogger', () => ({
+  AppLogger: {
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    flushQueues: jest.fn(),
+  },
+}));
+
 import { Platform } from 'react-native';
 import type { BleManager, Device, Subscription } from 'react-native-ble-plx';
 import { recoveryService } from '../RecoveryService';
@@ -153,6 +165,9 @@ describe('RecoveryService test suite', () => {
   });
 
   afterEach(() => {
+    // Clear any pending fake timers before restoring real ones to prevent
+    // AppLogger flush queue timer from firing after test suite completes
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
