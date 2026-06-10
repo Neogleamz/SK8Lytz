@@ -42,6 +42,18 @@ jest.mock('react-native', () => ({
   },
 }));
 
+// Silence AppLogger to prevent BLE_STATE_CHANGE events from leaking post-suite
+// (AppLogger's setInterval flushes queued logs after tests complete — worker crash)
+jest.mock('../../AppLogger', () => ({
+  AppLogger: {
+    log: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    flushQueues: jest.fn(),
+  },
+}));
+
 import { createActor, fromPromise, fromCallback } from 'xstate';
 import { bleMachine } from '../BleMachine';
 import type { Device } from 'react-native-ble-plx';
