@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
 
 jest.mock('expo-battery', () => ({
@@ -55,6 +56,7 @@ describe('BleMachine test suite', () => {
   let mockConnectResolve: (val: { devices: Device[] }) => void;
   let mockConnectReject: (err: any) => void;
   let mockConnectPromise: Promise<{ devices: Device[] }>;
+  let actorsList: ReturnType<typeof createActor>[] = [];
 
   const testBleMachine = bleMachine.provide({
     actors: {
@@ -74,6 +76,7 @@ describe('BleMachine test suite', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    actorsList = [];
 
     mockInput = {
       bleManager: mockBleManager,
@@ -91,6 +94,20 @@ describe('BleMachine test suite', () => {
     };
   });
 
+  afterEach(() => {
+    actorsList.forEach((actor) => {
+      try {
+        actor.stop();
+      } catch {}
+    });
+  });
+
+  const createTestActor = (options?: any) => {
+    const actor = createActor(testBleMachine, options);
+    actorsList.push(actor);
+    return actor;
+  };
+
   // Helper helper to transition actor to READY state
   const walkToReady = async (actor: ReturnType<typeof createActor>) => {
     actor.start();
@@ -105,7 +122,7 @@ describe('BleMachine test suite', () => {
   // --- Group A: State Transitions ---
 
   it('1. IDLE -> SCANNING on SCAN_START', () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     actor.start();
     expect(actor.getSnapshot().value).toBe('IDLE');
 
@@ -116,7 +133,7 @@ describe('BleMachine test suite', () => {
   });
 
   it('2. IDLE -> CONNECTING on CONNECT_REQUEST', () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     actor.start();
     actor.send({ type: 'CONNECT_REQUEST', targetMacs: ['MAC1'] });
     expect(actor.getSnapshot().value).toBe('CONNECTING');
@@ -124,7 +141,7 @@ describe('BleMachine test suite', () => {
   });
 
   it('3. IDLE -> RECOVERING on RECOVERY_START', () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     actor.start();
     actor.send({ type: 'RECOVERY_START', ghostedMacs: ['MAC1'] });
     expect(actor.getSnapshot().value).toBe('RECOVERING');
@@ -132,7 +149,7 @@ describe('BleMachine test suite', () => {
   });
 
   it('4. SCANNING -> IDLE on SCAN_STOP', () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     actor.start();
     actor.send({ type: 'SCAN_START', sweeperId: 10 });
     expect(actor.getSnapshot().value).toBe('SCANNING');
@@ -144,7 +161,7 @@ describe('BleMachine test suite', () => {
   });
 
   it('5. SCANNING -> CONNECTING on CONNECT_REQUEST', () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     actor.start();
     actor.send({ type: 'SCAN_START', sweeperId: 10 });
     expect(actor.getSnapshot().value).toBe('SCANNING');
@@ -156,7 +173,7 @@ describe('BleMachine test suite', () => {
   });
 
   it('6. CONNECTING -> READY on connectService success (xstate.done.actor)', async () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     actor.start();
     actor.send({ type: 'CONNECT_REQUEST', targetMacs: ['MAC1'] });
     expect(actor.getSnapshot().value).toBe('CONNECTING');
@@ -171,7 +188,7 @@ describe('BleMachine test suite', () => {
   });
 
   it('7. CONNECTING -> IDLE on connectService error', async () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     actor.start();
     actor.send({ type: 'CONNECT_REQUEST', targetMacs: ['MAC1'] });
     expect(actor.getSnapshot().value).toBe('CONNECTING');
@@ -179,14 +196,14 @@ describe('BleMachine test suite', () => {
     mockConnectReject(new Error('Connection Failed'));
     try {
       await mockConnectPromise;
-    } catch (e) {}
+    } catch {}
     await new Promise((res) => setTimeout(res, 0));
 
     expect(actor.getSnapshot().value).toBe('IDLE');
   });
 
   it('8. READY -> RECOVERING on HEARTBEAT_FAIL', async () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     await walkToReady(actor);
     expect(actor.getSnapshot().value).toBe('READY');
 
@@ -196,7 +213,7 @@ describe('BleMachine test suite', () => {
   });
 
   it('9. READY -> DISCONNECTING on DISCONNECT_REQUEST', async () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     await walkToReady(actor);
     expect(actor.getSnapshot().value).toBe('READY');
 
@@ -205,7 +222,7 @@ describe('BleMachine test suite', () => {
   });
 
   it('10. RECOVERING -> READY on RECOVERY_COMPLETE', () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     actor.start();
     actor.send({ type: 'RECOVERY_START', ghostedMacs: ['MAC1'] });
     expect(actor.getSnapshot().value).toBe('RECOVERING');
@@ -217,7 +234,7 @@ describe('BleMachine test suite', () => {
   });
 
   it('11. RECOVERING -> IDLE on RECOVERY_FAIL', () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     actor.start();
     actor.send({ type: 'RECOVERY_START', ghostedMacs: ['MAC1'] });
     expect(actor.getSnapshot().value).toBe('RECOVERING');
@@ -228,7 +245,7 @@ describe('BleMachine test suite', () => {
   });
 
   it('12. DISCONNECTING -> IDLE on DISCONNECT_COMPLETE', () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     actor.start();
     actor.send({ type: 'DISCONNECT_REQUEST' });
     expect(actor.getSnapshot().value).toBe('DISCONNECTING');
@@ -239,7 +256,7 @@ describe('BleMachine test suite', () => {
   });
 
   it('13. ANY -> IDLE on FORCE_IDLE (does not clear connectedDevices)', async () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     await walkToReady(actor);
     expect(actor.getSnapshot().value).toBe('READY');
     expect(actor.getSnapshot().context.connectedDevices.length).toBe(1);
@@ -252,7 +269,7 @@ describe('BleMachine test suite', () => {
   // --- Group B: Organic Disconnect Regression Guard (P0) ---
 
   it('14. onOrganicDisconnect triggers RECOVERY_START and transitions to RECOVERING', async () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     
     // Simulate useBLE.ts wiring for onOrganicDisconnect
     const onOrganicDisconnectWrapper = (deviceId: string) => {
@@ -274,7 +291,7 @@ describe('BleMachine test suite', () => {
   });
 
   it('15. onOrganicDisconnect is suppressed during DISCONNECTING', async () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     
     const onOrganicDisconnectWrapper = (deviceId: string) => {
       const snapshot = actor.getSnapshot();
@@ -302,14 +319,14 @@ describe('BleMachine test suite', () => {
   // --- Group C: Context Assertions ---
 
   it('16. ghostedDeviceIds populated correctly on RECOVERY_START', () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     actor.start();
     actor.send({ type: 'RECOVERY_START', ghostedMacs: ['MAC1', 'MAC2'] });
     expect(actor.getSnapshot().context.ghostedDeviceIds).toEqual(['MAC1', 'MAC2']);
   });
 
   it('17. connectedDevices cleared on DISCONNECT_COMPLETE, but not on FORCE_IDLE', async () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     await walkToReady(actor);
     expect(actor.getSnapshot().context.connectedDevices.length).toBe(1);
 
@@ -332,7 +349,7 @@ describe('BleMachine test suite', () => {
   });
 
   it('18. targetMacs set correctly on CONNECT_REQUEST', () => {
-    const actor = createActor(testBleMachine, { input: mockInput });
+    const actor = createTestActor({ input: mockInput });
     actor.start();
     actor.send({ type: 'CONNECT_REQUEST', targetMacs: ['MAC1', 'MAC2'] });
     expect(actor.getSnapshot().context.targetMacs).toEqual(['MAC1', 'MAC2']);
