@@ -1637,3 +1637,10 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - Maintained Zero Blast Radius by computing the legacy boolean variables dynamically from the new status state, preventing cascading refactors across 50+ components.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/context/AuthContext.tsx
+### [MERGE] 2026-06-10T12:38 — chore/hardcoded-delay-audit -> master @ ae3bf0f3
+**What merged:** 
+- Migrated physical GATT staggered write delays from nested setTimeout to BleWriteQueue.enqueueDelay.
+- Resolved priority interleaving risks in ConnectService, BlePingService, and InterrogatorService.
+- Documented remaining UI debouncers in docs/audits/AUDIT-hardcoded-delays.md.
+**Verify result:** TSC ?, Jest ?, Gatekeeper ?
+**Files touched:** src/services/BleWriteQueue.ts, src/services/ble/ConnectService.ts, src/services/BlePingService.ts, src/services/ble/InterrogatorService.ts, docs/audits/AUDIT-hardcoded-delays.md, src/services/ble/__tests__/*.test.ts
