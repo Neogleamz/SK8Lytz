@@ -56,10 +56,17 @@ export function useDashboardProfile({
   const [authUsername, setAuthUsername] = useState<string | null>(null);
 
   // ── Modal visibility state ───────────────────────────────────────────────
-  const [isAccountModalVisible, setIsAccountModalVisible] = useState(false);
-  const [isAdminToolsVisible, setIsAdminToolsVisible] = useState(false);
-  const [isSupportModalVisible, setIsSupportModalVisible] = useState(false);
-  const [isMapVisible, setIsMapVisible] = useState(false);
+  type ActiveModalState = 'none' | 'account' | 'admin' | 'support' | 'map';
+  const [activeModal, setActiveModal] = useState<ActiveModalState>('none');
+  const isAccountModalVisible = activeModal === 'account';
+  const isAdminToolsVisible = activeModal === 'admin';
+  const isSupportModalVisible = activeModal === 'support';
+  const isMapVisible = activeModal === 'map';
+
+  const setIsAccountModalVisible = (v: boolean) => setActiveModal(v ? 'account' : 'none');
+  const setIsAdminToolsVisible = (v: boolean) => setActiveModal(v ? 'admin' : 'none');
+  const setIsSupportModalVisible = (v: boolean) => setActiveModal(v ? 'support' : 'none');
+  const setIsMapVisible = (v: boolean) => setActiveModal(v ? 'map' : 'none');
 
   // ── App settings — fetched on mount, refreshed on foreground ────────────
   useEffect(() => {

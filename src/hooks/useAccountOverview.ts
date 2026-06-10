@@ -36,12 +36,12 @@ function hexToHue(hex: string | null | undefined): number {
 
 export function useAccountOverview(visible: boolean, onProfileUpdated?: () => void) {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
+  type OverviewStatus = 'idle' | 'loading' | 'saving_profile' | 'crew_loading' | 'error' | 'success';
+  const [status, setStatus] = useState<OverviewStatus>('idle');
   const [accountError, setAccountError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [editName, setEditName] = useState('');
   const [editUsername, setEditUsername] = useState('');
-  const [savingProfile, setSavingProfile] = useState(false);
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
   const [avatarHue, setAvatarHue] = useState<number>(30);
   const [userEmail, setUserEmail] = useState('');
@@ -51,7 +51,6 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   const [crewStep, setCrewStep] = useState<'list' | 'create' | 'join' | 'manage'>('list');
   const [newCrewName, setNewCrewName] = useState('');
   const [joinCode, setJoinCode] = useState('');
-  const [crewLoading, setCrewLoading] = useState(false);
   const [crewError, setCrewError] = useState('');
 
   // History
@@ -69,7 +68,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   const [autoPauseEnabled, setAutoPauseEnabled] = useState(true);
 
   const loadData = useCallback(async () => {
-    setLoading(true);
+    setStatus('loading');
     setAccountError(null);
     try {
       AppLogger.log('ACCOUNT_MODAL_LOAD_START');
@@ -134,11 +133,11 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       }
       setCrews(c);
       setHistory(h);
+      setStatus('success');
     } catch (e: unknown) {
       AppLogger.warn('[AccountOverview] loadData error', { error: e instanceof Error ? e.message : String(e)  });
       setAccountError('Failed to load. Tap to retry.');
-    } finally {
-      setLoading(false);
+      setStatus('error');
     }
   }, [user]);
 
@@ -150,7 +149,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
 
   const handleSaveProfile = async () => {
     if (!editName.trim()) return;
-    setSavingProfile(true);
+    setStatus('saving_profile');
     try {
       const updates: Partial<UserProfile> = { display_name: editName.trim() };
       if (editUsername.trim()) updates.username = editUsername.trim().toLowerCase();
@@ -161,11 +160,11 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       AppLogger.log('PROFILE_UPDATED', { fields: Object.keys(updates) });
       onProfileUpdated?.();
       Alert.alert('Saved', 'Profile updated successfully.');
+      setStatus('success');
     } catch (e: unknown) {
       AppLogger.error('[AccountOverview] handleSaveProfile failed', { error: e instanceof Error ? e.message : String(e)  });
       Alert.alert('Error', (e instanceof Error ? e.message : String(e)) || 'Could not save profile');
-    } finally {
-      setSavingProfile(false);
+      setStatus('error');
     }
   };
 
@@ -254,31 +253,35 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   const handleCreateCrew = async () => {
     if (!newCrewName.trim()) { setCrewError('Enter a crew name'); return; }
     if (!user?.id) { setCrewError('Not logged in'); return; }
-    setCrewLoading(true); setCrewError('');
+    setStatus('crew_loading'); setCrewError('');
     try {
       const crew = await profileService.createPermanentCrew(newCrewName.trim(), undefined, user.id);
       setCrews(prev => [...prev, crew]);
       setNewCrewName(''); setCrewStep('list');
       AppLogger.log('CREW_PERMANENT_CREATED', { crewName: newCrewName.trim() });
+      setStatus('success');
     } catch (e: unknown) {
       AppLogger.warn('[AccountOverview] handleCreateCrew failed', { error: e instanceof Error ? e.message : String(e)  });
       setCrewError((e instanceof Error ? e.message : String(e)) ?? 'Failed to create crew');
-    } finally { setCrewLoading(false); }
+      setStatus('error');
+    }
   };
 
   const handleJoinCrew = async () => {
     if (joinCode.trim().length < 4) { setCrewError('Enter the invite code'); return; }
     if (!user?.id) { setCrewError('Not logged in'); return; }
-    setCrewLoading(true); setCrewError('');
+    setStatus('crew_loading'); setCrewError('');
     try {
       const crew = await profileService.joinPermanentCrew(joinCode.trim(), user.id);
       setCrews(prev => prev.find(c => c.id === crew.id) ? prev : [...prev, crew]);
       setJoinCode(''); setCrewStep('list');
       AppLogger.log('CREW_PERMANENT_JOINED', { crewId: crew.id });
+      setStatus('success');
     } catch (e: unknown) {
       AppLogger.warn('[AccountOverview] handleJoinCrew failed', { error: e instanceof Error ? e.message : String(e)  });
       setCrewError((e instanceof Error ? e.message : String(e)) ?? 'Failed to join crew');
-    } finally { setCrewLoading(false); }
+      setStatus('error');
+    }
   };
 
   const handleLeaveCrew = async (crewId: string) => {
@@ -295,11 +298,10 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
 
   return {
     user,
-    loading,
+    status,
     profile, setProfile,
     editName, setEditName,
     editUsername, setEditUsername,
-    savingProfile,
     profilePhotoUri,
     avatarHue, setAvatarHue,
     userEmail,
@@ -307,7 +309,6 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     crewStep, setCrewStep,
     newCrewName, setNewCrewName,
     joinCode, setJoinCode,
-    crewLoading,
     crewError, setCrewError,
     history,
     notifCrewInvites, setNotifCrewInvites,

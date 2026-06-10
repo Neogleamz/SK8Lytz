@@ -74,7 +74,11 @@ export function CrewModal({
 
   const [step, setStep] = useState<ModalStep>(activeSession ? 'controller' : (initialStep || 'landing'));
   const [showCodeEntry, setShowCodeEntry] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  type ModalStatus = 'idle' | 'loading' | 'error' | 'success';
+  const [status, setStatus] = useState<ModalStatus>('idle');
+  const isLoading = status === 'loading';
+  const setIsLoading = (loading: boolean) => setStatus(loading ? 'loading' : 'idle');
+  
   const [errorMsg, setErrorMsg] = useState('');
   const [confirmAction, setConfirmAction] = useState<'end' | 'leave' | null>(null);
 

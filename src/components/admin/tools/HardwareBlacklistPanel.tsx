@@ -42,16 +42,19 @@ export function HardwareBlacklistPanel({
   textPrimary,
   textMuted,
 }: HardwareBlacklistPanelProps) {
+  type BlacklistPanelStatus = 'idle' | 'loading' | 'refreshing' | 'submitting' | 'error';
+  const [status, setStatus] = useState<BlacklistPanelStatus>('loading');
+  const loading = status === 'loading';
+  const isRefreshing = status === 'refreshing';
+  const isSubmitting = status === 'submitting';
+
   const [blacklist, setBlacklist] = useState<BlacklistedDevice[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [newMac, setNewMac] = useState('');
   const [newReason, setNewReason] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchBlacklist = async () => {
     try {
-      setLoading(true);
+      setStatus(prev => prev === 'idle' ? 'refreshing' : 'loading');
       const { data, error } = await supabase
         .from('hardware_blacklist')
         .select('*')
@@ -62,9 +65,9 @@ export function HardwareBlacklistPanel({
     } catch (e: unknown) {
       AppLogger.error('Failed to fetch hardware blacklist', e instanceof Error ? e.message : String(e));
       Alert.alert('Error', 'Failed to fetch hardware blacklist: ' + (e instanceof Error ? e.message : String(e)));
+      setStatus('error');
     } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+      setStatus('idle');
     }
   };
 
@@ -90,7 +93,7 @@ export function HardwareBlacklistPanel({
     }
 
     try {
-      setIsSubmitting(true);
+      setStatus('submitting');
       const { error } = await supabase.rpc('admin_add_hardware_blacklist', {
         p_mac_address: formattedMac,
         p_reason: newReason.trim()
@@ -103,16 +106,17 @@ export function HardwareBlacklistPanel({
       setNewReason('');
       fetchBlacklist();
     } catch (e: unknown) {
-      Alert.alert('Failed to Add', (e instanceof Error ? e.message : String(e)));
+      Alert.alert('Failed to Blacklist', (e instanceof Error ? e.message : String(e)));
+      setStatus('idle');
     } finally {
-      setIsSubmitting(false);
+      setStatus('idle');
     }
   };
 
-  const handleRemove = (mac: string) => {
+  const handleRemove = (macAddress: string) => {
     Alert.alert(
       'Remove from Blacklist',
-      `Are you sure you want to remove ${mac} from the blacklist?`,
+      `Are you sure you want to remove ${macAddress} from the blacklist?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -120,14 +124,17 @@ export function HardwareBlacklistPanel({
           style: 'destructive',
           onPress: async () => {
             try {
+              setStatus('submitting');
               const { error } = await supabase.rpc('admin_remove_hardware_blacklist', {
-                p_mac_address: mac
+                p_mac_address: macAddress
               });
               if (error) throw error;
               Alert.alert('Success', 'Device removed from blacklist.');
               fetchBlacklist();
             } catch (e: unknown) {
-              Alert.alert('Failed', (e instanceof Error ? e.message : String(e)));
+              Alert.alert('Failed to Remove', (e instanceof Error ? e.message : String(e)));
+            } finally {
+              setStatus('idle');
             }
           },
         },
@@ -214,7 +221,6 @@ export function HardwareBlacklistPanel({
             contentContainerStyle={styles.list}
             refreshing={isRefreshing}
             onRefresh={() => {
-              setIsRefreshing(true);
               fetchBlacklist();
             }}
             ListEmptyComponent={<Text style={{color: textMuted, textAlign: 'center', marginTop: 20}}>No devices currently blacklisted.</Text>}

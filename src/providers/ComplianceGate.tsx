@@ -16,7 +16,8 @@ interface ComplianceGateProps {
 export function ComplianceGate({ children }: ComplianceGateProps) {
   const { isOfflineMode, user } = useAuth();
   const { Colors } = useTheme();
-  const [loading, setLoading] = useState(true);
+  type ComplianceStatus = 'checking' | 'idle';
+  const [status, setStatus] = useState<ComplianceStatus>('checking');
   const [requiresEula, setRequiresEula] = useState(false);
 
   useEffect(() => {
@@ -24,7 +25,7 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
   }, [isOfflineMode]);
 
   const checkCompliance = async () => {
-    setLoading(true);
+    setStatus('checking');
     try {
 
       if (isOfflineMode) {
@@ -34,12 +35,12 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
         if (!offlineEula) {
           setRequiresEula(true);
         }
-        setLoading(false);
+        setStatus('idle');
         return;
       }
 
       if (!supabase) {
-        setLoading(false);
+        setStatus('idle');
         return;
       }
       
@@ -49,7 +50,7 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
 
       // 2. Fetch user's accepted version
       if (!user) {
-        setLoading(false);
+        setStatus('idle');
         return;
       }
 
@@ -68,7 +69,7 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.warn('[ComplianceGate] check error', { error: msg });
     } finally {
-      setLoading(false);
+      setStatus('idle');
     }
   };
 
@@ -116,7 +117,7 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
     }
   };
 
-  if (loading) {
+  if (status === 'checking') {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={Colors.primary} />

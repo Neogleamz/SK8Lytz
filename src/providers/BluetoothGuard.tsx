@@ -11,9 +11,9 @@ export function BluetoothGuard({ children }: { children: React.ReactNode }) {
   const ble = useSharedBLE();
   const { Colors } = useTheme();
   
+  type GuardStatus = 'checking' | 'idle' | 'requesting';
+  const [status, setStatus] = useState<GuardStatus>('checking');
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [checking, setChecking] = useState(true);
-  const isRequestingRef = useRef(false);
 
   const checkBluetoothState = async () => {
     try {
@@ -22,7 +22,7 @@ export function BluetoothGuard({ children }: { children: React.ReactNode }) {
     } catch {
       setHasPermission(false);
     } finally {
-      setChecking(false);
+      setStatus(prev => prev === 'checking' ? 'idle' : prev);
     }
   };
 
@@ -39,8 +39,8 @@ export function BluetoothGuard({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleRequestPermission = async () => {
-    if (isRequestingRef.current) return;
-    isRequestingRef.current = true;
+    if (status === 'requesting') return;
+    setStatus('requesting');
     try {
       const granted = await requestPermission('BLUETOOTH');
       if (granted) {
@@ -57,7 +57,7 @@ export function BluetoothGuard({ children }: { children: React.ReactNode }) {
         );
       }
     } finally {
-      isRequestingRef.current = false;
+      setStatus('idle');
     }
   };
 
@@ -70,7 +70,7 @@ export function BluetoothGuard({ children }: { children: React.ReactNode }) {
 
   const styles = createStyles(Colors);
 
-  if (checking) {
+  if (status === 'checking') {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator size="large" color={Colors.primary} />

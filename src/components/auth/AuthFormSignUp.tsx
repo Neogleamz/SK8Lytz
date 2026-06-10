@@ -36,8 +36,10 @@ export function AuthFormSignUp({ onModeChange }: AuthFormSignUpProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   
-  const [loading, setLoading] = useState(false);
-  const [hibpChecking, setHibpChecking] = useState(false);
+  type SignUpStatus = 'idle' | 'hibp_checking' | 'loading' | 'success' | 'error';
+  const [status, setStatus] = useState<SignUpStatus>('idle');
+  const loading = status === 'loading';
+  const hibpChecking = status === 'hibp_checking';
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
   const [eulaAccepted, setEulaAccepted] = useState(false);
@@ -85,23 +87,22 @@ export function AuthFormSignUp({ onModeChange }: AuthFormSignUpProps) {
     }
 
     setErrorMessage('');
-    setHibpChecking(true);
+    setStatus('hibp_checking');
     try {
       const hibp = await checkHIBP(password);
-      setHibpChecking(false);
 
       if (hibp.pwned) {
+        setStatus('error');
         showError(`⚠️ This password has appeared in ${hibp.count.toLocaleString()} data breaches. Please choose a different password.`);
         return;
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.error('AuthFormSignUp', 'HIBP Check failed', { error: msg });
-      setHibpChecking(false);
       // We don't block sign up on HIBP failure
     }
 
-    setLoading(true);
+    setStatus('loading');
     try {
       const redirectUrl = makeRedirectUri({ path: 'auth' });
       const { error } = await signUp(email.trim(), password, {
@@ -112,11 +113,11 @@ export function AuthFormSignUp({ onModeChange }: AuthFormSignUpProps) {
         },
         emailRedirectTo: redirectUrl
       });
-      setLoading(false);
-      
       if (error) {
+        setStatus('error');
         showError(error.message);
       } else {
+        setStatus('success');
         AppLogger.log('EULA_ACCEPTED', { policy_version: 'v1.0.0' });
         showSuccess('✅ Account created! Check your email for a verification link, then log in.');
         setTimeout(() => onModeChange('LOGIN'), 3000);
@@ -124,7 +125,7 @@ export function AuthFormSignUp({ onModeChange }: AuthFormSignUpProps) {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.error('AuthFormSignUp', 'Sign up exception', { error: msg });
-      setLoading(false);
+      setStatus('error');
       showError('A network or internal error occurred. Please try again.');
     }
   };

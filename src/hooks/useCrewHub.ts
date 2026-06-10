@@ -28,14 +28,19 @@ export function useCrewHub(visible: boolean, step: string) {
   const [permanentCrews, setPermanentCrews] = useState<{ id: string; name: string }[]>([]);
   const [crewMemberCounts, setCrewMemberCounts] = useState<Record<string, { count: number; avatarColors: string[] }>>({});
   
+  type HubRequestStatus = 'idle' | 'loading' | 'error' | 'success';
+
   const [nearbySessions, setNearbySessions] = useState<NearbySession[]>([]);
   const [nearbySpots, setNearbySpots] = useState<NearbySkateSpot[]>([]);
-  const [isLoadingNearby, setIsLoadingNearby] = useState(false);
+  const [nearbyStatus, setNearbyStatus] = useState<HubRequestStatus>('idle');
+  const isLoadingNearby = nearbyStatus === 'loading';
   
   const [activeSessions, setActiveSessions] = useState<CrewSession[]>([]);
-  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [sessionsStatus, setSessionsStatus] = useState<HubRequestStatus>('idle');
+  const isLoadingSessions = sessionsStatus === 'loading';
 
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationStatus, setLocationStatus] = useState<HubRequestStatus>('idle');
+  const isGettingLocation = locationStatus === 'loading';
   const [locationLabel, setLocationLabel] = useState('');
   const [locationCoords, setLocationCoords] = useState<{ lat: number; lng: number } | undefined>();
 
@@ -69,7 +74,7 @@ export function useCrewHub(visible: boolean, step: string) {
   }, []);
 
   const refreshNearby = useCallback(() => {
-    setIsLoadingNearby(true);
+    setNearbyStatus('loading');
 
     const GPS_TIMEOUT_MS = 3000;
 
@@ -119,8 +124,11 @@ export function useCrewHub(visible: boolean, step: string) {
       })
       .catch((err) => {
         AppLogger.warn('[useCrewHub] refreshNearby failed', err instanceof Error ? err.message : String(err));
+        setNearbyStatus('error');
       })
-      .finally(() => setIsLoadingNearby(false));
+      .finally(() => {
+        setNearbyStatus(prev => prev === 'loading' ? 'success' : prev);
+      });
   }, [discoverRadiusMi, locationCoords]);
 
   useEffect(() => {
@@ -130,10 +138,13 @@ export function useCrewHub(visible: boolean, step: string) {
 
   // Load Active Sessions
   const loadActiveSessions = useCallback(async () => {
-    setIsLoadingSessions(true);
-    const sessions = await crewService.fetchActiveSessions().catch(() => []);
+    setSessionsStatus('loading');
+    const sessions = await crewService.fetchActiveSessions().catch(() => {
+      setSessionsStatus('error');
+      return [];
+    });
     setActiveSessions(sessions);
-    setIsLoadingSessions(false);
+    setSessionsStatus(prev => prev === 'loading' ? 'success' : prev);
   }, []);
 
   useEffect(() => {
@@ -146,9 +157,12 @@ export function useCrewHub(visible: boolean, step: string) {
   }, [step, loadActiveSessions]);
 
   const handleDetectLocation = async () => {
-    setIsGettingLocation(true);
-    const loc = await locationService.getSessionLocation();
-    setIsGettingLocation(false);
+    setLocationStatus('loading');
+    const loc = await locationService.getSessionLocation().catch(() => {
+      setLocationStatus('error');
+      return null;
+    });
+    setLocationStatus(loc ? 'success' : 'error');
     if (loc) {
       setLocationLabel(loc.label);
       setLocationCoords(loc.coords);
@@ -166,7 +180,7 @@ export function useCrewHub(visible: boolean, step: string) {
     isLoadingNearby, refreshNearby,
     activeSessions, setActiveSessions,
     isLoadingSessions, loadActiveSessions,
-    isGettingLocation, setIsGettingLocation,
+    isGettingLocation, setIsGettingLocation: (v: boolean) => setLocationStatus(v ? 'loading' : 'idle'),
     locationLabel, setLocationLabel,
     locationCoords, setLocationCoords,
     handleDetectLocation

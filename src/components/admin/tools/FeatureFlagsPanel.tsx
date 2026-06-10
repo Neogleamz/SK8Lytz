@@ -44,17 +44,19 @@ export function FeatureFlagsPanel({
   textPrimary,
   textMuted,
 }: FeatureFlagsPanelProps) {
-  const [flags, setFlags] = useState<FeatureFlag[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  type FlagPanelStatus = 'idle' | 'loading' | 'refreshing' | 'submitting' | 'error';
+  const [status, setStatus] = useState<FlagPanelStatus>('loading');
+  const loading = status === 'loading';
+  const isRefreshing = status === 'refreshing';
+  const isSubmitting = status === 'submitting';
   
+  const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [newKey, setNewKey] = useState('');
   const [newUserId, setNewUserId] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchFlags = async () => {
     try {
-      setLoading(true);
+      setStatus(prev => prev === 'idle' ? 'refreshing' : 'loading');
       const { data, error } = await supabase
         .from('feature_flags')
         .select('*')
@@ -65,9 +67,9 @@ export function FeatureFlagsPanel({
     } catch (e: unknown) {
       AppLogger.error('Failed to fetch feature flags', e instanceof Error ? e.message : String(e));
       Alert.alert('Error', 'Failed to fetch feature flags: ' + (e instanceof Error ? e.message : String(e)));
+      setStatus('error');
     } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+      setStatus('idle');
     }
   };
 
@@ -84,7 +86,7 @@ export function FeatureFlagsPanel({
     }
 
     try {
-      setIsSubmitting(true);
+      setStatus('submitting');
       const targetUserId = newUserId.trim() || null;
 
       const { error } = await supabase
@@ -103,13 +105,15 @@ export function FeatureFlagsPanel({
       fetchFlags();
     } catch (e: unknown) {
       Alert.alert('Failed to Create', (e instanceof Error ? e.message : String(e)));
+      setStatus('idle');
     } finally {
-      setIsSubmitting(false);
+      setStatus('idle');
     }
   };
 
   const handleToggle = async (id: string, currentVal: boolean) => {
     try {
+      setStatus('submitting');
       const { error } = await supabase
         .from('feature_flags')
         .update({ is_enabled: !currentVal })
@@ -225,7 +229,6 @@ export function FeatureFlagsPanel({
             contentContainerStyle={styles.list}
             refreshing={isRefreshing}
             onRefresh={() => {
-              setIsRefreshing(true);
               fetchFlags();
             }}
             ListEmptyComponent={<Text style={{color: textMuted, textAlign: 'center', marginTop: 20}}>No feature flags found.</Text>}

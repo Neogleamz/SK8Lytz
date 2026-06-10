@@ -36,8 +36,9 @@ export function useCrewManage(
   const [newCrewPhotoUri, setNewCrewPhotoUri] = useState<string | null>(null);
   const [newCrewCode, setNewCrewCode] = useState(() => Math.random().toString(36).substring(2, 8).toUpperCase());
   const [newCrewHue, setNewCrewHue] = useState(40);
-  
-  const [isCreatingCrew, setIsCreatingCrew] = useState(false);
+  type ManageStatus = 'idle' | 'creating' | 'saving' | 'error' | 'success';
+  const [status, setStatus] = useState<ManageStatus>('idle');
+  const isCreatingCrew = status === 'creating';
   const [createCrewError, setCreateCrewError] = useState('');
 
   // Edit form
@@ -47,7 +48,7 @@ export function useCrewManage(
   const [editCrewCity, setEditCrewCity] = useState('');
   const [editCrewState, setEditCrewState] = useState('');
   const [editCrewDesc, setEditCrewDesc] = useState('');
-  const [isSavingCrew, setIsSavingCrew] = useState(false);
+  const isSavingCrew = status === 'saving';
 
   // Confirmations
   const [confirmingDeleteCrewId, setConfirmingDeleteCrewId] = useState<string | null>(null);
@@ -114,7 +115,7 @@ export function useCrewManage(
     newCrewPhotoUri, setNewCrewPhotoUri,
     newCrewCode, setNewCrewCode,
     newCrewHue, setNewCrewHue,
-    isCreatingCrew, setIsCreatingCrew,
+    isCreatingCrew, setIsCreatingCrew: (v: boolean) => setStatus(v ? 'creating' : 'idle'),
     createCrewError, setCreateCrewError,
 
     // Edit form
@@ -124,7 +125,8 @@ export function useCrewManage(
     editCrewCity, setEditCrewCity,
     editCrewState, setEditCrewState,
     editCrewDesc, setEditCrewDesc,
-    isSavingCrew, setIsSavingCrew,
+    isSavingCrew, setIsSavingCrew: (v: boolean) => setStatus(v ? 'saving' : 'idle'),
+    status, setStatus,
 
     confirmingDeleteCrewId, setConfirmingDeleteCrewId,
     confirmingLeaveCrewId, setConfirmingLeaveCrewId,

@@ -13,7 +13,7 @@ interface GradientLibraryTabProps {
 }
 
 export const GradientLibraryTab: React.FC<GradientLibraryTabProps> = ({ Colors, onOpenBuilder, onApplyGradient }) => {
-  const { gradients, isLoading, error, deleteGradient, refreshGradients } = useGradients();
+  const { gradients, status, error, deleteGradient, refreshGradients } = useGradients();
 
   const handleDelete = (preset: CustomBuilderPreset) => {
     if (preset.id.startsWith('builtin_')) return;
@@ -104,7 +104,7 @@ export const GradientLibraryTab: React.FC<GradientLibraryTabProps> = ({ Colors, 
         <Text style={styles.createButtonText}>Create Custom Gradient</Text>
       </TouchableOpacity>
 
-      {isLoading ? (
+      {status === 'loading' ? (
         <View style={styles.centerBox}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>

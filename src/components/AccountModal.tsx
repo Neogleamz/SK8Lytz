@@ -145,11 +145,10 @@ export default function AccountModal({
   // --- Domain Hooks ---
   const {
     user,
-    loading: accountLoading,
+    status: accountStatus,
     profile, setProfile,
     editName, setEditName,
     editUsername, setEditUsername,
-    savingProfile,
     profilePhotoUri,
     avatarHue, setAvatarHue,
     userEmail,
@@ -157,7 +156,6 @@ export default function AccountModal({
     crewStep, setCrewStep,
     newCrewName, setNewCrewName,
     joinCode, setJoinCode,
-    crewLoading,
     crewError, setCrewError,
     history,
     notifCrewInvites, setNotifCrewInvites,
@@ -293,13 +291,20 @@ export default function AccountModal({
 
 
   // Security state (Kept local for now as per Phase 3 scope)
+  type ModalStatus = 'idle' | 'saving_pwd' | 'saving_email' | 'deleting';
+  const [modalStatus, setModalStatus] = useState<ModalStatus>('idle');
+
   const [currentPwd, setCurrentPwd] = useState('');
   const [newPwd, setNewPwd] = useState('');
   const [confirmPwd, setConfirmPwd] = useState('');
   const [_securityMsg, setSecurityMsg] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
-  const [savingPwd, setSavingPwd] = useState(false);
   const [newEmail, setNewEmail] = useState('');
-  const [savingEmail, setSavingEmail] = useState(false);
+
+  const savingPwd = modalStatus === 'saving_pwd';
+  const savingEmail = modalStatus === 'saving_email';
+  const accountLoading = accountStatus === 'loading';
+  const savingProfile = accountStatus === 'saving_profile';
+  const crewLoading = accountStatus === 'crew_loading';
   const [showCurrentPwd, setShowCurrentPwd] = useState(false);
   const [showNewPwd, setShowNewPwd] = useState(false);
 
@@ -321,7 +326,7 @@ export default function AccountModal({
       setSecurityMsg({ type: 'error', text: 'Passwords do not match' });
       return;
     }
-    setSavingPwd(true);
+    setModalStatus('saving_pwd');
     try {
       const { error: reAuthError } = await supabase.auth.signInWithPassword({ 
         email: userEmail || '', 
@@ -330,20 +335,18 @@ export default function AccountModal({
       if (reAuthError) {
         setSecurityMsg({ type: 'error', text: 'Current password is incorrect' });
         setCurrentPwd('');
-        setSavingPwd(false);
+        setModalStatus('idle');
         return;
       }
-
+      
       const { error } = await supabase.auth.updateUser({ password: newPwd });
       if (error) throw error;
+      setSecurityMsg({ type: 'success', text: 'Password updated successfully' });
       setCurrentPwd(''); setNewPwd(''); setConfirmPwd('');
-      setSecurityMsg({ type: 'success', text: '✓ Password updated successfully' });
-    } catch (err: unknown) {
-      const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
-      setSecurityMsg({ type: 'error', text: e.message || 'Could not change password' });
-      setCurrentPwd('');
-    } finally {
-      setSavingPwd(false);
+      setModalStatus('idle');
+    } catch (e: unknown) {
+      setSecurityMsg({ type: 'error', text: (e instanceof Error ? e.message : String(e)) || 'Failed to update password' });
+      setModalStatus('idle');
     }
   };
 
@@ -352,17 +355,17 @@ export default function AccountModal({
       setSecurityMsg({ type: 'error', text: 'Enter a valid email address' });
       return;
     }
-    setSavingEmail(true);
+    setModalStatus('saving_email');
     try {
       const { error } = await supabase.auth.updateUser({ email: newEmail });
       if (error) throw error;
       setSecurityMsg({ type: 'success', text: `✓ Confirmation sent to ${newEmail}. Check your inbox.` });
       setNewEmail('');
+      setModalStatus('idle');
     } catch (err: unknown) {
       const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       setSecurityMsg({ type: 'error', text: e.message || 'Could not update email' });
-    } finally {
-      setSavingEmail(false);
+      setModalStatus('idle');
     }
   };
 
@@ -408,7 +411,7 @@ export default function AccountModal({
                   text: 'Confirm Delete', style: 'destructive',
                   onPress: async () => {
                     try {
-                      // Attempt to run the dedicated Account Deletion RPC
+                      setModalStatus('deleting');
                       const { error } = await supabase.rpc('delete_account');
                       if (error) {
                         AppLogger.error('ACCOUNT_MGMT', { event: 'delete_account_rpc_failed', error: (error instanceof Error ? error.message : String(error)) });
@@ -425,6 +428,7 @@ export default function AccountModal({
                     } catch (err: unknown) {
                       const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
                       Alert.alert('Deletion Failed', e.message);
+                      setModalStatus('idle');
                     }
                   },
                 },

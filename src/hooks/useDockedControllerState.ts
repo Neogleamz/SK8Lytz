@@ -100,7 +100,9 @@ export function useDockedControllerState(
 
   // Cloud Scene UI States
   const [isCommunityModalVisible, setIsCommunityModalVisible] = useState<boolean>(false);
-  const [isPublishingCloud, setIsPublishingCloud] = useState<boolean>(false);
+  type PublishStatus = 'idle' | 'publishing' | 'error' | 'success';
+  const [publishStatus, setPublishStatus] = useState<PublishStatus>('idle');
+  const isPublishingCloud = publishStatus === 'publishing';
   const [cloudPublicToggle, setCloudPublicToggle] = useState<boolean>(true);
 
   const applyCloudScene = (
@@ -213,7 +215,8 @@ export function useDockedControllerState(
     fixedHue, setFixedHue,
     fixedDirection, setFixedDirection,
     isCommunityModalVisible, setIsCommunityModalVisible,
-    isPublishingCloud, setIsPublishingCloud,
+    isPublishingCloud, setIsPublishingCloud: (v: boolean) => setPublishStatus(v ? 'publishing' : 'idle'),
+    publishStatus, setPublishStatus,
     cloudPublicToggle, setCloudPublicToggle,
     applyCloudScene,
     captureEntireState,
