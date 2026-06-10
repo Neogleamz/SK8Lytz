@@ -32,7 +32,7 @@ import { requestPermission } from '../services/PermissionService';
 import { supabase } from '../services/supabaseClient';
 import { useBLEScanner } from './ble/useBLEScanner';
 import { useBLEAutoRecovery } from './ble/useBLEAutoRecovery';
-import { useBLEHeartbeat } from './ble/useBLEHeartbeat';
+
 import { useBLERSSIMonitor } from './ble/useBLERSSIMonitor';
 import { acquireGattLock } from './ble/useBLEGattMutex';
 
@@ -460,23 +460,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   // Enables mixed-protocol group writes: Zengge + BanlanX skates in the same group.
 
-  // ── Connection Health Heartbeat (MISS-03) ─────────────────────────────────
-  // Pings every connected device every 45s to detect stale GATT handles early.
-  // Samsung Galaxy A-series can hold stale handles alive for minutes after the
-  // physical device powers off. Without this, the stale link is only discovered
-  // on the next user write — triggering the slow ghost→recovery cycle mid-session.
-  useBLEHeartbeat({
-    bleManager,
-    connectedDevicesRef,
-    adapterMapRef,
-    onStaleLinkDetected: (mac: string) => {
-      // Drop the device from connected state so the controller closes gracefully.
-      updateConnectedDevices(prev => prev.filter(d => d.id !== mac));
-      // Immediately start Phase 1 aggressive recovery — don't wait for the next
-      // organic disconnect event which could take minutes on stale handles.
-      bleSend({ type: 'RECOVERY_START', ghostedMacs: [mac] });
-    },
-  });
+
 
   // ── Post-Connect Signal Quality Monitor (BAT-02) ─────────────────────────
   // Polls readRSSIForDevice every 30s to track live signal strength per device.

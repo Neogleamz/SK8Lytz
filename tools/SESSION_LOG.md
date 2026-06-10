@@ -1357,3 +1357,10 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC ✅, Jest ✅, QA Hardening ✅, Auth ✅
 **Files touched:** src/services/ble/RecoveryService.ts, src/services/ble/BleMachine.ts, src/services/BleLifecycleManager.ts, src/hooks/useBLE.ts, src/services/ble/BleMachine.types.ts
 
+
+### [DECISION] 2026-06-10T06:56 - Plan Verified for ble-p5-heartbeat-service
+**Decision:** [PLAN VERIFIED] The plan for refactor/ble-p5-heartbeat-service makes sense. We will extract pingConnectedDevice into a fromCallback XState service, use it inside READY state, and remove the useBLEHeartbeat hook.
+**Rejected:** N/A
+**Don't re-derive:** This eliminates manual lifecycle management and integrates it with XState READY transitions.
+**Source:** src/hooks/ble/useBLEHeartbeat.ts:12,44,62
+

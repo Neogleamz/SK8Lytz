@@ -3,13 +3,13 @@ import { BleMachineContext, BleMachineEvent } from './BleMachine.types';
 import { AppLogger } from '../AppLogger';
 import { connectService } from './ConnectService';
 import { recoveryService } from './RecoveryService';
-
+import { heartbeatService } from './HeartbeatService';
 export const bleMachine = setup({
   types: {
     context: {} as BleMachineContext,
     events: {} as BleMachineEvent,
   },
-  actors: { connectService, recoveryService },
+  actors: { connectService, recoveryService, heartbeatService },
   actions: {
     logTransition: (_, params: { from: string; to: string; reason?: string }) => {
       AppLogger.log('BLE_STATE_CHANGE', {
@@ -44,7 +44,11 @@ export const bleMachine = setup({
       }
     }),
     setGhostedMacs: assign({
-      ghostedDeviceIds: ({ event }) => event.type === 'RECOVERY_START' && event.ghostedMacs ? event.ghostedMacs : []
+      ghostedDeviceIds: ({ event }) => {
+        if (event.type === 'RECOVERY_START' && event.ghostedMacs) return event.ghostedMacs;
+        if (event.type === 'HEARTBEAT_FAIL') return [event.deviceId];
+        return [];
+      }
     }),
     clearGhostedMacs: assign({
       ghostedDeviceIds: () => []
@@ -163,7 +167,19 @@ export const bleMachine = setup({
       }
     },
     READY: {
+      invoke: [{
+        src: 'heartbeatService',
+        input: ({ context }) => ({
+          bleManager: context.bleManager,
+          connectedDevices: context.connectedDevices,
+          adapterMap: context.adapterMapRef.current,
+        })
+      }],
       on: {
+        HEARTBEAT_FAIL: {
+          target: 'RECOVERING',
+          actions: ['setGhostedMacs', { type: 'logTransition', params: { from: 'READY', to: 'RECOVERING', reason: 'heartbeat_fail' } }]
+        },
         DISCONNECT_REQUEST: {
           target: 'DISCONNECTING',
           actions: [{ type: 'logTransition', params: { from: 'READY', to: 'DISCONNECTING' } }]
