@@ -1098,3 +1098,12 @@ pm run verify which includes QA tests.
   - **Plan:** 📎 [PLAN-ble-t5-heartbeat-service-tests.md](docs/plans/PLAN-ble-t5-heartbeat-service-tests.md)
   - **Source of Truth:** 📖 `src/services/ble/HeartbeatService.ts` · `tools/BLE_AUDIT_2/04_heartbeatService.md`
   - **Details:** 12 test cases across 6 groups. Verify exact opcode bytes [0x63, 0x12, 0x21, 0x0F, 0xA5] from audit. Use fake timers.
+
+- [x] **test/ble-t6-interrogator-service-tests** — InterrogatorService unit tests
+  - **Tags:** [✅ READY] [✅ VERIFIED] [BLE] [L-RISK] [Meal] [🧠 MED] [BATCH:ble-test-hardening]
+  - **Goal:** Write unit tests for InterrogatorService.ts covering probe lifecycle, cancelDeviceConnection in finally (both success and failure paths), FTUE vs standard queue delay, AsyncStorage parse error resilience.
+  - **Decision Log (2026-06-10):** InterrogatorService reads hardware EEPROM on first contact — wrong behavior here means wrong LED counts and broken color patterns for the user's lifetime. Zero tests.
+  - **Analysis:** 📊 Source: [BLE_AUDIT_2/06_interrogatorService.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/06_interrogatorService.md)
+  - **Plan:** 📎 [PLAN-ble-t6-interrogator-service-tests.md](docs/plans/PLAN-ble-t6-interrogator-service-tests.md)
+  - **Source of Truth:** 📖 `src/services/ble/InterrogatorService.ts` · `tools/BLE_AUDIT_2/06_interrogatorService.md`
+  - **Details:** 12 test cases across 5 groups. Mock AsyncStorage, createGattSession, enqueueWrite. Verify `cancelDeviceConnection` called in finally on both success AND failure paths.
