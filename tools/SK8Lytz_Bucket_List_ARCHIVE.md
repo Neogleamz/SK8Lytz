@@ -1062,3 +1062,12 @@ pm run verify which includes QA tests.
   - **Plan:** 📎 [PLAN-ble-t2-static-guards.md](docs/plans/PLAN-ble-t2-static-guards.md)
   - **Source of Truth:** 📖 `tools/verifiable-check-runner.js` · `src/services/ble/BleMachine.ts` · `src/hooks/useBLE.ts`
   - **Details:** Both guards must pass on current codebase AND fail when the pattern is violated. Snack-sized — pure JS additions to existing check runner, no new files needed.
+
+- [x] **test/ble-t1-machine-tests** — BleMachine state machine unit tests 🚀 Merged in 2b1226a8
+  - **Tags:** [✅ READY] [✅ VERIFIED] [BLE] [M-RISK] [Meal] [🧠 MED] [BATCH:ble-test-hardening]
+  - **Goal:** Write comprehensive unit tests for all 6 BleMachine state transitions + the organic disconnect → RECOVERY_START wiring. This test is the regression guard for the HIGH-severity silent bug fixed in 2276ac8a.
+  - **Decision Log (2026-06-10):** Audit found zero tests for BleMachine.ts. The organic disconnect fix has no guard — any future refactor of useBLE.ts input construction silently breaks recovery again with a green test suite. Filed as P0.
+  - **Analysis:** 📊 Source: [BLE_AUDIT_2/01_bleMachine.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/01_bleMachine.md) · [SESSION_LOG.md DECISION 2026-06-10T08:38](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SESSION_LOG.md)
+  - **Plan:** 📎 [PLAN-ble-t1-machine-tests.md](docs/plans/PLAN-ble-t1-machine-tests.md)
+  - **Source of Truth:** 📖 `src/services/ble/BleMachine.ts` · `src/hooks/useBLE.ts:L182-187`
+  - **Details:** 18 test cases across 3 groups: state transitions, organic disconnect regression guard, context assertions. Use XState `createActor` with mocked service stubs.
