@@ -179,6 +179,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       disconnectListeners,
       blacklistedMacsRef,
       handleOrganicDisconnect: (error: any, deviceId: string) => handleOrganicDisconnectRef.current(error, deviceId),
+      // onOrganicDisconnect — the REAL recovery trigger.
+      // handleOrganicDisconnect above is logging-only. This fires RECOVERY_START.
+      onOrganicDisconnect: (deviceId: string) => {
+        if (!bleActorRef.getSnapshot().matches('DISCONNECTING')) {
+          bleSend({ type: 'RECOVERY_START', ghostedMacs: [deviceId] });
+        }
+      },
       handleNotification: (error: any, characteristic: any, deviceId: string) => handleNotificationRef.current(error, characteristic, deviceId),
       enqueueWrite,
     }

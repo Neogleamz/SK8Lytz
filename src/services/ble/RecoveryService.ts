@@ -4,7 +4,7 @@ import { Buffer } from 'buffer';
 import type { BleManager, Device } from 'react-native-ble-plx';
 import { AppLogger } from '../AppLogger';
 import { createGattSession } from '../BleSessionFactory';
-import { enqueueWrite } from '../BleWriteQueue';
+import { enqueueWrite, clearWriteQueue } from '../BleWriteQueue';
 import { BLE_TIMING } from '../../constants/bleTimingConstants';
 
 export const MAX_RECOVERY_ATTEMPTS = 360;
@@ -33,6 +33,11 @@ interface RecoveryInput {
   mtuMapRef: { current: Map<string, number> };
   disconnectListeners: { current: Record<string, import('react-native-ble-plx').Subscription> };
   handleOrganicDisconnect: (error: any, deviceId: string) => void;
+  /**
+   * onOrganicDisconnect — fires when a recovered device drops again.
+   * Wired by useBLE.ts to send RECOVERY_START back to the machine.
+   */
+  onOrganicDisconnect: (deviceId: string) => void;
   handleNotification: (error: any, characteristic: any, deviceId: string) => void;
   getSweepedDevice?: (deviceId: string) => Device | undefined;
 }
@@ -48,8 +53,12 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
   async function run() {
     const { 
       bleManager, ghostedDeviceIds, adapterMapRef, mtuMapRef, 
-      disconnectListeners, handleOrganicDisconnect, handleNotification, getSweepedDevice 
+      disconnectListeners, handleOrganicDisconnect, onOrganicDisconnect,
+      handleNotification, getSweepedDevice 
     } = input;
+
+    // Clear stale pre-disconnect writes so they don't compete with recovery pings.
+    clearWriteQueue();
 
     if (!ghostedDeviceIds || ghostedDeviceIds.length === 0) {
       sendBack({ type: 'RECOVERY_FAIL' });
@@ -119,6 +128,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
             status: (error && 'errorCode' in error) ? (error as {errorCode: unknown}).errorCode : (error && 'status' in error) ? (error as {status: unknown}).status : (error.message.includes('133') ? 133 : null)
           } : null;
           handleOrganicDisconnect(contextError, conn.id);
+          onOrganicDisconnect(conn.id);
         });
 
         conn.monitorCharacteristicForService(
@@ -197,6 +207,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
               status: (error && 'errorCode' in error) ? (error as {errorCode: unknown}).errorCode : (error && 'status' in error) ? (error as {status: unknown}).status : (error.message.includes('133') ? 133 : null)
             } : null;
             handleOrganicDisconnect(contextError, conn.id);
+            onOrganicDisconnect(conn.id);
           });
           conn.monitorCharacteristicForService(
             recoveryAdapter.serviceUUID,

@@ -14,6 +14,8 @@ export interface BleMachineContext {
   disconnectListeners: { current: Record<string, import('react-native-ble-plx').Subscription> };
   blacklistedMacsRef: { current: string[] };
   handleOrganicDisconnect: (error: any, deviceId: string) => void;
+  /** Fires when a device drops unexpectedly — wired by useBLE.ts to send RECOVERY_START */
+  onOrganicDisconnect: (deviceId: string) => void;
   handleNotification: (error: any, characteristic: any, deviceId: string) => void;
   enqueueWrite: (priority: string, op: () => Promise<boolean>) => Promise<boolean | 'partial'>;
 }

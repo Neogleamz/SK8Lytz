@@ -19,7 +19,17 @@ export interface ConnectServiceInput {
   mtuMapRef: { current: Map<string, number> };
   disconnectListeners: { current: Record<string, import('react-native-ble-plx').Subscription> };
   blacklistedMacsRef: { current: string[] };
+  /**
+   * handleOrganicDisconnect — legacy logging-only callback. Kept for telemetry.
+   * Does NOT trigger recovery. Use onOrganicDisconnect for recovery.
+   */
   handleOrganicDisconnect: (error: any, deviceId: string) => void;
+  /**
+   * onOrganicDisconnect — fires when BLE stack signals an unexpected device
+   * disconnect. Caller (useBLE.ts) wires this to send RECOVERY_START to the
+   * XState BleMachine. This is the correct recovery trigger.
+   */
+  onOrganicDisconnect: (deviceId: string) => void;
   handleNotification: (error: any, characteristic: any, deviceId: string) => void;
   enqueueWrite: (priority: string, op: () => Promise<boolean>) => Promise<boolean | 'partial'>;
 }
@@ -37,6 +47,7 @@ export const connectService = fromPromise<
     disconnectListeners,
     blacklistedMacsRef,
     handleOrganicDisconnect,
+    onOrganicDisconnect,
     handleNotification,
     enqueueWrite,
   } = input;
@@ -207,7 +218,10 @@ export const connectService = fromPromise<
 
         if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
         disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {
+          // 1. Log + telemetry (non-recovery)
           handleOrganicDisconnect(error, conn.id);
+          // 2. Trigger XState RECOVERY_START (the actual recovery mechanism)
+          onOrganicDisconnect(conn.id);
         });
         conn.monitorCharacteristicForService(
           adapter.serviceUUID,
