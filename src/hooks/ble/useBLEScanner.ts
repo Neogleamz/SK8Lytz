@@ -62,7 +62,6 @@ export function useBLEScanner({
   const [pendingRegistrations, setPendingRegistrations] = useState<PendingRegistration[]>([]);
 
   const allDevicesRef = useRef<Device[]>([]);
-  const scannerStateRef = useRef<'IDLE' | 'SCANNING'>('IDLE');
   const rejectedMacsRef = useRef<Set<string>>(new Set());
   const setupRssiThresholdRef = useRef<number>(-70);
 
@@ -290,29 +289,17 @@ export function useBLEScanner({
 
   const { isSweeperActive, startSweeper, stopSweeper: _stopSweeper, burstScan: _burstScan, batteryTier } = useBLEBatterySweep({
     bleManager,
-    scanCallback
+    bleSend
   });
 
   const stopScanner = useCallback(() => {
     _stopSweeper();
-    // Always stop native scan client regardless of sweeper state — leaked clients
-    // from the fallback path (line ~367) survive _stopSweeper()'s isSweeperActiveRef guard.
-    // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
-    // bleManager?.stopDeviceScan();
-    bleSend({ type: 'SCAN_STOP' });
-    scannerStateRef.current = 'IDLE';
-  }, [_stopSweeper, bleSend, bleManager]);
+  }, [_stopSweeper]);
 
   const burstScan = useCallback((durationMs?: number) => {
     seenMacsRef.current = new Set();
-    _burstScan(durationMs, () => {
-      bleSend({ type: 'SCAN_START' });
-      scannerStateRef.current = 'SCANNING';
-    }).then(() => {
-      bleSend({ type: 'SCAN_STOP' });
-      scannerStateRef.current = 'IDLE';
-    });
-  }, [_burstScan, bleSend]);
+    _burstScan(durationMs);
+  }, [_burstScan]);
 
   const scanForPeripherals = useCallback((options?: { keepAlive?: boolean }) => {
     if (!options?.keepAlive) {
@@ -326,28 +313,24 @@ export function useBLEScanner({
     const isSandboxMocking = ((typeof __DEV__ !== 'undefined' && __DEV__) || Platform.OS === 'web') && isSandboxEnabled;
 
     if (isSandboxMocking) {
-      if (scannerStateRef.current !== 'SCANNING') {
-        bleSend({ type: 'SCAN_START' });
-        scannerStateRef.current = 'SCANNING';
-        
-        setTimeout(() => {
-          const halozL = { id: 'VIRTUAL-HALOZ-L', name: 'SK8-HALOZ-L-DEV', rssi: -50, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 } as unknown as Device;
-          const halozR = { id: 'VIRTUAL-HALOZ-R', name: 'SK8-HALOZ-R-DEV', rssi: -52, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 } as unknown as Device;
-          const soulzL = { id: 'VIRTUAL-SOULZ-L', name: 'SK8-SOULZ-L-DEV', rssi: -55, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'SOULZ', hwPoints: 43 } as unknown as Device;
-          const soulzR = { id: 'VIRTUAL-SOULZ-R', name: 'SK8-SOULZ-R-DEV', rssi: -57, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'SOULZ', hwPoints: 43 } as unknown as Device;
-          
-          scanCallback(null, halozL);
-          scanCallback(null, halozR);
-          scanCallback(null, soulzL);
-          scanCallback(null, soulzR);
-        }, 1000);
+      bleSend({ type: 'SCAN_START' });
 
-        setTimeout(() => {
-          bleSend({ type: 'SCAN_STOP' });
-          scannerStateRef.current = 'IDLE';
-        }, 5000);
-      }
-      
+      setTimeout(() => {
+        const halozL = { id: 'VIRTUAL-HALOZ-L', name: 'SK8-HALOZ-L-DEV', rssi: -50, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 } as unknown as Device;
+        const halozR = { id: 'VIRTUAL-HALOZ-R', name: 'SK8-HALOZ-R-DEV', rssi: -52, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 } as unknown as Device;
+        const soulzL = { id: 'VIRTUAL-SOULZ-L', name: 'SK8-SOULZ-L-DEV', rssi: -55, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'SOULZ', hwPoints: 43 } as unknown as Device;
+        const soulzR = { id: 'VIRTUAL-SOULZ-R', name: 'SK8-SOULZ-R-DEV', rssi: -57, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'SOULZ', hwPoints: 43 } as unknown as Device;
+
+        scanCallback(null, halozL);
+        scanCallback(null, halozR);
+        scanCallback(null, soulzL);
+        scanCallback(null, soulzR);
+      }, 1000);
+
+      setTimeout(() => {
+        bleSend({ type: 'SCAN_STOP' });
+      }, 5000);
+
       if (Platform.OS === 'web') return; // Early return for web so it doesn't hit native sweeper
     }
 
@@ -365,22 +348,12 @@ export function useBLEScanner({
     if (isSweeperActive) {
       burstScan(options?.keepAlive ? 10000 : 5000);
     } else if (!isSandboxMocking) {
-      if (scannerStateRef.current === 'SCANNING') return;
-      // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
-      // bleManager?.stopDeviceScan(); // Prevent scan client accumulation
       bleSend({ type: 'SCAN_START' });
-      scannerStateRef.current = 'SCANNING';
-      // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
-      // bleManager?.startDeviceScan(null, null, scanCallback);
-
       setTimeout(() => {
-        // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
-        // bleManager?.stopDeviceScan();
         bleSend({ type: 'SCAN_STOP' });
-        scannerStateRef.current = 'IDLE';
       }, 5000);
     }
-  }, [registeredMacs.length, startSweeper, isSweeperActive, burstScan, bleManager, scanCallback, bleSend, setAllDevices, isSandboxEnabled]);
+  }, [registeredMacs.length, startSweeper, isSweeperActive, burstScan, scanCallback, bleSend, setAllDevices, isSandboxEnabled]);
 
   return {
     pendingRegistrations,
