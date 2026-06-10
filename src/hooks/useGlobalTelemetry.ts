@@ -209,6 +209,7 @@ export function useGlobalTelemetry(
         AppLogger.log('GLOBAL_TELEMETRY_STARTED');
       }
 
+      let isActive = true;
       // Start Location Tracking
       (async () => {
         try {
@@ -219,7 +220,7 @@ export function useGlobalTelemetry(
              if (!reG) throw new Error('Location permission denied via modal');
           }
 
-          locationSubRef.current = await Location.watchPositionAsync(
+          const watchSub = await Location.watchPositionAsync(
               { accuracy: Location.Accuracy.Balanced, timeInterval: 1000, distanceInterval: 1 },
               (pos) => {
                 const spdMpS = pos.coords.speed || 0;
@@ -285,6 +286,11 @@ export function useGlobalTelemetry(
                 );
               }
             );
+          if (!isActive) {
+            watchSub.remove();
+          } else {
+            locationSubRef.current = watchSub;
+          }
         } catch (e: unknown) {
           AppLogger.error('[useGlobalTelemetry] Location permission denied or unavailable', e instanceof Error ? e.message : String(e));
         }
@@ -311,6 +317,7 @@ export function useGlobalTelemetry(
       });
 
       return () => {
+        isActive = false;
         sub.remove();
         if (locationSubRef.current) {
           locationSubRef.current.remove();

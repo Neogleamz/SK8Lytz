@@ -82,9 +82,17 @@ export function useDashboardCrew({
       }
     };
 
+    let isMounted = true;
     let unsub: (() => void) | undefined;
-    tryRejoin().then(u => { unsub = u; });
+    tryRejoin().then(u => {
+      if (!isMounted && u) {
+        u();
+      } else {
+        unsub = u;
+      }
+    });
     return () => {
+      isMounted = false;
       if (unsub) unsub();
     };
     // onApplyScene is a stable callback — intentionally excluded from deps

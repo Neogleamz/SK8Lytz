@@ -30,7 +30,7 @@ const VerticalPatternDrum = ({
     setLocalVal(value);
   }, [value]);
 
-  const commitValue = (val: number) => {
+  const commitValue = useCallback((val: number) => {
     setLocalVal(val);
     if (val !== value) {
        if (commitTimeoutRef.current) clearTimeout(commitTimeoutRef.current);
@@ -38,7 +38,7 @@ const VerticalPatternDrum = ({
           onValueChange(val);
        }, 50); // Fast 50ms debounce
     }
-  };
+  }, [value, onValueChange]);
 
 
   const padCount = Math.max(1, Math.floor((layoutHeight / ITEM_HEIGHT) / 2));
@@ -58,7 +58,7 @@ const VerticalPatternDrum = ({
   // Frame 1 absolute jump vector ensuring Zero layout calculations
   const [initialTargetIdx] = useState((2 * patternCount) + (value - min));
 
-  const scrollToValue = (val: number, animated = true) => {
+  const scrollToValue = useCallback((val: number, animated = true) => {
     let targetRep = 2; // Middle of 5 reps
     const targetIdx = (targetRep * patternCount) + (val - min);
     
@@ -66,7 +66,7 @@ const VerticalPatternDrum = ({
       offset: targetIdx * ITEM_HEIGHT, 
       animated 
     });
-  };
+  }, [patternCount, min]);
 
   const keyExtractor = useCallback((item: { id: string }) => item.id, []);
 
@@ -93,11 +93,15 @@ const VerticalPatternDrum = ({
   }, [localVal, commitValue, scrollToValue, itemLabel, styles]);
 
   useEffect(() => {
+    let timeoutId: ReturnType<typeof setTimeout>;
     if (value !== localVal) {
       setLocalVal(value);
-      setTimeout(() => scrollToValue(value, true), 50);
+      timeoutId = setTimeout(() => scrollToValue(value, true), 50);
     }
-  }, [value]);
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [value, localVal, scrollToValue]);
 
   const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetY = e.nativeEvent.contentOffset.y;

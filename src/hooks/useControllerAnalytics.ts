@@ -86,25 +86,31 @@ export function useControllerAnalytics({
   // Brightness change logger (debounced 600ms)
   useEffect(() => {
     clearTimeout(logTimers.current['brightness']);
-    logTimers.current['brightness'] = setTimeout(() => {
+    const timerId = setTimeout(() => {
       AppLogger.log('BRIGHTNESS_CHANGED', { value: brightness, mode: activeMode, ...deviceContext });
     }, 600);
+    logTimers.current['brightness'] = timerId;
+    return () => clearTimeout(timerId);
   }, [brightness, activeMode, deviceContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Speed change logger (debounced 600ms)
   useEffect(() => {
     clearTimeout(logTimers.current['speed']);
-    logTimers.current['speed'] = setTimeout(() => {
+    const timerId = setTimeout(() => {
       AppLogger.log('SPEED_CHANGED', { value: speed, mode: activeMode, ...deviceContext });
     }, 600);
+    logTimers.current['speed'] = timerId;
+    return () => clearTimeout(timerId);
   }, [speed, activeMode, deviceContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Street sensitivity change logger (debounced 800ms)
   useEffect(() => {
     if (activeMode !== 'STREET') return;
     clearTimeout(logTimers.current['streetSens']);
-    logTimers.current['streetSens'] = setTimeout(() => {
+    const timerId = setTimeout(() => {
       AppLogger.log('STREET_SENSITIVITY_CHANGED', { sensitivity: streetSensitivity, ...deviceContext });
     }, 800);
+    logTimers.current['streetSens'] = timerId;
+    return () => clearTimeout(timerId);
   }, [streetSensitivity, activeMode, deviceContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
 }

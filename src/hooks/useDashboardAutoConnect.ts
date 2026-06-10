@@ -14,9 +14,8 @@
  *
  * Extracted from DashboardScreen.tsx (Phase 2 — God Object Surgery).
  */
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import DeviceRepository from '../services/DeviceRepository';
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { Device } from 'react-native-ble-plx';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import { AppLogger } from '../services/AppLogger';
@@ -126,7 +125,6 @@ export function useDashboardAutoConnect({
   const AUTO_CONNECT_RETRY_BACKOFF_MS = 3000;
   // Stable ref to the cloud sync function — allows retriggerAutoConnect to call it
   // directly without needing to re-subscribe to the useEffect dependency array.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const syncCloudAndAutoConnectRef = useRef<(isRetrigger?: boolean) => Promise<void>>(async () => {});
   const lastRetriggerRef = useRef<number>(0);
 
@@ -246,6 +244,11 @@ export function useDashboardAutoConnect({
 
       debounceTimerRef.current = setTimeout(attemptConnection, 500); // 500ms debounce window
     }
+
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allDevices, connectedDevices]);
 
   // ── One-shot cloud sync + auto-connect trigger on BLE ready ─────────────
@@ -405,6 +408,7 @@ export function useDashboardAutoConnect({
     // Slight delay to allow Bluetooth stack to fully initialize
     const timerId = setTimeout(() => syncCloudAndAutoConnect(false), 1500);
     return () => clearTimeout(timerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBluetoothSupported, isBluetoothEnabled]);
 
   return {
