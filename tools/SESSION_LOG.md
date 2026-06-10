@@ -1724,3 +1724,15 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - Injected architecture profiles, blast radiuses, sequence diagrams, and OS variance matrices for all 21 system domains into SK8Lytz_App_Master_Reference.md.
 **Verify result:** TSC ✅, Jest ✅, gates ✅
 **Files touched:** tools/SK8Lytz_App_Master_Reference.md
+
+### [MERGE] 2026-06-10T23:28 — cartography-docs -> master @ b832f67b
+**What merged:** Deep-Dive Cartography (21 Domains)
+- Injected architecture profiles, blast radiuses, sequence diagrams, and OS variance matrices for all 21 system domains into SK8Lytz_App_Master_Reference.md.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** tools/SK8Lytz_App_Master_Reference.md
+
+### [MERGE] 2026-06-10T23:32 — cartography-docs -> master @ b832f67b
+**What merged:** Deep-Dive Cartography (21 Domains)
+- Injected architecture profiles, blast radiuses, sequence diagrams, and OS variance matrices for all 21 system domains into SK8Lytz_App_Master_Reference.md.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** tools/SK8Lytz_App_Master_Reference.md
