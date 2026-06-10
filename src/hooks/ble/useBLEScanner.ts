@@ -295,9 +295,12 @@ export function useBLEScanner({
 
   const stopScanner = useCallback(() => {
     _stopSweeper();
+    // Always stop native scan client regardless of sweeper state — leaked clients
+    // from the fallback path (line ~367) survive _stopSweeper()'s isSweeperActiveRef guard.
+    bleManager?.stopDeviceScan();
     bleSend({ type: 'SCAN_STOP' });
     scannerStateRef.current = 'IDLE';
-  }, [_stopSweeper, bleSend]);
+  }, [_stopSweeper, bleSend, bleManager]);
 
   const burstScan = useCallback((durationMs?: number) => {
     seenMacsRef.current = new Set();
@@ -362,6 +365,7 @@ export function useBLEScanner({
       burstScan(options?.keepAlive ? 10000 : 5000);
     } else if (!isSandboxMocking) {
       if (scannerStateRef.current === 'SCANNING') return;
+      bleManager?.stopDeviceScan(); // Prevent scan client accumulation
       bleSend({ type: 'SCAN_START' });
       scannerStateRef.current = 'SCANNING';
       bleManager?.startDeviceScan(null, null, scanCallback);

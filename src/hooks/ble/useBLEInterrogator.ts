@@ -41,8 +41,7 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
           try {
             loaded[mac] = JSON.parse(val);
           } catch (e: unknown) {
-      const safeErr = e instanceof Error ? e : new Error(String(e));
-            AppLogger.warn('[useBLEInterrogator] Malformed HW cache', { mac, error: e instanceof Error ? e.message : String(e)  });
+            AppLogger.warn('[useBLEInterrogator] Malformed HW cache', { mac, error: e instanceof Error ? e.message : String(e) });
           }
         }
         if (Object.keys(loaded).length > 0) {
@@ -58,8 +57,10 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
     if (Platform.OS === 'web' || !bleManager) return;
     if (probingMacsRef.current.has(mac)) return;
     if (hwCacheRef.current[mac]) return;
-
-    if (registeredMacs.map(m => m.toUpperCase()).includes(mac.toUpperCase())) return;
+    // NOTE: Do NOT skip registered MACs here. During setup wizard, registered devices
+    // still need to be re-probed to get fresh hardware config (ledPoints, icName, etc.).
+    // The hwCache check above is the correct deduplication — if we have data, skip;
+    // if we don't, probe regardless of registration status.
 
     const lockHandle = await acquireGattLock(3);
     if (!lockHandle) {
@@ -119,8 +120,7 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
                 if (isPingResult(accumulated)) resolve(accumulated);
               }
             } catch (e: unknown) {
-      const safeErr = e instanceof Error ? e : new Error(String(e));
-              AppLogger.warn('[useBLEInterrogator] Protocol parse failed', { mac, error: e instanceof Error ? e.message : String(e)  });
+              AppLogger.warn('[useBLEInterrogator] Protocol parse failed', { mac, error: e instanceof Error ? e.message : String(e) });
             }
           }
         );
@@ -162,7 +162,6 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
         onDeviceInterrogated();
       }
     } catch (err: unknown) {
-      const safeErr = err instanceof Error ? err : new Error(String(err));
       if (!signal.aborted) {
         AppLogger.warn(`[Interrogator] Failed for ${mac}`, { error: String(err) });
       }
@@ -171,7 +170,7 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
       release();
       await bleManager.cancelDeviceConnection(mac).catch((e: unknown) => AppLogger.warn('[useBLEInterrogator] Disconnect failed', { error: String(e) }));
     }
-  }, [bleManager, registeredMacs, onDeviceInterrogated]);
+  }, [bleManager, onDeviceInterrogated]);
 
   const processProbeQueue = useCallback(() => {
     if (probeQueueTimerRef.current) clearTimeout(probeQueueTimerRef.current);

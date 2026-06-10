@@ -1306,3 +1306,18 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Performed an emergency surgical rollback of the 'deprecate mobile admin tools' commit (fca1b6ef). Restored the src/components/admin/ directory entirely via git checkout fca1b6ef~1 -- src/components/admin. Re-integrated AdminToolsModal into DashboardScreen.tsx and restored the isAdminToolsVisible, ctiveHwSettings, and setIsDiagnosticsMode states to the component and useDashboardProfile.ts. The build is now green and the Admin Tools modal is accessible via the dashboard logo again.
 **Files touched:** src/components/admin/*, src/screens/DashboardScreen.tsx, src/hooks/useDashboardProfile.ts
 
+### [MERGE] 2026-06-09T23:31 - Fixed ble-plx scan client leak
+**What merged:** Implemented a double-stop in useBLEBatterySweep.ts to prevent the sweeper from restarting while an async stop was pending. This fixes GATT 133 errors on Android caused by orphaned scan clients during rapid foreground/background switching.
+**Verify result:** TSC passed, Jest passed, gates passed
+**Files touched:** src/hooks/ble/useBLEBatterySweep.ts, src/hooks/ble/__tests__/useBLEBatterySweep.test.ts
+
+### [DECISION] 2026-06-09T23:55 - XState FORCE_IDLE and web connections
+**Decision:** Removed clearConnectedDevices from the XState FORCE_IDLE action in BleMachine.ts. Updated BleConnectionManager.ts mock path to use CONNECT_SUCCESS instead of FORCE_IDLE. 
+**Rejected:** Continuing to try to wrap text nodes in Text tags. The 'Unexpected text node' warning was a cosmetic symptom of the React tree rendering a broken intermediate state, NOT the cause of the connection failure. 
+**Don't re-derive:** FORCE_IDLE means "reset the activity gate (scanning/connecting) to IDLE". It does NOT mean "wipe the device list". Wiping devices is strictly the job of DISCONNECT_COMPLETE. Using setGate('IDLE') on a cache-hit or a mock connection instantly wiped the devices we just set, forcing isActuallyConnected=false and causing the UI to render the blank blue screen.
+**Source:** src/services/ble/BleMachine.ts:167
+
+### [ARTIFACT] 2026-06-10T00:46 — BLE Pipeline Audit & Synthesis Report
+**What created:** Generated comprehensive BLE codebase audit leveraging 6 parallel subagents.
+**Location:** [BLE_AUDIT_REPORT.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_REPORT.md)
+**Key Findings:** State fragmentation (scannerStateRef, isSweeperActiveRef, derived UI state) will be consolidated into XState FSM. Custom queues/mutexes (mutexQueue) will be eliminated in favor of XState actor mailboxes. Hooks will be systematically deleted or converted into invoked services across 6 deployment phases.
