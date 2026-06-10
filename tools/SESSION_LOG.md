@@ -1,3 +1,8 @@
+### [MERGE] 2026-06-10T23:52 — cowboy-graphrag-iframe → master @ f1b9eda2
+**What merged:** Added `GraphRagWidget.tsx` and routing in `App.tsx` to embed GraphRAG UI (`http://localhost:8505/`) into the Command Center.
+**Verify result:** TSC ✅, Jest ✅, gates ✅ (Manual merge due to orphaned worktrees blocking the gatekeeper)
+**Files touched:** `tools/command-center/src/App.tsx`, `tools/command-center/src/components/widgets/GraphRagWidget.tsx`
+
 ### [EVENT] 2026-06-10T12:13 — Parallel Surgeon Fleet (Wave 2) Deployed
 **Trigger:** User authorized Wave 2 execution.
 **Action:** Created 3 isolated Git worktrees and invoked 3 parallel Surgeon Developer Agents with explicit instructions to run `npm run verify` AFTER the commit to prevent attestation misalignment.
