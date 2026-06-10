@@ -1347,3 +1347,13 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - Added acquireGattLock protection to prevent stampeding herd concurrent connect attempts
 **Verify result:** TSC ?, Jest ?, TypeSafety ?, Workflows ?, Auth ?
 **Files touched:** src/services/ble/ConnectService.ts, src/services/ble/BleMachine.ts, src/services/ble/BleMachine.types.ts, src/hooks/useBLE.ts, src/services/BleConnectionManager.ts
+### [MERGE] 2026-06-10T06:55 — ble-p4-recovery-service → master @ 456a6e6e
+**What merged:**
+- Created `RecoveryService.ts` as an XState `fromCallback` actor.
+- Integrated `RecoveryService` into `BleMachine.ts` `RECOVERING` state.
+- Deleted legacy `cancelAllRecoveries` from `BleLifecycleManager.ts`.
+- Routed `useBLE.ts` to trigger `RECOVERY_START` events instead of calling legacy recovery hooks directly.
+- Concurrency eliminated: `CONNECTING` and `RECOVERING` are mutually exclusive machine states.
+**Verify result:** TSC ✅, Jest ✅, QA Hardening ✅, Auth ✅
+**Files touched:** src/services/ble/RecoveryService.ts, src/services/ble/BleMachine.ts, src/services/BleLifecycleManager.ts, src/hooks/useBLE.ts, src/services/ble/BleMachine.types.ts
+
