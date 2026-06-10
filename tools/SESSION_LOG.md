@@ -1653,3 +1653,20 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Artifacts Generated**: 21 unique _cartography.md markdown files injected into the DeepDive Docs artifact directory.
 **Compilation**: Successfully replaced Section 12 of SK8Lytz_App_Master_Reference.md with the compiled payloads.
 **Graveyard**: Extracted 18 [MOVE_TO_ARCHIVE] tags and deposited them into Section 13.
+
+### [DECISION] 2026-06-10T20:05 — Monolith Extraction Audit Complete (Wave 1)
+**Decision:** 13 of 14 suspected monolith files are CONFIRMED. DockedController.tsx (65.6KB/50 hooks) is the highest-risk file in the codebase. DashboardScreen.tsx (50.1KB/56 hooks) has undergone Phase 1 extraction and is conditionally safe for surgical edits.
+**Don't re-derive:** 
+- DockedController.tsx lines 205-500 (hook zone) — DO NOT ADD/REMOVE/REORDER hooks. Lines 900+ (JSX section) are safe.
+- DockedController.tsx lines 79-121 — INLINE component FixedPatternPreviewRow. Extract before editing.
+- DockedController.tsx lines 247-263 — writeToDevice BLE write bus. Regression = all hardware output crashes.
+- DashboardScreen.tsx — 56 hooks are DELEGATION calls to already-extracted domain hooks. Safe for JSX edits, NOT for hook structure changes.
+- supabase.ts — Auto-generated (147KB). NEVER edit directly. Use /db-sync.
+**Wave 2-6 Safe Edit Zones (DockedController):** Lines 900+ JSX only. Hook zone strictly off-limits.
+**Wave 2-6 Safe Edit Zones (DashboardScreen):** useState initializer values, useCallback return bodies (not dep arrays), JSX leaf nodes (lines ~900+).
+**Optional pre-Wave 2 extractions (RECOMMENDED not blocking):**
+- Extract FixedPatternPreviewRow (lines 79-121) to src/components/docked/FixedPatternPreviewRow.tsx — Snack
+- Extract useDeepLinkHandler (DashboardScreen lines 308-327) to src/hooks/useDeepLinkHandler.ts — Snack
+**Source:** docs/plans/PLAN-monolith-extraction-audit.md — Audit Results 2026-06-10 section
+**Cross-checked:** Wave 1 exception-masking agent warned about DockedController lines 438/470
+
