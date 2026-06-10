@@ -6,6 +6,9 @@ team_roster: .agents/team-roster.md
 
 # The Audit Codebase Engine
 
+> ⚠️ **DEPRECATED** — This workflow has been superseded by `/self-heal`.
+> Run `/self-heal` instead. All audit-codebase functionality is now part of the observatory pipeline.
+
 > **📍 WHEN TO USE:** Periodic "clean the house" sweep — weekly, or whenever things feel messy.
 > Also called by `/ship-it` Phase 1 for the bundle check portion.
 > For a fast pre-release security-only check, use `/health-sweep` instead.
