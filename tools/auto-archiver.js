@@ -34,7 +34,9 @@ let inTask = false;
 // Search for the task block
 for (let i = 0; i < lines.length; i++) {
   const line = lines[i];
-  if (!inTask && line.match(new RegExp(`^- \\[ ?[x ]? ?\\] \\*\\*\`${taskSlug}\`\\*\\*`))) {
+  // Match optional backticks and optional namespace prefix (e.g. fix/, test/) before taskSlug
+  const pattern = new RegExp(`^- \\[ ?[x ]? ?\\] \\*\\*(?:\`|)(?:[a-z0-9-]+\\/|)${taskSlug}(?:\`|)\\*\\*`);
+  if (!inTask && line.match(pattern)) {
     inTask = true;
     taskStartIndex = i;
   } else if (inTask) {

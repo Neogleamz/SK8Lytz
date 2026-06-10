@@ -1052,4 +1052,13 @@ pm run verify which includes QA tests.
     Key finding: "Device Connection entry trigger `BleConnectionManager.ts:42` — exit cleanup `BleConnectionManager.ts:88` — no abort signal propagated to intermediate GATT awaits"
     Rejected alternative: "Fix cancellation in BleConnectionManager — rejected because the root problem is that the machine does not own the lifecycle; fixing the manager leaves the structural gap"
   - **Source of Truth:** 📖 [BleConnectionManager.ts:42-88](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleConnectionManager.ts#L42) · [BleSessionFactory.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleSessionFactory.ts)
-  - **Details:** Pure GATT helpers (GATT 133 retry, MTU negotiation, handshake) move to `ConnectService.ts` or `BleSessionFactory.ts`. Double-tap gating is now free — machine in CONNECTING ignores CONNECT_REQUEST.
+  - **Details:** Pure GATT helpers (GATT 133 retry, MTU negotiation, handshake) move to `ConnectService.ts` or `BleSessionFactory.ts`. Double-tap gating is now free — machine in CONNECTING ignores CONNECT_REQUEST.
+
+- [x] **fix/ble-t2-static-guards** — Add BLE architecture invariant guards to verifiable-check-runner 🚀 Merged in bdcfd9f8
+  - **Tags:** [✅ READY] [✅ VERIFIED] [TOOLING] [L-RISK] [Snack] [🤖 PRO-LOW] [BATCH:ble-test-hardening]
+  - **Goal:** Add 2 new static checks to `tools/verifiable-check-runner.js`: (1) detect `bleManager.startDeviceScan()` calls outside BleMachine.ts, (2) detect `onOrganicDisconnect` missing from useBLE.ts machine input.
+  - **Decision Log (2026-06-10):** The dual-scan bug and the organic disconnect bug were both invisible to the test suite. Static AST/grep guards at the gate level catch these at commit time, not at runtime during a skate session.
+  - **Analysis:** 📊 Source: [ble_test_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a20aff2e-be9b-43b9-b217-269aa20e5f8a/ble_test_gap_analysis.md) — "Missing Static git gate" section
+  - **Plan:** 📎 [PLAN-ble-t2-static-guards.md](docs/plans/PLAN-ble-t2-static-guards.md)
+  - **Source of Truth:** 📖 `tools/verifiable-check-runner.js` · `src/services/ble/BleMachine.ts` · `src/hooks/useBLE.ts`
+  - **Details:** Both guards must pass on current codebase AND fail when the pattern is violated. Snack-sized — pure JS additions to existing check runner, no new files needed.
