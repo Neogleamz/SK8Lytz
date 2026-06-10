@@ -29,7 +29,7 @@ export type BleMachineEvent =
   | { type: 'DISCONNECT_REQUEST' }
   | { type: 'DISCONNECT_COMPLETE' }
   | { type: 'RECOVERY_START'; ghostedMacs?: string[] }
-  | { type: 'RECOVERY_COMPLETE'; recoveredMacs?: string[] }
+  | { type: 'RECOVERY_COMPLETE'; devices?: Device[] }
   | { type: 'RECOVERY_FAIL' }
   | { type: 'UPDATE_CONNECTED_DEVICES'; devices: Device[] }
   | { type: 'HEARTBEAT_FAIL'; deviceId: string }

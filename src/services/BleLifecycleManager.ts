@@ -14,7 +14,7 @@ export async function executeRealDisconnect(
   disconnectListeners: React.MutableRefObject<Record<string, Subscription>>,
   mtuMapRef: React.MutableRefObject<Map<string, number>>,
   adapterMapRef: React.MutableRefObject<Map<string, any>>,
-  autoRecovery: { cancelAllRecoveries: () => Promise<void> },
+
   getGate: () => BLEPhaseTag,
   setConnectedDevices: React.Dispatch<React.SetStateAction<Device[]>>,
   setGate: (phase: BLEPhaseTag) => void,
@@ -22,7 +22,7 @@ export async function executeRealDisconnect(
 ): Promise<void> {
   if (getGate() === 'DISCONNECTING') return;
   setGate('DISCONNECTING');
-  await autoRecovery.cancelAllRecoveries();
+
 
   Object.values(disconnectListeners.current).forEach((sub: any) => {
     try {

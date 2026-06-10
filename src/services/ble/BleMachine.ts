@@ -2,13 +2,14 @@ import { setup, assign } from 'xstate';
 import { BleMachineContext, BleMachineEvent } from './BleMachine.types';
 import { AppLogger } from '../AppLogger';
 import { connectService } from './ConnectService';
+import { recoveryService } from './RecoveryService';
 
 export const bleMachine = setup({
   types: {
     context: {} as BleMachineContext,
     events: {} as BleMachineEvent,
   },
-  actors: { connectService },
+  actors: { connectService, recoveryService },
   actions: {
     logTransition: (_, params: { from: string; to: string; reason?: string }) => {
       AppLogger.log('BLE_STATE_CHANGE', {
@@ -36,7 +37,11 @@ export const bleMachine = setup({
       sweeperId: () => undefined
     }),
     setTargetMacs: assign({
-      targetMacs: ({ event }) => event.type === 'CONNECT_REQUEST' ? event.targetMacs : undefined
+      targetMacs: ({ event }) => {
+        if (event.type === 'CONNECT_REQUEST') return event.targetMacs;
+        if (event.type === 'RECOVERY_START') return event.ghostedMacs;
+        return undefined;
+      }
     }),
     setGhostedMacs: assign({
       ghostedDeviceIds: ({ event }) => event.type === 'RECOVERY_START' && event.ghostedMacs ? event.ghostedMacs : []
@@ -163,10 +168,17 @@ export const bleMachine = setup({
           target: 'DISCONNECTING',
           actions: [{ type: 'logTransition', params: { from: 'READY', to: 'DISCONNECTING' } }]
         },
-        RECOVERY_START: {
-          target: 'RECOVERING',
-          actions: ['setGhostedMacs', { type: 'logTransition', params: { from: 'READY', to: 'RECOVERING' } }]
-        },
+        RECOVERY_START: [
+          {
+            guard: ({ event }) => event.type === 'RECOVERY_START' && (event.ghostedMacs?.length ?? 0) >= 2,
+            target: 'CONNECTING',
+            actions: ['setTargetMacs', { type: 'logTransition', params: { from: 'READY', to: 'CONNECTING', reason: 'group_recovery' } }]
+          },
+          {
+            target: 'RECOVERING',
+            actions: ['setGhostedMacs', { type: 'logTransition', params: { from: 'READY', to: 'RECOVERING' } }]
+          }
+        ],
         UPDATE_CONNECTED_DEVICES: [
           {
             guard: ({ event }) => event.type === 'UPDATE_CONNECTED_DEVICES' && event.devices.length === 0,
@@ -188,16 +200,36 @@ export const bleMachine = setup({
       }
     },
     RECOVERING: {
+      invoke: {
+        src: 'recoveryService',
+        input: ({ context }) => ({
+          bleManager: context.bleManager,
+          ghostedDeviceIds: context.ghostedDeviceIds ?? [],
+          adapterMapRef: context.adapterMapRef,
+          mtuMapRef: context.mtuMapRef,
+          disconnectListeners: context.disconnectListeners,
+          handleOrganicDisconnect: context.handleOrganicDisconnect,
+          handleNotification: context.handleNotification,
+        }),
+        onDone: undefined,
+        onError: undefined,
+      },
       on: {
         RECOVERY_COMPLETE: [
           {
-            guard: ({ context }) => context.connectedDevices.length > 0,
             target: 'READY',
-            actions: ['clearGhostedMacs', { type: 'logTransition', params: { from: 'RECOVERING', to: 'READY' } }]
-          },
-          {
-            target: 'IDLE',
-            actions: ['clearGhostedMacs', { type: 'logTransition', params: { from: 'RECOVERING', to: 'IDLE' } }]
+            actions: [
+              assign({
+                connectedDevices: ({ context, event }) => {
+                  const newDevices = event.devices || [];
+                  const existingIds = newDevices.map((d: any) => d.id);
+                  const filtered = context.connectedDevices.filter(d => !existingIds.includes(d.id));
+                  return [...filtered, ...newDevices];
+                }
+              }),
+              'clearGhostedMacs',
+              { type: 'logTransition', params: { from: 'RECOVERING', to: 'READY' } }
+            ]
           }
         ],
         CONNECT_REQUEST: {
@@ -207,6 +239,10 @@ export const bleMachine = setup({
         RECOVERY_FAIL: {
           target: 'IDLE',
           actions: ['clearGhostedMacs', { type: 'logTransition', params: { from: 'RECOVERING', to: 'IDLE' } }]
+        },
+        DISCONNECT_REQUEST: {
+          target: 'DISCONNECTING',
+          actions: [{ type: 'logTransition', params: { from: 'RECOVERING', to: 'DISCONNECTING' } }]
         }
       }
     }

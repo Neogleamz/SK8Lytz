@@ -381,7 +381,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const handleOrganicDisconnect = (error: any, deviceId: string) => {
     AppLogger.warn(`[BLE] Organic disconnect/dropout for ${deviceId}`);
       AppLogger.log('DEVICE_DISCONNECTED', { id: deviceId, reason: 'dropout', error: error instanceof Error ? error.message : String(error) });
-    autoRecovery.initiateRecovery(deviceId);
+    bleSend({ type: 'RECOVERY_START', ghostedMacs: [deviceId] });
   };
 
   // Stable ref-forwarder: the BLE disconnect listener captures this ref once,
@@ -474,7 +474,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       updateConnectedDevices(prev => prev.filter(d => d.id !== mac));
       // Immediately start Phase 1 aggressive recovery — don't wait for the next
       // organic disconnect event which could take minutes on stale handles.
-      autoRecovery.initiateRecovery(mac);
+      bleSend({ type: 'RECOVERY_START', ghostedMacs: [mac] });
     },
   });
 
@@ -486,11 +486,11 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   
   const handleCriticalSignal = useCallback((mac: string) => {
     // Only reconnect if device is not already in the recovery queue.
-    if (!autoRecovery.ghostedDeviceIds.includes(mac)) {
+    if (!bleSnapshot.context.ghostedDeviceIds.includes(mac)) {
       AppLogger.warn('[BLE RSSI] Critical signal — proactive reconnect', { deviceId: scrubPII(mac) });
-      autoRecovery.initiateRecovery(mac);
+      bleSend({ type: 'RECOVERY_START', ghostedMacs: [mac] });
     }
-  }, [autoRecovery]);
+  }, [bleSnapshot.context.ghostedDeviceIds, bleSend]);
 
   const rssiMap = useBLERSSIMonitor({
     bleManager,
@@ -530,13 +530,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       opts,
       bleManager,
       connectedDevices,
-      autoRecovery.ghostedDeviceIds,
+      bleSnapshot.context.ghostedDeviceIds,
       mtuMapRef.current,
       adapterMapRef.current,
       stateRefs,
       setWriteGeneration
     ));
-  }, [bleManager, connectedDevices, autoRecovery.ghostedDeviceIds, stateRefs, setWriteGeneration]);
+  }, [bleManager, connectedDevices, bleSnapshot.context.ghostedDeviceIds, stateRefs, setWriteGeneration]);
 
   const writeChunked = useCallback(async (
     payload: number[],
@@ -546,11 +546,11 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       payload,
       targetDeviceId,
       connectedDevices,
-      autoRecovery.ghostedDeviceIds,
+      bleSnapshot.context.ghostedDeviceIds,
       mtuMapRef.current,
       adapterMapRef.current
     ).then(() => true));
-  }, [connectedDevices, autoRecovery.ghostedDeviceIds]);
+  }, [connectedDevices, bleSnapshot.context.ghostedDeviceIds]);
 
   // ── BleLifecycleManager bindings ──────────────────────────────────────────
   const realDisconnect = useCallback(async () => {
@@ -562,13 +562,12 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       disconnectListeners,
       mtuMapRef,
       adapterMapRef,
-      autoRecovery,
       getGate,
       updateConnectedDevices,
       setGate,
       bleSend
     );
-  }, [bleManager, autoRecovery, updateConnectedDevices, setGate, bleSend, getGate]);
+  }, [bleManager, updateConnectedDevices, setGate, bleSend, getGate]);
 
   const disconnectFromDevice = useCallback(() => {
     keepaliveDisconnect(keepaliveTimerRef, KEEPALIVE_DURATION_MS, realDisconnect);
@@ -591,13 +590,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       opts,
       bleManager,
       connectedDevices,
-      autoRecovery.ghostedDeviceIds,
+      bleSnapshot.context.ghostedDeviceIds,
       mtuMapRef.current,
       adapterMapRef.current,
       stateRefs,
       setWriteGeneration
     );
-  }, [bleManager, connectedDevices, autoRecovery.ghostedDeviceIds, stateRefs, setWriteGeneration]);
+  }, [bleManager, connectedDevices, bleSnapshot.context.ghostedDeviceIds, stateRefs, setWriteGeneration]);
 
   const derivedBleState: BleConnectionState = 
     bleGateState === 'DISCONNECTING' ? 'DISCONNECTING' :
@@ -636,7 +635,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     pingDevice,
     getAdapterForDevice,
     executeProtocolResults,
-    ghostedDeviceIds: bleSnapshot.context.ghostedDeviceIds.length > 0 ? bleSnapshot.context.ghostedDeviceIds : autoRecovery.ghostedDeviceIds,
+    ghostedDeviceIds: bleSnapshot.context.ghostedDeviceIds,
     bleState: derivedBleState,
     getGate,
     bleActorRef,
@@ -669,7 +668,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     isBluetoothEnabled,
     bleSnapshot.context.ghostedDeviceIds,
     droppedOutDeviceIds,
-    autoRecovery.ghostedDeviceIds,
+    bleSnapshot.context.ghostedDeviceIds,
     rssiMap,
     bleActorRef,
     connectToDevices,
