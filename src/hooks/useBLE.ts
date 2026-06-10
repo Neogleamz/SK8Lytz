@@ -16,6 +16,9 @@ import { STORAGE_DEMO_MODE } from '../constants/storageKeys';
 import { Buffer } from 'buffer';
 import type { Device } from 'react-native-ble-plx';
 import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
+import { ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol';
+import { BANLANX_SERVICE_UUID } from '../protocols/BanlanxAdapter';
+import type { BleError } from 'react-native-ble-plx';
 import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
 import { AppLogger } from '../services/AppLogger';
 import type { BleConnectionState, PendingRegistration, PingResult } from '../types/dashboard.types';
@@ -152,7 +155,15 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // ALL BLE operations (scan, connect, disconnect, recovery) must acquire this
   // gate before touching the radio. Prevents the "stampeding herd" of competing
   // GATT operations that cause Android GATT 133 errors.
-  const [bleSnapshot, bleSend, bleActorRef] = useMachine(bleMachine);
+  const scanCallbackRef = useRef<(error: BleError | null, device: Device | null) => void>(() => {});
+  const [bleSnapshot, bleSend, bleActorRef] = useMachine(bleMachine, {
+    input: {
+      bleManager,
+      scanCallback: (error: BleError | null, device: Device | null) => scanCallbackRef.current(error, device),
+      scanMode: 1,
+      scanServiceUUIDs: [ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID]
+    }
+  });
   const bleGateState = typeof bleSnapshot.value === 'string' ? bleSnapshot.value : 'IDLE';
   const connectedDevices = bleSnapshot.context.connectedDevices;
 
@@ -418,7 +429,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // Sweeper's Interrogator is always async (2s+ delay) so this is always populated in time.
   useEffect(() => {
     pendingRegistrationsSetterRef.current = scanner.setPendingRegistrations;
-  }, [scanner.setPendingRegistrations]);
+    scanCallbackRef.current = scanner.scanCallback;
+  }, [scanner.setPendingRegistrations, scanner.scanCallback]);
 
   const pingDevice = useCallback(async (
     mac: string,

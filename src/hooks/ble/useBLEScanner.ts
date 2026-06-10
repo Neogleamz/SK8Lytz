@@ -297,7 +297,8 @@ export function useBLEScanner({
     _stopSweeper();
     // Always stop native scan client regardless of sweeper state — leaked clients
     // from the fallback path (line ~367) survive _stopSweeper()'s isSweeperActiveRef guard.
-    bleManager?.stopDeviceScan();
+    // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
+    // bleManager?.stopDeviceScan();
     bleSend({ type: 'SCAN_STOP' });
     scannerStateRef.current = 'IDLE';
   }, [_stopSweeper, bleSend, bleManager]);
@@ -365,13 +366,16 @@ export function useBLEScanner({
       burstScan(options?.keepAlive ? 10000 : 5000);
     } else if (!isSandboxMocking) {
       if (scannerStateRef.current === 'SCANNING') return;
-      bleManager?.stopDeviceScan(); // Prevent scan client accumulation
+      // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
+      // bleManager?.stopDeviceScan(); // Prevent scan client accumulation
       bleSend({ type: 'SCAN_START' });
       scannerStateRef.current = 'SCANNING';
-      bleManager?.startDeviceScan(null, null, scanCallback);
+      // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
+      // bleManager?.startDeviceScan(null, null, scanCallback);
 
       setTimeout(() => {
-        bleManager?.stopDeviceScan();
+        // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
+        // bleManager?.stopDeviceScan();
         bleSend({ type: 'SCAN_STOP' });
         scannerStateRef.current = 'IDLE';
       }, 5000);
@@ -388,6 +392,7 @@ export function useBLEScanner({
     batteryTier,
     startSweeper,
     burstScan,
-    hwCache
+    hwCache,
+    scanCallback
   };
 }

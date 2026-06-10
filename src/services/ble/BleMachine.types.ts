@@ -1,6 +1,10 @@
-import { Device } from 'react-native-ble-plx';
+import { BleError, BleManager, Device, ScanMode } from 'react-native-ble-plx';
 
 export interface BleMachineContext {
+  bleManager: BleManager;
+  scanCallback: (error: BleError | null, device: Device | null) => void;
+  scanMode: ScanMode;
+  scanServiceUUIDs: string[];
   connectedDevices: Device[];
   ghostedDeviceIds: string[];
   sweeperId?: number;
@@ -10,6 +14,8 @@ export interface BleMachineContext {
 export type BleMachineEvent =
   | { type: 'SCAN_START'; sweeperId?: number }
   | { type: 'SCAN_STOP' }
+  | { type: 'SCAN_PAUSE' }
+  | { type: 'SCAN_RESUME' }
   | { type: 'CONNECT_REQUEST'; targetMacs?: string[] }
   | { type: 'CONNECT_SUCCESS'; devices: Device[] }
   | { type: 'CONNECT_FAIL' }
@@ -19,6 +25,7 @@ export type BleMachineEvent =
   | { type: 'RECOVERY_COMPLETE'; recoveredMacs?: string[] }
   | { type: 'RECOVERY_FAIL' }
   | { type: 'UPDATE_CONNECTED_DEVICES'; devices: Device[] }
+  | { type: 'HEARTBEAT_FAIL'; deviceId: string }
   | { type: 'FORCE_IDLE' };
 
 export type BleMachineState =

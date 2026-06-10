@@ -46,10 +46,11 @@ export const bleMachine = setup({
 }).createMachine({
   id: 'bleMachine',
   initial: 'IDLE',
-  context: {
+  context: ({ input }: { input: any }) => ({
+    ...input,
     connectedDevices: [],
     ghostedDeviceIds: [],
-  },
+  }),
   states: {
     IDLE: {
       on: {
@@ -75,6 +76,21 @@ export const bleMachine = setup({
       }
     },
     SCANNING: {
+      entry: [
+        ({ context }) => {
+          context.bleManager.startDeviceScan(
+            context.scanServiceUUIDs,
+            { allowDuplicates: false, scanMode: context.scanMode },
+            context.scanCallback
+          );
+        },
+        { type: 'logTransition', params: { from: 'ANY', to: 'SCANNING' } }
+      ],
+      exit: [
+        ({ context }) => {
+          context.bleManager.stopDeviceScan();
+        }
+      ],
       on: {
         SCAN_STOP: {
           target: 'IDLE',
@@ -84,9 +100,23 @@ export const bleMachine = setup({
           target: 'CONNECTING',
           actions: ['clearSweeperId', 'setTargetMacs', { type: 'logTransition', params: { from: 'SCANNING', to: 'CONNECTING' } }]
         },
+        SCAN_PAUSE: {
+          actions: ({ context }) => context.bleManager.stopDeviceScan()
+        },
+        SCAN_RESUME: {
+          actions: ({ context }) => context.bleManager.startDeviceScan(
+            context.scanServiceUUIDs,
+            { allowDuplicates: false, scanMode: context.scanMode },
+            context.scanCallback
+          )
+        },
         DISCONNECT_REQUEST: {
           target: 'DISCONNECTING',
           actions: ['clearSweeperId', { type: 'logTransition', params: { from: 'SCANNING', to: 'DISCONNECTING' } }]
+        },
+        RECOVERY_START: {
+          target: 'RECOVERING',
+          actions: ['setGhostedMacs', { type: 'logTransition', params: { from: 'SCANNING', to: 'RECOVERING' } }]
         }
       }
     },

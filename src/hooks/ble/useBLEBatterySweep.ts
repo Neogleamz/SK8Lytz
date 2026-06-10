@@ -42,13 +42,15 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
     const runCycle = () => {
       if (!isSweeperActiveRef.current || batteryTierRef.current !== 'THROTTLED') return;
 
-      bleManager.stopDeviceScan();
-      bleManager.startDeviceScan(null, { scanMode: 0 }, scanCallback);
+      // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
+      // bleManager.stopDeviceScan();
+      // bleManager.startDeviceScan(null, { scanMode: 0 }, scanCallback);
       AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_throttle_scan_on' });
 
       throttleCycleTimerRef.current = setTimeout(() => {
         if (!isSweeperActiveRef.current || batteryTierRef.current !== 'THROTTLED') return;
-        bleManager.stopDeviceScan();
+        // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
+        // bleManager.stopDeviceScan();
         AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_throttle_scan_off' });
         throttleCycleTimerRef.current = setTimeout(runCycle, THROTTLE_SCAN_OFF_MS);
       }, THROTTLE_SCAN_ON_MS);
@@ -63,7 +65,8 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
     // Always stop any existing scan client FIRST — prevents scan client accumulation
     // across burst→sweeper transitions and re-render cycles. Android has a finite
     // number of scan client slots; leaking them blocks GATT connections.
-    bleManager.stopDeviceScan();
+    // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
+    // bleManager.stopDeviceScan();
     
     if (burstTimerRef.current) { clearTimeout(burstTimerRef.current); burstTimerRef.current = null; }
 
@@ -106,23 +109,27 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
         // Second safety stop — clears any scan client registered during the async battery promise gap
         // (e.g. burstScan fired between our sync stop at entry and here).
         // ble-plx only tracks one subscription internally; without this, the previous client is orphaned.
-        bleManager.stopDeviceScan();
-        bleManager.startDeviceScan(null, { scanMode: 0 }, scanCallback);
+        // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
+        // bleManager.stopDeviceScan();
+        // bleManager.startDeviceScan(null, { scanMode: 0 }, scanCallback);
       }
     }).catch(err => {
       AppLogger.warn('[useBLEBatterySweep] Battery check failed', { error: String(err) });
       batteryTierRef.current = 'FULL';
       setBatteryTier('FULL');
-      bleManager.stopDeviceScan();
+      // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
+      // bleManager.stopDeviceScan();
       isSweeperActiveRef.current = true;
       setIsSweeperActive(true);
-      bleManager.startDeviceScan(null, { scanMode: 0 }, scanCallback);
+      // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
+      // bleManager.startDeviceScan(null, { scanMode: 0 }, scanCallback);
     });
   }, [bleManager, scanCallback, startThrottleCycle]);
 
   const stopSweeper = useCallback(() => {
     if (!isSweeperActiveRef.current) return;
-    bleManager?.stopDeviceScan();
+    // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
+    // bleManager?.stopDeviceScan();
     isSweeperActiveRef.current = false;
     setIsSweeperActive(false);
     if (burstTimerRef.current) { clearTimeout(burstTimerRef.current); burstTimerRef.current = null; }
@@ -141,12 +148,14 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
         return;
       }
       AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_burst_start', durationMs });
-      bleManager.stopDeviceScan();
+      // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
+      // bleManager.stopDeviceScan();
       isSweeperActiveRef.current = false;
 
       if (onBurstStart) onBurstStart();
 
-      bleManager.startDeviceScan(null, { scanMode: 2 }, scanCallback);
+      // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
+      // bleManager.startDeviceScan(null, { scanMode: 2 }, scanCallback);
 
       burstTimerRef.current = setTimeout(() => {
         burstTimerRef.current = null;
@@ -177,13 +186,15 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
         stopSweeper();
         AppLogger.warn('[useBLEBatterySweep] Battery critical — auto-paused');
       } else if (newTier === 'THROTTLED' && oldTier === 'FULL') {
-        bleManager?.stopDeviceScan();
+        // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
+        // bleManager?.stopDeviceScan();
         if (throttleCycleTimerRef.current) { clearTimeout(throttleCycleTimerRef.current); throttleCycleTimerRef.current = null; }
         startThrottleCycle();
       } else if (newTier === 'FULL' && oldTier === 'THROTTLED') {
         if (throttleCycleTimerRef.current) { clearTimeout(throttleCycleTimerRef.current); throttleCycleTimerRef.current = null; }
-        bleManager?.stopDeviceScan();
-        bleManager?.startDeviceScan(null, { scanMode: 0 }, scanCallback);
+        // PHASE-1: radio now owned by BleMachine.ts SCANNING entry/exit
+        // bleManager?.stopDeviceScan();
+        // bleManager?.startDeviceScan(null, { scanMode: 0 }, scanCallback);
       }
     });
     return () => { subscription.remove(); };
