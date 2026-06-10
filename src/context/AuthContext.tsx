@@ -25,7 +25,11 @@ import { STORAGE_LAST_EMAIL, STORAGE_OFFLINE_SKIP } from '../constants/storageKe
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
+export type AuthStatus = 'checking' | 'authenticated' | 'expired' | 'offline' | 'unauthenticated';
+
 export interface AuthContextValue {
+  /** The current authentication finite state. */
+  status: AuthStatus;
   /** The active Supabase Session, or null if unauthenticated. */
   session: Session | null;
   /** Derived from session — the authenticated user, or null. */
@@ -66,9 +70,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
-  const [sessionLoaded, setSessionLoaded] = useState(false);
-  const [isOfflineMode, setIsOfflineMode] = useState(false);
-  const [sessionExpired, setSessionExpired] = useState(false);
+  const [status, setStatus] = useState<AuthStatus>('checking');
 
   // Stable ref to prevent stale closure in deep-link handler
   const setSessionRef = useRef(setSession);
@@ -80,7 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!supabase) {
       AppLogger.warn('[AuthContext] Supabase not configured — offline-only mode.');
-      setSessionLoaded(true);
+      setStatus('offline');
       return;
     }
 
@@ -135,7 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           AppLogger.warn('[AuthContext] Failed to read offline skip', e instanceof Error ? e.message : String(e));
         }
         if (offlineSkip === 'true') {
-          setIsOfflineMode(true);
+          setStatus('offline');
           return;
         }
 
@@ -144,6 +146,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const existing = data?.session;
         if (existing) {
           setSession(existing);
+          setStatus('authenticated');
           return;
         }
 
@@ -155,12 +158,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           AppLogger.warn('[AuthContext] Failed to read last email', e instanceof Error ? e.message : String(e));
         }
         if (lastEmail) {
-          setSessionExpired(true);
+          setStatus('expired');
+        } else {
+          setStatus('unauthenticated');
         }
       } catch (err: unknown) {
         AppLogger.log('ERROR_CAUGHT', { message: 'AuthContext init failed', info: err instanceof Error ? err.message : String(err), context: 'AuthContext.init' });
-      } finally {
-        setSessionLoaded(true);
+        setStatus('unauthenticated');
       }
     };
 
@@ -171,10 +175,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       AppLogger.log('SYNC', { context: 'auth_change', event: _event, hasSession: !!newSession });
       setSessionRef.current(newSession);
       if (_event === 'SIGNED_IN') {
-        setSessionExpired(false);
+        setStatus('authenticated');
       }
-      if (!newSession) {
-        setIsOfflineMode(false);
+      if (_event === 'SIGNED_OUT') {
+        setStatus('unauthenticated');
         AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP).catch(e => {
           AppLogger.warn('[AuthContext] Failed to remove offline skip', e instanceof Error ? e.message : String(e));
         });
@@ -187,8 +191,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const setIsOfflineMode = (value: boolean) => {
+    if (value) {
+      setStatus('offline');
+    } else {
+      setStatus(session ? 'authenticated' : 'unauthenticated');
+    }
+  };
+
   const clearOfflineMode = () => {
-    setIsOfflineMode(false);
+    setStatus(session ? 'authenticated' : 'unauthenticated');
     AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP).catch(() => {});
   };
 
@@ -225,9 +237,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const user = session?.user ?? null;
-  const isAuthenticated = !!(session && session.user) || !supabase || isOfflineMode;
+
+  const isOfflineMode = status === 'offline';
+  const sessionLoaded = status !== 'checking';
+  const sessionExpired = status === 'expired';
+  const isAuthenticated = status === 'authenticated' || status === 'offline' || !supabase;
 
   const value: AuthContextValue = {
+    status,
     session,
     user,
     isOfflineMode,
