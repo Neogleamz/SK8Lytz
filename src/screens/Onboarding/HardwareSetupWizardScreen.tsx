@@ -63,28 +63,32 @@ export default function HardwareSetupWizardScreen({
   const [isIdentifying, setIsIdentifying] = useState(false);
 
   const fireOrientationTest = async (configsOverride?: Record<string, any>) => {
-    const selected = pendingRegistrations.filter(r => selectedDeviceMacs.has(r.device_mac));
-    if (selected.length !== 2) return;
-    
-    setIsIdentifying(true);
-    const configs = configsOverride || deviceConfigsState;
-    const adapter = getDefaultProtocol();
-    
-    for (const device of selected) {
-       const cfg = configs[device.device_mac];
-       if (!cfg || !cfg.position) continue;
-       
-       const points = cfg.points || device.led_points || LOCAL_PRODUCT_CATALOG[0].defaultLedPoints;
-       const color = cfg.position === 'Left' ? { r: 255, g: 0, b: 0 } : { r: 0, g: 255, b: 0 };
-       const colorArray = Array(points).fill(color);
-       
-       const payloadResult = adapter.buildMultiColor(colorArray, points, 1, 1, 0x00);
-       try {
-         await pingDevice(device.device_mac, payloadResult.packets[0], { probe: false, duration: 500, turnOffAtEnd: false });
-       } catch (err: unknown) {
-         AppLogger.error('[FTUE] pingDevice failed in orientation test', err instanceof Error ? err.message : String(err));
-         setSetupError('Device not responding, retrying...');
-       }
+    try {
+      const selected = pendingRegistrations.filter(r => selectedDeviceMacs.has(r.device_mac));
+      if (selected.length !== 2) return;
+      
+      setIsIdentifying(true);
+      const configs = configsOverride || deviceConfigsState;
+      const adapter = getDefaultProtocol();
+      
+      for (const device of selected) {
+         const cfg = configs[device.device_mac];
+         if (!cfg || !cfg.position) continue;
+         
+         const points = cfg.points || device.led_points || LOCAL_PRODUCT_CATALOG[0].defaultLedPoints;
+         const color = cfg.position === 'Left' ? { r: 255, g: 0, b: 0 } : { r: 0, g: 255, b: 0 };
+         const colorArray = Array(points).fill(color);
+         
+         const payloadResult = adapter.buildMultiColor(colorArray, points, 1, 1, 0x00);
+         try {
+           await pingDevice(device.device_mac, payloadResult.packets[0], { probe: false, duration: 500, turnOffAtEnd: false });
+         } catch (err: unknown) {
+           AppLogger.error('[FTUE] pingDevice failed in orientation test', err instanceof Error ? err.message : String(err));
+           setSetupError('Device not responding, retrying...');
+         }
+      }
+    } catch (e: unknown) {
+      AppLogger.error('HardwareSetupWizard', 'operation failed', { error: e instanceof Error ? e.message : String(e) });
     }
   };
 

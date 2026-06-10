@@ -16,7 +16,7 @@ export function DevSandboxDrawer({ onOfflineMode, setErrorMessage }: DevSandboxD
   const [isVirtualSkatesEnabled, setIsVirtualSkatesEnabled] = useState(false);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_DEMO_MODE).then(val => setIsVirtualSkatesEnabled(val === 'true'));
+    AsyncStorage.getItem(STORAGE_DEMO_MODE).then(val => setIsVirtualSkatesEnabled(val === 'true')).catch(() => {/* storage unavailable — leave default false */});
   }, []);
 
   const toggleVirtualSkates = async (value: boolean) => {

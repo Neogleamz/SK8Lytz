@@ -9,6 +9,7 @@
  */
 
 import { supabase } from './supabaseClient';
+import { AppLogger } from './AppLogger';
 
 class PushTokenService {
 
@@ -19,12 +20,16 @@ class PushTokenService {
   async registerPushToken(token: string, platform: 'ios' | 'android' | 'web', userId: string | null): Promise<void> {
     if (!userId) return; // silently skip if not logged in
 
-    await supabase
-      .from('push_tokens')
-      .upsert(
-        { user_id: userId, token, platform, updated_at: new Date().toISOString() },
-        { onConflict: 'user_id,token' }
-      );
+    try {
+      await supabase
+        .from('push_tokens')
+        .upsert(
+          { user_id: userId, token, platform, updated_at: new Date().toISOString() },
+          { onConflict: 'user_id,token' }
+        );
+    } catch (e: unknown) {
+      AppLogger.error('PushTokenService', 'registerPushToken failed', { error: e instanceof Error ? e.message : String(e) });
+    }
   }
 
   /**
@@ -33,11 +38,15 @@ class PushTokenService {
   async unregisterPushToken(token: string, userId: string | null): Promise<void> {
     if (!userId) return;
 
-    await supabase
-      .from('push_tokens')
-      .delete()
-      .eq('user_id', userId)
-      .eq('token', token);
+    try {
+      await supabase
+        .from('push_tokens')
+        .delete()
+        .eq('user_id', userId)
+        .eq('token', token);
+    } catch (e: unknown) {
+      AppLogger.error('PushTokenService', 'unregisterPushToken failed', { error: e instanceof Error ? e.message : String(e) });
+    }
   }
 }
 

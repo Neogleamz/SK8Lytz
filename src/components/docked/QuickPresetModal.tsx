@@ -105,25 +105,31 @@ const QuickPresetModal = React.memo(function QuickPresetModal({
       setIsPublishingCloud(false);
       return;
     }
-    const success = await ScenesService.publishScene(
-      safeName,
-      captureEntireState(),
-      cloudPublicToggle,
-      user?.id,
-      user?.user_metadata?.username
-    );
-    if (success) {
-      Alert.alert(
-        cloudPublicToggle ? 'Published!' : 'Saved!',
-        cloudPublicToggle
-          ? 'Your scene is now available to the community.'
-          : 'Scene saved privately to your cloud.'
+    try {
+      const success = await ScenesService.publishScene(
+        safeName,
+        captureEntireState(),
+        cloudPublicToggle,
+        user?.id,
+        user?.user_metadata?.username
       );
-      closePrompt();
-    } else {
-      Alert.alert('Error', 'Could not save scene. Are you logged in?');
+      if (success) {
+        Alert.alert(
+          cloudPublicToggle ? 'Published!' : 'Saved!',
+          cloudPublicToggle
+            ? 'Your scene is now available to the community.'
+            : 'Scene saved privately to your cloud.'
+        );
+        closePrompt();
+      } else {
+        Alert.alert('Error', 'Could not save scene. Are you logged in?');
+      }
+    } catch (e: unknown) {
+      AppLogger.error('QuickPresetModal', 'handlePublish failed', { error: e instanceof Error ? e.message : String(e) });
+      Alert.alert('Error', 'Failed to publish scene.');
+    } finally {
+      setIsPublishingCloud(false);
     }
-    setIsPublishingCloud(false);
   };
 
   return (

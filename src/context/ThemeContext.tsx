@@ -29,10 +29,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     AsyncStorage.getItem(THEME_KEY).then((val) => {
       if (val !== null) setIsDark(val === 'dark');
-    });
+    }).catch((err: unknown) => AppLogger.warn('[ThemeContext] THEME_KEY read failed', err instanceof Error ? err.message : String(err)));
     AsyncStorage.getItem(CONTROL_THEME_KEY).then((val) => {
       if (val === 'CLASSIC' || val === 'MODERN' || val === 'DOCKED') setControlUITheme(val);
-    });
+    }).catch((err: unknown) => AppLogger.warn('[ThemeContext] CONTROL_THEME_KEY read failed', err instanceof Error ? err.message : String(err)));
   }, []);
 
   const toggleTheme = useCallback(() => {

@@ -337,24 +337,32 @@ export function useDashboardGroups({
         { 
           text: "Forget Group Only", 
           onPress: async () => {
-            // Phase 5: Atomic RPC-backed backend sync and instantaneous RAM cleanup
-            await GroupRepository.getInstance().deleteGroup(id, user?.id);
-            await _scrubGhostGroupFromLocal(groupToDelete);
-            closeGroupModal();
+            try {
+              // Phase 5: Atomic RPC-backed backend sync and instantaneous RAM cleanup
+              await GroupRepository.getInstance().deleteGroup(id, user?.id);
+              await _scrubGhostGroupFromLocal(groupToDelete);
+              closeGroupModal();
+            } catch (e: unknown) {
+              AppLogger.warn('[useDashboardGroups] Forget Group Only failed', { error: e instanceof Error ? e.message : String(e) });
+            }
           }
         },
         {
           text: "Deregister Hardware",
           style: "destructive",
           onPress: async () => {
-            const devsToDelete = registeredDevices.filter(d => d.group_ids && d.group_ids.includes(id));
-            for (const d of devsToDelete) {
-              await deregisterDevice(d.device_mac);
+            try {
+              const devsToDelete = registeredDevices.filter(d => d.group_ids && d.group_ids.includes(id));
+              for (const d of devsToDelete) {
+                await deregisterDevice(d.device_mac);
+              }
+              // Phase 5: Atomic RPC-backed cleanup follows the device removal
+              await GroupRepository.getInstance().deleteGroup(id, user?.id);
+              await _scrubGhostGroupFromLocal(groupToDelete);
+              closeGroupModal();
+            } catch (e: unknown) {
+              AppLogger.warn('[useDashboardGroups] Deregister Hardware failed', { error: e instanceof Error ? e.message : String(e) });
             }
-            // Phase 5: Atomic RPC-backed cleanup follows the device removal
-            await GroupRepository.getInstance().deleteGroup(id, user?.id);
-            await _scrubGhostGroupFromLocal(groupToDelete);
-            closeGroupModal();
           }
         }
       ]

@@ -330,7 +330,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
       // Update the notification every 5 seconds with new stats
       updateInterval = setInterval(() => {
-        displayNotification();
+        displayNotification().catch((err: unknown) => AppLogger.warn('[SessionContext] displayNotification interval failed', err instanceof Error ? err.message : String(err)));
       }, 5000);
     };
 
@@ -402,10 +402,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     // ── 4. NOW transition to IDLE — safe to tear down FGS ────────────────────
     setSessionPhase('IDLE');
     AppLogger.log('APP_LOG', { event: 'session_ended' });
-    if (Platform.OS === 'android') {
-      notifee.stopForegroundService();
-    } else {
-      notifee.cancelNotification(NOTIFICATION_ID);
+    try {
+      if (Platform.OS === 'android') {
+        await notifee.stopForegroundService();
+      } else {
+        await notifee.cancelNotification(NOTIFICATION_ID);
+      }
+    } catch (e: unknown) {
+      AppLogger.warn('[SessionContext] notification teardown failed', { error: e instanceof Error ? e.message : String(e) });
     }
 
     // ── 5. Push STOPPED after 10s (matches watch card auto-dismiss timer) ────

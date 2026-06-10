@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const linkSubscription = Linking.addEventListener('url', handleDeepLink);
     Linking.getInitialURL().then(url => {
       if (url) handleDeepLink({ url });
-    });
+    }).catch((err: unknown) => AppLogger.warn('[AuthContext] getInitialURL failed', { error: err instanceof Error ? err.message : String(err) }));
 
     // ── Cold-start: restore session or detect expiry ──────────────────────────
     const init = async () => {

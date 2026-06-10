@@ -92,7 +92,7 @@ export function useFavorites() {
       };
       fetchCloudFavs();
     }
-    });
+    }).catch((err: unknown) => AppLogger.warn('[useFavorites] Favorites read failed', { error: err instanceof Error ? err.message : String(err) }));
 
     AsyncStorage.getItem(`${STORAGE_PREFIX}QuickPresets`).then((saved) => {
       if (saved) {
@@ -101,7 +101,7 @@ export function useFavorites() {
           if (parsed && parsed.length > 0) setQuickPresets(parsed);
         } catch (e: unknown) { AppLogger.warn('[Favorites] Failed to parse quick presets', { error: (e instanceof Error ? e.message : String(e)) }); }
       }
-    });
+    }).catch((err: unknown) => AppLogger.warn('[useFavorites] QuickPresets read failed', { error: err instanceof Error ? err.message : String(err) }));
   }, [user]);
 
   const openFavoritePrompt = useCallback((targetId?: string, defaultName: string = '') => {

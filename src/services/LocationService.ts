@@ -258,7 +258,13 @@ class LocationService {
    * Fetch static skate spots sorted by distance from current position.
    */
   async getNearbySkateSpots(radiusMi?: number | null, userCoords?: { lat: number; lng: number } | null): Promise<NearbySkateSpot[]> {
-    const rawSpots = await SkateSpotsService.getCachedSpots();
+    let rawSpots;
+    try {
+      rawSpots = await SkateSpotsService.getCachedSpots();
+    } catch (e: unknown) {
+      AppLogger.error('LocationService', 'getCachedSpots failed', { error: e instanceof Error ? e.message : String(e) });
+      return [];
+    }
     const spotsData = rawSpots as Record<string, unknown>[];
 
     if (!spotsData || spotsData.length === 0) return [];

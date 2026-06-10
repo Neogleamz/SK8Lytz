@@ -76,8 +76,14 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
              setMode('LOGIN');
           }
           setHasLoadedCreds(true);
+        }).catch((err: unknown) => {
+          AppLogger.warn('[AuthScreen] STORAGE_LAST_EMAIL read failed', { error: err instanceof Error ? err.message : String(err) });
+          setHasLoadedCreds(true);
         });
       }
+    }).catch((err: unknown) => {
+      AppLogger.warn('[AuthScreen] STORAGE_REMEMBER_CREDS read failed', { error: err instanceof Error ? err.message : String(err) });
+      setHasLoadedCreds(true);
     });
   }, []);
 

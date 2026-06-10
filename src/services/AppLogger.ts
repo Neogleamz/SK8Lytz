@@ -490,6 +490,8 @@ class AppLoggerService {
           app_version: Device.osVersion || null
         }).then(({ error }) => {
           if (error && __DEV__) console.warn('[AppLogger] Crash Telemetry dual-write failed:', error.message);
+        }, (e: unknown) => {
+          if (__DEV__) console.warn('[AppLogger] Crash Telemetry insert rejected (network):', e instanceof Error ? e.message : String(e));
         });
       }
       if (__DEV__) console.log(`[AppLogger VIP] ${event}`, payload);
