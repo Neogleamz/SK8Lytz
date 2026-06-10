@@ -399,6 +399,7 @@ class AppLoggerService {
       'email', 'name', 'password', 'token', 'phone', 'address', 'fullname',
       'lat', 'lng', 'latitude', 'longitude', 'label',
       'auth', 'refresh', 'access', 'secret', 'credential',
+      'mac', 'deviceid', 'peripheral_id',
     ];
     const seen = new WeakSet();
 
@@ -468,9 +469,12 @@ class AppLoggerService {
           },
           payload_size: payload.payload_size || null,
           operation_type: payload.operation_type || null
-        }).then(({ error }) => {
-          if (error) console.warn('[AppLogger] VIP Fast-Lane failed:', error.message);
-        });
+        }).then(
+          ({ error }) => {
+            if (error) console.warn('[AppLogger] VIP Fast-Lane failed:', error.message);
+          },
+          (e: unknown) => console.warn('[AppLogger] VIP insert failed (network):', e instanceof Error ? e.message : String(e))
+        );
 
         supabase.from('crash_telemetry').insert({
           error_signature: safeErrorString.substring(0, 500),
