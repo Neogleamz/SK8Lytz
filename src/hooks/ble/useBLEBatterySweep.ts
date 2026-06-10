@@ -101,6 +101,10 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
       if (tier === 'THROTTLED') {
         startThrottleCycle();
       } else {
+        // Second safety stop — clears any scan client registered during the async battery promise gap
+        // (e.g. burstScan fired between our sync stop at entry and here).
+        // ble-plx only tracks one subscription internally; without this, the previous client is orphaned.
+        bleManager.stopDeviceScan();
         bleManager.startDeviceScan(null, { scanMode: 0 }, scanCallback);
       }
     }).catch(err => {
