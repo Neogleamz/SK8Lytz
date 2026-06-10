@@ -1613,3 +1613,10 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - 	ype-safety-sweep-batch: Removed s any type laundering across 28 files and added strict type checks.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/constants/bleTimingConstants.ts, Sk8LytzProgrammer.tsx, useDashboardCrew.ts, AppLogger.ts, SessionContext.tsx, ThemeContext.tsx, QuickPresetModal.tsx, useFavorites.ts, etc. (30+ files)
+### [MERGE] 2026-06-10T12:42 — Wave 4 Sweep Batches ? master @ 2213d4cc8db8c6b1ae8b21ccef4f23a1b738f83e
+**What merged:** 
+- uth-context-bypass-batch: Removed direct supabase.auth.getSession() calls from GroupRepository, accepting userId.
+- device-settings-probe-fsm-batch: Refactored isProbing boolean trap in DeviceSettingsModal to a single ProbeState union.
+- hal-oracle-tab-enclosure-batch: Centralized raw byte array literals in DiagnosticLabOracleTab to ZenggeProtocol factory methods.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/repositories/GroupRepository.ts, src/repositories/DeviceRepository.ts, src/hooks/useDashboardGroups.ts, src/components/DeviceSettingsModal.tsx, src/protocols/ZenggeProtocol.ts, src/screens/admin/DiagnosticLabOracleTab.tsx
