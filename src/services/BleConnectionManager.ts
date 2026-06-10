@@ -131,7 +131,15 @@ export async function executeConnectToDevices({
       }
 
       if (Platform.OS === 'web' || isMock === 'true') {
+        // Update connectedDevicesRef synchronously so all ref-based readers (heartbeat,
+        // writeToDevice, etc.) see the mock devices immediately.
         setConnectedDevices(devices);
+        // Transition XState CONNECTING → READY and set context.connectedDevices.
+        // NOTE: setGate('IDLE') was previously used here, which fired FORCE_IDLE.
+        // FORCE_IDLE has clearConnectedDevices in its actions, immediately wiping the
+        // devices we just set — causing the blank blue screen on web.
+        // CONNECT_SUCCESS is the correct event: it targets READY and sets devices.
+        bleSend({ type: 'CONNECT_SUCCESS', devices });
         devices.forEach(d => {
           AppLogger.log('DEVICE_CONNECTED', { id: d.id, name: d.name, firmware: 'v2.0.1.DEMO' });
         });
@@ -144,7 +152,6 @@ export async function executeConnectToDevices({
              });
           }, 1000);
         }
-        setGate('IDLE');
         return;
       }
       scanner.stopScanner();

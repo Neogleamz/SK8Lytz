@@ -167,7 +167,13 @@ export const bleMachine = setup({
   on: {
     FORCE_IDLE: {
       target: '.IDLE',
-      actions: ['clearConnectedDevices', 'clearSweeperId', 'clearGhostedMacs', { type: 'logTransition', params: { from: 'ANY', to: 'IDLE', reason: 'forced' } }]
+      // NOTE: clearConnectedDevices intentionally omitted here.
+      // FORCE_IDLE resets the activity gate (SCANNING/CONNECTING) back to IDLE,
+      // NOT the device connection list. Devices are removed only on DISCONNECT_COMPLETE.
+      // Adding clearConnectedDevices here caused: mock web connection → CONNECTING →
+      // setConnectedDevices(devices) → FORCE_IDLE clears them → isActuallyConnected=false
+      // → blank blue screen. Also broke the keepalive cache-hit path.
+      actions: ['clearSweeperId', 'clearGhostedMacs', { type: 'logTransition', params: { from: 'ANY', to: 'IDLE', reason: 'forced' } }]
     }
   }
 });
