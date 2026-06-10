@@ -392,3 +392,17 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Impact:** Context explosion risk; the parent agent has to manually proxy and write 21 markdown files to disk.
 - **Status:** MONITORING
 
+
+### [FRICTION-029] Blast Radius Scanner False Positives on Static Methods and Log-Only Edits
+- **First Observed:** 2026-06-10
+- **Observed By:** Reyes (via HAL enclosure sweep Wave 1)
+- **Occurrences:** 1 / 3
+- **Trigger:** ortress-gatekeeper.ps1 blast radius scanner flagged ZenggeProtocol.ts and DeviceRepository.ts as requiring dependent-file updates, blocking all Wave-1 merges.
+- **Pattern:** Two categories of false positive confirmed:
+  1. **Static utility method addition** — Adding static methods to a class that implements an interface triggers a "dependent needs update" warning, even though static methods are NOT part of the instance interface contract.
+  2. **Internal log string change** — Changing the message string and context object keys in an AppLogger call (no method signature change) triggers "call-site update required" warnings in hooks that call the same service.
+- **Root Cause Theory:** The blast radius scanner appears to use file-level dependency tracking (if File A imports File B, and File B changes, flag File A). It does not distinguish between signature-breaking changes vs. internal-only changes. Static methods and log rewrites are internal-only by definition.
+- **Impact:** Blocked all three Wave-1 merge agents simultaneously. Required manual -IgnoreBlast flag and coordinator intervention. Added ~8 minutes of merge sequencing overhead.
+- **Status:** MONITORING
+- **Proposed Fix (at 3 occurrences):** Add suppression annotations or a scanner config option for: (a) changes to static class members only, (b) changes confined to AppLogger.* call sites with no method signature delta.
+
