@@ -1,3 +1,5 @@
+(global as unknown as { __DEV__: boolean }).__DEV__ = true;
+
 jest.mock('expo-battery', () => ({
   isAvailableAsync: jest.fn().mockResolvedValue(true),
   getBatteryLevelAsync: jest.fn().mockResolvedValue(1),
