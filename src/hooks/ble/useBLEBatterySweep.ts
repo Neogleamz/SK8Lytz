@@ -58,6 +58,10 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
 
   const startSweeper = useCallback(() => {
     if (Platform.OS === 'web' || !bleManager) return;
+    // Always stop any existing scan client FIRST — prevents scan client accumulation
+    // across burst→sweeper transitions and re-render cycles. Android has a finite
+    // number of scan client slots; leaking them blocks GATT connections.
+    bleManager.stopDeviceScan();
     if (isSweeperActiveRef.current) return;
     if (burstTimerRef.current) { clearTimeout(burstTimerRef.current); burstTimerRef.current = null; }
 
@@ -71,10 +75,10 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
         return;
       }
 
-      bleManager.stopDeviceScan();
       isSweeperActiveRef.current = true;
       setIsSweeperActive(true);
       AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_start', batteryTier: tier, batteryLevel: Math.round(level * 100) });
+
 
       if (Platform.OS === 'android' && (Platform.Version as number) >= 31) {
         const now = Date.now();
