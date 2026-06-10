@@ -44,6 +44,7 @@ jest.mock('react-native', () => ({
 // Path: from __tests__/ go up two levels to reach src/services/BleWriteQueue.ts
 jest.mock('../../BleWriteQueue', () => ({
   enqueueWrite: jest.fn(async (_priority: any, op: () => Promise<any>) => op()),
+  enqueueDelay: jest.fn(async (_priority: any, delay: number) => new Promise(res => setTimeout(res, delay))),
   isWriteQueueActive: jest.fn().mockReturnValue(false),
 }));
 

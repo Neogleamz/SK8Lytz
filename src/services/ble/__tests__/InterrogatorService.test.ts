@@ -55,6 +55,7 @@ jest.mock('../../AppLogger', () => ({
 
 jest.mock('../../BleWriteQueue', () => ({
   enqueueWrite: jest.fn(async (_priority: any, op: () => Promise<any>) => op()),
+  enqueueDelay: jest.fn(async (_priority: any, delay: number) => new Promise(res => setTimeout(res, delay))),
 }));
 
 jest.mock('../../BleSessionFactory', () => ({
