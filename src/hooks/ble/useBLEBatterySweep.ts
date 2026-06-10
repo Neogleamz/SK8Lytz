@@ -3,8 +3,6 @@ import { Platform } from 'react-native';
 import * as Battery from 'expo-battery';
 import type { BleManager, Device, BleError } from 'react-native-ble-plx';
 import { AppLogger } from '../../services/AppLogger';
-import { ZENGGE_SERVICE_UUID } from '../../protocols/ZenggeProtocol';
-import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
 
 type BatteryTier = 'FULL' | 'THROTTLED' | 'PAUSED';
 const BATTERY_TIER_FULL_THRESHOLD = 0.30;
@@ -45,7 +43,7 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
       if (!isSweeperActiveRef.current || batteryTierRef.current !== 'THROTTLED') return;
 
       bleManager.stopDeviceScan();
-      bleManager.startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], { scanMode: 0 }, scanCallback);
+      bleManager.startDeviceScan(null, { scanMode: 0 }, scanCallback);
       AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_throttle_scan_on' });
 
       throttleCycleTimerRef.current = setTimeout(() => {
@@ -99,7 +97,7 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
       if (tier === 'THROTTLED') {
         startThrottleCycle();
       } else {
-        bleManager.startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], { scanMode: 0 }, scanCallback);
+        bleManager.startDeviceScan(null, { scanMode: 0 }, scanCallback);
       }
     }).catch(err => {
       AppLogger.warn('[useBLEBatterySweep] Battery check failed', { error: String(err) });
@@ -108,7 +106,7 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
       bleManager.stopDeviceScan();
       isSweeperActiveRef.current = true;
       setIsSweeperActive(true);
-      bleManager.startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], { scanMode: 0 }, scanCallback);
+      bleManager.startDeviceScan(null, { scanMode: 0 }, scanCallback);
     });
   }, [bleManager, scanCallback, startThrottleCycle]);
 
@@ -138,7 +136,7 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
 
       if (onBurstStart) onBurstStart();
 
-      bleManager.startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], { scanMode: 2 }, scanCallback);
+      bleManager.startDeviceScan(null, { scanMode: 2 }, scanCallback);
 
       burstTimerRef.current = setTimeout(() => {
         burstTimerRef.current = null;
@@ -175,7 +173,7 @@ export function useBLEBatterySweep({ bleManager, scanCallback }: UseBLEBatterySw
       } else if (newTier === 'FULL' && oldTier === 'THROTTLED') {
         if (throttleCycleTimerRef.current) { clearTimeout(throttleCycleTimerRef.current); throttleCycleTimerRef.current = null; }
         bleManager?.stopDeviceScan();
-        bleManager?.startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], { scanMode: 0 }, scanCallback);
+        bleManager?.startDeviceScan(null, { scanMode: 0 }, scanCallback);
       }
     });
     return () => { subscription.remove(); };
