@@ -17,6 +17,7 @@ import PromoBlastWidget from './components/widgets/PromoBlastWidget';
 import CheatSheetWidget from './components/widgets/CheatSheetWidget';
 import AppManagerWidget from './components/widgets/AppManagerWidget';
 import ProductCatalogWidget from './components/widgets/ProductCatalogWidget';
+import GraphRagWidget from './components/widgets/GraphRagWidget';
 import './index.css';
 
 const NavGroup = ({ title, icon: Icon, children }: { title: string; icon: any; children: React.ReactNode }) => {
@@ -69,6 +70,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => (
         <NavGroup title="Content & Data" icon={Database}>
           <Link to="/scraper" className="nav-link"><Database size={16} /> Scraper Dashboard</Link>
           <Link to="/cheat-sheet" className="nav-link"><BookOpen size={16} /> Protocol Cheat Sheet</Link>
+          <Link to="/graphrag" className="nav-link"><Radar size={16} /> GraphRAG UI</Link>
         </NavGroup>
       </nav>
       <div className="sidebar-footer">
@@ -186,6 +188,7 @@ export default function App() {
           <Route path="/audit-logs" element={<AuditLogsWidget />} />
           <Route path="/promo-blast" element={<PromoBlastWidget />} />
           <Route path="/cheat-sheet" element={<div className="p-6 h-full"><CheatSheetWidget /></div>} />
+          <Route path="/graphrag" element={<div className="p-6 h-full"><GraphRagWidget /></div>} />
           <Route path="/app-simulator" element={<AppManagerWidget />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
