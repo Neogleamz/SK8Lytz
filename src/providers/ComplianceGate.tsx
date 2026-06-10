@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, View } from 'react-native';
+import { ActivityIndicator, Alert, View, Text } from 'react-native';
 import EulaModal from '../components/modals/EulaModal';
 import { useTheme } from '../context/ThemeContext';
 import { AppSettingsService } from '../services/AppSettingsService';
@@ -19,6 +19,7 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
   type ComplianceStatus = 'checking' | 'idle';
   const [status, setStatus] = useState<ComplianceStatus>('checking');
   const [requiresEula, setRequiresEula] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     checkCompliance();
@@ -68,6 +69,7 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.warn('[ComplianceGate] check error', { error: msg });
+      setError(msg);
     } finally {
       setStatus('idle');
     }
@@ -133,7 +135,14 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
     );
   }
 
-
+  if (error) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+        <Text style={{ color: Colors.error || '#FF0000', marginBottom: 16, fontWeight: 'bold' }}>Failed to verify compliance status.</Text>
+        <Text style={{ color: Colors.text, textAlign: 'center' }}>{error}</Text>
+      </View>
+    );
+  }
 
   return <>{children}</>;
 }

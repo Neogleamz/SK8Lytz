@@ -14,19 +14,27 @@ export interface RecentSpot {
 
 export function useRecentSpots() {
   const [recentSpots, setRecentSpots] = useState<RecentSpot[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadRecents();
   }, []);
 
   const loadRecents = async () => {
+    setIsLoading(true);
+    setError(null);
     try {
       const data = await AsyncStorage.getItem(STORAGE_KEY);
       if (data) setRecentSpots(JSON.parse(data));
     } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
       AppLogger.warn('[useRecentSpots] Failed to load recent spots from storage', {
-        error: e instanceof Error ? e.message : String(e),
+        error: msg,
       });
+      setError(msg);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -49,5 +57,5 @@ export function useRecentSpots() {
     } catch {}
   }, []);
 
-  return { recentSpots, addRecentSpot };
+  return { recentSpots, addRecentSpot, isLoading, error };
 }

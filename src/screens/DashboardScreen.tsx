@@ -19,7 +19,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useState, useEffect, useRef, useCallback, useMemo, startTransition } from 'react';
-import { ActivityIndicator, Alert, AppState, AppStateStatus, BackHandler, Linking, PanResponder, Platform, SafeAreaView, ScrollView, Text, TouchableOpacity, View, useWindowDimensions, RefreshControl } from 'react-native';
+import { ActivityIndicator, Alert, AppState, AppStateStatus, BackHandler, Linking, PanResponder, Platform, SafeAreaView, ScrollView, Text, TouchableOpacity, View, useWindowDimensions, RefreshControl, InteractionManager } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as ExpoLinking from 'expo-linking';
 import DeviceItem from '../components/DeviceItem';
@@ -193,10 +193,10 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     // Retrigger the auto connect sequence, which also calls burstScan 
     retriggerAutoConnectRef.current();
     
-    // Stop the spinner after 2 seconds
-    setTimeout(() => {
+    // Stop the spinner after interactions complete
+    InteractionManager.runAfterInteractions(() => {
       setIsRefreshing(false);
-    }, 2000);
+    });
   }, []);
 
   // Stable ref to retriggerAutoConnect — bridges the forward-reference since

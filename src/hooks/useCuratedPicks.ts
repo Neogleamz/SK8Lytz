@@ -21,6 +21,7 @@ import type { Database } from '../types/supabase';
 export function useCuratedPicks() {
   const [curatedPresets, setCuratedPresets] = useState<IFavoriteState[]>([]);
   const [picksLoading, setPicksLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const CACHE_KEY = `${STORAGE_PREFIX}PicksCache`;
@@ -55,6 +56,7 @@ export function useCuratedPicks() {
 
         if (error) {
           AppLogger.error('[SK8Lytz Picks] Failed to fetch from DB', error instanceof Error ? error.message : String(error));
+          setError(error.message);
           return;
         }
 
@@ -97,6 +99,7 @@ export function useCuratedPicks() {
         }
       } catch (e: unknown) {
         AppLogger.error('[SK8Lytz Picks] Exception fetching from DB', e instanceof Error ? e.message : String(e));
+        setError(e instanceof Error ? e.message : String(e));
       } finally {
         setPicksLoading(false);
       }
@@ -109,5 +112,5 @@ export function useCuratedPicks() {
     });
   }, []);
 
-  return { curatedPresets, picksLoading };
+  return { curatedPresets, picksLoading, error };
 }

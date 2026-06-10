@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from './AppLogger';
 import { supabase } from './supabaseClient';
+import { STORAGE_APP_SETTINGS } from '../constants/storageKeys';
 
 /**
  * Valid known keys for App Settings
@@ -18,7 +19,7 @@ export interface AppSettingsMap {
   [key: string]: any;
 }
 
-const CACHE_KEY = '@sk8lytz_app_settings';
+const CACHE_KEY = STORAGE_APP_SETTINGS;
 
 export const AppSettingsService = {
   /**

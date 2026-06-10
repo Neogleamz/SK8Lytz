@@ -7,7 +7,7 @@
  * Extracted from DockedController.tsx (Phase 3).
  */
 import React, { useCallback } from 'react';
-import { Dimensions, FlatList, Text, View } from 'react-native';
+import { Dimensions, FlatList, Text, View, ActivityIndicator } from 'react-native';
 import { Layout, Spacing, Typography , ThemePalette } from '../../theme/theme';
 import type { IFavoriteState } from '../../types/dashboard.types';
 import PresetCard from './PresetCard';
@@ -25,6 +25,7 @@ interface FavoritesPanelProps {
 const FavoritesPanel = React.memo(({
   favorites,
   curatedPresets,
+  picksLoading,
   onLoadFavorite,
   onEditFavorite,
   isDark,
@@ -94,7 +95,10 @@ const FavoritesPanel = React.memo(({
 
       {/* ── SK8Lytz Picks Section ── */}
       <View style={[localStyles.section, localStyles.picksSection]}>
-        <Text style={[Typography.title, isDark && localStyles.textWhite, localStyles.sectionTitle]}>SK8Lytz Picks</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: Layout.padding }}>
+          <Text style={[Typography.title, isDark && localStyles.textWhite, localStyles.sectionTitle]}>SK8Lytz Picks</Text>
+          {picksLoading && <ActivityIndicator size="small" color={Colors.primary} />}
+        </View>
         <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
           style={localStyles.list}
           horizontal

@@ -153,11 +153,8 @@ export function useStreetMode({
   // user is stationary the value stays the same and no pattern ever gets sent.
   useEffect(() => {
     if (activeMode !== 'STREET') return;
-    // Small delay so the BLE stack settles after the mode switch
-    const t = setTimeout(() => {
-      applyStreetPattern(motionStateRef.current);
-    }, 150);
-    return () => clearTimeout(t);
+    // Rely on BleWriteQueue internal timing instead of a hardcoded delay
+    applyStreetPattern(motionStateRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeMode]);
 

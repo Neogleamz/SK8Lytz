@@ -16,6 +16,8 @@ export function useFavorites() {
   const { user } = useAuth();
   const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
   const [activeFavoriteId, setActiveFavoriteId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [quickPresets, setQuickPresets] = useState<IQuickPreset[]>([
     { name: 'Rainbow', colors: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'], type: 3 },
@@ -37,9 +39,12 @@ export function useFavorites() {
   // Initialize from AsyncStorage and Cloud
   useEffect(() => {
     let localFavorites: IFavoriteState[] = [];
+    setIsLoading(true);
+    setError(null);
 
-    // 1. Fetch Local
-    AsyncStorage.getItem(`${STORAGE_PREFIX}Favorites`).then((saved) => {
+    Promise.all([
+      // 1. Fetch Local
+      AsyncStorage.getItem(`${STORAGE_PREFIX}Favorites`).then(async (saved) => {
       if (saved) {
         try {
           const parsed: IFavoriteState[] = JSON.parse(saved);
@@ -90,9 +95,13 @@ export function useFavorites() {
           AppLogger.warn('[Favorites] Failed to fetch cloud favorites', { error: (err instanceof Error ? err.message : String(err)) });
         }
       };
-      fetchCloudFavs();
+      await fetchCloudFavs();
     }
-    }).catch((err: unknown) => AppLogger.warn('[useFavorites] Favorites read failed', { error: err instanceof Error ? err.message : String(err) }));
+    }).catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      AppLogger.warn('[useFavorites] Favorites read failed', { error: msg });
+      setError(msg);
+    }),
 
     AsyncStorage.getItem(`${STORAGE_PREFIX}QuickPresets`).then((saved) => {
       if (saved) {
@@ -101,7 +110,14 @@ export function useFavorites() {
           if (parsed && parsed.length > 0) setQuickPresets(parsed);
         } catch (e: unknown) { AppLogger.warn('[Favorites] Failed to parse quick presets', { error: (e instanceof Error ? e.message : String(e)) }); }
       }
-    }).catch((err: unknown) => AppLogger.warn('[useFavorites] QuickPresets read failed', { error: err instanceof Error ? err.message : String(err) }));
+    }).catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      AppLogger.warn('[useFavorites] QuickPresets read failed', { error: msg });
+      setError(msg);
+    })
+    ]).finally(() => {
+      setIsLoading(false);
+    });
   }, [user]);
 
   const openFavoritePrompt = useCallback((targetId?: string, defaultName: string = '') => {
@@ -226,6 +242,8 @@ export function useFavorites() {
     closePrompt,
     saveFavorite,
     deleteFavorite,
-    saveQuickPreset
+    saveQuickPreset,
+    isLoading,
+    error
   };
 }

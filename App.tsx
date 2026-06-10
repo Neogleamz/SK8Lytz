@@ -1,7 +1,7 @@
 /* global global, window */
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet, LogBox, AppState, Platform } from 'react-native';
+import { View, StyleSheet, LogBox, AppState, Platform, InteractionManager } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import DashboardScreen from './src/screens/DashboardScreen';
 import AuthScreen from './src/screens/AuthScreen';
@@ -109,9 +109,9 @@ export default function App() {
   useEffect(() => {
     if (fontsLoaded) {
       if (Platform.OS === 'web') {
-        setTimeout(() => {
+        InteractionManager.runAfterInteractions(() => {
           SplashScreen.hideAsync().catch(() => {});
-        }, 150);
+        });
       } else {
         SplashScreen.hideAsync().catch(() => {});
       }

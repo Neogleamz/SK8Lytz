@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../services/supabaseClient';
 import { Spacing } from '../../theme/theme';
-import { STORAGE_DEMO_MODE } from '../../constants/storageKeys';
+import { STORAGE_DEMO_MODE, STORAGE_REMEMBER_CREDS, STORAGE_LAST_EMAIL } from '../../constants/storageKeys';
 
 interface DevSandboxDrawerProps {
   onOfflineMode?: () => void;
@@ -96,8 +96,8 @@ export function DevSandboxDrawer({ onOfflineMode, setErrorMessage }: DevSandboxD
             try {
               await supabase.auth.signOut();
               // Remove auth-specific local keys but preserve theme/settings
-              await AsyncStorage.removeItem('@sk8lytz_remember_creds');
-              await AsyncStorage.removeItem('@sk8lytz_last_email');
+              await AsyncStorage.removeItem(STORAGE_REMEMBER_CREDS);
+              await AsyncStorage.removeItem(STORAGE_LAST_EMAIL);
               setErrorMessage('SOFT NUKE: AUTH WIPED. SETTINGS KEPT.');
             } catch (e: unknown) {
               setErrorMessage('Failed to soft nuke auth: ' + String(e));
