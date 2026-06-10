@@ -27,7 +27,7 @@ export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(({ inpu
     try {
       if (connectedDevices.length === 0) return;
 
-      for (const device of connectedDevices) {
+      await Promise.all(connectedDevices.map(async (device) => {
         const mac = device.id;
         const adapter = adapterMap.get(mac);
 
@@ -46,7 +46,7 @@ export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(({ inpu
                 return true;
               });
               AppLogger.log('DEVICE_DISCOVERED', { context: 'heartbeat_ping_ok', deviceId: mac });
-              continue;
+              return;
             }
           }
           // BanlanX / unknown adapter fallback: RSSI read as a liveness probe
@@ -68,7 +68,7 @@ export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(({ inpu
           // Signal the machine that a heartbeat failed for this specific device.
           sendBack({ type: 'HEARTBEAT_FAIL', deviceId: mac });
         }
-      }
+      }));
     } finally {
       isRunning = false;
     }

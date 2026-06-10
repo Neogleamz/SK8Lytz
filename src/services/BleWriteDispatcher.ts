@@ -144,7 +144,10 @@ async function _executeWriteToDeviceInternal(
     // writeCharacteristicWithoutResponse resolves when the write is SENT, not RECEIVED.
     // Without a gap, device 1's incoming GATT notification collides with device 2's
     // in-flight write, causing a buffer overflow → organic disconnect → auto-recovery cascade.
-    for (const device of liveTargets) {
+    await Promise.all(liveTargets.map(async (device, index) => {
+      if (index > 0) {
+        await new Promise(res => setTimeout(res, index * BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
+      }
       const deviceAdapter = resolveProtocolForDevice(device.id, adapterMap);
       try {
         await device.writeCharacteristicWithoutResponseForService(
@@ -156,8 +159,7 @@ async function _executeWriteToDeviceInternal(
         AppLogger.warn(`[BLE] Write failed for ${device.id}`, writeError instanceof Error ? writeError.message : String(writeError));
         allSucceeded = false;
       }
-      await new Promise(res => setTimeout(res, BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
-    }
+    }));
 
     if (skippedGhosted > 0 && allSucceeded) return 'partial';
     return allSucceeded;
@@ -205,8 +207,11 @@ export async function executeWriteChunked(
   await enqueueWrite('bulk', async () => {
     for (const chunk of chunks) {
       const b64 = Buffer.from(chunk).toString('base64');
-      for (const device of targets) {
-        if (ghostedDeviceIds.includes(device.id)) continue;
+      const liveTargetsChunk = targets.filter(d => !ghostedDeviceIds.includes(d.id));
+      await Promise.all(liveTargetsChunk.map(async (device, index) => {
+        if (index > 0) {
+          await new Promise(res => setTimeout(res, index * BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
+        }
         const deviceAdapter = resolveProtocolForDevice(device.id, adapterMap);
         try {
           await device.writeCharacteristicWithoutResponseForService(
@@ -215,8 +220,7 @@ export async function executeWriteChunked(
         } catch (e: unknown) {
           AppLogger.warn(`[BLE] writeChunked chunk failed for ${device.id}`, { error: e instanceof Error ? e.message : String(e)  });
         }
-        await new Promise(res => setTimeout(res, BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
-      }
+      }));
       await new Promise(resolve => setTimeout(resolve, BLE_TIMING.WRITE_CHUNK_INTER_GAP_MS));
     }
     await new Promise(resolve => setTimeout(resolve, BLE_TIMING.WRITE_CHUNK_FINAL_SETTLE_MS));
