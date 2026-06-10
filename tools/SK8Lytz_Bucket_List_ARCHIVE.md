@@ -1363,3 +1363,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "Bare re-throw — rejected, crashes the caller instead of gracefully logging."
   - **Plan:** 📎 [PLAN-exception-masking-sweep.md](docs/plans/PLAN-exception-masking-sweep.md)
   - **Source of Truth:** 📖 `src/protocols/ZenggeProtocol.ts:18,192,393` · `src/protocols/BanlanxAdapter.ts:95` · `src/context/SessionContext.tsx:366,399`
+
+- [x] **chore/promise-safety-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🤖 PRO-HIGH]` `[BATCH:deepdive-sweep]` `[WAVE:2]`
+  - **Goal:** Add try/catch and `.catch()` handlers to 23 async operations across 13 files — including the hardware wizard flow, session context notification setup, AdminTelemetry export, and all AsyncStorage fire-and-forget calls.
+  - **Decision Log (2026-06-10):** Fleet confirmed `HardwareSetupWizardScreen.tsx:64,601` has async flows with no catch — any BLE rejection silently crashes the wizard. `setupNotification()` is called fire-and-forget with internal awaits. `PushTokenService` makes two Supabase writes with zero error handling.
+  - **Analysis:** 📊 Source: `artifacts/system_audit_report.md` · CLUSTER-02 (23 findings, R-11)
+    Key finding: "8 HIGH severity unhandled rejections in wizard, session, and telemetry flows — crash risk on BLE/network failure."
+    Rejected alternative: "Global unhandledRejection handler — rejected, masks root causes and violates surgical principle."
+  - **Plan:** 📎 [PLAN-promise-safety-sweep.md](docs/plans/PLAN-promise-safety-sweep.md)
+  - **Source of Truth:** 📖 `src/screens/Onboarding/HardwareSetupWizardScreen.tsx:64,601` · `src/context/SessionContext.tsx:240` · `src/hooks/useAdminTelemetry.ts:49,55` · `src/services/PushTokenService.ts:22,36`

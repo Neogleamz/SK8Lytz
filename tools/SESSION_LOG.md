@@ -1682,3 +1682,12 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Wave 2 status:** UNLOCKED â€” promise-safety-sweep ready to start
 **FRICTION-029:** Blast radius scanner false-positived 2x on ZenggeProtocol.ts catch-block edits. Filed. Monitoring for 3rd occurrence before proposing scanner fix.
 **Key advisory for Wave 2-6:** DockedController.tsx (65.6KB/50 hooks) hook zone strictly off-limits. Safe zones: JSX lines 900+. DashboardScreen.tsx safe for leaf/JSX edits only.
+
+### [MERGE] 2026-06-10T21:20 — chore/promise-safety-sweep ? master @ dc743149
+**What merged:** 
+- Completed Wave 2 of the deepdive-sweep batch.
+- Wrapped unhandled promises in try/catch and .catch() across async task targets.
+- Fixed AppLogger.warn signature mismatch in SessionContext.tsx.
+- Handled ScenesService.publishScene safely inside QuickPresetModal.tsx.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/context/SessionContext.tsx, src/components/docked/QuickPresetModal.tsx
