@@ -1245,4 +1245,54 @@ pm run verify which includes QA tests.
     Key finding: "Local grep and file parsing provide zero-dependency signals for regression detection."
     Rejected alternative: "N/A"
   - **Source of Truth:** 📖 `self_healing_audit_system.md` §3 (Sources 7-12)
-  - **Details:** Zero external dependencies. Wraps `grep -rn "console.error" src/` avoiding `__DEV__` lines.
+  - **Details:** Zero external dependencies. Wraps `grep -rn "console.error" src/` avoiding `__DEV__` lines.
+
+- [x] **feat/observatory-build-collectors** 🚀 Merged in 22e1907d01b97e4c507a92cad74c208228ccf665
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[TELEMETRY]` `[✅ L-RISK]` `[🍱 Meal]` `[🤖 MODEL]` `[BATCH:observatory-pipeline]`
+  - **Goal:** Build the build-time collectors for Jest, TSC, and Web Console errors (Sources 3-5).
+  - **Decision Log:** Unit test failures and TSC compilation errors must be auto-triaged just like production errors.
+  - **Analysis:** 📊 Source: [self_healing_audit_system.md](../../C:/Users/Magma/.gemini/antigravity/brain/28213fdb-ce7c-4291-859e-45b22a1df8e4/self_healing_audit_system.md) · Plan: [PLAN-observatory-pipeline.md#task-a3](docs/plans/PLAN-observatory-pipeline.md)
+    Key finding: "Build pipeline errors provide high-confidence signals with exact file:line references."
+    Rejected alternative: "Manual test verification — rejected to enforce auto-triage of regressions."
+  - **Source of Truth:** 📖 `self_healing_audit_system.md` §3 (Sources 3-5)
+  - **Details:** Must parse JSON outputs from Jest and map TSC stdout to the Unified schema.
+
+- [x] **feat/observatory-report-generator** 🚀 Merged in 22e1907d01b97e4c507a92cad74c208228ccf665
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[TELEMETRY]` `[✅ L-RISK]` `[🍱 Meal]` `[🤖 MODEL]` `[BATCH:observatory-pipeline]`
+  - **Goal:** Generate the daily markdown triage report for user review.
+  - **Decision Log:** Tasks require human approval. The report is the presentation layer for the user's "Ship it" gate.
+  - **Analysis:** 📊 Source: [self_healing_audit_system.md](../../C:/Users/Magma/.gemini/antigravity/brain/28213fdb-ce7c-4291-859e-45b22a1df8e4/self_healing_audit_system.md) · Plan: [PLAN-observatory-pipeline.md#task-d2](docs/plans/PLAN-observatory-pipeline.md)
+    Key finding: "Report must sort by max urgency score to focus attention on CRITICAL and HIGH items."
+    Rejected alternative: "N/A"
+  - **Source of Truth:** 📖 `self_healing_audit_system.md` §8
+  - **Details:** Writes to `tools/observatory/reports/YYYY-MM-DD/report.md`.
+
+- [x] **feat/observatory-workflow** 🚀 Merged in 22e1907d01b97e4c507a92cad74c208228ccf665
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 MODEL]` `[BATCH:observatory-pipeline]`
+  - **Goal:** Write the `/self-heal` markdown workflow and deprecate `/audit-codebase`.
+  - **Decision Log:** This brings the system to life, tying River, Blake, Reyes, Jordan, and Alex into a unified 5-phase execution map.
+  - **Analysis:** 📊 Source: [self_healing_audit_system.md](../../C:/Users/Magma/.gemini/antigravity/brain/28213fdb-ce7c-4291-859e-45b22a1df8e4/self_healing_audit_system.md) · Plan: [PLAN-observatory-pipeline.md#task-e1](docs/plans/PLAN-observatory-pipeline.md)
+    Key finding: "A dedicated workflow file ensures consistent execution and persona handoffs."
+    Rejected alternative: "Keeping audit-codebase — rejected per user decision C to consolidate."
+  - **Source of Truth:** 📖 `self_healing_audit_system.md` §8, §10.4
+  - **Details:** Must include the Step 0 institutional memory check. Deprecates `audit-codebase.md`.
+
+- [x] **feat/observatory-auto-heal-library** 🚀 Merged in 22e1907d01b97e4c507a92cad74c208228ccf665
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[CORE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 MODEL]` `[BATCH:observatory-pipeline]`
+  - **Goal:** Implement the AH-001 through AH-009 auto-heal pattern library.
+  - **Decision Log:** We must automate fixes for known, low-risk, repetitive errors to free up human cycles.
+  - **Analysis:** 📊 Source: [self_healing_audit_system.md](../../C:/Users/Magma/.gemini/antigravity/brain/28213fdb-ce7c-4291-859e-45b22a1df8e4/self_healing_audit_system.md) · Plan: [PLAN-observatory-pipeline.md#task-e2](docs/plans/PLAN-observatory-pipeline.md)
+    Key finding: "Auto-heals must NEVER apply to BLE or CORE domains."
+    Rejected alternative: "Auto-committing patches — rejected; user must approve all proposals."
+  - **Source of Truth:** 📖 `self_healing_audit_system.md` §7
+  - **Details:** Flags tasks with `[🔧 AUTO-HEAL PROPOSED]`.
+
+- [x] **feat/observatory-tests** 🚀 Merged in 22e1907d01b97e4c507a92cad74c208228ccf665
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[TELEMETRY]` `[✅ L-RISK]` `[🍱 Meal]` `[🤖 MODEL]` `[BATCH:observatory-pipeline]`
+  - **Goal:** Write Jest unit tests for the collection, dedup, scoring, and task generation engines.
+  - **Decision Log:** The observatory is critical infrastructure and must be protected by the `npm run verify` pipeline.
+  - **Analysis:** 📊 Source: [self_healing_audit_system.md](../../C:/Users/Magma/.gemini/antigravity/brain/28213fdb-ce7c-4291-859e-45b22a1df8e4/self_healing_audit_system.md) · Plan: [PLAN-observatory-pipeline.md#task-f1](docs/plans/PLAN-observatory-pipeline.md)
+    Key finding: "Test coverage ensures dedup and scoring logic remains stable."
+    Rejected alternative: "N/A"
+  - **Source of Truth:** 📖 `self_healing_audit_system.md` §11
+  - **Details:** Add at least 3 test suites (`dedup.test.js`, `scoring.test.js`, `task_generator.test.js`).

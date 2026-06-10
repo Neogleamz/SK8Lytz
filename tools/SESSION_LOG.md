@@ -1626,3 +1626,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - observatory-pipeline-batch (Part 1): Implemented UnifiedErrorRecord schema and BaseCollector class. Added 6 local file-parsing collectors (naked_errors, known_issues, friction_events, etc.).
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/components/ErrorCard.tsx, src/components/EmptyState.tsx, src/components/admin/tools/*.tsx, src/components/crew/*.tsx, tools/observatory/schema/UnifiedErrorRecord.ts, tools/observatory/collectors/*.mjs
+### [MERGE] 2026-06-10T13:00 — Wave 6 Sweep Batches ? master @ 22e1907d01b97e4c507a92cad74c208228ccf665
+**What merged:** 
+- observatory-pipeline-batch (Part 2): Implemented build collectors, report generator, self-heal workflow, auto-heal library, and tests for the Self-Healing Observatory pipeline.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** tools/observatory/collectors/*.mjs, tools/observatory/core/*.ts, tools/observatory/reports/*.md, .agents/workflows/self-heal.md
