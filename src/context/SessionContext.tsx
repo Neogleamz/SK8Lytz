@@ -421,10 +421,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return notifee.onForegroundEvent(({ type, detail }) => {
       if (type === EventType.ACTION_PRESS && detail.pressAction?.id === 'end-session') {
         AppLogger.log('APP_LOG', { event: 'end_session_from_notification' });
-        endSession();
+        endSessionRef.current();
       }
     });
-  }, [endSession]);
+  }, []);
 
 
 
