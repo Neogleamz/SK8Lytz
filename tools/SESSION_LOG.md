@@ -1606,3 +1606,10 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - pii-scrub-sweep-batch: Added PII scrubber to AppLogger VIP fast-lane.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** RecoveryService.ts, HeartbeatService.ts, useHardwareNotifications.ts, useBLEScanner.ts, AppLogger.ts
+### [MERGE] 2026-06-10T12:33 — Wave 3 Sweep Batches ? master @ 882704065b83f7807014ba20d8d185b995627f87
+**What merged:** 
+- le-timing-sweep-batch: Extracted magic numbers in Sk8LytzProgrammer to tunable constants, updated useCrewSession.ts.
+- promise-io-safety-sweep-batch: Added explicit catch blocks to critical unhandled promises.
+- 	ype-safety-sweep-batch: Removed s any type laundering across 28 files and added strict type checks.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/constants/bleTimingConstants.ts, Sk8LytzProgrammer.tsx, useDashboardCrew.ts, AppLogger.ts, SessionContext.tsx, ThemeContext.tsx, QuickPresetModal.tsx, useFavorites.ts, etc. (30+ files)
