@@ -130,6 +130,8 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
     );
   }, []);
 
+  const keyExtractorTemplate = useCallback((item: SK8LytzTemplate) => item.id.toString(), []);
+
   return (
     <View style={{ flex: 1 }}>
       {/* Horizontal Category Wheel */}
@@ -152,7 +154,7 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
 
       <FlatList removeClippedSubviews={true}
         data={filteredTemplates}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={keyExtractorTemplate}
         numColumns={2}
         style={{ flex: 1 }}
         contentContainerStyle={{

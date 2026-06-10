@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -72,7 +72,7 @@ export function AdminRosterPanel({
     }
   }, [visible]);
 
-  const handleRevokeAdmin = (userId: string, username: string | null) => {
+  const handleRevokeAdmin = useCallback((userId: string, username: string | null) => {
     Alert.alert(
       'Revoke Admin Privileges',
       `Are you sure you want to demote ${username || 'this user'} to a regular user?`,
@@ -97,9 +97,9 @@ export function AdminRosterPanel({
         },
       ]
     );
-  };
+  }, [fetchAdmins]);
 
-  const renderItem = ({ item }: { item: AdminProfile }) => {
+  const renderItem = useCallback(({ item }: { item: AdminProfile }) => {
     return (
       <View style={[styles.userCard, { backgroundColor: cardBg, borderColor }]}>
         <View style={styles.cardHeader}>
@@ -122,7 +122,7 @@ export function AdminRosterPanel({
         </View>
       </View>
     );
-  };
+  }, [textPrimary, textMuted, cardBg, borderColor, handleRevokeAdmin]);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>

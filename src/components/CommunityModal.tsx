@@ -217,6 +217,8 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
     );
   }, [activeTab, processingId]);
 
+  const keyExtractorScene = useCallback((item: ICloudScene) => item.id, []);
+
   return (
     <Modal visible={isVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <SafeAreaView style={styles.container}>
@@ -269,7 +271,7 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
         ) : (
           <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={scenes}
-            keyExtractor={(item) => item.id}
+            keyExtractor={keyExtractorScene}
             renderItem={renderItem}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}

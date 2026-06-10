@@ -91,6 +91,8 @@ export const GradientLibraryTab: React.FC<GradientLibraryTabProps> = ({ Colors, 
     );
   }, [onApplyGradient, onOpenBuilder]);
 
+  const keyExtractorGradient = useCallback((item: CustomBuilderPreset) => item.id.toString(), []);
+
   return (
     <View style={styles.container}>
       {/* Create button */}
@@ -124,7 +126,7 @@ export const GradientLibraryTab: React.FC<GradientLibraryTabProps> = ({ Colors, 
       ) : (
         <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
           data={gradients}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={keyExtractorGradient}
           numColumns={2}
           style={styles.listContainer}
           contentContainerStyle={{

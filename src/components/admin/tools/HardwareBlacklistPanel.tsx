@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -135,7 +135,7 @@ export function HardwareBlacklistPanel({
     );
   };
 
-  const renderItem = ({ item }: { item: BlacklistedDevice }) => {
+  const renderItem = useCallback(({ item }: { item: BlacklistedDevice }) => {
     return (
       <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
         <View style={styles.cardHeader}>
@@ -162,7 +162,7 @@ export function HardwareBlacklistPanel({
         </View>
       </View>
     );
-  };
+  }, [textPrimary, textMuted, cardBg, borderColor, handleRemove]);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>

@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -113,7 +113,7 @@ export function AdminAuditLogViewer({
     return '#00f0ff';
   };
 
-  const renderItem = ({ item }: { item: AuditLogEntry }) => {
+  const renderItem = useCallback(({ item }: { item: AuditLogEntry }) => {
     const adminName = profiles[item.admin_id] || item.admin_id.substring(0, 8);
     const targetName = item.target_user_id ? (profiles[item.target_user_id] || item.target_user_id.substring(0, 8)) : null;
 
@@ -141,7 +141,7 @@ export function AdminAuditLogViewer({
         </View>
       </View>
     );
-  };
+  }, [profiles, textPrimary, textMuted, getActionColor, borderColor, cardBg]);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>

@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -241,7 +241,7 @@ export function UserManagementPanel({
     );
   });
 
-  const renderItem = ({ item }: { item: AdminUserProfile }) => {
+  const renderItem = useCallback(({ item }: { item: AdminUserProfile }) => {
     const isBanned = item.is_banned;
     return (
       <View style={[styles.userCard, { backgroundColor: cardBg, borderColor }]}>
@@ -300,7 +300,7 @@ export function UserManagementPanel({
         </View>
       </View>
     );
-  };
+  }, [textPrimary, textMuted, cardBg, borderColor, handleBan, handleRevokeBan, handleResetPassword, handleRevokeSessions, handleExportData, handleSoftDelete]);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>

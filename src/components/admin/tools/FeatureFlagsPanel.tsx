@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -145,7 +145,7 @@ export function FeatureFlagsPanel({
     );
   };
 
-  const renderItem = ({ item }: { item: FeatureFlag }) => {
+  const renderItem = useCallback(({ item }: { item: FeatureFlag }) => {
     const isGlobal = !item.target_user_id;
     return (
       <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
@@ -158,10 +158,10 @@ export function FeatureFlagsPanel({
               {isGlobal ? 'GLOBAL TARGET' : `USER: ${item.target_user_id}`}
             </Text>
           </View>
-          <Switch 
-            value={item.is_enabled} 
-            onValueChange={() => handleToggle(item.id, item.is_enabled)} 
-            trackColor={{ false: '#444', true: '#00f0ff' }} 
+          <Switch
+            value={item.is_enabled}
+            onValueChange={() => handleToggle(item.id, item.is_enabled)}
+            trackColor={{ false: '#444', true: '#00f0ff' }}
           />
         </View>
 
@@ -173,7 +173,7 @@ export function FeatureFlagsPanel({
         </View>
       </View>
     );
-  };
+  }, [textPrimary, textMuted, cardBg, borderColor, handleToggle, handleRemove]);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>

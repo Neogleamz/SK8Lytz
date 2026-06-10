@@ -6,7 +6,7 @@
  *
  * Extracted from DockedController.tsx (Phase 3).
  */
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Dimensions, FlatList, Text, View } from 'react-native';
 import { Layout, Spacing, Typography , ThemePalette } from '../../theme/theme';
 import type { IFavoriteState } from '../../types/dashboard.types';
@@ -33,9 +33,18 @@ const FavoritesPanel = React.memo(({
   const cardWidth = (Dimensions.get('window').width - (Layout.padding * 2)) / 3.5;
   const localStyles = React.useMemo(() => createStyles(Colors), [Colors]);
 
-  const emptyPlaceholder = React.useCallback((keyPrefix: string) => (
+  const emptyPlaceholder = React.useCallback((_keyPrefix: string) => (
     <View style={[localStyles.presetCard, localStyles.emptyPlaceholder, { width: cardWidth }]} />
   ), [localStyles, cardWidth]);
+
+  const keyExtractorYours = useCallback(
+    (item: IFavoriteState, index: number) => (item ? item.id : `empty-yours-${index}`),
+    []
+  );
+  const keyExtractorPicks = useCallback(
+    (item: IFavoriteState, index: number) => (item ? item.id : `empty-picks-${index}`),
+    []
+  );
 
   const renderYoursItem = React.useCallback(({ item: fav }: { item: IFavoriteState }) => {
     if (!fav) return emptyPlaceholder('yours');
@@ -77,7 +86,7 @@ const FavoritesPanel = React.memo(({
           horizontal
           showsHorizontalScrollIndicator={false}
           data={favorites.length > 0 ? favorites : [null as unknown as IFavoriteState]}
-          keyExtractor={(item, index) => item ? item.id : `empty-yours-${index}`}
+          keyExtractor={keyExtractorYours}
           contentContainerStyle={localStyles.listContent}
           renderItem={renderYoursItem}
         />
@@ -91,7 +100,7 @@ const FavoritesPanel = React.memo(({
           horizontal
           showsHorizontalScrollIndicator={false}
           data={curatedPresets.length > 0 ? curatedPresets : [null as unknown as IFavoriteState]}
-          keyExtractor={(item, index) => item ? item.id : `empty-picks-${index}`}
+          keyExtractor={keyExtractorPicks}
           contentContainerStyle={localStyles.listContent}
           renderItem={renderPicksItem}
         />

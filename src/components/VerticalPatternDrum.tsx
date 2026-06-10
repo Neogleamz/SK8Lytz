@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, NativeScrollEvent, NativeSyntheticEvent, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Spacing , ThemePalette } from '../theme/theme';
@@ -40,6 +40,7 @@ const VerticalPatternDrum = ({
     }
   };
 
+
   const padCount = Math.max(1, Math.floor((layoutHeight / ITEM_HEIGHT) / 2));
 
   // Pure pattern data array. No layout dependencies ensure stable reference hooks.
@@ -66,6 +67,30 @@ const VerticalPatternDrum = ({
       animated 
     });
   };
+
+  const keyExtractor = useCallback((item: { id: string }) => item.id, []);
+
+  const renderItem = useCallback(({ item }: { item: { type: string; id: string; val: number; rep: number } }) => {
+    const itemVal = item.val;
+    const isSelected = itemVal === localVal;
+
+    return (
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => {
+          commitValue(itemVal);
+          scrollToValue(itemVal, true);
+        }}
+        style={[styles.itemContainer, { height: ITEM_HEIGHT }]}
+      >
+        <View style={[styles.itemTextWrapper, isSelected && styles.selectedItemWrapper]}>
+          <Text style={[styles.itemLabel, isSelected && styles.selectedItemLabel]} numberOfLines={1}>
+            {itemLabel ? itemLabel(itemVal) : `Pattern ${itemVal}`}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [localVal, commitValue, scrollToValue, itemLabel, styles]);
 
   useEffect(() => {
     if (value !== localVal) {
@@ -98,7 +123,7 @@ const VerticalPatternDrum = ({
              <FlatList removeClippedSubviews={true}
                ref={flatListRef}
                data={items}
-               keyExtractor={(item) => item.id}
+               keyExtractor={keyExtractor}
                showsVerticalScrollIndicator={false}
                snapToInterval={ITEM_HEIGHT}
                snapToAlignment="start"
@@ -113,27 +138,7 @@ const VerticalPatternDrum = ({
                ListHeaderComponent={<View style={{ height: padCount * ITEM_HEIGHT }} />}
                ListFooterComponent={<View style={{ height: padCount * ITEM_HEIGHT }} />}
                getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
-               renderItem={({ item }) => {
-                 const itemVal = (item as unknown as { val: number }).val;
-                 const isSelected = itemVal === localVal;
-                 
-                 return (
-                   <TouchableOpacity 
-                     activeOpacity={0.9} 
-                     onPress={() => {
-                       commitValue(itemVal);
-                       scrollToValue(itemVal, true);
-                     }}
-                     style={[styles.itemContainer, { height: ITEM_HEIGHT }]}
-                   >
-                     <View style={[styles.itemTextWrapper, isSelected && styles.selectedItemWrapper]}>
-                       <Text style={[styles.itemLabel, isSelected && styles.selectedItemLabel]} numberOfLines={1}>
-                         {itemLabel ? itemLabel(itemVal) : `Pattern ${itemVal}`}
-                       </Text>
-                     </View>
-                   </TouchableOpacity>
-                 );
-               }}
+               renderItem={renderItem}
              />
              
              {/* Shadow gradients for 3D fading effect */}
