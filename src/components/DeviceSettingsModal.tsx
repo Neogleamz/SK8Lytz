@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { useProtocolDispatch } from '../hooks/useProtocolDispatch';
@@ -8,6 +8,18 @@ import { Colors, Spacing, Typography } from '../theme/theme';
 import { getDefaultGroupName } from '../utils/NamingUtils';
 
 import { DeviceSettings } from '../types/dashboard.types';
+
+type ProbeStatus = 'idle' | 'connecting' | 'reading' | 'writing' | 'disconnecting' | 'complete' | 'error';
+
+const probeStatusLabel: Record<ProbeStatus, string> = {
+  idle: 'PROBE',
+  connecting: 'Connecting...',
+  reading: 'Reading...',
+  writing: 'Writing...',
+  disconnecting: 'Disconnecting...',
+  complete: 'Done',
+  error: 'Error'
+};
 
 
 interface DeviceSettingsModalProps {
@@ -50,7 +62,9 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
     initialSettings.rfMode || 'ALLOW_PAIRED'
   );
   const [rfRemotes, setRfRemotes] = useState<string[]>(initialSettings.rfRemotes || []);
-  const [isProbing, setIsProbing] = useState(false);
+  const [probeStatus, setProbeStatus] = useState<ProbeStatus>('idle');
+
+  const isProbing = probeStatus !== 'idle' && probeStatus !== 'complete' && probeStatus !== 'error';
 
 
   // Derived values
@@ -78,7 +92,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
       
       // Data arrived, stop probing spinner
       if (isProbing && initialSettings.provenance !== 'UNCONFIGURED') {
-        setIsProbing(false);
+        setProbeStatus('complete');
       }
     }
   }, [initialSettings.points, initialSettings.segments, initialSettings.sorting, initialSettings.stripType, initialSettings.rfMode, initialSettings.rfRemotes, initialSettings.provenance]);
@@ -96,7 +110,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
       setSorting(initialSettings.sorting || null);
       setRfMode(initialSettings.rfMode || 'ALLOW_PAIRED');
       setRfRemotes(initialSettings.rfRemotes || []);
-      setIsProbing(false);
+      setProbeStatus('idle');
     }
   }, [isVisible]);
 
@@ -193,14 +207,14 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
 
   const handleProbeHardware = () => {
     if (writeToDevice) {
-      setIsProbing(true);
+      setProbeStatus('connecting');
       dispatch.queryHardwareSettings(false, deviceId);
       // Fallback timeout in case the device doesn't respond
       setTimeout(() => {
-        setIsProbing(prev => {
-          if (prev) {
+        setProbeStatus(prev => {
+          if (prev !== 'idle' && prev !== 'complete' && prev !== 'error') {
              Alert.alert("Probe Timeout", "Device didn't respond to hardware query. Make sure it's nearby and connected.");
-             return false;
+             return 'error';
           }
           return prev;
         });
@@ -242,12 +256,13 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
             </View>
             {initialSettings.provenance === 'UNCONFIGURED' && writeToDevice && (
                <TouchableOpacity 
-                  style={[styles.probeBtn, isProbing && { opacity: 0.5 }]} 
+                  style={[styles.probeBtn, isProbing && { opacity: 0.5, flexDirection: 'row', alignItems: 'center', gap: 6 }]} 
                   onPress={handleProbeHardware}
                   disabled={isProbing}
                >
+                 {isProbing && <ActivityIndicator size="small" color="#fff" />}
                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: 'bold' }}>
-                   {isProbing ? 'Probing...' : 'PROBE'}
+                   {isProbing ? probeStatusLabel[probeStatus] : 'PROBE'}
                  </Text>
                </TouchableOpacity>
             )}
