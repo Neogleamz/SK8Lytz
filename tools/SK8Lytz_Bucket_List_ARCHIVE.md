@@ -1403,3 +1403,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "Accept the Location permission — rejected, violates user trust and App Store privacy guidelines."
   - **Plan:** 📎 [PLAN-misc-guardrail-sweep.md](docs/plans/PLAN-misc-guardrail-sweep.md)
   - **Source of Truth:** 📖 `android/app/src/main/AndroidManifest.xml:8` · `src/services/DeviceRepository.ts:793` · `src/hooks/useDashboardCrew.ts:70` · `artifacts/system_audit_report.md CLUSTER-09`
+
+- [x] **chore/type-safety-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[CORE]` `[⚠️ M-RISK]` `[🥩 Feast]` `[🤖 PRO-HIGH]` `[BATCH:deepdive-sweep]` `[WAVE:6]`
+  - **Goal:** Eliminate 48 `any` casts and `as unknown as` type laundering patterns across 36 files. Highest concentration in hooks, dashboard components, admin tools, and crew screens.
+  - **Decision Log (2026-06-10):** Fleet flagged 30 HIGH severity `any` usages. `useHardwareNotifications.ts` alone has 4. `supabaseClient.ts:78` uses `as unknown as` to bypass the mock type — must implement the interface properly. `CrewCreateScreen.tsx:122` uses `(s: any)` on a spot filter with a known `SkateSpot` type available.
+  - **Analysis:** 📊 Source: `artifacts/system_audit_report.md` · CLUSTER-01 (48 findings, R-08)
+    Key finding: "36 files affected — this is the widest surface area finding in the entire audit."
+    Rejected alternative: "Suppress with @ts-ignore — strictly forbidden per No `any` Cast Law in agent-behavior.md."
+  - **Plan:** 📎 [PLAN-type-safety-sweep.md](docs/plans/PLAN-type-safety-sweep.md)
+  - **Source of Truth:** 📖 `src/types/supabase.ts` · `src/hooks/useHardwareNotifications.ts` · `src/components/crew/CrewCreateScreen.tsx:122` · `artifacts/system_audit_report.md CLUSTER-01`

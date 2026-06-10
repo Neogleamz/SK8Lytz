@@ -1713,3 +1713,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Fixed various guardrails including R-20 OS variance, R-21 Split brain, R-22 memory leaks, and R-17 event listener leaks.
 **Verify result:** TSC u{2705}, Jest u{2705}, gates u{2705}
 **Files touched:** src/hooks/useControllerDispatch.ts, src/hooks/useDeviceStateLedger.ts, src/components/DockedController.tsx, src/hooks/__tests__/*, etc.
+
+### [MERGE] 2026-06-10T17:08 - type-safety-sweep -> master @ f207ba76
+**What merged:** Fixed remaining `any` casts in dashboard components and hooks, completing Wave 6 of the type-safety sweep.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** DashboardScreen.tsx, useDashboardController.tsx, useHardwareNotifications.ts, RegisteredFleetSlab.tsx, MySkatesSlab.tsx, SkateGroupCard.tsx, DashboardTelemetryHero.tsx, useControllerDispatch.ts, DockedController.tsx, useDockedControllerState.ts
