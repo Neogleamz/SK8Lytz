@@ -1599,3 +1599,10 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 
 
 
+### [MERGE] 2026-06-10T12:20 — Wave 2 Sweep Batches ? master @ 1864e5e27d33e5003df0533087841b225515f28b
+**What merged:** 
+- error-handling-sweep-batch: Implemented ble recovery backoff jitter, max attempts cap, and heartbeat gatt guard.
+- memory-leak-sweep-batch: Fixed memory leaks in hardware notifications, scanner timers, and telemetry global timer.
+- pii-scrub-sweep-batch: Added PII scrubber to AppLogger VIP fast-lane.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** RecoveryService.ts, HeartbeatService.ts, useHardwareNotifications.ts, useBLEScanner.ts, AppLogger.ts
