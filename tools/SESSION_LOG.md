@@ -1599,45 +1599,45 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 
 
 
-### [MERGE] 2026-06-10T12:20 — Wave 2 Sweep Batches ? master @ 1864e5e27d33e5003df0533087841b225515f28b
+### [MERGE] 2026-06-10T12:20 ï¿½ Wave 2 Sweep Batches ? master @ 1864e5e27d33e5003df0533087841b225515f28b
 **What merged:** 
 - error-handling-sweep-batch: Implemented ble recovery backoff jitter, max attempts cap, and heartbeat gatt guard.
 - memory-leak-sweep-batch: Fixed memory leaks in hardware notifications, scanner timers, and telemetry global timer.
 - pii-scrub-sweep-batch: Added PII scrubber to AppLogger VIP fast-lane.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** RecoveryService.ts, HeartbeatService.ts, useHardwareNotifications.ts, useBLEScanner.ts, AppLogger.ts
-### [MERGE] 2026-06-10T12:33 — Wave 3 Sweep Batches ? master @ 882704065b83f7807014ba20d8d185b995627f87
+### [MERGE] 2026-06-10T12:33 ï¿½ Wave 3 Sweep Batches ? master @ 882704065b83f7807014ba20d8d185b995627f87
 **What merged:** 
 - le-timing-sweep-batch: Extracted magic numbers in Sk8LytzProgrammer to tunable constants, updated useCrewSession.ts.
 - promise-io-safety-sweep-batch: Added explicit catch blocks to critical unhandled promises.
 - 	ype-safety-sweep-batch: Removed s any type laundering across 28 files and added strict type checks.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/constants/bleTimingConstants.ts, Sk8LytzProgrammer.tsx, useDashboardCrew.ts, AppLogger.ts, SessionContext.tsx, ThemeContext.tsx, QuickPresetModal.tsx, useFavorites.ts, etc. (30+ files)
-### [MERGE] 2026-06-10T12:42 — Wave 4 Sweep Batches ? master @ 2213d4cc8db8c6b1ae8b21ccef4f23a1b738f83e
+### [MERGE] 2026-06-10T12:42 ï¿½ Wave 4 Sweep Batches ? master @ 2213d4cc8db8c6b1ae8b21ccef4f23a1b738f83e
 **What merged:** 
 - uth-context-bypass-batch: Removed direct supabase.auth.getSession() calls from GroupRepository, accepting userId.
 - device-settings-probe-fsm-batch: Refactored isProbing boolean trap in DeviceSettingsModal to a single ProbeState union.
 - hal-oracle-tab-enclosure-batch: Centralized raw byte array literals in DiagnosticLabOracleTab to ZenggeProtocol factory methods.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/repositories/GroupRepository.ts, src/repositories/DeviceRepository.ts, src/hooks/useDashboardGroups.ts, src/components/DeviceSettingsModal.tsx, src/protocols/ZenggeProtocol.ts, src/screens/admin/DiagnosticLabOracleTab.tsx
-### [MERGE] 2026-06-10T12:53 — Wave 5 & 6 Sweep Batches ? master @ 83feb803e4511fad99933de527feee45d384a3b9
+### [MERGE] 2026-06-10T12:53 ï¿½ Wave 5 & 6 Sweep Batches ? master @ 83feb803e4511fad99933de527feee45d384a3b9
 **What merged:** 
 - ui-state-matrix-batch: Implemented complete 4-state matrix (Loading/Error/Empty/Success) across 9 major UI screens including AdminAuditLogViewer and SkateSpotBottomSheet.
 - observatory-pipeline-batch (Part 1): Implemented UnifiedErrorRecord schema and BaseCollector class. Added 6 local file-parsing collectors (naked_errors, known_issues, friction_events, etc.).
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/components/ErrorCard.tsx, src/components/EmptyState.tsx, src/components/admin/tools/*.tsx, src/components/crew/*.tsx, tools/observatory/schema/UnifiedErrorRecord.ts, tools/observatory/collectors/*.mjs
-### [MERGE] 2026-06-10T13:00 — Wave 6 Sweep Batches ? master @ 22e1907d01b97e4c507a92cad74c208228ccf665
+### [MERGE] 2026-06-10T13:00 ï¿½ Wave 6 Sweep Batches ? master @ 22e1907d01b97e4c507a92cad74c208228ccf665
 **What merged:** 
 - observatory-pipeline-batch (Part 2): Implemented build collectors, report generator, self-heal workflow, auto-heal library, and tests for the Self-Healing Observatory pipeline.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** tools/observatory/collectors/*.mjs, tools/observatory/core/*.ts, tools/observatory/reports/*.md, .agents/workflows/self-heal.md
-### [MERGE] 2026-06-10T17:25 — fix/auth-context-fsm ? master @ 461e16d6f591884c9e0f3ed222f340600c4f704c
+### [MERGE] 2026-06-10T17:25 ï¿½ fix/auth-context-fsm ? master @ 461e16d6f591884c9e0f3ed222f340600c4f704c
 **What merged:** 
 - Refactored AuthContext.tsx to use a strict Finite State Machine (AuthStatus) instead of overlapping booleans (sessionLoaded, isOfflineMode, sessionExpired).
 - Maintained Zero Blast Radius by computing the legacy boolean variables dynamically from the new status state, preventing cascading refactors across 50+ components.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/context/AuthContext.tsx
-### [MERGE] 2026-06-10T12:38 — chore/hardcoded-delay-audit -> master @ ae3bf0f3
+### [MERGE] 2026-06-10T12:38 ï¿½ chore/hardcoded-delay-audit -> master @ ae3bf0f3
 **What merged:** 
 - Migrated physical GATT staggered write delays from nested setTimeout to BleWriteQueue.enqueueDelay.
 - Resolved priority interleaving risks in ConnectService, BlePingService, and InterrogatorService.
@@ -1649,7 +1649,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Rescue and implementation of the Self-Healing Audit System (Observatory) core intelligence engines (dedup, scoring, crossref, task_generator) and telemetry collectors.
 **Verify result:** TSC âœ…, Jest âœ…, gates âœ…
 **Files touched:** tools/observatory/action/*.mjs, tools/observatory/collectors/*.mjs, tools/observatory/__tests__/*.test.js
-### [ARTIFACT] 2026-06-10T18:05 — 21 Cartography Domain Payloads
+### [ARTIFACT] 2026-06-10T18:05 ï¿½ 21 Cartography Domain Payloads
 **Artifacts Generated**: 21 unique _cartography.md markdown files injected into the DeepDive Docs artifact directory.
 **Compilation**: Successfully replaced Section 12 of SK8Lytz_App_Master_Reference.md with the compiled payloads.
 **Graveyard**: Extracted 18 [MOVE_TO_ARCHIVE] tags and deposited them into Section 13.
@@ -1683,7 +1683,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **FRICTION-029:** Blast radius scanner false-positived 2x on ZenggeProtocol.ts catch-block edits. Filed. Monitoring for 3rd occurrence before proposing scanner fix.
 **Key advisory for Wave 2-6:** DockedController.tsx (65.6KB/50 hooks) hook zone strictly off-limits. Safe zones: JSX lines 900+. DashboardScreen.tsx safe for leaf/JSX edits only.
 
-### [MERGE] 2026-06-10T21:20 — chore/promise-safety-sweep ? master @ dc743149
+### [MERGE] 2026-06-10T21:20 ï¿½ chore/promise-safety-sweep ? master @ dc743149
 **What merged:** 
 - Completed Wave 2 of the deepdive-sweep batch.
 - Wrapped unhandled promises in try/catch and .catch() across async task targets.
@@ -1702,14 +1702,14 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC âœ… Jest âœ… All 8 gates âœ…
 **Wave 5 status:** UNLOCKED â€” misc-guardrail-sweep ready to start
 
-### [DECISION] 2026-06-10T21:50 — Misc Guardrail Fixes & R-27 Context Consumer Depth
+### [DECISION] 2026-06-10T21:50 ï¿½ Misc Guardrail Fixes & R-27 Context Consumer Depth
 **Decision:** All guardrails (R-09, R-12, R-17, R-20, R-21, R-22, R-26) have been successfully mitigated. For R-27, evaluating the depth of DashboardScreen and DockedController context consumers against the Hard Rules.
 **Rejected:** Refactoring DashboardScreen hooks or extracting more contexts from DockedController.
 **Don't re-derive:** The user explicitly placed Hard Rules forbidding the modification of hook declarations in DashboardScreen.tsx and the DockedController.tsx hook zone to prevent monolith fragmentation bugs. Additionally, useDashboardController.tsx already acts as the composite context aggregator for the controller.
 **Source:** PLAN-misc-guardrail-sweep.md:51
 
 
-### [MERGE] 2026-06-10T21:54 — misc-guardrail-sweep -> master @ 2a682c5b
+### [MERGE] 2026-06-10T21:54 ï¿½ misc-guardrail-sweep -> master @ 2a682c5b
 **What merged:** Fixed various guardrails including R-20 OS variance, R-21 Split brain, R-22 memory leaks, and R-17 event listener leaks.
 **Verify result:** TSC u{2705}, Jest u{2705}, gates u{2705}
 **Files touched:** src/hooks/useControllerDispatch.ts, src/hooks/useDeviceStateLedger.ts, src/components/DockedController.tsx, src/hooks/__tests__/*, etc.
@@ -1718,3 +1718,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What merged:** Fixed remaining `any` casts in dashboard components and hooks, completing Wave 6 of the type-safety sweep.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** DashboardScreen.tsx, useDashboardController.tsx, useHardwareNotifications.ts, RegisteredFleetSlab.tsx, MySkatesSlab.tsx, SkateGroupCard.tsx, DashboardTelemetryHero.tsx, useControllerDispatch.ts, DockedController.tsx, useDockedControllerState.ts
+
+### [MERGE] 2026-06-10T23:11 â€” cartography-docs -> master @ e030a10a
+**What merged:** Deep-Dive Cartography (21 Domains)
+- Injected architecture profiles, blast radiuses, sequence diagrams, and OS variance matrices for all 21 system domains into SK8Lytz_App_Master_Reference.md.
+**Verify result:** TSC âœ…, Jest âœ…, gates âœ…
+**Files touched:** tools/SK8Lytz_App_Master_Reference.md
