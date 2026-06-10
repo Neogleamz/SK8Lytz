@@ -1,4 +1,20 @@
-﻿### [MERGE] 2026-06-10T08:38 — ble-p8-organic-fix → master @ 2276ac8a
+﻿### [MERGE] 2026-06-10T09:00 — ble-master-ref-sync → master @ c8f221af
+**What merged:**
+- docs(master-ref): Fix VS-003 parity violation — Master Reference BLE section fully updated to XState pipeline
+- §3 BLE Stability Constraints: items 1+2 now describe BleMachine (XState) + BleWriteQueue (priority tiers), not deleted BleStateMachine/GattMutex
+- §3 Auto-Recovery System: rewritten for RecoveryService XState fromCallback actor, organic disconnect dual-callback pattern documented
+- §3 Connection Health Heartbeat: rewritten for HeartbeatService XState fromCallback actor
+- §3 iOS/Android Platform Guards: file refs corrected to ConnectService.ts + BleMachine.ts
+- §4 BLE Engine Domain: rebuilt with XState Actor table + Hook-Level Services table + DELETED CAUTION block
+- §4 DDA intro + File Manifest: stale hook entries strikethrough'd with migration notes
+**Verify result:** TSC clean, Jest 116/116 PASS, all gates green
+**Files touched:** tools/SK8Lytz_App_Master_Reference.md
+
+### [DECISION] 2026-06-10T09:00 — Double-lock memory strategy for BLE architecture
+**Decision:** Update Master Reference surgically NOW (done), then run /deepdive-docs + /deepdive-code-hunt AFTER ble-test-hardening batch completes as a second ground-truth verification pass.
+**Don't re-derive:** The deepdive fleet does NOT replace the surgical update — it supplements it. The fleet catches what we missed; the surgical update catches what the fleet might misinterpret from deleted files still in git history.
+**Source:** Session decision, no single file
+### [MERGE] 2026-06-10T08:38 — ble-p8-organic-fix → master @ 2276ac8a
 **What merged:**
 - CRITICAL FIX: Organic device drops now correctly trigger RECOVERY_START
 - Root cause: handleOrganicDisconnect in useBLE.ts was a logging-only no-op. ConnectService and RecoveryService called it on BLE disconnect, but nothing sent RECOVERY_START to the machine. Devices that dropped were permanently lost.
@@ -1431,5 +1447,6 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - **Root Cause Theory:** I assumed I was inside SK8Lytz-worktrees/ble-p6-cleanup but my terminal CWD was actually C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz.
 - **Impact:** Violated Safety Rule 1 (Master Fortress Lock). Risk of master branch instability.
 - **Status:** MONITORING
+
 
 
