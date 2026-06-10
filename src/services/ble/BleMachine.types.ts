@@ -9,6 +9,13 @@ export interface BleMachineContext {
   ghostedDeviceIds: string[];
   sweeperId?: number;
   targetMacs?: string[];
+  adapterMapRef: { current: Map<string, any> };
+  mtuMapRef: { current: Map<string, number> };
+  disconnectListeners: { current: Record<string, import('react-native-ble-plx').Subscription> };
+  blacklistedMacsRef: { current: string[] };
+  handleOrganicDisconnect: (error: any, deviceId: string) => void;
+  handleNotification: (error: any, characteristic: any, deviceId: string) => void;
+  enqueueWrite: (priority: string, op: () => Promise<boolean>) => Promise<boolean | 'partial'>;
 }
 
 export type BleMachineEvent =

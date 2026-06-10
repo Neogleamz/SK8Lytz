@@ -1,12 +1,14 @@
 import { setup, assign } from 'xstate';
 import { BleMachineContext, BleMachineEvent } from './BleMachine.types';
 import { AppLogger } from '../AppLogger';
+import { connectService } from './ConnectService';
 
 export const bleMachine = setup({
   types: {
     context: {} as BleMachineContext,
     events: {} as BleMachineEvent,
   },
+  actors: { connectService },
   actions: {
     logTransition: (_, params: { from: string; to: string; reason?: string }) => {
       AppLogger.log('BLE_STATE_CHANGE', {
@@ -121,15 +123,30 @@ export const bleMachine = setup({
       }
     },
     CONNECTING: {
-      on: {
-        CONNECT_SUCCESS: {
+      invoke: {
+        src: 'connectService',
+        input: ({ context }) => ({
+          bleManager: context.bleManager,
+          targetMacs: context.targetMacs ?? [],
+          connectedDevicesRef: { current: context.connectedDevices },
+          adapterMapRef: context.adapterMapRef,
+          mtuMapRef: context.mtuMapRef,
+          disconnectListeners: context.disconnectListeners,
+          blacklistedMacsRef: context.blacklistedMacsRef,
+          handleOrganicDisconnect: context.handleOrganicDisconnect,
+          handleNotification: context.handleNotification,
+          enqueueWrite: context.enqueueWrite,
+        }),
+        onDone: {
           target: 'READY',
           actions: ['setConnectedDevices', { type: 'logTransition', params: { from: 'CONNECTING', to: 'READY' } }]
         },
-        CONNECT_FAIL: {
+        onError: {
           target: 'IDLE',
-          actions: [{ type: 'logTransition', params: { from: 'CONNECTING', to: 'IDLE' } }]
-        },
+          actions: [{ type: 'logTransition', params: { from: 'CONNECTING', to: 'IDLE', reason: 'connect_failed' } }]
+        }
+      },
+      on: {
         RECOVERY_START: {
           target: 'RECOVERING',
           actions: ['setGhostedMacs', { type: 'logTransition', params: { from: 'CONNECTING', to: 'RECOVERING' } }]

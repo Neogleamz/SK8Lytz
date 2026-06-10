@@ -40,7 +40,6 @@ import { executePingDevice } from '../services/BlePingService';
 import { executeWriteToDevice, executeWriteChunked, executeProtocolResults as executeProtocolResultsService, BleWriteStateRefs } from '../services/BleWriteDispatcher';
 import { clearWriteQueue, enqueueWrite, resolveWritePriority } from '../services/BleWriteQueue';
 import { executeRealDisconnect, disconnectFromDevice as keepaliveDisconnect, forceDisconnect as keepaliveForceDisconnect } from '../services/BleLifecycleManager';
-import { executeConnectToDevices } from '../services/BleConnectionManager';
 import { jitteredDelay } from '../utils/backoff';
 
 let BleManager: any;
@@ -146,6 +145,19 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     });
   }, []);
 
+  const disconnectListeners = useRef<Record<string, import('react-native-ble-plx').Subscription>>({});
+  const dataReceivedCallbackRef = useRef<((deviceId: string, data: number[]) => void) | undefined>(undefined);
+  const deviceRecoveredCallbackRef = useRef<((deviceId: string) => void) | undefined>(undefined);
+  const hardwareProbedCallbackRef = useRef<((deviceId: string, config: any) => void) | undefined>(undefined);
+  const connectedDevicesRef = useRef<Device[]>([]);
+  const allDevicesRef = useRef<Device[]>([]);
+  const droppedOutDeviceIdsRef = useRef<string[]>([]);
+  const blacklistedMacsRef = useRef<string[]>([]);
+  const mtuMapRef = useRef<Map<string, number>>(new Map());
+  const adapterMapRef = useRef<Map<string, IControllerProtocol>>(new Map());
+  const handleNotificationRef = useRef<((error: any, characteristic: any, deviceId: string) => void)>(() => {});
+  const handleOrganicDisconnectRef = useRef<((error: any, deviceId: string) => void)>(() => {});
+
   const [allDevices, setAllDevices] = useState<Device[]>([]);
   const [isBluetoothSupported, setIsBluetoothSupported] = useState(Platform.OS !== 'web');
   const [isBluetoothEnabled, setIsBluetoothEnabled] = useState(Platform.OS === 'web');
@@ -161,7 +173,14 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       bleManager,
       scanCallback: (error: BleError | null, device: Device | null) => scanCallbackRef.current(error, device),
       scanMode: 1,
-      scanServiceUUIDs: [ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID]
+      scanServiceUUIDs: [ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID],
+      adapterMapRef,
+      mtuMapRef,
+      disconnectListeners,
+      blacklistedMacsRef,
+      handleOrganicDisconnect: (error: any, deviceId: string) => handleOrganicDisconnectRef.current(error, deviceId),
+      handleNotification: (error: any, characteristic: any, deviceId: string) => handleNotificationRef.current(error, characteristic, deviceId),
+      enqueueWrite,
     }
   });
   const bleGateState = typeof bleSnapshot.value === 'string' ? bleSnapshot.value : 'IDLE';
@@ -213,15 +232,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
        sub.remove();
     };
   }, []);
-
-  const disconnectListeners = useRef<Record<string, import('react-native-ble-plx').Subscription>>({});
-  const dataReceivedCallbackRef = useRef<((deviceId: string, data: number[]) => void) | undefined>(undefined);
-  const deviceRecoveredCallbackRef = useRef<((deviceId: string) => void) | undefined>(undefined);
-  const hardwareProbedCallbackRef = useRef<((deviceId: string, config: any) => void) | undefined>(undefined);
-  const connectedDevicesRef = useRef<Device[]>([]);
-  const allDevicesRef = useRef<Device[]>([]);
-  const droppedOutDeviceIdsRef = useRef<string[]>([]);
-  const blacklistedMacsRef = useRef<string[]>([]);
 
   useEffect(() => {
     const fetchBlacklist = async () => {
@@ -308,7 +318,6 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   // Wrap handleNotification in a stable ref callback to prevent stale closures
   // when AutoRecovery re-registers notification monitors after reconnect.
-  const handleNotificationRef = useRef(handleNotification);
   handleNotificationRef.current = handleNotification;
 
   useEffect(() => {
@@ -378,10 +387,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // Stable ref-forwarder: the BLE disconnect listener captures this ref once,
   // but it always delegates to the latest handleOrganicDisconnect. Same pattern
   // as handleNotificationRef (L224-225). Eliminates RC-06 stale closure risk.
-  const handleOrganicDisconnectRef = useRef(handleOrganicDisconnect);
   handleOrganicDisconnectRef.current = handleOrganicDisconnect;
-
-
 
   const autoRecovery = useBLEAutoRecovery({
     bleManager,
@@ -452,17 +458,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   }, [bleManager, scanner]);
 
 
-  // ─── Per-device MTU map ────────────────────────────────────────────────────
-  // Each device may negotiate a different MTU. Using a single shared ref caused
-  // the "last device wins" bug where payload chunking used the wrong MTU.
-  const mtuMapRef = useRef<Map<string, number>>(new Map());
-
-  // ─── Per-device adapter map (HAL) ─────────────────────────────────────────
-  // Stores the resolved IControllerProtocol adapter for each connected device.
-  // Populated during connectToDevices Phase 2 handshake (after discoverServices).
-  // Cleared on disconnect. Falls back to getDefaultProtocol() if device not found.
   // Enables mixed-protocol group writes: Zengge + BanlanX skates in the same group.
-  const adapterMapRef = useRef<Map<string, IControllerProtocol>>(new Map());
 
   // ── Connection Health Heartbeat (MISS-03) ─────────────────────────────────
   // Pings every connected device every 45s to detect stale GATT handles early.
@@ -504,36 +500,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   });
 
   const connectToDevices = useCallback(async (devices: Device[]) => {
-    await executeConnectToDevices({
-      devices,
-      bleManager,
-      connectedDevicesRef,
-      blacklistedMacsRef,
-      keepaliveTimerRef,
-      disconnectListeners,
-      scanner,
-      autoRecovery,
-      getGate,
-      mtuMapRef,
-      adapterMapRef,
-      dataReceivedCallbackRef,
-      handleNotificationRef,
-      handleOrganicDisconnect: (error: any, deviceId: string) =>
-        handleOrganicDisconnectRef.current(error, deviceId),
-      enqueueWrite,
-      setConnectedDevices: updateConnectedDevices,
-      setGate,
-      bleSend,
-    });
-  }, [
-    bleManager,
-    scanner,
-    autoRecovery,
-    updateConnectedDevices,
-    setGate,
-    getGate,
-    bleSend,
-  ]);
+    if (devices.length === 0) return;
+    bleSend({ type: 'CONNECT_REQUEST', targetMacs: devices.map(d => d.id) });
+  }, [bleSend]);
 
   // Wire connectToDevicesRef immediately after connectToDevices is defined so the
   // autoRecovery group coordinator always calls the latest version of the function.
