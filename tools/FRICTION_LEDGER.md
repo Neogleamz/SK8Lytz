@@ -381,3 +381,14 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Root Cause Theory:** The agent updates its memory and tracking files while executing a worktree. Because these files are version-controlled, master becomes dirty and triggers the gatekeeper's safety halt.
 - **Impact:** Forces manual commits, halting automated pipeline orchestration.
 - **Status:** âœ… RESOLVED (Gatekeeper evolved)
+
+### [FRICTION-SUBAGENT-WRITE] Subagent Write Privilege Mismatch
+- **First Observed:** 2026-06-10
+- **Observed By:** ?? Docs — Avery
+- **Occurrences:** 1 / 3
+- **Trigger:** Phase 2 Fleet Launch in deepdive-docs workflow
+- **Pattern:** The workflow explicitly tells the parent agent to spawn 'research' subagents, but the prompt demands the subagent use 'write_to_file' to save their cartography. 'research' subagents do not have write tools, causing them to fallback to 'send_message' and violating the ANTI-CONTEXT-EXPLOSION rule.
+- **Root Cause Theory:** The workflow was written assuming 'research' subagents have write capabilities, or the parent agent should define a custom 'cartographer' subagent with write_tools enabled before spawning them.
+- **Impact:** Context explosion risk; the parent agent has to manually proxy and write 21 markdown files to disk.
+- **Status:** MONITORING
+

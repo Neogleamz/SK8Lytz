@@ -1644,3 +1644,12 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - Documented remaining UI debouncers in docs/audits/AUDIT-hardcoded-delays.md.
 **Verify result:** TSC ?, Jest ?, Gatekeeper ?
 **Files touched:** src/services/BleWriteQueue.ts, src/services/ble/ConnectService.ts, src/services/BlePingService.ts, src/services/ble/InterrogatorService.ts, docs/audits/AUDIT-hardcoded-delays.md, src/services/ble/__tests__/*.test.ts
+
+### [MERGE] 2026-06-10T17:46 — observatory-pipeline-rescue -> master @ f7f2385a
+**What merged:** Rescue and implementation of the Self-Healing Audit System (Observatory) core intelligence engines (dedup, scoring, crossref, task_generator) and telemetry collectors.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** tools/observatory/action/*.mjs, tools/observatory/collectors/*.mjs, tools/observatory/__tests__/*.test.js
+### [ARTIFACT] 2026-06-10T18:05 � 21 Cartography Domain Payloads
+**Artifacts Generated**: 21 unique _cartography.md markdown files injected into the DeepDive Docs artifact directory.
+**Compilation**: Successfully replaced Section 12 of SK8Lytz_App_Master_Reference.md with the compiled payloads.
+**Graveyard**: Extracted 18 [MOVE_TO_ARCHIVE] tags and deposited them into Section 13.
