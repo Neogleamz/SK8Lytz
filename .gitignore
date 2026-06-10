@@ -169,3 +169,8 @@ artifacts/
 ast_r14_scanner.js
 scratch_r11.js
 tools/find_unused_deps.js
+
+# Observatory raw test output
+tools/observatory/raw/
+harvested_screenshot.png
+tools/sentinel/sweeper_screencap.png

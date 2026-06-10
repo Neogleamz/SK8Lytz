@@ -412,14 +412,14 @@ Every GATT connection fires this sequence before the device is added to React st
 3. **React state update** — `setConnectedDevices()` fires _after_ GATT is booted to prevent UI from blasting payloads during MTU queries.
 
 <!-- AST_COMPILER_START: ZENGGE_CONSTANTS -->
-#### ðŸ“ Auto-Compiled Zengge Protocol Constants (AST Compiler)
+#### 📝 Auto-Compiled Zengge Protocol Constants (AST Compiler)
 
-##### ðŸ”Œ BLE UUIDs
+##### 🔌 BLE UUIDs
 - **Service UUID**: `0000ffff-0000-1000-8000-00805f9b34fb` (`ZENGGE_SERVICE_UUID`)
 - **Write Characteristic UUID**: `0000ff01-0000-1000-8000-00805f9b34fb` (`ZENGGE_CHARACTERISTIC_UUID`)
 - **Notification Characteristic UUID**: `0000ff02-0000-1000-8000-00805f9b34fb` (`ZENGGE_NOTIFY_UUID`)
 
-##### ðŸ› ï¸ Hardware Constraints
+##### 🛠️ Hardware Constraints
 | Constraint | Value | Description |
 |:---|:---:|:---|
 | `maxPoints` | 300 | Maximum addressable points per segment |
@@ -430,7 +430,7 @@ Every GATT connection fires this sequence before the device is added to React st
 | `defaultPoints` | 30 | Fallback default point count |
 | `defaultSegments` | 10 | Fallback default segment count |
 
-##### ðŸ“Ÿ IC Chip Types (`IC_TYPES`)
+##### 📟 IC Chip Types (`IC_TYPES`)
 | Key | Chip Type |
 |:---:|:---|
 | 1 | WS2812B |
@@ -445,7 +445,7 @@ Every GATT connection fires this sequence before the device is added to React st
 | 10 | JY1903 |
 | 11 | WS2812E |
 
-##### ðŸŽ¨ Color Sorting RGB (`COLOR_SORTING_RGB`)
+##### 🎨 Color Sorting RGB (`COLOR_SORTING_RGB`)
 | Key | RGB Order |
 |:---:|:---|
 | 0 | RGB |
@@ -5694,3 +5694,10 @@ Here is the Elite Architecture Markdown Payload for the domain:
 
 ### Hook Registry Updates
 - useWebDemoConsoleBridge: Web Demo specific hook to pipe console logs to Command Center.
+
+
+### 🚨 SDE Autonomous Fuzzer Discoveries (Auto-Documented)
+- **Opcode**: `0x59` (Static Colorful)
+- **Constraint**: Array sizes between 2 and 9 elements cause physical EEPROM buffer lockout on the `0xA3` chipset.
+- **Rule**: Minimum safe payload length is 12 RGB pixels. (See Rule: Surgical Buffer Overflow Defense in agent-behavior.md).
+

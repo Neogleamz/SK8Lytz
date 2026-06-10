@@ -463,13 +463,11 @@ RF Remote authorization modes are controlled via standard hex opcodes over BLE G
 #### 📝 Auto-Compiled Zengge Protocol Constants (AST Compiler)
 
 ##### 🔌 BLE UUIDs
-
 - **Service UUID**: `0000ffff-0000-1000-8000-00805f9b34fb` (`ZENGGE_SERVICE_UUID`)
 - **Write Characteristic UUID**: `0000ff01-0000-1000-8000-00805f9b34fb` (`ZENGGE_CHARACTERISTIC_UUID`)
 - **Notification Characteristic UUID**: `0000ff02-0000-1000-8000-00805f9b34fb` (`ZENGGE_NOTIFY_UUID`)
 
 ##### 🛠️ Hardware Constraints
-
 | Constraint | Value | Description |
 |:---|:---:|:---|
 | `maxPoints` | 300 | Maximum addressable points per segment |
@@ -481,7 +479,6 @@ RF Remote authorization modes are controlled via standard hex opcodes over BLE G
 | `defaultSegments` | 10 | Fallback default segment count |
 
 ##### 📟 IC Chip Types (`IC_TYPES`)
-
 | Key | Chip Type |
 |:---:|:---|
 | 1 | WS2812B |
@@ -497,7 +494,6 @@ RF Remote authorization modes are controlled via standard hex opcodes over BLE G
 | 11 | WS2812E |
 
 ##### 🎨 Color Sorting RGB (`COLOR_SORTING_RGB`)
-
 | Key | RGB Order |
 |:---:|:---|
 | 0 | RGB |
