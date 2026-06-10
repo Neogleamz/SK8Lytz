@@ -972,6 +972,16 @@ export class ZenggeProtocol {
 
     return { mode, modeName: modeNames[mode], pairedCount, pairedRemoteIds };
   }
+
+  // ─── DIAGNOSTIC ORACLE COMMANDS ──────────────────────────────────────────────
+  public oracleMusicMic26(): number[] { return [0x73, 0x01, 0x26, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64]; }
+  public oracleMusicMic27(): number[] { return [0x73, 0x01, 0x27, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64]; }
+  public oracleMusicOff(): number[] { return [0x73, 0x01, 0x26, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64]; }
+  public oracleMusicMic00(): number[] { return [0x73, 0x01, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64]; }
+  public oracleMusicMissingIsOn(): number[] { return [0x73, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64]; }
+  public oracleSceneQuery(): number[] { return [0x58, 0xF0]; }
+  public oracleSceneActivate(slot: number): number[] { return [0x57, slot & 0xFF, 0x32, 0x64]; }
+  public oracleSceneDelete(slot: number): number[] { return [0x56, slot & 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; }
 }
 
 export namespace ZenggeProtocol {
@@ -1007,4 +1017,13 @@ export namespace ZenggeProtocol {
   export function setRfRemoteState(authMode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED', clearRemotes: boolean = false): number[] { return _shared.setRfRemoteState(authMode, clearRemotes); }
   export function clearRfRemotes(currentMode: 'ALLOW_ALL' | 'ALLOW_NONE' | 'ALLOW_PAIRED' = 'ALLOW_PAIRED'): number[] { return _shared.clearRfRemotes(currentMode); }
   export function queryRfRemoteState(): number[] { return _shared.queryRfRemoteState(); }
+
+  export function oracleMusicMic26(): number[] { return _shared.oracleMusicMic26(); }
+  export function oracleMusicMic27(): number[] { return _shared.oracleMusicMic27(); }
+  export function oracleMusicOff(): number[] { return _shared.oracleMusicOff(); }
+  export function oracleMusicMic00(): number[] { return _shared.oracleMusicMic00(); }
+  export function oracleMusicMissingIsOn(): number[] { return _shared.oracleMusicMissingIsOn(); }
+  export function oracleSceneQuery(): number[] { return _shared.oracleSceneQuery(); }
+  export function oracleSceneActivate(slot: number): number[] { return _shared.oracleSceneActivate(slot); }
+  export function oracleSceneDelete(slot: number): number[] { return _shared.oracleSceneDelete(slot); }
 }

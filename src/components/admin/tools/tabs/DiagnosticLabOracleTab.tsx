@@ -164,7 +164,7 @@ export function DiagnosticLabOracleTab({
           opcode: '0x73',
           note: '0x73 app mic byte — 0x26, isOn=0x01. Send then enable AUTO-STREAM ⇓',
           bytes: () => {
-            const raw = [0x73, 0x01, 0x26, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64];
+            const raw = ZenggeProtocol.oracleMusicMic26();
             return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
           },
         },
@@ -173,7 +173,7 @@ export function DiagnosticLabOracleTab({
           opcode: '0x73',
           note: '0x73 device mic byte — 0x27, isOn=0x01. Reacts to ambient sound WITHOUT 0x74.',
           bytes: () => {
-            const raw = [0x73, 0x01, 0x27, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64];
+            const raw = ZenggeProtocol.oracleMusicMic27();
             return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
           },
         },
@@ -182,7 +182,7 @@ export function DiagnosticLabOracleTab({
           opcode: '0x73',
           note: '0x73 isOn byte set to 0x00 — LEDs should DEACTIVATE music mode. Confirms isOn is live.',
           bytes: () => {
-            const raw = [0x73, 0x01, 0x26, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64];
+            const raw = ZenggeProtocol.oracleMusicOff();
             return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
           },
         },
@@ -191,7 +191,7 @@ export function DiagnosticLabOracleTab({
           opcode: '0x73',
           note: '0x73 OLD wrong mic byte — 0x00. With auto-stream ON, LEDs should NOT pulse (confirms bug).',
           bytes: () => {
-            const raw = [0x73, 0x01, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64];
+            const raw = ZenggeProtocol.oracleMusicMic00();
             return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
           },
         },
@@ -200,7 +200,7 @@ export function DiagnosticLabOracleTab({
           opcode: '0x73',
           note: '0x73 OLD 12-byte format without isOn byte — should NOT activate music mode.',
           bytes: () => {
-            const raw = [0x73, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64];
+            const raw = ZenggeProtocol.oracleMusicMissingIsOn();
             return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
           },
         },
@@ -243,7 +243,7 @@ export function DiagnosticLabOracleTab({
           opcode: '0x58',
           note: '0x58 Scene state query — watch RX observer for response bytes.',
           bytes: () => {
-            const raw = [0x58, 0xF0];
+            const raw = ZenggeProtocol.oracleSceneQuery();
             return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
           },
         },
@@ -252,7 +252,7 @@ export function DiagnosticLabOracleTab({
           opcode: '0x57',
           note: '0x57 Activate scene slot 0, speed=50, brightness=100.',
           bytes: () => {
-            const raw = [0x57, 0x00, 0x32, 0x64];
+            const raw = ZenggeProtocol.oracleSceneActivate(0);
             return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
           },
         },
@@ -261,7 +261,7 @@ export function DiagnosticLabOracleTab({
           opcode: '0x56',
           note: '0x56 Delete scene slot 0 — 15-byte payload.',
           bytes: () => {
-            const raw = [0x56, 0x00, 0,0,0,0,0,0,0,0,0,0,0,0];
+            const raw = ZenggeProtocol.oracleSceneDelete(0);
             return ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]);
           },
         },
@@ -721,7 +721,7 @@ export function DiagnosticLabOracleTab({
             <TouchableOpacity
               style={[S.txBtn, { backgroundColor: '#FFD70022', borderColor: '#FFD700' }]}
               onPress={() => {
-                const raw = [0x58, 0xF0];
+                const raw = ZenggeProtocol.oracleSceneQuery();
                 transmit(ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]), `0x58 QUERY scene state`, '0x58');
               }}
             >
@@ -730,7 +730,7 @@ export function DiagnosticLabOracleTab({
             <TouchableOpacity
               style={[S.txBtn, { backgroundColor: '#00CC8822', borderColor: '#00CC88' }]}
               onPress={() => {
-                const raw = [0x57, sceneSlot & 0xFF, 0x32, 0x64];
+                const raw = ZenggeProtocol.oracleSceneActivate(sceneSlot);
                 transmit(ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]), `0x57 ACTIVATE slot=${sceneSlot}`, '0x57');
               }}
             >
@@ -739,7 +739,7 @@ export function DiagnosticLabOracleTab({
             <TouchableOpacity
               style={[S.txBtn, { backgroundColor: '#FF404022', borderColor: '#FF4040' }]}
               onPress={() => {
-                const raw = [0x56, sceneSlot & 0xFF, 0,0,0,0,0,0,0,0,0,0,0,0];
+                const raw = ZenggeProtocol.oracleSceneDelete(sceneSlot);
                 transmit(ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]), `0x56 DELETE slot=${sceneSlot}`, '0x56');
               }}
             >
