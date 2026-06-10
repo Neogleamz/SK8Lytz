@@ -48,12 +48,12 @@ export function useDashboardCrew({
     });
   }, []);
 
-  const { user } = useAuth();
+  const { user, sessionLoaded } = useAuth();
   const hasTriedRejoinRef = React.useRef(false);
 
   // ── Auto-rejoin on launch ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!user || hasTriedRejoinRef.current) return;
+    if (!sessionLoaded || !user || hasTriedRejoinRef.current) return;
 
     const tryRejoin = async () => {
       try {
@@ -81,12 +81,10 @@ export function useDashboardCrew({
       }
     };
 
-    // Delay 2 s to let auth session restore before querying
-    const t = setTimeout(tryRejoin, 2000);
-    return () => clearTimeout(t);
+    tryRejoin();
     // onApplyScene is a stable callback — intentionally excluded from deps
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, sessionLoaded]);
 
   return {
     crewSession,

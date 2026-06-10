@@ -23,6 +23,7 @@ import { AppLogger } from '../../../services/AppLogger';
 import { Spacing, Typography } from '../../../theme/theme';
 import { useProtocolDispatch } from '../../../hooks/useProtocolDispatch';
 import { STORAGE_PROGRAMMER_PROFILES } from '../../../constants/storageKeys';
+import { BLE_TIMING } from '../../../constants/bleTimingConstants';
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -191,13 +192,13 @@ export default function Sk8LytzProgrammer({
               const device = allDevices.find(d => d.id === id);
               if (connectToDevice && device) {
                   await connectToDevice(device);
-                  await new Promise(res => setTimeout(res, 600)); // let GATT settle
+                  await new Promise(res => setTimeout(res, BLE_TIMING.FLASH_SETTLE_MS)); // let GATT settle
               }
               await dispatch.writeSettings(config.ledPoints, config.segments, config.icType, config.colorSorting, id);
-              await new Promise(res => setTimeout(res, 400)); // let write land
+              await new Promise(res => setTimeout(res, BLE_TIMING.FLASH_WRITE_LAND_MS)); // let write land
               if (disconnectFromDevice) {
                   await disconnectFromDevice(id);
-                  await new Promise(res => setTimeout(res, 400)); // gap between ops
+                  await new Promise(res => setTimeout(res, BLE_TIMING.FLASH_DISCONNECT_GAP_MS)); // gap between ops
               }
               setFlashStatus(prev => ({ ...prev, [id]: 'success' }));
               AppLogger.log('PERFORMANCE_METRIC', { metricName: 'HW_CONFIG_FLASHED', value: 1, unit: id, deviceId: id });

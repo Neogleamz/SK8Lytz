@@ -69,6 +69,24 @@ export const BLE_TIMING = {
    * BleWriteDispatcher — after the full chunked write completes.
    */
   WRITE_CHUNK_FINAL_SETTLE_MS: 50,
+
+  /**
+   * Post-connection GATT settle time before flashing.
+   * Sk8LytzProgrammer — gives device time to stabilize after connection.
+   */
+  FLASH_SETTLE_MS: 600,
+
+  /**
+   * Post-flash settle time to let the write transaction land in EEPROM.
+   * Sk8LytzProgrammer — prevents disconnecting before flash saves.
+   */
+  FLASH_WRITE_LAND_MS: 400,
+
+  /**
+   * Gap between consecutive device flash operations.
+   * Sk8LytzProgrammer — lets the BT adapter cool down between units.
+   */
+  FLASH_DISCONNECT_GAP_MS: 400,
 } as const;
 
 export type BleTiming = typeof BLE_TIMING;
