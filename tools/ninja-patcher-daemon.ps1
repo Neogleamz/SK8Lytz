@@ -35,5 +35,5 @@ while ($true) {
   } catch {
     # File might be temporarily locked during CMake write, ignore and retry next tick
   }
-  Start-Sleep -Milliseconds 150
+  Start-Sleep -Milliseconds 50
 }
