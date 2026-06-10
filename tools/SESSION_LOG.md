@@ -1,3 +1,14 @@
+### [EVENT] 2026-06-10T12:13 — Parallel Surgeon Fleet (Wave 2) Deployed
+**Trigger:** User authorized Wave 2 execution.
+**Action:** Created 3 isolated Git worktrees and invoked 3 parallel Surgeon Developer Agents with explicit instructions to run `npm run verify` AFTER the commit to prevent attestation misalignment.
+**Batches Deployed:** pii-scrub-sweep, error-handling-sweep, memory-leak-sweep.
+**Status:** Fleet executing in background. Awaiting async completion messages before merging.
+
+### [MERGE] 2026-06-10T12:12 — group-concurrency-sweep-batch → master @ 92a3b893
+**What merged:** Fixed missing boolean re-entrancy locks and dependencies to resolve Race Condition Sweep violations for `street-mode-accelerometer` and `session-notifee-listener`.
+**Verify result:** TSC ✅, Jest ✅, tests and attestation verified via gatekeeper.
+**Files touched:** `src/hooks/useStreetMode.ts`, `src/context/SessionContext.tsx`
+
 ### [EVENT] 2026-06-10T11:58 — Parallel Surgeon Fleet Deployed
 **Trigger:** User authorized full 10-agent execution of the audit batches using the Gemini 3.1 Pro High model.
 **Action:** Created 10 separate Git worktrees (e.g. `pii-scrub-sweep-batch`) and invoked 10 parallel Surgeon Developer Agents. Each agent is tasked with reading its respective `PLAN-*.md`, implementing the fix, running `npm run verify` in its isolated worktree, and committing locally. 
