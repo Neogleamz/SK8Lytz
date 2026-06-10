@@ -1321,3 +1321,20 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **What created:** Generated comprehensive BLE codebase audit leveraging 6 parallel subagents.
 **Location:** [BLE_AUDIT_REPORT.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_REPORT.md)
 **Key Findings:** State fragmentation (scannerStateRef, isSweeperActiveRef, derived UI state) will be consolidated into XState FSM. Custom queues/mutexes (mutexQueue) will be eliminated in favor of XState actor mailboxes. Hooks will be systematically deleted or converted into invoked services across 6 deployment phases.
+
+### [MERGE] 2026-06-10T06:35 - refactor/ble-p2-scanner-simplify -> master @ d939b54a
+**What merged:**
+- Deleted all PHASE-1 commented-out startDeviceScan/stopDeviceScan calls from useBLEBatterySweep.ts and useBLEScanner.ts`r
+- Removed isSweeperActiveRef from useBLEBatterySweep.ts (confirmed dead by audit)
+- Removed scannerStateRef from useBLEScanner.ts (confirmed dead by audit)
+- Added leSend to UseBLEBatterySweepProps interface; removed scanCallback from sweep props
+- Battery tier changes (THROTTLED/FULL) now send SCAN_PAUSE/SCAN_RESUME events to machine
+- Burst scan now sends SCAN_PAUSE + SCAN_RESUME instead of directly calling the radio
+**Verify result:** TSC ?, Jest ?, Browser ?, OP_0x59 ?, TypeSafety ?, Workflows ?
+**Files touched:** src/hooks/ble/useBLEBatterySweep.ts, src/hooks/ble/useBLEScanner.ts
+
+### [DECISION] 2026-06-10T06:35 - Phase 2 structural fix confirmed
+**Decision:** After Phase 1+2, startDeviceScan and stopDeviceScan exist in exactly ONE place: BleMachine.ts SCANNING state entry/exit actions. The scan client leak is now structurally impossible — no guard, ref, or race condition can bypass a state machine entry/exit. Battery tier and burst scan logic now express intent via machine events rather than radio calls.
+**Rejected:** Keeping scanner files with dead-commented radio calls — rejected because commented code is a confusion vector that gets copied and re-enabled by future engineers.
+**Don't re-derive:** useBLEBatterySweep.ts no longer takes scanCallback in its interface. It takes leSend. The hook is now purely a battery observer that signals state changes to the machine.
+**Source:** src/hooks/ble/useBLEBatterySweep.ts:23, src/hooks/ble/useBLEScanner.ts:291
