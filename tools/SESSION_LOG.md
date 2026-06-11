@@ -1,4 +1,23 @@
-### [MERGE] 2026-06-11T22:42 — docs/cartographer-rebuild-and-harden → master @ HEAD
+### [MERGE READY] fix/session-machine-actor-types — 682f411d
+Files touched:
+- src/services/session/SessionMachine.ts
+- src/services/session/AutoPauseService.ts
+- src/services/session/SensorService.ts
+- src/services/session/HealthService.ts
+- src/services/session/NotificationService.ts
+TSC: ✅  Jest: ✅
+
+### [MERGE] 2026-06-11T22:44 — fix/session-commit-onsaved-catch → master @ 695ecbde
+**What merged:**
+- Added `input.onSessionSaved()` call to the catch block in `SessionCommitService.ts` (L80).
+- **Root cause fixed:** DB-throw path was silently swallowing errors without notifying consumers. The session machine would get stuck in ENDING state indefinitely on any DB failure. Now all three paths (success, discard, error) call `onSessionSaved()`.
+- Change source: Post-merge audit 2026-06-11 (HIGH finding, 4-parallel-agent fleet).
+**Verify result:** TSC ✅, Jest ✅ (28/218), BLE guards ✅, Type safety guard ✅
+**Files touched:**
+- `src/services/session/SessionCommitService.ts` (+2 lines)
+
+### [MERGE] 2026-06-11T22:42 — chore(workflows): update deploy-device workflow
+
 **What merged:**
 - Compiled the ultimate architectural truth for the entire codebase via a 21-node `/deepdive-docs` cartographer fleet, writing report payloads to `artifacts/deepdive_docs/` and injecting them into `tools/SK8Lytz_App_Master_Reference.md`.
 - Relocated 20 deprecated/stale features (including `useSessionTracking`, `useDeviceFleet`, and opcodes) into Graveyard deposits (Section 13) in the Master Reference.
