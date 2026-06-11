@@ -1,8 +1,24 @@
+### [MERGE] 2026-06-11T04:36 — sweep-screens → master @ 6aca11d4
+**What merged:**
+- Resolved all 32 findings in the screens domain (`DashboardScreen.tsx`, `HardwareSetupWizardScreen.tsx`, `PermissionsOnboardingScreen.tsx`, `AuthScreen.tsx`).
+- Fixed a type mismatch in `DashboardScreen.tsx` where connection handler expects `{ id: string; name: string | null; rssi?: number | null }` while `DashboardScreen` was passing a full `Device` (bridged the gap by looking up the full `Device` dynamically in `allDevices` using `d.id`).
+- Standardized FlatList inline `onPress` arrow callbacks with `useCallback` to prevent performance leaks.
+- Wrapped floating promises and corrected telemetry warn/error parameters.
+- Cleaned up unused imports and variables across screens.
+**Verify result:** TSC ✅, Jest ✅ (203 tests passing), gates ✅
+**Files touched:**
+- `src/screens/DashboardScreen.tsx`
+- `src/screens/Onboarding/HardwareSetupWizardScreen.tsx`
+- `src/screens/Onboarding/PermissionsOnboardingScreen.tsx`
+- `src/screens/AuthScreen.tsx`
+- `tools/SESSION_LOG.md`
+
 ### [DECISION] 2026-06-11T04:28 — FSM Theme Mode Refactoring
 **Decision:** Refactored `isDark` boolean state inside `ThemeContext.tsx` to a string union `themeMode` state machine (`'dark' | 'light'`) to align with project FSM constraints, while keeping the `isDark` computed getter for backward compatibility with screens.
 **Rejected:** Keep `isDark` as a raw boolean state variable (violates the FSM pattern for UI states).
 **Don't re-derive:** Use the string union `'dark' | 'light'` as the source of truth, and compute `isDark = themeMode === 'dark'` synchronously.
 **Source:** `src/context/ThemeContext.tsx`:L26-30
+
 
 ### [MERGE] 2026-06-11T04:29 — sweep-context → master @ 2351b8f9
 **What merged:**

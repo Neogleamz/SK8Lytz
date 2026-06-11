@@ -1692,4 +1692,11 @@ pm run verify which includes QA tests.
   - **Goal:** Fix all 15 findings in domain context. Every file in the plan must appear in the diff.
   - **Prerequisite:** Wave 5 fully merged
   - **Source of Truth:** docs/plans/PLAN-sweep-context.md
-  - **Decision Log:** Eradicate all context domain findings identified in the DeepDive audit (system_audit_report.md) to fix memory leaks, unhandled promises, and state naming in React contexts.
+  - **Decision Log:** Eradicate all context domain findings identified in the DeepDive audit (system_audit_report.md) to fix memory leaks, unhandled promises, and state naming in React contexts.
+
+- [x] **chore/sweep-screens**
+  - **Tags:** `[READY]` `[VERIFIED]` `[MAINTENANCE]` `[M-RISK]` `[Feast]` `[WAVE:7]` `[BATCH:deepdive-sweep-phase3]`
+  - **Goal:** Fix all 32 findings in domain screens. Every file in the plan must appear in the diff.
+  - **Prerequisite:** Wave 6 fully merged
+  - **Source of Truth:** docs/plans/PLAN-sweep-screens.md
+  - **Decision Log:** Eradicate all screens domain findings identified in the DeepDive audit (system_audit_report.md) to ensure proper type safety, remove unused variables, and standardize lifecycle callbacks.
