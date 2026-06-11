@@ -224,6 +224,9 @@ For each changed file, check:
 - `src/hooks/use*.ts` → requires §4 Hook Registry row
 - `src/services/*.ts` → requires §4 Service Registry row
 - `src/protocols/*.ts` or `src/services/BLE*.ts` → requires §3 BLE Protocol Library check
+- `*Machine.ts` or XState config → requires `tools/State_Charts_UX.md` check
+- `*Bridge.ts` or session flows → requires `tools/User_Journey_Maps.md` check
+- Native modules / external APIs → requires `tools/System_Context_Diagram.md` check
 - `supabase/migrations/*.sql` → triggers `/db-sync` automatically
 
 **Output the parity delta:**
@@ -236,7 +239,7 @@ For each changed file, check:
 Overall: PARITY CLEARED ✅ / GAPS FOUND ⚠️ (list)
 ```
 
-- **If YES to any registry impact**: Update the relevant sections in `tools/SK8Lytz_App_Master_Reference.md` (§3 BLE Protocol Library, §4 Hook & Service Registry, §4 Shared Type Contract, §2 AsyncStorage Key Registry, §5 Database Schemas).
+- **If YES to any registry impact**: Update the relevant sections in `tools/SK8Lytz_App_Master_Reference.md` and any required Satellite Docs (`State_Charts_UX.md`, `User_Journey_Maps.md`, `System_Context_Diagram.md`).
 - **If NO to all**: Explicitly state `"Documentation parity check: no architectural changes — docs gate CLEARED ✅"`.
 
 ```

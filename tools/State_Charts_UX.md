@@ -140,3 +140,52 @@ stateDiagram-v2
 
 ### UX Mandates for Designers:
 1. **Fallback Indicator:** When the watch disconnects, the heart rate indicator must show a subtle fallback state (e.g. gray out or display a warning) to inform the user that heart rate tracking has reverted to the phone's OS health queries.
+
+---
+
+## State Chart 4: Session Lifecycle (sessionMachine)
+
+This chart maps the UI states driven by the `sessionMachine` XState v5 architecture. It manages the core skate tracking lifecycle, coordinating telemetry, pause states, and cloud commits.
+
+```mermaid
+stateDiagram-v2
+    [*] --> IDLE : App Launch
+    
+    state IDLE {
+        UI: "Start Skate" Button
+    }
+    
+    IDLE --> ACTIVE : User Taps Start
+    IDLE --> ACTIVE : Watch Starts Session
+    
+    state ACTIVE {
+        UI: Live Dashboard (Speed, HR, Distance)
+        Rule: Records telemetry & tracks location
+    }
+    
+    ACTIVE --> PAUSED : User Taps Pause
+    ACTIVE --> PAUSED : Auto-Pause (Speed = 0)
+    
+    state PAUSED {
+        UI: Pulsing "Paused" Overlay
+        Rule: Stops accumulating time/distance
+    }
+    
+    PAUSED --> ACTIVE : User Taps Resume
+    PAUSED --> ACTIVE : Auto-Resume (Speed > 0)
+    
+    ACTIVE --> ENDING : User Taps Stop
+    PAUSED --> ENDING : User Taps Stop
+    
+    state ENDING {
+        UI: Loading Spinner
+        Text: "Saving Session..."
+        Rule: Commits to Supabase, syncs watch, resets to IDLE
+    }
+    
+    ENDING --> IDLE : Commit Success / Error
+```
+
+### UX Mandates for Designers:
+1. **Clear Paused State:** The `PAUSED` state must be visually distinct from `ACTIVE` to prevent users from thinking their session is still recording while standing still.
+2. **Ending Grace Period:** The `ENDING` state handles network requests to Supabase. Ensure a non-blocking or well-animated loading state is shown so users don't double-tap "Stop" and trigger duplicate commits.

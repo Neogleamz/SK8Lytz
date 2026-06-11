@@ -64,17 +64,19 @@ journey
 journey
     title Wearable Session Sync & Health Telemetry
     section 1. Start Session
-      User starts session on phone: 5: Skater
-      Phone syncs session status ACTIVE to Watch: 4: System
-      Watch starts workout session: 5: System
+      User taps Start on Phone OR Watch: 5: Skater
+      Device sends sync command (START_SESSION) to counterpart: 4: System
+      Both devices sync to ACTIVE state: 5: System
     section 2. Live Telemetry Sync
       Phone pushes live speed to Watch display: 4: System
       Watch optical sensor reads heart rate: 5: System
       Watch relays heart rate back to Phone: 5: System
-    section 3. Link Drop Recovery
-      S skater goes out of BLE range from phone: 3: Skater
+    section 3. Link Drop Recovery & Session End
+      Skater goes out of BLE range from phone: 3: Skater
       Watch continues local tracking: 5: System
       Watch reconnects and flushes data: 4: System
+      User taps Pause or Stop on Phone OR Watch: 5: Skater
+      Counterpart syncs state (PAUSED / STOPPED): 5: System
 ```
 
 ### UX Friction Points to Monitor:

@@ -645,3 +645,30 @@ _Last updated: 2026-04-22 | Maintained by: AG + Andy_
 
 **Results:** `[ ][ ][ ][ ]`
 
+---
+
+## Session Machine Test Coverage (XState v5)
+Added: Wave 1 (feat/session-services-layer @ b9c7baa9) + Wave 2 (refactor/session-context-xstate @ 4df46b81)
+Suite count: 28 total suites / 218 total tests
+
+### Covered States
+- IDLE → WARMING_UP transition
+- WARMING_UP → ACTIVE on GPS + timer ready
+- ACTIVE → PAUSED on user action / watch command
+- PAUSED → ACTIVE on resume
+- ACTIVE → COMMITTED on end session
+- COMMITTED → IDLE on cleanup
+
+### Covered Edge Cases
+- BLE disconnect during ACTIVE state → session NOT ended (product invariant)
+- App backgrounded during ACTIVE state → session persists via STORAGE_PENDING_BG_END
+- Watch START_SESSION command → fires START event to machine
+- Watch STOP_SESSION command → fires END event to machine
+- Auto-pause trigger → ACTIVE → PAUSED transition
+- Crash recovery on app restart → STORAGE_PENDING_BG_END recovery path
+
+### Not Yet Covered (Known Gaps)
+- Network failure during COMMITTED → Supabase sync retry behavior
+- Concurrent watch + notification END triggers
+
+
