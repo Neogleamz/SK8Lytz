@@ -1,4 +1,5 @@
 import { setup, assign } from 'xstate';
+import type { Device } from 'react-native-ble-plx';
 import { BleMachineContext, BleMachineEvent } from './BleMachine.types';
 import { AppLogger } from '../AppLogger';
 import { connectService } from './ConnectService';
@@ -247,7 +248,7 @@ export const bleMachine = setup({
               assign({
                 connectedDevices: ({ context, event }) => {
                   const newDevices = event.devices || [];
-                  const existingIds = newDevices.map((d: any) => d.id);
+                  const existingIds = newDevices.map((d: Device) => d.id);
                   const filtered = context.connectedDevices.filter(d => !existingIds.includes(d.id));
                   return [...filtered, ...newDevices];
                 }

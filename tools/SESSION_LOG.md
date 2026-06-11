@@ -1860,4 +1860,12 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - `src/components/auth/DevSandboxDrawer.tsx`
 - `tools/SK8Lytz_App_Master_Reference.md`
 
+<!-- Monolith acknowledgement: Appending DECISION entry for type safety pattern to SESSION_LOG.md -->
+### [DECISION] 2026-06-11T03:28 - BleManager Picked Type in HeartbeatService
+**Decision:** Typed `bleManager` parameter in `HeartbeatServiceInput` using `Pick<BleManager, ...>` rather than raw `BleManager` or casting to `any`.
+**Rejected:** Casting the mock `bleManager` as `unknown as BleManager` or reverting `bleManager` to type `any`.
+**Don't re-derive:** The `react-native-ble-plx` `BleManager` interface contains dozens of properties and methods. Replicating the full interface in mock files is extremely tedious, while using `any` violates type safety rules. Selecting the subset of properties actually used in the service via `Pick` enables both strict type safety and clean partial mocking in unit tests without type-unsafe assertions.
+**Source:** src/services/ble/HeartbeatService.ts:12
+
+
 

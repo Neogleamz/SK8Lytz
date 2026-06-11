@@ -72,7 +72,7 @@ export async function interrogateDevice(
   if (hwCacheRef.current[mac]) return null;
 
   probingMacsRef.current.add(mac);
-  AppLogger.log('BLE_STATE_CHANGE', { event: 'interrogator_start', mac });
+  AppLogger.log('BLE_STATE_CHANGE', { event: 'interrogator_start', mac: scrubPII(mac) });
 
   try {
     const { adapter: interrogatorAdapter } = await createGattSession(bleManager, mac, {
@@ -104,7 +104,7 @@ export async function interrogateDevice(
               if (isPingResult(accumulated)) resolve(accumulated);
             }
           } catch (e: unknown) {
-            AppLogger.warn('[InterrogatorService] Protocol parse failed', { mac, error: e instanceof Error ? e.message : String(e) });
+            AppLogger.warn('[InterrogatorService] Protocol parse failed', { mac: scrubPII(mac), error: e instanceof Error ? e.message : String(e) });
           }
         }
       );
@@ -140,7 +140,7 @@ export async function interrogateDevice(
       await AsyncStorage.setItem(HW_CACHE_KEY(mac), JSON.stringify(hwConfig))
         .catch(e => AppLogger.warn('[InterrogatorService] Failed to persist HW cache', { error: String(e) }));
       hwCacheRef.current[mac] = hwConfig;
-      AppLogger.log('DEVICE_DISCOVERED', { event: 'interrogator_complete', mac, ledPoints: hwConfig.ledPoints });
+      AppLogger.log('DEVICE_DISCOVERED', { event: 'interrogator_complete', mac: scrubPII(mac), ledPoints: hwConfig.ledPoints });
       onDeviceInterrogated();
     }
 

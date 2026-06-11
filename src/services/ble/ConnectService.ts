@@ -3,7 +3,7 @@ import { Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_DEMO_MODE } from '../../constants/storageKeys';
 import { Buffer } from 'buffer';
-import type { Device, BleManager } from 'react-native-ble-plx';
+import type { Device, BleManager, BleError, Characteristic } from 'react-native-ble-plx';
 import { createGattSession } from '../BleSessionFactory';
 import { AppLogger } from '../AppLogger';
 import { scrubPII } from '../../utils/piiScrubber';
@@ -31,7 +31,7 @@ export interface ConnectServiceInput {
    * XState BleMachine. This is the correct recovery trigger.
    */
   onOrganicDisconnect: (deviceId: string) => void;
-  handleNotification: (error: any, characteristic: any, deviceId: string) => void;
+  handleNotification: (error: BleError | null, characteristic: Characteristic | null, deviceId: string) => void;
   enqueueWrite: (
     priority: WritePriority,
     op: () => Promise<boolean | 'partial'>,
@@ -175,7 +175,7 @@ export const connectService = fromPromise<
       if (conn && conn.id) {
         rawConns.push(conn);
       } else {
-        AppLogger.error('FAILED TO CONNECT TO INDIVIDUAL DEVICE', { deviceId: scrubPII(mac), error: lastErr?.message || String(lastErr) , payload_size: 0, ssi: 0 });
+        AppLogger.error('FAILED TO CONNECT TO INDIVIDUAL DEVICE', lastErr, { deviceId: scrubPII(mac), payload_size: 0, ssi: 0 });
         AppLogger.log('BLE_CONNECTION_ERROR', { error: lastErr?.message || String(lastErr), deviceId: scrubPII(mac), context: 'group_sync_fail' });
       }
     }
@@ -204,10 +204,12 @@ export const connectService = fromPromise<
               const negotiated = await conn.requestMTU(512);
               negotiatedMtu = negotiated.mtu;
               if (negotiatedMtu > 23) break;
-              AppLogger.warn(`[BLE] MTU glitch (23) for ${conn.id}. Retrying...`);
-              await new Promise(res => setTimeout(res, jitteredDelay(BLE_TIMING.MTU_RETRY_SETTLE_MS, 50)));
+              AppLogger.warn(`[BLE] MTU glitch (23) for ${scrubPII(conn.id)}. Retrying...`);
+              const backoffMs = BLE_TIMING.MTU_RETRY_SETTLE_MS * Math.pow(2, mtuAttempt - 1);
+              await new Promise(res => setTimeout(res, jitteredDelay(backoffMs, 50)));
             } catch {
-              await new Promise(res => setTimeout(res, jitteredDelay(BLE_TIMING.MTU_RETRY_SETTLE_MS, 50)));
+              const backoffMs = BLE_TIMING.MTU_RETRY_SETTLE_MS * Math.pow(2, mtuAttempt - 1);
+              await new Promise(res => setTimeout(res, jitteredDelay(backoffMs, 50)));
             }
           }
           mtuMapRef.current.set(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);
@@ -259,7 +261,7 @@ export const connectService = fromPromise<
             AppLogger.log('BLE_TIME_SYNC', { deviceId: conn.id, protocolId: adapter.protocolId, timestamp: Date.now() });
           }
         } catch (handshakeErr: unknown) {
-          AppLogger.warn('[BLE] Handshake write failed (non-fatal)', { error: handshakeErr instanceof Error ? handshakeErr.message : String(handshakeErr), deviceId: conn.id  });
+          AppLogger.warn('[BLE] Handshake write failed (non-fatal)', { error: handshakeErr instanceof Error ? handshakeErr.message : String(handshakeErr), deviceId: scrubPII(conn.id) });
         }
 
         AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name });
@@ -272,10 +274,10 @@ export const connectService = fromPromise<
       } catch (deviceError: unknown) {
         const errMsg = deviceError instanceof Error ? deviceError.message : String(deviceError);
         if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
-          AppLogger.warn(`[BLE] Connection dropout for ${conn.id} (ignoring VIP error)`);
+          AppLogger.warn(`[BLE] Connection dropout for ${scrubPII(conn.id)} (ignoring VIP error)`);
         } else {
-          AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${conn.id}`, deviceError instanceof Error ? deviceError.message : String(deviceError), { payload_size: 0, ssi: 0 });
-          AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, deviceId: conn.id, context: 'group_sync_fail' });
+          AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${scrubPII(conn.id)}`, deviceError, { deviceId: scrubPII(conn.id), payload_size: 0, ssi: 0 });
+          AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, deviceId: scrubPII(conn.id), context: 'group_sync_fail' });
         }
         return null;
       }
@@ -303,7 +305,7 @@ export const connectService = fromPromise<
     return { devices: finalGroup };
 
   } catch (outerErr: unknown) {
-    AppLogger.error('[BLE] connectService outer failed', outerErr instanceof Error ? outerErr.message : String(outerErr), { payload_size: 0, ssi: 0 });
+    AppLogger.error('[BLE] connectService outer failed', outerErr, { payload_size: 0, ssi: 0 });
     throw outerErr;
   }
 });

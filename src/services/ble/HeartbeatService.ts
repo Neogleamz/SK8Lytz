@@ -1,6 +1,6 @@
 import { fromCallback } from 'xstate';
 import { Buffer } from 'buffer';
-import type { Device } from 'react-native-ble-plx';
+import type { Device, BleManager } from 'react-native-ble-plx';
 import { AppLogger } from '../../services/AppLogger';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
 import { enqueueWrite, isWriteQueueActive } from '../BleWriteQueue';
@@ -9,7 +9,7 @@ import { enqueueWrite, isWriteQueueActive } from '../BleWriteQueue';
 const HEARTBEAT_INTERVAL_MS = 45_000;
 
 export interface HeartbeatServiceInput {
-  bleManager: any;
+  bleManager: Pick<BleManager, 'writeCharacteristicWithoutResponseForDevice' | 'readRSSIForDevice' | 'cancelDeviceConnection'>;
   connectedDevices: Device[];
   adapterMap: Map<string, IControllerProtocol>;
 }
@@ -27,7 +27,7 @@ export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(({ inpu
     try {
       if (connectedDevices.length === 0) return;
 
-      await Promise.all(connectedDevices.map(async (device) => {
+      for (const device of connectedDevices) {
         const mac = device.id;
         const adapter = adapterMap.get(mac);
 
@@ -46,7 +46,7 @@ export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(({ inpu
                 return true;
               });
               AppLogger.log('DEVICE_DISCOVERED', { context: 'heartbeat_ping_ok', deviceId: mac });
-              return;
+              continue;
             }
           }
           // BanlanX / unknown adapter fallback: RSSI read as a liveness probe
@@ -68,7 +68,7 @@ export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(({ inpu
           // Signal the machine that a heartbeat failed for this specific device.
           sendBack({ type: 'HEARTBEAT_FAIL', deviceId: mac });
         }
-      }));
+      }
     } finally {
       isRunning = false;
     }

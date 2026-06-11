@@ -1,5 +1,6 @@
-import { BleError, BleManager, Device, ScanMode } from 'react-native-ble-plx';
+import { BleError, BleManager, Characteristic, Device, ScanMode } from 'react-native-ble-plx';
 import { WritePriority } from '../BleWriteQueue';
+import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
 
 export interface BleMachineContext {
   bleManager: BleManager;
@@ -10,14 +11,14 @@ export interface BleMachineContext {
   ghostedDeviceIds: string[];
   sweeperId?: number;
   targetMacs?: string[];
-  adapterMapRef: { current: Map<string, any> };
+  adapterMapRef: { current: Map<string, IControllerProtocol> };
   mtuMapRef: { current: Map<string, number> };
   disconnectListeners: { current: Record<string, import('react-native-ble-plx').Subscription> };
   blacklistedMacsRef: { current: string[] };
   handleOrganicDisconnect: (error: any, deviceId: string) => void;
   /** Fires when a device drops unexpectedly — wired by useBLE.ts to send RECOVERY_START */
   onOrganicDisconnect: (deviceId: string) => void;
-  handleNotification: (error: any, characteristic: any, deviceId: string) => void;
+  handleNotification: (error: BleError | null, characteristic: Characteristic | null, deviceId: string) => void;
   enqueueWrite: (
     priority: WritePriority,
     op: () => Promise<boolean | 'partial'>,
