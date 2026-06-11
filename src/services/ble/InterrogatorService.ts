@@ -19,6 +19,7 @@ import { AppLogger } from '../AppLogger';
 import { createGattSession } from '../BleSessionFactory';
 import { enqueueWrite, enqueueDelay } from '../BleWriteQueue';
 import { type PingResult, isPingResult } from '../../types/dashboard.types';
+import { scrubPII } from '../../utils/piiScrubber';
 
 const HW_CACHE_KEY = (mac: string) => `@sk8_hw_${mac.toUpperCase()}`;
 const PROBE_TIMEOUT_MS = 3500;
@@ -145,7 +146,7 @@ export async function interrogateDevice(
 
     return hwConfig;
   } catch (err: unknown) {
-    AppLogger.warn(`[InterrogatorService] Probe failed for ${mac}`, { error: String(err) });
+    AppLogger.warn(`[InterrogatorService] Probe failed for ${scrubPII(mac)}`, { error: String(err) });
     return null;
   } finally {
     probingMacsRef.current.delete(mac);
