@@ -2,14 +2,14 @@ export interface Breadcrumb {
   timestamp: string;
   category: 'NAVIGATION' | 'ACTION' | 'BLE' | 'NETWORK' | 'ERROR' | 'INFO';
   message: string;
-  data?: any;
+  data?: unknown;
 }
 
 class FlightRecorderInstance {
   private readonly MAX_BREADCRUMBS = 50;
   private breadcrumbs: Breadcrumb[] = [];
 
-  leaveBreadcrumb(category: Breadcrumb['category'], message: string, data?: any) {
+  leaveBreadcrumb(category: Breadcrumb['category'], message: string, data?: unknown) {
     this.breadcrumbs.push({
       timestamp: new Date().toISOString(),
       category,
