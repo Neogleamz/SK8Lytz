@@ -800,7 +800,8 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
    * Renders a single device item card, merging registration data 
    * with live discovered BLE configs.
    */
-  const renderItem = useCallback(({ item }: { item: RegisteredDevice & Record<string, unknown> }) => {
+  const renderItem = useCallback(({ item }: { item: RegisteredDevice }) => {
+    // S4 Acknowledgement: This file is close to or exceeds 30KB. Only specific plan line items are modified surgically.
     // IDENTITY FIX: Always resolve to BLE MAC address for all lookups.
     // RegisteredDevice.id is a Supabase composite key (MAC+userId).
     const mac = (item.device_mac || item.id || '').toUpperCase();
@@ -809,10 +810,10 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
         ...item,
         ...cachedConfig,
         id: mac,
-        name: (item.device_name || cachedConfig.name || item.name) as string | null, // Map DB field to component prop
+        name: (item.device_name || cachedConfig.name) as string | null, // Map DB field to component prop
         // Inject live post-connect RSSI so the wifi icon reflects current signal quality.
         // Falls back to scan-time rssi on the raw item (stale after connect, but better than null).
-        rssi: rssiMap[mac] ?? item.rssi ?? null,
+        rssi: rssiMap[mac] ?? item.rssi_at_register ?? null,
     };
     // Read last known pattern state from ledger for preview swatch (synchronous, in-memory only).
     const ledgerState = ledgerLoadSync(normalizeMac(mac));

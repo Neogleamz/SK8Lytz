@@ -4,10 +4,10 @@ import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { useTheme } from '../context/ThemeContext';
 import type { PatternId, RGB } from '../protocols/PatternEngine';
 import { getVisualizerFrame, getMusicVisualizerFrame, SK8LYTZ_TEMPLATES } from '../protocols/PatternEngine';
-import { PositionalMathBuffer } from '../protocols/PositionalMathBuffer';
+import { PositionalMathBuffer, BuilderNode } from '../protocols/PositionalMathBuffer';
 import { Spacing } from '../theme/theme';
 
-interface DeviceConfig {
+export interface DeviceConfig {
   id?: string;
   name?: string;
   /** Product type string. Must match a `ProductProfile.id` in the catalog. */
@@ -35,10 +35,10 @@ interface ProductVisualizerProps {
   audioMagnitude?: number;
   multiColors?: string[];
   multiTransition?: number;
-  isStreetBraking?: boolean;
+  streetBrakeState?: 'BRAKING' | 'CRUISING';
   streetCruiseColor?: string;
   motionState?: string;
-  builderNodes?: any[];
+  builderNodes?: BuilderNode[];
   builderFillMode?: 'GRADIENT' | 'SOLID';
   builderTransitionType?: number;
   builderDirection?: number;
@@ -49,10 +49,10 @@ interface ProductVisualizerProps {
 import { VisualizerUnit } from './VisualizerUnit';
 
 const EMPTY_MULTI_COLORS: string[] = [];
-const EMPTY_BUILDER_NODES: any[] = [];
+const EMPTY_BUILDER_NODES: BuilderNode[] = [];
 const DEFAULT_STREET_DISTRIBUTION: [number, number, number] = [0.3, 0.4, 0.3];
 
-const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, hwSettings, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = EMPTY_MULTI_COLORS, multiTransition = 0, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = EMPTY_BUILDER_NODES, builderFillMode = 'GRADIENT', builderTransitionType = 0x01, builderDirection = 1, fixedDirection = 1, streetDistribution = DEFAULT_STREET_DISTRIBUTION }: ProductVisualizerProps) => {
+const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, hwSettings, devices, fixedFgColor, fixedBgColor, onLongPressDevice, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = EMPTY_MULTI_COLORS, multiTransition = 0, streetBrakeState = 'CRUISING', streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = EMPTY_BUILDER_NODES, builderFillMode = 'GRADIENT', builderTransitionType = 0x01, builderDirection = 1, fixedDirection = 1, streetDistribution = DEFAULT_STREET_DISTRIBUTION }: ProductVisualizerProps) => {
   const { isDark } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
 
@@ -120,7 +120,7 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
             audioMagnitude={audioMagnitude}
             multiColors={multiColors}
             multiTransition={multiTransition}
-            isStreetBraking={isStreetBraking}
+            streetBrakeState={streetBrakeState}
             streetCruiseColor={streetCruiseColor}
             motionState={motionState}
             builderNodes={builderNodes}

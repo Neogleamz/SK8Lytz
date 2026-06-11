@@ -119,7 +119,16 @@ export function CrewCreateScreen() {
         isGettingLocation={isGettingLocation}
         onDetectLocation={handleDetectLocation}
         searchRadiusMi={discoverRadiusMi || undefined}
-        curatedSpots={hub.nearbySpots.filter((s: any) => s.facility_type === 'roller_rink' || s.facility_type === 'skatepark')}
+        curatedSpots={hub.nearbySpots
+          .filter((s: any) => s.facility_type === 'roller_rink' || s.facility_type === 'skatepark')
+          .map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            lat: s.lat,
+            lng: s.lng,
+            city: s.city ?? undefined,
+            state: s.state ?? undefined,
+          }))}
       />
 
       {errorMsg ? <Text style={styles.errorText}>{errorMsg}</Text> : null}

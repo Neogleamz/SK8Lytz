@@ -29,7 +29,15 @@ interface MusicPanelProps {
   brightness: number;
   musicPrimaryColor: string;
   musicSecondaryColor: string;
-  handleMusicChange: (...args: any[]) => void;
+  handleMusicChange: (
+    patternId?: number,
+    sensitivity?: number,
+    brightness?: number,
+    source?: 'APP' | 'DEVICE',
+    primaryColor?: string,
+    secondaryColor?: string,
+    matrix?: number
+  ) => void;
   Colors: ThemePalette;
 }
 

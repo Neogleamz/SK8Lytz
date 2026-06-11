@@ -9,6 +9,31 @@ import { useRecentSpots, RecentSpot } from '../hooks/useRecentSpots';
 import { AppLogger } from '../services/AppLogger';
 import { useAppConfig } from '../context/AppConfigContext';
 
+export interface CuratedSpot {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  city?: string;
+  state?: string;
+}
+
+export interface SuggestionItem {
+  isCurated?: boolean;
+  place_id: number | string;
+  name?: string;
+  display_name?: string;
+  lat: string | number;
+  lon: string | number;
+  address?: {
+    amenity?: string;
+    park?: string;
+    road?: string;
+    city?: string;
+    town?: string;
+  };
+}
+
 interface LocationPickerProps {
   locationLabel: string;
   onLocationLabelChange: (label: string) => void;
@@ -19,7 +44,7 @@ interface LocationPickerProps {
   isGettingLocation: boolean;
   onDetectLocation: () => void;
   searchRadiusMi?: number;
-  curatedSpots?: any[];
+  curatedSpots?: CuratedSpot[];
 }
 
 export const LocationPicker: React.FC<LocationPickerProps> = ({
@@ -35,9 +60,18 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   const { isVisibilityAllowed } = useAppConfig();
   const showMap = isVisibilityAllowed('visibility_maps_tab');
   
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const debounceTimer = useRef<NodeJS.Timeout | null>(null);
+  type SearchFSMState = 'IDLE' | 'GETTING_GPS' | 'GEOCODING' | 'ERROR' | 'SUCCESS';
+  const [fsmState, setFsmState] = useState<SearchFSMState>('IDLE');
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    if (isGettingLocation) {
+      setFsmState('GETTING_GPS');
+    } else if (fsmState === 'GETTING_GPS') {
+      setFsmState(locationCoords ? 'SUCCESS' : 'IDLE');
+    }
+  }, [isGettingLocation, locationCoords]);
 
   const handleSearch = (text: string) => {
     onLocationLabelChange(text);
@@ -48,11 +82,12 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     
     if (text.length < 2) {
       setSuggestions([]);
+      setFsmState('IDLE');
       return;
     }
 
     debounceTimer.current = setTimeout(async () => {
-      setIsSearching(true);
+      setFsmState('GEOCODING');
       
       // Fast Path: Search curated SK8Lytz spots natively
       const lowerT = text.toLowerCase();
@@ -71,7 +106,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           lon: m.lng,
           spotData: m
         })));
-        setIsSearching(false);
+        setFsmState('IDLE');
         return;
       }
       
@@ -94,34 +129,35 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         const res = await fetch(url, { headers: { 'User-Agent': 'SK8Lytz App' } });
         const data = await res.json();
         setSuggestions(data || []);
+        setFsmState(locationCoords ? 'SUCCESS' : 'IDLE');
       } catch (err: unknown) {
         AppLogger.warn('[LocationPicker] OSM fetch error', { error: (err instanceof Error ? err.message : String(err)) });
-      } finally {
-        setIsSearching(false);
+        setFsmState('ERROR');
       }
     }, 400); // reduced latency since we have local search
   };
 
-  const selectSuggestion = (item: any) => {
-    let shortName = item.name;
+  const selectSuggestion = (item: SuggestionItem) => {
+    let shortName = item.name || '';
     let fallbackId = undefined;
     
     if (item.isCurated) {
-      shortName = item.name;
-      fallbackId = item.place_id;
+      shortName = item.name || '';
+      fallbackId = typeof item.place_id === 'string' ? item.place_id : undefined;
     } else {
       const parts = [
         item.address?.amenity, item.address?.park, item.address?.road, item.address?.city || item.address?.town
       ].filter(Boolean);
-      shortName = parts.length > 0 ? parts.join(', ') : item.name || item.display_name.split(',')[0];
+      shortName = parts.length > 0 ? parts.join(', ') : item.name || item.display_name?.split(',')[0] || '';
     }
     
     onLocationLabelChange(shortName);
-    onLocationCoordsChange({ lat: parseFloat(item.lat), lng: parseFloat(item.lon) });
+    onLocationCoordsChange({ lat: parseFloat(String(item.lat)), lng: parseFloat(String(item.lon)) });
     if (onLocationSpotIdChange) onLocationSpotIdChange(fallbackId);
     
-    addRecentSpot({ id: fallbackId, name: shortName, lat: parseFloat(item.lat), lng: parseFloat(item.lon) });
+    addRecentSpot({ id: fallbackId, name: shortName, lat: parseFloat(String(item.lat)), lng: parseFloat(String(item.lon)) });
     setSuggestions([]);
+    setFsmState('SUCCESS');
   };
 
   return (
@@ -134,7 +170,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.sm }} contentContainerStyle={{ gap: Spacing.sm, paddingRight: Spacing.lg }}>
             {recentSpots.map(s => (
                 <TouchableOpacity key={`rx-${s.lat}-${s.lng}`} style={styles.chip}
-                  onPress={() => selectSuggestion({ isCurated: true, place_id: s.id, name: s.name, lat: s.lat, lon: s.lng })}>
+                  onPress={() => selectSuggestion({ isCurated: true, place_id: s.id || '', name: s.name, lat: s.lat, lon: s.lng })}>
                    <MaterialCommunityIcons name="history" size={14} color={Colors.primary} />
                    <Text style={styles.chipText}>{s.name || 'Recent'}</Text>
                 </TouchableOpacity>
@@ -158,10 +194,13 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         />
         <TouchableOpacity
           style={styles.detectBtn}
-          onPress={onDetectLocation}
-          disabled={isGettingLocation}
+          onPress={() => {
+            setFsmState('GETTING_GPS');
+            onDetectLocation();
+          }}
+          disabled={fsmState === 'GETTING_GPS'}
         >
-          {isGettingLocation || isSearching ? (
+          {fsmState === 'GETTING_GPS' || fsmState === 'GEOCODING' ? (
             <ActivityIndicator size="small" color={Colors.primary} />
           ) : (
             <MaterialCommunityIcons name="crosshairs-gps" size={20} color={locationCoords ? Colors.primary : Colors.textMuted} />
@@ -169,18 +208,34 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         </TouchableOpacity>
       </View>
 
-      {/* Suggestions List */}
-      {suggestions.length > 0 && !locationCoords && (
-        <View style={styles.suggestionsContainer}>
-          {suggestions.map((item, idx) => (
-            <TouchableOpacity key={item.place_id || idx} style={styles.suggestionItem} onPress={() => selectSuggestion(item)}>
-              <MaterialCommunityIcons name="map-marker-outline" size={16} color={Colors.textMuted} style={{ marginRight: Spacing.sm }} />
-              <Text style={styles.suggestionText} numberOfLines={2}>
-                {item.display_name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+      {/* Suggestions List dropdown with full 4-state matrix */}
+      {!locationCoords && (
+        fsmState === 'GEOCODING' ? (
+          <View style={[styles.suggestionsContainer, { padding: Spacing.md, alignItems: 'center' }]}>
+            <ActivityIndicator size="small" color={Colors.primary} />
+            <Text style={[styles.suggestionText, { marginTop: Spacing.sm, textAlign: 'center', color: Colors.textMuted }]}>Searching locations...</Text>
+          </View>
+        ) : fsmState === 'ERROR' ? (
+          <View style={[styles.suggestionsContainer, { padding: Spacing.md, alignItems: 'center' }]}>
+            <MaterialCommunityIcons name="alert-circle-outline" size={24} color="#FF453A" />
+            <Text style={[styles.suggestionText, { marginTop: Spacing.sm, textAlign: 'center', color: '#FF453A' }]}>Failed to load location suggestions.</Text>
+          </View>
+        ) : suggestions.length > 0 ? (
+          <View style={styles.suggestionsContainer}>
+            {suggestions.map((item, idx) => (
+              <TouchableOpacity key={item.place_id || idx} style={styles.suggestionItem} onPress={() => selectSuggestion(item)}>
+                <MaterialCommunityIcons name="map-marker-outline" size={16} color={Colors.textMuted} style={{ marginRight: Spacing.sm }} />
+                <Text style={styles.suggestionText} numberOfLines={2}>
+                  {item.display_name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        ) : locationLabel.length >= 2 && fsmState === 'IDLE' ? (
+          <View style={[styles.suggestionsContainer, { padding: Spacing.md, alignItems: 'center' }]}>
+            <Text style={[styles.suggestionText, { textAlign: 'center', color: Colors.textMuted }]}>No matching locations found</Text>
+          </View>
+        ) : null
       )}
 
       {/* Map Thumbnail */}

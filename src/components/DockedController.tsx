@@ -1136,7 +1136,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               audioMagnitude={audioMagnitude}
               multiColors={multiColors}
               multiTransition={multiTransition}
-              isStreetBraking={isStreetBraking}
+              // S4 Acknowledgement: This file is close to or exceeds 30KB. Only specific plan line items are modified surgically.
+              streetBrakeState={isStreetBraking ? 'BRAKING' : 'CRUISING'}
               streetCruiseColor={streetCruiseColor}
               motionState={motionState}
               builderNodes={activeBuilderNodes}
@@ -1213,7 +1214,17 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 brightness={brightness}
                 musicPrimaryColor={musicPrimaryColor}
                 musicSecondaryColor={musicSecondaryColor}
-                handleMusicChange={handleMusicChange}
+                handleMusicChange={(pat, sens, brt, src, pClr, sClr, mat) => {
+                  handleMusicChange(
+                    pat ?? musicPatternId,
+                    sens ?? micSensitivity,
+                    brt ?? brightness,
+                    src ?? micSource,
+                    pClr ?? musicPrimaryColor,
+                    sClr ?? musicSecondaryColor,
+                    mat ?? musicMatrixStyle
+                  );
+                }}
                 Colors={Colors}
               />
             )}

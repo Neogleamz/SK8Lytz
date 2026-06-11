@@ -1,7 +1,12 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useRef, useState } from 'react';
-import { LayoutChangeEvent, PanResponder, StyleSheet, View } from 'react-native';
+import { LayoutChangeEvent, PanResponder, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+
+interface WebStyle extends ViewStyle {
+  touchAction?: string;
+  userSelect?: string;
+}
 
 interface NeonHueStripProps {
   value: number;
@@ -9,7 +14,7 @@ interface NeonHueStripProps {
   onSlidingComplete?: (val: number) => void;
   minimumValue?: number;
   maximumValue?: number;
-  style?: any;
+  style?: StyleProp<ViewStyle>;
 }
 
 const NeonHueStrip = ({ value, onValueChange, onSlidingComplete, minimumValue = 0, maximumValue = 360, style }: NeonHueStripProps) => {
@@ -91,7 +96,7 @@ const NeonHueStrip = ({ value, onValueChange, onSlidingComplete, minimumValue = 
 
   return (
     <View 
-      style={[styles.container, style, { touchAction: 'none', userSelect: 'none' } as unknown as import('react-native').ViewStyle]} 
+      style={[styles.container, style, { touchAction: 'none', userSelect: 'none' } as WebStyle]} 
       onLayout={(e: LayoutChangeEvent) => {
         setContainerWidth(e.nativeEvent.layout.width);
         containerWidthRef.current = e.nativeEvent.layout.width;

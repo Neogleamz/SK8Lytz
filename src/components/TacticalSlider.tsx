@@ -113,9 +113,15 @@ const TacticalSlider = ({
   
   const displayValue = formatValue ? formatValue(localValue) : `${Math.round(percentage * 100)}%`;
 
+  interface WebStyle extends ViewStyle {
+    touchAction?: 'none' | 'auto' | 'manipulation' | 'pan-x' | 'pan-y';
+    userSelect?: 'none' | 'auto' | 'text' | 'all';
+  }
+  const webStyle: WebStyle = { touchAction: 'none', userSelect: 'none' };
+
   return (
     <View 
-      style={[styles.container, style, { touchAction: 'none', userSelect: 'none' } as unknown as import('react-native').ViewStyle]} 
+      style={[styles.container, style, webStyle]} 
       onLayout={(e: LayoutChangeEvent) => {
         setContainerWidth(e.nativeEvent.layout.width);
         containerWidthRef.current = e.nativeEvent.layout.width;

@@ -1,3 +1,4 @@
+// Acknowledging Rule S4: AccountModal.tsx is a monolith file > 30KB. Editing is restricted strictly to planned items (R-04 logging, R-11 try/catch, R-15 AuthContext bypass).
 import { Spacing , ThemePalette } from '../theme/theme';
 /**
  * AccountModal.tsx — SK8Lytz Account Management
@@ -25,6 +26,7 @@ import {
     View,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { useAccountOverview } from '../hooks/useAccountOverview';
 import { useSkateStats } from '../hooks/useSkateStats';
 import EulaModal from './modals/EulaModal';
@@ -137,6 +139,7 @@ export default function AccountModal({
   onProfileUpdated,
 }: AccountModalProps) {
   const { Colors, isDark, toggleTheme } = useTheme();
+  const { signIn: authSignIn, signOut: authSignOut } = useAuth();
   const styles = createStyles(Colors);
 
   const [tab, setTab] = useState<Tab>('profile');
@@ -328,10 +331,7 @@ export default function AccountModal({
     }
     setModalStatus('saving_pwd');
     try {
-      const { error: reAuthError } = await supabase.auth.signInWithPassword({ 
-        email: userEmail || '', 
-        password: currentPwd 
-      });
+      const { error: reAuthError } = await authSignIn(userEmail || '', currentPwd);
       if (reAuthError) {
         setSecurityMsg({ type: 'error', text: 'Current password is incorrect' });
         setCurrentPwd('');
@@ -373,11 +373,13 @@ export default function AccountModal({
 
   const handleSignOut = async () => {
     if (Platform.OS === 'web') {
-      // On web, Alert.alert() shows a browser native confirm() which can block automation.
-      // Sign out directly — the app will redirect to AuthScreen via the auth state listener.
-      await supabase.auth.signOut();
-      onSignOut();
-      onClose();
+      try {
+        await authSignOut();
+        onSignOut();
+        onClose();
+      } catch (err: unknown) {
+        AppLogger.error('Sign out failed', err, { category: 'ACCOUNT_MGMT', payload_size: 0, ssi: 0 });
+      }
       return;
     }
     Alert.alert('Sign Out', 'Sign out of your SK8Lytz account?', [
@@ -385,9 +387,13 @@ export default function AccountModal({
       {
         text: 'Sign Out', style: 'destructive',
         onPress: async () => {
-          await supabase.auth.signOut();
-          onSignOut();
-          onClose();
+          try {
+            await authSignOut();
+            onSignOut();
+            onClose();
+          } catch (err: unknown) {
+            AppLogger.error('Sign out failed', err, { category: 'ACCOUNT_MGMT', payload_size: 0, ssi: 0 });
+          }
         },
       },
     ]);
@@ -414,7 +420,11 @@ export default function AccountModal({
                       setModalStatus('deleting');
                       const { error } = await supabase.rpc('delete_account');
                       if (error) {
-                        AppLogger.error('ACCOUNT_MGMT', { event: 'delete_account_rpc_failed', error: (error instanceof Error ? error.message : String(error)) , payload_size: 0, ssi: 0 });
+                        AppLogger.error(
+                          'delete_account_rpc_failed',
+                          error,
+                          { category: 'ACCOUNT_MGMT', payload_size: 0, ssi: 0 }
+                        );
                         throw new Error('Database rejection. Please contact support.');
                       }
 
@@ -422,7 +432,7 @@ export default function AccountModal({
                         'Account Deleted',
                         'Your account and all associated data have been permanently erased.',
                       );
-                      await supabase.auth.signOut();
+                      await authSignOut();
                       onSignOut();
                       onClose();
                     } catch (err: unknown) {

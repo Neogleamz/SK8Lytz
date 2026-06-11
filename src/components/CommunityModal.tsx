@@ -5,16 +5,26 @@ import {
     Animated, Easing,
     FlatList,
     Modal,
-    SafeAreaView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ICloudScene, Scene, ScenesService } from '../services/ScenesService';
+import { AppLogger } from '../services/AppLogger';
 import { Layout, Spacing, Typography , ThemePalette } from '../theme/theme';
+
+interface ScenePayload extends Partial<Scene> {
+  activeMode?: string;
+  fixedSubMode?: string;
+  multiColors?: string[];
+  selectedColor?: string;
+  musicPrimaryColor?: string;
+  musicSecondaryColor?: string;
+}
 import { ErrorCard } from './ErrorCard';
 import { EmptyState } from './EmptyState';
 
@@ -63,7 +73,7 @@ function LedStripPreview({ colors, mode }: { colors: string[], mode: string }) {
           flexDirection: 'row',
           width: '200%',
           height: '100%',
-          transform: isAnimated ? [{ translateX: translateX as unknown as number }] : [],
+          transform: isAnimated ? [{ translateX: translateX as Animated.AnimatedInterpolation<number> }] : [],
         }}
       >
         {repeated.map((color, idx) => (
@@ -73,6 +83,110 @@ function LedStripPreview({ colors, mode }: { colors: string[], mode: string }) {
     </View>
   );
 }
+
+const SceneCard = React.memo(({
+  item,
+  activeTab,
+  processingId,
+  Colors,
+  styles,
+  onUpvote,
+  onDelete,
+  onApply,
+}: {
+  item: ICloudScene;
+  activeTab: 'COMMUNITY' | 'PERSONAL';
+  processingId: string | null;
+  Colors: ThemePalette;
+  styles: any;
+  onUpvote: (id: string) => void;
+  onDelete: (id: string) => void;
+  onApply: (scene: ICloudScene) => void;
+}) => {
+  const handleUpvote = useCallback(() => {
+    onUpvote(item.id);
+  }, [onUpvote, item.id]);
+
+  const handleDelete = useCallback(() => {
+    onDelete(item.id);
+  }, [onDelete, item.id]);
+
+  const handleApply = useCallback(() => {
+    onApply(item);
+  }, [onApply, item]);
+
+  const p = (item.scene_payload as ScenePayload) || {};
+  const mode: string = p.activeMode || p.fixedSubMode || 'UNKNOWN';
+  const isOwner = activeTab === 'PERSONAL';
+
+  // Build color array for preview
+  let previewColors: string[] = [];
+  if (p.multiColors && p.multiColors.length > 0) previewColors = p.multiColors;
+  else if (p.selectedColor) previewColors = [p.selectedColor, p.selectedColor];
+  else if (p.musicPrimaryColor) previewColors = [p.musicPrimaryColor, p.musicSecondaryColor || '#000'];
+
+  const modeLabel = mode.toUpperCase();
+  const paramCount = Object.keys(p).length;
+
+  return (
+    <View style={styles.card}>
+      {/* Header row */}
+      <View style={styles.cardHeader}>
+        <Text style={styles.sceneName} numberOfLines={1}>{item.name}</Text>
+        <View style={[styles.badge, { backgroundColor: item.is_public ? 'rgba(0,200,80,0.15)' : 'rgba(255,255,255,0.08)' }]}>
+          <MaterialCommunityIcons
+            name={item.is_public ? 'earth' : 'lock-outline'}
+            size={10}
+            color={item.is_public ? '#00C853' : '#888'}
+            style={{ marginRight: Spacing.xs }}
+          />
+          <Text style={[styles.badgeText, { color: item.is_public ? '#00C853' : '#888' }]}>{modeLabel}</Text>
+        </View>
+      </View>
+
+      <Text style={styles.authorText}>By {item.author_username}  ·  {paramCount} params</Text>
+
+      {/* LED Strip Preview */}
+      <View style={styles.stripContainer}>
+        <LedStripPreview colors={previewColors} mode={mode} />
+      </View>
+
+      {/* Actions */}
+      <View style={styles.cardActions}>
+        <View style={styles.statsRow}>
+          <TouchableOpacity
+            style={styles.statItem}
+            onPress={handleUpvote}
+            disabled={processingId === item.id || activeTab === 'PERSONAL'}
+          >
+            <MaterialCommunityIcons name="heart" size={15} color={activeTab === 'COMMUNITY' ? Colors.primary : '#555'} />
+            <Text style={styles.statText}>{item.upvotes}</Text>
+          </TouchableOpacity>
+          <View style={styles.statItem}>
+            <MaterialCommunityIcons name="download-outline" size={15} color="#555" />
+            <Text style={styles.statText}>{item.downloads}</Text>
+          </View>
+        </View>
+
+        <View style={styles.actionButtons}>
+          {isOwner && (
+            <TouchableOpacity
+              style={[styles.iconButton, { borderColor: 'rgba(255,60,60,0.4)' }]}
+              onPress={handleDelete}
+              disabled={processingId === item.id}
+            >
+              <MaterialCommunityIcons name="trash-can-outline" size={17} color="#FF4444" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.applyButton} onPress={handleApply}>
+            <Text style={styles.applyButtonText}>Apply</Text>
+            <MaterialCommunityIcons name="lightning-bolt" size={16} color="#000" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+});
 
 // --- Main Component ---
 export default function CommunityModal({ isOfflineMode = false, isVisible, onClose, onApplyScene }: Props) {
@@ -85,6 +199,7 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
     if (isVisible) {
@@ -94,11 +209,14 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
   }, [isVisible, activeTab, isOfflineMode]);
 
   const fetchScenes = async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setLoading(true);
     setError(null);
     if (activeTab === 'COMMUNITY' && isOfflineMode) {
       setScenes([]);
       setLoading(false);
+      isFetchingRef.current = false;
       return;
     }
     try {
@@ -106,10 +224,12 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
         ? await ScenesService.getPublicScenes()
         : await ScenesService.getMyScenes(user?.id ?? '');
       setScenes(data);
-    } catch (e) {
+    } catch (e: unknown) {
+      AppLogger.warn('[CommunityModal] failed to fetch scenes', { error: e instanceof Error ? e.message : String(e) });
       setError('Failed to load. Tap to retry.');
     } finally {
       setLoading(false);
+      isFetchingRef.current = false;
     }
   };
 
@@ -144,78 +264,19 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
   };
 
   const renderItem = useCallback(({ item }: { item: ICloudScene }) => {
-    const p = (item.scene_payload as unknown as Record<string, any>) || {};
-    const mode: string = p.activeMode || p.fixedSubMode || 'UNKNOWN';
-    const isOwner = activeTab === 'PERSONAL';
-
-    // Build color array for preview
-    let previewColors: string[] = [];
-    if (p.multiColors?.length > 0) previewColors = p.multiColors;
-    else if (p.selectedColor) previewColors = [p.selectedColor, p.selectedColor];
-    else if (p.musicPrimaryColor) previewColors = [p.musicPrimaryColor, p.musicSecondaryColor || '#000'];
-
-    const modeLabel = mode.toUpperCase();
-    const paramCount = Object.keys(p).length;
-
     return (
-      <View style={styles.card}>
-        {/* Header row */}
-        <View style={styles.cardHeader}>
-          <Text style={styles.sceneName} numberOfLines={1}>{item.name}</Text>
-          <View style={[styles.badge, { backgroundColor: item.is_public ? 'rgba(0,200,80,0.15)' : 'rgba(255,255,255,0.08)' }]}>
-            <MaterialCommunityIcons
-              name={item.is_public ? 'earth' : 'lock-outline'}
-              size={10}
-              color={item.is_public ? '#00C853' : '#888'}
-              style={{ marginRight: Spacing.xs }}
-            />
-            <Text style={[styles.badgeText, { color: item.is_public ? '#00C853' : '#888' }]}>{modeLabel}</Text>
-          </View>
-        </View>
-
-        <Text style={styles.authorText}>By {item.author_username}  ·  {paramCount} params</Text>
-
-        {/* LED Strip Preview */}
-        <View style={styles.stripContainer}>
-          <LedStripPreview colors={previewColors} mode={mode} />
-        </View>
-
-        {/* Actions */}
-        <View style={styles.cardActions}>
-          <View style={styles.statsRow}>
-            <TouchableOpacity
-              style={styles.statItem}
-              onPress={() => handleUpvote(item.id)}
-              disabled={processingId === item.id || activeTab === 'PERSONAL'}
-            >
-              <MaterialCommunityIcons name="heart" size={15} color={activeTab === 'COMMUNITY' ? Colors.primary : '#555'} />
-              <Text style={styles.statText}>{item.upvotes}</Text>
-            </TouchableOpacity>
-            <View style={styles.statItem}>
-              <MaterialCommunityIcons name="download-outline" size={15} color="#555" />
-              <Text style={styles.statText}>{item.downloads}</Text>
-            </View>
-          </View>
-
-          <View style={styles.actionButtons}>
-            {isOwner && (
-              <TouchableOpacity
-                style={[styles.iconButton, { borderColor: 'rgba(255,60,60,0.4)' }]}
-                onPress={() => handleDelete(item.id)}
-                disabled={processingId === item.id}
-              >
-                <MaterialCommunityIcons name="trash-can-outline" size={17} color="#FF4444" />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity style={styles.applyButton} onPress={() => handleApply(item)}>
-              <Text style={styles.applyButtonText}>Apply</Text>
-              <MaterialCommunityIcons name="lightning-bolt" size={16} color="#000" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
+      <SceneCard
+        item={item}
+        activeTab={activeTab}
+        processingId={processingId}
+        Colors={Colors}
+        styles={styles}
+        onUpvote={handleUpvote}
+        onDelete={handleDelete}
+        onApply={handleApply}
+      />
     );
-  }, [activeTab, processingId]);
+  }, [activeTab, processingId, Colors, styles, handleUpvote, handleDelete, handleApply]);
 
   const keyExtractorScene = useCallback((item: ICloudScene) => item.id, []);
 

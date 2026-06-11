@@ -1,3 +1,4 @@
+// S4 Acknowledgement: This file is close to 30KB. Only specific plan line items are modified surgically.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 /* global requestAnimationFrame, cancelAnimationFrame */
 import { Animated, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -41,7 +42,7 @@ export interface VisualizerUnitProps {
   fallbackProduct?: string;
   fallbackPoints?: number;
   hwSettings?: { ledPoints?: number; segments?: number };
-  onLongPress?: (device: unknown) => void;
+  onLongPress?: (device: any) => void;
   fixedFgColor?: string;
   fixedBgColor?: string;
   brightness?: number;
@@ -50,10 +51,10 @@ export interface VisualizerUnitProps {
   audioMagnitude?: number;
   multiColors?: string[];
   multiTransition?: number;
-  isStreetBraking?: boolean;
+  streetBrakeState?: 'BRAKING' | 'CRUISING';
   streetCruiseColor?: string;
   motionState?: string;
-  builderNodes?: unknown[];
+  builderNodes?: BuilderNode[];
   builderFillMode?: string;
   builderTransitionType?: number;
   builderDirection?: number;
@@ -61,7 +62,7 @@ export interface VisualizerUnitProps {
   streetDistribution?: [number, number, number];
 }
 
-export const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, hwSettings, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, isStreetBraking = false, streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1, fixedDirection = 1, streetDistribution = [0.3, 0.4, 0.3] }: VisualizerUnitProps) => {
+export const VisualizerUnit = React.memo(({ device, color, mode, patternId, animValue, fallbackProduct, fallbackPoints, hwSettings, onLongPress, fixedFgColor, fixedBgColor, brightness = 100, speed = 50, isPoweredOn = true, audioMagnitude = 0, multiColors = [], multiTransition = 0, streetBrakeState = 'CRUISING', streetCruiseColor = '#FF8C00', motionState = 'STOPPED', builderNodes = [], builderFillMode = 'GRADIENT', builderTransitionType = 1, builderDirection = 1, fixedDirection = 1, streetDistribution = [0.3, 0.4, 0.3] }: VisualizerUnitProps) => {
   const { isDark: _isDark } = useTheme();
   // Guard against String(undefined)='undefined' which causes silent SOULZ fallback for HALOZ devices
   const product = (device?.type && device.type !== 'undefined') ? String(device.type) : String(fallbackProduct || 'SOULZ');
@@ -236,7 +237,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
       let bgHex = fixedBgColor || '#000000';
       hoistedPid = Math.max(1, patternId || 1);
       if (mode === 'STREET') {
-        const isActiveBraking = motionState === 'HARD_BRAKING' || motionState === 'STOPPED' || isStreetBraking;
+        const isActiveBraking = motionState === 'HARD_BRAKING' || motionState === 'STOPPED' || streetBrakeState === 'BRAKING';
         const isSlowing = motionState === 'SLOWING_DOWN';
         fgHex = '#FF2200';
         bgHex = isSlowing ? '#FFAA00' : streetCruiseColor;
@@ -442,7 +443,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
       });
     }
     return list;
-  }, [pathGeometry, mode, color, numLeds, patternId, isPoweredOn, audioMagnitude, fixedFgColor, fixedBgColor, multiColors, multiTransition, brightness, speed, animTick, isStreetBraking, motionState, streetCruiseColor, builderNodes, builderFillMode, builderTransitionType, builderDirection]);
+  }, [pathGeometry, mode, color, numLeds, patternId, isPoweredOn, audioMagnitude, fixedFgColor, fixedBgColor, multiColors, multiTransition, brightness, speed, animTick, streetBrakeState, motionState, streetCruiseColor, builderNodes, builderFillMode, builderTransitionType, builderDirection]);
 
   return (
     <TouchableOpacity

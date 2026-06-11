@@ -23,6 +23,7 @@ import {
     Text,
     TouchableOpacity,
     View,
+    ViewStyle,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import type { ISessionSnapshot } from '../services/SpeedTrackingService';
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
     borderRadius: 24, borderWidth: 1.5,
     padding: Spacing.xl,
     ...(Platform.OS === 'web'
-      ? { boxShadow: '0px 0px 30px rgba(0,0,0,0.8)' } as unknown as import('react-native').ViewStyle
+      ? ({ boxShadow: '0px 0px 30px rgba(0,0,0,0.8)' } as ViewStyle & { boxShadow?: string })
       : { shadowColor: '#000000', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 30, elevation: 20 })
   },
   headerRow: {

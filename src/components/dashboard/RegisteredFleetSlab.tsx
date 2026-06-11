@@ -1,22 +1,15 @@
-import { Spacing , ThemePalette } from '../../theme/theme';
-/**
- * RegisteredFleetSlab.tsx — "REGISTERED DEVICES" Fleet Slab
- *
- * SLAB 4 of the disconnected dashboard view. Collapsible list of all
- * registered devices, rendered via the parent's `renderItem` callback.
- *
- * Extracted from DashboardScreen.tsx (chore/refactor-dashboard-monolith).
- */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
+import { Spacing , ThemePalette } from '../../theme/theme';
+import { RegisteredDevice } from '../../hooks/useRegistration';
 
 interface RegisteredFleetSlabProps {
-  registeredDevices: any[];
+  registeredDevices: RegisteredDevice[];
   isRegisteredCollapsed: boolean;
   onToggleCollapse: () => void;
   onSetupWizard: () => void;
-  renderItem: (info: { item: any }) => React.ReactElement | null;
+  renderItem: (info: { item: RegisteredDevice }) => React.ReactElement | null;
   Colors: ThemePalette;
   styles: Record<string, import('react-native').StyleProp<import('react-native').ViewStyle | import('react-native').TextStyle>>;
 }
@@ -57,7 +50,7 @@ const RegisteredFleetSlab = React.memo(({
     {!isRegisteredCollapsed && (
       registeredDevices.length > 0 ? (
         <View style={styles.deviceListFixed}>
-          {registeredDevices.map((d: any) => (
+          {registeredDevices.map((d: RegisteredDevice) => (
             <View key={d.id || d.device_mac} style={{ marginBottom: Spacing.sm }}>
               {renderItem({ item: d })}
             </View>

@@ -63,6 +63,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
   );
   const [rfRemotes, setRfRemotes] = useState<string[]>(initialSettings.rfRemotes || []);
   const [probeStatus, setProbeStatus] = useState<ProbeStatus>('idle');
+  const probeTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isProbing = probeStatus !== 'idle' && probeStatus !== 'complete' && probeStatus !== 'error';
 
@@ -111,7 +112,18 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
       setRfMode(initialSettings.rfMode || 'ALLOW_PAIRED');
       setRfRemotes(initialSettings.rfRemotes || []);
       setProbeStatus('idle');
+    } else {
+      if (probeTimeoutRef.current) {
+        clearTimeout(probeTimeoutRef.current);
+        probeTimeoutRef.current = null;
+      }
     }
+    return () => {
+      if (probeTimeoutRef.current) {
+        clearTimeout(probeTimeoutRef.current);
+        probeTimeoutRef.current = null;
+      }
+    };
   }, [isVisible]);
 
   const handleTypeChange = (t: string) => {
@@ -209,8 +221,13 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
     if (writeToDevice) {
       setProbeStatus('connecting');
       dispatch.queryHardwareSettings(false, deviceId);
+      
+      if (probeTimeoutRef.current) {
+        clearTimeout(probeTimeoutRef.current);
+      }
+      
       // Fallback timeout in case the device doesn't respond
-      setTimeout(() => {
+      probeTimeoutRef.current = setTimeout(() => {
         setProbeStatus(prev => {
           if (prev !== 'idle' && prev !== 'complete' && prev !== 'error') {
              Alert.alert("Probe Timeout", "Device didn't respond to hardware query. Make sure it's nearby and connected.");

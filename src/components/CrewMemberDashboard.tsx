@@ -137,6 +137,19 @@ const viStyles = StyleSheet.create({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+interface CrewMemberRow {
+  user_id: string;
+  role: 'leader' | 'member' | null;
+  joined_at: string;
+  user_profiles: {
+    display_name: string | null;
+    avatar_color: string | null;
+  } | {
+    display_name: string | null;
+    avatar_color: string | null;
+  }[] | null;
+}
+
 export default function CrewMemberDashboard({ session, role, currentScene, onLeave }: Props) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
@@ -161,13 +174,16 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
         .eq('session_id', session.id);
 
         if (data) {
-          setMembers(data.map((r: any) => ({
-            user_id: r.user_id,
-            role: r.role ?? 'member',
-            joined_at: r.joined_at,
-            display_name: r.user_profiles?.display_name ?? null,
-            avatar_color: r.user_profiles?.avatar_color ?? null,
-          })));
+          setMembers((data as unknown as CrewMemberRow[]).map((r) => {
+            const profile = Array.isArray(r.user_profiles) ? r.user_profiles[0] : r.user_profiles;
+            return {
+              user_id: r.user_id,
+              role: r.role ?? 'member',
+              joined_at: r.joined_at,
+              display_name: profile?.display_name ?? null,
+              avatar_color: profile?.avatar_color ?? null,
+            };
+          }));
         }
       } catch (e: unknown) {
         import('../services/AppLogger').then(({ AppLogger }) => {

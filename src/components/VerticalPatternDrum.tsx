@@ -19,12 +19,25 @@ const VerticalPatternDrum = ({
   itemLabel?: (item: number) => string;
 }) => {
   const { Colors } = useTheme();
-  const styles = createStyles(Colors);
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const flatListRef = useRef<FlatList>(null);
   
   const [localVal, setLocalVal] = useState(value);
   const [layoutHeight, setLayoutHeight] = useState(200);
   const commitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastScrolledValueRef = useRef(value);
+
+  const patternCount = max - min + 1;
+
+  const scrollToValue = useCallback((val: number, animated = true) => {
+    let targetRep = 2; // Middle of 5 reps
+    const targetIdx = (targetRep * patternCount) + (val - min);
+    
+    flatListRef.current?.scrollToOffset({ 
+      offset: targetIdx * ITEM_HEIGHT, 
+      animated 
+    });
+  }, [patternCount, min]);
 
   useEffect(() => {
     return () => {
@@ -34,10 +47,15 @@ const VerticalPatternDrum = ({
 
   useEffect(() => {
     setLocalVal(value);
-  }, [value]);
+    if (value !== lastScrolledValueRef.current) {
+      lastScrolledValueRef.current = value;
+      scrollToValue(value, true);
+    }
+  }, [value, scrollToValue]);
 
   const commitValue = useCallback((val: number) => {
     setLocalVal(val);
+    lastScrolledValueRef.current = val;
     if (val !== value) {
        if (commitTimeoutRef.current) clearTimeout(commitTimeoutRef.current);
        commitTimeoutRef.current = setTimeout(() => {
@@ -60,19 +78,8 @@ const VerticalPatternDrum = ({
     return arr;
   }, [min, max]);
 
-  const patternCount = max - min + 1;
   // Frame 1 absolute jump vector ensuring Zero layout calculations
   const [initialTargetIdx] = useState((2 * patternCount) + (value - min));
-
-  const scrollToValue = useCallback((val: number, animated = true) => {
-    let targetRep = 2; // Middle of 5 reps
-    const targetIdx = (targetRep * patternCount) + (val - min);
-    
-    flatListRef.current?.scrollToOffset({ 
-      offset: targetIdx * ITEM_HEIGHT, 
-      animated 
-    });
-  }, [patternCount, min]);
 
   const keyExtractor = useCallback((item: { id: string }) => item.id, []);
 
@@ -98,18 +105,7 @@ const VerticalPatternDrum = ({
     );
   }, [localVal, commitValue, scrollToValue, itemLabel, styles]);
 
-  useEffect(() => {
-    let timeoutId: ReturnType<typeof setTimeout>;
-    if (value !== localVal) {
-      setLocalVal(value);
-      timeoutId = setTimeout(() => scrollToValue(value, true), 50);
-    }
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-    };
-  }, [value, localVal, scrollToValue]);
-
-  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const offsetY = e.nativeEvent.contentOffset.y;
     const index = Math.max(0, Math.round(offsetY / ITEM_HEIGHT));
     const item = items[index];
@@ -119,7 +115,7 @@ const VerticalPatternDrum = ({
         commitValue(item.val);
       }
     }
-  };
+  }, [items, localVal, commitValue]);
 
   return (
     <View style={[styles.containerWrap, { flex: 1 }]}>
