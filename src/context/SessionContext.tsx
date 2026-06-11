@@ -203,6 +203,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
         if (telemetry.gpsSpeed < 0.2) {
           if (sessionPhase === 'ACTIVE') {
+            // TODO: [R-16] Refactor hardcoded setTimeout to use BleWriteQueue
             timer = setTimeout(async () => {
               setSessionPhase('PAUSED');
               AppLogger.log('APP_LOG', { event: 'auto_pause_triggered' });
@@ -420,6 +421,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
 
     // ── 5. Push STOPPED after 10s (matches watch card auto-dismiss timer) ────
+    // TODO: [R-16] Refactor hardcoded setTimeout to use BleWriteQueue
     summaryTimeoutRef.current = setTimeout(() => {
       WatchBridge.syncSessionState({ status: 'STOPPED' }).catch(() => {});
       summaryTimeoutRef.current = null;
