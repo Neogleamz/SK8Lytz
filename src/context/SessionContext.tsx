@@ -7,8 +7,24 @@ import { useMachine } from '@xstate/react';
 import { sessionMachine } from '../services/session/SessionMachine';
 import { SessionBridge } from '../services/session/SessionBridge';
 import { TelemetrySnapshot, HealthSnapshot } from '../services/session/SessionMachine.types';
-import { GlobalTelemetryState } from '../hooks/useGlobalTelemetry';
-import { HealthTelemetry } from '../hooks/useHealthTelemetry';
+
+export interface GlobalTelemetryState {
+  gpsSpeed: number;
+  peakGForce: number;
+  sessionDistanceMiles: number;
+  sessionDurationSec: number;
+  sessionPeakSpeed: number;
+  sessionAvgSpeed: number;
+}
+
+export interface HealthTelemetry {
+  latestBpm: number | null;
+  avgBpm: number | null;
+  peakBpm: number | null;
+  activeCalories: number | null;
+  mergeWatchHealth?: (heartRate: number, calories: number) => void;
+}
+
 import { AppLogger } from '../services/AppLogger';
 import { WatchBridge, WatchCommand, WatchHealthUpdate } from 'sk8lytz-watch-bridge';
 import { STORAGE_AUTO_PAUSE_ENABLED, STORAGE_PENDING_BG_END } from '../constants/storageKeys';

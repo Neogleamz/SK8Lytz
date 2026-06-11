@@ -5,6 +5,8 @@ import { useTheme } from '../../context/ThemeContext';
 import Svg, { Circle, Line, Text as SvgText } from 'react-native-svg';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TextShadows, Shadows } from '../../theme/theme';
+import { SessionPhaseBadge } from '../session/SessionPhaseBadge';
+import type { SessionPhase } from '../../services/session/SessionMachine.types';
 
 // Wrapper to strip the 'collapsable' prop injected by Animated which causes DOM errors on Web
 const CircleWrapper = React.forwardRef<any, any>((props: any, ref) => {
@@ -21,6 +23,7 @@ interface DashboardTelemetryHeroProps {
   sessionAvgSpeed: number;
   healthBpm?: number | null;
   healthCalories?: number | null;
+  sessionPhase: SessionPhase;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -37,7 +40,7 @@ const angleForRatio = (t: number) => (1 - t) * Math.PI;
 export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = React.memo(({
   gpsSpeed, peakGForce, sessionDistanceMiles,
   sessionDurationSec, sessionPeakSpeed, sessionAvgSpeed,
-  healthBpm, healthCalories
+  healthBpm, healthCalories, sessionPhase
 }) => {
   const { Colors } = useTheme();
   const windowWidth = Dimensions.get('window').width;
@@ -251,7 +254,13 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = Rea
         <View style={styles.metricsRow}>
           <TelemetryPill label="DISTANCE" value={sessionDistanceMiles.toFixed(2)} unit="mi"    accent="#00FFFF" />
           <TelemetryPill label="G-FORCE"  value={peakGForce.toFixed(1)}           unit="g"     accent="#FF00FF" />
-          <TelemetryPill label="TIME"     value={formatDuration(sessionDurationSec)} unit=""   accent="#FFD600" />
+          <TelemetryPill label="TIME"     value={formatDuration(sessionDurationSec)} unit=""   accent="#FFD600">
+            {sessionPhase !== 'IDLE' && (
+              <View style={{ marginTop: 4 }}>
+                <SessionPhaseBadge sessionPhase={sessionPhase} />
+              </View>
+            )}
+          </TelemetryPill>
         </View>
         <View style={styles.metricsRow}>
           <TelemetryPill label="AVG SPD"  value={sessionAvgSpeed.toFixed(1)}       unit="mph"  accent="#00FF85" />
@@ -265,8 +274,8 @@ export const DashboardTelemetryHero: React.FC<DashboardTelemetryHeroProps> = Rea
 });
 
 // ─── Glass Pill ───────────────────────────────────────────────────────────────
-const TelemetryPill = ({ label, value, unit, accent }:
-  { label: string; value: string; unit: string; accent: string }) => (
+const TelemetryPill = ({ label, value, unit, accent, children }:
+  { label: string; value: string; unit: string; accent: string; children?: React.ReactNode }) => (
   <View style={styles.pillContainer}>
     <LinearGradient
       colors={['rgba(255,255,255,0.07)', 'rgba(0,0,0,0.5)']}
@@ -280,6 +289,7 @@ const TelemetryPill = ({ label, value, unit, accent }:
       </Text>
       {unit !== '' && <Text style={styles.pillUnit}>{unit}</Text>}
     </View>
+    {children}
   </View>
 );
 

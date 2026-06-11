@@ -10,11 +10,12 @@
  */
 import React, { useEffect, useRef } from 'react';
 import { Animated, ScrollView, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
-import { crewService } from '../../services/CrewService';
 import { Spacing } from '../../theme/theme';
 import type { MotionState } from '../../types/dashboard.types';
 import AnalogGauge from './AnalogGauge';
 import StreetModeDistributionSlider from './StreetModeDistributionSlider';
+import { SessionPhaseBadge } from '../session/SessionPhaseBadge';
+import type { SessionPhase } from '../../services/session/SessionMachine.types';
 
 /** Converts elapsed milliseconds → "MM:SS" string */
 function formatElapsedTime(ms: number): string {
@@ -39,6 +40,9 @@ interface StreetPanelProps {
   sessionDurationSec: number;
   /** Injected from telemetry */
   sessionAvgSpeed: number;
+  sessionPeakSpeed: number;
+  sessionDistanceMiles: number;
+  sessionPhase: SessionPhase;
 }
 
 const StreetPanel = React.memo(({
@@ -54,6 +58,9 @@ const StreetPanel = React.memo(({
   stopSessionRecording,
   sessionDurationSec,
   sessionAvgSpeed,
+  sessionPeakSpeed,
+  sessionDistanceMiles,
+  sessionPhase,
 }: StreetPanelProps) => {
   const { height: windowHeight } = useWindowDimensions();
   const isShort = windowHeight < 720;
@@ -77,8 +84,8 @@ const StreetPanel = React.memo(({
   }, [sessionActive, pulseAnim]);
 
   // ── Metric chip computations ──────────────────────────────────────────────
-  const topSpeed = crewService.sessionTelemetry.topSpeedMph.toFixed(1);
-  const distance = crewService.sessionTelemetry.distanceMiles.toFixed(2);
+  const topSpeed = sessionPeakSpeed.toFixed(1);
+  const distance = sessionDistanceMiles.toFixed(2);
   const avgSpeed = sessionAvgSpeed.toFixed(1);
   const sessionTime = sessionActive
     ? formatElapsedTime(sessionDurationSec * 1000)
@@ -114,22 +121,24 @@ const StreetPanel = React.memo(({
 
         {/* REC dot — absolutely pinned to right edge so it never shifts the centered text */}
         <TouchableOpacity
-          onPress={() => { if (!sessionActive) startSession(); else stopSessionRecording(); }}
+          onPress={() => { if (sessionPhase === 'IDLE') startSession(); else stopSessionRecording(); }}
           activeOpacity={0.7}
           style={{ position: 'absolute', right: 0, alignItems: 'center', paddingHorizontal: 6, paddingVertical: 2 }}
         >
-          <Text style={{ color: '#F79320', fontSize: 8, fontWeight: '900', letterSpacing: 1, marginBottom: 3 }}>
-            REC
-          </Text>
-          <Animated.View style={{
-            width: 13, height: 13, borderRadius: 7,
-            backgroundColor: sessionActive ? '#F79320' : '#4A2A05',
-            shadowColor: '#F79320',
-            shadowOpacity: sessionActive ? 0.9 : 0,
-            shadowRadius: 6,
-            elevation: sessionActive ? 6 : 0,
-            opacity: sessionActive ? pulseAnim : 0.4,
-          }} />
+          {sessionPhase === 'IDLE' ? (
+            <>
+              <Text style={{ color: '#F79320', fontSize: 8, fontWeight: '900', letterSpacing: 1, marginBottom: 3 }}>
+                REC
+              </Text>
+              <Animated.View style={{
+                width: 13, height: 13, borderRadius: 7,
+                backgroundColor: '#4A2A05',
+                opacity: 0.4,
+              }} />
+            </>
+          ) : (
+            <SessionPhaseBadge sessionPhase={sessionPhase} />
+          )}
         </TouchableOpacity>
       </View>
 

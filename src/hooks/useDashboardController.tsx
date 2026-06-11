@@ -13,6 +13,7 @@ import { useAuth } from '../context/AuthContext';
 import { PanResponderInstance } from 'react-native';
 import { AppLogger } from '../services/AppLogger';
 import { RegisteredDevice } from './useRegistration';
+import type { SessionPhase } from '../services/session/SessionMachine.types';
 
 export interface UseDashboardControllerProps {
   isOfflineMode: boolean;
@@ -37,6 +38,8 @@ export interface UseDashboardControllerProps {
   sessionDistanceMiles: number;
   sessionDurationSec: number;
   sessionAvgSpeed: number;
+  sessionPeakSpeed: number;
+  sessionPhase: SessionPhase;
   sessionActive: boolean;
   startSession: () => void;
   stopSessionRecording: () => void;
@@ -79,6 +82,8 @@ export function useDashboardController({
   sessionDistanceMiles,
   sessionDurationSec,
   sessionAvgSpeed,
+  sessionPeakSpeed,
+  sessionPhase,
   sessionActive,
   startSession,
   stopSessionRecording,
@@ -201,6 +206,8 @@ export function useDashboardController({
             sessionDistanceMiles={sessionDistanceMiles}
             sessionDurationSec={sessionDurationSec}
             sessionAvgSpeed={sessionAvgSpeed}
+            sessionPeakSpeed={sessionPeakSpeed}
+            sessionPhase={sessionPhase}
             sessionActive={sessionActive}
             startSession={startSession}
             stopSessionRecording={stopSessionRecording}
@@ -238,7 +245,7 @@ export function useDashboardController({
   }, [
     isActuallyConnected, isGrouped, displayConnectedDevices, writeToDevice, powerStates, 
     isTestModeActive, activeHwSettings, crewRole, crewSession, lastLeaderScene, bleState, 
-    ledgerSave, gpsSpeed, peakGForce, sessionDistanceMiles, sessionDurationSec, sessionAvgSpeed, sessionActive, startSession, stopSessionRecording,
+    ledgerSave, gpsSpeed, peakGForce, sessionDistanceMiles, sessionDurationSec, sessionAvgSpeed, sessionPeakSpeed, sessionPhase, sessionActive, startSession, stopSessionRecording,
     appSettings, customGroups, dockedControllerRef, edgePanResponder, handleDisconnect, 
     handlePowerToggle, lastGroupPatterns, setCrewModeSummary,
     setLastGroupPattern, setLastLeaderScene, userId

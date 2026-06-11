@@ -483,7 +483,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   const [isControllerOpen, setIsControllerOpen] = useState(false);
   
   // ── Global Telemetry from SessionProvider ──
-  const { isSkateSessionActive, startSession, endSession, telemetry: sessionTelemetry, health } = useSession();
+  const { isSkateSessionActive, sessionPhase, startSession, endSession, telemetry: sessionTelemetry, health } = useSession();
   
   const {
     gpsSpeed,
@@ -793,6 +793,8 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     sessionDistanceMiles,
     sessionDurationSec,
     sessionAvgSpeed,
+    sessionPeakSpeed,
+    sessionPhase,
     sessionActive: isSkateSessionActive,
     startSession,
     stopSessionRecording: endSession,
@@ -1061,6 +1063,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
                     sessionAvgSpeed={sessionAvgSpeed}
                     healthBpm={health.latestBpm}
                     healthCalories={health.activeCalories}
+                    sessionPhase={sessionPhase}
                   />
                 </View>
 

@@ -33,6 +33,7 @@ import { useStreetMode } from '../hooks/useStreetMode';
 import { useDeviceStateLedger } from '../hooks/useDeviceStateLedger';
 import type { BleConnectionState, DockedBus, IDeviceState, IFavoriteState, ModeType } from '../types/dashboard.types';
 import { getColorName, hexToRgb, rgbToHex, boostForLED } from '../utils/ColorUtils';
+import type { SessionPhase } from '../services/session/SessionMachine.types';
 import type { RGB } from '../utils/kMeansPalette';
 
 
@@ -163,6 +164,8 @@ interface Sk8lytzControllerProps {
   sessionDurationSec?: number;
   /** Average speed this session */
   sessionAvgSpeed?: number;
+  sessionPeakSpeed?: number;
+  sessionPhase?: SessionPhase;
   /** Session control props */
   sessionActive?: boolean;
   startSession?: () => void;
@@ -187,7 +190,7 @@ export type DockedControllerHandle = {
 // MarqueeText moved to standalone component MarqueeText.tsx
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
-  function DockedController({ isOfflineMode = false, hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onPowerToggle, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {}, gpsSpeed = 0, peakGForce = 1.0, sessionDistanceMiles = 0, sessionDurationSec = 0, sessionAvgSpeed = 0, sessionActive = false, startSession = () => {}, stopSessionRecording = () => {} }: Sk8lytzControllerProps, ref) {
+  function DockedController({ isOfflineMode = false, hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onPowerToggle, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {}, gpsSpeed = 0, peakGForce = 1.0, sessionDistanceMiles = 0, sessionDurationSec = 0, sessionAvgSpeed = 0, sessionPeakSpeed = 0, sessionPhase = 'IDLE', sessionActive = false, startSession = () => {}, stopSessionRecording = () => {} }: Sk8lytzControllerProps, ref) {
     // TODO: [R-27] Refactor to Context Container (Context Overload limit exceeded)
     const { Colors, isDark } = useTheme();
     const { isVisibilityAllowed } = useAppConfig();
@@ -1082,6 +1085,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           peakGForce={peakGForce}
           sessionDistanceMiles={sessionDistanceMiles}
           sessionDurationSec={sessionDurationSec}
+          sessionPhase={sessionPhase}
         />
 
         {/* Visual Product Shape Selector/Indicator - ENLARGED FOCUS */}
@@ -1256,6 +1260,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 stopSessionRecording={stopSessionRecording}
                 sessionDurationSec={sessionDurationSec}
                 sessionAvgSpeed={sessionAvgSpeed}
+                sessionPeakSpeed={sessionPeakSpeed}
+                sessionPhase={sessionPhase}
+                sessionDistanceMiles={sessionDistanceMiles}
               />
             )}
 

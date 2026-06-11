@@ -56,6 +56,22 @@ console.error = (...args: unknown[]) => {
   _originalConsoleError.apply(console, args);
 };
 
+import notifee, { EventType } from '@notifee/react-native';
+import { SessionBridge } from './src/services/session/SessionBridge';
+
+notifee.onBackgroundEvent(async ({ type, detail }) => {
+  if (type === EventType.ACTION_PRESS) {
+    const id = detail.pressAction?.id;
+    if (id === 'end-session') {
+      SessionBridge.send({ type: 'END' });
+    } else if (id === 'pause-session') {
+      SessionBridge.send({ type: 'PAUSE' });
+    } else if (id === 'resume-session') {
+      SessionBridge.send({ type: 'RESUME' });
+    }
+  }
+});
+
 /** ── Global Error Boundary to prevent White Screens ────────────────────────────────── */
 SplashScreen.preventAutoHideAsync().catch(() => {});
 

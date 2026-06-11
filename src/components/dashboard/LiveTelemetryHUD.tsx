@@ -4,19 +4,23 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
 import { Spacing } from '../../theme/theme';
 import { webStyle } from '../../utils/webStyles';
+import { SessionPhaseBadge } from '../session/SessionPhaseBadge';
+import type { SessionPhase } from '../../services/session/SessionMachine.types';
 
 interface LiveTelemetryHUDProps {
   gpsSpeed: number;
   peakGForce: number;
   sessionDistanceMiles: number;
   sessionDurationSec: number;
+  sessionPhase: SessionPhase;
 }
 
 export const LiveTelemetryHUD: React.FC<LiveTelemetryHUDProps> = ({
   gpsSpeed,
   peakGForce,
   sessionDistanceMiles,
-  sessionDurationSec
+  sessionDurationSec,
+  sessionPhase
 }) => {
   const { Colors } = useTheme();
 
@@ -48,6 +52,12 @@ export const LiveTelemetryHUD: React.FC<LiveTelemetryHUDProps> = ({
         <MaterialCommunityIcons name="timer-outline" size={16} color={Colors.warning} />
         <Text style={[styles.value, { color: Colors.text }]}>{formatDuration(sessionDurationSec)}</Text>
       </View>
+      {sessionPhase !== 'IDLE' && (
+        <>
+          <View style={styles.divider} />
+          <SessionPhaseBadge sessionPhase={sessionPhase} />
+        </>
+      )}
     </View>
   );
 };

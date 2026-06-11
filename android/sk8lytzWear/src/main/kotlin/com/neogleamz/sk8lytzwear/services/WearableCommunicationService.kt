@@ -40,6 +40,7 @@ class WearableCommunicationService : WearableListenerService() {
          * 0L = no active session. DashboardScreen reads this to compute elapsed duration.
          */
         @Volatile var sessionStartTimeMs: Long = 0L
+        @Volatile var lastKnownDistance: Double = 0.0
 
         // ── Summary metric cache (populated when status == "SUMMARY") ─────────────
         @Volatile var summaryDuration: Int = 0
@@ -97,6 +98,7 @@ class WearableCommunicationService : WearableListenerService() {
                             }
                         } else if (currentState == SessionState.IDLE) {
                             sessionStartTimeMs = 0L
+                            lastKnownDistance = 0.0
                         }
 
                         Log.d(TAG, "syncInitialState: Loaded $status from DataClient")
@@ -152,6 +154,7 @@ class WearableCommunicationService : WearableListenerService() {
                 } else if (currentState == SessionState.IDLE) {
                     // Clear anchor when session stops
                     sessionStartTimeMs = 0L
+                    lastKnownDistance = 0.0
                 }
 
                 // Start/stop HealthTracker & OngoingActivity when phone drives the session state
@@ -189,8 +192,9 @@ class WearableCommunicationService : WearableListenerService() {
                     currentSpeed = json.optDouble("speed", currentSpeed)
                     currentHR = json.optInt("heartRate", currentHR)
                     currentCalories = json.optInt("calories", currentCalories)
+                    lastKnownDistance = json.optDouble("distance", lastKnownDistance)
 
-                    Log.d(TAG, "Metric update: speed=$currentSpeed hr=$currentHR cal=$currentCalories")
+                    Log.d(TAG, "Metric update: speed=$currentSpeed hr=$currentHR cal=$currentCalories dist=$lastKnownDistance")
                     notifyListeners()
                     
                     // Force Tile refresh for live telemetry

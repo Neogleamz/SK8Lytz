@@ -155,7 +155,7 @@ fun DashboardScreen() {
                     onStop = {
                         // Snapshot current telemetry for local watch-initiated stop
                         summaryDuration  = elapsedSeconds
-                        summaryDistance  = 0.0       // phone-authoritative; shows 0 on watch-initiated stop
+                        summaryDistance  = WearableCommunicationService.lastKnownDistance
                         summaryAvgSpeed  = speed      // last known speed as rough indicator
                         summaryCalories  = calories
                         summaryPeakHR    = heartRate
