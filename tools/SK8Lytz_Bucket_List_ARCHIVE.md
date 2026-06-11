@@ -1612,4 +1612,14 @@ pm run verify which includes QA tests.
   - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-16. Grouped by collision graph into parallel-safe batches.
   - **Plan:** 📎 [PLAN-r-16-sweep.md](docs/plans/PLAN-r-16-sweep.md)
   - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-16
-  - **Prerequisite:** Wave 9 fully merged
+  - **Prerequisite:** Wave 9 fully merged
+
+- [x] **`feat/deepdive-docs-holistic-sync`** 🚀 Merged in 64e6826d
+  - **Tags:** `[✅ READY]` `[TOOLING]` `[L-RISK]` `[Snack]` `[🤖 PRO-MED]`
+  - **Goal:** Enhance /deepdive-docs to automatically maintain high-level non-developer documentation.
+  - **Decision Log:** High-level diagrams and user journeys will slowly drift out of date if they aren't synced dynamically alongside the Master Reference when code changes.
+  - **Analysis:** 📊 Plan: [PLAN-deepdive-docs-holistic-sync.md](../../docs/plans/PLAN-deepdive-docs-holistic-sync.md)
+    Key finding: "The Cartographers must flag changes impacting User Journey flows, C4 Context boundaries, or Hardware state machines."
+    Rejected alternative: "Manually patching the documentation was rejected in favor of automatic synthesis."
+  - **Source of Truth:** 📖 [.agents/workflows/deepdive-docs.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.agents/workflows/deepdive-docs.md)
+  - **Details:** Must not break non-destructive archival protocols.
