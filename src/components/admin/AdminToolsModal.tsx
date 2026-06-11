@@ -8,6 +8,7 @@ import {
     FlatList,
     Modal,
     Platform, SafeAreaView,
+    StyleSheet,
     Text,
     TouchableOpacity,
     View
@@ -160,7 +161,7 @@ export default function AdminToolsModal({
   const renderLogItem = useCallback(({ item }: { item: LogEntry }) => {
     const meta = EVENT_META[item.e as EventType] || { icon: 'information', color: '#888', label: item.e };
     return (
-      <View style={[styles.logRow, { borderBottomColor: borderColor }]}>
+      <View style={[styles.logRow, isDark ? localStyles.listItemContainerDark : localStyles.listItemContainerLight]}>
         <MaterialCommunityIcons name={meta.icon as keyof typeof MaterialCommunityIcons.glyphMap} size={18} color={meta.color} style={styles.logIcon} />
         <View style={styles.logBody}>
           <View style={styles.logHeader}>
@@ -372,3 +373,12 @@ export default function AdminToolsModal({
     </Modal>
   );
 }
+
+const localStyles = StyleSheet.create({
+  listItemContainerLight: {
+    borderBottomColor: '#E0E0E0',
+  },
+  listItemContainerDark: {
+    borderBottomColor: '#252c47',
+  },
+});
