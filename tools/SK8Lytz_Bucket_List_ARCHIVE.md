@@ -1445,3 +1445,51 @@ pm run verify which includes QA tests.
   - **Plan:** 📎 [PLAN-r-10-sweep.md](docs/plans/PLAN-r-10-sweep.md)
   - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-10
   - **Prerequisite:** None
+
+- [x] **chore/anti-bloatprotocol-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Snack]` `[WAVE:2]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all Anti-Bloat Protocol violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating Anti-Bloat Protocol. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-anti-bloatprotocol-sweep.md](docs/plans/PLAN-anti-bloatprotocol-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule Anti-Bloat Protocol
+  - **Prerequisite:** Wave 1 fully merged
+
+- [x] **chore/r-03-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Snack]` `[WAVE:2]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-03 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-03. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-03-sweep.md](docs/plans/PLAN-r-03-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-03
+  - **Prerequisite:** Wave 1 fully merged
+
+- [x] **chore/r-05-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Snack]` `[WAVE:2]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-05 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-05. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-05-sweep.md](docs/plans/PLAN-r-05-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-05
+  - **Prerequisite:** Wave 1 fully merged
+
+- [x] **chore/r-08-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Feast]` `[WAVE:2]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-08 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-08. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-08-sweep.md](docs/plans/PLAN-r-08-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-08
+  - **Prerequisite:** Wave 1 fully merged
+
+- [x] **chore/r-22-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Snack]` `[WAVE:2]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-22 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-22. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-22-sweep.md](docs/plans/PLAN-r-22-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-22
+  - **Prerequisite:** Wave 1 fully merged
+
+- [x] **chore/unknown-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Snack]` `[WAVE:2]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all Unknown violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating Unknown. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-unknown-sweep.md](docs/plans/PLAN-unknown-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule Unknown
+  - **Prerequisite:** Wave 1 fully merged

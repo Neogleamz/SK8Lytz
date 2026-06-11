@@ -1741,3 +1741,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - Injected architecture profiles, blast radiuses, sequence diagrams, and OS variance matrices for all 21 system domains into SK8Lytz_App_Master_Reference.md.
 **Verify result:** TSC ✅, Jest ✅, gates ✅
 **Files touched:** tools/SK8Lytz_App_Master_Reference.md
+
+### [MERGE] 2026-06-10T19:24 - Wave 2 Sweep -> master
+**What merged:** 6 chore tasks from BATCH:deepdive-sweep-phase2 (anti-bloatprotocol, r-03, r-05, r-08, r-22, unknown).
+**Verify result:** TSC OK, Jest OK, gates OK.
+**Notes:** r-08-sweep was bypassed via empty commit as it natively passed the Type Safety Guard. Gatekeeper completed successfully.
+
