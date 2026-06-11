@@ -1760,3 +1760,43 @@ pm run verify which includes QA tests.
     Rejected alternative: "Fix via crewService changes — rejected because crewService is the wrong data source entirely"
   - **Source of Truth:** 📖 [StreetPanel.tsx:80–81](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/StreetPanel.tsx#L80-L81) + [AccountTabStats.tsx:49](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/account/AccountTabStats.tsx#L49) + [DockedController.tsx:1249](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DockedController.tsx#L1249)
   - **Details:** Parallel-safe with Wave 3A and 3B. Files: `StreetPanel.tsx` (2-line data fix + badge integration + 1 prop addition), `AccountTabStats.tsx` (1-line counter fix), `android/sk8lytzWear/` KT file (hardcoded distance fix — field name from Wave 0 SESSION_LOG entry). `Prerequisite: Wave 2 fully merged into master. Wave 0 SESSION_LOG entry must contain confirmed distance field name.`
+
+- [x] **`docs/cartographer-rebuild-and-harden`**
+  - **Tags:** `[✅ READY]` `[🤖 INFERRED]` `[☁️ CLOUD]` `[✅ L-RISK]` `[🥩 Feast]` `[🧠 HIGH]` `[BATCH:doc-pipeline-sync]` `[WAVE:1]`
+  - **Goal:** Run the full 21-node cartographer fleet, update all Tier-3 satellite docs unconditionally, inject 3 missing ADRs, and harden 3 workflow files so Phase 4 can never be silently skipped again.
+  - **Decision Log:** Post-Wave 1+2 audit confirmed: Master Reference missing 9 new session service files + rewritten SessionContext.tsx; Phase 4 of `/deepdive-docs` was skipped on `5aa3aa68` run because it is conditional on flags sub-agents optionally emit; 3 [DECISION] entries from 2026-06-11 never promoted to ADR; State_Charts_UX.md has no sessionMachine chart; User_Journey_Maps.md Journey 3 shows outdated linear watch flow.
+  - **Analysis:** 📊 Source: [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/689630a3-694f-4156-a7bc-69878591a1d7/implementation_plan.md) · Plan: [PLAN-docs-cartographer-rebuild-and-harden.md](./plans/PLAN-docs-cartographer-rebuild-and-harden.md)
+    Key finding: "`git log --oneline -3 -- tools/State_Charts_UX.md` shows last update `5aa3aa68` (yesterday) — Phase 4 ran but produced no changes because [IMPACTS_STATE_CHART] flag was conditional"
+    Rejected alternative: "Delta sync of 4 domains only — rejected because Phase 4 was skipped entirely so all satellite docs need first real sync"
+  - **Source of Truth:** 📖 [deepdive-docs.md:L121-L129](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.agents/workflows/deepdive-docs.md#L121-L129) §Phase 4 + [SESSION_LOG.md:L40-L52](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SESSION_LOG.md#L40-L52) §3 missing ADRs
+  - **Details:** Phase A = 21-node cartographer fleet → Phase 3 injection → Phase 4 unconditional satellite update → Phase 5 ADR sync. Phase B = 3 surgical workflow edits (deepdive-docs, start-task, wind-down). Zero TypeScript source file changes. Full rebuild justified: Domain 12 (SESSION_TRACKING) entirely different after Wave 2 rewrite.
+
+- [x] **`docs/test-plan-session-machine`**
+  - **Tags:** `[✅ READY]` `[🤖 INFERRED]` `[☁️ CLOUD]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 MEDIUM]` `[BATCH:doc-pipeline-sync]` `[WAVE:1]`
+  - **Goal:** Add a "Session Machine Test Coverage (XState v5)" section to `tools/SK8Lytz_TEST_PLAN.md` documenting the 28-suite / 218-test coverage added in Waves 1+2, including known gaps.
+  - **Decision Log:** Wave 1 (`b9c7baa9`) + Wave 2 (`4df46b81`) merged a complete sessionMachine implementation with 10+ new test cases. `SK8Lytz_TEST_PLAN.md` (39KB) has no session machine section — last update was `a3973b94` (pre-XState). Without documenting what is covered and what is NOT covered (the gaps), future QA runs have no baseline to work from.
+  - **Analysis:** 📊 Source: [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/689630a3-694f-4156-a7bc-69878591a1d7/implementation_plan.md) · Plan: [PLAN-docs-test-plan-session-machine.md](./plans/PLAN-docs-test-plan-session-machine.md)
+    Key finding: "`git log --oneline -1 -- tools/SK8Lytz_TEST_PLAN.md` → `a3973b94` (pre-Wave 1) — test plan 2 merges behind"
+    Rejected alternative: "Write new tests instead — rejected; user explicitly said `/intake` for test plan documentation, not new test authoring. Test authoring is a separate `/tdd` task."
+  - **Source of Truth:** 📖 [SK8Lytz_TEST_PLAN.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SK8Lytz_TEST_PLAN.md) + merge commits `b9c7baa9` (W1) + `4df46b81` (W2)
+  - **Details:** Must read actual test files before documenting coverage — do not document from memory. Document both covered states/edges AND known gaps (network failure during COMMITTED, concurrent END triggers). Parallel-safe with all other batch tasks.
+
+- [x] **`docs/xstate-v5-kb-capture`**
+  - **Tags:** `[✅ READY]` `[🤖 INFERRED]` `[☁️ CLOUD]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:doc-pipeline-sync]` `[WAVE:1]`
+  - **Goal:** Read `BleMachine.ts` + `sessionMachine.ts` live implementations and write a KB entry for the XState v5 patterns SK8Lytz actually uses, so future agents never re-derive them.
+  - **Decision Log:** KB INDEX has no XState entry (confirmed by search — 2026-06-11). Two XState v5 state machines now run in the app (`BleMachine.ts` + `sessionMachine.ts` from Wave 1). Without a KB entry, every cold-start session agent re-derives patterns from documentation or guesswork. Rule 13 requires KB entry before asserting facts about external libraries.
+  - **Analysis:** 📊 Source: [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/689630a3-694f-4156-a7bc-69878591a1d7/implementation_plan.md) · Plan: [PLAN-docs-xstate-v5-kb-capture.md](./plans/PLAN-docs-xstate-v5-kb-capture.md)
+    Key finding: "`grep 'xstate' tools/knowledge-base/INDEX.md` → no results. Zero KB coverage for XState v5 despite two active state machines in production."
+    Rejected alternative: "Full XState v5 API docs — rejected; scope is patterns-we-use only to keep KB focused (user confirmed Q1)"
+  - **Source of Truth:** 📖 [BleMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts) + [sessionMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/session/sessionMachine.ts) + [knowledge-base/INDEX.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/knowledge-base/INDEX.md)
+  - **Details:** Scope = `createMachine`, `useMachine`, `assign`, guard syntax, `SessionBridge` actor pattern. Staleness window: 180 days. Feeds into Master Reference §3 State Machine Library. Parallel-safe with all other batch tasks.
+
+- [x] **`fix/industry-benchmarks-dedup`**
+  - **Tags:** `[✅ READY]` `[🤖 INFERRED]` `[☁️ CLOUD]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:doc-pipeline-sync]` `[WAVE:1]`
+  - **Goal:** Remove the duplicate second copy of content in `tools/INDUSTRY_BENCHMARKS.md` — the full file content appears twice due to a prior double-write bug.
+  - **Decision Log:** `view_file tools/INDUSTRY_BENCHMARKS.md` confirmed (2026-06-11): lines 1-49 identical to lines 50-99 verbatim. A double-write during a prior context-compiler run wrote the header + 3 benchmark entries twice. Lines 100-125 are unique (High-Density Grouping, Hardware Mocks, DB PII Encryption) and must be preserved.
+  - **Analysis:** 📊 Source: [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/689630a3-694f-4156-a7bc-69878591a1d7/implementation_plan.md) · Plan: [PLAN-fix-industry-benchmarks-dedup.md](./plans/PLAN-fix-industry-benchmarks-dedup.md)
+    Key finding: "File is 125 lines but unique content is only ~75 lines — 50-line duplicate section from a prior double-write"
+    Rejected alternative: "Leave as-is — rejected; duplication confuses agents and the second header block (`# Industry Benchmarks`) causes parsing errors in synthesis workflows"
+  - **Source of Truth:** 📖 [INDUSTRY_BENCHMARKS.md:L1-L125](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/INDUSTRY_BENCHMARKS.md)
+  - **Details:** 2-minute surgical fix. Read full file, identify exact duplicate range, remove second copy, commit. No content loss — only duplicate removal.

@@ -65,7 +65,9 @@ journey
     title Wearable Session Sync & Health Telemetry
     section 1. Start Session
       User taps Start on Phone OR Watch: 5: Skater
-      Device sends sync command (START_SESSION) to counterpart: 4: System
+      Watch transmits START_SESSION command to Phone: 4: System
+      Phone transitions XState machine to ACTIVE: 5: System
+      Phone pushes ACTIVE state and ISO start time to Watch: 5: System
       Both devices sync to ACTIVE state: 5: System
     section 2. Live Telemetry Sync
       Phone pushes live speed to Watch display: 4: System
@@ -74,11 +76,14 @@ journey
     section 3. Link Drop Recovery & Session End
       Skater goes out of BLE range from phone: 3: Skater
       Watch continues local tracking: 5: System
-      Watch reconnects and flushes data: 4: System
-      User taps Pause or Stop on Phone OR Watch: 5: Skater
-      Counterpart syncs state (PAUSED / STOPPED): 5: System
+      Watch reconnects and flushes buffered metrics: 4: System
+      User taps Pause or Stop on Watch or Phone: 5: Skater
+      Watch transmits command (PAUSE/STOP) to Phone: 5: System
+      Phone XState transitions (PAUSED / SAVING / COMPLETED): 5: System
+      Phone syncs state update back to Watch: 5: System
 ```
 
 ### UX Friction Points to Monitor:
 - **Discrepant Sync State:** If WCSession context delivery fails or drops, the Apple Watch session can get stuck out of sync with the phone.
 - **Heart Rate Priority Fallback:** If the watch is disconnected, the phone falls back to querying Apple Health/Health Connect (15s poll) rather than real-time watch stream (5s push).
+

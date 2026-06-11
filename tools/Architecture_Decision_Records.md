@@ -164,3 +164,55 @@ We implemented the **WatchBridge Telemetry Sync Protocol** using native OS data 
 ### The Trade-off
 - **Pro:** Ensures reliable background sync and maintains 60fps UI performance despite high-frequency incoming BLE health streams.
 - **Con:** Requires maintaining complex native Swift/Kotlin bridging code, and the UI state is slightly eventual-consistent (max 1s delay).
+
+---
+
+## ADR-010: Session State → XState sessionMachine Architecture
+
+**Date:** June 2026
+**Status:** 🔒 Locked & Active
+
+### The Context
+The session tracking lifecycle (START, PAUSE, RESUME, STOP, SAVE) was previously managed by a disparate React hook trio (`SessionContext` + `useGlobalTelemetry` + `useHealthTelemetry`). This setup caused synchronization bugs, race conditions with background notifications, and telemetry display glitches (e.g. dual source-of-truth telemetry display in `StreetPanel`).
+
+### The Decision
+We migrated the entire session tracking architecture to a unified XState v5 `sessionMachine`, replacing the legacy hook trio. The machine acts as the single state authority for session phase, tracking telemetry, managing auto-pauses, and orchestrating background notifications via Notifee actors.
+
+### The Trade-off (What Stakeholders Must Know)
+- **Pro:** Complete eradication of session state sync bugs and race conditions. Single source of truth for all telemetry and background notifications.
+- **Con:** Incremental complexity in React UI components which must now dispatch events to the session actor rather than updating local states.
+
+---
+
+## ADR-011: Session Never Ends on BLE Disconnect
+
+**Date:** June 2026
+**Status:** 🔒 Locked & Active
+
+### The Context
+Skates connect to the phone via Bluetooth Low Energy (BLE) to control LEDs, while session tracking (speed, distance, heart rate) runs via phone GPS/sensors and watch integration. Skaters frequently experience temporary BLE dropouts during rides.
+
+### The Decision
+We established a strict product invariant: BLE disconnect events have absolutely no effect on active session tracking. Session lifecycle (`sessionMachine`) and BLE connection lifecycle (`BleMachine`) are orthogonal systems. The session will never end or pause due to a Bluetooth disconnection.
+
+### The Trade-off (What Stakeholders Must Know)
+- **Pro:** Skaters do not lose session tracking data or experience interrupted sessions due to transient wireless interference or range issues.
+- **Con:** Skaters may continue recording a session even if the lights are disconnected or turned off, leading to a disconnect between light status and session tracking.
+
+---
+
+## ADR-012: WatchBridge Distance Field = "distance"
+
+**Date:** June 2026
+**Status:** 🔒 Locked & Active
+
+### The Context
+Bidirectional communication between the phone and wearable devices (watchOS and Wear OS) requires a consistent field schema. Inconsistencies in distance field names (e.g., `distanceMiles`, `sessionDistance`) led to Wear OS summary metrics rendering blank or zeros.
+
+### The Decision
+We locked the exact field name used in the WatchBridge message payload and serialization for session distance to `"distance"`. The Kotlin `WearableCommunicationService`, Swift `WatchConnectivityManager`, and TypeScript `WatchBridge` interface are aligned to parse and transmit distance using this single lowercase string key.
+
+### The Trade-off (What Stakeholders Must Know)
+- **Pro:** Clear, uniform schema definition across Android, iOS, and TypeScript codebases. Eradicates summary rendering bugs on watch companions.
+- **Con:** Requires explicit translation from internal camelCase properties (e.g., `lifetimeStats.totalDistance`) to lowercase `"distance"` in serialization payloads.
+

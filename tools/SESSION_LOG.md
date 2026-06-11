@@ -1,3 +1,22 @@
+### [MERGE] 2026-06-11T22:42 — docs/cartographer-rebuild-and-harden → master @ HEAD
+**What merged:**
+- Compiled the ultimate architectural truth for the entire codebase via a 21-node `/deepdive-docs` cartographer fleet, writing report payloads to `artifacts/deepdive_docs/` and injecting them into `tools/SK8Lytz_App_Master_Reference.md`.
+- Relocated 20 deprecated/stale features (including `useSessionTracking`, `useDeviceFleet`, and opcodes) into Graveyard deposits (Section 13) in the Master Reference.
+- Updated `tools/User_Journey_Maps.md` Journey 3 (Wearable Session Sync) to align with recent session XState transitions and bidirectional watch commands.
+- Promoted 3 recent `[DECISION]` entries from `tools/SESSION_LOG.md` to `tools/Architecture_Decision_Records.md` as ADR-010 (sessionMachine migration), ADR-011 (BLE disconnect decoupling), and ADR-012 (WatchBridge lowercase `"distance"` field).
+- Hardened the documentation pipeline workflows (`deepdive-docs.md`, `start-task.md`, and `wind-down.md`) and verified satellite charts (`State_Charts_UX.md`, `System_Context_Diagram.md`) are up to date.
+**Verify result:** TSC ✅, Jest ✅ (28 suites / 218 tests), gates ✅
+**Files touched:**
+- `tools/SK8Lytz_App_Master_Reference.md`
+- `tools/User_Journey_Maps.md`
+- `tools/Architecture_Decision_Records.md`
+- `tools/SESSION_LOG.md`
+
+### [ARTIFACT] 2026-06-11T22:30 — NATIVE_&_WATCH Domain Cartography Created
+| Artifact | Path | Description |
+|---|---|---|
+| NATIVE_&_WATCH Cartography | [NATIVE_&_WATCH_cartography.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/NATIVE_&_WATCH_cartography.md) | Architectural cartography mapping native, watchOS/WearOS, and BLE components |
+
 ### [MERGE] 2026-06-11T22:01 — session-xstate-engine-batch → master @ 481839b5
 **What merged:**
 - Deleted legacy telemetry hooks (`useGlobalTelemetry.ts`, `useHealthTelemetry.ts`) and registered Notifee background event handlers in `App.tsx` (Wave 3A).
@@ -57,7 +76,14 @@
 - `src/services/session/__tests__/SessionCommitService.test.ts`
 - `src/services/session/__tests__/SessionMachine.test.ts`
 
-### [ARTIFACT] 2026-06-11T21:59 — doc-pipeline-sync Batch Intake Complete
+### [EVENT] 2026-06-11T22:20 — Goal Complete: doc-pipeline-sync
+**Batch:** `[BATCH:doc-pipeline-sync]`
+**Total tasks executed:** 4
+**Total waves:** 1
+**Status:** All 4 tasks successfully verified and merged into master.
+**Key Recoveries:** Resolved parallel rebase collisions on `SESSION_LOG.md` safely by keeping master's source of truth and orchestrating fast-forward manual merges.
+**Master:** Green and clean. Session ready for wind-down or next goal.
+
 | Artifact | Path | Description |
 |---|---|---|
 | Cartographer Rebuild Plan | [PLAN-docs-cartographer-rebuild-and-harden.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-docs-cartographer-rebuild-and-harden.md) | Full 21-node cartographer run + Phase 4 unconditional + Phase 5 ADR sync + 3 workflow hardening edits |
@@ -2254,3 +2280,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 ### [MERGE READY] docs/test-plan-session-machine — 9e85de0b
 Files touched: `tools/SK8Lytz_TEST_PLAN.md`
 TSC: ✅  Jest: ✅
+
+### [ARTIFACT] 2026-06-11T22:25 — c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/UI_MODALS_cartography.md
+**What:** Architectural Cartography Report for the UI_MODALS domain.
+**Why:** Documented all 11 files in the domain, their blast radius, consumed contexts, service I/O, platform OS branching matrices, design system tokens, and BLE probing and cloud scene application sequence diagrams.
+
