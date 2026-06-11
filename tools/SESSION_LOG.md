@@ -1874,4 +1874,16 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC compiled clean, Jest unit tests passed, all verification gates green via verifiable-check-runner.js (Task 69).
 **Files touched:** src/types/supabase.ts, supabase/functions/notify-crew-session/index.ts.
 
+### [MERGE] 2026-06-11T03:36 — Wave 2 Sweep Batch merged → master
+**What merged:**
+- Resolved 70 findings across 5 Wave 2 domains:
+  - `sweep-components-admin`: Fixed `isLoading` prop passing, `AdminPicksScheduler` FSM status, `SafeAreaView` notches padding, and `Sk8LytzProgrammer` compilation.
+  - `sweep-components-auth`: Fixed sign-in/sign-up logging parameters, UI redirect timeout, and documented 4 AsyncStorage keys in the Master Reference Key Registry.
+  - `sweep-services-ble`: Standardized sequential write pacing, Picked interface typing for mock compatibility, and scrubbed MAC address PII from logs.
+  - `sweep-supabase`: Added type file size exception comments and standardized error unwrapping.
+  - `sweep-utils`: Standardized flight recorder parameters and resolved token migration.
+**Verify result:** TSC ✅, Jest ✅ (203 tests), all 8 QA gates passed.
+**Files touched:** ~30 files in admin tools, auth, BLE services, Supabase schemas, and utilities.
+
+
 

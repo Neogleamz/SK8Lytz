@@ -1627,4 +1627,34 @@ pm run verify which includes QA tests.
 - [x] **chore/sweep-services-core**
   - **Tags:** `[TRIAGE]` `[VERIFIED]` `[MAINTENANCE]` `[M-RISK]` `[Feast]` `[WAVE:1]` `[BATCH:deepdive-sweep-phase3]`
   - **Goal:** Fix all 94 findings in domain services-core. Every file in the plan must appear in the diff.
-  - **Source of Truth:** docs/plans/PLAN-sweep-services-core.md
+  - **Source of Truth:** docs/plans/PLAN-sweep-services-core.md
+
+- [x] **chore/sweep-components-admin** 🚀 Merged in d9585164
+  - **Tags:** `[TRIAGE]` `[VERIFIED]` `[MAINTENANCE]` `[M-RISK]` `[Feast]` `[WAVE:2]` `[BATCH:deepdive-sweep-phase3]`
+  - **Goal:** Fix all 35 findings in domain components-admin. Every file in the plan must appear in the diff.
+  - **Prerequisite:** Wave 1 fully merged
+  - **Source of Truth:** docs/plans/PLAN-sweep-components-admin.md
+
+- [x] **chore/sweep-components-auth** 🚀 Merged in 54b1cea5
+  - **Tags:** `[TRIAGE]` `[VERIFIED]` `[MAINTENANCE]` `[M-RISK]` `[Meal]` `[WAVE:2]` `[BATCH:deepdive-sweep-phase3]`
+  - **Goal:** Fix all 13 findings in domain components-auth. Every file in the plan must appear in the diff.
+  - **Prerequisite:** Wave 1 fully merged
+  - **Source of Truth:** docs/plans/PLAN-sweep-components-auth.md
+
+- [x] **chore/sweep-services-ble** 🚀 Merged in 414097f8
+  - **Tags:** `[TRIAGE]` `[VERIFIED]` `[MAINTENANCE]` `[H-RISK]` `[Meal]` `[WAVE:2]` `[BATCH:deepdive-sweep-phase3]`
+  - **Goal:** Fix all 11 findings in domain services-ble. Every file in the plan must appear in the diff.
+  - **Prerequisite:** Wave 1 fully merged
+  - **Source of Truth:** docs/plans/PLAN-sweep-services-ble.md
+
+- [x] **chore/sweep-supabase** 🚀 Merged in a561ee25
+  - **Tags:** `[TRIAGE]` `[VERIFIED]` `[MAINTENANCE]` `[M-RISK]` `[Snack]` `[WAVE:2]` `[BATCH:deepdive-sweep-phase3]`
+  - **Goal:** Fix all 3 findings in domain supabase. Every file in the plan must appear in the diff.
+  - **Prerequisite:** Wave 1 fully merged
+  - **Source of Truth:** docs/plans/PLAN-sweep-supabase.md
+
+- [x] **chore/sweep-utils** 🚀 Merged in 7a827677
+  - **Tags:** `[TRIAGE]` `[VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Meal]` `[WAVE:2]` `[BATCH:deepdive-sweep-phase3]`
+  - **Goal:** Fix all 8 findings in domain utils. Every file in the plan must appear in the diff.
+  - **Prerequisite:** Wave 1 fully merged
+  - **Source of Truth:** docs/plans/PLAN-sweep-utils.md
