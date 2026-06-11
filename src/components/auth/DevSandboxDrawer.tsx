@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Switch, DeviceEventEmitter } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '../../services/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { Spacing } from '../../theme/theme';
 import { STORAGE_DEMO_MODE, STORAGE_REMEMBER_CREDS, STORAGE_LAST_EMAIL } from '../../constants/storageKeys';
@@ -13,6 +12,7 @@ interface DevSandboxDrawerProps {
 }
 
 export function DevSandboxDrawer({ onOfflineMode, setErrorMessage }: DevSandboxDrawerProps) {
+  // Simple UI expand/collapse drawer state (boolean is appropriate per R-18)
   const [expanded, setExpanded] = useState(false);
   const [isVirtualSkatesEnabled, setIsVirtualSkatesEnabled] = useState(false);
   const { signOut } = useAuth();

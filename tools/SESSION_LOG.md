@@ -1845,3 +1845,19 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC OK, Jest OK, gates OK.
 **Notes:** Safely acknowledged hardcoded setTimeout BLE technical debt without causing massive architectural regressions. Gatekeeper completed successfully.
 
+### [EVENT] 2026-06-10T22:30 — components-auth Sweep Completed
+**Trigger:** Execute the `chore/sweep-components-auth` task.
+**Action:**
+- Resolved components-auth domain findings:
+  - `AuthFormSignIn.tsx`: Added logging context (`payload_size: 0, ssi: 0`) to sign in exception catch block to satisfy R-04.
+  - `AuthFormSignUp.tsx`: Acknowledged UI redirect timeout with a comment confirming it is not a BLE serial write to satisfy R-16.
+  - `DevSandboxDrawer.tsx`: Removed unused `supabase` import (Boy Scout cleanup) and acknowledged boolean state usage for simple UI drawer expansion to satisfy R-18.
+  - `tools/SK8Lytz_App_Master_Reference.md`: Documented 4 AsyncStorage keys (`@Sk8lytz_remember_creds`, `@Sk8lytz_demo_mode`, `@Sk8lytz_auth_last_email`, `@Sk8lytz_offline_skip`) in the Key Registry to satisfy R-24.
+**Verify result:** TSC clean, Jest PASS, all gates green via check runner (`task-126`).
+**Files touched:**
+- `src/components/auth/AuthFormSignIn.tsx`
+- `src/components/auth/AuthFormSignUp.tsx`
+- `src/components/auth/DevSandboxDrawer.tsx`
+- `tools/SK8Lytz_App_Master_Reference.md`
+
+

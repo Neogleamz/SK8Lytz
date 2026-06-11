@@ -120,6 +120,7 @@ export function AuthFormSignUp({ onModeChange }: AuthFormSignUpProps) {
         setStatus('success');
         AppLogger.log('EULA_ACCEPTED', { policy_version: 'v1.0.0' });
         showSuccess('✅ Account created! Check your email for a verification link, then log in.');
+        // UI transition delay (not BLE serial write) — intentionally preserved per R-16
         setTimeout(() => onModeChange('LOGIN'), 3000);
       }
     } catch (e: unknown) {

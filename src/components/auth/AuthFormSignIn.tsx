@@ -96,7 +96,7 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('AuthFormSignIn', 'Sign in exception', { error: msg });
+      AppLogger.error('AuthFormSignIn', 'Sign in exception', { error: msg, payload_size: 0, ssi: 0 });
       setLoading(false);
       showError('A network or internal error occurred. Please try again.');
     }
