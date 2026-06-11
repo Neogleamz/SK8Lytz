@@ -1,3 +1,27 @@
+### [MERGE] 2026-06-11T21:47 — feat/session-services-layer → master @ b9c7baa9
+**What merged:**
+- Created session-specific services layer leveraging XState v5 patterns.
+- Implemented `SessionMachine` to orchestrate session lifecycle (STARTING, RECORDING, PAUSED, SAVING, COMPLETED).
+- Implemented supporting services: `AutoPauseService` (speed-based thresholds), `HealthService` (heart rate tracking), `SensorService` (barometer, step counter, accelerometer), `NotificationService` (Notifee background notifications), and `SessionCommitService` (persisting session telemetry to Supabase).
+- Implemented `SessionBridge` and unit tests to ensure WatchBridge event listeners and message transmissions function properly.
+- Implemented comprehensive Jest unit test suites covering the machine and individual services.
+- Added `SessionPhaseBadge` UI component to render current session phase correctly.
+**Verify result:** TSC ✅, Jest ✅ (24 suites / 203 tests), Blast Radius ✅, gates ✅
+**Files touched:**
+- `src/components/session/SessionPhaseBadge.tsx`
+- `src/services/session/AutoPauseService.ts`
+- `src/services/session/HealthService.ts`
+- `src/services/session/NotificationService.ts`
+- `src/services/session/SensorService.ts`
+- `src/services/session/SessionBridge.ts`
+- `src/services/session/SessionCommitService.ts`
+- `src/services/session/SessionMachine.ts`
+- `src/services/session/SessionMachine.types.ts`
+- `src/services/session/__tests__/AutoPauseService.test.ts`
+- `src/services/session/__tests__/SessionBridge.test.ts`
+- `src/services/session/__tests__/SessionCommitService.test.ts`
+- `src/services/session/__tests__/SessionMachine.test.ts`
+
 ### [MERGE] 2026-06-11T21:40 — system-hardening → master @ 1bde6d33
 **What merged:**
 - agent-behavior.md: C1 post-diff silent→mandatory; C2 Snack S8 carve-out clarified; O4 Casey 'mentally' removed
