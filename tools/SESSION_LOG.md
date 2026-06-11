@@ -1,7 +1,7 @@
 ### [EVENT] 2026-06-11T05:06 — Ignored Bucket List Recovery Completed
 **Trigger:** User reported lost icebox tasks and directives in the gitignored `tools/SK8Lytz_Bucket_List.md`.
-**Action:** Identified that the bucket list was overwritten by the `populate_bucket.py` script in a previous session. Recovered the full untruncated file from `3c276c08~1` (pre-untracked commit), resolved Powershell encoding issues via binary Node.js output, re-inserted the pending `spike/pii-app-encryption` task, and restored the original directives and icebox tasks.
-**Verify result:** `tools/SK8Lytz_Bucket_List.md` restored to full 138-line version with all emojis and tasks correct.
+**Action:** Identified that the bucket list was overwritten by the `populate_bucket.py` script in a previous session. Recovered the full untruncated file from `3c276c08~1` (pre-untracked commit), resolved Powershell encoding issues via binary Node.js output, re-inserted the pending `spike/pii-app-encryption` task, restored the original directives and icebox tasks, and restored the original clean reference directives pointing to `.agents/rules/kanban-constitution.md`.
+**Verify result:** `tools/SK8Lytz_Bucket_List.md` restored to full correct layout with all emojis, tasks, and reference directives intact.
 
 ### [EVENT] 2026-06-11T04:37 — BATCH:deepdive-sweep-phase3 Completed
 **Trigger:** Completed the full `/goal` execution for the deepdive-sweep-phase3 batch.
