@@ -68,9 +68,12 @@ export function useBLEScanner({
   const seenMacsRef = useRef<Set<string>>(new Set());
   const lastSeenRef = useRef<Map<string, number>>(new Map());
   const pendingStagedRef = useRef<Device[]>([]);
+  // Scan stage debounce timer (not GATT write timing) — intentionally preserved per R-16
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    // R-24: Shared global settings AsyncStorage key read.
+    // Multiple modules read distinct settings properties from this central key.
     AsyncStorage.getItem(STORAGE_APP_SETTINGS).then(cached => {
       if (cached) {
         try {
@@ -85,6 +88,7 @@ export function useBLEScanner({
 
   const telemetryCacheRef = useRef<Map<string, number>>(new Map());
   const telemetryBatchRef = useRef<Record<string, unknown>[]>([]);
+  // Ambient telemetry flush timer (not GATT write timing) — intentionally preserved per R-16
   const telemetryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const flushTelemetry = () => {
@@ -193,6 +197,7 @@ export function useBLEScanner({
   const scheduleFlush = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     const delay = registeredMacs.length === 0 ? DEBOUNCE_MS_FTUE : DEBOUNCE_MS;
+    // Debounce timer for staged devices (not GATT write timing) — intentionally preserved per R-16
     debounceTimerRef.current = setTimeout(flushStagedDevices, delay);
   }, [flushStagedDevices, registeredMacs.length]);
 
@@ -277,6 +282,7 @@ export function useBLEScanner({
         if (telemetryBatchRef.current.length >= 25) {
            flushTelemetry();
         } else if (!telemetryTimerRef.current) {
+           // Telemetry batch flush timer (not GATT write timing) — intentionally preserved per R-16
            telemetryTimerRef.current = setTimeout(() => { flushTelemetry(); telemetryTimerRef.current = null; }, 60000);
         }
       }
@@ -315,6 +321,7 @@ export function useBLEScanner({
     if (isSandboxMocking) {
       bleSend({ type: 'SCAN_START' });
 
+      // Sandbox mock device discovery timer (not GATT write timing) — intentionally preserved per R-16
       setTimeout(() => {
         const halozL = { id: 'VIRTUAL-HALOZ-L', name: 'SK8-HALOZ-L-DEV', rssi: -50, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 } as Partial<Device> & { product_type: string; hwPoints: number } as Device;
         const halozR = { id: 'VIRTUAL-HALOZ-R', name: 'SK8-HALOZ-R-DEV', rssi: -52, manufacturerData: 'MwHwMwEBKwE=', serviceUUIDs: [ZENGGE_SERVICE_UUID], product_type: 'HALOZ', hwPoints: 10 } as Partial<Device> & { product_type: string; hwPoints: number } as Device;
@@ -327,6 +334,7 @@ export function useBLEScanner({
         scanCallback(null, soulzR);
       }, 1000);
 
+      // Sandbox mock scan stop timer (not GATT write timing) — intentionally preserved per R-16
       setTimeout(() => {
         bleSend({ type: 'SCAN_STOP' });
       }, 5000);
@@ -349,6 +357,7 @@ export function useBLEScanner({
       burstScan(options?.keepAlive ? 10000 : 5000);
     } else if (!isSandboxMocking) {
       bleSend({ type: 'SCAN_START' });
+      // Non-sweeper manual scan timeout fallback (not GATT write timing) — intentionally preserved per R-16
       setTimeout(() => {
         bleSend({ type: 'SCAN_STOP' });
       }, 5000);

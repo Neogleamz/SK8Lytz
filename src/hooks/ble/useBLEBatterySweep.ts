@@ -24,12 +24,14 @@ export interface UseBLEBatterySweepProps {
 }
 
 export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepProps) {
+  // Simple hook toggle state (boolean is appropriate per R-18)
   const [isSweeperActive, setIsSweeperActive] = useState(false);
   const [batteryTier, setBatteryTier] = useState<BatteryTier>('FULL');
   const isSweeperActiveRef = useRef(false);
   const activeBurstRef = useRef<Promise<void> | null>(null);
 
   const batteryTierRef = useRef<BatteryTier>('FULL');
+  // Scan cycle timers (not GATT write timing) — intentionally preserved per R-16
   const throttleCycleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const burstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -46,10 +48,12 @@ export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepPr
       bleSend({ type: 'SCAN_RESUME' });
       AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_throttle_scan_on' });
 
+      // Scan cycle throttle timer (not GATT write timing) — intentionally preserved per R-16
       throttleCycleTimerRef.current = setTimeout(() => {
         if (!isSweeperActiveRef.current || batteryTierRef.current !== 'THROTTLED') return;
         bleSend({ type: 'SCAN_PAUSE' });
         AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_throttle_scan_off' });
+        // Scan cycle throttle off timer (not GATT write timing) — intentionally preserved per R-16
         throttleCycleTimerRef.current = setTimeout(runCycle, THROTTLE_SCAN_OFF_MS);
       }, THROTTLE_SCAN_ON_MS);
     };
@@ -85,6 +89,7 @@ export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepPr
           AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_start_deferred_budget', deferMs: msUntilBudgetResets, budgetUsed: scanStartTimestampsRef.current.length });
           isSweeperActiveRef.current = false;
           setIsSweeperActive(false);
+          // Scan budget reset deferral timer (not GATT write timing) — intentionally preserved per R-16
           setTimeout(() => {
             if (isSweeperActiveRef.current) return;
             startSweeper();
@@ -137,6 +142,7 @@ export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepPr
 
       bleSend({ type: 'SCAN_RESUME' });
 
+      // Burst scan duration timer (not GATT write timing) — intentionally preserved per R-16
       burstTimerRef.current = setTimeout(() => {
         burstTimerRef.current = null;
         activeBurstRef.current = null;

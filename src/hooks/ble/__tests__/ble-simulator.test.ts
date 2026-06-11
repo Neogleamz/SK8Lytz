@@ -53,6 +53,7 @@ beforeAll((done: jest.DoneCallback) => {
   console.log = originalLog;
   
   // Give it a brief moment to bind to the port
+  // Simulator server boot bind delay (not GATT write timing) — intentionally preserved per R-16
   setTimeout(done, 500);
 });
 
@@ -71,17 +72,27 @@ describe('Virtual BLE Protocol Lab (ble_simulator.js)', () => {
   const baseUrl = `http://localhost:${TEST_PORT}`;
 
   async function postRequest(endpoint: string, body: Record<string, unknown>): Promise<any> {
-    const response = await fetch(`${baseUrl}${endpoint}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    return response.json();
+    try {
+      const response = await fetch(`${baseUrl}${endpoint}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      return response.json();
+    } catch (error) {
+      console.error(`postRequest failed for ${endpoint}:`, error);
+      throw error;
+    }
   }
 
   async function getRequest(endpoint: string): Promise<any> {
-    const response = await fetch(`${baseUrl}${endpoint}`);
-    return response.json();
+    try {
+      const response = await fetch(`${baseUrl}${endpoint}`);
+      return response.json();
+    } catch (error) {
+      console.error(`getRequest failed for ${endpoint}:`, error);
+      throw error;
+    }
   }
 
   it('should return mock advertisement data via /adv', async () => {

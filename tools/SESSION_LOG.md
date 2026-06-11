@@ -1,3 +1,14 @@
+### [EVENT] 2026-06-11T04:16 — chore/sweep-hooks-ble implemented & verified
+**What implemented:**
+- Resolved all findings in the hooks-ble domain (`ble-simulator.test.ts`, `useBLEBatterySweep.ts`, `useBLEScanner.ts`).
+- Added R-16 setTimeout comments for non-GATT write timers.
+- Added R-18 state toggle comment to `useBLEBatterySweep.ts`.
+- Added R-24 AsyncStorage app settings key collision comment to `useBLEScanner.ts`.
+- Wrapped fetch calls in `ble-simulator.test.ts` in try/catch blocks to resolve R-11.
+- All code compiled cleanly and passed the QA test suite (`npm run verify`).
+- Committed changes to branch `chore/sweep-hooks-ble`.
+**Verify result:** TSC ✅, Jest ✅, all quality gates passed ✅
+
 ### [MERGE] 2026-06-11T04:06 — sweep-hooks-core → master @ b3d43808
 **What merged:**
 - Fixed all 118 hooks-core domain findings (type-safety, error handling, re-entrancy, memory leaks).
