@@ -9,6 +9,9 @@ import { AppLogger } from '../services/AppLogger';
 import { WatchBridge, WatchCommand, WatchHealthUpdate } from 'sk8lytz-watch-bridge';
 import { STORAGE_AUTO_PAUSE_ENABLED, STORAGE_PENDING_BG_END } from '../constants/storageKeys';
 
+// S4 Monolith Acknowledgment: This file (SessionContext.tsx) is flagged as a monolith (>30KB).
+// We are only modifying specific line items listed in PLAN-sweep-context.md.
+
 interface SessionContextValue {
   isSkateSessionActive: boolean;
   sessionPhase: 'IDLE' | 'ACTIVE' | 'PAUSED' | 'ENDING';
@@ -41,7 +44,7 @@ async function persistSessionPhase(phase: PersistedSessionPhase, pauseTimeMs?: n
     }
     await AsyncStorage.multiSet(pairs);
   } catch (err: unknown) {
-    AppLogger.error('Failed to persist session phase', err instanceof Error ? err.message : String(err));
+    AppLogger.error('Failed to persist session phase', err, { payload_size: 0, ssi: 0 });
   }
 }
 
@@ -159,7 +162,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (err: unknown) {
-        AppLogger.error('Failed to sync session state from AsyncStorage', err instanceof Error ? err.message : String(err));
+        AppLogger.error('Failed to sync session state from AsyncStorage', err, { payload_size: 0, ssi: 0 });
       } finally {
         isSyncingSessionState.current = false;
       }
@@ -205,13 +208,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           if (sessionPhase === 'ACTIVE') {
             // TODO: [R-16] Refactor hardcoded setTimeout to use BleWriteQueue
             timer = setTimeout(async () => {
+              if (!isActive) return;
               setSessionPhase('PAUSED');
               AppLogger.log('APP_LOG', { event: 'auto_pause_triggered' });
               await persistSessionPhase('paused', Date.now());
               try {
                 await WatchBridge.syncSessionState({ status: 'PAUSED' });
               } catch (err: unknown) {
-                AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_pause', error: err instanceof Error ? err.message : String(err)  });
+                AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_pause', error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
               }
             }, 10000);
           }
@@ -223,7 +227,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (err: unknown) {
-        AppLogger.error('Failed to run auto-pause check', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
+        AppLogger.error('Failed to run auto-pause check', err, { payload_size: 0, ssi: 0 });
       } finally {
         isCheckingAutoPause.current = false;
       }
@@ -279,6 +283,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       let isDisplaying = false;
 
       const displayNotification = async () => {
+        if (!isActive) return;
         if (isDisplaying) return;
         isDisplaying = true;
         try {
@@ -319,12 +324,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             }
           });
           
-          
+          if (!isActive) return;
           if (hasLocationPermission && AppState.currentState === 'active') {
             isForegroundServiceStarted = true;
           }
         } catch (err: unknown) {
-          AppLogger.error('Failed to display foreground service notification', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
+          AppLogger.error('Failed to display foreground service notification', err, { payload_size: 0, ssi: 0 });
         } finally {
           isDisplaying = false;
         }
@@ -337,11 +342,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
       // Update the notification every 5 seconds with new stats
       updateInterval = setInterval(() => {
-        displayNotification().catch((err: unknown) => AppLogger.warn('[SessionContext] displayNotification interval failed', err instanceof Error ? err.message : String(err)));
+        if (!isActive) {
+          if (updateInterval) clearInterval(updateInterval);
+          return;
+        }
+        displayNotification().catch((err: unknown) => AppLogger.warn('[SessionContext] displayNotification interval failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
       }, 5000);
     };
 
-    setupNotification().catch(err => AppLogger.error('[SessionContext] setupNotification failed', err instanceof Error ? err.message : String(err)));
+    setupNotification().catch(err => AppLogger.error('[SessionContext] setupNotification failed', err, { payload_size: 0, ssi: 0 }));
 
     return () => {
       isActive = false;
@@ -371,7 +380,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       status: 'ACTIVE',
       startTime: isoStart,
     }).catch((err: unknown) =>
-      AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_start', error: err instanceof Error ? err.message : String(err) })
+      AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_start', error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 })
     );
   }, []);
   startSessionRef.current = startSession;
@@ -404,7 +413,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         peakHR: finalPeakHR,
       });
     } catch (err: unknown) {
-      AppLogger.warn('WATCH_BRIDGE', { event: 'summary_push_failed', error: err instanceof Error ? err.message : String(err) });
+      AppLogger.warn('WATCH_BRIDGE', { event: 'summary_push_failed', error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
     }
 
     // ── 4. NOW transition to IDLE — safe to tear down FGS ────────────────────
@@ -417,7 +426,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         await notifee.cancelNotification(NOTIFICATION_ID);
       }
     } catch (e: unknown) {
-      AppLogger.warn('[SessionContext] notification teardown failed', { error: e instanceof Error ? e.message : String(e) });
+      AppLogger.warn('[SessionContext] notification teardown failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
     }
 
     // ── 5. Push STOPPED after 10s (matches watch card auto-dismiss timer) ────
@@ -437,6 +446,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         endSessionRef.current();
       }
     });
+  }, []);
+
+  // 6. Cleanup summary timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (summaryTimeoutRef.current) {
+        clearTimeout(summaryTimeoutRef.current);
+      }
+    };
   }, []);
 
 

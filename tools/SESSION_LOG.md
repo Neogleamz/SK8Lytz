@@ -1,3 +1,23 @@
+### [DECISION] 2026-06-11T04:28 — FSM Theme Mode Refactoring
+**Decision:** Refactored `isDark` boolean state inside `ThemeContext.tsx` to a string union `themeMode` state machine (`'dark' | 'light'`) to align with project FSM constraints, while keeping the `isDark` computed getter for backward compatibility with screens.
+**Rejected:** Keep `isDark` as a raw boolean state variable (violates the FSM pattern for UI states).
+**Don't re-derive:** Use the string union `'dark' | 'light'` as the source of truth, and compute `isDark = themeMode === 'dark'` synchronously.
+**Source:** `src/context/ThemeContext.tsx`:L26-30
+
+### [EVENT] 2026-06-11T04:28 — Context Domain Sweep Completed (chore/sweep-context)
+**Trigger:** Executed the `chore/sweep-context` task to address context vulnerabilities, async race conditions, and telemetry payload requirements.
+**Action:**
+- Wrapped async operations (`signIn`, `signUp`, `resetPassword`) in try-catch blocks in `src/context/AuthContext.tsx`.
+- Refactored `SessionContext.tsx` to clear intervals/timeouts safely on unmount (`summaryTimeoutRef`, `updateInterval`), added `!isActive` guards in timeout callbacks, and included `payload_size: 0, ssi: 0` in all telemetry logging.
+- Refactored `ThemeContext.tsx` to use FSM theme state and correct telemetry logging.
+- Ran `npm run verify` successfully. Committed changes to `chore/sweep-context` worktree branch.
+**Verify result:** TSC ✅, Jest ✅ (203 passing), all static guards clean.
+**Files touched:**
+- `src/context/AuthContext.tsx`
+- `src/context/SessionContext.tsx`
+- `src/context/ThemeContext.tsx`
+- `tools/SESSION_LOG.md`
+
 ### [MERGE] 2026-06-11T04:22 — sweep-hooks-ble → master @ 7bd54735
 **What merged:**
 - Resolved all findings in the hooks-ble domain (`ble-simulator.test.ts`, `useBLEBatterySweep.ts`, `useBLEScanner.ts`).

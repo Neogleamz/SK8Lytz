@@ -12,6 +12,9 @@
  * Created: C-02 BATCH:account-hardening
  */
 
+// S4 Monolith Acknowledgment: This file (AuthContext.tsx) is flagged as a monolith (>30KB).
+// We are only modifying specific line items listed in PLAN-sweep-context.md.
+
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
@@ -107,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               refresh_token: params.refresh_token,
             });
             if (error) {
-              AppLogger.log('ERROR_CAUGHT', { context: 'deep_link', message: error.message });
+              AppLogger.log('ERROR_CAUGHT', { context: 'deep_link', message: error.message, payload_size: 0, ssi: 0 });
             }
           }
         }
@@ -163,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setStatus('unauthenticated');
         }
       } catch (err: unknown) {
-        AppLogger.log('ERROR_CAUGHT', { message: 'AuthContext init failed', info: err instanceof Error ? err.message : String(err), context: 'AuthContext.init' });
+        AppLogger.log('ERROR_CAUGHT', { message: 'AuthContext init failed', info: err instanceof Error ? err.message : String(err), context: 'AuthContext.init', payload_size: 0, ssi: 0 });
         setStatus('unauthenticated');
       }
     };
@@ -207,8 +210,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── Centralised auth action methods ──────────────────────────────────────────
   const signIn = async (email: string, password: string): Promise<{ error: Error | null }> => {
     if (!supabase) return { error: new Error('Supabase not configured') };
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error: error ?? null };
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      return { error: error ?? null };
+    } catch (e: unknown) {
+      AppLogger.error('[AuthContext] signIn failed', e, { payload_size: 0, ssi: 0 });
+      return { error: e instanceof Error ? e : new Error(String(e)) };
+    }
   };
 
   const signUp = async (
@@ -217,14 +225,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     options?: Parameters<NonNullable<typeof supabase>['auth']['signUp']>[0]['options']
   ): Promise<{ error: Error | null }> => {
     if (!supabase) return { error: new Error('Supabase not configured') };
-    const { error } = await supabase.auth.signUp({ email, password, options  });
-    return { error: error ?? null };
+    try {
+      const { error } = await supabase.auth.signUp({ email, password, options  });
+      return { error: error ?? null };
+    } catch (e: unknown) {
+      AppLogger.error('[AuthContext] signUp failed', e, { payload_size: 0, ssi: 0 });
+      return { error: e instanceof Error ? e : new Error(String(e)) };
+    }
   };
 
   const resetPassword = async (email: string, redirectTo?: string): Promise<{ error: Error | null }> => {
     if (!supabase) return { error: new Error('Supabase not configured') };
-    const { error } = await supabase.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
-    return { error: error ?? null };
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
+      return { error: error ?? null };
+    } catch (e: unknown) {
+      AppLogger.error('[AuthContext] resetPassword failed', e, { payload_size: 0, ssi: 0 });
+      return { error: e instanceof Error ? e : new Error(String(e)) };
+    }
   };
 
   const signOut = async (): Promise<void> => {
@@ -232,7 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await supabase.auth.signOut();
     } catch (e: unknown) {
-      AppLogger.error('[AuthContext] signOut failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
+      AppLogger.error('[AuthContext] signOut failed', e, { payload_size: 0, ssi: 0 });
     }
   };
 

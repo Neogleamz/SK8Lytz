@@ -23,22 +23,24 @@ const ThemeContext = createContext<ThemeContextType>({
 });
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isDark, setIsDark] = useState(true);
+  const [themeMode, setThemeMode] = useState<'dark' | 'light'>('dark');
   const [controlUITheme, setControlUITheme] = useState<'CLASSIC' | 'MODERN' | 'DOCKED'>('DOCKED');
+
+  const isDark = themeMode === 'dark';
 
   useEffect(() => {
     AsyncStorage.getItem(THEME_KEY).then((val) => {
-      if (val !== null) setIsDark(val === 'dark');
-    }).catch((err: unknown) => AppLogger.warn('[ThemeContext] THEME_KEY read failed', err instanceof Error ? err.message : String(err)));
+      if (val === 'dark' || val === 'light') setThemeMode(val);
+    }).catch((err: unknown) => AppLogger.warn('[ThemeContext] THEME_KEY read failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
     AsyncStorage.getItem(CONTROL_THEME_KEY).then((val) => {
       if (val === 'CLASSIC' || val === 'MODERN' || val === 'DOCKED') setControlUITheme(val);
-    }).catch((err: unknown) => AppLogger.warn('[ThemeContext] CONTROL_THEME_KEY read failed', err instanceof Error ? err.message : String(err)));
+    }).catch((err: unknown) => AppLogger.warn('[ThemeContext] CONTROL_THEME_KEY read failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
   }, []);
 
   const toggleTheme = useCallback(() => {
-    setIsDark((prev) => {
-      const next = !prev;
-      AsyncStorage.setItem(THEME_KEY, next ? 'dark' : 'light').catch((err: unknown) => AppLogger.warn('[ThemeContext] Failed to persist THEME_KEY', err instanceof Error ? err.message : String(err)));
+    setThemeMode((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      AsyncStorage.setItem(THEME_KEY, next).catch((err: unknown) => AppLogger.warn('[ThemeContext] Failed to persist THEME_KEY', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
       return next;
     });
   }, []);
@@ -46,7 +48,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const toggleControlUITheme = useCallback(() => {
     setControlUITheme((prev) => {
       const next = prev === 'CLASSIC' ? 'DOCKED' : 'CLASSIC';
-      AsyncStorage.setItem(CONTROL_THEME_KEY, next).catch((err: unknown) => AppLogger.warn('[ThemeContext] Failed to persist CONTROL_THEME_KEY', err instanceof Error ? err.message : String(err)));
+      AsyncStorage.setItem(CONTROL_THEME_KEY, next).catch((err: unknown) => AppLogger.warn('[ThemeContext] Failed to persist CONTROL_THEME_KEY', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
       return next;
     });
   }, []);
