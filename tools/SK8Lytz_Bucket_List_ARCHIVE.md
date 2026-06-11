@@ -1540,4 +1540,28 @@ pm run verify which includes QA tests.
   - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-09. Grouped by collision graph into parallel-safe batches.
   - **Plan:** 📎 [PLAN-r-09-sweep.md](docs/plans/PLAN-r-09-sweep.md)
   - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-09
-  - **Prerequisite:** Wave 4 fully merged
+  - **Prerequisite:** Wave 4 fully merged
+
+- [x] **chore/r-24-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Meal]` `[WAVE:6]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-24 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-24. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-24-sweep.md](docs/plans/PLAN-r-24-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-24
+  - **Prerequisite:** Wave 5 fully merged
+
+- [x] **chore/r-06-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[H-RISK]` `[Meal]` `[WAVE:6]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-06 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-06. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-06-sweep.md](docs/plans/PLAN-r-06-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-06
+  - **Prerequisite:** Wave 5 fully merged
+
+- [x] **chore/r-14-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Snack]` `[WAVE:6]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-14 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-14. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-14-sweep.md](docs/plans/PLAN-r-14-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-14
+  - **Prerequisite:** Wave 5 fully merged

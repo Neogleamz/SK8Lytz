@@ -1765,3 +1765,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC OK, Jest OK, gates OK.
 **Notes:** Tasks safely addressed Race Conditions and PII leaks. Gatekeeper completed successfully.
 
+
+### [MERGE] 2026-06-10T19:44 - Wave 6 Sweep -> master
+**What merged:** 3 chore tasks from BATCH:deepdive-sweep-phase2 (r-24, r-06, r-14).
+**Verify result:** TSC OK, Jest OK, gates OK.
+**Notes:** Centralized magic keys, fixed swallowed errors, and added missing error UI states. Gatekeeper completed successfully.
+
