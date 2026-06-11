@@ -154,6 +154,12 @@ Context: Production log status: [CLEAN / ISSUES TRIAGED]. Resuming shutdown chec
      Additionally, ensure ALL `[DECISION]` entries made during the session are already in the log (they should have been written at decision time). If any are missing, add them now.
      Then commit: `git add tools/SESSION_LOG.md tools/FRICTION_LEDGER.md && git commit -m "docs: session log + friction audit <YYYY-MM-DD>"`
 
+   **🔴 MERGE ENTRY ENFORCEMENT (Alex — Hard Verify Before Sign-Off):**
+   Before committing the session log, Alex MUST verify that every gatekeeper merge that ran this session has a `[MERGE]` entry in SESSION_LOG. To check:
+   - `git log --oneline --since="today"` → identify all merge commits this session
+   - grep SESSION_LOG for `[MERGE]` entries matching those commit hashes
+   - If any merge is NOT logged → write the `[MERGE]` entry NOW before the final commit. A session sign-off is invalid if any merge lacks a SESSION_LOG entry.
+
    **NOTE:** The session log should have been updated throughout the session after each merge (`[MERGE]` entries) and each architectural decision (`[DECISION]` entries). Wind-down is the FINAL update only, not the sole update.
    - Close all background terminal processes (dev servers, etc.) if applicable.
    - **Discord Notification:** Broadcast session end status:

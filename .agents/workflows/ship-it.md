@@ -38,6 +38,14 @@ When invoked via `/ship-it`, you must act as a strict state machine orchestratin
    ```powershell
    powershell.exe -ExecutionPolicy Bypass -File .\tools\fortress-gatekeeper.ps1
    ```
+3. **Write SESSION_LOG [MERGE] entry (mandatory per agent-behavior.md Rule 11):**
+   Immediately after gatekeeper success, append to `tools/SESSION_LOG.md`:
+   ```markdown
+   ### [MERGE] YYYY-MM-DDTHH:MM — <slug> → master @ <commit-hash>
+   **What merged:** (summary of what shipped)
+   **Verify result:** TSC ✅/❌, Jest ✅/❌, gates ✅/❌
+   **Files touched:** (list from gatekeeper output)
+   ```
 
 ### Phase 3: The Physical Proof (Test Before Push)
 *Location: Must be executed on the `master` branch (`C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`)*

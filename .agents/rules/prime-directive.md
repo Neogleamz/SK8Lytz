@@ -22,6 +22,8 @@ You are a precision instrument, not a text generator. Every code change must pas
 | **S5** | You are fixing a bug for the 3rd time | *The third attempt proves the approach is wrong, not the implementation. Reset and think.* | Three-Strike Lockout. `git reset --hard`. Consultative mode only. |
 | **S6** | The user asks for something NOT in the active sprint | *Off-sprint work creates merge conflicts, context fragmentation, and untracked debt.* | **The Intercept Gate**: Say *"⚠️ Intercept — outside the active sprint. Route through `/intake`, or say `COWBOY MODE ACTIVATED` to proceed knowingly."* |
 | **S7** | You are running raw `tsc` or `jest` commands manually | *Raw terminal commands bypass the isolated testing suite, break on Windows paths, and erode trust when they fail.* | **The Pre-Installed Suite Mandate**: ALWAYS use `node tools/verifiable-check-runner.js` or `npm run verify`. Hard ban on manual test commands. |
+| **S8** | You have NOT read the PLAN-*.md file in full before writing code | *The plan is the contract. Writing from memory or summaries causes scope creep, skipped steps, and incorrect implementations — exactly what burned us on 2026-06-11.* | Run `view_file` on the full `docs/plans/PLAN-<slug>.md` and quote the "Files to Create/Modify" section verbatim before the first edit. No plan read = no code. |
+| **S9** | You have NOT confirmed the wave prerequisite via `git log` | *Wave N tasks silently fail when Wave N-1 hasn't merged — the worktree branches from a stale master and the imported types/services don't exist yet.* | Run `git log --oneline -5` on master. Confirm the previous wave's merge commit exists. If it does NOT → HALT and report. Never assume. |
 
 ---
 
@@ -33,11 +35,12 @@ You are a precision instrument, not a text generator. Every code change must pas
               STALE entries? → warn user before proceeding. Not in KB? → note “KB capture required during execution.”
 2. 👁️ LOOK BEFORE  → view_file the EXACT lines you will edit. Never write from memory.
 3. ✂️  SURGICAL     → Target minimum lines (3–10 chunks). No whole-file rewrites.
-4. 🔍 POST-DIFF    → git diff HEAD after every edit. Check for accidental deletions.
+4. 🔍 POST-DIFF    → `git diff HEAD <filename>` after EVERY SINGLE EDIT. Not mental. Actual command. Read the output. Revert if anything outside plan scope changed.
 5. 🔬 QA TESTER    → /qa-tester 5-case checklist before committing.
 6. 📋 DOCS GATE    → Did you add a hook/service/component/BLE change? Update Master Reference §3/§4 NOW.
 7. ✅ VERIFY       → npm run verify (TSC + Jest + AST + TypeSafety + WorkflowValidator)
 8. 🔀 GATEKEEPER   → fortress-gatekeeper.ps1 (fast-forward merge only)
+8.5 📝 SESSION_LOG  → Append [MERGE] entry to tools/SESSION_LOG.md (mandatory — agent-behavior.md Rule 11)
 9. 🎙️ DISCORD      → notify_discord.ps1 -Message "✅ <slug> merged. Master is green."
 ```
 
@@ -49,8 +52,14 @@ These are NOT session-start reads. These trigger RIGHT BEFORE the specific actio
 
 ### 👁️ Sage — Pre-Edit Micro-Read (Before touching ANY file)
 Recite internally before the first `replace_file_content` or `write_to_file` call:
-> *"I must: (1) view the exact lines first, (2) change only what the plan requires, (3) check git diff after."*
+> *"I must: (1) view the exact lines first, (2) change only what the plan requires, (3) run `git diff HEAD <filename>` after every edit and read the output."*
 If you cannot answer YES to all 3: stop and re-read Rule 2 in agent-behavior.md.
+
+**The git diff is NOT optional and NOT mental.** After every `replace_file_content` or `write_to_file` call, you MUST run:
+```powershell
+git diff HEAD <filename>
+```
+Read the diff. If ANY line outside the plan's listed scope appears in the diff → run `git checkout -- <file>` and retry surgically. This is enforced, not suggested. Skipping it is an S4-class violation.
 
 ### 🔬 Blake — Pre-QA Micro-Read (Before running the QA checklist)
 Recite internally before opening the qa-tester workflow:

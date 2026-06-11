@@ -56,10 +56,24 @@ When prompted with "sync architecture", "update memory", or "compile context", e
 4. **Commit the Sync**:
    ```powershell
    Set-Location "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
+   npm run verify
+   ```
+   If verify fails → HALT. Fix the type error before committing the sync.
+   ```powershell
    git add tools/SK8Lytz_App_Master_Reference.md
    git commit -m "docs: sync Master Reference architecture map with live codebase"
    ```
 
-5. **Halt**: Report how many hooks/services were added to the Registry and confirm the Master Reference is now current.
+5. **Write SESSION_LOG [ARTIFACT] entry (mandatory — P3)**:
+   After the commit, append to `tools/SESSION_LOG.md`:
+   ```markdown
+   ### [ARTIFACT] YYYY-MM-DDTHH:MM — Master Reference Sync
+   **What changed:** N hooks / N services registered | N BLE entries updated
+   **Commit:** <commit-hash>
+   **Triggered by:** context-compiler (manual sync)
+   ```
+
+6. **Halt**: Report how many hooks/services were added to the Registry and confirm the Master Reference is now current.
 
 > Note: This workflow supersedes the old `architecture-map.md` approach. The Master Reference IS the architecture map.
+

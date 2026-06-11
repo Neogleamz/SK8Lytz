@@ -27,6 +27,24 @@ git diff HEAD
 ```
 
 3. **Act as a Senior Code Reviewer.** For small diffs, review the files yourself. For large diffs (>5 files or complex architectural changes), leverage the Sub-Agent Swarm Protocol: invoke parallel `self` sub-agents using `invoke_subagent`, assigning each a specific file or module to review concurrently.
+
+   **Swarm agent prompt template** (one per file/module):
+   ```
+   You are a Senior Code Reviewer. Review ONLY the diff for [filename].
+   Read the file at its current state using view_file, then read `git diff HEAD [filename]`.
+
+   Check for these 7 issues and report each as ✅ PASS or ⚠️ ISSUE with line numbers:
+   1. Security — hardcoded secrets, API keys, MAC addresses
+   2. Error Handling — missing try/catch on async operations, swallowed errors
+   3. Dead Code — unused imports, commented-out blocks, orphaned variables
+   4. Typing — any `any` types that should be strict, missing return types
+   5. Naming — vague variable names (data, temp, x, result)
+   6. Architecture — business logic in UI components, missing hook extraction
+   7. Documentation Parity — new hook/service created but Master Reference not updated (Kanban Rule 12)
+
+   Output a markdown table with Verdict: SHIP IT ✅ or NEEDS FIXES ⚠️.
+   DO NOT modify any files. This is a read-only review.
+   ```
    
    Analyze every changed file in the diff and check for:
 

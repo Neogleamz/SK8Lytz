@@ -17,11 +17,24 @@ team_roster: .agents/team-roster.md
 ### /gitcleanup (Worktree Teardown)
 1. Verify no uncommitted changes exist in the worktree.
 2. Ensure you are currently IN the master fortress directory (`cd C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`).
-3. Execute the automated gatekeeper to verify cryptographic attestations, merge cleanly, and tear down:
+3. **Run verify before gatekeeper (S7 gate order requirement):**
+   ```powershell
+   npm run verify
+   ```
+   If verify fails → HALT. Fix the issue in the worktree before proceeding.
+4. Execute the automated gatekeeper to verify cryptographic attestations, merge cleanly, and tear down:
    > [!CAUTION]
    > **CRITICAL CWD REQUIREMENT:** You MUST set the `Cwd` parameter of your `run_command` tool to exactly `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz`. Running this from inside the worktree directory will cause a silent failure loop.
 
    ```powershell
    powershell.exe -ExecutionPolicy Bypass -File .\tools\fortress-gatekeeper.ps1
    ```
-4. Verify clean master state with `git worktree list`.
+5. **Write SESSION_LOG [MERGE] entry (mandatory per agent-behavior.md Rule 11):**
+   Immediately after gatekeeper success, append to `tools/SESSION_LOG.md`:
+   ```markdown
+   ### [MERGE] YYYY-MM-DDTHH:MM — <slug> → master @ <commit-hash>
+   **What merged:** (bullet list of what changed and why)
+   **Verify result:** TSC ✅/❌, Jest ✅/❌, gates ✅/❌
+   **Files touched:** (list)
+   ```
+6. Verify clean master state with `git worktree list`.

@@ -39,6 +39,24 @@ When invoked via `/qa-tester` or triggered during `/start-task` Phase 5, hunt fo
 
 **⚡ Swarm QA Protocol:** If the code changes span multiple disparate domains (e.g., both BLE Core and UI), leverage the Sub-Agent Swarm Protocol. Invoke parallel `self` sub-agents using `invoke_subagent` to evaluate the 5 cases concurrently for each distinct domain, rather than evaluating everything sequentially.
 
+   **Swarm agent prompt template** (one per domain):
+   ```
+   You are a QA Edge-Case Hunter for the [DOMAIN] domain. Read the current diff:
+   git diff HEAD
+
+   Focus ONLY on files in your domain: [list of files].
+   For each of these 5 cases, state: What could go wrong, How the code handles it, and
+   whether it is ✅ Handled or ⚠️ Gap:
+   1. BLE Drop / Connection Loss
+   2. App Backgrounding / Foreground Resume
+   3. Null / Undefined State Race Condition
+   4. Concurrent Writes / Double-Tap
+   5. Domain-specific edge case for [DOMAIN]
+
+   Output a markdown table per case. DO NOT fix any code. DO NOT commit anything.
+   Read-only analysis only. Report ⚠️ gaps with the exact file:line where the gap exists.
+   ```
+
 For EACH of the 5 case categories below, explicitly state:
 - 🔍 **What could go wrong** — one specific failure scenario for THIS task's code
 - ✅ **How the code handles it** — cite the exact line/function that defends against it

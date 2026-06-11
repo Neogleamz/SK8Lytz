@@ -6,8 +6,9 @@ team_roster: .agents/team-roster.md
 
 # The Audit Codebase Engine
 
-> ⚠️ **DEPRECATED** — This workflow has been superseded by `/self-heal`.
+> ⛔ **DEPRECATED — HARD REDIRECT**: This workflow has been superseded by `/self-heal`.
 > Run `/self-heal` instead. All audit-codebase functionality is now part of the observatory pipeline.
+> **If invoked directly**: Output *"⚠️ /audit-codebase is deprecated. Running /self-heal instead."* and switch to the /self-heal workflow immediately. Only continue with this file if the user explicitly responds with "proceed with audit-codebase directly".
 
 > **📍 WHEN TO USE:** Periodic "clean the house" sweep — weekly, or whenever things feel messy.
 > Also called by `/ship-it` Phase 1 for the bundle check portion.
@@ -47,5 +48,13 @@ Invoke 3 parallel sub-agents (Role: "Auditor", TypeName: "self") to partition th
 1. **Bucket List Integration**:
    - Pipe all findings into `tools/SK8Lytz_Bucket_List.md` under the `🧹 TECH DEBT` queue.
    - You MUST strictly format the injected tasks according to the nested multi-line Task Schema defined in the AI AGENT DIRECTIVES.
-2. **Report**: Output a summary to the chat detailing vulnerabilities, crashes, TODOs, smells, and bundle weight.
+2. **Write SESSION_LOG [ARTIFACT] entry (mandatory — P3)**:
+   Append to `tools/SESSION_LOG.md`:
+   ```markdown
+   ### [ARTIFACT] YYYY-MM-DDTHH:MM — Codebase Audit
+   **Vulnerabilities:** N found | N new TECH DEBT tasks filed
+   **TODOs found:** N | **God Objects:** N | **Bundle >5MB packages:** N
+   **Production errors fetched:** N
+   ```
+3. **Report**: Output a summary to the chat detailing vulnerabilities, crashes, TODOs, smells, and bundle weight.
 

@@ -178,8 +178,11 @@ Before touching any file:
 3. Report: `"Sage pre-read complete. File: [name]. Boy Scout queue: [items found / none]."`
 
 - Once the user types "proceed", execute the code strictly according to the TPM's plan within the isolated task worktree.
+- **Before the first edit, quote the PLAN's "Files to Create/Modify" list verbatim** — this is the scope fence. Anything not on that list is off-limits.
+- The plan's **"Out of Scope" section is a hard boundary**, not a suggestion. If a file appears there, do not open it.
 - Do not perform unsolicited refactors outside the scope of the plan.
-- After EVERY edit, run a mental `git diff HEAD` check — if any lines outside the plan scope changed, revert them immediately.
+- **After EVERY `replace_file_content` or `write_to_file` call**, run `git diff HEAD <filename>` as an actual command (not mentally). Read the output. If any line outside plan scope changed → `git checkout -- <filename>` and retry. This is S8-class enforcement.
+
 
 ```
 ─────────────────────────────────────────────────────────────────────
@@ -282,10 +285,18 @@ git log -1 --format="%h"
    ```powershell
    powershell.exe -ExecutionPolicy Bypass -File .\tools\fortress-gatekeeper.ps1 -ArchiveTask <task-slug>
    ```
-4. **Clean Slate Check**: Run `git status -s` on master immediately after merge.
+4. **Write SESSION_LOG [MERGE] entry (mandatory — agent-behavior.md Rule 11)**:
+   Immediately after gatekeeper success, append to `tools/SESSION_LOG.md`:
+   ```markdown
+   ### [MERGE] YYYY-MM-DDTHH:MM — <slug> → master @ <commit-hash>
+   **What merged:** (bullet list of what changed and why)
+   **Verify result:** TSC ✅/❌, Jest ✅/❌, gates ✅/❌
+   **Files touched:** (list from gatekeeper output)
+   ```
+5. **Clean Slate Check**: Run `git status -s` on master immediately after merge.
   - Any modified plan files (`tools/plans/*.md`) -> stage and commit as `docs(plans): commit AI-First plan for <task-slug>`
   - Any temp scripts -> DELETE them, do not commit
-5. **Board Sync (MANDATORY — FRICTION-020 Fix)**:
+6. **Board Sync (MANDATORY — FRICTION-020 Fix)**:
    - The gatekeeper auto-archiver removes the task entry from the list but does NOT update the ACTIVE SPRINT header.
    - You MUST immediately edit `tools/SK8Lytz_Bucket_List.md` after every merge:
      - Update `> Currently executing: **\`<slug>\`**` → next pending task slug

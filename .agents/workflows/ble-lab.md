@@ -67,3 +67,14 @@ Announce: *"Checking what we already know about this command..."*
    ```
 
 7. If the user confirms the test was successful, offer to update the Master Reference with any new findings. **Additionally, if any new opcode behavior or hardware constraint was discovered during this session, Reyes MUST run `/kb-capture` targeting `knowledge-base/hardware/` before the session ends.** Hardware knowledge is never-expire in the KB.
+
+8. **Write SESSION_LOG [ARTIFACT] entry (mandatory — P3 compliance)**:
+   After every BLE lab session, append to `tools/SESSION_LOG.md`:
+   ```markdown
+   ### [ARTIFACT] YYYY-MM-DDTHH:MM — BLE Lab: 0x<XX> <command-name>
+   **Payload tested:** [hex bytes]
+   **Result:** Master Ref match: ✅/❌ | Discrepancies: (list or "none")
+   **KB captured:** ✅/❌
+   **Source file verified:** <file path>
+   ```
+

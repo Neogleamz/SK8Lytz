@@ -150,9 +150,31 @@ Use the tool's `wave_assignments` map. Every cluster gets a `[WAVE:N]` tag befor
 ### 🧪 Phase 2.85 — Vector Delta (The Test Generators)
 
 For every finding marked `HIGH` or `MEDIUM` with `CONFIRMED` confidence:
-1. Invoke a sub-agent (`invoke_subagent` using the `TDD` profile).
-2. Task the sub-agent to write a failing Jest or Detox test case to `__tests__/` that explicitly targets the `rule_violated` in the specific `file`.
-3. The sub-agent must commit the failing test to the worktree but MUST NOT fix the code themselves.
+1. Invoke a sub-agent (`invoke_subagent` using the `TDD` profile) with the following contract prompt (fill in the specifics per-finding):
+   ```
+   You are a TDD Test Generator. Your ONLY job is to write a failing regression test.
+   Target: [rule_violated] violation in [file]:[line]
+   Test file destination: __tests__/<domain>/<slug>.test.ts
+
+   MANDATORY ENFORCEMENT CONTRACT — NO EXCEPTIONS:
+   [S1] Before writing anything, confirm you are NOT on master:
+        git branch --show-current
+        If output is 'master' → HALT. Do not proceed.
+   [WRITE TEST] Write a failing Jest or Detox test case that explicitly targets
+        the rule_violated at the specified file:line. The test must FAIL on current code.
+   [POST-DIFF] After write_to_file, run:
+        git diff HEAD __tests__/<domain>/<slug>.test.ts
+        Read the output. Verify only the test file was modified.
+   [S7] Run: npm run verify
+        If verify passes (all tests green), the test was not written correctly — a
+        FAILING test for the violation means verify should show 1 new failure. Report this.
+   [COMMIT] Stage and commit the failing test:
+        git add __tests__/<domain>/<slug>.test.ts
+        git commit -m "test: failing regression for [rule_violated] in [file]"
+   [REPORT] Output the commit hash and test name. DO NOT fix the code. HALT after commit.
+   ```
+2. The sub-agent MUST NOT fix the code. Its sole output is the failing test commit.
+
 
 ---
 

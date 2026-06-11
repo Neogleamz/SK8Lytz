@@ -15,7 +15,7 @@ team_roster: .agents/team-roster.md
 
 ```powershell
 Set-Location "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
-npx tsc --noEmit 2>&1 | Select-String "error TS" | Select-Object -First 10
+npm run verify 2>&1 | Select-String "error TS" | Select-Object -First 10
 Write-Host "Pre-sync TSC check complete."
 ```
 
@@ -34,6 +34,6 @@ Write-Host "supabase.ts synced: $lines lines generated."
 
 ```powershell
 Set-Location "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
-npx tsc --noEmit 2>&1 | Select-String "error TS" | Select-Object -First 20
+npm run verify 2>&1 | Select-String "error TS" | Select-Object -First 20
 Write-Host "Post-sync TSC check complete."
 ```

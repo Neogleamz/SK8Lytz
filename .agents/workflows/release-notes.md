@@ -74,7 +74,7 @@ Generate a formatted PR body from the branch commits and diff stat:
 
 ## Testing Done
 - [ ] Local web demo verified
-- [ ] TypeScript compilation clean (`npx tsc --noEmit`)
+- [ ] `npm run verify` passed (TypeScript + Jest — S7: raw `npx tsc` is banned)
 - [ ] No console errors in browser
 
 ## Breaking Changes

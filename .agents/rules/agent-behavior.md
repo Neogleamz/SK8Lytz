@@ -77,7 +77,7 @@ HANDOFF QUALITY CHECK (outgoing persona runs this):
 - **The Surgical Strike Protocol (Anti-Collision Checklists)**:
   - **Look Before You Leap**: You are strictly forbidden from rewriting entire functions or files from memory. Immediately before executing a replacement tool, you MUST use the `view_file` tool to read the current state of the exact lines you are targeting down to the spacing.
   - **Surgical Tool Bounds**: You must target the exact minimum number of lines required for the objective. Focus on 3-10 line chunks using `replace_file_content` or `multi_replace_file_content`.
-  - **Post-Edit Diff self-audit**: Immediately after applying any code change, you must silently check the diff (`git diff HEAD`). Analyze it carefully to ensure no unrelated hooks, JSX, or state variables were deleted. If an accidental deletion occurred, instantly execute `git checkout -- <file>` to revert and retry.
+  - **Post-Edit Diff (Mandatory Actual Command — NOT Mental)**: Immediately after applying any code change, you MUST run `git diff HEAD <filename>` as an actual shell command. Read the output. Ensure no unrelated hooks, JSX, or state variables were deleted. If an accidental deletion occurred, instantly execute `git checkout -- <file>` to revert and retry. **Skipping this command or running it mentally is an S4-class violation.**
   - **The Component Extraction Escape Hatch**: If a monolithic file is too complex (e.g., >30KB and dozens of hooks), you must pause and tell the user: *"This file is too large to safely edit. We must extract this component/logic first before modifying it."*
 - **The Boy Scout (Tech Debt) Rule**:
   - Within the specific files you are editing, you are 100% responsible for cleaning up pre-existing defects. You MUST surgically delete dead imports, unused variables, stale comments, and resolve type-mismatches in those target files before committing.
@@ -204,7 +204,8 @@ The 3-persona model has been superseded by the Full-Lifecycle Team Roster.
 
 ## 9. The Turbo & Autopilot Protocols
 1. **The // turbo Annotation**: If a step in an Implementation Plan or Workflow is annotated with `// turbo`, you are authorized to set `SafeToAutoRun` to `true` for those specific `run_command` calls to bypass manual user confirmation.
-2. **The Snack Autopilot**: Any task tagged `[L-RISK]` AND `[Snack]` AND `[BATCH]` is authorized for "Zero-Gate Execution." You may implement the change, verify it, and commit it in a single turn WITHOUT waiting for a formal plan approval or a separate branch if it is part of a maintenance sweep.
+2. **The Snack Autopilot**: Any task tagged `[L-RISK]` AND `[Snack]` AND `[BATCH]` is authorized for "Zero-Gate Execution." You may implement the change, verify it, and commit it in a single turn WITHOUT waiting for a formal plan APPROVAL or a separate branch if it is part of a maintenance sweep.
+   > ⚠️ **S8 STILL APPLIES**: Zero-Gate Execution exempts you from the plan APPROVAL wait — it does NOT exempt you from reading the plan file. You MUST still run `view_file docs/plans/PLAN-<slug>.md` in full and quote the "Files to Create/Modify" section before writing any code. S8 has no task-size carve-outs.
 
 ## 10. Evolved Rules (SDE Closed-Loop Friction Feedback)
 - **Rule: Surgical Buffer Overflow Defense**: The agent must enforce a minimum length of 12 RGB pixels for all `0x59` Static Colorful payload dispatches. Payloads below 10 pixels cause physical controller EEPROM buffer lockouts on the `0xA3` chipset.
@@ -272,7 +273,7 @@ On activation: Announce *"Checking what we already know..."* then follow the **3
 - ALWAYS write findings back to BOTH KB and SESSION_LOG after any new research.
 
 ### 📋 Scrum — Casey | Worktree-First Rule
-On activation: Run `git worktree list` mentally (or via command). Check for:
+On activation: Run `git worktree list` **via actual command** (not mentally). Check for:
 - Orphaned worktrees with no corresponding active task → surface them immediately.
 - Active sprint tasks with no worktree → flag as zombie.
 THEN proceed with sprint coordination.

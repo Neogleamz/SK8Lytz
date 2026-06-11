@@ -73,5 +73,5 @@ Completion stamp protocol + pre-merge verification matrix → see `/start-task` 
   3. ✅ `PLAN-*.md` file exists at the path listed in `Source of Truth`
   4. ✅ `Decision Log:` field is filled — not empty, not `"TBD"`
   5. ✅ `[WAVE:N]` tag is present and was assigned by `ast-parser.js` (not manually guessed)
-  6. ✅ For Wave N > 1: all Wave N-1 tasks are confirmed merged to master
+  6. ✅ For Wave N > 1: all Wave N-1 tasks are confirmed merged to master — **enforcement: run `git log --oneline -5` on master root and confirm the Wave N-1 task's merge commit hash appears. Assumption is not confirmation. If the commit is NOT in the log → HALT.**
 - **If any check fails:** Output the specific failure and HALT. Do NOT proceed. Route back to `/intake` to resolve.
