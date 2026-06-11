@@ -187,6 +187,7 @@ export type DockedControllerHandle = {
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
   function DockedController({ isOfflineMode = false, hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onPowerToggle, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {}, gpsSpeed = 0, peakGForce = 1.0, sessionDistanceMiles = 0, sessionDurationSec = 0, sessionAvgSpeed = 0, sessionActive = false, startSession = () => {}, stopSessionRecording = () => {} }: Sk8lytzControllerProps, ref) {
+    // TODO: [R-27] Refactor to Context Container (Context Overload limit exceeded)
     const { Colors, isDark } = useTheme();
     const { isVisibilityAllowed } = useAppConfig();
     const { height: windowHeight } = useWindowDimensions();
