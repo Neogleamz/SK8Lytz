@@ -29,6 +29,7 @@ import { resolveProtocol, getDefaultProtocol, getProtocolById } from '../protoco
 import { AppLogger } from './AppLogger';
 import { BleCharacteristicCache } from './BleCharacteristicCache';
 import { scrubPII } from '../utils/piiScrubber';
+import { jitteredDelay } from '../utils/backoff';
 
 
 /** Result of a successful GATT session creation */
@@ -121,7 +122,7 @@ export async function createGattSession(
         || errStr.includes('Peer removed');
 
       if (isTransient && attempt < retries) {
-        const delay = GATT_BACKOFF_MS[attempt - 1] ?? 1500;
+        const delay = jitteredDelay(GATT_BACKOFF_MS[attempt - 1] ?? 1500, 500);
         AppLogger.warn(`[BleSessionFactory] GATT 133 on ${scrubPII(mac)}. Attempt ${attempt}/${retries} — retrying in ${delay}ms with refreshGatt`, { context, error: errStr });
         await bleManager.cancelDeviceConnection(mac).catch(() => {});
         await new Promise(resolve => setTimeout(resolve, delay));

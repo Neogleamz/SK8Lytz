@@ -205,9 +205,9 @@ export const connectService = fromPromise<
               negotiatedMtu = negotiated.mtu;
               if (negotiatedMtu > 23) break;
               AppLogger.warn(`[BLE] MTU glitch (23) for ${conn.id}. Retrying...`);
-              await new Promise(res => setTimeout(res, BLE_TIMING.MTU_RETRY_SETTLE_MS));
+              await new Promise(res => setTimeout(res, jitteredDelay(BLE_TIMING.MTU_RETRY_SETTLE_MS, 50)));
             } catch {
-              await new Promise(res => setTimeout(res, BLE_TIMING.MTU_RETRY_SETTLE_MS));
+              await new Promise(res => setTimeout(res, jitteredDelay(BLE_TIMING.MTU_RETRY_SETTLE_MS, 50)));
             }
           }
           mtuMapRef.current.set(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);
