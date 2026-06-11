@@ -37,6 +37,10 @@ jest.mock('@notifee/react-native', () => ({
   AndroidForegroundServiceType: { FOREGROUND_SERVICE_TYPE_LOCATION: 8 },
 }));
 
+jest.mock('react-native/Libraries/vendor/emitter/EventEmitter', () => {
+  return {};
+}, { virtual: true });
+
 jest.mock('sk8lytz-watch-bridge', () => ({
   WatchBridge: {
     syncSessionState: jest.fn().mockResolvedValue(undefined),
