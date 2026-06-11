@@ -306,39 +306,41 @@ async function _executeProtocolResultsInternal(
     let allSucceeded = true;
     const getDeviceMtu = (id: string) => mtuMap.get(id) ?? 186;
 
-    // Parallelize per-device writes — each targetDeviceId is a distinct device.
+    // Sequentialize per-device writes to prevent GATT 133 collisions on Android.
     // Packet ordering within a single device is preserved by the sequential inner loop.
-    const writeResults = await Promise.all(
-      payloads
-        .filter(({ targetDeviceId }) => !ghostedDeviceIds.includes(targetDeviceId))
-        .map(async ({ targetDeviceId, result }) => {
-          const device = connectedDevices.find(d => d.id === targetDeviceId);
-          if (!device) return true;
+    const livePayloads = payloads.filter(({ targetDeviceId }) => !ghostedDeviceIds.includes(targetDeviceId));
+    let isFirstDevice = true;
 
-          const adapter = resolveProtocolForDevice(targetDeviceId, adapterMap);
-          const mtu = getDeviceMtu(targetDeviceId);
-          const preparedResult = adapter.prepareForTransmission(result, mtu);
+    for (const { targetDeviceId, result } of livePayloads) {
+      if (!isFirstDevice) {
+        await new Promise(r => setTimeout(r, 50));
+      }
+      isFirstDevice = false;
 
-          for (let i = 0; i < preparedResult.packets.length; i++) {
-            const base64 = Buffer.from(preparedResult.packets[i]).toString('base64');
-            try {
-              await device.writeCharacteristicWithoutResponseForService(
-                adapter.serviceUUID,
-                adapter.writeCharacteristicUUID,
-                base64
-              );
-              if (i < preparedResult.packets.length - 1 && preparedResult.interPacketDelayMs > 0) {
-                await new Promise(res => setTimeout(res, preparedResult.interPacketDelayMs));
-              }
-            } catch (e: unknown) {
-              AppLogger.warn(`[BLE] executeProtocolResults failed for ${targetDeviceId}`, e instanceof Error ? e.message : String(e));
-              return false;
-            }
+      const device = connectedDevices.find(d => d.id === targetDeviceId);
+      if (!device) continue;
+
+      const adapter = resolveProtocolForDevice(targetDeviceId, adapterMap);
+      const mtu = getDeviceMtu(targetDeviceId);
+      const preparedResult = adapter.prepareForTransmission(result, mtu);
+
+      for (let i = 0; i < preparedResult.packets.length; i++) {
+        const base64 = Buffer.from(preparedResult.packets[i]).toString('base64');
+        try {
+          await device.writeCharacteristicWithoutResponseForService(
+            adapter.serviceUUID,
+            adapter.writeCharacteristicUUID,
+            base64
+          );
+          if (i < preparedResult.packets.length - 1 && preparedResult.interPacketDelayMs > 0) {
+            await new Promise(res => setTimeout(res, preparedResult.interPacketDelayMs));
           }
-          return true;
-        })
-    );
-    allSucceeded = writeResults.every(Boolean);
+        } catch (e: unknown) {
+          AppLogger.warn(`[BLE] executeProtocolResults failed for ${targetDeviceId}`, e instanceof Error ? e.message : String(e));
+          allSucceeded = false;
+        }
+      }
+    }
     return allSucceeded;
   };
 
