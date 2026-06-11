@@ -1753,3 +1753,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC OK, Jest OK, gates OK.
 **Notes:** Both tasks executed by self-healing subagents cleanly without incident. Gatekeeper completed successfully.
 
+
+### [MERGE] 2026-06-10T19:34 - Wave 4 Sweep -> master
+**What merged:** 2 chore tasks from BATCH:deepdive-sweep-phase2 (r-23, r-21).
+**Verify result:** TSC OK, Jest OK, gates OK.
+**Notes:** Tasks safely addressed architecture limit warnings and dependency overhangs. Gatekeeper completed successfully.
+
