@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -33,6 +33,49 @@ interface AdminProfile {
   created_at: string;
 }
 
+const AdminRosterCard = React.memo(({
+  item,
+  cardBg,
+  borderColor,
+  textPrimary,
+  textMuted,
+  onRevokeAdmin,
+}: {
+  item: AdminProfile;
+  cardBg: string;
+  borderColor: string;
+  textPrimary: string;
+  textMuted: string;
+  onRevokeAdmin: (userId: string, username: string | null) => void;
+}) => {
+  const handleRevoke = useCallback(() => {
+    onRevokeAdmin(item.user_id, item.username);
+  }, [onRevokeAdmin, item.user_id, item.username]);
+
+  return (
+    <View style={[styles.userCard, { backgroundColor: cardBg, borderColor }]}>
+      <View style={styles.cardHeader}>
+        <View>
+          <Text style={[styles.userTitle, { color: textPrimary }]}>
+            {item.display_name || 'No Display Name'}
+          </Text>
+          <Text style={[styles.userSubtitle, { color: textMuted }]}>
+            @{item.username || 'unknown'} • Promoted: {new Date(item.created_at).toLocaleDateString()}
+          </Text>
+        </View>
+        <MaterialCommunityIcons name="shield-star" size={20} color="#FFD700" />
+      </View>
+
+      <View style={styles.actionRow}>
+        <TouchableOpacity onPress={handleRevoke} style={styles.actionBtn}>
+          <MaterialCommunityIcons name="shield-remove-outline" size={18} color="#ff4040" />
+          <Text style={[styles.actionText, { color: '#ff4040' }]}>Revoke Admin</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+});
+
 export function AdminRosterPanel({
   visible,
   onClose,
@@ -43,12 +86,12 @@ export function AdminRosterPanel({
   textMuted,
 }: AdminRosterPanelProps) {
   const [admins, setAdmins] = useState<AdminProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  type ViewState = 'loading' | 'refreshing' | 'error' | 'success';
+  const [status, setStatus] = useState<ViewState>('loading');
 
-  const fetchAdmins = async () => {
+  const fetchAdmins = useCallback(async () => {
     try {
-      setLoading(true);
+      setStatus(prev => prev === 'refreshing' ? 'refreshing' : 'loading');
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -57,20 +100,19 @@ export function AdminRosterPanel({
 
       if (error) throw error;
       setAdmins(data as AdminProfile[]);
+      setStatus('success');
     } catch (e: unknown) {
-      AppLogger.error('Failed to fetch admins for roster panel', e instanceof Error ? e.message : String(e));
+      AppLogger.error('Failed to fetch admins for roster panel', e, { payload_size: 0, ssi: 0 });
       Alert.alert('Error', 'Failed to fetch admins: ' + (e instanceof Error ? e.message : String(e)));
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+      setStatus('error');
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (visible) {
       fetchAdmins();
     }
-  }, [visible]);
+  }, [visible, fetchAdmins]);
 
   const handleRevokeAdmin = useCallback((userId: string, username: string | null) => {
     Alert.alert(
@@ -101,28 +143,21 @@ export function AdminRosterPanel({
 
   const renderItem = useCallback(({ item }: { item: AdminProfile }) => {
     return (
-      <View style={[styles.userCard, { backgroundColor: cardBg, borderColor }]}>
-        <View style={styles.cardHeader}>
-          <View>
-            <Text style={[styles.userTitle, { color: textPrimary }]}>
-              {item.display_name || 'No Display Name'}
-            </Text>
-            <Text style={[styles.userSubtitle, { color: textMuted }]}>
-              @{item.username || 'unknown'} • Promoted: {new Date(item.created_at).toLocaleDateString()}
-            </Text>
-          </View>
-          <MaterialCommunityIcons name="shield-star" size={20} color="#FFD700" />
-        </View>
-
-        <View style={styles.actionRow}>
-          <TouchableOpacity onPress={() => handleRevokeAdmin(item.user_id, item.username)} style={styles.actionBtn}>
-            <MaterialCommunityIcons name="shield-remove-outline" size={18} color="#ff4040" />
-            <Text style={[styles.actionText, { color: '#ff4040' }]}>Revoke Admin</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <AdminRosterCard
+        item={item}
+        cardBg={cardBg}
+        borderColor={borderColor}
+        textPrimary={textPrimary}
+        textMuted={textMuted}
+        onRevokeAdmin={handleRevokeAdmin}
+      />
     );
-  }, [textPrimary, textMuted, cardBg, borderColor, handleRevokeAdmin]);
+  }, [cardBg, borderColor, textPrimary, textMuted, handleRevokeAdmin]);
+
+  const handleRefresh = useCallback(() => {
+    setStatus('refreshing');
+    fetchAdmins();
+  }, [fetchAdmins]);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
@@ -134,7 +169,7 @@ export function AdminRosterPanel({
           <Text style={[styles.headerTitle, { color: textPrimary }]}>Admin Roster</Text>
         </View>
 
-        {loading && !isRefreshing ? (
+        {status === 'loading' ? (
           <ActivityIndicator size="large" color="#FFD700" style={{ marginTop: Spacing.xl }} />
         ) : (
           <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
@@ -142,11 +177,8 @@ export function AdminRosterPanel({
             renderItem={renderItem}
             keyExtractor={(i) => i.user_id}
             contentContainerStyle={styles.list}
-            refreshing={isRefreshing}
-            onRefresh={() => {
-              setIsRefreshing(true);
-              fetchAdmins();
-            }}
+            refreshing={status === 'refreshing'}
+            onRefresh={handleRefresh}
           />
         )}
       </SafeAreaView>

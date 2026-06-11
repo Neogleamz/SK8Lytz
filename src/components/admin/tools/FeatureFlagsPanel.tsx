@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -35,6 +35,60 @@ interface FeatureFlag {
   created_at: string;
 }
 
+const FeatureFlagCard = React.memo(({
+  item,
+  cardBg,
+  borderColor,
+  textPrimary,
+  textMuted,
+  onToggle,
+  onRemove,
+}: {
+  item: FeatureFlag;
+  cardBg: string;
+  borderColor: string;
+  textPrimary: string;
+  textMuted: string;
+  onToggle: (id: string, currentVal: boolean) => void;
+  onRemove: (id: string) => void;
+}) => {
+  const isGlobal = !item.target_user_id;
+  const handleTogglePress = useCallback(() => {
+    onToggle(item.id, item.is_enabled);
+  }, [onToggle, item.id, item.is_enabled]);
+
+  const handleRemovePress = useCallback(() => {
+    onRemove(item.id);
+  }, [onRemove, item.id]);
+
+  return (
+    <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
+      <View style={styles.cardHeader}>
+        <View style={{flex: 1, marginRight: Spacing.md}}>
+          <Text style={[styles.keyText, { color: textPrimary }]}>
+            {item.flag_key}
+          </Text>
+          <Text style={[styles.targetText, { color: isGlobal ? '#00f0ff' : textMuted }]}>
+            {isGlobal ? 'GLOBAL TARGET' : `USER: ${item.target_user_id}`}
+          </Text>
+        </View>
+        <Switch
+          value={item.is_enabled}
+          onValueChange={handleTogglePress}
+          trackColor={{ false: '#444', true: '#00f0ff' }}
+        />
+      </View>
+
+      <View style={styles.actionRow}>
+        <TouchableOpacity onPress={handleRemovePress} style={styles.actionBtn}>
+          <MaterialCommunityIcons name="delete-outline" size={18} color="#ff4040" />
+          <Text style={[styles.actionText, { color: '#ff4040' }]}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+});
+
 export function FeatureFlagsPanel({
   visible,
   onClose,
@@ -54,7 +108,7 @@ export function FeatureFlagsPanel({
   const [newKey, setNewKey] = useState('');
   const [newUserId, setNewUserId] = useState('');
 
-  const fetchFlags = async () => {
+  const fetchFlags = useCallback(async () => {
     try {
       setStatus(prev => prev === 'idle' ? 'refreshing' : 'loading');
       const { data, error } = await supabase
@@ -65,21 +119,21 @@ export function FeatureFlagsPanel({
       if (error) throw error;
       setFlags(data as FeatureFlag[]);
     } catch (e: unknown) {
-      AppLogger.error('Failed to fetch feature flags', e instanceof Error ? e.message : String(e));
+      AppLogger.error('Failed to fetch feature flags', e, { payload_size: 0, ssi: 0 });
       Alert.alert('Error', 'Failed to fetch feature flags: ' + (e instanceof Error ? e.message : String(e)));
       setStatus('error');
     } finally {
       setStatus('idle');
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (visible) {
       fetchFlags();
     }
-  }, [visible]);
+  }, [visible, fetchFlags]);
 
-  const handleAdd = async () => {
+  const handleAdd = useCallback(async () => {
     if (!newKey.trim()) {
       Alert.alert('Error', 'Flag Key is required.');
       return;
@@ -94,7 +148,7 @@ export function FeatureFlagsPanel({
         .insert([{
           flag_key: newKey.trim(),
           target_user_id: targetUserId,
-          is_enabled: false // Default to false when creating
+          is_enabled: false
         }]);
 
       if (error) throw error;
@@ -106,12 +160,10 @@ export function FeatureFlagsPanel({
     } catch (e: unknown) {
       Alert.alert('Failed to Create', (e instanceof Error ? e.message : String(e)));
       setStatus('idle');
-    } finally {
-      setStatus('idle');
     }
-  };
+  }, [newKey, newUserId, fetchFlags]);
 
-  const handleToggle = async (id: string, currentVal: boolean) => {
+  const handleToggle = useCallback(async (id: string, currentVal: boolean) => {
     try {
       setStatus('submitting');
       const { error } = await supabase
@@ -120,13 +172,14 @@ export function FeatureFlagsPanel({
         .eq('id', id);
 
       if (error) throw error;
-      fetchFlags(); // Optimistic update would be better, but this is safer
+      fetchFlags();
     } catch (e: unknown) {
       Alert.alert('Failed to Update', (e instanceof Error ? e.message : String(e)));
+      setStatus('idle');
     }
-  };
+  }, [fetchFlags]);
 
-  const handleRemove = (id: string) => {
+  const handleRemove = useCallback((id: string) => {
     Alert.alert(
       'Delete Feature Flag',
       `Are you sure you want to delete this feature flag?`,
@@ -147,37 +200,29 @@ export function FeatureFlagsPanel({
         },
       ]
     );
-  };
+  }, [fetchFlags]);
 
   const renderItem = useCallback(({ item }: { item: FeatureFlag }) => {
-    const isGlobal = !item.target_user_id;
     return (
-      <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
-        <View style={styles.cardHeader}>
-          <View style={{flex: 1, marginRight: Spacing.md}}>
-            <Text style={[styles.keyText, { color: textPrimary }]}>
-              {item.flag_key}
-            </Text>
-            <Text style={[styles.targetText, { color: isGlobal ? '#00f0ff' : textMuted }]}>
-              {isGlobal ? 'GLOBAL TARGET' : `USER: ${item.target_user_id}`}
-            </Text>
-          </View>
-          <Switch
-            value={item.is_enabled}
-            onValueChange={() => handleToggle(item.id, item.is_enabled)}
-            trackColor={{ false: '#444', true: '#00f0ff' }}
-          />
-        </View>
-
-        <View style={styles.actionRow}>
-          <TouchableOpacity onPress={() => handleRemove(item.id)} style={styles.actionBtn}>
-            <MaterialCommunityIcons name="delete-outline" size={18} color="#ff4040" />
-            <Text style={[styles.actionText, { color: '#ff4040' }]}>Delete</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <FeatureFlagCard
+        item={item}
+        cardBg={cardBg}
+        borderColor={borderColor}
+        textPrimary={textPrimary}
+        textMuted={textMuted}
+        onToggle={handleToggle}
+        onRemove={handleRemove}
+      />
     );
-  }, [textPrimary, textMuted, cardBg, borderColor, handleToggle, handleRemove]);
+  }, [cardBg, borderColor, textPrimary, textMuted, handleToggle, handleRemove]);
+
+  const handleRefresh = useCallback(() => {
+    fetchFlags();
+  }, [fetchFlags]);
+
+  const renderEmpty = useCallback(() => (
+    <Text style={{color: textMuted, textAlign: 'center', marginTop: 20}}>No feature flags found.</Text>
+  ), [textMuted]);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
@@ -228,10 +273,8 @@ export function FeatureFlagsPanel({
             keyExtractor={(i) => i.id}
             contentContainerStyle={styles.list}
             refreshing={isRefreshing}
-            onRefresh={() => {
-              fetchFlags();
-            }}
-            ListEmptyComponent={<Text style={{color: textMuted, textAlign: 'center', marginTop: 20}}>No feature flags found.</Text>}
+            onRefresh={handleRefresh}
+            ListEmptyComponent={renderEmpty}
           />
         )}
       </SafeAreaView>

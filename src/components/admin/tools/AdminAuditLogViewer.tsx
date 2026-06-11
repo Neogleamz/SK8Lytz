@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -51,14 +51,12 @@ export function AdminAuditLogViewer({
 }: AdminAuditLogViewerProps) {
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [profiles, setProfiles] = useState<ProfileMap>({});
-  const [loading, setLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  type ViewState = 'loading' | 'refreshing' | 'error' | 'success';
+  const [status, setStatus] = useState<ViewState>('loading');
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
+      setStatus(prev => prev === 'refreshing' ? 'refreshing' : 'loading');
       const { data, error } = await supabase
         .from('admin_audit_logs')
         .select('*')
@@ -67,7 +65,14 @@ export function AdminAuditLogViewer({
 
       if (error) throw error;
       
-      const fetchedLogs = data as AuditLogEntry[];
+      const fetchedLogs: AuditLogEntry[] = (data || []).map((row: any) => ({
+        id: String(row.id || ''),
+        admin_id: String(row.admin_id || ''),
+        target_user_id: row.target_user_id ? String(row.target_user_id) : null,
+        action: String(row.action || ''),
+        reason: row.reason ? String(row.reason) : null,
+        created_at: String(row.created_at || ''),
+      }));
       setLogs(fetchedLogs);
 
       // Collect unique user IDs to fetch profiles for display names
@@ -91,21 +96,18 @@ export function AdminAuditLogViewer({
           setProfiles(pMap);
         }
       }
-
+      setStatus('success');
     } catch (e: unknown) {
-      AppLogger.error('Failed to fetch audit logs', e instanceof Error ? e.message : String(e));
-      setError('Failed to load. Tap to retry.');
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+      AppLogger.error('Failed to fetch audit logs', e, { payload_size: 0, ssi: 0 });
+      setStatus('error');
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (visible) {
       fetchLogs();
     }
-  }, [visible]);
+  }, [visible, fetchLogs]);
 
   const getActionColor = (action: string) => {
     if (action.includes('BAN') || action.includes('DELETE') || action.includes('RESET') || action.includes('REVOKE')) return '#ff4040';
@@ -113,12 +115,14 @@ export function AdminAuditLogViewer({
     return '#00f0ff';
   };
 
+  const cardStyle = useMemo(() => ({ backgroundColor: cardBg, borderColor }), [cardBg, borderColor]);
+
   const renderItem = useCallback(({ item }: { item: AuditLogEntry }) => {
     const adminName = profiles[item.admin_id] || item.admin_id.substring(0, 8);
     const targetName = item.target_user_id ? (profiles[item.target_user_id] || item.target_user_id.substring(0, 8)) : null;
 
     return (
-      <View style={[styles.logCard, { backgroundColor: cardBg, borderColor }]}>
+      <View style={[styles.logCard, cardStyle]}>
         <View style={styles.cardHeader}>
           <Text style={[styles.actionText, { color: getActionColor(item.action) }]}>
             {item.action}
@@ -141,7 +145,16 @@ export function AdminAuditLogViewer({
         </View>
       </View>
     );
-  }, [profiles, textPrimary, textMuted, getActionColor, borderColor, cardBg]);
+  }, [profiles, textPrimary, textMuted, cardStyle]);
+
+  const handleRefresh = useCallback(() => {
+    setStatus('refreshing');
+    fetchLogs();
+  }, [fetchLogs]);
+
+  const renderEmpty = useCallback(() => (
+    <EmptyState message="No items found" />
+  ), []);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
@@ -153,22 +166,19 @@ export function AdminAuditLogViewer({
           <Text style={[styles.headerTitle, { color: textPrimary }]}>Audit Trail</Text>
         </View>
 
-        {loading && !isRefreshing ? (
+        {status === 'loading' ? (
           <ActivityIndicator size="large" color="#00f0ff" style={{ marginTop: Spacing.xl }} />
-        ) : error ? (
-          <ErrorCard message={error} onRetry={fetchLogs} />
+        ) : status === 'error' ? (
+          <ErrorCard message="Failed to load. Tap to retry." onRetry={fetchLogs} />
         ) : (
           <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={logs}
-            ListEmptyComponent={<EmptyState message="No items found" />}
+            ListEmptyComponent={renderEmpty}
             renderItem={renderItem}
             keyExtractor={(i) => i.id}
             contentContainerStyle={styles.list}
-            refreshing={isRefreshing}
-            onRefresh={() => {
-              setIsRefreshing(true);
-              fetchLogs();
-            }}
+            refreshing={status === 'refreshing'}
+            onRefresh={handleRefresh}
           />
         )}
       </SafeAreaView>

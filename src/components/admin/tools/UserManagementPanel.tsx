@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -39,6 +39,98 @@ interface AdminUserProfile {
   created_at: string;
 }
 
+const UserCard = React.memo(({
+  item,
+  cardBg,
+  borderColor,
+  textPrimary,
+  textMuted,
+  onBan,
+  onRevokeBan,
+  onResetPassword,
+  onRevokeSessions,
+  onExportData,
+  onSoftDelete,
+}: {
+  item: AdminUserProfile;
+  cardBg: string;
+  borderColor: string;
+  textPrimary: string;
+  textMuted: string;
+  onBan: (id: string) => void;
+  onRevokeBan: (id: string) => void;
+  onResetPassword: (id: string) => void;
+  onRevokeSessions: (id: string) => void;
+  onExportData: (id: string, name: string | null) => void;
+  onSoftDelete: (id: string) => void;
+}) => {
+  const isBanned = item.is_banned;
+  const handleBanPress = useCallback(() => onBan(item.user_id), [onBan, item.user_id]);
+  const handleRevokeBanPress = useCallback(() => onRevokeBan(item.user_id), [onRevokeBan, item.user_id]);
+  const handleResetPasswordPress = useCallback(() => onResetPassword(item.user_id), [onResetPassword, item.user_id]);
+  const handleRevokeSessionsPress = useCallback(() => onRevokeSessions(item.user_id), [onRevokeSessions, item.user_id]);
+  const handleExportDataPress = useCallback(() => onExportData(item.user_id, item.display_name), [onExportData, item.user_id, item.display_name]);
+  const handleSoftDeletePress = useCallback(() => onSoftDelete(item.user_id), [onSoftDelete, item.user_id]);
+
+  return (
+    <View style={[styles.userCard, { backgroundColor: cardBg, borderColor }]}>
+      <View style={styles.cardHeader}>
+        <View>
+          <Text style={[styles.userTitle, { color: textPrimary }]}>
+            {item.display_name || 'No Display Name'}
+          </Text>
+          <Text style={[styles.userSubtitle, { color: textMuted }]}>
+            @{item.username || 'unknown'} • {item.role.toUpperCase()}
+          </Text>
+        </View>
+        {isBanned && (
+          <MaterialCommunityIcons name="gavel" size={20} color="#ff4040" />
+        )}
+      </View>
+
+      {isBanned && (
+        <View style={[styles.bannedNotice, { backgroundColor: '#ff404020' }]}>
+          <Text style={styles.bannedText}>Banned: {item.ban_reason}</Text>
+        </View>
+      )}
+
+      <View style={styles.actionRow}>
+        {isBanned ? (
+          <TouchableOpacity onPress={handleRevokeBanPress} style={styles.actionBtn}>
+            <MaterialCommunityIcons name="shield-check" size={18} color="#00E676" />
+            <Text style={[styles.actionText, { color: '#00E676' }]}>Unban</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity onPress={handleBanPress} style={styles.actionBtn}>
+            <MaterialCommunityIcons name="gavel" size={18} color="#ff4040" />
+            <Text style={[styles.actionText, { color: '#ff4040' }]}>Ban</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity onPress={handleResetPasswordPress} style={styles.actionBtn}>
+          <MaterialCommunityIcons name="lock-reset" size={18} color="#FF5A00" />
+          <Text style={[styles.actionText, { color: '#FF5A00' }]}>Lockout</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={handleRevokeSessionsPress} style={styles.actionBtn}>
+          <MaterialCommunityIcons name="logout-variant" size={18} color="#FFD700" />
+          <Text style={[styles.actionText, { color: '#FFD700' }]}>Revoke</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={handleExportDataPress} style={styles.actionBtn}>
+          <MaterialCommunityIcons name="database-export" size={18} color="#00f0ff" />
+          <Text style={[styles.actionText, { color: '#00f0ff' }]}>Export</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={handleSoftDeletePress} style={styles.actionBtn}>
+          <MaterialCommunityIcons name="delete-empty" size={18} color="#ff4040" />
+          <Text style={[styles.actionText, { color: '#ff4040' }]}>Soft Delete</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+});
+
 export function UserManagementPanel({
   visible,
   onClose,
@@ -49,18 +141,13 @@ export function UserManagementPanel({
   textMuted,
 }: UserManagementPanelProps) {
   const [users, setUsers] = useState<AdminUserProfile[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  type ViewState = 'loading' | 'refreshing' | 'error' | 'success';
+  const [status, setStatus] = useState<ViewState>('loading');
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
-      // Notice: auth.users email is not directly readable via select from public.user_profiles unless linked.
-      // We will just fetch profiles. Since this is an admin panel, we can join with RPC if we need emails, 
-      // or we just show display names.
+      setStatus(prev => prev === 'refreshing' ? 'refreshing' : 'loading');
       const { data, error } = await supabase
         .from('user_profiles')
         .select('*')
@@ -69,22 +156,20 @@ export function UserManagementPanel({
 
       if (error) throw error;
       setUsers(data as AdminUserProfile[]);
+      setStatus('success');
     } catch (e: unknown) {
-      AppLogger.error('Failed to fetch users for admin panel', e instanceof Error ? e.message : String(e));
-      setError('Failed to load. Tap to retry.');
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+      AppLogger.error('Failed to fetch users for admin panel', e, { payload_size: 0, ssi: 0 });
+      setStatus('error');
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (visible) {
       fetchUsers();
     }
-  }, [visible]);
+  }, [visible, fetchUsers]);
 
-  const handleBan = (userId: string) => {
+  const handleBan = useCallback((userId: string) => {
     Alert.prompt(
       'Ban User',
       'Enter a reason for the ban:',
@@ -114,9 +199,9 @@ export function UserManagementPanel({
       ],
       'plain-text'
     );
-  };
+  }, [fetchUsers]);
 
-  const handleRevokeBan = async (userId: string) => {
+  const handleRevokeBan = useCallback(async (userId: string) => {
     Alert.alert('Revoke Ban', 'Are you sure you want to lift the ban?', [
       { text: 'Cancel', style: 'cancel' },
       {
@@ -135,9 +220,9 @@ export function UserManagementPanel({
         },
       },
     ]);
-  };
+  }, [fetchUsers]);
 
-  const handleResetPassword = (userId: string) => {
+  const handleResetPassword = useCallback((userId: string) => {
     Alert.alert(
       'Force Password Reset',
       'This will lock the user out by scrambling their password. They must use the recovery flow. Continue?',
@@ -160,9 +245,9 @@ export function UserManagementPanel({
         },
       ]
     );
-  };
+  }, []);
 
-  const handleSoftDelete = (userId: string) => {
+  const handleSoftDelete = useCallback((userId: string) => {
     Alert.alert(
       'Soft Delete User',
       'This will ban the user and scramble their email/password pending a bulk purge. Proceed?',
@@ -186,9 +271,9 @@ export function UserManagementPanel({
         },
       ]
     );
-  };
+  }, [fetchUsers]);
 
-  const handleRevokeSessions = (userId: string) => {
+  const handleRevokeSessions = useCallback((userId: string) => {
     Alert.alert(
       'Revoke Sessions',
       'This will instantly log the user out of all devices by destroying their active tokens. Proceed?',
@@ -211,26 +296,24 @@ export function UserManagementPanel({
         },
       ]
     );
-  };
+  }, []);
 
-  const handleExportData = async (userId: string, displayName: string | null) => {
+  const handleExportData = useCallback(async (userId: string, displayName: string | null) => {
     try {
-      setLoading(true);
+      setStatus('loading');
       const { data, error } = await supabase.rpc('admin_export_user_data', {
         p_target_user_id: userId,
       });
       if (error) throw error;
       
-      // In a real app we'd save to file. Here we'll just show it or log it, or save using Expo FileSystem.
-      // Since FileSystem isn't imported, let's just log it and alert for now, or display in a simple modal.
       AppLogger.log('DATA_EXPORT', { byteLength: JSON.stringify(data).length });
       Alert.alert('Data Exported', `Data for ${displayName || userId} has been fetched and logged to the telemetry stream. (Length: ${JSON.stringify(data).length} bytes)`);
+      setStatus('success');
     } catch (e: unknown) {
       Alert.alert('Export Failed', (e instanceof Error ? e.message : String(e)));
-    } finally {
-      setLoading(false);
+      setStatus('success');
     }
-  };
+  }, []);
 
   const filteredUsers = users.filter((u) => {
     const q = searchQuery.toLowerCase();
@@ -242,65 +325,31 @@ export function UserManagementPanel({
   });
 
   const renderItem = useCallback(({ item }: { item: AdminUserProfile }) => {
-    const isBanned = item.is_banned;
     return (
-      <View style={[styles.userCard, { backgroundColor: cardBg, borderColor }]}>
-        <View style={styles.cardHeader}>
-          <View>
-            <Text style={[styles.userTitle, { color: textPrimary }]}>
-              {item.display_name || 'No Display Name'}
-            </Text>
-            <Text style={[styles.userSubtitle, { color: textMuted }]}>
-              @{item.username || 'unknown'} • {item.role.toUpperCase()}
-            </Text>
-          </View>
-          {isBanned && (
-            <MaterialCommunityIcons name="gavel" size={20} color="#ff4040" />
-          )}
-        </View>
-
-        {isBanned && (
-          <View style={[styles.bannedNotice, { backgroundColor: '#ff404020' }]}>
-            <Text style={styles.bannedText}>Banned: {item.ban_reason}</Text>
-          </View>
-        )}
-
-        <View style={styles.actionRow}>
-          {isBanned ? (
-            <TouchableOpacity onPress={() => handleRevokeBan(item.user_id)} style={styles.actionBtn}>
-              <MaterialCommunityIcons name="shield-check" size={18} color="#00E676" />
-              <Text style={[styles.actionText, { color: '#00E676' }]}>Unban</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity onPress={() => handleBan(item.user_id)} style={styles.actionBtn}>
-              <MaterialCommunityIcons name="gavel" size={18} color="#ff4040" />
-              <Text style={[styles.actionText, { color: '#ff4040' }]}>Ban</Text>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity onPress={() => handleResetPassword(item.user_id)} style={styles.actionBtn}>
-            <MaterialCommunityIcons name="lock-reset" size={18} color="#FF5A00" />
-            <Text style={[styles.actionText, { color: '#FF5A00' }]}>Lockout</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => handleRevokeSessions(item.user_id)} style={styles.actionBtn}>
-            <MaterialCommunityIcons name="logout-variant" size={18} color="#FFD700" />
-            <Text style={[styles.actionText, { color: '#FFD700' }]}>Revoke</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => handleExportData(item.user_id, item.display_name)} style={styles.actionBtn}>
-            <MaterialCommunityIcons name="database-export" size={18} color="#00f0ff" />
-            <Text style={[styles.actionText, { color: '#00f0ff' }]}>Export</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => handleSoftDelete(item.user_id)} style={styles.actionBtn}>
-            <MaterialCommunityIcons name="delete-empty" size={18} color="#ff4040" />
-            <Text style={[styles.actionText, { color: '#ff4040' }]}>Soft Delete</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <UserCard
+        item={item}
+        cardBg={cardBg}
+        borderColor={borderColor}
+        textPrimary={textPrimary}
+        textMuted={textMuted}
+        onBan={handleBan}
+        onRevokeBan={handleRevokeBan}
+        onResetPassword={handleResetPassword}
+        onRevokeSessions={handleRevokeSessions}
+        onExportData={handleExportData}
+        onSoftDelete={handleSoftDelete}
+      />
     );
-  }, [textPrimary, textMuted, cardBg, borderColor, handleBan, handleRevokeBan, handleResetPassword, handleRevokeSessions, handleExportData, handleSoftDelete]);
+  }, [cardBg, borderColor, textPrimary, textMuted, handleBan, handleRevokeBan, handleResetPassword, handleRevokeSessions, handleExportData, handleSoftDelete]);
+
+  const handleRefresh = useCallback(() => {
+    setStatus('refreshing');
+    fetchUsers();
+  }, [fetchUsers]);
+
+  const renderEmpty = useCallback(() => (
+    <EmptyState message="No users found" />
+  ), []);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
@@ -323,22 +372,19 @@ export function UserManagementPanel({
           />
         </View>
 
-        {loading && !isRefreshing ? (
+        {status === 'loading' ? (
           <ActivityIndicator size="large" color="#00f0ff" style={{ marginTop: Spacing.xl }} />
-        ) : error ? (
-          <ErrorCard message={error} onRetry={fetchUsers} />
+        ) : status === 'error' ? (
+          <ErrorCard message="Failed to load. Tap to retry." onRetry={fetchUsers} />
         ) : (
           <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={filteredUsers}
-            ListEmptyComponent={<EmptyState message="No users found" />}
+            ListEmptyComponent={renderEmpty}
             renderItem={renderItem}
             keyExtractor={(i) => i.user_id}
             contentContainerStyle={styles.list}
-            refreshing={isRefreshing}
-            onRefresh={() => {
-              setIsRefreshing(true);
-              fetchUsers();
-            }}
+            refreshing={status === 'refreshing'}
+            onRefresh={handleRefresh}
           />
         )}
       </SafeAreaView>

@@ -1,6 +1,6 @@
 /* eslint-disable unused-imports/no-unused-vars, unused-imports/no-unused-imports */
 import React, { useState } from 'react';
-import { ScrollView, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { ScrollView, Text, TouchableOpacity, View, Platform, ActivityIndicator } from 'react-native';
 import { Spacing } from '../../../../theme/theme';
 import { useDiagnosticLabStyles } from './DiagnosticLabStyles';
 import { DiagnosticDevice, DiagnosticHwSettings, DeviceHardwareConfig } from './DiagnosticLabTypes';
@@ -26,6 +26,7 @@ interface DevicesTabProps {
   setTargetDeviceId: (id: string | null) => void;
   liveRxPayload?: { deviceId: string; payloadHex: string; timestamp?: number } | null;
   connectToDevice?: (device: Device) => void;
+  isLoading?: boolean;
   hwSettings: DiagnosticHwSettings | undefined;
 }
 
@@ -39,6 +40,7 @@ export function DiagnosticLabDevicesTab({
   targetDeviceId,
   setTargetDeviceId,
   connectToDevice,
+  isLoading,
   hwSettings,
 }: DevicesTabProps) {
   const { S, txtPri, txtMuted, cyan, border } = useDiagnosticLabStyles();
@@ -57,6 +59,13 @@ export function DiagnosticLabDevicesTab({
           </Text>
         </TouchableOpacity>
       </View>
+      
+      {isLoading && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.md }}>
+          <ActivityIndicator color={cyan} size="small" />
+          <Text style={{ color: txtMuted, fontSize: 11 }}>Loading registered devices...</Text>
+        </View>
+      )}
       
       {(!allDevices || allDevices.length === 0) && (
         <Text style={S.hint}>No devices found. Tap START SCAN to begin.</Text>

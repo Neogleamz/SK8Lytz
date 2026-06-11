@@ -96,7 +96,7 @@ export default function Sk8LytzDiagnosticLab({
   const border  = Colors.surfaceHighlight;
   const cyan    = '#00f0ff';
 
-  const { registeredDevices } = useRegistration();
+  const { registeredDevices, isLoading: isRegistrationLoading } = useRegistration();
 
   const [tab, setTab] = useState<LabTab>('DEVICES');
   const insets = useSafeAreaInsets();
@@ -241,6 +241,7 @@ export default function Sk8LytzDiagnosticLab({
             handleScan={handleScan}
             connectToDevice={connectToDevice}
             registeredDevices={registeredDevices}
+            isLoading={isRegistrationLoading}
             liveRxPayload={liveRxPayload}
             hwSettings={hwSettings}
           />}

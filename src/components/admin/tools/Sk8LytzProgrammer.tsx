@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator, Platform,
     SafeAreaView,
@@ -9,7 +9,8 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
+    ViewStyle
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LOCAL_PRODUCT_CATALOG } from '../../../constants/ProductCatalog';
@@ -61,6 +62,8 @@ export default function Sk8LytzProgrammer({
   const dispatch = useProtocolDispatch();
   const { Colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const loadingRef = useRef(false);
+  const delay = useCallback((ms: number) => new Promise(res => setTimeout(res, ms)), []);
 
   const bg       = Colors.background;
   const cardBg   = Colors.surface;
@@ -141,7 +144,8 @@ export default function Sk8LytzProgrammer({
 
   // ─── Load Profiles ──────────────────────────────────────────────────────────
   useEffect(() => {
-      if (!visible) return;
+      if (!visible || loadingRef.current) return;
+      loadingRef.current = true;
       let isActive = true;
       const load = async () => {
           try {
@@ -154,7 +158,9 @@ export default function Sk8LytzProgrammer({
               const saved = await AsyncStorage.getItem(STORAGE_PROGRAMMER_PROFILES);
               if (saved && isActive) setProfiles(JSON.parse(saved));
           } catch (e: unknown) {
-              AppLogger.error('[Sk8LytzProgrammer] Failed to migrate or load profiles', { error: (e instanceof Error ? e.message : String(e)) });
+              AppLogger.error('[Sk8LytzProgrammer] Failed to migrate or load profiles', e, { payload_size: 0, ssi: 0 });
+          } finally {
+              loadingRef.current = false;
           }
       };
       load();
@@ -168,7 +174,7 @@ export default function Sk8LytzProgrammer({
       try {
           await AsyncStorage.setItem(STORAGE_PROGRAMMER_PROFILES, JSON.stringify(newProfiles));
       } catch (e: unknown) {
-          AppLogger.error('[Sk8LytzProgrammer] persist failed', { error: (e instanceof Error ? e.message : String(e)) });
+          AppLogger.error('[Sk8LytzProgrammer] persist failed', e, { payload_size: 0, ssi: 0 });
       }
   };
 
@@ -192,13 +198,13 @@ export default function Sk8LytzProgrammer({
               const device = allDevices.find(d => d.id === id);
               if (connectToDevice && device) {
                   await connectToDevice(device);
-                  await new Promise(res => setTimeout(res, BLE_TIMING.FLASH_SETTLE_MS)); // let GATT settle
+                  await delay(BLE_TIMING.FLASH_SETTLE_MS); // let GATT settle
               }
               await dispatch.writeSettings(config.ledPoints, config.segments, config.icType, config.colorSorting, id);
-              await new Promise(res => setTimeout(res, BLE_TIMING.FLASH_WRITE_LAND_MS)); // let write land
+              await delay(BLE_TIMING.FLASH_WRITE_LAND_MS); // let write land
               if (disconnectFromDevice) {
                   await disconnectFromDevice(id);
-                  await new Promise(res => setTimeout(res, BLE_TIMING.FLASH_DISCONNECT_GAP_MS)); // gap between ops
+                  await delay(BLE_TIMING.FLASH_DISCONNECT_GAP_MS); // gap between ops
               }
               setFlashStatus(prev => ({ ...prev, [id]: 'success' }));
               AppLogger.log('PERFORMANCE_METRIC', { metricName: 'HW_CONFIG_FLASHED', value: 1, unit: id, deviceId: id });
@@ -446,6 +452,10 @@ export default function Sk8LytzProgrammer({
   );
 }
 
+interface WebStyle extends ViewStyle {
+  boxShadow?: string;
+}
+
 const s = StyleSheet.create({
   root: { flex: 1 },
   topBar: {
@@ -498,7 +508,7 @@ const s = StyleSheet.create({
       alignItems: 'center',
       justifyContent: 'center',
       ...(Platform.OS === 'web'
-        ? { boxShadow: '0px 4px 8px rgba(0,0,0,0.3)' } as unknown as import('react-native').ViewStyle
+        ? ({ boxShadow: '0px 4px 8px rgba(0,0,0,0.3)' } as WebStyle)
         : { shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 })
   }
 });

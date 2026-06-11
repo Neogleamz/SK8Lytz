@@ -40,8 +40,9 @@ interface AdminPicksSchedulerProps {
 
 export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSchedulerProps) {
   const [picks, setPicks] = useState<Sk8LytzPick[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
+  const isLoading = status === 'loading';
   const [datePickerConfig, setDatePickerConfig] = useState<{
     visible: boolean;
     pickId: string;
@@ -72,7 +73,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
       return;
     }
     
-    setIsLoading(true);
+    setStatus('loading');
     try {
       let insertData: Record<string, unknown> = {
         name: createName.trim(),
@@ -101,7 +102,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
     } catch (err: unknown) {
       Alert.alert('Create Error', err instanceof Error ? err.message : String(err));
     } finally {
-      setIsLoading(false);
+      setStatus('idle');
     }
   };
 
@@ -112,14 +113,14 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
         text: 'Delete', 
         style: 'destructive', 
         onPress: async () => {
-          setIsLoading(true);
+          setStatus('loading');
           try {
             const { error } = await supabase.from('sk8lytz_picks').delete().eq('id', pickId);
             if (error) throw error;
             fetchPicks();
           } catch(err: unknown) {
             Alert.alert('Delete Error', err instanceof Error ? err.message : String(err));
-            setIsLoading(false);
+            setStatus('idle');
           }
         }
       }
@@ -131,7 +132,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
   }, [visible]);
 
   const fetchPicks = async () => {
-    setIsLoading(true);
+    setStatus('loading');
     setError(null);
     try {
       const { data, error } = await supabase
@@ -141,10 +142,10 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
 
       if (error) throw error;
       if (data) setPicks(data as Sk8LytzPick[]);
+      setStatus('success');
     } catch (err: unknown) {
       setError('Failed to load. Tap to retry.');
-    } finally {
-      setIsLoading(false);
+      setStatus('error');
     }
   };
 

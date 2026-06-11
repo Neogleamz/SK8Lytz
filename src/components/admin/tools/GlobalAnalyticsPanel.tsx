@@ -21,11 +21,18 @@ export default function GlobalAnalyticsPanel({ Colors }: { Colors: Record<string
     try {
       setLoading(true);
       setError(null);
-      const { data, error } = await supabase.rpc('admin_get_global_telemetry');
+      const { data: rawData, error } = await supabase.rpc('admin_get_global_telemetry');
       if (error) throw error;
-      if (data) setData(data as unknown as GlobalAnalyticsSummary);
+      if (rawData && typeof rawData === 'object') {
+        const obj = rawData as Record<string, unknown>;
+        setData({
+          fleet_total_distance_meters: typeof obj.fleet_total_distance_meters === 'number' ? obj.fleet_total_distance_meters : undefined,
+          fleet_total_app_time_sec: typeof obj.fleet_total_app_time_sec === 'number' ? obj.fleet_total_app_time_sec : undefined,
+          fleet_total_street_sessions: typeof obj.fleet_total_street_sessions === 'number' ? obj.fleet_total_street_sessions : undefined,
+        });
+      }
     } catch (e: unknown) {
-      AppLogger.error('[GlobalAnalytics] RPC failed', { error: (e instanceof Error ? e.message : String(e)) });
+      AppLogger.error('[GlobalAnalytics] RPC failed', e, { payload_size: 0, ssi: 0 });
       setError('Failed to load. Tap to retry.');
     } finally {
       setLoading(false);

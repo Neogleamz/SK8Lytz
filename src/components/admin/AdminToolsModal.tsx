@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CONFIGS_KEY } from '../../constants/storageKeys';
 /* eslint-disable unused-imports/no-unused-vars */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     Alert,
     FlatList,
@@ -70,6 +70,35 @@ export interface AdminToolsModalProps {
   liveDeviceConfigs?: Record<string, import('../../types/dashboard.types').DeviceSettings>;
 }
 
+const LogItemCard = React.memo(({
+  item,
+  isDark,
+  textMuted,
+}: {
+  item: LogEntry;
+  isDark: boolean;
+  textMuted: string;
+}) => {
+  const meta = EVENT_META[item.e as EventType] || { icon: 'information', color: '#888', label: item.e };
+  return (
+    <View style={[styles.logRow, isDark ? localStyles.listItemContainerDark : localStyles.listItemContainerLight]}>
+      <MaterialCommunityIcons name={meta.icon as keyof typeof MaterialCommunityIcons.glyphMap} size={18} color={meta.color} style={styles.logIcon} />
+      <View style={styles.logBody}>
+        <View style={styles.logHeader}>
+          <Text style={[styles.logType, { color: meta.color }]}>{meta.label}</Text>
+          <Text style={[styles.logTime, { color: textMuted }]}>{formatLogTime(item.t)}</Text>
+        </View>
+        <Text style={[styles.logPayload, { color: textMuted }]} numberOfLines={1}>
+          {getPayloadSummary(item)}
+        </Text>
+        {item.e === 'COLOR_CHANGED' && item.d.hex && (
+          <View style={[styles.colorSwatch, { backgroundColor: item.d.hex }]} />
+        )}
+      </View>
+    </View>
+  );
+});
+
 export default function AdminToolsModal({ 
   visible, onClose, onClearAll, liveRxPayload, 
   connectedDevices, allDevices, bleState, handleScan, onConnectToDevice, 
@@ -102,15 +131,20 @@ export default function AdminToolsModal({
   }, [updateSetting]);
 
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, import('../../types/dashboard.types').DeviceSettings>>({});
+  const loadingConfigsRef = useRef(false);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || loadingConfigsRef.current) return;
+    loadingConfigsRef.current = true;
     let isActive = true;
     const loadConfigs = async () => {
       try {
         const stored = await AsyncStorage.getItem(CONFIGS_KEY);
         if (stored && isActive) setDeviceConfigs(JSON.parse(stored) || {});
-      } catch (e: unknown) {}
+      } catch (e: unknown) {
+      } finally {
+        loadingConfigsRef.current = false;
+      }
     };
     loadConfigs();
     return () => { isActive = false; };
@@ -159,25 +193,8 @@ export default function AdminToolsModal({
   const memoizedTimelineLogs = React.useMemo(() => logs.filter(l => l.e !== 'RAW_PAYLOAD'), [logs]);
 
   const renderLogItem = useCallback(({ item }: { item: LogEntry }) => {
-    const meta = EVENT_META[item.e as EventType] || { icon: 'information', color: '#888', label: item.e };
-    return (
-      <View style={[styles.logRow, isDark ? localStyles.listItemContainerDark : localStyles.listItemContainerLight]}>
-        <MaterialCommunityIcons name={meta.icon as keyof typeof MaterialCommunityIcons.glyphMap} size={18} color={meta.color} style={styles.logIcon} />
-        <View style={styles.logBody}>
-          <View style={styles.logHeader}>
-            <Text style={[styles.logType, { color: meta.color }]}>{meta.label}</Text>
-            <Text style={[styles.logTime, { color: textMuted }]}>{formatLogTime(item.t)}</Text>
-          </View>
-          <Text style={[styles.logPayload, { color: textMuted }]} numberOfLines={1}>
-            {getPayloadSummary(item)}
-          </Text>
-          {item.e === 'COLOR_CHANGED' && item.d.hex && (
-            <View style={[styles.colorSwatch, { backgroundColor: item.d.hex }]} />
-          )}
-        </View>
-      </View>
-    );
-  }, [borderColor, textMuted]);
+    return <LogItemCard item={item} isDark={isDark} textMuted={textMuted} />;
+  }, [isDark, textMuted]);
 
   const renderContent = () => {
     switch (tab) {

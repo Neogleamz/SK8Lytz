@@ -1,7 +1,8 @@
 /* eslint-disable unused-imports/no-unused-vars */
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
-import { SafeAreaView, ScrollView, Switch, Text, TextInput, TextStyle, TouchableOpacity, View, ViewStyle, KeyboardTypeOptions } from 'react-native';
+import { ScrollView, Switch, Text, TextInput, TextStyle, TouchableOpacity, View, ViewStyle, KeyboardTypeOptions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Spacing } from '../../../theme/theme';
 import { adminStyles as styles } from '../adminStyles';
 import type { ProductProfile } from '../../../types/ProductCatalog';

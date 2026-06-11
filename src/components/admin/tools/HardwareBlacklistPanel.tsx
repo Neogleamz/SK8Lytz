@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -33,6 +33,53 @@ interface BlacklistedDevice {
   created_at: string;
 }
 
+const HardwareBlacklistCard = React.memo(({
+  item,
+  cardBg,
+  borderColor,
+  textPrimary,
+  textMuted,
+  onRemove,
+}: {
+  item: BlacklistedDevice;
+  cardBg: string;
+  borderColor: string;
+  textPrimary: string;
+  textMuted: string;
+  onRemove: (macAddress: string) => void;
+}) => {
+  const handleRemovePress = useCallback(() => {
+    onRemove(item.mac_address);
+  }, [onRemove, item.mac_address]);
+
+  return (
+    <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
+      <View style={styles.cardHeader}>
+        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+          <MaterialCommunityIcons name="chip" size={20} color="#ff4040" style={{marginRight: 8}} />
+          <Text style={[styles.macText, { color: textPrimary }]}>
+            {item.mac_address}
+          </Text>
+        </View>
+        <Text style={[styles.dateText, { color: textMuted }]}>
+          {new Date(item.created_at).toLocaleDateString()}
+        </Text>
+      </View>
+
+      <Text style={[styles.reasonText, { color: textMuted }]}>
+        Reason: {item.reason}
+      </Text>
+
+      <View style={styles.actionRow}>
+        <TouchableOpacity onPress={handleRemovePress} style={styles.actionBtn}>
+          <MaterialCommunityIcons name="delete-outline" size={18} color="#ff4040" />
+          <Text style={[styles.actionText, { color: '#ff4040' }]}>Remove</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+});
+
 export function HardwareBlacklistPanel({
   visible,
   onClose,
@@ -52,7 +99,7 @@ export function HardwareBlacklistPanel({
   const [newMac, setNewMac] = useState('');
   const [newReason, setNewReason] = useState('');
 
-  const fetchBlacklist = async () => {
+  const fetchBlacklist = useCallback(async () => {
     try {
       setStatus(prev => prev === 'idle' ? 'refreshing' : 'loading');
       const { data, error } = await supabase
@@ -63,27 +110,26 @@ export function HardwareBlacklistPanel({
       if (error) throw error;
       setBlacklist(data as BlacklistedDevice[]);
     } catch (e: unknown) {
-      AppLogger.error('Failed to fetch hardware blacklist', e instanceof Error ? e.message : String(e));
+      AppLogger.error('Failed to fetch hardware blacklist', e, { payload_size: 0, ssi: 0 });
       Alert.alert('Error', 'Failed to fetch hardware blacklist: ' + (e instanceof Error ? e.message : String(e)));
       setStatus('error');
     } finally {
       setStatus('idle');
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (visible) {
       fetchBlacklist();
     }
-  }, [visible]);
+  }, [visible, fetchBlacklist]);
 
-  const handleAdd = async () => {
+  const handleAdd = useCallback(async () => {
     if (!newMac.trim() || !newReason.trim()) {
       Alert.alert('Error', 'Both MAC Address and Reason are required.');
       return;
     }
     
-    // Basic MAC address validation
     const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
     const formattedMac = newMac.trim().toUpperCase().replace(/-/g, ':');
     
@@ -108,12 +154,10 @@ export function HardwareBlacklistPanel({
     } catch (e: unknown) {
       Alert.alert('Failed to Blacklist', (e instanceof Error ? e.message : String(e)));
       setStatus('idle');
-    } finally {
-      setStatus('idle');
     }
-  };
+  }, [newMac, newReason, fetchBlacklist]);
 
-  const handleRemove = (macAddress: string) => {
+  const handleRemove = useCallback((macAddress: string) => {
     Alert.alert(
       'Remove from Blacklist',
       `Are you sure you want to remove ${macAddress} from the blacklist?`,
@@ -133,43 +177,34 @@ export function HardwareBlacklistPanel({
               fetchBlacklist();
             } catch (e: unknown) {
               Alert.alert('Failed to Remove', (e instanceof Error ? e.message : String(e)));
-            } finally {
               setStatus('idle');
             }
           },
         },
       ]
     );
-  };
+  }, [fetchBlacklist]);
 
   const renderItem = useCallback(({ item }: { item: BlacklistedDevice }) => {
     return (
-      <View style={[styles.card, { backgroundColor: cardBg, borderColor }]}>
-        <View style={styles.cardHeader}>
-          <View style={{flexDirection: 'row', alignItems: 'center'}}>
-            <MaterialCommunityIcons name="chip" size={20} color="#ff4040" style={{marginRight: 8}} />
-            <Text style={[styles.macText, { color: textPrimary }]}>
-              {item.mac_address}
-            </Text>
-          </View>
-          <Text style={[styles.dateText, { color: textMuted }]}>
-            {new Date(item.created_at).toLocaleDateString()}
-          </Text>
-        </View>
-
-        <Text style={[styles.reasonText, { color: textMuted }]}>
-          Reason: {item.reason}
-        </Text>
-
-        <View style={styles.actionRow}>
-          <TouchableOpacity onPress={() => handleRemove(item.mac_address)} style={styles.actionBtn}>
-            <MaterialCommunityIcons name="delete-outline" size={18} color="#ff4040" />
-            <Text style={[styles.actionText, { color: '#ff4040' }]}>Remove</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <HardwareBlacklistCard
+        item={item}
+        cardBg={cardBg}
+        borderColor={borderColor}
+        textPrimary={textPrimary}
+        textMuted={textMuted}
+        onRemove={handleRemove}
+      />
     );
-  }, [textPrimary, textMuted, cardBg, borderColor, handleRemove]);
+  }, [cardBg, borderColor, textPrimary, textMuted, handleRemove]);
+
+  const handleRefresh = useCallback(() => {
+    fetchBlacklist();
+  }, [fetchBlacklist]);
+
+  const renderEmpty = useCallback(() => (
+    <Text style={{color: textMuted, textAlign: 'center', marginTop: 20}}>No devices currently blacklisted.</Text>
+  ), [textMuted]);
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
@@ -220,10 +255,8 @@ export function HardwareBlacklistPanel({
             keyExtractor={(i) => i.mac_address}
             contentContainerStyle={styles.list}
             refreshing={isRefreshing}
-            onRefresh={() => {
-              fetchBlacklist();
-            }}
-            ListEmptyComponent={<Text style={{color: textMuted, textAlign: 'center', marginTop: 20}}>No devices currently blacklisted.</Text>}
+            onRefresh={handleRefresh}
+            ListEmptyComponent={renderEmpty}
           />
         )}
       </SafeAreaView>
