@@ -63,7 +63,10 @@ class ScenesServiceClass {
           .range(offset, offset + limit - 1)
           .returns<ICloudScene[]>();
         if (!error && data) {
-          AsyncStorage.setItem(STORAGE_SCENES_CACHE, JSON.stringify(data)).catch(() => {});
+          AsyncStorage.setItem(STORAGE_SCENES_CACHE, JSON.stringify(data)).catch((e: unknown) => {
+            const error = e instanceof Error ? e : new Error(String(e));
+            console.error('[ScenesService]', error);
+          });
           return data;
         }
       } catch (e: unknown) {
