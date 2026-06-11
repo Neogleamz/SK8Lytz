@@ -1,3 +1,4 @@
+// Acknowledged Monolith (S4): This file is a monolith > 30KB (approx. 53.4KB). Component extraction is flagged for future refactoring.
 /**
  * Zengge BLE Controller Protocol Implementation
  * Supports Magic Home / LEDnetWF / Zengge Symphony controllers
@@ -189,8 +190,10 @@ export class ZenggeProtocol {
           isJsonFormat = true;
         }
       }
-    } catch (_e: unknown) {
+    } catch (e: unknown) {
       // Not JSON format — fall through to binary parse
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      getAppLogger().debug?.('[ZenggeProtocol] JSON parse skipped', { error: errorMsg });
     }
 
     // ── Step 2: Strip V2 binary wrapper if present ──────────────────────────

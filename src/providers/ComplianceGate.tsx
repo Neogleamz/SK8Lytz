@@ -6,15 +6,15 @@ import { useTheme } from '../context/ThemeContext';
 import { AppSettingsService } from '../services/AppSettingsService';
 import { supabase } from '../services/supabaseClient';
 import { AppLogger } from '../services/AppLogger';
-
 import { useAuth } from '../context/AuthContext';
+import { STORAGE_EULA_ACCEPTED } from '../constants/storageKeys';
 
 interface ComplianceGateProps {
   children: React.ReactNode;
 }
 
 export function ComplianceGate({ children }: ComplianceGateProps) {
-  const { isOfflineMode, user } = useAuth();
+  const { isOfflineMode, user, signOut } = useAuth();
   const { Colors } = useTheme();
   type ComplianceStatus = 'checking' | 'idle';
   const [status, setStatus] = useState<ComplianceStatus>('checking');
@@ -32,7 +32,7 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
       if (isOfflineMode) {
         // Offline users still require EULA acceptance — check the local AsyncStorage record.
         // This closes the bypass that previously let users skip legal compliance entirely.
-        const offlineEula = await AsyncStorage.getItem('@Sk8lytz_offline_eula_accepted');
+        const offlineEula = await AsyncStorage.getItem(STORAGE_EULA_ACCEPTED);
         if (!offlineEula) {
           setRequiresEula(true);
         }
@@ -57,10 +57,10 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
       }
 
       const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('accepted_eula_version')
-        .eq('user_id', user.id)
-        .single();
+         .from('user_profiles')
+         .select('accepted_eula_version')
+         .eq('user_id', user.id)
+         .single();
       
       const userVersion = profile?.accepted_eula_version || 0;
 
@@ -82,7 +82,7 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
         // Offline acceptance: write versioned record to AsyncStorage.
         // No Supabase call — user has no account. ComplianceGate will pass through on next check.
         await AsyncStorage.setItem(
-          '@Sk8lytz_offline_eula_accepted',
+          STORAGE_EULA_ACCEPTED,
           JSON.stringify({ version: 1, acceptedAt: new Date().toISOString() }),
         );
         setRequiresEula(false);
@@ -112,9 +112,7 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
 
   const handleDecline = async () => {
     try {
-      if (supabase) {
-        await supabase.auth.signOut();
-      }
+      await signOut();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.warn('[ComplianceGate] Sign out failed', { error: msg });

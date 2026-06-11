@@ -19,7 +19,9 @@ export function BluetoothGuard({ children }: { children: React.ReactNode }) {
     try {
       const granted = await checkPermission('BLUETOOTH');
       setHasPermission(granted);
-    } catch {
+    } catch (e: unknown) {
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      AppLogger.warn('BluetoothGuard', { event: 'check_permission_failed', error: errorMsg });
       setHasPermission(false);
     } finally {
       setStatus(prev => prev === 'checking' ? 'idle' : prev);

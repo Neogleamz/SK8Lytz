@@ -70,15 +70,18 @@ import { Platform, ViewStyle, TextStyle } from 'react-native';
 export const Shadows = {
   soft: Platform.select<ViewStyle>({
     ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4 },
-    android: { elevation: 3 }
+    android: { elevation: 3 },
+    default: {}
   }) as ViewStyle,
   medium: Platform.select<ViewStyle>({
     ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 },
-    android: { elevation: 5 }
+    android: { elevation: 5 },
+    default: {}
   }) as ViewStyle,
   glow: (color: string): ViewStyle => Platform.select<ViewStyle>({
     ios: { shadowColor: color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 8 },
-    android: { shadowColor: color, elevation: 8 }
+    android: { shadowColor: color, elevation: 8 },
+    default: {}
   }) as ViewStyle,
 };
 

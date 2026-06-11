@@ -31,7 +31,7 @@ import { STORAGE_OFFLINE_SKIP } from './src/constants/storageKeys';
 
 
 interface GlobalWithErrorUtils { ErrorUtils?: { getGlobalHandler: () => ((error: unknown, isFatal?: boolean) => void) | undefined; setGlobalHandler: (handler: (error: unknown, isFatal?: boolean) => void) => void; } }
-const g = global as unknown as GlobalWithErrorUtils;
+const g = global as typeof global & GlobalWithErrorUtils;
 if (g.ErrorUtils) {
   const defaultHandler = g.ErrorUtils.getGlobalHandler();
   g.ErrorUtils.setGlobalHandler(async (error: unknown, isFatal?: boolean) => {

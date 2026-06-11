@@ -125,7 +125,7 @@ describe('saveSession() — offline queue', () => {
     // Timestamp present and parseable
     expect(new Date(entry.queued_at).getTime()).not.toBeNaN();
     // NO user_id stored in queue record
-    expect((entry as unknown as Record<string, unknown>).user_id).toBeUndefined();
+    expect('user_id' in entry).toBe(false);
   });
 });
 
@@ -185,7 +185,7 @@ describe('flushPendingSessionQueue() — re-entrancy guard', () => {
 
     // Make insert take a moment so the guard has time to block the second call
     mockInsert.mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve({ error: null }), 20))
+      () => Promise.resolve().then(() => ({ error: null }))
     );
 
     // Fire both without await — second should be blocked by guard

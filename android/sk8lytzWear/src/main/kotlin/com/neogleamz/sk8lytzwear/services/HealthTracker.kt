@@ -45,11 +45,11 @@ object HealthTracker {
      */
     fun startTracking(context: Context) {
         if (isTracking) return
+        isTracking = true
         
         // Prevent NoClassDefFoundError on Wear OS 2 (API < 30)
         if (android.os.Build.VERSION.SDK_INT < 30) {
             Log.w(TAG, "Health Services API requires Wear OS 3+ (API 30+). Skipping tracking.")
-            isTracking = true
             return
         }
         
@@ -77,9 +77,9 @@ object HealthTracker {
 
                 client.setUpdateCallback(exerciseCallback)
                 client.startExerciseAsync(config).await()
-                isTracking = true
                 Log.d(TAG, "Exercise session started")
             }.onFailure {
+                isTracking = false
                 Log.e(TAG, "Failed to start exercise tracking: ${it.message}", it)
             }
         }
@@ -88,9 +88,9 @@ object HealthTracker {
     /** Stop the Health Services exercise session. */
     fun stopTracking() {
         if (!isTracking) return
+        isTracking = false
         
         if (android.os.Build.VERSION.SDK_INT < 30) {
-            isTracking = false
             return
         }
         
@@ -98,10 +98,10 @@ object HealthTracker {
             runCatching {
                 exerciseClient?.endExerciseAsync()?.await()
                 exerciseClient?.clearUpdateCallbackAsync(exerciseCallback)?.await()
-                isTracking = false
                 trackingContext = null
                 Log.d(TAG, "Exercise session ended")
             }.onFailure {
+                isTracking = true
                 Log.e(TAG, "Failed to stop exercise tracking: ${it.message}", it)
             }
         }
