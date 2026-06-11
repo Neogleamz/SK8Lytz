@@ -66,7 +66,7 @@ export function useGlobalTelemetry(
   const lastGpsTimeRef = useRef<number | null>(null);
   const locationSubRef = useRef<Location.LocationSubscription | null>(null);
   const prevGRef = useRef(1.0);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Stable ref so commitSession never closes over stale peakGForce state
   const peakGForceRef = useRef(1.0);
@@ -139,7 +139,7 @@ export function useGlobalTelemetry(
         await SpeedTrackingService.saveSession(snapshot, userIdRef.current);
         AppLogger.log('GLOBAL_SESSION_SAVED', { action: 'AUTO_SAVED_TO_DB', durationSec, distanceMiles });
       } catch (err: unknown) {
-        AppLogger.error('[useGlobalTelemetry] Failed to persist auto-session', err instanceof Error ? err.message : String(err));
+        AppLogger.error('[useGlobalTelemetry] Failed to persist auto-session', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
       }
     } else {
        AppLogger.log('GLOBAL_SESSION_DISCARDED', { reason: 'insufficient distance/duration', distanceMiles, durationSec });
@@ -214,15 +214,20 @@ export function useGlobalTelemetry(
       (async () => {
         try {
           const isGranted = await checkPermission('LOCATION');
+          if (!isActive) return;
           if (!isGranted) {
              await openGlobalPermissionsModal();
+             if (!isActive) return;
              const reG = await checkPermission('LOCATION');
+             if (!isActive) return;
              if (!reG) throw new Error('Location permission denied via modal');
           }
+          if (!isActive) return;
 
           const watchSub = await Location.watchPositionAsync(
               { accuracy: Location.Accuracy.Balanced, timeInterval: 1000, distanceInterval: 1 },
               (pos) => {
+                if (!isActive) return;
                 const spdMpS = pos.coords.speed || 0;
                 const spdMph = Math.max(0, spdMpS * 2.23694);
                 setGpsSpeed(spdMph);
@@ -292,7 +297,9 @@ export function useGlobalTelemetry(
             locationSubRef.current = watchSub;
           }
         } catch (e: unknown) {
-          AppLogger.error('[useGlobalTelemetry] Location permission denied or unavailable', e instanceof Error ? e.message : String(e));
+          if (isActive) {
+            AppLogger.error('[useGlobalTelemetry] Location permission denied or unavailable', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
+          }
         }
       })();
 

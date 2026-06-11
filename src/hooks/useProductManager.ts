@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useProductCatalog } from '../hooks/useProductCatalog';
 import { supabase } from '../services/supabaseClient';
@@ -38,6 +38,14 @@ export function useProductManager() {
   const { allProfiles, saveProfile: saveToCloud, syncFromCloud } = useProductCatalog();
   const [editingProfile, setEditingProfile] = useState<ProductProfile | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const startEditing = useCallback((profile: ProductProfile) => {
     setEditingProfile({ ...profile });
@@ -67,16 +75,20 @@ export function useProductManager() {
       }
 
       const success = await saveToCloud(editingProfile);
+      if (!isMountedRef.current) return false;
       if (success) {
         setEditingProfile(null);
         return true;
       }
       return false;
     } catch (err: unknown) {
+      if (!isMountedRef.current) return false;
       AppLogger.error('Save failed', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
       return false;
     } finally {
-      setIsSaving(false);
+      if (isMountedRef.current) {
+        setIsSaving(false);
+      }
     }
   }, [editingProfile, saveToCloud]);
 

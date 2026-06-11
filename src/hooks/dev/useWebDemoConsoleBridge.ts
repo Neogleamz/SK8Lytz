@@ -28,7 +28,8 @@ export function useWebDemoConsoleBridge() {
           if (typeof arg === 'object') {
             try {
               return JSON.stringify(arg, null, 2);
-            } catch (e) {
+            } catch (e: unknown) {
+              const _safeErr = e instanceof Error ? e : new Error(String(e));
               return String(arg);
             }
           }
@@ -40,7 +41,8 @@ export function useWebDemoConsoleBridge() {
           level,
           data: parsedArgs
         }, '*');
-      } catch (err) {
+      } catch (err: unknown) {
+        const _safeErr = err instanceof Error ? err : new Error(String(err));
         // Silently fail if postMessage throws (e.g., disconnected parent)
       }
     };

@@ -7,26 +7,30 @@ import { getLocalProfileByPoints } from '../constants/ProductCatalog';
 import { crewService } from '../services/CrewService';
 import { normalizeMac } from '../hooks/useDeviceStateLedger';
 import { useDashboardDeviceConfig } from './useDashboardDeviceConfig';
-import type { DisplayDevice, IDeviceState, GroupPatternSnapshot, BleConnectionState } from '../types/dashboard.types';
+import type { DisplayDevice, IDeviceState, GroupPatternSnapshot, BleConnectionState, DevicePatternState, ModeType } from '../types/dashboard.types';
+import type { CrewSession } from '../services/CrewService';
 import { useAuth } from '../context/AuthContext';
+import { PanResponderInstance } from 'react-native';
+import { AppLogger } from '../services/AppLogger';
+import { RegisteredDevice } from './useRegistration';
 
 export interface UseDashboardControllerProps {
   isOfflineMode: boolean;
   isActuallyConnected: boolean;
   isTestModeActive: boolean;
-  crewSession: any;
-  crewRole: any;
-  lastLeaderScene: any;
-  setLastLeaderScene: (s: any) => void;
-  setCrewModeSummary: (s: any | undefined) => void;
+  crewSession: CrewSession | null;
+  crewRole: 'leader' | 'member' | null;
+  lastLeaderScene: Record<string, unknown> | null;
+  setLastLeaderScene: (s: Record<string, unknown> | null) => void;
+  setCrewModeSummary: (s: string | undefined) => void;
   dockedControllerRef: React.RefObject<DockedControllerHandle | null>;
   displayConnectedDevices: DisplayDevice[];
-  deviceConfigs: Record<string, any>;
+  deviceConfigs: Record<string, Record<string, unknown>>;
   isGrouped: boolean;
   powerStates: Record<string, boolean>;
   handlePowerToggle: (macs: string[]) => void;
   handleDisconnect: () => void;
-  appSettings: any;
+  appSettings: Record<string, string | boolean>;
   bleState: BleConnectionState | string;
   gpsSpeed: number;
   peakGForce: number;
@@ -36,20 +40,20 @@ export interface UseDashboardControllerProps {
   sessionActive: boolean;
   startSession: () => void;
   stopSessionRecording: () => void;
-  customGroups: any[];
-  lastGroupPatterns: Record<string, any>;
+  customGroups: { id: string; name: string; deviceIds: string[] }[];
+  lastGroupPatterns: Record<string, GroupPatternSnapshot>;
   setLastGroupPattern: (groupId: string, snapshot: GroupPatternSnapshot) => void;
-  ledgerSave: (id: string, payload: any) => void;
+  ledgerSave: (id: string, payload: DevicePatternState) => void;
   writeToDevice: (payload: number[], targetDeviceId?: string, opts?: { lowPriority?: boolean }) => Promise<boolean | 'partial'>;
-  edgePanResponder: any;
+  edgePanResponder: PanResponderInstance;
   
   // Dependencies for useDashboardDeviceConfig
-  allDevices: any[];
-  setAllDevices: any;
-  allDevicesRef: any;
-  registeredDevices: any[];
-  saveRegisteredDevice: any;
-  setUpdateTrigger: any;
+  allDevices: DisplayDevice[];
+  setAllDevices: React.Dispatch<React.SetStateAction<DisplayDevice[]>>;
+  allDevicesRef: React.MutableRefObject<DisplayDevice[]>;
+  registeredDevices: RegisteredDevice[];
+  saveRegisteredDevice: (device: Partial<RegisteredDevice> & { device_mac: string }) => Promise<boolean>;
+  setUpdateTrigger: React.Dispatch<React.SetStateAction<number>>;
 }
 
 export function useDashboardController({
@@ -111,8 +115,8 @@ export function useDashboardController({
     return { ...cfg, ...device };
   }, [selectedDeviceForSettingsId, allDevices, deviceConfigs]);
 
-  const openSettings = (device: any) => {
-    setSelectedDeviceForSettingsId(device.device_mac || device.id);
+  const openSettings = (device: { device_mac?: string; id?: string }) => {
+    setSelectedDeviceForSettingsId(device.device_mac || device.id || null);
     setIsSettingsVisible(true);
   };
 
@@ -159,7 +163,9 @@ export function useDashboardController({
           role={crewRole}
           currentScene={lastLeaderScene}
           onLeave={async () => {
-            await crewService.leaveSession(userId).catch(() => {});
+            await crewService.leaveSession(userId).catch((err: unknown) => {
+              AppLogger.error('Leave crew session failed', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
+            });
             setLastLeaderScene(null);
             setCrewModeSummary(undefined);
           }}
@@ -188,7 +194,7 @@ export function useDashboardController({
             onDisconnect={handleDisconnect}
             crewRole={crewRole}
             appSettings={appSettings}
-            onCrewSceneChange={(scene: Record<string, any>) => crewService.broadcastScene(scene, userId)}
+            onCrewSceneChange={(scene: Record<string, unknown>) => crewService.broadcastScene(scene, userId)}
             bleState={bleState as BleConnectionState}
             gpsSpeed={gpsSpeed}
             peakGForce={peakGForce}
@@ -212,7 +218,7 @@ export function useDashboardController({
                     ledgerSave(d.id, {
                       deviceMac: normalizeMac(d.id),
                       groupId: targetGroupId,
-                      mode: snapshot.mode,
+                      mode: snapshot.mode as ModeType,
                       patternLabel: patternName,
                       fgColor: snapshot.fgColor,
                       bgColor: snapshot.bgColor,

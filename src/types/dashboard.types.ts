@@ -86,6 +86,7 @@ export interface PingResult {
   rfPairedCount?: number;
   // Extra fields from firmware advertisement
   productId?: number;
+  [key: string]: unknown;
 }
 
 /**
@@ -127,6 +128,7 @@ export interface DeviceSettings {
   rfRemotes?: string[];
   /** ZENGGE hardware product ID reported during BLE pairing (0xA3 = 163 for all SK8Lytz hardware). */
   productId?: number;
+  [key: string]: unknown;
 }
 
 
@@ -226,6 +228,8 @@ export interface IHardwareSettings {
   icName?: string;
   colorSorting?: number;
   colorSortingName?: string;
+  detected?: boolean;
+  [key: string]: unknown;
 }
 
 // ─── DockedController Domain Types (migrated from DockedController.tsx) ───────

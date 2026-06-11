@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppLogger } from '../services/AppLogger';
 import { CrewMember, CrewRole, crewService, CrewSession } from '../services/CrewService';
 import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 
 export function useCrewSession(
-  onSessionReady: (session: CrewSession, role: CrewRole, lastScene: Record<string, any> | null) => void,
+  onSessionReady: (session: CrewSession, role: CrewRole, lastScene: Record<string, unknown> | null) => void,
   onSessionLeft: () => void,
   onSessionEnded: () => void,
   refreshNearby: () => void,
@@ -17,6 +17,13 @@ export function useCrewSession(
   const [currentRole, setCurrentRole] = useState<CrewRole>(crewService.currentRole);
   const [members, setMembers] = useState<CrewMember[]>([]);
   const [isHandoffMode, setIsHandoffMode] = useState(false);
+  const loadMembersTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (loadMembersTimerRef.current) clearTimeout(loadMembersTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     return crewService.subscribe(() => {
@@ -32,19 +39,25 @@ export function useCrewSession(
   }, [currentSession]);
 
   const handleSessionJoined = useCallback(async (session: CrewSession) => {
-    // Determine the role
-    const role: CrewRole = crewService.currentRole ?? (session.leader_user_id === user?.id ? 'leader' : 'member');
-    
-    // Load members
-    const m = await crewService.fetchMembers(session.id).catch(() => []);
-    setMembers(m);
+    try {
+      // Determine the role
+      const role: CrewRole = crewService.currentRole ?? (session.leader_user_id === user?.id ? 'leader' : 'member');
+      
+      // Load members
+      const m = await crewService.fetchMembers(session.id).catch(() => []);
+      setMembers(m);
 
-    const lastScene = role === 'member'
-      ? await crewService.fetchLastScene(session.id).catch(() => null)
-      : null;
+      const lastScene = role === 'member'
+        ? await crewService.fetchLastScene(session.id).catch(() => null)
+        : null;
 
-    onSessionReady(session, role, lastScene);
-  }, [user?.id, onSessionReady]);
+      onSessionReady(session, role, lastScene);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.log('CREW_ERROR', { action: 'join_session', error: msg });
+      setErrorMsg(msg);
+    }
+  }, [user?.id, onSessionReady, setErrorMsg]);
 
 
   const executeEndSession = async () => {
@@ -85,11 +98,18 @@ export function useCrewSession(
 
   const executeLeaveSession = async () => {
     AppLogger.log('CREW_SESSION_LEFT', { sessionId: currentSession?.id, role: currentRole });
-    await crewService.leaveSession(user?.id);
-    refreshNearby();
-    setIsHandoffMode(false);
-    onSessionLeft();
-    goToLanding();
+    try {
+      await crewService.leaveSession(user?.id);
+      refreshNearby();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.log('CREW_ERROR', { action: 'leave_session', error: msg });
+      setErrorMsg(msg);
+    } finally {
+      setIsHandoffMode(false);
+      onSessionLeft();
+      goToLanding();
+    }
   };
 
   const handleHandoffLeadership = async (member: CrewMember): Promise<boolean> => {
@@ -97,7 +117,8 @@ export function useCrewSession(
       await crewService.transferLeadership(member.user_id);
       AppLogger.log('CREW_LEADERSHIP_TRANSFERRED', { transferred: true });
       setIsHandoffMode(false);
-      setTimeout(loadMembers, 500);
+      if (loadMembersTimerRef.current) clearTimeout(loadMembersTimerRef.current);
+      loadMembersTimerRef.current = setTimeout(loadMembers, 500);
       return true;
     } catch (e: unknown) { 
       return false; 

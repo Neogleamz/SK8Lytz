@@ -16,8 +16,8 @@ export function useFavorites() {
   const { user } = useAuth();
   const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
   const [activeFavoriteId, setActiveFavoriteId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('loading');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [quickPresets, setQuickPresets] = useState<IQuickPreset[]>([
     { name: 'Rainbow', colors: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'], type: 3 },
@@ -38,86 +38,102 @@ export function useFavorites() {
 
   // Initialize from AsyncStorage and Cloud
   useEffect(() => {
+    let active = true;
     let localFavorites: IFavoriteState[] = [];
-    setIsLoading(true);
-    setError(null);
+    setStatus('loading');
+    setErrorMsg(null);
 
     Promise.all([
       // 1. Fetch Local
       AsyncStorage.getItem(`${STORAGE_PREFIX}Favorites`).then(async (saved) => {
-      if (saved) {
-        try {
-          const parsed: IFavoriteState[] = JSON.parse(saved);
-          if (parsed && parsed.length > 0) {
-            localFavorites = parsed.map(f => {
-              let nf = { ...f };
-              if (nf.mode === 'DIY' || nf.mode === 'MULTI' || nf.mode === 'MULTICOLOR') {
-                nf.mode = 'BUILDER';
-              }
-              if (nf.mode === 'RBM' || nf.mode === 'PROGRAMS') {
-                nf.mode = 'PATTERN';
-                nf.patternId = Math.min(nf.patternId ?? 1, 28);
-              }
-              return nf;
-            });
-            setFavorites(localFavorites);
+        if (!active) return;
+        if (saved) {
+          try {
+            const parsed: IFavoriteState[] = JSON.parse(saved);
+            if (parsed && parsed.length > 0) {
+              localFavorites = parsed.map(f => {
+                let nf = { ...f };
+                if (nf.mode === 'DIY' || nf.mode === 'MULTI' || nf.mode === 'MULTICOLOR') {
+                  nf.mode = 'BUILDER';
+                }
+                if (nf.mode === 'RBM' || nf.mode === 'PROGRAMS') {
+                  nf.mode = 'PATTERN';
+                  nf.patternId = Math.min(nf.patternId ?? 1, 28);
+                }
+                return nf;
+              });
+              if (active) setFavorites(localFavorites);
+            }
+          } catch (e: unknown) {
+            AppLogger.warn('[Favorites] Failed to parse saved favorites', { error: (e instanceof Error ? e.message : String(e)) });
           }
-      } catch (e: unknown) { AppLogger.warn('[Favorites] Failed to parse saved favorites', { error: (e instanceof Error ? e.message : String(e)) }); }
-    }
-
-    // 2. Fetch Cloud and merge
-    if (user) {
-      const fetchCloudFavs = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('user_saved_presets')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('fill_mode', 'FAVORITE');
-          
-          if (!error && data) {
-            const cloudFavs = data.map(d => ({
-              id: d.id,
-              name: d.name,
-              ...(typeof d.nodes === 'string' ? JSON.parse(d.nodes) : d.nodes as Record<string, unknown>)
-            })) as IFavoriteState[];
-
-            // Merge local and cloud (cloud wins on ID collision)
-            const mergedMap = new Map<string, IFavoriteState>();
-            localFavorites.forEach(f => mergedMap.set(f.id, f));
-            cloudFavs.forEach(f => mergedMap.set(f.id, f));
-            
-            const finalFavs = Array.from(mergedMap.values());
-            setFavorites(finalFavs);
-            AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(finalFavs)).catch((err: unknown) => AppLogger.warn('[useFavorites] Failed to persist favorites', err instanceof Error ? err.message : String(err)));
-          }
-        } catch (err: unknown) {
-          AppLogger.warn('[Favorites] Failed to fetch cloud favorites', { error: (err instanceof Error ? err.message : String(err)) });
         }
-      };
-      await fetchCloudFavs();
-    }
-    }).catch((err: unknown) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      AppLogger.warn('[useFavorites] Favorites read failed', { error: msg });
-      setError(msg);
-    }),
 
-    AsyncStorage.getItem(`${STORAGE_PREFIX}QuickPresets`).then((saved) => {
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed && parsed.length > 0) setQuickPresets(parsed);
-        } catch (e: unknown) { AppLogger.warn('[Favorites] Failed to parse quick presets', { error: (e instanceof Error ? e.message : String(e)) }); }
-      }
-    }).catch((err: unknown) => {
-      const msg = err instanceof Error ? err.message : String(err);
-      AppLogger.warn('[useFavorites] QuickPresets read failed', { error: msg });
-      setError(msg);
-    })
+        // 2. Fetch Cloud and merge
+        if (user) {
+          try {
+            const { data, error: cloudErr } = await supabase
+              .from('user_saved_presets')
+              .select('*')
+              .eq('user_id', user.id)
+              .eq('fill_mode', 'FAVORITE');
+            
+            if (!active) return;
+            
+            if (!cloudErr && data) {
+              const cloudFavs = data.map(d => ({
+                id: d.id,
+                name: d.name,
+                ...(typeof d.nodes === 'string' ? JSON.parse(d.nodes) : d.nodes as Record<string, unknown>)
+              })) as IFavoriteState[];
+
+              // Merge local and cloud (cloud wins on ID collision)
+              const mergedMap = new Map<string, IFavoriteState>();
+              localFavorites.forEach(f => mergedMap.set(f.id, f));
+              cloudFavs.forEach(f => mergedMap.set(f.id, f));
+              
+              const finalFavs = Array.from(mergedMap.values());
+              if (active) {
+                setFavorites(finalFavs);
+                AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(finalFavs)).catch((err: unknown) => AppLogger.warn('[useFavorites] Failed to persist favorites', err instanceof Error ? err.message : String(err)));
+              }
+            }
+          } catch (err: unknown) {
+            AppLogger.warn('[Favorites] Failed to fetch cloud favorites', { error: (err instanceof Error ? err.message : String(err)) });
+          }
+        }
+      }).catch((err: unknown) => {
+        if (!active) return;
+        const msg = err instanceof Error ? err.message : String(err);
+        AppLogger.warn('[useFavorites] Favorites read failed', { error: msg });
+        setErrorMsg(msg);
+        setStatus('error');
+      }),
+
+      AsyncStorage.getItem(`${STORAGE_PREFIX}QuickPresets`).then((saved) => {
+        if (!active) return;
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (parsed && parsed.length > 0 && active) setQuickPresets(parsed);
+          } catch (e: unknown) {
+            AppLogger.warn('[Favorites] Failed to parse quick presets', { error: (e instanceof Error ? e.message : String(e)) });
+          }
+        }
+      }).catch((err: unknown) => {
+        if (!active) return;
+        const msg = err instanceof Error ? err.message : String(err);
+        AppLogger.warn('[useFavorites] QuickPresets read failed', { error: msg });
+        setErrorMsg(msg);
+        setStatus('error');
+      })
     ]).finally(() => {
-      setIsLoading(false);
+      if (active) setStatus('success');
     });
+
+    return () => {
+      active = false;
+    };
   }, [user]);
 
   const openFavoritePrompt = useCallback((targetId?: string, defaultName: string = '') => {
@@ -243,7 +259,7 @@ export function useFavorites() {
     saveFavorite,
     deleteFavorite,
     saveQuickPreset,
-    isLoading,
-    error
+    isLoading: status === 'loading',
+    error: status === 'error' ? errorMsg : null
   };
 }

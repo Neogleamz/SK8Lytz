@@ -42,8 +42,8 @@ import { executePingDevice } from '../services/BlePingService';
 import { executeWriteToDevice, executeWriteChunked, executeProtocolResults as executeProtocolResultsService, BleWriteStateRefs } from '../services/BleWriteDispatcher';
 import { jitteredDelay } from '../utils/backoff';
 
-let BleManager: any;
-let State: any;
+let BleManager: typeof import('react-native-ble-plx').BleManager;
+let State: typeof import('react-native-ble-plx').State;
 
 if (Platform.OS !== 'web') {
   const blePlx = require('react-native-ble-plx');
@@ -155,13 +155,19 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const blacklistedMacsRef = useRef<string[]>([]);
   const mtuMapRef = useRef<Map<string, number>>(new Map());
   const adapterMapRef = useRef<Map<string, IControllerProtocol>>(new Map());
-  const handleNotificationRef = useRef<((error: any, characteristic: any, deviceId: string) => void)>(() => {});
-  const handleOrganicDisconnectRef = useRef<((error: any, deviceId: string) => void)>(() => {});
+  const handleNotificationRef = useRef<((error: import('react-native-ble-plx').BleError | null, characteristic: import('react-native-ble-plx').Characteristic | null, deviceId: string) => void)>(() => {});
+  const handleOrganicDisconnectRef = useRef<((error: import('react-native-ble-plx').BleError | null, deviceId: string) => void)>(() => {});
 
   const [allDevices, setAllDevices] = useState<Device[]>([]);
-  const [isBluetoothSupported, setIsBluetoothSupported] = useState(Platform.OS !== 'web');
-  const [isBluetoothEnabled, setIsBluetoothEnabled] = useState(Platform.OS === 'web');
-  const [isSandboxEnabled, setIsSandboxEnabled] = useState(false);
+  const [btState, setBtState] = useState<'unsupported' | 'disabled' | 'enabled'>(
+    Platform.OS === 'web' ? 'enabled' : 'disabled'
+  );
+  const [sandboxState, setSandboxState] = useState<'disabled' | 'enabled'>('disabled');
+
+  const isBluetoothSupported = btState !== 'unsupported';
+  const isBluetoothEnabled = btState === 'enabled';
+  const isSandboxEnabled = sandboxState === 'enabled';
+
   const [droppedOutDeviceIds, setDroppedOutDeviceIds] = useState<string[]>([]);
   // ── Connection Gate Semaphore (XState V5) ─────────────────────────────────
   // ALL BLE operations (scan, connect, disconnect, recovery) must acquire this
@@ -170,7 +176,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const scanCallbackRef = useRef<(error: BleError | null, device: Device | null) => void>(() => {});
   const [bleSnapshot, bleSend, bleActorRef] = useMachine(bleMachine, {
     input: {
-      bleManager,
+      bleManager: bleManager as import('react-native-ble-plx').BleManager,
       scanCallback: (error: BleError | null, device: Device | null) => scanCallbackRef.current(error, device),
       scanMode: 1,
       scanServiceUUIDs: [ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID],
@@ -178,7 +184,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       mtuMapRef,
       disconnectListeners,
       blacklistedMacsRef,
-      handleOrganicDisconnect: (error: any, deviceId: string) => handleOrganicDisconnectRef.current(error, deviceId),
+      handleOrganicDisconnect: (error: import('react-native-ble-plx').BleError | null, deviceId: string) => handleOrganicDisconnectRef.current(error, deviceId),
       // onOrganicDisconnect — the REAL recovery trigger.
       // handleOrganicDisconnect above is logging-only. This fires RECOVERY_START.
       onOrganicDisconnect: (deviceId: string) => {
@@ -186,7 +192,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
           bleSend({ type: 'RECOVERY_START', ghostedMacs: [deviceId] });
         }
       },
-      handleNotification: (error: any, characteristic: any, deviceId: string) => handleNotificationRef.current(error, characteristic, deviceId),
+      handleNotification: (error: import('react-native-ble-plx').BleError | null, characteristic: import('react-native-ble-plx').Characteristic | null, deviceId: string) => handleNotificationRef.current(error, characteristic, deviceId),
       enqueueWrite,
     }
   });
@@ -199,7 +205,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // ── Pattern write debounce ─────────────────────────────────────────────────
   // Prevents BLE queue pile-up when user swipes rapidly through the pattern picker.
   // Critical writes (power, time sync) bypass this and go direct.
-  const writeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const writeDebounceTimerRef = useRef<ReturnType<typeof global.setTimeout> | null>(null);
 
   useEffect(() => {
     // 1. Initial Load
@@ -207,16 +213,15 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       AsyncStorage.getItem(STORAGE_DEMO_MODE).then((isMock) => {
         const enabled = isMock === 'true';
         if (Platform.OS === 'web') {
-           setIsBluetoothSupported(true);
-           setIsBluetoothEnabled(true);
+           setBtState('enabled');
         }
-        setIsSandboxEnabled(enabled);
+        setSandboxState(enabled ? 'enabled' : 'disabled');
       });
     }
 
     // 2. Dynamic Update Listener (from DevSandboxDrawer)
     const sub = DeviceEventEmitter.addListener('TOGGLE_VIRTUAL_SKATES', (enabled: boolean) => {
-       setIsSandboxEnabled(enabled);
+       setSandboxState(enabled ? 'enabled' : 'disabled');
     });
 
     return () => {
@@ -280,7 +285,16 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     allDevicesRef.current = allDevices;
   }, [allDevices]);
 
-  const handleNotification = (error: any, characteristic: any, deviceId: string) => {
+  // Sync connectedDevicesRef with XState machine state to prevent split-brain arrays
+  useEffect(() => {
+    connectedDevicesRef.current = connectedDevices;
+  }, [connectedDevices]);
+
+  const handleNotification = (
+    error: import('react-native-ble-plx').BleError | null,
+    characteristic: import('react-native-ble-plx').Characteristic | null,
+    deviceId: string
+  ) => {
     if (error) {
       const errMsg = error?.message || String(error);
       // Suppress normal organic dropouts from flooding the VIP error telemetry
@@ -301,8 +315,10 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
         }
       } catch (e: unknown) {
         const parseErrMsg = e instanceof Error ? e.message : String(e);
-        AppLogger.error('Failed to parse notification', parseErrMsg, { payload_size: 0, ssi: 0 });
-        AppLogger.log('PROTOCOL_ERROR', { error: parseErrMsg, deviceId, context: 'parse', payload_size: characteristic.value?.length ?? 0 });
+        const payloadSize = characteristic.value ? Buffer.from(characteristic.value, 'base64').length : 0;
+        const currentRssi = rssiMap ? (rssiMap[deviceId] ?? 0) : 0;
+        AppLogger.error('Failed to parse notification', parseErrMsg, { payload_size: payloadSize, ssi: currentRssi });
+        AppLogger.log('PROTOCOL_ERROR', { error: parseErrMsg, deviceId, context: 'parse', payload_size: payloadSize });
       }
     }
   };
@@ -313,12 +329,15 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   useEffect(() => {
     if (!bleManager || Platform.OS === 'web') return;
-    const subscription = bleManager.onStateChange((state: any) => {
+    const subscription = bleManager.onStateChange((state: import('react-native-ble-plx').State) => {
       AppLogger.log('BLE_STATE_CHANGE', { state });
       if (state === State.Unsupported) {
-        setIsBluetoothSupported(false);
+        setBtState('unsupported');
+      } else if (state === State.PoweredOn) {
+        setBtState('enabled');
+      } else {
+        setBtState('disabled');
       }
-      setIsBluetoothEnabled(state === State.PoweredOn);
     }, true);
     
     // Audit native connections when app wakes up to prune stale react-state
@@ -369,7 +388,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // Moved pingDevice down below sweeper definition to enable scan preemption
 
   // --- Sub-Hooks ---
-  const handleOrganicDisconnect = (error: any, deviceId: string) => {
+  const handleOrganicDisconnect = (error: import('react-native-ble-plx').BleError | null, deviceId: string) => {
     AppLogger.warn(`[BLE] Organic disconnect/dropout for ${deviceId}`);
     AppLogger.log('DEVICE_DISCONNECTED', { id: deviceId, reason: 'dropout', error: error instanceof Error ? error.message : String(error) });
     // The machine handles this organically via handleOrganicDisconnect callback in bleMachine input.
@@ -402,6 +421,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     blinkPayload: number[],
     options?: { probe?: boolean; duration?: number; turnOffAtEnd?: boolean }
   ): Promise<PingResult | null> => {
+    if (!bleManager) return null;
     const wasSweeperActive = scanner.isSweeperActive;
     if (wasSweeperActive) scanner.stopScanner(); // Stops sweeper natively
     try {
@@ -461,6 +481,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     targetDeviceId?: string,
     opts?: { lowPriority?: boolean, writeType?: 'Response' | 'NoResponse' }
   ): Promise<boolean | 'partial'> => {
+    if (!bleManager) return false;
     const priority = resolveWritePriority(payload[0] || 0);
     return enqueueWrite(priority, () => executeWriteToDevice(
       payload,
@@ -506,6 +527,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     payloads: { targetDeviceId: string; result: ProtocolResult }[],
     opts?: { lowPriority?: boolean }
   ): Promise<boolean> => {
+    if (!bleManager) return false;
     return executeProtocolResultsService(
       payloads,
       opts,

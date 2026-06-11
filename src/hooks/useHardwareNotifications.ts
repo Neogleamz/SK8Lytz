@@ -13,13 +13,34 @@ import { useEffect, useRef } from 'react';
 import { AppLogger } from '../services/AppLogger';
 import DeviceRepository from '../services/DeviceRepository';
 import { BlePayloadParser } from '../utils/BlePayloadParser';
+import { scrubPII } from '../utils/piiScrubber';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 /** Minimal device shape — just enough for the notification callback to resolve name. */
-interface BLEDeviceMinimal {
+export interface BLEDeviceMinimal {
   id: string;
   name?: string | null;
+  points?: number;
+  ledPoints?: number;
+  sorting?: string;
+  colorSorting?: number;
+  colorSortingName?: string;
+  stripType?: string;
+  icType?: number;
+  segments?: number;
+  detected?: boolean;
+  firmware?: string;
+}
+
+export interface ProbedHardwareConfig {
+  ledPoints?: number;
+  segments?: number;
+  icName?: string;
+  colorSortingName?: string;
+  colorSorting?: number;
+  icType?: number;
+  [key: string]: unknown;
 }
 
 interface UseHardwareNotificationsOptions {
@@ -28,15 +49,15 @@ interface UseHardwareNotificationsOptions {
   /** Registers the BLE data-received callback. From useBLE(). */
   setOnDataReceived: (cb: (deviceId: string, payload: number[]) => void) => void;
   /** Registers the scan-probe-completed callback. From useBLE(). */
-  setOnHardwareProbed: (cb: (deviceId: string, cfg: any) => void) => void;
+  setOnHardwareProbed: (cb: (deviceId: string, cfg: ProbedHardwareConfig) => void) => void;
   /** BLE scanned device list — used to resolve device names for diagnostics. */
   allDevices: BLEDeviceMinimal[];
   /** State updater for allDevices — merges parsed hardware config into BLE list. */
-  setAllDevices: (updater: (prev: any[]) => any[]) => void;
+  setAllDevices: (updater: (prev: BLEDeviceMinimal[]) => BLEDeviceMinimal[]) => void;
   /** State updater for deviceConfigs — persists hw settings per device. */
-  setDeviceConfigs: (updater: (prev: Record<string, any>) => Record<string, any>) => void;
+  setDeviceConfigs: (updater: (prev: Record<string, Record<string, unknown>>) => Record<string, Record<string, unknown>>) => void;
   /** Current device configurations for delta checks */
-  deviceConfigs: Record<string, any>;
+  deviceConfigs: Record<string, Record<string, unknown>>;
   /** State setter for the raw BLE payload — feeds the Sniffer UI. */
   setLastRawNotification: (val: { deviceId: string; payloadHex: string } | null) => void;
 }
@@ -90,7 +111,7 @@ export function useHardwareNotifications({
         
         AppLogger.log('RAW_PAYLOAD', {
            dir: 'RX',
-           deviceId: deviceId,
+           deviceId: scrubPII(deviceId),
            hex: payloadHex,
            bytes: payload.length,
            parsedOk: parsed?.parsedOk ?? false,
@@ -140,10 +161,11 @@ export function useHardwareNotifications({
       
       // Update state — mirror all hardware fields into allDevices so DeviceSettingsModal
       // receives a fully-populated initialSettings object without any extra queries.
-      setAllDevices((prev: any[]) => prev.map(d => {
+      setAllDevices((prev: BLEDeviceMinimal[]) => prev.map(d => {
         if (d.id !== deviceId) return d;
         const newD = {
           ...d,
+          name:             d.name ?? undefined,
           points:           ledConfig.points,
           ledPoints:        ledConfig.points,  // Mirror for activeHwSettings (checks ledPoints first)
           sorting:          ledConfig.sorting,
@@ -178,7 +200,7 @@ export function useHardwareNotifications({
 
   // ── 2. Hardware probe callback: merge scanned config before first connect ───
   useEffect(() => {
-    setOnHardwareProbed((deviceId: string, cfg: any) => {
+    setOnHardwareProbed((deviceId: string, cfg: ProbedHardwareConfig) => {
       setDeviceConfigs(prev => {
         const merged = { ...(prev[deviceId] || {}), ...cfg };
         const next = { ...prev, [deviceId]: merged };

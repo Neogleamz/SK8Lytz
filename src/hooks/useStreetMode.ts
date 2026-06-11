@@ -21,6 +21,7 @@ import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { AppLogger } from '../services/AppLogger';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
 import { buildPatternPayload } from '../protocols/PatternEngine';
+import type { IHardwareSettings } from '../types/dashboard.types';
 
 export type MotionState = 'STOPPED' | 'ACCELERATING' | 'CRUISING' | 'SLOWING_DOWN' | 'HARD_BRAKING';
 
@@ -29,13 +30,13 @@ export interface UseStreetModeOptions {
   activeMode: string;
   /** BLE write delegate — injected to keep hook decoupled from BLE layer */
   writeToDevice: ((payload: number[]) => Promise<void | boolean | 'partial'>) | undefined;
-  hwSettings: any;
+  hwSettings: IHardwareSettings | null;
   points: number | undefined;
   activeProduct: string;
   brightness: number;
   speed: number;
   /** deviceContext for analytics logging */
-  deviceContext: Record<string, any>;
+  deviceContext: Record<string, unknown>;
   /** Live GPS speed from global telemetry */
   gpsSpeed: number;
   /** Live peak G-Force from global telemetry */
@@ -74,8 +75,8 @@ export function useStreetMode({
   const [streetCruiseColor, setStreetCruiseColor] = useState<string>('#FF8C00');
   const [streetBrakeColor, setStreetBrakeColor] = useState<string>('#FF0000');
   const [streetDistribution, setStreetDistribution] = useState<[number, number, number]>([0.3, 0.4, 0.3]);
-  const [isStreetBraking, setIsStreetBraking] = useState<boolean>(false);
   const [motionState, setMotionState] = useState<MotionState>('STOPPED');
+  const isStreetBraking = motionState === 'HARD_BRAKING';
 
   const streetBrakingRef = useRef(false);
   const lastAccelRef = useRef({ x: 0, y: 0, z: 0 });
@@ -101,9 +102,9 @@ export function useStreetMode({
   ) => {
     if (!writeToDeviceRef.current) return;
 
-    const pts = hwSettings?.ledPoints || points || 16;
+    const pts = (hwSettings?.ledPoints as number | undefined) || points || 16;
     const profile = LOCAL_PRODUCT_CATALOG.find(p => p.id === activeProduct) || LOCAL_PRODUCT_CATALOG[0];
-    const segments = profile.vizIsMirrored && hwSettings?.segments ? hwSettings.segments : 1;
+    const segments = profile.vizIsMirrored && hwSettings && hwSettings.segments ? (hwSettings.segments as number) : 1;
 
     let cruiseHex = streetCruiseColor;
     if (currMotionState === 'STOPPED') cruiseHex = '#FF0000';
@@ -136,7 +137,9 @@ export function useStreetMode({
     );
 
     if (payload) {
-      writeToDeviceRef.current(payload);
+      writeToDeviceRef.current(payload).catch(e => {
+        AppLogger.error('[useStreetMode] Failed to write pattern to device', e instanceof Error ? e.message : String(e), { payload_size: payload.length, ssi: 0 });
+      });
     }
   }, [hwSettings, points, activeProduct, streetCruiseColor, brightness, speed, streetDistribution, isStreetBraking]);
 
@@ -187,7 +190,6 @@ export function useStreetMode({
       if (Platform.OS !== 'web') Accelerometer.removeAllListeners();
       if (streetBrakingRef.current) {
         streetBrakingRef.current = false;
-        setIsStreetBraking(false);
       }
       return;
     }
@@ -211,12 +213,10 @@ export function useStreetMode({
           AppLogger.log('STREET_JERK_DETECTED', { jerkMag: parseFloat(jerkMag.toFixed(3)), threshold: parseFloat(threshold.toFixed(3)), gpsSpeedMph: gpsSpeedRef.current, ...deviceContext });
         }
         streetBrakingRef.current = true;
-        setIsStreetBraking(true);
         updateMotion('HARD_BRAKING');
       } else {
         if (streetBrakingRef.current) {
           streetBrakingRef.current = false;
-          setIsStreetBraking(false);
           if (lastGpsSpeeds.current[lastGpsSpeeds.current.length - 1] < 1.0) updateMotion('STOPPED');
           else updateMotion('CRUISING');
         } else if (isActivePush && motionStateRef.current !== 'SLOWING_DOWN') {

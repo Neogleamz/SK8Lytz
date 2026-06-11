@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppLogger } from '../services/AppLogger';
 
 const STORAGE_KEY = '@Sk8lytz_RecentLocations';
@@ -16,6 +16,14 @@ export function useRecentSpots() {
   const [recentSpots, setRecentSpots] = useState<RecentSpot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     loadRecents();
@@ -26,15 +34,19 @@ export function useRecentSpots() {
     setError(null);
     try {
       const data = await AsyncStorage.getItem(STORAGE_KEY);
+      if (!isMountedRef.current) return;
       if (data) setRecentSpots(JSON.parse(data));
     } catch (e: unknown) {
+      if (!isMountedRef.current) return;
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.warn('[useRecentSpots] Failed to load recent spots from storage', {
         error: msg,
       });
       setError(msg);
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -53,8 +65,16 @@ export function useRecentSpots() {
       if (parsed.length > 10) parsed = parsed.slice(0, 10);
       
       await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      if (!isMountedRef.current) return;
       setRecentSpots(parsed);
-    } catch {}
+    } catch (e: unknown) {
+      if (!isMountedRef.current) return;
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.warn('[useRecentSpots] Failed to add recent spot', {
+        error: msg,
+      });
+      setError(msg);
+    }
   }, []);
 
   return { recentSpots, addRecentSpot, isLoading, error };

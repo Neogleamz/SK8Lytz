@@ -43,14 +43,18 @@ export const normalizeMac = (rawId: string): string => {
 export const isStale = (ts: number): boolean =>
   Date.now() - ts > 24 * 60 * 60 * 1000;
 
-// Dev-mode Fast Refresh global survival
-const globalAny: any = global;
+interface GlobalWithLedger {
+  __sk8lytz_ledger_cache?: Map<string, DevicePatternState>;
+  __sk8lytz_ledger_timers?: Map<string, NodeJS.Timeout>;
+}
+
+const globalWithLedger = global as unknown as GlobalWithLedger;
 
 /**
  * Module-level in-memory cache shared across all hook instances.
  * Populated on load(), updated on save(). Synchronous — no async penalty.
  */
-const memoryCache: Map<string, DevicePatternState> = globalAny.__sk8lytz_ledger_cache || new Map<string, DevicePatternState>();
+const memoryCache: Map<string, DevicePatternState> = globalWithLedger.__sk8lytz_ledger_cache || new Map<string, DevicePatternState>();
 
 /**
  * Module-level debounce timer map — shared across ALL hook instances.
@@ -58,11 +62,11 @@ const memoryCache: Map<string, DevicePatternState> = globalAny.__sk8lytz_ledger_
  * even when DashboardScreen and DockedController both call save() simultaneously.
  * Previously this was a per-instance useRef, causing independent timers to race.
  */
-const debounceTimers: Map<string, ReturnType<typeof setTimeout>> = globalAny.__sk8lytz_ledger_timers || new Map<string, ReturnType<typeof setTimeout>>();
+const debounceTimers: Map<string, NodeJS.Timeout> = globalWithLedger.__sk8lytz_ledger_timers || new Map<string, NodeJS.Timeout>();
 
 if (__DEV__) {
-  globalAny.__sk8lytz_ledger_cache = memoryCache;
-  globalAny.__sk8lytz_ledger_timers = debounceTimers;
+  globalWithLedger.__sk8lytz_ledger_cache = memoryCache;
+  globalWithLedger.__sk8lytz_ledger_timers = debounceTimers;
 }
 
 // Moved to useEffect inside useDeviceStateLedger
@@ -127,6 +131,7 @@ export function useDeviceStateLedger() {
     memoryCache.set(key, entry);
 
     // Debounced AsyncStorage write — module-level timer map prevents dual-instance race
+    const LEDGER_WRITE_DEBOUNCE_MS = 500;
     const existing = debounceTimers.get(key);
     if (existing) clearTimeout(existing);
 
@@ -135,7 +140,7 @@ export function useDeviceStateLedger() {
         AppLogger.warn('PERSISTENCE', { key: `${KEY_PREFIX}${key}`, event: 'ledger_write_failed', error: (e instanceof Error ? e.message : String(e)) });
       });
       debounceTimers.delete(key);
-    }, 500);
+    }, LEDGER_WRITE_DEBOUNCE_MS);
 
     debounceTimers.set(key, timer);
   }, []);

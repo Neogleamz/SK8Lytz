@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { AppLogger } from '../services/AppLogger';
 import { PermanentCrew, profileService, SessionHistoryItem, UserProfile } from '../services/ProfileService';
@@ -42,6 +42,14 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [editName, setEditName] = useState('');
   const [editUsername, setEditUsername] = useState('');
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   const [profilePhotoUri, setProfilePhotoUri] = useState<string | null>(null);
   const [avatarHue, setAvatarHue] = useState<number>(30);
   const [userEmail, setUserEmail] = useState('');
@@ -68,6 +76,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   const [autoPauseEnabled, setAutoPauseEnabled] = useState(true);
 
   const loadData = useCallback(async () => {
+    if (!isMountedRef.current) return;
     setStatus('loading');
     setAccountError(null);
     try {
@@ -86,6 +95,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
         }),
       ]);
 
+      if (!isMountedRef.current) return;
       if (user) setUserEmail(user.email ?? '');
 
       // Apply notif prefs as soon as they resolve (Phase A complete)
@@ -116,6 +126,8 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
           return [] as import('../services/ProfileService').SessionHistoryItem[];
         }) : Promise.resolve([]),
       ]);
+
+      if (!isMountedRef.current) return;
       AppLogger.log('ACCOUNT_MODAL_DATA_RESOLVED', { hasProfile: !!p, crewCount: c?.length || 0, historyCount: h?.length || 0 });
       if (p) {
         setProfile(p);
@@ -135,6 +147,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       setHistory(h);
       setStatus('success');
     } catch (e: unknown) {
+      if (!isMountedRef.current) return;
       AppLogger.warn('[AccountOverview] loadData error', { error: e instanceof Error ? e.message : String(e)  });
       setAccountError('Failed to load. Tap to retry.');
       setStatus('error');

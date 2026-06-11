@@ -11,6 +11,33 @@ export interface BuilderNode {
   colorHex: string;
 }
 
+export interface CloudScenePayload {
+  activeMode?: ModeType;
+  fixedSubMode?: 'PATTERN' | 'BUILDER';
+  fixedModePattern?: FixedModePattern;
+  selectedColor?: string;
+  selectedPatternId?: number;
+  brightness?: number;
+  speed?: number;
+  multiColors?: string[];
+  multiLength?: number;
+  multiTransition?: number;
+  musicPatternId?: number;
+  musicPrimaryColor?: string;
+  musicSecondaryColor?: string;
+  micSensitivity?: number;
+  micSource?: 'APP' | 'DEVICE';
+  musicMatrixStyle?: number;
+  streetSensitivity?: number;
+  streetCruiseColor?: string;
+  streetBrakeColor?: string;
+}
+
+export interface SpatialSegment {
+  position: 'BACK' | 'FRONT' | 'ALL' | string;
+  color: string;
+}
+
 export function useDockedControllerState(
   initialProduct: ProductType = 'HALOZ',
   /** Optional: synchronous ledger read function for pre-warming state on mount. */
@@ -106,7 +133,7 @@ export function useDockedControllerState(
   const [cloudPublicToggle, setCloudPublicToggle] = useState<boolean>(true);
 
   const applyCloudScene = (
-    scenePayload: any,
+    scenePayload: CloudScenePayload,
     setStreetSensitivity: (v: number) => void,
     setStreetCruiseColor: (v: string) => void,
     setStreetBrakeColor: (v: string) => void
@@ -139,7 +166,7 @@ export function useDockedControllerState(
     musicPatternId: number; musicPrimaryColor: string; musicSecondaryColor: string;
     micSensitivity: number; micSource: 'APP' | 'DEVICE'; musicMatrixStyle: number;
     streetSensitivity: number; streetCruiseColor: string; streetBrakeColor: string;
-    [key: string]: any;
+    [key: string]: unknown;
   };
 
   const captureEntireState = (
@@ -158,7 +185,7 @@ export function useDockedControllerState(
     };
   };
 
-  const applySpatialSegments = (segments: any[]) => {
+  const applySpatialSegments = (segments: SpatialSegment[]) => {
     setActiveMode('MULTIMODE');
     setFixedSubMode('BUILDER');
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Share } from 'react-native';
 import { AppLogger, EventType, LogEntry } from '../services/AppLogger';
 
@@ -77,6 +77,14 @@ export function useAdminTelemetry(visible: boolean) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [stats, setStats] = useState<TelemetryStats | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -84,9 +92,11 @@ export function useAdminTelemetry(visible: boolean) {
         AppLogger.getLogs(),
         AppLogger.getStats()
       ]);
+      if (!isMountedRef.current) return;
       setLogs(allLogs);
       setStats(allStats);
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       AppLogger.warn('[AdminTelemetry] Failed to load telemetry', { error: (err instanceof Error ? err.message : String(err)) });
     }
   }, []);

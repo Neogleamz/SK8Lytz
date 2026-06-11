@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { CrewMemberFull, PermanentCrew, profileService } from '../services/ProfileService';
 import { AppLogger } from '../services/AppLogger';
 
+const SEARCH_DEBOUNCE_MS = 300;
+
 export function useCrewManage(
   myCrews: PermanentCrew[]
 ) {
@@ -80,12 +82,20 @@ export function useCrewManage(
       setUserSearchResults([]);
       return;
     }
+    let active = true;
     const timer = setTimeout(() => {
       profileService.searchUsers(userSearchQuery)
-        .then(setUserSearchResults)
-        .catch((e) => AppLogger.warn('[CrewManage] searchUsers failed', { query: userSearchQuery, error: String(e) }));
-    }, 300);
-    return () => clearTimeout(timer);
+        .then((res) => {
+          if (active) setUserSearchResults(res);
+        })
+        .catch((e) => {
+          if (active) AppLogger.warn('[CrewManage] searchUsers failed', { query: userSearchQuery, error: String(e) });
+        });
+    }, SEARCH_DEBOUNCE_MS);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
   }, [userSearchQuery]);
 
   return {

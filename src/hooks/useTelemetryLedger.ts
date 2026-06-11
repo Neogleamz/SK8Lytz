@@ -129,51 +129,53 @@ export function useTelemetryLedger() {
       // 1. Close any active stopwatch
       closeCurrentState();
 
-    // 2. Add total app time since last flush
-    const elapsedAppTime = Math.round((Date.now() - sessionStartTime.current) / 1000);
-    if (elapsedAppTime > 0) {
-      mergeIntoBuffer({ total_app_time_sec: elapsedAppTime });
-      sessionStartTime.current = Date.now();
-    }
+      // 2. Add total app time since last flush
+      const elapsedAppTime = Math.round((Date.now() - sessionStartTime.current) / 1000);
+      if (elapsedAppTime > 0) {
+        mergeIntoBuffer({ total_app_time_sec: elapsedAppTime });
+        sessionStartTime.current = Date.now();
+      }
 
-    // 3. Load offline buffer from AsyncStorage and merge
-    try {
-      const offlineRaw = await AsyncStorage.getItem(TELEMETRY_BUFFER_KEY);
-      if (offlineRaw) {
-        const offlineData: TelemetryPayload = JSON.parse(offlineRaw);
-        mergeIntoBuffer(offlineData);
+      // 3. Load offline buffer from AsyncStorage and merge
+      try {
+        const offlineRaw = await AsyncStorage.getItem(TELEMETRY_BUFFER_KEY);
+        if (offlineRaw) {
+          const offlineData: TelemetryPayload = JSON.parse(offlineRaw);
+          mergeIntoBuffer(offlineData);
+        }
+      } catch (e: unknown) {
+        // Ignore parse error
+      }
+
+      // If buffer is completely empty, skip network call
+      if (Object.keys(payloadBuffer.current).length === 0) return;
+
+      // Snapshot payload for upload
+      const payloadToUpload = { ...payloadBuffer.current };
+
+      try {
+        // Push to Supabase RPC
+        const { error } = await supabase.rpc('flush_telemetry', { payload: payloadToUpload });
+        if (error) throw error;
+
+        // Success! Clear memory buffer and AsyncStorage
+        payloadBuffer.current = {};
+        await AsyncStorage.removeItem(TELEMETRY_BUFFER_KEY);
+        AppLogger.debug('Telemetry flushed successfully');
+        
+      } catch (err: unknown) {
+        // Failed (e.g., offline). Save back to AsyncStorage to retry later.
+        AppLogger.warn('Telemetry flush failed, buffering locally', err instanceof Error ? err.message : String(err));
+        try {
+          await AsyncStorage.setItem(TELEMETRY_BUFFER_KEY, JSON.stringify(payloadToUpload));
+          // Reset memory buffer so we don't accumulate duplicates if it stays running
+          payloadBuffer.current = {};
+        } catch (storageErr: unknown) {
+          // Fatal storage error
+        }
       }
     } catch (e: unknown) {
-      // Ignore parse error
-    }
-
-    // If buffer is completely empty, skip network call
-    if (Object.keys(payloadBuffer.current).length === 0) return;
-
-    // Snapshot payload for upload
-    const payloadToUpload = { ...payloadBuffer.current };
-
-    try {
-      // Push to Supabase RPC
-      const { error } = await supabase.rpc('flush_telemetry', { payload: payloadToUpload });
-      if (error) throw error;
-
-      // Success! Clear memory buffer and AsyncStorage
-      payloadBuffer.current = {};
-      await AsyncStorage.removeItem(TELEMETRY_BUFFER_KEY);
-      AppLogger.debug('Telemetry flushed successfully');
-      
-    } catch (err: unknown) {
-      // Failed (e.g., offline). Save back to AsyncStorage to retry later.
-      AppLogger.warn('Telemetry flush failed, buffering locally', err instanceof Error ? err.message : String(err));
-      try {
-        await AsyncStorage.setItem(TELEMETRY_BUFFER_KEY, JSON.stringify(payloadToUpload));
-        // Reset memory buffer so we don't accumulate duplicates if it stays running
-        payloadBuffer.current = {};
-      } catch (storageErr: unknown) {
-        // Fatal storage error
-      }
-    }
+      AppLogger.error('[useTelemetryLedger] flushToDatabase failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
     } finally {
       _isFlushingRef.current = false;
     }

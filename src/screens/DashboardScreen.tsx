@@ -52,7 +52,7 @@ import { useDashboardGroups } from '../hooks/useDashboardGroups';
 import { useDashboardProfile } from '../hooks/useDashboardProfile';
 import { useDashboardCrew } from '../hooks/useDashboardCrew';
 
-import { useHardwareNotifications } from '../hooks/useHardwareNotifications';
+import { useHardwareNotifications, BLEDeviceMinimal, ProbedHardwareConfig } from '../hooks/useHardwareNotifications';
 import { useDeviceStateLedger, normalizeMac } from '../hooks/useDeviceStateLedger';
 import { useTelemetryLedger } from '../hooks/useTelemetryLedger';
 import type { DashboardViewState, DeviceSettings, CustomGroup, DisplayDevice } from '../types/dashboard.types';
@@ -231,9 +231,9 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     saveRegisteredDevice,
 
     clearPendingRegistrations,
-    getAllScannedDevices: () => allDevicesRef.current,
-    setAllDevices,
-    allDevicesRef,
+    getAllScannedDevices: () => allDevicesRef.current as unknown as DisplayDevice[],
+    setAllDevices: setAllDevices as unknown as React.Dispatch<React.SetStateAction<DisplayDevice[]>>,
+    allDevicesRef: allDevicesRef as unknown as React.MutableRefObject<DisplayDevice[]>,
     deregisterDevice,
     onRegistrationComplete: () => {
       setViewState('DASHBOARD');
@@ -498,11 +498,11 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   useHardwareNotifications({
     isDiagnosticsMode,
     setOnDataReceived,
-    setOnHardwareProbed,
+    setOnHardwareProbed: (cb) => setOnHardwareProbed((deviceId, cfg) => { if (cfg) cb(deviceId, cfg); }),
     allDevices,
-    setAllDevices,
-    setDeviceConfigs,
-    deviceConfigs,
+    setAllDevices: (updater) => setAllDevices((prev) => updater(prev as unknown as BLEDeviceMinimal[]) as unknown as Device[]),
+    setDeviceConfigs: (updater) => setDeviceConfigs((prev) => updater(prev as Record<string, Record<string, unknown>>) as Record<string, DeviceSettings>),
+    deviceConfigs: deviceConfigs as Record<string, Record<string, unknown>>,
     setLastRawNotification,
   });
 
@@ -788,11 +788,11 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     ledgerSave,
     writeToDevice,
     edgePanResponder,
-    allDevices,
-    setAllDevices,
-    allDevicesRef,
+    allDevices: allDevices as unknown as DisplayDevice[],
+    setAllDevices: setAllDevices as unknown as React.Dispatch<React.SetStateAction<DisplayDevice[]>>,
+    allDevicesRef: allDevicesRef as unknown as React.MutableRefObject<DisplayDevice[]>,
     registeredDevices,
-    saveRegisteredDevice,
+    saveRegisteredDevice: (device) => saveRegisteredDevice(device as RegisteredDevice),
     setUpdateTrigger,
   });
 
@@ -930,7 +930,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     case 'SETUP_WIZARD':
       return (
         <HardwareSetupWizardScreen
-          onSetupComplete={async (devices) => { await handleRegistrationComplete(devices, allDevices); }}
+          onSetupComplete={async (devices) => { await handleRegistrationComplete(devices, allDevices as unknown as DisplayDevice[]); }}
           scanForPeripherals={scanForPeripherals}
           bleState={bleState}
           requestPermissions={requestPermissions}
@@ -1105,7 +1105,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
           isVisible={isSettingsVisible}
           onClose={() => setIsSettingsVisible(false)}
           onSave={saveSettings}
-          initialSettings={selectedDeviceForSettings || {}}
+          initialSettings={selectedDeviceForSettings ? (selectedDeviceForSettings as unknown as DeviceSettings) : { name: '', type: 'HALOZ', grouped: false }}
           groups={customGroups}
           writeToDevice={writeToDevice}
           deviceId={selectedDeviceForSettings?.id}

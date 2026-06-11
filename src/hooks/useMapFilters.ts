@@ -55,7 +55,7 @@ export function useMapFilters() {
     }
   };
 
-  const applyFilters = (spots: any[]) => {
+  const applyFilters = <T extends { facility_type?: string | null }>(spots: T[]): T[] => {
     return spots.filter(spot => {
       const t = spot.facility_type;
       if (t === 'roller_rink') return filters.showRinks;

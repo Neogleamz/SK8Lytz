@@ -8,6 +8,7 @@
 import { useCallback, useContext } from 'react';
 import { BLEContext } from '../context/BLEContext';
 import type { CustomModeStep, MusicConfig, RGB, ProtocolResult } from '../protocols/IControllerProtocol';
+import { AppLogger } from '../services/AppLogger';
 
 export function useProtocolDispatch() {
   const context = useContext(BLEContext);
@@ -27,9 +28,7 @@ export function useProtocolDispatch() {
         : connectedDevices;
 
       if (targets.length === 0) {
-        if (__DEV__) {
-          console.error("🔴 [BLE ORPHAN DISPATCH] _dispatchToDevices called but connectedDevices/targets is empty! This indicates an orphaned hook instance or dead write path.");
-        }
+        AppLogger.error('[useProtocolDispatch] _dispatchToDevices targets empty', new Error('connectedDevices or targets empty'), { payload_size: 0, ssi: 0 });
         return Promise.resolve(true);
       }
 
@@ -129,9 +128,7 @@ export function useProtocolDispatch() {
       : connectedDevices;
 
     if (targets.length === 0) {
-      if (__DEV__) {
-        console.error("🔴 [BLE ORPHAN DISPATCH] executeRawPayload called but connectedDevices/targets is empty! This indicates an orphaned hook instance or dead write path.");
-      }
+      AppLogger.error('[useProtocolDispatch] executeRawPayload targets empty', new Error('connectedDevices or targets empty'), { payload_size: 0, ssi: 0 });
       return Promise.resolve(true);
     }
 

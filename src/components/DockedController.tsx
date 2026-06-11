@@ -22,7 +22,7 @@ import { AppState, Platform, StyleSheet, Text, TouchableOpacity, View, DeviceEve
 import { useAppMicrophone } from '../hooks/useAppMicrophone';
 import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
 import { useCuratedPicks } from '../hooks/useCuratedPicks';
-import { useDockedControllerState } from '../hooks/useDockedControllerState';
+import { useDockedControllerState, SpatialSegment } from '../hooks/useDockedControllerState';
 import { useSharedFavorites } from '../context/FavoritesContext';
 import { useAppConfig } from '../context/AppConfigContext';
 import { useSharedBLE } from '../context/BLEContext';
@@ -171,13 +171,14 @@ interface Sk8lytzControllerProps {
   onPatternChanged?: (patternName: string, snapshot: import('../types/dashboard.types').GroupPatternSnapshot, lastPayload?: number[]) => void;
 }
 
+// Acknowledged Rule S4: Monolithic file edit for hooks-core sweep plan
 export type DockedControllerHandle = {
   applyCloudScene: (scenePayload: Record<string, unknown>) => void;
   loadFavorite: (fav: IFavoriteState) => void;
   setActiveMode: (mode: ModeType) => void;
   setBrightness: (val: number) => void;
   setSpeed: (val: number) => void;
-  applySpatialSegments: (segments: unknown[]) => void;
+  applySpatialSegments: (segments: SpatialSegment[]) => void;
   replayStateToDevice: (deviceId: string) => void;
 };
 
@@ -396,7 +397,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     } = useStreetMode({
       activeMode,
       writeToDevice: parentWriteToDevice,
-      hwSettings,
+      hwSettings: hwSettings ?? null,
       points,
       activeProduct,
       brightness,

@@ -69,8 +69,10 @@ export const useDiagnosticLog = ({
 
   // Load persisted test log on mount
   useEffect(() => {
+    let active = true;
     AsyncStorage.getItem(VERDICT_LOG_KEY).then(raw => {
       try {
+        if (!active) return;
         if (!raw) return;
         const parsed: TestLogEntry[] = JSON.parse(raw);
         setTestLog(parsed);
@@ -84,9 +86,18 @@ export const useDiagnosticLog = ({
         }
         setCoverage(cov);
       } catch (e: unknown) {
-        AppLogger.warn('[useDiagnosticLog] Failed to parse verdict log', { error: (e instanceof Error ? e.message : String(e)) });
+        if (active) {
+          AppLogger.warn('[useDiagnosticLog] Failed to parse verdict log', { error: (e instanceof Error ? e.message : String(e)) });
+        }
       }
-    }).catch(e => AppLogger.warn('[useDiagnosticLog] Failed to load verdict log from storage', e instanceof Error ? e.message : String(e)));
+    }).catch(e => {
+      if (active) {
+        AppLogger.warn('[useDiagnosticLog] Failed to load verdict log from storage', e instanceof Error ? e.message : String(e));
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   // ── RX listener ──────────────────────────────────────────────────────────

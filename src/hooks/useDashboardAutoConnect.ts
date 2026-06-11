@@ -131,6 +131,17 @@ export function useDashboardAutoConnect({
   // ── Continuous observer: connect queued devices as they appear in scan ───
   // Debounce: batch devices that appear within 500ms into a single connectToDevices call.
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const retriggerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      retryTimersRef.current.forEach(clearTimeout);
+      retryTimersRef.current = [];
+      if (retriggerTimerRef.current) clearTimeout(retriggerTimerRef.current);
+    };
+  }, []);
+
   const pendingBatchRef = useRef<Device[]>([]);
   const gateRetryCountRef = useRef(0);
 
@@ -190,7 +201,7 @@ export function useDashboardAutoConnect({
 
         AppLogger.log('BLE_STATE_CHANGE', {
           event: 'auto_connect_observer',
-          devices: batch.map(d => d.name ?? d.id),
+          devices: batch.map(d => scrubPII(d.name ?? d.id)),
         });
 
         connectToDevicesRef.current(batch)
@@ -202,7 +213,7 @@ export function useDashboardAutoConnect({
           })
           .catch((e: unknown) => {
             AppLogger.warn('[AutoConnect] Batch connection failed — re-queueing', {
-              macs: batch.map(d => d.id),
+              macs: batch.map(d => scrubPII(d.id)),
               error: String(e),
             });
 
@@ -223,11 +234,13 @@ export function useDashboardAutoConnect({
                   retry: retries,
                   backoffMs: backoff,
                 });
-                setTimeout(() => {
+                const retryTimerId = setTimeout(() => {
                   if (!autoConnectIdsRef.current.includes(id)) {
                     autoConnectIdsRef.current = [...autoConnectIdsRef.current, id];
                   }
+                  retryTimersRef.current = retryTimersRef.current.filter(t => t !== retryTimerId);
                 }, backoff);
+                retryTimersRef.current.push(retryTimerId);
               } else {
                 AppLogger.warn('[AutoConnect] Max retries exceeded — abandoning', { deviceId: scrubPII(id), retries });
                 autoConnectRetriesRef.current.delete(id);
@@ -316,7 +329,12 @@ export function useDashboardAutoConnect({
       }
 
       if (groupsToProcess.length > 0) {
-        const granted = await requestPermissions();
+        let granted = false;
+        try {
+          granted = await requestPermissions();
+        } catch (e: unknown) {
+          AppLogger.error('[AutoConnect] requestPermissions failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
+        }
         if (granted && !isActuallyConnected) {
           // NOTE: scan is intentionally deferred until AFTER autoConnectIdsRef is
           // populated below. If scan starts first, devices appear in allDevices
@@ -372,7 +390,7 @@ export function useDashboardAutoConnect({
           if (idsToConnect.length > 0) {
             AppLogger.log('BLE_STATE_CHANGE', {
               event: 'auto_connect_queued',
-              fleets: presentGroups.map(g => g.group_name),
+              fleets: presentGroups.map(g => scrubPII(g.group_name)),
               groupCount: presentGroups.length,
               count: idsToConnect.length,
             });
@@ -389,11 +407,15 @@ export function useDashboardAutoConnect({
             // We fire a targeted 8-second burst scan to instantly discover the device.
             if (isRetrigger && burstScan) {
               AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_burst_scan_triggered' });
-              const scanResult = burstScan(8000);
-              if (scanResult && typeof (scanResult as Promise<void>).catch === 'function') {
-                (scanResult as Promise<void>).catch((e: unknown) => {
-                  AppLogger.warn('Auto-connect burst scan failed', e instanceof Error ? e.message : String(e));
-                });
+              try {
+                const scanResult = burstScan(8000);
+                if (scanResult && typeof scanResult.catch === 'function') {
+                  scanResult.catch((e: unknown) => {
+                    AppLogger.warn('Auto-connect burst scan failed', e instanceof Error ? e.message : String(e));
+                  });
+                }
+              } catch (e: unknown) {
+                AppLogger.warn('Auto-connect burst scan threw error', e instanceof Error ? e.message : String(e));
               }
             }
           }
@@ -406,7 +428,11 @@ export function useDashboardAutoConnect({
     syncCloudAndAutoConnectRef.current = syncCloudAndAutoConnect;
 
     // Slight delay to allow Bluetooth stack to fully initialize
-    const timerId = setTimeout(() => syncCloudAndAutoConnect(false), 1500);
+    const timerId = setTimeout(() => {
+      syncCloudAndAutoConnect(false).catch((e: unknown) => {
+        AppLogger.error('[AutoConnect] syncCloudAndAutoConnect failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
+      });
+    }, 1500);
     return () => clearTimeout(timerId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBluetoothSupported, isBluetoothEnabled]);
@@ -431,8 +457,11 @@ export function useDashboardAutoConnect({
       
       // Delay to allow Android/iOS Bluetooth stack to fully transition from suspended to active
       // before blasting a high-power burst scan.
-      setTimeout(() => {
-        syncCloudAndAutoConnectRef.current(true);
+      if (retriggerTimerRef.current) clearTimeout(retriggerTimerRef.current);
+      retriggerTimerRef.current = setTimeout(() => {
+        syncCloudAndAutoConnectRef.current(true).catch((e: unknown) => {
+          AppLogger.error('[AutoConnect] retrigger syncCloudAndAutoConnect failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
+        });
       }, 1500);
     },
   };

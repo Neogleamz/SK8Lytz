@@ -16,7 +16,7 @@
  * hardware binding is possible with Zengge controllers).
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { AppLogger } from '../services/AppLogger';
@@ -78,6 +78,14 @@ export function useRegistration() {
   const [registeredDevices, setRegisteredDevices] = useState<RegisteredDevice[]>([]);
   const [isLoading, setIsLoading]                 = useState(true);
   const [hasPendingSync, setHasPendingSync]       = useState(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const { session } = useAuth();
   const userId = session?.user?.id;
@@ -88,15 +96,22 @@ export function useRegistration() {
   useEffect(() => {
     let isActive = true;
     const boot = async () => {
-      await repo.initialize();
-      if (!isActive) return;
-      setRegisteredDevices(repo.getDevices());
+      try {
+        await repo.initialize();
+        if (!isActive) return;
+        setRegisteredDevices(repo.getDevices());
 
-      // Cloud sync — updates repo in-memory, then we pull fresh state
-      const merged = await repo.syncFromCloud(userId);
-      if (!isActive) return;
-      setRegisteredDevices(merged);
-      setIsLoading(false);
+        // Cloud sync — updates repo in-memory, then we pull fresh state
+        const merged = await repo.syncFromCloud(userId);
+        if (!isActive) return;
+        setRegisteredDevices(merged);
+      } catch (e: unknown) {
+        AppLogger.warn('[useRegistration] Boot initialization or cloud sync failed', {
+          error: e instanceof Error ? e.message : String(e)
+        });
+      } finally {
+        if (isActive) setIsLoading(false);
+      }
     };
     boot();
 
@@ -109,7 +124,7 @@ export function useRegistration() {
       isActive = false;
       unsub();
     };
-  }, []);
+  }, [userId]);
 
 
   // ── Save (upsert) a device ───────────────────────────────────────────────────
@@ -120,10 +135,12 @@ export function useRegistration() {
   const saveRegisteredDevice = async (device: Partial<RegisteredDevice> & { device_mac: string }) => {
     try {
       const ok = await repo.saveDevice(device, userId);
+      if (!isMountedRef.current) return ok;
       setRegisteredDevices(repo.getDevices());
       if (!ok) setHasPendingSync(true);
       return ok;
     } catch (e: unknown) {
+      if (!isMountedRef.current) return false;
       AppLogger.warn('[Registration] Save failed:', e instanceof Error ? e.message : String(e));
       setHasPendingSync(true);
       return false;
@@ -132,63 +149,93 @@ export function useRegistration() {
 
   // ── Save multiple devices at once (first-time wizard) ───────────────────────
   const saveAllRegisteredDevices = useCallback(async (devices: RegisteredDevice[]): Promise<boolean> => {
-    const ok = await repo.saveAllDevices(devices, userId);
-    setRegisteredDevices(repo.getDevices());
-    if (!ok) setHasPendingSync(true);
-    return ok;
-  }, []);
+    try {
+      const ok = await repo.saveAllDevices(devices, userId);
+      if (!isMountedRef.current) return ok;
+      setRegisteredDevices(repo.getDevices());
+      if (!ok) setHasPendingSync(true);
+      return ok;
+    } catch (e: unknown) {
+      if (!isMountedRef.current) return false;
+      AppLogger.warn('[Registration] Save all devices failed:', e instanceof Error ? e.message : String(e));
+      setHasPendingSync(true);
+      return false;
+    }
+  }, [userId]);
 
   // ── Check claim status of a specific device MAC ──────────────────────────────
   const checkDeviceClaimed = useCallback(async (
     deviceMac: string,
     fingerprint?: { firmwareVer?: number; ledVersion?: number; productId?: number }
   ): Promise<ClaimStatus> => {
-    return repo.checkDeviceClaimed(deviceMac, fingerprint, userId);
+    try {
+      return await repo.checkDeviceClaimed(deviceMac, fingerprint, userId);
+    } catch (e: unknown) {
+      AppLogger.warn('[Registration] Check device claimed failed:', e instanceof Error ? e.message : String(e));
+      return 'offline_unknown';
+    }
   }, [userId]);
 
   // ── Deregister (release ownership) ───────────────────────────────────────────
   const deregisterDevice = useCallback(async (deviceMac: string): Promise<void> => {
     try {
       await repo.deleteDevice(deviceMac, userId);
+      if (!isMountedRef.current) return;
       setRegisteredDevices(repo.getDevices());
     } catch (e: unknown) {
+      if (!isMountedRef.current) return;
       AppLogger.warn('[Registration] Deregister failed:', e instanceof Error ? e.message : String(e));
-      Alert.alert('Delete Failed', `Could not remove device: ${(e instanceof Error ? e.message : String(e)) || (e instanceof Error ? e.message : String(e))}`);
+      Alert.alert('Delete Failed', `Could not remove device: ${(e instanceof Error ? e.message : String(e))}`);
     }
-  }, []);
+  }, [userId]);
 
 
   // ── Swap positions of two paired devices ─────────────────────────────────────
   const swapDevicePositions = useCallback(async (mac1: string, mac2: string): Promise<void> => {
-    const d1 = repo.findDevice(mac1);
-    const d2 = repo.findDevice(mac2);
-    if (!d1 || !d2) return;
+    try {
+      const d1 = repo.findDevice(mac1);
+      const d2 = repo.findDevice(mac2);
+      if (!d1 || !d2) return;
 
-    // Swap positions
-    const tmp = d1.position;
-    d1.position = d2.position;
-    d2.position = tmp;
+      // Swap positions
+      const tmp = d1.position;
+      d1.position = d2.position;
+      d2.position = tmp;
 
-    // FIX: Use canonical NamingUtils format
-    d1.device_name = `${getDefaultDeviceName(d1.device_mac)}${d1.position ? ` ${d1.position}` : ''}`;
-    d2.device_name = `${getDefaultDeviceName(d2.device_mac)}${d2.position ? ` ${d2.position}` : ''}`;
+      // FIX: Use canonical NamingUtils format
+      d1.device_name = `${getDefaultDeviceName(d1.device_mac)}${d1.position ? ` ${d1.position}` : ''}`;
+      d2.device_name = `${getDefaultDeviceName(d2.device_mac)}${d2.position ? ` ${d2.position}` : ''}`;
 
-    await repo.saveDevice(d1, userId);
-    await repo.saveDevice(d2, userId);
-    setRegisteredDevices(repo.getDevices());
+      await repo.saveDevice(d1, userId);
+      await repo.saveDevice(d2, userId);
+      if (!isMountedRef.current) return;
+      setRegisteredDevices(repo.getDevices());
+    } catch (e: unknown) {
+      AppLogger.warn('[Registration] Swap positions failed:', e instanceof Error ? e.message : String(e));
+    }
   }, [userId]);
 
   // ── Check if user has ANY registered devices (cloud or local) ────────────────
   const hasCloudRegistrations = useCallback(async (): Promise<boolean> => {
-    return repo.hasRegistrations(userId);
+    try {
+      return await repo.hasRegistrations(userId);
+    } catch (e: unknown) {
+      AppLogger.warn('[Registration] Check registrations failed:', e instanceof Error ? e.message : String(e));
+      return false;
+    }
   }, [userId]);
 
 
 
   // ── Cloud re-sync (exposed for manual refresh) ──────────────────────────────
   const syncFromCloud = useCallback(async () => {
-    const merged = await repo.syncFromCloud(userId);
-    setRegisteredDevices(merged);
+    try {
+      const merged = await repo.syncFromCloud(userId);
+      if (!isMountedRef.current) return;
+      setRegisteredDevices(merged);
+    } catch (e: unknown) {
+      AppLogger.warn('[Registration] Sync from cloud failed:', e instanceof Error ? e.message : String(e));
+    }
   }, [userId]);
 
   return {

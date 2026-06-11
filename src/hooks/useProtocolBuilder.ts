@@ -21,7 +21,8 @@ const TRANSITION_TYPES = [
 /**
  * Safely parse a number from a string or number input, avoiding NaN.
  */
-const safeParseInt = (val: any, fallback: number = 0): number => {
+const safeParseInt = (val: string | number | undefined | null, fallback: number = 0): number => {
+  if (val === null || val === undefined) return fallback;
   const parsed = typeof val === 'string' ? parseInt(val, 10) : val;
   return isNaN(parsed) ? fallback : parsed;
 };
@@ -73,7 +74,9 @@ export const useProtocolBuilder = (_hwPts: number = 16) => {
   const [bld51Seg, setBld51Seg] = useState(false);
 
   // Builder 0x73
-  const [bldMic, setBldMic] = useState(true);
+  const [bldMicSource, setBldMicSource] = useState<'APP' | 'DEVICE'>('DEVICE');
+  const bldMic = bldMicSource === 'DEVICE';
+  const setBldMic = (v: boolean) => setBldMicSource(v ? 'DEVICE' : 'APP');
   const [bldMusicMode, setBldMusicMode] = useState('1');
   const [bldSens, setBldSens] = useState('100');
   const [bldC2, setBldC2] = useState({r:0, g:0, b:255});

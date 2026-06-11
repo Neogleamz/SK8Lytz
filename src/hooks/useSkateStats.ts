@@ -11,14 +11,17 @@ export function useSkateStats(visible: boolean) {
   const [statsLoading, setStatsLoading] = useState(false);
 
   useEffect(() => {
-    if (visible && userId) {
+    let active = true;
+    if (visible) {
       setStatsLoading(true);
 
+      const targetId = userId || 'anonymous';
       // Load from cache first for instant UI
       Promise.all([
-        SpeedTrackingService.getCachedLifetimeStats(userId),
-        SpeedTrackingService.getCachedRecentSessions(userId),
+        SpeedTrackingService.getCachedLifetimeStats(targetId),
+        SpeedTrackingService.getCachedRecentSessions(targetId),
       ]).then(([cachedStats, cachedSessions]) => {
+        if (!active) return;
         if (cachedStats) setLifetimeStats(cachedStats);
         if (cachedSessions && cachedSessions.length > 0) setRecentSessions(cachedSessions);
       });
@@ -28,14 +31,23 @@ export function useSkateStats(visible: boolean) {
         SpeedTrackingService.fetchRecentSessions(userId, 10),
       ])
         .then(([stats, sessions]) => {
+          if (!active) return;
           setLifetimeStats(stats);
           setRecentSessions(sessions);
         })
-        .catch((err) => {
+        .catch((err: unknown) => {
+          if (!active) return;
           AppLogger.error('[useSkateStats] Failed to fetch stats', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
         })
-        .finally(() => setStatsLoading(false));
+        .finally(() => {
+          if (active) {
+            setStatsLoading(false);
+          }
+        });
     }
+    return () => {
+      active = false;
+    };
   }, [visible, userId]);
 
   return {

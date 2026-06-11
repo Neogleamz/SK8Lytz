@@ -23,7 +23,7 @@ import DeviceRepository from '../services/DeviceRepository';
 import GroupRepository from '../services/GroupRepository';
 import { STORAGE_LAST_GROUP_PATTERNS } from '../constants/storageKeys';
 // NOTE: Direct supabase import removed — all cloud writes go through DeviceRepository SSOT.
-import type { CustomGroup, DeviceSettings, GroupModalState, GroupPatternSnapshot } from '../types/dashboard.types';
+import type { CustomGroup, DeviceSettings, GroupModalState, GroupPatternSnapshot, DisplayDevice } from '../types/dashboard.types';
 
 
 interface UseDashboardGroupsOptions {
@@ -40,11 +40,11 @@ interface UseDashboardGroupsOptions {
   /** Called after FTUE setup completes to hide the SetupWizard. */
   onRegistrationComplete: () => void;
   /** Provides real-time access to BLE-scanned devices for provisioning. */
-  getAllScannedDevices: () => any[];
+  getAllScannedDevices: () => DisplayDevice[];
   /** Mirror config-back into useBLE's allDevices state after provisioning. */
-  setAllDevices: (updater: (prev: any[]) => any[]) => void;
+  setAllDevices: React.Dispatch<React.SetStateAction<DisplayDevice[]>>;
   /** Ref that mirrors allDevices for stale-closure-safe access inside callbacks. */
-  allDevicesRef: React.MutableRefObject<any[]>;
+  allDevicesRef: React.MutableRefObject<DisplayDevice[]>;
   deregisterDevice: (mac: string) => Promise<void>;
 }
 
@@ -75,7 +75,7 @@ export interface UseDashboardGroupsResult {
   isRegisteredCollapsed: boolean;
   setIsRegisteredCollapsed: (v: boolean) => void;
   // ─── FTUE registration handler ────────────────────────────────────────────
-  handleRegistrationComplete: (devices: RegisteredDevice[], allBleDevices: any[]) => Promise<void>;
+  handleRegistrationComplete: (devices: RegisteredDevice[], allBleDevices: DisplayDevice[]) => Promise<void>;
   // ─── Provisioning & CRUD (Phase 2–3 migration) ────────────────────────────
   saveGroup: (name: string, deviceIds: string[]) => Promise<void>;
   handleGroupDelete: (id: string) => Promise<void>;
@@ -192,6 +192,14 @@ export function useDashboardGroups({
 
 
 
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // ─── Device configs — 0x63 probe results + user overrides ────────────────
   const [deviceConfigs, setDeviceConfigs] = useState<Record<string, DeviceSettings>>({});
 
@@ -202,6 +210,7 @@ export function useDashboardGroups({
   // and the mount-time load from AsyncStorage.
   useEffect(() => {
     repo.initialize().then(() => {
+      if (!isMountedRef.current) return;
       const configs = repo.getConfigs();
       if (Object.keys(configs).length > 0) {
         setDeviceConfigs(configs);
@@ -210,6 +219,7 @@ export function useDashboardGroups({
 
     // Subscribe: re-read configs on every repo mutation (saveDevice, updateConfig, etc.)
     const unsubscribe = repo.subscribe(() => {
+      if (!isMountedRef.current) return;
       const fresh = repo.getConfigs();
       setDeviceConfigs(prev => {
         // Identity check: only trigger re-render if something actually changed
@@ -247,6 +257,7 @@ export function useDashboardGroups({
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_LAST_GROUP_PATTERNS).then(saved => {
+      if (!isMountedRef.current) return;
       if (saved) {
         try { setLastGroupPatterns(JSON.parse(saved)); } catch (e: unknown) { AppLogger.warn('[Groups] Failed to parse last group patterns', { error: (e instanceof Error ? e.message : String(e)) }); }
       }
@@ -308,11 +319,15 @@ export function useDashboardGroups({
    */
   const handleRegistrationComplete = async (
     devices: RegisteredDevice[],
-    _allBleDevices: any[]
+    _allBleDevices: DisplayDevice[]
   ): Promise<void> => {
     // [Ghost Injection Fix]: We completely remove `migrateLegacyGroups` which was re-injecting 
     // mismatched lower-case MACs from local cache alongside fresh upper-case MACs, bypassing DB UNIQUE constraints.
-    await saveAllRegisteredDevices(devices);
+    try {
+      await saveAllRegisteredDevices(devices);
+    } catch (e: unknown) {
+      AppLogger.error('[useDashboardGroups] saveAllRegisteredDevices failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
+    }
 
     // Groups are derived automatically from registeredDevices via the useEffect derivation loop.
     // Devices carry the correct group_id from the wizard — no manual group creation needed.

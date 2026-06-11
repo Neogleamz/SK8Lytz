@@ -12,7 +12,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     LOCAL_PRODUCT_CATALOG,
     getLocalProfileById,
@@ -21,11 +21,33 @@ import {
 import { supabase } from '../services/supabaseClient';
 import { AppLogger } from '../services/AppLogger';
 import { STORAGE_PRODUCT_CATALOG } from '../constants/storageKeys';
-import type { ProductProfile } from '../types/ProductCatalog';
+import type { ProductProfile, VizShape } from '../types/ProductCatalog';
 
-// ─── Supabase row → ProductProfile mapper ─────────────────────────────────────
+interface ProductCatalogRow {
+  id: string;
+  display_name: string;
+  default_led_points: number;
+  default_segments: number;
+  default_ic_type: number;
+  default_color_sorting: number;
+  hardware_allows_custom_points?: boolean | null;
+  detect_min_points: number;
+  detect_max_points: number;
+  viz_shape: string;
+  viz_default_points: number;
+  viz_blob_diameter_mm: number;
+  viz_base_width: number;
+  viz_base_height: number;
+  viz_strip_count?: number | null;
+  viz_strip_separation?: number | null;
+  viz_strip_orientation?: string | null;
+  viz_is_mirrored?: boolean | null;
+  battery_capacity_milli_ampere_hour?: number | null;
+  viz_theme_color?: string | null;
+  brand_icon?: string | null;
+}
 
-function rowToProfile(row: Record<string, any>): ProductProfile {
+function rowToProfile(row: ProductCatalogRow): ProductProfile {
   return {
     id:                   row.id,
     displayName:          row.display_name,
@@ -36,14 +58,14 @@ function rowToProfile(row: Record<string, any>): ProductProfile {
     hardwareAllowsCustomPoints: row.hardware_allows_custom_points ?? false,
     detectMinPoints:      row.detect_min_points,
     detectMaxPoints:      row.detect_max_points,
-    vizShape:             row.viz_shape,
+    vizShape:             row.viz_shape as VizShape,
     vizDefaultPoints:     row.viz_default_points,
     vizBlobDiameterMm:    row.viz_blob_diameter_mm,
     vizBaseWidth:         row.viz_base_width,
     vizBaseHeight:        row.viz_base_height,
     vizStripCount:        row.viz_strip_count ?? undefined,
     vizStripSeparation:   row.viz_strip_separation ?? undefined,
-    vizStripOrientation:  row.viz_strip_orientation ?? undefined,
+    vizStripOrientation:  row.viz_strip_orientation as "HORIZONTAL" | "VERTICAL" | undefined,
     vizIsMirrored:        row.viz_is_mirrored ?? undefined,
     batteryCapacityMilliAmpereHour: row.battery_capacity_milli_ampere_hour ?? 0,
     vizThemeColor:        row.viz_theme_color ?? undefined,
@@ -55,6 +77,14 @@ function rowToProfile(row: Record<string, any>): ProductProfile {
 
 export function useProductCatalog() {
   const [allProfiles, setAllProfiles] = useState<ProductProfile[]>(LOCAL_PRODUCT_CATALOG);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // ── Boot: load cached catalog from AsyncStorage, then sync from cloud ────────
   useEffect(() => {
@@ -72,6 +102,7 @@ export function useProductCatalog() {
       const raw = await AsyncStorage.getItem(STORAGE_PRODUCT_CATALOG);
       if (raw) {
         const cached: ProductProfile[] = JSON.parse(raw);
+        if (!isMountedRef.current) return;
         if (cached.length > 0) setAllProfiles(cached);
       }
     } catch (e: unknown) {
@@ -96,6 +127,7 @@ export function useProductCatalog() {
       const localOnly = LOCAL_PRODUCT_CATALOG.filter((p: ProductProfile) => !cloudIds.has(p.id));
       const merged = [...cloudProfiles, ...localOnly];
 
+      if (!isMountedRef.current) return;
       setAllProfiles(merged);
       await AsyncStorage.setItem(STORAGE_PRODUCT_CATALOG, JSON.stringify(merged));
     } catch (e: unknown) {

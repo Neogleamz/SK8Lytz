@@ -55,42 +55,53 @@ export function useDashboardCrew({
   useEffect(() => {
     if (!sessionLoaded || !user || hasTriedRejoinRef.current) return;
 
-    const tryRejoin = async (): Promise<(() => void) | undefined> => {
+    let isMounted = true;
+    let unsub: (() => void) | undefined;
+
+    const tryRejoin = async () => {
       try {
         hasTriedRejoinRef.current = true;
         const displayName = user.email?.split('@')[0] || 'Skater';
         const result = await crewService.tryAutoRejoin(displayName, user.id);
-        if (!result) return undefined;
+        
+        if (!isMounted) return;
+        if (!result) return;
 
         const { session, role } = result;
 
         if (role === 'leader') {
-          return crewService.subscribeAsLeader(session.id, () => {});
+          const u = await crewService.subscribeAsLeader(session.id, () => {});
+          if (!isMounted) {
+            u();
+          } else {
+            unsub = u;
+          }
         } else {
-          const unsub = crewService.subscribeAsMember(session.id, (scene) => {
-            onApplyScene(scene);
+          const u = crewService.subscribeAsMember(session.id, (scene) => {
+            if (isMounted) onApplyScene(scene);
           });
+          
+          if (!isMounted) {
+            u();
+            return;
+          }
+          unsub = u;
+
           // Apply last known scene immediately on rejoin
           const lastScene = await crewService.fetchLastScene(session.id).catch(() => null);
-          if (lastScene) {
-            setTimeout(() => onApplyScene(lastScene), 500);
+          if (isMounted && lastScene) {
+            onApplyScene(lastScene);
           }
-          return unsub;
         }
       } catch (e: unknown) {
-        AppLogger.warn('[useDashboardCrew] auto-rejoin failed', { error: (e instanceof Error ? e.message : String(e)) });
+        if (isMounted) {
+          AppLogger.warn('[useDashboardCrew] auto-rejoin failed', { error: (e instanceof Error ? e.message : String(e)) });
+        }
       }
     };
 
-    let isMounted = true;
-    let unsub: (() => void) | undefined;
-    tryRejoin().then(u => {
-      if (!isMounted && u) {
-        u();
-      } else {
-        unsub = u;
-      }
-    });
+    tryRejoin();
+
     return () => {
       isMounted = false;
       if (unsub) unsub();

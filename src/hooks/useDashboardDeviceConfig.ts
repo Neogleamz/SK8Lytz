@@ -7,10 +7,11 @@
  *
  * Extracted from DashboardScreen.tsx (chore/refactor-dashboard-monolith).
  */
-import { MutableRefObject } from 'react';
+import { MutableRefObject, Dispatch, SetStateAction } from 'react';
 import { AppLogger } from '../services/AppLogger';
 import DeviceRepository from '../services/DeviceRepository';
-import type { DeviceSettings } from '../types/dashboard.types';
+import type { DeviceSettings, DisplayDevice } from '../types/dashboard.types';
+import { RegisteredDevice } from './useRegistration';
 
 interface Group {
   id: string;
@@ -18,22 +19,14 @@ interface Group {
   deviceIds: string[];
 }
 
-interface RegisteredDevice {
-  device_mac: string;
-  group_ids?: string[];
-  group_names?: string[];
-  is_pending_sync?: boolean;
-  [key: string]: any;
-}
-
 interface UseDashboardDeviceConfigOptions {
-  selectedDeviceForSettings: { id: string; name: string | null; [key: string]: any } | null;
+  selectedDeviceForSettings: { id: string; name: string | null; [key: string]: unknown } | null;
   customGroups: Group[];
   registeredDevices: RegisteredDevice[];
-  saveRegisteredDevice: (rd: RegisteredDevice) => Promise<boolean>;
-  setAllDevices: (updater: (prev: any[]) => any[]) => void;
-  allDevicesRef: MutableRefObject<any[]>;
-  setUpdateTrigger: (updater: (prev: number) => number) => void;
+  saveRegisteredDevice: (rd: Partial<RegisteredDevice> & { device_mac: string }) => Promise<boolean>;
+  setAllDevices: Dispatch<SetStateAction<DisplayDevice[]>>;
+  allDevicesRef: MutableRefObject<DisplayDevice[]>;
+  setUpdateTrigger: Dispatch<SetStateAction<number>>;
   setIsSettingsVisible: (v: boolean) => void;
 }
 
@@ -55,7 +48,7 @@ export function useDashboardDeviceConfig({
   const saveSettings = async (settings: DeviceSettings): Promise<void> => {
     if (!selectedDeviceForSettings) return;
 
-    const targetMac = (selectedDeviceForSettings.device_mac || selectedDeviceForSettings.id).toUpperCase();
+    const targetMac = String(selectedDeviceForSettings.device_mac || selectedDeviceForSettings.id).toUpperCase();
 
     // ── Group-ID resolution ────────────────────────────────────────────────
     let finalGroupIds = settings.groupIds || [];
@@ -85,13 +78,15 @@ export function useDashboardDeviceConfig({
         ic_type: settings.stripType,
         color_sorting: settings.sorting,
         is_pending_sync: true,
-      }).catch(AppLogger.warn);
+      }).catch((e: unknown) => {
+        AppLogger.warn('saveRegisteredDevice failed: ' + (e instanceof Error ? e.message : String(e)));
+      });
     }
 
     // ── Optimistic device-list update ──────────────────────────────────────
-    setAllDevices((prev: any[]) => {
+    setAllDevices((prev: DisplayDevice[]) => {
       const next = prev.map(d => {
-        const dMac = (d.device_mac || d.id).toUpperCase();
+        const dMac = String(d.device_mac || d.id).toUpperCase();
         return dMac === targetMac
           ? {
               ...d,

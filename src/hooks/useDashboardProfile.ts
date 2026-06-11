@@ -12,6 +12,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState, useRef } from 'react';
+import { STORAGE_AUTH_USERNAME } from '../constants/storageKeys';
 import { AppState, AppStateStatus, Alert } from 'react-native';
 import { AppLogger } from '../services/AppLogger';
 import { AppSettingsMap, AppSettingsService } from '../services/AppSettingsService';
@@ -55,6 +56,15 @@ export function useDashboardProfile({
   const [appSettings, setAppSettings] = useState<AppSettingsMap>({});
   const [authUsername, setAuthUsername] = useState<string | null>(null);
 
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const onCrewJoinNotificationRef = useRef(onCrewJoinNotification);
   useEffect(() => {
     onCrewJoinNotificationRef.current = onCrewJoinNotification;
@@ -75,11 +85,21 @@ export function useDashboardProfile({
 
   // ── App settings — fetched on mount, refreshed on foreground ────────────
   useEffect(() => {
-    AppSettingsService.fetchAllSettings().then(setAppSettings);
-    const sub = AppState.addEventListener('change', (s: AppStateStatus) => {
-      if (s === 'active') AppSettingsService.fetchAllSettings().then(setAppSettings);
+    let active = true;
+    AppSettingsService.fetchAllSettings().then(val => {
+      if (active) setAppSettings(val);
     });
-    return () => sub.remove();
+    const sub = AppState.addEventListener('change', (s: AppStateStatus) => {
+      if (s === 'active') {
+        AppSettingsService.fetchAllSettings().then(val => {
+          if (active) setAppSettings(val);
+        });
+      }
+    });
+    return () => {
+      active = false;
+      sub.remove();
+    };
   }, []);
 
   // ── Push notification init — wires crew join handler ────────────────────
@@ -100,9 +120,13 @@ export function useDashboardProfile({
 
   // ── Stage 1: cached username for instant UI feedback ────────────────────
   useEffect(() => {
-    AsyncStorage.getItem('@Sk8lytz_auth_username').then(val => {
-      if (val && !authUsername) setAuthUsername(val);
-    }).catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_auth_username', event: 'load_failed', error: (e instanceof Error ? e.message : String(e)) }));
+    let active = true;
+    AsyncStorage.getItem(STORAGE_AUTH_USERNAME).then(val => {
+      if (active && val && !authUsername) setAuthUsername(val);
+    }).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_AUTH_USERNAME, event: 'load_failed', error: (e instanceof Error ? e.message : String(e)) }));
+    return () => {
+      active = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -114,7 +138,7 @@ export function useDashboardProfile({
     const sessionEmailPrefix = session?.user?.email?.split('@')[0];
     const fallback = dbDisplay || dbUser || sessionEmailPrefix || 'GUEST';
     setAuthUsername(fallback);
-    AsyncStorage.setItem('@Sk8lytz_auth_username', fallback).catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_auth_username', event: 'save_failed', error: (e instanceof Error ? e.message : String(e)) }));
+    AsyncStorage.setItem(STORAGE_AUTH_USERNAME, fallback).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_AUTH_USERNAME, event: 'save_failed', error: (e instanceof Error ? e.message : String(e)) }));
   }, [userProfile, session]);
 
   const handleLogout = async (): Promise<void> => {
@@ -125,6 +149,7 @@ export function useDashboardProfile({
   const refreshProfile = async (): Promise<void> => {
     try {
       const profile = await profileService.fetchOrCreateProfile(session?.user);
+      if (!isMountedRef.current) return;
       if (profile?.is_banned) {
         Alert.alert(
           'Account Suspended',
@@ -135,6 +160,7 @@ export function useDashboardProfile({
         setUserProfile(profile);
       }
     } catch (e: unknown) {
+      if (!isMountedRef.current) return;
       AppLogger.error('[useDashboardProfile] Profile refresh failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
     }
   };

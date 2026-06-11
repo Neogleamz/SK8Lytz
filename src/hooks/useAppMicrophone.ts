@@ -44,6 +44,14 @@ export function useAppMicrophone({
   const [hasMicPermission, setHasMicPermission] = useState<boolean>(true);
   const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
   const isCapturingRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const writeToDeviceRef = useRef(writeToDevice);
   writeToDeviceRef.current = writeToDevice;
@@ -53,10 +61,12 @@ export function useAppMicrophone({
     isCapturingRef.current = true;
     try {
       const isGranted = await checkPermission('MIC');
+      if (!isMountedRef.current) return;
       setHasMicPermission(isGranted);
       if (!isGranted) {
         await openGlobalPermissionsModal();
         const reG = await checkPermission('MIC');
+        if (!isMountedRef.current) return;
         setHasMicPermission(reG);
         if (!reG) {
           isCapturingRef.current = false;
@@ -69,6 +79,7 @@ export function useAppMicrophone({
         playsInSilentMode: true,
       });
 
+      if (!isMountedRef.current) return;
       await recorder.prepareToRecordAsync();
       recorder.record();
 
@@ -91,16 +102,25 @@ export function useAppMicrophone({
             : prevMagRef.current + 0.4 * (raw - prevMagRef.current);
           prevMagRef.current = smoothed;
 
-          setAudioMagnitude(smoothed);
+          if (isMountedRef.current) {
+            setAudioMagnitude(smoothed);
+          }
 
           // Send to hardware — 0x74 expects 0-150 (ZENGGE §11 decompiler limit)
           const deviceMag = Math.floor(smoothed * 150);
-          if (writeToDeviceRef.current) writeToDeviceRef.current(ZenggeProtocol.sendMusicMagnitude(deviceMag));
+          if (writeToDeviceRef.current) {
+            const payload = ZenggeProtocol.sendMusicMagnitude(deviceMag);
+            writeToDeviceRef.current(payload).catch(e => {
+              AppLogger.error('[useAppMicrophone] Failed to stream magnitude', e instanceof Error ? e.message : String(e), { payload_size: payload.length, ssi: 0 });
+            });
+          }
         }
       }, 50); // 20Hz — hardware needs continuous stream to stay in app-mic mode
     } catch (err: unknown) {
-      AppLogger.error('Failed to start recording', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
-      isCapturingRef.current = false;
+      if (isMountedRef.current) {
+        AppLogger.error('Failed to start recording', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
+        isCapturingRef.current = false;
+      }
     }
   };
 
@@ -141,6 +161,7 @@ export function useAppMicrophone({
   const requestMicPermission = async () => {
     await openGlobalPermissionsModal();
     const reG = await checkPermission('MIC');
+    if (!isMountedRef.current) return;
     setHasMicPermission(reG);
     if (reG && activeMode === 'MUSIC' && micSource === 'APP' && isPoweredOn) {
       startRecording();

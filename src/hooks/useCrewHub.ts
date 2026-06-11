@@ -70,6 +70,8 @@ export function useCrewHub(visible: boolean, step: string) {
     // Attempt to silently grab location if permission exists so map knows where to center initially
     locationService.getSilentLocation().then(coords => {
       if (coords) setLocationCoords(coords);
+    }).catch(err => {
+      AppLogger.warn('[useCrewHub] Silent location acquisition failed', err instanceof Error ? err.message : String(err));
     });
   }, []);
 
@@ -90,10 +92,17 @@ export function useCrewHub(visible: boolean, step: string) {
         const { status } = await Location.getForegroundPermissionsAsync();
         if (status !== 'granted') return null;
 
+        let timerId: ReturnType<typeof setTimeout> | undefined;
+        const timeoutPromise = new Promise<null>(resolve => {
+          timerId = setTimeout(() => resolve(null), GPS_TIMEOUT_MS);
+        });
+
         const pos = await Promise.race<Location.LocationObject | null>([
           Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Low }),
-          new Promise<null>(resolve => setTimeout(() => resolve(null), GPS_TIMEOUT_MS)),
+          timeoutPromise,
         ]);
+
+        if (timerId) clearTimeout(timerId);
 
         if (!pos) return null;
         return { lat: pos.coords.latitude, lng: pos.coords.longitude };

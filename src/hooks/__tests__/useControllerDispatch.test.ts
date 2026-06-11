@@ -24,8 +24,8 @@ jest.mock('../../constants/ProductCatalog', () => ({
   getLocalProfileById: jest.fn(),
 }));
 
-// Helper to ignore the sequence number (byte index 1) which drifts in ZenggeProtocol singleton
 function expectPayloadMatch(mockFn: jest.Mock, expectedPayload: number[], extraArgs: any[] = []) {
+  console.log('[DEBUG expectPayloadMatch] mockFn.mock.calls =', JSON.stringify(mockFn.mock.calls.map(c => [c[0]?.slice?.(0, 10), c[1], c[2]])));
   if (expectedPayload) {
     expectedPayload[1] = expect.any(Number) as any;
   }

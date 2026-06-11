@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { GradientsService } from '../services/GradientsService';
 import { CustomBuilderPreset } from '../protocols/PositionalMathBuffer';
@@ -16,20 +16,32 @@ export function useGradients() {
   const [status, setStatus] = useState<GradientStatus>('loading');
   const [error, setError] = useState<string | null>(null);
   const isLoading = status === 'loading';
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const loadGradients = useCallback(async () => {
     try {
       setStatus('loading');
       setError(null);
       const data = await GradientsService.getSavedGradients(userId);
+      if (!isMountedRef.current) return;
       setGradients(data);
     } catch (e: unknown) {
+      if (!isMountedRef.current) return;
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.error('USE_GRADIENTS_LOAD_ERROR', msg, { payload_size: 0, ssi: 0 });
       setError(msg);
       setStatus('error');
     } finally {
-      setStatus(prev => prev === 'loading' ? 'success' : prev);
+      if (isMountedRef.current) {
+        setStatus(prev => prev === 'loading' ? 'success' : prev);
+      }
     }
   }, [userId]);
 

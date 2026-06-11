@@ -20,6 +20,7 @@ import { IControllerProtocol } from '../protocols/IControllerProtocol';
 import { AppLogger } from '../services/AppLogger';
 import { hexToRgb } from '../utils/ColorUtils';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
+import type { IHardwareSettings } from '../types/dashboard.types';
 
 /**
  * LRU Cache for pattern payloads to avoid re-running the Math Synthesizer on repeat taps.
@@ -28,11 +29,11 @@ import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
  */
 const patternPayloadCache = new Map<string, number[]>();
 
-type WriteFn = (payload: number[], targetDeviceId?: string | Record<string, any>, override?: Record<string, any>) => Promise<boolean | 'partial' | void>;
+type WriteFn = (payload: number[], targetDeviceId?: string | Record<string, unknown>, override?: Record<string, unknown>) => Promise<boolean | 'partial' | void>;
 
 interface UseControllerDispatchParams {
   writeToDevice?: WriteFn;
-  hwSettings?: any;
+  hwSettings?: IHardwareSettings | null;
   points?: number;
   getAdapterForDevice?: (mac: string) => IControllerProtocol | undefined;
   primaryDeviceId?: string;
@@ -45,7 +46,20 @@ interface UseControllerDispatchParams {
  */
 export function useControllerDispatch({ writeToDevice, hwSettings, points, getAdapterForDevice, primaryDeviceId, connectedDevices = [] }: UseControllerDispatchParams) {
   /** Resolve LED count from hw config or fallback */
-  const numLEDs = Math.max(1, hwSettings?.ledPoints || points || 16);
+  const numLEDs = Math.max(1, (hwSettings?.ledPoints as number | undefined) || points || 16);
+
+  const safeWrite = useCallback(
+    (payload: number[], targetId?: string, override?: Record<string, unknown>) => {
+      if (!writeToDevice) return;
+      const promise = override !== undefined
+        ? writeToDevice(payload, targetId, override)
+        : writeToDevice(payload, targetId);
+      promise.catch((e: unknown) => {
+        AppLogger.error('[useControllerDispatch] BLE write failed', e instanceof Error ? e.message : String(e), { payload_size: payload.length, ssi: 0 });
+      });
+    },
+    [writeToDevice]
+  );
 
   // DEV diagnostic: Detect when numLEDs resolves from product defaults instead of EEPROM probe.
   // If this fires, the EEPROM 0x63 response hasn't populated hwSettings before the first dispatch.
@@ -74,17 +88,18 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       }
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       targets.forEach(device => {
+        console.log('[DEBUG sendColor] device.id =', device.id, typeof device.id);
         const adapter = getAdapterForDevice?.(device.id);
         if (adapter) {
           const result = adapter.buildSolidColor(r, g, b);
-          result.packets.forEach(p => writeToDevice(p, device.id));
+          result.packets.forEach(p => safeWrite(p, device.id));
         } else {
           const arr = Array.from({ length: numLEDs }, () => ({ r, g, b }));
-          writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSettings?.ledPoints || points || 16, 31, 1, 0x01), device.id); // 0x01 = FREEZE
+          safeWrite(ZenggeProtocol.setMultiColor(arr, (hwSettings?.ledPoints as number | undefined) || points || 16, 31, 1, 0x01), device.id); // 0x01 = FREEZE
         }
       });
     },
-    [writeToDevice, numLEDs, hwSettings, points, connectedDevices, getAdapterForDevice, primaryDeviceId]
+    [writeToDevice, safeWrite, numLEDs, hwSettings, points, connectedDevices, getAdapterForDevice, primaryDeviceId]
   );
 
   /**
@@ -154,10 +169,10 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
           }
         }
 
-        if (payload) writeToDevice(payload, device.id);
+        if (payload) safeWrite(payload, device.id);
       });
     },
-    [writeToDevice, sendColor, clampSpeed, numLEDs, getAdapterForDevice, primaryDeviceId, connectedDevices]
+    [writeToDevice, safeWrite, sendColor, clampSpeed, numLEDs, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
 
   /** Apply static/strobe/blink mode pattern */
@@ -192,9 +207,9 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
           const adapter = getAdapterForDevice?.(device.id);
           if (adapter) {
             const result = adapter.buildCustomMode([{ mode: ZenggeProtocol.STEP_STROBE, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }]);
-            result.packets.forEach(p => writeToDevice(p, device.id));
+            result.packets.forEach(p => safeWrite(p, device.id));
           } else {
-            writeToDevice(ZenggeProtocol.setCustomModeCompact([
+            safeWrite(ZenggeProtocol.setCustomModeCompact([
               { mode: ZenggeProtocol.STEP_STROBE, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }
             ]), device.id);
           }
@@ -202,16 +217,16 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
           const adapter = getAdapterForDevice?.(device.id);
           if (adapter) {
             const result = adapter.buildCustomMode([{ mode: ZenggeProtocol.STEP_JUMP, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }]);
-            result.packets.forEach(p => writeToDevice(p, device.id));
+            result.packets.forEach(p => safeWrite(p, device.id));
           } else {
-            writeToDevice(ZenggeProtocol.setCustomModeCompact([
+            safeWrite(ZenggeProtocol.setCustomModeCompact([
               { mode: ZenggeProtocol.STEP_JUMP, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }
             ]), device.id);
           }
         }
       });
     },
-    [writeToDevice, sendColor, getAdapterForDevice, primaryDeviceId, connectedDevices]
+    [writeToDevice, safeWrite, sendColor, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
 
   /**
@@ -231,7 +246,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
         return;
       }
       const factor = bright / 100;
-      const profile = getLocalProfileById(hwSettings?.type || '');
+      const profile = getLocalProfileById((hwSettings?.type as string | undefined) || '');
       const isRingShape = profile?.vizShape === 'RING';
       const hwSpd = Math.min(spd, 31); // 31 is max anim speed for Zengge
 
@@ -261,14 +276,14 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       targets.forEach(device => {
         const adapter = getAdapterForDevice?.(device.id);
         if (adapter) {
-          const result = adapter.buildMultiColor(arr, hwSettings?.ledPoints || numLEDs, hwSpd, 1, 0x02);
-          result.packets.forEach(p => writeToDevice(p, device.id));
+          const result = adapter.buildMultiColor(arr, (hwSettings?.ledPoints as number | undefined) || numLEDs, hwSpd, 1, 0x02);
+          result.packets.forEach(p => safeWrite(p, device.id));
         } else {
-          writeToDevice(ZenggeProtocol.setMultiColor(arr, hwSettings?.ledPoints || numLEDs, hwSpd, 1, 0x02), device.id);
+          safeWrite(ZenggeProtocol.setMultiColor(arr, (hwSettings?.ledPoints as number | undefined) || numLEDs, hwSpd, 1, 0x02), device.id);
         }
       });
     },
-    [writeToDevice, hwSettings, numLEDs, getAdapterForDevice, primaryDeviceId, connectedDevices]
+    [writeToDevice, safeWrite, hwSettings, numLEDs, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
 
   /** Send music mode configuration to hardware */
@@ -316,9 +331,9 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
             brightness: bright,
             speed: 50
           });
-          result.packets.forEach(p => writeToDevice(p, device.id, { micSource: src }));
+          result.packets.forEach(p => safeWrite(p, device.id, { micSource: src }));
         } else {
-          writeToDevice(ZenggeProtocol.setMusicConfig(
+          safeWrite(ZenggeProtocol.setMusicConfig(
             patternId,
             matrix === 0x27 ? 0x27 : 0x26,
             src === 'DEVICE',
@@ -330,7 +345,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
         }
       });
     },
-    [writeToDevice, getAdapterForDevice, primaryDeviceId, connectedDevices]
+    [writeToDevice, safeWrite, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
 
   /** Send power on/off command */
@@ -346,13 +361,13 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
         const adapter = getAdapterForDevice?.(device.id);
         if (adapter) {
           const result = isOn ? adapter.buildPowerOn() : adapter.buildPowerOff();
-          result.packets.forEach(p => writeToDevice(p, device.id));
+          result.packets.forEach(p => safeWrite(p, device.id));
         } else {
-          writeToDevice(isOn ? ZenggeProtocol.turnOn() : ZenggeProtocol.turnOff(), device.id);
+          safeWrite(isOn ? ZenggeProtocol.turnOn() : ZenggeProtocol.turnOff(), device.id);
         }
       });
     },
-    [writeToDevice, getAdapterForDevice, primaryDeviceId, connectedDevices]
+    [writeToDevice, safeWrite, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
 
   /** Send multi-color array (used by BUILDER mode, favorites restore) */
@@ -368,13 +383,13 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
         const adapter = getAdapterForDevice?.(device.id);
         if (adapter) {
           const result = adapter.buildMultiColor(colors, ledPoints, speed, direction, transitionType);
-          result.packets.forEach(p => writeToDevice(p, device.id));
+          result.packets.forEach(p => safeWrite(p, device.id));
         } else {
-          writeToDevice(ZenggeProtocol.setMultiColor(colors, ledPoints, speed, direction, transitionType), device.id);
+          safeWrite(ZenggeProtocol.setMultiColor(colors, ledPoints, speed, direction, transitionType), device.id);
         }
       });
     },
-    [writeToDevice, getAdapterForDevice, primaryDeviceId, connectedDevices]
+    [writeToDevice, safeWrite, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
 
   return {
