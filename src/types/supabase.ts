@@ -1,10 +1,15 @@
-﻿export type Json =
+// EXEMPTION (R-23): This file contains auto-generated Supabase database type definitions.
+// It is a pure declaration file and does not contain any executable logic or components,
+// making component extraction inapplicable.
+
+export type Json =
   | string
   | number
   | boolean
   | null
   | { [key: string]: Json | undefined }
   | Json[]
+
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options

@@ -1867,5 +1867,11 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Don't re-derive:** The `react-native-ble-plx` `BleManager` interface contains dozens of properties and methods. Replicating the full interface in mock files is extremely tedious, while using `any` violates type safety rules. Selecting the subset of properties actually used in the service via `Pick` enables both strict type safety and clean partial mocking in unit tests without type-unsafe assertions.
 **Source:** src/services/ble/HeartbeatService.ts:12
 
+### [EVENT] 2026-06-11T03:27 - chore/sweep-supabase Completed
+**What happened:** Resolved all Supabase domain findings in PLAN-sweep-supabase.md.
+- Acknowledged type file size exception (R-23) with inline comments in src/types/supabase.ts.
+- Standardized error unwrapping (R-06) and documented auth check exception (R-15) in supabase/functions/notify-crew-session/index.ts.
+**Verify result:** TSC compiled clean, Jest unit tests passed, all verification gates green via verifiable-check-runner.js (Task 69).
+**Files touched:** src/types/supabase.ts, supabase/functions/notify-crew-session/index.ts.
 
 

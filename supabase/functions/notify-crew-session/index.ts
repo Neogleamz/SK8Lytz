@@ -24,6 +24,9 @@ Deno.serve(async (req: Request) => {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return new Response("Unauthorized", { status: 401 });
 
+  // EXEMPTION (R-15): This is a server-side Supabase Edge Function running in Deno.
+  // It has no access to the React Native AuthContext, so it must authenticate the caller
+  // directly by verifying the JWT via GoTrue server-side.
   const { data: { user }, error: authErr } = await supabase.auth.getUser(
     authHeader.replace("Bearer ", ""),
   );
@@ -105,7 +108,10 @@ Deno.serve(async (req: Request) => {
       else console.error(`[notify-crew-session] Expo error:`, await resp.text());
     }
   } catch (error) {
-    console.error(`[notify-crew-session] Network fetch failed:`, error);
+    console.error(
+      `[notify-crew-session] Network fetch failed:`,
+      error instanceof Error ? error.message : String(error)
+    );
   }
 
   return new Response(JSON.stringify({ sent }), {
