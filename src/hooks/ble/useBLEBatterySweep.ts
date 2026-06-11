@@ -64,6 +64,13 @@ export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepPr
     if (Platform.OS === 'web' || !bleManager) return;
     if (isSweeperActiveRef.current) return;
 
+    // Guard must be set synchronously — Battery.getBatteryLevelAsync() is async.
+    // Without this, concurrent startSweeper() calls all pass the guard before
+    // the first promise resolves, causing multiple SCAN_START events → mScannerId=0
+    // corruption on Android, silently killing all scan results (VS-005).
+    isSweeperActiveRef.current = true;
+    setIsSweeperActive(true);
+
     if (burstTimerRef.current) { clearTimeout(burstTimerRef.current); burstTimerRef.current = null; }
 
     Battery.getBatteryLevelAsync().then(level => {
@@ -73,11 +80,13 @@ export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepPr
 
       if (tier === 'PAUSED') {
         AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_start_blocked_low_battery', batteryLevel: Math.round(level * 100) });
+        // Reset — scan was blocked by low battery. Allow retry once battery recovers.
+        isSweeperActiveRef.current = false;
+        setIsSweeperActive(false);
         return;
       }
 
-      isSweeperActiveRef.current = true;
-      setIsSweeperActive(true);
+      // isSweeperActiveRef.current is already true (set synchronously above)
       AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_start', batteryTier: tier, batteryLevel: Math.round(level * 100) });
 
       if (Platform.OS === 'android' && (Platform.Version as number) >= 31) {
