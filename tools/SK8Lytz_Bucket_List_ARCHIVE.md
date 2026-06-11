@@ -1800,3 +1800,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "Leave as-is — rejected; duplication confuses agents and the second header block (`# Industry Benchmarks`) causes parsing errors in synthesis workflows"
   - **Source of Truth:** 📖 [INDUSTRY_BENCHMARKS.md:L1-L125](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/INDUSTRY_BENCHMARKS.md)
   - **Details:** 2-minute surgical fix. Read full file, identify exact duplicate range, remove second copy, commit. No content loss — only duplicate removal.
+
+- [x] **`fix/session-machine-actor-types`** — *Merged to master @ 8f482d06*
+  - **Tags:** `[✅ READY]` `[🤖 INFERRED]` `[🧪 LAB]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 MEDIUM]` `[BATCH:session-xstate-hardening]` `[WAVE:1A]`
+  - **Goal:** Type all 4 `fromCallback<any>` actor calls to `SessionMachineEvent`, remove 10s `syncWatchStopped` delay, fix ENDING notification buttons.
+  - **Decision Log:** Post-merge audit 2026-06-11 found `fromCallback<any, ...>` on AutoPauseService L9, SensorService L18, HealthService L12, NotificationService L18 — suppresses type checking on sendBack events. syncWatchStopped 10s delay creates race if new session starts within window. ENDING phase shows contextually wrong action buttons.
+  - **Analysis:** 📊 Source: [session_xstate_audit.md](file:///C:/Users/Magma/.gemini/antigravity/brain/215f67ea-4c87-4823-b1ce-c91d7ed5e78c/session_xstate_audit.md) · Plan: [PLAN-fix-session-machine-actor-types.md](./plans/PLAN-fix-session-machine-actor-types.md)
+    Key finding: "4 actors emit untyped sendBack events; 1 machine action has a 10s race window; ENDING notification shows wrong buttons"
+    Rejected alternative: "Add // @ts-ignore to suppress" — violates No any Cast Law (S3)
+  - **Source of Truth:** 📖 [SessionMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/session/SessionMachine.ts#L127-L131) `syncWatchStopped` · [AutoPauseService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/session/AutoPauseService.ts#L9) · [NotificationService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/session/NotificationService.ts#L42-L71)
+  - **Details:** All 4 actor files share `SessionMachine.ts` as their parent consumer — AST confirmed these must run in one worktree. `SessionMachineEvent` type exists in `SessionMachine.types.ts` and is the correct sendBack type. The ENDING fix adds an early-return branch before the isPaused branch in NotificationService.
