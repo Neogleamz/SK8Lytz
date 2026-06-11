@@ -1,3 +1,4 @@
+// TODO: [R-23] Extract logic to smaller components (Monolith limit exceeded)
 /**
  * DeviceRepository.ts — Single Source of Truth for Device & Group Persistence
  *
