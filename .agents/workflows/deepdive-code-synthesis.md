@@ -109,36 +109,41 @@ Write this report to `artifacts/system_audit_report.md` as the header section.
 
 ---
 
-### 🌊 Phase 2.75 — Parallel Wave Assignment (MANDATORY before Phase 3)
+### 🌊 Phase 2.75 — Parallel Wave Assignment (AST-Verified — MANDATORY before Phase 3)
 
 This phase prevents VS-014 (parallel worktree file collision). It MUST run before any task is written to the Bucket List.
 
-#### Step 1: Build the File Manifest
-For every task cluster drafted in Phase 3 Step 2, collect the complete list of files it will modify (from the cluster's `Affected Files` list in the audit report). Use `grep_search` or an AST parsing script (`node tools/ast-parser.js`) to find all files that `import` the affected files, limiting to immediate parent/child imports to avoid blowing up context window.
+#### Step 1: Write the Domain Clusters JSON
+After completing Phase 2 Orthogonal Clustering, write the clusters to disk:
+```
+artifacts/domain_clusters.json  ← { "domain-name": [findings...], ... }
+```
 
-#### Step 2: Compute the Collision Matrix
-For every pair of clusters A and B:
-- Compute the collision not just as "Task A and Task B edit the same file", but "Task A edits File X, and Task B edits File Y, but File Y depends on File X".
-- If an import path overlaps or `|intersection(A.files, B.files)| ≥1` → they are a **collision pair** (cannot run in parallel worktrees).
-- Log all collision pairs.
+#### Step 2: Run the AST Collision Tool
+```powershell
+node tools/ast-parser.js --collision-matrix artifacts/domain_clusters.json
+```
+This tool:
+- Walks the real TypeScript import tree (not filename overlap)
+- Detects import-dependency collisions between domains
+- Applies greedy graph coloring to assign `[WAVE:N]` tags
+- Enforces the 8-task swarm cap automatically (Rule 10)
+- Outputs JSON with `wave_assignments` and `waves`
 
-#### Step 3: Graph Coloring → Wave Assignment
-Model the clusters as graph nodes. Add an edge between every collision pair. Apply greedy graph coloring:
-- Wave 1 = all nodes with no edges to each other (parallel-safe)
-- Wave 2 = next independent set after removing Wave 1 nodes
-- Continue until all clusters are assigned
+**Manual collision calculation is FORBIDDEN.** Always use the tool output.
 
-#### Step 4: Output the Batch Strategy Table
-Write the following table into the `artifacts/system_audit_report.md` before the triage section, AND into the Bucket List anchor block when tasks are appended:
+#### Step 3: Output the Batch Strategy Table
+From the tool's `waves` output, write this table into `artifacts/system_audit_report.md` AND the Bucket List anchor block:
 ```
 | Wave | Task Clusters | Parallel-Safe? | Prerequisite |
 |------|--------------|---------------|-------------------|
-| 1    | cluster-A, cluster-B | ✅ Yes | None |
-| 2    | cluster-C    | N/A (solo)     | Wave 1 merged |
+| 1    | cluster-A    | Solo           | None              |
+| 2    | cluster-B, cluster-C | ✅ Yes | Wave 1 merged |
 ```
 
-#### Step 5: Assign `[WAVE:N]` Tags
-Every cluster gets a `[WAVE:N]` tag before being written to the Bucket List. No cluster may be written without a wave assignment.
+#### Step 4: Assign `[WAVE:N]` Tags
+Use the tool's `wave_assignments` map. Every cluster gets a `[WAVE:N]` tag before being written to the Bucket List. No cluster may be written without a wave assignment from the tool.
+
 
 ---
 

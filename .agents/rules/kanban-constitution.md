@@ -44,19 +44,16 @@ Completion stamp protocol + pre-merge verification matrix → see `/start-task` 
 - Tasks MUST NOT be appended to the Bucket List with `*(pending)*` plans or `[❌ UNVERIFIED]` status.
 - Every new task MUST go through an explicit planning workflow (like `/intake`) to generate an approved `PLAN-*.md` BEFORE it enters the `TRIAGE QUEUE`. No unverified brain-dumps.
 
-**8. Parallel Wave Safety (VS-014):**
-- When a synthesis workflow (e.g., `/deepdive-code-synthesis`) generates multiple task clusters from the same codebase sweep, the agent MUST perform a **file-collision analysis** before writing tasks to the Bucket List.
-- **The Collision Check:** For every pair of clusters, compute the intersection of their `Affected Files` lists. Any pair sharing ≥1 file is a **collision pair** and CANNOT run in parallel worktrees.
-- **Wave Assignment:** Assign each cluster a `[WAVE:N]` tag using graph coloring (greedy): collision pairs must be in different waves. Tasks with zero collisions may share Wave 1.
+**8. Parallel Wave Safety (VS-014) — AST-Verified:**
+- When a synthesis workflow generates multiple task clusters, the agent MUST run the AST collision tool BEFORE writing tasks to the Bucket List:
+  ```
+  node tools/ast-parser.js --collision-matrix <domain_clusters.json>
+  ```
+- **The Collision Check:** The tool computes the real import dependency graph — not just file name overlap. If Domain A imports a file in Domain B, they are a **collision pair** and CANNOT run in parallel worktrees.
+- **Wave Assignment:** Assign each cluster a `[WAVE:N]` tag from the tool's `wave_assignments` output. Manual guessing is FORBIDDEN.
 - **The Wave Tag Format:** Add `[WAVE:N]` to the Tags line of every synthesized task. Add `Prerequisite: Wave N-1 fully merged` to the task's Details field for any Wave N > 1.
-- **The Batch Strategy Table:** Every multi-cluster synthesis MUST output a Batch Strategy Table in the Bucket List anchor block:
-  ```
-  | Wave | Tasks | Parallel-Safe? | Prerequisite |
-  |------|-------|---------------|-------------------|
-  | 1    | A, B  | ✅ Yes         | None              |
-  | 2    | C     | N/A (solo)     | Wave 1 merged     |
-  ```
-- ⛔ FORBIDDEN: Assigning `[WAVE:1]` to two tasks that share a file. This is the sub-agent equivalent of VS-001 (parallel worktree gatekeeper divergence).
+- **The Batch Strategy Table:** Every multi-cluster synthesis MUST output the tool's `waves` output as a Batch Strategy Table in the Bucket List anchor block.
+- ⛔ FORBIDDEN: Assigning `[WAVE:1]` to two tasks that share an import dependency. This is the sub-agent equivalent of VS-001.
 
 
 **9. The Plan Completeness Gate (Anti-Skimping Law):**
@@ -67,3 +64,14 @@ Completion stamp protocol + pre-merge verification matrix → see `/start-task` 
 **10. The Parallel Swarm Limit (CPU Protection):**
 - You are **STRICTLY FORBIDDEN** from assigning more than 8 parallel tasks to a single `[WAVE:N]` tag. 
 - If orthogonal batching generates 15 parallel-safe tasks, they MUST be mathematically split into two waves (e.g., Wave 1 = 8 tasks, Wave 2 = 7 tasks) to prevent CPU/Memory exhaustion and Git index locking during parallel Verification.
+- The `ast-parser.js` tool enforces this cap automatically in its output.
+
+**11. The Pre-Execution Intake Checklist Gate (No-Launch-Without-Clearance):**
+- `/start-task` and `/goal` are **STRICTLY FORBIDDEN** from creating a worktree or invoking a subagent for any task that fails ANY of these checks:
+  1. ✅ Task status is `[✅ READY]` — NOT `[❌ UNVERIFIED]` or `[📝 NEEDS PLAN]`
+  2. ✅ `Source of Truth:` field is present and does NOT contain `[PENDING]`
+  3. ✅ `PLAN-*.md` file exists at the path listed in `Source of Truth`
+  4. ✅ `Decision Log:` field is filled — not empty, not `"TBD"`
+  5. ✅ `[WAVE:N]` tag is present and was assigned by `ast-parser.js` (not manually guessed)
+  6. ✅ For Wave N > 1: all Wave N-1 tasks are confirmed merged to master
+- **If any check fails:** Output the specific failure and HALT. Do NOT proceed. Route back to `/intake` to resolve.

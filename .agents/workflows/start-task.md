@@ -48,6 +48,30 @@ Context: SoT is primed. Casey takes over sprint coordination from this point.
 
 ---
 
+### 📋 Scrum — Casey | Phase 0.5: Pre-Execution Intake Checklist Gate
+
+**🛑 MANDATORY HARD GATE — runs before ANY worktree creation or subagent launch.**
+**This enforces Kanban Constitution Rule 11. If ANY check fails, HALT immediately.**
+
+For the target task, run this 6-point checklist and output the result:
+
+```
+Pre-Execution Gate for <slug>:
+[1] Status = [✅ READY]?          → YES / NO — current: <actual status>
+[2] Source of Truth present?       → YES / NO — value: <actual SoT value>
+[3] PLAN-*.md file exists on disk? → YES / NO — checked: <plan file path>
+[4] Decision Log filled?           → YES / NO — value: <first 10 words of log>
+[5] [WAVE:N] tag present?          → YES / NO — wave: <N>
+[6] Wave N-1 merged? (if N>1)      → YES / N/A — last master commit: <hash>
+```
+
+- **ALL 6 = YES/N/A** → Output `"✅ Intake Gate CLEARED — proceeding to worktree creation."` and continue.
+- **ANY = NO** → Output the specific failure(s) and HALT with:
+  *"🛑 Intake Gate FAILED on check [N]. This task is not ready to execute. Route back to `/intake` to resolve: [specific field missing]."*
+  Do NOT create a worktree. Do NOT invoke a subagent. Wait for user instruction.
+
+---
+
 ### 📋 Scrum — Casey | Phase 1: Triage & Setup
 
 1. **Target Identification (Batch-Aware)**:
