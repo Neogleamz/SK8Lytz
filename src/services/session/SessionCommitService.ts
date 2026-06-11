@@ -77,6 +77,8 @@ export const sessionCommitService = fromPromise<void, SessionCommitServiceInput>
         err instanceof Error ? err.message : String(err),
         { payload_size: 0, ssi: 0 }
       );
+      // Notify consumer even on DB failure so the session phase exits ENDING cleanly
+      input.onSessionSaved();
     }
   } else {
     AppLogger.log('GLOBAL_SESSION_DISCARDED', {
