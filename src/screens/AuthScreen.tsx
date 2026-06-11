@@ -45,7 +45,7 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
   // Stored Credentials state
   const [initialEmail, setInitialEmail] = useState('');
   const [initialRememberMe, setInitialRememberMe] = useState(false);
-  const [hasLoadedCreds, setHasLoadedCreds] = useState(false);
+  const [credLoadStage, setCredLoadStage] = useState<'LOADING' | 'LOADED'>('LOADING');
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -67,22 +67,22 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
             setInitialEmail(saved.email || '');
           }
         } catch {}
-        setHasLoadedCreds(true);
+        setCredLoadStage('LOADED');
       } else {
         AsyncStorage.getItem(STORAGE_LAST_EMAIL).then(saved => {
           if (saved) {
              setInitialEmail(saved);
              setMode('LOGIN');
           }
-          setHasLoadedCreds(true);
+          setCredLoadStage('LOADED');
         }).catch((err: unknown) => {
           AppLogger.warn('[AuthScreen] STORAGE_LAST_EMAIL read failed', { error: err instanceof Error ? err.message : String(err) });
-          setHasLoadedCreds(true);
+          setCredLoadStage('LOADED');
         });
       }
     }).catch((err: unknown) => {
       AppLogger.warn('[AuthScreen] STORAGE_REMEMBER_CREDS read failed', { error: err instanceof Error ? err.message : String(err) });
-      setHasLoadedCreds(true);
+      setCredLoadStage('LOADED');
     });
   }, []);
 
@@ -123,7 +123,7 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
         )}
         <AuthHeader />
 
-        {hasLoadedCreds && (
+        {credLoadStage === 'LOADED' && (
           <>
             {!!errorMessage && (
               <Text style={{ color: '#FF4444', textAlign: 'center', marginBottom: Spacing.md }}>

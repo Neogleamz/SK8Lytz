@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets, EdgeInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { requestPermission } from '../../services/PermissionService';
 import { Layout, Spacing, ThemePalette } from '../../theme/theme';
@@ -92,7 +92,7 @@ export default function PermissionsOnboardingScreen({ onComplete }: PermissionsO
   );
 }
 
-const createStyles = (Colors: ThemePalette, insets: any) => StyleSheet.create({
+const createStyles = (Colors: ThemePalette, insets: EdgeInsets) => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   scrollContent: {
     paddingTop: Math.max(insets.top + 24, 48),

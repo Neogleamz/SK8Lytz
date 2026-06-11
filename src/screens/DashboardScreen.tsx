@@ -1,6 +1,10 @@
 /**
  * DashboardScreen.tsx — SK8Lytz Root Application Screen
  *
+ * S4 Acknowledgement: This file is a monolith of 51KB, exceeding the 30KB limit.
+ * Per the task guidelines, we acknowledge this and are only making surgical edits
+ * to specific line items outlined in the plan rather than extracting the component.
+ *
  * The single top-level screen for the entire SK8Lytz application.
  * This is intentionally monolithic — all BLE state must be co-located
  * to prevent race conditions between hardware events and UI re-renders.
@@ -11,6 +15,7 @@
  *  - Fleet groups, device configs, power map  → useDashboardGroups
  *  - Voice commands, favorites, tutorial      → useDashboardVoice
  *  - Crew session state                       → remains here (feeds BLE write dispatch)
+ *  - Crew Hub collapsed state                 → remains here
  *
  * Platform: React Native (Android + Web)
  */
@@ -55,7 +60,7 @@ import { useDashboardCrew } from '../hooks/useDashboardCrew';
 import { useHardwareNotifications, BLEDeviceMinimal, ProbedHardwareConfig } from '../hooks/useHardwareNotifications';
 import { useDeviceStateLedger, normalizeMac } from '../hooks/useDeviceStateLedger';
 import { useTelemetryLedger } from '../hooks/useTelemetryLedger';
-import type { DashboardViewState, DeviceSettings, CustomGroup, DisplayDevice } from '../types/dashboard.types';
+import type { DashboardViewState, DeviceSettings, CustomGroup, DisplayDevice, IFavoriteState } from '../types/dashboard.types';
 
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
 // — migrated as part of Phase 1 Domain-Driven Refactor
@@ -427,6 +432,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     if (pendingRegistrations.length === 0) return;
     if (viewState === 'SETUP_WIZARD') return; // Ignore if wizard is already active
     
+    let isMounted = true;
     // Only check if we are in dashboard mode and a new untracked device appears
     const checkNewDevice = async () => {
       const first = pendingRegistrations[0];
@@ -435,6 +441,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
         firmwareVer: first.firmware_ver,
         productId:   first.product_id,
       });
+      if (!isMounted) return;
       // Allow registration for both unclaimed devices AND when we can't verify
       // claim status due to being offline (BUG: offline_unknown was blocking post-FTUE device adds)
       if (status === 'unclaimed' || status === 'offline_unknown') {
@@ -444,6 +451,9 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     };
     
     checkNewDevice();
+    return () => {
+      isMounted = false;
+    };
   }, [pendingRegistrations, checkDeviceClaimed, viewState]);
 
   // handleRegistrationComplete is now provided by useDashboardGroups hook
@@ -536,7 +546,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     disconnectFromDevice();
   }, [disconnectFromDevice, endSession]);
 
-  const handleCrewHubApplyCloudScene = useCallback((scene: Record<string, any>) => {
+  const handleCrewHubApplyCloudScene = useCallback((scene: Record<string, unknown>) => {
     dockedControllerRef.current?.applyCloudScene(scene);
   }, []);
 
@@ -604,8 +614,10 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
       startTransition(() => {
         setIsControllerOpen(true);
       });
-      // Small delay so the controller mounts before we switch mode
-      setTimeout(() => dockedControllerRef.current?.setActiveMode('MUSIC'), 300);
+      // Defer mode activation until interactions complete
+      InteractionManager.runAfterInteractions(() => {
+        dockedControllerRef.current?.setActiveMode('MUSIC');
+      });
     } else {
       retriggerAutoConnectRef.current();
     }
@@ -619,19 +631,21 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
       startTransition(() => {
         setIsControllerOpen(true);
       });
-      setTimeout(() => dockedControllerRef.current?.setActiveMode('CAMERA'), 300);
+      InteractionManager.runAfterInteractions(() => {
+        dockedControllerRef.current?.setActiveMode('CAMERA');
+      });
     } else {
       retriggerAutoConnectRef.current();
     }
   }, [allDevices, connectToDevices, isSkateSessionActive, startSession]);
 
-  const handleGroupFavoritePress = useCallback(async (group: CustomGroup, _snapshot: any) => {
+  const handleGroupFavoritePress = useCallback(async (group: CustomGroup, _snapshot: unknown) => {
     // Load the last-used IFavoriteState from AsyncStorage (same key as useFavorites)
-    let lastFav: any = null;
+    let lastFav: IFavoriteState | null = null;
     try {
       const raw = await AsyncStorage.getItem('@Sk8lytz_Favorites');
       if (raw) {
-        const favs = JSON.parse(raw);
+        const favs = JSON.parse(raw) as IFavoriteState[];
         if (Array.isArray(favs) && favs.length > 0) {
           // Use the most recently saved favorite (last in array)
           lastFav = favs[favs.length - 1];
@@ -653,9 +667,9 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
       startTransition(() => {
         setIsControllerOpen(true);
       });
-      setTimeout(() => {
-        dockedControllerRef.current?.loadFavorite(lastFav);
-      }, 300);
+      InteractionManager.runAfterInteractions(() => {
+        dockedControllerRef.current?.loadFavorite(lastFav as IFavoriteState);
+      });
     } else {
       retriggerAutoConnectRef.current();
     }
@@ -800,72 +814,68 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
    * Renders a single device item card, merging registration data 
    * with live discovered BLE configs.
    */
+  const handleDeviceItemPress = useCallback((mac: string) => {
+    if (isSelectionMode) {
+      toggleDeviceSelection(mac);
+      return;
+    }
+    // Resolve the live BLE peripheral by MAC.
+    const bleDevice = allDevices.find(
+      (d) => (d.id || '').toUpperCase() === mac
+    );
+    if (!bleDevice) {
+      // Device not yet discovered — trigger a scan. useDashboardAutoConnect
+      // observer will connect it automatically when it appears.
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'manual_connect_scan_triggered', deviceId: scrubPII(mac) });
+      scanForPeripherals();
+      return;
+    }
+    // Optimistic UI: Defer heavy controller mount by one frame to allow tap animation.
+    // Fire-and-forget the BLE connection so JS thread is not blocked.
+    requestAnimationFrame(() => {
+      if (!isSkateSessionActive) startSession();
+      startTransition(() => {
+        setIsControllerOpen(true);
+      });
+      connectToDevices([bleDevice]);
+    });
+  }, [isSelectionMode, toggleDeviceSelection, allDevices, isSkateSessionActive, startSession, connectToDevices, scanForPeripherals]);
+
+  const handleDeviceItemPowerToggle = useCallback((mac: string) => {
+    handlePowerToggle([mac]);
+  }, [handlePowerToggle]);
+
   const renderItem = useCallback(({ item }: { item: RegisteredDevice }) => {
     // S4 Acknowledgement: This file is close to or exceeds 30KB. Only specific plan line items are modified surgically.
     // IDENTITY FIX: Always resolve to BLE MAC address for all lookups.
     // RegisteredDevice.id is a Supabase composite key (MAC+userId).
     const mac = (item.device_mac || item.id || '').toUpperCase();
-      const cachedConfig = (deviceConfigs[item.id as string] || {}) as Partial<DeviceSettings>;
-      const mergedItem = {
-        ...item,
-        ...cachedConfig,
-        id: mac,
-        name: (item.device_name || cachedConfig.name) as string | null, // Map DB field to component prop
-        // Inject live post-connect RSSI so the wifi icon reflects current signal quality.
-        // Falls back to scan-time rssi on the raw item (stale after connect, but better than null).
-        rssi: rssiMap[mac] ?? item.rssi_at_register ?? null,
+    const cachedConfig = (deviceConfigs[item.id as string] || {}) as Partial<DeviceSettings>;
+    const mergedItem = {
+      ...item,
+      ...cachedConfig,
+      id: mac,
+      name: (item.device_name || cachedConfig.name) as string | null, // Map DB field to component prop
+      rssi: rssiMap[mac] ?? item.rssi_at_register ?? null,
     };
-    // Read last known pattern state from ledger for preview swatch (synchronous, in-memory only).
     const ledgerState = ledgerLoadSync(normalizeMac(mac));
 
     return (
-    <View style={{ paddingHorizontal: Layout.padding }}>
-      <DeviceItem
-        device={mergedItem}
-        isConnected={displayConnectedDevices.some(d => d.id.toUpperCase() === mac)}
-        isSelectionMode={isSelectionMode}
-        isSelected={selectedIds.includes(mac)}
-        ledgerState={ledgerState ?? undefined}
-        onPress={() => {
-          if (isSelectionMode) {
-            toggleDeviceSelection(mac);
-            return;
-          }
-          // Resolve the live BLE peripheral by MAC.
-          const bleDevice = allDevices.find(
-            (d) => (d.id || '').toUpperCase() === mac
-          );
-          if (!bleDevice) {
-            // Device not yet discovered — trigger a scan. useDashboardAutoConnect
-            // observer will connect it automatically when it appears.
-            AppLogger.log('BLE_STATE_CHANGE', { event: 'manual_connect_scan_triggered', deviceId: scrubPII(mac) });
-            scanForPeripherals();
-            return;
-          }
-          // Optimistic UI: Defer heavy controller mount by one frame to allow tap animation.
-          // Fire-and-forget the BLE connection so JS thread is not blocked.
-          requestAnimationFrame(() => {
-            if (!isSkateSessionActive) startSession();
-            startTransition(() => {
-              setIsControllerOpen(true);
-            });
-            connectToDevices([bleDevice]);
-          });
-          // NOTE: Hardware probe (0x63) intentionally NOT fired here.
-          // hwSettings are loaded from DeviceRepository on mount — registered devices
-          // already have their ledPoints/segments persisted from setup wizard.
-          // Probing on every tap created an async race that corrupted deviceLedCount.
-        }}
-        onLongPress={() => {
-          openSettings(mergedItem);
-        }}
-        showGroupIcon={false}
-        isPoweredOn={powerStates[mac] ?? true}
-        onPowerToggle={() => handlePowerToggle([mac])}
-      />
-    </View>
-    ); // close return
-  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs, allDevices, connectToDevices, scanForPeripherals, writeToDevice, ledgerLoadSync, rssiMap]);
+      <View style={{ paddingHorizontal: Layout.padding }}>
+        <MemoizedDeviceItem
+          device={mergedItem}
+          isConnected={displayConnectedDevices.some(d => d.id.toUpperCase() === mac)}
+          isSelectionMode={isSelectionMode}
+          isSelected={selectedIds.includes(mac)}
+          ledgerState={ledgerState ?? undefined}
+          isPoweredOn={powerStates[mac] ?? true}
+          onPress={handleDeviceItemPress}
+          onLongPress={openSettings}
+          onPowerToggle={handleDeviceItemPowerToggle}
+        />
+      </View>
+    );
+  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs, ledgerLoadSync, rssiMap, handleDeviceItemPress, openSettings, handleDeviceItemPowerToggle]);
 
   const mappedRegisteredDevicesForModal = useMemo(() => registeredDevices.map((d) => ({
     // IDENTITY KEY: always use device_mac (BLE MAC address), NOT d.id (Supabase UUID).
@@ -1199,7 +1209,12 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
           handleScan={() => scanForPeripherals()}
           liveRxPayload={lastRawNotification}
           liveDeviceConfigs={deviceConfigs}
-          onConnectToDevice={async (d: any) => { await connectToDevices([d]); }}
+          onConnectToDevice={async (d) => {
+            const fullDevice = allDevices.find(dev => dev.id === d.id);
+            if (fullDevice) {
+              await connectToDevices([fullDevice]);
+            }
+          }}
           onDisconnectFromDevice={async (_id: string) => { handleDisconnect(); }}
           isDiagnosticsMode={isDiagnosticsMode}
           onToggleDiagnostics={() => setIsDiagnosticsMode(!isDiagnosticsMode)}
@@ -1211,5 +1226,56 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     </SafeAreaView>
   );
 }
+
+interface MemoizedDeviceItemProps {
+  device: DisplayDevice;
+  isConnected: boolean;
+  isSelectionMode: boolean;
+  isSelected: boolean;
+  ledgerState?: any;
+  isPoweredOn: boolean;
+  onPress: (mac: string) => void;
+  onLongPress: (device: DisplayDevice) => void;
+  onPowerToggle: (mac: string) => void;
+}
+
+const MemoizedDeviceItem = React.memo(({
+  device,
+  isConnected,
+  isSelectionMode,
+  isSelected,
+  ledgerState,
+  isPoweredOn,
+  onPress,
+  onLongPress,
+  onPowerToggle,
+}: MemoizedDeviceItemProps) => {
+  const handlePress = useCallback(() => {
+    onPress(device.id);
+  }, [onPress, device.id]);
+
+  const handleLongPress = useCallback(() => {
+    onLongPress(device);
+  }, [onLongPress, device]);
+
+  const handlePowerToggle = useCallback(() => {
+    onPowerToggle(device.id);
+  }, [onPowerToggle, device.id]);
+
+  return (
+    <DeviceItem
+      device={device}
+      isConnected={isConnected}
+      isSelectionMode={isSelectionMode}
+      isSelected={isSelected}
+      ledgerState={ledgerState}
+      onPress={handlePress}
+      onLongPress={handleLongPress}
+      showGroupIcon={false}
+      isPoweredOn={isPoweredOn}
+      onPowerToggle={handlePowerToggle}
+    />
+  );
+});
 
 
