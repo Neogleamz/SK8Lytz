@@ -2247,3 +2247,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Master HEAD:** 07663e3a
 **Friction Audit:** 0 new events | 0 resolved | 0 incremented
 **System evolution:** none
+
+### [MERGE READY] fix/industry-benchmarks-dedup — 19d8d225
+Files touched:
+- tools/INDUSTRY_BENCHMARKS.md
+TSC: ✅  Jest: ✅
