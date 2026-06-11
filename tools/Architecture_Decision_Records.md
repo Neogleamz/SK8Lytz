@@ -113,3 +113,54 @@ We established a strict separation of concerns for disconnect subscriptions in `
 ### The Trade-off
 - **Pro:** Fully automated, reliable background reconnection for dropped devices without locking the UI.
 - **Con:** Maintains two concurrent callbacks for a single event, which must be carefully unmounted to prevent memory leaks.
+
+---
+
+## ADR-007: XState v5 Migration
+
+**Date:** June 2026
+**Status:** 🔒 Locked & Active
+
+### The Context
+The application's core logic (BLE connection lifecycle, session tracking) was originally managed via disparate React hooks and boolean flags (`isConnecting`, `isScanning`, etc.). This led to race conditions, overlapping effects, and 'impossible' UI states (e.g., scanning while already connected).
+
+### The Decision
+We migrated the entire core architecture to **XState v5**. All lifecycle logic was extracted out of React components into strict, deterministic Finite State Machines (`BleMachine`, `sessionMachine`).
+
+### The Trade-off
+- **Pro:** Mathematical certainty against impossible states. State transitions are predictable, testable, and completely decoupled from React's render cycle.
+- **Con:** Steep learning curve. Boilerplate increases, and engineers must think in statecharts rather than imperative boolean toggles.
+
+---
+
+## ADR-008: BLE Payload Queue Isolation
+
+**Date:** June 2026
+**Status:** 🔒 Locked & Active
+
+### The Context
+Simultaneously writing complex color arrays, handling organic disconnects, and dispatching high-frequency telemetry (G-force/speed) was causing severe Android GATT buffer lockouts (Error 133). 
+
+### The Decision
+We implemented a strict **BLE Payload Queue Isolation** pattern. The state machine (ADR-007) is strictly forbidden from directly calling BLE characteristic writes. Instead, the machine fires events to an isolated, imperative priority queue that manages backpressure, enforces 12-pixel minimums (Rule 10), and handles serialization.
+
+### The Trade-off
+- **Pro:** Complete eradication of buffer overflows and physical controller EEPROM lockouts.
+- **Con:** Introduces a singleton imperative queue outside the declarative state machine boundaries, creating a hybrid architectural pattern.
+
+---
+
+## ADR-009: WatchBridge Telemetry Sync Protocol
+
+**Date:** June 2026
+**Status:** 🔒 Locked & Active
+
+### The Context
+The companion watch application needs to sync bi-directional commands (Start/Stop) and stream high-frequency health telemetry (Heart Rate, Calories) back to the phone, even when the phone app is in the background or screen-locked.
+
+### The Decision
+We implemented the **WatchBridge Telemetry Sync Protocol** using native OS data layers (WCSession on iOS, DataClient on Android). The phone acts as the Source of Truth via the `sessionMachine`. The watch streams telemetry which is ingested into a ref-backed cache to prevent React re-render thrashing, and only flushed to the UI on a 1-second interval tick.
+
+### The Trade-off
+- **Pro:** Ensures reliable background sync and maintains 60fps UI performance despite high-frequency incoming BLE health streams.
+- **Con:** Requires maintaining complex native Swift/Kotlin bridging code, and the UI state is slightly eventual-consistent (max 1s delay).
