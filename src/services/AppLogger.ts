@@ -228,25 +228,33 @@ class AppLoggerService {
   // VIP Fast-Lane errors bypass persist() entirely — no data-loss risk.
   private lastPersistedLength = 0;
   private lastPersistTime = 0;
+  private loadPromise: Promise<void> | null = null;
 
   private async ensureLoaded() {
     if (this.loaded) return;
-    try {
-      let raw = await AsyncStorage.getItem(STORAGE_KEY);
-      // \u2500\u2500 One-time migration from legacy lowercase key \u2500\u2500
-      if (!raw) {
-        const legacy = await AsyncStorage.getItem(LEGACY_KEY);
-        if (legacy) {
-          await AsyncStorage.setItem(STORAGE_KEY, legacy);
-          await AsyncStorage.removeItem(LEGACY_KEY);
-          raw = legacy;
+    if (this.loadPromise) return this.loadPromise;
+
+    this.loadPromise = (async () => {
+      try {
+        let raw = await AsyncStorage.getItem(STORAGE_KEY);
+        // \u2500\u2500 One-time migration from legacy lowercase key \u2500\u2500
+        if (!raw) {
+          const legacy = await AsyncStorage.getItem(LEGACY_KEY);
+          if (legacy) {
+            await AsyncStorage.setItem(STORAGE_KEY, legacy);
+            await AsyncStorage.removeItem(LEGACY_KEY);
+            raw = legacy;
+          }
         }
+        this.buffer = raw ? JSON.parse(raw) : [];
+      } catch (e: unknown) {
+        this.buffer = [];
       }
-      this.buffer = raw ? JSON.parse(raw) : [];
-    } catch (e: unknown) {
-      this.buffer = [];
-    }
-    this.loaded = true;
+      this.loaded = true;
+      this.loadPromise = null;
+    })();
+
+    return this.loadPromise;
   }
 
   private persistTimeout: ReturnType<typeof setTimeout> | null = null;
