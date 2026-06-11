@@ -4,5 +4,4 @@
 # Run this script instead of `npx expo start` directly.
 
 Set-Location "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
-$env:EXPO_NO_TELEMETRY = "1"
-npx expo start --web
+docker compose up -d webdemo

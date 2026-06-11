@@ -10,7 +10,6 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -3253,6 +3252,17 @@ export type Database = {
         }
         Relationships: []
       }
+      view_telemetry_errors_aggregates: {
+        Row: {
+          affected_users: number | null
+          crash_count: number | null
+          error_signature: string | null
+          first_seen: string | null
+          last_seen: string | null
+          status: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       _postgis_deprecate: {
@@ -3795,6 +3805,10 @@ export type Database = {
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
       resolve_crash_signature: {
+        Args: { resolver_id?: string; target_signature: string }
+        Returns: undefined
+      }
+      resolve_telemetry_error: {
         Args: { resolver_id?: string; target_signature: string }
         Returns: undefined
       }
@@ -4577,4 +4591,3 @@ export const Constants = {
     },
   },
 } as const
-

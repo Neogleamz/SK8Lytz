@@ -7,10 +7,10 @@
 
 ## How to Run
 
-**Browser (Expo Web)**
+**Browser (Expo Web via Docker)**
 
 ```
-npx expo start --web
+docker compose up -d
 # Open http://localhost:8081 in Chrome/Firefox
 # Resize to 390px width (iPhone sim) and 412px (Pixel 7 sim) for responsive checks
 ```

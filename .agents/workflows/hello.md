@@ -56,15 +56,18 @@ Output combined: *"Session health: Friction Ledger: [status] | KB: [status]"*
 
 ---
 
-
+1. Verify or Start the Docker Stack (Scraper Stack & Web Demo)
+```powershell
+docker compose up -d
+```
 
 2. Synchronize Supabase TypeScript definitions
    - Execute the `mcp_supabase-mcp-server_generate_typescript_types` MCP tool using project ID `qefmeivpjyaukbwadgaz`.
    - Overwrite `src/types/supabase.ts` with the new definitions using `write_to_file`.
 
-3. Launch the Expo web server
+3. Verify the Docker Stack is online
 ```powershell
-Set-Location "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"; npx expo start --web
+docker compose ps
 ```
 
 4. **Session Memory Read — Reyes Knowledge-First Protocol**: Read `tools/SESSION_LOG.md` — most recent entry only. Announce: *"Checking what we already know..."* then verbally summarize:

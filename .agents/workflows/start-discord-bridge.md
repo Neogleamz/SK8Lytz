@@ -9,7 +9,14 @@ team_roster: .agents/team-roster.md
 
 // turbo-all
 
-1. Launch the Discord Bridge microservice using PM2 in the background
-Start-Process node -ArgumentList "index.js" -WorkingDirectory "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\tools\discord-bridge" -WindowStyle Hidden
+> **⚠️ DEPRECATION NOTICE:** The Discord Bridge is now automatically launched inside the Docker Scraper Stack container (`sk8lytz-scraper-stack` service running `CCTower.ts`) when the stack starts. Running it as a host process is deprecated.
 
-2. Confirm to the user that the bridge has been successfully launched.
+1. Verify that the Docker Scraper Stack is online
+```powershell
+docker compose ps
+```
+
+2. Confirm that the Discord Bridge is active by checking the logs
+```powershell
+docker compose logs cctower | Select-String "Booting Discord Bridge"
+```

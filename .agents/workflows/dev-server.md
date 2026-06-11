@@ -19,7 +19,7 @@ cd c:\Neogleamz\AG_SK8Lytz_App\SK8Lytz
 powershell.exe -ExecutionPolicy Bypass -File .\tools\port-sweeper.ps1
 ```
 
-3. Start the Expo dev server (clears cache)
+3. Recreate or restart the Expo web demo container (clears cache)
 ```powershell
-npx expo start --clear
+docker compose up -d --force-recreate webdemo
 ```

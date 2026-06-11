@@ -19,7 +19,7 @@ When invoked via `/smoke-test`, dispatch the headless browser subagent to rapidl
 
 ### Subagent Instructions
 Trigger the `browser_subagent` tool with the following rigorous instructions:
-1. Ensure the Expo web server is running. If not, spin it up (`npx expo start --web`).
+1. Ensure the Docker Compose stack is running. If not, spin it up (`docker compose up -d`).
 2. Navigate the browser directly to `http://localhost:8081` (or the active port).
 3. **Wait for JS Bundle:** Wait a minimum of 2-3 seconds for React to finish hydrating the DOM. 
 4. **Inspect the Mount Root:** Target the `<div id="root">` element. Verify that it contains child nodes and successfully mounted UI components.

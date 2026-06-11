@@ -1092,11 +1092,10 @@ The project leverages a decoupled, two-phase zero-cost backend to populate `skat
 ### Wave 1: Spatial Harvesting (The Cartographer)
 A fast, lightweight Node script (`USANationalHarvest.ts`) queries the OSM Overpass API state-by-state. It extracts coordinates, resolves full addresses via Nominatim, and maps physical boolean tags (`has_ac`, `has_food`, `capacity`) into Supabase in bulk.
 
-### Wave 2: Cultural Enrichment (The Daemon)
-A stealthy `Puppeteer` background process (`CulturalDaemon.ts`) runs infinitely via PM2. 
-- **The Priority Queue:** It queries Supabase via the `get_next_spot_to_enrich()` RPC, which enforces a strict hierarchy: `roller_rink` -> `hybrid` -> `pro_shop` -> `skatepark`.
-- **The Engine:** It uses Google Shadow-DOM scraping to extract aggregate `vibe_rating`, Instagram links, and adult-night presence.
-- **The Stealth:** The script strictly sleeps for 4 minutes between hits (~280 locations/day), guaranteeing zero CAPTCHAs and eliminating the need for paid IP proxies.
+### Wave 2: Cultural Enrichment (The Daemon) — RETIRED
+The host PM2 process (`CulturalDaemon.ts`) was retired in the Great Consolidation (v3.9.1). All active scraping daemons (website-resolver, indexer, photographer, publisher) are now run directly as managed sub-processes under `CCTower.ts` inside the Docker Scraper Stack container (`sk8lytz-scraper-stack`).
+- **The Priority Queue:** Daemons query the local SQLite pipeline database and push changes downstream via the `Publisher`.
+- **The Engine:** We use Puppeteer and Google Shadow-DOM scraping managed via CCTower's dashboard interface.
 
 ### Wave 3: The AI Detective (Local LM Studio Pipeline)
 A localized, schema-driven AI extraction pipeline that processes raw text dumps from deep-crawled websites.

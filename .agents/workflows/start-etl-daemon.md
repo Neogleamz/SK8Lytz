@@ -9,16 +9,14 @@ team_roster: .agents/team-roster.md
 
 // turbo-all
 
-1. Launch the Cultural Enrichment Daemon using PM2 in the background
+> **⚠️ RETIREMENT NOTICE:** The `CulturalDaemon.ts` script has been retired. The other daemons in the scraper stack (website-resolver, indexer, photographer, publisher) are now run as child processes under `CCTower.ts` inside the Docker Scraper Stack container (`sk8lytz-scraper-stack`).
+
+1. Verify that the Docker Scraper Stack is online
 ```powershell
-Set-Location -Path "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\tools\scraper"
-npx -y pm2 start node_modules/tsx/dist/cli.mjs --name "CulturalDaemon" -- CulturalDaemon.ts
-Set-Location -Path "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
+docker compose ps
 ```
 
-2. Save the PM2 process list to persist across reboots (optional but recommended)
+2. Confirm that the CCTower scraper daemons are online by querying the status endpoint
 ```powershell
-npx -y pm2 save
+Invoke-RestMethod -Uri "http://localhost:5999/status" -Method GET | ConvertTo-Json -Depth 2
 ```
-
-3. Confirm to the user that the daemon has been successfully launched and is running silently to enrich skate spots.

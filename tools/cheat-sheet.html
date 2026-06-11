@@ -654,7 +654,7 @@
         <thead><tr><th>Command</th><th>What It Does</th><th>Persona</th></tr></thead>
         <tbody>
           <tr><td>/scaffold-hook</td><td>New hook file — FSM boilerplate, typed params, JSDoc, Hook Registry entry</td><td style="color:var(--sage)">Sage</td></tr>
-          <tr><td>/dev-server</td><td>Kill ghost Node processes → start Expo with --clear</td><td style="color:var(--sage)">Sage</td></tr>
+          <tr><td>/dev-server</td><td>Restart web demo container (clears cache via docker compose recreate)</td><td style="color:var(--sage)">Sage</td></tr>
           <tr><td>/tsc-check</td><td>TypeScript errors — grouped by file, smallest-first fix suggestions</td><td style="color:var(--sage)">Sage</td></tr>
           <tr><td>/tdd</td><td>Test-driven development — write test first, fail state, implement, verify</td><td style="color:var(--sage)">Sage + Blake</td></tr>
           <tr><td>/add-dep</td><td>Native alternative check → 3-point justification → approval gate before any npm install</td><td style="color:var(--morgan)">Morgan + Quinn</td></tr>
@@ -755,10 +755,10 @@
       <table>
         <thead><tr><th>Command</th><th>What It Does</th><th>Persona</th></tr></thead>
         <tbody>
-          <tr><td>/start-stack</td><td>Docker compose up → verify CCTower, Dashboard, Discord Bridge</td><td style="color:var(--alex)">Alex</td></tr>
-          <tr><td>/start-discord-bridge</td><td>Launch Discord Bridge microservice via PM2</td><td style="color:var(--alex)">Alex</td></tr>
-          <tr><td>/start-etl-daemon</td><td>Launch Cultural Enrichment Daemon via PM2</td><td style="color:var(--alex)">Alex</td></tr>
-          <tr><td>/dev-server</td><td>Start Expo dev server — see 🟢 Dev Tools above</td><td style="color:var(--sage)">Sage</td></tr>
+          <tr><td>/start-stack</td><td>Docker compose up → verify CCTower, Dashboard, Discord Bridge, and Web Demo</td><td style="color:var(--alex)">Alex</td></tr>
+          <tr class="deprecated"><td>/start-discord-bridge</td><td>Launch Discord Bridge (Now auto-booted by CCTower inside Docker)</td><td style="color:var(--alex)">Alex</td></tr>
+          <tr class="deprecated"><td>/start-etl-daemon</td><td>Launch Cultural Enrichment Daemon (Obsolete / Retired)</td><td style="color:var(--alex)">Alex</td></tr>
+          <tr><td>/dev-server</td><td>Restart Expo web demo container — see 🟢 Dev Tools above</td><td style="color:var(--sage)">Sage</td></tr>
         </tbody>
       </table>
     </div>
