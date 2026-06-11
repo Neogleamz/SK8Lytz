@@ -2248,14 +2248,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Friction Audit:** 0 new events | 0 resolved | 0 incremented
 **System evolution:** none
 
-### [MERGE READY] docs/cartographer-rebuild-and-harden � HEAD
-Files touched:
-- .agents/workflows/deepdive-docs.md
-- .agents/workflows/start-task.md
-- .agents/workflows/wind-down.md
-- tools/Architecture_Decision_Records.md
-- tools/SK8Lytz_App_Master_Reference.md
-- tools/State_Charts_UX.md
-- tools/User_Journey_Maps.md
-TSC: ?  Jest: ?
+### [ARTIFACT] 2026-06-11T22:08 — Session Machine Test Coverage Appended
+**Description:** Appended Session Machine XState v5 test coverage section to SK8Lytz_TEST_PLAN.md.
 
+### [MERGE READY] docs/test-plan-session-machine — 9e85de0b
+Files touched: `tools/SK8Lytz_TEST_PLAN.md`
+TSC: ✅  Jest: ✅
