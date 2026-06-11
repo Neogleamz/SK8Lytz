@@ -34,6 +34,16 @@
 - `src/services/session/__tests__/SessionCommitService.test.ts`
 - `src/services/session/__tests__/SessionMachine.test.ts`
 
+### [ARTIFACT] 2026-06-11T21:59 — doc-pipeline-sync Batch Intake Complete
+| Artifact | Path | Description |
+|---|---|---|
+| Cartographer Rebuild Plan | [PLAN-docs-cartographer-rebuild-and-harden.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-docs-cartographer-rebuild-and-harden.md) | Full 21-node cartographer run + Phase 4 unconditional + Phase 5 ADR sync + 3 workflow hardening edits |
+| XState KB Capture Plan | [PLAN-docs-xstate-v5-kb-capture.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-docs-xstate-v5-kb-capture.md) | KB entry for XState v5 patterns used in BleMachine + sessionMachine |
+| Benchmarks Dedup Plan | [PLAN-fix-industry-benchmarks-dedup.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-fix-industry-benchmarks-dedup.md) | Remove 50-line duplicate content block from INDUSTRY_BENCHMARKS.md |
+| Test Plan Session Machine Plan | [PLAN-docs-test-plan-session-machine.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-docs-test-plan-session-machine.md) | Add sessionMachine XState v5 test coverage section to SK8Lytz_TEST_PLAN.md |
+**Batch:** `[BATCH:doc-pipeline-sync]` — 4 tasks, all `[WAVE:1]`, all parallel-safe, all `[✅ READY]`
+**Sprint slot:** ON DECK under HIGH Engineering Excellence — parallel-safe with session-xstate-engine Wave 3
+
 ### [MERGE] 2026-06-11T21:40 — system-hardening → master @ 1bde6d33
 **What merged:**
 - agent-behavior.md: C1 post-diff silent→mandatory; C2 Snack S8 carve-out clarified; O4 Casey 'mentally' removed
