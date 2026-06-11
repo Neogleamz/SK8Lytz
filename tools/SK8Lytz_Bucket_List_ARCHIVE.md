@@ -1710,3 +1710,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "Assume field name is `distance` — rejected, assumption violates P1"
   - **Source of Truth:** 📖 [android/sk8lytzWear/](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/android/sk8lytzWear/) + [targets/watch/](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/targets/watch/) + `sk8lytz-watch-bridge` package types
   - **Details:** Read-only spike. Output: one `[DECISION]` entry in SESSION_LOG with the confirmed field name. No code changes. `Prerequisite: none.`
+
+- [x] **`feat/session-services-layer`** 🚀 Merged in b9c7baa9
+  - **Tags:** `[✅ READY]` `[🤖 INFERRED]` `[🧪 LAB]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 HIGH]` `[BATCH:session-xstate-engine]` `[WAVE:1]`
+  - **Goal:** Create all 9 new files in `src/services/session/` and `src/components/session/` — the full XState session engine layer — without touching any existing file.
+  - **Decision Log:** 10 confirmed session sync bugs (watch desync, auto-pause race, notification drift, stats wrong counter) all trace to one root cause: no single XState state authority for session lifecycle. Confirmed 2026-06-11 via full `SessionContext.tsx` + `useGlobalTelemetry.ts` + `useHealthTelemetry.ts` audit.
+  - **Analysis:** 📊 Source: [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/689630a3-694f-4156-a7bc-69878591a1d7/implementation_plan.md) · Plan: [PLAN-feat-session-services-layer.md](./plans/PLAN-feat-session-services-layer.md)
+    Key finding: "`BleMachine.ts` pattern (`setup({ actors, actions })` + `fromCallback` services + `fromPromise` commit) is already proven in this codebase — zero new patterns required"
+    Rejected alternative: "Custom pub/sub event bus — rejected because XState v5 already installed and BleMachine proves pattern works"
+  - **Source of Truth:** 📖 [BleMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts) + [HeartbeatService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/HeartbeatService.ts) + [ConnectService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts) + [SessionContext.tsx:285–359](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/context/SessionContext.tsx#L285-L359)
+  - **Details:** Creates: `SessionMachine.types.ts`, `SessionMachine.ts`, `SensorService.ts`, `AutoPauseService.ts`, `HealthService.ts`, `SessionCommitService.ts`, `NotificationService.ts`, `SessionBridge.ts`, `../components/session/SessionPhaseBadge.tsx`. Zero existing file modifications. Jest test stubs required. `Prerequisite: Wave 0 fully merged — distance field name confirmed in SESSION_LOG.`
