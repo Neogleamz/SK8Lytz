@@ -1699,4 +1699,14 @@ pm run verify which includes QA tests.
   - **Goal:** Fix all 32 findings in domain screens. Every file in the plan must appear in the diff.
   - **Prerequisite:** Wave 6 fully merged
   - **Source of Truth:** docs/plans/PLAN-sweep-screens.md
-  - **Decision Log:** Eradicate all screens domain findings identified in the DeepDive audit (system_audit_report.md) to ensure proper type safety, remove unused variables, and standardize lifecycle callbacks.
+  - **Decision Log:** Eradicate all screens domain findings identified in the DeepDive audit (system_audit_report.md) to ensure proper type safety, remove unused variables, and standardize lifecycle callbacks.
+
+- [x] **`spike/wear-os-bridge-field`**
+  - **Tags:** `[✅ READY]` `[🤖 INFERRED]` `[🧪 LAB]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:session-xstate-engine]` `[WAVE:0]`
+  - **Goal:** Confirm exact field name for session distance in WatchBridge payload so Wave 1 + Wear OS fix use the correct key.
+  - **Decision Log:** `SessionCommitService.ts` and the Wear OS distance bug fix both read from a WatchBridge message field — field name must be verified before writing a single line of code that uses it.
+  - **Analysis:** 📊 Source: [session_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/689630a3-694f-4156-a7bc-69878591a1d7/session_audit_report.md) · Plan: [PLAN-spike-wear-os-bridge-field.md](./plans/PLAN-spike-wear-os-bridge-field.md)
+    Key finding: "Wear OS DashboardScreen.kt shows hardcoded 0.0 distance — field name must be from WatchBridge payload type"
+    Rejected alternative: "Assume field name is `distance` — rejected, assumption violates P1"
+  - **Source of Truth:** 📖 [android/sk8lytzWear/](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/android/sk8lytzWear/) + [targets/watch/](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/targets/watch/) + `sk8lytz-watch-bridge` package types
+  - **Details:** Read-only spike. Output: one `[DECISION]` entry in SESSION_LOG with the confirmed field name. No code changes. `Prerequisite: none.`

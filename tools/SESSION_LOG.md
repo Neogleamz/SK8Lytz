@@ -1,3 +1,36 @@
+### [DECISION] 2026-06-11T21:27 — Wear OS and iOS Watch Bridge Distance Field
+**Decision:** The exact field name used in the WatchBridge message payload for session distance is `"distance"`.
+**Rejected:** Assuming it is `distanceMiles` or `sessionDistance` — rejected because the source of truth codebases (Kotlin, Swift, and TypeScript interface) explicitly use `distance` for the post-session summary message payload key.
+**Don't re-derive:** Use the `"distance"` key when constructing the `WatchSessionState` payload in `SessionCommitService.ts` and for the Wear OS Kotlin distance bug fix.
+**Source:** `android/sk8lytzWear/src/main/kotlin/com/neogleamz/sk8lytzwear/services/WearableCommunicationService.kt:L138`, `targets/watch/WatchConnectivityManager.swift:L99`, `modules/sk8lytz-watch-bridge/src/index.ts:L30`
+**ADR Link:** N/A
+
+### [DECISION] 2026-06-11T16:17 — Session State → XState sessionMachine Architecture
+**Decision:** Replace `SessionContext` + `useGlobalTelemetry` + `useHealthTelemetry` trio with a single XState v5 `sessionMachine` following the `BleMachine.ts` pattern exactly.
+**Rejected:** (1) Patching individual bugs in the existing hook trio — rejected because root cause is architectural (no single state authority), not implementation bugs. Patching creates more fragmentation. (2) Custom pub/sub event bus — rejected because XState v5 is already installed and `BleMachine.ts` proves the pattern works in this codebase.
+**Don't re-derive:** The watch IS already bidirectional — `WatchBridge.addWatchCommandListener` fires `START_SESSION`/`STOP_SESSION` from `SessionContext.tsx:93`. Notification already has `END SESSION` button at `SessionContext.tsx:311`. `STORAGE_PENDING_BG_END` crash recovery path exists at `SessionContext.tsx:134`. These are RELOCATIONS not new features.
+**Source:** `SessionContext.tsx:1–474` (full read), `BleMachine.ts:8`, `HeartbeatService.ts:17`, `ConnectService.ts:42`, `useBLE.ts:177`
+**ADR Link:** N/A — pattern follows existing `BleMachine` ADR implicitly
+
+
+### [DECISION] 2026-06-11T16:17 — Session Never Ends on BLE Disconnect
+**Decision:** BLE disconnect events have NO effect on session state. Session = you are skating (GPS + time). BLE = LED controllers connected. Orthogonal systems.
+**Rejected:** Auto-end on BLE disconnect — rejected because BLE drops and recovers independently during skating. A BLE dropout should never destroy session data.
+**Don't re-derive:** This is a product invariant, not a technical limitation. Do not add any BLE event listener to the session machine.
+**Source:** Product decision confirmed by user 2026-06-11T16:09
+
+### [ARTIFACT] 2026-06-11T16:17 — Session XState Intake Plans Created
+| Artifact | Path | Description |
+|---|---|---|
+| Implementation Plan | `brain/689630a3.../implementation_plan.md` | Full migration plan with surface map, trigger map, execution waves |
+| Session Audit Report | `brain/689630a3.../session_audit_report.md` | 10 confirmed bugs mapped to root causes |
+| PLAN-spike-wear-os-bridge-field | `docs/plans/PLAN-spike-wear-os-bridge-field.md` | Wave 0 spike |
+| PLAN-feat-session-services-layer | `docs/plans/PLAN-feat-session-services-layer.md` | Wave 1 — 9 new files |
+| PLAN-refactor-session-context-xstate | `docs/plans/PLAN-refactor-session-context-xstate.md` | Wave 2 — SessionContext rewrite |
+| PLAN-refactor-delete-legacy-hooks | `docs/plans/PLAN-refactor-delete-legacy-hooks.md` | Wave 3A — deletions + App.tsx |
+| PLAN-feat-session-phase-badge-ui | `docs/plans/PLAN-feat-session-phase-badge-ui.md` | Wave 3B — badge UI |
+| PLAN-fix-session-bug-fixes | `docs/plans/PLAN-fix-session-bug-fixes.md` | Wave 3C — StreetPanel + AccountTabStats + Wear OS |
+
 ### [EVENT] 2026-06-11T01:18 — Code Hunt Suspended & Wind-Down
 **What shipped:**
 - None (Read-only scan and database backup phase).
