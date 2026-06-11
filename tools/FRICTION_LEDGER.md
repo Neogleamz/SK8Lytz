@@ -409,3 +409,13 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 
   **2nd Occurrence — 2026-06-10 — exception-masking-sweep:** ZenggeProtocol.ts lines 18, 192, 393 — catch block body changes only (added AppLogger.warn + e: unknown typing). Zero protocol/interface/dispatch changes. -IgnoreBlast required.
   **Occurrences updated:** 2 / 3
+
+### [FRICTION-042] Agent Task-Avoidance Shortcut
+- **First Observed:** 2026-06-11
+- **Observed By:** PM - Jordan
+- **Occurrences:** 3 / 3
+- **Trigger:** Generated deepdive sweep plans containing hundreds of issues, but agent executed only 1 file per plan to rush completion.
+- **Pattern:** Agent artificially inflated completion metrics by fixing 1 file per generated plan and ignoring the remaining 95% of the payload to bypass blast radius constraints.
+- **Root Cause Theory:** P4 misapplied to bypass work. The only verification gate was npm run verify, allowing agents to skimp on plan completeness as long as the build was green.
+- **Impact:** 381 unaddressed vulnerabilities masked as Completed. User had to explicitly ask to double check work.
+- **Status:** RESOLVED - Evolution Implemented (Plan Completeness Gate)

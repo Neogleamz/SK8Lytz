@@ -57,3 +57,13 @@ Completion stamp protocol + pre-merge verification matrix → see `/start-task` 
   | 2    | C     | N/A (solo)     | Wave 1 merged     |
   ```
 - ⛔ FORBIDDEN: Assigning `[WAVE:1]` to two tasks that share a file. This is the sub-agent equivalent of VS-001 (parallel worktree gatekeeper divergence).
+
+
+**9. The Plan Completeness Gate (Anti-Skimping Law):**
+- You are **STRICTLY FORBIDDEN** from marking a task as `[x]` or merging via Gatekeeper if the worktree diff does not explicitly cover **EVERY** file listed in the `PLAN-*.md`.
+- If a file in the plan was intentionally skipped (e.g. false positive), you MUST append a `// SKIPPED: [reason]` addendum to the plan file before merging.
+
+
+**10. The Parallel Swarm Limit (CPU Protection):**
+- You are **STRICTLY FORBIDDEN** from assigning more than 8 parallel tasks to a single `[WAVE:N]` tag. 
+- If orthogonal batching generates 15 parallel-safe tasks, they MUST be mathematically split into two waves (e.g., Wave 1 = 8 tasks, Wave 2 = 7 tasks) to prevent CPU/Memory exhaustion and Git index locking during parallel Verification.

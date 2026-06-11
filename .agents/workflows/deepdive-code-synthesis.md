@@ -159,8 +159,11 @@ Append to `artifacts/system_audit_report.md` (after the metrics header):
 - Each finding includes: file, line, rule, severity, confidence, description, suggested fix
 - Separate section for KNOWN_ISSUES matches (documented but not yet fixed)
 
-#### Step 2: Draft Triage Batch
-Group related findings into logical task clusters (e.g., all R-08 violations → one `[BATCH:type-safety-sweep]` task, all R-17 violations → one `[BATCH:listener-leak-sweep]` task).
+#### Step 2: Draft Triage Batch (Orthogonal Domain Clustering)
+**CRITICAL:** Do NOT group tasks by Rule (e.g. all R-08 violations). This causes cross-domain collisions. 
+Instead, group findings into logical **Orthogonal Task Clusters** by Domain/File Sector (e.g. `[BATCH:sweep-src-context]`, `[BATCH:sweep-src-components-ui]`). 
+- One cluster contains ALL rule violations (R-08, R-16, R-01, etc.) that occur within its specific file boundaries.
+- This guarantees zero file overlap between clusters, maximizing parallel execution safety.
 
 For each task cluster, draft a task summary with:
 - **Goal:** "Fix the bug to make the auto-generated failing regression test pass."
