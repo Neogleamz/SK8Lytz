@@ -31,7 +31,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
 }) => {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
-  const { recentSpots, addRecentSpot } = useRecentSpots();
+  const { recentSpots, addRecentSpot, error, isLoading } = useRecentSpots();
   const { isVisibilityAllowed } = useAppConfig();
   const showMap = isVisibilityAllowed('visibility_maps_tab');
   
@@ -129,6 +129,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
       <Text style={styles.label}>LOCATION (OPTIONAL)</Text>
       
       {/* Smart Chips List */}
+      {error && <Text style={styles.errorText}>Error loading spots</Text>}
       {!locationCoords && (recentSpots.length > 0 || curatedSpots.length > 0) && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.sm }} contentContainerStyle={{ gap: Spacing.sm, paddingRight: Spacing.lg }}>
             {recentSpots.map(s => (
@@ -238,6 +239,11 @@ const createStyles = (Colors: ThemePalette) => StyleSheet.create({
     fontWeight: '800',
     marginBottom: Spacing.sm,
     letterSpacing: 1.2,
+  },
+  errorText: {
+    color: '#FF453A',
+    fontSize: 12,
+    marginBottom: Spacing.sm,
   },
   inputRow: {
     flexDirection: 'row',
