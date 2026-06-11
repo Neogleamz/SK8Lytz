@@ -11,7 +11,7 @@
  * Depends on: ProfileService, AppSettingsService, NotificationService, Supabase
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { AppState, AppStateStatus, Alert } from 'react-native';
 import { AppLogger } from '../services/AppLogger';
 import { AppSettingsMap, AppSettingsService } from '../services/AppSettingsService';
@@ -55,6 +55,11 @@ export function useDashboardProfile({
   const [appSettings, setAppSettings] = useState<AppSettingsMap>({});
   const [authUsername, setAuthUsername] = useState<string | null>(null);
 
+  const onCrewJoinNotificationRef = useRef(onCrewJoinNotification);
+  useEffect(() => {
+    onCrewJoinNotificationRef.current = onCrewJoinNotification;
+  }, [onCrewJoinNotification]);
+
   // ── Modal visibility state ───────────────────────────────────────────────
   type ActiveModalState = 'none' | 'account' | 'admin' | 'support' | 'map';
   const [activeModal, setActiveModal] = useState<ActiveModalState>('none');
@@ -80,7 +85,7 @@ export function useDashboardProfile({
   // ── Push notification init — wires crew join handler ────────────────────
   useEffect(() => {
     notificationService.setJoinHandler((crewId: string, _sessionId: string) => {
-      onCrewJoinNotification(crewId);
+      onCrewJoinNotificationRef.current(crewId);
     });
 
     notificationService.init(false, session?.user?.id).catch(e =>
@@ -90,8 +95,6 @@ export function useDashboardProfile({
     return () => {
       notificationService.cleanup(session?.user?.id).catch((e) => AppLogger.warn('NOTIFICATION_SERVICE', { event: 'cleanup_failed', error: (e instanceof Error ? e.message : String(e)) }));
     };
-    // onCrewJoinNotification is a stable callback ref — intentionally excluded from deps
-    // to avoid re-registering the notification service on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
