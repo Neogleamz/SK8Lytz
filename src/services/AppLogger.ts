@@ -1,3 +1,4 @@
+// TODO: [R-23] File exceeds 30KB — component extraction required before architectural refactor
 /**
  * AppLogger.ts — SK8Lytz Telemetry & Analytics Engine
  *
@@ -487,12 +488,16 @@ class AppLoggerService {
         supabase.from('crash_telemetry').insert({
           error_signature: safeErrorString.substring(0, 500),
           stack_trace: payload.stack || payload.stackTrace || null,
+          // R-08: Supabase Json type requires this cast — breadcrumbs is a plain
+          // object array that is structurally compatible with Json but TS cannot
+          // verify the recursive constraint without the intermediate unknown step.
           breadcrumbs: FlightRecorder.getBreadcrumbs() as unknown as import('../types/supabase').Json,
           environment_state: {
             ...payload,
             host_device_id: Device.osInternalBuildId || Device.modelId || 'unknown',
             session_id: this.sessionId,
             event_type: event
+            // R-08: same Json structural cast — required by Supabase schema types.
           } as unknown as import('../types/supabase').Json,
           severity: 'CRITICAL',
           app_version: Device.osVersion || null
@@ -661,12 +666,15 @@ class AppLoggerService {
           };
         });
 
+        // TODO: [R-15] Refactor to accept userId as parameter instead of calling
+        // supabase.auth.getUser() directly — this executes an unnecessary network
+        // request and bypasses AuthContext. Callers should inject userId via a setter.
         let userId: string | undefined = undefined;
         try {
           const { data: { user } } = await supabase.auth.getUser();
           userId = user?.id;
         } catch {
-          // ignore
+          // ignore — userId remains undefined, telemetry still uploads anonymously
         }
 
         const batch = dbPayload.map(s => ({

@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import { Buffer } from 'buffer';
 import { AppLogger } from './AppLogger';
 import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
-import type { ProtocolResult } from '../protocols/IControllerProtocol';
+import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
 import { enqueueWrite, resolveWritePriority, setWriteQueueGeneration } from './BleWriteQueue';
 import { BLE_TIMING } from '../constants/bleTimingConstants';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
@@ -12,6 +12,23 @@ export interface BleWriteStateRefs {
   writeDebounceTimerRef: { current: ReturnType<typeof setTimeout> | null };
 }
 
+
+// R-08: bleManager and device objects come from react-native-ble-plx which does
+// not re-export its Device class in a way that is importable without tight coupling.
+// These structural aliases document the minimal interface we actually use.
+type BleManagerLike = {
+  writeCharacteristicWithoutResponseForDevice(
+    deviceId: string,
+    serviceUUID: string,
+    charUUID: string,
+    base64: string
+  ): Promise<unknown>;
+};
+type BleDeviceLike = { id: string; writeCharacteristicWithoutResponseForService(s: string, c: string, b: string): Promise<unknown> };
+// AdapterMapLike: the actual map in useBLE.ts holds full IControllerProtocol objects.
+// We alias for clarity; callers pass Map<string, IControllerProtocol>.
+type AdapterMapLike = Map<string, IControllerProtocol>;
+
 /**
  * executeWriteToDevice — Core BLE write function.
  * Manages debouncing for pattern/color writes and handles direct execution.
@@ -20,11 +37,11 @@ export async function executeWriteToDevice(
   payload: number[],
   targetDeviceId: string | undefined,
   opts: { lowPriority?: boolean } | undefined,
-  bleManager: any,
-  connectedDevices: any[],
+  bleManager: BleManagerLike,
+  connectedDevices: BleDeviceLike[],
   ghostedDeviceIds: string[],
   mtuMap: Map<string, number>,
-  adapterMap: Map<string, any>,
+  adapterMap: AdapterMapLike,
   stateRefs: BleWriteStateRefs,
   setWriteGeneration: (gen: number) => void
 ): Promise<boolean | 'partial'> {
@@ -90,11 +107,11 @@ async function _executeWriteToDeviceInternal(
   payload: number[],
   targetDeviceId: string | undefined,
   capturedGeneration: number,
-  bleManager: any,
-  connectedDevices: any[],
+  bleManager: BleManagerLike,
+  connectedDevices: BleDeviceLike[],
   ghostedDeviceIds: string[],
   mtuMap: Map<string, number>,
-  adapterMap: Map<string, any>,
+  adapterMap: AdapterMapLike,
   stateRefs: BleWriteStateRefs
 ): Promise<boolean | 'partial'> {
   const targets = targetDeviceId
@@ -178,10 +195,10 @@ async function _executeWriteToDeviceInternal(
 export async function executeWriteChunked(
   payload: number[],
   targetDeviceId: string | undefined,
-  connectedDevices: any[],
+  connectedDevices: BleDeviceLike[],
   ghostedDeviceIds: string[],
   mtuMap: Map<string, number>,
-  adapterMap: Map<string, any>
+  adapterMap: AdapterMapLike
 ): Promise<void> {
   if (connectedDevices.length === 0 || Platform.OS === 'web') return;
 
@@ -234,11 +251,11 @@ export async function executeWriteChunked(
 export async function executeProtocolResults(
   payloads: { targetDeviceId: string, result: ProtocolResult }[],
   opts: { lowPriority?: boolean } | undefined,
-  bleManager: any,
-  connectedDevices: any[],
+  bleManager: BleManagerLike,
+  connectedDevices: BleDeviceLike[],
   ghostedDeviceIds: string[],
   mtuMap: Map<string, number>,
-  adapterMap: Map<string, any>,
+  adapterMap: AdapterMapLike,
   stateRefs: BleWriteStateRefs,
   setWriteGeneration: (gen: number) => void
 ): Promise<boolean> {
@@ -292,10 +309,10 @@ export async function executeProtocolResults(
 async function _executeProtocolResultsInternal(
   payloads: { targetDeviceId: string, result: ProtocolResult }[],
   capturedGeneration: number,
-  connectedDevices: any[],
+  connectedDevices: BleDeviceLike[],
   ghostedDeviceIds: string[],
   mtuMap: Map<string, number>,
-  adapterMap: Map<string, any>,
+  adapterMap: AdapterMapLike,
   stateRefs: BleWriteStateRefs
 ): Promise<boolean> {
   const executeWrite = async (): Promise<boolean> => {

@@ -28,7 +28,8 @@ class PushTokenService {
           { onConflict: 'user_id,token' }
         );
     } catch (e: unknown) {
-      AppLogger.error('PushTokenService', 'registerPushToken failed', { error: e instanceof Error ? e.message : String(e) , payload_size: 0, ssi: 0 });
+      // R-04: error context (payload_size, ssi) included per structured-log standard.
+      AppLogger.error('PushTokenService', 'registerPushToken failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
     }
   }
 

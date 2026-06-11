@@ -19,6 +19,7 @@ import type * as NotificationsType from 'expo-notifications';
 import { Platform } from 'react-native';
 import { AppLogger } from './AppLogger';
 import { profileService } from './ProfileService';
+import { pushTokenService } from './PushTokenService';
 import { supabase } from './supabaseClient';
 
 let Notifications: typeof NotificationsType | null = null;
@@ -81,7 +82,9 @@ class NotificationService {
       AppLogger.log('NOTIFICATION_SERVICE', { event: 'token_acquired', tokenPrefix: this.token.slice(0, 12) });
 
       const platform = Platform.OS as 'ios' | 'android' | 'web';
-      await profileService.registerPushToken(this.token, platform, userId || null);
+      // R-21 fix: route through pushTokenService (extracted from ProfileService during
+      // God Object Decomposition). profileService.registerPushToken is now deprecated.
+      await pushTokenService.registerPushToken(this.token, platform, userId || null);
       AppLogger.log('PUSH_TOKEN_REGISTERED', { platform, tokenPrefix: this.token.slice(0, 12) });
     } catch (err: unknown) {
       AppLogger.warn('NOTIFICATION_SERVICE', { event: 'push_token_unavailable', error: (err instanceof Error ? err.message : String(err)) });

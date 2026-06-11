@@ -26,7 +26,9 @@ class SecureStoreAdapter implements SupportedStorage {
         await SecureStore.setItemAsync(key, value);
       }
     } catch (e: unknown) {
-      console.error('SecureStore setItem failed', e instanceof Error ? e.message : String(e));
+      // R-04 note: AppLogger cannot be imported here (circular dep risk).
+      // Using console.warn so auth storage errors are visible in dev logs.
+      console.warn('[supabaseClient] SecureStore setItem failed', e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -38,7 +40,8 @@ class SecureStoreAdapter implements SupportedStorage {
         await SecureStore.deleteItemAsync(key);
       }
     } catch (e: unknown) {
-      console.error('SecureStore removeItem failed', e instanceof Error ? e.message : String(e));
+      // R-04 note: AppLogger cannot be imported here (circular dep risk).
+      console.warn('[supabaseClient] SecureStore removeItem failed', e instanceof Error ? e.message : String(e));
     }
   }
 }
@@ -75,4 +78,8 @@ export const supabase = supabaseUrl && supabaseAnonKey
         insert: async () => ({ error: null }),
         delete: () => ({ eq: () => ({ eq: async () => ({ error: null }), delete: async () => ({ error: null }) }) })
       })
+    // R-08: The offline stub must satisfy ReturnType<typeof createClient<Database>>.
+    // The structural object is intentionally incomplete (only paths exercised in offline
+    // mode are mocked) — the double cast is required because TS cannot verify partial
+    // structural compatibility against the generated Supabase client type.
     } as unknown as ReturnType<typeof createClient<Database>>);

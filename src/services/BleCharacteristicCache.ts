@@ -9,6 +9,9 @@ export interface BleCacheEntry {
 }
 
 const TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+// R-24: AsyncStorage key prefix for GATT adapter cache entries.
+// Format: '@sk8_gatt_<MAC_UPPERCASE>' (e.g. '@sk8_gatt_AA:BB:CC:DD:EE:FF').
+// Registered in storageKeys.ts registry. Do NOT use this prefix for any other purpose.
 const CACHE_PREFIX = '@sk8_gatt_';
 
 /**

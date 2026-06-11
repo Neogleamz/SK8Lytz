@@ -61,7 +61,8 @@ class LocationService {
       AppLogger.log('PERFORMANCE_METRIC', {
         metricName: 'LOCATION_ACQUIRED',
         value: 1,
-        address: label,
+        // R-09: address label omitted — may contain residential PII (street name + number).
+        // Log only accuracy for latency diagnostics.
         accuracy: pos.coords.accuracy,
       });
 
@@ -89,7 +90,9 @@ class LocationService {
       }
       return null;
     } catch (err: unknown) {
-      // Don't clutter logs during passive scanning
+      // R-06 note: Silenced intentionally during passive scanning to avoid log noise.
+      // If location access is denied this is expected — AppLogger.warn would spam.
+      if (__DEV__) console.warn('[LocationService] getSilentLocation failed:', err instanceof Error ? err.message : String(err));
       return null;
     }
   }
@@ -155,18 +158,18 @@ class LocationService {
             .or(orParts.join(','))
             .order('created_at', { ascending: false });
 
-          privateData = (memberSessions ?? []).map((row: any) => ({
-            id: row.id,
-            name: row.name,
-            invite_code: row.invite_code,
-            location_label: row.location_label,
-            location_coords: row.location_coords,
-            scheduled_at: row.scheduled_at,
-            created_at: row.created_at,
-            is_public: row.is_public,
-            crew_id: row.crew_id,
-            crew_members: row.crew_members,
-            crews: row.crews,
+          privateData = (memberSessions ?? []).map((row: Record<string, unknown>) => ({
+            id: row.id as string,
+            name: row.name as string,
+            invite_code: row.invite_code as string,
+            location_label: row.location_label as string | null,
+            location_coords: row.location_coords as { lat?: number; lng?: number } | null,
+            scheduled_at: row.scheduled_at as string | null,
+            created_at: row.created_at as string,
+            is_public: (row.is_public as boolean | null) ?? false,
+            crew_id: row.crew_id as string | null,
+            crew_members: row.crew_members as DB_CrewSession['crew_members'],
+            crews: row.crews as DB_CrewSession['crews'],
           }));
         }
       }
@@ -175,22 +178,22 @@ class LocationService {
     }
 
     // ── Merge + deduplicate by session id ────────────────────────────────────
-    const mappedPublicData = (publicData ?? []).map((row: any) => ({
-      id: row.id,
-      name: row.name,
-      invite_code: row.invite_code,
-      location_label: row.location_label,
-      location_coords: row.location_coords,
-      scheduled_at: row.scheduled_at,
-      created_at: row.created_at,
-      is_public: row.is_public,
-      crew_id: row.crew_id,
-      crew_members: row.crew_members,
-      crews: row.crews,
+    const mappedPublicData = (publicData ?? []).map((row: Record<string, unknown>) => ({
+      id: row.id as string,
+      name: row.name as string,
+      invite_code: row.invite_code as string,
+      location_label: row.location_label as string | null,
+      location_coords: row.location_coords as { lat?: number; lng?: number } | null,
+      scheduled_at: row.scheduled_at as string | null,
+      created_at: row.created_at as string,
+      is_public: (row.is_public as boolean | null) ?? false,
+      crew_id: row.crew_id as string | null,
+      crew_members: row.crew_members as DB_CrewSession['crew_members'],
+      crews: row.crews as DB_CrewSession['crews'],
     }));
     const combined = [...mappedPublicData, ...privateData];
     const seen = new Set<string>();
-    const unique = combined.filter((s: DB_CrewSession) => {
+    const unique = (combined as DB_CrewSession[]).filter((s: DB_CrewSession) => {
       if (seen.has(s.id)) return false;
       seen.add(s.id);
       return true;
@@ -202,7 +205,7 @@ class LocationService {
     const userLat = userCoords?.lat ?? null;
     const userLng = userCoords?.lng ?? null;
 
-    const sessions: NearbySession[] = unique.map((s: DB_CrewSession) => {
+    const sessions: NearbySession[] = (unique as DB_CrewSession[]).map((s: DB_CrewSession) => {
       const coords = s.location_coords as { lat?: number; lng?: number } | null;
       let distanceMi: number | null = null;
       let distanceLabel = '';

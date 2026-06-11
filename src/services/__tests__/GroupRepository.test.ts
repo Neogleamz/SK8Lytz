@@ -6,7 +6,9 @@
  * offline queue caching, and Supabase synchronization logic.
  */
 
-(global as any).__DEV__ = true;
+// R-08 fix: Typed global augmentation instead of `as any` cast.
+// __DEV__ is a React Native runtime global; we declare it here for Jest compatibility.
+(global as typeof globalThis & { __DEV__: boolean }).__DEV__ = true;
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../supabaseClient';

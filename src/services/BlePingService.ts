@@ -6,6 +6,17 @@ import { type PingResult, isPingResult } from '../types/dashboard.types';
 import { enqueueWrite, enqueueDelay } from './BleWriteQueue';
 import { scrubPII } from '../utils/piiScrubber';
 
+// R-08: react-native-ble-plx BleManager type is not importable without tight coupling.
+// Structural alias for the minimal interface used by the ping flow.
+type BleManagerPingLike = {
+  writeCharacteristicWithoutResponseForDevice(id: string, svc: string, chr: string, b64: string): Promise<unknown>;
+  cancelDeviceConnection(id: string): Promise<unknown>;
+  monitorCharacteristicForDevice(
+    id: string, svc: string, chr: string,
+    cb: (err: Error | null, char: { value: string | null } | null) => void
+  ): { remove(): void };
+};
+
 /**
  * executePingDevice — Wizard-exclusive atomic GATT session.
  * Connect → Blink → Probe EEPROM → Turn Off → Disconnect.
@@ -13,7 +24,7 @@ import { scrubPII } from '../utils/piiScrubber';
  * Returns hwConfig (ledPoints, icName, etc.) or null if probe timed out.
  */
 export async function executePingDevice(
-  bleManager: any,
+  bleManager: BleManagerPingLike,
   mac: string,
   blinkPayload: number[],
   options?: {
@@ -30,11 +41,14 @@ export async function executePingDevice(
 
   try {
     // ── BleSessionFactory: connect → discover → resolve (single source of truth) ──
-    const { conn: _pingConn, adapter: pingAdapter } = await createGattSession(bleManager, mac, {
-      timeout: 6000,
-      retries: 2,
-      context: 'pingDevice',
-    });
+    // Cast justified: the caller always passes a real BleManager instance; BleManagerPingLike
+    // is a structural subset type we defined to avoid tight coupling at the type level.
+    const { conn: _pingConn, adapter: pingAdapter } = await createGattSession(
+      bleManager as unknown as import('react-native-ble-plx').BleManager, mac, {
+        timeout: 6000,
+        retries: 2,
+        context: 'pingDevice',
+      });
 
     // ── Step 2: Write Blink (channel is now hot — no Phantom Blink) ───────────
     const b64Blink = Buffer.from(blinkPayload).toString('base64');
@@ -69,7 +83,7 @@ export async function executePingDevice(
           mac,
           pingAdapter.serviceUUID,
           pingAdapter.notifyCharacteristicUUID,
-          (err: any, char: any) => {
+          (err: Error | null, char: { value: string | null } | null) => {
             if (err) return;
             if (!char?.value) return;
             try {
@@ -128,6 +142,8 @@ export async function executePingDevice(
     }
 
     // ── Step 4: Wait so user can see the blink ───────────────────────
+    // R-16 note: this is a UX dwell delay (not a GATT write timing), so a
+    // raw setTimeout is correct here — enqueueDelay is for inter-write gaps only.
     if (duration > 0) {
       await new Promise(r => setTimeout(r, duration));
     }

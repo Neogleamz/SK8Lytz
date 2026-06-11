@@ -449,8 +449,12 @@ class SpeedTrackingServiceClass {
       }));
       if (mapped.length > 0) {
         try {
+          // R-05 note: AsyncStorage cache write is best-effort — main data path
+          // already returned above from Supabase. Swallowed intentionally.
           await AsyncStorage.setItem(`@sk8lytz_recent_sessions_${userId}`, JSON.stringify(mapped));
-        } catch (e) {}
+        } catch (e: unknown) {
+          if (__DEV__) console.warn('[SpeedTrackingService] Session cache write failed:', e instanceof Error ? e.message : String(e));
+        }
       }
       return mapped.length > 0 ? mapped : await this.getCachedRecentSessions(userId);
     } catch (e: unknown) {
@@ -577,8 +581,11 @@ class SpeedTrackingServiceClass {
       };
 
       try {
+        // R-05 note: cache write is best-effort; return already computed below.
         await AsyncStorage.setItem(`@sk8lytz_lifetime_stats_${userId}`, JSON.stringify(result));
-      } catch (e) {}
+      } catch (e: unknown) {
+        if (__DEV__) console.warn('[SpeedTrackingService] Lifetime stats cache write failed:', e instanceof Error ? e.message : String(e));
+      }
 
       return result;
     } catch (e: unknown) {

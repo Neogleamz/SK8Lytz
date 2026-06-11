@@ -64,8 +64,10 @@ class ScenesServiceClass {
           .returns<ICloudScene[]>();
         if (!error && data) {
           AsyncStorage.setItem(STORAGE_SCENES_CACHE, JSON.stringify(data)).catch((e: unknown) => {
-            const error = e instanceof Error ? e : new Error(String(e));
-            console.error('[ScenesService]', error);
+            // R-06 fix: route cache-write failures through AppLogger, not console.
+            AppLogger.warn('[ScenesService] Failed to write scenes cache', {
+              error: e instanceof Error ? e.message : String(e)
+            });
           });
           return data;
         }
@@ -303,6 +305,9 @@ class ScenesServiceClass {
         payload: {
           id: scene.id,
           name: scene.name,
+          // R-08: Supabase requires nodes to match its recursive Json type. scene.steps
+          // is structurally compatible but TS cannot verify the constraint — the double
+          // cast is unavoidable without a full Supabase Json-union helper.
           nodes: scene.steps as unknown as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
           fill_mode: 'SCENE',
           transition_type: 0,

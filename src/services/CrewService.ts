@@ -1,3 +1,4 @@
+// TODO: [R-23] File exceeds 30KB limit (30,962 bytes) — mandatory component extraction required before architectural refactor
 /**
  * CrewService.ts — SK8Lytz Crew Sync
  *

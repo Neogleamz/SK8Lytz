@@ -40,10 +40,13 @@ export const SkateSpotsService = {
       try {
         const { data, error } = await supabase.from('skate_spots').select('*').eq('is_published', true).limit(500);
         if (!error && data) {
-          AsyncStorage.setItem(STORAGE_SKATE_SPOTS_CACHE, JSON.stringify({ timestamp: Date.now(), data })).catch(e => console.error(e));
+          // R-11 fix: wrap fire-and-forget storage write with proper error logging.
+          AsyncStorage.setItem(STORAGE_SKATE_SPOTS_CACHE, JSON.stringify({ timestamp: Date.now(), data })).catch((e: unknown) => {
+            AppLogger.warn('[SkateSpotsService] Failed to cache spots', { error: e instanceof Error ? e.message : String(e) });
+          });
         }
       } catch (e: unknown) {
-        console.error(e);
+        AppLogger.warn('[SkateSpotsService] syncCloud failed', { error: e instanceof Error ? e.message : String(e) });
       }
     };
 
@@ -58,13 +61,18 @@ export const SkateSpotsService = {
             .limit(500);
           if (!error && data) {
             localData = data as SkateSpot[];
-            AsyncStorage.setItem(STORAGE_SKATE_SPOTS_CACHE, JSON.stringify({ timestamp: Date.now(), data })).catch(e => console.error(e));
+            // R-11 fix: proper error logging on storage write
+            AsyncStorage.setItem(STORAGE_SKATE_SPOTS_CACHE, JSON.stringify({ timestamp: Date.now(), data })).catch((e: unknown) => {
+              AppLogger.warn('[SkateSpotsService] Failed to cache spots (blocking fetch)', { error: e instanceof Error ? e.message : String(e) });
+            });
           }
         } catch (e: unknown) {
           AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Error fetching native spots', info: e instanceof Error ? e.message : String(e) });
         }
       } else {
-        syncCloud().catch(e => console.error(e));
+        syncCloud().catch((e: unknown) => {
+          AppLogger.warn('[SkateSpotsService] Background sync failed', { error: e instanceof Error ? e.message : String(e) });
+        });
       }
     }
 

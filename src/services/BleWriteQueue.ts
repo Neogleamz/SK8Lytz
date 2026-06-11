@@ -202,6 +202,9 @@ async function _drain(): Promise<void> {
     } catch (err: unknown) {
       const safeErr = err instanceof Error ? err : new Error(String(err));
       if (isTransientGattError(err)) {
+        // R-03: jitteredDelay(100, 50) adds ±50ms random spread to the 100ms base.
+        // Prevents synchronized retry storms when multiple queue entries hit GATT errors
+        // simultaneously on a crowded 2.4GHz band.
         const delay = jitteredDelay(100, 50);
         AppLogger.warn(`[BleWriteQueue] Transient GATT error — retrying in ${delay}ms`, { error: String(err) });
         await new Promise(r => setTimeout(r, delay));
@@ -209,7 +212,6 @@ async function _drain(): Promise<void> {
           const retryResult = await entry.execute();
           entry.resolve(retryResult);
         } catch (retryErr: unknown) {
-      const safeErr = retryErr instanceof Error ? retryErr : new Error(String(retryErr));
           AppLogger.warn('[BleWriteQueue] Retry failed', { error: String(retryErr) });
           entry.resolve(false);
         }

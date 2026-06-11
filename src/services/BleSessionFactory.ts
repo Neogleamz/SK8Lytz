@@ -122,6 +122,8 @@ export async function createGattSession(
         || errStr.includes('Peer removed');
 
       if (isTransient && attempt < retries) {
+        // R-03: jitteredDelay() randomizes within ±jitter ms to prevent reconnect storms.
+        // GATT_BACKOFF_MS = [500, 1500] base delays; actual delay = base ± 500ms random.
         const delay = jitteredDelay(GATT_BACKOFF_MS[attempt - 1] ?? 1500, 500);
         AppLogger.warn(`[BleSessionFactory] GATT 133 on ${scrubPII(mac)}. Attempt ${attempt}/${retries} — retrying in ${delay}ms with refreshGatt`, { context, error: errStr });
         await bleManager.cancelDeviceConnection(mac).catch(() => {});

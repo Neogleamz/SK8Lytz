@@ -45,7 +45,9 @@ export const HealthSyncService = {
         const { initialize: initHC, insertRecords } = require('react-native-health-connect');
         await initHC();
 
-        const records: Array<Record<string, any>> = [
+        // R-08 fix: react-native-health-connect does not export a typed Record interface.
+        // Record<string, unknown> captures the heterogeneous shape while eliminating the `any` cast.
+        const records: Array<Record<string, unknown>> = [
           {
             recordType: 'ExerciseSession',
             exerciseType: 60, // 60 = Skating in Health Connect API

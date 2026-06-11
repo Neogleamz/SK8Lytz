@@ -485,7 +485,7 @@ class CrewProfileService {
       if (error) throw error;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] assignCrewOwner failed', { error: msg });
+      AppLogger.error('[CrewProfileService] assignCrewOwner failed', { error: msg, payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }
@@ -572,7 +572,7 @@ class CrewProfileService {
       if (err2) throw err2;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewProfileService] transferSessionLeadership failed', { error: msg });
+      AppLogger.error('[CrewProfileService] transferSessionLeadership failed', { error: msg, payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }

@@ -70,7 +70,9 @@ class GradientsServiceClass {
       const finalMerged = Array.from(mergedMap.values());
       try {
         await AsyncStorage.setItem(LOCAL_GRADIENTS_KEY, JSON.stringify(finalMerged));
-      } catch (e: unknown) {}
+      } catch (e: unknown) {
+        AppLogger.warn('GRADIENT_CACHE_WRITE_FAIL', e instanceof Error ? e.message : String(e));
+      }
     };
 
     syncCloud(); // Fire and forget
@@ -111,6 +113,8 @@ class GradientsServiceClass {
         const payload: Database['public']['Tables']['user_saved_presets']['Insert'] = {
           id: newPreset.id,
           name: newPreset.name,
+          // R-08: Supabase nodes column is typed as Json. CustomBuilderNode[] is structurally
+          // compatible but TS cannot verify the recursive Json constraint — double cast required.
           nodes: newPreset.nodes as unknown as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
           fill_mode: newPreset.fill_mode || 'GRADIENT',
           transition_type: newPreset.transition_type || 0x01,

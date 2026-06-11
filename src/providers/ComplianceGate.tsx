@@ -47,7 +47,8 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
       
       // 1. Fetch required version from app_settings
       const settings = await AppSettingsService.fetchAllSettings();
-      const requiredVersion = parseInt(settings['required_eula_version'] || '1', 10);
+      const requiredVal = settings['required_eula_version'];
+      const requiredVersion = parseInt(typeof requiredVal === 'string' ? requiredVal : '1', 10);
 
       // 2. Fetch user's accepted version
       if (!user) {
@@ -90,7 +91,8 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
 
       // 1. Fetch current required version
       const settings = await AppSettingsService.fetchAllSettings();
-      const requiredVersion = parseInt(settings['required_eula_version'] || '1', 10);
+      const requiredVal = settings['required_eula_version'];
+      const requiredVersion = parseInt(typeof requiredVal === 'string' ? requiredVal : '1', 10);
 
       // 2. Update user profile in Supabase
       if (!user) return;

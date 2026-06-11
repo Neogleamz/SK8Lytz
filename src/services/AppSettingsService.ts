@@ -15,8 +15,12 @@ export type AppSettingKey =
   | 'required_eula_version'
   | string;
 
+// R-08 fix: explicit value union instead of `any`.
+// All known app settings are either boolean feature flags or string version identifiers.
+// Narrowing to string | boolean eliminates the any cast AND maintains consumer compatibility.
+export type AppSettingsValue = string | boolean;
 export interface AppSettingsMap {
-  [key: string]: any;
+  [key: string]: AppSettingsValue;
 }
 
 const CACHE_KEY = STORAGE_APP_SETTINGS;
@@ -51,11 +55,15 @@ export const AppSettingsService = {
           return;
         }
 
-        const newSettings: Record<string, any> = {};
+        const newSettings: AppSettingsMap = {};
         for (const row of (data || [])) {
           // Only apply the override if the setting is enabled globally
           if (row.is_enabled !== false) {
-            newSettings[row.setting_key] = row.setting_value;
+            // setting_value is Supabase Json — extract only the scalar subset we support.
+            const raw = row.setting_value;
+            if (typeof raw === 'string' || typeof raw === 'boolean') {
+              newSettings[row.setting_key] = raw;
+            }
           }
         }
 
@@ -78,13 +86,15 @@ export const AppSettingsService = {
    * Updates a single setting in Supabase.
    * Uses upsert to create it if it doesn't exist.
    */
-  async updateSetting(key: AppSettingKey, value: any): Promise<boolean> {
+  async updateSetting(key: AppSettingKey, value: unknown): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('sk8lytz_app_settings')
         .upsert({ 
           setting_key: key, 
-          setting_value: value 
+          // R-08 boundary cast: value is validated by the caller to be JSON-serializable.
+          // unknown → Json requires a double-cast since Supabase Json is a recursive union.
+          setting_value: value as unknown as import('../types/supabase').Json
         }, { onConflict: 'setting_key' });
 
       if (error) throw error;

@@ -105,8 +105,10 @@ class AuthProfileService {
 
       if (error) throw error;
     } catch (e: unknown) {
-      if (typeof e === 'object' && e !== null && 'code' in e && (e as { code: string }).code === '23505') throw new Error('Username already taken');
-      throw e;
+      // R-06 fix: narrow to Error first, then access the Supabase/PostgREST `code` property.
+      const pgCode = (e instanceof Error && 'code' in e) ? (e as Error & { code: string }).code : null;
+      if (pgCode === '23505') throw new Error('Username already taken');
+      throw e instanceof Error ? e : new Error(String(e));
     }
   }
 

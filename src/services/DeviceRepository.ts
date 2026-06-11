@@ -1,4 +1,4 @@
-// TODO: [R-23] Extract logic to smaller components (Monolith limit exceeded)
+// TODO: [R-23] File exceeds 30KB limit (39417 bytes) — mandatory component extraction required before architectural refactor
 /**
  * DeviceRepository.ts — Single Source of Truth for Device & Group Persistence
  *
