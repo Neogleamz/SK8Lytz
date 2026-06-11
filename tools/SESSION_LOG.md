@@ -1,3 +1,12 @@
+### [EVENT] 2026-06-11T03:58 — /intake Execution for PII Encryption
+**Trigger:** User requested adding `pgsodium` to the Bucket List for PII encryption based on the recommended extensions artifact.
+**Action:** Intercepted the request via `/intake`. Conducted benchmarking (`INDUSTRY_BENCHMARKS.md`) which revealed that Supabase actively discourages `pgsodium` TCE for high-volume PII due to operational risk. Pivoted the task to Application-Level Encryption (client-side) per the industry gold standard. Generated `PLAN-spike-pii-app-encryption.md` and added `spike/pii-app-encryption` to `SK8Lytz_Bucket_List.md` under `ON DECK`.
+**Verify result:** Task fully formatted and routed correctly.
+
+### [ARTIFACT] 2026-06-11T03:51 — Recommended Extensions Research
+**Link:** [recommended_extensions.md](file:///C:/Users/Magma/.gemini/antigravity-ide/brain/49562e45-5cf2-4ee1-90d6-05f5fc939b81/artifacts/recommended_extensions.md)
+**Summary:** User asked for useful extensions. Researched and compiled a list of high-value Supabase (PostgreSQL) and VS Code development extensions specific to the SK8Lytz offline-first, BLE, and React Native architecture.
+
 ### [MERGE] 2026-06-11T03:22 — sweep-services-core → master @ 4f49db3f
 **What merged:**
 - Resolved all 21 files of the services-core domain sweep, fixing `any` casts, missing `try/catch` and PII/Supabase context parameter gaps.
@@ -1887,3 +1896,8 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 
 
 
+
+ # # #   [ A R T I F A C T ]        R e c o m m e n d e d   E x t e n s i o n s   R e s e a r c h 
+ * * L i n k : * *   [ r e c o m m e n d e d _ e x t e n s i o n s . m d ] ( f i l e : / / / C : / U s e r s / M a g m a / . g e m i n i / a n t i g r a v i t y - i d e / b r a i n / 4 9 5 6 2 e 4 5 - 5 c f 2 - 4 e e 1 - 9 0 d 6 - 0 5 f 5 f c 9 3 9 b 8 1 / a r t i f a c t s / r e c o m m e n d e d _ e x t e n s i o n s . m d ) 
+ * * S u m m a r y : * *   U s e r   a s k e d   f o r   u s e f u l   e x t e n s i o n s .   R e s e a r c h e d   a n d   c o m p i l e d   a   l i s t   o f   h i g h - v a l u e   S u p a b a s e   ( P o s t g r e S Q L )   a n d   V S   C o d e   d e v e l o p m e n t   e x t e n s i o n s   s p e c i f i c   t o   t h e   S K 8 L y t z   o f f l i n e - f i r s t ,   B L E ,   a n d   R e a c t   N a t i v e   a r c h i t e c t u r e .  
+ 
