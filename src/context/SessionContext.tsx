@@ -1,16 +1,17 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef, useMemo } from 'react';
 import { AppState, Platform } from 'react-native';
-import * as Location from 'expo-location';
-import notifee, { AndroidImportance, EventType, AndroidForegroundServiceType } from '@notifee/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useGlobalTelemetry, GlobalTelemetryState } from '../hooks/useGlobalTelemetry';
-import { useHealthTelemetry, HealthTelemetry } from '../hooks/useHealthTelemetry';
+import notifee, { EventType } from '@notifee/react-native';
+import { useAuth } from './AuthContext';
+import { useMachine } from '@xstate/react';
+import { sessionMachine } from '../services/session/SessionMachine';
+import { SessionBridge } from '../services/session/SessionBridge';
+import { TelemetrySnapshot, HealthSnapshot } from '../services/session/SessionMachine.types';
+import { GlobalTelemetryState } from '../hooks/useGlobalTelemetry';
+import { HealthTelemetry } from '../hooks/useHealthTelemetry';
 import { AppLogger } from '../services/AppLogger';
 import { WatchBridge, WatchCommand, WatchHealthUpdate } from 'sk8lytz-watch-bridge';
 import { STORAGE_AUTO_PAUSE_ENABLED, STORAGE_PENDING_BG_END } from '../constants/storageKeys';
-
-// S4 Monolith Acknowledgment: This file (SessionContext.tsx) is flagged as a monolith (>30KB).
-// We are only modifying specific line items listed in PLAN-sweep-context.md.
 
 interface SessionContextValue {
   isSkateSessionActive: boolean;
@@ -23,56 +24,251 @@ interface SessionContextValue {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
-const NOTIFICATION_CHANNEL_ID = 'sk8lytz-session';
-const NOTIFICATION_ID = 'active-skate-session';
-
-/** Persisted session phase for crash recovery. */
-type PersistedSessionPhase = 'active' | 'paused' | 'idle';
 const SESSION_PHASE_KEY = '@sk8lytz_session_phase';
-const SESSION_PAUSE_TIME_KEY = '@sk8lytz_session_pause_time';
-
-async function persistSessionPhase(phase: PersistedSessionPhase, pauseTimeMs?: number): Promise<void> {
-  try {
-    const pairs: [string, string][] = [
-      [SESSION_PHASE_KEY, phase],
-      ['@sk8lytz_session_active', phase === 'active' || phase === 'paused' ? 'true' : 'false'],
-    ];
-    if (phase === 'paused' && pauseTimeMs) {
-      pairs.push([SESSION_PAUSE_TIME_KEY, String(pauseTimeMs)]);
-    } else if (phase !== 'paused') {
-      pairs.push([SESSION_PAUSE_TIME_KEY, '']);
-    }
-    await AsyncStorage.multiSet(pairs);
-  } catch (err: unknown) {
-    AppLogger.error('Failed to persist session phase', err, { payload_size: 0, ssi: 0 });
-  }
-}
 
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [sessionPhase, setSessionPhase] = useState<'IDLE' | 'ACTIVE' | 'PAUSED' | 'ENDING'>('IDLE');
-  const [recoveredStartTimeMs, setRecoveredStartTimeMs] = useState<number | null>(null);
-  const sessionPhaseRef = React.useRef(sessionPhase);
-  useEffect(() => { sessionPhaseRef.current = sessionPhase; }, [sessionPhase]);
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
+  const [autoPauseEnabled, setAutoPauseEnabled] = useState(false);
+
+  useEffect(() => {
+    const load = async () => {
+      const enabled = await AsyncStorage.getItem(STORAGE_AUTO_PAUSE_ENABLED);
+      setAutoPauseEnabled(enabled !== 'false');
+      setInitialDataLoaded(true);
+    };
+    load();
+  }, []);
+
+  if (!initialDataLoaded) {
+    return (
+      <SessionContext.Provider
+        value={{
+          isSkateSessionActive: false,
+          sessionPhase: 'IDLE',
+          startSession: () => {},
+          endSession: () => {},
+          telemetry: {
+            gpsSpeed: 0,
+            peakGForce: 1.0,
+            sessionDistanceMiles: 0,
+            sessionDurationSec: 0,
+            sessionPeakSpeed: 0,
+            sessionAvgSpeed: 0,
+          },
+          health: {
+            latestBpm: null,
+            avgBpm: null,
+            peakBpm: null,
+            activeCalories: null,
+          },
+        }}
+      >
+        {children}
+      </SessionContext.Provider>
+    );
+  }
+
+  return (
+    <SessionMachineWrapper
+      key={initialDataLoaded ? 'ready' : 'loading'}
+      autoPauseEnabled={autoPauseEnabled}
+      initialDataLoaded={initialDataLoaded}
+    >
+      {children}
+    </SessionMachineWrapper>
+  );
+}
+
+function SessionMachineWrapper({
+  children,
+  autoPauseEnabled,
+  initialDataLoaded,
+}: {
+  children: ReactNode;
+  autoPauseEnabled: boolean;
+  initialDataLoaded: boolean;
+}) {
+  const { user } = useAuth();
+  const userIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    userIdRef.current = user?.id ?? null;
+  }, [user]);
+
+  const gpsSpeedRef = useRef(0);
+  const telemetryRef = useRef<TelemetrySnapshot>({
+    gpsSpeed: 0,
+    peakGForce: 1.0,
+    sessionDistanceMiles: 0,
+    sessionDurationSec: 0,
+    sessionPeakSpeed: 0,
+    sessionAvgSpeed: 0,
+  });
+  const healthRef = useRef<HealthSnapshot>({
+    latestBpm: null,
+    avgBpm: null,
+    peakBpm: null,
+    activeCalories: null,
+  });
+
+  const [telemetry, setTelemetry] = useState<GlobalTelemetryState>({
+    gpsSpeed: 0,
+    peakGForce: 1.0,
+    sessionDistanceMiles: 0,
+    sessionDurationSec: 0,
+    sessionPeakSpeed: 0,
+    sessionAvgSpeed: 0,
+  });
+
+  const [health, setHealth] = useState<HealthTelemetry>({
+    latestBpm: null,
+    avgBpm: null,
+    peakBpm: null,
+    activeCalories: null,
+  });
+
+  const invalidateStatsCache = () => {
+    AppLogger.log('APP_LOG', { event: 'stats_cache_invalidated' });
+  };
+
+  const [snapshot, send, actorRef] = useMachine(sessionMachine, {
+    input: {
+      autoPauseEnabled,
+      gpsSpeedRef,
+      telemetryRef,
+      healthRef,
+      userIdRef,
+      onTelemetryUpdate: (t) => {
+        telemetryRef.current = t;
+        gpsSpeedRef.current = t.gpsSpeed;
+      },
+      onHealthUpdate: (h) => {
+        healthRef.current = h;
+      },
+      onSessionSaved: () => invalidateStatsCache(),
+    },
+  });
+
+  // Keep SessionBridge in sync
+  useEffect(() => {
+    SessionBridge.register(send);
+    return () => SessionBridge.unregister();
+  }, [send]);
+
+  const sessionPhase = snapshot.value as 'IDLE' | 'ACTIVE' | 'PAUSED' | 'ENDING';
   const isSkateSessionActive = sessionPhase === 'ACTIVE' || sessionPhase === 'PAUSED' || sessionPhase === 'ENDING';
-  // Ref for the delayed STOPPED push that follows the 10-second SUMMARY card
-  const summaryTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Refs to always-current session functions — avoids stale closures in stable listeners
-  const startSessionRef = React.useRef<(externalStartTimeMs?: number) => void>(() => {});
-  const endSessionRef = React.useRef<() => void>(() => {});
+  // UI timer tick (1s interval)
+  useEffect(() => {
+    if (!snapshot.matches('ACTIVE') && !snapshot.matches('PAUSED')) return;
+    const id = setInterval(() => {
+      const now = snapshot.value === 'PAUSED' && snapshot.context.pauseStartTimeMs
+        ? snapshot.context.pauseStartTimeMs
+        : Date.now();
+      const elapsed = snapshot.context.startTimeMs
+        ? Math.floor((now - snapshot.context.startTimeMs - snapshot.context.pausedMsAccum) / 1000)
+        : 0;
+      setTelemetry({
+        gpsSpeed: gpsSpeedRef.current,
+        peakGForce: telemetryRef.current.peakGForce,
+        sessionDistanceMiles: telemetryRef.current.sessionDistanceMiles,
+        sessionDurationSec: elapsed,
+        sessionPeakSpeed: telemetryRef.current.sessionPeakSpeed,
+        sessionAvgSpeed: telemetryRef.current.sessionAvgSpeed,
+      });
+      setHealth({
+        latestBpm: healthRef.current.latestBpm,
+        avgBpm: healthRef.current.avgBpm,
+        peakBpm: healthRef.current.peakBpm,
+        activeCalories: healthRef.current.activeCalories,
+      });
+    }, 1000);
+    return () => clearInterval(id);
+  }, [snapshot.value, snapshot.context.startTimeMs, snapshot.context.pausedMsAccum, snapshot.context.pauseStartTimeMs]);
 
-  // 1. Hook up the core telemetry
-  const health = useHealthTelemetry(isSkateSessionActive);
-  const telemetry = useGlobalTelemetry(sessionPhase, {
-    avgBpm: health.avgBpm,
-    peakBpm: health.peakBpm,
-    activeCalories: health.activeCalories
-  }, recoveredStartTimeMs);
+  // Reset telemetry & health when IDLE
+  useEffect(() => {
+    if (snapshot.matches('IDLE')) {
+      setTelemetry({
+        gpsSpeed: 0,
+        peakGForce: 1.0,
+        sessionDistanceMiles: 0,
+        sessionDurationSec: 0,
+        sessionPeakSpeed: 0,
+        sessionAvgSpeed: 0,
+      });
+      setHealth({
+        latestBpm: null,
+        avgBpm: null,
+        peakBpm: null,
+        activeCalories: null,
+      });
+    }
+  }, [snapshot.value]);
 
-  const telemetryRef = React.useRef(telemetry);
-  useEffect(() => { telemetryRef.current = telemetry; }, [telemetry]);
+  // Crash recovery
+  useEffect(() => {
+    const recover = async () => {
+      const currentSnapshot = actorRef.getSnapshot();
+      const pendingEnd = await AsyncStorage.getItem(STORAGE_PENDING_BG_END);
+      if (pendingEnd === 'true') {
+        await AsyncStorage.removeItem(STORAGE_PENDING_BG_END);
+        if (!currentSnapshot.matches('IDLE')) {
+          send({ type: 'END' });
+        }
+        return;
+      }
+      const phase = await AsyncStorage.getItem(SESSION_PHASE_KEY);
+      if (phase === 'active' && currentSnapshot.matches('IDLE')) {
+        send({ type: 'START' });
+      }
+      if (phase === 'paused' && currentSnapshot.matches('IDLE')) {
+        send({ type: 'START' });
+        send({ type: 'PAUSE' });
+      }
+    };
+    if (initialDataLoaded) {
+      recover();
+      const sub = AppState.addEventListener('change', (s) => {
+        if (s === 'active') recover();
+      });
+      return () => sub.remove();
+    }
+  }, [actorRef, send, initialDataLoaded]);
 
-  // 2. Initialize iOS categories + listen for watch commands
+  // Watch listeners
+  useEffect(() => {
+    const unsubCmd = WatchBridge.addWatchCommandListener((command: WatchCommand) => {
+      AppLogger.log('APP_LOG', { event: 'watch_command_received', command });
+      if (command === 'START_SESSION') send({ type: 'START' });
+      if (command === 'STOP_SESSION') send({ type: 'END' });
+    });
+    const unsubHealth = WatchBridge.addWatchHealthListener((update: WatchHealthUpdate) => {
+      AppLogger.log('APP_LOG', {
+        event: 'watch_health_received',
+        heartRate: update.heartRate,
+        calories: update.calories,
+        status: update.status,
+      });
+      if (update.heartRate > 0) {
+        healthRef.current = {
+          ...healthRef.current,
+          latestBpm: update.heartRate,
+          activeCalories: update.calories > 0 ? update.calories : healthRef.current.activeCalories,
+        };
+      }
+      const currentSnapshot = actorRef.getSnapshot();
+      if (update.status === 'ACTIVE' && currentSnapshot.matches('IDLE')) {
+        AppLogger.log('APP_LOG', { event: 'auto_recovering_session_from_watch_health' });
+        send({ type: 'START', externalStartTimeMs: update.startTimeMs });
+      }
+    });
+    return () => {
+      unsubCmd();
+      unsubHealth();
+    };
+  }, [actorRef, send]);
+
+  // Foreground Service/Notification configuration on iOS categories mount
   useEffect(() => {
     if (Platform.OS === 'ios') {
       notifee.setNotificationCategories([
@@ -84,383 +280,68 @@ export function SessionProvider({ children }: { children: ReactNode }) {
               title: '🛑 End Session',
               foreground: true,
             },
+            {
+              id: 'pause-session',
+              title: '⏸ Pause Session',
+              foreground: true,
+            },
+            {
+              id: 'resume-session',
+              title: '▶️ Resume Session',
+              foreground: true,
+            },
           ],
         },
       ]);
     }
-
-    // Listen for START_SESSION / STOP_SESSION commands sent from the watch
-    const unsubscribeCmd = WatchBridge.addWatchCommandListener((command: WatchCommand) => {
-      AppLogger.log('APP_LOG', { event: 'watch_command_received', command });
-      if (command === 'START_SESSION') startSessionRef.current();
-      else if (command === 'STOP_SESSION') endSessionRef.current();
-    });
-
-    // Listen for health telemetry relayed from the watch's HealthKit/Health Services
-    const unsubscribeHealth = WatchBridge.addWatchHealthListener((update: WatchHealthUpdate) => {
-      AppLogger.log('APP_LOG', {
-        event: 'watch_health_received',
-        heartRate: update.heartRate,
-        calories: update.calories,
-        status: update.status
-      });
-      // Merge into phone-side health telemetry — watch data takes precedence when available
-      if (update.heartRate > 0) {
-        health.mergeWatchHealth?.(update.heartRate, update.calories);
-      }
-      
-      // Auto-recover session if watch is active but phone is idle
-      if (update.status === 'ACTIVE' && sessionPhaseRef.current === 'IDLE') {
-        AppLogger.log('APP_LOG', { event: 'auto_recovering_session_from_watch_health' });
-        startSessionRef.current(update.startTimeMs);
-      }
-    });
-
-    return () => {
-      unsubscribeCmd();
-      unsubscribeHealth();
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 3. Synchronize React state with AsyncStorage on mount & App foreground transitions
-  const isSyncingSessionState = React.useRef(false);
-  useEffect(() => {
-    const syncSessionState = async () => {
-      if (isSyncingSessionState.current) return;
-      isSyncingSessionState.current = true;
-      try {
-        // Check if a background end was queued while we were backgrounded
-        const pendingBgEnd = await AsyncStorage.getItem(STORAGE_PENDING_BG_END);
-        if (pendingBgEnd === 'true') {
-          await AsyncStorage.removeItem(STORAGE_PENDING_BG_END);
-          if (sessionPhaseRef.current !== 'IDLE') {
-            AppLogger.log('APP_LOG', { event: 'deferred_bg_end_session' });
-            // Fire the full endSession teardown (Supabase save, GPS cleanup, etc.)
-            endSessionRef.current();
-          }
-          return; // Skip normal sync — endSession handles everything
-        }
-
-        const phase = await AsyncStorage.getItem(SESSION_PHASE_KEY);
-        if (phase === 'active') {
-          if (sessionPhaseRef.current === 'IDLE') {
-            setSessionPhase('ACTIVE');
-          }
-        } else if (phase === 'paused') {
-          if (sessionPhaseRef.current === 'IDLE') {
-            setSessionPhase('PAUSED');
-            // Recover pause timestamp for duration correction
-            const pauseTimeStr = await AsyncStorage.getItem(SESSION_PAUSE_TIME_KEY);
-            if (pauseTimeStr) {
-              AppLogger.log('APP_LOG', { event: 'recovered_paused_session', pauseTimeMs: Number(pauseTimeStr) });
-            }
-          }
-        } else {
-          if (sessionPhaseRef.current !== 'IDLE') {
-            setSessionPhase('IDLE');
-          }
-        }
-      } catch (err: unknown) {
-        AppLogger.error('Failed to sync session state from AsyncStorage', err, { payload_size: 0, ssi: 0 });
-      } finally {
-        isSyncingSessionState.current = false;
-      }
-    };
-
-    syncSessionState();
-
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (nextAppState === 'active') {
-        syncSessionState();
-      }
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-
-  // Auto-pause timer and setting check based on GPS speed
-  const isCheckingAutoPause = React.useRef(false);
-  useEffect(() => {
-    if (sessionPhase !== 'ACTIVE' && sessionPhase !== 'PAUSED') return;
-
-    let isActive = true;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-
-    const checkAutoPause = async () => {
-      if (isCheckingAutoPause.current) return;
-      isCheckingAutoPause.current = true;
-      try {
-        const enabled = await AsyncStorage.getItem(STORAGE_AUTO_PAUSE_ENABLED);
-        if (!isActive) return;
-        if (enabled === 'false') {
-          if (sessionPhase === 'PAUSED') {
-            setSessionPhase('ACTIVE');
-            // Watch sync handled by useGlobalTelemetry PAUSED→ACTIVE transition
-            persistSessionPhase('active');
-          }
-          return;
-        }
-
-        if (telemetry.gpsSpeed < 0.2) {
-          if (sessionPhase === 'ACTIVE') {
-            // TODO: [R-16] Refactor hardcoded setTimeout to use BleWriteQueue
-            timer = setTimeout(async () => {
-              if (!isActive) return;
-              setSessionPhase('PAUSED');
-              AppLogger.log('APP_LOG', { event: 'auto_pause_triggered' });
-              await persistSessionPhase('paused', Date.now());
-              try {
-                await WatchBridge.syncSessionState({ status: 'PAUSED' });
-              } catch (err: unknown) {
-                AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_pause', error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
-              }
-            }, 10000);
-          }
-        } else {
-          if (sessionPhase === 'PAUSED') {
-            setSessionPhase('ACTIVE');
-            AppLogger.log('APP_LOG', { event: 'auto_resume_triggered' });
-            persistSessionPhase('active');
-          }
-        }
-      } catch (err: unknown) {
-        AppLogger.error('Failed to run auto-pause check', err, { payload_size: 0, ssi: 0 });
-      } finally {
-        isCheckingAutoPause.current = false;
-      }
-    };
-
-    checkAutoPause();
-
-    return () => {
-      isActive = false;
-      if (timer) clearTimeout(timer);
-    };
-  }, [sessionPhase, telemetry.gpsSpeed]);
-
-  // 4. Manage the Foreground Service (Android) / Background Notification (iOS)
-  useEffect(() => {
-    let isActive = true;
-    let updateInterval: ReturnType<typeof setInterval> | null = null;
-
-    const setupNotification = async () => {
-      if (!isSkateSessionActive) {
-        if (updateInterval) clearInterval(updateInterval);
-        if (Platform.OS === 'android') {
-          try { await notifee.stopForegroundService(); } catch { /* no FGS running — safe */ }
-        } else {
-          await notifee.cancelNotification(NOTIFICATION_ID);
-        }
-        return;
-      }
-
-      if (Platform.OS === 'android') {
-        // Create channel (idempotent)
-        await notifee.createChannel({
-          id: NOTIFICATION_CHANNEL_ID,
-          name: 'Active Skate Session',
-          importance: AndroidImportance.LOW,
-        });
-      }
-
-      // Android 14+ crashes with SecurityException if we start a FGS with
-      // FOREGROUND_SERVICE_TYPE_LOCATION before the user has granted location.
-      // Check first — if not granted, show a plain notification (no FGS).
-      let hasLocationPermission = false;
-      if (Platform.OS === 'android') {
-        try {
-          const { status } = await Location.getForegroundPermissionsAsync();
-          hasLocationPermission = status === 'granted';
-        } catch {
-          hasLocationPermission = false;
-        }
-      }
-
-      let isForegroundServiceStarted = false;
-      let isDisplaying = false;
-
-      const displayNotification = async () => {
-        if (!isActive) return;
-        if (isDisplaying) return;
-        isDisplaying = true;
-        try {
-          await notifee.displayNotification({
-            id: NOTIFICATION_ID,
-            title: sessionPhaseRef.current === 'PAUSED' ? 'Skate Session Paused ⏸' : sessionPhaseRef.current === 'ENDING' ? 'Saving Session...' : 'Skate Session Active 🟢',
-            body: `Distance: ${telemetryRef.current.sessionDistanceMiles.toFixed(2)} mi | Speed: ${telemetryRef.current.gpsSpeed.toFixed(1)} mph`,
-            android: {
-              channelId: NOTIFICATION_CHANNEL_ID,
-              // Only trigger the native startForegroundService ONCE.
-              // Subsequent updates just update the notification visually.
-              // CRITICAL (Android 14+): FGS can ONLY be started when the app is visibly in the foreground.
-              asForegroundService: !isForegroundServiceStarted && hasLocationPermission && AppState.currentState === 'active',
-              ...(hasLocationPermission && {
-                foregroundServiceTypes: [AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_LOCATION],
-              }),
-              color: '#00F0FF',
-              ongoing: true,
-              pressAction: {
-                id: 'default',
-                launchActivity: 'default',
-              },
-              actions: [
-                {
-                  title: '🛑 END SESSION',
-                  pressAction: { id: 'end-session' }
-                }
-              ]
-            },
-            ios: {
-              categoryId: 'session-actions',
-              foregroundPresentationOptions: {
-                badge: true,
-                sound: true,
-                banner: true,
-                list: true,
-              },
-            }
-          });
-          
-          if (!isActive) return;
-          if (hasLocationPermission && AppState.currentState === 'active') {
-            isForegroundServiceStarted = true;
-          }
-        } catch (err: unknown) {
-          AppLogger.error('Failed to display foreground service notification', err, { payload_size: 0, ssi: 0 });
-        } finally {
-          isDisplaying = false;
-        }
-      };
-
-      // Initial display
-      await displayNotification();
-
-      if (!isActive) return;
-
-      // Update the notification every 5 seconds with new stats
-      updateInterval = setInterval(() => {
-        if (!isActive) {
-          if (updateInterval) clearInterval(updateInterval);
-          return;
-        }
-        displayNotification().catch((err: unknown) => AppLogger.warn('[SessionContext] displayNotification interval failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
-      }, 5000);
-    };
-
-    setupNotification().catch(err => AppLogger.error('[SessionContext] setupNotification failed', err, { payload_size: 0, ssi: 0 }));
-
-    return () => {
-      isActive = false;
-      if (updateInterval) clearInterval(updateInterval);
-    };
-  }, [isSkateSessionActive, sessionPhase]);
-
-  const startSession = useCallback(async (externalStartTimeMs?: number) => {
-    // Cancel any pending STOPPED push from a prior session summary
-    if (summaryTimeoutRef.current) {
-      clearTimeout(summaryTimeoutRef.current);
-      summaryTimeoutRef.current = null;
-    }
-    if (externalStartTimeMs) {
-      setRecoveredStartTimeMs(externalStartTimeMs);
-    }
-    setSessionPhase('ACTIVE');
-    await persistSessionPhase('active');
-    AppLogger.log('APP_LOG', { event: 'session_started', externalStartTimeMs });
-    
-    const isoStart = externalStartTimeMs 
-      ? new Date(externalStartTimeMs).toISOString() 
-      : new Date().toISOString();
-
-    // Notify both watches — fire-and-forget, safe if no watch paired
-    WatchBridge.syncSessionState({
-      status: 'ACTIVE',
-      startTime: isoStart,
-    }).catch((err: unknown) =>
-      AppLogger.warn('WATCH_BRIDGE', { event: 'sync_failed_on_start', error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 })
-    );
-  }, []);
-  startSessionRef.current = startSession;
-
-  const endSession = useCallback(async () => {
-    // ── 1. Capture final metrics before state resets ──────────────────────────
-    const finalDurationSec = telemetry.sessionDurationSec ?? 0;
-    const finalDistanceMiles = telemetry.sessionDistanceMiles ?? 0;
-    const finalAvgSpeed =
-      finalDistanceMiles > 0 && finalDurationSec > 0
-        ? finalDistanceMiles / (finalDurationSec / 3600)
-        : 0;
-    const finalCalories = health.activeCalories ?? 0;
-    const finalPeakHR = health.peakBpm ?? 0;
-
-    // ── 2. Transition to ENDING — phone HUD clears, but FGS stays alive ──────
-    setSessionPhase('ENDING');
-    setRecoveredStartTimeMs(null);
-    await persistSessionPhase('idle');
-    AppLogger.log('APP_LOG', { event: 'session_ending' });
-
-    // ── 3. Push SUMMARY → wait for delivery before tearing down ──────────────
-    try {
-      await WatchBridge.syncSessionState({
-        status: 'SUMMARY',
-        totalDuration: finalDurationSec,
-        distance: finalDistanceMiles,
-        avgSpeed: finalAvgSpeed,
-        calories: finalCalories,
-        peakHR: finalPeakHR,
-      });
-    } catch (err: unknown) {
-      AppLogger.warn('WATCH_BRIDGE', { event: 'summary_push_failed', error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
-    }
-
-    // ── 4. NOW transition to IDLE — safe to tear down FGS ────────────────────
-    setSessionPhase('IDLE');
-    AppLogger.log('APP_LOG', { event: 'session_ended' });
-    try {
-      if (Platform.OS === 'android') {
-        await notifee.stopForegroundService();
-      } else {
-        await notifee.cancelNotification(NOTIFICATION_ID);
-      }
-    } catch (e: unknown) {
-      AppLogger.warn('[SessionContext] notification teardown failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
-    }
-
-    // ── 5. Push STOPPED after 10s (matches watch card auto-dismiss timer) ────
-    // TODO: [R-16] Refactor hardcoded setTimeout to use BleWriteQueue
-    summaryTimeoutRef.current = setTimeout(() => {
-      WatchBridge.syncSessionState({ status: 'STOPPED' }).catch(() => {});
-      summaryTimeoutRef.current = null;
-    }, 10000);
-  }, [telemetry, health]);
-  endSessionRef.current = endSession;
-
-  // 5. Handle Foreground Event Buttons from Notifee
+  // Handle Foreground Event Buttons from Notifee
   useEffect(() => {
     return notifee.onForegroundEvent(({ type, detail }) => {
-      if (type === EventType.ACTION_PRESS && detail.pressAction?.id === 'end-session') {
-        AppLogger.log('APP_LOG', { event: 'end_session_from_notification' });
-        endSessionRef.current();
+      if (type === EventType.ACTION_PRESS) {
+        if (detail.pressAction?.id === 'end-session') {
+          AppLogger.log('APP_LOG', { event: 'end_session_from_notification' });
+          send({ type: 'END' });
+        } else if (detail.pressAction?.id === 'pause-session') {
+          AppLogger.log('APP_LOG', { event: 'pause_session_from_notification' });
+          send({ type: 'PAUSE' });
+        } else if (detail.pressAction?.id === 'resume-session') {
+          AppLogger.log('APP_LOG', { event: 'resume_session_from_notification' });
+          send({ type: 'RESUME' });
+        }
       }
     });
+  }, [send]);
+
+  const mergeWatchHealth = useCallback((watchHR: number, watchCal: number) => {
+    if (watchHR > 0) {
+      healthRef.current = {
+        ...healthRef.current,
+        latestBpm: watchHR,
+        activeCalories: watchCal > 0 ? watchCal : healthRef.current.activeCalories,
+      };
+    }
   }, []);
 
-  // 6. Cleanup summary timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (summaryTimeoutRef.current) {
-        clearTimeout(summaryTimeoutRef.current);
-      }
-    };
-  }, []);
+  const healthValue = useMemo(() => ({
+    latestBpm: health.latestBpm,
+    avgBpm: health.avgBpm,
+    peakBpm: health.peakBpm,
+    activeCalories: health.activeCalories,
+    mergeWatchHealth,
+  }), [health, mergeWatchHealth]);
 
+  const startSession = useCallback(() => {
+    send({ type: 'START' });
+  }, [send]);
 
+  const endSession = useCallback(() => {
+    send({ type: 'END' });
+  }, [send]);
 
   return (
-    <SessionContext.Provider value={{ isSkateSessionActive, sessionPhase, startSession, endSession, telemetry, health }}>
+    <SessionContext.Provider value={{ isSkateSessionActive, sessionPhase, startSession, endSession, telemetry, health: healthValue }}>
       {children}
     </SessionContext.Provider>
   );
@@ -471,3 +352,4 @@ export function useSession() {
   if (!context) throw new Error('useSession must be used within a SessionProvider');
   return context;
 }
+
