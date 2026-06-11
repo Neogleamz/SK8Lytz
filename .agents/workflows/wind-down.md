@@ -121,6 +121,15 @@ Context: Production log status: [CLEAN / ISSUES TRIAGED]. Resuming shutdown chec
    - Execute `powershell.exe -ExecutionPolicy Bypass -File .\tools\backup_database.ps1` via the terminal.
    - Verify the script completes successfully and report the backup file sizes in the Final SITREP.
 
+4.6. **Satellite Doc Completeness Check (Alex — Mandatory)**:
+   Before the Hard Freeze, Alex MUST verify that all 3 Tier-3 satellite docs have been updated if their domains changed today:
+   - Check `git log --oneline --since="today" --name-status`
+   - If XState or session machines changed → verify `tools/State_Charts_UX.md` changed.
+   - If WatchBridge or flow changed → verify `tools/User_Journey_Maps.md` changed.
+   - If new hardware/API added → verify `tools/System_Context_Diagram.md` changed.
+   - If ANY required satellite doc is missing an update: HALT wind-down and trigger `/audit-codebase` or `/deepdive-docs` to sync them first.
+
+
 4.75. **Evolution Audit (Alex — Mandatory)**:
    Alex audits `tools/FRICTION_LEDGER.md` before the Hard Freeze:
    1. **New Friction Events This Session**: Did any rule get forgotten? Did any behavior need correcting? Was the user forced to remind the team of anything? If yes → file a new `[FRICTION-XXX]` entry for each pattern.

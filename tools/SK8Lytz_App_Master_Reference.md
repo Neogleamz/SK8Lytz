@@ -1454,7 +1454,6 @@ The health telemetry system implements a **watch-preferred** priority model:
 
 ### Domain: IDENTITY
 <!-- CARTOGRAPHER_START: IDENTITY -->
-
 # 🕵️ IDENTITY Domain Cartography
 
 This document contains a comprehensive architectural audit of the **IDENTITY** domain within the SK8Lytz application codebase.
@@ -1650,7 +1649,6 @@ sequenceDiagram
 
 ### Domain: BLE_CORE
 <!-- CARTOGRAPHER_START: BLE_CORE -->
-
 # BLE_CORE Domain Cartography Report
 
 _Last Updated: 2026-06-11 | Read-Only Architectural Audit_
@@ -2096,6 +2094,9 @@ sequenceDiagram
 ## 9. Stale Documentation Targets
 
 The following references within `tools/SK8Lytz_App_Master_Reference.md` are outdated and must be updated to align with current XState v5 actors:
+* **§3.8.3 "Dashboard UI Layout (4-Slab Architecture)"**: `[MOVE_TO_ARCHIVE]` — Replaced by newer fluid tabs and setup steps.
+* **§3.8.5 "One-Screen Setup Policy"**: `[MOVE_TO_ARCHIVE]` — Setup has migrated to a Multi-Step Wizard component.
+* **§3.10.3 "writeChunked — 0x51 Extended Payload Framing"**: `[MOVE_TO_ARCHIVE]` — Re-architected to delegate framing logic strictly to `ZenggeProtocol` in compliance with R-19.
 
 ---
 
@@ -2108,7 +2109,6 @@ The following references within `tools/SK8Lytz_App_Master_Reference.md` are outd
 
 ### Domain: GROUP_SYNC
 <!-- CARTOGRAPHER_START: GROUP_SYNC -->
-
 # Architectural Cartography: GROUP_SYNC Domain
 
 This document provides a comprehensive read-only architectural audit of the `GROUP_SYNC` domain in the SK8Lytz codebase, detailing its structures, data models, real-time sync systems, platforms, and integrations.
@@ -2350,7 +2350,9 @@ sequenceDiagram
 
 The following sections in `tools/SK8Lytz_App_Master_Reference.md` are outdated:
 * **Section 6: Crew Hub & Session Lifecycle**:
+  * "Automatic `_MM/DD` suffix enforced in `CrewModal.handleCreate` [MOVE_TO_ARCHIVE]" (line 1116)
   * "Discovery radius filter governed by `LocationService.getNearbyPublicSessions(radiusMi)`" (line 1120) — This has been replaced by dynamic views (`public_sessions` view) and direct Haversine calculations within the hooks.
+* **Section 12.2 Auto-Compiled Domain Architecture / Domain: GROUP_SYNC** (line 1464-1466) — The section is empty and stale references on lines 1564/1579-1648/2145-2157 describing legacy offline queues should be marked with `[MOVE_TO_ARCHIVE]`.
 
 ---
 
@@ -2364,7 +2366,6 @@ The following sections in `tools/SK8Lytz_App_Master_Reference.md` are outdated:
 
 ### Domain: UI_SCREENS
 <!-- CARTOGRAPHER_START: UI_SCREENS -->
-
 # UI_SCREENS Domain Cartography
 
 This document contains a comprehensive architectural audit, dependency mapping, and design token manifest for the **UI_SCREENS** domain in the SK8Lytz codebase, located under `src/screens/*`, `src/components/dashboard/*`, `src/components/shared/*`, `src/components/DeviceItem.tsx`, `src/components/LocationPicker*.tsx`, and `src/components/SkateSpotBottomSheet.tsx`.
@@ -2649,16 +2650,19 @@ During this audit, three stale visualizer and layout references were identified 
 
 1.  **Line 1557**:
     ```markdown
+    - **[UI_SCREENS]**: - `### Dashboard UI Layout (4-Slab Architecture) [MOVE_TO_ARCHIVE]`
     ```
     *Status*: Confirmed. The dashboard was previously mapped as a single monolithic block. It has since been modularized into discrete slab sub-components (`CrewHubSlab.tsx`, `MySkatesSlab.tsx`, `RegisteredFleetSlab.tsx`). **Recommendation**: Archive references to the monolithic design.
 
 2.  **Line 1558**:
     ```markdown
+    - **[UI_SCREENS]**: - `### UI Design patterns & Branding` -> `One-Screen Setup Policy [MOVE_TO_ARCHIVE]`
     ```
     *Status*: Confirmed. The "One-Screen Setup Policy" is outdated. Setup flows are split between onboarding wizards, permissions lists, and modal drawers. **Recommendation**: Archive.
 
 3.  **Line 1559**:
     ```markdown
+    - **[UI_SCREENS]**: - `### writeChunked — 0x51 Extended Payload Framing [MOVE_TO_ARCHIVE]`
     ```
     *Status*: Confirmed. Payload fragmentation handling is a core GATT transport detail. It has been moved to `BleWriteQueue.ts` and `ZenggeProtocol.ts`, out of the UI layer. **Recommendation**: Archive.
 
@@ -2678,7 +2682,6 @@ Since this is a read-only architectural cartography audit, no functional modific
 
 ### Domain: UI_DOCKED_CONTROLLER
 <!-- CARTOGRAPHER_START: UI_DOCKED_CONTROLLER -->
-
 # 📐 Architectural Cartography — UI_DOCKED_CONTROLLER Domain
 
 This document provides a complete read-only architectural map of the `UI_DOCKED_CONTROLLER` domain of the SK8Lytz App codebase. It catalogs the internal files, maps hook and context boundaries, registers service I/O, details operating system variances, illustrates connection lifecycles, and highlights refactoring recommendations.
@@ -2914,7 +2917,6 @@ sequenceDiagram
 
 ### Domain: UI_MODALS
 <!-- CARTOGRAPHER_START: UI_MODALS -->
-
 # UI_MODALS Domain Cartography
 
 _Last Updated: 2026-06-11 | Domain: UI_MODALS | Target OS: iOS, Android, Web_
@@ -3129,14 +3131,17 @@ Shadows              ├── soft             iOS: shadowOffset {y:2, r:4}, op
 
 ---
 
+## 9. Archival Ledger (`[MOVE_TO_ARCHIVE]`)
 
 Stale references and outdated layout policies found in `tools/SK8Lytz_App_Master_Reference.md`:
+- **Dashboard UI Layout (4-Slab Architecture)**: Tagged with `[MOVE_TO_ARCHIVE]` on lines 308 and 1553. The current dashboard uses tabbed nested controllers rather than a single vertical 4-slab layout.
+- **One-Screen Setup Policy**: Tagged with `[MOVE_TO_ARCHIVE]` on lines 321 and 1554. Multi-device onboarding steps are split across a dedicated modal wizard rather than squeezed into a single scroll-disabled layout.
+- **AccountModal Domain stale registers**: Stale hooks (`useDeviceFleet`) tagged with `[MOVE_TO_ARCHIVE]` on line 958. Device registrations are handled by shared state properties passed down from the root layout instead of independent Supabase triggers inside the modal.
 
 <!-- CARTOGRAPHER_END: UI_MODALS -->
 
 ### Domain: UI_VISUALIZER
 <!-- CARTOGRAPHER_START: UI_VISUALIZER -->
-
 # UI_VISUALIZER Domain Architectural Cartography
 
 This document provides a comprehensive, read-only architectural audit of the `UI_VISUALIZER` domain in the SK8Lytz codebase, detailing component functions, dependency interfaces, state contexts, data mapping registers, OS platform deviations, runtime sequence flows, and the Design System tokens.
@@ -3357,7 +3362,6 @@ The visualizer domain is governed by the core token specifications from `src/the
 
 ### Domain: DATA_LAYER
 <!-- CARTOGRAPHER_START: DATA_LAYER -->
-
 # 🗺️ DATA_LAYER Architectural Cartography Report
 
 This document details the read-only architectural audit of the data persistence, synchronization, and caching layer of the SK8Lytz App.
@@ -3612,7 +3616,6 @@ sequenceDiagram
 
 ### Domain: UTILS
 <!-- CARTOGRAPHER_START: UTILS -->
-
 # UTILS & TYPES Domain Cartography
 
 This document contains a comprehensive architectural audit and dependency mapping of the **UTILS** and **TYPES** domains in the SK8Lytz codebase, located under `src/utils/*` and `src/types/*` (excluding `supabase.ts`).
@@ -3910,11 +3913,13 @@ During this audit, two stale visualizer references were identified inside `tools
 
 1.  **Line 679**:
     ```markdown
+    Visualizer: `src/utils/RbmSimulator.ts` (pixel-perfect frame generation). [MOVE_TO_ARCHIVE] (Note: RbmSimulator has been deleted/refactored, visualizer frame generation has been migrated to protocols/SymphonyEngine.ts)
     ```
     *Status*: Confirmed. `RbmSimulator.ts` has been removed. Frame rendering is now fully handled inside `protocols/SymphonyEngine.ts`. **Recommendation**: Archive/remove line.
 
 2.  **Line 685**:
     ```markdown
+    Visualizer: `src/utils/RbmSimulator.ts` → `getRbmMusicFrame()`. [MOVE_TO_ARCHIVE] (Note: migrated to protocols/SymphonyEngine.ts -> getMusicVisualizerFrame)
     ```
     *Status*: Confirmed. **Recommendation**: Archive/remove line.
 
@@ -3922,7 +3927,6 @@ During this audit, two stale visualizer references were identified inside `tools
 
 ### Domain: NATIVE_&_WATCH
 <!-- CARTOGRAPHER_START: NATIVE_&_WATCH -->
-
 # NATIVE_&_WATCH Domain Cartography
 
 This document contains a comprehensive architectural audit and mapping of the `NATIVE_&_WATCH` domain, detailing the iOS/watchOS target, the Android/Wear OS module, and the custom Expo native watch bridge.
@@ -4174,7 +4178,6 @@ Configured via custom Expo Config Plugin to inject gradle properties on prebuild
 
 ### Domain: NOTIFICATIONS_&_ROUTING
 <!-- CARTOGRAPHER_START: NOTIFICATIONS_&_ROUTING -->
-
 # Codebase Cartography — NOTIFICATIONS_&_ROUTING Domain
 
 This document provides a comprehensive architectural audit of the `NOTIFICATIONS_&_ROUTING` domain in the SK8Lytz codebase. This domain spans app bootstrapping, legal compliance gates, system permissions, hardware telemetry dispatch, location-aware session discovery, and push notification routing.
@@ -4456,7 +4459,6 @@ sequenceDiagram
 
 ### Domain: SESSION_TRACKING
 <!-- CARTOGRAPHER_START: SESSION_TRACKING -->
-
 # 🗺️ SESSION_TRACKING Domain Cartography
 
 This document provides a read-only architectural audit of the **SESSION_TRACKING** codebase domain for the SK8Lytz mobile application. It captures the interaction pathways, sensor polling loops, native platform bridges, and database schemas governing user skate sessions.
@@ -4474,6 +4476,7 @@ This document provides a read-only architectural audit of the **SESSION_TRACKING
 | `src/hooks/useDeviceStateLedger.ts` | Serves as the single source of truth for the physical hardware state (active pattern config dispatched over BLE) of connected adapters. Caches mapping in-memory and debounces (500ms) writes to AsyncStorage. |
 | `src/services/HealthSyncService.ts` | Integrates directly with native platform APIs to save completed workout sessions (skating exercises, duration, distance, and calories) into Apple HealthKit (iOS) or Health Connect (Android). |
 | `src/services/SpeedTrackingService.ts` | Manages persistence layers for session snapshots, including database updates, local file/AsyncStorage buffering for offline/unauthenticated rides, queue flushing, and lifetime statistic retrievals. |
+| `src/hooks/useSessionTracking.ts` | **`[MOVE_TO_ARCHIVE]`** - *Legacy File (Deleted)*. Stale hook that previously drove session FSM logic; its functionality has been completely integrated into `SessionContext.tsx`, `useGlobalTelemetry.ts`, and `SpeedTrackingService.ts`. |
 
 ---
 
@@ -4725,7 +4728,6 @@ CREATE TABLE skate_sessions (
 
 ### Domain: PROTOCOL_CORE
 <!-- CARTOGRAPHER_START: PROTOCOL_CORE -->
-
 # PROTOCOL_CORE Domain Cartography
 
 This document contains a comprehensive architectural audit and mapping of the `PROTOCOL_CORE` domain.
@@ -5059,8 +5061,10 @@ In `useProductCatalog.ts` (Line 124), the administrative `saveProfile` function 
 The SDE audit scanned the Master Reference files for stale entries in this domain:
 
 - **`tools/SK8Lytz_App_Master_Reference.md` §2 AsyncStorage Key Registry**
+  - **Verdict**: `[MOVE_TO_ARCHIVE]`
   - **Reason**: The table lacks documentation for the active key `@Sk8lytz_product_catalog` (defined as `STORAGE_PRODUCT_CATALOG`) and references outdated keys.
 - **`tools/ZENGGE_PROTOCOL_BIBLE.md` §8 BUG-2 `0x73` micSource Wrong Values**
+  - **Verdict**: `[MOVE_TO_ARCHIVE]`
   - **Reason**: The micSource logic is no longer used directly as an state flag since the device microphone listens by default when music visualizers are configured.
 
 ---
@@ -5074,7 +5078,6 @@ The SDE audit scanned the Master Reference files for stale entries in this domai
 
 ### Domain: PATTERN_ENGINE
 <!-- CARTOGRAPHER_START: PATTERN_ENGINE -->
-
 # PATTERN_ENGINE Domain Cartography
 
 This document contains the read-only architectural audit of the **PATTERN_ENGINE** domain in the SK8Lytz codebase. 
@@ -5327,10 +5330,12 @@ Stale sections identified in `tools/SK8Lytz_App_Master_Reference.md` are tagged 
 
 1. **`0x41` Settled Mode Table Row**:
    * *Stale Section*: Master Reference "Opcode Map" section referencing `0x41` Settled Mode for custom dual colors.
+   * *Status*: `[MOVE_TO_ARCHIVE]`
    * *Rationale*: `PatternEngine.ts` explicitly intercepts test pattern IDs 201-233 and dispatches them via `0x51` compact (ZenggeProtocol.setCustomModeExtendedCompact) to bypass physical hardware state lockups caused by `0x41` on the `0xA3` chipset.
 
 2. **`0x43` Multi-Effect Sequence Row**:
    * *Stale Section*: Master Reference description of `0x43` Multi-Effect Sequence supporting up to 50 effects.
+   * *Status*: `[MOVE_TO_ARCHIVE]`
    * *Rationale*: Physical testing confirms that sending `0x43` crashes the `0xA3` controller's state machine. The official ZENGGE app uses `0x51` multi-step slots instead.
 
 ---
@@ -5347,7 +5352,6 @@ Stale sections identified in `tools/SK8Lytz_App_Master_Reference.md` are tagged 
 
 ### Domain: CLOUD_FUNCTIONS
 <!-- CARTOGRAPHER_START: CLOUD_FUNCTIONS -->
-
 # CLOUD_FUNCTIONS Domain Cartography Report
 
 This cartography report details the file manifest, imports/exports (Blast Radius), React Context dependencies, API parameters, OS-specific differences, runtime synchronization pipeline sequence, security hardening audits, and stale documentation targets for the `CLOUD_FUNCTIONS` domain in SK8Lytz.
@@ -5629,23 +5633,26 @@ In migration `20260512180000_fix_admin_revoke_and_promotion_security.sql`, funct
 
 During the codebase audit, the following stale documentation entries were identified:
 
+### `[MOVE_TO_ARCHIVE]`
 * **File**: `tools/SK8Lytz_App_Master_Reference.md`
 * **Line Range**: 946
+* **Stale Text**: `| useSessionTracking (stale) | DockedController | [MOVE_TO_ARCHIVE] - Session FSM (IDLE → RECORDING → SUMMARY), duration, distance, peak speed, session summary modal |`
 * **Reason**: This hook has been fully deprecated and removed. Session tracking is now managed dynamically through the `SessionContext` and `SpeedTrackingService`.
 
 * **File**: `tools/SK8Lytz_App_Master_Reference.md`
 * **Line Range**: 958
+* **Stale Text**: `| useDeviceFleet | AccountModal | registered_devices Supabase fetch, fleet display list [MOVE_TO_ARCHIVE] |`
 * **Reason**: The `useDeviceFleet` hook was replaced by query logic utilizing junction tables (`device_group_members`) to support many-to-many device grouping.
 
 * **File**: `tools/SK8Lytz_App_Master_Reference.md`
 * **Line Range**: 965
+* **Stale Text**: `| useProtocolBuilder | Sk8LytzDiagnosticLab | [MOVE_TO_ARCHIVE] - Stale owner Sk8LytzProgrammerModal replaced. FSM-based payload generation for 0x51, 0x59, 0x62, 0x63, 0x73 |`
 * **Reason**: Replaced by direct modal state calls inside `ProgrammerModal` to prevent state syncing lag.
 
 <!-- CARTOGRAPHER_END: CLOUD_FUNCTIONS -->
 
 ### Domain: THEME_&_ASSETS
 <!-- CARTOGRAPHER_START: THEME_&_ASSETS -->
-
 # Architectural Cartography — THEME_&_ASSETS Domain
 
 This document provides a comprehensive read-only architectural audit of the `THEME_&_ASSETS` domain within the SK8Lytz codebase, covering static theme tokens, component style adaptors, utility registries, storage constants, asset folders, runtime theme contexts, and platform variance.
@@ -5886,12 +5893,13 @@ During our audit, we identified documentation key name drift in `tools/SK8Lytz_A
 
 ### 🧹 Archival Tags Applied
 Stale document keys in `tools/SK8Lytz_App_Master_Reference.md` are marked for replacement:
+* `| @sk8lytz_theme | ThemeContext | ...` `[MOVE_TO_ARCHIVE]` $\rightarrow$ update to `@Sk8lytz_ThemeMode`
+* `| @sk8lytz_control_theme | ThemeContext | ...` `[MOVE_TO_ARCHIVE]` $\rightarrow$ update to `@Sk8lytz_ControlUITheme`
 
 <!-- CARTOGRAPHER_END: THEME_&_ASSETS -->
 
 ### Domain: SIMULATION_&_MOCKS
 <!-- CARTOGRAPHER_START: SIMULATION_&_MOCKS -->
-
 # 🗺️ SIMULATION_&_MOCKS Domain Cartography
 
 This document is the **Canonical Architectural Map** for the simulation, mocking, and unit testing subsystems in the SK8Lytz application. It catalogs Jest hardware mocks, Expo Web shims, the offline Virtual BLE Daemon simulator, and all service-level unit test structures.
@@ -6133,7 +6141,6 @@ The mocking and simulation infrastructure has structural dependencies that gover
 
 ### Domain: BUILD_CONFIG
 <!-- CARTOGRAPHER_START: BUILD_CONFIG -->
-
 # SK8Lytz Build Configuration Cartography Audit
 
 _Domain Marker: **BUILD_CONFIG** | Last Updated: 2026-06-11_
@@ -6282,6 +6289,10 @@ sequenceDiagram
 
 The following sections in the Master Reference (`tools/SK8Lytz_App_Master_Reference.md`) are stale and tagged for relocation:
 
+- **Section 11.7 Future Watch Enhancements (Planned)**: Tagged with `[MOVE_TO_ARCHIVE]`. Features like the "Session Duration Timer" and "watchOS Complications" are fully shipped and configured in `expo-target.config.js`.
+- **Section 2.3 Dashboard UI Layout (4-Slab Architecture)**: Tagged with `[MOVE_TO_ARCHIVE]`. The UI has transitioned away from the strict 4-slab layout, making this paragraph stale.
+- **Section 2.4 One-Screen Setup Policy**: Tagged with `[MOVE_TO_ARCHIVE]`. Superseded by setup refactoring.
+- **Section 2.5 writeChunked - 0x51 Extended Payload Framing**: Tagged with `[MOVE_TO_ARCHIVE]`. Standard 0x51 writes are performed via compact 9B structures.
 
 ---
 
@@ -6291,7 +6302,6 @@ _Report compiled by SDE Cartographer Node. Architectural surface has been verifi
 
 ### Domain: OS_PERMISSIONS
 <!-- CARTOGRAPHER_START: OS_PERMISSIONS -->
-
 # OS_PERMISSIONS Domain Cartography Report
 
 This cartography report details the file manifest, imports/exports (Blast Radius), React Context dependencies, API parameters, OS-specific differences, runtime permission request sequence, and security discrepancies for the `OS_PERMISSIONS` domain in SK8Lytz.
@@ -6528,6 +6538,7 @@ The Google Maps API key `AIzaSyBfvwN5fcyDbzUZp2Q7c2OfMLPFajVRPwA` is generated i
 
 During the codebase audit, the following stale reference was identified:
 
+### `[MOVE_TO_ARCHIVE]`
 * **File**: `tools/SK8Lytz_App_Master_Reference.md`
 * **Line Range**: 1182 (and 1573 in comments)
 * **Stale Text**: `- **OS Sync**: syncSystemPermissions() runs on boot/foreground to reconcile the ledger with native OS settings. If OS is "Denied", App ledger is forced to "Opt-Out".`
@@ -6537,7 +6548,6 @@ During the codebase audit, the following stale reference was identified:
 
 ### Domain: ADMIN_&_TELEMETRY
 <!-- CARTOGRAPHER_START: ADMIN_&_TELEMETRY -->
-
 # 🏛️ ADMIN_&_TELEMETRY Domain Cartography
 
 _SDE Cartographer Node Read-Only Audit | Compiled: 2026-06-11 | Domain: `src/components/admin/*`, `src/services/AppLogger.ts`, `src/services/AppSettingsService.ts`, `src/hooks/useAdminSettings.ts`, `src/hooks/useAdminTelemetry.ts`, `src/hooks/useDiagnosticLog.ts`._
@@ -6822,7 +6832,6 @@ sequenceDiagram
 
 ### Domain: DEPENDENCY_AUDIT
 <!-- CARTOGRAPHER_START: DEPENDENCY_AUDIT -->
-
 # Architectural Cartography: DEPENDENCY_AUDIT
 
 This document provides a comprehensive architectural map of the **DEPENDENCY_AUDIT** domain, analyzing the configurations, scripts, and runtime implications of dependencies defined in the core manifests.

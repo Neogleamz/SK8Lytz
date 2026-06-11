@@ -2247,3 +2247,15 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Master HEAD:** 07663e3a
 **Friction Audit:** 0 new events | 0 resolved | 0 incremented
 **System evolution:** none
+
+### [MERGE READY] docs/cartographer-rebuild-and-harden — HEAD
+Files touched:
+- .agents/workflows/deepdive-docs.md
+- .agents/workflows/start-task.md
+- .agents/workflows/wind-down.md
+- tools/Architecture_Decision_Records.md
+- tools/SK8Lytz_App_Master_Reference.md
+- tools/State_Charts_UX.md
+- tools/User_Journey_Maps.md
+TSC: ?  Jest: ?
+
