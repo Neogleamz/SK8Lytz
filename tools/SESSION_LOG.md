@@ -1,3 +1,13 @@
+### [EVENT] 2026-06-11T01:18 — Code Hunt Suspended & Wind-Down
+**What shipped:**
+- None (Read-only scan and database backup phase).
+**AI failure pattern:** Spawning too many parallel subagents triggered 429 API rate limits. Resolved by batching subagent creation in groups of 8.
+**User pattern:** Monitored subagent execution and proactively suspended the run due to token depletion.
+**Active sprint state:** `/deepdive-code-hunt` (suspended mid-run, 24/55 reports generated).
+**Master HEAD:** `5aa3aa68`
+**Friction Audit:** 0 new events | 0 incremented | 0 resolved | Proposals due: none
+**System evolution:** none
+
 ### [EVENT] 2026-06-11T05:06 — Ignored Bucket List Recovery Completed
 **Trigger:** User reported lost icebox tasks and directives in the gitignored `tools/SK8Lytz_Bucket_List.md`.
 **Action:** Identified that the bucket list was overwritten by the `populate_bucket.py` script in a previous session. Recovered the full untruncated file from `3c276c08~1` (pre-untracked commit), resolved Powershell encoding issues via binary Node.js output, re-inserted the pending `spike/pii-app-encryption` task, restored the original directives and icebox tasks, and restored the original clean reference directives pointing to `.agents/rules/kanban-constitution.md`.
