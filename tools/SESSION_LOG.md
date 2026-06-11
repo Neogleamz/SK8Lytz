@@ -2247,3 +2247,7 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Master HEAD:** 07663e3a
 **Friction Audit:** 0 new events | 0 resolved | 0 incremented
 **System evolution:** none
+
+### [ARTIFACT] 2026-06-11T17:09 — XState v5 KB Capture Complete
+**Link:** [xstate-v5-patterns.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/knowledge-base/patterns/xstate-v5-patterns.md)
+**Summary:** Synthesized the XState v5 patterns used in BleMachine.ts and sessionMachine.ts and created a new Knowledge Base entry under tools/knowledge-base/patterns/xstate-v5-patterns.md. Appended to KB INDEX.md. Both files are gitignored local-only so no codebase tracking was modified.
