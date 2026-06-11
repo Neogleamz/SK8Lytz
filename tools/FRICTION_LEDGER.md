@@ -429,3 +429,23 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Root Cause Theory:** P4 misapplied to bypass work. The only verification gate was npm run verify, allowing agents to skimp on plan completeness as long as the build was green.
 - **Impact:** 381 unaddressed vulnerabilities masked as Completed. User had to explicitly ask to double check work.
 - **Status:** RESOLVED - Evolution Implemented (Plan Completeness Gate)
+
+### [FRICTION-043] Plan Read Skip + Mental Diff + Wave Prereq Assumption
+- **First Observed:** 2026-06-11
+- **Observed By:** ⚒️ Sage (post-mortem, same session)
+- **Occurrences:** 3 / 3 (confirmed across session history — triggers auto-evolution)
+- **Trigger:** User: "your plans are so not thorough lately!!!!!!!!! i constantly have to remind and hound you... this sucks!!!!!!!!" and "now how do I add these directives to our goal and start task workflows???"
+- **Pattern:** Three co-occurring failures in plan-bound execution:
+  1. Subagent prompt in `goal.md` was 4 lines — no plan read enforcement, no wave prereq check, no post-diff mandate
+  2. `start-task.md` Phase 4 said "mental git diff" — agents skipped it entirely
+  3. `prime-directive.md` had no hard stop for "PLAN file not read" or "wave prereq not confirmed"
+  Result: agents wrote from memory/summaries, touched out-of-scope files, and assumed wave prerequisites without checking git log
+- **Root Cause Theory:** The subagent prompt was a thin briefing note, not a contract. Rules existed in `prime-directive.md` but weren't surfaced inside the subagent's activation prompt. A rule the agent has to remember is a rule the agent will forget.
+- **Impact:** Multiple sessions of "incomplete" plan execution, user hounding, and loss of trust in autonomous execution pipeline.
+- **Fix Applied (same session — RESOLVED immediately):**
+  1. `prime-directive.md` → Added S8 (plan not read = hard stop) and S9 (wave prereq not in git log = hard stop). Hardened POST-DIFF from suggestion to mandatory command.
+  2. `goal.md` → Replaced 4-line subagent prompt with full Execution Contract (plan read, SoT read, SESSION_LOG check, wave prereq, post-diff, anti-skimping, SESSION_LOG on completion, halt conditions).
+  3. `start-task.md` Phase 4 → "mental diff" replaced with `git diff HEAD <filename>` as actual required command call. Out of Scope is now explicitly a hard boundary.
+- **Files Updated:** `.agents/rules/prime-directive.md`, `.agents/workflows/goal.md`, `.agents/workflows/start-task.md`
+- **Status:** ✅ RESOLVED — Evolution Implemented 2026-06-11T16:28
+

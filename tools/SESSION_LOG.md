@@ -1,3 +1,35 @@
+### [MERGE] 2026-06-11T21:40 — system-hardening → master @ 1bde6d33
+**What merged:**
+- agent-behavior.md: C1 post-diff silent→mandatory; C2 Snack S8 carve-out clarified; O4 Casey 'mentally' removed
+- sub-agent-behavior.md: Full Surgeon Developer Enforcement Contract (S1/S7/S8/post-diff/SESSION_LOG) — was entirely absent
+- tsc-check.md + db-sync.md + release-notes.md: 4x banned `npx tsc` replaced with `npm run verify` (S7)
+- git-ops.md: verify before gatekeeper + SESSION_LOG [MERGE] after
+- start-task.md + ship-it.md: SESSION_LOG [MERGE] step inserted into Phase 6 / Phase 2
+- prime-directive.md: Step 8.5 SESSION_LOG added to process gate chain
+- safety-protocol.md: Rule 12 typo fixed (ode→node); Rule 12.1 SESSION_LOG mandate added
+- kanban-constitution.md: R11 item 6 — `git log --oneline -5` specified as enforcement
+- tdd.md + scaffold-hook.md: S8 gate / S8 exemption declared; npm run verify added
+- wind-down.md: Advisory SESSION_LOG note → hard verification check with git log --since
+- ble-lab.md + audit-codebase.md + context-compiler.md: SESSION_LOG [ARTIFACT] write-backs
+- deepdive-code-synthesis.md: Vector Delta thin prompt → full S1/S7/post-diff enforcement contract
+- diff-review.md + qa-tester.md: Swarm agent prompt templates added (previously had no prompt body)
+**Verify result:** TSC ✅, Jest ✅ (24 suites / 203 tests), Blast Radius ✅, gates ✅
+**Files touched:** 20 files in .agents/rules/ and .agents/workflows/
+
+### [DECISION] 2026-06-11T21:40 — scaffold-hook S8 Exemption Is Declared Not Assumed
+**Decision:** scaffold-hook is an intentional S8 exemption — the workflow IS the plan. The exemption is now explicitly stated in the file.
+**Rejected:** Applying S8 to scaffold-hook (would require a PLAN-*.md for a plan-generating workflow — circular).
+**Don't re-derive:** Only scaffold-hook has this exemption. It is declared in the file. No other workflow gets a silent carve-out.
+**Source:** `.agents/workflows/scaffold-hook.md:L10`
+**ADR Link:** N/A
+
+### [DECISION] 2026-06-11T21:40 — System Hardening: 30/30 Audit Findings Resolved
+**Decision:** All 30 findings from the 4-agent parallel workflow audit (46 files) have been surgically fixed in 20 files.
+**Rejected:** Rewriting entire workflow files — rejected per P4. Only the failing lines were changed.
+**Don't re-derive:** The gaps were: (1) silent diff checks, (2) `npx tsc` in 4 places, (3) zero enforcement in sub-agent-behavior.md, (4) missing SESSION_LOG after every gatekeeper path, (5) thin/empty subagent prompts.
+**Source:** `brain/689630a3.../workflow_audit_report.md`
+**ADR Link:** N/A
+
 ### [DECISION] 2026-06-11T21:27 — Wear OS and iOS Watch Bridge Distance Field
 **Decision:** The exact field name used in the WatchBridge message payload for session distance is `"distance"`.
 **Rejected:** Assuming it is `distanceMiles` or `sessionDistance` — rejected because the source of truth codebases (Kotlin, Swift, and TypeScript interface) explicitly use `distance` for the post-session summary message payload key.
