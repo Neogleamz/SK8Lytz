@@ -26,15 +26,15 @@
  * Platform: React Native (Android + Web)
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_APP_SETTINGS } from '../constants/storageKeys';
+import { STORAGE_APP_SETTINGS, APP_LOGGER_STORAGE_KEY } from '../constants/storageKeys';
 import * as Battery from 'expo-battery';
 import * as Device from 'expo-device';
 import { supabase } from './supabaseClient';
 import { TelemetryService } from './TelemetryService';
 import { FlightRecorder, Breadcrumb } from '../utils/FlightRecorder';
 
-const STORAGE_KEY = '@Sk8lytz_logs';         // canonical casing — matches @Sk8lytz_ convention
-const LEGACY_KEY  = '@sk8lytz_logs';          // old lowercase key — migrated on first load
+const STORAGE_KEY = APP_LOGGER_STORAGE_KEY;         // migrated to shared constant
+const LEGACY_KEY  = '@Sk8lytz_logs';          // old lowercase key — migrated on first load
 const MAX_ENTRIES = 500; // ~1MB of compact log data before rotation
 
 export type EventType =
