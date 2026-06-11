@@ -2304,3 +2304,6 @@ TSC: ✅  Jest: ✅
 **What:** Architectural Cartography Report for the UI_MODALS domain.
 **Why:** Documented all 11 files in the domain, their blast radius, consumed contexts, service I/O, platform OS branching matrices, design system tokens, and BLE probing and cloud scene application sequence diagrams.
 
+### [MERGE READY] fix/session-ui-cleanup — 727e2057
+Files touched: src/components/docked/StreetPanel.tsx, src/components/DockedController.tsx, src/services/session/__tests__/SessionCommitService.test.ts
+TSC: ✅  Jest: ✅
