@@ -1493,3 +1493,19 @@ pm run verify which includes QA tests.
   - **Plan:** 📎 [PLAN-unknown-sweep.md](docs/plans/PLAN-unknown-sweep.md)
   - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule Unknown
   - **Prerequisite:** Wave 1 fully merged
+
+- [x] **chore/r-18-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Feast]` `[WAVE:3]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-18 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-18. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-18-sweep.md](docs/plans/PLAN-r-18-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-18
+  - **Prerequisite:** Wave 2 fully merged
+
+- [x] **chore/r-13-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Snack]` `[WAVE:3]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-13 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-13. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-13-sweep.md](docs/plans/PLAN-r-13-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-13
+  - **Prerequisite:** Wave 2 fully merged
