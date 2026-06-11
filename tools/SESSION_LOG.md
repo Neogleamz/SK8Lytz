@@ -1,3 +1,26 @@
+### [MERGE] 2026-06-11T22:01 — session-xstate-engine-batch → master @ 481839b5
+**What merged:**
+- Deleted legacy telemetry hooks (`useGlobalTelemetry.ts`, `useHealthTelemetry.ts`) and registered Notifee background event handlers in `App.tsx` (Wave 3A).
+- Integrated `SessionPhaseBadge` into `DashboardTelemetryHero` (below the TIME pill) and `LiveTelemetryHUD` (rightmost pill slot), drilling down `sessionPhase` dynamically (Wave 3B).
+- Resolved dual source-of-truth telemetry display bugs in `StreetPanel` by sourcing data from props (`sessionPeakSpeed`, `sessionDistanceMiles`) instead of `crewService` (Wave 3C).
+- Wrote `SessionPhaseBadge` in place of the pulsing REC dot inside `StreetPanel` during active/paused/saving session states (Wave 3C).
+- Fixed the sessions counter in `AccountTabStats` to display `lifetimeStats?.totalSessions` instead of `history?.length` (Wave 3C).
+- Fixed the Wear OS distance bug by tracking `lastKnownDistance` on watch metric messages (using `"distance"` key) and rendering it formatted in the summary view (Wave 3C).
+**Verify result:** TSC ✅, Jest ✅ (28 suites / 218 tests), Blast Radius ✅, gates ✅
+**Files touched:**
+- `App.tsx`
+- `android/sk8lytzWear/src/main/kotlin/com/neogleamz/sk8lytzwear/presentation/DashboardScreen.kt`
+- `android/sk8lytzWear/src/main/kotlin/com/neogleamz/sk8lytzwear/services/WearableCommunicationService.kt`
+- `src/components/DockedController.tsx`
+- `src/components/account/AccountTabStats.tsx`
+- `src/components/dashboard/DashboardTelemetryHero.tsx`
+- `src/components/dashboard/LiveTelemetryHUD.tsx`
+- `src/components/docked/StreetPanel.tsx`
+- `src/hooks/useDashboardController.tsx`
+- `src/screens/DashboardScreen.tsx`
+- `src/hooks/useGlobalTelemetry.ts` (DEL)
+- `src/hooks/useHealthTelemetry.ts` (DEL)
+
 ### [MERGE] 2026-06-11T21:52 — refactor/session-context-xstate → master @ 4df46b81
 **What merged:**
 - Rewrote `SessionContext.tsx` to wrap `sessionMachine` using XState v5 `useMachine` hook.

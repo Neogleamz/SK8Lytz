@@ -1730,3 +1730,33 @@ pm run verify which includes QA tests.
     Rejected alternative: "Change useSession() return shape — rejected because 14+ consumers would break"
   - **Source of Truth:** 📖 [SessionContext.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/context/SessionContext.tsx) + [useBLE.ts:177](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L177)
   - **Details:** Single file rewrite. Keeps: `SessionContext` createContext, storage key constants, `persistSessionPhase`, `useSession()` export. Removes: all useState FSM, all manual useEffect chains. Adds: `useMachine`, `SessionBridge.register`, crash recovery via `STORAGE_PENDING_BG_END`, watch listeners via `SessionBridge`. `Prerequisite: Wave 1 fully merged into master before this worktree is created.`
+
+- [x] **`refactor/delete-legacy-hooks`** 🚀 Merged in c8e30287
+  - **Tags:** `[✅ READY]` `[🤖 INFERRED]` `[🧪 LAB]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:session-xstate-engine]` `[WAVE:3]`
+  - **Goal:** Delete `useGlobalTelemetry.ts` + `useHealthTelemetry.ts` (now orphaned after Wave 2) and register the Notifee background event handler in app root.
+  - **Decision Log:** AST confirmed both files have `imported_by: [SessionContext.tsx]` only. After Wave 2 removes those imports, both files are dead code. Background Notifee handler must be registered at app root (outside React tree) for notification action buttons to work when app is backgrounded.
+  - **Analysis:** 📊 Source: [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/689630a3-694f-4156-a7bc-69878591a1d7/implementation_plan.md) · Plan: [PLAN-refactor-delete-legacy-hooks.md](./plans/PLAN-refactor-delete-legacy-hooks.md)
+    Key finding: "AST output: `useGlobalTelemetry.ts imported_by: [SessionContext.tsx]` and `useHealthTelemetry.ts imported_by: [SessionContext.tsx]` — confirmed safe to delete after Wave 2"
+    Rejected alternative: "Keep as deprecated stubs — rejected because dead code is risk and confusion"
+  - **Source of Truth:** 📖 [useGlobalTelemetry.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useGlobalTelemetry.ts) + [useHealthTelemetry.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useHealthTelemetry.ts) + [SessionContext.tsx:441–448](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/context/SessionContext.tsx#L441-L448)
+  - **Details:** Parallel-safe with Wave 3B and 3C — no shared files. Files touched: 2 deletions + `App.tsx` (1 new block). Must grep for remaining imports before deleting. `Prerequisite: Wave 2 fully merged into master before this worktree is created.`
+
+- [x] **`feat/session-phase-badge-ui`** 🚀 Merged in 481839b5
+  - **Tags:** `[✅ READY]` `[🤖 INFERRED]` `[☁️ CLOUD]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 MEDIUM]` `[BATCH:session-xstate-engine]` `[WAVE:3]`
+  - **Goal:** Integrate `SessionPhaseBadge` into `DashboardTelemetryHero` and `LiveTelemetryHUD` so users see `● RECORDING` / `⏸ PAUSED` / `⏺ SAVING...` near the session timer.
+  - **Decision Log:** User explicitly requested phase indicator below/near timers in session — `DashboardTelemetryHero` (HUD) and `LiveTelemetryHUD` (controller pill) are the two display surfaces confirmed by prop chain audit at `DockedController.tsx:1080–1084`. `SessionPhaseBadge` component created in Wave 1.
+  - **Analysis:** 📊 Source: [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/689630a3-694f-4156-a7bc-69878591a1d7/implementation_plan.md) · Plan: [PLAN-feat-session-phase-badge-ui.md](./plans/PLAN-feat-session-phase-badge-ui.md)
+    Key finding: "`sessionPhase` already destructured from `useSession()` in `DashboardScreen.tsx:486` — zero new data fetching required"
+    Rejected alternative: "Add `useSession()` call inside DashboardTelemetryHero directly — rejected because it bypasses the existing prop contract and creates a second context read"
+  - **Source of Truth:** 📖 [DashboardTelemetryHero.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/DashboardTelemetryHero.tsx) + [DockedController.tsx:1080](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DockedController.tsx#L1080) + [DashboardScreen.tsx:486](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx#L486)
+  - **Details:** Parallel-safe with Wave 3A and 3C. Files: `DashboardTelemetryHero.tsx` (badge below TIME pill), `LiveTelemetryHUD.tsx` (rightmost pill slot), `DockedController.tsx` (1 prop addition line only — S4 monolith flag active, surgical only). StreetPanel badge done in Wave 3C. `Prerequisite: Wave 2 fully merged into master before this worktree is created.`
+
+- [x] **`fix/session-bug-fixes`** 🚀 Merged in 481839b5
+  - **Tags:** `[✅ READY]` `[🤖 INFERRED]` `[☁️ CLOUD]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 MEDIUM]` `[BATCH:session-xstate-engine]` `[WAVE:3]`
+  - **Goal:** Fix 3 isolated bugs: StreetPanel dual-source-of-truth data + badge, AccountTabStats wrong sessions counter, Wear OS hardcoded 0.0 mi distance.
+  - **Decision Log:** (1) `StreetPanel.tsx:80–81` reads `crewService.sessionTelemetry` instead of the drilled-in `sessionPeakSpeed`/`sessionDistanceMiles` props — confirmed by code read. (2) `AccountTabStats.tsx:49` uses `history?.length` (crew history count, not skate sessions) — confirmed source-of-truth mismatch. (3) Wear OS stop confirmation screen shows hardcoded `0.0 mi` — confirmed from prior audit.
+  - **Analysis:** 📊 Source: [session_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/689630a3-694f-4156-a7bc-69878591a1d7/session_audit_report.md) · Plan: [PLAN-fix-session-bug-fixes.md](./plans/PLAN-fix-session-bug-fixes.md)
+    Key finding: "`DockedController.tsx:1249–1258` confirms `sessionPeakSpeed` and `sessionDistanceMiles` are already drilled to StreetPanel — the fix is replacing the wrong data source, not adding new props"
+    Rejected alternative: "Fix via crewService changes — rejected because crewService is the wrong data source entirely"
+  - **Source of Truth:** 📖 [StreetPanel.tsx:80–81](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/StreetPanel.tsx#L80-L81) + [AccountTabStats.tsx:49](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/account/AccountTabStats.tsx#L49) + [DockedController.tsx:1249](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DockedController.tsx#L1249)
+  - **Details:** Parallel-safe with Wave 3A and 3B. Files: `StreetPanel.tsx` (2-line data fix + badge integration + 1 prop addition), `AccountTabStats.tsx` (1-line counter fix), `android/sk8lytzWear/` KT file (hardcoded distance fix — field name from Wave 0 SESSION_LOG entry). `Prerequisite: Wave 2 fully merged into master. Wave 0 SESSION_LOG entry must contain confirmed distance field name.`
