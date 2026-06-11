@@ -1783,3 +1783,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC OK, Jest OK, gates OK.
 **Notes:** Fixed missing try/catches on floating promises and acknowledged R-27 context overload technical debt. Gatekeeper completed successfully.
 
+
+### [MERGE] 2026-06-10T19:56 - Wave 9 Sweep -> master
+**What merged:** 1 chore task from BATCH:deepdive-sweep-phase2 (r-20).
+**Verify result:** TSC OK, Jest OK, gates OK.
+**Notes:** Replaced invalid react-native SafeAreaView import with react-native-safe-area-context. Gatekeeper completed successfully.
+

@@ -1596,4 +1596,12 @@ pm run verify which includes QA tests.
   - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-27. Grouped by collision graph into parallel-safe batches.
   - **Plan:** 📎 [PLAN-r-27-sweep.md](docs/plans/PLAN-r-27-sweep.md)
   - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-27
-  - **Prerequisite:** Wave 7 fully merged
+  - **Prerequisite:** Wave 7 fully merged
+
+- [x] **chore/r-20-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Snack]` `[WAVE:9]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-20 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-20. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-20-sweep.md](docs/plans/PLAN-r-20-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-20
+  - **Prerequisite:** Wave 8 fully merged
