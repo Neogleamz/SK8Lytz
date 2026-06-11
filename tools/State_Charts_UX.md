@@ -101,3 +101,42 @@ stateDiagram-v2
         Rule: Do NOT show raw JSON error text.
     }
 ```
+
+---
+
+## State Chart 3: Wearable Companion Connection & Sync Lifecycle
+
+```mermaid
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Syncing : Phone Starts Session
+    
+    state Syncing {
+        direction LR
+        UI: Spinning Sync Icon
+        Text: "Waiting for Watch..."
+    }
+    
+    Syncing --> Connected : Handshake Complete
+    
+    state Connected {
+        direction LR
+        UI: Watch Icon Green
+        Text: "Watch Active (Streaming HR)"
+    }
+    
+    Connected --> Disconnected : Link Lost / Range Exceeded
+    
+    state Disconnected {
+        direction LR
+        UI: Watch Icon Orange
+        Text: "Watch Disconnected"
+    }
+    
+    Disconnected --> Connected : Auto-Reconnect (WCSession/DataLayer)
+    Disconnected --> Idle : Session Ends on Phone
+    Connected --> Idle : Phone Stops Session
+```
+
+### UX Mandates for Designers:
+1. **Fallback Indicator:** When the watch disconnects, the heart rate indicator must show a subtle fallback state (e.g. gray out or display a warning) to inform the user that heart rate tracking has reverted to the phone's OS health queries.

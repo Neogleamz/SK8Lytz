@@ -56,3 +56,60 @@ We do not have a hardware hub, and the Zengge/Banlanx LED chips on the skates do
 ### The Trade-off (What Stakeholders Must Know)
 - **Pro:** We don't have to manufacture expensive custom hardware hubs. It works with cheap, off-the-shelf LED controllers.
 - **Con:** Mobile phones are not built to maintain 10 simultaneous Bluetooth connections. The larger the Crew, the more noticeable the "lag" will be between the first person's skates changing colors and the 10th person's skates changing colors. We are physically limited by the phone's Bluetooth antenna.
+
+---
+
+## ADR-004: FSM Theme Mode Refactoring
+
+**Date:** June 2026
+**Status:** 🔒 Locked & Active
+
+### The Context
+The application utilizes various state indicators and UI themes. To conform to strict Finite State Machine (FSM) naming rules, the UI state should be defined via explicit string unions rather than generic Boolean toggles like `isDark`.
+
+### The Decision
+We refactored the theme state management in `ThemeContext.tsx`:
+- Replaced the `isDark: boolean` state with a strict `themeMode: 'dark' | 'light'` string union.
+- Exposed a computed `isDark` getter (`themeMode === 'dark'`) inside the Context to prevent breaking downstream screens and layout providers that read it.
+
+### The Trade-off
+- **Pro:** Ensures compile-time safety and alignment with the project's state machine modeling conventions.
+- **Con:** Requires a sync wrapper for components expecting simple Boolean states.
+
+---
+
+## ADR-005: Retention of BleWriteQueue as Imperative Serialization Layer
+
+**Date:** June 2026
+**Status:** 🔒 Locked & Active
+
+### The Context
+A previous audit proposed deleting `BleWriteQueue.ts` and moving raw Bluetooth characteristic writes into XState state machine transitions.
+
+### The Decision
+We rejected the proposal and retained `BleWriteQueue.ts` as a priority FIFO write serialization queue:
+- High-frequency commands (G-force updates, color arrays, heartbeat checks) require backpressure queueing and priority execution.
+- Storing these raw write operations as XState states would clutter the lifecycle machine with ephemeral state transitions and lead to Android GATT buffer lockouts.
+
+### The Trade-off
+- **Pro:** Keeps the XState machine focused purely on macro-lifecycle states (Connected, Scanning, Reconnecting) while ensuring safe, serialized write queues.
+- **Con:** Relies on a singleton class outside the core XState service logic.
+
+---
+
+## ADR-006: Dual-Callback Organic Disconnect Recovery Trigger
+
+**Date:** June 2026
+**Status:** 🔒 Locked & Active
+
+### The Context
+When a Bluetooth device drops connection organically (due to range or battery), the app must trigger auto-recovery. Initial implementations had a single callback that only logged the drop, leaving the device permanently disconnected.
+
+### The Decision
+We established a strict separation of concerns for disconnect subscriptions in `ConnectService`:
+- `handleOrganicDisconnect`: Dedicated strictly to logging and telemetry dispatches.
+- `onOrganicDisconnect`: Direct connection hook that dispatches `RECOVERY_START` to the BleMachine with a `DISCONNECTING` guard.
+
+### The Trade-off
+- **Pro:** Fully automated, reliable background reconnection for dropped devices without locking the UI.
+- **Con:** Maintains two concurrent callbacks for a single event, which must be carefully unmounted to prevent memory leaks.

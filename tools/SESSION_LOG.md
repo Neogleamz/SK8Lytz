@@ -2071,3 +2071,25 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
  * * L i n k : * *   [ r e c o m m e n d e d _ e x t e n s i o n s . m d ] ( f i l e : / / / C : / U s e r s / M a g m a / . g e m i n i / a n t i g r a v i t y - i d e / b r a i n / 4 9 5 6 2 e 4 5 - 5 c f 2 - 4 e e 1 - 9 0 d 6 - 0 5 f 5 f c 9 3 9 b 8 1 / a r t i f a c t s / r e c o m m e n d e d _ e x t e n s i o n s . m d ) 
  * * S u m m a r y : * *   U s e r   a s k e d   f o r   u s e f u l   e x t e n s i o n s .   R e s e a r c h e d   a n d   c o m p i l e d   a   l i s t   o f   h i g h - v a l u e   S u p a b a s e   ( P o s t g r e S Q L )   a n d   V S   C o d e   d e v e l o p m e n t   e x t e n s i o n s   s p e c i f i c   t o   t h e   S K 8 L y t z   o f f l i n e - f i r s t ,   B L E ,   a n d   R e a c t   N a t i v e   a r c h i t e c t u r e .  
  
+
+### [EVENT] 2026-06-11T05:30 — /deepdive-docs Completed
+**Trigger:** User requested `/deepdive-docs` workflow.
+**Action:**
+- Cleaned and rebuilt `tools/SK8Lytz_App_Master_Reference.md` to purge legacy duplicates and line-number bugs.
+- Defined custom `cartographer` subagent with write permissions to prevent context explosion and bypass `research` subagent write limitations.
+- Invoked 21 parallel subagents to audit all 21 codebase domains, collecting reports to `artifacts/deepdive_docs/`.
+- Programmatically synthesized and injected all 21 reports between domain markers in `tools/SK8Lytz_App_Master_Reference.md`.
+- Safely moved 30 stale entries to Section 13: Historical Archive (The Graveyard).
+- Synchronized high-level non-developer documentation based on architectural impact flags:
+  - `User_Journey_Maps.md`: Added Journey 3 (Wearable Session Sync).
+  - `System_Context_Diagram.md`: Added Wearable external system block.
+  - `State_Charts_UX.md`: Added companion wearable connection & sync lifecycle chart.
+  - `Architecture_Decision_Records.md`: Added ADR-004 (Theme FSM), ADR-005 (BleWriteQueue), and ADR-006 (Organic Disconnect callback).
+**Verify result:** TSC check passed clean, Jest unit tests passed (203 tests), all static code gates and invariant checkers verified via `npm run verify`.
+**Files touched:**
+- [Architecture_Decision_Records.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/Architecture_Decision_Records.md)
+- [SK8Lytz_App_Master_Reference.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SK8Lytz_App_Master_Reference.md)
+- [State_Charts_UX.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/State_Charts_UX.md)
+- [System_Context_Diagram.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/System_Context_Diagram.md)
+- [User_Journey_Maps.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/User_Journey_Maps.md)
+- [SESSION_LOG.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SESSION_LOG.md)

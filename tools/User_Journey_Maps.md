@@ -54,3 +54,29 @@ journey
 ### UX Friction Points to Monitor:
 - **The Phantom Session:** If the user kills the app before returning to Wi-Fi, the session data lives in local storage. The system *must* have a reliable boot-up check to find these stranded sessions and upload them silently, otherwise the user thinks they lost their data.
 - **GPS Drift:** If the phone goes into a deep sleep pocket mode, the OS might throttle GPS polling. The app must use an active Foreground Service to keep tracking speed accurately.
+
+---
+
+## Journey 3: Wearable Session Sync
+**Goal:** A skater starts a session on their phone and views speed/heart rate on their watch, or handles organic disconnect/recovery.
+
+```mermaid
+journey
+    title Wearable Session Sync & Health Telemetry
+    section 1. Start Session
+      User starts session on phone: 5: Skater
+      Phone syncs session status ACTIVE to Watch: 4: System
+      Watch starts workout session: 5: System
+    section 2. Live Telemetry Sync
+      Phone pushes live speed to Watch display: 4: System
+      Watch optical sensor reads heart rate: 5: System
+      Watch relays heart rate back to Phone: 5: System
+    section 3. Link Drop Recovery
+      S skater goes out of BLE range from phone: 3: Skater
+      Watch continues local tracking: 5: System
+      Watch reconnects and flushes data: 4: System
+```
+
+### UX Friction Points to Monitor:
+- **Discrepant Sync State:** If WCSession context delivery fails or drops, the Apple Watch session can get stuck out of sync with the phone.
+- **Heart Rate Priority Fallback:** If the watch is disconnected, the phone falls back to querying Apple Health/Health Connect (15s poll) rather than real-time watch stream (5s push).

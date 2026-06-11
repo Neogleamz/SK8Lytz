@@ -23,6 +23,7 @@ C4Context
     %% External Systems (Hardware)
     System_Ext(ble_skate, "Zengge/Banlanx LED Controller", "The physical hardware on the skates (e.g. 0xA3 chip). Receives BLE hex payloads to change colors.")
     System_Ext(phone_os, "Mobile OS (iOS / Android)", "Provides Bluetooth Radio, Location/GPS, and Background Execution permissions.")
+    System_Ext(wearable, "Wearable Companion (Apple Watch / Wear OS)", "Syncs session state and streams real-time heart rate and calorie telemetry to the phone app.")
 
     %% External Systems (Cloud)
     System_Ext(supabase, "Supabase (Cloud)", "Handles user authentication, database storage for crews/spots, and telemetry/crash logging.")
@@ -34,6 +35,8 @@ C4Context
     Rel(admin, sk8lytz_app, "Monitors telemetry and curates catalog via")
 
     Rel(sk8lytz_app, ble_skate, "Sends RGB commands & patterns via", "Bluetooth Low Energy (BLE)")
+    Rel(sk8lytz_app, wearable, "Syncs session state, pushes speed to", "WatchBridge (WCSession / DataLayer)")
+    Rel(wearable, sk8lytz_app, "Streams heart rate & calories to", "WatchBridge")
     Rel(sk8lytz_app, phone_os, "Requests Bluetooth access, reads GPS data from", "Native OS APIs")
     Rel(sk8lytz_app, supabase, "Syncs profiles, crews, and telemetry to", "HTTPS / WebSocket")
     Rel(sk8lytz_app, expo_eas, "Receives OTA updates and Push Notifications from", "HTTPS")
