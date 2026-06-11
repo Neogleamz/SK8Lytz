@@ -183,6 +183,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (sessionPhase !== 'ACTIVE' && sessionPhase !== 'PAUSED') return;
 
+    let isActive = true;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     const checkAutoPause = async () => {
@@ -190,6 +191,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isCheckingAutoPause.current = true;
       try {
         const enabled = await AsyncStorage.getItem(STORAGE_AUTO_PAUSE_ENABLED);
+        if (!isActive) return;
         if (enabled === 'false') {
           if (sessionPhase === 'PAUSED') {
             setSessionPhase('ACTIVE');
@@ -229,12 +231,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     checkAutoPause();
 
     return () => {
+      isActive = false;
       if (timer) clearTimeout(timer);
     };
   }, [sessionPhase, telemetry.gpsSpeed]);
 
   // 4. Manage the Foreground Service (Android) / Background Notification (iOS)
   useEffect(() => {
+    let isActive = true;
     let updateInterval: ReturnType<typeof setInterval> | null = null;
 
     const setupNotification = async () => {
@@ -328,6 +332,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       // Initial display
       await displayNotification();
 
+      if (!isActive) return;
+
       // Update the notification every 5 seconds with new stats
       updateInterval = setInterval(() => {
         displayNotification().catch((err: unknown) => AppLogger.warn('[SessionContext] displayNotification interval failed', err instanceof Error ? err.message : String(err)));
@@ -337,6 +343,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setupNotification().catch(err => AppLogger.error('[SessionContext] setupNotification failed', err instanceof Error ? err.message : String(err)));
 
     return () => {
+      isActive = false;
       if (updateInterval) clearInterval(updateInterval);
     };
   }, [isSkateSessionActive, sessionPhase]);

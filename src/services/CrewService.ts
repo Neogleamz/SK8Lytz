@@ -744,6 +744,10 @@ class CrewService {
 
   /** Unsubscribe from current channel and clean up timer. */
   unsubscribe(): void {
+    if (this._lastScenePersistTimer) {
+      clearTimeout(this._lastScenePersistTimer);
+      this._lastScenePersistTimer = null;
+    }
     if (this.broadcastTimer) {
       clearTimeout(this.broadcastTimer);
       this.broadcastTimer = null;

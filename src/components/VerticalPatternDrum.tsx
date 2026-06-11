@@ -27,6 +27,12 @@ const VerticalPatternDrum = ({
   const commitTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    return () => {
+      if (commitTimeoutRef.current) clearTimeout(commitTimeoutRef.current);
+    };
+  }, []);
+
+  useEffect(() => {
     setLocalVal(value);
   }, [value]);
 
