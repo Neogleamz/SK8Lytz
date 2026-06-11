@@ -18,8 +18,9 @@ export const SkateSpotBottomSheet: React.FC<BottomSheetProps> = ({ visible, onCl
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
   
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  type StatusState = 'idle' | 'loading' | 'success' | 'error';
+  const [status, setStatus] = useState<StatusState>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [selectedSurface, setSelectedSurface] = useState<string>(spot?.surface_type || 'unknown');
   const [isIndoor, setIsIndoor] = useState<boolean>(spot?.is_indoor ?? true);
 
@@ -28,8 +29,8 @@ export const SkateSpotBottomSheet: React.FC<BottomSheetProps> = ({ visible, onCl
   const isVerifiedNative = spot.source === 'native' && spot.is_verified;
 
   const handleClaim = async () => {
-    setIsUpdating(true);
-    setError(null);
+    setStatus('loading');
+    setErrorMessage(null);
     try {
       const result = await SkateSpotsService.claimAndUpdateSpot({
         ...spot,
@@ -40,14 +41,14 @@ export const SkateSpotBottomSheet: React.FC<BottomSheetProps> = ({ visible, onCl
       if (result && onSpotUpdated) {
         onSpotUpdated(result);
       }
+      setStatus('success');
       onClose();
     } catch (e: unknown) {
       AppLogger.warn('[SkateSpotBottomSheet] claimAndUpdateSpot failed', {
         error: e instanceof Error ? e.message : String(e),
       });
-      setError('Failed to load. Tap to retry.');
-    } finally {
-      setIsUpdating(false);
+      setErrorMessage('Failed to load. Tap to retry.');
+      setStatus('error');
     }
   };
 
@@ -79,7 +80,7 @@ export const SkateSpotBottomSheet: React.FC<BottomSheetProps> = ({ visible, onCl
             {isVerifiedNative ? 'Verified Community Spot' : 'Unverified (Sourced from OSM)'}
           </Text>
 
-          {error && <View style={{ marginBottom: Spacing.xl }}><ErrorCard message={error} onRetry={handleClaim} /></View>}
+          {status === 'error' && errorMessage && <View style={{ marginBottom: Spacing.xl }}><ErrorCard message={errorMessage} onRetry={handleClaim} /></View>}
 
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Surface Type</Text>
@@ -109,8 +110,8 @@ export const SkateSpotBottomSheet: React.FC<BottomSheetProps> = ({ visible, onCl
             </View>
           </View>
 
-          <TouchableOpacity style={styles.actionButton} onPress={handleClaim} disabled={isUpdating}>
-            {isUpdating ? (
+          <TouchableOpacity style={styles.actionButton} onPress={handleClaim} disabled={status === 'loading'}>
+            {status === 'loading' ? (
               <ActivityIndicator color="#000" />
             ) : (
               <Text style={styles.actionText}>{isVerifiedNative ? 'SAVE CHANGES' : 'VERIFY & CLAIM SPOT'}</Text>
