@@ -2103,3 +2103,13 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - [System_Context_Diagram.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/System_Context_Diagram.md)
 - [User_Journey_Maps.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/User_Journey_Maps.md)
 - [SESSION_LOG.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SESSION_LOG.md)
+
+### [EVENT] 2026-06-11T20:30 — Docker Compose Workflow Parity Completed
+**What shipped:**
+- Aligned session kickoff (`/hello`), smoke test (`/smoke-test`), and dev server (`/dev-server`) workflows with Docker Compose.
+- Updated `tools/start-web-demo.ps1`, `tools/cheat-sheet.html`, `tools/SK8Lytz_TEST_PLAN.md`, and `tools/SK8Lytz_App_Master_Reference.md` to deprecate host PM2 daemons and document retired scripts.
+**Verify result:** TSC ✅, Jest ✅ (203 tests passing), all verification checks green.
+**Active sprint state:** none (clean).
+**Master HEAD:** 07663e3a
+**Friction Audit:** 0 new events | 0 resolved | 0 incremented
+**System evolution:** none
