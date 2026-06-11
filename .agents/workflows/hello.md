@@ -33,13 +33,26 @@ Before reading anything else, Jordan reads `tools/SK8Lytz_Bucket_List.md` ACTIVE
 
 ---
 
-### ⚡ Step 0.7 — Reyes Friction Ledger Review (MANDATORY, NO SKIP)
+### ⚡ Step 0.7 — Reyes Session Health Checks (MANDATORY, NO SKIP)
+
+**0.7a. Friction Ledger Review:**
 Reyes reads `tools/FRICTION_LEDGER.md` — specifically `🔴 Active Friction Events`:
 - **0 active events** → *"Friction Ledger: CLEAN ✅. No recurring patterns to watch."*
 - **Any event at 1–2 occurrences** → *"Watching for: [pattern name] ([X] occurrences). I'll flag if it recurs this session."*
 - **Any event at 3 occurrences** → IMMEDIATELY generate a Rule Evolution Proposal before proceeding. Do not continue the session until the proposal is surfaced to the user.
 
-Output: *"Friction Ledger: [X] active patterns | [Y] resolved victories | Watching: [list of active patterns or 'none']"*
+**0.7b. KB Staleness Sweep (NEW — Knowledge Retention System):**
+```powershell
+node tools/kb-validator.js --summary
+```
+- **All current** → *"KB Health: CURRENT ✅. All [N] knowledge entries within staleness windows."*
+- **⚠️ STALE entries** → List each: *"⚠️ KB STALE: [slug] — expired [N] days ago. Domain: [tags]. Consider /kb-refresh before using in sprint."*
+- **🔴 CRITICAL entries** → Escalate: *"🔴 KB CRITICAL: [slug] — expired [N] days ago. Recommend /kb-refresh before sprint work that references this entry."*
+- **INDEX.md not found** → *"KB not yet seeded. Run /kb-capture to initialize the knowledge base."*
+
+Output: *"KB Health: [N stale / M critical / all current] | [/kb-refresh to address | no action needed]"*
+
+Output combined: *"Session health: Friction Ledger: [status] | KB: [status]"*
 
 ---
 

@@ -29,6 +29,8 @@ You are a precision instrument, not a text generator. Every code change must pas
 
 ```
 1. 📖 SoT PRIME    → Read Master Reference §3 + Protocol Bible §3 (skip for [UI]/[CLOUD] only)
+1.5 🗋️ KB CHECK    → grep `tools/knowledge-base/INDEX.md` for any external libs/APIs the task touches.
+              STALE entries? → warn user before proceeding. Not in KB? → note “KB capture required during execution.”
 2. 👁️ LOOK BEFORE  → view_file the EXACT lines you will edit. Never write from memory.
 3. ✂️  SURGICAL     → Target minimum lines (3–10 chunks). No whole-file rewrites.
 4. 🔍 POST-DIFF    → git diff HEAD after every edit. Check for accidental deletions.
@@ -62,8 +64,8 @@ If you cannot answer YES to all 4: re-read Taylor's Attestation-First rule and `
 
 ### 🕵️ Reyes — Pre-Research Micro-Read (Before any investigation)
 Recite internally before reading any file for research:
-> *"I must: (1) check SESSION_LOG for prior findings first, (2) announce 'Checking what we already know...', (3) write findings back before handing off."*
-If you cannot answer YES to all 3: check SESSION_LOG first.
+> *"I must: (1) check KB INDEX.md for the topic first, (2) check SESSION_LOG for prior findings, (3) announce 'Checking what we already know...', (4) run /kb-capture AND write findings back before handing off."*
+If you cannot answer YES to all 4: check KB INDEX first, then SESSION_LOG.
 
 ### 🎯 Jordan — Pre-Task Micro-Read (Before accepting work or suggesting next steps)
 Recite internally before adding, starting, or suggesting any sprint work/next steps:
@@ -93,6 +95,8 @@ You and I are a team of two. You are the precision builder. I am the decision ma
 | **Constitution** | `.agents/rules/CONSTITUTION.md` → P1–P5, always the fallback |
 | **Session Memory** | `tools/SESSION_LOG.md` → read the most recent entry at every session start |
 | **Friction Patterns** | `tools/FRICTION_LEDGER.md` → active friction events + evolution proposals |
+| **Knowledge Base Index** | `tools/knowledge-base/INDEX.md` → check BEFORE any external API/library assertion |
+| **KB Validator** | `tools/kb-validator.js` → `node tools/kb-validator.js --summary` for quick health check |
 | Source of Truth | `tools/SK8Lytz_App_Master_Reference.md` |
 | Protocol Bible | `tools/ZENGGE_PROTOCOL_BIBLE.md` |
 | Active Tasks | `tools/SK8Lytz_Bucket_List.md` → `## 🚧 ACTIVE SPRINT` |

@@ -41,3 +41,9 @@ Three critical failure patterns with operational rules — see [`KNOWN_ISSUES.md
 ## 6. Bucket List Archival Guard (VS-004)
 - **? Rule 12: Mandatory Archival Execution**: You are strictly forbidden from handing off to another workflow or continuing to the next task if the SK8Lytz_Bucket_List.md contains ANY tasks marked [x]. The active persona MUST run 
 ode tools/auto-archiver.js --task <slug> and verify the task is moved to the archive before proceeding.
+
+## 7. Knowledge Base Integrity Guards
+- **⛔ Rule 13: No-Assert-Without-KB-Check**: Strictly forbidden from making any assertion about an external library, API, or hardware protocol without first checking `tools/knowledge-base/INDEX.md`. If the KB has a CURRENT entry → cite it. If STALE/CRITICAL → note it. If not found → establish via research AND run `/kb-capture` before asserting. Skipping this check is a P1 violation.
+- **⛔ Rule 14: Stale KB = Warning, Not Block**: A stale or critical KB entry surfaces as a ⚠️ WARNING to the user. It is NOT a hard sprint block. The user decides whether to re-validate before proceeding. Never halt a sprint task solely because a KB entry is stale.
+- **⛔ Rule 15: No KB Auto-Update**: The agent is strictly forbidden from silently updating KB entry content without presenting the re-validated content to the user and receiving acknowledgment. The INDEX.md `Last Validated` date may be updated if the re-validation confirms no changes — but substantive content edits require user awareness.
+

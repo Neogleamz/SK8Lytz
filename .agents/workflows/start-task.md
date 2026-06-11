@@ -63,6 +63,8 @@ Pre-Execution Gate for <slug>:
 [4] Decision Log filled?           → YES / NO — value: <first 10 words of log>
 [5] [WAVE:N] tag present?          → YES / NO — wave: <N>
 [6] Wave N-1 merged? (if N>1)      → YES / N/A — last master commit: <hash>
+[7] KB awareness (WARNING only):   → CURRENT / STALE ⚠️ / NOT FOUND — run `node tools/kb-validator.js --summary`
+    (STALE/NOT FOUND is a warning, not a blocker. Note it; user decides if /kb-refresh needed first.)
 ```
 
 - **ALL 6 = YES/N/A** → Output `"✅ Intake Gate CLEARED — proceeding to worktree creation."` and continue.

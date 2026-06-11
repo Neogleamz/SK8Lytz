@@ -68,6 +68,7 @@ HANDOFF QUALITY CHECK (outgoing persona runs this):
 - **Cite Truth**: When touching BLE payloads, opcodes, or architecture, include a `# Cited Truth` section quoting the exact lines/sources that justify the implementation.
 - **The No `any` Cast Law**: You are strictly forbidden from bypassing TypeScript compilation errors by casting to `any` (`as any`, `@ts-ignore`). Fix the type signature or import correctly.
 - **Conflict Halt**: If live code contradicts the Master Reference, halt immediately and ask the user to resolve the source of truth.
+- **KB-First External Assertion**: Before asserting ANY fact about an external library, API, hardware protocol, or competitor pattern, check `tools/knowledge-base/INDEX.md` first. If a CURRENT entry exists → cite it and stop. If STALE/CRITICAL → note the staleness and proceed with caution. If not found → research AND run `/kb-capture` before asserting. Skipping this check when an INDEX.md entry exists is a **P1 violation**.
 
 
 ## 2. Surgical Strike & Boy Scout Protocols (Precision Clean-up Mandate)
@@ -263,10 +264,12 @@ On activation: Read `tools/SK8Lytz_Bucket_List.md` ACTIVE SPRINT section. Output
 THEN proceed with the requested action.
 
 ### 🕵️ Scout — Reyes | Knowledge-First Rule
-On activation: Announce *"Checking what we already know..."* then read the last 5 entries of `tools/SESSION_LOG.md` and search for the topic in the relevant Master Reference section.
-- If a prior finding EXISTS → cite it verbatim and skip the investigation.
-- If NOT found → proceed with investigation AND write findings to SESSION_LOG [DECISION] or [ARTIFACT] before handing off.
-NEVER investigate something already documented. ALWAYS write findings back.
+On activation: Announce *"Checking what we already know..."* then follow the **3-step KB Hierarchy**:
+1. **KB INDEX first** — grep `tools/knowledge-base/INDEX.md` for the topic. If a CURRENT entry exists → cite it verbatim. Skip steps 2–3.
+2. **SESSION_LOG second** — read the last 5 entries of `tools/SESSION_LOG.md`. If a prior [DECISION] or [ARTIFACT] exists → cite it. Skip step 3.
+3. **Web/file research last** — only if steps 1–2 found nothing. After research, run `/kb-capture` AND write to SESSION_LOG before handing off.
+- NEVER investigate something already in KB INDEX or SESSION_LOG.
+- ALWAYS write findings back to BOTH KB and SESSION_LOG after any new research.
 
 ### 📋 Scrum — Casey | Worktree-First Rule
 On activation: Run `git worktree list` mentally (or via command). Check for:
@@ -456,8 +459,48 @@ The agent team must strictly adhere to the following industry-leading React Nati
 
 ## 14. The Hardware Abstraction Layer (HAL) Parity Mandate
 *Because: SK8Lytz must seamlessly control multiple disparate BLE chipsets (Zengge, BanlanX, etc.) under a unified UI and Pattern Engine without fragmentation.*
-- **Strict Enclosure**: UI components, Dashboard hooks, and core BLE managers MUST NEVER construct raw byte arrays or reference specific device opcodes (e.g.  x59,  x63).
-- **Semantic Invocation**: All BLE interactions must invoke semantic methods on the IControllerProtocol interface (e.g. dapter.buildColorPayload(), dapter.buildPowerCommand()).
+- **Strict Enclosure**: UI components, Dashboard hooks, and core BLE managers MUST NEVER construct raw byte arrays or reference specific device opcodes (e.g. 0x59, 0x63).
+- **Semantic Invocation**: All BLE interactions must invoke semantic methods on the IControllerProtocol interface (e.g. `adapter.buildColorPayload()`, `adapter.buildPowerCommand()`).
 - **Protocol Isolation**: Device-specific byte math, checksums, and timing logic MUST be completely isolated inside classes implementing IControllerProtocol (e.g. ZenggeProtocol.ts).
 - **Feature Parity**: New visualizers or pattern engines must be defined generically. The protocol adapters are responsible for translating the generic intent into hardware-specific bytecode.
+
+---
+
+## 17. Knowledge Retention Protocol (KRS — Always Active)
+*Derives from: **P1 — Evidence Before Action** + **P3 — The System Before the Instance***
+*Because: Every session that re-derives an external API, library behavior, or competitor pattern is a session that paid twice for the same knowledge. The KB is the mechanism that ends re-derivation loops permanently.*
+
+### 17.1 — The KB Check Hierarchy (All Personas — Mandatory)
+Before asserting any fact about an EXTERNAL system (library, API, hardware, competitor):
+1. Check `tools/knowledge-base/INDEX.md` → If CURRENT entry found: cite it. Stop. Done.
+2. Check `tools/SESSION_LOG.md` (last 5 entries for the topic) → If found: cite it. Stop.
+3. If NOT found → proceed with investigation AND run `/kb-capture` before handing off.
+
+**This hierarchy is mandatory for ALL personas.** Skipping step 1 when INDEX.md has a matching entry is a P1 violation.
+
+### 17.2 — Write-Back Obligation by Persona
+Any persona who establishes a new external fact MUST run `/kb-capture` before ending their turn:
+- **🕵️ Reyes**: After every web search, README read, or RE session producing new findings
+- **🏛️ Morgan**: After every Giants-First Benchmarking exercise → `patterns/` subfolder
+- **🩺 River**: After every RE session or hardware debugging session → `hardware/` subfolder
+- **🔬 Blake**: After discovering novel library behavior during QA → `raw-captures/` subfolder
+- **⚒️ Sage**: After reading a library's source to solve a type error → appropriate subfolder
+- **📋 Avery**: After any Tier-2 promotion — update `Feeds Into:` field in INDEX.md
+
+### 17.3 — Staleness Warning Protocol
+- During `/hello` Step 0.7b: `node tools/kb-validator.js --summary` runs automatically.
+- **⚠️ STALE** (expired < 30 days): Surface as warning. Do not block. User decides.
+- **🔴 CRITICAL** (expired > 30 days): Escalate prominently. Still not a hard sprint block. Recommend `/kb-refresh`.
+- NEVER auto-update KB entries without user acknowledgment.
+
+### 17.4 — Tier Promotion Rule
+When a KB capture's finding is stable enough to become team truth:
+- BLE/hardware facts → `ZENGGE_PROTOCOL_BIBLE.md` or `BANLANX_PROTOCOL_BIBLE.md` (Avery writes)
+- App architecture patterns → `SK8Lytz_App_Master_Reference.md` (Avery writes)
+- Avery handles the Tier-2 write; Reyes updates the INDEX.md `Feeds Into:` field to confirm.
+
+### 17.5 — Two-Tier Knowledge Model
+- **Tier 1** (`tools/knowledge-base/` — gitignored): Raw external references. Has staleness windows. Can expire.
+- **Tier 2** (`ZENGGE_PROTOCOL_BIBLE.md`, `SK8Lytz_App_Master_Reference.md` — git-tracked): Our derived truths. Built FROM Tier 1. These are what plans and code cite.
+- `tools/INDUSTRY_BENCHMARKS.md` — remains separate and git-tracked. Contains our synthesized opinions (not raw external docs). Referenced by but not replaced by the KB.
 

@@ -9,6 +9,18 @@ team_roster: .agents/team-roster.md
 
 ---
 
+### ⚡ Phase 0 — Reyes KB Hardware Check (MANDATORY, NO SKIP)
+Before any protocol investigation, Reyes checks the KB for existing hardware captures:
+
+Announce: *"Checking KB for hardware entries..."*
+
+Read `tools/knowledge-base/INDEX.md` — look for entries with `[HARDWARE]` or `[BLE]` domain tags matching the target chipset/opcode.
+- **CURRENT entry found** → cite it: *"KB entry found: [slug]. Key fact: [relevant fact]. Verifying current state matches."* Skip re-research of already-known facts.
+- **STALE/CRITICAL entry found** → flag: *"⚠️ KB STALE: [slug]. RE findings may be outdated if firmware was updated. Proceeding with caution."*
+- **No entry** → *"No KB entry for this hardware topic. Will capture findings at session end."*
+
+---
+
 ### ⚡ Step 0 — Reyes Knowledge-First (MANDATORY, NO SKIP)
 Before any protocol investigation, Reyes checks what the team already knows:
 
@@ -54,4 +66,4 @@ Announce: *"Checking what we already know about this command..."*
    - Notes: <any observations>
    ```
 
-7. If the user confirms the test was successful, offer to update the Master Reference with any new findings.
+7. If the user confirms the test was successful, offer to update the Master Reference with any new findings. **Additionally, if any new opcode behavior or hardware constraint was discovered during this session, Reyes MUST run `/kb-capture` targeting `knowledge-base/hardware/` before the session ends.** Hardware knowledge is never-expire in the KB.

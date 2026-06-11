@@ -86,6 +86,24 @@ Context: Production log status: [CLEAN / ISSUES TRIAGED]. Resuming shutdown chec
    - Identify any new architectural patterns, hardware protocol discoveries, or database schema changes.
    - Update `tools/SK8Lytz_App_Master_Reference.md` strictly following the **Corporate Memory Synchronization Rule**.
 
+2.5. **KB Capture Sweep (Reyes — NEW)**:
+   Reyes reviews the session’s research activity and verifies all external knowledge was captured:
+   - Did this session involve reading external library docs, GitHub READMEs, or web searches for API guidance? → KB entry required
+   - Did this session involve RE findings, hardware discoveries, or constraint analysis? → KB entry required (`hardware/`)
+   - Did Morgan run any Giants-First benchmarking? → KB entry required (`patterns/`)
+   - Did Blake discover a novel library behavior during QA? → KB entry required (`raw-captures/`)
+
+   For each YES: verify a KB capture was already done (grep SESSION_LOG for `[ARTIFACT]` entries with `KB Capture` in the type line).
+   For any uncaptured finding: run `/kb-capture` NOW before committing.
+
+   Output: *"🗋️ KB Capture Sweep: [N] captures already logged | [M] new captures run this sweep | KB is up to date ✅"*
+
+   After sweep, run the staleness validator one final time:
+   ```powershell
+   node tools/kb-validator.js --summary
+   ```
+   Include the KB health line in the Final SITREP.
+
 3. **Bucket List Grooming & Archiving**:
    - Parse `tools/SK8Lytz_Bucket_List.md`.
    - Ensure every task completed during the session is marked with `[x]`.

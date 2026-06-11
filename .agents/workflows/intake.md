@@ -21,8 +21,15 @@ Read `tools/SK8Lytz_Bucket_List.md` — specifically ACTIVE SPRINT and ON DECK.
 
 ### 🕵️ Scout — Reyes (Step 0.5): The Benchmarking Gate
 Before any feature classification or planning begins, Reyes MUST establish the industry gold standard.
-1. Use `search_web` to research how 5 top-tier companies/apps solve this exact problem (e.g., Govee, LIFX, Strava, Sonos, Discord, Philips Hue).
-2. Synthesize their approaches into a new entry in `tools/INDUSTRY_BENCHMARKS.md`.
+
+**0.5a. KB-First Check (MANDATORY — before any web search):**
+Reyes reads `tools/knowledge-base/INDEX.md` and searches for entries matching the task's domain tags.
+- **CURRENT entry found** → cite it directly in the benchmark output. Skip the web search for that specific topic. *"Found in KB: [slug] — [key fact]. No web search needed for this pattern."*
+- **STALE/CRITICAL entry found** → note the staleness prominently in the benchmark output, then re-search and run `/kb-capture` to update.
+- **No entry found** → proceed with `search_web` AND run `/kb-capture` before handing to Quinn.
+
+1. Use `search_web` to research how 5 top-tier companies/apps solve this exact problem (e.g., Govee, LIFX, Strava, Sonos, Discord, Philips Hue). **Skip for any topic already CURRENT in the KB.**
+2. Synthesize their approaches into a new entry in `tools/INDUSTRY_BENCHMARKS.md`. **AND run `/kb-capture` targeting `knowledge-base/patterns/` for the raw research.**
 3. If no clear gold standard exists, extract the closest analog.
 4. Output a summary: *"Industry Benchmark complete. Govee does X, Sonos does Y. We will adopt Z as our gold standard."*
 
