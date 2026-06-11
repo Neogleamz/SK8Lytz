@@ -1771,3 +1771,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC OK, Jest OK, gates OK.
 **Notes:** Centralized magic keys, fixed swallowed errors, and added missing error UI states. Gatekeeper completed successfully.
 
+
+### [MERGE] 2026-06-10T19:48 - Wave 7 Sweep -> master
+**What merged:** 2 chore tasks from BATCH:deepdive-sweep-phase2 (r-15, r-07).
+**Verify result:** TSC OK, Jest OK, gates OK.
+**Notes:** Converted direct Supabase API usages to context hooks and fixed FlatList renderItem inline style performance leak. Gatekeeper completed successfully.
+

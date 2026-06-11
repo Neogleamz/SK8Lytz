@@ -1564,4 +1564,20 @@ pm run verify which includes QA tests.
   - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-14. Grouped by collision graph into parallel-safe batches.
   - **Plan:** 📎 [PLAN-r-14-sweep.md](docs/plans/PLAN-r-14-sweep.md)
   - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-14
-  - **Prerequisite:** Wave 5 fully merged
+  - **Prerequisite:** Wave 5 fully merged
+
+- [x] **chore/r-15-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Meal]` `[WAVE:7]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-15 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-15. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-15-sweep.md](docs/plans/PLAN-r-15-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-15
+  - **Prerequisite:** Wave 6 fully merged
+
+- [x] **chore/r-07-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[M-RISK]` `[Meal]` `[WAVE:7]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-07 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-07. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-07-sweep.md](docs/plans/PLAN-r-07-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-07
+  - **Prerequisite:** Wave 6 fully merged
