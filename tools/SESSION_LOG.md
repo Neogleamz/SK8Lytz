@@ -1759,3 +1759,9 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 **Verify result:** TSC OK, Jest OK, gates OK.
 **Notes:** Tasks safely addressed architecture limit warnings and dependency overhangs. Gatekeeper completed successfully.
 
+
+### [MERGE] 2026-06-10T19:38 - Wave 5 Sweep -> master
+**What merged:** 2 chore tasks from BATCH:deepdive-sweep-phase2 (r-26, r-09).
+**Verify result:** TSC OK, Jest OK, gates OK.
+**Notes:** Tasks safely addressed Race Conditions and PII leaks. Gatekeeper completed successfully.
+
