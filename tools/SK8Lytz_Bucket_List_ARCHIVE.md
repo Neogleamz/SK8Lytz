@@ -1685,4 +1685,11 @@ pm run verify which includes QA tests.
   - **Goal:** Fix all 18 findings in domain hooks-ble. Every file in the plan must appear in the diff.
   - **Prerequisite:** Wave 4 fully merged
   - **Source of Truth:** docs/plans/PLAN-sweep-hooks-ble.md
-  - **Decision Log:** Resolve all hooks-ble domain findings identified in the DeepDive audit (system_audit_report.md) to fix memory leaks, type safety issues, and connection state bugs in BLE hooks.
+  - **Decision Log:** Resolve all hooks-ble domain findings identified in the DeepDive audit (system_audit_report.md) to fix memory leaks, type safety issues, and connection state bugs in BLE hooks.
+
+- [x] **chore/sweep-context**
+  - **Tags:** `[READY]` `[VERIFIED]` `[MAINTENANCE]` `[H-RISK]` `[Meal]` `[WAVE:6]` `[BATCH:deepdive-sweep-phase3]`
+  - **Goal:** Fix all 15 findings in domain context. Every file in the plan must appear in the diff.
+  - **Prerequisite:** Wave 5 fully merged
+  - **Source of Truth:** docs/plans/PLAN-sweep-context.md
+  - **Decision Log:** Eradicate all context domain findings identified in the DeepDive audit (system_audit_report.md) to fix memory leaks, unhandled promises, and state naming in React contexts.

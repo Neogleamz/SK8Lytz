@@ -4,14 +4,14 @@
 **Don't re-derive:** Use the string union `'dark' | 'light'` as the source of truth, and compute `isDark = themeMode === 'dark'` synchronously.
 **Source:** `src/context/ThemeContext.tsx`:L26-30
 
-### [EVENT] 2026-06-11T04:28 — Context Domain Sweep Completed (chore/sweep-context)
-**Trigger:** Executed the `chore/sweep-context` task to address context vulnerabilities, async race conditions, and telemetry payload requirements.
-**Action:**
-- Wrapped async operations (`signIn`, `signUp`, `resetPassword`) in try-catch blocks in `src/context/AuthContext.tsx`.
-- Refactored `SessionContext.tsx` to clear intervals/timeouts safely on unmount (`summaryTimeoutRef`, `updateInterval`), added `!isActive` guards in timeout callbacks, and included `payload_size: 0, ssi: 0` in all telemetry logging.
-- Refactored `ThemeContext.tsx` to use FSM theme state and correct telemetry logging.
-- Ran `npm run verify` successfully. Committed changes to `chore/sweep-context` worktree branch.
-**Verify result:** TSC ✅, Jest ✅ (203 passing), all static guards clean.
+### [MERGE] 2026-06-11T04:29 — sweep-context → master @ 2351b8f9
+**What merged:**
+- Resolved all findings in the context domain (`AuthContext.tsx`, `SessionContext.tsx`, `ThemeContext.tsx`).
+- Wrapped critical async authentication operations in try/catch blocks with `AppLogger.error` handling.
+- Introduced unmount guards and teardowns in `SessionContext.tsx` to resolve async race condition leaks with `setInterval`/`setTimeout`.
+- Standardized error logging in contexts to include `payload_size: 0, ssi: 0` context.
+- Refactored `ThemeContext.tsx` theme mode to a strict FSM string union state (`dark` | `light`).
+**Verify result:** TSC ✅, Jest ✅ (203 tests passing), gates ✅
 **Files touched:**
 - `src/context/AuthContext.tsx`
 - `src/context/SessionContext.tsx`
