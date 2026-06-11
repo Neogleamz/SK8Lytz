@@ -113,3 +113,12 @@
   - **Compile-Time Elimination:** Giants use global flags (like React Native's `__DEV__`) to physically remove sandbox code from the production compiler path.
   - **Dependency Injection:** Rather than littering components with `if (mock)`, they use DI to inject a `MockBleService` at the highest layer when the Dev Mode flag is active.
 - **Adopted Gold Standard:** We will use the Metro bundler's `__DEV__` flag to strip the UI, pair it with `AsyncStorage` for the runtime flag, and use Dependency Injection at the `useBLEScanner.ts` level to yield virtual devices instead of interacting with the physical Bluetooth radio.
+
+### Database PII Encryption (TCE vs Application-Level) (2026-06-10)
+- **Problem:** Encrypting PII (MAC addresses, locations) in Supabase/PostgreSQL to prevent database-level leaks without creating operational fragility.
+- **Analyzed Giants:** Supabase Official Guidelines, Strava, Standard SOC2 Compliance Patterns.
+- **Key Findings:**
+  - **The `pgsodium` Trap:** While Supabase offers `pgsodium` for Transparent Column Encryption (TCE), it is actively discouraged for high-volume PII due to high operational risk, trigger conflicts, and unrecoverable data if keys are mismanaged.
+  - **RLS First:** The industry standard for DB security is robust Row-Level Security (`auth.uid() = user_id`) and default encryption-at-rest.
+  - **Application-Level Encryption:** If data must be obscured from DB admins, giants use client-side (Application-Level) encryption (e.g., `libsodium-wrappers` or `react-native-quick-crypto`) *before* sending to the database, maintaining key control entirely outside the DB.
+- **Adopted Gold Standard:** We will explicitly AVOID `pgsodium` TCE for our PII task. Instead, we will implement robust Row-Level Security and investigate Application-Level Encryption (React Native client-side) for critical PII fields before syncing to Supabase.

@@ -1664,4 +1664,25 @@ pm run verify which includes QA tests.
   - **Goal:** Fix all 118 findings in domain hooks-core. Every file in the plan must appear in the diff.
   - **Prerequisite:** Wave 2 fully merged
   - **Source of Truth:** docs/plans/PLAN-sweep-hooks-core.md
-  - **Decision Log:** Eradicate all core hook findings identified in the DeepDive audit (system_audit_report.md) to enforce type safety, error boundaries, and re-entrancy safety.
+  - **Decision Log:** Eradicate all core hook findings identified in the DeepDive audit (system_audit_report.md) to enforce type safety, error boundaries, and re-entrancy safety.
+
+- [x] **chore/sweep-root** 🚀 Merged in 9bdeb129
+  - **Tags:** `[READY]` `[VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Feast]` `[WAVE:4]` `[BATCH:deepdive-sweep-phase3]`
+  - **Goal:** Fix all 23 findings in domain root. Every file in the plan must appear in the diff.
+  - **Prerequisite:** Wave 3 fully merged
+  - **Source of Truth:** docs/plans/PLAN-sweep-root.md
+  - **Decision Log:** Eradicate all root domain findings identified in the DeepDive audit (system_audit_report.md) to enforce type safety, remove unused/bloated client-side Node.js dependencies, handle unhandled platform/native promise re-entrancies, and ensure platform UI shadow fallbacks.
+
+- [x] **chore/sweep-components-ui**
+  - **Tags:** `[READY]` `[VERIFIED]` `[MAINTENANCE]` `[M-RISK]` `[Feast]` `[WAVE:5]` `[BATCH:deepdive-sweep-phase3]`
+  - **Goal:** Fix all 96 findings in domain components-ui. Every file in the plan must appear in the diff.
+  - **Prerequisite:** Wave 4 fully merged
+  - **Source of Truth:** docs/plans/PLAN-sweep-components-ui.md
+  - **Decision Log:** Eradicate all components-ui domain findings identified in the DeepDive audit (system_audit_report.md) to improve layout safety, eliminate type laundering, and enforce error boundary protection.
+
+- [x] **chore/sweep-hooks-ble**
+  - **Tags:** `[READY]` `[VERIFIED]` `[MAINTENANCE]` `[H-RISK]` `[Feast]` `[WAVE:5]` `[BATCH:deepdive-sweep-phase3]`
+  - **Goal:** Fix all 18 findings in domain hooks-ble. Every file in the plan must appear in the diff.
+  - **Prerequisite:** Wave 4 fully merged
+  - **Source of Truth:** docs/plans/PLAN-sweep-hooks-ble.md
+  - **Decision Log:** Resolve all hooks-ble domain findings identified in the DeepDive audit (system_audit_report.md) to fix memory leaks, type safety issues, and connection state bugs in BLE hooks.
