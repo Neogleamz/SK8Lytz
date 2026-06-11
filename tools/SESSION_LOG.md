@@ -1,3 +1,15 @@
+### [MERGE] 2026-06-11T21:52 — refactor/session-context-xstate → master @ 4df46b81
+**What merged:**
+- Rewrote `SessionContext.tsx` to wrap `sessionMachine` using XState v5 `useMachine` hook.
+- Wrapped the context renderer in a `SessionMachineWrapper` to handle asynchronous AsyncStorage loading of `autoPauseEnabled` settings on app mount, preventing race conditions.
+- Replaced local states and chained hooks for crash recovery, watch listeners, auto-pause checks, and Notifee foreground notifications with clean XState transitions.
+- Integrated `SessionBridge` to register/unregister the XState actor sender and enable clean global telemetry event dispatches.
+- Preserved public exports including `useSession()`, `SessionProvider` and their return value shapes to keep consumers unbroken.
+- Added actions to target iOS categories registration including `PAUSE` and `RESUME` alongside `end-session`.
+**Verify result:** TSC ✅, Jest ✅ (28 suites / 218 tests), Blast Radius ✅, gates ✅
+**Files touched:**
+- `src/context/SessionContext.tsx`
+
 ### [MERGE] 2026-06-11T21:47 — feat/session-services-layer → master @ b9c7baa9
 **What merged:**
 - Created session-specific services layer leveraging XState v5 patterns.
