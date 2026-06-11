@@ -125,9 +125,7 @@ export const sessionMachine = setup({
       );
     },
     syncWatchStopped: () => {
-      setTimeout(() => {
-        WatchBridge.syncSessionState({ status: 'STOPPED' }).catch(() => {});
-      }, 10000);
+      WatchBridge.syncSessionState({ status: 'STOPPED' }).catch(() => {});
     },
   },
 }).createMachine({

@@ -6,7 +6,7 @@ import { checkPermission, openGlobalPermissionsModal } from '../PermissionServic
 import { AppLogger } from '../AppLogger';
 import { crewService } from '../CrewService';
 import { SpeedTrackingService } from '../SpeedTrackingService';
-import { TelemetrySnapshot, HealthSnapshot } from './SessionMachine.types';
+import { TelemetrySnapshot, HealthSnapshot, SessionMachineEvent } from './SessionMachine.types';
 
 export interface SensorServiceInput {
   onTelemetryUpdate: (t: TelemetrySnapshot) => void;
@@ -15,7 +15,7 @@ export interface SensorServiceInput {
   healthRef?: { current: HealthSnapshot };
 }
 
-export const sensorService = fromCallback<any, SensorServiceInput>(({ input }) => {
+export const sensorService = fromCallback<SessionMachineEvent, SensorServiceInput>(({ input }) => {
   if (Platform.OS === 'web') return () => {};
 
   let isActive = true;

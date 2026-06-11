@@ -1,4 +1,5 @@
 import { fromCallback } from 'xstate';
+import { SessionMachineEvent } from './SessionMachine.types';
 
 export interface AutoPauseServiceInput {
   autoPauseEnabled: boolean;
@@ -6,7 +7,7 @@ export interface AutoPauseServiceInput {
   sessionPhase: 'ACTIVE' | 'PAUSED';
 }
 
-export const autoPauseService = fromCallback<any, AutoPauseServiceInput>(({ sendBack, input }) => {
+export const autoPauseService = fromCallback<SessionMachineEvent, AutoPauseServiceInput>(({ sendBack, input }) => {
   let lowSpeedTicks = 0;
 
   const timer = setInterval(() => {

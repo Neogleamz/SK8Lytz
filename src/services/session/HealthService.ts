@@ -3,13 +3,13 @@ import { fromCallback } from 'xstate';
 import { WatchBridge, WatchHealthUpdate } from 'sk8lytz-watch-bridge';
 import { checkPermission } from '../PermissionService';
 import { AppLogger } from '../AppLogger';
-import { HealthSnapshot } from './SessionMachine.types';
+import { HealthSnapshot, SessionMachineEvent } from './SessionMachine.types';
 
 export interface HealthServiceInput {
   onHealthUpdate: (h: HealthSnapshot) => void;
 }
 
-export const healthService = fromCallback<any, HealthServiceInput>(({ input }) => {
+export const healthService = fromCallback<SessionMachineEvent, HealthServiceInput>(({ input }) => {
   if (Platform.OS === 'web') return () => {};
 
   let isActive = true;

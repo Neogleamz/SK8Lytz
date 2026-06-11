@@ -3,7 +3,7 @@ import * as Location from 'expo-location';
 import { AppState, Platform } from 'react-native';
 import { fromCallback } from 'xstate';
 import { AppLogger } from '../AppLogger';
-import { TelemetrySnapshot, SessionPhase } from './SessionMachine.types';
+import { TelemetrySnapshot, SessionPhase, SessionMachineEvent } from './SessionMachine.types';
 
 export interface NotificationServiceInput {
   sessionPhase: SessionPhase;
@@ -15,7 +15,7 @@ export interface NotificationServiceInput {
 const NOTIFICATION_CHANNEL_ID = 'sk8lytz-session';
 const NOTIFICATION_ID = 'active-skate-session';
 
-export const notificationService = fromCallback<any, NotificationServiceInput>(({ input }) => {
+export const notificationService = fromCallback<SessionMachineEvent, NotificationServiceInput>(({ input }) => {
   if (Platform.OS === 'web') return () => {};
 
   let isActive = true;
@@ -48,7 +48,7 @@ export const notificationService = fromCallback<any, NotificationServiceInput>((
         ? 'Saving Session...'
         : 'Skate Session Active 🟢';
 
-      const actions = isPaused
+      const actions = isEnding ? [] : isPaused
         ? [
             {
               title: '▶ RESUME',
