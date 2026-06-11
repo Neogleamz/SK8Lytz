@@ -13,6 +13,16 @@ export function useSkateStats(visible: boolean) {
   useEffect(() => {
     if (visible && userId) {
       setStatsLoading(true);
+
+      // Load from cache first for instant UI
+      Promise.all([
+        SpeedTrackingService.getCachedLifetimeStats(userId),
+        SpeedTrackingService.getCachedRecentSessions(userId),
+      ]).then(([cachedStats, cachedSessions]) => {
+        if (cachedStats) setLifetimeStats(cachedStats);
+        if (cachedSessions && cachedSessions.length > 0) setRecentSessions(cachedSessions);
+      });
+
       Promise.all([
         SpeedTrackingService.fetchLifetimeStats(userId),
         SpeedTrackingService.fetchRecentSessions(userId, 10),
@@ -26,7 +36,7 @@ export function useSkateStats(visible: boolean) {
         })
         .finally(() => setStatsLoading(false));
     }
-  }, [visible]);
+  }, [visible, userId]);
 
   return {
     lifetimeStats,

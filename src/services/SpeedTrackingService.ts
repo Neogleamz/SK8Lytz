@@ -191,6 +191,21 @@ class SpeedTrackingServiceClass {
 
       if (error) {
         AppLogger.log('ERROR_CAUGHT', { message: `[SpeedTrackingService] Save failed: ${error instanceof Error ? error.message : String(error)}` });
+        try {
+          const raw = await AsyncStorage.getItem(PENDING_SESSION_QUEUE_KEY);
+          const queue: PendingSessionRecord[] = raw ? JSON.parse(raw) : [];
+          if (queue.length >= PENDING_QUEUE_SOFT_CAP) {
+            AppLogger.warn('[SpeedTrackingService] Pending session queue at capacity', { count: queue.length });
+          }
+          const record: PendingSessionRecord = { ...snapshot, calories, queued_at: new Date().toISOString() };
+          queue.push(record);
+          await AsyncStorage.setItem(PENDING_SESSION_QUEUE_KEY, JSON.stringify(queue));
+          AppLogger.info('[SpeedTrackingService] Session queued for offline sync after failed save', { queueLength: queue.length });
+        } catch (queueErr: unknown) {
+          AppLogger.warn('[SpeedTrackingService] Failed to queue offline session after save failure', {
+            error: queueErr instanceof Error ? queueErr.message : String(queueErr),
+          });
+        }
         return null;
       }
 
@@ -241,6 +256,26 @@ class SpeedTrackingServiceClass {
       AppLogger.warn('[SpeedTrackingService] saveSession exception', {
         error: err instanceof Error ? err.message : String(err),
       });
+      if (userId) {
+        try {
+          const calories = snapshot.healthCalories !== undefined && snapshot.healthCalories !== null
+            ? snapshot.healthCalories
+            : estimateCalories(snapshot.avgSpeedMph, snapshot.durationSec);
+          const raw = await AsyncStorage.getItem(PENDING_SESSION_QUEUE_KEY);
+          const queue: PendingSessionRecord[] = raw ? JSON.parse(raw) : [];
+          if (queue.length >= PENDING_QUEUE_SOFT_CAP) {
+            AppLogger.warn('[SpeedTrackingService] Pending session queue at capacity', { count: queue.length });
+          }
+          const record: PendingSessionRecord = { ...snapshot, calories, queued_at: new Date().toISOString() };
+          queue.push(record);
+          await AsyncStorage.setItem(PENDING_SESSION_QUEUE_KEY, JSON.stringify(queue));
+          AppLogger.info('[SpeedTrackingService] Session queued for offline sync after save exception', { queueLength: queue.length });
+        } catch (queueErr: unknown) {
+          AppLogger.warn('[SpeedTrackingService] Failed to queue offline session after save exception', {
+            error: queueErr instanceof Error ? queueErr.message : String(queueErr),
+          });
+        }
+      }
       return null;
     }
   }
@@ -397,7 +432,7 @@ class SpeedTrackingServiceClass {
         .limit(limit)
         .returns<SkateSessionRow[]>();
 
-      if (error || !data) return this._getOfflineFallbackSessions();
+      if (error || !data) return this.getCachedRecentSessions(userId);
 
       const mapped = data.map((r) => ({
         id: r.id,
@@ -412,11 +447,28 @@ class SpeedTrackingServiceClass {
         peakBpm: r.peak_bpm ?? null,
         locationLabel: r.location_label,
       }));
-      return mapped.length > 0 ? mapped : this._getOfflineFallbackSessions();
+      if (mapped.length > 0) {
+        try {
+          await AsyncStorage.setItem(`@sk8lytz_recent_sessions_${userId}`, JSON.stringify(mapped));
+        } catch (e) {}
+      }
+      return mapped.length > 0 ? mapped : await this.getCachedRecentSessions(userId);
     } catch (e: unknown) {
       AppLogger.warn('[SpeedTrackingService] fetchRecentSessions failed — falling back to offline queue', {
         error: e instanceof Error ? e.message : String(e),
       });
+      return userId ? this.getCachedRecentSessions(userId) : this._getOfflineFallbackSessions();
+    }
+  }
+
+  async getCachedRecentSessions(userId: string): Promise<ISkateSession[]> {
+    try {
+      const raw = await AsyncStorage.getItem(`@sk8lytz_recent_sessions_${userId}`);
+      const cached: ISkateSession[] = raw ? JSON.parse(raw) : [];
+      const pending = await this._getOfflineFallbackSessions();
+      const combined = [...pending, ...cached].sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime());
+      return combined;
+    } catch {
       return this._getOfflineFallbackSessions();
     }
   }
@@ -494,6 +546,8 @@ class SpeedTrackingServiceClass {
       }
 
       if (error || !data || data.length === 0) {
+        const cached = await this.getCachedLifetimeStats(userId);
+        if (cached) return cached;
         return {
           ...empty,
           totalDistanceMiles: cachedDistance,
@@ -511,7 +565,7 @@ class SpeedTrackingServiceClass {
       const lifetimeCalories = rows.reduce((s, r) => s + (r.calories ?? 0), 0);
       const lifetimePeakBpm = Math.max(...rows.map((r) => Number(r.peak_bpm ?? 0)));
 
-      return {
+      const result = {
         totalSessions,
         totalDistanceMiles: parseFloat(Math.max(computedDistance, cachedDistance).toFixed(2)),
         totalDurationSec,
@@ -521,11 +575,28 @@ class SpeedTrackingServiceClass {
         lifetimeCalories,
         lifetimePeakBpm: lifetimePeakBpm > 0 ? lifetimePeakBpm : null,
       };
+
+      try {
+        await AsyncStorage.setItem(`@sk8lytz_lifetime_stats_${userId}`, JSON.stringify(result));
+      } catch (e) {}
+
+      return result;
     } catch (e: unknown) {
       AppLogger.warn('[SpeedTrackingService] fetchLifetimeStats failed', {
         error: e instanceof Error ? e.message : String(e),
       });
+      const cached = userId ? await this.getCachedLifetimeStats(userId) : null;
+      if (cached) return cached;
       return empty;
+    }
+  }
+
+  async getCachedLifetimeStats(userId: string): Promise<ILifetimeStats | null> {
+    try {
+      const raw = await AsyncStorage.getItem(`@sk8lytz_lifetime_stats_${userId}`);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
     }
   }
 }
