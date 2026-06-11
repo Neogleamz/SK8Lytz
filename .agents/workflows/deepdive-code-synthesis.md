@@ -114,12 +114,12 @@ Write this report to `artifacts/system_audit_report.md` as the header section.
 This phase prevents VS-014 (parallel worktree file collision). It MUST run before any task is written to the Bucket List.
 
 #### Step 1: Build the File Manifest
-For every task cluster drafted in Phase 3 Step 2, collect the complete list of files it will modify (from the cluster's `Affected Files` list in the audit report).
+For every task cluster drafted in Phase 3 Step 2, collect the complete list of files it will modify (from the cluster's `Affected Files` list in the audit report). Use `grep_search` or an AST parsing script (`node tools/ast-parser.js`) to find all files that `import` the affected files, limiting to immediate parent/child imports to avoid blowing up context window.
 
 #### Step 2: Compute the Collision Matrix
 For every pair of clusters A and B:
-- Compute `intersection(A.files, B.files)`.
-- If `|intersection| ≥1` → they are a **collision pair** (cannot run in parallel worktrees).
+- Compute the collision not just as "Task A and Task B edit the same file", but "Task A edits File X, and Task B edits File Y, but File Y depends on File X".
+- If an import path overlaps or `|intersection(A.files, B.files)| ≥1` → they are a **collision pair** (cannot run in parallel worktrees).
 - Log all collision pairs.
 
 #### Step 3: Graph Coloring → Wave Assignment
@@ -142,6 +142,15 @@ Every cluster gets a `[WAVE:N]` tag before being written to the Bucket List. No 
 
 ---
 
+### 🧪 Phase 2.85 — Vector Delta (The Test Generators)
+
+For every finding marked `HIGH` or `MEDIUM` with `CONFIRMED` confidence:
+1. Invoke a sub-agent (`invoke_subagent` using the `TDD` profile).
+2. Task the sub-agent to write a failing Jest or Detox test case to `__tests__/` that explicitly targets the `rule_violated` in the specific `file`.
+3. The sub-agent must commit the failing test to the worktree but MUST NOT fix the code themselves.
+
+---
+
 ### 📋 Phase 3 — Triage Routing
 
 #### Step 1: Generate the Audit Report
@@ -154,6 +163,8 @@ Append to `artifacts/system_audit_report.md` (after the metrics header):
 Group related findings into logical task clusters (e.g., all R-08 violations → one `[BATCH:type-safety-sweep]` task, all R-17 violations → one `[BATCH:listener-leak-sweep]` task).
 
 For each task cluster, draft a task summary with:
+- **Goal:** "Fix the bug to make the auto-generated failing regression test pass."
+- **Source of Truth:** `[Test File]` generated in Phase 2.85
 - Affected files list (REQUIRED — used by Phase 2.75 collision check)
 - Rule violations addressed
 - Estimated size tag (`[Snack]` for <5 files, `[Meal]` for 5-15, `[Feast]` for 15+)

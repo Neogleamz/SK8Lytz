@@ -30,8 +30,8 @@ You are STRICTLY FORBIDDEN from running /deepdive-code-hunt unless /deepdive-doc
 
 The codebase is audited orthogonally.
 
-#### Vector Alpha (Domain Agents — 21 agents)
-1 agent per domain. They understand the holistic context of their silo and audit against ALL 27 Guardrails.
+#### Vector Alpha (Domain Agents — 25 agents)
+1 agent per domain. They understand the holistic context of their silo and audit against ALL 30 Guardrails.
 
 | # | Domain | Target Directories |
 |---|---|---|
@@ -56,8 +56,12 @@ The codebase is audited orthogonally.
 | 19 | **OS_PERMISSIONS** | `android/app/src/main/AndroidManifest.xml`, `ios/*/Info.plist` |
 | 20 | **ADMIN_&_TELEMETRY** | `src/components/admin/*`, `src/services/AppLogger.ts`, `src/services/AppSettingsService.ts`, `src/hooks/useAdminSettings.ts`, `src/hooks/useAdminTelemetry.ts`, `src/hooks/useDiagnosticLog.ts` |
 | 21 | **DEPENDENCY_AUDIT** | `package.json`, `package-lock.json` |
+| 22 | **DEVOPS_&_TOOLING** | `.github/workflows/*`, `tools/*`, `.husky/*`, `.agents/rules/*` |
+| 23 | **ANIMATION_&_PERFORMANCE** | Files importing `react-native-reanimated`, `@shopify/react-native-skia`, `react-native-gesture-handler` |
+| 24 | **ACCESSIBILITY_&_I18N** | Global scan of `src/components/*` looking for `accessible={true}`, `accessibilityRole`, and `i18n.t()` |
+| 25 | **THE_TEST_SUITE** | `__tests__/*`, `src/**/__tests__/*` |
 
-#### Vector Beta (Rule Snipers — 26 agents)
+#### Vector Beta (Rule Snipers — 29 agents)
 1 agent per rule. They scan the ENTIRE codebase globally for their specific anti-pattern.
 
 | ID | Rule | What to Hunt |
@@ -88,6 +92,9 @@ The codebase is audited orthogonally.
 | **R-25** | Unguarded Platform API | Code accessing platform-specific APIs (`requestMTU`, `requestConnectionPriority`, `Foreground Service`, `CBCentralManager`) without a `Platform.OS` or `Platform.select()` guard |
 | **R-26** | Re-entrancy Races | Async functions called from `setInterval` or `useEffect` without a boolean re-entrancy guard (e.g., `_isFlushing` pattern). These cause double-INSERT and duplicate network request bugs |
 | **R-27** | Context Consumer Depth | Components that consume 4+ React Contexts directly — performance risk, every context change re-renders the component. Flag for `useMemo` wrapping or context consolidation |
+| **R-28** | FlatList Bottlenecks | Inline arrow functions passed to `renderItem` or `keyExtractor` in `FlatList` components; missing `initialNumToRender` or `windowSize` on large lists |
+| **R-29** | Circular Dependencies | Services importing other services that import them back (e.g. A -> B -> A), causing `undefined` module errors at runtime |
+| **R-30** | Zombie Tests | Tests containing `.skip()`, `test.todo()`, or assertions that are commented out (`// expect(...)`) |
 
 #### Vector Gamma (Structural Snipers — 1 agent)
 1 agent to detect Split-Brain Code Duplication across the entire codebase.
@@ -149,7 +156,7 @@ Blake executes `invoke_subagent` for all Domains and Snipers.
 > Instead, you MUST use the `write_to_file` tool. Output your findings as a **strict JSON object conforming to the Required Output Schema above** and save it to `artifacts/deepdive_raw/<Your_Agent_ID>_findings.json`. Once the file is written, silently terminate.
 
 **Vector Alpha Directive (Domain Agents):**
-> You are a QA Auditor Node assigned to the `[DOMAIN_NAME]` domain. Read the Master Reference and Protocol Bible for context. View EVERY file in your domain. Audit them against ALL 27 Guardrails (R-01 through R-27). Write a strict JSON Bug Checklist conforming to the Required Output Schema to `artifacts/deepdive_raw/DOMAIN_[DOMAIN_NAME]_findings.json`. Do NOT use `send_message`.
+> You are a QA Auditor Node assigned to the `[DOMAIN_NAME]` domain. Read the Master Reference and Protocol Bible for context. View EVERY file in your domain. Audit them against ALL 30 Guardrails (R-01 through R-30). Write a strict JSON Bug Checklist conforming to the Required Output Schema to `artifacts/deepdive_raw/DOMAIN_[DOMAIN_NAME]_findings.json`. Do NOT use `send_message`.
 
 **Vector Beta Directive (Rule Snipers):**
 > You are a QA Sniper Node. Your ONLY target is Rule `[R-XX]`: `[RULE_DESCRIPTION]`. Use `grep_search` and AST analysis across the ENTIRE `src/` directory to hunt for this exact anti-pattern. You do not care about domain context; you are a ruthless bounty hunter for this specific violation. Write a strict JSON Bug Checklist conforming to the Required Output Schema to `artifacts/deepdive_raw/R-XX_findings.json`. Do NOT use `send_message`.
@@ -165,9 +172,9 @@ After dispatching the fleet:
 
 1. Set a **5-minute timer** using the `schedule` tool.
 2. On wake: `list_dir` on `artifacts/deepdive_raw/`.
-3. Count output files. **Expected: 48 files** (21 domain + 26 sniper + 1 structural).
-4. If count < 48: identify which agents are missing, set another **3-minute timer**, and repeat.
-5. If count == 48: notify the user and proceed to the model switch step.
+3. Count output files. **Expected: 55 files** (25 domain + 29 sniper + 1 structural).
+4. If count < 55: identify which agents are missing, set another **3-minute timer**, and repeat.
+5. If count == 55: notify the user and proceed to the model switch step.
 6. If **3 polling cycles** pass with no new files appearing: report the incomplete agents to the user and proceed with available data.
 
 **Verification:** Before declaring the hunt complete, spot-check 3 random output files to verify they conform to the Required Output Schema. If any are malformed, log the agent ID and note it for the Synthesis workflow.
@@ -176,6 +183,6 @@ After dispatching the fleet:
 
 ### 🏁 Phase 4 — Switch to Synthesis
 Once the fleet has completed and all outputs are verified:
-1. Notify the user: *"Hunt complete. [X]/48 agents reported. [Y] findings total across all reports. Ready for synthesis."*
+1. Notify the user: *"Hunt complete. [X]/55 agents reported. [Y] findings total across all reports. Ready for synthesis."*
 2. Instruct the user to switch their global Model Selection to a reasoning-heavy model (e.g., Claude Sonnet 4).
 3. Execute `/deepdive-code-synthesis` to complete the workflow.
