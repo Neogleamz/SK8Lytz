@@ -18,12 +18,12 @@ jest.mock('../../../services/SpeedTrackingService', () => ({
   },
 }));
 
-import { sessionCommitService } from '../SessionCommitService';
+import { sessionCommitService, type SessionCommitServiceInput } from '../SessionCommitService';
 import { SpeedTrackingService } from '../../../services/SpeedTrackingService';
 import { WatchBridge } from 'sk8lytz-watch-bridge';
 
 describe('SessionCommitService test suite', () => {
-  let mockInput: any;
+  let mockInput: SessionCommitServiceInput;
 
   beforeEach(() => {
     jest.clearAllMocks();

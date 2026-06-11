@@ -66,23 +66,6 @@ const StreetPanel = React.memo(({
   const isShort = windowHeight < 720;
   const gaugeSize = isShort ? 100 : 120;
 
-  // ── REC dot pulse animation ───────────────────────────────────────────────
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    if (sessionActive) {
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 0.3, duration: 600, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1.0, duration: 600, useNativeDriver: true }),
-        ])
-      );
-      pulse.start();
-      return () => pulse.stop();
-    } else {
-      pulseAnim.setValue(1);
-    }
-  }, [sessionActive, pulseAnim]);
-
   // ── Metric chip computations ──────────────────────────────────────────────
   const topSpeed = sessionPeakSpeed.toFixed(1);
   const distance = sessionDistanceMiles.toFixed(2);

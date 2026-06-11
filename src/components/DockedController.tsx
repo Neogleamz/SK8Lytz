@@ -61,9 +61,9 @@ import CommunityModal from './CommunityModal';
 
 import DockedDock from './docked/DockedDock';
 import QuickPresetModal from './docked/QuickPresetModal';
-// NOTE: useGlobalTelemetry intentionally NOT imported here.
+// NOTE: Telemetry values received via props from DashboardScreen through useSession().
 // GPS + accelerometer sensors are owned exclusively by DashboardScreen via
-// useGlobalTelemetry(isSkateSessionActive). The 4 telemetry values are threaded
+// useSession(). The 4 telemetry values are threaded
 // down as props to prevent a duplicate sensor loop. (BUG-01 fix, 2026-05-08)
 import { LiveTelemetryHUD } from './dashboard/LiveTelemetryHUD';
 
@@ -152,7 +152,7 @@ interface Sk8lytzControllerProps {
   /** Triggered to persist the active pattern name + color snapshot to dashboard group persistent storage */
   appSettings?: Record<string, string | boolean>;
   // ── Telemetry props (BUG-01 fix) ──────────────────────────────────────────
-  // These values are owned by DashboardScreen's single useGlobalTelemetry instance.
+  // These values are owned by DashboardScreen's SessionContext/useSession() instance.
   // DockedController is a display consumer — it must NOT create its own sensor subscriptions.
   /** Current GPS speed in MPH */
   gpsSpeed?: number;
@@ -276,10 +276,9 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     }, [parentWriteToDevice, optimisticWrite]);
 
     // ── Global Telemetry Engine ─────────────────────────────────────────────
-    // REMOVED: useGlobalTelemetry(true) — values now received as props from DashboardScreen.
-    // The parent holds the single GPS + accelerometer subscription, preventing double-sensor
-    // registration that caused 2x battery drain and incorrect session distance accumulation.
-    // See: BUG-01 forensic audit 2026-05-08, Bucket List fix/double-global-telemetry.
+    // REMOVED: useGlobalTelemetry(true) — values now received as props from DashboardScreen
+    // via the SessionContext/useSession() architecture. The parent holds the single
+    // GPS + accelerometer subscription, preventing double-sensor registration.
 
 
 
