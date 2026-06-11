@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Switch, DeviceEventEmitter } 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../../services/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 import { Spacing } from '../../theme/theme';
 import { STORAGE_DEMO_MODE, STORAGE_REMEMBER_CREDS, STORAGE_LAST_EMAIL } from '../../constants/storageKeys';
 
@@ -14,6 +15,7 @@ interface DevSandboxDrawerProps {
 export function DevSandboxDrawer({ onOfflineMode, setErrorMessage }: DevSandboxDrawerProps) {
   const [expanded, setExpanded] = useState(false);
   const [isVirtualSkatesEnabled, setIsVirtualSkatesEnabled] = useState(false);
+  const { signOut } = useAuth();
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_DEMO_MODE).then(val => setIsVirtualSkatesEnabled(val === 'true')).catch(() => {/* storage unavailable — leave default false */});
@@ -94,7 +96,7 @@ export function DevSandboxDrawer({ onOfflineMode, setErrorMessage }: DevSandboxD
           style={[styles.actionBtn, { borderColor: '#FF88CC', backgroundColor: 'rgba(255,136,204,0.1)' }]}
           onPress={async () => {
             try {
-              await supabase.auth.signOut();
+              await signOut();
               // Remove auth-specific local keys but preserve theme/settings
               await AsyncStorage.removeItem(STORAGE_REMEMBER_CREDS);
               await AsyncStorage.removeItem(STORAGE_LAST_EMAIL);
