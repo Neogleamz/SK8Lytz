@@ -59,15 +59,84 @@ For each task in Wave N that passed the gate:
 4. Invoke a `self` subagent with `Workspace: "inherit"` with this prompt:
 
 ```
-You are executing task <slug> in worktree C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\<slug>.
-Your PLAN file is at docs/plans/PLAN-<slug>.md — READ IT FIRST.
-CRITICAL RULES:
-1. Every file listed in the PLAN must appear in your git diff. No skimping (Rule 9).
-2. Run `npm run verify` after your FINAL commit.
-3. Run `node tools/verifiable-check-runner.js` to sign the attestation.
-4. Report back: "READY FOR GATEKEEPER: <slug>"
+⚒️ EXECUTION CONTRACT — TASK: <slug>
+Worktree: C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\<slug>
+Master root: C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz
+
+════════════════════════════════════════
+MANDATORY PRE-CODE CHECKLIST (ALL 4 REQUIRED)
+════════════════════════════════════════
+BEFORE writing a single line of code you MUST:
+
+[1] READ THE PLAN IN FULL
+    view_file docs/plans/PLAN-<slug>.md (full file, not summary)
+    Quote the "Files to Create/Modify" section back in your first message.
+    If the plan file does not exist → HALT and report. Do not proceed.
+
+[2] READ EVERY SOURCE OF TRUTH FILE CITED IN THE PLAN
+    Use view_file on the EXACT line ranges cited.
+    Never write code against a file you haven't read in this conversation.
+
+[3] CHECK tools/SESSION_LOG.md FOR PRIOR [DECISION] ENTRIES
+    Search for any [DECISION] entries relevant to your task domain.
+    Wave 1+ tasks: confirm Wave 0 [DECISION] entry with Wear OS field name exists.
+
+[4] CONFIRM YOUR WAVE PREREQUISITE VIA GIT LOG
+    Run: git log --oneline -5 (in master root, not worktree)
+    The previous wave's merge commit MUST appear. If it does NOT → HALT.
+
+════════════════════════════════════════
+EXECUTION RULES (HARD — NO EXCEPTIONS)
+════════════════════════════════════════
+
+RULE 1 — LOOK BEFORE YOU LEAP (S8)
+Before every replace_file_content or write_to_file call:
+  → view_file the exact target lines
+  → Never write from memory or conversation summaries
+
+RULE 2 — SURGICAL SCOPE ONLY (S4)
+Touch ONLY the files listed in your plan's "Files to Create/Modify" section.
+Found a bug in an unrelated file? Leave a // TODO comment. Do NOT fix it.
+The plan's "Out of Scope" section is a hard boundary, not a suggestion.
+
+RULE 3 — POST-DIFF IS MANDATORY (NOT MENTAL)
+After EVERY replace_file_content or write_to_file call, run:
+  git diff HEAD <filename>
+Read the output. If any line outside your plan's scope appears → run:
+  git checkout -- <filename>
+and retry the edit surgically. Skipping this step is a plan violation.
+
+RULE 4 — VERIFY BEFORE GATEKEEPER
+Run: npm run verify
+ONLY AFTER your final commit. Not before. Not instead of.
+If TSC fails → fix the type. Never use `as any` or `@ts-ignore`.
+If Jest fails → fix the test. Never delete the test.
+
+RULE 5 — ANTI-SKIMPING (Rule 9)
+Every file listed in PLAN-<slug>.md "Files to Create/Modify" MUST appear
+in your final git diff. No silent skips. If you skip a file intentionally,
+append "// SKIPPED: <reason>" to the plan file before reporting ready.
+
+RULE 6 — SESSION LOG ON COMPLETION
+After your final commit and before reporting "READY FOR GATEKEEPER", write to
+tools/SESSION_LOG.md:
+  ### [MERGE READY] <slug> — <commit-hash>
+  Files touched: (list)
+  TSC: ✅/❌  Jest: ✅/❌
+
+HALT CONDITIONS — Stop and report immediately if:
+  • PLAN file not found at docs/plans/PLAN-<slug>.md
+  • Wave prerequisite not confirmed in git log
+  • npm run verify fails after 3 attempts (Three-Strike Lockout)
+  • A file you need to edit is > 30KB (S4 monolith — read agent-behavior.md Rule 2)
+  • You find a conflict between the plan and what the source code actually shows
+
+════════════════════════════════════════
+REPORT BACK WHEN DONE:
+"READY FOR GATEKEEPER: <slug> — verify ✅ — files: <list>"
 DO NOT run the gatekeeper yourself.
 ```
+
 
 5. Launch ALL Wave N subagents simultaneously. Each gets its own worktree. Max 8 parallel (Rule 10).
 
