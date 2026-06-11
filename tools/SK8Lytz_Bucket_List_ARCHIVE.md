@@ -1657,4 +1657,11 @@ pm run verify which includes QA tests.
   - **Tags:** `[TRIAGE]` `[VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Meal]` `[WAVE:2]` `[BATCH:deepdive-sweep-phase3]`
   - **Goal:** Fix all 8 findings in domain utils. Every file in the plan must appear in the diff.
   - **Prerequisite:** Wave 1 fully merged
-  - **Source of Truth:** docs/plans/PLAN-sweep-utils.md
+  - **Source of Truth:** docs/plans/PLAN-sweep-utils.md
+
+- [x] **chore/sweep-hooks-core** 🚀 Merged in b3d43808
+  - **Tags:** `[READY]` `[VERIFIED]` `[MAINTENANCE]` `[M-RISK]` `[Feast]` `[WAVE:3]` `[BATCH:deepdive-sweep-phase3]`
+  - **Goal:** Fix all 118 findings in domain hooks-core. Every file in the plan must appear in the diff.
+  - **Prerequisite:** Wave 2 fully merged
+  - **Source of Truth:** docs/plans/PLAN-sweep-hooks-core.md
+  - **Decision Log:** Eradicate all core hook findings identified in the DeepDive audit (system_audit_report.md) to enforce type safety, error boundaries, and re-entrancy safety.

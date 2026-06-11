@@ -1,3 +1,53 @@
+### [MERGE] 2026-06-11T04:06 — sweep-hooks-core → master @ b3d43808
+**What merged:**
+- Fixed all 118 hooks-core domain findings (type-safety, error handling, re-entrancy, memory leaks).
+- Added index signature `[key: string]: unknown` to `ProbedHardwareConfig` and `PingResult` to resolve React state setter casting issues.
+- Fixed unhandled native and platform promise re-entrancies in `useHardwareNotifications` and core hooks.
+- Cleared the worktree and merged successfully via fortress-gatekeeper.
+**Verify result:** TSC ✅, Jest ✅ (203 tests passing), gates ✅
+**Files touched:**
+- `src/components/DockedController.tsx`
+- `src/constants/storageKeys.ts`
+- `src/hooks/__tests__/useControllerDispatch.test.ts`
+- `src/hooks/dev/useWebDemoConsoleBridge.ts`
+- `src/hooks/useAccountOverview.ts`
+- `src/hooks/useAdminSettings.ts`
+- `src/hooks/useAdminTelemetry.ts`
+- `src/hooks/useAppMicrophone.ts`
+- `src/hooks/useBLE.ts`
+- `src/hooks/useControllerAnalytics.ts`
+- `src/hooks/useControllerDispatch.ts`
+- `src/hooks/useCrewHub.ts`
+- `src/hooks/useCrewManage.ts`
+- `src/hooks/useCrewSession.ts`
+- `src/hooks/useCuratedPicks.ts`
+- `src/hooks/useDashboardAutoConnect.ts`
+- `src/hooks/useDashboardController.tsx`
+- `src/hooks/useDashboardCrew.ts`
+- `src/hooks/useDashboardDeviceConfig.ts`
+- `src/hooks/useDashboardGroups.ts`
+- `src/hooks/useDashboardProfile.ts`
+- `src/hooks/useDeviceStateLedger.ts`
+- `src/hooks/useDiagnosticLog.ts`
+- `src/hooks/useDockedControllerState.ts`
+- `src/hooks/useFavorites.ts`
+- `src/hooks/useGlobalTelemetry.ts`
+- `src/hooks/useGradients.ts`
+- `src/hooks/useHardwareNotifications.ts`
+- `src/hooks/useMapFilters.ts`
+- `src/hooks/useProductCatalog.ts`
+- `src/hooks/useProductManager.ts`
+- `src/hooks/useProtocolBuilder.ts`
+- `src/hooks/useProtocolDispatch.ts`
+- `src/hooks/useRecentSpots.ts`
+- `src/hooks/useRegistration.ts`
+- `src/hooks/useScenes.ts`
+- `src/hooks/useSkateStats.ts`
+- `src/hooks/useStreetMode.ts`
+- `src/hooks/useTelemetryLedger.ts`
+- `src/screens/DashboardScreen.tsx`
+- `src/types/dashboard.types.ts`
+
 ### [EVENT] 2026-06-11T03:58 — /intake Execution for PII Encryption
 **Trigger:** User requested adding `pgsodium` to the Bucket List for PII encryption based on the recommended extensions artifact.
 **Action:** Intercepted the request via `/intake`. Conducted benchmarking (`INDUSTRY_BENCHMARKS.md`) which revealed that Supabase actively discourages `pgsodium` TCE for high-volume PII due to operational risk. Pivoted the task to Application-Level Encryption (client-side) per the industry gold standard. Generated `PLAN-spike-pii-app-encryption.md` and added `spike/pii-app-encryption` to `SK8Lytz_Bucket_List.md` under `ON DECK`.
