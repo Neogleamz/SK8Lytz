@@ -1413,3 +1413,35 @@ pm run verify which includes QA tests.
     Rejected alternative: "Suppress with @ts-ignore — strictly forbidden per No `any` Cast Law in agent-behavior.md."
   - **Plan:** 📎 [PLAN-type-safety-sweep.md](docs/plans/PLAN-type-safety-sweep.md)
   - **Source of Truth:** 📖 `src/types/supabase.ts` · `src/hooks/useHardwareNotifications.ts` · `src/components/crew/CrewCreateScreen.tsx:122` · `artifacts/system_audit_report.md CLUSTER-01`
+
+- [x] **chore/anti-bloatprotocolr-21-sweep** (merged: c750de0f)
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Snack]` `[WAVE:1]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all Anti-Bloat Protocol / R-21 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating Anti-Bloat Protocol / R-21. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-anti-bloatprotocolr-21-sweep.md](docs/plans/PLAN-anti-bloatprotocolr-21-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule Anti-Bloat Protocol / R-21
+  - **Prerequisite:** None
+
+- [x] **chore/r-17-sweep** (merged: 06ed1ab7)
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Meal]` `[WAVE:1]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-17 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-17. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-17-sweep.md](docs/plans/PLAN-r-17-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-17
+  - **Prerequisite:** None
+
+- [x] **chore/r-04-sweep** (merged: c39f38f5)
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Feast]` `[WAVE:1]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-04 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-04. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-04-sweep.md](docs/plans/PLAN-r-04-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-04
+  - **Prerequisite:** None
+
+- [x] **chore/r-10-sweep** (merged: 61315662)
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Snack]` `[WAVE:1]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-10 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-10. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-10-sweep.md](docs/plans/PLAN-r-10-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-10
+  - **Prerequisite:** None
