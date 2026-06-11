@@ -1604,4 +1604,12 @@ pm run verify which includes QA tests.
   - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-20. Grouped by collision graph into parallel-safe batches.
   - **Plan:** 📎 [PLAN-r-20-sweep.md](docs/plans/PLAN-r-20-sweep.md)
   - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-20
-  - **Prerequisite:** Wave 8 fully merged
+  - **Prerequisite:** Wave 8 fully merged
+
+- [x] **chore/r-16-sweep**
+  - **Tags:** `[⚪ TRIAGE]` `[✅ VERIFIED]` `[MAINTENANCE]` `[L-RISK]` `[Feast]` `[WAVE:10]` `[BATCH:deepdive-sweep-phase2]`
+  - **Goal:** Resolve all R-16 violations across the identified files.
+  - **Decision Log (2026-06-10):** Fleet synthesis identified these files as violating R-16. Grouped by collision graph into parallel-safe batches.
+  - **Plan:** 📎 [PLAN-r-16-sweep.md](docs/plans/PLAN-r-16-sweep.md)
+  - **Source of Truth:** 📖 `artifacts/system_audit_report.md` · Rule R-16
+  - **Prerequisite:** Wave 9 fully merged
