@@ -1622,4 +1622,9 @@ pm run verify which includes QA tests.
     Key finding: "The Cartographers must flag changes impacting User Journey flows, C4 Context boundaries, or Hardware state machines."
     Rejected alternative: "Manually patching the documentation was rejected in favor of automatic synthesis."
   - **Source of Truth:** 📖 [.agents/workflows/deepdive-docs.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/.agents/workflows/deepdive-docs.md)
-  - **Details:** Must not break non-destructive archival protocols.
+  - **Details:** Must not break non-destructive archival protocols.
+
+- [x] **chore/sweep-services-core**
+  - **Tags:** `[TRIAGE]` `[VERIFIED]` `[MAINTENANCE]` `[M-RISK]` `[Feast]` `[WAVE:1]` `[BATCH:deepdive-sweep-phase3]`
+  - **Goal:** Fix all 94 findings in domain services-core. Every file in the plan must appear in the diff.
+  - **Source of Truth:** docs/plans/PLAN-sweep-services-core.md

@@ -1,3 +1,13 @@
+### [MERGE] 2026-06-11T03:22 — sweep-services-core → master @ 4f49db3f
+**What merged:**
+- Resolved all 21 files of the services-core domain sweep, fixing `any` casts, missing `try/catch` and PII/Supabase context parameter gaps.
+- Standardized `AppSettingsValue` as `string | boolean` to eliminate type laundering while maintaining consumer compatibility.
+- Fixed `LocationService` `is_public` null coalescing (`?? false`) and type casting.
+- Updated `ComplianceGate.tsx` to handle `AppSettingsValue` narrowing.
+- Staged, verified, and successfully merged via fortress gatekeeper.
+**Verify result:** TSC ✅, Jest ✅ (203 tests), all 8 QA gates passed.
+**Files touched:** 22 files in src/services/ and src/providers/ComplianceGate.tsx.
+
 ### [EVENT] 2026-06-11T02:52 — Workflow Created: audit-ble-pipeline
 **Trigger:** User requested codifying the BLE XState pipeline audit into a reusable workflow.
 **Action:** Drafted and saved `.agents/workflows/audit-ble-pipeline.md` containing the 9-agent map-reduce prompt structure to ensure architectural verifications are not lost.
