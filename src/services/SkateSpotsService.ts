@@ -40,9 +40,11 @@ export const SkateSpotsService = {
       try {
         const { data, error } = await supabase.from('skate_spots').select('*').eq('is_published', true).limit(500);
         if (!error && data) {
-          AsyncStorage.setItem(STORAGE_SKATE_SPOTS_CACHE, JSON.stringify({ timestamp: Date.now(), data })).catch(() => {});
+          AsyncStorage.setItem(STORAGE_SKATE_SPOTS_CACHE, JSON.stringify({ timestamp: Date.now(), data })).catch(e => console.error(e));
         }
-      } catch (e: unknown) {}
+      } catch (e: unknown) {
+        console.error(e);
+      }
     };
 
     if (!cacheValid) {
@@ -56,13 +58,13 @@ export const SkateSpotsService = {
             .limit(500);
           if (!error && data) {
             localData = data as SkateSpot[];
-            AsyncStorage.setItem(STORAGE_SKATE_SPOTS_CACHE, JSON.stringify({ timestamp: Date.now(), data })).catch(() => {});
+            AsyncStorage.setItem(STORAGE_SKATE_SPOTS_CACHE, JSON.stringify({ timestamp: Date.now(), data })).catch(e => console.error(e));
           }
         } catch (e: unknown) {
           AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Error fetching native spots', info: e instanceof Error ? e.message : String(e) });
         }
       } else {
-        syncCloud();
+        syncCloud().catch(e => console.error(e));
       }
     }
 
