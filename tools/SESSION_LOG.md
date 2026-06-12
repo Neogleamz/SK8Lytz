@@ -1,3 +1,10 @@
+### [MERGE] 2026-06-12T04:26 — fix-ble-connection-hang → master @ de974879
+**What merged:**
+- Resolved BLE connection hang by fixing the `connectedDevices` call inside `ConnectService.ts`. Replaced `bleManager.connectedDevices([mac])` which incorrectly filtered by MAC instead of service UUIDs with a call to `connectedDevices([])` and a `.find(d => d.id === mac)` lookup. This prevents redundant `connectToDevice` attempts which caused Android's BLE stack to hang in `CONNECTING`.
+**Verify result:** TSC ✅, Jest ✅ (28 suites / 218 tests), gates ✅
+**Files touched:**
+- `src/services/ble/ConnectService.ts`
+
 ### [MERGE] 2026-06-12T08:58 — fix-ble-group-routing → master @ 783c7ec8
 **What merged:**
 - Modified `useOptimisticBLE.ts` to manage debounce timers per-device using a `Map` ref and added component unmount cleanup to clear all active timers.

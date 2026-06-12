@@ -1810,3 +1810,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "Add // @ts-ignore to suppress" — violates No any Cast Law (S3)
   - **Source of Truth:** 📖 [SessionMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/session/SessionMachine.ts#L127-L131) `syncWatchStopped` · [AutoPauseService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/session/AutoPauseService.ts#L9) · [NotificationService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/session/NotificationService.ts#L42-L71)
   - **Details:** All 4 actor files share `SessionMachine.ts` as their parent consumer — AST confirmed these must run in one worktree. `SessionMachineEvent` type exists in `SessionMachine.types.ts` and is the correct sendBack type. The ENDING fix adds an early-return branch before the isPaused branch in NotificationService.
+
+- [x] **`fix/ble-connection-hang`** 🚀 Merged in de974879
+  - **Tags:** `[✅ READY]` `[🧪 LAB]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]`
+  - **Goal:** Fix the connection hang when opening the controller screen on already connected devices.
+  - **Decision Log:** physical device gets stuck on blue screen when opening controller because connectedDevices([mac]) passes MAC instead of service UUIDs, causing connectToDevice to be called redundantly and hang.
+  - **Analysis:** 📊 Source: [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/002ab10f-9595-41ac-89ac-a7516dd02366/implementation_plan.md) · Plan: [PLAN-fix-ble-connection-hang.md](./plans/PLAN-fix-ble-connection-hang.md)
+    Key finding: "passing MAC to connectedDevices returns [] forcing redundant connectToDevice call which hangs BLE stack"
+    Rejected alternative: "bypassing isDeviceConnected check — rejected because we need connection-state check to prevent redundant connection attempts"
+  - **Source of Truth:** 📖 [ConnectService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts#L149) §1
+  - **Details:** Must run verify after changes.
