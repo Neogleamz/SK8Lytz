@@ -35,7 +35,7 @@ import { scrubPII } from '../utils/piiScrubber';
 import { requestPermission } from '../services/PermissionService';
 import { supabase } from '../services/supabaseClient';
 import { useBLEScanner } from './ble/useBLEScanner';
-import { enqueueWrite, resolveWritePriority } from '../services/BleWriteQueue';
+import { enqueueWrite } from '../services/BleWriteQueue';
 import { useBLERSSIMonitor } from './ble/useBLERSSIMonitor';
 import { executePingDevice } from '../services/BlePingService';
 import { executeWriteToDevice, executeWriteChunked, executeProtocolResults as executeProtocolResultsService, BleWriteStateRefs } from '../services/BleWriteDispatcher';
@@ -486,8 +486,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     opts?: { lowPriority?: boolean, writeType?: 'Response' | 'NoResponse' }
   ): Promise<boolean | 'partial'> => {
     if (!bleManager) return false;
-    const priority = resolveWritePriority(payload[0] || 0);
-    return enqueueWrite(priority, () => executeWriteToDevice(
+    return executeWriteToDevice(
       payload,
       targetDeviceId,
       opts,
@@ -498,21 +497,21 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       adapterMapRef.current,
       stateRefs,
       setWriteGeneration
-    ));
+    );
   }, [bleManager, connectedDevices, bleSnapshot.context.ghostedDeviceIds, stateRefs, setWriteGeneration]);
 
   const writeChunked = useCallback(async (
     payload: number[],
     targetDeviceId?: string
   ): Promise<void> => {
-    await enqueueWrite('bulk', () => executeWriteChunked(
+    await executeWriteChunked(
       payload,
       targetDeviceId,
       connectedDevices,
       bleSnapshot.context.ghostedDeviceIds,
       mtuMapRef.current,
       adapterMapRef.current
-    ).then(() => true));
+    );
   }, [connectedDevices, bleSnapshot.context.ghostedDeviceIds]);
 
   const disconnectFromDevice = useCallback(() => {
