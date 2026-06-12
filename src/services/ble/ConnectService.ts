@@ -74,7 +74,9 @@ export const connectService = fromPromise<
       connectedDevicesRef.current.some(connected => connected.id === requestedMac)
     );
 
-    if (allRequestedAlreadyConnected) {
+    const staleDevices = connectedDevicesRef.current.filter(c => !targetMacs.includes(c.id));
+
+    if (allRequestedAlreadyConnected && staleDevices.length === 0) {
       AppLogger.log('BLE_STATE_CHANGE', { event: 'connectToDevices_cached_hit_skip' });
       // We just return the already connected ones
       const requestedDevices = connectedDevicesRef.current.filter(c => targetMacs.includes(c.id));
@@ -84,7 +86,6 @@ export const connectService = fromPromise<
     const retainedDevices = connectedDevicesRef.current.filter(c => targetMacs.includes(c.id));
 
     // Stale flush logic
-    const staleDevices = connectedDevicesRef.current.filter(c => !targetMacs.includes(c.id));
     if (staleDevices.length > 0) {
       for (const stale of staleDevices) {
         if (disconnectListeners.current[stale.id]) {

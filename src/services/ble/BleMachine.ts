@@ -189,6 +189,10 @@ export const bleMachine = setup({
           target: 'RECOVERING',
           actions: ['setGhostedMacs', { type: 'logTransition', params: { from: 'READY', to: 'RECOVERING', reason: 'heartbeat_fail' } }]
         },
+        CONNECT_REQUEST: {
+          target: 'CONNECTING',
+          actions: ['setTargetMacs', { type: 'logTransition', params: { from: 'READY', to: 'CONNECTING' } }]
+        },
         DISCONNECT_REQUEST: {
           target: 'DISCONNECTING',
           actions: [{ type: 'logTransition', params: { from: 'READY', to: 'DISCONNECTING' } }]

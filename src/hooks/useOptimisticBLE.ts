@@ -12,7 +12,7 @@
  * @see docs/plans/perf-optimistic-ble-updates.md
  */
 import * as Haptics from 'expo-haptics';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useRef, useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import { AppLogger } from '../services/AppLogger';
 
@@ -41,8 +41,18 @@ export function useOptimisticBLE({
   disableHaptics = false,
 }: UseOptimisticBLEOptions) {
   const [writeStatus, setWriteStatus] = useState<BLEWriteStatus>('IDLE');
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const pendingCount = useRef(0);
+
+  // Clear all timers on unmount to prevent leaks
+  useEffect(() => {
+    return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      debounceTimers.current.forEach((timer) => clearTimeout(timer));
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      debounceTimers.current.clear();
+    };
+  }, []);
 
   /**
    * optimisticWrite — Instantly updates local UI state, then fires the real
@@ -61,11 +71,18 @@ export function useOptimisticBLE({
     if (onOptimistic && !disableOptimisticUI) onOptimistic();
     setWriteStatus('PENDING');
 
+    const targetKey = targetDeviceId ?? 'global';
+
     // Phase 2: Debounce rapid-fire writes (slider drags)
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    const existingTimer = debounceTimers.current.get(targetKey);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      debounceTimers.current.delete(targetKey);
+    }
 
     return new Promise<boolean>((resolve) => {
-      debounceTimer.current = setTimeout(async () => {
+      const timer = setTimeout(async () => {
+        debounceTimers.current.delete(targetKey);
         pendingCount.current++;
         
         if (!writeToDevice) {
@@ -119,6 +136,8 @@ export function useOptimisticBLE({
           resolve(false);
         }
       }, debounceMs);
+
+      debounceTimers.current.set(targetKey, timer);
     });
   }, [writeToDevice, onReconcile, debounceMs, disableOptimisticUI, disableHaptics]);
 
