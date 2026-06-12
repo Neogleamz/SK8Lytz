@@ -2307,3 +2307,28 @@ TSC: ✅  Jest: ✅
 ### [MERGE READY] fix/session-ui-cleanup — 727e2057
 Files touched: src/components/docked/StreetPanel.tsx, src/components/DockedController.tsx, src/services/session/__tests__/SessionCommitService.test.ts
 TSC: ✅  Jest: ✅
+
+### [DECISION] 2026-06-12T02:30 - Revert neverForLocation to false
+**Decision:** Set `neverForLocation: false` in the `react-native-ble-plx` plugin options in `app.config.js`.
+**Rejected:** Leaving it true or attempting to scan with filters.
+**Don't re-derive:** If `neverForLocation` is declared in the manifest, Android OS silently blocks and drops all unfiltered scan results (`scanServiceUUIDs: null`). Since we scan unfiltered to capture FCF1/Zengge advertisements accurately, we must set `neverForLocation: false` and request runtime Location permissions.
+**Source:** [app.config.js](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/app.config.js#L83)
+
+### [DECISION] 2026-06-12T02:35 - Request ACCESS_FINE_LOCATION on Android 12+
+**Decision:** Added `ACCESS_FINE_LOCATION` back to the Android 12+ API permission array in `PermissionService.ts` and `BleMachine.types.ts`.
+**Rejected:** Leaving it out because the manifest declares `neverForLocation`.
+**Don't re-derive:** `react-native-ble-plx` internally checks for Location permissions and throws `LOCATION_PERMISSION_MISSING` if it's missing, before passing the scan to the OS. Because `console.warn` is stripped in Release builds, this failure was entirely silent in `adb logcat`.
+**Source:** [PermissionService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/PermissionService.ts#L95-L108)
+
+### [DECISION] 2026-06-12T02:40 - Set scanMode: 2 (LOW_LATENCY) for unfiltered scan
+**Decision:** Set `scanMode: 2` (LOW_LATENCY) and `scanServiceUUIDs: null` in `useBLE.ts`.
+**Rejected:** Leaving scanMode as 1 or null (LOW_POWER).
+**Don't re-derive:** Android 12+ OS silently intercepts and drops legacy unfiltered advertisements if the scan mode is LOW_POWER or BALANCED, causing the scanner to infinite loop without firing the callback. Changing to LOW_LATENCY forces the OS to deliver the packets to the app.
+**Source:** [useBLE.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L177-L186)
+
+### [DECISION] 2026-06-12T02:45 - Remove scan-lockout from Wizard Next button
+**Decision:** Changed the Next button condition on Step 1 of `HardwareSetupWizardScreen.tsx` from `pendingRegistrations.length > 0 && bleState !== 'SCANNING'` to `pendingRegistrations.length > 0`.
+**Rejected:** Keeping the original scan-state block or enforcing a hard scan-stop timer.
+**Don't re-derive:** In FTUE, the app runs a persistent background battery sweeper that scans indefinitely. If the wizard blocks transition to Step 2 while `bleState === 'SCANNING'`, the user is deadlocked on Step 1: devices are discovered in JS but the Next button displays `SEARCHING FOR SKATES...` and remains disabled forever.
+**Source:** [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx#L551)
+

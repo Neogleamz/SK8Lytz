@@ -21,8 +21,7 @@ import { STORAGE_DEMO_MODE } from '../constants/storageKeys';
 import { Buffer } from 'buffer';
 import type { Device } from 'react-native-ble-plx';
 import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
-import { ZENGGE_SERVICE_UUID } from '../protocols/ZenggeProtocol';
-import { BANLANX_SERVICE_UUID } from '../protocols/BanlanxAdapter';
+
 import type { BleError } from 'react-native-ble-plx';
 import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
 import { AppLogger } from '../services/AppLogger';
@@ -178,8 +177,13 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     input: {
       bleManager: bleManager as import('react-native-ble-plx').BleManager,
       scanCallback: (error: BleError | null, device: Device | null) => scanCallbackRef.current(error, device),
-      scanMode: 1,
-      scanServiceUUIDs: [ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID],
+      scanMode: 2,
+      // scanServiceUUIDs: null - unfiltered scan.
+      // Reverted to null (VS-006 fix 2). Now that we removed neverForLocation and 
+      // request ACCESS_FINE_LOCATION, unfiltered scans are allowed by Android OS.
+      // We MUST scan unfiltered because FCF1 devices do not broadcast their UUID
+      // in mServiceUuids (they use mServiceData), making OS-level UUID filters drop them.
+      scanServiceUUIDs: null,
       adapterMapRef,
       mtuMapRef,
       disconnectListeners,
@@ -205,7 +209,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // ── Pattern write debounce ─────────────────────────────────────────────────
   // Prevents BLE queue pile-up when user swipes rapidly through the pattern picker.
   // Critical writes (power, time sync) bypass this and go direct.
-  const writeDebounceTimerRef = useRef<ReturnType<typeof global.setTimeout> | null>(null);
+  const writeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // 1. Initial Load

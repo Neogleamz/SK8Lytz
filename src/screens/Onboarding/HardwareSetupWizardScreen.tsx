@@ -548,7 +548,7 @@ export default function HardwareSetupWizardScreen({
                 <Text style={styles.errorText}>{setupError}</Text>
               </View>
             )}
-            {pendingRegistrations.length > 0 && bleState !== 'SCANNING' ? (
+            {pendingRegistrations.length > 0 ? (
               <TouchableOpacity 
                 style={styles.primaryBtn} 
                 onPress={() => setStep(2)}

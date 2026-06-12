@@ -6,7 +6,7 @@ export interface BleMachineContext {
   bleManager: BleManager;
   scanCallback: (error: BleError | null, device: Device | null) => void;
   scanMode: ScanMode;
-  scanServiceUUIDs: string[];
+  scanServiceUUIDs: string[] | null;
   connectedDevices: Device[];
   ghostedDeviceIds: string[];
   sweeperId?: number;

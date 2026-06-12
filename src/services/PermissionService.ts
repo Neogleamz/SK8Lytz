@@ -95,16 +95,19 @@ export const requestPermission = async (type: PermissionType): Promise<boolean> 
       }
       case 'BLUETOOTH': {
         if (Platform.OS === 'android' && Platform.Version >= 31) {
-          // FIX: On Android 12+, we no longer request ACCESS_FINE_LOCATION for BLE.
-          // Requesting it without ACCESS_COARSE_LOCATION causes an instant rejection
-          // and the system prompt will never appear.
+          // Reverted VS-005: Android 12+ MUST request ACCESS_FINE_LOCATION
+          // because FCF1 devices advertise their UUID in mServiceData instead of mServiceUuids.
+          // The native OS scanner cannot filter by mServiceData. Thus, we MUST perform an
+          // unfiltered (null) scan, which strictly requires location permissions.
           const result = await PermissionsAndroid.requestMultiple([
             PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
             PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
           ]);
           return (
             result['android.permission.BLUETOOTH_CONNECT'] === PermissionsAndroid.RESULTS.GRANTED &&
-            result['android.permission.BLUETOOTH_SCAN'] === PermissionsAndroid.RESULTS.GRANTED
+            result['android.permission.BLUETOOTH_SCAN'] === PermissionsAndroid.RESULTS.GRANTED &&
+            result['android.permission.ACCESS_FINE_LOCATION'] === PermissionsAndroid.RESULTS.GRANTED
           );
         } else if (Platform.OS === 'android') {
           const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
@@ -210,7 +213,8 @@ const checkPermissionNative = async (type: PermissionType): Promise<boolean> => 
         if (Platform.OS === 'android' && Platform.Version >= 31) {
           const scan = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN);
           const connect = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT);
-          return scan && connect;
+          const location = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+          return scan && connect && location;
         } else if (Platform.OS === 'android') {
           return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
         }

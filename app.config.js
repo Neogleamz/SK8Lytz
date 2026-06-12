@@ -80,7 +80,7 @@ module.exports = {
             "central"
           ],
           bluetoothAlwaysPermission: "Allow Neogleamz App to connect to your Zengge roller skate controllers.",
-          neverForLocation: true
+          neverForLocation: false
         }
       ],
       "@bacons/apple-targets",
