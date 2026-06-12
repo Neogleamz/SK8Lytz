@@ -275,9 +275,11 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   }, [connectedDevices, deviceConfigs, registeredDevices]);
 
   const isActuallyConnected = displayConnectedDevices.length > 0;
-  // BUG FIX: was `every(d => d.grouped)` — fails for re-provisioned devices missing the `.grouped` flag.
-  // Fix: check `groupId` presence (the canonical group membership token from DeviceRepository).
-  const isGrouped = displayConnectedDevices.length > 1 && displayConnectedDevices.every(d => !!d.groupId);
+  // BUG FIX: `d.groupId` is NEVER set on DisplayDevice — deviceConfigs stores `groupIds` (plural array),
+  // not `groupId` (singular string). The prior check always returned false, making isPaired=false
+  // for ALL connections including groups, causing dispatch to only write to the first device.
+  // Ground truth: if 2+ devices are in connectedDevices, we are in a multi-device session.
+  const isGrouped = connectedDevices.length > 1;
 
   const prevIsConnectedRef = useRef(false);
   const telemetry = useTelemetryLedger();

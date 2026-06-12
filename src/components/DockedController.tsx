@@ -580,7 +580,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       clampSpeed,
       setPower,
       setMultiColor,
-    } = useControllerDispatch({ writeToDevice, hwSettings, points, getAdapterForDevice, primaryDeviceId: primaryMac, connectedDevices: (!isPaired && devices && devices.length > 0) ? [devices[0]] : (devices || []) });
+    } = useControllerDispatch({ writeToDevice, hwSettings, points, getAdapterForDevice, primaryDeviceId: primaryMac, connectedDevices: devices || [] });
 
     /** Convenience wrapper — pre-binds selectedColor and speed for callers */
     const applyStaticModePattern = (pat: typeof fixedModePattern, r?: number, g?: number, b?: number, spd?: number) =>
@@ -1129,7 +1129,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
               isPaired={isPaired}
               points={points}
               hwSettings={hwSettings}
-              devices={(!isPaired && devices && devices.length > 0) ? [devices[0]] : devices}
+              devices={devices}
               onLongPressDevice={onLongPressDevice}
               brightness={brightness}
               speed={speed}
