@@ -1,3 +1,16 @@
+### [MERGE] 2026-06-12T08:58 — fix-ble-group-routing → master @ 783c7ec8
+**What merged:**
+- Modified `useOptimisticBLE.ts` to manage debounce timers per-device using a `Map` ref and added component unmount cleanup to clear all active timers.
+- Added `CONNECT_REQUEST` event handling to the `READY` state of `BleMachine.ts` to support switching from group mode to single-device mode.
+- Enforced single-device bounds in `DockedController.tsx` for visualizer and dispatch callbacks when `isPaired` is false.
+- Updated the connection/cache-hit check in `ConnectService.ts` to proceed to the stale device flush loop when stale connected devices are present, and fixed a TypeScript duplicate declaration compile error of `staleDevices`.
+**Verify result:** TSC ✅, Jest ✅ (28 suites / 218 tests), gates ✅
+**Files touched:**
+- `src/components/DockedController.tsx`
+- `src/hooks/useOptimisticBLE.ts`
+- `src/services/ble/BleMachine.ts`
+- `src/services/ble/ConnectService.ts`
+
 ### [MERGE] 2026-06-12T03:15 — fix-ble-write-deadlock → master @ 5dd1eeca
 **What merged:**
 - Surgically removed redundant `enqueueWrite` wrappers from `writeToDevice` and `writeChunked` in `src/hooks/useBLE.ts`.
