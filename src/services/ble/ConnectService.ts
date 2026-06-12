@@ -146,7 +146,12 @@ export const connectService = fromPromise<
         if (signal.aborted) throw new Error('connect_aborted');
         try {
           const isConnected = await bleManager.isDeviceConnected(mac);
-          conn = isConnected ? (await bleManager.connectedDevices([mac]))[0] || ({} as Device) : null;
+          if (isConnected) {
+            const devicesList = await bleManager.connectedDevices([]).catch(() => []);
+            conn = devicesList.find(d => d.id === mac) || null;
+          } else {
+            conn = null;
+          }
           
           if (!conn || !conn.id) {
              conn = await bleManager.connectToDevice(
