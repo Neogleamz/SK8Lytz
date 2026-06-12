@@ -1,3 +1,12 @@
+### [MERGE] 2026-06-12T03:15 — fix-ble-write-deadlock → master @ 5dd1eeca
+**What merged:**
+- Surgically removed redundant `enqueueWrite` wrappers from `writeToDevice` and `writeChunked` in `src/hooks/useBLE.ts`.
+- Removed the unused `resolveWritePriority` import from `src/hooks/useBLE.ts`.
+- Resolved the nested queue deadlock where writes inside the priority queue were nested, locking the single-threaded priority queue dispatcher.
+**Verify result:** TSC ✅, Jest ✅ (28 suites / 218 tests), gates ✅
+**Files touched:**
+- `src/hooks/useBLE.ts`
+
 ### [DECISION] 2026-06-12T02:50 — BLE write deadlock from double-enqueue
 **Decision:** Remove the redundant `enqueueWrite` call from `useBLE.ts` (`writeToDevice` and `writeChunked`) because it duplicates the queueing handled internally by `BleWriteDispatcher.ts`.
 **Rejected:** Bypassing `BleWriteQueue` entirely — rejected because serializing writes is a hard requirement for the Android BLE stack to prevent GATT collisions and 133 errors.
