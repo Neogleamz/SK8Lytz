@@ -1,3 +1,10 @@
+### [DECISION] 2026-06-12T02:50 — BLE write deadlock from double-enqueue
+**Decision:** Remove the redundant `enqueueWrite` call from `useBLE.ts` (`writeToDevice` and `writeChunked`) because it duplicates the queueing handled internally by `BleWriteDispatcher.ts`.
+**Rejected:** Bypassing `BleWriteQueue` entirely — rejected because serializing writes is a hard requirement for the Android BLE stack to prevent GATT collisions and 133 errors.
+**Don't re-derive:** The `BleWriteQueue` singleton is single-threaded and locks using `_isRunning = true` during execution. Invoking `enqueueWrite` inside another enqueued write callback results in a permanent deadlock.
+**Source:** `src/hooks/useBLE.ts:L483-L516` and `src/services/BleWriteDispatcher.ts:L189`
+**ADR Link:** N/A
+
 ### [MERGE READY] fix/session-machine-actor-types — 682f411d
 Files touched:
 - src/services/session/SessionMachine.ts
