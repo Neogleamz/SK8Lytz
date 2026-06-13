@@ -3331,3 +3331,8 @@ TSC: ?  Jest: ?
 **Merged:** chore/sweep-ble-core-dispatch, chore/sweep-admin-telemetry, chore/sweep-storage-keys, chore/sweep-ui-modals-shared
 **Status:** Fully verified via npm run verify and fortress-gatekeeper.
 
+
+### [MERGE READY] sweep-identity-auth — b0489ad7
+Files touched: src/services/ProfileService.types.ts, src/services/AppLogger.ts, src/context/AuthContext.tsx, src/components/AccountModal.tsx, src/services/AuthProfileService.ts, src/hooks/useAccountOverview.ts
+TSC: ?  Jest: ?
+
