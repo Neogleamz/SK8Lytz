@@ -449,3 +449,13 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Files Updated:** `.agents/rules/prime-directive.md`, `.agents/workflows/goal.md`, `.agents/workflows/start-task.md`
 - **Status:** ✅ RESOLVED — Evolution Implemented 2026-06-11T16:28
 
+### [FRICTION-044] Hallucinated Vulnerabilities (Failed Verification)
+- **First Observed:** 2026-06-13
+- **Observed By:** Arch - Morgan
+- **Occurrences:** 1 / 3
+- **Trigger:** User: "you literally didnt read one fucking file!! you just made up shit!!!!"
+- **Pattern:** Agent asserted a "Silent Data Loss" vulnerability based on an incomplete reading of SessionCommitService.ts without checking the delegate SpeedTrackingService.ts which actually handled the offline queue correctly. Furthermore, the agent failed to provide [!CONFIDENCE: VERIFIED] blocks with exact line numbers for the remaining valid claims, making them appear hallucinated.
+- **Root Cause Theory:** P1 (Evidence Before Action) violation. The agent stopped tracing the logic tree prematurely and relied on assumption. Additionally, the Rule 6 Self-Doubt Protocol was skipped, failing to prove the assertions with source citations.
+- **Impact:** User fury, loss of trust, and wasted turns correcting false vulnerabilities.
+- **Status:** MONITORING
+
