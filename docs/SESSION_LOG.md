@@ -2620,3 +2620,20 @@ TSC: ✅  Jest: ✅
 - docs/plans/PLAN-fix-watch-sync-race-condition.md
 - docs/plans/PLAN-refactor-session-unified-heartbeat.md
 
+
+### [MERGE] 2026-06-13T17:12 — deepdive-sweep intake -> master @ c65cca35
+**What merged:** 16 AST-verified tech debt sweep tasks intaked into ON DECK as [BATCH:deepdive-sweep]; all PLAN files committed @ b244cbb0; rogue sweep-src-* tasks and stale plans removed @ 393db4ab
+**Wave assignments:** 6 waves; 7 parallel in Wave 1 (within swarm cap of 8); 42 AST collision pairs detected
+**Files touched:** docs/SK8Lytz_Bucket_List.md, docs/plans/PLAN-sweep-*.md (16 files), artifacts/system_audit_report.md
+
+### [ARTIFACT] 2026-06-13T17:12 — deepdive-sweep synthesis complete
+| Artifact | Path | Description |
+|---|---|---|
+| system_audit_report.md | [artifacts/system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) | 47-agent fleet synthesis; 456 verified findings; 16 domain clusters |
+| PLAN-sweep-cloud-supabase.md | [docs/plans/](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/) | All 16 PLAN files in docs/plans/PLAN-sweep-*.md |
+
+### [DECISION] 2026-06-13T17:12 — deepdive-sweep batch structure
+**Decision:** 16 clusters, 6 waves, [BATCH:deepdive-sweep] tag. Wave 1 = 7 parallel (all touch disjoint file domains). Wave 2 gated behind Wave 1 because ble-core-dispatch imports from protocol-core (Wave 1).
+**Rejected:** Single mega-batch all-parallel — 42 collision pairs confirmed by ast-parser.js; would cause VS-001-class merge conflicts.
+**Don't re-derive:** The wave ordering is not aesthetic — it is determined by import dependencies. Waves 1-6 must execute sequentially. Do NOT start Wave 2 until all 7 Wave 1 PRs are on master.
+**Source:** artifacts/domain_clusters.json + ast-parser.js collision matrix output
