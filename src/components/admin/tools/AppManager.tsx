@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
-import { Alert, SafeAreaView, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ScrollView, Switch, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Spacing } from '../../../theme/theme';
 import { adminStyles as styles } from '../adminStyles';
 import { CONTROLS_REGISTRY, ControlEntry } from '../../../constants/ControlsRegistry';

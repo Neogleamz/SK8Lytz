@@ -5,7 +5,6 @@ import {
     Alert,
     FlatList,
     Modal,
-    SafeAreaView,
     StyleSheet,
     Switch,
     Text,
@@ -13,6 +12,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppLogger } from '../../../services/AppLogger';
 import { supabase } from '../../../services/supabaseClient';
 import { Spacing, Typography } from '../../../theme/theme';

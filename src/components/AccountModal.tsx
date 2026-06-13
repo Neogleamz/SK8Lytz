@@ -25,6 +25,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useAccountOverview } from '../hooks/useAccountOverview';
@@ -140,6 +141,7 @@ export default function AccountModal({
 }: AccountModalProps) {
   const { Colors, isDark, toggleTheme } = useTheme();
   const { signIn: authSignIn, signOut: authSignOut } = useAuth();
+  const insets = useSafeAreaInsets();
   const styles = createStyles(Colors);
 
   const [tab, setTab] = useState<Tab>('profile');
@@ -482,7 +484,7 @@ export default function AccountModal({
       )}
       <View style={styles.overlay}>
         <View style={styles.sheet}>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+          <TouchableOpacity style={[styles.closeBtn, { top: Math.max(insets.top + 16, 16) }]} onPress={onClose}>
             <MaterialCommunityIcons name="close" size={22} color={Colors.textMuted} />
           </TouchableOpacity>
 

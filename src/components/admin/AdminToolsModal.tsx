@@ -7,12 +7,13 @@ import {
     Alert,
     FlatList,
     Modal,
-    Platform, SafeAreaView,
+    Platform,
     StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { useAdminSettings } from '../../hooks/useAdminSettings';
 import { EVENT_META, formatLogTime, getPayloadSummary, useAdminTelemetry } from '../../hooks/useAdminTelemetry';
