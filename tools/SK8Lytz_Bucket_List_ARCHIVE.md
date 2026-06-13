@@ -1866,3 +1866,13 @@ pm run verify which includes QA tests.
     Rejected alternative: "Ignore since they are admin tools" — breaks UX for power users and EulaModal affects all users.
   - **Source of Truth:** 📖 [AdminToolsModal.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/AdminToolsModal.tsx)
   - **Details:** Simple import swap across 8 files and one dynamic padding change.
+
+- [x] **`feat/harden-ble-regression-shields`** 🚀 Merged in fd3df999
+  - **Tags:** `[✅ READY]` `[🧪 LAB]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 MEDIUM]`
+  - **Goal:** Build automated Jest regression tests and codify permanent rules to lock down setup wizard scanning and group connection state.
+  - **Decision Log:** FTUE onboarding race conditions and setup wizard scanning deadlocks cost 12 hours of debugging across multiple sessions; codifying regression tests and strict rules prevents future AI/developer regressions.
+  - **Analysis:** 📊 Source: [useBLEScanner.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts#L345) and [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx#L561) · Plan: [PLAN-harden-ble-regression-shields.md](./plans/PLAN-harden-ble-regression-shields.md)
+    Key finding: Idempotent sweeper triggers and Next button state checks are critical to FTUE onboarding stability.
+    Rejected alternative: Relying solely on textual instructions in session summaries, which inevitably drift or get ignored by future models.
+  - **Source of Truth:** 📖 [useBLEScanner.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts#L345) L345-355 · [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx#L561) L561-571 · [DashboardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx#L282) L282
+  - **Details:** Non-production changes only. Adds tests in `ConnectService.test.ts` and `HardwareSetupWizardScreen.test.tsx`, plus a new `useBLEScanner.test.ts`. Codifies rules in `21_GUARDRAILS.md` and `prime-directive.md`.
