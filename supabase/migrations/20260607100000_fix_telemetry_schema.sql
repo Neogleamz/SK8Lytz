@@ -9,6 +9,7 @@ CREATE OR REPLACE FUNCTION public.flush_telemetry(payload JSONB)
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 DECLARE
     v_user_id UUID;

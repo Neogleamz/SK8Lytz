@@ -1,6 +1,6 @@
 
 /* eslint-disable no-undef */
-import { createClient, SupportedStorage } from '@supabase/supabase-js';
+import { createClient, SupabaseClient, SupportedStorage } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import 'react-native-url-polyfill/auto';
 
@@ -58,6 +58,7 @@ export const supabase = supabaseUrl && supabaseAnonKey
         detectSessionInUrl: false,
       },
     })
+  // @ts-expect-error TS2352: The offline stub is intentionally an incomplete mock interface
   : ({
       auth: {
         getUser: async () => ({ data: { user: null }, error: null }),
@@ -78,8 +79,7 @@ export const supabase = supabaseUrl && supabaseAnonKey
         insert: async () => ({ error: null }),
         delete: () => ({ eq: () => ({ eq: async () => ({ error: null }), delete: async () => ({ error: null }) }) })
       })
-    // R-08: The offline stub must satisfy ReturnType<typeof createClient<Database>>.
+    // R-08: The offline stub must satisfy SupabaseClient<Database>.
     // The structural object is intentionally incomplete (only paths exercised in offline
-    // mode are mocked) — the double cast is required because TS cannot verify partial
-    // structural compatibility against the generated Supabase client type.
-    } as unknown as ReturnType<typeof createClient<Database>>);
+    // mode are mocked)
+    } as SupabaseClient<Database>);

@@ -5,6 +5,7 @@ CREATE OR REPLACE FUNCTION public.delete_account()
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER -- Runs as elevated privileges so it can delete from auth.users
+SET search_path = ''
 AS $$
 BEGIN
   -- Double check the caller is an authenticated user

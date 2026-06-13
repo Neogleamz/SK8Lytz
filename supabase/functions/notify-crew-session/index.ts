@@ -27,10 +27,18 @@ Deno.serve(async (req: Request) => {
   // EXEMPTION (R-15): This is a server-side Supabase Edge Function running in Deno.
   // It has no access to the React Native AuthContext, so it must authenticate the caller
   // directly by verifying the JWT via GoTrue server-side.
-  const { data: { user }, error: authErr } = await supabase.auth.getUser(
-    authHeader.replace("Bearer ", ""),
-  );
-  if (authErr || !user) return new Response("Unauthorized", { status: 401 });
+  let user;
+  try {
+    const { data, error: authErr } = await supabase.auth.getUser(
+      authHeader.replace("Bearer ", ""),
+    );
+    if (authErr) return new Response("Unauthorized", { status: 401 });
+    user = data.user;
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "Auth exception" }), { status: 500, headers: { "Content-Type": "application/json" } });
+  }
+
+  if (!user) return new Response("Unauthorized", { status: 401 });
 
   let body: NotifyPayload;
   try {
@@ -45,39 +53,39 @@ Deno.serve(async (req: Request) => {
   }
 
   // Verify caller is a member of the crew
-  const { data: callerMembership, error: callerErr } = await supabase
-    .from("crew_memberships")
-    .select("role")
-    .eq("crew_id", crewId)
-    .eq("user_id", user.id)
-    .single();
+  try {
+    const { data: callerMembership, error: callerErr } = await supabase
+      .from("crew_memberships")
+      .select("role")
+      .eq("crew_id", crewId)
+      .eq("user_id", user.id)
+      .single();
 
-  if (callerErr || !callerMembership) {
-    return new Response("Forbidden: Not a member of this crew", { status: 403 });
+    if (callerErr || !callerMembership) {
+      return new Response("Forbidden: Not a member of this crew", { status: 403 });
+    }
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "DB exception" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
-  // 1. Get all permanent crew members (exclude the leader)
-  const { data: members, error: membersErr } = await supabase
-    .from("crew_memberships")
-    .select("user_id")
-    .eq("crew_id", crewId)
-    .neq("user_id", user.id); // exclude caller (the leader)
+  // 1 & 2. Get all permanent crew members and their push tokens
+  let tokenRows;
+  try {
+    const { data, error } = await supabase
+      .from("push_tokens")
+      .select("token, crew_memberships!inner(crew_id)")
+      .eq("crew_memberships.crew_id", crewId)
+      .neq("user_id", user.id); // exclude caller (the leader)
 
-  if (membersErr || !members || members.length === 0) {
-    return new Response(JSON.stringify({ sent: 0, reason: "No members" }), {
-      headers: { "Content-Type": "application/json" },
-    });
+    if (error) {
+      return new Response(JSON.stringify({ sent: 0, reason: "DB error" }), { status: 500, headers: { "Content-Type": "application/json" } });
+    }
+    tokenRows = data;
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "DB exception" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
-  const memberIds = members.map((m: { user_id: string }) => m.user_id);
-
-  // 2. Get their push tokens
-  const { data: tokenRows, error: tokensErr } = await supabase
-    .from("push_tokens")
-    .select("token")
-    .in("user_id", memberIds);
-
-  if (tokensErr || !tokenRows || tokenRows.length === 0) {
+  if (!tokenRows || tokenRows.length === 0) {
     return new Response(JSON.stringify({ sent: 0, reason: "No tokens" }), {
       headers: { "Content-Type": "application/json" },
     });
@@ -96,17 +104,24 @@ Deno.serve(async (req: Request) => {
   const batchSize = 100;
   let sent = 0;
   try {
+    const fetchPromises = [];
     for (let i = 0; i < messages.length; i += batchSize) {
       const batch = messages.slice(i, i + batchSize);
-      const resp = await fetch(EXPO_PUSH_URL, {
-        method:  "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body:    JSON.stringify(batch),
-      });
-
-      if (resp.ok) sent += batch.length;
-      else console.error(`[notify-crew-session] Expo error:`, await resp.text());
+      fetchPromises.push(
+        fetch(EXPO_PUSH_URL, {
+          method:  "POST",
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          body:    JSON.stringify(batch),
+        }).then(async (resp) => {
+          if (resp.ok) {
+            sent += batch.length;
+          } else {
+            console.error(`[notify-crew-session] Expo error:`, await resp.text());
+          }
+        })
+      );
     }
+    await Promise.allSettled(fetchPromises);
   } catch (error) {
     console.error(
       `[notify-crew-session] Network fetch failed:`,
