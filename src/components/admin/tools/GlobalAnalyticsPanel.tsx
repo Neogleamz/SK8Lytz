@@ -32,7 +32,8 @@ export default function GlobalAnalyticsPanel({ Colors }: { Colors: Record<string
         });
       }
     } catch (e: unknown) {
-      AppLogger.error('[GlobalAnalytics] RPC failed', e, { payload_size: 0, ssi: 0 });
+      const err = e instanceof Error ? e : new Error(String(e));
+      AppLogger.error('[GlobalAnalytics] RPC failed', err, { payload_size: 0, ssi: 0 });
       setError('Failed to load. Tap to retry.');
     } finally {
       setLoading(false);

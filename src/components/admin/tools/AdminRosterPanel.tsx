@@ -159,6 +159,14 @@ export function AdminRosterPanel({
     fetchAdmins();
   }, [fetchAdmins]);
 
+  const renderEmpty = useCallback(() => (
+    <View style={{ padding: 20, alignItems: 'center' }}>
+      <Text style={{ color: textMuted }}>No admins found.</Text>
+    </View>
+  ), [textMuted]);
+
+  const keyExtractor = useCallback((i: AdminProfile) => i.user_id, []);
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
@@ -175,7 +183,8 @@ export function AdminRosterPanel({
           <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={admins}
             renderItem={renderItem}
-            keyExtractor={(i) => i.user_id}
+            keyExtractor={keyExtractor}
+            ListEmptyComponent={renderEmpty}
             contentContainerStyle={styles.list}
             refreshing={status === 'refreshing'}
             onRefresh={handleRefresh}

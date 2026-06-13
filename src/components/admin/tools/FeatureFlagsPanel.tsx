@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppLogger } from '../../../services/AppLogger';
 import { supabase } from '../../../services/supabaseClient';
 import { Spacing, Typography } from '../../../theme/theme';
+import { ErrorCard } from '../../ErrorCard';
 
 export interface FeatureFlagsPanelProps {
   visible: boolean;
@@ -224,6 +225,8 @@ export function FeatureFlagsPanel({
     <Text style={{color: textMuted, textAlign: 'center', marginTop: 20}}>No feature flags found.</Text>
   ), [textMuted]);
 
+  const keyExtractor = useCallback((i: FeatureFlag) => i.id, []);
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
@@ -264,13 +267,15 @@ export function FeatureFlagsPanel({
           </TouchableOpacity>
         </View>
 
-        {loading && !isRefreshing ? (
+        {status === 'error' ? (
+          <ErrorCard message="Failed to load. Tap to retry." onRetry={fetchFlags} />
+        ) : loading && !isRefreshing ? (
           <ActivityIndicator size="large" color="#00f0ff" style={{ marginTop: Spacing.xl }} />
         ) : (
           <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={flags}
             renderItem={renderItem}
-            keyExtractor={(i) => i.id}
+            keyExtractor={keyExtractor}
             contentContainerStyle={styles.list}
             refreshing={isRefreshing}
             onRefresh={handleRefresh}

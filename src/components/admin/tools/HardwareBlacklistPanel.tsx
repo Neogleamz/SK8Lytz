@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppLogger } from '../../../services/AppLogger';
 import { supabase } from '../../../services/supabaseClient';
 import { Spacing, Typography } from '../../../theme/theme';
+import { ErrorCard } from '../../ErrorCard';
 
 export interface HardwareBlacklistPanelProps {
   visible: boolean;
@@ -206,6 +207,8 @@ export function HardwareBlacklistPanel({
     <Text style={{color: textMuted, textAlign: 'center', marginTop: 20}}>No devices currently blacklisted.</Text>
   ), [textMuted]);
 
+  const keyExtractor = useCallback((i: BlacklistedDevice) => i.mac_address, []);
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
@@ -246,13 +249,15 @@ export function HardwareBlacklistPanel({
           </TouchableOpacity>
         </View>
 
-        {loading && !isRefreshing ? (
+        {status === 'error' ? (
+          <ErrorCard message="Failed to load. Tap to retry." onRetry={fetchBlacklist} />
+        ) : loading && !isRefreshing ? (
           <ActivityIndicator size="large" color="#ff4040" style={{ marginTop: Spacing.xl }} />
         ) : (
           <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={blacklist}
             renderItem={renderItem}
-            keyExtractor={(i) => i.mac_address}
+            keyExtractor={keyExtractor}
             contentContainerStyle={styles.list}
             refreshing={isRefreshing}
             onRefresh={handleRefresh}

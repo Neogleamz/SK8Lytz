@@ -197,6 +197,8 @@ export default function AdminToolsModal({
     return <LogItemCard item={item} isDark={isDark} textMuted={textMuted} />;
   }, [isDark, textMuted]);
 
+  const keyExtractor = useCallback((item: LogEntry, index: number) => item.t.toString() + index, []);
+
   const renderContent = () => {
     switch (tab) {
       case 'timeline':
@@ -204,7 +206,7 @@ export default function AdminToolsModal({
           <FlatList
             data={memoizedTimelineLogs}
             renderItem={renderLogItem}
-            keyExtractor={(item, index) => item.t.toString() + index}
+            keyExtractor={keyExtractor}
             initialNumToRender={20}
             maxToRenderPerBatch={10}
             windowSize={5}

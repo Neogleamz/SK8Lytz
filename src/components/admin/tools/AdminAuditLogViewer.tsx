@@ -98,7 +98,8 @@ export function AdminAuditLogViewer({
       }
       setStatus('success');
     } catch (e: unknown) {
-      AppLogger.error('Failed to fetch audit logs', e, { payload_size: 0, ssi: 0 });
+      const error = e instanceof Error ? e : new Error(String(e));
+      AppLogger.error('Failed to fetch audit logs', error, { payload_size: 0, ssi: 0 });
       setStatus('error');
     }
   }, []);
@@ -156,6 +157,8 @@ export function AdminAuditLogViewer({
     <EmptyState message="No items found" />
   ), []);
 
+  const keyExtractor = useCallback((i: AuditLogEntry) => i.id, []);
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
@@ -175,7 +178,7 @@ export function AdminAuditLogViewer({
             data={logs}
             ListEmptyComponent={renderEmpty}
             renderItem={renderItem}
-            keyExtractor={(i) => i.id}
+            keyExtractor={keyExtractor}
             contentContainerStyle={styles.list}
             refreshing={status === 'refreshing'}
             onRefresh={handleRefresh}

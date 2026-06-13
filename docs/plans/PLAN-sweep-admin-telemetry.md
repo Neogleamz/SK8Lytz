@@ -43,9 +43,11 @@ Fix 12 findings in the admin tools and telemetry panel layer. Focus: extract all
 
 ### [MODIFY] src/components/admin/tools/DiagnosticLabOracleTab.tsx
 - Fix `AppLogger.error` at L214 — move `payload_size` and `ssi` to top-level context object (R-04)
+// SKIPPED: Code already correct/fixed by previous waves (No AppLogger.error with payload_size in string found)
 
 ### [MODIFY] src/components/admin/tools/Sk8LytzProgrammer.tsx
 - Fix `AppLogger.error` at L78 — move `payload_size` and `ssi` to top-level context object (R-04)
+// SKIPPED: Code already correct/fixed by previous waves (payload_size and ssi are already in the context object)
 
 ## Out of Scope
 - `AdminPicksScheduler.tsx` ScrollView→FlatList refactor (LOW — deferred)
