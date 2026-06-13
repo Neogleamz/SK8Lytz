@@ -3320,3 +3320,8 @@ TSC: ✅  Jest: ✅
 ### [MERGE READY] sweep-storage-keys — c2402a6e
 Files touched: src/hooks/useFavorites.ts, src/services/AppSettingsService.ts, src/services/DeviceRepository.ts, src/components/docked/QuickPresetModal.tsx, src/constants/storageKeys.ts
 TSC: ✅  Jest: ✅
+
+
+### [MERGE READY] sweep-ui-modals-shared - 343895e4
+Files touched: src/components/DeviceSettingsModal.tsx, src/components/GroupSettingsModal.tsx, src/components/SessionSummaryModal.tsx, src/components/CommunityModal.tsx, src/components/MarqueeText.tsx, src/components/CustomSlider.tsx, src/components/account/types.ts, src/components/account/account.types.ts, src/components/AccountModal.tsx, src/components/account/AccountTabCrewz.tsx, src/components/account/AccountTabDevices.tsx, src/components/account/AccountTabProfile.tsx, src/components/account/AccountTabSecurity.tsx, src/components/account/AccountTabSettings.tsx, src/components/account/AccountTabStats.tsx, src/services/SpeedTrackingService.ts, src/screens/DashboardScreen.tsx
+TSC: ?  Jest: ?
