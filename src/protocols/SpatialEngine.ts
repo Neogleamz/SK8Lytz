@@ -1,4 +1,5 @@
 // Acknowledged Monolith (S4): This file is a monolith > 30KB (approx. 60.5KB). Component extraction is flagged for future refactoring.
+// TODO: extract
 import type { RGB, PatternId, PatternOptions } from './PatternEngine';
 
 

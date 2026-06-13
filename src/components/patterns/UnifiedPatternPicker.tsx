@@ -5,6 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { hexToRgb } from '../../utils/ColorUtils';
 import { PatternPickerTab } from './PatternPickerTab';
 import { IHardwareSettings } from '../../types/dashboard.types';
+import { AppLogger } from '../../services/AppLogger';
 
 interface UnifiedPatternPickerProps {
   writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
@@ -59,7 +60,15 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
         effectId, fgRgb, bgRgb, devicePoints,
         Math.max(1, Math.min(100, Math.round(spd))), dir, brt
       );
-      if (payload) writeToDeviceRef.current(payload);
+      if (payload) {
+        (async () => {
+          try {
+            if (writeToDeviceRef.current) await writeToDeviceRef.current(payload);
+          } catch (err) {
+            AppLogger.error('UnifiedPatternPicker writeToDevice failed', err);
+          }
+        })();
+      }
     }
     onStateChangeRef.current?.(effectId);
   }, [devicePoints]);

@@ -48,6 +48,8 @@ export default function CameraTracker({
     if (!hasPermission) {
       requestPermission('CAMERA').then((granted) => {
         if (granted) requestFromHook();
+      }).catch((err) => {
+        console.error('Camera permission request failed:', err);
       });
     }
   }, [hasPermission, requestFromHook]);

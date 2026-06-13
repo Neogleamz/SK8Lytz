@@ -112,7 +112,7 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
   const renderItem = useCallback(({ item: effect }: { item: SK8LytzTemplate }) => {
     const p = propsRef.current;
     return (
-      <View style={{ width: '48%' }}>
+      <View style={styles.cardContainer}>
         <PatternCard
           effect={effect}
           isSelected={p.selectedEffectId === effect.id}
@@ -206,5 +206,8 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
     letterSpacing: 1,
+  },
+  cardContainer: {
+    width: '48%',
   },
 });

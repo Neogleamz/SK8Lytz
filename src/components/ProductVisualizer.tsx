@@ -6,6 +6,7 @@ import type { PatternId, RGB } from '../protocols/PatternEngine';
 import { getVisualizerFrame, getMusicVisualizerFrame, SK8LYTZ_TEMPLATES } from '../protocols/PatternEngine';
 import { PositionalMathBuffer, BuilderNode } from '../protocols/PositionalMathBuffer';
 import { Spacing } from '../theme/theme';
+import { DisplayDevice, IDeviceState } from '../types/dashboard.types';
 
 export interface DeviceConfig {
   id?: string;
@@ -26,7 +27,7 @@ interface ProductVisualizerProps {
   /** Authoritative hardware settings from DashboardScreen — drives segment/ledPoints geometry */
   hwSettings?: { ledPoints?: number; segments?: number };
   devices?: DeviceConfig[];
-  onLongPressDevice?: (device: any) => void;
+  onLongPressDevice?: (device: DisplayDevice & IDeviceState) => void;
   fixedFgColor?: string;
   fixedBgColor?: string;
   brightness?: number;

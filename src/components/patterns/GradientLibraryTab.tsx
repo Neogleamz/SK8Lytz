@@ -6,6 +6,16 @@ import { Spacing , ThemePalette } from '../../theme/theme';
 import { useGradients } from '../../hooks/useGradients';
 import { CustomBuilderPreset, PositionalMathBuffer } from '../../protocols/PositionalMathBuffer';
 
+const LIST_CONTENT_CONTAINER_STYLE = {
+  paddingHorizontal: Spacing.xs,
+  paddingBottom: Spacing.xl * 2,
+};
+
+const LIST_COLUMN_WRAPPER_STYLE = {
+  justifyContent: 'space-between' as const,
+  marginBottom: Spacing.sm,
+};
+
 interface GradientLibraryTabProps {
   Colors: ThemePalette;
   onOpenBuilder: (preset?: CustomBuilderPreset) => void;
@@ -129,14 +139,8 @@ export const GradientLibraryTab: React.FC<GradientLibraryTabProps> = ({ Colors, 
           keyExtractor={keyExtractorGradient}
           numColumns={2}
           style={styles.listContainer}
-          contentContainerStyle={{
-            paddingHorizontal: Spacing.xs,
-            paddingBottom: Spacing.xl * 2,
-          }}
-          columnWrapperStyle={{
-            justifyContent: 'space-between',
-            marginBottom: Spacing.sm,
-          }}
+          contentContainerStyle={LIST_CONTENT_CONTAINER_STYLE}
+          columnWrapperStyle={LIST_COLUMN_WRAPPER_STYLE}
           showsVerticalScrollIndicator={false}
           renderItem={renderGradientCard}
         />

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { getVisualizerFrame } from '../protocols/PatternEngine';
 import { Spacing } from '../theme/theme';
+import { hexToRgb } from '../utils/ColorUtils';
 
 interface CustomEffectVisualizerProps {
   effectId: number;
@@ -14,15 +15,6 @@ interface CustomEffectVisualizerProps {
   /** When false, animation loop is suspended (no setInterval started). Default true. */
   autoPlay?: boolean;
 }
-
-const hexToRgb = (hex: string) => {
-  const h = hex || '#000000';
-  return {
-    r: parseInt(h.substring(1, 3), 16) || 0,
-    g: parseInt(h.substring(3, 5), 16) || 0,
-    b: parseInt(h.substring(5, 7), 16) || 0,
-  };
-};
 
 export const CustomEffectVisualizer: React.FC<CustomEffectVisualizerProps> = ({ 
   effectId, 

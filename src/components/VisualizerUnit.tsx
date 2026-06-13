@@ -8,6 +8,7 @@ import type { PatternId, RGB } from '../protocols/PatternEngine';
 import { getVisualizerFrame, getMusicVisualizerFrame, SK8LYTZ_TEMPLATES } from '../protocols/PatternEngine';
 import { PositionalMathBuffer, BuilderNode } from '../protocols/PositionalMathBuffer';
 import { Spacing } from '../theme/theme';
+import { DisplayDevice, IDeviceState } from '../types/dashboard.types';
 
 // Convert HSL to Hex manually as React Native Interpolate handles strict string maps better
 function HSLToHex(h: number, s: number, l: number) {
@@ -42,7 +43,7 @@ export interface VisualizerUnitProps {
   fallbackProduct?: string;
   fallbackPoints?: number;
   hwSettings?: { ledPoints?: number; segments?: number };
-  onLongPress?: (device: any) => void;
+  onLongPress?: (device: DisplayDevice & IDeviceState) => void;
   fixedFgColor?: string;
   fixedBgColor?: string;
   brightness?: number;
@@ -448,7 +449,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
   return (
     <TouchableOpacity
       activeOpacity={onLongPress ? 0.8 : 1}
-      onLongPress={onLongPress ? () => onLongPress(device) : undefined}
+      onLongPress={onLongPress ? () => onLongPress(device as unknown as DisplayDevice & IDeviceState) : undefined}
       style={{ alignItems: 'center', marginHorizontal: Spacing.md, paddingVertical: Spacing.xs }}
     >
       <View style={[
