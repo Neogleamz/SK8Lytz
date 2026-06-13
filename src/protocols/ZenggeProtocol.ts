@@ -607,8 +607,7 @@ export class ZenggeProtocol {
    * @param pixels  Array of RGB pixels. Max 54 (safe MTU limit).
    */
   public streamPixelFrame(pixels: { r: number; g: number; b: number }[]): number[] {
-    const MAX_PX = 54;
-    const safePx = pixels.slice(0, MAX_PX);
+    const safePx = pixels.slice(0, HW_CONSTRAINTS.maxPoints);
     const dataLen = safePx.length * 3;
     const raw: number[] = [
       0x53,
@@ -980,14 +979,14 @@ export class ZenggeProtocol {
   }
 
   // ─── DIAGNOSTIC ORACLE COMMANDS ──────────────────────────────────────────────
-  public oracleMusicMic26(): number[] { return [0x73, 0x01, 0x26, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64]; }
-  public oracleMusicMic27(): number[] { return [0x73, 0x01, 0x27, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64]; }
-  public oracleMusicOff(): number[] { return [0x73, 0x01, 0x26, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64]; }
-  public oracleMusicMic00(): number[] { return [0x73, 0x01, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64]; }
-  public oracleMusicMissingIsOn(): number[] { return [0x73, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64]; }
-  public oracleSceneQuery(): number[] { return [0x58, 0xF0]; }
-  public oracleSceneActivate(slot: number): number[] { return [0x57, slot & 0xFF, 0x32, 0x64]; }
-  public oracleSceneDelete(slot: number): number[] { return [0x56, slot & 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; }
+  public oracleMusicMic26(): number[] { const p = [0x73, 0x01, 0x26, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64]; p.push(this.calculateChecksum(p)); return this.wrapCommand(p); }
+  public oracleMusicMic27(): number[] { const p = [0x73, 0x01, 0x27, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64]; p.push(this.calculateChecksum(p)); return this.wrapCommand(p); }
+  public oracleMusicOff(): number[] { const p = [0x73, 0x01, 0x26, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64]; p.push(this.calculateChecksum(p)); return this.wrapCommand(p); }
+  public oracleMusicMic00(): number[] { const p = [0x73, 0x01, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64]; p.push(this.calculateChecksum(p)); return this.wrapCommand(p); }
+  public oracleMusicMissingIsOn(): number[] { const p = [0x73, 0x00, 0x01, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x80, 0x64]; p.push(this.calculateChecksum(p)); return this.wrapCommand(p); }
+  public oracleSceneQuery(): number[] { const p = [0x58, 0xF0]; p.push(this.calculateChecksum(p)); return this.wrapCommand(p); }
+  public oracleSceneActivate(slot: number): number[] { const p = [0x57, slot & 0xFF, 0x32, 0x64]; p.push(this.calculateChecksum(p)); return this.wrapCommand(p); }
+  public oracleSceneDelete(slot: number): number[] { const p = [0x56, slot & 0xFF, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; p.push(this.calculateChecksum(p)); return this.wrapCommand(p); }
 
   // ─── HAL ENCLOSURE: BUFFER LOCKOUT DEFENSE (R-19) ────────────────────────────
 

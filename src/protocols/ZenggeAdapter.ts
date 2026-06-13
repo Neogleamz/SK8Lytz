@@ -258,48 +258,8 @@ export class ZenggeAdapter implements IControllerProtocol {
    * @param mtu     Negotiated BLE MTU for this device.
    */
   prepareForTransmission(result: ProtocolResult, mtu: number): ProtocolResult {
-    const safeMtu = mtu - 3; // Subtract 3 bytes ATT overhead
-    const CHUNK_HEADER_SIZE = 3; // [0x40, chunkIndex, totalChunks]
-    const chunkPayloadSize = safeMtu - CHUNK_HEADER_SIZE;
-
-    let needsChunking = false;
-    for (const packet of result.packets) {
-      if (packet.length > safeMtu) {
-        needsChunking = true;
-        break;
-      }
-    }
-
-    if (!needsChunking) return result;
-
-    const chunkedPackets: number[][] = [];
-
-    for (const packet of result.packets) {
-      if (packet.length <= safeMtu) {
-        // Packet fits in one MTU — send as-is
-        chunkedPackets.push(packet);
-      } else {
-        // Fragment into 0x40-prefixed chunks
-        const totalChunks = Math.ceil(packet.length / chunkPayloadSize);
-        for (let i = 0; i < totalChunks; i++) {
-          const chunkData = packet.slice(i * chunkPayloadSize, (i + 1) * chunkPayloadSize);
-          chunkedPackets.push([
-            0x40,              // Zengge chunk framing opcode
-            i & 0xFF,          // chunk index (0-based)
-            totalChunks & 0xFF, // total chunk count
-            ...chunkData,
-          ]);
-        }
-      }
-    }
-
-    return {
-      packets: chunkedPackets,
-      // Add 8ms inter-chunk delay when we actually chunked something
-      interPacketDelayMs: chunkedPackets.length > result.packets.length
-        ? Math.max(8, result.interPacketDelayMs)
-        : result.interPacketDelayMs,
-      isRateLimited: result.isRateLimited,
-    };
+    // 0x40 chunking is now handled exclusively by BleWriteDispatcher.
+    // ZenggeAdapter should only emit flat, protocol-level payloads.
+    return result;
   }
 }
