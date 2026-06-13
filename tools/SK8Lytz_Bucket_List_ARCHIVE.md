@@ -1856,3 +1856,13 @@ pm run verify which includes QA tests.
     Key finding: "Core SafeAreaView does not respect Android notification bar insets correctly."
   - **Source of Truth:** 📖 [GlobalErrorBoundary.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/GlobalErrorBoundary.tsx#L2) · [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx#L11)
   - **Details:** Replaces the deprecated import in the two remaining files. Drops into existing UI with no layout shifts other than correct notch spacing.
+
+- [x] **`fix/admin-modal-safe-areas`** [merge: efe231b2] 🚀 Merged in efe231b2
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 LOW]` `[BATCH:admin-modal-safe-areas]` `[WAVE:1]`
+  - **Goal:** Migrate remaining legacy SafeAreaView imports in Admin/Account Modals to react-native-safe-area-context.
+  - **Decision Log:** Codebase audit revealed 8 admin panels and EulaModal still use core SafeAreaView, and AccountModal uses an unpadded absolute `top: 16`.
+  - **Analysis:** 📊 Source: N/A · Plan: [PLAN-fix-admin-modal-safe-areas.md](./plans/PLAN-fix-admin-modal-safe-areas.md)
+    Key finding: "Legacy SafeAreaView allows notch bleeding on Android."
+    Rejected alternative: "Ignore since they are admin tools" — breaks UX for power users and EulaModal affects all users.
+  - **Source of Truth:** 📖 [AdminToolsModal.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/AdminToolsModal.tsx)
+  - **Details:** Simple import swap across 8 files and one dynamic padding change.

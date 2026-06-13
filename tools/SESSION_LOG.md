@@ -148,6 +148,20 @@ TSC: ✅  Jest: ✅
 **Files touched:**
 - `src/context/SessionContext.tsx`
 
+### [MERGE] 2026-06-13T04:40 — fix/admin-modal-safe-areas → master @ efe231b2
+**What merged:** Migrated `SafeAreaView` to `react-native-safe-area-context` for Admin Modals and AccountModal, preventing notch bleeding on Android.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:**
+- `src/components/AccountModal.tsx`
+- `src/components/admin/AdminToolsModal.tsx`
+- `src/components/admin/tools/AdminAuditLogViewer.tsx`
+- `src/components/admin/tools/AdminRosterPanel.tsx`
+- `src/components/admin/tools/AppManager.tsx`
+- `src/components/admin/tools/FeatureFlagsPanel.tsx`
+- `src/components/admin/tools/HardwareBlacklistPanel.tsx`
+- `src/components/admin/tools/UserManagementPanel.tsx`
+- `src/components/modals/EulaModal.tsx`
+
 ### [MERGE] 2026-06-11T21:47 — feat/session-services-layer → master @ b9c7baa9
 **What merged:**
 - Created session-specific services layer leveraging XState v5 patterns.
