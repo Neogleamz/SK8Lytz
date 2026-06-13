@@ -23,3 +23,5 @@ export const STORAGE_AUTH_MIGRATION_FLAG = '@Sk8lytz_auth_migration_v1';
 export const STORAGE_SUPABASE_AUTH_KEY = 'supabase.auth.token';
 export const STORAGE_AUTH_USERNAME = '@Sk8lytz_auth_username';
 export const STORAGE_EULA_ACCEPTED = '@Sk8lytz_offline_eula_accepted';
+
+export const STORAGE_FAVORITES = '@Sk8lytz_Favorites';

@@ -8,7 +8,15 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Spacing } from '../theme/theme';
 
 interface LocationPickerMapProps {
-  [key: string]: any;
+  style?: import('react-native').StyleProp<import('react-native').ViewStyle>;
+  initialRegion?: {
+    latitude: number;
+    longitude: number;
+    latitudeDelta: number;
+    longitudeDelta: number;
+  };
+  onRegionChangeComplete?: (region: { latitude: number; longitude: number; }) => void;
+  children?: React.ReactNode;
 }
 
 export default function LocationPickerMap(_props: LocationPickerMapProps) {

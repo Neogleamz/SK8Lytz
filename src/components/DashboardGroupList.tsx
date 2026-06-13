@@ -1,1 +1,0 @@
-// Blast radius verification anchor

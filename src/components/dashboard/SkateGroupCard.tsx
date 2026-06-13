@@ -6,6 +6,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { webStyle } from '../../utils/webStyles';
 import type { ThemePalette } from '../../theme/theme';
 import type { CustomGroup } from '../../types/dashboard.types';
+import type { UserProfile } from '../../services/ProfileService';
 
 interface SkateGroupCardProps {
   group: CustomGroup;
@@ -15,7 +16,7 @@ interface SkateGroupCardProps {
   lastPattern?: string;
   isActive?: boolean;
   rssiMap?: Record<string, number>;
-  userProfile: any;
+  userProfile: UserProfile | null;
   powerStates: Record<string, boolean>;
   Colors: ThemePalette;
   styles: Record<string, import('react-native').StyleProp<import('react-native').ViewStyle | import('react-native').TextStyle>>;

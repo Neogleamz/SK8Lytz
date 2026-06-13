@@ -48,6 +48,7 @@ const CrewHubSlab = React.memo(({
   styles,
 }: CrewHubSlabProps) => {
   const context = useOptionalCrewContext();
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
   const hub = context?.hub;
   const { isVisibilityAllowed } = useAppConfig();
   const showMap = isVisibilityAllowed('visibility_maps_tab');
@@ -178,7 +179,7 @@ const CrewHubSlab = React.memo(({
                   <CrewLandingMap
                     nearbySpots={hub?.nearbySpots || []}
                     nearbySessions={[]}
-                    pulseAnim={new Animated.Value(1)}
+                    pulseAnim={pulseAnim}
                     handleJoinById={() => {}}
                     locationCoords={hub?.locationCoords ?? null}
                     discoverRadiusMi={hub?.discoverRadiusMi ?? 10}

@@ -56,6 +56,7 @@ import { useDashboardAutoConnect } from '../hooks/useDashboardAutoConnect';
 import { useDashboardGroups } from '../hooks/useDashboardGroups';
 import { useDashboardProfile } from '../hooks/useDashboardProfile';
 import { useDashboardCrew } from '../hooks/useDashboardCrew';
+import { STORAGE_FAVORITES } from '../constants/storageKeys';
 
 import { useHardwareNotifications, BLEDeviceMinimal, ProbedHardwareConfig } from '../hooks/useHardwareNotifications';
 import { useDeviceStateLedger, normalizeMac } from '../hooks/useDeviceStateLedger';
@@ -180,9 +181,11 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
 
   const [updateTrigger, setUpdateTrigger] = useState(0);
   const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
-  const [isTestModeActive, setIsTestModeActive] = useState(false);
-  // isDisconnecting removed — bleState === 'DISCONNECTING' is the canonical FSM gate
-  const [isDiagnosticsMode, setIsDiagnosticsMode] = useState(false);
+  type DiagnosticFsmState = 'IDLE' | 'TEST_MODE' | 'DIAGNOSTICS';
+  const [diagnosticState, setDiagnosticState] = useState<DiagnosticFsmState>('IDLE');
+  const isTestModeActive = diagnosticState === 'TEST_MODE';
+  const isDiagnosticsMode = diagnosticState === 'DIAGNOSTICS';
+  // isDisconnecting removed - bleState === 'DISCONNECTING' is the canonical FSM gate
 
   // ── Phase 1: Fleet Groups, Device Configs, Power States → useDashboardGroups ───────
   // Declare refs before domain hooks that consume them
@@ -236,7 +239,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     saveRegisteredDevice,
 
     clearPendingRegistrations,
-    getAllScannedDevices: () => allDevicesRef.current as unknown as DisplayDevice[],
+    getAllScannedDevices: () => allDevicesRef.current as Pick<DisplayDevice, 'id' | 'name'>[] as DisplayDevice[],
     setAllDevices: setAllDevices as unknown as React.Dispatch<React.SetStateAction<DisplayDevice[]>>,
     allDevicesRef: allDevicesRef as unknown as React.MutableRefObject<DisplayDevice[]>,
     deregisterDevice,
@@ -645,7 +648,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     // Load the last-used IFavoriteState from AsyncStorage (same key as useFavorites)
     let lastFav: IFavoriteState | null = null;
     try {
-      const raw = await AsyncStorage.getItem('@Sk8lytz_Favorites');
+      const raw = await AsyncStorage.getItem(STORAGE_FAVORITES);
       if (raw) {
         const favs = JSON.parse(raw) as IFavoriteState[];
         if (Array.isArray(favs) && favs.length > 0) {
@@ -699,7 +702,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   useEffect(() => {
     const handleBackPress = () => {
       if (isTestModeActive) {
-        setIsTestModeActive(false);
+        setDiagnosticState('IDLE');
         return true; // intercept
       }
       if (bleState === 'DISCONNECTING') {
@@ -729,13 +732,13 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
       },
       onPanResponderRelease: (evt, gestureState) => {
         if (gestureState.dx > 60) {
-          if (isTestModeActive) setIsTestModeActive(false);
+          if (isTestModeActive) setDiagnosticState('IDLE');
           else if ((isActuallyConnected || isSkateSessionActive) && bleState !== 'DISCONNECTING') handleCloseController();
         }
       },
       onPanResponderTerminate: (evt, gestureState) => {
         if (gestureState.dx > 60) {
-          if (isTestModeActive) setIsTestModeActive(false);
+          if (isTestModeActive) setDiagnosticState('IDLE');
           else if ((isActuallyConnected || isSkateSessionActive) && bleState !== 'DISCONNECTING') handleCloseController();
         }
       }
@@ -753,7 +756,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
 
     // 3. Dispatch BLE command to each device via HAL
     for (const mac of deviceIds) {
-      dispatch.setPower(targetState, mac);
+      await dispatch.setPower(targetState, mac);
     }
   }, [powerStates, setPowerState, dispatch]);
 
@@ -1073,9 +1076,9 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
                 <MySkatesSlab
                   customGroups={customGroups}
                   lastGroupPatterns={lastGroupPatterns}
-                  allDevices={allDevices}
-                  connectedDevices={connectedDevices}
-                  registeredDevices={registeredDevices}
+                  allDevices={allDevices as Pick<DisplayDevice, 'id' | 'name'>[] as DisplayDevice[]}
+                  connectedDevices={connectedDevices as Pick<DisplayDevice, 'id' | 'name'>[] as DisplayDevice[]}
+                  registeredDevices={registeredDevices as unknown as DisplayDevice[]}
                   powerStates={powerStates}
                   userProfile={userProfile}
                   onGroupPress={handleGroupPress}
@@ -1222,7 +1225,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
           }}
           onDisconnectFromDevice={async (_id: string) => { handleDisconnect(); }}
           isDiagnosticsMode={isDiagnosticsMode}
-          onToggleDiagnostics={() => setIsDiagnosticsMode(!isDiagnosticsMode)}
+          onToggleDiagnostics={() => setDiagnosticState(isDiagnosticsMode ? 'IDLE' : 'DIAGNOSTICS')}
           hwSettings={activeHwSettings}
         />
       )}

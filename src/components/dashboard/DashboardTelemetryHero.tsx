@@ -9,7 +9,7 @@ import { SessionPhaseBadge } from '../session/SessionPhaseBadge';
 import type { SessionPhase } from '../../services/session/SessionMachine.types';
 
 // Wrapper to strip the 'collapsable' prop injected by Animated which causes DOM errors on Web
-const CircleWrapper = React.forwardRef<any, any>((props: any, ref) => {
+const CircleWrapper = React.forwardRef<React.ElementRef<typeof Circle>, React.ComponentProps<typeof Circle> & { collapsable?: boolean }>((props, ref) => {
   const { collapsable, ...rest } = props;
   return <Circle ref={ref} {...rest} />;
 });

@@ -4,8 +4,10 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { Spacing, Typography } from '../../theme/theme';
 
+import { DisplayDevice } from '../../types/dashboard.types';
+
 interface HardwareStatusPillsProps {
-  device: any;
+  device: Record<string, any>;
   small?: boolean;
 }
 
