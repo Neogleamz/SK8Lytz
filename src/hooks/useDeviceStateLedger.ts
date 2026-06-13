@@ -24,7 +24,9 @@ import type { DevicePatternState } from '../types/dashboard.types';
 import { scrubPII } from '../utils/piiScrubber';
 
 
-const KEY_PREFIX = '@SK8Lytz_DeviceState_v2_';
+import { STORAGE_DEVICE_STATE_V2_PREFIX } from '../constants/storageKeys';
+
+const KEY_PREFIX = STORAGE_DEVICE_STATE_V2_PREFIX;
 
 /**
  * Normalize any device ID to a clean uppercase MAC address.
@@ -92,7 +94,7 @@ export async function warmLedgerCache(): Promise<void> {
           memoryCache.set(normalizeMac(parsed.deviceMac), parsed);
         }
       } catch (e: unknown) {
-        AppLogger.warn('Failed to parse ledger entry from storage during cache warm', e instanceof Error ? e.message : String(e));
+        AppLogger.warn('Failed to parse ledger entry from storage during cache warm', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       }
     });
   } catch (e: unknown) {
@@ -137,7 +139,7 @@ export function useDeviceStateLedger() {
 
     const timer = setTimeout(() => {
       AsyncStorage.setItem(`${KEY_PREFIX}${key}`, JSON.stringify(entry)).catch((e) => {
-        AppLogger.warn('PERSISTENCE', { key: `${KEY_PREFIX}${key}`, event: 'ledger_write_failed', error: (e instanceof Error ? e.message : String(e)) });
+        AppLogger.warn('PERSISTENCE', { key: '[REDACTED]', event: 'ledger_write_failed', error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 });
       });
       debounceTimers.delete(key);
     }, LEDGER_WRITE_DEBOUNCE_MS);
@@ -196,7 +198,7 @@ export function useDeviceStateLedger() {
     }
 
     memoryCache.delete(key);
-    await AsyncStorage.removeItem(`${KEY_PREFIX}${key}`).catch((e) => AppLogger.warn('PERSISTENCE', { key: `${KEY_PREFIX}${key}`, event: 'ledger_clear_failed', error: (e instanceof Error ? e.message : String(e)) }));
+    await AsyncStorage.removeItem(`${KEY_PREFIX}${key}`).catch((e) => AppLogger.warn('PERSISTENCE', { key: '[REDACTED]', event: 'ledger_clear_failed', error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 }));
   }, []);
 
   return { save, load, loadSync, clear };

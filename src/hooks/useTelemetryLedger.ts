@@ -4,7 +4,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../services/supabaseClient';
 import { AppLogger } from '../services/AppLogger';
 
-const TELEMETRY_BUFFER_KEY = '@sk8lytz_telemetry_buffer';
+import { STORAGE_TELEMETRY_BUFFER } from '../constants/storageKeys';
+
+const TELEMETRY_BUFFER_KEY = STORAGE_TELEMETRY_BUFFER;
 
 export interface TelemetryPayload {
   total_app_time_sec?: number;
@@ -165,7 +167,7 @@ export function useTelemetryLedger() {
         
       } catch (err: unknown) {
         // Failed (e.g., offline). Save back to AsyncStorage to retry later.
-        AppLogger.warn('Telemetry flush failed, buffering locally', err instanceof Error ? err.message : String(err));
+        AppLogger.warn('Telemetry flush failed, buffering locally', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
         try {
           await AsyncStorage.setItem(TELEMETRY_BUFFER_KEY, JSON.stringify(payloadToUpload));
           // Reset memory buffer so we don't accumulate duplicates if it stays running

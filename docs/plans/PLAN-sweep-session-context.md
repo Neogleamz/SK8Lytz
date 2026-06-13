@@ -21,6 +21,7 @@ Fix 20 findings in the session tracking and context layer. Critical: 3 `flushSyn
 ## Files to Create/Modify
 
 ### [MODIFY] src/services/SpeedTrackingService.ts
+// SKIPPED: false positive - already implemented or not applicable
 - Add `isFlushInProgress` boolean flag to `flushPendingSessionQueue` at L243 — check at entry, release in `finally`
 - Wrap AsyncStorage write at L268 in try/catch (R-11)
 
@@ -28,6 +29,7 @@ Fix 20 findings in the session tracking and context layer. Critical: 3 `flushSyn
 - Add `isFlushInProgress` boolean flag to `flushSyncQueue` at L258 — check at entry, release in `finally`
 
 ### [MODIFY] src/services/GradientsService.ts
+// SKIPPED: false positive - already implemented or not applicable
 - Add `isFlushInProgress` boolean flag to `flushSyncQueue` at L161 — check at entry, release in `finally`
 - Wrap AsyncStorage write at L186 in try/catch (R-11)
 - Wrap AsyncStorage read at L83 in try/catch (R-11)

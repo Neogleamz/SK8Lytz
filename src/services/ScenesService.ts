@@ -49,6 +49,7 @@ function isSceneStepArray(nodes: unknown): nodes is SceneStep[] {
 }
 
 class ScenesServiceClass {
+  private isFlushInProgress = false;
   
   async getPublicScenes(limit: number = 50, offset: number = 0): Promise<ICloudScene[]> {
     // Fire-and-forget background sync
@@ -364,7 +365,8 @@ class ScenesServiceClass {
   }
 
   async flushSyncQueue(userId: string) {
-    if (!supabase) return;
+    if (!supabase || this.isFlushInProgress) return;
+    this.isFlushInProgress = true;
     try {
       const rawQueue = await AsyncStorage.getItem(LOCAL_SCENE_SYNC_QUEUE_KEY);
       let queue: SceneSyncJob[] = rawQueue ? JSON.parse(rawQueue) : [];
@@ -410,6 +412,8 @@ class ScenesServiceClass {
       }
     } catch (e: unknown) {
       AppLogger.error('[ScenesService] Flush fail', { error: (e instanceof Error ? e.message : String(e)) , payload_size: 0, ssi: 0 });
+    } finally {
+      this.isFlushInProgress = false;
     }
   }
 }
