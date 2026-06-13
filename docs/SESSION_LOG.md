@@ -3403,3 +3403,12 @@ Files touched:
 - src/hooks/useDockedControllerState.ts
 - src/hooks/useStreetMode.ts
 TSC: ✅  Jest: ✅
+### [MERGE] 2026-06-13T15:54 — deepdive-sweep-batch Wave 6 → master @ 1db67c37
+**What merged:** 
+- chore/sweep-ui-docked-controller (Docked controller, Street mode UI matrix)
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** DockedController.tsx, BuilderPanel.tsx, etc.
+
+### [EVENT] 2026-06-13T15:54 — [BATCH:deepdive-sweep] COMPLETE
+The entire 6-wave deepdive-sweep batch has successfully merged to master.
+Active Sprint is now empty.
