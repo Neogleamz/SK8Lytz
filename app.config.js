@@ -18,8 +18,10 @@ module.exports = {
         NSMicrophoneUsageDescription: "SK8Lytz needs microphone access to synchronize your lights to ambient music.",
         NSCameraUsageDescription: "SK8Lytz needs camera access to sample colors from your environment for LED synchronization.",
         NSHealthShareUsageDescription: "SK8Lytz reads step count and heart rate to synchronize light patterns with your fitness metrics.",
-        NSHealthUpdateUsageDescription: "SK8Lytz writes your skating sessions to Apple Health to track fitness activity.",
-        NSLocationWhenInUseUsageDescription: "SK8Lytz uses your location to discover nearby skate spots and map your skating routes."
+        NSHealthUpdateUsageDescription: "SK8Lytz writes your inline skating sessions to Apple Health to track fitness activity.",
+        NSLocationWhenInUseUsageDescription: "SK8Lytz uses your location to discover nearby skate spots and map your skating routes.",
+        NSLocationAlwaysAndWhenInUseUsageDescription: "SK8Lytz tracks your location in the background to map your route even when your phone is in your pocket.",
+        NSLocationAlwaysUsageDescription: "SK8Lytz tracks your location in the background to map your route even when your phone is in your pocket."
       },
       buildNumber: "18",
       config: {
@@ -80,6 +82,7 @@ module.exports = {
             "central"
           ],
           bluetoothAlwaysPermission: "Allow Neogleamz App to connect to your Zengge roller skate controllers.",
+          bluetoothPeripheralPermission: "Allow Neogleamz App to connect to your Zengge roller skate controllers.",
           neverForLocation: false
         }
       ],
