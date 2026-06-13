@@ -1,4 +1,4 @@
-### [ARTIFACT] 2026-06-13T06:22 â€” system_audit_report.md Created
+ï»¿### [ARTIFACT] 2026-06-13T06:22 â€” system_audit_report.md Created
 | Artifact | Path | Description |
 |---|---|---|
 | Deep-Dive Synthesis Audit Report | [system_audit_report.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) | Deduped static audit report with parallel wave strategy table. |
@@ -3266,7 +3266,7 @@ TSC: âœ…  Jest: âœ…
 **Rejected:** Leaving files scattered across root which violated separation of concerns.
 **Don't re-derive:** The `docs/` directory is now the canonical source of truth for all rules, plans, and markdown documents. All .agents constitutional rules were updated to reflect this path shift.
 **Source:** C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\repo-restructure
-### [ARTIFACT] 2026-06-13T06:57 — session-telemetry-harden plans
+### [ARTIFACT] 2026-06-13T06:57 ï¿½ session-telemetry-harden plans
 - docs/plans/PLAN-fix-session-auto-pause-jitter.md
 - docs/plans/PLAN-fix-watch-sync-race-condition.md
 - docs/plans/PLAN-refactor-session-unified-heartbeat.md
@@ -3289,10 +3289,10 @@ TSC: âœ…  Jest: âœ…
 **Don't re-derive:** The wave ordering is not aesthetic â€” it is determined by import dependencies. Waves 1-6 must execute sequentially. Do NOT start Wave 2 until all 7 Wave 1 PRs are on master.
 **Source:** artifacts/domain_clusters.json + ast-parser.js collision matrix output
 
-### [MERGE READY] sweep-cloud-supabase — 6d73a045
+### [MERGE READY] sweep-cloud-supabase ï¿½ 6d73a045
 Files touched: supabase/migrations/20260414_account_deletion_rpc.sql, supabase/migrations/20260607100000_fix_telemetry_schema.sql, supabase/migrations/20260609175500_restore_domain_admin_promotion.sql, supabase/migrations/20260609140000_live_debugger_views.sql, supabase/migrations/20260614000000_harden_rls_scraper_blocklist.sql, supabase/functions/notify-crew-session/index.ts, src/services/supabaseClient.ts
 TSC: ?  Jest: ?
-### [EVENT] 2026-06-13T13:17 — [BATCH:deepdive-sweep] Wave 1 complete.
+### [EVENT] 2026-06-13T13:17 ï¿½ [BATCH:deepdive-sweep] Wave 1 complete.
 **What happened:** 7 autonomous subagents completed parallel sweep tasks.
 **Merged:** chore/sweep-cloud-supabase, chore/sweep-devops-tooling, chore/sweep-protocol-core, chore/sweep-ui-screens-dashboard, chore/sweep-ui-visualizer-patterns, chore/sweep-os-permissions-manifests, chore/sweep-native-watch
 **Status:** Fully verified via npm run verify and fortress-gatekeeper.
@@ -3326,24 +3326,24 @@ TSC: âœ…  Jest: âœ…
 Files touched: src/components/DeviceSettingsModal.tsx, src/components/GroupSettingsModal.tsx, src/components/SessionSummaryModal.tsx, src/components/CommunityModal.tsx, src/components/MarqueeText.tsx, src/components/CustomSlider.tsx, src/components/account/types.ts, src/components/account/account.types.ts, src/components/AccountModal.tsx, src/components/account/AccountTabCrewz.tsx, src/components/account/AccountTabDevices.tsx, src/components/account/AccountTabProfile.tsx, src/components/account/AccountTabSecurity.tsx, src/components/account/AccountTabSettings.tsx, src/components/account/AccountTabStats.tsx, src/services/SpeedTrackingService.ts, src/screens/DashboardScreen.tsx
 TSC: ?  Jest: ?
 
-### [EVENT] 2026-06-13T15:17 — [BATCH:deepdive-sweep] Wave 2 complete.
+### [EVENT] 2026-06-13T15:17 ï¿½ [BATCH:deepdive-sweep] Wave 2 complete.
 **What happened:** 4 autonomous subagents completed parallel sweep tasks.
 **Merged:** chore/sweep-ble-core-dispatch, chore/sweep-admin-telemetry, chore/sweep-storage-keys, chore/sweep-ui-modals-shared
 **Status:** Fully verified via npm run verify and fortress-gatekeeper.
 
 
-### [MERGE READY] sweep-identity-auth — b0489ad7
+### [MERGE READY] sweep-identity-auth ï¿½ b0489ad7
 Files touched: src/services/ProfileService.types.ts, src/services/AppLogger.ts, src/context/AuthContext.tsx, src/components/AccountModal.tsx, src/services/AuthProfileService.ts, src/hooks/useAccountOverview.ts
 TSC: ?  Jest: ?
 
 
-### [EVENT] 2026-06-13T15:24 — [BATCH:deepdive-sweep] Wave 3 complete.
+### [EVENT] 2026-06-13T15:24 ï¿½ [BATCH:deepdive-sweep] Wave 3 complete.
 **What happened:** 1 autonomous subagent completed parallel sweep task.
 **Merged:** chore/sweep-identity-auth
 **Status:** Fully verified via npm run verify and fortress-gatekeeper.
 
 
-### [MERGE READY] sweep-session-context — b0b42580b2ecae15c3c75289dbe6bb1b374e2d42
+### [MERGE READY] sweep-session-context ï¿½ b0b42580b2ecae15c3c75289dbe6bb1b374e2d42
 **Files touched:**
 - docs/plans/PLAN-sweep-session-context.md
 - src/services/ScenesService.ts
@@ -3351,7 +3351,7 @@ TSC: ?  Jest: ?
 - src/hooks/useTelemetryLedger.ts
 - src/hooks/useDeviceStateLedger.ts
 **TSC:** ?  **Jest:** ?
-### [MERGE READY] sweep-group-sync — 959385b3
+### [MERGE READY] sweep-group-sync ï¿½ 959385b3
 Files touched:
 - src/services/GroupRepository.ts
 - src/hooks/useCrewSession.ts
@@ -3365,3 +3365,9 @@ Files touched:
 TSC: ?  Jest: ?
 
 
+### [MERGE] 2026-06-13T15:41 â€” deepdive-sweep-batch Wave 4 â†’ master @ c5e1ccd3
+**What merged:** 
+- chore/sweep-group-sync (AST fixes, PII scrub, 4-state UI)
+- chore/sweep-session-context (re-entrancy locks, explicit keys)
+**Verify result:** TSC âœ…, Jest âœ…, gates âœ…
+**Files touched:** GroupRepository.ts, CrewService.ts, SessionContext.tsx, etc.

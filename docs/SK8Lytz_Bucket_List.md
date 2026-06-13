@@ -1,4 +1,4 @@
-# SK8Lytz Master Bucket List
+﻿# SK8Lytz Master Bucket List
 
 > Ã¢Å¡Â Ã¯Â¸Â AI AGENT DIRECTIVES (THE CONSTITUTION)
 > The constitution is located in `.agents/rules/kanban-constitution.md` for universal agent context injection.
@@ -49,11 +49,9 @@
 
 
 ## 🚧 ACTIVE SPRINT
-> Currently executing: Wave 4 parallel sweep
-> Completed: Wave 3
-- [/] **`chore/sweep-group-sync`**
-- [/] **`chore/sweep-session-context`**
-
+> Currently executing: Wave 5 sweep
+> Completed: Wave 4
+- [/] **chore/sweep-shared-utils**
 ## Ã°Å¸â€Âµ LOW: Ã¢Å“Â¨ New Features & UI Enhancements
 
 _User-facing product value and UI refinements._
@@ -110,22 +108,6 @@ _User-facing product value and UI refinements._
 | 6 | `chore/sweep-ui-docked-controller` | `sweep-ui-docked-controller` | `src/components/docked/UniversalSlidersFooter.tsx`, `src/components/docked/BuilderPanel.tsx`, `src/hooks/useStreetMode.ts`, `src/hooks/useDashboardController.tsx`, `src/components/DockedController.tsx` + 3 more | Wave 5 merged |
 
 ---
-
-- [ ] **`chore/sweep-group-sync`**
-  - **Tags:** `[READY]` `[CONFIRMED]` `[CLOUD]` `[H-RISK]` `[Feast]` `[H-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:4]`
-  - **Goal:** Eliminate 4 as-any type casts in GroupRepository and CrewService DB access paths, fix stale closure in useCrewProximityRadar, add 4-state UI to Crew screens, and PII-scrub 3 raw user data leaks.
-  - **Decision Log:** Fleet confirmed 4x as-any on GroupRepository + CrewService Supabase row access — bypasses shape validation on DB rows, causing runtime crashes when schema evolves. useCrewProximityRadar:131 captures crewService.isNearby as non-reactive, causing proximity radar to never update after initial mount.
-  - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-group-sync.md](./plans/PLAN-sweep-group-sync.md) — Key finding: "4x as-any on DB row access in GroupRepository/CrewService; stale closure in useCrewProximityRadar stops proximity radar after mount" — Rejected: "Runtime schema validation library" — overweight; Supabase-generated types already present in project
-  - **Source of Truth:** [GroupRepository.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/GroupRepository.ts#L27) · [useCrewProximityRadar.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useCrewProximityRadar.ts#L131)
-  - **Details:** Prerequisite: Wave 3 fully merged into master before this worktree is created.
-
-- [ ] **`chore/sweep-session-context`**
-  - **Tags:** `[READY]` `[CONFIRMED]` `[SERVICES]` `[H-RISK]` `[Meal]` `[H-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:4]`
-  - **Goal:** Add isFlushInProgress re-entrancy guards to 3 flushSyncQueue functions, add try/catch to 3 unawaited AsyncStorage calls in SessionContext, and register 6 undocumented storage keys into the registry.
-  - **Decision Log:** Fleet confirmed SpeedTrackingService, ScenesService, and GradientsService all have the same re-entrancy bug — concurrent callers double-upload the queue then both clear it, silently deleting pending session data that one caller never successfully POSTed. This is an active data loss bug.
-  - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-session-context.md](./plans/PLAN-sweep-session-context.md) — Key finding: "3x flushSyncQueue with no re-entrancy guard — concurrent callers corrupt queue and silently delete pending session data (2 agents confirmed)" — Rejected: "Move flush to singleton scheduler" — boolean ref guard solves problem with zero new dependencies
-  - **Source of Truth:** [SpeedTrackingService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/SpeedTrackingService.ts#L243) · [ScenesService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ScenesService.ts#L258) · [GradientsService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/GradientsService.ts#L161)
-  - **Details:** Prerequisite: Wave 3 fully merged into master before this worktree is created.
 
 - [ ] **`chore/sweep-shared-utils`**
   - **Tags:** `[READY]` `[CONFIRMED]` `[SERVICES]` `[M-RISK]` `[Snack]` `[L-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:5]`
