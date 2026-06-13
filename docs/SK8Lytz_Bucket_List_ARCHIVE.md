@@ -1967,4 +1967,13 @@ pm run verify which includes QA tests.
   - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-ui-modals-shared.md](./plans/PLAN-sweep-ui-modals-shared.md) — Key finding: "DeviceSettingsModal and GroupSettingsModal ignore dark mode — static color import bypasses useTheme()" — Rejected: "Pass colors as props" — props threading for theme is an antipattern; hook consumption is correct
   - **Source of Truth:** [DeviceSettingsModal.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DeviceSettingsModal.tsx#L7) · [account/types.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/account/types.ts)
   - **Details:** Prerequisite: Wave 1 fully merged into master before this worktree is created.
+
+
+- [x] **`chore/sweep-identity-auth`**
+  - **Tags:** `[READY]` `[CONFIRMED]` `[AUTH]` `[H-RISK]` `[Snack]` `[M-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:3]`
+  - **Goal:** Fix notif_preferences: any in core profile type, remove direct supabase.auth.getUser() from AppLogger, and fix 5 AppLogger telemetry context structure errors in auth layer.
+  - **Decision Log:** Fleet confirmed ProfileService.types.ts:21 declares notif_preferences: any — this core type field poisons every component that consumes the profile type. AppLogger.ts:674 fires a live supabase.auth.getUser() network call on every log flush cycle, adding latency and failing silently when offline.
+  - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-identity-auth.md](./plans/PLAN-sweep-identity-auth.md) — Key finding: "notif_preferences: any in core type; AppLogger fires live auth network call on every log flush" — Rejected: "Cast to unknown instead of any" — still loses type information; proper interface required
+  - **Source of Truth:** [ProfileService.types.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ProfileService.types.ts#L21) · [AppLogger.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/AppLogger.ts#L674)
+  - **Details:** Prerequisite: Wave 2 fully merged into master before this worktree is created.
 

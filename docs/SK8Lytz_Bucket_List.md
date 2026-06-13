@@ -48,12 +48,11 @@
   - **Decision Log (2026-06-13):** Found during Supabase log audit. Check constraint restricts severity to FATAL/ERROR/WARN/INFO, but code sends CRITICAL.
 
 
-## Ã°Å¸Å¡Â§ ACTIVE SPRINT
-> Currently executing: **`feat/harden-ble-regression-shields`**
-> Completed: N/A
-
-
-
+## 🚧 ACTIVE SPRINT
+> Currently executing: Wave 4 parallel sweep
+> Completed: Wave 3
+- [/] **`chore/sweep-group-sync`**
+- [/] **`chore/sweep-session-context`**
 
 ## Ã°Å¸â€Âµ LOW: Ã¢Å“Â¨ New Features & UI Enhancements
 
@@ -111,14 +110,6 @@ _User-facing product value and UI refinements._
 | 6 | `chore/sweep-ui-docked-controller` | `sweep-ui-docked-controller` | `src/components/docked/UniversalSlidersFooter.tsx`, `src/components/docked/BuilderPanel.tsx`, `src/hooks/useStreetMode.ts`, `src/hooks/useDashboardController.tsx`, `src/components/DockedController.tsx` + 3 more | Wave 5 merged |
 
 ---
-
-- [ ] **`chore/sweep-identity-auth`**
-  - **Tags:** `[READY]` `[CONFIRMED]` `[AUTH]` `[H-RISK]` `[Snack]` `[M-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:3]`
-  - **Goal:** Fix notif_preferences: any in core profile type, remove direct supabase.auth.getUser() from AppLogger, and fix 5 AppLogger telemetry context structure errors in auth layer.
-  - **Decision Log:** Fleet confirmed ProfileService.types.ts:21 declares notif_preferences: any — this core type field poisons every component that consumes the profile type. AppLogger.ts:674 fires a live supabase.auth.getUser() network call on every log flush cycle, adding latency and failing silently when offline.
-  - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-identity-auth.md](./plans/PLAN-sweep-identity-auth.md) — Key finding: "notif_preferences: any in core type; AppLogger fires live auth network call on every log flush" — Rejected: "Cast to unknown instead of any" — still loses type information; proper interface required
-  - **Source of Truth:** [ProfileService.types.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ProfileService.types.ts#L21) · [AppLogger.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/AppLogger.ts#L674)
-  - **Details:** Prerequisite: Wave 2 fully merged into master before this worktree is created.
 
 - [ ] **`chore/sweep-group-sync`**
   - **Tags:** `[READY]` `[CONFIRMED]` `[CLOUD]` `[H-RISK]` `[Feast]` `[H-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:4]`
