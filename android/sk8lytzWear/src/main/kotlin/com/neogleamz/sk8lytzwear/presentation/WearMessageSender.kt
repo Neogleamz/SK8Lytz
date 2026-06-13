@@ -93,13 +93,19 @@ object WearMessageSender {
 
                 val nodes = Wearable.getNodeClient(context).connectedNodes.await()
                 if (nodes.isEmpty()) {
-                    val buffer = getPendingTelemetry(context)
-                    buffer.put(jsonObj)
-                    savePendingTelemetry(context, buffer)
-                    Log.d(TAG, "Phone disconnected. Buffered health update. Queue size: ${buffer.length()}")
+                    val queueSize = synchronized(this) {
+                        val buffer = getPendingTelemetry(context)
+                        buffer.put(jsonObj)
+                        savePendingTelemetry(context, buffer)
+                        buffer.length()
+                    }
+                    Log.d(TAG, "Phone disconnected. Buffered health update. Queue size: $queueSize")
                 } else {
-                    val buffer = getPendingTelemetry(context)
-                    buffer.put(jsonObj)
+                    val buffer = synchronized(this) {
+                        val b = getPendingTelemetry(context)
+                        b.put(jsonObj)
+                        b
+                    }
                     
                     var allSent = true
                     for (i in 0 until buffer.length()) {
@@ -111,7 +117,7 @@ object WearMessageSender {
                         }
                     }
                     if (allSent) {
-                        clearPendingTelemetry(context)
+                        synchronized(this) { clearPendingTelemetry(context) }
                         Log.d(TAG, "Health relay flushed ${buffer.length()} items → ${nodes.size} node(s)")
                     }
                 }

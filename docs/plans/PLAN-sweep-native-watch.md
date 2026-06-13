@@ -41,3 +41,7 @@ Fix 10 findings in the native Watch and Wear OS layers. Critical: `WatchConnecti
 - Manual review of Swift diff — confirm all `@Published` mutations are on main thread
 - Manual review of Kotlin diff — confirm atomicity of SharedPreferences write
 - `npm run verify` for any JS/TS touch points
+
+// SKIPPED: android/sk8lytzWear/src/main/kotlin/com/neogleamz/sk8lytzwear/services/HealthTracker.kt already has ExerciseType.INLINE_SKATING at L64.
+// SKIPPED: targets/watch/WatchConnectivityManager.swift @Published mutations inside WCSession delegate callbacks are already wrapped in DispatchQueue.main.async via the handlePayload wrapper.
+

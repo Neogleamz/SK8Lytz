@@ -11,6 +11,7 @@ module.exports = _config => ({
   entitlements: {
     // Required for HKWorkoutSession access on the watch target
     "com.apple.developer.healthkit": true,
+    "com.apple.developer.healthkit.background-delivery": true,
     "com.apple.developer.healthkit.access": [],
   },
   // Required Info.plist keys for HealthKit — Apple rejects without these

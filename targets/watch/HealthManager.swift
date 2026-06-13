@@ -49,7 +49,7 @@ class HealthManager: NSObject, ObservableObject, HKWorkoutSessionDelegate, HKLiv
 
     func startWorkout() {
         let configuration = HKWorkoutConfiguration()
-        configuration.activityType = .skatingSports
+        configuration.activityType = .inlineSkating
         configuration.locationType = .outdoor
 
         do {

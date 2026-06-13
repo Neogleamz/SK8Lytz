@@ -2,6 +2,7 @@ import Foundation
 import WatchConnectivity
 import WatchKit
 import ClockKit
+import os
 
 /// Manages bidirectional WCSession communication between the watch app and the iOS host.
 /// Acts as the single source of truth for session state and telemetry pushed from the phone.
@@ -58,10 +59,11 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     func session(_ session: WCSession,
                  activationDidCompleteWith activationState: WCSessionActivationState,
                  error: Error?) {
+        let logger = Logger(subsystem: "com.neogleamz.sk8lytz", category: "WatchConnectivity")
         if let error = error {
-            print("[WCSession] Activation failed: \(error.localizedDescription)")
+            logger.error("[WCSession] Activation failed: \(error.localizedDescription)")
         } else {
-            print("[WCSession] Activated — state: \(activationState.rawValue)")
+            logger.notice("[WCSession] Activated — state: \(activationState.rawValue)")
         }
     }
 
