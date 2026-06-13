@@ -3351,3 +3351,17 @@ TSC: ?  Jest: ?
 - src/hooks/useTelemetryLedger.ts
 - src/hooks/useDeviceStateLedger.ts
 **TSC:** ?  **Jest:** ?
+### [MERGE READY] sweep-group-sync — 959385b3
+Files touched:
+- src/services/GroupRepository.ts
+- src/hooks/useCrewSession.ts
+- src/services/CrewProfileService.ts
+- src/hooks/useCrewHub.ts
+- src/hooks/useCrewManage.ts
+- src/hooks/useCrewProximityRadar.ts
+- src/components/CrewMemberDashboard.tsx
+- src/components/crew/CrewLandingScreen.tsx
+- src/components/crew/CrewJoinScreen.tsx
+TSC: ?  Jest: ?
+
+
