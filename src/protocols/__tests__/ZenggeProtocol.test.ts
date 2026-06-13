@@ -220,60 +220,16 @@ describe('ZenggeAdapter', () => {
   });
 
   describe('prepareForTransmission', () => {
-    it('should pass through small packets unchanged', () => {
-      const small: ProtocolResult = {
-        packets: [[0x59, 0x00, 0x2D, ...new Array(45).fill(0)]],
-        interPacketDelayMs: 0,
-        isRateLimited: true,
-      };
-      const prepared = adapter.prepareForTransmission(small, 186);
-      expect(prepared.packets).toHaveLength(1);
-      expect(prepared.packets[0]).toEqual(small.packets[0]);
-    });
-
-    it('should chunk a 323-byte 0x51 extended packet into multiple 0x40 chunks (MTU=186)', () => {
-      // 323 bytes > (186-3)=183 safeMtu → must chunk
-      // chunkPayloadSize = 183 - 3 (header) = 180 bytes per chunk
-      // chunks = ceil(323 / 180) = 2
-      const largePayload = [0x51, ...new Array(322).fill(0xAB)];
-      const large: ProtocolResult = {
-        packets: [largePayload],
-        interPacketDelayMs: 0,
-        isRateLimited: true,
-      };
-      const prepared = adapter.prepareForTransmission(large, 186);
-
-      // Must produce 2 chunks
-      expect(prepared.packets).toHaveLength(2);
-
-      // Each chunk starts with [0x40, chunkIndex, totalChunks]
-      expect(prepared.packets[0][0]).toBe(0x40);
-      expect(prepared.packets[0][1]).toBe(0x00); // chunk 0
-      expect(prepared.packets[0][2]).toBe(0x02); // total 2
-
-      expect(prepared.packets[1][0]).toBe(0x40);
-      expect(prepared.packets[1][1]).toBe(0x01); // chunk 1
-      expect(prepared.packets[1][2]).toBe(0x02); // total 2
-
-      // Inter-packet delay should be at least 8ms when chunking
-      expect(prepared.interPacketDelayMs).toBeGreaterThanOrEqual(8);
-
-      // Verify no data is lost
-      const chunk0Data = prepared.packets[0].slice(3);
-      const chunk1Data = prepared.packets[1].slice(3);
-      const reconstructed = [...chunk0Data, ...chunk1Data];
-      expect(reconstructed).toEqual(largePayload);
-    });
-
-    it('should use 8ms delay when chunking, preserving larger delays', () => {
+    it('should pass through packets unchanged (chunking is now handled by BleWriteDispatcher)', () => {
       const largePayload = new Array(300).fill(0xCC);
       const large: ProtocolResult = {
         packets: [largePayload],
-        interPacketDelayMs: 20, // larger than 8ms
-        isRateLimited: false,
+        interPacketDelayMs: 20,
+        isRateLimited: true,
       };
       const prepared = adapter.prepareForTransmission(large, 186);
-      // Should preserve the 20ms delay since it's larger than the 8ms minimum
+      expect(prepared.packets).toHaveLength(1);
+      expect(prepared.packets[0]).toEqual(largePayload);
       expect(prepared.interPacketDelayMs).toBe(20);
     });
   });
