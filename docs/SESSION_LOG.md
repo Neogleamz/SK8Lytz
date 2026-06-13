@@ -2637,3 +2637,7 @@ TSC: ✅  Jest: ✅
 **Rejected:** Single mega-batch all-parallel — 42 collision pairs confirmed by ast-parser.js; would cause VS-001-class merge conflicts.
 **Don't re-derive:** The wave ordering is not aesthetic — it is determined by import dependencies. Waves 1-6 must execute sequentially. Do NOT start Wave 2 until all 7 Wave 1 PRs are on master.
 **Source:** artifacts/domain_clusters.json + ast-parser.js collision matrix output
+
+### [MERGE READY] sweep-cloud-supabase � 6d73a045
+Files touched: supabase/migrations/20260414_account_deletion_rpc.sql, supabase/migrations/20260607100000_fix_telemetry_schema.sql, supabase/migrations/20260609175500_restore_domain_admin_promotion.sql, supabase/migrations/20260609140000_live_debugger_views.sql, supabase/migrations/20260614000000_harden_rls_scraper_blocklist.sql, supabase/functions/notify-crew-session/index.ts, src/services/supabaseClient.ts
+TSC: ?  Jest: ?
