@@ -1,7 +1,16 @@
-### [ARTIFACT] 2026-06-12T23:14 — SafeAreaView Migration Plan
+### [MERGE] 2026-06-12T23:20 — fix/app-safe-area-boundaries → master @ 1122bb39
+**What merged:**
+- Migrated core SafeAreaView imports to react-native-safe-area-context in GlobalErrorBoundary and HardwareSetupWizardScreen.
+- Fixed Android notch rendering bleed.
+- Suppressed pre-existing exhaustive-deps warnings in HardwareSetupWizardScreen.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** src/components/GlobalErrorBoundary.tsx, src/screens/Onboarding/HardwareSetupWizardScreen.tsx
+
+### 🗂️ Artifacts Created This Session
 | Artifact | Path | Description |
 |---|---|---|
-| SafeArea Boundaries Plan | [PLAN-fix-app-safe-area-boundaries.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-fix-app-safe-area-boundaries.md) | Migration plan from React Native core SafeAreaView to community safe-area-context to fix notch bleeding on Android. |
+| `PLAN-fix-admin-modal-safe-areas.md` | `docs/plans/PLAN-fix-admin-modal-safe-areas.md` | Implementation plan for fixing Admin/Account Modal safe area bleeding |
+| `PLAN-fix-app-safe-area-boundaries.md` | `docs/plans/PLAN-fix-app-safe-area-boundaries.md` | Implementation plan for Android notch layout fixes in Setup Wizard |
 
 ### [MERGE] 2026-06-12T22:30 — hardware-setup-batch → master @ c9c64b88
 **What merged:**

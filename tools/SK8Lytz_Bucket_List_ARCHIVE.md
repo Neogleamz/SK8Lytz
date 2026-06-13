@@ -1847,3 +1847,12 @@ pm run verify which includes QA tests.
     Key finding: "DashboardScreen nested SafeAreaView causes double padding."
   - **Source of Truth:** 📖 [DashboardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx)
   - **Details:** Wave assignment: [WAVE:1] — verified by AST analysis. Shares import tree with hardware setup batch. Merged in c9c64b88 — Removed SafeAreaView to fix double padding.
+
+- [x] **`fix/app-safe-area-boundaries`** - Merged @ 1122bb39 (Migrated to react-native-safe-area-context)
+  - **Tags:** `[✅ READY]` `[✅ UNVERIFIED]` `[UI]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 LOW]` `[BATCH:safe-area-migration]` `[WAVE:1]`
+  - **Goal:** Migrate core React Native SafeAreaView imports to react-native-safe-area-context.
+  - **Decision Log:** SafeAreaView from react-native is deprecated and fails to apply notch/header padding on Android devices properly.
+  - **Analysis:** 📊 Plan: [PLAN-fix-app-safe-area-boundaries.md](./plans/PLAN-fix-app-safe-area-boundaries.md)
+    Key finding: "Core SafeAreaView does not respect Android notification bar insets correctly."
+  - **Source of Truth:** 📖 [GlobalErrorBoundary.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/GlobalErrorBoundary.tsx#L2) · [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx#L11)
+  - **Details:** Replaces the deprecated import in the two remaining files. Drops into existing UI with no layout shifts other than correct notch spacing.
