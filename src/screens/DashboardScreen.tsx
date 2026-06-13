@@ -961,7 +961,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   }
 
   return (
-    <SafeAreaView testID="dashboard-screen" style={styles.safeArea}>
+    <View testID="dashboard-screen" style={styles.safeArea}>
       {BluetoothWarningBanner}
       {BatteryWarningBanner}
       <View style={styles.container}>
@@ -1228,7 +1228,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
       )}
 
 
-    </SafeAreaView>
+    </View>
   );
 }
 

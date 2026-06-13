@@ -96,7 +96,7 @@ export default function HardwareSetupWizardScreen({
          if (!cfg || !cfg.position) continue;
          
          const points = cfg.points || device.led_points || LOCAL_PRODUCT_CATALOG[0].defaultLedPoints;
-         const color = cfg.position === 'Left' ? { r: 255, g: 0, b: 0 } : { r: 0, g: 255, b: 0 };
+         const color = cfg.position === 'Left' ? { r: 27, g: 66, b: 121 } : { r: 247, g: 147, b: 32 };
          const colorArray = Array(points).fill(color);
          
          const payloadResult = adapter.buildMultiColor(colorArray, points, 1, 1, 0x00);
@@ -188,8 +188,17 @@ export default function HardwareSetupWizardScreen({
       const profile = getLocalProfileById(productType) || LOCAL_PRODUCT_CATALOG[0];
       const blinkPoints = registration?.led_points || profile.vizDefaultPoints;
 
-      // 0x59 static multi-color mode: Green
-      const colorArray = Array(blinkPoints).fill({ r: 0, g: 255, b: 0 });
+      const cfg = deviceConfigsState[deviceMac];
+      const pos = cfg?.position;
+      
+      let blinkColor = { r: 27, g: 66, b: 121 }; // Default Blue (#1B4279)
+      if (pos === 'Left') {
+          blinkColor = { r: 27, g: 66, b: 121 }; // Blue
+      } else if (pos === 'Right') {
+          blinkColor = { r: 247, g: 147, b: 32 }; // Orange
+      }
+      
+      const colorArray = Array(blinkPoints).fill(blinkColor);
       const adapter = getDefaultProtocol();
       const blinkPayloadResult = adapter.buildMultiColor(colorArray, blinkPoints, 1, 1, 0x00);
       const blinkPayload = blinkPayloadResult.packets[0];
@@ -396,12 +405,9 @@ export default function HardwareSetupWizardScreen({
                        cfg2.position = tempPos;
                      }
                      
-                     if (cfg1.name.toLowerCase().includes('left') || cfg1.name.toLowerCase().includes('right') || 
-                         cfg2.name.toLowerCase().includes('left') || cfg2.name.toLowerCase().includes('right')) {
-                         const tempName = cfg1.name;
-                         cfg1.name = cfg2.name;
-                         cfg2.name = tempName;
-                     }
+                     // Ensure names match the newly swapped positions
+                     if (cfg1.position) cfg1.name = `SOULZ ${cfg1.position}`;
+                     if (cfg2.position) cfg2.name = `SOULZ ${cfg2.position}`;
                      
                      newConfigs[macs[0]] = cfg1;
                      newConfigs[macs[1]] = cfg2;
@@ -412,9 +418,9 @@ export default function HardwareSetupWizardScreen({
                }}
              >
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm }}>
-                  <MaterialCommunityIcons name="swap-horizontal" size={24} color={isIdentifying ? '#00f0ff' : Colors.text} />
-                  <Text style={[styles.primaryBtnText, { color: isIdentifying ? '#00f0ff' : Colors.text, fontSize: 13 }]}>
-                    {isIdentifying ? 'SWAP LEFT/RIGHT (RED/GREEN)' : 'IDENTIFY PORT/STARBOARD'}
+                  <MaterialCommunityIcons name="swap-horizontal" size={24} color={isIdentifying ? '#F79320' : Colors.text} />
+                  <Text style={[styles.primaryBtnText, { color: isIdentifying ? '#F79320' : Colors.text, fontSize: 13 }]}>
+                    {isIdentifying ? 'SWAP LEFT/RIGHT (BLUE/ORANGE)' : 'IDENTIFY PORT/STARBOARD'}
                   </Text>
                 </View>
              </TouchableOpacity>
@@ -609,7 +615,7 @@ export default function HardwareSetupWizardScreen({
                   }
                   
                   configs[d.device_mac] = {
-                    name: n || getDefaultGroupName(pProfile.id),
+                    name: pos ? `SOULZ ${pos}` : (n || getDefaultGroupName(pProfile.id)),
                     type: pType,
                     position: pos,
                     points: typeof d.led_points === 'number' ? d.led_points : pProfile.defaultLedPoints
@@ -776,17 +782,17 @@ function createStyles(Colors: ThemePalette) {
     deviceMeta: { color: Colors.textMuted || '#888', fontSize: 11, marginBottom: Spacing.xxs },
     blinkBtn: {
       flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-      backgroundColor: 'rgba(0,240,255,0.08)',
+      backgroundColor: 'rgba(27,66,121,0.1)',
       paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
-      borderRadius: 10, borderWidth: 1.5, borderColor: 'rgba(0,240,255,0.4)',
-      shadowColor: '#00F0FF', shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 0 },
+      borderRadius: 10, borderWidth: 1.5, borderColor: 'rgba(27,66,121,0.5)',
+      shadowColor: '#1B4279', shadowOpacity: 0.3, shadowRadius: 6, shadowOffset: { width: 0, height: 0 },
       elevation: 4,
     },
     blinkBtnActive: {
-      backgroundColor: '#4ade80', borderColor: '#4ade80',
-      shadowColor: '#4ade80', shadowOpacity: 0.6, shadowRadius: 10,
+      backgroundColor: '#F79320', borderColor: '#F79320',
+      shadowColor: '#F79320', shadowOpacity: 0.6, shadowRadius: 10,
     },
-    blinkBtnText: { color: '#00F0FF', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
+    blinkBtnText: { color: '#1B4279', fontSize: 12, fontWeight: '900', letterSpacing: 0.5 },
     
     // Step 3 Styles
     label: { color: Colors.textMuted || '#888', fontSize: 11, fontWeight: 'bold', letterSpacing: 1, marginBottom: Spacing.sm, marginLeft: Spacing.xs },
