@@ -1,7 +1,7 @@
 ---
 description: The Map-Reduce QA Fleet (Mapper) — Orthogonal Auditing Hunt. Spawns 48 Domain Agents and Snipers to read the codebase and dump their findings to the filesystem.
 persona_entry: "🕵️ QA — Blake"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # Deep-Dive Code Hunt (The Orthogonal QA Fleet - Mapper)

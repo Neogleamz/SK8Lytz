@@ -1,7 +1,7 @@
 ---
 description: Perform autonomous backlog hygiene by dropping stale items into the icebox
 persona_entry: "📋 Scrum — Casey"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **📋 Scrum — Casey | Backlog Grooming Active**

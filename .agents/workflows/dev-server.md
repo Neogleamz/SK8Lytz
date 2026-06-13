@@ -1,7 +1,7 @@
 ---
 description: Start the Expo/React Native dev server for SK8Lytz
 persona_entry: "⚒️ Dev — Sage"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **⚒️ Dev — Sage | Dev Server Active**

@@ -1,7 +1,7 @@
 ---
 description: The Map-Reduce Cartography Fleet — Spawns 21 sub-agents to read the live codebase and rebuild the Master Reference without destroying historical data.
 persona_entry: "📋 Docs — Avery"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # Deep-Dive Docs (The Cartographers)

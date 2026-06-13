@@ -1,7 +1,7 @@
 ---
 description: Diagnostic drill for stack traces or unexpected crashes
 persona_entry: "🩺 SRE — River"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **🩺 SRE — River | Debug Workflow Active**

@@ -1,7 +1,7 @@
 ---
 description: Build the release APK and install it to a connected Android device
 persona_entry: "🚀 RM — Taylor"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # Deploy Device Engine

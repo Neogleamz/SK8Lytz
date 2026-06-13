@@ -1,7 +1,7 @@
 ---
 description: Scaffold a new domain hook with boilerplate FSM state, typed params, error handling, and JSDoc
 persona_entry: "⚒️ Dev — Sage"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **⚒️ Dev — Sage | Scaffold Hook Active**

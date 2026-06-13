@@ -1,7 +1,7 @@
 ---
 description: Generate release notes — CHANGELOG entry + PR description — from semantic commits. Consolidates the former `changelog` and `pr-summary` workflows.
 persona_entry: "🚀 RM — Taylor"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **🚀 RM — Taylor | Release Notes Active**

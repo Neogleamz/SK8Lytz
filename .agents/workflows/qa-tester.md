@@ -1,7 +1,7 @@
 ---
 description: QA Edge-Case Hunter — 5-point structured checklist for BLE app hardening before commit. QA Pipeline Step 4 of 4.
 persona_entry: "🔬 QA — Blake"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # QA Edge-Case Hunter — "/qa-tester"

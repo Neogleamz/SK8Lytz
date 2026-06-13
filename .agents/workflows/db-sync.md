@@ -1,7 +1,7 @@
 ---
 description: Generate fresh Supabase TypeScript types and inject them into src/types/supabase.ts
 persona_entry: "📋 Docs — Avery"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > NOTE: This workflow MUST be automatically triggered after executing database table changes or RLS migrations via MCP tools, ensuring TS parity.

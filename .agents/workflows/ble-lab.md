@@ -1,7 +1,7 @@
 ---
 description: Structured BLE protocol testing — read Master Reference, build hex payload, verify byte math, and log results
 persona_entry: "🕵️ Scout — Reyes"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **🕵️ Scout — Reyes | BLE Lab Active**

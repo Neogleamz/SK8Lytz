@@ -1,7 +1,7 @@
 ---
 description: Fire up the environment, launch web demo, open it, and provide a status update
 persona_entry: "📋 Scrum — Casey"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **📋 Scrum — Casey | Session Kickoff Active**

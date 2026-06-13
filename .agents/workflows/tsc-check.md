@@ -1,7 +1,7 @@
 ---
 description: Run the TypeScript compiler in no-emit mode and report all errors in a clean, scannable format
 persona_entry: "⚒️ Dev — Sage"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **⚒️ Dev — Sage | TypeScript Audit Active**

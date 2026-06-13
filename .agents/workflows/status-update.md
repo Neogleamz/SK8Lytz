@@ -2,7 +2,7 @@
 description: Status Update Workflow Rule
 trigger: always_on
 persona_entry: "📋 Scrum — Casey"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # Status Update Workflow Rule -- "we good","whats up","status update", "where are we", "what's happening", or "current status"

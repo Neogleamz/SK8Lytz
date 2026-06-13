@@ -2,7 +2,7 @@
 description: "GraphRAG DB Exporter: Export SK8Lytz scraper SQLite DB and Cloud Supabase DB into markdown for GraphRAG indexing"
 trigger: always_on
 persona_entry: "💾 Data Engineer"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **💾 Data Engineer | GraphRAG DB Exporter**

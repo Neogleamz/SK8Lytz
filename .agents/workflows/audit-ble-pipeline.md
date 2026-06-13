@@ -1,7 +1,7 @@
 ---
 description: Perform a read-only semantic audit of the SK8Lytz BLE XState pipeline using 9 parallel Mapper agents.
 persona_entry: "🕵️ Scout — Reyes"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # The BLE Pipeline Audit Engine

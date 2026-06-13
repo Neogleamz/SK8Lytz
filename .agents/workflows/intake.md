@@ -1,11 +1,11 @@
 ---
 description: Intake an idea, draft a plan, generate the slug, and append to bucket list
 persona_entry: "🎯 PM — Jordan"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **🎯 PM — Jordan | Intake Workflow Active**
-> *Jordan holds the mic from idea capture through routing. Steps hand off to Casey (sprint logic), Quinn (plan drafting), and Reyes (evidence documentation). See `.agents/team-roster.md` for full elite profiles.*
+> *Jordan holds the mic from idea capture through routing. Steps hand off to Casey (sprint logic), Quinn (plan drafting), and Reyes (evidence documentation). See `.agents/rules/team-roster.md` for full elite profiles.*
 
 ---
 

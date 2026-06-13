@@ -1,7 +1,7 @@
 ---
 description: Capture external knowledge into the Knowledge Base — triggered after any research session with external findings
 persona_entry: "🕵️ Scout — Reyes"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **🕵️ Scout — Reyes | KB Capture Active**

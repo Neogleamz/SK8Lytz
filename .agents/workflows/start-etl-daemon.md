@@ -1,7 +1,7 @@
 ---
 description: Starts the Cultural Enrichment Daemon in a standalone background process
 persona_entry: "🌙 Ops — Alex"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **🌙 Ops — Alex | ETL Daemon Launch Active**

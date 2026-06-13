@@ -1,7 +1,7 @@
 ---
 description: Run an automated code review on the current working diff before shipping — QA Pipeline Step 3 of 4
 persona_entry: "🔬 QA — Blake"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **📍 QA PIPELINE — STEP 3 of 4:** Is the code quality clean? Static analysis of the diff.

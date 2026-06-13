@@ -2,7 +2,7 @@
 description: Isolated Test & Verify Protocol — QA Pipeline Step 2 of 4
 trigger: always_on
 persona_entry: "🔬 QA — Blake"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # Isolated Test & Verify Protocol

@@ -2,7 +2,7 @@
 description: Echo Protocol (Context Verification)
 trigger: always_on
 persona_entry: "🕵️ Scout — Reyes"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # Echo Protocol (Context Verification)

@@ -1,7 +1,7 @@
 ---
 description: "Self-Healing Audit System — Unified error observatory, analyzer, and auto-triage pipeline"
 persona_entry: "🩺 SRE — River"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 trigger: "/self-heal"
 model_requirement: "Reasoning-heavy model (Claude Sonnet 4 / Gemini 2.5 Pro)"
 estimated_duration: "10-20 minutes depending on fleet size"

@@ -2,7 +2,7 @@
 description: Product Alignment Protocol
 trigger: always_on
 persona_entry: "🎯 PM — Jordan"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **📍 WHEN TO USE THIS STANDALONE:**

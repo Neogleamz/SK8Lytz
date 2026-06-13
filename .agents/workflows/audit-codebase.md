@@ -1,7 +1,7 @@
 ---
 description: Unified Maintenance Sweep — npm audit, TODO hunt, bundle weight, component sizing, security advisors. Replaces /bundle-audit (consolidated here).
 persona_entry: "🕵️ Scout — Reyes"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # The Audit Codebase Engine

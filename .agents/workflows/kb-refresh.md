@@ -1,7 +1,7 @@
 ---
 description: Knowledge Base Staleness Sweep — surface expired KB entries as warnings and guide re-validation
 persona_entry: "🕵️ Scout — Reyes"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **🕵️ Scout — Reyes | KB Refresh Active**

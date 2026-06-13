@@ -2,7 +2,7 @@
 description: The Midnight Oil Protocol (Wind Down Workflow)
 trigger: always_on
 persona_entry: "🌙 Ops — Alex"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # The Midnight Oil Protocol (Wind Down Workflow)

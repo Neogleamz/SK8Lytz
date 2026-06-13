@@ -1,7 +1,7 @@
 ---
 description: Ensure dependencies are critically justified before addition
 persona_entry: "🏛️ Arch — Morgan"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **🏛️ Arch — Morgan | Dependency Review Active** *(TPM — Quinn finalizes the proposal template)*

@@ -1,7 +1,7 @@
 ---
 description: The Unified Start Task Engine — Triage, Worktree Creation, and Plan Review Gates (Batch-Aware)
 persona_entry: "🕵️ Scout — Reyes"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # The Start Task Engine — "/start-task", "what's next", "focus on <slug>"

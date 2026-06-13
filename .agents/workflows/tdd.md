@@ -1,7 +1,7 @@
 ---
 description: Apply Test-Driven Development (TDD) for utility functions and logic
 persona_entry: "⚒️ Dev — Sage"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 > **⚒️ Dev — Sage | TDD Mode Active**

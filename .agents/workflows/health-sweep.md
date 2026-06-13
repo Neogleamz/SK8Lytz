@@ -1,7 +1,7 @@
 ---
 description: Pre-release health sweep — npm audit + Supabase DB security advisors before any push
 persona_entry: "🩺 SRE — River"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # Health Sweep Engine — "/health-sweep"

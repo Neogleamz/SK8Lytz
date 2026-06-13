@@ -2,7 +2,7 @@
 description: Panic Button (Emergency Triage Workflow)
 trigger: always_on
 persona_entry: "🩺 SRE — River"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # Panic Button (Emergency Triage Workflow)

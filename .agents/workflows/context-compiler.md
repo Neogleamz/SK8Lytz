@@ -1,7 +1,7 @@
 ---
 description: Context Memory Compiler — sync codebase architecture into SK8Lytz_App_Master_Reference.md
 persona_entry: "📋 Docs — Avery"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # Context Memory Compiler — "sync architecture", "update memory", "compile context"

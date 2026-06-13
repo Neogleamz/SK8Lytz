@@ -1,7 +1,7 @@
 ---
 description: Visual Smoke Test Workflow — QA Pipeline Step 1 of 4
 persona_entry: "🔬 QA — Blake"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # Visual Smoke Test — "/smoke-test"

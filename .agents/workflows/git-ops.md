@@ -1,7 +1,7 @@
 ---
 description: Universal Git Operations (Snapshots, Reverts, and Worktree Teardowns)
 persona_entry: "📋 Scrum — Casey"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # Git Ops Engine

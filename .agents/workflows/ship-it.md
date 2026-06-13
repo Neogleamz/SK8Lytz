@@ -1,7 +1,7 @@
 ---
 description: Orchestrate the comprehensive release pipeline enforcing the Test Before Merge strategy
 persona_entry: "🚀 RM — Taylor"
-team_roster: .agents/team-roster.md
+team_roster: .agents/rules/team-roster.md
 ---
 
 # Ship It Orchestrator -- "/ship-it"
