@@ -3342,3 +3342,12 @@ TSC: ?  Jest: ?
 **Merged:** chore/sweep-identity-auth
 **Status:** Fully verified via npm run verify and fortress-gatekeeper.
 
+
+### [MERGE READY] sweep-session-context — b0b42580b2ecae15c3c75289dbe6bb1b374e2d42
+**Files touched:**
+- docs/plans/PLAN-sweep-session-context.md
+- src/services/ScenesService.ts
+- src/constants/storageKeys.ts
+- src/hooks/useTelemetryLedger.ts
+- src/hooks/useDeviceStateLedger.ts
+**TSC:** ?  **Jest:** ?
