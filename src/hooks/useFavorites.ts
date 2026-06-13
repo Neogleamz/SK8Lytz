@@ -182,20 +182,23 @@ export function useFavorites() {
     if (user) {
       // Strip out id/name from capturedState so we just store the pure payload in nodes
       const { id: _id, name: _name, ...payload } = newFav;
-      supabase.from('user_saved_presets').upsert({
-        id,
-        user_id: user.id,
-        name,
-        fill_mode: 'FAVORITE',
-        transition_type: 0,
-        nodes: payload as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
-        created_at: new Date().toISOString()
-      }).then(({ error }) => {
-        if (error) throw error;
-      }).catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        AppLogger.warn('[Favorites] Cloud save failed', { error: msg });
-      });
+      (async () => {
+        try {
+          const { error } = await supabase.from('user_saved_presets').upsert({
+            id,
+            user_id: user.id,
+            name,
+            fill_mode: 'FAVORITE',
+            transition_type: 0,
+            nodes: payload as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
+            created_at: new Date().toISOString()
+          });
+          if (error) throw error;
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          AppLogger.warn('[Favorites] Cloud save failed', { error: msg });
+        }
+      })();
     }
 
     closePrompt();
@@ -216,12 +219,15 @@ export function useFavorites() {
     
     // 2. Delete Cloud
     if (user) {
-      supabase.from('user_saved_presets').delete().eq('id', id).eq('user_id', user.id).then(({ error }) => {
-        if (error) throw error;
-      }).catch((err: unknown) => {
-        const msg = err instanceof Error ? err.message : String(err);
-        AppLogger.warn('[Favorites] Cloud delete failed', { error: msg });
-      });
+      (async () => {
+        try {
+          const { error } = await supabase.from('user_saved_presets').delete().eq('id', id).eq('user_id', user.id);
+          if (error) throw error;
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : String(err);
+          AppLogger.warn('[Favorites] Cloud delete failed', { error: msg });
+        }
+      })();
     }
   }, [favorites, activeFavoriteId]);
 

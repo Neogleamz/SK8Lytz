@@ -98,18 +98,19 @@ export const AppSettingsService = {
     }
 
     // 2. Background Cloud Sync
-    supabase
-      .from('sk8lytz_app_settings')
-      .upsert({ 
-        setting_key: key, 
-        setting_value: value as unknown as import('../types/supabase').Json
-      }, { onConflict: 'setting_key' })
-      .then(({ error }) => {
+    (async () => {
+      try {
+        const { error } = await supabase
+          .from('sk8lytz_app_settings')
+          .upsert({ 
+            setting_key: key, 
+            setting_value: value as unknown as import('../types/supabase').Json
+          }, { onConflict: 'setting_key' });
         if (error) throw error;
-      })
-      .catch((err: unknown) => {
+      } catch (err: unknown) {
         AppLogger.log('ERROR_CAUGHT', { message: `Failed to update setting ${key}`, error: err instanceof Error ? err.message : String(err) });
-      });
+      }
+    })();
 
     return true;
   }
