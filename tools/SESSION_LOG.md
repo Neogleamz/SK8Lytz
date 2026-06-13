@@ -1,3 +1,18 @@
+### [ARTIFACT] 2026-06-12T23:14 — SafeAreaView Migration Plan
+| Artifact | Path | Description |
+|---|---|---|
+| SafeArea Boundaries Plan | [PLAN-fix-app-safe-area-boundaries.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-fix-app-safe-area-boundaries.md) | Migration plan from React Native core SafeAreaView to community safe-area-context to fix notch bleeding on Android. |
+
+### [MERGE] 2026-06-12T22:30 — hardware-setup-batch → master @ c9c64b88
+**What merged:**
+- Applied SK8Lytz brand colors (Blue #1B4279 / Orange #F79320) to HardwareSetupWizardScreen for the Left/Right blink buttons and swap text.
+- Fixed logical assignment bug where device names weren't dynamically updating to "SOULZ Left" or "SOULZ Right" when positions swapped.
+- Removed redundant SafeAreaView from DashboardScreen.tsx causing double-header padding spacing issue.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:**
+- `src/screens/Onboarding/HardwareSetupWizardScreen.tsx`
+- `src/screens/DashboardScreen.tsx`
+
 ### [MERGE] 2026-06-12T09:47 — fix/group-routing-ispaired → master @ d0dad3bd
 **What merged:**
 - Fixed `isGrouped` in `DashboardScreen.tsx:280` — the check `displayConnectedDevices.every(d => !!d.groupId)` was ALWAYS false because `d.groupId` (singular) is never set on `DisplayDevice`; `deviceConfigs` stores `groupIds` (plural array). This caused `isPaired=false` for ALL connections including groups.

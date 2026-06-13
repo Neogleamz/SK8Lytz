@@ -1820,3 +1820,30 @@ pm run verify which includes QA tests.
     Rejected alternative: "bypassing isDeviceConnected check — rejected because we need connection-state check to prevent redundant connection attempts"
   - **Source of Truth:** 📖 [ConnectService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts#L149) §1
   - **Details:** Must run verify after changes.
+
+- [x] **`fix/hardware-setup-identification`**
+  - **Tags:** `[✅ READY]` `[✅ UNVERIFIED]` `[UI]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 LOW]` `[BATCH:hardware-setup]`
+  - **Goal:** Fix setup wizard color swap logic, blink button matching colors, and correctly persist left/right custom device names.
+  - **Decision Log:** Setup wizard had flawed color swap assignment causing both skates to get same color on step 2, blink buttons defaulted to cyan instead of red/green, and custom names did not persist to DB.
+  - **Analysis:** 📊 Plan: [PLAN-hardware-setup-batch.md](./plans/PLAN-hardware-setup-batch.md)
+    Key finding: "position assignment overrides itself if both names default to 'left' substring; `custom_name` missing from payload."
+  - **Source of Truth:** 📖 [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx)
+  - **Details:** Wave assignment: [WAVE:1] — verified by AST analysis. No import overlap with active batches. Merged in c9c64b88 — Fixed left/right assignment bug and name logic.
+
+- [x] **`feat/hardware-setup-brand-colors`**
+  - **Tags:** `[✅ READY]` `[✅ UNVERIFIED]` `[UI]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:hardware-setup]`
+  - **Goal:** Update Hardware Setup Wizard to use Neogleamz brand colors (Blue and Orange) instead of generic Red and Green.
+  - **Decision Log:** The user requested swapping the generic red/green identification colors to the official brand colors 1B4279 and F79320.
+  - **Analysis:** 📊 Plan: [PLAN-hardware-setup-batch.md](./plans/PLAN-hardware-setup-batch.md)
+    Key finding: "Hardware identity flashing should match the brand aesthetic for a premium feel."
+  - **Source of Truth:** 📖 [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx)
+  - **Details:** Wave assignment: [WAVE:1] — shares import tree with `fix/hardware-setup-identification`. Will execute in unified batch worktree. Merged in c9c64b88 — Applied brand colors to setup wizard.
+
+- [x] **`fix/global-header-spacing`**
+  - **Tags:** `[✅ READY]` `[✅ UNVERIFIED]` `[UI]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:hardware-setup]`
+  - **Goal:** Eliminate double padding blank space at the top of the app header.
+  - **Decision Log:** SafeAreaProvider was added to App.tsx, but DashboardScreen retained SafeAreaView while DashboardHeader also used insetTop, causing double top padding.
+  - **Analysis:** 📊 Plan: [PLAN-hardware-setup-batch.md](./plans/PLAN-hardware-setup-batch.md)
+    Key finding: "DashboardScreen nested SafeAreaView causes double padding."
+  - **Source of Truth:** 📖 [DashboardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx)
+  - **Details:** Wave assignment: [WAVE:1] — verified by AST analysis. Shares import tree with hardware setup batch. Merged in c9c64b88 — Removed SafeAreaView to fix double padding.
