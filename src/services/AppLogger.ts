@@ -220,6 +220,7 @@ class AppLoggerService {
   private buffer: LogEntry[] = [];
   private activeDevices: any[] = [];
   private loaded = false;
+  private currentUserId: string | undefined = undefined;
   private sessionId = `telemetry_${Date.now()}`;
   // ── Batch-write accumulators (Fix 1) ───────────────────────────────
   // AsyncStorage.setItem is only called when EITHER:
@@ -669,13 +670,7 @@ class AppLoggerService {
         // TODO: [R-15] Refactor to accept userId as parameter instead of calling
         // supabase.auth.getUser() directly — this executes an unnecessary network
         // request and bypasses AuthContext. Callers should inject userId via a setter.
-        let userId: string | undefined = undefined;
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          userId = user?.id;
-        } catch {
-          // ignore — userId remains undefined, telemetry still uploads anonymously
-        }
+        let userId: string | undefined = this.currentUserId;
 
         const batch = dbPayload.map(s => ({
           ...s,
@@ -802,6 +797,9 @@ class AppLoggerService {
       averageLoadTimeMs, lastAppOpenedTime, primaryBleMac: bleMac,
       batteryLevel, isLowPowerMode
     };
+  }
+  setCurrentUser(userId: string | undefined) {
+    this.currentUserId = userId;
   }
 }
 

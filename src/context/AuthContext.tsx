@@ -57,6 +57,8 @@ export interface AuthContextValue {
   resetPassword: (email: string, redirectTo?: string) => Promise<{ error: Error | null }>;
   /** Sign the current user out via Supabase. */
   signOut: () => Promise<void>;
+  /** Update user attributes (e.g. password, email) via Supabase. */
+  updateUser: (attributes: import('@supabase/supabase-js').UserAttributes) => Promise<{ error: Error | null }>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -254,7 +256,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateUser = async (attributes: import('@supabase/supabase-js').UserAttributes): Promise<{ error: Error | null }> => {
+    if (!supabase) return { error: new Error('Supabase not configured') };
+    try {
+      const { error } = await supabase.auth.updateUser(attributes);
+      return { error: error ?? null };
+    } catch (e: unknown) {
+      AppLogger.error('[AuthContext] updateUser failed', e, { payload_size: 0, ssi: 0 });
+      return { error: e instanceof Error ? e : new Error(String(e)) };
+    }
+  };
+
   const user = session?.user ?? null;
+
+  useEffect(() => {
+    AppLogger.setCurrentUser(user?.id);
+  }, [user?.id]);
 
   const isOfflineMode = status === 'offline';
   const sessionLoaded = status !== 'checking';
@@ -275,6 +292,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     resetPassword,
     signOut,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -7,6 +7,16 @@
  * Part of epic/god-object-decomposition — Meal 1: ProfileService split.
  */
 
+export interface NotifPreferences {
+  mute?: boolean;
+  push?: boolean;
+  email?: boolean;
+  crewInvites?: boolean;
+  sessionReminders?: boolean;
+  leaderHandoff?: boolean;
+  [key: string]: boolean | undefined;
+}
+
 export interface UserProfile {
   user_id: string;
   display_name: string | null;
@@ -18,7 +28,7 @@ export interface UserProfile {
   is_banned?: boolean;
   ban_reason?: string | null;
   role?: 'user' | 'moderator' | 'admin';
-  notif_preferences?: any;
+  notif_preferences?: NotifPreferences;
   accepted_eula_version?: number;
   lifetime_distance_miles?: number;
   lifetime_top_speed_mph?: number;

@@ -7,7 +7,7 @@
  */
 
 import { supabase } from './supabaseClient';
-import type { UserProfile, SessionHistoryItem } from './ProfileService.types';
+import type { UserProfile, SessionHistoryItem, NotifPreferences } from './ProfileService.types';
 import { AppLogger } from './AppLogger';
 import type { User } from '@supabase/supabase-js';
 
@@ -76,7 +76,7 @@ class AuthProfileService {
       return created as UserProfile | null;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[AuthProfileService] fetchOrCreateProfile failed', { error: msg , payload_size: 0, ssi: 0 });
+      AppLogger.error('[AuthProfileService] fetchOrCreateProfile failed', msg, { payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }
@@ -84,7 +84,7 @@ class AuthProfileService {
   /**
    * Update display name and/or avatar color for the current user.
    */
-  async updateProfile(userId: string | undefined, fields: { display_name?: string | null; avatar_color?: string; username?: string | null; avatar_url?: string | null; notif_preferences?: Record<string, boolean> }): Promise<void> {
+  async updateProfile(userId: string | undefined, fields: { display_name?: string | null; avatar_color?: string; username?: string | null; avatar_url?: string | null; notif_preferences?: NotifPreferences }): Promise<void> {
     if (!userId) throw new Error('Not authenticated');
 
     // Strip null/undefined values to avoid overwriting with null
@@ -152,7 +152,7 @@ class AuthProfileService {
       });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[AuthProfileService] getSessionHistory failed', { error: msg });
+      AppLogger.error('[AuthProfileService] getSessionHistory failed', msg, { payload_size: 0, ssi: 0 });
       return [];
     }
   }

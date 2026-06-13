@@ -127,7 +127,7 @@ export default function AccountModal({
   onProfileUpdated,
 }: AccountModalProps) {
   const { Colors, isDark, toggleTheme } = useTheme();
-  const { signIn: authSignIn, signOut: authSignOut } = useAuth();
+  const { signIn: authSignIn, signOut: authSignOut, updateUser } = useAuth();
   const insets = useSafeAreaInsets();
   const styles = createStyles(Colors);
 
@@ -328,7 +328,7 @@ export default function AccountModal({
         return;
       }
       
-      const { error } = await supabase.auth.updateUser({ password: newPwd });
+      const { error } = await updateUser({ password: newPwd });
       if (error) throw error;
       setSecurityMsg({ type: 'success', text: 'Password updated successfully' });
       setCurrentPwd(''); setNewPwd(''); setConfirmPwd('');
@@ -346,7 +346,7 @@ export default function AccountModal({
     }
     setModalStatus('saving_email');
     try {
-      const { error } = await supabase.auth.updateUser({ email: newEmail });
+      const { error } = await updateUser({ email: newEmail });
       if (error) throw error;
       setSecurityMsg({ type: 'success', text: `✓ Confirmation sent to ${newEmail}. Check your inbox.` });
       setNewEmail('');
