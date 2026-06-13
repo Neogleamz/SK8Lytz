@@ -7,7 +7,7 @@ $workspaceDir = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
 $workspaceRulesDir = Join-Path $workspaceDir ".agents\rules"
 $globalBackupDir = "C:\Users\Magma\.gemini\config\rules-backup"
 
-$rules = @("agent-behavior.md", "safety-protocol.md")
+$rules = @("agent-behavior.md", "safety-protocol.md", "prime-directive.md", "kanban-constitution.md", "sub-agent-behavior.md")
 
 # Ensure folders exist
 if (-not (Test-Path $globalBackupDir)) {
@@ -58,7 +58,7 @@ foreach ($rule in $rules) {
             } else {
                 # Inject trigger block manually
                 $rawContent = Get-Content $workspaceFile -Raw
-                $injected = "---\ntrigger: always_on\n---\n\n" + $rawContent.TrimStart()
+                $injected = "---`ntrigger: always_on`n---`n`n" + $rawContent.TrimStart()
                 $injected | Out-File -FilePath $workspaceFile -Encoding utf8 -Force
                 Write-Host "  [HEALED] Injected always_on trigger into workspace rule." -ForegroundColor Green
             }

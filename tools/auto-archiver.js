@@ -41,7 +41,7 @@ for (let i = 0; i < lines.length; i++) {
     taskStartIndex = i;
   } else if (inTask) {
     // A task block ends when we hit another task, an empty line, or a horizontal rule
-    if (line.match(/^- \[ ?[x ]? ?\] \*\*/) || line.trim() === '' || line.match(/^---/)) {
+    if (line.match(/^- \[ ?[x ]? ?\] \*\*/) || line.match(/^---/)) {
       taskEndIndex = i;
       break;
     }
@@ -74,7 +74,7 @@ lines.splice(taskStartIndex, taskEndIndex - taskStartIndex);
 // Clean up any stray "Active Tasks" references for this slug
 for (let i = 0; i < lines.length; i++) {
   if (lines[i].startsWith('- **Active Tasks**:')) {
-    lines[i] = lines[i].replace(new RegExp(`${taskSlug},? ?`), '').replace(/, $/, '').trim();
+    lines[i] = lines[i].replace(new RegExp(`(^|,\\s*)${taskSlug}($|,|\\s)`), '$2').replace(/- \*\*Active Tasks\*\*: , /, '- **Active Tasks**: ').replace(/, $/, '').trim();
     if (lines[i] === '- **Active Tasks**:') {
       lines[i] = '- **Active Tasks**: None';
     }

@@ -55,8 +55,5 @@ if [ -n "$ABS_FILES" ]; then
   eval npx eslint $ABS_FILES --max-warnings=0
 fi
 
-echo "[Husky] Running TSC check from: $WORKTREE_ROOT"
-npx tsc --noEmit
-
-echo "[Husky] Running Jest from: $WORKTREE_ROOT"
-npx jest --watchAll=false --passWithNoTests
+echo "[Husky] Running unified verify check from: $WORKTREE_ROOT"
+npm run verify

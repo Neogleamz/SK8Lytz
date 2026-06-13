@@ -12,18 +12,18 @@
     },
     {
       "trigger": "src/services/BleConnectionManager.ts",
-      "requires": ["src/hooks/useBLE.ts", "src/hooks/ble/useBLEAutoRecovery.ts", "src/hooks/ble/useBLEGattMutex.ts"],
+      "requires": ["src/hooks/useBLE.ts", "src/services/ble/RecoveryService.ts"],
       "description": "CONNECTIVITY: Changes to the core Connection Manager impact all GATT lifecycle hooks. Ensure AutoRecovery and the GATT Mutex are not deadlocking."
     },
     {
-      "trigger": "src/services/BleStateMachine.ts",
+      "trigger": "src/services/ble/BleMachine.ts",
       "requires": ["src/hooks/useBLE.ts", "src/hooks/useOptimisticBLE.ts"],
       "description": "STATES: If the global BLE state machine transitions change (IDLE/SCANNING/RECOVERING), the Optimistic Ghost UI must know how to render it."
     },
     {
-      "trigger": "src/hooks/ble/useBLEGattMutex.ts",
-      "requires": ["src/hooks/ble/useBLEHeartbeat.ts", "src/hooks/ble/useBLEAutoRecovery.ts"],
-      "description": "GATT MUTEX: Priority tier changes (P1_CRITICAL to P4_MAINTENANCE) directly impact background heartbeat polling and recovery timeouts."
+      "trigger": "src/services/ble/RecoveryService.ts",
+      "requires": ["src/hooks/ble/useBLEHeartbeat.ts"],
+      "description": "GATT MUTEX & RECOVERY: Priority tier changes (P1_CRITICAL to P4_MAINTENANCE) directly impact background heartbeat polling and recovery timeouts."
     },
     {
       "trigger": "src/services/DeviceRepository.ts",

@@ -68,7 +68,7 @@ const SUPABASE_KEY = env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 if (!SUPABASE_URL || !SUPABASE_KEY) {
   console.warn('[sync_remote_errors] ⚠️  Skipped — EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY not set.');
   // exitCode stays 0 — non-fatal, audit-codebase sweep continues
-}
+} else {
 
 // ── Fetch from Supabase REST API (native fetch — Node 18+) ────────────────────
 
@@ -166,3 +166,4 @@ function formatReport(errors) {
     // exitCode stays 0
   }
 })();
+}

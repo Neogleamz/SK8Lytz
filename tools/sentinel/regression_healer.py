@@ -162,8 +162,8 @@ Please generate the required surgical code replacement block to resolve the fail
                 for part in parts[1:]:
                     sub_parts = part.split("=======")
                     if len(sub_parts) >= 2:
-                        original_text = sub_parts[0].strip()
-                        replacement_text = sub_parts[1].split(">>>>>>> SYSTEM")[0].strip()
+                        original_text = sub_parts[0].strip('\r\n')
+                        replacement_text = sub_parts[1].split(">>>>>>> SYSTEM")[0].strip('\r\n')
                         
                         with open(file_path, "r", encoding="utf-8") as f:
                             content = f.read()
@@ -187,6 +187,10 @@ Please generate the required surgical code replacement block to resolve the fail
 
     def _commit_repair(self, target_file):
         try:
+            res = subprocess.run(["git", "branch", "--show-current"], cwd=self.workspace_path, capture_output=True, text=True)
+            if res.stdout.strip() == "master":
+                self.log("HALT: Autonomous healer cannot commit to master.")
+                return
             subprocess.run(["git", "add", target_file], cwd=self.workspace_path)
             subprocess.run(
                 ["git", "commit", "-m", f"chore(healer): autonomous regression repair for {target_file}"],

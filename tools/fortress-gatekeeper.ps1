@@ -93,9 +93,17 @@ foreach ($Line in $WorktreeList) {
     Push-Location $Path
     try {
         git rebase origin/master 2>$null  # Rebase off remote if ahead
+        if ($LASTEXITCODE -ne 0) {
+            git rebase --abort 2>$null
+            Write-Host "GATEKEEPER HALT: Rebase origin/master failed." -ForegroundColor Red
+            exit 1
+        }
         git rebase master                 # Rebase off local master
-    } catch {
-        # Rebase may fail if there's nothing to rebase — that's fine
+        if ($LASTEXITCODE -ne 0) {
+            git rebase --abort 2>$null
+            Write-Host "GATEKEEPER HALT: Rebase master failed." -ForegroundColor Red
+            exit 1
+        }
     } finally {
         Pop-Location
     }
