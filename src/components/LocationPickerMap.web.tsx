@@ -17,15 +17,18 @@ interface LocationPickerMapProps {
   };
   onRegionChangeComplete?: (region: { latitude: number; longitude: number; }) => void;
   children?: React.ReactNode;
+  [key: string]: unknown;
 }
 
-export default function LocationPickerMap(_props: LocationPickerMapProps) {
+export const LocationPickerMap = (_props: LocationPickerMapProps) => {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>📍 Map view not available on web.</Text>
     </View>
   );
-}
+};
+
+export const LocationMarker = (_props: { coordinate?: { latitude: number; longitude: number }, pinColor?: string }) => null;
 
 const styles = StyleSheet.create({
   container: {

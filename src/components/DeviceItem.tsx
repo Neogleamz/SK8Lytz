@@ -41,6 +41,8 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
       onLongPress={onLongPress}
       delayLongPress={300}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`Device ${displayName}, ${isConnected ? 'Connected' : 'Disconnected'}`}
     >
       <LinearGradient 
         colors={isConnected 

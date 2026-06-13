@@ -7,8 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { AppLogger } from '../../services/AppLogger';
 import { Spacing } from '../../theme/theme';
 import { useAuthStyles } from './AuthStyles';
-
-const isValidEmail = (str: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str.trim());
+import { isValidEmail } from '../../utils/validation';
 
 interface AuthFormForgotPasswordProps {
   onModeChange: (mode: 'LOGIN' | 'SIGNUP') => void;

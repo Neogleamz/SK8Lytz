@@ -106,6 +106,10 @@ const CustomSlider = ({ value, onValueChange, onSlidingComplete, minimumValue = 
         containerWidthRef.current = e.nativeEvent.layout.width;
       }}
       {...panResponder.panHandlers}
+      accessible={true}
+      accessibilityRole="adjustable"
+      accessibilityLabel="Slider"
+      accessibilityValue={{ min: minimumValue, max: maximumValue, now: localValue }}
     >
       <View style={[styles.track, gradientTrack && { backgroundColor: 'transparent' }]} pointerEvents="none">
         {gradientTrack ? (

@@ -19,8 +19,7 @@ import {
 } from '../../services/AuthUtils';
 import { Spacing } from '../../theme/theme';
 import { useAuthStyles } from './AuthStyles';
-
-const isValidEmail = (str: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str.trim());
+import { isValidEmail } from '../../utils/validation';
 
 interface AuthFormSignUpProps {
   onModeChange: (mode: 'LOGIN' | 'FORGOT_PASSWORD' | 'MAGIC_LINK') => void;

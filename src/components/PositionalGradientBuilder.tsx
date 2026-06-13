@@ -39,6 +39,8 @@ export default function PositionalGradientBuilder({
   const [activeNodeId, setActiveNodeId] = useState<string | null>(nodes[0]?.id || null);
 
 
+const BLE_WRITE_THROTTLE_MS = 100;
+
   // Dispatch payloads whenever parameters change (with throttle to prevent hardware blackout from BLE flood)
   useEffect(() => {
      const timeout = setTimeout(() => {
@@ -52,11 +54,11 @@ export default function PositionalGradientBuilder({
          const mappedSpeed = Math.max(1, Math.min(100, Math.round(speed)));
           if (writeToDevice) {
              writeToDevice(ZenggeProtocol.setMultiColor(scaledRgbArray, deviceLedCount, mappedSpeed, direction, transitionType))
-                .catch((err) => {
-                    console.warn('[PositionalGradientBuilder] BLE write failed:', err);
+                .catch((err: unknown) => {
+                    console.warn('[PositionalGradientBuilder] BLE write failed:', err instanceof Error ? err.message : String(err));
                 });
           }
-     }, 100);
+     }, BLE_WRITE_THROTTLE_MS);
      return () => clearTimeout(timeout);
   }, [nodes, fillMode, transitionType, direction, speed, brightness, deviceLedCount, writeToDevice]);
 

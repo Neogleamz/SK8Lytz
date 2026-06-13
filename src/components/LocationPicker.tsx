@@ -73,6 +73,12 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     }
   }, [isGettingLocation, locationCoords]);
 
+  React.useEffect(() => {
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    };
+  }, []);
+
   const handleSearch = (text: string) => {
     onLocationLabelChange(text);
     onLocationCoordsChange(undefined);

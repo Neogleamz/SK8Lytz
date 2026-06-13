@@ -14,8 +14,7 @@ import { useAuthStyles } from './AuthStyles';
 import { AppLogger } from '../../services/AppLogger';
 
 import { STORAGE_REMEMBER_CREDS, STORAGE_OFFLINE_SKIP } from '../../constants/storageKeys';
-
-const isValidEmail = (str: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(str.trim());
+import { isValidEmail } from '../../utils/validation';
 
 interface AuthFormSignInProps {
   initialEmail: string;

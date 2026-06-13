@@ -84,6 +84,7 @@ class LocationService {
       if (status !== 'granted') return null;
 
       // Use last known position for zero battery impact ambient scanning
+      if (require('react-native').Platform.OS === 'web') return null;
       const pos = await Location.getLastKnownPositionAsync();
       if (pos) {
         return { lat: pos.coords.latitude, lng: pos.coords.longitude };
