@@ -22,11 +22,11 @@ You must execute this pipeline sequentially. **DO NOT BYPASS ANY GATES.** You mu
 
 Announce: *"🕵️ Scout — Reyes is investigating... Checking what we already know."*
 
-1. Read `tools/SESSION_LOG.md` — last 5 entries. Search for any prior findings related to the target task's domain (`[BLE]`, `[UI]`, `[DB]`, etc.). If prior [DECISION] entries exist about the same topic, cite them and skip re-investigation.
+1. Read `docs/SESSION_LOG.md` — last 5 entries. Search for any prior findings related to the target task's domain (`[BLE]`, `[UI]`, `[DB]`, etc.). If prior [DECISION] entries exist about the same topic, cite them and skip re-investigation.
 
 2. Then read the SoT sources:
-   - `tools/SK8Lytz_App_Master_Reference.md` §3 (BLE Protocol Library) and §4 (Hook & Service Registry)
-   - `tools/ZENGGE_PROTOCOL_BIBLE.md` §3 (Opcode Command Map)
+   - `docs/SK8Lytz_App_Master_Reference.md` §3 (BLE Protocol Library) and §4 (Hook & Service Registry)
+   - `docs/ZENGGE_PROTOCOL_BIBLE.md` §3 (Opcode Command Map)
    Skip steps 2–3 if the task is `[UI]` or `[CLOUD]` only.
 
 3. Output the Knowledge State:
@@ -77,7 +77,7 @@ Pre-Execution Gate for <slug>:
 ### 📋 Scrum — Casey | Phase 1: Triage & Setup
 
 1. **Target Identification (Batch-Aware)**:
-   - Parse `tools/SK8Lytz_Bucket_List.md`. Look strictly inside the `## 🚧 ACTIVE SPRINT` section.
+   - Parse `docs/SK8Lytz_Bucket_List.md`. Look strictly inside the `## 🚧 ACTIVE SPRINT` section.
    - If there is an active batch with uncompleted tasks, find the FIRST task that is NOT `[x]`. That is your target.
    - If `## 🚧 ACTIVE SPRINT` is empty or fully completed, look at `## 🔥 ON DECK`.
    - **Pulling a Batch**: Find the TOP batch group that is UNBLOCKED. Move the **ENTIRE batch group header and ALL its nested tasks** into `## 🚧 ACTIVE SPRINT`. Update the header to `(Active)`.
@@ -120,7 +120,7 @@ Context: Task slug, WHY, Analysis, and SoT are all confirmed. Morgan now stress-
 
 **⚡ Morgan Rejection-Register-First — MANDATORY FIRST ACTION:**
 
-Before proposing any approach, search `tools/SESSION_LOG.md` for `Rejected:` entries related to the current task's domain.
+Before proposing any approach, search `docs/SESSION_LOG.md` for `Rejected:` entries related to the current task's domain.
 
 ```
 Morgan Rejection Scan:
@@ -224,9 +224,9 @@ For each changed file, check:
 - `src/hooks/use*.ts` → requires §4 Hook Registry row
 - `src/services/*.ts` → requires §4 Service Registry row
 - `src/protocols/*.ts` or `src/services/BLE*.ts` → requires §3 BLE Protocol Library check
-- `*Machine.ts` or XState config → requires `tools/State_Charts_UX.md` check
-- `*Bridge.ts` or session flows → requires `tools/User_Journey_Maps.md` check
-- Native modules / external APIs → requires `tools/System_Context_Diagram.md` check
+- `*Machine.ts` or XState config → requires `docs/State_Charts_UX.md` check
+- `*Bridge.ts` or session flows → requires `docs/User_Journey_Maps.md` check
+- Native modules / external APIs → requires `docs/System_Context_Diagram.md` check
 - `supabase/migrations/*.sql` → triggers `/db-sync` automatically
 
 **Output the parity delta:**
@@ -239,7 +239,7 @@ For each changed file, check:
 Overall: PARITY CLEARED ✅ / GAPS FOUND ⚠️ (list)
 ```
 
-- **If YES to any registry impact**: Update the relevant sections in `tools/SK8Lytz_App_Master_Reference.md` and any required Satellite Docs (`State_Charts_UX.md`, `User_Journey_Maps.md`, `System_Context_Diagram.md`).
+- **If YES to any registry impact**: Update the relevant sections in `docs/SK8Lytz_App_Master_Reference.md` and any required Satellite Docs (`State_Charts_UX.md`, `User_Journey_Maps.md`, `System_Context_Diagram.md`).
 - **If NO to all**: Explicitly state `"Documentation parity check: no architectural changes — docs gate CLEARED ✅"`.
 
 ```
@@ -289,7 +289,7 @@ git log -1 --format="%h"
    powershell.exe -ExecutionPolicy Bypass -File .\tools\fortress-gatekeeper.ps1 -ArchiveTask <task-slug>
    ```
 4. **Write SESSION_LOG [MERGE] entry (mandatory — agent-behavior.md Rule 11)**:
-   Immediately after gatekeeper success, append to `tools/SESSION_LOG.md`:
+   Immediately after gatekeeper success, append to `docs/SESSION_LOG.md`:
    ```markdown
    ### [MERGE] YYYY-MM-DDTHH:MM — <slug> → master @ <commit-hash>
    **What merged:** (bullet list of what changed and why)
@@ -297,17 +297,17 @@ git log -1 --format="%h"
    **Files touched:** (list from gatekeeper output)
    ```
 5. **Clean Slate Check**: Run `git status -s` on master immediately after merge.
-  - Any modified plan files (`tools/plans/*.md`) -> stage and commit as `docs(plans): commit AI-First plan for <task-slug>`
+  - Any modified plan files (`docs/plans/*.md`) -> stage and commit as `docs(plans): commit AI-First plan for <task-slug>`
   - Any temp scripts -> DELETE them, do not commit
 6. **Board Sync (MANDATORY — FRICTION-020 Fix)**:
    - The gatekeeper auto-archiver removes the task entry from the list but does NOT update the ACTIVE SPRINT header.
-   - You MUST immediately edit `tools/SK8Lytz_Bucket_List.md` after every merge:
+   - You MUST immediately edit `docs/SK8Lytz_Bucket_List.md` after every merge:
      - Update `> Currently executing: **\`<slug>\`**` → next pending task slug
      - Add `> Completed: \`<completed-slug>\` @ <commit-hash> ✅` line to the header
    - This is non-optional. Skipping it causes user-visible board staleness. See FRICTION-020.
 
 - **Batch Progression Check**:
-  - **🚨 Anti-Hallucination Board Guard**: You MUST call `view_file` on `tools/SK8Lytz_Bucket_List.md` right now to verify the current state of the active sprint. DO NOT guess the next task from memory.
+  - **🚨 Anti-Hallucination Board Guard**: You MUST call `view_file` on `docs/SK8Lytz_Bucket_List.md` right now to verify the current state of the active sprint. DO NOT guess the next task from memory.
   - IF the file shows there are MORE uncompleted tasks in the active batch:
     - Ask the user: "Task complete. Shall I spin up the worktree for the next task in the batch?"
   - IF this was the LAST task in the active batch:

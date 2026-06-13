@@ -10,7 +10,7 @@ trigger: always_on
 - **⛔ Rule 2.5: Subagent Isolation**: Subagents MUST be invoked with `Workspace: "branch"` or `Workspace: "share"`. They are strictly forbidden from inheriting the master workspace unless executing read-only audits.
 - **⛔ Rule 3: Fast-Forward Merges Only**: Use `tools/fortress-gatekeeper.ps1`. Direct manual merges prohibited.
 - **⛔ Rule 4: Worktree Commit Is Not Done**: Task is incomplete until worktree is merged, folder removed, and branch deleted.
-- **⛔ Rule 5: Version-Controlled Brain**: `tools/SK8Lytz_Bucket_List.md` is tracked by Git. Always ensure your updates to the board are staged and committed. Never use python `w` mode scripts that overwrite the file blindly.
+- **⛔ Rule 5: Version-Controlled Brain**: `docs/SK8Lytz_Bucket_List.md` is tracked by Git. Always ensure your updates to the board are staged and committed. Never use python `w` mode scripts that overwrite the file blindly.
 
 ## 2. Push & Release Gates
 - **⛔ Rule 6: Zero-Bypass Push Gate**: FORBIDDEN from `git push` without a fresh `npm run verify` attestation for the current commit.
@@ -33,7 +33,7 @@ $APK  = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\android\app\build\outputs\apk\relea
 - Discord: `powershell.exe -ExecutionPolicy Bypass -File .\tools\discord-bridge\notify_discord.ps1 -Message "..."`
 
 ## 5. Learned Failure Patterns
-Three critical failure patterns with operational rules — see [`KNOWN_ISSUES.md`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/KNOWN_ISSUES.md):
+Three critical failure patterns with operational rules — see [`KNOWN_ISSUES.md`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/KNOWN_ISSUES.md):
 - **VS-001**: Parallel worktree gatekeeper divergence → always create worktrees sequentially
 - **VS-002**: Gitignore shadow zone → always run `git status --short` before committing
 - **VS-003**: Documentation drift → always update Master Reference before running gatekeeper
@@ -44,7 +44,7 @@ Three critical failure patterns with operational rules — see [`KNOWN_ISSUES.md
   node tools/auto-archiver.js --task <slug>
   ```
   and verify the task is moved to the archive before proceeding.
-- **⛔ Rule 12.1: SESSION_LOG [MERGE] Companion (agent-behavior.md Rule 11)**: Immediately after every successful gatekeeper merge, BEFORE running the auto-archiver, append a `[MERGE]` entry to `tools/SESSION_LOG.md`. Archival without a log entry is a P3 violation.
+- **⛔ Rule 12.1: SESSION_LOG [MERGE] Companion (agent-behavior.md Rule 11)**: Immediately after every successful gatekeeper merge, BEFORE running the auto-archiver, append a `[MERGE]` entry to `docs/SESSION_LOG.md`. Archival without a log entry is a P3 violation.
 
 ## 7. Knowledge Base Integrity Guards
 - **⛔ Rule 13: No-Assert-Without-KB-Check**: Strictly forbidden from making any assertion about an external library, API, or hardware protocol without first checking `tools/knowledge-base/INDEX.md`. If the KB has a CURRENT entry → cite it. If STALE/CRITICAL → note it. If not found → establish via research AND run `/kb-capture` before asserting. Skipping this check is a P1 violation.

@@ -47,7 +47,7 @@ Every Surgeon Developer Agent MUST comply with the following before writing a si
 - If output is `master` → HALT immediately. All code work must occur inside a worktree branch.
 
 **SESSION_LOG ON COMPLETION**
-- Before reporting "READY FOR GATEKEEPER", append to `tools/SESSION_LOG.md`:
+- Before reporting "READY FOR GATEKEEPER", append to `docs/SESSION_LOG.md`:
   ```markdown
   ### [MERGE READY] <slug> — <commit-hash>
   Files touched: (list every modified file)

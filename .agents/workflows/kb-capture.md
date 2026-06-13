@@ -41,8 +41,8 @@ Assign from: `[BLE]` `[UI]` `[DB]` `[PATTERNS]` `[HARDWARE]` `[SCRAPER]`
 Default by source type (see INDEX.md staleness table). Override only if the source has explicit versioning.
 
 **4. Does this promote to a Tier-2 doc?**
-- Hardware/BLE protocol finding → `tools/ZENGGE_PROTOCOL_BIBLE.md` or `tools/BANLANX_PROTOCOL_BIBLE.md`
-- App architecture pattern → `tools/SK8Lytz_App_Master_Reference.md`
+- Hardware/BLE protocol finding → `docs/ZENGGE_PROTOCOL_BIBLE.md` or `docs/BANLANX_PROTOCOL_BIBLE.md`
+- App architecture pattern → `docs/SK8Lytz_App_Master_Reference.md`
 - If YES → flag for Avery handoff after capture
 
 ---
@@ -137,7 +137,7 @@ If NOT a Tier-2 promotion → skip this phase. Reyes proceeds directly to Phase 
 
 ### 📝 Phase 5 — SESSION_LOG Write-Back (Reyes)
 
-Append a `[ARTIFACT]` entry to `tools/SESSION_LOG.md`:
+Append a `[ARTIFACT]` entry to `docs/SESSION_LOG.md`:
 
 ```markdown
 ### [ARTIFACT] YYYY-MM-DDTHH:MM — KB Capture: <topic-slug>

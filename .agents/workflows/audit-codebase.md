@@ -26,7 +26,7 @@ Before running a full sweep, check what the last audit found:
 
 Announce: *"Checking prior audit findings..."*
 
-Read `tools/SESSION_LOG.md` — search for `[ARTIFACT]` entries mentioning `audit` or `TODO sweep`. If found, output:
+Read `docs/SESSION_LOG.md` — search for `[ARTIFACT]` entries mentioning `audit` or `TODO sweep`. If found, output:
 > *"Last audit: [date]. Findings: [summary]. Checking if those issues are resolved before flagging new ones."*
 
 This prevents filing the same TECH DEBT tasks every session.
@@ -46,10 +46,10 @@ Invoke 3 parallel sub-agents (Role: "Auditor", TypeName: "self") to partition th
 
 ### ⚡ Phase 2 — Synthesis
 1. **Bucket List Integration**:
-   - Pipe all findings into `tools/SK8Lytz_Bucket_List.md` under the `🧹 TECH DEBT` queue.
+   - Pipe all findings into `docs/SK8Lytz_Bucket_List.md` under the `🧹 TECH DEBT` queue.
    - You MUST strictly format the injected tasks according to the nested multi-line Task Schema defined in the AI AGENT DIRECTIVES.
 2. **Write SESSION_LOG [ARTIFACT] entry (mandatory — P3)**:
-   Append to `tools/SESSION_LOG.md`:
+   Append to `docs/SESSION_LOG.md`:
    ```markdown
    ### [ARTIFACT] YYYY-MM-DDTHH:MM — Codebase Audit
    **Vulnerabilities:** N found | N new TECH DEBT tasks filed

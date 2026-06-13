@@ -25,7 +25,7 @@ git worktree list
 ---
 
 ### ⚡ Step 0.5 — Jordan Board-First Check (MANDATORY, NO SKIP)
-Before reading anything else, Jordan reads `tools/SK8Lytz_Bucket_List.md` ACTIVE SPRINT section and outputs sprint health:
+Before reading anything else, Jordan reads `docs/SK8Lytz_Bucket_List.md` ACTIVE SPRINT section and outputs sprint health:
 - Any zombie tasks (`[/]` with no active worktree)? → Flag and propose resolution.
 - Any completed tasks not yet archived? → Archive them now before continuing.
 - Any ON DECK tasks missing `Decision Log:` field? → Flag for return to TRIAGE.
@@ -36,7 +36,7 @@ Before reading anything else, Jordan reads `tools/SK8Lytz_Bucket_List.md` ACTIVE
 ### ⚡ Step 0.7 — Reyes Session Health Checks (MANDATORY, NO SKIP)
 
 **0.7a. Friction Ledger Review:**
-Reyes reads `tools/FRICTION_LEDGER.md` — specifically `🔴 Active Friction Events`:
+Reyes reads `docs/FRICTION_LEDGER.md` — specifically `🔴 Active Friction Events`:
 - **0 active events** → *"Friction Ledger: CLEAN ✅. No recurring patterns to watch."*
 - **Any event at 1–2 occurrences** → *"Watching for: [pattern name] ([X] occurrences). I'll flag if it recurs this session."*
 - **Any event at 3 occurrences** → IMMEDIATELY generate a Rule Evolution Proposal before proceeding. Do not continue the session until the proposal is surfaced to the user.
@@ -70,13 +70,13 @@ docker compose up -d
 docker compose ps
 ```
 
-4. **Session Memory Read — Reyes Knowledge-First Protocol**: Read `tools/SESSION_LOG.md` — most recent entry only. Announce: *"Checking what we already know..."* then verbally summarize:
+4. **Session Memory Read — Reyes Knowledge-First Protocol**: Read `docs/SESSION_LOG.md` — most recent entry only. Announce: *"Checking what we already know..."* then verbally summarize:
    - What burned us last session (AI failure pattern)
    - What the user pattern was
    - What architecture decisions are locked (don't re-derive these)
    This is the memory bridge. Never skip it.
 
-5. **Bucket List Status**: The AI must read `tools/SK8Lytz_Bucket_List.md` to determine the current project status.
+5. **Bucket List Status**: The AI must read `docs/SK8Lytz_Bucket_List.md` to determine the current project status.
 
 6. Verify Database Backup Status
    - Use PowerShell to check the `backups/` directory for the most recent `.sql` file: `Get-ChildItem -Path C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\backups -Filter "data_*.sql" | Sort-Object LastWriteTime -Descending | Select-Object -First 1`

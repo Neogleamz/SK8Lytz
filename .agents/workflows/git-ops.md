@@ -30,7 +30,7 @@ team_roster: .agents/team-roster.md
    powershell.exe -ExecutionPolicy Bypass -File .\tools\fortress-gatekeeper.ps1
    ```
 5. **Write SESSION_LOG [MERGE] entry (mandatory per agent-behavior.md Rule 11):**
-   Immediately after gatekeeper success, append to `tools/SESSION_LOG.md`:
+   Immediately after gatekeeper success, append to `docs/SESSION_LOG.md`:
    ```markdown
    ### [MERGE] YYYY-MM-DDTHH:MM — <slug> → master @ <commit-hash>
    **What merged:** (bullet list of what changed and why)

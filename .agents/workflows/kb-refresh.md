@@ -112,7 +112,7 @@ For each entry approved for re-validation:
 
 ### 📝 Phase 4 — Log (Reyes)
 
-Append a `[ARTIFACT]` entry to `tools/SESSION_LOG.md`:
+Append a `[ARTIFACT]` entry to `docs/SESSION_LOG.md`:
 
 ```markdown
 ### [ARTIFACT] YYYY-MM-DDTHH:MM — KB Refresh Sweep

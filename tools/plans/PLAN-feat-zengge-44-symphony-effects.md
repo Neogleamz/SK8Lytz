@@ -1,7 +1,0 @@
-# [feat/zengge-44-symphony-effects] Expose 44 Native Hardware Effects
-## Goal
-Implement the 10 additional SymphonyEffects (IDs 35-44) discovered in the ZENGGE 1.5.0 APK.
-## Details
-- Effects 1-28 accept FG/BG bytes.
-- Effects 29-44 are hardcoded as `IType_NoColor` in the APK. They are 7-color generative sequences that ignore custom color inputs.
-- Ensure the UI disables color pickers when these specific modes are selected via `0x51`.

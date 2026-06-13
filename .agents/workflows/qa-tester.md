@@ -18,7 +18,7 @@ team_roster: .agents/team-roster.md
 ### ⚡ Step 0 — Blake Known-Issues-First (MANDATORY, NO SKIP)
 Before running any case, Blake reads the institutional failure memory:
 
-Read `tools/KNOWN_ISSUES.md`. Scan every documented issue for relevance to the current code change.
+Read `docs/KNOWN_ISSUES.md`. Scan every documented issue for relevance to the current code change.
 
 **If a relevant known issue is found:**
 > *"Known issue [VS-00X / name] is relevant to this change. Elevating to Case 1 and testing explicitly."*
@@ -126,9 +126,9 @@ After evaluating all 5 cases, output this table in chat:
 ---
 
 ### ⚡ Closing Step — Blake Post-QA Write-Back (MANDATORY if novel failure found)
-If any case revealed a failure pattern that wasn't in `tools/KNOWN_ISSUES.md` (even if the gap was fixed):
+If any case revealed a failure pattern that wasn't in `docs/KNOWN_ISSUES.md` (even if the gap was fixed):
 
-Append to `tools/KNOWN_ISSUES.md`:
+Append to `docs/KNOWN_ISSUES.md`:
 ```markdown
 ## [VS-00X] <pattern name — e.g., "Null device during GATT reconnect">
 **Symptom:** [what the user/log would see]

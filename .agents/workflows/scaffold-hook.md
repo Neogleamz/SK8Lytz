@@ -57,7 +57,7 @@ export function <hookName>(): HookResult {
 }
 ```
 
-4. **Update the Hook Registry**: Open `tools/SK8Lytz_App_Master_Reference.md` and find the §4 Hook & Service Registry table. Add a new row for the scaffolded hook:
+4. **Update the Hook Registry**: Open `docs/SK8Lytz_App_Master_Reference.md` and find the §4 Hook & Service Registry table. Add a new row for the scaffolded hook:
    - Name: `<hookName>`
    - File: `src/hooks/<hookName>.ts`
    - Domain: (fill in based on hook purpose)

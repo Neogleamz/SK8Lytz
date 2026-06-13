@@ -15,7 +15,7 @@ This workflow is a **Wave Orchestrator**. It reads the Bucket List Batch Strateg
 
 **MANDATORY FIRST ACTION — Board-First Rule:**
 
-1. Read `tools/SK8Lytz_Bucket_List.md` in full. Do NOT proceed from memory.
+1. Read `docs/SK8Lytz_Bucket_List.md` in full. Do NOT proceed from memory.
 2. Locate the `## 🔥 ON DECK` section and the **Batch Strategy Table**.
 3. Extract every `[BATCH:*]` group and its wave assignments.
 4. Output the execution plan:
@@ -77,7 +77,7 @@ BEFORE writing a single line of code you MUST:
     Use view_file on the EXACT line ranges cited.
     Never write code against a file you haven't read in this conversation.
 
-[3] CHECK tools/SESSION_LOG.md FOR PRIOR [DECISION] ENTRIES
+[3] CHECK docs/SESSION_LOG.md FOR PRIOR [DECISION] ENTRIES
     Search for any [DECISION] entries relevant to your task domain.
     Wave 1+ tasks: confirm Wave 0 [DECISION] entry with Wear OS field name exists.
 
@@ -119,7 +119,7 @@ append "// SKIPPED: <reason>" to the plan file before reporting ready.
 
 RULE 6 — SESSION LOG ON COMPLETION
 After your final commit and before reporting "READY FOR GATEKEEPER", write to
-tools/SESSION_LOG.md:
+docs/SESSION_LOG.md:
   ### [MERGE READY] <slug> — <commit-hash>
   Files touched: (list)
   TSC: ✅/❌  Jest: ✅/❌

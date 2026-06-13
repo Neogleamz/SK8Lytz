@@ -15,7 +15,7 @@ team_roster: .agents/team-roster.md
 
 ### ⚡ Step 0 — Reyes Knowledge-First (MANDATORY, NO SKIP)
 Check if this audit was already run recently.
-Read `tools/SESSION_LOG.md` — search for `[EVENT]` entries mentioning `BLE XState Pipeline Audit Completed`. If found recently, warn the user before proceeding to avoid redundant cycles.
+Read `docs/SESSION_LOG.md` — search for `[EVENT]` entries mentioning `BLE XState Pipeline Audit Completed`. If found recently, warn the user before proceeding to avoid redundant cycles.
 
 ---
 
@@ -166,4 +166,4 @@ Answer:
 - Wait for all 9 agents to complete and report back via messages.
 - Generate `tools/BLE_AUDIT_2/00_INDEX.md` containing a table of the files generated, their sizes, a timestamp, and the `git rev-parse HEAD` output.
 - Print a completion summary to the user.
-- Add an `[EVENT]` entry to `tools/SESSION_LOG.md` detailing the successful audit.
+- Add an `[EVENT]` entry to `docs/SESSION_LOG.md` detailing the successful audit.

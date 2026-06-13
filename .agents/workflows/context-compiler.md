@@ -20,7 +20,7 @@ $liveHooks = (Get-ChildItem -Path src/hooks -Recurse -Filter "*.ts" | Measure-Ob
 Write-Host "Live hooks: $liveHooks"
 
 # Find new files not yet in registry (proxy: files newer than last commit to Master Reference)
-git log --oneline -1 -- tools/SK8Lytz_App_Master_Reference.md
+git log --oneline -1 -- docs/SK8Lytz_App_Master_Reference.md
 ```
 
 Then grep the `src/` diff for unregistered exports:
@@ -40,14 +40,14 @@ Then grep the `src/` diff for unregistered exports:
 
 ---
 
-When prompted with "sync architecture", "update memory", or "compile context", execute the following workflow to synchronize `tools/SK8Lytz_App_Master_Reference.md` with the current codebase reality:
+When prompted with "sync architecture", "update memory", or "compile context", execute the following workflow to synchronize `docs/SK8Lytz_App_Master_Reference.md` with the current codebase reality:
 
 1. **Codebase Scan**: Leverage the Sub-Agent Swarm Protocol. Invoke parallel `research` sub-agents using `invoke_subagent` to survey distinct directories simultaneously:
    - Sub-agent 1: `src/hooks/` and `src/hooks/ble/` — count all hooks, identify new ones not in the Registry
    - Sub-agent 2: `src/services/` — count all services
    - Sub-agent 3: `src/components/` and `src/screens/` — count all components and screens
 
-2. **Hook & Service Registry Diff**: Compare the live file count against the Hook & Service Registry table in `tools/SK8Lytz_App_Master_Reference.md` §4. List every hook/service that is missing from the Registry.
+2. **Hook & Service Registry Diff**: Compare the live file count against the Hook & Service Registry table in `docs/SK8Lytz_App_Master_Reference.md` §4. List every hook/service that is missing from the Registry.
 
 3. **Update the Master Reference**: For each missing entry, add it to the appropriate Registry table in §4 with:
    - Name, file path, domain responsibility, and status
@@ -60,12 +60,12 @@ When prompted with "sync architecture", "update memory", or "compile context", e
    ```
    If verify fails → HALT. Fix the type error before committing the sync.
    ```powershell
-   git add tools/SK8Lytz_App_Master_Reference.md
+   git add docs/SK8Lytz_App_Master_Reference.md
    git commit -m "docs: sync Master Reference architecture map with live codebase"
    ```
 
 5. **Write SESSION_LOG [ARTIFACT] entry (mandatory — P3)**:
-   After the commit, append to `tools/SESSION_LOG.md`:
+   After the commit, append to `docs/SESSION_LOG.md`:
    ```markdown
    ### [ARTIFACT] YYYY-MM-DDTHH:MM — Master Reference Sync
    **What changed:** N hooks / N services registered | N BLE entries updated

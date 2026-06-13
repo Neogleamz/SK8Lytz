@@ -40,7 +40,7 @@ You are a precision instrument, not a text generator. Every code change must pas
 6. 📋 DOCS GATE    → Did you add a hook/service/component/BLE change? Update Master Reference §3/§4 NOW.
 7. ✅ VERIFY       → npm run verify (TSC + Jest + AST + TypeSafety + WorkflowValidator)
 8. 🔀 GATEKEEPER   → fortress-gatekeeper.ps1 (fast-forward merge only)
-8.5 📝 SESSION_LOG  → Append [MERGE] entry to tools/SESSION_LOG.md (mandatory — agent-behavior.md Rule 11)
+8.5 📝 SESSION_LOG  → Append [MERGE] entry to docs/SESSION_LOG.md (mandatory — agent-behavior.md Rule 11)
 9. 🎙️ DISCORD      → notify_discord.ps1 -Message "✅ <slug> merged. Master is green."
 ```
 
@@ -114,13 +114,13 @@ Future agents must check these invariants before touching BLE or onboarding logi
 | What | Where |
 |------|-------|
 | **Constitution** | `.agents/rules/CONSTITUTION.md` → P1–P5, always the fallback |
-| **Session Memory** | `tools/SESSION_LOG.md` → read the most recent entry at every session start |
-| **Friction Patterns** | `tools/FRICTION_LEDGER.md` → active friction events + evolution proposals |
+| **Session Memory** | `docs/SESSION_LOG.md` → read the most recent entry at every session start |
+| **Friction Patterns** | `docs/FRICTION_LEDGER.md` → active friction events + evolution proposals |
 | **Knowledge Base Index** | `tools/knowledge-base/INDEX.md` → check BEFORE any external API/library assertion |
 | **KB Validator** | `tools/kb-validator.js` → `node tools/kb-validator.js --summary` for quick health check |
-| Source of Truth | `tools/SK8Lytz_App_Master_Reference.md` |
-| Protocol Bible | `tools/ZENGGE_PROTOCOL_BIBLE.md` |
-| Active Tasks | `tools/SK8Lytz_Bucket_List.md` → `## 🚧 ACTIVE SPRINT` |
+| Source of Truth | `docs/SK8Lytz_App_Master_Reference.md` |
+| Protocol Bible | `docs/ZENGGE_PROTOCOL_BIBLE.md` |
+| Active Tasks | `docs/SK8Lytz_Bucket_List.md` → `## 🚧 ACTIVE SPRINT` |
 | Gatekeeper | `tools/fortress-gatekeeper.ps1` |
 | Discord Bridge | `tools/discord-bridge/notify_discord.ps1` |
 | Worktrees | `C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\<slug>\` |

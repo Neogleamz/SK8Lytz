@@ -1694,25 +1694,25 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - GradientLibraryTab.tsx: Added error UI component for missing/failed gradients.
 **Verify result:** TSC ? Jest ? gates ?
 **Files touched:** src/components/account/SkaterStatsPanel.tsx, src/hooks/useScenes.ts, src/hooks/useGradients.ts, src/components/patterns/GradientLibraryTab.tsx
-# # #   [ M E R G E ]   2 0 2 6 - 0 6 - 0 8 T 1 6 : 3 7      r e f a c t o r / t y p e - s a f e t y - d a t a - l a y e r   - >   m a s t e r   @   7 6 a c 0 9 1 1 
- * * W h a t   m e r g e d : * *   R e m o v e d    s   u n k n o w n   a s   d o u b l e - c a s t s   a n d   e n f o r c e d   . r e t u r n s < T > ( )   i n   d a t a   l a y e r   s e r v i c e s . 
- * * V e r i f y   r e s u l t : * *   T S C   ',   J e s t   ',   g a t e s   '
- * * F i l e s   t o u c h e d : * *   S c e n e s S e r v i c e . t s ,   G r a d i e n t s S e r v i c e . t s ,   S p e e d T r a c k i n g S e r v i c e . t s ,   D e v i c e R e p o s i t o r y . t s ,   u s e F a v o r i t e s . t s ,   u s e C u r a t e d P i c k s . t s ,   Q u i c k P r e s e t M o d a l . t s x  
- # # #   [ D E C I S I O N ]   2 0 2 6 - 0 6 - 0 8 T 1 6 : 3 7      s u p a b a s e C l i e n t . t s   m o c k   e x e m p t i o n 
- * * D e c i s i o n : * *   K e p t    s   u n k n o w n   a s   R e t u r n T y p e < t y p e o f   c r e a t e C l i e n t < D a t a b a s e > >   a t   s u p a b a s e C l i e n t . t s : 6 4 . 
- * * R e j e c t e d : * *   R e f a c t o r i n g   t h e   e n t i r e   m o c k   t o   a v o i d   d o u b l e - c a s t i n g . 
- * * D o n ' t   r e - d e r i v e : * *   T y p e S c r i p t   r e q u i r e s   d o u b l e - c a s t i n g   w h e n   c o n s t r u c t i n g   p r o x y / m o c k   o b j e c t s   t h a t   d o n ' t   s a t i s f y   1 0 0 %   o f   a   m a s s i v e   c l a s s   s i g n a t u r e .   I t ' s   a   v a l i d   p a t t e r n   f o r   t h e   o f f l i n e   m o c k   f a l l b a c k . 
- * * S o u r c e : * *   s r c / s e r v i c e s / s u p a b a s e C l i e n t . t s : 6 4  
- 
+### [MERGE] 2026-06-08T16:37   refactor/type-safety-data-layer -> master @ 76ac0911
+**What merged:** Removed s unknown as double-casts and enforced .returns<T>() in data layer services.
+**Verify result:** TSC ', Jest ', gates '
+**Files touched:** ScenesService.ts, GradientsService.ts, SpeedTrackingService.ts, DeviceRepository.ts, useFavorites.ts, useCuratedPicks.ts, QuickPresetModal.tsx
+### [DECISION] 2026-06-08T16:37   supabaseClient.ts mock exemption
+**Decision:** Kept s unknown as ReturnType<typeof createClient<Database>> at supabaseClient.ts:64.
+**Rejected:** Refactoring the entire mock to avoid double-casting.
+**Don't re-derive:** TypeScript requires double-casting when constructing proxy/mock objects that don't satisfy 100% of a massive class signature. It's a valid pattern for the offline mock fallback.
+**Source:** src/services/supabaseClient.ts:64
+
 ### [MERGE] 2026-06-08T17:03 â€” refactor-type-safety-ui-layer ? master @ 38d792dd
 **What merged:** Fixed missing DisplayDevice prop types (ny) across UI components (HardwareStatusPills, DashboardTelemetryHero, SkateGroupCard, DockedController, AccountTabDevices). Switched back to relaxed typings where necessary to stabilize mapping.
 **Verify result:** TSC ?, Jest ?, guards ?
 **Files touched:** src/components/DockedController.tsx, src/components/dashboard/*.tsx, etc.
-# # #   [ M E R G E ]   2 0 2 6 - 0 6 - 0 8 T 1 8 : 4 4      f i x / r e - e n t r a n c y - g u a r d s - p h a s e - 2   - >   m a s t e r   @   3 9 4 9 0 c 6 8  
- * * W h a t   m e r g e d : * *   A d d e d   u s e R e f   b o o l e a n   g a t e s   t o   c h e c k A u t o P a u s e ,   s y n c S e s s i o n S t a t e ,   p o l l H e a l t h D a t a ,   a n d   s c a n .  
- * * V e r i f y   r e s u l t : * *   T S C   ',   J e s t   ',   g a t e s   ' 
- * * F i l e s   t o u c h e d : * *   S e s s i o n C o n t e x t . t s x ,   u s e H e a l t h T e l e m e t r y . t s ,   u s e C r e w P r o x i m i t y R a d a r . t s  
- 
+### [MERGE] 2026-06-08T18:44   fix/re-entrancy-guards-phase-2 -> master @ 39490c68
+**What merged:** Added useRef boolean gates to checkAutoPause, syncSessionState, pollHealthData, and scan.
+**Verify result:** TSC ', Jest ', gates '
+**Files touched:** SessionContext.tsx, useHealthTelemetry.ts, useCrewProximityRadar.ts
+
 ### [ARTIFACT] 2026-06-09T00:35 - Functional Audit Intake Complete
 **What was filed:** All 15 findings from the 2026-06-09 functional audit processed through /intake workflow.
 **Tasks created:**
@@ -2301,11 +2301,11 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 - Handled ScenesService.publishScene safely inside QuickPresetModal.tsx.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/context/SessionContext.tsx, src/components/docked/QuickPresetModal.tsx
-# # #   [ M E R G E ]   2 0 2 6 - 0 6 - 1 0 T 1 6 : 3 6      f s m - b o o l e a n - t r a p - s w e e p   - >   m a s t e r   @   b d 3 a 0 4 3 5 
- * * W h a t   m e r g e d : * *   R e f a c t o r e d   1 8   t a r g e t   f i l e s   t o   u s e   s t r i c t   s t a t u s   s t r i n g   u n i o n s   ( ' i d l e '   |   ' l o a d i n g '   |   ' s u c c e s s '   |   ' e r r o r ' ) ,   e l i m i n a t i n g   i m p o s s i b l e   r a c e   s t a t e s .   D e f e r r e d   H o o k   Z o n e s   i n   D a s h b o a r d S c r e e n / D o c k e d C o n t r o l l e r   t o   a v o i d   c o l l a t e r a l   d a m a g e   p e r   s u r g i c a l   r u l e s . 
- * * V e r i f y   r e s u l t : * *   T S C   ',   J e s t   ',   g a t e s   '
- * * F i l e s   t o u c h e d : * *   s r c / h o o k s / u s e A c c o u n t O v e r v i e w . t s ,   s r c / c o m p o n e n t s / A c c o u n t M o d a l . t s x ,   s r c / c o m p o n e n t s / C r e w M o d a l . t s x ,   s r c / c o m p o n e n t s / a u t h / A u t h F o r m S i g n U p . t s x ,   s r c / h o o k s / u s e D a s h b o a r d P r o f i l e . t s ,   s r c / h o o k s / u s e C r e w M a n a g e . t s ,   s r c / h o o k s / u s e C r e w H u b . t s ,   s r c / s c r e e n s / O n b o a r d i n g / H a r d w a r e S e t u p W i z a r d S c r e e n . t s x ,   s r c / p r o v i d e r s / C o m p l i a n c e G a t e . t s x ,   s r c / p r o v i d e r s / B l u e t o o t h G u a r d . t s x ,   s r c / h o o k s / u s e D o c k e d C o n t r o l l e r S t a t e . t s ,   s r c / c o m p o n e n t s / a d m i n / t o o l s / F e a t u r e F l a g s P a n e l . t s x ,   s r c / c o m p o n e n t s / a d m i n / t o o l s / H a r d w a r e B l a c k l i s t P a n e l . t s x ,   s r c / h o o k s / u s e G r a d i e n t s . t s ,   s r c / c o m p o n e n t s / p a t t e r n s / G r a d i e n t L i b r a r y T a b . t s x  
- 
+### [MERGE] 2026-06-10T16:36   fsm-boolean-trap-sweep -> master @ bd3a0435
+**What merged:** Refactored 18 target files to use strict status string unions ('idle' | 'loading' | 'success' | 'error'), eliminating impossible race states. Deferred Hook Zones in DashboardScreen/DockedController to avoid collateral damage per surgical rules.
+**Verify result:** TSC ', Jest ', gates '
+**Files touched:** src/hooks/useAccountOverview.ts, src/components/AccountModal.tsx, src/components/CrewModal.tsx, src/components/auth/AuthFormSignUp.tsx, src/hooks/useDashboardProfile.ts, src/hooks/useCrewManage.ts, src/hooks/useCrewHub.ts, src/screens/Onboarding/HardwareSetupWizardScreen.tsx, src/providers/ComplianceGate.tsx, src/providers/BluetoothGuard.tsx, src/hooks/useDockedControllerState.ts, src/components/admin/tools/FeatureFlagsPanel.tsx, src/components/admin/tools/HardwareBlacklistPanel.tsx, src/hooks/useGradients.ts, src/components/patterns/GradientLibraryTab.tsx
+
 ### [MERGE] 2026-06-10T21:41 — Wave 4 of deepdive-sweep → master @ 0374dc4c
 **What merged:**
 - state-matrix-sweep @ 0374dc4c — fixed R-14 (missing error/isLoading states), R-24 (normalized AsyncStorage keys), R-16 (removed hardcoded setTimeout delays in favor of proper lifecycles/queues)
@@ -2443,10 +2443,10 @@ Pushed for honest root-cause answers rather than surface fixes. Good instincts. 
 
 
 
- # # #   [ A R T I F A C T ]        R e c o m m e n d e d   E x t e n s i o n s   R e s e a r c h 
- * * L i n k : * *   [ r e c o m m e n d e d _ e x t e n s i o n s . m d ] ( f i l e : / / / C : / U s e r s / M a g m a / . g e m i n i / a n t i g r a v i t y - i d e / b r a i n / 4 9 5 6 2 e 4 5 - 5 c f 2 - 4 e e 1 - 9 0 d 6 - 0 5 f 5 f c 9 3 9 b 8 1 / a r t i f a c t s / r e c o m m e n d e d _ e x t e n s i o n s . m d ) 
- * * S u m m a r y : * *   U s e r   a s k e d   f o r   u s e f u l   e x t e n s i o n s .   R e s e a r c h e d   a n d   c o m p i l e d   a   l i s t   o f   h i g h - v a l u e   S u p a b a s e   ( P o s t g r e S Q L )   a n d   V S   C o d e   d e v e l o p m e n t   e x t e n s i o n s   s p e c i f i c   t o   t h e   S K 8 L y t z   o f f l i n e - f i r s t ,   B L E ,   a n d   R e a c t   N a t i v e   a r c h i t e c t u r e .  
- 
+### [ARTIFACT]    Recommended Extensions Research
+**Link:** [recommended_extensions.md](file:///C:/Users/Magma/.gemini/antigravity-ide/brain/49562e45-5cf2-4ee1-90d6-05f5fc939b81/artifacts/recommended_extensions.md)
+**Summary:** User asked for useful extensions. Researched and compiled a list of high-value Supabase (PostgreSQL) and VS Code development extensions specific to the SK8Lytz offline-first, BLE, and React Native architecture.
+
 
 ### [EVENT] 2026-06-11T05:30 — /deepdive-docs Completed
 **Trigger:** User requested `/deepdive-docs` workflow.
@@ -2528,3 +2528,90 @@ TSC: ✅  Jest: ✅
 | Artifact | Path | Description |
 |---|---|---|
 | Session Telemetry Architecture | file:///C:/Users/Magma/.gemini/antigravity/brain/1f61f75f-57c0-48b4-9117-a556c5711e06/session_telemetry_flow.md | Synthesized flow diagram of skate and crew session states and health telemetry handling. |
+
+### [ARTIFACT]    Recommended Extensions Research
+**Link:** [recommended_extensions.md](file:///C:/Users/Magma/.gemini/antigravity-ide/brain/49562e45-5cf2-4ee1-90d6-05f5fc939b81/artifacts/recommended_extensions.md)
+**Summary:** User asked for useful extensions. Researched and compiled a list of high-value Supabase (PostgreSQL) and VS Code development extensions specific to the SK8Lytz offline-first, BLE, and React Native architecture.
+
+
+### [EVENT] 2026-06-11T05:30 — /deepdive-docs Completed
+**Trigger:** User requested `/deepdive-docs` workflow.
+**Action:**
+- Cleaned and rebuilt `tools/SK8Lytz_App_Master_Reference.md` to purge legacy duplicates and line-number bugs.
+- Defined custom `cartographer` subagent with write permissions to prevent context explosion and bypass `research` subagent write limitations.
+- Invoked 21 parallel subagents to audit all 21 codebase domains, collecting reports to `artifacts/deepdive_docs/`.
+- Programmatically synthesized and injected all 21 reports between domain markers in `tools/SK8Lytz_App_Master_Reference.md`.
+- Safely moved 30 stale entries to Section 13: Historical Archive (The Graveyard).
+- Synchronized high-level non-developer documentation based on architectural impact flags:
+  - `User_Journey_Maps.md`: Added Journey 3 (Wearable Session Sync).
+  - `System_Context_Diagram.md`: Added Wearable external system block.
+  - `State_Charts_UX.md`: Added companion wearable connection & sync lifecycle chart.
+  - `Architecture_Decision_Records.md`: Added ADR-004 (Theme FSM), ADR-005 (BleWriteQueue), and ADR-006 (Organic Disconnect callback).
+**Verify result:** TSC check passed clean, Jest unit tests passed (203 tests), all static code gates and invariant checkers verified via `npm run verify`.
+**Files touched:**
+- [Architecture_Decision_Records.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/Architecture_Decision_Records.md)
+- [SK8Lytz_App_Master_Reference.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SK8Lytz_App_Master_Reference.md)
+- [State_Charts_UX.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/State_Charts_UX.md)
+- [System_Context_Diagram.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/System_Context_Diagram.md)
+- [User_Journey_Maps.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/User_Journey_Maps.md)
+- [SESSION_LOG.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SESSION_LOG.md)
+
+### [EVENT] 2026-06-11T20:30 — Docker Compose Workflow Parity Completed
+**What shipped:**
+- Aligned session kickoff (`/hello`), smoke test (`/smoke-test`), and dev server (`/dev-server`) workflows with Docker Compose.
+- Updated `tools/start-web-demo.ps1`, `tools/cheat-sheet.html`, `tools/SK8Lytz_TEST_PLAN.md`, and `tools/SK8Lytz_App_Master_Reference.md` to deprecate host PM2 daemons and document retired scripts.
+**Verify result:** TSC ✅, Jest ✅ (203 tests passing), all verification checks green.
+**Active sprint state:** none (clean).
+**Master HEAD:** 07663e3a
+**Friction Audit:** 0 new events | 0 resolved | 0 incremented
+**System evolution:** none
+
+### [ARTIFACT] 2026-06-11T22:08 — Session Machine Test Coverage Appended
+**Description:** Appended Session Machine XState v5 test coverage section to SK8Lytz_TEST_PLAN.md.
+
+### [MERGE READY] docs/test-plan-session-machine — 9e85de0b
+Files touched: `tools/SK8Lytz_TEST_PLAN.md`
+TSC: ✅  Jest: ✅
+
+### [ARTIFACT] 2026-06-11T22:25 — c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/UI_MODALS_cartography.md
+**What:** Architectural Cartography Report for the UI_MODALS domain.
+**Why:** Documented all 11 files in the domain, their blast radius, consumed contexts, service I/O, platform OS branching matrices, design system tokens, and BLE probing and cloud scene application sequence diagrams.
+
+### [MERGE READY] fix/session-ui-cleanup — 727e2057
+Files touched: src/components/docked/StreetPanel.tsx, src/components/DockedController.tsx, src/services/session/__tests__/SessionCommitService.test.ts
+TSC: ✅  Jest: ✅
+
+### [DECISION] 2026-06-12T02:30 - Revert neverForLocation to false
+**Decision:** Set `neverForLocation: false` in the `react-native-ble-plx` plugin options in `app.config.js`.
+**Rejected:** Leaving it true or attempting to scan with filters.
+**Don't re-derive:** If `neverForLocation` is declared in the manifest, Android OS silently blocks and drops all unfiltered scan results (`scanServiceUUIDs: null`). Since we scan unfiltered to capture FCF1/Zengge advertisements accurately, we must set `neverForLocation: false` and request runtime Location permissions.
+**Source:** [app.config.js](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/app.config.js#L83)
+
+### [DECISION] 2026-06-12T02:35 - Request ACCESS_FINE_LOCATION on Android 12+
+**Decision:** Added `ACCESS_FINE_LOCATION` back to the Android 12+ API permission array in `PermissionService.ts` and `BleMachine.types.ts`.
+**Rejected:** Leaving it out because the manifest declares `neverForLocation`.
+**Don't re-derive:** `react-native-ble-plx` internally checks for Location permissions and throws `LOCATION_PERMISSION_MISSING` if it's missing, before passing the scan to the OS. Because `console.warn` is stripped in Release builds, this failure was entirely silent in `adb logcat`.
+**Source:** [PermissionService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/PermissionService.ts#L95-L108)
+
+### [DECISION] 2026-06-12T02:40 - Set scanMode: 2 (LOW_LATENCY) for unfiltered scan
+**Decision:** Set `scanMode: 2` (LOW_LATENCY) and `scanServiceUUIDs: null` in `useBLE.ts`.
+**Rejected:** Leaving scanMode as 1 or null (LOW_POWER).
+**Don't re-derive:** Android 12+ OS silently intercepts and drops legacy unfiltered advertisements if the scan mode is LOW_POWER or BALANCED, causing the scanner to infinite loop without firing the callback. Changing to LOW_LATENCY forces the OS to deliver the packets to the app.
+**Source:** [useBLE.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L177-L186)
+
+### [DECISION] 2026-06-12T02:45 - Remove scan-lockout from Wizard Next button
+**Decision:** Changed the Next button condition on Step 1 of `HardwareSetupWizardScreen.tsx` from `pendingRegistrations.length > 0 && bleState !== 'SCANNING'` to `pendingRegistrations.length > 0`.
+**Rejected:** Keeping the original scan-state block or enforcing a hard scan-stop timer.
+**Don't re-derive:** In FTUE, the app runs a persistent background battery sweeper that scans indefinitely. If the wizard blocks transition to Step 2 while `bleState === 'SCANNING'`, the user is deadlocked on Step 1: devices are discovered in JS but the Next button displays `SEARCHING FOR SKATES...` and remains disabled forever.
+**Source:** [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx#L551)
+
+### [ARTIFACT] 2026-06-13T05:40 — c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/NOTIFICATIONS_&_ROUTING_cartography.md
+**What:** Architectural Cartography Report for the NOTIFICATIONS_&_ROUTING domain.
+**Why:** Documented all 7 files in the domain, their blast radius, consumed/provided contexts, service input/output registries, platform OS branching matrices, and background session notification dispatch and push token/geocoding sequence diagrams.
+
+
+### [DECISION] 2026-06-13T01:22 — Comprehensive Repo Restructure
+**Decision:** Consolidate all executable scripts into `tools/`, all documentation and plans into `docs/`, and move root garbage files into `scratch/` and `releases/`.
+**Rejected:** Leaving files scattered across root which violated separation of concerns.
+**Don't re-derive:** The `docs/` directory is now the canonical source of truth for all rules, plans, and markdown documents. All .agents constitutional rules were updated to reflect this path shift.
+**Source:** C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\repo-restructure

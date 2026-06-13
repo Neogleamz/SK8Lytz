@@ -1,7 +1,0 @@
-# [feat/hardware-segment-mirroring] BLE Payload Optimization
-## Goal
-Implement segment-aware mirroring for `0x59` payload generation.
-## Details
-- Discovered that the hardware possesses an internal mirroring engine based on `segments`.
-- For a device like HALOZ (16 LEDs total, 2 segments of 8), the app should only calculate and transmit an 8-pixel array over BLE.
-- Update `PatternEngine.ts` to respect segment division, reducing the BLE MTU payload size by half.

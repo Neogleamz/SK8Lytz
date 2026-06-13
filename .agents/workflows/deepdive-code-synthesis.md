@@ -40,7 +40,7 @@ You are STRICTLY FORBIDDEN from running /deepdive-code-synthesis unless `/deepdi
 
 ### 📖 Phase 1.5 — KNOWN_ISSUES Cross-Reference
 
-1. Read `tools/KNOWN_ISSUES.md`.
+1. Read `docs/KNOWN_ISSUES.md`.
 2. For each documented known issue, check if any finding in the raw list matches (same file, same pattern).
 3. Tag matching findings as `[KNOWN_ISSUE: VS-XXX]` — these are NOT duplicates to remove, but they should be marked so the triage batch doesn't recreate already-documented work.
 4. Report: *"[X] findings match existing KNOWN_ISSUES entries."*

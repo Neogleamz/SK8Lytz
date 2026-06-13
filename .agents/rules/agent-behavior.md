@@ -64,7 +64,7 @@ HANDOFF QUALITY CHECK (outgoing persona runs this):
 ## 1. Anti-Hallucination & First Principles
 *Derives from: **P1 — Evidence Before Action***
 - **Deny Assumptions**: Never guess root causes. Always inspect source files.
-- **First-Principles Audit**: You MUST read `tools/SK8Lytz_App_Master_Reference.md` AND `tools/ZENGGE_PROTOCOL_BIBLE.md` BEFORE generating any plan, task, or writing code.
+- **First-Principles Audit**: You MUST read `docs/SK8Lytz_App_Master_Reference.md` AND `docs/ZENGGE_PROTOCOL_BIBLE.md` BEFORE generating any plan, task, or writing code.
 - **Cite Truth**: When touching BLE payloads, opcodes, or architecture, include a `# Cited Truth` section quoting the exact lines/sources that justify the implementation.
 - **The No `any` Cast Law**: You are strictly forbidden from bypassing TypeScript compilation errors by casting to `any` (`as any`, `@ts-ignore`). Fix the type signature or import correctly.
 - **Conflict Halt**: If live code contradicts the Master Reference, halt immediately and ask the user to resolve the source of truth.
@@ -110,7 +110,7 @@ HANDOFF QUALITY CHECK (outgoing persona runs this):
 The system must grow with the team. Friction is not just a bug — it is a signal. Every recurring pain point is data about a missing or broken rule. The team's job is to catch that signal and bake the fix into the rules permanently.
 
 ### The 3-Strike Evolution Loop (Always Active)
-1. **Friction Observation**: Any persona that witnesses a recurring problem (same mistake, same confusion, same re-correction) MUST file a Friction Event to `tools/FRICTION_LEDGER.md`. Do not wait to be told. Do not just fix it in the moment. File it.
+1. **Friction Observation**: Any persona that witnesses a recurring problem (same mistake, same confusion, same re-correction) MUST file a Friction Event to `docs/FRICTION_LEDGER.md`. Do not wait to be told. Do not just fix it in the moment. File it.
 
 2. **Friction Filing Format**:
    ```markdown
@@ -137,7 +137,7 @@ The system must grow with the team. Friction is not just a bug — it is a signa
    → Approve with: "Ship the evolution" | Reject with: "Hold, here's why..."
    ```
 
-4. **After Approval → Victory Snapshot**: Once a fix is implemented, update the Friction Event to `RESOLVED` and move it to the `✅ Resolved Patterns` section in `tools/FRICTION_LEDGER.md` as a Victory Snapshot. Append the fix to `RULE[safety-protocol.md]`.
+4. **After Approval → Victory Snapshot**: Once a fix is implemented, update the Friction Event to `RESOLVED` and move it to the `✅ Resolved Patterns` section in `docs/FRICTION_LEDGER.md` as a Victory Snapshot. Append the fix to `RULE[safety-protocol.md]`.
 
 ### Peer Drift Watch (Always Active — No Workflow Required)
 Each persona monitors specific drift signals in other personas' domains and calls them out immediately:
@@ -209,10 +209,10 @@ The 3-persona model has been superseded by the Full-Lifecycle Team Roster.
 
 ## 10. Evolved Rules (SDE Closed-Loop Friction Feedback)
 - **Rule: Surgical Buffer Overflow Defense**: The agent must enforce a minimum length of 12 RGB pixels for all `0x59` Static Colorful payload dispatches. Payloads below 10 pixels cause physical controller EEPROM buffer lockouts on the `0xA3` chipset.
-- **Rule: Documentation Parity Gate (VS-003)**: When completing ANY task that creates new hooks, services, components, or modifies BLE architecture/protocol/types, the agent MUST update `tools/SK8Lytz_App_Master_Reference.md` BEFORE running the fortress gatekeeper. Failure to do so caused 16 commits of documentation drift (2026-06-06) requiring emergency remediation. See Kanban Constitution Rule 12 for the full specification.
+- **Rule: Documentation Parity Gate (VS-003)**: When completing ANY task that creates new hooks, services, components, or modifies BLE architecture/protocol/types, the agent MUST update `docs/SK8Lytz_App_Master_Reference.md` BEFORE running the fortress gatekeeper. Failure to do so caused 16 commits of documentation drift (2026-06-06) requiring emergency remediation. See Kanban Constitution Rule 12 for the full specification.
 
 ## 11. Session Log Live Update Protocol (The Context Bridge Mandate)
-The `tools/SESSION_LOG.md` is a **living chat log** updated throughout the session, NOT only at `/wind-down`. Failing to update it live means the next session agent re-derives decisions that already cost hours. This failure occurred repeatedly in the session of 2026-06-06.
+The `docs/SESSION_LOG.md` is a **living chat log** updated throughout the session, NOT only at `/wind-down`. Failing to update it live means the next session agent re-derives decisions that already cost hours. This failure occurred repeatedly in the session of 2026-06-06.
 
 **Mandatory update triggers (write to SESSION_LOG immediately):**
 1. **After every `fortress-gatekeeper.ps1` success** → append a `[MERGE]` entry:
@@ -257,17 +257,17 @@ Each persona MUST execute their Proactive Behavior #1 as the FIRST action when t
 **The 11 Activation Protocols (execute on persona activation, no exceptions):**
 
 ### 🎯 PM — Jordan | Board-First Rule
-On activation: Read `tools/SK8Lytz_Bucket_List.md` ACTIVE SPRINT section. Output sprint health:
+On activation: Read `docs/SK8Lytz_Bucket_List.md` ACTIVE SPRINT section. Output sprint health:
 - Any zombie tasks (tagged `[/]` with no active worktree)? → Flag them.
 - Any completed tasks not yet archived? → Archive them now.
 - Any tasks in ON DECK missing Decision Log? → Send them back to TRIAGE.
-**The Anti-Hallucination Board Guard**: You are STRICTLY FORBIDDEN from suggesting a "next task" to the user unless you have explicitly called `view_file` on `tools/SK8Lytz_Bucket_List.md` in your current context window. Do not trust conversational memory or checkpoint summaries.
+**The Anti-Hallucination Board Guard**: You are STRICTLY FORBIDDEN from suggesting a "next task" to the user unless you have explicitly called `view_file` on `docs/SK8Lytz_Bucket_List.md` in your current context window. Do not trust conversational memory or checkpoint summaries.
 THEN proceed with the requested action.
 
 ### 🕵️ Scout — Reyes | Knowledge-First Rule
 On activation: Announce *"Checking what we already know..."* then follow the **3-step KB Hierarchy**:
 1. **KB INDEX first** — grep `tools/knowledge-base/INDEX.md` for the topic. If a CURRENT entry exists → cite it verbatim. Skip steps 2–3.
-2. **SESSION_LOG second** — read the last 5 entries of `tools/SESSION_LOG.md`. If a prior [DECISION] or [ARTIFACT] exists → cite it. Skip step 3.
+2. **SESSION_LOG second** — read the last 5 entries of `docs/SESSION_LOG.md`. If a prior [DECISION] or [ARTIFACT] exists → cite it. Skip step 3.
 3. **Web/file research last** — only if steps 1–2 found nothing. After research, run `/kb-capture` AND write to SESSION_LOG before handing off.
 - NEVER investigate something already in KB INDEX or SESSION_LOG.
 - ALWAYS write findings back to BOTH KB and SESSION_LOG after any new research.
@@ -279,7 +279,7 @@ On activation: Run `git worktree list` **via actual command** (not mentally). Ch
 THEN proceed with sprint coordination.
 
 ### 🏛️ Arch — Morgan | Rejection-Register-First Rule
-On activation: Search `tools/SESSION_LOG.md` for `Rejected:` entries related to the current topic.
+On activation: Search `docs/SESSION_LOG.md` for `Rejected:` entries related to the current topic.
 - If a prior rejection EXISTS → surface it: *"We considered this on [date]. Rejected because [reason]."*
 - Then evaluate whether current context changes that conclusion.
 NEVER propose a previously rejected alternative without acknowledging the rejection and explaining what's different now.
@@ -298,9 +298,9 @@ On activation: Before touching any file, run `view_file` on the exact target lin
 DO NOT write code from memory. DO NOT skip the pre-read.
 
 ### 🔬 QA — Blake | Known-Issues-First Rule
-On activation: Read `tools/KNOWN_ISSUES.md`. Cross-reference each documented issue against the current code change.
+On activation: Read `docs/KNOWN_ISSUES.md`. Cross-reference each documented issue against the current code change.
 - If a known issue is relevant → it becomes Case 1 of the QA checklist, explicitly tested.
-- After QA, if a novel failure pattern was found (even if fixed) → append to `tools/KNOWN_ISSUES.md` before handing off.
+- After QA, if a novel failure pattern was found (even if fixed) → append to `docs/KNOWN_ISSUES.md` before handing off.
 
 ### 📋 Docs — Avery | Parity-Scan-First Rule
 On activation: Grep the current diff for:
@@ -318,7 +318,7 @@ On activation: Verify the attestation chain:
 If ANY mismatch → halt and fix before gatekeeper runs.
 
 ### 🩺 SRE — River | Known-Issues-First Rule
-On activation: Read `tools/KNOWN_ISSUES.md` before any diagnosis.
+On activation: Read `docs/KNOWN_ISSUES.md` before any diagnosis.
 - If the bug pattern matches a known issue → cite it: *"VS-00X pattern detected. Prior fix: [X]."*
 - Always output 3 explicit root-cause theories BEFORE touching any code.
 - After fix: write `[DECISION]` post-mortem to SESSION_LOG. Update KNOWN_ISSUES.md.
@@ -340,19 +340,19 @@ Every persona has the authority AND responsibility to propose changes to:
 - Their own workflow files (within their domain)
 - `agent-behavior.md` rules
 - `team-roster.md` elite profiles
-- `tools/FRICTION_LEDGER.md`
+- `docs/FRICTION_LEDGER.md`
 
 No permission is needed to FILE a friction event or draft a proposal. Permission IS required to implement a rule change.
 
 ### Session-Start Friction Review (Reyes — Always Active)
 At every session start (`/hello`), after the Knowledge-First check, Reyes MUST:
-1. Read `tools/FRICTION_LEDGER.md` — specifically the `🔴 Active Friction Events` section.
+1. Read `docs/FRICTION_LEDGER.md` — specifically the `🔴 Active Friction Events` section.
 2. For any event with **2+ occurrences**: Announce it immediately: *"We have a recurring friction pattern: [name]. [X] occurrences. Watching for recurrence this session."*
 3. For any event at **3 occurrences**: Immediately generate an Evolution Proposal (see Rule 5, Step 3).
 
 ### Wind-Down Evolution Audit (Alex — Always Active)
 At every session end (`/wind-down`), after the Completeness-First check, Alex MUST:
-1. Review `tools/FRICTION_LEDGER.md` for any new friction events that occurred this session.
+1. Review `docs/FRICTION_LEDGER.md` for any new friction events that occurred this session.
 2. Check if any currently open friction events were triggered again today.
 3. If yes: increment the occurrence count. If count reaches 3, flag: *"Evolution Proposal due from [filing persona] before next session."*
 4. Add a `Friction Audit:` line to the SESSION_LOG `[EVENT]` entry: *"Friction events: [X new / Y incremented / Z resolved]"*
@@ -474,7 +474,7 @@ The agent team must strictly adhere to the following industry-leading React Nati
 ### 17.1 — The KB Check Hierarchy (All Personas — Mandatory)
 Before asserting any fact about an EXTERNAL system (library, API, hardware, competitor):
 1. Check `tools/knowledge-base/INDEX.md` → If CURRENT entry found: cite it. Stop. Done.
-2. Check `tools/SESSION_LOG.md` (last 5 entries for the topic) → If found: cite it. Stop.
+2. Check `docs/SESSION_LOG.md` (last 5 entries for the topic) → If found: cite it. Stop.
 3. If NOT found → proceed with investigation AND run `/kb-capture` before handing off.
 
 **This hierarchy is mandatory for ALL personas.** Skipping step 1 when INDEX.md has a matching entry is a P1 violation.
@@ -503,5 +503,5 @@ When a KB capture's finding is stable enough to become team truth:
 ### 17.5 — Two-Tier Knowledge Model
 - **Tier 1** (`tools/knowledge-base/` — gitignored): Raw external references. Has staleness windows. Can expire.
 - **Tier 2** (`ZENGGE_PROTOCOL_BIBLE.md`, `SK8Lytz_App_Master_Reference.md` — git-tracked): Our derived truths. Built FROM Tier 1. These are what plans and code cite.
-- `tools/INDUSTRY_BENCHMARKS.md` — remains separate and git-tracked. Contains our synthesized opinions (not raw external docs). Referenced by but not replaced by the KB.
+- `docs/INDUSTRY_BENCHMARKS.md` — remains separate and git-tracked. Contains our synthesized opinions (not raw external docs). Referenced by but not replaced by the KB.
 

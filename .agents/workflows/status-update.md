@@ -20,7 +20,7 @@ When my prompt includes "whats up", "we good", "status update", "where are we", 
    - Use the `run_command` tool to execute `git log -1 --pretty=%B` to get the most recent commit message.
    - Use the `run_command` tool to execute `git status --short` to see if there are uncommitted changes.
 
-2. **Parse the Bucket List**: Read `tools/SK8Lytz_Bucket_List.md`.
+2. **Parse the Bucket List**: Read `docs/SK8Lytz_Bucket_List.md`.
    - Identify which `### Target:` section currently has active, incomplete tasks.
    - Calculate the Epic Progress by counting how many items are `[x]` versus the total number of items under that specific `### Target:` heading.
    - Look at the most recently checked-off item (`- [x]`).

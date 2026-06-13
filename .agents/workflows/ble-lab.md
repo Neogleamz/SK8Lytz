@@ -26,9 +26,9 @@ Before any protocol investigation, Reyes checks what the team already knows:
 
 Announce: *"Checking what we already know about this command..."*
 
-1. Read `tools/SESSION_LOG.md` — search for prior [DECISION] or [ARTIFACT] entries mentioning the target opcode (e.g., `0x62`, `0x59`, `0x74`).
-2. Read `tools/SK8Lytz_App_Master_Reference.md` §3 BLE Protocol Library — find the command entry.
-3. Read `tools/ZENGGE_PROTOCOL_BIBLE.md` §3 Opcode Command Map — find the command specification.
+1. Read `docs/SESSION_LOG.md` — search for prior [DECISION] or [ARTIFACT] entries mentioning the target opcode (e.g., `0x62`, `0x59`, `0x74`).
+2. Read `docs/SK8Lytz_App_Master_Reference.md` §3 BLE Protocol Library — find the command entry.
+3. Read `docs/ZENGGE_PROTOCOL_BIBLE.md` §3 Opcode Command Map — find the command specification.
 
 **If prior lab findings exist in SESSION_LOG:**
 > *"Found prior lab results for [opcode] in SESSION_LOG [date]: [finding]. Verifying current state matches."*
@@ -40,7 +40,7 @@ Announce: *"Checking what we already know about this command..."*
 
 1. **Parse the command** from the user prompt (e.g., "ble lab 0x62 color write" → target command `0x62`).
 
-2. **Read the Master Reference** — open and search `tools/SK8Lytz_App_Master_Reference.md` for the target command byte to retrieve:
+2. **Read the Master Reference** — open and search `docs/SK8Lytz_App_Master_Reference.md` for the target command byte to retrieve:
    - Command structure and byte layout
    - Expected payload format (Big-Endian/Little-Endian)
    - Expected notification response format
@@ -69,7 +69,7 @@ Announce: *"Checking what we already know about this command..."*
 7. If the user confirms the test was successful, offer to update the Master Reference with any new findings. **Additionally, if any new opcode behavior or hardware constraint was discovered during this session, Reyes MUST run `/kb-capture` targeting `knowledge-base/hardware/` before the session ends.** Hardware knowledge is never-expire in the KB.
 
 8. **Write SESSION_LOG [ARTIFACT] entry (mandatory — P3 compliance)**:
-   After every BLE lab session, append to `tools/SESSION_LOG.md`:
+   After every BLE lab session, append to `docs/SESSION_LOG.md`:
    ```markdown
    ### [ARTIFACT] YYYY-MM-DDTHH:MM — BLE Lab: 0x<XX> <command-name>
    **Payload tested:** [hex bytes]

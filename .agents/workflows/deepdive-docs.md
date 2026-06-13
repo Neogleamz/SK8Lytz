@@ -121,17 +121,17 @@ Once all 21 sub-agents have written their files to `artifacts/deepdive_docs/`:
 ### ⚡ Phase 4 — High-Level Documentation Synthesis (Unconditional)
 
 After the Master Reference is updated in Phase 3, Avery unconditionally opens each satellite doc and diffs against the live architecture. No conditional flags required:
-1. Open `tools/State_Charts_UX.md`. Update any XState or UX charts to match new machine states.
-2. Open `tools/User_Journey_Maps.md`. Update any step-by-step flows that changed.
-3. Open `tools/System_Context_Diagram.md`. Update if new external systems or hardware interfaces were added.
+1. Open `docs/State_Charts_UX.md`. Update any XState or UX charts to match new machine states.
+2. Open `docs/User_Journey_Maps.md`. Update any step-by-step flows that changed.
+3. Open `docs/System_Context_Diagram.md`. Update if new external systems or hardware interfaces were added.
 
 ---
 
 ### ⚡ Phase 5 — ADR Sync
 
-1. Read `tools/SESSION_LOG.md` entirely for `[DECISION]` entries.
+1. Read `docs/SESSION_LOG.md` entirely for `[DECISION]` entries.
 2. Filter for major architectural shifts (not minor bugfixes).
-3. Open `tools/Architecture_Decision_Records.md`.
+3. Open `docs/Architecture_Decision_Records.md`.
 4. Inject new ADR entries following the established format (Context, Decision, Trade-off).
 
 **MANDATORY FINAL STEP:** After Phase 4 and Phase 5 are complete, run `git add tools/*.md` and `git commit -m "docs: cartographer rebuild and satellite sync"`.

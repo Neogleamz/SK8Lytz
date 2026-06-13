@@ -14,10 +14,10 @@ This workflow acts as the Error Observatory and Auto-Triage Pipeline.
 ## Phase 0 — Institutional Memory Pre-Check (River)
 > 🩺 SRE — River activates. Reads institutional memory BEFORE any collection.
 
-1. Read `tools/KNOWN_ISSUES.md` → load resolved patterns for regression detection
-2. Read `tools/FRICTION_LEDGER.md` → load active friction events
-3. Read last 10 entries of `tools/SESSION_LOG.md` → check for recent error context
-4. Read `tools/SK8Lytz_Bucket_List.md` TRIAGE QUEUE → check for existing error tasks (avoid duplicates)
+1. Read `docs/KNOWN_ISSUES.md` → load resolved patterns for regression detection
+2. Read `docs/FRICTION_LEDGER.md` → load active friction events
+3. Read last 10 entries of `docs/SESSION_LOG.md` → check for recent error context
+4. Read `docs/SK8Lytz_Bucket_List.md` TRIAGE QUEUE → check for existing error tasks (avoid duplicates)
 5. Announce findings — "Observatory pre-check complete. X known issues loaded, Y friction events active, Z existing error tasks in triage."
 
 **Gate:** If ACTIVE SPRINT contains incomplete tasks, warn user: *"⚠️ Active sprint has in-progress work. Observatory findings will be queued to TRIAGE, not injected into the sprint."*

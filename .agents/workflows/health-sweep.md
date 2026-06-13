@@ -31,7 +31,7 @@ Invoke 2 parallel `self` sub-agents using `invoke_subagent`:
 Once the swarm reports back, synthesize the results:
 
 - **npm audit**: If ANY **critical** or **high** vulnerabilities are found: **HALT. Do NOT proceed to release.** If only **moderate**: Document them, proceed with user approval.
-- **npm outdated**: Log any packages >2 major versions behind into the `🧹 TECH DEBT` section of `tools/SK8Lytz_Bucket_List.md`.
+- **npm outdated**: Log any packages >2 major versions behind into the `🧹 TECH DEBT` section of `docs/SK8Lytz_Bucket_List.md`.
 - **Supabase Security**: If ANY security advisors are flagged: **HALT. Log to TRIAGE QUEUE and do NOT push.**
 
 ### Step 4: Report

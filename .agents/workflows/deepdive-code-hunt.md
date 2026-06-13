@@ -12,7 +12,7 @@ team_roster: .agents/team-roster.md
 ---
 
 ### 🛑 PREREQUISITE GATE
-You are STRICTLY FORBIDDEN from running /deepdive-code-hunt unless /deepdive-docs has been run recently and the `tools/SK8Lytz_App_Master_Reference.md` is guaranteed to be accurate. If the Master Reference is stale, my auditors will go rogue and report false positives.
+You are STRICTLY FORBIDDEN from running /deepdive-code-hunt unless /deepdive-docs has been run recently and the `docs/SK8Lytz_App_Master_Reference.md` is guaranteed to be accurate. If the Master Reference is stale, my auditors will go rogue and report false positives.
 
 **USER ACTION REQUIRED:** Ensure your active Model Selection is set to a model with a massive context window (e.g., Gemini 2.5 Flash/Pro) before triggering this workflow to save on costs and processing time.
 

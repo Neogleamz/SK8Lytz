@@ -12,7 +12,7 @@ team_roster: .agents/team-roster.md
 ### ⚡ Step 0 — River Known-Issues-First (MANDATORY, NO SKIP)
 Before any diagnosis, River checks the institutional memory:
 
-Read `tools/KNOWN_ISSUES.md`. Search for patterns matching the reported bug.
+Read `docs/KNOWN_ISSUES.md`. Search for patterns matching the reported bug.
 
 **If a matching known issue is found:**
 > *"VS-00X / [issue name] pattern detected. Prior root cause: [cause]. Prior fix: [fix]. Testing if this matches..."*
@@ -53,7 +53,7 @@ Verify whether the prior fix applies. If yes, apply it as Theory 1.
 8. **Success Reset + Post-Mortem (MANDATORY)**:
    If the fix works and tests pass:
    - Delete `.debug-strikes.json` to reset the counter.
-   - Write a `[DECISION]` entry to `tools/SESSION_LOG.md`:
+   - Write a `[DECISION]` entry to `docs/SESSION_LOG.md`:
      ```markdown
      ### [DECISION] YYYY-MM-DDTHH:MM — Bug Fix: <brief description>
      **Decision:** [what fix was applied and why]
@@ -61,7 +61,7 @@ Verify whether the prior fix applies. If yes, apply it as Theory 1.
      **Don't re-derive:** [the exact root cause — so next session doesn't re-investigate]
      **Source:** [file + line number of the fix]
      ```
-   - If the bug pattern is novel, append to `tools/KNOWN_ISSUES.md`:
+   - If the bug pattern is novel, append to `docs/KNOWN_ISSUES.md`:
      ```markdown
      ## [VS-00X] <pattern name>
      **Symptom:** [what the user sees]

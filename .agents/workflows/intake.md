@@ -12,7 +12,7 @@ team_roster: .agents/team-roster.md
 ### ⚡ Step 0 — Jordan Board-First Check (MANDATORY, NO SKIP)
 Before adding any task, Jordan reads the board to avoid adding noise to an already busy sprint.
 
-Read `tools/SK8Lytz_Bucket_List.md` — specifically ACTIVE SPRINT and ON DECK.
+Read `docs/SK8Lytz_Bucket_List.md` — specifically ACTIVE SPRINT and ON DECK.
 - Is there an active task in progress? → Warn the user: *"Active sprint task in progress: [slug]. Are you sure you want to add another task now, or should we route this to TRIAGE/ROADMAP for later?"*
 - Any ON DECK tasks missing `Decision Log:`? → Note them — the new task might unblock one of these instead.
 - Output sprint slot status: *"Sprint slot: [AVAILABLE / OCCUPIED BY: slug]"*
@@ -29,7 +29,7 @@ Reyes reads `tools/knowledge-base/INDEX.md` and searches for entries matching th
 - **No entry found** → proceed with `search_web` AND run `/kb-capture` before handing to Quinn.
 
 1. Use `search_web` to research how 5 top-tier companies/apps solve this exact problem (e.g., Govee, LIFX, Strava, Sonos, Discord, Philips Hue). **Skip for any topic already CURRENT in the KB.**
-2. Synthesize their approaches into a new entry in `tools/INDUSTRY_BENCHMARKS.md`. **AND run `/kb-capture` targeting `knowledge-base/patterns/` for the raw research.**
+2. Synthesize their approaches into a new entry in `docs/INDUSTRY_BENCHMARKS.md`. **AND run `/kb-capture` targeting `knowledge-base/patterns/` for the raw research.**
 3. If no clear gold standard exists, extract the closest analog.
 4. Output a summary: *"Industry Benchmark complete. Govee does X, Sonos does Y. We will adopt Z as our gold standard."*
 
@@ -122,7 +122,7 @@ Context: The plan exists structurally. Reyes now anchors it to real evidence so 
 
 ### ⚡ Reyes Knowledge-First Check (MANDATORY)
 Announce: *"Checking what we already know..."*
-Search `tools/SESSION_LOG.md` for prior findings related to this task's domain.
+Search `docs/SESSION_LOG.md` for prior findings related to this task's domain.
 - If prior [DECISION] or [ARTIFACT] entries exist → cite them in the Decision Log directly.
 - This prevents re-derivation and strengthens the evidence chain.
 
