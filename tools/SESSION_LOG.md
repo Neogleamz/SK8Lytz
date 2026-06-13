@@ -1,3 +1,17 @@
+### [MERGE] 2026-06-13T05:47 — feat/harden-ble-regression-shields → master @ 182b9010
+**What merged:**
+- Codified [R-22] FTUE Background Scan Idempotency, [R-23] Wizard Scanning Non-Blocking Next, and [R-24] Group Connection Ground Truth into `tools/21_GUARDRAILS.md`.
+- Added Hard Onboarding & BLE Invariants to `.agents/rules/prime-directive.md` and documented them in `tools/SK8Lytz_App_Master_Reference.md` §3.
+- Implemented regression unit tests for `useBLEScanner` (FTUE sweep and sandbox mock discoveries), `HardwareSetupWizardScreen` contract (Step 1 non-blocking next button and `isGrouped` connections count check), and `ConnectService` (group connect).
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:**
+- `.agents/rules/prime-directive.md`
+- `src/hooks/ble/__tests__/useBLEScanner.test.ts`
+- `src/screens/__tests__/HardwareSetupWizardScreen.test.tsx`
+- `src/services/ble/__tests__/ConnectService.test.ts`
+- `tools/21_GUARDRAILS.md`
+- `tools/SK8Lytz_App_Master_Reference.md`
+
 ### [ARTIFACT] 2026-06-13T05:45 — PLAN-harden-ble-regression-shields.md Created
 | Artifact | Path | Description |
 |---|---|---|
