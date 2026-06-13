@@ -2615,3 +2615,8 @@ TSC: ✅  Jest: ✅
 **Rejected:** Leaving files scattered across root which violated separation of concerns.
 **Don't re-derive:** The `docs/` directory is now the canonical source of truth for all rules, plans, and markdown documents. All .agents constitutional rules were updated to reflect this path shift.
 **Source:** C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz-worktrees\repo-restructure
+### [ARTIFACT] 2026-06-13T06:57 � session-telemetry-harden plans
+- docs/plans/PLAN-fix-session-auto-pause-jitter.md
+- docs/plans/PLAN-fix-watch-sync-race-condition.md
+- docs/plans/PLAN-refactor-session-unified-heartbeat.md
+
