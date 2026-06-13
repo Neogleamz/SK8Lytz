@@ -2665,3 +2665,4 @@ TSC: ✅  Jest: ✅
 **Verify result:** TSC ✅, Jest ✅, gates ✅
 **Files touched:** AdminToolsModal.tsx, AdminAuditLogViewer.tsx, GlobalAnalyticsPanel.tsx, AdminRosterPanel.tsx, HardwareBlacklistPanel.tsx, FeatureFlagsPanel.tsx, PLAN-sweep-admin-telemetry.md
 
+\n### [MERGE] 2026-06-13T19:32:00Z — sweep-ble-core-dispatch → master @ 589ccadf\n**What merged:** Swept BLE core dispatch replacing forEach loops with sequential for..of loops to prevent GATT 133 collisions on Android. Added async keywords down the stack. Patched PII log leaks replacing MACs with [REDACTED]. Cleaned up timeout leaks in useOptimisticBLE and useBLEBatterySweep.\n**Verify result:** TSC ✅, Jest ✅, gates ✅\n**Files touched:** src/hooks/useControllerDispatch.ts, src/hooks/useOptimisticBLE.ts, src/hooks/ble/useBLEBatterySweep.ts, src/services/BleWriteDispatcher.ts, src/services/ble/*.ts\n
