@@ -87,7 +87,7 @@ export interface UniversalSlidersFooterProps {
   handleMusicChange: (patId: number, sens: number, brt: number, src: 'APP' | 'DEVICE', prim: string, sec: string, matrix: number) => void;
   clampSpeed: (v: number) => number;
   brtFactor: (brt: number) => number;
-  writeToDevice?: (payload: number[]) => void;
+  writeToDevice?: (payload: number[]) => Promise<void>;
   hwSettings?: import('../../types/dashboard.types').IHardwareSettings;
   motionStateRef: React.MutableRefObject<MotionState>;
 
@@ -390,7 +390,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                     }));
                     const transition = builderTransitionType ?? 1;
                     const dir = builderDirection ?? 1;
-                    writeToDevice(ZenggeProtocol.setMultiColor(scaledRgb, ledPoints, Math.round(speed), dir, transition));
+                    writeToDevice(ZenggeProtocol.setMultiColor(scaledRgb, ledPoints, Math.round(speed), dir, transition))?.catch((e: Error) => AppLogger.error('writeToDevice error', e));
                   } else {
                     const rgbColors = multiColors.map(h => {
                       const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
@@ -398,7 +398,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                       const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
                       return { r: rawR, g: rawG, b: rawB };
                     });
-                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(speed), 1, multiTransition));
+                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(speed), 1, multiTransition))?.catch((e: Error) => AppLogger.error('writeToDevice error', e));
                   }
                 } else if (activeMode === 'CAMERA' && cameraSubMode === 'VIBE') {
                   const factor = brtFactor(val);
@@ -409,7 +409,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                       const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
                       return { r: rawR, g: rawG, b: rawB };
                     });
-                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(speed), 1, 1));
+                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(speed), 1, 1))?.catch((e: Error) => AppLogger.error('writeToDevice error', e));
                   }
                 } else {
                   const factor = brtFactor(val);
@@ -498,7 +498,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                     }));
                     const transition = builderTransitionType ?? 1;
                     const dir = builderDirection ?? 1;
-                    writeToDevice(ZenggeProtocol.setMultiColor(scaledRgb, ledPoints, Math.round(val), dir, transition));
+                    writeToDevice(ZenggeProtocol.setMultiColor(scaledRgb, ledPoints, Math.round(val), dir, transition))?.catch((e: Error) => AppLogger.error('writeToDevice error', e));
                   } else {
                     const rgbColors = multiColors.map(h => {
                       const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
@@ -506,7 +506,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                       const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
                       return { r: rawR, g: rawG, b: rawB };
                     });
-                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, multiTransition));
+                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, multiTransition))?.catch((e: Error) => AppLogger.error('writeToDevice error', e));
                   }
                 } else if (activeMode === 'CAMERA' && cameraSubMode === 'VIBE') {
                   const factor = brtFactor(brightness);
@@ -517,7 +517,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
                       const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
                       return { r: rawR, g: rawG, b: rawB };
                     });
-                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, 1));
+                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, 1))?.catch((e: Error) => AppLogger.error('writeToDevice error', e));
                   }
                 } else if (activeMode === 'STREET') {
                   applyStreetPattern(motionStateRef.current, brightness, val);

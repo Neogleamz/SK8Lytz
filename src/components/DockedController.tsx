@@ -191,7 +191,7 @@ export type DockedControllerHandle = {
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
   function DockedController({ isOfflineMode = false, hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onPowerToggle, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {}, gpsSpeed = 0, peakGForce = 1.0, sessionDistanceMiles = 0, sessionDurationSec = 0, sessionAvgSpeed = 0, sessionPeakSpeed = 0, sessionPhase = 'IDLE', sessionActive = false, startSession = () => {}, stopSessionRecording = () => {} }: Sk8lytzControllerProps, ref) {
-    // TODO: [R-27] Refactor to Context Container (Context Overload limit exceeded)
+    // TODO: [R-27] extract contexts to parent container (Context Overload limit exceeded)
     const { Colors, isDark } = useTheme();
     const { isVisibilityAllowed } = useAppConfig();
     const { height: windowHeight } = useWindowDimensions();
@@ -714,7 +714,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
 
     // -- Curated Presets (SK8Lytz Picks) — now owned by useCuratedPicks hook --
-    const { curatedPresets, picksLoading } = useCuratedPicks();
+    const { curatedPresets, picksLoading, error: picksError } = useCuratedPicks();
 
     // -- App Microphone — now owned by useAppMicrophone hook --
     const { audioMagnitude, hasMicPermission, requestMicPermission } = useAppMicrophone({
@@ -1173,6 +1173,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 favorites={favorites}
                 curatedPresets={curatedPresets}
                 picksLoading={picksLoading}
+                picksError={picksError}
                 onLoadFavorite={loadFavorite}
                 onEditFavorite={(id, name) => openFavoritePrompt(id, name)}
                 isDark={isDark}

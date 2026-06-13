@@ -120,10 +120,10 @@ export function useDashboardController({
     return { ...cfg, ...device };
   }, [selectedDeviceForSettingsId, allDevices, deviceConfigs]);
 
-  const openSettings = (device: { device_mac?: string; id?: string }) => {
+  const openSettings = React.useCallback((device: { device_mac?: string; id?: string }) => {
     setSelectedDeviceForSettingsId(device.device_mac || device.id || null);
     setIsSettingsVisible(true);
-  };
+  }, []);
 
   const { saveSettings } = useDashboardDeviceConfig({
     selectedDeviceForSettings,
@@ -248,7 +248,7 @@ export function useDashboardController({
     ledgerSave, gpsSpeed, peakGForce, sessionDistanceMiles, sessionDurationSec, sessionAvgSpeed, sessionPeakSpeed, sessionPhase, sessionActive, startSession, stopSessionRecording,
     appSettings, customGroups, dockedControllerRef, edgePanResponder, handleDisconnect, 
     handlePowerToggle, lastGroupPatterns, setCrewModeSummary,
-    setLastGroupPattern, setLastLeaderScene, userId
+    setLastGroupPattern, setLastLeaderScene, userId, openSettings
   ]);
 
   return {

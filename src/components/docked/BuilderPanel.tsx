@@ -74,7 +74,7 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
       b: Math.round(c.b * factor),
     }));
     const mappedSpeed = Math.max(1, Math.min(100, Math.round(speed)));
-    if (writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(scaledRgbArray, points, mappedSpeed, direction, safeTransition));
+    if (writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(scaledRgbArray, points, mappedSpeed, direction, safeTransition))?.catch((e: Error) => AppLogger.error('writeToDevice error', e));
   }, [points, speed, brightness, direction, setBuilderNodes, setBuilderFillMode, setBuilderTransitionType, writeToDevice]);
 
   const openBuilder = (preset?: CustomBuilderPreset) => {

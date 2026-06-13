@@ -198,7 +198,7 @@ export function useDockedControllerState(
       }
 
       return {
-        id: `voice_${idx}_${Date.now()}`,
+        id: `voice_${idx}_${seg.position}`,
         position: pos,
         colorHex: seg.color || '#FFFFFF'
       };

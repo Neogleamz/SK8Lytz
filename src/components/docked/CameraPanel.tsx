@@ -6,6 +6,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import CameraTracker from '../CameraTracker';
 import { Spacing, Colors } from '../../theme/theme';
 import { RGB } from '../../utils/kMeansPalette';
+import { rgbToHex } from '../../utils/ColorUtils';
 
 interface CameraPanelProps {
   onColorDetected: (hex: string) => void;
@@ -17,15 +18,6 @@ interface CameraPanelProps {
 }
 
 const MAX_SWATCHES = 5;
-
-/** Convert RGB struct to #RRGGBB hex string — no color manipulation. */
-function rgbToHexStr(color: RGB): string {
-  const toHex = (v: number) => {
-    const s = Math.round(v).toString(16);
-    return s.length === 1 ? '0' + s : s;
-  };
-  return ('#' + toHex(color.r) + toHex(color.g) + toHex(color.b)).toUpperCase();
-}
 
 const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteChange, onSubModeChange, swatches: externalSwatches, onSwatchesChange }: CameraPanelProps) => {
   const [subMode, setSubMode] = useState<'SNIPER' | 'VIBE'>('SNIPER');
@@ -100,6 +92,18 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
     setIsFlow(prev => !prev);
   }, []);
 
+  const renderSwatch = useCallback((swatch: string, index: number) => (
+    <TouchableOpacity
+      key={`swatch-${swatch}-${index}`}
+      onPress={() => handleSelectSwatch(swatch)}
+      style={[
+        styles.swatchDot,
+        { backgroundColor: swatch },
+        activeSwatch === swatch && styles.swatchDotActive,
+      ]}
+    />
+  ), [handleSelectSwatch, activeSwatch]);
+
   return (
     <View style={styles.container}>
       {/* ── Full-bleed Camera Viewfinder ─────────────────────────────── */}
@@ -169,17 +173,7 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
 
             {/* Bottom-Right: Swatch dots, newest rightmost */}
             <View style={styles.swatchStrip} pointerEvents="box-none">
-              {swatches.map((swatch, index) => (
-                <TouchableOpacity
-                  key={`swatch-${swatch}-${index}`}
-                  onPress={() => handleSelectSwatch(swatch)}
-                  style={[
-                    styles.swatchDot,
-                    { backgroundColor: swatch },
-                    activeSwatch === swatch && styles.swatchDotActive,
-                  ]}
-                />
-              ))}
+              {swatches.map(renderSwatch)}
               {/* Empty placeholder dots */}
               {Array.from({ length: Math.max(0, MAX_SWATCHES - swatches.length) }).map((_, i) => (
                 <View key={`empty-${i}`} style={styles.swatchDotEmpty} />
@@ -196,7 +190,7 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
             {/* Gradient preview strip */}
             <View style={styles.gradientBar} pointerEvents="none">
               <LinearGradient
-                colors={vibePalette.map(rgbToHexStr) as [string, string, ...string[]]}
+                colors={vibePalette.map(c => rgbToHex(c.r, c.g, c.b)) as [string, string, ...string[]]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={StyleSheet.absoluteFillObject}
@@ -207,7 +201,7 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
             <View style={styles.vibeCardRow} pointerEvents="none">
               {vibePalette.map((color, index) => {
                 const label = ['FG', 'BG', 'ACCENT'][index];
-                const hex = rgbToHexStr(color);
+                const hex = rgbToHex(color.r, color.g, color.b);
                 return (
                   <View key={`vcard-${index}`} style={styles.vibeCard}>
                     <View style={[styles.vibeCardSwatch, { backgroundColor: hex }]} />

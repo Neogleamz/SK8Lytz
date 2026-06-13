@@ -16,6 +16,7 @@ interface FavoritesPanelProps {
   favorites: IFavoriteState[];
   curatedPresets: IFavoriteState[];
   picksLoading: boolean;
+  picksError?: string | null;
   onLoadFavorite: (fav: IFavoriteState, context?: 'FAVORITE' | 'PICK' | 'COMMUNITY') => void;
   onEditFavorite: (id: string, name: string) => void;
   isDark: boolean;
@@ -26,6 +27,7 @@ const FavoritesPanel = React.memo(({
   favorites,
   curatedPresets,
   picksLoading,
+  picksError,
   onLoadFavorite,
   onEditFavorite,
   isDark,
@@ -34,9 +36,7 @@ const FavoritesPanel = React.memo(({
   const cardWidth = (Dimensions.get('window').width - (Layout.padding * 2)) / 3.5;
   const localStyles = React.useMemo(() => createStyles(Colors), [Colors]);
 
-  const emptyPlaceholder = React.useCallback((_keyPrefix: string) => (
-    <View style={[localStyles.presetCard, localStyles.emptyPlaceholder, { width: cardWidth }]} />
-  ), [localStyles, cardWidth]);
+
 
   const keyExtractorYours = useCallback(
     (item: IFavoriteState, index: number) => (item ? item.id : `empty-yours-${index}`),
@@ -48,7 +48,6 @@ const FavoritesPanel = React.memo(({
   );
 
   const renderYoursItem = React.useCallback(({ item: fav }: { item: IFavoriteState }) => {
-    if (!fav) return emptyPlaceholder('yours');
     return (
       <PresetCard
         preset={fav}
@@ -61,10 +60,9 @@ const FavoritesPanel = React.memo(({
         Colors={Colors}
       />
     );
-  }, [Colors, cardWidth, localStyles, onEditFavorite, onLoadFavorite, emptyPlaceholder]);
+  }, [Colors, cardWidth, localStyles, onEditFavorite, onLoadFavorite]);
 
   const renderPicksItem = React.useCallback(({ item: fav }: { item: IFavoriteState }) => {
-    if (!fav) return emptyPlaceholder('picks');
     return (
       <PresetCard
         preset={fav}
@@ -75,7 +73,44 @@ const FavoritesPanel = React.memo(({
         Colors={Colors}
       />
     );
-  }, [Colors, cardWidth, localStyles, onLoadFavorite, emptyPlaceholder]);
+  }, [Colors, cardWidth, localStyles, onLoadFavorite]);
+
+  const renderEmptyYours = React.useCallback(() => (
+    <View style={localStyles.matrixContainer}>
+      <Text style={[localStyles.matrixText, isDark && localStyles.textWhite]}>
+        No favorites saved yet.
+      </Text>
+    </View>
+  ), [localStyles, isDark]);
+
+  const renderEmptyPicks = React.useCallback(() => {
+    if (picksLoading) {
+      return (
+        <View style={localStyles.matrixContainer}>
+          <ActivityIndicator size="small" color={Colors.primary} />
+          <Text style={[localStyles.matrixText, isDark && localStyles.textWhite, { marginTop: Spacing.xs }]}>
+            Loading Picks...
+          </Text>
+        </View>
+      );
+    }
+    if (picksError) {
+      return (
+        <View style={localStyles.matrixContainer}>
+          <Text style={[localStyles.matrixText, { color: Colors.error }]}>
+            Error: {picksError}
+          </Text>
+        </View>
+      );
+    }
+    return (
+      <View style={localStyles.matrixContainer}>
+        <Text style={[localStyles.matrixText, isDark && localStyles.textWhite]}>
+          No picks available.
+        </Text>
+      </View>
+    );
+  }, [picksLoading, picksError, localStyles, isDark, Colors]);
 
   return (
     <View style={localStyles.container}>
@@ -86,10 +121,11 @@ const FavoritesPanel = React.memo(({
           style={localStyles.list}
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={favorites.length > 0 ? favorites : [null as unknown as IFavoriteState]}
+          data={favorites}
           keyExtractor={keyExtractorYours}
-          contentContainerStyle={localStyles.listContent}
+          contentContainerStyle={favorites.length === 0 ? localStyles.emptyListContent : localStyles.listContent}
           renderItem={renderYoursItem}
+          ListEmptyComponent={renderEmptyYours}
         />
       </View>
 
@@ -103,10 +139,11 @@ const FavoritesPanel = React.memo(({
           style={localStyles.list}
           horizontal
           showsHorizontalScrollIndicator={false}
-          data={curatedPresets.length > 0 ? curatedPresets : [null as unknown as IFavoriteState]}
+          data={curatedPresets}
           keyExtractor={keyExtractorPicks}
-          contentContainerStyle={localStyles.listContent}
+          contentContainerStyle={curatedPresets.length === 0 ? localStyles.emptyListContent : localStyles.listContent}
           renderItem={renderPicksItem}
+          ListEmptyComponent={renderEmptyPicks}
         />
       </View>
     </View>
@@ -138,5 +175,8 @@ const createStyles = (Colors: ThemePalette) => ({
   textWhite: { color: '#FFF' },
   list: { flex: 1 },
   listContent: { paddingHorizontal: Layout.padding, flexGrow: 1 },
-  emptyPlaceholder: { marginHorizontal: Spacing.xs, borderWidth: 1.5, borderStyle: 'dashed' as const, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 }
+  emptyListContent: { paddingHorizontal: Layout.padding, flexGrow: 1, justifyContent: 'center' as const, alignItems: 'center' as const },
+  emptyPlaceholder: { marginHorizontal: Spacing.xs, borderWidth: 1.5, borderStyle: 'dashed' as const, borderColor: 'rgba(255,255,255,0.08)', backgroundColor: 'transparent', elevation: 0, shadowOpacity: 0 },
+  matrixContainer: { flex: 1, justifyContent: 'center' as const, alignItems: 'center' as const, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.xl },
+  matrixText: { ...Typography.body, opacity: 0.7, textAlign: 'center' as const }
 });

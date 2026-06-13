@@ -89,6 +89,9 @@ export function useStreetMode({
   const gpsSpeedRef = useRef(gpsSpeed);
   useEffect(() => { gpsSpeedRef.current = gpsSpeed; }, [gpsSpeed]);
 
+  const deviceContextRef = useRef(deviceContext);
+  useEffect(() => { deviceContextRef.current = deviceContext; }, [deviceContext]);
+
   const clampSpeed = useCallback((uiSpeed: number): number =>
     normalizeUISpeedToHardware(uiSpeed), []);
 
@@ -210,7 +213,7 @@ export function useStreetMode({
 
       if (isBrakingJerk) {
         if (!streetBrakingRef.current) {
-          AppLogger.log('STREET_JERK_DETECTED', { jerkMag: parseFloat(jerkMag.toFixed(3)), threshold: parseFloat(threshold.toFixed(3)), gpsSpeedMph: gpsSpeedRef.current, ...deviceContext });
+          AppLogger.log('STREET_JERK_DETECTED', { jerkMag: parseFloat(jerkMag.toFixed(3)), threshold: parseFloat(threshold.toFixed(3)), gpsSpeedMph: gpsSpeedRef.current, ...deviceContextRef.current });
         }
         streetBrakingRef.current = true;
         updateMotion('HARD_BRAKING');
