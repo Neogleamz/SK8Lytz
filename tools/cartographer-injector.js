@@ -2,20 +2,21 @@ const fs = require('fs');
 const path = require('path');
 
 const masterRefPath = 'c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SK8Lytz_App_Master_Reference.md';
-const scratchDir = 'C:/Users/Magma/.gemini/antigravity/brain/79cf6856-67a1-49d0-aadc-9079eee6c7ae/scratch';
+const scratchDir = 'c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs';
 
 const domains = [
-  'IDENTITY', 'BLE_CORE', 'GROUP_SYNC', 'UI_CONTROLS', 'DATA_LAYER',
-  'UTILS', 'NATIVE_&_WATCH', 'NOTIFICATIONS_&_ROUTING', 'SESSION_TRACKING',
-  'HARDWARE_PROTOCOLS', 'CLOUD_FUNCTIONS', 'THEME_&_ASSETS',
-  'SIMULATION_&_MOCKS', 'BUILD_CONFIG_&_OTA', 'OS_PERMISSIONS', 'DEPENDENCY_AUDIT'
+  'IDENTITY', 'BLE_CORE', 'GROUP_SYNC', 'UI_SCREENS', 'UI_DOCKED_CONTROLLER',
+  'UI_MODALS', 'UI_VISUALIZER', 'DATA_LAYER', 'UTILS', 'NATIVE_&_WATCH',
+  'NOTIFICATIONS_&_ROUTING', 'SESSION_TRACKING', 'PROTOCOL_CORE', 'PATTERN_ENGINE',
+  'CLOUD_FUNCTIONS', 'THEME_&_ASSETS', 'SIMULATION_&_MOCKS', 'BUILD_CONFIG',
+  'OS_PERMISSIONS', 'ADMIN_&_TELEMETRY', 'DEPENDENCY_AUDIT'
 ];
 
 let masterRef = fs.readFileSync(masterRefPath, 'utf8');
 let graveyardAppends = [];
 
 for (const domain of domains) {
-  const payloadPath = path.join(scratchDir, `${domain}.md`);
+  const payloadPath = path.join(scratchDir, `${domain}_cartography.md`);
   if (fs.existsSync(payloadPath)) {
     let payload = fs.readFileSync(payloadPath, 'utf8');
     
