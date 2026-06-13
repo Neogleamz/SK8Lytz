@@ -1,3 +1,20 @@
+### [MERGE] 2026-06-12T09:47 — fix/group-routing-ispaired → master @ d0dad3bd
+**What merged:**
+- Fixed `isGrouped` in `DashboardScreen.tsx:280` — the check `displayConnectedDevices.every(d => !!d.groupId)` was ALWAYS false because `d.groupId` (singular) is never set on `DisplayDevice`; `deviceConfigs` stores `groupIds` (plural array). This caused `isPaired=false` for ALL connections including groups.
+- Removed broken `!isPaired && devices.length > 0 ? [devices[0]] : devices` guard from `DockedController.tsx:583` (`useControllerDispatch` connectedDevices param) — now always passes all devices.
+- Removed same broken guard from `DockedController.tsx:1132` (ProductVisualizer devices prop) — now passes `devices` directly.
+- `BleWriteDispatcher` was never broken — it correctly routes each write to its `targetDeviceId`. The only broken gate was the one feeding it.
+**Verify result:** TSC ✅, Jest ✅ (28 suites / 218 tests), gates ✅
+**Files touched:**
+- `src/screens/DashboardScreen.tsx`
+- `src/components/DockedController.tsx`
+
+### [DECISION] 2026-06-12T09:47 — isGrouped ground truth is connectedDevices.length > 1
+**Decision:** Use `connectedDevices.length > 1` as the canonical source of truth for whether we are in a multi-device session, not any field on `DisplayDevice`.
+**Rejected:** Checking `d.groupId`, `d.grouped`, or `d.groupIds` on DisplayDevice — these fields require the `deviceConfigs`/`registeredDevices` lookup to succeed AND use the correct field name, making them fragile. The BLE machine's `connectedDevices` array is the only ground truth.
+**Don't re-derive:** `DisplayDevice.groupId` (singular) is in the type definition but is NEVER populated by `displayConnectedDevices` useMemo — `deviceConfigs` stores `groupIds` (plural). Any future check for group membership in the controller must use `connectedDevices.length`.
+**Source:** `DashboardScreen.tsx:260-274` (displayConnectedDevices mapper), `dashboard.types.ts:21` (groupId optional)
+
 ### [MERGE] 2026-06-12T04:26 — fix-ble-connection-hang → master @ de974879
 **What merged:**
 - Resolved BLE connection hang by fixing the `connectedDevices` call inside `ConnectService.ts`. Replaced `bleManager.connectedDevices([mac])` which incorrectly filtered by MAC instead of service UUIDs with a call to `connectedDevices([])` and a `.find(d => d.id === mac)` lookup. This prevents redundant `connectToDevice` attempts which caused Android's BLE stack to hang in `CONNECTING`.
