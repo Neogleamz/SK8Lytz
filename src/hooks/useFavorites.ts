@@ -5,8 +5,7 @@ import { supabase } from '../services/supabaseClient';
 import type { Database } from '../types/supabase';
 import type { IFavoriteState, IQuickPreset } from '../types/dashboard.types';
 
-// Shared Storage Prefix constant
-const STORAGE_PREFIX = '@Sk8lytz_';
+import { STORAGE_FAVORITES, STORAGE_QUICK_PRESETS } from '../constants/storageKeys';
 
 export type FavoritesPromptState = 'HIDDEN' | 'NAMING_FAVORITE' | 'NAMING_PRESET';
 
@@ -45,7 +44,7 @@ export function useFavorites() {
 
     Promise.all([
       // 1. Fetch Local
-      AsyncStorage.getItem(`${STORAGE_PREFIX}Favorites`).then(async (saved) => {
+      AsyncStorage.getItem(STORAGE_FAVORITES).then(async (saved) => {
         if (!active) return;
         if (saved) {
           try {
@@ -95,7 +94,7 @@ export function useFavorites() {
               const finalFavs = Array.from(mergedMap.values());
               if (active) {
                 setFavorites(finalFavs);
-                AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(finalFavs)).catch((err: unknown) => AppLogger.warn('[useFavorites] Failed to persist favorites', err instanceof Error ? err.message : String(err)));
+                AsyncStorage.setItem(STORAGE_FAVORITES, JSON.stringify(finalFavs)).catch((err: unknown) => AppLogger.warn('[useFavorites] Failed to persist favorites', err instanceof Error ? err.message : String(err)));
               }
             }
           } catch (err: unknown) {
@@ -110,7 +109,7 @@ export function useFavorites() {
         setStatus('error');
       }),
 
-      AsyncStorage.getItem(`${STORAGE_PREFIX}QuickPresets`).then((saved) => {
+      AsyncStorage.getItem(STORAGE_QUICK_PRESETS).then((saved) => {
         if (!active) return;
         if (saved) {
           try {
@@ -173,30 +172,30 @@ export function useFavorites() {
     // 1. Save Local
     setFavorites(newFavorites);
     try {
-      await AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(newFavorites));
+      await AsyncStorage.setItem(STORAGE_FAVORITES, JSON.stringify(newFavorites));
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
       AppLogger.warn('[Favorites] Local save failed', { error: msg });
     }
     
     // 2. Save Cloud
-    try {
-      if (user) {
-        // Strip out id/name from capturedState so we just store the pure payload in nodes
-        const { id: _id, name: _name, ...payload } = newFav;
-        await supabase.from('user_saved_presets').upsert({
-          id,
-          user_id: user.id,
-          name,
-          fill_mode: 'FAVORITE',
-          transition_type: 0,
-          nodes: payload as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
-          created_at: new Date().toISOString()
-        });
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : (err instanceof Error ? err.message : String(err));
-      AppLogger.warn('[Favorites] Cloud save failed', { error: msg });
+    if (user) {
+      // Strip out id/name from capturedState so we just store the pure payload in nodes
+      const { id: _id, name: _name, ...payload } = newFav;
+      supabase.from('user_saved_presets').upsert({
+        id,
+        user_id: user.id,
+        name,
+        fill_mode: 'FAVORITE',
+        transition_type: 0,
+        nodes: payload as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
+        created_at: new Date().toISOString()
+      }).then(({ error }) => {
+        if (error) throw error;
+      }).catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        AppLogger.warn('[Favorites] Cloud save failed', { error: msg });
+      });
     }
 
     closePrompt();
@@ -209,20 +208,20 @@ export function useFavorites() {
     
     // 1. Delete Local
     try {
-      await AsyncStorage.setItem(`${STORAGE_PREFIX}Favorites`, JSON.stringify(newFavorites));
+      await AsyncStorage.setItem(STORAGE_FAVORITES, JSON.stringify(newFavorites));
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
       AppLogger.warn('[Favorites] Local delete failed', { error: msg });
     }
     
     // 2. Delete Cloud
-    try {
-      if (user) {
-        await supabase.from('user_saved_presets').delete().eq('id', id).eq('user_id', user.id);
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : (err instanceof Error ? err.message : String(err));
-      AppLogger.warn('[Favorites] Cloud delete failed', { error: msg });
+    if (user) {
+      supabase.from('user_saved_presets').delete().eq('id', id).eq('user_id', user.id).then(({ error }) => {
+        if (error) throw error;
+      }).catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : String(err);
+        AppLogger.warn('[Favorites] Cloud delete failed', { error: msg });
+      });
     }
   }, [favorites, activeFavoriteId]);
 
@@ -231,9 +230,9 @@ export function useFavorites() {
     newArr[index] = preset;
     setQuickPresets(newArr);
     try {
-      await AsyncStorage.setItem(`${STORAGE_PREFIX}QuickPresets`, JSON.stringify(newArr));
+      await AsyncStorage.setItem(STORAGE_QUICK_PRESETS, JSON.stringify(newArr));
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
       AppLogger.warn('[Favorites] Local quick preset save failed', { error: msg });
     }
     closePrompt();

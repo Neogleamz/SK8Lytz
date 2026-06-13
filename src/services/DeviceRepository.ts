@@ -34,11 +34,13 @@ import GroupRepository from './GroupRepository';
 type DeviceInsertRow = TablesInsert<'registered_devices'>;
 type GroupInsert     = Omit<TablesInsert<'registered_groups'>, 'created_at'>;
 
+import { STORAGE_DELETED_MACS, STORAGE_PENDING_SYNC } from '../constants/storageKeys';
+
 // ─── Storage Keys ─────────────────────────────────────────────────────────────
 const DEVICES_KEY     = '@Sk8lytz_registered_devices';
 const CONFIGS_KEY     = '@Sk8lytz_device_configs';
-const TOMBSTONE_KEY   = '@Sk8lytz_deleted_macs';
-const PENDING_KEY       = '@Sk8lytz_pending_sync';
+const TOMBSTONE_KEY   = STORAGE_DELETED_MACS;
+const PENDING_KEY     = STORAGE_PENDING_SYNC;
 // NOTE: '@Sk8lytz_last_group_patterns' is intentionally managed by useDashboardGroups
 // as a UI-local concern (last pattern picked per group). It is NOT part of this repo's SSOT.
 

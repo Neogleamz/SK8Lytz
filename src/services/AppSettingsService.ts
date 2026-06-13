@@ -87,32 +87,30 @@ export const AppSettingsService = {
    * Uses upsert to create it if it doesn't exist.
    */
   async updateSetting(key: AppSettingKey, value: unknown): Promise<boolean> {
+    // 1. Optimistic Local Update
     try {
-      const { error } = await supabase
-        .from('sk8lytz_app_settings')
-        .upsert({ 
-          setting_key: key, 
-          // R-08 boundary cast: value is validated by the caller to be JSON-serializable.
-          // unknown → Json requires a double-cast since Supabase Json is a recursive union.
-          setting_value: value as unknown as import('../types/supabase').Json
-        }, { onConflict: 'setting_key' });
-
-      if (error) throw error;
-
-      // Update local cache
-      try {
-        const cachedStr = await AsyncStorage.getItem(CACHE_KEY);
-        const cached = cachedStr ? JSON.parse(cachedStr) : {};
-        cached[key] = value;
-        await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(cached));
-      } catch (e: unknown) {
-        AppLogger.warn('AppSettingsService cache update failed', e instanceof Error ? e.message : String(e));
-      }
-
-      return true;
-    } catch (err: unknown) {
-      AppLogger.log('ERROR_CAUGHT', { message: `Failed to update setting ${key}`, error: err instanceof Error ? err.message : String(err)  });
-      return false;
+      const cachedStr = await AsyncStorage.getItem(CACHE_KEY);
+      const cached = cachedStr ? JSON.parse(cachedStr) : {};
+      cached[key] = value;
+      await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(cached));
+    } catch (e: unknown) {
+      AppLogger.warn('AppSettingsService cache update failed', e instanceof Error ? e.message : String(e));
     }
+
+    // 2. Background Cloud Sync
+    supabase
+      .from('sk8lytz_app_settings')
+      .upsert({ 
+        setting_key: key, 
+        setting_value: value as unknown as import('../types/supabase').Json
+      }, { onConflict: 'setting_key' })
+      .then(({ error }) => {
+        if (error) throw error;
+      })
+      .catch((err: unknown) => {
+        AppLogger.log('ERROR_CAUGHT', { message: `Failed to update setting ${key}`, error: err instanceof Error ? err.message : String(err) });
+      });
+
+    return true;
   }
 };
