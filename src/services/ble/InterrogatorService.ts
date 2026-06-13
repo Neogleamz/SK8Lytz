@@ -25,6 +25,7 @@ const HW_CACHE_KEY = (mac: string) => `@sk8_hw_${mac.toUpperCase()}`;
 const PROBE_TIMEOUT_MS = 3500;
 export const PROBE_QUEUE_DELAY_MS = 2000;
 export const PROBE_QUEUE_DELAY_MS_FTUE = 500;
+export const BLE_INTERROGATION_STAGGER_MS = 500;
 
 /**
  * loadHWCacheFromStorage — Load all persisted hardware profiles on startup.
@@ -43,7 +44,7 @@ export async function loadHWCacheFromStorage(): Promise<Record<string, PingResul
       try {
         result[mac] = JSON.parse(val);
       } catch (e: unknown) {
-        AppLogger.warn('[InterrogatorService] Malformed HW cache entry', { mac, error: e instanceof Error ? e.message : String(e) });
+        AppLogger.warn('[InterrogatorService] Malformed HW cache entry', { mac: '[REDACTED]', error: e instanceof Error ? e.message : String(e) });
       }
     }
   } catch (e: unknown) {
@@ -170,15 +171,22 @@ export function createProbeQueue(params: {
 }) {
   const probeQueueRef: { current: string[] } = { current: [] };
   const probeQueueTimerRef: { current: ReturnType<typeof setTimeout> | null } = { current: null };
+  const isProcessingRef = { current: false };
 
   function processQueue() {
+    if (isProcessingRef.current) return;
     if (probeQueueTimerRef.current) clearTimeout(probeQueueTimerRef.current);
     const delay = params.getRegisteredMacsCount() === 0 ? PROBE_QUEUE_DELAY_MS_FTUE : PROBE_QUEUE_DELAY_MS;
     probeQueueTimerRef.current = setTimeout(async () => {
-      while (probeQueueRef.current.length > 0) {
-        const mac = probeQueueRef.current.shift()!;
-        await interrogateDevice(mac, params.bleManager, params.probingMacsRef, params.hwCacheRef, params.onDeviceInterrogated);
-        await new Promise(r => setTimeout(r, 500));
+      isProcessingRef.current = true;
+      try {
+        while (probeQueueRef.current.length > 0) {
+          const mac = probeQueueRef.current.shift()!;
+          await interrogateDevice(mac, params.bleManager, params.probingMacsRef, params.hwCacheRef, params.onDeviceInterrogated);
+          await new Promise(r => setTimeout(r, BLE_INTERROGATION_STAGGER_MS));
+        }
+      } finally {
+        isProcessingRef.current = false;
       }
     }, delay);
   }
@@ -194,5 +202,9 @@ export function createProbeQueue(params: {
     }
   }
 
-  return { queueDeviceForInterrogation };
+  function cleanup() {
+    if (probeQueueTimerRef.current) clearTimeout(probeQueueTimerRef.current);
+  }
+
+  return { queueDeviceForInterrogation, cleanup };
 }

@@ -58,7 +58,7 @@ export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(({ inpu
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);
           AppLogger.warn('[BLE Heartbeat] Stale link detected — initiating recovery', {
-            deviceId: mac,
+            deviceId: '[REDACTED]',
             error: message,
           });
           // Cancel the stale GATT handle so the OS releases it immediately.

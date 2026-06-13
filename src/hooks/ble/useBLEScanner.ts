@@ -226,8 +226,8 @@ export function useBLEScanner({
     if (!isSymphony && !isKnownPrefix && !hasZenggeService && !hasBanlanxService && !hasFcf1Service) {
       if (!rejectedMacsRef.current.has(device.id)) {
         rejectedMacsRef.current.add(device.id);
-        if (device.name || (device.serviceUUIDs && device.serviceUUIDs.length > 0)) {
-          AppLogger.log('SCAN_FILTER_REJECT', { id: device.id, name: device.name, reason: 'No matching signature' });
+        if (__DEV__) {
+          AppLogger.log('SCAN_FILTER_REJECT', { id: '[REDACTED]', name: '[REDACTED]', reason: 'No matching signature' });
         }
       }
       return;
@@ -240,7 +240,7 @@ export function useBLEScanner({
     if (deviceRssi < targetThreshold) {
       if (!rejectedMacsRef.current.has(device.id)) {
         rejectedMacsRef.current.add(device.id);
-        AppLogger.log('SCAN_FILTER_REJECT', { id: device.id, reason: `RSSI too low (${deviceRssi} < ${targetThreshold})` });
+        AppLogger.log('SCAN_FILTER_REJECT', { id: '[REDACTED]', reason: `RSSI too low (${deviceRssi} < ${targetThreshold})` });
       }
       return;
     }

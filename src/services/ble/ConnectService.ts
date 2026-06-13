@@ -62,7 +62,7 @@ export const connectService = fromPromise<
   // ── HARDWARE BLACKLIST GUARD ──────────────────────────────────────────────
   const blockedMacs = targetMacs.filter(mac => blacklistedMacsRef.current.includes(mac.toUpperCase()));
   if (blockedMacs.length > 0) {
-    AppLogger.warn('[BLE] Hardware Blacklist Blocked Connection', { blockedDevices: blockedMacs });
+    AppLogger.warn('[BLE] Hardware Blacklist Blocked Connection', { blockedDevices: '[REDACTED]' });
     Alert.alert('Connection Blocked', 'One or more devices have been restricted and cannot be connected.');
     throw new Error('hardware_blacklist');
   }
@@ -110,7 +110,11 @@ export const connectService = fromPromise<
 
     let isMock = 'false';
     if ((typeof __DEV__ !== 'undefined' && __DEV__) || Platform.OS === 'web') {
-       isMock = await AsyncStorage.getItem(STORAGE_DEMO_MODE) || 'false';
+       try {
+         isMock = await AsyncStorage.getItem(STORAGE_DEMO_MODE) || 'false';
+       } catch (e: unknown) {
+         AppLogger.warn('Failed to read mock storage', e instanceof Error ? e.message : String(e));
+       }
     }
 
     if (Platform.OS === 'web' || isMock === 'true') {
@@ -226,11 +230,11 @@ export const connectService = fromPromise<
         AppLogger.log('DEVICE_CONNECTED', {
           context: 'mtu_negotiated',
           mtu: mtuMapRef.current.get(conn.id),
-          deviceId: conn.id,
+          deviceId: '[REDACTED]',
         });
 
         adapterMapRef.current.set(conn.id, adapter);
-        AppLogger.log('DEVICE_CONNECTED', { context: 'adapter_resolved', deviceId: conn.id, protocolId: adapter.protocolId });
+        AppLogger.log('DEVICE_CONNECTED', { context: 'adapter_resolved', deviceId: '[REDACTED]', protocolId: adapter.protocolId });
 
         if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
         disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {

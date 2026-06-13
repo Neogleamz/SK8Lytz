@@ -74,6 +74,7 @@ export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepPr
     if (burstTimerRef.current) { clearTimeout(burstTimerRef.current); burstTimerRef.current = null; }
 
     Battery.getBatteryLevelAsync().then(level => {
+      if (!isSweeperActiveRef.current) return;
       const tier = classifyBatteryTier(level);
       batteryTierRef.current = tier;
       setBatteryTier(tier);

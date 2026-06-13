@@ -81,7 +81,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
         attempts++;
 
         if (hasExceededMaxRecovery(attempts)) {
-          AppLogger.warn(`[RecoveryService] ${deviceId} failed after ${attempts} attempts`);
+          AppLogger.warn(`[RecoveryService] '[REDACTED]' failed after ${attempts} attempts`);
           break;
         }
 
@@ -157,7 +157,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
         break; // Success! Exit while loop.
 
       } catch (e: unknown) {
-        AppLogger.warn(`[RecoveryService] Connection attempt failed for ${deviceId}`, e instanceof Error ? e.message : String(e));
+        AppLogger.warn(`[RecoveryService] Connection attempt failed for '[REDACTED]'`, e instanceof Error ? e.message : String(e));
       }
     }
 

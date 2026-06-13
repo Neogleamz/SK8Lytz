@@ -43,6 +43,7 @@ export function useOptimisticBLE({
   const [writeStatus, setWriteStatus] = useState<BLEWriteStatus>('IDLE');
   const debounceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const pendingCount = useRef(0);
+  const statusResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Clear all timers on unmount to prevent leaks
   useEffect(() => {
@@ -51,6 +52,7 @@ export function useOptimisticBLE({
       debounceTimers.current.forEach((timer) => clearTimeout(timer));
       // eslint-disable-next-line react-hooks/exhaustive-deps
       debounceTimers.current.clear();
+      if (statusResetTimerRef.current) clearTimeout(statusResetTimerRef.current);
     };
   }, []);
 
@@ -105,7 +107,8 @@ export function useOptimisticBLE({
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
               }
               // Reset to IDLE after brief confirmation window
-              setTimeout(() => setWriteStatus('IDLE'), 300);
+              if (statusResetTimerRef.current) clearTimeout(statusResetTimerRef.current);
+              statusResetTimerRef.current = setTimeout(() => setWriteStatus('IDLE'), 300);
             }
             resolve(true);
           } else {
@@ -127,7 +130,8 @@ export function useOptimisticBLE({
             if (onReconcile) onReconcile();
 
             // Reset to IDLE after reconciliation window
-            setTimeout(() => setWriteStatus('IDLE'), 1000);
+            if (statusResetTimerRef.current) clearTimeout(statusResetTimerRef.current);
+            statusResetTimerRef.current = setTimeout(() => setWriteStatus('IDLE'), 1000);
             resolve(false);
           }
         } catch (err: unknown) {
