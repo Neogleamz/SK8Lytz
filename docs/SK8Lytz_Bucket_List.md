@@ -120,14 +120,6 @@ _User-facing product value and UI refinements._
   - **Source of Truth:** [BleWriteDispatcher.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleWriteDispatcher.ts#L164) · [ZENGGE_PROTOCOL_BIBLE.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/ZENGGE_PROTOCOL_BIBLE.md)
   - **Details:** Prerequisite: Wave 1 fully merged into master before this worktree is created.
 
-- [ ] **`chore/sweep-admin-telemetry`**
-  - **Tags:** `[READY]` `[CONFIRMED]` `[UI]` `[M-RISK]` `[Meal]` `[L-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:2]`
-  - **Goal:** Extract all inline keyExtractor/renderItem callbacks in admin FlatLists to stable useCallback refs, add 4-state UI matrices to 3 admin panels, and fix AppLogger telemetry context structure in 2 files.
-  - **Decision Log:** Fleet found inline arrow functions for keyExtractor in every admin panel FlatList — these defeat FlatList virtualization causing full re-renders on every state update. AdminRosterPanel, HardwareBlacklistPanel, and FeatureFlagsPanel show blank screens on fetch failure with no error feedback.
-  - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-admin-telemetry.md](./plans/PLAN-sweep-admin-telemetry.md) — Key finding: "6 admin FlatLists with inline keyExtractor defeat virtualization; 3 panels missing error/empty states" — Rejected: "Memoize entire list component" — stable callback refs are the targeted correct fix
-  - **Source of Truth:** [AdminRosterPanel.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/AdminRosterPanel.tsx#L178) · [HardwareBlacklistPanel.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/HardwareBlacklistPanel.tsx#L255)
-  - **Details:** Prerequisite: Wave 1 fully merged into master before this worktree is created.
-
 - [ ] **`chore/sweep-storage-keys`**
   - **Tags:** `[READY]` `[CONFIRMED]` `[STORAGE]` `[H-RISK]` `[Snack]` `[M-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:2]`
   - **Goal:** Fix 3 AsyncStorage key collision bugs, consolidate all hardcoded @Sk8lytz_* key literals into the central STORAGE_KEYS registry, and flip AppSettingsService to write local cache first (offline-first mandate).

@@ -1931,4 +1931,13 @@ pm run verify which includes QA tests.
   - **Decision Log:** Fleet confirmed WatchConnectivityManager.swift:105 mutates @Published properties from the WCSession background delegate queue — SwiftUI rendering on background threads causes crashes on iOS 17+. WearMessageSender.kt:85 non-atomic SharedPreferences write causes data corruption under concurrent health delivery.
   - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-native-watch.md](./plans/PLAN-sweep-native-watch.md) — Key finding: "@Published modified on WCSession background queue — guaranteed crash on iOS 17+" — Rejected: "@MainActor attribute only" — WCSession delegates are not MainActor-isolated; must use explicit DispatchQueue.main.async
   - **Source of Truth:** [WatchConnectivityManager.swift](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/targets/watch/WatchConnectivityManager.swift#L105) · [WearMessageSender.kt](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/android/sk8lytzWear/src/main/kotlin/com/neogleamz/sk8lytzwear/presentation/WearMessageSender.kt#L85)
+
+
+- [x] **`chore/sweep-admin-telemetry`** 🚀 Merged in aa782643
+  - **Tags:** `[READY]` `[CONFIRMED]` `[UI]` `[M-RISK]` `[Meal]` `[L-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:2]`
+  - **Goal:** Extract all inline keyExtractor/renderItem callbacks in admin FlatLists to stable useCallback refs, add 4-state UI matrices to 3 admin panels, and fix AppLogger telemetry context structure in 2 files.
+  - **Decision Log:** Fleet found inline arrow functions for keyExtractor in every admin panel FlatList — these defeat FlatList virtualization causing full re-renders on every state update. AdminRosterPanel, HardwareBlacklistPanel, and FeatureFlagsPanel show blank screens on fetch failure with no error feedback.
+  - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-admin-telemetry.md](./plans/PLAN-sweep-admin-telemetry.md) — Key finding: "6 admin FlatLists with inline keyExtractor defeat virtualization; 3 panels missing error/empty states" — Rejected: "Memoize entire list component" — stable callback refs are the targeted correct fix
+  - **Source of Truth:** [AdminRosterPanel.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/AdminRosterPanel.tsx#L178) · [HardwareBlacklistPanel.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/HardwareBlacklistPanel.tsx#L255)
+  - **Details:** Prerequisite: Wave 1 fully merged into master before this worktree is created.
 
