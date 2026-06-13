@@ -97,6 +97,18 @@ You and I are a team of two. You are the precision builder. I am the decision ma
 
 ---
 
+## 🛡️ Hard Onboarding & BLE Invariants
+
+Future agents must check these invariants before touching BLE or onboarding logic:
+
+| Rule | Description | Target Files |
+|---|---|---|
+| **[R-22] FTUE Background Scan Idempotency** | When `registeredMacs.length === 0`, `startSweeper` must be called unconditionally on scan trigger (no async startSweeper races). | [useBLEScanner.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts) |
+| **[R-23] Wizard Scanning Non-Blocking Next** | Next button on Step 1 must be enabled if `pendingRegistrations.length > 0` even when `bleState === 'SCANNING'`. | [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx) |
+| **[R-24] Group Connection Ground Truth** | Evaluate `isGrouped` sessions purely by checking `connectedDevices.length > 1` (do not rely on DisplayDevice fields). | [DashboardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx) |
+
+---
+
 ## 📍 Key File Locations (Quick Reference)
 
 | What | Where |

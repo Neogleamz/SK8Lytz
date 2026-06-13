@@ -19,3 +19,6 @@
 - **[R-19] HAL Enclosure**: Raw byte arrays (0x59) constructed outside src/protocols/.
 - **[R-20] OS Variance Parity**: Missing Platform.select(), blind cross-platform assumptions.
 - **[R-21] Split-Brain & Duplication**: Hunting for duplicate functions, hooks, state variables, or redundant API calls.
+- **[R-22] FTUE Background Scan Idempotency**: If `registeredMacs.length === 0`, call `startSweeper()` directly to bypass `isSweeperActive` async battery check races.
+- **[R-23] Wizard Scanning Non-Blocking Next**: Setup wizard Next button enabled state on Step 1 must rely purely on `pendingRegistrations.length > 0` and never block on scanning state (`bleState === 'SCANNING'`).
+- **[R-24] Group Connection Ground Truth**: Authoritative check for multi-device/group sessions is `connectedDevices.length > 1` (do not check fragile `DisplayDevice` flags).

@@ -415,6 +415,17 @@ The `CAMERA` mode provides real-time ambient lighting translation and dual-mode 
 
 All byte definitions below represent the inner payload _before_ the V2 BLE packet wrapper is applied.
 
+### Hard Onboarding & BLE Invariants (Non-Negotiable Architectural Constraints)
+
+The following architectural invariants are codified to prevent regression of critical BLE and onboarding bugs:
+
+1. **Idempotent FTUE Scan Sweep Launch**:
+   When the user has no registered devices (`registeredMacs.length === 0`), triggering a BLE scan via `scanForPeripherals` must unconditionally call `startSweeper()`. This bypasses the asynchronous `isSweeperActive` flag check, avoiding initialization races on mounting the onboarding wizard where `isSweeperActive` returns false during lazy battery initialization.
+2. **Non-Blocking Wizard Next Button**:
+   The Hardware Setup Wizard's Step 1 "Next" button must be enabled purely based on whether `pendingRegistrations.length > 0`. The transition to Step 2 must never be blocked when scanning is active (`bleState === 'SCANNING'`), preventing user deadlocks during indefinite background sweeps.
+3. **Group Connection Ground Truth**:
+   The authoritative check for multi-device/group sessions is strictly `connectedDevices.length > 1`. The codebase must never evaluate grouping using fragile `DisplayDevice` properties or database synchronization flags like `groupId` to avoid sync delays and type discrepancy issues.
+
 ### Confirmed Hardware Identity (APK-Verified 2026-04-21)
 
 > [!IMPORTANT]

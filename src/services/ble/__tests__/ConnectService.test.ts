@@ -248,6 +248,24 @@ describe('ConnectService test suite', () => {
     expect(mockBleManager.connectToDevice).toHaveBeenNthCalledWith(2, 'MAC2', undefined);
   });
 
+  it('2.1. Group connect (2 MACs) sequential flow asserts isGrouped invariant', async () => {
+    mockInput.targetMacs = ['MAC1', 'MAC2'];
+    mockBleManager.connectToDevice = jest.fn().mockImplementation((mac) => {
+      if (mac === 'MAC1') return Promise.resolve(mockDevice1);
+      if (mac === 'MAC2') return Promise.resolve(mockDevice2);
+      return Promise.reject(new Error('Unknown device'));
+    });
+
+    const promise = runConnectService(mockInput);
+    const result = await resolveActor(promise);
+
+    expect(result.devices).toEqual([mockDevice1, mockDevice2]);
+    
+    // [R-24] Group Connection Ground Truth: check that length > 1 defines grouping
+    const isGrouped = result.devices.length > 1;
+    expect(isGrouped).toBe(true);
+  });
+
   it('3. Already-connected device cache hit skips connectToDevice', async () => {
     mockInput.connectedDevicesRef.current = [mockDevice1];
 
