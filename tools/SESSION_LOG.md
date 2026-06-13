@@ -1,3 +1,28 @@
+### [ARTIFACT] 2026-06-13T06:05 — R-11_findings.json Created
+| Artifact | Path | Description |
+|---|---|---|
+| R-11 Promise/IO Safety Findings Report | [R-11_findings.json](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_raw/R-11_findings.json) | Static audit findings for Promise/IO Safety (Rule R-11) in the SK8Lytz codebase. |
+
+### [ARTIFACT] 2026-06-13T06:05 — R-12_findings.json Created
+| Artifact | Path | Description |
+|---|---|---|
+| R-12 Stale Closures Findings Report | [R-12_findings.json](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_raw/R-12_findings.json) | Static audit findings for Stale Closures (Rule R-12) in the SK8Lytz codebase. |
+
+### [ARTIFACT] 2026-06-13T06:05 — R-23_findings.json Created
+| Artifact | Path | Description |
+|---|---|---|
+| R-23 Monolith Detection Findings Report | [R-23_findings.json](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_raw/R-23_findings.json) | Static audit findings for Monolith Detection (Rule R-23) in the SK8Lytz codebase. |
+
+### [ARTIFACT] 2026-06-13T06:02 — DOMAIN_ANIMATION_AND_PERFORMANCE_findings.json Created
+| Artifact | Path | Description |
+|---|---|---|
+| Animations and Performance Findings Report | [DOMAIN_ANIMATION_AND_PERFORMANCE_findings.json](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_raw/DOMAIN_ANIMATION_AND_PERFORMANCE_findings.json) | Static audit findings for DOMAIN_ANIMATION_AND_PERFORMANCE in the SK8Lytz codebase. |
+
+### [ARTIFACT] 2026-06-13T05:58 — R-18_findings.json Created
+| Artifact | Path | Description |
+|---|---|---|
+| R-18 Findings Report | [R-18_findings.json](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_raw/R-18_findings.json) | Static audit findings for Boolean Traps (Rule R-18) in the SK8Lytz codebase. |
+
 ### [MERGE] 2026-06-13T05:47 — feat/harden-ble-regression-shields → master @ 182b9010
 **What merged:**
 - Codified [R-22] FTUE Background Scan Idempotency, [R-23] Wizard Scanning Non-Blocking Next, and [R-24] Group Connection Ground Truth into `tools/21_GUARDRAILS.md`.
@@ -2485,3 +2510,8 @@ TSC: ✅  Jest: ✅
 **What:** Architectural Cartography Report for the NOTIFICATIONS_&_ROUTING domain.
 **Why:** Documented all 7 files in the domain, their blast radius, consumed/provided contexts, service input/output registries, platform OS branching matrices, and background session notification dispatch and push token/geocoding sequence diagrams.
 
+
+### [ARTIFACT] 2026-06-13T01:07 � Session Telemetry Flow Created
+| Artifact | Path | Description |
+|---|---|---|
+| Session Telemetry Architecture | file:///C:/Users/Magma/.gemini/antigravity/brain/1f61f75f-57c0-48b4-9117-a556c5711e06/session_telemetry_flow.md | Synthesized flow diagram of skate and crew session states and health telemetry handling. |
