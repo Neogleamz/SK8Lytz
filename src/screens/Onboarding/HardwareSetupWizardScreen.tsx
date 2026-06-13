@@ -8,7 +8,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { getDefaultProtocol } from '../../protocols/ControllerRegistry';
 import { Spacing, Typography , ThemePalette } from '../../theme/theme';
@@ -122,6 +123,7 @@ export default function HardwareSetupWizardScreen({
     } else if (actionStatus === 'identifying') {
       setActionStatus('idle');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, pendingRegistrations, scanStage, bleState]);
 
   useEffect(() => {
@@ -134,6 +136,7 @@ export default function HardwareSetupWizardScreen({
         handleStartScan();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanStage, isBluetoothSupported, isBluetoothEnabled, pendingRegistrations.length]);
 
   useEffect(() => {
@@ -150,6 +153,7 @@ export default function HardwareSetupWizardScreen({
     return () => {
       if (timer) clearTimeout(timer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, bleState, scanStage, pendingRegistrations.length]);
 
   const handleStartScan = async () => {
