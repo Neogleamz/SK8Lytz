@@ -31,7 +31,7 @@ const mockFrom = jest.fn((_table: string) => ({ insert: mockInsert }));
 const mockGetUser = jest.fn();
 const mockGetSession = jest.fn();
 
-jest.mock('../../src/services/supabaseClient', () => ({
+jest.mock('../supabaseClient', () => ({
   supabase: {
     auth: {
       getUser: () => mockGetUser(),
@@ -41,7 +41,7 @@ jest.mock('../../src/services/supabaseClient', () => ({
   },
 }));
 
-jest.mock('../../src/services/AppLogger', () => ({
+jest.mock('../AppLogger', () => ({
   AppLogger: {
     log: jest.fn(),
     warn: jest.fn(),
@@ -58,8 +58,8 @@ import {
   SpeedTrackingService,
   type PendingSessionRecord,
   type ISessionSnapshot,
-} from '../../src/services/SpeedTrackingService';
-import { PENDING_SESSION_QUEUE_KEY } from '../../src/constants/storageKeys';
+} from '../SpeedTrackingService';
+import { PENDING_SESSION_QUEUE_KEY } from '../../constants/storageKeys';
 
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 const mockUserId = 'user_offline_mock';
