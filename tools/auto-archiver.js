@@ -16,8 +16,8 @@ if (!taskSlug) {
 }
 
 const rootDir = path.resolve(__dirname, '..');
-const bucketListPath = path.join(rootDir, 'tools', 'SK8Lytz_Bucket_List.md');
-const archivePath = path.join(rootDir, 'tools', 'SK8Lytz_Bucket_List_ARCHIVE.md');
+const bucketListPath = path.join(rootDir, 'docs', 'SK8Lytz_Bucket_List.md');
+const archivePath = path.join(rootDir, 'docs', 'SK8Lytz_Bucket_List_ARCHIVE.md');
 
 if (!fs.existsSync(bucketListPath)) {
   console.error(`Bucket List not found at ${bucketListPath}`);

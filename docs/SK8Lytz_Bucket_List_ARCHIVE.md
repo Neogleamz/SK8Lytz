@@ -1876,3 +1876,59 @@ pm run verify which includes QA tests.
     Rejected alternative: Relying solely on textual instructions in session summaries, which inevitably drift or get ignored by future models.
   - **Source of Truth:** 📖 [useBLEScanner.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts#L345) L345-355 · [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx#L561) L561-571 · [DashboardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx#L282) L282
   - **Details:** Non-production changes only. Adds tests in `ConnectService.test.ts` and `HardwareSetupWizardScreen.test.tsx`, plus a new `useBLEScanner.test.ts`. Codifies rules in `21_GUARDRAILS.md` and `prime-directive.md`.
+
+- [x] **`chore/sweep-cloud-supabase`**
+  - **Tags:** `[READY]` `[CONFIRMED]` `[CLOUD]` `[H-RISK]` `[Meal]` `[H-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:1]`
+  - **Goal:** Harden 6 SECURITY DEFINER PostgreSQL functions with `SET search_path = ''` to eliminate SQL injection surface, fix email domain validation bypass, restrict scraper_blocklist RLS, and add error handling to the Deno edge function.
+  - **Decision Log:** deepdive fleet confirmed 6 unguarded `SECURITY DEFINER` functions in Supabase migrations — without `SET search_path`, a caller can inject a malicious schema and execute arbitrary SQL under elevated privilege. The email LIKE `%@sk8lytz.com` pattern is bypassable with `x@sk8lytz.com.evil.com`.
+  - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-cloud-supabase.md](./plans/PLAN-sweep-cloud-supabase.md) — Key finding: "6 SECURITY DEFINER RPCs without SET search_path — SQL injection vectors (2 agents confirmed)" — Rejected: "App-layer validation only" — does not protect against DB-level schema injection
+  - **Source of Truth:** [20260414_account_deletion_rpc.sql](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/supabase/migrations/20260414_account_deletion_rpc.sql) + 5 additional migration files listed in PLAN
+
+
+- [x] **`chore/sweep-devops-tooling`**
+  - **Tags:** `[READY]` `[CONFIRMED]` `[DEVOPS]` `[H-RISK]` `[Snack]` `[H-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:1]`
+  - **Goal:** Fix gatekeeper rebase failure detection ($LASTEXITCODE), prevent regression healer from committing to master, fix auto-archiver slug regex collision, and replace raw `npx tsc`/`npx jest` in husky pre-commit hook.
+  - **Decision Log:** Fleet confirmed `fortress-gatekeeper.ps1` does not check `$LASTEXITCODE` after `git rebase` — a failed rebase is silently ignored, leaving master in a corrupted merge state. `regression_healer.py` has no branch guard and can commit directly to master.
+  - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-devops-tooling.md](./plans/PLAN-sweep-devops-tooling.md) — Key finding: "Gatekeeper git rebase failure is unchecked; regression healer can commit to master" — Rejected: "Manual review step only" — silent failure mode requires a process guard
+  - **Source of Truth:** [fortress-gatekeeper.ps1](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/fortress-gatekeeper.ps1#L93) · [regression_healer.py](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/sentinel/regression_healer.py#L188)
+
+
+- [x] **`chore/sweep-protocol-core`**
+  - **Tags:** `[READY]` `[CONFIRMED]` `[BLE]` `[H-RISK]` `[Snack]` `[H-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:1]`
+  - **Goal:** Resolve split-brain 0x40 chunking between ZenggeAdapter and BleWriteDispatcher, fix incorrect TransitionType mapping, and remove hardcoded 54-pixel max in streamPixelFrame.
+  - **Decision Log:** 2 independent fleet agents confirmed ZenggeAdapter.prepareForTransmission and BleWriteDispatcher implement conflicting chunking logic — the controller receives double-chunked payloads, causing corrupted LED state. Per Protocol Bible: chunking belongs to the dispatcher only.
+  - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-protocol-core.md](./plans/PLAN-sweep-protocol-core.md) — Key finding: "Split-brain 0x40 chunking confirmed by 2 agents — double-chunked payloads corrupt LED state" — Rejected: "Move chunking to adapter" — Protocol Bible explicitly assigns chunking to the write dispatcher
+  - **Source of Truth:** [ZenggeAdapter.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/ZenggeAdapter.ts#L260) · [ZENGGE_PROTOCOL_BIBLE.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/ZENGGE_PROTOCOL_BIBLE.md)
+
+
+- [x] **`chore/sweep-ui-screens-dashboard`**
+  - **Tags:** `[READY]` `[CONFIRMED]` `[UI]` `[H-RISK]` `[Meal]` `[M-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:1]`
+  - **Goal:** Eliminate `as any`/`any[]` props from 5 dashboard sub-components, fix Animated.Value memory leak in render cycle, fix Platform.OS ternary missing Web case, and fix power-toggle loop missing queue serialization.
+  - **Decision Log:** Fleet found 6 dashboard components with untyped any props in the primary render path. Animated.Value instantiated in CrewHubSlab.tsx:181 render body accumulates instances on every render causing memory growth over long skating sessions.
+  - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-ui-screens-dashboard.md](./plans/PLAN-sweep-ui-screens-dashboard.md) — Key finding: "Animated.Value memory leak in render; 5 components with any-typed props in Dashboard render path" — Rejected: "@ts-ignore suppression" — banned by The No any Cast Law
+  - **Source of Truth:** [CrewHubSlab.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/CrewHubSlab.tsx#L181) · [DashboardTelemetryHero.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/DashboardTelemetryHero.tsx#L12)
+
+
+- [x] **`chore/sweep-ui-visualizer-patterns`**
+  - **Tags:** `[READY]` `[CONFIRMED]` `[UI]` `[M-RISK]` `[Meal]` `[M-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:1]`
+  - **Goal:** Fix floating unawaited promise in UnifiedPatternPicker, remove duplicate hexToRgb, fix web-only CSS props crashing on native in NeonHueStrip, and extract inline FlatList callbacks to stable useCallback refs.
+  - **Decision Log:** Fleet confirmed writeToDeviceRef.current(payload) in UnifiedPatternPicker returns a Promise never caught — BLE write failures silently dropped. NeonHueStrip passes touchAction/userSelect to a native View, which crashes silently on iOS/Android.
+  - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-ui-visualizer-patterns.md](./plans/PLAN-sweep-ui-visualizer-patterns.md) — Key finding: "Floating promise in UnifiedPatternPicker:62; NeonHueStrip web-only props crash on native" — Rejected: "Return void from writeToDevice" — masks errors; proper async error handling required
+  - **Source of Truth:** [UnifiedPatternPicker.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/patterns/UnifiedPatternPicker.tsx#L62) · [NeonHueStrip.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/NeonHueStrip.tsx#L99)
+
+
+- [x] **`chore/sweep-os-permissions-manifests`**
+  - **Tags:** `[READY]` `[CONFIRMED]` `[NATIVE]` `[H-RISK]` `[Snack]` `[M-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:1]`
+  - **Goal:** Move hardcoded Google Maps API key from AndroidManifest.xml to build-time env var, fix HealthKit activity type mismatch, and trim excessive foregroundServiceType declaration.
+  - **Decision Log:** Fleet flagged Google Maps API key hardcoded in AndroidManifest.xml:29 as plaintext — committed to git history and exposed to all repo contributors. Android 14+ strictly enforces foregroundServiceType matching; the over-broad declaration risks Play Store rejection.
+  - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-os-permissions-manifests.md](./plans/PLAN-sweep-os-permissions-manifests.md) — Key finding: "Google Maps API key hardcoded in AndroidManifest.xml — PII/secret leak committed to git" — Rejected: "Add to .gitignore only" — key already in history; must rotate + move to env var
+  - **Source of Truth:** [AndroidManifest.xml](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/android/app/src/main/AndroidManifest.xml#L29) · [app.config.js](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/app.config.js#L15)
+
+
+- [x] **`chore/sweep-native-watch`**
+  - **Tags:** `[READY]` `[CONFIRMED]` `[NATIVE]` `[M-RISK]` `[Snack]` `[M-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:1]`
+  - **Goal:** Fix @Published property mutation on WCSession background queue (iOS crash risk), fix non-atomic SharedPreferences write in Wear OS, and align exercise type to INLINE_SKATING.
+  - **Decision Log:** Fleet confirmed WatchConnectivityManager.swift:105 mutates @Published properties from the WCSession background delegate queue — SwiftUI rendering on background threads causes crashes on iOS 17+. WearMessageSender.kt:85 non-atomic SharedPreferences write causes data corruption under concurrent health delivery.
+  - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-native-watch.md](./plans/PLAN-sweep-native-watch.md) — Key finding: "@Published modified on WCSession background queue — guaranteed crash on iOS 17+" — Rejected: "@MainActor attribute only" — WCSession delegates are not MainActor-isolated; must use explicit DispatchQueue.main.async
+  - **Source of Truth:** [WatchConnectivityManager.swift](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/targets/watch/WatchConnectivityManager.swift#L105) · [WearMessageSender.kt](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/android/sk8lytzWear/src/main/kotlin/com/neogleamz/sk8lytzwear/presentation/WearMessageSender.kt#L85)
+

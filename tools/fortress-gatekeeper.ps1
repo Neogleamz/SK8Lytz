@@ -15,10 +15,10 @@ if ((Get-Location).Path -ne $FORTRESS_ROOT) {
 }
 
 # 0. Agent State Auto-Commit Guard (FRICTION-027)
-$LogStatus = git status --short tools/SESSION_LOG.md tools/SK8Lytz_Bucket_List_ARCHIVE.md tools/FRICTION_LEDGER.md tools/SK8Lytz_Bucket_List.md 2>$null
+$LogStatus = git status --short docs/SESSION_LOG.md docs/SK8Lytz_Bucket_List_ARCHIVE.md docs/FRICTION_LEDGER.md docs/SK8Lytz_Bucket_List.md 2>$null
 if ($LogStatus) {
     Write-Host "Auto-committing agent state logs before merge..." -ForegroundColor Yellow
-    git add tools/SESSION_LOG.md tools/SK8Lytz_Bucket_List_ARCHIVE.md tools/FRICTION_LEDGER.md tools/SK8Lytz_Bucket_List.md
+    git add docs/SESSION_LOG.md docs/SK8Lytz_Bucket_List_ARCHIVE.md docs/FRICTION_LEDGER.md docs/SK8Lytz_Bucket_List.md
     git commit -m "chore(logs): save session state before merge" --quiet
 }
 
