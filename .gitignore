@@ -90,7 +90,6 @@ theme.js
 !.agents/workflows/
 
 # Scratch tool / analysis files (local only)
-diff.txt
 tools/cleanup_pass2.py
 tools/dead_code_cleanup.py
 tools/dockedcontroller_cleanup.py
@@ -99,14 +98,10 @@ tools/docked_old.tsx
 
 # Knowledge Base (local-only — may contain RE artifacts and fair-use excerpts)
 tools/knowledge-base/
-layout_audit_report.json
 
 # Scraper caches (generated, local only)
 tools/scraper/nominatim_cache.json
 tools/scraper/state_caches/
-
-# Plan files (archived/local only)
-docs/plans/
 
 # Temporary scratchpad directory
 scratch/
@@ -158,7 +153,6 @@ tools/Node.js-LEDnetWF-46CC/
 tools/java-*/
 
 # Scratch logcat / WSL dumps
-logcat.txt
 wsl_list.txt
 
 # Stale bucket list backups
@@ -168,7 +162,6 @@ tools/scraper/core/scraper.db
 
 # DeepDive Scripts & Artifacts
 artifacts/
-ast_r14_scanner.js
 scratch_r11.js
 tools/find_unused_deps.js
 

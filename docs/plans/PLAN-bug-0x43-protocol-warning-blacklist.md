@@ -1,0 +1,6 @@
+# [bug/0x43-protocol-warning-blacklist] Flash Memory Safeguard
+## Goal
+Blacklist dangerous `0x43` opcodes to prevent hardware corruption.
+## Details
+- Sending improperly formatted `0x43` packets can permanently corrupt the `0xA3` flash memory.
+- Implement a strict validation layer or hard blacklist in `ZenggeProtocol.ts` to prevent the app from ever dispatching `0x43` commands unless explicitly authenticated by a verified builder.

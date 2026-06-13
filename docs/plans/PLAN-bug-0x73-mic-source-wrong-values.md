@@ -1,0 +1,7 @@
+# [bug/0x73-mic-source-wrong-values] Fix Music Mode Bytes
+## Goal
+Correct the `0x73` payload for Music Mode.
+## Details
+- The previously documented `0x00`/`0x01` values for mic source are incorrect.
+- The ZENGGE APK uses `0x26` (Light Bar, 16 modes) and `0x27` (Light Screen, 30 modes).
+- Update the protocol packet generator and UI mapping to use the correct `modeType` byte to unlock all 46 native music effects.
