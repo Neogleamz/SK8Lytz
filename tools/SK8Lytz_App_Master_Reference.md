@@ -117,7 +117,7 @@ Fixed: `HALOZ.defaultLedPoints = 8, segments = 2`.
 - Seg 2 (LEFT): Hardware mirror places LED 0 at physical TOP, LED 7 at physical BOTTOM.
 - If pixel[0] = RED → **Right BOTTOM = RED, Left TOP = RED**. True horseshoe symmetry.
 
-#### VisualizerUnit Rendering Rules (HALOZ RING only)
+#### VisualizerUnit Rendering Rules (HALOZ RING only) [MOVE_TO_ARCHIVE] (Note: VisualizerUnit has been upgraded to natively support RING, OVAL, and DUAL_STRIP layouts, unified under product profile geometry).
 
 These rules govern `src/components/VisualizerUnit.tsx`. **Do NOT apply to SOULZ (OVAL) or RAILZ (DUAL_STRIP).**
 
@@ -1317,7 +1317,7 @@ Built with Jetpack Compose for Wear OS.
 |:-----|:--------|
 | `MainActivity.kt` | ComponentActivity entry point with Compose theme |
 | `DashboardScreen.kt` | Session HUD — speed, HR, calories, elapsed timer, start/stop button (244 lines) |
-| `SessionState.kt` | Data class for session state (status, speed, heartRate, calories, startTime) |
+| `SessionState.kt` | Data class for session state (status, speed, heartRate, calories, startTime) [MOVE_TO_ARCHIVE] |
 | `WearMessageSender.kt` | Outbound `MessageClient` sender for START/STOP commands to phone |
 | `WearableCommunicationService.kt` | Inbound `WearableListenerService` — receives phone state via DataLayer |
 | `HealthTracker.kt` | Health Services `ExerciseClient` — continuous HR monitoring during active sessions |
@@ -1351,7 +1351,7 @@ WatchBridge.addWatchHealthListener(handler)                  // Watch → Phone 
 
 ```typescript
 interface WatchSessionState {
-  status: 'ACTIVE' | 'STOPPED';
+  status: 'ACTIVE' | 'STOPPED'; // [MOVE_TO_ARCHIVE] - Missing PAUSED and SUMMARY states
   speed?: number;
   heartRate?: number;
   calories?: number;
@@ -2754,13 +2754,13 @@ Every file within the `UI_MODALS` domain mapped to its specific architectural pu
 | `src/components/DeviceSettingsModal.tsx` | `DeviceSettingsModal` | A configuration overlay that interfaces with BLE dispatch queues to configure and write hardware EEPROM parameters (LED count, segment configuration, color sorting, RF pairing). |
 | `src/components/CommunityModal.tsx` | `CommunityModal` | An interactive browser sheet loading community-shared and personal cloud presets with preview support using animated LED strip previews. |
 | `src/components/GroupSettingsModal.tsx` | `GroupSettingsModal` | A modal drawer facilitating group setup, renaming, and member selection from registered devices, equipped with active BLE range indicators. |
-| `src/components/SessionSummaryModal.tsx` | `SessionSummaryModal` | A post-session HUD overlay rendering aggregated metrics (trip distance, speeds, peak G-Force, calories burned) styled with speed-accented glassmorphic cards. |
+| `src/components/SessionSummaryModal.tsx` | `SessionSummaryModal` | A post-session HUD overlay rendering aggregated metrics (trip distance, speeds, peak G-Force, calories burned) styled with speed-accented glassmorphic cards. [MOVE_TO_ARCHIVE] |
 | `src/components/modals/EulaModal.tsx` | `EulaModal` | A legal gateway requiring scroll-to-bottom interaction verification before enabling the user to accept physical safety and photosensitivity waivers. |
 | `src/components/modals/GlobalPermissionsModal.tsx` | `GlobalPermissionsModal` | An event-driven wrapper routing system permission requests (location, audio, BLE) via React Native's Modal platform, listening to global trigger events. |
 | `src/components/CustomSlider.tsx` | `CustomSlider` | A high-performance PanResponder slider component maintaining local state inputs for smooth rendering, supporting full-spectrum gradient backgrounds. |
 | `src/components/TacticalSlider.tsx` | `TacticalSlider` | A borderless flat bar slider rendering custom icons and dynamic colors (speed green-to-red in TURBO mode, white opacities in BRIGHTNESS mode). |
 | `src/components/MarqueeText.tsx` | `MarqueeText` | An Animated.Text wrapper measuring container limits to run a loop translation scroll (`translateX`) if the child string exceeds container boundaries. |
-| `src/components/ConnectionStrengthBadge.tsx` | `ConnectionStrengthBadge` | A standalone 3-bar signal strength icon mapping raw BLE RSSI values directly to vertical colored bar tiers. |
+| `src/components/ConnectionStrengthBadge.tsx` | `ConnectionStrengthBadge` | A standalone 3-bar signal strength icon mapping raw BLE RSSI values directly to vertical colored bar tiers. [MOVE_TO_ARCHIVE] |
 
 ---
 
@@ -2784,7 +2784,7 @@ graph TD
     UI_MODALS -->|Exports DeviceSettingsModal| DashboardScreen
     UI_MODALS -->|Exports CommunityModal| ControllerDock[components/DockedController.tsx]
     UI_MODALS -->|Exports GroupSettingsModal| DashboardScreen
-    UI_MODALS -->|Exports SessionSummaryModal| StreetModeScreen[screens/StreetModeScreen.tsx]
+    UI_MODALS -->|Exports SessionSummaryModal| StreetModeScreen[screens/StreetModeScreen.tsx] [MOVE_TO_ARCHIVE]
     UI_MODALS -->|Exports GlobalPermissionsModal| RootApp[App.tsx]
 ```
 
@@ -2991,7 +2991,7 @@ Every file in the `UI_VISUALIZER` domain mapped to its exact architectural purpo
 |---|---|---|
 | **VisualizerUnit** | [VisualizerUnit.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/VisualizerUnit.tsx) | Computes coordinate-math layouts and renders physical LED paths (`RING`, `DUAL_STRIP`, `OVAL`) using a multi-layer glow simulation model, throttled to 30 FPS on web and 60 FPS on native. |
 | **ProductVisualizer** | [ProductVisualizer.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/ProductVisualizer.tsx) | Outer wrapper component managing the shared `Animated.Value` timer loop to drive synchronous animation ticks for single or paired skate visualizer units. |
-| **LEDStripPreview** | [LEDStripPreview.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/LEDStripPreview.tsx) | Renders a 2D linear row of colored blocks to preview pattern engine effects, optimized with hash-based change checks and 20 FPS timers. |
+| **LEDStripPreview** | [LEDStripPreview.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/LEDStripPreview.tsx) | Renders a 2D linear row of colored blocks to preview pattern engine effects, optimized with hash-based change checks and 30 FPS timers. |
 | **CustomEffectVisualizer** | [CustomEffectVisualizer.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/CustomEffectVisualizer.tsx) | Renders a small horizontal row of circular LED dots to preview custom effects with dynamic timing adjustments for breathing/static/scrolling transitions. |
 | **NeonHueStrip** | [NeonHueStrip.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/NeonHueStrip.tsx) | Renders a full-spectrum linear color strip using `LinearGradient` and implements a dedicated `PanResponder` gesture responder for lag-free local slider changes. |
 | **PositionalGradientBuilder** | [PositionalGradientBuilder.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/PositionalGradientBuilder.tsx) | Visual node editor allowing users to insert, remove, position, and color-code pins on a 0-100% strip, and dispatch generated RGB arrays over BLE with 100ms throttle protection. |

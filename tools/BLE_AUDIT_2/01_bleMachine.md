@@ -1,166 +1,175 @@
 # BLE Machine Audit Findings
 
+## Overview
+This document logs the audit findings for the BLE XState machine (`BleMachine.ts` and `BleMachine.types.ts`) in the SK8Lytz project.
+
+---
+
 ## 1. Machine States
-The machine consists of the following states:
-*   `IDLE`
-*   `SCANNING`
-*   `CONNECTING`
-*   `READY`
-*   `DISCONNECTING`
-*   `RECOVERING`
+The machine defines the following 6 states in `BleMachineState`:
+1. `IDLE`
+2. `SCANNING`
+3. `CONNECTING`
+4. `READY`
+5. `DISCONNECTING`
+6. `RECOVERING`
 
 ---
 
-## 2. State Actions, Events, and Transitions
+## 2. State-by-State Analysis (Actors, Events, and Transitions)
 
-### State: `IDLE`
-*   **Invoked Actors:** None
-*   **Events Accepted & Transitions:**
-    *   `SCAN_START`: Transitions to `SCANNING` and triggers actions `setSweeperId` and `logTransition` (from 'IDLE' to 'SCANNING').
-    *   `CONNECT_REQUEST`: Transitions to `CONNECTING` and triggers actions `setTargetMacs` and `logTransition` (from 'IDLE' to 'CONNECTING').
-    *   `DISCONNECT_REQUEST`: Transitions to `DISCONNECTING` and triggers action `logTransition` (from 'IDLE' to 'DISCONNECTING').
-    *   `RECOVERY_START`: Transitions to `RECOVERING` and triggers actions `setGhostedMacs` and `logTransition` (from 'IDLE' to 'RECOVERING').
-    *   `UPDATE_CONNECTED_DEVICES`: Does not transition (stays in `IDLE`). Triggers action `setConnectedDevices`.
+### 2.1. `IDLE`
+* **Invoked Actors**: None.
+* **Events & Transitions**:
+  * `SCAN_START` ➡️ `SCANNING`
+    * Actions: `setSweeperId`, `logTransition`
+  * `CONNECT_REQUEST` ➡️ `CONNECTING`
+    * Actions: `setTargetMacs`, `logTransition`
+  * `DISCONNECT_REQUEST` ➡️ `DISCONNECTING`
+    * Actions: `logTransition`
+  * `RECOVERY_START` ➡️ `RECOVERING`
+    * Actions: `setGhostedMacs`, `logTransition`
+  * `UPDATE_CONNECTED_DEVICES` ➡️ Internal Transition (stays in `IDLE`)
+    * Actions: `setConnectedDevices`
 
-### State: `SCANNING`
-*   **Invoked Actors:** None (performs manual device scan start on entry and stop on exit/pause)
-*   **Events Accepted & Transitions:**
-    *   `SCAN_STOP`: Transitions to `IDLE` and triggers actions `clearSweeperId` and `logTransition` (from 'SCANNING' to 'IDLE').
-    *   `CONNECT_REQUEST`: Transitions to `CONNECTING` and triggers actions `clearSweeperId`, `setTargetMacs`, and `logTransition` (from 'SCANNING' to 'CONNECTING').
-    *   `SCAN_PAUSE`: Stays in `SCANNING`. Action: stops device scanning (`context.bleManager.stopDeviceScan()`).
-    *   `SCAN_RESUME`: Stays in `SCANNING`. Action: starts device scanning (`context.bleManager.startDeviceScan(...)`).
-    *   `DISCONNECT_REQUEST`: Transitions to `DISCONNECTING` and triggers actions `clearSweeperId` and `logTransition` (from 'SCANNING' to 'DISCONNECTING').
-    *   `RECOVERY_START`: Transitions to `RECOVERING` and triggers actions `setGhostedMacs` and `logTransition` (from 'SCANNING' to 'RECOVERING').
+### 2.2. `SCANNING`
+* **Invoked Actors**: None.
+  * *Entry Action*: Starts scanning using `context.bleManager.startDeviceScan(...)`.
+  * *Exit Action*: Stops scanning using `context.bleManager.stopDeviceScan()`.
+* **Events & Transitions**:
+  * `SCAN_STOP` ➡️ `IDLE`
+    * Actions: `clearSweeperId`, `logTransition`
+  * `CONNECT_REQUEST` ➡️ `CONNECTING`
+    * Actions: `clearSweeperId`, `setTargetMacs`, `logTransition`
+  * `SCAN_PAUSE` ➡️ Internal Transition
+    * Actions: Stops device scan via `context.bleManager.stopDeviceScan()`
+  * `SCAN_RESUME` ➡️ Internal Transition
+    * Actions: Resumes device scan via `context.bleManager.startDeviceScan(...)`
+  * `DISCONNECT_REQUEST` ➡️ `DISCONNECTING`
+    * Actions: `clearSweeperId`, `logTransition`
+  * `RECOVERY_START` ➡️ `RECOVERING`
+    * Actions: `setGhostedMacs`, `logTransition`
 
-### State: `CONNECTING`
-*   **Invoked Actors:** `connectService`
-*   **Events Accepted & Transitions:**
-    *   `onDone` (on actor success): Transitions to `READY` and triggers actions `setConnectedDevices` and `logTransition` (from 'CONNECTING' to 'READY').
-    *   `onError` (on actor error): Transitions to `IDLE` and triggers action `logTransition` (from 'CONNECTING' to 'IDLE', reason: 'connect_failed').
-    *   `RECOVERY_START`: Transitions to `RECOVERING` and triggers actions `setGhostedMacs` and `logTransition` (from 'CONNECTING' to 'RECOVERING').
-    *   `DISCONNECT_REQUEST`: Transitions to `DISCONNECTING` and triggers action `logTransition` (from 'CONNECTING' to 'DISCONNECTING').
+### 2.3. `CONNECTING`
+* **Invoked Actors**: `connectService` (ID: `connectService`).
+  * *Input Map*:
+    * `bleManager`: `context.bleManager`
+    * `targetMacs`: `context.targetMacs`
+    * `connectedDevicesRef`: `{ current: context.connectedDevices }`
+    * `adapterMapRef`: `context.adapterMapRef`
+    * `mtuMapRef`: `context.mtuMapRef`
+    * `disconnectListeners`: `context.disconnectListeners`
+    * `blacklistedMacsRef`: `context.blacklistedMacsRef`
+    * `handleOrganicDisconnect`: `context.handleOrganicDisconnect`
+    * `onOrganicDisconnect`: `context.onOrganicDisconnect`
+    * `handleNotification`: `context.handleNotification`
+    * `enqueueWrite`: `context.enqueueWrite`
+* **Events & Transitions**:
+  * `xstate.done.actor.connectService` (`onDone`) ➡️ `READY`
+    * Actions: `setConnectedDevices`, `logTransition`
+  * `xstate.error.actor.connectService` (`onError`) ➡️ `IDLE`
+    * Actions: `logTransition` (reason: `connect_failed`)
+  * `RECOVERY_START` ➡️ `RECOVERING`
+    * Actions: `setGhostedMacs`, `logTransition`
+  * `DISCONNECT_REQUEST` ➡️ `DISCONNECTING`
+    * Actions: `logTransition`
 
-### State: `READY`
-*   **Invoked Actors:** `heartbeatService`
-*   **Events Accepted & Transitions:**
-    *   `HEARTBEAT_FAIL`: Transitions to `RECOVERING` and triggers actions `setGhostedMacs` and `logTransition` (from 'READY' to 'RECOVERING', reason: 'heartbeat_fail').
-    *   `DISCONNECT_REQUEST`: Transitions to `DISCONNECTING` and triggers action `logTransition` (from 'READY' to 'DISCONNECTING').
-    *   `RECOVERY_START`:
-        *   *Guard:* `event.type === 'RECOVERY_START' && (event.ghostedMacs?.length ?? 0) >= 2`: Transitions to `CONNECTING` and triggers actions `setTargetMacs` and `logTransition` (from 'READY' to 'CONNECTING', reason: 'group_recovery').
-        *   *Fallback (Default):* Transitions to `RECOVERING` and triggers actions `setGhostedMacs` and `logTransition` (from 'READY' to 'RECOVERING').
-    *   `UPDATE_CONNECTED_DEVICES`:
-        *   *Guard:* `event.type === 'UPDATE_CONNECTED_DEVICES' && event.devices.length === 0`: Transitions to `IDLE` and triggers actions `setConnectedDevices` and `logTransition` (from 'READY' to 'IDLE', reason: 'zero_devices').
-        *   *Fallback (Default):* Stays in `READY`. Action: triggers `setConnectedDevices`.
+### 2.4. `READY`
+* **Invoked Actors**: `heartbeatService` (invoked anonymously in array format).
+  * *Input Map*:
+    * `bleManager`: `context.bleManager`
+    * `connectedDevices`: `context.connectedDevices`
+    * `adapterMap`: `context.adapterMapRef.current`
+* **Events & Transitions**:
+  * `HEARTBEAT_FAIL` ➡️ `RECOVERING`
+    * Actions: `setGhostedMacs`, `logTransition` (reason: `heartbeat_fail`)
+  * `CONNECT_REQUEST` ➡️ `CONNECTING`
+    * Actions: `setTargetMacs`, `logTransition`
+  * `DISCONNECT_REQUEST` ➡️ `DISCONNECTING`
+    * Actions: `logTransition`
+  * `RECOVERY_START` (Conditional Target):
+    * Target 1: `CONNECTING` (if guard returns true: `event.ghostedMacs?.length >= 2`)
+      * Actions: `setTargetMacs`, `logTransition` (reason: `group_recovery`)
+    * Target 2: `RECOVERING` (default fallback)
+      * Actions: `setGhostedMacs`, `logTransition`
+  * `UPDATE_CONNECTED_DEVICES` (Conditional Target):
+    * Target 1: `IDLE` (if guard returns true: `event.devices.length === 0`)
+      * Actions: `setConnectedDevices`, `logTransition` (reason: `zero_devices`)
+    * Target 2: Internal Transition (default fallback)
+      * Actions: `setConnectedDevices`
 
-### State: `DISCONNECTING`
-*   **Invoked Actors:** None
-*   **Events Accepted & Transitions:**
-    *   `DISCONNECT_COMPLETE`: Transitions to `IDLE` and triggers actions `clearConnectedDevices`, `clearGhostedMacs`, and `logTransition` (from 'DISCONNECTING' to 'IDLE').
+### 2.5. `DISCONNECTING`
+* **Invoked Actors**: None.
+* **Events & Transitions**:
+  * `DISCONNECT_COMPLETE` ➡️ `IDLE`
+    * Actions: `clearConnectedDevices`, `clearGhostedMacs`, `logTransition`
 
-### State: `RECOVERING`
-*   **Invoked Actors:** `recoveryService`
-*   **Events Accepted & Transitions:**
-    *   `RECOVERY_COMPLETE`: Transitions to `READY`. Action: updates the `connectedDevices` in context by merging the recovered devices into the existing connected devices list (filtering out duplicates by ID), calls `clearGhostedMacs`, and triggers `logTransition` (from 'RECOVERING' to 'READY').
-    *   `CONNECT_REQUEST`: Transitions to `CONNECTING` and triggers actions `setTargetMacs` and `logTransition` (from 'RECOVERING' to 'CONNECTING').
-    *   `RECOVERY_FAIL`: Transitions to `IDLE` and triggers actions `clearGhostedMacs` and `logTransition` (from 'RECOVERING' to 'IDLE').
-    *   `DISCONNECT_REQUEST`: Transitions to `DISCONNECTING` and triggers action `logTransition` (from 'RECOVERING' to 'DISCONNECTING').
-
----
-
-## 3. Heartbeat Invocation in READY
-Yes, the `READY` state invokes `heartbeatService`.
-It receives the following input object constructed from `context`:
-```typescript
-{
-  bleManager: context.bleManager,
-  connectedDevices: context.connectedDevices,
-  adapterMap: context.adapterMapRef.current,
-}
-```
-
----
-
-## 4. Connect Invocation in CONNECTING
-Yes, the `CONNECTING` state invokes `connectService`.
-It receives the following input object constructed from `context`:
-```typescript
-{
-  bleManager: context.bleManager,
-  targetMacs: context.targetMacs ?? [],
-  connectedDevicesRef: { current: context.connectedDevices },
-  adapterMapRef: context.adapterMapRef,
-  mtuMapRef: context.mtuMapRef,
-  disconnectListeners: context.disconnectListeners,
-  blacklistedMacsRef: context.blacklistedMacsRef,
-  handleOrganicDisconnect: context.handleOrganicDisconnect,
-  handleNotification: context.handleNotification,
-  enqueueWrite: context.enqueueWrite,
-}
-```
-
----
-
-## 5. Recovery Invocation in RECOVERING
-Yes, the `RECOVERING` state invokes `recoveryService`.
-It receives the following input object constructed from `context`:
-```typescript
-{
-  bleManager: context.bleManager,
-  ghostedDeviceIds: context.ghostedDeviceIds ?? [],
-  adapterMapRef: context.adapterMapRef,
-  mtuMapRef: context.mtuMapRef,
-  disconnectListeners: context.disconnectListeners,
-  handleOrganicDisconnect: context.handleOrganicDisconnect,
-  handleNotification: context.handleNotification,
-}
-```
-
----
-
-## 6. RSSI and Interrogator Services
-No. Neither `rssiService` nor `interrogatorService` is invoked anywhere inside `BleMachine.ts` or `BleMachine.types.ts`. As expected, they function at the React hook level rather than as actors inside the state machine.
-
----
-
-## 7. Presence of `any` Casts
-There are **no `any` casts** (such as `as any` or `<any>`) in either file.
-There are, however, type definitions and parameters typed as `any` in callback signatures and type declarations:
-*   `adapterMapRef: { current: Map<string, any> }` in `BleMachine.types.ts`
-*   `handleOrganicDisconnect: (error: any, deviceId: string) => void` in `BleMachine.types.ts`
-*   `handleNotification: (error: any, characteristic: any, deviceId: string) => void` in `BleMachine.types.ts`
-*   `context: ({ input }: { input: any }) => ...` in `BleMachine.ts`
-*   `const existingIds = newDevices.map((d: any) => d.id)` in `BleMachine.ts`
+### 2.6. `RECOVERING`
+* **Invoked Actors**: `recoveryService` (invoked anonymously).
+  * *Input Map*:
+    * `bleManager`: `context.bleManager`
+    * `ghostedDeviceIds`: `context.ghostedDeviceIds`
+    * `adapterMapRef`: `context.adapterMapRef`
+    * `mtuMapRef`: `context.mtuMapRef`
+    * `disconnectListeners`: `context.disconnectListeners`
+    * `handleOrganicDisconnect`: `context.handleOrganicDisconnect`
+    * `onOrganicDisconnect`: `context.onOrganicDisconnect`
+    * `handleNotification`: `context.handleNotification`
+  * *Configuration*: `onDone` and `onError` are set to `undefined`.
+* **Events & Transitions**:
+  * `RECOVERY_COMPLETE` ➡️ `READY`
+    * Actions: `assign({ connectedDevices: ... })`, `clearGhostedMacs`, `logTransition`
+  * `CONNECT_REQUEST` ➡️ `CONNECTING`
+    * Actions: `setTargetMacs`, `logTransition`
+  * `RECOVERY_PERMANENTLY_FAILED` ➡️ `IDLE`
+    * Actions: `setDeviceUnreachable`, `notifyUserDeviceFailed`, `clearGhostedMacs`, `logTransition` (reason: `permanent_fail`)
+  * `RECOVERY_FAIL` ➡️ `IDLE`
+    * Actions: `clearGhostedMacs`, `logTransition`
+  * `DISCONNECT_REQUEST` ➡️ `DISCONNECTING`
+    * Actions: `logTransition`
 
 ---
 
-## 8. Machine Context Fields
-The machine context (`BleMachineContext`) in `BleMachine.types.ts` contains all of the requested fields:
-*   `bleManager` (present)
-*   `scanCallback` (present)
-*   `adapterMapRef` (present)
-*   `mtuMapRef` (present)
-*   `disconnectListeners` (present)
-*   `blacklistedMacsRef` (present)
-*   `handleOrganicDisconnect` (present)
-*   `handleNotification` (present)
-*   `enqueueWrite` (present)
-
-No fields from this list are missing.
+## 3. Global Events
+* `FORCE_IDLE` ➡️ `.IDLE` (transition from any state back to IDLE)
+  * Actions: `clearSweeperId`, `clearGhostedMacs`, `logTransition` (reason: `forced`)
+  * *Note*: This intentionally does not clear `connectedDevices` to avoid clearing connection list state or breaking keepalive cache-hit paths.
 
 ---
 
-## 9. Handling of `SCAN_PAUSE` & `SCAN_RESUME`
-Yes, `SCAN_PAUSE` and `SCAN_RESUME` are handled.
-Only the **`SCANNING`** state accepts and handles these events:
-*   `SCAN_PAUSE` stops scanning via `context.bleManager.stopDeviceScan()`
-*   `SCAN_RESUME` starts scanning again via `context.bleManager.startDeviceScan(...)`
+## 4. Specific Audit Questionnaire Responses
 
----
+### Q1: List every state in the machine (IDLE, SCANNING, CONNECTING, READY, DISCONNECTING, RECOVERING).
+* **Response**: Yes, the states are: `IDLE`, `SCANNING`, `CONNECTING`, `READY`, `DISCONNECTING`, and `RECOVERING`.
 
-## 10. `FORCE_IDLE` Behavior
-On `FORCE_IDLE`, the machine transitions to the `.IDLE` state and executes the following actions:
-*   `clearSweeperId`
-*   `clearGhostedMacs`
-*   `logTransition` (from 'ANY' to 'IDLE', reason: 'forced')
+### Q2: For each state: what actors are invoked? What events does it accept? What transitions exist?
+* **Response**: Refer to Section 2 for a detailed state-by-state transition map, actors invoked, and action arrays.
 
-It **does not** clear `connectedDevices`. The `clearConnectedDevices` action is intentionally omitted here to prevent resetting the device connection list on an activity reset, which avoids known screen flickers or blank blue screen issues on state resets. Devices are only cleared on `DISCONNECT_COMPLETE`.
+### Q3: Does READY invoke heartbeatService?
+* **Response**: **Yes**. `READY` invokes `heartbeatService` to monitor device connectivity.
+
+### Q4: Does CONNECTING invoke connectService?
+* **Response**: **Yes**. `CONNECTING` invokes `connectService` to handle the connection setup (MTU negotiation, adapter pairing, etc.).
+
+### Q5: Does RECOVERING invoke recoveryService?
+* **Response**: **Yes**. `RECOVERING` invokes `recoveryService` to handle connection recovery for ghosted devices.
+
+### Q6: Is rssiService or interrogatorService invoked anywhere in the machine?
+* **Response**: **No**. Neither `rssiService` nor `interrogatorService` is imported or invoked inside `BleMachine.ts`.
+
+### Q7: Any `any` casts?
+* **Response**: **Yes**. There is one `any` cast/type definition in the types file (`BleMachine.types.ts` line 18):
+  * `handleOrganicDisconnect: (error: any, deviceId: string) => void;`
+  There are no raw `as any` casts or `@ts-ignore` in `BleMachine.ts`, though `as` is used for XState context/event type definitions during machine setup.
+
+### Q8: Does the context contain bleManager, scanCallback, adapterMapRef, mtuMapRef, disconnectListeners, blacklistedMacsRef, handleOrganicDisconnect, handleNotification, enqueueWrite?
+* **Response**: **Yes**. All nine parameters are declared in `BleMachineContext` inside `BleMachine.types.ts` and passed appropriately into services.
+
+### Q9: Is SCAN_PAUSE / SCAN_RESUME handled? Which states?
+* **Response**: **Yes**. Both are handled inside the `SCANNING` state.
+  * `SCAN_PAUSE` invokes `bleManager.stopDeviceScan()`.
+  * `SCAN_RESUME` invokes `bleManager.startDeviceScan(...)` to resume.
+  * Both are internal transitions that keep the state as `SCANNING`.
+
+### Q10: What happens on FORCE_IDLE? Does it clear connectedDevices?
+* **Response**: On `FORCE_IDLE`, the machine transitions to the `IDLE` state and runs `clearSweeperId`, `clearGhostedMacs`, and the `logTransition` action. It **does NOT** clear `connectedDevices`. This design prevents breaking UI components that rely on mock/existing connections and keeps keepalive cache-hit paths working.

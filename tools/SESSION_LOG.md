@@ -1,3 +1,45 @@
+### [ARTIFACT] 2026-06-13T05:45 — PLAN-harden-ble-regression-shields.md Created
+| Artifact | Path | Description |
+|---|---|---|
+| Regression Shields Plan | [PLAN-harden-ble-regression-shields.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-harden-ble-regression-shields.md) | Technical implementation plan for codifying regression tests and guardrails for setup wizard and group connect. |
+
+### [ARTIFACT] 2026-06-13T05:40 — UI_MODALS Cartography Created
+| Artifact | Path | Description |
+|---|---|---|
+| UI_MODALS Cartography | [UI_MODALS_cartography.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/UI_MODALS_cartography.md) | Comprehensive architectural cartography of overlay interfaces, sliders, and marquee texts, capturing React contexts, OS variances, design tokens, and sequence diagrams. |
+
+### [ARTIFACT] 2026-06-13T05:38 — UTILS Cartography Created
+| Artifact | Path | Description |
+|---|---|---|
+| UTILS Cartography | [UTILS_cartography.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/UTILS_cartography.md) | Comprehensive architectural cartography mapping the utilities domain, stateless parser helper, color models, K-Means clustering, and OS variances. |
+
+### [ARTIFACT] 2026-06-13T05:36 — UI_SCREENS Cartography Created
+| Artifact | Path | Description |
+|---|---|---|
+| UI_SCREENS Cartography | [UI_SCREENS_cartography.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/UI_SCREENS_cartography.md) | Comprehensive codebase cartography of root screens, layouts, slabs, design system tokens, and hardware setup onboarding flows. |
+
+### [ARTIFACT] 2026-06-13T05:35 — DATA_LAYER Cartography Created
+| Artifact | Path | Description |
+|---|---|---|
+| DATA_LAYER Cartography | [DATA_LAYER_cartography.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/DATA_LAYER_cartography.md) | Comprehensive architectural cartography of the persistence, synchronization, and caching layer |
+
+
+### [EVENT] 2026-06-13T05:31 — BLE XState Pipeline Audit Completed
+**Trigger:** BLE XState Pipeline Audit — Workflow Execution
+**Action:** Spawned 9 parallel Mapper agents to execute a read-only audit of the entire BLE XState pipeline and write detailed findings reports to `tools/BLE_AUDIT_2/`.
+**Verify result:** 9 reports successfully written to `tools/BLE_AUDIT_2/01_bleMachine.md` through `09_useBLE.md`, and compiled index `00_INDEX.md` at git commit `2c44f3aaea61cb9a1148aeba475e49d60531c53f`. No code modifications made.
+**Files updated:**
+- [00_INDEX.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/00_INDEX.md)
+- [01_bleMachine.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/01_bleMachine.md)
+- [02_connectService.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/02_connectService.md)
+- [03_recoveryService.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/03_recoveryService.md)
+- [04_heartbeatService.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/04_heartbeatService.md)
+- [05_rssiService.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/05_rssiService.md)
+- [06_interrogatorService.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/06_interrogatorService.md)
+- [07_scanner.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/07_scanner.md)
+- [08_writePipeline.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/08_writePipeline.md)
+- [09_useBLE.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/09_useBLE.md)
+
 ### [MERGE] 2026-06-12T23:20 — fix/app-safe-area-boundaries → master @ 1122bb39
 **What merged:**
 - Migrated core SafeAreaView imports to react-native-safe-area-context in GlobalErrorBoundary and HardwareSetupWizardScreen.
@@ -11,6 +53,8 @@
 |---|---|---|
 | `PLAN-fix-admin-modal-safe-areas.md` | `docs/plans/PLAN-fix-admin-modal-safe-areas.md` | Implementation plan for fixing Admin/Account Modal safe area bleeding |
 | `PLAN-fix-app-safe-area-boundaries.md` | `docs/plans/PLAN-fix-app-safe-area-boundaries.md` | Implementation plan for Android notch layout fixes in Setup Wizard |
+| IDENTITY Cartography | [IDENTITY_cartography.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/IDENTITY_cartography.md) | Architectural cartography mapping authentication context, profile services, auth utility checks, and account tabs |
+
 
 ### [MERGE] 2026-06-12T22:30 — hardware-setup-batch → master @ c9c64b88
 **What merged:**
@@ -2422,4 +2466,8 @@ TSC: ✅  Jest: ✅
 **Rejected:** Keeping the original scan-state block or enforcing a hard scan-stop timer.
 **Don't re-derive:** In FTUE, the app runs a persistent background battery sweeper that scans indefinitely. If the wizard blocks transition to Step 2 while `bleState === 'SCANNING'`, the user is deadlocked on Step 1: devices are discovered in JS but the Next button displays `SEARCHING FOR SKATES...` and remains disabled forever.
 **Source:** [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx#L551)
+
+### [ARTIFACT] 2026-06-13T05:40 — c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/NOTIFICATIONS_&_ROUTING_cartography.md
+**What:** Architectural Cartography Report for the NOTIFICATIONS_&_ROUTING domain.
+**Why:** Documented all 7 files in the domain, their blast radius, consumed/provided contexts, service input/output registries, platform OS branching matrices, and background session notification dispatch and push token/geocoding sequence diagrams.
 

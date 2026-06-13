@@ -1,67 +1,113 @@
-# BLE Scanner Audit (useBLEScanner.ts & useBLEBatterySweep.ts)
+# BLE Audit Report: Scanner & Battery Sweep Hook analysis
+**Files Evaluated:**
+- [useBLEScanner.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts)
+- [useBLEBatterySweep.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEBatterySweep.ts)
 
-## 1. bleManager.startDeviceScan() calls in useBLEBatterySweep.ts
-Does useBLEBatterySweep.ts call bleManager.startDeviceScan() directly ANYWHERE?
-**No.** It does not call `bleManager.startDeviceScan()` anywhere. It communicates exclusively by sending events to the BLE state machine using `bleSend(...)`. For example, it sends `{ type: 'SCAN_START' }`, `{ type: 'SCAN_STOP' }`, `{ type: 'SCAN_PAUSE' }`, and `{ type: 'SCAN_RESUME' }`.
+---
 
-## 2. SCAN_STOP call in useBLEBatterySweep.ts
-Does useBLEBatterySweep.ts call bleSend({type:'SCAN_STOP'}) to stop scanning? Quote the line.
-**Yes.** It calls `bleSend({ type: 'SCAN_STOP' })` in the `stopSweeper` callback on line 114:
-```typescript
-bleSend({ type: 'SCAN_STOP' });
-```
+## 1. Direct Calls to `bleManager.startDeviceScan()`
+No direct calls to `bleManager.startDeviceScan()` exist in either file. The `BleManager` is only imported as a type for parameter typing. The scanning lifecycle is controlled entirely by sending event dispatches to the XState state machine (`bleSend`) with events such as `SCAN_START`, `SCAN_STOP`, `SCAN_PAUSE`, and `SCAN_RESUME`. The actual invocation of the native BLE manager scan methods is encapsulated inside the `bleMachine` service/actor.
 
-## 3. Battery THROTTLED duty-cycle handling
-Does useBLEBatterySweep handle the THROTTLED battery tier with a duty-cycle approach? Describe it.
-**Yes.** When the battery level is between 15% and 30% (threshold constants defined at lines 10-11), it classifies the battery tier as `'THROTTLED'` and runs `startThrottleCycle()`.
-The throttle cycle operates as a recursive timeout loop:
-1. It resumes scanning by calling `bleSend({ type: 'SCAN_RESUME' })`.
-2. It keeps scanning active for 10 seconds (`THROTTLE_SCAN_ON_MS = 10_000`).
-3. After 10 seconds, it pauses scanning via `bleSend({ type: 'SCAN_PAUSE' })`.
-4. It waits in the paused state for 20 seconds (`THROTTLE_SCAN_OFF_MS = 20_000`) before recursively running the cycle again.
+---
 
-## 4. Android scan budget (4 starts per 30s)
-Does useBLEBatterySweep handle the Android scan budget (max 4 starts per 30s)?
-**Yes.** If the platform is Android and version >= 31, it enforces the budget within `startSweeper` (lines 79-95):
-- It filters a rolling window of recent scan start timestamps (`scanStartTimestampsRef.current`) to keep only those within the last 30 seconds (`SCAN_BUDGET_WINDOW_MS = 30_000`).
-- If the count of recent scans has reached `SCAN_BUDGET_MAX` (4), it defers starting the scan by setting `isSweeperActiveRef.current = false` and schedules a retry for `startSweeper()` using a `setTimeout` with a calculated delay (`msUntilBudgetResets`) until the oldest start timestamp is no longer in the window.
-- If the budget is not exceeded, it records the current timestamp `Date.now()` and starts scanning.
+## 2. SCAN_STOP Events
+`SCAN_STOP` events are dispatched via `bleSend({ type: 'SCAN_STOP' })` in the following locations:
+* **`useBLEScanner.ts`:**
+  * **Sandbox Mocking Path:** Dispatched inside a `setTimeout` callback after 5000ms to stop the simulated scan (line 339).
+  * **Non-Sweeper Manual Path:** Dispatched inside a fallback `setTimeout` callback after 5000ms (line 362).
+* **`useBLEBatterySweep.ts`:**
+  * **Stop Sweeper Action:** Dispatched in the `stopSweeper` callback when turning off the scanner sweeper (line 128).
 
-## 5. bleManager.startDeviceScan() calls in useBLEScanner.ts
-Does useBLEScanner.ts call bleManager.startDeviceScan() directly ANYWHERE?
-**No.** `useBLEScanner.ts` does not call `bleManager.startDeviceScan()` directly anywhere. All scanning starts and stops are initiated through either `useBLEBatterySweep` or `bleSend` state machine events.
+---
 
-## 6. Wiring scanCallback through to the machine
-Does useBLEScanner wire scanCallback through to the machine via bleSend or a ref?
-**No.** `useBLEScanner` does not wire `scanCallback` to the machine via `bleSend` or a ref within `useBLEScanner.ts`. It merely defines `scanCallback` as a hook callback and returns it in the returned hook object, so that the parent hook/context orchestrator (which houses the state machine) can wire it directly to the native `startDeviceScan` callback.
+## 3. THROTTLED Battery Duty-Cycle Logic
+The THROTTLED battery duty-cycle logic resides in `useBLEBatterySweep.ts`:
+* **Thresholds:** Classified when the battery level is between `0.15` (15%) and `0.30` (30%).
+* **Duty-Cycle Constants:** 
+  * `THROTTLE_SCAN_ON_MS = 10_000` (10s scanning)
+  * `THROTTLE_SCAN_OFF_MS = 20_000` (20s paused)
+* **Execution Flow (`startThrottleCycle`):**
+  * It starts a recursive cycle via `throttleCycleTimerRef` utilizing `setTimeout`.
+  * In the active phase, it calls `bleSend({ type: 'SCAN_RESUME' })` and logs a `sweeper_throttle_scan_on` event.
+  * After 10 seconds, it triggers `bleSend({ type: 'SCAN_PAUSE' })`, logs `sweeper_throttle_scan_off`, and sets a 20-second timeout to repeat the cycle.
+* **State Listener Transitions:**
+  * On transition from `FULL` to `THROTTLED`: It dispatches `SCAN_PAUSE`, clears any existing throttle cycle timer, and invokes `startThrottleCycle()`.
+  * On transition from `THROTTLED` to `FULL`: It clears the throttle cycle timer and dispatches `SCAN_RESUME`.
 
-## 7. SCAN_START for non-sweeper paths in scanForPeripherals()
-Does useBLEScanner.scanForPeripherals() use bleSend({type:'SCAN_START'}) for non-sweeper paths?
-**Yes.** In `scanForPeripherals` (lines 304-356), when `isSweeperActive` is false and it is not sandbox mocking, it starts scanning on line 351:
-```typescript
-bleSend({ type: 'SCAN_START' });
-```
-It then registers a timeout to stop it after 5 seconds:
-```typescript
-setTimeout(() => {
-  bleSend({ type: 'SCAN_STOP' });
-}, 5000);
-```
+---
 
-## 8. useBLEInterrogator import
-Does useBLEScanner use useBLEInterrogator for hardware probing? Quote the import.
-**Yes.** The import is:
+## 4. Android Scan Budget Handling
+Android scan budget deferral is implemented in `useBLEBatterySweep.ts` inside `startSweeper`:
+* **Limits:** `SCAN_BUDGET_MAX = 4` starts within `SCAN_BUDGET_WINDOW_MS = 30_000` (30 seconds).
+* **Logic:**
+  * If the platform is Android and API version is >= 31, it checks the timestamps stored in `scanStartTimestampsRef.current`.
+  * It filters out timestamps older than 30 seconds.
+  * If the size of the array is `>= 4`, it identifies the oldest timestamp and calculates `msUntilBudgetResets` (the remaining time before that oldest scan expires from the 30-second window plus a 100ms safety margin).
+  * It logs a `sweeper_start_deferred_budget` event, resets `isSweeperActive` state to `false`, and schedules a deferral `setTimeout` to retry starting the sweeper once the oldest window budget slot clears.
+  * If the budget is not exceeded, the current timestamp `now` is appended to `scanStartTimestampsRef.current` and scanning proceeds.
+
+---
+
+## 5. scanCallback Wiring
+* **Definition:** `scanCallback` is defined as a `useCallback` inside `useBLEScanner.ts` (lines 204-294).
+* **Purpose:** It processes BleErrors and discovered Devices, parses advertisement manufacturer data for Zengge/BanlanX device signatures, validates RSSI thresholds (filtering based on whether the device MAC is registered or new), updates the last seen time, records telemetry statistics, and pushes valid devices to the staging queue for interrogation.
+* **Wiring:** The callback is returned from the `useBLEScanner` hook, but it is **not** registered directly with `bleManager` inside either hook file. The hook caller is responsible for passing or wiring this callback to the native BLE scanner registration mechanism or XState service.
+
+---
+
+## 6. scanForPeripherals Non-Sweeper Paths
+In `useBLEScanner.ts`, the `scanForPeripherals` function executes several logical branches:
+1. **Cleanup Phase:** Clears all search-related state (pending registrations, rejected and seen MACs, device lists) unless `options?.keepAlive` is true.
+2. **Sandbox Mocking Path:** If `isSandboxEnabled` and the app is running in DEV/Web mode:
+   * Dispatches `SCAN_START`.
+   * Sets a 1-second timeout to mock the discovery of four virtual devices (`VIRTUAL-HALOZ-L`, `VIRTUAL-HALOZ-R`, `VIRTUAL-SOULZ-L`, `VIRTUAL-SOULZ-R`) by calling `scanCallback` for each.
+   * Sets a 5-second timeout to dispatch `SCAN_STOP`.
+   * Early returns if on the Web platform.
+3. **First-Time User Experience (FTUE) Path:** If no devices are registered (`registeredMacs.length === 0`) and `keepAlive` is false:
+   * Bypasses sweeper state checks and directly calls `startSweeper()` to start scanning persistently.
+4. **Sweeper Burst Path:** If the sweeper is already active:
+   * Calls `burstScan()` for 10 seconds (if keepAlive is true) or 5 seconds.
+5. **Non-Sweeper Manual Scan Fallback:** If the sweeper is not active and sandbox mode is disabled:
+   * Dispatches `SCAN_START`.
+   * Sets a 5-second fallback timer that dispatches `SCAN_STOP`.
+
+---
+
+## 7. useBLEInterrogator Imports
+`useBLEInterrogator` is imported on line 19:
 ```typescript
 import { useBLEInterrogator } from './useBLEInterrogator';
 ```
+It is called on line 142 inside the hook to query details from discovered hardware:
+```typescript
+  const { hwCache, hwCacheRef, queueDeviceForInterrogation } = useBLEInterrogator({
+    bleManager,
+    registeredMacs,
+    onDeviceInterrogated: () => {
+      setAllDevices(current => {
+        classifyProbeResults(current);
+        return current;
+      });
+    }
+  });
+```
 
-## 9. useBLEBatterySweep import
-Does useBLEScanner use useBLEBatterySweep for the sweeper? Quote the import.
-**Yes.** The import is:
+---
+
+## 8. useBLEBatterySweep Imports
+`useBLEBatterySweep` is imported on line 18:
 ```typescript
 import { useBLEBatterySweep } from './useBLEBatterySweep';
 ```
+It is called on line 296 to manage battery-aware sweeps:
+```typescript
+  const { isSweeperActive, startSweeper, stopSweeper: _stopSweeper, burstScan: _burstScan, batteryTier } = useBLEBatterySweep({
+    bleManager,
+    bleSend
+  });
+```
 
-## 10. `any` casts in either file
-Are there any `any` casts in either file?
-**No.** Neither file contains any `any` casts. Both files use strict typing and explicit type casting using `as unknown as Type` or type narrowing with `unknown` / `Record<string, unknown>`.
+---
+
+## 9. Presence of `any` Casts
+There are absolutely **no** `any` casts (e.g., `as any`, typed variables using `any`), nor any `@ts-ignore` comments in either file. Both files are strictly typed and pass static compilation checks cleanly.

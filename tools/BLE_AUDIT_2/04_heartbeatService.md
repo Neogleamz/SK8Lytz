@@ -1,119 +1,43 @@
 # BLE Audit: HeartbeatService
 
-This document contains the read-only audit findings for the `HeartbeatService.ts` file in the SK8Lytz codebase.
+This document contains the audit findings for [HeartbeatService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/HeartbeatService.ts).
 
----
+## 1. Actor Type
+The `heartbeatService` is an **XState callback actor** created via `fromCallback` from the `'xstate'` package (line 17).
 
-## Code Reference
-- **File:** [HeartbeatService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/HeartbeatService.ts)
+## 2. Heartbeat Interval
+The heartbeat interval is **45 seconds** (45,000 ms), defined by the constant `HEARTBEAT_INTERVAL_MS = 45_000` on line 9.
 
----
+## 3. Payload Sent / Opcode
+* **Zengge Devices**: The service calls `adapter.buildQuerySettings(false)` (line 36) to construct a query settings packet. If packets exist, it takes the first packet (`queryResult.packets[0]`), converts it to base64, and sends it to the device using `writeCharacteristicWithoutResponseForDevice` (line 40).
+* **BanlanX / Unknown Fallback**: If there is no adapter or no query packets, it issues a **liveness probe** via `bleManager.readRSSIForDevice(mac)` (line 54). No BLE payload/opcode is sent in this fallback case.
 
-## 🔍 Audit Answers
+## 4. Failure Detection Method
+Failure detection relies on catching errors/exceptions thrown during the GATT operations:
+* If the `writeCharacteristicWithoutResponseForDevice` or `readRSSIForDevice` call throws an error (e.g., GATT write/read failure, timeout, or disconnect), it enters the `catch (err: unknown)` block (line 58).
 
-### 1. What actor type?
-The service is implemented as an **XState callback actor** using `fromCallback` from the `'xstate'` package. It runs indefinitely upon activation, dispatching periodic heartbeats.
+## 5. Failure Event
+Inside the catch block, the service:
+1. Logs a warning using `AppLogger.warn`.
+2. Cancels the stale GATT connection handle immediately to release it: `await bleManager.cancelDeviceConnection(mac).catch(() => undefined)` (line 66).
+3. Dispatches the **`HEARTBEAT_FAIL`** event back to the parent XState machine using `sendBack({ type: 'HEARTBEAT_FAIL', deviceId: mac })` (line 69).
 
+## 6. enqueueWrite vs Direct Write
+The service **always uses `enqueueWrite`** (from `BleWriteQueue`) with `'normal'` priority for both characteristic writes (line 39) and RSSI reads (line 53). It never executes direct writes or direct reads.
+Additionally, it skips the heartbeat cycle entirely if any GATT operation is currently active or pending in the queue (line 25):
 ```typescript
-export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(({ input, sendBack }) => {
+if (isWriteQueueActive()) return;
 ```
 
----
+## 7. Cleanup Mechanism
+The callback actor returns a cleanup function (line 78) that calls `clearInterval(interval)`. This clears the heartbeat interval timer when the actor is stopped/unmounted (e.g. when the machine transitions out of the `READY` state).
 
-### 2. What is the heartbeat interval?
-The heartbeat interval is **45,000 milliseconds (45 seconds)**. It is configured via the file-level constant `HEARTBEAT_INTERVAL_MS`:
+## 8. Simultaneous Device Handling
+The service handles multiple devices **sequentially in series** using a `for...of` loop over `connectedDevices` (line 30). For each device, it awaits the write/read operation inside the queue before moving to the next. It does not handle them concurrently or in parallel.
 
+## 9. Any Casts
+There are no type-laundering assertions (such as `as any` or `as unknown as any`) or compiler bypasses (`@ts-ignore`) in this file. The only use of `any` is in the XState actor declaration's generic type parameter:
 ```typescript
-const HEARTBEAT_INTERVAL_MS = 45_000;
+export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(...)
 ```
-
----
-
-### 3. What payload does it send to the device? Which opcode?
-- **Zengge/MagicHome Adapter Devices:**
-  - It builds a settings query payload by calling the adapter's `buildQuerySettings(false)` method.
-  - The inner payload returned by `queryHardwareSettings(false)` is:
-    ```
-    [0x63, 0x12, 0x21, 0x0F, checksum]
-    ```
-    Where `checksum` is `0xA5` (the simple sum `0x63 + 0x12 + 0x21 + 0x0F = 165 = 0xA5`).
-  - After being wrapped with the V2 transport packet framing `wrapCommand`, the sent bytes are:
-    ```
-    [0x00, seq & 0xFF, 0x80, 0x00, 0x00, 0x05, 0x06, 0x0b, 0x63, 0x12, 0x21, 0x0F, 0xA5]
-    ```
-    Where `seq` represents the independent sequence number of the adapter.
-  - **Opcode:** The primary opcode is **`0x63`** (IC Config Query / EEPROM read).
-- **BanlanX / Unknown Fallback Devices:**
-  - No write payload or opcode is sent. Instead, the service uses `bleManager.readRSSIForDevice(mac)` as a liveness probe.
-
----
-
-### 4. How does it detect a failed heartbeat? Timeout? GATT error?
-The heartbeat loop evaluates each connected device in a nested `try/catch` block:
-1. If the connection fails or drops, calling `enqueueWrite` (which executes `writeCharacteristicWithoutResponseForDevice`) or `readRSSIForDevice` will throw a **GATT or BLE error** (propagated by the underlying `react-native-ble-plx` manager).
-2. The `catch (err: unknown)` block catches this error, logs a warning via `AppLogger.warn`, cancels the stale GATT connection cleanly using `bleManager.cancelDeviceConnection(mac)`, and dispatches a failure event back to the machine.
-3. No custom JS-level `setTimeout` based liveness timer is implemented inside the service itself; it depends entirely on the GATT/BLE library error handling.
-
----
-
-### 5. What event does it send to the machine on failure?
-On failure, it dispatches the following event back to the parent XState machine:
-- **Event:** `HEARTBEAT_FAIL`
-- **Payload:** `{ type: 'HEARTBEAT_FAIL', deviceId: mac }` (where `mac` is the MAC address of the failed device)
-
-```typescript
-sendBack({ type: 'HEARTBEAT_FAIL', deviceId: mac });
-```
-
----
-
-### 6. Does it use enqueueWrite or call bleManager.writeCharacteristic... directly?
-- **Zengge Devices:** It uses `enqueueWrite` with priority `'normal'`. The actual write command `bleManager.writeCharacteristicWithoutResponseForDevice` is wrapped in an async callback passed to the queue:
-  ```typescript
-  await enqueueWrite('normal', async () => {
-    await bleManager.writeCharacteristicWithoutResponseForDevice(
-      mac,
-      adapter.serviceUUID,
-      adapter.writeCharacteristicUUID,
-      b64,
-    );
-    return true;
-  });
-  ```
-- **Fallback (BanlanX/Unknown):** It calls `bleManager.readRSSIForDevice(mac)` **directly** without going through the `enqueueWrite` queue.
-
----
-
-### 7. Does it clean up (clear timers) when the machine exits READY state?
-Yes. The `fromCallback` generator returns a cleanup function that clears the periodic timer:
-```typescript
-return () => clearInterval(interval);
-```
-This is automatically run by XState when the machine exits the state hosting the service.
-
----
-
-### 8. Does it handle multiple connected devices simultaneously?
-Yes. It loops through the `connectedDevices` array sequentially inside the interval callback:
-```typescript
-for (const device of connectedDevices) {
-  const mac = device.id;
-  // ... check liveness ...
-}
-```
-
----
-
-### 9. Any `any` casts? List them.
-The service uses the `any` type in two places (exclusively for parameter definitions, no inline `as any` or `@ts-ignore` bypasses are used):
-1. **Type Parameter in `fromCallback`:**
-   ```typescript
-   export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(...)
-   ```
-2. **Interface parameter `bleManager`:**
-   ```typescript
-   export interface HeartbeatServiceInput {
-     bleManager: any;
-     ...
-   }
-   ```
+This is a standard generic parameter for event types in `fromCallback` when not strictly typed.

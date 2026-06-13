@@ -1,178 +1,89 @@
-# 09_useBLE.ts Audit Findings
+# BLE Audit Report: useBLE Hook & Context (`09_useBLE.md`)
 
-## 1. instantiation of `useMachine(bleMachine, ...)`
-`useBLE.ts` instantiates `useMachine(bleMachine, ...)` correctly, providing the following input fields:
-* `bleManager`
-* `scanCallback`
-* `scanMode`
-* `scanServiceUUIDs`
-* `adapterMapRef`
-* `mtuMapRef`
-* `disconnectListeners`
-* `blacklistedMacsRef`
-* `handleOrganicDisconnect`
-* `handleNotification`
-* `enqueueWrite`
+This document presents the semantic audit findings for `useBLE.ts` and `BLEContext.tsx`.
 
-Source snippet (lines 171-185):
-```typescript
-  const [bleSnapshot, bleSend, bleActorRef] = useMachine(bleMachine, {
-    input: {
-      bleManager,
-      scanCallback: (error: BleError | null, device: Device | null) => scanCallbackRef.current(error, device),
-      scanMode: 1,
-      scanServiceUUIDs: [ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID],
-      adapterMapRef,
-      mtuMapRef,
-      disconnectListeners,
-      blacklistedMacsRef,
-      handleOrganicDisconnect: (error: any, deviceId: string) => handleOrganicDisconnectRef.current(error, deviceId),
-      handleNotification: (error: any, characteristic: any, deviceId: string) => handleNotificationRef.current(error, characteristic, deviceId),
-      enqueueWrite,
-    }
-  });
-```
+## 📌 Cited Files
+- [useBLE.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts)
+- [BLEContext.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/context/BLEContext.tsx)
+- [BleMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts)
+- [BleMachine.types.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.types.ts)
 
 ---
 
-## 2. `scanCallback` Ref-Forwarding Pattern
-Yes, `scanCallback` is passed as a ref-forwarded function rather than a direct closure to prevent stale closure issues.
+## 🔍 Detailed Audit Answers
 
-**Cited Pattern:**
-```typescript
-scanCallback: (error: BleError | null, device: Device | null) => scanCallbackRef.current(error, device)
-```
-Where `scanCallbackRef` is defined as:
-```typescript
-const scanCallbackRef = useRef<(error: BleError | null, device: Device | null) => void>(() => {});
-```
-And dynamically wired in `useEffect` (lines 388-391):
-```typescript
-  useEffect(() => {
-    pendingRegistrationsSetterRef.current = scanner.setPendingRegistrations;
-    scanCallbackRef.current = scanner.scanCallback;
-  }, [scanner.setPendingRegistrations, scanner.scanCallback]);
-```
+### 1. `useMachine` Input Fields Correctness
+- **Verdict**: Correct.
+- **Evidence**:
+  - In [useBLE.ts:L176-202](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L176-L202), `useMachine(bleMachine, { input: { ... } })` passes all the required context properties.
+  - In [BleMachine.ts:L12](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts#L12), the machine's expected input type is mapped via `types: { input: {} as Omit<BleMachineContext, 'connectedDevices' | 'ghostedDeviceIds'> }`.
+  - Comparing the context properties in [BleMachine.types.ts:L5-27](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.types.ts#L5-L27) with the arguments passed, they align perfectly.
 
----
+### 2. `scanCallback` Ref-Forwarding
+- **Verdict**: Properly implemented via a mutable reference.
+- **Evidence**:
+  - [useBLE.ts:L175](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L175) defines `scanCallbackRef = useRef(...)`.
+  - [useBLE.ts:L179](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L179) passes a wrapper calling `scanCallbackRef.current(...)` to the state machine.
+  - [useBLE.ts:L418-421](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L418-L421) runs an effect updating `scanCallbackRef.current = scanner.scanCallback` whenever the scanner's callback changes. This successfully avoids re-instantiating the XState machine when standard scanner state changes.
 
-## 3. Direct calls to `startDeviceScan()` or `stopDeviceScan()`
-**No.** `useBLE.ts` does not call `bleManager.startDeviceScan()` or `bleManager.stopDeviceScan()` directly anywhere in the file. These interactions are entirely managed by the state machine and the `useBLEScanner` hook.
+### 3. Direct `bleManager` Start/Stop Scan Calls
+- **Verdict**: None present in `useBLE.ts`.
+- **Evidence**:
+  - Scanning calls (`startDeviceScan` and `stopDeviceScan`) are delegated entirely to the `bleMachine` state transitions (scanning state entry/exit/resume/pause) inside [BleMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts) and the `useBLEScanner` hook. `useBLE.ts` does not invoke these functions directly on `bleManager`.
 
----
+### 4. `connectToDevices` GATT Handling
+- **Verdict**: Delegated to the State Machine.
+- **Evidence**:
+  - In [useBLE.ts:L464-467](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L464-L467), calling `connectToDevices` sends the `CONNECT_REQUEST` event: `bleSend({ type: 'CONNECT_REQUEST', targetMacs: devices.map(d => d.id) })`.
+  - The physical connection logic and GATT configuration are offloaded to `connectService` in `BleMachine.ts`, ensuring serialized radio access and preventing stampeding-herd/GATT 133 conflicts.
 
-## 4. `connectToDevices` Behavior
-`connectToDevices` does **not** perform any GATT work directly. It only dispatches the `CONNECT_REQUEST` event containing the target device MAC addresses to the state machine.
+### 5. `disconnectFromDevice` GATT Handling
+- **Verdict**: Delegated to the State Machine.
+- **Evidence**:
+  - In [useBLE.ts:L517-519](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L517-L519), `disconnectFromDevice` dispatches `bleSend({ type: 'DISCONNECT_REQUEST' })`.
+  - All teardowns and GATT resets are managed by the machine's transition to the `DISCONNECTING` state.
 
-Source snippet (lines 433-436):
-```typescript
-  const connectToDevices = useCallback(async (devices: Device[]) => {
-    if (devices.length === 0) return;
-    bleSend({ type: 'CONNECT_REQUEST', targetMacs: devices.map(d => d.id) });
-  }, [bleSend]);
-```
+### 6. `forceDisconnect` GATT Handling
+- **Verdict**: Delegated to the State Machine.
+- **Evidence**:
+  - In [useBLE.ts:L521-523](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L521-L523), `forceDisconnect` dispatches `bleSend({ type: 'FORCE_IDLE' })`.
+  - This transitions the FSM immediately back to the `.IDLE` state (as defined in [BleMachine.ts:L285-294](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts#L285-L294)). Note that this activity gate reset purposely does not clear the connected device list directly in `useBLE.ts`.
 
----
+### 7. `handleOrganicDisconnect` Machine Delegation
+- **Verdict**: Handled via two separate machine properties.
+- **Evidence**:
+  - In [useBLE.ts:L191](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L191), `handleOrganicDisconnect` (logging-only) is passed to the machine inputs.
+  - In [useBLE.ts:L194-198](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L194-L198), `onOrganicDisconnect` delegates the recovery trigger by sending `bleSend({ type: 'RECOVERY_START', ghostedMacs: [deviceId] })` to initiate the reconnect flow.
 
-## 5. `disconnectFromDevice` Behavior
-`disconnectFromDevice` does **not** perform direct GATT teardown. It only dispatches the `DISCONNECT_REQUEST` event to the machine.
+### 8. Sweeper Control Exposure
+- **Verdict**: Exposed in the returned memo object.
+- **Evidence**:
+  - [useBLE.ts:L588-592](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L588-L592) exposes:
+    - `startSweeper: scanner.startSweeper`
+    - `stopSweeper: scanner.stopScanner`
+    - `burstScan: scanner.burstScan`
+    - `isSweeperActive: scanner.isSweeperActive`
+    - `batteryTier: scanner.batteryTier`
 
-Source snippet (lines 486-488):
-```typescript
-  const disconnectFromDevice = useCallback(() => {
-    bleSend({ type: 'DISCONNECT_REQUEST' });
-  }, [bleSend]);
-```
+### 9. `BluetoothLowEnergyApi` Interface Provision
+- **Verdict**: Acts as the strict contract hook provider.
+- **Evidence**:
+  - Defined in [useBLE.ts:L56-111](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L56-L111).
+  - Used in [BLEContext.tsx:L5](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/context/BLEContext.tsx#L5) for `createContext<BluetoothLowEnergyApi | null>(null)` and [BLEContext.tsx:L18](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/context/BLEContext.tsx#L18) for the shared hook `useSharedBLE()`.
 
----
+### 10. `scanForPeripherals` Delegation
+- **Verdict**: Delegated based on Sweeper state.
+- **Evidence**:
+  - In [useBLE.ts:L599-609](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts#L599-L609):
+    - If `scanner.isSweeperActive` is true, it triggers a fire-and-forget `scanner.burstScan` (either 10s or 5s).
+    - If inactive, it delegates directly to `scanner.scanForPeripherals(options)`.
 
-## 6. `forceDisconnect` Behavior
-`forceDisconnect` does **not** call GATT teardown directly. It only sends the `FORCE_IDLE` event to the state machine.
+### 11. TypeScript `any` Casts (excluding `Platform.OS === 'web'`)
+- **Verdict**: 0 (None).
+- **Evidence**:
+  - Checked `useBLE.ts` for type override patterns (`as any` and `@ts-ignore`). No such casts or bypasses are present in `useBLE.ts`. Type overrides only exist as standard configuration signatures (e.g. `config: any` parameters in probed callbacks).
 
-Source snippet (lines 490-492):
-```typescript
-  const forceDisconnect = useCallback(() => {
-    bleSend({ type: 'FORCE_IDLE' });
-  }, [bleSend]);
-```
-
----
-
-## 7. `handleOrganicDisconnect` Mechanism
-`handleOrganicDisconnect` logs the warning and telemetry, but does not send a machine event or call GATT methods within its block. The XState machine intercepts the disconnect organically and manages the recovery lifecycle (`RECOVERY_START`) internally.
-
-Source snippet (lines 365-370):
-```typescript
-  const handleOrganicDisconnect = (error: any, deviceId: string) => {
-    AppLogger.warn(`[BLE] Organic disconnect/dropout for ${deviceId}`);
-    AppLogger.log('DEVICE_DISCONNECTED', { id: deviceId, reason: 'dropout', error: error instanceof Error ? error.message : String(error) });
-    // The machine handles this organically via handleOrganicDisconnect callback in bleMachine input.
-    // The machine handles RECOVERY_START internally for organic drops.
-  };
-```
-
----
-
-## 8. Exposure of Sweeper and Scan Controls
-Yes, `useBLE` exposes the following scanner functions from `useBLEScanner`:
-* `startSweeper` mapped to `scanner.startSweeper`
-* `stopSweeper` mapped to `scanner.stopScanner`
-* `burstScan` mapped to `scanner.burstScan`
-* `isSweeperActive` mapped to `scanner.isSweeperActive`
-
----
-
-## 9. `BLEContext.tsx` Integration
-`BLEContext.tsx` provides the full `BluetoothLowEnergyApi` interface:
-```typescript
-export const BLEContext = createContext<BluetoothLowEnergyApi | null>(null);
-```
-`useBLE` is wired into `BLEProvider` by calling the hook with the list of registered device MAC addresses (obtained from `useRegistration()`) and providing the resulting object directly to the React Context:
-```typescript
-export const BLEProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { registeredDevices } = useRegistration();
-  const registeredMacs = useMemo(
-    () => registeredDevices.map(d => d.device_mac || ''),
-    [registeredDevices]
-  );
-  const ble = useBLE(registeredMacs);
-
-  return <BLEContext.Provider value={ble}>{children}</BLEContext.Provider>;
-};
-```
-
----
-
-## 10. `scanForPeripherals` Delegation
-Yes, `scanForPeripherals` is present in the returned API and delegates correctly depending on the sweeper state:
-* If the sweeper is active (`scanner.isSweeperActive` is true), it calls `scanner.burstScan` as a fire-and-forget call to avoid locking `bleState` to `SCANNING`.
-* Otherwise, it delegates directly to `scanner.scanForPeripherals(options)`.
-
-Source snippet (lines 567-577):
-```typescript
-    scanForPeripherals: (options?: { keepAlive?: boolean; disableProbing?: boolean }) => {
-      if (scanner.isSweeperActive) {
-        // FIX: Fire-and-forget — do NOT await burstScan.
-        // Awaiting it locked bleState='SCANNING' for the full 5s burst duration,
-        // blocking the Wizard from ever showing discovered devices.
-        // burstScan handles its own timer + revert internally.
-        scanner.burstScan(options?.keepAlive ? 10000 : 5000);
-      } else {
-        scanner.scanForPeripherals(options);
-      }
-    },
-```
-
----
-
-## 11. Type Casting and `any` Usage
-There are **no** type-bypassing casts (e.g., `as any`) or `@ts-ignore` comments in `useBLE.ts`.
-
-However, the `any` type is used for:
-* Parameters in callback registrations (e.g., `error: any`, `characteristic: any`, `config: any`, `state: any`).
-* Lazy-loaded/conditional class refs (e.g., `let BleManager: any;` and `let State: any;` on lines 45-46, which are safely instantiated inside a web platform guard).
-
----
-
-## 12. Line Count
-The total line count of `useBLE.ts` is **602 lines** (slightly over the 600-line threshold).
+### 12. `useBLE.ts` Line Count
+- **Verdict**: 634 lines.
+- **Evidence**:
+  - Verified that the file ends at line 634 with an empty line following `// blast radius bypass` comments.
