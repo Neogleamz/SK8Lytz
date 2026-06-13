@@ -89,7 +89,7 @@ export function useCrewManage(
           if (active) setUserSearchResults(res);
         })
         .catch((e) => {
-          if (active) AppLogger.warn('[CrewManage] searchUsers failed', { query: userSearchQuery, error: String(e) });
+          if (active) AppLogger.warn('[CrewManage] searchUsers failed', { query: '[REDACTED]', error: String(e) });
         });
     }, SEARCH_DEBOUNCE_MS);
     return () => {

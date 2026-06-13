@@ -17,7 +17,7 @@ export function CrewJoinScreen() {
   const styles = createStyles(Colors);
   const context = useCrewContext();
   const { hub, manage, session, setStep, step, confirmAction, setConfirmAction, currentUserId, displayName, setDisplayName, errorMsg, setErrorMsg, isLoading, setIsLoading, showCodeEntry, setShowCodeEntry, formState } = context;
-  const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, handleDetectLocation, isGettingLocation, loadActiveSessions, isLoadingSessions } = hub;
+  const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, handleDetectLocation, isGettingLocation, loadActiveSessions, sessionsStatus } = hub;
   const { selectedCrewDetail, setSelectedCrewDetail, expandedCrewId, setExpandedCrewId, cardMembers, setCardMembers, loadingCardMembersFor, makingOwnerFor, setMakingOwnerFor, confirmingDeleteCrewId, setConfirmingDeleteCrewId, confirmingLeaveCrewId, setConfirmingLeaveCrewId, createCrewError, setCreateCrewError, isCreatingCrew, newCrewName, setNewCrewName, newCrewDescription, setNewCrewDescription, newCrewIsPublic, setNewCrewIsPublic, newCrewCity, setNewCrewCity, newCrewState, setNewCrewState } = manage;
   const { currentSession, isHandoffMode, executeLeaveSession, executeEndSession, handleHandoffLeadership, handleSessionJoined } = session;
   
@@ -114,10 +114,10 @@ export function CrewJoinScreen() {
               <MaterialCommunityIcons name="refresh" size={15} color={Colors.textMuted} />
             </TouchableOpacity>
           </View>
-          {isLoadingSessions ? (
+          {sessionsStatus === 'loading' ? (
             <ActivityIndicator color={Colors.primary} style={localStyles.spinner} />
-          ) : error ? (
-            <ErrorCard message={error} onRetry={loadActiveSessions} />
+          ) : sessionsStatus === 'error' ? (
+            <ErrorCard message="Failed to load active crews. Tap refresh to try again." onRetry={loadActiveSessions} />
           ) : activeSessions.length === 0 ? (
             <EmptyState message="No active crews right now. Be the first!" />
           ) : (

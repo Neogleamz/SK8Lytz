@@ -23,6 +23,14 @@ export function useCrewProximityRadar() {
 
   const isScanningRef = useRef(false);
 
+  const [isInCrew, setIsInCrew] = useState(crewService.isInCrew);
+
+  useEffect(() => {
+    return crewService.subscribe(() => {
+      setIsInCrew(crewService.isInCrew);
+    });
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 
@@ -121,14 +129,14 @@ export function useCrewProximityRadar() {
     }
 
     // Only run if not already in a session
-    if (!crewService.isInCrew) {
+    if (!isInCrew) {
       scan();
     } else {
       setRadarAlert({ matchType: 'NONE', venueName: '', distanceMi: 0 });
     }
 
     return () => { mounted = false; };
-  }, [crewService.isInCrew]);
+  }, [isInCrew]);
 
   return radarAlert;
 }

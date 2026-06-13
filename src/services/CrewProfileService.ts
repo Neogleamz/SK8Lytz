@@ -590,7 +590,7 @@ class CrewProfileService {
         .or(`username.ilike.${searchTerms},display_name.ilike.${searchTerms}`)
         .limit(10);
       if (error) {
-        AppLogger.warn('CREW_PROFILE', { event: 'search_users_failed', query, error: String(error) });
+        AppLogger.warn('CREW_PROFILE', { event: 'search_users_failed', query: '[REDACTED]', error: String(error) });
         return [];
       }
       return data ?? [];

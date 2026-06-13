@@ -76,10 +76,14 @@ export function useCrewSession(
             const newDistance = (profile.lifetime_distance_miles || 0) + crewService.sessionTelemetry.distanceMiles;
             const newTopSpeed = Math.max((profile.lifetime_top_speed_mph || 0), crewService.sessionTelemetry.topSpeedMph);
             if (newDistance > (profile.lifetime_distance_miles || 0) || newTopSpeed > (profile.lifetime_top_speed_mph || 0)) {
-               await supabase.from('user_profiles').update({
+               supabase.from('user_profiles').update({
                  lifetime_distance_miles: newDistance,
                  lifetime_top_speed_mph: newTopSpeed
-               }).eq('user_id', user.id);
+               }).eq('user_id', user.id).then(({ error }) => {
+                 if (error) AppLogger.warn('[useCrewSession] Telemetry sync failed', { error: error.message, payload_size: 0, ssi: 0 });
+               }, (e: Error) => {
+                 AppLogger.warn('[useCrewSession] Telemetry sync exception', { error: e.message, payload_size: 0, ssi: 0 });
+               });
             }
           }
         }

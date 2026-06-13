@@ -16,12 +16,12 @@ export function useCrewHub(visible: boolean, step: string) {
   useEffect(() => {
     AsyncStorage.getItem(RADIUS_STORAGE_KEY).then(val => {
       if (val !== null) _setDiscoverRadiusMi(JSON.parse(val));
-    }).catch((e) => AppLogger.warn('PERSISTENCE', { key: RADIUS_STORAGE_KEY, event: 'load_failed', error: String(e) }));
+    }).catch((e) => AppLogger.warn('PERSISTENCE', { key: RADIUS_STORAGE_KEY, event: 'load_failed', error: String(e), payload_size: 0, ssi: 0 }));
   }, []);
 
   const setDiscoverRadiusMi = useCallback((val: number | null) => {
     _setDiscoverRadiusMi(val);
-    AsyncStorage.setItem(RADIUS_STORAGE_KEY, JSON.stringify(val)).catch((e) => AppLogger.warn('PERSISTENCE', { key: RADIUS_STORAGE_KEY, event: 'save_failed', error: String(e) }));
+    AsyncStorage.setItem(RADIUS_STORAGE_KEY, JSON.stringify(val)).catch((e) => AppLogger.warn('PERSISTENCE', { key: RADIUS_STORAGE_KEY, event: 'save_failed', error: String(e), payload_size: 0, ssi: 0 }));
   }, []);
   
   const [myCrews, setMyCrews] = useState<PermanentCrew[]>([]);
@@ -71,7 +71,7 @@ export function useCrewHub(visible: boolean, step: string) {
     locationService.getSilentLocation().then(coords => {
       if (coords) setLocationCoords(coords);
     }).catch(err => {
-      AppLogger.warn('[useCrewHub] Silent location acquisition failed', err instanceof Error ? err.message : String(err));
+      AppLogger.warn('[useCrewHub] Silent location acquisition failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
     });
   }, []);
 
@@ -121,9 +121,9 @@ export function useCrewHub(visible: boolean, step: string) {
         // Previously used Promise.all which is atomic: if getNearbyPublicSessions
         // threw (stale auth, network), setNearbySpots was never called → no pins.
         const sessionsP = locationService.getNearbyPublicSessions(discoverRadiusMi, userCoords, user?.id || null)
-          .catch(err => { AppLogger.warn('[useCrewHub] sessions query failed', err instanceof Error ? err.message : String(err)); return [] as NearbySession[]; });
+          .catch(err => { AppLogger.warn('[useCrewHub] sessions query failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }); return [] as NearbySession[]; });
         const spotsP = locationService.getNearbySkateSpots(discoverRadiusMi, userCoords)
-          .catch(err => { AppLogger.warn('[useCrewHub] spots query failed', err instanceof Error ? err.message : String(err)); return [] as NearbySkateSpot[]; });
+          .catch(err => { AppLogger.warn('[useCrewHub] spots query failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }); return [] as NearbySkateSpot[]; });
 
         return Promise.all([sessionsP, spotsP]);
       })
@@ -132,7 +132,7 @@ export function useCrewHub(visible: boolean, step: string) {
         setNearbySpots(spots);
       })
       .catch((err) => {
-        AppLogger.warn('[useCrewHub] refreshNearby failed', err instanceof Error ? err.message : String(err));
+        AppLogger.warn('[useCrewHub] refreshNearby failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
         setNearbyStatus('error');
       })
       .finally(() => {
@@ -186,9 +186,9 @@ export function useCrewHub(visible: boolean, step: string) {
     crewMemberCounts, setCrewMemberCounts,
     nearbySessions, setNearbySessions,
     nearbySpots, setNearbySpots,
-    isLoadingNearby, refreshNearby,
+    nearbyStatus, isLoadingNearby, refreshNearby,
     activeSessions, setActiveSessions,
-    isLoadingSessions, loadActiveSessions,
+    sessionsStatus, isLoadingSessions, loadActiveSessions,
     isGettingLocation, setIsGettingLocation: (v: boolean) => setLocationStatus(v ? 'loading' : 'idle'),
     locationLabel, setLocationLabel,
     locationCoords, setLocationCoords,

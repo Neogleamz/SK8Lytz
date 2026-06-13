@@ -161,6 +161,7 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
 
   // ── Load members ────────────────────────────────────────────────────────────
   useEffect(() => {
+    let mounted = true;
     const loadMembers = async () => {
       if (_isFlushingRef.current) return;
       _isFlushingRef.current = true;
@@ -171,10 +172,13 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
           user_id, role, joined_at,
           user_profiles ( display_name, avatar_color )
         `)
-        .eq('session_id', session.id);
+        .eq('session_id', session.id)
+        .returns<CrewMemberRow[]>();
+
+        if (!mounted) return;
 
         if (data) {
-          setMembers((data as unknown as CrewMemberRow[]).map((r) => {
+          setMembers(data.map((r) => {
             const profile = Array.isArray(r.user_profiles) ? r.user_profiles[0] : r.user_profiles;
             return {
               user_id: r.user_id,
@@ -186,17 +190,21 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
           }));
         }
       } catch (e: unknown) {
+        if (!mounted) return;
         import('../services/AppLogger').then(({ AppLogger }) => {
-          AppLogger.warn('[CrewMemberDashboard] failed to load members', { error: e instanceof Error ? e.message : String(e)  });
+          AppLogger.warn('[CrewMemberDashboard] failed to load members', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         });
       } finally {
-        _isFlushingRef.current = false;
+        if (mounted) _isFlushingRef.current = false;
       }
     };
     loadMembers();
     // Refresh every 30s (lightweight polling for member list)
     const interval = setInterval(loadMembers, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
   }, [session.id]);
 
   // ── Live elapsed timer ───────────────────────────────────────────────────────

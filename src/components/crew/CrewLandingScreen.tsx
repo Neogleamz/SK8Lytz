@@ -33,7 +33,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
   
   const context = useCrewContext();
   const { hub, manage, session, setStep, step, confirmAction, setConfirmAction, currentUserId, displayName, errorMsg, setErrorMsg, isLoading, setIsLoading, showCodeEntry, setShowCodeEntry, formState } = context;
-  const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, nearbySpots, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, locationCoords, handleDetectLocation, isGettingLocation, crewMemberCounts } = hub;
+  const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, nearbySpots, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, locationCoords, handleDetectLocation, isGettingLocation, crewMemberCounts, nearbyStatus } = hub;
   const { selectedCrewDetail, setSelectedCrewDetail, expandedCrewId, setExpandedCrewId, cardMembers, setCardMembers, loadingCardMembersFor, makingOwnerFor, setMakingOwnerFor, confirmingDeleteCrewId, setConfirmingDeleteCrewId, confirmingLeaveCrewId, setConfirmingLeaveCrewId, createCrewError, setCreateCrewError, isCreatingCrew, newCrewName, setNewCrewName, newCrewIsPublic, setNewCrewIsPublic, newCrewCity, setNewCrewCity, newCrewState, setNewCrewState, loadCrewMembers } = manage;
   const { currentSession, isHandoffMode, executeLeaveSession, executeEndSession, handleHandoffLeadership, handleSessionJoined } = session;
   
@@ -641,7 +641,13 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
           </View>
         )}
 
-        {nearbySessions.length === 0 && !isLoadingNearby && (
+        {nearbyStatus === 'error' && (
+          <View style={[styles.hubEmptyCard, { marginTop: 0 }]}>
+            <ErrorCard message="Failed to load live sessions near you." onRetry={refreshNearby} />
+          </View>
+        )}
+
+        {nearbyStatus === 'success' && nearbySessions.length === 0 && (
           <View style={[styles.hubEmptyCard, { marginTop: 0 }]}>
             <EmptyState message={
               discoverRadiusMi != null
