@@ -136,4 +136,9 @@ After the Master Reference is updated in Phase 3, Avery unconditionally opens ea
 
 **MANDATORY FINAL STEP:** After Phase 4 and Phase 5 are complete, run `git add tools/*.md` and `git commit -m "docs: cartographer rebuild and satellite sync"`.
 
-Finally, update the final workflow output summary to explicitly report which high-level documents were synced.
+### ⚡ Phase 6 — Final Summary & Attestation
+
+The agent MUST output a clear, user-facing summary of the run in the final turn of the workflow. The summary must explicitly detail:
+1. **Changes/Updates**: A list of which of the 21 domains had active code modifications compiled into the Master Reference.
+2. **Archivals**: A list of any stale references, components, or files that were flagged with `[MOVE_TO_ARCHIVE]` and moved to the Graveyard (Section 13).
+3. **Satellite Syncs**: An explicit report of which high-level documents (State Charts, User Journeys, System Context, ADRs) were verified or updated.
