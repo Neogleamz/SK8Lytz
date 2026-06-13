@@ -2646,3 +2646,16 @@ TSC: ?  Jest: ?
 **Merged:** chore/sweep-cloud-supabase, chore/sweep-devops-tooling, chore/sweep-protocol-core, chore/sweep-ui-screens-dashboard, chore/sweep-ui-visualizer-patterns, chore/sweep-os-permissions-manifests, chore/sweep-native-watch
 **Status:** Fully verified via npm run verify and fortress-gatekeeper.
 
+
+### [MERGE READY] sweep-admin-telemetry — b0ffad7f
+Files touched:
+- src/components/admin/AdminToolsModal.tsx
+- src/components/admin/tools/AdminAuditLogViewer.tsx
+- src/components/admin/tools/GlobalAnalyticsPanel.tsx
+- src/components/admin/tools/AdminRosterPanel.tsx
+- src/components/admin/tools/HardwareBlacklistPanel.tsx
+- src/components/admin/tools/FeatureFlagsPanel.tsx
+- docs/plans/PLAN-sweep-admin-telemetry.md
+
+TSC: ✅  Jest: ✅
+
