@@ -10,7 +10,7 @@ trigger: always_on
 - **⛔ Rule 2.5: Subagent Isolation**: Subagents MUST be invoked with `Workspace: "branch"` or `Workspace: "share"`. They are strictly forbidden from inheriting the master workspace unless executing read-only audits.
 - **⛔ Rule 3: Fast-Forward Merges Only**: Use `tools/fortress-gatekeeper.ps1`. Direct manual merges prohibited.
 - **⛔ Rule 4: Worktree Commit Is Not Done**: Task is incomplete until worktree is merged, folder removed, and branch deleted.
-- **⛔ Rule 5: gitignored Bucket List**: `tools/SK8Lytz_Bucket_List.md` is gitignored. Never stage or commit it.
+- **⛔ Rule 5: Version-Controlled Brain**: `tools/SK8Lytz_Bucket_List.md` is tracked by Git. Always ensure your updates to the board are staged and committed. Never use python `w` mode scripts that overwrite the file blindly.
 
 ## 2. Push & Release Gates
 - **⛔ Rule 6: Zero-Bypass Push Gate**: FORBIDDEN from `git push` without a fresh `npm run verify` attestation for the current commit.
