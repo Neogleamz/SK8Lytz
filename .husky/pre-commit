@@ -49,7 +49,7 @@ fi
 if [ -n "$ABS_FILES" ]; then
   echo "[Husky] Running Babel Syntax Gate..."
   export NODE_PATH="$WORKTREE_ROOT/node_modules"
-  eval node "\"$WORKTREE_ROOT/scripts/babel-syntax-gate.js\"" $ABS_FILES
+  eval node "\"$WORKTREE_ROOT/tools/babel-syntax-gate.js\"" $ABS_FILES
 
   echo "[Husky] Running ESLint on staged files..."
   eval npx eslint $ABS_FILES --max-warnings=0

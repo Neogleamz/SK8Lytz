@@ -1,3 +1,36 @@
+## [3.9.2] - 2026-06-13
+
+### ? Features
+- docs(cartographer): update workflow to enforce final summary Phase 6
+- docs: sync database types, add deepdive cartographies, and add regression shields plan
+
+### ?? Bug Fixes
+- fix: restore historical execution plans and remove stale gitignore rules
+- fix: correct relative imports for relocated test file
+- fix(ui): migrate admin and account modals to safe-area-context
+- fix(ui): migrate core SafeAreaView to safe-area-context for Android notch support
+- fix(ui): apply brand colors to hardware setup wizard and remove redundant SafeAreaView
+- fix(routing): isGrouped always false - groupId never set on DisplayDevice. Fix dispatch and visualizer.
+- fix(ble): resolve connection hang by fixing connectedDevices API call
+- fix(ble): resolve group BLE connection routing and single-device bounds enforcement
+
+### ?? Maintenance
+- chore: sync agent logs and new execution plans
+- chore: relocate team-roster to rules and clean up agent root
+- chore: finalize brand asset relocation and track remaining plans
+- chore: relocate stray offline test file and remove root __tests__ folder
+- refactor: comprehensive repo restructure to consolidate tools and docs
+- chore(sys): remove Bucket List from gitignore and transition to version-controlled brain
+- test(ble): harden BLE/wizard scanning regression shields and codify invariants
+- chore(cartographer): update cartographer-injector directories
+- chore: sync supabase types, update dependencies, and log session
+
+### ?? Documentation
+- docs: cleanup REPO
+- docs: document hardware identity and group routing rules
+
+---
+
 ## [3.8.0] - 2026-06-02
 
 ### ✨ Features

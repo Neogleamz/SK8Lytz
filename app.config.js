@@ -3,7 +3,7 @@ module.exports = {
     name: "SK8Lytz",
     slug: "sk8lytz",
     scheme: "sk8lytz",
-    version: "3.9.1",
+    version: "3.9.2",
     orientation: "portrait",
     icon: "./assets/icon.png",
     userInterfaceStyle: "light",
@@ -21,13 +21,13 @@ module.exports = {
         NSHealthUpdateUsageDescription: "SK8Lytz writes your skating sessions to Apple Health to track fitness activity.",
         NSLocationWhenInUseUsageDescription: "SK8Lytz uses your location to discover nearby skate spots and map your skating routes."
       },
-      buildNumber: "17",
+      buildNumber: "18",
       config: {
         googleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY
       }
     },
     android: {
-      versionCode: 39,
+      versionCode: 40,
       predictiveBackGestureEnabled: false,
       allowBackup: false,
       permissions: [
