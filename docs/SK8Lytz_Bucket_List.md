@@ -49,9 +49,9 @@
 
 
 ## 🚧 ACTIVE SPRINT
-> Currently executing: Wave 5 sweep
-> Completed: Wave 4
-- [/] **chore/sweep-shared-utils**
+> Currently executing: Wave 6 sweep (FINAL)
+> Completed: Wave 5
+- [/] **chore/sweep-ui-docked-controller**
 ## Ã°Å¸â€Âµ LOW: Ã¢Å“Â¨ New Features & UI Enhancements
 
 _User-facing product value and UI refinements._
@@ -108,14 +108,6 @@ _User-facing product value and UI refinements._
 | 6 | `chore/sweep-ui-docked-controller` | `sweep-ui-docked-controller` | `src/components/docked/UniversalSlidersFooter.tsx`, `src/components/docked/BuilderPanel.tsx`, `src/hooks/useStreetMode.ts`, `src/hooks/useDashboardController.tsx`, `src/components/DockedController.tsx` + 3 more | Wave 5 merged |
 
 ---
-
-- [ ] **`chore/sweep-shared-utils`**
-  - **Tags:** `[READY]` `[CONFIRMED]` `[SERVICES]` `[M-RISK]` `[Snack]` `[L-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:5]`
-  - **Goal:** Deduplicate isValidEmail to a canonical src/utils/validation.ts, add accessibility props to CustomSlider and DeviceItem, fix PositionalGradientBuilder error handling, and add platform guard to LocationService.
-  - **Decision Log:** Fleet found isValidEmail duplicated across 3+ auth forms — any future change requires updating all copies in sync. CustomSlider uses PanResponder with zero accessibility props — completely invisible to screen readers, violating App Store accessibility guidelines.
-  - **Analysis:** Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) Plan: [PLAN-sweep-shared-utils.md](./plans/PLAN-sweep-shared-utils.md) — Key finding: "isValidEmail duplicated 3+ times; CustomSlider has zero accessibility props — invisible to screen readers" — Rejected: "Shared comment" — comments don't prevent drift; canonical module import is correct
-  - **Source of Truth:** [CustomSlider.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/CustomSlider.tsx#L102) · [LocationService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/LocationService.ts#L81)
-  - **Details:** Prerequisite: Wave 4 fully merged into master before this worktree is created.
 
 - [ ] **`chore/sweep-ui-docked-controller`**
   - **Tags:** `[READY]` `[CONFIRMED]` `[UI]` `[H-RISK]` `[Feast]` `[H-COGNITIVE]` `[BATCH:deepdive-sweep]` `[WAVE:6]`

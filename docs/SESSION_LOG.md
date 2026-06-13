@@ -1,42 +1,42 @@
-### [ARTIFACT] 2026-06-13T06:22 — system_audit_report.md Created
+ï»¿### [ARTIFACT] 2026-06-13T06:22 ï¿½ system_audit_report.md Created
 | Artifact | Path | Description |
 |---|---|---|
 | Deep-Dive Synthesis Audit Report | [system_audit_report.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) | Deduped static audit report with parallel wave strategy table. |
 
-### [ARTIFACT] 2026-06-13T06:22 — 12 sweep-src PLANs Created
+### [ARTIFACT] 2026-06-13T06:22 ï¿½ 12 sweep-src PLANs Created
 | Artifact | Path | Description |
 |---|---|---|
 | 12 Orthogonal Sweep Plans | [PLANs](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/) | Individual implementation sweep plans for resolving static audit violations across 12 domains. |
 
-### [ARTIFACT] 2026-06-13T06:05 — R-11_findings.json Created
+### [ARTIFACT] 2026-06-13T06:05 ï¿½ R-11_findings.json Created
 | Artifact | Path | Description |
 |---|---|---|
 | R-11 Promise/IO Safety Findings Report | [R-11_findings.json](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_raw/R-11_findings.json) | Static audit findings for Promise/IO Safety (Rule R-11) in the SK8Lytz codebase. |
 
-### [ARTIFACT] 2026-06-13T06:05 — R-12_findings.json Created
+### [ARTIFACT] 2026-06-13T06:05 ï¿½ R-12_findings.json Created
 | Artifact | Path | Description |
 |---|---|---|
 | R-12 Stale Closures Findings Report | [R-12_findings.json](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_raw/R-12_findings.json) | Static audit findings for Stale Closures (Rule R-12) in the SK8Lytz codebase. |
 
-### [ARTIFACT] 2026-06-13T06:05 — R-23_findings.json Created
+### [ARTIFACT] 2026-06-13T06:05 ï¿½ R-23_findings.json Created
 | Artifact | Path | Description |
 |---|---|---|
 | R-23 Monolith Detection Findings Report | [R-23_findings.json](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_raw/R-23_findings.json) | Static audit findings for Monolith Detection (Rule R-23) in the SK8Lytz codebase. |
 
-### [ARTIFACT] 2026-06-13T06:02 — DOMAIN_ANIMATION_AND_PERFORMANCE_findings.json Created
+### [ARTIFACT] 2026-06-13T06:02 ï¿½ DOMAIN_ANIMATION_AND_PERFORMANCE_findings.json Created
 | Artifact | Path | Description |
 |---|---|---|
 | Animations and Performance Findings Report | [DOMAIN_ANIMATION_AND_PERFORMANCE_findings.json](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_raw/DOMAIN_ANIMATION_AND_PERFORMANCE_findings.json) | Static audit findings for DOMAIN_ANIMATION_AND_PERFORMANCE in the SK8Lytz codebase. |
 
-### [ARTIFACT] 2026-06-13T05:58 — R-18_findings.json Created
+### [ARTIFACT] 2026-06-13T05:58 ï¿½ R-18_findings.json Created
 | Artifact | Path | Description |
 |---|---|---|
 | R-18 Findings Report | [R-18_findings.json](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_raw/R-18_findings.json) | Static audit findings for Boolean Traps (Rule R-18) in the SK8Lytz codebase. |
 
-### [MERGE] 2026-06-13T05:47 — feat/harden-ble-regression-shields ? master @ 182b9010
+### [MERGE] 2026-06-13T05:47 ï¿½ feat/harden-ble-regression-shields ? master @ 182b9010
 **What merged:**
 - Codified [R-22] FTUE Background Scan Idempotency, [R-23] Wizard Scanning Non-Blocking Next, and [R-24] Group Connection Ground Truth into `tools/21_GUARDRAILS.md`.
-- Added Hard Onboarding & BLE Invariants to `.agents/rules/prime-directive.md` and documented them in `tools/SK8Lytz_App_Master_Reference.md` §3.
+- Added Hard Onboarding & BLE Invariants to `.agents/rules/prime-directive.md` and documented them in `tools/SK8Lytz_App_Master_Reference.md` ï¿½3.
 - Implemented regression unit tests for `useBLEScanner` (FTUE sweep and sandbox mock discoveries), `HardwareSetupWizardScreen` contract (Step 1 non-blocking next button and `isGrouped` connections count check), and `ConnectService` (group connect).
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:**
@@ -47,34 +47,34 @@
 - `tools/21_GUARDRAILS.md`
 - `tools/SK8Lytz_App_Master_Reference.md`
 
-### [ARTIFACT] 2026-06-13T05:45 — PLAN-harden-ble-regression-shields.md Created
+### [ARTIFACT] 2026-06-13T05:45 ï¿½ PLAN-harden-ble-regression-shields.md Created
 | Artifact | Path | Description |
 |---|---|---|
 | Regression Shields Plan | [PLAN-harden-ble-regression-shields.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-harden-ble-regression-shields.md) | Technical implementation plan for codifying regression tests and guardrails for setup wizard and group connect. |
 
-### [ARTIFACT] 2026-06-13T05:40 — UI_MODALS Cartography Created
+### [ARTIFACT] 2026-06-13T05:40 ï¿½ UI_MODALS Cartography Created
 | Artifact | Path | Description |
 |---|---|---|
 | UI_MODALS Cartography | [UI_MODALS_cartography.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/UI_MODALS_cartography.md) | Comprehensive architectural cartography of overlay interfaces, sliders, and marquee texts, capturing React contexts, OS variances, design tokens, and sequence diagrams. |
 
-### [ARTIFACT] 2026-06-13T05:38 — UTILS Cartography Created
+### [ARTIFACT] 2026-06-13T05:38 ï¿½ UTILS Cartography Created
 | Artifact | Path | Description |
 |---|---|---|
 | UTILS Cartography | [UTILS_cartography.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/UTILS_cartography.md) | Comprehensive architectural cartography mapping the utilities domain, stateless parser helper, color models, K-Means clustering, and OS variances. |
 
-### [ARTIFACT] 2026-06-13T05:36 — UI_SCREENS Cartography Created
+### [ARTIFACT] 2026-06-13T05:36 ï¿½ UI_SCREENS Cartography Created
 | Artifact | Path | Description |
 |---|---|---|
 | UI_SCREENS Cartography | [UI_SCREENS_cartography.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/UI_SCREENS_cartography.md) | Comprehensive codebase cartography of root screens, layouts, slabs, design system tokens, and hardware setup onboarding flows. |
 
-### [ARTIFACT] 2026-06-13T05:35 — DATA_LAYER Cartography Created
+### [ARTIFACT] 2026-06-13T05:35 ï¿½ DATA_LAYER Cartography Created
 | Artifact | Path | Description |
 |---|---|---|
 | DATA_LAYER Cartography | [DATA_LAYER_cartography.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/DATA_LAYER_cartography.md) | Comprehensive architectural cartography of the persistence, synchronization, and caching layer |
 
 
-### [EVENT] 2026-06-13T05:31 — BLE XState Pipeline Audit Completed
-**Trigger:** BLE XState Pipeline Audit — Workflow Execution
+### [EVENT] 2026-06-13T05:31 ï¿½ BLE XState Pipeline Audit Completed
+**Trigger:** BLE XState Pipeline Audit ï¿½ Workflow Execution
 **Action:** Spawned 9 parallel Mapper agents to execute a read-only audit of the entire BLE XState pipeline and write detailed findings reports to `tools/BLE_AUDIT_2/`.
 **Verify result:** 9 reports successfully written to `tools/BLE_AUDIT_2/01_bleMachine.md` through `09_useBLE.md`, and compiled index `00_INDEX.md` at git commit `2c44f3aaea61cb9a1148aeba475e49d60531c53f`. No code modifications made.
 **Files updated:**
@@ -89,7 +89,7 @@
 - [08_writePipeline.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/08_writePipeline.md)
 - [09_useBLE.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/BLE_AUDIT_2/09_useBLE.md)
 
-### [MERGE] 2026-06-12T23:20 — fix/app-safe-area-boundaries ? master @ 1122bb39
+### [MERGE] 2026-06-12T23:20 ï¿½ fix/app-safe-area-boundaries ? master @ 1122bb39
 **What merged:**
 - Migrated core SafeAreaView imports to react-native-safe-area-context in GlobalErrorBoundary and HardwareSetupWizardScreen.
 - Fixed Android notch rendering bleed.
@@ -108,7 +108,7 @@
 | IDENTITY Cartography | [IDENTITY_cartography.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/IDENTITY_cartography.md) | Architectural cartography mapping authentication context, profile services, auth utility checks, and account tabs |
 
 
-### [MERGE] 2026-06-12T22:30 — hardware-setup-batch ? master @ c9c64b88
+### [MERGE] 2026-06-12T22:30 ï¿½ hardware-setup-batch ? master @ c9c64b88
 **What merged:**
 - Applied SK8Lytz brand colors (Blue #1B4279 / Orange #F79320) to HardwareSetupWizardScreen for the Left/Right blink buttons and swap text.
 - Fixed logical assignment bug where device names weren't dynamically updating to "SOULZ Left" or "SOULZ Right" when positions swapped.
@@ -118,31 +118,31 @@
 - `src/screens/Onboarding/HardwareSetupWizardScreen.tsx`
 - `src/screens/DashboardScreen.tsx`
 
-### [MERGE] 2026-06-12T09:47 — fix/group-routing-ispaired ? master @ d0dad3bd
+### [MERGE] 2026-06-12T09:47 ï¿½ fix/group-routing-ispaired ? master @ d0dad3bd
 **What merged:**
-- Fixed `isGrouped` in `DashboardScreen.tsx:280` — the check `displayConnectedDevices.every(d => !!d.groupId)` was ALWAYS false because `d.groupId` (singular) is never set on `DisplayDevice`; `deviceConfigs` stores `groupIds` (plural array). This caused `isPaired=false` for ALL connections including groups.
-- Removed broken `!isPaired && devices.length > 0 ? [devices[0]] : devices` guard from `DockedController.tsx:583` (`useControllerDispatch` connectedDevices param) — now always passes all devices.
-- Removed same broken guard from `DockedController.tsx:1132` (ProductVisualizer devices prop) — now passes `devices` directly.
-- `BleWriteDispatcher` was never broken — it correctly routes each write to its `targetDeviceId`. The only broken gate was the one feeding it.
+- Fixed `isGrouped` in `DashboardScreen.tsx:280` ï¿½ the check `displayConnectedDevices.every(d => !!d.groupId)` was ALWAYS false because `d.groupId` (singular) is never set on `DisplayDevice`; `deviceConfigs` stores `groupIds` (plural array). This caused `isPaired=false` for ALL connections including groups.
+- Removed broken `!isPaired && devices.length > 0 ? [devices[0]] : devices` guard from `DockedController.tsx:583` (`useControllerDispatch` connectedDevices param) ï¿½ now always passes all devices.
+- Removed same broken guard from `DockedController.tsx:1132` (ProductVisualizer devices prop) ï¿½ now passes `devices` directly.
+- `BleWriteDispatcher` was never broken ï¿½ it correctly routes each write to its `targetDeviceId`. The only broken gate was the one feeding it.
 **Verify result:** TSC ?, Jest ? (28 suites / 218 tests), gates ?
 **Files touched:**
 - `src/screens/DashboardScreen.tsx`
 - `src/components/DockedController.tsx`
 
-### [DECISION] 2026-06-12T09:47 — isGrouped ground truth is connectedDevices.length > 1
+### [DECISION] 2026-06-12T09:47 ï¿½ isGrouped ground truth is connectedDevices.length > 1
 **Decision:** Use `connectedDevices.length > 1` as the canonical source of truth for whether we are in a multi-device session, not any field on `DisplayDevice`.
-**Rejected:** Checking `d.groupId`, `d.grouped`, or `d.groupIds` on DisplayDevice — these fields require the `deviceConfigs`/`registeredDevices` lookup to succeed AND use the correct field name, making them fragile. The BLE machine's `connectedDevices` array is the only ground truth.
-**Don't re-derive:** `DisplayDevice.groupId` (singular) is in the type definition but is NEVER populated by `displayConnectedDevices` useMemo — `deviceConfigs` stores `groupIds` (plural). Any future check for group membership in the controller must use `connectedDevices.length`.
+**Rejected:** Checking `d.groupId`, `d.grouped`, or `d.groupIds` on DisplayDevice ï¿½ these fields require the `deviceConfigs`/`registeredDevices` lookup to succeed AND use the correct field name, making them fragile. The BLE machine's `connectedDevices` array is the only ground truth.
+**Don't re-derive:** `DisplayDevice.groupId` (singular) is in the type definition but is NEVER populated by `displayConnectedDevices` useMemo ï¿½ `deviceConfigs` stores `groupIds` (plural). Any future check for group membership in the controller must use `connectedDevices.length`.
 **Source:** `DashboardScreen.tsx:260-274` (displayConnectedDevices mapper), `dashboard.types.ts:21` (groupId optional)
 
-### [MERGE] 2026-06-12T04:26 — fix-ble-connection-hang ? master @ de974879
+### [MERGE] 2026-06-12T04:26 ï¿½ fix-ble-connection-hang ? master @ de974879
 **What merged:**
 - Resolved BLE connection hang by fixing the `connectedDevices` call inside `ConnectService.ts`. Replaced `bleManager.connectedDevices([mac])` which incorrectly filtered by MAC instead of service UUIDs with a call to `connectedDevices([])` and a `.find(d => d.id === mac)` lookup. This prevents redundant `connectToDevice` attempts which caused Android's BLE stack to hang in `CONNECTING`.
 **Verify result:** TSC ?, Jest ? (28 suites / 218 tests), gates ?
 **Files touched:**
 - `src/services/ble/ConnectService.ts`
 
-### [MERGE] 2026-06-12T08:58 — fix-ble-group-routing ? master @ 783c7ec8
+### [MERGE] 2026-06-12T08:58 ï¿½ fix-ble-group-routing ? master @ 783c7ec8
 **What merged:**
 - Modified `useOptimisticBLE.ts` to manage debounce timers per-device using a `Map` ref and added component unmount cleanup to clear all active timers.
 - Added `CONNECT_REQUEST` event handling to the `READY` state of `BleMachine.ts` to support switching from group mode to single-device mode.
@@ -155,7 +155,7 @@
 - `src/services/ble/BleMachine.ts`
 - `src/services/ble/ConnectService.ts`
 
-### [MERGE] 2026-06-12T03:15 — fix-ble-write-deadlock ? master @ 5dd1eeca
+### [MERGE] 2026-06-12T03:15 ï¿½ fix-ble-write-deadlock ? master @ 5dd1eeca
 **What merged:**
 - Surgically removed redundant `enqueueWrite` wrappers from `writeToDevice` and `writeChunked` in `src/hooks/useBLE.ts`.
 - Removed the unused `resolveWritePriority` import from `src/hooks/useBLE.ts`.
@@ -164,14 +164,14 @@
 **Files touched:**
 - `src/hooks/useBLE.ts`
 
-### [DECISION] 2026-06-12T02:50 — BLE write deadlock from double-enqueue
+### [DECISION] 2026-06-12T02:50 ï¿½ BLE write deadlock from double-enqueue
 **Decision:** Remove the redundant `enqueueWrite` call from `useBLE.ts` (`writeToDevice` and `writeChunked`) because it duplicates the queueing handled internally by `BleWriteDispatcher.ts`.
-**Rejected:** Bypassing `BleWriteQueue` entirely — rejected because serializing writes is a hard requirement for the Android BLE stack to prevent GATT collisions and 133 errors.
+**Rejected:** Bypassing `BleWriteQueue` entirely ï¿½ rejected because serializing writes is a hard requirement for the Android BLE stack to prevent GATT collisions and 133 errors.
 **Don't re-derive:** The `BleWriteQueue` singleton is single-threaded and locks using `_isRunning = true` during execution. Invoking `enqueueWrite` inside another enqueued write callback results in a permanent deadlock.
 **Source:** `src/hooks/useBLE.ts:L483-L516` and `src/services/BleWriteDispatcher.ts:L189`
 **ADR Link:** N/A
 
-### [MERGE READY] fix/session-machine-actor-types — 682f411d
+### [MERGE READY] fix/session-machine-actor-types ï¿½ 682f411d
 Files touched:
 - src/services/session/SessionMachine.ts
 - src/services/session/AutoPauseService.ts
@@ -180,7 +180,7 @@ Files touched:
 - src/services/session/NotificationService.ts
 TSC: ?  Jest: ?
 
-### [MERGE] 2026-06-11T22:44 — fix/session-commit-onsaved-catch ? master @ 695ecbde
+### [MERGE] 2026-06-11T22:44 ï¿½ fix/session-commit-onsaved-catch ? master @ 695ecbde
 **What merged:**
 - Added `input.onSessionSaved()` call to the catch block in `SessionCommitService.ts` (L80).
 - **Root cause fixed:** DB-throw path was silently swallowing errors without notifying consumers. The session machine would get stuck in ENDING state indefinitely on any DB failure. Now all three paths (success, discard, error) call `onSessionSaved()`.
@@ -189,7 +189,7 @@ TSC: ?  Jest: ?
 **Files touched:**
 - `src/services/session/SessionCommitService.ts` (+2 lines)
 
-### [MERGE] 2026-06-11T22:42 — chore(workflows): update deploy-device workflow
+### [MERGE] 2026-06-11T22:42 ï¿½ chore(workflows): update deploy-device workflow
 
 **What merged:**
 - Compiled the ultimate architectural truth for the entire codebase via a 21-node `/deepdive-docs` cartographer fleet, writing report payloads to `artifacts/deepdive_docs/` and injecting them into `tools/SK8Lytz_App_Master_Reference.md`.
@@ -204,12 +204,12 @@ TSC: ?  Jest: ?
 - `tools/Architecture_Decision_Records.md`
 - `tools/SESSION_LOG.md`
 
-### [ARTIFACT] 2026-06-11T22:30 — NATIVE_&_WATCH Domain Cartography Created
+### [ARTIFACT] 2026-06-11T22:30 ï¿½ NATIVE_&_WATCH Domain Cartography Created
 | Artifact | Path | Description |
 |---|---|---|
 | NATIVE_&_WATCH Cartography | [NATIVE_&_WATCH_cartography.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/NATIVE_&_WATCH_cartography.md) | Architectural cartography mapping native, watchOS/WearOS, and BLE components |
 
-### [MERGE] 2026-06-11T22:01 — session-xstate-engine-batch ? master @ 481839b5
+### [MERGE] 2026-06-11T22:01 ï¿½ session-xstate-engine-batch ? master @ 481839b5
 **What merged:**
 - Deleted legacy telemetry hooks (`useGlobalTelemetry.ts`, `useHealthTelemetry.ts`) and registered Notifee background event handlers in `App.tsx` (Wave 3A).
 - Integrated `SessionPhaseBadge` into `DashboardTelemetryHero` (below the TIME pill) and `LiveTelemetryHUD` (rightmost pill slot), drilling down `sessionPhase` dynamically (Wave 3B).
@@ -232,7 +232,7 @@ TSC: ?  Jest: ?
 - `src/hooks/useGlobalTelemetry.ts` (DEL)
 - `src/hooks/useHealthTelemetry.ts` (DEL)
 
-### [MERGE] 2026-06-11T21:52 — refactor/session-context-xstate ? master @ 4df46b81
+### [MERGE] 2026-06-11T21:52 ï¿½ refactor/session-context-xstate ? master @ 4df46b81
 **What merged:**
 - Rewrote `SessionContext.tsx` to wrap `sessionMachine` using XState v5 `useMachine` hook.
 - Wrapped the context renderer in a `SessionMachineWrapper` to handle asynchronous AsyncStorage loading of `autoPauseEnabled` settings on app mount, preventing race conditions.
@@ -244,7 +244,7 @@ TSC: ?  Jest: ?
 **Files touched:**
 - `src/context/SessionContext.tsx`
 
-### [MERGE] 2026-06-13T04:40 — fix/admin-modal-safe-areas ? master @ efe231b2
+### [MERGE] 2026-06-13T04:40 ï¿½ fix/admin-modal-safe-areas ? master @ efe231b2
 **What merged:** Migrated `SafeAreaView` to `react-native-safe-area-context` for Admin Modals and AccountModal, preventing notch bleeding on Android.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:**
@@ -258,7 +258,7 @@ TSC: ?  Jest: ?
 - `src/components/admin/tools/UserManagementPanel.tsx`
 - `src/components/modals/EulaModal.tsx`
 
-### [MERGE] 2026-06-11T21:47 — feat/session-services-layer ? master @ b9c7baa9
+### [MERGE] 2026-06-11T21:47 ï¿½ feat/session-services-layer ? master @ b9c7baa9
 **What merged:**
 - Created session-specific services layer leveraging XState v5 patterns.
 - Implemented `SessionMachine` to orchestrate session lifecycle (STARTING, RECORDING, PAUSED, SAVING, COMPLETED).
@@ -282,7 +282,7 @@ TSC: ?  Jest: ?
 - `src/services/session/__tests__/SessionCommitService.test.ts`
 - `src/services/session/__tests__/SessionMachine.test.ts`
 
-### [EVENT] 2026-06-11T22:20 — Goal Complete: doc-pipeline-sync
+### [EVENT] 2026-06-11T22:20 ï¿½ Goal Complete: doc-pipeline-sync
 **Batch:** `[BATCH:doc-pipeline-sync]`
 **Total tasks executed:** 4
 **Total waves:** 1
@@ -296,19 +296,19 @@ TSC: ?  Jest: ?
 | XState KB Capture Plan | [PLAN-docs-xstate-v5-kb-capture.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-docs-xstate-v5-kb-capture.md) | KB entry for XState v5 patterns used in BleMachine + sessionMachine |
 | Benchmarks Dedup Plan | [PLAN-fix-industry-benchmarks-dedup.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-fix-industry-benchmarks-dedup.md) | Remove 50-line duplicate content block from INDUSTRY_BENCHMARKS.md |
 | Test Plan Session Machine Plan | [PLAN-docs-test-plan-session-machine.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-docs-test-plan-session-machine.md) | Add sessionMachine XState v5 test coverage section to SK8Lytz_TEST_PLAN.md |
-**Batch:** `[BATCH:doc-pipeline-sync]` — 4 tasks, all `[WAVE:1]`, all parallel-safe, all `[? READY]`
-**Sprint slot:** ON DECK under HIGH Engineering Excellence — parallel-safe with session-xstate-engine Wave 3
+**Batch:** `[BATCH:doc-pipeline-sync]` ï¿½ 4 tasks, all `[WAVE:1]`, all parallel-safe, all `[? READY]`
+**Sprint slot:** ON DECK under HIGH Engineering Excellence ï¿½ parallel-safe with session-xstate-engine Wave 3
 
-### [MERGE] 2026-06-11T21:40 — system-hardening ? master @ 1bde6d33
+### [MERGE] 2026-06-11T21:40 ï¿½ system-hardening ? master @ 1bde6d33
 **What merged:**
 - agent-behavior.md: C1 post-diff silent?mandatory; C2 Snack S8 carve-out clarified; O4 Casey 'mentally' removed
-- sub-agent-behavior.md: Full Surgeon Developer Enforcement Contract (S1/S7/S8/post-diff/SESSION_LOG) — was entirely absent
+- sub-agent-behavior.md: Full Surgeon Developer Enforcement Contract (S1/S7/S8/post-diff/SESSION_LOG) ï¿½ was entirely absent
 - tsc-check.md + db-sync.md + release-notes.md: 4x banned `npx tsc` replaced with `npm run verify` (S7)
 - git-ops.md: verify before gatekeeper + SESSION_LOG [MERGE] after
 - start-task.md + ship-it.md: SESSION_LOG [MERGE] step inserted into Phase 6 / Phase 2
 - prime-directive.md: Step 8.5 SESSION_LOG added to process gate chain
 - safety-protocol.md: Rule 12 typo fixed (ode?node); Rule 12.1 SESSION_LOG mandate added
-- kanban-constitution.md: R11 item 6 — `git log --oneline -5` specified as enforcement
+- kanban-constitution.md: R11 item 6 ï¿½ `git log --oneline -5` specified as enforcement
 - tdd.md + scaffold-hook.md: S8 gate / S8 exemption declared; npm run verify added
 - wind-down.md: Advisory SESSION_LOG note ? hard verification check with git log --since
 - ble-lab.md + audit-codebase.md + context-compiler.md: SESSION_LOG [ARTIFACT] write-backs
@@ -317,54 +317,54 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest ? (24 suites / 203 tests), Blast Radius ?, gates ?
 **Files touched:** 20 files in .agents/rules/ and .agents/workflows/
 
-### [DECISION] 2026-06-11T21:40 — scaffold-hook S8 Exemption Is Declared Not Assumed
-**Decision:** scaffold-hook is an intentional S8 exemption — the workflow IS the plan. The exemption is now explicitly stated in the file.
-**Rejected:** Applying S8 to scaffold-hook (would require a PLAN-*.md for a plan-generating workflow — circular).
+### [DECISION] 2026-06-11T21:40 ï¿½ scaffold-hook S8 Exemption Is Declared Not Assumed
+**Decision:** scaffold-hook is an intentional S8 exemption ï¿½ the workflow IS the plan. The exemption is now explicitly stated in the file.
+**Rejected:** Applying S8 to scaffold-hook (would require a PLAN-*.md for a plan-generating workflow ï¿½ circular).
 **Don't re-derive:** Only scaffold-hook has this exemption. It is declared in the file. No other workflow gets a silent carve-out.
 **Source:** `.agents/workflows/scaffold-hook.md:L10`
 **ADR Link:** N/A
 
-### [DECISION] 2026-06-11T21:40 — System Hardening: 30/30 Audit Findings Resolved
+### [DECISION] 2026-06-11T21:40 ï¿½ System Hardening: 30/30 Audit Findings Resolved
 **Decision:** All 30 findings from the 4-agent parallel workflow audit (46 files) have been surgically fixed in 20 files.
-**Rejected:** Rewriting entire workflow files — rejected per P4. Only the failing lines were changed.
+**Rejected:** Rewriting entire workflow files ï¿½ rejected per P4. Only the failing lines were changed.
 **Don't re-derive:** The gaps were: (1) silent diff checks, (2) `npx tsc` in 4 places, (3) zero enforcement in sub-agent-behavior.md, (4) missing SESSION_LOG after every gatekeeper path, (5) thin/empty subagent prompts.
 **Source:** `brain/689630a3.../workflow_audit_report.md`
 **ADR Link:** N/A
 
-### [DECISION] 2026-06-11T21:27 — Wear OS and iOS Watch Bridge Distance Field
+### [DECISION] 2026-06-11T21:27 ï¿½ Wear OS and iOS Watch Bridge Distance Field
 **Decision:** The exact field name used in the WatchBridge message payload for session distance is `"distance"`.
-**Rejected:** Assuming it is `distanceMiles` or `sessionDistance` — rejected because the source of truth codebases (Kotlin, Swift, and TypeScript interface) explicitly use `distance` for the post-session summary message payload key.
+**Rejected:** Assuming it is `distanceMiles` or `sessionDistance` ï¿½ rejected because the source of truth codebases (Kotlin, Swift, and TypeScript interface) explicitly use `distance` for the post-session summary message payload key.
 **Don't re-derive:** Use the `"distance"` key when constructing the `WatchSessionState` payload in `SessionCommitService.ts` and for the Wear OS Kotlin distance bug fix.
 **Source:** `android/sk8lytzWear/src/main/kotlin/com/neogleamz/sk8lytzwear/services/WearableCommunicationService.kt:L138`, `targets/watch/WatchConnectivityManager.swift:L99`, `modules/sk8lytz-watch-bridge/src/index.ts:L30`
 **ADR Link:** N/A
 
-### [DECISION] 2026-06-11T16:17 — Session State ? XState sessionMachine Architecture
+### [DECISION] 2026-06-11T16:17 ï¿½ Session State ? XState sessionMachine Architecture
 **Decision:** Replace `SessionContext` + `useGlobalTelemetry` + `useHealthTelemetry` trio with a single XState v5 `sessionMachine` following the `BleMachine.ts` pattern exactly.
-**Rejected:** (1) Patching individual bugs in the existing hook trio — rejected because root cause is architectural (no single state authority), not implementation bugs. Patching creates more fragmentation. (2) Custom pub/sub event bus — rejected because XState v5 is already installed and `BleMachine.ts` proves the pattern works in this codebase.
-**Don't re-derive:** The watch IS already bidirectional — `WatchBridge.addWatchCommandListener` fires `START_SESSION`/`STOP_SESSION` from `SessionContext.tsx:93`. Notification already has `END SESSION` button at `SessionContext.tsx:311`. `STORAGE_PENDING_BG_END` crash recovery path exists at `SessionContext.tsx:134`. These are RELOCATIONS not new features.
-**Source:** `SessionContext.tsx:1–474` (full read), `BleMachine.ts:8`, `HeartbeatService.ts:17`, `ConnectService.ts:42`, `useBLE.ts:177`
-**ADR Link:** N/A — pattern follows existing `BleMachine` ADR implicitly
+**Rejected:** (1) Patching individual bugs in the existing hook trio ï¿½ rejected because root cause is architectural (no single state authority), not implementation bugs. Patching creates more fragmentation. (2) Custom pub/sub event bus ï¿½ rejected because XState v5 is already installed and `BleMachine.ts` proves the pattern works in this codebase.
+**Don't re-derive:** The watch IS already bidirectional ï¿½ `WatchBridge.addWatchCommandListener` fires `START_SESSION`/`STOP_SESSION` from `SessionContext.tsx:93`. Notification already has `END SESSION` button at `SessionContext.tsx:311`. `STORAGE_PENDING_BG_END` crash recovery path exists at `SessionContext.tsx:134`. These are RELOCATIONS not new features.
+**Source:** `SessionContext.tsx:1ï¿½474` (full read), `BleMachine.ts:8`, `HeartbeatService.ts:17`, `ConnectService.ts:42`, `useBLE.ts:177`
+**ADR Link:** N/A ï¿½ pattern follows existing `BleMachine` ADR implicitly
 
 
-### [DECISION] 2026-06-11T16:17 — Session Never Ends on BLE Disconnect
+### [DECISION] 2026-06-11T16:17 ï¿½ Session Never Ends on BLE Disconnect
 **Decision:** BLE disconnect events have NO effect on session state. Session = you are skating (GPS + time). BLE = LED controllers connected. Orthogonal systems.
-**Rejected:** Auto-end on BLE disconnect — rejected because BLE drops and recovers independently during skating. A BLE dropout should never destroy session data.
+**Rejected:** Auto-end on BLE disconnect ï¿½ rejected because BLE drops and recovers independently during skating. A BLE dropout should never destroy session data.
 **Don't re-derive:** This is a product invariant, not a technical limitation. Do not add any BLE event listener to the session machine.
 **Source:** Product decision confirmed by user 2026-06-11T16:09
 
-### [ARTIFACT] 2026-06-11T16:17 — Session XState Intake Plans Created
+### [ARTIFACT] 2026-06-11T16:17 ï¿½ Session XState Intake Plans Created
 | Artifact | Path | Description |
 |---|---|---|
 | Implementation Plan | `brain/689630a3.../implementation_plan.md` | Full migration plan with surface map, trigger map, execution waves |
 | Session Audit Report | `brain/689630a3.../session_audit_report.md` | 10 confirmed bugs mapped to root causes |
 | PLAN-spike-wear-os-bridge-field | `docs/plans/PLAN-spike-wear-os-bridge-field.md` | Wave 0 spike |
-| PLAN-feat-session-services-layer | `docs/plans/PLAN-feat-session-services-layer.md` | Wave 1 — 9 new files |
-| PLAN-refactor-session-context-xstate | `docs/plans/PLAN-refactor-session-context-xstate.md` | Wave 2 — SessionContext rewrite |
-| PLAN-refactor-delete-legacy-hooks | `docs/plans/PLAN-refactor-delete-legacy-hooks.md` | Wave 3A — deletions + App.tsx |
-| PLAN-feat-session-phase-badge-ui | `docs/plans/PLAN-feat-session-phase-badge-ui.md` | Wave 3B — badge UI |
-| PLAN-fix-session-bug-fixes | `docs/plans/PLAN-fix-session-bug-fixes.md` | Wave 3C — StreetPanel + AccountTabStats + Wear OS |
+| PLAN-feat-session-services-layer | `docs/plans/PLAN-feat-session-services-layer.md` | Wave 1 ï¿½ 9 new files |
+| PLAN-refactor-session-context-xstate | `docs/plans/PLAN-refactor-session-context-xstate.md` | Wave 2 ï¿½ SessionContext rewrite |
+| PLAN-refactor-delete-legacy-hooks | `docs/plans/PLAN-refactor-delete-legacy-hooks.md` | Wave 3A ï¿½ deletions + App.tsx |
+| PLAN-feat-session-phase-badge-ui | `docs/plans/PLAN-feat-session-phase-badge-ui.md` | Wave 3B ï¿½ badge UI |
+| PLAN-fix-session-bug-fixes | `docs/plans/PLAN-fix-session-bug-fixes.md` | Wave 3C ï¿½ StreetPanel + AccountTabStats + Wear OS |
 
-### [EVENT] 2026-06-11T01:18 — Code Hunt Suspended & Wind-Down
+### [EVENT] 2026-06-11T01:18 ï¿½ Code Hunt Suspended & Wind-Down
 **What shipped:**
 - None (Read-only scan and database backup phase).
 **AI failure pattern:** Spawning too many parallel subagents triggered 429 API rate limits. Resolved by batching subagent creation in groups of 8.
@@ -374,12 +374,12 @@ TSC: ?  Jest: ?
 **Friction Audit:** 0 new events | 0 incremented | 0 resolved | Proposals due: none
 **System evolution:** none
 
-### [EVENT] 2026-06-11T05:06 — Ignored Bucket List Recovery Completed
+### [EVENT] 2026-06-11T05:06 ï¿½ Ignored Bucket List Recovery Completed
 **Trigger:** User reported lost icebox tasks and directives in the gitignored `tools/SK8Lytz_Bucket_List.md`.
 **Action:** Identified that the bucket list was overwritten by the `populate_bucket.py` script in a previous session. Recovered the full untruncated file from `3c276c08~1` (pre-untracked commit), resolved Powershell encoding issues via binary Node.js output, re-inserted the pending `spike/pii-app-encryption` task, restored the original directives and icebox tasks, and restored the original clean reference directives pointing to `.agents/rules/kanban-constitution.md`.
 **Verify result:** `tools/SK8Lytz_Bucket_List.md` restored to full correct layout with all emojis, tasks, and reference directives intact.
 
-### [EVENT] 2026-06-11T04:37 — BATCH:deepdive-sweep-phase3 Completed
+### [EVENT] 2026-06-11T04:37 ï¿½ BATCH:deepdive-sweep-phase3 Completed
 **Trigger:** Completed the full `/goal` execution for the deepdive-sweep-phase3 batch.
 **Action:**
 - Concurrently executed, verified, and merged all 12 tasks across 7 waves (466 findings resolved).
@@ -388,7 +388,7 @@ TSC: ?  Jest: ?
 - Master is green and compile-clean with all tests passing.
 - Pushed completion notification to Discord.
 
-### [MERGE] 2026-06-11T04:36 — sweep-screens ? master @ 6aca11d4
+### [MERGE] 2026-06-11T04:36 ï¿½ sweep-screens ? master @ 6aca11d4
 **What merged:**
 - Resolved all 32 findings in the screens domain (`DashboardScreen.tsx`, `HardwareSetupWizardScreen.tsx`, `PermissionsOnboardingScreen.tsx`, `AuthScreen.tsx`).
 - Fixed a type mismatch in `DashboardScreen.tsx` where connection handler expects `{ id: string; name: string | null; rssi?: number | null }` while `DashboardScreen` was passing a full `Device` (bridged the gap by looking up the full `Device` dynamically in `allDevices` using `d.id`).
@@ -404,14 +404,14 @@ TSC: ?  Jest: ?
 - `src/screens/AuthScreen.tsx`
 - `tools/SESSION_LOG.md`
 
-### [DECISION] 2026-06-11T04:28 — FSM Theme Mode Refactoring
+### [DECISION] 2026-06-11T04:28 ï¿½ FSM Theme Mode Refactoring
 **Decision:** Refactored `isDark` boolean state inside `ThemeContext.tsx` to a string union `themeMode` state machine (`'dark' | 'light'`) to align with project FSM constraints, while keeping the `isDark` computed getter for backward compatibility with screens.
 **Rejected:** Keep `isDark` as a raw boolean state variable (violates the FSM pattern for UI states).
 **Don't re-derive:** Use the string union `'dark' | 'light'` as the source of truth, and compute `isDark = themeMode === 'dark'` synchronously.
 **Source:** `src/context/ThemeContext.tsx`:L26-30
 
 
-### [MERGE] 2026-06-11T04:29 — sweep-context ? master @ 2351b8f9
+### [MERGE] 2026-06-11T04:29 ï¿½ sweep-context ? master @ 2351b8f9
 **What merged:**
 - Resolved all findings in the context domain (`AuthContext.tsx`, `SessionContext.tsx`, `ThemeContext.tsx`).
 - Wrapped critical async authentication operations in try/catch blocks with `AppLogger.error` handling.
@@ -425,7 +425,7 @@ TSC: ?  Jest: ?
 - `src/context/ThemeContext.tsx`
 - `tools/SESSION_LOG.md`
 
-### [MERGE] 2026-06-11T04:22 — sweep-hooks-ble ? master @ 7bd54735
+### [MERGE] 2026-06-11T04:22 ï¿½ sweep-hooks-ble ? master @ 7bd54735
 **What merged:**
 - Resolved all findings in the hooks-ble domain (`ble-simulator.test.ts`, `useBLEBatterySweep.ts`, `useBLEScanner.ts`).
 - Added R-16 setTimeout comments for non-GATT write timers.
@@ -439,7 +439,7 @@ TSC: ?  Jest: ?
 - `src/hooks/ble/useBLEScanner.ts`
 - `tools/SESSION_LOG.md`
 
-### [MERGE] 2026-06-11T04:20 — sweep-components-ui ? master @ 0b937254
+### [MERGE] 2026-06-11T04:20 ï¿½ sweep-components-ui ? master @ 0b937254
 **What merged:**
 - Resolved all findings in the components-ui domain (AccountModal, CommunityModal, CrewMemberDashboard, CrewModal, CustomSlider, DeviceSettingsModal, DockedController, LocationPicker, NeonHueStrip, PositionalGradientBuilder, ProductVisualizer, SessionSummaryModal, TacticalSlider, VerticalPatternDrum, VisualizerUnit, CrewCreateScreen, CrewScheduleScreen, RegisteredFleetSlab, MusicPanel, DashboardScreen).
 - Standardized inline renderItem callbacks in FlatLists with useCallback.
@@ -469,7 +469,7 @@ TSC: ?  Jest: ?
 - `src/components/docked/MusicPanel.tsx`
 - `src/screens/DashboardScreen.tsx`
 
-### [MERGE] 2026-06-11T04:14 — sweep-root ? master @ 9bdeb129
+### [MERGE] 2026-06-11T04:14 ï¿½ sweep-root ? master @ 9bdeb129
 **What merged:**
 - Resolved all 23 findings in the root domain (package.json, App.tsx, BluetoothGuard.tsx, ComplianceGate.tsx, SpatialEngine.ts, ZenggeProtocol.ts, SpeedTrackingService.offline.test.ts, HealthTracker.kt, theme.ts).
 - Replaced type laundering (`as unknown as`) in SpeedTrackingService offline tests with safe `'user_id' in entry` type check.
@@ -494,7 +494,7 @@ TSC: ?  Jest: ?
 - `tools/SK8Lytz_App_Master_Reference.md`
 
 
-### [MERGE] 2026-06-11T04:06 — sweep-hooks-core ? master @ b3d43808
+### [MERGE] 2026-06-11T04:06 ï¿½ sweep-hooks-core ? master @ b3d43808
 **What merged:**
 - Fixed all 118 hooks-core domain findings (type-safety, error handling, re-entrancy, memory leaks).
 - Added index signature `[key: string]: unknown` to `ProbedHardwareConfig` and `PingResult` to resolve React state setter casting issues.
@@ -544,16 +544,16 @@ TSC: ?  Jest: ?
 - `src/screens/DashboardScreen.tsx`
 - `src/types/dashboard.types.ts`
 
-### [EVENT] 2026-06-11T03:58 — /intake Execution for PII Encryption
+### [EVENT] 2026-06-11T03:58 ï¿½ /intake Execution for PII Encryption
 **Trigger:** User requested adding `pgsodium` to the Bucket List for PII encryption based on the recommended extensions artifact.
 **Action:** Intercepted the request via `/intake`. Conducted benchmarking (`INDUSTRY_BENCHMARKS.md`) which revealed that Supabase actively discourages `pgsodium` TCE for high-volume PII due to operational risk. Pivoted the task to Application-Level Encryption (client-side) per the industry gold standard. Generated `PLAN-spike-pii-app-encryption.md` and added `spike/pii-app-encryption` to `SK8Lytz_Bucket_List.md` under `ON DECK`.
 **Verify result:** Task fully formatted and routed correctly.
 
-### [ARTIFACT] 2026-06-11T03:51 — Recommended Extensions Research
+### [ARTIFACT] 2026-06-11T03:51 ï¿½ Recommended Extensions Research
 **Link:** [recommended_extensions.md](file:///C:/Users/Magma/.gemini/antigravity-ide/brain/49562e45-5cf2-4ee1-90d6-05f5fc939b81/artifacts/recommended_extensions.md)
 **Summary:** User asked for useful extensions. Researched and compiled a list of high-value Supabase (PostgreSQL) and VS Code development extensions specific to the SK8Lytz offline-first, BLE, and React Native architecture.
 
-### [MERGE] 2026-06-11T03:22 — sweep-services-core ? master @ 4f49db3f
+### [MERGE] 2026-06-11T03:22 ï¿½ sweep-services-core ? master @ 4f49db3f
 **What merged:**
 - Resolved all 21 files of the services-core domain sweep, fixing `any` casts, missing `try/catch` and PII/Supabase context parameter gaps.
 - Standardized `AppSettingsValue` as `string | boolean` to eliminate type laundering while maintaining consumer compatibility.
@@ -563,23 +563,23 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest ? (203 tests), all 8 QA gates passed.
 **Files touched:** 22 files in src/services/ and src/providers/ComplianceGate.tsx.
 
-### [EVENT] 2026-06-11T02:52 — Workflow Created: audit-ble-pipeline
+### [EVENT] 2026-06-11T02:52 ï¿½ Workflow Created: audit-ble-pipeline
 **Trigger:** User requested codifying the BLE XState pipeline audit into a reusable workflow.
 **Action:** Drafted and saved `.agents/workflows/audit-ble-pipeline.md` containing the 9-agent map-reduce prompt structure to ensure architectural verifications are not lost.
 **Verify result:** Workflow file written to disk successfully.
 
-### [ARTIFACT] 2026-06-11T02:14 — PLAN-deepdive-docs-holistic-sync Generated
+### [ARTIFACT] 2026-06-11T02:14 ï¿½ PLAN-deepdive-docs-holistic-sync Generated
 **Link:** [PLAN-deepdive-docs-holistic-sync.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-deepdive-docs-holistic-sync.md)
 **Summary:** Created plan to automatically sync high-level non-developer documentation (`System_Context_Diagram.md`, etc.) by introducing a new Phase 4 synthesis phase into the `/deepdive-docs` workflow. Cartographers will now append specific impact flags for architectural changes.
 
-### [MERGE] 2026-06-11T02:17 — deepdive-docs-holistic-sync ? master @ 64e6826d
+### [MERGE] 2026-06-11T02:17 ï¿½ deepdive-docs-holistic-sync ? master @ 64e6826d
 **What merged:**
 - Added `[IMPACTS_USER_JOURNEY]`, `[IMPACTS_C4_CONTEXT]`, and `[IMPACTS_STATE_CHART]` flags to `.agents/workflows/deepdive-docs.md`.
-- Appended `Phase 4 — High-Level Documentation Synthesis` to process flags and dynamically update corresponding high-level documentation and ADRs.
+- Appended `Phase 4 ï¿½ High-Level Documentation Synthesis` to process flags and dynamically update corresponding high-level documentation and ADRs.
 **Verify result:** TSC ?, Jest ?, all gates green ?
 **Files touched:** `.agents/workflows/deepdive-docs.md`
 
-### [MERGE] 2026-06-11T01:30 — deepdive-enhancements-batch ? master @ dea1556d
+### [MERGE] 2026-06-11T01:30 ï¿½ deepdive-enhancements-batch ? master @ dea1556d
 **What merged:**
 - Added domains DEVOPS_&_TOOLING, ANIMATION_&_PERFORMANCE, ACCESSIBILITY_&_I18N, and THE_TEST_SUITE to `deepdive-code-hunt.md`.
 - Added snipers R-28 (FlatList), R-29 (Circular Deps), R-30 (Zombie Tests) to `deepdive-code-hunt.md`.
@@ -589,138 +589,138 @@ TSC: ?  Jest: ?
 **Files touched:** `.agents/workflows/deepdive-code-hunt.md`, `.agents/workflows/deepdive-code-synthesis.md`
 **Pattern:** AST analysis, sub-agent TDD test generation, strict domain limits.
 
-### [EVENT] 2026-06-11T01:30 — /goal Completed: DeepDive Workflow Enhancements
+### [EVENT] 2026-06-11T01:30 ï¿½ /goal Completed: DeepDive Workflow Enhancements
 **Trigger:** User requested enhancements to the code-hunt and code-synthesis workflows to catch missing domains and generate tests.
 **Action:** Implemented all 4 tasks from `[BATCH:deepdive-enhancements]` in parallel worktree. Updated `System_Context_Diagram.md`, `User_Journey_Maps.md`, `State_Charts_UX.md`, and `Architecture_Decision_Records.md`.
 **Verify result:** Worktree validated and merged. Workflows are now primed with 55 agents and automated test generators.
 
-### [EVENT] 2026-06-10T20:11 — /intake Execution for DeepDive Enhancements
+### [EVENT] 2026-06-10T20:11 ï¿½ /intake Execution for DeepDive Enhancements
 **Trigger:** User approved Implementation Plan to intake the DeepDive enhancements and generate non-developer documentation.
 **Action:** Drafted 4 `PLAN-*.md` files for missing domains, missing snipers, test generators, and AST collision detection. Fully inserted the `[BATCH:deepdive-enhancements]` into `tools/SK8Lytz_Bucket_List.md` under `ON DECK` per Kanban schema.
 **Verify result:** Task fully formatted and successfully routed. Created 4 comprehensive architectural documentation files for non-developers in `tools/`.
 
-### [ARTIFACT] 2026-06-10T20:11 — Non-Developer Documentation Generated
+### [ARTIFACT] 2026-06-10T20:11 ï¿½ Non-Developer Documentation Generated
 **Link:** [System_Context_Diagram.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/System_Context_Diagram.md) | [User_Journey_Maps.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/User_Journey_Maps.md) | [State_Charts_UX.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/State_Charts_UX.md) | [Architecture_Decision_Records.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/Architecture_Decision_Records.md)
 **Summary:** Created Level-1 C4 System Context Diagram, User Journey Maps for Crew Sync and Offline Riding, UX State Charts for Hardware Connection lifecycle, and ADR index covering Offline-First, Supabase, and Software FRR decisions.
 
-### [MERGE] 2026-06-10T23:52 — cowboy-graphrag-iframe ? master @ f1b9eda2
+### [MERGE] 2026-06-10T23:52 ï¿½ cowboy-graphrag-iframe ? master @ f1b9eda2
 **What merged:** Added `GraphRagWidget.tsx` and routing in `App.tsx` to embed GraphRAG UI (`http://localhost:8505/`) into the Command Center.
 **Verify result:** TSC ?, Jest ?, gates ? (Manual merge due to orphaned worktrees blocking the gatekeeper)
 **Files touched:** `tools/command-center/src/App.tsx`, `tools/command-center/src/components/widgets/GraphRagWidget.tsx`
 
-### [EVENT] 2026-06-10T12:13 — Parallel Surgeon Fleet (Wave 2) Deployed
+### [EVENT] 2026-06-10T12:13 ï¿½ Parallel Surgeon Fleet (Wave 2) Deployed
 **Trigger:** User authorized Wave 2 execution.
 **Action:** Created 3 isolated Git worktrees and invoked 3 parallel Surgeon Developer Agents with explicit instructions to run `npm run verify` AFTER the commit to prevent attestation misalignment.
 **Batches Deployed:** pii-scrub-sweep, error-handling-sweep, memory-leak-sweep.
 **Status:** Fleet executing in background. Awaiting async completion messages before merging.
 
-### [MERGE] 2026-06-10T12:12 — group-concurrency-sweep-batch ? master @ 92a3b893
+### [MERGE] 2026-06-10T12:12 ï¿½ group-concurrency-sweep-batch ? master @ 92a3b893
 **What merged:** Fixed missing boolean re-entrancy locks and dependencies to resolve Race Condition Sweep violations for `street-mode-accelerometer` and `session-notifee-listener`.
 **Verify result:** TSC ?, Jest ?, tests and attestation verified via gatekeeper.
 **Files touched:** `src/hooks/useStreetMode.ts`, `src/context/SessionContext.tsx`
 
-### [EVENT] 2026-06-10T11:58 — Parallel Surgeon Fleet Deployed
+### [EVENT] 2026-06-10T11:58 ï¿½ Parallel Surgeon Fleet Deployed
 **Trigger:** User authorized full 10-agent execution of the audit batches using the Gemini 3.1 Pro High model.
 **Action:** Created 10 separate Git worktrees (e.g. `pii-scrub-sweep-batch`) and invoked 10 parallel Surgeon Developer Agents. Each agent is tasked with reading its respective `PLAN-*.md`, implementing the fix, running `npm run verify` in its isolated worktree, and committing locally. 
 **Batches Deployed:** pii-scrub, auth-context, error-handling, group-concurrency, type-safety, promise-io, memory-leak, hardcoded-delay, boolean-fsm, hal-enclosure.
 **Status:** Fleet executing in background. Awaiting async completion messages before merging to master.
 
-### [EVENT] 2026-06-10T11:55 — System Audit Bulk Intake Completed
+### [EVENT] 2026-06-10T11:55 ï¿½ System Audit Bulk Intake Completed
 **Trigger:** User mandated bulk intake of 21 tasks from deepdive-code-synthesis to prevent findings loss.
 **Action:** Sub-agent fleet parallelization (SA-1, SA-5, SA-6) + parent fallback (due to 429 quota limits) generated 21 `PLAN-*.md` implementation files. Executed multi_replace_file_content to bulk-insert all 21 Kanban-compliant task entries into `tools/SK8Lytz_Bucket_List.md`. Added `SYSTEM AUDIT ANCHOR` to Bucket List.
 **Verify result:** 10 plan files created. Bucket List updated with 21 new entries across TRIAGE QUEUE and ROADMAP. `ix/hal-enclosure-oracle-tab` upgraded to `fix/hal-enclosure-oracle-tab`.
 
-### [ARTIFACT] 2026-06-10T11:50 — Self-Healing Observatory Pipeline Specification & Batch Plan
+### [ARTIFACT] 2026-06-10T11:50 ï¿½ Self-Healing Observatory Pipeline Specification & Batch Plan
 **Link:** [self_healing_audit_system.md](file:///C:/Users/Magma/.gemini/antigravity/brain/28213fdb-ce7c-4291-859e-45b22a1df8e4/self_healing_audit_system.md) | [PLAN-observatory-pipeline.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-observatory-pipeline.md)
 **Summary:** Executed the `/intake` workflow for the entire `/self-heal` observatory pipeline. The spec was finalized with 5 locked decisions (MMKV-backed homegrown CrashReporter, moderate automation via cron, full 12-source sweep, 30-day rotation, and audit-codebase deprecation). 12 tasks across 6 phases were fully planned, formatted per Kanban schema, and added to the Bucket List under `?? ON DECK` in the `BATCH:observatory-pipeline` sequential batch.
 
-### [EVENT] 2026-06-10T11:15 — /deepdive-code-synthesis Complete — 257 Confirmed Findings
+### [EVENT] 2026-06-10T11:15 ï¿½ /deepdive-code-synthesis Complete ï¿½ 257 Confirmed Findings
 **Trigger:** User requested `/deepdive-code-synthesis` following completion of `/deepdive-code-hunt` (625 raw findings, 48 agent reports)
-**Action:** Executed full Reducer pipeline (Phases 0–3): schema validation, full ingestion of all 48 JSON reports, deduplication (exact + fuzzy), false-positive scrubbing, confidence scoring, KNOWN_ISSUES cross-reference (0 matches), metrics report, and 11 task cluster drafts.
-**Output:** `artifacts/system_audit_report.md` — 459 lines, 25KB
+**Action:** Executed full Reducer pipeline (Phases 0ï¿½3): schema validation, full ingestion of all 48 JSON reports, deduplication (exact + fuzzy), false-positive scrubbing, confidence scoring, KNOWN_ISSUES cross-reference (0 matches), metrics report, and 11 task cluster drafts.
+**Output:** `artifacts/system_audit_report.md` ï¿½ 459 lines, 25KB
 **Verify result:** Report written and verified. No source files modified.
 
-### [ARTIFACT] 2026-06-10T11:15 — System Audit Report (Synthesis Output)
+### [ARTIFACT] 2026-06-10T11:15 ï¿½ System Audit Report (Synthesis Output)
 **Link:** [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md)
 **Summary:** 257 confirmed findings across 11 task clusters after deduplication and FP scrub from 337 raw findings (80 FP removed, 23.8% FP rate). Three systemic failure modes: (1) PII leakage via AppLogger MAC address gaps, (2) type-safety erosion via `as unknown as` laundering in BLE/data layers, (3) per-navigation memory leaks in `useHardwareNotifications` + `useBLEScanner`. Clean zones: R-10 and R-13 both zero confirmed findings. 8 immediate Snack/Meal tasks ready for `/intake`. 3 Roadmap/Architecture tasks require planning.
 
-### [DECISION] 2026-06-10T11:15 — AppLogger Designated Tier-1 Hardening Target
-**Decision:** `AppLogger.ts` is the single highest-impact file in the audit — appearing in 9 of 11 clusters as origin or enabler. It is the first file that should enter a sprint.
+### [DECISION] 2026-06-10T11:15 ï¿½ AppLogger Designated Tier-1 Hardening Target
+**Decision:** `AppLogger.ts` is the single highest-impact file in the audit ï¿½ appearing in 9 of 11 clusters as origin or enabler. It is the first file that should enter a sprint.
 **Rejected:** Treating AppLogger issues as scattered one-offs across clusters. They share a root: missing `mac`/`deviceId` in `PII_KEY_PATTERNS` + direct `supabase.auth.*` call + unhandled VIP Fast-Lane promise.
 **Don't re-derive:** The correct fix is a single `fix/pii-logger-scrubber` task that adds the missing PII keys AND wraps the VIP Fast-Lane insert in `.catch()`. This is one task, not three.
-**Source:** `artifacts/system_audit_report.md` — Cluster A + Theme 1
+**Source:** `artifacts/system_audit_report.md` ï¿½ Cluster A + Theme 1
 
-### [ARTIFACT] 2026-06-10T11:00 — R-24 AsyncStorage Key Collision Audit Findings
+### [ARTIFACT] 2026-06-10T11:00 ï¿½ R-24 AsyncStorage Key Collision Audit Findings
 **Link:** [R-24_findings.json](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_raw/R-24_findings.json)
 **Summary:** Executed a comprehensive global audit of AsyncStorage key namespaces, duplicate key mappings, case casing sensitivity collisions, and legacy deprecated keys in the `src/` directory. Identified 16 distinct findings including high-severity issues (duplicate keys with lowercase-uppercase mismatches causing sandbox clearing failures, legacy banned `ng_` keys in `CrewService.ts` and `useProductCatalog.ts`), and localized/undocumented keys.
 
-### [EVENT] 2026-06-10T10:40 — deepdive-docs Cartography Synthesis Completed
+### [EVENT] 2026-06-10T10:40 ï¿½ deepdive-docs Cartography Synthesis Completed
 **Trigger:** User requested `/deepdive-docs`
 **Action:** Read all 21 cartography reports generated by the sub-agent fleet, extracted stale documentation tags for archival, injected the updated payloads into the Master Reference file, and ran the full QA verification gate.
 **Verify result:** TypeScript compiled clean, Jest passed (189 tests), and all QA gates green. Cryptographic attestation updated.
 
-### [ARTIFACT] 2026-06-10T10:30 — PATTERN_ENGINE Domain Cartography
+### [ARTIFACT] 2026-06-10T10:30 ï¿½ PATTERN_ENGINE Domain Cartography
 **Link:** [PATTERN_ENGINE_cartography.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/PATTERN_ENGINE_cartography.md)
 **Summary:** Generated a comprehensive cartography of the PATTERN_ENGINE domain detailing file manifests, imports/exports (Blast Radius), React Context interactions, Hook/Service I/O parameters, OS-specific platform branching, a detailed Mermaid sequence diagram mapping frame computation to BLE packet dispatch, and a complete catalog of all 81 pattern templates. Stale documentation tagged with `[MOVE_TO_ARCHIVE]`.
 
-### [EVENT] 2026-06-10T10:30 — PATTERN_ENGINE Domain Cartography Scan Completed
-**Trigger:** Cartography Scan for the PATTERN_ENGINE domain — Agent Prompt
+### [EVENT] 2026-06-10T10:30 ï¿½ PATTERN_ENGINE Domain Cartography Scan Completed
+**Trigger:** Cartography Scan for the PATTERN_ENGINE domain ï¿½ Agent Prompt
 **Action:** Performed a read-only audit of all files in the domain. Generated detailed mapping and wrote findings report to `artifacts/deepdive_docs/PATTERN_ENGINE_cartography.md`.
 **Verify result:** Verified artifact written on disk with non-zero size. No code modifications made.
 
-### [MERGE] 2026-06-10T10:21 — ble-t6-interrogator-service-tests ? master @ 174868f1
+### [MERGE] 2026-06-10T10:21 ï¿½ ble-t6-interrogator-service-tests ? master @ 174868f1
 **What merged:**
 - Added 12 Jest unit tests for `InterrogatorService.ts` in `src/services/ble/__tests__/InterrogatorService.test.ts`.
-- Group A: Full probe lifecycle — GATT session open, 0x63 HW query via enqueueWrite, notification callback fires ? `onDeviceInterrogated` + `cancelDeviceConnection` in finally block, MAC removed from `probingMacsRef`.
-- Group B: Error paths — `createGattSession` throws, `enqueueWrite` throws, 3500ms notification timeout ? all three paths call `cancelDeviceConnection` in finally.
+- Group A: Full probe lifecycle ï¿½ GATT session open, 0x63 HW query via enqueueWrite, notification callback fires ? `onDeviceInterrogated` + `cancelDeviceConnection` in finally block, MAC removed from `probingMacsRef`.
+- Group B: Error paths ï¿½ `createGattSession` throws, `enqueueWrite` throws, 3500ms notification timeout ? all three paths call `cancelDeviceConnection` in finally.
 - Group C: FTUE (500ms) vs standard (2000ms) queue delay verified via `createProbeQueue` + fake timers.
-- Group D: `loadHWCacheFromStorage` — valid JSON parse, malformed entry skipped, `getAllKeys` throws ? empty cache (no crash).
-- Group E: Duplicate guard — MAC already in `probingMacsRef` ? early return, no GATT attempted.
+- Group D: `loadHWCacheFromStorage` ï¿½ valid JSON parse, malformed entry skipped, `getAllKeys` throws ? empty cache (no crash).
+- Group E: Duplicate guard ï¿½ MAC already in `probingMacsRef` ? early return, no GATT attempted.
 - Fixed `BleMachine.test.ts` (Boy Scout): added AppLogger silence mock to stop `BLE_STATE_CHANGE` events leaking post-suite via `AppLogger.setInterval` flush (was causing worker crash).
 **Verify result:** TSC ?, Jest ? (189 tests, 20 suites), all 8 gates green ?
 **Files touched:** `src/services/ble/__tests__/InterrogatorService.test.ts` (new), `src/services/ble/__tests__/BleMachine.test.ts` (AppLogger mock added)
 **Lessons:**
-- `PingResult` has NO `protocolId` field — required fields are `ledPoints`, `segments`, `icType`, `icName`, `colorSorting`, `colorSortingName`, `detected`
-- Always read the actual type definition (P1) before building mocks — never assume fields from memory
-- `isPingResult` type guard validates `icType`, `icName`, `ledPoints`, `detected` — mock must satisfy all 4
+- `PingResult` has NO `protocolId` field ï¿½ required fields are `ledPoints`, `segments`, `icType`, `icName`, `colorSorting`, `colorSortingName`, `detected`
+- Always read the actual type definition (P1) before building mocks ï¿½ never assume fields from memory
+- `isPingResult` type guard validates `icType`, `icName`, `ledPoints`, `detected` ï¿½ mock must satisfy all 4
 
-### [MERGE] 2026-06-10T10:11 — ble-t5-heartbeat-service-tests ? master @ 5d7c387f
+### [MERGE] 2026-06-10T10:11 ï¿½ ble-t5-heartbeat-service-tests ? master @ 5d7c387f
 **What merged:**
 - Added 12 Jest unit tests for `HeartbeatService.ts` in `src/services/ble/__tests__/HeartbeatService.test.ts`.
-- Group A: 45s interval timing — fires at exactly 45s, not immediately.
+- Group A: 45s interval timing ï¿½ fires at exactly 45s, not immediately.
 - Group B: Zengge 0x63 opcode bytes validated via `enqueueWrite` + `writeCharacteristicWithoutResponseForDevice`.
 - Group C: RSSI fallback for unknown/BanlanX adapters (`readRSSIForDevice` called directly, NOT via enqueueWrite).
 - Group D: `HEARTBEAT_FAIL` + `cancelDeviceConnection` call-order regression guard.
 - Group E: Two-device sequential tick, first-device-fail does not block second device.
-- Group F: `clearInterval` cleanup — orphaned timer cannot fire `HEARTBEAT_FAIL`.
+- Group F: `clearInterval` cleanup ï¿½ orphaned timer cannot fire `HEARTBEAT_FAIL`.
 - Fixed `RecoveryService.test.ts` infra: AppLogger silence mock (ENOBUFS fix) + `jest.clearAllTimers()` in afterEach (timer leak fix).
 **Verify result:** TSC ?, Jest ? (177 tests), all 8 gates green ?
 **Files touched:** `src/services/ble/__tests__/HeartbeatService.test.ts` (new), `src/services/ble/__tests__/RecoveryService.test.ts` (infra fixes)
 **Patterns established:**
-- `setInterval` actors: use `jest.advanceTimersByTime(N)` + `flushAsyncQueue()` — NOT `runAllTimersAsync()` (infinite loop)
+- `setInterval` actors: use `jest.advanceTimersByTime(N)` + `flushAsyncQueue()` ï¿½ NOT `runAllTimersAsync()` (infinite loop)
 - AppLogger silence mock: `jest.mock('../../AppLogger', ...)` prevents ENOBUFS in all future service tests
 - `jest.clearAllTimers()` before `jest.useRealTimers()` in afterEach prevents post-suite flush queue leak
 
-### [MERGE] 2026-06-10T09:56 — ble-t4-recovery-service-tests ? master @ 4fae3d5b
+### [MERGE] 2026-06-10T09:56 ï¿½ ble-t4-recovery-service-tests ? master @ 4fae3d5b
 **What merged:**
 - Added 13 Jest unit tests covering all 5 groups for `RecoveryService.ts` in `src/services/ble/__tests__/RecoveryService.test.ts`.
-- Group A: Regression guard — `clearWriteQueue()` called synchronously before first GATT attempt (commit `2276ac8a` fix guard).
-- Group B: RECOVERY_COMPLETE path — GATT success, `adapterMapRef` update, `monitorCharacteristicForService` re-registration, `onOrganicDisconnect` disconnect subscription rewiring, MTU re-negotiation on Android.
-- Group C: RECOVERY_FAIL paths — empty `ghostedDeviceIds`, Phase 1+2 exhaustion (35 attempts), Phase 3 poll exhaustion (120 polls).
-- Group D: Phase 3 happy path — `getSweepedDevice` returns device ? GATT reconnect ? RECOVERY_COMPLETE; Phase 3 GATT failure ? RECOVERY_FAIL.
-- Group E: `cancel()` during Phase 1 backoff and Phase 3 poll — exits cleanly with no events sent.
+- Group A: Regression guard ï¿½ `clearWriteQueue()` called synchronously before first GATT attempt (commit `2276ac8a` fix guard).
+- Group B: RECOVERY_COMPLETE path ï¿½ GATT success, `adapterMapRef` update, `monitorCharacteristicForService` re-registration, `onOrganicDisconnect` disconnect subscription rewiring, MTU re-negotiation on Android.
+- Group C: RECOVERY_FAIL paths ï¿½ empty `ghostedDeviceIds`, Phase 1+2 exhaustion (35 attempts), Phase 3 poll exhaustion (120 polls).
+- Group D: Phase 3 happy path ï¿½ `getSweepedDevice` returns device ? GATT reconnect ? RECOVERY_COMPLETE; Phase 3 GATT failure ? RECOVERY_FAIL.
+- Group E: `cancel()` during Phase 1 backoff and Phase 3 poll ï¿½ exits cleanly with no events sent.
 **Verify result:** TSC ?, Jest ?, all 8 gates green ?
 **Files touched:** src/services/ble/__tests__/RecoveryService.test.ts
-**Pattern:** XState v5 `fromCallback.config` direct invocation with mock `sendBack` — same `(actorLogic as any).config(...)` technique established for callback actors.
+**Pattern:** XState v5 `fromCallback.config` direct invocation with mock `sendBack` ï¿½ same `(actorLogic as any).config(...)` technique established for callback actors.
 
-### [MERGE] 2026-06-10T09:39 — ble-t3-connect-service-tests ? master @ 43377f8c
+### [MERGE] 2026-06-10T09:39 ï¿½ ble-t3-connect-service-tests ? master @ 43377f8c
 **What merged:**
 - Added 18 comprehensive Jest unit tests covering single device connect, group connect sequential flow, cache hit logic, transient GATT 133 retries with backoff, stale device flush, MTU negotiation retries/fallbacks, adapter mapping, and `onOrganicDisconnect` wiring in `src/services/ble/__tests__/ConnectService.test.ts`.
 - Refactored tests to run the `connectService` Promise Actor Logic via XState v5 `createActor`, subscribing to state transition snapshots to assert output or capture rejections without unhandled exceptions.
 **Verify result:** TSC ?, Jest 152/152 PASS ?, all 8 gates green ?
 **Files touched:** src/services/ble/__tests__/ConnectService.test.ts
 
-### [MERGE] 2026-06-10T09:25 — ble-t1-machine-tests ? master @ c30039e1
+### [MERGE] 2026-06-10T09:25 ï¿½ ble-t1-machine-tests ? master @ c30039e1
 **What merged:**
 - Added 18 comprehensive Jest unit tests covering all 6 state transitions, context assertions, and organic disconnect recovery trigger guards in `src/services/ble/__tests__/BleMachine.test.ts`.
 - Fixed `BleMachine.ts` `setConnectedDevices` action to correctly map XState promise resolution `event.output.devices` inside `onDone` actor callbacks.
@@ -730,14 +730,14 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest 134/134 PASS ?, all 8 gates green ?
 **Files touched:** src/services/ble/BleMachine.ts, src/services/ble/BleMachine.types.ts, src/services/ble/ConnectService.ts, src/services/ble/__tests__/BleMachine.test.ts
 
-### [DECISION] 2026-06-10T09:25 — XState actor promise output mapping and global __DEV__ mock
+### [DECISION] 2026-06-10T09:25 ï¿½ XState actor promise output mapping and global __DEV__ mock
 **Decision:**
 1. Promise actor resolution yields output on `event.output`, not `event.devices`. Reusable FSM actions must verify the `xstate.done.actor.*` event structure to preserve context on transition.
 2. Async timeouts in global singleton instances (like `AppLogger.ts` flush queues) run outside Jest's React/hook environments and throw `ReferenceError: __DEV__ is not defined` if `__DEV__` isn't globally mock-declared. Injecting `(global as unknown as { __DEV__: boolean }).__DEV__ = true` at the test root surgically fixes this without editing production log modules.
 **Don't re-derive:** Use `snapshot.value` instead of `snapshot.matches` inside unit tests where actor logic is provided via `.provide()` to bypass TypeScript matches type restrictions.
 **Source:** src/services/ble/BleMachine.ts:L24-30, src/services/ble/__tests__/BleMachine.test.ts:L1-20
 
-### [MERGE] 2026-06-10T09:11 — ble-t2-static-guards ? master @ 50a60012
+### [MERGE] 2026-06-10T09:11 ï¿½ ble-t2-static-guards ? master @ 50a60012
 **What merged:**
 - Added Guard A: Direct `startDeviceScan` call detector using regex `\.startDeviceScan\(` (excludes `BleMachine.ts` and `__tests__` folders) to permanently prevent dual-scan regressions.
 - Added Guard B: `onOrganicDisconnect` wiring validator to prevent silent recovery drops in `useBLE.ts`.
@@ -747,35 +747,35 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** tools/verifiable-check-runner.js, tools/auto-archiver.js, tools/SK8Lytz_Bucket_List.md
 
-### [MERGE] 2026-06-10T09:00 — ble-master-ref-sync ? master @ c8f221af
+### [MERGE] 2026-06-10T09:00 ï¿½ ble-master-ref-sync ? master @ c8f221af
 **What merged:**
-- docs(master-ref): Fix VS-003 parity violation — Master Reference BLE section fully updated to XState pipeline
-- §3 BLE Stability Constraints: items 1+2 now describe BleMachine (XState) + BleWriteQueue (priority tiers), not deleted BleStateMachine/GattMutex
-- §3 Auto-Recovery System: rewritten for RecoveryService XState fromCallback actor, organic disconnect dual-callback pattern documented
-- §3 Connection Health Heartbeat: rewritten for HeartbeatService XState fromCallback actor
-- §3 iOS/Android Platform Guards: file refs corrected to ConnectService.ts + BleMachine.ts
-- §4 BLE Engine Domain: rebuilt with XState Actor table + Hook-Level Services table + DELETED CAUTION block
-- §4 DDA intro + File Manifest: stale hook entries strikethrough'd with migration notes
+- docs(master-ref): Fix VS-003 parity violation ï¿½ Master Reference BLE section fully updated to XState pipeline
+- ï¿½3 BLE Stability Constraints: items 1+2 now describe BleMachine (XState) + BleWriteQueue (priority tiers), not deleted BleStateMachine/GattMutex
+- ï¿½3 Auto-Recovery System: rewritten for RecoveryService XState fromCallback actor, organic disconnect dual-callback pattern documented
+- ï¿½3 Connection Health Heartbeat: rewritten for HeartbeatService XState fromCallback actor
+- ï¿½3 iOS/Android Platform Guards: file refs corrected to ConnectService.ts + BleMachine.ts
+- ï¿½4 BLE Engine Domain: rebuilt with XState Actor table + Hook-Level Services table + DELETED CAUTION block
+- ï¿½4 DDA intro + File Manifest: stale hook entries strikethrough'd with migration notes
 **Verify result:** TSC clean, Jest 116/116 PASS, all gates green
 **Files touched:** tools/SK8Lytz_App_Master_Reference.md
 
-### [DECISION] 2026-06-10T09:00 — Double-lock memory strategy for BLE architecture
+### [DECISION] 2026-06-10T09:00 ï¿½ Double-lock memory strategy for BLE architecture
 **Decision:** Update Master Reference surgically NOW (done), then run /deepdive-docs + /deepdive-code-hunt AFTER ble-test-hardening batch completes as a second ground-truth verification pass.
-**Don't re-derive:** The deepdive fleet does NOT replace the surgical update — it supplements it. The fleet catches what we missed; the surgical update catches what the fleet might misinterpret from deleted files still in git history.
+**Don't re-derive:** The deepdive fleet does NOT replace the surgical update ï¿½ it supplements it. The fleet catches what we missed; the surgical update catches what the fleet might misinterpret from deleted files still in git history.
 **Source:** Session decision, no single file
-### [MERGE] 2026-06-10T08:38 — ble-p8-organic-fix ? master @ 2276ac8a
+### [MERGE] 2026-06-10T08:38 ï¿½ ble-p8-organic-fix ? master @ 2276ac8a
 **What merged:**
 - CRITICAL FIX: Organic device drops now correctly trigger RECOVERY_START
 - Root cause: handleOrganicDisconnect in useBLE.ts was a logging-only no-op. ConnectService and RecoveryService called it on BLE disconnect, but nothing sent RECOVERY_START to the machine. Devices that dropped were permanently lost.
 - Fix: Added onOrganicDisconnect callback (distinct from handleOrganicDisconnect) wired through BleMachineContext ? ConnectService + RecoveryService. useBLE.ts sends RECOVERY_START with DISCONNECTING guard.
-- Also: clearWriteQueue() added at RecoveryService start — purges stale pre-disconnect writes that competed with recovery pings.
+- Also: clearWriteQueue() added at RecoveryService start ï¿½ purges stale pre-disconnect writes that competed with recovery pings.
 - Files: ConnectService.ts, RecoveryService.ts, BleMachine.types.ts, BleMachine.ts, useBLE.ts
 **Verify result:** TSC clean, Jest 116/116 PASS, all 6 gates green
 
-### [DECISION] 2026-06-10T08:38 — onOrganicDisconnect is the recovery trigger, handleOrganicDisconnect is logging-only
+### [DECISION] 2026-06-10T08:38 ï¿½ onOrganicDisconnect is the recovery trigger, handleOrganicDisconnect is logging-only
 **Decision:** Keep both callbacks. handleOrganicDisconnect = telemetry/logging only. onOrganicDisconnect = sends RECOVERY_START.
 **Rejected:** Merging them into one callback. The separation is intentional: logging must not be coupled to recovery logic.
-**Don't re-derive:** The disconnect subscription in ConnectService MUST call both. Removing onOrganicDisconnect will silently break recovery again — it will look like it works in tests but fail on real hardware organic drops.
+**Don't re-derive:** The disconnect subscription in ConnectService MUST call both. Removing onOrganicDisconnect will silently break recovery again ï¿½ it will look like it works in tests but fail on real hardware organic drops.
 **Source:** src/services/ble/ConnectService.ts:L208-214, src/hooks/useBLE.ts:L182-187
 ### [EVENT] 2026-06-10T08:15 â€” BLE XState Pipeline Audit Completed
 **Trigger:** BLE XState Pipeline Audit â€” Agent Prompt
@@ -2817,7 +2817,7 @@ egistered_devices, crew_memberships) when a specific cluster/pin is clicked, to 
 - **Impact:** Violated Safety Rule 1 (Master Fortress Lock). Risk of master branch instability.
 - **Status:** MONITORING
 
-### [EVENT] 2026-06-10T11:09:00Z — Orthogonal Code Audit Hunt Complete
+### [EVENT] 2026-06-10T11:09:00Z ï¿½ Orthogonal Code Audit Hunt Complete
 **What shipped:**
 - Completed `/deepdive-code-hunt` static analysis sweep across 21 domains and 27 rules.
 - Spawned 46 concurrent sub-agents auditing the entire codebase in parallel.
@@ -2886,7 +2886,7 @@ egistered_devices, crew_memberships) when a specific cluster/pin is clicked, to 
 **Files touched:** src/services/BleWriteQueue.ts, src/services/ble/ConnectService.ts, src/services/BlePingService.ts, src/services/ble/InterrogatorService.ts, docs/audits/AUDIT-hardcoded-delays.md, src/services/ble/__tests__/*.test.ts
 
 
-### [MERGE] 2026-06-10T17:46 — observatory-pipeline-rescue -> master @ f7f2385a
+### [MERGE] 2026-06-10T17:46 ï¿½ observatory-pipeline-rescue -> master @ f7f2385a
 **What merged:** Rescue and implementation of the Self-Healing Audit System (Observatory) core intelligence engines (dedup, scoring, crossref, task_generator) and telemetry collectors.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** tools/observatory/action/*.mjs, tools/observatory/collectors/*.mjs, tools/observatory/__tests__/*.test.js
@@ -2896,33 +2896,33 @@ egistered_devices, crew_memberships) when a specific cluster/pin is clicked, to 
 **Graveyard**: Extracted 18 [MOVE_TO_ARCHIVE] tags and deposited them into Section 13.
 
 
-### [DECISION] 2026-06-10T20:05 — Monolith Extraction Audit Complete (Wave 1)
+### [DECISION] 2026-06-10T20:05 ï¿½ Monolith Extraction Audit Complete (Wave 1)
 **Decision:** 13 of 14 suspected monolith files are CONFIRMED. DockedController.tsx (65.6KB/50 hooks) is the highest-risk file in the codebase. DashboardScreen.tsx (50.1KB/56 hooks) has undergone Phase 1 extraction and is conditionally safe for surgical edits.
 **Don't re-derive:** 
-- DockedController.tsx lines 205-500 (hook zone) — DO NOT ADD/REMOVE/REORDER hooks. Lines 900+ (JSX section) are safe.
-- DockedController.tsx lines 79-121 — INLINE component FixedPatternPreviewRow. Extract before editing.
-- DockedController.tsx lines 247-263 — writeToDevice BLE write bus. Regression = all hardware output crashes.
-- DashboardScreen.tsx — 56 hooks are DELEGATION calls to already-extracted domain hooks. Safe for JSX edits, NOT for hook structure changes.
-- supabase.ts — Auto-generated (147KB). NEVER edit directly. Use /db-sync.
+- DockedController.tsx lines 205-500 (hook zone) ï¿½ DO NOT ADD/REMOVE/REORDER hooks. Lines 900+ (JSX section) are safe.
+- DockedController.tsx lines 79-121 ï¿½ INLINE component FixedPatternPreviewRow. Extract before editing.
+- DockedController.tsx lines 247-263 ï¿½ writeToDevice BLE write bus. Regression = all hardware output crashes.
+- DashboardScreen.tsx ï¿½ 56 hooks are DELEGATION calls to already-extracted domain hooks. Safe for JSX edits, NOT for hook structure changes.
+- supabase.ts ï¿½ Auto-generated (147KB). NEVER edit directly. Use /db-sync.
 **Wave 2-6 Safe Edit Zones (DockedController):** Lines 900+ JSX only. Hook zone strictly off-limits.
 **Wave 2-6 Safe Edit Zones (DashboardScreen):** useState initializer values, useCallback return bodies (not dep arrays), JSX leaf nodes (lines ~900+).
 **Optional pre-Wave 2 extractions (RECOMMENDED not blocking):**
-- Extract FixedPatternPreviewRow (lines 79-121) to src/components/docked/FixedPatternPreviewRow.tsx — Snack
-- Extract useDeepLinkHandler (DashboardScreen lines 308-327) to src/hooks/useDeepLinkHandler.ts — Snack
-**Source:** docs/plans/PLAN-monolith-extraction-audit.md — Audit Results 2026-06-10 section
+- Extract FixedPatternPreviewRow (lines 79-121) to src/components/docked/FixedPatternPreviewRow.tsx ï¿½ Snack
+- Extract useDeepLinkHandler (DashboardScreen lines 308-327) to src/hooks/useDeepLinkHandler.ts ï¿½ Snack
+**Source:** docs/plans/PLAN-monolith-extraction-audit.md ï¿½ Audit Results 2026-06-10 section
 **Cross-checked:** Wave 1 exception-masking agent warned about DockedController lines 438/470
 
 
 
-### [MERGE] 2026-06-10T20:15 — Wave 1 of deepdive-sweep ? master @ 559dcaaf
+### [MERGE] 2026-06-10T20:15 ï¿½ Wave 1 of deepdive-sweep ? master @ 559dcaaf
 **What merged:**
-- latlist-render-sweep @ 3bf9e046 — 11 files, 17 FlatList inline props stabilized with useCallback
-- hal-enclosure-sweep @ 855cc7d5 — 7 files, 0x59/0x40 byte construction moved to ZenggeProtocol, MAC PII scrubbed from 3 call sites, group writes parallelized
-- exception-masking-sweep @ 559dcaaf — 10 files, 17 silent catches fixed with canonical e instanceof Error pattern
-- monolith-extraction-audit — read-only, 13/14 files confirmed monoliths, advisory written to PLAN file
+- latlist-render-sweep @ 3bf9e046 ï¿½ 11 files, 17 FlatList inline props stabilized with useCallback
+- hal-enclosure-sweep @ 855cc7d5 ï¿½ 7 files, 0x59/0x40 byte construction moved to ZenggeProtocol, MAC PII scrubbed from 3 call sites, group writes parallelized
+- exception-masking-sweep @ 559dcaaf ï¿½ 10 files, 17 silent catches fixed with canonical e instanceof Error pattern
+- monolith-extraction-audit ï¿½ read-only, 13/14 files confirmed monoliths, advisory written to PLAN file
 **Verify result:** TSC ? Jest 203/203 ? All 8 gates ? on all 3 code tasks
 **Files touched:** 28 files total, ~346 lines net change across 3 merge commits
-**Wave 2 status:** UNLOCKED — promise-safety-sweep ready to start
+**Wave 2 status:** UNLOCKED ï¿½ promise-safety-sweep ready to start
 **FRICTION-029:** Blast radius scanner false-positived 2x on ZenggeProtocol.ts catch-block edits. Filed. Monitoring for 3rd occurrence before proposing scanner fix.
 **Key advisory for Wave 2-6:** DockedController.tsx (65.6KB/50 hooks) hook zone strictly off-limits. Safe zones: JSX lines 900+. DashboardScreen.tsx safe for leaf/JSX edits only.
 
@@ -2942,11 +2942,11 @@ egistered_devices, crew_memberships) when a specific cluster/pin is clicked, to 
 **Files touched:** src/hooks/useAccountOverview.ts, src/components/AccountModal.tsx, src/components/CrewModal.tsx, src/components/auth/AuthFormSignUp.tsx, src/hooks/useDashboardProfile.ts, src/hooks/useCrewManage.ts, src/hooks/useCrewHub.ts, src/screens/Onboarding/HardwareSetupWizardScreen.tsx, src/providers/ComplianceGate.tsx, src/providers/BluetoothGuard.tsx, src/hooks/useDockedControllerState.ts, src/components/admin/tools/FeatureFlagsPanel.tsx, src/components/admin/tools/HardwareBlacklistPanel.tsx, src/hooks/useGradients.ts, src/components/patterns/GradientLibraryTab.tsx
 
 
-### [MERGE] 2026-06-10T21:41 — Wave 4 of deepdive-sweep ? master @ 0374dc4c
+### [MERGE] 2026-06-10T21:41 ï¿½ Wave 4 of deepdive-sweep ? master @ 0374dc4c
 **What merged:**
-- state-matrix-sweep @ 0374dc4c — fixed R-14 (missing error/isLoading states), R-24 (normalized AsyncStorage keys), R-16 (removed hardcoded setTimeout delays in favor of proper lifecycles/queues)
+- state-matrix-sweep @ 0374dc4c ï¿½ fixed R-14 (missing error/isLoading states), R-24 (normalized AsyncStorage keys), R-16 (removed hardcoded setTimeout delays in favor of proper lifecycles/queues)
 **Verify result:** TSC ? Jest ? All 8 gates ?
-**Wave 5 status:** UNLOCKED — misc-guardrail-sweep ready to start
+**Wave 5 status:** UNLOCKED ï¿½ misc-guardrail-sweep ready to start
 
 
 ### [DECISION] 2026-06-10T21:50 ? Misc Guardrail Fixes & R-27 Context Consumer Depth
@@ -2969,19 +2969,19 @@ egistered_devices, crew_memberships) when a specific cluster/pin is clicked, to 
 **Files touched:** DashboardScreen.tsx, useDashboardController.tsx, useHardwareNotifications.ts, RegisteredFleetSlab.tsx, MySkatesSlab.tsx, SkateGroupCard.tsx, DashboardTelemetryHero.tsx, useControllerDispatch.ts, DockedController.tsx, useDockedControllerState.ts
 
 
-### [MERGE] 2026-06-10T23:11 — cartography-docs -> master @ e030a10a
+### [MERGE] 2026-06-10T23:11 ï¿½ cartography-docs -> master @ e030a10a
 **What merged:** Deep-Dive Cartography (21 Domains)
 - Injected architecture profiles, blast radiuses, sequence diagrams, and OS variance matrices for all 21 system domains into SK8Lytz_App_Master_Reference.md.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** tools/SK8Lytz_App_Master_Reference.md
 
-### [MERGE] 2026-06-10T23:28 — cartography-docs -> master @ b832f67b
+### [MERGE] 2026-06-10T23:28 ï¿½ cartography-docs -> master @ b832f67b
 **What merged:** Deep-Dive Cartography (21 Domains)
 - Injected architecture profiles, blast radiuses, sequence diagrams, and OS variance matrices for all 21 system domains into SK8Lytz_App_Master_Reference.md.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** tools/SK8Lytz_App_Master_Reference.md
 
-### [MERGE] 2026-06-10T23:32 — cartography-docs -> master @ b832f67b
+### [MERGE] 2026-06-10T23:32 ï¿½ cartography-docs -> master @ b832f67b
 **What merged:** Deep-Dive Cartography (21 Domains)
 - Injected architecture profiles, blast radiuses, sequence diagrams, and OS variance matrices for all 21 system domains into SK8Lytz_App_Master_Reference.md.
 **Verify result:** TSC ?, Jest ?, gates ?
@@ -3048,7 +3048,7 @@ egistered_devices, crew_memberships) when a specific cluster/pin is clicked, to 
 **Verify result:** TSC OK, Jest OK, gates OK.
 **Notes:** Safely acknowledged hardcoded setTimeout BLE technical debt without causing massive architectural regressions. Gatekeeper completed successfully.
 
-### [EVENT] 2026-06-10T22:30 — components-auth Sweep Completed
+### [EVENT] 2026-06-10T22:30 ï¿½ components-auth Sweep Completed
 **Trigger:** Execute the `chore/sweep-components-auth` task.
 **Action:**
 - Resolved components-auth domain findings:
@@ -3077,7 +3077,7 @@ egistered_devices, crew_memberships) when a specific cluster/pin is clicked, to 
 **Verify result:** TSC compiled clean, Jest unit tests passed, all verification gates green via verifiable-check-runner.js (Task 69).
 **Files touched:** src/types/supabase.ts, supabase/functions/notify-crew-session/index.ts.
 
-### [MERGE] 2026-06-11T03:36 — Wave 2 Sweep Batch merged ? master
+### [MERGE] 2026-06-11T03:36 ï¿½ Wave 2 Sweep Batch merged ? master
 **What merged:**
 - Resolved 70 findings across 5 Wave 2 domains:
   - `sweep-components-admin`: Fixed `isLoading` prop passing, `AdminPicksScheduler` FSM status, `SafeAreaView` notches padding, and `Sk8LytzProgrammer` compilation.
@@ -3098,7 +3098,7 @@ egistered_devices, crew_memberships) when a specific cluster/pin is clicked, to 
 
 
 
-### [EVENT] 2026-06-11T05:30 — /deepdive-docs Completed
+### [EVENT] 2026-06-11T05:30 ï¿½ /deepdive-docs Completed
 **Trigger:** User requested `/deepdive-docs` workflow.
 **Action:**
 - Cleaned and rebuilt `tools/SK8Lytz_App_Master_Reference.md` to purge legacy duplicates and line-number bugs.
@@ -3120,7 +3120,7 @@ egistered_devices, crew_memberships) when a specific cluster/pin is clicked, to 
 - [User_Journey_Maps.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/User_Journey_Maps.md)
 - [SESSION_LOG.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SESSION_LOG.md)
 
-### [EVENT] 2026-06-11T20:30 — Docker Compose Workflow Parity Completed
+### [EVENT] 2026-06-11T20:30 ï¿½ Docker Compose Workflow Parity Completed
 **What shipped:**
 - Aligned session kickoff (`/hello`), smoke test (`/smoke-test`), and dev server (`/dev-server`) workflows with Docker Compose.
 - Updated `tools/start-web-demo.ps1`, `tools/cheat-sheet.html`, `tools/SK8Lytz_TEST_PLAN.md`, and `tools/SK8Lytz_App_Master_Reference.md` to deprecate host PM2 daemons and document retired scripts.
@@ -3130,18 +3130,18 @@ egistered_devices, crew_memberships) when a specific cluster/pin is clicked, to 
 **Friction Audit:** 0 new events | 0 resolved | 0 incremented
 **System evolution:** none
 
-### [ARTIFACT] 2026-06-11T22:08 — Session Machine Test Coverage Appended
+### [ARTIFACT] 2026-06-11T22:08 ï¿½ Session Machine Test Coverage Appended
 **Description:** Appended Session Machine XState v5 test coverage section to SK8Lytz_TEST_PLAN.md.
 
-### [MERGE READY] docs/test-plan-session-machine — 9e85de0b
+### [MERGE READY] docs/test-plan-session-machine ï¿½ 9e85de0b
 Files touched: `tools/SK8Lytz_TEST_PLAN.md`
 TSC: ?  Jest: ?
 
-### [ARTIFACT] 2026-06-11T22:25 — c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/UI_MODALS_cartography.md
+### [ARTIFACT] 2026-06-11T22:25 ï¿½ c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/UI_MODALS_cartography.md
 **What:** Architectural Cartography Report for the UI_MODALS domain.
 **Why:** Documented all 11 files in the domain, their blast radius, consumed contexts, service I/O, platform OS branching matrices, design system tokens, and BLE probing and cloud scene application sequence diagrams.
 
-### [MERGE READY] fix/session-ui-cleanup — 727e2057
+### [MERGE READY] fix/session-ui-cleanup ï¿½ 727e2057
 Files touched: src/components/docked/StreetPanel.tsx, src/components/DockedController.tsx, src/services/session/__tests__/SessionCommitService.test.ts
 TSC: ?  Jest: ?
 
@@ -3169,7 +3169,7 @@ TSC: ?  Jest: ?
 **Don't re-derive:** In FTUE, the app runs a persistent background battery sweeper that scans indefinitely. If the wizard blocks transition to Step 2 while `bleState === 'SCANNING'`, the user is deadlocked on Step 1: devices are discovered in JS but the Next button displays `SEARCHING FOR SKATES...` and remains disabled forever.
 **Source:** [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx#L551)
 
-### [ARTIFACT] 2026-06-13T05:40 — c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/NOTIFICATIONS_&_ROUTING_cartography.md
+### [ARTIFACT] 2026-06-13T05:40 ï¿½ c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/NOTIFICATIONS_&_ROUTING_cartography.md
 **What:** Architectural Cartography Report for the NOTIFICATIONS_&_ROUTING domain.
 **Why:** Documented all 7 files in the domain, their blast radius, consumed/provided contexts, service input/output registries, platform OS branching matrices, and background session notification dispatch and push token/geocoding sequence diagrams.
 
@@ -3185,7 +3185,7 @@ TSC: ?  Jest: ?
 **Summary:** User asked for useful extensions. Researched and compiled a list of high-value Supabase (PostgreSQL) and VS Code development extensions specific to the SK8Lytz offline-first, BLE, and React Native architecture.
 
 
-### [EVENT] 2026-06-11T05:30 — /deepdive-docs Completed
+### [EVENT] 2026-06-11T05:30 ï¿½ /deepdive-docs Completed
 **Trigger:** User requested `/deepdive-docs` workflow.
 **Action:**
 - Cleaned and rebuilt `tools/SK8Lytz_App_Master_Reference.md` to purge legacy duplicates and line-number bugs.
@@ -3207,7 +3207,7 @@ TSC: ?  Jest: ?
 - [User_Journey_Maps.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/User_Journey_Maps.md)
 - [SESSION_LOG.md](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SESSION_LOG.md)
 
-### [EVENT] 2026-06-11T20:30 — Docker Compose Workflow Parity Completed
+### [EVENT] 2026-06-11T20:30 ï¿½ Docker Compose Workflow Parity Completed
 **What shipped:**
 - Aligned session kickoff (`/hello`), smoke test (`/smoke-test`), and dev server (`/dev-server`) workflows with Docker Compose.
 - Updated `tools/start-web-demo.ps1`, `tools/cheat-sheet.html`, `tools/SK8Lytz_TEST_PLAN.md`, and `tools/SK8Lytz_App_Master_Reference.md` to deprecate host PM2 daemons and document retired scripts.
@@ -3217,18 +3217,18 @@ TSC: ?  Jest: ?
 **Friction Audit:** 0 new events | 0 resolved | 0 incremented
 **System evolution:** none
 
-### [ARTIFACT] 2026-06-11T22:08 — Session Machine Test Coverage Appended
+### [ARTIFACT] 2026-06-11T22:08 ï¿½ Session Machine Test Coverage Appended
 **Description:** Appended Session Machine XState v5 test coverage section to SK8Lytz_TEST_PLAN.md.
 
-### [MERGE READY] docs/test-plan-session-machine — 9e85de0b
+### [MERGE READY] docs/test-plan-session-machine ï¿½ 9e85de0b
 Files touched: `tools/SK8Lytz_TEST_PLAN.md`
 TSC: ?  Jest: ?
 
-### [ARTIFACT] 2026-06-11T22:25 — c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/UI_MODALS_cartography.md
+### [ARTIFACT] 2026-06-11T22:25 ï¿½ c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/UI_MODALS_cartography.md
 **What:** Architectural Cartography Report for the UI_MODALS domain.
 **Why:** Documented all 11 files in the domain, their blast radius, consumed contexts, service I/O, platform OS branching matrices, design system tokens, and BLE probing and cloud scene application sequence diagrams.
 
-### [MERGE READY] fix/session-ui-cleanup — 727e2057
+### [MERGE READY] fix/session-ui-cleanup ï¿½ 727e2057
 Files touched: src/components/docked/StreetPanel.tsx, src/components/DockedController.tsx, src/services/session/__tests__/SessionCommitService.test.ts
 TSC: ?  Jest: ?
 
@@ -3256,12 +3256,12 @@ TSC: ?  Jest: ?
 **Don't re-derive:** In FTUE, the app runs a persistent background battery sweeper that scans indefinitely. If the wizard blocks transition to Step 2 while `bleState === 'SCANNING'`, the user is deadlocked on Step 1: devices are discovered in JS but the Next button displays `SEARCHING FOR SKATES...` and remains disabled forever.
 **Source:** [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx#L551)
 
-### [ARTIFACT] 2026-06-13T05:40 — c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/NOTIFICATIONS_&_ROUTING_cartography.md
+### [ARTIFACT] 2026-06-13T05:40 ï¿½ c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs/NOTIFICATIONS_&_ROUTING_cartography.md
 **What:** Architectural Cartography Report for the NOTIFICATIONS_&_ROUTING domain.
 **Why:** Documented all 7 files in the domain, their blast radius, consumed/provided contexts, service input/output registries, platform OS branching matrices, and background session notification dispatch and push token/geocoding sequence diagrams.
 
 
-### [DECISION] 2026-06-13T01:22 — Comprehensive Repo Restructure
+### [DECISION] 2026-06-13T01:22 ï¿½ Comprehensive Repo Restructure
 **Decision:** Consolidate all executable scripts into `tools/`, all documentation and plans into `docs/`, and move root garbage files into `scratch/` and `releases/`.
 **Rejected:** Leaving files scattered across root which violated separation of concerns.
 **Don't re-derive:** The `docs/` directory is now the canonical source of truth for all rules, plans, and markdown documents. All .agents constitutional rules were updated to reflect this path shift.
@@ -3272,21 +3272,21 @@ TSC: ?  Jest: ?
 - docs/plans/PLAN-refactor-session-unified-heartbeat.md
 
 
-### [MERGE] 2026-06-13T17:12 — deepdive-sweep intake -> master @ c65cca35
+### [MERGE] 2026-06-13T17:12 ï¿½ deepdive-sweep intake -> master @ c65cca35
 **What merged:** 16 AST-verified tech debt sweep tasks intaked into ON DECK as [BATCH:deepdive-sweep]; all PLAN files committed @ b244cbb0; rogue sweep-src-* tasks and stale plans removed @ 393db4ab
 **Wave assignments:** 6 waves; 7 parallel in Wave 1 (within swarm cap of 8); 42 AST collision pairs detected
 **Files touched:** docs/SK8Lytz_Bucket_List.md, docs/plans/PLAN-sweep-*.md (16 files), artifacts/system_audit_report.md
 
-### [ARTIFACT] 2026-06-13T17:12 — deepdive-sweep synthesis complete
+### [ARTIFACT] 2026-06-13T17:12 ï¿½ deepdive-sweep synthesis complete
 | Artifact | Path | Description |
 |---|---|---|
 | system_audit_report.md | [artifacts/system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) | 47-agent fleet synthesis; 456 verified findings; 16 domain clusters |
 | PLAN-sweep-cloud-supabase.md | [docs/plans/](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/) | All 16 PLAN files in docs/plans/PLAN-sweep-*.md |
 
-### [DECISION] 2026-06-13T17:12 — deepdive-sweep batch structure
+### [DECISION] 2026-06-13T17:12 ï¿½ deepdive-sweep batch structure
 **Decision:** 16 clusters, 6 waves, [BATCH:deepdive-sweep] tag. Wave 1 = 7 parallel (all touch disjoint file domains). Wave 2 gated behind Wave 1 because ble-core-dispatch imports from protocol-core (Wave 1).
-**Rejected:** Single mega-batch all-parallel — 42 collision pairs confirmed by ast-parser.js; would cause VS-001-class merge conflicts.
-**Don't re-derive:** The wave ordering is not aesthetic — it is determined by import dependencies. Waves 1-6 must execute sequentially. Do NOT start Wave 2 until all 7 Wave 1 PRs are on master.
+**Rejected:** Single mega-batch all-parallel ï¿½ 42 collision pairs confirmed by ast-parser.js; would cause VS-001-class merge conflicts.
+**Don't re-derive:** The wave ordering is not aesthetic ï¿½ it is determined by import dependencies. Waves 1-6 must execute sequentially. Do NOT start Wave 2 until all 7 Wave 1 PRs are on master.
 **Source:** artifacts/domain_clusters.json + ast-parser.js collision matrix output
 
 ### [MERGE READY] sweep-cloud-supabase ? 6d73a045
@@ -3298,7 +3298,7 @@ TSC: ?  Jest: ?
 **Status:** Fully verified via npm run verify and fortress-gatekeeper.
 
 
-### [MERGE READY] sweep-admin-telemetry — b0ffad7f
+### [MERGE READY] sweep-admin-telemetry ï¿½ b0ffad7f
 Files touched:
 - src/components/admin/AdminToolsModal.tsx
 - src/components/admin/tools/AdminAuditLogViewer.tsx
@@ -3311,13 +3311,13 @@ Files touched:
 TSC: ?  Jest: ?
 
 
-### [MERGE] 2026-06-13T19:18 — sweep-admin-telemetry ? master @ aa782643
+### [MERGE] 2026-06-13T19:18 ï¿½ sweep-admin-telemetry ? master @ aa782643
 **What merged:** Fixed 6/6 telemetry and UI bugs across admin panels (extracted inline functions, added ListEmptyComponent error handling).
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** AdminToolsModal.tsx, AdminAuditLogViewer.tsx, GlobalAnalyticsPanel.tsx, AdminRosterPanel.tsx, HardwareBlacklistPanel.tsx, FeatureFlagsPanel.tsx, PLAN-sweep-admin-telemetry.md
 
-\n### [MERGE] 2026-06-13T19:32:00Z — sweep-ble-core-dispatch ? master @ 589ccadf\n**What merged:** Swept BLE core dispatch replacing forEach loops with sequential for..of loops to prevent GATT 133 collisions on Android. Added async keywords down the stack. Patched PII log leaks replacing MACs with [REDACTED]. Cleaned up timeout leaks in useOptimisticBLE and useBLEBatterySweep.\n**Verify result:** TSC ?, Jest ?, gates ?\n**Files touched:** src/hooks/useControllerDispatch.ts, src/hooks/useOptimisticBLE.ts, src/hooks/ble/useBLEBatterySweep.ts, src/services/BleWriteDispatcher.ts, src/services/ble/*.ts\n
-### [MERGE READY] sweep-storage-keys — c2402a6e
+\n### [MERGE] 2026-06-13T19:32:00Z ï¿½ sweep-ble-core-dispatch ? master @ 589ccadf\n**What merged:** Swept BLE core dispatch replacing forEach loops with sequential for..of loops to prevent GATT 133 collisions on Android. Added async keywords down the stack. Patched PII log leaks replacing MACs with [REDACTED]. Cleaned up timeout leaks in useOptimisticBLE and useBLEBatterySweep.\n**Verify result:** TSC ?, Jest ?, gates ?\n**Files touched:** src/hooks/useControllerDispatch.ts, src/hooks/useOptimisticBLE.ts, src/hooks/ble/useBLEBatterySweep.ts, src/services/BleWriteDispatcher.ts, src/services/ble/*.ts\n
+### [MERGE READY] sweep-storage-keys ï¿½ c2402a6e
 Files touched: src/hooks/useFavorites.ts, src/services/AppSettingsService.ts, src/services/DeviceRepository.ts, src/components/docked/QuickPresetModal.tsx, src/constants/storageKeys.ts
 TSC: ?  Jest: ?
 
@@ -3365,14 +3365,14 @@ Files touched:
 TSC: ?  Jest: ?
 
 
-### [MERGE] 2026-06-13T15:41 — deepdive-sweep-batch Wave 4 ? master @ c5e1ccd3
+### [MERGE] 2026-06-13T15:41 ï¿½ deepdive-sweep-batch Wave 4 ? master @ c5e1ccd3
 **What merged:** 
 - chore/sweep-group-sync (AST fixes, PII scrub, 4-state UI)
 - chore/sweep-session-context (re-entrancy locks, explicit keys)
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** GroupRepository.ts, CrewService.ts, SessionContext.tsx, etc.
 
-### [MERGE READY] sweep-shared-utils — 136e27dd6ddfd4eefbb0479d41e51c4fc024e925
+### [MERGE READY] sweep-shared-utils ï¿½ 136e27dd6ddfd4eefbb0479d41e51c4fc024e925
 **Files touched:**
 - src/components/PositionalGradientBuilder.tsx
 - src/components/DeviceItem.tsx
@@ -3386,3 +3386,8 @@ TSC: ?  Jest: ?
 - src/components/auth/AuthFormSignIn.tsx
 - src/components/auth/AuthFormSignUp.tsx
 **TSC:** ?  **Jest:** ?
+### [MERGE] 2026-06-13T15:48 â€” deepdive-sweep-batch Wave 5 â†’ master @ 27913f66
+**What merged:** 
+- chore/sweep-shared-utils (Validation extraction, Slider fixes, Gradient fixes)
+**Verify result:** TSC âœ…, Jest âœ…, gates âœ…
+**Files touched:** validation.ts, CustomSlider.tsx, PositionalGradientBuilder.tsx, etc.
