@@ -2659,3 +2659,9 @@ Files touched:
 
 TSC: ✅  Jest: ✅
 
+
+### [MERGE] 2026-06-13T19:18 — sweep-admin-telemetry → master @ aa782643
+**What merged:** Fixed 6/6 telemetry and UI bugs across admin panels (extracted inline functions, added ListEmptyComponent error handling).
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** AdminToolsModal.tsx, AdminAuditLogViewer.tsx, GlobalAnalyticsPanel.tsx, AdminRosterPanel.tsx, HardwareBlacklistPanel.tsx, FeatureFlagsPanel.tsx, PLAN-sweep-admin-telemetry.md
+
