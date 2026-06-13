@@ -3391,3 +3391,15 @@ TSC: ?  Jest: ?
 - chore/sweep-shared-utils (Validation extraction, Slider fixes, Gradient fixes)
 **Verify result:** TSC ✅, Jest ✅, gates ✅
 **Files touched:** validation.ts, CustomSlider.tsx, PositionalGradientBuilder.tsx, etc.
+
+### [MERGE READY] sweep-ui-docked-controller — 55dceeba
+Files touched:
+- src/components/DockedController.tsx
+- src/components/docked/BuilderPanel.tsx
+- src/components/docked/CameraPanel.tsx
+- src/components/docked/FavoritesPanel.tsx
+- src/components/docked/UniversalSlidersFooter.tsx
+- src/hooks/useDashboardController.tsx
+- src/hooks/useDockedControllerState.ts
+- src/hooks/useStreetMode.ts
+TSC: ✅  Jest: ✅
