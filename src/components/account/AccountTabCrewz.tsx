@@ -1,4 +1,4 @@
-import { AccountTabCrewzProps } from './types';
+import { AccountTabCrewzProps } from './account.types';
 import { PermanentCrew } from '../../services/ProfileService';
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Platform } from 'react-native';

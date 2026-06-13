@@ -15,7 +15,7 @@ interface CustomSliderProps {
   thumbTintColor?: string;
 }
 
-const CustomSlider = ({ value, onValueChange, onSlidingComplete, minimumValue = 0, maximumValue = 100, style, gradientTrack = false, step, thumbTintColor }: CustomSliderProps) => {
+const CustomSlider = ({ value, onValueChange, onSlidingComplete, minimumValue = 0, maximumValue = 100, style, gradientTrack = false }: CustomSliderProps) => {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
   const [_containerWidth, setContainerWidth] = useState(0);

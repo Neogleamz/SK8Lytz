@@ -41,7 +41,8 @@ import AdminToolsModal from '../components/admin/AdminToolsModal';
 
 import { AppLogger } from '../services/AppLogger';
 
-import AccountModal, { StoredDevice } from '../components/AccountModal';
+import AccountModal from '../components/AccountModal';
+import { StoredDevice } from '../components/account/account.types';
 import { getDefaultGroupName } from '../utils/NamingUtils';
 // Removed getLocalProfileByPoints as it is unused
 import { RegisteredDevice, useRegistration } from '../hooks/useRegistration';

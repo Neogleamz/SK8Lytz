@@ -1,4 +1,4 @@
-import { AccountTabSettingsProps } from './types';
+import { AccountTabSettingsProps } from './account.types';
 import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';

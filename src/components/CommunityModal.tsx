@@ -98,7 +98,7 @@ const SceneCard = React.memo(({
   activeTab: 'COMMUNITY' | 'PERSONAL';
   processingId: string | null;
   Colors: ThemePalette;
-  styles: any;
+  styles: ReturnType<typeof createStyles>;
   onUpvote: (id: string) => void;
   onDelete: (id: string) => void;
   onApply: (scene: ICloudScene) => void;
@@ -192,7 +192,7 @@ const SceneCard = React.memo(({
 export default function CommunityModal({ isOfflineMode = false, isVisible, onClose, onApplyScene }: Props) {
   const { Colors } = useTheme();
   const { user } = useAuth();
-  const styles = createStyles(Colors);
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
 
   const [activeTab, setActiveTab] = useState<'COMMUNITY' | 'PERSONAL'>(isOfflineMode ? 'PERSONAL' : 'COMMUNITY');
   const [scenes, setScenes] = useState<ICloudScene[]>([]);

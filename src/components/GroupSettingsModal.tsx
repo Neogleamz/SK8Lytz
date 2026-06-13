@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { AppLogger } from '../services/AppLogger';
-import { Colors, Layout, Spacing, Typography } from '../theme/theme';
+import { Layout, Spacing, Typography } from '../theme/theme';
+import { useTheme } from '../context/ThemeContext';
 import { getDefaultGroupName } from '../utils/NamingUtils';
+import type { DisplayDevice } from '../types/dashboard.types';
 
 interface GroupSettingsModalProps {
   isVisible: boolean;
@@ -11,10 +13,13 @@ interface GroupSettingsModalProps {
   onDelete?: () => void;
   initialName?: string;
   initialDeviceIds?: string[];
-  allDevices?: any[];
+  allDevices?: DisplayDevice[];
 }
 
 export default function GroupSettingsModal({ isVisible, onClose, onSave, onDelete, initialName = '', initialDeviceIds = [], allDevices = [] }: GroupSettingsModalProps) {
+  const { Colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
+
   const [name, setName] = useState(initialName);
   const [selectedIds, setSelectedIds] = useState<string[]>(initialDeviceIds);
   const [isSaving, setIsSaving] = useState(false);
@@ -109,7 +114,7 @@ export default function GroupSettingsModal({ isVisible, onClose, onSave, onDelet
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',

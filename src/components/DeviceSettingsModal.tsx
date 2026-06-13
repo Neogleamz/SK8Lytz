@@ -4,7 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { useProtocolDispatch } from '../hooks/useProtocolDispatch';
 import { AppLogger } from '../services/AppLogger';
-import { Colors, Spacing, Typography } from '../theme/theme';
+import { Spacing, Typography } from '../theme/theme';
+import { useTheme } from '../context/ThemeContext';
 import { getDefaultGroupName } from '../utils/NamingUtils';
 
 import { DeviceSettings } from '../types/dashboard.types';
@@ -46,6 +47,8 @@ const deriveNames = (type: string, position: 'Left' | 'Right' | null) => {
 };
 
 export default function DeviceSettingsModal({ isVisible, onClose, onSave, initialSettings, groups, writeToDevice, onDeregister, deviceName, deviceId }: DeviceSettingsModalProps) {
+  const { Colors } = useTheme();
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
 
   const dispatch = useProtocolDispatch();
   const insets = useSafeAreaInsets();
@@ -528,7 +531,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleSheet.create({
   overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
   content: { backgroundColor: Colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: Spacing.xl, maxHeight: '88%', borderWidth: 1, borderColor: Colors.surfaceHighlight },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.xl },

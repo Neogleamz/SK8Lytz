@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, StyleProp, TextStyle, View } from 'react-native';
+import { Animated, StyleProp, TextStyle, View, ViewStyle } from 'react-native';
 
 interface MarqueeTextProps {
   children: string;
   style?: StyleProp<TextStyle>;
-  containerStyle?: any;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 const MarqueeText = ({ children, style, containerStyle }: MarqueeTextProps) => {

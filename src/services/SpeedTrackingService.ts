@@ -95,7 +95,7 @@ export interface ILifetimeStats {
  * Approximation: 70 kg base weight, MET scaled by avg speed.
  *   calories = MET × weight_kg × duration_hours
  */
-function estimateCalories(avgSpeedMph: number, durationSec: number): number {
+export function estimateCalories(avgSpeedMph: number, durationSec: number): number {
   const MET = avgSpeedMph > 12 ? 12 : avgSpeedMph > 8 ? 9 : 7;
   const hours = durationSec / 3600;
   const weightKg = 70; // canonical approximation — no personal data stored

@@ -1,4 +1,4 @@
-import { AccountTabStatsProps } from './types';
+import { AccountTabStatsProps } from './account.types';
 import React from 'react';
 import { View, Text, ScrollView } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';

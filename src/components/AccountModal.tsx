@@ -47,20 +47,7 @@ import { AppLogger } from '../services/AppLogger';
 
 type Tab = 'profile' | 'security' | 'crews' | 'devices' | 'settings' | 'stats';
 
-/** Lightweight device display type for AccountModal, mapped from RegisteredDevice. */
-export type StoredDevice = {
-  id: string;
-  mac?: string;
-  name: string;
-  customName?: string;
-  groupName?: string;
-  type?: string;
-  registeredAt?: string;
-  led_points?: number;
-  segments?: number;
-  ic_type?: string;
-  color_sorting?: string;
-};
+import { StoredDevice } from './account/account.types';
 
 interface AccountModalProps {
   visible: boolean;

@@ -26,7 +26,7 @@ import {
     ViewStyle,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import type { ISessionSnapshot } from '../services/SpeedTrackingService';
+import { estimateCalories, type ISessionSnapshot } from '../services/SpeedTrackingService';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -48,10 +48,7 @@ function speedAccentColor(peakMph: number): string {
   return '#00B0FF';                    // cool blue  — chill session
 }
 
-function estimateCalories(avgSpeedMph: number, durationSec: number): number {
-  const MET = avgSpeedMph > 12 ? 12 : avgSpeedMph > 8 ? 9 : 7;
-  return Math.round(MET * 70 * (durationSec / 3600));
-}
+// removed estimateCalories
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -117,7 +114,7 @@ export default function SessionSummaryModal({
 
   return (
     <Modal visible={visible} animationType="slide" transparent statusBarTranslucent>
-      <View style={styles.overlay}>
+      <View style={[styles.overlay, { backgroundColor: Colors.isDark ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.85)' }]}>
         <View style={[styles.card, { borderColor: accentColor }]}>
 
           {/* Header */}
