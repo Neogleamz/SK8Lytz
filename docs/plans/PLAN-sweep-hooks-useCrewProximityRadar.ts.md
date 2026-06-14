@@ -22,3 +22,5 @@ Fix static audit findings for the `sweep-hooks-useCrewProximityRadar.ts` domain 
 ## Verification Plan
 - Run `npm run verify` to ensure AST and Type checking passes.
 - Verify wave boundaries are respected.
+
+// SKIPPED: The finding for line 53 regarding stale state inside setInterval without refs is a false positive. useCrewProximityRadar.ts does not contain an interval, radar scanner loop, or a skaters state list.

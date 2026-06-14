@@ -121,7 +121,7 @@ export function useCrewProximityRadar() {
         }
       } catch (err: unknown) {
         const errMsg = err instanceof Error ? err.message : String(err);
-        AppLogger.warn('[useCrewProximityRadar] scan failed', { error: errMsg });
+        AppLogger.warn('[useCrewProximityRadar] scan failed', { error: errMsg, payload_size: 0, ssi: 0 });
         if (mounted) setRadarAlert({ matchType: 'NONE', venueName: '', distanceMi: 0 });
       } finally {
         isScanningRef.current = false;
