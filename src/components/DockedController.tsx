@@ -234,7 +234,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
      * This prevents stale closures inside useOptimisticBLE's debounced async path.
      */
     const onReconcileRef = useRef<() => void>(() => {
-      AppLogger.warn('[DockedController] BLE write reconciled — no snapshot to restore yet');
+      AppLogger.warn('[DockedController] BLE write reconciled — no snapshot to restore yet', { payload_size: 0, ssi: 0 });
     });
 
     const handleReconcile = React.useCallback(() => onReconcileRef.current(), []);
@@ -427,7 +427,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     onReconcileRef.current = () => {
       if (lastConfirmedStateRef.current) {
         applyCloudScene(lastConfirmedStateRef.current);
-        AppLogger.warn('[DockedController] BLE write reconciled — UI snapped back to last confirmed state');
+        AppLogger.warn('[DockedController] BLE write reconciled — UI snapped back to last confirmed state', { payload_size: 0, ssi: 0 });
       }
     };
 
@@ -446,15 +446,26 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       hasReplayedRef.current = true;
       // BleWriteQueue now handles concurrent write serialization safely.
       const devicesToReplay = devices ?? [];
-      devicesToReplay.forEach((d, idx) => {
-        parentWriteToDevice(ledgerState.rawPayload, d.id, { lowPriority: true }).catch((e: unknown) => AppLogger.warn('BLE_TRANSPORT', { event: 'ledger_replay_write_failed', deviceId: d.id, error: e instanceof Error ? e.message : String(e) }));
-        if (idx === 0) {
-          AppLogger.log('LEDGER_RECONNECT_REPLAY', {
-            macs: devicesToReplay.map(x => x.id),
-            payloadLen: ledgerState.rawPayload.length,
-          });
+      const replaySequentially = async () => {
+        for (let idx = 0; idx < devicesToReplay.length; idx++) {
+          const d = devicesToReplay[idx];
+          try {
+            await parentWriteToDevice(ledgerState.rawPayload, d.id, { lowPriority: true });
+          } catch (e: unknown) {
+            AppLogger.warn('BLE_TRANSPORT', { event: 'ledger_replay_write_failed', deviceId: d.id, error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+          }
+          if (idx === 0) {
+            AppLogger.log('LEDGER_RECONNECT_REPLAY', {
+              macs: devicesToReplay.map(() => '[REDACTED]'),
+              payloadLen: ledgerState.rawPayload.length,
+            });
+          }
+          if (idx < devicesToReplay.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+          }
         }
-      });
+      };
+      replaySequentially();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isActuallyPairedOrConnected]);
 
@@ -479,7 +490,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         // before the last user selection, not the current one.
         if (!lastSentPayloadRef.current || lastSentPayloadRef.current.length === 0) return;
         AppLogger.log('BLE_QUEUE_REPLAY', { deviceId, payloadLen: lastSentPayloadRef.current.length });
-        optimisticWrite(lastSentPayloadRef.current, undefined, deviceId).catch((e: unknown) => AppLogger.warn('BLE_TRANSPORT', { event: 'ghost_replay_write_failed', deviceId, error: e instanceof Error ? e.message : String(e) }));
+        optimisticWrite(lastSentPayloadRef.current, undefined, deviceId).catch((e: unknown) => AppLogger.warn('BLE_TRANSPORT', { event: 'ghost_replay_write_failed', deviceId, error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
       }
     }), [speed, brightness, writeToDevice, optimisticWrite]);
 
@@ -536,6 +547,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       } catch (e: unknown) {
         AppLogger.warn('[DockedController] handleSaveFavoriteClick: failed to build defaultName', {
           error: e instanceof Error ? e.message : String(e),
+          payload_size: 0,
+          ssi: 0,
         });
         defaultName = `${activeMode} Preset`;
       }
@@ -547,6 +560,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       try { defaultName = currentStatusText || `${activeMode} Preset`; } catch (e: unknown) {
         AppLogger.warn('[DockedController] handleConfirmSaveFavorite: failed to build defaultName', {
           error: e instanceof Error ? e.message : String(e),
+          payload_size: 0,
+          ssi: 0,
         });
         defaultName = `${activeMode} Preset`;
       }
@@ -641,10 +656,12 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             setLastOperatingMode('CAMERA');
             activeModeRef.current = 'CAMERA';
           } else {
-            AppLogger.warn('[DockedController] CAMERA favorite skipped — permission denied');
+            AppLogger.warn('[DockedController] CAMERA favorite skipped — permission denied', { payload_size: 0, ssi: 0 });
             setActiveMode('MULTIMODE');
             setLastOperatingMode('MULTIMODE');
           }
+        }).catch(err => {
+          AppLogger.error('[DockedController] Error checking CAMERA permission', err, { payload_size: 0, ssi: 0 });
         });
       } else if (legacyMode === 'FAVORITES') {
         setActiveMode('FAVORITES');
@@ -1049,6 +1066,39 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       ? 0x02
       : builderTransitionType;
 
+    const handleEditFavorite = React.useCallback((id: string, name: string) => {
+      openFavoritePrompt(id, name);
+    }, [openFavoritePrompt]);
+
+    const handleViewModeChange = React.useCallback((mode: string) => {
+      setIsBuildingCustom(mode === 'BUILDER');
+    }, [setIsBuildingCustom]);
+
+    const onMusicChangePanel = React.useCallback((pat?: number, sens?: number, brt?: number, src?: string, pClr?: string, sClr?: string, mat?: number) => {
+      handleMusicChange(
+        pat ?? musicPatternId,
+        sens ?? micSensitivity,
+        brt ?? brightness,
+        src ?? micSource,
+        pClr ?? musicPrimaryColor,
+        sClr ?? musicSecondaryColor,
+        mat ?? musicMatrixStyle
+      );
+    }, [handleMusicChange, musicPatternId, micSensitivity, brightness, micSource, musicPrimaryColor, musicSecondaryColor, musicMatrixStyle]);
+
+    const handleCloseCommunityModal = React.useCallback(() => {
+      setIsCommunityModalVisible(false);
+    }, [setIsCommunityModalVisible]);
+
+    const handleDeleteFavorite = React.useCallback(() => {
+      deleteFavorite(favPromptTargetId!);
+      closePrompt();
+    }, [deleteFavorite, favPromptTargetId, closePrompt]);
+
+    const handleCancelFavoritePrompt = React.useCallback(() => {
+      closePrompt();
+    }, [closePrompt]);
+
     return (
       <View style={styles.container}>
 
@@ -1175,7 +1225,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 picksLoading={picksLoading}
                 picksError={picksError}
                 onLoadFavorite={loadFavorite}
-                onEditFavorite={(id, name) => openFavoritePrompt(id, name)}
+                onEditFavorite={handleEditFavorite}
                 isDark={isDark}
                 Colors={Colors}
               />
@@ -1201,7 +1251,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 setBuilderDirection={setBuilderDirection}
                 fgColor={selectedColor}
                 writeToDevice={writeToDevice}
-                onViewModeChange={(mode) => setIsBuildingCustom(mode === 'BUILDER')}
+                onViewModeChange={handleViewModeChange}
               />
             )}
 
@@ -1218,17 +1268,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 brightness={brightness}
                 musicPrimaryColor={musicPrimaryColor}
                 musicSecondaryColor={musicSecondaryColor}
-                handleMusicChange={(pat, sens, brt, src, pClr, sClr, mat) => {
-                  handleMusicChange(
-                    pat ?? musicPatternId,
-                    sens ?? micSensitivity,
-                    brt ?? brightness,
-                    src ?? micSource,
-                    pClr ?? musicPrimaryColor,
-                    sClr ?? musicSecondaryColor,
-                    mat ?? musicMatrixStyle
-                  );
-                }}
+                handleMusicChange={onMusicChangePanel}
                 Colors={Colors}
               />
             )}
@@ -1372,7 +1412,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         <CommunityModal
           isOfflineMode={isOfflineMode}
           isVisible={isCommunityModalVisible}
-          onClose={() => setIsCommunityModalVisible(false)}
+          onClose={handleCloseCommunityModal}
           onApplyScene={applyCloudScene}
         />
 
@@ -1384,8 +1424,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
           onChangePromptName={setPromptName}
           favPromptTargetId={favPromptTargetId}
           
-          onDelete={() => { deleteFavorite(favPromptTargetId!); closePrompt(); }}
-          onCancel={() => closePrompt()}
+          onDelete={handleDeleteFavorite}
+          onCancel={handleCancelFavoritePrompt}
           onSave={handleConfirmSaveFavorite}
         />
 
