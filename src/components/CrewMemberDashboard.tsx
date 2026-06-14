@@ -175,7 +175,7 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
       if (_isFlushingRef.current) return;
       _isFlushingRef.current = true;
       try {
-        const { data } = await supabase
+        const { data, error: supaError } = await supabase
         .from('crew_members')
         .select(`
           user_id, role, joined_at,
@@ -185,6 +185,10 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
         .returns<CrewMemberRow[]>();
 
         if (!mounted) return;
+
+        if (supaError) {
+          throw new Error(supaError.message);
+        }
 
         if (data) {
           setMembers(data.map((r) => {
