@@ -87,10 +87,10 @@ _User-facing product value and UI refinements._
   - Decision Log: `TBD`
   - Details: Wave 1 execution. None. (H:1 M:1 L:1)
   - [WAVE:1]
-- [ ] [BATCH:deepdive-sweep-phase3]
+- [x] **[MAINTENANCE]** `[Status: [x]]` `[Verification: ✅ VERIFIED]` `[Layer: COMPONENT]` `[Risk: M-RISK]` `[Size: Meal]` `[Cognitive Load: HIGH]`
   - Task: Resolve 11 findings in sweep-components-crew
-  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
   - Source of Truth: `docs/plans/PLAN-sweep-components-crew.md`
+  - Merge: 807f2235 - Extracted stats/forms, fixed double-taps, added error boundaries.
   - Decision Log: `TBD`
   - Details: Wave 1 execution. None. (H:8 M:2 L:1)
   - [WAVE:1]
