@@ -48,7 +48,20 @@ _User-facing product value and UI refinements._
 ### 🌊 Parallel Wave Strategy (AST-Verified)
 
 ## 🚧 ACTIVE SPRINT
-*(Empty — ready for intake)*
+
+### ⚡ [BATCH:performance-telemetry] — `feat/performance-telemetry-ttid` — (Active)
+> **Worktree**: `feat/performance-telemetry-ttid` · **Type**: Solo · **Prerequisite**: None
+> **Source Analysis**: 📊 [mobile-perf-standards.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/knowledge-base/patterns/mobile-perf-standards.md) — Implementation of industry-standard TTID/TTFD telemetry
+
+- [/] **`feat/performance-telemetry-ttid`**
+  - **Tags:** `[✅ READY]` `[UI]` `[✅ L-RISK]` `[🍱 Meal]` `[🤖 PRO-HIGH]` `[BATCH:performance-telemetry]` `[WAVE:Standalone]`
+  - **Goal:** Implement TTID/TTFD load time tracking on 7 heavy screens via a surgical hook.
+  - **Decision Log:** The user requested tracking for individual page load times beyond just app startup. Rejected 3rd-party APM SDKs to maintain offline-first constraint.
+  - **Analysis:** 📊 Source: [mobile-perf-standards.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/knowledge-base/patterns/mobile-perf-standards.md) · Plan: [PLAN-feat-performance-telemetry-ttid.md](./plans/PLAN-feat-performance-telemetry-ttid.md)
+    Key finding: "Giants separate initial render from fully interactive states."
+    Rejected alternative: "Global React Navigation middleware was rejected in favor of surgical control to prevent log flooding."
+  - **Source of Truth:** 📖 [PLAN-feat-performance-telemetry-ttid.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-feat-performance-telemetry-ttid.md)
+  - **Details:** Surgical hook injection on core screens. Standalone wave.
 
 ## 🔵 LOW: ✨ New Features & UI Enhancements
 
