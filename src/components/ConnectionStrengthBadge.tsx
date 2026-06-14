@@ -41,10 +41,15 @@ export interface ConnectionStrengthBadgeProps {
 export function ConnectionStrengthBadge({ rssi, style }: ConnectionStrengthBadgeProps) {
   if (rssi == null) return null;
 
-  const { bars, colour } = getSignalTier(rssi);
+  const { bars, colour, label } = getSignalTier(rssi);
 
   return (
-    <View style={[styles.container, style]}>
+    <View 
+      style={[styles.container, style]}
+      accessible={true}
+      accessibilityRole="image"
+      accessibilityLabel={`Signal strength: ${label}`}
+    >
       {/* Three bars, left=shortest, right=tallest */}
       <View style={[styles.bar, styles.bar1, bars >= 1 ? { backgroundColor: colour } : styles.barInactive]} />
       <View style={[styles.bar, styles.bar2, bars >= 2 ? { backgroundColor: colour } : styles.barInactive]} />
