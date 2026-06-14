@@ -1,4 +1,4 @@
-### [EVENT] 2026-06-14T02:44:43.629Z √¢‚Ç¨‚Äù Wave 1 Implementation Merged
+Ôªø### [EVENT] 2026-06-14T02:44:43.629Z √¢‚Ç¨‚Äù Wave 1 Implementation Merged
 **Trigger:** Orchestrator gatekeeper execution
 **Action:** Fast-forward merged 8 subagent branches into master.
 **Outcome:** Wave 1 is officially closed. Moving tasks to archive.
@@ -3488,13 +3488,13 @@ TSC: ‚úÖ  Jest: ‚úÖ
 Files touched: src/components/DockedController.tsx
 TSC: ‚úÖ  Jest: ‚úÖ
 
-### [EVENT] 2026-06-13T21:45 ó Wave 2a Implementation Complete
+### [EVENT] 2026-06-13T21:45 ÔøΩ Wave 2a Implementation Complete
 **Outcome:** All 8 tasks from Wave 2a successfully completed, merged, and archived.
 **Highlights:**
 - Successfully resolved the merge conflict in src/constants/storageKeys.ts safely after gatekeeper rollback.
 - Regenerated 4 attestations securely.
 - Ready to initialize Wave 2b.
-### [MERGE READY] sweep-components-permissions ó 02f7bb9c
+### [MERGE READY] sweep-components-permissions ÔøΩ 02f7bb9c
 Files touched: src/components/permissions/GranularPermissionsList.tsx
 TSC: ?  Jest: ?
 
@@ -3503,16 +3503,16 @@ Files touched: src/context/SessionContext.tsx
 TSC: ‚úÖ  Jest: ‚úÖ
 
 
-### [MERGE READY] sweep-components-SkateSpotBottomSheet.tsx ó a060a42a
+### [MERGE READY] sweep-components-SkateSpotBottomSheet.tsx ÔøΩ a060a42a
 Files touched: src/components/SkateSpotBottomSheet.tsx
 TSC: ?  Jest: ?
-### [MERGE READY] sweep-hooks-useCrewHub.ts ó 77305d4c
+### [MERGE READY] sweep-hooks-useCrewHub.ts ÔøΩ 77305d4c
 Files touched:
 - src/hooks/useCrewHub.ts
 TSC: ?  Jest: ?
 
 
-### [MERGE READY] sweep-components-LocationPicker.tsx ó 4aefa0bb
+### [MERGE READY] sweep-components-LocationPicker.tsx ÔøΩ 4aefa0bb
 Files touched: src/components/LocationPicker.tsx
 TSC: ?  Jest: ?
 
@@ -3521,14 +3521,14 @@ Files touched: src/components/VisualizerUnit.tsx, src/components/visualizer/Visu
 TSC: ‚úÖ  Jest: ‚úÖ
 
 
-### [MERGE READY] sweep-hooks-useControllerDispatch.ts ó 45a4ec9c
+### [MERGE READY] sweep-hooks-useControllerDispatch.ts ÔøΩ 45a4ec9c
 Files touched: src/hooks/useControllerDispatch.ts, src/hooks/__tests__/useControllerDispatch.test.ts
 TSC: ?  Jest: ?
 
-### [MERGE READY] sweep-hooks-useCrewSession.ts ó ef93bfef
+### [MERGE READY] sweep-hooks-useCrewSession.ts ÔøΩ ef93bfef
 Files touched: src/hooks/useCrewSession.ts
 TSC: ?  Jest: ?
-### [MERGE READY] sweep-hooks-useCrewSession.ts ó ef93bfef
+### [MERGE READY] sweep-hooks-useCrewSession.ts ÔøΩ ef93bfef
 Files touched: src/hooks/useCrewSession.ts
 TSC: ?  Jest: ?
 
@@ -3537,11 +3537,11 @@ Files touched: src/hooks/useProductManager.ts
 TSC: ‚úÖ  Jest: ‚úÖ
 
 
-### [MERGE READY] sweep-hooks-useDashboardCrew.ts ó 3cbbcb42
+### [MERGE READY] sweep-hooks-useDashboardCrew.ts ÔøΩ 3cbbcb42
 **Files touched:** src/hooks/useDashboardCrew.ts
 **TSC:** ?  **Jest:** ?
 
-### [MERGE READY] sweep-services-BleWriteDispatcher.ts ó f27bab34
+### [MERGE READY] sweep-services-BleWriteDispatcher.ts ÔøΩ f27bab34
 Files touched: src/services/BleWriteDispatcher.ts
 TSC: ?  Jest: ?
  
@@ -3550,11 +3550,11 @@ Files touched: src/providers/ComplianceGate.tsx
 TSC: ? Jest: ?
 
 
-### [MERGE READY] sweep-hooks-useDashboardAutoConnect.ts ó d6497db0e913e31b216cf486c004a7c7fdc76291
+### [MERGE READY] sweep-hooks-useDashboardAutoConnect.ts ÔøΩ d6497db0e913e31b216cf486c004a7c7fdc76291
 Files touched: src/hooks/useDashboardAutoConnect.ts
 TSC: ?  Jest: ?
 
-### [MERGE READY] sweep-hooks-useTelemetryLedger.ts ó 58105473
+### [MERGE READY] sweep-hooks-useTelemetryLedger.ts ÔøΩ 58105473
 Files touched: src/hooks/useTelemetryLedger.ts
 TSC: ?  Jest: ?
 
@@ -3566,36 +3566,36 @@ TSC: ?  Jest: ?
 pm run verify passed cleanly on master. The AST findings were based on a pre-June-10 scan, but the chore(sweep) commit on Jun 13 already fixed them. Running subagents on them causes no-op diffs and worktree errors.
 **Source:** Master branch git log and verifiable checks.
 
-### [ARTIFACT] 2026-06-13T22:35 ó Captured mobile-perf-standards to KB
+### [ARTIFACT] 2026-06-13T22:35 ÔøΩ Captured mobile-perf-standards to KB
 **What**: Researched industry standard mobile performance metrics (TTID, TTFD, ANR) and added to knowledge-base.
 
 
-### [ARTIFACT] 2026-06-13T22:37 ó Generated PLAN-feat-performance-telemetry-ttid
+### [ARTIFACT] 2026-06-13T22:37 ÔøΩ Generated PLAN-feat-performance-telemetry-ttid
 **What**: Drafted plan to implement TTID and TTFD tracking via a surgical React Native hook.
 **Decision Log**: The user requested tracking for individual page load times beyond just app startup. Rejected 3rd-party APM SDKs to maintain offline-first constraint. Drafted plan for custom hook.
 
 
-### [MERGE READY] feat-performance-telemetry-ttid ó 15fbac89
+### [MERGE READY] feat-performance-telemetry-ttid ÔøΩ 15fbac89
 Files touched: src/hooks/useScreenPerformance.ts, src/services/AppLogger.ts, src/screens/AuthScreen.tsx, src/screens/DashboardScreen.tsx, src/screens/Onboarding/HardwareSetupWizardScreen.tsx, src/components/AccountModal.tsx, src/components/CrewMemberDashboard.tsx, src/components/DockedController.tsx, src/components/SkateSpotBottomSheet.tsx
 TSC: ?  Jest: ?
 
 
-### [ARTIFACT] 2026-06-14T11:50 ó Deep-Dive Code Synthesis Batch Plans
+### [ARTIFACT] 2026-06-14T11:50 ÔøΩ Deep-Dive Code Synthesis Batch Plans
 **Artifacts:** 32 PLAN-*.md files added to docs/plans/
 **Why:** Output of the orthogonal code hunt synthesis. 619 unique violations clustered into 32 domain task clusters and routed to ON DECK.
 
-### [EVENT] 2026-06-14T16:56:02Z ó Wave 1 Task Halted (S4 Monolith)
+### [EVENT] 2026-06-14T16:56:02Z ÔøΩ Wave 1 Task Halted (S4 Monolith)
 **Task:** sweep-src-components-DockedController.tsx
 **Reason:** DockedController.tsx is 70KB, violating S4. Subagent execution aborted.
 **Action:** Task pulled from Active Sprint. Extraction refactor task must be scheduled.
-### [MERGE READY] sweep-src-components-TacticalSlider.tsx ó 04f0fe8a
+### [MERGE READY] sweep-src-components-TacticalSlider.tsx ÔøΩ 04f0fe8a
 Files touched: src/components/TacticalSlider.tsx
 TSC: ?  Jest: ?
 ### [MERGE READY] sweep-src-components-CrewModal.tsx - 5eb9b21c
 Files touched: src/components/CrewModal.tsx
 TSC: ?  Jest: ?
 
-### [MERGE READY] sweep-src-components-admin ó 2eed569b3c756f4a1e08e9e07c80929ca0be6645
+### [MERGE READY] sweep-src-components-admin ÔøΩ 2eed569b3c756f4a1e08e9e07c80929ca0be6645
 Files touched:
 - src/components/admin/AdminToolsModal.tsx
 - src/components/admin/AdvancedHardwareModal.tsx
@@ -3613,7 +3613,7 @@ Files touched:
 TSC: ? (Env Error)  Jest: ? (Env Error)
 
 
-### [MERGE READY] sweep-src-components-admin ó fe02f0c2f924e3a55fcfe985bcceca974375ac5c
+### [MERGE READY] sweep-src-components-admin ÔøΩ fe02f0c2f924e3a55fcfe985bcceca974375ac5c
 Files touched:
 - src/components/admin/DeviceTab.tsx
 - src/components/admin/tools/AdminPicksScheduler.tsx
@@ -3635,14 +3635,14 @@ TSC: ?  Jest: ?
 Files touched: src/components/VisualizerUnit.tsx
 TSC: ‚úÖ  Jest: ‚úÖ
 
-### [MERGE READY] sweep-src-utils ó 676d24e4118199179e81399b9b25ad0690473107
+### [MERGE READY] sweep-src-utils ÔøΩ 676d24e4118199179e81399b9b25ad0690473107
 Files touched:
 - src/utils/migrateAuthTokens.ts
 - src/utils/BlePayloadParser.ts
 TSC: ?  Jest: ?
 
 
-### [MERGE READY] sweep-src-components-NeonHueStrip.tsx ó 8527ddebf7d80100f7634a2f089cb895d7954f7a
+### [MERGE READY] sweep-src-components-NeonHueStrip.tsx ÔøΩ 8527ddebf7d80100f7634a2f089cb895d7954f7a
 Files touched:
 - src/components/NeonHueStrip.tsx
 TSC: ?  Jest: ?
@@ -3652,11 +3652,11 @@ Files touched: src/components/CameraTracker.tsx
 TSC: ?  Jest: ?
 
 
-### [MERGE READY] sweep-src-components-VerticalPatternDrum.tsx ó 73e2297abf45118030d4253e2c664e269b361eec
+### [MERGE READY] sweep-src-components-VerticalPatternDrum.tsx ÔøΩ 73e2297abf45118030d4253e2c664e269b361eec
 Files touched: src/components/VerticalPatternDrum.tsx
 TSC: ?  Jest: ?
 
-### [MERGE READY] sweep-src-components-VerticalPatternDrum.tsx ó 73e2297abf45118030d4253e2c664e269b361eec
+### [MERGE READY] sweep-src-components-VerticalPatternDrum.tsx ÔøΩ 73e2297abf45118030d4253e2c664e269b361eec
 Files touched: src/components/VerticalPatternDrum.tsx
 TSC: ?  Jest: ?
 
@@ -3665,7 +3665,7 @@ Files touched: src/components/CustomEffectVisualizer.tsx
 TSC: ?  Jest: ?
 
 
-### [MERGE] 2026-06-14T18:10 ó Wave 2 Batched Fixes (UI Component Sweeps)
+### [MERGE] 2026-06-14T18:10 ÔøΩ Wave 2 Batched Fixes (UI Component Sweeps)
 **What merged:**
 - sweep-src-components-NeonHueStrip.tsx ? master @ d13261c4
 - sweep-src-components-CameraTracker.tsx ? master @ 75e2f53d
@@ -3682,3 +3682,7 @@ TSC: ?  Jest: ?
 Files touched: src/components/GlobalErrorBoundary.tsx
 TSC: ‚úÖ  Jest: ‚úÖ
 
+
+### [MERGE READY] sweep-src-components-permissions ÔøΩ b0a3e886
+Files touched: src/components/permissions/GranularPermissionsList.tsx
+TSC: ?  Jest: ?
