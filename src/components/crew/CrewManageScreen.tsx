@@ -31,14 +31,19 @@ export function CrewManageScreen() {
   const { currentSession, isHandoffMode, executeLeaveSession, executeEndSession, handleHandoffLeadership } = session;
   
   const handlePickCrewPhoto = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
-    if (!result.canceled && result.assets[0]) {
-      setNewCrewPhotoUri(result.assets[0].uri);
+    try {
+      let result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+      if (!result.canceled && result.assets && result.assets[0]) {
+        setNewCrewPhotoUri(result.assets[0].uri);
+      }
+    } catch (err: unknown) {
+      const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
+      AppLogger.log('CREW_ERROR', { action: 'pick_photo', error: e.message });
     }
   };
 
@@ -69,7 +74,7 @@ export function CrewManageScreen() {
       formState.setCrewName(crew.name);
       setStep('landing');
     } catch (e: unknown) {
-      const err = e as Error;
+      const err = e instanceof Error ? e : new Error(String(e));
       setCreateCrewError(err.message || 'Failed to create crew');
     } finally {
       setIsCreatingCrew(false);

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, Animated } from 'react-native';
+import { View, Text, Image, Animated, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import MapViewCluster from 'react-native-map-clustering';
