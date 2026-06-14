@@ -4,12 +4,13 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { isStale } from '../hooks/useDeviceStateLedger';
+import { useProductCatalog } from '../hooks/useProductCatalog';
 import { Layout, Spacing } from '../theme/theme';
 import type { DevicePatternState } from '../types/dashboard.types';
 import { HardwareStatusPills } from './dashboard/HardwareStatusPills';
 
 interface DeviceItemProps {
-  device: { name: string | null; id: string; rssi?: number | null; rssiList?: number[]; isGroup?: boolean };
+  device: { name: string | null; id: string; rssi?: number | null; rssiList?: number[]; isGroup?: boolean; type?: string; product_type?: string; };
   onPress: () => void;
   onLongPress?: () => void;
   isConnected: boolean;
@@ -22,10 +23,23 @@ interface DeviceItemProps {
   ledgerState?: DevicePatternState;
 }
 
-export default function DeviceItem({ device, onPress, onLongPress, isConnected, showGroupIcon, isSelectionMode, isSelected, onPowerToggle, isPoweredOn = true, ledgerState }: DeviceItemProps) {
+function DeviceItem({ device, onPress, onLongPress, isConnected, showGroupIcon, isSelectionMode, isSelected, onPowerToggle, isPoweredOn = true, ledgerState }: DeviceItemProps) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
-  const isZengge = (device.name?.toLowerCase().includes('led') || device.name?.toLowerCase().includes('zengge') || device.name?.toLowerCase().includes('magic')) && !device.name?.includes('HALOZ') && !device.name?.includes('SOULZ');
+  const { allProfiles } = useProductCatalog();
+  
+  const handlePowerToggle = React.useCallback((e: import('react-native').GestureResponderEvent) => {
+    e.stopPropagation();
+    onPowerToggle?.();
+  }, [onPowerToggle]);
+
+  const profileId = device.type || device.product_type;
+  let isZengge = true;
+  if (profileId && allProfiles.some(p => p.id === profileId)) {
+    isZengge = false;
+  } else if (device.name && allProfiles.some(p => device.name!.toUpperCase().includes(p.id.toUpperCase()))) {
+    isZengge = false;
+  }
   
   const displayName = (!device.name || isZengge) 
     ? `SK8Lytz-${(device.id || '').replace(/:/g, '').slice(-4).toUpperCase()}` 
@@ -89,7 +103,7 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
                       name={r === null ? 'wifi-off' : r > -60 ? 'wifi-strength-4' : r > -80 ? 'wifi-strength-2' : 'wifi-strength-1'} 
                       size={14} 
                       color={r === null ? Colors.error : r > -60 ? Colors.success : r > -80 ? '#FFA500' : Colors.error}
-                      style={{ marginLeft: i > 0 ? 2 : 0, opacity: 0.8 }}
+                      style={i > 0 ? styles.rssiIconMargin : styles.rssiIcon}
                     />
                   ))}
                 </View>
@@ -98,7 +112,7 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
                   name={!device.rssi ? 'wifi-off' : device.rssi > -60 ? 'wifi-strength-4' : device.rssi > -80 ? 'wifi-strength-2' : 'wifi-strength-1'} 
                   size={14} 
                   color={!device.rssi ? Colors.error : device.rssi > -60 ? Colors.success : device.rssi > -80 ? '#FFA500' : Colors.error}
-                  style={{ opacity: 0.8 }}
+                  style={styles.rssiIcon}
                 />
               )}
 
@@ -108,8 +122,10 @@ export default function DeviceItem({ device, onPress, onLongPress, isConnected, 
                     styles.powerIconCircleSmall, 
                     { backgroundColor: isPoweredOn ? 'rgba(0, 240, 255, 0.1)' : 'rgba(255,255,255,0.05)' }
                   ]}
-                  onPress={(e) => { e.stopPropagation(); onPowerToggle(); }}
+                  onPress={handlePowerToggle}
                   activeOpacity={0.6}
+                  accessibilityRole="button"
+                  accessibilityLabel="Toggle device power"
                 >
                   <MaterialCommunityIcons 
                     name="power" 
@@ -250,6 +266,13 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   rssiContainer: {
     flexDirection: 'row',
   },
+  rssiIcon: {
+    opacity: 0.8,
+  },
+  rssiIconMargin: {
+    marginLeft: 2,
+    opacity: 0.8,
+  },
   powerIconCircleSmall: {
     width: 24,
     height: 24,
@@ -281,3 +304,5 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
     flex: 1,
   },
 });
+
+export default React.memo(DeviceItem);
