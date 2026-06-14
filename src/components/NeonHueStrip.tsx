@@ -96,7 +96,11 @@ const NeonHueStrip = ({ value, onValueChange, onSlidingComplete, minimumValue = 
 
   return (
     <View 
-      style={[styles.container, style, Platform.select({ web: { touchAction: 'none', userSelect: 'none' }, default: {} }) as WebStyle]} 
+      accessible={true}
+      accessibilityRole="adjustable"
+      accessibilityLabel="Hue Selector"
+      accessibilityValue={{ min: minimumValue, max: maximumValue, now: localValue }}
+      style={[styles.container, style, Platform.select({ web: { touchAction: 'none', userSelect: 'none', cursor: 'pointer' }, default: {} }) as WebStyle]} 
       onLayout={(e: LayoutChangeEvent) => {
         setContainerWidth(e.nativeEvent.layout.width);
         containerWidthRef.current = e.nativeEvent.layout.width;
@@ -119,7 +123,6 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   container: {
     height: 48,
     justifyContent: 'center',
-    cursor: 'pointer',
   },
   trackWrap: {
     height: 24, // Thicker DJ style touch strip
