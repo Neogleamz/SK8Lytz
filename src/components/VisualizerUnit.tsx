@@ -113,7 +113,7 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
     <TouchableOpacity
       activeOpacity={onLongPress ? 0.8 : 1}
       onLongPress={onLongPress ? () => onLongPress(device as Partial<DisplayDevice & IDeviceState> as DisplayDevice & IDeviceState) : undefined}
-      style={{ alignItems: 'center', marginHorizontal: Spacing.md, paddingVertical: Spacing.xs }}
+      style={styles.touchableBase}
     >
       <View style={[
         vizShape === 'RING' ? styles.haloBase : vizShape === 'DUAL_STRIP' ? styles.railBase : styles.soulBase,
@@ -222,6 +222,11 @@ export const VisualizerUnit = React.memo(({ device, color, mode, patternId, anim
 });
 
 const styles = StyleSheet.create({
+  touchableBase: {
+    alignItems: 'center',
+    marginHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+  },
   haloBase: {
     width: 60, height: 90,
   },
