@@ -32,30 +32,6 @@
 > **Worktree**: `wave-1-sweep` · **Type**: Parallel · **Prerequisite**: None
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — Deep-Dive Code Hunt orthogonal analysis
 
-- [ ] **`sweep-src-components-permissions`**
-  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-3]` `[WAVE:3]`
-  - **Goal:** Resolve 1 telemetry and architectural rule violations in the components-permissions domain.
-  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-permissions.md](./plans/PLAN-sweep-src-components-permissions.md)
-    Key finding: "1 specific rule violations located and deduplicated in this cluster."
-    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
-  - **Source of Truth:** 📖 [PLAN-sweep-src-components-permissions.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-permissions.md)
-  - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 2 fully merged into master before this worktree is created.`
-
-- [ ] **`sweep-src-components-GlobalErrorBoundary.tsx`**
-  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-3]` `[WAVE:3]`
-  - **Goal:** Resolve 1 telemetry and architectural rule violations in the components-GlobalErrorBoundary.tsx domain.
-  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-GlobalErrorBoundary.tsx.md](./plans/PLAN-sweep-src-components-GlobalErrorBoundary.tsx.md)
-    Key finding: "1 specific rule violations located and deduplicated in this cluster."
-    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
-  - **Source of Truth:** 📖 [PLAN-sweep-src-components-GlobalErrorBoundary.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-GlobalErrorBoundary.tsx.md)
-  - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 2 fully merged into master before this worktree is created.`
-
-### ⚡ [BATCH:WAVE-4] — `wave-4-sweep` — READY
-> **Worktree**: `wave-4-sweep` · **Type**: Parallel · **Prerequisite**: Wave 3 merged
-> **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — Deep-Dive Code Hunt orthogonal analysis
-
 - [ ] **`sweep-src-components-crew`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-4]` `[WAVE:4]`
   - **Goal:** Resolve 27 telemetry and architectural rule violations in the components-crew domain.

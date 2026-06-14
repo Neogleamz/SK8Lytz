@@ -3686,3 +3686,16 @@ TSC: ✅  Jest: ✅
 ### [MERGE READY] sweep-src-components-permissions � b0a3e886
 Files touched: src/components/permissions/GranularPermissionsList.tsx
 TSC: ?  Jest: ?
+
+### [MERGE] 2026-06-14T18:17 — Wave 3 Batched Fixes
+**What merged:**
+- sweep-src-components-GlobalErrorBoundary.tsx → master @ 2f89923f
+- sweep-src-components-permissions → master @ cbf8342b
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** src/components/GlobalErrorBoundary.tsx, src/components/permissions/GranularPermissionsList.tsx
+
+### [MERGE READY] sweep-src-context — aa7f7471
+Files touched:
+- src/context/AuthContext.tsx
+- docs/plans/PLAN-sweep-src-context.md
+TSC: ✅  Jest: ✅
