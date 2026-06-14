@@ -3525,3 +3525,9 @@ TSC: âœ…  Jest: âœ…
 Files touched: src/hooks/useControllerDispatch.ts, src/hooks/__tests__/useControllerDispatch.test.ts
 TSC: ?  Jest: ?
 
+### [MERGE READY] sweep-hooks-useCrewSession.ts — ef93bfef
+Files touched: src/hooks/useCrewSession.ts
+TSC: ?  Jest: ?
+### [MERGE READY] sweep-hooks-useCrewSession.ts — ef93bfef
+Files touched: src/hooks/useCrewSession.ts
+TSC: ?  Jest: ?

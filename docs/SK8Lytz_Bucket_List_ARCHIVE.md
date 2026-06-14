@@ -790,10 +790,10 @@ pm run verify which includes QA tests.
     Rejected alternative: "Configurable runtime delays — rejected because these are protocol-level timing constraints that should be compile-time constants, not runtime settings."
   - **Source of Truth:** 📖 [R-16_findings.json](artifacts/deepdive_raw/R-16_findings.json) · `tools/ZENGGE_PROTOCOL_BIBLE.md`
   - **Details:** Create `BLE_TIMING` const object. 6 files touched. No logic changes — purely naming. Low execution risk despite H-RISK domain tag.
-- [x] **\ix/error-handling-standardization\** � Merged a171835: Standardized ~150 catch blocks with instanceof Error unwrapping.
+- [x] **\ix/error-handling-standardization\** � Merged a171835: Standardized ~150 catch blocks with instanceof Error unwrapping.
   - **Tags:** \[? READY]\ \[?? INFERRED]\ \[Services]\ \[L-RISK]\ \[Feast]\ \[?? PRO-MED]\ \[BATCH:deepdive-synthesis-2026-06-08]\
   - **Goal:** Add \instanceof Error\ unwrapping to all ~190 catch blocks that pass raw \e: unknown\ directly to AppLogger, replacing \[object Object]\ telemetry with readable error messages.
-  - **Decision Log:** R-06 sniper found 2130 raw entries (~190 unique) of \catch (e: unknown)\ blocks that log \e\ directly without unwrapping. This produces \[object Object]\ in production telemetry, making debugging impossible. The pattern \e instanceof Error ? e.message : String(e)\ is already used correctly in ~60% of the codebase � the other 40% needs to catch up. Evidence: \R-06_findings.json\ (2026-06-08).
+  - **Decision Log:** R-06 sniper found 2130 raw entries (~190 unique) of \catch (e: unknown)\ blocks that log \e\ directly without unwrapping. This produces \[object Object]\ in production telemetry, making debugging impossible. The pattern \e instanceof Error ? e.message : String(e)\ is already used correctly in ~60% of the codebase � the other 40% needs to catch up. Evidence: \R-06_findings.json\ (2026-06-08).
 
 
 - [x] **`refactor/boolean-fsm-admin-tools`** 🚀 Merged in 07f94b36
@@ -2116,3 +2116,131 @@ pm run verify which includes QA tests.
 ## 🚑 TRIAGE QUEUE
 
 > **Source Analysis**: 📊 [PLAN-hardware-setup-batch.md](./plans/PLAN-hardware-setup-batch.md) — Unifies setup wizard logic fixes, brand color updates, and global header padding into a single surgical pass.
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 39 findings in sweep-root
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Feast] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-root.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:22 M:8 L:9)
+  - [WAVE:1]
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 10 findings in sweep-components-AccountModal.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-AccountModal.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:3 M:3 L:4)
+  - [WAVE:1]
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 22 findings in sweep-components-admin
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Feast] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-admin.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:7 M:7 L:8)
+  - [WAVE:1]
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 7 findings in sweep-components-auth
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-auth.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:3 M:0 L:4)
+  - [WAVE:1]
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-components-CommunityModal.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-CommunityModal.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:1 L:1)
+  - [WAVE:1]
+
+- [x] **[MAINTENANCE]** `[Status: [x]]` `[Verification: ✅ VERIFIED]` `[Layer: COMPONENT]` `[Risk: M-RISK]` `[Size: Meal]` `[Cognitive Load: HIGH]`
+  - Task: Resolve 11 findings in sweep-components-crew
+  - Source of Truth: `docs/plans/PLAN-sweep-components-crew.md`
+  - Merge: 807f2235 - Extracted stats/forms, fixed double-taps, added error boundaries.
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:8 M:2 L:1)
+  - [WAVE:1]
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 6 findings in sweep-components-dashboard
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-dashboard.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:2 M:2 L:2)
+  - [WAVE:1]
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 18 findings in sweep-components-docked
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Feast] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-docked.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:7 M:9 L:2)
+  - [WAVE:1]
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-components-LocationPicker.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-LocationPicker.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:2 L:0)
+  - [WAVE:1]
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-components-permissions
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-permissions.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:2 M:1 L:0)
+  - [WAVE:1]
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-components-SkateSpotBottomSheet.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-SkateSpotBottomSheet.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:2 L:0)
+  - [WAVE:1]
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-components-VisualizerUnit.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-VisualizerUnit.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:1 L:0)
+  - [WAVE:1]
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 5 findings in sweep-context-SessionContext.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-context-SessionContext.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:3 M:1 L:1)
+  - [WAVE:1]
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 17 findings in sweep-hooks-ble
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [H-RISK] [Feast] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-ble.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:10 L:6)
+  - [WAVE:1]
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 11 findings in sweep-hooks-useControllerDispatch.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useControllerDispatch.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:3 M:8 L:0)
+  - [WAVE:1]
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 5 findings in sweep-hooks-useCrewHub.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useCrewHub.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:2 M:3 L:0)
+  - [WAVE:1]
