@@ -130,7 +130,7 @@ const flushToDatabase = async () => {
       if (error) throw error;
 
       // Success! Clear memory buffer and AsyncStorage
-      for (const key in _payloadBuffer) delete (_payloadBuffer as any)[key];
+      _payloadBuffer = {};
       await AsyncStorage.removeItem(TELEMETRY_BUFFER_KEY);
       AppLogger.debug('Telemetry flushed successfully');
       
@@ -140,7 +140,7 @@ const flushToDatabase = async () => {
       try {
         await AsyncStorage.setItem(TELEMETRY_BUFFER_KEY, JSON.stringify(payloadToUpload));
         // Reset memory buffer so we don't accumulate duplicates if it stays running
-        for (const key in _payloadBuffer) delete (_payloadBuffer as any)[key];
+        _payloadBuffer = {};
       } catch (storageErr: unknown) {
         // Fatal storage error
       }
