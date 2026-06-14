@@ -3574,3 +3574,8 @@ pm run verify passed cleanly on master. The AST findings were based on a pre-Jun
 **What**: Drafted plan to implement TTID and TTFD tracking via a surgical React Native hook.
 **Decision Log**: The user requested tracking for individual page load times beyond just app startup. Rejected 3rd-party APM SDKs to maintain offline-first constraint. Drafted plan for custom hook.
 
+
+### [MERGE READY] feat-performance-telemetry-ttid — 15fbac89
+Files touched: src/hooks/useScreenPerformance.ts, src/services/AppLogger.ts, src/screens/AuthScreen.tsx, src/screens/DashboardScreen.tsx, src/screens/Onboarding/HardwareSetupWizardScreen.tsx, src/components/AccountModal.tsx, src/components/CrewMemberDashboard.tsx, src/components/DockedController.tsx, src/components/SkateSpotBottomSheet.tsx
+TSC: ?  Jest: ?
+
