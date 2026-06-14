@@ -169,3 +169,4 @@ tools/find_unused_deps.js
 tools/observatory/raw/
 harvested_screenshot.png
 tools/sentinel/sweeper_screencap.png
+.test-attestation.json
