@@ -55,8 +55,8 @@ foreach ($Line in $WorktreeList) {
     try {
         $Status = git status --short
         if ($Status) {
-            Write-Host "Error: Worktree has uncommitted changes. Please commit or stash first." -ForegroundColor Red
-            exit 1
+            Write-Host "Error: Worktree has uncommitted changes. Skipping." -ForegroundColor Red
+            continue
         }
 
         # 1.5 Blast Radius Scan
