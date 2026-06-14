@@ -115,7 +115,7 @@ export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepPr
         bleSend({ type: 'SCAN_START' });
       }
     }).catch(err => {
-      AppLogger.warn('[useBLEBatterySweep] Battery check failed', { error: String(err) });
+      AppLogger.warn('[useBLEBatterySweep] Battery check failed', { error: String(err), payload_size: 0, ssi: 0 });
       batteryTierRef.current = 'FULL';
       setBatteryTier('FULL');
       isSweeperActiveRef.current = true;
@@ -180,7 +180,7 @@ export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepPr
 
       if (newTier === 'PAUSED') {
         stopSweeper();
-        AppLogger.warn('[useBLEBatterySweep] Battery critical — auto-paused');
+        AppLogger.warn('[useBLEBatterySweep] Battery critical — auto-paused', { payload_size: 0, ssi: 0 });
       } else if (newTier === 'THROTTLED' && oldTier === 'FULL') {
         bleSend({ type: 'SCAN_PAUSE' });
         if (throttleCycleTimerRef.current) { clearTimeout(throttleCycleTimerRef.current); throttleCycleTimerRef.current = null; }

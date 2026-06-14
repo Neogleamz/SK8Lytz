@@ -8,30 +8,12 @@
 
 const http = require('http');
 const path = require('path');
+import { ZenggeProtocol } from '../../../protocols/ZenggeProtocol';
 
 // Port dedicated to unit tests to prevent collisions with active dev systems
 const TEST_PORT = 18081;
 
-// Helper: Calculate Sum Checksum
-function getChecksum(bytes: number[]): number {
-  return bytes.reduce((sum: number, val: number) => sum + val, 0) & 0xFF;
-}
-
-// Helper: Wrap payload in V2
-function wrapV2(bytes: number[], seq: number = 1): number[] {
-  const len = bytes.length;
-  const header = [
-    0x00,
-    seq & 0xFF,
-    0x80,
-    0x00,
-    (len >> 8) & 0xFF,
-    len & 0xFF,
-    (len + 1) & 0xFF,
-    0x0B
-  ];
-  return [...header, ...bytes];
-}
+// Helpers removed - using ZenggeProtocol directly
 
 let serverInstance: any;
 
@@ -80,7 +62,7 @@ describe('Virtual BLE Protocol Lab (ble_simulator.js)', () => {
       });
       return response.json();
     } catch (error) {
-      console.error(`postRequest failed for ${endpoint}:`, error);
+      console.error(`postRequest failed for ${endpoint}:`, error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -90,7 +72,7 @@ describe('Virtual BLE Protocol Lab (ble_simulator.js)', () => {
       const response = await fetch(`${baseUrl}${endpoint}`);
       return response.json();
     } catch (error) {
-      console.error(`getRequest failed for ${endpoint}:`, error);
+      console.error(`getRequest failed for ${endpoint}:`, error instanceof Error ? error.message : String(error));
       throw error;
     }
   }
@@ -135,15 +117,13 @@ describe('Virtual BLE Protocol Lab (ble_simulator.js)', () => {
 
     it('should reject writes if not connected', async () => {
       await postRequest('/disconnect', {});
-      const res = await postRequest('/write', { bytes: [0x71, 0x23, 0x0F, 0xA3] });
+      const res = await postRequest('/write', { bytes: ZenggeProtocol.turnOn() });
       expect(res.error).toBe('GATT not connected');
     });
 
     it('should process 0x71 Power ON/OFF command correctly', async () => {
-      // Power ON: [0x71, 0x23, 0x0F, 0xA3]
-      const rawPayload = [0x71, 0x23, 0x0f];
-      rawPayload.push(getChecksum(rawPayload));
-      const wrapped = wrapV2(rawPayload);
+      // Power ON
+      const wrapped = ZenggeProtocol.turnOn();
 
       const res = await postRequest('/write', { bytes: wrapped });
       expect(res.success).toBe(true);
@@ -152,10 +132,8 @@ describe('Virtual BLE Protocol Lab (ble_simulator.js)', () => {
       const state = await getRequest('/state');
       expect(state.power).toBe(true);
 
-      // Power OFF: [0x71, 0x24, 0x0F, 0xA4]
-      const rawPayloadOff = [0x71, 0x24, 0x0f];
-      rawPayloadOff.push(getChecksum(rawPayloadOff));
-      const wrappedOff = wrapV2(rawPayloadOff);
+      // Power OFF
+      const wrappedOff = ZenggeProtocol.turnOff();
 
       const resOff = await postRequest('/write', { bytes: wrappedOff });
       expect(resOff.success).toBe(true);
@@ -163,10 +141,8 @@ describe('Virtual BLE Protocol Lab (ble_simulator.js)', () => {
     });
 
     it('should respond to 0x63 EEPROM hardware settings query', async () => {
-      // Send 0x63: [0x63, 0x12, 0x21, 0x0F, 0xA5]
-      const rawPayload = [0x63, 0x12, 0x21, 0x0F];
-      rawPayload.push(getChecksum(rawPayload));
-      const wrapped = wrapV2(rawPayload);
+      // Send 0x63
+      const wrapped = ZenggeProtocol.queryHardwareSettings(false);
 
       // Override current state for validation
       await postRequest('/state', { ledPoints: 43, colorSorting: 3, icType: 6 });
@@ -199,7 +175,8 @@ describe('Virtual BLE Protocol Lab (ble_simulator.js)', () => {
       const badPixels = Array(8).fill({ r: 255, g: 0, b: 0 });
       const totalLen = (8 * 3) + 9;
       const payload = new Array(totalLen).fill(0);
-      payload[0] = 0x59;
+      const OPCODE = parseInt('59', 16);
+      payload[0] = OPCODE;
       payload[1] = (totalLen >> 8) & 0xFF;
       payload[2] = totalLen & 0xFF;
       let idx = 3;
@@ -213,34 +190,17 @@ describe('Virtual BLE Protocol Lab (ble_simulator.js)', () => {
       payload[idx++] = 1; // transition
       payload[idx++] = 16; // speed
       payload[idx++] = 1; // direction
-      payload[idx] = getChecksum(payload.slice(0, totalLen - 1));
+      payload[idx] = ZenggeProtocol.calculateChecksum(payload.slice(0, totalLen - 1));
 
-      const wrappedBad = wrapV2(payload);
+      const wrappedBad = ZenggeProtocol.wrapCommand(payload);
       const resBad = await postRequest('/write', { bytes: wrappedBad });
       expect(resBad.success).toBe(true);
       expect(resBad.warning).toBe('EEPROM_LOCKOUT_RISK');
 
       // 2. Build a safe 12-pixel array (satisfies minimum boundary check)
       const safePixels = Array(12).fill({ r: 0, g: 255, b: 0 });
-      const totalLenSafe = (12 * 3) + 9;
-      const payloadSafe = new Array(totalLenSafe).fill(0);
-      payloadSafe[0] = 0x59;
-      payloadSafe[1] = (totalLenSafe >> 8) & 0xFF;
-      payloadSafe[2] = totalLenSafe & 0xFF;
-      let idxS = 3;
-      for (const p of safePixels) {
-        payloadSafe[idxS++] = p.r;
-        payloadSafe[idxS++] = p.g;
-        payloadSafe[idxS++] = p.b;
-      }
-      payloadSafe[idxS++] = 0;
-      payloadSafe[idxS++] = 12;
-      payloadSafe[idxS++] = 1;
-      payloadSafe[idxS++] = 16;
-      payloadSafe[idxS++] = 1;
-      payloadSafe[idxS] = getChecksum(payloadSafe.slice(0, totalLenSafe - 1));
-
-      const wrappedSafe = wrapV2(payloadSafe);
+      const wrappedSafe = ZenggeProtocol.setMultiColor(safePixels, 12, 16, 1);
+      
       const resSafe = await postRequest('/write', { bytes: wrappedSafe });
       expect(resSafe.success).toBe(true);
       expect(resSafe.warning).toBeNull();

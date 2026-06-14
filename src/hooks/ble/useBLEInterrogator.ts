@@ -34,7 +34,7 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
   }, []);
 
   // Create the probe queue — wired to update hwCache state on completion
-  const { queueDeviceForInterrogation } = bleManager
+  const { queueDeviceForInterrogation, cleanup } = bleManager
     ? createProbeQueue({
         bleManager,
         probingMacsRef,
@@ -46,7 +46,13 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
           onDeviceInterrogated();
         },
       })
-    : { queueDeviceForInterrogation: (_mac: string) => {} };
+    : { queueDeviceForInterrogation: (_mac: string) => {}, cleanup: () => {} };
+
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
 
   const stableQueueDeviceForInterrogation = useCallback(
     (mac: string) => queueDeviceForInterrogation(mac),
