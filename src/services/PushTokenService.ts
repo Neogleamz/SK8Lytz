@@ -21,12 +21,13 @@ class PushTokenService {
     if (!userId) return; // silently skip if not logged in
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('push_tokens')
         .upsert(
           { user_id: userId, token, platform, updated_at: new Date().toISOString() },
           { onConflict: 'user_id,token' }
         );
+      if (error) throw error;
     } catch (e: unknown) {
       // R-04: error context (payload_size, ssi) included per structured-log standard.
       AppLogger.error('PushTokenService', 'registerPushToken failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
@@ -40,11 +41,12 @@ class PushTokenService {
     if (!userId) return;
 
     try {
-      await supabase
+      const { error } = await supabase
         .from('push_tokens')
         .delete()
         .eq('user_id', userId)
         .eq('token', token);
+      if (error) throw error;
     } catch (e: unknown) {
       AppLogger.error('PushTokenService', 'unregisterPushToken failed', { error: e instanceof Error ? e.message : String(e) , payload_size: 0, ssi: 0 });
     }
