@@ -87,10 +87,10 @@ class GroupRepository {
         }
       }
       AppLogger.warn('[GroupRepository] initialized', { event: 'initialized',
-        groupCount: this.groups.length,
+        groupCount: this.groups.length, payload_size: 0, ssi: 0
       });
     } catch (e: unknown) {
-      AppLogger.warn('[GroupRepository] Storage load failed:', e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e)));
+      AppLogger.warn('[GroupRepository] Storage load failed:', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
     }
   }
 
@@ -149,7 +149,7 @@ class GroupRepository {
       });
       if (error) throw error;
     } catch (e: unknown) {
-      AppLogger.warn('[GroupRepository] delete_group_cascade RPC failed, falling back:', { error: e instanceof Error ? e.message : String(e)  });
+      AppLogger.warn('[GroupRepository] delete_group_cascade RPC failed, falling back:', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0  });
       try {
         if (userId) {
           await supabase.from('registered_groups').delete()
@@ -157,7 +157,7 @@ class GroupRepository {
             .eq('user_id', userId);
         }
       } catch (fe: unknown) {
-        AppLogger.warn('[GroupRepository] Cloud group delete fallback failed:', { error: fe instanceof Error ? fe.message : (fe instanceof Error ? fe.message : String(fe)) });
+        AppLogger.warn('[GroupRepository] Cloud group delete fallback failed:', { error: fe instanceof Error ? fe.message : String(fe), payload_size: 0, ssi: 0 });
       }
     }
   }
@@ -232,7 +232,7 @@ class GroupRepository {
       if (!userId || hasPendingDevices) {
         await this._queuePendingGroupSync(groupId, groupName, deviceMacs, type);
         AppLogger.warn('[GroupRepository] Offline or Pending Devices — group queued for sync', { groupId,
-          hasPendingDevices,
+          hasPendingDevices, payload_size: 0, ssi: 0
         });
         return true;
       }
@@ -246,16 +246,21 @@ class GroupRepository {
       if (error) throw error;
 
       if (dbDeviceIds.length > 0) {
-        await supabase
-          .from('registered_devices')
-          .update({ group_id: groupId, group_name: groupName })
-          .in('id', dbDeviceIds)
-          .then(({ error: updateErr }) => {
-            if (updateErr)
+        (async () => {
+          try {
+            const { error: updateErr } = await supabase
+              .from('registered_devices')
+              .update({ group_id: groupId, group_name: groupName })
+              .in('id', dbDeviceIds);
+            if (updateErr) {
               AppLogger.warn('[GroupRepository] group_id stamp failed (non-fatal)', {
-                error: updateErr.message,
+                error: updateErr.message, payload_size: 0, ssi: 0
               });
-          });
+            }
+          } catch (e: unknown) {
+            AppLogger.warn('[GroupRepository] group_id stamp network error', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+          }
+        })();
       }
 
       return true;
@@ -283,7 +288,7 @@ class GroupRepository {
       else queue.push(entry);
       await AsyncStorage.setItem(PENDING_GROUP_KEY, JSON.stringify(queue));
     } catch (e: unknown) {
-      AppLogger.warn('[GroupRepository] Group queue failed:', { error: e instanceof Error ? e.message : String(e)  });
+      AppLogger.warn('[GroupRepository] Group queue failed:', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0  });
     }
   }
 
@@ -312,7 +317,7 @@ class GroupRepository {
           });
           if (error) throw error;
         } catch (rpcErr: unknown) {
-          AppLogger.warn('[GroupRepository] Group flush RPC failed, fallback:', { error: rpcErr instanceof Error ? rpcErr.message : (rpcErr instanceof Error ? rpcErr.message : String(rpcErr)) });
+          AppLogger.warn('[GroupRepository] Group flush RPC failed, fallback:', { error: rpcErr instanceof Error ? rpcErr.message : String(rpcErr), payload_size: 0, ssi: 0 });
           try {
             await supabase.from('registered_groups').upsert({
               id: entry.groupId,
@@ -321,13 +326,13 @@ class GroupRepository {
               user_id: userId,
             } satisfies GroupInsert, { onConflict: 'id' });
           } catch (fbErr: unknown) {
-            AppLogger.warn('[GroupRepository] Group flush fallback failed:', { error: fbErr instanceof Error ? fbErr.message : (fbErr instanceof Error ? fbErr.message : String(fbErr)) });
+            AppLogger.warn('[GroupRepository] Group flush fallback failed:', { error: fbErr instanceof Error ? fbErr.message : String(fbErr), payload_size: 0, ssi: 0 });
           }
         }
       }
 
       await AsyncStorage.removeItem(PENDING_GROUP_KEY);
-      AppLogger.warn('[GroupRepository] Pending group sync flushed', { count: queue.length });
+      AppLogger.warn('[GroupRepository] Pending group sync flushed', { count: queue.length, payload_size: 0, ssi: 0 });
     } catch (e: unknown) {
       AppLogger.warn('[GroupRepository] Group flush failed:', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0  });
     }

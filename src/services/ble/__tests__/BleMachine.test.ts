@@ -128,7 +128,7 @@ describe('BleMachine test suite', () => {
     mockConnectResolve({ devices: [mockDevice] });
     await mockConnectPromise;
     // Wait for microtasks
-    await new Promise((res) => setTimeout(res, 0));
+    jest.runAllTicks();
   };
 
   // --- Group A: State Transitions ---
@@ -193,7 +193,7 @@ describe('BleMachine test suite', () => {
     const mockDevice = { id: 'MAC1', name: 'Mock Skates' } as unknown as Device;
     mockConnectResolve({ devices: [mockDevice] });
     await mockConnectPromise;
-    await new Promise((res) => setTimeout(res, 0));
+    jest.runAllTicks();
 
     expect(actor.getSnapshot().value).toBe('READY');
     expect(actor.getSnapshot().context.connectedDevices).toEqual([mockDevice]);
@@ -209,7 +209,7 @@ describe('BleMachine test suite', () => {
     try {
       await mockConnectPromise;
     } catch {}
-    await new Promise((res) => setTimeout(res, 0));
+    jest.runAllTicks();
 
     expect(actor.getSnapshot().value).toBe('IDLE');
   });
@@ -350,7 +350,7 @@ describe('BleMachine test suite', () => {
     const mockDevice = { id: 'MAC1', name: 'Mock Skates' } as unknown as Device;
     mockConnectResolve({ devices: [mockDevice] });
     await mockConnectPromise;
-    await new Promise((res) => setTimeout(res, 0));
+    jest.runAllTicks();
     expect(actor.getSnapshot().value).toBe('READY');
 
     // Request formal disconnect

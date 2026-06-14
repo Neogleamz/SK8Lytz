@@ -99,9 +99,11 @@ class CrewProfileService {
         });
       }
 
-      await supabase
+      const { error: membershipsErr } = await supabase
         .from('crew_memberships')
         .insert(memberships);
+
+      if (membershipsErr) throw membershipsErr;
 
       return { ...crew, is_owner: true } as PermanentCrew;
     } catch (e: unknown) {
@@ -178,11 +180,13 @@ class CrewProfileService {
     try {
       if (!userId) return;
 
-      await supabase
+      const { error: leaveErr } = await supabase
         .from('crew_memberships')
         .delete()
         .eq('crew_id', crewId)
         .eq('user_id', userId);
+
+      if (leaveErr) throw leaveErr;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.error('[CrewProfileService] leavePermanentCrew failed', { error: msg , payload_size: 0, ssi: 0 });
@@ -590,7 +594,7 @@ class CrewProfileService {
         .or(`username.ilike.${searchTerms},display_name.ilike.${searchTerms}`)
         .limit(10);
       if (error) {
-        AppLogger.warn('CREW_PROFILE', { event: 'search_users_failed', query: '[REDACTED]', error: String(error) });
+        AppLogger.warn('CREW_PROFILE', { event: 'search_users_failed', query: '[REDACTED]', error: String(error), payload_size: 0, ssi: 0 });
         return [];
       }
       return data ?? [];

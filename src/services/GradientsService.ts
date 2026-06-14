@@ -4,12 +4,15 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from './AppLogger';
 import type { Database } from '../types/supabase';
 import { BuilderNode, CustomBuilderPreset } from '../protocols/PositionalMathBuffer';
+import { scrubPII } from '../utils/piiScrubber';
 
 const LOCAL_GRADIENTS_KEY = STORAGE_LOCAL_GRADIENTS;
 
 
 
 class GradientsServiceClass {
+  private isSyncing = false;
+
   async getSavedGradients(userId?: string): Promise<CustomBuilderPreset[]> {
     let localPresets: CustomBuilderPreset[] = [];
     
@@ -28,8 +31,11 @@ class GradientsServiceClass {
 
     // 2. Background Sync
     const syncCloud = async () => {
-      let globalPresets: CustomBuilderPreset[] = [];
-      let userCloudPresets: CustomBuilderPreset[] = [];
+      if (this.isSyncing) return;
+      this.isSyncing = true;
+      try {
+        let globalPresets: CustomBuilderPreset[] = [];
+        let userCloudPresets: CustomBuilderPreset[] = [];
       
       try {
         const { data, error } = await supabase
@@ -42,7 +48,7 @@ class GradientsServiceClass {
           globalPresets = data.filter(p => p && p.id && p.name && Array.isArray(p.nodes));
         }
       } catch (err: unknown) {
-        AppLogger.warn('GRADIENT_SYNC_FAIL', err instanceof Error ? err.message : String(err));
+        AppLogger.warn('GRADIENT_SYNC_FAIL', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       }
 
       if (userId) {
@@ -58,7 +64,7 @@ class GradientsServiceClass {
             userCloudPresets = data.filter(p => p && p.id && p.name && Array.isArray(p.nodes));
           }
         } catch (err: unknown) {
-          AppLogger.warn('GRADIENT_SYNC_FAIL', err instanceof Error ? err.message : String(err));
+          AppLogger.warn('GRADIENT_SYNC_FAIL', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
         }
       }
 
@@ -72,7 +78,10 @@ class GradientsServiceClass {
       try {
         await AsyncStorage.setItem(LOCAL_GRADIENTS_KEY, JSON.stringify(finalMerged));
       } catch (e: unknown) {
-        AppLogger.warn('GRADIENT_CACHE_WRITE_FAIL', e instanceof Error ? e.message : String(e));
+        AppLogger.warn('GRADIENT_CACHE_WRITE_FAIL', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+      }
+      } finally {
+        this.isSyncing = false;
       }
     };
 
@@ -114,9 +123,8 @@ class GradientsServiceClass {
         const payload: Database['public']['Tables']['user_saved_presets']['Insert'] = {
           id: newPreset.id,
           name: newPreset.name,
-          // R-08: Supabase nodes column is typed as Json. CustomBuilderNode[] is structurally
-          // compatible but TS cannot verify the recursive Json constraint — double cast required.
-          nodes: newPreset.nodes as unknown as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
+          // R-08: Fix double cast by serializing
+          nodes: JSON.parse(JSON.stringify(newPreset.nodes)) as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
           fill_mode: newPreset.fill_mode || 'GRADIENT',
           transition_type: newPreset.transition_type || 0x01,
           user_id: userId,
@@ -126,11 +134,11 @@ class GradientsServiceClass {
         const { error } = await supabase.from('user_saved_presets').upsert(payload);
         if (error) throw error;
       } catch (err: unknown) {
-        AppLogger.warn('GRADIENT_CLOUD_SAVE_FAIL', err instanceof Error ? err.message : String(err));
+        AppLogger.warn('GRADIENT_CLOUD_SAVE_FAIL', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       }
     }
 
-    AppLogger.log('BUILDER_PRESET_SAVED', { id: newPreset.id, name: newPreset.name });
+    AppLogger.log('BUILDER_PRESET_SAVED', { id: newPreset.id, name: scrubPII(newPreset.name) });
     return newPreset;
   }
 
@@ -150,7 +158,7 @@ class GradientsServiceClass {
       try {
         await supabase.from('user_saved_presets').delete().eq('id', id);
       } catch (err: unknown) {
-        AppLogger.warn('GRADIENT_CLOUD_DEL_FAIL', err instanceof Error ? err.message : String(err));
+        AppLogger.warn('GRADIENT_CLOUD_DEL_FAIL', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       }
     }
 

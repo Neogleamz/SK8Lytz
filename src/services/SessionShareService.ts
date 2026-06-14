@@ -10,6 +10,7 @@
 
 import { Platform, Share } from 'react-native';
 import { AppLogger } from './AppLogger';
+import { scrubPII } from '../utils/piiScrubber';
 
 // App store / download links — update when app is published
 const APP_LINK_IOS     = 'https://apps.apple.com/app/sk8lytz';
@@ -113,12 +114,12 @@ async function _share(message: string, s: ShareableSession): Promise<void> {
 
     if (result.action === Share.sharedAction) {
       AppLogger.log('CREW_SESSION_SHARED', { activityType: (result as Record<string, unknown>).activityType ?? 'unknown',
-        sessionName: s.name,
+        sessionName: scrubPII(s.name || ''),
         isScheduled: !!s.scheduled_at,
       });
     }
   } catch (e: unknown) {
     // User dismissed or share failed - not a fatal error, just log
-    AppLogger.log('CREW_SESSION_SHARED', { error: e instanceof Error ? e.message : String(e), sessionName: s.name });
+    AppLogger.log('CREW_SESSION_SHARED', { error: e instanceof Error ? e.message : String(e), sessionName: scrubPII(s.name || '') });
   }
 }

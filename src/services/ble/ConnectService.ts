@@ -62,7 +62,7 @@ export const connectService = fromPromise<
   // ── HARDWARE BLACKLIST GUARD ──────────────────────────────────────────────
   const blockedMacs = targetMacs.filter(mac => blacklistedMacsRef.current.includes(mac.toUpperCase()));
   if (blockedMacs.length > 0) {
-    AppLogger.warn('[BLE] Hardware Blacklist Blocked Connection', { blockedDevices: '[REDACTED]' });
+    AppLogger.warn('[BLE] Hardware Blacklist Blocked Connection', { blockedDevices: '[REDACTED]', payload_size: 0, ssi: 0 });
     Alert.alert('Connection Blocked', 'One or more devices have been restricted and cannot be connected.');
     throw new Error('hardware_blacklist');
   }
@@ -92,7 +92,7 @@ export const connectService = fromPromise<
            try {
              disconnectListeners.current[stale.id].remove();
            } catch (e: unknown) {
-             AppLogger.warn('[BLE] Failed to remove disconnect listener during stale device flush', e instanceof Error ? e.message : String(e));
+             AppLogger.warn('[BLE] Failed to remove disconnect listener during stale device flush', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
            }
            delete disconnectListeners.current[stale.id];
         }
@@ -100,7 +100,7 @@ export const connectService = fromPromise<
           await bleManager.cancelDeviceConnection(stale.id);
           AppLogger.log('BLE_STATE_CHANGE', { event: 'stale_device_flushed', deviceId: scrubPII(stale.id) });
         } catch (e: unknown) {
-          AppLogger.warn('Failed to flush stale device', { deviceId: scrubPII(stale.id), error: e instanceof Error ? e.message : String(e)  });
+          AppLogger.warn('Failed to flush stale device', { deviceId: scrubPII(stale.id), error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         }
       }
       await new Promise(resolve => setTimeout(resolve, BLE_TIMING.STALE_FLUSH_SETTLE_MS));
@@ -113,7 +113,7 @@ export const connectService = fromPromise<
        try {
          isMock = await AsyncStorage.getItem(STORAGE_DEMO_MODE) || 'false';
        } catch (e: unknown) {
-         AppLogger.warn('Failed to read mock storage', e instanceof Error ? e.message : String(e));
+         AppLogger.warn('Failed to read mock storage', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
        }
     }
 
@@ -129,7 +129,7 @@ export const connectService = fromPromise<
       });
       
       mockDevices.forEach(d => {
-        AppLogger.log('DEVICE_CONNECTED', { id: d.id, name: d.name, firmware: 'v2.0.1.DEMO' });
+        AppLogger.log('DEVICE_CONNECTED', { id: d.id, name: scrubPII(d.name || ''), firmware: 'v2.0.1.DEMO' });
       });
       return { devices: mockDevices };
     }
@@ -174,7 +174,7 @@ export const connectService = fromPromise<
           if (isTransient && attempt < 3) {
             const baseDelay = GATT_BACKOFF_MS[attempt - 1];
             const delay = jitteredDelay(baseDelay, 500);
-            AppLogger.warn('[BLE] GATT 133 — transient connect error, retrying', { attempt, maxAttempts: 3, delayMs: delay, deviceId: scrubPII(mac), error: errStr });
+            AppLogger.warn('[BLE] GATT 133 — transient connect error, retrying', { attempt, maxAttempts: 3, delayMs: delay, deviceId: scrubPII(mac), error: errStr, payload_size: 0, ssi: 0 });
             await bleManager.cancelDeviceConnection(mac).catch(() => {});
             await new Promise(resolve => setTimeout(resolve, delay));
           } else {
@@ -195,7 +195,7 @@ export const connectService = fromPromise<
         if (signal.aborted) throw new Error('connect_aborted');
         if (Platform.OS === 'android') {
           await bleManager.requestConnectionPriorityForDevice(conn.id, 1).catch((e: unknown) => {
-            AppLogger.warn('[BLE] requestConnectionPriorityForDevice failed', e instanceof Error ? e.message : String(e));
+            AppLogger.warn('[BLE] requestConnectionPriorityForDevice failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
           });
         }
         const { adapter } = await createGattSession(bleManager, conn.id, {
@@ -214,7 +214,7 @@ export const connectService = fromPromise<
               const negotiated = await conn.requestMTU(512);
               negotiatedMtu = negotiated.mtu;
               if (negotiatedMtu > 23) break;
-              AppLogger.warn(`[BLE] MTU glitch (23) for ${scrubPII(conn.id)}. Retrying...`);
+              AppLogger.warn(`[BLE] MTU glitch (23) for ${scrubPII(conn.id)}. Retrying...`, { payload_size: 0, ssi: 0 });
               const backoffMs = BLE_TIMING.MTU_RETRY_SETTLE_MS * Math.pow(2, mtuAttempt - 1);
               await new Promise(res => setTimeout(res, jitteredDelay(backoffMs, 50)));
             } catch {
@@ -234,7 +234,7 @@ export const connectService = fromPromise<
         });
 
         adapterMapRef.current.set(conn.id, adapter);
-        AppLogger.log('DEVICE_CONNECTED', { context: 'adapter_resolved', deviceId: '[REDACTED]', protocolId: adapter.protocolId });
+        AppLogger.log('DEVICE_CONNECTED', { context: 'adapter_resolved', deviceId: '[REDACTED]', protocolId: scrubPII(adapter.protocolId) });
 
         if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
         disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {
@@ -268,25 +268,25 @@ export const connectService = fromPromise<
             }
           }
           if (handshake.packets.length > 0) {
-            AppLogger.log('BLE_TIME_SYNC', { deviceId: conn.id, protocolId: adapter.protocolId, timestamp: Date.now() });
+            AppLogger.log('BLE_TIME_SYNC', { deviceId: scrubPII(conn.id), protocolId: scrubPII(adapter.protocolId), timestamp: Date.now() });
           }
         } catch (handshakeErr: unknown) {
-          AppLogger.warn('[BLE] Handshake write failed (non-fatal)', { error: handshakeErr instanceof Error ? handshakeErr.message : String(handshakeErr), deviceId: scrubPII(conn.id) });
+          AppLogger.warn('[BLE] Handshake write failed (non-fatal)', { error: handshakeErr instanceof Error ? handshakeErr.message : String(handshakeErr), deviceId: scrubPII(conn.id), payload_size: 0, ssi: 0 });
         }
 
         AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name });
         if (Platform.OS === 'android') {
           bleManager.requestConnectionPriorityForDevice(conn.id, 0).catch((e: unknown) => {
-            AppLogger.warn('[BLE] Priority BALANCED downgrade failed (non-fatal)', e instanceof Error ? e.message : String(e));
+            AppLogger.warn('[BLE] Priority BALANCED downgrade failed (non-fatal)', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
           });
         }
         return conn;
       } catch (deviceError: unknown) {
         const errMsg = deviceError instanceof Error ? deviceError.message : String(deviceError);
         if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('not connected') || errMsg.includes('Device disconnected')) {
-          AppLogger.warn(`[BLE] Connection dropout for ${scrubPII(conn.id)} (ignoring VIP error)`);
+          AppLogger.warn(`[BLE] Connection dropout for ${scrubPII(conn.id)} (ignoring VIP error)`, { payload_size: 0, ssi: 0 });
         } else {
-          AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${scrubPII(conn.id)}`, deviceError, { deviceId: scrubPII(conn.id), payload_size: 0, ssi: 0 });
+          AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${scrubPII(conn.id)}`, deviceError instanceof Error ? deviceError.message : String(deviceError), { deviceId: scrubPII(conn.id), payload_size: 0, ssi: 0 });
           AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, deviceId: scrubPII(conn.id), context: 'group_sync_fail' });
         }
         return null;
@@ -315,7 +315,7 @@ export const connectService = fromPromise<
     return { devices: finalGroup };
 
   } catch (outerErr: unknown) {
-    AppLogger.error('[BLE] connectService outer failed', outerErr, { payload_size: 0, ssi: 0 });
+    AppLogger.error('[BLE] connectService outer failed', outerErr instanceof Error ? outerErr.message : String(outerErr), { payload_size: 0, ssi: 0 });
     throw outerErr;
   }
 });

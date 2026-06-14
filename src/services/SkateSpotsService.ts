@@ -13,6 +13,8 @@ interface BoundingBox {
   maxLng: number;
 }
 
+let isSpotsSyncing = false;
+
 export const SkateSpotsService = {
   /**
    * Fetch all cached spots from DB (with background sync).
@@ -37,16 +39,20 @@ export const SkateSpotsService = {
     } catch (e: unknown) {}
 
     const syncCloud = async () => {
+      if (isSpotsSyncing) return;
+      isSpotsSyncing = true;
       try {
         const { data, error } = await supabase.from('skate_spots').select('*').eq('is_published', true).limit(500);
         if (!error && data) {
           // R-11 fix: wrap fire-and-forget storage write with proper error logging.
           AsyncStorage.setItem(STORAGE_SKATE_SPOTS_CACHE, JSON.stringify({ timestamp: Date.now(), data })).catch((e: unknown) => {
-            AppLogger.warn('[SkateSpotsService] Failed to cache spots', { error: e instanceof Error ? e.message : String(e) });
+            AppLogger.warn('[SkateSpotsService] Failed to cache spots', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
           });
         }
       } catch (e: unknown) {
-        AppLogger.warn('[SkateSpotsService] syncCloud failed', { error: e instanceof Error ? e.message : String(e) });
+        AppLogger.warn('[SkateSpotsService] syncCloud failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+      } finally {
+        isSpotsSyncing = false;
       }
     };
 
@@ -63,15 +69,15 @@ export const SkateSpotsService = {
             localData = data as SkateSpot[];
             // R-11 fix: proper error logging on storage write
             AsyncStorage.setItem(STORAGE_SKATE_SPOTS_CACHE, JSON.stringify({ timestamp: Date.now(), data })).catch((e: unknown) => {
-              AppLogger.warn('[SkateSpotsService] Failed to cache spots (blocking fetch)', { error: e instanceof Error ? e.message : String(e) });
+              AppLogger.warn('[SkateSpotsService] Failed to cache spots (blocking fetch)', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
             });
           }
         } catch (e: unknown) {
-          AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Error fetching native spots', info: e instanceof Error ? e.message : String(e) });
+          AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Error fetching native spots', info: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         }
       } else {
         syncCloud().catch((e: unknown) => {
-          AppLogger.warn('[SkateSpotsService] Background sync failed', { error: e instanceof Error ? e.message : String(e) });
+          AppLogger.warn('[SkateSpotsService] Background sync failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         });
       }
     }
@@ -113,12 +119,12 @@ export const SkateSpotsService = {
         .single();
 
       if (error) {
-        AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Failed to claim spot', info: error instanceof Error ? error.message : String(error) });
+        AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Failed to claim spot', info: error instanceof Error ? error.message : String(error), payload_size: 0, ssi: 0 });
         return null;
       }
       return data;
     } catch (err: unknown) {
-      AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Error claiming spot', info: err instanceof Error ? err.message : String(err) });
+      AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'Error claiming spot', info: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       return null;
     }
   },
@@ -156,7 +162,7 @@ export const SkateSpotsService = {
         } as Partial<SkateSpot>;
       });
     } catch (err: unknown) {
-      AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'OSM fetch error', info: err instanceof Error ? err.message : String(err) });
+      AppLogger.log('ERROR', { context: 'SkateSpotsService', message: 'OSM fetch error', info: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       return [];
     }
   }

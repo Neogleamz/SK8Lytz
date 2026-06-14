@@ -81,7 +81,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
         attempts++;
 
         if (hasExceededMaxRecovery(attempts)) {
-          AppLogger.warn(`[RecoveryService] '[REDACTED]' failed after ${attempts} attempts`);
+          AppLogger.warn(`[RecoveryService] '[REDACTED]' failed after ${attempts} attempts`, { payload_size: 0, ssi: 0 });
           break;
         }
 
@@ -111,7 +111,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
             mtuMapRef.current.set(conn.id, 186);
           }
         } catch (e: unknown) {
-          AppLogger.warn('[RecoveryService] MTU negotiation failed', { deviceId, error: e instanceof Error ? e.message : String(e) });
+          AppLogger.warn('[RecoveryService] MTU negotiation failed', { deviceId, error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         }
         if (signal.aborted || cancelled) break;
 
@@ -146,7 +146,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
             await conn.writeCharacteristicWithoutResponseForService(
               recoveryAdapter.serviceUUID, recoveryAdapter.writeCharacteristicUUID,
               Buffer.from(pingResult.packets[0]).toString('base64')
-            ).catch((e: unknown) => AppLogger.warn('[RecoveryService] Recovery ping failed', e instanceof Error ? e.message : String(e)));
+            ).catch((e: unknown) => AppLogger.warn('[RecoveryService] Recovery ping failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
             return true;
           });
         }
@@ -157,7 +157,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
         break; // Success! Exit while loop.
 
       } catch (e: unknown) {
-        AppLogger.warn(`[RecoveryService] Connection attempt failed for '[REDACTED]'`, e instanceof Error ? e.message : String(e));
+        AppLogger.warn(`[RecoveryService] Connection attempt failed for '[REDACTED]'`, { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       }
     }
 
@@ -220,7 +220,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
           AppLogger.log('AUTO_RECOVERY_SUCCESS', { deviceId, phase: 3 });
           break; // Success! Exit while loop.
         } catch (e: unknown) {
-          AppLogger.warn('[RecoveryService] Phase 3 reconnect failed', { deviceId, error: String(e) });
+          AppLogger.warn('[RecoveryService] Phase 3 reconnect failed', { deviceId, error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
           break; // Give up
         }
       }

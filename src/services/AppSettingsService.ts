@@ -40,7 +40,7 @@ export const AppSettingsService = {
         settingsMap = JSON.parse(cached) as AppSettingsMap;
       }
     } catch (e: unknown) {
-      AppLogger.log('ERROR_CAUGHT', { message: 'Failed to access cached app settings', info: e instanceof Error ? e.message : String(e) });
+      AppLogger.log('ERROR_CAUGHT', { message: 'Failed to access cached app settings', info: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
     }
 
     // 2. Background network sync (non-blocking)
@@ -51,7 +51,7 @@ export const AppSettingsService = {
           .select('setting_key, setting_value, is_enabled');
 
         if (error) {
-          AppLogger.log('ERROR', { context: 'AppSettingsService', message: 'Fetch settings failed', info: error instanceof Error ? error.message : String(error) });
+          AppLogger.log('ERROR', { context: 'AppSettingsService', message: 'Fetch settings failed', info: error instanceof Error ? error.message : String(error), payload_size: 0, ssi: 0 });
           return;
         }
 
@@ -70,10 +70,10 @@ export const AppSettingsService = {
         try {
           await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(newSettings));
         } catch (e: unknown) {
-          AppLogger.warn('AppSettingsService cache write failed', e instanceof Error ? e.message : String(e));
+          AppLogger.warn('AppSettingsService cache write failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         }
       } catch (err: unknown) {
-        AppLogger.log('ERROR', { context: 'AppSettingsService', message: 'Settings sync failed', info: err instanceof Error ? err.message : String(err) });
+        AppLogger.log('ERROR', { context: 'AppSettingsService', message: 'Settings sync failed', info: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       }
     };
 
@@ -86,7 +86,7 @@ export const AppSettingsService = {
    * Updates a single setting in Supabase.
    * Uses upsert to create it if it doesn't exist.
    */
-  async updateSetting(key: AppSettingKey, value: unknown): Promise<boolean> {
+  async updateSetting(key: AppSettingKey, value: AppSettingsValue): Promise<boolean> {
     // 1. Optimistic Local Update
     try {
       const cachedStr = await AsyncStorage.getItem(CACHE_KEY);
@@ -94,7 +94,7 @@ export const AppSettingsService = {
       cached[key] = value;
       await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(cached));
     } catch (e: unknown) {
-      AppLogger.warn('AppSettingsService cache update failed', e instanceof Error ? e.message : String(e));
+      AppLogger.warn('AppSettingsService cache update failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
     }
 
     // 2. Background Cloud Sync
@@ -104,11 +104,11 @@ export const AppSettingsService = {
           .from('sk8lytz_app_settings')
           .upsert({ 
             setting_key: key, 
-            setting_value: value as unknown as import('../types/supabase').Json
+            setting_value: value as string | boolean | null
           }, { onConflict: 'setting_key' });
         if (error) throw error;
       } catch (err: unknown) {
-        AppLogger.log('ERROR_CAUGHT', { message: `Failed to update setting ${key}`, error: err instanceof Error ? err.message : String(err) });
+        AppLogger.log('ERROR_CAUGHT', { message: `Failed to update setting ${key}`, error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       }
     })();
 

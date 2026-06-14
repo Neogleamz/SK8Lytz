@@ -131,7 +131,7 @@ export function enqueueWrite(
           AppLogger.log('BLE_WRITE_QUEUE', { event: 'backpressure_drop_normal', depth: _queue.length });
         } else {
           // Queue is full of critical writes — reject the new entry
-          AppLogger.warn('BLE_WRITE_QUEUE', 'Queue saturated with critical writes — dropping incoming entry');
+          AppLogger.warn('BLE_WRITE_QUEUE Queue saturated with critical writes — dropping incoming entry', { payload_size: 0, ssi: 0 });
           resolve(true);
           return;
         }
@@ -192,7 +192,7 @@ async function _drain(): Promise<void> {
 
     const queueLatencyMs = Date.now() - entry.enqueuedAt;
     if (queueLatencyMs > 2000) {
-      AppLogger.warn('BLE_WRITE_QUEUE', `High queue latency: ${queueLatencyMs}ms for ${entry.priority} write`);
+      AppLogger.warn(`BLE_WRITE_QUEUE High queue latency: ${queueLatencyMs}ms for ${entry.priority} write`, { payload_size: 0, ssi: 0 });
     }
 
     // ── EXECUTE WITH 1 TRANSIENT RETRY ────────────────────────────────────
@@ -206,13 +206,13 @@ async function _drain(): Promise<void> {
         // Prevents synchronized retry storms when multiple queue entries hit GATT errors
         // simultaneously on a crowded 2.4GHz band.
         const delay = jitteredDelay(100, 50);
-        AppLogger.warn(`[BleWriteQueue] Transient GATT error — retrying in ${delay}ms`, { error: String(err) });
+        AppLogger.warn(`[BleWriteQueue] Transient GATT error — retrying in ${delay}ms`, { error: safeErr.message, payload_size: 0, ssi: 0 });
         await new Promise(r => setTimeout(r, delay));
         try {
           const retryResult = await entry.execute();
           entry.resolve(retryResult);
         } catch (retryErr: unknown) {
-          AppLogger.warn('[BleWriteQueue] Retry failed', { error: String(retryErr) });
+          AppLogger.warn('[BleWriteQueue] Retry failed', { error: retryErr instanceof Error ? retryErr.message : String(retryErr), payload_size: 0, ssi: 0 });
           entry.resolve(false);
         }
       } else {

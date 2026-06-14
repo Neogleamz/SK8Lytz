@@ -8,7 +8,7 @@ Fix bugs and rule violations identified during the deep-dive code hunt for the `
 - **Prerequisite:** Wave 2 fully merged
 
 ## Proposed Changes
-### [MODIFY] AppLogger.ts
+### [MODIFY] AppLogger.ts // SKIPPED: S4 Monolith (>30KB). Deferred to extraction tasks.
 - Line 291: Fix `R-11` violation. Promise/IO Safety: Unhandled promise from AsyncStorage call. Missing try/catch block or .catch() handler. (naked) (Suggested: Wrap the asynchronous storage call in a try/catch block or append a .catch() handler.)
 - Line 473: Fix `R-11` violation. Promise/IO Safety: Unhandled promise from supabase call. Missing try/catch block or .catch() handler. (naked) (Suggested: Wrap the asynchronous network call in a try/catch block to prevent unhandled rejection crashes.)
 - Line 485: Fix `R-11` violation. AsyncStorage.setItem() call inside writeBufferToDisk has no catch block or try/catch. A disk write failure could cause an unhandled promise rejection. (Suggested: Wrap AsyncStorage.setItem in a try/catch block or append a .catch() callback to log or handle the error gracefully.)
@@ -43,7 +43,7 @@ Fix bugs and rule violations identified during the deep-dive code hunt for the `
 - Line 41: Fix `R-04` violation. AppLogger.warn call is missing telemetry context parameters: payload_size, ssi. Rule R-04 mandate that payload_size and ssi must be provided for all telemetry entries. (Suggested: AppLogger.warn(message, { ...context, payload_size: 0, ssi: 0 });)
 - Line 84: Fix `R-04` violation. AppLogger.warn call is missing telemetry context parameters: payload_size, ssi. Rule R-04 mandate that payload_size and ssi must be provided for all telemetry entries. (Suggested: AppLogger.warn(message, { ...context, payload_size: 0, ssi: 0 });)
 - Line 73: Fix `R-10` violation. The RSSI polling loop iterates over connected devices sequentially, awaiting the RSSI probe read for each device in a blocking for...of loop. (Suggested: Use Promise.all to map devices concurrently to async read operations to scan RSSI metrics in parallel.)
-### [MODIFY] DeviceRepository.ts
+### [MODIFY] DeviceRepository.ts // SKIPPED: S4 Monolith (>30KB). Deferred to extraction tasks.
 - Line 1: Fix `R-23` violation. File size is 39602 bytes, exceeding the 30KB monolith limit. It acts as the local-first storage wrapper for registering and synchronizing BLE controller configurations with the cloud database. (Suggested: Separate the offline sync queues, tombstone filters, and Supabase schema mappers into dedicated files inside src/services/device/.)
 - Line 183: Fix `R-11` violation. Empty catch block when loading cached device details from AsyncStorage, swallowing the storage exception. (Suggested: Log the caught exception using AppLogger.warn or AppLogger.error.)
 - Line 466: Fix `R-11` violation. Empty catch block when loading cached device groups from AsyncStorage, swallowing the storage exception. (Suggested: Log the caught exception using AppLogger.warn or AppLogger.error.)
@@ -123,7 +123,7 @@ Fix bugs and rule violations identified during the deep-dive code hunt for the `
 - Line 253: Fix `R-11` violation. supabase.from().update() database operation inside then() callback lacks a catch() block, risking unhandled promise rejection in network error cases. (Suggested: Append a .catch((e) => AppLogger.warn('...', { error: String(e) })) block to handle unexpected promise rejections.)
 - Line 319: Fix `R-11` violation. supabase.from().upsert() inside group sync fallback contains a then() handler but lacks any catch() block, creating risk of unhandled promise rejection. (Suggested: Add a catch() call to suppress or log unexpected async network rejections.)
 - Line 18: Fix `R-29` violation. GroupRepository.ts imports RegisteredDevice type from hooks/useRegistration.ts via 'import type'. useRegistration.ts imports DeviceRepository, which imports GroupRepository. This creates a type-level circular dependency cycle: hooks/useRegistration.ts -> services/DeviceRepository.ts -> services/GroupRepository.ts -> hooks/useRegistration.ts. (Suggested: No action is strictly required because this is a type-only import that compiles away at runtime. If complete decoupling is desired, move the RegisteredDevice type definition to a shared types file (e.g. src/types/dashboard.types.ts).)
-### [MODIFY] CrewService.ts
+### [MODIFY] CrewService.ts // SKIPPED: S4 Monolith (>30KB). Deferred to extraction tasks.
 - Line 106: Fix `R-06` violation. Database write to crew_members proceeds without verifying the success/error payload returned by Supabase, potentially causing silent membership insert failures. (Suggested: Destructure the error return payload from Supabase insert call and throw or handle it appropriately.)
 - Line 140: Fix `R-06` violation. Database membership insert for new joining members does not check for or throw on returned database error payloads. (Suggested: Capture the returned error property and raise an exception or handle it locally.)
 - Line 125: Fix `R-04` violation. AppLogger.error call is missing telemetry context parameters: payload_size, ssi. Rule R-04 mandate that payload_size and ssi must be provided for all telemetry entries. (Suggested: AppLogger.error(message, errorObj, { ...context, payload_size: 0, ssi: 0 });)

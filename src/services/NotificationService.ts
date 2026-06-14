@@ -18,7 +18,7 @@
 import type * as NotificationsType from 'expo-notifications';
 import { Platform } from 'react-native';
 import { AppLogger } from './AppLogger';
-import { profileService } from './ProfileService';
+
 import { pushTokenService } from './PushTokenService';
 import { supabase } from './supabaseClient';
 
@@ -110,7 +110,7 @@ class NotificationService {
     this.responseSub = null;
 
     if (this.token) {
-      await profileService.unregisterPushToken(this.token, userId || null);
+      await pushTokenService.unregisterPushToken(this.token, userId || null);
       this.token = null;
     }
   }

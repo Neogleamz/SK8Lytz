@@ -82,7 +82,7 @@ const mockSessionUser = { id: 'user-uuid-abc123' };
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 beforeEach(async () => {
-  await AsyncStorage.clear();
+  await AsyncStorage.clear().catch(() => {});
   jest.clearAllMocks();
   // Reset the re-entrancy guard between tests by using the service singleton
   // (the guard resets in the finally block, but we need a clean state)
@@ -109,7 +109,7 @@ describe('saveSession() — offline queue', () => {
     );
 
     // Should have written to the queue key
-    const raw = await AsyncStorage.getItem(PENDING_SESSION_QUEUE_KEY);
+    const raw = await AsyncStorage.getItem(PENDING_SESSION_QUEUE_KEY).catch(() => null);
     expect(raw).not.toBeNull();
 
     const queue: PendingSessionRecord[] = JSON.parse(raw!);
@@ -139,7 +139,7 @@ describe('flushPendingSessionQueue() — happy path', () => {
       calories: 420,
       queued_at: new Date().toISOString(),
     };
-    await AsyncStorage.setItem(PENDING_SESSION_QUEUE_KEY, JSON.stringify([pending]));
+    await AsyncStorage.setItem(PENDING_SESSION_QUEUE_KEY, JSON.stringify([pending])).catch(() => {});
 
     // Auth session present
     mockGetSession.mockResolvedValueOnce({
@@ -162,7 +162,7 @@ describe('flushPendingSessionQueue() — happy path', () => {
     expect(insertPayload.location_label).toBe(pending.locationLabel);
 
     // Queue cleared after successful flush
-    const raw = await AsyncStorage.getItem(PENDING_SESSION_QUEUE_KEY);
+    const raw = await AsyncStorage.getItem(PENDING_SESSION_QUEUE_KEY).catch(() => null);
     const remaining: PendingSessionRecord[] = JSON.parse(raw!);
     expect(remaining).toHaveLength(0);
   });
@@ -177,7 +177,7 @@ describe('flushPendingSessionQueue() — re-entrancy guard', () => {
       calories: 420,
       queued_at: new Date().toISOString(),
     };
-    await AsyncStorage.setItem(PENDING_SESSION_QUEUE_KEY, JSON.stringify([pending]));
+    await AsyncStorage.setItem(PENDING_SESSION_QUEUE_KEY, JSON.stringify([pending])).catch(() => {});
 
     mockGetSession.mockResolvedValue({
       data: { session: { user: mockSessionUser } },
@@ -207,7 +207,7 @@ describe('flushPendingSessionQueue() — no auth session', () => {
       calories: 420,
       queued_at: new Date().toISOString(),
     };
-    await AsyncStorage.setItem(PENDING_SESSION_QUEUE_KEY, JSON.stringify([pending]));
+    await AsyncStorage.setItem(PENDING_SESSION_QUEUE_KEY, JSON.stringify([pending])).catch(() => {});
 
     // No auth session
     mockGetSession.mockResolvedValueOnce({
@@ -220,7 +220,7 @@ describe('flushPendingSessionQueue() — no auth session', () => {
     expect(mockInsert).not.toHaveBeenCalled();
 
     // Queue still has the record
-    const raw = await AsyncStorage.getItem(PENDING_SESSION_QUEUE_KEY);
+    const raw = await AsyncStorage.getItem(PENDING_SESSION_QUEUE_KEY).catch(() => null);
     const remaining: PendingSessionRecord[] = JSON.parse(raw!);
     expect(remaining).toHaveLength(1);
   });

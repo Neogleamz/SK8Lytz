@@ -11,6 +11,7 @@
  */
 import type { Device } from 'react-native-ble-plx';
 import { AppLogger } from '../AppLogger';
+import { scrubPII } from '../../utils/piiScrubber';
 
 /** Minimal BleManager surface required by RSSIService — allows partial mocks in tests. */
 interface RSSIBleManager {
@@ -38,7 +39,7 @@ export async function readDeviceRSSI(
     return rssi;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    AppLogger.warn('[RSSIService] readRSSIForDevice failed', { deviceId: '[REDACTED]', error: message });
+    AppLogger.warn('[RSSIService] readRSSIForDevice failed', { deviceId: '[REDACTED]', error: message, payload_size: 0, ssi: 0 });
     return null;
   }
 }
@@ -70,21 +71,21 @@ export function startRSSIPolling(
       const devices = callbacks.getConnectedDevices();
       if (devices.length === 0) return;
 
-      for (const device of devices) {
+      await Promise.all(devices.map(async (device) => {
         const mac = device.id;
         const rssi = await readDeviceRSSI(mac, bleManager);
-        if (rssi === null) continue;
+        if (rssi === null) return;
 
         callbacks.onRssiUpdated(mac, rssi);
 
         if (rssi < RSSI_CRITICAL_THRESHOLD) {
-          AppLogger.warn('[RSSIService] Critical signal — proactive reconnect', { mac, rssi });
+          AppLogger.warn('[RSSIService] Critical signal — proactive reconnect', { deviceId: scrubPII(mac), rssi, payload_size: 0, ssi: 0 });
           callbacks.onCriticalSignal?.(mac, rssi);
         } else if (rssi < RSSI_WEAK_THRESHOLD) {
-          AppLogger.warn('[RSSIService] Weak signal detected', { mac, rssi });
+          AppLogger.warn('[RSSIService] Weak signal detected', { deviceId: scrubPII(mac), rssi, payload_size: 0, ssi: 0 });
           callbacks.onWeakSignal?.(mac, rssi);
         }
-      }
+      }));
     } finally {
       _isRunning = false;
     }

@@ -44,7 +44,7 @@ jest.mock('react-native', () => ({
 // Path: from __tests__/ go up two levels to reach src/services/BleWriteQueue.ts
 jest.mock('../../BleWriteQueue', () => ({
   enqueueWrite: jest.fn(async (_priority: any, op: () => Promise<any>) => op()),
-  enqueueDelay: jest.fn(async (_priority: any, delay: number) => new Promise(res => setTimeout(res, delay))),
+  enqueueDelay: jest.fn().mockResolvedValue(undefined),
   isWriteQueueActive: jest.fn().mockReturnValue(false),
 }));
 
@@ -63,6 +63,7 @@ import type { Device } from 'react-native-ble-plx';
 import type { IControllerProtocol } from '../../../protocols/IControllerProtocol';
 import { heartbeatService, type HeartbeatServiceInput } from '../HeartbeatService';
 import { enqueueWrite } from '../../BleWriteQueue';
+import { ZenggeProtocol } from '../../../protocols/ZenggeProtocol';
 
 const HEARTBEAT_INTERVAL_MS = 45_000;
 
@@ -127,7 +128,7 @@ describe('HeartbeatService test suite', () => {
       writeCharacteristicUUID: 'uuid-write',
       notifyCharacteristicUUID: 'uuid-notify',
       protocolId: 'zengge',
-      buildQuerySettings: jest.fn().mockReturnValue({ packets: [[0x63, 0x12, 0x21, 0x0f, 0xa5]] }),
+      buildQuerySettings: jest.fn().mockReturnValue({ packets: [new ZenggeProtocol().queryHardwareSettings(false)] }),
     } as unknown as IControllerProtocol & { buildQuerySettings: jest.Mock };
 
     mockDevice = {
@@ -203,11 +204,11 @@ describe('HeartbeatService test suite', () => {
       expect.any(String), // base64-encoded packet
     );
 
-    // Verify the base64 encodes the correct 0x63 opcode bytes
+    // Verify the base64 encodes the correct 0x63 opcode bytes (accounting for the 8-byte wrapper)
     const callArgs = mockBleManager.writeCharacteristicWithoutResponseForDevice.mock.calls[0];
     const b64 = callArgs[3] as string;
     const decoded = Buffer.from(b64, 'base64');
-    expect(decoded[0]).toBe(0x63); // First byte must be 0x63 opcode
+    expect(decoded[8]).toBe(0x63); // Opcode is at index 8 after wrapper
   });
 
   // ─── Group C: Fallback (BanlanX / Unknown Adapter) ────────────────────────
@@ -285,7 +286,7 @@ describe('HeartbeatService test suite', () => {
     const mockDevice2 = { id: 'MAC2', name: 'Skate R' } as unknown as Device;
     const mockAdapter2 = {
       ...mockAdapter,
-      buildQuerySettings: jest.fn().mockReturnValue({ packets: [[0x63, 0x12]] }),
+      buildQuerySettings: jest.fn().mockReturnValue({ packets: [new ZenggeProtocol().queryHardwareSettings(false)] }),
     } as unknown as IControllerProtocol & { buildQuerySettings: jest.Mock };
 
     mockInput.connectedDevices = [mockDevice, mockDevice2];
@@ -309,7 +310,7 @@ describe('HeartbeatService test suite', () => {
     const mockDevice2 = { id: 'MAC2', name: 'Skate R' } as unknown as Device;
     const mockAdapter2 = {
       ...mockAdapter,
-      buildQuerySettings: jest.fn().mockReturnValue({ packets: [[0x63, 0x12]] }),
+      buildQuerySettings: jest.fn().mockReturnValue({ packets: [new ZenggeProtocol().queryHardwareSettings(false)] }),
     } as unknown as IControllerProtocol & { buildQuerySettings: jest.Mock };
 
     mockInput.connectedDevices = [mockDevice, mockDevice2];

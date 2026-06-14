@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_SCENES_CACHE, STORAGE_LOCAL_SCENES, STORAGE_LOCAL_SCENE_SYNC_QUEUE } from '../constants/storageKeys';
 import type { Database } from '../types/supabase';
 import { AppLogger } from './AppLogger';
+import { scrubPII } from '../utils/piiScrubber';
 
 export interface SceneStep {
   id: string;
@@ -50,6 +51,7 @@ function isSceneStepArray(nodes: unknown): nodes is SceneStep[] {
 
 class ScenesServiceClass {
   private isFlushInProgress = false;
+  private isSavedScenesSyncing = false;
   
   async getPublicScenes(limit: number = 50, offset: number = 0): Promise<ICloudScene[]> {
     // Fire-and-forget background sync
@@ -67,7 +69,7 @@ class ScenesServiceClass {
           AsyncStorage.setItem(STORAGE_SCENES_CACHE, JSON.stringify(data)).catch((e: unknown) => {
             // R-06 fix: route cache-write failures through AppLogger, not console.
             AppLogger.warn('[ScenesService] Failed to write scenes cache', {
-              error: e instanceof Error ? e.message : String(e)
+              error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0
             });
           });
           return data;
@@ -121,7 +123,7 @@ class ScenesServiceClass {
   async publishScene(name: string, payload: Scene | Record<string, unknown>, isPublic: boolean = false, userId?: string, username?: string): Promise<boolean> {
     try {
       if (!userId) {
-        AppLogger.warn('[ScenesService] Skipping cloud publish (not logged in)');
+        AppLogger.warn('[ScenesService] Skipping cloud publish (not logged in)', { payload_size: 0, ssi: 0 });
         return false;
       }
 
@@ -216,8 +218,11 @@ class ScenesServiceClass {
 
     // 2. Background Sync
     const syncCloud = async () => {
-      let globalScenes: Scene[] = [];
-      let userCloudScenes: Scene[] = [];
+      if (this.isSavedScenesSyncing) return;
+      this.isSavedScenesSyncing = true;
+      try {
+        let globalScenes: Scene[] = [];
+        let userCloudScenes: Scene[] = [];
       
       try {
         const { data, error } = await supabase
@@ -235,7 +240,7 @@ class ScenesServiceClass {
           }));
         }
       } catch (err: unknown) {
-        AppLogger.warn('[ScenesService] Global sync fail', { error: (err instanceof Error ? err.message : String(err)) });
+        AppLogger.warn('[ScenesService] Global sync fail', { error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
       }
 
       if (userId) {
@@ -256,7 +261,7 @@ class ScenesServiceClass {
             }));
           }
         } catch (err: unknown) {
-          AppLogger.warn('[ScenesService] User cloud sync fail', { error: (err instanceof Error ? err.message : String(err)) });
+          AppLogger.warn('[ScenesService] User cloud sync fail', { error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
         }
       }
 
@@ -270,7 +275,12 @@ class ScenesServiceClass {
       const finalUserSaved = Array.from(mergedMap.values());
       try {
         await AsyncStorage.setItem(LOCAL_SCENES_KEY, JSON.stringify(finalUserSaved));
-      } catch (e: unknown) {}
+      } catch (e: unknown) {
+        AppLogger.warn('[ScenesService] Failed to write user scenes cache', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+      }
+      } finally {
+        this.isSavedScenesSyncing = false;
+      }
     };
 
     syncCloud(); // Fire and forget
@@ -306,10 +316,8 @@ class ScenesServiceClass {
         payload: {
           id: scene.id,
           name: scene.name,
-          // R-08: Supabase requires nodes to match its recursive Json type. scene.steps
-          // is structurally compatible but TS cannot verify the constraint — the double
-          // cast is unavoidable without a full Supabase Json-union helper.
-          nodes: scene.steps as unknown as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
+          // R-08: Fix double cast by serializing
+          nodes: JSON.parse(JSON.stringify(scene.steps)) as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
           fill_mode: 'SCENE',
           transition_type: 0,
           user_id: userId,
@@ -358,7 +366,7 @@ class ScenesServiceClass {
       const queue: SceneSyncJob[] = rawQueue ? JSON.parse(rawQueue) : [];
       queue.push(job);
       await AsyncStorage.setItem(LOCAL_SCENE_SYNC_QUEUE_KEY, JSON.stringify(queue));
-      AppLogger.debug('[ScenesService] Enqueued sync job', { jobType: job.type, jobId: job.id });
+      AppLogger.debug('[ScenesService] Enqueued sync job', { jobType: job.type, jobId: scrubPII(job.id), payload_size: 0, ssi: 0 });
     } catch (e: unknown) {
       AppLogger.error('[ScenesService] Enqueue fail', { error: (e instanceof Error ? e.message : String(e)) , payload_size: 0, ssi: 0 });
     }
@@ -396,6 +404,7 @@ class ScenesServiceClass {
           }
         } catch (err: unknown) {
           // Swallow explicit error to allow retry
+          AppLogger.warn('[ScenesService] Sync job retry', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
         }
 
         if (success) {
@@ -408,7 +417,7 @@ class ScenesServiceClass {
       await AsyncStorage.setItem(LOCAL_SCENE_SYNC_QUEUE_KEY, JSON.stringify(remainingQueue));
       
       if (successCount > 0) {
-        AppLogger.info('[ScenesService] Sync queue flushed', { successCount, remaining: remainingQueue.length });
+        AppLogger.info('[ScenesService] Sync queue flushed', { successCount, remaining: remainingQueue.length, payload_size: 0, ssi: 0 });
       }
     } catch (e: unknown) {
       AppLogger.error('[ScenesService] Flush fail', { error: (e instanceof Error ? e.message : String(e)) , payload_size: 0, ssi: 0 });

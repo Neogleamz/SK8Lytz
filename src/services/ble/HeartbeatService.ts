@@ -2,6 +2,7 @@ import { fromCallback } from 'xstate';
 import { Buffer } from 'buffer';
 import type { Device, BleManager } from 'react-native-ble-plx';
 import { AppLogger } from '../../services/AppLogger';
+import { scrubPII } from '../../utils/piiScrubber';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
 import { enqueueWrite, isWriteQueueActive } from '../BleWriteQueue';
 
@@ -11,6 +12,8 @@ const HEARTBEAT_INTERVAL_MS = 45_000;
 export interface HeartbeatServiceInput {
   bleManager: Pick<BleManager, 'writeCharacteristicWithoutResponseForDevice' | 'readRSSIForDevice' | 'cancelDeviceConnection'>;
   connectedDevices: Device[];
+  getConnectedDevices?: () => Device[];
+  connectedDevicesRef?: { current: Device[] };
   adapterMap: Map<string, IControllerProtocol>;
 }
 
@@ -25,9 +28,13 @@ export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(({ inpu
     if (isWriteQueueActive()) return;
     isRunning = true;
     try {
-      if (connectedDevices.length === 0) return;
+      const currentDevices = input.getConnectedDevices 
+        ? input.getConnectedDevices() 
+        : input.connectedDevicesRef?.current ?? connectedDevices;
+      
+      if (currentDevices.length === 0) return;
 
-      for (const device of connectedDevices) {
+      await Promise.all(currentDevices.map(async (device) => {
         const mac = device.id;
         const adapter = adapterMap.get(mac);
 
@@ -45,8 +52,8 @@ export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(({ inpu
                 );
                 return true;
               });
-              AppLogger.log('DEVICE_DISCOVERED', { context: 'heartbeat_ping_ok', deviceId: mac });
-              continue;
+              AppLogger.log('DEVICE_DISCOVERED', { context: 'heartbeat_ping_ok', deviceId: scrubPII(mac) });
+              return;
             }
           }
           // BanlanX / unknown adapter fallback: RSSI read as a liveness probe
@@ -54,12 +61,14 @@ export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(({ inpu
             await bleManager.readRSSIForDevice(mac);
             return true;
           });
-          AppLogger.log('DEVICE_DISCOVERED', { context: 'heartbeat_rssi_ok', deviceId: mac });
+          AppLogger.log('DEVICE_DISCOVERED', { context: 'heartbeat_rssi_ok', deviceId: scrubPII(mac) });
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);
           AppLogger.warn('[BLE Heartbeat] Stale link detected — initiating recovery', {
-            deviceId: '[REDACTED]',
+            deviceId: scrubPII(mac),
             error: message,
+            payload_size: 0,
+            ssi: 0
           });
           // Cancel the stale GATT handle so the OS releases it immediately.
           // Swallow cancellation errors — we are already in a broken state.
@@ -68,7 +77,7 @@ export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(({ inpu
           // Signal the machine that a heartbeat failed for this specific device.
           sendBack({ type: 'HEARTBEAT_FAIL', deviceId: mac });
         }
-      }
+      }));
     } finally {
       isRunning = false;
     }

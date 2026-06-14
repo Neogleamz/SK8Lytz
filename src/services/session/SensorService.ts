@@ -122,6 +122,11 @@ export const sensorService = fromCallback<SessionMachineEvent, SensorServiceInpu
           );
         }
       );
+      if (!isActive) {
+        locationSubscription.remove();
+        locationSubscription = null;
+        return;
+      }
     } catch (e: unknown) {
       if (isActive) {
         AppLogger.error(

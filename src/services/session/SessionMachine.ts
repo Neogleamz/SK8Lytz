@@ -26,7 +26,7 @@ async function persistSessionPhase(phase: 'active' | 'paused' | 'idle', pauseTim
     }
     await AsyncStorage.multiSet(pairs);
   } catch (err: unknown) {
-    AppLogger.error('Failed to persist session phase', err, { payload_size: 0, ssi: 0 });
+    AppLogger.error('Failed to persist session phase', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
   }
 }
 

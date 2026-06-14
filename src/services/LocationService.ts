@@ -179,7 +179,7 @@ class LocationService {
     }
 
     // ── Merge + deduplicate by session id ────────────────────────────────────
-    const mappedPublicData = (publicData ?? []).map((row: Record<string, unknown>) => ({
+    const mappedPublicData = (publicData ?? []).map((row) => ({
       id: row.id as string,
       name: row.name as string,
       invite_code: row.invite_code as string,

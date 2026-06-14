@@ -123,7 +123,7 @@ export const healthService = fromCallback<SessionMachineEvent, HealthServiceInpu
               },
             },
             (err: string) => {
-              if (err) AppLogger.warn('HEALTH_TELEMETRY', { event: 'init_failed', error: err });
+              if (err) AppLogger.warn('HEALTH_TELEMETRY', { event: 'init_failed', error: err, payload_size: 0, ssi: 0 });
               resolve();
             }
           );
@@ -138,7 +138,7 @@ export const healthService = fromCallback<SessionMachineEvent, HealthServiceInpu
           },
           (err: string, results: Array<{ value: number }>) => {
             if (err) {
-              AppLogger.warn('HEALTH_TELEMETRY', { event: 'ios_hr_failed', error: err });
+              AppLogger.warn('HEALTH_TELEMETRY', { event: 'ios_hr_failed', error: err, payload_size: 0, ssi: 0 });
             } else if (results && results.length > 0 && isActive && !isWatchHealthActive()) {
               updateBpm(Math.round(results[0].value));
             }
@@ -152,7 +152,7 @@ export const healthService = fromCallback<SessionMachineEvent, HealthServiceInpu
           },
           (err: string, results: Array<{ value: number }>) => {
             if (err) {
-              AppLogger.warn('HEALTH_TELEMETRY', { event: 'ios_energy_failed', error: err });
+              AppLogger.warn('HEALTH_TELEMETRY', { event: 'ios_energy_failed', error: err, payload_size: 0, ssi: 0 });
             } else if (results && results.length > 0 && isActive && !isWatchHealthActive()) {
               const totalCals = results.reduce((acc, r) => acc + r.value, 0);
               updateCalories(Math.round(totalCals));
@@ -166,7 +166,7 @@ export const healthService = fromCallback<SessionMachineEvent, HealthServiceInpu
           await initialize();
         } catch (e: unknown) {
           const msg = e instanceof Error ? e.message : String(e);
-          AppLogger.warn('HEALTH_TELEMETRY', { event: 'init_failed', error: msg });
+          AppLogger.warn('HEALTH_TELEMETRY', { event: 'init_failed', error: msg, payload_size: 0, ssi: 0 });
           isPolling = false;
           return;
         }
@@ -196,7 +196,7 @@ export const healthService = fromCallback<SessionMachineEvent, HealthServiceInpu
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.warn('HEALTH_TELEMETRY', { event: 'poll_error', error: msg });
+      AppLogger.warn('HEALTH_TELEMETRY', { event: 'poll_error', error: msg, payload_size: 0, ssi: 0 });
     } finally {
       isPolling = false;
     }

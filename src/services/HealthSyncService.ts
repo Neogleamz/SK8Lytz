@@ -3,8 +3,12 @@ import { AppLogger } from './AppLogger';
 import { ISessionSnapshot } from './SpeedTrackingService';
 import { checkPermission } from './PermissionService';
 
+let isSavingWorkout = false;
+
 export const HealthSyncService = {
   async saveWorkout(snapshot: ISessionSnapshot) {
+    if (isSavingWorkout) return;
+    isSavingWorkout = true;
     if (snapshot.distanceMiles < 0.1 && snapshot.durationSec < 60) {
       AppLogger.log('APP_LOG', { reason: 'session too short/short distance' });
       return;
@@ -19,6 +23,10 @@ export const HealthSyncService = {
 
       const endDate = new Date();
       const startDate = new Date(endDate.getTime() - snapshot.durationSec * 1000);
+
+      if (Platform.OS === 'web') {
+        return;
+      }
 
       if (Platform.OS === 'ios') {
         const AppleHealthKit = require('react-native-health').default;
@@ -35,7 +43,8 @@ export const HealthSyncService = {
 
         AppleHealthKit.saveWorkout(options, (err: Object, result: Object) => {
           if (err) {
-            AppLogger.error('Health sync failed', (err instanceof Error ? err.message : String(err)), { platform: 'ios' , payload_size: 0, ssi: 0 });
+            const errMsg = err instanceof Error ? err.message : (err && typeof (err as Record<string, unknown>).message === 'string' ? (err as Record<string, unknown>).message as string : JSON.stringify(err));
+            AppLogger.error('Health sync failed', errMsg, { platform: 'ios' , payload_size: 0, ssi: 0 });
             return;
           }
           AppLogger.log('APP_LOG', { platform: 'ios', result, event: 'HEALTH_SYNC_SUCCESS' });
@@ -85,6 +94,8 @@ export const HealthSyncService = {
       }
     } catch (e: unknown) {
       AppLogger.error('Health sync failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
+    } finally {
+      isSavingWorkout = false;
     }
   }
 };
