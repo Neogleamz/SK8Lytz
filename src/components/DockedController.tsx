@@ -422,7 +422,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     // Keep ref current so writeToDevice (declared above) always captures the latest
     captureEntireStateRef.current = captureEntireState;
     const applyCloudScene = React.useCallback(
-      (scenePayload: Record<string, unknown>) => baseApplyCloudScene(scenePayload, setStreetSensitivity, setStreetCruiseColor, setStreetBrakeColor),
+      (scenePayload: import('../services/ScenesService').Scene | Record<string, unknown>) => baseApplyCloudScene(scenePayload, setStreetSensitivity, setStreetCruiseColor, setStreetBrakeColor),
       [baseApplyCloudScene, setStreetSensitivity, setStreetCruiseColor, setStreetBrakeColor]
     );
 
