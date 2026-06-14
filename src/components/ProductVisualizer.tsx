@@ -100,7 +100,7 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
   }, [devices, isPaired, product, points]);
 
   return (
-    <View style={[styles.container, { backgroundColor: '#000000', borderColor: 'rgba(255,255,255,0.12)' }]}>
+    <View style={styles.container}>
       <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', flexWrap: 'wrap', paddingTop: Spacing.xl }}>
         {renderDevices.map((dev, index) => (
           <VisualizerUnit
@@ -150,17 +150,6 @@ const styles = StyleSheet.create({
     minHeight: 110,
     width: '100%',
   },
-  haloBase: {
-    width: 60, height: 90,
-  },
-  soulBase: {
-    width: 55, height: 115,
-  },
-  railBase: {
-    // RAILZ: dual vertical strips — wider canvas to hold two separated rails
-    width: 80, height: 120,
-  },
-
 });
 
 export default React.memo(ProductVisualizer);
