@@ -3699,3 +3699,9 @@ Files touched:
 - src/context/AuthContext.tsx
 - docs/plans/PLAN-sweep-src-context.md
 TSC: ✅  Jest: ✅
+
+### [MERGE] 2026-06-14T13:32 — sweep-src-components-crew → master @ e943efab
+**What merged:** Sweeping refactor of the Crew Domain components. Extracted SessionMarker and FilterPill to prevent re-renders. Addressed accessibility and removed PII.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** src/components/crew/CrewCard.tsx, CrewLandingScreen.tsx, CrewDetailScreen.tsx, MapFiltersTray.tsx, CrewLandingMap.tsx, CrewCreateScreen.tsx, etc.
+

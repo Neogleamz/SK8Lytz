@@ -3102,3 +3102,14 @@ pm run verify which includes QA tests.
     Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
   - **Source of Truth:** 📖 [PLAN-sweep-src-components-permissions.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-permissions.md)
   - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 2 fully merged into master before this worktree is created.`
+
+
+- [x] **`sweep-src-components-crew`**
+  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-4]` `[WAVE:4]`
+  - **Goal:** Resolve 27 telemetry and architectural rule violations in the components-crew domain.
+  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-crew.md](./plans/PLAN-sweep-src-components-crew.md)
+    Key finding: "27 specific rule violations located and deduplicated in this cluster."
+    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
+  - **Source of Truth:** 📖 [PLAN-sweep-src-components-crew.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-crew.md)
+  - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 3 fully merged into master before this worktree is created.`
