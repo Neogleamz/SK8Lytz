@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!supabase) {
-      AppLogger.warn('[AuthContext] Supabase not configured — offline-only mode.');
+      AppLogger.warn('[AuthContext] Supabase not configured — offline-only mode.', { payload_size: 0, ssi: 0 });
       setStatus('offline');
       return;
     }
@@ -117,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch (err: unknown) {
-        AppLogger.warn('[AuthContext] Deep link parse error', { error: err instanceof Error ? err.message : String(err)  });
+        AppLogger.warn('[AuthContext] Deep link parse error', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       } finally {
         isHandlingDeepLinkRef.current = false;
       }
@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const linkSubscription = Linking.addEventListener('url', handleDeepLink);
     Linking.getInitialURL().then(url => {
       if (url) handleDeepLink({ url });
-    }).catch((err: unknown) => AppLogger.warn('[AuthContext] getInitialURL failed', { error: err instanceof Error ? err.message : String(err) }));
+    }).catch((err: unknown) => AppLogger.warn('[AuthContext] getInitialURL failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
 
     // ── Cold-start: restore session or detect expiry ──────────────────────────
     const init = async () => {
@@ -139,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           offlineSkip = await AsyncStorage.getItem(STORAGE_OFFLINE_SKIP);
         } catch (e: unknown) {
-          AppLogger.warn('[AuthContext] Failed to read offline skip', e instanceof Error ? e.message : String(e));
+          AppLogger.warn('[AuthContext] Failed to read offline skip', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         }
         if (offlineSkip === 'true') {
           setStatus('offline');
@@ -160,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           lastEmail = await AsyncStorage.getItem(STORAGE_LAST_EMAIL);
         } catch (e: unknown) {
-          AppLogger.warn('[AuthContext] Failed to read last email', e instanceof Error ? e.message : String(e));
+          AppLogger.warn('[AuthContext] Failed to read last email', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         }
         if (lastEmail) {
           setStatus('expired');
@@ -185,7 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (_event === 'SIGNED_OUT') {
         setStatus('unauthenticated');
         AsyncStorage.removeItem(STORAGE_OFFLINE_SKIP).catch(e => {
-          AppLogger.warn('[AuthContext] Failed to remove offline skip', e instanceof Error ? e.message : String(e));
+          AppLogger.warn('[AuthContext] Failed to remove offline skip', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         });
       }
     });
@@ -216,7 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       return { error: error ?? null };
     } catch (e: unknown) {
-      AppLogger.error('[AuthContext] signIn failed', e, { payload_size: 0, ssi: 0 });
+      AppLogger.error('[AuthContext] signIn failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
       return { error: e instanceof Error ? e : new Error(String(e)) };
     }
   };
@@ -231,7 +231,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signUp({ email, password, options  });
       return { error: error ?? null };
     } catch (e: unknown) {
-      AppLogger.error('[AuthContext] signUp failed', e, { payload_size: 0, ssi: 0 });
+      AppLogger.error('[AuthContext] signUp failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
       return { error: e instanceof Error ? e : new Error(String(e)) };
     }
   };
@@ -242,7 +242,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
       return { error: error ?? null };
     } catch (e: unknown) {
-      AppLogger.error('[AuthContext] resetPassword failed', e, { payload_size: 0, ssi: 0 });
+      AppLogger.error('[AuthContext] resetPassword failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
       return { error: e instanceof Error ? e : new Error(String(e)) };
     }
   };
@@ -252,7 +252,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       await supabase.auth.signOut();
     } catch (e: unknown) {
-      AppLogger.error('[AuthContext] signOut failed', e, { payload_size: 0, ssi: 0 });
+      AppLogger.error('[AuthContext] signOut failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
     }
   };
 
@@ -262,7 +262,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.updateUser(attributes);
       return { error: error ?? null };
     } catch (e: unknown) {
-      AppLogger.error('[AuthContext] updateUser failed', e, { payload_size: 0, ssi: 0 });
+      AppLogger.error('[AuthContext] updateUser failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
       return { error: e instanceof Error ? e : new Error(String(e)) };
     }
   };
