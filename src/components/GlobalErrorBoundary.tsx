@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { logFatalCrash } from '../utils/CrashReporter';
 
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   eventText: {
     color: '#434343',
     fontSize: 12,
-    fontFamily: 'monospace',
+    fontFamily: Platform.select({ ios: 'Courier', default: 'monospace' }),
     marginBottom: 32,
   },
   button: {
