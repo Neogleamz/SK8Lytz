@@ -28,6 +28,38 @@ _User-facing product value and UI refinements._
 
 ## 🔥 ON DECK
 
+*(Empty — ready for intake)*
+
+# SK8Lytz Master Bucket List
+
+> ⚠️ AI AGENT DIRECTIVES (THE CONSTITUTION)
+> The constitution is located in `.agents/rules/kanban-constitution.md` for universal agent context injection.
+
+---
+
+## 📊 Global System Readiness
+
+---
+
+## 🔴 CRITICAL: 🛡️ Performance, Stability & Security
+
+---
+
+### 🌊 Parallel Wave Strategy (AST-Verified)
+
+## 🚧 ACTIVE SPRINT
+*(Empty — ready for intake)*
+
+## 🔵 LOW: ✨ New Features & UI Enhancements
+
+_User-facing product value and UI refinements._
+
+- [ ] `feat/app-wide-ux-tips` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🪙 12k] [⏱️ 3h] [📅 2026-04-14] [🤖 FLASH] [📝️ NEEDS-PLAN] Contextual tips system for key friction points. → [Plan](docs/plans/feat-app-wide-ux-tips.md)
+
+---
+
+## 🔥 ON DECK
+
 ### 🌊 Orthogonal Batch Strategy (AST-Verified)
 
 | Wave | Task Clusters | Parallel-Safe? | Prerequisite |

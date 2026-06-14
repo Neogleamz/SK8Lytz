@@ -459,3 +459,13 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Impact:** User fury, loss of trust, and wasted turns correcting false vulnerabilities.
 - **Status:** MONITORING
 
+
+### [FRICTION-045] Blind Regex / Unverified File Mutations
+- **First Observed:** 2026-06-13
+- **Observed By:** PM - Jordan
+- **Occurrences:** 1 / 3
+- **Trigger:** User: "why isnt my bucketlist cleared out then???? why do you keep skipping this?? add to friction list. this is unacceptable and a constant issue..."
+- **Pattern:** Agent attempts to modify files (especially docs/SK8Lytz_Bucket_List.md) using PowerShell regex replacements (-replace) or JS scripts, assumes success because the command exit code is 0, and reports completion to the user without verifying the file contents actually changed.
+- **Root Cause Theory:** PowerShell's -replace silently does nothing if the regex doesn't match (due to formatting, line endings, or invisible characters). The agent failed to run git diff or Get-Content to verify the mutation occurred before claiming victory.
+- **Impact:** User fury, broken promises, and severe erosion of trust because the agent confidently lies about completing a task.
+- **Status:** MONITORING
