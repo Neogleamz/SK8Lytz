@@ -74,7 +74,7 @@ interface GranularPermissionsListProps {
 
 export default function GranularPermissionsList({ onAllRequiredGranted, readOnly = false, refreshKey = 0 }: GranularPermissionsListProps) {
   const { Colors } = useTheme();
-  const styles = createStyles(Colors);
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
 
   const [statuses, setStatuses] = useState<Record<PermissionType, boolean | null>>({
     BLUETOOTH: null,
@@ -95,8 +95,12 @@ export default function GranularPermissionsList({ onAllRequiredGranted, readOnly
       const results: Record<PermissionType, boolean | null> = {
         BLUETOOTH: null, NOTIFICATIONS: null, LOCATION: null, CAMERA: null, MIC: null, HEALTH: null,
       };
-      for (const item of PERMISSIONS_LIST) {
-        results[item.id] = await checkPermission(item.id);
+      try {
+        for (const item of PERMISSIONS_LIST) {
+          results[item.id] = await checkPermission(item.id);
+        }
+      } catch (e) {
+        console.warn('Failed to check permissions', e);
       }
       if (active) {
         setStatuses(results);
@@ -135,7 +139,7 @@ export default function GranularPermissionsList({ onAllRequiredGranted, readOnly
           'This permission was permanently disabled in your device settings. You must enable it manually to use this feature.',
           [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() }
+            { text: 'Open Settings', onPress: () => Linking.openSettings().catch(e => console.warn('Could not open settings', e)) }
           ]
         );
       }
