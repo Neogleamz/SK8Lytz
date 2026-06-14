@@ -215,6 +215,8 @@ export function useDashboardAutoConnect({
             AppLogger.warn('[AutoConnect] Batch connection failed — re-queueing', {
               macs: batch.map(d => scrubPII(d.id)),
               error: String(e),
+              payload_size: 0,
+              ssi: 0,
             });
 
             // Re-queue MACs that aren't already connected and haven't exceeded retries
@@ -242,7 +244,7 @@ export function useDashboardAutoConnect({
                 }, backoff);
                 retryTimersRef.current.push(retryTimerId);
               } else {
-                AppLogger.warn('[AutoConnect] Max retries exceeded — abandoning', { deviceId: scrubPII(id), retries });
+                AppLogger.warn('[AutoConnect] Max retries exceeded — abandoning', { deviceId: scrubPII(id), retries, payload_size: 0, ssi: 0 });
                 autoConnectRetriesRef.current.delete(id);
               }
             }
@@ -270,65 +272,42 @@ export function useDashboardAutoConnect({
       if ((hasAutoConnectedRef.current && !isRetrigger) || !isBluetoothSupported || !isBluetoothEnabled) return;
       hasAutoConnectedRef.current = true;
 
+      // ── 1. Immediate Local/Offline Resolution ──
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_local_resolution' });
       let groupsToProcess: RegisteredGroup[] = [];
-      let isOffline = true;
-      let cloudUserId: string | null = null;
+      
+      const processLocalDevices = (devicesArray: RegisteredDevice[]) => {
+        groupsToProcess = buildOfflineGroupMap(devicesArray);
+      };
 
-      if (supabase) {
-        if (sessionRef.current?.user) {
-          cloudUserId = sessionRef.current.user.id;
-
-          try {
-            await refreshProfile();
-          } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : String(e);
-            AppLogger.warn('Failed to refresh profile on dashboard load', { error: msg });
+      if (registeredDevices && registeredDevices.length > 0) {
+        processLocalDevices(registeredDevices);
+      } else {
+        try {
+          const localDevices = DeviceRepository.getInstance().getDevices();
+          if (localDevices && localDevices.length > 0) {
+            processLocalDevices(localDevices);
           }
-
-          let groups: RegisteredGroup[] | null = null;
-          try {
-            const result = await supabase
-              .from('registered_groups')
-              .select('*')
-              .eq('user_id', cloudUserId);
-            groups = result.data;
-            isOffline = !!result.error;
-          } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : String(e);
-            AppLogger.warn('Failed to query registered groups from Supabase, entering offline mode', { error: msg });
-            isOffline = true;
-          }
-
-          if (!isOffline && groups && groups.length > 0) {
-            groupsToProcess = groups;
-          }
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e);
+          AppLogger.warn('Failed to read or parse offline registered_devices', { error: msg, payload_size: 0, ssi: 0 });
         }
       }
 
-      if (isOffline || groupsToProcess.length === 0) {
-        AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_offline_fallback' });
-        
-        const processLocalDevices = (devicesArray: RegisteredDevice[]) => {
-          groupsToProcess = buildOfflineGroupMap(devicesArray);
-        };
-
-
-        if (registeredDevices && registeredDevices.length > 0) {
-          processLocalDevices(registeredDevices);
-        } else {
-          try {
-            const localDevices = DeviceRepository.getInstance().getDevices();
-            if (localDevices && localDevices.length > 0) {
-              processLocalDevices(localDevices);
-            }
-          } catch (e: unknown) {
-            const msg = e instanceof Error ? e.message : String(e);
-            AppLogger.warn('Failed to read or parse offline registered_devices', { error: msg });
-          }
+      let idsToConnect: string[] = [];
+      const presentGroups = groupsToProcess.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      
+      const macSet = new Set<string>();
+      for (const group of presentGroups) {
+        for (const mac of group.deviceIds ?? []) {
+          macSet.add(mac);
         }
       }
+      idsToConnect = Array.from(macSet);
 
-      if (groupsToProcess.length > 0) {
+      if (idsToConnect.length > 0) {
         let granted = false;
         try {
           granted = await requestPermissions();
@@ -336,90 +315,96 @@ export function useDashboardAutoConnect({
           AppLogger.error('[AutoConnect] requestPermissions failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
         }
         if (granted && !isActuallyConnected) {
-          // NOTE: scan is intentionally deferred until AFTER autoConnectIdsRef is
-          // populated below. If scan starts first, devices appear in allDevices
-          // before the ref is set — the observer fires, sees an empty queue,
-          // and skips them. Starting scan after setting the ref guarantees every
-          // discovered device is evaluated against a populated target list.
+          AppLogger.log('BLE_STATE_CHANGE', {
+            event: 'auto_connect_queued',
+            fleets: presentGroups.map(g => scrubPII(g.group_name)),
+            groupCount: presentGroups.length,
+            count: idsToConnect.length,
+          });
+          autoConnectIdsRef.current = idsToConnect;
 
-          let presentGroups: RegisteredGroup[] = [];
-          let idsToConnect: string[] = [];
-
-          if (!isOffline && supabase && cloudUserId) {
+          // BUG-04 Fix: Burst scan
+          if (isRetrigger && burstScan) {
+            AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_burst_scan_triggered' });
             try {
-              const { data: devices, error } = await supabase
-                .from('registered_devices')
-                .select('*')
-                .eq('user_id', cloudUserId);
-              
-              if (error) throw error;
-
-              if (devices) {
-                presentGroups = groupsToProcess.sort(
-                  (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-                );
-                // Aggregate ALL device MACs across ALL groups (deduplicated) — RC-07
-                const allGroupIds = new Set(presentGroups.map(g => g.id));
-                const macSet = new Set<string>();
-                for (const d of devices as RegisteredDeviceRow[]) {
-                  const dGroupIds: string[] = d.group_ids || (d.group_id ? [d.group_id] : []);
-                  if (dGroupIds.some(gId => allGroupIds.has(gId))) {
-                    macSet.add(d.device_mac || d.id);
-                  }
-                }
-                idsToConnect = Array.from(macSet);
+              const scanResult = burstScan(8000);
+              if (scanResult && typeof scanResult.catch === 'function') {
+                scanResult.catch((e: unknown) => {
+                  AppLogger.warn('Auto-connect burst scan failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+                });
               }
             } catch (e: unknown) {
-              const msg = e instanceof Error ? e.message : String(e);
-              AppLogger.warn('[AutoConnect] Failed to query registered devices', { error: msg });
-            }
-          } else {
-            presentGroups = groupsToProcess.sort(
-              (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-            );
-            // Aggregate ALL device MACs across ALL offline groups (deduplicated) — RC-07
-            const macSet = new Set<string>();
-            for (const group of presentGroups) {
-              for (const mac of group.deviceIds ?? []) {
-                macSet.add(mac);
-              }
-            }
-            idsToConnect = Array.from(macSet);
-          }
-
-          if (idsToConnect.length > 0) {
-            AppLogger.log('BLE_STATE_CHANGE', {
-              event: 'auto_connect_queued',
-              fleets: presentGroups.map(g => scrubPII(g.group_name)),
-              groupCount: presentGroups.length,
-              count: idsToConnect.length,
-            });
-            autoConnectIdsRef.current = idsToConnect;
-            // ── Overwatch: NO manual scan needed here ──────────────────────────
-            // useBLESweeper (Silent Sweeper) is already running in the background,
-            // continuously populating allDevices. The observer effect above will
-            // fire connectToDevices() the moment Fleet MACs appear in the list.
-            // Starting a manual scan here was a duplicate trigger that raced
-            // against the Sweeper and caused double-connection attempts.
-
-            // BUG-04 Fix: If this is a post-wizard retrigger, we don't want to wait 
-            // for the passive sweeper's next slow cycle (which could take 30s+ in low power).
-            // We fire a targeted 8-second burst scan to instantly discover the device.
-            if (isRetrigger && burstScan) {
-              AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_burst_scan_triggered' });
-              try {
-                const scanResult = burstScan(8000);
-                if (scanResult && typeof scanResult.catch === 'function') {
-                  scanResult.catch((e: unknown) => {
-                    AppLogger.warn('Auto-connect burst scan failed', e instanceof Error ? e.message : String(e));
-                  });
-                }
-              } catch (e: unknown) {
-                AppLogger.warn('Auto-connect burst scan threw error', e instanceof Error ? e.message : String(e));
-              }
+              AppLogger.warn('Auto-connect burst scan threw error', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
             }
           }
         }
+      }
+
+      // ── 2. Background Cloud Sync ──
+      const cloudUserId = sessionRef.current?.user?.id;
+      if (supabase && cloudUserId) {
+        (async () => {
+          try {
+            await refreshProfile();
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            AppLogger.warn('Failed to refresh profile on dashboard load', { error: msg, payload_size: 0, ssi: 0 });
+          }
+
+          try {
+            const { data: groups, error: groupsError } = await supabase
+              .from('registered_groups')
+              .select('*')
+              .eq('user_id', cloudUserId);
+
+            if (groupsError) throw groupsError;
+
+            if (groups && groups.length > 0) {
+              const { data: devices, error: devError } = await supabase
+                .from('registered_devices')
+                .select('*')
+                .eq('user_id', cloudUserId);
+
+              if (devError) throw devError;
+
+              if (devices) {
+                const cloudGroups = groups.sort(
+                  (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                );
+                const allGroupIds = new Set(cloudGroups.map(g => g.id));
+                const cloudMacSet = new Set<string>();
+                for (const d of devices as RegisteredDeviceRow[]) {
+                  const dGroupIds: string[] = d.group_ids || (d.group_id ? [d.group_id] : []);
+                  if (dGroupIds.some(gId => allGroupIds.has(gId))) {
+                    cloudMacSet.add(d.device_mac || d.id);
+                  }
+                }
+                const cloudIds = Array.from(cloudMacSet);
+                
+                if (cloudIds.length > 0) {
+                  const currentSet = new Set(autoConnectIdsRef.current);
+                  let addedNew = false;
+                  for (const id of cloudIds) {
+                    if (!currentSet.has(id)) {
+                      currentSet.add(id);
+                      addedNew = true;
+                    }
+                  }
+                  if (addedNew) {
+                    autoConnectIdsRef.current = Array.from(currentSet);
+                    AppLogger.log('BLE_STATE_CHANGE', {
+                      event: 'auto_connect_cloud_synced',
+                      count: autoConnectIdsRef.current.length,
+                    });
+                  }
+                }
+              }
+            }
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : String(e);
+            AppLogger.warn('Failed to query registered groups/devices from Supabase in background', { error: msg, payload_size: 0, ssi: 0 });
+          }
+        })();
       }
     }
 
