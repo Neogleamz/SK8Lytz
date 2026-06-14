@@ -55,6 +55,10 @@ export const SkateGroupCard = ({
   const isMixed = onCount > 0 && onCount < total;
   const isPoweredOn = onCount > 0;
 
+  const safeColors: readonly [string, string, ...string[]] = isPoweredOn && colors.length >= 2 
+    ? [colors[0], colors[1], ...colors.slice(2)] 
+    : ['#333', '#1a1a1a'];
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -63,7 +67,7 @@ export const SkateGroupCard = ({
       style={styles.skateCardWrapper}
     >
       <LinearGradient
-        colors={isPoweredOn ? (colors as unknown as readonly [string, string, ...string[]]) : ['#333', '#1a1a1a']}
+        colors={safeColors}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.skateCardGradient, isActive && { borderColor: Colors.primary, borderWidth: 1.5 }, { overflow: 'hidden' }]}
@@ -81,7 +85,7 @@ export const SkateGroupCard = ({
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 
                 {/* Stacked Skates in a fixed 3D box (Smaller) */}
-                <View style={{ width: 28, height: 22, position: 'relative' }}>
+                <View style={localStyles.skateBox}>
                   {group.deviceIds.map((id, index) => {
                     const isDeviceOn = powerStates[id] !== false;
                     return (
@@ -90,31 +94,30 @@ export const SkateGroupCard = ({
                         name="roller-skate" 
                         size={16} 
                         color={isDeviceOn ? Colors.success : Colors.error} 
-                        style={{ 
-                          position: 'absolute',
-                          bottom: index > 0 ? 6 : 0,
-                          left: index > 0 ? 10 : 0,
-                          zIndex: group.deviceIds.length - index 
-                        }} 
+                        style={[
+                          localStyles.skateIconBase,
+                          index > 0 ? localStyles.skateStackOffset : localStyles.skateStackBase,
+                          { zIndex: group.deviceIds.length - index }
+                        ]} 
                       />
                     );
                   })}
                 </View>
 
                 {/* Vertical Stack of RSSI Meters (Smaller) */}
-                <View style={{ flexDirection: 'column', gap: 5, marginLeft: 6, height: 22, justifyContent: 'center' }}>
+                <View style={localStyles.rssiContainer}>
                   {[...group.deviceIds].reverse().map((id) => {
                     const isDeviceOn = powerStates[id] !== false;
                     const rssi = rssiMap[id] || -100;
-                    const activeColor = isDeviceOn ? Colors.success : Colors.error;
+                    const activeColor = { backgroundColor: isDeviceOn ? Colors.success : Colors.error };
                     return (
                       <View 
                         key={`rssi-${id}`} 
-                        style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 1, height: 8 }}
+                        style={localStyles.rssiRow}
                       >
-                        <View style={{ width: 2, height: 3, backgroundColor: rssi >= -90 ? activeColor : '#555' }} />
-                        <View style={{ width: 2, height: 5, backgroundColor: rssi >= -75 ? activeColor : '#555' }} />
-                        <View style={{ width: 2, height: 8, backgroundColor: rssi >= -60 ? activeColor : '#555' }} />
+                        <View style={[localStyles.rssiBar1, rssi >= -90 ? activeColor : localStyles.rssiInactive]} />
+                        <View style={[localStyles.rssiBar2, rssi >= -75 ? activeColor : localStyles.rssiInactive]} />
+                        <View style={[localStyles.rssiBar3, rssi >= -60 ? activeColor : localStyles.rssiInactive]} />
                       </View>
                     );
                   })}
@@ -205,3 +208,18 @@ export const SkateGroupCard = ({
     </TouchableOpacity>
   );
 };
+
+import { StyleSheet } from 'react-native';
+
+const localStyles = StyleSheet.create({
+  skateBox: { width: 28, height: 22, position: 'relative' },
+  skateIconBase: { position: 'absolute' },
+  skateStackOffset: { bottom: 6, left: 10 },
+  skateStackBase: { bottom: 0, left: 0 },
+  rssiContainer: { flexDirection: 'column', gap: 5, marginLeft: 6, height: 22, justifyContent: 'center' },
+  rssiRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 1, height: 8 },
+  rssiBar1: { width: 2, height: 3 },
+  rssiBar2: { width: 2, height: 5 },
+  rssiBar3: { width: 2, height: 8 },
+  rssiInactive: { backgroundColor: '#555' }
+});

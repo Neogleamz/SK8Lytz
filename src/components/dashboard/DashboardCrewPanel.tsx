@@ -119,7 +119,7 @@ export default React.memo(function DashboardCrewPanel({
               });
               if (lastScene) {
                 setLastLeaderScene(lastScene); // seed dashboard immediately from persisted DB scene
-                setTimeout(() => onApplyCloudScene(lastScene), 300);
+                onApplyCloudScene(lastScene);
               }
             }
           }}
