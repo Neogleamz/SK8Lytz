@@ -62,6 +62,13 @@ export default function Sk8LytzProgrammer({
   const { Colors } = useTheme();
   const insets = useSafeAreaInsets();
   const loadingRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
+
   const delay = useCallback((ms: number) => new Promise(res => setTimeout(res, ms)), []);
 
   const bg       = Colors.background;
@@ -209,13 +216,18 @@ export default function Sk8LytzProgrammer({
                   // TODO(R-16): Incorporate disconnect gap into queue-managed loop
                   await delay(BLE_TIMING.FLASH_DISCONNECT_GAP_MS); // gap between ops
               }
+              if (!isMountedRef.current) return;
               setFlashStatus(prev => ({ ...prev, [id]: 'success' }));
               AppLogger.log('PERFORMANCE_METRIC', { metricName: 'HW_CONFIG_FLASHED', value: 1, unit: id, deviceId: id });
-          } catch {
+          } catch (e: unknown) {
+              if (!isMountedRef.current) return;
+              AppLogger.error('Failed to flash device', e instanceof Error ? e : new Error(String(e)), { payload_size: 0, ssi: 0 });
               setFlashStatus(prev => ({ ...prev, [id]: 'failed' }));
           }
       }
-      setIsFlashing(false);
+      if (isMountedRef.current) {
+          setIsFlashing(false);
+      }
   };
 
   const toggleSelectAll = () => {

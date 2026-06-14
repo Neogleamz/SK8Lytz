@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../../../services/supabaseClient';
@@ -15,6 +15,12 @@ export default function GlobalAnalyticsPanel({ Colors }: { Colors: Record<string
   const [data, setData] = useState<GlobalAnalyticsSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const loadGlobalStats = async () => {
     if (!supabase) return;
@@ -23,6 +29,7 @@ export default function GlobalAnalyticsPanel({ Colors }: { Colors: Record<string
       setError(null);
       const { data: rawData, error } = await supabase.rpc('admin_get_global_telemetry');
       if (error) throw error;
+      if (!isMountedRef.current) return;
       if (rawData && typeof rawData === 'object') {
         const obj = rawData as Record<string, unknown>;
         setData({
@@ -32,11 +39,14 @@ export default function GlobalAnalyticsPanel({ Colors }: { Colors: Record<string
         });
       }
     } catch (e: unknown) {
+      if (!isMountedRef.current) return;
       const err = e instanceof Error ? e : new Error(String(e));
       AppLogger.error('[GlobalAnalytics] RPC failed', err, { payload_size: 0, ssi: 0 });
       setError('Failed to load. Tap to retry.');
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 

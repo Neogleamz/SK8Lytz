@@ -1,7 +1,7 @@
 import { Spacing } from '../../../theme/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
     Alert,
     Modal,
@@ -44,6 +44,12 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const isLoading = status === 'loading';
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
   const [datePickerConfig, setDatePickerConfig] = useState<{
     visible: boolean;
     pickId: string;
@@ -102,7 +108,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
       fetchPicks();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      AppLogger.error('Failed to create pick', err instanceof Error ? err : new Error(msg));
+      AppLogger.error('Failed to create pick', err instanceof Error ? err : new Error(msg), { payload_size: 0, ssi: 0 });
       Alert.alert('Create Error', msg);
     } finally {
       setStatus('idle');
@@ -123,7 +129,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
             fetchPicks();
           } catch(err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
-            AppLogger.error('Failed to delete pick', err instanceof Error ? err : new Error(msg));
+            AppLogger.error('Failed to delete pick', err instanceof Error ? err : new Error(msg), { payload_size: 0, ssi: 0 });
             Alert.alert('Delete Error', msg);
             setStatus('idle');
           }
@@ -146,9 +152,11 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
         .order('sort_order', { ascending: true });
 
       if (error) throw error;
+      if (!isMountedRef.current) return;
       if (data) setPicks(data as Sk8LytzPick[]);
       setStatus('success');
     } catch (err: unknown) {
+      if (!isMountedRef.current) return;
       setError('Failed to load. Tap to retry.');
       setStatus('error');
     }
@@ -169,7 +177,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      AppLogger.error('Failed to toggle pick', err instanceof Error ? err : new Error(msg));
+      AppLogger.error('Failed to toggle pick', err instanceof Error ? err : new Error(msg), { payload_size: 0, ssi: 0 });
       Alert.alert('Update Error', msg);
       // Rollback
       fetchPicks();
@@ -190,7 +198,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
     });
   };
 
-  const onDateChanged = async (event: any, selectedDate?: Date) => {
+  const onDateChanged = async (event: unknown, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
        // Android closes immediately after selection
        setDatePickerConfig(null);

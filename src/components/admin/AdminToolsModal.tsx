@@ -338,13 +338,15 @@ export default function AdminToolsModal({
               <Text style={[styles.subtitle, { color: textMuted }]} numberOfLines={1}>{memoizedTimelineLogs.length} events stored</Text>
             </View>
             <View style={styles.headerActions}>
-              <TouchableOpacity onPress={handleExport} style={styles.actionBtn}>
+              <TouchableOpacity onPress={handleExport} style={styles.actionBtn} accessibilityRole="button" accessibilityLabel="Export logs">
                 <MaterialCommunityIcons name="download" size={22} color="#00f0ff" />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleUpload}
                 style={[styles.actionBtn, isUploading && { opacity: 0.5 }]}
                 disabled={isUploading}
+                accessibilityRole="button"
+                accessibilityLabel={isUploading ? 'Uploading logs' : 'Upload logs to cloud'}
               >
                 <MaterialCommunityIcons
                   name={isUploading ? 'cloud-sync' : 'cloud-upload'}
@@ -352,10 +354,10 @@ export default function AdminToolsModal({
                   color="#00E676"
                 />
               </TouchableOpacity>
-              <TouchableOpacity onPress={handleClear} style={styles.actionBtn}>
+              <TouchableOpacity onPress={handleClear} style={styles.actionBtn} accessibilityRole="button" accessibilityLabel="Clear all logs">
                 <MaterialCommunityIcons name="delete-sweep" size={22} color="#ff4040" />
               </TouchableOpacity>
-              <TouchableOpacity onPress={onClose} style={styles.actionBtn}>
+              <TouchableOpacity onPress={onClose} style={styles.actionBtn} accessibilityRole="button" accessibilityLabel="Close admin tools">
                 <MaterialCommunityIcons name="close" size={22} color={textPrimary} />
               </TouchableOpacity>
             </View>
@@ -368,6 +370,8 @@ export default function AdminToolsModal({
                 key={t}
                 onPress={() => setTab(t)}
                 style={[styles.tabBtn, tab === t && { borderBottomColor: Colors.primary }]}
+                accessibilityRole="button"
+                accessibilityLabel={`${t} tab`}
               >
                 <Text style={[styles.tabLabel, { color: tab === t ? Colors.primary : textMuted }]}>
                   {t === 'device' ? 'Device' : t === 'tools' ? 'Tools' : t.charAt(0).toUpperCase() + t.slice(1)}

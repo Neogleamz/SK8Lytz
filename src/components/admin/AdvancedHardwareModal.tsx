@@ -56,12 +56,16 @@ export const AdvancedHardwareModal: React.FC<AdvancedHardwareModalProps> = ({
           text: 'Flash Device', 
           style: 'destructive',
           onPress: async () => {
-            const success = await dispatch.writeSettingsByName(points, segments, icType, sorting, targetDeviceId);
-            if (success) {
-               Alert.alert('Success', 'EEPROM written successfully. Device should reboot momentarily.');
-               onClose();
-            } else {
-               Alert.alert('Failed', 'Failed to dispatch write command.');
+            try {
+              const success = await dispatch.writeSettingsByName(points, segments, icType, sorting, targetDeviceId);
+              if (success) {
+                 Alert.alert('Success', 'EEPROM written successfully. Device should reboot momentarily.');
+                 onClose();
+              } else {
+                 Alert.alert('Failed', 'Failed to dispatch write command.');
+              }
+            } catch (error) {
+              Alert.alert('Failed', error instanceof Error ? error.message : String(error));
             }
           }
         }

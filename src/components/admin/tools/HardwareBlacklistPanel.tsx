@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -10,6 +10,7 @@ import {
     TextInput,
     TouchableOpacity,
     View,
+    Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppLogger } from '../../../services/AppLogger';
@@ -99,6 +100,12 @@ export function HardwareBlacklistPanel({
   const [blacklist, setBlacklist] = useState<BlacklistedDevice[]>([]);
   const [newMac, setNewMac] = useState('');
   const [newReason, setNewReason] = useState('');
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const fetchBlacklist = useCallback(async () => {
     try {
@@ -109,13 +116,17 @@ export function HardwareBlacklistPanel({
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      if (!isMountedRef.current) return;
       setBlacklist(data as BlacklistedDevice[]);
     } catch (e: unknown) {
-      AppLogger.error('Failed to fetch hardware blacklist', e, { payload_size: 0, ssi: 0 });
+      if (!isMountedRef.current) return;
+      AppLogger.error('Failed to fetch hardware blacklist', e instanceof Error ? e : new Error(String(e)), { payload_size: 0, ssi: 0 });
       Alert.alert('Error', 'Failed to fetch hardware blacklist: ' + (e instanceof Error ? e.message : String(e)));
       setStatus('error');
     } finally {
-      setStatus('idle');
+      if (isMountedRef.current) {
+        setStatus('idle');
+      }
     }
   }, []);
 
@@ -330,7 +341,7 @@ const styles = StyleSheet.create({
   macText: { 
     fontSize: 15, 
     fontWeight: 'bold',
-    fontFamily: 'monospace',
+    fontFamily: Platform.select({ ios: 'Courier', default: 'monospace' }),
   },
   dateText: { fontSize: 12 },
   reasonText: { fontSize: 14, marginBottom: Spacing.sm },

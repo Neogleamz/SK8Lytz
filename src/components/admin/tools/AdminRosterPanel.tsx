@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -89,6 +89,12 @@ export function AdminRosterPanel({
   const [admins, setAdmins] = useState<AdminProfile[]>([]);
   type ViewState = 'loading' | 'refreshing' | 'error' | 'success';
   const [status, setStatus] = useState<ViewState>('loading');
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const fetchAdmins = useCallback(async () => {
     try {
@@ -100,10 +106,12 @@ export function AdminRosterPanel({
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      if (!isMountedRef.current) return;
       setAdmins(data as AdminProfile[]);
       setStatus('success');
     } catch (e: unknown) {
-      AppLogger.error('Failed to fetch admins for roster panel', e, { payload_size: 0, ssi: 0 });
+      if (!isMountedRef.current) return;
+      AppLogger.error('Failed to fetch admins for roster panel', e instanceof Error ? e : new Error(String(e)), { payload_size: 0, ssi: 0 });
       Alert.alert('Error', 'Failed to fetch admins: ' + (e instanceof Error ? e.message : String(e)));
       setStatus('error');
     }

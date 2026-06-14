@@ -15,13 +15,13 @@ export interface TabProps {
 
 export interface DeviceTabProps extends TabProps {
   logs: LogEntry[];
-  deviceConfigs: Record<string, any>;
+  deviceConfigs: Record<string, import('../../types/dashboard.types').DeviceSettings>;
 }
 
 export const DeviceTab = React.memo(({ logs, deviceConfigs, textMuted, textPrimary, cardBg, borderColor }: DeviceTabProps) => {
   const earliest = new Map<string, number>();
   const latest = new Map<string, number>();
-  const uniqueMeta = new Map<string, any>();
+  const uniqueMeta = new Map<string, Record<string, unknown>>();
   const firmwares = new Map<string, string>();
 
   logs.forEach((l: LogEntry) => {
@@ -51,12 +51,12 @@ export const DeviceTab = React.memo(({ logs, deviceConfigs, textMuted, textPrima
           <View key={i} style={[styles.deviceCard, { backgroundColor: cardBg, borderColor }]}>
             <MaterialCommunityIcons name="bluetooth-connect" size={24} color="#9D4EFF" />
             <View style={{ marginLeft: Spacing.md, flex: 1 }}>
-              <Text style={[styles.deviceName, { color: textPrimary }]}>{config.name || meta.name || 'Unknown'}</Text>
+              <Text style={[styles.deviceName, { color: textPrimary }]}>{config.name || String(meta.name || '') || 'Unknown'}</Text>
               <Text style={[styles.deviceDetail, { color: textMuted }]}>MAC Address: {id}</Text>
               {firmwares.has(id) && <Text style={[styles.deviceDetail, { color: textMuted }]}>Firmware: {firmwares.get(id)}</Text>}
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginTop: Spacing.xs }}>
-                <Text style={[styles.deviceDetail, { color: textMuted }]}>Type: {config.type || meta?.type || '?'}</Text>
-                {meta?.rssi && <Text style={[styles.deviceDetail, { color: textMuted }]}>· RSSI: {meta.rssi}</Text>}
+                <Text style={[styles.deviceDetail, { color: textMuted }]}>Type: {config.type || String(meta?.type || '') || '?'}</Text>
+                {meta?.rssi && <Text style={[styles.deviceDetail, { color: textMuted }]}>· RSSI: {String(meta.rssi)}</Text>}
               </View>
               <View style={{ borderTopWidth: 1, borderTopColor: borderColor, marginTop: Spacing.sm, paddingTop: Spacing.xs }}>
                 <Text style={[styles.deviceDetail, { color: textMuted }]}>First seen: {formatLogTime(earliest.get(id)!)}</Text>

@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -144,6 +144,12 @@ export function UserManagementPanel({
   const [searchQuery, setSearchQuery] = useState('');
   type ViewState = 'loading' | 'refreshing' | 'error' | 'success';
   const [status, setStatus] = useState<ViewState>('loading');
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -155,10 +161,12 @@ export function UserManagementPanel({
         .limit(100);
 
       if (error) throw error;
+      if (!isMountedRef.current) return;
       setUsers(data as AdminUserProfile[]);
       setStatus('success');
     } catch (e: unknown) {
-      AppLogger.error('Failed to fetch users for admin panel', e, { payload_size: 0, ssi: 0 });
+      if (!isMountedRef.current) return;
+      AppLogger.error('Failed to fetch users for admin panel', e instanceof Error ? e : new Error(String(e)), { payload_size: 0, ssi: 0 });
       setStatus('error');
     }
   }, []);
@@ -352,6 +360,8 @@ export function UserManagementPanel({
     <EmptyState message="No users found" />
   ), []);
 
+  const keyExtractor = useCallback((i: AdminUserProfile, index: number) => i.user_id || String(index), []);
+
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
       <SafeAreaView style={[styles.root, { backgroundColor: bg }]}>
@@ -382,7 +392,7 @@ export function UserManagementPanel({
             data={filteredUsers}
             ListEmptyComponent={renderEmpty}
             renderItem={renderItem}
-            keyExtractor={(i, index) => i.user_id || String(index)}
+            keyExtractor={keyExtractor}
             contentContainerStyle={styles.list}
             refreshing={status === 'refreshing'}
             onRefresh={handleRefresh}

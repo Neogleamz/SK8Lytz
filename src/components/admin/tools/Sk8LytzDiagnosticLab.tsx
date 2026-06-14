@@ -54,7 +54,7 @@ interface LabProps {
     segments?: number;
     detected?: boolean;
   };
-  allDevices?: any[];
+  allDevices?: Device[];
   bleState?: string;
   handleScan?: () => void;
   connectToDevice?: (device: Device) => Promise<void>;

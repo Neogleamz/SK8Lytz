@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -108,6 +108,12 @@ export function FeatureFlagsPanel({
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
   const [newKey, setNewKey] = useState('');
   const [newUserId, setNewUserId] = useState('');
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const fetchFlags = useCallback(async () => {
     try {
@@ -118,13 +124,17 @@ export function FeatureFlagsPanel({
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      if (!isMountedRef.current) return;
       setFlags(data as FeatureFlag[]);
     } catch (e: unknown) {
-      AppLogger.error('Failed to fetch feature flags', e, { payload_size: 0, ssi: 0 });
+      if (!isMountedRef.current) return;
+      AppLogger.error('Failed to fetch feature flags', e instanceof Error ? e : new Error(String(e)), { payload_size: 0, ssi: 0 });
       Alert.alert('Error', 'Failed to fetch feature flags: ' + (e instanceof Error ? e.message : String(e)));
       setStatus('error');
     } finally {
-      setStatus('idle');
+      if (isMountedRef.current) {
+        setStatus('idle');
+      }
     }
   }, []);
 
@@ -348,7 +358,7 @@ const styles = StyleSheet.create({
   keyText: { 
     fontSize: 15, 
     fontWeight: 'bold',
-    fontFamily: 'monospace',
+    fontFamily: Platform.select({ ios: 'Courier', default: 'monospace' }),
   },
   targetText: { fontSize: 12, marginTop: 4, fontWeight: '600' },
   actionRow: {

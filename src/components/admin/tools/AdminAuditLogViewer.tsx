@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -53,6 +53,12 @@ export function AdminAuditLogViewer({
   const [profiles, setProfiles] = useState<ProfileMap>({});
   type ViewState = 'loading' | 'refreshing' | 'error' | 'success';
   const [status, setStatus] = useState<ViewState>('loading');
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => { isMountedRef.current = false; };
+  }, []);
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -73,6 +79,7 @@ export function AdminAuditLogViewer({
         reason: row.reason ? String(row.reason) : null,
         created_at: String(row.created_at || ''),
       }));
+      if (!isMountedRef.current) return;
       setLogs(fetchedLogs);
 
       // Collect unique user IDs to fetch profiles for display names
@@ -93,11 +100,14 @@ export function AdminAuditLogViewer({
           profileData.forEach(p => {
             pMap[p.user_id] = p.display_name || p.username || p.user_id;
           });
+          if (!isMountedRef.current) return;
           setProfiles(pMap);
         }
       }
+      if (!isMountedRef.current) return;
       setStatus('success');
     } catch (e: unknown) {
+      if (!isMountedRef.current) return;
       const error = e instanceof Error ? e : new Error(String(e));
       AppLogger.error('Failed to fetch audit logs', error, { payload_size: 0, ssi: 0 });
       setStatus('error');
