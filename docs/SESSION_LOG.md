@@ -3412,3 +3412,8 @@ TSC: ✅  Jest: ✅
 ### [EVENT] 2026-06-13T15:54 — [BATCH:deepdive-sweep] COMPLETE
 The entire 6-wave deepdive-sweep batch has successfully merged to master.
 Active Sprint is now empty.
+
+### [MERGE] 2026-06-14T01:19:00.381Z — chore/session-service-test-coverage
+**What merged:** 3 missing unit test files for SensorService, HealthService, NotificationService.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** src/services/session/__tests__/SensorService.test.ts, HealthService.test.ts, NotificationService.test.ts
