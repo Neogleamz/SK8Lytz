@@ -3625,3 +3625,8 @@ TSC: ?  Jest: ?
 **What merged:** 7 worktrees from the AST-verified Wave 1 batch.
 **Verify result:** TSC ✅, Jest ✅, gates ✅, cryptographic attestations verified.
 **Files touched:** Extensively across the UI and BLE hooks domains.
+
+### [MERGE] 2026-06-14T17:33 — sweep-src-components-DockedController.tsx → master
+**What merged:** Extracted useDockedPermissions and useCrewLeaderBroadcast, unified Context usage, fixed PII logging, added try/catch, fixed returning types.
+**Verify result:** TSC ✅, Jest ✅, gates ✅, cryptographic attestations verified.
+**Files touched:** DockedController.tsx, CommunityModal.tsx, useDockedPermissions.ts, useCrewLeaderBroadcast.ts, ScenesService.ts
