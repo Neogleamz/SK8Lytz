@@ -3687,7 +3687,6 @@ TSC: ✅  Jest: ✅
 Files touched: src/components/permissions/GranularPermissionsList.tsx
 TSC: ?  Jest: ?
 
-<<<<<<< HEAD
 ### [MERGE] 2026-06-14T18:17 — Wave 3 Batched Fixes
 **What merged:**
 - sweep-src-components-GlobalErrorBoundary.tsx → master @ 2f89923f
@@ -3705,10 +3704,8 @@ TSC: ✅  Jest: ✅
 **What merged:** Sweeping refactor of the Crew Domain components. Extracted SessionMarker and FilterPill to prevent re-renders. Addressed accessibility and removed PII.
 **Verify result:** TSC ✅, Jest ✅, gates ✅
 **Files touched:** src/components/crew/CrewCard.tsx, CrewLandingScreen.tsx, CrewDetailScreen.tsx, MapFiltersTray.tsx, CrewLandingMap.tsx, CrewCreateScreen.tsx, etc.
-=======
 ### [MERGE READY] sweep-src-components-PositionalGradientBuilder.tsx - 2452810e
 Files touched:
 - src/components/PositionalGradientBuilder.tsx
 TSC: ✅  Jest: ✅
->>>>>>> 463bedda (chore(log): update SESSION_LOG.md)
 
