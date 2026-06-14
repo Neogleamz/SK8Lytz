@@ -3620,3 +3620,8 @@ Files touched:
 - src/components/admin/tools/FeatureFlagsPanel.tsx
 TSC: ?  Jest: ?
 
+
+### [MERGE] 2026-06-14T17:22 — Wave 1 Sweeps → master
+**What merged:** 7 worktrees from the AST-verified Wave 1 batch.
+**Verify result:** TSC ✅, Jest ✅, gates ✅, cryptographic attestations verified.
+**Files touched:** Extensively across the UI and BLE hooks domains.
