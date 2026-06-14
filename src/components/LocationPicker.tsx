@@ -1,13 +1,16 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView, Platform } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Spacing , ThemePalette } from '../theme/theme';
 import { LocationMarker, LocationPickerMap } from './LocationPickerMap';
 import { useRecentSpots, RecentSpot } from '../hooks/useRecentSpots';
 import { AppLogger } from '../services/AppLogger';
 import { useAppConfig } from '../context/AppConfigContext';
+
+// TODO(i18n): Replace with global i18n.t when framework is adopted
+const t = (key: string) => key;
 
 export interface CuratedSpot {
   id: string;
@@ -119,7 +122,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         
         // Fallback Path: Nominatim OpenStreetMap Geocoder
         let viewbox = '';
-        if (searchRadiusMi) {
+        if (searchRadiusMi && Platform.OS !== 'web') {
           try {
             const loc = await Location.getLastKnownPositionAsync();
             if (loc) {
@@ -175,21 +178,25 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>LOCATION (OPTIONAL)</Text>
+      <Text style={styles.label}>{t('LOCATION (OPTIONAL)')}</Text>
       
       {/* Smart Chips List */}
-      {error && <Text style={styles.errorText}>Error loading spots</Text>}
+      {error && <Text style={styles.errorText}>{t('Error loading spots')}</Text>}
       {!locationCoords && (recentSpots.length > 0 || curatedSpots.length > 0) && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.sm }} contentContainerStyle={{ gap: Spacing.sm, paddingRight: Spacing.lg }}>
             {recentSpots.map(s => (
                 <TouchableOpacity key={`rx-${s.lat}-${s.lng}`} style={styles.chip}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(`Recent location: ${s.name || 'Recent'}`)}
                   onPress={() => selectSuggestion({ isCurated: true, place_id: s.id || '', name: s.name, lat: s.lat, lon: s.lng })}>
                    <MaterialCommunityIcons name="history" size={14} color={Colors.primary} />
-                   <Text style={styles.chipText}>{s.name || 'Recent'}</Text>
+                   <Text style={styles.chipText}>{s.name || t('Recent')}</Text>
                 </TouchableOpacity>
             ))}
             {curatedSpots.slice(0, 5).map(s => (
                 <TouchableOpacity key={`cx-${s.id}`} style={styles.chip}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(`Curated location: ${s.name}`)}
                   onPress={() => selectSuggestion({ isCurated: true, place_id: s.id, name: s.name, lat: s.lat, lon: s.lng })}>
                    <Text style={styles.chipText}>{s.name}</Text>
                 </TouchableOpacity>
@@ -200,13 +207,16 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
       <View style={styles.inputRow}>
         <TextInput
           style={styles.input}
+          accessibilityLabel={t('Search location input')}
           value={locationLabel}
           onChangeText={handleSearch}
-          placeholder="Enter address or park name"
+          placeholder={t('Enter address or park name')}
           placeholderTextColor={Colors.textMuted}
         />
         <TouchableOpacity
           style={styles.detectBtn}
+          accessibilityRole="button"
+          accessibilityLabel={t('Detect current location')}
           onPress={() => {
             setFsmState('GETTING_GPS');
             onDetectLocation();
@@ -226,12 +236,12 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         fsmState === 'GEOCODING' ? (
           <View style={[styles.suggestionsContainer, { padding: Spacing.md, alignItems: 'center' }]}>
             <ActivityIndicator size="small" color={Colors.primary} />
-            <Text style={[styles.suggestionText, { marginTop: Spacing.sm, textAlign: 'center', color: Colors.textMuted }]}>Searching locations...</Text>
+            <Text style={[styles.suggestionText, { marginTop: Spacing.sm, textAlign: 'center', color: Colors.textMuted }]}>{t('Searching locations...')}</Text>
           </View>
         ) : fsmState === 'ERROR' ? (
           <View style={[styles.suggestionsContainer, { padding: Spacing.md, alignItems: 'center' }]}>
             <MaterialCommunityIcons name="alert-circle-outline" size={24} color="#FF453A" />
-            <Text style={[styles.suggestionText, { marginTop: Spacing.sm, textAlign: 'center', color: '#FF453A' }]}>Failed to load location suggestions.</Text>
+            <Text style={[styles.suggestionText, { marginTop: Spacing.sm, textAlign: 'center', color: '#FF453A' }]}>{t('Failed to load location suggestions.')}</Text>
           </View>
         ) : suggestions.length > 0 ? (
           <View style={styles.suggestionsContainer}>
@@ -246,7 +256,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           </View>
         ) : locationLabel.length >= 2 && fsmState === 'IDLE' ? (
           <View style={[styles.suggestionsContainer, { padding: Spacing.md, alignItems: 'center' }]}>
-            <Text style={[styles.suggestionText, { textAlign: 'center', color: Colors.textMuted }]}>No matching locations found</Text>
+            <Text style={[styles.suggestionText, { textAlign: 'center', color: Colors.textMuted }]}>{t('No matching locations found')}</Text>
           </View>
         ) : null
       )}
@@ -279,7 +289,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
             </LocationPickerMap>
             <View style={styles.mapOverlay}>
               <Text style={styles.mapOverlayText}>
-                ✓ GPS coordinates attached
+                {t('✓ GPS coordinates attached')}
               </Text>
             </View>
           </View>
@@ -287,7 +297,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
           <View style={{ marginTop: Spacing.md, padding: Spacing.md, backgroundColor: 'rgba(0, 200, 100, 0.1)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(0, 200, 100, 0.3)', flexDirection: 'row', alignItems: 'center' }}>
             <MaterialCommunityIcons name="check-circle" size={16} color="#00C864" style={{ marginRight: Spacing.sm }} />
             <Text style={{ color: '#00C864', fontSize: 13, fontWeight: '600' }}>
-              Address selected successfully
+              {t('Address selected successfully')}
             </Text>
           </View>
         )
