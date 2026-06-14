@@ -43,13 +43,10 @@ describe('useControllerDispatch', () => {
 
   describe('Missing writeToDevice Handling', () => {
     it('gracefully logs error without crashing when writeToDevice is undefined', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
       const dispatch = useControllerDispatch({ writeToDevice: undefined, hwSettings: undefined, points: 16 });
       
       await dispatch.sendColor(255, 0, 0);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('writeToDevice is undefined'));
-      
-      consoleErrorSpy.mockRestore();
+      expect(AppLogger.error).toHaveBeenCalledWith('BLE_DEAD_WIRE', expect.stringContaining('writeToDevice is undefined'), expect.any(Object));
     });
   });
 
