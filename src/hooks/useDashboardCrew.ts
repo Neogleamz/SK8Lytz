@@ -50,15 +50,17 @@ export function useDashboardCrew({
 
   const { user, sessionLoaded } = useAuth();
   const hasTriedRejoinRef = React.useRef(false);
+  const isRejoiningRef = React.useRef(false);
 
   // ── Auto-rejoin on launch ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!sessionLoaded || !user || hasTriedRejoinRef.current) return;
+    if (!sessionLoaded || !user || hasTriedRejoinRef.current || isRejoiningRef.current) return;
 
     let isMounted = true;
     let unsub: (() => void) | undefined;
 
     const tryRejoin = async () => {
+      isRejoiningRef.current = true;
       try {
         hasTriedRejoinRef.current = true;
         const displayName = user.email?.split('@')[0] || 'Skater';
@@ -95,8 +97,14 @@ export function useDashboardCrew({
         }
       } catch (e: unknown) {
         if (isMounted) {
-          AppLogger.warn('[useDashboardCrew] auto-rejoin failed', { error: (e instanceof Error ? e.message : String(e)) });
+          AppLogger.warn('[useDashboardCrew] auto-rejoin failed', {
+            error: (e instanceof Error ? e.message : String(e)),
+            payload_size: 0,
+            ssi: 0
+          });
         }
+      } finally {
+        isRejoiningRef.current = false;
       }
     };
 
