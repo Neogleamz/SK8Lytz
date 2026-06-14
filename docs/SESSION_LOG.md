@@ -3531,3 +3531,25 @@ TSC: ?  Jest: ?
 ### [MERGE READY] sweep-hooks-useCrewSession.ts — ef93bfef
 Files touched: src/hooks/useCrewSession.ts
 TSC: ?  Jest: ?
+
+### [MERGE READY] sweep-hooks-useProductManager.ts â€” 4e0662d4
+Files touched: src/hooks/useProductManager.ts
+TSC: âœ…  Jest: âœ…
+
+
+### [MERGE READY] sweep-hooks-useDashboardCrew.ts — 3cbbcb42
+**Files touched:** src/hooks/useDashboardCrew.ts
+**TSC:** ?  **Jest:** ?
+
+### [MERGE READY] sweep-services-BleWriteDispatcher.ts — f27bab34
+Files touched: src/services/BleWriteDispatcher.ts
+TSC: ?  Jest: ?
+ 
+### [MERGE READY] sweep-providers-ComplianceGate.tsx - d8fd0ad6
+Files touched: src/providers/ComplianceGate.tsx
+TSC: ? Jest: ?
+
+
+### [MERGE READY] sweep-hooks-useDashboardAutoConnect.ts — d6497db0e913e31b216cf486c004a7c7fdc76291
+Files touched: src/hooks/useDashboardAutoConnect.ts
+TSC: ?  Jest: ?
