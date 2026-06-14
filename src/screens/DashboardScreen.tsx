@@ -77,10 +77,10 @@ import RegisteredFleetSlab from '../components/dashboard/RegisteredFleetSlab';
 import SupportModal from '../components/dashboard/SupportModal';
 import { createDashboardStyles } from '../styles/DashboardStyles';
 import { scrubPII } from '../utils/piiScrubber';
-
-
+import { useScreenPerformance } from '../hooks/useScreenPerformance';
 
 export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMode?: boolean; } = {}) {
+  const { markFullyDrawn } = useScreenPerformance('DashboardScreen');
   const { isVisibilityAllowed } = useAppConfig();
   const { Colors, isDark, toggleTheme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -429,7 +429,8 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
         setViewState('DASHBOARD');
       }
     }
-  }, [isLoading, registeredDevices.length, viewState]);
+    markFullyDrawn();
+  }, [isLoading, registeredDevices.length, viewState, markFullyDrawn]);
 
 
 

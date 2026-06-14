@@ -115,6 +115,8 @@ function AccountModalSkeleton() {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
+import { useScreenPerformance } from '../hooks/useScreenPerformance';
+
 export default function AccountModal({
   visible, onClose, onSignOut,
   onJoinCrewSession: _onJoinCrewSession,
@@ -126,10 +128,17 @@ export default function AccountModal({
   isOfflineMode = false,
   onProfileUpdated,
 }: AccountModalProps) {
+  const { markFullyDrawn } = useScreenPerformance('AccountModal');
   const { Colors, isDark, toggleTheme } = useTheme();
   const { signIn: authSignIn, signOut: authSignOut, updateUser } = useAuth();
   const insets = useSafeAreaInsets();
   const styles = createStyles(Colors);
+
+  useEffect(() => {
+    if (visible) {
+      markFullyDrawn();
+    }
+  }, [visible, markFullyDrawn]);
 
   const [tab, setTab] = useState<Tab>('profile');
   const [showEula, setShowEula] = useState(false);

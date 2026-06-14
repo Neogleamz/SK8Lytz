@@ -23,6 +23,7 @@ import { AppLogger } from '../../services/AppLogger';
 import { buildPatternPayload } from '../../protocols/PatternEngine';
 
 import type { BleConnectionState, PendingRegistration, PingResult } from '../../types/dashboard.types';
+import { useScreenPerformance } from '../../hooks/useScreenPerformance';
 
 interface WizardDeviceConfig {
   name: string;
@@ -64,6 +65,11 @@ export default function HardwareSetupWizardScreen({
   setPendingRegistrations,
   pingDevice,
 }: HardwareSetupWizardScreenProps) {
+  const { markFullyDrawn } = useScreenPerformance('HardwareSetupWizardScreen');
+
+  useEffect(() => {
+    markFullyDrawn();
+  }, [markFullyDrawn]);
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
   // FSM-style state union to avoid boolean trap (R-18)

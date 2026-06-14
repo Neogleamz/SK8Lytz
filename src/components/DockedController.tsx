@@ -66,6 +66,7 @@ import QuickPresetModal from './docked/QuickPresetModal';
 // useSession(). The 4 telemetry values are threaded
 // down as props to prevent a duplicate sensor loop. (BUG-01 fix, 2026-05-08)
 import { LiveTelemetryHUD } from './dashboard/LiveTelemetryHUD';
+import { useScreenPerformance } from '../hooks/useScreenPerformance';
 
 
 
@@ -191,6 +192,9 @@ export type DockedControllerHandle = {
 
 const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControllerProps>(
   function DockedController({ isOfflineMode = false, hwSettings, lockedProduct, isPaired, bleState, points, devices, onLongPressDevice, writeToDevice: parentWriteToDevice, isPoweredOn = true, onPowerToggle, onDisconnect, crewRole, onCrewSceneChange, onPatternChanged, appSettings = {}, gpsSpeed = 0, peakGForce = 1.0, sessionDistanceMiles = 0, sessionDurationSec = 0, sessionAvgSpeed = 0, sessionPeakSpeed = 0, sessionPhase = 'IDLE', sessionActive = false, startSession = () => {}, stopSessionRecording = () => {} }: Sk8lytzControllerProps, ref) {
+    const { markFullyDrawn } = useScreenPerformance('DockedController');
+    useEffect(() => { markFullyDrawn(); }, [markFullyDrawn]);
+
     // TODO: [R-27] extract contexts to parent container (Context Overload limit exceeded)
     const { Colors, isDark } = useTheme();
     const { isVisibilityAllowed } = useAppConfig();

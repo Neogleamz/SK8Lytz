@@ -83,6 +83,8 @@ export type EventType =
   | 'ZENGGE_SETTLED_MODE_0x41'
   | 'ZENGGE_EFFECT_SEQ_0x43_DIAGNOSTIC_ONLY'
   | 'SCREEN_OPENED'
+  | 'SCREEN_LOAD_TTID'
+  | 'SCREEN_LOAD_TTFD'
   | 'APP_BACKGROUNDED'
   | 'APP_FOREGROUNDED'
   | 'ERROR_CAUGHT'
@@ -453,7 +455,7 @@ class AppLoggerService {
     if (event.startsWith('BLE_') || event.startsWith('DEVICE_') || event.startsWith('ZENGGE_')) category = 'BLE';
     else if (event === 'ERROR_CAUGHT' || event.includes('ERROR') || event.includes('FAIL')) category = 'ERROR';
     else if (event.includes('FETCH') || event.includes('CLOUD') || event.includes('SYNC')) category = 'NETWORK';
-    else if (event === 'SCREEN_OPENED' || event.includes('NAV')) category = 'NAVIGATION';
+    else if (event.startsWith('SCREEN_') || event.includes('NAV')) category = 'NAVIGATION';
     
     FlightRecorder.leaveBreadcrumb(category, event, payload);
 

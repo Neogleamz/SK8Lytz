@@ -23,6 +23,7 @@ import { AuthFooterActions } from '../components/auth/AuthFooterActions';
 import { DevSandboxDrawer } from '../components/auth/DevSandboxDrawer';
 
 import { STORAGE_REMEMBER_CREDS, STORAGE_LAST_EMAIL } from '../constants/storageKeys';
+import { useScreenPerformance } from '../hooks/useScreenPerformance';
 
 type AuthMode = 'LOGIN' | 'SIGNUP' | 'FORGOT_PASSWORD' | 'MAGIC_LINK';
 
@@ -37,6 +38,7 @@ const showHelp = () => {
 };
 
 export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflineMode?: () => void; sessionExpired?: boolean }) {
+  const { markFullyDrawn } = useScreenPerformance('AuthScreen');
   const { isDark, toggleTheme, Colors } = useTheme();
   const styles = useAuthStyles();
 
@@ -85,6 +87,12 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
       setCredLoadStage('LOADED');
     });
   }, []);
+
+  useEffect(() => {
+    if (credLoadStage === 'LOADED') {
+      markFullyDrawn();
+    }
+  }, [credLoadStage, markFullyDrawn]);
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>

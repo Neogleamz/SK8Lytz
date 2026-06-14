@@ -1,11 +1,12 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { AppLogger } from '../services/AppLogger';
 import { SkateSpot, SkateSpotsService } from '../services/SkateSpotsService';
 import { Spacing , ThemePalette } from '../theme/theme';
 import { ErrorCard } from './ErrorCard';
+import { useScreenPerformance } from '../hooks/useScreenPerformance';
 
 interface BottomSheetProps {
   visible: boolean;
@@ -24,8 +25,15 @@ const SurfaceChip = ({ type, label, selectedSurface, onSelect, styles }: { type:
 );
 
 export const SkateSpotBottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, spot, onSpotUpdated }) => {
+  const { markFullyDrawn } = useScreenPerformance('SkateSpotBottomSheet');
   const { Colors } = useTheme();
   const styles = useMemo(() => createStyles(Colors), [Colors]);
+
+  useEffect(() => {
+    if (visible) {
+      markFullyDrawn();
+    }
+  }, [visible, markFullyDrawn]);
   
   type StatusState = 'idle' | 'loading' | 'success' | 'error';
   const [status, setStatus] = useState<StatusState>('idle');

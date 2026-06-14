@@ -150,9 +150,16 @@ interface CrewMemberRow {
   }[] | null;
 }
 
+import { useScreenPerformance } from '../hooks/useScreenPerformance';
+
 export default function CrewMemberDashboard({ session, role, currentScene, onLeave }: Props) {
+  const { markFullyDrawn } = useScreenPerformance('CrewMemberDashboard');
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
+
+  useEffect(() => {
+    markFullyDrawn();
+  }, [markFullyDrawn]);
 
   const [members, setMembers] = useState<CrewMember[]>([]);
   const [elapsed, setElapsed] = useState('');
