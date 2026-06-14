@@ -225,7 +225,11 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
         : await ScenesService.getMyScenes(user?.id ?? '');
       setScenes(data);
     } catch (e: unknown) {
-      AppLogger.warn('[CommunityModal] failed to fetch scenes', { error: e instanceof Error ? e.message : String(e) });
+      AppLogger.warn('[CommunityModal] failed to fetch scenes', { 
+        error: e instanceof Error ? e.message : String(e),
+        payload_size: 0,
+        ssi: 0
+      });
       setError('Failed to load. Tap to retry.');
     } finally {
       setLoading(false);
@@ -233,35 +237,64 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
     }
   };
 
-  const handleApply = async (scene: ICloudScene) => {
+  const handleApply = useCallback(async (scene: ICloudScene) => {
     onApplyScene(scene.scene_payload);
     Alert.alert('✅ Applied!', `"${scene.name}" has been loaded onto your hardware.`);
-    if (activeTab === 'COMMUNITY') ScenesService.downloadScene(scene.id);
+    if (activeTab === 'COMMUNITY') {
+      try {
+        await ScenesService.downloadScene(scene.id);
+      } catch (e: unknown) {
+        AppLogger.error('[CommunityModal] failed to download scene', {
+          error: e instanceof Error ? e.message : String(e),
+          payload_size: 0,
+          ssi: 0
+        });
+      }
+    }
     onClose();
-  };
+  }, [activeTab, onClose, onApplyScene]);
 
-  const handleUpvote = async (sceneId: string) => {
+  const handleUpvote = useCallback(async (sceneId: string) => {
     setProcessingId(sceneId);
-    const success = await ScenesService.upvoteScene(sceneId);
-    if (success) setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, upvotes: s.upvotes + 1 } : s));
-    setProcessingId(null);
-  };
+    try {
+      const success = await ScenesService.upvoteScene(sceneId);
+      if (success) setScenes(prev => prev.map(s => s.id === sceneId ? { ...s, upvotes: s.upvotes + 1 } : s));
+    } catch (e: unknown) {
+      AppLogger.error('[CommunityModal] failed to upvote scene', {
+        error: e instanceof Error ? e.message : String(e),
+        payload_size: 0,
+        ssi: 0
+      });
+    } finally {
+      setProcessingId(null);
+    }
+  }, []);
 
-  const handleDelete = (sceneId: string) => {
+  const handleDelete = useCallback((sceneId: string) => {
     Alert.alert('Delete Scene', 'This will permanently remove this scene from your cloud saves.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: async () => {
         setProcessingId(sceneId);
-        const success = await ScenesService.deleteScene(sceneId);
-        if (success) {
-          setScenes(prev => prev.filter(s => s.id !== sceneId));
-        } else {
-          Alert.alert('Error', 'Failed to delete scene.');
+        try {
+          const success = await ScenesService.deleteScene(sceneId);
+          if (success) {
+            setScenes(prev => prev.filter(s => s.id !== sceneId));
+          } else {
+            Alert.alert('Error', 'Failed to delete scene.');
+          }
+        } catch (e: unknown) {
+          AppLogger.error('[CommunityModal] failed to delete scene', {
+            error: e instanceof Error ? e.message : String(e),
+            payload_size: 0,
+            ssi: 0
+          });
+          Alert.alert('Error', 'An error occurred while deleting.');
+        } finally {
+          setProcessingId(null);
         }
-        setProcessingId(null);
       }}
     ]);
-  };
+  }, []);
 
   const renderItem = useCallback(({ item }: { item: ICloudScene }) => {
     return (
