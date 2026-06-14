@@ -4,6 +4,11 @@ import { useTheme } from '../context/ThemeContext';
 import { Spacing , ThemePalette } from '../theme/theme';
 
 const ITEM_HEIGHT = 44;
+const getDrumItemLayout = (_data: unknown, index: number) => ({
+  length: ITEM_HEIGHT,
+  offset: ITEM_HEIGHT * index,
+  index,
+});
 
 const VerticalPatternDrum = ({
   value,
@@ -118,7 +123,13 @@ const VerticalPatternDrum = ({
   }, [items, localVal, commitValue]);
 
   return (
-    <View style={[styles.containerWrap, { flex: 1 }]}>
+    <View 
+      style={[styles.containerWrap, { flex: 1 }]}
+      accessible={true}
+      accessibilityRole="adjustable"
+      accessibilityLabel={`Pattern drum. Currently selected pattern ${localVal}`}
+      accessibilityHint="Scroll up or down to change the pattern"
+    >
       <View style={styles.container} onLayout={(e) => setLayoutHeight(e.nativeEvent.layout.height)}>
         <View style={styles.drumMask}>
              {/* Reticle / Center indicator */}
@@ -143,7 +154,7 @@ const VerticalPatternDrum = ({
                windowSize={5}
                ListHeaderComponent={<View style={{ height: padCount * ITEM_HEIGHT }} />}
                ListFooterComponent={<View style={{ height: padCount * ITEM_HEIGHT }} />}
-               getItemLayout={(_, index) => ({ length: ITEM_HEIGHT, offset: ITEM_HEIGHT * index, index })}
+               getItemLayout={getDrumItemLayout}
                renderItem={renderItem}
              />
              
