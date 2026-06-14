@@ -232,8 +232,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
      */
     const lastConfirmedStateRef = useRef<Record<string, unknown> | null>(null);
     // Ref indirection for captureEntireState — declared here to break the TDZ forward reference.
-    // captureEntireState (defined at L413 via useCallback) is assigned to this ref each render.
-    const captureEntireStateRef = useRef<(override?: Record<string, unknown>) => unknown>(() => null);
+    const captureEntireStateRef = useRef<(override?: Record<string, unknown>) => Record<string, unknown> | null>(() => null);
 
     /**
      * Stable ref wrapper for the onReconcile callback.
@@ -417,13 +416,13 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     });
 
     const captureEntireState = React.useCallback(
-      (override?: Record<string, any>) => baseCaptureEntireState(streetSensitivity, streetCruiseColor, streetBrakeColor, override),
+      (override?: Record<string, unknown>) => baseCaptureEntireState(streetSensitivity, streetCruiseColor, streetBrakeColor, override),
       [baseCaptureEntireState, streetSensitivity, streetCruiseColor, streetBrakeColor]
     );
     // Keep ref current so writeToDevice (declared above) always captures the latest
     captureEntireStateRef.current = captureEntireState;
     const applyCloudScene = React.useCallback(
-      (scenePayload: any) => baseApplyCloudScene(scenePayload, setStreetSensitivity, setStreetCruiseColor, setStreetBrakeColor),
+      (scenePayload: Record<string, unknown>) => baseApplyCloudScene(scenePayload, setStreetSensitivity, setStreetCruiseColor, setStreetBrakeColor),
       [baseApplyCloudScene, setStreetSensitivity, setStreetCruiseColor, setStreetBrakeColor]
     );
 
