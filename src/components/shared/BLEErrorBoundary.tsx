@@ -8,7 +8,7 @@
  * Uses class component (required by React ErrorBoundary API).
  */
 import React from 'react';
-import { Text, TouchableOpacity, View, StyleSheet } from 'react-native';
+import { Text, TouchableOpacity, View, StyleSheet, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { AppLogger } from '../../services/AppLogger';
 
@@ -39,6 +39,8 @@ export class BLEErrorBoundary extends React.Component<Props, State> {
     AppLogger.error(`[ErrorBoundary] ${this.props.componentName} crashed`, { 
       error: error instanceof Error ? error.message : String(error) || JSON.stringify(error),
       componentStack: info.componentStack?.slice(0, 500),
+      payload_size: 0,
+      ssi: 0,
      });
   }
 
@@ -111,7 +113,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     marginBottom: 16,
-    fontFamily: 'monospace',
+    fontFamily: Platform.select({ ios: 'Courier', default: 'monospace' }),
     opacity: 0.7,
   },
   button: {
