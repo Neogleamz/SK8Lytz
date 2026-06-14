@@ -4,6 +4,7 @@ import { AppState, Linking, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { Camera, useCameraDevice, useCameraPermission, useFrameOutput, Frame } from 'react-native-vision-camera';
 import { runOnJS } from 'react-native-worklets';
 import { useResizer } from 'react-native-vision-camera-resizer';
+import { AppLogger } from '../services/AppLogger';
 import { requestPermission } from '../services/PermissionService';
 import { Colors, Spacing } from '../theme/theme';
 import { rgbToHex, boostForLED } from '../utils/ColorUtils';
@@ -48,8 +49,9 @@ export default function CameraTracker({
     if (!hasPermission) {
       requestPermission('CAMERA').then((granted) => {
         if (granted) requestFromHook();
-      }).catch((err) => {
-        console.error('Camera permission request failed:', err);
+      }).catch((err: unknown) => {
+        const safeErr = err instanceof Error ? err : new Error(String(err));
+        AppLogger.error('Camera permission request failed:', safeErr);
       });
     }
   }, [hasPermission, requestFromHook]);
@@ -87,7 +89,8 @@ export default function CameraTracker({
     if (resizer) {
       console.log('Camera Sniper: GPU Resizer loaded successfully!');
     } else if (error) {
-      console.error('Camera Sniper: GPU Resizer failed to load:', error instanceof Error ? error.message : String(error));
+      const safeErr = error instanceof Error ? error : new Error(String(error));
+      AppLogger.error('Camera Sniper: GPU Resizer failed to load', safeErr);
     }
   }, [resizer, error]);
 
@@ -148,8 +151,8 @@ export default function CameraTracker({
           }
         }
       } catch (err: unknown) {
-      const safeErr = err instanceof Error ? err : new Error(String(err));
-        console.error('Camera Frame Processor Error:', err instanceof Error ? err.message : String(err));
+        const safeErr = err instanceof Error ? err : new Error(String(err));
+        AppLogger.error('Camera Frame Processor Error', safeErr);
       } finally {
         frame.dispose(); // CRITICAL: Dispose Frame immediately to prevent stalls
       }
