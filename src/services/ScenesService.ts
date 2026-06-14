@@ -29,7 +29,7 @@ export interface ICloudScene {
   author_id: string;
   author_username: string;
   name: string;
-  scene_payload: Scene;
+  scene_payload: import('../hooks/useDockedControllerState').CloudScenePayload;
   downloads: number;
   upvotes: number;
   is_public: boolean;

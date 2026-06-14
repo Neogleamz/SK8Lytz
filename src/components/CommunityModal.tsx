@@ -28,11 +28,13 @@ interface ScenePayload extends Partial<Scene> {
 import { ErrorCard } from './ErrorCard';
 import { EmptyState } from './EmptyState';
 
+import { CloudScenePayload } from '../hooks/useDockedControllerState';
+
 interface Props {
   isOfflineMode?: boolean;
   isVisible: boolean;
   onClose: () => void;
-  onApplyScene: (payload: Scene | Record<string, unknown>) => void;
+  onApplyScene: (payload: CloudScenePayload) => void;
 }
 
 // --- Animated LED Strip Preview ---
