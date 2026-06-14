@@ -62,7 +62,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
     setJoiningSessionId(sessionId);
     try {
       const sessionData = await crewService.joinSessionById(sessionId, displayName.trim(), currentUserId ?? undefined);
-      AppLogger.log('CREW_SESSION_JOINED', { sessionId: sessionData.id, crewName: sessionData.name, method: 'browse' });
+      AppLogger.log('CREW_SESSION_JOINED', { sessionId: sessionData.id, method: 'browse' });
       await handleSessionJoined(sessionData);
     } catch (err: unknown) {
       const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
@@ -136,7 +136,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
     setIsLoading(true); setErrorMsg('');
     try {
       const crew = await profileService.joinPermanentCrew(inviteCode.trim(), currentUserId);
-      AppLogger.log('CREW_SESSION_JOINED', { crewId: crew.id, crewName: crew.name, method: 'permanent_code' });
+      AppLogger.log('CREW_SESSION_JOINED', { crewId: crew.id, method: 'permanent_code' });
       const updatedCrews = await profileService.getMyCrew(undefined, currentUserId);
       hub.setMyCrews(updatedCrews);
       hub.setPermanentCrews(updatedCrews.map(c => ({ id: c.id, name: c.name })));

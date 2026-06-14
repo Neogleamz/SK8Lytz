@@ -3,7 +3,7 @@ import * as Clipboard from 'expo-clipboard';
 import React from 'react';
 import { ActivityIndicator, Alert, Animated, Image, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
 import { CrewSession } from '../../services/CrewService';
-import { PermanentCrew } from '../../services/ProfileService';
+import { PermanentCrew, CrewMemberFull } from '../../services/ProfileService';
 import { Spacing } from '../../theme/theme';
 
 export interface CrewCardProps {
@@ -12,7 +12,7 @@ export interface CrewCardProps {
   Colors: any;
   liveSession: CrewSession | null;
   memberInfo: { count: number } | null;
-  cardMembers: Record<string, any[]>;
+  cardMembers: Record<string, CrewMemberFull[]>;
   isOwner: boolean;
   expandedCrewId: string | null;
   setExpandedCrewId: (id: string | null) => void;
@@ -20,8 +20,8 @@ export interface CrewCardProps {
   handleJoinById: (id: string) => void;
   isLoading: boolean;
   pulseAnim: Animated.Value;
-  formState: any;
-  setStep: any; // Using any to avoid importing ModalStep if it's not exported
+  formState: { setSelectedCrewId: (id: string) => void; setCrewName: (name: string) => void; };
+  setStep: (step: any) => void;
   setErrorMsg: (msg: string) => void;
   loadingCardMembersFor: string | null;
   currentUserId: string | null;

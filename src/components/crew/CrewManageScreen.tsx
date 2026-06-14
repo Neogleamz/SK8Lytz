@@ -30,7 +30,7 @@ export function CrewManageScreen() {
   const { selectedCrewDetail, setSelectedCrewDetail, expandedCrewId, setExpandedCrewId, cardMembers, setCardMembers, loadingCardMembersFor, makingOwnerFor, setMakingOwnerFor, confirmingDeleteCrewId, setConfirmingDeleteCrewId, confirmingLeaveCrewId, setConfirmingLeaveCrewId, createCrewError, setCreateCrewError, isCreatingCrew, setIsCreatingCrew, newCrewName, setNewCrewName, newCrewDescription, setNewCrewDescription, newCrewIsPublic, setNewCrewIsPublic, newCrewCity, setNewCrewCity, newCrewState, setNewCrewState, newCrewPhotoUri, setNewCrewPhotoUri, newCrewIcon, setNewCrewIcon, newCrewColor, setNewCrewColor, newCrewHue, setNewCrewHue, newCrewCode, setNewCrewCode, selectedMembers, setSelectedMembers, userSearchQuery, setUserSearchQuery, userSearchResults, setUserSearchResults } = manage;
   const { currentSession, isHandoffMode, executeLeaveSession, executeEndSession, handleHandoffLeadership } = session;
   
-  const handlePickCrewPhoto = async () => {
+  const handlePickCrewPhoto = React.useCallback(async () => {
     try {
       let result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -45,9 +45,9 @@ export function CrewManageScreen() {
       const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       AppLogger.log('CREW_ERROR', { action: 'pick_photo', error: e.message });
     }
-  };
+  }, [setNewCrewPhotoUri]);
 
-  const handleCreateCrew = async () => {
+  const handleCreateCrew = React.useCallback(async () => {
     if (!newCrewName.trim()) { setCreateCrewError('Enter a crew name'); return; }
     if (!currentUserId) { setCreateCrewError('Not logged in'); return; }
     setIsCreatingCrew(true); setCreateCrewError('');
@@ -79,12 +79,27 @@ export function CrewManageScreen() {
     } finally {
       setIsCreatingCrew(false);
     }
-  };
+  }, [
+    newCrewName, currentUserId, newCrewIsPublic, newCrewColor, newCrewIcon, newCrewCity, newCrewState, newCrewDescription,
+    newCrewCode, selectedMembers, setIsCreatingCrew, setCreateCrewError, hub, formState, setStep
+  ]);
+
+  const handleHueChange = React.useCallback((hue: number) => {
+    setNewCrewHue(hue);
+    const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+    const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
+    setNewCrewColor(rgb2hex(f(5), f(3), f(1)));
+  }, [setNewCrewHue, setNewCrewColor]);
+
+  const handleRemovePhoto = React.useCallback(() => setNewCrewPhotoUri(null), [setNewCrewPhotoUri]);
+  const handleSetPublic = React.useCallback(() => setNewCrewIsPublic(true), [setNewCrewIsPublic]);
+  const handleSetPrivate = React.useCallback(() => setNewCrewIsPublic(false), [setNewCrewIsPublic]);
+  const handleGoBack = React.useCallback(() => setStep('landing'), [setStep]);
 
   return (
       <View style={{ flex: 1 }}>
         {/* Header */}
-        <TouchableOpacity onPress={() => setStep('landing')} style={styles.backBtn}>
+        <TouchableOpacity onPress={handleGoBack} style={styles.backBtn}>
           <MaterialCommunityIcons name="chevron-left" size={22} color={Colors.textMuted} />
           <Text style={styles.backText}>Back</Text>
         </TouchableOpacity>
@@ -111,7 +126,7 @@ export function CrewManageScreen() {
                 <TouchableOpacity style={[styles.mgPhotoBtn, { height: 120, width: 120, borderRadius: 60, marginBottom: Spacing.md }]} onPress={handlePickCrewPhoto}>
                   <Image source={{ uri: newCrewPhotoUri }} style={styles.mgPhotoBtnImg} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setNewCrewPhotoUri(null)} style={{ paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg, backgroundColor: 'rgba(255,68,68,0.1)', borderRadius: 20 }}>
+                <TouchableOpacity onPress={handleRemovePhoto} style={{ paddingVertical: Spacing.sm, paddingHorizontal: Spacing.lg, backgroundColor: 'rgba(255,68,68,0.1)', borderRadius: 20 }}>
                   <Text style={{ color: '#FF4444', fontWeight: 'bold' }}>Remove Photo</Text>
                 </TouchableOpacity>
               </View>
@@ -153,12 +168,7 @@ export function CrewManageScreen() {
                   <CustomSlider
                     gradientTrack={true}
                     value={newCrewHue}
-                    onValueChange={(hue) => {
-                      setNewCrewHue(hue);
-                      const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
-                      const rgb2hex = (r: number, g: number, b: number) => "#" + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, "0").toUpperCase()).join("");
-                      setNewCrewColor(rgb2hex(f(5), f(3), f(1)));
-                    }}
+                    onValueChange={handleHueChange}
                     minimumValue={0}
                     maximumValue={360}
                     style={{ flex: 1 }}
@@ -172,12 +182,12 @@ export function CrewManageScreen() {
           <Text style={styles.label}>VISIBILITY</Text>
           <View style={styles.visibilityRow}>
             <TouchableOpacity style={[styles.visibilityBtn, !newCrewIsPublic && styles.visibilityBtnActive]}
-              onPress={() => setNewCrewIsPublic(false)}>
+              onPress={handleSetPrivate}>
               <MaterialCommunityIcons name="lock" size={15} color={!newCrewIsPublic ? '#000' : Colors.textMuted} />
               <Text style={[styles.visibilityBtnText, !newCrewIsPublic && styles.visibilityBtnTextActive]}>Private</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.visibilityBtn, newCrewIsPublic && styles.visibilityBtnPublic]}
-              onPress={() => setNewCrewIsPublic(true)}>
+              onPress={handleSetPublic}>
               <MaterialCommunityIcons name="earth" size={15} color={newCrewIsPublic ? '#000' : Colors.textMuted} />
               <Text style={[styles.visibilityBtnText, newCrewIsPublic && styles.visibilityBtnTextActive]}>Public</Text>
             </TouchableOpacity>

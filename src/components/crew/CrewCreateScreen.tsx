@@ -52,7 +52,7 @@ export function CrewCreateScreen() {
 
       const newSession = await crewService.createSession(sessionName, displayName.trim(), opts, currentUserId ?? undefined);
       AppLogger.log('CREW_SESSION_CREATED', {
-        sessionId: newSession.id, crewName: sessionName,
+        sessionId: newSession.id, crewId: selectedCrewId,
         hasLocation: !!locationLabel, scheduled: !!scheduled, isPublic: isSessionPublic,
       });
 
@@ -120,8 +120,8 @@ export function CrewCreateScreen() {
         onDetectLocation={handleDetectLocation}
         searchRadiusMi={discoverRadiusMi || undefined}
         curatedSpots={hub.nearbySpots
-          .filter((s: any) => s.facility_type === 'roller_rink' || s.facility_type === 'skatepark')
-          .map((s: any) => ({
+          .filter((s: import('../../services/LocationService').NearbySkateSpot) => s.facility_type === 'roller_rink' || s.facility_type === 'skatepark')
+          .map((s: import('../../services/LocationService').NearbySkateSpot) => ({
             id: s.id,
             name: s.name,
             lat: s.lat,

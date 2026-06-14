@@ -4,7 +4,7 @@ import { ActivityIndicator, Alert, FlatList, Text, TextInput, TouchableOpacity, 
 import { useTheme } from '../../context/ThemeContext';
 import { AppLogger } from '../../services/AppLogger';
 import { crewService, CrewSession } from '../../services/CrewService';
-import { profileService } from '../../services/ProfileService';
+import { profileService, PermanentCrew } from '../../services/ProfileService';
 import { Spacing } from '../../theme/theme';
 
 import { useCrewContext } from '../../context/CrewContext';
@@ -24,16 +24,18 @@ export function CrewJoinScreen() {
   const { inviteCode, setInviteCode } = formState;
   const [error, setError] = useState<string | null>(null);
 
+  const keyExtractor = React.useCallback((s: CrewSession) => s.id, []);
+
   const handleJoinByCode = async () => {
     if (inviteCode.trim().length < 6) { setErrorMsg('Enter the 6-character crew invite code'); return; }
     if (!currentUserId) { setErrorMsg('Not logged in'); return; }
     setIsLoading(true); setErrorMsg('');
     try {
       const crew = await profileService.joinPermanentCrew(inviteCode.trim(), currentUserId);
-      AppLogger.log('CREW_SESSION_JOINED', { crewId: crew.id, crewName: crew.name, method: 'permanent_code' });
+      AppLogger.log('CREW_SESSION_JOINED', { crewId: crew.id, method: 'permanent_code' });
       const updatedCrews = await profileService.getMyCrew(undefined, currentUserId);
       hub.setMyCrews(updatedCrews);
-      hub.setPermanentCrews(updatedCrews.map((c: any) => ({ id: c.id, name: c.name })));
+      hub.setPermanentCrews(updatedCrews.map((c: PermanentCrew) => ({ id: c.id, name: c.name })));
       setShowCodeEntry(false);
       setInviteCode('');
       Alert.alert(
@@ -53,7 +55,7 @@ export function CrewJoinScreen() {
     setIsLoading(true); setErrorMsg('');
     try {
       const sess = await crewService.joinSessionById(sessionId, displayName.trim(), currentUserId ?? undefined);
-      AppLogger.log('CREW_SESSION_JOINED', { sessionId: sess.id, crewName: sess.name, method: 'browse' });
+      AppLogger.log('CREW_SESSION_JOINED', { sessionId: sess.id, method: 'browse' });
       await handleSessionJoined(sess);
       setStep('controller');
     } catch (err: unknown) {
@@ -121,7 +123,7 @@ export function CrewJoinScreen() {
           ) : activeSessions.length === 0 ? (
             <EmptyState message="No active crews right now. Be the first!" />
           ) : (
-            <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5} data={activeSessions} keyExtractor={React.useCallback((s: CrewSession) => s.id, [])}
+            <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5} data={activeSessions} keyExtractor={keyExtractor}
               renderItem={renderActiveSessionCard} scrollEnabled={false} />
           )}
         </View>

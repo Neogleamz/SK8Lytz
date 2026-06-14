@@ -3,10 +3,24 @@ import React from 'react';
 import { Text, View } from 'react-native';
 import { Spacing } from '../../theme/theme';
 
+import { StyleProp, ViewStyle, TextStyle } from 'react-native';
+import { ThemePalette } from '../../theme/theme';
+
+export interface CrewStatsData {
+  sessionCount: number;
+  lastActive: string | null;
+  topScene: string | null;
+  totalDistanceMiles?: number;
+  avgSpeedMph?: number;
+  peakSpeedMph?: number;
+  peakGForce?: number;
+  totalDurationSec?: number;
+}
+
 export interface CrewDetailStatsProps {
-  stats: any;
-  styles: any;
-  Colors: any;
+  stats: CrewStatsData | null;
+  styles: Record<string, StyleProp<ViewStyle | TextStyle>>;
+  Colors: ThemePalette;
 }
 
 export const CrewDetailStats = ({ stats, styles, Colors }: CrewDetailStatsProps) => {

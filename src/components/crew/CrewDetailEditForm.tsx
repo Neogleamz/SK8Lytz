@@ -3,10 +3,20 @@ import React from 'react';
 import { ActivityIndicator, Alert, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Spacing } from '../../theme/theme';
 
+import { StyleProp, TextStyle, ViewStyle } from 'react-native';
+import { ThemePalette } from '../../theme/theme';
+import { PermanentCrew, CrewMemberFull } from '../../services/ProfileService';
+
+export interface UserSearchResult {
+  user_id: string;
+  username: string | null;
+  display_name: string | null;
+}
+
 export interface CrewDetailEditFormProps {
-  crew: any;
-  styles: any;
-  Colors: any;
+  crew: PermanentCrew & { is_owner?: boolean };
+  styles: Record<string, StyleProp<ViewStyle | TextStyle>>;
+  Colors: ThemePalette;
   editCrewName: string;
   setEditCrewName: (v: string) => void;
   editCrewDesc: string;
@@ -18,23 +28,23 @@ export interface CrewDetailEditFormProps {
   editCrewIsPublic: boolean;
   setEditCrewIsPublic: (v: boolean) => void;
   loadingCardMembersFor: string | null;
-  cardMembers: Record<string, any[]>;
+  cardMembers: Record<string, CrewMemberFull[]>;
   currentUserId: string | null;
   makingOwnerFor: string | null;
   setMakingOwnerFor: (id: string | null) => void;
-  profileService: any;
-  setCardMembers: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
+  profileService: typeof import('../../services/ProfileService').profileService;
+  setCardMembers: React.Dispatch<React.SetStateAction<Record<string, CrewMemberFull[]>>>;
   isRemovingUserFor: string | null;
   setIsRemovingUserFor: (id: string | null) => void;
-  setCrewMemberCounts: React.Dispatch<React.SetStateAction<Record<string, any>>>;
-  selectedMembers: any[];
-  setSelectedMembers: React.Dispatch<React.SetStateAction<any[]>>;
+  setCrewMemberCounts: React.Dispatch<React.SetStateAction<Record<string, { count: number; avatarColors: string[] }>>>;
+  selectedMembers: UserSearchResult[];
+  setSelectedMembers: React.Dispatch<React.SetStateAction<UserSearchResult[]>>;
   userSearchQuery: string;
   setUserSearchQuery: (v: string) => void;
-  userSearchResults: any[];
+  userSearchResults: UserSearchResult[];
   handleAddMembersToCrew: (crewId: string) => void;
   isAddingMembersTo: string | null;
-  handleSaveCrew: (crew: any) => void;
+  handleSaveCrew: (crew: PermanentCrew) => void;
   isSavingCrew: boolean;
   setEditingCrewId: (id: string | null) => void;
 }

@@ -47,7 +47,7 @@ export function CrewDetailScreen() {
     if (!currentUserId) return;
     try {
       await profileService.leavePermanentCrew(crew.id, currentUserId);
-      AppLogger.log('CREW_PERMANENT_LEFT', { crewId: crew.id, crewName: crew.name, method: 'leave_btn' });
+      AppLogger.log('CREW_PERMANENT_LEFT', { crewId: crew.id, method: 'leave_btn' });
       hub.setMyCrews(prev => prev.filter(c => c.id !== crew.id));
       hub.setPermanentCrews(prev => prev.filter((c) => c.id !== crew.id));
       setSelectedCrewDetail(null);
@@ -59,7 +59,7 @@ export function CrewDetailScreen() {
     if (!currentUserId) return;
     try {
       await profileService.deleteCrew(crew.id, currentUserId);
-      AppLogger.log('CREW_PERMANENT_DELETED', { crewId: crew.id, crewName: crew.name });
+      AppLogger.log('CREW_PERMANENT_DELETED', { crewId: crew.id });
       hub.setMyCrews(prev => prev.filter(c => c.id !== crew.id));
       hub.setPermanentCrews(prev => prev.filter((c) => c.id !== crew.id));
       setSelectedCrewDetail(null);

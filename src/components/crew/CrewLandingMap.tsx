@@ -136,70 +136,74 @@ export function CrewLandingMap({
       })}
 
       {/* ── Active Crew Sessions — orange-ringed crew avatar beacons ── */}
-      {nearbySessions.map((s: NearbySession) => {
-        if (!s.lat || !s.lng) return null;
-        return (
-          <Marker
-            key={`session-${s.id}`}
-            coordinate={{ latitude: s.lat, longitude: s.lng }}
-            onPress={() => handleJoinById(s.id)}
-          >
-            <Animated.View style={{ opacity: pulseAnim, alignItems: 'center' }}>
-              {/* Crew avatar bubble with orange border */}
-              <View style={{
-                width: 38,
-                height: 38,
-                borderRadius: 19,
-                borderWidth: 3,
-                borderColor: '#F97316',
-                overflow: 'hidden',
-                shadowColor: '#F97316',
-                shadowRadius: 8,
-                shadowOpacity: 0.85,
-                elevation: 6,
-              }}>
-                {s.crewAvatarUrl ? (
-                  <Image
-                    source={{ uri: s.crewAvatarUrl }}
-                    style={{ width: '100%', height: '100%' }}
-                  />
-                ) : (
-                  <View style={{
-                    flex: 1,
-                    backgroundColor: s.crewAvatarColor || '#F97316',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}>
-                    <MaterialCommunityIcons
-                      name={(s.crewAvatarIcon as keyof typeof MaterialCommunityIcons.glyphMap) || 'account-group'}
-                      size={18}
-                      color="#FFF"
-                    />
-                  </View>
-                )}
-              </View>
-
-              {/* Crew name + member count callout below pin */}
-              <View style={{
-                backgroundColor: 'rgba(0,0,0,0.85)',
-                paddingHorizontal: 6,
-                paddingVertical: 3,
-                borderRadius: 5,
-                marginTop: 4,
-                alignItems: 'center',
-                minWidth: 80,
-              }}>
-                <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '700' }} numberOfLines={1}>
-                  {s.crewName || s.name}
-                </Text>
-                <Text style={{ color: '#F97316', fontSize: 9 }}>
-                  {s.memberCount} Skater{s.memberCount !== 1 ? 's' : ''}
-                </Text>
-              </View>
-            </Animated.View>
-          </Marker>
-        );
-      })}
+      {nearbySessions.map((s: NearbySession) => (
+        <SessionMarker key={`session-${s.id}`} session={s} pulseAnim={pulseAnim} onJoin={handleJoinById} />
+      ))}
     </MapViewCluster>
   );
 }
+
+const SessionMarker = React.memo(({ session: s, pulseAnim, onJoin }: { session: NearbySession, pulseAnim: Animated.Value, onJoin: (id: string) => void }) => {
+  const handlePress = React.useCallback(() => onJoin(s.id), [onJoin, s.id]);
+  if (!s.lat || !s.lng) return null;
+  return (
+    <Marker
+      coordinate={{ latitude: s.lat, longitude: s.lng }}
+      onPress={handlePress}
+    >
+      <Animated.View style={{ opacity: pulseAnim, alignItems: 'center' }}>
+        {/* Crew avatar bubble with orange border */}
+        <View style={{
+          width: 38,
+          height: 38,
+          borderRadius: 19,
+          borderWidth: 3,
+          borderColor: '#F97316',
+          overflow: 'hidden',
+          shadowColor: '#F97316',
+          shadowRadius: 8,
+          shadowOpacity: 0.85,
+          elevation: 6,
+        }}>
+          {s.crewAvatarUrl ? (
+            <Image
+              source={{ uri: s.crewAvatarUrl }}
+              style={{ width: '100%', height: '100%' }}
+            />
+          ) : (
+            <View style={{
+              flex: 1,
+              backgroundColor: s.crewAvatarColor || '#F97316',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <MaterialCommunityIcons
+                name={(s.crewAvatarIcon as keyof typeof MaterialCommunityIcons.glyphMap) || 'account-group'}
+                size={18}
+                color="#FFF"
+              />
+            </View>
+          )}
+        </View>
+
+        {/* Crew name + member count callout below pin */}
+        <View style={{
+          backgroundColor: 'rgba(0,0,0,0.85)',
+          paddingHorizontal: 6,
+          paddingVertical: 3,
+          borderRadius: 5,
+          marginTop: 4,
+          alignItems: 'center',
+          minWidth: 80,
+        }}>
+          <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '700' }} numberOfLines={1}>
+            {s.crewName || s.name}
+          </Text>
+          <Text style={{ color: '#F97316', fontSize: 9 }}>
+            {s.memberCount} Skater{s.memberCount !== 1 ? 's' : ''}
+          </Text>
+        </View>
+      </Animated.View>
+    </Marker>
+  );
+});

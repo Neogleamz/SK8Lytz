@@ -22,34 +22,54 @@ export function MapFiltersTray({ filters, toggleFilter }: Props) {
 
   return (
     <View style={styles.tray}>
-      {FILTER_OPTS.map((opt) => {
-        const isActive = filters[opt.key as keyof MapFilterMatrix];
-        return (
-          <TouchableOpacity 
-            key={opt.key}
-            style={[
-              styles.pill,
-              { 
-                backgroundColor: isActive ? opt.activeColor : 'rgba(255,255,255,0.05)',
-                borderColor: isActive ? opt.activeColor : 'rgba(255,255,255,0.1)'
-              }
-            ]}
-            onPress={() => toggleFilter(opt.key as keyof MapFilterMatrix)}
-          >
-            <MaterialCommunityIcons 
-              name={opt.icon as keyof typeof MaterialCommunityIcons.glyphMap} 
-              size={12} 
-              color={isActive ? '#FFF' : Colors.textMuted} 
-            />
-            <Text style={[styles.pillText, { color: isActive ? '#FFF' : Colors.textMuted }]}>
-               {opt.label}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+      {FILTER_OPTS.map((opt) => (
+        <FilterPill 
+          key={opt.key}
+          opt={opt}
+          isActive={filters[opt.key as keyof MapFilterMatrix]}
+          onToggle={toggleFilter}
+          Colors={Colors}
+        />
+      ))}
     </View>
   );
 }
+
+const FilterPill = React.memo(({ 
+  opt, 
+  isActive, 
+  onToggle, 
+  Colors 
+}: { 
+  opt: any, 
+  isActive: boolean, 
+  onToggle: (k: keyof MapFilterMatrix) => void,
+  Colors: any
+}) => {
+  const handleToggle = React.useCallback(() => onToggle(opt.key), [onToggle, opt.key]);
+
+  return (
+    <TouchableOpacity 
+      style={[
+        styles.pill,
+        { 
+          backgroundColor: isActive ? opt.activeColor : 'rgba(255,255,255,0.05)',
+          borderColor: isActive ? opt.activeColor : 'rgba(255,255,255,0.1)'
+        }
+      ]}
+      onPress={handleToggle}
+    >
+      <MaterialCommunityIcons 
+        name={opt.icon as keyof typeof MaterialCommunityIcons.glyphMap} 
+        size={12} 
+        color={isActive ? '#FFF' : Colors.textMuted} 
+      />
+      <Text style={[styles.pillText, { color: isActive ? '#FFF' : Colors.textMuted }]}>
+         {opt.label}
+      </Text>
+    </TouchableOpacity>
+  );
+});
 
 const styles = StyleSheet.create({
   tray: {
