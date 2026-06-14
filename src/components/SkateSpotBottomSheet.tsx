@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { AppLogger } from '../services/AppLogger';
@@ -14,9 +14,18 @@ interface BottomSheetProps {
   onSpotUpdated?: (spot: SkateSpot) => void;
 }
 
+const SurfaceChip = ({ type, label, selectedSurface, onSelect, styles }: { type: string, label: string, selectedSurface: string, onSelect: (type: string) => void, styles: ReturnType<typeof createStyles> }) => (
+  <TouchableOpacity 
+    style={[styles.chip, selectedSurface === type && styles.chipActive]}
+    onPress={() => onSelect(type)}
+  >
+    <Text style={[styles.chipText, selectedSurface === type && styles.chipTextActive]}>{label}</Text>
+  </TouchableOpacity>
+);
+
 export const SkateSpotBottomSheet: React.FC<BottomSheetProps> = ({ visible, onClose, spot, onSpotUpdated }) => {
   const { Colors } = useTheme();
-  const styles = createStyles(Colors);
+  const styles = useMemo(() => createStyles(Colors), [Colors]);
   
   type StatusState = 'idle' | 'loading' | 'success' | 'error';
   const [status, setStatus] = useState<StatusState>('idle');
@@ -46,20 +55,13 @@ export const SkateSpotBottomSheet: React.FC<BottomSheetProps> = ({ visible, onCl
     } catch (e: unknown) {
       AppLogger.warn('[SkateSpotBottomSheet] claimAndUpdateSpot failed', {
         error: e instanceof Error ? e.message : String(e),
+        payload_size: 0,
+        ssi: 0,
       });
       setErrorMessage('Failed to load. Tap to retry.');
       setStatus('error');
     }
   };
-
-  const SurfaceChip = ({ type, label }: { type: string, label: string }) => (
-    <TouchableOpacity 
-      style={[styles.chip, selectedSurface === type && styles.chipActive]}
-      onPress={() => setSelectedSurface(type)}
-    >
-      <Text style={[styles.chipText, selectedSurface === type && styles.chipTextActive]}>{label}</Text>
-    </TouchableOpacity>
-  );
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -85,10 +87,10 @@ export const SkateSpotBottomSheet: React.FC<BottomSheetProps> = ({ visible, onCl
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Surface Type</Text>
             <View style={styles.chipRow}>
-              <SurfaceChip type="wood" label="Wood" />
-              <SurfaceChip type="concrete" label="Concrete" />
-              <SurfaceChip type="sport_court" label="Sport Court" />
-              <SurfaceChip type="asphalt" label="Asphalt" />
+              <SurfaceChip type="wood" label="Wood" selectedSurface={selectedSurface} onSelect={setSelectedSurface} styles={styles} />
+              <SurfaceChip type="concrete" label="Concrete" selectedSurface={selectedSurface} onSelect={setSelectedSurface} styles={styles} />
+              <SurfaceChip type="sport_court" label="Sport Court" selectedSurface={selectedSurface} onSelect={setSelectedSurface} styles={styles} />
+              <SurfaceChip type="asphalt" label="Asphalt" selectedSurface={selectedSurface} onSelect={setSelectedSurface} styles={styles} />
             </View>
           </View>
 
