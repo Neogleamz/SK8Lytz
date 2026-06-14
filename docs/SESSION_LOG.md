@@ -3664,3 +3664,21 @@ TSC: ?  Jest: ?
 Files touched: src/components/CustomEffectVisualizer.tsx
 TSC: ?  Jest: ?
 
+
+### [MERGE] 2026-06-14T18:10 � Wave 2 Batched Fixes (UI Component Sweeps)
+**What merged:**
+- sweep-src-components-NeonHueStrip.tsx ? master @ d13261c4
+- sweep-src-components-CameraTracker.tsx ? master @ 75e2f53d
+- sweep-src-components-patterns ? master @ 04d347dd
+- sweep-src-components-VerticalPatternDrum.tsx ? master @ 08972ff5
+- sweep-src-components-VisualizerUnit.tsx ? master @ 0802db8c
+- sweep-src-components-CustomEffectVisualizer.tsx ? master @ e6398099
+- sweep-src-utils ? master @ de7cd00f
+- sweep-src-components-shared ? master @ 0401d5b7
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** All targeted Wave 2 components (resolved various static violations like console logs, static inline styles, accessibility props, etc.)
+
+### [MERGE READY] sweep-src-components-GlobalErrorBoundary.tsx - 6e8b33a4
+Files touched: src/components/GlobalErrorBoundary.tsx
+TSC: ✅  Jest: ✅
+
