@@ -4,9 +4,10 @@ import React, { useEffect, useState } from 'react';
 import { TouchableOpacity, View, Text, ScrollView } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { BuilderNode, PositionalMathBuffer } from '../protocols/PositionalMathBuffer';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
+import { getDefaultProtocol } from '../protocols/ControllerRegistry';
 import CustomSlider from './CustomSlider';
 import { COLOR_PRESET_PALETTE, hexToHue, hueToHex } from '../utils/ColorUtils';
+import { AppLogger } from '../services/AppLogger';
 
 interface Props {
   nodes: BuilderNode[];
@@ -53,10 +54,18 @@ const BLE_WRITE_THROTTLE_MS = 100;
          }));
          const mappedSpeed = Math.max(1, Math.min(100, Math.round(speed)));
           if (writeToDevice) {
-             writeToDevice(ZenggeProtocol.setMultiColor(scaledRgbArray, deviceLedCount, mappedSpeed, direction, transitionType))
-                .catch((err: unknown) => {
-                    console.warn('[PositionalGradientBuilder] BLE write failed:', err instanceof Error ? err.message : String(err));
-                });
+             const protocol = getDefaultProtocol();
+             const result = protocol.buildMultiColor(scaledRgbArray, deviceLedCount, mappedSpeed, direction, transitionType);
+             if (result.packets.length > 0) {
+                 const payload = result.packets[0];
+                 writeToDevice(payload)
+                    .catch((err: unknown) => {
+                        AppLogger.error('[PositionalGradientBuilder] BLE write failed', err instanceof Error ? err : new Error(String(err)), { 
+                            payload_size: payload.length, 
+                            speed: mappedSpeed 
+                        });
+                    });
+             }
           }
      }, BLE_WRITE_THROTTLE_MS);
      return () => clearTimeout(timeout);
@@ -123,6 +132,8 @@ const BLE_WRITE_THROTTLE_MS = 100;
                 <TouchableOpacity 
                    key={n.id}
                    onPress={() => setActiveNodeId(n.id)}
+                   accessibilityRole="button"
+                   accessibilityLabel={`Select pin at ${n.position} percent with color ${n.colorHex}`}
                    style={{
                        width: 24, height: 24, borderRadius: 12, backgroundColor: n.colorHex,
                        borderWidth: activeNodeId === n.id ? 2 : 1,
@@ -137,6 +148,8 @@ const BLE_WRITE_THROTTLE_MS = 100;
             {nodes.length < maxPins && (
                 <TouchableOpacity 
                    onPress={addNode}
+                   accessibilityRole="button"
+                   accessibilityLabel="Add new color pin"
                    style={{
                        width: 24, height: 24, borderRadius: 12, 
                        borderWidth: 1, borderColor: Colors.textMuted, borderStyle: 'dashed',
@@ -162,7 +175,7 @@ const BLE_WRITE_THROTTLE_MS = 100;
                    maximumValue={100}
                    style={{ flex: 1, transform: [{ scale: 0.95 }], height: 30 }}
                />
-               <TouchableOpacity onPress={() => removeNode(activeNode.id)} disabled={nodes.length <= 1} style={{ marginLeft: Spacing.sm }}>
+               <TouchableOpacity onPress={() => removeNode(activeNode.id)} disabled={nodes.length <= 1} style={{ marginLeft: Spacing.sm }} accessibilityRole="button" accessibilityLabel="Remove color pin">
                    <MaterialCommunityIcons name="trash-can-outline" size={16} color={nodes.length <= 1 ? 'rgba(255,255,255,0.2)' : '#FF4444'} />
                </TouchableOpacity>
             </View>
@@ -173,6 +186,8 @@ const BLE_WRITE_THROTTLE_MS = 100;
                   <TouchableOpacity
                      key={color}
                      onPress={() => updateNode(activeNode.id, { colorHex: color })}
+                     accessibilityRole="button"
+                     accessibilityLabel={`Select preset color ${color}`}
                      style={{
                         width: 22, height: 22, borderRadius: 11, backgroundColor: color,
                         borderWidth: 2, borderColor: activeNode.colorHex.toUpperCase() === color.toUpperCase() ? '#00F0FF' : 'rgba(255,255,255,0.2)'
@@ -200,12 +215,16 @@ const BLE_WRITE_THROTTLE_MS = 100;
               <View style={{ flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: Spacing.xxs }}>
                   <TouchableOpacity 
                       onPress={() => onFillModeChange('GRADIENT')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Set fill mode to gradient"
                       style={{ flex: 1, paddingVertical: Spacing.xxs, alignItems: 'center', backgroundColor: fillMode === 'GRADIENT' ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
                   >
                       <Text style={{ color: fillMode === 'GRADIENT' ? Colors.primary : Colors.textMuted, fontWeight: 'bold', fontSize: 9 }}>GRADIENT</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                       onPress={() => onFillModeChange('SOLID')}
+                      accessibilityRole="button"
+                      accessibilityLabel="Set fill mode to solid"
                       style={{ flex: 1, paddingVertical: Spacing.xxs, alignItems: 'center', backgroundColor: fillMode === 'SOLID' ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
                   >
                       <Text style={{ color: fillMode === 'SOLID' ? Colors.primary : Colors.textMuted, fontWeight: 'bold', fontSize: 9 }}>SOLID</Text>
@@ -218,12 +237,16 @@ const BLE_WRITE_THROTTLE_MS = 100;
               <View style={{ flexDirection: 'row', backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 6, padding: Spacing.xxs }}>
                   <TouchableOpacity 
                       onPress={() => onDirectionChange(1)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Set direction to forward"
                       style={{ flex: 1, paddingVertical: Spacing.xxs, alignItems: 'center', backgroundColor: direction === 1 ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
                   >
                       <Text style={{ color: direction === 1 ? Colors.primary : Colors.textMuted, fontWeight: 'bold', fontSize: 9 }}>FORWARD</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                       onPress={() => onDirectionChange(0)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Set direction to reverse"
                       style={{ flex: 1, paddingVertical: Spacing.xxs, alignItems: 'center', backgroundColor: direction === 0 ? Colors.surfaceHighlight : 'transparent', borderRadius: 4 }}
                   >
                       <Text style={{ color: direction === 0 ? Colors.primary : Colors.textMuted, fontWeight: 'bold', fontSize: 9 }}>REVERSE</Text>
@@ -245,6 +268,8 @@ const BLE_WRITE_THROTTLE_MS = 100;
               <TouchableOpacity 
                   key={t.id}
                   onPress={() => onTransitionTypeChange(t.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Set animation to ${t.label.toLowerCase()}`}
                   style={{ paddingHorizontal: Spacing.sm, paddingVertical: Spacing.xxs, borderRadius: 6, borderWidth: 1, borderColor: transitionType === t.id ? Colors.primary : 'rgba(255,255,255,0.1)', backgroundColor: transitionType === t.id ? 'rgba(0,240,255,0.1)' : 'transparent', flexDirection: 'row', alignItems: 'center', gap: 3 }}
               >
                   <MaterialCommunityIcons name={t.icon} size={9} color={transitionType === t.id ? Colors.primary : Colors.textMuted} />
