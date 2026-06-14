@@ -3579,3 +3579,7 @@ pm run verify passed cleanly on master. The AST findings were based on a pre-Jun
 Files touched: src/hooks/useScreenPerformance.ts, src/services/AppLogger.ts, src/screens/AuthScreen.tsx, src/screens/DashboardScreen.tsx, src/screens/Onboarding/HardwareSetupWizardScreen.tsx, src/components/AccountModal.tsx, src/components/CrewMemberDashboard.tsx, src/components/DockedController.tsx, src/components/SkateSpotBottomSheet.tsx
 TSC: ?  Jest: ?
 
+
+### [ARTIFACT] 2026-06-14T11:50 — Deep-Dive Code Synthesis Batch Plans
+**Artifacts:** 32 PLAN-*.md files added to docs/plans/
+**Why:** Output of the orthogonal code hunt synthesis. 619 unique violations clustered into 32 domain task clusters and routed to ON DECK.
