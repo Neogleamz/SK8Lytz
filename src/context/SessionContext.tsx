@@ -41,19 +41,30 @@ interface SessionContextValue {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
-const SESSION_PHASE_KEY = STORAGE_SESSION_PHASE;
-
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   const [autoPauseEnabled, setAutoPauseEnabled] = useState(false);
 
   useEffect(() => {
+    let active = true;
     const load = async () => {
-      const enabled = await AsyncStorage.getItem(STORAGE_AUTO_PAUSE_ENABLED);
-      setAutoPauseEnabled(enabled !== 'false');
-      setInitialDataLoaded(true);
+      try {
+        const enabled = await AsyncStorage.getItem(STORAGE_AUTO_PAUSE_ENABLED);
+        if (active) {
+          setAutoPauseEnabled(enabled !== 'false');
+          setInitialDataLoaded(true);
+        }
+      } catch (e) {
+        if (active) {
+          setAutoPauseEnabled(false);
+          setInitialDataLoaded(true);
+        }
+      }
     };
     load();
+    return () => {
+      active = false;
+    };
   }, []);
 
   if (!initialDataLoaded) {
@@ -224,17 +235,24 @@ function SessionMachineWrapper({
 
   // Crash recovery
   useEffect(() => {
+    let active = true;
     const recover = async () => {
       const currentSnapshot = actorRef.getSnapshot();
-      const pendingEnd = await AsyncStorage.getItem(STORAGE_PENDING_BG_END);
+      const pendingEnd = await AsyncStorage.getItem(STORAGE_PENDING_BG_END).catch(() => null);
+      if (!active) return;
+
       if (pendingEnd === 'true') {
-        await AsyncStorage.removeItem(STORAGE_PENDING_BG_END);
+        await AsyncStorage.removeItem(STORAGE_PENDING_BG_END).catch(() => null);
+        if (!active) return;
+
         if (!currentSnapshot.matches('IDLE')) {
           send({ type: 'END' });
         }
         return;
       }
-      const phase = await AsyncStorage.getItem(SESSION_PHASE_KEY);
+      const phase = await AsyncStorage.getItem(STORAGE_SESSION_PHASE).catch(() => null);
+      if (!active) return;
+
       if (phase === 'active' && currentSnapshot.matches('IDLE')) {
         send({ type: 'START' });
       }
@@ -243,13 +261,18 @@ function SessionMachineWrapper({
         send({ type: 'PAUSE' });
       }
     };
+    
+    let sub: { remove: () => void } | null = null;
     if (initialDataLoaded) {
       recover();
-      const sub = AppState.addEventListener('change', (s) => {
+      sub = AppState.addEventListener('change', (s) => {
         if (s === 'active') recover();
       });
-      return () => sub.remove();
     }
+    return () => {
+      active = false;
+      if (sub) sub.remove();
+    };
   }, [actorRef, send, initialDataLoaded]);
 
   // Watch listeners
