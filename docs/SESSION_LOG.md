@@ -3558,3 +3558,10 @@ TSC: ?  Jest: ?
 Files touched: src/hooks/useTelemetryLedger.ts
 TSC: ?  Jest: ?
 
+
+### [DECISION] 2026-06-14T03:26:00Z - Stale Batch Wipe
+**Decision:** Clear out the deepdive-sweep-phase3 tasks from ON DECK.
+**Rejected:** Running 40 subagents to fix them.
+**Don't re-derive:** 
+pm run verify passed cleanly on master. The AST findings were based on a pre-June-10 scan, but the chore(sweep) commit on Jun 13 already fixed them. Running subagents on them causes no-op diffs and worktree errors.
+**Source:** Master branch git log and verifiable checks.
