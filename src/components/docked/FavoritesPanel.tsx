@@ -51,9 +51,9 @@ const FavoritesPanel = React.memo(({
     return (
       <PresetCard
         preset={fav}
-        onPress={() => onLoadFavorite(fav)}
+        onPress={onLoadFavorite}
         showEditButton
-        onEdit={() => onEditFavorite(fav.id, fav.name)}
+        onEdit={onEditFavorite}
         accentFallback={Colors.primary}
         cardWidth={cardWidth}
         styles={localStyles}
@@ -66,7 +66,8 @@ const FavoritesPanel = React.memo(({
     return (
       <PresetCard
         preset={fav}
-        onPress={() => onLoadFavorite(fav, 'PICK')}
+        onPress={onLoadFavorite}
+        onPressContext="PICK"
         accentFallback={Colors.secondary}
         cardWidth={cardWidth}
         styles={localStyles}

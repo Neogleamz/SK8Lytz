@@ -134,3 +134,5 @@ Fix static audit findings for the `sweep-components-docked` domain cluster.
 ## Verification Plan
 - Run `npm run verify` to ensure AST and Type checking passes.
 - Verify wave boundaries are respected.
+
+// SKIPPED: SpectrumAnalyzer.tsx (R-22 false positive - Animated API is correctly cleaned up, requestAnimationFrame is not used)

@@ -160,14 +160,10 @@ const createStyles = (Colors: ThemePalette) =>
       marginHorizontal: Spacing.lg,
       marginBottom: Spacing.sm,
       marginTop: Spacing.sm,
-      ...(Platform.OS === 'web'
-        ? { boxShadow: `0px 8px 20px ${Colors.primary}99` } as unknown as import('react-native').ViewStyle
-        : {
-            shadowColor: Colors.primary,
-            shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.6,
-            shadowRadius: 20,
-          }),
+      shadowColor: Colors.primary,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.6,
+      shadowRadius: 20,
       elevation: 15,
     },
     dockIconCont: {
@@ -187,14 +183,10 @@ const createStyles = (Colors: ThemePalette) =>
     dockIconActive: {
       backgroundColor: Colors.primary,
       borderColor: Colors.primary,
-      ...(Platform.OS === 'web'
-        ? { boxShadow: `0px 0px 12px ${Colors.primary}e6` } as unknown as import('react-native').ViewStyle
-        : {
-            shadowColor: Colors.primary,
-            shadowOffset: { width: 0, height: 0 },
-            shadowOpacity: 0.9,
-            shadowRadius: 12,
-          }),
+      shadowColor: Colors.primary,
+      shadowOffset: { width: 0, height: 0 },
+      shadowOpacity: 0.9,
+      shadowRadius: 12,
       elevation: 8,
       transform: [{ scale: 1.15 }],
     },

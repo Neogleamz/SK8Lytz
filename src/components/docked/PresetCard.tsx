@@ -15,10 +15,11 @@ import { resolveGlowColor, resolveGradientColors, resolveModeIcon, GENERATIVE_RA
 
 interface PresetCardProps {
   preset: IFavoriteState;
-  onPress: () => void;
+  onPress: (preset: IFavoriteState, context?: 'FAVORITE' | 'PICK' | 'COMMUNITY') => void;
+  onPressContext?: 'FAVORITE' | 'PICK' | 'COMMUNITY';
   /** Show edit pencil icon (user favorites only). */
   showEditButton?: boolean;
-  onEdit?: () => void;
+  onEdit?: (id: string, name: string) => void;
   /** Accent color fallback when preset colors are missing. */
   accentFallback: string;
   cardWidth: number;
@@ -34,6 +35,7 @@ interface PresetCardProps {
 const PresetCard = React.memo(({
   preset,
   onPress,
+  onPressContext,
   showEditButton = false,
   onEdit,
   accentFallback,
@@ -48,7 +50,7 @@ const PresetCard = React.memo(({
   return (
     <TouchableOpacity
       style={{ flex: 1, marginHorizontal: Spacing.xs, shadowColor: glow, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 }}
-      onPress={onPress}
+      onPress={() => onPress(preset, onPressContext)}
     >
       <LinearGradient
         colors={gradColors as unknown as readonly [string, string, ...string[]]}
@@ -60,7 +62,7 @@ const PresetCard = React.memo(({
           {showEditButton && onEdit && (
             <TouchableOpacity
               style={{ position: 'absolute', right: 4, top: 4, zIndex: 10, padding: Spacing.xs }}
-              onPress={onEdit}
+              onPress={() => onEdit(preset.id, preset.customName || preset.name)}
             >
               <MaterialCommunityIcons name="pencil-outline" size={12} color={Colors.textMuted} />
             </TouchableOpacity>

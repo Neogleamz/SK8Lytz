@@ -36,19 +36,18 @@ const StreetModeDistributionSlider: React.FC<StreetModeDistributionSliderProps> 
     onPanResponderMove: (_, gestureState) => {
       if (width === 0) return;
       let newT1 = thumb1Ref.current + gestureState.dx / width;
-      // Clamp between minimum constraint and thumb2
-      newT1 = Math.max(MIN_PERCENT, Math.min(newT1, t2Pos - MIN_PERCENT));
+      newT1 = Math.max(MIN_PERCENT, Math.min(newT1, thumb2Ref.current - MIN_PERCENT));
       setT1Pos(newT1);
     },
     onPanResponderRelease: (_, gestureState) => {
       if (width === 0) return;
       let newT1 = thumb1Ref.current + gestureState.dx / width;
-      newT1 = Math.max(MIN_PERCENT, Math.min(newT1, t2Pos - MIN_PERCENT));
+      newT1 = Math.max(MIN_PERCENT, Math.min(newT1, thumb2Ref.current - MIN_PERCENT));
       thumb1Ref.current = newT1;
       setT1Pos(newT1);
-      onChange([newT1, t2Pos - newT1, 1 - t2Pos]);
+      onChange([newT1, thumb2Ref.current - newT1, 1 - thumb2Ref.current]);
     },
-  }), [width, t2Pos, onChange]);
+  }), [width, onChange]);
 
   const panResponder2 = useMemo(() => PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -57,19 +56,18 @@ const StreetModeDistributionSlider: React.FC<StreetModeDistributionSliderProps> 
     onPanResponderMove: (_, gestureState) => {
       if (width === 0) return;
       let newT2 = thumb2Ref.current + gestureState.dx / width;
-      // Clamp between thumb1 and max constraint
-      newT2 = Math.max(t1Pos + MIN_PERCENT, Math.min(newT2, 1 - MIN_PERCENT));
+      newT2 = Math.max(thumb1Ref.current + MIN_PERCENT, Math.min(newT2, 1 - MIN_PERCENT));
       setT2Pos(newT2);
     },
     onPanResponderRelease: (_, gestureState) => {
       if (width === 0) return;
       let newT2 = thumb2Ref.current + gestureState.dx / width;
-      newT2 = Math.max(t1Pos + MIN_PERCENT, Math.min(newT2, 1 - MIN_PERCENT));
+      newT2 = Math.max(thumb1Ref.current + MIN_PERCENT, Math.min(newT2, 1 - MIN_PERCENT));
       thumb2Ref.current = newT2;
       setT2Pos(newT2);
-      onChange([t1Pos, newT2 - t1Pos, 1 - newT2]);
+      onChange([thumb1Ref.current, newT2 - thumb1Ref.current, 1 - newT2]);
     },
-  }), [width, t1Pos, onChange]);
+  }), [width, onChange]);
 
   const height = isShort ? 22 : 26;
   const thumbSize = height + 10;
