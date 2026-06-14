@@ -156,6 +156,8 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
 
   const [members, setMembers] = useState<CrewMember[]>([]);
   const [elapsed, setElapsed] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const _isFlushingRef = useRef(false);
 
@@ -188,14 +190,19 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
               avatar_color: profile?.avatar_color ?? null,
             };
           }));
+          setError(null);
         }
       } catch (e: unknown) {
         if (!mounted) return;
+        setError('Failed to load members');
         import('../services/AppLogger').then(({ AppLogger }) => {
           AppLogger.warn('[CrewMemberDashboard] failed to load members', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         });
       } finally {
-        if (mounted) _isFlushingRef.current = false;
+        if (mounted) {
+          _isFlushingRef.current = false;
+          setIsLoading(false);
+        }
       }
     };
     loadMembers();
@@ -332,10 +339,22 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
         </View>
 
         {/* ── Members list ── */}
-        {members.length > 0 && (
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>MEMBERS ({members.length})</Text>
-            {members.map(m => (
+        <View style={styles.card}>
+          <Text style={styles.cardLabel}>MEMBERS ({members.length})</Text>
+          {isLoading && members.length === 0 ? (
+            <Text style={[styles.cardSub, { textAlign: 'center', marginVertical: Spacing.md }]}>
+              Loading members...
+            </Text>
+          ) : error && members.length === 0 ? (
+            <Text style={[styles.cardSub, { textAlign: 'center', marginVertical: Spacing.md, color: '#FF4444' }]}>
+              {error}
+            </Text>
+          ) : members.length === 0 ? (
+            <Text style={[styles.cardSub, { textAlign: 'center', marginVertical: Spacing.md }]}>
+              No members found in this session.
+            </Text>
+          ) : (
+            members.map(m => (
               <View key={m.user_id} style={styles.memberRow}>
                 <View style={[styles.memberAvatar, { backgroundColor: m.avatar_color ?? '#FF8C00' }]}>
                   <Text style={styles.memberAvatarText}>{initials(m.display_name)}</Text>
@@ -351,9 +370,9 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
                 </View>
                 <View style={styles.onlineDot} />
               </View>
-            ))}
-          </View>
-        )}
+            ))
+          )}
+        </View>
 
         {/* ── Action buttons ── */}
         <View style={{ flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xs }}>
