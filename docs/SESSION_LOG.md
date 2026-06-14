@@ -3594,3 +3594,21 @@ TSC: ?  Jest: ?
 ### [MERGE READY] sweep-src-components-CrewModal.tsx - 5eb9b21c
 Files touched: src/components/CrewModal.tsx
 TSC: ?  Jest: ?
+
+### [MERGE READY] sweep-src-components-admin — 2eed569b3c756f4a1e08e9e07c80929ca0be6645
+Files touched:
+- src/components/admin/AdminToolsModal.tsx
+- src/components/admin/AdvancedHardwareModal.tsx
+- src/components/admin/DeviceTab.tsx
+- src/components/admin/tools/AdminPicksScheduler.tsx
+- src/components/admin/tools/Sk8LytzDiagnosticLab.tsx
+- src/components/admin/tools/UserManagementPanel.tsx
+- src/components/admin/tools/AdminAuditLogViewer.tsx
+- src/components/admin/tools/AdminRosterPanel.tsx
+- src/components/admin/tools/FeatureFlagsPanel.tsx
+- src/components/admin/tools/GlobalAnalyticsPanel.tsx
+- src/components/admin/tools/HardwareBlacklistPanel.tsx
+- src/components/admin/tools/Sk8LytzProgrammer.tsx
+- src/hooks/useProductManager.ts
+TSC: ? (Env Error)  Jest: ? (Env Error)
+
