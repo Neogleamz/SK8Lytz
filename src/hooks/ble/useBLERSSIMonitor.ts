@@ -13,7 +13,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
-import type { Device } from 'react-native-ble-plx';
+import type { Device, BleManager } from 'react-native-ble-plx';
 import {
   startRSSIPolling,
   readDeviceRSSI,
@@ -26,7 +26,7 @@ import {
 export { RSSI_WEAK_THRESHOLD, RSSI_CRITICAL_THRESHOLD, RSSI_POLL_INTERVAL_MS, readDeviceRSSI };
 
 export interface UseBLERSSIMonitorParams {
-  bleManager: any;
+  bleManager: BleManager | null;
   /** Stable ref to the current connected device list — read lazily inside interval. */
   connectedDevicesRef: React.MutableRefObject<Device[]>;
   /** Array of active device IDs to trigger prune when disconnected */

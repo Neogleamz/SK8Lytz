@@ -56,8 +56,7 @@ export function useBLEInterrogator({ bleManager, registeredMacs, onDeviceInterro
 
   const stableQueueDeviceForInterrogation = useCallback(
     (mac: string) => queueDeviceForInterrogation(mac),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [bleManager, registeredMacs.length],
+    [bleManager, registeredMacs.length, queueDeviceForInterrogation],
   );
 
   return { hwCache, hwCacheRef, queueDeviceForInterrogation: stableQueueDeviceForInterrogation };

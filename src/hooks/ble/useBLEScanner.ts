@@ -14,6 +14,7 @@ import type { Database } from '../../types/supabase';
 import type { EventFrom } from 'xstate';
 import type { bleMachine } from '../../services/ble/BleMachine';
 import { STORAGE_SCANNER_TELEMETRY_QUEUE, STORAGE_APP_SETTINGS } from '../../constants/storageKeys';
+import { scrubPII } from '../../utils/piiScrubber';
 
 import { useBLEBatterySweep } from './useBLEBatterySweep';
 import { useBLEInterrogator } from './useBLEInterrogator';
@@ -86,6 +87,26 @@ export function useBLEScanner({
     }).catch((e: unknown) => {
       AppLogger.warn('[useBLEScanner] AsyncStorage.getItem failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
     });
+
+    const flushOfflineTelemetry = async () => {
+      try {
+        if (!supabase) return;
+        const raw = await AsyncStorage.getItem(STORAGE_SCANNER_TELEMETRY_QUEUE);
+        if (!raw) return;
+        const queue: TelemetryInsert[] = JSON.parse(raw);
+        if (queue.length > 0) {
+          const { error } = await supabase.from('discovered_devices_telemetry').insert(queue);
+          if (error) throw new Error(error.message);
+          await AsyncStorage.removeItem(STORAGE_SCANNER_TELEMETRY_QUEUE);
+        }
+      } catch (e: unknown) {
+        AppLogger.warn('[Scanner] Failed to flush offline telemetry queue', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+      }
+    };
+    // Flush offline queue shortly after mount
+    setTimeout(() => {
+      InteractionManager.runAfterInteractions(flushOfflineTelemetry);
+    }, 5000);
   }, []);
 
   const telemetryCacheRef = useRef<Map<string, number>>(new Map());
@@ -266,7 +287,7 @@ export function useBLEScanner({
               firmwareVer, ledVersion, bleVersion, productId
             });
           }
-        } catch (e: unknown) { AppLogger.warn('[Scanner] Failed to parse firmware', { mac, error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }); }
+        } catch (e: unknown) { AppLogger.warn('[Scanner] Failed to parse firmware', { mac: scrubPII(mac), error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }); }
       }
 
       Object.assign(device, { factoryName: determineFactoryName(device) });

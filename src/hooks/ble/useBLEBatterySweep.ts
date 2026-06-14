@@ -34,6 +34,7 @@ export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepPr
   // Scan cycle timers (not GATT write timing) — intentionally preserved per R-16
   const throttleCycleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const burstTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const budgetResetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const scanStartTimestampsRef = useRef<number[]>([]);
   const SCAN_BUDGET_MAX = 4;
@@ -99,8 +100,10 @@ export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepPr
           AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_start_deferred_budget', deferMs: msUntilBudgetResets, budgetUsed: scanStartTimestampsRef.current.length });
           isSweeperActiveRef.current = false;
           setIsSweeperActive(false);
+          if (budgetResetTimerRef.current) { clearTimeout(budgetResetTimerRef.current); budgetResetTimerRef.current = null; }
           // Scan budget reset deferral timer (not GATT write timing) — intentionally preserved per R-16
-          setTimeout(() => {
+          budgetResetTimerRef.current = setTimeout(() => {
+            budgetResetTimerRef.current = null;
             if (isSweeperActiveRef.current) return;
             startSweeper();
           }, msUntilBudgetResets);
@@ -194,7 +197,10 @@ export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepPr
   }, [bleSend, stopSweeper, startThrottleCycle]);
 
   useEffect(() => {
-    return () => { stopSweeper(); };
+    return () => { 
+      stopSweeper(); 
+      if (budgetResetTimerRef.current) { clearTimeout(budgetResetTimerRef.current); budgetResetTimerRef.current = null; }
+    };
   }, [stopSweeper]);
 
   return { isSweeperActive, startSweeper, stopSweeper, burstScan, batteryTier };

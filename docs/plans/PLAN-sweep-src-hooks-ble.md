@@ -23,3 +23,4 @@ Fix bugs and rule violations identified during the deep-dive code hunt for the `
 ## Verification Plan
 - Run `npm run verify` to ensure type safety and tests pass.
 - Run AST parser to ensure no regressions.
+// SKIPPED: src\hooks\ble\__tests__\ble-simulator.test.ts Intentional boot time delay required for bind socket setup and noted as exempt in source comments.
