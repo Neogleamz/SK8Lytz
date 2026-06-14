@@ -95,8 +95,9 @@ const CustomSlider = ({ value, onValueChange, onSlidingComplete, minimumValue = 
   interface WebStyle extends ViewStyle {
     touchAction?: 'none' | 'auto' | 'manipulation' | 'pan-x' | 'pan-y';
     userSelect?: 'none' | 'auto' | 'text' | 'all';
+    cursor?: 'pointer' | 'default';
   }
-  const webStyle: WebStyle = { touchAction: 'none', userSelect: 'none' };
+  const webStyle: WebStyle = { touchAction: 'none', userSelect: 'none', cursor: 'pointer' };
 
   return (
     <View 
@@ -131,7 +132,6 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   container: {
     height: 40,
     justifyContent: 'center',
-    cursor: 'pointer',
   },
   track: {
     height: 6,
