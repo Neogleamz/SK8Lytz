@@ -68,7 +68,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
   // DEV diagnostic: Detect when numLEDs resolves from product defaults instead of EEPROM probe.
   // If this fires, the EEPROM 0x63 response hasn't populated hwSettings before the first dispatch.
   if (__DEV__ && !hwSettings?.detected && hwSettings?.ledPoints) {
-    AppLogger.warn('[useControllerDispatch] numLEDs resolved WITHOUT EEPROM probe', 'using product defaults', {
+    AppLogger.warn('[useControllerDispatch] numLEDs resolved WITHOUT EEPROM probe — using product defaults', {
       numLEDs, hwLedPoints: hwSettings?.ledPoints, propPoints: points, detected: hwSettings?.detected,
     });
   }
