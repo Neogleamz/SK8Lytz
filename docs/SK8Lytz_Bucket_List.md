@@ -11,104 +11,6 @@
 
 ## 🔴 CRITICAL: 🛡️ Performance, Stability & Security
 
-## 🟠 HIGH: 🛠️ Engineering Excellence & Tech Debt
-
-- [ ] **chore/sweep-src-identity**
-  - **Goal:** Resolve all static audit findings in the IDENTITY domain cluster.
-  - **Details:** Wave 1 execution. Prerequisite: None.
-  - **Files:** `src/components/account/AccountTabDevices.tsx`, `src/components/account/AccountTabProfile.tsx`, `src/components/account/AccountTabStats.tsx`, `src/components/account/SkaterStatsPanel.tsx`, `src/components/account/types.ts`, `src/components/auth/AuthFormSignIn.tsx`, `src/components/auth/DevSandboxDrawer.tsx`, `src/context/AuthContext.tsx`, `src/hooks/useAccountOverview.ts`, `src/services/AuthProfileService.ts`, `src/services/ProfileService.types.ts`
-  - **Tags:** [🧹 TECH DEBT] [❌ UNVERIFIED] [⚙️ SERVICES] [M-RISK] [Feast] [L-COGNITIVE] [WAVE:1]
-  - **Source of Truth:** docs/plans/PLAN-sweep-src-identity.md
-  - **Decision Log (2026-06-13):** Generated from deep-dive fleet synthesis. AST coloring assigned Wave 1.
-
-- [ ] **chore/sweep-src-ble-core**
-  - **Goal:** Resolve all static audit findings in the BLE_CORE domain cluster.
-  - **Details:** Wave 1 execution. Prerequisite: None.
-  - **Files:** `src/hooks/ble/__tests__/ble-simulator.test.ts`, `src/hooks/ble/useBLEBatterySweep.ts`, `src/hooks/ble/useBLEScanner.ts`, `src/hooks/useBLE.ts`, `src/hooks/useOptimisticBLE.ts`, `src/services/ble/__tests__/BleMachine.test.ts`, `src/services/ble/ConnectService.ts`, `src/services/ble/HeartbeatService.ts`, `src/services/ble/InterrogatorService.ts`, `src/services/ble/RecoveryService.ts`, `src/services/ble/RSSIService.ts`
-  - **Tags:** [🧹 TECH DEBT] [❌ UNVERIFIED] [⚙️ SERVICES] [H-RISK] [Feast] [L-COGNITIVE] [WAVE:1]
-  - **Source of Truth:** docs/plans/PLAN-sweep-src-ble-core.md
-  - **Decision Log (2026-06-13):** Generated from deep-dive fleet synthesis. AST coloring assigned Wave 1.
-
-- [ ] **chore/sweep-src-ui-visualizer**
-  - **Goal:** Resolve all static audit findings in the UI_VISUALIZER domain cluster.
-  - **Details:** Wave 1 execution. Prerequisite: None.
-  - **Files:** `src/components/CameraTracker.tsx`, `src/components/CustomEffectVisualizer.tsx`, `src/components/NeonHueStrip.tsx`, `src/components/patterns/GradientLibraryTab.tsx`, `src/components/patterns/PatternPickerTab.tsx`, `src/components/patterns/UnifiedPatternPicker.tsx`, `src/components/PositionalGradientBuilder.tsx`, `src/components/ProductVisualizer.tsx`, `src/components/VerticalPatternDrum.tsx`, `src/components/VisualizerUnit.tsx`
-  - **Tags:** [🧹 TECH DEBT] [❌ UNVERIFIED] [⚙️ SERVICES] [M-RISK] [Feast] [L-COGNITIVE] [WAVE:1]
-  - **Source of Truth:** docs/plans/PLAN-sweep-src-ui-visualizer.md
-  - **Decision Log (2026-06-13):** Generated from deep-dive fleet synthesis. AST coloring assigned Wave 1.
-
-- [ ] **chore/sweep-src-pattern-engine**
-  - **Goal:** Resolve all static audit findings in the PATTERN_ENGINE domain cluster.
-  - **Details:** Wave 1 execution. Prerequisite: None.
-  - **Files:** `src/hooks/useAppMicrophone.ts`, `src/hooks/useMusicMode.ts`, `src/hooks/useStreetMode.ts`, `src/protocols/SpatialEngine.ts`, `src/protocols/VisualizerEngine.ts`
-  - **Tags:** [🧹 TECH DEBT] [❌ UNVERIFIED] [⚙️ SERVICES] [H-RISK] [Meal] [L-COGNITIVE] [WAVE:1]
-  - **Source of Truth:** docs/plans/PLAN-sweep-src-pattern-engine.md
-  - **Decision Log (2026-06-13):** Generated from deep-dive fleet synthesis. AST coloring assigned Wave 1.
-
-- [ ] **chore/sweep-src-group-sync**
-  - **Goal:** Resolve all static audit findings in the GROUP_SYNC domain cluster.
-  - **Details:** Wave 2 execution. Prerequisite: Wave 1 fully merged.
-  - **Files:** `src/components/crew/CrewDetailScreen.tsx`, `src/components/crew/CrewJoinScreen.tsx`, `src/components/crew/CrewLandingScreen.tsx`, `src/components/crew/CrewManageScreen.tsx`, `src/hooks/useCrewHub.ts`, `src/hooks/useCrewManage.ts`, `src/hooks/useCrewProximityRadar.ts`, `src/hooks/useCrewSession.ts`, `src/services/CrewProfileService.ts`, `src/services/CrewService.ts`, `src/services/GroupRepository.ts`
-  - **Tags:** [🧹 TECH DEBT] [❌ UNVERIFIED] [⚙️ SERVICES] [M-RISK] [Feast] [L-COGNITIVE] [WAVE:2]
-  - **Source of Truth:** docs/plans/PLAN-sweep-src-group-sync.md
-  - **Decision Log (2026-06-13):** Generated from deep-dive fleet synthesis. AST coloring assigned Wave 2.
-
-- [ ] **chore/sweep-src-protocol-core**
-  - **Goal:** Resolve all static audit findings in the PROTOCOL_CORE domain cluster.
-  - **Details:** Wave 2 execution. Prerequisite: Wave 1 fully merged.
-  - **Files:** `src/hooks/useProtocolBuilder.ts`, `src/protocols/BanlanxAdapter.ts`, `src/protocols/ZenggeAdapter.ts`, `src/protocols/ZenggeProtocol.ts`
-  - **Tags:** [🧹 TECH DEBT] [❌ UNVERIFIED] [⚙️ SERVICES] [H-RISK] [Meal] [L-COGNITIVE] [WAVE:2]
-  - **Source of Truth:** docs/plans/PLAN-sweep-src-protocol-core.md
-  - **Decision Log (2026-06-13):** Generated from deep-dive fleet synthesis. AST coloring assigned Wave 2.
-
-- [ ] **chore/sweep-src-utils**
-  - **Goal:** Resolve all static audit findings in the UTILS domain cluster.
-  - **Details:** Wave 2 execution. Prerequisite: Wave 1 fully merged.
-  - **Files:** `src/utils/kMeansPalette.ts`, `src/utils/migrateAuthTokens.ts`
-  - **Tags:** [🧹 TECH DEBT] [❌ UNVERIFIED] [⚙️ SERVICES] [L-RISK] [Snack] [L-COGNITIVE] [WAVE:2]
-  - **Source of Truth:** docs/plans/PLAN-sweep-src-utils.md
-  - **Decision Log (2026-06-13):** Generated from deep-dive fleet synthesis. AST coloring assigned Wave 2.
-
-- [ ] **chore/sweep-src-ui-docked-controller**
-  - **Goal:** Resolve all static audit findings in the UI_DOCKED_CONTROLLER domain cluster.
-  - **Details:** Wave 3 execution. Prerequisite: Wave 2 fully merged.
-  - **Files:** `src/components/docked/BuilderPanel.tsx`, `src/components/docked/CameraPanel.tsx`, `src/components/docked/DockedDock.tsx`, `src/components/docked/FavoritesPanel.tsx`, `src/components/docked/MusicPanel.tsx`, `src/components/docked/PresetCard.tsx`, `src/components/docked/QuickPresetModal.tsx`, `src/components/docked/UniversalSlidersFooter.tsx`, `src/components/DockedController.tsx`, `src/hooks/useControllerAnalytics.ts`, `src/hooks/useControllerDispatch.ts`, `src/hooks/useDashboardController.tsx`, `src/hooks/useDockedControllerState.ts`
-  - **Tags:** [🧹 TECH DEBT] [❌ UNVERIFIED] [⚙️ SERVICES] [M-RISK] [Feast] [L-COGNITIVE] [WAVE:3]
-  - **Source of Truth:** docs/plans/PLAN-sweep-src-ui-docked-controller.md
-  - **Decision Log (2026-06-13):** Generated from deep-dive fleet synthesis. AST coloring assigned Wave 3.
-
-- [ ] **chore/sweep-src-notifications-&-routing**
-  - **Goal:** Resolve all static audit findings in the NOTIFICATIONS_&_ROUTING domain cluster.
-  - **Details:** Wave 3 execution. Prerequisite: Wave 2 fully merged.
-  - **Files:** `App.tsx`, `src/providers/BluetoothGuard.tsx`, `src/providers/ComplianceGate.tsx`, `src/services/LocationService.ts`, `src/services/NotificationService.ts`
-  - **Tags:** [🧹 TECH DEBT] [❌ UNVERIFIED] [⚙️ SERVICES] [M-RISK] [Meal] [L-COGNITIVE] [WAVE:3]
-  - **Source of Truth:** docs/plans/PLAN-sweep-src-notifications-&-routing.md
-  - **Decision Log (2026-06-13):** Generated from deep-dive fleet synthesis. AST coloring assigned Wave 3.
-
-- [ ] **chore/sweep-src-data-layer**
-  - **Goal:** Resolve all static audit findings in the DATA_LAYER domain cluster.
-  - **Details:** Wave 4 execution. Prerequisite: Wave 3 fully merged.
-  - **Files:** `src/hooks/useCuratedPicks.ts`, `src/hooks/useFavorites.ts`, `src/services/DeviceRepository.ts`, `src/services/GradientsService.ts`, `src/services/ScenesService.ts`, `src/services/SkateSpotsService.ts`, `src/services/SpeedTrackingService.ts`, `src/services/supabaseClient.ts`, `src/services/TelemetryService.ts`, `src/types/supabase.ts`
-  - **Tags:** [🧹 TECH DEBT] [❌ UNVERIFIED] [⚙️ SERVICES] [M-RISK] [Feast] [L-COGNITIVE] [WAVE:4]
-  - **Source of Truth:** docs/plans/PLAN-sweep-src-data-layer.md
-  - **Decision Log (2026-06-13):** Generated from deep-dive fleet synthesis. AST coloring assigned Wave 4.
-
-- [ ] **chore/sweep-src-admin-&-telemetry**
-  - **Goal:** Resolve all static audit findings in the ADMIN_&_TELEMETRY domain cluster.
-  - **Details:** Wave 5 execution. Prerequisite: Wave 4 fully merged.
-  - **Files:** `src/components/admin/AdminToolsModal.tsx`, `src/components/admin/tools/AdminAuditLogViewer.tsx`, `src/components/admin/tools/AdminPicksScheduler.tsx`, `src/components/admin/tools/AdminRosterPanel.tsx`, `src/components/admin/tools/FeatureFlagsPanel.tsx`, `src/components/admin/tools/GlobalAnalyticsPanel.tsx`, `src/components/admin/tools/HardwareBlacklistPanel.tsx`, `src/components/admin/tools/Sk8LytzProgrammer.tsx`, `src/components/admin/tools/tabs/DiagnosticLabBuilderTab.tsx`, `src/components/admin/tools/tabs/DiagnosticLabOracleTab.tsx`, `src/components/admin/tools/UserManagementPanel.tsx`, `src/hooks/useDiagnosticLog.ts`, `src/services/AppLogger.ts`, `src/services/AppSettingsService.ts`
-  - **Tags:** [🧹 TECH DEBT] [❌ UNVERIFIED] [⚙️ SERVICES] [M-RISK] [Feast] [L-COGNITIVE] [WAVE:5]
-  - **Source of Truth:** docs/plans/PLAN-sweep-src-admin-&-telemetry.md
-  - **Decision Log (2026-06-13):** Generated from deep-dive fleet synthesis. AST coloring assigned Wave 5.
-
-- [ ] **chore/sweep-src-ui-screens-and-modals**
-  - **Goal:** Resolve all static audit findings in the UI_SCREENS_AND_MODALS domain cluster.
-  - **Details:** Wave 6 execution. Prerequisite: Wave 5 fully merged.
-  - **Files:** `android/app/src/main/AndroidManifest.xml`, `android/sk8lytzWear/src/main/AndroidManifest.xml`, `app.config.js`, `src/../.husky/pre-commit`, `src/../android/app/src/main/AndroidManifest.xml`, `src/../android/sk8lytzWear/src/main/kotlin/com/neogleamz/sk8lytzwear/presentation/WearMessageSender.kt`, `src/../android/sk8lytzWear/src/main/kotlin/com/neogleamz/sk8lytzwear/services/WearableCommunicationService.kt`, `src/../android/sk8lytzWear/src/main/kotlin/com/neogleamz/sk8lytzwear/tiles/Sk8lytzTileService.kt`, `src/../app.config.js`, `src/../modules/sk8lytz-watch-bridge/ios/Sk8lytzWatchBridgeModule.swift`, `src/../package-lock.json`, `src/../package.json`, `src/../supabase/functions/notify-crew-session/index.ts`, `src/../supabase/migrations/20260414_account_deletion_rpc.sql`, `src/../supabase/migrations/20260426200000_phase_control_panels.sql`, `src/../supabase/migrations/20260607100000_fix_telemetry_schema.sql`, `src/../supabase/migrations/20260609140000_live_debugger_views.sql`, `src/../supabase/migrations/20260609175500_restore_domain_admin_promotion.sql`, `src/../targets/watch/expo-target.config.js`, `src/../targets/watch/HealthManager.swift`, `src/../targets/watch/WatchConnectivityManager.swift`, `src/components/AccountModal.tsx`, `src/components/CommunityModal.tsx`, `src/components/CrewMemberDashboard.tsx`, `src/components/CustomSlider.tsx`, `src/components/dashboard/CrewHubSlab.tsx`, `src/components/dashboard/DashboardCrewPanel.tsx`, `src/components/dashboard/DashboardGroupList.tsx`, `src/components/dashboard/DashboardTelemetryHero.tsx`, `src/components/dashboard/HardwareStatusPills.tsx`, `src/components/dashboard/MySkatesSlab.tsx`, `src/components/dashboard/SkateGroupCard.tsx`, `src/components/DashboardGroupList.tsx`, `src/components/DeviceItem.tsx`, `src/components/DeviceSettingsModal.tsx`, `src/components/GroupSettingsModal.tsx`, `src/components/LocationPicker.tsx`, `src/components/LocationPickerMap.web.tsx`, `src/components/MarqueeText.tsx`, `src/components/SessionSummaryModal.tsx`, `src/components/shared/BLEErrorBoundary.tsx`, `src/constants/storageKeys.ts`, `src/context/AppConfigContext.tsx`, `src/context/SessionContext.tsx`, `src/context/ThemeContext.tsx`, `src/hooks/dev/useWebDemoConsoleBridge.ts`, `src/hooks/useDeviceStateLedger.ts`, `src/hooks/useTelemetryLedger.ts`, `src/screens/AuthScreen.tsx`, `src/screens/DashboardScreen.tsx`, `src/screens/Onboarding/HardwareSetupWizardScreen.tsx`, `src/services/BlePingService.ts`, `src/services/BleWriteDispatcher.ts`, `src/services/BleWriteQueue.ts`, `src/services/PermissionService.ts`, `src/services/session/__tests__/SessionMachine.test.ts`, `src/services/session/NotificationService.ts`, `src/services/session/SessionMachine.ts`, `src/styles/DashboardStyles.ts`, `src/theme/theme.ts`, `targets/watch/Info.plist`
-  - **Tags:** [🧹 TECH DEBT] [❌ UNVERIFIED] [⚙️ SERVICES] [M-RISK] [Feast] [L-COGNITIVE] [WAVE:6]
-  - **Source of Truth:** docs/plans/PLAN-sweep-src-ui-screens-and-modals.md
-  - **Decision Log (2026-06-13):** Generated from deep-dive fleet synthesis. AST coloring assigned Wave 6.
-
 - [ ] **`chore/session-service-test-coverage`**
   - **Tags:** `[✅ READY]` `[🤖 INFERRED]` `[🧪 LAB]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 MEDIUM]`
   - **Goal:** Add substantive unit tests for SensorService, HealthService, and NotificationService — the 3 untested session actor services from the post-merge audit.
@@ -149,11 +51,7 @@ _User-facing product value and UI refinements._
 
 ## 🔥 ON DECK
 
----
-
-_User-facing product value and UI refinements._
-
-- [ ] `feat/app-wide-ux-tips` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🪙 12k] [⏱️ 3h] [📅 2026-04-14] [🤖 FLASH] [📝️ NEEDS-PLAN] Contextual tips system for key friction points. → [Plan](docs/plans/feat-app-wide-ux-tips.md)
+*(Empty)*
 
 ---
 
@@ -171,7 +69,7 @@ _User-facing product value and UI refinements._
 - [ ] `feat/spatial-beat-mapping` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🪙 18k] [⏱️ 3h] [🧠 THINK] [Pillar 11] Sound-to-Light Spatialization (Bass/Mid/Treble mapping). → [Plan](docs/plans/feat-spatial-beat-mapping.md)
 - [ ] `feat/cockpit-dash-dynamic-bg` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🪙 15k] [⏱️ 3h] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] Transform Dashboard into palette-synced dynamic backgrounds. → [Plan](docs/plans/feat-cockpit-dash-dynamic-bg.md)
 - [ ] `feat/fixed-mode-refactor` : [🧪 LAB] [✅ L-RISK] [🍱 Meal] [🪙 10k] [⏱️ 3h] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] Pattern selection (Strobe, Blink, Static) + music slider fix. → [Plan](docs/plans/feat-fixed-mode-refactor.md)
- Fall Detection — triggers white 'Flare' strobe on impact. → [Plan](docs/plans/feat-impact-sentinel-safety.md)
+- [ ] `feat/impact-sentinel-safety` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🪙 15k] [⏱️ 3h] [🧠 THINK] [Pillar 13] Fall Detection — triggers white 'Flare' strobe on impact. → [Plan](docs/plans/feat-impact-sentinel-safety.md)
 - [ ] `feat/kinetic-brake-lights` : [🧪 LAB] [⚠️ H-RISK] [🍱 Meal] [🪙 15k] [⏱️ 3h] [🧠 THINK] [Pillar 12] Kinetic Safety — phone accelerometer pulse RED for braking. → [Plan](docs/plans/feat-kinetic-brake-lights.md)
 - [ ] `feat/zero-touch-crew-sync` : [☁️ CLOUD] [⚠️ H-RISK] [🥩 Feast] [🪙 30k] [⏱️ 6h] [🧠 THINK] Geofence-based 'Hive Mind' synchronization. → [Plan](docs/plans/feat-zero-touch-crew-sync.md)
 - [ ] `feat/neogleamz-brand-presence` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🪙 8k] [⏱️ 3h] [🤖 FLASH] [📝️ NEEDS-PLAN] Neogleamz identity integration.
