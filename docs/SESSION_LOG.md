@@ -3630,3 +3630,37 @@ TSC: ?  Jest: ?
 **What merged:** Extracted useDockedPermissions and useCrewLeaderBroadcast, unified Context usage, fixed PII logging, added try/catch, fixed returning types.
 **Verify result:** TSC âœ…, Jest âœ…, gates âœ…, cryptographic attestations verified.
 **Files touched:** DockedController.tsx, CommunityModal.tsx, useDockedPermissions.ts, useCrewLeaderBroadcast.ts, ScenesService.ts
+
+### [MERGE READY] sweep-src-components-VisualizerUnit.tsx - 1925a0d2
+Files touched: src/components/VisualizerUnit.tsx
+TSC: âœ…  Jest: âœ…
+
+### [MERGE READY] sweep-src-utils — 676d24e4118199179e81399b9b25ad0690473107
+Files touched:
+- src/utils/migrateAuthTokens.ts
+- src/utils/BlePayloadParser.ts
+TSC: ?  Jest: ?
+
+
+### [MERGE READY] sweep-src-components-NeonHueStrip.tsx — 8527ddebf7d80100f7634a2f089cb895d7954f7a
+Files touched:
+- src/components/NeonHueStrip.tsx
+TSC: ?  Jest: ?
+
+### [MERGE READY] sweep-src-components-CameraTracker.tsx - ec82a0a0
+Files touched: src/components/CameraTracker.tsx
+TSC: ?  Jest: ?
+
+
+### [MERGE READY] sweep-src-components-VerticalPatternDrum.tsx — 73e2297abf45118030d4253e2c664e269b361eec
+Files touched: src/components/VerticalPatternDrum.tsx
+TSC: ?  Jest: ?
+
+### [MERGE READY] sweep-src-components-VerticalPatternDrum.tsx — 73e2297abf45118030d4253e2c664e269b361eec
+Files touched: src/components/VerticalPatternDrum.tsx
+TSC: ?  Jest: ?
+
+### [MERGE READY] sweep-src-components-CustomEffectVisualizer.tsx - e6398099
+Files touched: src/components/CustomEffectVisualizer.tsx
+TSC: ?  Jest: ?
+
