@@ -2894,3 +2894,93 @@ pm run verify which includes QA tests.
   - Decision Log: `TBD`
   - Details: Wave 4 execution. Prerequisite: Wave 3 fully merged. (H:0 M:0 L:1)
   - [WAVE:4]
+
+
+- [x] **`sweep-src-components-account`** 🚀 Merged in HEAD
+  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
+  - **Goal:** Resolve 6 telemetry and architectural rule violations in the components-account domain.
+  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-account.md](./plans/PLAN-sweep-src-components-account.md)
+    Key finding: "6 specific rule violations located and deduplicated in this cluster."
+    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
+  - **Source of Truth:** 📖 [PLAN-sweep-src-components-account.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-account.md)
+  - **Details:** Orthogonal cluster safe for parallel verification.
+
+- [/] **`sweep-src-components-DockedController.tsx`**
+  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
+  - **Goal:** Resolve 9 telemetry and architectural rule violations in the components-DockedController.tsx domain.
+  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-DockedController.tsx.md](./plans/PLAN-sweep-src-components-DockedController.tsx.md)
+    Key finding: "9 specific rule violations located and deduplicated in this cluster."
+    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
+  - **Source of Truth:** 📖 [PLAN-sweep-src-components-DockedController.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-DockedController.tsx.md)
+  - **Details:** Orthogonal cluster safe for parallel verification.
+### ⚡ [BATCH:WAVE-2] — `wave-2-sweep` — READY
+> **Worktree**: `wave-2-sweep` · **Type**: Parallel · **Prerequisite**: Wave 1 merged
+> **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — Deep-Dive Code Hunt orthogonal analysis
+
+
+- [x] **`sweep-src-components-admin`** 🚀 Merged in HEAD
+  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
+  - **Goal:** Resolve 27 telemetry and architectural rule violations in the components-admin domain.
+  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-admin.md](./plans/PLAN-sweep-src-components-admin.md)
+    Key finding: "27 specific rule violations located and deduplicated in this cluster."
+    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
+  - **Source of Truth:** 📖 [PLAN-sweep-src-components-admin.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-admin.md)
+  - **Details:** Orthogonal cluster safe for parallel verification.
+
+
+- [x] **`sweep-src-components-CrewMemberDashboard.tsx`** 🚀 Merged in HEAD
+  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
+  - **Goal:** Resolve 1 telemetry and architectural rule violations in the components-CrewMemberDashboard.tsx domain.
+  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-CrewMemberDashboard.tsx.md](./plans/PLAN-sweep-src-components-CrewMemberDashboard.tsx.md)
+    Key finding: "1 specific rule violations located and deduplicated in this cluster."
+    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
+  - **Source of Truth:** 📖 [PLAN-sweep-src-components-CrewMemberDashboard.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-CrewMemberDashboard.tsx.md)
+  - **Details:** Orthogonal cluster safe for parallel verification.
+
+
+- [x] **`sweep-src-components-CrewModal.tsx`** 🚀 Merged in HEAD
+  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
+  - **Goal:** Resolve 2 telemetry and architectural rule violations in the components-CrewModal.tsx domain.
+  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-CrewModal.tsx.md](./plans/PLAN-sweep-src-components-CrewModal.tsx.md)
+    Key finding: "2 specific rule violations located and deduplicated in this cluster."
+    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
+  - **Source of Truth:** 📖 [PLAN-sweep-src-components-CrewModal.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-CrewModal.tsx.md)
+  - **Details:** Orthogonal cluster safe for parallel verification.
+
+
+- [x] **`sweep-src-components-LocationPicker.tsx`** 🚀 Merged in HEAD
+  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
+  - **Goal:** Resolve 3 telemetry and architectural rule violations in the components-LocationPicker.tsx domain.
+  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-LocationPicker.tsx.md](./plans/PLAN-sweep-src-components-LocationPicker.tsx.md)
+    Key finding: "3 specific rule violations located and deduplicated in this cluster."
+    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
+  - **Source of Truth:** 📖 [PLAN-sweep-src-components-LocationPicker.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-LocationPicker.tsx.md)
+  - **Details:** Orthogonal cluster safe for parallel verification.
+
+
+- [x] **`sweep-src-components-TacticalSlider.tsx`** 🚀 Merged in HEAD
+  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
+  - **Goal:** Resolve 3 telemetry and architectural rule violations in the components-TacticalSlider.tsx domain.
+  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-TacticalSlider.tsx.md](./plans/PLAN-sweep-src-components-TacticalSlider.tsx.md)
+    Key finding: "3 specific rule violations located and deduplicated in this cluster."
+    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
+  - **Source of Truth:** 📖 [PLAN-sweep-src-components-TacticalSlider.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-TacticalSlider.tsx.md)
+  - **Details:** Orthogonal cluster safe for parallel verification.
+
+
+- [x] **`sweep-src-hooks-ble`** 🚀 Merged in HEAD
+  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
+  - **Goal:** Resolve 6 telemetry and architectural rule violations in the hooks-ble domain.
+  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-hooks-ble.md](./plans/PLAN-sweep-src-hooks-ble.md)
+    Key finding: "6 specific rule violations located and deduplicated in this cluster."
+    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
+  - **Source of Truth:** 📖 [PLAN-sweep-src-hooks-ble.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-hooks-ble.md)
+  - **Details:** Orthogonal cluster safe for parallel verification.
