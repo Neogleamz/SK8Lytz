@@ -3718,6 +3718,7 @@ TSC: ✅  Jest: ✅
 Files touched:
 - src/components/ProductVisualizer.tsx
 TSC: ✅  Jest: ✅
+<<<<<<< HEAD
 
 ### [MERGE] 2026-06-14T18:38 � Wave 4 Batched Fixes
 **What merged:**
@@ -3731,4 +3732,38 @@ TSC: ✅  Jest: ✅
 ### [MERGE READY] sweep-src-components-CustomSlider.tsx — b3d6b5a6
 Files touched: src/components/CustomSlider.tsx
 TSC: ✅  Jest: ✅
+=======
+>>>>>>> edbb5b13 (chore(log): update SESSION_LOG.md)
+
+### [MERGE READY] sweep-src-services � c16a3048eb61b52396632fd2e046acfc7f705af4
+Files touched: 
+- docs/plans/PLAN-sweep-src-services.md
+- src/services/AppSettingsService.ts
+- src/services/BleCharacteristicCache.ts
+- src/services/BlePingService.ts
+- src/services/BleWriteDispatcher.ts
+- src/services/BleWriteQueue.ts
+- src/services/CrewProfileService.ts
+- src/services/GradientsService.ts
+- src/services/GroupRepository.ts
+- src/services/HealthSyncService.ts
+- src/services/LocationService.ts
+- src/services/NotificationService.ts
+- src/services/PermissionService.ts
+- src/services/ScenesService.ts
+- src/services/SessionShareService.ts
+- src/services/SkateSpotsService.ts
+- src/services/__tests__/GroupRepository.test.ts
+- src/services/__tests__/SpeedTrackingService.offline.test.ts
+- src/services/ble/ConnectService.ts
+- src/services/ble/HeartbeatService.ts
+- src/services/ble/RSSIService.ts
+- src/services/ble/RecoveryService.ts
+- src/services/ble/__tests__/BleMachine.test.ts
+- src/services/ble/__tests__/HeartbeatService.test.ts
+- src/services/session/HealthService.ts
+- src/services/session/SensorService.ts
+- src/services/session/SessionMachine.ts
+TSC: ?  Jest: ?
+>>>>>>> b981d161 (chore(log): update SESSION_LOG.md)
 
