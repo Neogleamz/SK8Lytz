@@ -3612,3 +3612,11 @@ Files touched:
 - src/hooks/useProductManager.ts
 TSC: ? (Env Error)  Jest: ? (Env Error)
 
+
+### [MERGE READY] sweep-src-components-admin — fe02f0c2f924e3a55fcfe985bcceca974375ac5c
+Files touched:
+- src/components/admin/DeviceTab.tsx
+- src/components/admin/tools/AdminPicksScheduler.tsx
+- src/components/admin/tools/FeatureFlagsPanel.tsx
+TSC: ?  Jest: ?
+
