@@ -102,7 +102,7 @@ export function CrewModal({
       setCurrentUserId(user.id);
       profileService.fetchOrCreateProfile(user).then((profile) => {
         setDisplayName(profile?.display_name || user.user_metadata?.display_name || 'Skater');
-      }).catch(e => AppLogger.warn('[CrewModal] fetch profile failed', { error: e instanceof Error ? e.message : String(e) }));
+      }).catch(e => AppLogger.warn('[CrewModal] fetch profile failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
     }
   }, [user]);
 
@@ -118,7 +118,7 @@ export function CrewModal({
     hub.refreshNearby, () => setStep('landing'), setErrorMsg
   );
 
-  const contextValue = {
+  const contextValue = React.useMemo(() => ({
     step, setStep,
     showCodeEntry, setShowCodeEntry,
     isLoading, setIsLoading,
@@ -139,7 +139,11 @@ export function CrewModal({
     hub,
     manage,
     session
-  };
+  }), [
+    step, showCodeEntry, isLoading, errorMsg, confirmAction,
+    currentUserId, displayName, crewName, selectedCrewId, isPublic, schedDateTime,
+    showDatePicker, showTimePicker, joiningCrewId, inviteCode, hub, manage, session
+  ]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
