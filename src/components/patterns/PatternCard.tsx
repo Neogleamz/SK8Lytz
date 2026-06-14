@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
@@ -32,6 +32,10 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
 }) => {
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
+  const handlePress = useCallback(() => {
+    onSelect(effect.id);
+  }, [onSelect, effect.id]);
+
   useEffect(() => {
     if (isSelected) {
       const loop = Animated.loop(
@@ -52,8 +56,11 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
     <Animated.View style={{ transform: [{ scale: pulseAnim }], flex: 1 }}>
       <TouchableOpacity
         id={`fx-card-${effect.id}`}
+        accessibilityRole="button"
+        accessibilityState={{ selected: isSelected }}
+        accessibilityLabel={effect.name}
         activeOpacity={0.75}
-        onPress={() => onSelect(effect.id)}
+        onPress={handlePress}
         style={[
           styles.effectCard,
           isSelected && {
