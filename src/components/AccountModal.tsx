@@ -361,31 +361,31 @@ export default function AccountModal({
   // ── Sign Out ──────────────────────────────────────────────────────────────
 
   const handleSignOut = async () => {
-    if (Platform.OS === 'web') {
+    const doSignOut = async () => {
       try {
         await authSignOut();
         onSignOut();
         onClose();
       } catch (err: unknown) {
-        AppLogger.error('Sign out failed', err, { category: 'ACCOUNT_MGMT', payload_size: 0, ssi: 0 });
+        AppLogger.error('Sign out failed', err instanceof Error ? err : new Error(String(err)), { category: 'ACCOUNT_MGMT', payload_size: 0, ssi: 0 });
       }
-      return;
-    }
-    Alert.alert('Sign Out', 'Sign out of your SK8Lytz account?', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign Out', style: 'destructive',
-        onPress: async () => {
-          try {
-            await authSignOut();
-            onSignOut();
-            onClose();
-          } catch (err: unknown) {
-            AppLogger.error('Sign out failed', err, { category: 'ACCOUNT_MGMT', payload_size: 0, ssi: 0 });
-          }
-        },
+    };
+
+    const action = Platform.select({
+      web: () => {
+        void doSignOut();
       },
-    ]);
+      default: () => {
+        Alert.alert('Sign Out', 'Sign out of your SK8Lytz account?', [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Sign Out', style: 'destructive',
+            onPress: doSignOut,
+          },
+        ]);
+      }
+    });
+    if (action) action();
   };
 
   const handleDeleteAccount = () => {
@@ -411,7 +411,7 @@ export default function AccountModal({
                       if (error) {
                         AppLogger.error(
                           'delete_account_rpc_failed',
-                          error,
+                          error instanceof Error ? error : new Error(String(error)),
                           { category: 'ACCOUNT_MGMT', payload_size: 0, ssi: 0 }
                         );
                         throw new Error('Database rejection. Please contact support.');
@@ -576,7 +576,7 @@ const createStyles = (Colors: ThemePalette) => StyleSheet.create({
   },
   codeInput: {
     fontSize: 28, fontWeight: '900', letterSpacing: 8, textAlign: 'center',
-    fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    fontFamily: Platform.select({ ios: 'Courier New', default: 'monospace' }),
   },
 
   // Profile
