@@ -65,7 +65,7 @@ export const UnifiedPatternPicker: React.FC<UnifiedPatternPickerProps> = ({
           try {
             if (writeToDeviceRef.current) await writeToDeviceRef.current(payload);
           } catch (err) {
-            AppLogger.error('UnifiedPatternPicker writeToDevice failed', err);
+            AppLogger.error('UnifiedPatternPicker writeToDevice failed', err instanceof Error ? err : new Error(String(err)));
           }
         })();
       }

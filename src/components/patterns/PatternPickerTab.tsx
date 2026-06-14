@@ -8,6 +8,16 @@ import { PatternCard } from './PatternCard';
 
 
 
+const LIST_CONTENT_CONTAINER_STYLE = {
+  paddingHorizontal: Spacing.xs,
+  paddingBottom: Spacing.md,
+};
+
+const LIST_COLUMN_WRAPPER_STYLE = {
+  justifyContent: 'space-between' as const,
+  marginBottom: Spacing.sm,
+};
+
 interface PatternPickerTabProps {
   selectedEffectId: number;
   fgColor: string;
@@ -22,7 +32,7 @@ interface PatternPickerTabProps {
 
 const CATEGORIES = ['Solid', 'Rainbow', 'Sparkle', 'Chase', 'Marquee', 'Wave', 'Breathe', 'SK8Lytz'];
 
-const CATEGORY_STYLES: Record<string, { icon: string, colors: string[], start?: {x: number, y: number}, end?: {x: number, y: number} }> = {
+const CATEGORY_STYLES: Record<string, { icon: string, colors: readonly [string, string, ...string[]], start?: {x: number, y: number}, end?: {x: number, y: number} }> = {
   Solid: { icon: 'format-color-fill', colors: ['#00F0FF', '#0080FF'] },
   Rainbow: { icon: 'palette', colors: ['#FF0000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#FF00FF'], start: {x: 0, y: 0}, end: {x: 1, y: 0} },
   Sparkle: { icon: 'star-four-points', colors: ['#222222', '#666666', '#222222'], start: {x: 0, y: 0}, end: {x: 1, y: 1} },
@@ -63,7 +73,7 @@ const AnimatedCategoryPill = ({ cat, isActive, onPress }: { cat: string, isActiv
       ]}>
         <Animated.View style={[StyleSheet.absoluteFill, { opacity }]}>
           <LinearGradient
-            colors={styleData.colors as unknown as readonly [string, string, ...string[]]}
+            colors={styleData.colors}
             start={styleData.start}
             end={styleData.end}
             style={StyleSheet.absoluteFill}
@@ -157,14 +167,8 @@ export const PatternPickerTab: React.FC<PatternPickerTabProps> = ({
         keyExtractor={keyExtractorTemplate}
         numColumns={2}
         style={{ flex: 1 }}
-        contentContainerStyle={{
-          paddingHorizontal: Spacing.xs,
-          paddingBottom: Spacing.md,
-        }}
-        columnWrapperStyle={{
-          justifyContent: 'space-between',
-          marginBottom: Spacing.sm,
-        }}
+        contentContainerStyle={LIST_CONTENT_CONTAINER_STYLE}
+        columnWrapperStyle={LIST_COLUMN_WRAPPER_STYLE}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
         onViewableItemsChanged={onViewableItemsChanged}

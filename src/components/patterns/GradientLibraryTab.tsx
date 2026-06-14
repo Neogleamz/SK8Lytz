@@ -22,10 +22,87 @@ interface GradientLibraryTabProps {
   onApplyGradient: (preset: CustomBuilderPreset) => void;
 }
 
+interface GradientCardProps {
+  preset: CustomBuilderPreset;
+  onApplyGradient: (preset: CustomBuilderPreset) => void;
+  onOpenBuilder: (preset: CustomBuilderPreset) => void;
+  onDelete: (preset: CustomBuilderPreset) => void;
+}
+
+const GradientCard = React.memo(({ preset, onApplyGradient, onOpenBuilder, onDelete }: GradientCardProps) => {
+  const isBuiltin = preset.id.startsWith('builtin_');
+
+  const previewColors = PositionalMathBuffer.generateArray(
+    preset.nodes,
+    12,
+    preset.fill_mode === 'GRADIENT'
+  );
+
+  const handlePress = useCallback(() => onApplyGradient(preset), [preset, onApplyGradient]);
+  const handleLongPress = useCallback(() => {
+    if (!isBuiltin) onOpenBuilder(preset);
+  }, [preset, isBuiltin, onOpenBuilder]);
+  const handleEditPress = useCallback(() => onOpenBuilder(preset), [preset, onOpenBuilder]);
+  const handleDeletePress = useCallback(() => onDelete(preset), [preset, onDelete]);
+
+  return (
+    <View style={styles.cardWrapper}>
+      <TouchableOpacity
+        activeOpacity={0.75}
+        style={styles.effectCard}
+        onPress={handlePress}
+        onLongPress={handleLongPress}
+      >
+        {/* Glassmorphism refraction layer — matches Pro Effects cards */}
+        <LinearGradient
+          colors={['rgba(255,255,255,0.07)', 'rgba(255,255,255,0.02)']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View style={styles.cardRefraction} />
+
+        <View style={styles.cardHeader}>
+          <Text style={styles.effectName} numberOfLines={1}>{preset.name}</Text>
+          {isBuiltin && <Text style={styles.builtinBadge}>BUILT-IN</Text>}
+        </View>
+
+        {/* Gradient color strip preview */}
+        <View style={styles.stripWrapper}>
+          <View style={styles.stripRow}>
+            {previewColors.map((color, i) => (
+              <View key={i} style={{ flex: 1, backgroundColor: `rgb(${color.r}, ${color.g}, ${color.b})` }} />
+            ))}
+          </View>
+        </View>
+
+        {/* Mode badge */}
+        <View style={styles.cardFooter}>
+          <Text style={styles.modeBadge}>
+            {preset.transition_type === 0x02 ? '▶ FLOW' :
+             preset.transition_type === 0x03 ? '⚡ STROBE' :
+             preset.transition_type === 0x04 ? '⏭ JUMP' : '■ STATIC'}
+          </Text>
+          {!isBuiltin && (
+            <View style={styles.cardActions}>
+              <TouchableOpacity onPress={handleEditPress} style={styles.actionButton} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                <MaterialCommunityIcons name="pencil" size={13} color="rgba(255,255,255,0.7)" />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleDeletePress} style={styles.actionButton} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
+                <MaterialCommunityIcons name="delete" size={13} color="#FF4444" />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </TouchableOpacity>
+    </View>
+  );
+});
+
 export const GradientLibraryTab: React.FC<GradientLibraryTabProps> = ({ Colors, onOpenBuilder, onApplyGradient }) => {
   const { gradients, status, error, deleteGradient, refreshGradients } = useGradients();
 
-  const handleDelete = (preset: CustomBuilderPreset) => {
+  const handleDelete = useCallback((preset: CustomBuilderPreset) => {
     if (preset.id.startsWith('builtin_')) return;
     Alert.alert(
       'Delete Gradient',
@@ -35,71 +112,18 @@ export const GradientLibraryTab: React.FC<GradientLibraryTabProps> = ({ Colors, 
         { text: 'Delete', style: 'destructive', onPress: () => deleteGradient(preset.id) }
       ]
     );
-  };
+  }, [deleteGradient]);
 
   const renderGradientCard = useCallback(({ item: preset }: { item: CustomBuilderPreset }) => {
-    const isBuiltin = preset.id.startsWith('builtin_');
-
-    // 12-block static preview — matches Pro Effects pattern card density
-    const previewColors = PositionalMathBuffer.generateArray(
-      preset.nodes,
-      12,
-      preset.fill_mode === 'GRADIENT'
-    );
-
     return (
-      <View style={styles.cardWrapper}>
-        <TouchableOpacity
-          activeOpacity={0.75}
-          style={styles.effectCard}
-          onPress={() => onApplyGradient(preset)}
-          onLongPress={() => !isBuiltin && onOpenBuilder(preset)}
-        >
-          {/* Glassmorphism refraction layer — matches Pro Effects cards */}
-          <LinearGradient
-            colors={['rgba(255,255,255,0.07)', 'rgba(255,255,255,0.02)']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFillObject}
-          />
-          <View style={styles.cardRefraction} />
-
-          <View style={styles.cardHeader}>
-            <Text style={styles.effectName} numberOfLines={1}>{preset.name}</Text>
-            {isBuiltin && <Text style={styles.builtinBadge}>BUILT-IN</Text>}
-          </View>
-
-          {/* Gradient color strip preview */}
-          <View style={styles.stripWrapper}>
-            <View style={styles.stripRow}>
-              {previewColors.map((color, i) => (
-                <View key={i} style={{ flex: 1, backgroundColor: `rgb(${color.r}, ${color.g}, ${color.b})` }} />
-              ))}
-            </View>
-          </View>
-
-          {/* Mode badge */}
-          <View style={styles.cardFooter}>
-            <Text style={styles.modeBadge}>
-              {preset.transition_type === 0x02 ? '▶ FLOW' :
-               preset.transition_type === 0x03 ? '⚡ STROBE' :
-               preset.transition_type === 0x04 ? '⏭ JUMP' : '■ STATIC'}
-            </Text>
-            {!isBuiltin && (
-              <View style={styles.cardActions}>
-                <TouchableOpacity onPress={() => onOpenBuilder(preset)} style={styles.actionButton} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                  <MaterialCommunityIcons name="pencil" size={13} color="rgba(255,255,255,0.7)" />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDelete(preset)} style={styles.actionButton} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-                  <MaterialCommunityIcons name="delete" size={13} color="#FF4444" />
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
-        </TouchableOpacity>
-      </View>
+      <GradientCard
+        preset={preset}
+        onApplyGradient={onApplyGradient}
+        onOpenBuilder={onOpenBuilder as (preset: CustomBuilderPreset) => void}
+        onDelete={handleDelete}
+      />
     );
-  }, [onApplyGradient, onOpenBuilder]);
+  }, [onApplyGradient, onOpenBuilder, handleDelete]);
 
   const keyExtractorGradient = useCallback((item: CustomBuilderPreset) => item.id.toString(), []);
 
