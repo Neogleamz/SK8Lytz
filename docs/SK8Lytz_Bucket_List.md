@@ -15,15 +15,6 @@
 
 ### 🌊 Parallel Wave Strategy (AST-Verified)
 
-| Wave | Task Clusters | Parallel-Safe? | Prerequisite |
-|------|--------------|---------------|-------------------|
-| 1 | [BATCH:sweep-src-identity], [BATCH:sweep-src-ble-core], [BATCH:sweep-src-ui-visualizer], [BATCH:sweep-src-pattern-engine] | ✅ Yes | None |
-| 2 | [BATCH:sweep-src-group-sync], [BATCH:sweep-src-protocol-core], [BATCH:sweep-src-utils] | ✅ Yes | Wave 1 fully merged |
-| 3 | [BATCH:sweep-src-ui-docked-controller], [BATCH:sweep-src-notifications-&-routing] | ✅ Yes | Wave 2 fully merged |
-| 4 | [BATCH:sweep-src-data-layer] | ✅ Yes | Wave 3 fully merged |
-| 5 | [BATCH:sweep-src-admin-&-telemetry] | ✅ Yes | Wave 4 fully merged |
-| 6 | [BATCH:sweep-src-ui-screens-and-modals] | ✅ Yes | Wave 5 fully merged |
-
 ## 🚧 ACTIVE SPRINT
 *(Empty — ready for intake)*
 
@@ -36,6 +27,789 @@ _User-facing product value and UI refinements._
 ---
 
 ## 🔥 ON DECK
+
+### 🌊 Orthogonal Batch Strategy (AST-Verified)
+
+| Wave | Task Clusters | Parallel-Safe? | Prerequisite |
+|------|--------------|---------------|-------------------|
+| 1 | sweep-root<br>sweep-components-AccountModal.tsx<br>sweep-components-admin<br>sweep-components-auth<br>sweep-components-CommunityModal.tsx<br>sweep-components-crew<br>sweep-components-dashboard<br>sweep-components-docked | ✅ Yes | None |
+| 2 | sweep-components-LocationPicker.tsx<br>sweep-components-permissions<br>sweep-components-SkateSpotBottomSheet.tsx<br>sweep-components-VisualizerUnit.tsx<br>sweep-context-SessionContext.tsx<br>sweep-hooks-ble<br>sweep-hooks-useControllerDispatch.ts<br>sweep-hooks-useCrewHub.ts | ✅ Yes | Wave 1 merged |
+| 3 | sweep-hooks-useCrewSession.ts<br>sweep-hooks-useDashboardAutoConnect.ts<br>sweep-hooks-useDashboardCrew.ts<br>sweep-hooks-useHardwareNotifications.ts<br>sweep-hooks-useProductManager.ts<br>sweep-hooks-useTelemetryLedger.ts<br>sweep-providers-ComplianceGate.tsx<br>sweep-services-BleWriteDispatcher.ts | ✅ Yes | Wave 2 merged |
+| 4 | sweep-services-CrewProfileService.ts<br>sweep-services-GradientsService.ts<br>sweep-services-GroupRepository.ts<br>sweep-services-NotificationService.ts<br>sweep-services-SpeedTrackingService.ts<br>sweep-components-CameraTracker.tsx<br>sweep-components-DeviceSettingsModal.tsx<br>sweep-components-GroupSettingsModal.tsx | ✅ Yes | Wave 3 merged |
+| 5 | sweep-components-shared<br>sweep-components-VerticalPatternDrum.tsx<br>sweep-hooks-useCuratedPicks.ts<br>sweep-hooks-useDeviceStateLedger.ts<br>sweep-hooks-useOptimisticBLE.ts<br>sweep-hooks-useStreetMode.ts<br>sweep-providers-BluetoothGuard.tsx<br>sweep-services-AuthProfileService.ts | ✅ Yes | Wave 4 merged |
+| 6 | sweep-services-BleCharacteristicCache.ts<br>sweep-styles-DashboardStyles.ts<br>sweep-utils-migrateAuthTokens.ts<br>sweep-hooks-useAdminSettings.ts<br>sweep-hooks-useAdminTelemetry.ts<br>sweep-hooks-useAppMicrophone.ts<br>sweep-hooks-useCrewManage.ts<br>sweep-hooks-useDashboardDeviceConfig.ts | ✅ Yes | Wave 5 merged |
+| 7 | sweep-hooks-useFavorites.ts<br>sweep-protocols-SpatialEngine.ts<br>sweep-services-BlePingService.ts<br>sweep-services-SessionShareService.ts | ✅ Yes | Wave 6 merged |
+| 8 | sweep-components-CrewMemberDashboard.tsx<br>sweep-components-DeviceItem.tsx<br>sweep-components-DockedController.tsx<br>sweep-components-patterns<br>sweep-constants-storageKeys.ts<br>sweep-hooks-useCrewProximityRadar.ts<br>sweep-screens-Onboarding<br>sweep-services-PushTokenService.ts | ✅ Yes | Wave 7 merged |
+| 9 | sweep-services-session<br>sweep-components-account<br>sweep-components-CrewModal.tsx<br>sweep-components-CustomSlider.tsx<br>sweep-components-NeonHueStrip.tsx<br>sweep-components-SessionSummaryModal.tsx<br>sweep-hooks-useDiagnosticLog.ts<br>sweep-hooks-useMapFilters.ts | ✅ Yes | Wave 8 merged |
+| 10 | sweep-hooks-useRecentSpots.ts<br>sweep-hooks-useSkateStats.ts<br>sweep-protocols-ZenggeProtocol.ts<br>sweep-services-BleWriteQueue.ts<br>sweep-hooks-cloud<br>sweep-hooks-useProtocolBuilder.ts<br>sweep-protocols-BanlanxAdapter.ts<br>sweep-protocols-SymphonyEngine.ts | ✅ Yes | Wave 9 merged |
+| 11 | sweep-protocols-VisualizerEngine.ts<br>sweep-services-BleSessionFactory.ts<br>sweep-services-HealthSyncService.ts<br>sweep-utils-BlePayloadParser.ts | ✅ Yes | Wave 10 merged |
+| 12 | sweep-context-AppConfigContext.tsx<br>sweep-hooks-useAccountOverview.ts<br>sweep-hooks-useBLE.ts<br>sweep-hooks-useMusicMode.ts<br>sweep-screens-AuthScreen.tsx<br>sweep-services-CrewService.ts<br>sweep-services-DeviceRepository.ts<br>sweep-services-ScenesService.ts | ✅ Yes | Wave 11 merged |
+| 13 | sweep-components-PositionalGradientBuilder.tsx<br>sweep-context-CrewContext.tsx<br>sweep-hooks-useDashboardProfile.ts<br>sweep-hooks-useProductCatalog.ts<br>sweep-components-ProductVisualizer.tsx<br>sweep-services-SkateSpotsService.ts | ✅ Yes | Wave 12 merged |
+| 14 | sweep-screens-DashboardScreen.tsx<br>sweep-services-ble<br>sweep-services-LocationService.ts<br>sweep-services-AppSettingsService.ts<br>sweep-context-AuthContext.tsx<br>sweep-types-supabase.ts<br>sweep-utils-ColorUtils.ts | ✅ Yes | Wave 13 merged |
+| 15 | sweep-services-AppLogger.ts<br>sweep-theme-theme.ts | ✅ Yes | Wave 14 merged |
+| 16 | sweep-services-PermissionService.ts<br>sweep-context-ThemeContext.tsx<br>sweep-hooks-useDashboardGroups.ts<br>sweep-services-supabaseClient.ts | ✅ Yes | Wave 15 merged |
+| 17 | sweep-hooks-useRegistration.ts | Solo | Wave 16 merged |
+
+### Synthesized Audit Tasks
+
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 39 findings in sweep-root
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Feast] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-root.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:22 M:8 L:9)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 10 findings in sweep-components-AccountModal.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-AccountModal.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:3 M:3 L:4)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 22 findings in sweep-components-admin
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Feast] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-admin.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:7 M:7 L:8)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 7 findings in sweep-components-auth
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-auth.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:3 M:0 L:4)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-components-CommunityModal.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-CommunityModal.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:1 L:1)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 11 findings in sweep-components-crew
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-crew.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:8 M:2 L:1)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-components-CrewMemberDashboard.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-CrewMemberDashboard.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:1 M:0 L:0)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 6 findings in sweep-components-dashboard
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-dashboard.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:2 M:2 L:2)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 5 findings in sweep-components-DeviceItem.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-DeviceItem.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:3 M:2 L:0)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 18 findings in sweep-components-docked
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Feast] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-docked.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:7 M:9 L:2)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 13 findings in sweep-components-DockedController.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-DockedController.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:2 M:4 L:7)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-components-LocationPicker.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-LocationPicker.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:2 L:0)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 5 findings in sweep-components-patterns
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-patterns.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:1 M:2 L:2)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-components-permissions
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-permissions.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:2 M:1 L:0)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-components-SkateSpotBottomSheet.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-SkateSpotBottomSheet.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:2 L:0)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-components-VisualizerUnit.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-VisualizerUnit.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:1 L:0)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-constants-storageKeys.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-constants-storageKeys.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:2 M:0 L:1)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-context-AppConfigContext.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-context-AppConfigContext.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 3 execution. Prerequisite: Wave 2 fully merged. (H:1 M:0 L:0)
+  - [WAVE:3]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 5 findings in sweep-context-SessionContext.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-context-SessionContext.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:3 M:1 L:1)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 17 findings in sweep-hooks-ble
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [H-RISK] [Feast] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-ble.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:10 L:6)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 9 findings in sweep-hooks-useAccountOverview.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useAccountOverview.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 3 execution. Prerequisite: Wave 2 fully merged. (H:1 M:1 L:7)
+  - [WAVE:3]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 8 findings in sweep-hooks-useBLE.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useBLE.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 3 execution. Prerequisite: Wave 2 fully merged. (H:1 M:2 L:5)
+  - [WAVE:3]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 11 findings in sweep-hooks-useControllerDispatch.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useControllerDispatch.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:3 M:8 L:0)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 5 findings in sweep-hooks-useCrewHub.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useCrewHub.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:2 M:3 L:0)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-hooks-useCrewProximityRadar.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useCrewProximityRadar.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:1 M:0 L:1)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-hooks-useCrewSession.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useCrewSession.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:1 L:0)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 8 findings in sweep-hooks-useDashboardAutoConnect.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useDashboardAutoConnect.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:0 L:7)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-hooks-useDashboardCrew.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useDashboardCrew.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:0 L:1)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 6 findings in sweep-hooks-useHardwareNotifications.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useHardwareNotifications.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:1 L:4)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-hooks-useMusicMode.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useMusicMode.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 3 execution. Prerequisite: Wave 2 fully merged. (H:2 M:0 L:0)
+  - [WAVE:3]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-hooks-useProductManager.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useProductManager.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:0 L:1)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-hooks-useTelemetryLedger.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useTelemetryLedger.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:0 L:0)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 6 findings in sweep-providers-ComplianceGate.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-providers-ComplianceGate.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:2 L:3)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 4 findings in sweep-screens-AuthScreen.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-screens-AuthScreen.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 3 execution. Prerequisite: Wave 2 fully merged. (H:1 M:2 L:1)
+  - [WAVE:3]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 17 findings in sweep-screens-DashboardScreen.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Feast] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-screens-DashboardScreen.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 4 execution. Prerequisite: Wave 3 fully merged. (H:7 M:7 L:3)
+  - [WAVE:4]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 8 findings in sweep-screens-Onboarding
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-screens-Onboarding.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:2 M:2 L:4)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 9 findings in sweep-services-AppLogger.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-AppLogger.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 5 execution. Prerequisite: Wave 4 fully merged. (H:2 M:7 L:0)
+  - [WAVE:5]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 47 findings in sweep-services-ble
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [H-RISK] [Feast] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-ble.md`
+  - Decision Log: `TBD`
+  - Details: Wave 4 execution. Prerequisite: Wave 3 fully merged. (H:6 M:7 L:34)
+  - [WAVE:4]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 8 findings in sweep-services-BleWriteDispatcher.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-BleWriteDispatcher.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:3 M:1 L:4)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 5 findings in sweep-services-CrewProfileService.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-CrewProfileService.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:3 M:1 L:1)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 25 findings in sweep-services-CrewService.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Feast] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-CrewService.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 3 execution. Prerequisite: Wave 2 fully merged. (H:10 M:6 L:9)
+  - [WAVE:3]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 33 findings in sweep-services-DeviceRepository.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Feast] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-DeviceRepository.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 3 execution. Prerequisite: Wave 2 fully merged. (H:2 M:2 L:29)
+  - [WAVE:3]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 8 findings in sweep-services-GradientsService.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-GradientsService.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:1 M:2 L:5)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 12 findings in sweep-services-GroupRepository.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-GroupRepository.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:2 M:1 L:9)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 6 findings in sweep-services-LocationService.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-LocationService.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 4 execution. Prerequisite: Wave 3 fully merged. (H:2 M:1 L:3)
+  - [WAVE:4]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 7 findings in sweep-services-NotificationService.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-NotificationService.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:2 M:0 L:5)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 7 findings in sweep-services-PermissionService.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-PermissionService.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 6 execution. Prerequisite: Wave 5 fully merged. (H:4 M:1 L:2)
+  - [WAVE:6]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-services-PushTokenService.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-PushTokenService.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:2 M:0 L:0)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 9 findings in sweep-services-ScenesService.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-ScenesService.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 3 execution. Prerequisite: Wave 2 fully merged. (H:2 M:3 L:4)
+  - [WAVE:3]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 10 findings in sweep-services-session
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-session.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:1 M:1 L:8)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 18 findings in sweep-services-SpeedTrackingService.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Feast] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-SpeedTrackingService.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:2 M:3 L:13)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 4 findings in sweep-components-account
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-account.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:2 L:2)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 6 findings in sweep-components-CameraTracker.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-CameraTracker.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:3 L:3)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 4 findings in sweep-components-CrewModal.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-CrewModal.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:2 L:2)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-components-CustomSlider.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-CustomSlider.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:1 L:1)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-components-DeviceSettingsModal.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-DeviceSettingsModal.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:1 L:0)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-components-GroupSettingsModal.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-GroupSettingsModal.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:1 L:0)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-components-NeonHueStrip.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-NeonHueStrip.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:1 L:0)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-components-PositionalGradientBuilder.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-PositionalGradientBuilder.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 3 execution. Prerequisite: Wave 2 fully merged. (H:0 M:1 L:0)
+  - [WAVE:3]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-components-SessionSummaryModal.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-SessionSummaryModal.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:1 L:0)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-components-shared
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-shared.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:1 L:0)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-components-VerticalPatternDrum.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-VerticalPatternDrum.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:1 L:0)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-context-CrewContext.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-context-CrewContext.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 3 execution. Prerequisite: Wave 2 fully merged. (H:0 M:1 L:0)
+  - [WAVE:3]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-context-ThemeContext.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-context-ThemeContext.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 6 execution. Prerequisite: Wave 5 fully merged. (H:0 M:1 L:0)
+  - [WAVE:6]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-hooks-useCuratedPicks.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useCuratedPicks.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:1 L:1)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 8 findings in sweep-hooks-useDashboardGroups.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useDashboardGroups.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 6 execution. Prerequisite: Wave 5 fully merged. (H:0 M:1 L:7)
+  - [WAVE:6]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 4 findings in sweep-hooks-useDashboardProfile.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useDashboardProfile.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 3 execution. Prerequisite: Wave 2 fully merged. (H:0 M:1 L:3)
+  - [WAVE:3]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-hooks-useDeviceStateLedger.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useDeviceStateLedger.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:1 L:1)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 4 findings in sweep-hooks-useDiagnosticLog.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useDiagnosticLog.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:1 L:3)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-hooks-useMapFilters.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useMapFilters.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:1 L:2)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-hooks-useOptimisticBLE.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useOptimisticBLE.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:1 L:0)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 4 findings in sweep-hooks-useProductCatalog.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useProductCatalog.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 3 execution. Prerequisite: Wave 2 fully merged. (H:0 M:1 L:3)
+  - [WAVE:3]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-hooks-useRecentSpots.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useRecentSpots.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:1 L:2)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-hooks-useSkateStats.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useSkateStats.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:1 L:0)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-hooks-useStreetMode.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useStreetMode.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:2 L:1)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-protocols-ZenggeProtocol.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [H-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-protocols-ZenggeProtocol.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:1 L:1)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 4 findings in sweep-providers-BluetoothGuard.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-providers-BluetoothGuard.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:2 L:2)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-services-AppSettingsService.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-AppSettingsService.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 4 execution. Prerequisite: Wave 3 fully merged. (H:0 M:1 L:2)
+  - [WAVE:4]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 7 findings in sweep-services-AuthProfileService.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-AuthProfileService.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:3 L:4)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-services-BleCharacteristicCache.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-BleCharacteristicCache.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:1 L:2)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 5 findings in sweep-services-BleWriteQueue.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-BleWriteQueue.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:2 L:3)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-services-supabaseClient.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-supabaseClient.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 6 execution. Prerequisite: Wave 5 fully merged. (H:0 M:3 L:0)
+  - [WAVE:6]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-styles-DashboardStyles.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-styles-DashboardStyles.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:1 L:1)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-theme-theme.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-theme-theme.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 5 execution. Prerequisite: Wave 4 fully merged. (H:0 M:1 L:0)
+  - [WAVE:5]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-utils-migrateAuthTokens.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [L-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-utils-migrateAuthTokens.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:1 L:0)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-components-ProductVisualizer.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-components-ProductVisualizer.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 3 execution. Prerequisite: Wave 2 fully merged. (H:0 M:0 L:1)
+  - [WAVE:3]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 9 findings in sweep-context-AuthContext.tsx
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-context-AuthContext.tsx.md`
+  - Decision Log: `TBD`
+  - Details: Wave 4 execution. Prerequisite: Wave 3 fully merged. (H:0 M:0 L:9)
+  - [WAVE:4]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-hooks-cloud
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-cloud.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:0 L:2)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-hooks-useAdminSettings.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useAdminSettings.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:0 L:2)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-hooks-useAdminTelemetry.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useAdminTelemetry.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:0 L:2)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-hooks-useAppMicrophone.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useAppMicrophone.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:0 L:2)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 4 findings in sweep-hooks-useCrewManage.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useCrewManage.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:0 L:4)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-hooks-useDashboardDeviceConfig.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useDashboardDeviceConfig.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:0 L:1)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 10 findings in sweep-hooks-useFavorites.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useFavorites.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:0 L:10)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-hooks-useProtocolBuilder.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useProtocolBuilder.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:0 L:2)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 8 findings in sweep-hooks-useRegistration.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-hooks-useRegistration.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 7 execution. Prerequisite: Wave 6 fully merged. (H:0 M:0 L:8)
+  - [WAVE:7]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-protocols-BanlanxAdapter.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [H-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-protocols-BanlanxAdapter.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:0 L:1)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-protocols-SpatialEngine.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [H-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-protocols-SpatialEngine.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:0 L:2)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-protocols-SymphonyEngine.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [H-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-protocols-SymphonyEngine.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:0 L:1)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-protocols-VisualizerEngine.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [H-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-protocols-VisualizerEngine.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:0 L:1)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 8 findings in sweep-services-BlePingService.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Meal] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-BlePingService.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:0 L:8)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-services-BleSessionFactory.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-BleSessionFactory.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:0 L:2)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-services-HealthSyncService.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-HealthSyncService.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:0 L:2)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-services-SessionShareService.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-SessionShareService.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 1 execution. None. (H:0 M:0 L:1)
+  - [WAVE:1]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 3 findings in sweep-services-SkateSpotsService.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-services-SkateSpotsService.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 3 execution. Prerequisite: Wave 2 fully merged. (H:0 M:0 L:3)
+  - [WAVE:3]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-types-supabase.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [M-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-types-supabase.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 4 execution. Prerequisite: Wave 3 fully merged. (H:0 M:0 L:1)
+  - [WAVE:4]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 2 findings in sweep-utils-BlePayloadParser.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [L-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-utils-BlePayloadParser.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 2 execution. Prerequisite: Wave 1 fully merged. (H:0 M:0 L:2)
+  - [WAVE:2]
+- [ ] [BATCH:deepdive-sweep-phase3]
+  - Task: Resolve 1 findings in sweep-utils-ColorUtils.ts
+  - Tags: [✅ READY] [✅ AST-VERIFIED] [CORE] [L-RISK] [Snack] [HIGH]
+  - Source of Truth: `docs/plans/PLAN-sweep-utils-ColorUtils.ts.md`
+  - Decision Log: `TBD`
+  - Details: Wave 4 execution. Prerequisite: Wave 3 fully merged. (H:0 M:0 L:1)
+  - [WAVE:4]
+
+
 
 *(Empty)*
 
