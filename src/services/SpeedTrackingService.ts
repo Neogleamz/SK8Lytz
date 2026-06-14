@@ -25,7 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from './AppLogger';
 import { supabase } from './supabaseClient';
 import { WatchBridge } from 'sk8lytz-watch-bridge';
-import { PENDING_SESSION_QUEUE_KEY } from '../constants/storageKeys';
+import { PENDING_SESSION_QUEUE_KEY, STORAGE_RECENT_SESSIONS_PREFIX, STORAGE_LIFETIME_STATS_PREFIX } from '../constants/storageKeys';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -451,7 +451,7 @@ class SpeedTrackingServiceClass {
         try {
           // R-05 note: AsyncStorage cache write is best-effort — main data path
           // already returned above from Supabase. Swallowed intentionally.
-          await AsyncStorage.setItem(`@sk8lytz_recent_sessions_${userId}`, JSON.stringify(mapped));
+          await AsyncStorage.setItem(`${STORAGE_RECENT_SESSIONS_PREFIX}${userId}`, JSON.stringify(mapped));
         } catch (e: unknown) {
           if (__DEV__) console.warn('[SpeedTrackingService] Session cache write failed:', e instanceof Error ? e.message : String(e));
         }
@@ -467,7 +467,7 @@ class SpeedTrackingServiceClass {
 
   async getCachedRecentSessions(userId: string): Promise<ISkateSession[]> {
     try {
-      const raw = await AsyncStorage.getItem(`@sk8lytz_recent_sessions_${userId}`);
+      const raw = await AsyncStorage.getItem(`${STORAGE_RECENT_SESSIONS_PREFIX}${userId}`);
       const cached: ISkateSession[] = raw ? JSON.parse(raw) : [];
       const pending = await this._getOfflineFallbackSessions();
       const combined = [...pending, ...cached].sort((a, b) => new Date(b.sessionDate).getTime() - new Date(a.sessionDate).getTime());
@@ -582,7 +582,7 @@ class SpeedTrackingServiceClass {
 
       try {
         // R-05 note: cache write is best-effort; return already computed below.
-        await AsyncStorage.setItem(`@sk8lytz_lifetime_stats_${userId}`, JSON.stringify(result));
+        await AsyncStorage.setItem(`${STORAGE_LIFETIME_STATS_PREFIX}${userId}`, JSON.stringify(result));
       } catch (e: unknown) {
         if (__DEV__) console.warn('[SpeedTrackingService] Lifetime stats cache write failed:', e instanceof Error ? e.message : String(e));
       }
@@ -600,7 +600,7 @@ class SpeedTrackingServiceClass {
 
   async getCachedLifetimeStats(userId: string): Promise<ILifetimeStats | null> {
     try {
-      const raw = await AsyncStorage.getItem(`@sk8lytz_lifetime_stats_${userId}`);
+      const raw = await AsyncStorage.getItem(`${STORAGE_LIFETIME_STATS_PREFIX}${userId}`);
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;

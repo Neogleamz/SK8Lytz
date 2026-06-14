@@ -1,3 +1,4 @@
+import { STORAGE_PERMISSIONS_OPTOUT } from '../constants/storageKeys';
 import { requestRecordingPermissionsAsync, getRecordingPermissionsAsync } from 'expo-audio';
 import * as Location from 'expo-location';
 
@@ -21,7 +22,7 @@ export const openGlobalPermissionsModal = (): Promise<void> => {
 
 export type PermissionType = 'CAMERA' | 'MIC' | 'LOCATION' | 'NOTIFICATIONS' | 'BLUETOOTH' | 'HEALTH';
 
-export const OPTOUT_LEDGER_KEY = '@sk8lytz_permissions_optout';
+export const OPTOUT_LEDGER_KEY = STORAGE_PERMISSIONS_OPTOUT;
 
 export const DEFAULT_LEDGER: Record<PermissionType, boolean> = {
   CAMERA: false,

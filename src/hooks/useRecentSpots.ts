@@ -1,8 +1,9 @@
+import { STORAGE_RECENT_LOCATIONS } from '../constants/storageKeys';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppLogger } from '../services/AppLogger';
 
-const STORAGE_KEY = '@Sk8lytz_RecentLocations';
+const STORAGE_KEY = STORAGE_RECENT_LOCATIONS;
 
 export interface RecentSpot {
   id?: string;

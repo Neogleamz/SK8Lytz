@@ -17,7 +17,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, AppState, DeviceEventEmitter } from 'react-native';
-import { STORAGE_DEMO_MODE } from '../constants/storageKeys';
+import { STORAGE_DEMO_MODE, STORAGE_HARDWARE_BLACKLIST } from '../constants/storageKeys';
 import { Buffer } from 'buffer';
 import type { Device } from 'react-native-ble-plx';
 import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
@@ -237,7 +237,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   useEffect(() => {
     const fetchBlacklist = async () => {
-      const CACHE_KEY = '@Sk8lytz_hardware_blacklist';
+      const CACHE_KEY = STORAGE_HARDWARE_BLACKLIST;
       
       try {
         const cached = await AsyncStorage.getItem(CACHE_KEY);

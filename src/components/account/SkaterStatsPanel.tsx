@@ -1,3 +1,4 @@
+import { STORAGE_LIFETIME_STATS_CACHE } from '../../constants/storageKeys';
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -33,7 +34,7 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
 
     async function fetchStats() {
       setError(null);
-      const CACHE_KEY = '@sk8lytz_lifetime_stats_cache';
+      const CACHE_KEY = STORAGE_LIFETIME_STATS_CACHE;
       
       // 1. Instantly load from cache for offline-first zero-latency
       try {

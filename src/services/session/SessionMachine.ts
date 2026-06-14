@@ -1,3 +1,4 @@
+import { STORAGE_SESSION_PHASE, STORAGE_SESSION_PAUSE_TIME, STORAGE_SESSION_ACTIVE } from '../../constants/storageKeys';
 import { setup, assign } from 'xstate';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WatchBridge } from 'sk8lytz-watch-bridge';
@@ -9,14 +10,14 @@ import { healthService } from './HealthService';
 import { sessionCommitService } from './SessionCommitService';
 import { notificationService } from './NotificationService';
 
-const SESSION_PHASE_KEY = '@sk8lytz_session_phase';
-const SESSION_PAUSE_TIME_KEY = '@sk8lytz_session_pause_time';
+const SESSION_PHASE_KEY = STORAGE_SESSION_PHASE;
+const SESSION_PAUSE_TIME_KEY = STORAGE_SESSION_PAUSE_TIME;
 
 async function persistSessionPhase(phase: 'active' | 'paused' | 'idle', pauseTimeMs?: number): Promise<void> {
   try {
     const pairs: [string, string][] = [
       [SESSION_PHASE_KEY, phase],
-      ['@sk8lytz_session_active', phase === 'active' || phase === 'paused' ? 'true' : 'false'],
+      [STORAGE_SESSION_ACTIVE, phase === 'active' || phase === 'paused' ? 'true' : 'false'],
     ];
     if (phase === 'paused' && pauseTimeMs) {
       pairs.push([SESSION_PAUSE_TIME_KEY, String(pauseTimeMs)]);

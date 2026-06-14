@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_SCENES_CACHE } from '../constants/storageKeys';
+import { STORAGE_SCENES_CACHE, STORAGE_LOCAL_SCENES, STORAGE_LOCAL_SCENE_SYNC_QUEUE } from '../constants/storageKeys';
 import type { Database } from '../types/supabase';
 import { AppLogger } from './AppLogger';
 
@@ -35,8 +35,8 @@ export interface ICloudScene {
   is_public: boolean;
 }
 
-const LOCAL_SCENES_KEY = '@Sk8lytz_Scenes';
-const LOCAL_SCENE_SYNC_QUEUE_KEY = '@Sk8lytz_Scene_Sync_Queue';
+const LOCAL_SCENES_KEY = STORAGE_LOCAL_SCENES;
+const LOCAL_SCENE_SYNC_QUEUE_KEY = STORAGE_LOCAL_SCENE_SYNC_QUEUE;
 
 export type SceneSyncJob = 
   | { id: string; type: 'upsert_user_scene'; payload: Database['public']['Tables']['user_saved_presets']['Insert']; timestamp: number; }

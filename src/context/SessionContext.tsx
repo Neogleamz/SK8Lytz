@@ -1,3 +1,4 @@
+import { STORAGE_SESSION_PHASE } from '../constants/storageKeys';
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useRef, useMemo } from 'react';
 import { AppState, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -40,7 +41,7 @@ interface SessionContextValue {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
-const SESSION_PHASE_KEY = '@sk8lytz_session_phase';
+const SESSION_PHASE_KEY = STORAGE_SESSION_PHASE;
 
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);

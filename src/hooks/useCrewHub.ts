@@ -1,3 +1,4 @@
+import { STORAGE_RADIUS_PREFERENCE } from '../constants/storageKeys';
 import { useCallback, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
@@ -7,7 +8,7 @@ import { PermanentCrew, profileService } from '../services/ProfileService';
 import { AppLogger } from '../services/AppLogger';
 import { useAuth } from '../context/AuthContext';
 
-const RADIUS_STORAGE_KEY = '@Sk8lytz_RadiusPreference';
+const RADIUS_STORAGE_KEY = STORAGE_RADIUS_PREFERENCE;
 
 export function useCrewHub(visible: boolean, step: string) {
   const { user } = useAuth();

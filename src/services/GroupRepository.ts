@@ -1,3 +1,4 @@
+import { STORAGE_CUSTOM_GROUPS, STORAGE_PENDING_GROUP_SYNC } from '../constants/storageKeys';
 /**
  * GroupRepository.ts — Single Source of Truth for Custom Group Persistence & Sync
  *
@@ -20,8 +21,8 @@ import type { TablesInsert } from '../types/supabase';
 
 type GroupInsert = Omit<TablesInsert<'registered_groups'>, 'created_at'>;
 
-const GROUPS_KEY = '@Sk8lytz_custom_groups';
-const PENDING_GROUP_KEY = '@Sk8lytz_pending_group_sync';
+const GROUPS_KEY = STORAGE_CUSTOM_GROUPS;
+const PENDING_GROUP_KEY = STORAGE_PENDING_GROUP_SYNC;
 
 /**
  * Delegate interface implemented by DeviceRepository to decouple
