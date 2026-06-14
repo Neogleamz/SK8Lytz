@@ -56,7 +56,7 @@ export const DeviceTab = React.memo(({ logs, deviceConfigs, textMuted, textPrima
               {firmwares.has(id) && <Text style={[styles.deviceDetail, { color: textMuted }]}>Firmware: {firmwares.get(id)}</Text>}
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginTop: Spacing.xs }}>
                 <Text style={[styles.deviceDetail, { color: textMuted }]}>Type: {config.type || String(meta?.type || '') || '?'}</Text>
-                {meta?.rssi && <Text style={[styles.deviceDetail, { color: textMuted }]}>· RSSI: {String(meta.rssi)}</Text>}
+                {meta?.rssi ? <Text style={[styles.deviceDetail, { color: textMuted }]}>· RSSI: {String(meta.rssi)}</Text> : null}
               </View>
               <View style={{ borderTopWidth: 1, borderTopColor: borderColor, marginTop: Spacing.sm, paddingTop: Spacing.xs }}>
                 <Text style={[styles.deviceDetail, { color: textMuted }]}>First seen: {formatLogTime(earliest.get(id)!)}</Text>

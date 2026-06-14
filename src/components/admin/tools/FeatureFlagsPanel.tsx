@@ -5,6 +5,7 @@ import {
     Alert,
     FlatList,
     Modal,
+    Platform,
     StyleSheet,
     Switch,
     Text,
