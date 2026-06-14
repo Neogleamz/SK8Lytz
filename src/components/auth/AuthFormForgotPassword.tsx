@@ -27,6 +27,7 @@ export function AuthFormForgotPassword({ onModeChange }: AuthFormForgotPasswordP
   const showSuccess = (msg: string) => { setSuccessMessage(msg); setErrorMessage(''); };
 
   const handleForgotPassword = async () => {
+    if (loading) return;
     if (!email.trim()) { showError('Please enter your email address.'); return; }
     if (!isValidEmail(email)) { showError('Please enter a valid email address.'); return; }
 

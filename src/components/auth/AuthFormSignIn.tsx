@@ -37,6 +37,7 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
   const showError = (msg: string) => setErrorMessage(msg);
 
   const handleSignIn = async () => {
+    if (loading) return;
     const input = email.trim();
 
     if (!input) { showError('Please enter your email or username.'); return; }

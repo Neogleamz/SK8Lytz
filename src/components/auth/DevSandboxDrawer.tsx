@@ -18,7 +18,11 @@ export function DevSandboxDrawer({ onOfflineMode, setErrorMessage }: DevSandboxD
   const { signOut } = useAuth();
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_DEMO_MODE).then(val => setIsVirtualSkatesEnabled(val === 'true')).catch(() => {/* storage unavailable — leave default false */});
+    let active = true;
+    AsyncStorage.getItem(STORAGE_DEMO_MODE).then(val => {
+      if (active) setIsVirtualSkatesEnabled(val === 'true');
+    }).catch(() => {/* storage unavailable — leave default false */});
+    return () => { active = false; };
   }, []);
 
   const toggleVirtualSkates = async (value: boolean) => {
@@ -29,7 +33,7 @@ export function DevSandboxDrawer({ onOfflineMode, setErrorMessage }: DevSandboxD
       setErrorMessage(value ? 'VIRTUAL SKATES ENABLED' : 'VIRTUAL SKATES DISABLED');
       if (value) onOfflineMode?.();
     } catch (e: unknown) {
-      setErrorMessage('Failed to toggle Virtual Skates: ' + String(e));
+      setErrorMessage('Failed to toggle Virtual Skates: ' + (e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -84,7 +88,7 @@ export function DevSandboxDrawer({ onOfflineMode, setErrorMessage }: DevSandboxD
               await AsyncStorage.clear();
               setErrorMessage('APP RESET: ALL DATA CLEARED. PLEASE RESTART APP.');
             } catch (e: unknown) {
-              setErrorMessage('Failed to hard nuke data: ' + String(e));
+              setErrorMessage('Failed to hard nuke data: ' + (e instanceof Error ? e.message : String(e)));
             }
           }}
         >
@@ -102,7 +106,7 @@ export function DevSandboxDrawer({ onOfflineMode, setErrorMessage }: DevSandboxD
               await AsyncStorage.removeItem(STORAGE_LAST_EMAIL);
               setErrorMessage('SOFT NUKE: AUTH WIPED. SETTINGS KEPT.');
             } catch (e: unknown) {
-              setErrorMessage('Failed to soft nuke auth: ' + String(e));
+              setErrorMessage('Failed to soft nuke auth: ' + (e instanceof Error ? e.message : String(e)));
             }
           }}
         >

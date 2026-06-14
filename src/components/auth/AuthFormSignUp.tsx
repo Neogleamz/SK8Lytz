@@ -64,6 +64,7 @@ export function AuthFormSignUp({ onModeChange }: AuthFormSignUpProps) {
   }, [password]);
 
   const handleSignUp = async () => {
+    if (loading || hibpChecking) return;
     if (!username.trim()) { showError('Please enter a username.'); return; }
     if (!email.trim()) { showError('Please enter your email.'); return; }
     if (!isValidEmail(email)) { showError('Please enter a valid email address.'); return; }
