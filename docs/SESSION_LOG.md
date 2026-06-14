@@ -3565,3 +3565,12 @@ TSC: ?  Jest: ?
 **Don't re-derive:** 
 pm run verify passed cleanly on master. The AST findings were based on a pre-June-10 scan, but the chore(sweep) commit on Jun 13 already fixed them. Running subagents on them causes no-op diffs and worktree errors.
 **Source:** Master branch git log and verifiable checks.
+
+### [ARTIFACT] 2026-06-13T22:35 — Captured mobile-perf-standards to KB
+**What**: Researched industry standard mobile performance metrics (TTID, TTFD, ANR) and added to knowledge-base.
+
+
+### [ARTIFACT] 2026-06-13T22:37 — Generated PLAN-feat-performance-telemetry-ttid
+**What**: Drafted plan to implement TTID and TTFD tracking via a surgical React Native hook.
+**Decision Log**: The user requested tracking for individual page load times beyond just app startup. Rejected 3rd-party APM SDKs to maintain offline-first constraint. Drafted plan for custom hook.
+
