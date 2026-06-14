@@ -9,6 +9,7 @@ export default function AccountTabStats({
   Colors,
   styles,
   statsLoading,
+  statsError,
   lifetimeStats,
   recentSessions,
   crews,
@@ -29,6 +30,15 @@ export default function AccountTabStats({
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: Spacing.giant }}>
         <MaterialCommunityIcons name="lightning-bolt" size={32} color={String(Colors.primary)} />
         <Text style={{ color: Colors.textMuted, marginTop: Spacing.md, fontSize: 13 }}>Loading your stats…</Text>
+      </View>
+    );
+  }
+
+  if (statsError) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: Spacing.giant }}>
+        <MaterialCommunityIcons name="alert-circle" size={32} color={String(Colors.error)} />
+        <Text style={{ color: Colors.error, marginTop: Spacing.md, fontSize: 13, textAlign: 'center', paddingHorizontal: Spacing.xl }}>{statsError}</Text>
       </View>
     );
   }

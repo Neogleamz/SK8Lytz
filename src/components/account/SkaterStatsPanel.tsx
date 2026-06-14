@@ -34,14 +34,14 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
 
     async function fetchStats() {
       setError(null);
-      const CACHE_KEY = STORAGE_LIFETIME_STATS_CACHE;
+      const CACHE_KEY = `${STORAGE_LIFETIME_STATS_CACHE}_${user!.id}`;
       
       // 1. Instantly load from cache for offline-first zero-latency
       try {
         const cached = await AsyncStorage.getItem(CACHE_KEY);
         if (cached && isActive) setStats(JSON.parse(cached));
       } catch (e: unknown) {
-        AppLogger.warn('Failed to load skater stats cache from AsyncStorage', e instanceof Error ? e.message : String(e));
+        AppLogger.warn('Failed to load skater stats cache from AsyncStorage', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       }
 
       if (!user || !supabase) {
@@ -59,7 +59,7 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
         if (data && !error && isActive) {
           setStats(data);
           // 2. Save fresh cloud data to offline cache
-          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(e => AppLogger.warn('Failed to cache skater stats', e instanceof Error ? e.message : String(e)));
+          await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(e => AppLogger.warn('Failed to cache skater stats', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
         }
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);

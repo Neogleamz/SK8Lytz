@@ -94,6 +94,7 @@ export interface AccountTabDevicesProps extends BaseTabProps {
 
 export interface AccountTabStatsProps extends BaseTabProps {
   statsLoading: boolean;
+  statsError?: string | null;
   lifetimeStats: ILifetimeStats | null;
   recentSessions: ISkateSession[];
   crews: PermanentCrew[];
@@ -108,7 +109,7 @@ export interface AccountTabSettingsProps extends BaseTabProps {
   setNotifSessionReminders: (val: boolean) => void;
   notifLeaderHandoff: boolean;
   setNotifLeaderHandoff: (val: boolean) => void;
-  saveNotifPrefs: (prefs: any) => Promise<void>;
+  saveNotifPrefs: (prefs: { crewInvites: boolean; sessionReminders: boolean; leaderHandoff: boolean }) => Promise<void>;
   isDark: boolean;
   toggleTheme: () => void;
   healthSyncEnabled: boolean;
