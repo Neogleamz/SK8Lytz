@@ -95,7 +95,7 @@ const CustomSlider = ({ value, onValueChange, onSlidingComplete, minimumValue = 
   interface WebStyle extends ViewStyle {
     touchAction?: 'none' | 'auto' | 'manipulation' | 'pan-x' | 'pan-y';
     userSelect?: 'none' | 'auto' | 'text' | 'all';
-    cursor?: 'pointer' | 'default';
+    cursor?: 'pointer' | 'auto';
   }
   const webStyle: WebStyle = { touchAction: 'none', userSelect: 'none', cursor: 'pointer' };
 
