@@ -88,6 +88,9 @@ export function useHardwareNotifications({
 
   // Maintain a throttle cache of the last packet seen to drop duplicates
   const lastPacketCacheRef = useRef<Record<string, string>>({});
+  
+  // Synchronous cache for led config writes to prevent re-entrancy
+  const syncConfigCacheRef = useRef<Record<string, Record<string, unknown>>>({});
 
   // ── 1. BLE data-received: Mailroom Handler ──────────────────────────────────
   useEffect(() => {
@@ -133,7 +136,7 @@ export function useHardwareNotifications({
             rfRemotes: rfConfig.rfRemotes
           };
           // Persist RF config update via DeviceRepository SSOT (tombstone-safe merge)
-          DeviceRepository.getInstance().updateConfig(deviceId, { rfMode: rfConfig.rfMode, rfRemotes: rfConfig.rfRemotes }).catch(e => AppLogger.warn('Failed to persist RF config', e instanceof Error ? e.message : String(e)));
+          DeviceRepository.getInstance().updateConfig(deviceId, { rfMode: rfConfig.rfMode, rfRemotes: rfConfig.rfRemotes }).catch(e => AppLogger.warn('Failed to persist RF config', { error: e instanceof Error ? e.message : String(e), payload_size: payload.length, ssi: 0 }));
           return { ...prevConfigs, [deviceId]: updated };
         });
         // BUG-03 Fix: Removed early return. Compound notifications contain both RF and LED configs.
@@ -147,10 +150,10 @@ export function useHardwareNotifications({
       }
 
       // EEPROM parsing was successful — lock the product identification
-      DeviceRepository.getInstance().confirmProductId(deviceId);
+      DeviceRepository.getInstance().confirmProductId(deviceId).catch(e => AppLogger.warn('Confirm failed', { error: e instanceof Error ? e.message : String(e), payload_size: payload.length, ssi: 0 }));
 
       // ── [Delta Check] Only update state/disk if data fundamentally changed ──
-      const existingCfg = deviceConfigsRef.current[deviceId] || {};
+      const existingCfg = syncConfigCacheRef.current[deviceId] || deviceConfigsRef.current[deviceId] || {};
       const isDirty = 
         existingCfg.points !== ledConfig.points || 
         existingCfg.colorSorting !== ledConfig.colorSortingIdx ||
@@ -158,6 +161,15 @@ export function useHardwareNotifications({
         existingCfg.detected !== true; // Ensure fallback 'detected' flag triggers 1st write
 
       if (!isDirty) return; // Deduplicated — prevents 5+ disk writes per connect!
+      
+      // Update synchronous cache immediately to prevent re-entrancy
+      syncConfigCacheRef.current[deviceId] = {
+        ...existingCfg,
+        points: ledConfig.points,
+        colorSorting: ledConfig.colorSortingIdx,
+        segments: ledConfig.segments,
+        detected: true,
+      };
       
       // Update state — mirror all hardware fields into allDevices so DeviceSettingsModal
       // receives a fully-populated initialSettings object without any extra queries.
@@ -182,7 +194,7 @@ export function useHardwareNotifications({
         };
 
         // Mirror securely to persistent memory via DeviceRepository SSOT
-        DeviceRepository.getInstance().updateConfig(deviceId, newD).catch(e => AppLogger.warn('Failed to persist LED config', e instanceof Error ? e.message : String(e)));
+        DeviceRepository.getInstance().updateConfig(deviceId, newD).catch(e => AppLogger.warn('Failed to persist LED config', { error: e instanceof Error ? e.message : String(e), payload_size: payload.length, ssi: 0 }));
 
         setDeviceConfigs(prevConfigs => ({
           ...prevConfigs,
@@ -196,7 +208,7 @@ export function useHardwareNotifications({
     return () => {
       setOnDataReceived(() => {});
     };
-  }, [setOnDataReceived, setAllDevices, setDeviceConfigs, isDiagnosticsMode]);
+  }, [setOnDataReceived, setAllDevices, setDeviceConfigs, isDiagnosticsMode, setLastRawNotification]);
 
   // ── 2. Hardware probe callback: merge scanned config before first connect ───
   useEffect(() => {
@@ -205,8 +217,8 @@ export function useHardwareNotifications({
         const merged = { ...(prev[deviceId] || {}), ...cfg };
         const next = { ...prev, [deviceId]: merged };
         // Persist probe config via DeviceRepository SSOT (updateConfig merges internally)
-        DeviceRepository.getInstance().updateConfig(deviceId, cfg).catch(e => AppLogger.warn('Failed to persist probed config', e instanceof Error ? e.message : String(e)));
-        DeviceRepository.getInstance().confirmProductId(deviceId);
+        DeviceRepository.getInstance().updateConfig(deviceId, cfg).catch(e => AppLogger.warn('Failed to persist probed config', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
+        DeviceRepository.getInstance().confirmProductId(deviceId).catch(e => AppLogger.warn('Confirm failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
         return next;
       });
       setAllDevices(prev => prev.map(d =>
