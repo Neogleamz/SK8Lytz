@@ -55,7 +55,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
   searchRadiusMi, curatedSpots = []
 }) => {
   const { Colors } = useTheme();
-  const styles = createStyles(Colors);
+  const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { recentSpots, addRecentSpot, error, isLoading } = useRecentSpots();
   const { isVisibilityAllowed } = useAppConfig();
   const showMap = isVisibilityAllowed('visibility_maps_tab');
@@ -93,31 +93,31 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
     }
 
     debounceTimer.current = setTimeout(async () => {
-      setFsmState('GEOCODING');
-      
-      // Fast Path: Search curated SK8Lytz spots natively
-      const lowerT = text.toLowerCase();
-      const localMatches = curatedSpots.filter(s => 
-        s.name.toLowerCase().includes(lowerT) || 
-        (s.city && s.city.toLowerCase().includes(lowerT))
-      ).slice(0, 5);
-      
-      if (localMatches.length > 0) {
-        setSuggestions(localMatches.map(m => ({
-          isCurated: true,
-          place_id: m.id,
-          name: m.name,
-          display_name: `${m.name} • ${m.city || ''} ${m.state || ''}`,
-          lat: m.lat,
-          lon: m.lng,
-          spotData: m
-        })));
-        setFsmState('IDLE');
-        return;
-      }
-      
-      // Fallback Path: Nominatim OpenStreetMap Geocoder
       try {
+        setFsmState('GEOCODING');
+        
+        // Fast Path: Search curated SK8Lytz spots natively
+        const lowerT = text.toLowerCase();
+        const localMatches = curatedSpots.filter(s => 
+          s.name.toLowerCase().includes(lowerT) || 
+          (s.city && s.city.toLowerCase().includes(lowerT))
+        ).slice(0, 5);
+        
+        if (localMatches.length > 0) {
+          setSuggestions(localMatches.map(m => ({
+            isCurated: true,
+            place_id: m.id,
+            name: m.name,
+            display_name: `${m.name} • ${m.city || ''} ${m.state || ''}`,
+            lat: m.lat,
+            lon: m.lng,
+            spotData: m
+          })));
+          setFsmState('IDLE');
+          return;
+        }
+        
+        // Fallback Path: Nominatim OpenStreetMap Geocoder
         let viewbox = '';
         if (searchRadiusMi) {
           try {
@@ -128,7 +128,9 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
               const delta = searchRadiusMi / 69;
               viewbox = `&viewbox=${lon - delta},${lat + delta},${lon + delta},${lat - delta}&bounded=1`;
             }
-          } catch (locErr: unknown) {}
+          } catch (locErr: unknown) {
+            AppLogger.warn('[LocationPicker] Geolocation bounds error', { error: (locErr instanceof Error ? locErr.message : String(locErr)), payload_size: 0, ssi: 0 });
+          }
         }
 
         const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(text)}&format=json&limit=5&addressdetails=1${viewbox}`;
@@ -137,33 +139,38 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         setSuggestions(data || []);
         setFsmState(locationCoords ? 'SUCCESS' : 'IDLE');
       } catch (err: unknown) {
-        AppLogger.warn('[LocationPicker] OSM fetch error', { error: (err instanceof Error ? err.message : String(err)) });
+        AppLogger.warn('[LocationPicker] OSM fetch error', { error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
         setFsmState('ERROR');
       }
     }, 400); // reduced latency since we have local search
   };
 
   const selectSuggestion = (item: SuggestionItem) => {
-    let shortName = item.name || '';
-    let fallbackId = undefined;
-    
-    if (item.isCurated) {
-      shortName = item.name || '';
-      fallbackId = typeof item.place_id === 'string' ? item.place_id : undefined;
-    } else {
-      const parts = [
-        item.address?.amenity, item.address?.park, item.address?.road, item.address?.city || item.address?.town
-      ].filter(Boolean);
-      shortName = parts.length > 0 ? parts.join(', ') : item.name || item.display_name?.split(',')[0] || '';
+    try {
+      let shortName = item.name || '';
+      let fallbackId = undefined;
+      
+      if (item.isCurated) {
+        shortName = item.name || '';
+        fallbackId = typeof item.place_id === 'string' ? item.place_id : undefined;
+      } else {
+        const parts = [
+          item.address?.amenity, item.address?.park, item.address?.road, item.address?.city || item.address?.town
+        ].filter(Boolean);
+        shortName = parts.length > 0 ? parts.join(', ') : item.name || item.display_name?.split(',')[0] || '';
+      }
+      
+      onLocationLabelChange(shortName);
+      onLocationCoordsChange({ lat: parseFloat(String(item.lat)), lng: parseFloat(String(item.lon)) });
+      if (onLocationSpotIdChange) onLocationSpotIdChange(fallbackId);
+      
+      addRecentSpot({ id: fallbackId, name: shortName, lat: parseFloat(String(item.lat)), lng: parseFloat(String(item.lon)) });
+      setSuggestions([]);
+      setFsmState('SUCCESS');
+    } catch (err: unknown) {
+      AppLogger.warn('[LocationPicker] Suggestion selection error', { error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
+      setFsmState('ERROR');
     }
-    
-    onLocationLabelChange(shortName);
-    onLocationCoordsChange({ lat: parseFloat(String(item.lat)), lng: parseFloat(String(item.lon)) });
-    if (onLocationSpotIdChange) onLocationSpotIdChange(fallbackId);
-    
-    addRecentSpot({ id: fallbackId, name: shortName, lat: parseFloat(String(item.lat)), lng: parseFloat(String(item.lon)) });
-    setSuggestions([]);
-    setFsmState('SUCCESS');
   };
 
   return (
