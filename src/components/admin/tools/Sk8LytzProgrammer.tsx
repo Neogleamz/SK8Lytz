@@ -3,7 +3,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     ActivityIndicator, Platform,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -12,7 +11,7 @@ import {
     View,
     ViewStyle
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LOCAL_PRODUCT_CATALOG } from '../../../constants/ProductCatalog';
 import { useTheme } from '../../../context/ThemeContext';
 import {
@@ -132,7 +131,7 @@ export default function Sk8LytzProgrammer({
 
   // Commit typed points/segments to profile state on blur
   const commitPoints = () => {
-    const v = Math.max(1, Math.min(300, parseInt(pointsText) || currentProfile.ledPoints));
+    const v = Math.max(12, Math.min(300, parseInt(pointsText) || currentProfile.ledPoints));
     setPointsText(String(v));
     updateActiveProfile({ ledPoints: v });
   };
@@ -150,15 +149,16 @@ export default function Sk8LytzProgrammer({
       const load = async () => {
           try {
               // One-time data migration from banned ng_ namespace
-              const old = await AsyncStorage.getItem('ng_programmer_profiles');
+              const legacyKey = 'ng_programmer_profiles'; // TODO: Move to storageKeys.ts
+              const old = await AsyncStorage.getItem(legacyKey);
               if (old) {
                   await AsyncStorage.setItem(STORAGE_PROGRAMMER_PROFILES, old);
-                  await AsyncStorage.removeItem('ng_programmer_profiles');
+                  await AsyncStorage.removeItem(legacyKey);
               }
               const saved = await AsyncStorage.getItem(STORAGE_PROGRAMMER_PROFILES);
               if (saved && isActive) setProfiles(JSON.parse(saved));
           } catch (e: unknown) {
-              AppLogger.error('[Sk8LytzProgrammer] Failed to migrate or load profiles', e, { payload_size: 0, ssi: 0 });
+              AppLogger.error('[Sk8LytzProgrammer] Failed to migrate or load profiles', e instanceof Error ? e : new Error(String(e)), { payload_size: 0, ssi: 0 });
           } finally {
               loadingRef.current = false;
           }
@@ -174,7 +174,7 @@ export default function Sk8LytzProgrammer({
       try {
           await AsyncStorage.setItem(STORAGE_PROGRAMMER_PROFILES, JSON.stringify(newProfiles));
       } catch (e: unknown) {
-          AppLogger.error('[Sk8LytzProgrammer] persist failed', e, { payload_size: 0, ssi: 0 });
+          AppLogger.error('[Sk8LytzProgrammer] persist failed', e instanceof Error ? e : new Error(String(e)), { payload_size: 0, ssi: 0 });
       }
   };
 
@@ -198,12 +198,15 @@ export default function Sk8LytzProgrammer({
               const device = allDevices.find(d => d.id === id);
               if (connectToDevice && device) {
                   await connectToDevice(device);
+                  // TODO(R-16): Incorporate the settle delay directly into a queue-managed loop
                   await delay(BLE_TIMING.FLASH_SETTLE_MS); // let GATT settle
               }
               await dispatch.writeSettings(config.ledPoints, config.segments, config.icType, config.colorSorting, id);
+              // TODO(R-16): Refactor the batch flash command to use a command queue
               await delay(BLE_TIMING.FLASH_WRITE_LAND_MS); // let write land
               if (disconnectFromDevice) {
                   await disconnectFromDevice(id);
+                  // TODO(R-16): Incorporate disconnect gap into queue-managed loop
                   await delay(BLE_TIMING.FLASH_DISCONNECT_GAP_MS); // gap between ops
               }
               setFlashStatus(prev => ({ ...prev, [id]: 'success' }));
@@ -407,7 +410,7 @@ export default function Sk8LytzProgrammer({
                      </View>
                      <View style={{ flex: 1, marginLeft: Spacing.md }}>
                         <Text style={{ color: txtPri, fontWeight: '800', fontSize: 14 }}>{device.name}</Text>
-                        <Text style={{ color: txtMuted, fontSize: 11, marginTop: Spacing.xxs, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+                        <Text style={{ color: txtMuted, fontSize: 11, marginTop: Spacing.xxs, fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }) }}>
                           {device.id} ({device.rssi} dBm)
                         </Text>
                         {/* Show detected hw from scan probe */}
@@ -507,8 +510,9 @@ const s = StyleSheet.create({
       borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
-      ...(Platform.OS === 'web'
-        ? ({ boxShadow: '0px 4px 8px rgba(0,0,0,0.3)' } as WebStyle)
-        : { shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 })
+      ...Platform.select({
+        web: { boxShadow: '0px 4px 8px rgba(0,0,0,0.3)' } as WebStyle,
+        default: { shadowColor: '#000000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 }
+      })
   }
 });

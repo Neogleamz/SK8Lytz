@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppLogger } from '../../../services/AppLogger';
 import { supabase } from '../../../services/supabaseClient';
 import { Spacing, Typography } from '../../../theme/theme';
+import { ErrorCard } from '../../ErrorCard';
 
 export interface AdminRosterPanelProps {
   visible: boolean;
@@ -179,6 +180,10 @@ export function AdminRosterPanel({
 
         {status === 'loading' ? (
           <ActivityIndicator size="large" color="#FFD700" style={{ marginTop: Spacing.xl }} />
+        ) : status === 'error' ? (
+          <View style={{ padding: Spacing.md }}>
+            <ErrorCard message="Failed to load roster. Tap to retry." onRetry={fetchAdmins} />
+          </View>
         ) : (
           <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}
             data={admins}

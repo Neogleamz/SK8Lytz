@@ -78,7 +78,7 @@ export const AdvancedHardwareModal: React.FC<AdvancedHardwareModalProps> = ({
             <MaterialCommunityIcons name="chip" size={24} color={Colors.primary} />
             <View>
               <Text style={{ fontSize: 18, fontWeight: 'bold', color: Colors.text }}>Advanced Settings</Text>
-              <Text style={{ fontSize: 12, color: Colors.textMuted }}>{targetDeviceId || 'No Device Selected'}</Text>
+              <Text style={{ fontSize: 12, color: Colors.textMuted }}>{targetDeviceId ? 'Device ID: ...' + targetDeviceId.slice(-4) : 'No Device Selected'}</Text>
             </View>
           </View>
           <TouchableOpacity onPress={onClose} style={{ padding: Spacing.sm }}>
@@ -97,7 +97,7 @@ export const AdvancedHardwareModal: React.FC<AdvancedHardwareModalProps> = ({
                 <Text style={{ color: Colors.primary, fontWeight: 'bold' }}>{points}</Text>
               </View>
               <CustomSlider 
-                minimumValue={1} maximumValue={300} step={1}
+                minimumValue={12} maximumValue={300} step={1}
                 value={points} onValueChange={setPoints} 
               />
             </View>

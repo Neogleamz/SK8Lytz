@@ -118,6 +118,10 @@ export function AdminAuditLogViewer({
 
   const cardStyle = useMemo(() => ({ backgroundColor: cardBg, borderColor }), [cardBg, borderColor]);
 
+  const textMutedStyle = useMemo(() => ({ color: textMuted }), [textMuted]);
+  const textPrimaryStyle = useMemo(() => ({ color: textPrimary }), [textPrimary]);
+  const reasonStyle = useMemo(() => ({ color: textMuted, backgroundColor: '#ffffff10' }), [textMuted]);
+
   const renderItem = useCallback(({ item }: { item: AuditLogEntry }) => {
     const adminName = profiles[item.admin_id] || item.admin_id.substring(0, 8);
     const targetName = item.target_user_id ? (profiles[item.target_user_id] || item.target_user_id.substring(0, 8)) : null;
@@ -128,25 +132,25 @@ export function AdminAuditLogViewer({
           <Text style={[styles.actionText, { color: getActionColor(item.action) }]}>
             {item.action}
           </Text>
-          <Text style={[styles.timeText, { color: textMuted }]}>
+          <Text style={[styles.timeText, textMutedStyle]}>
             {new Date(item.created_at).toLocaleString()}
           </Text>
         </View>
 
         <View style={styles.logBody}>
-          <Text style={[styles.detailText, { color: textPrimary }]}>
+          <Text style={[styles.detailText, textPrimaryStyle]}>
             <Text style={{ fontWeight: 'bold' }}>{adminName}</Text> executed action
             {targetName && <Text> on <Text style={{ fontWeight: 'bold' }}>{targetName}</Text></Text>}.
           </Text>
           {item.reason && (
-            <Text style={[styles.reasonText, { color: textMuted, backgroundColor: '#ffffff10' }]}>
+            <Text style={[styles.reasonText, reasonStyle]}>
               Reason: {item.reason}
             </Text>
           )}
         </View>
       </View>
     );
-  }, [profiles, textPrimary, textMuted, cardStyle]);
+  }, [profiles, cardStyle, textMutedStyle, textPrimaryStyle, reasonStyle]);
 
   const handleRefresh = useCallback(() => {
     setStatus('refreshing');

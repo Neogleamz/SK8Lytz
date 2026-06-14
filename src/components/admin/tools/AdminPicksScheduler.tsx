@@ -6,7 +6,6 @@ import {
     Alert,
     Modal,
     Platform,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Switch,
@@ -15,6 +14,8 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { AppLogger } from '../../../services/AppLogger';
 import { useTheme } from '../../../context/ThemeContext';
 import { BuilderNode } from '../../../protocols/PositionalMathBuffer';
 import { supabase } from '../../../services/supabaseClient';
@@ -100,7 +101,9 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
       setCreateName('');
       fetchPicks();
     } catch (err: unknown) {
-      Alert.alert('Create Error', err instanceof Error ? err.message : String(err));
+      const msg = err instanceof Error ? err.message : String(err);
+      AppLogger.error('Failed to create pick', err instanceof Error ? err : new Error(msg));
+      Alert.alert('Create Error', msg);
     } finally {
       setStatus('idle');
     }
@@ -119,7 +122,9 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
             if (error) throw error;
             fetchPicks();
           } catch(err: unknown) {
-            Alert.alert('Delete Error', err instanceof Error ? err.message : String(err));
+            const msg = err instanceof Error ? err.message : String(err);
+            AppLogger.error('Failed to delete pick', err instanceof Error ? err : new Error(msg));
+            Alert.alert('Delete Error', msg);
             setStatus('idle');
           }
         }
@@ -164,6 +169,7 @@ export default function AdminPicksScheduler({ visible, onClose }: AdminPicksSche
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
+      AppLogger.error('Failed to toggle pick', err instanceof Error ? err : new Error(msg));
       Alert.alert('Update Error', msg);
       // Rollback
       fetchPicks();

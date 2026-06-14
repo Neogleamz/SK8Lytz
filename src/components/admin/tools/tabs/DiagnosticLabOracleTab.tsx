@@ -10,6 +10,11 @@ import { SK8LYTZ_TEMPLATES } from '../../../../protocols/PatternEngine';
 import { OpcodeStatus, TRACKED_OPCODES, TestVerdict } from '../../../../hooks/useDiagnosticLog';
 import { DiagnosticDevice, DiagnosticHwSettings } from './DiagnosticLabTypes';
 import { TestLogEntry } from '../../../../hooks/useDiagnosticLog';
+import { Oracle59Sweep } from './oracle/Oracle59Sweep';
+import { Oracle51Native } from './oracle/Oracle51Native';
+import { Oracle43MultiSeq } from './oracle/Oracle43MultiSeq';
+import { Oracle53LiveStream } from './oracle/Oracle53LiveStream';
+import { OracleSceneMgmt } from './oracle/OracleSceneMgmt';
 
 interface OracleTabProps {
   targetDeviceId: string | null;
@@ -55,52 +60,6 @@ export function DiagnosticLabOracleTab({
   }, []);
 
   const [expandedP2, setExpandedP2] = useState<string | null>(null);
-  
-  // 0x41 Settled Mode panel
-  const [_p41EffectId, _setP41EffectId]   = useState(1);
-  const [p41Speed, setP41Speed]         = useState(50);
-  const [_p41Bright, _setP41Bright]       = useState(100);
-  const [_p41Dir, _setP41Dir]             = useState(0x01);
-  const [p41Color1, setP41Color1]       = useState<{r:number;g:number;b:number}>({r:255,g:0,b:0});
-  const [p41Color2, setP41Color2]       = useState<{r:number;g:number;b:number}>({r:0,g:0,b:255});
-  const [p41SweepResults, setP41SweepResults] = useState<Record<string, 'WORKS'|'NO_EFFECT'|'CRASHED'>>({});
-  const [oracle51Format, setOracle51Format] = useState<'compact' | 'extended' | 'wrapped_extended'>('wrapped_extended');
-  
-  const [ttSweepResults, setTtSweepResults] = useState<Record<string, 'WORKS'|'NO_EFFECT'|'CRASHED'>>({});
-  
-  // 0x43 Multi-Sequence panel
-  const [p43Ids, setP43Ids]             = useState<number[]>([1,5,10]);
-  const [p43Speed, setP43Speed]         = useState(50);
-  const [p43Bright, setP43Bright]       = useState(100);
-  
-  // 0x53 Live Stream
-  const [p53Fps, setP53Fps]             = useState(10);
-  const [p53Active, setP53Active]       = useState(false);
-  const [p53GradStart, setP53GradStart] = useState({r:0,g:255,b:255});
-  const [p53GradEnd, setP53GradEnd]     = useState({r:255,g:0,b:255});
-
-  useEffect(() => {
-    if (!p53Active) return;
-    const buildGradient = () => {
-      const pixels = Array.from({length: hwPts}, (_, i) => {
-        const t = hwPts > 1 ? i / (hwPts - 1) : 0;
-        return {
-          r: Math.round(p53GradStart.r + (p53GradEnd.r - p53GradStart.r) * t),
-          g: Math.round(p53GradStart.g + (p53GradEnd.g - p53GradStart.g) * t),
-          b: Math.round(p53GradStart.b + (p53GradEnd.b - p53GradStart.b) * t),
-        };
-      });
-      return pixels;
-    };
-    const ms = Math.max(33, Math.round(1000 / Math.max(1, Math.min(60, p53Fps))));
-    const id = setInterval(() => {
-      transmit(ZenggeProtocol.streamPixelFrame(buildGradient()), `0x53 frame @ ${p53Fps}fps`, '0x53');
-    }, ms);
-    return () => clearInterval(id);
-  }, [p53Active, p53Fps, p53GradStart, p53GradEnd, hwPts, transmit]);
-
-  // 0x56/57/58 Scene Management
-  const [sceneSlot, setSceneSlot]       = useState(0);
 
   const opcodeStatusConfig: Record<OpcodeStatus, { emoji: string; color: string }> = {
     UNTESTED:  { emoji: '⬜', color: txtMuted },
@@ -401,77 +360,7 @@ export function DiagnosticLabOracleTab({
         </View>
         <Text style={{ color: '#FBBF24', fontSize: 18 }}>{expandedP2 === 'TT_SWEEP' ? '▲' : '▼'}</Text>
       </TouchableOpacity>
-      {expandedP2 === 'TT_SWEEP' && (
-        <View style={[S.diagBox, { borderColor: '#FBBF24', borderWidth: 1 }]}>
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm }}>
-            Sends a solid RED 0x59 array ({hwPts} LEDs) with each transitionType byte.{'\n'}
-            Tap SEND → observe hardware → log result. 0x06 is the key unknown.
-          </Text>
-          {/* Summary grid */}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.md }}>
-            {TRANSITION_TYPES.map(tt => {
-              const key = `0x0${tt.byte.toString(16).toUpperCase()}`;
-              const res = ttSweepResults[key];
-              const cellColor = res === 'WORKS' ? '#00CC88' : res === 'NO_EFFECT' ? '#FF9500' : res === 'CRASHED' ? '#FF4040' : border;
-              return (
-                <View key={tt.byte} style={{ alignItems: 'center', width: 44 }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: cellColor + '33', borderWidth: 1.5, borderColor: cellColor, justifyContent: 'center', alignItems: 'center' }}>
-                    <Text style={{ color: cellColor, fontSize: 9, fontWeight: '900', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>{key}</Text>
-                  </View>
-                  <Text style={{ color: cellColor, fontSize: 8, marginTop: 2 }}>{res ?? '—'}</Text>
-                </View>
-              );
-            })}
-          </View>
-          <Text style={{ color: '#FBBF24', fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>FG COLOR FOR SWEEP</Text>
-          <QuickColorGrid activeColor={p41Color1} onSelect={setP41Color1} />
-          {TRANSITION_TYPES.map(tt => {
-            const key = `0x0${tt.byte.toString(16).toUpperCase()}`;
-            const res = ttSweepResults[key];
-            const setByte = (r: 'WORKS' | 'NO_EFFECT' | 'CRASHED') =>
-              setTtSweepResults(prev => ({ ...prev, [key]: r }));
-            return (
-              <View key={tt.byte} style={[S.diagBox, { borderColor: tt.color, borderWidth: 1, marginBottom: Spacing.sm }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.sm }}>
-                  <View>
-                    <Text style={{ color: tt.color, fontWeight: '900', fontSize: 12 }}>
-                      {key}  {tt.label}  {tt.confirmed ? '✅' : '❓'}
-                    </Text>
-                    <Text style={{ color: txtMuted, fontSize: 10, marginTop: 2 }}>{tt.desc}</Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => {
-                      const numPoints = Math.max(12, hwPts);
-                      const pixels = Array(numPoints).fill(p41Color1);
-                      const payload = ZenggeProtocol.setMultiColor(pixels, numPoints, 50, 1, tt.byte);
-                      transmit(payload, `0x59 transType=${key} ${tt.label}`, '0x59');
-                    }}
-                    style={{ backgroundColor: tt.color + '22', borderWidth: 1, borderColor: tt.color, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderRadius: 8 }}
-                  >
-                    <Text style={{ color: tt.color, fontWeight: '900', fontSize: 11 }}>SEND</Text>
-                  </TouchableOpacity>
-                </View>
-                <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-                  {(['WORKS', 'NO_EFFECT', 'CRASHED'] as const).map(r => (
-                    <TouchableOpacity key={r} onPress={() => setByte(r)}
-                      style={{ flex: 1, paddingVertical: Spacing.sm, borderRadius: 6, alignItems: 'center',
-                        backgroundColor: res === r ? (r === 'WORKS' ? '#00CC8822' : r === 'CRASHED' ? '#FF404022' : '#FF950022') : 'transparent',
-                        borderWidth: 1, borderColor: res === r ? (r === 'WORKS' ? '#00CC88' : r === 'CRASHED' ? '#FF4040' : '#FF9500') : border }}
-                    >
-                      <Text style={{ color: res === r ? (r === 'WORKS' ? '#00CC88' : r === 'CRASHED' ? '#FF4040' : '#FF9500') : txtMuted, fontSize: 9, fontWeight: '900' }}>
-                        {r === 'WORKS' ? '✅ WORKS' : r === 'NO_EFFECT' ? '⚠️ NO FX' : '💀 CRASH'}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            );
-          })}
-          <TouchableOpacity onPress={() => setTtSweepResults({})} style={{ alignSelf: 'flex-end', marginTop: Spacing.sm }}>
-            <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: '900' }}>RESET RESULTS</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {expandedP2 === 'TT_SWEEP' && <Oracle59Sweep hwPts={hwPts} transmit={transmit} />}
 
       {/* 🎵 0x51 NATIVE SYMPHONY — Effect ID Sweep (1–44) */}
       <TouchableOpacity
@@ -488,116 +377,7 @@ export function DiagnosticLabOracleTab({
         </View>
         <Text style={{ color: '#9D4EFF', fontSize: 18 }}>{expandedP2 === '0x41' ? '▲' : '▼'}</Text>
       </TouchableOpacity>
-      {expandedP2 === '0x41' && (
-        <View style={[S.diagBox, { borderColor: '#9D4EFF', borderWidth: 1 }]}>
-          <Text style={{ color: '#00CC88', fontSize: 10, fontWeight: '700', marginBottom: Spacing.md }}>
-            ✅ PRODUCTION READY — 0x51 is the stable Scene Mode opcode.{'\n'}
-            Testing authentic strings 1-44 via setCustomModeCompact.
-          </Text>
-
-          {/* Controls row */}
-          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>SPEED (1–100)</Text>
-              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]}
-                value={String(p41Speed)} keyboardType="numeric"
-                onChangeText={v => setP41Speed(Math.max(1, Math.min(100, parseInt(v) || 1)))} />
-            </View>
-          </View>
-
-          {/* ── ORACLE 0x51 FORMAT TOGGLE ──────────────────────────────────── */}
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, fontWeight: '900' }}>TEST FORMAT (0x51)</Text>
-          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
-            <TouchableOpacity
-              style={[S.chip, oracle51Format === 'compact' && { backgroundColor: '#00E67633', borderColor: '#00E676' }, { flex: 1, paddingVertical: Spacing.md }]}
-              onPress={() => setOracle51Format('compact')}
-            >
-              <Text style={{ color: oracle51Format === 'compact' ? '#00E676' : txtMuted, fontWeight: '900', fontSize: 11, textAlign: 'center' }}>COMPACT (9B)</Text>
-              <Text style={{ color: oracle51Format === 'compact' ? '#00E676' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>9B Slots</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[S.chip, oracle51Format === 'extended' && { backgroundColor: '#FF950033', borderColor: '#FF9500' }, { flex: 1, paddingVertical: Spacing.md }]}
-              onPress={() => setOracle51Format('extended')}
-            >
-              <Text style={{ color: oracle51Format === 'extended' ? '#FF9500' : txtMuted, fontWeight: '900', fontSize: 11, textAlign: 'center' }}>EXTENDED (323B)</Text>
-              <Text style={{ color: oracle51Format === 'extended' ? '#FF9500' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>10B slots · chunked</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[S.chip, oracle51Format === 'wrapped_extended' && { backgroundColor: '#00F0FF33', borderColor: '#00F0FF' }, { flex: 1, paddingVertical: Spacing.md }]}
-              onPress={() => setOracle51Format('wrapped_extended')}
-            >
-              <Text style={{ color: oracle51Format === 'wrapped_extended' ? '#00F0FF' : txtMuted, fontWeight: '900', fontSize: 11, textAlign: 'center' }}>WRAPPED EXT (331B)</Text>
-              <Text style={{ color: oracle51Format === 'wrapped_extended' ? '#00F0FF' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>10B slots · un-chunked</Text>
-            </TouchableOpacity>
-          </View>
-
-          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>FG COLOR</Text>
-          <QuickColorGrid activeColor={p41Color1} onSelect={setP41Color1} />
-          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>BG COLOR</Text>
-          <QuickColorGrid activeColor={p41Color2} onSelect={setP41Color2} />
-
-          {/* 44-ID grid — tap to send + verdict buttons inline */}
-          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginTop: Spacing.md, marginBottom: Spacing.xs }}>TAP TO SEND EACH EFFECT</Text>
-          {SK8LYTZ_TEMPLATES.filter(t => t.id >= 201 && t.id <= 244).map(template => {
-            const id = template.id - 200; // 1-44
-            const res = p41SweepResults[String(id)];
-            const setRes = (r: 'WORKS' | 'NO_EFFECT' | 'CRASHED') =>
-              setP41SweepResults(prev => ({ ...prev, [String(id)]: r }));
-            const resColor = res === 'WORKS' ? '#00CC88' : res === 'NO_EFFECT' ? '#FF9500' : res === 'CRASHED' ? '#FF4040' : border;
-            return (
-              <View key={id} style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.sm,
-                borderBottomWidth: 1, borderBottomColor: border, paddingBottom: Spacing.sm }}>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (oracle51Format === 'compact') {
-                      transmit(
-                        ZenggeProtocol.setCustomModeCompact([{ mode: id, speed: p41Speed, color1: p41Color1, color2: p41Color2 }]),
-                        `0x51 compact id=${id} spd=${p41Speed}`, '0x51'
-                      );
-                    } else if (oracle51Format === 'extended') {
-                      transmit(
-                        ZenggeProtocol.setCustomModeExtended([{ mode: id, speed: p41Speed, color1: p41Color1, color2: p41Color2, dir: 0x81 }]),
-                        `0x51 extended id=${id} spd=${p41Speed} dir=0x81`, '0x51'
-                      );
-                    } else {
-                      const rawPayload = ZenggeProtocol.setCustomModeExtended([{ mode: id, speed: p41Speed, color1: p41Color1, color2: p41Color2, dir: 0x81 }]);
-                      const wrappedPayload = ZenggeProtocol.wrapCommand(rawPayload);
-                      transmit(
-                        wrappedPayload,
-                        `0x51 wrapped extended id=${id} spd=${p41Speed} dir=0x81`, '0x51'
-                      );
-                    }
-                  }}
-                  style={{ width: 48, height: 40, borderRadius: 8, backgroundColor: resColor + '22',
-                    borderWidth: 1.5, borderColor: resColor, justifyContent: 'center', alignItems: 'center' }}
-                >
-                  <Text style={{ color: resColor, fontWeight: '900', fontSize: 12 }}>{id}</Text>
-                  <Text style={{ color: resColor, fontSize: 8 }}>SEND</Text>
-                </TouchableOpacity>
-                <View style={{ flex: 1, paddingLeft: 4 }}>
-                  <Text style={{ color: txtPri, fontSize: 11, fontWeight: '600' }}>
-                    {template.name}
-                  </Text>
-                </View>
-                {(['WORKS', 'NO_EFFECT', 'CRASHED'] as const).map(r => (
-                  <TouchableOpacity key={r} onPress={() => setRes(r)}
-                    style={{ width: 36, paddingVertical: Spacing.sm, borderRadius: 6, alignItems: 'center',
-                      backgroundColor: res === r ? (r === 'WORKS' ? '#00CC8822' : r === 'CRASHED' ? '#FF404022' : '#FF950022') : 'transparent',
-                      borderWidth: 1, borderColor: res === r ? (r === 'WORKS' ? '#00CC88' : r === 'CRASHED' ? '#FF4040' : '#FF9500') : border }}
-                  >
-                    <Text style={{ color: res === r ? (r === 'WORKS' ? '#00CC88' : r === 'CRASHED' ? '#FF4040' : '#FF9500') : txtMuted, fontSize: 9, fontWeight: '900' }}>
-                      {r === 'WORKS' ? '✅' : r === 'NO_EFFECT' ? '⚠️' : '💀'}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            );
-          })}
-          <TouchableOpacity onPress={() => setP41SweepResults({})} style={{ alignSelf: 'flex-end', marginTop: Spacing.sm }}>
-            <Text style={{ color: '#FF4040', fontSize: 10, fontWeight: '900' }}>RESET RESULTS</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {expandedP2 === '0x41' && <Oracle51Native transmit={transmit} />}
 
       {/* ── 0x43 Multi-Sequence Panel ─────────────────────── */}
       <TouchableOpacity
@@ -610,47 +390,7 @@ export function DiagnosticLabOracleTab({
         </View>
         <Text style={{ color: '#FF69B4', fontSize: 18 }}>{expandedP2 === '0x43' ? '▲' : '▼'}</Text>
       </TouchableOpacity>
-      {expandedP2 === '0x43' && (
-        <View style={[S.diagBox, { borderColor: '#FF69B4', borderWidth: 1 }]}>
-          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.sm }}>EFFECT IDs (tap to toggle, max 50)</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, marginBottom: Spacing.lg }}>
-            {Array.from({length: 50}, (_, i) => i + 1).map(id => {
-              const sel = p43Ids.includes(id);
-              return (
-                <TouchableOpacity key={id} onPress={() => {
-                  if (sel) setP43Ids(p43Ids.filter(x => x !== id));
-                  else if (p43Ids.length < 50) setP43Ids([...p43Ids, id]);
-                }}
-                  style={{ width: 36, height: 36, borderRadius: 6, alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: sel ? '#FF69B422' : border, borderWidth: 1, borderColor: sel ? '#FF69B4' : border }}
-                >
-                  <Text style={{ color: sel ? '#FF69B4' : txtMuted, fontSize: 10, fontWeight: sel ? '900' : '400' }}>{id}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-          <Text style={{ color: '#FF69B4', fontSize: 11, fontWeight: '700', marginBottom: Spacing.md }}>
-            Selected: [{p43Ids.join(', ')}] ({p43Ids.length} IDs)
-          </Text>
-          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>SPEED</Text>
-              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={String(p43Speed)} keyboardType="numeric" onChangeText={v => setP43Speed(Math.max(1, Math.min(100, parseInt(v)||1)))} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.xs }}>BRIGHTNESS</Text>
-              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={String(p43Bright)} keyboardType="numeric" onChangeText={v => setP43Bright(Math.max(1, Math.min(100, parseInt(v)||1)))} />
-            </View>
-          </View>
-          <TouchableOpacity
-            style={[S.txBtn, { backgroundColor: p43Ids.length === 0 ? border : '#FF69B4', borderColor: '#FF69B4', opacity: p43Ids.length === 0 ? 0.4 : 1 }]}
-            disabled={p43Ids.length === 0}
-            onPress={() => transmit(ZenggeProtocol.setEffectSequence(p43Ids, p43Speed, p43Bright), `0x43 ${p43Ids.length} IDs speed=${p43Speed}`, '0x43')}
-          >
-            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>TX 0x43 MULTI-SEQUENCE</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      {expandedP2 === '0x43' && <Oracle43MultiSeq transmit={transmit} />}
 
       {/* ── 0x53 Live Pixel Stream Panel ─────────────────── */}
       <TouchableOpacity
@@ -663,36 +403,7 @@ export function DiagnosticLabOracleTab({
         </View>
         <Text style={{ color: '#00CC88', fontSize: 18 }}>{expandedP2 === '0x53' ? '▲' : '▼'}</Text>
       </TouchableOpacity>
-      {expandedP2 === '0x53' && (
-        <View style={[S.diagBox, { borderColor: p53Active ? '#00CC88' : border, borderWidth: p53Active ? 2 : 1 }]}>
-          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.sm }}>GRADIENT START COLOR</Text>
-          <QuickColorGrid activeColor={p53GradStart} onSelect={setP53GradStart} />
-          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.sm }}>GRADIENT END COLOR</Text>
-          <QuickColorGrid activeColor={p53GradEnd} onSelect={setP53GradEnd} />
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.md }}>
-            <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900' }}>FPS (1–60):</Text>
-            <TextInput style={[S.numInput, { flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={String(p53Fps)} keyboardType="numeric" onChangeText={v => setP53Fps(Math.max(1, Math.min(60, parseInt(v)||1)))} />
-            <Text style={{ color: txtMuted, fontSize: 10 }}>= {Math.round(1000 / Math.max(1, p53Fps))}ms/frame</Text>
-          </View>
-          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-            <TouchableOpacity onPress={() => {transmit(ZenggeProtocol.streamPixelFrame(Array.from({length:hwPts},(_,i)=>{const t=hwPts>1?i/(hwPts-1):0;return {r:Math.round(p53GradStart.r+(p53GradEnd.r-p53GradStart.r)*t),g:Math.round(p53GradStart.g+(p53GradEnd.g-p53GradStart.g)*t),b:Math.round(p53GradStart.b+(p53GradEnd.b-p53GradStart.b)*t)}})), '0x53 single frame', '0x53');}}
-              style={[S.txBtn, { flex: 1, backgroundColor: border, borderColor: '#00CC88' }]}>
-              <Text style={{ color: '#00CC88', fontWeight: '900', fontSize: 11 }}>SINGLE FRAME</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setP53Active(!p53Active)}
-              style={[S.txBtn, { flex: 1, backgroundColor: p53Active ? '#00CC88' : border, borderColor: '#00CC88' }]}>
-              <Text style={{ color: p53Active ? '#000' : '#00CC88', fontWeight: '900', fontSize: 11 }}>
-                {p53Active ? `STOP (${p53Fps}fps)` : `START ${p53Fps}fps`}
-              </Text>
-            </TouchableOpacity>
-          </View>
-          {p53Active && (
-            <Text style={{ color: '#00CC88', fontSize: 10, marginTop: Spacing.sm, fontWeight: 'bold' }}>
-              ● Streaming 0x53 frames @ {p53Fps}fps — observe LED rendering latency
-            </Text>
-          )}
-        </View>
-      )}
+      {expandedP2 === '0x53' && <Oracle53LiveStream hwPts={hwPts} transmit={transmit} />}
 
       {/* ── 0x56/57/58 Scene Management Panel ────────────── */}
       <TouchableOpacity
@@ -705,49 +416,7 @@ export function DiagnosticLabOracleTab({
         </View>
         <Text style={{ color: '#FFD700', fontSize: 18 }}>{expandedP2 === 'SCENE' ? '▲' : '▼'}</Text>
       </TouchableOpacity>
-      {expandedP2 === 'SCENE' && (
-        <View style={[S.diagBox, { borderColor: '#FFD700', borderWidth: 1 }]}>
-          <Text style={{ color: txtMuted, fontSize: 10, fontWeight: '900', marginBottom: Spacing.sm }}>SCENE SLOT (0–31)</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, marginBottom: Spacing.lg }}>
-            <TouchableOpacity onPress={() => setSceneSlot(Math.max(0, sceneSlot - 1))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>‒</Text>
-            </TouchableOpacity>
-            <TextInput style={[S.numInput, { flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri, textAlign: 'center' }]} value={String(sceneSlot)} keyboardType="numeric" onChangeText={v => setSceneSlot(Math.max(0, Math.min(31, parseInt(v)||0)))} />
-            <TouchableOpacity onPress={() => setSceneSlot(Math.min(31, sceneSlot + 1))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>+</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={{ gap: Spacing.sm }}>
-            <TouchableOpacity
-              style={[S.txBtn, { backgroundColor: '#FFD70022', borderColor: '#FFD700' }]}
-              onPress={() => {
-                const raw = ZenggeProtocol.oracleSceneQuery();
-                transmit(ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]), `0x58 QUERY scene state`, '0x58');
-              }}
-            >
-              <Text style={{ color: '#FFD700', fontWeight: '900', fontSize: 12 }}>0x58 QUERY — watch RX for state bytes</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[S.txBtn, { backgroundColor: '#00CC8822', borderColor: '#00CC88' }]}
-              onPress={() => {
-                const raw = ZenggeProtocol.oracleSceneActivate(sceneSlot);
-                transmit(ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]), `0x57 ACTIVATE slot=${sceneSlot}`, '0x57');
-              }}
-            >
-              <Text style={{ color: '#00CC88', fontWeight: '900', fontSize: 12 }}>0x57 ACTIVATE slot {sceneSlot} (speed=50, bright=100)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[S.txBtn, { backgroundColor: '#FF404022', borderColor: '#FF4040' }]}
-              onPress={() => {
-                const raw = ZenggeProtocol.oracleSceneDelete(sceneSlot);
-                transmit(ZenggeProtocol.wrapCommand([...raw, ZenggeProtocol.calculateChecksum(raw)]), `0x56 DELETE slot=${sceneSlot}`, '0x56');
-              }}
-            >
-              <Text style={{ color: '#FF4040', fontWeight: '900', fontSize: 12 }}>0x56 DELETE slot {sceneSlot}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
+      {expandedP2 === 'SCENE' && <OracleSceneMgmt transmit={transmit} />}
 
       {/* ── 0x74 Auto-Stream Toggle ────────────────────────── */}
       <Text style={[S.subTitle, { color: '#FF9500' }]}>⚡ 0x74 AUTO-STREAM (MIC SHOOTOUT TOOL)</Text>

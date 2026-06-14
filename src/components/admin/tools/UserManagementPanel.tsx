@@ -306,8 +306,9 @@ export function UserManagementPanel({
       });
       if (error) throw error;
       
-      AppLogger.log('DATA_EXPORT', { byteLength: JSON.stringify(data).length });
-      Alert.alert('Data Exported', `Data for ${displayName || userId} has been fetched and logged to the telemetry stream. (Length: ${JSON.stringify(data).length} bytes)`);
+      const dataLen = data ? JSON.stringify(data).length : 0;
+      AppLogger.log('DATA_EXPORT', { byteLength: dataLen });
+      Alert.alert('Data Exported', `Data for ${displayName || userId} has been fetched and logged to the telemetry stream. (Length: ${dataLen} bytes)`);
       setStatus('success');
     } catch (e: unknown) {
       Alert.alert('Export Failed', (e instanceof Error ? e.message : String(e)));
@@ -381,7 +382,7 @@ export function UserManagementPanel({
             data={filteredUsers}
             ListEmptyComponent={renderEmpty}
             renderItem={renderItem}
-            keyExtractor={(i) => i.user_id}
+            keyExtractor={(i, index) => i.user_id || String(index)}
             contentContainerStyle={styles.list}
             refreshing={status === 'refreshing'}
             onRefresh={handleRefresh}

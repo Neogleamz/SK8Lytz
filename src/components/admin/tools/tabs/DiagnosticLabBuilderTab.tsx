@@ -10,6 +10,11 @@ import { ZenggeProtocol } from '../../../../protocols/ZenggeProtocol';
 import CustomEffectVisualizer from '../../../CustomEffectVisualizer';
 import { ProtocolBuilderContext } from '../../../../hooks/useProtocolBuilder';
 import { DiagnosticDevice, DiagnosticHwSettings } from './DiagnosticLabTypes';
+import { Builder51Mode } from './builder/Builder51Mode';
+import { Builder59Mode } from './builder/Builder59Mode';
+import { Builder61Mode } from './builder/Builder61Mode';
+import { Builder73Mode } from './builder/Builder73Mode';
+import { Builder62Mode } from './builder/Builder62Mode';
 
 interface BuilderTabProps {
   targetDeviceId: string | null;
@@ -32,40 +37,10 @@ export function DiagnosticLabBuilderTab({
 }: BuilderTabProps) {
   const { S, txtPri, txtMuted, cardBg, border, isDark, cyan } = useDiagnosticLabStyles();
 
-  const {
-    bldProtocol, setBldProtocol,
-    bldColors, setBldColors,
-    bldTrans, setBldTrans,
-    bldSpeed, setBldSpeed,
-    bldPoints, setBldPoints,
-    bldDir, setBldDir,
-    bldPatternId, setBldPatternId,
-    bldBright, setBldBright,
-    bld51Mode, setBld51Mode,
-    bld51Speed, setBld51Speed,
-    bld51Color1, setBld51Color1,
-    bld51Color2, setBld51Color2,
-    bld51Dir, setBld51Dir,
-    bld51Seg, setBld51Seg,
-    bldMic, setBldMic,
-    bldMusicMode, setBldMusicMode,
-    bldSens, setBldSens,
-    bldC2, setBldC2,
-    bldMatrixStyle: _bldMatrixStyle, setBldMatrixStyle: _setBldMatrixStyle,
-    bldIc, setBldIc,
-    bldOrder, setBldOrder,
-    bldSegs, setBldSegs,
-    bldResult
-  } = builderCtx;
+  const { bldProtocol, bldResult } = builderCtx;
 
   // Manual override for edited hex
   const [bldHexOverride, setBldHexOverride] = useState('');
-  
-  // 0x73 isOn state for builder + Oracle fix
-  const [bldMusicIsOn, setBldMusicIsOn] = useState(true);
-
-  // 0x51 format toggle: 'compact' = 9B/slot wrapCommand, 'extended' = 10B/slot×32 writeChunked, 'wrapped_extended' = 10B/slot×32 wrapped (331B)
-  const [bld51Format, setBld51Format] = useState<'compact' | 'extended' | 'wrapped_extended'>('compact');
 
   // Sync override with result whenever result changes (unless manually edited)
   useEffect(() => {
@@ -101,444 +76,23 @@ export function DiagnosticLabBuilderTab({
         ].map(p => (
            <TouchableOpacity key={p.id}
              style={[S.chip, bldProtocol === p.id && S.chipActive, { backgroundColor: bldProtocol === p.id ? cyan + '22' : cardBg, borderColor: bldProtocol === p.id ? cyan : border }]}
-             onPress={() => setBldProtocol(p.id as Parameters<typeof setBldProtocol>[0])}>
+             onPress={() => builderCtx.setBldProtocol(p.id as Parameters<typeof builderCtx.setBldProtocol>[0])}>
              <Text style={{ color: bldProtocol === p.id ? cyan : txtMuted, fontWeight: '900', fontSize: 11 }}>{p.label}</Text>
            </TouchableOpacity>
         ))}
       </View>
 
-      {bldProtocol === '0x51' && (
-        <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
-          <Text style={[S.subTitle, { color: txtPri, marginTop: 0 }]}>DIY MODE MATH SIMULATOR</Text>
-          <View style={{ alignItems: 'center', marginBottom: Spacing.lg }}>
-            <CustomEffectVisualizer 
-              effectId={parseInt(bld51Mode) || 1} 
-              fgColorHex={`#${bld51Color1.r.toString(16).padStart(2,'0')}${bld51Color1.g.toString(16).padStart(2,'0')}${bld51Color1.b.toString(16).padStart(2,'0')}`}
-              bgColorHex={`#${bld51Color2.r.toString(16).padStart(2,'0')}${bld51Color2.g.toString(16).padStart(2,'0')}${bld51Color2.b.toString(16).padStart(2,'0')}`}
-              speed={Math.max(1, Math.min(100, parseInt(bld51Speed) || 50))}
-              direction={bld51Dir === 1}
-              segments={bld51Seg ? 2 : 1}
-            />
-          </View>
-
-          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>EFFECT ID (1-44)</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                <TouchableOpacity onPress={() => setBld51Mode(String(Math.max(1, (parseInt(bld51Mode)||1) - 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: txtPri, fontSize: 16 }}>-</Text>
-                </TouchableOpacity>
-                <TextInput style={[S.numInput, { flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri, textAlign: 'center' }]} value={bld51Mode} keyboardType="numeric" onChangeText={v => setBld51Mode(String(Math.max(1, Math.min(44, parseInt(v)||1))))} />
-                <TouchableOpacity onPress={() => setBld51Mode(String(Math.min(44, (parseInt(bld51Mode)||1) + 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>+</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>SPEED (1–100)</Text>
-              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bld51Speed.toString()} keyboardType="numeric" onChangeText={v => setBld51Speed(Math.max(1, Math.min(100, parseInt(v)||1)).toString())} />
-            </View>
-          </View>
-
-          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.lg }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>DIR (Bit 7)</Text>
-              <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
-                {[0, 1].map(d => (
-                  <TouchableOpacity key={d} style={[S.chip, bld51Dir === d && { backgroundColor: cyan + '22', borderColor: cyan }, {flex: 1, height: 40}]} onPress={() => setBld51Dir(d)}>
-                    <Text style={{ color: bld51Dir === d ? cyan : txtMuted, fontSize: 11, textAlign: 'center', fontWeight: '900' }}>{d === 0 ? 'LEFT' : 'RIGHT'}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>SEGS (Bit 6)</Text>
-              <TouchableOpacity style={[S.chip, bld51Seg && { backgroundColor: cyan + '22', borderColor: cyan }, {paddingVertical: Spacing.md, height: 40}]} onPress={() => setBld51Seg(!bld51Seg)}>
-                <Text style={{ color: bld51Seg ? cyan : txtMuted, textAlign: 'center', fontSize: 11, fontWeight: '900' }}>{bld51Seg ? 'SPLIT (1)' : 'FULL (0)'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <Text style={[S.subTitle, { color: txtMuted, marginTop: Spacing.md }]}>FOREGROUND (COLOR 1)</Text>
-          <QuickColorGrid activeColor={bld51Color1} onSelect={setBld51Color1} />
-
-          <Text style={[S.subTitle, { color: txtMuted, marginTop: Spacing.md }]}>BACKGROUND (COLOR 2)</Text>
-          <QuickColorGrid activeColor={bld51Color2} onSelect={setBld51Color2} />
-
-          {/* ── FORMAT TOGGLE ──────────────────────────────────────────────── */}
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, marginTop: Spacing.xl, fontWeight: '900' }}>PACKET FORMAT — SELECT BEFORE TX</Text>
-          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
-            <TouchableOpacity
-              style={[S.chip, bld51Format === 'compact' && { backgroundColor: '#00E67633', borderColor: '#00E676' }, { flex: 1, paddingVertical: Spacing.md }]}
-              onPress={() => setBld51Format('compact')}
-            >
-              <Text style={{ color: bld51Format === 'compact' ? '#00E676' : txtMuted, fontWeight: '900', fontSize: 11, textAlign: 'center' }}>COMPACT (9B)</Text>
-              <Text style={{ color: bld51Format === 'compact' ? '#00E676' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>9B Slots · Wrapped</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[S.chip, bld51Format === 'extended' && { backgroundColor: '#FF950033', borderColor: '#FF9500' }, { flex: 1, paddingVertical: Spacing.md }]}
-              onPress={() => setBld51Format('extended')}
-            >
-              <Text style={{ color: bld51Format === 'extended' ? '#FF9500' : txtMuted, fontWeight: '900', fontSize: 11, textAlign: 'center' }}>EXTENDED (323B)</Text>
-              <Text style={{ color: bld51Format === 'extended' ? '#FF9500' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>10B Slots · Chunked</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[S.chip, bld51Format === 'wrapped_extended' && { backgroundColor: '#00F0FF33', borderColor: '#00F0FF' }, { flex: 1, paddingVertical: Spacing.md }]}
-              onPress={() => setBld51Format('wrapped_extended')}
-            >
-              <Text style={{ color: bld51Format === 'wrapped_extended' ? '#00F0FF' : txtMuted, fontWeight: '900', fontSize: 11, textAlign: 'center' }}>WRAPPED EXT (331B)</Text>
-              <Text style={{ color: bld51Format === 'wrapped_extended' ? '#00F0FF' : txtMuted, fontSize: 9, textAlign: 'center', opacity: 0.8 }}>10B Slots · Wrapped</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* ── LIVE PAYLOAD BYTE PREVIEW ──────────────────────────────────── */}
-          <View style={{ backgroundColor: isDark ? '#05070a' : '#f9fafb', borderRadius: 8, padding: Spacing.md, marginBottom: Spacing.lg, borderColor: bld51Format === 'wrapped_extended' ? '#00F0FF' : bld51Format === 'extended' ? '#FF9500' : '#00E676', borderWidth: 1 }}>
-            {bld51Format === 'compact' ? (
-              <Text style={{ color: cyan, fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
-                {`[0x51, 0xF0, 0x${(parseInt(bld51Mode)||1).toString(16).padStart(2,'0').toUpperCase()}, 0x${(Math.max(1,Math.min(100,parseInt(bld51Speed)||50))).toString(16).padStart(2,'0').toUpperCase()},`}
-                {`\n R1=${bld51Color1.r} G1=${bld51Color1.g} B1=${bld51Color1.b},`}
-                {`\n R2=${bld51Color2.r} G2=${bld51Color2.g} B2=${bld51Color2.b},`}
-                {`\n 0x0F, CS]  ← 12 bytes raw, wrapped to 20 bytes`}
-              </Text>
-            ) : bld51Format === 'extended' ? (
-              <Text style={{ color: '#FF9500', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
-                {`[0x51, 0xF0, 0x${(parseInt(bld51Mode)||1).toString(16).padStart(2,'0').toUpperCase()}, 0x${(Math.max(1,Math.min(100,parseInt(bld51Speed)||50))).toString(16).padStart(2,'0').toUpperCase()},`}
-                {`\n R1=${bld51Color1.r} G1=${bld51Color1.g} B1=${bld51Color1.b},`}
-                {`\n R2=${bld51Color2.r} G2=${bld51Color2.g} B2=${bld51Color2.b},`}
-                {`\n flags=0x${bld51Dir === 1 ? '80' : '00'} (${bld51Dir === 1 ? 'FWD+SEG' : 'REV'})]`}
-                {`\n + 31 empty slots + [0x0F, CS]  ← 323 bytes raw via 0x40 chunks`}
-              </Text>
-            ) : (
-              <Text style={{ color: '#00F0FF', fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
-                {`[0x00, Seq, 0x80, 0x00, 0x01, 0x43, 0x44, 0x0B, 0x51, 0xF0, ...]`}
-                {`\n R1=${bld51Color1.r} G1=${bld51Color1.g} B1=${bld51Color1.b},`}
-                {`\n R2=${bld51Color2.r} G2=${bld51Color2.g} B2=${bld51Color2.b},`}
-                {`\n flags=0x${bld51Dir === 1 ? '80' : '00'} (${bld51Dir === 1 ? 'FWD+SEG' : 'REV'})]`}
-                {`\n + 31 empty slots + [0x0F, CS]  ← Wrapped 331 bytes total (bypasses chunking!)`}
-              </Text>
-            )}
-          </View>
-
-          {/* ── TX BUTTONS ─────────────────────────────────────────────────── */}
-          <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
-            <TouchableOpacity
-              style={[S.txBtn, { flex: 1, backgroundColor: '#00E676', borderColor: '#00E676' }]}
-              onPress={() => {
-                const mode = Math.max(1, Math.min(44, parseInt(bld51Mode) || 1));
-                const speed = Math.max(1, Math.min(100, parseInt(bld51Speed) || 50));
-                transmit(
-                  ZenggeProtocol.setCustomModeCompact([{ mode, speed, color1: bld51Color1, color2: bld51Color2 }]),
-                  `0x51 compact mode=${mode} spd=${speed}`,
-                  '0x51'
-                );
-              }}
-            >
-              <Text style={{ color: '#000', fontWeight: '900', fontSize: 11 }}>TX COMPACT (9B)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[S.txBtn, { flex: 1, backgroundColor: '#FF9500', borderColor: '#FF9500' }]}
-              onPress={() => {
-                const mode = Math.max(1, Math.min(44, parseInt(bld51Mode) || 1));
-                const speed = Math.max(1, Math.min(100, parseInt(bld51Speed) || 50));
-                const flags = (bld51Seg ? 0x80 : 0x00) | (bld51Dir === 1 ? 0x01 : 0x00);
-                transmit(
-                  ZenggeProtocol.setCustomModeExtended([{ mode, speed, color1: bld51Color1, color2: bld51Color2, dir: flags }]),
-                  `0x51 extended mode=${mode} spd=${speed} dir=0x${flags.toString(16).toUpperCase()}`,
-                  '0x51'
-                );
-              }}
-            >
-              <Text style={{ color: '#000', fontWeight: '900', fontSize: 11 }}>TX EXTENDED (323B)</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[S.txBtn, { flex: 1, backgroundColor: '#00F0FF', borderColor: '#00F0FF' }]}
-              onPress={() => {
-                const mode = Math.max(1, Math.min(44, parseInt(bld51Mode) || 1));
-                const speed = Math.max(1, Math.min(100, parseInt(bld51Speed) || 50));
-                const flags = (bld51Seg ? 0x80 : 0x00) | (bld51Dir === 1 ? 0x01 : 0x00);
-                const rawPayload = ZenggeProtocol.setCustomModeExtended([{ mode, speed, color1: bld51Color1, color2: bld51Color2, dir: flags }]);
-                const wrappedPayload = ZenggeProtocol.wrapCommand(rawPayload);
-                transmit(
-                  wrappedPayload,
-                  `0x51 wrapped extended mode=${mode} spd=${speed} dir=0x${flags.toString(16).toUpperCase()}`,
-                  '0x51'
-                );
-              }}
-            >
-              <Text style={{ color: '#000', fontWeight: '900', fontSize: 11 }}>TX WRAPPED (331B)</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* ── MODE ID EXPLORER ─────────────────────────────────────────────────── */}
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, marginTop: Spacing.xl, fontWeight: '900' }}>MODE ID EXPLORER (1-44)</Text>
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.md }}>Tap to fast-fire the active configuration with a specific Mode ID using the selected packet format.</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: Spacing.xs, paddingBottom: Spacing.sm }}>
-            {Array.from({length: 44}, (_, i) => i + 1).map(id => (
-              <TouchableOpacity
-                key={id}
-                style={[S.chip, bld51Mode === String(id) && { backgroundColor: cyan + '22', borderColor: cyan }, { width: 44, height: 44, paddingHorizontal: 0, justifyContent: 'center' }]}
-                onPress={() => {
-                  setBld51Mode(String(id));
-                  const speed = Math.max(1, Math.min(100, parseInt(bld51Speed) || 50));
-                  if (bld51Format === 'compact') {
-                    transmit(
-                      ZenggeProtocol.setCustomModeCompact([{ mode: id, speed, color1: bld51Color1, color2: bld51Color2 }]),
-                      `0x51 compact mode=${id} spd=${speed}`,
-                      '0x51'
-                    );
-                  } else if (bld51Format === 'extended') {
-                    const flags = (bld51Seg ? 0x80 : 0x00) | (bld51Dir === 1 ? 0x01 : 0x00);
-                    transmit(
-                      ZenggeProtocol.setCustomModeExtended([{ mode: id, speed, color1: bld51Color1, color2: bld51Color2, dir: flags }]),
-                      `0x51 extended mode=${id} spd=${speed} dir=0x${flags.toString(16).toUpperCase()}`,
-                      '0x51'
-                    );
-                  } else {
-                    const flags = (bld51Seg ? 0x80 : 0x00) | (bld51Dir === 1 ? 0x01 : 0x00);
-                    const rawPayload = ZenggeProtocol.setCustomModeExtended([{ mode: id, speed: bld51Color1 ? speed : speed, color1: bld51Color1, color2: bld51Color2, dir: flags }]);
-                    const wrappedPayload = ZenggeProtocol.wrapCommand(rawPayload);
-                    transmit(
-                      wrappedPayload,
-                      `0x51 wrapped extended mode=${id} spd=${speed} dir=0x${flags.toString(16).toUpperCase()}`,
-                      '0x51'
-                    );
-                  }
-                }}
-              >
-                <Text style={{ color: bld51Mode === String(id) ? cyan : txtMuted, fontWeight: '900', fontSize: 14, textAlign: 'center' }}>{id}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {bldProtocol === '0x59' && (
-        <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
-          <Text style={[S.subTitle, { color: txtPri, marginTop: 0 }]}>PIXEL COLORS (0x59)</Text>
-          <Text style={[S.hint, { color: txtMuted }]}>Colors will be repeated to fill the LED count.</Text>
-          
-          {bldColors.map((c: {r: number, g: number, b: number}, i: number) => (
-             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm, gap: Spacing.sm }}>
-                <View style={{ width: 24, height: 24, backgroundColor: `rgb(${c.r},${c.g},${c.b})`, borderRadius: 6, borderWidth: 1, borderColor: border }} />
-                <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={c.r.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].r = parseInt(v)||0; setBldColors(cur); }} placeholder="R" placeholderTextColor={txtMuted} />
-                <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={c.g.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].g = parseInt(v)||0; setBldColors(cur); }} placeholder="G" placeholderTextColor={txtMuted} />
-                <TextInput style={[{flex:1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri}, S.numInput]} value={c.b.toString()} keyboardType="numeric" onChangeText={v => { const cur = [...bldColors]; cur[i].b = parseInt(v)||0; setBldColors(cur); }} placeholder="B" placeholderTextColor={txtMuted} />
-                <TouchableOpacity onPress={() => setBldColors(bldColors.filter((_: {r:number, g:number, b:number}, idx: number)=>idx!==i))} style={{ padding: Spacing.sm }}>
-                  <MaterialCommunityIcons name="delete" color="#ff4040" size={18} />
-                </TouchableOpacity>
-             </View>
-          ))}
-          <TouchableOpacity onPress={() => setBldColors([...bldColors, {r:0,g:0,b:0}])} style={{ alignSelf: 'flex-start', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, backgroundColor: border, borderRadius: 8, marginTop: Spacing.xs }}>
-             <Text style={{ color: txtPri, fontSize: 11, fontWeight: '900' }}>+ ADD COLOR</Text>
-          </TouchableOpacity>
-
-          <Text style={[S.subTitle, { color: txtMuted, marginTop: Spacing.xl }]}>TRANSITION TYPE</Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm, marginBottom: Spacing.lg }}>
-            {TRANSITION_TYPES.map(tt => (
-              <TouchableOpacity key={tt.byte}
-                style={[S.chip, bldTrans === tt.byte && { backgroundColor: tt.color + '22', borderColor: tt.color }, { height: 40 }]}
-                onPress={() => setBldTrans(tt.byte)}>
-                <Text style={{ color: bldTrans === tt.byte ? tt.color : txtMuted, fontWeight: '900', fontSize: 11 }}>
-                  0x0{tt.byte.toString(16).toUpperCase()} {tt.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.sm }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>NUM POINTS</Text>
-              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldPoints} keyboardType="numeric"
-                onChangeText={v => setBldPoints(v)} placeholder={hwPts.toString()} placeholderTextColor={txtMuted} />
-              <Text style={{ color: cyan, fontSize: 10, marginTop: Spacing.xs, fontWeight: 'bold' }}>HW probe: {hwPts}</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>SPEED</Text>
-              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldSpeed.toString()} keyboardType="numeric"
-                onChangeText={v => setBldSpeed(Math.max(1, Math.min(255, parseInt(v)||1)))} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>DIR</Text>
-              <View style={{ flexDirection: 'row', gap: Spacing.xs }}>
-                {[0, 1].map(d => (
-                  <TouchableOpacity key={d} style={[S.chip, bldDir === d && { backgroundColor: cyan + '22', borderColor: cyan }, {flex: 1, height: 40}]} onPress={() => setBldDir(d)}>
-                    <Text style={{ color: bldDir === d ? cyan : txtMuted, fontSize: 11, textAlign: 'center', fontWeight: '900' }}>{d === 0 ? 'REV' : 'FWD'}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          </View>
-        </View>
-      )}
-
-      {bldProtocol === '0x61' && (
-        <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
-          <Text style={[S.subTitle, { color: txtPri, marginTop: 0 }]}>FIXED PATTERN (0x61)</Text>
-          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>PATTERN ID (1–210)</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                <TouchableOpacity onPress={() => setBldPatternId(String(Math.max(1, (parseInt(bldPatternId)||1) - 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>‒</Text>
-                </TouchableOpacity>
-                <TextInput style={[S.numInput, { flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri, textAlign: 'center' }]} value={bldPatternId} keyboardType="numeric" onChangeText={v => setBldPatternId(String(Math.max(1, Math.min(210, parseInt(v)||1))))} />
-                <TouchableOpacity onPress={() => setBldPatternId(String(Math.min(210, (parseInt(bldPatternId)||1) + 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>+</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>SPEED (1–100)</Text>
-              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldSpeed.toString()} keyboardType="numeric" onChangeText={v => setBldSpeed(Math.max(1, Math.min(100, parseInt(v)||1)))} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>BRIGHTNESS</Text>
-              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldBright} keyboardType="numeric" onChangeText={setBldBright} />
-            </View>
-          </View>
-        </View>
-      )}
-
-      {bldProtocol === '0x73' && (
-        <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: '#FF4040', borderWidth: 1 }]}>
-          <Text style={[S.subTitle, { color: '#FF9500', marginTop: 0 }]}>SYMPHONY MODE (0x73) — 13B FORMAT</Text>
-          <Text style={{ color: '#FF4040', fontSize: 10, marginBottom: Spacing.md, fontWeight: '700' }}>
-            ⚠️ VERIFIED: 13B format · mic=0x26 (APP) / 0x27 (DEVICE) · isOn byte at position [3]
-          </Text>
-
-          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>MUSIC MODE (1–13)</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-                <TouchableOpacity onPress={() => setBldMusicMode(String(Math.max(1, (parseInt(bldMusicMode)||1) - 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>‒</Text>
-                </TouchableOpacity>
-                <TextInput style={[S.numInput, { flex: 1, backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri, textAlign: 'center' }]} value={bldMusicMode} keyboardType="numeric" onChangeText={v => setBldMusicMode(String(Math.max(1, Math.min(13, parseInt(v)||1))))} />
-                <TouchableOpacity onPress={() => setBldMusicMode(String(Math.min(13, (parseInt(bldMusicMode)||1) + 1)))} style={{ backgroundColor: border, borderRadius: 6, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Text style={{ color: txtPri, fontSize: 18, fontWeight: 'bold' }}>+</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>isOn [BYTE 3]</Text>
-              <TouchableOpacity
-                style={[S.chip, bldMusicIsOn && { backgroundColor: '#00E67633', borderColor: '#00E676' }, { paddingVertical: Spacing.md, height: 40 }]}
-                onPress={() => setBldMusicIsOn(!bldMusicIsOn)}
-              >
-                <Text style={{ color: bldMusicIsOn ? '#00E676' : '#FF4040', textAlign: 'center', fontSize: 11, fontWeight: '900' }}>
-                  {bldMusicIsOn ? '0x01 ON' : '0x00 OFF'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* MIC SOURCE: 0x26 (APP) vs 0x27 (DEVICE) */}
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, fontWeight: '900' }}>MIC SOURCE [BYTE 2] — PROTOCOL TRUTH</Text>
-          <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
-            <TouchableOpacity
-              onPress={() => setBldMic(false)}
-              style={{ flex: 1, paddingVertical: Spacing.md, borderRadius: 8, alignItems: 'center',
-                backgroundColor: !bldMic ? '#00f0ff22' : border,
-                borderWidth: 1.5, borderColor: !bldMic ? cyan : border }}
-            >
-              <Text style={{ color: !bldMic ? cyan : txtMuted, fontWeight: '900', fontSize: 11 }}>APP MIC</Text>
-              <Text style={{ color: !bldMic ? cyan : txtMuted, fontSize: 9, opacity: 0.8 }}>0x26</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setBldMic(true)}
-              style={{ flex: 1, paddingVertical: Spacing.md, borderRadius: 8, alignItems: 'center',
-                backgroundColor: bldMic ? '#FF950033' : border,
-                borderWidth: 1.5, borderColor: bldMic ? '#FF9500' : border }}
-            >
-              <Text style={{ color: bldMic ? '#FF9500' : txtMuted, fontWeight: '900', fontSize: 11 }}>DEVICE MIC</Text>
-              <Text style={{ color: bldMic ? '#FF9500' : txtMuted, fontSize: 9, opacity: 0.8 }}>0x27</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>SENSITIVITY</Text>
-              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldSens} keyboardType="numeric" onChangeText={setBldSens} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>BRIGHTNESS</Text>
-              <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldBright} keyboardType="numeric" onChangeText={setBldBright} />
-            </View>
-          </View>
-
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, fontWeight: '900' }}>COLOR 1 (PRIMARY)</Text>
-          <QuickColorGrid activeColor={bldColors[0]} onSelect={c => setBldColors([c])} />
-
-          <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, fontWeight: '900' }}>COLOR 2 (SECONDARY)</Text>
-          <QuickColorGrid activeColor={bldC2} onSelect={setBldC2} />
-
-          {/* Byte preview */}
-          <View style={{ backgroundColor: isDark ? '#05070a' : '#f9fafb', borderRadius: 8, padding: Spacing.md, marginTop: Spacing.md, borderColor: border, borderWidth: 1 }}>
-            <Text style={{ color: cyan, fontSize: 10, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
-              {'[0x73, '}
-              {`0x${(parseInt(bldMusicMode)||1).toString(16).padStart(2,'0').toUpperCase()}, `}
-              {`${bldMic ? '0x27' : '0x26'}, `}
-              {`${bldMusicIsOn ? '0x01' : '0x00'}, `}
-              {'R1, G1, B1, R2, G2, B2, SENS, BRIGHT, CS]'}
-            </Text>
-            <Text style={{ color: txtMuted, fontSize: 9, marginTop: Spacing.xs }}>13 bytes (0xA3 format) — was 12B (broken, no isOn)</Text>
-          </View>
-
-          <TouchableOpacity
-            style={[S.txBtn, { backgroundColor: '#FF9500', borderColor: '#FF9500', marginTop: Spacing.md }]}
-            onPress={() => {
-              const mic: 0x26 | 0x27 = bldMic ? 0x27 : 0x26;
-              transmit(
-                ZenggeProtocol.setMusicConfig(
-                  parseInt(bldMusicMode) || 1,
-                  mic,
-                  bldMusicIsOn,
-                  bldColors[0] || {r:255,g:0,b:0},
-                  bldC2 || {r:0,g:0,b:255},
-                  parseInt(bldSens) || 128,
-                  parseInt(bldBright) || 100
-                ),
-                `0x73 mode=${bldMusicMode} mic=${bldMic?'0x27':'0x26'} isOn=${bldMusicIsOn}`,
-                '0x73'
-              );
-            }}
-          >
-            <Text style={{ color: '#000', fontWeight: '900', fontSize: 12 }}>TX 0x73 (13B FORMAT)</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-
-      {bldProtocol === '0x62' && (
-        <View style={[S.diagBox, { backgroundColor: cardBg, borderColor: border }]}>
-          <Text style={[S.subTitle, { color: txtPri, marginTop: 0 }]}>HARDWARE SETUP (0x62)</Text>
-          <View style={{ flexDirection: 'row', gap: Spacing.md, marginBottom: Spacing.md }}>
-            <View style={{ flex: 1 }}>
-               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>IC CHIP</Text>
-               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldIc} onChangeText={setBldIc} placeholder="e.g. WS2812B" />
-            </View>
-            <View style={{ flex: 1 }}>
-               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>COLOR ORDER</Text>
-               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldOrder} onChangeText={setBldOrder} placeholder="e.g. RGB" />
-            </View>
-          </View>
-          <View style={{ flexDirection: 'row', gap: Spacing.md }}>
-             <View style={{ flex: 1 }}>
-               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>TOTAL LEDS</Text>
-               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldPoints} keyboardType="numeric" onChangeText={setBldPoints} />
-            </View>
-            <View style={{ flex: 1 }}>
-               <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.xs, fontWeight: '900' }}>SEGMENTS</Text>
-               <TextInput style={[S.numInput, { backgroundColor: isDark ? '#05070a' : '#fff', color: txtPri }]} value={bldSegs} keyboardType="numeric" onChangeText={setBldSegs} />
-            </View>
-          </View>
-        </View>
-      )}
+      {bldProtocol === '0x51' && <Builder51Mode builderCtx={builderCtx} transmit={transmit} />}
+      {bldProtocol === '0x59' && <Builder59Mode builderCtx={builderCtx} hwPts={hwPts} />}
+      {bldProtocol === '0x61' && <Builder61Mode builderCtx={builderCtx} />}
+      {bldProtocol === '0x73' && <Builder73Mode builderCtx={builderCtx} transmit={transmit} />}
+      {bldProtocol === '0x62' && <Builder62Mode builderCtx={builderCtx} />}
 
       <Text style={[S.subTitle, { color: txtMuted }]}>GENERATED PAYLOAD — BYTE ANNOTATIONS</Text>
       {bldResult && (
         <View style={[S.diagBox, { backgroundColor: isDark ? '#05070a' : '#f9fafb', borderColor: border, padding: Spacing.md }]}>
           {bldResult.annotations.map((a: string, i: number) => (
-            <Text key={i} style={{ color: i === 4 ? TRANSITION_TYPES.find(t=>t.byte===bldTrans)?.color ?? cyan : txtPri, fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginBottom: Spacing.xxs }}>
+            <Text key={i} style={{ color: i === 4 ? cyan : txtPri, fontSize: 11, fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', marginBottom: Spacing.xxs }}>
               {a}
             </Text>
           ))}
@@ -556,7 +110,7 @@ export function DiagnosticLabBuilderTab({
       />
       <View style={{ flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.md }}>
         <TouchableOpacity style={[S.txBtn, { flex: 1, backgroundColor: cyan, borderColor: cyan }]}
-          onPress={() => sendRawHex(bldHexOverride, `Builder: trans=0x0${bldTrans.toString(16).toUpperCase()} pts=${bldPoints}`)}>
+          onPress={() => sendRawHex(bldHexOverride, `Builder Custom Payload`)}>
           <Text style={{ color: '#000', fontWeight: '900', fontSize: 12 }}>TX PAYLOAD</Text>
         </TouchableOpacity>
         <TouchableOpacity style={[S.txBtn, { flex: 1, backgroundColor: border, borderColor: border }]}
@@ -609,7 +163,7 @@ export function DiagnosticLabBuilderTab({
                 transmit(ZenggeProtocol.wrapCommand(preset.cmd), preset.note);
               } else if ('r' in preset) {
                 const p = preset as { r: number; g: number; b: number; trans: number; note: string };
-                const pts = parseInt(bldPoints) || hwPts || 16;
+                const pts = hwPts || 16;
                 sendSolid(p.r, p.g, p.b, pts, p.trans ?? 0x01, p.note);
               }
             }}>

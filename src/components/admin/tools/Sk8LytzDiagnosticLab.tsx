@@ -20,7 +20,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
     Platform,
-    SafeAreaView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -29,7 +28,7 @@ import {
 import { Device } from 'react-native-ble-plx';
 import { DeviceHardwareConfig } from './tabs/DiagnosticLabTypes';
 import { RegisteredDevice } from '../../../hooks/useRegistration';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../context/ThemeContext';
 import {
     useDiagnosticLog,
@@ -408,7 +407,7 @@ const S = StyleSheet.create({
     borderColor: '#252c47', 
     borderRadius: 12, 
     padding: Spacing.lg, 
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', 
+    fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }), 
     fontSize: 11, 
     minHeight: 100 
   },
