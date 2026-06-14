@@ -216,3 +216,37 @@ We locked the exact field name used in the WatchBridge message payload and seria
 - **Pro:** Clear, uniform schema definition across Android, iOS, and TypeScript codebases. Eradicates summary rendering bugs on watch companions.
 - **Con:** Requires explicit translation from internal camelCase properties (e.g., `lifetimeStats.totalDistance`) to lowercase `"distance"` in serialization payloads.
 
+---
+
+## ADR-013: isGrouped Ground Truth (connectedDevices.length)
+
+**Date:** June 2026
+**Status:** 🔒 Locked & Active
+
+### The Context
+Determining whether the app is in a multi-device session (`isGrouped`) was previously reliant on fields within `DisplayDevice` (like `d.groupId` or `d.grouped`). These fields are fragile because they rely on successful lookups into `deviceConfigs` or `registeredDevices` arrays and matching field names.
+
+### The Decision
+We chose to use `connectedDevices.length > 1` as the absolute canonical source of truth for group membership throughout the app (specifically, the BLE machine's `connectedDevices` array). 
+
+### The Trade-off (What Stakeholders Must Know)
+- **Pro:** Complete eradication of false negatives for `isPaired` and `isGrouped` states, removing dependency on fragile object property lookups.
+- **Con:** Prevents us from officially recognizing a "single-skate group" (a group configured with only one connected skate), which is an edge case we intentionally deprecate.
+
+---
+
+## ADR-014: BLE Write Deadlock Prevention (Single Enqueue)
+
+**Date:** June 2026
+**Status:** 🔒 Locked & Active
+
+### The Context
+The `BleWriteQueue` singleton is single-threaded and locks its queue execution loop using `_isRunning = true`. Previously, `writeToDevice` and `writeChunked` in `useBLE.ts` were redundantly wrapping commands with `enqueueWrite`, causing an immediate deadlock where an enqueued callback attempts to enqueue another operation.
+
+### The Decision
+We removed the redundant `enqueueWrite` calls from `useBLE.ts`. The `BleWriteDispatcher` internally handles the queueing for hardware commands, making the wrapper redundant and dangerous.
+
+### The Trade-off (What Stakeholders Must Know)
+- **Pro:** Eliminates the permanent priority queue deadlock that would lock the single-threaded dispatcher.
+- **Con:** Developers must trust `BleWriteDispatcher` for correct serialization and must not attempt to manually enqueue raw payload writes at the hook level.
+

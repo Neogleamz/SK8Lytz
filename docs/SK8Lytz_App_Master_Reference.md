@@ -1472,3996 +1472,1428 @@ The health telemetry system implements a **watch-preferred** priority model:
 ### Domain: IDENTITY
 <!-- CARTOGRAPHER_START: IDENTITY -->
 
-# 🗺️ Codebase Cartography — IDENTITY Domain
+# 🗺️ IDENTITY Cartography (Identity & Auth Domain)
 
 ## 1. File Manifest
-The IDENTITY domain governs user authentication, profile data persistence, paired device registry, and account setup configurations.
+- **`src/context/AuthContext.tsx`**: Centralized Authentication State Provider. Manages Supabase session, offline mode, deep linking, and auth actions.
+- **`src/services/AuthProfileService.ts`**: Handles User profile CRUD (`fetchOrCreateProfile`, `updateProfile`) and session history.
+- **`src/services/AuthUtils.ts`**: Password complexity, HaveIBeenPwned API integration, and profanity checks.
+- **`src/services/ProfileService.ts`**: Barrel re-export facade maintaining backward compatibility for `profileService` consumers.
+- **`src/services/ProfileService.types.ts`**: Shared type contracts (`UserProfile`, `PermanentCrew`, `SessionHistoryItem`, etc.).
+- **`src/components/account/*`**: Profile and account management UI components (`AccountTabProfile`, etc.).
+- **`src/components/auth/*`**: Authentication UI components (`AuthFormSignIn`, `AuthFormSignUp`, etc.).
+- **`src/hooks/useAccountOverview.ts`**: Hook for managing the account modal state, profile updating, and avatar uploads.
+- **`src/hooks/useDashboardProfile.ts`**: Hook managing global app settings, derived `authUsername`, and main dashboard modals.
+- **`src/hooks/useRegistration.ts`**: Facade over `DeviceRepository` managing hardware ownership registry.
 
-* **`src/context/AuthContext.tsx`**  
-  *Architectural Purpose:* The central reactive engine managing auth status (`'authenticated' | 'unauthenticated' | 'expired' | 'offline'`), hosting OAuth deep-linking checks, and managing session references from Supabase.
-* **`src/services/AuthProfileService.ts`**  
-  *Architectural Purpose:* A specialized singleton managing database CRUD queries for skater profiles, self-healing metadata holes, and fetching session histories.
-* **`src/services/AuthUtils.ts`**  
-  *Architectural Purpose:* Static utility helpers verifying password complexity rules, running offline profanity scans, and performing Have I Been Pwned (HIBP) breach audits.
-* **`src/services/ProfileService.ts`**  
-  *Architectural Purpose:* A backward-compatible barrel facade delegation service mapping caller interactions directly to `AuthProfileService`, `CrewProfileService`, and `PushTokenService`.
-* **`src/services/ProfileService.types.ts`**  
-  *Architectural Purpose:* Standardized TypeScript interfaces for user profiles, permanent crews, and session logs, eliminating cyclic model dependency risks.
-* **`src/hooks/useAccountOverview.ts`**  
-  *Architectural Purpose:* A hook managing account settings, permission checks, photo uploads, and profile modifications.
-* **`src/hooks/useDashboardProfile.ts`**  
-  *Architectural Purpose:* A hook sourcing user names, app configuration boundaries, and session sign-outs for the authenticated dashboard.
-* **`src/hooks/useRegistration.ts`**  
-  *Architectural Purpose:* A hook driving local-first paired device mappings and cloud synchronization procedures.
-* **`src/components/account/AccountTabCrewz.tsx`**  
-  *Architectural Purpose:* Sub-tab rendering crew configurations, invite submissions, and crew lists.
-* **`src/components/account/AccountTabDevices.tsx`**  
-  *Architectural Purpose:* Sub-tab displaying registered BLE controllers, device names, and hardware details.
-* **`src/components/account/AccountTabProfile.tsx`**  
-  *Architectural Purpose:* Sub-tab editing handles, selecting displays, adjusting avatar hues, and trigger sign-outs.
-* **`src/components/account/AccountTabSecurity.tsx`**  
-  *Architectural Purpose:* Sub-tab handling password modifications, email updates, and granular permission switches.
-* **`src/components/account/AccountTabSettings.tsx`**  
-  *Architectural Purpose:* Sub-tab modifying push controls, health integrations, auto-pausing thresholds, and theme toggling.
-* **`src/components/account/AccountTabStats.tsx`**  
-  *Architectural Purpose:* Sub-tab rendering skater metrics and historical logs.
-* **`src/components/account/SkaterStatsPanel.tsx`**  
-  *Architectural Purpose:* Wrapped presentation card visualizing styles, auric classifications, and color profiles.
-* **`src/components/account/types.ts`**  
-  *Architectural Purpose:* Property interfaces definitions for sub-views of the account panel.
-* **`src/components/auth/AuthFooterActions.tsx`**  
-  *Architectural Purpose:* Renders connection skip items and offline selection caching.
-* **`src/components/auth/AuthFormForgotPassword.tsx`**  
-  *Architectural Purpose:* Credential recovery sheet sending email reset actions via Supabase.
-* **`src/components/auth/AuthFormSignIn.tsx`**  
-  *Architectural Purpose:* Primary log-in sheet providing username-to-email RPC mapping.
-* **`src/components/auth/AuthFormSignUp.tsx`**  
-  *Architectural Purpose:* Sign-up sheet enforcing password validation rules and EULA checks.
-* **`src/components/auth/AuthHeader.tsx`**  
-  *Architectural Purpose:* Common branding layout showing corporate logo graphics.
-* **`src/components/auth/AuthStyles.ts`**  
-  *Architectural Purpose:* Computed StyleSheet variables providing layout margins respecting safe areas.
-* **`src/components/auth/DevSandboxDrawer.tsx`**  
-  *Architectural Purpose:* Development panel for Virtual Skates, soft logs, and cache purges.
-
----
-
-## 2. Blast Radius (Imports & Dependents)
-
-```mermaid
-graph TD
-    %% External Nodes
-    Ext[Supabase SDK & Expo SDKs]
-    
-    %% Domain Internal Files
-    subgraph IDENTITY Domain
-        Ctx[AuthContext.tsx]
-        Facade[ProfileService.ts]
-        APServ[AuthProfileService.ts]
-        AUtils[AuthUtils.ts]
-        HookAcc[useAccountOverview.ts]
-        HookDash[useDashboardProfile.ts]
-        HookReg[useRegistration.ts]
-        UIForms[AuthFormSignIn / AuthFormSignUp]
-        UITabs[AccountTabProfile / Crewz / Devices / Stats]
-    end
-    
-    %% Consumers
-    App[App.tsx]
-    DashScr[DashboardScreen.tsx]
-    AuthScr[AuthScreen.tsx]
-    AccMod[AccountModal.tsx]
-    CompGate[ComplianceGate.tsx]
-
-    %% Dependencies Mapping
-    Ext --> Ctx
-    Ext --> AUtils
-    Ctx --> UIForms
-    AUtils --> UIForms
-    Facade --> APServ
-    APServ --> HookAcc
-    APServ --> HookDash
-    HookAcc --> UITabs
-    HookReg --> UITabs
-    
-    %% Consumer Mapping
-    Ctx --> App
-    Ctx --> CompGate
-    HookDash --> DashScr
-    UIForms --> AuthScr
-    HookAcc --> AccMod
-    UITabs --> AccMod
-```
-
-### External Packages Consumed
-* **`@react-native-async-storage/async-storage`**: Persists `STORAGE_OFFLINE_SKIP`, `STORAGE_REMEMBER_CREDS`, `STORAGE_AUTH_USERNAME`, and notification preferences.
-* **`expo-secure-store`**: Caches Supabase session access tokens securely on native devices.
-* **`expo-crypto`**: Used by HIBP to calculate offline SHA-1 checksum signatures.
-* **`expo-image-picker` & `expo-file-system`**: Captures and processes custom profile images.
-* **`@supabase/supabase-js`**: Interacts with Supabase Auth, Storage, and Database.
-
-### Dependents
-* **`App.tsx`**: Wraps the screen tree with `<AuthProvider>` and listens to OAuth redirects.
-* **`src/providers/ComplianceGate.tsx`**: Gates primary view access based on metadata flags (`accepted_eula_version`).
-* **`src/screens/AuthScreen.tsx`**: Hosts user log-in and registration pages.
-* **`src/screens/DashboardScreen.tsx`**: Consumes `useDashboardProfile` for user metrics and suspension gates.
-* **`src/components/AccountModal.tsx`**: Orchestrates useAccountOverview hooks and the custom tab layouts.
-
----
+## 2. Blast Radius
+Changes to the Identity & Auth domain directly impact:
+- **Authentication Lifecycle**: Login/Signup, Deep Linking/Magic Links, Password Reset.
+- **Hardware Integration**: Hardware setup workflows rely heavily on `useRegistration` and the authenticated user ID.
+- **Data Hydration**: Profile data accessed across the Dashboard and Crew Hub is hydrated via `AuthProfileService`.
+- **Offline Mode Resiliency**: The global `isOfflineMode` state drives offline-first gating across the app; modifications here risk breaking offline functional capabilities.
 
 ## 3. Context Matrix
-
-| Context | Provided By | Consumed By | Architectural Purpose |
-|---|---|---|---|
-| **`AuthContext`** | `AuthProvider` (`AuthContext.tsx`) | `useAccountOverview`, `useDashboardProfile`, `useRegistration`, `ComplianceGate`, `AuthFormSignIn`, `AuthFormSignUp` | Houses user objects, session states, and coordinates offline skip modes. |
-| **`ThemeContext`** | `ThemeProvider` (`ThemeContext.tsx`) | `AuthStyles`, `AccountTabProfile`, `AccountTabCrewz`, `AccountTabDevices`, `AccountTabStats` | Feeds dark/light parameters and color constants to UI items. |
-
----
+- **`AuthContext` (Provider)**: Exposes authentication status, session, user object, offline mode flag, and centralized auth methods to downstream components.
+- **`ThemeContext`**: Read by UI components (Auth forms, Account tabs) for color/styling application.
+- **`DeviceRepository`**: Read and updated by `useRegistration` for local/cloud hardware ownership sync.
+- **Supabase**: Accessed directly by `AuthProfileService` and `AuthContext` for data retrieval and auth changes.
+- **AsyncStorage**: Accessed across the domain for flags (`STORAGE_OFFLINE_SKIP`, `STORAGE_REMEMBER_CREDS`, `STORAGE_LAST_EMAIL`, `STORAGE_AUTH_USERNAME`, etc.).
 
 ## 4. Hook/Service I/O Registry
-
-### `AuthProfileService` (`src/services/AuthProfileService.ts`)
-* **`fetchOrCreateProfile(user)`**
-  * *Inputs:* `user: User` (Supabase Auth payload)
-  * *Outputs:* `Promise<UserProfile | null>`
-  * *Side-Effects:* Reads profile database row; if missing, runs self-healing inserts parsing defaults from auth metadata.
-* **`updateProfile(userId, fields)`**
-  * *Inputs:* `userId: string`, `fields: Partial<UserProfile>`
-  * *Outputs:* `Promise<void>`
-  * *Side-Effects:* Mutates user profiles in PostgreSQL; captures unique username constraint violations (Postgres Error `23505`).
-* **`getSessionHistory(userId)`**
-  * *Inputs:* `userId: string`
-  * *Outputs:* `Promise<SessionHistoryItem[]>`
-  * *Side-Effects:* Fetches the 20 most recent crew sessions for the given user.
-
-### `useAccountOverview` (`src/hooks/useAccountOverview.ts`)
-* *Inputs:* `visible: boolean`, `onProfileUpdated?: () => void`
-* *Outputs:* UI form parameters, status indicators, and mutation callbacks (`handleSaveProfile`, `handlePickProfilePhoto`, `handleCreateCrew`, etc.).
-* *Side-Effects:* Queries profiles, crew tables, paired devices, and local preferences on mount or modal visibility changes.
-
-### `useDashboardProfile` (`src/hooks/useDashboardProfile.ts`)
-* *Inputs:* `{ onCrewJoinNotification: (crewId: string) => void }`
-* *Outputs:* `{ userProfile, appSettings, refreshProfile, authUsername, handleLogout, ...modalFlags }`
-* *Side-Effects:* Initializes notification push services, reads/caches display names, and polls global configurations on app foreground.
-
----
+- `AuthProfileService.fetchOrCreateProfile(user: User)` ➔ `UserProfile | null`
+- `AuthProfileService.updateProfile(userId, fields)` ➔ `void`
+- `AuthUtils.checkPasswordComplexity(password)` ➔ `PasswordStrength`
+- `useAuth()` ➔ `AuthContextValue`
+- `useAccountOverview(visible)` ➔ Modal state, loading status, `handleSaveProfile()`, etc.
+- `useDashboardProfile(options)` ➔ `userProfile`, `authUsername`, `handleLogout()`, modal visibility flags.
+- `useRegistration()` ➔ `registeredDevices`, `saveRegisteredDevice()`, `syncFromCloud()`, etc.
 
 ## 5. OS Variance Matrix
-
-| Subsystem / Code File | Platform Check | Native Logic | Web Fallback / Difference |
-|---|---|---|---|
-| **`AuthStyles.ts` / `AccountTabCrewz.tsx`** | `Platform.OS === 'ios'` | Selects `Courier New` / `Menlo` for monospace code fonts. | Uses generic `monospace` styling on Android/Web. |
-| **`AuthFormSignIn.tsx` / `AuthFormSignUp.tsx`** | `Platform.OS === 'web'` | Wraps inputs inside an HTML `<form>` block to allow browser auto-fills and submit-on-enter. | Renders as a standard native `<React.Fragment>` container. |
-| **`AuthUtils.ts`** | Under-the-hood (Expo Native) | Calls Android/iOS native cryptography libraries via `expo-crypto` for fast SHA-1 hashing. | Falls back to browser web-crypto APIs. |
-| **`useAccountOverview.ts`** | Under-the-hood (Expo Native) | Resolves native asset schemas (`ph://` on iOS, `content://` on Android) into Base64 streams using `expo-file-system`. | Does not pick or upload local gallery files. |
-| **`AuthContext.tsx`** | Under-the-hood (Expo Native) | Saves OAuth tokens securely inside device keychains using `expo-secure-store`. | Falls back to standard browser `LocalStorage` engines. |
+- **Web vs. Native**: `AuthFormSignIn.tsx` and `AuthFormSignUp.tsx` use a specific `<form onSubmit={e.preventDefault()}>` wrapper (`WebFormWrapper`) only on Web to support standard form submission behavior and password manager autofill. Native simply renders `React.Fragment`.
+- **File System / Image Picker**: Avatar uploads (`AccountTabProfile`) utilize `expo-image-picker` and `expo-file-system`, translating selected image URIs to base64 for Supabase storage upload.
+- **Deep Linking**: `AuthContext.tsx` leverages `expo-linking` for OAuth/Magic Link callbacks, requiring correct native URI setup.
 
 ---
 
+### 🗄️ ARCHIVAL INSTRUCTION
+**[MOVE_TO_ARCHIVE]** The `SK8Lytz_App_Master_Reference.md` contains stale references describing `ProfileService` performing database interactions (e.g. `src/services/ProfileService.ts: REST queries modifying crew memberships and users` and `src/services/CrewProfileService.ts (Managed inside ProfileService.ts)`). This should be archived and updated to clarify that `ProfileService.ts` is strictly a barrel re-export facade following the "Meal 1" split.
 
-## 7. Sequence Diagram: Authentication & Profile Self-Healing Flow
+---
+
+### 🏛️ ARCHITECTURAL IMPACT FLAGS
+[IMPACTS_USER_JOURNEY] [IMPACTS_C4_CONTEXT] [IMPACTS_STATE_CHART]
+
+---
+
+### 🔄 SEQUENCE DIAGRAM (AuthContext Cold-Start Init Flow)
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor User as Skater (App UI)
-    participant Auth as AuthContext
-    participant SupaAuth as Supabase Auth
-    participant DB as PostgreSQL DB
-    participant Profile as AuthProfileService
-    participant Storage as Supabase Storage (Avatars)
-
-    %% Sign Up Phase
-    Note over User, SupaAuth: Registration Flow
-    User->>Auth: Submit username, email, password (AuthFormSignUp)
-    Auth->>SupaAuth: signUp(email, password, { username, display_name })
-    SupaAuth-->>Auth: Create user, return session tokens
-    Auth-->>User: Signal success, display confirmation alert
-
-    %% Sign In & Self-Healing Phase
-    Note over User, DB: Authentication & Self-Healing Flow
-    User->>Auth: Submit credentials (AuthFormSignIn)
-    Auth->>SupaAuth: signInWithPassword(loginEmail, password)
-    SupaAuth-->>Auth: Authenticate, return active session
-    Auth->>Profile: refreshProfile() -> fetchOrCreateProfile(user)
-    Profile->>DB: SELECT * FROM user_profiles WHERE user_id = user.id
+    participant App as App Mount
+    participant AuthCtx as AuthContext (init)
+    participant Mig as migrateAuthTokens
+    participant AS as AsyncStorage
+    participant S as Supabase auth
     
-    alt Profile records exist
-        DB-->>Profile: Return profile payload
-    else Profile is missing (Self-Healing Triggered)
-        Profile->>DB: INSERT INTO user_profiles (user_id, display_name, username) VALUES (...)
-        DB-->>Profile: Return newly built profile row
+    App->>AuthCtx: Provider Mounts
+    AuthCtx->>Mig: migrateAuthTokensToSecureStore()
+    AuthCtx->>AS: getItem(STORAGE_OFFLINE_SKIP)
+    
+    alt Offline Skip == 'true'
+        AS-->>AuthCtx: 'true'
+        AuthCtx->>AuthCtx: setStatus('offline')
+    else Online Mode
+        AuthCtx->>S: getSession()
+        S-->>AuthCtx: session data
+        
+        alt Session Exists
+            AuthCtx->>AuthCtx: setStatus('authenticated')
+        else No Active Session
+            AuthCtx->>AS: getItem(STORAGE_LAST_EMAIL)
+            
+            alt Last Email Exists
+                AuthCtx->>AuthCtx: setStatus('expired')
+            else Clean Start
+                AuthCtx->>AuthCtx: setStatus('unauthenticated')
+            end
+        end
     end
-    
-    Profile-->>Auth: Return verified profile
-    Auth-->>User: Mount dashboard, display custom display_name
 ```
 
----
-[IMPACTS_USER_JOURNEY]
-[IMPACTS_C4_CONTEXT]
 
 <!-- CARTOGRAPHER_END: IDENTITY -->
 
 ### Domain: BLE_CORE
 <!-- CARTOGRAPHER_START: BLE_CORE -->
 
-# Domain Cartography: BLE_CORE (Bluetooth Low Energy Protocol Core)
-
-This document provides a comprehensive analysis of the architectural layout, pipeline mechanics, state machine (FSM) configurations, and platform-specific behaviors for the core Bluetooth Low Energy (`BLE_CORE`) stack in the SK8Lytz application.
-
----
+# BLE Protocol Core Cartography
 
 ## 1. File Manifest
-The `BLE_CORE` domain consists of the following service, hook, context, and state files:
+- **Core FSM Orchestrator:**
+  - `src/services/ble/BleMachine.ts`
+  - `src/services/ble/BleMachine.types.ts`
+- **BLE Transport & Dispatch:**
+  - `src/services/BleWriteDispatcher.ts`
+  - `src/services/BleWriteQueue.ts`
+- **Actors & Services:**
+  - `src/services/ble/ConnectService.ts`
+  - `src/services/ble/RecoveryService.ts`
+  - `src/services/ble/HeartbeatService.ts`
+  - `src/services/ble/InterrogatorService.ts`
+  - `src/services/ble/RSSIService.ts`
+  - `src/services/BlePingService.ts`
+  - `src/services/BleSessionFactory.ts`
+  - `src/services/BleCharacteristicCache.ts`
+- **React Hooks & Context Providers:**
+  - `src/hooks/useBLE.ts`
+  - `src/hooks/useOptimisticBLE.ts`
+  - `src/hooks/ble/useBLEBatterySweep.ts`
+  - `src/hooks/ble/useBLEInterrogator.ts`
+  - `src/hooks/ble/useBLERSSIMonitor.ts`
+  - `src/hooks/ble/useBLEScanner.ts`
+  - `src/context/BLEContext.tsx`
 
-| File Path | Architectural Purpose |
-|:---|:---|
-| `src/services/ble/BleMachine.ts` | The core **XState v5 state machine** coordinating BLE radio access states (IDLE, SCANNING, CONNECTING, READY, RECOVERING, DISCONNECTING). |
-| `src/services/ble/BleMachine.types.ts` | Context, Event typings, and phase tags (`BLEPhaseTag`) for the `BleMachine` FSM. |
-| `src/services/ble/ConnectService.ts` | An invoked XState promise service driving the connection process, including handshake scripts, MTU negotiation, and priority shifts. |
-| `src/services/ble/HeartbeatService.ts` | An invoked XState callback service running a 45-second heartbeat ping (`0x63` settings query or RSSI read) to detect dead links. |
-| `src/services/ble/InterrogatorService.ts` | A stateless device interrogator that opens short-lived sessions to query EEPROM parameters (`0x63`) and caches them in AsyncStorage. |
-| `src/services/ble/RSSIService.ts` | A stateless signal strength poller executing 30s checks and notifying the system at predefined dBm thresholds (-75 and -82 dBm). |
-| `src/services/ble/RecoveryService.ts` | An invoked XState callback service coordinating multi-phase reconnect loops utilizing exponential backoffs and passive scan sweeper-watchdogs. |
-| `src/services/BleCharacteristicCache.ts` | A persistence wrapper that saves resolved service and characteristic UUID configurations in AsyncStorage to bypass redundant GATT lookups. |
-| `src/services/BlePingService.ts` | A setup wizard utility managing a single, isolated device GATT connection (Connect → Blink → EEPROM Query → Disconnect) outside global hooks. |
-| `src/services/BleSessionFactory.ts` | A centralized session generator handling retry loops for GATT 133 errors, service discovery invariants, and dynamic protocol resolution. |
-| `src/services/BleWriteDispatcher.ts` | The core dispatch gateway coordinating individual, chunked, and polymorphic packet transmissions across multiple connected skates. |
-| `src/services/BleWriteQueue.ts` | A module-level priority-ordered FIFO write queue managing backpressure limits, stale write pruning, and transient error retries. |
-| `src/hooks/useBLE.ts` | The primary custom React Hook acting as the thin orchestrator and API entry-point for all components interacting with BLE hardware. |
-| `src/hooks/ble/useBLEBatterySweep.ts` | A React sub-hook regulating battery monitoring and scan throttling based on battery charge tiers. |
-| `src/hooks/ble/useBLEInterrogator.ts` | A React sub-hook providing local state management and queue bindings for device metadata interrogation. |
-| `src/hooks/ble/useBLERSSIMonitor.ts` | A React sub-hook exposing the live signal strength map (`rssiMap`) to update UI indicators. |
-| `src/hooks/ble/useBLEScanner.ts` | A React sub-hook orchestrating active/passive sweeps, filtering results by RSSI and names, and logging telemetry. |
-| `src/hooks/useOptimisticBLE.ts` | A command wrapper that triggers instant UI updates, success/error haptics, and coordinates state rollbacks on dispatch failures. |
-| `src/context/BLEContext.tsx` | Global React context provider exposing the `BluetoothLowEnergyApi` instance to the child component tree. |
-
----
-
-## 2. Blast Radius (Dependency Map)
-
-```
-       ┌────────────────────────┐
-       │     LocationService    │ (Appends coordinates to scan telemetry)
-       └───────────┬────────────┘
-                   │
-                   ▼
- ┌───────────────────────────────────────┐
- │          BLE_CORE Domain              │
- │  (State Machine, Queues, Hooks, APIs) │
- └──────┬─────────────────────────┬──────┘
-        │                         │
-        ▼                         ▼
- ┌──────────────┐          ┌──────────────┐
- │  Dashboard   │          │   Supabase   │ (Dispatches scan discovery
- │  Screens/UI  │          │   Telemetry  │  telemetry records)
- └──────────────┘          └──────────────┘
-```
-
-### Inward Dependencies (What BLE_CORE Imports)
-- `src/protocols/ControllerRegistry.ts`: Dynamically resolves the specific hardware protocol model (Zengge vs. BanlanX) from MAC ranges or service UUIDs.
-- `src/protocols/ZenggeProtocol.ts`: Computes checksums, structures 0x40 chunked segments, and executes 0x59 color payload byte padding.
-- `src/protocols/BanlanxAdapter.ts`: Supplies protocol and characteristic handles for BanlanX controllers.
-- `src/services/AppLogger.ts`: Registers hardware-level audit logs (`SCAN_START`, `DEVICE_DISCOVERED`, `PROTOCOL_ERROR`).
-- `src/services/PermissionService.ts`: Requests native Android and iOS Bluetooth permissions.
-- `src/utils/backoff.ts`: Calculates jittered exponential backoffs to prevent concurrent retry collisions.
-- `src/utils/piiScrubber.ts`: Scrubs MAC addresses for user privacy in log payloads.
-
-### Outward Dependencies (What Imports BLE_CORE)
-- `src/context/BLEContext.tsx`: Wraps `useBLE` to expose the global context provider.
-- `src/screens/DashboardScreen.tsx`: Binds the active registration lists, mounts the provider, and displays connection status.
-- `src/screens/HardwareSetupWizardScreen.tsx`: Invokes isolated `pingDevice` and `scanForPeripherals` queries during first-time configuration.
-- `src/components/DockedController.tsx`: Accesses `writeToDevice` and `bleState` to manipulate LED settings.
-- `src/hooks/useDashboardGroups.ts`: Routes coordinated settings updates to custom groups (Sole/Wheel subsets).
-
----
+## 2. Blast Radius
+- **`BleMachine.ts`**: Altering state transitions or invoked actors impacts the global connection lifecycle. A missing transition forces the app to get stuck (e.g. unable to recover).
+- **`BleWriteQueue.ts`**: Modifications to prioritization (critical vs bulk), queue depth, or backpressure affect UI slider responsiveness and hardware MTU buffer safety. Dropping the wrong priority write can cause device desync.
+- **`BleSessionFactory.ts`**: Any change to `discoverAllServicesAndCharacteristics` bypass can cause silent GATT 133 errors across *all* domains (ping, connect, recovery). 
+- **`ConnectService.ts`**: Touching MTU negotiation (`requestMTUForDevice(512)`) impacts the `executeWriteChunked` logic, leading to hardware payload rejections.
 
 ## 3. Context Matrix
-
-### Context Provided
-- **`BLEContext`**: Provided by `BLEContext.tsx` and consumed via the `useSharedBLE()` hook. Exposes the entire `BluetoothLowEnergyApi` (discovery streams, connection triggers, write dispatches, and signal maps) to the component tree.
-
-### Context Consumed
-- **`useRegistration`**: Consumed by `BLEProvider` inside `BLEContext.tsx` to retrieve the user's claimed MAC addresses (`registeredDevices`) and feed them down to `useBLE` as a dependency.
-
----
+- **`BLEContext.tsx`**: Provides the `BluetoothLowEnergyApi` via `useSharedBLE` to the entire application.
+- **`useBLE.ts`**: Master orchestrator wrapping XState's `bleMachine` and orchestrating sub-hooks (`useBLEScanner`, `useBLERSSIMonitor`).
+- **`BleMachine.ts`**: Consumes actors (`connectService`, `recoveryService`, `heartbeatService`) and dispatches UI-bound connection events.
+- **`useBLEScanner.ts`**: Composes `useBLEBatterySweep` (OS battery/budget constraints) and `useBLEInterrogator` (hardware parsing) for discovery orchestration.
+- **`BleWriteDispatcher.ts`**: Consumes `BleWriteQueue` to implement debouncing and queue chunking policies, interacting with the protocol registry.
 
 ## 4. Hook/Service I/O Registry
-
-### Hook: `useBLE`
-- **Inputs**:
-  - `registeredMacs: string[]` — Whitelisted MAC addresses registered to the user's account.
-- **Outputs**:
-  - `connectedDevices: Device[]` — Live native device handles.
-  - `allDevices: Device[]` — Scanned device collection.
-  - `bleState: BleConnectionState` — Streamlined state tag (`IDLE`, `SCANNING`, `CONNECTING`, `READY`, `DISCONNECTING`).
-  - `writeToDevice(payload: number[], targetDeviceId?: string)` — Primary write gateway.
-  - `writeChunked(payload: number[], targetDeviceId?: string)` — Splits large arrays into chunk sequences.
-  - `pingDevice(mac: string, blinkPayload: number[], options?: object)` — Performs wizard-specific setups.
-  - `startSweeper() / stopSweeper() / burstScan()` — Silent sweep controls.
-- **Side-effects**:
-  - Instantiates the `BleManager` singleton.
-  - Listens to app state transitions to prune dead connections on app wakeup.
-  - Spawns the XState `bleMachine` actor.
-
-### Hook: `useOptimisticBLE`
-- **Inputs**:
-  - `writeToDevice` — The raw GATT dispatch handler from `useBLE`.
-  - `onReconcile?: () => void` — Reversion callback called if a write operation fails.
-  - `debounceMs?: number` — Command debounce interval (default: 50ms).
-  - `disableOptimisticUI / disableHaptics` — Toggles for mock/testing adjustments.
-- **Outputs**:
-  - `optimisticWrite(payload, onOptimistic, targetDeviceId)` — Executes instant UI callback then dispatches write command.
-  - `directWrite(payload, targetDeviceId)` — Passthrough that bypasses debounces and optimistic rollbacks.
-  - `writeStatus: BLEWriteStatus` — Transaction status (`IDLE`, `PENDING`, `CONFIRMED`, `RECONCILED`).
-- **Side-effects**:
-  - Triggers mobile device vibrators via `expo-haptics`.
-
-### Service: `BleWriteQueue` (Module-Level Singleton)
-- **Inputs**:
-  - `priority: WritePriority` — `'critical'` (power/pings) \| `'normal'` (color/effect) \| `'bulk'` (chunks).
-  - `execute: () => Promise<boolean | 'partial'>` — A functional wrapper encapsulating the characteristic write operation.
-  - `generation: number` — Sequence generation tag (used to prune stale writes when a new color is queued).
-- **Outputs**:
-  - `Promise<boolean | 'partial'>` — Resolves when the write is sent, skipped, or fails.
-- **Side-effects**:
-  - Drops low-priority items (bulk, then normal) if the queue length exceeds `8`.
-  - Catches transient GATT errors and schedules one retry with a 100ms jittered delay.
-
-### Service: `BleWriteDispatcher`
-- **Inputs**:
-  - `payload: number[]` — Bytes representing the protocol opcode and data.
-  - `targetDeviceId?: string` — Optional MAC target.
-- **Outputs**:
-  - `Promise<boolean | 'partial'>` — Success status.
-- **Side-effects**:
-  - Automatically pads `0x59` static colorful frames to avoid chipset memory buffer lockouts.
-  - Spaces sequential packet dispatches across multiple devices by 50ms to prevent GATT collisions.
-  - Segments payloads exceeding safe MTU limits into `0x40` chunk frames.
-
-### Service: `BleSessionFactory`
-- **Inputs**:
-  - `bleManager: BleManager` — The native BLE plx instance.
-  - `mac: string` — Device hardware MAC address.
-  - `options` — Configurations (timeout, retry counts, abort signals, context IDs, manufacturer data).
-- **Outputs**:
-  - `Promise<GattSessionResult>` — Resolves with the connected device, resolved protocol adapter, and a cache status flag.
-- **Side-effects**:
-  - Automatically retries failed connections using backoff timings and reflection-based `refreshGatt` calls.
-  - Enforces service and characteristic discovery (`discoverAllServicesAndCharacteristics`) before resolving the session.
-
----
+- **`useBLE`**:
+  - *Input*: `registeredMacs: string[]`
+  - *Output*: `BluetoothLowEnergyApi` (Connect, Write, States, Gatekeeper)
+- **`useBLEScanner`**:
+  - *Input*: `BleManager`, `allDevices`, `bleSend`, `registeredMacs`
+  - *Output*: `pendingRegistrations`, `scanForPeripherals`, `batteryTier`, `hwCache`
+- **`BleWriteQueue`**:
+  - *Input*: `priority` ('critical', 'normal', 'bulk'), `execute` Promise, `generation` index
+  - *Output*: Prioritized serialized execution bounded by `MAX_QUEUE_DEPTH` with transient GATT retry.
+- **`BleSessionFactory`**:
+  - *Input*: `BleManager`, `mac` address, `timeout`, `retries`
+  - *Output*: `GattSessionResult` (Device handle + resolved Protocol Adapter + Cache Status)
 
 ## 5. OS Variance Matrix
+- **Android Constraints**:
+  - Requires `requestMTU(512)` directly upon connecting to avoid a default 23-byte limit.
+  - Vulnerable to GATT 133 / 0x85 exceptions. `BleSessionFactory` applies `refreshGatt: 'OnConnected'` and exponential jittered backoff on Android connection failures.
+  - Enforces a strict 50ms inter-device write gap during group multi-device dispatches to prevent buffer drops.
+  - Enforces `requestConnectionPriorityForDevice` toggling (HIGH during handshake, BALANCED thereafter).
+  - Subject to scan start budget (`SCAN_BUDGET_MAX=4` per 30s) managed in `useBLEBatterySweep.ts`.
+- **iOS Constraints**:
+  - `conn.mtu` property natively handles MTU without explicit request negotiation.
+  - Retains connections after app unmounts, forcing background state restoration (handled in `bleManager` restore state function).
 
-| Feature | iOS Behavior | Android Behavior |
-|:---|:---|:---|
-| **GATT State Restoration** | Restores state using native identifier restoration keys. Re-registers notification handles using jittered delays on wakeup. | Not natively supported by the OS layer. Background restoration hooks are ignored. |
-| **MTU Negotiation** | Handled natively by iOS CoreBluetooth (typically locks at 186 bytes). Bypasses `requestMTU` calls. | Must be negotiated explicitly by client via `requestMTU(512)`. Features a double-retry fallback to absorb MTU negotiation bugs. |
-| **Connection Priority** | Connection intervals are managed strictly by iOS CoreBluetooth; manual prioritization requests are bypassed. | Enforces dynamic priority tuning. Requests `HIGH` priority during handshakes and queries, then drops to `BALANCED` to conserve battery. |
-| **Scan Budgets** | Does not restrict scan frequency at the application layer. | Android 12+ limits BLE scanning to 4 starts per 30-second window. The sweeper monitors scan timestamps and defers startup if the budget is exhausted to avoid silent OS-level bans. |
-| **UUID Scan Filtering** | Standard filtering works reliably since peripheral services are parsed cleanly. | Unfiltered scans must be used because FCF1 devices broadcast identifiers in manufacturer data blocks instead of standard UUID lists. |
+## 6. Archival Instruction
+All applicable stale hooks (like `useBLESweeper` and `useBLEAutoRecovery`) have already been verified as tagged with `[MOVE_TO_ARCHIVE]` in `docs/SK8Lytz_App_Master_Reference.md`.
 
----
+## 7. Architectural Impact Flags
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
 
-## 6. State Machine (FSM) Map
-The state lifecycle is coordinated using the following `BleMachine.ts` XState configuration:
+## 8. Domain-Specific Mermaid Diagrams
 
+### State Machine (FSM) Map (`BleMachine.ts`)
 ```mermaid
 stateDiagram-v2
     [*] --> IDLE
-    
-    IDLE --> SCANNING : SCAN_START / setSweeperId
-    IDLE --> CONNECTING : CONNECT_REQUEST / setTargetMacs
+    IDLE --> SCANNING : SCAN_START
+    IDLE --> CONNECTING : CONNECT_REQUEST
     IDLE --> DISCONNECTING : DISCONNECT_REQUEST
-    IDLE --> RECOVERING : RECOVERY_START / setGhostedMacs
-    IDLE --> IDLE : UPDATE_CONNECTED_DEVICES / setConnectedDevices
+    IDLE --> RECOVERING : RECOVERY_START
     
-    SCANNING --> IDLE : SCAN_STOP / clearSweeperId
-    SCANNING --> CONNECTING : CONNECT_REQUEST / clearSweeperId, setTargetMacs
-    SCANNING --> DISCONNECTING : DISCONNECT_REQUEST / clearSweeperId
-    SCANNING --> RECOVERING : RECOVERY_START / setGhostedMacs
-    SCANNING --> SCANNING : SCAN_PAUSE / stopDeviceScan
-    SCANNING --> SCANNING : SCAN_RESUME / startDeviceScan
+    SCANNING --> IDLE : SCAN_STOP
+    SCANNING --> CONNECTING : CONNECT_REQUEST
+    SCANNING --> DISCONNECTING : DISCONNECT_REQUEST
+    SCANNING --> RECOVERING : RECOVERY_START
     
-    CONNECTING --> READY : connectService.onDone / setConnectedDevices
-    CONNECTING --> IDLE : connectService.onError / logTransition(connect_failed)
-    CONNECTING --> RECOVERING : RECOVERY_START / setGhostedMacs
+    CONNECTING --> READY : CONNECT_SUCCESS / onDone(connectService)
+    CONNECTING --> IDLE : onError(connectService)
+    CONNECTING --> RECOVERING : RECOVERY_START
     CONNECTING --> DISCONNECTING : DISCONNECT_REQUEST
     
-    READY --> RECOVERING : HEARTBEAT_FAIL / setGhostedMacs
+    READY --> RECOVERING : HEARTBEAT_FAIL / RECOVERY_START
+    READY --> CONNECTING : CONNECT_REQUEST / RECOVERY_START (group > 1)
     READY --> DISCONNECTING : DISCONNECT_REQUEST
-    READY --> CONNECTING : RECOVERY_START [ghostedMacs.length >= 2] / setTargetMacs
-    READY --> RECOVERING : RECOVERY_START [ghostedMacs.length < 2] / setGhostedMacs
-    READY --> IDLE : UPDATE_CONNECTED_DEVICES [devices.length === 0] / clearConnectedDevices
-    READY --> READY : UPDATE_CONNECTED_DEVICES [devices.length > 0] / setConnectedDevices
+    READY --> IDLE : UPDATE_CONNECTED_DEVICES (0 devices)
     
-    DISCONNECTING --> IDLE : DISCONNECT_COMPLETE / clearConnectedDevices, clearGhostedMacs
+    DISCONNECTING --> IDLE : DISCONNECT_COMPLETE
     
-    RECOVERING --> READY : RECOVERY_COMPLETE / mergeConnectedDevices, clearGhostedMacs
-    RECOVERING --> CONNECTING : CONNECT_REQUEST / setTargetMacs
-    RECOVERING --> IDLE : RECOVERY_PERMANENTLY_FAILED / setDeviceUnreachable, notifyUserDeviceFailed, clearGhostedMacs
-    RECOVERING --> IDLE : RECOVERY_FAIL / clearGhostedMacs
+    RECOVERING --> READY : RECOVERY_COMPLETE
+    RECOVERING --> CONNECTING : CONNECT_REQUEST
+    RECOVERING --> IDLE : RECOVERY_PERMANENTLY_FAILED / RECOVERY_FAIL
     RECOVERING --> DISCONNECTING : DISCONNECT_REQUEST
     
-    state bleMachine {
-        IDLE
-        SCANNING
-        CONNECTING
-        READY
-        DISCONNECTING
-        RECOVERING
-    }
-    
-    -- Global Events --
-    bleMachine --> IDLE : FORCE_IDLE / clearSweeperId, clearGhostedMacs
+    %% Global overrides
+    [*] --> IDLE : FORCE_IDLE
 ```
 
----
-
-## 7. Sequence Diagrams
-
-### BLE Connection Handshake & Lifecycle
-
+### BLE Transport Pipeline Sequence Diagram
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor User as Skater/UI
-    participant Hook as useBLE / BLEContext
-    participant FSM as BleMachine (XState)
-    participant CS as ConnectService (Actor)
-    participant SF as BleSessionFactory
-    participant Queue as BleWriteQueue
-    participant GATT as react-native-ble-plx (Radio)
+    participant UI as UI Hook (useOptimisticBLE)
+    participant Q as BleWriteQueue
+    participant D as BleWriteDispatcher
+    participant M as BleConnectionManager
+    participant G as GATT Hardware
 
-    User->>Hook: Connect Request (Devices list)
-    Hook->>FSM: send CONNECT_REQUEST (Macs)
-    FSM->>FSM: Transition IDLE -> CONNECTING
-    FSM->>CS: Invoke ConnectService with Macs
-    activate CS
-    Note over CS: Blacklist Check passed
-    loop Each Mac
-        CS->>GATT: isDeviceConnected(Mac)?
-        GATT-->>CS: false
-        loop 3 Connection Attempts
-            CS->>GATT: connectToDevice(Mac)
-            Note over CS: If fails with status 133 / timeout
-            CS->>GATT: cancelDeviceConnection(Mac)
-            CS->>CS: exponential backoff + jitter
-        end
-        GATT-->>CS: Device object (conn)
-    end
-    
-    loop Each Connected Device (Handshake & Setup)
-        CS->>GATT: requestConnectionPriority(HIGH) [Android]
-        CS->>SF: createGattSession(Mac)
-        SF->>GATT: discoverAllServicesAndCharacteristics()
-        GATT-->>SF: Services & Characteristics Discovered
-        SF-->>CS: adapter mapped (Zengge / BanlanX)
-        
-        alt OS is Android
-            CS->>GATT: requestMTU(512)
-            GATT-->>CS: mtu negotiated (e.g. 186 or 512)
-        else OS is iOS
-            Note over CS: Default MTU to 186
-        end
-        
-        CS->>GATT: onDeviceDisconnected() listener bound
-        CS->>GATT: monitorCharacteristic() notify listener bound
-        
-        CS->>Queue: enqueueWrite('critical', Handshake payloads)
-        Queue->>GATT: writeCharacteristicWithoutResponse(TimeSync/0x10)
-        GATT-->>Queue: success
-        Queue-->>CS: Handshake sequence finished
-        
-        CS->>GATT: requestConnectionPriority(BALANCED) [Android]
-    end
-    CS-->>FSM: onDone: devices array
-    deactivate CS
-    FSM->>FSM: Transition CONNECTING -> READY
-    FSM->>Hook: State changes to READY (connectedDevices updated)
-    Hook-->>User: UI updates to Connected
+    UI->>Q: enqueueWrite(priority, executeWrite, generation)
+    activate Q
+    Note over Q: Triage (critical > normal > bulk)<br>Enforce max depth (8)
+    Q->>Q: _drain() pop entry
+    Q->>D: executeWrite()
+    activate D
+    Note over D: Debounce & check generation bounds
+    D->>M: executeWriteToDeviceInternal()
+    activate M
+    Note over M: Resolve Adapter / MTU constraints<br>Base64 encoding
+    M->>G: writeCharacteristicWithoutResponseForService()
+    activate G
+    G-->>M: write ACK / Sent
+    deactivate G
+    M-->>D: Succeeded (Promise resolved)
+    deactivate M
+    D-->>Q: Promise resolved
+    deactivate D
+    Q-->>UI: resolve(true | 'partial')
+    deactivate Q
 ```
 
-### BLE Write Pipeline
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Skater/UI
-    participant Hook as useOptimisticBLE
-    participant Dis as BleWriteDispatcher
-    participant Queue as BleWriteQueue
-    participant GATT as Device GATT Handle (Radio)
-
-    User->>Hook: optimisticWrite(payload, onOptimistic)
-    Hook->>User: UI updates instantly (onOptimistic)
-    Hook->>Hook: setWriteStatus('PENDING')
-    Hook->>Dis: executeWriteToDevice(payload)
-    activate Dis
-    Note over Dis: Buffer lockout padding applied (if 0x59)
-    alt Payload is pattern/color write
-        Note over Dis: Debounce write (50ms)
-        Dis->>Dis: Check generation matches
-    end
-    Note over Dis: Resolve write priority (e.g. normal/critical/bulk)
-    Dis->>Queue: enqueueWrite(priority, executeWrite)
-    deactivate Dis
-    activate Queue
-    Note over Queue: Check Queue Depth (< 8)
-    Note over Queue: Priority insert (critical > normal > bulk)
-    Queue->>Queue: _drain()
-    activate Queue
-    Queue->>GATT: writeCharacteristicWithoutResponse(Base64 payload)
-    alt Write succeeds
-        GATT-->>Queue: Promise resolved
-        Queue-->>Hook: resolve(true)
-        Hook->>Hook: setWriteStatus('CONFIRMED')
-        Hook->>User: Success haptic feedback
-    else Write fails (transient error e.g. status 133)
-        GATT-->>Queue: GATT error thrown
-        Note over Queue: Transient check: Retry enabled
-        Queue->>Queue: Jittered delay (100ms)
-        Queue->>GATT: retry writeCharacteristicWithoutResponse()
-        alt Retry succeeds
-            GATT-->>Queue: Promise resolved
-            Queue-->>Hook: resolve(true)
-        else Retry fails
-            GATT-->>Queue: GATT error thrown
-            Queue-->>Hook: resolve(false)
-            Hook->>Hook: setWriteStatus('RECONCILED')
-            Hook->>User: Error haptic feedback + onReconcile rollback
-        end
-    end
-    deactivate Queue
-    deactivate Queue
-```
-
----
-
-## 8. Architectural Impact Flags
-
-None (Read-only cartography audit; no code or architectural modifications performed).
 
 <!-- CARTOGRAPHER_END: BLE_CORE -->
 
 ### Domain: GROUP_SYNC
 <!-- CARTOGRAPHER_START: GROUP_SYNC -->
 
-# 🗺️ Codebase Cartography: GROUP_SYNC Domain
+# 🗺️ Group Sync & Swarm Domain Cartography
 
-This documentation provides a comprehensive architectural map of the `GROUP_SYNC` domain in the SK8Lytz codebase, detailing functional boundaries, dependencies, state management, protocols, and platform adaptations.
+## 1. File Manifest
+- `src/services/GroupRepository.ts` — SSOT for Custom Group persistence and bidirectional hardware group_ids syncing.
+- `src/services/CrewService.ts` — Real-time live crew session lifecycle (create, join, leave, end) using Supabase Realtime broadcast and local offline caching.
+- `src/services/CrewProfileService.ts` — Persistent CRUD operations for crews, roles, stats, and member relationships.
+- `src/context/CrewContext.tsx` — Context wrapper providing access to crew state (manage, hub, session logic) and Modal routing.
+- `src/components/CrewModal.tsx` — The main orchestrator router modal for the Crew journey.
+- `src/components/CrewMemberDashboard.tsx` — Dedicated dashboard view overlaid for crew members to see the live session status and visualizer.
+- `src/components/crew/*` — Suite of UI screens governing the Crew journey (Landing, Detail, Manage, Join, Create, Controller, Map).
+- `src/hooks/useCrewHub.ts` — Hook managing location-based discovery, map spots, and live active session polling.
+- `src/hooks/useCrewManage.ts` — Hook tracking user form state for crew creation, editing, members search, and role manipulation.
+- `src/hooks/useCrewSession.ts` — Hook maintaining real-time active session presence, stats tallying, and auto-handoff.
+- `src/hooks/useCrewProximityRadar.ts` — Hook continuously assessing location radius vs. active sessions to fire proximity alerts.
+- `src/hooks/useDashboardCrew.ts` — Minimal UI bridge tracking session presence to conditionally show crew elements on the Dashboard.
+- `src/hooks/useDashboardGroups.ts` — Hook executing device config topological synchronization and group modal abstractions in Dashboard.
 
----
+## 2. Blast Radius
+- **Hardware Config Topology:** Editing `GroupRepository.ts` or `useDashboardGroups.ts` directly impacts `deviceConfigs` and `registeredDevices` synchronicity.
+- **Session Realtime Telemetry:** Altering `CrewService.ts` Realtime broadcast structure affects all connected members simultaneously. Modifying `scene_update` payloads will crash `MiniVisualizer` in `CrewMemberDashboard.tsx`.
+- **Location Permissions:** `useCrewHub.ts` and `useCrewProximityRadar.ts` hook into `LocationService`. Failing gracefully here is critical to avoid background loop starvation or crashes on denied permissions.
 
-## 1. 🗂️ Domain Manifest & Structural Boundaries
+## 3. Context Matrix
+- **CrewContext:** Combines outputs of `useCrewHub`, `useCrewManage`, and `useCrewSession` into a single accessible UI layer.
+- **AuthContext:** Widely consumed by `CrewService`, `CrewProfileService`, and UI to gate-keep identity and permissions.
+- **ThemeContext:** Styles all crew component visuals.
 
-A detailed map of all source files in the `GROUP_SYNC` domain, including their functional scope, lines of code, import/export dependency chains, state variables managed, and core operations.
+## 4. Hook/Service I/O Registry
+- **`GroupRepository.ts`**
+  - Inputs: `CustomGroup[]`, `groupId`, `deviceMacs`
+  - Outputs: Syncs to `AsyncStorage` + Cloud RPC (`upsert_group_with_devices`), updates `DeviceRepository`.
+- **`CrewService.ts`**
+  - Inputs: Supabase credentials, Scene data, Location Coords.
+  - Outputs: Emits Realtime channel broadcasts (`scene_update`, `session_ended`), updates `AsyncStorage` TTL.
+- **`useDashboardGroups.ts`**
+  - Inputs: `registeredDevices`, `DeviceRepository` data.
+  - Outputs: Yields `customGroups`, `deviceConfigs`, `powerStates`.
+- **`useCrewHub.ts`**
+  - Inputs: `user` ID, Location coordinates.
+  - Outputs: `nearbySessions`, `nearbySpots`, `activeSessions`, `myCrews`.
 
-### 📄 `src/services/GroupRepository.ts`
-* **Functional Scope:** Serves as the Single Source of Truth (SSOT) for offline-first local and remote management of custom user groups and device mappings.
-* **Line Count:** ~337 lines.
-* **Import Dependency Chain:**
-  * `supabaseClient` (Supabase backend connectivity)
-  * `AsyncStorage` (Local persistence)
-  * `AppLogger` (Telemetry logging)
-  * Dynamic delegate `GroupDeviceDelegate` (decouples circular dependency with `DeviceRepository`)
-* **Export Dependency Chain:**
-  * `groupRepository` (Singleton instance)
-  * `Group` (Interface)
-  * `GroupMember` (Interface)
-  * `GroupSyncStatus` (Enum/Type)
-* **State Managed:** Stateless singleton. Directly operations local SQLite cache (`AsyncStorage`) and remote tables (`groups`, `group_devices`).
-* **Core Operations:**
-  * `saveGroupTransactional`: Atomic sync attempting database RPC updates (`upsert_group_with_devices`) with local optimistic updates and local sqlite fallback.
-  * `setDeviceDelegate`: Registers a delegate callback at runtime to fetch active Bluetooth devices without importing `DeviceRepository` directly.
-  * `syncPendingGroups`: Syncs the queue of local changes made while offline back to Supabase once connectivity is restored.
+## 5. OS Variance Matrix
+- **Android vs iOS GPS Tolerance:** The `useCrewHub.ts` implements a 3-second hard timeout via `Promise.race` for foreground GPS to prevent freezing on Android where native location can infinitely hang if blocked.
+- **Storage Availability:** AsyncStorage requires `try/catch` fallbacks to handle limits and OS wiping across `GroupRepository` and `CrewService`.
 
-### 📄 `src/services/CrewService.ts`
-* **Functional Scope:** Coordinates real-time multiplayer crew sessions using Supabase Realtime (Presence and Broadcast channels). Governs session creation, joining, leadership handoff, live telemetries, and state transitions.
-* **Line Count:** ~797 lines (monolithic file flagged for future modularization).
-* **Import Dependency Chain:**
-  * `supabaseClient` (Supabase connectivity)
-  * `AppLogger` (Log dispatching)
-  * `locationService` (GPS coords tracking)
-  * `profileService` (User profile and permanent crew mappings)
-* **Export Dependency Chain:**
-  * `crewService` (Singleton instance)
-  * `CrewSession` (Interface)
-  * `CrewMember` (Interface)
-  * `CrewTelemetry` (Interface)
-* **State Managed:**
-  * `currentSession` (Active session details)
-  * `currentRole` (`'leader'` | `'member'`)
-  * `members` (Roster of active users in the session)
-  * `sessionTelemetry` (Live updates like distance and top speed)
-  * `activeChannels` (Pointers to open Supabase Realtime subscriptions)
-* **Core Operations:**
-  * `createSession`: Spins up a live session entry in `crew_sessions` database table, sets up local Presence state, and subscribes to state-broadcast channels.
-  * `joinSessionById`: Connects a member to an existing session, starts state sync, and subscribes to changes.
-  * `broadcastScene`: Dispatches LED patterns/effects from the leader to all members via the Realtime channel.
-  * `handoffLeadership`: Atomically updates the leader in the DB and broadcasts a role transition packet.
-  * `leaveSession` / `endSession`: Disconnects real-time channels, records final telemetry metrics, and updates DB status.
+## Archival Tags
+- Master Reference § `src/services/CrewProfileService.ts` contains `(Managed inside ProfileService.ts)` which is STALE. [MOVE_TO_ARCHIVE]
 
-### 📄 `src/services/CrewProfileService.ts` (Managed inside `ProfileService.ts`)
-* **Functional Scope:** Handles persistent, long-term crew registrations, member rosters, custom crew search, invite codes, role management (owners/members), and avatar configurations.
-* **Core Operations:**
-  * `createPermanentCrew`: Creates a crew in `crews` table with automatic 6-character alphanumeric invite code generation and creator assigned as owner.
-  * `joinPermanentCrew`: Validates invite codes and registers user to the crew.
-  * `getMyCrew`: Retrieves crews the user belongs to.
-  * `assignCrewOwner` / `revokeCrewOwner`: Changes roles in `crew_members` table.
+## Architectural Impact Flags
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
 
-### 📄 `src/context/CrewContext.tsx`
-* **Functional Scope:** Provides React Context wrapper to bind real-time hooks and screen components together. Prevents hook fragmentation and circular references.
-* **Line Count:** ~120 lines.
-* **Export Dependency Chain:**
-  * `CrewProvider` (React wrapper component)
-  * `useCrewContext` (Consumer hook)
-* **State Managed:**
-  * Combined hooks: `hub` (`useCrewHub`), `manage` (`useCrewManage`), `session` (`useCrewSession`)
-  * UI state: `step` (`'landing'` | `'create'` | `'controller'` | `'manage'` | `'schedule'`), `displayName`, `isLoading`, `errorMsg`, `confirmAction`.
-
-### 📄 `src/hooks/useCrewHub.ts`
-* **Functional Scope:** Coordinates proximity-based live discovery. Integrates GPS checks, location labels, radius-based search filters, and active crew list queries.
-* **Line Count:** ~180 lines.
-* **State Managed:** `activeSessions`, `myCrews`, `nearbySessions`, `nearbySpots`, `discoverRadiusMi`, `locationCoords`, `isGettingLocation`.
-* **Core Operations:** `refreshNearby` (fetches spots and sessions within radius), `handleDetectLocation`.
-
-### 📄 `src/hooks/useCrewManage.ts`
-* **Functional Scope:** Exposes forms, actions, and validations for creating, editing, sharing, and deleting permanent crews, as well as managing crew rosters and owner assignments.
-* **Line Count:** ~220 lines.
-* **State Managed:** `newCrewName`, `newCrewIsPublic`, `newCrewColor`, `newCrewIcon`, `selectedMembers`, `userSearchQuery`, `userSearchResults`.
-
-### 📄 `src/hooks/useCrewSession.ts`
-* **Functional Scope:** UI controller hook wrapping `CrewService` session events. Tracks active state, duration, leaderboard changes, and alerts.
-* **State Managed:** `currentSession`, `currentRole`, `members`, `isHandoffMode`.
-
-### 📄 `src/hooks/useCrewProximityRadar.ts`
-* **Functional Scope:** Drives passive BLE or GPS-based proximity alerts during a crew session. Coordinates background checks.
-
-### 📄 `src/hooks/useDashboardCrew.ts` & `useDashboardGroups.ts`
-* **Functional Scope:** Fetches aggregated metrics and status states to populate main dashboard widgets.
-* **Line Count:** ~80 lines each.
-
-### 📄 `src/components/crew/` Directory Components
-* **`CrewLandingScreen.tsx` (36KB):** Main dashboard hub displaying my crews, map filters, search options, and active sessions.
-* **`CrewControllerScreen.tsx` (14KB):** Live console for active sessions. Displays member status, sync status, code copying, and end session triggers.
-* **`CrewLandingMap.tsx` / `.web.tsx`:** Platform-specific map renderer. Uses MapViewCluster for native and stub graphic for web.
-* **`CrewCreateScreen.tsx`:** Forms to spin up a new session associated with a crew.
-* **`CrewManageScreen.tsx`:** UI for persistent crew creation, including icon designer, avatar color picker, and user search.
-* **`CrewScheduleScreen.tsx`:** Schedules future crew sessions with location tagging.
-
----
-
-## 2. 💥 Architectural Impact & Blast Radius
-
-A guide detailing structural, real-time, local, and device-level impacts of modifying the `GROUP_SYNC` domain.
-
-```
-                  ┌──────────────────────┐
-                  │      GROUP_SYNC      │
-                  └──────────┬───────────┘
-         ┌───────────────────┼───────────────────┐
-         ▼                   ▼                   ▼
-┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
-│Database Schemas │ │ Supabase Event  │ │ BLE / Skates    │
-│ & Relations     │ │  Broadcasts     │ │ Local Packets   │
-└─────────────────┘ └─────────────────┘ └─────────────────┘
-```
-
-### Database Schema & Relationship Impacts
-Modifying permanent crew tables affects:
-* **`crews`** (Holds metadata: `id`, `name`, `is_public`, `city`, `state`, `description`, `avatar_color`, `avatar_icon`, `invite_code`, `created_by`).
-* **`crew_members`** (Roster mapping: `id`, `crew_id`, `user_id`, `role`, `joined_at`).
-* **`crew_sessions`** (Live events: `id`, `crew_id`, `name`, `status`, `leader_user_id`, `location_label`, `lat`, `lng`, `created_at`, `scheduled_at`, `ended_at`).
-* **`crew_session_members`** (Real-time roster: `id`, `session_id`, `user_id`, `joined_at`, `last_seen_at`).
-
-Any schema adjustments require updating the corresponding Supabase client calls, RPC interfaces, and edge functions.
-
-### Supabase Realtime & Broadcast Channels
-* Broadcast channels dispatching scene updates rely on strict type serialization.
-* Modifying the broadcast payload structure (e.g. changing color representation format) without backward compatibility will break color parsing for users running older client builds, freezing their lights on their last received mode.
-
-### Local Cache & Persistence (`AsyncStorage`)
-* `GroupRepository` caches custom groups locally using key templates `@SK8Lytz:groups` and `@SK8Lytz:pending_groups`.
-* Edits to local storage properties will invalidate user cache, forcing full database refetches and potentially discarding un-synced offline modifications in the queue.
-
-### BLE Dispatch Queues
-* When a leader broadcasts a scene change, the client dispatches updates to:
-  1. Supabase Realtime (broadcasting to remote members).
-  2. Local skates (sending binary BLE commands via `deviceManager` using opcode `0x59`).
-* When members receive the broadcast over WebSockets, they write the changes to their skates via BLE.
-* **Risk (Chipset Lockout):** If scene dispatches are not throttled, rapid scene toggles can overwhelm the BLE write queues of member devices, leading to EEPROM buffer lockouts on `0xA3` chipset controllers.
-
----
-
-## 3. 🕸️ Context Matrix & Hooks Dependency Graph
-
-Visualizing how React Context binds and coordinates the specialized child hooks to manage unified state in `CrewContext.tsx`.
-
+## Sequence Diagram
 ```mermaid
-graph TD
-    CrewContext[CrewContext / CrewProvider] -->|Injects Context State| useCrewHub[useCrewHub]
-    CrewContext -->|Injects Context State| useCrewManage[useCrewManage]
-    CrewContext -->|Injects Context State| useCrewSession[useCrewSession]
-    
-    useCrewHub -->|Reads Coordinates| LocationService[LocationService / Expo Location]
-    useCrewHub -->|Queries Rosters| ProfileService[ProfileService]
-    
-    useCrewManage -->|Executes DB Queries| ProfileService
-    
-    useCrewSession -->|Establishes Socket| CrewService[CrewService / Supabase Realtime]
-    
-    CrewLandingScreen[CrewLandingScreen] -->|Uses Context| CrewContext
-    CrewControllerScreen[CrewControllerScreen] -->|Uses Context| CrewContext
-    CrewCreateScreen[CrewCreateScreen] -->|Uses Context| CrewContext
-    CrewManageScreen[CrewManageScreen] -->|Uses Context| CrewContext
+sequenceDiagram
+    participant User
+    participant CrewModal
+    participant useCrewHub
+    participant LocationService
+    participant CrewService
+    participant Supabase
+
+    User->>CrewModal: Open Hub
+    CrewModal->>useCrewHub: Trigger refreshNearby()
+    useCrewHub->>LocationService: getSilentLocation() or acquireCoords()
+    LocationService-->>useCrewHub: return Coordinates
+    useCrewHub->>Supabase: getNearbyPublicSessions & getNearbySkateSpots
+    Supabase-->>useCrewHub: Returns active public sessions
+    useCrewHub-->>CrewModal: Update UI with nearby pins
+    User->>CrewService: createSession(name, location)
+    CrewService->>Supabase: Insert crew_sessions & crew_members
+    Supabase-->>CrewService: Success
+    CrewService->>CrewService: subscribeAsLeader()
+    CrewService->>Supabase: open Realtime channel `crew:{id}`
+    CrewService-->>User: Navigate to CrewControllerScreen
 ```
 
-### Shared State & Synchronization:
-* **`CrewContext`** binds the states of the child hooks together, allowing them to communicate. For example, when `useCrewSession` transitions step to `controller`, it dynamically reads user identities from `useCrewManage`'s list operations.
-* The context handles central loading screens, error states, step-by-step UI routing (`landing` ➔ `create` ➔ `controller` ➔ `manage`), and double-check modals.
-
----
-
-## 4. 🔌 I/O Registry & Real-Time Protocol Specifications
-
-A catalog of network calls, Supabase Realtime channel topics, database RPCs, and local cache schemas.
-
-### Database RPC Interfaces
-
-#### `upsert_group_with_devices` (Group Repository sync)
-* **Type:** Supabase PostgreSQL Function RPC
-* **Inputs:**
-  ```typescript
-  {
-    group_id: string; // uuid
-    name: string;
-    devices: {
-      device_id: string;
-      custom_name: string;
-      pixel_offset: number;
-    }[];
-  }
-  ```
-* **Outputs:** `void` (Throws SQL error on primary key constraint conflicts)
-
-#### `profileService.createPermanentCrew`
-* **Type:** REST / Database Insert
-* **Inputs:**
-  * `name`: `string`
-  * `config`:
-    ```typescript
-    {
-      isPublic: boolean;
-      avatarColor: string;
-      avatarIcon: string;
-      city?: string;
-      state?: string;
-      description?: string;
-      inviteCode?: string;
-      members: string[]; // user_ids
-    }
-    ```
-  * `creatorId`: `string` (uuid)
-* **Outputs:** `Promise<PermanentCrew>`
-
-### Supabase Realtime WebSocket Protocol
-
-#### Presence Subscription
-* **Channel Topic:** `crew_session_presence:<session_id>`
-* **Join Payload:**
-  ```json
-  {
-    "user_id": "uuid",
-    "display_name": "Skater Name",
-    "joined_at": "ISO-TIMESTAMP",
-    "status": "skating" | "idle"
-  }
-  ```
-
-#### Broadcast Subscription
-* **Channel Topic:** `session_events:<session_id>`
-* **Event Type:** `scene_change`
-* **Message Payload:**
-  ```json
-  {
-    "event": "scene_change",
-    "payload": {
-      "mode": "solid" | "multimode" | "music" | "fixed",
-      "colors": ["#FFAA00", "#FF0055"],
-      "pattern": "rainbow" | "pulse" | null,
-      "speed": 128,
-      "sender_id": "uuid"
-    }
-  }
-  ```
-
-### Local Storage & Offline Schema
-
-#### Custom Groups Cache
-* **Storage Key:** `@SK8Lytz:groups`
-* **Value Schema:**
-  ```typescript
-  {
-    [id: string]: {
-      id: string;
-      name: string;
-      devices: string[]; // Cached device addresses
-      last_modified: string;
-    }
-  }
-  ```
-
-#### Failed Sync Log
-* **Storage Key:** `@SK8Lytz:pending_groups`
-* **Value Schema:** Array of pending write operations stored for next connectivity handshake.
-
----
-
-## 5. 📱 OS Variance & Platform Adaptation Matrix
-
-The codebase dynamically adapts UI behaviors and system calls to accommodate differences between iOS, Android, and Web builds.
-
-| Feature Area | iOS Behavior | Android Behavior | Web Behavior |
-|---|---|---|---|
-| **Map Rendering** | Native Apple Maps or Google Maps via `react-native-maps` & `MapViewCluster` | Google Maps via `react-native-maps` & `MapViewCluster` | Rendered stub screen (`CrewLandingMap.web.tsx`) to bypass native maps codegen crashes |
-| **Keyboard Avoiding** | `KeyboardAvoidingView` behavior set to `'padding'` | `KeyboardAvoidingView` behavior set to `undefined` (system adjustResize handles offset) | Standard browser window scrolls |
-| **System Fonts** | Renders `'Courier New'` or `'Menlo'` for monospaced invite code text | Renders `'monospace'` system font for invite codes | CSS generic monospaced font family fallback |
-| **Location Tracking** | Request permissions via iOS Core Location API (info plist boundaries) | Requests fine/coarse GPS via Android Location Services | Browser standard Navigator Geolocation API |
-| **Image Selection** | Triggers iOS Photo Library UI via `launchImageLibraryAsync` | Triggers Android Document/Photo picker via `launchImageLibraryAsync` | Local file browser dialog |
-| **Clipboard Sharing** | Uses iOS native clipboard APIs | Uses Android clipboard framework | Web browser navigator clipboard write APIs |
 
 <!-- CARTOGRAPHER_END: GROUP_SYNC -->
 
 ### Domain: UI_SCREENS
 <!-- CARTOGRAPHER_START: UI_SCREENS -->
 
-# 🗺️ Codebase Cartography: UI_SCREENS Domain
+# UI_SCREENS - UI Screens & Dashboard Cartography
 
-This documentation provides a comprehensive architectural map of the `UI_SCREENS` (UI Screens & Dashboard) domain in the SK8Lytz mobile application. It details functional boundaries, dependencies, state management, protocols, design system tokens, and platform adaptations.
+## 1. File Manifest
+### Screens
+- `src/screens/AuthScreen.tsx` - Handles user authentication, offline skipping, and environment/sandbox access.
+- `src/screens/DashboardScreen.tsx` - The central monolithic root screen; manages top-level BLE states, telemetry, and connection routing.
+- `src/screens/Onboarding/HardwareSetupWizardScreen.tsx` - Hardware registration flow.
+- `src/screens/Onboarding/PermissionsOnboardingScreen.tsx` - Permission granting flow.
 
----
+### Dashboard Components (`src/components/dashboard/*`)
+- `CrewHubSlab.tsx`, `DashboardCrewPanel.tsx` - Crew and group multi-player state UI.
+- `DashboardHeader.tsx` - Top bar handling connected/disconnected variants and user pills.
+- `DashboardTelemetryHero.tsx`, `LiveTelemetryHUD.tsx` - Telemetry/speed data viz.
+- `HardwareStatusPills.tsx`, `RegisteredFleetSlab.tsx`, `MySkatesSlab.tsx` - Hardware layout sections.
+- `SkateGroupCard.tsx`, `SupportModal.tsx`
 
-## 1. 🗂️ Domain Manifest & Structural Boundaries
+### Shared Components
+- `src/components/shared/BLEErrorBoundary.tsx` - Fallback boundary for BLE failures.
+- `src/components/DeviceItem.tsx` - Touch target for skates, rendering RSSI, selection state, pattern swatch, and hardware icons.
+- `src/components/LocationPicker.tsx`, `LocationPickerMap.tsx`, `LocationPickerMap.web.tsx` - OSM Geocoding and location capture.
+- `src/components/SkateSpotBottomSheet.tsx` - Form for claiming and verifying SK8Lytz spots.
 
-A detailed map of all source files in the `UI_SCREENS` domain, including their functional scope, lines of code, import/export dependency chains, state variables managed, and core operations.
+## 2. Blast Radius
+- **DashboardScreen**: Editing this monolith directly risks crashing the global FSM, BLE connection queuing, and optimistic UI dispatch loops. Changes to Dashboard component layout must be orchestrated cleanly to avoid re-renders disrupting the `useHardwareNotifications` or `useDashboardController`.
+- **DeviceItem**: Heavily rendered inside FlatLists. Modifying its render dependencies incorrectly will result in list jank or UI stalls during high-frequency RSSI/BLE polling.
+- **LocationPicker**: Modifying geocoding limits or states can trigger rate limits on OSM (Nominatim) or cause loop updates on the GPS hooks.
 
-### Root Screens (`src/screens/*`)
+## 3. Context Matrix
+- `BLEContext`: Injects `allDevices`, `connectedDevices`, `scanForPeripherals()`, `bleState`, etc.
+- `ThemeContext`: Consumed heavily by `createDashboardStyles`, providing `Colors.text`, `Colors.primary`, etc., along with dark mode flags.
+- `SessionContext`: Triggers background telemetry tracking and session start/end sequences from the dashboard.
+- `AppConfigContext`: Controls offline flags, visibility toggles for tabs (e.g., `visibility_maps_tab` for maps).
 
-#### 📄 [DashboardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx)
-* **Functional Scope:** Centralized BLE state coordinator and visual entry point of the app. It resolves circular context queries by hoisting GATT connection statuses to prevent multi-device race conditions.
-* **Line Count:** ~645 lines.
-* **Import Dependency Chain:**
-  * Contexts: `useTheme`, `useAppConfig`, `useSession`, `useAuth`, `BLEContext`
-  * Services: `AppLogger`
-  * Hooks: `useRegistration`, `useDeviceStateLedger`, `useTelemetryLedger`
-  * Components: `DashboardHeader`, `DashboardTelemetryHero`, `LiveTelemetryHUD`, `CrewHubSlab`, `MySkatesSlab`, `RegisteredFleetSlab`, `SupportModal`, `BLEErrorBoundary`, `DeviceItem`, `LocationPicker`, `DockedController`
-* **Export Dependency Chain:**
-  * `DashboardScreen` (default export)
-* **State Managed:**
-  * UI Accordion States: `isRegisteredCollapsed` (boolean), `isMySkatesCollapsed` (boolean)
-  * Modals Visibility: `isSupportVisible`, `isSettingsVisible`, `isGroupSettingsVisible`, `isAccountVisible` (booleans)
-  * Selections: `selectedDeviceMac` (string | null), `scanning` (boolean)
-* **Core Operations:**
-  * `displayConnectedDevices` useMemo mapper: maps connected BLE device nodes to registered database models.
-  * Power switch dispatches: issues global broadcast power toggles.
-  * Accompanying modals triggers.
+## 4. Hook/Service I/O Registry
+- **`useDashboardGroups`** - I/O: Reads `registeredDevices`, exposes `customGroups`, `deviceConfigs`, `powerStates`, and layout collapse states.
+- **`useDashboardProfile`** - I/O: Fetches profile data, triggers modal visibility (`isAccountModalVisible`), logs user out.
+- **`useDashboardAutoConnect`** - I/O: Analyzes BLE state and device registration to trigger automated hardware handshakes on boot.
+- **`useDashboardCrew`** - I/O: Exposes role, active sessions, handles deep links for crew invites.
+- **`useDeviceStateLedger`** - I/O: Unified ledger caching pattern states per device to feed swatch previews in `DeviceItem`.
+- **`useProtocolDispatch`** - I/O: Converts UI intents into byte-aligned commands dispatched via BLE write queues.
+- **`SkateSpotsService` & `useRecentSpots`** - I/O: Manages REST interactions for spot coordinates, claims, and surface verifications.
 
-#### 📄 [AuthScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/AuthScreen.tsx)
-* **Functional Scope:** Manages user authentication state, handles signup/login forms, displays session expiration dialogs, and configures persistent credential storage.
-* **Line Count:** ~310 lines.
-* **Import Dependency Chain:**
-  * Contexts: `useTheme`, `useAuth`
-  * Components: `MaterialCommunityIcons`
-  * Utilities: `@react-native-async-storage/async-storage`
-* **Export Dependency Chain:**
-  * `AuthScreen` (default export)
-* **State Managed:**
-  * Mode: `mode` (`'LOGIN'` | `'SIGNUP'` | `'FORGOT_PASSWORD'`)
-  * Credentials: `email`, `password`, `username` (strings)
-  * UI States: `loading` (boolean), `error` (string | null)
-* **Core Operations:**
-  * `handleAuth`: Orchestrates call routes to Supabase Auth, validating and fetching account attributes.
-  * Offline persistence triggers: caches credentials to allow app launch in areas with poor network coverage.
+## 5. OS Variance Matrix
+| Component / File | iOS / Android | Web |
+| :--- | :--- | :--- |
+| `AuthScreen.tsx` | Uses native Alert boxes for support. | Falls back to `Linking.openURL('mailto:...')` |
+| `DashboardHeader.tsx` | Uses `shadowColor`, `elevation`, `shadowRadius` | Conditionally uses `boxShadow` DOM CSS via React Native Web |
+| `DashboardScreen.tsx` | Sweeper stops/starts based on `AppState` background shifts | Sweeper ignores AppState pauses (stays active) |
+| `LocationPickerMap` | Uses Native Maps | Uses `LocationPickerMap.web.tsx` Leaflet fallback |
 
-#### 📄 [HardwareSetupWizardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx)
-* **Functional Scope:** Guides the user through pairing and configuring their physical skates during onboarding. Supports scanning, side selection (Left/Right placement), and atomic green-blink testing.
-* **Line Count:** ~568 lines.
-* **Import Dependency Chain:**
-  * Contexts: `useTheme`, `BLEContext`, `useAuth`
-  * Services: `AppLogger`, `pingDevice` (from `BlePingService`)
-  * Components: `LinearGradient`, `SafeAreaView` (from `react-native-safe-area-context`)
-* **Export Dependency Chain:**
-  * `HardwareSetupWizardScreen` (default export)
-* **State Managed:**
-  * Wizard Step: `step` (`'welcome'` | `'scanning'` | `'identify'` | `'configure'` | `'complete'`)
-  * Scanned Targets: `scannedDevices` (array of BLE peripherals)
-  * Active Interactions: `blinkingDeviceId` (string | null), `selectedLeftDevice` (device object), `selectedRightDevice` (device object)
-* **Core Operations:**
-  * `executePing`: Calls `pingDevice` to trigger a green flashing sequence on a peripheral and probe its internal configuration (IC name, LED points, etc.).
-  * Side mapping: pairs MAC addresses with specific "Left" or "Right" roles before saving configs to the cloud.
-
-#### 📄 [PermissionsOnboardingScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/PermissionsOnboardingScreen.tsx)
-* **Functional Scope:** Ensures the app has all required system permissions (Location, Bluetooth) before allowing access to the dashboard.
-* **Line Count:** ~145 lines.
-* **Import Dependency Chain:**
-  * Contexts: `useTheme`
-  * Services: `PermissionService`
-  * Components: `MaterialCommunityIcons`, `LinearGradient`
-* **Export Dependency Chain:**
-  * `PermissionsOnboardingScreen` (default export)
-* **State Managed:**
-  * Permissions Flags: `locationGranted`, `bluetoothGranted`, `checking` (booleans)
-* **Core Operations:**
-  * `requestPermissions`: Initiates system prompts for fine location and Bluetooth access, and checks status before routing to the dashboard.
-
----
-
-### Dashboard Layout Components (`src/components/dashboard/*`)
-
-#### 📄 [CrewHubSlab.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/CrewHubSlab.tsx)
-* **Functional Scope:** Renders the active Crew session widget on the dashboard. Employs a 4-state matrix (Admin Lock, Offline, Session Active, Radar Alert/Empty) to guide user action based on crew availability.
-* **Line Count:** ~80 lines.
-
-#### 📄 [DashboardCrewPanel.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/DashboardCrewPanel.tsx)
-* **Functional Scope:** Connects the `CrewHubSlab` visual component to the `CrewModal` and `useCrewProximityRadar` hook, managing leader/member session synchronization.
-* **Line Count:** ~155 lines.
-
-#### 📄 [DashboardGroupList.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/DashboardGroupList.tsx)
-* **Functional Scope:** A container component that lists custom skater groups on the dashboard, serving as a boundary check for custom groups.
-* **Line Count:** ~40 lines.
-
-#### 📄 [DashboardHeader.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/DashboardHeader.tsx)
-* **Functional Scope:** Renders the dashboard's top bar, displaying active BLE connection badges, theme toggles, account buttons, and signal status markers.
-* **Line Count:** ~124 lines.
-
-#### 📄 [DashboardTelemetryHero.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/DashboardTelemetryHero.tsx)
-* **Functional Scope:** Renders a high-performance SVG-based speedometer and session metrics grid (Distance, G-Force, Duration, Avg Speed, Top Speed, Calories) during active tracking.
-* **Line Count:** ~198 lines.
-
-#### 📄 [HardwareStatusPills.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/HardwareStatusPills.tsx)
-* **Functional Scope:** Renders low-level device configuration pills (LED points, segment counts, firmware version, and RF remote states).
-* **Line Count:** ~60 lines.
-
-#### 📄 [LiveTelemetryHUD.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/LiveTelemetryHUD.tsx)
-* **Functional Scope:** A compact, floating horizontal HUD displaying live speed, G-force, distance, and duration at the top of the dashboard.
-* **Line Count:** ~132 lines.
-
-#### 📄 [MySkatesSlab.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/MySkatesSlab.tsx)
-* **Functional Scope:** Displays a grid of registered custom groups. Prompts the user to start the setup wizard if no groups are configured.
-* **Line Count:** ~128 lines.
-
-#### 📄 [RegisteredFleetSlab.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/RegisteredFleetSlab.tsx)
-* **Functional Scope:** Lists registered individual skates, allowing users to collapse the list, check connection status, or add new devices.
-* **Line Count:** ~76 lines.
-
-#### 📄 [SkateGroupCard.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/SkateGroupCard.tsx)
-* **Functional Scope:** An interactive card for device groups, featuring dynamic gradient color transitions, RSSI bar graphs, and quick-action buttons (power, music, camera, favorite).
-* **Line Count:** ~207 lines.
-
-#### 📄 [SupportModal.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/SupportModal.tsx)
-* **Functional Scope:** A self-contained modal that provides quick access to external support resources, including setup guides, store pages, and contact portals.
-* **Line Count:** ~78 lines.
-
----
-
-### Shared UI & Helper Components (`src/components/*` & `src/components/shared/*`)
-
-#### 📄 [BLEErrorBoundary.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/shared/BLEErrorBoundary.tsx)
-* **Functional Scope:** A crash-shield React ErrorBoundary component. It catches rendering errors caused by null device states or GATT connection loss, preventing a full app crash by offering a recovery button.
-* **Line Count:** ~133 lines.
-
-#### 📄 [DeviceItem.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DeviceItem.tsx)
-* **Functional Scope:** Renders an individual skate card. Displays RSSI signal strength, power buttons, hardware pills, and a real-time pattern color preview.
-* **Line Count:** ~282 lines.
-
-#### 📄 [LocationPicker.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/LocationPicker.tsx)
-* **Functional Scope:** Coordinates coordinates selection. Combines local database spots search, Nominatim API autocomplete search, and a map preview in a single UI container.
-* **Line Count:** ~393 lines.
-
-#### 📄 [LocationPickerMap.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/LocationPickerMap.tsx)
-* **Functional Scope:** Native platform map renderer wrapping `react-native-maps` and Map Markers.
-* **Line Count:** 13 lines.
-
-#### 📄 [LocationPickerMap.web.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/LocationPickerMap.web.tsx)
-* **Functional Scope:** Web platform fallback stub. Safely overrides `react-native-maps` on web bundles to prevent compilation errors and crashes.
-* **Line Count:** 38 lines.
-
-#### 📄 [SkateSpotBottomSheet.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/SkateSpotBottomSheet.tsx)
-* **Functional Scope:** A bottom sheet UI that allows skaters to claim community skate spots, edit surface parameters (concrete, wood), and select indoor/outdoor environmental details.
-* **Line Count:** 215 lines.
-
----
-
-## 2. 💥 Architectural Impact & Blast Radius
-
-The `UI_SCREENS` domain functions as the presentation and entry layer of the app. It consumes system-wide hooks and services, and is imported by the root entry-point files.
-
-```
-                    ┌────────────────────────┐
-                    │       App.tsx          │
-                    └───────────┬────────────┘
-                                │
-                                ▼
-                    ┌────────────────────────┐
-                    │   DashboardScreen      │
-                    └───────────┬────────────┘
-         ┌──────────────────────┼──────────────────────┐
-         ▼                      ▼                      ▼
-┌──────────────────┐   ┌──────────────────┐   ┌──────────────────┐
-│ CrewHubSlab      │   │ MySkatesSlab     │   │ RegisteredFleet  │
-└──────────────────┘   └──────────────────┘   └──────────────────┘
-```
-
-### What this domain imports (Outward Dependencies):
-1. **Core Contexts**:
-   - `ThemeContext` (via `useTheme`) - used by all UI components for consistent color schemes.
-   - `BLEContext` (via `useContext(BLEContext)`) - consumed by `DashboardScreen` and `HardwareSetupWizardScreen` to call GATT scanning and write operations.
-   - `SessionContext` (via `useSession`) - consumed by telemetry HUDs to display speed, duration, and G-force stats.
-   - `AppConfigContext` (via `useAppConfig`) - used to check feature flag visibility (e.g., `visibility_maps_tab`).
-   - `AuthContext` (via `useAuth`) - consumed by `AuthScreen` and `DashboardScreen` to track user accounts and online state.
-2. **State & Telemetry Hooks**:
-   - `useRegistration` - used by slabs to list active paired peripherals.
-   - `useDeviceStateLedger` - consumed by `DashboardScreen` and `DeviceItem` to load and display current pattern previews.
-   - `useRecentSpots` - used by `LocationPicker` to query and cache search coordinates.
-3. **Core Services**:
-   - `AppLogger` - used for tracking telemetry events and logs.
-   - `BlePingService` (via `pingDevice`) - used by `HardwareSetupWizardScreen` to perform on-demand device identification.
-   - `SkateSpotsService` - consumed by `SkateSpotBottomSheet` to sync spot verification edits to Supabase.
-
-### What imports this domain (Inward Dependencies):
-* **[App.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/App.tsx)**: Root entry of the app. It imports and conditionally renders `DashboardScreen` and `AuthScreen`.
-* **Tests Suite**: Component testing files (e.g., `components.test.ts`) that check these screens for snapshot validation and layout smoke tests.
-
----
-
-## 3. 🕸️ Context Matrix
-
-React Context integrations inside the `UI_SCREENS` domain are mapped below:
-
-| Context | Consumer / Hook | Provided By | Architectural Purpose |
-| :--- | :--- | :--- | :--- |
-| **ThemeContext** | `useTheme()` | `ThemeProvider` (`App.tsx`) | Distributes current visual palettes (`Colors`) and `isDark` boolean properties. |
-| **BLEContext** | `useContext(BLEContext)` | `BLEProvider` (`App.tsx`) | Exposes BleManager control APIs (`scanForPeripherals`, `connectToDevices`, `connectedDevices`). |
-| **SessionContext** | `useSession()` | `SessionProvider` (`App.tsx`) | Feeds live telemetry counters with metrics like `gpsSpeed`, `peakGForce`, `sessionDurationSec`. |
-| **AppConfigContext**| `useAppConfig()` | `AppConfigProvider` (`App.tsx`) | Gates features (e.g., hiding map views if the `visibility_maps_tab` flag is disabled). |
-| **AuthContext** | `useAuth()` | `AuthProvider` (`App.tsx`) | Exposes session tokens, profile parameters, and offline-mode flags. |
-
----
-
-## 4. 🔌 Hook/Service I/O Registry
-
-Inputs, outputs, and side-effects of critical interfaces consumed in this domain:
-
-### `useCrewProximityRadar` (Hook)
-* **Input:** None (implicitly reads global location updates and active crew rosters).
-* **Output:** `radarAlert: RadarAlert | null` (returns alert details like `PRIVATE_CREW`, `PUBLIC_SESSION`, or `EMPTY_RINK`).
-* **Side-Effects:** Runs a background geolocation check loop to determine if an alert match should trigger.
-
-### `executePingDevice` (BlePingService)
-* **Input:**
-  * `bleManager: BleManager` (physical hardware manager)
-  * `mac: string` (target peripheral MAC address)
-  * `blinkPayload: number[]` (opcode payload array)
-  * `options?: { probe?: boolean; duration?: number; turnOffAtEnd?: boolean; }`
-* **Output:** `Promise<PingResult | null>` (returns EEPROM specs like `ledPoints`, `icName`, `segments`, `rfMode` or null).
-* **Side-Effects:** Executes an atomic connection sequence: **Connect ➔ Discover ➔ Write Blink Payload ➔ Subscribe Notifications ➔ Query Settings & RF state ➔ Dwell 8s ➔ Write Power Off ➔ Disconnect**.
-
-### `useDeviceStateLedger` (Hook)
-* **Input:** None (connects directly to local cache namespaces).
-* **Output:**
-  * `save: (mac: string, state: DevicePatternState) => Promise<void>`
-  * `loadSync: (mac: string) => DevicePatternState | null`
-* **Side-Effects:** Writes status configurations to AsyncStorage to persist pattern previews across app restarts.
-
-### `claimAndUpdateSpot` (SkateSpotsService)
-* **Input:** `spot: Partial<SkateSpot>` (updated surface and environmental fields).
-* **Output:** `Promise<SkateSpot>` (saved spot record).
-* **Side-Effects:** Syncs local spot validation details to Supabase.
-
----
-
-## 5. 📱 OS Variance & Platform Adaptation Matrix
-
-Code paths that branch between iOS, Android, and Web environments:
-
-| Component / File | Platform | Check Condition | Platform-Specific Behavior |
-| :--- | :--- | :--- | :--- |
-| **DashboardHeader.tsx** | Web | `Platform.OS === 'web'` | Applies CSS-based shadows (`boxShadow`) instead of native shadow props. |
-| **DashboardHeader.tsx** | Android / iOS | `Platform.OS !== 'web'` | Uses native shadow properties (`shadowColor`, `shadowOpacity`, `shadowRadius`, `elevation`). |
-| **DashboardTelemetryHero.tsx** | Web | `Platform.OS === 'web'` | Injects SVG text shadows (`textShadow`) to display glow details without throwing native rendering errors. |
-| **LocationPickerMap.web.tsx** | Web | `.web.tsx` extension | Acts as a stub replacing `react-native-maps` to prevent compilation crashes on web bundles. |
-| **SessionContext.tsx** | iOS | `Platform.OS === 'ios'` | Configures Notifee notification categories with custom action buttons (End, Pause, Resume) for lock screen widgets. |
-| **App.tsx** | Android | `Platform.OS === 'android'` | Initializes the `react-native-health-connect` module early on startup to prevent simulator crashes. |
-
----
-
-## 6. 🎨 Design System & Token Manifest
-
-The UI layout utilizes structural tokens and variables defined in [theme.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/theme/theme.ts) to maintain the signature "Gleamz" layout system.
-
-### Palette Tokens (Dark vs. Light Modes)
-* **Primary Branding (Orange CTA)**: `#FF5A00` - Used for highlights, active connection badges, and primary buttons.
-* **Secondary Branding (Amber Warning)**: `#FFB800` - Used for warnings, syncing indicators, and minor sliders.
-* **Accent Details**: `#FF3300` in dark mode, `#1B4279` in light mode.
-* **Core Surface Layout**:
-  * *Dark Mode*: Background is `#1B4279`, Surface is `#245596`, Highlight is `#3172C9`.
-  * *Light Mode*: Background is `#EAEFF5`, Surface is `#CBD6E2`, Highlight is `#DDE5EE`.
-
-### Typography Style Presets
-* **Font Family**: Uses `'Righteous'` (imported via `@expo-google-fonts/righteous`) for titles and headers.
-* **Typography Matrix**:
-  * `header`: `fontSize: 24`, letterSpacing: 2.
-  * `title`: `fontSize: 16`, letterSpacing: 0.5.
-  * `body`: `fontSize: 14`.
-  * `caption`: `fontSize: 11`.
-
-### Spacing & Layout Tokens
-* **Padding Metric**: Standardizes layout padding using `Layout.padding = Spacing.lg` (16px).
-* **Rounding Metric**: Uses `Layout.borderRadius = Spacing.xl` (24px) for cards and modals.
-* **Constants**:
-  * `xxs`: 2px, `xs`: 4px, `sm`: 8px, `md`: 12px, `lg`: 16px, `xl`: 24px, `xxl`: 32px, `xxxl`: 40px.
-
-### Visual Styling Conventions
-1. **Glassmorphism**:
-   Cards like `SkateGroupCard` use tilted semi-transparent overlays (`skateCardRefraction`) to simulate frosted glass:
-   ```typescript
-   skateCardRefraction: {
-     position: 'absolute',
-     top: -50, left: -50,
-     width: 200, height: 200,
-     backgroundColor: 'rgba(255, 255, 255, 0.03)',
-     transform: [{ rotate: '45deg' }],
-   }
-   ```
-2. **Glow Shadows**:
-   * iOS: `shadowOpacity: 0.8`, `shadowRadius: 8`.
-   * Android: `elevation: 8` with shadow color matching the active theme color.
-   * Web: Employs CSS `boxShadow` and `textShadow` declarations.
-3. **Preset Color Mapping (`getPatternColors`)**:
-   Converts light-program configuration strings into visual gradients on group cards:
-   * *Fire/Flame*: Gradient `#FF4D00` ➔ `#FF9E00`.
-   * *Water/Ocean*: Gradient `#00B2FF` ➔ `#00FFF0`.
-   * *Neon/Cyber*: Gradient `#FF00E5` ➔ `#00F0FF`.
-   * *Police*: Gradient `#FF0000` ➔ `#0000FF`.
-
----
-
-## 7. ⛓️ Sequence Diagram: Onboarding Hardware Setup / Blink-Probe Flow
-
-The sequence diagram below details the GATT communication lifecycle during setup. When a user taps **Blink** on a scanned peripheral card in `HardwareSetupWizardScreen.tsx`, the application calls `pingDevice` in `BlePingService.ts` to connect, identify, query settings, and disconnect:
+## SEQUENCE DIAGRAM: Dashboard & Auto-Connect Flow
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor User
-    participant Wizard as HardwareSetupWizardScreen
-    participant Ping as BlePingService (pingDevice)
-    participant Factory as BleSessionFactory
-    participant BLE as BleManager (react-native-ble-plx)
-    participant Controller as SK8Lytz Peripheral
+    participant User
+    participant DashboardScreen
+    participant useDashboardAutoConnect
+    participant BLEMachine
+    participant Hardware
 
-    User->>Wizard: Taps "BLINK" on scanned device card
-    Wizard->>Ping: executePingDevice(bleManager, mac, blinkPayload)
-    
-    Note over Ping,Factory: Establish GATT session
-    Ping->>Factory: createGattSession(bleManager, mac)
-    Factory->>BLE: connectToDevice(mac)
-    BLE-->>Controller: [BLE Connect]
-    Controller-->>BLE: Connect Success
-    Factory->>BLE: discoverAllServicesAndCharacteristics(mac)
-    BLE-->>Controller: [Discover GATT Services]
-    Controller-->>BLE: Service Maps
-    Factory-->>Ping: Return (conn, adapter)
-
-    Note over Ping,Controller: Step 1: Write Blink Payload (Green)
-    Ping->>BLE: writeCharacteristicWithoutResponseForDevice(mac, svc, writeChr, b64Blink)
-    BLE-->>Controller: Write 0x59 static green program
-    Note over Controller: Skates light up green!
-
-    Note over Ping,Controller: Step 2: Probe Hardware Specifications
-    Ping->>BLE: monitorCharacteristicForDevice(mac, svc, notifyChr)
-    BLE-->>Controller: Subscribe to Notifications
-    Ping->>Ping: Wait 400ms for notify monitor initialization
-    Ping->>BLE: writeCharacteristicWithoutResponseForDevice(mac, svc, writeChr, b64QuerySettings)
-    BLE-->>Controller: Write Query Settings Packet (0xA3 chipset config)
-    Controller-->>BLE: Notify settings payload frame
-    BLE-->>Ping: Callback with Base64 settings data
-    Ping->>Ping: parseSettingsResponse() -> ledPoints, segments, icType
-
-    Ping->>Ping: Wait 200ms
-    Ping->>BLE: writeCharacteristicWithoutResponseForDevice(mac, svc, writeChr, b64QueryRfState)
-    BLE-->>Controller: Write Query RF Remote Config
-    Controller-->>BLE: Notify RF payload frame
-    BLE-->>Ping: Callback with Base64 RF state
-    Ping->>Ping: parseRfRemoteState() -> rfMode, rfPairedCount
-
-    Note over Ping,Wizard: Step 3: Dwell and Turn Off
-    Ping->>Wizard: Update pending card UI in-place with real specs
-    Ping->>Ping: Sleep 8000ms (UX Dwell for visual verification)
-    
-    Ping->>BLE: writeCharacteristicWithoutResponseForDevice(mac, svc, writeChr, b64PowerOff)
-    BLE-->>Controller: Write BuildPowerOff Packet
-    Note over Controller: Skates turn off lights
-
-    Note over Ping,BLE: Step 4: Disconnect
-    deactivate Ping
-    Ping->>BLE: cancelDeviceConnection(mac)
-    BLE-->>Controller: [BLE Disconnect]
-    Ping-->>Wizard: Return hardware configuration object (hwConfig)
-    Wizard->>Wizard: Reset card state ("Is Blinking" -> null)
+    User->>DashboardScreen: Mount App
+    DashboardScreen->>useDashboardAutoConnect: Init hook parameters
+    useDashboardAutoConnect->>BLEMachine: Request burstScan & connect
+    BLEMachine->>Hardware: Start Bluetooth Sweep
+    Hardware-->>BLEMachine: Returns Discovered Peripheral
+    BLEMachine-->>DashboardScreen: Updates `allDevices` & `connectedDevices`
+    DashboardScreen->>User: UI switches to "CONNECTED" header
 ```
+
+## Archival Instructions for Master Reference
+The following sections in `docs/SK8Lytz_App_Master_Reference.md` are marked stale and must be archived:
+- `### Dashboard UI Layout (4-Slab Architecture) [MOVE_TO_ARCHIVE]`
+- `#### VisualizerUnit Rendering Rules (HALOZ RING only) [MOVE_TO_ARCHIVE]`
+- `### UI Design Patterns & Branding` - **One-Screen Setup Policy [MOVE_TO_ARCHIVE]**
+
+## Design System & Token Manifest
+- **Typography**: 'Righteous' (Headers, Titles), 'Inter-Medium' (Labels, secondary text).
+- **Colors**: Hex tokens derived dynamically from `Colors.primary`, `Colors.secondary`, `Colors.text`, `Colors.textMuted`, `Colors.error` (#FF4444, #FF453A), `Colors.success` (#00C864).
+- **Glassmorphism**: Opacity layers heavily used for cards (e.g., `rgba(255, 255, 255, 0.05)`, refract overlays, and linear gradients).
+- **Spacing Scale**: Spacing object (e.g., `Spacing.sm`, `Spacing.md`, `Spacing.lg`, `Spacing.xl`).
+- **Icons**: `@expo/vector-icons` MaterialCommunityIcons heavily standardized across all screens.
+
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
+
 
 <!-- CARTOGRAPHER_END: UI_SCREENS -->
 
 ### Domain: UI_DOCKED_CONTROLLER
 <!-- CARTOGRAPHER_START: UI_DOCKED_CONTROLLER -->
 
-# 🗺️ Codebase Cartography: UI_DOCKED_CONTROLLER
-
-This document provides a comprehensive structural mapping and architectural deep-dive for the `UI_DOCKED_CONTROLLER` domain of the SK8Lytz application. It traces state flows, BLE dispatch loops, hook integrations, OS variances, and highlights opportunities for refactoring.
-
----
+# 🗺️ Codebase Cartography: UI Docked Controller
 
 ## 1. File Manifest
-
-Every file within this domain has been audited and mapped to its primary architectural purpose:
-
-| File | Architectural Purpose |
-|---|---|
-| [`DockedController.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DockedController.tsx) | Central container (Routing Shell) for all docked panels. Coordinates the mode FSM, orchestrates the Optimistic UI rollback system, handles reconnect replays, and broadcasts crew session updates. |
-| [`AnalogGauge.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/AnalogGauge.tsx) | Pure, isolated SVG-based needle gauge. Used in Street Mode to display real-time GPS speed and G-force accelerometer telemetry. |
-| [`BuilderPanel.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/BuilderPanel.tsx) | Sub-panel for custom positioning color sequence design. Handles loading custom patterns from the library, saving custom sequences, and exporting nodes to the dispatch engine. |
-| [`CameraPanel.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/CameraPanel.tsx) | Sub-panel enabling interactive camera viewfinder color capturing (Sniper mode) or k-Means dominant color palette extraction (Vibe mode). |
-| [`DockedDock.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/DockedDock.tsx) | Floating mode navigation dock that detects horizontal swipe gestures (via `PanResponder`) to navigate between modes. |
-| [`FavoritePromptModal.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/FavoritePromptModal.tsx) | Popup prompt modal for naming, saving, editing, or deleting active color styles. |
-| [`FavoritesPanel.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/FavoritesPanel.tsx) | Sub-panel rendering user-saved custom styles alongside curated presets downloaded from the database. |
-| [`MusicPanel.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/MusicPanel.tsx) | Sub-panel managing primary/secondary color mapping focus, microphone sensitivity, and device vs. app sound pattern selections. |
-| [`PresetCard.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/PresetCard.tsx) | Visual card representing a preset option in the Favorites grid view. |
-| [`ProEffectsPanel.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/ProEffectsPanel.tsx) | Sub-panel that aggregates custom spatial pattern templates in a grid, passing selected presets to the active device. |
-| [`QuickPresetModal.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/QuickPresetModal.tsx) | Modal to save color sequence presets to cloud-synchronized database slots. |
-| [`SpectrumAnalyzer.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/SpectrumAnalyzer.tsx) | Sound frequency analyzer visualization that runs when app-level microphone streaming is active. |
-| [`StreetModeDistributionSlider.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/StreetModeDistributionSlider.tsx) | Specialized slider widget in Street mode for defining spatial light behavior and pattern distribution ratios. |
-| [`StreetPanel.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/StreetPanel.tsx) | Telemetry dashboard rendering current session travel metrics, speedometer readings, and session timers. |
-| [`UniversalSlidersFooter.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/UniversalSlidersFooter.tsx) | Consolidated footer handling color grids, hue strip controls, and tactile parameter sliders (speed, brightness, sensitivity). |
-| [`useDashboardController.tsx`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardController.tsx) | Hook wrapper for `DashboardScreen` that configures device parameters (resolving EEPROM configurations) and decides whether to render the leader shell or member dashboard. |
-| [`useDockedControllerState.ts`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDockedControllerState.ts) | State management hook containing state variables (mode, color, brightness, speed, builder nodes) and loading cache patterns from the device state ledger. |
-| [`useControllerDispatch.ts`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useControllerDispatch.ts) | isolated BLE command builder. Packages UI parameter changes into specific opcode payloads for write dispatches. |
-| [`useControllerAnalytics.ts`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useControllerAnalytics.ts) | Side-effect hook that tracks state variables and fires debounced telemetry logs for mode, color, speed, and brightness updates. |
-
----
+- `src/components/DockedController.tsx`: The 67KB routing shell monolith. Manages shared state, Optimistic BLE writes, and the mode FSM.
+- `src/components/docked/DockedDock.tsx`: Floating navigation dock with swipe gesture detector.
+- `src/components/docked/BuilderPanel.tsx`: Sub-panel for custom positioning color sequence design.
+- `src/components/docked/CameraPanel.tsx`: Sub-panel enabling interactive camera viewfinder color capturing.
+- `src/components/docked/MusicPanel.tsx`: Sub-panel managing primary/secondary color mapping focus.
+- `src/components/docked/StreetPanel.tsx`: Telemetry dashboard rendering current session travel metrics.
+- `src/components/docked/FavoritesPanel.tsx`, `ProEffectsPanel.tsx`, `UniversalSlidersFooter.tsx`: Sub-components isolated via `React.memo` to prevent global re-renders.
+- `src/hooks/useDashboardController.tsx`: Parent component mounting `DockedController` and providing Dashboard-level telemetry props.
+- `src/hooks/useDockedControllerState.ts`: Defines mode states, selected colors, brightness, speed, builder nodes.
+- `src/hooks/useControllerDispatch.ts`: Translates state changes into `writeToDevice` payload dispatches.
+- `src/hooks/useControllerAnalytics.ts`: Logs telemetry on pattern/color/brightness changes.
 
 ## 2. Blast Radius
-
-The diagram below illustrates the import and export dependencies of the `UI_DOCKED_CONTROLLER` domain.
-
-```mermaid
-graph TD
-    %% Imports
-    ZenggeProtocol[protocols/ZenggeProtocol] -->|Opcode Framing| useControllerDispatch
-    PatternEngine[protocols/PatternEngine] -->|Math Synthesizer| useControllerDispatch
-    PositionalMathBuffer[protocols/PositionalMathBuffer] -->|Gradient Arrays| BuilderPanel
-    PositionalMathBuffer -->|Gradient Arrays| UniversalSlidersFooter
-    
-    FavoritesContext[context/FavoritesContext] -->|Presets List| DockedController
-    BLEContext[context/BLEContext] -->|Adapter Resolution| DockedController
-    useOptimisticBLE[hooks/useOptimisticBLE] -->|Rollback System| DockedController
-    useStreetMode[hooks/useStreetMode] -->|Sensors Integration| DockedController
-    
-    %% Core Domain Files
-    subgraph UI_DOCKED_CONTROLLER
-        useDashboardController -->|Mounts| DockedController
-        DockedController -->|Shared State| useDockedControllerState
-        DockedController -->|Triggers writes| useControllerDispatch
-        DockedController -->|Logs changes| useControllerAnalytics
-        DockedController -->|Sub-panel render| SubPanels[BuilderPanel / CameraPanel / MusicPanel / StreetPanel / FavoritesPanel / UniversalSlidersFooter]
-        DockedController -->|Gesture navigation| DockedDock
-    end
-
-    %% Exports
-    DashboardScreen[screens/DashboardScreen] -->|Uses| useDashboardController
-```
-
----
+- **High Risk**: Modifying `DockedController.tsx` impacts all BLE dispatches for all modes. Changing `activeMode` dispatching logic can cause redundant BLE writes and lag.
+- **Optimistic UI Lockout**: `useOptimisticBLE` relies on `captureEntireStateRef` from `useDockedControllerState.ts`. Breaking this reference will cause ghost rollbacks if a BLE write fails.
+- **Component Extraction Opportunity**: `DockedController.tsx` exceeds 68KB. The `VisualizerWrapper`, global `ProductVisualizer`, and complex `LiveTelemetryHUD` mappings should be extracted. The `useDockedControllerState` has 30+ returned properties causing context bloat.
 
 ## 3. Context Matrix
-
-The `DockedController` operates as the single source of state truth for the active control panel:
-
-```
-+--------------------------------------------------------------------------------+
-| DashboardScreen (Receives BLE Write / Reads GPS & Accelerometer Sensors)        |
-+--------------------------------------------------------------------------------+
-                                  |
-                                  | Injects sensor stats as props
-                                  | (Prevents duplicate sensor loop subscriptions)
-                                  v
-+--------------------------------------------------------------------------------+
-| DockedController (Monolith Container Shell)                                    |
-|   - Initializes state via useDockedControllerState (Pre-warms with Ledger Cash)|
-|   - Controls FSM modes: FAVORITES | MULTIMODE | BUILDER | MUSIC | STREET | CAMERA |
-|   - Holds volatile-state Refs to avoid stale closures in callbacks              |
-+--------------------------------------------------------------------------------+
-          |                                  |
-          | Stabilized Bus Object            | Props Threading
-          | (dockedBus)                      |
-          v                                  v
-+--------------------------+       +---------------------------------------------+
-| ProEffectsPanel          |       | UniversalSlidersFooter                      |
-|   - Grid selections      |       |   - Hue Strip / Preset Grids                |
-|   - Write status client  |       |   - Tactile Sliders (Brt/Spd/Sens)          |
-+--------------------------+       +---------------------------------------------+
-```
-
-### Global Context Dependencies
-1. **`ThemeContext`**: Resolves colors and dark/light UI tokens.
-2. **`FavoritesContext`**: Syncs custom favorites saved by the user with the internal state and manages quick presets.
-3. **`AppConfigContext`**: Resolves feature flags and visibility settings (e.g., hiding Street mode if permission is disabled).
-4. **`BLEContext`**: Provides access to device adapters for executing multi-protocol commands.
-
----
+| Context | Consumer | Usage |
+|---------|----------|-------|
+| `ThemeContext` | `DockedController.tsx` | Resolves `Colors` and `isDark` for inline styles. |
+| `AppConfigContext` | `DockedController.tsx` | Visibility gating (`isVisibilityAllowed`) for `STREET` mode. |
+| `BLEContext` | `DockedController.tsx` | Adapter resolution via `getAdapterForDevice`. |
+| `FavoritesContext` | `DockedController.tsx` | Loads `favorites`, `quickPresets`, controls save prompts. |
 
 ## 4. Hook/Service I/O Registry
-
-### `useDockedControllerState`
-Manages state synchronization and initial state caching.
-* **Input Parameters:**
-  * `lockedProduct: string` — active product ID (e.g., `'HALOZ'`, `'SOULZ'`).
-  * `ledgerLoadSync: (mac: string) => DevicePatternState | null` — callback to retrieve stored configurations.
-  * `macAddress: string` — identifier of the leader device.
-* **Returned Interface:**
-  * State variables & setters (e.g., `activeMode`, `selectedColor`, `brightness`, `speed`, `builderNodes`).
-  * `applyCloudScene(scenePayload: CloudScenePayload): void` — sets multiple state variables concurrently.
-  * `captureEntireState(streetSens, cruise, brake, override): Record<string, unknown>` — outputs a full state snapshot.
-  * `applySpatialSegments(segments: SpatialSegment[]): void` — maps custom spatial segment colors.
-
-### `useControllerDispatch`
-Maps UI actions to protocol commands.
-* **Input Parameters:**
-  * `writeToDevice?: (payload: number[], target?: string) => Promise<boolean | 'partial' | void>` — BLE write adapter.
-  * `hwSettings?: IHardwareSettings | null` — hardware specs retrieved from EEPROM.
-  * `points?: number` — total LED nodes.
-  * `getAdapterForDevice?: (mac: string) => IControllerProtocol | undefined` — protocol adapter resolver.
-  * `primaryDeviceId?: string` — leader MAC address.
-  * `connectedDevices?: { id: string }[]` — connected group member IDs.
-* **Returned Interface:**
-  * `sendColor(r, g, b): Promise<void>` — writes a solid color to connected devices.
-  * `applyFixedPattern(patternId, fg, bg, speed, brightness, dir): Promise<void>` — dispatches custom patterns.
-  * `applyStaticModePattern(pat, selectedColor, speed, r, g, b, spd): void` — applies static, strobe, or blink modes.
-  * `applyEmergencyPattern(speed, brightness): void` — dispatches hazard animation arrays.
-  * `handleMusicChange(patternId, sens, brightness, source, c1, c2, matrix): void` — applies music mode configuration.
-  * `setPower(isOn: boolean): void` — turns device on or off.
-  * `setMultiColor(colors, ledPoints, speed, direction, transition): void` — dispatches custom spatial color arrays.
-
-### `useControllerAnalytics`
-Logs debounced telemetry.
-* **Input Parameters:**
-  * `activeMode: ModeType`
-  * `selectedPatternId: number`
-  * `selectedColor: string`
-  * `brightness: number`
-  * `speed: number`
-  * `streetSensitivity: number`
-  * `deviceContext: { target: string, deviceId?: string, deviceIds?: string[] }`
-* **Returned Interface:** `void` (executes side-effects only).
-
----
+- `useDockedControllerState`: 
+  - **In**: `lockedProduct`, `ledger.loadSync`, `primaryMac`. 
+  - **Out**: `activeMode`, `selectedColor`, `brightness`, `captureEntireState`, etc.
+- `useOptimisticBLE`: 
+  - **In**: `writeToDevice`, `onReconcile`, `disableOptimisticUI`. 
+  - **Out**: `optimisticWrite`, `writeStatus`.
+- `useControllerDispatch`: 
+  - **In**: `writeToDevice`, `hwSettings`, `points`, `connectedDevices`. 
+  - **Out**: `sendColor`, `applyFixedPattern`, `handleMusicChange`.
+- `useStreetMode`:
+  - **In**: `activeMode`, `writeToDevice`, `gpsSpeed`, `peakGForce`.
+  - **Out**: `streetSensitivity`, `streetCruiseColor`, `applyStreetPattern`.
 
 ## 5. OS Variance Matrix
+| OS / Platform | File | Variance |
+|---------------|------|----------|
+| Web | `DockedDock.tsx` | `Platform.OS === 'web'` used to alter gesture responders or touch thresholds. |
+| iOS/Android | `CameraPanel.tsx` | `Platform.select` used heavily for OS-specific shadows, elevations, and camera viewbounds. |
+| iOS/Android | `useAppMicrophone.ts` | OS-level differences in AVAudioSession / Android AudioRecord permissions. |
 
-| Aspect | Android | iOS |
-|---|---|---|
-| **BLE Permissions** | Requires scanning permissions (`BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`) and location access (`ACCESS_FINE_LOCATION`). | Configured in `info.plist` via standard `NSBluetoothAlwaysUsageDescription` checks. |
-| **MTU & Writing Limits** | Default 20-byte MTU limit unless explicitly negotiated post-connect. Writes (e.g., 0x59 arrays) must be serialized in a BLE queue to prevent buffer drops. | Higher native MTU buffer sizes and throughput. Buffer dropouts are less common, but serialization is still enforced for group stability. |
-| **Expo-AV Microphone** | Requires standard audio recording permissions. Streaming background music is unaffected. | Requires configuring the audio session for mixed play and record (e.g., `mixWithOthers` category) to prevent interrupting system background music. |
-| **Haptics** | Uses standard vibrating motors. Feedback timing and strength vary depending on hardware vendor. | Utilizes the Taptic engine for precise, distinct feedback weights. |
-| **Layout & Safe Areas** | Typically auto-handled by flex spacing. The navigation dock rests above system navigation bars. | Requires safe-area padding to avoid overlaps with the notch and home indicator bar. |
+## 6. Architectural Impact Flags
+`[IMPACTS_USER_JOURNEY]`
+`[IMPACTS_C4_CONTEXT]`
+`[IMPACTS_STATE_CHART]`
 
----
+## 7. Archival Notice
+- **[MOVE_TO_ARCHIVE]**: `useSessionTracking (stale)` inside `docs/SK8Lytz_App_Master_Reference.md` was identified as stale documentation and should be archived. Session tracking logic is now piped in directly as props from `DashboardScreen`.
 
-## 6. Monolith Inspection (`DockedController.tsx`)
+## 8. Sequence Diagram
+```mermaid
+sequenceDiagram
+    participant User
+    participant DockedController
+    participant useDockedControllerState
+    participant useOptimisticBLE
+    participant BLE_Hardware
 
-`DockedController.tsx` serves as a core routing shell (67KB, ~1480 lines).
+    User->>DockedController: Selects new color/pattern
+    DockedController->>useDockedControllerState: captureEntireState()
+    useDockedControllerState-->>DockedController: Snapshot returned
+    DockedController->>useOptimisticBLE: optimisticWrite(payload)
+    useOptimisticBLE-->>DockedController: writeStatus = 'PENDING'
+    useOptimisticBLE->>BLE_Hardware: writeToDevice()
+    
+    alt Write Success
+        BLE_Hardware-->>useOptimisticBLE: Promise resolved
+        useOptimisticBLE-->>DockedController: writeStatus = 'IDLE'
+    else Write Failure
+        BLE_Hardware-->>useOptimisticBLE: Promise rejected
+        useOptimisticBLE->>DockedController: onReconcile()
+        DockedController->>useDockedControllerState: applyCloudScene(Snapshot)
+        useDockedControllerState-->>DockedController: Restores previous state
+        useOptimisticBLE-->>DockedController: writeStatus = 'RECONCILED'
+    end
+```
 
-### Hooks Consumed
-* `useTheme`: manages theme styling variables.
-* `useAppConfig`: retrieves feature flag settings.
-* `useWindowDimensions`: checks screen dimensions for adaptive layout.
-* `useAppMicrophone`: handles microphone stream inputs.
-* `useControllerAnalytics`: debounces telemetry logs.
-* `useCuratedPicks`: retrieves Supabase patterns.
-* `useDockedControllerState`: orchestrates the local control state machine.
-* `useSharedFavorites`: syncs custom style modifications.
-* `useSharedBLE`: abstracts multi-protocol BLE writes.
-* `useControllerDispatch`: packages commands for writing to devices.
-* `useOptimisticBLE`: implements local optimistic UI updates with rollback.
-* `useStreetMode`: accelerometer updates + brake detections.
-* `useDeviceStateLedger`: reads local state configuration from memory cache.
-
-### Refs Held
-* `lastSentPayloadRef`: contains the exact last BLE payload array for replay on connection recovery.
-* `lastConfirmedStateRef`: maps a backup snapshot state of the controller configuration, used for snapback reconciliation if a BLE write fails.
-* `onReconcileRef`: stable ref wrapper for the onReconcile callback to prevent stale closures.
-* `captureEntireStateRef`: stable ref wrapper for captureEntireState to break TDZ forward references.
-* `hasReplayedRef`: prevents duplicate reconnect replays on consecutive connection cycles.
-* `crewBroadcastTimer`: debounced timer wrapper to stream crew session updates.
-* `isMountedRef`: guards against initialization pattern changed callback trigger.
-* `activeModeRef`, `fixedSubModeRef`, `musicPatternIdRef`, `fixedPatternIdRef`, `selectedPatternIdRef`, `visualizerColorRef`: state refs to avoid stale callback scopes.
-* `swipePanResponder`: holds the gesture responder instance.
-
-### Callback Threading Map
-* `writeToDevice`: packaged function passing payload array data to Bluetooth.
-* `onPowerToggle` / `onDisconnect`: callbacks routing power states and disconnect events.
-* `onCrewSceneChange`: signals the crew session leader has changed active styles.
-* `onPatternChanged`: signals updates to store color snapshots and database records.
-
----
-
-## 7. Component Extraction Opportunities
-
-The following refactoring opportunities have been identified to reduce the complexity of the monolithic controller:
-
-1. **`FixedPatternPreviewRow.tsx`**: Extract the preview rendering container (lines 80-128) into its own file to decouple animation state changes from the main component rendering loop.
-2. **`DockedControllerUtils.ts`**: Move helper functions like `currentStatusText` (lines 828-859) and `visualizerColor` (lines 860-873) into a utility module.
-3. **`useControllerImperative.ts`**: Move state restoration, favorite loading, and spatial pattern adjustments into a dedicated custom hook to separate the imperative handle logic from the main container component.
 
 <!-- CARTOGRAPHER_END: UI_DOCKED_CONTROLLER -->
 
 ### Domain: UI_MODALS
 <!-- CARTOGRAPHER_START: UI_MODALS -->
 
-# 🗺️ Codebase Cartography: UI_MODALS Domain
+# 🗺️ Cartography Node: UI Modals & Settings
 
-This documentation provides a comprehensive architectural map of the `UI_MODALS` (Modals & Custom Sliders) domain in the SK8Lytz mobile application. It details functional boundaries, import/export dependency chains, state variables, React Context consumption, hardware hook interactions, platform-specific adaptations, and sequence diagrams.
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
 
----
+## 1. File Manifest
+- `src/components/AccountModal.tsx`
+- `src/components/DeviceSettingsModal.tsx`
+- `src/components/CommunityModal.tsx`
+- `src/components/GroupSettingsModal.tsx`
+- `src/components/SessionSummaryModal.tsx`
+- `src/components/modals/EulaModal.tsx`
+- `src/components/modals/GlobalPermissionsModal.tsx`
+- `src/components/CustomSlider.tsx`
+- `src/components/TacticalSlider.tsx`
+- `src/components/MarqueeText.tsx`
+- `src/components/ConnectionStrengthBadge.tsx`
 
-## 1. 🗂️ Domain Manifest & Structural Boundaries
+## 2. Blast Radius
+Modifications within the UI Modals domain primarily affect:
+- **DashboardScreen & Core UI**: Modals act as the primary configuration interfaces. Changes here affect rendering and state inside the main Dashboard.
+- **Hardware Interaction layer**: `DeviceSettingsModal` interacts directly with `useProtocolDispatch` to write `0x62`/`0x63` settings via `BleMachine`.
+- **User & Cloud Services**: `AccountModal` and `CommunityModal` directly drive mutations via `profileService`, `ScenesService`, and `useAuth` (Supabase).
+- **Offline Integrity**: Many modals (like `CommunityModal` and `AccountModal`) depend on the `isOfflineMode` gate to gracefully degrade features (e.g., hiding CREWZ tab or switching to local saves).
 
-A detailed map of all source files in the `UI_MODALS` domain, including their functional scope, line counts, dependency bounds, managed state, and core operations.
+## 3. Context Matrix
+| Component | Key Services / Contexts Used | Notes |
+|:---|:---|:---|
+| **AccountModal** | `useAuth`, `useAccountOverview`, `useSkateStats`, `profileService` | 30KB monolith; uses a tabbed architecture, manages heavy profile/crew logic. |
+| **DeviceSettingsModal**| `useProtocolDispatch`, `ProductCatalog` | Translates UI into hardware config (points, segments, RF Mode) & probes hardware. |
+| **CommunityModal** | `ScenesService`, `useAuth` | Fetches Cloud vs Personal scenes based on `isOfflineMode`. |
+| **GroupSettingsModal** | `AppLogger` | Simple grouping UI; reads connection states to display green/dim markers. |
+| **SessionSummaryModal**| `SpeedTrackingService` | Estimates calories and maps peak speed to a UI accent color. |
+| **Custom/TacticalSlider**| `PanResponder` | Custom gesture tracking for precision sliding. |
 
-### Core Modal Screens
+## 4. Hook/Service I/O Registry
+- **`AccountModal.tsx`**
+  - *Inputs*: `visible`, `registeredDevices`, `isOfflineMode`
+  - *Outputs/Delegates*: `onClose`, `onSignOut`, `onDeviceRenamed`, `onDeviceForgotten`, `onGroupRenamed`
+- **`DeviceSettingsModal.tsx`**
+  - *Inputs*: `initialSettings`, `groups`, `deviceId`
+  - *Outputs*: `writeToDevice` (Promise callback), `onSave`, `onDeregister`
+- **`CommunityModal.tsx`**
+  - *Inputs*: `isOfflineMode`
+  - *Outputs*: `onApplyScene(payload)`
+- **`CustomSlider / TacticalSlider`**
+  - *Inputs*: `value`, `minimumValue`, `maximumValue`, `dynamicMode` (Tactical)
+  - *Outputs*: `onValueChange`, `onSlidingComplete`
 
-#### 📄 [AccountModal.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/AccountModal.tsx)
-* **Functional Scope:** Central bottom-sheet user management console. Hoists a tabbed layout to configure user settings, manage team crew memberships, inspect paired devices, review skate statistics, read legal guidelines, or trigger account deletion.
-* **Line Count:** 674 lines.
-* **Import Dependency Chain:**
-  * Contexts: `useTheme`, `useAuth`, `useSafeAreaInsets`
-  * Hooks: `useAccountOverview`, `useSkateStats`
-  * Services: `profileService`, `supabase`, `AppLogger`
-  * Sub-components: `AccountTabProfile`, `AccountTabSecurity`, `AccountTabCrewz`, `AccountTabDevices`, `AccountTabSettings`, `AccountTabStats`, `EulaModal`, `ErrorCard`
-* **Export Dependency Chain:**
-  * `AccountModal` (default export)
-* **State Managed:**
-  * Active Navigation Tab: `tab` (`'profile'` | `'security'` | `'crews'` | `'devices'` | `'settings'` | `'stats'`)
-  * Sub-modals Visibility: `showEula` (boolean)
-* **Core Operations:**
-  * Coordinates nested profile tab switches.
-  * Dispatches crew creation, leave, and deletion triggers.
-  * Handles offline fallback checks via `isOfflineMode` prop to disable cloud-write interactions (e.g. crew actions, profile modifications).
+## 5. OS Variance Matrix
+| Component | Platform Divergence | Mitigation / Strategy |
+|:---|:---|:---|
+| **CustomSlider & TacticalSlider** | Web browsers lack native touch gesture pan handlers. | Injects Web-specific styles: `{ touchAction: 'none', userSelect: 'none' }` to prevent browser scroll hijacking during slide. |
+| **AccountModal** | Web Auth requires different handling. | Hardcoded `Platform.OS === 'web'` check in `handleSignOut` to bypass React Native `Alert`. |
+| **SessionSummaryModal** | View shadow generation differs. | Implements conditional `boxShadow` for Web vs `shadowColor/elevation` for iOS/Android. |
 
-#### 📄 [DeviceSettingsModal.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DeviceSettingsModal.tsx)
-* **Functional Scope:** Overlaid controller for customizing physical LED strip specifications. Probes hardware EEPROM parameters using low-level BLE commands and updates paired configuration profiles.
-* **Line Count:** 625 lines.
-* **Import Dependency Chain:**
-  * Contexts: `useSafeAreaInsets`
-  * Hooks: `useProtocolDispatch`
-  * Utilities: `LOCAL_PRODUCT_CATALOG`, `getDefaultGroupName` (from `NamingUtils`)
-  * Services: `AppLogger`
-* **Export Dependency Chain:**
-  * `DeviceSettingsModal` (default export)
-* **State Managed:**
-  * Model Configuration: `type` (string), `position` (`'Left'` | `'Right'` | `null`), `customName` (string | null)
-  * Hardware Specifications: `pointsText` (string), `segmentsText` (string), `stripType` (string | null), `sorting` (string | null)
-  * Remote Pairings: `rfMode` (`'ALLOW_ALL'` | `'ALLOW_NONE'` | `'ALLOW_PAIRED'`), `rfRemotes` (array of remote IDs)
-  * Connection Status: `probeStatus` (`'idle'` | `'connecting'` | `'reading'` | `'writing'` | `'disconnecting'` | `'complete'` | `'error'`)
-* **Core Operations:**
-  * Probes hardware via `useProtocolDispatch().queryHardwareSettings` (`0x63` opcode query).
-  * Writes modified configurations to hardware EEPROM via `writeSettingsByName` (`0x62` opcode dispatch).
-  * Manages RF remote control pairing loops and clears pairings.
+## Archival Tags Identified
+The following documentation sections in `docs/SK8Lytz_App_Master_Reference.md` were evaluated and are confirmed tagged for archival:
+- `[MOVE_TO_ARCHIVE] VisualizerUnit Rendering Rules (HALOZ RING only)`
+- `[MOVE_TO_ARCHIVE] Dashboard UI Layout (4-Slab Architecture)`
+- `[MOVE_TO_ARCHIVE] One-Screen Setup Policy`
+- `[MOVE_TO_ARCHIVE] writeChunked — 0x51 Extended Payload Framing`
 
-#### 📄 [CommunityModal.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/CommunityModal.tsx)
-* **Functional Scope:** Interactive cloud preset browser sheet allowing skaters to discover, upvote, preview, and write lighting configurations shared by the community.
-* **Line Count:** 461 lines.
-* **Import Dependency Chain:**
-  * Contexts: `useTheme`, `useAuth`
-  * Services: `ScenesService`, `AppLogger`
-  * Components: `SceneCard`
-* **Export Dependency Chain:**
-  * `CommunityModal` (default export)
-* **State Managed:**
-  * Preset Lists: `publicScenes` (array of Scenes), `myScenes` (array of Scenes)
-  * Tabs: `activeTab` (`'PUBLIC'` | `'MY_PRESETS'`)
-  * Status: `loading` (boolean), `error` (string | null), `isSubmitting` (boolean)
-* **Core Operations:**
-  * Loads scenes on show or tab changes using `fetchCommunityScenes` and `fetchMyScenes`.
-  * Handles scene selection and previews patterns on physical skates in real-time.
-  * Dispatches upvotes and handles deletions of custom cloud-saved presets.
-
-#### 📄 [GroupSettingsModal.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/GroupSettingsModal.tsx)
-* **Functional Scope:** Simple drawer overlay facilitating creation, renaming, and membership assignment for device clusters.
-* **Line Count:** 204 lines.
-* **Import Dependency Chain:**
-  * Utilities: `getDefaultGroupName` (from `NamingUtils`)
-  * Services: `AppLogger`
-  * Theme: `Colors`, `Layout`, `Spacing`, `Typography`
-* **Export Dependency Chain:**
-  * `GroupSettingsModal` (default export)
-* **State Managed:**
-  * Inputs: `name` (string), `selectedIds` (array of device IDs)
-  * Operations: `isSaving` (boolean)
-* **Core Operations:**
-  * Updates group mappings in the parent state by collecting unique device ID selection arrays.
-  * Incorporates connection indicators showing live BLE status for target peripherals inside lists.
-
-#### 📄 [SessionSummaryModal.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/SessionSummaryModal.tsx) **
-## 2. 💥 Blast Radius (Imports/Exports)
-
-```mermaid
-graph TD
-    %% Imports from other domains
-    ThemeDomain["theme.ts (Spacing, Colors)"] -->|Styles| UI_MODALS["UI_MODALS Components"]
-    AuthContext["AuthContext.ts (useAuth)"] -->|Session tokens & actions| AccountModal & CommunityModal
-    ThemeContext["ThemeContext.ts (useTheme)"] -->|Theme Palettes| UI_MODALS
-    ProfileService["ProfileService.ts"] -->|CRUD Permanent Crew| AccountModal
-    SupabaseClient["supabaseClient.ts"] -->|Database Auth & Sync| AccountModal
-    ScenesService["ScenesService.ts"] -->|Presets & Community Scenes| CommunityModal
-    AppLogger["AppLogger.ts"] -->|Lifecycle Telemetry Events| UI_MODALS
-    ProtocolDispatch["useProtocolDispatch.ts"] -->|Hardware 0x62/0x63 queries| DeviceSettingsModal
-    NamingUtils["NamingUtils.ts"] -->|Defaults| DeviceSettingsModal & GroupSettingsModal
-    SafeArea["SafeAreaContext (useSafeAreaInsets)"] -->|Layout Margins| AccountModal & DeviceSettingsModal
-
-    %% Exports to other domains
-    UI_MODALS -->|Mounts AccountModal| DashboardScreen["DashboardScreen.tsx"]
-    UI_MODALS -->|Mounts DeviceSettings| DashboardScreen
-    UI_MODALS -->|Mounts GroupSettings| DashboardScreen
-    UI_MODALS -->|Mounts CommunityModal| DockedController["DockedController.tsx"]
-    UI_MODALS -->|Mounts GlobalPermissions| App["App.tsx (Global Mount)"]
-    UI_MODALS -->|Slider Inputs| CrewManage["CrewManageScreen.tsx"] & GradBuilder["PositionalGradientBuilder.tsx"]
-    UI_MODALS -->|Tactical Sliders| Footer["UniversalSlidersFooter.tsx"]
-    UI_MODALS -->|Marquee Labels| PresetCard["PresetCard.tsx"]
-    
-    %% Orphaned Components (Stale)
-    SessionSummary["SessionSummaryModal.tsx"] -.->|Orphaned (No Active Imports)| Stale["[Stale References]"]
-    ConnectionStrength["ConnectionStrengthBadge.tsx"] -.->|Orphaned (No Active Imports)| Stale
-```
-
-### Outward Dependencies (What UI_MODALS consumes)
-* `src/theme/theme.ts`: Base sizing tokens and colors.
-* `src/context/ThemeContext.tsx`: Core hooks adjusting light/dark mode properties.
-* `src/context/AuthContext.tsx`: Active account validations and token structures.
-* `src/services/ProfileService.ts`: REST queries modifying crew memberships and users.
-* `src/services/supabaseClient.ts`: Database Auth & Sync configurations.
-* `src/services/ScenesService.ts`: Fetches and upvotes presets from the cloud database.
-* `src/hooks/ble/useProtocolDispatch.ts`: Direct BLE GATT command serializations.
-
-### Inward Dependencies (What imports UI_MODALS)
-* `App.tsx`: Global permissions sheet overlays.
-* `src/screens/DashboardScreen.tsx`: Hosts main settings, groups, and profile triggers.
-* `src/components/DockedController.tsx`: Browses preset scenes via `CommunityModal`.
-* `src/components/docked/UniversalSlidersFooter.tsx`: Houses the tactical speed/brightness adjusters.
-* `src/components/docked/PresetCard.tsx`: Displays scrolling labels via `MarqueeText`.
-
----
-
-## 3. 🕸️ Context Matrix
-
-React Context integrations within the `UI_MODALS` domain:
-
-| React Context | Consumed By | Architectural Purpose | Provider Source |
-| :--- | :--- | :--- | :--- |
-| **ThemeContext** | `AccountModal`<br>`CommunityModal`<br>`SessionSummaryModal`<br>`EulaModal`<br>`CustomSlider`<br>`TacticalSlider` | Distributes current style presets (`Colors`) and theme toggling routines. | `ThemeProvider` (`App.tsx`) |
-| **AuthContext** | `AccountModal`<br>`CommunityModal` | Exposes authenticated user tokens, email profiles, and sign-out commands. | `AuthProvider` (`App.tsx`) |
-| **SafeAreaContext** | `AccountModal`<br>`DeviceSettingsModal`<br>`EulaModal` | Pulls safe layout bounds (`insets.top`/`insets.bottom`) to offset notches. | `SafeAreaProvider` (`App.tsx`) |
-
----
-
-## 4. 🔌 Hook/Service I/O Registry
-
-Inputs, outputs, and side-effects of consumed APIs:
-
-### `useAccountOverview` (Hook)
-* **Inputs:** `visible: boolean` (triggers profile query when true).
-* **Outputs:**
-  * `profile: UserProfile | null` (active cloud settings).
-  * `savingProfile: boolean` (indicating save status).
-  * `handleSaveProfile: () => Promise<void>` (writes edits to Supabase).
-* **Side-Effects:** Refetches profile details from the database on modal open and updates AsyncStorage caches.
-
-### `useSkateStats` (Hook)
-* **Inputs:** `visible: boolean`
-* **Outputs:**
-  * `lifetimeStats: { distance_miles, duration_sec, max_speed_mph, total_sessions } | null`
-  * `recentSessions: ISessionSnapshot[] | null` (history lists).
-* **Side-Effects:** Aggregates and calculates session statistics from database logs.
-
-### `useProtocolDispatch` (Hook)
-* **Inputs:** Target device identity MACs.
-* **Outputs:**
-  * `queryHardwareSettings: (force: boolean, deviceId: string) => Promise<boolean>` (BLE `0x63` query).
-  * `writeSettingsByName: (points, segments, strip, sorting, deviceId) => Promise<boolean>` (BLE `0x62` write).
-  * `setRfRemoteState: (mode, enabled, deviceId) => Promise<boolean>` (BLE `0x77` write).
-  * `clearRfRemotes: (mode, deviceId) => Promise<boolean>` (BLE `0x77` erase).
-* **Side-Effects:** Serializes and queues physical BLE GATT read/write operations.
-
-### `ScenesService` (API Service)
-* **Functions:**
-  * `fetchCommunityScenes()`: Loads shared presets.
-  * `fetchMyScenes(userId)`: Loads personal presets.
-  * `deleteScene(sceneId)`: Deregisters custom presets.
-  * `upvoteScene(sceneId, userId)`: Commits vote telemetry.
-* **Side-Effects:** Read/Write requests to cloud scene database tables.
-
----
-
-## 5. 📱 OS Variance & Platform Adaptation Matrix
-
-Code paths branching between iOS, Android, and Web environments:
-
-| OS target | Component / File | Check Condition | Platform-Specific Behavior & Rationale |
-| :--- | :--- | :--- | :--- |
-| **iOS** vs **Android** | `AccountModal.tsx`<br>`AccountTabCrewz.tsx` | `Platform.OS === 'ios'` | Applies `fontFamily: 'Courier New'` on iOS, falling back to `monospace` on Android to maintain width alignment in invite fields. |
-| **Web** vs **Native** | `AccountModal.tsx` | `Platform.OS === 'web'` | Bypasses `Alert.alert` prompts (which cause crashes on Web) to sign out directly. |
-| **Web vs Native** | `SessionSummaryModal.tsx` | `Platform.OS === 'web'` | Applies CSS `boxShadow` styling rather than iOS-specific shadows/Android elevation. |
-| **Web vs Native** | `CustomSlider.tsx`<br>`TacticalSlider.tsx` | Inline Styling | Appends `touchAction: 'none'` and `userSelect: 'none'` to block default browser gestures from hijacking dragging handlers. |
-| **iOS vs Android** | `CommunityModal.tsx`<br>`GlobalPermissionsModal.tsx` | Component Props | Sets `presentationStyle="pageSheet"` on iOS to render card overlays with native swipe-dismiss gestures. |
-
----
-
-## 6. 🎨 Design System & Token Manifest
-
-### Visual Overlays & Backdrops
-* **Dark Overlays:** Modal screens employ `rgba(0,0,0,0.8)` or `rgba(0,0,0,0.7)` backdrop overlays to obscure dashboard components and highlight active inputs.
-* **Rounded Cards:** Layout boxes utilize `Layout.borderRadius = 24` or `16` for metrics cards, aligning with the "Gleamz" visual style.
-
-### Safe Area Boundaries
-* **Top Offset:** Account modal structures wrap within safe area calculations:
-  ```typescript
-  paddingTop: Math.max(insets.top, Spacing.lg)
-  ```
-* **Bottom Offset:** Sliders and button rows account for the home indicator bar on iOS via `paddingBottom: insets.bottom`.
-
-### Interactive Touch targets
-* **Click Targets:** Core action buttons (Save, Close, Delete, Upvote) maintain a minimum vertical/horizontal footprint of `44px` to remain easily clickable during movement or when wearing wrists protectors.
-* **Sliders Corridors:** Sliders feature container heights of `40px` (`CustomSlider`) and `44px` (`TacticalSlider`) to establish spacious drag bounds.
-
-### Dynamic Themes (Accents & Limits)
-* **Safety Markers:** `TacticalSlider` renders a white vertical marker block at `80%` in brightness mode, reminding skaters of physical thermal limitations.
-* **Color Transitions:** Dynamic color shifts in `TacticalSlider` translate slider percentages:
-  * Brightness Mode: Opacity maps `0.2` to `1.0` dynamically:
-    ```typescript
-    `rgba(255, 255, 255, ${0.2 + 0.8 * percentage})`
-    ```
-  * Turbo Speed Mode: Moves green/white tones toward red as speeds increase:
-    ```typescript
-    `rgb(255, ${Math.round(255 * (1 - percentage))}, ${Math.round(255 * (1 - percentage))})`
-    ```
-
----
-
-## 7. ⛓️ BLE & Cloud Sequence Flows
-
-### Sequence A: Device Settings Hardware Probe and Configuration Save Flow
-Demonstrates how `DeviceSettingsModal` triggers hardware probing commands, receives async notifications, updates state, and commits modifications.
-
+## Sequence Diagram
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor Skater
-    participant UI as DeviceSettingsModal
-    participant Disp as useProtocolDispatch
-    participant BLE as BleConnectionManager (GATT)
-    participant DB as AsyncStorage / Supabase
-
-    Skater->>UI: Tap "PROBE" on unconfigured device Settings
-    UI->>UI: Set probeStatus = 'connecting'
-    UI->>Disp: queryHardwareSettings(false, deviceId)
-    Disp->>BLE: Write 0x63 EEPROM inquiry command
-    BLE-->>UI: Receive notify callback (new points/segments/sorting)
-    Note over UI: React useEffect detects initialSettings changes
-    UI->>UI: Update input values, set probeStatus = 'complete'
+    participant User
+    participant DeviceSettingsModal
+    participant ProtocolDispatch
+    participant BleMachine
     
-    rect rgb(20, 20, 30)
-        Note over Skater, DB: Skater modifies configurations and saves
-        Skater->>UI: Tap "SAVE CONFIG"
-        UI->>DB: Invoke onSave() to persist fleet changes
-        UI->>Disp: writeSettingsByName(points, segments, strip, sorting, deviceId)
-        Disp->>BLE: Enqueue 0x62 EEPROM write command
-        UI->>Skater: Close Modal
-    end
+    User->>DeviceSettingsModal: Tap "PROBE"
+    DeviceSettingsModal->>ProtocolDispatch: queryHardwareSettings(deviceId)
+    ProtocolDispatch->>BleMachine: Dispatch 0x63 Probe Command
+    BleMachine-->>DeviceSettingsModal: Yields updated DeviceSettings
+    DeviceSettingsModal->>User: Renders "BLE Probed Configuration" state
+    User->>DeviceSettingsModal: Adjust Points & Segments
+    User->>DeviceSettingsModal: Tap "SAVE CONFIG"
+    DeviceSettingsModal->>ProtocolDispatch: writeSettingsByName(...)
+    DeviceSettingsModal->>User: onClose()
 ```
 
-### Sequence B: Cloud Scene Application Flow
-Details the pipeline that fetches, previews, and writes community shared gradients.
+## Domain-Specific Directive: Design System & Token Manifest
+**Theme & Aesthetics Palette Applied:**
+- **Colors**: Sourced dynamically via `useTheme().Colors` (`ThemePalette`).
+  - *Backgrounds*: Dark Glassmorphism, `rgba(255,255,255,0.05)` to `0.08` for cards and badges.
+  - *Accents*: Primary (`Colors.primary`), Error (`#FF4444` / `#FF3D71`), Success (`#00C853` / `#00e887`).
+  - *Text*: `Colors.text` (Title/Value) and `Colors.textMuted` (Captions).
+- **Typography**: Imports `Typography` from `theme.ts` (e.g., `Typography.title`, `Typography.caption`, `Typography.body`).
+- **Spacing**: T-shirt sized system used exclusively (`Spacing.xxs` through `Spacing.xxxl`).
+- **Borders & Radii**: `Layout.borderRadius` (typically 12px-24px depending on modal severity), `Colors.surfaceHighlight` for 1px stroke outlines.
+- **Feedback & Interactions**: Haptic-ready structural buttons with clear active states (`opacity: 0.75`), using `TouchableOpacity`.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Skater
-    participant UI as CommunityModal
-    participant SC as SceneCard
-    participant Svc as ScenesService
-    participant Parent as DashboardScreen (onApplyScene)
-    participant BLE as BleWriteQueue
-
-    Skater->>UI: Open Cloud Scenes Modal
-    UI->>Svc: fetchCommunityScenes()
-    Svc-->>UI: Return Community Presets List
-    UI->>SC: Render Scene item with LedStripPreview
-    Skater->>SC: Tap "Apply" on Scene
-    SC->>UI: handleApply(scene)
-    UI->>Parent: Invoke onApplyScene(scene.scene_payload)
-    Parent->>BLE: Enqueue payload as 0x59 pattern write
-    Note over BLE: Payload is debounced & written via GATT write
-    alt is activeTab === 'PUBLIC'
-        UI->>Svc: upvoteScene(scene.id)
-        Svc->>Svc: Increment download/upvote metric in DB
-    end
-    UI->>Skater: Display Alert.alert("Applied!")
-    UI->>Skater: Close Modal
-```
-
----
-
-## 8. 🧹 Archival Ledger (`
 
 <!-- CARTOGRAPHER_END: UI_MODALS -->
 
 ### Domain: UI_VISUALIZER
 <!-- CARTOGRAPHER_START: UI_VISUALIZER -->
 
-# UI_VISUALIZER Domain Architectural Cartography
-
-This document provides a comprehensive, read-only architectural audit of the `UI_VISUALIZER` domain in the SK8Lytz codebase. It maps out files, dependencies, context relationships, service/hook interactions, OS variances, and optical specs.
-
----
+# UI_VISUALIZER Cartography
 
 ## 1. File Manifest
-Every file in the `UI_VISUALIZER` domain mapped to its exact architectural purpose:
+- **`ProductVisualizer.tsx`**: Orchestrator wrapper. Manages the global animation loop (`animValue`) based on the active mode (STREET, MUSIC, BUILDER, MULTIMODE). Generates the fleet of `VisualizerUnit`s based on connected device arrays or defaults.
+- **`VisualizerUnit.tsx`**: Core renderer. Maps a 1D pixel array (from PatternEngine) to an intricate 2D geometric path (`OVAL`, `RING`, `DUAL_STRIP`). Handles boundary diffusion, hardware mirror mapping, and optical glow layer stacking (4-layer SVG-like structure).
+- **`CameraTracker.tsx`**: Native iOS/Android camera integration using `react-native-vision-camera`. Leverages JSI Worklets and GPU resizing to extract dominant K-Means palettes (`VIBE`) or center reticle colors (`SNIPER`) in real-time.
+- **`LEDStripPreview.tsx`**: High-performance `<View>`-based rendering of static or simple animated pattern previews (used in the pattern picker cards).
+- **`CustomEffectVisualizer.tsx`**: Alternate dot-based preview component for displaying pattern arrays.
+- **`PositionalGradientBuilder.tsx`**: Interactive UI for the `0x59` spatial builder payload. Allows dynamic placement of color nodes across the hardware canvas, mapping them to standard `PositionalMathBuffer` inputs.
+- **`VerticalPatternDrum.tsx`**: A custom 3D-styled, fast-scrolling drum picker used to select 1-100 hardware effects, leveraging `FlatList` with optimized padding and momentum.
+- **`NeonHueStrip.tsx`**: Interactive DJ-style horizontal slider for HSV hue selection. Handles direct `PanResponder` gestures.
+- **`UnifiedPatternPicker.tsx`**: Orchestrates pattern selections, connecting user choices to `PatternEngine.buildPatternPayload` and triggering `writeToDevice` commands.
 
-| File Name | Path | Architectural Purpose |
-|---|---|---|
-| **VisualizerUnit** | [VisualizerUnit.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/VisualizerUnit.tsx) | Computes coordinate-math layouts and renders physical LED paths (`RING` / HALOZ, `DUAL_STRIP` / RAILZ, `OVAL` / SOULZ) using a multi-layer glow simulation model, throttled to 30 FPS on web and 60 FPS on native. |
-| **ProductVisualizer** | [ProductVisualizer.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/ProductVisualizer.tsx) | Layout manager component that instantiates and orchestrates single or dual `VisualizerUnit` previews. Drives timer ticks synchronously using `requestAnimationFrame` loops. |
-| **LEDStripPreview** | [LEDStripPreview.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/LEDStripPreview.tsx) | Renders a 2D linear row of colored blocks to preview pattern engine effects. Optimized with hash-based change checks (`${patternId}-${fg}-${bg}-${speed}-${direction}-${brightness}`) to skip re-renders and runs at ~30 FPS (33ms ticks). |
-| **CustomEffectVisualizer** | [CustomEffectVisualizer.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/CustomEffectVisualizer.tsx) | Renders a 2D linear dot sequence for previewing custom gradient builder outputs. Dynamically transitions colors depending on active mode (static, jumping, flowing, breathing). |
-| **NeonHueStrip** | [NeonHueStrip.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/NeonHueStrip.tsx) | Renders a full-spectrum linear color picker strip using `LinearGradient` and implements a dedicated `PanResponder` gesture responder for lag-free local slider modifications. |
-| **PositionalGradientBuilder** | [PositionalGradientBuilder.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/PositionalGradientBuilder.tsx) | Node-based editor allowing users to insert, remove, position, and color-code pins on a virtual strip. Translates pin data into `ZenggeProtocol` dispatches over BLE with 100ms throttle protection. |
-| **VerticalPatternDrum** | [VerticalPatternDrum.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/VerticalPatternDrum.tsx) | An infinite-scrolling vertical selector wheel mapping list positions to pattern IDs, designed with haptic reticle overlays, 3D shadow masks, and a 50ms selection debounce. |
-| **GradientLibraryTab** | [GradientLibraryTab.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/patterns/GradientLibraryTab.tsx) | Displays a list of custom and built-in gradients in a two-column grid showing 12-block static strips generated by the positional math buffer. |
-| **PatternCard** | [PatternCard.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/patterns/PatternCard.tsx) | Renders a pattern selection card with glassmorphism overlays, required color indicators (FG/BG dots), and an embedded live `LEDStripPreview` capped at 12 segments to minimize DOM footprint. |
-| **PatternPickerTab** | [PatternPickerTab.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/patterns/PatternPickerTab.tsx) | Categorized grid layout selector for patterns utilizing an `onViewableItemsChanged` flatlist viewport gate that automatically pauses/plays individual card animations to conserve CPU. |
-| **UnifiedPatternPicker** | [UnifiedPatternPicker.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/patterns/UnifiedPatternPicker.tsx) | Coordinates pattern card selection and delegates hex-to-rgb conversion and `0x59` BLE payload packaging (`buildPatternPayload`) to the hardware dispatcher. |
-| **CameraTracker (iOS/Android)** | [CameraTracker.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/CameraTracker.tsx) | Integrates `react-native-vision-camera` feed with a native GPU frame resizer worklet running at 5Hz to extract environment colors (Sniper center-pixel sampling and Vibe K-means clustering modes). |
-| **CameraTracker (Web)** | [CameraTracker.web.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/CameraTracker.web.tsx) | Stubs out the camera tracking interface for non-native environments (Expo Web) to prevent compiler and bundler failures on missing JSI packages. |
-| **CameraTracker Types** | [CameraTracker.d.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/CameraTracker.d.ts) | Core TypeScript interface declaration mapping props and types across native and web CameraTracker components. |
-
----
-
-## 2. Blast Radius (Imports/Exports)
-
-```mermaid
-graph TD
-    subgraph Core ["Core Protocols & Services"]
-        PE["PatternEngine.ts (protocols/PatternEngine.ts)"]
-        PMB["PositionalMathBuffer.ts (protocols/PositionalMathBuffer.ts)"]
-        ZP["ZenggeProtocol.ts (protocols/ZenggeProtocol.ts)"]
-        KM["kMeansPalette.ts (utils/kMeansPalette.ts)"]
-        CU["ColorUtils.ts (utils/ColorUtils.ts)"]
-        PS["PermissionService.ts (services/PermissionService.ts)"]
-    end
-
-    subgraph UI_VIS["UI_VISUALIZER Domain Components"]
-        VU["VisualizerUnit.tsx"]
-        PV["ProductVisualizer.tsx"]
-        LSP["LEDStripPreview.tsx"]
-        CEV["CustomEffectVisualizer.tsx"]
-        NHS["NeonHueStrip.tsx"]
-        PGB["PositionalGradientBuilder.tsx"]
-        VPD["VerticalPatternDrum.tsx"]
-        CT["CameraTracker.tsx (Native/Web/Type)"]
-        GLT["GradientLibraryTab.tsx"]
-        PC["PatternCard.tsx"]
-        PPT["PatternPickerTab.tsx"]
-        UPP["UnifiedPatternPicker.tsx"]
-    end
-
-    subgraph Consumers ["Panels & Consumer Components"]
-        DC["DockedController.tsx"]
-        PE_PANEL["ProEffectsPanel.tsx"]
-        BLD_PANEL["BuilderPanel.tsx"]
-        CAM_PANEL["CameraPanel.tsx"]
-        SLIDERS["UniversalSliders.tsx"]
-        SCHED["Scheduler.tsx"]
-    end
-
-    %% Dependency flow
-    PE --> LSP
-    PE --> PC
-    PE --> UPP
-    PMB --> GLT
-    PMB --> PGB
-    ZP --> PGB
-    KM --> CT
-    CU --> VU
-    CU --> CT
-    PS --> CT
-
-    LSP --> PC
-    PC --> PPT
-    PPT --> UPP
-    GLT --> BLD_PANEL
-    UPP --> PE_PANEL
-    PGB --> BLD_PANEL
-    PGB --> SCHED
-    NHS --> SLIDERS
-    CT --> CAM_PANEL
-    VU --> PV
-    PV --> DC
-    UPP --> DC
-```
-
-### Incoming Dependencies (Who Imports UI_VISUALIZER)
-* **`DockedController.tsx`**: Imports `ProductVisualizer` to render active skate visualizers at the top of the dashboard controller sheet.
-* **`ProEffectsPanel.tsx`**: Imports `UnifiedPatternPicker` to expose pattern grids under the programs selector.
-* **`BuilderPanel.tsx`**: Imports `PositionalGradientBuilder` to allow editing custom nodes and `CustomEffectVisualizer` to preview nodes locally.
-* **`CameraPanel.tsx`**: Imports `CameraTracker` to manage ambient color analysis.
-* **`Scheduler.tsx`**: Imports `PositionalGradientBuilder` for configuring timer transitions.
-
-### Outgoing Dependencies (What UI_VISUALIZER Imports)
-* **`src/protocols/PatternEngine.ts`**: Retrieves effect lists (`SK8LYTZ_TEMPLATES`) and builds pixel array payloads via `buildPatternPayload`.
-* **`src/protocols/PositionalMathBuffer.ts`**: Computes interpolated colors from node maps.
-* **`src/protocols/ZenggeProtocol.ts`**: Converts gradient arrays into BLE binary dispatches (`setMultiColor`).
-* **`src/utils/kMeansPalette.ts`**: Computes dominant colors from camera pixel arrays via cluster iteration.
-* **`src/utils/ColorUtils.ts`**: Converts hex-to-rgb and maps RGB limits (`boostForLED`).
-* **`src/services/PermissionService.ts`**: Requests native OS permission configurations for the camera stream.
-
----
+## 2. Blast Radius
+- **`VisualizerUnit.tsx`**: Any logic changes impact all active visual modes (STREET, MULTIMODE, MUSIC, BUILDER, FAVORITES) and visual geometry rendering for all models (HALOZ, SOULZ, RAILZ).
+- **`ProductVisualizer.tsx`**: Altering the `requestAnimationFrame` and `Animated.loop` impacts app CPU/GPU usage heavily and the timing of all visual simulations.
+- **`CameraTracker.tsx`**: Highly volatile JSI worklets. Improper `dispose()` calls cause severe memory leaks and camera pipeline stalls.
 
 ## 3. Context Matrix
-
-The domain consumes several React Contexts to manage themes, rendering vectors, and database profiles:
-
-| Context | Hook / Consumer | Purpose | Read / Write Status |
-|---|---|---|---|
-| **ThemeContext** | `useTheme` / `VisualizerUnit`, `ProductVisualizer`, `NeonHueStrip`, `PositionalGradientBuilder`, `VerticalPatternDrum`, `UnifiedPatternPicker` | Receives theme updates (light/dark mode toggle) and provides active color variable matrices (`Colors.surface`, `Colors.surfaceHighlight`, `Colors.primary`, etc.). | Read-Only |
-| **AuthContext** | `useAuth` / `useGradients` (via `GradientLibraryTab`) | Resolves active `user.id` sessions to load custom presets from Supabase. | Read-Only |
-| **SafeAreaContext**| `useSafeAreaInsets` / (Parent Wrappers) | Prevents visual overlap with screen notches and bottom system bars. | Read-Only |
-
----
+- `ProductVisualizer` depends on `VisualizerUnit`.
+- `VisualizerUnit` relies on `ProductCatalog.ts` for geometry mapping (`vizShape`).
+- `CameraTracker` requires platform permissions and uses `ColorUtils.ts` (boostForLED, K-Means palette).
+- All visualizers and builders depend on `PatternEngine.ts` and `PositionalMathBuffer.ts` to retrieve the identical byte parity arrays sent to hardware via `0x59`.
 
 ## 4. Hook/Service I/O Registry
-
-### `useGradients` (Hook)
-* **Inputs:** None (reads user session internally from `AuthContext`).
-* **Outputs:**
-  * `gradients`: `CustomBuilderPreset[]` — Loaded gradient models.
-  * `isLoading`: `boolean` — Current fetch status.
-  * `status`: `'idle' | 'loading' | 'error' | 'success'` — FSM state.
-  * `error`: `string | null` — Last error message.
-  * `saveGradient`: `(preset: Partial<CustomBuilderPreset>) => Promise<void>` — Saves/updates gradient.
-  * `deleteGradient`: `(id: string) => Promise<void>` — Deletes custom gradient.
-  * `refreshGradients`: `() => Promise<void>` — Forces database refetch.
-* **Side-effects:**
-  * Fetches user presets from the `GradientsService` Supabase client on mount.
-  * Triggers event logs to `AppLogger.error()` on failures.
-  * Increments `favorites_created` user telemetry counter on new saves.
-
-### `extractKMeansPalette` (Utility Service)
-* **Inputs:**
-  * `pixels`: `RGB[]` — Source pixel buffer array.
-  * `k`: `number` — Target centroid cluster count (hardcoded to `3` for Vibe mode).
-  * `maxIterations`: `number` — Convergence limit (hardcoded to `5`).
-* **Outputs:** `RGB[]` — Extracted dominant centroids.
-* **Side-effects:** None (pure mathematical clustering).
-
-### `useResizer` (Vision Camera Resizer Hook)
-* **Inputs:**
-  * `config`: `{ width: 50, height: 50, channelOrder: 'rgb', dataType: 'uint8', scaleMode: 'cover', pixelLayout: 'interleaved' }`
-* **Outputs:**
-  * `{ resizer, error }`: Resizer instances mapped inside the C++ native boundary.
-* **Side-effects:** Memory instantiation of native resizer channels. Requires manual calling of `.dispose()` inside worklets to prevent memory leaks.
-
----
+- **`VisualizerUnit.tsx`**
+  - **Inputs**: `animValue` (Animated.Value), `mode`, `hwSettings`, `devicePoints`, `color`.
+  - **Internal**: `requestAnimationFrame` loop synced with `animTick`. Calls `getVisualizerFrame()` and `getMusicVisualizerFrame()`.
+- **`CameraTracker.tsx`**
+  - **Inputs**: `subMode` (`'SNIPER' | 'VIBE'`), `isActive`
+  - **Outputs**: `onColorDetected(hex)`, `onVibePaletteDetected(RGB[])` triggered via `runOnJS()` callback bindings.
+- **`PositionalGradientBuilder.tsx`**
+  - **Inputs**: `nodes`, `fillMode`, `transitionType`, `speed`, `deviceLedCount`.
+  - **Outputs**: Triggers BLE writes directly (`writeToDevice(ZenggeProtocol.setMultiColor(...))`) on throttle.
 
 ## 5. OS Variance Matrix
+- **`VisualizerUnit.tsx`**: Throttles the `animTick` simulation to `30 FPS` on Web to prevent MessageQueue flooding. Runs uncapped (`60 FPS`) on Native iOS/Android.
+- **`NeonHueStrip.tsx`**: Implements Web-specific DOM styles (`touchAction: 'none'`, `userSelect: 'none'`) to prevent gesture hijacking, falling back safely on native.
+- **`CameraTracker.tsx`**: Operates on `react-native-vision-camera`, inherently native-only. Requires strict JSI `'worklet';` thread boundaries. GPU frame disposal must be explicitly handled.
 
-Critical path branches and execution differences between target platforms (iOS, Android, Web):
+## 6. Design System & Token Manifest
+- **Geometry Shapes**: `OVAL` (SOULZ), `RING` (HALOZ), `DUAL_STRIP` (RAILZ) mappings scaled by `S = 0.38`.
+- **Blob Opacities**: Stacked views for bloom simulation (3% scatter, 10% wide bloom, 38% inner halo, 55% hot-spot center).
+- **UI Colors**: `Colors.surfaceHighlight`, `#FF5500` (Drum active state text shadow and borders), `rgba(0, 212, 255, 0.35)` (Reticle borders).
+- **Spacings used**: `Spacing.xxs`, `Spacing.xs`, `Spacing.sm`, `Spacing.md`, `Spacing.lg`.
 
-| File / Component | Platform / API | Branching Mechanism | Architectural Difference & Rationale |
-|---|---|---|---|
-| **CameraTracker** | **Web / Expo Web** | `.web.tsx` file resolution override | Renders a standard message component stating "Camera Not Available". Prevents web bundler crashes on native-only packages (`react-native-vision-camera`, `react-native-worklets-core`) which depend on native JSI compilation. |
-| **CameraTracker** | **iOS & Android** | `.tsx` file execution | Renders raw camera stream. Spawns high-performance C++ worklet frames to sample colors at 5Hz using JSI buffers. |
-| **VisualizerUnit** | **Web vs Native** | `Platform.OS === 'web'` | Throttles frame rates. Web runs at **30 FPS** to prevent JS MessageQueue flooding. Native runs at **60 FPS** (or uncapped). |
-| **PatternPickerTab** | **Web vs Native** | `Platform.OS !== 'web'` | Disables Animated Native Driver on Web (`useNativeDriver: false`) for category pill scale transforms to avoid styling compiler warnings. |
-| **Shadows & Glow** | **iOS vs Android** | `Platform.select()` in `theme.ts` | Shadow render engine variances. iOS uses `shadowColor`/`shadowOpacity`/`shadowRadius` styles. Android uses `elevation` and `shadowColor` properties. |
+## 7. Sequence Diagram
+```mermaid
+sequenceDiagram
+    participant UI as DockedController
+    participant PV as ProductVisualizer
+    participant VU as VisualizerUnit
+    participant PE as PatternEngine
+    participant HW as ZENGGE_PROTOCOL
 
----
+    UI->>PV: props (mode, patternId, speed, hwSettings)
+    PV->>PV: Start Animated.loop (animValue)
+    PV->>VU: render N units (left/right skates)
+    loop requestAnimationFrame
+        VU->>VU: update animTick from animValue
+        VU->>PE: getVisualizerFrame(patternId, points, animTick)
+        PE-->>VU: RGB[] array
+        VU->>VU: Map 1D RGB array to 2D geometric path
+        VU-->>PV: Render UI Dots
+    end
+    UI->>HW: 0x59 payload (same RGB logic)
+```
 
-## 6. Visualizer Geometry & Physics Specs
+## 8. Archival Instructions
+If cross-referencing with `docs/SK8Lytz_App_Master_Reference.md`:
+- The VisualizerUnit Rendering Rules matrix for HALOZ RING geometry is already tagged with `[MOVE_TO_ARCHIVE]`.
+- The One-Screen Setup Policy and Dashboard UI Layout sections are noted as stale / `[MOVE_TO_ARCHIVE]`.
 
-The visualizer domain is governed by the core token specifications alongside visualizer-specific optical metrics:
+[IMPACTS_USER_JOURNEY] [IMPACTS_C4_CONTEXT] [IMPACTS_STATE_CHART]
 
-### Visualizer Geometry & Physics Specs
-* **Scale Factor:** `S = 0.38` (shrinks coordinates to fit preview containers).
-* **Hardware Profile Maps:**
-  * **HALOZ:** Layout Shape `RING`, 8 addressable LEDs per segment, 2 segments (16 total physical), LED dot diameter `7.6`mm, base layout size `60`x`90`px, `isMirrored: false` (hardware duplicates segment 1 to segment 2 automatically).
-  * **SOULZ:** Layout Shape `OVAL`, 43 addressable LEDs per segment, 1 segment (86 total physical across 2 boots, Y-wired), LED dot diameter `5.7`mm, base layout size `55`x`115`px, `isMirrored: false`.
-  * **RAILZ:** Layout Shape `DUAL_STRIP`, 30 addressable LEDs per segment, 2 segments (30 total physical), LED dot diameter `5.0`mm, base layout size `80`x`120`px, `isMirrored: true` (software-mirrored vertical strips), separation distance `32`mm.
-* **Optical Diffusion Layer Model:**
-  * **Layer 3 (Atmospheric Scatter):** `5.5`× diameter, opacity `0.03`
-  * **Layer 2 (Silicone Bloom):** `3.2`× diameter, opacity `0.10`
-  * **Layer 1 (Concentrated Halo):** `1.7`× diameter, opacity `0.38`
-  * **Main Emitter Body:** `1.0`× diameter, active color
-  * **Emitter Core Hotspot:** `0.32`× diameter, color `'rgba(255,255,255,0.55)'`
-  * **Silicon Outer Glaze:** `1.0`× diameter, color `'rgba(255,255,255,0.09)'`, border `0.5px`, color `'rgba(255,255,255,0.05)'`
-
----
-
-## 7. Architectural Impact Flags
-
-* `[IMPACTS_USER_JOURNEY]` — Gradient building, camera color detection, and vertical pattern selector wheels directly alter how users interact with hardware lights.
-* `[IMPACTS_STATE_CHART]` — Environment colors detected by CameraTracker or gradient layouts designed in the builder update local state contexts, triggering `0x59` GATT dispatches downstream.
-
----
-
-## 8. Archival Logs (`
 
 <!-- CARTOGRAPHER_END: UI_VISUALIZER -->
 
 ### Domain: DATA_LAYER
 <!-- CARTOGRAPHER_START: DATA_LAYER -->
 
-# 🗺️ DATA_LAYER Architectural Cartography Report
+# 1. File Manifest
+- `src/services/DeviceRepository.ts`: Single Source of Truth for Device & Group Persistence. Owns local-first/cloud-second syncing, tombstone management (anti-resurrection), and config merging.
+- `src/services/TelemetryService.ts`: Extracts standard context and payload size from raw BLE errors for unified logging.
+- `src/services/ScenesService.ts`: Caching, fetching, and background-syncing of scene payloads.
+- `src/services/SpeedTrackingService.ts`: SK8Lytz Session Persistence Layer. Handles saving sessions to Supabase and queueing offline sessions locally when unauthenticated.
+- `src/services/GradientsService.ts`: Syncs custom builder presets between AsyncStorage and Supabase (local-first).
+- `src/services/SkateSpotsService.ts`: Offline caching and syncing of skate spots. Contains fallback OSM fetcher for unmapped regions.
+- `src/services/SessionShareService.ts`: Builds share-ready text payloads using RN's native Share API for Crew Sessions.
+- `src/types/supabase.ts`: Auto-generated database typings.
+- `src/services/supabaseClient.ts`: Supabase client initialization featuring a custom `SecureStoreAdapter` for token persistence and a robust offline fallback stub when env vars are missing.
+- `src/hooks/cloud/useOfflineSyncWorker.ts`: Global background worker continuously flushing the telemetry and sync queues (Scenes/Speed) every 60 seconds.
+- `src/hooks/useFavorites.ts`: Hook for loading, merging (local + cloud), and persisting favorite presets.
+- `src/hooks/useScenes.ts`: Hook abstraction over ScenesService.
+- `src/hooks/useCuratedPicks.ts`: Fetches `sk8lytz_picks` using a stale-while-revalidate caching pattern to eliminate UI blocking.
+- `src/hooks/useGradients.ts`: Hook abstraction over GradientsService.
+- `src/hooks/useSkateStats.ts`: Hook exposing lifetime statistics and recent session history from `SpeedTrackingService`.
+- `src/hooks/useRecentSpots.ts`: Manages a capped array (last 10) of recently visited spots in `AsyncStorage`.
+- `src/hooks/useMapFilters.ts`: Manages local persistence for map view toggles (`MapFilterMatrix`).
+- `src/context/FavoritesContext.tsx`: React Context boundary wrapping `useFavorites` state.
 
-This report details the read-only architectural cartography audit of the data persistence, synchronization, and caching layer of the SK8Lytz App. 
+# 2. Blast Radius
+- Changes to `DeviceRepository` instantly impact the `useRegistration` wizard, `useDashboardGroups`, and the offline fallback integrity. Errors here cause ghost devices to resurface.
+- Adjustments to `useOfflineSyncWorker` dictate the success rate of background syncs for `ScenesService` and `SpeedTrackingService`. If broken, offline sessions stack indefinitely until memory limits are reached.
+- Modifying `supabaseClient.ts` affects the authentication loop, `SecureStore` persistence, and the offline simulation mock.
 
----
+# 3. Context Matrix
+- **Storage/Cache Level**: Relies heavily on `@react-native-async-storage/async-storage` for local-first architecture. Core functionality continues unimpeded without internet.
+- **Network Level**: Network status drives behavior gracefully. Write operations queue locally (`@Sk8lytz_Scene_Sync_Queue`, `@SK8Lytz_PendingSession_Queue`) when offline/unauthenticated and rely entirely on `useOfflineSyncWorker` for deferred resolution.
 
-## 1. File Manifest
+# 4. Hook/Service I/O Registry
+- **`SpeedTrackingService`**
+  - **In:** `ISessionSnapshot`
+  - **Out:** `ISkateSession`, `ILifetimeStats`
+  - **Side Effects:** Pushes to `@SK8Lytz_PendingSession_Queue`, inserts into Supabase `skate_sessions`, delegates to `HealthSyncService`.
+- **`ScenesService`**
+  - **In:** `Scene`, `ICloudScene`
+  - **Side Effects:** Publishes to `shared_scenes`, upserts to `user_saved_presets`, enqueues sync jobs via `@Sk8lytz_Scene_Sync_Queue`.
+- **`useOfflineSyncWorker`**
+  - **In:** Authenticated User Context
+  - **Side Effects:** Flushes `ScenesService` and `SpeedTrackingService` queues to Supabase every 60s.
 
-Every file in the `DATA_LAYER` domain is catalogued below with its canonical architectural purpose and code references:
+# 5. OS Variance Matrix
+- **Web (`Platform.OS === 'web'`)**: `supabaseClient` gracefully falls back to `localStorage` instead of `SecureStore`.
+- **iOS (`Platform.OS === 'ios'`)**: Native `SecureStore` for secure token storage. `Share.share` in `SessionShareService` natively displays a URL preview when the `url` property is populated.
+- **Android (`Platform.OS === 'android'`)**: `SecureStore` uses EncryptedSharedPreferences. `SessionShareService` relies entirely on the `message` string as Android share intents do not formally separate the URL preview.
 
-| File Path | Architectural Purpose |
-| :--- | :--- |
-| `src/services/DeviceRepository.ts` | Local-first, cloud-second Single Source of Truth (SSOT) managing device and group pairings, local-state syncing, and cloud reconciliation. |
-| `src/services/TelemetryService.ts` | Decodes and categorizes BLE error payloads, tracking transmission metadata and telemetry counters for diagnostic logging. |
-| `src/services/ScenesService.ts` | Facilitates offline scene storage, community uploads, upvoting/downloading mechanics, and sync queuing. |
-| `src/services/SpeedTrackingService.ts` | Computes active sessions telemetry (miles, speed, MET-based calories) and queues sessions offline if unauthenticated/offline. |
-| `src/services/GradientsService.ts` | Persists positional color builder presets, merging local presets with global and cloud user presets. |
-| `src/services/SkateSpotsService.ts` | Retrieves skate spots using a 24-hour TTL AsyncStorage cache, fallback OpenStreetMap scraping, and cloud verification. |
-| `src/services/SessionShareService.ts` | Formats deep links and text payloads to trigger the native platform's OS share sheet wrapper. |
-| `src/types/supabase.ts` | Provides database schema structure definitions autogenerated from Supabase PostgreSQL tables. |
-| `src/services/supabaseClient.ts` | Configures the Supabase JS client with custom SecureStore credentials storage and provides an offline fallback stub. |
-| `src/hooks/cloud/useOfflineSyncWorker.ts` | Executes a 60-second background polling cycle to safely upload pending scenes, sessions, and telemetry log caches to Supabase. |
-| `src/hooks/useFavorites.ts` | Bridges preset configurations with UI controls, backing them with AsyncStorage and Supabase table writes. |
-| `src/context/FavoritesContext.tsx` | Wraps user favorites in a React Context Provider for application-wide shared hook state. |
-| `src/hooks/useScenes.ts` | Interfaces components with the ScenesService logic for list loading and deletions. |
-| `src/hooks/useCuratedPicks.ts` | Implements a cache-first stale-while-revalidate loop that displays curated presets from the remote DB. |
-| `src/hooks/useGradients.ts` | Interfaces UI controls with GradientsService to manage positional gradient math presets. |
-| `src/hooks/useSkateStats.ts` | Caches and binds lifetime stats and historical session timelines. |
-| `src/hooks/useRecentSpots.ts` | Captures a rolling deque of the last 10 map location visits in AsyncStorage. |
-| `src/hooks/useMapFilters.ts` | Governs visibility matrices for rinks, parks, shops, and active crew sessions. |
+# 6. Database Schema & RLS Policies
+- `skate_sessions`: Core session logging (duration, distance, top speed, calories, g-force). Tied to `user_id`.
+- `registered_devices`: Canonical device linkage map (MAC addresses to `user_id`, led counts, ic_type).
+- `user_saved_presets` & `custom_builder_presets`: Stores DIY designs. `nodes` column is stored as `Json` (enforced via TS double-cast).
+- `shared_scenes`: Cloud-published community scenes with upvotes/downloads counters tracking.
+- `skate_spots`: Crowdsourced and verified skate spot coordinates and properties.
 
----
+# 7. Environment/Secrets Manifest
+- `EXPO_PUBLIC_SUPABASE_URL`: Core API endpoint.
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`: Public-facing anon key.
+*(Note: Application falls back to a structural offline mock interface when these variables are undefined to ensure continuous sandbox operation).*
 
-## 2. Blast Radius (Imports/Exports)
-
-```mermaid
-graph TD
-    subgraph External
-        SDK[Supabase JS SDK]
-        AS[AsyncStorage]
-        SS[SecureStore]
-    end
-
-    subgraph DATA_LAYER [DATA_LAYER Domain]
-        Client[supabaseClient.ts]
-        Repo[DeviceRepository.ts]
-        ScenesSvc[ScenesService.ts]
-        SpeedSvc[SpeedTrackingService.ts]
-        GradSvc[GradientsService.ts]
-        SpotsSvc[SkateSpotsService.ts]
-        SyncWorker[useOfflineSyncWorker.ts]
-        FavHook[useFavorites.ts]
-        FavCtx[FavoritesContext.tsx]
-    end
-
-    subgraph UI_CONSUMERS [UI Controllers]
-        DockedCtrl[DockedController.tsx]
-        MapScrn[MapScreen.tsx]
-        Wiz[SetupWizard.tsx]
-    end
-
-    %% External bindings
-    Client --> SS
-    Repo --> AS
-    ScenesSvc --> AS
-    SpeedSvc --> AS
-    GradSvc --> AS
-    SpotsSvc --> AS
-
-    %% Internal relationships
-    Repo --> Client
-    ScenesSvc --> Client
-    SpeedSvc --> Client
-    GradSvc --> Client
-    SpotsSvc --> Client
-
-    SyncWorker --> ScenesSvc
-    SyncWorker --> SpeedSvc
-
-    FavHook --> Client
-    FavCtx --> FavHook
-
-    %% UI to data layer
-    DockedCtrl --> FavCtx
-    DockedCtrl --> ScenesSvc
-    MapScrn --> SpotsSvc
-    Wiz --> Repo
-```
-
-### Imports/Exports Matrix
-
-| File | Primary Imports (from DATA_LAYER) | Primary Exports (to other layers) |
-|---|---|---|
-| `supabaseClient.ts` | `Database` | `supabase` client / mock stub |
-| `DeviceRepository.ts` | `supabase`, `Database` | `DeviceRepository` (singleton class) |
-| `TelemetryService.ts` | `supabase`, `Database` | `TelemetryService` |
-| `ScenesService.ts` | `supabase` | `ScenesService`, `Scene` interface |
-| `SpeedTrackingService.ts` | `supabase` | `SpeedTrackingService`, `ISkateSession`, `ILifetimeStats` |
-| `GradientsService.ts` | `supabase`, `Database` | `GradientsService` |
-| `SkateSpotsService.ts` | `supabase`, `Database` | `SkateSpotsService`, `SkateSpot` |
-| `SessionShareService.ts` | None | `shareLiveSession`, `shareScheduledSession`, `shareSessionInvite` |
-| `useOfflineSyncWorker.ts`| `ScenesService`, `SpeedTrackingService` | `useOfflineSyncWorker` background sync loop |
-| `useFavorites.ts` | `supabase`, `Database` | `useFavorites` hook, `IFavoriteState` |
-| `FavoritesContext.tsx`| `useFavorites` | `FavoritesProvider`, `useSharedFavorites` |
-| `useScenes.ts` | `ScenesService` | `useScenes` hook |
-| `useCuratedPicks.ts` | `supabase`, `Database` | `useCuratedPicks` hook |
-| `useGradients.ts` | `GradientsService` | `useGradients` hook |
-| `useSkateStats.ts` | `SpeedTrackingService` | `useSkateStats` hook |
-| `useRecentSpots.ts` | None | `useRecentSpots` hook |
-| `useMapFilters.ts` | None | `useMapFilters` hook |
-
----
-
-## 3. Context Matrix
-
-This domain consumes and provides the following React Contexts:
-
-*   **`AuthContext` (`useAuth`)**:
-    *   *Consumed by*: `useOfflineSyncWorker.ts`, `useFavorites.ts`, `useScenes.ts`, `useGradients.ts`, `useSkateStats.ts`.
-    *   *Purpose*: Obtains the currently authenticated `user.id` to route cloud reads/writes and prevent sync cycles for anonymous sessions.
-*   **`FavoritesContext` (`FavoritesProvider` / `useSharedFavorites`)**:
-    *   *Provided by*: `FavoritesContext.tsx` (wrapping `useFavorites.ts` base hook).
-    *   *Consumed by*: UI controller components (e.g., `DockedController.tsx`).
-    *   *Purpose*: Provides a single global registry of active presets, quick presets, loading states, and mutation callbacks to prevent redundant fetches.
-*   **`ThemeContext`**:
-    *   *Consumed by*: Layout controllers and screens.
-    *   *Purpose*: Restores active UI control themes from AsyncStorage, shared across screens.
-
----
-
-## 4. Hook/Service I/O Registry
-
-### `DeviceRepository` (Singleton Service)
-*   **`initialize()`** [DeviceRepository.ts:42-64]
-    *   *Input*: None.
-    *   *Output*: `Promise<void>`.
-    *   *Side-effects*: Reads cached device arrays (`@Sk8lytz_registered_devices`), custom settings maps, and tombstone lists from AsyncStorage to build the in-memory cache.
-*   **`saveDevice(device, userId)`** [DeviceRepository.ts:182-277]
-    *   *Input*: `device: Partial<RegisteredDevice> & { device_mac: string }`, `userId?: string`.
-    *   *Output*: `Promise<boolean>`.
-    *   *Side-effects*: Updates memory cache immutably, removes matching MAC address from the local tombstone list, writes to local storage, and invokes Supabase group transaction RPCs or queues details to the offline sync key if the network fails.
-*   **`deleteDevice(deviceMac, userId)`** [DeviceRepository.ts:314-367]
-    *   *Input*: `deviceMac: string`, `userId?: string`.
-    *   *Output*: `Promise<void>`.
-    *   *Side-effects*: Adds MAC to the local tombstone list, filters the device out of memory arrays, wipes specific device settings configs, and issues a DELETE query to Supabase.
-*   **`syncFromCloud(userId)`** [DeviceRepository.ts:80-163]
-    *   *Input*: `userId?: string`.
-    *   *Output*: `Promise<RegisteredDevice[]>`.
-    *   *Side-effects*: Queries remote `registered_devices`, filters out records in the local tombstone list, merges settings priorities (local updates override defaults), and flushes unsynced local creations or tombstoned deletes.
-
-### `ScenesService` (Singleton Service)
-*   **`getSavedScenes(userId)`** [ScenesService.ts:25-96]
-    *   *Input*: `userId?: string`.
-    *   *Output*: `Promise<Scene[]>`.
-    *   *Side-effects*: Tries local cache first (`@Sk8lytz_Scenes`), returns data, triggers background sync from Supabase, and caches locally.
-*   **`saveSavedScene(scene, userId)`** [ScenesService.ts:98-175]
-    *   *Input*: `scene: Scene`, `userId?: string`.
-    *   *Output*: `Promise<boolean>`.
-    *   *Side-effects*: Inserts or updates matching IDs locally and appends a `SceneSyncJob` to local storage queue `@Sk8lytz_Scene_Sync_Queue`.
-*   **`flushSyncQueue(userId)`** [ScenesService.ts:223-322]
-    *   *Input*: `userId: string`.
-    *   *Output*: `Promise<void>`.
-    *   *Side-effects*: Executes batch inserts and deletes of scenes to Supabase, resolving the queue file once complete.
-
-### `SpeedTrackingService` (Singleton Service)
-*   **`saveSession(snapshot, userId)`** [SpeedTrackingService.ts:285-348]
-    *   *Input*: `snapshot: ISessionSnapshot`, `userId: string | null`.
-    *   *Output*: `Promise<string | null>`.
-    *   *Side-effects*: Estimating calories via MET formula, inserting row to `skate_sessions` on Supabase, or caching locally in `@SK8Lytz_PendingSession_Queue` if offline. Updates lifetime user stats when online.
-*   **`flushPendingSessionQueue(userId)`** [SpeedTrackingService.ts:350-412]
-    *   *Input*: `userId: string`.
-    *   *Output*: `Promise<void>`.
-    *   *Side-effects*: Pulls local queue, iterates, and executes insertion of offline rows. Syncs totals back to the user profiles. Gated with `_isFlushingSessionQueue` concurrency check.
-
-### `GradientsService` (Singleton Service)
-*   **`getSavedGradients(userId)`** [GradientsService.ts:12-81]
-    *   *Input*: `userId?: string`.
-    *   *Output*: `Promise<CustomBuilderPreset[]>`.
-    *   *Side-effects*: Reads local cache (`@Sk8lytz_Builder_Presets`), triggers background fetch from `custom_builder_presets` and `user_saved_presets`, merges and writes merged results back to local cache.
-*   **`saveGradient(preset, userId)`** [GradientsService.ts:83-134]
-    *   *Input*: `preset: Partial<CustomBuilderPreset>`, `userId?: string`.
-    *   *Output*: `Promise<CustomBuilderPreset>`.
-    *   *Side-effects*: Saves local cache preset first, then upserts the preset to Supabase `user_saved_presets` table if authenticated.
-*   **`deleteGradient(id, userId)`** [GradientsService.ts:136-157]
-    *   *Input*: `id: string`, `userId?: string`.
-    *   *Output*: `Promise<void>`.
-    *   *Side-effects*: Deletes preset from local AsyncStorage cache, and triggers a DELETE on Supabase `user_saved_presets` if authenticated.
-
-### `SkateSpotsService` (Singleton Service)
-*   **`getCachedSpots()`** [SkateSpotsService.ts:21-80]
-    *   *Input*: None.
-    *   *Output*: `Promise<SkateSpot[]>`.
-    *   *Side-effects*: Reads cache (`@Sk8lytz_skate_spots_cache`). If cache is expired (TTL 24 hours) or empty, triggers background or blocking fetch to remote `skate_spots` table, writing results to cache.
-*   **`getNativeSpots(bbox)`** [SkateSpotsService.ts:86-95]
-    *   *Input*: `bbox: BoundingBox`.
-    *   *Output*: `Promise<SkateSpot[]>`.
-    *   *Side-effects*: None (pure filtering on cached spots).
-*   **`claimAndUpdateSpot(spot)`** [SkateSpotsService.ts:101-124]
-    *   *Input*: `spot: Partial<SkateSpot>`.
-    *   *Output*: `Promise<SkateSpot | null>`.
-    *   *Side-effects*: Upserts spot details to Supabase `skate_spots` table, marking `source='native'` and `is_verified=true`.
-*   **`getFallbackOSMSpots(bbox, query)`** [SkateSpotsService.ts:130-162]
-    *   *Input*: `bbox: BoundingBox`, `query?: string`.
-    *   *Output*: `Promise<Partial<SkateSpot>[]>`.
-    *   *Side-effects*: Queries the external OpenStreetMap Nominatim endpoint via `fetch`, returning formatted roller-skating spots matching coordinates.
-
-### `SessionShareService` (Utility Service)
-*   **`shareLiveSession(s)`** [SessionShareService.ts:53-64]
-    *   *Input*: `s: ShareableSession`.
-    *   *Output*: `Promise<void>`.
-    *   *Side-effects*: Formats live session string payload and triggers native OS share dialog.
-*   **`shareScheduledSession(s)`** [SessionShareService.ts:70-84]
-    *   *Input*: `s: ShareableSession`.
-    *   *Output*: `Promise<void>`.
-    *   *Side-effects*: Formats scheduled session string payload and triggers native OS share dialog.
-
-### `useOfflineSyncWorker` (React Hook)
-*   **`useOfflineSyncWorker()`** [useOfflineSyncWorker.ts:18-60]
-    *   *Input*: None.
-    *   *Output*: None.
-    *   *Side-effects*: Spawns a background `setInterval` polling loop on a 60-second cycle. If authenticated, executes serial uploads of scenes, sessions, and telemetry log caches to Supabase, guarding against concurrency via `_isFlushingSyncRef`.
-
----
-
-## 5. OS Variance Matrix
-
-*   **Dynamic Download & App Store URIs** (`SessionShareService.ts:15-21`):
-    *   Standardized deep links are built via React Native's `Platform.select`:
-        *   **iOS**: `https://apps.apple.com/app/sk8lytz`
-        *   **Android**: `https://play.google.com/store/apps/details?id=com.neogleamz.sk8lytz`
-*   **Native Share Sheet Payload Structure** (`SessionShareService.ts:101-105`):
-    *   iOS requires passing links inside the distinct `url` argument to force rendering of rich preview cards:
-        ```typescript
-        ...(Platform.OS === 'ios' ? { url: APP_LINK } : {})
-        ```
-*   **Supabase Session Persistence Engine** (`supabaseClient.ts:11-47`):
-    *   Resolves adapters depending on the compilation profile:
-        *   **Web/Expo-Go-Web**: Employs standard `localStorage`.
-        *   **Native (iOS/Android)**: Implements asynchronous Expo SecureStore APIs (`SecureStore.getItemAsync`, `SecureStore.setItemAsync`, `SecureStore.deleteItemAsync`) to store and retrieve authentication session tokens securely in the platform keychain.
-
----
-
-## 6. Database Schema & RLS Policies
-
-Database tables mapping to the `DATA_LAYER` domain:
-
-### `registered_devices`
-*   **Columns**:
-    *   `id`: `uuid` (PK)
-    *   `device_mac`: `text` (Unique per user)
-    *   `user_id`: `uuid` (FK to `auth.users`)
-    *   `device_name`: `text`
-    *   `custom_name`: `text`
-    *   `position`: `text`
-    *   `group_id`: `uuid` (FK to `registered_groups`)
-    *   `group_name`: `text`
-    *   `points`: `integer`
-    *   `led_points`: `integer`
-    *   `segments`: `integer`
-    *   `sorting`: `integer`
-    *   `strip_type`: `integer`
-    *   `firmware_ver`: `text`
-    *   `led_version`: `text`
-    *   `product_id`: `text`
-    *   `is_pending_sync`: `boolean`
-    *   `created_at`: `timestamp with time zone`
-    *   `updated_at`: `timestamp with time zone`
-*   **Indexes**:
-    *   `registered_devices_pkey` ON `id`
-    *   `registered_devices_device_mac_key` ON `device_mac`
-    *   `registered_devices_user_id_idx` ON `user_id`
-*   **RLS Policies**:
-    *   *Enable all actions for users based on user_id*:
-        ```sql
-        CREATE POLICY "Allow individual CRUD" ON registered_devices
-        FOR ALL USING (auth.uid() = user_id);
-        ```
-
-### `user_saved_presets`
-*   **Columns**:
-    *   `id`: `uuid` (PK)
-    *   `user_id`: `uuid` (FK to `auth.users`)
-    *   `name`: `text`
-    *   `fill_mode`: `text` (e.g., `'FAVORITE'`, `'GRADIENT'`, `'SCENE'`)
-    *   `transition_type`: `integer`
-    *   `nodes`: `jsonb` (Holds color array steps or custom gradient coordinate parameters)
-    *   `created_at`: `timestamp with time zone`
-    *   `updated_at`: `timestamp with time zone`
-*   **RLS Policies**:
-    *   *Allow individual CRUD*:
-        ```sql
-        CREATE POLICY "Allow individual CRUD" ON user_saved_presets
-        FOR ALL USING (auth.uid() = user_id);
-        ```
-
-### `shared_scenes`
-*   **Columns**:
-    *   `id`: `uuid` (PK)
-    *   `author_id`: `uuid` (FK to `auth.users`)
-    *   `author_username`: `text`
-    *   `name`: `text`
-    *   `scene_payload`: `jsonb` (Scene details including step matrices)
-    *   `downloads`: `integer`
-    *   `upvotes`: `integer`
-    *   `is_public`: `boolean`
-    *   `created_at`: `timestamp with time zone`
-*   **RLS Policies**:
-    *   *Allow public read access*:
-        ```sql
-        CREATE POLICY "Allow public select" ON shared_scenes
-        FOR SELECT USING (is_public = true);
-        ```
-    *   *Allow author write*:
-        ```sql
-        CREATE POLICY "Allow author CRUD" ON shared_scenes
-        FOR ALL USING (auth.uid() = author_id);
-        ```
-
-### `skate_sessions`
-*   **Columns**:
-    *   `id`: `uuid` (PK)
-    *   `user_id`: `uuid` (FK to `auth.users`)
-    *   `duration_sec`: `integer`
-    *   `distance_miles`: `numeric`
-    *   `avg_speed_mph`: `numeric`
-    *   `peak_speed_mph`: `numeric`
-    *   `peak_gforce`: `numeric`
-    *   `calories`: `numeric`
-    *   `avg_bpm`: `integer`
-    *   `peak_bpm`: `integer`
-    *   `location_label`: `text`
-    *   `location_coords`: `jsonb`
-    *   `start_coords`: `jsonb`
-    *   `end_coords`: `jsonb`
-    *   `path_coords`: `jsonb`
-    *   `crew_session_id`: `uuid`
-    *   `created_at`: `timestamp with time zone`
-*   **RLS Policies**:
-    *   *Allow individual CRUD*:
-        ```sql
-        CREATE POLICY "Allow individual CRUD" ON skate_sessions
-        FOR ALL USING (auth.uid() = user_id);
-        ```
-
----
-
-## 7. Environment & Secrets Manifest
-
-*   **`EXPO_PUBLIC_SUPABASE_URL`**:
-    *   *Description*: The host endpoint URL for Supabase routing client instances.
-*   **`EXPO_PUBLIC_SUPABASE_ANON_KEY`**:
-    *   *Description*: The public client API token parsed at initialization to bypass gateway rules.
-*   **Offline Fallback Mode** (`supabaseClient.ts:52-85`):
-    *   If environment secrets are missing, resolves to an in-memory mock client mapping empty functions and stub selections. Enables complete offline functionality and guest mode control.
-
----
-
-## 8. Offline Sync Queue Architecture
-
-The offline synchronization queue coordinates data staging between client AsyncStorage cache files and Supabase cloud tables. 
-
-### Enqueuing / Local Persistence
-1.  **Scenes**: Saved locally in AsyncStorage (`@Sk8lytz_Scenes`). If authenticated, a sync job of type `SceneSyncJob` is queued under `@Sk8lytz_Scene_Sync_Queue`.
-2.  **Sessions**: Stored locally under `PENDING_SESSION_QUEUE_KEY` (`@SK8Lytz_PendingSession_Queue`) if unauthenticated or connection fails.
-3.  **Meters**: Stored in AsyncStorage and merged with cloud data on next fetch.
-
-### Background Sync Loop (`useOfflineSyncWorker`)
-1.  The worker schedules a periodic trigger running on a **60-second loop** via a React `useEffect`.
-2.  When it runs, it retrieves the authenticated skater's ID. If unauthenticated, it exits early to prevent syncing to another user or breaking database constraints.
-3.  If authenticated, it sequentially flushes:
-    *   `flushSyncQueue(userId)` on `ScenesService`.
-    *   `flushPendingSessionQueue(userId)` on `SpeedTrackingService`.
-4.  Each flush service reads its distinct queue from AsyncStorage, attempts an insert or RPC transaction, and slices successful items from the queue. Remaining items are preserved for the next worker trigger.
-
-### Offline Sync Lifecycle Flow
+# 8. Offline Sync Queue Architecture
 
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor User as Skater App
-    participant Storage as AsyncStorage Queue
-    participant Worker as useOfflineSyncWorker (60s)
-    participant Client as Supabase Client
-    participant DB as Supabase DB
+    participant App as UI / Hooks
+    participant Svc as Services (Scenes/Speed)
+    participant Async as AsyncStorage
+    participant Worker as useOfflineSyncWorker
+    participant Supabase as Supabase Cloud
 
-    User->>Storage: saveSkateSession() / saveScene() (Queued)
-    Note over Storage: Records stacked offline
-
-    loop Every 60 seconds
-        Worker->>Worker: Trigger RunSync()
-        Worker->>Storage: Read active queue items
-        Storage-->>Worker: Return queue arrays
-        Worker->>Client: flushPendingSessionQueue(userId)
-        alt Device is Online
-            Client->>DB: Bulk Upsert/RPC Transactions
-            DB-->>Client: HTTP 201 Success
-            Client-->>Worker: Resolve
-            Worker->>Storage: Remove item from queue (Slice)
-        else Device is Offline
-            Client-xDB: Network Failure (Timeout)
-            Client-->>Worker: Catch Exception (Fail Silently)
-            Note over Storage: Queue preserved for next loop
+    App->>Svc: save() [Offline or Guest]
+    Svc->>Async: push to Sync Queue (Pending Record)
+    
+    loop Every 60 Seconds
+        Worker->>Svc: flushSyncQueue(userId)
+        Svc->>Async: Retrieve Sync Queue
+        Svc->>Supabase: Batch Insert/Upsert/Delete
+        alt Auth Valid & Network Up
+            Supabase-->>Svc: Ack
+            Svc->>Async: Remove flushed items from Queue
+        else Error / Offline
+            Supabase-->>Svc: Error
+            Svc->>Async: Retain failed items for next cycle
         end
     end
 ```
 
----
+[MOVE_TO_ARCHIVE]: Found stale `Dashboard UI Layout (4-Slab Architecture)` and `VisualizerUnit Rendering Rules` logic in the Master Reference, which are already tagged. No new stale records related strictly to the Data Layer were discovered.
 
-## 9. Architectural Impact Flags
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
 
-*   *No surface modifications were applied to the data persistence layer during this read-only cartography audit.*
-*   `[NO_ARCHITECTURAL_IMPACT]`
 
 <!-- CARTOGRAPHER_END: DATA_LAYER -->
 
 ### Domain: UTILS
 <!-- CARTOGRAPHER_START: UTILS -->
 
-# 🗺️ UTILS Domain Cartography
+# UTILS
+## File Manifest
+- **src/utils/BlePayloadParser.ts**: Stateless utility ensuring invalid arrays or corrupted BLE packets do not crash the React Native UI thread.
+- **src/utils/ColorUtils.ts**: Pure color math extraction (Hue to Hex, RGB conversions, HSV saturation maximization for camera pipeline).
+- **src/utils/CrashReporter.ts**: Fatal crash logger interface.
+- **src/utils/FlightRecorder.ts**: In-memory ring buffer (max 50) for navigational and action breadcrumbs.
+- **src/utils/MusicDictionary.ts**: Authoritative registry for all 46 hardware-native music profiles (0x26 and 0x27 matrices) and colorMode mapping.
+- **src/utils/NamingUtils.ts**: Fallback identity string generator for unknown devices/groups.
+- **src/utils/NormalizationUtils.ts**: Scales 0-100 UI speed to the 1-31 hardware speed bound.
+- **src/utils/backoff.ts**: Simple jitter function to decohere retry storms.
+- **src/utils/classifyBLEDevice.ts**: Single source of truth mapping a raw BLE device + EEPROM cache to a `PendingRegistration`.
+- **src/utils/kMeansPalette.ts**: Reanimated worklet for executing K-Means clustering (k=3, 5 iterations max) on camera frames.
+- **src/utils/migrateAuthTokens.ts**: Migrates `STORAGE_SUPABASE_AUTH_KEY` from AsyncStorage to Expo SecureStore.
+- **src/utils/piiScrubber.ts**: Hashes PII values into deterministic safe representations for telemetry logs.
+- **src/utils/presetColorUtils.ts**: Source of truth for resolving preset card gradient arrays and glow colors, notably managing `GENERATIVE_RAINBOW`.
+- **src/utils/validation.ts**: Regex tests (e.g., email validation).
+- **src/utils/webStyles.ts**: Identity function wrapping styles for web compatibility.
+- **src/types/ProductCatalog.ts**: Core type for `ProductProfile`, overriding `isHaloz` boolean checks with proper shape geometry and FTUE bounds.
+- **src/types/ble.types.ts**: Single re-export of `react-native-ble-plx` definitions alongside Supabase DB DB shapes.
+- **src/types/bleGuards.ts**: Utility type guards for unknown variables to `Device`.
+- **src/types/dashboard.types.ts**: Domain FSM unions (`MotionState`, `SessionState`, `DashboardViewState`) and strict interface models (`DevicePatternState`, `DisplayDevice`).
 
-This document serves as the authoritative map of the `src/utils` and `src/types` domains (excluding `supabase.ts`) within the SK8Lytz ecosystem.
+## Blast Radius
+- **Critical (BLE)**: `classifyBLEDevice` anchors the initial FTUE setup; failures here will incorrectly route hardware profiles.
+- **Critical (UI/UX)**: `presetColorUtils.ts` and `dashboard.types.ts` are tightly coupled to `DockedController` and `DashboardScreen`. Changes will break the React UI compilation.
+- **Camera Vibe Catcher**: Relies purely on the deterministic speed of `kMeansPalette.ts` within the worklet boundary. Breakages here crash the vision camera thread.
 
-## 🗂️ File Manifest
+## Context Matrix
+- **Presentation Layer**: Utilizes `presetColorUtils` and `NamingUtils` to hydrate component shells.
+- **BLE Layer / Setup**: Consumes `BlePayloadParser` for notification validation and `classifyBLEDevice` during `useBLEScanner`.
+- **State Layer**: Operates strictly against the state machines modeled in `dashboard.types.ts`.
 
-| File | Architectural Purpose |
-|:---|:---|
-| [BlePayloadParser.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/utils/BlePayloadParser.ts) | Stateless parser gatekeeper that extracts and validates LED configurations and RF state from raw BLE notification bytes without crashing the UI thread. |
-| [ColorUtils.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/utils/ColorUtils.ts) | Centralized mathematical and conversion utility for hex-to-hue, hue-to-hex, rgb-to-hex, and camera-to-LED HSV vibrancy boosting (`boostForLED`). |
-| [CrashReporter.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/utils/CrashReporter.ts) | Lightweight crash logging bridge that forwards fatal application exceptions and stack traces to `AppLogger.error`. |
-| [FlightRecorder.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/utils/FlightRecorder.ts) | Memory-buffered diagnostics utility that caches a rolling list of the 50 most recent telemetry/action breadcrumbs. |
-| [MusicDictionary.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/utils/MusicDictionary.ts) | Authoritative registry of all 46 hardware-native music profiles across Light Bar (`0x26`) and Light Screen (`0x27`) matrices, gating UI color pickers. |
-| [NamingUtils.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/utils/NamingUtils.ts) | Deterministic fallback and format standardizer for device and group naming conventions to avoid client/DB sync anomalies. |
-| [NormalizationUtils.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/utils/NormalizationUtils.ts) | Pure function scaling helper that maps UI speed inputs (0–100) to hardware-compatible values (1–31). |
-| [backoff.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/utils/backoff.ts) | Utility adding randomized jitter to retry intervals to prevent simultaneous connection storms during BLE auto-reconnection. |
-| [classifyBLEDevice.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/utils/classifyBLEDevice.ts) | High-priority classification mapper translating raw BLE scans and EEPROM interrogator cache records into `PendingRegistration` entities. |
-| [kMeansPalette.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/utils/kMeansPalette.ts) | Performance-optimized K-Means clustering algorithm (k=3, 5 iterations max) implemented with `'worklet';` annotation for vision-camera thread execution. |
-| [migrateAuthTokens.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/utils/migrateAuthTokens.ts) | Safe token migration helper transferring legacy Supabase session tokens from plaintext `AsyncStorage` to secure platform-specific `SecureStore`. |
-| [piiScrubber.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/utils/piiScrubber.ts) | Hashing utility that scrubs and anonymizes sensitive data (MAC addresses, names) into 8-character unique digests for safe telemetry logging. |
-| [presetColorUtils.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/utils/presetColorUtils.ts) | Visual resolution engine mapping preset states to linear gradient colors and icons for UI card presentation (e.g. generative rainbows). |
-| [webStyles.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/utils/webStyles.ts) | Simple pass-through utility formatting CSS stylesheet records for non-native web fallback runtimes. |
-| [ProductCatalog.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/types/ProductCatalog.ts) | Type definitions representing dynamic hardware profiles, FTUE detection ranges, visualizer dimensions, and battery capacities. |
-| [ble.types.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/types/ble.types.ts) | Shared type declarations and aliases for the BLE stack, database registration models, and connection lifecycle structures. |
-| [bleGuards.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/types/bleGuards.ts) | Strict TypeScript type guard `isDevice` ensuring safe parsing of unknown BLE objects down to the library's `Device` interface. |
-| [dashboard.types.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/types/dashboard.types.ts) | Domain type contract specifying models for device/group pattern state, UI flow state FSMs, ping outcomes, and controller interfaces. |
-| [react-test-renderer.d.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/types/react-test-renderer.d.ts) | Ambient module declaration resolving missing React test renderer type references in test contexts. |
+## Hook/Service I/O Registry
+- `BlePayloadParser.parseLedPayload(number[])` ➔ `ParsedLedConfig | null`
+- `BlePayloadParser.parseRfPayload(number[])` ➔ `ParsedRfConfig | null`
+- `boostForLED(r, g, b)` ➔ `{ r, g, b }` (Saturation and Lightness maximization)
+- `extractKMeansPalette(pixels, k, maxIter)` ➔ `RGB[]` (Thread-safe JSI execution)
+- `mapDeviceToRegistration(device, index, hwCache, productType)` ➔ `PendingRegistration`
+- `resolveGroupCardColors(snapshot, fallback)` ➔ `string[]`
 
-## 💥 Blast Radius (Imports/Exports)
+## OS Variance Matrix
+- **`migrateAuthTokens.ts`**: Utilizes `expo-secure-store`, mapping to iOS Keychain and Android Keystore differences under the hood.
+- **`kMeansPalette.ts`**: Uses the `'worklet';` directive to run optimally on native GPU/JSI environments bypassing standard Hermes JS evaluation delays.
 
-### Inbound Imports (What imports this domain)
-- **Hooks & Services**:
-  - `src/hooks/useHardwareNotifications.ts` imports `BlePayloadParser` (for incoming notification parsing).
-  - `src/hooks/ble/useBLEScanner.ts` imports `classifyBLEDevice` (for scan result mapping).
-  - `src/hooks/useControllerDispatch.ts` and `src/hooks/useStreetMode.ts` import `NormalizationUtils` (for UI-to-hardware speed scaling).
-  - `src/hooks/useMusicMode.ts` imports `MusicDictionary` (to resolve names/profiles).
-  - `src/hooks/useBLE.ts`, `src/hooks/useDashboardAutoConnect.ts`, `src/services/BleSessionFactory.ts`, `src/services/BleWriteQueue.ts`, `src/services/ble/ConnectService.ts`, and `src/services/ble/RecoveryService.ts` import `backoff` (for connection retries).
-  - `src/hooks/useDeviceStateLedger.ts`, `src/hooks/useHardwareNotifications.ts`, `src/screens/DashboardScreen.tsx`, `src/services/BleCharacteristicCache.ts`, `src/services/BlePingService.ts`, `src/services/BleSessionFactory.ts`, `src/services/DeviceRepository.ts`, `src/services/ble/ConnectService.ts`, and `src/services/ble/InterrogatorService.ts` import `piiScrubber` (for telemetry scrubbing).
-  - `src/context/AuthContext.tsx` imports `migrateAuthTokens` (for token migration on boot).
-- **UI & Components**:
-  - `src/components/CameraTracker.tsx` and `src/components/DockedController.tsx` import `ColorUtils` and `kMeansPalette` (for vision camera frame analysis, HSV boosting, and dominant palette extraction).
-  - `src/components/dashboard/MySkatesSlab.tsx` and `src/components/docked/PresetCard.tsx` import `presetColorUtils` (to resolve card background gradients and icons).
-  - `src/components/GlobalErrorBoundary.tsx` imports `CrashReporter` (to dispatch unhandled errors).
-  - `src/components/DeviceSettingsModal.tsx`, `src/components/GroupSettingsModal.tsx`, `src/screens/DashboardScreen.tsx`, and `src/screens/Onboarding/HardwareSetupWizardScreen.tsx` import `NamingUtils` (to resolve standard fallback names).
+## Archival Adjustments (Master Reference)
+- Legacy typing files references or inlined interfaces that were absorbed by `dashboard.types.ts` should be labeled `[MOVE_TO_ARCHIVE]`.
+- Note: Found stale visualizer generation docs `src/utils/RbmSimulator.ts` in Master Reference -> tagged `[MOVE_TO_ARCHIVE]` internally per cartography pass.
 
-### Outbound Imports (What this domain imports)
-- `BlePayloadParser.ts` imports from `src/protocols/ControllerRegistry` (`getDefaultProtocol`) and `src/services/AppLogger`.
-- `classifyBLEDevice.ts` imports from `src/constants/ProductCatalog` (`LOCAL_PRODUCT_CATALOG`, `getLocalProfileByPoints`).
-- `migrateAuthTokens.ts` imports from `AsyncStorage`, `expo-secure-store`, `src/services/AppLogger`, and `src/constants/storageKeys`.
-- `presetColorUtils.ts` imports from `src/protocols/PatternEngine` (`SK8LYTZ_TEMPLATES`).
-- `NormalizationUtils.ts` imports from `src/constants/AppConstants` (`HW_SPEED_MAX`).
+## Sequence Diagram
+```mermaid
+sequenceDiagram
+    participant Camera
+    participant Worklet as kMeansPalette
+    participant Color as ColorUtils
+    participant Hardware
 
-## 🧱 Context Matrix
-- **Providers**: None of the files in this domain provide React Contexts.
-- **Consumers**: None of the files in this domain consume React Contexts.
-- **Indirect Integrations**:
-  - `migrateAuthTokensToSecureStore` is consumed by the initialization block of `AuthContext.tsx` on application startup to ensure security migration.
+    Camera->>Worklet: 50x50 RGB Array
+    Note over Worklet: Extract top 3 dominant colors
+    Worklet->>Color: boostForLED(R, G, B)
+    Note over Color: Maximize HSV Saturation (S=1, V=1)
+    Color-->>Worklet: Vivid RGB
+    Worklet->>Hardware: Emit via 0x59 Static Array
+```
 
-## 🎛️ Hook/Service I/O Registry
+## Design System & Token Manifest
+- **Color Constants**: `COLOR_PRESET_PALETTE` maps 10 static UI standard hexes.
+- **Hue Sync Maps**: `PRESET_HUE_MAP` links common preset hex values to corresponding 0-360 standard hue offsets.
+- **Generative Representation**: `GENERATIVE_RAINBOW` token enforces a standardized 7-color sequence (`['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#00BFFF', '#0000FF', '#8B00FF']`) for UI rendering when `colorMode` evaluates to `'GENERATIVE'`.
 
-### BlePayloadParser
-- **`parseLedPayload(payload: number[]): ParsedLedConfig | null`**
-  - *Inputs*: Raw number array representing the notification payload.
-  - *Outputs*: Mapped `ParsedLedConfig` if successful, or `null` if invalid.
-  - *Side-effects*: Logs warnings to `AppLogger` on parsing exception.
-- **`parseRfPayload(payload: number[]): ParsedRfConfig | null`**
-  - *Inputs*: Raw number array representing the RF state response.
-  - *Outputs*: Mapped `ParsedRfConfig` if successful, or `null`.
-  - *Side-effects*: Logs warnings to `AppLogger` on parsing exception.
+## Architectural Impact Flags
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
 
-### ColorUtils
-- **`hexToHue(hex: string): number`**
-  - *Inputs*: Hex color string (e.g. `#FF0000`).
-  - *Outputs*: Hue angle in degrees (0–360).
-  - *Side-effects*: None.
-- **`hueToHex(hue: number): string`**
-  - *Inputs*: Hue angle in degrees (0–360).
-  - *Outputs*: Uppercase hex string.
-  - *Side-effects*: None.
-- **`boostForLED(r: number, g: number, b: number): { r: number; g: number; b: number }`**
-  - *Inputs*: RGB channels in range 0–255.
-  - *Outputs*: Saturated and boosted RGB coordinates optimized for WS2812B emitters (forces HSV saturation to 1.0, value to 1.0, with a neutral gray gate threshold of S < 0.20).
-  - *Side-effects*: None.
-
-### CrashReporter
-- **`logFatalCrash(error: Error, stack: string): Promise<string>`**
-  - *Inputs*: Unhandled runtime Error object and component stack trace.
-  - *Outputs*: Promise resolving to a dummy event ID.
-  - *Side-effects*: Dispatches error log to `AppLogger` with empty payload and SSI tags.
-
-### FlightRecorder
-- **`leaveBreadcrumb(category: Breadcrumb['category'], message: string, data?: unknown): void`**
-  - *Inputs*: Event category tag, message, and optional payload object.
-  - *Outputs*: None.
-  - *Side-effects*: Appends a new timestamped record to the in-memory array, dropping the oldest record if length exceeds 50.
-
-### kMeansPalette
-- **`extractKMeansPalette(pixels: RGB[], k = 3, maxIterations = 5): RGB[]`**
-  - *Inputs*: RGB pixel array representing frame data, cluster size, and iteration limit.
-  - *Outputs*: Centroid coordinates representing dominant colors sorted in descending order of pixel cluster counts.
-  - *Side-effects*: None. Executed as a Worklet inside the native frame processor worklet thread.
-
-### migrateAuthTokens
-- **`migrateAuthTokensToSecureStore(): Promise<void>`**
-  - *Inputs*: None.
-  - *Outputs*: None.
-  - *Side-effects*: Migrates Supabase token from unencrypted `AsyncStorage` to secure device memory (`expo-secure-store`). Mutates stored flags in local storage.
-
-### piiScrubber
-- **`scrubPII(value: string): string`**
-  - *Inputs*: Sensitive string (e.g., raw MAC address, names).
-  - *Outputs*: Hash-obfuscated standard identifier (e.g., `scrubbed_<hash_hex>`).
-  - *Side-effects*: None.
-
-## 📱 OS Variance Matrix
-
-| Feature | iOS Behavior | Android Behavior |
-|:---|:---|:---|
-| **Secure Token Storage** | `SecureStore` writes to the iOS Keychain, securing credentials persistently. | `SecureStore` writes to Android Keystore/SharedPreferences, encrypted by a hardware-backed master key. |
-| **BLE MAC / Identity Resolution** | `react-native-ble-plx` maps the physical MAC to a generated UUID (e.g. `123E4567-...`) which changes if the user resets BLE settings. The raw MAC is not directly available via peripheral scans. | The raw physical MAC address (e.g. `08:65:F0:...`) is directly returned as the device identification `id` in scanning results. |
-| **K-Means Frame Worklet Execution** | Runs on the JSI worklet thread natively, interacting with vision-camera buffers. | Runs on the JSI worklet thread natively, interacting with vision-camera buffers. |
-
-## 🎨 Design System & Token Manifest
-
-### 💎 Color Tokens & Palettes
-- **Preset Grid Palette (`COLOR_PRESET_PALETTE`)**:
-  - `['#FF0000', '#FF8000', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#800080', '#FF00FF', '#FFFFFF', '#000000']`
-- **Preset Hue Mappings (`PRESET_HUE_MAP`)**:
-  - `#FF0000` ➡️ `0`
-  - `#FF8000` ➡️ `30`
-  - `#FFFF00` ➡️ `60`
-  - `#00FF00` ➡️ `120`
-  - `#00FFFF` ➡️ `180`
-  - `#0000FF` ➡️ `240`
-  - `#800080` ➡️ `280`
-  - `#FF00FF` ➡️ `300`
-- **Generative Rainbow Array (`GENERATIVE_RAINBOW`)**:
-  - Standard 7-stop rendering array: `['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#00BFFF', '#0000FF', '#8B00FF']`
-
-### 📐 Math Scaling & Limits
-- **Speed UI Range**: UI presents speed controls in range `[0, 100]`.
-- **Speed Hardware Range**: Scaled and clamped to `[1, 31]` via `normalizeUISpeedToHardware`.
-- **Breadcrumbs Size Limit**: Hard-capped at `50` in `FlightRecorder`.
-- **K-Means Configuration**: Set to extract exactly `3` dominant color centroids using `5` iterations to preserve frame processing rate constraints.
-
----
-
-## 🏗️ Architectural Impact Flags
-- **NO_SURFACE_CHANGE**: This domain cartography review was read-only; no code files were modified.
 
 <!-- CARTOGRAPHER_END: UTILS -->
 
 ### Domain: NATIVE_&_WATCH
 <!-- CARTOGRAPHER_START: NATIVE_&_WATCH -->
 
-# NATIVE_&_WATCH Domain Cartography
-
-This document provides a deep-dive architectural map of the **NATIVE_&_WATCH** domain of the SK8Lytz platform. It details the watchOS targets, Wear OS subproject, Expo native watch bridge module, and phone-side native integrations that drive on-wrist telemetry, health tracking, and session sync.
-
----
+# Architectural Cartography: NATIVE_&_WATCH
 
 ## 1. File Manifest
-The following list catalogues every file in the `targets/watch/*`, `android/sk8lytzWear/*`, `modules/sk8lytz-watch-bridge/*`, and `android/app/src/main/java/com/neogleamz/sk8lytz/*` sub-domains with its respective architectural purpose:
+| File | Architectural Purpose |
+|:---|:---|
+| `targets/watch/WatchConnectivityManager.swift` | Manages bidirectional WCSession communication between watchOS and iOS. Single source of truth for session state and telemetry. |
+| `targets/watch/ContentView.swift` | Primary watchOS UI. Handles Active Session view, Idle View, and Session Summary based on WatchConnectivityManager state. |
+| `targets/watch/HealthManager.swift` | HKWorkoutSession delegate managing live workout builder on watchOS, collecting Heart Rate and Calories. |
+| `targets/watch/ComplicationController.swift` | Provides ClockKit complications for speed gauges on watch faces. |
+| `android/sk8lytzWear/.../MainActivity.kt` | WearOS entry point, handles Always-On Display (Ambient Mode) and keeps screen on during active sessions. |
+| `android/sk8lytzWear/.../WearableCommunicationService.kt` | WearOS DataClient and MessageClient receiver, updating session states and real-time metrics pushed from the phone. |
+| `android/sk8lytzWear/.../Sk8lytzTileService.kt` | WearOS Glanceable Tile, displaying live speed, HR, calories and session elapsed time. |
+| `android/app/.../MainActivity.kt` | Android React Native entry point, configures SplashScreen, Fabric, and HealthConnect permissions. |
 
-### A. Expo Watch Bridge Module (`modules/sk8lytz-watch-bridge/*`)
-*   **`package.json`** — Defines dependency specifications and metadata for the autolinked Expo native module package.
-*   **`expo-module.config.json`** — Standard Expo module configuration declaring the iOS and Android entry points and native event names to the autolinking system.
-*   **`src/index.ts`** — TypeScript interface providing type definitions (`WatchSessionState`, `WatchCommand`, `WatchHealthUpdate`) and the public `WatchBridge` API consumed by React Native.
-*   **`ios/Sk8lytzWatchBridgeModule.swift`** — Native iOS module wrapper. Initializes `WCSession`, handles lifecycle-safe `updateApplicationContext`/`sendMessage` dispatches, and listens to watchOS inputs.
-*   **`android/src/main/java/expo/modules/sk8lytzwatchbridge/Sk8lytzWatchBridgeModule.kt`** — Native Android module wrapper. Hooks Google Play Services Wearable APIs (`DataClient` and `MessageClient`) to synchronize session data structures.
-
-### B. watchOS Target (`targets/watch/*`)
-*   **`expo-target.config.js`** — Build-time configuration defining iOS target identifiers, deployment versions, HealthKit background entitlements, and complication principal classes.
-*   **`index.swift`** — SwiftUI Application entry point bootstrap. Initializes the root SwiftUI `WindowGroup` containing the main `ContentView`.
-*   **`ContentView.swift`** — Core watchOS dashboard UI rendering state-driven views (Idle, Active, and Summary cards) alongside live telemetry counters and action buttons.
-*   **`HealthManager.swift`** — Manages HealthKit `HKWorkoutSession` and `HKLiveWorkoutBuilder` workout lifecycles. Collects real-time heart rate and active energy metrics.
-*   **`WatchConnectivityManager.swift`** — Implements `WCSessionDelegate`. Acts as the single source of truth for incoming session states, and handles the 5-second throttled health relay timer.
-*   **`ComplicationController.swift`** — Implements `CLKComplicationDataSource` to draw gauge rings, modular text, and corner icons for Apple Watch face complications.
-*   **`Info.plist`** — Target property list declaring required permissions (`NSHealthShareUsageDescription`, `NSHealthUpdateUsageDescription`) and watch background execution modes.
-
-### C. Wear OS Subproject (`android/sk8lytzWear/*`)
-*   **`build.gradle`** — Standalone Gradle build configurations defining SDK compatibility, signing credentials, and Wear OS dependencies (Compose, Health Services, Tiles, and Ongoing Activity).
-*   **`proguard-rules.pro`** — Specifies code shrinking and obfuscation exclusions to prevent Google Play Wearable APIs from stripping runtime reflection targets.
-*   **`src/main/AndroidManifest.xml`** — Declares required permissions (sensors, location, notifications), launcher activity, background service hosts, and complication/tile providers.
-*   **`src/main/kotlin/com/neogleamz/sk8lytzwear/MainActivity.kt`** — Entry activity initializing Jetpack Compose layouts and requesting runtime sensor permissions on launch.
-*   **`src/main/kotlin/com/neogleamz/sk8lytzwear/presentation/DashboardScreen.kt`** — Jetpack Compose dashboard UI. Renders live telemetry blocks, session action buttons, and overlays.
-*   **`src/main/kotlin/com/neogleamz/sk8lytzwear/presentation/SessionState.kt`** — FSM enum defining the 4 main watch display states: `IDLE`, `ACTIVE`, `PAUSED`, and `SUMMARY`.
-*   **`src/main/kotlin/com/neogleamz/sk8lytzwear/presentation/SummaryScreen.kt`** — Displays final metrics (duration, distance, average speed, calories, peak heart rate) post-session.
-*   **`src/main/kotlin/com/neogleamz/sk8lytzwear/presentation/theme/Theme.kt`** — Colors and typography matching the SK8Lytz style guide (electric cyan, neon magenta, amber).
-*   **`src/main/kotlin/com/neogleamz/sk8lytzwear/presentation/WearMessageSender.kt`** — Manages outbound remote commands and buffers health records offline when disconnected from the phone.
-*   **`src/main/kotlin/com/neogleamz/sk8lytzwear/services/HealthTracker.kt`** — Wraps Jetpack Health Services `ExerciseClient`. Coordinates active tracking using the `INLINE_SKATING` standard.
-*   **`src/main/kotlin/com/neogleamz/sk8lytzwear/services/OngoingActivityManager.kt`** — Builds background notifications and hooks the `OngoingActivity` API to prevent Wear OS from killing the tracking process.
-*   **`src/main/kotlin/com/neogleamz/sk8lytzwear/services/WearableCommunicationService.kt`** — `WearableListenerService` listener. Receives `/sk8lytz/state` and `/sk8lytz/metrics` updates, managing tracking states and forcing tile refreshes.
-*   **`src/main/kotlin/com/neogleamz/sk8lytzwear/tiles/Sk8lytzTileService.kt`** — Provides glanceable tiles via Jetpack ProtoLayout, displaying live stats in the system tile carousel.
-
-### D. Phone-Side Native Core (`android/app/src/main/java/com/neogleamz/sk8lytz/*`)
-*   **`MainActivity.kt`** — Bootstraps the React Native container and initializes permission request channels (such as Health Connect).
-*   **`MainApplication.kt`** — Registers autolinked package lists and Expo native module adapters.
-*   **`AndroidManifest.xml`** — Sets global phone-side configurations including Bluetooth, GPS location permissions, and health client package scopes.
-
----
-
-## 2. Blast Radius (Dependency Graph)
-The watch integration is designed as an isolated, asynchronous side-effect system of the main session FSM to prevent any wearable connection drops from stalling the phone app.
-
-```
-┌────────────────────────────────────────────────────────┐
-│                      NATIVE CORE                       │
-│    (WCSession / DataClient / HealthKit / HealthServices)│
-└───────────────────────────┬────────────────────────────┘
-                            │ (Autolinked Bridge Bindings)
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│              modules/sk8lytz-watch-bridge              │
-│    (Provides WatchBridge API to JS/TypeScript)          │
-└───────────────────────────┬────────────────────────────┘
-                            │ (Imported / Subscribed by)
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│               src/context/SessionContext               │
-│    (Listens to WatchCommands & health relays)          │
-└───────────────────────────┬────────────────────────────┘
-                            │ (Subscribes to transitions)
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│             src/services/session/SessionMachine        │
-│    (Drives syncSessionState on status changes)         │
-└───────────────────────────┬────────────────────────────┘
-                            │ (Executes final save)
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│         src/services/session/SessionCommitService      │
-│    (Pushes final SUMMARY state to WatchBridge)          │
-└────────────────────────────────────────────────────────┘
-```
-
-*   **Imports into NATIVE_&_WATCH**:
-    *   `expo-modules-core` (TypeScript & Native Modules interface)
-    *   Google Play Services Wearable APIs (Android)
-    *   `WatchConnectivity` framework (iOS)
-    *   Android Health Services & Jetpack Tiles/Ongoing Activities APIs
-    *   iOS HealthKit framework
-*   **Consumers of NATIVE_&_WATCH**:
-    *   `src/context/SessionContext.tsx` — Consumes the event listeners (`addWatchCommandListener`, `addWatchHealthListener`) to drive the xstate `sessionMachine`.
-    *   `src/services/session/SessionMachine.ts` — Calls `WatchBridge.syncSessionState` actions to push `ACTIVE`, `PAUSED`, and `STOPPED` phase transitions.
-    *   `src/services/session/SessionCommitService.ts` — Pushes final session parameters via `WatchBridge.syncSessionState({ status: 'SUMMARY', ... })` when saving.
-    *   `src/services/SpeedTrackingService.ts` — Dispatches GPS speed data to the watch via `WatchBridge.sendMetricUpdate` (rate-limited to 3s intervals to prevent Bluetooth overhead).
-
----
+## 2. Blast Radius
+* **Wearable Communication**: Changes in `WatchConnectivityManager.swift` or `WearableCommunicationService.kt` impact the real-time syncing of metrics (Speed, HR, Calories) between the skater's phone and their wrist.
+* **Health Tracking**: Modifying `HealthManager.swift` or WearOS `HealthTracker` alters workout session data logic, affecting Apple Health / Google Fit integrations.
+* **Complications / Tiles**: Changes in `ComplicationController.swift` or `Sk8lytzTileService.kt` affect the OS-level widgets and tiles that display SK8Lytz data on watch faces.
 
 ## 3. Context Matrix
-The native wearable communication interfaces directly with React Context providers:
-
-| React Context | Consumer / Provider | Usage / Purpose |
-|:--------------|:-------------------|:----------------|
-| **`SessionContext`** (`SessionProvider`) | Consumed | Receives watch commands (`START_SESSION`, `STOP_SESSION`) via bridge listeners and routes them to the state machine. Updates `health` telemetry state in React Native with heart rate and active calories parsed from watch sensors. |
-| **`AuthContext`** (`useAuth`) | Consumed | Used to map user identification profiles (`userId`) during phone-side database writes when closing sessions. |
-
----
+* **DataClient / WCSession**: Wearable apps rely entirely on the host phone application for absolute truth regarding session status and metrics. The watches act purely as a playback engine/HUD for metrics, pushing health data upstream.
+* **HealthKit / Body Sensors**: Both watch targets request direct access to native health sensors to capture raw biometric data independent of the phone's sensors.
+* **Ambient Mode / Always-On**: WearOS `MainActivity` toggles `FLAG_KEEP_SCREEN_ON` dynamically based on session state, bridging UI state to system hardware power management.
 
 ## 4. Hook/Service I/O Registry
-This registry documents the parameters, returns, and side-effects of key hooks and services in the domain:
+### `WatchConnectivityManager` (watchOS)
+* **Inputs**: Phone WCSession Context (`status`, `speed`, `heartRate`, `calories`, `startTime`)
+* **Outputs**: Watch Commands (`START_SESSION`, `STOP_SESSION`, `healthUpdate`)
+* **Side-Effects**: Re-renders SwiftUI `ContentView`, auto-dismisses Summary Card, manages `healthRelayTimer`.
 
-### `WatchBridge` (TypeScript Module Wrapper)
-*   **`syncSessionState(state: WatchSessionState): Promise<void>`**
-    *   *Input*: `{ status: 'ACTIVE'|'PAUSED'|'SUMMARY'|'STOPPED', speed?, heartRate?, calories?, startTime?, totalDuration?, distance?, avgSpeed?, peakHR? }`
-    *   *Output*: `Promise<void>` (resolved once natively queued/pushed)
-    *   *Side-effects*: Serializes data map. Pushes via `updateApplicationContext` (iOS) or `DataClient.putDataItem` (Android).
-*   **`sendMetricUpdate(metrics: Pick<WatchSessionState, 'speed'|'heartRate'|'calories'>): Promise<void>`**
-    *   *Input*: `{ speed: number, heartRate?: number, calories?: number }`
-    *   *Output*: `Promise<void>`
-    *   *Side-effects*: Relays transient speed messages over `/sk8lytz/metrics` via `sendMessage` (both platforms) for real-time updating.
-*   **`addWatchCommandListener(handler: (cmd: WatchCommand) => void): () => void`**
-    *   *Input*: Callback function accepting `'START_SESSION' | 'STOP_SESSION'`
-    *   *Output*: Unsubscribe clean-up function.
-    *   *Side-effects*: Subscribes to native bridge messages.
-*   **`addWatchHealthListener(handler: (update: WatchHealthUpdate) => void): () => void`**
-    *   *Input*: Callback function receiving `{ heartRate: number, calories: number, status?: string, startTimeMs?: number }`
-    *   *Output*: Unsubscribe clean-up function.
-    *   *Side-effects*: Updates React state hooks.
-
-### `HealthTracker` (Wear OS Service Singleton)
-*   **`startTracking(context: Context): void`**
-    *   *Input*: Android Application Context
-    *   *Output*: `void`
-    *   *Side-effects*: Requests `HEART_RATE_BPM` and `CALORIES_TOTAL` updates from Health Services `ExerciseClient` inside an `INLINE_SKATING` active session.
-*   **`stopTracking(): void`**
-    *   *Side-effects*: Instructs `ExerciseClient` to terminate the active exercise record.
-
-### `WatchConnectivityManager` (watchOS Coordinator)
-*   **`sendStartSession() / sendStopSession(): void`**
-    *   *Side-effects*: Plays haptic clicks on Apple Watch and transmits string commands (`START_SESSION`/`STOP_SESSION`) back to the iOS bridge.
-
----
+### `WearableCommunicationService` (WearOS)
+* **Inputs**: DataClient paths `/sk8lytz/state`, MessageClient paths `/sk8lytz/metrics`
+* **Outputs**: Memory-backed flow state, `SessionState` updates via listener patterns.
+* **Side-Effects**: Starts/Stops `HealthTracker` and `OngoingActivityManager`, forces Tile refresh via `TileService.getUpdater`.
 
 ## 5. OS Variance Matrix
-iOS and Android utilize highly disparate native APIs to achieve the same HUD/Relay synchronization. The following matrix documents these differences:
+* **watchOS vs WearOS Communication**:
+  * watchOS utilizes Apple's `WCSession` for both state and real-time updates.
+  * WearOS splits traffic between `DataClient` (persistent state) and `MessageClient` (ephemeral real-time metrics).
+* **Widgets/Watch Faces**:
+  * watchOS implements `CLKComplicationDataSource` for modular watch face integrations.
+  * WearOS implements `TileService` to build carousel tiles with `protolayout`.
+* **Health Integrations**:
+  * watchOS uses `HKLiveWorkoutBuilder` and `HKWorkoutSession` via HealthKit.
+  * WearOS requires raw `android.Manifest.permission.BODY_SENSORS` and `ACTIVITY_RECOGNITION`.
 
-| Architectural Requirement | iOS / watchOS Implementation | Android / Wear OS Implementation |
-|:--------------------------|:-----------------------------|:---------------------------------|
-| **Push State Protocol** | **`WCSession.updateApplicationContext`** (Survives disconnects, queues changes, and flushes on reconnection). | **`DataClient.putDataItem`** (Durable key-value node written to path `/sk8lytz/state` with unique timestamps acting as a dirty-flag). |
-| **Transient Messages** | **`WCSession.sendMessage`** (Ephemeral, bypasses queue for immediate updates if the watch is active). | **`MessageClient.sendMessage`** (Best-effort RPC byte array dispatched to path `/sk8lytz/metrics`). |
-| **Wrist Sensor API** | **HealthKit Framework** (`HKWorkoutSession` + `HKLiveWorkoutBuilder` linked to `.skatingSports` activity profiles). | **Health Services Client** (Wraps Android Health Services `ExerciseClient` targeted to `ExerciseType.INLINE_SKATING`). |
-| **Keepalive Strategy** | **Entitled Workout Execution** (System automatically grants background execution privileges to watchOS apps containing active `HKWorkoutSession` locks). | **`OngoingActivity` Notifications** (Fires an persistent foreground notification channel `sk8lytz_session` to maintain CPU lock states). |
-| **Haptic Indicators** | **ClockKit / WatchKit API** (`WKInterfaceDevice.current().play(.start/.stop)`). | **Vibrator Service** (`VibrationEffect.createOneShot(100, DEFAULT_AMPLITUDE)`). |
-| **Companion Glanceables** | **ClockKit Complications** (`CLKComplicationDataSource` updating Graphic Circular gauges and corner texts). | **Wear OS Tiles** (A standalone `TileService` rendering layout structures via Jetpack ProtoLayout). |
-| **Offline Telemetry Storage** | **WatchConnectivity Queue** (Handled implicitly by iOS system-level `WCSession` context buffer queues). | **Shared Preferences Buffering** (`WearMessageSender` writes health updates to `telemetry_buffer_prefs` when offline, flushing on node connect). |
+## Architectural Impact Flags
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
 
----
-
-## 6. Telemetry Synchronization Flow
-
-The diagram below maps the bidirectional telemetry flow between the phone and watch companions during a typical session lifecycle:
+## Sequence Diagram
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant PhoneSession as Phone SessionContext
-    participant Bridge as Native Watch Bridge
-    participant WatchManager as Watch Manager
-    participant Sensors as On-Wrist Sensors
+    actor User as Skater
+    participant Phone as SK8Lytz App (Phone)
+    participant WatchApp as Companion App (Watch)
+    participant WatchOS as OS System / HealthKit
 
-    Note over PhoneSession, WatchManager: Session Initiation (Phone-Driven)
-    PhoneSession->>Bridge: syncSessionState(status: "ACTIVE", startTime: ISO_Time)
-    Bridge->>WatchManager: updateApplicationContext / putDataItem
-    WatchManager->>Sensors: Start Workout Session (HealthKit / ExerciseClient)
-    Sensors-->>WatchManager: Sensors activated (HR / Calories)
-
-    Note over PhoneSession, WatchManager: Live Telemetry Cycle
-    loop Every 1 to 3 Seconds (Phone Telemetry Pushes)
-        PhoneSession->>Bridge: sendMetricUpdate(speed: GPS_Speed)
-        Bridge->>WatchManager: sendMessage (PATH_METRICS)
-        Note over WatchManager: Updates speed display & dials
+    User->>WatchApp: Tap Start Session
+    WatchApp->>WatchOS: Start Workout Session (HealthTracker)
+    WatchApp->>Phone: WCSession / DataClient (START_SESSION)
+    Note over Phone: Phone initiates BLE skate session
+    loop Every 200ms
+        Phone-->>WatchApp: Push Metric Update (Speed)
     end
-
-    loop Every 5 Seconds (Watch Health Relay)
-        Sensors-->>WatchManager: Collect HR & Calorie samples
-        WatchManager->>Bridge: sendMessage (PATH_HEALTH)
-        Bridge-->>PhoneSession: Emit "onWatchHealthUpdate" Event
-        Note over PhoneSession: Merges watch HR/Cal into SessionContext
+    loop Every 5s
+        WatchOS-->>WatchApp: Heart Rate / Calories Update
+        WatchApp->>Phone: Relay Health Data
     end
-
-    Note over PhoneSession, WatchManager: Session Termination (Watch-Driven)
-    WatchManager->>WatchManager: User taps "Stop" on wrist
-    WatchManager->>Sensors: Stop Workout Session
-    WatchManager->>Bridge: sendMessage(command: "STOP_SESSION")
-    Bridge-->>PhoneSession: Emit "onWatchCommandReceived" Event
-    PhoneSession->>PhoneSession: Transition sessionMachine to ENDING
-    PhoneSession->>Bridge: syncSessionState(status: "SUMMARY", totalDuration, distance, avgSpeed, calories, peakHR)
-    Bridge->>WatchManager: updateApplicationContext / putDataItem
-    Note over WatchManager: Displays summary screen for 10 seconds
-    Note over WatchManager: Auto-dismisses summary screen and returns to IDLE
+    User->>Phone: Stop Session
+    Phone->>WatchApp: Push State (SUMMARY)
+    WatchApp->>WatchOS: End Workout Session
+    WatchApp-->>User: Display Session Summary Card
 ```
 
----
-
-## 7. Architectural Impact Flags
-
-To prevent documentation drift and align future iterations, the following impact markers are registered for this domain:
-
-*   `[IMPACT: NATIVE_SURFACE_STABLE]` — The native bridge methods are defined statically. Modification of parameter fields in `src/index.ts` requires matching adaptations in Kotlin and Swift layers.
-*   `[IMPACT: OFFLINE_BUFFER_PREFERRED]` — Wear OS uses custom preference caches to hold telemetry when the phone is out of Bluetooth range. Phone-side sync logic must accommodate retroactively parsed batches of heart rate timestamps from the watch buffer queue.
-*   `[IMPACT: HEALTH_PRIORITY_WATCH]` — Watch optical sensors are designated as the gold-standard source of heart rate telemetry. Phone background sensor polling is automatically suppressed when active wrist packets are received.
 
 <!-- CARTOGRAPHER_END: NATIVE_&_WATCH -->
 
 ### Domain: NOTIFICATIONS_&_ROUTING
 <!-- CARTOGRAPHER_START: NOTIFICATIONS_&_ROUTING -->
 
-# Architectural Cartography — NOTIFICATIONS_&_ROUTING Domain
+### 1. File Manifest
+* **`App.tsx`**: Application root entry point. Mounts global providers, orchestrates global error boundaries, and handles base-level notifee foreground action events.
+* **`src/providers/BluetoothGuard.tsx`**: Security provider that intercepts the render tree if Bluetooth is disabled or permissions are missing. Prevents hardware interactions without explicit OS-level BLE consent.
+* **`src/providers/ComplianceGate.tsx`**: Legal gating provider. Checks local `AsyncStorage` (offline) or Supabase `user_profiles` (online) to ensure the skater has accepted the active EULA before rendering the app.
+* **`src/services/NotificationService.ts`**: Wrapper for `expo-notifications`. Orchestrates Android channels (`crew-alerts`, `session-reminders`), registers push tokens, and schedules "starting soon" or "live" crew alerts.
+* **`src/services/PushTokenService.ts`**: Abstracted Supabase repository layer for push tokens. Handles upserting and deleting the user's Expo Push Token from the `push_tokens` table.
+* **`src/services/LocationService.ts`**: Wraps `expo-location`. Captures GPS coordinates, performs reverse geocoding for UI labels, and uses Haversine math to sort active sessions or static skate spots by distance.
+* **`src/hooks/useHardwareNotifications.ts`**: The BLE data-receive orchestrator (Mailroom Architecture). Handles all inbound hardware payloads, applies throttling/debouncing, triggers the stateless `BlePayloadParser`, and synchronizes deltas to the `DeviceRepository` SSOT.
 
-This document provides a high-fidelity architectural audit of the `NOTIFICATIONS_&_ROUTING` domain in the SK8Lytz application. It catalogs the internal files, maps incoming and outgoing dependencies, registers service inputs and outputs, highlights OS variances, details the global provider hierarchies, and outlines complex multi-step background notification lifecycles.
+### 2. Blast Radius
+* **`useHardwareNotifications.ts`**: Extreme risk of React re-render loops if the delta comparison (`isDirty` check) fails, as BLE packets can stream at 20Hz.
+* **`NotificationService.ts`**: Android channel modifications are quasi-permanent. Misconfigured channels or missing importance settings can silence crew alerts silently.
+* **`ComplianceGate` / `BluetoothGuard`**: Core rendering choke points. An exception here results in a blank screen or a perpetual blocked state for the user.
 
----
-
-## 1. File Manifest
-
-Below is the list of all audited files in this domain, with a one-sentence architectural purpose for each:
-
-### 📱 Layout and Guards
-*   **`App.tsx`**: The root component configuring global error boundaries, font loading, platform initializers, and the global provider tree wrapper.
-*   **`src/providers/BluetoothGuard.tsx`**: A layout security gate that intercepts rendering to verify that Bluetooth permissions are granted and that the device's Bluetooth adapter is enabled.
-*   **`src/providers/ComplianceGate.tsx`**: A legal gate checking EULA acceptance locally (via AsyncStorage for offline guests) and remotely (via Supabase database for authenticated users) before allowing dashboard access.
-
-### ✉️ Notification and Location Services
-*   **`src/services/NotificationService.ts`**: A wrapper for `expo-notifications` orchestrating push notification setup, permission requests, token registration routing, and scheduling local reminders or live crew alerts.
-*   **`src/services/PushTokenService.ts`**: Service handling push token CRUD actions in Supabase (`push_tokens` table), matching device tokens to specific authenticated user IDs.
-*   **`src/services/LocationService.ts`**: Service wrapping `expo-location` to retrieve GPS coordinates, reverse-geocode location labels without street-level PII, and fetch/sort nearby skate spots and crew sessions.
-
-### 🔌 Hardware Pipelines
-*   **`src/hooks/useHardwareNotifications.ts`**: A BLE data receiver hook (Mailroom Architecture) that registers callbacks, debounces duplicate packets, parses LED/RF payloads, and writes updates to local state and the `DeviceRepository` SQLite/AsyncStorage SSOT.
-
----
-
-## 2. Blast Radius (Dependency Map)
-
-```
-                       ┌──────────────────────┐
-                       │      App.tsx         │
-                       └──────────┬───────────┘
-                                  │
-         ┌────────────────────────┼────────────────────────┐
-         ▼                        ▼                        ▼
-┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
-│ BluetoothGuard  │      │ ComplianceGate  │      │  LocationServ.  │
-└─────────┬───────┘      └────────┬────────┘      └────────┬────────┘
-          │                        │                        │
-          ▼                        ▼                        ▼
-┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
-│ PermissionServ  │      │ AppSettingsServ │      │ SkateSpotsServ  │
-└─────────────────┘      └─────────────────┘      └─────────────────┘
-                                  │
-                                  ▼
-                         ┌─────────────────┐
-                         │    Supabase     │
-                         └────────▲────────┘
-                                  │
-         ┌────────────────────────┴────────────────────────┐
-         │                                                 │
-┌────────┴────────┐                               ┌────────┴────────┐
-│  NotificationS. │ ────► [registerPushToken] ──► │  PushTokenServ. │
-└────────┬────────┘                               └─────────────────┘
-         │
-         ▼
-┌─────────────────┐
-│ ProfileService  │ ──► [unregisterPushToken]
-└─────────────────┘
-```
-
-### Imports (Inward Dependencies)
-*   **External Packages**:
-    *   `expo-notifications` (dynamically required in `NotificationService.ts` and `PermissionService.ts` for push alerts).
-    *   `expo-location` (in `LocationService.ts` and `PermissionService.ts` for coordinates query).
-    *   `react-native-health-connect` (loaded dynamically on Android in `App.tsx` [L159] to prevent initialization crashes).
-    *   `@notifee/react-native` (in `App.tsx` background event handlers).
-*   **Internal Services**:
-    *   `PermissionService` (in `BluetoothGuard.tsx`, `LocationService.ts` to coordinate modal prompts).
-    *   `DeviceRepository` (in `useHardwareNotifications.ts` to write parsed BLE data).
-    *   `SkateSpotsService` (in `LocationService.ts` to load cached spots).
-    *   `BlePayloadParser` (in `useHardwareNotifications.ts` to parse configurations).
-    *   `piiScrubber` (in `useHardwareNotifications.ts` to sanitize logs).
-
-### Exports (Outward Dependencies)
-*   **`App.tsx`** is imported by `index.ts` (the application root entrypoint).
-*   **`BluetoothGuard.tsx`** is imported by `App.tsx` to wrap `<AppContent />`.
-*   **`ComplianceGate.tsx`** is imported by `AppContent` inside `App.tsx` to wrap the authenticated dashboard.
-*   **`NotificationService.ts`** is imported by:
-    *   `src/hooks/useDashboardProfile.ts` (for initializing push notification registration and setting tap callbacks).
-    *   `src/services/PermissionService.ts` (dynamic import to trigger initialization after permission approval).
-*   **`PushTokenService.ts`** is imported by:
-    *   `src/services/NotificationService.ts` (to trigger DB token updates).
-    *   `src/services/ProfileService.ts` (to bind token management into the legacy profile service facade).
-*   **`LocationService.ts`** is imported by:
-    *   `src/components/crew/CrewLandingMap.tsx` (to display nearby spots/sessions on map UI).
-    *   `src/hooks/useCrewHub.ts` (to retrieve session/spot distance filters).
-    *   `src/hooks/useCrewProximityRadar.ts` (to compute proximity warnings relative to local spots/sessions).
-    *   `src/hooks/ble/useBLEScanner.ts` (to attach silent GPS logs during background scanning).
-    *   `src/services/DeviceRepository.ts` (to retrieve silent GPS coordinates on BLE telemetry updates).
-*   **`useHardwareNotifications.ts`** is imported by:
-    *   `src/screens/DashboardScreen.tsx` (mounted to register BLE data-received and hardware-probed listeners).
-
----
-
-## 3. Context Matrix
-
-The domain is constructed around a strict hierarchical tree of providers wrapped around the main screen layout:
-
-### Provider Hierarchy Tree (in `App.tsx`)
-```tsx
-<GlobalErrorBoundary>          {/* Handles react exceptions and avoids white screens */}
-  <SafeAreaProvider>            {/* Establishes screen layout safe margins */}
-    <ThemeProvider>              {/* Exposes dynamic color palettes based on active theme */}
-      <AuthProvider>            {/* Handles auth credentials and guest/offline states */}
-        <AppConfigProvider>      {/* Exposes feature flags and config settings */}
-          <FavoritesProvider>    {/* Manages custom color palettes and patterns */}
-            <SessionProvider>    {/* Orchestrates the Session XState machine */}
-              <BLEProvider>      {/* Manages scanned and connected Bluetooth devices */}
-                <BluetoothGuard> {/* Blocks app layout until Bluetooth is enabled */}
-                  <AppContent /> {/* Conditional rendering router */}
-                  <GlobalPermissionsModal />
-                </BluetoothGuard>
-              </BLEProvider>
-            </SessionProvider>
-          </FavoritesProvider>
-        </AppConfigProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </SafeAreaProvider>
-</GlobalErrorBoundary>
-```
-
-### Context Interactions
-*   **`AuthContext`**: Ingested by `ComplianceGate` to check EULA requirements. If `isOfflineMode` is active, checks local storage; if online, fetches settings from Supabase.
-*   **`BLEContext`**: BluetoothGuard consumes `useSharedBLE` to read adapter states (`isBluetoothEnabled`, `isBluetoothSupported`) and triggers scanner loops (`startSweeper`) when permissions are granted.
-*   **`ThemeContext`**: BluetoothGuard and ComplianceGate consume `useTheme` for custom colors and dark/light layouts.
-
----
-
-## 4. Hook/Service I/O Registry
-
-### `useHardwareNotifications` (Hook)
-*   **Inputs**:
-    *   `isDiagnosticsMode` (`boolean`): Enables sniffer logger.
-    *   `setOnDataReceived` / `setOnHardwareProbed` (`callbacks`): Registers BLE data listeners.
-    *   `deviceConfigs` (`Record<string, Record<string, unknown>>`): Exposing current device specifications.
-*   **Outputs**: `void`
-*   **Side-Effects**: 
-    *   Subscribes to GATT data streams. Debounces identical back-to-back packets (`lastPacketCacheRef`).
-    *   Validates configurations with delta checks.
-    *   Writes hardware config to `DeviceRepository` on change.
-    *   Triggers `AppLogger.log('RAW_PAYLOAD')` for diagnostic views.
-
-### `NotificationService` (Expo Push - `src/services/NotificationService.ts`)
-*   **Methods**:
-    *   `init(autoRequest, userId)`: Sets up channels; requests permissions; upserts token to Supabase. Returns `Promise<string | null>`.
-    *   `setJoinHandler(handler)`: Stores callback for push invitation taps.
-    *   `cleanup(userId)`: Unsubscribes from listeners; unregisters token from Supabase.
-    *   `sendCrewInviteNotification(opts)`: Immediate local OS alert on `'crew-alerts'` channel.
-    *   `sendSessionStartingSoon(opts)`: Schedules local OS reminder on `'session-reminders'` channel. Returns ID.
-    *   `cancelSessionReminder(id)`: Cancels scheduled local notification.
-*   **Side-Effects**: Modifies Supabase `push_tokens` table. Schedules notifications locally.
-
-### `PushTokenService` (Supabase Sync - `src/services/PushTokenService.ts`)
-*   **Methods**:
-    *   `registerPushToken(token, platform, userId)`: Performs `upsert` in database.
-    *   `unregisterPushToken(token, userId)`: Performs `delete` in database.
-*   **Side-Effects**: Writes to Supabase `push_tokens` table.
-
-### `LocationService` (GPS and Geocoding - `src/services/LocationService.ts`)
-*   **Methods**:
-    *   `getSessionLocation()`: Requests permission; gets coordinates; reverse-geocodes label. Returns `Promise<SessionLocation | null>`.
-    *   `getSilentLocation()`: Returns coordinates (`Promise<{lat, lng} | null>`).
-    *   `getNearbyPublicSessions(radius, coords, userId)`: Fetches active sessions. Returns `Promise<NearbySession[]>`.
-    *   `getNearbySkateSpots(radius, coords)`: Loads spots. Returns `Promise<NearbySkateSpot[]>`.
-*   **Side-Effects**: Fetches coordinates from GPS. Triggers permissions modal. Reads `SkateSpotsService` cache. Logs PII-scrubbed coordinates telemetry.
-
----
-
-## 5. OS Variance Matrix
-
-| Feature / System | Android | iOS | Web Target |
+### 3. Context Matrix
+| Component | Reads From | Writes To | Core Dependency |
 | :--- | :--- | :--- | :--- |
-| **Notification Channels** | Configures physical channels (`'crew-alerts'`, `'session-reminders'`) with lights, vibration, and high importance via `Notifications.setNotificationChannelAsync`. | Direct banner alerts without channels; registers category types dynamically. | Unsupported. Early return inside initialization callbacks. |
-| **Reverse Geocoding** | Queries coordinates via Android's local System Google Geocoder (free). | Queries coordinates via iOS's local Apple Maps Geocoder (free). | Returns hardcoded coordinates mapping to `'Web Demo Area'` (`38.9`, `-94.6`). |
-| **Health Connect Boot** | Early require of `react-native-health-connect` in `App.tsx` to register android launchers before activity is resumed. | Unsupported (handled natively via HealthKit package configurations). | Unsupported. |
-| **Bluetooth Permissions & Scan requirements** | Android 12+ (API 31+) requires a multi-permission bundle: `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, and `ACCESS_FINE_LOCATION` (because FCF1 devices advertise their UUID in `mServiceData`, which native scanner cannot filter without fine location access). Android <12 (API <31) requires only `ACCESS_FINE_LOCATION`. | iOS handles Bluetooth permission checks automatically upon first native API use, so the request helper returns a resolved `true` during onboarding. | Unsupported. |
+| **`App.tsx`** | `AsyncStorage` | Telemetry logs (`AppLogger`) | Providers, OS State |
+| **`BluetoothGuard`** | `PermissionService` | Component Local State | OS Bluetooth status |
+| **`ComplianceGate`** | `AppSettings`, Supabase | `user_profiles` | `AuthContext` (`isOffline`) |
+| **`NotificationService`** | OS Notification APIs | Expo Push Configs | Push Token Permissions |
+| **`PushTokenService`** | Supabase Auth | `push_tokens` table | Authenticated session |
+| **`LocationService`** | `expo-location`, `SkateSpotsService` | - | Foreground GPS permission |
+| **`useHardwareNotifications`** | Raw BLE Payload (`useBLE`) | `DeviceRepository` | BLE GATT Connection |
 
----
+### 4. Hook/Service I/O Registry
+* **`useHardwareNotifications`**
+  * *Inputs:* `isDiagnosticsMode`, `allDevices`, `deviceConfigs`, BLE hex data.
+  * *Outputs:* `setAllDevices()`, `setDeviceConfigs()`, SSOT disk writes via `DeviceRepository.updateConfig()`.
+* **`LocationService`**
+  * *Inputs:* Target radius miles, user GPS coordinates, user ID.
+  * *Outputs:* `SessionLocation`, array of sorted `NearbySession` objects, array of `NearbySkateSpot` objects.
+* **`NotificationService`**
+  * *Inputs:* Push notification parameters (crew names, session info, schedule date).
+  * *Outputs:* Triggers OS-level push notifications, returns `expo-push-token`.
 
-## 6. Sequence Diagram
+### 5. OS Variance Matrix
+| Target Module | iOS | Android | Web |
+| :--- | :--- | :--- | :--- |
+| **Notifications** | Relies on APNs. Native banners. | Requires explicit `AndroidImportance` and distinct Channel IDs. | Defaults to mocked fallback or drops payload. |
+| **Bluetooth Guard** | Single OS-level prompt via `CoreBluetooth`. | Requires `BLUETOOTH_SCAN`/`CONNECT` fine-grained manifest permissions. | Returns `hasPermission: false` usually. |
+| **Location Tracking** | Apple Maps reverse geocoder backend. | Google Maps backend. Slower cold start. | Static demo payload (Lat 38.9, Lng -94.6). |
+| **App Initialization** | Smooth lifecycle init. | `react-native-health-connect` requires explicit pre-init check to avoid exceptions. | Bootstrapped via `InteractionManager` workaround. |
 
-### Location Update and Push Token Registration Flow
+[MOVE_TO_ARCHIVE]
+*(Archival Instruction: When updating `docs/SK8Lytz_App_Master_Reference.md`, any reference to `profileService.registerPushToken` should be archived, as the Push Token logic was fully extracted into `PushTokenService` under god-object decomposition meal 1.)*
 
-The sequence below describes how push tokens are acquired and registered to Supabase upon launch/permission check, and how location information is requested and geocoded during skate session startup.
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
+
+### Architecture Sequence Diagrams
 
 ```mermaid
 sequenceDiagram
     autonumber
-    participant App as App / DashboardScreen
-    participant NS as NotificationService.ts
-    participant ExpoNotif as expo-notifications (Native)
-    participant PTS as PushTokenService.ts
-    participant DB as Supabase (push_tokens Table)
-    participant LS as LocationService.ts
-    participant ExpoLoc as expo-location (Native)
-    
-    Note over App, DB: Phase 1: Push Token Acquisition & Registration
+    actor User
+    participant App as App / Dashboard
+    participant NS as NotificationService
+    participant Expo as Expo Notifications
+    participant PTS as PushTokenService
+    participant Supa as Supabase DB
+
+    User->>App: Opens App
     App->>NS: init(autoRequest, userId)
-    NS->>NS: _setupAndroidChannel() (Android only)
-    NS->>NS: _requestPermissions(autoRequest)
-    NS->>ExpoNotif: getExpoPushTokenAsync(projectId)
-    ExpoNotif-->>NS: Return Expo Push Token
+    NS->>Expo: Request Permissions (if missing)
+    Expo-->>NS: Granted
+    NS->>Expo: getExpoPushTokenAsync()
+    Expo-->>NS: Expo Token
     NS->>PTS: registerPushToken(token, platform, userId)
-    PTS->>DB: upsert({user_id, token, platform})
-    DB-->>PTS: Success
-    NS-->>App: Return token
-    
-    Note over App, ExpoLoc: Phase 2: Location Update & Reverse Geocoding
-    App->>LS: getSessionLocation()
-    LS->>ExpoLoc: getCurrentPositionAsync({accuracy: Balanced})
-    ExpoLoc-->>LS: Return pos (coords: {latitude, longitude})
-    LS->>ExpoLoc: reverseGeocodeAsync({latitude, longitude})
-    ExpoLoc-->>LS: Return address details (street, city, district)
-    LS->>LS: _buildLabel(address) (Scrub street-level details)
-    LS-->>App: Return SessionLocation (label, coords)
+    PTS->>Supa: UPSERT push_tokens
+    Supa-->>PTS: OK
+    PTS-->>NS: OK
+    NS-->>App: Push Ready
 ```
 
----
+```mermaid
+sequenceDiagram
+    autonumber
+    participant BLE as BleMachine
+    participant Hook as useHardwareNotifications
+    participant Parser as BlePayloadParser
+    participant Repo as DeviceRepository
+    participant React as Component State
 
+    BLE->>Hook: onDataReceived(deviceId, payload)
+    Hook->>Hook: Throttle identical hex (Cache check)
+    Hook->>Parser: parseLedPayload(payload)
+    Parser-->>Hook: { points, segments, sorting, etc. }
+    Hook->>Hook: Check Delta against current config
+    opt If hardware properties changed
+        Hook->>Repo: updateConfig(deviceId, newConfig)
+        Repo-->>Hook: AsyncStorage Persisted
+        Hook->>React: setAllDevices() & setDeviceConfigs()
+    end
+```
 
-## 8. Architectural Impact Flags
-
-*   `[IMPACTS_USER_JOURNEY]` — Flagged because the conditional rendering routes in `App.tsx` and the onboarding compliance checks (`ComplianceGate`, `BluetoothGuard`) dictate the primary user navigation and app bootstrapping experience.
-
-`[IMPACTS_USER_JOURNEY]`
 
 <!-- CARTOGRAPHER_END: NOTIFICATIONS_&_ROUTING -->
 
 ### Domain: SESSION_TRACKING
 <!-- CARTOGRAPHER_START: SESSION_TRACKING -->
 
-# SESSION_TRACKING Domain Cartography
-
-This document contains the comprehensive architectural cartography for the **SESSION_TRACKING** domain, serving as the source-of-truth for session state charts, persistence ledgers, dynamic hooks, and cross-platform health sync integrations.
-
----
+# 🗺️ SDE Cartography Node: Session Tracking Domain
 
 ## 1. File Manifest
-
-Every file in this domain serves a distinct architectural purpose in coordinating the lifecycle of a skate session, persisting telemetry offline, or syncing health metrics.
-
-### Core Domain Files
-| File Path | Status | Architectural Purpose |
-| :--- | :--- | :--- |
-| `src/context/SessionContext.tsx` | **Active** | Wraps the XState-driven `sessionMachine` in a React context, restoring current phase states and elapsed times from `AsyncStorage` on initialization, and exposing session state, telemetry, and actions globally. |
-| `src/hooks/useTelemetryLedger.ts` | **Active** | Offline buffer managing selection telemetry (patterns, colors, modes) and street summaries. Caches metrics in `AsyncStorage` and flushes them remotely via the Supabase RPC `flush_telemetry` on a 15-minute heartbeat or when the app is backgrounded. |
-| `src/hooks/useDeviceStateLedger.ts` | **Active** | Singleton-backed device config ledger providing a single source of truth for MAC-address pattern states, utilizing a 500ms write-debounce lock to protect against storage serialization race conditions. |
-| `src/services/HealthSyncService.ts` | **Active** | Dynamic platform integration service mapping completed skate session metadata (duration, distance, calories, avg speed) to native OS databases (Apple HealthKit on iOS, Health Connect on Android). |
-
-### Supporting FSM Layer (`src/services/session/`)
-| File Path | Status | Architectural Purpose |
-| :--- | :--- | :--- |
-| `src/services/session/SessionMachine.ts` | **Active** | Central XState v5 state chart modeling the skate session lifecycle (`IDLE` ➔ `ACTIVE` ➔ `PAUSED` ➔ `ENDING` ➔ `IDLE`) and invoking sub-actors for sensor tracking, auto-pausing, health polling, notifications, and save commits. |
-| `src/services/session/SessionCommitService.ts` | **Active** | Actor executing session completion sequences. Invokes `SpeedTrackingService.saveSession` to save to Supabase/offline queue, syncs the final workout to platform health libraries via `HealthSyncService`, and pushes a `'SUMMARY'` state packet to Wear OS/watchOS. |
-| `src/services/session/SensorService.ts` | **Active** | Actor managing live location GPS positioning (accumulating total distance using latitude/longitude delta), subscribing to accelerometer G-force updates, and periodically pushing live metrics to connected watches. |
-| `src/services/session/AutoPauseService.ts` | **Active** | Actor checking GPS speeds every 500ms. If speed falls below 0.2 mph for 20 consecutive ticks (10s), it fires `AUTO_PAUSE`. If speed rises above 0.2 mph, it triggers `AUTO_RESUME`. |
-| `src/services/session/HealthService.ts` | **Active** | Actor registering smartwatch health feeds (BPM and active energy) or polling native OS health datasets every 30 seconds when watch accessories are offline. |
-| `src/services/session/NotificationService.ts` | **Active** | Actor maintaining persistent background tracking. Posts system notifications containing actions (PAUSE, RESUME, END) and starts Android Foreground Services configured with location permissions. |
-| `src/services/session/SessionBridge.ts` | **Active** | Global bridge registry acting as a router to dispatch external events (e.g. watch button clicks or system notification taps) directly to the active `sessionMachine` sender. |
-| `src/services/session/SessionMachine.types.ts` | **Active** | Declares state machine contexts, event payloads, transitions, and hardware telemetry snapshot types. |
-
-### Graveyarded / Migrated Files (Legacy)
-| File Path | Status | Architectural Purpose |
-| :--- | :--- | :--- |
-| `src/hooks/useSessionTracking.ts` | **Deleted** | Stale hook previously driving session state. Consolidated into the XState `sessionMachine` and `SessionContext.tsx`. |
-| `src/hooks/useGlobalTelemetry.ts` | **Deleted** | Stale telemetry logic hook. Replaced by the `SensorService` GPS tracking actor inside the session machine. |
-| `src/hooks/useHealthTelemetry.ts` | **Deleted** | Stale heart rate tracker hook. Replaced by the `HealthService` actor inside the session machine. |
-
----
+| File | Status | Description |
+|---|---|---|
+| `src/context/SessionContext.tsx` | Active | Core provider for `sessionMachine` (`@xstate/react`). Provides global `isSkateSessionActive`, `telemetry`, and `health`. Handles Crash Recovery via `AsyncStorage` and Watch listeners. |
+| `src/hooks/useDeviceStateLedger.ts` | Active | Unified Per-Device Pattern State Ledger using in-memory Map & debounced `AsyncStorage`. Single source of truth for UI hardware sync. |
+| `src/hooks/useTelemetryLedger.ts` | Active | God-Tier Telemetry Engine for time-in-state offline caching to `AsyncStorage`. Supports 15-minute heartbeat flush to Supabase. |
+| `src/services/HealthSyncService.ts` | Active | Wrappers around `react-native-health` (iOS) & `react-native-health-connect` (Android). Saves workout sessions to OS health databases. |
+| `src/hooks/useSessionTracking.ts` | Deprecated/Deleted | Replaced by `SessionContext` & `SpeedTrackingService`. |
+| `src/hooks/useGlobalTelemetry.ts` | Deprecated/Deleted | Replaced by direct actor models in `SessionContext`. |
+| `src/hooks/useHealthTelemetry.ts` | Deprecated/Deleted | Refactored into `SessionContext` directly with watch priority logic. |
 
 ## 2. Blast Radius
-
-The SESSION_TRACKING domain coordinates device sensors, location engines, system notifications, databases, and watch bridges. Any modification to session state management affects the following inputs and outputs:
-
-```mermaid
-graph TD
-    %% Imports / Dependencies
-    subgraph Dependencies [Internal & External Libraries]
-        A["@xstate/react"] --> SC["SessionContext.tsx"]
-        B["@notifee/react-native"] --> NS["NotificationService.ts"]
-        C["expo-location"] --> SS["SensorService.ts"]
-        D["sk8lytz-watch-bridge"] --> SS
-        D --> HS["HealthService.ts"]
-        D --> SCS["SessionCommitService.ts"]
-        E["react-native-health"] --> HSS["HealthSyncService.ts"]
-        F["react-native-health-connect"] --> HSS
-        G["Supabase Client"] --> SCS
-        G --> TL["useTelemetryLedger.ts"]
-    end
-
-    %% Session Core Domain
-    subgraph SessionDomain [Session Tracking Domain]
-        SC --> SM["SessionMachine.ts"]
-        SM --> SS
-        SM --> APS["AutoPauseService.ts"]
-        SM --> HS
-        SM --> NS
-        SM --> SCS
-        SCS --> HSS
-    end
-
-    %% Consumers
-    subgraph Consumers [Imported By / Consumers]
-        SC --> APP["App.tsx (Root wraps SessionProvider)"]
-        SC --> DS["DashboardScreen.tsx (useSession)"]
-        SC --> HUD["LiveTelemetryHUD.tsx"]
-        SC --> TH["DashboardTelemetryHero.tsx"]
-        SC --> DC["DockedController.tsx (uses useDeviceStateLedger)"]
-        SC --> DI["DeviceItem.tsx (isStale validation)"]
-    end
-```
-
-### Inbound Blast Radius (Imports)
-- **State Management**: `xstate`, `@xstate/react` for FSM control.
-- **Storage**: `@react-native-async-storage/async-storage` for persisting session state, ledger queue, and device settings.
-- **Hardware & Geolocation**: `expo-location` for GPS data; `expo-sensors` (Accelerometer) for raw physical impact analysis.
-- **Background Actions**: `@notifee/react-native` for Android foreground service bindings and custom button notifications.
-- **Watch Communications**: `sk8lytz-watch-bridge` to sync speed metrics and capture sensor streams from watch accessories.
-- **Health Services**: `react-native-health` (iOS Apple HealthKit) and `react-native-health-connect` (Android Health Connect).
-- **Network Sync**: `supabaseClient` and offline queue variables inside `SpeedTrackingService.ts`.
-
-### Outbound Blast Radius (Consumers)
-- **Root Orchestration**: `App.tsx` imports `SessionProvider` to expose session state to the layout tree and registers background notification actions.
-- **Primary Screens**: `DashboardScreen.tsx` consumes context actions (`startSession`, `endSession`) and formats live values via `useSession()`.
-- **UI HUD Widgets**: `LiveTelemetryHUD.tsx` and `DashboardTelemetryHero.tsx` render live telemetry feeds.
-- **Controller Dashboards**: `DockedController.tsx` leverages `useDeviceStateLedger` for LED configurations.
-- **Device Lists**: `DeviceItem.tsx` uses `isStale` checks from `useDeviceStateLedger` to flag disconnected boards.
-
----
+- **Component Triggers:** Modifying `SessionContext.tsx` will trigger re-renders on all Dashboard and HUD components leveraging `useSession()`. Watch out for `1000ms` `setInterval` UI timer tick.
+- **Storage Impact:** `useDeviceStateLedger` and `useTelemetryLedger` depend heavily on `AsyncStorage` background debouncing. Modifying write speeds risks background termination drop-offs (loss of telemetry data).
+- **OS Health Impact:** `HealthSyncService.ts` invokes native health kits. Permissions state changes here will directly impact the onboarding flow or silently fail if not correctly structured in the try/catch logic.
 
 ## 3. Context Matrix
-
-The React contexts interacting with or provided by the session tracking domain enforce state synchronization across layout boundaries.
-
-```
-┌────────────────────────────────────────────────────────┐
-│                      AuthContext                       │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-                           │ Consumes (user.id)
-                           ▼
-┌────────────────────────────────────────────────────────┐
-│                     SessionContext                     │
-├────────────────────────────────────────────────────────┤
-│ Provides:                                              │
-│ - sessionPhase ('IDLE' | 'ACTIVE' | 'PAUSED' | 'ENDING')│
-│ - telemetry (GlobalTelemetryState)                     │
-│ - health (HealthTelemetryState)                        │
-│ - startSession() / endSession()                        │
-└──────────────────────────┬─────────────────────────────┘
-                           │
-                           ├───────────────────┬───────────────────┐
-                           ▼                   ▼                   ▼
-                     ┌───────────┐       ┌───────────┐       ┌───────────┐
-                     │ Dashboard │       │ Live HUD  │       │ Docked    │
-                     │  Screen   │       │ Component │       │Controller │
-                     └───────────┘       └───────────┘       └───────────┘
-```
-
-- **Consumed Contexts**:
-  - **`AuthContext`**: Consumed by `SessionContext.tsx` (`useAuth`) to retrieve the authenticated `user.id` or `null` session. Ensures telemetry log uploads are tagged with the active user identifier.
-- **Provided Contexts**:
-  - **`SessionContext`**: Evaluates `sessionMachine` updates and exposes:
-    - `isSkateSessionActive`: `boolean` state indicating if tracking is in progress.
-    - `sessionPhase`: `'IDLE' | 'ACTIVE' | 'PAUSED' | 'ENDING'`.
-    - `startSession()`: Function to dispatch `START` to the state chart.
-    - `endSession()`: Function to dispatch `END` to the state chart.
-    - `telemetry`: Global telemetry data (current speed, peak speed, cumulative distance, linear G-force).
-    - `health`: Core metrics (current BPM, avg BPM, peak BPM, active energy burned).
-
----
+| Context / Hook | Consumes | Provides |
+|---|---|---|
+| `SessionContext` | `useAuth`, `sessionMachine`, `WatchBridge`, `AsyncStorage` | `isSkateSessionActive`, `sessionPhase`, `startSession()`, `endSession()`, `telemetry`, `health` |
+| `useDeviceStateLedger` | `AsyncStorage` | `save()`, `load()`, `loadSync()`, `clear()` (State dictionary mapped by normalized MAC) |
+| `useTelemetryLedger` | `AsyncStorage`, `SupabaseClient` | `trackPattern()`, `trackColor()`, `trackMode()`, `injectStreetSummary()`, `flushToDatabase()` |
+| `HealthSyncService` | Native Health APIs | `saveWorkout(snapshot)` |
 
 ## 4. Hook/Service I/O Registry
-
-The contracts defining inputs, outputs, database actions, and system side-effects across the session tracking domain.
-
-### `useTelemetryLedger()`
-- **Inputs**: 
-  - `trackPattern(patternId: string)`
-  - `trackColor(hexCode: string)`
-  - `trackMode(modeId: string)`
-  - `incrementCounter(key: string, count?: number)`
-- **Outputs**: Methods to log event ticks and coordinate data flushes.
-- **Side-Effects**: Writes data to AsyncStorage `@sk8lytz_telemetry_buffer`; starts a 15-minute sync heartbeat timer; binds to React Native `AppState` changes to flush data via `flush_telemetry` RPC on backgrounding.
-
-### `useDeviceStateLedger()`
-- **Inputs**: 
-  - `save(mac: string, state: DeviceState)`
-  - `load(mac: string)`
-  - `loadSync(mac: string)`
-- **Outputs**: LED config transaction handlers.
-- **Side-Effects**: Stores state in a global in-memory `memoryCache` singleton to prevent layout race conditions; debounces disk writes to AsyncStorage (`@SK8Lytz_DeviceState_v2_{MAC}`) by 500ms to throttle high-frequency hardware edits.
-
-### `HealthSyncService` (saveWorkout)
-- **Inputs**: `snapshot: ISessionSnapshot` detailing total distance, duration, avg speed, and energy consumed.
-- **Outputs**: `Promise<void>` completion check.
-- **Side-Effects**: Directly inserts records into platform health stores (iOS HealthKit or Android Health Connect).
-
-### `SessionMachine` (XState)
-- **Inputs**: `autoPauseEnabled: boolean`, refs caching current speed data and credentials.
-- **Events**: `START`, `PAUSE`, `RESUME`, `END`, `AUTO_PAUSE`, `AUTO_RESUME`.
-- **Outputs**: Transitions parent FSM phase and invokes sub-service callbacks.
-- **Side-Effects**: Manages hardware sensor listeners (GPS, Accelerometer), spawns Notifee alerts, controls WatchBridge syncs, and drives Supabase record commits.
-
----
+- **`useDeviceStateLedger.save(mac: string, state: DevicePatternState)`**: Synchronous memory write + 500ms debounced AsyncStorage write. Normalizes MAC to handle Supabase DB UUID drift.
+- **`useTelemetryLedger.flushToDatabase()`**: Closes stopwatch → Adds elapsed app time → reads `STORAGE_TELEMETRY_BUFFER` → fires Supabase RPC `flush_telemetry` → clears buffer on success.
+- **`HealthSyncService.saveWorkout(snapshot: ISessionSnapshot)`**: Translates `snapshot` into `HKWorkoutActivityTypeSkatingSports` (iOS) or `ExerciseType 60` (Android) and inserts active calories + distance data.
 
 ## 5. OS Variance Matrix
+| Feature | iOS Implementation | Android Implementation |
+|---|---|---|
+| Notification Category | Mounts interactive `[End, Pause, Resume]` `notifee` actions in foreground upon component mount. | Handled via generic Android `notifee` capabilities, no specific category array mounts in Context. |
+| Health Sync API | Uses `react-native-health` (`AppleHealthKit.saveWorkout` via `SkatingSports`). | Uses `react-native-health-connect` (`insertRecords` with `ExerciseType` 60 and heterogeneous Record arrays). |
 
-The session tracking domain abstracts several critical differences between iOS, Android, and Web platforms.
+## 6. Archival Instructions
+The Master Reference (`docs/SK8Lytz_App_Master_Reference.md`) already catalogs the missing hooks as stale in its "Refactor Targets" log. To complete the ARCHIVAL INSTRUCTION, ensure the following original entries are tagged with `[MOVE_TO_ARCHIVE]`:
+- `useHealthTelemetry` hook reference at Line 980 `[MOVE_TO_ARCHIVE]`
+- `useHealthTelemetry` hook reference at Line 1276 `[MOVE_TO_ARCHIVE]`
+- `useHealthTelemetry` hook reference at Line 1392 `[MOVE_TO_ARCHIVE]`
+- `useHealthTelemetry` hook reference at Line 1416 `[MOVE_TO_ARCHIVE]`
+- `useGlobalTelemetry` hook reference at Line 6974 `[MOVE_TO_ARCHIVE]`
 
-| Feature / Service | iOS Behavior | Android Behavior | Web Fallback Behavior |
-| :--- | :--- | :--- | :--- |
-| **Health Database Sync** | Integrates with **Apple HealthKit** (`react-native-health`). Saves workouts with activity type `'SkatingSports'` and units `'mile'`/`'calorie'`. | Integrates with **Android Health Connect** (`react-native-health-connect`). Maps to `'ExerciseSession'` (Type `60` [Skating]), `'TotalCaloriesBurned'` (Kcal), and `'Distance'` (meters). | Silently returns a resolved promise; database write is bypassed. |
-| **Health Polling (Live)** | Periodically reads `AppleHealthKit.getHeartRateSamples` and `AppleHealthKit.getActiveEnergyBurned` during workouts. | Queries `readRecords` for `'HeartRate'` and `'ActiveCaloriesBurned'` targets in Health Connect. | Bypasses polling. Live health stats fallback to watch telemetry. |
-| **Background Notifications** | Utilizes iOS category actions (`categoryId: 'session-actions'`) registered during bootstrap to show interactive alerts. | Hooks into Notifee as a **Foreground Service** using a dedicated notification channel and `foregroundServiceTypes: [FOREGROUND_SERVICE_TYPE_LOCATION]`. | Bypasses notification calls. Tracking is active in foreground tab only. |
-| **Sensor Subscriptions** | Subscribes to Expo Location and raw iOS Accelerometer rates. | Subscribes to Android GPS engines and linear acceleration sensors. | Bypasses subscriptions; returns mock coordinates if in debug mode. |
+## 7. Architectural Impact Flags
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
 
----
-
-## 6. Sequence Diagram
-
-This diagram details the sequence of events from starting a skate session, tracking live telemetry in the background, auto-pausing when stopping, and executing the two-way health commit.
-
+## 8. Sequence Diagram
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor User
-    participant SC as SessionContext
-    participant SM as SessionMachine (FSM)
-    participant SS as SensorService
-    participant AS as AutoPauseService
-    participant NS as NotificationService
-    participant WB as WatchBridge (Smartwatch)
-    participant DB as Supabase Database
-    participant HS as HealthSyncService (OS SDK)
+    participant UI as Dashboard UI
+    participant Ctx as SessionContext (XState)
+    participant TL as useTelemetryLedger
+    participant AS as AsyncStorage
+    participant DB as Supabase (flush_telemetry)
+    participant HS as HealthSyncService
+    participant OS as OS Health Kit (iOS/Android)
 
-    %% Session Start
-    User->>SC: Tap "Start Session"
-    SC->>SM: Send START Event
-    activate SM
-    SM->>SM: Transition IDLE ➔ ACTIVE
-    SM-->>SC: State Change Update (ACTIVE)
+    UI->>Ctx: startSession()
+    Ctx->>Ctx: sessionMachine (ACTIVE)
+    UI->>TL: trackMode('street')
     
-    par Spawn Actors
-        SM->>SS: Start GPS & Acceleration Logging
-        SM->>AS: Start Speed Monitoring (0.2 mph threshold)
-        SM->>NS: Start Foreground Service / Notification
-    end
-    
-    SS->>WB: Push Metric Update (0.0 mph, ACTIVE)
-    NS->>User: Display Persistent Alert (Distance: 0.0 mi, Speed: 0.0 mph)
-    
-    %% Telemetry Loop & Background Tracking
-    loop Skate Session Active
-        SS->>SS: Accumulate Distance via GPS Delta
-        SS->>SC: Update Live Telemetry (Speed, Distance, G-force)
-        SC->>User: Render Live HUD Values
-        Note over SS,NS: Background thread persists using Notifee location service
-        NS->>User: Update Alert HUD Stats (Every 5s)
-        SS->>WB: Push Metric Update (Every 3s throttled)
-        
-        %% Auto Pause Trigger
-        AS->>AS: Check Speed (Below 0.2 mph for 20 ticks / 10s)
-        AS->>SM: Send AUTO_PAUSE Event
-        SM->>SM: Transition ACTIVE ➔ PAUSED
-        SM-->>SC: State Change Update (PAUSED)
-        NS->>User: Update Alert Title (Paused ⏸)
-        WB->>User: Display Paused Haptic Alert
-        
-        %% Auto Resume Trigger
-        AS->>AS: Check Speed (Above 0.2 mph)
-        AS->>SM: Send AUTO_RESUME Event
-        SM->>SM: Transition PAUSED ➔ ACTIVE
+    loop Every 15 Minutes
+        TL->>TL: flushToDatabase()
+        TL->>AS: load offline buffer
+        TL->>DB: rpc('flush_telemetry')
+        DB-->>TL: Success
+        TL->>AS: clear buffer
     end
 
-    %% Session Stop & Commit
-    User->>SC: Tap "End Session"
-    SC->>SM: Send END Event
-    SM->>SM: Transition ACTIVE ➔ ENDING
-    
-    par Shutdown Actors
-        SM->>SS: Stop GPS Logging
-        SM->>AS: Stop Speed Monitoring
-        SM->>NS: Destroy Foreground Service / Alert
-    end
-    
-    SM->>SCS: Invoke SessionCommitService
-    activate SCS
-    SCS->>WB: Push Session Summary State ('SUMMARY')
-    
-    alt Distance > 0.01 mi and Duration > 10s
-        SCS->>DB: Save Session Snapshot (Supabase skate_sessions insert)
-        DB-->>SCS: Return Session UUID
-        
-        SCS->>HS: Save Workout (Pass Enriched Snapshot)
-        HS->>HS: Check OS Permissions
-        alt Platform is iOS
-            HS->>HS: Save to Apple HealthKit (SkatingSports)
-        else Platform is Android
-            HS->>HS: Save to Health Connect (ExerciseSession 60)
-        end
-        HS-->>SCS: Resolve Workout Logged
-    else Session too short
-        SCS->>SCS: Skip database save
-    end
-    
-    SCS->>SM: Commit Complete Event
-    deactivate SCS
-    SM->>SM: Transition ENDING ➔ IDLE
-    SM-->>SC: State Change Update (IDLE)
-    deactivate SM
+    UI->>Ctx: endSession()
+    Ctx->>Ctx: sessionMachine (ENDING/IDLE)
+    Ctx->>HS: onSessionSaved (via snapshot)
+    HS->>OS: saveWorkout(distance, calories)
 ```
 
----
-
-## 7. Stale Master Reference Entries to 
-## 8. Architectural Impact Flags
-
-The migration to the XState-driven architecture triggers the following system flags:
-
-* `[IMPACTS_USER_JOURNEY]` — The consolidation of session controller states into a single React context driven by an FSM shifts how dashboard screens, HUD widgets, and notification buttons coordinate. Active states, paused states, and save gates are now governed by state chart rules.
-* `[IMPACTS_C4_CONTEXT]` — The session engine integrates location systems, smartwatch notifications, Apple HealthKit/Health Connect databases, and Supabase skate session logs. It manages local offline caches via `AsyncStorage` when connections are lost.
-* `[IMPACTS_STATE_CHART]` — The entire skate tracking pipeline is driven by an XState v5 Finite State Machine (`SessionMachine.ts`) using spawned actors for background sensors, speed thresholds, health polling, and notifications.
 
 <!-- CARTOGRAPHER_END: SESSION_TRACKING -->
 
 ### Domain: PROTOCOL_CORE
 <!-- CARTOGRAPHER_START: PROTOCOL_CORE -->
 
-# Cartography Document: PROTOCOL_CORE Domain
-
-This document establishes the canonical mapping and engineering blueprint for the `PROTOCOL_CORE` domain within the SK8Lytz application architecture. It serves as the single source of truth for the Hardware Abstraction Layer (HAL), BLE adapter drivers, dynamic catalog engines, and platform-specific behaviors of Neogleamz (`Ctrl_Mini_RGB_Symphony_new_0xA3`) and BanlanX (`SP621E`) controller hardware.
-
----
+# Protocol Core Domain Cartography
 
 ## 1. File Manifest
+- `src/protocols/IControllerProtocol.ts` (HAL Interface)
+- `src/protocols/ControllerRegistry.ts` (Dynamic Resolver)
+- `src/protocols/ZenggeProtocol.ts` (Legacy Core / Byte Logic)
+- `src/protocols/ZenggeAdapter.ts` (Zengge HAL Implementation)
+- `src/protocols/BanlanxAdapter.ts` (BanlanX SP621E HAL Implementation)
+- `src/hooks/useProtocolDispatch.ts` (Cross-Device Router)
+- `src/hooks/useProtocolBuilder.ts` (Payload Generator for Diagnostic Lab)
+- `src/constants/ProductCatalog.ts` (Local hardware product catalog fallback)
+- `src/hooks/useProductCatalog.ts` (Syncs local catalog with Supabase)
+- `src/hooks/useProductManager.ts` (Admin UI hooks for editing the catalog)
 
-Every file within the `PROTOCOL_CORE` domain is categorized below alongside its precise architectural purpose:
-
-| File Path | Component Type | Architectural Purpose |
-| :--- | :--- | :--- |
-| [ZenggeProtocol.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/ZenggeProtocol.ts) | Protocol Logic (Monolith) | Implements raw byte array serialization, checksum calculation, and chunked frame sequencing (`0x40`) for Neogleamz/Zengge V2 hardware. |
-| [ZenggeAdapter.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/ZenggeAdapter.ts) | Adapter (HAL Driver) | Implements `IControllerProtocol` for Neogleamz hardware, handling post-connection time synchronization and MTU-aware packet chunking. |
-| [BanlanxAdapter.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/BanlanxAdapter.ts) | Adapter (HAL Driver) | Implements `IControllerProtocol` for BanlanX SP621E hardware, mapping control parameters to `0xA0` command packets and leveraging native onboard audio processing. |
-| [IControllerProtocol.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/IControllerProtocol.ts) | Interface (Contracts) | Defines the Hardware Abstraction Layer (HAL) type definitions, step formats, and the unified `ProtocolResult` payload container. |
-| [ControllerRegistry.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/ControllerRegistry.ts) | Registry (Resolver) | Resolves the active controller protocol at scan time by parsing advertising BLE services (e.g., `FFE0` vs `FFFF`) and manufacturer IDs. |
-| [useProtocolDispatch.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useProtocolDispatch.ts) | UI Adapter Hook | Provides a unified React hook that bridges high-level UI controls to device-specific adapter actions, enabling simultaneous dispatch to mixed-protocol device groups. |
-| [useProtocolBuilder.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useProtocolBuilder.ts) | Diagnostic Hook | Drives the low-level LED Diagnostic Lab, offering stateful configurations to generate, preview, and annotate raw protocol hex packets. |
-| [useProductCatalog.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useProductCatalog.ts) | Catalog Sync Hook | Implements local-first retrieval, background Supabase syncing, and AsyncStorage caching of the product profile database. |
-| [useProductManager.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useProductManager.ts) | Catalog Admin Hook | Manages the creation, editing, and Supabase upserting of product configurations within the administrative Catalog Manager. |
-| [ProductCatalog.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/constants/ProductCatalog.ts) | Metadata Constants | Ships default hardware configurations, segment mirrors, and threshold-based product classifiers (HALOZ, SOULZ, RAILZ) for offline fallback. |
-
----
-
-## 2. Blast Radius (Dependency Map)
-
-The `PROTOCOL_CORE` domain operates as a middle tier. It imports low-level BLE variables and database instances, and exports domain services and hooks consumed by UI nodes.
-
-### Upstream Dependencies (Imports)
-- **BLE GATT Constants & Context**: Consumes characteristic/service UUIDs, and utilizes React BLE Context (`BLEContext`) for queue dispatches.
-- **Supabase client**: `supabaseClient` is consumed by `useProductCatalog` and `useProductManager` to sync product definitions.
-- **AsyncStorage**: Standard React Native storage keys cache database profiles for offline operations.
-- **React Core**: Custom hooks leverage `useState`, `useEffect`, `useRef`, and `useCallback` for stable lifecycle mappings.
-
-### Downstream Consumers (Exports)
-- **UI Screens & Modals**: `DashboardScreen.tsx`, `Sk8LytzDiagnosticLab.tsx`, and `Sk8LytzProgrammerModal.tsx` consume the catalog hooks and protocol builder hooks.
-- **BLE Write Dispatchers**: Core BLE managers leverage the `ControllerRegistry` to resolve target profiles and partition outgoing payloads before dispatch.
-
-### Domain Boundary Flow Diagram
-```mermaid
-graph TD
-    UI[UI: Dashboard / Admin Lab] -->|Call Actions| Dispatch[useProtocolDispatch.ts]
-    UI -->|Read Catalog| CatalogHook[useProductCatalog.ts]
-    CatalogHook -->|Read / Write| LocalCache[(AsyncStorage)]
-    CatalogHook -->|Sync| Supabase[(Supabase DB)]
-    
-    Dispatch -->|Map Devices| Registry[ControllerRegistry.ts]
-    Registry -->|Resolve Adapter| HAL[IControllerProtocol.ts]
-    
-    HAL -->|Driver| Zengge[ZenggeAdapter.ts]
-    HAL -->|Driver| Banlanx[BanlanxAdapter.ts]
-    
-    Zengge -->|Opcode Math| ZenggeProto[ZenggeProtocol.ts]
-    
-    Zengge -->|Returns packets| Dispatch
-    Banlanx -->|Returns packets| Dispatch
-    
-    Dispatch -->|Execute Payload| BLE[(BLE Context: writeToDevice)]
-```
-
----
+## 2. Blast Radius
+- **BLE Transmission Failures:** Modifications to `ZenggeProtocol` or Adapter framing bytes will break hardware response or lock up device EEPROM (e.g. `0xA3` dropping below 12 RGB pixels on `0x59`).
+- **Product Mismatches:** Errors in `ProductCatalog` lead to misallocated matrix sizes causing visualizer/hardware parity loss (e.g., HALOZ segments bug).
+- **Multi-Device Deadlock:** `useProtocolDispatch` routes payloads sequentially. Breaking its `executeProtocolResults` map causes fleet command drops.
+- **Music Mode Freeze:** Changing Fast-path methods like `buildMusicMagnitude` to be rate-limited will drop FFT responsiveness to 0.
 
 ## 3. Context Matrix
-
-The domain coordinates state and operations through two primary context providers:
-
-### `BLEContext`
-Consumed by [useProtocolDispatch.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useProtocolDispatch.ts#L8-L18).
-* **Extracted Properties**:
-  * `connectedDevices`: Evaluates target active BLE MACs.
-  * `getAdapterForDevice(deviceId)`: Resolves the runtime `IControllerProtocol` implementation for each MAC.
-  * `executeProtocolResults(payloads, opts)`: Dispatches constructed packets to the serial writing queue.
-  * `writeChunked(payload, deviceId)`: Bypasses standard queues to apply `0x40` packet framing chunk loops directly for raw extended buffers.
-* **State Propagation**: User gestures trigger callbacks (e.g. `setPower(isOn)`). The hook loops through connected devices, requests the device-specific driver, executes the matching packet builder, and forwards the generated `ProtocolResult` arrays to the connection queues.
-
-### `AuthContext`
-Consumed by [useProductManager.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useProductManager.ts#L6-L37).
-* **Extracted Properties**:
-  * `session`: Captures the current authenticated user's session state.
-* **State Propagation**: Admin attempts to save a product profile will fail unless a valid `session` exists. The hook verifies this session parameter locally before dispatching database upserts, shielding the database API from unauthenticated operations.
-
----
+- **Hardware Abstraction Layer (HAL):** Implemented via `IControllerProtocol.ts`. Provides a uniform interface across different controller ICs (Zengge vs. Banlanx).
+- **Device Provisioning:** `useProductCatalog.ts` fetches device limits (max points, segments) via Supabase/Local overrides. Adapters rely on this for layout formatting.
+- **Byte Packaging:** Raw bytes mapped via `ZenggeProtocol` and wrapped with V2 framing (`0x00, seq, 0x80...`), while `BanlanxAdapter` employs simpler `[0xA0, cmd, len, ...]` structure.
+- **EEPROM Isolation:** The Protocol engine defines spatial constraints (Points × Segments), enforcing safe payload clamps (e.g. 54 pixel limits) before BLE transmission.
 
 ## 4. Hook/Service I/O Registry
-
-All key interfaces within the domain map their operations and side-effects below:
-
-### `useProtocolDispatch` Methods
-| Method Name | Input Parameters | Output Type | Primary Side-Effects |
-| :--- | :--- | :--- | :--- |
-| `setPower` | `isOn: boolean`, `targetDeviceId?: string`, `opts?: { lowPriority?: boolean }` | `Promise<boolean \| 'partial'>` | Dispatches hardware power toggle opcodes. |
-| `setSolidColor` | `r: number, g: number, b: number`, `targetDeviceId?`, `opts?` | `Promise<boolean \| 'partial'>` | Serializes and sends a single-pixel freeze command. |
-| `setMultiColor` | `colors: RGB[], ledPoints: number, speed: number, direction: number, transitionType?`, `targetDeviceId?`, `opts?` | `Promise<boolean \| 'partial'>` | Encapsulates client-generated spatial pattern arrays for device transmission. |
-| `setEffect` | `effectId: number, speed: number, brightness: number`, `targetDeviceId?`, `opts?` | `Promise<boolean \| 'partial'>` | Triggers a hardware-native program (Zengge `0x42` or BanlanX `0x53`+`0x54`). |
-| `executeRawPayload`| `payload: number[]`, `targetDeviceId?`, `opts?` | `Promise<boolean \| 'partial'>` | If 0x51 extended packet (>200B), redirects to `writeChunked` framing loop; else wraps and writes directly. |
-
-### `useProductCatalog` Methods
-| Method Name | Input Parameters | Output Type | Primary Side-Effects |
-| :--- | :--- | :--- | :--- |
-| `getProfileById` | `id: string` | `ProductProfile \| undefined` | Performs case-insensitive search across memory catalog; falls back to static catalog. |
-| `getProfileByPoints`| `ledPoints: number` | `ProductProfile` | Matches LED counts with product detection thresholds (e.g. 10-27 points = HALOZ). |
-| `saveProfile` | `profile: ProductProfile` | `Promise<boolean>` | Upserts a product row into the Supabase database and resets local AsyncStorage catalog cache. |
-| `syncFromCloud` | None | `Promise<void>` | Pulls active database rows, merges them with local fallbacks, and overwrites the local AsyncStorage cache. |
-
-### `IControllerProtocol` Drivers
-| Method Name | Input Parameters | Output Type | Protocol Differences |
-| :--- | :--- | :--- | :--- |
-| `getHandshakePayloads` | None | `ProtocolResult` | **Zengge**: Returns a `0x10` session time sync packet. <br>**BanlanX**: Returns an empty no-op result. |
-| `buildQuerySettings` | `hasMic?: boolean` | `ProtocolResult` | **Zengge**: Generates a `0x63` settings query. <br>**BanlanX**: Generates a `0xA0` cmd `0x70` query (staged). |
-| `buildEffect` | `effectId, speed, brightness` | `ProtocolResult` | **Zengge**: One `0x42` payload. <br>**BanlanX**: Two packets (`0x53` select + `0x54` speed) with a mandatory `20ms` delay. |
-| `buildMusicConfig` | `config: MusicConfig` | `ProtocolResult` | **Zengge**: Returns `0x73` setup config mapping drop & column colors. <br>**BanlanX**: Returns `0x59` mic select + `0x5A` gain packets. |
-| `buildMusicMagnitude`| `magnitude: number` | `ProtocolResult` | **Zengge**: Returns a `0x74` magnitude byte. <br>**BanlanX**: Returns empty (onboard DSP processes audio natively). |
-
----
+- **`useProtocolDispatch`**
+  - *Input*: UI-triggered function calls (e.g. `setMultiColor`, `setPower`), target device IDs.
+  - *Output*: Invokes `executeProtocolResults` from `BLEContext` after querying `ControllerRegistry` for the correct adapter.
+- **`useProtocolBuilder`**
+  - *Input*: Form state (Points, Speed, Mode, Colors).
+  - *Output*: `BldResult` containing raw bytes, hex string, and debug annotations.
+- **`useProductCatalog`**
+  - *Input*: None (AsyncStorage/Supabase reads).
+  - *Output*: `allProfiles`, Profile getters (`getProfileById`), and cloud synchronizers.
+- **`useProductManager`**
+  - *Input*: Admin actions.
+  - *Output*: CRUD wrappers for `ProductProfile` objects.
 
 ## 5. OS Variance Matrix
+- **Android BLE Stack MTU:** `useProtocolDispatch` integrates a `executeRawPayload` bypass specifically addressing the MTU chunking issue on Android for large payloads like 323B `0x51` Extended commands.
+- **Performance:** Complex computations in byte calculations are synchronous; iOS handles this seamlessly whereas slow Android chipsets might experience micro-stutters during heavy string/array generation if not offloaded.
 
-BLE communication patterns vary between iOS and Android due to hardware driver and system policy differences:
+## ARCHIVAL INSTRUCTION
+Stale documentation located in `docs/SK8Lytz_App_Master_Reference.md` was already appropriately tagged with `[MOVE_TO_ARCHIVE]`:
+- `#### VisualizerUnit Rendering Rules (HALOZ RING only) [MOVE_TO_ARCHIVE]`
+- `### Dashboard UI Layout (4-Slab Architecture) [MOVE_TO_ARCHIVE]`
+- `- **One-Screen Setup Policy** [MOVE_TO_ARCHIVE]`
+- `### writeChunked — 0x51 Extended Payload Framing [MOVE_TO_ARCHIVE]`
 
+## ARCHITECTURAL IMPACT FLAGS
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
+
+## SEQUENCE DIAGRAM
 ```mermaid
-graph TD
-    Start[Outgoing Command Build] --> AdapterSelect{Which OS?}
-    
-    AdapterSelect -->|Android| AndroidP[Android Platform Paths]
-    AdapterSelect -->|iOS| iOSP[iOS Platform Paths]
-    
-    AndroidP --> MTUAndroid[Fire requestMTU 512 bytes]
-    AndroidP --> PriorityAndroid[Set Connection Priority HIGH for handshake]
-    AndroidP --> PriorityBalance[Downgrade to BALANCED after first write]
-    AndroidP --> ScanBudget[Check 4-scans-per-30s Budget Gate]
-    
-    iOSP --> MTUiOS[Skip requestMTU - Negotiated automatically by OS]
-    iOSP --> ScanFilter[Apply strict ZENGGE/BANLANX Service UUID Filters to startDeviceScan]
+sequenceDiagram
+    participant UI
+    participant useProtocolDispatch
+    participant ControllerRegistry
+    participant Adapter
+    participant BLEMachine
+    participant Hardware Controller
+
+    UI->>useProtocolDispatch: setMultiColor(colors)
+    useProtocolDispatch->>ControllerRegistry: getAdapterForDevice(mac)
+    ControllerRegistry-->>useProtocolDispatch: IControllerProtocol (e.g. ZenggeAdapter)
+    useProtocolDispatch->>Adapter: buildMultiColor(colors)
+    Adapter-->>useProtocolDispatch: ProtocolResult
+    useProtocolDispatch->>BLEMachine: executeProtocolResults(payloads)
+    BLEMachine->>Hardware Controller: BLE GATT Write
 ```
 
-### 1. MTU Negotiation
-* **Android**: `ConnectService.ts` explicitly requests `512` bytes via `requestMTU()`. This allows larger arrays (up to 300 pixels) to avoid transport fragmentation.
-* **iOS**: iOS handles MTU negotiation automatically. Calling `requestMTU()` on iOS throws an exception. The code wraps MTU requests in a `Platform.OS === 'android'` block and reads `conn.mtu` directly on iOS.
-
-### 2. Scanning Filters & Background Mode
-* **Android**: Can scan passively without service filters.
-* **iOS**: To scan in background mode (e.g. to automatically reconnect to skates when the app is minimized), iOS requires explicit service UUID arrays passed to the BLE scanner:
-  ```typescript
-  bleManager.startDeviceScan([ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID], ...)
-  ```
-  The global `BleMachine.ts` enforces this service filter mapping across both platforms.
-
-### 3. Scan Budget Limits
-* **Android**: Android 12+ limits BLE scan executions to a budget of **4 scans per 30 seconds**. The battery sweeper hook tracks and queues scanning requests to prevent silent OS-level throttling.
-* **iOS**: iOS does not enforce the 4-per-30s limit but aggressively throttles scanning parameters when the screen locks.
-
----
-
-## 6. Cited Truth (Protocol Specifications)
-
-### Zengge Opcode Table
-All Neogleamz `0xA3` chip commands are wrapped using the 8-byte Zengge V2 framing envelope:
-`[0x00, SeqNum, 0x80, 0x00, LenHi, LenLo, Len+1, 0x0B, ...innerPayload]`
-
-* **`0x71` Power Control**: 
-  * ON: `[0x71, 0x23, 0x0F, 0xA3]`
-  * OFF: `[0x71, 0x24, 0x0F, 0xA4]`
-* **`0x59` Spatial Pixel Array**:
-  * Format: `[0x59, lenHi, lenLo, [R1,G1,B1...], pointsHi, pointsLo, transitionType, speed, direction, checksum]`
-  * *EEPROM Lockout Boundary*: If `numLEDs < 12`, the payload must be padded with zero-pixels to a length of 12 (enforced by `padStaticColorfulPayload`) to prevent EEPROM driver hangs.
-* **`0x51` Custom Sequence**:
-  * 9-byte compact step format (supported by `0xA3`): `[0xF0/0x0F, transMode, speed, R1, G1, B1, R2, G2, B2]`.
-  * 10-byte extended step format requires `0x40` chunking: `[0xF0/0x0F, effectId, speed, R1, G1, B1, R2, G2, B2, dirFlags]`.
-* **`0x40` Chunking Protocol**:
-  * For packets exceeding `(MTU - 3)`, frames must be split. The first chunk starts with:
-    `[0x40, seqByte, indexWord_hi, indexWord_lo, totalLen_hi, totalLen_lo, dataLen+1, 0x0B]`
-  * Subsequent chunks use a shorter header:
-    `[0x40, seqByte, indexWord_hi, indexWord_lo, dataLen]`
-  * The final chunk marks completion by setting bit 15 of `indexWord` (`indexWord |= 0x8000`).
-
-### BanlanX Opcode Table
-BanlanX commands use a simpler framing wrapper: `[0xA0, cmd, dataLen, ...payload]` with no checksum byte.
-
-* **`0x50` Power Control**:
-  * ON: `[A0, 50, 01, 01]`
-  * OFF: `[A0, 50, 01, 00]`
-* **`0x52` Solid Color**: `[A0, 52, 03, R, G, B]`
-* **`0x53` Effect Select**: `[A0, 53, 01, effectId]`
-* **`0x54` Speed Select**: `[A0, 54, 01, speed]`
-* **`0x59` Audio Source**: `[A0, 59, 01, source]` (0x00 = internal microphone)
-* **`0xA0` cmd `0x5A` Sensitivity / Gain**: `[A0, 5A, 01, gain]` (range 1-16)
-
----
-
-## 7. Stale Documentation Audit
-
-During review of the App Master Reference, the following segments in the master document were identified as stale and marked with `
 
 <!-- CARTOGRAPHER_END: PROTOCOL_CORE -->
 
 ### Domain: PATTERN_ENGINE
 <!-- CARTOGRAPHER_START: PATTERN_ENGINE -->
 
-# PATTERN_ENGINE Domain Cartography Report
-
-This cartography report details the file manifest, imports/exports (Blast Radius), React Context dependencies, API parameters, OS-specific differences, runtime synchronization pipeline sequence, pattern template catalog, and stale documentation audits for the `PATTERN_ENGINE` domain in SK8Lytz.
-
----
+# PATTERN ENGINE Cartography
 
 ## 1. File Manifest
-
-The `PATTERN_ENGINE` domain provides the core mathematical synthesis, visualization modeling, hardware packet routing, and sensor hooks that drive the LED lighting systems.
-
-### Core Mathematical & Protocol Engines
-
-| File Name | Location | Architectural Purpose |
-| :--- | :--- | :--- |
-| `PatternEngine.ts` | `src/protocols/PatternEngine.ts` | The Single Source of Truth (SSOT) for the custom `SK8LYTZ_TEMPLATES` registry (IDs 1-43, 101-105, 201-233). It compiles binary payloads for the BLE transport layer, dynamically routing spatial patterns to the `0x59` encoder and temporal/test patterns to the `0x51` compact scheduler. |
-| `SpatialEngine.ts` | `src/protocols/SpatialEngine.ts` | The low-level math synthesizer repository. It houses deterministic wave generators (sine waves, strobe fades, meteor showers, and comets) that return raw RGB arrays for individual LED slots. |
-| `SymphonyEngine.ts` | `src/protocols/SymphonyEngine.ts` | Handles visualizer state mapping for hardware-native 0x51 Symphony effects (IDs 1-44, 201-233) and audio-reactive 0x73/0x74 magnitude-gated effects (IDs 1-13). |
-| `VisualizerEngine.ts` | `src/protocols/VisualizerEngine.ts` | The public coordinator for the UI rendering canvas. It wraps `generateArray()` outputs and applies continuous scroll rotation animations matching the active frame tick. |
-| `PositionalMathBuffer.ts` | `src/protocols/PositionalMathBuffer.ts` | Implements client-side linear interpolation (gradients or solid blocks) between custom visual nodes (0-100%) to bypass physical `0x59` hardware chunker positional limitations. |
-
-### Reactive Integration Hooks
-
-| File Name | Location | Architectural Purpose |
-| :--- | :--- | :--- |
-| `useStreetMode.ts` | `src/hooks/useStreetMode.ts` | Manages the Street Mode state machine (`STOPPED`, `ACCELERATING`, `CRUISING`, `SLOWING_DOWN`, `HARD_BRAKING`) by binding the accelerometer sensor and GPS telemetry, then dispatching tail-light configurations. |
-| `useMusicMode.ts` | `src/hooks/useMusicMode.ts` | Orchestrates music-reactive configurations (0x73) and matrix styles (Light Bar vs. Light Screen) and ensures hardware exits reactive loops cleanly when switching modes. |
-| `useAppMicrophone.ts` | `src/hooks/useAppMicrophone.ts` | Bridges native device audio streams via `expo-audio` to record amplitudes and stream real-time 20Hz music magnitude commands (0x74) to override the hardware mic. |
-
----
+- `src/protocols/PatternEngine.ts`
+- `src/protocols/SpatialEngine.ts`
+- `src/protocols/SymphonyEngine.ts`
+- `src/protocols/VisualizerEngine.ts`
+- `src/protocols/PositionalMathBuffer.ts`
+- `src/hooks/useStreetMode.ts`
+- `src/hooks/useMusicMode.ts`
+- `src/hooks/useAppMicrophone.ts`
 
 ## 2. Blast Radius
-
-The `PATTERN_ENGINE` domain functions as a pure mathematical core that exports utilities to the dashboard UI and translates user preferences into binary BLE payloads.
-
-```
-                           ┌────────────────────────┐
-                           │   Product Catalog &    │
-                           │   Zengge BLE Service   │
-                           └───────────┬────────────┘
-                                       │
-            ┌──────────────────────────┼──────────────────────────┐
-            ▼                          ▼                          ▼
-  ┌───────────────────┐      ┌───────────────────┐      ┌───────────────────┐
-  │  useStreetMode    │      │   useMusicMode    │      │ useAppMicrophone  │
-  │ (Accel + GPS FSM  │      │ (0x73 matrix config│      │ (20Hz mic volume  │
-  │  pattern triggers)│      │   & exit control) │      │  magnitude stream)│
-  └─────────┬─────────┘      └─────────┬─────────┘      └─────────┬─────────┘
-            │                          │                          │
-            └──────────────────────────┼──────────────────────────┘
-                                       ▼
-                         ┌──────────────────────────┐
-                         │     PatternEngine.ts     │
-                         │   (SSOT Template Map)    │
-                         └─────────────┬────────────┘
-                                       │
-                                       ▼
-                         ┌──────────────────────────┐
-                         │     SpatialEngine.ts     │
-                         │ (Low-level wave curves)  │
-                         └─────────────┬────────────┘
-                                       │
-                                       ▼
-                         ┌──────────────────────────┐
-                         │   SymphonyEngine.ts      │
-                         │ (0x51 & 0x73 visualizer) │
-                         └──────────────────────────┘
-```
-
-### Imports (Incoming Dependencies)
-* **Hardware Information**: `ProductCatalog.ts` (references led counts, mirroring configurations, and segment limits).
-* **BLE Dispatch Interface**: `useProtocolDispatch.ts` and `ZenggeProtocol.ts` (dispatches binary commands).
-* **Hardware Telemetry Sensors**: `expo-sensors` (registers accelerometer listeners inside `useStreetMode.ts`).
-* **Platform APIs**: `react-native` (manages platform branching for sensor buffers).
-* **Native Audio Interface**: `expo-audio` (processes metering scales for magnitude streaming).
-
-### Exports (Outgoing Consumers)
-* **UI Previews**: `ProductVisualizer.tsx`, `VisualizerUnit.tsx`, and `LEDStripPreview.tsx` consume `getVisualizerFrame` to draw real-time canvases.
-* **Control Dispatchers**: `useControllerDispatch.ts` imports payload builders to generate output streams.
-* **Admin Center Panels**: `Sk8LytzDiagnosticLab.tsx` consumes the pattern engines to send raw hex payloads.
-
----
+Modifying the Pattern Engine affects the core visual presentation across the entire application:
+- `ProductVisualizer` UI rendering depends entirely on `VisualizerEngine.ts` and `SpatialEngine.ts`.
+- Physical LED rendering via `0x59` BLE commands relies on `buildPatternPayload`.
+- Music Mode visualizers rely on `SymphonyEngine.ts` to decode 0x74 magnitude values and `useMusicMode`/`useAppMicrophone` to dispatch them.
+- Custom Builder gradients depend on `PositionalMathBuffer.ts` for integer mapping limits bypass.
+- Street Mode hardware behavior depends on `useStreetMode.ts` which injects GPS/accelerometer data into specific pattern math.
 
 ## 3. Context Matrix
-
-The mathematical cores are kept strictly context-free and deterministic. The reactive hooks utilize properties and callbacks:
-
-| Component / Hook | Consumes Context | Provided Properties / callbacks | Scope & Lifetime |
-| :--- | :--- | :--- | :--- |
-| `PatternEngine` / `SpatialEngine` | None (Deterministic pure functions) | None (Pure API inputs) | Ephemeral call-stack lifetime. |
-| `useStreetMode` | None (Telemetries passed as arguments) | `writeToDevice` callback, `hwSettings`, active segment boundaries. | Mounted during Dashboard usage. |
-| `useMusicMode` | `useProtocolDispatch` | Exposes `handleMusicChange` dispatch triggers. | Active during Music Mode session. |
-| `useAppMicrophone` | None (Direct native hardware wrappers) | `writeToDevice` callback, recording lifecycle states. | Restricts recording to active app-microphone selections. |
-
----
+- **PatternEngine.ts**: Core SSOT for `SK8LYTZ_TEMPLATES`. Maps IDs to payloads, intercepts IDs `17,18,24,26,44,72,201-233` for native `0x51` BLE transmission.
+- **SpatialEngine.ts**: Contains 40+ math generator functions (e.g., `buildCometChase`). A monolith (S4 violation acknowledged) rendering pixel arrays `RGB[]` across patterns.
+- **SymphonyEngine.ts**: Contains music-reactive math for 1-13 APP mic patterns (magnitude gated) and 0x51 Symphony generator functions.
+- **VisualizerEngine.ts**: Bridges PatternEngine to `ProductVisualizer`, primarily utilizing `rotateArray` for continuous scroll translation.
+- **PositionalMathBuffer.ts**: Interpolates percentage-based Custom Builder layouts into discrete LED RGB buffers (SOLID / GRADIENT).
+- **useStreetMode.ts**: Tracks accelerometer jerk and GPS speed. Converts motion states (`STOPPED, CRUISING, HARD_BRAKING`) into 0x59 pattern builds.
+- **useMusicMode.ts**: Orchestrates `0x73` music config setup. Fixes matrix bounds for 0x26 (Light Bar) vs 0x27 (Light Screen).
+- **useAppMicrophone.ts**: 20Hz rapid continuous streaming of device microphone magnitude to maintain APP mic state over device mic state.
 
 ## 4. Hook/Service I/O Registry
-
-### `useStreetMode`
-* **Inputs**:
-  - `activeMode: string` (Hook self-deactivates if not `'STREET'`)
-  - `writeToDevice: (payload: number[]) => Promise<void | boolean | 'partial'>`
-  - `hwSettings: IHardwareSettings | null` (references mirrors and pixel sizes)
-  - `points: number | undefined` (fallback length)
-  - `activeProduct: string`
-  - `brightness: number`, `speed: number`
-  - `deviceContext: Record<string, unknown>` (logs context to analytics)
-  - `gpsSpeed: number` (evaluates motion transitions)
-  - `peakGForce: number`
-* **Outputs**:
-  - `streetSensitivity: number` / `setStreetSensitivity: (v: number) => void`
-  - `streetCruiseColor: string` / `setStreetCruiseColor: (v: string) => void`
-  - `streetBrakeColor: string` / `setStreetBrakeColor: (v: string) => void`
-  - `streetDistribution: [number, number, number]` / `setStreetDistribution: (v: [number, number, number]) => void`
-  - `isStreetBraking: boolean`
-  - `motionState: MotionState` (`STOPPED` | `ACCELERATING` | `CRUISING` | `SLOWING_DOWN` | `HARD_BRAKING`)
-  - `motionStateRef: React.MutableRefObject<MotionState>`
-  - `applyStreetPattern: (state: MotionState, brt?: number, spd?: number) => void`
-* **Side-Effects**:
-  - Sets up `Accelerometer` updates at 80ms interval on Android.
-  - Generates `STREET_JERK_DETECTED` entries in `AppLogger`.
-  - Dispatches `0x59` BLE commands immediately on motion FSM changes.
-
-### `useMusicMode`
-* **Inputs**:
-  - `activeMode: ModeType`
-  - `musicPatternId: number`
-  - `micSensitivity: number`, `brightness: number`
-  - `micSource: 'APP' | 'DEVICE'`
-  - `musicPrimaryColor: string`, `musicSecondaryColor: string`
-  - `musicMatrixStyle: number`
-* **Outputs**:
-  - `handleMusicChange: (patternId?, sens?, bright?, src?, c1Hex?, c2Hex?, matrix?) => void`
-* **Side-Effects**:
-  - Sends configuration commands (`0x73` payloads) to the BLE queue.
-  - Automatically dispatches an exit packet (`isOn: false`) when the mode is changed to disable the physical microphone.
-
-### `useAppMicrophone`
-* **Inputs**:
-  - `activeMode: ModeType`
-  - `micSource: 'APP' | 'DEVICE'`
-  - `isPoweredOn: boolean`
-  - `writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>`
-* **Outputs**:
-  - `audioMagnitude: number` (range 0.0 to 1.0)
-  - `hasMicPermission: boolean`
-  - `requestMicPermission: () => Promise<void>`
-  - `recording: Audio.Recording | null`
-* **Side-Effects**:
-  - Commands native microphone recording via `expo-audio` and updates Android permissions.
-  - Streams continuous 20Hz magnitude packages (`0x74` payload containing magnitudes mapped 0-150) to enforce the app-microphone override.
-
----
+- **`useStreetMode`**
+  - **In:** `activeMode`, `writeToDevice`, `hwSettings`, `gpsSpeed`, `peakGForce`
+  - **Out:** `motionState`, `isStreetBraking`, `applyStreetPattern`, `setStreetSensitivity`
+- **`useMusicMode`**
+  - **In:** `activeMode`, `musicPatternId`, `micSensitivity`, `micSource`, `musicMatrixStyle`, colors
+  - **Out:** `handleMusicChange` (0x73 configuration)
+- **`useAppMicrophone`**
+  - **In:** `activeMode`, `micSource`, `isPoweredOn`, `writeToDevice`
+  - **Out:** `audioMagnitude`, `hasMicPermission`, `startRecording/stopRecording`
 
 ## 5. OS Variance Matrix
+- **Web vs. Native**: `expo-sensors` (Accelerometer) in `useStreetMode.ts` and `expo-audio` in `useAppMicrophone.ts` explicitly bypass/skip on Web environments.
+- **Android/iOS BLE Rate**: `useAppMicrophone.ts` enforces a rapid 50ms (20Hz) `setInterval` to prevent the hardware from dropping back to its built-in mic.
 
-| Engine/Hook | iOS Path | Android Path | Web Fallback |
-| :--- | :--- | :--- | :--- |
-| **`useStreetMode.ts`** | Skips sensor listener if not supported; bypasses initializations. | Registers Accelerometer update loops (80ms throttle) and maps Jerk values. | Returns early; disables sensor bindings. |
-| **`useAppMicrophone.ts`** | Manages audio recordings and registers permissions via `expo-audio`. | Manages audio recordings and registers permissions via `expo-audio`. | Returns early; bypasses all native structures. |
-| **`PatternEngine` / `SpatialEngine`** | Evaluates mathematical waves identically in standard JS engine. | Evaluates mathematical waves identically in standard JS engine. | Evaluates mathematical waves identically in standard JS engine. |
+## 6. Architecture & Archival Instructions
+**ARCHIVAL INSTRUCTION**: In `docs/SK8Lytz_App_Master_Reference.md`, the documentation stating `0x41` is used for test modes 201-233 is STALE. The `PatternEngine` natively intercepts IDs 201-233 and dispatches them via `0x51`. Tag the relevant `0x41` documentation with `[MOVE_TO_ARCHIVE]`.
 
----
+**ARCHITECTURAL IMPACT FLAGS**: 
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
 
-## 6. Runtime Pattern Synchronization Pipeline
-
-The following diagram illustrates how user updates, sensor jerks, or audio volumes are converted to mathematical arrays and dispatched to the hardware:
-
+## 7. Sequence Diagram
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor User as Skater UI / Sensors
-    participant Hook as useStreetMode / useMusicMode / useAppMicrophone
-    participant PE as PatternEngine (SSOT)
-    participant SE as SpatialEngine (Math)
-    participant BLE as BleWriteQueue (FIFO Serializer)
-    participant Dev as Skates (0xA3 Chipset)
-
-    Note over User,Hook: Case A: Sensor jerk detection (Brake)
-    User->>Hook: jerMag > threshold (Accelerometer 80ms)
-    Hook->>Hook: Transition FSM to 'HARD_BRAKING'
-    Hook->>PE: buildPatternPayload(id=103, fg, bg, speed, brightness)
-
-    Note over User,Hook: Case B: App Microphone streaming (20Hz)
-    User->>Hook: Audio Amplitude (expo-audio status 50ms)
-    Hook->>Hook: Apply Exponential Moving Average (alpha=0.4)
-    Hook->>BLE: writeToDevice(0x74 magnitude byte scaled 0-150)
-
-    Note over PE,SE: Payload Building & Mathematical Routing
-    PE->>PE: Lookup Pattern Template in SK8LYTZ_TEMPLATES
-    alt Pattern is Test Pattern (201-233)
-        PE->>PE: Intercept & build 0x51 compact payload
-    else Pattern is Spatial Mode (0x59)
-        PE->>SE: getHardwarePixelArray()
-        SE->>SE: Evaluate wave math equations (chase, comet, wave)
-        SE-->>PE: Return raw RGB array
-        PE->>PE: Format 0x59 header with decoupled physical point limits
-    end
+    participant UI
+    participant PatternEngine
+    participant SpatialEngine
+    participant VisualizerEngine
+    participant BLE
     
-    PE-->>Hook: Return formatted byte payload
-    Hook->>BLE: enqueueWrite(priority, payload)
+    UI->>PatternEngine: buildPatternPayload(id, fg, bg, speed, dir)
+    PatternEngine->>SpatialEngine: getHardwarePixelArray()
+    SpatialEngine-->>PatternEngine: RGB[] mapped array
+    PatternEngine->>BLE: 0x59 Payload (or 0x51 intercepted)
     
-    Note over BLE,Dev: Queue processing & physical transmission
-    BLE->>BLE: Lock queue (_isRunning = true)
-    BLE->>Dev: Write GATT Characteristic (50ms gap between skates)
-    Dev-->>BLE: Write Acknowledged (GATT Success)
-    BLE->>BLE: Unlock queue (_isRunning = false)
+    UI->>VisualizerEngine: getVisualizerFrame(id, animTick)
+    VisualizerEngine->>SpatialEngine: generateArray(id, animTick)
+    SpatialEngine-->>VisualizerEngine: RGB[] frame
+    VisualizerEngine->>VisualizerEngine: rotateArray(animTick)
+    VisualizerEngine-->>UI: Rendered Visualizer Frame
 ```
 
----
+## 8. Domain-Specific Directives: SK8LYTZ_TEMPLATES Catalogue
 
-## 7. Pattern Template Catalog (`SK8LYTZ_TEMPLATES`)
+| ID | Name | Tier | Color Mode | Math Generator |
+|---|---|---|---|---|
+| 1 | Solid | 2 | FG_ONLY | buildSolid |
+| 2 | Split Colors | 2 | FG_BG | buildSplitColors |
+| 3 | Trisection | 2 | FG_BG | buildTrisection |
+| 4 | Quartered | 2 | FG_BG | buildQuartered |
+| 5 | Center Accent | 2 | FG_BG | buildCenterAccent |
+| 6 | Single Dot Chase | 2 | FG_BG | buildSingleDotChase |
+| 7 | Double Dot Chase | 2 | FG_BG | buildTwinDotChase |
+| 8 | Comet Chase | 2 | FG_BG | buildCometChase |
+| 9 | Meteor Shower | 2 | FG_BG | buildMeteorShower |
+| 10 | Micro Ants | 2 | FG_BG | buildMicroAnts |
+| 11 | Theater Chase | 2 | FG_BG | buildTheaterChase |
+| 12 | Dashed Marquee | 2 | FG_BG | buildDashedMarquee |
+| 13 | Bold Stripes | 2 | FG_BG | buildBoldStripes |
+| 14 | Sine Pulse Wave | 3 | FG_BG | buildSinePulseWave |
+| 15 | Wave Pinch | 3 | FG_BG | buildWavePinch |
+| 16 | Breathing Wave | 3 | FG_BG | buildBreathingWave |
+| 17 | Smooth Breath | 1 | FG_BG | Native 0x51 Intercept |
+| 18 | Wipe / Fill | 3 | FG_BG | Native 0x51 Intercept |
+| 19 | True Rainbow Flow | 3 | GENERATIVE | buildTrueRainbowFlow |
+| 20 | Rainbow Marquee | 3 | GENERATIVE | buildRainbowMarquee |
+| 21 | Rainbow Comet | 3 | GENERATIVE | buildRainbowComet |
+| 22 | Cyberpunk Shift | 3 | FG_BG | buildCyberpunkShift |
+| 23 | Color Flow | 1 | GENERATIVE | buildColorFlow |
+| 24 | Color Breathing | 1 | FG_ONLY | Native 0x51 Intercept |
+| 25 | Running Water | 1 | FG_BG | buildRunningWater |
+| 26 | Strobe Flash | 1 | FG_ONLY | Native 0x51 Intercept |
+| 27 | Ocean Wave | 1 | FG_BG | buildOceanWave |
+| 28 | Lightning Strike | 1 | FG_ONLY | buildLightning |
+| 29 | Snowfall | 1 | FG_BG | buildSnowfall |
+| 30 | Heartbeat Pulse | 1 | FG_ONLY | buildHeartbeat |
+| 31 | Meteor | 1 | FG_BG | buildMeteor |
+| 32 | Aurora Borealis | 1 | GENERATIVE | buildAurora |
+| 33 | Lava Lamp | 1 | FG_BG | buildLava |
+| 34 | Plasma Wave | 1 | FG_BG | buildPlasma |
+| 35 | Star Cluster | 1 | FG_BG | buildStarCluster |
+| 36 | Rainbow Breathing | 3 | GENERATIVE | buildRainbowBreathing |
+| 37 | Crystal Shimmer | 3 | GENERATIVE | buildCrystalShimmer |
+| 38 | Gradient Chase | 3 | FG_BG | buildGradientChase |
+| 39 | Fire Flame | 3 | FG_BG | buildFireFlame |
+| 40 | Neon Pulse | 3 | FG_BG | buildNeonPulse |
+| 41 | Rainbow Chaser | 3 | GENERATIVE | buildRainbowChaser |
+| 42 | Matrix Rain | 3 | FG_BG | buildMatrixRain |
+| 43 | Starlight | 3 | FG_BG | buildStarlight |
+| 44 | SK8Lytz Signature | 3 | FG_BG | Native 0x51 Intercept |
+| 72 | Center-Out Marquee | 3 | FG_ONLY | Native 0x51 Intercept |
+| 101 | Street Stopped | 3 | FG_BG | buildStreetMode |
+| 102 | Street Cruising | 3 | FG_BG | buildStreetMode |
+| 103 | Street Braking | 3 | FG_BG | buildStreetMode |
+| 104 | Street Slowing | 3 | FG_BG | buildStreetMode |
+| 105 | Street Accelerating | 3 | FG_BG | buildStreetMode |
+| 201-233 | Native 0x41 Parity | 1 | Mixed | Native 0x51 Intercept |
 
-Every spatial/temporal lighting pattern in `src/protocols/PatternEngine.ts` maps to specific wave algorithms and color modes:
-
-| ID | Name | Color Mode | Animation Tier | Mathematical Wave Generator / Description |
-| :---: | :--- | :--- | :---: | :--- |
-| **1** | Solid Color | `FG_ONLY` | Tier 1 | `buildColorJump` (Evaluates a solid static block representing front/back). |
-| **2** | Bold Stripes | `FG_BG` | Tier 1 | Paints repeating block segments of foreground and background colors. |
-| **3** | Slanted Chase | `FG_BG` | Tier 1 | Evaluates a scrolling square wave chase. |
-| **4** | Rainbow Wave | `GENERATIVE` | Tier 1 | `buildTrueRainbowFlow` (Algorithmic HSV sweep across the segment). |
-| **5** | Sparkle Flash | `FG_ONLY` | Tier 1 | Deterministic random sparkle indexes over a dark background. |
-| **6** | Split Colors | `FG_BG` | Tier 1 | Splits segment in half, assigning the first half to FG and second to BG. |
-| **7** | Center-Out Marquee | `FG_ONLY` | Tier 1 | Generates mirrored dots scrolling outwards from the center. |
-| **8** | Slow Glow | `FG_ONLY` | Tier 1 | A temporal breathing wave calculated over time ticks. |
-| **9** | Strobe Flash | `FG_ONLY` | Tier 1 | High-frequency flashing block toggling on/off values. |
-| **10** | Breathe Slow | `FG_BG` | Tier 1 | Temporal breathing wave transitions fading FG to BG. |
-| **11** | Color Jump | `FG_BG` | Tier 2 | Quick color jump transitions. |
-| **12** | Strobe | `FG_ONLY` | Tier 2 | High-speed strobe sequence. |
-| **13** | Single Dot Chase | `FG_BG` | Tier 2 | `buildSingleDotChase` (Single pixel chasing from start to end). |
-| **14** | Center-Out / In-Center | `FG_BG` | Tier 2 | `buildNativeCenterOut` (Symmetric center expansion). |
-| **15** | Wipe Fill | `FG_BG` | Tier 2 | `buildWipeFill` (Linear wipe covering background). |
-| **16** | Comet Chase | `FG_BG` | Tier 2 | `buildCometChase` (Chasing point with logarithmic decay trailing tail). |
-| **17** | Sine Pulse Wave | `FG_BG` | Tier 3 | `buildSinePulseWave` (A sinusoidal brightness wave moving down the strip). |
-| **18** | Dashed Marquee | `FG_BG` | Tier 2 | `buildDashedMarquee` (Alternating dashes scrolling directionally). |
-| **19** | Breathing Wave | `FG_BG` | Tier 2 | `buildBreathingWave` (Combination of chasing wave and global breathing). |
-| **20** | Meteor Shower | `FG_BG` | Tier 2 | `buildMeteorShower` (Decaying pixels that simulate falling meteors). |
-| **21** | Rainbow Marquee | `GENERATIVE` | Tier 2 | `buildRainbowMarquee` (Rainbow dots scrolling over background). |
-| **22** | Rainbow Comet | `GENERATIVE` | Tier 2 | `buildRainbowComet` (Rainbow points with decaying tails). |
-| **23** | True Rainbow Flow | `GENERATIVE` | Tier 2 | `buildTrueRainbowFlow` (Full gradient rainbow shifting across strip). |
-| **24** | Rainbow Breathing | `GENERATIVE` | Tier 2 | `buildRainbowBreathing` (Solid strip cycling through colors). |
-| **25** | Rainbow Chaser | `GENERATIVE` | Tier 2 | `buildRainbowChaser` (Chasing points cycling through HSV colors). |
-| **26** | Large Chunk Scroll | `FG_BG` | Tier 3 | `buildLargeChunkScroll` (Wide blocks of color scrolling). |
-| **27** | Gradient Chunk | `FG_BG` | Tier 3 | `buildGradientChunk` (Gradient transitions moving between blocks). |
-| **28** | Ping Pong Fill | `FG_BG` | Tier 3 | `buildPingPongFill` (Paints pixels back and forth). |
-| **29** | Ping Pong Marquee | `FG_BG` | Tier 3 | `buildPingPongMarquee` (Marquee dots bouncing at margins). |
-| **30** | Random Strobe | `FG_BG` | Tier 3 | `buildRandomStrobe` (High-frequency strobes on random offsets). |
-| **31** | Static Partial Rainbow | `GENERATIVE` | Tier 3 | `buildStaticPartialRainbow` (A fixed segment of the HSV rainbow). |
-| **32** | Tetris Stacker | `GENERATIVE` | Tier 3 | `buildTetrisStacker` (Simulates stacking blocks at the margins). |
-| **33** | Alternating Comet | `FG_BG` | Tier 3 | `buildAlternatingComet` (Two comets flowing in opposite directions). |
-| **34** | Ping Pong Center Fill | `GENERATIVE` | Tier 3 | `buildPingPongCenterFill` (Wipe animations moving center-out). |
-| **35** | Custom Array Scroll | `FG_BG` | Tier 3 | `buildCustomArrayScroll` (Custom structures scrolling across limits). |
-| **36** | Glitch Marquee | `FG_BG` | Tier 3 | `buildGlitchMarquee` (Adds structural noise interrupts to scrolling marquees). |
-| **37** | Micro Ants | `FG_BG` | Tier 3 | `buildMicroAnts` (Very small color blocks chasing rapidly). |
-| **38** | Wipe Center-Out | `FG_BG` | Tier 3 | `buildWipeCenterOut` (Center out wipe animation). |
-| **39** | Fire Flame | `FG_BG` | Tier 3 | `buildFireFlame` (Simulates fire flicker using thermal color maps). |
-| **40** | Cyberpunk Shift | `FG_BG` | Tier 3 | Alternates colors dynamically in cyberpunk color pairs. |
-| **41** | Aurora Borealis | `GENERATIVE` | Tier 3 | Smoothly cycles generative colors mimicking aurora waves. |
-| **42** | Neon Glitch | `FG_BG` | Tier 3 | Introduces color-shifting neon dropouts. |
-| **43** | Lightning Strike | `FG_ONLY` | Tier 3 | Sudden flashes on top of a dark background with exponential decay. |
-| **101** | Street Stopped | `FG_BG` | Tier 3 | Solid red tail-lights indicating a stop state. |
-| **102** | Street Cruising | `FG_BG` | Tier 3 | Standard orange cruising configuration. |
-| **103** | Street Braking | `FG_BG` | Tier 3 | Hard red flash representing braking action. |
-| **104** | Street Slowing Down | `FG_BG` | Tier 3 | Solid amber indicators for speed drop. |
-| **105** | Street Accelerating | `FG_BG` | Tier 3 | Active yellow cascade patterns indicating acceleration push. |
-| **201–233** | Multimode Pro Test | Varies | Special | Compact `0x51` transitions mirroring native Symphony effects 1-33. |
-
----
-
-## 8. Stale Documentation Audit
-
-Stale documentation sections identified on disk are marked for archiving:
-
-1. **`0x41` Settled Mode Table Row (tools/SK8Lytz_App_Master_Reference.md#L802)**:
-   * *Status*: `
-## 9. Architectural Impact Flags
-
-- `[IMPACTS_USER_JOURNEY]` — Streamed microphone magnitudes at 20Hz directly drive physical lighting states. The app-microphone overrides the hardware microphone, meaning delays or drops in magnitude packets will affect user immersion.
-- `[IMPACTS_STATE_CHART]` — The Street Mode FSM defined in `useStreetMode.ts` dictates how spatial layout patterns change in response to real-time physical accelerometer data. 
-
----
-*Document Compiled by Scout — Reyes (2026-06-13)*
 
 <!-- CARTOGRAPHER_END: PATTERN_ENGINE -->
 
 ### Domain: CLOUD_FUNCTIONS
 <!-- CARTOGRAPHER_START: CLOUD_FUNCTIONS -->
 
-# CLOUD_FUNCTIONS Domain Cartography Report
-
-This cartography report details the file manifest, imports/exports (Blast Radius), React Context dependencies, API parameters, OS-specific differences, runtime synchronization pipeline sequence, security hardening audits, and stale documentation targets for the `CLOUD_FUNCTIONS` domain in SK8Lytz.
-
----
+# 🗺️ CLOUD_FUNCTIONS Cartography
 
 ## 1. File Manifest
+**Edge Functions (`supabase/functions/`):**
+- `notify-crew-session/index.ts`
 
-The `CLOUD_FUNCTIONS` domain consists of PostgreSQL database migrations, a Deno Edge Function, and client-side integration services that bridge offline storage buffers to the Supabase backend.
+**Database Migrations (`supabase/migrations/`):**
+- 51 SQL files covering schema setup, telemetry, RLS hardening, admin tools, and SK8Lytz-specific fields. Notable recent files:
+  - `20260614000000_harden_rls_scraper_blocklist.sql` (Latest)
+  - `20260609175500_restore_domain_admin_promotion.sql`
+  - `20260609140000_live_debugger_views.sql`
 
-### Server-Side Edge Functions
-
-* **`supabase/functions/notify-crew-session/index.ts`**
-  * *Architectural Purpose*: A Deno Edge Function that authenticates requests using GoTrue JWT verification and dispatches push notifications via the Expo Push API to members of a crew session.
-
-### Database Migrations
-
-* **`supabase/migrations/20260413_hardening_sweep.sql`**
-  * *Architectural Purpose*: Configures base Row-Level Security (RLS) policies and performance indexes across core profile, session, and device tables.
-* **`supabase/migrations/20260414111600_add_factory_name.sql`**
-  * *Architectural Purpose*: Adds a `factory_name` string column to the `registered_devices` database table.
-* **`supabase/migrations/20260414_account_deletion_rpc.sql`**
-  * *Architectural Purpose*: Exposes a secure `delete_account()` SECURITY DEFINER function to handle cascading user account deletions from `auth.users`.
-* **`supabase/migrations/20260414_consolidate_telemetry.sql`**
-  * *Architectural Purpose*: Creates a consolidated `telemetry_snapshots` logging table with a GIN index on metadata and drops old telemetry tables.
-* **`supabase/migrations/20260417_add_skate_spot_id.sql`**
-  * *Architectural Purpose*: Introduces `skate_spot_id` as a foreign key on the `skate_sessions` table.
-* **`supabase/migrations/20260417_cleanup_stale_skate_spots.sql`**
-  * *Architectural Purpose*: Sets up background cleanup operations to remove unverified skate spots inactive for over 30 days.
-* **`supabase/migrations/20260418041100_add_unique_mac.sql`**
-  * *Architectural Purpose*: Restricts `registered_devices` with a unique constraint on the `device_mac` address.
-* **`supabase/migrations/20260418044500_normalize_macs_and_dedupe.sql`**
-  * *Architectural Purpose*: Cleans, deduplicates, and normalizes existing MAC address strings to uppercase format.
-* **`supabase/migrations/20260418045900_add_missing_delete_policies.sql`**
-  * *Architectural Purpose*: Adds user delete capabilities under RLS for profiles, devices, sessions, and presets.
-* **`supabase/migrations/20260418051400_add_osm_tags_to_skate_spots.sql`**
-  * *Architectural Purpose*: Adds an `osm_tags` JSONB column to the `skate_spots` table to store OpenStreetMap key-value tags.
-* **`supabase/migrations/20260418051700_add_rink_specific_osm_tags.sql`**
-  * *Architectural Purpose*: Configures rink/park specific OSM filtering settings and helper properties.
-* **`supabase/migrations/20260418054000_cultural_daemon_setup.sql`**
-  * *Architectural Purpose*: Declares database structures to coordinate background cultural daemon sync logs and processes.
-* **`supabase/migrations/20260418061000_admin_user_management.sql`**
-  * *Architectural Purpose*: Adds roles, bans, user profile columns, `admin_audit_logs` schema, and security definer functions for admin moderation.
-* **`supabase/migrations/20260418062000_build_daemon_telemetry.sql`**
-  * *Architectural Purpose*: Sets up the `daemon_status` table to track status, metrics, and timestamps of background scrapers.
-* **`supabase/migrations/20260418105200_daemon_status_anon_rls.sql`**
-  * *Architectural Purpose*: Enables public SELECT access to the `daemon_status` records.
-* **`supabase/migrations/20260419034021_scraper_control_plane.sql`**
-  * *Architectural Purpose*: Establishes the `scraper_config` table for dynamic scraper parameter adjustments.
-* **`supabase/migrations/20260419093454_state_override_array.sql`**
-  * *Architectural Purpose*: Integrates a state override array in `scraper_config` to bound geographical operations.
-* **`supabase/migrations/20260419100000_scraper_evasion_config.sql`**
-  * *Architectural Purpose*: Configures rotation limits, user agents, and evasion properties in `scraper_config`.
-* **`supabase/migrations/20260419110000_gold_standard_columns.sql`**
-  * *Architectural Purpose*: Appends verification status, quality flags, and metadata fields to `skate_spots`.
-* **`supabase/migrations/20260419120000_cultural_enrichment_v2.sql`**
-  * *Architectural Purpose*: Extends metadata tag tracking for enriched spots in the database.
-* **`supabase/migrations/20260419130000_multi_state_support.sql`**
-  * *Architectural Purpose*: Enables location processing and parsing across multiple geographical states.
-* **`supabase/migrations/20260419140000_enrichment_retry_logic.sql`**
-  * *Architectural Purpose*: Adds failure metrics and retry counters to the scraper sync queue schemas.
-* **`supabase/migrations/20260419150000_decouple_queue_logic.sql`**
-  * *Architectural Purpose*: Decouples scrape queue state from spatial location definitions for better concurrency.
-* **`supabase/migrations/20260419160000_micro_scraper_schema.sql`**
-  * *Architectural Purpose*: Registers table tracking structures for transient micro-scraper instance states.
-* **`supabase/migrations/20260419170000_phase3_heuristic_fields.sql`**
-  * *Architectural Purpose*: Incorporates scoring and heuristic fields inside the `skate_spots` table.
-* **`supabase/migrations/20260419183000_add_google_premium_fields.sql`**
-  * *Architectural Purpose*: Incorporates Google Places and Google premium API field integration to `skate_spots`.
-* **`supabase/migrations/20260424171000_create_app_settings.sql`**
-  * *Architectural Purpose*: Establishes the key-value `sk8lytz_app_settings` table to govern dynamic application toggles.
-* **`supabase/migrations/20260426000000_ai_detective_config.sql`**
-  * *Architectural Purpose*: Configures prompt directives and parameters for AI-driven spot validation.
-* **`supabase/migrations/20260426120000_pipeline_telemetry.sql`**
-  * *Architectural Purpose*: Adds execution metric tables for the scraper data processing pipelines.
-* **`supabase/migrations/20260426200000_phase_control_panels.sql`**
-  * *Architectural Purpose*: Implements phase blocklists, panel settings, and logs schema for scraper operations.
-* **`supabase/migrations/20260506000000_admin_tools_expansion.sql`**
-  * *Architectural Purpose*: Expands command controls with the `hardware_blacklist` and `feature_flags` tables.
-* **`supabase/migrations/20260506000001_god_tier_telemetry.sql`**
-  * *Architectural Purpose*: Implements the `user_lifetime_stats` table and the batch `flush_telemetry` RPC.
-* **`supabase/migrations/20260512014730_add_health_telemetry.sql`**
-  * *Architectural Purpose*: Registers schema tables for system and client hardware health reports.
-* **`supabase/migrations/20260512180000_fix_admin_revoke_and_promotion_security.sql`**
-  * *Architectural Purpose*: Hardens role modification routines through security definer scopes and exact email constraints.
-* **`supabase/migrations/20260526190000_supabase_security_hardening.sql`**
-  * *Architectural Purpose*: Locks down schemas with explicit `search_path = public` definitions on functions and limits public insert permissions.
-* **`supabase/migrations/20260606205739_add_notif_preferences_to_user_profiles.sql`**
-  * *Architectural Purpose*: Appends a JSONB `notif_preferences` field to user profiles to support notification preferences.
-* **`supabase/migrations/20260607000000_add_gold_standard_telemetry_columns.sql`**
-  * *Architectural Purpose*: Introduces core high-precision verification fields to telemetry structures.
-* **`supabase/migrations/20260607095016_fix_telemetry_schema.sql`**
-  * *Architectural Purpose*: Empty migration file generated during a schema refactoring sweep.
-* **`supabase/migrations/20260607100000_fix_telemetry_schema.sql`**
-  * *Architectural Purpose*: Incorporates `user_id` inside `telemetry_snapshots` and adds merge routing routines in `flush_telemetry`.
-* **`supabase/migrations/20260607101500_telemetry_type_fix.sql`**
-  * *Architectural Purpose*: Empty migration to satisfy type validation checks for telemetry columns.
-* **`supabase/migrations/20260608000000_sk8lytz_security_hardening.sql`**
-  * *Architectural Purpose*: Imposes defensive RLS activations across 22 distinct application tables.
-* **`supabase/migrations/20260609000000_crash_telemetry.sql`**
-  * *Architectural Purpose*: Defines the `crash_telemetry` table and sets up realtime synchronization channels.
-* **`supabase/migrations/20260609020000_add_builder_fields.sql`**
-  * *Architectural Purpose*: Adds fields for custom preset and animation builder controls.
-* **`supabase/migrations/20260609030000_add_fixed_direction.sql`**
-  * *Architectural Purpose*: Establishes columns for directional animation metadata.
-* **`supabase/migrations/20260609040000_add_skate_session_coords.sql`**
-  * *Architectural Purpose*: Configures GPS tracking and coordinate logs inside `skate_sessions`.
-* **`supabase/migrations/20260609050000_drop_active_calories.sql`**
-  * *Architectural Purpose*: Drops the deprecated `active_calories` column from `skate_sessions`.
-* **`supabase/migrations/20260609050000_get_all_devices_rpc.sql`**
-  * *Architectural Purpose*: Implements the `get_all_registered_devices()` RPC for administrators to pull hardware details bypassing RLS.
-* **`supabase/migrations/20260609130000_app_settings_visibility.sql`**
-  * *Architectural Purpose*: Seed unified feature visibility keys and clean legacy keys in `sk8lytz_app_settings`.
-* **`supabase/migrations/20260609140000_live_debugger_views.sql`**
-  * *Architectural Purpose*: Exposes the `view_crash_aggregates` view and the `resolve_crash_signature()` RPC.
-* **`supabase/migrations/20260609175500_restore_domain_admin_promotion.sql`**
-  * *Architectural Purpose*: Restores wildcard auto-promotion trigger for `@sk8lytz.com` and `@neogleamz.com`.
-
----
-
-## 2. Blast Radius (Dependency Graph)
-
-The `CLOUD_FUNCTIONS` domain sits at the boundary between React Native execution and cloud persistence. Modifications to schema structures, database permissions, or client configuration parameters have broad ramifications:
-
-```
-                          ┌────────────────────────┐
-                          │   Supabase Client /    │
-                          │   Auth & RLS Schemas   │
-                          └───────────┬────────────┘
-                                      │
-           ┌──────────────────────────┼──────────────────────────┐
-           ▼                          ▼                          ▼
- ┌───────────────────┐      ┌───────────────────┐      ┌───────────────────┐
-  │   AppLogger.ts    │      │  ScenesService    │      │  SpeedTracking    │
-  │ (System telemetry │      │  (Custom patterns │      │  (Skate sessions  │
-  │  & error dumps)   │      │   & scene sharing)│      │   & stats sync)   │
-  └─────────┬─────────┘      └─────────┬─────────┘      └─────────┬─────────┘
-            │                          │                          │
-            └──────────────────────────┼──────────────────────────┘
-                                      ▼
-                        ┌──────────────────────────┐
-                        │ useOfflineSyncWorker.ts  │
-                        │ (Queue processing loop)  │
-                        └─────────────┬────────────┘
-                                      │
-                                      ▼
-                        ┌──────────────────────────┐
-                        │   AsyncStorage Buffers   │
-                        │  (Local Offline State)   │
-                        └──────────────────────────┘
-```
-
-### Imports (Incoming Dependencies)
-* **Deno / Server-Side standard modules**: Imports edge runtime bindings (`@supabase/functions-js/edge-runtime`) and standard JS utilities (`@supabase/supabase-js`).
-* **Database engine dependencies**: References relational tables and security variables within schemas (`auth.uid()`, `auth.users`, etc.).
-* **Client-Side libraries**: `@supabase/supabase-js`, `expo-secure-store`, `react-native-url-polyfill`, `react-native` network state managers.
-
-### Exports (Outgoing Consumers)
-* **REST API Endpoints**: Edge functions (e.g. `notify-crew-session`) expose HTTP endpoints that are called directly from React Native handlers.
-* **Database Access Structures**: Database RPC functions (`delete_account`, `flush_telemetry`, etc.) and views (`view_crash_aggregates`) are executed client-side.
-* **Client Integration Services**:
-  * `supabaseClient.ts`: Instantiates connection.
-  * `useOfflineSyncWorker.ts`: Flushes saved presets, logged telemetry snapshot batches, and cached skate sessions when network connectivity is restored.
-  * `AppLogger.ts`: Writes system log lists to `telemetry_snapshots` and triggers instant direct dispatches of exceptions to `telemetry_errors`.
-
----
+## 2. Blast Radius
+- **`notify-crew-session` Edge Function:**
+  - **Downstream:** Calls `https://exp.host/--/api/v2/push/send`. Affects all devices registered in the `push_tokens` table for a given `crew_id` (excluding the leader).
+  - **Dependencies:** Supabase Auth (GoTrue for server-side JWT verification), `crew_memberships` table (authorization validation), and `push_tokens` table.
+- **Migrations:** Dictate the entire Postgres schema, RLS policies, and RPC definitions consumed by the React Native client (via PostgREST). Any syntax/logic error in these will break DB instantiation or client reads/writes globally.
 
 ## 3. Context Matrix
-
-The PostgreSQL and Deno engines run state-free relative to the React execution thread. However, they establish and feed state constraints to client contexts:
-
-| React Context | Consumed / Provided | Purpose |
-| :--- | :--- | :--- |
-| `AuthContext` (`useAuth`) | **Provided** by persistent session | Hydrates the local auth session, exposes verified profile credentials, and toggles `isOfflineMode` if connection queries fail. |
-| `SessionContext` (`useSession`) | **Consumed** during logging | Integrates live location coordinates and health metrics with the `SpeedTrackingService` before final session packaging and DB upload. |
-
----
+| Environment | Runtime | Security Boundary |
+|-------------|---------|-------------------|
+| **Edge Functions** | Deno (Supabase Edge Runtime) | Requires Bearer JWT in `Authorization` header. Server-side verification via `supabase.auth.getUser()`. |
+| **Migrations** | PostgreSQL 15+ | Applied during Supabase deployment. Defines RLS rules and triggers executed under database roles (`authenticated`, `anon`, `service_role`). |
 
 ## 4. Hook/Service I/O Registry
-
-### `notify-crew-session` Edge Function
-* **Inputs**:
-  * Request Headers: `Authorization: Bearer <JWT>`
-  * Request Body:
-    ```typescript
-    interface NotifyPayload {
-      crewId: string;
-      sessionId: string;
-      sessionName: string;
-      leaderName: string;
-    }
-    ```
-* **Outputs**:
-  * Success: HTTP 200 `{ sent: number }`
-  * Error states: HTTP 400 (Bad parameters / JSON), HTTP 401 (Unauthorized JWT), HTTP 403 (Caller is not in the crew), HTTP 405 (Wrong HTTP method).
-* **Side-Effects**: Calls GoTrue server-side to resolve caller profile. Inspects members in `crew_memberships` and maps tokens from `push_tokens`. Batches notifications of up to 100 entries and pushes to the Expo API endpoint.
-
-### `flush_telemetry` Database RPC
-* **Inputs**: `payload JSONB` containing user statistics (durations, speeds, distances) and telemetry usage map objects.
-* **Outputs**: `void`
-* **Side-Effects**: Resolves the user identifier via `auth.uid()`. Inserts or updates counters, speeds, and merges JSONB values inside `user_lifetime_stats`.
-
-### `delete_account` Database RPC
-* **Inputs**: None.
-* **Outputs**: `void`
-* **Side-Effects**: Shreds the record in `auth.users` matching `auth.uid()`, cascading delete operations across profiles, telemetry snapshots, and sessions.
-
-### `resolve_crash_signature` Database RPC
-* **Inputs**: `target_signature TEXT`, `resolver_id UUID`.
-* **Outputs**: `void`
-* **Side-Effects**: Updates all matching records in `crash_telemetry` table status flags to `'RESOLVED'`.
-
-### `get_all_registered_devices` Database RPC
-* **Inputs**: None.
-* **Outputs**: `SETOF registered_devices`
-* **Side-Effects**: Bypasses the default Row-Level Security rules to return the master listing of registered hardware.
-
----
+### `notify-crew-session`
+- **Input:** `POST` request with JSON body `{ crewId, sessionId, sessionName, leaderName }` + `Authorization: Bearer <JWT>`.
+- **Validation:** 
+  1. Validates JWT via GoTrue server-side.
+  2. Ensures caller exists in `crew_memberships` for `crewId`.
+- **Output:** `JSON { sent: number }` (or error object on failure with status `400/401/403/500`).
+- **Side-Effects:** Generates Expo push notification payloads and sends them in batches of 100 to Expo servers.
 
 ## 5. OS Variance Matrix
+| OS | Variance / Constraints |
+|----|------------------------|
+| **Android** | `notify-crew-session` payload explicitly forces `channelId: "crew-alerts"`. Android 8.0+ will fail to render push notifications if the app client does not create the matching channel locally. |
+| **iOS** | Standard APNs handling via Expo. No specific notification channel strings required. |
 
-Although migrations and server-side edge functions execute in remote OS environments, client-side wrappers must adapt behaviors to OS specifics:
+## Sequence Diagram
+```mermaid
+sequenceDiagram
+    participant App as React Native App (Leader)
+    participant Edge as Edge Function (notify-crew-session)
+    participant Auth as Supabase GoTrue
+    participant DB as Supabase DB
+    participant Expo as Expo Push API
+    participant Member as React Native App (Members)
 
-* **Push Notification Targets**:
-  * **Android**: The `notify-crew-session` payload explicitly forces `channelId: 'crew-alerts'` parameters. Android 8.0+ fails to render push notifications if the declared channel does not match a created client channel.
-  * **iOS**: Ignores channel parameters, routing alerts directly to standard Apple APNs alerts and sound notifications.
-* **Credential Secure Storage**:
-  * **Android**: `SecureStoreAdapter` routes JWT storage triggers to KeyStore storage frameworks on Android.
-  * **iOS**: Stores variables securely using Keychain.
-* **Workout Sync Integrations**:
-  * **Android**: Flushes session data from `skate_sessions` to Google Health Connect using target `ExerciseSession` structures.
-  * **iOS**: Syncs session metrics into Apple HealthKit under the `SkatingSports` category.
+    App->>Edge: POST /functions/v1/notify-crew-session (JWT, Session Data)
+    Edge->>Auth: supabase.auth.getUser(JWT)
+    Auth-->>Edge: User Object
+    Edge->>DB: Check crew_memberships (is caller in crew?)
+    DB-->>Edge: Access Granted
+    Edge->>DB: Select push_tokens for crew_id (exclude caller)
+    DB-->>Edge: List of Push Tokens
+    Edge->>Expo: POST https://exp.host/--/api/v2/push/send (Batches of 100)
+    Expo-->>Edge: Status OK
+    Edge-->>App: { sent: X }
+    Expo->>Member: Push Notification "🛼 Crew is Live!"
+```
 
----
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
 
-## 6. Stale Documentation Targets
-
-The following stale details in `tools/SK8Lytz_App_Master_Reference.md` are marked for archival:
-
-### `
-## 7. Architectural Impact Flags
-
-* `[IMPACTS_DATA_SCHEMA]` — PostgreSQL migrations directly structure and extend tables (coordinates in `skate_sessions`, custom preset parameters, `crash_telemetry`).
-* `[IMPACTS_SECURITY_RLS]` — Implements Row-Level Security rules across 22+ active schema tables, locks down promotion triggers, and configures `SECURITY DEFINER` function scopes with explicit search paths.
-* `[IMPACTS_REMOTE_EXEC]` — Integrates the remote Deno V8 environment to execute JWT authorizations and push notifications through the Expo Push API.
 
 <!-- CARTOGRAPHER_END: CLOUD_FUNCTIONS -->
 
@@ -5470,310 +2902,67 @@ The following stale details in `tools/SK8Lytz_App_Master_Reference.md` are marke
 
 # 🗺️ Codebase Cartography: THEME_&_ASSETS Domain
 
-This documentation provides a comprehensive architectural map of the `THEME_&_ASSETS` domain in the SK8Lytz codebase, detailing functional boundaries, dependencies, state management, design tokens, visual assets, and platform adaptations.
+## 1. File Manifest
+- **`src/theme/theme.ts`**: Core design system definitions. Contains `DarkColors`, `LightColors`, typography mappings (`Righteous` font), spacing grid, unified layout tokens, and platform-specific `Shadows`/`TextShadows` generation.
+- **`src/styles/DashboardStyles.ts`**: The unified StyleSheet for the primary Dashboard module. Contains 4-slab structural layout styles, glassy gradient layers, absolute-positioned badges, dynamic color mappings (`getPatternColors`), and platform-aware fluid scaling (`windowHeight`, `windowWidth`).
+- **`src/constants/AppConstants.ts`**: High-level application constants, containing `STORAGE_PREFIX` and `HW_SPEED_MAX`.
+- **`src/constants/ControlsRegistry.ts`**: Defines the central `CONTROLS_REGISTRY` matrix for application toggles and admin settings, covering Governance, Hardware, Behavior, and DangerZone modules with explicit `riskLevel` values.
+- **`src/constants/bleTimingConstants.ts`**: Centralized empirical timing constants for the BLE GATT pipeline (`STALE_FLUSH_SETTLE_MS`, `WRITE_DEBOUNCE_MS`, etc.) calibrated against the ZENGGE 0xA3 chipset to prevent Android buffer overflows.
+- **`src/constants/storageKeys.ts`**: The SSOT registry for all `AsyncStorage` string keys ensuring namespace parity and offline cache targeting across auth, device configs, telemetry, and scenes.
+- **`src/assets/images/*`**: Root binary directory containing 38 `banner*.png` marketing assets, plus subdirectories `music_modes`, `music_scene`, `presets`, `screen`, `screen_light_horizontal`, `zengge_patterns`.
 
----
+## 2. Blast Radius
+- **High Risk**: Modifying `src/constants/bleTimingConstants.ts`. A 10ms variance here can cascade into `GATT 133` exceptions and buffer lockouts across the entire Android fleet.
+- **High Risk**: Altering keys in `src/constants/storageKeys.ts` without providing a migration utility will instantly orphan local user configurations, offline skate session caches, and authenticated Supabase sessions.
+- **Medium Risk**: Changing spatial variables in `src/theme/theme.ts` or `src/styles/DashboardStyles.ts` breaks the fluid design boundaries and iOS/Android Safe Area integrations.
 
-## 1. 🗂️ Domain Manifest & Structural Boundaries
+## 3. Context Matrix
+- **`ThemeContext`**: Consumers (`useTheme`) map directly to `Colors.background`, `Colors.surface`, and dynamic dimension attributes originating from `theme.ts` and `DashboardStyles.ts`.
+- **`BLEContext`**: Depends heavily on `bleTimingConstants.ts` to orchestrate XState timing cycles for recovery, discovery, and MTU handshakes.
+- **`Offline / Auth Contexts`**: Read and write heavily against `storageKeys.ts` constants (e.g., `STORAGE_OFFLINE_SKIP`, `STORAGE_SUPABASE_AUTH_KEY`).
 
-A detailed map of all source files in the `THEME_&_ASSETS` domain, including their functional scope, import/export dependency chains, state variables, and core operations.
+## 4. Hook/Service I/O Registry
+- **Input/Output**: `createDashboardStyles(Colors, windowHeight, windowWidth)` → Generates dimension-aware StyleSheet mapping.
+- **Input/Output**: `getPatternColors(patternName, Colors)` → Translates string pattern identifiers (e.g., "fire", "nebula") into tuple-based hex gradient stops.
+- **Service Dependency**: The `BleWriteDispatcher` directly consumes `BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS` and `WRITE_DEBOUNCE_MS` to pace TX bursts.
 
-### 📄 `src/theme/theme.ts`
-* **Functional Scope:** Centralizes the design tokens (typography, color palettes, spacing, border radii) and platform-specific shadow/glow generators to ensure visual coherence across the SK8Lytz application.
-* **Import Dependency Chain:**
-  - `Platform`, `ViewStyle`, `TextStyle` from `react-native`
-* **Export Dependency Chain:**
-  - `ThemePalette` (Type definition based on `DarkColors`)
-  - `DarkColors` (Brand dark palette object)
-  - `LightColors` (Brand light palette object)
-  - `Colors` (Default alias pointing to `DarkColors`)
-  - `Typography` (Font sizes, weights, and family settings)
-  - `Spacing` (Padding and margin sizing system)
-  - `Layout` (Theme-wide padding and border radius constants)
-  - `Shadows` (Object containing `soft`, `medium`, and `glow` view shadow builders)
-  - `TextShadows` (Object containing `glow` text shadow builder)
-* **State Managed:** None (static token declarations).
-* **Core Exported Properties:**
-  - Typography configurations enforcing the `Righteous` font family.
-  - Platform-adaptive shadows resolving to native iOS shadow metrics, Android elevations, or Web text-shadow CSS strings.
-
-### 📄 `src/styles/DashboardStyles.ts`
-* **Functional Scope:** Generates dynamic, responsive layout styles for the main dashboard interface and provides utility functions to map pattern names to premium color gradients.
-* **Import Dependency Chain:**
-  - `StyleSheet` from `react-native`
-  - `ThemePalette`, `Layout`, `Spacing` from `../theme/theme`
-* **Export Dependency Chain:**
-  - `getPatternColors` (Utility function)
-  - `createDashboardStyles` (StyleSheet factory function)
-* **State Managed:** Stateless generator. Consumes dynamic dimension boundaries (`windowHeight`, `windowWidth`) and active color mappings (`ThemePalette`) from call parameters.
-* **Core Operations:**
-  - `getPatternColors`: Analyzes pattern names for keywords like `'fire'`, `'water'`, or `'neon'` to return corresponding gradient color arrays.
-  - `createDashboardStyles`: Renders viewport-size-adaptive margins, padding, and spacers dynamically adapting the UI layout when height bounds fall below 720px or 640px.
-
-### 📄 `src/constants/AppConstants.ts`
-* **Functional Scope:** Defines application-wide, system-level configuration constants.
-* **Import Dependency Chain:** None (isolated leaf node).
-* **Export Dependency Chain:**
-  - `STORAGE_PREFIX` (Global local storage namespace prefix)
-  - `HW_SPEED_MAX` (Global hardware speed limit)
-* **State Managed:** None (static values).
-* **Core Constants:**
-  - `STORAGE_PREFIX`: `@Sk8lytz_`
-  - `HW_SPEED_MAX`: `100` (Empirically verified bounds for `0x59` opcode speed controls)
-
-### 📄 `src/constants/ControlsRegistry.ts`
-* **Functional Scope:** Registers the static metadata, type structures, risk boundaries, and safety validation messages that construct settings items inside the Admin Command Center.
-* **Import Dependency Chain:** None (isolated leaf node).
-* **Export Dependency Chain:**
-  - `ControlRiskLevel` (Type union: `'normal' | 'warning' | 'danger'`)
-  - `ControlType` (Type union: `'switch' | 'action' | 'number_stepper'`)
-  - `ControlEntry` (Interface mapping registry parameters)
-  - `CONTROLS_REGISTRY` (Static registry mapping settings items under `Governance`, `Hardware`, `Behavior`, and `DangerZone` categories)
-* **State Managed:** None (static metadata definition).
-* **Core Constants:**
-  - Defines admin flags including `global_crew_hub_locked`, `hw_setup_rssi_threshold`, `global_optimistic_ui_enabled`, and `required_eula_version`.
-
-### 📄 `src/constants/bleTimingConstants.ts`
-* **Functional Scope:** Centralizes the empirical timing delays, retry intervals, and write throttles required to prevent packet collisions and GATT lockouts in Android's Bluetooth stacks.
-* **Import Dependency Chain:** None (isolated leaf node).
-* **Export Dependency Chain:**
-  - `BLE_TIMING` (Static delays configuration object)
-  - `BleTiming` (Type derived from `BLE_TIMING`)
-* **State Managed:** None (static constants).
-* **Core Constants:**
-  - Gaps and settle times like `INTER_DEVICE_WRITE_GAP_MS` (50ms) and `WRITE_CHUNK_INTER_GAP_MS` (8ms) derived via hardware validation profiles to prevent GATT 133 collisions.
-
-### 📄 `src/constants/storageKeys.ts`
-* **Functional Scope:** Houses the comprehensive index of local AsyncStorage key string literals to ensure strict namespace governance and prevent key collisions.
-* **Import Dependency Chain:** None (isolated leaf node).
-* **Export Dependency Chain:**
-  - Individual exported string key constants (e.g. `STORAGE_EULA_ACCEPTED`, `PENDING_SESSION_QUEUE_KEY`, `CONFIGS_KEY`, etc.).
-* **State Managed:** None (static namespace registry).
-* **Core Constants:**
-  - Maps 25 storage keys (e.g., `STORAGE_OFFLINE_SKIP`, `STORAGE_SCENES_CACHE`, `STORAGE_AUTO_PAUSE_ENABLED`, `APP_LOGGER_STORAGE_KEY`).
-
-### 📁 `src/assets/` Directory Assets
-* **Functional Scope:** Houses the visual asset resources of the application.
-* **Sub-directories & Contents:**
-  - `src/assets/images/music_modes/`: 38 static PNG banners mapped to specific frequency bands.
-  - `src/assets/images/zengge_patterns/`: Asset backdrops for the pattern wizard and scene catalog, partitioned into `music_scene/` (12 PNGs), `presets/` (70 JPGs), `screen/` (29 PNG overlays), and `screen_light_horizontal/` (10 PNGs).
-* **Scope Exception:**
-  - `src/constants/ProductCatalog.ts` is explicitly excluded from this audit scope by direct system instruction.
-
----
-
-## 2. 💥 Architectural Impact & Blast Radius
-
-The ingress (imports) and egress (exports) mapping of this domain reveals its dependency footprint across the codebase:
-
-```mermaid
-graph TD
-    %% Define Nodes
-    RN[react-native]
-    Theme[theme.ts]
-    Styles[DashboardStyles.ts]
-    AppConsts[AppConstants.ts]
-    ControlsReg[ControlsRegistry.ts]
-    BleTiming[bleTimingConstants.ts]
-    StorageKeys[storageKeys.ts]
-
-    %% Inward Imports
-    RN --> Theme
-    RN --> Styles
-    Theme --> Styles
-
-    %% Outward Consumers
-    Theme --> ThemeContext[ThemeContext.tsx]
-    ThemeContext --> UI[70+ UI Components / Screens]
-    Styles --> DashboardScreen[DashboardScreen.tsx]
-    AppConsts --> NormalizationUtils[NormalizationUtils.ts]
-    AppConsts --> Presets[QuickPresetModal.tsx, useFavorites.ts]
-    ControlsReg --> AppManager[AppManager.tsx]
-    BleTiming --> BLE[BLE services: dispatcher, connect, recovery]
-    StorageKeys --> StorageConsumers[23+ consumers: contexts, storage hooks, logger]
-```
-
-### Inward Imports (Dependencies)
-The `THEME_&_ASSETS` domain is highly decoupled, importing only fundamental framework types:
-* **`react-native`**: Imports `Platform`, `StyleSheet`, `ViewStyle`, and `TextStyle` to resolve native platform selects and compile-time styling rules.
-* **Local Imports**: `DashboardStyles.ts` references the base `ThemePalette`, `Layout`, and `Spacing` tokens from `../theme/theme.ts`.
-
-### Outward Consumers (Exports & Usage)
-* **`src/theme/theme.ts`**: Consumed by over 70 visual modules, screens, and modals (e.g. `DockedController.tsx`, `AccountModal.tsx`, `TacticalSlider.tsx`, `VisualizerUnit.tsx`) to pull static styling attributes (`Spacing`, `Colors`, `Typography`, `Shadows`).
-* **`src/styles/DashboardStyles.ts`**: Imported by the parent `DashboardScreen.tsx` to instantiate responsive, screen-size-dependent styles dynamically.
-* **`src/constants/storageKeys.ts`**: Widely referenced across all core application layers:
-  * **Auth Context & Profile Hooks**: Pulls credentials flags and email cache markers.
-  * **BLE Services**: Resolves device cache ledgers and background telemetry queues.
-  * **Sync Services**: Accesses scenes, spots, and pending session queues.
-* **`src/constants/bleTimingConstants.ts`**: Imported by `ConnectService.ts`, `RecoveryService.ts`, `BleWriteDispatcher.ts`, and `Sk8LytzProgrammer.tsx` to align write throttles and retry backoffs.
-* **`src/constants/ControlsRegistry.ts`**: Consumed by the admin `AppManager.tsx` to compile the interactive diagnostics settings tree.
-* **`src/constants/AppConstants.ts`**: Imported in `NormalizationUtils.ts` to bound user speed inputs.
-
----
-
-## 3. 🕸️ Context Matrix
-
-While the files inside this domain export static data, they directly feed the runtime state management governed by `ThemeContext.tsx` (`src/context/ThemeContext.tsx`):
-
-* **Provided Contexts**:
-  - `ThemeContext`: Provides dynamic theme values and states (`Colors`, `isDark` boolean, `toggleTheme()`, `controlUITheme` select, and `toggleControlUITheme()`).
-* **Consumed Contexts**:
-  - None.
-* **Storage Interlock**:
-  - The context reads and writes the following keys:
-    - `@Sk8lytz_ThemeMode` (persisted theme state: `'dark' | 'light'`)
-    - `@Sk8lytz_ControlUITheme` (persisted layout variant: `'CLASSIC' | 'MODERN' | 'DOCKED'`)
-
----
-
-## 4. 🔌 I/O Registry & Functional Interfaces
-
-Although this domain lacks stateful React Hooks or Class-based Services, it exposes critical dynamic utility methods that compute design values:
-
-### `getPatternColors` (defined in `DashboardStyles.ts`)
-* **Input**:
-  - `patternName` (`string?`): The name of the active pattern to match.
-  - `Colors` (`ThemePalette?`): The active color theme mapping.
-* **Output**:
-  - `string[]` (A size-2 array containing CSS/React Native hex string colors for gradients).
-* **Behavior/Side Effects**:
-  - Scans the normalized lowercase pattern string for keyword matches (e.g., `'fire'` $\rightarrow$ Orange/Gold, `'water'` $\rightarrow$ Blue/Cyan, `'matrix'` $\rightarrow$ Lime/Green). Defaults to `[Colors.primary, Colors.secondary]` if no keywords match.
-
-### `createDashboardStyles` (defined in `DashboardStyles.ts`)
-* **Input**:
-  - `Colors` (`ThemePalette`): Active colors injected from context.
-  - `windowHeight` (`number`, default: 800)
-  - `windowWidth` (`number`, default: 400)
-* **Output**:
-  - `StyleSheet` object containing structural layout keys (`safeArea`, `card`, `skateCardInner`, etc.) optimized for the target viewport.
-* **Behavior/Side Effects**:
-  - Dynamically modifies margins, padding, and spacers based on height criteria (`windowHeight < 720` for short viewports, `windowHeight < 640` for very short viewports).
-
-### `Shadows.glow` (defined in `theme.ts`)
-* **Input**:
-  - `color` (`string`): Target neon glow color.
-* **Output**:
-  - `ViewStyle` shadow layout properties.
-
-### `TextShadows.glow` (defined in `theme.ts`)
-* **Input**:
-  - `color` (`string`): Target neon text color.
-  - `radius` (`number`, default: 10): Blur spread radius.
-* **Output**:
-  - `TextStyle` text shadow properties.
-
----
-
-## 5. 📱 OS Variance Matrix
-
-The domain implements structural adjustments to accommodate native platform rendering quirks and API characteristics:
-
-| Code Constant | iOS Path | Android Path | Web Fallback / Default |
-| :--- | :--- | :--- | :--- |
-| `Shadows.soft` / `Shadows.medium` | Resolves to shadow object: `shadowColor`, `shadowOffset`, `shadowOpacity`, `shadowRadius`. | Maps directly to native elevation integers: `elevation: 3` / `elevation: 5`. | Returns `{}` (empty object) to prevent unsupported platform crashes. |
-| `Shadows.glow(color)` | Standard shadow object: `shadowColor: color`, `shadowOffset: { width: 0, height: 0 }`, `shadowOpacity: 0.8`, `shadowRadius: 8`. | Maps to: `shadowColor: color`, `elevation: 8`. | Returns `{}`. |
-| `TextShadows.glow(color, radius)` | Defaults to mobile shadow: `textShadowColor: color`, `textShadowRadius: radius`, `textShadowOffset: { width: 0, height: 0 }`. | Defaults to mobile shadow: `textShadowColor: color`, `textShadowRadius: radius`, `textShadowOffset: { width: 0, height: 0 }`. | Translates to string-based CSS property: `textShadow: "0 0 [radius]px [color]"`. |
-| `bleTimingConstants.ts` $\rightarrow$ `MTU_RETRY_SETTLE_MS` | Unused (iOS CoreBluetooth manages MTU negotiations internally). | Empirically required: Android-only negotiation retry loop throttle (200ms gap) to prevent concurrent write collisions on Qualcomm/MediaTek adapters. | N/A |
-| `bleTimingConstants.ts` $\rightarrow$ `INTER_DEVICE_WRITE_GAP_MS` | Unused. | Required: Android-only inter-device GAP (50ms) to prevent GATT 133 errors caused by rapid writeCharacteristic dispatches before connection feedback loops resolve. | N/A |
-
----
+## 5. OS Variance Matrix
+| OS Variant | Resolution Strategy | Component |
+| --- | --- | --- |
+| **Android** | Utilizes `elevation` mapped to dynamic shadow color bindings. | `Shadows` (`src/theme/theme.ts`) |
+| **iOS** | Explicit `shadowColor`, `shadowOffset`, `shadowOpacity`, `shadowRadius`. | `Shadows` (`src/theme/theme.ts`) |
+| **Web** | Fallback to CSS `box-shadow` structures and `textShadow` string literals. | `TextShadows` (`src/theme/theme.ts`) |
 
 ## 6. Design System & Token Manifest
+- **Brand Palette**: Blue (`#1B4279`, `#245596`), Orange (`#FF5A00`), Amber (`#FFB800`).
+- **Typography**: Display/Brand typeface explicitly bound to `Righteous`.
+- **Spacing Scale**: 8-point baseline (`sm: 8, md: 12, lg: 16, xl: 24, xxl: 32, xxxl: 40`).
+- **Layout Constructs**: 4-Slab UI composition, transparent glassy overlays (`rgba(255,255,255,0.03)`), pill-shaped UI toggles, explicit absolute-offset status badges.
 
-The design tokens codified in `src/theme/theme.ts` and `src/styles/DashboardStyles.ts` establish the "Righteous Neon" visual identity of the app:
+## 7. Master Reference Archival Instructions
+- **`Dashboard UI Layout (4-Slab Architecture)`** (docs/SK8Lytz_App_Master_Reference.md): Already tagged with `[MOVE_TO_ARCHIVE]`. Action is to migrate structural logic exclusively to `DashboardStyles.ts`.
 
-### Typography Scale
-Every typography preset enforces the brand-defining font family: **`Righteous`**.
-* **Header**: `fontSize: 24`, `letterSpacing: 2`, `textTransform: 'uppercase'`, `fontFamily: 'Righteous'`
-* **Title**: `fontSize: 16`, `letterSpacing: 0.5`, `fontFamily: 'Righteous'`
-* **Body**: `fontSize: 14`, `fontFamily: 'Righteous'`
-* **Caption**: `fontSize: 11`, `fontFamily: 'Righteous'`
+## 8. Sequence Diagram
+```mermaid
+sequenceDiagram
+    participant UI as Dashboard Component
+    participant Hook as useTheme / Context
+    participant Theme as theme.ts
+    participant Styles as DashboardStyles.ts
 
-### Spacing Scale
-* `xxs`: 2px
-* `xs`: 4px
-* `sm`: 8px
-* `md`: 12px
-* `lg`: 16px
-* `xl`: 24px
-* `xxl`: 32px
-* `xxxl`: 40px
-* `huge`: 48px
-* `giant`: 64px
+    UI->>Hook: Request Dimensions & Palette
+    Hook->>Theme: Resolve Light/Dark Palette
+    Theme-->>Hook: Return Colors & Layout
+    Hook->>UI: Inject ThemeContext State
+    UI->>Styles: createDashboardStyles(Colors, windowH, windowW)
+    Styles-->>UI: Return Platform-Specific StyleSheet
+    UI->>UI: Render Glassy Slabs & Elements
+```
 
-### Layout Metrics
-* `Layout.padding`: `Spacing.lg` (16px)
-* `Layout.borderRadius`: `Spacing.xl` (24px)
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
 
-### Colors & HSL Variable Map
-
-| Color Key | Hex Color Code (Dark) | HSL Mapping (Dark) | Hex Color Code (Light) | HSL Mapping (Light) |
-| :--- | :--- | :--- | :--- | :--- |
-| `background` | `#1B4279` | `hsl(215, 63%, 29%)` | `#EAEFF5` | `hsl(213, 29%, 94%)` |
-| `surface` | `#245596` | `hsl(214, 61%, 37%)` | `#CBD6E2` | `hsl(212, 23%, 84%)` |
-| `surfaceHighlight`| `#3172C9` | `hsl(214, 61%, 49%)` | `#DDE5EE` | `hsl(212, 29%, 90%)` |
-| `primary` | `#FF5A00` | `hsl(21, 100%, 50%)` | `#FF5A00` | `hsl(21, 100%, 50%)` |
-| `secondary` | `#FFB800` | `hsl(43, 100%, 50%)` | `#FFB800` | `hsl(43, 100%, 50%)` |
-| `accent` | `#FF3300` | `hsl(12, 100%, 50%)` | `#1B4279` | `hsl(215, 63%, 29%)` |
-| `text` | `#FFFFFF` | `hsl(0, 0%, 100%)` | `#0A1C38` | `hsl(217, 69%, 13%)` |
-| `textMuted` | `#A0B4CF` | `hsl(215, 33%, 72%)` | `#5C7491` | `hsl(212, 22%, 46%)` |
-| `textDim` | `#6B85A0` | `hsl(211, 23%, 52%)` | `#8A9EB5` | `hsl(212, 23%, 63%)` |
-| `border` | `#2E5FA3` | `hsl(215, 56%, 41%)` | `#B0C0D0` | `hsl(210, 22%, 75%)` |
-| `success` | `#00E88F` | `hsl(157, 100%, 45%)` | `#00C476` | `hsl(156, 100%, 38%)` |
-| `error` | `#FF3D71` | `hsl(344, 100%, 62%)` | `#FF3D71` | `hsl(344, 100%, 62%)` |
-| `warning` | `#FFB800` | `hsl(43, 100%, 50%)` | `#E07A00` | `hsl(33, 100%, 44%)` |
-
-### Dynamic Gradient Pattern Tokens (`getPatternColors`)
-
-| Pattern Keyword Matches | Hex Gradient Start | Hex Gradient End | Derived Theme Context |
-| :--- | :--- | :--- | :--- |
-| `fire` / `flame` | `#FF4D00` | `#FF9E00` | High-energy visual accent |
-| `water` / `ocean` | `#00B2FF` | `#00FFF0` | Cool active states |
-| `forest` / `nature` | `#00FF85` | `#00A3FF` | Calmer outdoor sessions |
-| `sunset` / `gold` | `#FFD600` | `#FF00E5` | Retro/80s neon vibe |
-| `nebula` / `space` | `#7000FF` | `#00FFFF` | Cyberpunk ambiance |
-| `neon` / `cyber` | `#FF00E5` | `#00F0FF` | High-tech visual overlay |
-| `police` | `#FF0000` | `#0000FF` | Flashing alert style |
-| `matrix` | `#00FF00` | `#003300` | Terminal retro aesthetics |
-
-### Visual Assets Registry
-
-#### Root-Level Asset Assets (`assets/*`)
-* `android-icon-background.png` (Adaptive icon backdrop)
-* `android-icon-foreground.png` (Adaptive icon overlay)
-* `android-icon-monochrome.png` (Adaptive monochrome icon)
-* `favicon.png` (Web browser shortcut icon)
-* `icon.png` (Universal fallback application icon)
-* `logo.png` (Central brand text mark used in headers)
-* `splash-icon.png` (Splash screen loading graphic)
-
-#### Image Assets under the Bundle Scope (`src/assets/images/*`)
-* **`music_modes/`**: 38 PNG files (named `banner1.png` - `banner16.png` including sub-variants like `banner1_a7.png`, `banner_1_1.png`) mapping visual representations of audio frequency spectrum modes.
-* **`zengge_patterns/music_scene/`**: 12 PNG files (`music_scene_1.png` to `music_scene_12.png`) representing specific ambient audio visuals.
-* **`zengge_patterns/presets/`**: 70 JPG files (`meditation.jpg`, `night.jpg`, `morning.jpg`, `preset_1.jpg` to `preset_44.jpg`) mapping preset static scenes for fast-loading UI representations.
-* **`zengge_patterns/screen/`**: 29 PNG files including custom chassis frames (`car_underbody.png`, `carfoot.png`, `carhead.png`) and pixel positioning overlays (`screen0.png` to `screen23.png`).
-* **`zengge_patterns/screen_light_horizontal/`**: 10 PNG files (`screen_light_horizontal_1.png` to `screen_light_horizontal_10.png`) providing horizontal lighting guides.
-
----
-
-## 7. Stale Documentation & Key Registry Drift
-
-During our audit, we identified documentation key name drift in `tools/SK8Lytz_App_Master_Reference.md`:
-
-### 🚨 Key Registry Drift Detected
-* The **Master Reference** Key Registry lists:
-  * `@sk8lytz_theme` (linked to `ThemeContext`)
-  * `@sk8lytz_control_theme` (linked to `ThemeContext`)
-* The **Actual Code** (`ThemeContext.tsx`) loads and saves:
-  * `@Sk8lytz_ThemeMode` (for theme state)
-  * `@Sk8lytz_ControlUITheme` (for layout presets)
-
-### 🧹 Archival Tags Applied
-Stale document keys in `tools/SK8Lytz_App_Master_Reference.md` are marked for replacement:
-* `| @sk8lytz_theme | ThemeContext | ...` `
-## Architectural Impact Flags
-- `[IMPACTS_USER_JOURNEY]` — Theme mode transitions or custom preset UI triggers require full screen style invalidations and dynamic recalculations of styles.
-- `[IMPACTS_STATE_CHART]` — The hardware timers (recovery, write, chunk gaps) establish hardware-mandated barriers that directly govern BLE state machine transition speeds.
 
 <!-- CARTOGRAPHER_END: THEME_&_ASSETS -->
 
@@ -5782,1109 +2971,394 @@ Stale document keys in `tools/SK8Lytz_App_Master_Reference.md` are marked for re
 
 # Architectural Cartography — SIMULATION_&_MOCKS Domain
 
-This document serves as the **Canonical Architectural Map** for the simulation, mocking, and unit testing subsystems within the SK8Lytz application. It catalogues native Jest mocks, React Native Web shims, the offline Virtual BLE Daemon simulator, Headless CDP log sniffers, and test configurations.
-
----
-
 ## 1. File Manifest
+| File | Role | Size / Scope |
+|------|------|--------------|
+| `src/__mocks__/LocationService.ts` | Jest Mock | 5 lines. Stubs `getSilentLocation` and `requestLocationPermissions`. |
+| `src/__mocks__/expo-audio.ts` | Jest Mock | 3 lines. Stubs `requestRecordingPermissionsAsync` and `getRecordingPermissionsAsync` to return 'granted'. |
+| `src/__mocks__/expo-location.ts` | Jest Mock | 13 lines. Stubs foreground permissions, coordinates (Overland Park, KS), Accuracy levels, and reverse geocoding. |
+| `src/__mocks__/sk8lytz-watch-bridge.ts` | Jest Mock | 30 lines. Mocks watch connectivity (`isWatchReachable`), session state sync, and metric dispatches for unit tests. |
+| `src/mocks/react-native-vision-camera-worklets.web.js` | Web Shim | 2 lines. Empty module stub to bypass web compilation errors for vision camera. |
+| `src/mocks/react-native-worklets.web.js` | Web Shim | 19 lines. No-op shim aliased by Metro on Web to prevent `TurboModuleRegistry` crashes. Exports `useSharedValue`, `useAnimatedStyle`, `runOnJS`, `runOnUI`. |
 
-Every file within the `SIMULATION_&_MOCKS` scope is categorized below with its architectural purpose:
-
-| File Path | Type | Architectural Purpose |
-| :--- | :--- | :--- |
-| `src/__mocks__/LocationService.ts` | Jest Mock | Stubs the foreground permission requests and silent GPS coordinate queries to allow location-dependent tracking tests to execute headlessly. |
-| `src/__mocks__/expo-audio.ts` | Jest Mock | Stub for the Expo Audio module permission requests, returning standard `granted` status flags in test suites. |
-| `src/__mocks__/expo-location.ts` | Jest Mock | Mocks Expo Location APIs (coordinates, Accuracy levels, permissions, and reverse geocoding) returning fixed geographic values representing Overland Park, KS. |
-| `src/__mocks__/sk8lytz-watch-bridge.ts` | Jest Mock | Mocks watch connectivity, session synchronization status, metric dispatches, and command listener callbacks for watchOS unit tests. |
-| `src/mocks/react-native-vision-camera-worklets.web.js` | Web Shim | Swaps the native Vision Camera frame processor worklets with an empty module object to bypass browser crashes. |
-| `src/mocks/react-native-worklets.web.js` | Web Shim | Web stub mapping native JSI Worklets to safe React Native callbacks to prevent TurboModule resolution crashes on Web targets. |
-| `tools/ble-simulator/ble_simulator.js` | REST Daemon | An offline Node.js HTTP server acting as a Virtual BLE daemon. Parses and emulates Zengge opcode dispatches (0x71, 0x31, 0x59, 0x51, 0x62, 0x63), checksum calculations, and connection status transitions. |
-
----
-
-## 2. Blast Radius (Dependency Graph)
-
-The ingress (imports) and egress (exports) mapping of this domain illustrates how mock tools and configurations affect compiling, building, and verifying code:
-
-```
-                  [jest.config.js] (Auto-loads Mocks via moduleNameMapper)
-                                      │
-                                      ▼
-                        [Jest Test Execution Runner]
-                                      │
-              ┌───────────────────────┼───────────────────────┐
-              ▼                       ▼                       ▼
-   [src/__mocks__/expo-location.ts] [src/__mocks__/expo-audio.ts] [src/__mocks__/sk8lytz-watch-bridge.ts]
-              │                       │                       │
-              └───────────────────────┼───────────────────────┘
-                                      ▼
-                        [All Unit & Integration Tests]
-                        (e.g., BleMachine.test.ts, SessionMachine.test.ts)
-
-                  [metro.config.js] (Web-platform Alias Resolver)
-                                      │
-                                      ▼
-                             [Expo Web Compiler]
-                                      │
-              ┌───────────────────────┴───────────────────────┐
-              ▼                                               ▼
-   [src/mocks/react-native-worklets.web.js]  [src/mocks/react-native-vision-camera-worklets.web.js]
-              │                                               │
-              └───────────────────────┬───────────────────────┘
-                                      ▼
-                            [Web Browser Client Bundle]
-```
-
-### 2.1 Inbound Dependencies (What it Imports)
-* **Testing Libraries**: Imports standard Jest typings and mock wrapper declarations.
-* **Native Node.js**: The REST simulation daemon (`ble_simulator.js`) imports zero dependencies, referencing only built-in core modules (`http`, `url`, `path`, `fs`).
-
-### 2.2 Outbound Consumers (What it Impacts)
-* **Jest Unit Tests**: Over 30 unit/integration test suites (e.g. `BleMachine.test.ts`, `SessionMachine.test.ts`, `HeartbeatService.test.ts`) consume mock stubs automatically when accessing location, recording, or watch bridge functions.
-* **Web Client Build**: The bundler redirects native JSI dependencies to web shims during compilation to prevent white-screens on browser targets.
-* **Verification Gates**: Pre-commit hooks (`.husky/pre-commit`) launch the headless Chrome DevTools log harvester (`web-console-harvester.js`) to audit compiler warnings and exceptions.
-
----
+## 2. Blast Radius
+- **Test Suites (Jest)**: Any test suite importing `sk8lytz-watch-bridge`, `expo-location`, `expo-audio`, or `LocationService` is directly affected. Altering these mocks impacts over 30 unit/integration test suites.
+- **Web Build Target**: Modifying the Web Shims (`src/mocks/*.web.js`) risks re-introducing Webpack/Metro compilation White-Screens or crashes for `react-native-worklets-core` when targeting the browser.
+- **Continuous Integration**: The CI pipeline (`npm run verify`) relies on these mocks to pass headless verification tests without native module bindings or physical devices.
 
 ## 3. Context Matrix
-
-The simulation and mock files operate outside the React Context boundary to avoid side effects during test setup:
-
-* **React Context Mocking**: Test suites mounting UI components (e.g. `HardwareSetupWizardScreen.test.tsx`) stub the application contexts (`AuthContext`, `ThemeContext`) manually to prevent runtime rendering failures.
-* **XState Machine contexts**: Integration tests validating service layers (such as `BleMachine.test.ts` or `SessionMachine.test.ts`) bypass React contexts entirely, asserting state checks directly on the internal XState machine context properties.
-
----
+- **Testing Context**: Operates entirely outside the React component tree and app context providers. Injected implicitly during tests via `jest.config.js` (`moduleNameMapper`).
+- **Web Bundling Context**: Injected via `metro.config.js` module resolvers strictly when the platform target is `web`.
+- **Offline/Guest Context**: Does NOT dictate offline/guest mode (which is handled separately by `supabaseClient.ts` mock behaviors, out of scope for this domain).
 
 ## 4. Hook/Service I/O Registry
+- **`sk8lytz-watch-bridge` Mock**:
+  - `syncSessionState`, `sendMetricUpdate`, `isWatchReachable` -> Resolves `undefined` / `false`.
+  - `addWatchCommandListener`, `addWatchHealthListener` -> Returns empty teardown functions `() => {}`.
+- **`expo-location` Mock**:
+  - `getCurrentPositionAsync`, `getLastKnownPositionAsync` -> Returns `{ coords: { latitude: 38.9, longitude: -94.6, accuracy: 10 } }`.
+  - `reverseGeocodeAsync` -> Returns `[{ city: 'Overland Park', region: 'KS', name: 'SkateCity OP' }]`.
+- **`react-native-worklets.web.js` Shim**:
+  - `useSharedValue()` -> Returns `{ value: null }`.
+  - `runOnJS(fn)`, `runOnUI(fn)` -> Returns `fn` synchronously.
 
-Detailed functional interfaces of the mocks, shims, and simulator routes:
-
-### 4.1 `LocationService` Mock (`src/__mocks__/LocationService.ts`)
-* **Inputs**: None.
-* **Outputs**:
-  * `getSilentLocation()`: Returns `Promise<null>` (resolved).
-  * `requestLocationPermissions()`: Returns `Promise<false>` (resolved).
-* **Side-effects**: Zero side-effects; serves as a read-only permissions barrier stub.
-
-### 4.2 `expo-audio` Mock (`src/__mocks__/expo-audio.ts`)
-* **Inputs**: None.
-* **Outputs**:
-  * `requestRecordingPermissionsAsync()` / `getRecordingPermissionsAsync()`: Returns `Promise<{ status: 'granted' }>` (resolved).
-* **Side-effects**: Emulates permission approvals, bypassing standard native microphone alert overlays.
-
-### 4.3 `expo-location` Mock (`src/__mocks__/expo-location.ts`)
-* **Inputs**: None.
-* **Outputs**:
-  * `requestForegroundPermissionsAsync()` / `getForegroundPermissionsAsync()`: Returns `Promise<{ status: 'granted' }>`.
-  * `getCurrentPositionAsync()` / `getLastKnownPositionAsync()`: Returns `Promise<{ coords: { latitude: 38.9, longitude: -94.6, accuracy: 10 } }>`.
-  * `reverseGeocodeAsync()`: Returns `Promise<[{ city: 'Overland Park', region: 'KS', name: 'SkateCity OP' }]>`.
-* **Side-effects**: Forces the geolocation lookup to return constant coordinates (Latitude `38.9`, Longitude `-94.6`).
-
-### 4.4 `sk8lytz-watch-bridge` Mock (`src/__mocks__/sk8lytz-watch-bridge.ts`)
-* **Inputs**:
-  * `syncSessionState(state: WatchSessionState)`
-  * `sendMetricUpdate(update: WatchHealthUpdate)`
-* **Outputs**:
-  * `syncSessionState()` / `sendMetricUpdate()`: Returns `Promise<void>` (resolved).
-  * `isWatchReachable()`: Returns `Promise<false>`.
-  * `addWatchCommandListener()` / `addWatchHealthListener()`: Registers mock event listener, returning unsubscribe callback.
-* **Side-effects**: Triggers spying mocks for assertion checks on session sync states.
-
-### 4.5 `react-native-worklets` Web Shim (`src/mocks/react-native-worklets.web.js`)
-* **Inputs**: Function closures, JSI values.
-* **Outputs**:
-  * `useSharedValue()`: Returns `{ value: null }`.
-  * `useAnimatedStyle()`: Returns `{}`.
-  * `runOnJS()` / `runOnUI()`: Passthrough identity wrappers executing immediately on the main thread.
-* **Side-effects**: Neutralizes native worklet engine invocations in browser runtimes.
-
-### 4.6 Virtual BLE Simulator HTTP Server (`tools/ble-simulator/ble_simulator.js`)
-* **REST API Endpoints**:
-  * `GET /adv`: Returns advertising payload `JSON` mapping a custom `0xA3` chip.
-  * `GET /state` / `POST /state`: Reads or overrides the global mock controller state.
-  * `POST /connect`: Simulates GATT bonding (`isConnected = true`).
-  * `POST /disconnect`: Simulates connection drops, incrementing `dropCounter`.
-  * `POST /write`: Expects base64/hex/decimal arrays. Returns `{ success: true, warning: string | null }`.
-* **Opcode Intercepts**:
-  * `0x71` (Power): Toggles power state.
-  * `0x31` (Solid Color): Updates active color value.
-  * `0x59` (Static Colorful): Decodes pixel segments. Checks length; if array length is **under 10 RGB elements**, returns `warning: 'EEPROM_LOCKOUT_RISK'`.
-  * `0x63` (EEPROM query): Responds with wrapped 12-byte configuration (endian-safe points, segments, IC, and sorting).
-  * `0x62` (EEPROM write): Commits configuration changes to local device memory.
+## 5. OS Variance Matrix
+| Target | Behavior | Isolation Strategy |
+|--------|----------|--------------------|
+| **iOS / Android** | Uses actual Native Modules via Expo / bare React Native. | Jest mocks prevent native calls during purely JS headless tests. |
+| **Web** | Native modules (`react-native-worklets-core`) crash on load. | `metro.config.js` forces aliasing to `src/mocks/*.web.js` no-op shims. |
 
 ---
 
-## 5. OS/Platform Variance Matrix
-
-The simulation and mock mechanisms implement specific adjustments to accommodate native platform requirements:
-
-| Mock Target | iOS Behavior | Android Behavior | Web Platform Fallback |
-| :--- | :--- | :--- | :--- |
-| **`react-native-worklets`** | Native JSI module binding | Native JSI module binding | Aligned to `react-native-worklets.web.js` stub to prevent TurboModule crashes. |
-| **MTU / Connection Gaps** | Managed implicitly by iOS CoreBluetooth | Handled via explicit Android 200ms setup wait and 50ms write gap | Mocked via simulator state timers during integration runs |
-| **CD-Protocol log harvesters** | N/A | N/A | Launches Chrome in headless mode (`web-console-harvester.js`) to verify builds |
-| **Location Permission Keys** | Checked via plist keys | Checked via Android Manifest permissions | Mocked to auto-resolve to true (`status: 'granted'`) |
-
----
-
-## 6. Test Environment Configuration & Log Sniffer
-
-The SK8Lytz codebase relies on headless testing configurations to enforce build quality before staging:
-
-### 6.1 Jest Configuration (`jest.config.js`)
-The runner employs `ts-jest` for compilation and declares mapping aliases to redirect imports to local mock files:
-```javascript
-moduleNameMapper: {
-  "^sk8lytz-watch-bridge$": "<rootDir>/src/__mocks__/sk8lytz-watch-bridge.ts",
-  "^expo-location$": "<rootDir>/src/__mocks__/expo-location.ts",
-  "^expo-audio$": "<rootDir>/src/__mocks__/expo-audio.ts"
-}
-```
-
-### 6.2 Headless Web Log Harvester (`web-console-harvester.js`)
-Launches Google Chrome (`--remote-debugging-port=9222`) targeting the local web client bundle. It listens to WebSocket events (`Runtime.exceptionThrown`, `Runtime.consoleAPICalled`, `Log.entryAdded`). Any warning, console error, or uncaught exception triggers exit code `1`, causing commit verification check failures.
-
----
-
-## 7. Telemetry & Hardware Simulation Pipeline
-
-Integration testing leverages the Virtual BLE Daemon to run automated fuzzing and verification suites:
-
-```
-               [protocol_fuzzer.py / ble-simulator.test.ts]
-                                    │
-                         (POST /connect GATT Bond)
-                                    │
-                                    ▼
-                      [ble_simulator.js Daemon]
-                                    │
-                     (POST /write: Opcode 0x59 Payload)
-                                    │
-                                    ▼
-                        [Opcode Parsing Checks]
-                                    │
-                        ┌───────────┴───────────┐
-                        ▼                       ▼
-             (Pixel Length < 10)       (Pixel Length >= 10)
-                        │                       │
-                        ▼                       ▼
-            [EEPROM_LOCKOUT_RISK]       [Normal Execution]
-          (Returns warning string)      (Returns warning: null)
-```
-
-* **Opcode Parsing**: Enforces V2 protocol envelopes (`0x00` headers and `0x0B` footers) and verifies the trailing checksum byte (`sum & 0xFF`).
-* **12-Pixel Lockout Buffer Protection**: On opcode `0x59` Static Colorful dispatches, the simulator checks the color array size. If the payload is under 10 pixels, it returns an `EEPROM_LOCKOUT_RISK` warning, identifying physical controller memory lock hazards on `0xA3` hardware chips.
-
----
-
-## 8. Stale Documentation & Key Registry Drift
-
-During our audit, the following deprecated references were identified:
-
-### 🚨 Stale Documentation Marked for Archival
-* **File**: `tools/SK8Lytz_App_Master_Reference.md`
-* **Lines**: 684–685, 691, 6933–6934
-* **Stale Text**: References `src/utils/RbmSimulator.ts` for pixel-perfect frame calculations.
-* **Archival Status**: Tagged with `
 ## Architectural Impact Flags
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
 
-* `[IMPACTS_USER_JOURNEY]` — Edits to coordinate mocks in `expo-location.ts` alter testing behavior for user routing and setup screens.
-* `[IMPACTS_STATE_CHART]` — Integration tests in `BleMachine.test.ts` and `RecoveryService.test.ts` run assertions on XState transitions. Changing simulated timing gaps impacts these states.
-* `[IMPACTS_C4_CONTEXT]` — The REST daemon (`ble_simulator.js`) represents the physical device interface. Updating Zengge opcodes requires matching configurations in the simulator.
+## Archival Instruction
+[MOVE_TO_ARCHIVE]: `docs/SK8Lytz_App_Master_Reference.md` (lines 5780-5995) contain stale documentation for the `SIMULATION_&_MOCKS` domain. This must be archived to reflect the new cartography.
+
+## Sequence Diagram
+```mermaid
+sequenceDiagram
+    participant TestSuite as Jest Test Suite
+    participant Mapper as jest.config.js (moduleNameMapper)
+    participant Mock as src/__mocks__/*
+    
+    TestSuite->>Mapper: import { WatchBridge } from 'sk8lytz-watch-bridge'
+    Mapper-->>TestSuite: Redirect to src/__mocks__/sk8lytz-watch-bridge.ts
+    TestSuite->>Mock: WatchBridge.syncSessionState()
+    Mock-->>TestSuite: Promise.resolve(undefined)
+    
+    participant WebBuild as Metro Bundler (Web)
+    participant MetroConf as metro.config.js
+    participant WebShim as src/mocks/*.web.js
+    
+    WebBuild->>MetroConf: resolve 'react-native-worklets-core'
+    MetroConf-->>WebBuild: Alias to src/mocks/react-native-worklets.web.js
+    WebBuild->>WebShim: Execute module
+    WebShim-->>WebBuild: export default {}
+```
+
 
 <!-- CARTOGRAPHER_END: SIMULATION_&_MOCKS -->
 
 ### Domain: BUILD_CONFIG
 <!-- CARTOGRAPHER_START: BUILD_CONFIG -->
 
-# BUILD_CONFIG Domain Cartography & Technical Audit
-
-This document serves as the canonical architectural map and technical audit of the **BUILD_CONFIG** (Build Configurations) domain for the SK8Lytz application. It captures the compile-time, build-time, and pre-commit/pre-push quality gates that govern compilation, deployment, and static code validation.
-
----
+# 🗺️ BUILD_CONFIG: Cartography Deep Dive
 
 ## 1. File Manifest
-
-Every file in the BUILD_CONFIG domain is listed below with its exact architectural purpose:
-
-| File Name | Location | Architectural Purpose |
-| :--- | :--- | :--- |
-| **`app.config.js`** | Root | Dynamic Expo SDK 55 configuration containing app metadata, permissions (microphone, camera, health, location), native config plugins, target SDK settings, and Android Proguard rules. |
-| **`eas.json`** | Root | Build and submission profiles for Expo Application Services (EAS) CLI, defining development client, preview (internal APK/simulator), and production (App Bundle AAB) profiles. |
-| **`metro.config.js`** | Root | Metro Bundler configuration extending default Expo Metro configurations to inject web-platform no-op shims for native-only dependencies (such as Worklets) during Web compilation. |
-| **`babel.config.js`** | Root | Babel compiler setup integrating the `react-native-worklets/plugin` plugin required for JSI worklet transformations. |
-| **`tsconfig.json`** | Root | Root TypeScript configuration extending `expo/tsconfig.base`, enforcing strict type checks, and defining local path aliases for native module compilation. |
-| **`jest.config.js`** | Root | Base Jest unit testing configuration defining presets (`ts-jest`), test environments, folder ignores, and mock mapper paths for native libraries. |
-| **`e2e/jest.config.js`** | `e2e/` | Jest configuration for Detox End-to-End (E2E) testing, setting up timeout values, test execution patterns, and Detox global setup/teardown runners. |
-| **`package.json`** | Root | Main NPM manifest declaring scripts, dependencies (Expo 55, React 19, RN 0.83, Nitro Modules, BLE PLX), devDependencies, and package overrides. |
-| **`.husky/pre-commit`** | `.husky/` | Git pre-commit hook that resolves worktree directories, creates `node_modules` junctions, and runs the Blast Radius Scanner, Babel syntax gate, ESLint, type-checking, and Jest tests. |
-| **`.husky/pre-push`** | `.husky/` | Git pre-push hook enforcing a cryptographically signed QA attestation scan and running security audits (`npm audit`). |
-| **`targets/watch/expo-target.config.js`** | `targets/watch/` | Expo Targets configuration for watchOS compilation, defining deployment targets, HealthKit entitlements, and complication principal classes. |
-| **`plugins/withWearOsModule.js`** | `plugins/` | Custom Expo config plugin that injects gradle module configurations for Wear OS compile targets and adds Android 14+ background compliance foreground service types. |
-| **`tools/build-apk.ps1`** | `tools/` | Automated build orchestrator setting up the local JDK/SDK environment, pre-patching CMake build ninja files, and compiling release APKs. |
-| **`tools/ninja-patcher-daemon.ps1`** | `tools/` | Monitoring daemon running every 50ms to comment out RERUN_CMAKE sections inside `build.ninja` files to bypass Windows filesystem tunneling loops. |
-
----
+- `app.config.js`: Core Expo configuration (`v3.9.2`). Defines iOS/Android permissions, custom plugins (`react-native-ble-plx`, `expo-build-properties` with Proguard rules for BLE/Camera/Nitro), and EAS project ID. Targets Android SDK 36.
+- `eas.json`: Defines CLI requirements (`>= 16.0.0`) and build profiles (`development`, `preview`, `production`). Enforces `.apk` for dev/preview and `.aab` (app-bundle) for Android production.
+- `metro.config.js`: Expo default Metro bundler config augmented with a custom `resolveRequest` interceptor to stub native-only modules (`react-native-worklets`, `react-native-vision-camera-worklets`) for web platform compatibility.
+- `babel.config.js`: Defines `babel-preset-expo` and registers the `react-native-worklets/plugin` necessary for Camera Vibe Catcher processing.
+- `tsconfig.json`: Extends `expo/tsconfig.base` with strict mode. Configures path aliases for the local `sk8lytz-watch-bridge` module to bypass `npm install` resolution. Excludes `node_modules`, `supabase/functions`, `tools`, and `scratch`.
+- `jest.config.js`: Configures `ts-jest`, ignores e2e/local-builder paths, whitelists expo modules in `transformIgnorePatterns`, and maps aliases for `sk8lytz-watch-bridge`, `expo-location`, and `expo-audio`.
+- `package.json`: Contains project dependencies, overrides (xmldom, postcss, uuid), and operational scripts (`start`, `android`, `ios`, `verify`, `blast-radius`).
+- `.husky/pre-commit`: Worktree-aware git hook. Resolves the master fortress root, sets up a `node_modules` junction for worktrees, and runs `blast-radius-scanner.js`, `babel-syntax-gate.js`, ESLint, and `npm run verify` dynamically.
+- `.husky/pre-push`: Zero-bypass QA gate enforcing `verifiable-check-runner.js` and `npm audit --audit-level=moderate`.
 
 ## 2. Blast Radius
-
-The BUILD_CONFIG domain sits at the core of compilation, code styling, and pipeline gating. The diagram below represents the upstream inputs and downstream impacts of the build configs:
-
-```
-Upstream Inputs                               BUILD_CONFIG Files                       Downstream Impacts
-──────────────────────────────────────────────────────────────────────────────────────────────────────────
-[Local SDK/JDK binaries]  ───────────────►  [tools/build-apk.ps1]       ─────────►   [Android Release APK]
-[Google Maps API Key]     ───────────────►  [app.config.js]             ─────────►   [Prebuild Settings / Manifest]
-[Git Commit / Push]       ───────────────►  [.husky/pre-commit / pre-push] ──────►   [Signed QA Attestation / Lints]
-[Webpack / Web Targets]   ───────────────►  [metro.config.js]           ─────────►   [Web No-Op Mock Shims]
-[TypeScript Engine]       ───────────────►  [tsconfig.json]             ─────────►   [Strict Type Enforcement]
-```
-
-### Upstream Inputs (What controls this domain)
-- **Environment Variables**: Reads `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` for iOS and Android native map compilation (`app.config.js:26,51`).
-- **Git State**: Git hooks read staged files via `git diff --cached` to restrict syntax audits only to incoming changes (`.husky/pre-commit:40`).
-- **Local Compiler Runtimes**: Invokes internal JDK 17 (`.local-builder/jdk/jdk-17.0.10+7`) and Android SDK platform-tools to run isolated, reproducible local builds (`tools/build-apk.ps1:3-4`).
-
-### Downstream Targets (What this domain impacts)
-- **Runtime Code Execution**: Compiler flags determine what features are stripped out in production (`__DEV__` directives).
-- **Native Device Capabilities**: Custom plugins (`withWearOsModule.js` and `expo-target.config.js`) alter Settings Gradle and Android/iOS manifests, directly injecting permissions for HealthKit, Background Bluetooth communication, and Foreground Services.
-- **Bundler Behavior**: Metro config aliases native libraries to `src/mocks/` files on Web targets, preventing browser White-Screens (`metro.config.js:18-27`).
-- **Test Integrity**: Unit tests (`jest.config.js`) and End-to-End tests (`e2e/jest.config.js`) rely on mocked services and defined environment configurations.
-
----
+Modifications to this domain have **Project-Wide** scope:
+- **`app.config.js`**: Altering permissions requires full user-consent reset. Modifying Proguard rules can cause silent production crashes for RxAndroidBle or Nitro.
+- **`.husky/`**: Modifying hooks can break the multi-worktree parallel development architecture (VS-001 mitigations). 
+- **`metro.config.js`**: Incorrect shims will cause the Expo Web sandbox/simulator to white-screen on boot.
 
 ## 3. Context Matrix
-
-As compile-time and pipeline-level directives, build configurations do not directly consume or provide React Contexts. However, they establish the environment in which the contexts operate:
-- **`ThemeContext` / `AuthContext`**: Restrained by TypeScript's strict rules declared in `tsconfig.json`.
-- **`SessionContext` (Wearable Bridges)**: Dependent on `sk8lytz-watch-bridge` path aliasing in `tsconfig.json:10`. This local link maps `modules/sk8lytz-watch-bridge/src/index.ts` inline during React compilation, ensuring that watch session synchronizations are built without requiring separate npm publishing cycles.
-- **Background Contexts**: Android 14+ background execution of BLE sync and health logging context relies on `plugins/withWearOsModule.js` injecting the correct `foregroundServiceType` values into the build.
-
----
+| Component | Dependency / Context |
+| :--- | :--- |
+| **Expo Web Build** | Dependent on `metro.config.js` shims to bypass native JSI requirements (`react-native-worklets`). |
+| **Git Worktrees** | Dependent on `.husky/pre-commit` resolving `COMMON_DIR` and symlinking `node_modules` across parallel branches. |
+| **Local Bridge Dev** | `tsconfig.json` and `jest.config.js` both mock/alias `sk8lytz-watch-bridge` to allow isolated native development without publishing. |
 
 ## 4. Hook/Service I/O Registry
-
-The custom script utilities inside this domain govern compilation and quality gates. Their inputs, outputs, and side-effects are registered below:
-
-### `pre-commit` Hook (`.husky/pre-commit`)
-- **Inputs**:
-  - Git index changes (`git diff --cached`).
-- **Outputs**:
-  - Exit code `0` (success) or `1` (failure, blocking commit).
-- **Side-Effects**: 
-  - Resolves worktree scopes and creates directory junctions (`cmd.exe /c "mklink /j node_modules ..."`) for `node_modules` inside Git worktree folders to prevent compilation errors.
-  - Runs the Blast Radius Scanner, Babel syntax gate (`babel-syntax-gate.js`), ESLint, type-checking (`tsc`), and Jest tests.
-
-### `pre-push` Hook (`.husky/pre-push`)
-- **Inputs**:
-  - CLI execution state, `npm audit` findings.
-- **Outputs**:
-  - Exit code `0` (success) or `1` (failure, blocking push).
-- **Side-Effects**:
-  - Enforces `npm run verify` (`node tools/verifiable-check-runner.js --verify`) to validate attestation locks.
-  - Performs a moderate-level security vulnerability check (`npm audit --audit-level=moderate`).
-
-### `metro.config.js` Custom Resolver
-- **Inputs**:
-  - `(context, moduleName, platform)`
-- **Outputs**:
-  - Returns `{ filePath: string, type: 'sourceFile' }` aliased to `src/mocks/*.web.js` stubs for native modules.
-- **Side-Effects**:
-  - Prevents Expo Web build crashes by dynamically stripping JSI worklets during Web target bundling.
-
----
+_Note: Domain contains config overrides rather than code hooks._
+- **Input:** Staged Files (`git diff --cached`) → **Output:** `Husky pre-commit` passes or halts commit via `npm run verify`.
+- **Input:** Web Bundler Request (`metro.config.js`) → **Output:** Routes `vision-camera-worklets` to `src/mocks/*.web.js`.
 
 ## 5. OS Variance Matrix
-
-OS variance is handled via target configurations, config plugins, and bundler mapping:
-
-| Technical Surface | iOS / watchOS Implementation | Android / WearOS Implementation | Web Platform Fallback |
+| Feature | iOS Config | Android Config | Web Config |
 | :--- | :--- | :--- | :--- |
-| **Minimum / Target SDK** | Target watchOS 10.0+ configured in `expo-target.config.js` to ensure modern Swift support. | Custom `minSdkVersion: 26`, `compileSdkVersion: 36`, and `targetSdkVersion: 36` in `app.config.js`. | N/A |
-| **Permissions** | `NSMicrophoneUsage`, `NSCameraUsage`, `NSHealthShare`, `NSHealthUpdate`, and `NSLocationWhenInUse` defined in Plist. | BLE Scan, Connect, Admin, Fine/Coarse Location, and Foreground Service permissions declared in AndroidManifest. | N/A (Mocks resolved directly in tests). |
-| **Foreground Services** | N/A (Handles via standard background delivery entitlements). | Injected via `withWearOsModule.js` using types: `location\|health\|connectedDevice\|shortService\|dataSync`. | N/A |
-| **Optimization / Proguard** | Handled natively by Xcode / Clang. | Proguard configurations explicitly keep RxAndroidBle2, Polidea BLE-PLX, vision-camera, and nitro classes from optimization stripping. | N/A |
-| **Watch Integration** | SwiftUI watch targets mapped via independent target compilation in `targets/watch`. | Companion Kotlin module `sk8lytzWear` built and embedded inside the phone APK via `wearApp` Gradle dependencies. | N/A |
-| **Web Platform Shimming** | N/A | N/A | `metro.config.js` shims native JSI packages (`react-native-worklets`, `react-native-vision-camera-worklets`) with web mock stubs. |
+| **Build Artifact** | Simulator Build (`preview`) | APK (`development`/`preview`), AAB (`production`) | N/A |
+| **Permissions** | Managed via `Info.plist` usage descriptions (Health, Location, Mic, Camera). | Array of strings in `app.config.js` (`BLUETOOTH_CONNECT`, `FOREGROUND_SERVICE`, etc.). | Fallbacks to browser APIs. |
+| **Build Properties** | N/A | `compileSdkVersion: 36`, `targetSdkVersion: 36`, `enableJetifier: true`. | Uses `.web.js` stubs via Metro. |
 
----
+## ARCHIVAL INSTRUCTION
+Found stale documentation in `docs/SK8Lytz_App_Master_Reference.md`:
+Section `### Android Build Requirements`:
+`- **SDK Versions**: Project currently targets SDK 34...` 
+**Must be updated to SDK 36** as per `app.config.js`. Tagged with `[MOVE_TO_ARCHIVE]`.
 
-## 6. Release Profile & Compiler Audit
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
 
-### Release Channel Configurations (`eas.json`)
-The project utilizes three distinct EAS profiles:
-- **`development`**: Configured with `"developmentClient": true` (allowing local Dev Client testing) and `"distribution": "internal"`. Android compiles as a debug `apk`.
-- **`preview`**: Compiled as a distribution-ready internal `apk` for Android and targets the iOS simulator (`"simulator": true`) for quick QA verification.
-- **`production`**: Designed for public distribution. Compile targets generate an Android App Bundle (`app-bundle` / AAB) for Google Play optimization.
+## SEQUENCE DIAGRAM
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant Git as Git Client
+    participant Husky as Husky (pre-commit)
+    participant WT as Worktree Config
+    participant Runner as Verification Runner
+    
+    Dev->>Git: git commit
+    Git->>Husky: Trigger pre-commit hook
+    Husky->>WT: Check if running inside worktree
+    alt isWorktree == true
+        WT-->>Husky: Create mklink /j node_modules
+    end
+    Husky->>Runner: Run blast-radius-scanner
+    Husky->>Runner: Run babel-syntax-gate & eslint
+    Husky->>Runner: npm run verify
+    Runner-->>Husky: Exit Code (0 or 1)
+    Husky-->>Git: Allow or Abort Commit
+```
 
-### EAS Update Logic
-- **OTA Updates Status**: Currently **not configured** in `app.config.js` or `package.json` (no `updates` block or channel key), meaning the app compiles as a statically bundled package and does not consume Expo OTA updates.
-
-### Native Module Requirements
-- **Background BLE**: `react-native-ble-plx` configured with `isBackgroundEnabled: true` and central/peripheral modes.
-- **Health Integration**: Native config plugins link both Apple `react-native-health` and Android `react-native-health-connect` APIs during compilation.
-- **JSI Worklets**: Camera execution and math rendering filters utilize `react-native-worklets/plugin` in `babel.config.js` to enable JSI frame processing at 5Hz.
-
-### TypeScript Compiler Flags (`tsconfig.json`)
-- **`strict: true`**: Hard restriction that prevents implicit `any` conversions, enables strict null checks, and blocks untyped property modifications.
-- **`paths: { "sk8lytz-watch-bridge": [...] }`**: Custom compiler path alias. Maps watch bridge code directly to the TS compiler without requiring independent building or linking, matching mock resolutions in `jest.config.js`.
-
----
-
-## 7. Archival Target Registry
-
-The following documentation block in the master reference is identified as stale and must be archived:
-
-- **Location**: `tools/SK8Lytz_App_Master_Reference.md` (under Section `Domain: BUILD_CONFIG` / `1. File Manifest`)
-- **Stale Block**:
-  ```markdown
-  | **`.detoxrc.js`** | Root | Detox test runner configuration declaring device emulators (`SK8Lytz_Pixel7`) and native debug/release gradle build tasks. |
-  ```
-- **Reason for Archival**: `.detoxrc.js` does NOT exist in the repository at all. Detox E2E tests are configured via `e2e/jest.config.js` and there is no `.detoxrc.js` file.
-- **Tag**: `
-## 8. Architectural Impact Flags
-
-* `[IMPACTS_C4_CONTEXT]` — The config defines native modules, compilation targets, and system integrations (like companion watch OS apps), which shapes the System Context.
-* `[IMPACTS_USER_JOURNEY]` — The permissions declared in `app.config.js` and custom plugin dependencies directly gate core user journeys (e.g., GPS mapping, fitness telemetry, and background sync).
-* `[IMPACTS_STATE_CHART]` — The test mocks in `jest.config.js` directly dictate unit testing of connection state machines (XState v5).
 
 <!-- CARTOGRAPHER_END: BUILD_CONFIG -->
 
 ### Domain: OS_PERMISSIONS
 <!-- CARTOGRAPHER_START: OS_PERMISSIONS -->
 
-# 🔐 OS_PERMISSIONS Domain Cartography
-
-This document contains a comprehensive, read-only architectural audit of the **OS_PERMISSIONS** domain within the SK8Lytz mobile application on both iOS and Android.
-
----
-
-## # Cited Truth
-
-### 1. Android Manifest Permissions & Foreground Services
-Declared permissions and foreground service configuration in the main application manifest:
-> Source: [AndroidManifest.xml L2-L20](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/android/app/src/main/AndroidManifest.xml#L2-L20)
-```xml
-  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-  <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION"/>
-  <uses-permission android:name="android.permission.BLUETOOTH"/>
-  <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
-  <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
-  <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation"/>
-  <uses-permission android:name="android.permission.CAMERA"/>
-  <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
-  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
-  <uses-permission android:name="android.permission.INTERNET"/>
-  <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
-  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion"/>
-  <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-  <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
-  <uses-permission android:name="android.permission.VIBRATE"/>
-  <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="32" tools:replace="android:maxSdkVersion"/>
-  <uses-feature android:name="android.hardware.bluetooth_le" android:required="true"/>
-```
-And the associated Notifee Foreground Service declaration:
-> Source: [AndroidManifest.xml L33](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/android/app/src/main/AndroidManifest.xml#L33)
-```xml
-    <service android:name="app.notifee.core.ForegroundService" android:foregroundServiceType="location|health|connectedDevice|shortService|dataSync" tools:replace="android:foregroundServiceType"/>
-```
-
-### 2. iOS Info.plist Declarations (Expo Configuration)
-Defined keys in the Expo config:
-> Source: [app.config.js L15-L23](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/app.config.js#L15-L23)
-```javascript
-    ios: {
-      supportsTablet: true,
-      infoPlist: {
-        NSMicrophoneUsageDescription: "SK8Lytz needs microphone access to synchronize your lights to ambient music.",
-        NSCameraUsageDescription: "SK8Lytz needs camera access to sample colors from your environment for LED synchronization.",
-        NSHealthShareUsageDescription: "SK8Lytz reads step count and heart rate to synchronize light patterns with your fitness metrics.",
-        NSHealthUpdateUsageDescription: "SK8Lytz writes your skating sessions to Apple Health to track fitness activity.",
-        NSLocationWhenInUseUsageDescription: "SK8Lytz uses your location to discover nearby skate spots and map your skating routes."
-      },
-```
-
-### 3. Bluetooth Runtime Request Strategy
-Strategy handling the location scans requirement on Android 12+:
-> Source: [PermissionService.ts L97-L115](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/PermissionService.ts#L97-L115)
-```typescript
-        if (Platform.OS === 'android' && Platform.Version >= 31) {
-          // Reverted VS-005: Android 12+ MUST request ACCESS_FINE_LOCATION
-          // because FCF1 devices advertise their UUID in mServiceData instead of mServiceUuids.
-          // The native OS scanner cannot filter by mServiceData. Thus, we MUST perform an
-          // unfiltered (null) scan, which strictly requires location permissions.
-          const result = await PermissionsAndroid.requestMultiple([
-            PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-            PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-          ]);
-          return (
-            result['android.permission.BLUETOOTH_CONNECT'] === PermissionsAndroid.RESULTS.GRANTED &&
-            result['android.permission.BLUETOOTH_SCAN'] === PermissionsAndroid.RESULTS.GRANTED &&
-            result['android.permission.ACCESS_FINE_LOCATION'] === PermissionsAndroid.RESULTS.GRANTED
-          );
-        } else if (Platform.OS === 'android') {
-          const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
-          return result === PermissionsAndroid.RESULTS.GRANTED;
-        }
-```
-
-### 4. Health Connect Android Crash Protection
-Critical initialization step preventing UninitializedPropertyAccessException crashes:
-> Source: [PermissionService.ts L150-L156](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/PermissionService.ts#L150-L156)
-```typescript
-            const { initialize: initHC, requestPermission: requestHC } = require('react-native-health-connect');
-
-            // CRITICAL: initialize() registers the ActivityResultLauncher that
-            // the native HealthConnectPermissionDelegate stores in a lateinit var.
-            // Without this call, requestPermission() crashes with
-            // UninitializedPropertyAccessException on a native coroutine thread.
-            await initHC();
-```
-
----
+# OS Permissions Cartography
 
 ## 1. File Manifest
+- `android/app/src/main/AndroidManifest.xml`: Declares all native Android permissions (`BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, `ACCESS_FINE_LOCATION`, `ACTIVITY_RECOGNITION`, `CAMERA`, `RECORD_AUDIO`) and foreground service types.
+- `app.config.js`: Generates iOS `Info.plist` usage descriptions (e.g., `NSCameraUsageDescription`, `NSMicrophoneUsageDescription`, `NSHealthShareUsageDescription`, `NSLocationWhenInUseUsageDescription`).
+- `src/services/PermissionService.ts`: Core cross-platform registry coordinating runtime permission checks, requests, and the AsyncStorage-based soft-revocation ledger (`@sk8lytz_permissions_optout`).
 
-The **OS_PERMISSIONS** domain is governed by native manifest files, compiler-time configuration profiles, custom Expo plugins, and runtime routing layers:
-
-| File Path | Architectural Purpose |
-| :--- | :--- |
-| `android/app/src/main/AndroidManifest.xml` | Declares all native Android permissions, hardware features (BLE LE), deep-link intent-filters, custom metadata APIs, and background Notifee service types. |
-| `android/sk8lytzWear/src/main/AndroidManifest.xml` | Declares permissions for the Wear OS companion watch target, configuring wake locks, body sensor APIs, activity recognition, and wearable communication filters. |
-| `app.config.js` | Root Expo configuration mapping metadata, active permission arrays, and configuration plugins (such as `react-native-ble-plx`, `react-native-health`) to construct the final iOS `Info.plist` and Android manifest. |
-| `targets/watch/Info.plist` | Configures the companion Apple Watch extension target. It maintains a clean placeholder structure while inheriting permissions from the host app target. |
-| `plugins/withWearOsModule.js` | Custom Expo config plugin that modifies gradle project bindings and injects the low-level Notifee Foreground Service configuration with its allowed `foregroundServiceType` types into the generated manifest. |
-| `src/services/PermissionService.ts` | The Single Source of Truth (SSOT) client coordinating runtime permission checks and requests, platform-specific bridges, and the AsyncStorage-based app soft-revocation ledger. |
-
----
-
-## 2. Blast Radius (Dependency Graph)
-
-The following map outlines the inward dependencies (who imports this domain) and outward dependencies (what this domain imports):
-
-```
-Outward Imports                              OS_PERMISSIONS Domain                         Inward Consumers
-┌──────────────────────────────┐             ┌──────────────────────────────┐             ┌──────────────────────────────┐
-│ - expo-audio                 │             │ - app.config.js              │             │ - CameraTracker.tsx          │
-│   (Recordings permissions)   │────────────>│ - AndroidManifest.xml        │────────────>│   (CAMERA gated captures)    │
-│ - expo-location              │             │ - PermissionService.ts       │             │ - useAppMicrophone.ts        │
-│   (Foreground GPS calls)     │             └──────────────┬───────────────┘             │   (MIC gated sync queries)   │
-│ - react-native               │                            │                             │ - useBLE.ts / BluetoothGuard │
-│   (PermissionsAndroid/bridge)│                            │ updates                     │   (BLUETOOTH scan validations)│
-│ - react-native-health (iOS)  │                            ▼                             │ - useAccountOverview.ts      │
-│   (Android health bridges)   │             ┌──────────────────────────────┐             │   (HEALTH user toggles)      │
-│ - AsyncStorage               │             │ AsyncStorage Ledger          │             │ - LocationService.ts         │
-│   (Persistence buffers)      │             │ (@sk8lytz_permissions_optout)│             │   (LOCATION map services)    │
-└──────────────────────────────┘             └──────────────────────────────┘             └──────────────────────────────┘
-```
-
-### Inbound Imports (Outward Dependencies)
-- **Expo Framework**: Imports `requestRecordingPermissionsAsync` and `getRecordingPermissionsAsync` from `expo-audio` and `expo-location` hooks to execute foreground location queries.
-- **Native Platform APIs**: Consumes `PermissionsAndroid`, `Platform`, and `DeviceEventEmitter` from `react-native` to query Android system states and broadcast events.
-- **Dynamic Vendor Libraries**: Uses dynamic `require` statements to defer import and initialization of `expo-notifications`, `react-native-health` (Apple HealthKit on iOS), and `react-native-health-connect` (Android Health Connect) to prevent circular dependency lockouts during app startup.
-- **Persistence Store**: Taps into `@react-native-async-storage/async-storage` to read/write the `@sk8lytz_permissions_optout` soft-revocation ledger.
-
-### Outbound Exports (Inward Consumers)
-The `PermissionService` routines gate hardware services and reactive components:
-- `src/components/CameraTracker.tsx` (CAMERA check before initializing the camera module)
-- `src/hooks/useAppMicrophone.ts` (MIC check before spinning up the audio record metering timer)
-- `src/hooks/useBLE.ts` & `src/providers/BluetoothGuard.tsx` (BLUETOOTH checks to scan/connect to Zengge roller skate controllers)
-- `src/services/LocationService.ts` & `src/services/session/SensorService.ts` (LOCATION validation before registering GPS streams)
-- `src/services/HealthSyncService.ts` & `src/services/session/HealthService.ts` (HEALTH checks before initializing Apple HealthKit or Android Health Connect sync runs)
-- `src/components/permissions/GranularPermissionsList.tsx` & `src/components/modals/GlobalPermissionsModal.tsx` (Direct user toggles and dialog events)
-
----
+## 2. Blast Radius
+- **Upstream Imports**: 
+  - `react-native` (`PermissionsAndroid`, `DeviceEventEmitter`)
+  - `expo-audio`, `expo-location`, `expo-notifications`
+  - `react-native-health` (iOS HealthKit), `react-native-health-connect` (Android)
+- **Downstream Consumers**: 
+  - `src/components/CameraTracker.tsx` (Camera)
+  - `src/hooks/useAppMicrophone.ts` (Audio)
+  - `src/hooks/useBLE.ts` & `BluetoothGuard.tsx` (Bluetooth/Location)
+  - `src/services/HealthSyncService.ts` (Health metrics)
 
 ## 3. Context Matrix
-
-The permissions check logic operates as an independent service domain, utilizing global events and layout wrappers to interface with the React tree:
-
-| Provider/Context | Consumed By | Purpose |
-| :--- | :--- | :--- |
-| `DeviceEventEmitter` (Global) | `GranularPermissionsList.tsx`, `DockedController.tsx` | Emits `PERMISSION_STATUS_CHANGED_EVENT` to tell UI views to hide/show permission-gated controls (e.g. ambient microphone sync, GPS map layers) immediately when toggled. |
-| `BluetoothGuard` (Layout) | Root Navigation Tree | A security context layout wrapper that intercepts execution, checks both native Bluetooth status and user permissions, and blocks dashboard access if the adapter is unavailable. |
-| `openGlobalPermissionsModal` | Feature Hooks (Microphone, GPS) | Dispatches `SHOW_GLOBAL_PERMISSIONS_EVENT` to open the event-driven custom permissions modal sheet from anywhere in the codebase. |
-
----
+- **DeviceEventEmitter (Global)**: Emits `PERMISSION_STATUS_CHANGED_EVENT` to reactively notify UI layouts (e.g., DockedController) to toggle permission-gated controls immediately.
+- **AsyncStorage Ledger**: Uses `@sk8lytz_permissions_optout`. Bypasses native prompts if the user explicitly soft-revoked permission within the app.
+- **BluetoothGuard Layout**: Intercepts React Tree rendering to ensure BLE adapter readiness before exposing the main dashboard.
 
 ## 4. Hook/Service I/O Registry
-
-### `PermissionService.ts`
-
-#### `requestPermission`
-- **Inputs**: `type: PermissionType` (`'CAMERA' | 'MIC' | 'LOCATION' | 'NOTIFICATIONS' | 'BLUETOOTH' | 'HEALTH'`)
-- **Outputs**: `Promise<boolean>` (resolves to `true` if permission is granted by the system, else `false`)
-- **Side Effects**: Launches the native OS permission request prompt. If `NOTIFICATIONS` is granted, dynamically imports and boots the `NotificationService`. If `HEALTH` is granted, initializes either iOS HealthKit or Android Health Connect.
-
-#### `checkPermission`
-- **Inputs**: `type: PermissionType`
-- **Outputs**: `Promise<boolean>` (resolves to `true` if active and allowed, else `false`)
-- **Side Effects**: First reads the AsyncStorage ledger `@sk8lytz_permissions_optout`. If the app-level soft-revocation status is flagged as opted-out, it returns `false` directly (**Fast Gate**), bypasses native checks, and prevents triggering duplicate OS dialogs.
-
-#### `setPermissionOptOut`
-- **Inputs**: `type: PermissionType`, `isOptedOut: boolean`
-- **Outputs**: `Promise<void>`
-- **Side Effects**: Saves the opt-out status to local AsyncStorage. Dispatches telemetry event metrics (`PERMISSION_OPT_IN` or `PERMISSION_OPT_OUT`) to the cloud backend. Emits `PERMISSION_STATUS_CHANGED_EVENT` to notify reactive UI listeners.
-
-#### `openGlobalPermissionsModal`
-- **Inputs**: None.
-- **Outputs**: `Promise<void>` (resolves when the modal receives the closed event signal)
-- **Side Effects**: Dispatches a `SHOW_GLOBAL_PERMISSIONS_EVENT` to open the modal UI panel, and registers a one-shot listener to resolve when `GLOBAL_PERMISSIONS_CLOSED_EVENT` is intercepted.
-
----
+- **`requestPermission(type: PermissionType): Promise<boolean>`**
+  - *I/O*: Requests system permission prompt for 'CAMERA', 'MIC', 'LOCATION', 'NOTIFICATIONS', 'BLUETOOTH', or 'HEALTH'.
+  - *Side-Effect*: On Android, `HEALTH` triggers `initHC()` before requesting `react-native-health-connect` metrics. 
+- **`checkPermission(type: PermissionType): Promise<boolean>`**
+  - *I/O*: Queries current permission status. Returns `false` instantly if `@sk8lytz_permissions_optout` indicates an app-level revocation, skipping the native check.
+- **`setPermissionOptOut(type: PermissionType, isOptedOut: boolean): Promise<void>`**
+  - *I/O*: Writes user toggle to AsyncStorage.
+  - *Side-Effect*: Broadcasts `PERMISSION_STATUS_CHANGED_EVENT` to update the application UI tree.
 
 ## 5. OS Variance Matrix
+- **Bluetooth Requirements**: iOS relies on standard CoreBluetooth implicit permission gating. Android 12+ requires a three-pack of `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, and `ACCESS_FINE_LOCATION` (due to FCF1 hardware broadcasting UUID in `mServiceData`).
+- **Health Synchronization**: 
+  - *iOS*: Apple HealthKit does NOT allow status query checks for read permissions (returns `true` functionally). 
+  - *Android*: `react-native-health-connect` enforces strict pre-initialization (`initHC()`) to prevent `UninitializedPropertyAccessException` crashes on coroutines. Requires `ACTIVITY_RECOGNITION`.
 
-The platform-specific permission pathways are documented below:
-
-| Feature Area | iOS Platform Pathway | Android Platform Pathway |
-| :--- | :--- | :--- |
-| **Bluetooth Scans (API 31+)** | Handled natively by CoreBluetooth on first characteristic query. `PermissionService` returns `true` during onboarding. | Requests a multiple permission pack: `BLUETOOTH_SCAN`, `BLUETOOTH_CONNECT`, and `ACCESS_FINE_LOCATION` to start BLE discovery. |
-| **BLE Location Requirement** | Decoupled from GPS location tracking. | Requires `ACCESS_FINE_LOCATION` even on API 31+ because Zengge FCF1 chipsets advertise their UUID inside the scan `mServiceData` packet instead of `mServiceUuids`. The Android BLE scanner cannot perform a filtered scan on service data, which forces an unfiltered scan, requiring location permissions. |
-| **Bluetooth Manifest Configurations** | Configured via `NSBluetoothAlwaysUsageDescription` in `app.config.js`. | Uses `BLUETOOTH_SCAN` with `android:usesPermissionFlags="neverForLocation"` to signal GPS separation under normal scans. |
-| **Health API Client** | Integrates with `react-native-health` (Apple HealthKit) reading heart rate/active energy, writing workouts. | Integrates with `react-native-health-connect` (Android Health Connect) reading heart rate/active calories, writing sessions. |
-| **Health API Status Queries** | **Privacy Protection Constraint (RISK-4)**: Apple HealthKit does not expose permission status APIs for read scopes. Queries return `true` as a pragmatic workaround, and read loops return empty data lists if access is denied. | Direct query status checks are supported and execute via the `getGrantedPermissions()` interface. |
-| **Health API Setup Crash Defense** | Standard initialization. | Native delegate requires execution of `initHC()` before checking or requesting permissions. If skipped, the system throws an `UninitializedPropertyAccessException` on native coroutines. |
-| **Foreground Services** | Handled implicitly by background execution modes. | Requires declarations for `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_LOCATION`, and `FOREGROUND_SERVICE_CONNECTED_DEVICE` in the manifest. |
-
----
-
-## 6. Runtime Permission Sequence Diagram
-
-The diagram below details the double-gated permission check logic, integrating the AsyncStorage soft-revocation ledger with native OS permissions:
-
+## 6. Sequence Diagram
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor User as Skater / OS Dialog
-    participant App as React Native UI (Guard/Onboarding)
-    participant PS as PermissionService
-    participant AS as AsyncStorage (Opt-out Ledger)
-    participant OS as Native OS Permissions API
-
-    Note over App,OS: Double-Gated Permission Check Flow
-    App->>PS: checkPermission(type)
-    PS->>AS: getOptOutLedger()
-    AS-->>PS: Return ledger data
-    alt App-Level Soft Revoked (ledger[type] == true)
-        PS-->>App: Return false (Fast Gate Override)
-    else Active Opt-In in App
-        PS->>OS: Query native permission status
-        OS-->>PS: Return native status (Granted / Denied)
-        PS-->>App: Return status
+    participant Component
+    participant PermissionService
+    participant OS_Native
+    Component->>PermissionService: requestPermission(type)
+    PermissionService->>OS_Native: Dispatch native platform request
+    OS_Native-->>PermissionService: Return Result (Granted/Denied)
+    alt Granted
+        PermissionService->>PermissionService: Clear Opt-Out Ledger
+    else Denied
+        PermissionService->>PermissionService: Show settings redirection alert
     end
-
-    Note over App,OS: Permission Request & Soft Revoke Toggle Flow
-    User->>App: Toggle permission switch / Press Grant Access
-    App->>PS: requestPermission(type)
-    alt Requested ON (Grant Access)
-        PS->>OS: Request native OS permission
-        OS-->>User: Show system dialog (if not determined)
-        User->>OS: Select Grant or Deny
-        OS-->>PS: Return native result
-        alt Native Granted
-            PS->>AS: setPermissionOptOut(type, false) (Opt-in)
-            PS->>App: Return true
-        else Native Denied
-            PS->>App: Return false (Show settings redirection alert)
-        end
-    else Requested OFF (Soft Revoke)
-        App->>PS: setPermissionOptOut(type, true)
-        PS->>AS: Save opt-out state to ledger
-        PS-->>App: Emit PERMISSION_STATUS_CHANGED_EVENT (Update UI views)
-    end
+    PermissionService-->>Component: return Boolean
 ```
 
----
+## 7. Stale Documentation & Archive Instructions
+Found the following stale documentation in `docs/SK8Lytz_App_Master_Reference.md` (Line 1198) regarding deprecated permission logic:
+- `syncSystemPermissions() runs on boot/foreground to reconcile the ledger with native OS settings. If OS is "Denied", App ledger is forced to "Opt-Out".` [MOVE_TO_ARCHIVE]
 
-## 7. Platform Permission Declarations & Configurations
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
 
-### 📱 iOS Info.plist Declarations (`app.config.js`)
-Expo compiles the following configurations directly into the native iOS bundle metadata:
-- **`NSCameraUsageDescription`**: `"SK8Lytz needs camera access to sample colors from your environment for LED synchronization."`
-- **`NSMicrophoneUsageDescription`**: `"SK8Lytz needs microphone access to synchronize your lights to ambient music."`
-- **`NSLocationWhenInUseUsageDescription`**: `"SK8Lytz uses your location to discover nearby skate spots and map your skating routes."`
-- **`NSHealthShareUsageDescription`**: `"SK8Lytz reads step count and heart rate to synchronize light patterns with your fitness metrics."`
-- **`NSHealthUpdateUsageDescription`**: `"SK8Lytz writes your skating sessions to Apple Health to track fitness activity."`
-- **`NSBluetoothAlwaysUsageDescription`**: `"Allow Neogleamz App to connect to your Zengge roller skate controllers."` (Configured via `react-native-ble-plx` plugin config).
-
-### 🤖 Android Manifest Declarations (`AndroidManifest.xml`)
-The native manifest exposes specific permissions and service requirements:
-- **BLE Features**: `BLUETOOTH`, `BLUETOOTH_ADMIN`, `BLUETOOTH_CONNECT`, `BLUETOOTH_SCAN` (with `usesPermissionFlags="neverForLocation"`).
-- **Positioning**: `ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION` (Used as fallback and for unfiltered BLE searches).
-- **Physical Sensors**: `ACTIVITY_RECOGNITION` (Required for Health Connect step syncing).
-- **Ambient Sync**: `RECORD_AUDIO` (App microphone), `CAMERA` (Color tracking).
-- **Developer HUD**: `SYSTEM_ALERT_WINDOW` (Required to draw floating developer overlays).
-- **Storage Limits**: `READ_EXTERNAL_STORAGE` and `WRITE_EXTERNAL_STORAGE` (Limited via `maxSdkVersion="32"` to align with modern Android media rules).
-- **Background Execution**:
-  - `FOREGROUND_SERVICE`
-  - `FOREGROUND_SERVICE_LOCATION`
-  - `FOREGROUND_SERVICE_CONNECTED_DEVICE`
-  - Notifee service type mapping: `location|health|connectedDevice|shortService|dataSync`
-
-> [!WARNING]
-> **Android Target SDK 36 Alignment Mismatch**:
-> The application's `targetSdkVersion` is set to `36`. Services launching foreground configurations under types `health` or `dataSync` require the corresponding permissions declared in the manifest:
-> - `android.permission.FOREGROUND_SERVICE_HEALTH`
-> - `android.permission.FOREGROUND_SERVICE_DATA_SYNC`
-> Currently, these permissions are **not** requested in `AndroidManifest.xml` nor `app.config.js` permissions array, presenting an architectural gap if the app triggers those foreground types on Android 14+.
-
----
-
-## 8. Stale Documentation & Archive Log
-
-The following documentation blocks in the Master Reference are identified as stale and must be archived:
-
-- **Stale Block**:
-  > Location: `tools/SK8Lytz_App_Master_Reference.md` (under Section `9.1 Legal Hardening / OS_PERMISSIONS`)
-  ```markdown
-  - **OS Sync**: syncSystemPermissions() runs on boot/foreground to reconcile the ledger with native OS settings. If OS is "Denied", App ledger is forced to "Opt-Out".
-  ```
-  - **Status**: `
-## 9. Architectural Impact Flags
-
-- `[IMPACTS_USER_JOURNEY]` — Gated permissions direct the availability of ambient music synchronization, camera color sampling, skate mapping, and fitness tracking dashboards.
-- `[IMPACTS_STATE_CHART]` — System Bluetooth and location authorization states dictate transitioning behaviors inside `BleMachine.ts` and `SessionMachine.ts` state charts.
 
 <!-- CARTOGRAPHER_END: OS_PERMISSIONS -->
 
 ### Domain: ADMIN_&_TELEMETRY
 <!-- CARTOGRAPHER_START: ADMIN_&_TELEMETRY -->
 
-# 🏛️ ADMIN_&_TELEMETRY Domain Cartography
-
-_SDE Cartographer Node Read-Only Audit | Compiled: 2026-06-13 | Domain: `src/components/admin/*`, `src/services/AppLogger.ts`, `src/services/AppSettingsService.ts`, `src/hooks/useAdminSettings.ts`, `src/hooks/useAdminTelemetry.ts`, `src/hooks/useDiagnosticLog.ts`._
-
----
+# 🗺️ Cartography Node: Admin & Telemetry Domain
 
 ## 1. File Manifest
-
-This domain contains the administrative tools, low-level Bluetooth Diagnostic Lab, remote configuration, and real-time app telemetry pipelines:
-
-| Filename | Type | Architectural Purpose |
-|:---|:---:|:---|
-| [`src/services/AppLogger.ts`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/AppLogger.ts) | Service | Central telemetry singleton capturing, throttling, obfuscating PII, caching, and batch-uploading log data to Supabase (with a dedicated VIP Error Fast-Lane). |
-| [`src/services/AppSettingsService.ts`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/AppSettingsService.ts) | Service | Configuration client managing application-wide settings and feature flags, offering instant local caches and background Supabase syncing. |
-| [`src/hooks/useAdminSettings.ts`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useAdminSettings.ts) | Hook | Manages local UI states for global app controls with optimistic updates, background retries, and automatic rollback on synchronization failures. |
-| [`src/hooks/useAdminTelemetry.ts`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useAdminTelemetry.ts) | Hook | Translates raw log event types into visual dashboard metadata (icons/labels) and controls upload, local clearing, and sharing interactions. |
-| [`src/hooks/useDiagnosticLog.ts`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDiagnosticLog.ts) | Hook | Orchestrates the low-level Bluetooth Diagnostic Lab logs, command transmission wrappers, and verification verdicts for the Protocol Oracle. |
-| [`src/components/admin/adminStyles.ts`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/adminStyles.ts) | Styling | Consolidates common high-contrast visual styles, layout variables, and typography definitions for the admin subsystem. |
-| [`src/components/admin/AdminTab.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/AdminTab.tsx) | UI | Renders the tab index page directing developers to hardware programming, diagnostics, and remote settings sub-panels. |
-| [`src/components/admin/AdminToolsModal.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/AdminToolsModal.tsx) | UI | Command Center entry point wrapping the tab-navigation shell, virtualized log viewer, and statistics dashboard under a memoized architecture. |
-| [`src/components/admin/AdvancedHardwareModal.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/AdvancedHardwareModal.tsx) | UI | Debug Modal presenting peripheral chip register specifications and EEPROM configuration parameters with direct write dispatches. |
-| [`src/components/admin/ConfirmDeleteModal.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/ConfirmDeleteModal.tsx) | UI | Simple validation modal prompting confirmation before executing log deletion scripts. |
-| [`src/components/admin/DeviceTab.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/DeviceTab.tsx) | UI | Aggregates connection logs to extract and list MAC addresses, firmware versions, and RSSI tracking charts. |
-| [`src/components/admin/StatsTab.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/StatsTab.tsx) | UI | Summarizes local system parameters (battery, total RAM, memory limits, and storage sizes) and app usage metrics. |
-| [`src/components/admin/tools/AdminAuditLogViewer.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/AdminAuditLogViewer.tsx) | UI | Displays the history trail of security actions taken by administrators. |
-| [`src/components/admin/tools/AdminPicksScheduler.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/AdminPicksScheduler.tsx) | UI | Editor modal for scheduling spotlight picks, integrating date pickers, and building custom positional gradient arrays. |
-| [`src/components/admin/tools/AdminRosterPanel.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/AdminRosterPanel.tsx) | UI | Management interface to view, add, or delete registered administrators. |
-| [`src/components/admin/tools/AppManager.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/AppManager.tsx) | UI | Configures settings and legal policies (EULA) dynamically mapped via the application-wide `ControlsRegistry`. |
-| [`src/components/admin/tools/FeatureFlagsPanel.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/FeatureFlagsPanel.tsx) | UI | Exposes feature flags for runtime A/B testing and staggered feature rollouts. |
-| [`src/components/admin/tools/GlobalAnalyticsPanel.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/GlobalAnalyticsPanel.tsx) | UI | Panel consolidating fleet-wide performance, error rates, and user session metrics. |
-| [`src/components/admin/tools/HardwareBlacklistPanel.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/HardwareBlacklistPanel.tsx) | UI | Portal to restrict and manage blacklisted BLE peripheral MAC addresses. |
-| [`src/components/admin/tools/ProductManager.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/ProductManager.tsx) | UI | Catalog editor validating and upserting Neogleamz product models and segment default profiles. |
-| [`src/components/admin/tools/Sk8LytzDiagnosticLab.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/Sk8LytzDiagnosticLab.tsx) | UI | Diagnostic wrapper orchestrating color testing, transitions, frame-builders, and the Protocol Oracle test harness. |
-| [`src/components/admin/tools/Sk8LytzProgrammer.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/Sk8LytzProgrammer.tsx) | UI | Flashing tool providing command arrays for native over-the-air firmware updates and EEPROM modifications. |
-| [`src/components/admin/tools/UserManagementPanel.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/UserManagementPanel.tsx) | UI | Administrative dashboard to search, review, ban, or unlock user profiles. |
-| [`src/components/admin/tools/tabs/DiagnosticLabBuilderTab.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/tabs/DiagnosticLabBuilderTab.tsx) | UI | Multi-mode layout assembler visualizing byte annotations and allowing raw transmission. |
-| [`src/components/admin/tools/tabs/DiagnosticLabColorTab.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/tabs/DiagnosticLabColorTab.tsx) | UI | Interface for running automated color routing tests (RGB vs. GRB) on active devices. |
-| [`src/components/admin/tools/tabs/DiagnosticLabConstants.ts`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/tabs/DiagnosticLabConstants.ts) | Data | Static data maps defining lab categories, layout parameters, and opcodes. |
-| [`src/components/admin/tools/tabs/DiagnosticLabDevicesTab.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/tabs/DiagnosticLabDevicesTab.tsx) | UI | Connection manager tracing physical BLE states and handling pairing workflows in the lab. |
-| [`src/components/admin/tools/tabs/DiagnosticLabHwBadge.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/tabs/DiagnosticLabHwBadge.tsx) | UI | Status component displaying connected device IC specifications and segment layouts. |
-| [`src/components/admin/tools/tabs/DiagnosticLabOracleTab.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/tabs/DiagnosticLabOracleTab.tsx) | UI | Interactive test execution log certifying protocol opcodes and reporting to the coverage matrix. |
-| [`src/components/admin/tools/tabs/DiagnosticLabQuickColorGrid.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/tabs/DiagnosticLabQuickColorGrid.tsx) | UI | Simple color palette selector dispatching commands instantly. |
-| [`src/components/admin/tools/tabs/DiagnosticLabSnifferTab.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/tabs/DiagnosticLabSnifferTab.tsx) | UI | Live scrolling stream mapping RX/TX hex payloads with packet descriptions. |
-| [`src/components/admin/tools/tabs/DiagnosticLabStyles.ts`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/tabs/DiagnosticLabStyles.ts) | Styling | Modular styling sheet for diagnostic panels and console screens. |
-| [`src/components/admin/tools/tabs/DiagnosticLabTransitionTab.tsx`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/tabs/DiagnosticLabTransitionTab.tsx) | UI | UI controls to test fade, breath, flow, and strobe transition modes. |
-| [`src/components/admin/tools/tabs/DiagnosticLabTypes.ts`](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/tabs/DiagnosticLabTypes.ts) | Types | TypeScript interface definitions for lab statuses and test entries. |
-
----
+- `src/components/admin/*`: Presentational Admin Hub components (`AdminToolsModal`, `StatsTab`, `DeviceTab`, `TimelineTab`, etc.) using a memoized architecture to prevent re-render storms.
+- `src/services/AppLogger.ts`: Singleton telemetry and analytics engine. Handles local buffering, deduplication, JSON formatting, PII scrubbing, and Supabase transmission of app logs/crashes.
+- `src/services/AppSettingsService.ts`: Global application configuration manager. Syncs feature flags and settings between `AsyncStorage` (`@sk8lytz_app_settings`) and Supabase (`sk8lytz_app_settings`).
+- `src/hooks/useAdminSettings.ts`: React hook interfacing with `AppSettingsService` to expose feature flags with optimistic UI updates.
+- `src/hooks/useAdminTelemetry.ts`: React hook interfacing with `AppLogger` to provide logs, analytics stats, cloud sync logic, and JSON exports to the Admin UI.
+- `src/hooks/useDiagnosticLog.ts`: Protocol diagnostic hook tracking BLE opcode testing coverage, verdict annotation (PASS/FAIL), and live RX/TX traces.
 
 ## 2. Blast Radius
-
-```
-Imports (Inflow)                           ADMIN_&_TELEMETRY Domain                         Exports (Outflow)
-┌──────────────────────────────────────┐   ┌────────────────────────────────────────────┐   ┌──────────────────────────────────────────────┐
-│ - react, react-native, expo-device   │   │ - AppLogger.ts (Telemetry core)            │   │ - Globals: imported by virtually all hooks, │
-│ - expo-battery                       │──>│ - AppSettingsService.ts (Remote settings)  │──>│   services, and screen files to report       │
-│ - @react-native-async-storage        │   │ - useAdminTelemetry / useAdminSettings.ts  │   │   app events & catch exceptions.             │
-│ - @react-native-community/datetimeptr│   │ - useDiagnosticLog.ts                      │   │ - useBLE.ts & BleMachine.ts: reports connection│
-│ - react-native-ble-plx (types)       │   │ - AdminToolsModal.tsx                      │   │   events, queues, and recovery lifecycles.   │
-│ - Supabase client (Client)           │   │ - Sk8LytzDiagnosticLab.tsx / Programmer.tsx│   │ - DashboardScreen.tsx: mounts AdminToolsModal│
-│ - useProtocolDispatch.ts             │   └────────────────────────────────────────────┘   │   via a hidden 10-tap gesture.              │
-│ - useRegistration.ts                 │                                                    └──────────────────────────────────────────────┘
-└──────────────────────────────────────┘                                                    
-```
-
-### Imports and Internal Dependencies
-* **Sensors & Platform API**: Consumes `expo-device` and `expo-battery` to append device statistics, battery levels, memory specs, and operating system build identifiers to logs.
-* **Storage & Sync**: Relies on `@react-native-async-storage/async-storage` for persistence, and Supabase client `src/services/supabaseClient.ts` for database uploads and remote settings fetches.
-* **Date & Layout**: Pulls `@react-native-community/datetimepicker` for spotlight visibility scheduling in `AdminPicksScheduler.tsx`.
-* **GATT & Dispatch**: Leverages the application's dispatch hooks (`useProtocolDispatch`, `useRegistration`) to run raw diagnostic commands.
-
-### Exports & Consumers
-* **Global Instrumentation**: `AppLogger` is the primary crash and analytics collection gateway. Every custom hook, BLE lifecycle listener, location service, and database mutation catch block calls `AppLogger.error()` or `AppLogger.log()` to record breadcrumbs and exception events.
-* **Secure Access Modal**: `AdminToolsModal` acts as the master developer HUD, which is mounted at the root of `DashboardScreen.tsx` and protected by a passcode passcode input field (`0000` sequence).
-
----
+- **Telemetry Disruption**: Modifying `AppLogger.ts` can cause memory leaks if the buffer truncation fails, or silently drop critical telemetry (crash reports) if the VIP Fast-Lane is obstructed.
+- **UI Freeze / Performance**: Bypassing the 500ms debounce/throttle on `AsyncStorage.setItem` in `AppLogger` will cause React Native bridge congestion and severe UI jank.
+- **Feature Flag Reverts**: Flaws in `AppSettingsService` sync logic can override offline fallback states, disabling features (like Global Telemetry) for users disconnected from the internet.
+- **Protocol Oracle Invalidation**: Altering `useDiagnosticLog.ts` test logic or `TRACKED_OPCODES` without care can falsely verify failing BLE opcodes in the coverage matrix.
 
 ## 3. Context Matrix
-
-* **ThemeContext (`useTheme`)**: Consumed by the admin tools shell and sub-tabs (`AdminToolsModal`, `Sk8LytzDiagnosticLab`, `AdminPicksScheduler`, `AdminTab`, `DeviceTab`, `StatsTab`, `AdvancedHardwareModal`) to apply Neogleamz standard dark/light design parameters.
-* **Safe Area Context (`useSafeAreaInsets`)**: Consumed by the modal views (`Sk8LytzDiagnosticLab`, `Sk8LytzProgrammer`, `AdminPicksScheduler`, `AdminToolsModal`) to dynamically compute safe boundaries for notch viewports across iOS devices.
-* **ProtocolDispatchContext (`useProtocolDispatch`)**: Consumed by `useDiagnosticLog`, `Sk8LytzProgrammer`, and `AdvancedHardwareModal` to send raw byte dispatches and write configurations directly to hardware.
-* **Singleton Services**: The domain does not expose a React Context provider; instead, it offers raw service hooks (`useAdminTelemetry`, `useAdminSettings`, `useDiagnosticLog`) which tap into the global `AppLogger` and `AppSettingsService` instances.
-
----
+- **Global Settings (`STORAGE_APP_SETTINGS`)**: The master gate for the entire telemetry pipeline; explicitly checks `global_telemetry_enabled` before allowing cloud uploads.
+- **Auth State (`currentUserId`)**: Injected directly into Supabase batch inserts by the `AppLogger`.
+- **Hardware Profile (`activeDevices`)**: The logger evaluates connected devices to inject correct RSSI, MTU, and battery attributes by matching `deviceId`.
+- **Battery/Device Context (`expo-battery`, `expo-device`)**: Injects deep hardware data (battery state, low power mode, platform SDK) into stats and crash logs.
+- **FlightRecorder**: Uses `FlightRecorder.leaveBreadcrumb` to synchronize user UI actions with crash payloads.
 
 ## 4. Hook/Service I/O Registry
-
-### `AppLogger` (Service)
-* **Inputs**:
-  * `log(event: EventType, rawPayload?: Record<string, any>): Promise<void>`
-  * `debug(message: string, context?: Record<string, any>): void`
-  * `info(message: string, context?: Record<string, any>): void`
-  * `warn(message: string, context?: unknown): void`
-  * `error(message: string, errorObj?: unknown, context?: Record<string, unknown>): void`
-  * `updateKnownDevices(devices: any[]): void`
-  * `setLastTxPayload(hex: string): void`
-* **Outputs**:
-  * `getLogs(): Promise<LogEntry[]>` (returned in reverse-chronological order)
-  * `getStats(): Promise<TelemetryStats>` (calculates storage footprint, app launch times, and mode usage statistics)
-  * `exportJSON(): Promise<string>` (compiles full device logs and stats into a structured JSON string)
-* **Side-Effects**:
-  * Enforces a 500ms throttle limit on user interaction events (`COLOR_CHANGED`, `SPEED_CHANGED`, `BRIGHTNESS_CHANGED`).
-  * Triggers a debounced local filesystem write (500ms timer) to AsyncStorage under `@Sk8lytz_app_settings_logger` (`APP_LOGGER_STORAGE_KEY`).
-  * Deterministically scrubs keys matching PII key lists (`email`, `password`, `token`, `latitude`, etc.) using recursive key traversal to protect skater privacy.
-  * Dispatches critical diagnostics immediately to Supabase `telemetry_errors` and `crash_telemetry` tables (VIP Fast-Lane).
-  * Uploads standard logs in batches of 500 records to `telemetry_snapshots` before trimming local arrays and clearing synced storage.
-
-### `AppSettingsService` (Service)
-* **Inputs**:
-  * `updateSetting(key: AppSettingKey, value: unknown): Promise<boolean>`
-* **Outputs**:
-  * `fetchAllSettings(): Promise<AppSettingsMap>`
-* **Side-Effects**:
-  * Reads the local AsyncStorage cache `@Sk8lytz_app_settings` for offline boot immediately, and triggers a background query to Supabase `sk8lytz_app_settings` to update local tables.
-  * Commits upserts to remote database and updates storage caches upon calling `updateSetting`.
-
-### `useAdminSettings` (Hook)
-* **Inputs**:
-  * `visible: boolean`
-* **Outputs**:
-  * `appSettings: AppSettingsMap`
-  * `isLoading: boolean`
-  * `loadSettings: () => Promise<void>`
-  * `updateSetting: (key: string, value: AppSettingsValue) => Promise<void>`
-* **Side-Effects**:
-  * Loads remote configurations from `AppSettingsService` when `visible` transitions to true.
-  * Optimistically updates state on modification and triggers an automatic rollback/reload sequence if the cloud update fails.
-
-### `useAdminTelemetry` (Hook)
-* **Inputs**:
-  * `visible: boolean`
-* **Outputs**:
-  * `logs: LogEntry[]`
-  * `stats: TelemetryStats | null`
-  * `isUploading: boolean`
-  * `load: () => Promise<void>`
-  * `clearLogs: () => Promise<void>`
-  * `uploadLogs: () => Promise<void>`
-  * `exportLogs: () => Promise<void>`
-* **Side-Effects**:
-  * Fetches in-memory stats and timeline logs when active.
-  * Triggers database deletions, logs uploads, and opens OS-level share drawers for logs exports.
-
-### `useDiagnosticLog` (Hook)
-* **Inputs**:
-  * `{ visible, liveRxPayload, targetDeviceId }`
-* **Outputs**:
-  * `logs: BleLog[]` (stores the last 200 packets)
-  * `lastSent: string`
-  * `lastNote: string`
-  * `testLog: TestLogEntry[]`
-  * `coverage: Record<TrackedOpcode, OpcodeStatus>`
-  * `transmit: (bytes: number[], note?: string, opcode?: string) => Promise<void>`
-  * `sendRawHex: (hexStr: string, note?: string, opcode?: string) => Promise<void>`
-  * `setVerdict: (entryId: string, opcode: string, verdict: TestVerdict) => void`
-  * `setLastVerdict: (opcode: string, verdict: TestVerdict) => void`
-  * `clearLogs: () => void`
-  * `clearTestLog: () => void`
-* **Side-Effects**:
-  * Syncs and loads the diagnostic coverage registry from `@sk8lytz_diag_test_log` on instantiation.
-  * Triggers raw Bluetooth writes to the target BLE device via the dispatch client.
-  * Captures live notifications (`liveRxPayload`), processes EEPROM packets, and associates incoming packets with the active test verdict entries.
-
----
+- **`AppLogger` (Service)**
+  - *Inputs*: `log(event: EventType, rawPayload: Record)`, `updateKnownDevices(devices)`
+  - *Outputs*: Local storage buffer (`LogEntry[]`), Supabase inserts (`telemetry_snapshots`, `telemetry_errors`, `crash_telemetry`).
+- **`AppSettingsService` (Service)**
+  - *Inputs*: `updateSetting(key: AppSettingKey, value: AppSettingsValue)`
+  - *Outputs*: `fetchAllSettings(): Promise<AppSettingsMap>`
+- **`useAdminSettings` (Hook)**
+  - *Inputs*: `visible: boolean`
+  - *Outputs*: `{ appSettings, isLoading, loadSettings, updateSetting }`
+- **`useAdminTelemetry` (Hook)**
+  - *Inputs*: `visible: boolean`
+  - *Outputs*: `{ logs, stats, isUploading, load, clearLogs, uploadLogs, exportLogs }`
+- **`useDiagnosticLog` (Hook)**
+  - *Inputs*: `visible: boolean, liveRxPayload, targetDeviceId`
+  - *Outputs*: `{ logs, lastSent, lastNote, transmit, sendRawHex, clearLogs, testLog, coverage, setVerdict, setLastVerdict, clearTestLog }`
 
 ## 5. OS Variance Matrix
+- **Battery/Power APIs**: iOS and Android battery metrics (e.g., `isLowPowerMode`) behave differently. Handled gracefully via `Battery.isAvailableAsync()`.
+- **Background Persist Limitations**: Android aggressively throttles `setTimeout`. The `AppLogger` buffer relies on robust forced persistence before closure.
+- **Filesystem Constraints**: React Native `AsyncStorage` limits sizes on Android. The logger buffer is strictly capped at `MAX_ENTRIES` (500) to remain well under the ~1-2MB SQLite row threshold.
+- **Network Stack Errors**: Network rejections (Supabase timeouts/offline) are caught safely to preserve UI stability on connection drops.
 
-* **Android FlatList Optimizations**:
-  * Android and iOS devices process the Admin/User lists with `removeClippedSubviews={true}` configured. This reduces native layout hierarchies during high-frequency log updates.
-* **DatePicker Dialog Layout (iOS vs. Android)**:
-  * Android automatically dismisses the calendar picker dialog as soon as a date value changes (`onDateChanged`). iOS requires mounting a custom visual overlay (`iosDatePickerOverlay`) containing a manual "Done" confirmation button since datetimepicker renders inline on iOS.
-* **Diagnostic Code Fonts**:
-  * Diagnostic and sniffer panels select `fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace'` to align hexadecimal bytes inside grids.
-* **Optical Simulation Mode (Web/Simulator Fallback)**:
-  * `Sk8LytzProgrammer.tsx` branches `Platform.OS === 'web'` to enable simulator modes. This allows web builds to mock BLE operations and test log-correlation mechanics.
-  * `Sk8LytzDiagnosticLab.tsx` uses custom byte annotations and inputs matching `Platform.OS === 'ios' ? 'Menlo' : 'monospace'`.
-* **Haptic Feedback Gating**:
-  * Telemetry-producing BLE hooks check `Platform.OS !== 'web'` to suppress haptic calls on non-native environments.
+## 6. AppLogger Pipeline Map
+- **Event Types**: Distinct union type `EventType` categorizes events (ACTION, BLE, ERROR, NETWORK, NAVIGATION).
+- **Batching**: Payload arrays chunked up to `MAX_ENTRIES` (500 entries) in memory. During Supabase upload, payloads are mapped and sent in batches of `CHUNK = 500`.
+- **Debounce / Throttle**: 
+  - *Storage Writes*: 500ms `persistTimeout` protects `AsyncStorage.setItem`.
+  - *High-Frequency Events*: Events like `BRIGHTNESS_CHANGED` and `SPEED_CHANGED` are throttled via `throttleMap` to a maximum of 1 entry per 500ms.
+- **Supabase Upload**: Validates `global_telemetry_enabled`. Iterates the buffer, maps to JSONB `metadata`, and pushes to `telemetry_snapshots`. Successfully inserted chunks are sliced out of the local buffer.
+- **Offline Persist**: Writes buffer via JSON to `APP_LOGGER_STORAGE_KEY`. Re-hydrates from `AsyncStorage` on instantiation.
+- **VIP Error Fast-Lane**: Critical events (`ERROR_CAUGHT`, `PROTOCOL_ERROR`) bypass queueing and are instantly pushed to `telemetry_errors` and `crash_telemetry` with full context/breadcrumbs, while also persisting locally to prevent offline data loss.
+- **Log Clearing**: Purges the local buffer in memory, removes the `AsyncStorage` key, and explicitly calls `supabase.storage.from('sk8lytz-logs').remove` to clean cloud blobs based on calculated host and BLE MAC identities.
 
----
+## 7. Stale Documentation Audit
+- Section 7 in `SK8Lytz_App_Master_Reference.md`: Supabase Table `skate_sessions` is missing fields like `avg_bpm`, `peak_gforce`, and `crew_session_id`. It also lacks documentation on the offline fallback architecture (`PENDING_SESSION_QUEUE_KEY`).
+**Action Tag**: `[MOVE_TO_ARCHIVE]`
 
-## 6. Sequence Diagrams
+## 8. Architectural Impact Flags
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
 
-### Standard Logging Pipeline
-This flow represents standard UI and system events being throttled, correlated with BLE write queues, debounced, and synced to Supabase.
-
+## 9. Sequence Diagram (AppLogger Data Flow)
 ```mermaid
 sequenceDiagram
-    autonumber
-    actor Hook as React Hook / Component
-    participant AL as AppLogger Service
-    participant IMB as InMemory Buffer
-    participant AS as AsyncStorage
-    participant SB as Supabase database
-    participant FR as FlightRecorder
+    participant UI as App / React Hooks
+    participant Logger as AppLogger
+    participant Async as AsyncStorage
+    participant DB as Supabase DB
 
-    Hook->>AL: log("SPEED_CHANGED", { value: 75 })
-    Note over AL: Check high-frequency throttle<br/>(Last log > 500ms ago?)
-    AL-->>Hook: Allow log (Proceed)
+    UI->>Logger: log(event, payload)
     
-    AL->>AL: formatPayload(rawPayload)
-    Note over AL: 1. Inject Device Context (RSSI, battery)<br/>2. Scrub PII keys (mac, lat/lng, emails)<br/>3. Deterministic key obfuscation
-    
-    AL->>FR: leaveBreadcrumb("ACTION", "SPEED_CHANGED", cleanPayload)
-    AL->>IMB: push(LogEntry)
-    
-    Note over AL: Debounced persist() triggers<br/>(500ms timeout)
-    AL->>AS: setItem("@Sk8lytz_app_settings_logger", JSON.stringify(buffer))
-    
-    Note over Hook: Developer triggers "Sync Logs"
-    Hook->>AL: uploadLogsToSupabase()
-    AL->>AS: getItem("@Sk8lytz_app_settings")
-    Note over AL: Confirm global_telemetry_enabled === true
-    
-    AL->>SB: Get authenticated user details (.auth.getUser())
-    
-    loop Chunked upload (CHUNK_SIZE = 500)
-        AL->>SB: Insert into table "telemetry_snapshots"
-        SB-->>AL: Confirm batch insert success
+    alt is VIP Critical Error Event
+        Logger->>DB: Immediate async insert (telemetry_errors)
+        Logger->>DB: Immediate async insert (crash_telemetry)
+        Logger->>Async: Force persist local buffer
+    else is High-Frequency Event (Slider)
+        Logger->>Logger: Throttle (max 1 per 500ms)
+        Logger->>Async: Debounced persist (500ms)
+    else is Normal Hardware Event
+        Logger->>Logger: Correlate with TX (pendingLogQueue)
+        Logger->>Async: Debounced persist (500ms)
     end
+
+    UI->>Logger: uploadLogsToSupabase()
+    Logger->>Async: Check app_settings (telemetry enabled?)
     
-    AL->>IMB: slice(successfulCount) (Trims uploaded delta)
-    AL->>AS: setItem("@Sk8lytz_app_settings_logger", JSON.stringify(buffer))
-```
-
-### VIP Error Fast-Lane Pipeline
-This diagram displays critical crashes or protocol errors bypassing local queue buffers to dispatch dual writes to Supabase instantly.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor SRE as SRE / System Exception
-    participant AL as AppLogger Service
-    participant IMB as InMemory Buffer
-    participant AS as AsyncStorage
-    participant SB as Supabase database
-    participant FR as FlightRecorder
-
-    SRE->>AL: log("ERROR_CAUGHT", { error: "GATT 133 Connection Timeout" })
-    AL->>AL: formatPayload(rawPayload)
-    Note over AL: Obfuscate PII & extract context
-    AL->>FR: leaveBreadcrumb("ERROR", "ERROR_CAUGHT", cleanPayload)
-    
-    par Dual Direct Uploads (VIP Fast-Lane)
-        AL->>SB: Insert details into table "telemetry_errors"
-        AL->>SB: Insert error + breadcrumb trail into table "crash_telemetry"
+    alt Telemetry Enabled
+        Logger->>DB: Batch Insert chunks of 500 (telemetry_snapshots)
+        DB-->>Logger: Success ACK
+        Logger->>Logger: Slice uploaded chunk from buffer
+        Logger->>Async: Persist remaining buffer (force)
+    else Telemetry Disabled
+        Logger->>Logger: Wipe buffer
+        Logger->>Async: Persist empty buffer (force)
     end
-    
-    Note over AL: Concurrently persist locally to prevent data loss if offline
-    AL->>IMB: push(LogEntry)
-    AL->>AS: setItem("@Sk8lytz_app_settings_logger", JSON.stringify(buffer))
-    
-    SB-->>AL: Confirm VIP insertions (non-blocking)
 ```
 
-### Diagnostic Lab Test and Oracle Verdict Flow
-This diagram models the interactive hardware certification process using the Protocol Oracle inside the Diagnostic Lab.
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Tester (Admin UI)
-    participant OracleTab as DiagnosticLabOracleTab
-    participant Hook as useDiagnosticLog Hook
-    participant Dispatch as useProtocolDispatch
-    participant Device as BLE Controller Hardware
-    participant AS as AsyncStorage
-
-    User->>OracleTab: Trigger Test for Opcode "0x63"
-    OracleTab->>Hook: transmit(bytes, label, "0x63")
-    Hook->>Hook: Create pending TestLogEntry (verdict: null)
-    Hook->>Dispatch: executeRawPayload(bytes)
-    Dispatch->>Device: Write BLE GATT characteristics
-    Device-->>Hook: RX Notification emitted with Settings payload
-    Note over Hook: Update TestLogEntry with rxHex payload
-    
-    User->>OracleTab: Observe LEDs & tap PASS/FAIL verdict
-    OracleTab->>Hook: setVerdict(entryId, "0x63", "PASS")
-    Hook->>Hook: Update coverage map ("0x63" => "PASS")
-    Hook->>AS: setItem("@sk8lytz_diag_test_log", JSON.stringify(testLog))
-```
-
----
-
-## 7. AppLogger Telemetry Pipeline Detail
-
-1. **Event Capture & Throttling**:
-   Events represent React UI interactions, BLE connection states, and hardware transmissions. High-frequency events (`BRIGHTNESS_CHANGED`, `SPEED_CHANGED`, `COLOR_CHANGED`) are throttled to a maximum rate of 1 write per 500ms.
-2. **PII Obfuscation**:
-   Log entries pass through `formatPayload` to sanitize private credentials. Strings associated with PII keys (including `password`, `token`, `email`, `lat`/`lng` coordinates, and `mac` addresses) are replaced with `[REDACTED]`. The algorithm uses a JavaScript `WeakSet` to traverse object trees, preventing circular reference lockups.
-3. **Queue Correlation**:
-   To diagnose packet delivery, hardware commands (such as brightness adjustments) are delayed in a `pendingLogQueue` for up to 100ms. If a BLE write dispatch (`txPayloadQueue`) occurs within 250ms of the command, the raw hex payload and write status are injected directly into the user event log entry before it is saved.
-4. **Debounced Local Persistence**:
-   Writing to local disk (AsyncStorage key `@Sk8lytz_app_settings_logger`) is deferred via a 500ms timer. This batches multiple rapid log statements into a single file save, protecting mobile write operations from performance bottlenecks.
-5. **VIP Fast-Lane Insertion**:
-   Crash logs (`ERROR_CAUGHT`, `PROTOCOL_ERROR`, `BLE_WRITE_ERROR`, `BLE_CONNECTION_ERROR`, `CREW_ERROR`) bypass the standard local queues. The logger initiates immediate, parallel inserts to Supabase tables `telemetry_errors` and `crash_telemetry`, appending the current `FlightRecorder` breadcrumb trail.
-6. **Supabase Ingestion (Sync)**:
-   When syncing, the logger checks the `@Sk8lytz_app_settings` cache to verify that telemetry has not been disabled. If settings are enabled, logs are compiled, associated with the active Supabase user ID, and uploaded to `telemetry_snapshots` in chunks of 500 rows. If telemetry has been disabled, the local buffer is wiped immediately.
-7. **Log Clearing**:
-   Invoking `clearLogs()` purges the local database cache, resets active device lists, and calls Supabase storage buckets to delete remote JSON logs matching the device's host or BLE hardware identifiers.
-
----
-
-## 8. Archival Recommendations
-
-### `
-## 9. Architectural Impact Flags
-
-* **`[IMPACTS_USER_JOURNEY]`**: The Admin Modal is protected by a hidden 10-tap gesture and a passcode. The date pickers and color diagnostic selectors within the modal adapt dynamically to Android and iOS layout constraints.
-* **`[IMPACTS_C4_CONTEXT]`**: The logging pipeline writes to six remote PostgreSQL tables inside Supabase (`telemetry_snapshots`, `telemetry_errors`, `crash_telemetry`, etc.) and performs operations on Supabase's `sk8lytz-logs` object storage bucket.
-* **`[IMPACTS_STATE_CHART]`**: The diagnostics suite incorporates the Protocol Oracle, which monitors active opcodes (`0x41`, `0x42`, `0x43`, `0x51`, `0x59`, `0x63`, `0x74`, etc.) and records pass/fail verdicts to verify hardware integrity.
 
 <!-- CARTOGRAPHER_END: ADMIN_&_TELEMETRY -->
 
 ### Domain: DEPENDENCY_AUDIT
 <!-- CARTOGRAPHER_START: DEPENDENCY_AUDIT -->
 
-# Architectural Cartography: DEPENDENCY_AUDIT
-
-This document provides a comprehensive architectural map of the **DEPENDENCY_AUDIT** domain, analyzing the dependency configs, scripts, version locking, and security properties of the SK8Lytz application workspace.
-
----
+# DEPENDENCY_AUDIT Cartography
+*Generated by SDE Cartographer Node*
 
 ## 1. File Manifest
-
-| File | Architectural Purpose |
-|:---|:---|
-| [`package.json`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/package.json) | Main workspace package manifest detailing the dependency tree, build/verify scripts, dev tools, version overrides, and metadata. |
-| [`package-lock.json`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/package-lock.json) | Detailed dependency lock file ensuring exact sub-dependency version resolution and integrity hash validation across all environments. |
-| [`modules/sk8lytz-watch-bridge/package.json`](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/modules/sk8lytz-watch-bridge/package.json) | Manifest for the local watchOS/WearOS bridging module, identifying its peer Expo dependencies. |
-
----
+* **`package.json`** (107 lines)
+  * **Role**: Primary application manifest. Defines build scripts, React Native/Expo dependencies, DevDependencies (Detox, Jest, Husky), and module overrides.
+  * **Key Artifacts**: Defines `sk8lytz-watch-bridge` as a local module (`file:modules/sk8lytz-watch-bridge`).
+  * **Scripts**: Includes `verify` script mapping to `blast-radius --worktree` and `verifiable-check-runner.js`.
+* **`package-lock.json`**
+  * **Role**: Dependency tree lockfile ensuring deterministic builds and exact version resolution across CI and local environments.
 
 ## 2. Blast Radius
-
-The packages defined in the dependency manifests dictate the entire execution surface of the application. Below is the mapping of imported packages (external modules) and what they export/affect in the codebase (internal blast radius):
-
-### Imported Modules (Core Dependencies)
-* **Core React & Expo Engine** (`react`, `react-dom`, `react-native`, `expo`, `@expo/metro-runtime`, `react-native-web`): Forms the foundation of the hybrid runtime and UI views on native mobile platforms and fallback web views.
-* **BLE Transport Pipeline** (`react-native-ble-plx` & `@config-plugins/react-native-ble-plx`): The central hardware interface. Integrates the native Bluetooth stacks and provides the low-level GATT socket commands wrapped by `ZenggeProtocol.ts`, `BleWriteQueue.ts`, and `BleMachine.ts`.
-* **State Chart FSM Engine** (`xstate`, `@xstate/react`): Orchestrates state lifecycles. Powers the multi-state BLE connection flow in `BleMachine.ts` and the session tracking flow in `SessionMachine.ts`, ensuring race conditions and duplicate operations are structurally prevented.
-* **Background Notifications & Foreground Service HUD** (`@notifee/react-native` & `expo-notifications`): Manages active background notification alerts and foreground service hooks. Configures Android foreground services (`location|health|connectedDevice|shortService|dataSync`) enabling background BLE scanning and fitness telemetry tracking.
-* **High-Performance JSI Bridges** (`react-native-nitro-modules`, `react-native-nitro-image`, `react-native-worklets`, `react-native-vision-camera`, `react-native-vision-camera-resizer`, `react-native-vision-camera-worklets`): Direct C++ JSI bindings for high-frequency operations. Powers the camera color-sampler (`CameraTracker.tsx`) by executing 5Hz GPU frame-scaling and client-side K-Means palette extraction entirely in JSI worklet threads.
-* **Database Client Pipeline** (`@supabase/supabase-js`): Connects the local app to Supabase tables (`registered_devices`, `skate_spots`, `skate_sessions`). Powers real-time Crew Hub subscriptions, profile updates, and offline sync spooling.
-* **Fitness Telemetry Interfaces** (`react-native-health` & `react-native-health-connect`): Captures skater health telemetry metrics (heart rate, active calories, workout duration) to display on-wrist and store in session snapshots.
-* **Local Companion Native Bridge** (`sk8lytz-watch-bridge`): Coordinates continuous session data replication and remote session start/stop signals with Wear OS and watchOS companions.
-
-### Exported Targets (Scripts and Tooling Hooks)
-* **`npm run verify`**: Combines architectural blast radius checks (`blast-radius-scanner.js`) with compilation and automated test gates (`verifiable-check-runner.js`).
-* **`patch-package`**: Automatically injects local postinstall fixes into the `node_modules/` directory during dependency installation.
-* **Husky Git hooks**: Enforces pre-commit linting checks and Husky `npm run verify` gates before pushing.
-
----
+* **Scope**: **GLOBAL / CATASTROPHIC**
+* **Impact**: Modifications to `package.json` immediately impact the Metro bundler, Expo auto-linking, and native iOS/Android builds.
+* **Key Risk Vectors**: 
+  * Native Modules (`react-native-ble-plx`, `react-native-vision-camera`) require precise alignment with the `react-native` version (`0.83.2`).
+  * `overrides` section intercepts vulnerable sub-dependencies (`xmldom`, `xml2js`, `uuid`). Removing these exposes the app to audit failures.
 
 ## 3. Context Matrix
-
-The application's context architecture coordinates dependency status and session states across component layers:
-
-```
-                  ┌──────────────────────────────────────────┐
-                  │               AuthProvider               │
-                  │  (Supabase client auth state & profile)  │
-                  └────────────────────┬─────────────────────┘
-                                       │
-                  ┌────────────────────▼─────────────────────┐
-                  │              SessionProvider             │
-                  │ (XState telemetry and watchOS/WearOS via  │
-                  │       sk8lytz-watch-bridge module)       │
-                  └────────────────────┬─────────────────────┘
-                                       │
-                  ┌────────────────────▼─────────────────────┐
-                  │              BleMachineProvider          │
-                  │ (XState BLE client FSM, write dispatcher)│
-                  └──────────────────────────────────────────┘
-```
-
-* **`AuthContext`** (Provides: user profile data, credentials validation, and `isOfflineMode` state derived from `@supabase/supabase-js` auth sessions).
-* **`SessionContext`** (Provides: active skating session duration, GPS distance, peak speed, and continuous health telemetry. Integrates with `sk8lytz-watch-bridge` to relay active state to the watch companions).
-* **`BleMachineContext`** (Provides: the centralized XState `BleMachine` context, exposing connected device arrays, scanning indicators, GATT mutex status, and auto-recovery state).
-* **`ThemeContext`** (Provides: strict FSM theme states `themeMode: 'dark' | 'light'` with backward-compatible boolean getters).
-
----
+* **State Management**: `xstate` (v5.32.0) and `@xstate/react` define the application's finite state machine logic (e.g., `BleMachine`).
+* **Hardware/Sensors**: Expo sensor libraries (`expo-location`, `expo-sensors`, `expo-battery`, `expo-haptics`) form the device capability context.
+* **Data Context**: `@supabase/supabase-js` (v2.100.0) manages cloud sync context, and `@react-native-async-storage/async-storage` handles the offline cache layer.
 
 ## 4. Hook/Service I/O Registry
-
-The following table documents the input, output, and side-effects of the primary APIs introduced by core external and local dependencies:
-
-| API / Hook | Input Parameters | Output Signature | Side-Effects & Core Behavior |
-|:---|:---|:---|:---|
-| **`useMachine`**<br>(from `@xstate/react`) | `BleMachine` or `SessionMachine: StateMachine`, `options?` | `[state, send, actorRef]` | Instantiates the core BLE or Session state engines; spawns XState actors (`ConnectService`, `RecoveryService`, `HealthService`, `NotificationService`) to serialize radio operations and background services. |
-| **`BleManager`**<br>(from `react-native-ble-plx`) | `restoreStateIdentifier?: string`, `restoreStateCallback?: function` | Singleton API interface | Interacts with native iOS CoreBluetooth and Android BluetoothAdapter stacks; opens and destroys physical GATT connection handles. |
-| **`SupabaseClient`**<br>(from `@supabase/supabase-js`) | `supabaseUrl: string`, `supabaseKey: string`, `options?` | `SupabaseClient` instance | Connects to the remote Supabase PostgreSQL backend; manages user JWT auth states and sets up Realtime WebSocket event subscribers. |
-| **`WatchBridge`**<br>(from local module bridge) | Event listener callbacks, message payloads | Native event emitters and message senders | Initializes `WCSession` (iOS) or Google Play Services `DataClient` (Android) to establish bidirectional sockets with watch companion apps. |
-| **`notifee`**<br>(from `@notifee/react-native`) | Display configs, notification channels, headless event task | Native notifications and service triggers | Mounts native foreground services (Android); binds service lifecycle to GPS or BLE tracking processes to prevent app termination. |
-| **`useFrameProcessor`**<br>(from `react-native-vision-camera`) | `frameProcessor: function`, `dependencies: any[]` | `FrameProcessor` callback hook | Hooks into the GPU camera output stream; executes downscaled frame processing in JSI worklet threads. |
-
----
+* **Bluetooth Layer**: `react-native-ble-plx` acts as the primary service interface for `ZenggeProtocol` payloads.
+* **Telemetry/Data**: `react-native-health` and `react-native-health-connect` provide OS-level fitness data streams to the SpeedTracking and Health services.
+* **Vision Layer**: `react-native-vision-camera-worklets` and `react-native-vision-camera-resizer` provide hardware-accelerated inputs to the Camera Vibe Catcher frame processor.
 
 ## 5. OS Variance Matrix
+| Dependency | iOS Context | Android Context |
+| :--- | :--- | :--- |
+| `react-native-health[-connect]` | Uses Apple HealthKit bindings. | Uses Google Health Connect APIs. |
+| `@bacons/apple-targets` | Enables watchOS companion app targets. | N/A |
+| `sk8lytz-watch-bridge` | N/A (Handled natively or via separate pipeline). | Required for Wear OS Node/Message Client syncing. |
 
-Due to the heavy utilization of native Bluetooth, health tracking, and companion APIs, the dependency behavior branches significantly between iOS and Android:
+## Sequence Diagram: Dependency Verification Pipeline
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant NPM as npm run verify
+    participant BRS as blast-radius-scanner
+    participant VCR as verifiable-check-runner
+    
+    Dev->>NPM: Trigger script
+    NPM->>BRS: node tools/blast-radius-scanner.js --worktree
+    BRS-->>NPM: Exit 0 (Pass)
+    NPM->>VCR: node tools/verifiable-check-runner.js
+    VCR-->>NPM: Exit 0 (Pass)
+    NPM-->>Dev: Verification Complete
+```
 
-### iOS Specific Paths
-* **Health Tracking**: Utilizes the `react-native-health` dependency linked to the native Apple HealthKit framework.
-  * **Info.plist Keys**: Requires `NSHealthShareUsageDescription` and `NSHealthUpdateUsageDescription` keys.
-  * **Entitlements**: Requires `com.apple.developer.healthkit` and `com.apple.developer.healthkit.background-delivery` entitlements.
-* **Watch Companion**: Integrates with watchOS via Apple's native `WCSession` (WatchConnectivity framework) bridged inside `modules/sk8lytz-watch-bridge`. iOS companion compilation is managed via `@bacons/apple-targets`.
-* **Bluetooth Gating**: Requires `NSBluetoothAlwaysUsageDescription` key in the `Info.plist`.
+## Archival Instruction
+No stale documentation specifically isolated for the Dependency Audit domain was found in `docs/SK8Lytz_App_Master_Reference.md`. 
+Tag: [MOVE_TO_ARCHIVE] (Null-op for this domain).
 
-### Android Specific Paths
-* **Health Tracking**: Utilizes the `react-native-health-connect` dependency linked to Android's Google Health Connect API.
-  * **Permissions**: Requires `android.permission.ACTIVITY_RECOGNITION` and `android.permission.FOREGROUND_SERVICE_HEALTH` in the Manifest.
-* **Watch Companion**: Bundles the `sk8lytzWear` Kotlin Compose project into the final APK. The custom Expo plugin `plugins/withWearOsModule.js` injects compile bindings (`include ':sk8lytzWear'`) inside `settings.gradle` and bundles it via `wearApp project(':sk8lytzWear')` inside the app's `build.gradle`.
-* **Background Notifications**: Notifee foreground services types are explicitly compiled in `AndroidManifest.xml` as `location|health|connectedDevice|shortService|dataSync` to prevent Android OS process kills during active background sessions.
-* **Bluetooth Permissions**: Requires explicit permissions: `android.permission.BLUETOOTH`, `android.permission.BLUETOOTH_ADMIN`, `android.permission.BLUETOOTH_CONNECT`, `android.permission.BLUETOOTH_SCAN`.
-* **Proguard Obfuscation Rules**: Configured via `expo-build-properties` to keep native structures intact and prevent reflection failures:
-  ```proguard
-  -keep class com.polidea.reactnativeble.** { *; }
-  -keep class com.polidea.rxandroidble2.** { *; }
-  -keep class com.mrousavy.camera.** { *; }
-  -keep class com.mrousavy.nitro.** { *; }
-  ```
+## Architectural Impact Flags
+[IMPACTS_USER_JOURNEY]
+[IMPACTS_C4_CONTEXT]
+[IMPACTS_STATE_CHART]
 
----
-
-## 6. Archival Ledger (`
-## 7. Architectural Impact Flags
-
-No structural dependency changes (additions, updates, or removals) were executed during this read-only audit.
-Therefore, no impact flags (`[IMPACTS_USER_JOURNEY]`, `[IMPACTS_C4_CONTEXT]`, or `[IMPACTS_STATE_CHART]`) are appended.
 
 <!-- CARTOGRAPHER_END: DEPENDENCY_AUDIT -->
 
@@ -6992,6 +3466,44 @@ Therefore, no impact flags (`[IMPACTS_USER_JOURNEY]`, `[IMPACTS_C4_CONTEXT]`, or
 
 
 ## 13. Historical Archive (The Graveyard)
+
+- **From IDENTITY**: ** The `SK8Lytz_App_Master_Reference.md` contains stale references describing `ProfileService` performing database interactions (e.g. `src/services/ProfileService.ts: REST queries modifying crew memberships and users` and `src/services/CrewProfileService.ts (Managed inside ProfileService.ts)`). This should be archived and updated to clarify that `ProfileService.ts` is strictly a barrel re-export facade following the "Meal 1" split.
+- **From BLE_CORE**: ` in `docs/SK8Lytz_App_Master_Reference.md`.
+- **From GROUP_SYNC**: 
+- **From UI_SCREENS**: `
+- `#### VisualizerUnit Rendering Rules (HALOZ RING only) [MOVE_TO_ARCHIVE]`
+- `### UI Design Patterns & Branding` - **One-Screen Setup Policy [MOVE_TO_ARCHIVE]**
+- **From UI_DOCKED_CONTROLLER**: **: `useSessionTracking (stale)` inside `docs/SK8Lytz_App_Master_Reference.md` was identified as stale documentation and should be archived. Session tracking logic is now piped in directly as props from `DashboardScreen`.
+- **From UI_MODALS**: VisualizerUnit Rendering Rules (HALOZ RING only)`
+- `[MOVE_TO_ARCHIVE] Dashboard UI Layout (4-Slab Architecture)`
+- `[MOVE_TO_ARCHIVE] One-Screen Setup Policy`
+- `[MOVE_TO_ARCHIVE] writeChunked — 0x51 Extended Payload Framing`
+- **From UI_VISUALIZER**: `.
+- The One-Screen Setup Policy and Dashboard UI Layout sections are noted as stale / `[MOVE_TO_ARCHIVE]`.
+- **From DATA_LAYER**: : Found stale `Dashboard UI Layout (4-Slab Architecture)` and `VisualizerUnit Rendering Rules` logic in the Master Reference, which are already tagged. No new stale records related strictly to the Data Layer were discovered.
+- **From UTILS**: `.
+- Note: Found stale visualizer generation docs `src/utils/RbmSimulator.ts` in Master Reference -> tagged `[MOVE_TO_ARCHIVE]` internally per cartography pass.
+- **From NOTIFICATIONS_&_ROUTING**: *(Archival Instruction: When updating `docs/SK8Lytz_App_Master_Reference.md`, any reference to `profileService.registerPushToken` should be archived, as the Push Token logic was fully extracted into `PushTokenService` under god-object decomposition meal 1.)*
+- **From SESSION_TRACKING**: `:
+- `useHealthTelemetry` hook reference at Line 980 `[MOVE_TO_ARCHIVE]`
+- `useHealthTelemetry` hook reference at Line 1276 `[MOVE_TO_ARCHIVE]`
+- `useHealthTelemetry` hook reference at Line 1392 `[MOVE_TO_ARCHIVE]`
+- `useHealthTelemetry` hook reference at Line 1416 `[MOVE_TO_ARCHIVE]`
+- `useGlobalTelemetry` hook reference at Line 6974 `[MOVE_TO_ARCHIVE]`
+- **From PROTOCOL_CORE**: `:
+- `#### VisualizerUnit Rendering Rules (HALOZ RING only) [MOVE_TO_ARCHIVE]`
+- `### Dashboard UI Layout (4-Slab Architecture) [MOVE_TO_ARCHIVE]`
+- `- **One-Screen Setup Policy** [MOVE_TO_ARCHIVE]`
+- `### writeChunked — 0x51 Extended Payload Framing [MOVE_TO_ARCHIVE]`
+- **From PATTERN_ENGINE**: `.
+- **From THEME_&_ASSETS**: `. Action is to migrate structural logic exclusively to `DashboardStyles.ts`.
+- **From SIMULATION_&_MOCKS**: : `docs/SK8Lytz_App_Master_Reference.md` (lines 5780-5995) contain stale documentation for the `SIMULATION_&_MOCKS` domain. This must be archived to reflect the new cartography.
+- **From BUILD_CONFIG**: `.
+- **From OS_PERMISSIONS**: 
+- **From ADMIN_&_TELEMETRY**: `
+- **From DEPENDENCY_AUDIT**: (Null-op for this domain).
+
+
 
 
 ### Archived from IDENTITY
