@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { Buffer } from 'buffer';
+import { scrubPII } from '../utils/piiScrubber';
 import { AppLogger } from './AppLogger';
 import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
@@ -74,18 +75,27 @@ export async function executeWriteToDevice(
           resolve(true);
           return;
         }
-        const result = await _executeWriteToDeviceInternal(
-          payload,
-          targetDeviceId,
-          thisGeneration,
-          bleManager,
-          connectedDevices,
-          ghostedDeviceIds,
-          mtuMap,
-          adapterMap,
-          stateRefs
-        );
-        resolve(result);
+        try {
+          const result = await _executeWriteToDeviceInternal(
+            payload,
+            targetDeviceId,
+            thisGeneration,
+            bleManager,
+            connectedDevices,
+            ghostedDeviceIds,
+            mtuMap,
+            adapterMap,
+            stateRefs
+          );
+          resolve(result);
+        } catch (e: unknown) {
+          AppLogger.warn(`[BLE] Deferred write to device failed`, {
+            error: e instanceof Error ? e.message : String(e),
+            payload_size: payload.length,
+            ssi: 0
+          });
+          resolve(false);
+        }
       }, BLE_TIMING.WRITE_DEBOUNCE_MS);
     });
   }
@@ -119,7 +129,7 @@ async function _executeWriteToDeviceInternal(
     : connectedDevices;
 
   if (targets.length === 0 && targetDeviceId) {
-    AppLogger.warn(`Target device '[REDACTED]' not found in connected devices`);
+    AppLogger.warn(`Target device '[REDACTED]' not found in connected devices`, { payload_size: payload.length, ssi: 0 });
     return false;
   }
 
@@ -129,7 +139,7 @@ async function _executeWriteToDeviceInternal(
   if (payload.length > maxSafeSize) {
     const cmdId = payload[0];
     if (cmdId === 0x51 && payload.length > 200) {
-      AppLogger.warn('[BLE] 0x51 Payload exceeds safe MTU. Routing to writeChunked automatically.', { length: payload.length });
+      AppLogger.warn('[BLE] 0x51 Payload exceeds safe MTU. Routing to writeChunked automatically.', { payload_size: payload.length, ssi: 0 });
       await executeWriteChunked(payload, targetDeviceId, connectedDevices, ghostedDeviceIds, mtuMap, adapterMap);
       return true;
     }
@@ -145,7 +155,7 @@ async function _executeWriteToDeviceInternal(
 
     const liveTargets = targets.filter(device => {
       if (ghostedDeviceIds.includes(device.id)) {
-        AppLogger.warn(`[BLE] Write SKIPPED ghosted device ${device.id}`);
+        AppLogger.warn(`[BLE] Write SKIPPED ghosted device ${scrubPII(device.id)}`);
         return false;
       }
       return true;
@@ -174,7 +184,11 @@ async function _executeWriteToDeviceInternal(
           base64Full
         );
       } catch (writeError: unknown) {
-        AppLogger.warn(`[BLE] Write failed for '[REDACTED]'`, writeError instanceof Error ? writeError.message : String(writeError));
+        AppLogger.warn(`[BLE] Write failed for '[REDACTED]'`, {
+          error: writeError instanceof Error ? writeError.message : String(writeError),
+          payload_size: payload.length,
+          ssi: 0
+        });
         allSucceeded = false;
       }
       index++;
@@ -238,7 +252,11 @@ export async function executeWriteChunked(
             deviceAdapter.serviceUUID, deviceAdapter.writeCharacteristicUUID, b64
           );
         } catch (e: unknown) {
-          AppLogger.warn(`[BLE] writeChunked chunk failed for '[REDACTED]'`, { error: e instanceof Error ? e.message : String(e)  });
+          AppLogger.warn(`[BLE] writeChunked chunk failed for '[REDACTED]'`, { 
+            error: e instanceof Error ? e.message : String(e),
+            payload_size: chunk.length,
+            ssi: 0
+          });
         }
         index++;
       }
@@ -285,16 +303,25 @@ export async function executeProtocolResults(
           resolve(true);
           return;
         }
-        const res = await _executeProtocolResultsInternal(
-          payloads,
-          thisGeneration,
-          connectedDevices,
-          ghostedDeviceIds,
-          mtuMap,
-          adapterMap,
-          stateRefs
-        );
-        resolve(res);
+        try {
+          const res = await _executeProtocolResultsInternal(
+            payloads,
+            thisGeneration,
+            connectedDevices,
+            ghostedDeviceIds,
+            mtuMap,
+            adapterMap,
+            stateRefs
+          );
+          resolve(res);
+        } catch (e: unknown) {
+          AppLogger.warn(`[BLE] Deferred execute protocol results failed`, {
+            error: e instanceof Error ? e.message : String(e),
+            payload_size: 0,
+            ssi: 0
+          });
+          resolve(false);
+        }
       }, BLE_TIMING.WRITE_DEBOUNCE_MS);
     });
   }
@@ -357,7 +384,11 @@ async function _executeProtocolResultsInternal(
             await new Promise(res => setTimeout(res, preparedResult.interPacketDelayMs));
           }
         } catch (e: unknown) {
-          AppLogger.warn(`[BLE] executeProtocolResults failed for ${targetDeviceId}`, e instanceof Error ? e.message : String(e));
+          AppLogger.warn(`[BLE] executeProtocolResults failed for ${scrubPII(targetDeviceId)}`, {
+            error: e instanceof Error ? e.message : String(e),
+            payload_size: preparedResult.packets[i].length,
+            ssi: 0
+          });
           allSucceeded = false;
         }
       }
