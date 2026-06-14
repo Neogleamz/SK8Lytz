@@ -3520,3 +3520,8 @@ TSC: ?  Jest: ?
 Files touched: src/components/VisualizerUnit.tsx, src/components/visualizer/VisualizerHooks.ts
 TSC: ✅  Jest: ✅
 
+
+### [MERGE READY] sweep-hooks-useControllerDispatch.ts � 45a4ec9c
+Files touched: src/hooks/useControllerDispatch.ts, src/hooks/__tests__/useControllerDispatch.test.ts
+TSC: ?  Jest: ?
+
