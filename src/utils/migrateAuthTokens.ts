@@ -17,11 +17,11 @@ export async function migrateAuthTokensToSecureStore() {
         await SecureStore.setItemAsync(STORAGE_SUPABASE_AUTH_KEY, legacyToken);
       }
       await AsyncStorage.removeItem(STORAGE_SUPABASE_AUTH_KEY);
-      AppLogger.info('Migrated Supabase auth token to SecureStore');
+      AppLogger.info('Migrated Supabase auth token to SecureStore', { payload_size: 0, ssi: 0 });
     }
 
     await AsyncStorage.setItem(STORAGE_AUTH_MIGRATION_FLAG, 'true');
   } catch (e: unknown) {
-    AppLogger.error('Failed to migrate auth tokens', e, { payload_size: 0, ssi: 0 });
+    AppLogger.error('Failed to migrate auth tokens', e instanceof Error ? e : new Error(String(e)), { payload_size: 0, ssi: 0 });
   }
 }
