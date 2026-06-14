@@ -3583,3 +3583,14 @@ TSC: ?  Jest: ?
 ### [ARTIFACT] 2026-06-14T11:50 — Deep-Dive Code Synthesis Batch Plans
 **Artifacts:** 32 PLAN-*.md files added to docs/plans/
 **Why:** Output of the orthogonal code hunt synthesis. 619 unique violations clustered into 32 domain task clusters and routed to ON DECK.
+
+### [EVENT] 2026-06-14T16:56:02Z — Wave 1 Task Halted (S4 Monolith)
+**Task:** sweep-src-components-DockedController.tsx
+**Reason:** DockedController.tsx is 70KB, violating S4. Subagent execution aborted.
+**Action:** Task pulled from Active Sprint. Extraction refactor task must be scheduled.
+### [MERGE READY] sweep-src-components-TacticalSlider.tsx — 04f0fe8a
+Files touched: src/components/TacticalSlider.tsx
+TSC: ?  Jest: ?
+### [MERGE READY] sweep-src-components-CrewModal.tsx - 5eb9b21c
+Files touched: src/components/CrewModal.tsx
+TSC: ?  Jest: ?

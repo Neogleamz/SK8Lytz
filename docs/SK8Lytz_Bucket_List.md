@@ -28,23 +28,11 @@
 | 9 | sweep-src-components-AccountModal.tsx | ✅ Yes | Wave 8 merged |
 
 ## 🚧 ACTIVE SPRINT
-*(Empty — ready for intake)*
-
-## 🔵 LOW: ✨ New Features & UI Enhancements
-
-_User-facing product value and UI refinements._
-
-- [ ] `feat/app-wide-ux-tips` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🪙 12k] [⏱️ 3h] [📅 2026-04-14] [🤖 FLASH] [📝️ NEEDS-PLAN] Contextual tips system for key friction points. → [Plan](docs/plans/feat-app-wide-ux-tips.md)
-
----
-
-## 🔥 ON DECK
-
 ### ⚡ [BATCH:WAVE-1] — `wave-1-sweep` — READY
 > **Worktree**: `wave-1-sweep` · **Type**: Parallel · **Prerequisite**: None
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — Deep-Dive Code Hunt orthogonal analysis
 
-- [ ] **`sweep-src-components-TacticalSlider.tsx`**
+- [/] **`sweep-src-components-TacticalSlider.tsx`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
   - **Goal:** Resolve 3 telemetry and architectural rule violations in the components-TacticalSlider.tsx domain.
   - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
@@ -54,7 +42,7 @@ _User-facing product value and UI refinements._
   - **Source of Truth:** 📖 [PLAN-sweep-src-components-TacticalSlider.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-TacticalSlider.tsx.md)
   - **Details:** Orthogonal cluster safe for parallel verification.
 
-- [ ] **`sweep-src-components-LocationPicker.tsx`**
+- [/] **`sweep-src-components-LocationPicker.tsx`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
   - **Goal:** Resolve 3 telemetry and architectural rule violations in the components-LocationPicker.tsx domain.
   - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
@@ -64,7 +52,7 @@ _User-facing product value and UI refinements._
   - **Source of Truth:** 📖 [PLAN-sweep-src-components-LocationPicker.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-LocationPicker.tsx.md)
   - **Details:** Orthogonal cluster safe for parallel verification.
 
-- [ ] **`sweep-src-components-admin`**
+- [/] **`sweep-src-components-admin`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
   - **Goal:** Resolve 27 telemetry and architectural rule violations in the components-admin domain.
   - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
@@ -74,7 +62,7 @@ _User-facing product value and UI refinements._
   - **Source of Truth:** 📖 [PLAN-sweep-src-components-admin.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-admin.md)
   - **Details:** Orthogonal cluster safe for parallel verification.
 
-- [ ] **`sweep-src-hooks-ble`**
+- [/] **`sweep-src-hooks-ble`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
   - **Goal:** Resolve 6 telemetry and architectural rule violations in the hooks-ble domain.
   - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
@@ -84,7 +72,7 @@ _User-facing product value and UI refinements._
   - **Source of Truth:** 📖 [PLAN-sweep-src-hooks-ble.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-hooks-ble.md)
   - **Details:** Orthogonal cluster safe for parallel verification.
 
-- [ ] **`sweep-src-components-CrewModal.tsx`**
+- [/] **`sweep-src-components-CrewModal.tsx`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
   - **Goal:** Resolve 2 telemetry and architectural rule violations in the components-CrewModal.tsx domain.
   - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
@@ -94,7 +82,7 @@ _User-facing product value and UI refinements._
   - **Source of Truth:** 📖 [PLAN-sweep-src-components-CrewModal.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-CrewModal.tsx.md)
   - **Details:** Orthogonal cluster safe for parallel verification.
 
-- [ ] **`sweep-src-components-CrewMemberDashboard.tsx`**
+- [/] **`sweep-src-components-CrewMemberDashboard.tsx`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
   - **Goal:** Resolve 1 telemetry and architectural rule violations in the components-CrewMemberDashboard.tsx domain.
   - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
@@ -104,7 +92,7 @@ _User-facing product value and UI refinements._
   - **Source of Truth:** 📖 [PLAN-sweep-src-components-CrewMemberDashboard.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-CrewMemberDashboard.tsx.md)
   - **Details:** Orthogonal cluster safe for parallel verification.
 
-- [ ] **`sweep-src-components-account`**
+- [/] **`sweep-src-components-account`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
   - **Goal:** Resolve 6 telemetry and architectural rule violations in the components-account domain.
   - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
@@ -114,7 +102,7 @@ _User-facing product value and UI refinements._
   - **Source of Truth:** 📖 [PLAN-sweep-src-components-account.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-account.md)
   - **Details:** Orthogonal cluster safe for parallel verification.
 
-- [ ] **`sweep-src-components-DockedController.tsx`**
+- [/] **`sweep-src-components-DockedController.tsx`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:WAVE-1]` `[WAVE:1]`
   - **Goal:** Resolve 9 telemetry and architectural rule violations in the components-DockedController.tsx domain.
   - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
@@ -123,7 +111,6 @@ _User-facing product value and UI refinements._
     Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
   - **Source of Truth:** 📖 [PLAN-sweep-src-components-DockedController.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-DockedController.tsx.md)
   - **Details:** Orthogonal cluster safe for parallel verification.
-
 ### ⚡ [BATCH:WAVE-2] — `wave-2-sweep` — READY
 > **Worktree**: `wave-2-sweep` · **Type**: Parallel · **Prerequisite**: Wave 1 merged
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — Deep-Dive Code Hunt orthogonal analysis
