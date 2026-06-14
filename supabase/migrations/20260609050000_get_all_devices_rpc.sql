@@ -5,8 +5,10 @@ LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  -- Only allow if the user is an admin (optional, but good practice)
-  -- Since this is for the Command Center, we assume checkAdminStatus() is handled,
-  -- but we can just return all for the frontend to consume.
-  SELECT * FROM registered_devices;
+  -- Only allow if the user is an admin
+  SELECT * FROM registered_devices
+  WHERE EXISTS (
+    SELECT 1 FROM public.user_profiles
+    WHERE user_id = auth.uid() AND role = 'admin'
+  );
 $$;

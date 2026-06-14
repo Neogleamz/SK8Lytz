@@ -28,8 +28,12 @@ WORKTREE_ROOT=$(pwd)
 if [ "$WORKTREE_ROOT" != "$FORTRESS_ROOT" ]; then
   if [ ! -d "node_modules" ]; then
     echo "[Husky] Creating node_modules directory junction..."
-    WIN_FORTRESS_ROOT=$(cygpath -w "$FORTRESS_ROOT" || echo "$FORTRESS_ROOT")
-    cmd.exe /c "mklink /j node_modules \"$WIN_FORTRESS_ROOT\\node_modules\""
+    if [ "$OSTYPE" = "msys" ] || [ "$OSTYPE" = "cygwin" ] || [[ "$OSTYPE" == "win32"* ]]; then
+      WIN_FORTRESS_ROOT=$(cygpath -w "$FORTRESS_ROOT" || echo "$FORTRESS_ROOT")
+      cmd.exe /c "mklink /j node_modules \"$WIN_FORTRESS_ROOT\\node_modules\""
+    else
+      ln -s "$FORTRESS_ROOT/node_modules" "node_modules"
+    fi
   fi
 fi
 

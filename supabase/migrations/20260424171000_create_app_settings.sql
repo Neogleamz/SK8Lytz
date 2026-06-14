@@ -24,7 +24,7 @@ CREATE POLICY "Anyone can view app settings"
 -- Only profiles with the 'admin' role can mutate the app settings.
 CREATE POLICY "Admins can update app settings"
     ON public.sk8lytz_app_settings
-    FOR ALL
+    FOR ALL TO authenticated
     USING (
         (SELECT role FROM public.user_profiles WHERE user_id = auth.uid()) = 'admin'
     )

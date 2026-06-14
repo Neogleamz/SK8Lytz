@@ -7,7 +7,9 @@ import sys
 import json
 from google_antigravity import AgentCoordinator, LocalAgentConfig
 
-def find_latest_transcript(brain_dir="C:\\Users\\Magma\\.gemini\\antigravity-ide\\brain"):
+def find_latest_transcript(brain_dir=None):
+    if not brain_dir:
+        brain_dir = os.environ.get("AGY_APP_DATA_DIR", "C:\\Users\\Magma\\.gemini\\antigravity\\brain")
     if not os.path.exists(brain_dir):
         return None
     
@@ -111,7 +113,7 @@ def run_friction_analysis():
         print("====================================================\n")
         
         # Save amendment for review
-        output_file = "C:\\Neogleamz\\AG_SK8Lytz_App\\SK8Lytz\\.agents\\rules\\friction-rule-amendments.md"
+        output_file = os.path.join(os.getcwd(), ".agents", "rules", "friction-rule-amendments.md")
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(amendment)
         print(f"Proposals successfully written to: {output_file} [SUCCESS]")

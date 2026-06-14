@@ -5,7 +5,7 @@ $ErrorActionPreference = "Stop"
 
 $workspaceDir = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
 $workspaceRulesDir = Join-Path $workspaceDir ".agents\rules"
-$globalBackupDir = "C:\Users\Magma\.gemini\config\rules-backup"
+$globalBackupDir = Join-Path $workspaceDir "artifacts\rules-backup"
 
 $rules = @("agent-behavior.md", "safety-protocol.md", "prime-directive.md", "kanban-constitution.md", "sub-agent-behavior.md")
 
@@ -78,7 +78,7 @@ foreach ($rule in $rules) {
 # Bucket List Guard
 # -------------------------------------------------------------
 $bucketListFile = Join-Path $workspaceDir "tools\SK8Lytz_Bucket_List.md"
-$globalBucketBackupDir = "C:\Users\Magma\.gemini\config\bucket-list-backup"
+$globalBucketBackupDir = Join-Path $workspaceDir "artifacts\bucket-list-backup"
 $bucketListBackupFile = Join-Path $globalBucketBackupDir "SK8Lytz_Bucket_List.md"
 
 if (-not (Test-Path $globalBucketBackupDir)) {

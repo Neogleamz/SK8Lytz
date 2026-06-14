@@ -22,6 +22,13 @@ GRANT SELECT ON public.view_crash_aggregates TO service_role;
 CREATE OR REPLACE FUNCTION public.resolve_crash_signature(target_signature TEXT, resolver_id UUID DEFAULT NULL)
 RETURNS VOID AS $$
 BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM public.user_profiles
+        WHERE user_id = auth.uid() AND role IN ('admin', 'moderator')
+    ) THEN
+        RAISE EXCEPTION 'Access denied: Requires admin or moderator role';
+    END IF;
+
     UPDATE public.crash_telemetry
     SET status = 'RESOLVED',
         resolved_at = NOW(),

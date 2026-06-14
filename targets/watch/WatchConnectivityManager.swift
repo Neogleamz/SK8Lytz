@@ -38,6 +38,7 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
 
     // MARK: - Public Commands (watch → phone)
 
+    @MainActor
     func sendStartSession() {
         isSessionActive = true
         isPaused = false
@@ -46,6 +47,7 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         startHealthRelay()
     }
 
+    @MainActor
     func sendStopSession() {
         isSessionActive = false
         isPaused = false
@@ -80,6 +82,7 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
 
     // MARK: - Private
 
+    @MainActor
     private func handlePayload(_ payload: [String: Any]) {
         if let status = payload["status"] as? String {
             switch status {
@@ -153,6 +156,7 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     /// Dismisses the summary card and resets summary state.
+    @MainActor
     func dismissSummary() {
         showingSummary = false
         summaryDismissTimer?.invalidate()

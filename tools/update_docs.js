@@ -1,5 +1,5 @@
 const fs = require('fs');
-const path = 'C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SK8Lytz_App_Master_Reference.md';
+const path = require('path').join(__dirname, '..', 'docs', 'SK8Lytz_App_Master_Reference.md');
 let content = fs.readFileSync(path, 'utf8');
 
 const insertion = `

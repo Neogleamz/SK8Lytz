@@ -11,10 +11,14 @@ ALTER TABLE scraper_config ADD COLUMN IF NOT EXISTS randomize_viewport_enabled B
 ALTER TABLE scraper_config ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Allow anon all on scraper_config" ON scraper_config;
-CREATE POLICY "Allow anon all on scraper_config" ON scraper_config
-    FOR ALL
-    USING (TRUE)
-    WITH CHECK (TRUE);
+CREATE POLICY "Allow anon select on scraper_config" ON scraper_config
+    FOR SELECT TO anon
+    USING (TRUE);
+
+CREATE POLICY "Allow admin update on scraper_config" ON scraper_config
+    FOR UPDATE TO authenticated
+    USING (EXISTS (SELECT 1 FROM public.user_profiles WHERE user_id = auth.uid() AND role = 'admin'))
+    WITH CHECK (EXISTS (SELECT 1 FROM public.user_profiles WHERE user_id = auth.uid() AND role = 'admin'));
 
 -- 3. Ensure the singleton configuration row exists
 INSERT INTO scraper_config (id, state_override, target_facilities)

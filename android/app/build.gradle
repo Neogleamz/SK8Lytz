@@ -89,6 +89,7 @@ android {
 
     namespace 'com.neogleamz.sk8lytz'
     defaultConfig {
+        manifestPlaceholders = [GOOGLE_MAPS_API_KEY: project.findProperty("GOOGLE_MAPS_API_KEY") ?: System.getenv("GOOGLE_MAPS_API_KEY") ?: ""]
         // detox-plugin-default-config
         testBuildType System.getProperty('testBuildType', 'debug')
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'

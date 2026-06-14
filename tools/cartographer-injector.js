@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const masterRefPath = 'c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/SK8Lytz_App_Master_Reference.md';
+const masterRefPath = 'c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/SK8Lytz_App_Master_Reference.md';
 const scratchDir = 'c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/deepdive_docs';
 
 const domains = [

@@ -48,8 +48,8 @@ Deno.serve(async (req: Request) => {
   }
 
   const { crewId, sessionId, sessionName, leaderName } = body;
-  if (!crewId || !sessionId) {
-    return new Response("Missing crewId or sessionId", { status: 400 });
+  if (!crewId || typeof crewId !== 'string' || !sessionId || typeof sessionId !== 'string') {
+    return new Response("Missing or invalid crewId/sessionId", { status: 400 });
   }
 
   // Verify caller is a member of the crew
@@ -121,7 +121,12 @@ Deno.serve(async (req: Request) => {
         })
       );
     }
-    await Promise.allSettled(fetchPromises);
+    const results = await Promise.allSettled(fetchPromises);
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error(`[notify-crew-session] Fetch rejected:`, result.reason);
+      }
+    }
   } catch (error) {
     console.error(
       `[notify-crew-session] Network fetch failed:`,

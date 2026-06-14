@@ -219,7 +219,7 @@ export const MapWidget: React.FC = () => {
     }
 
     // 2. Fetch Skate Sessions (proxy for Users as well)
-    const { data: sSessions, error: sError } = await supabase.from('skate_sessions').select('*').limit(200) as any;
+    const { data: sSessions, error: sError } = await supabase.from('skate_sessions').select('*').limit(200);
     if (sSessions && sSessions.length > 0) {
       setDebugData(sSessions[0]);
     }
@@ -255,7 +255,7 @@ export const MapWidget: React.FC = () => {
     setUserPoints(uPoints);
 
     // 3. Fetch Crew Sessions (proxy for Crews as well)
-    const { data: cSessions } = await supabase.from('crew_sessions').select('id, crew_id, leader_user_id, name, location_coords').order('created_at', { ascending: false }).limit(100) as any;
+    const { data: cSessions } = await supabase.from('crew_sessions').select('id, crew_id, leader_user_id, name, location_coords').order('created_at', { ascending: false }).limit(100);
     if (cSessions) {
       const cPoints: MapPoint[] = [];
       const crewPts: MapPoint[] = [];

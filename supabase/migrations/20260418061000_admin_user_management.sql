@@ -32,7 +32,7 @@ CREATE POLICY "Admins can view audit logs" ON public.admin_audit_logs
         (SELECT role FROM public.user_profiles WHERE user_id = auth.uid()) = 'admin'
     );
 CREATE POLICY "Admins can insert audit logs" ON public.admin_audit_logs
-    FOR INSERT WITH CHECK (
+    FOR INSERT TO authenticated WITH CHECK (
         (SELECT role FROM public.user_profiles WHERE user_id = auth.uid()) = 'admin' OR
         (SELECT role FROM public.user_profiles WHERE user_id = auth.uid()) = 'moderator'
     );

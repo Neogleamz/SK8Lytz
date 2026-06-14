@@ -59,7 +59,7 @@ client.on('messageCreate', async (message) => {
 });
 
 client.login(TOKEN).catch((err) => {
-  console.error('[Bridge] Fatal login error:', err.message);
+  console.error('[Bridge] Fatal login error:', err instanceof Error ? err.message : String(err));
 });
 
 // --- Simple HTTP Webhook Server ---
@@ -78,7 +78,7 @@ const server = http.createServer((req, res) => {
           
           let cleanTxt = payload.message.substring(0, 1900);
           bridgeChannel.send(`\`\`\`md\n${cleanTxt}\n\`\`\``).catch(err => {
-            console.error("[Bridge Discord Error] Failed to send webhook chunk.", err.message);
+            console.error("[Bridge Discord Error] Failed to send webhook chunk.", err instanceof Error ? err.message : String(err));
           });
           
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -88,7 +88,7 @@ const server = http.createServer((req, res) => {
           res.end("Bad request or Discord not ready.");
         }
       } catch (err) {
-        console.error("[Webhook Error] Parse failed:", err.message);
+        console.error("[Webhook Error] Parse failed:", err instanceof Error ? err.message : String(err));
         res.writeHead(400);
         res.end("Invalid JSON payload.");
       }

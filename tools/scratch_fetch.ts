@@ -11,13 +11,17 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function check() {
-  console.log("Checking registered_devices...");
-  const { data, error } = await supabase.from('registered_devices').select('*');
-  console.log("registered_devices count:", data?.length, "Error:", error);
+  try {
+    console.log("Checking registered_devices...");
+    const { data, error } = await supabase.from('registered_devices').select('*');
+    console.log("registered_devices count:", data?.length, "Error:", error);
 
-  console.log("Checking discovered_devices_telemetry...");
-  const { data: data2, error: error2 } = await supabase.from('discovered_devices_telemetry').select('*');
-  console.log("discovered count:", data2?.length, "Error:", error2);
+    console.log("Checking discovered_devices_telemetry...");
+    const { data: data2, error: error2 } = await supabase.from('discovered_devices_telemetry').select('*');
+    console.log("discovered count:", data2?.length, "Error:", error2);
+  } catch (err) {
+    console.error("Fetch failed:", err);
+  }
 }
 
 check();

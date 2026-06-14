@@ -22,6 +22,11 @@ function sendKeystrokes(text) {
       [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
     `;
 
+    if (process.platform !== 'win32') {
+      console.warn('[SendKeys] Execution skipped: Only supported on Windows');
+      return resolve('Skipped on non-Windows platform');
+    }
+
     const command = `powershell -NoProfile -Command "${psScript.replace(/\\n/g, '; ')}"`;
 
     exec(command, (error, stdout, stderr) => {

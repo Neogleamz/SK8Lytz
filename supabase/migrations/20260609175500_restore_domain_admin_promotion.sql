@@ -12,7 +12,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-    IF RIGHT(NEW.email, 12) = '@sk8lytz.com' OR RIGHT(NEW.email, 15) = '@neogleamz.com' THEN
+    IF RIGHT(NEW.email, 12) = '@sk8lytz.com' OR RIGHT(NEW.email, 14) = '@neogleamz.com' THEN
         INSERT INTO public.user_profiles (user_id, role)
         VALUES (NEW.id, 'admin')
         ON CONFLICT (user_id) DO UPDATE

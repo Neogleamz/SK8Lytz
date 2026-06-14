@@ -14,6 +14,9 @@
     "node_modules",
     "supabase/functions",
     "tools",
-    "scratch"
+    "scratch",
+    ".expo",
+    ".local-builder",
+    "web-build"
   ]
 }

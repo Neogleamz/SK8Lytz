@@ -13,7 +13,7 @@ CREATE POLICY "Admins can view hardware blacklist" ON public.hardware_blacklist
         (SELECT role FROM public.user_profiles WHERE user_id = auth.uid()) = 'admin'
     );
 CREATE POLICY "Admins can manage hardware blacklist" ON public.hardware_blacklist
-    FOR ALL USING (
+    FOR ALL TO authenticated USING (
         (SELECT role FROM public.user_profiles WHERE user_id = auth.uid()) = 'admin'
     );
 
@@ -35,7 +35,7 @@ CREATE POLICY "Anyone can view feature flags" ON public.feature_flags
     
 -- Only Admins can manage them
 CREATE POLICY "Admins can manage feature flags" ON public.feature_flags
-    FOR ALL USING (
+    FOR ALL TO authenticated USING (
         (SELECT role FROM public.user_profiles WHERE user_id = auth.uid()) = 'admin'
     );
 

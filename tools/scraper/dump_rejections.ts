@@ -19,4 +19,4 @@ rows.forEach(r => {
   md += `| ${name} | **${reason}** | ${url} |\n`;
 });
 
-fs.writeFileSync('C:/Users/Magma/.gemini/antigravity/brain/e64c0f35-e4e4-4b73-940e-a7d3bf07479a/rejected_spots.md', md);
+fs.writeFileSync('C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/rejected_spots.md', md);

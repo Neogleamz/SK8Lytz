@@ -57,11 +57,24 @@ object OngoingActivityManager {
             .build()
 
         ongoingActivity.apply(context)
-        notificationManager?.notify(ONGOING_NOTIFICATION_ID, notificationBuilder.build())
+
+        if (context is android.app.Service) {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                context.startForeground(ONGOING_NOTIFICATION_ID, notificationBuilder.build(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH)
+            } else {
+                context.startForeground(ONGOING_NOTIFICATION_ID, notificationBuilder.build())
+            }
+        } else {
+            notificationManager?.notify(ONGOING_NOTIFICATION_ID, notificationBuilder.build())
+        }
     }
 
     fun stopOngoingActivity(context: Context) {
         val notificationManager = context.getSystemService(NotificationManager::class.java)
-        notificationManager?.cancel(ONGOING_NOTIFICATION_ID)
+        if (context is android.app.Service) {
+            context.stopForeground(true)
+        } else {
+            notificationManager?.cancel(ONGOING_NOTIFICATION_ID)
+        }
     }
 }

@@ -1,2 +1,2 @@
-CREATE POLICY "Allow anon to update daemon status" ON public.daemon_status FOR UPDATE TO anon USING ( id = '00000000-0000-0000-0000-000000000000' ) WITH CHECK ( id = '00000000-0000-0000-0000-000000000000' );
-CREATE POLICY "Allow anon to insert daemon status" ON public.daemon_status FOR INSERT TO anon WITH CHECK ( id = '00000000-0000-0000-0000-000000000000' );
+CREATE POLICY "Allow authenticated to update daemon status" ON public.daemon_status FOR UPDATE TO authenticated USING ( id = '00000000-0000-0000-0000-000000000000' ) WITH CHECK ( id = '00000000-0000-0000-0000-000000000000' );
+CREATE POLICY "Allow authenticated to insert daemon status" ON public.daemon_status FOR INSERT TO authenticated WITH CHECK ( id = '00000000-0000-0000-0000-000000000000' );

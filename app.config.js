@@ -15,6 +15,7 @@ module.exports = {
     ios: {
       supportsTablet: true,
       infoPlist: {
+        UIBackgroundModes: ["location", "bluetooth-central"],
         NSMicrophoneUsageDescription: "SK8Lytz needs microphone access to synchronize your lights to ambient music.",
         NSCameraUsageDescription: "SK8Lytz needs camera access to sample colors from your environment for LED synchronization.",
         NSHealthShareUsageDescription: "SK8Lytz reads step count and heart rate to synchronize light patterns with your fitness metrics.",
@@ -45,7 +46,15 @@ module.exports = {
         "android.permission.ACTIVITY_RECOGNITION",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_LOCATION",
-        "android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"
+        "android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE",
+        "android.permission.INTERNET",
+        "android.permission.VIBRATE",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW",
+        "android.permission.health.READ_HEART_RATE",
+        "android.permission.health.READ_STEPS",
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
       ],
       package: "com.neogleamz.sk8lytz",
       config: {
@@ -83,7 +92,7 @@ module.exports = {
           ],
           bluetoothAlwaysPermission: "Allow Neogleamz App to connect to your Zengge roller skate controllers.",
           bluetoothPeripheralPermission: "Allow Neogleamz App to connect to your Zengge roller skate controllers.",
-          neverForLocation: false
+          neverForLocation: true
         }
       ],
       "@bacons/apple-targets",

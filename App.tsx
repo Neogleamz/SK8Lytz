@@ -35,9 +35,13 @@ const g = global as typeof global & GlobalWithErrorUtils;
 if (g.ErrorUtils) {
   const defaultHandler = g.ErrorUtils.getGlobalHandler();
   g.ErrorUtils.setGlobalHandler(async (error: unknown, isFatal?: boolean) => {
-    const err = error as Error | undefined;
-    await AppLogger.log('ERROR_CAUGHT', { message: err?.message || 'Unhandled JS Exception', stack: err?.stack, isFatal });
-    await AppLogger.uploadLogsToSupabase();
+    try {
+      const err = error instanceof Error ? error : new Error(String(error));
+      await AppLogger.log('ERROR_CAUGHT', { message: err.message || 'Unhandled JS Exception', stack: err.stack, isFatal });
+      await AppLogger.uploadLogsToSupabase();
+    } catch (e) {
+      console.warn('Failed to log error', e);
+    }
     if (defaultHandler) defaultHandler(error, isFatal);
   });
 }
@@ -131,8 +135,8 @@ export default function App() {
       } else {
         SplashScreen.hideAsync().catch(() => {});
       }
-      AppLogger.log('APP_OPENED', { loadTimeMs: Date.now() - appStartTime });
-      AppLogger.uploadLogsToSupabase();
+      AppLogger.log('APP_OPENED', { loadTimeMs: Date.now() - appStartTime }).catch(() => {});
+      AppLogger.uploadLogsToSupabase().catch(() => {});
       // Pre-warm ledger cache so loadSync() has data before any screen mounts.
       // Fires once per cold start — reads all @SK8Lytz_DeviceState_v2_* keys from AsyncStorage.
       warmLedgerCache().catch(() => {});
@@ -142,10 +146,10 @@ export default function App() {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', nextAppState => {
       if (nextAppState === 'background' || nextAppState === 'inactive') {
-        AppLogger.uploadLogsToSupabase();
+        AppLogger.uploadLogsToSupabase().catch(() => {});
       }
       if (nextAppState === 'active') {
-        AppLogger.log('APP_FOREGROUNDED', { timestamp: Date.now() });
+        AppLogger.log('APP_FOREGROUNDED', { timestamp: Date.now() }).catch(() => {});
       }
     });
     return () => subscription.remove();

@@ -29,6 +29,7 @@ object WearMessageSender {
     private const val PATH_HEALTH  = "/sk8lytz/health"
     private const val HEALTH_THROTTLE_MS = 5000L
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val lock = Any()
     private var lastHealthSendMs = 0L
 
     /**
@@ -93,7 +94,7 @@ object WearMessageSender {
 
                 val nodes = Wearable.getNodeClient(context).connectedNodes.await()
                 if (nodes.isEmpty()) {
-                    val queueSize = synchronized(this) {
+                    val queueSize = synchronized(lock) {
                         val buffer = getPendingTelemetry(context)
                         buffer.put(jsonObj)
                         savePendingTelemetry(context, buffer)
@@ -101,7 +102,7 @@ object WearMessageSender {
                     }
                     Log.d(TAG, "Phone disconnected. Buffered health update. Queue size: $queueSize")
                 } else {
-                    val buffer = synchronized(this) {
+                    val buffer = synchronized(lock) {
                         val b = getPendingTelemetry(context)
                         b.put(jsonObj)
                         b
@@ -117,7 +118,7 @@ object WearMessageSender {
                         }
                     }
                     if (allSent) {
-                        synchronized(this) { clearPendingTelemetry(context) }
+                        synchronized(lock) { clearPendingTelemetry(context) }
                         Log.d(TAG, "Health relay flushed ${buffer.length()} items → ${nodes.size} node(s)")
                     }
                 }

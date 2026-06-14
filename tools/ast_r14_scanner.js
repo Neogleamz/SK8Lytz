@@ -94,7 +94,7 @@ function analyzeFile(filePath) {
 walk(srcPath, analyzeFile);
 
 // Ensure directory exists
-const outDir = 'C:/Users/Magma/.gemini/antigravity/brain/148744d3-1074-4373-86a4-b96867c0b71d/deepdive_raw';
+const outDir = path.join('C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz', 'artifacts', 'deepdive_raw');
 if (!fs.existsSync(outDir)) {
     fs.mkdirSync(outDir, { recursive: true });
 }
