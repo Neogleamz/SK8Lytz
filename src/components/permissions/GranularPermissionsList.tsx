@@ -100,7 +100,7 @@ export default function GranularPermissionsList({ onAllRequiredGranted, readOnly
           results[item.id] = await checkPermission(item.id);
         }
       } catch (e) {
-        console.warn('Failed to check permissions', e);
+        console.warn('Failed to check permissions', e instanceof Error ? e.message : String(e));
       }
       if (active) {
         setStatuses(results);
