@@ -32,50 +32,6 @@
 > **Worktree**: `wave-1-sweep` · **Type**: Parallel · **Prerequisite**: None
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — Deep-Dive Code Hunt orthogonal analysis
 
-- [ ] **`sweep-src-components-PositionalGradientBuilder.tsx`**
-  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-4]` `[WAVE:4]`
-  - **Goal:** Resolve 3 telemetry and architectural rule violations in the components-PositionalGradientBuilder.tsx domain.
-  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-PositionalGradientBuilder.tsx.md](./plans/PLAN-sweep-src-components-PositionalGradientBuilder.tsx.md)
-    Key finding: "3 specific rule violations located and deduplicated in this cluster."
-    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
-  - **Source of Truth:** 📖 [PLAN-sweep-src-components-PositionalGradientBuilder.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-PositionalGradientBuilder.tsx.md)
-  - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 3 fully merged into master before this worktree is created.`
-
-- [ ] **`sweep-src-context`**
-  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:WAVE-4]` `[WAVE:4]`
-  - **Goal:** Resolve 15 telemetry and architectural rule violations in the context domain.
-  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-context.md](./plans/PLAN-sweep-src-context.md)
-    Key finding: "15 specific rule violations located and deduplicated in this cluster."
-    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
-  - **Source of Truth:** 📖 [PLAN-sweep-src-context.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-context.md)
-  - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 3 fully merged into master before this worktree is created.`
-
-- [ ] **`sweep-src-components-ConnectionStrengthBadge.tsx`**
-  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-4]` `[WAVE:4]`
-  - **Goal:** Resolve 1 telemetry and architectural rule violations in the components-ConnectionStrengthBadge.tsx domain.
-  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-ConnectionStrengthBadge.tsx.md](./plans/PLAN-sweep-src-components-ConnectionStrengthBadge.tsx.md)
-    Key finding: "1 specific rule violations located and deduplicated in this cluster."
-    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
-  - **Source of Truth:** 📖 [PLAN-sweep-src-components-ConnectionStrengthBadge.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-ConnectionStrengthBadge.tsx.md)
-  - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 3 fully merged into master before this worktree is created.`
-
-- [ ] **`sweep-src-components-ProductVisualizer.tsx`**
-  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-4]` `[WAVE:4]`
-  - **Goal:** Resolve 2 telemetry and architectural rule violations in the components-ProductVisualizer.tsx domain.
-  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-ProductVisualizer.tsx.md](./plans/PLAN-sweep-src-components-ProductVisualizer.tsx.md)
-    Key finding: "2 specific rule violations located and deduplicated in this cluster."
-    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
-  - **Source of Truth:** 📖 [PLAN-sweep-src-components-ProductVisualizer.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-ProductVisualizer.tsx.md)
-  - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 3 fully merged into master before this worktree is created.`
-
-### ⚡ [BATCH:WAVE-5] — `wave-5-sweep` — READY
-> **Worktree**: `wave-5-sweep` · **Type**: Parallel · **Prerequisite**: Wave 4 merged
-> **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — Deep-Dive Code Hunt orthogonal analysis
-
 - [ ] **`sweep-src-services`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-5]` `[WAVE:5]`
   - **Goal:** Resolve 247 telemetry and architectural rule violations in the services domain.
@@ -99,6 +55,27 @@
 ### ⚡ [BATCH:WAVE-6] — `wave-6-sweep` — READY
 > **Worktree**: `wave-6-sweep` · **Type**: Parallel · **Prerequisite**: Wave 5 merged
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — Deep-Dive Code Hunt orthogonal analysis
+
+- [ ] **`extract-and-sweep-AppLogger.ts`**
+  - **Tags:** `[📝 NEEDS PLAN]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
+  - **Goal:** Extract logic and resolve violations in `AppLogger.ts` (>30KB monolith).
+  - **Decision Log:** Skipped during Wave 5 due to S4 Monolith limit. Must be extracted into smaller modules before fixing.
+  - **Source of Truth:** [PENDING]
+  - **Details:** Must run `/intake` to generate plan first. `Prerequisite: Wave 5 merged.`
+
+- [ ] **`extract-and-sweep-DeviceRepository.ts`**
+  - **Tags:** `[📝 NEEDS PLAN]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
+  - **Goal:** Extract logic and resolve violations in `DeviceRepository.ts` (>30KB monolith).
+  - **Decision Log:** Skipped during Wave 5 due to S4 Monolith limit. Must be extracted into smaller modules before fixing.
+  - **Source of Truth:** [PENDING]
+  - **Details:** Must run `/intake` to generate plan first. `Prerequisite: Wave 5 merged.`
+
+- [ ] **`extract-and-sweep-CrewService.ts`**
+  - **Tags:** `[📝 NEEDS PLAN]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
+  - **Goal:** Extract logic and resolve violations in `CrewService.ts` (>30KB monolith).
+  - **Decision Log:** Skipped during Wave 5 due to S4 Monolith limit. Must be extracted into smaller modules before fixing.
+  - **Source of Truth:** [PENDING]
+  - **Details:** Must run `/intake` to generate plan first. `Prerequisite: Wave 5 merged.`
 
 - [ ] **`sweep-src-hooks`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[✅ L-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
