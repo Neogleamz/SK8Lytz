@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, View, Text } from 'react-native';
+import React, { useEffect, useState, useRef } from 'react';
+import { ActivityIndicator, Alert, View, Text, Button } from 'react-native';
 import EulaModal from '../components/modals/EulaModal';
 import { useTheme } from '../context/ThemeContext';
 import { AppSettingsService } from '../services/AppSettingsService';
@@ -16,13 +16,18 @@ interface ComplianceGateProps {
 export function ComplianceGate({ children }: ComplianceGateProps) {
   const { isOfflineMode, user, signOut } = useAuth();
   const { Colors } = useTheme();
+  const mountedRef = useRef(true);
   type ComplianceStatus = 'checking' | 'idle';
   const [status, setStatus] = useState<ComplianceStatus>('checking');
   const [requiresEula, setRequiresEula] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    mountedRef.current = true;
     checkCompliance();
+    return () => {
+      mountedRef.current = false;
+    };
   }, [isOfflineMode]);
 
   const checkCompliance = async () => {
@@ -33,6 +38,7 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
         // Offline users still require EULA acceptance — check the local AsyncStorage record.
         // This closes the bypass that previously let users skip legal compliance entirely.
         const offlineEula = await AsyncStorage.getItem(STORAGE_EULA_ACCEPTED);
+        if (!mountedRef.current) return;
         if (!offlineEula) {
           setRequiresEula(true);
         }
@@ -41,7 +47,7 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
       }
 
       if (!supabase) {
-        setStatus('idle');
+        if (mountedRef.current) setStatus('idle');
         return;
       }
       
@@ -52,27 +58,36 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
 
       // 2. Fetch user's accepted version
       if (!user) {
-        setStatus('idle');
+        if (mountedRef.current) setStatus('idle');
         return;
       }
 
-      const { data: profile } = await supabase
+      const { data: profile, error: queryError } = await supabase
          .from('user_profiles')
          .select('accepted_eula_version')
          .eq('user_id', user.id)
          .single();
       
+      if (!mountedRef.current) return;
+
+      if (queryError) {
+        AppLogger.warn('[ComplianceGate] EULA query failed', { error: queryError.message, payload_size: 0, ssi: 0 });
+      }
+
       const userVersion = profile?.accepted_eula_version || 0;
 
       if (userVersion < requiredVersion) {
         setRequiresEula(true);
       }
     } catch (e: unknown) {
+      if (!mountedRef.current) return;
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.warn('[ComplianceGate] check error', { error: msg });
+      AppLogger.warn('[ComplianceGate] check error', { error: msg, payload_size: 0, ssi: 0 });
       setError(msg);
     } finally {
-      setStatus('idle');
+      if (mountedRef.current) {
+        setStatus('idle');
+      }
     }
   };
 
@@ -97,15 +112,17 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
       // 2. Update user profile in Supabase
       if (!user) return;
       
-      await supabase
+      const { error } = await supabase
         .from('user_profiles')
         .update({ accepted_eula_version: requiredVersion })
         .eq('user_id', user.id);
         
+      if (error) throw error;
+        
       setRequiresEula(false);
     } catch (e: unknown) {
        const msg = e instanceof Error ? e.message : String(e);
-       AppLogger.error('[ComplianceGate] Accept failed', { error: msg , payload_size: 0, ssi: 0 });
+       AppLogger.error('[ComplianceGate] Accept failed', { error: msg, payload_size: 0, ssi: 0 });
        Alert.alert('Error', 'Could not save compliance status. Please try again.');
     }
   };
@@ -115,7 +132,7 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
       await signOut();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.warn('[ComplianceGate] Sign out failed', { error: msg });
+      AppLogger.warn('[ComplianceGate] Sign out failed', { error: msg, payload_size: 0, ssi: 0 });
     }
   };
 
@@ -139,7 +156,11 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
         <Text style={{ color: Colors.error || '#FF0000', marginBottom: 16, fontWeight: 'bold' }}>Failed to verify compliance status.</Text>
-        <Text style={{ color: Colors.text, textAlign: 'center' }}>{error}</Text>
+        <Text style={{ color: Colors.text, textAlign: 'center', marginBottom: 20 }}>{error}</Text>
+        <Button title="Retry" onPress={() => { setError(null); checkCompliance(); }} color={Colors.primary} />
+        <View style={{ marginTop: 10 }}>
+           <Button title="Sign Out" onPress={handleDecline} color={Colors.text} />
+        </View>
       </View>
     );
   }
