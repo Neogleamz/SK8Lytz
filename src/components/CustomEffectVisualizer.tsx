@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { getVisualizerFrame } from '../protocols/PatternEngine';
 import { Spacing } from '../theme/theme';
 import { hexToRgb } from '../utils/ColorUtils';
@@ -22,8 +22,6 @@ export const CustomEffectVisualizer: React.FC<CustomEffectVisualizerProps> = ({
   fgColorHex = '#FF0000', 
   bgColorHex = '#000000',
   points = 16,
-  segments = 1,
-  direction = true,
   autoPlay = true,
 }) => {
   const [tick, setTick] = useState(0);
@@ -63,21 +61,38 @@ export const CustomEffectVisualizer: React.FC<CustomEffectVisualizerProps> = ({
   }, [effectId, fgColorHex, bgColorHex, tick, points]);
 
   return (
-    <View style={{ flex: 1, marginRight: Spacing.sm, height: 8, overflow: 'hidden' }}>
-      <View style={{ flex: 1, flexDirection: 'row', gap: Spacing.xxs }}>
+    <View style={styles.container}>
+      <View style={styles.row}>
         {displayedDots.slice(0, 10).map((c, i) => (
           <View 
              key={i} 
-             style={{ 
-               flex: 1,
-               borderRadius: 1000, 
-               backgroundColor: c
-             }} 
+             style={[
+               styles.dot,
+               { backgroundColor: c }
+             ]} 
           />
         ))}
       </View>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1, 
+    marginRight: Spacing.sm, 
+    height: 8, 
+    overflow: 'hidden'
+  },
+  row: {
+    flex: 1, 
+    flexDirection: 'row', 
+    gap: Spacing.xxs
+  },
+  dot: {
+    flex: 1,
+    borderRadius: 1000, 
+  }
+});
 
 export default CustomEffectVisualizer;
