@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useRef, useState } from 'react';
-import { LayoutChangeEvent, PanResponder, StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { LayoutChangeEvent, PanResponder, StyleSheet, Text, View, ViewStyle, Platform } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { Spacing } from '../theme/theme';
 
@@ -126,6 +126,10 @@ const TacticalSlider = ({
         setContainerWidth(e.nativeEvent.layout.width);
         containerWidthRef.current = e.nativeEvent.layout.width;
       }}
+      accessible={true}
+      accessibilityRole="adjustable"
+      accessibilityLabel={label || "Slider"}
+      accessibilityValue={{ min: minimumValue, max: maximumValue, now: localValue }}
       {...panResponder.panHandlers}
     >
       {/* Background Track */}
@@ -174,7 +178,10 @@ const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleShe
   container: {
     height: 44,
     justifyContent: 'center',
-    cursor: 'pointer',
+    ...Platform.select({
+      web: { cursor: 'pointer' },
+      default: {},
+    }),
     borderRadius: 8,
     overflow: 'hidden',
     borderWidth: 1,
