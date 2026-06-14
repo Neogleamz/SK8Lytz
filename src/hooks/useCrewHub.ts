@@ -47,24 +47,36 @@ export function useCrewHub(visible: boolean, step: string) {
 
   // Load permanent crews
   useEffect(() => {
+    let active = true;
     if (!visible) return;
     if (step !== 'landing' && step !== 'create' && step !== 'schedule' && step !== 'manage') return;
     if (!user?.id) return;
     profileService.getMyCrew(undefined, user.id).then((crews: PermanentCrew[]) => {
+      if (!active) return;
       setMyCrews(crews);
       setPermanentCrews(crews.map(c => ({ id: c.id, name: c.name })));
-    }).catch((e) => { AppLogger.error('[useCrewHub] Failed to load my crews', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 }); });
-  }, [visible, step]);
+    }).catch((e) => { 
+      if (!active) return;
+      AppLogger.error('[useCrewHub] Failed to load my crews', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 }); 
+    });
+    return () => { active = false; };
+  }, [visible, step, user?.id]);
 
   // Load member counts for My Crews
   useEffect(() => {
+    let active = true;
     if (!visible || step !== 'landing' || myCrews.length === 0) return;
     myCrews.forEach(crew => {
       if (crewMemberCounts[crew.id]) return;
       profileService.getCrewMembersForDisplay(crew.id).then(info => {
+        if (!active) return;
         setCrewMemberCounts(prev => ({ ...prev, [crew.id]: info }));
-      }).catch((e) => { AppLogger.error('[useCrewHub] Failed to load member counts', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 }); });
+      }).catch((e) => { 
+        if (!active) return;
+        AppLogger.error('[useCrewHub] Failed to load member counts', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 }); 
+      });
     });
+    return () => { active = false; };
   }, [visible, step, myCrews]);
 
   useEffect(() => {
@@ -139,7 +151,7 @@ export function useCrewHub(visible: boolean, step: string) {
       .finally(() => {
         setNearbyStatus(prev => prev === 'loading' ? 'success' : prev);
       });
-  }, [discoverRadiusMi, locationCoords]);
+  }, [discoverRadiusMi, locationCoords, user?.id]);
 
   useEffect(() => {
     if (!visible || (step !== 'landing' && step !== 'map')) return;
