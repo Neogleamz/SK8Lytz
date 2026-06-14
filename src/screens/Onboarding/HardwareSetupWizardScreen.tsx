@@ -7,7 +7,7 @@
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Linking, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
@@ -15,6 +15,7 @@ import { getDefaultProtocol } from '../../protocols/ControllerRegistry';
 import { Spacing, Typography , ThemePalette } from '../../theme/theme';
 
 import { LOCAL_PRODUCT_CATALOG, getLocalProfileById } from '../../constants/ProductCatalog';
+import { getHardwareConfigKey } from '../../constants/storageKeys';
 import { RegisteredDevice } from '../../hooks/useRegistration';
 import { HardwareStatusPills } from '../../components/dashboard/HardwareStatusPills';
 import { getDefaultGroupName } from '../../utils/NamingUtils';
@@ -70,6 +71,7 @@ export default function HardwareSetupWizardScreen({
   const [step, setStep] = useState<1 | 2 | 3>(1);
   // isBlinking is string | null (acts as a status union representing the active blinking device's MAC)
   const [isBlinking, setIsBlinking] = useState<string | null>(null);
+  const isBlinkingRef = useRef(false);
   
   type WizardActionStatus = 'idle' | 'identifying' | 'claiming' | 'error';
   const [actionStatus, setActionStatus] = useState<WizardActionStatus>('idle');
@@ -104,7 +106,7 @@ export default function HardwareSetupWizardScreen({
          try {
            await pingDevice(device.device_mac, payloadResult.packets[0], { probe: false, duration: 500, turnOffAtEnd: false });
          } catch (err: unknown) {
-           AppLogger.error('[FTUE] pingDevice failed in orientation test', err, { payload_size: 0, ssi: 0 });
+           AppLogger.error('[FTUE] pingDevice failed in orientation test', err instanceof Error ? err : new Error(String(err)), { payload_size: 0, ssi: 0 });
            setSetupError('Device not responding, retrying...');
          }
       }
@@ -175,7 +177,8 @@ export default function HardwareSetupWizardScreen({
   };
 
   const handleBlinkDevice = async (deviceMac: string) => {
-    if (isBlinking) return;
+    if (isBlinkingRef.current) return;
+    isBlinkingRef.current = true;
     setIsBlinking(deviceMac);
 
     // Blink & Claim: Automatically ensure the device is selected when tested
@@ -228,14 +231,15 @@ export default function HardwareSetupWizardScreen({
             : r
         ));
         // Cache the result so repeat wizard visits are instant
-        AsyncStorage.setItem(`@sk8_hw_${deviceMac}`, JSON.stringify(hwConfig)).catch(e => AppLogger.warn('Failed to cache probed hardware config', e instanceof Error ? e.message : String(e)));
+        AsyncStorage.setItem(getHardwareConfigKey(deviceMac), JSON.stringify(hwConfig)).catch(e => AppLogger.warn('Failed to cache probed hardware config', e instanceof Error ? e.message : String(e)));
         AppLogger.log('DEVICE_DISCOVERED', { context: 'pingDevice_complete', deviceId: deviceMac, ledPoints: hwConfig.ledPoints });
       }
     } catch (e: unknown) {
-      AppLogger.warn('[FTUE] Blink test failed', { error: (e instanceof Error ? e.message : String(e)) });
+      AppLogger.warn('[FTUE] Blink test failed', { error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 });
     } finally {
       // pingDevice handles the off command — just reset the button state
       setIsBlinking(null);
+      isBlinkingRef.current = false;
     }
   };
 
@@ -664,10 +668,7 @@ export default function HardwareSetupWizardScreen({
                     if (getLocalProfileById(cfg.type)?.hardwareAllowsCustomPoints && cfg.points !== device.led_points) {
                        AppLogger.log('FTUE_HARDWARE_WRITE', { points: cfg.points, deviceId: device.device_mac });
                        const payloadResult = hwAdapter.buildWriteSettings(cfg.points, 1, 1, 1);
-                       await pingDevice(device.device_mac, payloadResult.packets[0], { probe: false, duration: 500, turnOffAtEnd: false });
-                       // Let EEPROM persist
-                       const EEPROM_PERSIST_DELAY_MS = 600;
-                       await new Promise(resolve => setTimeout(resolve, EEPROM_PERSIST_DELAY_MS));
+                       await pingDevice(device.device_mac, payloadResult.packets[0], { probe: false, duration: 1100, turnOffAtEnd: false });
                     }
                     
                     // Re-probe to verify AND play SK8Lytz Signature (Mode 26 Dark Blue / Dark Orange)

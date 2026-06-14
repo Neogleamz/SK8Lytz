@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets, EdgeInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
@@ -16,7 +16,7 @@ import GranularPermissionsList from '../../components/permissions/GranularPermis
 export default function PermissionsOnboardingScreen({ onComplete }: PermissionsOnboardingScreenProps) {
   const { Colors, isDark } = useTheme();
   const insets = useSafeAreaInsets();
-  const styles = createStyles(Colors, insets);
+  const styles = useMemo(() => createStyles(Colors, insets), [Colors, insets]);
 
   const [allRequiredGranted, setAllRequiredGranted] = useState(false);
   // Ref used to trigger a re-check in GranularPermissionsList after auto-grant

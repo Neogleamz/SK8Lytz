@@ -1,4 +1,4 @@
-export const STORAGE_OFFLINE_SKIP = '@Sk8lytz_offline_skip';
+﻿export const STORAGE_OFFLINE_SKIP = '@Sk8lytz_offline_skip';
 export const STORAGE_REMEMBER_CREDS = '@Sk8lytz_remember_creds';
 export const STORAGE_SCENES_CACHE = '@SK8Lytz_PublicScenes_Cache';
 export const PENDING_SESSION_QUEUE_KEY = '@SK8Lytz_PendingSession_Queue';
@@ -48,3 +48,5 @@ export const STORAGE_LOCAL_SCENE_SYNC_QUEUE = '@Sk8lytz_Scene_Sync_Queue';
 export const STORAGE_REGISTERED_DEVICES = '@Sk8lytz_registered_devices';
 export const STORAGE_RECENT_SESSIONS_PREFIX = '@sk8lytz_recent_sessions_';
 export const STORAGE_LIFETIME_STATS_PREFIX = '@sk8lytz_lifetime_stats_';
+export const getHardwareConfigKey = (mac: string) => `@sk8_hw_${mac}`;
+
