@@ -1074,7 +1074,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       setIsBuildingCustom(mode === 'BUILDER');
     }, [setIsBuildingCustom]);
 
-    const onMusicChangePanel = React.useCallback((pat?: number, sens?: number, brt?: number, src?: string, pClr?: string, sClr?: string, mat?: number) => {
+    const onMusicChangePanel = React.useCallback((pat?: number, sens?: number, brt?: number, src?: 'APP' | 'DEVICE', pClr?: string, sClr?: string, mat?: number) => {
       handleMusicChange(
         pat ?? musicPatternId,
         sens ?? micSensitivity,
