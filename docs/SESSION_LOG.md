@@ -3494,3 +3494,29 @@ TSC: âœ…  Jest: âœ…
 - Successfully resolved the merge conflict in src/constants/storageKeys.ts safely after gatekeeper rollback.
 - Regenerated 4 attestations securely.
 - Ready to initialize Wave 2b.
+### [MERGE READY] sweep-components-permissions — 02f7bb9c
+Files touched: src/components/permissions/GranularPermissionsList.tsx
+TSC: ?  Jest: ?
+
+### [MERGE READY] sweep-context-SessionContext.tsx - 2cc825aa
+Files touched: src/context/SessionContext.tsx
+TSC: âœ…  Jest: âœ…
+
+
+### [MERGE READY] sweep-components-SkateSpotBottomSheet.tsx — a060a42a
+Files touched: src/components/SkateSpotBottomSheet.tsx
+TSC: ?  Jest: ?
+### [MERGE READY] sweep-hooks-useCrewHub.ts — 77305d4c
+Files touched:
+- src/hooks/useCrewHub.ts
+TSC: ?  Jest: ?
+
+
+### [MERGE READY] sweep-components-LocationPicker.tsx — 4aefa0bb
+Files touched: src/components/LocationPicker.tsx
+TSC: ?  Jest: ?
+
+### [MERGE READY] sweep-components-VisualizerUnit.tsx â€” a354ec9f
+Files touched: src/components/VisualizerUnit.tsx, src/components/visualizer/VisualizerHooks.ts
+TSC: âœ…  Jest: âœ…
+
