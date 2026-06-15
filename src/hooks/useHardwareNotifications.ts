@@ -11,7 +11,7 @@
  */
 import { useEffect, useRef } from 'react';
 import { AppLogger } from '../services/appLogger';
-import DeviceRepository from '../services/DeviceRepository';
+import DeviceRepository from '../services/deviceRepository';
 import { BlePayloadParser } from '../utils/BlePayloadParser';
 import { scrubPII } from '../utils/piiScrubber';
 

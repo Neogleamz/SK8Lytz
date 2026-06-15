@@ -19,7 +19,7 @@ import { useAuth } from '../context/AuthContext';
 
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import { AppLogger } from '../services/appLogger';
-import DeviceRepository from '../services/DeviceRepository';
+import DeviceRepository from '../services/deviceRepository';
 import GroupRepository from '../services/GroupRepository';
 import { STORAGE_LAST_GROUP_PATTERNS } from '../constants/storageKeys';
 // NOTE: Direct supabase import removed — all cloud writes go through DeviceRepository SSOT.

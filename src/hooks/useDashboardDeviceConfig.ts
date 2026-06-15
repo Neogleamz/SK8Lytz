@@ -9,7 +9,7 @@
  */
 import { MutableRefObject, Dispatch, SetStateAction } from 'react';
 import { AppLogger } from '../services/appLogger';
-import DeviceRepository from '../services/DeviceRepository';
+import DeviceRepository from '../services/deviceRepository';
 import type { DeviceSettings, DisplayDevice } from '../types/dashboard.types';
 import { RegisteredDevice } from './useRegistration';
 import { scrubPII } from '../utils/piiScrubber';

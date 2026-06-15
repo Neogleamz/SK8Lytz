@@ -14,7 +14,7 @@
  *
  * Extracted from DashboardScreen.tsx (Phase 2 — God Object Surgery).
  */
-import DeviceRepository from '../services/DeviceRepository';
+import DeviceRepository from '../services/deviceRepository';
 import { useEffect, useRef } from 'react';
 import type { Device } from 'react-native-ble-plx';
 import type { RegisteredDevice } from '../hooks/useRegistration';

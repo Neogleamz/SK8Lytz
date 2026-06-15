@@ -20,7 +20,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { AppLogger } from '../services/appLogger';
-import DeviceRepository from '../services/DeviceRepository';
+import DeviceRepository from '../services/deviceRepository';
 import { getDefaultDeviceName } from '../utils/NamingUtils';
 import { useAuth } from '../context/AuthContext';
 
