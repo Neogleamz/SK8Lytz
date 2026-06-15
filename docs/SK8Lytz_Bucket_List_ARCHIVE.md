@@ -3258,7 +3258,7 @@ pm run verify which includes QA tests.
   - **Source of Truth:** ðŸ“– [PLAN-extract-and-sweep-CrewService.ts.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-extract-and-sweep-CrewService.ts.md)
   - **Details:** Dependent layer extraction. `Prerequisite: Wave 6 fully merged into master before this worktree is created.`
 
-- [/] **`sweep-src-other`**
+- [x] **`sweep-src-other`** merged @ e87803d9
   - **Tags:** `[âœ… READY]` `[ðŸ” CONFIRMED]` `[ðŸ§¹ TECH DEBT]` `[âœ… L-RISK]` `[ðŸ¥© Feast]` `[ðŸ§  THINK]` `[BATCH:WAVE-7]` `[WAVE:7]`
   - **Goal:** Resolve 56 telemetry and architectural rule violations in the other domain.
   - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
@@ -3272,3 +3272,4 @@ pm run verify which includes QA tests.
 > **Worktree**: `wave-8-sweep` Â· **Type**: Parallel Â· **Prerequisite**: Wave 7 merged
 > **Source Analysis**: ðŸ“Š [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) â€” Deep-Dive Code Hunt orthogonal analysis
 
+

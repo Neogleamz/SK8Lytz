@@ -3891,3 +3891,7 @@ TSC: ✅  Jest: ✅
 Files touched: src/services/CrewService.ts -> src/services/CrewService/
 Verify result: TSC ✅, Jest ✅, gates ✅
 
+### [MERGE] sweep-src-other -> master @ e87803d9
+Files touched: 24 files across root and tools/
+Verify result: TSC ✅, Jest ✅, gates ✅
+
