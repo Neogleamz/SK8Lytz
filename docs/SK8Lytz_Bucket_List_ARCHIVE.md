@@ -3288,4 +3288,15 @@ pm run verify which includes QA tests.
 ### ⚡ [BATCH:WAVE-9] — `wave-9-sweep` — READY
 > **Worktree**: `wave-9-sweep` · **Type**: Parallel · **Prerequisite**: Wave 8 merged
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — Deep-Dive Code Hunt orthogonal analysis
+
+
+- [x] **`AccountModal-Extraction-Spike`** - Merged @ 4551c750: Extracted components and scrubbed PII telemetry.
+  - **Tags:** `[✅ READY]` `[🚧 M-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-9]` `[WAVE:9]`
+  - **Goal:** Extract sub-sections of `AccountModal.tsx` (31KB monolith) into `src/components/account/` to comply with Rule S4.
+  - **Decision Log:** Subagent execution halted perfectly on Rule S4 (Monolith File limit). Needs dedicated architectural extraction plan before modifying.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-AccountModal.tsx.md](./plans/PLAN-sweep-src-components-AccountModal.tsx.md)
+    Key finding: "2 specific rule violations located and deduplicated in this cluster."
+    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
+  - **Source of Truth:** 📖 [PLAN-sweep-src-components-AccountModal.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-AccountModal.tsx.md)
+  - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 8 fully merged into master before this worktree is created.`
 

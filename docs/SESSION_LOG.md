@@ -3921,3 +3921,8 @@ Verify result: TSC ✅, Jest ✅, gates ✅
 Files touched: 7 docked component files
 Verify result: TSC ✅, Jest ✅, gates ✅
 
+
+### [MERGE] AccountModal-Extraction-Spike -> master @ 4551c750
+Files touched: AccountModal.tsx, AccountModalSkeleton.tsx, AccountModalStyles.ts
+Verify result: TSC ✅, Jest ✅, gates ✅
+
