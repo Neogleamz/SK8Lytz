@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 import { ISessionSnapshot } from './SpeedTrackingService';
 import { checkPermission } from './PermissionService';
 

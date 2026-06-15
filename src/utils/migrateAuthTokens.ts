@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as SecureStore from 'expo-secure-store';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { STORAGE_AUTH_MIGRATION_FLAG, STORAGE_SUPABASE_AUTH_KEY } from '../constants/storageKeys';
 
 export async function migrateAuthTokensToSecureStore() {

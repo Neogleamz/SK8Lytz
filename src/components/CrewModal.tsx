@@ -19,7 +19,7 @@ import { CrewJoinScreen } from './crew/CrewJoinScreen';
 import { CrewLandingScreen } from './crew/CrewLandingScreen';
 import { CrewManageScreen } from './crew/CrewManageScreen';
 import { CrewScheduleScreen } from './crew/CrewScheduleScreen';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 type ModalStep = 'landing' | 'create' | 'schedule' | 'join' | 'controller' | 'manage' | 'crew-detail' | 'map';
 

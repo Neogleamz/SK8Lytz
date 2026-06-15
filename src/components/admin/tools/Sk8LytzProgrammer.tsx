@@ -19,7 +19,7 @@ import {
     HardwareSettings,
     IC_TYPES,
 } from '../../../protocols/ZenggeProtocol';
-import { AppLogger } from '../../../services/AppLogger';
+import { AppLogger } from '../../../services/appLogger';
 import { Spacing, Typography } from '../../../theme/theme';
 import { useProtocolDispatch } from '../../../hooks/useProtocolDispatch';
 import { STORAGE_PROGRAMMER_PROFILES } from '../../../constants/storageKeys';

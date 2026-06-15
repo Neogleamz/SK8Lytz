@@ -1,7 +1,7 @@
 import { setup, assign } from 'xstate';
 import type { Device } from 'react-native-ble-plx';
 import { BleMachineContext, BleMachineEvent } from './BleMachine.types';
-import { AppLogger } from '../AppLogger';
+import { AppLogger } from '../appLogger';
 import { connectService } from './ConnectService';
 import { recoveryService } from './RecoveryService';
 import { heartbeatService } from './HeartbeatService';

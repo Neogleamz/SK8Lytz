@@ -18,7 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAdminSettings } from '../../hooks/useAdminSettings';
 import { EVENT_META, formatLogTime, getPayloadSummary, useAdminTelemetry } from '../../hooks/useAdminTelemetry';
 import { useProductManager } from '../../hooks/useProductManager';
-import { EventType, LogEntry } from '../../services/AppLogger';
+import { EventType, LogEntry } from '../../services/appLogger';
 import { Spacing } from '../../theme/theme';
 import { adminStyles as styles } from './adminStyles';
 

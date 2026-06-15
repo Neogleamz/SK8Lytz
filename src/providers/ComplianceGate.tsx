@@ -5,7 +5,7 @@ import EulaModal from '../components/modals/EulaModal';
 import { useTheme } from '../context/ThemeContext';
 import { AppSettingsService } from '../services/AppSettingsService';
 import { supabase } from '../services/supabaseClient';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { useAuth } from '../context/AuthContext';
 import { STORAGE_EULA_ACCEPTED } from '../constants/storageKeys';
 

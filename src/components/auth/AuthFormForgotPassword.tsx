@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { makeRedirectUri } from 'expo-auth-session';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 import { Spacing } from '../../theme/theme';
 import { useAuthStyles } from './AuthStyles';
 import { isValidEmail } from '../../utils/validation';

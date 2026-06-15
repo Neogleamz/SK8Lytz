@@ -5,7 +5,7 @@ import { InteractionManager, Platform } from 'react-native';
 import type { Device, BleManager, BleError } from 'react-native-ble-plx';
 import { ZENGGE_SERVICE_UUID, ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 import { supabase } from '../../services/supabaseClient';
 import { locationService } from '../../services/LocationService';
 import type { PendingRegistration } from '../../types/dashboard.types';

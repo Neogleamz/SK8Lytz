@@ -3,7 +3,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import React from 'react';
 import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 import { crewService } from '../../services/CrewService';
 import { Spacing } from '../../theme/theme';
 import { LocationPicker } from '../LocationPicker';

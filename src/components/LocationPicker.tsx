@@ -6,7 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Spacing , ThemePalette } from '../theme/theme';
 import { LocationMarker, LocationPickerMap } from './LocationPickerMap';
 import { useRecentSpots, RecentSpot } from '../hooks/useRecentSpots';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { useAppConfig } from '../context/AppConfigContext';
 
 // TODO(i18n): Replace with global i18n.t when framework is adopted

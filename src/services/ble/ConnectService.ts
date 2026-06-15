@@ -5,7 +5,7 @@ import { STORAGE_DEMO_MODE } from '../../constants/storageKeys';
 import { Buffer } from 'buffer';
 import type { Device, BleManager, BleError, Characteristic } from 'react-native-ble-plx';
 import { createGattSession } from '../BleSessionFactory';
-import { AppLogger } from '../AppLogger';
+import { AppLogger } from '../appLogger';
 import { scrubPII } from '../../utils/piiScrubber';
 import { jitteredDelay } from '../../utils/backoff';
 import { BLE_TIMING } from '../../constants/bleTimingConstants';

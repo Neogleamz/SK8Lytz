@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { DeviceEventEmitter, Modal } from 'react-native';
 import PermissionsOnboardingScreen from '../../screens/Onboarding/PermissionsOnboardingScreen';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 
 import { SHOW_GLOBAL_PERMISSIONS_EVENT, GLOBAL_PERMISSIONS_CLOSED_EVENT } from '../../services/PermissionService';
 

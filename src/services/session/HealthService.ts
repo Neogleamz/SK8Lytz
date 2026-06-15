@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import { fromCallback } from 'xstate';
 import { WatchBridge, WatchHealthUpdate } from 'sk8lytz-watch-bridge';
 import { checkPermission } from '../PermissionService';
-import { AppLogger } from '../AppLogger';
+import { AppLogger } from '../appLogger';
 import { HealthSnapshot, SessionMachineEvent } from './SessionMachine.types';
 
 export interface HealthServiceInput {

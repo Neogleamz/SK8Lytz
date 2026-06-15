@@ -14,7 +14,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { RealtimeChannel } from '@supabase/supabase-js';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 import { supabase } from './supabaseClient';
 
 import type { Tables } from '../types/supabase';

@@ -8,7 +8,7 @@ import { useMapFilters } from '../../hooks/useMapFilters';
 import { useCrewContext } from '../../context/CrewContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useAppConfig } from '../../context/AppConfigContext';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 import { crewService, CrewSession } from '../../services/CrewService';
 import { PermanentCrew, profileService } from '../../services/ProfileService';
 import { Spacing } from '../../theme/theme';

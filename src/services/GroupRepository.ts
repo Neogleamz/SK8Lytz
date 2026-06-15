@@ -13,7 +13,7 @@ import { STORAGE_CUSTOM_GROUPS, STORAGE_PENDING_GROUP_SYNC } from '../constants/
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 import { supabase } from './supabaseClient';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import type { CustomGroup, DeviceSettings } from '../types/dashboard.types';

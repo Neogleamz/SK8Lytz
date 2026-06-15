@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Share } from 'react-native';
-import { AppLogger, EventType, LogEntry } from '../services/AppLogger';
+import { AppLogger, EventType, LogEntry } from '../services/appLogger';
 
 export interface TelemetryStats {
   totalEvents: number;

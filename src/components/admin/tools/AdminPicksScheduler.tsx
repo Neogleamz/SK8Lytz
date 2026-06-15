@@ -15,7 +15,7 @@ import {
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { AppLogger } from '../../../services/AppLogger';
+import { AppLogger } from '../../../services/appLogger';
 import { useTheme } from '../../../context/ThemeContext';
 import { BuilderNode } from '../../../protocols/PositionalMathBuffer';
 import { supabase } from '../../../services/supabaseClient';

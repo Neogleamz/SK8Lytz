@@ -4,7 +4,7 @@ import { AppState, Linking, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { Camera, useCameraDevice, useCameraPermission, useFrameOutput, Frame } from 'react-native-vision-camera';
 import { runOnJS } from 'react-native-worklets';
 import { useResizer } from 'react-native-vision-camera-resizer';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { requestPermission } from '../services/PermissionService';
 import { Colors, Spacing } from '../theme/theme';
 import { rgbToHex, boostForLED } from '../utils/ColorUtils';

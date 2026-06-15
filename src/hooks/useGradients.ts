@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { GradientsService } from '../services/GradientsService';
 import { CustomBuilderPreset } from '../protocols/PositionalMathBuffer';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { useTelemetryLedger } from './useTelemetryLedger';
 import { useAuth } from '../context/AuthContext';
 

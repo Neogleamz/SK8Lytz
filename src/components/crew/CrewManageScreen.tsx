@@ -3,7 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import React from 'react';
 import { ActivityIndicator, Image, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 import { profileService } from '../../services/ProfileService';
 import { Spacing } from '../../theme/theme';
 import CustomSlider from '../CustomSlider';

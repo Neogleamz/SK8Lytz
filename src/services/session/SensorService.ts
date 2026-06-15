@@ -3,7 +3,7 @@ import { Accelerometer } from 'expo-sensors';
 import { Platform } from 'react-native';
 import { fromCallback } from 'xstate';
 import { checkPermission, openGlobalPermissionsModal } from '../PermissionService';
-import { AppLogger } from '../AppLogger';
+import { AppLogger } from '../appLogger';
 import { crewService } from '../CrewService';
 import { SpeedTrackingService } from '../SpeedTrackingService';
 import { TelemetrySnapshot, HealthSnapshot, SessionMachineEvent } from './SessionMachine.types';

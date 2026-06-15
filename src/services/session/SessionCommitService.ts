@@ -1,6 +1,6 @@
 import { fromPromise } from 'xstate';
 import { WatchBridge } from 'sk8lytz-watch-bridge';
-import { AppLogger } from '../AppLogger';
+import { AppLogger } from '../appLogger';
 import { SpeedTrackingService, ISessionSnapshot } from '../SpeedTrackingService';
 import { TelemetrySnapshot, HealthSnapshot } from './SessionMachine.types';
 

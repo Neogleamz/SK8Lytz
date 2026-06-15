@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_THEME_MODE, STORAGE_CONTROL_UI_THEME } from '../constants/storageKeys';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { DarkColors, LightColors, ThemePalette } from '../theme/theme';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 const THEME_KEY = STORAGE_THEME_MODE;
 const CONTROL_THEME_KEY = STORAGE_CONTROL_UI_THEME;

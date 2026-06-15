@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useProtocolDispatch } from './useProtocolDispatch';
 import { scrubPII } from '../utils/piiScrubber';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import type { ModeType } from '../types/dashboard.types';
 import { hexToRgb } from '../utils/ColorUtils';
 import {

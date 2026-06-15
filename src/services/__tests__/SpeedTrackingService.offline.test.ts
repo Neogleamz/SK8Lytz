@@ -41,7 +41,7 @@ jest.mock('../supabaseClient', () => ({
   },
 }));
 
-jest.mock('../AppLogger', () => ({
+jest.mock('../appLogger', () => ({
   AppLogger: {
     log: jest.fn(),
     warn: jest.fn(),

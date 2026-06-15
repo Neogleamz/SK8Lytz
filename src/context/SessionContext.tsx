@@ -26,7 +26,7 @@ export interface HealthTelemetry {
   mergeWatchHealth?: (heartRate: number, calories: number) => void;
 }
 
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { WatchBridge, WatchCommand, WatchHealthUpdate } from 'sk8lytz-watch-bridge';
 import { STORAGE_AUTO_PAUSE_ENABLED, STORAGE_PENDING_BG_END } from '../constants/storageKeys';
 

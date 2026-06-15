@@ -1,7 +1,7 @@
 import { STORAGE_RECENT_LOCATIONS } from '../constants/storageKeys';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 const STORAGE_KEY = STORAGE_RECENT_LOCATIONS;
 

@@ -7,7 +7,7 @@ import { supabase } from '../../services/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 import { Spacing } from '../../theme/theme';
 import type { Tables } from '../../types/supabase';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 
 // Use the generated Supabase Row type directly — stays in sync with schema automatically.
 type LifetimeStats = Tables<'user_lifetime_stats'>;

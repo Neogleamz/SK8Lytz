@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ActivityIndicator, ScrollView, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../../../services/supabaseClient';
-import { AppLogger } from '../../../services/AppLogger';
+import { AppLogger } from '../../../services/appLogger';
 import { ErrorCard } from '../../ErrorCard';
 
 interface GlobalAnalyticsSummary {

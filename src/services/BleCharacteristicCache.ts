@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 import { scrubPII } from '../utils/piiScrubber';
 
 export interface BleCacheEntry {

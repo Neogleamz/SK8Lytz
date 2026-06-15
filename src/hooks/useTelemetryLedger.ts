@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../services/supabaseClient';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 import { STORAGE_TELEMETRY_BUFFER } from '../constants/storageKeys';
 

@@ -4,7 +4,7 @@ import { Spacing } from '../../theme/theme';
 import TacticalSlider from '../TacticalSlider';
 import { PositionalMathBuffer } from '../../protocols/PositionalMathBuffer';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import type { UniversalSlidersFooterProps } from './UniversalSlidersFooter';
 

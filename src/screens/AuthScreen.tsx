@@ -13,7 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { useTheme } from '../context/ThemeContext';
 import { Spacing } from '../theme/theme';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { useAuthStyles } from '../components/auth/AuthStyles';
 import { AuthHeader } from '../components/auth/AuthHeader';
 import { AuthFormSignIn } from '../components/auth/AuthFormSignIn';

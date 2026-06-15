@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { Scene, ScenesService } from '../services/ScenesService';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { useAuth } from '../context/AuthContext';
 
 export function useScenes() {

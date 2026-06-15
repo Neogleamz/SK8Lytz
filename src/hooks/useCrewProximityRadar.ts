@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { locationService } from '../services/LocationService';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { crewService } from '../services/CrewService';
 
 export type RadarMatchType = 'PRIVATE_CREW' | 'PUBLIC_SESSION' | 'EMPTY_RINK' | 'NONE';

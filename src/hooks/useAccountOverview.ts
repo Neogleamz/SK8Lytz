@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { PermanentCrew, profileService, SessionHistoryItem, UserProfile } from '../services/ProfileService';
 import { supabase } from '../services/supabaseClient';
 import * as FileSystem from 'expo-file-system';

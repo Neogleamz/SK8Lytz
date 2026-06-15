@@ -26,7 +26,7 @@
 import type { BleManager, Device } from 'react-native-ble-plx';
 import type { IControllerProtocol } from '../protocols/IControllerProtocol';
 import { resolveProtocol, getDefaultProtocol, getProtocolById } from '../protocols/ControllerRegistry';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 import { BleCharacteristicCache } from './BleCharacteristicCache';
 import { scrubPII } from '../utils/piiScrubber';
 import { jitteredDelay } from '../utils/backoff';

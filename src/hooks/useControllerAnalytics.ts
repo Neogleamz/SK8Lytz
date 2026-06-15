@@ -7,7 +7,7 @@
  * Extracted from DockedController.tsx to isolate analytics side-effects.
  */
 import { useEffect, useRef } from 'react';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import type { ModeType } from '../types/dashboard.types';
 import { useTelemetryLedger } from './useTelemetryLedger';
 import { scrubPII } from '../utils/piiScrubber';

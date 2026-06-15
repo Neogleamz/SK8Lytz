@@ -55,7 +55,7 @@ import SpectrumAnalyzer from './docked/SpectrumAnalyzer';
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { checkPermission, openGlobalPermissionsModal, PERMISSION_STATUS_CHANGED_EVENT } from '../services/PermissionService';
 import CommunityModal from './CommunityModal';
 import DockedDock from './docked/DockedDock';

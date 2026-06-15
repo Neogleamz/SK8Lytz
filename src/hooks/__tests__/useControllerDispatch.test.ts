@@ -1,7 +1,7 @@
 import { useControllerDispatch } from '../useControllerDispatch';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { getLocalProfileById } from '../../constants/ProductCatalog';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 import { buildPatternPayload } from '../../protocols/PatternEngine';
 
 // Global mocks

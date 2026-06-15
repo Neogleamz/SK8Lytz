@@ -4,7 +4,7 @@ import * as Battery from 'expo-battery';
 import type { BleManager } from 'react-native-ble-plx';
 import type { EventFrom } from 'xstate';
 import type { bleMachine } from '../../services/ble/BleMachine';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 
 type BatteryTier = 'FULL' | 'THROTTLED' | 'PAUSED';
 const BATTERY_TIER_FULL_THRESHOLD = 0.30;

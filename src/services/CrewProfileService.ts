@@ -13,7 +13,7 @@
 import { supabase } from './supabaseClient';
 import type { Database } from '../types/supabase';
 import type { PermanentCrew, CrewMemberDisplay, CrewMemberFull } from './ProfileService.types';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 
 class CrewProfileService {
 

@@ -206,7 +206,7 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
       } catch (e: unknown) {
         if (!mounted) return;
         setError('Failed to load members');
-        import('../services/AppLogger').then(({ AppLogger }) => {
+        import('../services/appLogger').then(({ AppLogger }) => {
           AppLogger.warn('[CrewMemberDashboard] failed to load members', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         });
       } finally {

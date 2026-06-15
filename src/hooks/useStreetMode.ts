@@ -19,7 +19,7 @@ import { scrubPII } from '../utils/piiScrubber';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
 import { buildPatternPayload } from '../protocols/PatternEngine';
 import type { IHardwareSettings } from '../types/dashboard.types';

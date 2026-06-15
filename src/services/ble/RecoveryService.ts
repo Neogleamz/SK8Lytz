@@ -2,7 +2,7 @@ import { fromCallback } from 'xstate';
 import { Platform } from 'react-native';
 import { Buffer } from 'buffer';
 import type { BleManager, Device } from 'react-native-ble-plx';
-import { AppLogger } from '../AppLogger';
+import { AppLogger } from '../appLogger';
 import { createGattSession } from '../BleSessionFactory';
 import { enqueueWrite, clearWriteQueue } from '../BleWriteQueue';
 import { BLE_TIMING } from '../../constants/bleTimingConstants';

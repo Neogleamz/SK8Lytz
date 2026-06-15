@@ -8,7 +8,7 @@
  * Extracted from DashboardScreen.tsx (chore/refactor-dashboard-monolith).
  */
 import { MutableRefObject, Dispatch, SetStateAction } from 'react';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import DeviceRepository from '../services/DeviceRepository';
 import type { DeviceSettings, DisplayDevice } from '../types/dashboard.types';
 import { RegisteredDevice } from './useRegistration';

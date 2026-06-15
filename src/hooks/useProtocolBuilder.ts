@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getDefaultProtocol } from '../protocols/ControllerRegistry';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 export type ProtocolType = '0x51' | '0x59' | '0x61' | '0x73' | '0x62';
 

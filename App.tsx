@@ -10,7 +10,7 @@ import { GlobalPermissionsModal } from './src/components/modals/GlobalPermission
 import { GlobalErrorBoundary } from './src/components/GlobalErrorBoundary';
 import { useFonts, Righteous_400Regular } from '@expo-google-fonts/righteous';
 import * as SplashScreen from 'expo-splash-screen';
-import { AppLogger } from './src/services/AppLogger';
+import { AppLogger } from './src/services/appLogger';
 import { warmLedgerCache } from './src/hooks/useDeviceStateLedger';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ComplianceGate } from './src/providers/ComplianceGate';

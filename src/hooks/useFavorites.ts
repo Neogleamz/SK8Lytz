@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { supabase } from '../services/supabaseClient';
 import type { Database } from '../types/supabase';
 import type { IFavoriteState, IQuickPreset } from '../types/dashboard.types';

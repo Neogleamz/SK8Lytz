@@ -11,7 +11,7 @@ import type { DisplayDevice, IDeviceState, GroupPatternSnapshot, BleConnectionSt
 import type { CrewSession } from '../services/CrewService';
 import { useAuth } from '../context/AuthContext';
 import { PanResponderInstance } from 'react-native';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { RegisteredDevice } from './useRegistration';
 import type { SessionPhase } from '../services/session/SessionMachine.types';
 

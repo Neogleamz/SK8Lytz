@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { AppState, DeviceEventEmitter } from 'react-native';
 import { checkPermission, PERMISSION_STATUS_CHANGED_EVENT, openGlobalPermissionsModal } from '../services/PermissionService';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 export function useDockedPermissions(isVisibilityAllowed: (key: string) => boolean) {
   const [hiddenModes, setHiddenModes] = useState<readonly string[]>([]);

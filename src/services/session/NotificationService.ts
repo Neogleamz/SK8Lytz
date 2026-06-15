@@ -2,7 +2,7 @@ import notifee, { AndroidImportance, AndroidForegroundServiceType } from '@notif
 import * as Location from 'expo-location';
 import { AppState, Platform } from 'react-native';
 import { fromCallback } from 'xstate';
-import { AppLogger } from '../AppLogger';
+import { AppLogger } from '../appLogger';
 import { TelemetrySnapshot, SessionPhase, SessionMachineEvent } from './SessionMachine.types';
 
 export interface NotificationServiceInput {

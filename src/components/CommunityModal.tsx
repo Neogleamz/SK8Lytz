@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ICloudScene, Scene, ScenesService } from '../services/ScenesService';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { Layout, Spacing, Typography , ThemePalette } from '../theme/theme';
 
 interface ScenePayload extends Partial<Scene> {

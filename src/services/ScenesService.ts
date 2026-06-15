@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_SCENES_CACHE, STORAGE_LOCAL_SCENES, STORAGE_LOCAL_SCENE_SYNC_QUEUE } from '../constants/storageKeys';
 import type { Database } from '../types/supabase';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 import { scrubPII } from '../utils/piiScrubber';
 
 export interface SceneStep {

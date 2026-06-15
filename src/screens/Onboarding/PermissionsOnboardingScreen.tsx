@@ -5,7 +5,7 @@ import { useSafeAreaInsets, EdgeInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../context/ThemeContext';
 import { requestPermission } from '../../services/PermissionService';
 import { Layout, Spacing, ThemePalette } from '../../theme/theme';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 
 interface PermissionsOnboardingScreenProps {
   onComplete: () => void;

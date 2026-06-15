@@ -1,7 +1,7 @@
 import { STORAGE_MAP_FILTERS } from '../constants/storageKeys';
 import { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 const FILTER_PERSIST_KEY = STORAGE_MAP_FILTERS;
 

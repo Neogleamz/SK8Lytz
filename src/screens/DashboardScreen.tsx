@@ -39,7 +39,7 @@ import DeviceSettingsModal from '../components/DeviceSettingsModal';
 
 import AdminToolsModal from '../components/admin/AdminToolsModal';
 
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 import AccountModal from '../components/AccountModal';
 import { StoredDevice } from '../components/account/account.types';

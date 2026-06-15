@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 import { Buffer } from 'buffer';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 import { createGattSession } from './BleSessionFactory';
 import { type PingResult, isPingResult } from '../types/dashboard.types';
 import { enqueueWrite, enqueueDelay } from './BleWriteQueue';

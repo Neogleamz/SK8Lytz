@@ -9,7 +9,7 @@ import { makeRedirectUri } from 'expo-auth-session';
 import EulaModal from '../modals/EulaModal';
 import { useTheme } from '../../context/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 import {
   checkHIBP,
   checkPasswordComplexity,

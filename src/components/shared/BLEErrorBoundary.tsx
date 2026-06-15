@@ -10,7 +10,7 @@
 import React from 'react';
 import { Text, TouchableOpacity, View, StyleSheet, Platform } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 
 interface Props {
   children: React.ReactNode;

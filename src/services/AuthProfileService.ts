@@ -8,7 +8,7 @@
 
 import { supabase } from './supabaseClient';
 import type { UserProfile, SessionHistoryItem, NotifPreferences } from './ProfileService.types';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 import type { User } from '@supabase/supabase-js';
 
 class AuthProfileService {

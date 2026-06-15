@@ -4,7 +4,7 @@ import * as Location from 'expo-location';
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PermissionsAndroid, Platform, DeviceEventEmitter } from 'react-native';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 
 export const SHOW_GLOBAL_PERMISSIONS_EVENT = 'SHOW_GLOBAL_PERMISSIONS_EVENT';
 export const GLOBAL_PERMISSIONS_CLOSED_EVENT = 'GLOBAL_PERMISSIONS_CLOSED_EVENT';

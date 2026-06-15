@@ -24,7 +24,7 @@ import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 
 import type { BleError } from 'react-native-ble-plx';
 import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import type { BleConnectionState, PendingRegistration, PingResult } from '../types/dashboard.types';
 import type { BLEPhaseTag } from '../services/ble/BleMachine.types';
 import { useMachine } from '@xstate/react';

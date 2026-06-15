@@ -10,7 +10,7 @@
  */
 
 import * as Location from 'expo-location';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 import { supabase } from './supabaseClient';
 import { openGlobalPermissionsModal, checkPermission } from './PermissionService';
 import { SkateSpotsService } from './SkateSpotsService';

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { CrewMember, CrewRole, crewService, CrewSession } from '../services/CrewService';
 import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 import { ScenesService } from '../../services/ScenesService';
 import { SpeedTrackingService } from '../../services/SpeedTrackingService';
 

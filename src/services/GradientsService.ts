@@ -1,7 +1,7 @@
 import { STORAGE_LOCAL_GRADIENTS } from '../constants/storageKeys';
 import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 import type { Database } from '../types/supabase';
 import { BuilderNode, CustomBuilderPreset } from '../protocols/PositionalMathBuffer';
 import { scrubPII } from '../utils/piiScrubber';

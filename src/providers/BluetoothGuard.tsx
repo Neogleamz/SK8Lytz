@@ -4,7 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSharedBLE } from '../context/BLEContext';
 import { checkPermission, requestPermission } from '../services/PermissionService';
 import { Layout, Spacing, ThemePalette } from '../theme/theme';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { useTheme } from '../context/ThemeContext';
 
 export function BluetoothGuard({ children }: { children: React.ReactNode }) {

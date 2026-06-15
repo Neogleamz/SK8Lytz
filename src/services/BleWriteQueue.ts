@@ -19,7 +19,7 @@
  *   normal   — 0x56 (static color), 0x59 (multi-color), 0x61 (effect)
  *   bulk     — 0x51 (scene builder chunks), 0x40 (chunked frame)
  */
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 import { jitteredDelay } from '../utils/backoff';
 
 export type WritePriority = 'critical' | 'normal' | 'bulk';

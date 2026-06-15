@@ -20,7 +20,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Linking from 'expo-linking';
 import { Session, User, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from '../services/supabaseClient';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { migrateAuthTokensToSecureStore } from '../utils/migrateAuthTokens';
 import { STORAGE_LAST_EMAIL, STORAGE_OFFLINE_SKIP } from '../constants/storageKeys';
 

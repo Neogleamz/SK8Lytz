@@ -53,7 +53,7 @@ jest.mock('../../BleSessionFactory', () => ({
 
 // Silence AppLogger to prevent ENOBUFS buffer overflow in verifiable-check-runner.js
 // Phase 1+2 exhaustion emits 35+ warn entries per test — too much stdout for spawn buffer
-jest.mock('../../AppLogger', () => ({
+jest.mock('../../appLogger', () => ({
   AppLogger: {
     log: jest.fn(),
     warn: jest.fn(),

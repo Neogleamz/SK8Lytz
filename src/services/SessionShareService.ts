@@ -9,7 +9,7 @@
  */
 
 import { Platform, Share } from 'react-native';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 import { scrubPII } from '../utils/piiScrubber';
 
 // App store / download links — update when app is published

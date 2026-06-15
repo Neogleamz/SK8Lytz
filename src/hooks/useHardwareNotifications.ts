@@ -10,7 +10,7 @@
  * 4. Checks Delta before mutating state — all persistence via DeviceRepository SSOT.
  */
 import { useEffect, useRef } from 'react';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import DeviceRepository from '../services/DeviceRepository';
 import { BlePayloadParser } from '../utils/BlePayloadParser';
 import { scrubPII } from '../utils/piiScrubber';

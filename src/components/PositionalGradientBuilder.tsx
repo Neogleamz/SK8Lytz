@@ -7,7 +7,7 @@ import { BuilderNode, PositionalMathBuffer } from '../protocols/PositionalMathBu
 import { getDefaultProtocol } from '../protocols/ControllerRegistry';
 import CustomSlider from './CustomSlider';
 import { COLOR_PRESET_PALETTE, hexToHue, hueToHex } from '../utils/ColorUtils';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 interface Props {
   nodes: BuilderNode[];

@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Database } from '../types/supabase';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 import { supabase } from './supabaseClient';
 import { STORAGE_SKATE_SPOTS_CACHE } from '../constants/storageKeys';
 

@@ -8,7 +8,7 @@
 import { useCallback, useContext } from 'react';
 import { BLEContext } from '../context/BLEContext';
 import type { CustomModeStep, MusicConfig, RGB, ProtocolResult } from '../protocols/IControllerProtocol';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 export function useProtocolDispatch() {
   const context = useContext(BLEContext);

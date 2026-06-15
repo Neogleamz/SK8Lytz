@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useProductCatalog } from '../hooks/useProductCatalog';
 import { supabase } from '../services/supabaseClient';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { useAuth } from '../context/AuthContext';
 import type { ProductProfile } from '../types/ProductCatalog';
 

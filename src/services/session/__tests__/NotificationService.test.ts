@@ -24,7 +24,7 @@ jest.mock('expo-location', () => ({
   getForegroundPermissionsAsync: jest.fn().mockResolvedValue({ status: 'granted' })
 }));
 
-jest.mock('../../AppLogger', () => ({
+jest.mock('../../appLogger', () => ({
   AppLogger: { error: jest.fn(), warn: jest.fn() }
 }));
 

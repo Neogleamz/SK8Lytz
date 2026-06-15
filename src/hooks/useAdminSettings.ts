@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppSettingsMap, AppSettingsService, AppSettingsValue } from '../services/AppSettingsService';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 type SettingsStatus = 'idle' | 'loading' | 'success' | 'error';
 

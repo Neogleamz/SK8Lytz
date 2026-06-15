@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { Buffer } from 'buffer';
 import { scrubPII } from '../utils/piiScrubber';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 import { resolveProtocolForDevice } from '../protocols/ControllerRegistry';
 import type { IControllerProtocol, ProtocolResult } from '../protocols/IControllerProtocol';
 import { enqueueWrite, resolveWritePriority, setWriteQueueGeneration } from './BleWriteQueue';

@@ -9,7 +9,7 @@ import { Spacing } from '../../theme/theme';
 import { useCrewContext } from '../../context/CrewContext';
 import CrewMemberDashboard from '../CrewMemberDashboard';
 import { createStyles } from './CrewStyles';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 
 function timeAgo(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();

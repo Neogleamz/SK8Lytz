@@ -19,7 +19,7 @@ import {
     getLocalProfileByPoints,
 } from '../constants/ProductCatalog';
 import { supabase } from '../services/supabaseClient';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { STORAGE_PRODUCT_CATALOG } from '../constants/storageKeys';
 import type { ProductProfile, VizShape } from '../types/ProductCatalog';
 

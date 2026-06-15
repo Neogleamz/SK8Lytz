@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { InteractionManager } from 'react-native';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 /**
  * useScreenPerformance

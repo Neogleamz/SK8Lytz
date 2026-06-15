@@ -9,7 +9,7 @@
  * audio recording from LED control state.
  */
 import * as FileSystem from 'expo-file-system';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { useAudioRecorder, setAudioModeAsync, RecordingPresets } from 'expo-audio';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { Platform } from 'react-native';

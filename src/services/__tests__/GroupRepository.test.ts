@@ -33,7 +33,7 @@ jest.mock('@react-native-async-storage/async-storage', () => {
   };
 });
 
-jest.mock('../AppLogger', () => ({
+jest.mock('../appLogger', () => ({
   AppLogger: { log: jest.fn(), warn: jest.fn(), error: jest.fn() },
 }));
 

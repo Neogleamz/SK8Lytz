@@ -10,7 +10,7 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Spacing } from '../../theme/theme';
 import { hexToHue } from '../../utils/ColorUtils';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { getActiveMusicProfile } from '../../hooks/useMusicMode';
 import NeonHueStrip from '../NeonHueStrip';

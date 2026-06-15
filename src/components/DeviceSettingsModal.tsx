@@ -3,7 +3,7 @@ import { Alert, Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { useProtocolDispatch } from '../hooks/useProtocolDispatch';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { Spacing, Typography } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import { getDefaultGroupName } from '../utils/NamingUtils';

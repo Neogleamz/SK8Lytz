@@ -10,7 +10,7 @@ import { useGradients } from '../../hooks/useGradients';
 import { useSharedFavorites } from '../../context/FavoritesContext';
 import FavoritePromptModal from './FavoritePromptModal';
 import { Spacing } from '../../theme/theme';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 
 interface BuilderPanelProps {
   points?: number;

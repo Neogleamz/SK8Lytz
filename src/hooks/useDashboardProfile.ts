@@ -14,7 +14,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState, useRef } from 'react';
 import { STORAGE_AUTH_USERNAME } from '../constants/storageKeys';
 import { AppState, AppStateStatus, Alert } from 'react-native';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { AppSettingsMap, AppSettingsService } from '../services/AppSettingsService';
 import { notificationService } from '../services/NotificationService';
 import { profileService, UserProfile } from '../services/ProfileService';

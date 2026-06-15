@@ -25,7 +25,7 @@ jest.mock('../../PermissionService', () => ({
   openGlobalPermissionsModal: jest.fn()
 }));
 
-jest.mock('../../AppLogger', () => ({
+jest.mock('../../appLogger', () => ({
   AppLogger: { error: jest.fn() }
 }));
 

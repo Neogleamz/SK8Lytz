@@ -10,7 +10,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { CrewRole, crewService, CrewSession } from '../services/CrewService';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { useAuth } from '../context/AuthContext';
 
 interface UseDashboardCrewOptions {

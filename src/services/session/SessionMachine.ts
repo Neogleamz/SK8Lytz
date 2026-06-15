@@ -2,7 +2,7 @@ import { STORAGE_SESSION_PHASE, STORAGE_SESSION_PAUSE_TIME, STORAGE_SESSION_ACTI
 import { setup, assign } from 'xstate';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WatchBridge } from 'sk8lytz-watch-bridge';
-import { AppLogger } from '../AppLogger';
+import { AppLogger } from '../appLogger';
 import { SessionMachineContext, SessionMachineEvent, SessionPhase } from './SessionMachine.types';
 import { sensorService } from './SensorService';
 import { autoPauseService } from './AutoPauseService';

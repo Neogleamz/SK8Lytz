@@ -4,7 +4,7 @@ import * as Linking from 'expo-linking';
 import React from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 import { PermanentCrew, profileService } from '../../services/ProfileService';
 import { Spacing } from '../../theme/theme';
 

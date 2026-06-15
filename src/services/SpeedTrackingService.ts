@@ -22,7 +22,7 @@
  */
 import { Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 import { supabase } from './supabaseClient';
 import { WatchBridge } from 'sk8lytz-watch-bridge';
 import { PENDING_SESSION_QUEUE_KEY, STORAGE_RECENT_SESSIONS_PREFIX, STORAGE_LIFETIME_STATS_PREFIX } from '../constants/storageKeys';

@@ -17,7 +17,7 @@ import { getLocalProfileById } from '../constants/ProductCatalog';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { buildPatternPayload } from '../protocols/PatternEngine';
 import { IControllerProtocol } from '../protocols/IControllerProtocol';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { hexToRgb } from '../utils/ColorUtils';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
 import type { IHardwareSettings } from '../types/dashboard.types';

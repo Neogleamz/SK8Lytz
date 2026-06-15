@@ -17,7 +17,7 @@
 
 import type * as NotificationsType from 'expo-notifications';
 import { Platform } from 'react-native';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 
 import { pushTokenService } from './PushTokenService';
 import { supabase } from './supabaseClient';

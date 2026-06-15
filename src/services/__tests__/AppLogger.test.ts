@@ -33,7 +33,7 @@ jest.mock('../supabaseClient', () => ({
   }
 }));
 
-const { AppLogger } = require('../AppLogger');
+const { AppLogger } = require('../appLogger');
 
 describe('AppLogger PII Scrubbing', () => {
   beforeEach(async () => {

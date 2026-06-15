@@ -15,7 +15,7 @@ import { BanlanxAdapter } from './BanlanxAdapter';
 import { ZenggeAdapter } from './ZenggeAdapter';
 
 // Lazy AppLogger — ControllerRegistry may load before native modules are ready
-let _appLogger: typeof import('../services/AppLogger').AppLogger | typeof console | undefined;
+let _appLogger: typeof import('../services/appLogger').AppLogger | typeof console | undefined;
 function getAppLogger() {
   if (!_appLogger) {
     try { _appLogger = require('../services/AppLogger').AppLogger; } catch (_e: unknown) { _appLogger = console; /* intentional: AppLogger not ready yet */ }

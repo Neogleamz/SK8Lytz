@@ -14,7 +14,7 @@
 import * as Haptics from 'expo-haptics';
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { Platform } from 'react-native';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 type WriteFunction = (payload: number[], targetDeviceId?: string) => Promise<boolean | 'partial'>;
 

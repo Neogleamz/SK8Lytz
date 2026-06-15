@@ -1,7 +1,7 @@
 import { fromCallback } from 'xstate';
 import { Buffer } from 'buffer';
 import type { Device, BleManager } from 'react-native-ble-plx';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 import { scrubPII } from '../../utils/piiScrubber';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
 import { enqueueWrite, isWriteQueueActive } from '../BleWriteQueue';

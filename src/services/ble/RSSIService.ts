@@ -10,7 +10,7 @@
  *   CRITICAL < -82 dBm → trigger proactive reconnect
  */
 import type { Device } from 'react-native-ble-plx';
-import { AppLogger } from '../AppLogger';
+import { AppLogger } from '../appLogger';
 import { scrubPII } from '../../utils/piiScrubber';
 
 /** Minimal BleManager surface required by RSSIService — allows partial mocks in tests. */

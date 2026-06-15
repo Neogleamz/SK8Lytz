@@ -40,7 +40,7 @@ import AccountTabCrewz from './account/AccountTabCrewz';
 import AccountTabDevices from './account/AccountTabDevices';
 import AccountTabSettings from './account/AccountTabSettings';
 import AccountTabStats from './account/AccountTabStats';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 
 // ─── Types ────────────────────────────────────────────────────────────────────

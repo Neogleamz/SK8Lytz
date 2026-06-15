@@ -10,7 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import { STORAGE_PREFIX } from '../constants/AppConstants';
 import { supabase } from '../services/supabaseClient';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import type { IFavoriteState } from '../types/dashboard.types';
 import type { Database } from '../types/supabase';
 

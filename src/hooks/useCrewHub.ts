@@ -5,7 +5,7 @@ import * as Location from 'expo-location';
 import { crewService, CrewSession } from '../services/CrewService';
 import { locationService, NearbySession, NearbySkateSpot } from '../services/LocationService';
 import { PermanentCrew, profileService } from '../services/ProfileService';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { useAuth } from '../context/AuthContext';
 
 const RADIUS_STORAGE_KEY = STORAGE_RADIUS_PREFERENCE;

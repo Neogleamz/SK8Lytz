@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { formatLogTime } from '../../hooks/useAdminTelemetry';
-import { LogEntry } from '../../services/AppLogger';
+import { LogEntry } from '../../services/appLogger';
 import { Spacing } from '../../theme/theme';
 import { adminStyles as styles } from './adminStyles';
 

@@ -11,7 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../services/supabaseClient';
 import { Spacing } from '../../theme/theme';
 import { useAuthStyles } from './AuthStyles';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 
 import { STORAGE_REMEMBER_CREDS, STORAGE_OFFLINE_SKIP } from '../../constants/storageKeys';
 import { isValidEmail } from '../../utils/validation';

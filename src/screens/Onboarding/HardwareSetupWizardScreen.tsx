@@ -19,7 +19,7 @@ import { getHardwareConfigKey } from '../../constants/storageKeys';
 import { RegisteredDevice } from '../../hooks/useRegistration';
 import { HardwareStatusPills } from '../../components/dashboard/HardwareStatusPills';
 import { getDefaultGroupName } from '../../utils/NamingUtils';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 import { buildPatternPayload } from '../../protocols/PatternEngine';
 
 import type { BleConnectionState, PendingRegistration, PingResult } from '../../types/dashboard.types';

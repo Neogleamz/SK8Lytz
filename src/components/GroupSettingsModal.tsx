@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { Layout, Spacing, Typography } from '../theme/theme';
 import { useTheme } from '../context/ThemeContext';
 import { getDefaultGroupName } from '../utils/NamingUtils';

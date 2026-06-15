@@ -2,7 +2,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React, { useState, useMemo, useEffect } from 'react';
 import { ActivityIndicator, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { SkateSpot, SkateSpotsService } from '../services/SkateSpotsService';
 import { Spacing , ThemePalette } from '../theme/theme';
 import { ErrorCard } from './ErrorCard';

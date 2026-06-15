@@ -15,7 +15,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Buffer } from 'buffer';
 import type { BleManager, BleError, Characteristic } from 'react-native-ble-plx';
-import { AppLogger } from '../AppLogger';
+import { AppLogger } from '../appLogger';
 import { createGattSession } from '../BleSessionFactory';
 import { enqueueWrite, enqueueDelay } from '../BleWriteQueue';
 import { type PingResult, isPingResult } from '../../types/dashboard.types';

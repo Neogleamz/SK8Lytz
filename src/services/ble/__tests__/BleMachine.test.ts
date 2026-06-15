@@ -44,7 +44,7 @@ jest.mock('react-native', () => ({
 
 // Silence AppLogger to prevent BLE_STATE_CHANGE events from leaking post-suite
 // (AppLogger's setInterval flushes queued logs after tests complete — worker crash)
-jest.mock('../../AppLogger', () => ({
+jest.mock('../../appLogger', () => ({
   AppLogger: {
     log: jest.fn(),
     warn: jest.fn(),

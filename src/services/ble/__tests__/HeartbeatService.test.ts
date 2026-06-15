@@ -49,7 +49,7 @@ jest.mock('../../BleWriteQueue', () => ({
 }));
 
 // Silence AppLogger to prevent console noise from overflowing verifiable-check-runner.js pipe
-jest.mock('../../AppLogger', () => ({
+jest.mock('../../appLogger', () => ({
   AppLogger: {
     log: jest.fn(),
     warn: jest.fn(),

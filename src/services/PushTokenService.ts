@@ -9,7 +9,7 @@
  */
 
 import { supabase } from './supabaseClient';
-import { AppLogger } from './AppLogger';
+import { AppLogger } from './appLogger';
 
 class PushTokenService {
 

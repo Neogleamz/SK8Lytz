@@ -2,7 +2,7 @@ import { STORAGE_DIAG_TEST_LOG } from '../constants/storageKeys';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getDefaultProtocol } from '../protocols/ControllerRegistry';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { useProtocolDispatch } from './useProtocolDispatch';
 import { scrubPII } from '../utils/piiScrubber';
 

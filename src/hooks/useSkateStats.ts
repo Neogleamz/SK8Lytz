@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { ILifetimeStats, ISkateSession, SpeedTrackingService } from '../services/SpeedTrackingService';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import { useAuth } from '../context/AuthContext';
 
 export function useSkateStats(visible: boolean) {

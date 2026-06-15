@@ -8,7 +8,7 @@
  */
 
 import { getDefaultProtocol } from '../protocols/ControllerRegistry';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 export interface ParsedLedConfig {
   points?: number;

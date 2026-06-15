@@ -5,7 +5,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { hexToRgb } from '../../utils/ColorUtils';
 import { PatternPickerTab } from './PatternPickerTab';
 import { IHardwareSettings } from '../../types/dashboard.types';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 
 interface UnifiedPatternPickerProps {
   writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;

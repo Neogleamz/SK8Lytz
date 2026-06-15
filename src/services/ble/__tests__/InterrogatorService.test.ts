@@ -43,7 +43,7 @@ jest.mock('react-native', () => ({
 }));
 
 // Silence AppLogger to prevent ENOBUFS buffer overflow in verifiable-check-runner.js
-jest.mock('../../AppLogger', () => ({
+jest.mock('../../appLogger', () => ({
   AppLogger: {
     log: jest.fn(),
     warn: jest.fn(),

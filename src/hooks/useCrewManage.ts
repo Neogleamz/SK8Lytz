@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CrewMemberFull, PermanentCrew, profileService } from '../services/ProfileService';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 
 const SEARCH_DEBOUNCE_MS = 300;
 

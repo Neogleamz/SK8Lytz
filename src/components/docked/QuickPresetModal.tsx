@@ -13,7 +13,7 @@ import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } fro
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_QUICK_PRESETS } from '../../constants/storageKeys';
-import { AppLogger } from '../../services/AppLogger';
+import { AppLogger } from '../../services/appLogger';
 import { containsProfanity } from '../../services/AuthUtils';
 import { ScenesService, Scene } from '../../services/ScenesService';
 import { useAuth } from '../../context/AuthContext';

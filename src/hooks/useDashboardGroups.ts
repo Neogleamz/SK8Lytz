@@ -18,7 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../context/AuthContext';
 
 import type { RegisteredDevice } from '../hooks/useRegistration';
-import { AppLogger } from '../services/AppLogger';
+import { AppLogger } from '../services/appLogger';
 import DeviceRepository from '../services/DeviceRepository';
 import GroupRepository from '../services/GroupRepository';
 import { STORAGE_LAST_GROUP_PATTERNS } from '../constants/storageKeys';
