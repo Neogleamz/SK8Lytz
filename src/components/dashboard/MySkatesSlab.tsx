@@ -11,13 +11,13 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import type { UserProfile } from '../../services/ProfileService';
-import type { CustomGroup, DisplayDevice } from '../../types/dashboard.types';
+import type { CustomGroup, DisplayDevice, GroupPatternSnapshot } from '../../types/dashboard.types';
 import { resolveGroupCardColors } from '../../utils/presetColorUtils';
 import { SkateGroupCard } from './SkateGroupCard';
 
 interface MySkatesSlabProps {
   customGroups: CustomGroup[];
-  lastGroupPatterns: Record<string, any>;
+  lastGroupPatterns: Record<string, GroupPatternSnapshot>;
   allDevices: DisplayDevice[];
   connectedDevices: DisplayDevice[];
   registeredDevices: DisplayDevice[];

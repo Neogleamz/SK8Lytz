@@ -20,7 +20,7 @@ interface CrewHubSlabProps {
   crewSession: CrewSession | null;
   crewRole: CrewRole;
   isOfflineMode: boolean;
-  appSettings: Record<string, any>;
+  appSettings: Record<string, string | boolean>;
   windowHeight: number;
   onOpenHub: () => void;
   onOpenMap?: () => void;

@@ -10,6 +10,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Linking, Modal, Text, TouchableOpacity, View } from 'react-native';
 import { Typography, Spacing , ThemePalette } from '../../theme/theme';
+import { AppLogger } from '../../services/appLogger';
 
 interface SupportModalProps {
   visible: boolean;
@@ -38,7 +39,7 @@ const SupportModal = React.memo(({ visible, onClose, Colors, styles }: SupportMo
 
         <TouchableOpacity
           style={[styles.groupButton, { backgroundColor: 'rgba(0, 240, 255, 0.1)', borderColor: Colors.primary, borderWidth: 1, marginBottom: Spacing.lg, paddingVertical: Spacing.md }]}
-          onPress={() => Linking.openURL('https://neogleamz.com/pages/getting-started').catch(err => console.warn('Failed to open URL', err))}
+          onPress={() => Linking.openURL('https://neogleamz.com/pages/getting-started').catch(err => AppLogger.warn('[SupportModal] Failed to open URL', { err }))}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <MaterialCommunityIcons name="book-open-page-variant" size={20} color={Colors.primary} style={{ marginRight: Spacing.sm }} />
@@ -48,7 +49,7 @@ const SupportModal = React.memo(({ visible, onClose, Colors, styles }: SupportMo
 
         <TouchableOpacity
           style={[styles.groupButton, { backgroundColor: 'rgba(255, 170, 0, 0.1)', borderColor: '#FFAA00', borderWidth: 1, marginBottom: Spacing.lg, paddingVertical: Spacing.md }]}
-          onPress={() => Linking.openURL('https://neogleamz.com').catch(err => console.warn('Failed to open URL', err))}
+          onPress={() => Linking.openURL('https://neogleamz.com').catch(err => AppLogger.warn('[SupportModal] Failed to open URL', { err }))}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <MaterialCommunityIcons name="cart" size={20} color="#FFAA00" style={{ marginRight: Spacing.sm }} />
@@ -58,7 +59,7 @@ const SupportModal = React.memo(({ visible, onClose, Colors, styles }: SupportMo
 
         <TouchableOpacity
           style={[styles.groupButton, { backgroundColor: 'rgba(255, 61, 0, 0.1)', borderColor: Colors.secondary, borderWidth: 1, marginBottom: Spacing.lg, paddingVertical: Spacing.md }]}
-          onPress={() => Linking.openURL('https://neogleamz.com/pages/contact').catch(err => console.warn('Failed to open URL', err))}
+          onPress={() => Linking.openURL('https://neogleamz.com/pages/contact').catch(err => AppLogger.warn('[SupportModal] Failed to open URL', { err }))}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <MaterialCommunityIcons name="email-fast" size={20} color={Colors.secondary} style={{ marginRight: Spacing.sm }} />

@@ -13,8 +13,8 @@ interface DashboardCrewPanelProps {
   setIsCrewModalVisible: (v: boolean) => void;
   crewModeSummary: string | undefined;
   setCrewModeSummary: (s: string | undefined) => void;
-  lastLeaderScene: Record<string, any> | null;
-  setLastLeaderScene: (s: Record<string, any> | null) => void;
+  lastLeaderScene: Record<string, unknown> | null;
+  setLastLeaderScene: (s: Record<string, unknown> | null) => void;
   initialDeepLinkCode: string | null;
   
   isOfflineMode: boolean;
@@ -23,7 +23,7 @@ interface DashboardCrewPanelProps {
   Colors: ThemePalette;
   styles: Record<string, import('react-native').StyleProp<import('react-native').ViewStyle | import('react-native').TextStyle>>;
   
-  onApplyCloudScene: (scene: Record<string, any>) => void;
+  onApplyCloudScene: (scene: Record<string, unknown>) => void;
   crewInitialStep: 'landing' | 'join' | 'create' | 'map';
   setCrewInitialStep: (step: 'landing' | 'join' | 'create' | 'map') => void;
   isCrewHubCollapsed: boolean;
@@ -51,6 +51,7 @@ export default React.memo(function DashboardCrewPanel({
   isCrewHubCollapsed,
   toggleCrewHubCollapse
 }: DashboardCrewPanelProps) {
+  const crewUnsubRef = React.useRef<(() => void) | null>(null);
   // State lifted to DashboardScreen
   const radarAlert = useCrewProximityRadar();
 
@@ -72,6 +73,7 @@ export default React.memo(function DashboardCrewPanel({
 
   React.useEffect(() => {
     return () => {
+      if (crewUnsubRef.current) crewUnsubRef.current();
       crewService.unsubscribe();
     };
   }, []);
@@ -104,11 +106,15 @@ export default React.memo(function DashboardCrewPanel({
           activeRole={crewRole}
           currentModeSummary={crewModeSummary}
           lastLeaderScene={lastLeaderScene}
-          onSessionReady={(session: CrewSession, role: CrewRole, lastScene: Record<string, any> | null) => {
+          onSessionReady={(session: CrewSession, role: CrewRole, lastScene: Record<string, unknown> | null) => {
+            if (crewUnsubRef.current) {
+              crewUnsubRef.current();
+              crewUnsubRef.current = null;
+            }
             if (role === 'leader') {
-              crewService.subscribeAsLeader(session.id, () => {});
+              crewUnsubRef.current = crewService.subscribeAsLeader(session.id, () => {});
             } else {
-              crewService.subscribeAsMember(session.id, (scene) => {
+              crewUnsubRef.current = crewService.subscribeAsMember(session.id, (scene) => {
                 onApplyCloudScene(scene);
                 setLastLeaderScene(scene); // track for member dashboard
               }, () => {
