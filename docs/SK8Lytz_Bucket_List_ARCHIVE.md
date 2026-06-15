@@ -3273,3 +3273,19 @@ pm run verify which includes QA tests.
 > **Source Analysis**: ðŸ“Š [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) â€” Deep-Dive Code Hunt orthogonal analysis
 
 
+
+
+- [x] **`sweep-src-components-docked`** merged @ 835ad6b7
+  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:WAVE-8]` `[WAVE:8]`
+  - **Goal:** Resolve 10 telemetry and architectural rule violations in the components-docked domain.
+  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-docked.md](./plans/PLAN-sweep-src-components-docked.md)
+    Key finding: "10 specific rule violations located and deduplicated in this cluster."
+    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
+  - **Source of Truth:** 📖 [PLAN-sweep-src-components-docked.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-docked.md)
+  - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 7 fully merged into master before this worktree is created.`
+
+### ⚡ [BATCH:WAVE-9] — `wave-9-sweep` — READY
+> **Worktree**: `wave-9-sweep` · **Type**: Parallel · **Prerequisite**: Wave 8 merged
+> **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — Deep-Dive Code Hunt orthogonal analysis
+
