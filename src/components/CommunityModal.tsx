@@ -315,6 +315,14 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
 
   const keyExtractorScene = useCallback((item: ICloudScene) => item.id, []);
 
+  const renderEmpty = useCallback(() => (
+    <EmptyState message={
+      activeTab === 'COMMUNITY'
+        ? 'Be the first to publish a scene to the community!'
+        : 'Save a preset to the cloud from the controller.'
+    } />
+  ), [activeTab]);
+
   return (
     <Modal visible={isVisible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
       <SafeAreaView style={styles.container}>
@@ -371,13 +379,7 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
             renderItem={renderItem}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
-            ListEmptyComponent={() => (
-              <EmptyState message={
-                activeTab === 'COMMUNITY'
-                  ? 'Be the first to publish a scene to the community!'
-                  : 'Save a preset to the cloud from the controller.'
-              } />
-            )}
+            ListEmptyComponent={renderEmpty}
           />
         )}
       </SafeAreaView>
