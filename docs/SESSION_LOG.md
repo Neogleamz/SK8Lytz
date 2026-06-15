@@ -3767,3 +3767,15 @@ Files touched:
 TSC: ?  Jest: ?
 >>>>>>> b981d161 (chore(log): update SESSION_LOG.md)
 
+
+### [MERGE] 2026-06-14T19:00 — Wave 5 Batched Fixes
+**What merged:**
+- sweep-src-services → master @ 2647c760
+- sweep-src-components-CustomSlider.tsx → master @ 0f881896
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** src/services/* (31 files), src/components/CustomSlider.tsx
+
+### [ARTIFACT] 2026-06-14T22:30:02 — AST-Verified Extraction Plans
+**Plans Generated:** PLAN-extract-and-sweep-AppLogger.ts.md, PLAN-extract-and-sweep-DeviceRepository.ts.md, PLAN-extract-and-sweep-CrewService.ts.md
+**Decision:** Based on AST collision analysis, these three monoliths were separated into Wave 6 (Foundation: AppLogger) and Wave 7 (Dependents: DeviceRepository, CrewService) to prevent import reference merge conflicts.
+**Link:** [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/3d2a7d84-27f3-4652-93e1-22a80e55076e/implementation_plan.md)

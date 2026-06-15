@@ -32,50 +32,40 @@
 > **Worktree**: `wave-1-sweep` · **Type**: Parallel · **Prerequisite**: None
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — Deep-Dive Code Hunt orthogonal analysis
 
-- [ ] **`sweep-src-services`**
-  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-5]` `[WAVE:5]`
-  - **Goal:** Resolve 247 telemetry and architectural rule violations in the services domain.
-  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-services.md](./plans/PLAN-sweep-src-services.md)
-    Key finding: "247 specific rule violations located and deduplicated in this cluster."
-    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
-  - **Source of Truth:** 📖 [PLAN-sweep-src-services.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-services.md)
-  - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 4 fully merged into master before this worktree is created.`
-
-- [ ] **`sweep-src-components-CustomSlider.tsx`**
-  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-5]` `[WAVE:5]`
-  - **Goal:** Resolve 1 telemetry and architectural rule violations in the components-CustomSlider.tsx domain.
-  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-CustomSlider.tsx.md](./plans/PLAN-sweep-src-components-CustomSlider.tsx.md)
-    Key finding: "1 specific rule violations located and deduplicated in this cluster."
-    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
-  - **Source of Truth:** 📖 [PLAN-sweep-src-components-CustomSlider.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-CustomSlider.tsx.md)
-  - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 4 fully merged into master before this worktree is created.`
-
 ### ⚡ [BATCH:WAVE-6] — `wave-6-sweep` — READY
 > **Worktree**: `wave-6-sweep` · **Type**: Parallel · **Prerequisite**: Wave 5 merged
-> **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — Deep-Dive Code Hunt orthogonal analysis
+> **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — AST-Verified Extraction Foundation
 
 - [ ] **`extract-and-sweep-AppLogger.ts`**
-  - **Tags:** `[📝 NEEDS PLAN]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
+  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
   - **Goal:** Extract logic and resolve violations in `AppLogger.ts` (>30KB monolith).
-  - **Decision Log:** Skipped during Wave 5 due to S4 Monolith limit. Must be extracted into smaller modules before fixing.
-  - **Source of Truth:** [PENDING]
-  - **Details:** Must run `/intake` to generate plan first. `Prerequisite: Wave 5 merged.`
+  - **Decision Log:** S4 Monolith limit prevents direct edits. AST analysis confirms it is a foundational dependency for DeviceRepository and CrewService.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-extract-and-sweep-AppLogger.ts.md](./plans/PLAN-extract-and-sweep-AppLogger.ts.md)
+    Key finding: "Monolith >30KB. Must be extracted into `src/services/appLogger/` before dependent services are touched."
+  - **Source of Truth:** 📖 [PLAN-extract-and-sweep-AppLogger.ts.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-extract-and-sweep-AppLogger.ts.md)
+  - **Details:** Foundational layer extraction. `Prerequisite: Wave 5 merged.`
+
+### ⚡ [BATCH:WAVE-7] — `wave-7-sweep` — READY
+> **Worktree**: `wave-7-sweep` · **Type**: Parallel · **Prerequisite**: Wave 6 merged
+> **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — AST-Verified Dependents Extraction
 
 - [ ] **`extract-and-sweep-DeviceRepository.ts`**
-  - **Tags:** `[📝 NEEDS PLAN]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
+  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-7]` `[WAVE:7]`
   - **Goal:** Extract logic and resolve violations in `DeviceRepository.ts` (>30KB monolith).
-  - **Decision Log:** Skipped during Wave 5 due to S4 Monolith limit. Must be extracted into smaller modules before fixing.
-  - **Source of Truth:** [PENDING]
-  - **Details:** Must run `/intake` to generate plan first. `Prerequisite: Wave 5 merged.`
+  - **Decision Log:** S4 Monolith limit prevents direct edits. AST analysis confirms it depends on AppLogger, requiring Wave 7 placement.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-extract-and-sweep-DeviceRepository.ts.md](./plans/PLAN-extract-and-sweep-DeviceRepository.ts.md)
+    Key finding: "Monolith >39KB. Depends on AppLogger. Extract into `src/services/deviceRepository/`."
+  - **Source of Truth:** 📖 [PLAN-extract-and-sweep-DeviceRepository.ts.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-extract-and-sweep-DeviceRepository.ts.md)
+  - **Details:** Dependent layer extraction. `Prerequisite: Wave 6 fully merged into master before this worktree is created.`
 
 - [ ] **`extract-and-sweep-CrewService.ts`**
-  - **Tags:** `[📝 NEEDS PLAN]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
+  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-7]` `[WAVE:7]`
   - **Goal:** Extract logic and resolve violations in `CrewService.ts` (>30KB monolith).
-  - **Decision Log:** Skipped during Wave 5 due to S4 Monolith limit. Must be extracted into smaller modules before fixing.
-  - **Source of Truth:** [PENDING]
-  - **Details:** Must run `/intake` to generate plan first. `Prerequisite: Wave 5 merged.`
+  - **Decision Log:** S4 Monolith limit prevents direct edits. AST analysis confirms it depends on AppLogger, requiring Wave 7 placement.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-extract-and-sweep-CrewService.ts.md](./plans/PLAN-extract-and-sweep-CrewService.ts.md)
+    Key finding: "Monolith >31KB. Depends on AppLogger. Extract into `src/services/crewService/`."
+  - **Source of Truth:** 📖 [PLAN-extract-and-sweep-CrewService.ts.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-extract-and-sweep-CrewService.ts.md)
+  - **Details:** Dependent layer extraction. `Prerequisite: Wave 6 fully merged into master before this worktree is created.`
 
 - [ ] **`sweep-src-hooks`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[✅ L-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
