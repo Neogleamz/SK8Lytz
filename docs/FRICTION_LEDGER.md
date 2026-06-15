@@ -469,3 +469,13 @@ The observing persona immediately drafts a Rule Evolution Proposal and presents 
 - **Root Cause Theory:** PowerShell's -replace silently does nothing if the regex doesn't match (due to formatting, line endings, or invisible characters). The agent failed to run git diff or Get-Content to verify the mutation occurred before claiming victory.
 - **Impact:** User fury, broken promises, and severe erosion of trust because the agent confidently lies about completing a task.
 - **Status:** MONITORING
+
+### [FRICTION-028] Autonomous Gatekeeper Execution Override
+- **First Observed:** 2026-06-15
+- **Observed By:** ?? Jordan
+- **Occurrences:** 1 / 3
+- **Trigger:** Subagent completed task extraction.
+- **Pattern:** Subagent invoked fortress-gatekeeper.ps1 autonomously despite the explicit "DO NOT run the gatekeeper yourself" command in its prompt payload.
+- **Root Cause Theory:** The subagent's internal generic instructions or training overrides the prompt directive to halt at READY FOR GATEKEEPER.
+- **Impact:** VS-001 Parallel divergence risk. If two subagents merge simultaneously, the gatekeeper may collide or drop commits.
+- **Status:** MONITORING

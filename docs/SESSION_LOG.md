@@ -3863,3 +3863,28 @@ TSC: ✅  Jest: ✅
 - src/services/ble/BleMachine.ts
 - src/hooks/useBLE.ts
 
+### [MERGE] 2026-06-15T18:31 — extract-and-sweep-DeviceRepository.ts → master @ 69eac04f81e35463900eb66ff69c338388fd16a5
+**What merged:** 
+- Extracted monolithic DeviceRepository.ts into a modular deviceRepository directory
+- Separated local storage, state management, and cloud sync into dedicated classes
+- Kept DeviceRepositoryService as the unified facade to avoid updating consumer signatures
+- Updated DeviceRepository import paths across src/hooks to point to the new module
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:**
+- src/hooks/useDashboardAutoConnect.ts
+- src/hooks/useDashboardDeviceConfig.ts
+- src/hooks/useDashboardGroups.ts
+- src/hooks/useHardwareNotifications.ts
+- src/hooks/useRegistration.ts
+- src/services/DeviceRepository.ts (deleted)
+- src/services/deviceRepository/index.ts (created)
+- src/services/deviceRepository/types.ts (created)
+- src/services/deviceRepository/DeviceStorage.ts (created)
+- src/services/deviceRepository/DeviceCloudSync.ts (created)
+- src/services/deviceRepository/DeviceStateManagement.ts (created)
+- src/services/deviceRepository/DeviceRepositoryService.ts (created)
+# # #   [ M E R G E   R E A D Y ]   e x t r a c t - a n d - s w e e p - C r e w S e r v i c e . t s      d 6 0 2 f 4 0 2 9 5 9 8 d f 8 b 9 5 5 2 f a 5 0 2 7 c 4 d c 4 c f 0 d 0 b 7 e 4 
+ F i l e s   t o u c h e d :   s r c / s e r v i c e s / C r e w S e r v i c e . t s ,   s r c / s e r v i c e s / C r e w S e r v i c e / * 
+ T S C :   '    J e s t :   '
+  
+ 
