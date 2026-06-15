@@ -3827,3 +3827,16 @@ TSC: ✅  Jest: ✅
 - src/hooks/useStreetMode.ts
 - src/hooks/useTelemetryLedger.ts
 **TSC:** ✅  **Jest:** ✅
+
+### [MERGE READY] sweep-remediation-wave1to6 — c86733b6
+**Files touched:**
+- src/components/permissions/GranularPermissionsList.tsx
+- src/services/LocationService.ts
+- src/services/SpeedTrackingService.ts
+- src/services/supabaseClient.ts
+- src/services/appLogger/AppLoggerCloud.ts
+- src/hooks/useControllerDispatch.ts
+- src/components/CameraTracker.tsx
+- src/services/ble/__tests__/BleMachine.test.ts
+**TSC:** ✅  **Jest:** ✅
+
