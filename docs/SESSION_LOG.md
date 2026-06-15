@@ -3788,3 +3788,42 @@ Files touched:
 - src/components/dashboard/MySkatesSlab.tsx
 TSC: ✅  Jest: ✅
 
+
+### [MERGE READY] sweep-src-hooks — 3cc9eecb0e7a8e44af4f69680b38fd78a72a289d
+**Files touched:**
+- docs/SESSION_LOG.md
+- docs/SK8Lytz_Bucket_List.md
+- src/components/admin/tools/Sk8LytzDiagnosticLab.tsx
+- src/components/admin/tools/tabs/builder/Builder73Mode.tsx
+- src/hooks/useAccountOverview.ts
+- src/hooks/useAdminSettings.ts
+- src/hooks/useAdminTelemetry.ts
+- src/hooks/useAppMicrophone.ts
+- src/hooks/useBLE.ts
+- src/hooks/useControllerAnalytics.ts
+- src/hooks/useControllerDispatch.ts
+- src/hooks/useCrewHub.ts
+- src/hooks/useCrewManage.ts
+- src/hooks/useCrewSession.ts
+- src/hooks/useCuratedPicks.ts
+- src/hooks/useDashboardAutoConnect.ts
+- src/hooks/useDashboardCrew.ts
+- src/hooks/useDashboardDeviceConfig.ts
+- src/hooks/useDashboardGroups.ts
+- src/hooks/useDashboardProfile.ts
+- src/hooks/useDeviceStateLedger.ts
+- src/hooks/useDiagnosticLog.ts
+- src/hooks/useFavorites.ts
+- src/hooks/useGradients.ts
+- src/hooks/useMapFilters.ts
+- src/hooks/useMusicMode.ts
+- src/hooks/useOptimisticBLE.ts
+- src/hooks/useProductCatalog.ts
+- src/hooks/useProductManager.ts
+- src/hooks/useProtocolBuilder.ts
+- src/hooks/useProtocolDispatch.ts
+- src/hooks/useRecentSpots.ts
+- src/hooks/useRegistration.ts
+- src/hooks/useStreetMode.ts
+- src/hooks/useTelemetryLedger.ts
+**TSC:** ✅  **Jest:** ✅
