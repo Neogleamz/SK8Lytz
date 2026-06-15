@@ -36,7 +36,7 @@
 > **Worktree**: `wave-6-sweep` · **Type**: Parallel · **Prerequisite**: Wave 5 merged
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — AST-Verified Extraction Foundation
 
-- [ ] **`extract-and-sweep-DeviceRepository.ts`**
+- [/] **`extract-and-sweep-DeviceRepository.ts`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-7]` `[WAVE:7]`
   - **Goal:** Extract logic and resolve violations in `DeviceRepository.ts` (>30KB monolith).
   - **Decision Log:** S4 Monolith limit prevents direct edits. AST analysis confirms it depends on AppLogger, requiring Wave 7 placement.
@@ -45,7 +45,7 @@
   - **Source of Truth:** 📖 [PLAN-extract-and-sweep-DeviceRepository.ts.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-extract-and-sweep-DeviceRepository.ts.md)
   - **Details:** Dependent layer extraction. `Prerequisite: Wave 6 fully merged into master before this worktree is created.`
 
-- [ ] **`extract-and-sweep-CrewService.ts`**
+- [/] **`extract-and-sweep-CrewService.ts`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-7]` `[WAVE:7]`
   - **Goal:** Extract logic and resolve violations in `CrewService.ts` (>30KB monolith).
   - **Decision Log:** S4 Monolith limit prevents direct edits. AST analysis confirms it depends on AppLogger, requiring Wave 7 placement.
@@ -54,7 +54,7 @@
   - **Source of Truth:** 📖 [PLAN-extract-and-sweep-CrewService.ts.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-extract-and-sweep-CrewService.ts.md)
   - **Details:** Dependent layer extraction. `Prerequisite: Wave 6 fully merged into master before this worktree is created.`
 
-- [ ] **`sweep-src-other`**
+- [/] **`sweep-src-other`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[✅ L-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-7]` `[WAVE:7]`
   - **Goal:** Resolve 56 telemetry and architectural rule violations in the other domain.
   - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
