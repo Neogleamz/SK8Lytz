@@ -92,7 +92,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       }
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       await Promise.all(targets.map(async (device) => {
-        console.log('[DEBUG sendColor] device.id =', device.id, typeof device.id);
+        if (__DEV__) AppLogger.log('APP_LOG', { message: '[DEBUG sendColor]', deviceId: device.id, type: typeof device.id, payload_size: 0, ssi: 0 });
         const adapter = getAdapterForDevice?.(device.id);
         if (adapter) {
           const result = adapter.buildSolidColor(r, g, b);

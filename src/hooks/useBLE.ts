@@ -133,10 +133,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
             // Note: Since `connectToDevices` handles the service discovery and adapter mapping,
             // we can pass these restored peripherals directly to `connectToDevices()`.
             // But we must do it carefully to avoid GATT 133 conflicts.
-            // We will enqueue a background reconnect.
-            const delay = jitteredDelay(1000, 500);
-            await new Promise(resolve => setTimeout(resolve, delay));
-            connectToDevicesRef.current(peripherals);
+            // We will enqueue a background reconnect through the XState machine's RESTORING state delay.
+            bleSend({ type: 'RESTORE_PERIPHERALS', peripherals });
           }
         }
       }

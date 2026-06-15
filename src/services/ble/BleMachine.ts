@@ -44,9 +44,10 @@ export const bleMachine = setup({
       sweeperId: () => undefined
     }),
     setTargetMacs: assign({
-      targetMacs: ({ event }) => {
+      targetMacs: ({ event }: any) => {
         if (event.type === 'CONNECT_REQUEST') return event.targetMacs;
         if (event.type === 'RECOVERY_START') return event.ghostedMacs;
+        if (event.type === 'RESTORE_PERIPHERALS') return event.peripherals.map((p: any) => p.id);
         return undefined;
       }
     }),
@@ -87,6 +88,10 @@ export const bleMachine = setup({
         RECOVERY_START: {
           target: 'RECOVERING',
           actions: ['setGhostedMacs', { type: 'logTransition', params: { from: 'IDLE', to: 'RECOVERING' } }]
+        },
+        RESTORE_PERIPHERALS: {
+          target: 'RESTORING',
+          actions: ['setTargetMacs', { type: 'logTransition', params: { from: 'IDLE', to: 'RESTORING' } }]
         },
         UPDATE_CONNECTED_DEVICES: {
           actions: ['setConnectedDevices']
@@ -135,6 +140,14 @@ export const bleMachine = setup({
         RECOVERY_START: {
           target: 'RECOVERING',
           actions: ['setGhostedMacs', { type: 'logTransition', params: { from: 'SCANNING', to: 'RECOVERING' } }]
+        }
+      }
+    },
+    RESTORING: {
+      after: {
+        1000: {
+          target: 'CONNECTING',
+          actions: [{ type: 'logTransition', params: { from: 'RESTORING', to: 'CONNECTING', reason: 'restore_delay_elapsed' } }]
         }
       }
     },

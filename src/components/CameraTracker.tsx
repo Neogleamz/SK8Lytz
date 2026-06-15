@@ -87,7 +87,7 @@ export default function CameraTracker({
 
   useEffect(() => {
     if (resizer) {
-      console.log('Camera Sniper: GPU Resizer loaded successfully!');
+      if (__DEV__) AppLogger.log('APP_LOG', { message: 'Camera Sniper: GPU Resizer loaded successfully!', payload_size: 0, ssi: 0 });
     } else if (error) {
       const safeErr = error instanceof Error ? error : new Error(String(error));
       AppLogger.error('Camera Sniper: GPU Resizer failed to load', safeErr);

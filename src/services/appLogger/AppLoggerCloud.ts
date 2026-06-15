@@ -33,9 +33,9 @@ export class AppLoggerCloud {
       operation_type: payload.operation_type || null
     }).then(
       ({ error }) => {
-        if (error) console.warn('[AppLogger] VIP Fast-Lane failed:', error.message);
+        if (error && __DEV__) console.warn('[AppLogger] VIP Fast-Lane failed:', error.message);
       },
-      (e: unknown) => console.warn('[AppLogger] VIP insert failed (network):', e instanceof Error ? e.message : String(e))
+      (e: unknown) => { if (__DEV__) console.warn('[AppLogger] VIP insert failed (network):', e instanceof Error ? e.message : String(e)); }
     );
 
     supabase.from('crash_telemetry').insert({

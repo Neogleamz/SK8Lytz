@@ -28,7 +28,7 @@ class SecureStoreAdapter implements SupportedStorage {
     } catch (e: unknown) {
       // R-04 note: AppLogger cannot be imported here (circular dep risk).
       // Using console.warn so auth storage errors are visible in dev logs.
-      console.warn('[supabaseClient] SecureStore setItem failed', e instanceof Error ? e.message : String(e));
+      if (__DEV__) console.warn('[supabaseClient] SecureStore setItem failed', e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -41,7 +41,7 @@ class SecureStoreAdapter implements SupportedStorage {
       }
     } catch (e: unknown) {
       // R-04 note: AppLogger cannot be imported here (circular dep risk).
-      console.warn('[supabaseClient] SecureStore removeItem failed', e instanceof Error ? e.message : String(e));
+      if (__DEV__) console.warn('[supabaseClient] SecureStore removeItem failed', e instanceof Error ? e.message : String(e));
     }
   }
 }

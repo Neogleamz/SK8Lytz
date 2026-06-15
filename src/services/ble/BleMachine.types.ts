@@ -43,6 +43,7 @@ export type BleMachineEvent =
   | { type: 'HEARTBEAT_FAIL'; deviceId: string }
   | { type: 'RECOVERY_PERMANENTLY_FAILED'; deviceId: string }
   | { type: 'FORCE_IDLE' }
+  | { type: 'RESTORE_PERIPHERALS'; peripherals: Device[] }
   | { type: 'xstate.done.actor.connectService'; output: { devices: Device[] } };
 
 export type BleMachineState =
@@ -51,6 +52,7 @@ export type BleMachineState =
   | { value: 'CONNECTING'; context: BleMachineContext }
   | { value: 'READY'; context: BleMachineContext }
   | { value: 'DISCONNECTING'; context: BleMachineContext }
+  | { value: 'RESTORING'; context: BleMachineContext }
   | { value: 'RECOVERING'; context: BleMachineContext };
 
 export type BLEPhaseTag = BleMachineState['value'];

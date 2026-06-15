@@ -1,11 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 import { AppLogger } from '../services/appLogger';
-import { supabase } from '../services/supabaseClient';
-import type { Database } from '../types/supabase';
+import { FavoritesService } from '../services/FavoritesService';
 import type { IFavoriteState, IQuickPreset } from '../types/dashboard.types';
 
-import { STORAGE_FAVORITES, STORAGE_QUICK_PRESETS } from '../constants/storageKeys';
+import { STORAGE_QUICK_PRESETS } from '../constants/storageKeys';
 
 export type FavoritesPromptState = 'HIDDEN' | 'NAMING_FAVORITE' | 'NAMING_PRESET';
 
@@ -43,63 +42,10 @@ export function useFavorites() {
     setErrorMsg(null);
 
     Promise.all([
-      // 1. Fetch Local
-      AsyncStorage.getItem(STORAGE_FAVORITES).then(async (saved) => {
-        if (!active) return;
-        if (saved) {
-          try {
-            const parsed: IFavoriteState[] = JSON.parse(saved);
-            if (parsed && parsed.length > 0) {
-              localFavorites = parsed.map(f => {
-                let nf = { ...f };
-                if (nf.mode === 'DIY' || nf.mode === 'MULTI' || nf.mode === 'MULTICOLOR') {
-                  nf.mode = 'BUILDER';
-                }
-                if (nf.mode === 'RBM' || nf.mode === 'PROGRAMS') {
-                  nf.mode = 'PATTERN';
-                  nf.patternId = Math.min(nf.patternId ?? 1, 28);
-                }
-                return nf;
-              });
-              if (active) setFavorites(localFavorites);
-            }
-          } catch (e: unknown) {
-            AppLogger.warn('[Favorites] Failed to parse saved favorites', { error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 });
-          }
-        }
-
-        // 2. Fetch Cloud and merge
-        if (user) {
-          try {
-            const { data, error: cloudErr } = await supabase
-              .from('user_saved_presets')
-              .select('*')
-              .eq('user_id', user.id)
-              .eq('fill_mode', 'FAVORITE');
-            
-            if (!active) return;
-            
-            if (!cloudErr && data) {
-              const cloudFavs = data.map(d => ({
-                id: d.id,
-                name: d.name,
-                ...(typeof d.nodes === 'string' ? JSON.parse(d.nodes) : d.nodes as Record<string, unknown>)
-              })) as IFavoriteState[];
-
-              // Merge local and cloud (cloud wins on ID collision)
-              const mergedMap = new Map<string, IFavoriteState>();
-              localFavorites.forEach(f => mergedMap.set(f.id, f));
-              cloudFavs.forEach(f => mergedMap.set(f.id, f));
-              
-              const finalFavs = Array.from(mergedMap.values());
-              if (active) {
-                setFavorites(finalFavs);
-                AsyncStorage.setItem(STORAGE_FAVORITES, JSON.stringify(finalFavs)).catch((err: unknown) => AppLogger.warn('[useFavorites] Failed to persist favorites', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
-              }
-            }
-          } catch (err: unknown) {
-            AppLogger.warn('[Favorites] Failed to fetch cloud favorites', { error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
-          }
+      // 1. Fetch Favorites via Service
+      FavoritesService.getFavorites(user?.id).then((favs) => {
+        if (active && favs.length > 0) {
+          setFavorites(favs);
         }
       }).catch((err: unknown) => {
         if (!active) return;
@@ -169,37 +115,9 @@ export function useFavorites() {
       newFavorites = [...favorites, newFav];
     }
 
-    // 1. Save Local
+    // Save via Service
     setFavorites(newFavorites);
-    try {
-      await AsyncStorage.setItem(STORAGE_FAVORITES, JSON.stringify(newFavorites));
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.warn('[Favorites] Local save failed', { error: msg, payload_size: 0, ssi: 0 });
-    }
-    
-    // 2. Save Cloud
-    if (user) {
-      // Strip out id/name from capturedState so we just store the pure payload in nodes
-      const { id: _id, name: _name, ...payload } = newFav;
-      (async () => {
-        try {
-          const { error } = await supabase.from('user_saved_presets').upsert({
-            id,
-            user_id: user.id,
-            name,
-            fill_mode: 'FAVORITE',
-            transition_type: 0,
-            nodes: payload as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
-            created_at: new Date().toISOString()
-          });
-          if (error) throw error;
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          AppLogger.warn('[Favorites] Cloud save failed', { error: msg, payload_size: 0, ssi: 0 });
-        }
-      })();
-    }
+    FavoritesService.saveFavorite(newFav, user?.id);
 
     closePrompt();
   }, [favorites, favPromptTargetId, closePrompt, user]);
@@ -209,26 +127,7 @@ export function useFavorites() {
     setFavorites(newFavorites);
     if (activeFavoriteId === id) setActiveFavoriteId(null);
     
-    // 1. Delete Local
-    try {
-      await AsyncStorage.setItem(STORAGE_FAVORITES, JSON.stringify(newFavorites));
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.warn('[Favorites] Local delete failed', { error: msg, payload_size: 0, ssi: 0 });
-    }
-    
-    // 2. Delete Cloud
-    if (user) {
-      (async () => {
-        try {
-          const { error } = await supabase.from('user_saved_presets').delete().eq('id', id).eq('user_id', user.id);
-          if (error) throw error;
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : String(err);
-          AppLogger.warn('[Favorites] Cloud delete failed', { error: msg, payload_size: 0, ssi: 0 });
-        }
-      })();
-    }
+    FavoritesService.deleteFavorite(id, user?.id);
   }, [favorites, activeFavoriteId, user]);
 
   const saveQuickPreset = useCallback(async (index: number, preset: IQuickPreset) => {

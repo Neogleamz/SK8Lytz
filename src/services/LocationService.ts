@@ -93,7 +93,7 @@ class LocationService {
     } catch (err: unknown) {
       // R-06 note: Silenced intentionally during passive scanning to avoid log noise.
       // If location access is denied this is expected — AppLogger.warn would spam.
-      if (__DEV__) console.warn('[LocationService] getSilentLocation failed:', err instanceof Error ? err.message : String(err));
+      if (__DEV__) AppLogger.warn('[LocationService] getSilentLocation failed:', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       return null;
     }
   }

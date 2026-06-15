@@ -453,7 +453,7 @@ class SpeedTrackingServiceClass {
           // already returned above from Supabase. Swallowed intentionally.
           await AsyncStorage.setItem(`${STORAGE_RECENT_SESSIONS_PREFIX}${userId}`, JSON.stringify(mapped));
         } catch (e: unknown) {
-          if (__DEV__) console.warn('[SpeedTrackingService] Session cache write failed:', e instanceof Error ? e.message : String(e));
+          if (__DEV__) AppLogger.warn('[SpeedTrackingService] Session cache write failed:', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         }
       }
       return mapped.length > 0 ? mapped : await this.getCachedRecentSessions(userId);
@@ -584,7 +584,7 @@ class SpeedTrackingServiceClass {
         // R-05 note: cache write is best-effort; return already computed below.
         await AsyncStorage.setItem(`${STORAGE_LIFETIME_STATS_PREFIX}${userId}`, JSON.stringify(result));
       } catch (e: unknown) {
-        if (__DEV__) console.warn('[SpeedTrackingService] Lifetime stats cache write failed:', e instanceof Error ? e.message : String(e));
+        if (__DEV__) AppLogger.warn('[SpeedTrackingService] Lifetime stats cache write failed:', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       }
 
       return result;

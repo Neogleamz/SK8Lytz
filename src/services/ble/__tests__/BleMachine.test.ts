@@ -87,6 +87,7 @@ describe('BleMachine test suite', () => {
   let mockInput: any;
 
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
     actorsList = [];
 
@@ -107,6 +108,7 @@ describe('BleMachine test suite', () => {
   });
 
   afterEach(() => {
+    jest.useRealTimers();
     actorsList.forEach((actor) => {
       try {
         actor.stop();

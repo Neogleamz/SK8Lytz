@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Alert, Linking, StyleSheet, Switch, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { checkPermission, PermissionType, requestPermission, setPermissionOptOut } from '../../services/PermissionService';
+import { AppLogger } from '../../services/appLogger';
 import { Layout, Spacing, ThemePalette } from '../../theme/theme';
 
 export interface PermissionItem {
@@ -100,7 +101,7 @@ export default function GranularPermissionsList({ onAllRequiredGranted, readOnly
           results[item.id] = await checkPermission(item.id);
         }
       } catch (e) {
-        console.warn('Failed to check permissions', e instanceof Error ? e.message : String(e));
+        AppLogger.warn('Failed to check permissions', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       }
       if (active) {
         setStatuses(results);
@@ -139,7 +140,7 @@ export default function GranularPermissionsList({ onAllRequiredGranted, readOnly
           'This permission was permanently disabled in your device settings. You must enable it manually to use this feature.',
           [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings().catch(e => console.warn('Could not open settings', e)) }
+            { text: 'Open Settings', onPress: () => Linking.openSettings().catch(e => AppLogger.warn('Could not open settings', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 })) }
           ]
         );
       }
