@@ -3840,3 +3840,26 @@ TSC: ✅  Jest: ✅
 - src/services/ble/__tests__/BleMachine.test.ts
 **TSC:** ✅  **Jest:** ✅
 
+
+### [MERGE] 2026-06-15T12:55 — sweep-remediation-wave1to6 -> master @ 5210326c
+**What merged:**
+- XState RESTORING delay transition in BleMachine
+- Created FavoritesService layer
+- Re-linked sk8lytz-watch-bridge
+- Swept console logs to AppLogger (R-06)
+- Circular dependency mitigations (R-04)
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:**
+- src/components/permissions/GranularPermissionsList.tsx
+- src/services/LocationService.ts
+- src/services/SpeedTrackingService.ts
+- src/services/supabaseClient.ts
+- src/services/appLogger/AppLoggerCloud.ts
+- src/hooks/useControllerDispatch.ts
+- src/components/CameraTracker.tsx
+- src/services/ble/__tests__/BleMachine.test.ts
+- src/services/FavoritesService.ts
+- src/hooks/useFavorites.ts
+- src/services/ble/BleMachine.ts
+- src/hooks/useBLE.ts
+
