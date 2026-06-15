@@ -36,19 +36,6 @@
 > **Worktree**: `wave-6-sweep` · **Type**: Parallel · **Prerequisite**: Wave 5 merged
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — AST-Verified Extraction Foundation
 
-- [/] **`extract-and-sweep-AppLogger.ts`**
-  - **Tags:** `[🏃 IN PROGRESS]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
-  - **Goal:** Extract logic and resolve violations in `AppLogger.ts` (>30KB monolith).
-  - **Decision Log:** S4 Monolith limit prevents direct edits. AST analysis confirms it is a foundational dependency for DeviceRepository and CrewService.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-extract-and-sweep-AppLogger.ts.md](./plans/PLAN-extract-and-sweep-AppLogger.ts.md)
-    Key finding: "Monolith >30KB. Must be extracted into `src/services/appLogger/` before dependent services are touched."
-  - **Source of Truth:** 📖 [PLAN-extract-and-sweep-AppLogger.ts.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-extract-and-sweep-AppLogger.ts.md)
-  - **Details:** Foundational layer extraction. `Prerequisite: Wave 5 merged.`
-
-### ⚡ [BATCH:WAVE-7] — `wave-7-sweep` — READY
-> **Worktree**: `wave-7-sweep` · **Type**: Parallel · **Prerequisite**: Wave 6 merged
-> **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — AST-Verified Dependents Extraction
-
 - [ ] **`extract-and-sweep-DeviceRepository.ts`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-7]` `[WAVE:7]`
   - **Goal:** Extract logic and resolve violations in `DeviceRepository.ts` (>30KB monolith).
@@ -66,40 +53,6 @@
     Key finding: "Monolith >31KB. Depends on AppLogger. Extract into `src/services/crewService/`."
   - **Source of Truth:** 📖 [PLAN-extract-and-sweep-CrewService.ts.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-extract-and-sweep-CrewService.ts.md)
   - **Details:** Dependent layer extraction. `Prerequisite: Wave 6 fully merged into master before this worktree is created.`
-
-- [/] **`sweep-src-hooks`**
-  - **Tags:** `[🏃 IN PROGRESS]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[✅ L-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
-  - **Goal:** Resolve 133 telemetry and architectural rule violations in the hooks domain.
-  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-hooks.md](./plans/PLAN-sweep-src-hooks.md)
-    Key finding: "133 specific rule violations located and deduplicated in this cluster."
-    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
-  - **Source of Truth:** 📖 [PLAN-sweep-src-hooks.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-hooks.md)
-  - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 5 fully merged into master before this worktree is created.`
-
-- [/] **`sweep-src-components-dashboard`**
-  - **Tags:** `[🏃 IN PROGRESS]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
-  - **Goal:** Resolve 8 telemetry and architectural rule violations in the components-dashboard domain.
-  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-dashboard.md](./plans/PLAN-sweep-src-components-dashboard.md)
-    Key finding: "8 specific rule violations located and deduplicated in this cluster."
-    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
-  - **Source of Truth:** 📖 [PLAN-sweep-src-components-dashboard.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-dashboard.md)
-  - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 5 fully merged into master before this worktree is created.`
-
-- [/] **`sweep-src-components-CommunityModal.tsx`**
-  - **Tags:** `[🏃 IN PROGRESS]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
-  - **Goal:** Resolve 1 telemetry and architectural rule violations in the components-CommunityModal.tsx domain.
-  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-CommunityModal.tsx.md](./plans/PLAN-sweep-src-components-CommunityModal.tsx.md)
-    Key finding: "1 specific rule violations located and deduplicated in this cluster."
-    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
-  - **Source of Truth:** 📖 [PLAN-sweep-src-components-CommunityModal.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-CommunityModal.tsx.md)
-  - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 5 fully merged into master before this worktree is created.`
-
-### ⚡ [BATCH:WAVE-7] — `wave-7-sweep` — READY
-> **Worktree**: `wave-7-sweep` · **Type**: Parallel · **Prerequisite**: Wave 6 merged
-> **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — Deep-Dive Code Hunt orthogonal analysis
 
 - [ ] **`sweep-src-other`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[✅ L-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-7]` `[WAVE:7]`
