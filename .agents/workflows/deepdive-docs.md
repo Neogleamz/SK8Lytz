@@ -134,7 +134,7 @@ After the Master Reference is updated in Phase 3, Avery unconditionally opens ea
 3. Open `docs/Architecture_Decision_Records.md`.
 4. Inject new ADR entries following the established format (Context, Decision, Trade-off).
 
-**MANDATORY FINAL STEP:** After Phase 4 and Phase 5 are complete, run `git add tools/*.md` and `git commit -m "docs: cartographer rebuild and satellite sync"`.
+**MANDATORY FINAL STEP:** After Phase 4 and Phase 5 are complete, run `git add docs/*.md` and `git commit -m "docs: cartographer rebuild and satellite sync"`.
 
 ### ⚡ Phase 6 — Final Summary & Attestation
 

@@ -77,8 +77,8 @@ journey
       Skater goes out of BLE range from phone: 3: Skater
       Watch continues local tracking: 5: System
       Watch reconnects and flushes buffered metrics: 4: System
-      User taps Pause or Stop on Watch or Phone: 5: Skater
-      Watch transmits command (PAUSE/STOP) to Phone: 5: System
+      User taps Stop on Watch or Pause/Stop on Phone: 5: Skater
+      Watch transmits STOP_SESSION command to Phone: 5: System
       Phone XState transitions (PAUSED / SAVING / COMPLETED): 5: System
       Phone syncs state update back to Watch: 5: System
 ```

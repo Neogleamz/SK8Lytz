@@ -239,7 +239,10 @@ For each changed file, check:
 Overall: PARITY CLEARED ✅ / GAPS FOUND ⚠️ (list)
 ```
 
-- **If YES to any registry impact**: Update the relevant sections in `docs/SK8Lytz_App_Master_Reference.md` and any required Satellite Docs (`State_Charts_UX.md`, `User_Journey_Maps.md`, `System_Context_Diagram.md`).
+- **If YES to any registry impact or satellite trigger**: Update the relevant sections in `docs/SK8Lytz_App_Master_Reference.md` and any required Satellite Docs:
+  - If XState machine (`*Machine.ts` or XState config) was touched → Update `docs/State_Charts_UX.md`
+  - If WatchBridge or session flow (`*Bridge.ts` or session tracking) was touched → Update `docs/User_Journey_Maps.md`
+  - If a new external system or hardware integration was added/modified → Update `docs/System_Context_Diagram.md`
 - **If NO to all**: Explicitly state `"Documentation parity check: no architectural changes — docs gate CLEARED ✅"`.
 
 ```
