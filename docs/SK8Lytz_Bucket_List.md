@@ -36,7 +36,7 @@
 > **Worktree**: `wave-6-sweep` · **Type**: Parallel · **Prerequisite**: Wave 5 merged
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — AST-Verified Extraction Foundation
 
-- [ ] **`sweep-src-screens`**
+- [/] **`sweep-src-screens`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[✅ L-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-8]` `[WAVE:8]`
   - **Goal:** Resolve 35 telemetry and architectural rule violations in the screens domain.
   - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
@@ -46,7 +46,7 @@
   - **Source of Truth:** 📖 [PLAN-sweep-src-screens.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-screens.md)
   - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 7 fully merged into master before this worktree is created.`
 
-- [ ] **`sweep-src-components-docked`**
+- [/] **`sweep-src-components-docked`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:WAVE-8]` `[WAVE:8]`
   - **Goal:** Resolve 10 telemetry and architectural rule violations in the components-docked domain.
   - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
