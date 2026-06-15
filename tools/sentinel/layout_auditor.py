@@ -34,10 +34,10 @@ def parse_args():
 
 def harvest_adb_screenshot(output_path):
     import subprocess
-    adb_paths = [
-        r"C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz\.local-builder\android-sdk\platform-tools\adb.exe",
-        "adb"
-    ]
+    import shutil
+    adb_paths = ["adb"]
+    if shutil.which("adb"):
+        adb_paths.insert(0, shutil.which("adb"))
     resolved_adb = None
     for p in adb_paths:
         try:

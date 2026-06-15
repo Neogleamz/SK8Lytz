@@ -11,9 +11,9 @@ CREATE INDEX idx_telemetry_snapshots_metadata ON telemetry_snapshots USING GIN (
 
 ALTER TABLE telemetry_snapshots ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Enable insert for authenticated users and anon" 
+CREATE POLICY "Enable insert for authenticated users" 
 ON telemetry_snapshots FOR INSERT 
-TO authenticated, anon 
+TO authenticated 
 WITH CHECK (true);
 
 

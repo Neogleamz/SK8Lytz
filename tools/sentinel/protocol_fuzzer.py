@@ -14,8 +14,8 @@ class ProtocolFuzzer:
     def __init__(self, workspace_path, test_mode=False):
         self.workspace_path = workspace_path
         self.test_mode = test_mode
-        self.bible_path = os.path.join(workspace_path, "tools", "ZENGGE_PROTOCOL_BIBLE.md")
-        self.master_ref_path = os.path.join(workspace_path, "tools", "SK8Lytz_App_Master_Reference.md")
+        self.bible_path = os.path.join(workspace_path, "docs", "ZENGGE_PROTOCOL_BIBLE.md")
+        self.master_ref_path = os.path.join(workspace_path, "docs", "SK8Lytz_App_Master_Reference.md")
         self.simulator_script = os.path.join(workspace_path, "tools", "ble-simulator", "ble_simulator.js")
         self.port = 18080
         self.server_url = f"http://localhost:{self.port}"

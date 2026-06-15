@@ -20,12 +20,12 @@ conversations = {
     "GROUP_SYNC": "459d1d1f-4a8f-47ff-b1e8-133dbc266b5e"
 }
 
-out_dir = r"C:\Users\Magma\.gemini\antigravity\brain\3b181b41-6ca5-443f-b4ae-b5b701d0f34c\scratch"
+out_dir = os.path.join(os.path.expanduser("~"), ".gemini", "antigravity", "brain", "scratch_payloads")
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 
 for name, cid in conversations.items():
-    path = rf"C:\Users\Magma\.gemini\antigravity\brain\{cid}\.system_generated\logs\transcript.jsonl"
+    path = os.path.join(os.path.expanduser("~"), ".gemini", "antigravity", "brain", cid, ".system_generated", "logs", "transcript.jsonl")
     if not os.path.exists(path):
         print(f"Missing {path}")
         continue

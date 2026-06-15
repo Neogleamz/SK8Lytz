@@ -3,7 +3,7 @@
 
 $ErrorActionPreference = "Stop"
 
-$pluginsDir = "C:\Users\Magma\.gemini\config\plugins"
+$pluginsDir = Join-Path $env:USERPROFILE ".gemini\config\plugins"
 
 if (-not (Test-Path $pluginsDir)) {
     Write-Host "Plugins directory does not exist: $pluginsDir. Skipping." -ForegroundColor Yellow

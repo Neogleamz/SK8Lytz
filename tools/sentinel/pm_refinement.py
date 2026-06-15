@@ -13,8 +13,8 @@ class BacklogRefiner:
         self.workspace_path = workspace_path
         self.test_mode = test_mode
         self.config = LocalAgentConfig()
-        self.bucket_list_path = os.path.join(workspace_path, "tools", "SK8Lytz_Bucket_List.md")
-        self.plans_dir = os.path.join(workspace_path, "plans")
+        self.bucket_list_path = os.path.join(workspace_path, "docs", "SK8Lytz_Bucket_List.md")
+        self.plans_dir = os.path.join(workspace_path, "docs", "plans")
 
     def log(self, message):
         print(f"[PM-REFINER] {message}")

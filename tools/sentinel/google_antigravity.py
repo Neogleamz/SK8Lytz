@@ -25,7 +25,7 @@ class LocalAgentConfig:
             os.path.dirname(os.path.abspath(__file__)),
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-            "C:\\Neogleamz\\AG_SK8Lytz_App\\SK8Lytz"
+            os.environ.get("WORKSPACE_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         ]
         
         # Deduplicate search paths preserving order
@@ -51,7 +51,9 @@ class LocalAgentConfig:
 
 class ContextCompiler:
     @staticmethod
-    def compile_all(workspace_dir="C:\\Neogleamz\\AG_SK8Lytz_App\\SK8Lytz"):
+    def compile_all(workspace_dir=None):
+        if workspace_dir is None:
+            workspace_dir = os.environ.get("WORKSPACE_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         context = "--- GLOBAL AI AGENT DIRECTIVES ---\n"
         
         # 1. Load Rules from .agents/rules/
@@ -253,7 +255,7 @@ if __name__ == "__main__":
             if not config.api_key:
                 print("WARNING: GEMINI_API_KEY is not set in environment/files. Testing manual key lookup...")
                 # Try finding in parent directory .env
-                parent_env = "C:\\Neogleamz\\AG_SK8Lytz_App\\.env"
+                parent_env = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))), ".env")
                 if os.path.exists(parent_env):
                     with open(parent_env, "r", encoding="utf-8") as f:
                         for line in f:

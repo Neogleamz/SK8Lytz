@@ -7,7 +7,7 @@ $workspaceDir = "C:\Neogleamz\AG_SK8Lytz_App\SK8Lytz"
 $workspaceRulesDir = Join-Path $workspaceDir ".agents\rules"
 $globalBackupDir = Join-Path $workspaceDir "artifacts\rules-backup"
 
-$rules = @("agent-behavior.md", "safety-protocol.md", "prime-directive.md", "kanban-constitution.md", "sub-agent-behavior.md")
+$rules = @("agent-behavior.md", "safety-protocol.md", "prime-directive.md", "kanban-constitution.md", "sub-agent-behavior.md", "CONSTITUTION.md", "team-roster.md")
 
 # Ensure folders exist
 if (-not (Test-Path $globalBackupDir)) {
@@ -77,7 +77,7 @@ foreach ($rule in $rules) {
 # -------------------------------------------------------------
 # Bucket List Guard
 # -------------------------------------------------------------
-$bucketListFile = Join-Path $workspaceDir "tools\SK8Lytz_Bucket_List.md"
+$bucketListFile = Join-Path $workspaceDir "docs\SK8Lytz_Bucket_List.md"
 $globalBucketBackupDir = Join-Path $workspaceDir "artifacts\bucket-list-backup"
 $bucketListBackupFile = Join-Path $globalBucketBackupDir "SK8Lytz_Bucket_List.md"
 

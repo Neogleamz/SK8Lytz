@@ -1,5 +1,5 @@
 module.exports = {
-  preset: 'ts-jest',
+  preset: 'jest-expo',
   testEnvironment: 'node',
   modulePathIgnorePatterns: ["<rootDir>/.local-builder/", "<rootDir>/e2e/"],
   testPathIgnorePatterns: ["<rootDir>/e2e/"],

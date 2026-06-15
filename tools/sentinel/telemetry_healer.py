@@ -34,7 +34,7 @@ def load_simulated_errors(log_path="C:\\Neogleamz\\AG_SK8Lytz_App\\SK8Lytz\\tool
         return []
 
 def file_triage_ticket(error):
-    bucket_list_path = "C:\\Neogleamz\\AG_SK8Lytz_App\\SK8Lytz\\tools\\SK8Lytz_Bucket_List.md"
+    bucket_list_path = "C:\\Neogleamz\\AG_SK8Lytz_App\\SK8Lytz\\docs\\SK8Lytz_Bucket_List.md"
     if not os.path.exists(bucket_list_path):
         print(f"Error: Bucket list not found at: {bucket_list_path}")
         return False

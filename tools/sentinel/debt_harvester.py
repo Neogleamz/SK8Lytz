@@ -21,7 +21,7 @@ class DebtHarvester:
     def __init__(self, workspace_path, dry_run=False):
         self.workspace_path = workspace_path
         self.dry_run = dry_run
-        self.bucket_list_path = os.path.join(workspace_path, "tools", "SK8Lytz_Bucket_List.md")
+        self.bucket_list_path = os.path.join(workspace_path, "docs", "SK8Lytz_Bucket_List.md")
         self.src_dir = os.path.join(workspace_path, "src")
 
     def log(self, message):

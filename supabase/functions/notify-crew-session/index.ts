@@ -35,6 +35,7 @@ Deno.serve(async (req: Request) => {
     if (authErr) return new Response("Unauthorized", { status: 401 });
     user = data.user;
   } catch (e) {
+    console.error(`[notify-crew-session] Auth exception:`, e instanceof Error ? e.message : String(e));
     return new Response(JSON.stringify({ error: "Auth exception" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
@@ -65,6 +66,7 @@ Deno.serve(async (req: Request) => {
       return new Response("Forbidden: Not a member of this crew", { status: 403 });
     }
   } catch (e) {
+    console.error(`[notify-crew-session] DB exception:`, e instanceof Error ? e.message : String(e));
     return new Response(JSON.stringify({ error: "DB exception" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 
@@ -82,6 +84,7 @@ Deno.serve(async (req: Request) => {
     }
     tokenRows = data;
   } catch (e) {
+    console.error(`[notify-crew-session] DB exception (push tokens):`, e instanceof Error ? e.message : String(e));
     return new Response(JSON.stringify({ error: "DB exception" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
 

@@ -14,7 +14,7 @@ while ($true) {
   try {
     # Scan for build.ninja files in node_modules and android
     if (Test-Path "node_modules") {
-      $files = Get-ChildItem -Path node_modules, android -Recurse -File -Filter "build.ninja" -Force -ErrorAction SilentlyContinue
+      $files = Get-ChildItem -Path android -Recurse -File -Filter "build.ninja" -Force -ErrorAction SilentlyContinue
       foreach ($f in $files) {
         $path = $f.FullName
         $txt = [System.IO.File]::ReadAllText($path)
@@ -35,5 +35,5 @@ while ($true) {
   } catch {
     # File might be temporarily locked during CMake write, ignore and retry next tick
   }
-  Start-Sleep -Milliseconds 50
+  Start-Sleep -Seconds 10
 }

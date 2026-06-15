@@ -51,10 +51,12 @@ module.exports = {
         "android.permission.VIBRATE",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.health.READ_HEART_RATE",
         "android.permission.health.READ_STEPS",
-        "android.permission.health.READ_ACTIVE_CALORIES_BURNED"
+        "android.permission.health.READ_ACTIVE_CALORIES_BURNED",
+        "android.permission.health.WRITE_EXERCISE",
+        "android.permission.health.WRITE_TOTAL_CALORIES_BURNED",
+        "android.permission.health.WRITE_DISTANCE"
       ],
       package: "com.neogleamz.sk8lytz",
       config: {
@@ -74,7 +76,7 @@ module.exports = {
         "expo-build-properties",
         {
           "android": {
-            "enableJetifier": true,
+            "enableJetifier": false,
             "minSdkVersion": 26,
             "compileSdkVersion": 36,
             "targetSdkVersion": 36,

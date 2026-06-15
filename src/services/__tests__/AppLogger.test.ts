@@ -1,8 +1,12 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import '@react-native-async-storage/async-storage';
 
 // Define __DEV__ globally for React Native environment
+/* eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any */
 (global as any).__DEV__ = true;
 
+jest.mock('@react-native-async-storage/async-storage', () =>
+  require('@react-native-async-storage/async-storage/jest/async-storage-mock')
+);
 jest.mock('expo-battery', () => ({
   isAvailableAsync: jest.fn().mockResolvedValue(false),
   getBatteryLevelAsync: jest.fn().mockResolvedValue(1),

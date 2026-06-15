@@ -294,8 +294,8 @@ function main() {
   const root = path.resolve(__dirname, '../..');
   const srcDir = path.join(root, 'src');
   const protocolFile = path.join(root, 'src/protocols/ZenggeProtocol.ts');
-  const zenggeBible = path.join(root, 'tools/ZENGGE_PROTOCOL_BIBLE.md');
-  const masterRef = path.join(root, 'tools/SK8Lytz_App_Master_Reference.md');
+  const zenggeBible = path.join(root, 'docs/ZENGGE_PROTOCOL_BIBLE.md');
+  const masterRef = path.join(root, 'docs/SK8Lytz_App_Master_Reference.md');
 
   const isCheckMode = process.argv.includes('--check');
 

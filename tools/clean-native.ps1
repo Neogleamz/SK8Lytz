@@ -40,8 +40,7 @@ foreach ($p in $deletePaths) {
 
 # 2. Touch files in node_modules and android to 30 seconds in the past
 $touchDirs = @(
-  "android",
-  "node_modules"
+  "android"
 )
 
 $pastTime = (Get-Date).AddSeconds(-30)
