@@ -36,7 +36,7 @@ describe('HardwareSetupWizard Registration Payload Contract', () => {
     expect(registeredDevice.group_names.length).toBeGreaterThan(0);
 
     // Legacy scalar should not exist
-    expect((registeredDevice as Record<string, unknown>).group_id).toBeUndefined();
+    expect(registeredDevice).not.toHaveProperty('group_id');
 
     // Type shape: arrays must be string[]
     expect(Array.isArray(registeredDevice.group_ids)).toBe(true);
@@ -53,8 +53,8 @@ describe('HardwareSetupWizard Registration Payload Contract', () => {
     };
 
     // This is the anti-pattern: a scalar group_id instead of group_ids array
-    expect((badPayload as Record<string, unknown>).group_ids).toBeUndefined();
-    expect(badPayload.group_id).toBeDefined(); // legacy still present = BAD
+    expect(badPayload).not.toHaveProperty('group_ids');
+    expect(badPayload).toHaveProperty('group_id'); // legacy still present = BAD
   });
 
   // 🛡️ Hard Onboarding & BLE Invariants Contract Tests

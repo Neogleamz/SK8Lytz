@@ -78,12 +78,12 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
           }
           setCredLoadStage('LOADED');
         }).catch((err: unknown) => {
-          AppLogger.warn('[AuthScreen] STORAGE_LAST_EMAIL read failed', { error: err instanceof Error ? err.message : String(err) });
+          AppLogger.warn('[AuthScreen] STORAGE_LAST_EMAIL read failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
           setCredLoadStage('LOADED');
         });
       }
     }).catch((err: unknown) => {
-      AppLogger.warn('[AuthScreen] STORAGE_REMEMBER_CREDS read failed', { error: err instanceof Error ? err.message : String(err) });
+      AppLogger.warn('[AuthScreen] STORAGE_REMEMBER_CREDS read failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       setCredLoadStage('LOADED');
     });
   }, []);
@@ -139,6 +139,8 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
               </Text>
             )}
             {mode === 'LOGIN' && (
+              // TODO (sweep-src-screens): Fix R-08 'any' cast in AuthFormSignIn.tsx catch block (Out of scope)
+              // TODO (sweep-src-screens): Fix R-24 missing AsyncStorage.setItem for STORAGE_LAST_EMAIL in AuthFormSignIn.tsx (Out of scope)
               <AuthFormSignIn 
                 initialEmail={initialEmail} 
                 initialRememberMe={initialRememberMe} 
@@ -146,6 +148,7 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
               />
             )}
             {mode === 'SIGNUP' && (
+              // TODO (sweep-src-screens): Fix R-08 'any' cast in AuthFormSignUp.tsx catch block (Out of scope)
               <AuthFormSignUp onModeChange={setMode} />
             )}
             {mode === 'FORGOT_PASSWORD' && (

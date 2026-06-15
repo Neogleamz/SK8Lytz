@@ -17,6 +17,13 @@
  *  - Crew session state                       → remains here (feeds BLE write dispatch)
  *  - Crew Hub collapsed state                 → remains here
  *
+ * TODO (sweep-src-screens): Extract smaller stateless sub-components or slabs (like MySkatesSlab, CrewHubSlab) and helper hooks to separate files outside the screen monolith. (Blocked by S4 plan scope limits)
+ * TODO (sweep-src-screens): Fix R-08 usage of 'Record<string, any>' as the type for 'lastGroupPatterns' state hook inside useDashboardGroups. (Blocked by S4)
+ * TODO (sweep-src-screens): Align DisplayDevice signature in hooks to fix type bypasses. (Blocked by S4)
+ * TODO (sweep-src-screens): Define STORAGE_CREWHUB_COLLAPSED in storageKeys.ts and use it. (Blocked by S4)
+ * TODO (sweep-src-screens): Add an 'ERROR' case to the DashboardViewState switch statement. (Blocked by S4)
+ * TODO (sweep-src-screens): Fix R-27 context consumer depth. (Blocked by S4)
+ *
  * Platform: React Native (Android + Web)
  */
 /* eslint-disable unused-imports/no-unused-vars, react-hooks/exhaustive-deps */
@@ -341,13 +348,13 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   useEffect(() => {
     AsyncStorage.getItem('@Sk8lytz_crewHubCollapsed')
       .then(res => { if (res !== null) setIsCrewHubCollapsed(res === 'true'); })
-      .catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_crewHubCollapsed', event: 'load_failed', error: String(e) }));
+      .catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_crewHubCollapsed', event: 'load_failed', error: String(e), payload_size: 0, ssi: 0 }));
   }, []);
 
   const toggleCrewHubCollapse = useCallback(() => {
     setIsCrewHubCollapsed(prev => {
       const next = !prev;
-      AsyncStorage.setItem('@Sk8lytz_crewHubCollapsed', String(next)).catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_crewHubCollapsed', event: 'save_failed', error: String(e) }));
+      AsyncStorage.setItem('@Sk8lytz_crewHubCollapsed', String(next)).catch((e) => AppLogger.warn('PERSISTENCE', { key: '@Sk8lytz_crewHubCollapsed', event: 'save_failed', error: String(e), payload_size: 0, ssi: 0 }));
       return next;
     });
   }, []);
@@ -598,7 +605,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
       });
     } else {
       // No BLE devices discovered yet — re-arm auto-connect + burst scan silently
-      AppLogger.log('BLE_STATE_CHANGE', { event: 'group_tap_no_ble_devices', groupId: group.id, expectedMacs: group.deviceIds });
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'group_tap_no_ble_devices', groupId: group.id, expectedMacs: group.deviceIds.map(scrubPII) });
       retriggerAutoConnectRef.current();
     }
   }, [allDevices, connectToDevices, isSkateSessionActive, startSession]);

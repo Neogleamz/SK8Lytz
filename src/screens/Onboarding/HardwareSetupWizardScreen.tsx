@@ -4,6 +4,8 @@
  * S4 Acknowledgement: This file is a monolith of 41KB, exceeding the 30KB limit.
  * Per the task guidelines, we acknowledge this and are only making surgical edits
  * to specific line items outlined in the plan rather than extracting the component.
+ *
+ * TODO (sweep-src-screens): Extract smaller functional components to an Onboarding/components directory. (Blocked by S4)
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -20,6 +22,7 @@ import { RegisteredDevice } from '../../hooks/useRegistration';
 import { HardwareStatusPills } from '../../components/dashboard/HardwareStatusPills';
 import { getDefaultGroupName } from '../../utils/NamingUtils';
 import { AppLogger } from '../../services/appLogger';
+import { scrubPII } from '../../utils/piiScrubber';
 import { buildPatternPayload } from '../../protocols/PatternEngine';
 
 import type { BleConnectionState, PendingRegistration, PingResult } from '../../types/dashboard.types';
@@ -100,9 +103,9 @@ export default function HardwareSetupWizardScreen({
       const configs = configsOverride || deviceConfigsState;
       const adapter = getDefaultProtocol();
       
-      for (const device of selected) {
+      await Promise.all(selected.map(async (device) => {
          const cfg = configs[device.device_mac];
-         if (!cfg || !cfg.position) continue;
+         if (!cfg || !cfg.position) return;
          
          const points = cfg.points || device.led_points || LOCAL_PRODUCT_CATALOG[0].defaultLedPoints;
          const color = cfg.position === 'Left' ? { r: 27, g: 66, b: 121 } : { r: 247, g: 147, b: 32 };
@@ -115,9 +118,9 @@ export default function HardwareSetupWizardScreen({
            AppLogger.error('[FTUE] pingDevice failed in orientation test', err instanceof Error ? err : new Error(String(err)), { payload_size: 0, ssi: 0 });
            setSetupError('Device not responding, retrying...');
          }
-      }
+      }));
     } catch (e: unknown) {
-      AppLogger.error('HardwareSetupWizard orientation test operation failed', e, { payload_size: 0, ssi: 0 });
+      AppLogger.error('HardwareSetupWizard orientation test operation failed', e instanceof Error ? e : new Error(String(e)), { payload_size: 0, ssi: 0 });
     }
   };
 
@@ -238,7 +241,7 @@ export default function HardwareSetupWizardScreen({
         ));
         // Cache the result so repeat wizard visits are instant
         AsyncStorage.setItem(getHardwareConfigKey(deviceMac), JSON.stringify(hwConfig)).catch(e => AppLogger.warn('Failed to cache probed hardware config', e instanceof Error ? e.message : String(e)));
-        AppLogger.log('DEVICE_DISCOVERED', { context: 'pingDevice_complete', deviceId: deviceMac, ledPoints: hwConfig.ledPoints });
+        AppLogger.log('DEVICE_DISCOVERED', { context: 'pingDevice_complete', deviceId: scrubPII(deviceMac), ledPoints: hwConfig.ledPoints });
       }
     } catch (e: unknown) {
       AppLogger.warn('[FTUE] Blink test failed', { error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 });
@@ -604,7 +607,7 @@ export default function HardwareSetupWizardScreen({
             onPress={() => {
                setSetupError(null);
                const selected = pendingRegistrations.filter(r => selectedDeviceMacs.has(r.device_mac));
-               const configs: Record<string, any> = {};
+               const configs: Record<string, WizardDeviceConfig> = {};
                let leftAssigned = false;
                let rightAssigned = false;
                
@@ -666,13 +669,13 @@ export default function HardwareSetupWizardScreen({
                  const hwAdapter = getDefaultProtocol();
                  
                  // Execute Hardware Loop
-                 for (const device of selected) {
+                 await Promise.all(selected.map(async (device) => {
                     const cfg = deviceConfigsState[device.device_mac];
-                    if (!cfg) continue;
+                    if (!cfg) return;
 
                     // If points were adjusted, we must push the EEPROM update and verify
                     if (getLocalProfileById(cfg.type)?.hardwareAllowsCustomPoints && cfg.points !== device.led_points) {
-                       AppLogger.log('FTUE_HARDWARE_WRITE', { points: cfg.points, deviceId: device.device_mac });
+                       AppLogger.log('FTUE_HARDWARE_WRITE', { points: cfg.points, deviceId: scrubPII(device.device_mac) });
                        const payloadResult = hwAdapter.buildWriteSettings(cfg.points, 1, 1, 1);
                        await pingDevice(device.device_mac, payloadResult.packets[0], { probe: false, duration: 1100, turnOffAtEnd: false });
                     }
@@ -692,8 +695,8 @@ export default function HardwareSetupWizardScreen({
                     if (signaturePayload) {
                       await pingDevice(device.device_mac, signaturePayload, { probe: false, duration: 1500, turnOffAtEnd: false });
                     }
-                    AppLogger.log('FTUE_HARDWARE_VERIFIED', { deviceId: device.device_mac });
-                 }
+                    AppLogger.log('FTUE_HARDWARE_VERIFIED', { deviceId: scrubPII(device.device_mac) });
+                 }));
 
                  const finalizedDevices = selected.map(device => {
                    const cfg = deviceConfigsState[device.device_mac];
@@ -714,7 +717,7 @@ export default function HardwareSetupWizardScreen({
                  });
                  await onSetupComplete(finalizedDevices);
                } catch (err: unknown) {
-                 AppLogger.error('[HardwareSetup] finish configuration failed', err, { payload_size: 0, ssi: 0 });
+                 AppLogger.error('[HardwareSetup] finish configuration failed', err instanceof Error ? err : new Error(String(err)), { payload_size: 0, ssi: 0 });
                  setSetupError(err instanceof Error ? err.message : 'Setup failed');
                  setActionStatus('error');
                } finally {
