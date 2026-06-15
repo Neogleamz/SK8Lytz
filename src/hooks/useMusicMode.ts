@@ -10,6 +10,7 @@
  */
 import { useCallback, useEffect, useRef } from 'react';
 import { useProtocolDispatch } from './useProtocolDispatch';
+import { scrubPII } from '../utils/piiScrubber';
 import { AppLogger } from '../services/AppLogger';
 import type { ModeType } from '../types/dashboard.types';
 import { hexToRgb } from '../utils/ColorUtils';
@@ -82,7 +83,7 @@ export function useMusicMode({
     const safePatternId = Math.max(1, Math.min(patternId, maxId));
 
     AppLogger.log('MUSIC_CONFIG_REQUESTED', {
-      patternId: safePatternId,
+      patternId: scrubPII(String(safePatternId)),
       matrix: matrix === 0x27 ? 'LIGHT_SCREEN' : 'LIGHT_BAR',
       c1Hex: color1Hex,
       c2Hex: color2Hex,
@@ -119,6 +120,21 @@ export function useMusicMode({
    * useRef so changes don't cause re-renders.
    */
   const previousActiveModeRef = useRef<ModeType>(activeMode);
+  const musicPrimaryColorRef = useRef(musicPrimaryColor);
+  const musicSecondaryColorRef = useRef(musicSecondaryColor);
+  const musicPatternIdRef = useRef(musicPatternId);
+  const musicMatrixStyleRef = useRef(musicMatrixStyle);
+  const micSensitivityRef = useRef(micSensitivity);
+  const brightnessRef = useRef(brightness);
+
+  useEffect(() => {
+    musicPrimaryColorRef.current = musicPrimaryColor;
+    musicSecondaryColorRef.current = musicSecondaryColor;
+    musicPatternIdRef.current = musicPatternId;
+    musicMatrixStyleRef.current = musicMatrixStyle;
+    micSensitivityRef.current = micSensitivity;
+    brightnessRef.current = brightness;
+  }, [musicPrimaryColor, musicSecondaryColor, musicPatternId, musicMatrixStyle, micSensitivity, brightness]);
 
   /**
    * Music Mode Exit Packet.
@@ -133,21 +149,21 @@ export function useMusicMode({
     previousActiveModeRef.current = activeMode;
 
     if (prev === 'MUSIC' && activeMode !== 'MUSIC') {
-      const c1 = hexToRgb(musicPrimaryColor);
-      const c2 = hexToRgb(musicSecondaryColor);
+      const c1 = hexToRgb(musicPrimaryColorRef.current);
+      const c2 = hexToRgb(musicSecondaryColorRef.current);
       AppLogger.log('MUSIC_MODE_EXIT', { from: prev, to: activeMode });
       dispatch.setMusicConfig({
-        patternId: musicPatternId,
-        matrixStyle: musicMatrixStyle as 0x26 | 0x27,
-        micSensitivity,
-        brightness,
+        patternId: musicPatternIdRef.current,
+        matrixStyle: musicMatrixStyleRef.current as 0x26 | 0x27,
+        micSensitivity: micSensitivityRef.current,
+        brightness: brightnessRef.current,
         color1: c1,
         color2: c2,
-        speed: musicPatternId,
+        speed: musicPatternIdRef.current,
         isOn: false, // Explicit exit signal to hardware
       });
     }
-  }, [activeMode]);
+  }, [activeMode, dispatch]);
   // Note: intentionally omitting music params from deps — we want to fire
   // exactly once on mode transition, not re-fire when colors change.
   

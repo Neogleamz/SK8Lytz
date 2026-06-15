@@ -97,7 +97,7 @@ export function useAdminTelemetry(visible: boolean) {
       setStats(allStats);
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
-      AppLogger.warn('[AdminTelemetry] Failed to load telemetry', { error: (err instanceof Error ? err.message : String(err)) });
+      AppLogger.warn('[AdminTelemetry] Failed to load telemetry', { error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
     }
   }, []);
 
@@ -110,7 +110,7 @@ export function useAdminTelemetry(visible: boolean) {
       await AppLogger.clearLogs();
       await load();
     } catch (err: unknown) {
-      AppLogger.warn('[AdminTelemetry] Failed to clear logs', err instanceof Error ? err.message : String(err));
+      AppLogger.warn('[AdminTelemetry] Failed to clear logs', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
     }
   }, [load]);
 
@@ -123,7 +123,7 @@ export function useAdminTelemetry(visible: boolean) {
     } catch (err: unknown) {
       Alert.alert('Upload Failed', err instanceof Error ? err.message : String(err));
     } finally {
-      setIsUploading(false);
+      if (isMountedRef.current) setIsUploading(false);
     }
   }, [isUploading]);
 

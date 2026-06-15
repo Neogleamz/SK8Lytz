@@ -105,7 +105,7 @@ export interface BluetoothLowEnergyApi {
   isSweeperActive: boolean;
   batteryTier: 'FULL' | 'THROTTLED' | 'PAUSED';
   /** In-memory EEPROM cache keyed by uppercase MAC — populated by the Interrogator Queue */
-  hwCache: Record<string, any>;
+  hwCache: Record<string, PingResult>;
   /** Live post-connect RSSI map keyed by device MAC — updated every 30s by useBLERSSIMonitor. */
   rssiMap: Record<string, number>;
 }
@@ -135,9 +135,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
             // But we must do it carefully to avoid GATT 133 conflicts.
             // We will enqueue a background reconnect.
             const delay = jitteredDelay(1000, 500);
-            setTimeout(() => {
-                connectToDevicesRef.current(peripherals);
-            }, delay);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            connectToDevicesRef.current(peripherals);
           }
         }
       }
@@ -221,7 +220,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
         }
         setSandboxState(enabled ? 'enabled' : 'disabled');
       }).catch(e => {
-        AppLogger.warn('Failed to read mock storage', e instanceof Error ? e.message : String(e));
+        AppLogger.warn('Failed to read mock storage', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       });
     }
 
@@ -305,11 +304,11 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       const errMsg = error?.message || String(error);
       // Suppress normal organic dropouts from flooding the VIP error telemetry
       if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('Device disconnected') || errMsg.includes('not connected')) {
-        AppLogger.warn(`[BLE] Organic notification disconnect for '[REDACTED]'`);
+        AppLogger.warn(`[BLE] Organic notification disconnect for '[REDACTED]'`, { payload_size: 0, ssi: 0 });
         return;
       }
       
-      AppLogger.warn('Notification Error', error instanceof Error ? error.message : String(error));
+      AppLogger.warn('Notification Error', { error: error instanceof Error ? error.message : String(error), payload_size: 0, ssi: 0 });
       AppLogger.log('PROTOCOL_ERROR', { error: errMsg, deviceId: '[REDACTED]', context: 'notification' });
       return;
     }
@@ -324,7 +323,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
         const payloadSize = characteristic.value ? Buffer.from(characteristic.value, 'base64').length : 0;
         const currentRssi = rssiMap ? (rssiMap[deviceId] ?? 0) : 0;
         AppLogger.error('Failed to parse notification', parseErrMsg, { payload_size: payloadSize, ssi: currentRssi });
-        AppLogger.log('PROTOCOL_ERROR', { error: parseErrMsg, deviceId, context: 'parse', payload_size: payloadSize });
+        AppLogger.log('PROTOCOL_ERROR', { error: parseErrMsg, deviceId: scrubPII(deviceId), context: 'parse', payload_size: payloadSize });
       }
     }
   };
@@ -361,7 +360,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
           }
         } catch (e: unknown) {
       const _safeErr = e instanceof Error ? e : new Error(String(e));
-          AppLogger.warn('[BLE] Failed to audit connections on wake', e instanceof Error ? e.message : String(e));
+          AppLogger.warn('[BLE] Failed to audit connections on wake', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         }
       }
     });
@@ -395,7 +394,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
 
   // --- Sub-Hooks ---
   const handleOrganicDisconnect = (error: import('react-native-ble-plx').BleError | null, deviceId: string) => {
-    AppLogger.warn(`[BLE] Organic disconnect/dropout for '[REDACTED]'`);
+    AppLogger.warn(`[BLE] Organic disconnect/dropout for '[REDACTED]'`, { payload_size: 0, ssi: 0 });
     AppLogger.log('DEVICE_DISCONNECTED', { id: '[REDACTED]', reason: 'dropout', error: error instanceof Error ? error.message : String(error) });
     // The machine handles this organically via handleOrganicDisconnect callback in bleMachine input.
     // The machine handles RECOVERY_START internally for organic drops.
@@ -451,7 +450,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const handleCriticalSignal = useCallback((mac: string) => {
     // Only reconnect if device is not already in the recovery queue.
     if (!bleSnapshot.context.ghostedDeviceIds.includes(mac)) {
-      AppLogger.warn('[BLE RSSI] Critical signal — proactive reconnect', { deviceId: scrubPII(mac) });
+      AppLogger.warn('[BLE RSSI] Critical signal — proactive reconnect', { deviceId: scrubPII(mac), payload_size: 0, ssi: 0 });
       bleSend({ type: 'RECOVERY_START', ghostedMacs: [mac] });
     }
   }, [bleSnapshot.context.ghostedDeviceIds, bleSend]);

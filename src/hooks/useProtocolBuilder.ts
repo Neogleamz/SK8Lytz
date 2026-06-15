@@ -77,8 +77,6 @@ export const useProtocolBuilder = (_hwPts: number = 16) => {
 
   // Builder 0x73
   const [bldMicSource, setBldMicSource] = useState<'APP' | 'DEVICE'>('DEVICE');
-  const bldMic = bldMicSource === 'DEVICE';
-  const setBldMic = (v: boolean) => setBldMicSource(v ? 'DEVICE' : 'APP');
   const [bldMusicMode, setBldMusicMode] = useState('1');
   const [bldSens, setBldSens] = useState('100');
   const [bldC2, setBldC2] = useState({r:0, g:0, b:255});
@@ -118,9 +116,9 @@ export const useProtocolBuilder = (_hwPts: number = 16) => {
         const c1 = bldColors[0] || {r:255,g:0,b:0};
         const s = safeParseInt(bldSens, 100);
         const br = safeParseInt(bldBright, 100);
-        const wrapped = adapter.buildMusicConfig({ patternId: id, matrixStyle: bldMatrixStyle, isOn: bldMic, micSensitivity: s, brightness: br, color1: c1, color2: bldC2, speed: id }).packets[0];
+        const wrapped = adapter.buildMusicConfig({ patternId: id, matrixStyle: bldMatrixStyle, isOn: bldMicSource === 'DEVICE', micSensitivity: s, brightness: br, color1: c1, color2: bldC2, speed: id }).packets[0];
         const matrixLabel = bldMatrixStyle === 0x27 ? 'Light Screen (0x27)' : 'Light Bar (0x26)';
-        setBldResult({ raw: wrapped, wrapped, hex: wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' '), annotations: ['[0x73] Symphony/Music Config', `Mode: ${id} | Matrix: ${matrixLabel}`, `Mic: ${bldMic ? 'DEVICE' : 'APP'} | Sens: ${s} | Bright: ${br}`, `C1 RGB(${c1.r},${c1.g},${c1.b}) | C2 RGB(${bldC2.r},${bldC2.g},${bldC2.b})`] });
+        setBldResult({ raw: wrapped, wrapped, hex: wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' '), annotations: ['[0x73] Symphony/Music Config', `Mode: ${id} | Matrix: ${matrixLabel}`, `Mic: ${bldMicSource} | Sens: ${s} | Bright: ${br}`, `C1 RGB(${c1.r},${c1.g},${c1.b}) | C2 RGB(${bldC2.r},${bldC2.g},${bldC2.b})`] });
       } else if (bldProtocol === '0x62') {
         const pts = safeParseInt(bldPoints, 16);
         const seg = safeParseInt(bldSegs, 1);
@@ -130,7 +128,7 @@ export const useProtocolBuilder = (_hwPts: number = 16) => {
     } catch (e: unknown) { 
       AppLogger.error('[useProtocolBuilder] Build failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
     }
-  }, [bldProtocol, bldColors, bldTrans, bldSpeed, bldPoints, bldDir, bldPatternId, bldBright, bldMic, bldMusicMode, bldSens, bldC2, bldMatrixStyle, bldIc, bldOrder, bldSegs, bld51Mode, bld51Speed, bld51Color1, bld51Color2]);
+  }, [bldProtocol, bldColors, bldTrans, bldSpeed, bldPoints, bldDir, bldPatternId, bldBright, bldMicSource, bldMusicMode, bldSens, bldC2, bldMatrixStyle, bldIc, bldOrder, bldSegs, bld51Mode, bld51Speed, bld51Color1, bld51Color2]);
 
   return {
     bldProtocol, setBldProtocol,
@@ -147,7 +145,7 @@ export const useProtocolBuilder = (_hwPts: number = 16) => {
     bld51Color2, setBld51Color2,
     bld51Dir, setBld51Dir,
     bld51Seg, setBld51Seg,
-    bldMic, setBldMic,
+    bldMicSource, setBldMicSource,
     bldMusicMode, setBldMusicMode,
     bldMusicIsOn, setBldMusicIsOn,
     bldSens, setBldSens,

@@ -83,7 +83,7 @@ export function useProductManager() {
       return false;
     } catch (err: unknown) {
       if (!isMountedRef.current) return false;
-      AppLogger.error('Save failed', err instanceof Error ? err : new Error(String(err)), { payload_size: 0, ssi: 0 });
+      AppLogger.error('Save failed', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
       return false;
     } finally {
       if (isMountedRef.current) {

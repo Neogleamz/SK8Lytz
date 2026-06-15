@@ -3,6 +3,7 @@ import { AppLogger } from '../services/AppLogger';
 import { CrewMember, CrewRole, crewService, CrewSession } from '../services/CrewService';
 import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';
+import { scrubPII } from '../utils/piiScrubber';
 
 export function useCrewSession(
   onSessionReady: (session: CrewSession, role: CrewRole, lastScene: Record<string, unknown> | null) => void,
@@ -54,7 +55,7 @@ export function useCrewSession(
       onSessionReady(session, role, lastScene);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.log('CREW_ERROR', { action: 'join_session', error: msg });
+      AppLogger.log('CREW_ERROR', { action: 'join_session', error: msg, payload_size: 0, ssi: 0 });
       setErrorMsg(msg);
     }
   }, [user?.id, onSessionReady, setErrorMsg]);
@@ -63,7 +64,7 @@ export function useCrewSession(
   const executeEndSession = async () => {
     const currentSessionId = currentSession?.id;
     try {
-      AppLogger.log('CREW_SESSION_ENDED', { sessionId: currentSessionId, crewName: currentSession?.name, role: 'leader', reason: 'explicit_end' });
+      AppLogger.log('CREW_SESSION_ENDED', { sessionId: currentSessionId ? scrubPII(currentSessionId) : undefined, crewName: currentSession?.name ? scrubPII(currentSession?.name) : undefined, role: 'leader', reason: 'explicit_end', payload_size: 0, ssi: 0 });
       if (currentSessionId) {
         // Telemetry
         // TODO: Consolidate the profile stats update logic into a single method (e.g., SpeedTrackingService.updateLifetimeStats)
@@ -98,19 +99,19 @@ export function useCrewSession(
       goToLanding();
     } catch (e: unknown) {
       const msg = e instanceof Error ? (e instanceof Error ? e.message : String(e)) : 'Could not end session';
-      AppLogger.log('CREW_ERROR', { action: 'end_session', error: msg });
+      AppLogger.log('CREW_ERROR', { action: 'end_session', error: msg, payload_size: 0, ssi: 0 });
       setErrorMsg(msg);
     }
   };
 
   const executeLeaveSession = async () => {
-    AppLogger.log('CREW_SESSION_LEFT', { sessionId: currentSession?.id, role: currentRole });
+    AppLogger.log('CREW_SESSION_LEFT', { sessionId: currentSession?.id ? scrubPII(currentSession.id) : undefined, role: currentRole, payload_size: 0, ssi: 0 });
     try {
       await crewService.leaveSession(user?.id);
       refreshNearby();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.log('CREW_ERROR', { action: 'leave_session', error: msg });
+      AppLogger.log('CREW_ERROR', { action: 'leave_session', error: msg, payload_size: 0, ssi: 0 });
       setErrorMsg(msg);
     } finally {
       setIsHandoffMode(false);
@@ -122,7 +123,7 @@ export function useCrewSession(
   const handleHandoffLeadership = async (member: CrewMember): Promise<boolean> => {
     try {
       await crewService.transferLeadership(member.user_id);
-      AppLogger.log('CREW_LEADERSHIP_TRANSFERRED', { transferred: true });
+      AppLogger.log('CREW_LEADERSHIP_TRANSFERRED', { transferred: true, payload_size: 0, ssi: 0 });
       setIsHandoffMode(false);
       if (loadMembersTimerRef.current) clearTimeout(loadMembersTimerRef.current);
       loadMembersTimerRef.current = setTimeout(loadMembers, 500);

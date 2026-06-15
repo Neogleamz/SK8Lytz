@@ -17,7 +17,7 @@ export function Builder73Mode({ builderCtx, transmit }: Builder73ModeProps) {
 
   const {
     bldMusicMode, setBldMusicMode,
-    bldMic, setBldMic,
+    bldMicSource, setBldMicSource,
     bldSens, setBldSens,
     bldBright, setBldBright,
     bldColors, setBldColors,
@@ -61,22 +61,22 @@ export function Builder73Mode({ builderCtx, transmit }: Builder73ModeProps) {
       <Text style={{ color: txtMuted, fontSize: 10, marginBottom: Spacing.sm, fontWeight: '900' }}>MIC SOURCE [BYTE 2] — PROTOCOL TRUTH</Text>
       <View style={{ flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.lg }}>
         <TouchableOpacity
-          onPress={() => setBldMic(false)}
+          onPress={() => setBldMicSource('APP')}
           style={{ flex: 1, paddingVertical: Spacing.md, borderRadius: 8, alignItems: 'center',
-            backgroundColor: !bldMic ? '#00f0ff22' : border,
-            borderWidth: 1.5, borderColor: !bldMic ? cyan : border }}
+            backgroundColor: bldMicSource !== 'DEVICE' ? '#00f0ff22' : border,
+            borderWidth: 1.5, borderColor: bldMicSource !== 'DEVICE' ? cyan : border }}
         >
-          <Text style={{ color: !bldMic ? cyan : txtMuted, fontWeight: '900', fontSize: 11 }}>APP MIC</Text>
-          <Text style={{ color: !bldMic ? cyan : txtMuted, fontSize: 9, opacity: 0.8 }}>0x26</Text>
+          <Text style={{ color: bldMicSource !== 'DEVICE' ? cyan : txtMuted, fontWeight: '900', fontSize: 11 }}>APP MIC</Text>
+          <Text style={{ color: bldMicSource !== 'DEVICE' ? cyan : txtMuted, fontSize: 9, opacity: 0.8 }}>0x26</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => setBldMic(true)}
+          onPress={() => setBldMicSource('DEVICE')}
           style={{ flex: 1, paddingVertical: Spacing.md, borderRadius: 8, alignItems: 'center',
-            backgroundColor: bldMic ? '#FF950033' : border,
-            borderWidth: 1.5, borderColor: bldMic ? '#FF9500' : border }}
+            backgroundColor: bldMicSource === 'DEVICE' ? '#FF950033' : border,
+            borderWidth: 1.5, borderColor: bldMicSource === 'DEVICE' ? '#FF9500' : border }}
         >
-          <Text style={{ color: bldMic ? '#FF9500' : txtMuted, fontWeight: '900', fontSize: 11 }}>DEVICE MIC</Text>
-          <Text style={{ color: bldMic ? '#FF9500' : txtMuted, fontSize: 9, opacity: 0.8 }}>0x27</Text>
+          <Text style={{ color: bldMicSource === 'DEVICE' ? '#FF9500' : txtMuted, fontWeight: '900', fontSize: 11 }}>DEVICE MIC</Text>
+          <Text style={{ color: bldMicSource === 'DEVICE' ? '#FF9500' : txtMuted, fontSize: 9, opacity: 0.8 }}>0x27</Text>
         </TouchableOpacity>
       </View>
 
@@ -102,7 +102,7 @@ export function Builder73Mode({ builderCtx, transmit }: Builder73ModeProps) {
         <Text style={{ color: cyan, fontSize: 10, fontFamily: Platform.select({ ios: 'Menlo', default: 'monospace' }) }}>
           {'[0x73, '}
           {`0x${(parseInt(bldMusicMode)||1).toString(16).padStart(2,'0').toUpperCase()}, `}
-          {`${bldMic ? '0x27' : '0x26'}, `}
+          {`${bldMicSource === 'DEVICE' ? '0x27' : '0x26'}, `}
           {`${bldMusicIsOn ? '0x01' : '0x00'}, `}
           {'R1, G1, B1, R2, G2, B2, SENS, BRIGHT, CS]'}
         </Text>
@@ -112,7 +112,7 @@ export function Builder73Mode({ builderCtx, transmit }: Builder73ModeProps) {
       <TouchableOpacity
         style={[S.txBtn, { backgroundColor: '#FF9500', borderColor: '#FF9500', marginTop: Spacing.md }]}
         onPress={() => {
-          const mic: 0x26 | 0x27 = bldMic ? 0x27 : 0x26;
+          const mic: 0x26 | 0x27 = bldMicSource === 'DEVICE' ? 0x27 : 0x26;
           transmit(
             ZenggeProtocol.setMusicConfig(
               parseInt(bldMusicMode) || 1,
@@ -123,7 +123,7 @@ export function Builder73Mode({ builderCtx, transmit }: Builder73ModeProps) {
               parseInt(bldSens) || 128,
               parseInt(bldBright) || 100
             ),
-            `0x73 mode=${bldMusicMode} mic=${bldMic?'0x27':'0x26'} isOn=${bldMusicIsOn}`,
+            `0x73 mode=${bldMusicMode} mic=${bldMicSource === 'DEVICE'?'0x27':'0x26'} isOn=${bldMusicIsOn}`,
             '0x73'
           );
         }}

@@ -181,6 +181,8 @@ export function useDashboardAutoConnect({
             event: 'auto_connect_observer_gate_blocked_retrying',
             gate: getGate(),
             batchSize: pendingBatchRef.current.length,
+            payload_size: 0,
+            ssi: 0,
           });
           // BUG-02 Fix: Do not wipe pendingBatchRef. Instead, retry with jittered exponential backoff.
           gateRetryCountRef.current += 1;
@@ -202,6 +204,8 @@ export function useDashboardAutoConnect({
         AppLogger.log('BLE_STATE_CHANGE', {
           event: 'auto_connect_observer',
           devices: batch.map(d => scrubPII(d.name ?? d.id)),
+          payload_size: 0,
+          ssi: 0,
         });
 
         connectToDevicesRef.current(batch)
@@ -235,6 +239,8 @@ export function useDashboardAutoConnect({
                   deviceId: scrubPII(id),
                   retry: retries,
                   backoffMs: backoff,
+                  payload_size: 0,
+                  ssi: 0,
                 });
                 const retryTimerId = setTimeout(() => {
                   if (!autoConnectIdsRef.current.includes(id)) {
@@ -251,7 +257,7 @@ export function useDashboardAutoConnect({
           })
           .finally(() => {
             if (autoConnectIdsRef.current.length > 0) {
-              AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_resume_scan' });
+              AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_resume_scan', payload_size: 0, ssi: 0 });
               scanForPeripheralsRef.current({ disableProbing: true });
             }
           });
@@ -264,7 +270,7 @@ export function useDashboardAutoConnect({
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allDevices, connectedDevices]);
+  }, [allDevices, connectedDevices, isWizardActive]);
 
   // ── One-shot cloud sync + auto-connect trigger on BLE ready ─────────────
   useEffect(() => {
@@ -273,7 +279,7 @@ export function useDashboardAutoConnect({
       hasAutoConnectedRef.current = true;
 
       // ── 1. Immediate Local/Offline Resolution ──
-      AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_local_resolution' });
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_local_resolution', payload_size: 0, ssi: 0 });
       let groupsToProcess: RegisteredGroup[] = [];
       
       const processLocalDevices = (devicesArray: RegisteredDevice[]) => {
@@ -320,12 +326,14 @@ export function useDashboardAutoConnect({
             fleets: presentGroups.map(g => scrubPII(g.group_name)),
             groupCount: presentGroups.length,
             count: idsToConnect.length,
+            payload_size: 0,
+            ssi: 0,
           });
           autoConnectIdsRef.current = idsToConnect;
 
           // BUG-04 Fix: Burst scan
           if (isRetrigger && burstScan) {
-            AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_burst_scan_triggered' });
+            AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_burst_scan_triggered', payload_size: 0, ssi: 0 });
             try {
               const scanResult = burstScan(8000);
               if (scanResult && typeof scanResult.catch === 'function') {
@@ -395,6 +403,8 @@ export function useDashboardAutoConnect({
                     AppLogger.log('BLE_STATE_CHANGE', {
                       event: 'auto_connect_cloud_synced',
                       count: autoConnectIdsRef.current.length,
+                      payload_size: 0,
+                      ssi: 0,
                     });
                   }
                 }
@@ -435,7 +445,7 @@ export function useDashboardAutoConnect({
       }
       lastRetriggerRef.current = now;
 
-      AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_retriggered' });
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_retriggered', payload_size: 0, ssi: 0 });
       hasAutoConnectedRef.current = false;
       autoConnectIdsRef.current = [];
       autoConnectRetriesRef.current.clear();

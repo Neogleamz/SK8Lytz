@@ -9,6 +9,7 @@ import * as FileSystem from 'expo-file-system';
 import { decode } from 'base64-arraybuffer';
 import { checkPermission, requestPermission, setPermissionOptOut } from '../services/PermissionService';
 import { useAuth } from '../context/AuthContext';
+import { scrubPII } from '../utils/piiScrubber';
 
 import { NOTIF_PREF_KEY, STORAGE_AUTO_PAUSE_ENABLED } from '../constants/storageKeys';
 
@@ -43,6 +44,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   const [editName, setEditName] = useState('');
   const [editUsername, setEditUsername] = useState('');
   const isMountedRef = useRef(true);
+  const isDataLoadingRef = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -76,21 +78,22 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   const [autoPauseEnabled, setAutoPauseEnabled] = useState(true);
 
   const loadData = useCallback(async () => {
-    if (!isMountedRef.current) return;
+    if (!isMountedRef.current || isDataLoadingRef.current) return;
+    isDataLoadingRef.current = true;
     setStatus('loading');
     setAccountError(null);
     try {
-      AppLogger.log('ACCOUNT_MODAL_LOAD_START');
+      AppLogger.log('ACCOUNT_MODAL_LOAD_START', { payload_size: 0, ssi: 0 });
 
       // ── Phase A: Run async local/permission lookups in parallel ───────────────
       const [rawNotifPrefs, hasHealth, rawAutoPause] = await Promise.all([
         AsyncStorage.getItem(NOTIF_PREF_KEY).catch(e => {
-          AppLogger.warn('Failed to load notification preferences from cache', e instanceof Error ? e.message : String(e));
+          AppLogger.warn('Failed to load notification preferences from cache', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
           return null;
         }),
         checkPermission('HEALTH'),
         AsyncStorage.getItem(STORAGE_AUTO_PAUSE_ENABLED).catch(e => {
-          AppLogger.warn('Failed to load auto-pause setting', e instanceof Error ? e.message : String(e));
+          AppLogger.warn('Failed to load auto-pause setting', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
           return null;
         }),
       ]);
@@ -114,21 +117,21 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       // not yet created) doesn't nuke crew/history loading (mirrors useCrewHub fix).
       const [p, c, h] = await Promise.all([
         profileService.fetchOrCreateProfile(user).catch((e) => {
-          AppLogger.warn('[AccountOverview] fetchOrCreateProfile failed', { error: String(e) });
+          AppLogger.warn('[AccountOverview] fetchOrCreateProfile failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
           return null;
         }),
         user?.id ? profileService.getMyCrew(undefined, user.id).catch((e) => {
-          AppLogger.warn('[AccountOverview] getMyCrew failed', { error: String(e) });
+          AppLogger.warn('[AccountOverview] getMyCrew failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
           return [] as import('../services/ProfileService').PermanentCrew[];
         }) : Promise.resolve([]),
         user?.id ? profileService.getSessionHistory(user.id).catch((e) => {
-          AppLogger.warn('[AccountOverview] getSessionHistory failed', { error: String(e) });
+          AppLogger.warn('[AccountOverview] getSessionHistory failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
           return [] as import('../services/ProfileService').SessionHistoryItem[];
         }) : Promise.resolve([]),
       ]);
 
       if (!isMountedRef.current) return;
-      AppLogger.log('ACCOUNT_MODAL_DATA_RESOLVED', { hasProfile: !!p, crewCount: c?.length || 0, historyCount: h?.length || 0 });
+      AppLogger.log('ACCOUNT_MODAL_DATA_RESOLVED', { hasProfile: !!p, crewCount: c?.length || 0, historyCount: h?.length || 0, payload_size: 0, ssi: 0 });
       if (p) {
         setProfile(p);
         setEditName(p.display_name ?? '');
@@ -148,9 +151,11 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       setStatus('success');
     } catch (e: unknown) {
       if (!isMountedRef.current) return;
-      AppLogger.warn('[AccountOverview] loadData error', { error: e instanceof Error ? e.message : String(e)  });
+      AppLogger.warn('[AccountOverview] loadData error', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       setAccountError('Failed to load. Tap to retry.');
       setStatus('error');
+    } finally {
+      isDataLoadingRef.current = false;
     }
   }, [user]);
 
@@ -170,7 +175,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       if (profile?.avatar_color) updates.avatar_color = profile.avatar_color;
       await profileService.updateProfile(user?.id, updates);
       setProfile(p => p ? { ...p, ...updates } : p);
-      AppLogger.log('PROFILE_UPDATED', { fields: Object.keys(updates) });
+      AppLogger.log('PROFILE_UPDATED', { fields: Object.keys(updates), payload_size: 0, ssi: 0 });
       onProfileUpdated?.();
       Alert.alert('Saved', 'Profile updated successfully.');
       setStatus('success');
@@ -215,7 +220,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
 
       await profileService.updateProfile(user?.id, { avatar_url: publicUrl });
       setProfile(p => p ? { ...p, avatar_url: publicUrl } : p);
-      AppLogger.log('PROFILE_UPDATED', { field: 'photo', bucket: 'avatars', path });
+      AppLogger.log('PROFILE_UPDATED', { field: 'photo', bucket: 'avatars', path, payload_size: 0, ssi: 0 });
       onProfileUpdated?.();
     } catch (e: unknown) {
       AppLogger.error('[AccountOverview] handlePickProfilePhoto failed', e, { payload_size: 0, ssi: 0 });
@@ -225,12 +230,12 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
 
   const saveNotifPrefs = async (prefs: { crewInvites: boolean; sessionReminders: boolean; leaderHandoff: boolean }) => {
     await AsyncStorage.setItem(NOTIF_PREF_KEY, JSON.stringify(prefs)).catch(e => {
-      AppLogger.warn('Failed to persist notification preferences', e instanceof Error ? e.message : String(e));
+      AppLogger.warn('Failed to persist notification preferences', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       Alert.alert('Settings Error', 'Failed to save notification preference.');
     });
     if (user?.id) {
       profileService.updateProfile(user.id, { notif_preferences: prefs }).catch((e: unknown) => 
-        AppLogger.warn('Failed to cloud sync notification preferences', e instanceof Error ? e.message : String(e))
+        AppLogger.warn('Failed to cloud sync notification preferences', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 })
       );
     }
   };
@@ -256,7 +261,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     setAutoPauseEnabled(enabled);
     try {
       await AsyncStorage.setItem(STORAGE_AUTO_PAUSE_ENABLED, String(enabled));
-      AppLogger.log('AUTO_PAUSE_TOGGLED', { enabled });
+      AppLogger.log('AUTO_PAUSE_TOGGLED', { enabled, payload_size: 0, ssi: 0 });
     } catch (e: unknown) {
       AppLogger.error('Failed to save auto-pause setting', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
     }
@@ -271,10 +276,10 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       const crew = await profileService.createPermanentCrew(newCrewName.trim(), undefined, user.id);
       setCrews(prev => [...prev, crew]);
       setNewCrewName(''); setCrewStep('list');
-      AppLogger.log('CREW_PERMANENT_CREATED', { crewName: newCrewName.trim() });
+      AppLogger.log('CREW_PERMANENT_CREATED', { crewName: scrubPII(newCrewName.trim()), payload_size: 0, ssi: 0 });
       setStatus('success');
     } catch (e: unknown) {
-      AppLogger.warn('[AccountOverview] handleCreateCrew failed', { error: e instanceof Error ? e.message : String(e)  });
+      AppLogger.warn('[AccountOverview] handleCreateCrew failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       setCrewError((e instanceof Error ? e.message : String(e)) ?? 'Failed to create crew');
       setStatus('error');
     }
@@ -288,10 +293,10 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       const crew = await profileService.joinPermanentCrew(joinCode.trim(), user.id);
       setCrews(prev => prev.find(c => c.id === crew.id) ? prev : [...prev, crew]);
       setJoinCode(''); setCrewStep('list');
-      AppLogger.log('CREW_PERMANENT_JOINED', { crewId: crew.id });
+      AppLogger.log('CREW_PERMANENT_JOINED', { crewId: crew.id, payload_size: 0, ssi: 0 });
       setStatus('success');
     } catch (e: unknown) {
-      AppLogger.warn('[AccountOverview] handleJoinCrew failed', { error: e instanceof Error ? e.message : String(e)  });
+      AppLogger.warn('[AccountOverview] handleJoinCrew failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       setCrewError((e instanceof Error ? e.message : String(e)) ?? 'Failed to join crew');
       setStatus('error');
     }
@@ -302,7 +307,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     try {
       await profileService.leavePermanentCrew(crewId, user.id);
       setCrews(prev => prev.filter(c => c.id !== crewId));
-      AppLogger.log('CREW_PERMANENT_LEFT', { crewId });
+      AppLogger.log('CREW_PERMANENT_LEFT', { crewId, payload_size: 0, ssi: 0 });
     } catch (e: unknown) { 
       AppLogger.error('[AccountOverview] handleLeaveCrew failed', e, { crewId, payload_size: 0, ssi: 0 });
       Alert.alert('Error', (e instanceof Error ? e.message : String(e))); 

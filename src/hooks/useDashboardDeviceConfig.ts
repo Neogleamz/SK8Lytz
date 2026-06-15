@@ -12,6 +12,7 @@ import { AppLogger } from '../services/AppLogger';
 import DeviceRepository from '../services/DeviceRepository';
 import type { DeviceSettings, DisplayDevice } from '../types/dashboard.types';
 import { RegisteredDevice } from './useRegistration';
+import { scrubPII } from '../utils/piiScrubber';
 
 interface Group {
   id: string;
@@ -79,7 +80,7 @@ export function useDashboardDeviceConfig({
         color_sorting: settings.sorting,
         is_pending_sync: true,
       }).catch((e: unknown) => {
-        AppLogger.warn('saveRegisteredDevice failed: ' + (e instanceof Error ? e.message : String(e)));
+        AppLogger.warn('saveRegisteredDevice failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       });
     }
 
@@ -119,22 +120,26 @@ export function useDashboardDeviceConfig({
 
 
       AppLogger.log('HARDWARE_CONFIG_CHANGED', {
-        deviceId:  targetMac,
-        name:      settings.name,
+        deviceId:  scrubPII(targetMac),
+        name:      scrubPII(settings.name),
         type:      settings.type,
         points:    settings.points,
         segments:  settings.segments,
         sorting:   settings.sorting,
         stripType: settings.stripType,
+        payload_size: 0,
+        ssi: 0
       });
 
       // Separate audit event for device renames
       const previousName = selectedDeviceForSettings.name;
       if (settings.name && settings.name !== previousName) {
         AppLogger.log('DEVICE_RENAMED', {
-          deviceId: targetMac,
-          oldName:  previousName || 'Unknown',
-          newName:  settings.name,
+          deviceId: scrubPII(targetMac),
+          oldName:  scrubPII(previousName || 'Unknown'),
+          newName:  scrubPII(settings.name),
+          payload_size: 0,
+          ssi: 0
         });
       }
     } catch (e: unknown) {

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { getDefaultProtocol } from '../protocols/ControllerRegistry';
 import { AppLogger } from '../services/AppLogger';
 import { useProtocolDispatch } from './useProtocolDispatch';
+import { scrubPII } from '../utils/piiScrubber';
 
 const VERDICT_LOG_KEY = STORAGE_DIAG_TEST_LOG;
 const VERDICT_LOG_MAX = 200;
@@ -88,12 +89,12 @@ export const useDiagnosticLog = ({
         setCoverage(cov);
       } catch (e: unknown) {
         if (active) {
-          AppLogger.warn('[useDiagnosticLog] Failed to parse verdict log', { error: (e instanceof Error ? e.message : String(e)) });
+          AppLogger.warn('[useDiagnosticLog] Failed to parse verdict log', { error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 });
         }
       }
     }).catch(e => {
       if (active) {
-        AppLogger.warn('[useDiagnosticLog] Failed to load verdict log from storage', e instanceof Error ? e.message : String(e));
+        AppLogger.warn('[useDiagnosticLog] Failed to load verdict log from storage', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       }
     });
     return () => {
@@ -143,7 +144,7 @@ export const useDiagnosticLog = ({
     setLastSent(hexStr);
     setLastNote(note || '');
     setLogs(prev => [{ dir: 'TX' as const, hex: hexStr, t: Date.now(), note, dev: targetDeviceId ?? undefined, entryId }, ...prev].slice(0, 200));
-    AppLogger.log('RAW_PAYLOAD', { dir: 'TX', hex: hexStr, note, deviceId: targetDeviceId ?? undefined });
+    AppLogger.log('RAW_PAYLOAD', { dir: 'TX', hex: hexStr, note, deviceId: targetDeviceId ? scrubPII(targetDeviceId) : undefined, payload_size: 0, ssi: 0 });
 
     if (opcode) {
       const newEntry: TestLogEntry = {
@@ -171,7 +172,7 @@ export const useDiagnosticLog = ({
   const setVerdict = useCallback((entryId: string, opcode: string, verdict: TestVerdict) => {
     setTestLog(prev => {
       const updated = prev.map(e => e.id === entryId ? { ...e, verdict } : e);
-      AsyncStorage.setItem(VERDICT_LOG_KEY, JSON.stringify(updated)).catch(e => AppLogger.warn('[useDiagnosticLog] Failed to save verdict log', e instanceof Error ? e.message : String(e)));
+      AsyncStorage.setItem(VERDICT_LOG_KEY, JSON.stringify(updated)).catch(e => AppLogger.warn('[useDiagnosticLog] Failed to save verdict log', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
       return updated;
     });
     if (TRACKED_OPCODES.includes(opcode as TrackedOpcode) && verdict) {
@@ -190,7 +191,7 @@ export const useDiagnosticLog = ({
   const clearTestLog = useCallback(() => {
     setTestLog([]);
     setCoverage(Object.fromEntries(TRACKED_OPCODES.map(op => [op, 'UNTESTED'])) as Record<TrackedOpcode, OpcodeStatus>);
-    AsyncStorage.removeItem(VERDICT_LOG_KEY).catch(e => AppLogger.warn('[useDiagnosticLog] Failed to remove verdict log', e instanceof Error ? e.message : String(e)));
+    AsyncStorage.removeItem(VERDICT_LOG_KEY).catch(e => AppLogger.warn('[useDiagnosticLog] Failed to remove verdict log', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
   }, []);
 
   return {

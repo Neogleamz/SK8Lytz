@@ -43,8 +43,16 @@ export function useAppMicrophone({
   const [audioMagnitude, setAudioMagnitude] = useState<number>(0);
   const [hasMicPermission, setHasMicPermission] = useState<boolean>(true);
   const magnitudeInterval = useRef<NodeJS.Timeout | null>(null);
-  const isCapturingRef = useRef(false);
   const isMountedRef = useRef(true);
+  const activeModeRef = useRef(activeMode);
+  const micSourceRef = useRef(micSource);
+  const isPoweredOnRef = useRef(isPoweredOn);
+
+  useEffect(() => {
+    activeModeRef.current = activeMode;
+    micSourceRef.current = micSource;
+    isPoweredOnRef.current = isPoweredOn;
+  }, [activeMode, micSource, isPoweredOn]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -57,19 +65,17 @@ export function useAppMicrophone({
   writeToDeviceRef.current = writeToDevice;
 
   const startRecording = async () => {
-    if (isCapturingRef.current) return;
-    isCapturingRef.current = true;
+    if (recorder.isRecording) return;
     try {
       const isGranted = await checkPermission('MIC');
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current || activeModeRef.current !== 'MUSIC' || micSourceRef.current !== 'APP' || !isPoweredOnRef.current) return;
       setHasMicPermission(isGranted);
       if (!isGranted) {
         await openGlobalPermissionsModal();
         const reG = await checkPermission('MIC');
-        if (!isMountedRef.current) return;
+        if (!isMountedRef.current || activeModeRef.current !== 'MUSIC' || micSourceRef.current !== 'APP' || !isPoweredOnRef.current) return;
         setHasMicPermission(reG);
         if (!reG) {
-          isCapturingRef.current = false;
           return;
         }
       }
@@ -79,8 +85,9 @@ export function useAppMicrophone({
         playsInSilentMode: true,
       });
 
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current || activeModeRef.current !== 'MUSIC' || micSourceRef.current !== 'APP' || !isPoweredOnRef.current) return;
       await recorder.prepareToRecordAsync();
+      if (!isMountedRef.current || activeModeRef.current !== 'MUSIC' || micSourceRef.current !== 'APP' || !isPoweredOnRef.current) return;
       recorder.record();
 
       // Start magnitude stream — firehose to hardware at 20Hz.
@@ -119,13 +126,11 @@ export function useAppMicrophone({
     } catch (err: unknown) {
       if (isMountedRef.current) {
         AppLogger.error('Failed to start recording', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
-        isCapturingRef.current = false;
       }
     }
   };
 
   const stopRecording = async () => {
-    if (!isCapturingRef.current) return;
     if (magnitudeInterval.current) {
       clearInterval(magnitudeInterval.current);
       magnitudeInterval.current = null;
@@ -138,8 +143,6 @@ export function useAppMicrophone({
       AppLogger.debug('[useAppMicrophone] recorder.stop() failed — already stopped or recorder torn down', {
         error: _e instanceof Error ? _e.message : String(_e),
       });
-    } finally {
-      isCapturingRef.current = false;
     }
   };
 

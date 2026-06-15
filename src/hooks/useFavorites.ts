@@ -64,7 +64,7 @@ export function useFavorites() {
               if (active) setFavorites(localFavorites);
             }
           } catch (e: unknown) {
-            AppLogger.warn('[Favorites] Failed to parse saved favorites', { error: (e instanceof Error ? e.message : String(e)) });
+            AppLogger.warn('[Favorites] Failed to parse saved favorites', { error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 });
           }
         }
 
@@ -94,17 +94,17 @@ export function useFavorites() {
               const finalFavs = Array.from(mergedMap.values());
               if (active) {
                 setFavorites(finalFavs);
-                AsyncStorage.setItem(STORAGE_FAVORITES, JSON.stringify(finalFavs)).catch((err: unknown) => AppLogger.warn('[useFavorites] Failed to persist favorites', err instanceof Error ? err.message : String(err)));
+                AsyncStorage.setItem(STORAGE_FAVORITES, JSON.stringify(finalFavs)).catch((err: unknown) => AppLogger.warn('[useFavorites] Failed to persist favorites', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
               }
             }
           } catch (err: unknown) {
-            AppLogger.warn('[Favorites] Failed to fetch cloud favorites', { error: (err instanceof Error ? err.message : String(err)) });
+            AppLogger.warn('[Favorites] Failed to fetch cloud favorites', { error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
           }
         }
       }).catch((err: unknown) => {
         if (!active) return;
         const msg = err instanceof Error ? err.message : String(err);
-        AppLogger.warn('[useFavorites] Favorites read failed', { error: msg });
+        AppLogger.warn('[useFavorites] Favorites read failed', { error: msg, payload_size: 0, ssi: 0 });
         setErrorMsg(msg);
         setStatus('error');
       }),
@@ -116,13 +116,13 @@ export function useFavorites() {
             const parsed = JSON.parse(saved);
             if (parsed && parsed.length > 0 && active) setQuickPresets(parsed);
           } catch (e: unknown) {
-            AppLogger.warn('[Favorites] Failed to parse quick presets', { error: (e instanceof Error ? e.message : String(e)) });
+            AppLogger.warn('[Favorites] Failed to parse quick presets', { error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 });
           }
         }
       }).catch((err: unknown) => {
         if (!active) return;
         const msg = err instanceof Error ? err.message : String(err);
-        AppLogger.warn('[useFavorites] QuickPresets read failed', { error: msg });
+        AppLogger.warn('[useFavorites] QuickPresets read failed', { error: msg, payload_size: 0, ssi: 0 });
         setErrorMsg(msg);
         setStatus('error');
       })
@@ -175,7 +175,7 @@ export function useFavorites() {
       await AsyncStorage.setItem(STORAGE_FAVORITES, JSON.stringify(newFavorites));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.warn('[Favorites] Local save failed', { error: msg });
+      AppLogger.warn('[Favorites] Local save failed', { error: msg, payload_size: 0, ssi: 0 });
     }
     
     // 2. Save Cloud
@@ -196,13 +196,13 @@ export function useFavorites() {
           if (error) throw error;
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
-          AppLogger.warn('[Favorites] Cloud save failed', { error: msg });
+          AppLogger.warn('[Favorites] Cloud save failed', { error: msg, payload_size: 0, ssi: 0 });
         }
       })();
     }
 
     closePrompt();
-  }, [favorites, favPromptTargetId, closePrompt]);
+  }, [favorites, favPromptTargetId, closePrompt, user]);
 
   const deleteFavorite = useCallback(async (id: string) => {
     const newFavorites = favorites.filter(f => f.id !== id);
@@ -214,7 +214,7 @@ export function useFavorites() {
       await AsyncStorage.setItem(STORAGE_FAVORITES, JSON.stringify(newFavorites));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.warn('[Favorites] Local delete failed', { error: msg });
+      AppLogger.warn('[Favorites] Local delete failed', { error: msg, payload_size: 0, ssi: 0 });
     }
     
     // 2. Delete Cloud
@@ -225,11 +225,11 @@ export function useFavorites() {
           if (error) throw error;
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
-          AppLogger.warn('[Favorites] Cloud delete failed', { error: msg });
+          AppLogger.warn('[Favorites] Cloud delete failed', { error: msg, payload_size: 0, ssi: 0 });
         }
       })();
     }
-  }, [favorites, activeFavoriteId]);
+  }, [favorites, activeFavoriteId, user]);
 
   const saveQuickPreset = useCallback(async (index: number, preset: IQuickPreset) => {
     const newArr = [...quickPresets];
@@ -239,7 +239,7 @@ export function useFavorites() {
       await AsyncStorage.setItem(STORAGE_QUICK_PRESETS, JSON.stringify(newArr));
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.warn('[Favorites] Local quick preset save failed', { error: msg });
+      AppLogger.warn('[Favorites] Local quick preset save failed', { error: msg, payload_size: 0, ssi: 0 });
     }
     closePrompt();
   }, [quickPresets, closePrompt]);

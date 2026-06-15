@@ -11,6 +11,7 @@ export function useAdminSettings(visible: boolean) {
   const [appSettings, setAppSettings] = useState<AppSettingsMap>({});
   const [status, setStatus] = useState<SettingsStatus>('idle');
   const isMountedRef = useRef(true);
+  const isDataLoadingRef = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -20,6 +21,8 @@ export function useAdminSettings(visible: boolean) {
   }, []);
 
   const loadSettings = useCallback(async () => {
+    if (isDataLoadingRef.current) return;
+    isDataLoadingRef.current = true;
     setStatus('loading');
     try {
       const settings = await AppSettingsService.fetchAllSettings();
@@ -28,8 +31,10 @@ export function useAdminSettings(visible: boolean) {
       setStatus('success');
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
-      AppLogger.warn('[AdminSettings] Failed to fetch app settings', { error: (err instanceof Error ? err.message : String(err)) });
+      AppLogger.warn('[AdminSettings] Failed to fetch app settings', { error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
       setStatus('error');
+    } finally {
+      isDataLoadingRef.current = false;
     }
   }, []);
 
@@ -47,11 +52,11 @@ export function useAdminSettings(visible: boolean) {
         // Simple rollback if failed
         loadSettings();
       } else {
-        AppLogger.log('HARDWARE_CONFIG_CHANGED', { key, value });
+        AppLogger.log('HARDWARE_CONFIG_CHANGED', { key, value, payload_size: 0, ssi: 0 });
       }
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
-      AppLogger.warn(`[AdminSettings] Failed to update setting ${key}`, { error: (err instanceof Error ? err.message : String(err)) });
+      AppLogger.warn(`[AdminSettings] Failed to update setting ${key}`, { error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
       loadSettings();
     }
   }, [loadSettings]);

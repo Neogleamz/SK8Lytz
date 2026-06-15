@@ -69,7 +69,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
   // If this fires, the EEPROM 0x63 response hasn't populated hwSettings before the first dispatch.
   if (__DEV__ && !hwSettings?.detected && hwSettings?.ledPoints) {
     AppLogger.warn('[useControllerDispatch] numLEDs resolved WITHOUT EEPROM probe — using product defaults', {
-      numLEDs, hwLedPoints: hwSettings?.ledPoints, propPoints: points, detected: hwSettings?.detected,
+      numLEDs, hwLedPoints: hwSettings?.ledPoints, propPoints: points, detected: hwSettings?.detected, payload_size: 0, ssi: 0
     });
   }
 
@@ -87,7 +87,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
   const sendColor = useCallback(
     async (r: number, g: number, b: number) => {
       if (!writeToDevice) {
-        if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "sendColor called but writeToDevice is undefined", { function: 'sendColor' });
+        if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "sendColor called but writeToDevice is undefined", { function: 'sendColor', payload_size: 0, ssi: 0 });
         return;
       }
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
@@ -120,7 +120,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       currentDirection?: number
     ) => {
       if (!writeToDevice) {
-        if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "applyFixedPattern called but writeToDevice is undefined", { function: 'applyFixedPattern' });
+        if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "applyFixedPattern called but writeToDevice is undefined", { function: 'applyFixedPattern', payload_size: 0, ssi: 0 });
         return;
       }
 
@@ -191,7 +191,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       spd?: number
     ) => {
       if (!writeToDevice) {
-        if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "applyStaticModePattern called but writeToDevice is undefined", { function: 'applyStaticModePattern' });
+        if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "applyStaticModePattern called but writeToDevice is undefined", { function: 'applyStaticModePattern', payload_size: 0, ssi: 0 });
         return;
       }
       const pR = parseInt(selectedColor.slice(1, 3), 16);
@@ -246,7 +246,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
   const applyEmergencyPattern = useCallback(
     async (spd: number, bright: number) => {
       if (!writeToDevice) {
-        if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "applyEmergencyPattern called but writeToDevice is undefined", { function: 'applyEmergencyPattern' });
+        if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "applyEmergencyPattern called but writeToDevice is undefined", { function: 'applyEmergencyPattern', payload_size: 0, ssi: 0 });
         return;
       }
       const factor = bright / 100;
@@ -302,14 +302,14 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       matrix: number
     ) => {
       if (!writeToDevice) {
-        if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "handleMusicChange called but writeToDevice is undefined", { function: 'handleMusicChange' });
+        if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "handleMusicChange called but writeToDevice is undefined", { function: 'handleMusicChange', payload_size: 0, ssi: 0 });
         return;
       }
 
       const c1 = hexToRgb(color1Hex);
       const c2 = hexToRgb(color2Hex);
 
-      AppLogger.log("MUSIC_CONFIG_REQUESTED", { patternId, src, c1Hex: color1Hex, c2Hex: color2Hex, matrix });
+      AppLogger.log("MUSIC_CONFIG_REQUESTED", { patternId, src, c1Hex: color1Hex, c2Hex: color2Hex, matrix, payload_size: 0, ssi: 0 });
 
       // BUG FIX: Previously passed `src === 'DEVICE'` as the `isOn` byte, which
       // disabled music mode (isOn=false -> 0x00) whenever APP mic was selected.
@@ -360,7 +360,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
   const setPower = useCallback(
     async (isOn: boolean) => {
       if (!writeToDevice) {
-        if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "setPower called but writeToDevice is undefined", { function: 'setPower' });
+        if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "setPower called but writeToDevice is undefined", { function: 'setPower', payload_size: 0, ssi: 0 });
         return;
       }
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
@@ -382,7 +382,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
   const setMultiColor = useCallback(
     async (colors: { r: number; g: number; b: number }[], ledPoints: number, speed: number, direction: number, transitionType?: number) => {
       if (!writeToDevice) {
-        if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "setMultiColor called but writeToDevice is undefined", { function: 'setMultiColor' });
+        if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "setMultiColor called but writeToDevice is undefined", { function: 'setMultiColor', payload_size: 0, ssi: 0 });
         return;
       }
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];

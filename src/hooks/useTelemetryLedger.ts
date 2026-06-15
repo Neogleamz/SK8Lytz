@@ -40,8 +40,6 @@ function stopSharedTimer() {
 let _payloadBuffer: TelemetryPayload = {};
 let _activeState: { type: 'pattern' | 'color' | 'mode', id: string, startTime: number } | null = null;
 let _sessionStartTime: number = Date.now();
-let _isFlushing = false;
-let _appStateInitialized = false;
 
 // Global Helpers
 const mergeIntoBuffer = (incoming: TelemetryPayload) => {
@@ -91,11 +89,12 @@ const closeCurrentState = () => {
   _activeState = null;
 };
 
-const flushToDatabase = async () => {
-  if (_isFlushing) return;
+let _flushPromise: Promise<void> | null = null;
+let _flushPending = false;
+
+const _doFlush = async () => {
   if (!supabase) return;
   
-  _isFlushing = true;
   try {
     // 1. Close any active stopwatch
     closeCurrentState();
@@ -132,7 +131,7 @@ const flushToDatabase = async () => {
       // Success! Clear memory buffer and AsyncStorage
       _payloadBuffer = {};
       await AsyncStorage.removeItem(TELEMETRY_BUFFER_KEY);
-      AppLogger.debug('Telemetry flushed successfully');
+      AppLogger.debug('Telemetry flushed successfully', { payload_size: 0, ssi: 0 });
       
     } catch (err: unknown) {
       // Failed (e.g., offline). Save back to AsyncStorage to retry later.
@@ -147,9 +146,28 @@ const flushToDatabase = async () => {
     }
   } catch (e: unknown) {
     AppLogger.error('[useTelemetryLedger] flushToDatabase failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
-  } finally {
-    _isFlushing = false;
   }
+};
+
+const flushToDatabase = async (): Promise<void> => {
+  if (_flushPromise) {
+    _flushPending = true;
+    return _flushPromise.then(() => {
+      if (_flushPending) {
+        _flushPending = false;
+        return flushToDatabase();
+      }
+    });
+  }
+  
+  _flushPromise = _doFlush().finally(() => {
+    _flushPromise = null;
+    if (_flushPending) {
+      _flushPending = false;
+      flushToDatabase();
+    }
+  });
+  return _flushPromise;
 };
 
 /**
@@ -186,18 +204,22 @@ export function useTelemetryLedger() {
 
   // Hook into AppState to flush on backgrounding
   useEffect(() => {
-    if (!_appStateInitialized) {
-      _appStateInitialized = true;
-      AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
-        if (nextAppState.match(/inactive|background/)) {
-          flushToDatabase();
-        }
-      });
+    const handleAppState = (nextAppState: AppStateStatus) => {
+      if (nextAppState.match(/inactive|background/)) {
+        flushToDatabase();
+      }
+    };
+    const sub = AppState.addEventListener('change', handleAppState);
 
-      // 15-Minute Heartbeat flush
-      _registeredFlushCallbacks.add(flushToDatabase);
-      startSharedTimer();
-    }
+    // 15-Minute Heartbeat flush
+    _registeredFlushCallbacks.add(flushToDatabase);
+    startSharedTimer();
+
+    return () => {
+      sub.remove();
+      _registeredFlushCallbacks.delete(flushToDatabase);
+      stopSharedTimer();
+    };
   }, []);
 
   return { trackPattern, trackColor, trackMode, incrementCounter, injectStreetSummary, flushToDatabase };

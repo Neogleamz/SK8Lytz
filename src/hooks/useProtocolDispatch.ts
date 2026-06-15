@@ -113,7 +113,12 @@ export function useProtocolDispatch() {
     // by the BLE stack if sent through executeProtocolResults as a single packet.
     const cmdByte = payload[0];
     if (cmdByte === 0x51 && payload.length > 200) {
-      return writeChunked(payload, targetDeviceId ?? undefined).then(() => true as const);
+      return writeChunked(payload, targetDeviceId ?? undefined)
+        .then(() => true as const)
+        .catch((err: unknown) => {
+          AppLogger.warn('[useProtocolDispatch] writeChunked failed', { error: err instanceof Error ? err.message : String(err), payload_size: payload.length, ssi: 0 });
+          return false as const;
+        });
     }
 
     // For all other raw payloads, wrap in a ProtocolResult and dispatch normally.

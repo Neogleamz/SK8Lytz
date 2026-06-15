@@ -107,7 +107,7 @@ export function useRegistration() {
         setRegisteredDevices(merged);
       } catch (e: unknown) {
         AppLogger.warn('[useRegistration] Boot initialization or cloud sync failed', {
-          error: e instanceof Error ? e.message : String(e)
+          error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0
         });
       } finally {
         if (isActive) setIsLoading(false);
@@ -141,7 +141,7 @@ export function useRegistration() {
       return ok;
     } catch (e: unknown) {
       if (!isMountedRef.current) return false;
-      AppLogger.warn('[Registration] Save failed:', e instanceof Error ? e.message : String(e));
+      AppLogger.warn('[Registration] Save failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       setHasPendingSync(true);
       return false;
     }
@@ -157,7 +157,7 @@ export function useRegistration() {
       return ok;
     } catch (e: unknown) {
       if (!isMountedRef.current) return false;
-      AppLogger.warn('[Registration] Save all devices failed:', e instanceof Error ? e.message : String(e));
+      AppLogger.warn('[Registration] Save all devices failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       setHasPendingSync(true);
       return false;
     }
@@ -171,7 +171,7 @@ export function useRegistration() {
     try {
       return await repo.checkDeviceClaimed(deviceMac, fingerprint, userId);
     } catch (e: unknown) {
-      AppLogger.warn('[Registration] Check device claimed failed:', e instanceof Error ? e.message : String(e));
+      AppLogger.warn('[Registration] Check device claimed failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       return 'offline_unknown';
     }
   }, [userId]);
@@ -184,7 +184,7 @@ export function useRegistration() {
       setRegisteredDevices(repo.getDevices());
     } catch (e: unknown) {
       if (!isMountedRef.current) return;
-      AppLogger.warn('[Registration] Deregister failed:', e instanceof Error ? e.message : String(e));
+      AppLogger.warn('[Registration] Deregister failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       Alert.alert('Delete Failed', `Could not remove device: ${(e instanceof Error ? e.message : String(e))}`);
     }
   }, [userId]);
@@ -211,7 +211,7 @@ export function useRegistration() {
       if (!isMountedRef.current) return;
       setRegisteredDevices(repo.getDevices());
     } catch (e: unknown) {
-      AppLogger.warn('[Registration] Swap positions failed:', e instanceof Error ? e.message : String(e));
+      AppLogger.warn('[Registration] Swap positions failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
     }
   }, [userId]);
 
@@ -220,7 +220,7 @@ export function useRegistration() {
     try {
       return await repo.hasRegistrations(userId);
     } catch (e: unknown) {
-      AppLogger.warn('[Registration] Check registrations failed:', e instanceof Error ? e.message : String(e));
+      AppLogger.warn('[Registration] Check registrations failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       return false;
     }
   }, [userId]);
@@ -234,7 +234,7 @@ export function useRegistration() {
       if (!isMountedRef.current) return;
       setRegisteredDevices(merged);
     } catch (e: unknown) {
-      AppLogger.warn('[Registration] Sync from cloud failed:', e instanceof Error ? e.message : String(e));
+      AppLogger.warn('[Registration] Sync from cloud failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
     }
   }, [userId]);
 

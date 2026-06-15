@@ -41,6 +41,11 @@ export function useDashboardCrew({
   const [lastLeaderScene, setLastLeaderScene] = useState<Record<string, any> | null>(null);
   const [pendingJoinCrewId, setPendingJoinCrewId] = useState<string | null>(null);
 
+  const onApplySceneRef = React.useRef(onApplyScene);
+  useEffect(() => {
+    onApplySceneRef.current = onApplyScene;
+  }, [onApplyScene]);
+
   useEffect(() => {
     return crewService.subscribe(() => {
       setCrewSession(crewService.currentSession);
@@ -80,7 +85,7 @@ export function useDashboardCrew({
           }
         } else {
           const u = crewService.subscribeAsMember(session.id, (scene) => {
-            if (isMounted) onApplyScene(scene);
+            if (isMounted) onApplySceneRef.current(scene);
           });
           
           if (!isMounted) {
@@ -92,7 +97,7 @@ export function useDashboardCrew({
           // Apply last known scene immediately on rejoin
           const lastScene = await crewService.fetchLastScene(session.id).catch(() => null);
           if (isMounted && lastScene) {
-            onApplyScene(lastScene);
+            onApplySceneRef.current(lastScene);
           }
         }
       } catch (e: unknown) {

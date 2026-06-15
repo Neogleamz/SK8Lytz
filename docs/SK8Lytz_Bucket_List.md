@@ -32,12 +32,12 @@
 > **Worktree**: `wave-1-sweep` · **Type**: Parallel · **Prerequisite**: None
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — Deep-Dive Code Hunt orthogonal analysis
 
-### ⚡ [BATCH:WAVE-6] — `wave-6-sweep` — READY
+### ⚡ [BATCH:WAVE-6] — `wave-6-sweep` — IN PROGRESS
 > **Worktree**: `wave-6-sweep` · **Type**: Parallel · **Prerequisite**: Wave 5 merged
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — AST-Verified Extraction Foundation
 
-- [ ] **`extract-and-sweep-AppLogger.ts`**
-  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
+- [/] **`extract-and-sweep-AppLogger.ts`**
+  - **Tags:** `[🏃 IN PROGRESS]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
   - **Goal:** Extract logic and resolve violations in `AppLogger.ts` (>30KB monolith).
   - **Decision Log:** S4 Monolith limit prevents direct edits. AST analysis confirms it is a foundational dependency for DeviceRepository and CrewService.
   - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-extract-and-sweep-AppLogger.ts.md](./plans/PLAN-extract-and-sweep-AppLogger.ts.md)
@@ -67,8 +67,8 @@
   - **Source of Truth:** 📖 [PLAN-extract-and-sweep-CrewService.ts.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-extract-and-sweep-CrewService.ts.md)
   - **Details:** Dependent layer extraction. `Prerequisite: Wave 6 fully merged into master before this worktree is created.`
 
-- [ ] **`sweep-src-hooks`**
-  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[✅ L-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
+- [/] **`sweep-src-hooks`**
+  - **Tags:** `[🏃 IN PROGRESS]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[✅ L-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
   - **Goal:** Resolve 133 telemetry and architectural rule violations in the hooks domain.
   - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
   - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-hooks.md](./plans/PLAN-sweep-src-hooks.md)
@@ -77,8 +77,8 @@
   - **Source of Truth:** 📖 [PLAN-sweep-src-hooks.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-hooks.md)
   - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 5 fully merged into master before this worktree is created.`
 
-- [ ] **`sweep-src-components-dashboard`**
-  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
+- [/] **`sweep-src-components-dashboard`**
+  - **Tags:** `[🏃 IN PROGRESS]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
   - **Goal:** Resolve 8 telemetry and architectural rule violations in the components-dashboard domain.
   - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
   - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-dashboard.md](./plans/PLAN-sweep-src-components-dashboard.md)
@@ -87,8 +87,8 @@
   - **Source of Truth:** 📖 [PLAN-sweep-src-components-dashboard.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-dashboard.md)
   - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 5 fully merged into master before this worktree is created.`
 
-- [ ] **`sweep-src-components-CommunityModal.tsx`**
-  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
+- [/] **`sweep-src-components-CommunityModal.tsx`**
+  - **Tags:** `[🏃 IN PROGRESS]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[🚧 M-RISK]` `[🍪 Snack]` `[🧠 THINK]` `[BATCH:WAVE-6]` `[WAVE:6]`
   - **Goal:** Resolve 1 telemetry and architectural rule violations in the components-CommunityModal.tsx domain.
   - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
   - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-components-CommunityModal.tsx.md](./plans/PLAN-sweep-src-components-CommunityModal.tsx.md)

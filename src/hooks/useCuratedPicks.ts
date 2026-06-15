@@ -67,7 +67,7 @@ export function useCuratedPicks() {
         }
 
         if (data && Array.isArray(data)) {
-          AppLogger.log('PICK_LOADED', { source: 'supabase', count: data.length });
+          AppLogger.log('PICK_LOADED', { source: 'supabase', count: data.length, payload_size: 0, ssi: 0 });
           // Map snake_case DB columns → IFavoriteState camelCase
           const mapped: IFavoriteState[] = data.map((row) => ({
             id: row.id,
@@ -102,7 +102,7 @@ export function useCuratedPicks() {
 
           // Update cache asynchronously
           AsyncStorage.setItem(CACHE_KEY, JSON.stringify(mapped)).catch(e => {
-            if (active) AppLogger.warn('Failed to cache curated picks', e instanceof Error ? e.message : String(e));
+            if (active) AppLogger.warn('Failed to cache curated picks', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
           });
         }
       } catch (e: unknown) {

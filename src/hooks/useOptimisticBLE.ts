@@ -114,11 +114,12 @@ export function useOptimisticBLE({
           } else {
             // Phase 3b: RECONCILE — hardware rejected
             setWriteStatus('RECONCILED');
-            AppLogger.warn('[OptimisticBLE] Write failed — triggering reconciliation');
+            AppLogger.warn('[OptimisticBLE] Write failed — triggering reconciliation', { payload_size: 0, ssi: 0 });
             AppLogger.log('BLE_WRITE_ERROR', {
               payload_size: payload.length,
               payloadHead: payload.slice(0, 4).map(b => b.toString(16)).join(' '),
               source: 'optimistic_reconcile',
+              ssi: 0,
             });
 
             // Error haptic (mobile only) unless globally disabled

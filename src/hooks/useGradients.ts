@@ -49,7 +49,7 @@ export function useGradients() {
     loadGradients();
   }, [loadGradients]);
 
-  const saveGradient = async (preset: Partial<CustomBuilderPreset>) => {
+  const saveGradient = useCallback(async (preset: Partial<CustomBuilderPreset>) => {
     try {
       // Basic check to see if this is likely a new creation (id starts with temp_)
       const isNew = preset.id?.startsWith('temp_') || !preset.id;
@@ -62,9 +62,9 @@ export function useGradients() {
       AppLogger.error('USE_GRADIENTS_SAVE_ERROR', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
       throw e;
     }
-  };
+  }, [userId, loadGradients, telemetry]);
 
-  const deleteGradient = async (id: string) => {
+  const deleteGradient = useCallback(async (id: string) => {
     try {
       await GradientsService.deleteGradient(id, userId);
       await loadGradients();
@@ -72,7 +72,7 @@ export function useGradients() {
       AppLogger.error('USE_GRADIENTS_DELETE_ERROR', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
       throw e;
     }
-  };
+  }, [userId, loadGradients]);
 
   return {
     gradients,

@@ -15,6 +15,7 @@
  * Platform: React Native (Android only for sensors — web returns early)
  */
 import { Accelerometer } from 'expo-sensors';
+import { scrubPII } from '../utils/piiScrubber';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
@@ -78,7 +79,6 @@ export function useStreetMode({
   const [motionState, setMotionState] = useState<MotionState>('STOPPED');
   const isStreetBraking = motionState === 'HARD_BRAKING';
 
-  const streetBrakingRef = useRef(false);
   const lastAccelRef = useRef({ x: 0, y: 0, z: 0 });
   const motionStateRef = useRef<MotionState>('STOPPED');
   const lastGpsSpeeds = useRef<number[]>([]);
@@ -190,10 +190,6 @@ export function useStreetMode({
   // ── Accelerometer Jerk Detector ──────────────────────────────────────────
   useEffect(() => {
     if (activeMode !== 'STREET') {
-      if (Platform.OS !== 'web') Accelerometer.removeAllListeners();
-      if (streetBrakingRef.current) {
-        streetBrakingRef.current = false;
-      }
       return;
     }
 
@@ -212,14 +208,16 @@ export function useStreetMode({
       const isActivePush = jerkMag > 0.4 && !isBrakingJerk;
 
       if (isBrakingJerk) {
-        if (!streetBrakingRef.current) {
-          AppLogger.log('STREET_JERK_DETECTED', { jerkMag: parseFloat(jerkMag.toFixed(3)), threshold: parseFloat(threshold.toFixed(3)), gpsSpeedMph: gpsSpeedRef.current, ...deviceContextRef.current });
+        if (motionStateRef.current !== 'HARD_BRAKING') {
+          const sanitizedContext = { ...deviceContextRef.current };
+          if (sanitizedContext.mac) sanitizedContext.mac = scrubPII(String(sanitizedContext.mac));
+          if (sanitizedContext.deviceId) sanitizedContext.deviceId = scrubPII(String(sanitizedContext.deviceId));
+          if (sanitizedContext.macAddress) sanitizedContext.macAddress = scrubPII(String(sanitizedContext.macAddress));
+          AppLogger.log('STREET_JERK_DETECTED', { jerkMag: parseFloat(jerkMag.toFixed(3)), threshold: parseFloat(threshold.toFixed(3)), gpsSpeedMph: gpsSpeedRef.current, ...sanitizedContext });
         }
-        streetBrakingRef.current = true;
         updateMotion('HARD_BRAKING');
       } else {
-        if (streetBrakingRef.current) {
-          streetBrakingRef.current = false;
+        if (motionStateRef.current === 'HARD_BRAKING') {
           if (lastGpsSpeeds.current[lastGpsSpeeds.current.length - 1] < 1.0) updateMotion('STOPPED');
           else updateMotion('CRUISING');
         } else if (isActivePush && motionStateRef.current !== 'SLOWING_DOWN') {

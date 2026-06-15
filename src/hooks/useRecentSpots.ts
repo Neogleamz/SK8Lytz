@@ -42,6 +42,8 @@ export function useRecentSpots() {
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.warn('[useRecentSpots] Failed to load recent spots from storage', {
         error: msg,
+        payload_size: 0,
+        ssi: 0
       });
       setError(msg);
     } finally {
@@ -73,6 +75,8 @@ export function useRecentSpots() {
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.warn('[useRecentSpots] Failed to add recent spot', {
         error: msg,
+        payload_size: 0,
+        ssi: 0
       });
       setError(msg);
     }

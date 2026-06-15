@@ -88,12 +88,12 @@ export function useDashboardProfile({
     let active = true;
     AppSettingsService.fetchAllSettings().then(val => {
       if (active) setAppSettings(val);
-    });
+    }).catch((e: unknown) => AppLogger.warn("useDashboardProfile - Failed to fetch settings", { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
     const sub = AppState.addEventListener('change', (s: AppStateStatus) => {
       if (s === 'active') {
         AppSettingsService.fetchAllSettings().then(val => {
           if (active) setAppSettings(val);
-        });
+        }).catch((e: unknown) => AppLogger.warn("useDashboardProfile - Failed to fetch settings", { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
       }
     });
     return () => {
@@ -113,7 +113,7 @@ export function useDashboardProfile({
     );
 
     return () => {
-      notificationService.cleanup(session?.user?.id).catch((e) => AppLogger.warn('NOTIFICATION_SERVICE', { event: 'cleanup_failed', error: (e instanceof Error ? e.message : String(e)) }));
+      notificationService.cleanup(session?.user?.id).catch((e) => AppLogger.warn('NOTIFICATION_SERVICE', { event: 'cleanup_failed', error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 }));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -123,7 +123,7 @@ export function useDashboardProfile({
     let active = true;
     AsyncStorage.getItem(STORAGE_AUTH_USERNAME).then(val => {
       if (active && val && !authUsername) setAuthUsername(val);
-    }).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_AUTH_USERNAME, event: 'load_failed', error: (e instanceof Error ? e.message : String(e)) }));
+    }).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_AUTH_USERNAME, event: 'load_failed', error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 }));
     return () => {
       active = false;
     };
@@ -138,7 +138,7 @@ export function useDashboardProfile({
     const sessionEmailPrefix = session?.user?.email?.split('@')[0];
     const fallback = dbDisplay || dbUser || sessionEmailPrefix || 'GUEST';
     setAuthUsername(fallback);
-    AsyncStorage.setItem(STORAGE_AUTH_USERNAME, fallback).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_AUTH_USERNAME, event: 'save_failed', error: (e instanceof Error ? e.message : String(e)) }));
+    AsyncStorage.setItem(STORAGE_AUTH_USERNAME, fallback).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_AUTH_USERNAME, event: 'save_failed', error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 }));
   }, [userProfile, session]);
 
   const handleLogout = async (): Promise<void> => {

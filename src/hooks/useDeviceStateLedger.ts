@@ -17,7 +17,7 @@
  * For UI widget state, see `useControllerPersistence.ts`.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { AppLogger } from '../services/AppLogger';
 import type { DevicePatternState } from '../types/dashboard.types';
@@ -45,18 +45,16 @@ export const normalizeMac = (rawId: string): string => {
 export const isStale = (ts: number): boolean =>
   Date.now() - ts > 24 * 60 * 60 * 1000;
 
-interface GlobalWithLedger {
-  __sk8lytz_ledger_cache?: Map<string, DevicePatternState>;
-  __sk8lytz_ledger_timers?: Map<string, NodeJS.Timeout>;
+declare global {
+  var __sk8lytz_ledger_cache: Map<string, DevicePatternState> | undefined;
+  var __sk8lytz_ledger_timers: Map<string, NodeJS.Timeout> | undefined;
 }
-
-const globalWithLedger = global as unknown as GlobalWithLedger;
 
 /**
  * Module-level in-memory cache shared across all hook instances.
  * Populated on load(), updated on save(). Synchronous — no async penalty.
  */
-const memoryCache: Map<string, DevicePatternState> = globalWithLedger.__sk8lytz_ledger_cache || new Map<string, DevicePatternState>();
+const memoryCache: Map<string, DevicePatternState> = global.__sk8lytz_ledger_cache || new Map<string, DevicePatternState>();
 
 /**
  * Module-level debounce timer map — shared across ALL hook instances.
@@ -64,11 +62,11 @@ const memoryCache: Map<string, DevicePatternState> = globalWithLedger.__sk8lytz_
  * even when DashboardScreen and DockedController both call save() simultaneously.
  * Previously this was a per-instance useRef, causing independent timers to race.
  */
-const debounceTimers: Map<string, NodeJS.Timeout> = globalWithLedger.__sk8lytz_ledger_timers || new Map<string, NodeJS.Timeout>();
+const debounceTimers: Map<string, NodeJS.Timeout> = global.__sk8lytz_ledger_timers || new Map<string, NodeJS.Timeout>();
 
 if (__DEV__) {
-  globalWithLedger.__sk8lytz_ledger_cache = memoryCache;
-  globalWithLedger.__sk8lytz_ledger_timers = debounceTimers;
+  global.__sk8lytz_ledger_cache = memoryCache;
+  global.__sk8lytz_ledger_timers = debounceTimers;
 }
 
 // Moved to useEffect inside useDeviceStateLedger
@@ -80,27 +78,39 @@ if (__DEV__) {
  * useDockedControllerState. Without this, cache is always empty on cold
  * start and pre-warm never fires even though data exists in storage.
  */
+let _warmPromise: Promise<void> | null = null;
+
 export async function warmLedgerCache(): Promise<void> {
-  try {
-    const allKeys = await AsyncStorage.getAllKeys();
-    const ledgerKeys = allKeys.filter(k => k.startsWith(KEY_PREFIX));
-    if (ledgerKeys.length === 0) return;
-    const pairs = await AsyncStorage.multiGet(ledgerKeys);
-    pairs.forEach(([, raw]) => {
-      if (!raw) return;
-      try {
-        const parsed: DevicePatternState = JSON.parse(raw);
-        if (parsed?.deviceMac) {
-          memoryCache.set(normalizeMac(parsed.deviceMac), parsed);
+  if (_warmPromise) return _warmPromise;
+
+  _warmPromise = (async () => {
+    try {
+      const allKeys = await AsyncStorage.getAllKeys();
+      const ledgerKeys = allKeys.filter(k => k.startsWith(KEY_PREFIX));
+      if (ledgerKeys.length === 0) return;
+      const pairs = await AsyncStorage.multiGet(ledgerKeys);
+      pairs.forEach(([, raw]) => {
+        if (!raw) return;
+        try {
+          const parsed: DevicePatternState = JSON.parse(raw);
+          if (parsed?.deviceMac) {
+            memoryCache.set(normalizeMac(parsed.deviceMac), parsed);
+          }
+        } catch (e: unknown) {
+          AppLogger.warn('Failed to parse ledger entry from storage during cache warm', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         }
-      } catch (e: unknown) {
-        AppLogger.warn('Failed to parse ledger entry from storage during cache warm', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
-      }
-    });
-  } catch (e: unknown) {
-    AppLogger.error('Failed to warm ledger cache from AsyncStorage', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
-  }
+      });
+    } catch (e: unknown) {
+      AppLogger.error('Failed to warm ledger cache from AsyncStorage', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
+    }
+  })();
+
+  return _warmPromise.finally(() => {
+    _warmPromise = null;
+  });
 }
+
+const _loadLocks = new Map<string, Promise<DevicePatternState | null>>();
 
 export function useDeviceStateLedger() {
   // debounceTimers is now module-level (shared singleton) — see top of file.
@@ -160,17 +170,31 @@ export function useDeviceStateLedger() {
       return memoryCache.get(key)!;
     }
 
+    if (_loadLocks.has(key)) {
+      return _loadLocks.get(key)!;
+    }
+
     // Slow path: AsyncStorage lookup
+    const loadPromise = (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(`${KEY_PREFIX}${key}`);
+        if (!raw) return null;
+        const parsed: DevicePatternState = JSON.parse(raw);
+        // Warm the cache for future synchronous reads
+        memoryCache.set(key, parsed);
+        return parsed;
+      } catch (e: unknown) {
+        AppLogger.error('Failed to read device state ledger entry from storage', e instanceof Error ? e.message : String(e), { deviceId: scrubPII(key), payload_size: 0, ssi: 0 });
+        return null;
+      }
+    })();
+
+    _loadLocks.set(key, loadPromise);
+
     try {
-      const raw = await AsyncStorage.getItem(`${KEY_PREFIX}${key}`);
-      if (!raw) return null;
-      const parsed: DevicePatternState = JSON.parse(raw);
-      // Warm the cache for future synchronous reads
-      memoryCache.set(key, parsed);
-      return parsed;
-    } catch (e: unknown) {
-      AppLogger.error('Failed to read device state ledger entry from storage', e instanceof Error ? e.message : String(e), { deviceId: scrubPII(key) , payload_size: 0, ssi: 0 });
-      return null;
+      return await loadPromise;
+    } finally {
+      _loadLocks.delete(key);
     }
   }, []);
 

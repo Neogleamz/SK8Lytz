@@ -1,5 +1,5 @@
 import { STORAGE_RADIUS_PREFERENCE } from '../constants/storageKeys';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { crewService, CrewSession } from '../services/CrewService';
@@ -63,21 +63,25 @@ export function useCrewHub(visible: boolean, step: string) {
   }, [visible, step, user?.id]);
 
   // Load member counts for My Crews
+  const fetchingCrewIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     let active = true;
     if (!visible || step !== 'landing' || myCrews.length === 0) return;
     myCrews.forEach(crew => {
-      if (crewMemberCounts[crew.id]) return;
+      if (crewMemberCounts[crew.id] || fetchingCrewIdsRef.current.has(crew.id)) return;
+      fetchingCrewIdsRef.current.add(crew.id);
       profileService.getCrewMembersForDisplay(crew.id).then(info => {
         if (!active) return;
         setCrewMemberCounts(prev => ({ ...prev, [crew.id]: info }));
       }).catch((e) => { 
         if (!active) return;
         AppLogger.error('[useCrewHub] Failed to load member counts', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 }); 
+      }).finally(() => {
+        fetchingCrewIdsRef.current.delete(crew.id);
       });
     });
     return () => { active = false; };
-  }, [visible, step, myCrews]);
+  }, [visible, step, myCrews, crewMemberCounts]);
 
   useEffect(() => {
     // Attempt to silently grab location if permission exists so map knows where to center initially

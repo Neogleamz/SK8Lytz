@@ -183,7 +183,7 @@ export function useDashboardGroups({
 
       if (configsChanged) {
         // Persist via DeviceRepository singleton (canonical write path)
-        repo.setConfigs(nextConfigs).catch((e) => AppLogger.warn('PERSISTENCE', { event: 'repo_set_configs_failed', error: (e instanceof Error ? e.message : String(e)) }));
+        repo.setConfigs(nextConfigs).catch((e) => AppLogger.warn('PERSISTENCE', { event: 'repo_set_configs_failed', error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 }));
         return nextConfigs;
       }
       return prevConfigs;
@@ -215,7 +215,7 @@ export function useDashboardGroups({
       if (Object.keys(configs).length > 0) {
         setDeviceConfigs(configs);
       }
-    }).catch((e) => AppLogger.warn('PERSISTENCE', { event: 'repo_initialize_failed', error: (e instanceof Error ? e.message : String(e)) }));
+    }).catch((e) => AppLogger.warn('PERSISTENCE', { event: 'repo_initialize_failed', error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 }));
 
     // Subscribe: re-read configs on every repo mutation (saveDevice, updateConfig, etc.)
     const unsubscribe = repo.subscribe(() => {
@@ -259,15 +259,15 @@ export function useDashboardGroups({
     AsyncStorage.getItem(STORAGE_LAST_GROUP_PATTERNS).then(saved => {
       if (!isMountedRef.current) return;
       if (saved) {
-        try { setLastGroupPatterns(JSON.parse(saved)); } catch (e: unknown) { AppLogger.warn('[Groups] Failed to parse last group patterns', { error: (e instanceof Error ? e.message : String(e)) }); }
+        try { setLastGroupPatterns(JSON.parse(saved)); } catch (e: unknown) { AppLogger.warn('[Groups] Failed to parse last group patterns', { error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 }); }
       }
-    }).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_LAST_GROUP_PATTERNS, event: 'load_failed', error: (e instanceof Error ? e.message : String(e)) }));
+    }).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_LAST_GROUP_PATTERNS, event: 'load_failed', error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 }));
   }, []);
 
   const setLastGroupPattern = async (groupId: string, snapshot: GroupPatternSnapshot): Promise<void> => {
     const updated = { ...lastGroupPatterns, [groupId]: snapshot };
     setLastGroupPatterns(updated);
-    await AsyncStorage.setItem(STORAGE_LAST_GROUP_PATTERNS, JSON.stringify(updated)).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_LAST_GROUP_PATTERNS, event: 'save_failed', error: (e instanceof Error ? e.message : String(e)) }));
+    await AsyncStorage.setItem(STORAGE_LAST_GROUP_PATTERNS, JSON.stringify(updated)).catch((e) => AppLogger.warn('PERSISTENCE', { key: STORAGE_LAST_GROUP_PATTERNS, event: 'save_failed', error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 }));
   };
 
   // ─── Group modal FSM ──────────────────────────────────────────────────────
@@ -358,7 +358,7 @@ export function useDashboardGroups({
               await _scrubGhostGroupFromLocal(groupToDelete);
               closeGroupModal();
             } catch (e: unknown) {
-              AppLogger.warn('[useDashboardGroups] Forget Group Only failed', { error: e instanceof Error ? e.message : String(e) });
+              AppLogger.warn('[useDashboardGroups] Forget Group Only failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
             }
           }
         },
@@ -376,7 +376,7 @@ export function useDashboardGroups({
               await _scrubGhostGroupFromLocal(groupToDelete);
               closeGroupModal();
             } catch (e: unknown) {
-              AppLogger.warn('[useDashboardGroups] Deregister Hardware failed', { error: e instanceof Error ? e.message : String(e) });
+              AppLogger.warn('[useDashboardGroups] Deregister Hardware failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
             }
           }
         }
@@ -406,7 +406,7 @@ export function useDashboardGroups({
           setDeviceConfigs(configs);
         }
       } catch (e: unknown) {
-        AppLogger.warn('Failed to scrub ghost group from device configs', { error: (e instanceof Error ? e.message : String(e)) });
+        AppLogger.warn('Failed to scrub ghost group from device configs', { error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 });
       }
     }
   };
@@ -475,7 +475,7 @@ export function useDashboardGroups({
         closeGroupModal();
       }
     } catch (e: unknown) {
-      AppLogger.warn('Failed to sync group cache changes', { error: (e instanceof Error ? e.message : String(e)) });
+      AppLogger.warn('Failed to sync group cache changes', { error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 });
     }
   };
 

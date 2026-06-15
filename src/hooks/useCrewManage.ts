@@ -62,7 +62,7 @@ export function useCrewManage(
     setLoadingCardMembersFor(crewId);
     profileService.getCrewMembersWithNames(crewId)
       .then(members => setCardMembers(prev => ({ ...prev, [crewId]: members })))
-      .catch((e) => AppLogger.warn('[CrewManage] loadCrewMembers failed', { crewId, error: String(e) }))
+      .catch((e) => AppLogger.warn('[CrewManage] loadCrewMembers failed', { crewId, error: String(e), payload_size: 0, ssi: 0 }))
       .finally(() => setLoadingCardMembersFor(null));
   };
 
@@ -73,7 +73,7 @@ export function useCrewManage(
     if (crewStats[id]) return; // already loaded
     profileService.getCrewStats(id)
       .then(stats => setCrewStats(prev => ({ ...prev, [id]: stats })))
-      .catch((e) => AppLogger.warn('[CrewManage] getCrewStats failed', { id, error: String(e) }));
+      .catch((e) => AppLogger.warn('[CrewManage] getCrewStats failed', { id, error: String(e), payload_size: 0, ssi: 0 }));
   }, [selectedCrewDetail, crewStats]);
 
   // Search users with debounce
@@ -89,7 +89,7 @@ export function useCrewManage(
           if (active) setUserSearchResults(res);
         })
         .catch((e) => {
-          if (active) AppLogger.warn('[CrewManage] searchUsers failed', { query: '[REDACTED]', error: String(e) });
+          if (active) AppLogger.warn('[CrewManage] searchUsers failed', { query: '[REDACTED]', error: String(e), payload_size: 0, ssi: 0 });
         });
     }, SEARCH_DEBOUNCE_MS);
     return () => {

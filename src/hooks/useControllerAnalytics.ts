@@ -10,6 +10,7 @@ import { useEffect, useRef } from 'react';
 import { AppLogger } from '../services/AppLogger';
 import type { ModeType } from '../types/dashboard.types';
 import { useTelemetryLedger } from './useTelemetryLedger';
+import { scrubPII } from '../utils/piiScrubber';
 
 interface DeviceContext {
   target: string;
@@ -51,10 +52,16 @@ export function useControllerAnalytics({
   // fire spuriously when the devices[] array reference changes without content change.
   const deviceContextKey = JSON.stringify(deviceContext);
 
+  const scrubbedDeviceContext = {
+    ...deviceContext,
+    deviceId: deviceContext.deviceId ? scrubPII(deviceContext.deviceId) : undefined,
+    deviceIds: deviceContext.deviceIds?.map(id => scrubPII(id)),
+  };
+
   // Mode change logger
   useEffect(() => {
     telemetry.trackMode(activeMode);
-    AppLogger.log('MODE_CHANGED', { mode: activeMode, ...deviceContext });
+    AppLogger.log('MODE_CHANGED', { mode: activeMode, ...scrubbedDeviceContext, payload_size: 0, ssi: 0 });
   }, [activeMode, deviceContextKey, telemetry]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pattern change logger
@@ -71,7 +78,9 @@ export function useControllerAnalytics({
       name,
       mode: activeMode,
       color: selectedColor,
-      ...deviceContext
+      ...scrubbedDeviceContext,
+      payload_size: 0,
+      ssi: 0
     });
   }, [selectedPatternId, activeMode, deviceContextKey, telemetry]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -84,13 +93,13 @@ export function useControllerAnalytics({
       telemetry.trackColor(selectedColor);
     }
     
-    AppLogger.log('COLOR_CHANGED', { hex: selectedColor, ...deviceContext });
+    AppLogger.log('COLOR_CHANGED', { hex: selectedColor, ...scrubbedDeviceContext, payload_size: 0, ssi: 0 });
   }, [selectedColor, activeMode, deviceContextKey, telemetry]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Brightness change logger (debounced)
   useEffect(() => {
     const timerId = setTimeout(() => {
-      AppLogger.log('BRIGHTNESS_CHANGED', { value: brightness, mode: activeMode, ...deviceContext });
+      AppLogger.log('BRIGHTNESS_CHANGED', { value: brightness, mode: activeMode, ...scrubbedDeviceContext, payload_size: 0, ssi: 0 });
     }, BRIGHTNESS_DEBOUNCE_MS);
     return () => clearTimeout(timerId);
   }, [brightness, activeMode, deviceContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -98,7 +107,7 @@ export function useControllerAnalytics({
   // Speed change logger (debounced)
   useEffect(() => {
     const timerId = setTimeout(() => {
-      AppLogger.log('SPEED_CHANGED', { value: speed, mode: activeMode, ...deviceContext });
+      AppLogger.log('SPEED_CHANGED', { value: speed, mode: activeMode, ...scrubbedDeviceContext, payload_size: 0, ssi: 0 });
     }, SPEED_DEBOUNCE_MS);
     return () => clearTimeout(timerId);
   }, [speed, activeMode, deviceContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -107,7 +116,7 @@ export function useControllerAnalytics({
   useEffect(() => {
     if (activeMode !== 'STREET') return;
     const timerId = setTimeout(() => {
-      AppLogger.log('STREET_SENSITIVITY_CHANGED', { sensitivity: streetSensitivity, ...deviceContext });
+      AppLogger.log('STREET_SENSITIVITY_CHANGED', { sensitivity: streetSensitivity, ...scrubbedDeviceContext, payload_size: 0, ssi: 0 });
     }, STREET_SENS_DEBOUNCE_MS);
     return () => clearTimeout(timerId);
   }, [streetSensitivity, activeMode, deviceContextKey]); // eslint-disable-line react-hooks/exhaustive-deps
