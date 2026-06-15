@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { Spacing } from '../../theme/theme';
 import TacticalSlider from '../TacticalSlider';
 import { PositionalMathBuffer } from '../../protocols/PositionalMathBuffer';
@@ -7,6 +7,7 @@ import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { AppLogger } from '../../services/appLogger';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import type { UniversalSlidersFooterProps } from './UniversalSlidersFooter';
+// R-29: Safe type-only import, compiles away at runtime.
 
 export const UniversalTacticalSliders = React.memo(function UniversalTacticalSliders(props: UniversalSlidersFooterProps) {
   const {

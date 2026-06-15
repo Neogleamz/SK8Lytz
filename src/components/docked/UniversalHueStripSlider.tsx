@@ -3,12 +3,18 @@ import { View, StyleSheet } from 'react-native';
 import { Spacing } from '../../theme/theme';
 import NeonHueStrip from '../NeonHueStrip';
 import type { UniversalSlidersFooterProps } from './UniversalSlidersFooter';
-import { hueToHex, hueToHexUpper } from './UniversalSlidersFooter';
 
+// Duplicated locally to break R-29 circular dependency without violating S4 bounds
+const hueToHex = (hue: number) => {
+  const f = (n: number, k = (n + hue / 60) % 6) => 1 - Math.max(Math.min(k, 4 - k, 1), 0);
+  const rgbToHex = (r: number, g: number, b: number) => '#' + [r, g, b].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+  return rgbToHex(f(5), f(3), f(1));
+};
+const hueToHexUpper = (hue: number) => hueToHex(hue).toUpperCase();
 export const UniversalHueStripSlider = React.memo(function UniversalHueStripSlider(props: UniversalSlidersFooterProps) {
   const {
     activeMode, fixedSubMode, fixedColorMode,
-    selectedColor, setSelectedColor,
+    setSelectedColor,
     setFixedFgColor, setFixedBgColor, setFixedHue, fixedFgColor, fixedBgColor,
     setMusicPrimaryColor, setMusicSecondaryColor, setMusicHue, setMusicSecondaryHue, musicPrimaryColor, musicSecondaryColor,
     setSelectedHue, setStreetCruiseColor, musicColorFocus,

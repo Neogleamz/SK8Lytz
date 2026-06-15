@@ -57,7 +57,7 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
   }, [onVibePaletteChange]);
 
   const handleCapture = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (Platform.OS !== 'web') { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {}); }
     const capturedColor = liveColorRef.current;
     setLiveHex(capturedColor);
     
@@ -71,24 +71,24 @@ const CameraPanel = React.memo(({ onColorDetected, onVibeApply, onVibePaletteCha
   }, [onColorDetected, externalSwatches, localSwatches, handleSetSwatches]);
 
   const handleSelectSwatch = useCallback((hex: string) => {
-    Haptics.selectionAsync();
+    if (Platform.OS !== 'web') { Haptics.selectionAsync().catch(() => {}); }
     setActiveSwatch(hex);
     onColorDetected(hex);
   }, [onColorDetected]);
 
   const handleModeToggle = useCallback((mode: 'SNIPER' | 'VIBE') => {
-    Haptics.selectionAsync();
+    if (Platform.OS !== 'web') { Haptics.selectionAsync().catch(() => {}); }
     setSubMode(mode);
     if (onSubModeChange) onSubModeChange(mode);
   }, [onSubModeChange]);
 
   const handleVibeApplyPress = useCallback(() => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (Platform.OS !== 'web') { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); }
     if (onVibeApply) onVibeApply(vibePalette, isFlow);
   }, [onVibeApply, vibePalette, isFlow]);
 
   const toggleFlow = useCallback(() => {
-    Haptics.selectionAsync();
+    if (Platform.OS !== 'web') { Haptics.selectionAsync().catch(() => {}); }
     setIsFlow(prev => !prev);
   }, []);
 

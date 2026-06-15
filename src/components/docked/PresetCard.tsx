@@ -11,7 +11,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { Spacing , ThemePalette } from '../../theme/theme';
 import type { IFavoriteState } from '../../types/dashboard.types';
 import MarqueeText from '../MarqueeText';
-import { resolveGlowColor, resolveGradientColors, resolveModeIcon, GENERATIVE_RAINBOW } from '../../utils/presetColorUtils';
+import { resolveGlowColor, resolveGradientColors, resolveModeIcon } from '../../utils/presetColorUtils';
 
 interface PresetCardProps {
   preset: IFavoriteState;
@@ -47,13 +47,23 @@ const PresetCard = React.memo(({
   const gradColors = resolveGradientColors(preset, glow);
   const iconName = resolveModeIcon(preset.mode);
 
+  const handlePress = React.useCallback(() => {
+    onPress(preset, onPressContext);
+  }, [onPress, preset, onPressContext]);
+
+  const safeGradColors: readonly [string, string, ...string[]] = [
+    gradColors[0] || glow,
+    gradColors[1] || gradColors[0] || glow,
+    ...gradColors.slice(2)
+  ];
+
   return (
     <TouchableOpacity
       style={{ flex: 1, marginHorizontal: Spacing.xs, shadowColor: glow, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.5, shadowRadius: 10, elevation: 8 }}
-      onPress={() => onPress(preset, onPressContext)}
+      onPress={handlePress}
     >
       <LinearGradient
-        colors={gradColors as unknown as readonly [string, string, ...string[]]}
+        colors={safeGradColors}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={{ flex: 1, width: cardWidth, borderRadius: 9, padding: 1.5 }}

@@ -15,7 +15,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_QUICK_PRESETS } from '../../constants/storageKeys';
 import { AppLogger } from '../../services/appLogger';
 import { containsProfanity } from '../../services/AuthUtils';
-import { ScenesService, Scene } from '../../services/ScenesService';
+import { ScenesService } from '../../services/ScenesService';
 import { useAuth } from '../../context/AuthContext';
 import { Spacing } from '../../theme/theme';
 import type { ThemePalette } from '../../theme/theme';
@@ -72,7 +72,7 @@ const QuickPresetModal = React.memo(function QuickPresetModal({
     const newArr = [...quickPresets];
     newArr.splice(quickPromptTargetIndex, 1);
     setQuickPresets(newArr);
-    AsyncStorage.setItem(STORAGE_QUICK_PRESETS, JSON.stringify(newArr)).catch((err: unknown) => AppLogger.warn('[QuickPresetModal] Failed to persist quick preset', err instanceof Error ? err.message : String(err)));
+    AsyncStorage.setItem(STORAGE_QUICK_PRESETS, JSON.stringify(newArr)).catch((err: unknown) => AppLogger.warn('[QuickPresetModal] Failed to persist quick preset', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
     AppLogger.log('BUILDER_PRESET_DELETED', { index: quickPromptTargetIndex });
     closePrompt();
   };
@@ -86,9 +86,9 @@ const QuickPresetModal = React.memo(function QuickPresetModal({
       newArr[quickPromptTargetIndex].name = safeName;
     }
     setQuickPresets(newArr);
-    AsyncStorage.setItem(STORAGE_QUICK_PRESETS, JSON.stringify(newArr)).catch((err: unknown) => AppLogger.warn('[QuickPresetModal] Failed to persist quick preset', err instanceof Error ? err.message : String(err)));
+    AsyncStorage.setItem(STORAGE_QUICK_PRESETS, JSON.stringify(newArr)).catch((err: unknown) => AppLogger.warn('[QuickPresetModal] Failed to persist quick preset', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
     AppLogger.log('BUILDER_PRESET_SAVED', {
-      name: safeName,
+      index: quickPromptTargetIndex !== -1 ? quickPromptTargetIndex : 'NEW',
       isOverwrite: quickPromptTargetIndex !== -1,
     });
     closePrompt();
