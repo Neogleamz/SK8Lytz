@@ -3887,4 +3887,7 @@ TSC: ✅  Jest: ✅
  F i l e s   t o u c h e d :   s r c / s e r v i c e s / C r e w S e r v i c e . t s ,   s r c / s e r v i c e s / C r e w S e r v i c e / * 
  T S C :   '    J e s t :   '
   
- 
+ ### [MERGE] extract-and-sweep-CrewService.ts -> master @ 471549bc
+Files touched: src/services/CrewService.ts -> src/services/CrewService/
+Verify result: TSC ✅, Jest ✅, gates ✅
+
