@@ -4026,3 +4026,15 @@ TSC: ✅  Jest: ✅
 - package.json
 - index.ts
 **Verify result:** TSC ✅, Jest ✅
+
+### [MERGE READY] feat/deep-dive-fixes-wave1 — fd106363
+Files touched:
+- src/services/BleWriteDispatcher.ts
+- src/services/ble/InterrogatorService.ts
+- src/hooks/useControllerDispatch.ts
+- src/hooks/useBLE.ts
+- src/services/ble/ConnectService.ts
+- src/services/ble/RecoveryService.ts
+- src/services/ble/RSSIService.ts
+- src/components/CameraTracker.tsx
+TSC: ✅  Jest: ✅
