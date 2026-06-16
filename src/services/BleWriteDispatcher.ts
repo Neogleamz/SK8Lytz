@@ -9,7 +9,7 @@ import { BLE_TIMING } from '../constants/bleTimingConstants';
 import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 
 export interface BleWriteStateRefs {
-  writeGeneration: number;
+  deviceGenerationsRef: { current: Map<string, number> };
   writeDebounceTimerRef: { current: Map<string, ReturnType<typeof setTimeout>> };
   writeDebounceResolveRef?: { current: Map<string, (result: boolean | 'partial') => void> };
 }
@@ -44,8 +44,7 @@ export async function executeWriteToDevice(
   ghostedDeviceIds: string[],
   mtuMap: Map<string, number>,
   adapterMap: AdapterMapLike,
-  stateRefs: BleWriteStateRefs,
-  setWriteGeneration: (gen: number) => void
+  stateRefs: BleWriteStateRefs
 ): Promise<boolean | 'partial'> {
   // BUFFER LOCKOUT DEFENSE (R-19): delegated to ZenggeProtocol.padStaticColorfulPayload()
   // Source: tools/ZENGGE_PROTOCOL_BIBLE.md §0x59 MINIMUM PIXELS
@@ -61,13 +60,14 @@ export async function executeWriteToDevice(
   const isDebounceable = priority === 'normal';
 
   if (isDebounceable) {
-    const thisGeneration = opts?.lowPriority ? stateRefs.writeGeneration : stateRefs.writeGeneration + 1;
+    const debounceKey = targetDeviceId ?? 'global';
+    const currentGen = stateRefs.deviceGenerationsRef.current.get(debounceKey) ?? 0;
+    const thisGeneration = opts?.lowPriority ? currentGen : currentGen + 1;
     if (!opts?.lowPriority) {
-      setWriteGeneration(thisGeneration);
-      setWriteQueueGeneration(thisGeneration);
+      stateRefs.deviceGenerationsRef.current.set(debounceKey, thisGeneration);
+      setWriteQueueGeneration(debounceKey, thisGeneration);
     }
 
-    const debounceKey = targetDeviceId ?? 'global';
     return new Promise((resolve) => {
       if (stateRefs.writeDebounceTimerRef.current.has(debounceKey)) {
         clearTimeout(stateRefs.writeDebounceTimerRef.current.get(debounceKey)!);
@@ -81,7 +81,7 @@ export async function executeWriteToDevice(
         if (stateRefs.writeDebounceResolveRef) {
           stateRefs.writeDebounceResolveRef.current.delete(debounceKey);
         }
-        if (thisGeneration !== stateRefs.writeGeneration) {
+        if (thisGeneration !== (stateRefs.deviceGenerationsRef.current.get(debounceKey) ?? 0)) {
           resolve(true);
           return;
         }
@@ -95,7 +95,8 @@ export async function executeWriteToDevice(
             ghostedDeviceIds,
             mtuMap,
             adapterMap,
-            stateRefs
+            stateRefs,
+            debounceKey
           );
           resolve(result);
         } catch (e: unknown) {
@@ -120,7 +121,8 @@ export async function executeWriteToDevice(
     ghostedDeviceIds,
     mtuMap,
     adapterMap,
-    stateRefs
+    stateRefs,
+    targetDeviceId ?? 'global'
   );
 }
 
@@ -133,7 +135,8 @@ async function _executeWriteToDeviceInternal(
   ghostedDeviceIds: string[],
   mtuMap: Map<string, number>,
   adapterMap: AdapterMapLike,
-  stateRefs: BleWriteStateRefs
+  stateRefs: BleWriteStateRefs,
+  debounceKey: string = 'global'
 ): Promise<boolean | 'partial'> {
   const targets = targetDeviceId
     ? connectedDevices.filter(d => d.id === targetDeviceId)
@@ -159,8 +162,8 @@ async function _executeWriteToDeviceInternal(
   }
 
   const executeWrite = async (): Promise<boolean | 'partial'> => {
-    if (capturedGeneration !== 0 && capturedGeneration !== stateRefs.writeGeneration) {
-      AppLogger.log('BLE_STATE_CHANGE', { event: 'write_stale_dropped', capturedGeneration, currentGeneration: stateRefs.writeGeneration });
+    if (capturedGeneration !== 0 && capturedGeneration !== (stateRefs.deviceGenerationsRef.current.get(debounceKey) ?? 0)) {
+      AppLogger.log('BLE_STATE_CHANGE', { event: 'write_stale_dropped', capturedGeneration, currentGeneration: stateRefs.deviceGenerationsRef.current.get(debounceKey) });
       return true;
     }
 
@@ -212,7 +215,7 @@ async function _executeWriteToDeviceInternal(
   const priority = capturedGeneration === 0
     ? resolveWritePriority(payload[0])   // critical path: use opcode classification
     : 'normal';                           // pattern write: always normal tier
-  return enqueueWrite(priority, executeWrite, capturedGeneration);
+  return enqueueWrite(priority, executeWrite, capturedGeneration, debounceKey);
 }
 
 /**
@@ -287,22 +290,22 @@ export async function executeProtocolResults(
   ghostedDeviceIds: string[],
   mtuMap: Map<string, number>,
   adapterMap: AdapterMapLike,
-  stateRefs: BleWriteStateRefs,
-  setWriteGeneration: (gen: number) => void
+  stateRefs: BleWriteStateRefs
 ): Promise<boolean> {
   if (payloads.length === 0) return true;
 
   const isRateLimited = payloads.some(p => p.result.isRateLimited);
-  const capturedGeneration = isRateLimited ? stateRefs.writeGeneration : 0;
+  const debounceKey = 'protocol_results';
+  const currentGen = stateRefs.deviceGenerationsRef.current.get(debounceKey) ?? 0;
+  const capturedGeneration = isRateLimited ? currentGen : 0;
 
   if (isRateLimited) {
-    const thisGeneration = opts?.lowPriority ? stateRefs.writeGeneration : stateRefs.writeGeneration + 1;
+    const thisGeneration = opts?.lowPriority ? currentGen : currentGen + 1;
     if (!opts?.lowPriority) {
-      setWriteGeneration(thisGeneration);
-      setWriteQueueGeneration(thisGeneration);
+      stateRefs.deviceGenerationsRef.current.set(debounceKey, thisGeneration);
+      setWriteQueueGeneration(debounceKey, thisGeneration);
     }
 
-    const debounceKey = 'protocol_results';
     return new Promise((resolve) => {
       if (stateRefs.writeDebounceTimerRef.current.has(debounceKey)) {
         clearTimeout(stateRefs.writeDebounceTimerRef.current.get(debounceKey)!);
@@ -316,7 +319,7 @@ export async function executeProtocolResults(
         if (stateRefs.writeDebounceResolveRef) {
           stateRefs.writeDebounceResolveRef.current.delete(debounceKey);
         }
-        if (thisGeneration !== stateRefs.writeGeneration) {
+        if (thisGeneration !== (stateRefs.deviceGenerationsRef.current.get(debounceKey) ?? 0)) {
           resolve(true);
           return;
         }
@@ -328,7 +331,8 @@ export async function executeProtocolResults(
             ghostedDeviceIds,
             mtuMap,
             adapterMap,
-            stateRefs
+            stateRefs,
+            debounceKey
           );
           resolve(res);
         } catch (e: unknown) {
@@ -351,7 +355,8 @@ export async function executeProtocolResults(
     ghostedDeviceIds,
     mtuMap,
     adapterMap,
-    stateRefs
+    stateRefs,
+    'protocol_results'
   );
 }
 
@@ -362,10 +367,11 @@ async function _executeProtocolResultsInternal(
   ghostedDeviceIds: string[],
   mtuMap: Map<string, number>,
   adapterMap: AdapterMapLike,
-  stateRefs: BleWriteStateRefs
+  stateRefs: BleWriteStateRefs,
+  debounceKey: string = 'global'
 ): Promise<boolean> {
   const executeWrite = async (): Promise<boolean> => {
-    if (capturedGeneration !== 0 && capturedGeneration !== stateRefs.writeGeneration) {
+    if (capturedGeneration !== 0 && capturedGeneration !== (stateRefs.deviceGenerationsRef.current.get(debounceKey) ?? 0)) {
       return true;
     }
 
@@ -414,6 +420,6 @@ async function _executeProtocolResultsInternal(
   };
 
   // Route through priority queue
-  const result = await enqueueWrite('normal', executeWrite as () => Promise<boolean | 'partial'>, capturedGeneration);
+  const result = await enqueueWrite('normal', executeWrite as () => Promise<boolean | 'partial'>, capturedGeneration, debounceKey);
   return result !== false;
 }

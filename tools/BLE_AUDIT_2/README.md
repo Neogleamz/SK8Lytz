@@ -1,3 +1,2 @@
-# BLE Audit 2 Findings Directory
-
-This directory contains the raw findings from the 9 Mapper agents auditing the SK8Lytz BLE XState pipeline.
+# BLE Pipeline Audit 2
+This directory contains the output of the parallel map-reduce agents performing the BLE XState Pipeline Audit.

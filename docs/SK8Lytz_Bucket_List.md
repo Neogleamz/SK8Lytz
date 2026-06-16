@@ -43,14 +43,6 @@
 > **Worktree**: `feat/deep-dive-fixes-wave1` · **Type**: Unified Batch · **Prerequisite**: None
 > **Source Analysis**: 📊 [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/fb5fb761-e7be-4241-a902-3cb07dca3307/implementation_plan.md) — Fixes for BLE Protocol Corruption, Memory Leaks, and Unhandled Async Rejections.
 
-- [/] **`feat/deep-dive-fixes-wave1`**
-  - **Tags:** `[✅ READY]` `[🕵️‍♂️ AUDIT]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:feat/deep-dive-fixes-wave1]` `[WAVE:1]`
-  - **Goal:** Execute the unified fixes for deep-dive issues #1, #4, and #5.
-  - **Decision Log:** Uncovered during deep-dive cartography. High risk issues affecting protocol compliance and memory stability.
-  - **Analysis:** 📊 Source: [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/fb5fb761-e7be-4241-a902-3cb07dca3307/implementation_plan.md)
-  - **Source of Truth:** `artifacts/system_audit_report.md`
-  - **Details:** Must be done in a unified batch to prevent gatekeeper collisions.
-
 ---
 
 ## 🔥 ON DECK

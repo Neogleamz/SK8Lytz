@@ -49,8 +49,6 @@ if (Platform.OS !== 'web') {
   State = blePlx.State;
 }
 
-let writeGeneration = 0; // Increments on every new write; stale debounce checks compare against this
-
 
 export interface BluetoothLowEnergyApi {
   requestPermissions(): Promise<boolean>;
@@ -475,15 +473,12 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   connectToDevicesRef.current = connectToDevices;
 
   // ── State refs and setters for BleWriteDispatcher ─────────────────────────
+  const deviceGenerationsRef = useRef<Map<string, number>>(new Map());
   const stateRefs = useMemo<BleWriteStateRefs>(() => ({
-    get writeGeneration() { return writeGeneration; },
+    deviceGenerationsRef,
     writeDebounceTimerRef,
     writeDebounceResolveRef,
   }), []);
-
-  const setWriteGeneration = useCallback((gen: number) => {
-    writeGeneration = gen;
-  }, []);
 
   const writeToDevice = useCallback(async (
     payload: number[],
@@ -500,10 +495,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       bleSnapshot.context.ghostedDeviceIds,
       mtuMapRef.current,
       adapterMapRef.current,
-      stateRefs,
-      setWriteGeneration
+      stateRefs
     );
-  }, [bleManager, connectedDevices, bleSnapshot.context.ghostedDeviceIds, stateRefs, setWriteGeneration]);
+  }, [bleManager, connectedDevices, bleSnapshot.context.ghostedDeviceIds, stateRefs]);
 
   const writeChunked = useCallback(async (
     payload: number[],
@@ -544,10 +538,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       bleSnapshot.context.ghostedDeviceIds,
       mtuMapRef.current,
       adapterMapRef.current,
-      stateRefs,
-      setWriteGeneration
+      stateRefs
     );
-  }, [bleManager, connectedDevices, bleSnapshot.context.ghostedDeviceIds, stateRefs, setWriteGeneration]);
+  }, [bleManager, connectedDevices, bleSnapshot.context.ghostedDeviceIds, stateRefs]);
 
   const derivedBleState: BleConnectionState = 
     bleGateState === 'DISCONNECTING' ? 'DISCONNECTING' :

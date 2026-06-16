@@ -73,7 +73,7 @@ export const UniversalColorGrid = React.memo(function UniversalColorGrid(props: 
                       }
                     }}
                     style={[
-                      { backgroundColor: color, width: 20, height: 20, borderRadius: 10, shadowColor: color, shadowOpacity: 1, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 8, margin: Spacing.xxs },
+                      { backgroundColor: color, width: 20, height: 20, borderRadius: 10, shadowColor: color, shadowOpacity: 1, shadowRadius: 10, shadowOffset: { width: 0, height: 0 }, elevation: 8, margin: Spacing.xxs, borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
                       isActive && { borderWidth: 2, borderColor: '#FFF' },
                     ]}
                   />
@@ -88,7 +88,7 @@ export const UniversalColorGrid = React.memo(function UniversalColorGrid(props: 
 const styles = StyleSheet.create({
   colorGrid: {
     flexDirection: 'row',
-    flexWrap: 'nowrap',
+    flexWrap: 'wrap',
     marginTop: Spacing.lg,
     justifyContent: 'space-between',
     alignItems: 'center',

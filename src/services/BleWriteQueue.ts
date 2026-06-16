@@ -65,11 +65,11 @@ export function resolveWritePriority(opcodeByte: number): WritePriority {
 // ── Module-level singleton state ──────────────────────────────────────────────
 let _queue: QueueEntry[] = [];
 let _isRunning = false;
-let _currentGeneration = 0;
+let _currentGenerations = new Map<string, number>();
 
 /** Update the current generation so stale queued writes are pruned on drain. */
-export function setWriteQueueGeneration(gen: number): void {
-  _currentGeneration = gen;
+export function setWriteQueueGeneration(key: string, gen: number): void {
+  _currentGenerations.set(key, gen);
 }
 
 /** Returns the current number of pending entries in the queue. */
@@ -107,7 +107,8 @@ export function clearWriteQueue(): void {
 export function enqueueWrite(
   priority: WritePriority,
   execute: () => Promise<boolean | 'partial'>,
-  generation: number = 0
+  generation: number = 0,
+  debounceKey: string = 'global'
 ): Promise<boolean | 'partial'> {
   return new Promise<boolean | 'partial'>((resolve, reject) => {
     // ── BACKPRESSURE: enforce MAX_QUEUE_DEPTH ─────────────────────────────
@@ -139,7 +140,7 @@ export function enqueueWrite(
     }
 
     // ── PRIORITY INSERT: maintain critical > normal > bulk ordering ────────
-    const entry: QueueEntry = { priority, generation, execute, resolve, reject, enqueuedAt: Date.now() };
+    const entry: QueueEntry = { priority, generation, debounceKey, execute, resolve, reject, enqueuedAt: Date.now() } as QueueEntry & { debounceKey: string };
     if (priority === 'critical') {
       // Insert after the last critical entry (or at front if none)
       const lastCritIdx = _queue.map((e, i) => ({ e, i }))
@@ -184,10 +185,14 @@ async function _drain(): Promise<void> {
 
     // ── STALE WRITE PRUNING ───────────────────────────────────────────────
     // generation=0 means critical (never prune). Otherwise skip if superseded.
-    if (entry.generation !== 0 && entry.generation < _currentGeneration) {
-      AppLogger.log('BLE_WRITE_QUEUE', { event: 'stale_pruned', generation: entry.generation, current: _currentGeneration });
-      entry.resolve(true);
-      continue;
+    const e = entry as QueueEntry & { debounceKey: string };
+    if (e.generation !== 0) {
+      const currentGen = _currentGenerations.get(e.debounceKey) ?? 0;
+      if (e.generation < currentGen) {
+        AppLogger.log('BLE_WRITE_QUEUE', { event: 'stale_pruned', generation: e.generation, current: currentGen, key: e.debounceKey });
+        entry.resolve(true);
+        continue;
+      }
     }
 
     const queueLatencyMs = Date.now() - entry.enqueuedAt;

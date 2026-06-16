@@ -4038,3 +4038,15 @@ Files touched:
 - src/services/ble/RSSIService.ts
 - src/components/CameraTracker.tsx
 TSC: ✅  Jest: ✅
+
+
+### [MERGE] 2026-06-16T22:48 — feat/deep-dive-fixes-wave1 -> master @ 17902bb2
+**What merged:** Unified fixes for BLE Protocol Corruption, Memory Leaks, and Unhandled Async Rejections.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** BleWriteDispatcher.ts, InterrogatorService.ts, useControllerDispatch.ts, useBLE.ts, ConnectService.ts, RecoveryService.ts, RSSIService.ts, CameraTracker.tsx
+
+### [MERGE] 2026-06-16T23:10 — feat/deep-dive-fixes-wave1 -> master
+**What merged:** Fixed critical BLE issue where groups only fired to single skate by changing global writeGeneration tracking to per-device (debounceKey) tracking in BleWriteDispatcher and BleWriteQueue. Parallelized Promise.all loops in useControllerDispatch. Added border and flexWrap to UniversalColorGrid to make black/white dots visible.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** BleWriteDispatcher.ts, BleWriteQueue.ts, useBLE.ts, useControllerDispatch.ts, UniversalColorGrid.tsx
+
