@@ -102,6 +102,9 @@ export default function CameraTracker({
   // Memoize the JS dispatchers so they can be securely captured by the worklet
   const dispatchSniperColorJS = React.useMemo(() => Worklets.createRunOnJS(dispatchSniperColor), [dispatchSniperColor]);
   const dispatchVibePaletteJS = React.useMemo(() => Worklets.createRunOnJS(dispatchVibePalette), [dispatchVibePalette]);
+  const logFrameErrorJS = React.useMemo(() => Worklets.createRunOnJS((errMsg: string) => {
+    AppLogger.error('Camera Frame Processor Error', new Error(errMsg));
+  }), []);
 
   // Memoize the frame processor onFrame callback to persist throttled timestamp in closure
   // and handle JSI worklet scopes without stale React Ref read failures.
@@ -157,13 +160,12 @@ export default function CameraTracker({
           }
         }
       } catch (err: unknown) {
-        const safeErr = err instanceof Error ? err : new Error(String(err));
-        AppLogger.error('Camera Frame Processor Error', safeErr);
+        logFrameErrorJS(err instanceof Error ? err.message : String(err));
       } finally {
         frame.dispose(); // CRITICAL: Dispose Frame immediately to prevent stalls
       }
     };
-  }, [resizer, subMode, dispatchSniperColorJS, dispatchVibePaletteJS]);
+  }, [resizer, subMode, dispatchSniperColorJS, dispatchVibePaletteJS, logFrameErrorJS]);
 
   const frameOutput = useFrameOutput({
     pixelFormat: 'yuv',

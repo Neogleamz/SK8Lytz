@@ -307,12 +307,12 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       const errMsg = error?.message || String(error);
       // Suppress normal organic dropouts from flooding the VIP error telemetry
       if (errMsg.includes('was disconnected') || errMsg.includes('is not connected') || errMsg.includes('Device disconnected') || errMsg.includes('not connected')) {
-        AppLogger.warn(`[BLE] Organic notification disconnect for '[REDACTED]'`, { payload_size: 0, ssi: 0 });
+        AppLogger.warn(`[BLE] Organic notification disconnect for '${scrubPII(deviceId)}'`, { payload_size: 0, ssi: 0 });
         return;
       }
       
       AppLogger.warn('Notification Error', { error: error instanceof Error ? error.message : String(error), payload_size: 0, ssi: 0 });
-      AppLogger.log('PROTOCOL_ERROR', { error: errMsg, deviceId: '[REDACTED]', context: 'notification' });
+      AppLogger.log('PROTOCOL_ERROR', { error: errMsg, deviceId: scrubPII(deviceId), context: 'notification' });
       return;
     }
     if (characteristic?.value) {
@@ -396,9 +396,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // Moved pingDevice down below sweeper definition to enable scan preemption
 
   // --- Sub-Hooks ---
-  const handleOrganicDisconnect = (error: import('react-native-ble-plx').BleError | null, _deviceId: string) => {
-    AppLogger.warn(`[BLE] Organic disconnect/dropout for '[REDACTED]'`, { payload_size: 0, ssi: 0 });
-    AppLogger.log('DEVICE_DISCONNECTED', { id: '[REDACTED]', reason: 'dropout', error: error instanceof Error ? error.message : String(error) });
+  const handleOrganicDisconnect = (error: import('react-native-ble-plx').BleError | null, deviceId: string) => {
+    AppLogger.warn(`[BLE] Organic disconnect/dropout for '${scrubPII(deviceId)}'`, { payload_size: 0, ssi: 0 });
+    AppLogger.log('DEVICE_DISCONNECTED', { id: scrubPII(deviceId), reason: 'dropout', error: error instanceof Error ? error.message : String(error) });
     // The machine handles this organically via handleOrganicDisconnect callback in bleMachine input.
     // The machine handles RECOVERY_START internally for organic drops.
   };

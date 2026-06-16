@@ -44,7 +44,7 @@ export async function loadHWCacheFromStorage(): Promise<Record<string, PingResul
       try {
         result[mac] = JSON.parse(val);
       } catch (e: unknown) {
-        AppLogger.warn('[InterrogatorService] Malformed HW cache entry', { mac: '[REDACTED]', error: e instanceof Error ? e.message : String(e) });
+        AppLogger.warn('[InterrogatorService] Malformed HW cache entry', { mac: scrubPII(mac), error: e instanceof Error ? e.message : String(e) });
       }
     }
   } catch (e: unknown) {

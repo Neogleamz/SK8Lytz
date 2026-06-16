@@ -35,11 +35,11 @@ export async function readDeviceRSSI(
   try {
     const device: Device = await bleManager.readRSSIForDevice(mac);
     const rssi = device.rssi ?? null;
-    AppLogger.log('DEVICE_DISCOVERED', { context: 'rssi_poll_ok', deviceId: '[REDACTED]', rssi });
+    AppLogger.log('DEVICE_DISCOVERED', { context: 'rssi_poll_ok', deviceId: scrubPII(mac), rssi });
     return rssi;
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
-    AppLogger.warn('[RSSIService] readRSSIForDevice failed', { deviceId: '[REDACTED]', error: message, payload_size: 0, ssi: 0 });
+    AppLogger.warn('[RSSIService] readRSSIForDevice failed', { deviceId: scrubPII(mac), error: message, payload_size: 0, ssi: 0 });
     return null;
   }
 }

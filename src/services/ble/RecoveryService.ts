@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import { Buffer } from 'buffer';
 import type { BleManager, Device } from 'react-native-ble-plx';
 import { AppLogger } from '../appLogger';
+import { scrubPII } from '../../utils/piiScrubber';
 import { createGattSession } from '../BleSessionFactory';
 import { enqueueWrite, clearWriteQueue } from '../BleWriteQueue';
 import { BLE_TIMING } from '../../constants/bleTimingConstants';
@@ -81,7 +82,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
         attempts++;
 
         if (hasExceededMaxRecovery(attempts)) {
-          AppLogger.warn(`[RecoveryService] '[REDACTED]' failed after ${attempts} attempts`, { payload_size: 0, ssi: 0 });
+          AppLogger.warn(`[RecoveryService] '${scrubPII(deviceId)}' failed after ${attempts} attempts`, { payload_size: 0, ssi: 0 });
           break;
         }
 
@@ -157,7 +158,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
         break; // Success! Exit while loop.
 
       } catch (e: unknown) {
-        AppLogger.warn(`[RecoveryService] Connection attempt failed for '[REDACTED]'`, { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+        AppLogger.warn(`[RecoveryService] Connection attempt failed for '${scrubPII(deviceId)}'`, { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       }
     }
 

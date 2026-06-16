@@ -140,7 +140,7 @@ async function _executeWriteToDeviceInternal(
     : connectedDevices;
 
   if (targets.length === 0 && targetDeviceId) {
-    AppLogger.warn(`Target device '[REDACTED]' not found in connected devices`, { payload_size: payload.length, ssi: 0 });
+    AppLogger.warn(`Target device '${scrubPII(targetDeviceId)}' not found in connected devices`, { payload_size: payload.length, ssi: 0 });
     return false;
   }
 
@@ -182,9 +182,10 @@ async function _executeWriteToDeviceInternal(
     // writeCharacteristicWithoutResponse resolves when the write is SENT, not RECEIVED.
     // Without a gap, device 1's incoming GATT notification collides with device 2's
     // in-flight write, causing a buffer overflow → organic disconnect → auto-recovery cascade.
-    await Promise.all(liveTargets.map(async (device, index) => {
+    for (let index = 0; index < liveTargets.length; index++) {
+      const device = liveTargets[index];
       if (index > 0) {
-        await new Promise(res => setTimeout(res, index * BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
+        await new Promise(res => setTimeout(res, BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
       }
       const deviceAdapter = resolveProtocolForDevice(device.id, adapterMap);
       try {
@@ -194,14 +195,14 @@ async function _executeWriteToDeviceInternal(
           base64Full
         );
       } catch (writeError: unknown) {
-        AppLogger.warn(`[BLE] Write failed for '[REDACTED]'`, {
+        AppLogger.warn(`[BLE] Write failed for '${scrubPII(device.id)}'`, {
           error: writeError instanceof Error ? writeError.message : String(writeError),
           payload_size: payload.length,
           ssi: 0
         });
         allSucceeded = false;
       }
-    }));
+    }
 
     if (skippedGhosted > 0 && allSucceeded) return 'partial';
     return allSucceeded;
@@ -250,9 +251,10 @@ export async function executeWriteChunked(
     for (const chunk of chunks) {
       const b64 = Buffer.from(chunk).toString('base64');
       const liveTargetsChunk = targets.filter(d => !ghostedDeviceIds.includes(d.id));
-      await Promise.all(liveTargetsChunk.map(async (device, index) => {
+      for (let index = 0; index < liveTargetsChunk.length; index++) {
+        const device = liveTargetsChunk[index];
         if (index > 0) {
-          await new Promise(res => setTimeout(res, index * BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
+          await new Promise(res => setTimeout(res, BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
         }
         const deviceAdapter = resolveProtocolForDevice(device.id, adapterMap);
         try {
@@ -260,13 +262,13 @@ export async function executeWriteChunked(
             deviceAdapter.serviceUUID, deviceAdapter.writeCharacteristicUUID, b64
           );
         } catch (e: unknown) {
-          AppLogger.warn(`[BLE] writeChunked chunk failed for '[REDACTED]'`, { 
+          AppLogger.warn(`[BLE] writeChunked chunk failed for '${scrubPII(device.id)}'`, { 
             error: e instanceof Error ? e.message : String(e),
             payload_size: chunk.length,
             ssi: 0
           });
         }
-      }));
+      }
       await new Promise(resolve => setTimeout(resolve, BLE_TIMING.WRITE_CHUNK_INTER_GAP_MS));
     }
     await new Promise(resolve => setTimeout(resolve, BLE_TIMING.WRITE_CHUNK_FINAL_SETTLE_MS));
@@ -374,13 +376,14 @@ async function _executeProtocolResultsInternal(
     // Packet ordering within a single device is preserved by the sequential inner loop.
     const livePayloads = payloads.filter(({ targetDeviceId }) => !ghostedDeviceIds.includes(targetDeviceId));
 
-    await Promise.all(livePayloads.map(async ({ targetDeviceId, result }, index) => {
+    for (let index = 0; index < livePayloads.length; index++) {
+      const { targetDeviceId, result } = livePayloads[index];
       if (index > 0) {
-        await new Promise(r => setTimeout(r, index * BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
+        await new Promise(r => setTimeout(r, BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
       }
 
       const device = connectedDevices.find(d => d.id === targetDeviceId);
-      if (!device) return;
+      if (!device) continue;
 
       const adapter = resolveProtocolForDevice(targetDeviceId, adapterMap);
       const mtu = getDeviceMtu(targetDeviceId);
@@ -406,7 +409,7 @@ async function _executeProtocolResultsInternal(
           allSucceeded = false;
         }
       }
-    }));
+    }
     return allSucceeded;
   };
 

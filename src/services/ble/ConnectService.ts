@@ -62,7 +62,7 @@ export const connectService = fromPromise<
   // ── HARDWARE BLACKLIST GUARD ──────────────────────────────────────────────
   const blockedMacs = targetMacs.filter(mac => blacklistedMacsRef.current.includes(mac.toUpperCase()));
   if (blockedMacs.length > 0) {
-    AppLogger.warn('[BLE] Hardware Blacklist Blocked Connection', { blockedDevices: '[REDACTED]', payload_size: 0, ssi: 0 });
+    AppLogger.warn('[BLE] Hardware Blacklist Blocked Connection', { blockedDevices: blockedMacs.map(scrubPII).join(', '), payload_size: 0, ssi: 0 });
     Alert.alert('Connection Blocked', 'One or more devices have been restricted and cannot be connected.');
     throw new Error('hardware_blacklist');
   }
@@ -111,7 +111,7 @@ export const connectService = fromPromise<
     let isMock = 'false';
     if ((typeof __DEV__ !== 'undefined' && __DEV__) || Platform.OS === 'web') {
        try {
-         isMock = await AsyncStorage.getItem(STORAGE_DEMO_MODE) || 'false';
+         isMock = await AsyncStorage.getItem(STORAGE_DEMO_MODE).catch(() => 'false') || 'false';
        } catch (e: unknown) {
          AppLogger.warn('Failed to read mock storage', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
        }
@@ -230,11 +230,11 @@ export const connectService = fromPromise<
         AppLogger.log('DEVICE_CONNECTED', {
           context: 'mtu_negotiated',
           mtu: mtuMapRef.current.get(conn.id),
-          deviceId: '[REDACTED]',
+          deviceId: scrubPII(conn.id),
         });
 
         adapterMapRef.current.set(conn.id, adapter);
-        AppLogger.log('DEVICE_CONNECTED', { context: 'adapter_resolved', deviceId: '[REDACTED]', protocolId: scrubPII(adapter.protocolId) });
+        AppLogger.log('DEVICE_CONNECTED', { context: 'adapter_resolved', deviceId: scrubPII(conn.id), protocolId: scrubPII(adapter.protocolId) });
 
         if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
         disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {
