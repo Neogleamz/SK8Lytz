@@ -3959,3 +3959,14 @@ TSC: ✅  Jest: ✅
 Files touched:
 - src/hooks/useDockedPermissions.ts
 TSC: ✅  Jest: ✅
+
+### [DECISION] 2026-06-15T22:53 — Web Demo SafeArea Crash
+**Decision:** Added web-only zero-fallback initialMetrics to SafeAreaProvider in App.tsx.
+**Rejected:** Allowing default measurement (crashes web demo on first paint).
+**Don't re-derive:** react-native-safe-area-context measures DOM asynchronously. Calling useSafeAreaInsets synchronously on first render throws if no fallback is provided.
+**Source:** App.tsx:178
+
+### [MERGE READY] fix-web-safe-area - 34c437b4
+Files touched:
+- App.tsx
+TSC: ✅  Jest: ✅
