@@ -1,6 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { logFatalCrash } from '../utils/CrashReporter';
 
 interface Props {
@@ -37,7 +36,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <SafeAreaView style={styles.container}>
+        <View style={[styles.container, { paddingTop: Platform.OS === 'ios' ? 50 : 30 }]}>
           <View style={styles.content}>
             <Text style={styles.title}>Oops, SK8Lytz crashed!</Text>
             <Text style={styles.subtitle}>
@@ -55,7 +54,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
               <Text style={styles.buttonText}>Restart App</Text>
             </TouchableOpacity>
           </View>
-        </SafeAreaView>
+        </View>
       );
     }
 
