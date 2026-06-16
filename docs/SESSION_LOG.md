@@ -3926,3 +3926,20 @@ Verify result: TSC ✅, Jest ✅, gates ✅
 Files touched: AccountModal.tsx, AccountModalSkeleton.tsx, AccountModalStyles.ts
 Verify result: TSC ✅, Jest ✅, gates ✅
 
+
+### [ARTIFACT] 2026-06-15T19:22:00 — KB Capture: mobile-perf-visualization
+**Type:** Knowledge Base Capture
+**File:** \	ools/knowledge-base/patterns/mobile-perf-visualization.md\ 
+**Source:** Web Research (Sentry RUM, Datadog RUM, Firebase Performance Documentation)
+**Key Finding:** Industry standard visualization separates Time to Initial Display (TTID) and Time to Fully Drawn (TTFD), utilizing screen-level cards, trend lines, and distribution charts to isolate performance bottlenecks.
+**Feeds Into:** Standalone
+**Re-Validate By:** 2026-12-12
+
+
+### [ARTIFACT] 2026-06-15T19:24:00 — PLAN: PLAN-feat-command-center-perf-charts.md
+**Type:** Implementation Plan
+**File:** \docs/plans/PLAN-feat-command-center-perf-charts.md\ 
+**Key Finding:** Visualizes TTID and TTFD load times per-screen in a grid of area charts in the Command Center web dashboard.
+**Feeds Into:** Standalone
+**Re-Validate By:** N/A
+
