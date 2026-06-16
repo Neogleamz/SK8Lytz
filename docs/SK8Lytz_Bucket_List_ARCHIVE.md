@@ -3299,4 +3299,15 @@ pm run verify which includes QA tests.
     Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
   - **Source of Truth:** 📖 [PLAN-sweep-src-components-AccountModal.tsx.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-components-AccountModal.tsx.md)
   - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 8 fully merged into master before this worktree is created.`
+
+
+- [x] **`sweep-src-screens`** 🚀 Merged in 305b45c9
+  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[✅ L-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:WAVE-8]` `[WAVE:8]`
+  - **Goal:** Resolve 35 telemetry and architectural rule violations in the screens domain.
+  - **Decision Log:** Findings surfaced during the deep-dive orthogonal sweep required immediate resolution before proceeding with features.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) · Plan: [PLAN-sweep-src-screens.md](./plans/PLAN-sweep-src-screens.md)
+    Key finding: "35 specific rule violations located and deduplicated in this cluster."
+    Rejected alternative: "Grouping by rule instead of domain (creates worktree file collisions)."
+  - **Source of Truth:** 📖 [PLAN-sweep-src-screens.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-sweep-src-screens.md)
+  - **Details:** Orthogonal cluster safe for parallel verification. `Prerequisite: Wave 7 fully merged into master before this worktree is created.`
 
