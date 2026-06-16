@@ -118,6 +118,11 @@ const appStartTime = Date.now();
 import { useOfflineSyncWorker } from './src/hooks/cloud/useOfflineSyncWorker';
 import { useWebDemoConsoleBridge } from './src/hooks/dev/useWebDemoConsoleBridge';
 
+const INITIAL_METRICS = Platform.OS === 'web' ? {
+  frame: { x: 0, y: 0, width: 0, height: 0 },
+  insets: { top: 0, left: 0, right: 0, bottom: 0 }
+} : undefined;
+
 export default function App() {
   useWebDemoConsoleBridge();
   const [fontsLoaded] = useFonts({
@@ -175,7 +180,7 @@ export default function App() {
 
   return (
     <GlobalErrorBoundary>
-      <SafeAreaProvider>
+      <SafeAreaProvider initialMetrics={INITIAL_METRICS}>
         <ThemeProvider>
           <AuthProvider>
             <AppConfigProvider>
