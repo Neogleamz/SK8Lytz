@@ -75,8 +75,7 @@ export default function CameraTracker({
     }
   }, []);
 
-  const runOnJS_dispatchSniperColor = useRunOnJS(dispatchSniperColor, [dispatchSniperColor]);
-  const runOnJS_dispatchVibePalette = useRunOnJS(dispatchVibePalette, [dispatchVibePalette]);
+
 
   // Frame processor GPU resizer configuration
   const { resizer, error } = useResizer({
