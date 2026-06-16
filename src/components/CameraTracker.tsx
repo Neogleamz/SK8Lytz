@@ -2,7 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission, useFrameOutput, Frame } from 'react-native-vision-camera';
-import { runOnJS } from 'react-native-worklets';
+import { useRunOnJS } from 'react-native-worklets-core';
 import { useResizer } from 'react-native-vision-camera-resizer';
 import { AppLogger } from '../services/appLogger';
 import { requestPermission } from '../services/PermissionService';
@@ -75,6 +75,9 @@ export default function CameraTracker({
     }
   }, []);
 
+  const runOnJS_dispatchSniperColor = useRunOnJS(dispatchSniperColor, [dispatchSniperColor]);
+  const runOnJS_dispatchVibePalette = useRunOnJS(dispatchVibePalette, [dispatchVibePalette]);
+
   // Frame processor GPU resizer configuration
   const { resizer, error } = useResizer({
     width: 50,
@@ -130,7 +133,7 @@ export default function CameraTracker({
                 const g = resizedArray[centerIdx + 1];
                 const b = resizedArray[centerIdx + 2];
 
-                runOnJS(dispatchSniperColor)(r, g, b);
+                runOnJS_dispatchSniperColor(r, g, b);
               } else {
                 // 2. VIBE mode: K-Means palette extraction (k=3)
                 const pixels: RGB[] = [];
@@ -143,7 +146,7 @@ export default function CameraTracker({
                 }
 
                 const palette = extractKMeansPalette(pixels, 3, 5);
-                runOnJS(dispatchVibePalette)(palette);
+                runOnJS_dispatchVibePalette(palette);
               }
             }
           } finally {
@@ -157,7 +160,7 @@ export default function CameraTracker({
         frame.dispose(); // CRITICAL: Dispose Frame immediately to prevent stalls
       }
     };
-  }, [resizer, subMode, dispatchSniperColor, dispatchVibePalette]);
+  }, [resizer, subMode, runOnJS_dispatchSniperColor, runOnJS_dispatchVibePalette]);
 
   const frameOutput = useFrameOutput({
     pixelFormat: 'yuv',

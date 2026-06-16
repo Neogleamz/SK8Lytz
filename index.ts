@@ -1,5 +1,5 @@
 /* eslint-disable no-undef, unused-imports/no-unused-vars */
-import 'react-native-worklets';
+import 'react-native-worklets-core';
 import { registerRootComponent } from 'expo';
 import notifee, { EventType } from '@notifee/react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
