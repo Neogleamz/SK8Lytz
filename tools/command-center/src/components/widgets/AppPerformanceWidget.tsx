@@ -168,6 +168,8 @@ export default function AppPerformanceWidget() {
             const medianTtfd = Math.round(getMedian(ttfdValues));
             const avgGap = Math.round(getAverageGap(points));
 
+            const safeScreenId = screen.replace(/[^a-zA-Z0-9-_]/g, '-');
+
             return (
               <div key={screen} className="glass-panel p-4 rounded-xl border border-slate-800 hover:border-cyan-500/30 transition-all duration-300 flex flex-col relative">
                 <h3 className="text-lg font-semibold text-white mb-3">{screen}</h3>
@@ -200,11 +202,11 @@ export default function AppPerformanceWidget() {
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={points} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                       <defs>
-                        <linearGradient id={`colorTtid-${screen}`} x1="0" y1="0" x2="0" y2="1">
+                        <linearGradient id={`colorTtid-${safeScreenId}`} x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#22d3ee" stopOpacity={0.6}/>
                           <stop offset="95%" stopColor="#22d3ee" stopOpacity={0}/>
                         </linearGradient>
-                        <linearGradient id={`colorTtfd-${screen}`} x1="0" y1="0" x2="0" y2="1">
+                        <linearGradient id={`colorTtfd-${safeScreenId}`} x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
                           <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                         </linearGradient>
@@ -215,8 +217,8 @@ export default function AppPerformanceWidget() {
                       <Tooltip
                         contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155', color: '#fff', borderRadius: '8px', fontSize: 11 }}
                       />
-                      <Area type="monotone" dataKey="ttfd" stroke="#10b981" fillOpacity={1} fill={`url(#colorTtfd-${screen})`} name="TTFD" />
-                      <Area type="monotone" dataKey="ttid" stroke="#22d3ee" fillOpacity={1} fill={`url(#colorTtid-${screen})`} name="TTID" />
+                      <Area type="monotone" dataKey="ttfd" stroke="#10b981" fillOpacity={1} fill={`url(#colorTtfd-${safeScreenId})`} name="TTFD" />
+                      <Area type="monotone" dataKey="ttid" stroke="#22d3ee" fillOpacity={1} fill={`url(#colorTtid-${safeScreenId})`} name="TTID" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
