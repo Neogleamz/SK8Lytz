@@ -3943,3 +3943,9 @@ Verify result: TSC ✅, Jest ✅, gates ✅
 **Feeds Into:** Standalone
 **Re-Validate By:** N/A
 
+
+
+### [MERGE READY] feat/command-center-perf-charts — 06348bc3
+Files touched:
+- tools/command-center/src/components/widgets/AppPerformanceWidget.tsx
+TSC: ✅  Jest: ✅
