@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { AppState, DeviceEventEmitter } from 'react-native';
-import { checkPermission, PERMISSION_STATUS_CHANGED_EVENT, openGlobalPermissionsModal } from '../services/PermissionService';
+import { checkPermission, PERMISSION_STATUS_CHANGED_EVENT, openGlobalPermissionsModal, getOptOutLedger } from '../services/PermissionService';
 import { AppLogger } from '../services/appLogger';
 
 export function useDockedPermissions(isVisibilityAllowed: (key: string) => boolean) {
@@ -8,14 +8,20 @@ export function useDockedPermissions(isVisibilityAllowed: (key: string) => boole
 
   const recheckPermissions = useCallback(async () => {
     const hidden: string[] = [];
-    const hasCam = await checkPermission('CAMERA');
-    const hasLoc = await checkPermission('LOCATION');
-    if (!hasCam) hidden.push('CAMERA');
-    
-    if (!hasLoc) hidden.push('STREET');
-    
-    if (!isVisibilityAllowed('visibility_street_mode') && !hidden.includes('STREET')) hidden.push('STREET');
-    
+    const ledger = await getOptOutLedger();
+
+    if (ledger.CAMERA) {
+      hidden.push('CAMERA');
+    }
+
+    if (ledger.LOCATION) {
+      hidden.push('STREET');
+    }
+
+    if (!isVisibilityAllowed('visibility_street_mode') && !hidden.includes('STREET')) {
+      hidden.push('STREET');
+    }
+
     setHiddenModes(hidden);
   }, [isVisibilityAllowed]);
 
