@@ -28,19 +28,11 @@
 | 9 | sweep-src-components-AccountModal.tsx | ✅ Yes | Wave 8 merged |
 
 ## 🚧 ACTIVE SPRINT
-### ⚡ [BATCH:WAVE-1] — `wave-1-sweep` — READY
-> **Worktree**: `wave-1-sweep` · **Type**: Parallel · **Prerequisite**: None
-> **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — Deep-Dive Code Hunt orthogonal analysis
+### ⚡ [BATCH:feat/command-center-perf-charts] — `feat/command-center-perf-charts` — IN PROGRESS
+> **Worktree**: `feat/command-center-perf-charts` · **Type**: Isolated · **Prerequisite**: None
+> **Source Analysis**: 📊 PLAN-feat-command-center-perf-charts.md
 
-### ⚡ [BATCH:WAVE-6] — `wave-6-sweep` — IN PROGRESS
-> **Worktree**: `wave-6-sweep` · **Type**: Parallel · **Prerequisite**: Wave 5 merged
-> **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/artifacts/system_audit_report.md) — AST-Verified Extraction Foundation
-
----
-
-## 🔥 ON DECK
-
-- [ ] **`feat/command-center-perf-charts`**
+- [/] **`feat/command-center-perf-charts`**
   - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[✅ L-RISK]` `[🍱 Meal]` `[🤖 FLASH]` `[WAVE:1]`
   - **Goal:** Replace two generic widgets in the Command Center with a grid of screen-level TTID/TTFD trend graphs.
   - **Decision Log:** Command Center lacked screen-specific latency diagnostics, rendering only high-level app averages which masked screen-hydration bottlenecks.
@@ -49,6 +41,11 @@
     Rejected alternative: "Global React Navigation router tracing (causes log floods and lacks data-load correlation)."
   - **Source of Truth:** 📖 [AppPerformanceWidget.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/command-center/src/components/widgets/AppPerformanceWidget.tsx#L13) §AppPerformanceWidget
   - **Details:** Isolated dashboard component. Wave 1 parallel-safe. No prerequisites.
+
+---
+
+## 🔥 ON DECK
+
 
 ---
 
