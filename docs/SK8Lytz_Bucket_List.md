@@ -38,6 +38,20 @@
 
 ---
 
+## 🔥 ON DECK
+
+- [ ] **`feat/command-center-perf-charts`**
+  - **Tags:** `[✅ READY]` `[🔍 CONFIRMED]` `[🧹 TECH DEBT]` `[✅ L-RISK]` `[🍱 Meal]` `[🤖 FLASH]` `[WAVE:1]`
+  - **Goal:** Replace two generic widgets in the Command Center with a grid of screen-level TTID/TTFD trend graphs.
+  - **Decision Log:** Command Center lacked screen-specific latency diagnostics, rendering only high-level app averages which masked screen-hydration bottlenecks.
+  - **Analysis:** 📊 Source: [PLAN-feat-command-center-perf-charts.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-feat-command-center-perf-charts.md) · Plan: [PLAN-feat-command-center-perf-charts.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-feat-command-center-perf-charts.md)
+    Key finding: "Divergence of TTID and TTFD plotted on a shared timeline exposes the network/GATT latency gap."
+    Rejected alternative: "Global React Navigation router tracing (causes log floods and lacks data-load correlation)."
+  - **Source of Truth:** 📖 [AppPerformanceWidget.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/command-center/src/components/widgets/AppPerformanceWidget.tsx#L13) §AppPerformanceWidget
+  - **Details:** Isolated dashboard component. Wave 1 parallel-safe. No prerequisites.
+
+---
+
 ##  ❄️ Icebox / Backburner (Manual Trigger Only)
 
 ### 🎵 Epic: Music Mode
