@@ -3987,3 +3987,9 @@ TSC: ✅  Jest: ✅
 - Fixed Promise leaks during debounce timeout.
 **Verify result:** TSC ✅, Jest ✅, gates ✅
 **Files touched:** src/hooks/useDashboardController.tsx, src/hooks/useDashboardGroups.ts, src/hooks/useBLE.ts, src/services/BleWriteDispatcher.ts
+
+
+### [MERGE READY] feat/command-center-perf-charts - 9fcb3d7a
+Files touched:
+- tools/command-center/src/components/widgets/AppPerformanceWidget.tsx
+TSC: ✅  Jest: ✅

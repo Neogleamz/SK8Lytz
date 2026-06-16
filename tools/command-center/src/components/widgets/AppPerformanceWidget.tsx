@@ -170,6 +170,7 @@ export default function AppPerformanceWidget() {
 
             const safeScreenId = screen.replace(/[^a-zA-Z0-9-_]/g, '-');
 
+
             return (
               <div key={screen} className="glass-panel p-4 rounded-xl border border-slate-800 hover:border-cyan-500/30 transition-all duration-300 flex flex-col relative">
                 <h3 className="text-lg font-semibold text-white mb-3">{screen}</h3>
