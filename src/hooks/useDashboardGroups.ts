@@ -162,8 +162,9 @@ export function useDashboardGroups({
         // Name and group metadata always sync from cloud (cross-device authoritative state)
         const canSyncName  = !!rd.device_name && rd.device_name !== existing.name;
         const canSyncGroup = !!rd.group_ids && !rd.group_ids.includes('default-fleet') && JSON.stringify(rd.group_ids) !== JSON.stringify(existing.groupIds);
+        const canSyncType  = !!rd.product_type && rd.product_type !== existing.type;
 
-        if (canSyncPoints || canSyncSegments || canSyncSorting || canSyncStrip || canSyncName || canSyncGroup) {
+        if (canSyncPoints || canSyncSegments || canSyncSorting || canSyncStrip || canSyncName || canSyncGroup || canSyncType) {
           nextConfigs[mac] = {
             ...existing,
             points:    canSyncPoints    ? rd.led_points!    : existing.points,
@@ -171,6 +172,7 @@ export function useDashboardGroups({
             sorting:   canSyncSorting   ? rd.color_sorting! : existing.sorting,
             stripType: canSyncStrip     ? rd.ic_type!       : existing.stripType,
             name:      canSyncName      ? rd.device_name!   : existing.name,
+            type:      canSyncType      ? rd.product_type!  : existing.type,
             groupIds:  canSyncGroup     ? rd.group_ids!      : existing.groupIds,
             groupNames:rd.group_names   || existing.groupNames,
             grouped:   !!(rd.group_ids && rd.group_ids.length > 0 && !rd.group_ids.includes('default-fleet')),

@@ -39,7 +39,6 @@ import { enqueueWrite } from '../services/BleWriteQueue';
 import { useBLERSSIMonitor } from './ble/useBLERSSIMonitor';
 import { executePingDevice } from '../services/BlePingService';
 import { executeWriteToDevice, executeWriteChunked, executeProtocolResults as executeProtocolResultsService, BleWriteStateRefs } from '../services/BleWriteDispatcher';
-import { jitteredDelay } from '../utils/backoff';
 
 let BleManager: typeof import('react-native-ble-plx').BleManager;
 let State: typeof import('react-native-ble-plx').State;
@@ -134,7 +133,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
             // we can pass these restored peripherals directly to `connectToDevices()`.
             // But we must do it carefully to avoid GATT 133 conflicts.
             // We will enqueue a background reconnect through the XState machine's RESTORING state delay.
-            bleSend({ type: 'RESTORE_PERIPHERALS', peripherals });
+            bleSendRef.current?.({ type: 'RESTORE_PERIPHERALS', peripherals });
           }
         }
       }
@@ -142,9 +141,11 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   }, []);
 
   const disconnectListeners = useRef<Record<string, import('react-native-ble-plx').Subscription>>({});
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const bleSendRef = useRef<any>(null); // MIGRATION-SHIM
   const dataReceivedCallbackRef = useRef<((deviceId: string, data: number[]) => void) | undefined>(undefined);
   const deviceRecoveredCallbackRef = useRef<((deviceId: string) => void) | undefined>(undefined);
-  const hardwareProbedCallbackRef = useRef<((deviceId: string, config: any) => void) | undefined>(undefined);
+  const hardwareProbedCallbackRef = useRef<((deviceId: string, config: PingResult | null) => void) | undefined>(undefined);
   const connectedDevicesRef = useRef<Device[]>([]);
   const allDevicesRef = useRef<Device[]>([]);
   const droppedOutDeviceIdsRef = useRef<string[]>([]);
@@ -197,6 +198,9 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       enqueueWrite,
     }
   });
+
+  bleSendRef.current = bleSend;
+
   const bleGateState = typeof bleSnapshot.value === 'string' ? bleSnapshot.value : 'IDLE';
   const connectedDevices = bleSnapshot.context.connectedDevices;
 
@@ -207,6 +211,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // Prevents BLE queue pile-up when user swipes rapidly through the pattern picker.
   // Critical writes (power, time sync) bypass this and go direct.
   const writeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const writeDebounceResolveRef = useRef<((result: boolean | 'partial') => void) | null>(null);
 
   useEffect(() => {
     // 1. Initial Load
@@ -391,7 +396,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // Moved pingDevice down below sweeper definition to enable scan preemption
 
   // --- Sub-Hooks ---
-  const handleOrganicDisconnect = (error: import('react-native-ble-plx').BleError | null, deviceId: string) => {
+  const handleOrganicDisconnect = (error: import('react-native-ble-plx').BleError | null, _deviceId: string) => {
     AppLogger.warn(`[BLE] Organic disconnect/dropout for '[REDACTED]'`, { payload_size: 0, ssi: 0 });
     AppLogger.log('DEVICE_DISCONNECTED', { id: '[REDACTED]', reason: 'dropout', error: error instanceof Error ? error.message : String(error) });
     // The machine handles this organically via handleOrganicDisconnect callback in bleMachine input.
@@ -473,6 +478,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   const stateRefs = useMemo<BleWriteStateRefs>(() => ({
     get writeGeneration() { return writeGeneration; },
     writeDebounceTimerRef,
+    writeDebounceResolveRef,
   }), []);
 
   const setWriteGeneration = useCallback((gen: number) => {
@@ -566,7 +572,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
     setOnDataReceived: (callback: (deviceId: string, data: number[]) => void) => { 
         dataReceivedCallbackRef.current = callback;
     },
-    setOnHardwareProbed: (callback: (deviceId: string, config: any) => void) => { 
+    setOnHardwareProbed: (callback: (deviceId: string, config: PingResult | null) => void) => { 
         hardwareProbedCallbackRef.current = callback; 
     },
     setOnDeviceRecovered: (callback: (deviceId: string) => void) => {

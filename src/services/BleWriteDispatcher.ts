@@ -11,6 +11,7 @@ import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 export interface BleWriteStateRefs {
   writeGeneration: number;
   writeDebounceTimerRef: { current: ReturnType<typeof setTimeout> | null };
+  writeDebounceResolveRef?: { current: ((result: boolean | 'partial') => void) | null };
 }
 
 
@@ -56,9 +57,10 @@ export async function executeWriteToDevice(
   if (connectedDevices.length === 0 || Platform.OS === 'web') return true;
 
   const cmdByte = payload[0];
-  const isPatternWrite = (cmdByte === 0x59 || cmdByte === 0x51 || cmdByte === 0x40);
+  const priority = resolveWritePriority(cmdByte);
+  const isDebounceable = priority === 'normal';
 
-  if (isPatternWrite) {
+  if (isDebounceable) {
     const thisGeneration = opts?.lowPriority ? stateRefs.writeGeneration : stateRefs.writeGeneration + 1;
     if (!opts?.lowPriority) {
       setWriteGeneration(thisGeneration);
@@ -68,9 +70,16 @@ export async function executeWriteToDevice(
     return new Promise((resolve) => {
       if (stateRefs.writeDebounceTimerRef.current) {
         clearTimeout(stateRefs.writeDebounceTimerRef.current);
+        stateRefs.writeDebounceResolveRef?.current?.(true);
+      }
+      if (stateRefs.writeDebounceResolveRef) {
+        stateRefs.writeDebounceResolveRef.current = resolve;
       }
       stateRefs.writeDebounceTimerRef.current = setTimeout(async () => {
         stateRefs.writeDebounceTimerRef.current = null;
+        if (stateRefs.writeDebounceResolveRef) {
+          stateRefs.writeDebounceResolveRef.current = null;
+        }
         if (thisGeneration !== stateRefs.writeGeneration) {
           resolve(true);
           return;
@@ -292,9 +301,16 @@ export async function executeProtocolResults(
     return new Promise((resolve) => {
       if (stateRefs.writeDebounceTimerRef.current) {
         clearTimeout(stateRefs.writeDebounceTimerRef.current);
+        stateRefs.writeDebounceResolveRef?.current?.(true);
+      }
+      if (stateRefs.writeDebounceResolveRef) {
+        stateRefs.writeDebounceResolveRef.current = resolve as (result: boolean | 'partial') => void;
       }
       stateRefs.writeDebounceTimerRef.current = setTimeout(async () => {
         stateRefs.writeDebounceTimerRef.current = null;
+        if (stateRefs.writeDebounceResolveRef) {
+          stateRefs.writeDebounceResolveRef.current = null;
+        }
         if (thisGeneration !== stateRefs.writeGeneration) {
           resolve(true);
           return;

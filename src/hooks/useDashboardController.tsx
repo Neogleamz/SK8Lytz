@@ -117,7 +117,7 @@ export function useDashboardController({
     // sorting, stripType, rfMode, rfRemotes. allDevices only carries BLE scan fields.
     // Spread order: cfg first, device second so BLE identity fields (id, name) always win.
     const cfg = deviceConfigs[selectedDeviceForSettingsId] || {};
-    return { ...cfg, ...device };
+    return { ...device, ...cfg };
   }, [selectedDeviceForSettingsId, allDevices, deviceConfigs]);
 
   const openSettings = React.useCallback((device: { device_mac?: string; id?: string }) => {
@@ -248,7 +248,7 @@ export function useDashboardController({
     ledgerSave, gpsSpeed, peakGForce, sessionDistanceMiles, sessionDurationSec, sessionAvgSpeed, sessionPeakSpeed, sessionPhase, sessionActive, startSession, stopSessionRecording,
     appSettings, customGroups, dockedControllerRef, edgePanResponder, handleDisconnect, 
     handlePowerToggle, lastGroupPatterns, setCrewModeSummary,
-    setLastGroupPattern, setLastLeaderScene, userId, openSettings
+    setLastGroupPattern, setLastLeaderScene, userId, openSettings, isOfflineMode
   ]);
 
   return {
