@@ -3978,3 +3978,12 @@ TSC: ✅  Jest: ✅
 - src/hooks/useBLE.ts
 - src/services/BleWriteDispatcher.ts
 **TSC:** ✅  **Jest:** ✅
+
+### [MERGE] 2026-06-15T23:41 — bug-fix-batch → master @ 4145ea63
+**What merged:**
+- Swapped order of object spread in useDashboardController to prioritize device settings from local DB (EEPROM cached config).
+- Synced product_type from Supabase to local DB to ensure type consistency across dashboard groups.
+- Added normal priority debounce logic to BleWriteDispatcher and useBLE to prevent GATT 133 backpressure.
+- Fixed Promise leaks during debounce timeout.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** src/hooks/useDashboardController.tsx, src/hooks/useDashboardGroups.ts, src/hooks/useBLE.ts, src/services/BleWriteDispatcher.ts
