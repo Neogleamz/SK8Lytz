@@ -4000,3 +4000,29 @@ TSC: ✅  Jest: ✅
 - Implemented screen-level TTID/TTFD latency charts in AppPerformanceWidget.tsx.
 **Verify result:** TSC ✅, Jest ✅, gates ✅
 **Files touched:** tools/command-center/src/components/widgets/AppPerformanceWidget.tsx, docs/SESSION_LOG.md
+### [MERGE] 2026-06-16T00:18:00 - Bug Fixes: Telemetry 400 & Camera Worklets
+**What merged:**
+- Updated flush_telemetry PostgreSQL RPC to silently ignore anonymous telemetry instead of throwing 400 Bad Request.
+- Uninstalled deprecated react-native-worklets and installed react-native-worklets-core.
+- Updated babel.config.js and CameraTracker.tsx to use useRunOnJS from react-native-worklets-core.
+**Verify result:** TSC Passed, Jest Passed
+**Files touched:** package.json, babel.config.js, src/components/CameraTracker.tsx, supabase/migrations/20260616050801_fix_anonymous_telemetry.sql, index.ts
+
+### [MERGE] 2026-06-16T04:40:00 - Restored Anonymous Telemetry Ingestion
+**What merged:**
+- Created migration 20260616053000_restore_anonymous_telemetry.sql
+- Enabled RLS 'anon' role INSERTS on telemetry_snapshots, crash_telemetry, and telemetry_errors.
+- Updated flush_telemetry to route anonymous performance dumps to telemetry_snapshots instead of returning silently.
+**Verify result:** Anonymous dumps now bypass auth blocks and land in telemetry_snapshots.
+**Files touched:** supabase/migrations/20260616053000_restore_anonymous_telemetry.sql
+
+### [MERGE READY] fix/ble-group-sync-debounce — 7fda0552
+**Files touched:**
+- src/services/BleWriteDispatcher.ts
+- src/hooks/useBLE.ts
+- src/components/docked/UniversalColorGrid.tsx
+- src/components/CameraTracker.tsx
+- babel.config.js
+- package.json
+- index.ts
+**Verify result:** TSC ✅, Jest ✅

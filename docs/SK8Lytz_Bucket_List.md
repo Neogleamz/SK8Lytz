@@ -11,6 +11,13 @@
 
 ## 🔴 CRITICAL: 🛡️ Performance, Stability & Security
 
+### 🚑 TRIAGE QUEUE
+- [ ] **`fix/ble-group-sync-debounce`**
+  - **Tags:** `[✅ READY]` `[🧪 LAB]` `[⚠️ H-RISK]` `[🍪 Snack]` `[BLE]`
+  - **Goal:** Fix the global debouncer bug dropping sequential BLE writes to grouped skates and restore missing color dots.
+  - **Decision Log:** Users report group writes only affecting a single skate due to a global debounce timer overwriting concurrent requests in BleWriteDispatcher.
+  - **Analysis:** 📊 Plan: [PLAN-fix-ble-group-sync-debounce.md](./plans/PLAN-fix-ble-group-sync-debounce.md)
+  - **Source of Truth:** 📖 [useBLE.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts)
 ---
 
 ### 🌊 Parallel Wave Strategy (AST-Verified)
