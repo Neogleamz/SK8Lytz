@@ -3949,3 +3949,8 @@ Verify result: TSC ✅, Jest ✅, gates ✅
 Files touched:
 - tools/command-center/src/components/widgets/AppPerformanceWidget.tsx
 TSC: ✅  Jest: ✅
+
+### [MERGE READY] fix-command-center-ref-crash — ab7f4852
+Files touched:
+- tools/command-center/src/components/widgets/AppPerformanceWidget.tsx
+TSC: ✅  Jest: ✅
