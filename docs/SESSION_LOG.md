@@ -3954,3 +3954,8 @@ TSC: ✅  Jest: ✅
 Files touched:
 - tools/command-center/src/components/widgets/AppPerformanceWidget.tsx
 TSC: ✅  Jest: ✅
+
+### [MERGE READY] fix-camera-mode-docked — 2c811720
+Files touched:
+- src/hooks/useDockedPermissions.ts
+TSC: ✅  Jest: ✅
