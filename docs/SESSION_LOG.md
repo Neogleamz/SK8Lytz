@@ -3993,3 +3993,10 @@ TSC: ✅  Jest: ✅
 Files touched:
 - tools/command-center/src/components/widgets/AppPerformanceWidget.tsx
 TSC: ✅  Jest: ✅
+
+
+### [MERGE] 2026-06-15T23:54 — feat-command-center-perf-charts → master @ e109135e
+**What merged:**
+- Implemented screen-level TTID/TTFD latency charts in AppPerformanceWidget.tsx.
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** tools/command-center/src/components/widgets/AppPerformanceWidget.tsx, docs/SESSION_LOG.md
