@@ -63,3 +63,12 @@ Moved from `safety-protocol.md` to reduce ambient context overhead.
 2. Added `"android": { "extraProguardRules": "./proguard-rules.pro" }` to `app.config.js` to ensure Expo injects it during builds.
 
 **⛔ Operational Rule**: Whenever introducing a new native module (especially hardware or background services), ALWAYS check if it requires ProGuard rules. Do NOT assume it will work in release just because it works in dev mode. Add its rules to `proguard-rules.pro`.
+
+---
+
+## 🏆 VS-005: React Native Web SafeArea Context Crash (2026-06-15)
+
+**Symptom**: Web Demo crashes to a black screen with SafeAreaContext.js:95 Uncaught Error: No safe area value available.
+**Root Cause**: <SafeAreaProvider> measures the DOM asynchronously. On web, initialWindowMetrics is null. Any child calling useSafeAreaInsets() on the first render frame crashes because no metrics exist yet.
+**Fix Applied**: Injected a zeroed-out initialMetrics fallback in App.tsx conditionally for Platform.OS === 'web'.
+**⛔ Operational Rule**: Never mount <SafeAreaProvider> without web fallback metrics if children use safe area hooks.
