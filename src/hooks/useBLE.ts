@@ -210,8 +210,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // ── Pattern write debounce ─────────────────────────────────────────────────
   // Prevents BLE queue pile-up when user swipes rapidly through the pattern picker.
   // Critical writes (power, time sync) bypass this and go direct.
-  const writeDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const writeDebounceResolveRef = useRef<((result: boolean | 'partial') => void) | null>(null);
+  const writeDebounceTimerRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const writeDebounceResolveRef = useRef<Map<string, (result: boolean | 'partial') => void>>(new Map());
 
   useEffect(() => {
     // 1. Initial Load

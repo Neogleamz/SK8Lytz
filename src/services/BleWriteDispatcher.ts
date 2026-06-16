@@ -10,8 +10,8 @@ import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 
 export interface BleWriteStateRefs {
   writeGeneration: number;
-  writeDebounceTimerRef: { current: ReturnType<typeof setTimeout> | null };
-  writeDebounceResolveRef?: { current: ((result: boolean | 'partial') => void) | null };
+  writeDebounceTimerRef: { current: Map<string, ReturnType<typeof setTimeout>> };
+  writeDebounceResolveRef?: { current: Map<string, (result: boolean | 'partial') => void> };
 }
 
 
@@ -67,18 +67,19 @@ export async function executeWriteToDevice(
       setWriteQueueGeneration(thisGeneration);
     }
 
+    const debounceKey = targetDeviceId ?? 'global';
     return new Promise((resolve) => {
-      if (stateRefs.writeDebounceTimerRef.current) {
-        clearTimeout(stateRefs.writeDebounceTimerRef.current);
-        stateRefs.writeDebounceResolveRef?.current?.(true);
+      if (stateRefs.writeDebounceTimerRef.current.has(debounceKey)) {
+        clearTimeout(stateRefs.writeDebounceTimerRef.current.get(debounceKey)!);
+        stateRefs.writeDebounceResolveRef?.current?.get(debounceKey)?.(true);
       }
       if (stateRefs.writeDebounceResolveRef) {
-        stateRefs.writeDebounceResolveRef.current = resolve;
+        stateRefs.writeDebounceResolveRef.current.set(debounceKey, resolve);
       }
-      stateRefs.writeDebounceTimerRef.current = setTimeout(async () => {
-        stateRefs.writeDebounceTimerRef.current = null;
+      const timer = setTimeout(async () => {
+        stateRefs.writeDebounceTimerRef.current.delete(debounceKey);
         if (stateRefs.writeDebounceResolveRef) {
-          stateRefs.writeDebounceResolveRef.current = null;
+          stateRefs.writeDebounceResolveRef.current.delete(debounceKey);
         }
         if (thisGeneration !== stateRefs.writeGeneration) {
           resolve(true);
@@ -106,6 +107,7 @@ export async function executeWriteToDevice(
           resolve(false);
         }
       }, BLE_TIMING.WRITE_DEBOUNCE_MS);
+      stateRefs.writeDebounceTimerRef.current.set(debounceKey, timer);
     });
   }
 
@@ -298,18 +300,19 @@ export async function executeProtocolResults(
       setWriteQueueGeneration(thisGeneration);
     }
 
+    const debounceKey = 'protocol_results';
     return new Promise((resolve) => {
-      if (stateRefs.writeDebounceTimerRef.current) {
-        clearTimeout(stateRefs.writeDebounceTimerRef.current);
-        stateRefs.writeDebounceResolveRef?.current?.(true);
+      if (stateRefs.writeDebounceTimerRef.current.has(debounceKey)) {
+        clearTimeout(stateRefs.writeDebounceTimerRef.current.get(debounceKey)!);
+        stateRefs.writeDebounceResolveRef?.current?.get(debounceKey)?.(true);
       }
       if (stateRefs.writeDebounceResolveRef) {
-        stateRefs.writeDebounceResolveRef.current = resolve as (result: boolean | 'partial') => void;
+        stateRefs.writeDebounceResolveRef.current.set(debounceKey, resolve as (result: boolean | 'partial') => void);
       }
-      stateRefs.writeDebounceTimerRef.current = setTimeout(async () => {
-        stateRefs.writeDebounceTimerRef.current = null;
+      const timer = setTimeout(async () => {
+        stateRefs.writeDebounceTimerRef.current.delete(debounceKey);
         if (stateRefs.writeDebounceResolveRef) {
-          stateRefs.writeDebounceResolveRef.current = null;
+          stateRefs.writeDebounceResolveRef.current.delete(debounceKey);
         }
         if (thisGeneration !== stateRefs.writeGeneration) {
           resolve(true);
@@ -335,6 +338,7 @@ export async function executeProtocolResults(
           resolve(false);
         }
       }, BLE_TIMING.WRITE_DEBOUNCE_MS);
+      stateRefs.writeDebounceTimerRef.current.set(debounceKey, timer);
     });
   }
 

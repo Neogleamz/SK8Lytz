@@ -4,9 +4,9 @@ import { Spacing } from '../../theme/theme';
 import type { UniversalSlidersFooterProps } from './UniversalSlidersFooter';
 
 // Duplicated locally to break R-29 circular dependency without violating S4 bounds
-const PRESET_COLORS = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'];
+const PRESET_COLORS = ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#00FFFF', '#0000FF', '#4B0082', '#9400D3', '#FF00FF', '#FFFFFF', '#000000'];
 const PRESET_HUE_MAP: Record<string, number> = {
-  '#FF0000': 0, '#FF7F00': 30, '#FFFF00': 60, '#00FF00': 120, '#0000FF': 240, '#4B0082': 275, '#9400D3': 285
+  '#FF0000': 0, '#FF7F00': 30, '#FFFF00': 60, '#00FF00': 120, '#00FFFF': 180, '#0000FF': 240, '#4B0082': 275, '#9400D3': 285, '#FF00FF': 300
 };
 
 export const UniversalColorGrid = React.memo(function UniversalColorGrid(props: UniversalSlidersFooterProps) {

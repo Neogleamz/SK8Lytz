@@ -2,7 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission, useFrameOutput, Frame } from 'react-native-vision-camera';
-import { useRunOnJS } from 'react-native-worklets-core';
+import { Worklets } from 'react-native-worklets-core';
 import { useResizer } from 'react-native-vision-camera-resizer';
 import { AppLogger } from '../services/appLogger';
 import { requestPermission } from '../services/PermissionService';
