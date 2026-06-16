@@ -101,7 +101,7 @@ export const bleMachine = setup({
     SCANNING: {
       entry: [
         ({ context }) => {
-          context.bleManager.startDeviceScan(
+          context.bleManager?.startDeviceScan(
             context.scanServiceUUIDs,
             { allowDuplicates: false, scanMode: context.scanMode },
             context.scanCallback
@@ -111,7 +111,7 @@ export const bleMachine = setup({
       ],
       exit: [
         ({ context }) => {
-          context.bleManager.stopDeviceScan();
+          context.bleManager?.stopDeviceScan();
         }
       ],
       on: {
@@ -124,10 +124,10 @@ export const bleMachine = setup({
           actions: ['clearSweeperId', 'setTargetMacs', { type: 'logTransition', params: { from: 'SCANNING', to: 'CONNECTING' } }]
         },
         SCAN_PAUSE: {
-          actions: ({ context }) => context.bleManager.stopDeviceScan()
+          actions: ({ context }) => context.bleManager?.stopDeviceScan()
         },
         SCAN_RESUME: {
-          actions: ({ context }) => context.bleManager.startDeviceScan(
+          actions: ({ context }) => context.bleManager?.startDeviceScan(
             context.scanServiceUUIDs,
             { allowDuplicates: false, scanMode: context.scanMode },
             context.scanCallback
