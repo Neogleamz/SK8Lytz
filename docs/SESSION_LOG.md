@@ -3970,3 +3970,11 @@ TSC: ✅  Jest: ✅
 Files touched:
 - App.tsx
 TSC: ✅  Jest: ✅
+
+### [MERGE READY] bug-fix-batch — c5e89db0aa2651511a3914e636ed2fc145383acb
+**Files touched:**
+- src/hooks/useDashboardController.tsx
+- src/hooks/useDashboardGroups.ts
+- src/hooks/useBLE.ts
+- src/services/BleWriteDispatcher.ts
+**TSC:** ✅  **Jest:** ✅
