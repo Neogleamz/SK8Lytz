@@ -100,6 +100,10 @@ export default function CameraTracker({
   // Worklet JS dispatchers must be captured, but runOnJS MUST be called *inside* the worklet
   // to ensure the JSI compiler correctly binds the C++ host function call.
 
+  // Memoize the JS dispatchers so they can be securely captured by the worklet
+  const dispatchSniperColorJS = React.useMemo(() => Worklets.createRunOnJS(dispatchSniperColor), [dispatchSniperColor]);
+  const dispatchVibePaletteJS = React.useMemo(() => Worklets.createRunOnJS(dispatchVibePalette), [dispatchVibePalette]);
+
   // Memoize the frame processor onFrame callback to persist throttled timestamp in closure
   // and handle JSI worklet scopes without stale React Ref read failures.
   const onFrame = React.useMemo(() => {
@@ -133,7 +137,7 @@ export default function CameraTracker({
                 const g = resizedArray[centerIdx + 1];
                 const b = resizedArray[centerIdx + 2];
 
-                runOnJS_dispatchSniperColor(r, g, b);
+                dispatchSniperColorJS(r, g, b);
               } else {
                 // 2. VIBE mode: K-Means palette extraction (k=3)
                 const pixels: RGB[] = [];
@@ -146,7 +150,7 @@ export default function CameraTracker({
                 }
 
                 const palette = extractKMeansPalette(pixels, 3, 5);
-                runOnJS_dispatchVibePalette(palette);
+                dispatchVibePaletteJS(palette);
               }
             }
           } finally {
@@ -160,7 +164,7 @@ export default function CameraTracker({
         frame.dispose(); // CRITICAL: Dispose Frame immediately to prevent stalls
       }
     };
-  }, [resizer, subMode, runOnJS_dispatchSniperColor, runOnJS_dispatchVibePalette]);
+  }, [resizer, subMode, dispatchSniperColorJS, dispatchVibePaletteJS]);
 
   const frameOutput = useFrameOutput({
     pixelFormat: 'yuv',
