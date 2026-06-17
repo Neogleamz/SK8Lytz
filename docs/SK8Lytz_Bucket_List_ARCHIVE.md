@@ -3353,4 +3353,12 @@ pm run verify which includes QA tests.
     Rejected alternative: "Bypassing the global BleWriteDispatcher for headless payload execution — Rejected to prevent GATT collisions."
   - **Source of Truth:** 📖 [NotificationService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/session/NotificationService.ts#L79)
   - **Details:** Requires writing native code and an Expo Config Plugin for iOS Live Activities, and intercepting background events to call existing hooks invisibly.
+
+
+- [x] **`feat/crewz-resilience`**
+  - **Tags:** `[✅ READY]` `[☁️ CLOUD]` `[⚠️ H-RISK]` `[🥩 Feast]` `[M-COG]` `[BATCH:feat-crewz-resilience]` `[WAVE:1]`
+  - **Goal:** Implement Crewz Mode Resilience (Phases 1, 3, 4) with Global Persistent Foreground Service and byte array payloads.
+  - **Decision Log:** Global persistent service chosen to act as Phone-as-Gateway to keep BLE and Supabase alive during background operation, similar to Watch app. Payload compression required to reduce latency.
+  - **Source of Truth:** 📖 docs/plans/PLAN-feat-crewz-resilience.md
+  - **Details:** Refactoring `CrewRealtime.ts` for payloads, replacing `NotificationService` with `GlobalForegroundService.ts`.
 

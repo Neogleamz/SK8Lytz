@@ -1,0 +1,35 @@
+[
+  {
+    "clusterId": "ERR-WEB-001",
+    "title": "Web Console Crash: getEnforcing undefined",
+    "source": "Build/Local",
+    "occurrences": 2,
+    "urgency": 90,
+    "description": "TypeError: Cannot read properties of undefined (reading 'getEnforcing') during web bundle execution. Likely a native module unmocked on Web.",
+    "regression": true
+  },
+  {
+    "clusterId": "ERR-DB-003",
+    "title": "Missing column label_designs.product_name",
+    "source": "Remote",
+    "occurrences": 2,
+    "urgency": 85,
+    "description": "Schema drift: column label_designs.product_name does not exist"
+  },
+  {
+    "clusterId": "ERR-DB-001",
+    "title": "Postgres crash_telemetry_severity_check violation",
+    "source": "Remote",
+    "occurrences": 7,
+    "urgency": 80,
+    "description": "new row for relation crash_telemetry violates check constraint"
+  },
+  {
+    "clusterId": "ERR-DB-002",
+    "title": "Postgres smallint out of range",
+    "source": "Remote",
+    "occurrences": 1,
+    "urgency": 75,
+    "description": "value 46733 is out of range for type smallint in telemetry"
+  }
+]
