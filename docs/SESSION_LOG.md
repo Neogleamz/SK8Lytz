@@ -4117,3 +4117,7 @@ TSC: ?  Jest: ?
 - src/context/SessionContext.tsx
 - src/hooks/useBLE.ts
 
+
+### [ARTIFACT] 2026-06-17T00:07 — Intake: PLAN-fix-hal-parity-split-brain
+**Plan Link**: docs/plans/PLAN-fix-hal-parity.md
+**Context**: Created plan to refactor UI components to use useProtocolDispatch to solve mixed-protocol parity splits.
