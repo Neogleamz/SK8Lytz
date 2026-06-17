@@ -130,7 +130,7 @@ export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ i
             name: error.name,
             status: (error && 'errorCode' in error) ? (error as {errorCode: unknown}).errorCode : (error && 'status' in error) ? (error as {status: unknown}).status : (error.message.includes('133') ? 133 : null)
           } : null;
-          handleOrganicDisconnect(contextError, conn.id);
+          handleOrganicDisconnect((contextError as unknown) as BleError | null, conn.id);
           onOrganicDisconnect(conn.id);
         });
 
@@ -138,7 +138,7 @@ export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ i
           recoveryAdapter.serviceUUID,
           recoveryAdapter.notifyCharacteristicUUID,
           (error: Error | null, characteristic: import('react-native-ble-plx').Characteristic | null) =>
-            handleNotification(error, characteristic, conn.id)
+            handleNotification(error as BleError | null, characteristic, conn.id)
         );
 
         await new Promise(r => setTimeout(r, BLE_TIMING.RECOVERY_PING_SETTLE_MS));
@@ -209,14 +209,14 @@ export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ i
               name: error.name,
               status: (error && 'errorCode' in error) ? (error as {errorCode: unknown}).errorCode : (error && 'status' in error) ? (error as {status: unknown}).status : (error.message.includes('133') ? 133 : null)
             } : null;
-            handleOrganicDisconnect(contextError, conn.id);
+            handleOrganicDisconnect((contextError as unknown) as BleError | null, conn.id);
             onOrganicDisconnect(conn.id);
           });
           conn.monitorCharacteristicForService(
             recoveryAdapter.serviceUUID,
             recoveryAdapter.notifyCharacteristicUUID,
             (error: Error | null, characteristic: import('react-native-ble-plx').Characteristic | null) =>
-              handleNotification(error, characteristic, conn.id)
+              handleNotification(error as BleError | null, characteristic, conn.id)
           );
 
           reconnectedDevice = conn;

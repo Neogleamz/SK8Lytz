@@ -247,9 +247,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     saveRegisteredDevice,
 
     clearPendingRegistrations,
-    getAllScannedDevices: () => allDevicesRef.current as Pick<DisplayDevice, 'id' | 'name'>[] as DisplayDevice[],
-    setAllDevices: setAllDevices,
-    allDevicesRef: allDevicesRef,
+
     deregisterDevice,
     onRegistrationComplete: () => {
       setViewState('DASHBOARD');

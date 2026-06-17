@@ -39,12 +39,6 @@ interface UseDashboardGroupsOptions {
   clearPendingRegistrations: () => void;
   /** Called after FTUE setup completes to hide the SetupWizard. */
   onRegistrationComplete: () => void;
-  /** Provides real-time access to BLE-scanned devices for provisioning. */
-  getAllScannedDevices: () => DisplayDevice[];
-  /** Mirror config-back into useBLE's allDevices state after provisioning. */
-  setAllDevices: React.Dispatch<React.SetStateAction<DisplayDevice[]>>;
-  /** Ref that mirrors allDevices for stale-closure-safe access inside callbacks. */
-  allDevicesRef: React.MutableRefObject<DisplayDevice[]>;
   deregisterDevice: (mac: string) => Promise<void>;
 }
 
@@ -88,9 +82,6 @@ export function useDashboardGroups({
 
   clearPendingRegistrations,
   onRegistrationComplete,
-  getAllScannedDevices: _getAllScannedDevices,
-  setAllDevices: _setAllDevices,
-  allDevicesRef: _allDevicesRef,
   deregisterDevice,
 }: UseDashboardGroupsOptions): UseDashboardGroupsResult {
   const { user } = useAuth();
