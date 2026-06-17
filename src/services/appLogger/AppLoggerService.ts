@@ -172,7 +172,7 @@ class AppLoggerService {
       return; 
     }
 
-    if (['APP_LOG', 'APP_OPENED', 'SCAN_STARTED', 'SCAN_COMPLETED', 'DEVICE_DISCOVERED', 'DEVICE_CONNECTED', 'DEVICE_DISCONNECTED', 'GLOBAL_TELEMETRY', 'AUTO_PAUSE_TOGGLED'].includes(event)) {
+    if (['APP_LOG', 'APP_OPENED', 'SCAN_STARTED', 'SCAN_COMPLETED', 'DEVICE_DISCOVERED', 'DEVICE_CONNECTED', 'DEVICE_DISCONNECTED', 'GLOBAL_TELEMETRY', 'AUTO_PAUSE_TOGGLED', 'SCREEN_LOAD_TTID', 'SCREEN_LOAD_TTFD'].includes(event)) {
       this.storage.push({ t: Date.now(), e: event, d: payload });
       if (__DEV__) console.log(`[AppLogger] ${event}`, payload);
       return;
