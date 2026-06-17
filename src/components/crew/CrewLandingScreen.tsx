@@ -10,6 +10,8 @@ import { useTheme } from '../../context/ThemeContext';
 import { useAppConfig } from '../../context/AppConfigContext';
 import { AppLogger } from '../../services/appLogger';
 import { crewService, CrewSession } from '../../services/CrewService';
+import { useAuth } from '../../context/AuthContext';
+import { checkPermission, requestPermission } from '../../services/PermissionService';
 import { PermanentCrew, profileService } from '../../services/ProfileService';
 import { Spacing } from '../../theme/theme';
 import { createStyles } from './CrewStyles';
@@ -33,6 +35,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
   const showMap = isVisibilityAllowed('visibility_maps_tab');
   const { filters, toggleFilter, applyFilters } = useMapFilters();
   
+  const { isOfflineMode } = useAuth();
   const context = useCrewContext();
   const { hub, manage, session, setStep, step, confirmAction, setConfirmAction, currentUserId, displayName, errorMsg, setErrorMsg, isLoading, setIsLoading, showCodeEntry, setShowCodeEntry, formState } = context;
   const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, nearbySpots, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, locationCoords, crewMemberCounts, nearbyStatus } = hub;
@@ -57,22 +60,36 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
     return () => pulse.stop();
   }, []);
 
-  const handleJoinById = async (sessionId: string) => {
-    setIsLoading(true); setErrorMsg('');
-    setJoiningSessionId(sessionId);
-    try {
-      const sessionData = await crewService.joinSessionById(sessionId, displayName.trim(), currentUserId ?? undefined);
-      AppLogger.log('CREW_SESSION_JOINED', { sessionId: sessionData.id, method: 'browse' });
-      await handleSessionJoined(sessionData);
-    } catch (err: unknown) {
-      const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
-      AppLogger.log('CREW_ERROR', { action: 'join_id', error: e instanceof Error ? e.message : String(e)  });
-      setErrorMsg(e.message || 'Could not join that crew');
-      setError('Failed to load. Tap to retry.');
-    } finally { 
-      setIsLoading(false); 
-      setJoiningSessionId(null);
+  const handleLocationCheck = async (action: () => void) => {
+    const hasLocation = await checkPermission('LOCATION');
+    if (!hasLocation) {
+      const granted = await requestPermission('LOCATION');
+      if (!granted) {
+        Alert.alert('Permission Required', 'Crewz Mode requires Location permission to find nearby skaters.');
+        return;
+      }
     }
+    action();
+  };
+
+  const handleJoinById = async (sessionId: string) => {
+    handleLocationCheck(async () => {
+      setIsLoading(true); setErrorMsg('');
+      setJoiningSessionId(sessionId);
+      try {
+        const sessionData = await crewService.joinSessionById(sessionId, displayName.trim(), currentUserId ?? undefined);
+        AppLogger.log('CREW_SESSION_JOINED', { sessionId: sessionData.id, method: 'browse' });
+        await handleSessionJoined(sessionData);
+      } catch (err: unknown) {
+        const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
+        AppLogger.log('CREW_ERROR', { action: 'join_id', error: e instanceof Error ? e.message : String(e)  });
+        setErrorMsg(e.message || 'Could not join that crew');
+        setError('Failed to load. Tap to retry.');
+      } finally { 
+        setIsLoading(false); 
+        setJoiningSessionId(null);
+      }
+    });
   };
 
   const handleStartEdit = (crew: PermanentCrew) => {
@@ -131,28 +148,30 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
   };
 
   const handleJoinByCode = async () => {
-    if (inviteCode.trim().length < 6) { setErrorMsg('Enter the 6-character crew invite code'); return; }
-    if (!currentUserId) { setErrorMsg('Not logged in'); return; }
-    setIsLoading(true); setErrorMsg('');
-    try {
-      const crew = await profileService.joinPermanentCrew(inviteCode.trim(), currentUserId);
-      AppLogger.log('CREW_SESSION_JOINED', { crewId: crew.id, method: 'permanent_code' });
-      const updatedCrews = await profileService.getMyCrew(undefined, currentUserId);
-      hub.setMyCrews(updatedCrews);
-      hub.setPermanentCrews(updatedCrews.map(c => ({ id: c.id, name: c.name })));
-      setShowCodeEntry(false);
-      setInviteCode('');
-      Alert.alert(
-        '🛹 Joined!',
-        `You're now a member of "${crew.name}". When they start a session you'll see it under My Crews.`,
-        [{ text: 'Nice!' }]
-      );
-    } catch (err: unknown) {
-      const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
-      AppLogger.log('CREW_ERROR', { action: 'join_crew_by_code', error: e instanceof Error ? e.message : String(e)  });
-      setErrorMsg(e.message || 'Crew not found — check the code and try again.');
-      setError('Failed to load. Tap to retry.');
-    } finally { setIsLoading(false); }
+    handleLocationCheck(async () => {
+      if (inviteCode.trim().length < 6) { setErrorMsg('Enter the 6-character crew invite code'); return; }
+      if (!currentUserId) { setErrorMsg('Not logged in'); return; }
+      setIsLoading(true); setErrorMsg('');
+      try {
+        const crew = await profileService.joinPermanentCrew(inviteCode.trim(), currentUserId);
+        AppLogger.log('CREW_SESSION_JOINED', { crewId: crew.id, method: 'permanent_code' });
+        const updatedCrews = await profileService.getMyCrew(undefined, currentUserId);
+        hub.setMyCrews(updatedCrews);
+        hub.setPermanentCrews(updatedCrews.map(c => ({ id: c.id, name: c.name })));
+        setShowCodeEntry(false);
+        setInviteCode('');
+        Alert.alert(
+          '🛹 Joined!',
+          `You're now a member of "${crew.name}". When they start a session you'll see it under My Crews.`,
+          [{ text: 'Nice!' }]
+        );
+      } catch (err: unknown) {
+        const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
+        AppLogger.log('CREW_ERROR', { action: 'join_crew_by_code', error: e instanceof Error ? e.message : String(e)  });
+        setErrorMsg(e.message || 'Crew not found — check the code and try again.');
+        setError('Failed to load. Tap to retry.');
+      } finally { setIsLoading(false); }
+    });
   };
 
   // Find the live session that belongs to a given permanent crew.
@@ -182,13 +201,20 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
 
         {error && <ErrorCard message={error} onRetry={() => setError(null)} />}
 
-        {/* ── MY CREWS ── */}
-        {!showOnlyMap && (
+        {isOfflineMode ? (
+          <View style={[styles.hubEmptyCard, { marginTop: Spacing.md }]}>
+            <MaterialCommunityIcons name="cloud-off-outline" size={32} color={Colors.textMuted} />
+            <Text style={styles.hubEmptyText}>Crewz Mode requires an active internet connection</Text>
+          </View>
+        ) : (
           <>
+            {/* ── MY CREWS ── */}
+            {!showOnlyMap && (
+              <>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm, marginTop: Spacing.xs, width: '100%' }}>
           <Text style={[styles.hubSectionLabel, { marginBottom: 0, marginTop: 0 }]}>MY CREWS</Text>
           {myCrews.length > 0 && (
-            <TouchableOpacity onPress={() => setStep('manage')} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: 12 }}>
+            <TouchableOpacity onPress={() => handleLocationCheck(() => setStep('manage'))} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(255,170,0,0.1)', paddingHorizontal: Spacing.md, paddingVertical: Spacing.xs, borderRadius: 12 }}>
               <MaterialCommunityIcons name="plus" size={14} color={Colors.primary} />
               <Text style={{ color: Colors.primary, fontSize: 11, fontWeight: '700', marginLeft: Spacing.xs }}>New CREW</Text>
             </TouchableOpacity>
@@ -201,7 +227,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
             <Text style={styles.hubEmptyText}>You haven't joined any crews yet</Text>
             <TouchableOpacity
               style={[styles.hubActionChip, { marginTop: Spacing.md }]}
-              onPress={() => setStep('manage')}
+              onPress={() => handleLocationCheck(() => setStep('manage'))}
             >
               <MaterialCommunityIcons name="plus" size={14} color={Colors.primary} />
               <Text style={styles.hubActionChipText}>Create a CREW</Text>
@@ -412,7 +438,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
         {!showOnlyMap && (
            <TouchableOpacity
              style={[styles.secondaryBtn, { marginTop: Spacing.xl }]}
-             onPress={() => { setStep('schedule'); setErrorMsg(''); }}
+             onPress={() => handleLocationCheck(() => { setStep('schedule'); setErrorMsg(''); })}
            >
              <MaterialCommunityIcons name="calendar-clock" size={18} color={Colors.primary} />
              <Text style={styles.secondaryBtnText}>📅 Schedule a Session</Text>
@@ -420,6 +446,8 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
         )}
 
         <View style={{ height: 32 }} />
+      </>
+      )}
       </ScrollView>
     );
   

@@ -4126,3 +4126,25 @@ TSC: ?  Jest: ?
 **What merged:** Android Custom RemoteViews with 3 interactive buttons (End, Music, Favorite). Implemented headless background dispatch wired directly to BleWriteQueue.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** NotificationService.ts, index.ts, SessionContext.tsx, DashboardScreen.tsx, NotificationService.test.ts
+
+### [MERGE] 2026-06-17T00:25 — fix/hal-parity-split-brain -> master @ 65e8e85e
+**What merged:** Rip out raw ZenggeProtocol dispatches from UI to enforce HAL split-brain parity on mixed BLE groups.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** UniversalTacticalSliders.tsx, BuilderPanel.tsx, UniversalSlidersFooter.tsx, DockedController.tsx
+
+
+### [ARTIFACT] 2026-06-17T05:35:00Z â€” Crewz Domain Audit Report
+**Artifact:** crewz_audit_report.md
+**Key Finding:** Crewz group sessions are 100% reliant on Supabase Realtime pub/sub, violating the Offline-First Mandate. Latency risks are high, and there is no automated host migration if a leader crashes.
+**Status:** Analysis complete, Roadmap generated.
+
+### [ARTIFACT] 2026-06-17T05:50 — Self-Healing Triage Report
+**Path:** tools/observatory/reports/2026-06-17/report.md
+**Summary:** Generated from 33 raw errors. 4 active clusters identified.
+
+### [ARTIFACT] 2026-06-17T05:53 — PLAN-fix-web-console-crash and PLAN-fix-observatory-db-drift
+**Summary:** Drafted fully verified plans and placed tasks ON DECK.
+
+### [MERGE READY] feat/crewz-resilience - 050a31ecb8128d388fd0541c55e5e6ebb3f5971e
+Files touched: docs/SK8Lytz_App_Master_Reference.md, src/components/crew/CrewLandingScreen.tsx, src/services/CrewService/CrewRealtime.ts, src/hooks/useCrewSession.ts, src/services/GlobalForegroundService.ts, src/services/session/NotificationService.ts, tools/knowledge-base/patterns/offline-first.md
+TSC: ? Jest: ?

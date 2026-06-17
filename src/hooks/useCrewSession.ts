@@ -6,6 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import { scrubPII } from '../utils/piiScrubber';
 
 export function useCrewSession(
+  // TODO(feat/crewz-resilience): The plan requested updating onScene to onPayload here and passing to BleWriteQueue, 
+  // but that logic resides in useDashboardCrew.ts and DashboardCrewPanel.tsx which are Out of Scope.
   onSessionReady: (session: CrewSession, role: CrewRole, lastScene: Record<string, unknown> | null) => void,
   onSessionLeft: () => void,
   onSessionEnded: () => void,

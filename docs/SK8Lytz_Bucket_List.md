@@ -44,10 +44,47 @@
   - **Source of Truth:** 📖 [UniversalTacticalSliders.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/UniversalTacticalSliders.tsx#L69)
   - **Details:** Refactoring requires updating the inner dispatch closures and props in DockedController to use HAL methods.
 
+### ⚡ [BATCH:feat-crewz-resilience] — `feat/crewz-resilience` — IN PROGRESS
+> **Worktree**: `feat/crewz-resilience` · **Type**: Sequential · **Prerequisite**: None
+> **Source Analysis**: 📊 [PLAN-feat-crewz-resilience.md](./plans/PLAN-feat-crewz-resilience.md)
+
+- [ ] **`feat/crewz-resilience`**
+  - **Tags:** `[✅ READY]` `[☁️ CLOUD]` `[⚠️ H-RISK]` `[🥩 Feast]` `[M-COG]` `[BATCH:feat-crewz-resilience]` `[WAVE:1]`
+  - **Goal:** Implement Crewz Mode Resilience (Phases 1, 3, 4) with Global Persistent Foreground Service and byte array payloads.
+  - **Decision Log:** Global persistent service chosen to act as Phone-as-Gateway to keep BLE and Supabase alive during background operation, similar to Watch app. Payload compression required to reduce latency.
+  - **Source of Truth:** 📖 docs/plans/PLAN-feat-crewz-resilience.md
+  - **Details:** Refactoring `CrewRealtime.ts` for payloads, replacing `NotificationService` with `GlobalForegroundService.ts`.
+
 ---
 
 ## 🔥 ON DECK
 
+### ⚡ [BATCH:fix/web-console-crash] — `fix/web-console-crash` — READY
+> **Worktree**: `fix/web-console-crash` · **Type**: Isolated · **Prerequisite**: None
+> **Source Analysis**: 📊 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md) — Web demo crashes on load due to missing native module mock.
+
+- [ ] **`fix/web-console-crash`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI/WEB]` `[⚠️ H-RISK]` `[🍱 Meal]` `[M-COG]` `[BATCH:fix/web-console-crash]` `[WAVE:10]`
+  - **Goal:** Fix `getEnforcing` TypeError on Web to unblock the web demo.
+  - **Decision Log:** Self-healing observatory found 2 occurrences of this crash blocking the headless quality gate.
+  - **Analysis:** 📊 Source: [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md) · Plan: [PLAN-fix-web-console-crash.md](./plans/PLAN-fix-web-console-crash.md)
+    Key finding: "TurboModule getEnforcing is undefined on web."
+    Rejected alternative: "Wait for upstream library fix."
+  - **Source of Truth:** 📖 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md)
+  - **Details:** Web platform mock required. Prerequisite: None.
+
+### ⚡ [BATCH:fix/observatory-db-drift] — `fix/observatory-db-drift` — READY
+> **Worktree**: `fix/observatory-db-drift` · **Type**: Isolated · **Prerequisite**: None
+> **Source Analysis**: 📊 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md) — 3 database anomalies detected from remote logs.
+
+- [ ] **`fix/observatory-db-drift`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[☁️ CLOUD]` `[⚠️ M-RISK]` `[🍱 Meal]` `[M-COG]` `[BATCH:fix/observatory-db-drift]` `[WAVE:10]`
+  - **Goal:** Apply migrations for label_designs drift, integer overflow, and telemetry constraints.
+  - **Decision Log:** Remote logs flagged 10+ errors for schema mismatches and failing telemetry inserts.
+  - **Analysis:** 📊 Source: [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md) · Plan: [PLAN-fix-observatory-db-drift.md](./plans/PLAN-fix-observatory-db-drift.md)
+    Key finding: "label_designs missing product_name column, and severity constraints are violating."
+  - **Source of Truth:** 📖 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md)
+  - **Details:** Requires creating and applying new Supabase migrations.
 ---
 
 ##  ❄️ Icebox / Backburner (Manual Trigger Only)

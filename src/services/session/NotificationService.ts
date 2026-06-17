@@ -1,8 +1,8 @@
-import notifee, { AndroidImportance, AndroidForegroundServiceType } from '@notifee/react-native';
 import * as Location from 'expo-location';
 import { AppState, Platform } from 'react-native';
 import { fromCallback } from 'xstate';
 import { AppLogger } from '../appLogger';
+import '../GlobalForegroundService'; // Ensure it initializes on boot
 import { TelemetrySnapshot, SessionPhase, SessionMachineEvent } from './SessionMachine.types';
 
 export interface NotificationServiceInput {
@@ -20,7 +20,6 @@ export const notificationService = fromCallback<SessionMachineEvent, Notificatio
 
   let isActive = true;
   let updateInterval: NodeJS.Timeout | null = null;
-  let isForegroundServiceStarted = false;
   let isDisplaying = false;
 
   const displayNotification = async () => {
@@ -29,6 +28,9 @@ export const notificationService = fromCallback<SessionMachineEvent, Notificatio
     isDisplaying = true;
 
     try {
+      const notifeeModule = require('@notifee/react-native');
+      const notifee = notifeeModule.default;
+
       let hasLocationPermission = false;
       if (Platform.OS === 'android') {
         try {
@@ -69,10 +71,6 @@ export const notificationService = fromCallback<SessionMachineEvent, Notificatio
         body: `Distance: ${input.telemetryRef.current.sessionDistanceMiles.toFixed(2)} mi | Speed: ${input.telemetryRef.current.gpsSpeed.toFixed(1)} mph`,
         android: {
           channelId: NOTIFICATION_CHANNEL_ID,
-          asForegroundService: !isForegroundServiceStarted && hasLocationPermission && AppState.currentState === 'active',
-          ...(hasLocationPermission && {
-            foregroundServiceTypes: [AndroidForegroundServiceType.FOREGROUND_SERVICE_TYPE_LOCATION],
-          }),
           color: '#00F0FF',
           ongoing: true,
           pressAction: {
@@ -93,9 +91,6 @@ export const notificationService = fromCallback<SessionMachineEvent, Notificatio
       });
 
       if (!isActive) return;
-      if (hasLocationPermission && AppState.currentState === 'active') {
-        isForegroundServiceStarted = true;
-      }
     } catch (err: unknown) {
       AppLogger.error('[NotificationService] Failed to display foreground notification', err, {
         payload_size: 0,
@@ -107,6 +102,10 @@ export const notificationService = fromCallback<SessionMachineEvent, Notificatio
   };
 
   const setupNotification = async () => {
+    const notifeeModule = require('@notifee/react-native');
+    const notifee = notifeeModule.default;
+    const { AndroidImportance } = notifeeModule;
+
     if (Platform.OS === 'android') {
       await notifee.createChannel({
         id: NOTIFICATION_CHANNEL_ID,
@@ -142,9 +141,8 @@ export const notificationService = fromCallback<SessionMachineEvent, Notificatio
 
     (async () => {
       try {
-        if (Platform.OS === 'android') {
-          await notifee.stopForegroundService();
-        } else {
+        if (Platform.OS !== 'web') {
+          const notifee = require('@notifee/react-native').default;
           await notifee.cancelNotification(NOTIFICATION_ID);
         }
       } catch (e: unknown) {

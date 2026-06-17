@@ -396,6 +396,7 @@ For testing App Sync behavior vs. Offline mode offline fallbacks, you can authen
 
 The application enforces a strict "Hardware First, Cloud Second" policy. Core hardware control (BLE opcodes) is NEVER gated behind an authentication wall.
 
+- **Crewz Mode Exception (Online-Only)**: The Crewz Hub and live group sessions are explicitly excluded from this mandate. They require an active internet connection, Location permissions, and Data Sharing permissions to function, relying strictly on Supabase Realtime for synchronization.
 - **Offline Mode State**: Propagated dynamically via the `isOfflineMode` prop in the component tree (`DashboardScreen` → `DockedController` → Modals).
 - **Graceful Degradation**: 
   - `QuickPresetModal`: Cloud preset saving is hidden when `isOfflineMode === true`. Only local device EEPROM saves are permitted.
@@ -446,8 +447,8 @@ The following architectural invariants are codified to prevent regression of cri
 > All 3 physical SK8Lytz devices confirmed as **`Ctrl_Mini_RGB_Symphony_new_0xA3`** (product_id: **163 = 0xA3**). Confirmed from `discovered_devices_telemetry` across MACs `08:65:F0:9A:C2:3C`, `08:65:F0:9A:5E:06`, `08:65:F0:5F:03:B1`. Firmware: v45—46, BLE: 5, LED version: 3.
 >
 > **Key implications of 0xA3 vs 0xA2:**
-> - `0x59` Static Colorful tab **IS available** on 0xA3 (not available on 0xA2) âœ…
-> - `0x51` Custom Scene — **9B compact format (291B) WORKS** on 0xA3 via our standard `wrapCommand` âœ…
+> - `0x59` Static Colorful tab **IS available** on 0xA3 (not available on 0xA2) ✅
+> - `0x51` Custom Scene — **9B compact format (291B) WORKS** on 0xA3 via our standard `wrapCommand` ✅
 > - `0x51` 10B extended format (323B) does NOT work via our wrapper — requires ZENGGE chunked framing header (see Protocol Bible Section 11)
 > - `0x42` effect ceiling: **1—100** (same as 0xA2). Effect 101 plays an undocumented effect (ceiling is soft).
 > - `0x43` Multi-Sequence: **DO NOT USE** — Oracle test caused hardware LED shutoff (state machine crash). ZENGGE app uses `0x51` for multi-step effects, not `0x43`.
@@ -661,7 +662,7 @@ The Silent Sweeper is a persistent background LowPower BLE scan that runs after 
 
 | Tier | Battery Level | Scan Interval | Behavior |
 | :--- | :--- | :--- | :--- |
-| **Normal** | â‰¥30% | Continuous LowPower | Full scan, all features active |
+| **Normal** | ≥30% | Continuous LowPower | Full scan, all features active |
 | **Conservative** | 15—30% | Reduced frequency | Longer gaps between scan windows |
 | **Critical** | <15% | Minimal scanning | Sweeper pauses non-essential scans, only responds to burst requests |
 
@@ -698,7 +699,7 @@ Dispatch chain: `useControllerDispatch.ts` → `PatternEngine.ts` (Synthesizer) 
 
 **Archetypes & Auto-Routing:**
 - **Spatial Mode (`0x59` CASCADE/FREEZE):** Synthesizes full 300-pixel RGB arrays client-side using waveform math (sine waves, pulse trains, alternating grids). Automatically routed to `<ProductVisualizer>` and `<CustomEffectVisualizer>` without duplicative business logic.
-  > **âš ï¸ 0x59 SPATIAL LIMITATION (Center-Out Reality):** The hardware `0x59` command ONLY supports autonomous scrolling (`0x02 Running`). It CANNOT mathematically expand or contract pixels from a center point. Center-Out math functions generate static arrays that merely scroll, creating visual duplicates of standard Wipes/Comets. Furthermore, HALOZ hardware physically mirrors left/right segments (both wipe Heel-to-Toe), meaning a standard Wipe natively behaves as a Center-Out effect. Thus, Center-Out pattern math is redundant and incompatible with `0x59`.
+  > **⚠️ 0x59 SPATIAL LIMITATION (Center-Out Reality):** The hardware `0x59` command ONLY supports autonomous scrolling (`0x02 Running`). It CANNOT mathematically expand or contract pixels from a center point. Center-Out math functions generate static arrays that merely scroll, creating visual duplicates of standard Wipes/Comets. Furthermore, HALOZ hardware physically mirrors left/right segments (both wipe Heel-to-Toe), meaning a standard Wipe natively behaves as a Center-Out effect. Thus, Center-Out pattern math is redundant and incompatible with `0x59`.
 - **Temporal Mode (`0x51` STEP_JUMP/GRADUAL):** For whole-strip temporal patterns (Jump, Strobe, Breathe), the engine MUST route to the `0x51` 32-step hardware scheduler. `0x59` is the wrong tool for whole-strip temporals because evaluating a Jump/Strobe equation at a static `seedTick` produces an un-animatable solid color or pure black frame that the hardware cannot jump/strobe properly. For patterns that require sub-millisecond fade interpolations (e.g., `Breath`, `Strobe`), the engine automatically routes to the `0x51` 32-step hardware scheduler to prevent BLE bus saturation.
 
 > [!NOTE]
@@ -733,9 +734,9 @@ _Writes custom segments, IC type, and max LED points permanently to the controll
 - **CRITICAL ENDIANNESS:** Uses **Big-Endian format**: `ptsHigh = (points >> 8) & 0xFF`, `ptsLow = points & 0xFF`.
 
 > [!NOTE]
-> **`points` â‰  total LEDs.** `points` = LEDs per segment. `segments` = number of parallel mirrors.
-> Total physical LEDs = `points Ã— segments`. The hardware's segment engine mirrors the pattern automatically.
-> **HALOZ example**: 22 bulbs = 11 points Ã— 2 segments. All pattern commands use 11, not 22.
+> **`points` ≠ total LEDs.** `points` = LEDs per segment. `segments` = number of parallel mirrors.
+> Total physical LEDs = `points × segments`. The hardware's segment engine mirrors the pattern automatically.
+> **HALOZ example**: 22 bulbs = 11 points × 2 segments. All pattern commands use 11, not 22.
 > The `0x51` slot `flags=0x80` byte enables segment mirroring ("section toggle"). `flags=0x00` disables it.
 > Full model documented in `ZENGGE_PROTOCOL_BIBLE.md` under `0x62`.
 
@@ -748,8 +749,8 @@ _Primary command for all IC-strip patterns. Sends a per-pixel RGB array that the
 > [!IMPORTANT]
 > **SEGMENT MODEL — Array Length Must Use `ledPoints`, NOT Total LEDs.**
 > The ZENGGE hardware segment engine automatically mirrors the `ledPoints` pattern across all segments.
-> For HALOZ (22 bulbs = 11 points Ã— 2 segments), send an array of **11** pixels, not 22.
-> Sending `ledPoints Ã— segments` pixels bypasses the hardware mirror and fills both segments manually.
+> For HALOZ (22 bulbs = 11 points × 2 segments), send an array of **11** pixels, not 22.
+> Sending `ledPoints × segments` pixels bypasses the hardware mirror and fills both segments manually.
 > Source: BLE sniff observation (2026-04-22) — ZENGGE Multi-Color creator uses `points` exclusively.
 
 - **Format:** `[0x59, totalLenHi, totalLenLo, [R1,G1,B1...], numLEDsHi, numLEDsLo, transitionType, speed, direction, checksum]`
@@ -757,21 +758,21 @@ _Primary command for all IC-strip patterns. Sends a per-pixel RGB array that the
 - **Minimum Payload:** 12 pixels. Payloads <10 cause **hardware memory lock glitching**.
 - **TransitionType Bytes (APK Verified Truth: `StaticColorfulMode.java`):**
 
-> âš ï¸ **0xA3 HARDWARE LIMITATION:** The `0x59` command is a spatial payload. The ZENGGE app explicitly *hides* Breathe and Twinkly from the `0x59` UI for the `0xA3` chip because the hardware cannot calculate temporal math over a 450-byte custom array. Strobe and Jump are also known to fail. **For temporal transitions (Breathe, Jump, Strobe), use the `0x51` Scene Sequencer instead!**
+> ⚠️ **0xA3 HARDWARE LIMITATION:** The `0x59` command is a spatial payload. The ZENGGE app explicitly *hides* Breathe and Twinkly from the `0x59` UI for the `0xA3` chip because the hardware cannot calculate temporal math over a 450-byte custom array. Strobe and Jump are also known to fail. **For temporal transitions (Breathe, Jump, Strobe), use the `0x51` Scene Sequencer instead!**
 
 | Byte | Name | Behavior | 0xA3 Status |
 |:---|:---|:---|:---|
-| `0x01` | Static | Freeze in place | âœ… **Fully Supported** |
-| `0x02` | Running Water | Continuous hardware scroll | âœ… **Fully Supported** |
-| `0x03` | Strobe | Flash effect | âŒ Fails (Requires `0x51`) |
-| `0x04` | Jump | Hard color jump | âŒ Fails (Requires `0x51`) |
-| `0x05` | Breathe | Breathe fade effect | â›” **Firmware Locked/Hidden** (Use `0x51`) |
-| `0x06` | Twinkly | Twinkle effect | â›” **Firmware Locked/Hidden** |
+| `0x01` | Static | Freeze in place | ✅ **Fully Supported** |
+| `0x02` | Running Water | Continuous hardware scroll | ✅ **Fully Supported** |
+| `0x03` | Strobe | Flash effect | ❌ Fails (Requires `0x51`) |
+| `0x04` | Jump | Hard color jump | ❌ Fails (Requires `0x51`) |
+| `0x05` | Breathe | Breathe fade effect | 🚫 **Firmware Locked/Hidden** (Use `0x51`) |
+| `0x06` | Twinkly | Twinkle effect | 🚫 **Firmware Locked/Hidden** |
 
 > [!IMPORTANT]
 > **Tick Settings (Point Count) Mismatch Flaw**: The `numLEDsHi` and `numLEDsLo` bytes at the end of the `0x59` payload dictate the **physical hardware strip length** that the transition effect will span across. Our previous implementation clamped this value to the RGB array length (max 54). If the hardware has 150 LEDs, clamping this to 54 causes transitions to truncate because the hardware thinks the spatial size is only 54! To bypass MTU limits while preserving spatial effects, we must decouple the RGB array length from the hardware point count sent in the payload.
 
-- **Speed:** UI 0—100 → HW 1—31. Formula: `max(1, min(31, round(uiSpeed / 100 Ã— 30) + 1))`. Source: APK `Protocol/n.java: ad.e.a(f, 1, 31)`.
+- **Speed:** UI 0—100 → HW 1—31. Formula: `max(1, min(31, round(uiSpeed / 100 × 30) + 1))`. Source: APK `Protocol/n.java: ad.e.a(f, 1, 31)`.
 - **Direction:** `0x01` Forward, `0x00` Reverse.
 - **Solid Mode Replication:** A single 1-pixel padded array with `transitionType=0x01` (FREEZE) safely replicates Solid Mode without `0x31` flickering glitches.
 
@@ -820,8 +821,8 @@ _Sends up to 32 animation steps. Hardware loops through active steps autonomousl
 
 ### Basic Control Commands
 
-- **Power ON (0x71):** `[0x71, 0x23, 0x0F, 0xA3]` — checksum `0xA3` = sum of first 3 bytes âœ…
-- **Power OFF (0x71):** `[0x71, 0x24, 0x0F, 0xA4]` — checksum `0xA4` = sum of first 3 bytes âœ…
+- **Power ON (0x71):** `[0x71, 0x23, 0x0F, 0xA3]` — checksum `0xA3` = sum of first 3 bytes ✅
+- **Power OFF (0x71):** `[0x71, 0x24, 0x0F, 0xA4]` — checksum `0xA4` = sum of first 3 bytes ✅
 - **Source:** `C14184b.m4796M()` via `C7780q.m20873a()` — 0xA3 is NOT a legacy device → always uses `0x71`, never `0x3B`.
 
 ### Command: Settled Mode — FG + BG Dual Color (0x41)
@@ -888,8 +889,8 @@ _Streams real-time audio magnitude from the app's microphone to drive hardware m
 
 _Streams one row of real-time pixel data per call. Used for live bitmap/image projection onto LEDs._
 
-- **Format (variable):** `[0x53, totalLen_hi, totalLen_lo, R, G, B, ...(numLEDs Ã— RGB)..., numLEDs_hi, numLEDs_lo, checksum]`
-- **totalLen:** `(numLEDs Ã— 3) + 6`
+- **Format (variable):** `[0x53, totalLen_hi, totalLen_lo, R, G, B, ...(numLEDs × RGB)..., numLEDs_hi, numLEDs_lo, checksum]`
+- **totalLen:** `(numLEDs × 3) + 6`
 - **Rate-limited:** Hardware uses AtomicBoolean gate — must wait for ACK before next frame.
 - **Behavior:** Sends one bitmap row. Call repeatedly in a loop to stream animation frames.
 - **APK Source:** Built inline `SceneModeFragment.m18748Z2(int[] iArr)` — no dedicated Protocol class.
@@ -1003,12 +1004,12 @@ The app implements a **Mathematical Consumption Modeling** system using real-tim
 | Hook / Service            | Consumer           | Owns                                                                                              |
 | :------------------------ | :----------------- | :------------------------------------------------------------------------------------------------ |
 | `useHealthTelemetry`      | `SessionContext`   | Phone/watch health polling, watch-preferred priority logic, HR/cal/peak/avg state, `mergeWatchHealth()` |
-| `WatchBridge` (native module) | `SessionContext` | Phoneâ†”watch session state sync, command relay (START/STOP), health data relay via native DataLayer/WCSession |
+| `WatchBridge` (native module) | `SessionContext` | Phone↔watch session state sync, command relay (START/STOP), health data relay via native DataLayer/WCSession |
 | `SpeedTrackingService`    | `SessionContext`   | GPS speed push to watch via `WatchBridge.sendMetricUpdate()` during active sessions               |
 
 ---
 
-### ðŸ“ Shared Type Contract
+### 🏛️ Shared Type Contract
 
 All FSM states and shared interfaces live in **`src/types/dashboard.types.ts`**. Never re-declare these types in individual hooks or components.
 
@@ -1069,8 +1070,8 @@ _Project ID:_ `qefmeivpjyaukbwadgaz`
 | `product_id_confirmed_at`   | TIMESTAMPTZ| When product_id was confirmed via BLE (added 2026-04-22)|
 | `rf_mode`                   | TEXT       | RF remote auth policy                                |
 | `rf_paired_count`           | INT        | Number of paired RF remotes                          |
-| `group_id`                  | TEXT       | **âš ï¸ LEGACY — do not use for new code.** Superseded by junction table `device_group_members`. Still present in cloud rows for backward compat. |
-| `group_name`                | TEXT       | **âš ï¸ LEGACY — do not use for new code.** Superseded by `registered_groups.group_name`. |
+| `group_id`                  | TEXT       | ⚠️ **LEGACY — do not use for new code.** Superseded by junction table `device_group_members`. Still present in cloud rows for backward compat. |
+| `group_name`                | TEXT       | ⚠️ **LEGACY — do not use for new code.** Superseded by `registered_groups.group_name`. |
 | `registered_at`             | TIMESTAMPTZ| First registration timestamp                         |
 | `updated_at`                | TIMESTAMPTZ| Last modification timestamp                          |
 | `rssi_at_register`          | INT        | Signal strength at registration                      |

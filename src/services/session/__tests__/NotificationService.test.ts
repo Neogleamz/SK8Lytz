@@ -5,7 +5,7 @@ import { Platform, AppState } from 'react-native';
 
 jest.mock('react-native', () => ({
   Platform: { OS: 'android' },
-  AppState: { currentState: 'active' }
+  AppState: { currentState: 'active', addEventListener: jest.fn() }
 }));
 
 jest.mock('@notifee/react-native', () => ({
@@ -120,7 +120,7 @@ describe('NotificationService test suite', () => {
     cleanup();
   });
 
-  it('4. Cleanup calls stopForegroundService on Android', async () => {
+  it('4. Cleanup calls cancelNotification', async () => {
     const callback = getCallback();
     const cleanup = callback({
       input: {
@@ -135,6 +135,6 @@ describe('NotificationService test suite', () => {
     cleanup();
     for (let i = 0; i < 5; i++) await Promise.resolve();
 
-    expect(notifee.stopForegroundService).toHaveBeenCalled();
+    expect(notifee.cancelNotification).toHaveBeenCalled();
   });
 });
