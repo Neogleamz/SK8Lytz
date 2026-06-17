@@ -101,18 +101,6 @@
   - **Source of Truth:** 📖 [BleMachine.types.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.types.ts#L18) §BLE Types
   - **Details:** 7 files, ~20 locations. Prerequisite: Wave 1 fully merged into master before this worktree is created.
 
-- [ ] **`fix/promise-io-guards`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[CLOUD]` `[✅ L-RISK]` `[🍱 Meal]` `[🤖 FLASH]` `[BATCH:deepdive-audit-sweep]` `[WAVE:2]`
-  - **Goal:** Add try/catch guards and .catch() handlers to all unguarded async IO operations to prevent unhandled promise rejections.
-  - **Decision Log:** R-11 sniper + DOMAIN_NOTIFICATIONS_&_ROUTING confirmed 15 unguarded async ops. 3 HIGH severity (AppConfigContext, AppLoggerStorage, LocationService) can crash silently and cause data loss.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a2899729-4d77-4e6c-8f8c-d23919eb2b74/system_audit_report.md) · Plan: [PLAN-fix-promise-io-guards.md](./plans/PLAN-fix-promise-io-guards.md)
-    Key finding: "AppLoggerStorage uses console.warn instead of AppLogger.warn to prevent re-entrant logging loops"
-    Rejected alternative: "Global unhandledrejection handler — masks bugs instead of fixing them"
-  - **Source of Truth:** 📖 [AppConfigContext.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/context/AppConfigContext.tsx#L25) §IO Safety
-  - **Details:** 5 files, 15 locations. Prerequisite: Wave 1 fully merged into master before this worktree is created.
-
-#### 🌊 Wave 3 — Hardening & Code Quality (Prerequisite: Wave 2 merged)
-
 - [ ] **`fix/reentrant-handler-guards`**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍱 Meal]` `[🤖 FLASH]` `[BATCH:deepdive-audit-sweep]` `[WAVE:3]`
   - **Goal:** Add re-entrancy guards (`isProcessing` ref pattern) to all async UI handler functions that interact with BLE or Supabase.
