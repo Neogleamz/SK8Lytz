@@ -1,9 +1,27 @@
-﻿### [EVENT] 2026-06-14T02:44:43.629Z â€” Wave 1 Implementation Merged
+### [ARTIFACT] 2026-06-16T23:34:00Z — Plan: feat/watch-bidirectional-bridge
+**Type:** Implementation Plan
+**File:** `docs/plans/PLAN-feat-watch-bidirectional-bridge.md`
+**Source:** Intake workflow based on user request.
+**Details:** Defines the architecture for transforming the one-way watch bridge into a fully bidirectional phone-as-gateway orchestrator.
+
+### [ARTIFACT] 2026-06-16T23:26:00Z — KB Capture: watch-ble-bridge
+**Type:** Knowledge Base Capture
+**File:** `tools/knowledge-base/patterns/watch-ble-bridge.md`
+**Source:** Web Research (Expo / Industry Patterns)
+**Key Finding:** Direct BLE from watch is heavily throttled and drops connections; Phone-as-Gateway (Companion App) is the industry standard for IoT.
+**Feeds Into:** `tools/SK8Lytz_App_Master_Reference.md`
+**Re-Validate By:** 2026-09-14
+
+### [ARTIFACT] 2026-06-16T23:25:00Z — Smartwatch Integration Analysis
+| Artifact | Path | Description |
+|---|---|---|
+| Watch App Analysis | [watch_app_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/c32537a3-610e-4934-884a-37f7878eec17/watch_app_analysis.md) | Comprehensive architectural analysis of Direct BLE vs Companion App models, industry benchmarks, and Expo/React Native integration strategy for watchOS and Wear OS. |
+
+### [EVENT] 2026-06-14T02:44:43.629Z â€” Wave 1 Implementation Merged
 **Trigger:** Orchestrator gatekeeper execution
 **Action:** Fast-forward merged 8 subagent branches into master.
 **Outcome:** Wave 1 is officially closed. Moving tasks to archive.
 
-﻿### [EVENT] 2026-06-14T02:27:38.466Z â€” Wave 1 Implementation Merged
 **Trigger:** Orchestrator gatekeeper execution
 **Action:** Fast-forward merged 8 subagent branches into master.
 **Outcome:** Wave 1 is officially closed. Moving tasks to archive.
@@ -3735,7 +3753,7 @@ TSC: ✅  Jest: ✅
 =======
 >>>>>>> edbb5b13 (chore(log): update SESSION_LOG.md)
 
-### [MERGE READY] sweep-src-services � c16a3048eb61b52396632fd2e046acfc7f705af4
+### [MERGE READY] sweep-src-services � c16a3048eb61b52396632fd2e046acfc7f705af4
 Files touched: 
 - docs/plans/PLAN-sweep-src-services.md
 - src/services/AppSettingsService.ts
@@ -4049,4 +4067,36 @@ TSC: ✅  Jest: ✅
 **What merged:** Fixed critical BLE issue where groups only fired to single skate by changing global writeGeneration tracking to per-device (debounceKey) tracking in BleWriteDispatcher and BleWriteQueue. Parallelized Promise.all loops in useControllerDispatch. Added border and flexWrap to UniversalColorGrid to make black/white dots visible.
 **Verify result:** TSC ✅, Jest ✅, gates ✅
 **Files touched:** BleWriteDispatcher.ts, BleWriteQueue.ts, useBLE.ts, useControllerDispatch.ts, UniversalColorGrid.tsx
+
+### [DECISION] 2026-06-16T23:08 — Halt Release & Upgrade Expo 56
+**Decision:** Paused the `/ship-it` release pipeline to perform a major dependency upgrade to Expo SDK 56.
+**Rejected:** Proceeding with the release despite 20 moderate `js-yaml` vulnerabilities.
+**Don't re-derive:** The user explicitly commanded overriding the release freeze to wipe out all outstanding NPM tech debt. This is a massive architectural shift (React Native 0.85) executed as an emergency mid-release injection.
+**Source:** User prompt
+
+### [ARTIFACT] 2026-06-16T23:09 — Expo 56 Upgrade Plan
+Plan drafted: `docs/plans/PLAN-refactor-upgrade-expo-56.md`
+
+### [DECISION] 2026-06-16T23:38 — Rich OS Notifications Architecture
+**Decision:** Upgrade standard text notifications to use iOS Live Activities (ActivityKit) and Android Custom RemoteViews with 3 interactive buttons (End Session, Music Mode, Favorite).
+**Rejected:** Bypassing `BleWriteDispatcher` for quick-favorite BLE writes — rejected because it violates the global write synchronization lock and leads to GATT 133 errors. We will use headless UI dispatches instead.
+**Don't re-derive:** Notifee supports basic headless actions, but iOS requires dropping down to native SwiftUI via an Expo plugin/module to achieve the Dynamic Island/Lock Screen widget.
+**Source:** User approval and benchmarking of Spotify/Strava/Uber standards.
+
+### [ARTIFACT] 2026-06-16T23:38 — PLAN-feat-rich-os-notifications Created
+| Artifact | Path | Description |
+|---|---|---|
+| Rich Notifications Plan | [PLAN-feat-rich-os-notifications.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-feat-rich-os-notifications.md) | Architectural plan for implementing Android Custom RemoteViews and iOS Live Activities. |
+
+
+### [MERGE READY] feat-watch-bidirectional-bridge � aa28a28a
+Files touched:
+- modules/sk8lytz-watch-bridge/src/index.ts
+- modules/sk8lytz-watch-bridge/android/src/main/java/expo/modules/sk8lytzwatchbridge/Sk8lytzWatchBridgeModule.kt
+- modules/sk8lytz-watch-bridge/ios/Sk8lytzWatchBridgeModule.swift
+- android/sk8lytzWear/src/main/kotlin/com/neogleamz/sk8lytzwear/presentation/WearMessageSender.kt
+- targets/watch/WatchConnectivityManager.swift
+- src/context/SessionContext.tsx
+- src/hooks/useBLE.ts
+TSC: ?  Jest: ?
 

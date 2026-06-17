@@ -47,10 +47,47 @@
 
 ## 🔥 ON DECK
 
+### ⚡ [BATCH:feat/rich-os-notifications] — `feat/rich-os-notifications` — [✅ READY]
+> **Worktree**: `feat/rich-os-notifications` · **Type**: Isolated · **Prerequisite**: None
+> **Source Analysis**: 📊 [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a87e0851-7797-4ede-a5a4-e9e88d68809d/implementation_plan.md) — Industry benchmarking of top-tier apps (Strava, Spotify) and custom view capabilities.
+
+- [ ] **`feat/rich-os-notifications`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[NATIVE/UI]` `[⚠️ H-RISK]` `[🥩 Feast]` `[H-COG]` `[BATCH:feat/rich-os-notifications]`
+  - **Goal:** Upgrade standard session notifications to Android Custom RemoteViews and iOS Live Activities with headless BLE quick-actions.
+  - **Decision Log:** Current notifications are static text; top-tier apps use ActivityKit and MediaStyle to present interactive telemetry lock-screen widgets that don't require bringing the UI to the foreground.
+  - **Analysis:** 📊 Source: [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a87e0851-7797-4ede-a5a4-e9e88d68809d/implementation_plan.md) · Plan: [PLAN-feat-rich-os-notifications.md](./plans/PLAN-feat-rich-os-notifications.md)
+    Key finding: "iOS Live Activities require dropping to SwiftUI; Android fits exactly 3 action buttons comfortably."
+    Rejected alternative: "Bypassing the global BleWriteDispatcher for headless payload execution — Rejected to prevent GATT collisions."
+  - **Source of Truth:** 📖 [NotificationService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/session/NotificationService.ts#L79)
+  - **Details:** Requires writing native code and an Expo Config Plugin for iOS Live Activities, and intercepting background events to call existing hooks invisibly.
+
+- [ ] **`feat/watch-bidirectional-bridge`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[NATIVE/BRIDGE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[H-COG]` 
+  - **Goal:** Upgrade the iOS and Android watch companion bridges from one-way telemetry to bidirectional JSON command dispatchers.
+  - **Decision Log:** Sending BLE payloads from the watch is banned due to OS background throttling and dual-master conflicts; the phone must act as the BLE gateway.
+  - **Analysis:** 📊 Source: [watch_app_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/c32537a3-610e-4934-884a-37f7878eec17/watch_app_analysis.md) · Plan: [PLAN-feat-watch-bidirectional-bridge.md](./plans/PLAN-feat-watch-bidirectional-bridge.md)
+    Key finding: "Both platforms limit commands to strict `START_SESSION`/`STOP_SESSION` string literal paths."
+    Rejected alternative: "Connecting watch directly to skates via BLE — Rejected because it causes dual-master disconnects with the phone."
+  - **Source of Truth:** 📖 [index.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/modules/sk8lytz-watch-bridge/src/index.ts) §WatchCommand
+  - **Details:** The `addWatchCommandListener` will be mounted globally in `BleMachine.ts` to ensure commands execute when the phone is locked in the skater's pocket.
+
 
 ---
 
 ##  ❄️ Icebox / Backburner (Manual Trigger Only)
+
+### 🧹 Tech Debt & Upgrades
+### ⚡ [BATCH:refactor/upgrade-expo-56] — `refactor/upgrade-expo-56` — IN PROGRESS
+> **Worktree**: `refactor/upgrade-expo-56` · **Type**: Sequential · **Prerequisite**: None
+> **Source Analysis**: 📊 [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/fb5fb761-e7be-4241-a902-3cb07dca3307/implementation_plan.md) — User explicitly requested forcing a major dependency update (Expo 55->56) mid-release to resolve deep-tree js-yaml vulnerabilities.
+
+- [ ] **`refactor/upgrade-expo-56`**
+  - **Tags:** `[✅ READY]` `[☁️ CLOUD]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 M132]` `[BATCH:refactor/upgrade-expo-56]`
+  - **Goal:** Upgrade the project from Expo SDK 55 to 56, including React Native 0.85, to wipe out all outstanding NPM vulnerabilities.
+  - **Decision Log:** User explicitly requested during `/ship-it` to override release freeze and force a full dependency update.
+  - **Analysis:** 📊 Plan: [PLAN-refactor-upgrade-expo-56.md](./plans/PLAN-refactor-upgrade-expo-56.md)
+  - **Source of Truth:** 📖 [package.json](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/package.json)
+  - **Details:** High risk of breaking custom native modules and legacy UI components due to React Native 0.85 bridging changes.
 
 ### 🎵 Epic: Music Mode
 
