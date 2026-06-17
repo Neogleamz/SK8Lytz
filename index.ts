@@ -11,25 +11,32 @@ import { WatchBridge } from 'sk8lytz-watch-bridge';
 
 // Register Notifee background event handler
 notifee.onBackgroundEvent(async ({ type, detail }) => {
-  if (type === EventType.ACTION_PRESS && detail.pressAction?.id === 'end-session') {
-    try {
-      // Mark session as ended + flag for deferred full teardown on foreground
-      await AsyncStorage.multiSet([
-        ['@sk8lytz_session_active', 'false'],
-        ['@sk8lytz_pending_bg_end', 'true'],
-      ]);
-    } catch (e) {
-      console.error('Failed to save session state in background handler', e);
+  if (type === EventType.ACTION_PRESS) {
+    const actionId = detail.pressAction?.id;
+
+    if (actionId === 'end-session') {
+      try {
+        await AsyncStorage.multiSet([
+          ['@sk8lytz_session_active', 'false'],
+          ['@sk8lytz_pending_bg_end', 'true'],
+        ]);
+      } catch (e) {
+        console.error('Failed to save session state in background handler', e);
+      }
+      WatchBridge.syncSessionState({ status: 'STOPPED' }).catch(() => {});
+      if (detail.notification?.id) {
+        await notifee.cancelNotification(detail.notification.id);
+      }
+      await notifee.stopForegroundService();
+    } else if (actionId === 'toggle-music') {
+      import('react-native').then(({ DeviceEventEmitter }) => {
+        DeviceEventEmitter.emit('BACKGROUND_ACTION_TOGGLE_MUSIC');
+      });
+    } else if (actionId === 'fire-favorite') {
+      import('react-native').then(({ DeviceEventEmitter }) => {
+        DeviceEventEmitter.emit('BACKGROUND_ACTION_FIRE_FAVORITE');
+      });
     }
-
-    // Push STOPPED to watch immediately — WatchBridge works outside React
-    WatchBridge.syncSessionState({ status: 'STOPPED' }).catch(() => {});
-
-    if (detail.notification?.id) {
-      await notifee.cancelNotification(detail.notification.id);
-    }
-
-    await notifee.stopForegroundService();
   }
 });
 

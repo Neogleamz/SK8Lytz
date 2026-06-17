@@ -65,9 +65,10 @@ describe('NotificationService test suite', () => {
     const args = (notifee.displayNotification as jest.Mock).mock.calls[0][0];
     
     expect(args.title).toContain('Skate Session Active');
-    expect(args.android.actions).toHaveLength(2);
-    expect(args.android.actions[0].title).toContain('PAUSE');
-    expect(args.android.actions[1].title).toContain('END SESSION');
+    expect(args.android.actions).toHaveLength(3);
+    expect(args.android.actions[0].title).toContain('END');
+    expect(args.android.actions[1].title).toContain('MUSIC');
+    expect(args.android.actions[2].title).toContain('FAVORITE');
 
     cleanup();
   });
@@ -89,9 +90,10 @@ describe('NotificationService test suite', () => {
     const args = (notifee.displayNotification as jest.Mock).mock.calls[0][0];
     
     expect(args.title).toContain('Paused');
-    expect(args.android.actions).toHaveLength(2);
-    expect(args.android.actions[0].title).toContain('RESUME');
-    expect(args.android.actions[1].title).toContain('END SESSION');
+    expect(args.android.actions).toHaveLength(3);
+    expect(args.android.actions[0].title).toContain('END');
+    expect(args.android.actions[1].title).toContain('MUSIC');
+    expect(args.android.actions[2].title).toContain('FAVORITE');
 
     cleanup();
   });

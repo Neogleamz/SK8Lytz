@@ -44,6 +44,12 @@ To clarify your question: We are **not** bypassing the `BleWriteDispatcher` or w
 *   The headless task simply calls our existing standard `useProtocolDispatch()` or `BleWriteDispatcher` queue, exactly as if you had tapped the button inside the app. 
 *   **The Benefit:** You don't have to unlock your phone, open the app, and wait for the screen to render just to change the lights. The existing app logic handles it invisibly.
 
+## 3. Failure Point Mitigations (Devil's Advocate)
+Based on the brainstorm, we will implement these 3 strict mitigations:
+1. **Android 14 Foreground Service Deadlocks:** We will wrap the headless BLE writes in a strict `< 10s` Promise resolution to prevent Android from throwing `ForegroundServiceStartNotAllowedException` when the app is suspended.
+2. **iOS Live Activity Stale States:** We will implement a `setTimeout` fallback (e.g., 60s) for the ActivityKit update stream. If no new payload hits the ActivityKit bridge, we mark the session as "Stale" to prevent the Dynamic Island from showing frozen speed data.
+3. **Headless React DOM Context Loss:** Headless tasks do NOT mount `<App />` or provide Context. We cannot use `useProtocolDispatch`. The headless event receiver will directly invoke the singleton `BleWriteQueue.dispatch()` pattern instead.
+
 ## Proposed Changes
 
 ---

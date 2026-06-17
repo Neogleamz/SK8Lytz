@@ -48,27 +48,20 @@ export const notificationService = fromCallback<SessionMachineEvent, Notificatio
         ? 'Saving Session...'
         : 'Skate Session Active 🟢';
 
-      const actions = isEnding ? [] : isPaused
-        ? [
-            {
-              title: '▶ RESUME',
-              pressAction: { id: 'resume-session' },
-            },
-            {
-              title: '🛑 END SESSION',
-              pressAction: { id: 'end-session' },
-            },
-          ]
-        : [
-            {
-              title: '⏸ PAUSE',
-              pressAction: { id: 'pause-session' },
-            },
-            {
-              title: '🛑 END SESSION',
-              pressAction: { id: 'end-session' },
-            },
-          ];
+      const actions = isEnding ? [] : [
+        {
+          title: '🛑 END',
+          pressAction: { id: 'end-session' },
+        },
+        {
+          title: '🎵 MUSIC',
+          pressAction: { id: 'toggle-music' },
+        },
+        {
+          title: '🔥 FAVORITE',
+          pressAction: { id: 'fire-favorite' },
+        },
+      ];
 
       await notifee.displayNotification({
         id: NOTIFICATION_ID,

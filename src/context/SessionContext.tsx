@@ -321,13 +321,13 @@ function SessionMachineWrapper({
               foreground: true,
             },
             {
-              id: 'pause-session',
-              title: '⏸ Pause Session',
+              id: 'toggle-music',
+              title: '🎵 Music Mode',
               foreground: true,
             },
             {
-              id: 'resume-session',
-              title: '▶️ Resume Session',
+              id: 'fire-favorite',
+              title: '🔥 Favorite',
               foreground: true,
             },
           ],
@@ -343,12 +343,16 @@ function SessionMachineWrapper({
         if (detail.pressAction?.id === 'end-session') {
           AppLogger.log('APP_LOG', { event: 'end_session_from_notification' });
           send({ type: 'END' });
-        } else if (detail.pressAction?.id === 'pause-session') {
-          AppLogger.log('APP_LOG', { event: 'pause_session_from_notification' });
-          send({ type: 'PAUSE' });
-        } else if (detail.pressAction?.id === 'resume-session') {
-          AppLogger.log('APP_LOG', { event: 'resume_session_from_notification' });
-          send({ type: 'RESUME' });
+        } else if (detail.pressAction?.id === 'toggle-music') {
+          AppLogger.log('APP_LOG', { event: 'toggle_music_from_notification' });
+          import('react-native').then(({ DeviceEventEmitter }) => {
+            DeviceEventEmitter.emit('BACKGROUND_ACTION_TOGGLE_MUSIC');
+          });
+        } else if (detail.pressAction?.id === 'fire-favorite') {
+          AppLogger.log('APP_LOG', { event: 'fire_favorite_from_notification' });
+          import('react-native').then(({ DeviceEventEmitter }) => {
+            DeviceEventEmitter.emit('BACKGROUND_ACTION_FIRE_FAVORITE');
+          });
         }
       }
     });

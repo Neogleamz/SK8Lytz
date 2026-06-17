@@ -689,6 +689,27 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     }
   }, [allDevices, connectToDevices, isSkateSessionActive, startSession]);
 
+  useEffect(() => {
+    import('react-native').then(({ DeviceEventEmitter }) => {
+      const unsubMusic = DeviceEventEmitter.addListener('BACKGROUND_ACTION_TOGGLE_MUSIC', () => {
+        AppLogger.log('APP_LOG', { event: 'dashboard_received_bg_music' });
+        // If the user has a custom group, we'd normally pass it. 
+        // For notifications, we just trigger it on the first/default group (or whatever is connected).
+        const defaultGroup = customGroups[0] || { id: 'default', name: 'My Skates', deviceIds: allDevices.map(d => d.id.toUpperCase()) };
+        handleGroupMusicPress(defaultGroup);
+      });
+      const unsubFav = DeviceEventEmitter.addListener('BACKGROUND_ACTION_FIRE_FAVORITE', () => {
+        AppLogger.log('APP_LOG', { event: 'dashboard_received_bg_fav' });
+        const defaultGroup = customGroups[0] || { id: 'default', name: 'My Skates', deviceIds: allDevices.map(d => d.id.toUpperCase()) };
+        handleGroupFavoritePress(defaultGroup, null);
+      });
+      return () => {
+        unsubMusic.remove();
+        unsubFav.remove();
+      };
+    });
+  }, [allDevices, customGroups, handleGroupMusicPress, handleGroupFavoritePress]);
+
   const handleToggleRegisteredCollapse = useCallback(() => {
     setIsRegisteredCollapsed(!isRegisteredCollapsed);
   }, [isRegisteredCollapsed, setIsRegisteredCollapsed]);
