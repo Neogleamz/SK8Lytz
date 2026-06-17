@@ -9,6 +9,15 @@
 
 ---
 
+## 🚧 ACTIVE SPRINT
+
+- `[/]` **`fix/js-yaml-audit`** — Add js-yaml override to resolve npm audit block on push.
+  - **Tags:** `[✅ READY]` `[❌ UNVERIFIED]` `[APP]` `[L-RISK]` `[Snack]` `[BATCH:audit-sweep]` `[WAVE:12]`
+  - **Source of Truth:** [PLAN-fix-js-yaml-audit.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-fix-js-yaml-audit.md)
+  - **Decision Log:** Vulnerability is dev-only, but strict pre-push requires zero-moderate audit. Override is the safest minimal fix.
+
+---
+
 ## 🔴 CRITICAL: 🛡️ Performance, Stability & Security
 
 ### 🚑 TRIAGE QUEUE
