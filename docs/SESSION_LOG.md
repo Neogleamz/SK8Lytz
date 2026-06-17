@@ -4232,3 +4232,14 @@ TSC: ?  Jest: ?
 
 
 
+
+### [MERGE] 2026-06-17T16:43:25.172Z — fix/fsm-state-matrix -> master @ c437e5c2
+**What merged:** Normalized remaining Tier 2 & Tier 3 error variables to FSM state matrix (ViewState).
+**Verify result:** TSC ✅, Jest ✅, gates ✅
+**Files touched:** src/components/crew/CrewJoinScreen.tsx, src/components/crew/CrewLandingScreen.tsx, src/hooks/useAccountOverview.ts, src/providers/ComplianceGate.tsx, etc.
+
+### [ARTIFACT] 2026-06-17T22:48 � PLAN-fix-stale-flush-group-kill.md
+**Type:** Implementation Plan
+**Path:** docs/plans/PLAN-fix-stale-flush-group-kill.md
+**Summary:** Fix for ConnectService stale flush killing Device A during incremental group assembly when Device B arrives in a separate auto-connect batch. Root cause: L77 marks all non-target connected devices as stale. Single-file surgical fix.
+**Evidence:** User live testing 2026-06-17 + 8-file subagent code trace. Rejected alternative: batch merging (non-deterministic BLE timing).
