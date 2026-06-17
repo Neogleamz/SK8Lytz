@@ -3361,4 +3361,19 @@ pm run verify which includes QA tests.
   - **Decision Log:** Global persistent service chosen to act as Phone-as-Gateway to keep BLE and Supabase alive during background operation, similar to Watch app. Payload compression required to reduce latency.
   - **Source of Truth:** 📖 docs/plans/PLAN-feat-crewz-resilience.md
   - **Details:** Refactoring `CrewRealtime.ts` for payloads, replacing `NotificationService` with `GlobalForegroundService.ts`.
+
+
+- [x] **`fix/web-console-crash`** 🚀 Merged in 513ed2f0
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI/WEB]` `[⚠️ H-RISK]` `[🍱 Meal]` `[M-COG]` `[BATCH:fix/web-console-crash]` `[WAVE:10]`
+  - **Goal:** Fix `getEnforcing` TypeError on Web to unblock the web demo.
+  - **Decision Log:** Self-healing observatory found 2 occurrences of this crash blocking the headless quality gate.
+  - **Analysis:** 📊 Source: [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md) · Plan: [PLAN-fix-web-console-crash.md](./plans/PLAN-fix-web-console-crash.md)
+    Key finding: "TurboModule getEnforcing is undefined on web."
+    Rejected alternative: "Wait for upstream library fix."
+  - **Source of Truth:** 📖 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md)
+  - **Details:** Web platform mock required. Prerequisite: None.
+
+### ⚡ [BATCH:fix/observatory-db-drift] — `fix/observatory-db-drift` — IN PROGRESS
+> **Worktree**: `fix/observatory-db-drift` · **Type**: Isolated · **Prerequisite**: None
+> **Source Analysis**: 📊 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md) — 3 database anomalies detected from remote logs.
 

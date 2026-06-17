@@ -35,21 +35,7 @@
 > **Worktree**: `fix/web-console-crash` · **Type**: Isolated · **Prerequisite**: None
 > **Source Analysis**: 📊 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md) — Web demo crashes on load due to missing native module mock.
 
-- [/] **`fix/web-console-crash`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI/WEB]` `[⚠️ H-RISK]` `[🍱 Meal]` `[M-COG]` `[BATCH:fix/web-console-crash]` `[WAVE:10]`
-  - **Goal:** Fix `getEnforcing` TypeError on Web to unblock the web demo.
-  - **Decision Log:** Self-healing observatory found 2 occurrences of this crash blocking the headless quality gate.
-  - **Analysis:** 📊 Source: [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md) · Plan: [PLAN-fix-web-console-crash.md](./plans/PLAN-fix-web-console-crash.md)
-    Key finding: "TurboModule getEnforcing is undefined on web."
-    Rejected alternative: "Wait for upstream library fix."
-  - **Source of Truth:** 📖 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md)
-  - **Details:** Web platform mock required. Prerequisite: None.
-
-### ⚡ [BATCH:fix/observatory-db-drift] — `fix/observatory-db-drift` — IN PROGRESS
-> **Worktree**: `fix/observatory-db-drift` · **Type**: Isolated · **Prerequisite**: None
-> **Source Analysis**: 📊 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md) — 3 database anomalies detected from remote logs.
-
-- [/] **`fix/observatory-db-drift`**
+- [x] **`fix/observatory-db-drift`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[☁️ CLOUD]` `[⚠️ M-RISK]` `[🍱 Meal]` `[M-COG]` `[BATCH:fix/observatory-db-drift]` `[WAVE:10]`
   - **Goal:** Apply migrations for label_designs drift, integer overflow, and telemetry constraints.
   - **Decision Log:** Remote logs flagged 10+ errors for schema mismatches and failing telemetry inserts.

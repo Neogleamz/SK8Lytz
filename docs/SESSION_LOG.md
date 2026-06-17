@@ -4155,3 +4155,8 @@ TSC: ? Jest: ?
  ### [MERGE READY] fix/web-console-crash -- bbece676
 Files touched: App.tsx, index.ts
 TSC: ✅  Jest: ✅
+
+### [MERGE] 2026-06-17T07:15 � fix/web-console-crash -> master @ 513ed2f0
+**What merged:** Fixed TurboModuleRegistry getEnforcing undefined crash on web target by adjusting import order and platform mocks.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/index.ts, App.tsx
