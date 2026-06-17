@@ -56,6 +56,7 @@ import SpectrumAnalyzer from './docked/SpectrumAnalyzer';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { AppLogger } from '../services/appLogger';
+import { scrubPII } from '../utils/piiScrubber';
 import { checkPermission, openGlobalPermissionsModal, PERMISSION_STATUS_CHANGED_EVENT } from '../services/PermissionService';
 import CommunityModal from './CommunityModal';
 import DockedDock from './docked/DockedDock';
@@ -495,8 +496,8 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
         // State-based closure caused split-brain: recovered device got the pattern from
         // before the last user selection, not the current one.
         if (!lastSentPayloadRef.current || lastSentPayloadRef.current.length === 0) return;
-        AppLogger.log('BLE_QUEUE_REPLAY', { deviceId, payloadLen: lastSentPayloadRef.current.length });
-        optimisticWrite(lastSentPayloadRef.current, undefined, deviceId).catch((e: unknown) => AppLogger.warn('BLE_TRANSPORT', { event: 'ghost_replay_write_failed', deviceId, error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
+        AppLogger.log('BLE_QUEUE_REPLAY', { deviceId: scrubPII(deviceId), payloadLen: lastSentPayloadRef.current.length });
+        optimisticWrite(lastSentPayloadRef.current, undefined, deviceId).catch((e: unknown) => AppLogger.warn('BLE_TRANSPORT', { event: 'ghost_replay_write_failed', deviceId: scrubPII(deviceId), error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
       }
     }), [speed, brightness, writeToDevice, optimisticWrite]);
 

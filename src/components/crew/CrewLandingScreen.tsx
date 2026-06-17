@@ -9,6 +9,7 @@ import { useCrewContext } from '../../context/CrewContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useAppConfig } from '../../context/AppConfigContext';
 import { AppLogger } from '../../services/appLogger';
+import { scrubPII } from '../../utils/piiScrubber';
 import { crewService, CrewSession } from '../../services/CrewService';
 import { useAuth } from '../../context/AuthContext';
 import { checkPermission, requestPermission } from '../../services/PermissionService';
@@ -113,7 +114,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
             setIsLoading(true);
             try {
               await profileService.leavePermanentCrew(crew.id, currentUserId);
-              AppLogger.log('CREW_LEFT', { crewId: crew.id, crewName: crew.name });
+              AppLogger.log('CREW_LEFT', { crewId: crew.id, crewName: scrubPII(crew.name) });
               const updated = await profileService.getMyCrew(undefined, currentUserId);
               hub.setMyCrews(updated);
               hub.setPermanentCrews(updated.map(c => ({ id: c.id, name: c.name })));
@@ -134,7 +135,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
     setIsLoading(true);
     try {
       await profileService.deleteCrew(crew.id, currentUserId);
-      AppLogger.log('CREW_DELETED', { crewId: crew.id, crewName: crew.name });
+      AppLogger.log('CREW_DELETED', { crewId: crew.id, crewName: scrubPII(crew.name) });
       const updated = await profileService.getMyCrew(undefined, currentUserId);
       hub.setMyCrews(updated);
       hub.setPermanentCrews(updated.map(c => ({ id: c.id, name: c.name })));

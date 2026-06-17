@@ -5,6 +5,7 @@ import React from 'react';
 import { ActivityIndicator, Alert, Image, ScrollView, Share, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { AppLogger } from '../../services/appLogger';
+import { scrubPII } from '../../utils/piiScrubber';
 import { PermanentCrew, profileService } from '../../services/ProfileService';
 import { Spacing } from '../../theme/theme';
 
@@ -118,7 +119,7 @@ export function CrewDetailScreen() {
       hub.setMyCrews(prev => prev.map(c => c.id === crew.id ? updated : c));
       setSelectedCrewDetail(updated);
       setEditingCrewId(null);
-      AppLogger.log('CREW_PERMANENT_UPDATED', { crewId: crew.id, crewName: editCrewName.trim(), isPublic: editCrewIsPublic });
+      AppLogger.log('CREW_PERMANENT_UPDATED', { crewId: crew.id, crewName: scrubPII(editCrewName.trim()), isPublic: editCrewIsPublic });
     } catch (err: unknown) {
       const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       AppLogger.log('CREW_ERROR', { action: 'save_crew', crewId: crew.id, error: e instanceof Error ? e.message : String(e)  });

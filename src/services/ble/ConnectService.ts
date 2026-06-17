@@ -274,7 +274,7 @@ export const connectService = fromPromise<
           AppLogger.warn('[BLE] Handshake write failed (non-fatal)', { error: handshakeErr instanceof Error ? handshakeErr.message : String(handshakeErr), deviceId: scrubPII(conn.id), payload_size: 0, ssi: 0 });
         }
 
-        AppLogger.log('DEVICE_CONNECTED', { id: conn.id, name: conn.name });
+        AppLogger.log('DEVICE_CONNECTED', { id: scrubPII(conn.id), name: scrubPII(conn.name ?? '') });
         if (Platform.OS === 'android') {
           bleManager.requestConnectionPriorityForDevice(conn.id, 0).catch((e: unknown) => {
             AppLogger.warn('[BLE] Priority BALANCED downgrade failed (non-fatal)', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });

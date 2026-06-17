@@ -20,6 +20,7 @@ import {
     IC_TYPES,
 } from '../../../protocols/ZenggeProtocol';
 import { AppLogger } from '../../../services/appLogger';
+import { scrubPII } from '../../../utils/piiScrubber';
 import { Spacing, Typography } from '../../../theme/theme';
 import { useProtocolDispatch } from '../../../hooks/useProtocolDispatch';
 import { STORAGE_PROGRAMMER_PROFILES } from '../../../constants/storageKeys';
@@ -218,7 +219,7 @@ export default function Sk8LytzProgrammer({
               }
               if (!isMountedRef.current) return;
               setFlashStatus(prev => ({ ...prev, [id]: 'success' }));
-              AppLogger.log('PERFORMANCE_METRIC', { metricName: 'HW_CONFIG_FLASHED', value: 1, unit: id, deviceId: id });
+              AppLogger.log('PERFORMANCE_METRIC', { metricName: 'HW_CONFIG_FLASHED', value: 1, unit: id, deviceId: scrubPII(id) });
           } catch (e: unknown) {
               if (!isMountedRef.current) return;
               AppLogger.error('Failed to flash device', e instanceof Error ? e : new Error(String(e)), { payload_size: 0, ssi: 0 });

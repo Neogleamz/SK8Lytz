@@ -4,6 +4,7 @@ import React from 'react';
 import { ActivityIndicator, Image, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { AppLogger } from '../../services/appLogger';
+import { scrubPII } from '../../utils/piiScrubber';
 import { profileService } from '../../services/ProfileService';
 import { Spacing } from '../../theme/theme';
 import CustomSlider from '../CustomSlider';
@@ -63,7 +64,7 @@ export function CrewManageScreen() {
         members: selectedMembers.map(m => m.user_id)
       }, currentUserId);
       AppLogger.log('CREW_PERMANENT_CREATED', {
-        crewId: crew.id, crewName: crew.name, isPublic: newCrewIsPublic,
+        crewId: crew.id, crewName: scrubPII(crew.name), isPublic: newCrewIsPublic,
         city: newCrewCity || null
       });
       const updated = await profileService.getMyCrew(undefined, currentUserId);

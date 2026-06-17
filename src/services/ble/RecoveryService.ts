@@ -112,7 +112,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
             mtuMapRef.current.set(conn.id, 186);
           }
         } catch (e: unknown) {
-          AppLogger.warn('[RecoveryService] MTU negotiation failed', { deviceId, error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+          AppLogger.warn('[RecoveryService] MTU negotiation failed', { deviceId: scrubPII(deviceId), error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         }
         if (signal.aborted || cancelled) break;
 
@@ -154,7 +154,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
         if (signal.aborted || cancelled) break;
 
         reconnectedDevice = conn;
-        AppLogger.log('AUTO_RECOVERY_SUCCESS', { deviceId, attempts });
+        AppLogger.log('AUTO_RECOVERY_SUCCESS', { deviceId: scrubPII(deviceId), attempts });
         break; // Success! Exit while loop.
 
       } catch (e: unknown) {
@@ -164,7 +164,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
 
     // --- Phase 3: Passive sweeper-watch mode ---
     if (!reconnectedDevice && !cancelled) {
-      AppLogger.log('AUTO_RECOVERY', { phase: 3, deviceId, event: 'entering_passive_mode' });
+      AppLogger.log('AUTO_RECOVERY', { phase: 3, deviceId: scrubPII(deviceId), event: 'entering_passive_mode' });
       let phase3Polls = 0;
       while (!cancelled && phase3Polls < PHASE_3_MAX_POLLS) {
         phase3Polls++;
@@ -174,7 +174,7 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
         const sweepedDevice = getSweepedDevice?.(deviceId);
         if (!sweepedDevice) continue;
 
-        AppLogger.log('AUTO_RECOVERY', { phase: 3, deviceId, event: 'mac_reappeared_attempting_reconnect' });
+        AppLogger.log('AUTO_RECOVERY', { phase: 3, deviceId: scrubPII(deviceId), event: 'mac_reappeared_attempting_reconnect' });
         try {
           if (cancelled) break;
           const signal = abortController.signal;
@@ -218,10 +218,10 @@ export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBa
           );
 
           reconnectedDevice = conn;
-          AppLogger.log('AUTO_RECOVERY_SUCCESS', { deviceId, phase: 3 });
+          AppLogger.log('AUTO_RECOVERY_SUCCESS', { deviceId: scrubPII(deviceId), phase: 3 });
           break; // Success! Exit while loop.
         } catch (e: unknown) {
-          AppLogger.warn('[RecoveryService] Phase 3 reconnect failed', { deviceId, error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+          AppLogger.warn('[RecoveryService] Phase 3 reconnect failed', { deviceId: scrubPII(deviceId), error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
           break; // Give up
         }
       }
