@@ -1,5 +1,6 @@
 import { useControllerDispatch } from '../useControllerDispatch';
 import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
+import { ZenggeAdapter } from '../../protocols/ZenggeAdapter';
 import { getLocalProfileById } from '../../constants/ProductCatalog';
 import { AppLogger } from '../../services/appLogger';
 import { buildPatternPayload } from '../../protocols/PatternEngine';
@@ -43,7 +44,7 @@ describe('useControllerDispatch', () => {
 
   describe('Missing writeToDevice Handling', () => {
     it('gracefully logs error without crashing when writeToDevice is undefined', async () => {
-      const dispatch = useControllerDispatch({ writeToDevice: undefined, hwSettings: undefined, points: 16 });
+      const dispatch = useControllerDispatch({ getAdapterForDevice: () => new ZenggeAdapter(), writeToDevice: undefined, hwSettings: undefined, points: 16 });
       
       await dispatch.sendColor(255, 0, 0);
       expect(AppLogger.error).toHaveBeenCalledWith('BLE_DEAD_WIRE', expect.stringContaining('writeToDevice is undefined'), expect.any(Object));
@@ -52,11 +53,11 @@ describe('useControllerDispatch', () => {
 
   describe('sendColor', () => {
     it('dispatches a 0x59 FREEZE payload mapped to the correct numLEDs', async () => {
-      const dispatch = useControllerDispatch({ writeToDevice: mockWriteToDevice, points: 5 });
+      const dispatch = useControllerDispatch({ getAdapterForDevice: () => new ZenggeAdapter(), writeToDevice: mockWriteToDevice, points: 5 });
       await dispatch.sendColor(255, 100, 50);
 
       const arr = Array.from({ length: 5 }, () => ({ r: 255, g: 100, b: 50 }));
-      const expectedPayload = ZenggeProtocol.setMultiColor(arr, 5, 31, 1, 0x01);
+      const expectedPayload = new ZenggeAdapter().buildSolidColor(255, 100, 50).packets[0];
       
       expectPayloadMatch(mockWriteToDevice, expectedPayload);
     });
@@ -64,17 +65,17 @@ describe('useControllerDispatch', () => {
 
   describe('applyFixedPattern', () => {
     it('sends solid color bypassing PatternEngine when patternId is 1', async () => {
-      const dispatch = useControllerDispatch({ writeToDevice: mockWriteToDevice, points: 10 });
+      const dispatch = useControllerDispatch({ getAdapterForDevice: () => new ZenggeAdapter(), writeToDevice: mockWriteToDevice, points: 10 });
       await dispatch.applyFixedPattern(1, '#FF0000', '#000000', 50, 100, 1);
 
       const expectedArr = Array.from({ length: 10 }, () => ({ r: 255, g: 0, b: 0 }));
-      const expectedPayload = ZenggeProtocol.setMultiColor(expectedArr, 10, 31, 1, 0x01);
+      const expectedPayload = new ZenggeAdapter().buildSolidColor(255, 0, 0).packets[0];
       
       expectPayloadMatch(mockWriteToDevice, expectedPayload);
     });
 
     it('uses PatternEngine and dispatches the synthesized payload', async () => {
-      const dispatch = useControllerDispatch({ writeToDevice: mockWriteToDevice, points: 16 });
+      const dispatch = useControllerDispatch({ getAdapterForDevice: () => new ZenggeAdapter(), writeToDevice: mockWriteToDevice, points: 16 });
       await dispatch.applyFixedPattern(2, '#FF0000', '#00FF00', 50, 100, 1);
       
       const synthesizedPayload = buildPatternPayload(
@@ -93,17 +94,17 @@ describe('useControllerDispatch', () => {
 
   describe('applyStaticModePattern', () => {
     it('handles STATIC by delegating to sendColor', () => {
-      const dispatch = useControllerDispatch({ writeToDevice: mockWriteToDevice, points: 5 });
+      const dispatch = useControllerDispatch({ getAdapterForDevice: () => new ZenggeAdapter(), writeToDevice: mockWriteToDevice, points: 5 });
       dispatch.applyStaticModePattern('STATIC', '#FF0000', 50);
 
       const expectedArr = Array.from({ length: 5 }, () => ({ r: 255, g: 0, b: 0 }));
-      const expectedPayload = ZenggeProtocol.setMultiColor(expectedArr, 5, 31, 1, 0x01);
+      const expectedPayload = new ZenggeAdapter().buildSolidColor(255, 0, 0).packets[0];
       
       expectPayloadMatch(mockWriteToDevice, expectedPayload);
     });
 
     it('handles STROBE mode', () => {
-      const dispatch = useControllerDispatch({ writeToDevice: mockWriteToDevice, points: 5 });
+      const dispatch = useControllerDispatch({ getAdapterForDevice: () => new ZenggeAdapter(), writeToDevice: mockWriteToDevice, points: 5 });
       dispatch.applyStaticModePattern('STROBE', '#00FF00', 100);
 
       const expectedPayload = ZenggeProtocol.setCustomModeCompact([
@@ -113,7 +114,7 @@ describe('useControllerDispatch', () => {
     });
 
     it('handles BLINK mode', () => {
-      const dispatch = useControllerDispatch({ writeToDevice: mockWriteToDevice, points: 5 });
+      const dispatch = useControllerDispatch({ getAdapterForDevice: () => new ZenggeAdapter(), writeToDevice: mockWriteToDevice, points: 5 });
       dispatch.applyStaticModePattern('BLINK', '#0000FF', 0);
 
       const expectedPayload = ZenggeProtocol.setCustomModeCompact([
@@ -126,7 +127,7 @@ describe('useControllerDispatch', () => {
   describe('applyEmergencyPattern', () => {
     it('dispatches the correct ring topology mapped emergency payload', () => {
       (getLocalProfileById as jest.Mock).mockReturnValue({ vizShape: 'RING' });
-      const dispatch = useControllerDispatch({ writeToDevice: mockWriteToDevice, hwSettings: { ledPoints: 8, type: 'HALOZ' } });
+      const dispatch = useControllerDispatch({ getAdapterForDevice: () => new ZenggeAdapter(), writeToDevice: mockWriteToDevice, hwSettings: { ledPoints: 8, type: 'HALOZ' } });
       dispatch.applyEmergencyPattern(31, 100);
 
       const red = { r: 255, g: 0, b: 0 };
@@ -142,7 +143,7 @@ describe('useControllerDispatch', () => {
 
     it('dispatches the correct linear strip topology emergency payload', () => {
       (getLocalProfileById as jest.Mock).mockReturnValue({ vizShape: 'STRIP' });
-      const dispatch = useControllerDispatch({ writeToDevice: mockWriteToDevice, hwSettings: { ledPoints: 10, type: 'SOULZ' } });
+      const dispatch = useControllerDispatch({ getAdapterForDevice: () => new ZenggeAdapter(), writeToDevice: mockWriteToDevice, hwSettings: { ledPoints: 10, type: 'SOULZ' } });
       dispatch.applyEmergencyPattern(31, 100);
 
       const red = { r: 255, g: 0, b: 0 };
@@ -163,7 +164,7 @@ describe('useControllerDispatch', () => {
 
   describe('handleMusicChange', () => {
     it('dispatches DEVICE mic config payload', () => {
-      const dispatch = useControllerDispatch({ writeToDevice: mockWriteToDevice, points: 16 });
+      const dispatch = useControllerDispatch({ getAdapterForDevice: () => new ZenggeAdapter(), writeToDevice: mockWriteToDevice, points: 16 });
       dispatch.handleMusicChange(3, 80, 100, 'DEVICE', '#FF0000', '#0000FF', 0x27);
 
       const c1 = { r: 255, g: 0, b: 0 };
@@ -175,7 +176,7 @@ describe('useControllerDispatch', () => {
     });
 
     it('dispatches APP mic config payload with isOn=false (onboard mic disabled in APP mode)', () => {
-      const dispatch = useControllerDispatch({ writeToDevice: mockWriteToDevice, points: 16 });
+      const dispatch = useControllerDispatch({ getAdapterForDevice: () => new ZenggeAdapter(), writeToDevice: mockWriteToDevice, points: 16 });
       dispatch.handleMusicChange(1, 50, 50, 'APP', '#FFFFFF', '#000000', 0x26);
 
       const c1 = { r: 255, g: 255, b: 255 };
@@ -190,13 +191,13 @@ describe('useControllerDispatch', () => {
 
   describe('setPower', () => {
     it('dispatches ON payload', () => {
-      const dispatch = useControllerDispatch({ writeToDevice: mockWriteToDevice, points: 16 });
+      const dispatch = useControllerDispatch({ getAdapterForDevice: () => new ZenggeAdapter(), writeToDevice: mockWriteToDevice, points: 16 });
       dispatch.setPower(true);
       expectPayloadMatch(mockWriteToDevice, ZenggeProtocol.turnOn());
     });
 
     it('dispatches OFF payload', () => {
-      const dispatch = useControllerDispatch({ writeToDevice: mockWriteToDevice, points: 16 });
+      const dispatch = useControllerDispatch({ getAdapterForDevice: () => new ZenggeAdapter(), writeToDevice: mockWriteToDevice, points: 16 });
       dispatch.setPower(false);
       expectPayloadMatch(mockWriteToDevice, ZenggeProtocol.turnOff());
     });
@@ -204,7 +205,7 @@ describe('useControllerDispatch', () => {
 
   describe('setMultiColor', () => {
     it('directly passes through array and parameters to ZenggeProtocol.setMultiColor', () => {
-      const dispatch = useControllerDispatch({ writeToDevice: mockWriteToDevice, points: 16 });
+      const dispatch = useControllerDispatch({ getAdapterForDevice: () => new ZenggeAdapter(), writeToDevice: mockWriteToDevice, points: 16 });
       const arr = [{ r: 10, g: 20, b: 30 }];
       dispatch.setMultiColor(arr, 16, 25, 1, 0x01);
       
