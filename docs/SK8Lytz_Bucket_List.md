@@ -43,15 +43,11 @@
 > **Worktree**: `feat/deep-dive-fixes-wave1` · **Type**: Unified Batch · **Prerequisite**: None
 > **Source Analysis**: 📊 [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/fb5fb761-e7be-4241-a902-3cb07dca3307/implementation_plan.md) — Fixes for BLE Protocol Corruption, Memory Leaks, and Unhandled Async Rejections.
 
----
-
-## 🔥 ON DECK
-
-### ⚡ [BATCH:fix/hal-parity-split-brain] — `fix/hal-parity-split-brain` — [✅ READY]
+### ⚡ [BATCH:fix/hal-parity-split-brain] — `fix/hal-parity-split-brain` — IN PROGRESS
 > **Worktree**: `fix/hal-parity-split-brain` · **Type**: Isolated · **Prerequisite**: None
 > **Source Analysis**: 📊 [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/c32537a3-610e-4934-884a-37f7878eec17/implementation_plan.md) — Refactor of components bypassing HAL.
 
-- [ ] **`fix/hal-parity-split-brain`**
+- [/] **`fix/hal-parity-split-brain`**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI/BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[M-COG]` `[BATCH:fix/hal-parity-split-brain]` `[WAVE:1]`
   - **Goal:** Migrate UI components bypassing `useProtocolDispatch` to use the Hardware Abstraction Layer instead of hardcoding protocol payloads.
   - **Decision Log:** Deep-dive audit found that UniversalTacticalSliders and BuilderPanel were constructing raw Zengge bytes and passing them directly to writeToDevice, causing mixed protocol (Zengge+BanlanX) groups to fall out of parity.
@@ -60,6 +56,12 @@
     Rejected alternative: "Leaving the components as-is (Rejected: breaks the core 'parity is law' directive)."
   - **Source of Truth:** 📖 [UniversalTacticalSliders.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/UniversalTacticalSliders.tsx#L69)
   - **Details:** Refactoring requires updating the inner dispatch closures and props in DockedController to use HAL methods.
+
+---
+
+## 🔥 ON DECK
+
+
 
 ### ⚡ [BATCH:feat/rich-os-notifications] — `feat/rich-os-notifications` — [✅ READY]
 > **Worktree**: `feat/rich-os-notifications` · **Type**: Isolated · **Prerequisite**: None
