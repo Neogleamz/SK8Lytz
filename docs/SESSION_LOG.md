@@ -1,3 +1,18 @@
+### [ARTIFACT] 2026-06-17T09:18Z — Deep-Dive Code Synthesis: 10-Cluster Intake Complete
+**Type:** Batch Intake (deepdive-audit-sweep)
+**Audit Report:** `system_audit_report.md` (268 verified findings from 36 Map-Reduce agents)
+**Plans Generated:** 10 PLAN files written by parallel subagent fleet
+**Tasks Created:** 10 tasks in `SK8Lytz_Bucket_List.md` under `[BATCH:deepdive-audit-sweep]`
+**Wave Strategy:**
+- Wave 1 (4 tasks): fix/group-concurrent-write, fix/protocol-seq-counter, fix/pii-scrub-sweep, fix/os-variance-parity
+- Wave 2 (3 tasks): fix/split-brain-trifecta, fix/ble-core-type-safety, fix/promise-io-guards
+- Wave 3 (3 tasks): fix/reentrant-handler-guards, fix/fsm-state-matrix, fix/timer-audit-ble
+**Key Decisions:**
+- TransitionType 0x00->CASCADE mapping confirmed FALSE POSITIVE by Cluster 3 plan writer
+- 2 PII scrub instances dropped as false positives (DEV-gated log, pattern label string)
+- BleWriteDispatcher already migrated to named constants — excluded from timer audit
+- DisplayDevice extends Device chosen over adapter functions for type hierarchy fix
+**Don't re-derive:** Wave assignments are based on file collision analysis. Clusters 1+3 are parallel-safe because they touch different aspects of useControllerDispatch (Promise.all vs protocol mapping).
 ### [ARTIFACT] 2026-06-16T23:34:00Z â€” Plan: feat/watch-bidirectional-bridge
 **Type:** Implementation Plan
 **File:** `docs/plans/PLAN-feat-watch-bidirectional-bridge.md`
