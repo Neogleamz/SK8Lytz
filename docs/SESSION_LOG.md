@@ -4206,3 +4206,23 @@ Files touched:
 - src/components/TacticalSlider.tsx
 TSC: ?  Jest: ?
 
+
+### [MERGE] 2026-06-17T04:36 — fix/group-concurrent-write ? master @ 61b93cb8
+**What merged:** Serialized BLE GATT writes per-device to prevent controller collisions.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/hooks/useControllerDispatch.ts, src/screens/Onboarding/HardwareSetupWizardScreen.tsx, src/services/ble/HeartbeatService.ts, src/services/ble/RSSIService.ts
+
+### [MERGE] 2026-06-17T04:36 — fix/protocol-seq-counter ? master @ 23176e34
+**What merged:** Unified sequence counter and removed artificial pixel cap constraints.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/protocols/ZenggeProtocol.ts, src/services/BleWriteDispatcher.ts, src/protocols/__tests__/ZenggeProtocol.test.ts, docs/SK8Lytz_App_Master_Reference.md
+
+### [MERGE] 2026-06-17T04:36 — fix/pii-scrub-sweep ? master @ e3869028
+**What merged:** Wrapped remaining PII with scrubPII in AppLogger for Rule R-09 compliance.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/services/ble/RecoveryService.ts, src/components/crew/CrewLandingScreen.tsx, src/components/DockedController.tsx, src/services/ble/ConnectService.ts, src/components/crew/CrewDetailScreen.tsx, src/components/crew/CrewManageScreen.tsx, src/components/admin/tools/Sk8LytzProgrammer.tsx
+
+### [MERGE] 2026-06-17T04:36 — fix/os-variance-parity ? master @ 61799340
+**What merged:** OS variance parity for Android shadow and Web touchAction properties.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/styles/DashboardStyles.ts, src/components/CustomSlider.tsx, src/components/TacticalSlider.tsx
