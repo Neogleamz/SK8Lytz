@@ -114,9 +114,13 @@ export class ZenggeProtocol {
   public static DIAGNOSTIC_MODE_ENABLED = false;
 
   // Instance method — used by this instance and by ZenggeAdapter
-  private getSequenceCounter(): number {
+  public getSequenceCounter(): number {
     this.messageCounter = (this.messageCounter + 1) % 256;
     return this.messageCounter;
+  }
+
+  public static getNextChunkSeqByte(): number {
+    return ZenggeProtocol._instance.getSequenceCounter();
   }
 
   // ─── Instance Methods (used by ZenggeAdapter and internally) ────────────────
@@ -651,9 +655,9 @@ export class ZenggeProtocol {
     transitionType: number = 0x01  // Default: Static/freeze (safest fallback)
   ): number[] {
     // Determine how many pixels we can safely send in a single default MTU write packet.
-    // Assuming default safe MTU of ~180 bytes, wrapper + 0x59 headers = 16 bytes.
-    // 164 bytes / 3 bytes per pixel = 54 pixels max.
-    const MAX_PIXELS = 54;
+    // The protocol builds the full payload; the transport layer (BleWriteDispatcher) handles MTU fragmentation via chunking.
+    // Therefore, pixel cap is now set to hardware max (300).
+    const MAX_PIXELS = HW_CONSTRAINTS.maxPoints;
 
     // Enforce an absolute minimum matrix length of 12! Master Reference explicitly warns that 0x59 payloads < 10 cause hardware memory lock glitching!
     const numPoints = Math.max(12, Math.min(MAX_PIXELS, colors.length));

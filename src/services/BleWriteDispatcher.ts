@@ -241,7 +241,7 @@ export async function executeWriteChunked(
   const safeMtu = targetDeviceId ? getDeviceMtu(targetDeviceId) - 3 : Math.min(...targets.map(d => getDeviceMtu(d.id))) - 3;
   const chunkSize = Math.max(20, safeMtu);
 
-  const seqByte = Math.floor(Math.random() * 256) & 0xFF;
+  const seqByte = ZenggeProtocol.getNextChunkSeqByte();
   // 0x40 frame construction delegated to ZenggeProtocol.buildChunkedFrames() (R-19)
   // Source: tools/ZENGGE_PROTOCOL_BIBLE.md §0x51 ZENGGE BLE Chunked Framing
   const chunks = ZenggeProtocol.buildChunkedFrames(payload, chunkSize, seqByte);

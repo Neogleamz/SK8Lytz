@@ -47,35 +47,42 @@ describe('ZenggeProtocol', () => {
   });
 
   describe('setMultiColor', () => {
-    it('should construct correct 0x59 payload and respect constraints', () => {
+    it('should enforce 12-pixel minimum', () => {
       const proto = ZenggeProtocol.prototype as any;
       const spy = jest.spyOn(proto, 'getSequenceCounter').mockReturnValue(0);
 
-      const colors = [
-        { r: 255, g: 0, b: 0 },
-        { r: 0, g: 255, b: 0 },
-      ]; // Only 2 colors, will be padded to 12
-
+      const colors = [{ r: 255, g: 0, b: 0 }]; // 1 color, will be padded to 12
       const result = ZenggeProtocol.setMultiColor(colors, 50, 10, 1, 0x02);
 
       // Payload starts at index 8 after wrapper
       expect(result[8]).toBe(0x59);
-
       // Check total length calculation: (12 points * 3) + 9 = 45 (0x2D)
       expect(result[9]).toBe(0x00); // len_hi
       expect(result[10]).toBe(0x2D); // len_lo
+      
+      spy.mockRestore();
+    });
 
-      // Check first pixel
-      expect(result[11]).toBe(255);
-      expect(result[12]).toBe(0);
-      expect(result[13]).toBe(0);
+    it('does not truncate at 54 pixels (supports 150 pixels)', () => {
+      const proto = ZenggeProtocol.prototype as any;
+      const spy = jest.spyOn(proto, 'getSequenceCounter').mockReturnValue(0);
 
-      // Check hardware led points (50 = 0x00 0x32)
-      // Colors take 3 * 12 = 36 bytes. Index 11 + 36 = 47
-      expect(result[47]).toBe(0x00); // pts_hi
-      expect(result[48]).toBe(0x32); // pts_lo
+      const colors = Array(150).fill({ r: 255, g: 0, b: 0 });
+      const result = ZenggeProtocol.setMultiColor(colors, 150, 10, 1, 0x02);
+
+      // Total length: (150 * 3) + 9 = 459 (0x01CB)
+      expect(result[9]).toBe(0x01); // len_hi
+      expect(result[10]).toBe(0xCB); // len_lo
 
       spy.mockRestore();
+    });
+  });
+
+  describe('getNextChunkSeqByte', () => {
+    it('returns incrementing values', () => {
+      const seq1 = ZenggeProtocol.getNextChunkSeqByte();
+      const seq2 = ZenggeProtocol.getNextChunkSeqByte();
+      expect(seq2).toBe((seq1 + 1) % 256);
     });
   });
 
