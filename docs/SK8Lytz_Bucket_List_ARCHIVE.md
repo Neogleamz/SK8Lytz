@@ -3386,4 +3386,13 @@ pm run verify which includes QA tests.
     Key finding: "label_designs missing product_name column, and severity constraints are violating."
   - **Source of Truth:** 📖 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md)
   - **Details:** Requires creating and applying new Supabase migrations.
+
+
+- [x] **`fix/performance-telemetry`** 🚀 Merged in 828549b8
+  - **Tags:** `[✅ READY]` `[❌ UNVERIFIED]` `[☁️ CLOUD]` `[⚠️ M-RISK]` `[🍿 Snack]` `[L-COG]` `[BATCH:fix/performance-telemetry]` `[WAVE:11]`
+  - **Goal:** Whitelist `SCREEN_LOAD_TTID` and `SCREEN_LOAD_TTFD` in AppLoggerService to bypass the lossy 100ms queue.
+  - **Decision Log:** Discovered that app hydration fires TTID concurrently with APP_OPENED, causing TTID to be silently overwritten in the single-slot `pendingLogQueue`.
+  - **Analysis:** 📊 Plan: [PLAN-fix-performance-telemetry.md](./plans/PLAN-fix-performance-telemetry.md)
+  - **Source of Truth:** 📖 [AppLoggerService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/appLogger/AppLoggerService.ts#L175-L180)
+  - **Details:** Add performance events to the immediate-push list.
 

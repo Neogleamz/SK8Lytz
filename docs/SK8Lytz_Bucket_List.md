@@ -25,14 +25,7 @@
 ### ⚡ [BATCH:fix/performance-telemetry] — `fix/performance-telemetry` — READY
 > **Worktree**: `fix/performance-telemetry` · **Type**: Isolated · **Prerequisite**: None
 > **Source Analysis**: 📊 Command Center widget `AppPerformanceWidget.tsx` is starving for data because React Native's telemetry queue drops TTID events.
-
-- [ ] **`fix/performance-telemetry`**
-  - **Tags:** `[✅ READY]` `[❌ UNVERIFIED]` `[☁️ CLOUD]` `[⚠️ M-RISK]` `[🍿 Snack]` `[L-COG]` `[BATCH:fix/performance-telemetry]` `[WAVE:11]`
-  - **Goal:** Whitelist `SCREEN_LOAD_TTID` and `SCREEN_LOAD_TTFD` in AppLoggerService to bypass the lossy 100ms queue.
-  - **Decision Log:** Discovered that app hydration fires TTID concurrently with APP_OPENED, causing TTID to be silently overwritten in the single-slot `pendingLogQueue`.
-  - **Analysis:** 📊 Plan: [PLAN-fix-performance-telemetry.md](./plans/PLAN-fix-performance-telemetry.md)
-  - **Source of Truth:** 📖 [AppLoggerService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/appLogger/AppLoggerService.ts#L175-L180)
-  - **Details:** Add performance events to the immediate-push list.
+> Completed: `fix/performance-telemetry` @ 828549b8 ✅
 
 ---
 
