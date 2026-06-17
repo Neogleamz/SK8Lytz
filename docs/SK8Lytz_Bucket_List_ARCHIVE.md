@@ -3330,4 +3330,16 @@ pm run verify which includes QA tests.
   - **Analysis:** 📊 Source: [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/fb5fb761-e7be-4241-a902-3cb07dca3307/implementation_plan.md)
   - **Source of Truth:** `artifacts/system_audit_report.md`
   - **Details:** Must be done in a unified batch to prevent gatekeeper collisions.
+
+
+- [x] **`feat/watch-bidirectional-bridge`**
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[NATIVE/BRIDGE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[H-COG]` 
+  - **Goal:** Upgrade the iOS and Android watch companion bridges from one-way telemetry to bidirectional JSON command dispatchers.
+  - **Decision Log:** Sending BLE payloads from the watch is banned due to OS background throttling and dual-master conflicts; the phone must act as the BLE gateway.
+  - **Analysis:** 📊 Source: [watch_app_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/c32537a3-610e-4934-884a-37f7878eec17/watch_app_analysis.md) · Plan: [PLAN-feat-watch-bidirectional-bridge.md](./plans/PLAN-feat-watch-bidirectional-bridge.md)
+    Key finding: "Both platforms limit commands to strict `START_SESSION`/`STOP_SESSION` string literal paths."
+    Rejected alternative: "Connecting watch directly to skates via BLE — Rejected because it causes dual-master disconnects with the phone."
+  - **Source of Truth:** 📖 [index.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/modules/sk8lytz-watch-bridge/src/index.ts) §WatchCommand
+  - **Details:** The `addWatchCommandListener` will be mounted globally in `BleMachine.ts` to ensure commands execute when the phone is locked in the skater's pocket.
+
 

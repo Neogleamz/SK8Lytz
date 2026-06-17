@@ -4100,3 +4100,20 @@ Files touched:
 - src/hooks/useBLE.ts
 TSC: ?  Jest: ?
 
+
+### [MERGE] 2026-06-17T04:48 — feat/watch-bidirectional-bridge -> master
+**What merged:**
+- Architecture mapping for Phone-as-Gateway bidirectional control flow.
+- Updates to Android and iOS WatchBridge modules to support robust JSON-based payload parsing instead of fragile strings.
+- Transformed TypeScript WatchCommand into a strict discriminated union mapping START/STOP_SESSION and new WRITE_COLOR/EXECUTE_PATTERN payloads.
+- Wired global hardware listener into useBLE.ts, executing background BLE writes directly using the BleWriteQueue priority lock, effectively preventing GATT 133 collisions.
+**Verify result:** TSC ?, Jest ?, AST Collision ?, Gatekeeper ?
+**Files touched:**
+- modules/sk8lytz-watch-bridge/src/index.ts
+- modules/sk8lytz-watch-bridge/android/src/main/java/expo/modules/sk8lytzwatchbridge/Sk8lytzWatchBridgeModule.kt
+- modules/sk8lytz-watch-bridge/ios/Sk8lytzWatchBridgeModule.swift
+- android/sk8lytzWear/src/main/kotlin/com/neogleamz/sk8lytzwear/presentation/WearMessageSender.kt
+- targets/watch/WatchConnectivityManager.swift
+- src/context/SessionContext.tsx
+- src/hooks/useBLE.ts
+
