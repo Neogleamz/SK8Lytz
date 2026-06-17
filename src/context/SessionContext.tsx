@@ -279,8 +279,8 @@ function SessionMachineWrapper({
   useEffect(() => {
     const unsubCmd = WatchBridge.addWatchCommandListener((command: WatchCommand) => {
       AppLogger.log('APP_LOG', { event: 'watch_command_received', command });
-      if (command === 'START_SESSION') send({ type: 'START' });
-      if (command === 'STOP_SESSION') send({ type: 'END' });
+      if (command.type === 'START_SESSION') send({ type: 'START' });
+      if (command.type === 'STOP_SESSION') send({ type: 'END' });
     });
     const unsubHealth = WatchBridge.addWatchHealthListener((update: WatchHealthUpdate) => {
       AppLogger.log('APP_LOG', {

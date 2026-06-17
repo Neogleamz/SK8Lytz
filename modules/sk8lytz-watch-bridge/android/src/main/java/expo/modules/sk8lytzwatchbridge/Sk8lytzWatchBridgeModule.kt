@@ -158,10 +158,24 @@ class Sk8lytzWatchBridgeModule : Module() {
     private fun handleInboundMessage(messageEvent: MessageEvent) {
         when (messageEvent.path) {
             PATH_COMMAND -> {
-                val command = String(messageEvent.data, Charsets.UTF_8)
-                Log.d(TAG, "Received command from watch: $command")
-                if (command == "START_SESSION" || command == "STOP_SESSION") {
-                    sendEvent("onWatchCommandReceived", mapOf("command" to command))
+                val payloadStr = String(messageEvent.data, Charsets.UTF_8)
+                Log.d(TAG, "Received command from watch: $payloadStr")
+                runCatching {
+                    val json = JSONObject(payloadStr)
+                    val map = mutableMapOf<String, Any>()
+                    val keys = json.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        map[key] = json.get(key)
+                    }
+                    sendEvent("onWatchCommandReceived", map)
+                }.onFailure {
+                    // Legacy fallback
+                    if (payloadStr == "START_SESSION" || payloadStr == "STOP_SESSION") {
+                        sendEvent("onWatchCommandReceived", mapOf("type" to payloadStr))
+                    } else {
+                        Log.e(TAG, "Failed to parse watch command: ${it.message}", it)
+                    }
                 }
             }
             PATH_HEALTH -> {

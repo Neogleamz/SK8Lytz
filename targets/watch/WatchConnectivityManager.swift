@@ -43,7 +43,7 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         isSessionActive = true
         isPaused = false
         WKInterfaceDevice.current().play(.start)
-        send(["command": "START_SESSION"])
+        send(["type": "START_SESSION"])
         startHealthRelay()
     }
 
@@ -52,8 +52,24 @@ class WatchConnectivityManager: NSObject, ObservableObject, WCSessionDelegate {
         isSessionActive = false
         isPaused = false
         WKInterfaceDevice.current().play(.stop)
-        send(["command": "STOP_SESSION"])
+        send(["type": "STOP_SESSION"])
         stopHealthRelay()
+    }
+
+    @MainActor
+    func sendWriteColor(r: Int, g: Int, b: Int) {
+        WKInterfaceDevice.current().play(.click)
+        send(["type": "WRITE_COLOR", "r": r, "g": g, "b": b])
+    }
+
+    @MainActor
+    func sendExecutePattern(patternId: Int, fg: [Int]? = nil, bg: [Int]? = nil, speed: Int? = nil) {
+        WKInterfaceDevice.current().play(.click)
+        var dict: [String: Any] = ["type": "EXECUTE_PATTERN", "patternId": patternId]
+        if let fg = fg { dict["fg"] = fg }
+        if let bg = bg { dict["bg"] = bg }
+        if let speed = speed { dict["speed"] = speed }
+        send(dict)
     }
 
     // MARK: - WCSessionDelegate

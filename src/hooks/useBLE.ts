@@ -33,6 +33,7 @@ import { ActorRefFrom } from 'xstate';
 import { scrubPII } from '../utils/piiScrubber';
 
 import { requestPermission } from '../services/PermissionService';
+import { WatchBridge, WatchCommand } from 'sk8lytz-watch-bridge';
 import { supabase } from '../services/supabaseClient';
 import { useBLEScanner } from './ble/useBLEScanner';
 import { enqueueWrite } from '../services/BleWriteQueue';
@@ -541,6 +542,28 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       stateRefs
     );
   }, [bleManager, connectedDevices, bleSnapshot.context.ghostedDeviceIds, stateRefs]);
+
+  // ── Global Watch Command Hardware Listener ───────────────────────────────
+  useEffect(() => {
+    const unsubCmd = WatchBridge.addWatchCommandListener((command: WatchCommand) => {
+      if (command.type === 'WRITE_COLOR') {
+        AppLogger.log('APP_LOG', { event: 'watch_hardware_command_write_color', r: command.r, g: command.g, b: command.b });
+        const payloads = connectedDevicesRef.current.map(d => {
+          const adapter = getAdapterForDevice(d.id);
+          return { targetDeviceId: d.id, result: adapter.buildSolidColor(command.r, command.g, command.b) };
+        });
+        executeProtocolResults(payloads, { lowPriority: false });
+      } else if (command.type === 'EXECUTE_PATTERN') {
+        AppLogger.log('APP_LOG', { event: 'watch_hardware_command_execute_pattern', patternId: command.patternId });
+        const payloads = connectedDevicesRef.current.map(d => {
+          const adapter = getAdapterForDevice(d.id);
+          return { targetDeviceId: d.id, result: adapter.buildEffect(command.patternId, command.speed ?? 50, 100) };
+        });
+        executeProtocolResults(payloads, { lowPriority: false });
+      }
+    });
+    return () => unsubCmd();
+  }, [getAdapterForDevice, executeProtocolResults]);
 
   const derivedBleState: BleConnectionState = 
     bleGateState === 'DISCONNECTING' ? 'DISCONNECTING' :

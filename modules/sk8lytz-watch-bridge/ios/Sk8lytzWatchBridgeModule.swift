@@ -71,9 +71,13 @@ public class Sk8lytzWatchBridgeModule: Module, WCSessionDelegate {
 
   /// Receives commands and health updates sent from the Apple Watch
   public func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-    if let command = message["command"] as? String {
-      sendEvent("onWatchCommandReceived", ["command": command])
+    if let _ = message["type"] as? String {
+      sendEvent("onWatchCommandReceived", message)
+    } else if let command = message["command"] as? String {
+      // Legacy fallback
+      sendEvent("onWatchCommandReceived", ["type": command])
     }
+    
     if message["healthUpdate"] as? Bool == true {
       let hr = message["heartRate"] as? Int ?? 0
       let cal = message["calories"] as? Int ?? 0
@@ -84,9 +88,13 @@ public class Sk8lytzWatchBridgeModule: Module, WCSessionDelegate {
   /// Also handle commands/health that arrive via applicationContext (watch not reachable in real-time)
   public func session(_ session: WCSession,
                       didReceiveApplicationContext applicationContext: [String: Any]) {
-    if let command = applicationContext["command"] as? String {
-      sendEvent("onWatchCommandReceived", ["command": command])
+    if let _ = applicationContext["type"] as? String {
+      sendEvent("onWatchCommandReceived", applicationContext)
+    } else if let command = applicationContext["command"] as? String {
+      // Legacy fallback
+      sendEvent("onWatchCommandReceived", ["type": command])
     }
+    
     if applicationContext["healthUpdate"] as? Bool == true {
       let hr = applicationContext["heartRate"] as? Int ?? 0
       let cal = applicationContext["calories"] as? Int ?? 0

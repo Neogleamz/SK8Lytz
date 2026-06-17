@@ -54,6 +54,28 @@ object WearMessageSender {
         }
     }
 
+    /**
+     * Send a complex JSON command payload to the phone app (e.g. WRITE_COLOR).
+     * Fires haptic buzz for physical confirmation.
+     */
+    fun sendCommandPayload(context: Context, jsonPayload: JSONObject) {
+        triggerHaptic(context)
+        scope.launch {
+            runCatching {
+                val nodes = Wearable.getNodeClient(context).connectedNodes.await()
+                val payload = jsonPayload.toString().toByteArray(Charsets.UTF_8)
+                nodes.forEach { node ->
+                    Wearable.getMessageClient(context)
+                        .sendMessage(node.id, PATH_COMMAND, payload)
+                        .await()
+                    Log.d(TAG, "Sent payload to ${node.displayName}")
+                }
+            }.onFailure {
+                Log.e(TAG, "Failed to send payload: ${it.message}", it)
+            }
+        }
+    }
+
     private const val PREFS_NAME = "telemetry_buffer_prefs"
     private const val KEY_BUFFER = "health_buffer"
 

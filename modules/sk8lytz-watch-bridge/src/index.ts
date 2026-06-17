@@ -35,7 +35,10 @@ export interface WatchSessionState {
 }
 
 /** Commands the watch can send back to the phone. */
-export type WatchCommand = 'START_SESSION' | 'STOP_SESSION';
+export type WatchCommand =
+  | { type: 'START_SESSION' | 'STOP_SESSION' }
+  | { type: 'WRITE_COLOR'; r: number; g: number; b: number }
+  | { type: 'EXECUTE_PATTERN'; patternId: number; fg?: number[]; bg?: number[]; speed?: number };
 
 /** Health telemetry relayed from the watch's HealthKit sensors. */
 export interface WatchHealthUpdate {
@@ -120,12 +123,28 @@ export const WatchBridge = {
         if (
           payload !== null &&
           typeof payload === 'object' &&
-          'command' in payload &&
-          typeof (payload as Record<string, unknown>).command === 'string'
+          'type' in payload &&
+          typeof (payload as Record<string, unknown>).type === 'string'
         ) {
-          const cmd = (payload as Record<string, unknown>).command as WatchCommand;
-          if (cmd === 'START_SESSION' || cmd === 'STOP_SESSION') {
-            handler(cmd);
+          const p = payload as Record<string, unknown>;
+          const type = p.type as string;
+          if (type === 'START_SESSION' || type === 'STOP_SESSION') {
+            handler({ type } as WatchCommand);
+          } else if (type === 'WRITE_COLOR') {
+            handler({
+              type: 'WRITE_COLOR',
+              r: typeof p.r === 'number' ? p.r : 0,
+              g: typeof p.g === 'number' ? p.g : 0,
+              b: typeof p.b === 'number' ? p.b : 0,
+            } as WatchCommand);
+          } else if (type === 'EXECUTE_PATTERN') {
+            handler({
+              type: 'EXECUTE_PATTERN',
+              patternId: typeof p.patternId === 'number' ? p.patternId : 0,
+              fg: Array.isArray(p.fg) ? p.fg : undefined,
+              bg: Array.isArray(p.bg) ? p.bg : undefined,
+              speed: typeof p.speed === 'number' ? p.speed : undefined,
+            } as WatchCommand);
           }
         }
       }
