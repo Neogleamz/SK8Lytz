@@ -4231,3 +4231,8 @@ TSC: ?  Jest: ?
 **Files touched:** src/hooks/useDashboardGroups.ts, src/services/GroupRepository.ts, src/hooks/useControllerDispatch.ts, src/services/SpeedTrackingService.ts, src/hooks/useCrewSession.ts
 
 
+
+### [MERGE] 2026-06-17T16:34 — fix/timer-audit-ble -> master @ 3fcc6b3d
+**What merged:** Replaced 94 hardcoded setTimeout delays in the BLE pipeline with bleTimingConstants.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/constants/bleTimingConstants.ts, src/services/ble/HeartbeatService.ts, src/services/ble/InterrogatorService.ts, src/services/BlePingService.ts, src/services/BleSessionFactory.ts, src/services/BleWriteQueue.ts, src/services/ble/ConnectService.ts, src/services/ble/RecoveryService.ts, src/hooks/ble/useBLEScanner.ts, src/hooks/ble/useBLEBatterySweep.ts

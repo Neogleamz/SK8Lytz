@@ -3430,4 +3430,15 @@ pm run verify which includes QA tests.
     Rejected alternative: "Adapter functions at each cast site — eliminated by making DisplayDevice extend Device"
   - **Source of Truth:** 📖 [BleMachine.types.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.types.ts#L18) §BLE Types
   - **Details:** 7 files, ~20 locations. Prerequisite: Wave 1 fully merged into master before this worktree is created.
+
+
+- [x] **`fix/timer-audit-ble`**
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[✅ L-RISK]` `[🥩 Feast]` `[🤖 FLASH]` `[BATCH:deepdive-audit-sweep]` `[WAVE:3]`
+  - **Goal:** Replace hardcoded setTimeout/setInterval delays in the BLE pipeline with named constants from `bleTimingConstants.ts`.
+  - **Decision Log:** R-16 sniper found 94 hardcoded delays. Plan writer confirmed BleWriteDispatcher is already migrated. 10 files need migration, pure refactor — zero behavioral changes.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a2899729-4d77-4e6c-8f8c-d23919eb2b74/system_audit_report.md) · Plan: [PLAN-fix-timer-audit-ble.md](./plans/PLAN-fix-timer-audit-ble.md)
+    Key finding: "BleWriteDispatcher already migrated, 10 other BLE files still have magic numbers"
+    Rejected alternative: "Runtime-configurable params — unnecessary for hardware-specific timing constants"
+  - **Source of Truth:** 📖 [bleTimingConstants.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/constants/bleTimingConstants.ts) §BLE Constants
+  - **Details:** 10 files, ~26 new constants. Prerequisite: Wave 2 fully merged into master before this worktree is created.
 

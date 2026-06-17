@@ -111,16 +111,6 @@
   - **Source of Truth:** 📖 [useAccountOverview.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useAccountOverview.ts#L70) §State Management
   - **Details:** 20 files in 3 tiers. Prerequisite: Wave 2 fully merged into master before this worktree is created.
 
-- [ ] **`fix/timer-audit-ble`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[✅ L-RISK]` `[🥩 Feast]` `[🤖 FLASH]` `[BATCH:deepdive-audit-sweep]` `[WAVE:3]`
-  - **Goal:** Replace hardcoded setTimeout/setInterval delays in the BLE pipeline with named constants from `bleTimingConstants.ts`.
-  - **Decision Log:** R-16 sniper found 94 hardcoded delays. Plan writer confirmed BleWriteDispatcher is already migrated. 10 files need migration, pure refactor — zero behavioral changes.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a2899729-4d77-4e6c-8f8c-d23919eb2b74/system_audit_report.md) · Plan: [PLAN-fix-timer-audit-ble.md](./plans/PLAN-fix-timer-audit-ble.md)
-    Key finding: "BleWriteDispatcher already migrated, 10 other BLE files still have magic numbers"
-    Rejected alternative: "Runtime-configurable params — unnecessary for hardware-specific timing constants"
-  - **Source of Truth:** 📖 [bleTimingConstants.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/constants/bleTimingConstants.ts) §BLE Constants
-  - **Details:** 10 files, ~26 new constants. Prerequisite: Wave 2 fully merged into master before this worktree is created.
-
 ---
 
 ##  ❄️ Icebox / Backburner (Manual Trigger Only)
