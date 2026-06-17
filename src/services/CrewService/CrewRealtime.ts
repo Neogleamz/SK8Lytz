@@ -38,18 +38,22 @@ export class CrewRealtime {
         if (crewPayload?.payload) onSceneOrPayload(crewPayload.payload);
       })
       .on('broadcast', { event: 'session_ended' }, () => {
-        AppLogger.log('CREW_SESSION_LEFT', { reason: 'leader_ended_session', role: 'member' });
-        this.service.unsubscribe();
-        this.service.currentSession = null;
-        this.service.currentSessionId = null;
-        this.service.currentRole = null;
-        this.service.emit();
-        try {
-          AsyncStorage.multiRemove([this.service.STORAGE_LAST_SESSION_ID, this.service.STORAGE_LAST_SESSION_EXP]);
-        } catch (err: unknown) {
-          AppLogger.warn('[CrewService] Failed to multiRemove on session_ended broadcast', { error: err instanceof Error ? err.message : String(err)  });
-        }
-        onSessionEnded?.();
+        (async () => {
+          AppLogger.log('CREW_SESSION_LEFT', { reason: 'leader_ended_session', role: 'member' });
+          this.service.unsubscribe();
+          this.service.currentSession = null;
+          this.service.currentSessionId = null;
+          this.service.currentRole = null;
+          this.service.emit();
+          try {
+            await AsyncStorage.multiRemove([this.service.STORAGE_LAST_SESSION_ID, this.service.STORAGE_LAST_SESSION_EXP]);
+          } catch (err: unknown) {
+            AppLogger.warn('[CrewService] Failed to multiRemove on session_ended broadcast', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
+          }
+          onSessionEnded?.();
+        })().catch((err: unknown) => {
+          AppLogger.warn('[CrewService] unhandled error in session_ended', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
+        });
       })
       .subscribe();
       

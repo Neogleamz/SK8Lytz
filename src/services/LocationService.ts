@@ -120,13 +120,19 @@ class LocationService {
     const SESSION_SELECT = 'id, name, invite_code, location_label, location_coords, scheduled_at, created_at, is_public, crew_id, crew_members(count), crews(name, avatar_url, avatar_icon, avatar_color)';
 
     // ── Query 1: All active PUBLIC sessions (visible to everyone in radius) ──
-    const { data: publicData } = await supabase
-      .from('crew_sessions')
-      .select(SESSION_SELECT)
-      .eq('is_active', true)
-      .eq('is_public', true)
-      .order('created_at', { ascending: false })
-      .limit(80);
+    let publicData: any[] | null = [];
+    try {
+      const { data } = await supabase
+        .from('crew_sessions')
+        .select(SESSION_SELECT)
+        .eq('is_active', true)
+        .eq('is_public', true)
+        .order('created_at', { ascending: false })
+        .limit(80);
+      publicData = data;
+    } catch (err: unknown) {
+      AppLogger.warn('[LocationService] Public session query failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
+    }
 
     // ── Query 2: Active sessions the user is a session-member of (private crew sessions) ──
     // This covers private sessions from crews the user belongs to.

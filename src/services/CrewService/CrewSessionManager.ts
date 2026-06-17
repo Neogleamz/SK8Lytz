@@ -361,7 +361,10 @@ export class CrewSessionManager {
         .from('crew_members')
         .delete()
         .eq('session_id', sessionId)
-        .then(() => AppLogger.log('CREW_CLEANUP', { action: 'crew_members_deleted', sessionId }));
+        .then(
+          () => AppLogger.log('CREW_CLEANUP', { action: 'crew_members_deleted', sessionId }),
+          (err: unknown) => AppLogger.warn('[CrewService] crew_members delete failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 })
+        );
 
       const channelRef = this.service.channel;
       this.service.channel = null;
@@ -370,8 +373,12 @@ export class CrewSessionManager {
       this.service.currentRole = null;
       this.service.emit();
       setTimeout(() => {
-        if (channelRef) supabase.removeChannel(channelRef);
-        AppLogger.log('CREW_SESSION_ENDED', { action: 'channel_torn_down' });
+        try {
+          if (channelRef) supabase.removeChannel(channelRef).catch((err: unknown) => AppLogger.warn('[CrewService] deferred removeChannel failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
+          AppLogger.log('CREW_SESSION_ENDED', { action: 'channel_torn_down' });
+        } catch (err: unknown) {
+          AppLogger.warn('[CrewService] deferred removeChannel failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
+        }
       }, 600);
 
       if (this.service.broadcastTimer) { clearTimeout(this.service.broadcastTimer); this.service.broadcastTimer = null; }

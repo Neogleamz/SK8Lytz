@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from '
 import { AppSettingsService, AppSettingsMap } from '../services/AppSettingsService';
 import { useAuth } from './AuthContext';
 import { AppState } from 'react-native';
+import { AppLogger } from '../services/appLogger';
 
 interface AppConfigContextValue {
   settings: AppSettingsMap;
@@ -22,8 +23,13 @@ export const AppConfigProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const { isOfflineMode } = useAuth();
 
   const refresh = async () => {
-    const fresh = await AppSettingsService.fetchAllSettings();
-    setSettings(fresh);
+    try {
+      const fresh = await AppSettingsService.fetchAllSettings();
+      setSettings(fresh);
+    } catch (error) {
+      AppLogger.warn('[AppConfigContext] fetchAllSettings failed', { error, payload_size: 0, ssi: 0 });
+      setSettings({});
+    }
   };
 
   useEffect(() => {

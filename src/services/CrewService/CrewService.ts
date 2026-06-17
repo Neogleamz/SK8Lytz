@@ -89,7 +89,7 @@ export class CrewService {
 
   public _ensureUnsubscribed() {
     if (this.channel) {
-      supabase.removeChannel(this.channel);
+      supabase.removeChannel(this.channel).catch((err: unknown) => AppLogger.warn('[CrewService] removeChannel failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
       this.channel = null;
     }
   }

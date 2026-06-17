@@ -65,9 +65,13 @@ export class AppLoggerStorage {
     if (this.buffer.length > MAX_ENTRIES) {
       this.buffer = this.buffer.slice(-MAX_ENTRIES);
     }
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(this.buffer));
-    this.lastPersistedLength = this.buffer.length;
-    this.lastPersistTime = Date.now();
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(this.buffer));
+      this.lastPersistedLength = this.buffer.length;
+      this.lastPersistTime = Date.now();
+    } catch (e: unknown) {
+      if (__DEV__) console.warn('[AppLogger] executePersist setItem failed', e instanceof Error ? e.message : String(e));
+    }
   }
 
   push(entry: LogEntry) {
