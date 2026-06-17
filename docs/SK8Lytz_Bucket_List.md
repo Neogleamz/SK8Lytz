@@ -11,10 +11,51 @@
 
 ## 🚧 ACTIVE SPRINT
 
-- `[/]` **`fix/js-yaml-audit`** — Add js-yaml override to resolve npm audit block on push.
+- `[x]` **`fix/js-yaml-audit`** — Add js-yaml override to resolve npm audit block on push.
   - **Tags:** `[✅ READY]` `[❌ UNVERIFIED]` `[APP]` `[L-RISK]` `[Snack]` `[BATCH:audit-sweep]` `[WAVE:12]`
   - **Source of Truth:** [PLAN-fix-js-yaml-audit.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/plans/PLAN-fix-js-yaml-audit.md)
   - **Decision Log:** Vulnerability is dev-only, but strict pre-push requires zero-moderate audit. Override is the safest minimal fix.
+  - **Completed:** Merged at 50f48fb2
+
+- `[/]` **`fix/group-concurrent-write`**
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:deepdive-audit-sweep]` `[WAVE:1]`
+  - **Goal:** Replace `Promise.all(targets.map(...))` with sequential `for...of` loops in group BLE dispatch to prevent GATT write collisions.
+  - **Decision Log:** Deep-dive R-10 sniper + DOMAIN_GROUP_SYNC + DOMAIN_BLE_CORE confirmed 11 concurrent write violations across 4 files. GATT controller expects sequential device-by-device dispatch — parallel writes cause collision and packet loss on grouped skates.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a2899729-4d77-4e6c-8f8c-d23919eb2b74/system_audit_report.md) · Plan: [PLAN-fix-group-concurrent-write.md](./plans/PLAN-fix-group-concurrent-write.md)
+    Key finding: "7 Promise.all(targets.map) in useControllerDispatch.ts bypass write queue serialization"
+    Rejected alternative: "Adding mutex locks in BleWriteQueue — unnecessary, queue already serializes per-device"
+  - **Source of Truth:** 📖 [useControllerDispatch.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useControllerDispatch.ts#L94) §BLE Dispatch
+  - **Details:** 4 files, 11 locations. BLE pipeline — wrong fix risks bricking skates.
+
+- `[/]` **`fix/protocol-seq-counter`**
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:deepdive-audit-sweep]` `[WAVE:1]`
+  - **Goal:** Fix sequence counter split-ownership in `0x40` chunked payload framing and replace hardcoded 54-pixel max with dynamic `numLeds`.
+  - **Decision Log:** DOMAIN_PROTOCOL_CORE confirmed BleWriteDispatcher uses `Math.random()` for seqNum while ZenggeProtocol has a proper incrementing counter. Protocol Bible §0x51 mandates `seqNum increments per save operation`. Split ownership = out-of-sequence frames = silently dropped pixels.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a2899729-4d77-4e6c-8f8c-d23919eb2b74/system_audit_report.md) · Plan: [PLAN-fix-protocol-seq-counter.md](./plans/PLAN-fix-protocol-seq-counter.md)
+    Key finding: "Dual sequence counter increment causes frame drops on 0x40 chunked payloads"
+    Rejected alternative: "TransitionType 0x00→CASCADE mapping — confirmed FALSE POSITIVE by plan writer"
+  - **Source of Truth:** 📖 [ZenggeAdapter.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/ZenggeAdapter.ts#L167) §Protocol Core
+  - **Details:** 4 files, 5 locations. Byte-level payload pipeline — wrong values = physical LED corruption.
+
+- `[/]` **`fix/pii-scrub-sweep`**
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[✅ L-RISK]` `[🍪 Snack]` `[🤖 FLASH]` `[BATCH:deepdive-audit-sweep]` `[WAVE:1]`
+  - **Goal:** Wrap all unscrubbed PII (deviceId, name, crewName) in AppLogger calls with `scrubPII()` utility.
+  - **Decision Log:** R-09 sniper found 16 instances of unscrubbed PII reaching cloud telemetry. Plan writer reduced to 14 confirmed fixes after dropping 2 false positives (DEV-gated log, pattern label string).
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a2899729-4d77-4e6c-8f8c-d23919eb2b74/system_audit_report.md) · Plan: [PLAN-fix-pii-scrub-sweep.md](./plans/PLAN-fix-pii-scrub-sweep.md)
+    Key finding: "14 unscrubbed PII values in production AppLogger calls across 7 files"
+    Rejected alternative: "N/A — find-and-replace pattern, no design alternatives"
+  - **Source of Truth:** 📖 [RecoveryService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/RecoveryService.ts#L115) §PII
+  - **Details:** 7 files, 14 locations. Privacy/compliance fix.
+
+- `[/]` **`fix/os-variance-parity`**
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍪 Snack]` `[🤖 FLASH]` `[BATCH:deepdive-audit-sweep]` `[WAVE:1]`
+  - **Goal:** Fix 3 OS variance parity violations: missing Android elevation and web-specific styles not wrapped in `Platform.select`.
+  - **Decision Log:** R-20 sniper confirmed 3 verified violations. `countdownBadge` missing Android elevation causes invisible shadow. CustomSlider/TacticalSlider merge web-only styles on all platforms.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a2899729-4d77-4e6c-8f8c-d23919eb2b74/system_audit_report.md) · Plan: [PLAN-fix-os-variance-parity.md](./plans/PLAN-fix-os-variance-parity.md)
+    Key finding: "3 style definitions with iOS/web shadows but no Android elevation"
+    Rejected alternative: "N/A — straightforward style fixes"
+  - **Source of Truth:** 📖 [DashboardStyles.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/styles/DashboardStyles.ts#L105) §Styles
+  - **Details:** 3 files, 3 locations. Style-only changes.
 
 ---
 
@@ -47,46 +88,6 @@
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a2899729-4d77-4e6c-8f8c-d23919eb2b74/system_audit_report.md) — Deep-dive code synthesis from 36 Map-Reduce agents. 268 verified findings across 10 clusters targeting group connection, payload sync, and critical architectural issues.
 
 #### 🌊 Wave 1 — BLE Pipeline & Quick Wins (Parallel-Safe)
-
-- [ ] **`fix/group-concurrent-write`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:deepdive-audit-sweep]` `[WAVE:1]`
-  - **Goal:** Replace `Promise.all(targets.map(...))` with sequential `for...of` loops in group BLE dispatch to prevent GATT write collisions.
-  - **Decision Log:** Deep-dive R-10 sniper + DOMAIN_GROUP_SYNC + DOMAIN_BLE_CORE confirmed 11 concurrent write violations across 4 files. GATT controller expects sequential device-by-device dispatch — parallel writes cause collision and packet loss on grouped skates.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a2899729-4d77-4e6c-8f8c-d23919eb2b74/system_audit_report.md) · Plan: [PLAN-fix-group-concurrent-write.md](./plans/PLAN-fix-group-concurrent-write.md)
-    Key finding: "7 Promise.all(targets.map) in useControllerDispatch.ts bypass write queue serialization"
-    Rejected alternative: "Adding mutex locks in BleWriteQueue — unnecessary, queue already serializes per-device"
-  - **Source of Truth:** 📖 [useControllerDispatch.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useControllerDispatch.ts#L94) §BLE Dispatch
-  - **Details:** 4 files, 11 locations. BLE pipeline — wrong fix risks bricking skates.
-
-- [ ] **`fix/protocol-seq-counter`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:deepdive-audit-sweep]` `[WAVE:1]`
-  - **Goal:** Fix sequence counter split-ownership in `0x40` chunked payload framing and replace hardcoded 54-pixel max with dynamic `numLeds`.
-  - **Decision Log:** DOMAIN_PROTOCOL_CORE confirmed BleWriteDispatcher uses `Math.random()` for seqNum while ZenggeProtocol has a proper incrementing counter. Protocol Bible §0x51 mandates `seqNum increments per save operation`. Split ownership = out-of-sequence frames = silently dropped pixels.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a2899729-4d77-4e6c-8f8c-d23919eb2b74/system_audit_report.md) · Plan: [PLAN-fix-protocol-seq-counter.md](./plans/PLAN-fix-protocol-seq-counter.md)
-    Key finding: "Dual sequence counter increment causes frame drops on 0x40 chunked payloads"
-    Rejected alternative: "TransitionType 0x00→CASCADE mapping — confirmed FALSE POSITIVE by plan writer"
-  - **Source of Truth:** 📖 [ZenggeAdapter.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/ZenggeAdapter.ts#L167) §Protocol Core
-  - **Details:** 4 files, 5 locations. Byte-level payload pipeline — wrong values = physical LED corruption.
-
-- [ ] **`fix/pii-scrub-sweep`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[✅ L-RISK]` `[🍪 Snack]` `[🤖 FLASH]` `[BATCH:deepdive-audit-sweep]` `[WAVE:1]`
-  - **Goal:** Wrap all unscrubbed PII (deviceId, name, crewName) in AppLogger calls with `scrubPII()` utility.
-  - **Decision Log:** R-09 sniper found 16 instances of unscrubbed PII reaching cloud telemetry. Plan writer reduced to 14 confirmed fixes after dropping 2 false positives (DEV-gated log, pattern label string).
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a2899729-4d77-4e6c-8f8c-d23919eb2b74/system_audit_report.md) · Plan: [PLAN-fix-pii-scrub-sweep.md](./plans/PLAN-fix-pii-scrub-sweep.md)
-    Key finding: "14 unscrubbed PII values in production AppLogger calls across 7 files"
-    Rejected alternative: "N/A — find-and-replace pattern, no design alternatives"
-  - **Source of Truth:** 📖 [RecoveryService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/RecoveryService.ts#L115) §PII
-  - **Details:** 7 files, 14 locations. Privacy/compliance fix.
-
-- [ ] **`fix/os-variance-parity`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍪 Snack]` `[🤖 FLASH]` `[BATCH:deepdive-audit-sweep]` `[WAVE:1]`
-  - **Goal:** Fix 3 OS variance parity violations: missing Android elevation and web-specific styles not wrapped in `Platform.select`.
-  - **Decision Log:** R-20 sniper confirmed 3 verified violations. `countdownBadge` missing Android elevation causes invisible shadow. CustomSlider/TacticalSlider merge web-only styles on all platforms.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a2899729-4d77-4e6c-8f8c-d23919eb2b74/system_audit_report.md) · Plan: [PLAN-fix-os-variance-parity.md](./plans/PLAN-fix-os-variance-parity.md)
-    Key finding: "3 style definitions with iOS/web shadows but no Android elevation"
-    Rejected alternative: "N/A — straightforward style fixes"
-  - **Source of Truth:** 📖 [DashboardStyles.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/styles/DashboardStyles.ts#L105) §Styles
-  - **Details:** 3 files, 3 locations. Style-only changes.
 
 #### 🌊 Wave 2 — Architecture & Safety (Prerequisite: Wave 1 merged)
 
