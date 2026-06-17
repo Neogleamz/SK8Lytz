@@ -8,6 +8,7 @@ import { AppLogger } from '../../services/appLogger';
 import { Spacing } from '../../theme/theme';
 import { useAuthStyles } from './AuthStyles';
 import { isValidEmail } from '../../utils/validation';
+import type { ViewState } from '../../types/ViewState';
 
 interface AuthFormForgotPasswordProps {
   onModeChange: (mode: 'LOGIN' | 'SIGNUP') => void;
@@ -19,26 +20,27 @@ export function AuthFormForgotPassword({ onModeChange }: AuthFormForgotPasswordP
   const { resetPassword } = useAuth();
 
   const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  /** 4-state FSM: idle → loading → success/empty/error */
+  const [viewState, setViewState] = useState<ViewState>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
-  const showError = (msg: string) => { setErrorMessage(msg); setSuccessMessage(''); };
-  const showSuccess = (msg: string) => { setSuccessMessage(msg); setErrorMessage(''); };
+  const showError = (msg: string) => { setErrorMsg(msg); setSuccessMsg(''); setViewState('error'); };
+  const showSuccess = (msg: string) => { setSuccessMsg(msg); setErrorMsg(''); setViewState('success'); };
 
   const handleForgotPassword = async () => {
-    if (loading) return;
+    if (viewState === 'loading') return;
     if (!email.trim()) { showError('Please enter your email address.'); return; }
     if (!isValidEmail(email)) { showError('Please enter a valid email address.'); return; }
 
-    setErrorMessage('');
-    setLoading(true);
+    setErrorMsg('');
+    setViewState('loading');
 
     try {
       const redirectUrl = makeRedirectUri({ path: 'auth' });
       const { error } = await resetPassword(email.trim(), redirectUrl);
       
-      setLoading(false);
+      setViewState('success'); // default, overridden below if error
 
       if (error) {
         showError(error.message);
@@ -48,7 +50,6 @@ export function AuthFormForgotPassword({ onModeChange }: AuthFormForgotPasswordP
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : (e instanceof Error ? e.message : String(e));
       AppLogger.error('AuthFormForgotPassword', 'Password reset exception', { error: msg , payload_size: 0, ssi: 0 });
-      setLoading(false);
       showError('A network or internal error occurred. Please try again.');
     }
   };
@@ -60,32 +61,32 @@ export function AuthFormForgotPassword({ onModeChange }: AuthFormForgotPasswordP
         placeholder="email@address.com"
         placeholderTextColor={Colors.textMuted}
         value={email}
-        onChangeText={t => { setEmail(t); setErrorMessage(''); }}
+        onChangeText={t => { setEmail(t); setErrorMsg(''); }}
         autoCapitalize="none"
         keyboardType="email-address"
         autoComplete="email"
       />
 
-      {!!errorMessage && (
+      {viewState === 'error' && !!errorMsg && (
         <View style={styles.errorBanner}>
           <MaterialCommunityIcons name="alert-circle-outline" size={15} color="#FF6B6B" style={{ marginRight: Spacing.sm }} />
-          <Text style={styles.errorBannerText}>{errorMessage}</Text>
+          <Text style={styles.errorBannerText}>{errorMsg}</Text>
         </View>
       )}
 
-      {!!successMessage && (
+      {viewState === 'success' && !!successMsg && (
         <View style={styles.successBanner}>
           <MaterialCommunityIcons name="check-circle-outline" size={15} color="#4ADE80" style={{ marginRight: Spacing.sm }} />
-          <Text style={styles.successBannerText}>{successMessage}</Text>
+          <Text style={styles.successBannerText}>{successMsg}</Text>
         </View>
       )}
 
       <TouchableOpacity
         style={styles.primaryButton}
-        disabled={loading}
+        disabled={viewState === 'loading'}
         onPress={handleForgotPassword}
       >
-        {loading ? (
+        {viewState === 'loading' ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
             <ActivityIndicator color="#000" size="small" />
             <Text style={styles.primaryButtonText}>Loading...</Text>

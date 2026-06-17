@@ -13,6 +13,7 @@ import { supabase } from '../services/supabaseClient';
 import { AppLogger } from '../services/appLogger';
 import type { IFavoriteState } from '../types/dashboard.types';
 import type { Database } from '../types/supabase';
+import type { ViewState } from '../types/ViewState';
 
 /**
  * Fetches and caches SK8Lytz Picks (curated presets) from the Supabase
@@ -20,8 +21,9 @@ import type { Database } from '../types/supabase';
  */
 export function useCuratedPicks() {
   const [curatedPresets, setCuratedPresets] = useState<IFavoriteState[]>([]);
-  const [picksLoading, setPicksLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  /** 4-state FSM: idle → loading → success/empty/error */
+  const [viewState, setViewState] = useState<ViewState>('loading');
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -35,7 +37,7 @@ export function useCuratedPicks() {
           const parsed = JSON.parse(cached);
           if (parsed && Array.isArray(parsed) && parsed.length > 0) {
             setCuratedPresets(parsed);
-            setPicksLoading(false);
+            setViewState('success');
           }
         }
       } catch (e: unknown) {
@@ -62,7 +64,8 @@ export function useCuratedPicks() {
 
         if (error) {
           AppLogger.error('[SK8Lytz Picks] Failed to fetch from DB', error instanceof Error ? error.message : String(error), { payload_size: 0, ssi: 0 });
-          setError(error.message);
+          setErrorMsg(error.message);
+          setViewState('error');
           return;
         }
 
@@ -99,6 +102,7 @@ export function useCuratedPicks() {
             }
             return prev;
           });
+          setViewState(mapped.length > 0 ? 'success' : 'empty');
 
           // Update cache asynchronously
           AsyncStorage.setItem(CACHE_KEY, JSON.stringify(mapped)).catch(e => {
@@ -108,10 +112,11 @@ export function useCuratedPicks() {
       } catch (e: unknown) {
         if (!active) return;
         AppLogger.error('[SK8Lytz Picks] Exception fetching from DB', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
-        setError(e instanceof Error ? e.message : String(e));
+        setErrorMsg(e instanceof Error ? e.message : String(e));
+        setViewState('error');
       } finally {
         if (active) {
-          setPicksLoading(false);
+          // viewState already updated
         }
       }
     };
@@ -127,5 +132,12 @@ export function useCuratedPicks() {
     };
   }, []);
 
-  return { curatedPresets, picksLoading, error };
+  return { 
+    curatedPresets, 
+    viewState, 
+    errorMsg,
+    // Legacy support for unmodified consumers
+    picksLoading: viewState === 'loading',
+    error: viewState === 'error' ? errorMsg : null
+  };
 }

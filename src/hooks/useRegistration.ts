@@ -23,6 +23,7 @@ import { AppLogger } from '../services/appLogger';
 import DeviceRepository from '../services/deviceRepository';
 import { getDefaultDeviceName } from '../utils/NamingUtils';
 import { useAuth } from '../context/AuthContext';
+import type { ViewState } from '../types/ViewState';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -76,7 +77,9 @@ export type ClaimStatus =
 
 export function useRegistration() {
   const [registeredDevices, setRegisteredDevices] = useState<RegisteredDevice[]>([]);
-  const [isLoading, setIsLoading]                 = useState(true);
+  /** 4-state FSM: idle → loading → success/empty/error */
+  const [viewState, setViewState] = useState<ViewState>('loading');
+  const [errorMsg, setErrorMsg] = useState('');
   const [hasPendingSync, setHasPendingSync]       = useState(false);
   const isMountedRef = useRef(true);
 
@@ -105,12 +108,16 @@ export function useRegistration() {
         const merged = await repo.syncFromCloud(userId);
         if (!isActive) return;
         setRegisteredDevices(merged);
+        setViewState(merged.length > 0 ? 'success' : 'empty');
       } catch (e: unknown) {
+        if (!isActive) return;
         AppLogger.warn('[useRegistration] Boot initialization or cloud sync failed', {
           error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0
         });
+        setErrorMsg(e instanceof Error ? e.message : String(e));
+        setViewState('error');
       } finally {
-        if (isActive) setIsLoading(false);
+        // loading state handled
       }
     };
     boot();
@@ -240,7 +247,10 @@ export function useRegistration() {
 
   return {
     registeredDevices,
-    isLoading,
+    viewState,
+    errorMsg,
+    // Legacy support for unmodified consumers
+    isLoading: viewState === 'loading',
     hasPendingSync,
     saveRegisteredDevice,
     saveAllRegisteredDevices,

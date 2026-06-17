@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { Spacing } from '../../theme/theme';
 import type { Tables } from '../../types/supabase';
 import { AppLogger } from '../../services/appLogger';
+import type { ViewState } from '../../types/ViewState';
 
 // Use the generated Supabase Row type directly — stays in sync with schema automatically.
 type LifetimeStats = Tables<'user_lifetime_stats'>;
@@ -20,20 +21,22 @@ const toMap = (v: LifetimeStats['pattern_time_map']): JsonMap =>
 export default function SkaterStatsPanel({ Colors }: { Colors: { background: string; surface: string; surfaceHighlight: string; primary: string; secondary: string; accent: string; text: string; textMuted: string; textDim: string; border: string; success: string; error: string; warning: string; isDark: boolean; } }) {
   const { user } = useAuth();
   const [stats, setStats] = useState<LifetimeStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  /** 4-state FSM: idle → loading → success/empty/error */
+  const [viewState, setViewState] = useState<ViewState>('loading');
+  const [errorMsg, setErrorMsg] = useState('');
   const [retryCounter, setRetryCounter] = useState(0);
 
   useEffect(() => {
     if (!user) {
-      setLoading(false);
+      setViewState('empty');
       return;
     }
 
     let isActive = true;
 
     async function fetchStats() {
-      setError(null);
+      setErrorMsg('');
+      setViewState('loading');
       const CACHE_KEY = `${STORAGE_LIFETIME_STATS_CACHE}_${user!.id}`;
       
       // 1. Instantly load from cache for offline-first zero-latency
@@ -45,7 +48,7 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
       }
 
       if (!user || !supabase) {
-        if (isActive) setLoading(false);
+        if (isActive) setViewState('empty');
         return;
       }
 
@@ -56,17 +59,22 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
           .eq('user_id', user.id)
           .single();
           
-        if (data && !error && isActive) {
+        if (error) throw new Error(error.message);
+        if (data && isActive) {
           setStats(data);
+          setViewState('success');
           // 2. Save fresh cloud data to offline cache
           await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(data)).catch(e => AppLogger.warn('Failed to cache skater stats', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }));
+        } else if (isActive) {
+          setViewState('empty');
         }
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         AppLogger.error('Failed to load skater stats from Supabase', msg, { payload_size: 0, ssi: 0 });
-        if (isActive) setError('Failed to load stats.');
-      } finally {
-        if (isActive) setLoading(false);
+        if (isActive) {
+          setErrorMsg('Failed to load stats.');
+          setViewState('error');
+        }
       }
     }
     fetchStats();
@@ -74,7 +82,7 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
   }, [user, retryCounter]);
 
 
-  if (loading) {
+  if (viewState === 'loading') {
     return (
       <View style={{ padding: Spacing.xl, alignItems: 'center' }}>
         <ActivityIndicator color={Colors.primary} />
@@ -82,14 +90,14 @@ export default function SkaterStatsPanel({ Colors }: { Colors: { background: str
     );
   }
 
-  if (error) {
+  if (viewState === 'error') {
     return (
       <View style={{ padding: Spacing.xl, alignItems: 'center' }}>
-        <Text style={{ color: Colors.error, fontSize: 14, marginBottom: Spacing.md }}>{error}</Text>
+        <Text style={{ color: Colors.error, fontSize: 14, marginBottom: Spacing.md }}>{errorMsg}</Text>
         <Text 
           style={{ color: Colors.primary, fontSize: 14, fontWeight: 'bold' }} 
           onPress={() => {
-            setLoading(true);
+            setViewState('loading');
             setRetryCounter(c => c + 1);
           }}
         >

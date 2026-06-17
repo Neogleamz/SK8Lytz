@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { supabase } from '../../../services/supabaseClient';
 import { AppLogger } from '../../../services/appLogger';
 import { ErrorCard } from '../../ErrorCard';
+import type { ViewState } from '../../../types/ViewState';
 
 interface GlobalAnalyticsSummary {
   fleet_total_distance_meters?: number;
@@ -13,8 +14,9 @@ interface GlobalAnalyticsSummary {
 
 export default function GlobalAnalyticsPanel({ Colors }: { Colors: Record<string, string> }) {
   const [data, setData] = useState<GlobalAnalyticsSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  /** 4-state FSM: idle → loading → success/empty/error */
+  const [viewState, setViewState] = useState<ViewState>('loading');
+  const [errorMsg, setErrorMsg] = useState('');
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -25,8 +27,8 @@ export default function GlobalAnalyticsPanel({ Colors }: { Colors: Record<string
   const loadGlobalStats = async () => {
     if (!supabase) return;
     try {
-      setLoading(true);
-      setError(null);
+      setViewState('loading');
+      setErrorMsg('');
       const { data: rawData, error } = await supabase.rpc('admin_get_global_telemetry');
       if (error) throw error;
       if (!isMountedRef.current) return;
@@ -37,16 +39,16 @@ export default function GlobalAnalyticsPanel({ Colors }: { Colors: Record<string
           fleet_total_app_time_sec: typeof obj.fleet_total_app_time_sec === 'number' ? obj.fleet_total_app_time_sec : undefined,
           fleet_total_street_sessions: typeof obj.fleet_total_street_sessions === 'number' ? obj.fleet_total_street_sessions : undefined,
         });
+        setViewState('success');
+      } else {
+        setViewState('empty');
       }
     } catch (e: unknown) {
       if (!isMountedRef.current) return;
       const err = e instanceof Error ? e : new Error(String(e));
       AppLogger.error('[GlobalAnalytics] RPC failed', err, { payload_size: 0, ssi: 0 });
-      setError('Failed to load. Tap to retry.');
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
+      setErrorMsg('Failed to load. Tap to retry.');
+      setViewState('error');
     }
   };
 
@@ -54,7 +56,7 @@ export default function GlobalAnalyticsPanel({ Colors }: { Colors: Record<string
     loadGlobalStats();
   }, []);
 
-  if (loading) {
+  if (viewState === 'loading') {
     return (
       <View style={{ padding: 40, alignItems: 'center' }}>
         <ActivityIndicator color={Colors.primary} size="large" />
@@ -62,8 +64,8 @@ export default function GlobalAnalyticsPanel({ Colors }: { Colors: Record<string
     );
   }
 
-  if (error) {
-    return <ErrorCard message={error} onRetry={loadGlobalStats} />;
+  if (viewState === 'error') {
+    return <ErrorCard message={errorMsg} onRetry={loadGlobalStats} />;
   }
 
   const distance = data?.fleet_total_distance_meters 

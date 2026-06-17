@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppLogger } from '../services/appLogger';
 
 const STORAGE_KEY = STORAGE_RECENT_LOCATIONS;
+import type { ViewState } from '../types/ViewState';
 
 export interface RecentSpot {
   id?: string;
@@ -15,8 +16,9 @@ export interface RecentSpot {
 
 export function useRecentSpots() {
   const [recentSpots, setRecentSpots] = useState<RecentSpot[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  /** 4-state FSM: idle → loading → success/empty/error */
+  const [viewState, setViewState] = useState<ViewState>('loading');
+  const [errorMsg, setErrorMsg] = useState('');
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -31,12 +33,18 @@ export function useRecentSpots() {
   }, []);
 
   const loadRecents = async () => {
-    setIsLoading(true);
-    setError(null);
+    setViewState('loading');
+    setErrorMsg('');
     try {
       const data = await AsyncStorage.getItem(STORAGE_KEY);
       if (!isMountedRef.current) return;
-      if (data) setRecentSpots(JSON.parse(data));
+      if (data) {
+        const parsed = JSON.parse(data);
+        setRecentSpots(parsed);
+        setViewState(parsed.length > 0 ? 'success' : 'empty');
+      } else {
+        setViewState('empty');
+      }
     } catch (e: unknown) {
       if (!isMountedRef.current) return;
       const msg = e instanceof Error ? e.message : String(e);
@@ -45,11 +53,8 @@ export function useRecentSpots() {
         payload_size: 0,
         ssi: 0
       });
-      setError(msg);
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
+      setErrorMsg(msg);
+      setViewState('error');
     }
   };
 
@@ -78,9 +83,18 @@ export function useRecentSpots() {
         payload_size: 0,
         ssi: 0
       });
-      setError(msg);
+      setErrorMsg(msg);
+      setViewState('error');
     }
   }, []);
 
-  return { recentSpots, addRecentSpot, isLoading, error };
+  return { 
+    recentSpots, 
+    addRecentSpot, 
+    viewState, 
+    errorMsg,
+    // Legacy support for unmodified consumers
+    isLoading: viewState === 'loading', 
+    error: viewState === 'error' ? errorMsg : null
+  };
 }

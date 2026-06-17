@@ -15,6 +15,7 @@ import { AppLogger } from '../../services/appLogger';
 
 import { STORAGE_REMEMBER_CREDS, STORAGE_OFFLINE_SKIP } from '../../constants/storageKeys';
 import { isValidEmail } from '../../utils/validation';
+import type { ViewState } from '../../types/ViewState';
 
 interface AuthFormSignInProps {
   initialEmail: string;
@@ -31,13 +32,14 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(initialRememberMe);
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  /** 4-state FSM: idle → loading → success/empty/error */
+  const [viewState, setViewState] = useState<ViewState>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const showError = (msg: string) => setErrorMessage(msg);
+  const showError = (msg: string) => { setErrorMsg(msg); setViewState('error'); };
 
   const handleSignIn = async () => {
-    if (loading) return;
+    if (viewState === 'loading') return;
     const input = email.trim();
 
     if (!input) { showError('Please enter your email or username.'); return; }
@@ -48,8 +50,8 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
       return;
     }
 
-    setErrorMessage('');
-    setLoading(true);
+    setErrorMsg('');
+    setViewState('loading');
 
     let loginEmail = input;
 
@@ -57,7 +59,6 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
       try {
         const { data, error: rpcErr } = await supabase.rpc('get_email_by_username', { p_username: input });
         if (rpcErr || !data) {
-          setLoading(false);
           showError('No account found with that username. Try signing in with your email instead.');
           return;
         }
@@ -65,7 +66,6 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
         AppLogger.error('AuthFormSignIn', 'Username lookup failed', { error: msg , payload_size: 0, ssi: 0 });
-        setLoading(false);
         showError('Could not look up username. Please use your email to sign in.');
         return;
       }
@@ -73,7 +73,7 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
 
     try {
       const { error } = await signIn(loginEmail, password);
-      setLoading(false);
+      setViewState('success'); // defaults to success, error branch overrides
 
       if (error) {
         const msg = error.message.toLowerCase().includes('invalid login')
@@ -81,7 +81,7 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
           : error.message;
         showError(msg);
       } else {
-        setErrorMessage('');
+        setErrorMsg('');
         try {
           if (rememberMe) {
             await AsyncStorage.setItem(STORAGE_REMEMBER_CREDS, JSON.stringify({ email: loginEmail, rememberMe: true }));
@@ -97,7 +97,6 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.error('AuthFormSignIn', 'Sign in exception', { error: msg, payload_size: 0, ssi: 0 });
-      setLoading(false);
       showError('A network or internal error occurred. Please try again.');
     }
   };
@@ -110,7 +109,7 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
         placeholder="Email or username"
         placeholderTextColor={Colors.textMuted}
         value={email}
-        onChangeText={t => { setEmail(t); setErrorMessage(''); }}
+        onChangeText={t => { setEmail(t); setErrorMsg(''); }}
         autoCapitalize="none"
         keyboardType="default"
         autoComplete="off"
@@ -122,7 +121,7 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
           placeholder="Password"
           placeholderTextColor={Colors.textMuted}
           value={password}
-          onChangeText={t => { setPassword(t); setErrorMessage(''); }}
+          onChangeText={t => { setPassword(t); setErrorMsg(''); }}
           secureTextEntry={!showPassword}
           autoCapitalize="none"
         />
@@ -153,19 +152,19 @@ export function AuthFormSignIn({ initialEmail, initialRememberMe, onModeChange }
         </TouchableOpacity>
       </View>
 
-      {!!errorMessage && (
+      {viewState === 'error' && !!errorMsg && (
         <View style={styles.errorBanner}>
           <MaterialCommunityIcons name="alert-circle-outline" size={15} color="#FF6B6B" style={{ marginRight: Spacing.sm }} />
-          <Text style={styles.errorBannerText}>{errorMessage}</Text>
+          <Text style={styles.errorBannerText}>{errorMsg}</Text>
         </View>
       )}
 
       <TouchableOpacity
         style={styles.primaryButton}
-        disabled={loading}
+        disabled={viewState === 'loading'}
         onPress={handleSignIn}
       >
-        {loading ? (
+        {viewState === 'loading' ? (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.md }}>
             <ActivityIndicator color="#000" size="small" />
             <Text style={styles.primaryButtonText}>Loading...</Text>

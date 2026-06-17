@@ -27,6 +27,7 @@ interface ScenePayload extends Partial<Scene> {
 }
 import { ErrorCard } from './ErrorCard';
 import { EmptyState } from './EmptyState';
+import type { ViewState } from '../types/ViewState';
 
 import { CloudScenePayload } from '../hooks/useDockedControllerState';
 
@@ -198,8 +199,9 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
 
   const [activeTab, setActiveTab] = useState<'COMMUNITY' | 'PERSONAL'>(isOfflineMode ? 'PERSONAL' : 'COMMUNITY');
   const [scenes, setScenes] = useState<ICloudScene[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  /** 4-state FSM: idle → loading → success/empty/error */
+  const [viewState, setViewState] = useState<ViewState>('loading');
+  const [errorMsg, setErrorMsg] = useState('');
   const [processingId, setProcessingId] = useState<string | null>(null);
   const isFetchingRef = useRef(false);
 
@@ -213,11 +215,11 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
   const fetchScenes = async () => {
     if (isFetchingRef.current) return;
     isFetchingRef.current = true;
-    setLoading(true);
-    setError(null);
+    setViewState('loading');
+    setErrorMsg('');
     if (activeTab === 'COMMUNITY' && isOfflineMode) {
       setScenes([]);
-      setLoading(false);
+      setViewState('empty');
       isFetchingRef.current = false;
       return;
     }
@@ -226,15 +228,16 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
         ? await ScenesService.getPublicScenes()
         : await ScenesService.getMyScenes(user?.id ?? '');
       setScenes(data);
+      setViewState(data.length ? 'success' : 'empty');
     } catch (e: unknown) {
       AppLogger.warn('[CommunityModal] failed to fetch scenes', { 
         error: e instanceof Error ? e.message : String(e),
         payload_size: 0,
         ssi: 0
       });
-      setError('Failed to load. Tap to retry.');
+      setErrorMsg('Failed to load. Tap to retry.');
+      setViewState('error');
     } finally {
-      setLoading(false);
       isFetchingRef.current = false;
     }
   };
@@ -363,14 +366,14 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
           ))}
         </View>
 
-        {loading ? (
+        {viewState === 'loading' ? (
           <View style={styles.centerLoading}>
             <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={{ color: Colors.textMuted, marginTop: Spacing.md, fontSize: 13 }}>Loading scenes...</Text>
           </View>
-        ) : error ? (
+        ) : viewState === 'error' ? (
           <View style={{ padding: Spacing.xl }}>
-            <ErrorCard message={error} onRetry={fetchScenes} />
+            <ErrorCard message={errorMsg} onRetry={fetchScenes} />
           </View>
         ) : (
           <FlatList removeClippedSubviews={true} initialNumToRender={12} windowSize={5}

@@ -30,6 +30,7 @@ import { CrewRole, CrewSession } from '../services/CrewService';
 import { shareSessionInvite } from '../services/SessionShareService';
 import { supabase } from '../services/supabaseClient';
 import { Spacing , ThemePalette } from '../theme/theme';
+import type { ViewState } from '../types/ViewState';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -163,8 +164,9 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
 
   const [members, setMembers] = useState<CrewMember[]>([]);
   const [elapsed, setElapsed] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  /** 4-state FSM: idle → loading → success/empty/error */
+  const [viewState, setViewState] = useState<ViewState>('loading');
+  const [errorMsg, setErrorMsg] = useState('');
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const _isFlushingRef = useRef(false);
 
@@ -201,18 +203,19 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
               avatar_color: profile?.avatar_color ?? null,
             };
           }));
-          setError(null);
+          setErrorMsg('');
+          setViewState(data.length ? 'success' : 'empty');
         }
       } catch (e: unknown) {
         if (!mounted) return;
-        setError('Failed to load members');
+        setErrorMsg('Failed to load members');
+        setViewState('error');
         import('../services/appLogger').then(({ AppLogger }) => {
           AppLogger.warn('[CrewMemberDashboard] failed to load members', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         });
       } finally {
         if (mounted) {
           _isFlushingRef.current = false;
-          setIsLoading(false);
         }
       }
     };
@@ -352,13 +355,13 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
         {/* ── Members list ── */}
         <View style={styles.card}>
           <Text style={styles.cardLabel}>MEMBERS ({members.length})</Text>
-          {isLoading && members.length === 0 ? (
+          {viewState === 'loading' && members.length === 0 ? (
             <Text style={[styles.cardSub, { textAlign: 'center', marginVertical: Spacing.md }]}>
               Loading members...
             </Text>
-          ) : error && members.length === 0 ? (
+          ) : viewState === 'error' && members.length === 0 ? (
             <Text style={[styles.cardSub, { textAlign: 'center', marginVertical: Spacing.md, color: '#FF4444' }]}>
-              {error}
+              {errorMsg}
             </Text>
           ) : members.length === 0 ? (
             <Text style={[styles.cardSub, { textAlign: 'center', marginVertical: Spacing.md }]}>

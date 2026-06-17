@@ -2,18 +2,22 @@ import { useEffect, useState } from 'react';
 import { ILifetimeStats, ISkateSession, SpeedTrackingService } from '../services/SpeedTrackingService';
 import { AppLogger } from '../services/appLogger';
 import { useAuth } from '../context/AuthContext';
+import type { ViewState } from '../types/ViewState';
 
 export function useSkateStats(visible: boolean) {
   const { user } = useAuth();
   const userId = user?.id || null;
   const [lifetimeStats, setLifetimeStats] = useState<ILifetimeStats | null>(null);
   const [recentSessions, setRecentSessions] = useState<ISkateSession[]>([]);
-  const [statsLoading, setStatsLoading] = useState(false);
+  /** 4-state FSM: idle → loading → success/empty/error */
+  const [viewState, setViewState] = useState<ViewState>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     let active = true;
     if (visible) {
-      setStatsLoading(true);
+      setViewState('loading');
+      setErrorMsg('');
 
       const targetId = userId || 'anonymous';
       // Load from cache first for instant UI
@@ -34,15 +38,14 @@ export function useSkateStats(visible: boolean) {
           if (!active) return;
           setLifetimeStats(stats);
           setRecentSessions(sessions);
+          const isEmpty = (!stats || stats.totalDistanceMiles === 0) && (!sessions || sessions.length === 0);
+          setViewState(isEmpty ? 'empty' : 'success');
         })
         .catch((err: unknown) => {
           if (!active) return;
           AppLogger.error('[useSkateStats] Failed to fetch stats', err instanceof Error ? err.message : String(err), { payload_size: 0, ssi: 0 });
-        })
-        .finally(() => {
-          if (active) {
-            setStatsLoading(false);
-          }
+          setErrorMsg(err instanceof Error ? err.message : String(err));
+          setViewState('error');
         });
     }
     return () => {
@@ -53,6 +56,9 @@ export function useSkateStats(visible: boolean) {
   return {
     lifetimeStats,
     recentSessions,
-    statsLoading,
+    viewState,
+    errorMsg,
+    // Legacy support for unmodified consumers
+    statsLoading: viewState === 'loading',
   };
 }
