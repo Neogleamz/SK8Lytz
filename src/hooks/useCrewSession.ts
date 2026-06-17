@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppLogger } from '../services/appLogger';
 import { CrewMember, CrewRole, crewService, CrewSession } from '../services/CrewService';
-import { supabase } from '../services/supabaseClient';
+import { SpeedTrackingService } from '../services/SpeedTrackingService';
 import { useAuth } from '../context/AuthContext';
 import { scrubPII } from '../utils/piiScrubber';
 
@@ -69,29 +69,12 @@ export function useCrewSession(
       AppLogger.log('CREW_SESSION_ENDED', { sessionId: currentSessionId ? scrubPII(currentSessionId) : undefined, crewName: currentSession?.name ? scrubPII(currentSession?.name) : undefined, role: 'leader', reason: 'explicit_end', payload_size: 0, ssi: 0 });
       if (currentSessionId) {
         // Telemetry
-        // TODO: Consolidate the profile stats update logic into a single method (e.g., SpeedTrackingService.updateLifetimeStats)
-        // to share between useCrewSession and SpeedTrackingService, eliminating this duplication.
-        if (user && (crewService.sessionTelemetry.distanceMiles > 0 || crewService.sessionTelemetry.topSpeedMph > 0)) {
-          try {
-            const { data: profile } = await supabase
-              .from('user_profiles')
-              .select('lifetime_top_speed_mph, lifetime_distance_miles')
-              .eq('user_id', user.id)
-              .single();
-            if (profile) {
-              const newDistance = (profile.lifetime_distance_miles || 0) + crewService.sessionTelemetry.distanceMiles;
-              const newTopSpeed = Math.max((profile.lifetime_top_speed_mph || 0), crewService.sessionTelemetry.topSpeedMph);
-              if (newDistance > (profile.lifetime_distance_miles || 0) || newTopSpeed > (profile.lifetime_top_speed_mph || 0)) {
-                 const { error } = await supabase.from('user_profiles').update({
-                   lifetime_distance_miles: parseFloat(newDistance.toFixed(3)),
-                   lifetime_top_speed_mph: parseFloat(newTopSpeed.toFixed(2))
-                 }).eq('user_id', user.id);
-                 if (error) AppLogger.warn('[useCrewSession] Telemetry sync failed', { error: error.message, payload_size: 0, ssi: 0 });
-              }
-            }
-          } catch (e: unknown) {
-            AppLogger.warn('[useCrewSession] Telemetry sync exception', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
-          }
+        if (user) {
+          await SpeedTrackingService.updateLifetimeStats(
+            user.id,
+            crewService.sessionTelemetry.distanceMiles,
+            crewService.sessionTelemetry.topSpeedMph
+          );
         }
         await crewService.endSession(currentSessionId, user?.id);
         refreshNearby();

@@ -229,26 +229,8 @@ class SpeedTrackingServiceClass {
       }
 
       // --- UPDATE LIFETIME STATS (DRIFT FIX) ---
-      try {
-        if (userId && (snapshot.distanceMiles > 0 || snapshot.peakSpeedMph > 0)) {
-          const { data: profile } = await supabase
-            .from('user_profiles')
-            .select('lifetime_top_speed_mph, lifetime_distance_miles')
-            .eq('user_id', userId)
-            .single();
-          if (profile) {
-            const newDistance = (profile.lifetime_distance_miles || 0) + snapshot.distanceMiles;
-            const newTopSpeed = Math.max((profile.lifetime_top_speed_mph || 0), snapshot.peakSpeedMph);
-            if (newDistance > (profile.lifetime_distance_miles || 0) || newTopSpeed > (profile.lifetime_top_speed_mph || 0)) {
-               await supabase.from('user_profiles').update({
-                 lifetime_distance_miles: parseFloat(newDistance.toFixed(3)),
-                 lifetime_top_speed_mph: parseFloat(newTopSpeed.toFixed(2))
-               }).eq('user_id', userId);
-            }
-          }
-        }
-      } catch (statsErr: unknown) {
-        AppLogger.warn('STATS_TELEMETRY', { event: 'lifetime_stats_update_failed', error: statsErr instanceof Error ? statsErr.message : String(statsErr) });
+      if (userId) {
+        await this.updateLifetimeStats(userId, snapshot.distanceMiles, snapshot.peakSpeedMph);
       }
 
       return data.id;
@@ -355,28 +337,8 @@ class SpeedTrackingServiceClass {
         });
         
         // --- UPDATE LIFETIME STATS (DRIFT FIX) ---
-        if (userId && (totalFlushedDistance > 0 || maxFlushedTopSpeed > 0)) {
-          try {
-            const { data: profile } = await supabase
-              .from('user_profiles')
-              .select('lifetime_top_speed_mph, lifetime_distance_miles')
-              .eq('user_id', userId)
-              .single();
-            if (profile) {
-              const newDistance = (profile.lifetime_distance_miles || 0) + totalFlushedDistance;
-              const newTopSpeed = Math.max((profile.lifetime_top_speed_mph || 0), maxFlushedTopSpeed);
-              if (newDistance > (profile.lifetime_distance_miles || 0) || newTopSpeed > (profile.lifetime_top_speed_mph || 0)) {
-                 await supabase.from('user_profiles').update({
-                   lifetime_distance_miles: parseFloat(newDistance.toFixed(3)),
-                   lifetime_top_speed_mph: parseFloat(newTopSpeed.toFixed(2))
-                 }).eq('user_id', userId);
-              }
-            }
-          } catch (e: unknown) {
-            AppLogger.warn('[SpeedTrackingService] Lifetime stats update failed during queue flush', {
-              error: e instanceof Error ? e.message : String(e),
-            });
-          }
+        if (userId) {
+          await this.updateLifetimeStats(userId, totalFlushedDistance, maxFlushedTopSpeed);
         }
       }
     } catch (e: unknown) {
@@ -604,6 +566,37 @@ class SpeedTrackingServiceClass {
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
+    }
+  }
+
+  /**
+   * Updates lifetime distance and top speed for a user profile.
+   * Centralized method to avoid split-brain DB updates between local saves and crew sessions.
+   */
+  async updateLifetimeStats(userId: string, distanceMiles: number, peakSpeedMph: number): Promise<void> {
+    if (!supabase || !userId) return;
+    if (distanceMiles <= 0 && peakSpeedMph <= 0) return;
+    
+    try {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('lifetime_top_speed_mph, lifetime_distance_miles')
+        .eq('user_id', userId)
+        .single();
+        
+      if (profile) {
+        const newDistance = (profile.lifetime_distance_miles || 0) + distanceMiles;
+        const newTopSpeed = Math.max((profile.lifetime_top_speed_mph || 0), peakSpeedMph);
+        
+        if (newDistance > (profile.lifetime_distance_miles || 0) || newTopSpeed > (profile.lifetime_top_speed_mph || 0)) {
+           await supabase.from('user_profiles').update({
+             lifetime_distance_miles: parseFloat(newDistance.toFixed(3)),
+             lifetime_top_speed_mph: parseFloat(newTopSpeed.toFixed(2))
+           }).eq('user_id', userId);
+        }
+      }
+    } catch (e: unknown) {
+      AppLogger.warn('STATS_TELEMETRY', { event: 'lifetime_stats_update_failed', error: e instanceof Error ? e.message : String(e) });
     }
   }
 }

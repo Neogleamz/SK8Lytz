@@ -14,7 +14,6 @@
  */
 import { useCallback } from 'react';
 import { getLocalProfileById } from '../constants/ProductCatalog';
-import { ZenggeProtocol } from '../protocols/ZenggeProtocol';
 import { buildPatternPayload } from '../protocols/PatternEngine';
 import { IControllerProtocol } from '../protocols/IControllerProtocol';
 import { AppLogger } from '../services/appLogger';
@@ -36,7 +35,7 @@ interface UseControllerDispatchParams {
   writeToDevice?: WriteFn;
   hwSettings?: IHardwareSettings | null;
   points?: number;
-  getAdapterForDevice?: (mac: string) => IControllerProtocol | undefined;
+  getAdapterForDevice: (mac: string) => IControllerProtocol | undefined;
   primaryDeviceId?: string;
   connectedDevices?: { id: string }[];
 }
@@ -93,13 +92,13 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       for (const device of targets) {
         if (__DEV__) AppLogger.log('APP_LOG', { message: '[DEBUG sendColor]', deviceId: device.id, type: typeof device.id, payload_size: 0, ssi: 0 });
-        const adapter = getAdapterForDevice?.(device.id);
+        const adapter = getAdapterForDevice(device.id);
         if (adapter) {
           const result = adapter.buildSolidColor(r, g, b);
           for (const p of result.packets) { await safeWrite(p, device.id); }
         } else {
-          const arr = Array.from({ length: numLEDs }, () => ({ r, g, b }));
-          await safeWrite(ZenggeProtocol.setMultiColor(arr, (hwSettings?.ledPoints as number | undefined) || points || 16, 31, 1, 0x01), device.id); // 0x01 = FREEZE
+          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id, { payload_size: 0, ssi: 0 });
+          return;
         }
       }
     },
@@ -143,8 +142,12 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
       for (const device of targets) {
-        const adapter = getAdapterForDevice?.(device.id);
-        const protocolKey = adapter ? adapter.constructor.name : 'ZenggeProtocol';
+        const adapter = getAdapterForDevice(device.id);
+        if (!adapter) {
+          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id, { payload_size: 0, ssi: 0 });
+          return;
+        }
+        const protocolKey = adapter.constructor.name;
         const cacheKey = `${protocolKey}_${patternId}_${fgRaw.r}_${fgRaw.g}_${fgRaw.b}_${bgRaw.r}_${bgRaw.g}_${bgRaw.b}_${numLEDs}_${spd}_${brt}_${dir}`;
 
         let payload = patternPayloadCache.get(cacheKey);
@@ -205,28 +208,19 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
       for (const device of targets) {
+        const adapter = getAdapterForDevice(device.id);
+        if (!adapter) {
+          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id, { payload_size: 0, ssi: 0 });
+          return;
+        }
         if (pat === 'STATIC') {
           await sendColor(tR, tG, tB);
         } else if (pat === 'STROBE') {
-          const adapter = getAdapterForDevice?.(device.id);
-          if (adapter) {
-            const result = adapter.buildCustomMode([{ mode: ZenggeProtocol.STEP_STROBE, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }]);
-            for (const p of result.packets) { await safeWrite(p, device.id); }
-          } else {
-            await safeWrite(ZenggeProtocol.setCustomModeCompact([
-              { mode: ZenggeProtocol.STEP_STROBE, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }
-            ]), device.id);
-          }
+          const result = adapter.buildCustomMode([{ mode: 0x3C, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }]);
+          for (const p of result.packets) { await safeWrite(p, device.id); }
         } else if (pat === 'BLINK') {
-          const adapter = getAdapterForDevice?.(device.id);
-          if (adapter) {
-            const result = adapter.buildCustomMode([{ mode: ZenggeProtocol.STEP_JUMP, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }]);
-            for (const p of result.packets) { await safeWrite(p, device.id); }
-          } else {
-            await safeWrite(ZenggeProtocol.setCustomModeCompact([
-              { mode: ZenggeProtocol.STEP_JUMP, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }
-            ]), device.id);
-          }
+          const result = adapter.buildCustomMode([{ mode: 0x3A, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }]);
+          for (const p of result.packets) { await safeWrite(p, device.id); }
         }
       }
     },
@@ -278,12 +272,13 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
       for (const device of targets) {
-        const adapter = getAdapterForDevice?.(device.id);
+        const adapter = getAdapterForDevice(device.id);
         if (adapter) {
           const result = adapter.buildMultiColor(arr, (hwSettings?.ledPoints as number | undefined) || numLEDs, hwSpd, 1, 0x02);
           for (const p of result.packets) { await safeWrite(p, device.id); }
         } else {
-          await safeWrite(ZenggeProtocol.setMultiColor(arr, (hwSettings?.ledPoints as number | undefined) || numLEDs, hwSpd, 1, 0x02), device.id);
+          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id, { payload_size: 0, ssi: 0 });
+          return;
         }
       }
     },
@@ -323,7 +318,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
       for (const device of targets) {
-        const adapter = getAdapterForDevice?.(device.id);
+        const adapter = getAdapterForDevice(device.id);
         if (adapter) {
           const result = adapter.buildMusicConfig({
             patternId,
@@ -340,16 +335,8 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
             await new Promise(r => setTimeout(r, BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
           }
         } else {
-          await safeWrite(ZenggeProtocol.setMusicConfig(
-            patternId,
-            matrix === 0x27 ? 0x27 : 0x26,
-            src === 'DEVICE',
-            c1,
-            c2,
-            sens,
-            bright
-          ), device.id, { micSource: src });
-          await new Promise(r => setTimeout(r, BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
+          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id, { payload_size: 0, ssi: 0 });
+          return;
         }
       }
     },
@@ -366,12 +353,13 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
       for (const device of targets) {
-        const adapter = getAdapterForDevice?.(device.id);
+        const adapter = getAdapterForDevice(device.id);
         if (adapter) {
           const result = isOn ? adapter.buildPowerOn() : adapter.buildPowerOff();
           for (const p of result.packets) { await safeWrite(p, device.id); }
         } else {
-          await safeWrite(isOn ? ZenggeProtocol.turnOn() : ZenggeProtocol.turnOff(), device.id);
+          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id, { payload_size: 0, ssi: 0 });
+          return;
         }
       }
     },
@@ -388,12 +376,13 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
       for (const device of targets) {
-        const adapter = getAdapterForDevice?.(device.id);
+        const adapter = getAdapterForDevice(device.id);
         if (adapter) {
           const result = adapter.buildMultiColor(colors, ledPoints, speed, direction, transitionType);
           for (const p of result.packets) { await safeWrite(p, device.id); }
         } else {
-          await safeWrite(ZenggeProtocol.setMultiColor(colors, ledPoints, speed, direction, transitionType), device.id);
+          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id, { payload_size: 0, ssi: 0 });
+          return;
         }
       }
     },

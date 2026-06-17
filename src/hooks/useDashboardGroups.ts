@@ -107,36 +107,25 @@ export function useDashboardGroups({
   // INVARIANT: deviceIds always contains UPPERCASE MACs — matching BLE d.id.toUpperCase().
   //
   // CRITICAL async-trap fix: setDeviceConfigs uses a functional updater that React runs
-  // asynchronously during reconciliation. groupMap must be populated BEFORE the updater
-  // fires — so we iterate registeredDevices TWICE:
-  //   Pass 1 (sync): Build groupMap → setCustomGroups (always has data)
-  //   Pass 2 (async functional updater): Merge hardware config fields → setDeviceConfigs
+  // asynchronously during reconciliation.
+  //   Pass 1: Load groups from SSOT GroupRepository
+  //   Pass 2: Merge hardware config fields → setDeviceConfigs
   useEffect(() => {
-    // ── Pass 1: Group derivation (synchronous) ───────────────────────────────
-    const groupMap: Record<string, CustomGroup> = {};
-    registeredDevices.forEach(rd => {
-      const mac = rd.device_mac.toUpperCase();
-      // MIGRATION-SHIM: Remove after all devices re-registered via wizard (target: v3.9.0)
-      // New devices use group_ids[]. Legacy cached devices may still have scalar group_id.
-      // BUG FIX: Use .length check instead of ?? — empty arrays [] are truthy and block the scalar fallback.
-      const ids: string[] = rd.group_ids?.length ? rd.group_ids : (rd.group_id ? [rd.group_id] : []);
-      const names: string[] = rd.group_names?.length ? rd.group_names : (rd.group_name ? [rd.group_name] : []);
-      
-      ids.forEach((gId, idx) => {
-        const gName = names[idx] || gId;
-        if (gId && gName && gId !== 'default-fleet') {
-          if (!groupMap[gId]) {
-            groupMap[gId] = { id: gId, name: gName, isGroup: true, deviceIds: [] };
-          }
-          if (!groupMap[gId].deviceIds.includes(mac)) {
-            groupMap[gId].deviceIds.push(mac);
-          }
-        }
-      });
+    // ── Pass 1: Group derivation (synchronous from GroupRepository SSOT) ───────
+    const groupRepo = GroupRepository.getInstance();
+    
+    // Initial load
+    setCustomGroups(groupRepo.getGroups());
+    
+    // Subscribe to live updates
+    const unsubscribe = groupRepo.subscribeGroups(() => {
+      setCustomGroups(groupRepo.getGroups());
     });
-    // setCustomGroups is called synchronously — groupMap is fully populated here
-    setCustomGroups(Object.values(groupMap));
+    
+    return unsubscribe;
+  }, []);
 
+  useEffect(() => {
     // ── Pass 2: Hardware config merge (functional updater, async-safe) ───────
     // NOTE: This config layer only handles hardware topology (points/segments/groups).
     // Live pattern/color dispatch state is tracked in DeviceStateLedger, NOT here

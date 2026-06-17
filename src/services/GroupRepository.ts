@@ -43,6 +43,7 @@ class GroupRepository {
   private isInitialized = false;
   private initPromise: Promise<void> | null = null;
   private delegate: GroupDeviceDelegate | null = null;
+  private groupListeners: Set<() => void> = new Set();
 
   private constructor() {}
 
@@ -65,6 +66,15 @@ class GroupRepository {
       throw new Error('[GroupRepository] GroupDeviceDelegate was not injected prior to usage.');
     }
     return this.delegate;
+  }
+
+  subscribeGroups(cb: () => void): () => void {
+    this.groupListeners.add(cb);
+    return () => this.groupListeners.delete(cb);
+  }
+
+  private notifyGroupSubscribers(): void {
+    this.groupListeners.forEach((cb) => cb());
   }
 
   async initialize(): Promise<void> {
@@ -104,6 +114,7 @@ class GroupRepository {
       AppLogger.warn('[GroupRepository] AsyncStorage write failed', { key: 'GROUPS_KEY/setGroups', error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0  })
     );
     this.getDelegate().notifySubscribers();
+    this.notifyGroupSubscribers();
   }
 
   /**
@@ -141,6 +152,7 @@ class GroupRepository {
 
     // 3. Notify subscribers
     delegate.notifySubscribers();
+    this.notifyGroupSubscribers();
 
     // 4. Cloud cleanup via atomic RPC
     try {
@@ -222,6 +234,7 @@ class GroupRepository {
       await delegate.updateDevicesInBulk(updatedDevices);
     }
     delegate.notifySubscribers();
+    this.notifyGroupSubscribers();
 
     // 2. Cloud: atomic RPC transaction
     try {
