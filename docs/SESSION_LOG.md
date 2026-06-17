@@ -4121,3 +4121,8 @@ TSC: ?  Jest: ?
 ### [ARTIFACT] 2026-06-17T00:07 — Intake: PLAN-fix-hal-parity-split-brain
 **Plan Link**: docs/plans/PLAN-fix-hal-parity.md
 **Context**: Created plan to refactor UI components to use useProtocolDispatch to solve mixed-protocol parity splits.
+
+### [MERGE] 2026-06-17T00:10 — feat/rich-os-notifications -> master @ 1ac8e688
+**What merged:** Android Custom RemoteViews with 3 interactive buttons (End, Music, Favorite). Implemented headless background dispatch wired directly to BleWriteQueue.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** NotificationService.ts, index.ts, SessionContext.tsx, DashboardScreen.tsx, NotificationService.test.ts

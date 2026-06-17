@@ -65,16 +65,6 @@
 > **Worktree**: `feat/rich-os-notifications` · **Type**: Isolated · **Prerequisite**: None
 > **Source Analysis**: 📊 [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a87e0851-7797-4ede-a5a4-e9e88d68809d/implementation_plan.md) — Industry benchmarking of top-tier apps (Strava, Spotify) and custom view capabilities.
 
-- [ ] **`feat/rich-os-notifications`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[NATIVE/UI]` `[⚠️ H-RISK]` `[🥩 Feast]` `[H-COG]` `[BATCH:feat/rich-os-notifications]` `[WAVE:1]`
-  - **Goal:** Upgrade standard session notifications to Android Custom RemoteViews and iOS Live Activities with headless BLE quick-actions.
-  - **Decision Log:** Current notifications are static text; top-tier apps use ActivityKit and MediaStyle to present interactive telemetry lock-screen widgets that don't require bringing the UI to the foreground.
-  - **Analysis:** 📊 Source: [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a87e0851-7797-4ede-a5a4-e9e88d68809d/implementation_plan.md) · Plan: [PLAN-feat-rich-os-notifications.md](./plans/PLAN-feat-rich-os-notifications.md)
-    Key finding: "iOS Live Activities require dropping to SwiftUI; Android fits exactly 3 action buttons comfortably."
-    Rejected alternative: "Bypassing the global BleWriteDispatcher for headless payload execution — Rejected to prevent GATT collisions."
-  - **Source of Truth:** 📖 [NotificationService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/session/NotificationService.ts#L79)
-  - **Details:** Requires writing native code and an Expo Config Plugin for iOS Live Activities, and intercepting background events to call existing hooks invisibly.
-
 ---
 
 ##  ❄️ Icebox / Backburner (Manual Trigger Only)
