@@ -1,3 +1,32 @@
+﻿## [3.10.0] - 2026-06-17
+
+### ✨ Features
+- feat(crewz): implement offline resilience and heartbeat (6a8b1be2)
+- feat(notifications): implement android custom headless notifications (1ac8e688)
+- feat(watch): Wire global hardware listener in useBLE.ts (82b18f14)
+
+### 🐛 Bug Fixes
+- fix(telemetry): whitelist TTID and TTFD to bypass lossy queue (828549b8)
+- fix(web): prevent getEnforcing crash by avoiding hoisted ES imports (513ed2f0)
+- fix(db): resolve ts errors (85b0971c)
+- fix(db): resolve observatory db drift and telemetry constraints (eb3f86ee)
+- fix(ble): routing universal sliders and builder through HAL (db1e5a72)
+- fix(ble): resolve group targeting collision and UI color sync lag (fc83722a)
+- fix(deep-dive): resolve protocol concurrency, pii leaks, and async rejections (b4e05171)
+- fix(camera): remove dangling useRunOnJS lines (e66d3de7)
+- fix(camera): update runOnJS to worklets-core createRunOnJS (ab330ab4)
+- fix(ble): debounce timer group dropping bug and missing grid colors (bade08ab)
+
+### 🔧 Maintenance & Documentation
+- docs(plans): intake fix-performance-telemetry (2534de66)
+- chore(logs): save session state before merge (2732fa00, ab71e58c, 32565358, a5ad4f50, 9a6e1236, fc11b533)
+- chore(docs): archive feat/crewz-resilience task (77e11ce6)
+- chore(docs): clean bucket list of zombie and completed tasks (e90afefa)
+- chore(docs): sync AI board and log state post-merge (f590d56f)
+- docs(plans): commit AI-First plan for fix-hal-parity (f9186226)
+- chore(docs): sync AI board and log state (190c3461)
+- docs(plans): Add implementation plans for watch bridge and rich OS notifications (e543e584)
+
 ## [3.9.2] - 2026-06-13
 
 ### ? Features
@@ -33,12 +62,12 @@
 
 ## [3.8.0] - 2026-06-02
 
-### ✨ Features
+### âœ¨ Features
 - Global Background Session Daemon and Health Sync (`dce2c0b2`)
 - Redesign BluetoothGuard and remove global modal popup (`f0bcc2ab`)
 - Include missing UI slider fixes and native prebuild generation (`59021cc9`)
 
-### 🐛 Bug Fixes
+### ðŸ› Bug Fixes
 - Restore correct speed and brightness scaling for custom patterns (`96e0ca48`)
 - Hoist BluetoothGuard to app root and redesign card (`df4dc5c8`)
 - Resolve type safety issues in HealthSyncService (`4a5488bc`)
@@ -46,7 +75,7 @@
 - Prioritize web port 8081 for console sniffer and add safety guard to channels (`283774f7`)
 - Resolve native worklet JSI thread isolation Ref read bug (`0c6a03c0`)
 
-### 🔧 Maintenance
+### ðŸ”§ Maintenance
 - Update android namespace and set minSdk to 26 for vision-camera (`9deee1f8`)
 - Apply pattern registry spreadsheet re-categorization (`113b3c2a`)
 - Archive completed fix/camera-mode-white-only sprint (`7aa1bbd9`)
@@ -55,13 +84,13 @@
 
 ## [3.6.2] - 2026-05-26
 
-### 🐛 Bug Fixes
+### ðŸ› Bug Fixes
 - fix(music): correct 0x73 'isOn' mic toggle routing to disable physical microphone in App Mic mode
 - fix(music): cap 0x74 magnitude streams to 150 to prevent controller saturation and visualizer freeze
 - fix(music): swap color bytes to match native sb_col / sb_point layout and clone primary color for Light Bar (0x26) mode
 - fix(music): clean up duplicate swatches and optimize layout in MusicPanel
 
-### 📖 Documentation
+### ðŸ“– Documentation
 - docs: true-up ZENGGE_PROTOCOL_BIBLE.md and SK8Lytz_App_Master_Reference.md to capture decompiler findings
 
 ---
@@ -89,21 +118,21 @@
 - d9fec604 chore(scraper): clean up lingering files from yesterday
 ## [3.5.2] - 2026-05-22
 
-### ✨ Features
+### âœ¨ Features
 - `bf02132b` feat(scraper): field confidence scoring + user correction feedback loop
-- `72c97763` feat(sitemap): multi-label content fingerprinting — classify pages by actual content
-- `56e62d9f` feat(detective): v2 overhaul — 11 fixes for data harvesting quality
+- `72c97763` feat(sitemap): multi-label content fingerprinting â€” classify pages by actual content
+- `56e62d9f` feat(detective): v2 overhaul â€” 11 fixes for data harvesting quality
 - `1c0faa35` feat(dashboard): LM Studio GPU telemetry control panel
 - `1d1a6de1` feat(scraper): integrate LM Studio pipeline control + fix dashboard TS compilation
 
-### 🐛 Bug Fixes
-- `1289dae4` fix(pipeline): additive-only data integrity guards — never delete, only verify and add
+### ðŸ› Bug Fixes
+- `1289dae4` fix(pipeline): additive-only data integrity guards â€” never delete, only verify and add
 - `49c1ba2d` hotfix(dashboard): replace dead Ollama toggle with interactive LM Studio Control Capsule
 - `9d6fa959` hotfix: resolve pm2 path bypass and migrate to qwen2.5-7b
 - `fbc432c0` fix(scraper): extract GPU telemetry to ps1 script, remove stale CCTower.js
 - `5cbdc2a4` fix(scraper): redefine daemon start command to use ecosystem.config.js
 
-### 🔧 Maintenance & Tests
+### ðŸ”§ Maintenance & Tests
 - `7ff122d7` test: implement useControllerDispatch test suite and fix parseInt bug
 - `abceadb3` chore: track pm2 daemon bootstrap scripts
 - `135c84c6` chore(scraper): resolve strict typescript compiler type warnings
@@ -114,23 +143,23 @@
 
 ## [3.5.1] - 2026-05-22
 
-### ✨ Features
+### âœ¨ Features
 - **qa**: Implement zero-dependency Headless Browser Console Sniffer Gate (`web-console-harvester.js`) utilizing native Google Chrome remote debugging via CDP WebSocket commands to hook runtime exceptions and errors on startup.
 - **qa**: Integrate the console sniffer into `verifiable-check-runner.js` and bind `browserConsoleStatus` securely into the cryptographically signed attestation signature.
 
-### 🔧 Maintenance & Refactoring
+### ðŸ”§ Maintenance & Refactoring
 - **git**: Ignore `.system_generated/` directory in `.gitignore` to keep runtime log reports out of codebase commits.
 
 ---
 
 ## [3.5.0] - 2026-05-21
 
-### ✨ Features
+### âœ¨ Features
 - **detox**: Add Detox End-to-End automated testing framework (`detox`, `jest-circus`, `@config-plugins/detox`) for virtual devices
 - **detox**: Implement Android debug build environment and write foundational `smoke.test.ts`
 - **detox**: Configure automated Jest runner and add `testID` targets to DashboardScreen
 
-### 🔧 Maintenance & Refactoring
+### ðŸ”§ Maintenance & Refactoring
 - **rules**: Execute rules consolidation, refactoring 12 bloated system roles into 3 clean, high-integrity archetypes (Architect, Precision Builder, Release Manager)
 - **rules**: Refactor workflows (`nuke-cache`, `audit-codebase`, `ship-it`) off Unix syntax to native PowerShell for Windows host compatibility
 - **git**: Harden check-runners and fast-forward gatekeeper validations
@@ -139,13 +168,13 @@
 
 ## [3.4.0] - 2026-05-12
 
-### ✨ Features
+### âœ¨ Features
 - feat(location): build useCrewProximityRadar and integrate into CrewHubSlab
 - feat(health): add health telemetry supabase migration
 - feat(telemetry): aggregate health metrics, insert to supabase, display in lifetime stats
 - feat(ui): implement optimistic UI and BLE connection caching
 
-### 🐛 Bug Fixes
+### ðŸ› Bug Fixes
 - fix(web): remove interactionmanager starvation blocking visualizer animation
 - fix(camera): restore native frame processor by injecting useCameraDevice for v5 nitro compat
 - fix(health): resolve TSC errors for granular permissions and supabase types
@@ -153,43 +182,43 @@
 - fix(ble): implement partial connection caching and fix keepalive teardown bug
 - fix(ui): remove absolute overlay blocking web touches on dashboard header
 
-### ⚡ Performance
+### âš¡ Performance
 - perf(web): implement concurrent transitions and visualizer FPS throttling
 
 ---
 
 ## [3.3.0] - 2026-05-02
 
-### ✨ Features
-- **ble**: Overwatch BLE Engine — reactive always-on discovery architecture
-- **ble**: On-demand hardware probe via BLINK tap — kill 7s blocking scan phase
+### âœ¨ Features
+- **ble**: Overwatch BLE Engine â€” reactive always-on discovery architecture
+- **ble**: On-demand hardware probe via BLINK tap â€” kill 7s blocking scan phase
 
-### 🐛 Bug Fixes
-- **ble**: Overwatch Polish — P1 preemption, dedup classification, dual-scan hardening
-- **ble**: Atomic group connect — single setConnectedDevices after full loop
-- **wizard**: Atomic pingDevice() primitive — fixes Phantom Blink and GATT probe collision
+### ðŸ› Bug Fixes
+- **ble**: Overwatch Polish â€” P1 preemption, dedup classification, dual-scan hardening
+- **ble**: Atomic group connect â€” single setConnectedDevices after full loop
+- **wizard**: Atomic pingDevice() primitive â€” fixes Phantom Blink and GATT probe collision
 - **ble**: Flush allDevices pre-scan + RSSI gate to kill ghost devices
 - **ble**: Hoist wasSweeperActive above try block (TS2304 scope fix)
 - **ble**: Fix TS1117 duplicate scanForPeripherals property in useBLE return object
 - **ble**: Match writeToDevice signature in AccountModal (TS2322)
 
-### 🔧 Maintenance & Refactoring
-- **ble**: Overwatch cleanup — remove legacy code, fix burst timer race, dedup Interrogator, thread writeToDevice prop
+### ðŸ”§ Maintenance & Refactoring
+- **ble**: Overwatch cleanup â€” remove legacy code, fix burst timer race, dedup Interrogator, thread writeToDevice prop
 
 ---
 
 ## [3.2.1] - 2026-04-24
 
-### 🐛 Bug Fixes
+### ðŸ› Bug Fixes
 - **core**: prevent session abandonment during crew deletion (`5871dc4`)
 
-### 📖 Documentation
+### ðŸ“– Documentation
 - **plans**: commit AI-First plans for sk8lytz picks and session abandonment fix (`6a0b3e9`)
 
 ---
 
 ## [3.2.0] - 2026-04-24
-### ✨ Features
+### âœ¨ Features
 - **admin**: Rebuild App Manager as a registry-driven tabbed controls hub (`fc756d9`)
 - **ui**: Apply dashboard and pattern UI polish, fix group creation duplication bug (`ab61434`)
 - **ble**: Overhaul useBLEScanner for passive telemetry and add AdvancedHardwareModal (`354a869`)
@@ -200,7 +229,7 @@
 - **ui**: Implement spectrum analyzer and fix music mode 0x73 byte order (`b4f7718`, `d391dce`, `f68771d`, `51ed2f5`)
 - **map**: Add spot labels, session clustering, and smart location picker (`0f11e6f`)
 
-### 🐛 Bug Fixes
+### ðŸ› Bug Fixes
 - **pattern**: Recalibrate math visualizers and resolve BLE blackout (`26ca458`)
 - **ble**: Resolve tsc errors in useBLEScanner and AdvancedHardwareModal (`584fedc`)
 - **ui**: Deduplicate power buttons by removing header button (`73d9c3b`)
@@ -208,14 +237,14 @@
 - **tsc**: Resolve undefined nearbySpots from context destructuring (`c978609`)
 - **ui**: Lock ProductVisualizer to dark background in all themes (`c126c25`)
 
-### 🔧 Maintenance & Refactoring
+### ðŸ”§ Maintenance & Refactoring
 - **refactor**: Decompose AccountModal god object into domain tabs (`ae2ebf1`)
 - **refactor**: Finalize GodObject extraction into standalone tab components for Diagnostic Lab (`d551a26`)
 - **refactor**: Decompose AuthScreen into domain-specific form components (`a6ab7a1`)
 - **refactor**: Extract VisualizerUnit from ProductVisualizer (`c07bce2`)
 - **chore**: Fix missing imports and TS type regressions from god object decomposition (`8ade3b9`, `7bcfac8`)
 
-### 📖 Documentation
+### ðŸ“– Documentation
 - **protocol**: Update bible and master reference with deep dive findings (`a5184c9`)
 - **protocol**: Update 0x59 payload specs and transition types (`c28804e`)
 
@@ -223,26 +252,26 @@
 
 ## [3.1.0] - 2026-04-23
 
-### 🚀 Features
+### ðŸš€ Features
 - feat(street-mode): implement pattern engine parity and dynamic distribution slider
 - feat(ui): direction toggle pill in UniversalSlidersFooter for animated patterns
 
-### 🐛 Bug Fixes
+### ðŸ› Bug Fixes
 - fix(street-mode): correct HALOZ physical geometry rendering and drop software palindrome
 - fix(street-mode): migrate hardware array math to PatternEngine for perfect parity
 - fix(street): align Street Mode payload with hardware sequential repeat
 - fix(visualizer): align HALOZ mirroring parity with hardware sequential repeat
-- fix(ui): thread fixedDirection into ProductVisualizer — product shape now flips on REV/FWD toggle
-- fix(ui): remove direction race — rely on UnifiedPatternPicker useEffect for dispatch
-- fix(ui): thread direction through PatternPickerTab→PatternCard→LEDStripPreview so visualizers flip on REV/FWD toggle
+- fix(ui): thread fixedDirection into ProductVisualizer â€” product shape now flips on REV/FWD toggle
+- fix(ui): remove direction race â€” rely on UnifiedPatternPicker useEffect for dispatch
+- fix(ui): thread direction through PatternPickerTabâ†’PatternCardâ†’LEDStripPreview so visualizers flip on REV/FWD toggle
 
-### 🛠 Maintenance
+### ðŸ›  Maintenance
 - chore(release): v3.1.0
 - Revert massive visualizer overrides, keeping visualizer unmodified
 
 ## [3.0.0] - 2026-04-23
 
-### ✨ Features
+### âœ¨ Features
 - feat(scenes): implement 32-slot Scene Builder UI per EPIC-004 Phase 3 plan
 - feat(ui): implement UnifiedPatternPicker and integrate into DockedController
 - feat(favorites): full BUILDER state persistence in favorites v2
@@ -258,7 +287,7 @@
 - feat(hw-screen): display product_id chip in DeviceSettingsModal
 - feat(tools): add automated database backup daemon and integrate into agent workflows
 
-### 🐛 Bug Fixes
+### ðŸ› Bug Fixes
 - fix(web): silence useNativeDriver warning spam in PatternCard
 - fix(web): resolve Maximum update depth loop in LEDStripPreview + UnifiedPatternPicker
 - fix(programs): minimal surgical fixes for Metro 500 - zero collateral damage
@@ -275,21 +304,21 @@
 - fix(map): auto-zoom map camera to selected radius bounds by populating silent location
 - fix(map): filter out unpublished skate spots from live map
 - fix(hw-screen): wrap productId || ?? chain in parens (TS5076)
-- fix(pr-b)!: BLE hardening — session time sync + chunked write framing
-- fix(pr-c)!: protocol guards — 0x43 condemned, 0x42 clamp, 0x41 correct format, EventType fix
+- fix(pr-b)!: BLE hardening â€” session time sync + chunked write framing
+- fix(pr-c)!: protocol guards â€” 0x43 condemned, 0x42 clamp, 0x41 correct format, EventType fix
 - fix(telemetry): add MUSIC_MODE_EXIT to EventType union (missed in PR-A)
-- fix(pr-a)!: protocol correctness — product_id, mic source, music exit packet
+- fix(pr-a)!: protocol correctness â€” product_id, mic source, music exit packet
 - fix(gradient-builder): correct LED count, pin cap, transition IDs + label icons
 - fix(emergency-pattern)!: correct HALOZ segment mirror + SOULZ ledPoints scaling
 - fix(hardware): correct HALOZ ledPoints 16/1-seg to 8/2-seg and document three-layer LED model
 
-### 🔧 Maintenance & Refactoring
+### ðŸ”§ Maintenance & Refactoring
 - chore(programs)!: retire PROGRAMS mode and 0x42 RBM architecture
 - refactor(account-modal): remove dead legacy shims
 - refactor(visualizer): gut simMode legacy engine and dead mode branches
 - chore(pattern-engine): purge condemned 0x03 opcodes from entire codebase
 - chore(cleanup): sync uncommitted master changes after epic merge
-- refactor(protocols): migrate MUSIC mode off RbmSimulator → PatternEngine, delete RbmSimulator.ts
+- refactor(protocols): migrate MUSIC mode off RbmSimulator â†’ PatternEngine, delete RbmSimulator.ts
 - refactor(protocols): deprecate Symphony/0x41 branding, inline RbmDictionary into RbmSimulator
 - chore(agents): enforce clean slate rule in Release Manager persona and Phase 6 pipeline
 - refactor(utils): retire RbmDictionary, migrate ProductVisualizer off getRbmVisualizerFrame/rgbToHex
@@ -298,16 +327,16 @@
 - chore(agents): execute The Great Consolidation to unify and harden the architecture
 - chore(wind-down): sync Master Reference + archive BATCH:PR-A/B/C in bucket list
 - refactor(epic004): reframe Phase 1 as complete hardware parity reversal
-- refactor(epic004): delete Symphony Phase 2 — PatternEngine owns all payloads
+- refactor(epic004): delete Symphony Phase 2 â€” PatternEngine owns all payloads
 - chore(repo): clean gitignore and commit protocol bible + scraper stack update
 
-### 📖 Documentation
+### ðŸ“– Documentation
 - docs(audit): fix ModeType table in Master Reference + remove stale PROGRAMS TODO
-- docs(master-ref): update header — BATCH:P2 complete, v2.7.0
+- docs(master-ref): update header â€” BATCH:P2 complete, v2.7.0
 - docs(workflows): revert shared worktree batch architecture in favor of isolated per-task worktrees
 - docs(workflows): upgrade /start-task engine to fully support batch execution, sequential worktrees, and completion stamps
 - docs(plans): commit AI-First audit plan for verify-pattern-engine-wiring [BATCH:P0]
-- docs(protocols): add wiring audit to PatternEngine JSDoc — all 28 IDs verified [BATCH:P0]
+- docs(protocols): add wiring audit to PatternEngine JSDoc â€” all 28 IDs verified [BATCH:P0]
 - docs(workflows): upgrade /intake with batch eligibility gates and group assignment logic
 - docs(plans): commit upgraded AI-First plan for delete-symphony-arch [BATCH:P0]
 - docs(plans): commit upgraded AI-First plan for retire-rbm-simulator [BATCH:P0]
@@ -319,15 +348,15 @@
 
 ## [2.3.0] - 2026-04-21
 
-### ✨ Features
-- **ZENGGE Protocol Oracle Lab — Phase 2 (Diagnostic Lab)**: Added 4 new interactive accordion panels to the `🔬 Oracle` tab for hardware verification of APK-hypothesized opcodes: `0x41` Settled Mode (effectId 1–33, FG/BG colors, speed/bright, direction), `0x43` Multi-Sequence (50-button tap grid, up to 50 effect IDs), `0x53` Live Pixel Stream (gradient start/end pickers, 1–60fps loop + single-frame shot), and `0x56/57/58` Scene Management (slot 0–31 picker + QUERY/ACTIVATE/DELETE). All panels labeled `[HYPOTHESIS]` — Oracle-gated before production promotion.
-- **ZENGGE Protocol Oracle Lab — Phase 1**: Added auto-streaming 323B pixel frame tester with continuous `0x53` multi-MTU write loop for real-time hardware verification. Integrated hardware response sniffer into the Oracle tab.
-- **ZENGGE Protocol Oracle Lab — Phase 0**: Deployed the core Protocol Oracle tab with dedicated `0x59`, `0x51`, `0x62`, and `0x73` builder panels — all with live hex byte previews, TX buttons wired to BLE, and response logging.
+### âœ¨ Features
+- **ZENGGE Protocol Oracle Lab â€” Phase 2 (Diagnostic Lab)**: Added 4 new interactive accordion panels to the `ðŸ”¬ Oracle` tab for hardware verification of APK-hypothesized opcodes: `0x41` Settled Mode (effectId 1â€“33, FG/BG colors, speed/bright, direction), `0x43` Multi-Sequence (50-button tap grid, up to 50 effect IDs), `0x53` Live Pixel Stream (gradient start/end pickers, 1â€“60fps loop + single-frame shot), and `0x56/57/58` Scene Management (slot 0â€“31 picker + QUERY/ACTIVATE/DELETE). All panels labeled `[HYPOTHESIS]` â€” Oracle-gated before production promotion.
+- **ZENGGE Protocol Oracle Lab â€” Phase 1**: Added auto-streaming 323B pixel frame tester with continuous `0x53` multi-MTU write loop for real-time hardware verification. Integrated hardware response sniffer into the Oracle tab.
+- **ZENGGE Protocol Oracle Lab â€” Phase 0**: Deployed the core Protocol Oracle tab with dedicated `0x59`, `0x51`, `0x62`, and `0x73` builder panels â€” all with live hex byte previews, TX buttons wired to BLE, and response logging.
 - **Math Synthesizer Pattern Engine**: Implemented 28 math-synthesized pattern templates replacing legacy hardcoded arrays. All pattern computation routes through the Math Synthesizer.
 
-### 🐛 Bug Fixes
-- **0x73 Builder — APK-Verified 13-Byte Format**: Rewrote the Symphony Mode `0x73` panel to use the confirmed 13-byte payload structure: `musicMode`, `micSource` (`0x26` App / `0x27` Device), `isOn` byte, C1 RGB, C2 RGB, sensitivity, brightness, checksum. Replaced the matrix-style picker with an explicit mic source button pair.
-- **FTUE — Auto BLE Permission Dialog**: Auto-triggers the native Bluetooth permission dialog on `PermissionsOnboardingScreen` mount, eliminating the manual setup step that caused user drop-off.
+### ðŸ› Bug Fixes
+- **0x73 Builder â€” APK-Verified 13-Byte Format**: Rewrote the Symphony Mode `0x73` panel to use the confirmed 13-byte payload structure: `musicMode`, `micSource` (`0x26` App / `0x27` Device), `isOn` byte, C1 RGB, C2 RGB, sensitivity, brightness, checksum. Replaced the matrix-style picker with an explicit mic source button pair.
+- **FTUE â€” Auto BLE Permission Dialog**: Auto-triggers the native Bluetooth permission dialog on `PermissionsOnboardingScreen` mount, eliminating the manual setup step that caused user drop-off.
 - **BLE Solid/Camera Mode**: Unified `SOLID` and `CAMERA` modes to `0x59 FREEZE` command, bypassing deprecated firmware commands that caused hardware lockups.
 - **Pattern Engine Routing**: Routed `applyFixedPattern` through the Math Synthesizer pipeline, eliminating the last legacy pattern bypasses.
 - **Session Summary Modal**: Added missing `Platform` import resolving a runtime `ReferenceError` on Android.
@@ -335,49 +364,49 @@
 - **Visualizer Dead Import**: Removed lingering `ZenggeVisualizerMath` import after Math Synthesizer migration.
 - **`setMusicConfig` Caller Sync**: Updated all 4 call sites (`useMusicMode`, `useControllerDispatch`, `useProtocolBuilder`, `ZenggeAdapter`) to the new 13B APK-verified signature `(musicMode, 0x26|0x27, isOn, c1, c2, sens, bright)`. Dropped the legacy `matrixStyle` parameter.
 
-### ⚡ Performance
+### âš¡ Performance
 - **Account Overview Mount**: Parallelized authentication and data fetching on `useAccountOverview` mount, eliminating sequential waterfalls. Added skeleton loading states for instant perceived responsiveness.
 
-### 🔧 Maintenance / Protocol
-- **`ZenggeProtocol` — New Methods**: `setSettledMode()` (0x41), `setEffectSequence()` (0x43), `streamPixelFrame()` (0x53), `setMusicConfig()` (13B APK format), `setMusicConfigLegacy()` (12B preserved for diffing).
+### ðŸ”§ Maintenance / Protocol
+- **`ZenggeProtocol` â€” New Methods**: `setSettledMode()` (0x41), `setEffectSequence()` (0x43), `streamPixelFrame()` (0x53), `setMusicConfig()` (13B APK format), `setMusicConfigLegacy()` (12B preserved for diffing).
 - **APK Protocol Audit**: Full reverse-engineering documentation of `0xA3` hardware opcodes committed to `ZENGGE_PROTOCOL_BIBLE.md` and `SK8Lytz_App_Master_Reference.md`.
 - **Web Compatibility**: Silenced React Native Web CSS `boxShadow`/`shadow*` deprecation warnings in `Sk8LytzProgrammer`.
-- **Legacy Fixed Mode Removed**: Ripped out the legacy fixed mode from DockedController navigation — replaced by the Math Synthesizer pattern system.
+- **Legacy Fixed Mode Removed**: Ripped out the legacy fixed mode from DockedController navigation â€” replaced by the Math Synthesizer pattern system.
 - **APK Path Fix**: Corrected build tooling `APK` path to use Gradle default `app-release.apk` output name.
 
-### 📖 Documentation
+### ðŸ“– Documentation
 - Synced Master Reference with AsyncStorage registry and Math Synthesizer architecture updates.
 
 ---
 
 ## [2.2.0] - 2026-04-21
 
-### ✨ Features
+### âœ¨ Features
 - **Scraper Guillotine REST API**: Fully functionalized the `/api/scraper/blocklist` and `/api/scraper/spots/:id/purge` endpoints across the CCTower. Adding keywords to the Phase 1 Blocklist GUI now instantly triggers a multi-table database purge via programmatic SQL drops.
 - **Dynamic Orchestrator Injection**: The master Google Sweep orchestrator now intercepts internal blocklist keywords natively, syncing to the database at launch to prevent historical re-ingestion.
 
-### 🛡️ Pipeline Defenses
+### ðŸ›¡ï¸ Pipeline Defenses
 - **Positive Heuristic Sieve (Phase 1)**: Deployed a dual-verification regex inside `GooglePlacesProvider.ts`. Generic municipal venues (Community Centers, Meeting Halls, Plazas, Fairgrounds) and open "Parks" natively returned by Google Places are now instantly vaporized *before* queue insertion unless the title explicitly guarantees roller-rink vernacular (`Skate`, `Rink`, `Roller`, `Arena`). 
 - **Corporate Exclusion Net**: Dramatically expanded the native Google `RETAIL_BLOCKLIST` array to actively identify and drop Ice Rinks, professional Hockey Arenas, Mega-Casinos, and big-box mega-chains (Hobby Lobby, Barnes & Noble, Dillons). Total Phase 1 queue fidelity is now operating at unprecedented validation thresholds.
 
-### 🐛 Bug Fixes
+### ðŸ› Bug Fixes
 - **Dashboard Guillotine Soft-Lock**: Re-wired CSS index layers and React button states that previously blocked the "Block & Purge" execution on Phase 1 data rows.
 - **API Crash Loop Rescue**: Hunted down and eradicated a legacy `pushLog()` logging dependency crash that was terminating SQL `DELETE` sequences mid-flight, successfully restoring end-to-end Guillotine operations.
 
 ---
 
-## [2.1.2] - 2026-04-21### ✨ Features
-- **Dual-Mode Coverage Map (Phase 6)**: The Databank QA map now has a mode toggle — **📊 Quality Mode** colors states by dominant pipeline status (existing behavior); **🚀 Published Mode** shows a green gradient by % of records `is_published = true`, giving a live per-state app coverage view.
-- **State-Scoped Publish / Retract**: Clicking any state on the map (or typing a 2-letter code in the search box) now reveals contextual **"🚀 Publish XX"** and **"↩ Retract XX"** buttons in the Databank toolbar. These call new CCTower endpoints (`POST /api/promote-state/:state` / `POST /api/unpublish-state/:state`) to promote or retract all eligible records for a single state atomically.
-- **Coverage Map Auto-Refresh**: The coverage map now refreshes after every `promoteSpot`, `bulkPromote`, `promoteState`, and `unpublishState` action — state colors update in real-time after publish operations.
+## [2.1.2] - 2026-04-21### âœ¨ Features
+- **Dual-Mode Coverage Map (Phase 6)**: The Databank QA map now has a mode toggle â€” **ðŸ“Š Quality Mode** colors states by dominant pipeline status (existing behavior); **ðŸš€ Published Mode** shows a green gradient by % of records `is_published = true`, giving a live per-state app coverage view.
+- **State-Scoped Publish / Retract**: Clicking any state on the map (or typing a 2-letter code in the search box) now reveals contextual **"ðŸš€ Publish XX"** and **"â†© Retract XX"** buttons in the Databank toolbar. These call new CCTower endpoints (`POST /api/promote-state/:state` / `POST /api/unpublish-state/:state`) to promote or retract all eligible records for a single state atomically.
+- **Coverage Map Auto-Refresh**: The coverage map now refreshes after every `promoteSpot`, `bulkPromote`, `promoteState`, and `unpublishState` action â€” state colors update in real-time after publish operations.
 
-### 🐛 Bug Fixes
+### ðŸ› Bug Fixes
 - **GoogleSweep Status Preservation**: Re-running the Google Places sweep would overwrite `MEDIA_READY` (and any higher-phase) records with `verification_status: 'ENRICHED'`, silently downgrading them. Fixed by splitting the record into `metaRecord` (Google factual data, no status) and `freshRecord` (metaRecord + `ENRICHED` for brand-new inserts only). All update/upsert-on-conflict paths now use `metaRecord`, preserving pipeline status across re-seeds.
 
-### 🗑️ Data Operations
+### ðŸ—‘ï¸ Data Operations
 - **OSM Record Purge**: Deleted 230 PENDING OSM-legacy records (`google_place_id IS NULL`). All 913 remaining records are 100% Google Places seeded (775 ENRICHED + 138 MEDIA_READY), zero null states. The Phase 1 coverage map now accurately reflects real state coverage.
 
-### 🌐 Scraper Pipeline (Daemon — separate from app)
+### ðŸŒ Scraper Pipeline (Daemon â€” separate from app)
 - All changes isolated to `tools/scraper/CCTower.ts`, `tools/scraper/GoogleSweep.ts`, and `tools/scraper-dashboard/src/App.tsx`. Zero mobile `src/` code was modified.
 
 ---
@@ -385,22 +414,22 @@
 ## [2.1.1] - 2026-04-21
 
 
-### 🐛 Bug Fixes
-- **Critical: Bulk Publish Skipped MEDIA_READY**: The `/api/promote-all` route only promoted `VERIFIED` and `ENRICHED` records — `MEDIA_READY` (the Photographer's final output) was excluded. 129 records were silently ineligible for promotion. Fixed by adding `MEDIA_READY` to the OR clause.
-- **Critical: Phase 4 Queue Wrong Status**: The Photographer's processing queue (Phase 4) was querying `verification_status = INDEXED` — a dead status the current pipeline never writes. Queue now correctly filters `candidate_photos IS NOT NULL AND photos IS NULL`, matching the Photographer's actual work backlog.
+### ðŸ› Bug Fixes
+- **Critical: Bulk Publish Skipped MEDIA_READY**: The `/api/promote-all` route only promoted `VERIFIED` and `ENRICHED` records â€” `MEDIA_READY` (the Photographer's final output) was excluded. 129 records were silently ineligible for promotion. Fixed by adding `MEDIA_READY` to the OR clause.
+- **Critical: Phase 4 Queue Wrong Status**: The Photographer's processing queue (Phase 4) was querying `verification_status = INDEXED` â€” a dead status the current pipeline never writes. Queue now correctly filters `candidate_photos IS NOT NULL AND photos IS NULL`, matching the Photographer's actual work backlog.
 - **Critical: Phase 5 Queue Wrong Status**: The Publisher queue (Phase 5) was showing all `ENRICHED` records (784 items) instead of `MEDIA_READY` records (the correct input), misrepresenting the publication queue entirely.
-- **Phase 4 Description Stale Copy**: Phase 4 explainer block referenced "Instagram / Yelp API" — a Phase 1-era description. Now accurately describes the Photographer daemon (OG image, DOM media, Street View fallback → MEDIA_READY).
-- **Phase 5 Description Stale Copy**: Phase 5 explainer block described "WebP CDN media engine" — this is Phase 4's job. Now correctly describes the Publisher Gate.
-- **Phase 4 Flow Input Metric**: Left metric showed `enrichedCount` (800+ records, meaningless as a Photographer input). Now shows `candidatesReadyCount` — the exact count of records with `candidate_photos IS NOT NULL AND photos IS NULL`.
+- **Phase 4 Description Stale Copy**: Phase 4 explainer block referenced "Instagram / Yelp API" â€” a Phase 1-era description. Now accurately describes the Photographer daemon (OG image, DOM media, Street View fallback â†’ MEDIA_READY).
+- **Phase 5 Description Stale Copy**: Phase 5 explainer block described "WebP CDN media engine" â€” this is Phase 4's job. Now correctly describes the Publisher Gate.
+- **Phase 4 Flow Input Metric**: Left metric showed `enrichedCount` (800+ records, meaningless as a Photographer input). Now shows `candidatesReadyCount` â€” the exact count of records with `candidate_photos IS NOT NULL AND photos IS NULL`.
 - **Log Panel Filter Missing Photographer**: Phase 4 tab was falling through to `return true` (showing all logs). Now correctly filters to `source === 'Photographer'` only.
 
-### ⚡ Performance
+### âš¡ Performance
 - **Smart Queue Polling**: `fetchQueue` was making 6 parallel API calls to CCTower every 5 seconds regardless of which tab was active. The polling interval now only re-fetches the currently active tab's phase queue (+ recent), reducing background requests by ~83% during normal dashboard use.
 
-### 🔧 Maintenance
-- **New CCTower Metric**: `/status` endpoint now returns `candidatesReadyCount` — the real-time count of Photographer candidates — used by both Phase 3 output and Phase 4 input flow visualizers.
+### ðŸ”§ Maintenance
+- **New CCTower Metric**: `/status` endpoint now returns `candidatesReadyCount` â€” the real-time count of Photographer candidates â€” used by both Phase 3 output and Phase 4 input flow visualizers.
 
-### 🌐 Scraper Pipeline (Daemon — separate from app)
+### ðŸŒ Scraper Pipeline (Daemon â€” separate from app)
 - All 8 correctness fixes are isolated to `tools/scraper/CCTower.ts` and `tools/scraper-dashboard/src/App.tsx`. Zero mobile `src/` code was modified.
 
 ---
@@ -408,18 +437,18 @@
 ## [2.1.0] - 2026-04-20
 
 
-### 🐛 Bug Fixes
-- **SSOT Bypass Eliminated**: Removed `AsyncStorage` import from `useHardwareNotifications.ts`. All 3 direct `setItem('@Sk8lytz_device_configs')` calls (RF config, LED probe, hardware probe) are now routed through `DeviceRepository.updateConfig()` — eliminating split-brain corruption on every BLE connect cycle.
+### ðŸ› Bug Fixes
+- **SSOT Bypass Eliminated**: Removed `AsyncStorage` import from `useHardwareNotifications.ts`. All 3 direct `setItem('@Sk8lytz_device_configs')` calls (RF config, LED probe, hardware probe) are now routed through `DeviceRepository.updateConfig()` â€” eliminating split-brain corruption on every BLE connect cycle.
 - **Provisioning Schema Corruption Fixed**: Replaced the 35-line direct Supabase write loop in `runAutoProvisioning` (which used raw MAC addresses as `id`, bypassing tombstone guards) with `repo.saveGroupTransactional()`. Removed the rogue `supabase` import from `useDashboardGroups.ts`.
-- **Stale Closure in Optimistic BLE**: Added `disableOptimisticUI` and `disableHaptics` to the `useOptimisticBLE` `useCallback` dependency array — App Manager runtime toggles now take effect immediately without waiting for an unrelated re-render.
+- **Stale Closure in Optimistic BLE**: Added `disableOptimisticUI` and `disableHaptics` to the `useOptimisticBLE` `useCallback` dependency array â€” App Manager runtime toggles now take effect immediately without waiting for an unrelated re-render.
 - **DockedController Platform Import**: Added missing `Platform` import in `DockedController.tsx` (pre-existing TSC error caught by release gate).
 
-### 🔧 Maintenance
+### ðŸ”§ Maintenance
 - **Settings Table Isolation**: Migrated all SK8Lytz admin settings from the shared `app_settings` table to a new, dedicated `sk8lytz_app_settings` table with `updated_at` auto-trigger and seeded keys. The Neogleamz Inventory app is unaffected.
 - **Orphaned Constant Removed**: Removed unused `PATTERNS_KEY` constant from `DeviceRepository.ts`. The key `@Sk8lytz_last_group_patterns` is documented as an intentional UI-local concern owned by `useDashboardGroups`.
 - **TypeScript Config**: Added `scratch/` to `tsconfig.json` exclude list to prevent non-production exploratory scripts from polluting the release gate.
 
-### 🌐 Scraper Pipeline (Daemon — separate from app)
+### ðŸŒ Scraper Pipeline (Daemon â€” separate from app)
 - **Phase 3 Queue Mirroring**: Queue now mirrors the Indexer RPC, surfacing `ENRICHED + crawled=false` records for targeted re-processing.
 - **Headless Browser**: Switched Puppeteer to `headless: 'new'` mode to suppress deprecation warnings.
 - **Indexer v2**: Structured extraction pipeline for hours, adult-night schedules, pricing, and events.
@@ -429,7 +458,7 @@
 ## [1.12.4] - 2026-04-19
 
 
-### 🐛 Bug Fixes
+### ðŸ› Bug Fixes
 - **Data Sync Regression**: Resolved offline synchronization integrity regressions across the device and group pipelines, ensuring cloud connectivity does not unintentionally wipe locally cached devices or phantom groups.
 - **Pro Effects Controller Lock**: Enforced single MTU strict write constraint logic and abolished multi-packet BLE chunking payloads to rectify severe hardware-level protocol freezes.
 
@@ -439,36 +468,36 @@
 
 ## [1.12.2] - 2026-04-18
 
-### ðŸš€ Features
+### Ã°Å¸Å¡â‚¬ Features
 - **Voice Engine Deprecation**: Surgically stripped the `@react-native-voice/voice` native dependency and the Voice Command Engine UI from the Dashboard to reduce the Android APK bundle size and improve app latency.
 
-### ðŸ› Bug Fixes
+### Ã°Å¸Ââ€º Bug Fixes
 - **React Native Web Hydration Regression**: Pinned `react-dom` explicitly to version `19.2.0` to resolve an invariant crash during web startup caused by NPM module resolution drift.
 
 ---
 
 ## [1.10.0] - 2026-04-18
 
-### ðŸš€ Features
+### Ã°Å¸Å¡â‚¬ Features
 - feat(telemetry): implemented passive, zero-performance-impact ambient BLE telemetry harvester
 - feat(db): integrated `discovered_devices_telemetry` table with PostGIS location batching for global hardware heatmapping
 - feat(ux): added silent background location fetcher via `LocationService` to avoid UI interruption/permission modals during background sync
 
-### ðŸ› Bug Fixes
+### Ã°Å¸Ââ€º Bug Fixes
 - fix(dashboard): resolved "Ghost Device" and orphaned group split-brain regressions by enforcing native `Alert` dialogs on RLS deletion failures and patching PostgreSQL policies
 
 ## [1.9.0] - 2026-04-18
 
-### âœ¨ Features
+### Ã¢Å“Â¨ Features
 - feat(telemetry): implement robust dual-probe harvesting pipeline (0x63 Hardware Config + 0x2B RF Remote State)
 - feat(ui): deploy high-fidelity `HardwareStatusPills` component to Dashboard and Setup Wizard
 - feat(ui): optimize `AuthScreen` layout and significantly reduce the visual footprint of the offline mode controls
 
-### ðŸ› Bug Fixes
+### Ã°Å¸Ââ€º Bug Fixes
 - fix(scanner): corrected product classification logic for HALOZ and SOULZ devices via flexible prefix matching
 - fix(onboarding): resolved telemetry persistence regression where hardware settings were overwritten by defaults during setup
 
-### ðŸ”§ Maintenance & Infrastructure
+### Ã°Å¸â€Â§ Maintenance & Infrastructure
 - chore(agents): restored global workflow registry with missing YAML frontmatter descriptions
 - chore(release): bumped Android `versionCode` to 19
 
@@ -476,21 +505,21 @@
 
 ## [1.8.20] - 2026-04-18
 
-### âœ¨ Features
+### Ã¢Å“Â¨ Features
 - feat(ux): implement Vivid Flush Slab architecture for Camera Tracker
 - feat(admin): build zero-edge user management architecture
 - feat(etl): implement comprehensive Cultural Daemon Pulse UI monitor inside Admin Tools
 - feat(etl): decoupled cultural enrichment daemon with PM2 queue
 - feat(ble): inject GATT 133 retry bumper and elevate connection priority to High
 
-### ðŸ› Bug Fixes
+### Ã°Å¸Ââ€º Bug Fixes
 - fix(dashboard): stabilize profile service and resolve type regressions
 - fix(permissions): decouple push notification init and reorder priority
 - fix(ble): convert payload engine to synchronous interleaved chunking to prevent native lockups
 - fix(ble): parallelize group teardown and payload pipeline
 - fix(db): add missing delete RLS policies to prevent ghost device retention on deregistration
 
-### ðŸ”§ Maintenance & Architecture
+### Ã°Å¸â€Â§ Maintenance & Architecture
 - refactor(ble): rip out firmware and hardware state query bloat from connectToDevices to eliminate lag
 - docs: formalize health sweep pre-flight requirement and capture architecture anomalies
 - docs: update BLE stability constraints to memorialize GATT 133 retry and high priority connection architectural invariants
@@ -499,19 +528,19 @@
 
 ## [1.8.19] - 2026-04-17
 
-### âœ¨ Features
+### Ã¢Å“Â¨ Features
 - feat(hardware): option to delete hardware on dashboard and enforce MAC uniqueness
 - feat(permissions): architect universal routing to Global Permissions Onboarding UI
 
-### ðŸ› Bug Fixes
+### Ã°Å¸Ââ€º Bug Fixes
 - fix(ble): isolate probing to setup wizard and remove diagnostic probe alerts
 - fix(hardware): remove legacy group migration to prevent case-sensitive recursive ghost injection
-- fix(hardware): normalize all device MACs to uppercase â€” single device identity invariant
+- fix(hardware): normalize all device MACs to uppercase Ã¢â‚¬â€ single device identity invariant
 - fix(hardware): eliminate split-brain duplicate groups on setup completion
 - fix(groups): sync account-manager renaming with dashboard ui cache
 - fix(groups): sync account-manager device grouping cache with dashboard deletes
 
-### ðŸ”§ Maintenance
+### Ã°Å¸â€Â§ Maintenance
 - chore(db): add nuclear option script to completely flush all devices and groups database-wide
 - chore: major repository cleanup
 
@@ -525,7 +554,7 @@
 
 ## [1.8.17] - 2026-04-17
 
-### ðŸ”§ BLE Pipeline Overhaul (`fix/ble-pipeline-overhaul`)
+### Ã°Å¸â€Â§ BLE Pipeline Overhaul (`fix/ble-pipeline-overhaul`)
 - **Gate Semaphore**: Implemented `bleGateRef` FSM (`IDLE|SCANNING|CONNECTING|DISCONNECTING|RECOVERING`) to serialize all BLE lifecycle operations and eliminate GATT collisions
 - **connectToDevice Deleted**: Removed singular device connector; unified all connections through `connectToDevices` group path
 - **AutoRecovery v2**: Replaced `useBLEWatchdog.ts` (deleted) with AbortController-based cancellation and 8-retry ceiling
@@ -533,59 +562,59 @@
 - **Write Type Propagation**: `writeToDevice` now returns `Promise<boolean | 'partial'>` across all 15 consumers
 - **Auto-Connect Observer**: Debounced with gate checks to prevent concurrent GATT boots
 
-### ðŸ›¡ï¸ Observability & Error Handling
+### Ã°Å¸â€ºÂ¡Ã¯Â¸Â Observability & Error Handling
 - **Silent Catch Purge**: Replaced 15 empty `catch(e){}` blocks with `AppLogger.warn()` across 6 BLE hooks
 - **BLEErrorBoundary**: New crash recovery component wrapping DockedController in DashboardScreen
-- **Consoleâ†’AppLogger Migration**: Converted 20 raw `console.log/warn/error` calls in 9 hooks to AppLogger
+- **ConsoleÃ¢â€ â€™AppLogger Migration**: Converted 20 raw `console.log/warn/error` calls in 9 hooks to AppLogger
 - **Telemetry Hardening**: Added `PROMISE_REJECTION` event type, unhandled rejection handler (web), `APP_FOREGROUNDED` event, `SCREEN_OPENED` telemetry for 4 screens, `__DEV__`-guarded console.error in AppLogger internals
 
-### ðŸ—ï¸ Architecture Diet (`chore/docked-controller-diet`)
-- **Color Math Dedup**: Replaced 8 inline hueâ†’hex lambdas with `ColorUtils.hueToHex()`; centralized `COLOR_PRESET_PALETTE` and `PRESET_HUE_MAP`
+### Ã°Å¸Ââ€”Ã¯Â¸Â Architecture Diet (`chore/docked-controller-diet`)
+- **Color Math Dedup**: Replaced 8 inline hueÃ¢â€ â€™hex lambdas with `ColorUtils.hueToHex()`; centralized `COLOR_PRESET_PALETTE` and `PRESET_HUE_MAP`
 - **Persistence Hook**: Wired orphaned `useControllerPersistence` hook, deleted 45 lines of duplicate inline AsyncStorage effects
 - **BLE Dispatch Hook**: Extracted 6 functions into `useControllerDispatch.ts` (185 lines): `sendColor`, `applyFixedPattern`, `applyStaticModePattern`, `applyEmergencyPattern`, `handleMusicChange`, `clampSpeed`
 - **FavoritePromptModal**: Extracted inline modal JSX into `FavoritePromptModal.tsx` (69 lines)
-- **Result**: DockedController slimmed from 97KB/2,080 lines â†’ 87KB/1,874 lines (-10KB, -206 lines)
+- **Result**: DockedController slimmed from 97KB/2,080 lines Ã¢â€ â€™ 87KB/1,874 lines (-10KB, -206 lines)
 
-### ðŸ§¹ Housekeeping
+### Ã°Å¸Â§Â¹ Housekeeping
 - **Legacy Purge**: Eliminated all `ng_*` AsyncStorage keys from codebase; fixed AdminToolsModal reading dead `ng_device_configs`
 - **Scraper Caches**: Added `nominatim_cache.json` and `state_caches/` to `.gitignore` to fix persistent CRLF dirtying
-- **Master Reference**: Updated storage keys, watchdogâ†’AutoRecovery docs, gate semaphore docs, writeToDevice type docs
+- **Master Reference**: Updated storage keys, watchdogÃ¢â€ â€™AutoRecovery docs, gate semaphore docs, writeToDevice type docs
 
 ---
 
 
 ## [1.8.16] - 2026-04-17
 
-### âœ¨ Features
+### Ã¢Å“Â¨ Features
 - feat(schema): add is_featured column to skate_spots schema and harvester pipeline
 
 ---
 
 ## [1.8.15] - 2026-04-17
 
-### âœ¨ Features
+### Ã¢Å“Â¨ Features
 - feat(crewz): rebrand UI exclusively to CREWZ and migrate national harvest pipeline to vertical synchrony
 - feat(map): unify crew hub map strategy with interactive clustering and OS-specific fallbacks
 - feat(crew): unified radius UI, flex map filters, dynamic local memory, and smart skate spots
 
-### ðŸŽ¨ Style
+### Ã°Å¸Å½Â¨ Style
 - style(crewz): fix grammar by restoring singular CREW capitalization in UI display text
 
-### ðŸ“– Documentation
+### Ã°Å¸â€œâ€“ Documentation
 - docs(schema): sync Master Reference with new skate_spots DB schema
 
 ---
 
 ## [1.8.14] - 2026-04-17
 
-### ðŸ“– Documentation
+### Ã°Å¸â€œâ€“ Documentation
 - docs(discord-bridge): expand developer portal setup instructions
 
 ---
 
 ## [1.8.13] - 2026-04-17
 
-### âœ¨ Features
+### Ã¢Å“Â¨ Features
 - feat(discord-bridge): implement bidirectional telemetry agent link via powershell keystrokes
 - docs(discord-bridge): add setup and usage instructions
 - chore(agents): add standalone discord bridge startup workflow and inject into hello routine
@@ -599,14 +628,14 @@
 
 ## [1.8.11] - 2026-04-17
 
-### âœ¨ Features
+### Ã¢Å“Â¨ Features
 - feat(security): implement RF remote ID discovery and UI audit
 
 ---
 
 ## [1.8.10] - 2026-04-17
 
-### ðŸ”§ Maintenance
+### Ã°Å¸â€Â§ Maintenance
 - style(theme): enforce tokenized 8pt spacing grid app-wide via codemod
 - chore(database): audit RLS performance and seal telemetry access vectors
 - docs(bucket-list): sweep backlog, clean tasks, and sync core 8pt grid metrics
@@ -615,10 +644,10 @@
 
 ## [1.8.9] - 2026-04-17
 
-### âœ¨ Features
+### Ã¢Å“Â¨ Features
 - feat(dashboard): extract fixed mode into dedicated docked panel with strobe/blink support
 
-### ðŸ› Bug Fixes
+### Ã°Å¸Ââ€º Bug Fixes
 - fix(ble): inject neverForLocation plugin flag and sync scanner race blocks
 - fix(ble): resolve device settings probing and group connection regressions
 - fix(ble): resolve scanner race condition and manifest permissions gap
@@ -628,7 +657,7 @@
 - fix(ble): hotfix zero-day android gatt exception by restoring scan lock and queue resumer
 - fix(ble): resolve group firmware sync race condition and popcorn effect
 
-### ðŸ”§ Maintenance
+### Ã°Å¸â€Â§ Maintenance
 - chore(dashboard): decompose DashboardScreen monolith (-450 lines, -32.9%)
 - chore(docked): decompose DockedController JSX into 6 memoized sub-panels
 - build(version): bump version to 1.8.7 for permission ledger fix
@@ -637,7 +666,7 @@
 
 ## [1.8.8] - 2026-04-14
 
-### ðŸš‘ Emergency Hotfixes
+### Ã°Å¸Å¡â€˜ Emergency Hotfixes
 
 **Android 12+ BLE Scanning Deadlock**
 - **Restored neverForLocation Flag** (`app.json`): Reverted the raw injection of `android.permission.BLUETOOTH_SCAN`. Manually defining this in the manifest overrode `react-native-ble-plx`'s auto-configurator, intentionally dropping the `usesPermissionFlags="neverForLocation"` attribute. Without this flag, Android 12+ enforced strict Location tracking requirements on all BLE scanning events and silently blockaded the Bluetooth radio at the OS level since we do not request background location tracking natively.
@@ -686,17 +715,17 @@
 
 ## [1.8.2] - 2026-04-14
 
-### ðŸ› Bug Fixes
+### Ã°Å¸Ââ€º Bug Fixes
 
-**BLE Group Stability â€” 5 Surgical Fixes**
-- **Critical Write Reconciliation Loop** (`useBLE.ts`): `writeToDevice` returned `void`, cast to `Promise<boolean>` but resolving as `undefined` at runtime â€” every single BLE write was falsy, triggering optimistic UI rollback on every command. Fixed to return honest `boolean` per-device success.
+**BLE Group Stability Ã¢â‚¬â€ 5 Surgical Fixes**
+- **Critical Write Reconciliation Loop** (`useBLE.ts`): `writeToDevice` returned `void`, cast to `Promise<boolean>` but resolving as `undefined` at runtime Ã¢â‚¬â€ every single BLE write was falsy, triggering optimistic UI rollback on every command. Fixed to return honest `boolean` per-device success.
 - **Scanner FSM Poisoning** (`useBLEScanner.ts`): `keepAlive` calls mutated `scannerState` to `'SCANNING'` before checking the flag, causing`derivedBleState` to report `SCANNING` immediately after a successful group connection. Fixed by early-exiting before any state mutation.
-- **Ghost Device Infinite Loop** (`useBLEAutoRecovery.ts`): Recovery loop had no retry ceiling â€” a Zengge chip in a GATT soft-lock would loop forever, permanently blocking all writes to the dropped device. Added 8-attempt ceiling with device ejection on exhaustion.
+- **Ghost Device Infinite Loop** (`useBLEAutoRecovery.ts`): Recovery loop had no retry ceiling Ã¢â‚¬â€ a Zengge chip in a GATT soft-lock would loop forever, permanently blocking all writes to the dropped device. Added 8-attempt ceiling with device ejection on exhaustion.
 - **Premature Write Guard** (`DockedController.tsx`): Guard missed `CONNECTING` and `PROBING` states, allowing `useEffect` writes to race `discoverAllServices` during group connect. Simplified to canonical `bleState !== 'READY'`.
 - **Duplicate Boot Scan System** (`DashboardScreen.tsx`): Legacy `handleScan` + `hasAutoScanned` useEffect (System B) racing against `useDashboardAutoConnect` (System A) on every launch. System B's `runAutoProvisioning()` at t+8s mutated device state mid-GATT handshake, permanently corrupting one device in every pair. System B removed entirely.
 
-**Naming Consistency â€” 3 Missed Gaps**
-- **Scanner Storage Key** (`useBLEScanner.ts`): Scanner read `ng_registered_devices` (legacy) instead of `@Sk8lytz_registered_devices` â€” MAC deduplication was completely blind post-migration.
+**Naming Consistency Ã¢â‚¬â€ 3 Missed Gaps**
+- **Scanner Storage Key** (`useBLEScanner.ts`): Scanner read `ng_registered_devices` (legacy) instead of `@Sk8lytz_registered_devices` Ã¢â‚¬â€ MAC deduplication was completely blind post-migration.
 - **swapDevicePositions Naming** (`useRegistration.ts`): Rebuilt `device_name` as `"HALOZ Left"` bypassing `NamingUtils`. Now uses `getDefaultDeviceName(mac) + position`.
 - **Auto-Provisioning Group Name** (`useDashboardGroups.ts`): Built group names as `"HALOZ SK8Lytz"` inline instead of `"My SK8Lytz HALOZ"` via `getDefaultGroupName()`. Same hardware produced different group names per registration path.
 
@@ -704,8 +733,8 @@
 
 ## [1.8.1] - 2026-04-14
 
-### ðŸ› Bug Fixes
-- **Critical Dashboard Stability**: Resolved a hook split-brain bug in `DashboardScreen.tsx` where `isActuallyConnected` was computed in two separate, desynchronized locations â€” an inline expression passed to `useDashboardAutoConnect` and a `useMemo` defined ~150 lines later. Hoisted `displayConnectedDevices`, `isActuallyConnected`, and `isGrouped` above all consumers to establish a single canonical source of truth. This eliminates the root cause of the potential `Rendered more hooks than expected` crash during BLE reconnect cycles.
+### Ã°Å¸Ââ€º Bug Fixes
+- **Critical Dashboard Stability**: Resolved a hook split-brain bug in `DashboardScreen.tsx` where `isActuallyConnected` was computed in two separate, desynchronized locations Ã¢â‚¬â€ an inline expression passed to `useDashboardAutoConnect` and a `useMemo` defined ~150 lines later. Hoisted `displayConnectedDevices`, `isActuallyConnected`, and `isGrouped` above all consumers to establish a single canonical source of truth. This eliminates the root cause of the potential `Rendered more hooks than expected` crash during BLE reconnect cycles.
 - **TS Compliance**: Fixed `PermissionService` default ledger initialization from `{}` to a fully-typed `DEFAULT_LEDGER` constant, and resolved `delete_account` RPC type narrowing error in `AccountModal`.
 
 ---
@@ -713,20 +742,20 @@
 ## [1.8.0] - 2026-04-14
 
 
-### âœ¨ Features
+### Ã¢Å“Â¨ Features
 - **Legal Compliance**: Executed granular legal compliance architecture and Account Deletion workflow.
 - **Telemetry Convergence**: Standardized device naming syntax and unified global namespace to `@Sk8lytz_`.
 - **Ghost Protocol**: Built pessimistic silent auto-recovery engine for Soft Disconnect drops.
 - **Skate Discovery ETL**: Evolved Headless Scraper pipeline into a zero-api DOM crawler with automated background job runner logic for stealth.
 - **Magic Workflows**: Added `/run-scraper` AI trigger.
 
-### ðŸ› Bug Fixes
+### Ã°Å¸Ââ€º Bug Fixes
 - **BLE Engine**: Neutered over-aggressive hardware watchdog to resolve connection dropouts. Tore down legacy Soft Disconnect UI alerts.
 - **Dashboard Hook Ordering**: Solved infinite 'Rendered more hooks' React error during async group recovery via closure stabilization.
 - **Account Management**: Resolved `AccountModal` crash loops and network hangs.
 - **Expo Auth Deep Linking**: Repaired dynamic `expo-auth-session` scheme callbacks, fixing Web 400 errors.
 
-### ðŸ”§ Maintenance & Performance
+### Ã°Å¸â€Â§ Maintenance & Performance
 - **Ghost Reconciliation**: Enforced true pessimistic reconciliation loop within `DockedController`.
 - **Fast-Lane Telemetry**: Refactored error-boundary catch blocks to bypass standard spool queues for VIP AppLogger payloads.
 - **Agent Governance**: Upgraded internal Bucket List parsing and enforced explicit PUSH blocks in AI workflow pipelines.
@@ -812,7 +841,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Hardware Watchdog**: Autonomous BLE 'Self-Healing' loop â€” detects hardware soft-locks, clears GATT buffers, and silently relatches connections to maintain stability.
+- **Hardware Watchdog**: Autonomous BLE 'Self-Healing' loop Ã¢â‚¬â€ detects hardware soft-locks, clears GATT buffers, and silently relatches connections to maintain stability.
 - **Diagnostic Controls**: Extracted Sniffer/Telemetry Diagnostics to its own toggle state in the Diagnostics Lab UI, rather than linking it to the modal open state.
 
 ### Changed
@@ -903,6 +932,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Legacy Tools**: Retired the Simple Scanner, legacy DIY Builder, and Admin Hardware Tester in favor of consolidated modern modules.
 - **Stale Data**: Purged legacy 0x81 protocol commands and hardcoded product heuristics.
+
 
 
 
