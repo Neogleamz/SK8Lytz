@@ -91,16 +91,6 @@
 
 #### 🌊 Wave 2 — Architecture & Safety (Prerequisite: Wave 1 merged)
 
-- [ ] **`fix/split-brain-trifecta`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 THINK]` `[BATCH:deepdive-audit-sweep]` `[WAVE:2]`
-  - **Goal:** Resolve 3 split-brain architectural defects: GroupRepository read bypass, protocol dispatch hardcode, and crew stats race condition.
-  - **Decision Log:** R-21 structural sniper + DOMAIN_PROTOCOL_CORE confirmed 3 disjoint code paths that should converge. GroupRepository is a write-only sink, useControllerDispatch hardcodes Zengge instead of using adapter registry, and useCrewSession duplicates lifetime stats writes causing race conditions.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a2899729-4d77-4e6c-8f8c-d23919eb2b74/system_audit_report.md) · Plan: [PLAN-fix-split-brain-trifecta.md](./plans/PLAN-fix-split-brain-trifecta.md)
-    Key finding: "3 independent code paths bypass their canonical repositories"
-    Rejected alternative: "Rewriting GroupRepository with RxJS observable streams — overengineered for current needs"
-  - **Source of Truth:** 📖 [GroupRepository.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/GroupRepository.ts) §Architecture
-  - **Details:** 5 files across 3 domains. Prerequisite: Wave 1 fully merged into master before this worktree is created.
-
 - [ ] **`fix/ble-core-type-safety`**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:deepdive-audit-sweep]` `[WAVE:2]`
   - **Goal:** Eliminate all `any` type casts from BLE core production services and fix the Device/DisplayDevice type hierarchy.
