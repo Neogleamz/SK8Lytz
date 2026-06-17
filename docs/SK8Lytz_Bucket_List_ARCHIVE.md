@@ -3376,4 +3376,14 @@ pm run verify which includes QA tests.
 ### ⚡ [BATCH:fix/observatory-db-drift] — `fix/observatory-db-drift` — IN PROGRESS
 > **Worktree**: `fix/observatory-db-drift` · **Type**: Isolated · **Prerequisite**: None
 > **Source Analysis**: 📊 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md) — 3 database anomalies detected from remote logs.
+
+
+- [x] **`fix/observatory-db-drift`** 🚀 Merged in 2732fa00
+  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[☁️ CLOUD]` `[⚠️ M-RISK]` `[🍱 Meal]` `[M-COG]` `[BATCH:fix/observatory-db-drift]` `[WAVE:10]`
+  - **Goal:** Apply migrations for label_designs drift, integer overflow, and telemetry constraints.
+  - **Decision Log:** Remote logs flagged 10+ errors for schema mismatches and failing telemetry inserts.
+  - **Analysis:** 📊 Source: [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md) · Plan: [PLAN-fix-observatory-db-drift.md](./plans/PLAN-fix-observatory-db-drift.md)
+    Key finding: "label_designs missing product_name column, and severity constraints are violating."
+  - **Source of Truth:** 📖 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md)
+  - **Details:** Requires creating and applying new Supabase migrations.
 

@@ -4160,3 +4160,11 @@ TSC: âœ…  Jest: âœ…
 **What merged:** Fixed TurboModuleRegistry getEnforcing undefined crash on web target by adjusting import order and platform mocks.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/index.ts, App.tsx
+
+### [MERGE] 2026-06-17T07:16 — fix/observatory-db-drift -> master @ 2732fa00
+**What merged:** Database migrations and app payload updates to resolve schema drift and telemetry check constraints.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** supabase/migrations/20260617_observatory_fixes.sql, src/services/appLogger/AppLoggerCloud.ts
+
+### [EVENT] 2026-06-17T07:16 — Goal Complete: Self-Healing Observatory
+**Summary:** Successfully orchestrated 2 parallel subagents to resolve 4 raw bug clusters. Both the Web Crash Regression and DB Schema Drift bugs are fully tested, merged to master, and archived.

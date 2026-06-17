@@ -12,42 +12,27 @@
 ## 🔴 CRITICAL: 🛡️ Performance, Stability & Security
 
 ### 🚑 TRIAGE QUEUE
-- [ ] Empty
 
+---
 
 ### 🌊 Parallel Wave Strategy (AST-Verified)
 
 | Wave | Task Clusters | Parallel-Safe? | Prerequisite |
-|------|--------------|---------------|-------------------|
-| 1 | sweep-src-components-TacticalSlider.tsx, sweep-src-components-LocationPicker.tsx, sweep-src-components-admin, sweep-src-hooks-ble, sweep-src-components-CrewModal.tsx, sweep-src-components-CrewMemberDashboard.tsx, sweep-src-components-account, sweep-src-components-DockedController.tsx | ✅ Yes | None |
-| 2 | sweep-src-components-NeonHueStrip.tsx, sweep-src-components-CameraTracker.tsx, sweep-src-components-patterns, sweep-src-components-VerticalPatternDrum.tsx, sweep-src-components-VisualizerUnit.tsx, sweep-src-components-CustomEffectVisualizer.tsx, sweep-src-utils, sweep-src-components-shared | ✅ Yes | Wave 1 merged |
-| 3 | sweep-src-components-permissions, sweep-src-components-GlobalErrorBoundary.tsx | ✅ Yes | Wave 2 merged |
-| 4 | sweep-src-components-crew, sweep-src-components-PositionalGradientBuilder.tsx, sweep-src-context, sweep-src-components-ConnectionStrengthBadge.tsx, sweep-src-components-ProductVisualizer.tsx | ✅ Yes | Wave 3 merged |
-| 5 | sweep-src-services, sweep-src-components-CustomSlider.tsx | ✅ Yes | Wave 4 merged |
-| 6 | sweep-src-hooks, sweep-src-components-dashboard, sweep-src-components-CommunityModal.tsx | ✅ Yes | Wave 5 merged |
-| 7 | sweep-src-other | ✅ Yes | Wave 6 merged |
-| 8 | sweep-src-screens, sweep-src-components-docked | ✅ Yes | Wave 7 merged |
-| 9 | sweep-src-components-AccountModal.tsx | ✅ Yes | Wave 8 merged |
-
-## 🚧 ACTIVE SPRINT
-
-### ⚡ [BATCH:fix/web-console-crash] — `fix/web-console-crash` — IN PROGRESS
-> **Worktree**: `fix/web-console-crash` · **Type**: Isolated · **Prerequisite**: None
-> **Source Analysis**: 📊 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md) — Web demo crashes on load due to missing native module mock.
-
-- [x] **`fix/observatory-db-drift`**
-  - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[☁️ CLOUD]` `[⚠️ M-RISK]` `[🍱 Meal]` `[M-COG]` `[BATCH:fix/observatory-db-drift]` `[WAVE:10]`
-  - **Goal:** Apply migrations for label_designs drift, integer overflow, and telemetry constraints.
-  - **Decision Log:** Remote logs flagged 10+ errors for schema mismatches and failing telemetry inserts.
-  - **Analysis:** 📊 Source: [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md) · Plan: [PLAN-fix-observatory-db-drift.md](./plans/PLAN-fix-observatory-db-drift.md)
-    Key finding: "label_designs missing product_name column, and severity constraints are violating."
-  - **Source of Truth:** 📖 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md)
-  - **Details:** Requires creating and applying new Supabase migrations.
 
 ---
 
 ## 🔥 ON DECK
+### ⚡ [BATCH:fix/performance-telemetry] — `fix/performance-telemetry` — READY
+> **Worktree**: `fix/performance-telemetry` · **Type**: Isolated · **Prerequisite**: None
+> **Source Analysis**: 📊 Command Center widget `AppPerformanceWidget.tsx` is starving for data because React Native's telemetry queue drops TTID events.
 
+- [ ] **`fix/performance-telemetry`**
+  - **Tags:** `[✅ READY]` `[❌ UNVERIFIED]` `[☁️ CLOUD]` `[⚠️ M-RISK]` `[🍿 Snack]` `[L-COG]` `[BATCH:fix/performance-telemetry]` `[WAVE:11]`
+  - **Goal:** Whitelist `SCREEN_LOAD_TTID` and `SCREEN_LOAD_TTFD` in AppLoggerService to bypass the lossy 100ms queue.
+  - **Decision Log:** Discovered that app hydration fires TTID concurrently with APP_OPENED, causing TTID to be silently overwritten in the single-slot `pendingLogQueue`.
+  - **Analysis:** 📊 Plan: [PLAN-fix-performance-telemetry.md](./plans/PLAN-fix-performance-telemetry.md)
+  - **Source of Truth:** 📖 [AppLoggerService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/appLogger/AppLoggerService.ts#L175-L180)
+  - **Details:** Add performance events to the immediate-push list.
 
 ---
 
@@ -85,5 +70,3 @@
 - [ ] `feat/siri-google-assistant-integration` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🪙 25k] [⏱️ 3h] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] Siri/Google Assistant phone-level voice control.
 - [ ] `feat/geofence-rink-sync` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🪙 20k] [⏱️ 3h] [🧠 THINK] GPS-based auto-crew discovery.
 - [ ] `feat/add-swipe-nav` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🪙 12k] [⏱️ 3h] [🤖 FLASH] [📝️ NEEDS-PLAN] Card Swipe Navigation.
-
-
