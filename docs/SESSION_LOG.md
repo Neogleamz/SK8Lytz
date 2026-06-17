@@ -4244,3 +4244,8 @@ TSC: ?  Jest: ?
 **What merged:** Centralized group state, removed Zengge dispatch fallback, centralized stats telemetry.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/hooks/useDashboardGroups.ts, src/services/GroupRepository.ts, src/hooks/useControllerDispatch.ts, src/services/SpeedTrackingService.ts, src/hooks/useCrewSession.ts
+
+### [MERGE] 2026-06-17T16:24 — fix/ble-core-type-safety -> master @ 2e4015bb
+**What merged:** Final Wave 2 task. Resolved all TS any/unknown type casting in the BLE core layer (BleMachine, RecoveryService, etc.) and DashboardScreen.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/hooks/useDashboardController.tsx, src/hooks/useDashboardDeviceConfig.ts, src/hooks/useDashboardGroups.ts, src/screens/DashboardScreen.tsx, src/services/ble/BleMachine.ts, src/services/ble/BleMachine.types.ts, src/services/ble/ConnectService.ts, src/services/ble/HeartbeatService.ts, src/services/ble/RecoveryService.ts

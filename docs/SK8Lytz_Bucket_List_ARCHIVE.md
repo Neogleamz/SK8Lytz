@@ -3419,4 +3419,15 @@ pm run verify which includes QA tests.
   - **Details:** 5 files, 15 locations. Prerequisite: Wave 1 fully merged into master before this worktree is created.
 
 #### 🌊 Wave 3 — Hardening & Code Quality (Prerequisite: Wave 2 merged)
+
+
+- [x] **`fix/ble-core-type-safety`**
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 THINK]` `[BATCH:deepdive-audit-sweep]` `[WAVE:2]`
+  - **Goal:** Eliminate all `any` type casts from BLE core production services and fix the Device/DisplayDevice type hierarchy.
+  - **Decision Log:** R-08 sniper + DOMAIN_BLE_CORE confirmed 11 `any` casts in production BLE services + 9 `as unknown as` casts in DashboardScreen indicating broken type hierarchy. Plan makes `DisplayDevice extends Device` to eliminate casts at the type system level.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a2899729-4d77-4e6c-8f8c-d23919eb2b74/system_audit_report.md) · Plan: [PLAN-fix-ble-core-type-safety.md](./plans/PLAN-fix-ble-core-type-safety.md)
+    Key finding: "DisplayDevice and Device type hierarchies are disjoint, causing 9 forced casts"
+    Rejected alternative: "Adapter functions at each cast site — eliminated by making DisplayDevice extend Device"
+  - **Source of Truth:** 📖 [BleMachine.types.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.types.ts#L18) §BLE Types
+  - **Details:** 7 files, ~20 locations. Prerequisite: Wave 1 fully merged into master before this worktree is created.
 
