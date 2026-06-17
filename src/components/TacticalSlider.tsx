@@ -117,7 +117,10 @@ const TacticalSlider = ({
     touchAction?: 'none' | 'auto' | 'manipulation' | 'pan-x' | 'pan-y';
     userSelect?: 'none' | 'auto' | 'text' | 'all';
   }
-  const webStyle: WebStyle = { touchAction: 'none', userSelect: 'none' };
+  const webStyle = Platform.select<WebStyle>({
+    web: { touchAction: 'none', userSelect: 'none' },
+    default: {},
+  });
 
   return (
     <View 

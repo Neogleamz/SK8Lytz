@@ -116,6 +116,7 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     shadowRadius: 8,
     shadowOpacity: 1,
     zIndex: 50,
+    elevation: 4,
   },
   countdownText: {
     color: '#FFFFFF',

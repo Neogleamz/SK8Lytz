@@ -1,6 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useRef, useState } from 'react';
-import { LayoutChangeEvent, PanResponder, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { LayoutChangeEvent, PanResponder, StyleProp, StyleSheet, View, ViewStyle, Platform } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
 interface CustomSliderProps {
@@ -97,7 +97,10 @@ const CustomSlider = ({ value, onValueChange, onSlidingComplete, minimumValue = 
     userSelect?: 'none' | 'auto' | 'text' | 'all';
     cursor?: 'pointer' | 'auto';
   }
-  const webStyle: WebStyle = { touchAction: 'none', userSelect: 'none', cursor: 'pointer' };
+  const webStyle = Platform.select<WebStyle>({
+    web: { touchAction: 'none', userSelect: 'none', cursor: 'pointer' },
+    default: {},
+  });
 
   return (
     <View 
