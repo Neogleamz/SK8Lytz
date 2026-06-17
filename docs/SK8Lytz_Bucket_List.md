@@ -12,13 +12,8 @@
 ## 🔴 CRITICAL: 🛡️ Performance, Stability & Security
 
 ### 🚑 TRIAGE QUEUE
-- [ ] **`fix/ble-group-sync-debounce`**
-  - **Tags:** `[✅ READY]` `[🧪 LAB]` `[⚠️ H-RISK]` `[🍪 Snack]` `[BLE]`
-  - **Goal:** Fix the global debouncer bug dropping sequential BLE writes to grouped skates and restore missing color dots.
-  - **Decision Log:** Users report group writes only affecting a single skate due to a global debounce timer overwriting concurrent requests in BleWriteDispatcher.
-  - **Analysis:** 📊 Plan: [PLAN-fix-ble-group-sync-debounce.md](./plans/PLAN-fix-ble-group-sync-debounce.md)
-  - **Source of Truth:** 📖 [useBLE.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts)
----
+- [ ] Empty
+
 
 ### 🌊 Parallel Wave Strategy (AST-Verified)
 
@@ -35,14 +30,6 @@
 | 9 | sweep-src-components-AccountModal.tsx | ✅ Yes | Wave 8 merged |
 
 ## 🚧 ACTIVE SPRINT
-### ⚡ [BATCH:feat/command-center-perf-charts] — `feat/command-center-perf-charts` — IN PROGRESS
-> **Worktree**: `feat/command-center-perf-charts` · **Type**: Isolated · **Prerequisite**: None
-> **Source Analysis**: 📊 PLAN-feat-command-center-perf-charts.md
-
-### ⚡ [BATCH:feat/deep-dive-fixes-wave1] — `feat/deep-dive-fixes-wave1` — IN PROGRESS
-> **Worktree**: `feat/deep-dive-fixes-wave1` · **Type**: Unified Batch · **Prerequisite**: None
-> **Source Analysis**: 📊 [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/fb5fb761-e7be-4241-a902-3cb07dca3307/implementation_plan.md) — Fixes for BLE Protocol Corruption, Memory Leaks, and Unhandled Async Rejections.
-
 ### ⚡ [BATCH:fix/hal-parity-split-brain] — `fix/hal-parity-split-brain` — IN PROGRESS
 > **Worktree**: `fix/hal-parity-split-brain` · **Type**: Isolated · **Prerequisite**: None
 > **Source Analysis**: 📊 [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/c32537a3-610e-4934-884a-37f7878eec17/implementation_plan.md) — Refactor of components bypassing HAL.
@@ -60,12 +47,6 @@
 ---
 
 ## 🔥 ON DECK
-
-
-
-### ⚡ [BATCH:feat/rich-os-notifications] — `feat/rich-os-notifications` — [✅ READY]
-> **Worktree**: `feat/rich-os-notifications` · **Type**: Isolated · **Prerequisite**: None
-> **Source Analysis**: 📊 [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a87e0851-7797-4ede-a5a4-e9e88d68809d/implementation_plan.md) — Industry benchmarking of top-tier apps (Strava, Spotify) and custom view capabilities.
 
 ---
 
