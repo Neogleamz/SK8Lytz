@@ -20,12 +20,12 @@ import { createGattSession } from '../BleSessionFactory';
 import { enqueueWrite, enqueueDelay } from '../BleWriteQueue';
 import { type PingResult, isPingResult } from '../../types/dashboard.types';
 import { scrubPII } from '../../utils/piiScrubber';
+import { BLE_TIMING } from '../../constants/bleTimingConstants';
 
 const HW_CACHE_KEY = (mac: string) => `@sk8_hw_${mac.toUpperCase()}`;
-const PROBE_TIMEOUT_MS = 3500;
-export const PROBE_QUEUE_DELAY_MS = 2000;
-export const PROBE_QUEUE_DELAY_MS_FTUE = 500;
-export const BLE_INTERROGATION_STAGGER_MS = 500;
+export const PROBE_QUEUE_DELAY_MS = BLE_TIMING.PROBE_QUEUE_DELAY_MS;
+export const PROBE_QUEUE_DELAY_MS_FTUE = BLE_TIMING.PROBE_QUEUE_DELAY_MS_FTUE;
+export const BLE_INTERROGATION_STAGGER_MS = BLE_TIMING.INTERROGATION_STAGGER_MS;
 
 /**
  * loadHWCacheFromStorage — Load all persisted hardware profiles on startup.
@@ -87,7 +87,7 @@ export async function interrogateDevice(
       const timer = setTimeout(() => {
         sub.remove();
         resolve(isPingResult(accumulated) ? accumulated : null);
-      }, PROBE_TIMEOUT_MS);
+      }, BLE_TIMING.PROBE_TIMEOUT_MS);
 
       const sub = bleManager.monitorCharacteristicForDevice(
         mac, interrogatorAdapter.serviceUUID, interrogatorAdapter.notifyCharacteristicUUID,
@@ -176,14 +176,14 @@ export function createProbeQueue(params: {
   function processQueue() {
     if (isProcessingRef.current) return;
     if (probeQueueTimerRef.current) clearTimeout(probeQueueTimerRef.current);
-    const delay = params.getRegisteredMacsCount() === 0 ? PROBE_QUEUE_DELAY_MS_FTUE : PROBE_QUEUE_DELAY_MS;
+    const delay = params.getRegisteredMacsCount() === 0 ? BLE_TIMING.PROBE_QUEUE_DELAY_MS_FTUE : BLE_TIMING.PROBE_QUEUE_DELAY_MS;
     probeQueueTimerRef.current = setTimeout(async () => {
       isProcessingRef.current = true;
       try {
         while (probeQueueRef.current.length > 0) {
           const mac = probeQueueRef.current.shift()!;
           await interrogateDevice(mac, params.bleManager, params.probingMacsRef, params.hwCacheRef, params.onDeviceInterrogated);
-          await new Promise(r => setTimeout(r, BLE_INTERROGATION_STAGGER_MS));
+          await new Promise(r => setTimeout(r, BLE_TIMING.INTERROGATION_STAGGER_MS));
         }
       } finally {
         isProcessingRef.current = false;

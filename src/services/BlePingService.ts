@@ -5,6 +5,7 @@ import { createGattSession } from './BleSessionFactory';
 import { type PingResult, isPingResult } from '../types/dashboard.types';
 import { enqueueWrite, enqueueDelay } from './BleWriteQueue';
 import { scrubPII } from '../utils/piiScrubber';
+import { BLE_TIMING } from '../constants/bleTimingConstants';
 
 // R-08: react-native-ble-plx BleManager type is not importable without tight coupling.
 // Structural alias for the minimal interface used by the ping flow.
@@ -74,10 +75,10 @@ export async function executePingDevice(
             AppLogger.warn(`[BLE pingDevice] Partial telemetry for ${scrubPII(mac)}. Returning partial.`, { payload_size: 0, ssi: 0 });
             resolve(isPingResult(accumulatedTelemetry) ? accumulatedTelemetry : null);
           } else {
-            AppLogger.warn(`[BLE pingDevice] Probe timed out for ${scrubPII(mac)} after 3500ms.`, { payload_size: 0, ssi: 0 });
+            AppLogger.warn(`[BLE pingDevice] Probe timed out for ${scrubPII(mac)} after ${BLE_TIMING.PROBE_TIMEOUT_MS}ms.`, { payload_size: 0, ssi: 0 });
             resolve(null);
           }
-        }, 3500);
+        }, BLE_TIMING.PROBE_TIMEOUT_MS);
 
         const sub = bleManager.monitorCharacteristicForDevice(
           mac,

@@ -21,6 +21,7 @@
  */
 import { AppLogger } from './appLogger';
 import { jitteredDelay } from '../utils/backoff';
+import { BLE_TIMING } from '../constants/bleTimingConstants';
 
 export type WritePriority = 'critical' | 'normal' | 'bulk';
 
@@ -207,10 +208,10 @@ async function _drain(): Promise<void> {
     } catch (err: unknown) {
       const safeErr = err instanceof Error ? err : new Error(String(err));
       if (isTransientGattError(err)) {
-        // R-03: jitteredDelay(100, 50) adds ±50ms random spread to the 100ms base.
+        // R-03: jitteredDelay adds random spread to the base.
         // Prevents synchronized retry storms when multiple queue entries hit GATT errors
         // simultaneously on a crowded 2.4GHz band.
-        const delay = jitteredDelay(100, 50);
+        const delay = jitteredDelay(BLE_TIMING.GATT_RETRY_BASE_MS, BLE_TIMING.GATT_RETRY_JITTER_MS);
         AppLogger.warn(`[BleWriteQueue] Transient GATT error — retrying in ${delay}ms`, { error: safeErr.message, payload_size: 0, ssi: 0 });
         await new Promise(r => setTimeout(r, delay));
         try {

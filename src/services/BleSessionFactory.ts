@@ -30,6 +30,7 @@ import { AppLogger } from './appLogger';
 import { BleCharacteristicCache } from './BleCharacteristicCache';
 import { scrubPII } from '../utils/piiScrubber';
 import { jitteredDelay } from '../utils/backoff';
+import { BLE_TIMING } from '../constants/bleTimingConstants';
 
 
 /** Result of a successful GATT session creation */
@@ -90,7 +91,6 @@ export async function createGattSession(
   // Exponential backoff delays for GATT 133 recovery (indexed by attempt-1).
   // refreshGatt: 'OnConnected' triggers BluetoothGatt.refresh() via reflection,
   // clearing the stale service table that causes Android GATT 133 (0x85) errors.
-  const GATT_BACKOFF_MS = [500, 1500] as const;
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     if (signal?.aborted) {
@@ -123,8 +123,8 @@ export async function createGattSession(
 
       if (isTransient && attempt < retries) {
         // R-03: jitteredDelay() randomizes within ±jitter ms to prevent reconnect storms.
-        // GATT_BACKOFF_MS = [500, 1500] base delays; actual delay = base ± 500ms random.
-        const delay = jitteredDelay(GATT_BACKOFF_MS[attempt - 1] ?? 1500, 500);
+        // BLE_TIMING.GATT_SESSION_BACKOFF_MS base delays; actual delay = base ± 500ms random.
+        const delay = jitteredDelay(BLE_TIMING.GATT_SESSION_BACKOFF_MS[attempt - 1] ?? 1500, 500);
         AppLogger.warn(`[BleSessionFactory] GATT 133 on ${scrubPII(mac)}. Attempt ${attempt}/${retries} — retrying in ${delay}ms with refreshGatt`, { context, error: errStr });
         await bleManager.cancelDeviceConnection(mac).catch(() => {});
         await new Promise(resolve => setTimeout(resolve, delay));

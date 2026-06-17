@@ -11,16 +11,9 @@ import { enqueueWrite, clearWriteQueue } from '../BleWriteQueue';
 import { BLE_TIMING } from '../../constants/bleTimingConstants';
 
 export const MAX_RECOVERY_ATTEMPTS = 5;
-const RECOVERY_BASE_MS = 1500;
-const RECOVERY_MAX_MS = 30_000;
-const PHASE_1_MAX_ATTEMPTS = 12;
-const PHASE_2_MAX_ATTEMPTS = 5;
-const PHASE_2_BACKOFF_MS = 20_000;
-const PHASE_3_POLL_INTERVAL_MS = 5_000;
-const PHASE_3_MAX_POLLS = 120;
 
 export const getRecoveryBackoffMs = (attempts: number): number => {
-  const exponential = Math.min(RECOVERY_BASE_MS * Math.pow(1.5, attempts), RECOVERY_MAX_MS);
+  const exponential = Math.min(BLE_TIMING.RECOVERY_BASE_MS * Math.pow(1.5, attempts), BLE_TIMING.RECOVERY_MAX_MS);
   const jitter = Math.random() * exponential * 0.3;
   return Math.round(exponential + jitter);
 };
@@ -73,11 +66,11 @@ export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ i
     let reconnectedDevice: Device | null = null;
 
     // --- Phase 1 & 2: GATT hammering ---
-    while (!cancelled && attempts <= PHASE_2_MAX_ATTEMPTS && !hasExceededMaxRecovery(attempts)) {
+    while (!cancelled && attempts <= BLE_TIMING.RECOVERY_PHASE_2_MAX_ATTEMPTS && !hasExceededMaxRecovery(attempts)) {
       try {
-        const backoff = attempts <= PHASE_1_MAX_ATTEMPTS
+        const backoff = attempts <= BLE_TIMING.RECOVERY_PHASE_1_MAX_ATTEMPTS
           ? getRecoveryBackoffMs(attempts)
-          : PHASE_2_BACKOFF_MS + Math.random() * RECOVERY_BASE_MS;
+          : BLE_TIMING.RECOVERY_PHASE_2_BACKOFF_MS + Math.random() * BLE_TIMING.RECOVERY_BASE_MS;
         await new Promise(r => setTimeout(r, backoff));
 
         if (cancelled) break;
@@ -168,9 +161,9 @@ export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ i
     if (!reconnectedDevice && !cancelled) {
       AppLogger.log('AUTO_RECOVERY', { phase: 3, deviceId: scrubPII(deviceId), event: 'entering_passive_mode' });
       let phase3Polls = 0;
-      while (!cancelled && phase3Polls < PHASE_3_MAX_POLLS) {
+      while (!cancelled && phase3Polls < BLE_TIMING.RECOVERY_PHASE_3_MAX_POLLS) {
         phase3Polls++;
-        await new Promise(r => setTimeout(r, PHASE_3_POLL_INTERVAL_MS));
+        await new Promise(r => setTimeout(r, BLE_TIMING.RECOVERY_PHASE_3_POLL_INTERVAL_MS));
         if (cancelled) break;
 
         const sweepedDevice = getSweepedDevice?.(deviceId);

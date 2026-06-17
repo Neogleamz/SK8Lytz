@@ -6,9 +6,7 @@ import { AppLogger } from '../../services/appLogger';
 import { scrubPII } from '../../utils/piiScrubber';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
 import { enqueueWrite, isWriteQueueActive } from '../BleWriteQueue';
-
-/** 45 seconds — long enough not to spam, short enough to catch stale links before the user notices. */
-const HEARTBEAT_INTERVAL_MS = 45_000;
+import { BLE_TIMING } from '../../constants/bleTimingConstants';
 
 export interface HeartbeatServiceInput {
   bleManager: Pick<BleManager, 'writeCharacteristicWithoutResponseForDevice' | 'readRSSIForDevice' | 'cancelDeviceConnection'>;
@@ -82,7 +80,7 @@ export const heartbeatService = fromCallback<BleMachineEvent, HeartbeatServiceIn
     } finally {
       isRunning = false;
     }
-  }, HEARTBEAT_INTERVAL_MS);
+  }, BLE_TIMING.HEARTBEAT_INTERVAL_MS);
 
   // XState calls this when machine exits READY
   return () => clearInterval(interval);

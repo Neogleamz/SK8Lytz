@@ -144,7 +144,6 @@ export const connectService = fromPromise<
 
       let conn: Device | null = null;
       let lastErr: Error | null = null;
-      const GATT_BACKOFF_MS = [500, 1500, 4000] as const;
       
       for (let attempt = 1; attempt <= 3; attempt++) {
         if (signal.aborted) throw new Error('connect_aborted');
@@ -172,7 +171,7 @@ export const connectService = fromPromise<
             || errStr.includes('Peer removed');
             
           if (isTransient && attempt < 3) {
-            const baseDelay = GATT_BACKOFF_MS[attempt - 1];
+            const baseDelay = BLE_TIMING.GATT_CONNECT_BACKOFF_MS[attempt - 1];
             const delay = jitteredDelay(baseDelay, 500);
             AppLogger.warn('[BLE] GATT 133 — transient connect error, retrying', { attempt, maxAttempts: 3, delayMs: delay, deviceId: scrubPII(mac), error: errStr, payload_size: 0, ssi: 0 });
             await bleManager.cancelDeviceConnection(mac).catch(() => {});

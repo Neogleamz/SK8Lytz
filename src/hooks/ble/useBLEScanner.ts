@@ -15,6 +15,7 @@ import type { EventFrom } from 'xstate';
 import type { bleMachine } from '../../services/ble/BleMachine';
 import { STORAGE_SCANNER_TELEMETRY_QUEUE, STORAGE_APP_SETTINGS } from '../../constants/storageKeys';
 import { scrubPII } from '../../utils/piiScrubber';
+import { BLE_TIMING } from '../../constants/bleTimingConstants';
 
 import { useBLEBatterySweep } from './useBLEBatterySweep';
 import { useBLEInterrogator } from './useBLEInterrogator';
@@ -23,8 +24,6 @@ type TelemetryInsert = Database['public']['Tables']['discovered_devices_telemetr
 
 const ZENGGE_NAME_PREFIXES = ['lednet', 'sk8', 'zg', 'halo', 'soul'];
 const RSSI_THRESHOLD = -80;
-const DEBOUNCE_MS = 1500;
-const DEBOUNCE_MS_FTUE = 800;
 
 function determineFactoryName(device: Device): string | undefined {
   const FFD5_UUID = '0000ffd5-0000-1000-8000-00805f9b34fb';
@@ -106,7 +105,7 @@ export function useBLEScanner({
     // Flush offline queue shortly after mount
     setTimeout(() => {
       InteractionManager.runAfterInteractions(flushOfflineTelemetry);
-    }, 5000);
+    }, BLE_TIMING.SCAN_OFFLINE_FLUSH_DEFER_MS);
   }, []);
 
   const telemetryCacheRef = useRef<Map<string, number>>(new Map());
@@ -219,7 +218,7 @@ export function useBLEScanner({
 
   const scheduleFlush = useCallback(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-    const delay = registeredMacs.length === 0 ? DEBOUNCE_MS_FTUE : DEBOUNCE_MS;
+    const delay = registeredMacs.length === 0 ? BLE_TIMING.SCAN_DEBOUNCE_MS_FTUE : BLE_TIMING.SCAN_DEBOUNCE_MS;
     // Debounce timer for staged devices (not GATT write timing) — intentionally preserved per R-16
     debounceTimerRef.current = setTimeout(flushStagedDevices, delay);
   }, [flushStagedDevices, registeredMacs.length]);
@@ -306,7 +305,7 @@ export function useBLEScanner({
            flushTelemetry();
         } else if (!telemetryTimerRef.current) {
            // Telemetry batch flush timer (not GATT write timing) — intentionally preserved per R-16
-           telemetryTimerRef.current = setTimeout(() => { flushTelemetry(); telemetryTimerRef.current = null; }, 60000);
+           telemetryTimerRef.current = setTimeout(() => { flushTelemetry(); telemetryTimerRef.current = null; }, BLE_TIMING.SCAN_TELEMETRY_FLUSH_MS);
         }
       }
 
@@ -355,12 +354,12 @@ export function useBLEScanner({
         scanCallback(null, halozR);
         scanCallback(null, soulzL);
         scanCallback(null, soulzR);
-      }, 1000);
+      }, BLE_TIMING.SANDBOX_MOCK_DISCOVERY_DELAY_MS);
 
       // Sandbox mock scan stop timer (not GATT write timing) — intentionally preserved per R-16
       setTimeout(() => {
         bleSend({ type: 'SCAN_STOP' });
-      }, 5000);
+      }, BLE_TIMING.SANDBOX_MOCK_SCAN_STOP_MS);
 
       if (Platform.OS === 'web') return; // Early return for web so it doesn't hit native sweeper
     }
@@ -383,7 +382,7 @@ export function useBLEScanner({
       // Non-sweeper manual scan timeout fallback (not GATT write timing) — intentionally preserved per R-16
       setTimeout(() => {
         bleSend({ type: 'SCAN_STOP' });
-      }, 5000);
+      }, BLE_TIMING.MANUAL_SCAN_TIMEOUT_MS);
     }
   }, [registeredMacs.length, startSweeper, isSweeperActive, burstScan, scanCallback, bleSend, setAllDevices, isSandboxEnabled]);
 

@@ -5,12 +5,11 @@ import type { BleManager } from 'react-native-ble-plx';
 import type { EventFrom } from 'xstate';
 import type { bleMachine } from '../../services/ble/BleMachine';
 import { AppLogger } from '../../services/appLogger';
+import { BLE_TIMING } from '../../constants/bleTimingConstants';
 
 type BatteryTier = 'FULL' | 'THROTTLED' | 'PAUSED';
 const BATTERY_TIER_FULL_THRESHOLD = 0.30;
 const BATTERY_TIER_THROTTLED_THRESHOLD = 0.15;
-const THROTTLE_SCAN_ON_MS = 10_000;
-const THROTTLE_SCAN_OFF_MS = 20_000;
 
 function classifyBatteryTier(level: number): BatteryTier {
   if (level >= BATTERY_TIER_FULL_THRESHOLD) return 'FULL';
@@ -38,7 +37,6 @@ export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepPr
 
   const scanStartTimestampsRef = useRef<number[]>([]);
   const SCAN_BUDGET_MAX = 4;
-  const SCAN_BUDGET_WINDOW_MS = 30_000;
 
   const startThrottleCycle = useCallback(() => {
     if (throttleCycleTimerRef.current) { clearTimeout(throttleCycleTimerRef.current); throttleCycleTimerRef.current = null; }
@@ -55,8 +53,8 @@ export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepPr
         bleSend({ type: 'SCAN_PAUSE' });
         AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_throttle_scan_off' });
         // Scan cycle throttle off timer (not GATT write timing) — intentionally preserved per R-16
-        throttleCycleTimerRef.current = setTimeout(runCycle, THROTTLE_SCAN_OFF_MS);
-      }, THROTTLE_SCAN_ON_MS);
+        throttleCycleTimerRef.current = setTimeout(runCycle, BLE_TIMING.THROTTLE_SCAN_OFF_MS);
+      }, BLE_TIMING.THROTTLE_SCAN_ON_MS);
     };
     runCycle();
   }, [bleSend]);
@@ -93,10 +91,10 @@ export function useBLEBatterySweep({ bleManager, bleSend }: UseBLEBatterySweepPr
 
       if (Platform.OS === 'android' && (Platform.Version as number) >= 31) {
         const now = Date.now();
-        scanStartTimestampsRef.current = scanStartTimestampsRef.current.filter(ts => now - ts < SCAN_BUDGET_WINDOW_MS);
+        scanStartTimestampsRef.current = scanStartTimestampsRef.current.filter(ts => now - ts < BLE_TIMING.SCAN_BUDGET_WINDOW_MS);
         if (scanStartTimestampsRef.current.length >= SCAN_BUDGET_MAX) {
           const oldestTs = scanStartTimestampsRef.current[0];
-          const msUntilBudgetResets = SCAN_BUDGET_WINDOW_MS - (now - oldestTs) + 100;
+          const msUntilBudgetResets = BLE_TIMING.SCAN_BUDGET_WINDOW_MS - (now - oldestTs) + 100;
           AppLogger.log('BLE_STATE_CHANGE', { event: 'sweeper_start_deferred_budget', deferMs: msUntilBudgetResets, budgetUsed: scanStartTimestampsRef.current.length });
           isSweeperActiveRef.current = false;
           setIsSweeperActive(false);
