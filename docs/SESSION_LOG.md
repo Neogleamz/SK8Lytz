@@ -4178,3 +4178,9 @@ TSC: ✅  Jest: ✅
 **Root Cause:** Command Center picks manager was throwing 406 Not Acceptable when saving presets. The sk8lytz_picks table had RLS enabled but lacked an UPDATE/INSERT policy for admins, causing 0 rows to be updated and .single() to fail.
 **Fix:** Created migration 20260617010000_sk8lytz_picks_admin_policy.sql to add the missing RLS policies.
 **Status:** Migration needs to be applied manually as supabase db push failed due to remote state mismatch.
+
+ # # #   [ M E R G E ]   2 0 2 6 - 0 6 - 1 7 T 0 3 : 0 2      f i x / j s - y a m l - a u d i t   - >   m a s t e r 
+ * * W h a t   m e r g e d : * *   O v e r r o d e   j s - y a m l   t o   ^ 4 . 1 . 2   i n   p a c k a g e . j s o n   t o   r e s o l v e   a   H u s k y   p r e - p u s h   n p m   a u d i t   b l o c k . 
+ * * V e r i f y   r e s u l t : * *   T S C   ',   J e s t   ',   g a t e s   '
+ * * F i l e s   t o u c h e d : * *   p a c k a g e . j s o n ,   p a c k a g e - l o c k . j s o n  
+ 
