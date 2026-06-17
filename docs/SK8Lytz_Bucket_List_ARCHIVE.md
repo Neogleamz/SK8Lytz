@@ -3441,4 +3441,15 @@ pm run verify which includes QA tests.
     Rejected alternative: "Runtime-configurable params — unnecessary for hardware-specific timing constants"
   - **Source of Truth:** 📖 [bleTimingConstants.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/constants/bleTimingConstants.ts) §BLE Constants
   - **Details:** 10 files, ~26 new constants. Prerequisite: Wave 2 fully merged into master before this worktree is created.
+
+
+- [x] **`fix/reentrant-handler-guards`**
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍱 Meal]` `[🤖 FLASH]` `[BATCH:deepdive-audit-sweep]` `[WAVE:3]`
+  - **Goal:** Add re-entrancy guards (`isProcessing` ref pattern) to all async UI handler functions that interact with BLE or Supabase.
+  - **Decision Log:** R-26 sniper found 28 unguarded async handlers. Double-tap on `handleStartScan`, `handleLeave`, `handleJoinByCode` causes BLE races, orphaned sessions, and duplicate database entries.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/a2899729-4d77-4e6c-8f8c-d23919eb2b74/system_audit_report.md) · Plan: [PLAN-fix-reentrant-handler-guards.md](./plans/PLAN-fix-reentrant-handler-guards.md)
+    Key finding: "Shared refs for mutually exclusive handlers within the same component"
+    Rejected alternative: "Disabling buttons during processing — already exists as UI state, but ref guard is the synchronous first-line defense"
+  - **Source of Truth:** 📖 [HardwareSetupWizardScreen.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx) §UI Safety
+  - **Details:** 12 files, 28 handlers. Prerequisite: Wave 2 fully merged into master before this worktree is created.
 

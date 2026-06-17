@@ -4236,3 +4236,8 @@ TSC: ?  Jest: ?
 **What merged:** Replaced 94 hardcoded setTimeout delays in the BLE pipeline with bleTimingConstants.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/constants/bleTimingConstants.ts, src/services/ble/HeartbeatService.ts, src/services/ble/InterrogatorService.ts, src/services/BlePingService.ts, src/services/BleSessionFactory.ts, src/services/BleWriteQueue.ts, src/services/ble/ConnectService.ts, src/services/ble/RecoveryService.ts, src/hooks/ble/useBLEScanner.ts, src/hooks/ble/useBLEBatterySweep.ts
+
+### [MERGE] 2026-06-17T16:36 — fix/reentrant-handler-guards -> master @ 274b5ba3
+**What merged:** Added re-entrancy isProcessingRef guards to 28 async UI handlers.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** src/components/admin/tools/BuilderPanel.tsx, src/components/admin/tools/QuickPresetModal.tsx, src/components/crew/CrewLandingScreen.tsx, src/components/crew/CrewScheduleScreen.tsx, src/hooks/useAccountOverview.ts, src/providers/ComplianceGate.tsx, src/screens/AccountModal.tsx, src/screens/AdminToolsModal.tsx
