@@ -71,10 +71,10 @@ export function startRSSIPolling(
       const devices = callbacks.getConnectedDevices();
       if (devices.length === 0) return;
 
-      await Promise.all(devices.map(async (device) => {
+      for (const device of devices) {
         const mac = device.id;
         const rssi = await readDeviceRSSI(mac, bleManager);
-        if (rssi === null) return;
+        if (rssi === null) continue;
 
         callbacks.onRssiUpdated(mac, rssi);
 
@@ -85,7 +85,7 @@ export function startRSSIPolling(
           AppLogger.warn('[RSSIService] Weak signal detected', { deviceId: scrubPII(mac), rssi, payload_size: 0, ssi: 0 });
           callbacks.onWeakSignal?.(mac, rssi);
         }
-      }));
+      }
     } finally {
       _isRunning = false;
     }

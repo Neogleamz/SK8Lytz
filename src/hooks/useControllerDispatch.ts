@@ -91,7 +91,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
         return;
       }
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
-      await Promise.all(targets.map(async (device) => {
+      for (const device of targets) {
         if (__DEV__) AppLogger.log('APP_LOG', { message: '[DEBUG sendColor]', deviceId: device.id, type: typeof device.id, payload_size: 0, ssi: 0 });
         const adapter = getAdapterForDevice?.(device.id);
         if (adapter) {
@@ -101,7 +101,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
           const arr = Array.from({ length: numLEDs }, () => ({ r, g, b }));
           await safeWrite(ZenggeProtocol.setMultiColor(arr, (hwSettings?.ledPoints as number | undefined) || points || 16, 31, 1, 0x01), device.id); // 0x01 = FREEZE
         }
-      }));
+      }
     },
     [writeToDevice, safeWrite, numLEDs, hwSettings, points, connectedDevices, getAdapterForDevice, primaryDeviceId]
   );
@@ -142,7 +142,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       const dir = currentDirection ?? 1;
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
-      await Promise.all(targets.map(async (device) => {
+      for (const device of targets) {
         const adapter = getAdapterForDevice?.(device.id);
         const protocolKey = adapter ? adapter.constructor.name : 'ZenggeProtocol';
         const cacheKey = `${protocolKey}_${patternId}_${fgRaw.r}_${fgRaw.g}_${fgRaw.b}_${bgRaw.r}_${bgRaw.g}_${bgRaw.b}_${numLEDs}_${spd}_${brt}_${dir}`;
@@ -174,7 +174,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
         }
 
         if (payload) await safeWrite(payload, device.id);
-      }));
+      }
     },
     [writeToDevice, safeWrite, sendColor, clampSpeed, numLEDs, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
@@ -204,7 +204,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
 
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
-      await Promise.all(targets.map(async (device) => {
+      for (const device of targets) {
         if (pat === 'STATIC') {
           await sendColor(tR, tG, tB);
         } else if (pat === 'STROBE') {
@@ -228,7 +228,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
             ]), device.id);
           }
         }
-      }));
+      }
     },
     [writeToDevice, safeWrite, sendColor, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
@@ -277,7 +277,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       // 0x02 = Running: hardware scrolls the array natively
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
-      await Promise.all(targets.map(async (device) => {
+      for (const device of targets) {
         const adapter = getAdapterForDevice?.(device.id);
         if (adapter) {
           const result = adapter.buildMultiColor(arr, (hwSettings?.ledPoints as number | undefined) || numLEDs, hwSpd, 1, 0x02);
@@ -285,7 +285,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
         } else {
           await safeWrite(ZenggeProtocol.setMultiColor(arr, (hwSettings?.ledPoints as number | undefined) || numLEDs, hwSpd, 1, 0x02), device.id);
         }
-      }));
+      }
     },
     [writeToDevice, safeWrite, hwSettings, numLEDs, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
@@ -322,7 +322,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       //   and the controller expects 0x74 magnitude packets.
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
-      await Promise.all(targets.map(async (device) => {
+      for (const device of targets) {
         const adapter = getAdapterForDevice?.(device.id);
         if (adapter) {
           const result = adapter.buildMusicConfig({
@@ -351,7 +351,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
           ), device.id, { micSource: src });
           await new Promise(r => setTimeout(r, BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
         }
-      }));
+      }
     },
     [writeToDevice, safeWrite, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
@@ -365,7 +365,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       }
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
-      await Promise.all(targets.map(async (device) => {
+      for (const device of targets) {
         const adapter = getAdapterForDevice?.(device.id);
         if (adapter) {
           const result = isOn ? adapter.buildPowerOn() : adapter.buildPowerOff();
@@ -373,7 +373,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
         } else {
           await safeWrite(isOn ? ZenggeProtocol.turnOn() : ZenggeProtocol.turnOff(), device.id);
         }
-      }));
+      }
     },
     [writeToDevice, safeWrite, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
@@ -387,7 +387,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       }
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
-      await Promise.all(targets.map(async (device) => {
+      for (const device of targets) {
         const adapter = getAdapterForDevice?.(device.id);
         if (adapter) {
           const result = adapter.buildMultiColor(colors, ledPoints, speed, direction, transitionType);
@@ -395,7 +395,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
         } else {
           await safeWrite(ZenggeProtocol.setMultiColor(colors, ledPoints, speed, direction, transitionType), device.id);
         }
-      }));
+      }
     },
     [writeToDevice, safeWrite, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );

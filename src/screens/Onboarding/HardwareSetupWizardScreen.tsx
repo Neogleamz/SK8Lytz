@@ -103,9 +103,9 @@ export default function HardwareSetupWizardScreen({
       const configs = configsOverride || deviceConfigsState;
       const adapter = getDefaultProtocol();
       
-      await Promise.all(selected.map(async (device) => {
+      for (const device of selected) {
          const cfg = configs[device.device_mac];
-         if (!cfg || !cfg.position) return;
+         if (!cfg || !cfg.position) continue;
          
          const points = cfg.points || device.led_points || LOCAL_PRODUCT_CATALOG[0].defaultLedPoints;
          const color = cfg.position === 'Left' ? { r: 27, g: 66, b: 121 } : { r: 247, g: 147, b: 32 };
@@ -118,7 +118,7 @@ export default function HardwareSetupWizardScreen({
            AppLogger.error('[FTUE] pingDevice failed in orientation test', err instanceof Error ? err : new Error(String(err)), { payload_size: 0, ssi: 0 });
            setSetupError('Device not responding, retrying...');
          }
-      }));
+      }
     } catch (e: unknown) {
       AppLogger.error('HardwareSetupWizard orientation test operation failed', e instanceof Error ? e : new Error(String(e)), { payload_size: 0, ssi: 0 });
     }
@@ -669,9 +669,9 @@ export default function HardwareSetupWizardScreen({
                  const hwAdapter = getDefaultProtocol();
                  
                  // Execute Hardware Loop
-                 await Promise.all(selected.map(async (device) => {
+                 for (const device of selected) {
                     const cfg = deviceConfigsState[device.device_mac];
-                    if (!cfg) return;
+                    if (!cfg) continue;
 
                     // If points were adjusted, we must push the EEPROM update and verify
                     if (getLocalProfileById(cfg.type)?.hardwareAllowsCustomPoints && cfg.points !== device.led_points) {
@@ -696,7 +696,7 @@ export default function HardwareSetupWizardScreen({
                       await pingDevice(device.device_mac, signaturePayload, { probe: false, duration: 1500, turnOffAtEnd: false });
                     }
                     AppLogger.log('FTUE_HARDWARE_VERIFIED', { deviceId: scrubPII(device.device_mac) });
-                 }));
+                 }
 
                  const finalizedDevices = selected.map(device => {
                    const cfg = deviceConfigsState[device.device_mac];
