@@ -8,7 +8,8 @@ import { LogEntry, EventType } from './types';
 export class AppLoggerCloud {
   static async pushFastLaneError(
     event: EventType,
-    payload: Record<string, unknown>,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    payload: Record<string, any>,
     sessionId: string
   ) {
     if (!supabase) return;
@@ -145,7 +146,8 @@ export class AppLoggerCloud {
     }
   }
 
-  static async clearCloudLogs(activeDevices: { id: string }[]) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  static async clearCloudLogs(activeDevices: any[]) {
     if (!supabase) return;
     
     const pMac = activeDevices.length > 0 ? activeDevices[0].id : 'unpaired-host';

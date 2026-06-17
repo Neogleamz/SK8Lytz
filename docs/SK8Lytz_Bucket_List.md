@@ -30,33 +30,12 @@
 | 9 | sweep-src-components-AccountModal.tsx | ✅ Yes | Wave 8 merged |
 
 ## 🚧 ACTIVE SPRINT
-### ⚡ [BATCH:fix/hal-parity-split-brain] — `fix/hal-parity-split-brain` — IN PROGRESS
-> **Worktree**: `fix/hal-parity-split-brain` · **Type**: Isolated · **Prerequisite**: None
-> **Source Analysis**: 📊 [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/c32537a3-610e-4934-884a-37f7878eec17/implementation_plan.md) — Refactor of components bypassing HAL.
 
-- [/] **`fix/hal-parity-split-brain`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI/BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[M-COG]` `[BATCH:fix/hal-parity-split-brain]` `[WAVE:1]`
-  - **Goal:** Migrate UI components bypassing `useProtocolDispatch` to use the Hardware Abstraction Layer instead of hardcoding protocol payloads.
-  - **Decision Log:** Deep-dive audit found that UniversalTacticalSliders and BuilderPanel were constructing raw Zengge bytes and passing them directly to writeToDevice, causing mixed protocol (Zengge+BanlanX) groups to fall out of parity.
-  - **Analysis:** 📊 Source: [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/c32537a3-610e-4934-884a-37f7878eec17/implementation_plan.md) · Plan: [PLAN-fix-hal-parity.md](./plans/PLAN-fix-hal-parity.md)
-    Key finding: "Direct use of ZenggeProtocol in UI breaks multi-device heterogeneous grouping."
-    Rejected alternative: "Leaving the components as-is (Rejected: breaks the core 'parity is law' directive)."
-  - **Source of Truth:** 📖 [UniversalTacticalSliders.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/docked/UniversalTacticalSliders.tsx#L69)
-  - **Details:** Refactoring requires updating the inner dispatch closures and props in DockedController to use HAL methods.
-
-### ⚡ [BATCH:feat-crewz-resilience] — `feat/crewz-resilience` — IN PROGRESS
-> **Worktree**: `feat/crewz-resilience` · **Type**: Sequential · **Prerequisite**: None
-> **Source Analysis**: 📊 [PLAN-feat-crewz-resilience.md](./plans/PLAN-feat-crewz-resilience.md)
-
----
-
-## 🔥 ON DECK
-
-### ⚡ [BATCH:fix/web-console-crash] — `fix/web-console-crash` — READY
+### ⚡ [BATCH:fix/web-console-crash] — `fix/web-console-crash` — IN PROGRESS
 > **Worktree**: `fix/web-console-crash` · **Type**: Isolated · **Prerequisite**: None
 > **Source Analysis**: 📊 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md) — Web demo crashes on load due to missing native module mock.
 
-- [ ] **`fix/web-console-crash`**
+- [/] **`fix/web-console-crash`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[UI/WEB]` `[⚠️ H-RISK]` `[🍱 Meal]` `[M-COG]` `[BATCH:fix/web-console-crash]` `[WAVE:10]`
   - **Goal:** Fix `getEnforcing` TypeError on Web to unblock the web demo.
   - **Decision Log:** Self-healing observatory found 2 occurrences of this crash blocking the headless quality gate.
@@ -66,11 +45,11 @@
   - **Source of Truth:** 📖 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md)
   - **Details:** Web platform mock required. Prerequisite: None.
 
-### ⚡ [BATCH:fix/observatory-db-drift] — `fix/observatory-db-drift` — READY
+### ⚡ [BATCH:fix/observatory-db-drift] — `fix/observatory-db-drift` — IN PROGRESS
 > **Worktree**: `fix/observatory-db-drift` · **Type**: Isolated · **Prerequisite**: None
 > **Source Analysis**: 📊 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md) — 3 database anomalies detected from remote logs.
 
-- [ ] **`fix/observatory-db-drift`**
+- [/] **`fix/observatory-db-drift`**
   - **Tags:** `[✅ READY]` `[✅ VERIFIED]` `[☁️ CLOUD]` `[⚠️ M-RISK]` `[🍱 Meal]` `[M-COG]` `[BATCH:fix/observatory-db-drift]` `[WAVE:10]`
   - **Goal:** Apply migrations for label_designs drift, integer overflow, and telemetry constraints.
   - **Decision Log:** Remote logs flagged 10+ errors for schema mismatches and failing telemetry inserts.
@@ -78,6 +57,12 @@
     Key finding: "label_designs missing product_name column, and severity constraints are violating."
   - **Source of Truth:** 📖 [report.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/tools/observatory/reports/2026-06-17/report.md)
   - **Details:** Requires creating and applying new Supabase migrations.
+
+---
+
+## 🔥 ON DECK
+
+
 ---
 
 ##  ❄️ Icebox / Backburner (Manual Trigger Only)
