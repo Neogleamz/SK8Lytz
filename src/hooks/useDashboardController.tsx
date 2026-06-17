@@ -7,6 +7,7 @@ import { getLocalProfileByPoints } from '../constants/ProductCatalog';
 import { crewService } from '../services/CrewService';
 import { normalizeMac } from '../hooks/useDeviceStateLedger';
 import { useDashboardDeviceConfig } from './useDashboardDeviceConfig';
+import type { Device } from 'react-native-ble-plx';
 import type { DisplayDevice, IDeviceState, GroupPatternSnapshot, BleConnectionState, DevicePatternState, ModeType } from '../types/dashboard.types';
 import type { CrewSession } from '../services/CrewService';
 import { useAuth } from '../context/AuthContext';
@@ -52,8 +53,8 @@ export interface UseDashboardControllerProps {
   
   // Dependencies for useDashboardDeviceConfig
   allDevices: DisplayDevice[];
-  setAllDevices: React.Dispatch<React.SetStateAction<DisplayDevice[]>>;
-  allDevicesRef: React.MutableRefObject<DisplayDevice[]>;
+  setAllDevices: React.Dispatch<React.SetStateAction<Device[]>>;
+  allDevicesRef: React.MutableRefObject<Device[]>;
   registeredDevices: RegisteredDevice[];
   saveRegisteredDevice: (device: Partial<RegisteredDevice> & { device_mac: string }) => Promise<boolean>;
   setUpdateTrigger: React.Dispatch<React.SetStateAction<number>>;

@@ -15,7 +15,7 @@ export interface BleMachineContext {
   mtuMapRef: { current: Map<string, number> };
   disconnectListeners: { current: Record<string, import('react-native-ble-plx').Subscription> };
   blacklistedMacsRef: { current: string[] };
-  handleOrganicDisconnect: (error: any, deviceId: string) => void;
+  handleOrganicDisconnect: (error: BleError | null, deviceId: string) => void;
   /** Fires when a device drops unexpectedly — wired by useBLE.ts to send RECOVERY_START */
   onOrganicDisconnect: (deviceId: string) => void;
   handleNotification: (error: BleError | null, characteristic: Characteristic | null, deviceId: string) => void;

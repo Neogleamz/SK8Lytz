@@ -1,7 +1,9 @@
 import { fromCallback } from 'xstate';
 import { Platform } from 'react-native';
 import { Buffer } from 'buffer';
-import type { BleManager, Device } from 'react-native-ble-plx';
+import type { BleManager, Device, BleError, Characteristic } from 'react-native-ble-plx';
+import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
+import type { BleMachineEvent } from './BleMachine.types';
 import { AppLogger } from '../appLogger';
 import { scrubPII } from '../../utils/piiScrubber';
 import { createGattSession } from '../BleSessionFactory';
@@ -30,20 +32,20 @@ export const hasExceededMaxRecovery = (attempts: number): boolean => {
 interface RecoveryInput {
   bleManager: BleManager;
   ghostedDeviceIds: string[];
-  adapterMapRef: { current: Map<string, any> };
+  adapterMapRef: { current: Map<string, IControllerProtocol> };
   mtuMapRef: { current: Map<string, number> };
   disconnectListeners: { current: Record<string, import('react-native-ble-plx').Subscription> };
-  handleOrganicDisconnect: (error: any, deviceId: string) => void;
+  handleOrganicDisconnect: (error: BleError | null, deviceId: string) => void;
   /**
    * onOrganicDisconnect — fires when a recovered device drops again.
    * Wired by useBLE.ts to send RECOVERY_START back to the machine.
    */
   onOrganicDisconnect: (deviceId: string) => void;
-  handleNotification: (error: any, characteristic: any, deviceId: string) => void;
+  handleNotification: (error: BleError | null, characteristic: Characteristic | null, deviceId: string) => void;
   getSweepedDevice?: (deviceId: string) => Device | undefined;
 }
 
-export const recoveryService = fromCallback<any, RecoveryInput>(({ input, sendBack }) => {
+export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ input, sendBack }) => {
   let cancelled = false;
   const abortController = new AbortController();
   const cancel = () => { 

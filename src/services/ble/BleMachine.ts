@@ -44,10 +44,10 @@ export const bleMachine = setup({
       sweeperId: () => undefined
     }),
     setTargetMacs: assign({
-      targetMacs: ({ event }: any) => {
+      targetMacs: ({ event }: { event: BleMachineEvent }) => {
         if (event.type === 'CONNECT_REQUEST') return event.targetMacs;
         if (event.type === 'RECOVERY_START') return event.ghostedMacs;
-        if (event.type === 'RESTORE_PERIPHERALS') return event.peripherals.map((p: any) => p.id);
+        if (event.type === 'RESTORE_PERIPHERALS') return event.peripherals.map((p: Device) => p.id);
         return undefined;
       }
     }),

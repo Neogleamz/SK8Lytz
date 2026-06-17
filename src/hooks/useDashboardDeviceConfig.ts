@@ -11,6 +11,7 @@ import { MutableRefObject, Dispatch, SetStateAction } from 'react';
 import { AppLogger } from '../services/appLogger';
 import DeviceRepository from '../services/deviceRepository';
 import type { DeviceSettings, DisplayDevice } from '../types/dashboard.types';
+import type { Device } from 'react-native-ble-plx';
 import { RegisteredDevice } from './useRegistration';
 import { scrubPII } from '../utils/piiScrubber';
 
@@ -25,8 +26,8 @@ interface UseDashboardDeviceConfigOptions {
   customGroups: Group[];
   registeredDevices: RegisteredDevice[];
   saveRegisteredDevice: (rd: Partial<RegisteredDevice> & { device_mac: string }) => Promise<boolean>;
-  setAllDevices: Dispatch<SetStateAction<DisplayDevice[]>>;
-  allDevicesRef: MutableRefObject<DisplayDevice[]>;
+  setAllDevices: Dispatch<SetStateAction<Device[]>>;
+  allDevicesRef: MutableRefObject<Device[]>;
   setUpdateTrigger: Dispatch<SetStateAction<number>>;
   setIsSettingsVisible: (v: boolean) => void;
 }
@@ -85,12 +86,12 @@ export function useDashboardDeviceConfig({
     }
 
     // ── Optimistic device-list update ──────────────────────────────────────
-    setAllDevices((prev: DisplayDevice[]) => {
+    setAllDevices((prev: Device[]) => {
       const next = prev.map(d => {
-        const dMac = String(d.device_mac || d.id).toUpperCase();
-        return dMac === targetMac
-          ? {
-              ...d,
+        const dMac = String((d as typeof d & { device_mac?: string }).device_mac || d.id).toUpperCase();
+        if (dMac === targetMac) {
+          const updated = Object.create(Object.getPrototypeOf(d));
+          return Object.assign(updated, d, {
               name:      settings.name,
               type:      settings.type,
               points:    settings.points,
@@ -99,8 +100,9 @@ export function useDashboardDeviceConfig({
               stripType: settings.stripType,
               groupIds:   finalGroupIds,
               groupNames: finalGroupNames,
-            }
-          : d
+          });
+        }
+        return d;
       });
       allDevicesRef.current = next;
       return next;

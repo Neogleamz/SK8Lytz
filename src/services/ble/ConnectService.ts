@@ -24,7 +24,7 @@ export interface ConnectServiceInput {
    * handleOrganicDisconnect — legacy logging-only callback. Kept for telemetry.
    * Does NOT trigger recovery. Use onOrganicDisconnect for recovery.
    */
-  handleOrganicDisconnect: (error: any, deviceId: string) => void;
+  handleOrganicDisconnect: (error: BleError | null, deviceId: string) => void;
   /**
    * onOrganicDisconnect — fires when BLE stack signals an unexpected device
    * disconnect. Caller (useBLE.ts) wires this to send RECOVERY_START to the
@@ -237,7 +237,7 @@ export const connectService = fromPromise<
         AppLogger.log('DEVICE_CONNECTED', { context: 'adapter_resolved', deviceId: scrubPII(conn.id), protocolId: scrubPII(adapter.protocolId) });
 
         if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
-        disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: any) => {
+        disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: BleError | null, device: Device | null) => {
           // 1. Log + telemetry (non-recovery)
           handleOrganicDisconnect(error, conn.id);
           // 2. Trigger XState RECOVERY_START (the actual recovery mechanism)
@@ -246,7 +246,7 @@ export const connectService = fromPromise<
         conn.monitorCharacteristicForService(
           adapter.serviceUUID,
           adapter.notifyCharacteristicUUID,
-          (error: any, characteristic: any) => handleNotification(error, characteristic, conn.id)
+          (error: BleError | null, characteristic: Characteristic | null) => handleNotification(error, characteristic, conn.id)
         );
 
         try {

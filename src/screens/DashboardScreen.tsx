@@ -248,8 +248,8 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
 
     clearPendingRegistrations,
     getAllScannedDevices: () => allDevicesRef.current as Pick<DisplayDevice, 'id' | 'name'>[] as DisplayDevice[],
-    setAllDevices: setAllDevices as unknown as React.Dispatch<React.SetStateAction<DisplayDevice[]>>,
-    allDevicesRef: allDevicesRef as unknown as React.MutableRefObject<DisplayDevice[]>,
+    setAllDevices: setAllDevices,
+    allDevicesRef: allDevicesRef,
     deregisterDevice,
     onRegistrationComplete: () => {
       setViewState('DASHBOARD');
@@ -840,8 +840,8 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     writeToDevice,
     edgePanResponder,
     allDevices: allDevices as unknown as DisplayDevice[],
-    setAllDevices: setAllDevices as unknown as React.Dispatch<React.SetStateAction<DisplayDevice[]>>,
-    allDevicesRef: allDevicesRef as unknown as React.MutableRefObject<DisplayDevice[]>,
+    setAllDevices: setAllDevices,
+    allDevicesRef: allDevicesRef,
     registeredDevices,
     saveRegisteredDevice: (device) => saveRegisteredDevice(device as RegisteredDevice),
     setUpdateTrigger,

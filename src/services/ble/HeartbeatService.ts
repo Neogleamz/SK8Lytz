@@ -1,4 +1,5 @@
 import { fromCallback } from 'xstate';
+import type { BleMachineEvent } from './BleMachine.types';
 import { Buffer } from 'buffer';
 import type { Device, BleManager } from 'react-native-ble-plx';
 import { AppLogger } from '../../services/appLogger';
@@ -17,7 +18,7 @@ export interface HeartbeatServiceInput {
   adapterMap: Map<string, IControllerProtocol>;
 }
 
-export const heartbeatService = fromCallback<any, HeartbeatServiceInput>(({ input, sendBack }) => {
+export const heartbeatService = fromCallback<BleMachineEvent, HeartbeatServiceInput>(({ input, sendBack }) => {
   const { bleManager, connectedDevices, adapterMap } = input;
   let isRunning = false;
 
