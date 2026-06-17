@@ -4243,3 +4243,8 @@ TSC: ?  Jest: ?
 **Path:** docs/plans/PLAN-fix-stale-flush-group-kill.md
 **Summary:** Fix for ConnectService stale flush killing Device A during incremental group assembly when Device B arrives in a separate auto-connect batch. Root cause: L77 marks all non-target connected devices as stale. Single-file surgical fix.
 **Evidence:** User live testing 2026-06-17 + 8-file subagent code trace. Rejected alternative: batch merging (non-deterministic BLE timing).
+
+### [MERGE] 2026-06-17T22:55 — fix/stale-flush-group-kill ? master @ 5b36ab8b
+**What merged:** Removed ConnectService stale flush that killed Device A when Device B connected in a separate auto-connect batch during incremental group assembly. Retained ALL connected devices. Updated tests 7-8 to verify retain-all behavior.
+**Verify result:** TSC ?, Jest ? (222/222), gates ?
+**Files touched:** src/services/ble/ConnectService.ts, src/services/ble/__tests__/ConnectService.test.ts

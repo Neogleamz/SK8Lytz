@@ -23,26 +23,6 @@
 
 ### 🚑 TRIAGE QUEUE
 
-- [ ] **`fix/stale-flush-group-kill`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍪 Snack]` `[🧠 THINK]`
-  - **Goal:** Remove the stale flush in ConnectService that kills Device A when Device B connects in a separate auto-connect batch, breaking group assembly.
-  - **Decision Log:** User reported (2026-06-17) only 1 of 2 grouped devices connects despite strong RSSI on both. Code trace confirmed ConnectService L77 marks Device A as "stale" when Device B arrives in a separate batch. Stale flush was designed for fleet switching but has no legitimate caller — fleet switching is handled by DISCONNECT_REQUEST.
-  - **Analysis:** 📊 Source: Live user testing 2026-06-17 + subagent code trace across 8 files. Plan: [PLAN-fix-stale-flush-group-kill.md](./plans/PLAN-fix-stale-flush-group-kill.md)
-    Key finding: "ConnectService stale flush disconnects Device A when Device B's batch arrives because A is not in B's targetMacs"
-    Rejected alternative: "Merge all group MACs into a single batch — rejected because BLE discovery timing is non-deterministic"
-  - **Source of Truth:** 📖 [ConnectService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts#L77-L107) §Stale Flush
-  - **Details:** 2 files, ~15 lines. BLE connection pipeline — wrong fix risks breaking all GATT connections.
-
-
-
-### 🌊 Parallel Wave Strategy (AST-Verified)
-
-| Wave | Task Clusters | Parallel-Safe? | Prerequisite |
-|------|--------------|----------------|--------------|
-| **W-1** | C1 (Group Concurrent Write), C3 (Protocol Seq Counter), C7 (PII Scrub), C10 (OS Variance) | ✅ Yes — zero import-tree overlap | None |
-| **W-2** | C2 (Split-Brain), C4 (BLE Type Safety), C5 (Promise IO Guards) | ✅ Yes — no shared files within wave | W-1 fully merged |
-| **W-3** | C6 (Re-entrancy Guards), C8 (FSM State Matrix), C9 (Timer Audit BLE) | ✅ Yes — disjoint after W-2 merges | W-2 fully merged |
-
 ---
 
 ## 🔥 ON DECK
