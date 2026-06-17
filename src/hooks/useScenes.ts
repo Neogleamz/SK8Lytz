@@ -6,8 +6,8 @@ import { useAuth } from '../context/AuthContext';
 
 export function useScenes() {
   const [localScenes, setLocalScenes] = useState<Scene[]>([]);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('loading');
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'empty'>('loading');
+  const [errorMsg, setErrorMsg] = useState('');
   const { user } = useAuth();
   const userId = user?.id;
   const isMountedRef = useRef(true);
@@ -21,12 +21,12 @@ export function useScenes() {
 
   const loadScenes = useCallback(async () => {
     setStatus('loading');
-    setErrorMsg(null);
+    setErrorMsg('');
     try {
       const scenes = await ScenesService.getSavedScenes(userId);
       if (!isMountedRef.current) return;
       setLocalScenes(scenes);
-      setStatus('success');
+      setStatus(scenes.length > 0 ? 'success' : 'empty');
     } catch (e: unknown) {
       if (!isMountedRef.current) return;
       const msg = e instanceof Error ? e.message : String(e);
@@ -51,6 +51,9 @@ export function useScenes() {
 
   return {
     localScenes,
+    status,
+    errorMsg,
+    // Legacy mapping to avoid breaking unlisted consumers
     isLoading: status === 'loading',
     error: status === 'error' ? errorMsg : null,
     loadScenes,

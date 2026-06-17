@@ -22,7 +22,6 @@ export function CrewJoinScreen() {
   const { currentSession, isHandoffMode, executeLeaveSession, executeEndSession, handleHandoffLeadership, handleSessionJoined } = session;
   
   const { inviteCode, setInviteCode } = formState;
-  const [error, setError] = useState<string | null>(null);
   const isProcessingRef = useRef(false);
 
   const keyExtractor = React.useCallback((s: CrewSession) => s.id, []);
@@ -50,7 +49,6 @@ export function CrewJoinScreen() {
       const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       AppLogger.log('CREW_ERROR', { action: 'join_crew_by_code', error: e instanceof Error ? e.message : String(e)  });
       setErrorMsg(e.message || 'Crew not found — check the code and try again.');
-      setError('Failed to load. Tap to retry.');
     } finally { 
       setIsLoading(false); 
       isProcessingRef.current = false;
@@ -68,7 +66,6 @@ export function CrewJoinScreen() {
       const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       AppLogger.log('CREW_ERROR', { action: 'join_id', error: e instanceof Error ? e.message : String(e)  });
       setErrorMsg(e.message || 'Failed to join session');
-      setError('Failed to load. Tap to retry.');
     } finally { setIsLoading(false); }
   }, [currentUserId, displayName, handleSessionJoined, setErrorMsg, setIsLoading, setStep]);
 

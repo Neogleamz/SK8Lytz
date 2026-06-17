@@ -14,8 +14,8 @@ export function useFavorites() {
   const { user } = useAuth();
   const [favorites, setFavorites] = useState<IFavoriteState[]>([]);
   const [activeFavoriteId, setActiveFavoriteId] = useState<string | null>(null);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('loading');
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error' | 'empty'>('loading');
+  const [errorMsg, setErrorMsg] = useState('');
 
   const [quickPresets, setQuickPresets] = useState<IQuickPreset[]>([
     { name: 'Rainbow', colors: ['#FF0000', '#FF7F00', '#FFFF00', '#00FF00', '#0000FF', '#4B0082', '#9400D3'], type: 3 },
@@ -39,7 +39,7 @@ export function useFavorites() {
     let active = true;
     let localFavorites: IFavoriteState[] = [];
     setStatus('loading');
-    setErrorMsg(null);
+    setErrorMsg('');
 
     Promise.all([
       // 1. Fetch Favorites via Service
@@ -163,6 +163,9 @@ export function useFavorites() {
     saveFavorite,
     deleteFavorite,
     saveQuickPreset,
+    status,
+    errorMsg,
+    // Legacy support
     isLoading: status === 'loading',
     error: status === 'error' ? errorMsg : null
   };

@@ -17,10 +17,10 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
   const { isOfflineMode, user, signOut } = useAuth();
   const { Colors } = useTheme();
   const mountedRef = useRef(true);
-  type ComplianceStatus = 'checking' | 'idle';
+  type ComplianceStatus = 'checking' | 'idle' | 'error';
   const [status, setStatus] = useState<ComplianceStatus>('checking');
   const [requiresEula, setRequiresEula] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
   const isProcessingRef = useRef(false);
 
   useEffect(() => {
@@ -80,15 +80,13 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
       if (userVersion < requiredVersion) {
         setRequiresEula(true);
       }
+      setStatus('idle');
     } catch (e: unknown) {
       if (!mountedRef.current) return;
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.warn('[ComplianceGate] check error', { error: msg, payload_size: 0, ssi: 0 });
-      setError(msg);
-    } finally {
-      if (mountedRef.current) {
-        setStatus('idle');
-      }
+      setErrorMsg(msg);
+      setStatus('error');
     }
   };
 
@@ -161,12 +159,12 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
     );
   }
 
-  if (error) {
+  if (status === 'error') {
     return (
       <View style={{ flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
         <Text style={{ color: Colors.error || '#FF0000', marginBottom: 16, fontWeight: 'bold' }}>Failed to verify compliance status.</Text>
-        <Text style={{ color: Colors.text, textAlign: 'center', marginBottom: 20 }}>{error}</Text>
-        <Button title="Retry" onPress={() => { setError(null); checkCompliance(); }} color={Colors.primary} />
+        <Text style={{ color: Colors.text, textAlign: 'center', marginBottom: 20 }}>{errorMsg}</Text>
+        <Button title="Retry" onPress={() => { setErrorMsg(''); checkCompliance(); }} color={Colors.primary} />
         <View style={{ marginTop: 10 }}>
            <Button title="Sign Out" onPress={handleDecline} color={Colors.text} />
         </View>

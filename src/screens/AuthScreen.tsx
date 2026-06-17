@@ -48,7 +48,7 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
   const [initialEmail, setInitialEmail] = useState('');
   const [initialRememberMe, setInitialRememberMe] = useState(false);
   const [credLoadStage, setCredLoadStage] = useState<'LOADING' | 'LOADED'>('LOADING');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     AppLogger.log('SCREEN_OPENED', { screen: 'AuthScreen' });
@@ -133,9 +133,9 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
 
         {credLoadStage === 'LOADED' && (
           <>
-            {!!errorMessage && (
+            {!!errorMsg && (
               <Text style={{ color: '#FF4444', textAlign: 'center', marginBottom: Spacing.md }}>
-                {errorMessage}
+                {errorMsg}
               </Text>
             )}
             {mode === 'LOGIN' && (
@@ -161,11 +161,11 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
           <AuthFooterActions 
             mode={mode} 
             onOfflineMode={onOfflineMode} 
-            setErrorMessage={setErrorMessage}
+            setErrorMessage={setErrorMsg}
           />
         </View>
       </View>
-      <DevSandboxDrawer onOfflineMode={onOfflineMode} setErrorMessage={setErrorMessage} />
+      <DevSandboxDrawer onOfflineMode={onOfflineMode} setErrorMessage={setErrorMsg} />
     </KeyboardAvoidingView>
   );
 }

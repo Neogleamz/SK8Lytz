@@ -18,6 +18,7 @@ import { Spacing } from '../../theme/theme';
 import { createStyles } from './CrewStyles';
 import { ErrorCard } from '../ErrorCard';
 import { EmptyState } from '../EmptyState';
+import type { ViewState } from '../../types/ViewState';
 
 import { CrewCard } from './CrewCard';
 
@@ -46,7 +47,8 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
   const [inviteCode, setInviteCode] = useState('');
   const [joiningSessionId, setJoiningSessionId] = useState<string | null>(null);
   const [showRadiusPicker, setShowRadiusPicker] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [viewState, setViewState] = useState<ViewState>('idle');
+  const [localError, setLocalError] = useState('');
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const isProcessingRef = useRef(false);
@@ -88,7 +90,8 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
         const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
         AppLogger.log('CREW_ERROR', { action: 'join_id', error: e instanceof Error ? e.message : String(e)  });
         setErrorMsg(e.message || 'Could not join that crew');
-        setError('Failed to load. Tap to retry.');
+        setLocalError('Failed to load. Tap to retry.');
+        setViewState('error');
       } finally { 
         setIsLoading(false); 
         setJoiningSessionId(null);
@@ -176,7 +179,8 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
         const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
         AppLogger.log('CREW_ERROR', { action: 'join_crew_by_code', error: e instanceof Error ? e.message : String(e)  });
         setErrorMsg(e.message || 'Crew not found — check the code and try again.');
-        setError('Failed to load. Tap to retry.');
+        setLocalError('Failed to load. Tap to retry.');
+        setViewState('error');
       } finally { 
         setIsLoading(false); 
         isProcessingRef.current = false;
@@ -209,7 +213,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
           )}
         </View>
 
-        {error && <ErrorCard message={error} onRetry={() => setError(null)} />}
+        {viewState === 'error' && <ErrorCard message={localError} onRetry={() => setViewState('idle')} />}
 
         {isOfflineMode ? (
           <View style={[styles.hubEmptyCard, { marginTop: Spacing.md }]}>

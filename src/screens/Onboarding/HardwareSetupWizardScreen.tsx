@@ -89,7 +89,7 @@ export default function HardwareSetupWizardScreen({
   const isIdentifying = actionStatus === 'identifying';
   
   const [selectedDeviceMacs, setSelectedDeviceMacs] = useState<Set<string>>(new Set());
-  const [setupError, setSetupError] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
   
   // Step 3 State
   const [groupName, setGroupName] = useState('');
@@ -117,7 +117,7 @@ export default function HardwareSetupWizardScreen({
            await pingDevice(device.device_mac, payloadResult.packets[0], { probe: false, duration: 500, turnOffAtEnd: false });
          } catch (err: unknown) {
            AppLogger.error('[FTUE] pingDevice failed in orientation test', err instanceof Error ? err : new Error(String(err)), { payload_size: 0, ssi: 0 });
-           setSetupError('Device not responding, retrying...');
+           setErrorMsg('Device not responding, retrying...');
          }
       }
     } catch (e: unknown) {
@@ -572,10 +572,10 @@ export default function HardwareSetupWizardScreen({
           </View>
         ) : step === 1 ? (
           <>
-            {setupError && (
+            {!!errorMsg && (
               <View style={[styles.errorBox, { marginBottom: Spacing.md }]}>
                 <MaterialCommunityIcons name="alert-circle" size={20} color="#ff4444" />
-                <Text style={styles.errorText}>{setupError}</Text>
+                <Text style={styles.errorText}>{errorMsg}</Text>
               </View>
             )}
             {pendingRegistrations.length > 0 ? (
@@ -612,7 +612,7 @@ export default function HardwareSetupWizardScreen({
             style={[styles.primaryBtn, (isClaiming || selectedDeviceMacs.size === 0) && styles.primaryBtnDisabled]} 
             disabled={isClaiming || selectedDeviceMacs.size === 0}
             onPress={() => {
-               setSetupError(null);
+               setErrorMsg('');
                const selected = pendingRegistrations.filter(r => selectedDeviceMacs.has(r.device_mac));
                const configs: Record<string, WizardDeviceConfig> = {};
                let leftAssigned = false;
@@ -670,7 +670,7 @@ export default function HardwareSetupWizardScreen({
             onPress={async () => {
                AppLogger.log('FTUE_PHASE_3_COMPLETE', { action: 'transition_to_phase_4' });
                setActionStatus('claiming');
-               setSetupError(null);
+               setErrorMsg('');
                try {
                  const selected = pendingRegistrations.filter(r => selectedDeviceMacs.has(r.device_mac));
                  const hwAdapter = getDefaultProtocol();
@@ -725,7 +725,7 @@ export default function HardwareSetupWizardScreen({
                  await onSetupComplete(finalizedDevices);
                } catch (err: unknown) {
                  AppLogger.error('[HardwareSetup] finish configuration failed', err instanceof Error ? err : new Error(String(err)), { payload_size: 0, ssi: 0 });
-                 setSetupError(err instanceof Error ? err.message : 'Setup failed');
+                 setErrorMsg(err instanceof Error ? err.message : 'Setup failed');
                  setActionStatus('error');
                } finally {
                  // Do not reset actionStatus('idle') on success because screen unmounts,

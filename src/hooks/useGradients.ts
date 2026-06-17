@@ -12,10 +12,9 @@ export function useGradients() {
   const userId = user?.id;
   
   const [gradients, setGradients] = useState<CustomBuilderPreset[]>([]);
-  type GradientStatus = 'idle' | 'loading' | 'error' | 'success';
+  type GradientStatus = 'idle' | 'loading' | 'error' | 'success' | 'empty';
   const [status, setStatus] = useState<GradientStatus>('loading');
-  const [error, setError] = useState<string | null>(null);
-  const isLoading = status === 'loading';
+  const [errorMsg, setErrorMsg] = useState('');
   const isMountedRef = useRef(true);
 
   useEffect(() => {
@@ -28,20 +27,17 @@ export function useGradients() {
   const loadGradients = useCallback(async () => {
     try {
       setStatus('loading');
-      setError(null);
+      setErrorMsg('');
       const data = await GradientsService.getSavedGradients(userId);
       if (!isMountedRef.current) return;
       setGradients(data);
+      setStatus(data.length > 0 ? 'success' : 'empty');
     } catch (e: unknown) {
       if (!isMountedRef.current) return;
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.error('USE_GRADIENTS_LOAD_ERROR', msg, { payload_size: 0, ssi: 0 });
-      setError(msg);
+      setErrorMsg(msg);
       setStatus('error');
-    } finally {
-      if (isMountedRef.current) {
-        setStatus(prev => prev === 'loading' ? 'success' : prev);
-      }
     }
   }, [userId]);
 
@@ -76,9 +72,11 @@ export function useGradients() {
 
   return {
     gradients,
-    isLoading,
     status,
-    error,
+    errorMsg,
+    // Legacy mapping to avoid breaking unlisted consumers
+    isLoading: status === 'loading',
+    error: status === 'error' ? errorMsg : null,
     saveGradient,
     deleteGradient,
     refreshGradients: loadGradients

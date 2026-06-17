@@ -39,7 +39,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   const { user } = useAuth();
   type OverviewStatus = 'idle' | 'loading' | 'saving_profile' | 'crew_loading' | 'error' | 'success';
   const [status, setStatus] = useState<OverviewStatus>('idle');
-  const [accountError, setAccountError] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [editName, setEditName] = useState('');
   const [editUsername, setEditUsername] = useState('');
@@ -65,7 +65,6 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   const [crewStep, setCrewStep] = useState<'list' | 'create' | 'join' | 'manage'>('list');
   const [newCrewName, setNewCrewName] = useState('');
   const [joinCode, setJoinCode] = useState('');
-  const [crewError, setCrewError] = useState('');
 
   // History
   const [history, setHistory] = useState<SessionHistoryItem[]>([]);
@@ -85,7 +84,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     if (!isMountedRef.current || isDataLoadingRef.current) return;
     isDataLoadingRef.current = true;
     setStatus('loading');
-    setAccountError(null);
+    setErrorMsg('');
     try {
       AppLogger.log('ACCOUNT_MODAL_LOAD_START', { payload_size: 0, ssi: 0 });
 
@@ -156,7 +155,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     } catch (e: unknown) {
       if (!isMountedRef.current) return;
       AppLogger.warn('[AccountOverview] loadData error', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
-      setAccountError('Failed to load. Tap to retry.');
+      setErrorMsg('Failed to load. Tap to retry.');
       setStatus('error');
     } finally {
       isDataLoadingRef.current = false;
@@ -288,10 +287,10 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   // Crew handlers
   const handleCreateCrew = async () => {
     if (isCrewProcessingRef.current) return;
-    if (!newCrewName.trim()) { setCrewError('Enter a crew name'); return; }
-    if (!user?.id) { setCrewError('Not logged in'); return; }
+    if (!newCrewName.trim()) { setErrorMsg('Enter a crew name'); setStatus('error'); return; }
+    if (!user?.id) { setErrorMsg('Not logged in'); setStatus('error'); return; }
     isCrewProcessingRef.current = true;
-    setStatus('crew_loading'); setCrewError('');
+    setStatus('crew_loading'); setErrorMsg('');
     try {
       const crew = await profileService.createPermanentCrew(newCrewName.trim(), undefined, user.id);
       setCrews(prev => [...prev, crew]);
@@ -300,7 +299,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       setStatus('success');
     } catch (e: unknown) {
       AppLogger.warn('[AccountOverview] handleCreateCrew failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
-      setCrewError((e instanceof Error ? e.message : String(e)) ?? 'Failed to create crew');
+      setErrorMsg((e instanceof Error ? e.message : String(e)) ?? 'Failed to create crew');
       setStatus('error');
     } finally {
       isCrewProcessingRef.current = false;
@@ -309,10 +308,10 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
 
   const handleJoinCrew = async () => {
     if (isCrewProcessingRef.current) return;
-    if (joinCode.trim().length < 4) { setCrewError('Enter the invite code'); return; }
-    if (!user?.id) { setCrewError('Not logged in'); return; }
+    if (joinCode.trim().length < 4) { setErrorMsg('Enter the invite code'); setStatus('error'); return; }
+    if (!user?.id) { setErrorMsg('Not logged in'); setStatus('error'); return; }
     isCrewProcessingRef.current = true;
-    setStatus('crew_loading'); setCrewError('');
+    setStatus('crew_loading'); setErrorMsg('');
     try {
       const crew = await profileService.joinPermanentCrew(joinCode.trim(), user.id);
       setCrews(prev => prev.find(c => c.id === crew.id) ? prev : [...prev, crew]);
@@ -321,7 +320,7 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       setStatus('success');
     } catch (e: unknown) {
       AppLogger.warn('[AccountOverview] handleJoinCrew failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
-      setCrewError((e instanceof Error ? e.message : String(e)) ?? 'Failed to join crew');
+      setErrorMsg((e instanceof Error ? e.message : String(e)) ?? 'Failed to join crew');
       setStatus('error');
     } finally {
       isCrewProcessingRef.current = false;
@@ -357,7 +356,11 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     crewStep, setCrewStep,
     newCrewName, setNewCrewName,
     joinCode, setJoinCode,
-    crewError, setCrewError,
+    errorMsg, setErrorMsg,
+    // Legacy mapping to avoid breaking unlisted consumers
+    crewError: status === 'error' ? errorMsg : '',
+    setCrewError: (msg: string) => { setErrorMsg(msg); setStatus(msg ? 'error' : 'idle'); },
+    accountError: status === 'error' ? errorMsg : null,
     history,
     notifCrewInvites, setNotifCrewInvites,
     notifSessionReminders, setNotifSessionReminders,
@@ -372,7 +375,6 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     handleToggleHealthSync,
     autoPauseEnabled,
     handleToggleAutoPause,
-    accountError,
     loadData,
   };
 }

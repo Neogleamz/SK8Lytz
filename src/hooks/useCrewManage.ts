@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CrewMemberFull, PermanentCrew, profileService } from '../services/ProfileService';
 import { AppLogger } from '../services/appLogger';
+import type { ViewState } from '../types/ViewState';
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -16,6 +17,7 @@ export function useCrewManage(
   // Members Card info
   const [cardMembers, setCardMembers] = useState<Record<string, CrewMemberFull[]>>({});
   const [loadingCardMembersFor, setLoadingCardMembersFor] = useState<string | null>(null);
+  const [cardMembersState, setCardMembersState] = useState<ViewState>('idle');
 
   // User Search
   const [userSearchQuery, setUserSearchQuery] = useState('');
@@ -41,7 +43,7 @@ export function useCrewManage(
   type ManageStatus = 'idle' | 'creating' | 'saving' | 'error' | 'success';
   const [status, setStatus] = useState<ManageStatus>('idle');
   const isCreatingCrew = status === 'creating';
-  const [createCrewError, setCreateCrewError] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Edit form
   const [editingCrewId, setEditingCrewId] = useState<string | null>(null);
@@ -60,9 +62,16 @@ export function useCrewManage(
   const loadCrewMembers = (crewId: string) => {
     if (cardMembers[crewId]) return;
     setLoadingCardMembersFor(crewId);
+    setCardMembersState('loading');
     profileService.getCrewMembersWithNames(crewId)
-      .then(members => setCardMembers(prev => ({ ...prev, [crewId]: members })))
-      .catch((e) => AppLogger.warn('[CrewManage] loadCrewMembers failed', { crewId, error: String(e), payload_size: 0, ssi: 0 }))
+      .then(members => {
+        setCardMembers(prev => ({ ...prev, [crewId]: members }));
+        setCardMembersState(members.length ? 'success' : 'empty');
+      })
+      .catch((e) => {
+        AppLogger.warn('[CrewManage] loadCrewMembers failed', { crewId, error: String(e), payload_size: 0, ssi: 0 });
+        setCardMembersState('error');
+      })
       .finally(() => setLoadingCardMembersFor(null));
   };
 
@@ -126,7 +135,11 @@ export function useCrewManage(
     newCrewCode, setNewCrewCode,
     newCrewHue, setNewCrewHue,
     isCreatingCrew, setIsCreatingCrew: (v: boolean) => setStatus(v ? 'creating' : 'idle'),
-    createCrewError, setCreateCrewError,
+    errorMsg, setErrorMsg,
+    cardMembersState,
+    // Legacy support for unmodified consumers
+    createCrewError: status === 'error' ? errorMsg : '',
+    setCreateCrewError: (msg: string) => { setErrorMsg(msg); setStatus(msg ? 'error' : 'idle'); },
 
     // Edit form
     editingCrewId, setEditingCrewId,
