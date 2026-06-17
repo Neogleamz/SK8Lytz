@@ -8,7 +8,7 @@ import { LogEntry, EventType } from './types';
 export class AppLoggerCloud {
   static async pushFastLaneError(
     event: EventType,
-    payload: Record<string, any>,
+    payload: Record<string, unknown>,
     sessionId: string
   ) {
     if (!supabase) return;
@@ -16,7 +16,7 @@ export class AppLoggerCloud {
     let safeErrorString = 'Unknown error';
     try {
       safeErrorString = String(payload.message || payload.error || payload.errorMessage || JSON.stringify(payload));
-    } catch (_e: unknown) {
+    } catch {
       safeErrorString = '[Circular or Unparseable Error Object]';
     }
 
@@ -38,7 +38,17 @@ export class AppLoggerCloud {
       (e: unknown) => { if (__DEV__) console.warn('[AppLogger] VIP insert failed (network):', e instanceof Error ? e.message : String(e)); }
     );
 
-    supabase.from('crash_telemetry').insert({
+      let normalizedSeverity = 'ERROR';
+      if (payload.severity) {
+        const rawSev = String(payload.severity).toUpperCase();
+        if (rawSev === 'WARNING') normalizedSeverity = 'WARN';
+        else if (rawSev === 'CRITICAL') normalizedSeverity = 'FATAL';
+        else if (['FATAL', 'ERROR', 'WARN', 'INFO'].includes(rawSev)) {
+          normalizedSeverity = rawSev;
+        }
+      }
+
+      supabase.from('crash_telemetry').insert({
       error_signature: safeErrorString.substring(0, 500),
       stack_trace: payload.stack || payload.stackTrace || null,
       breadcrumbs: FlightRecorder.getBreadcrumbs() as unknown as import('../../types/supabase').Json,
@@ -48,7 +58,7 @@ export class AppLoggerCloud {
         session_id: sessionId,
         event_type: event
       } as unknown as import('../../types/supabase').Json,
-      severity: 'CRITICAL',
+      severity: normalizedSeverity,
       app_version: Device.osVersion || null
     }).then(({ error }) => {
       if (error && __DEV__) console.warn('[AppLogger] Crash Telemetry dual-write failed:', error.message);
@@ -79,7 +89,7 @@ export class AppLoggerCloud {
           if (settings.global_telemetry_enabled === false || settings.global_telemetry_enabled === 'false') {
             telemetryEnabled = false;
           }
-        } catch(e: unknown) {}
+        } catch {}
       }
 
       if (!telemetryEnabled) {
@@ -135,7 +145,7 @@ export class AppLoggerCloud {
     }
   }
 
-  static async clearCloudLogs(activeDevices: any[]) {
+  static async clearCloudLogs(activeDevices: { id: string }[]) {
     if (!supabase) return;
     
     const pMac = activeDevices.length > 0 ? activeDevices[0].id : 'unpaired-host';
