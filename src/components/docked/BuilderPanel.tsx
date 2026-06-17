@@ -4,7 +4,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GradientLibraryTab } from '../patterns/GradientLibraryTab';
 import PositionalGradientBuilder from '../PositionalGradientBuilder';
 import { BuilderNode, CustomBuilderPreset, PositionalMathBuffer } from '../../protocols/PositionalMathBuffer';
-import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { useTheme } from '../../context/ThemeContext';
 import { useGradients } from '../../hooks/useGradients';
 import { useSharedFavorites } from '../../context/FavoritesContext';
@@ -27,6 +26,7 @@ interface BuilderPanelProps {
   setBuilderDirection: (dir: number) => void;
   fgColor: string;
   writeToDevice?: (payload: number[]) => Promise<void | boolean | 'partial'>;
+  setMultiColor?: (colors: {r: number, g: number, b: number}[], ledPoints: number, speed: number, direction: number, transitionType?: number) => Promise<void>;
   onViewModeChange?: (mode: 'LIBRARY' | 'BUILDER') => void;
 }
 
@@ -41,7 +41,7 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
   builderFillMode, setBuilderFillMode,
   builderTransitionType, setBuilderTransitionType,
   builderDirection, setBuilderDirection,
-  fgColor, writeToDevice, onViewModeChange
+  fgColor, writeToDevice, setMultiColor, onViewModeChange
 }) => {
   const { Colors, isDark } = useTheme();
   const { saveGradient } = useGradients();
@@ -74,8 +74,8 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
       b: Math.round(c.b * factor),
     }));
     const mappedSpeed = Math.max(1, Math.min(100, Math.round(speed)));
-    if (writeToDevice) writeToDevice(ZenggeProtocol.setMultiColor(scaledRgbArray, points, mappedSpeed, direction, safeTransition))?.catch((e: Error) => AppLogger.error('writeToDevice error', e, { payload_size: scaledRgbArray.length, ssi: 0 }));
-  }, [points, speed, brightness, direction, setBuilderNodes, setBuilderFillMode, setBuilderTransitionType, writeToDevice]);
+    if (setMultiColor) setMultiColor(scaledRgbArray, points, mappedSpeed, direction, safeTransition)?.catch((e: Error) => AppLogger.error('setMultiColor error', e, { payload_size: scaledRgbArray.length, ssi: 0 }));
+  }, [points, speed, brightness, direction, setBuilderNodes, setBuilderFillMode, setBuilderTransitionType, setMultiColor]);
 
   const openBuilder = (preset?: CustomBuilderPreset) => {
     if (preset) {

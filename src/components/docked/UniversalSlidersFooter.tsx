@@ -83,6 +83,7 @@ export interface UniversalSlidersFooterProps {
 
   // ── Dispatch functions ──────────────────────────────────────────────────
   sendColor: (r: number, g: number, b: number) => void;
+  setMultiColor?: (colors: {r: number, g: number, b: number}[], ledPoints: number, speed: number, direction: number, transitionType?: number) => Promise<void>;
   applyFixedPattern: (patternId: number, fg: string, bg: string, spd?: number, brt?: number, direction?: number) => void;
   applyStaticModePattern: (pat: FixedModePattern, r?: number, g?: number, b?: number, spd?: number) => void;
   applyEmergencyPattern: (spd: number, brt: number) => void;
@@ -141,7 +142,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
     setSelectedHue, setMusicColorFocus, setFixedColorMode, setStreetCruiseColor,
     setBrightness, setSpeed, setMicSensitivity, setStreetSensitivity,
     fixedDirection, setFixedDirection,
-    sendColor, applyFixedPattern,
+    sendColor, applyFixedPattern, setMultiColor,
     applyStreetPattern, handleMusicChange, clampSpeed, brtFactor,
     writeToDevice, hwSettings, motionStateRef,
     builderNodes, builderFillMode, builderTransitionType, builderDirection,
@@ -249,7 +250,7 @@ const UniversalSlidersFooter = React.memo(function UniversalSlidersFooter(props:
         {/* Hue Slider */}
         <UniversalHueStripSlider {...props} />
         {/* TACTICAL UNIVERSAL SLIDERS SECTIONS */}
-        <UniversalTacticalSliders {...props} />
+        <UniversalTacticalSliders {...props} setMultiColor={setMultiColor} />
         </View>
       )}
     </View>

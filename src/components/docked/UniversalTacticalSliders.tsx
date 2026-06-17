@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Spacing } from '../../theme/theme';
 import TacticalSlider from '../TacticalSlider';
 import { PositionalMathBuffer } from '../../protocols/PositionalMathBuffer';
-import { ZenggeProtocol } from '../../protocols/ZenggeProtocol';
 import { AppLogger } from '../../services/appLogger';
 import { SK8LYTZ_TEMPLATES } from '../../protocols/PatternEngine';
 import type { UniversalSlidersFooterProps } from './UniversalSlidersFooter';
@@ -22,7 +21,7 @@ export const UniversalTacticalSliders = React.memo(function UniversalTacticalSli
     builderNodes, builderFillMode, builderTransitionType, builderDirection, multiColors, multiTransition,
     hwSettings,
     applyFixedPattern, applyStreetPattern, handleMusicChange, writeToDevice,
-    motionStateRef, sendColor, selectedColor
+    motionStateRef, sendColor, selectedColor, setMultiColor
   } = props;
 
   const brtFactor = (b: number) => Math.max(1, Math.min(100, Math.round(b))) / 100;
@@ -66,7 +65,7 @@ export const UniversalTacticalSliders = React.memo(function UniversalTacticalSli
                     }));
                     const transition = builderTransitionType ?? 1;
                     const dir = builderDirection ?? 1;
-                    writeToDevice(ZenggeProtocol.setMultiColor(scaledRgb, ledPoints, Math.round(speed), dir, transition))?.catch((e: Error) => AppLogger.error('writeToDevice error', e, { payload_size: 0, ssi: 0 }));
+                    setMultiColor?.(scaledRgb, ledPoints, Math.round(speed), dir, transition)?.catch((e: Error) => AppLogger.error('setMultiColor error', e, { payload_size: 0, ssi: 0 }));
                   } else {
                     const rgbColors = multiColors.map(h => {
                       const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
@@ -74,7 +73,7 @@ export const UniversalTacticalSliders = React.memo(function UniversalTacticalSli
                       const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
                       return { r: rawR, g: rawG, b: rawB };
                     });
-                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(speed), 1, multiTransition))?.catch((e: Error) => AppLogger.error('writeToDevice error', e, { payload_size: 0, ssi: 0 }));
+                    setMultiColor?.(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(speed), 1, multiTransition)?.catch((e: Error) => AppLogger.error('setMultiColor error', e, { payload_size: 0, ssi: 0 }));
                   }
                 } else if (activeMode === 'CAMERA' && cameraSubMode === 'VIBE') {
                   const factor = brtFactor(val);
@@ -85,7 +84,7 @@ export const UniversalTacticalSliders = React.memo(function UniversalTacticalSli
                       const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
                       return { r: rawR, g: rawG, b: rawB };
                     });
-                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(speed), 1, 1))?.catch((e: Error) => AppLogger.error('writeToDevice error', e, { payload_size: 0, ssi: 0 }));
+                    setMultiColor?.(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(speed), 1, 1)?.catch((e: Error) => AppLogger.error('setMultiColor error', e, { payload_size: 0, ssi: 0 }));
                   }
                 } else {
                   const factor = brtFactor(val);
@@ -174,7 +173,7 @@ export const UniversalTacticalSliders = React.memo(function UniversalTacticalSli
                     }));
                     const transition = builderTransitionType ?? 1;
                     const dir = builderDirection ?? 1;
-                    writeToDevice(ZenggeProtocol.setMultiColor(scaledRgb, ledPoints, Math.round(val), dir, transition))?.catch((e: Error) => AppLogger.error('writeToDevice error', e, { payload_size: 0, ssi: 0 }));
+                    setMultiColor?.(scaledRgb, ledPoints, Math.round(val), dir, transition)?.catch((e: Error) => AppLogger.error('setMultiColor error', e, { payload_size: 0, ssi: 0 }));
                   } else {
                     const rgbColors = multiColors.map(h => {
                       const rawR = Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor);
@@ -182,7 +181,7 @@ export const UniversalTacticalSliders = React.memo(function UniversalTacticalSli
                       const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
                       return { r: rawR, g: rawG, b: rawB };
                     });
-                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, multiTransition))?.catch((e: Error) => AppLogger.error('writeToDevice error', e, { payload_size: 0, ssi: 0 }));
+                    setMultiColor?.(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, multiTransition)?.catch((e: Error) => AppLogger.error('setMultiColor error', e, { payload_size: 0, ssi: 0 }));
                   }
                 } else if (activeMode === 'CAMERA' && cameraSubMode === 'VIBE') {
                   const factor = brtFactor(brightness);
@@ -193,7 +192,7 @@ export const UniversalTacticalSliders = React.memo(function UniversalTacticalSli
                       const rawB = Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor);
                       return { r: rawR, g: rawG, b: rawB };
                     });
-                    writeToDevice(ZenggeProtocol.setMultiColor(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, 1))?.catch((e: Error) => AppLogger.error('writeToDevice error', e, { payload_size: 0, ssi: 0 }));
+                    setMultiColor?.(rgbColors, hwSettings?.ledPoints || 12, clampSpeed(val), 1, 1)?.catch((e: Error) => AppLogger.error('setMultiColor error', e, { payload_size: 0, ssi: 0 }));
                   }
                 } else if (activeMode === 'STREET') {
                   applyStreetPattern(motionStateRef.current, brightness, val);

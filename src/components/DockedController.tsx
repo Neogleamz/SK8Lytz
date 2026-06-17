@@ -1191,6 +1191,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
                 setBuilderDirection={setBuilderDirection}
                 fgColor={selectedColor}
                 writeToDevice={writeToDevice}
+                setMultiColor={setMultiColor}
                 onViewModeChange={handleViewModeChange}
               />
             )}
