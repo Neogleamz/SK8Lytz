@@ -74,37 +74,20 @@ export const connectService = fromPromise<
       connectedDevicesRef.current.some(connected => connected.id === requestedMac)
     );
 
-    const staleDevices = connectedDevicesRef.current.filter(c => !targetMacs.includes(c.id));
-
-    if (allRequestedAlreadyConnected && staleDevices.length === 0) {
+    // Cache hit — all requested devices are already connected, no work needed.
+    // Return the FULL connected list (not just requested) to preserve group integrity.
+    if (allRequestedAlreadyConnected) {
       AppLogger.log('BLE_STATE_CHANGE', { event: 'connectToDevices_cached_hit_skip' });
-      // We just return the already connected ones
-      const requestedDevices = connectedDevicesRef.current.filter(c => targetMacs.includes(c.id));
-      return { devices: requestedDevices };
+      return { devices: connectedDevicesRef.current };
     }
 
-    const retainedDevices = connectedDevicesRef.current.filter(c => targetMacs.includes(c.id));
+    // Retain ALL currently connected devices during incremental group assembly.
+    // Stale flush was removed because it killed Device A when Device B arrived
+    // in a separate auto-connect batch (A was not in B's targetMacs).
+    // Fleet switching is handled upstream by DISCONNECT_REQUEST → DISCONNECTING
+    // in BleMachine.ts, not here. See PLAN-fix-stale-flush-group-kill.md.
+    const retainedDevices = [...connectedDevicesRef.current];
 
-    // Stale flush logic
-    if (staleDevices.length > 0) {
-      for (const stale of staleDevices) {
-        if (disconnectListeners.current[stale.id]) {
-           try {
-             disconnectListeners.current[stale.id].remove();
-           } catch (e: unknown) {
-             AppLogger.warn('[BLE] Failed to remove disconnect listener during stale device flush', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
-           }
-           delete disconnectListeners.current[stale.id];
-        }
-        try {
-          await bleManager.cancelDeviceConnection(stale.id);
-          AppLogger.log('BLE_STATE_CHANGE', { event: 'stale_device_flushed', deviceId: scrubPII(stale.id) });
-        } catch (e: unknown) {
-          AppLogger.warn('Failed to flush stale device', { deviceId: scrubPII(stale.id), error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
-        }
-      }
-      await new Promise(resolve => setTimeout(resolve, BLE_TIMING.STALE_FLUSH_SETTLE_MS));
-    }
 
     if (signal.aborted) throw new Error('connect_aborted');
 

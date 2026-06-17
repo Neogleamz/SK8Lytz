@@ -322,9 +322,12 @@ describe('ConnectService test suite', () => {
     await expectation;
   });
 
-  // --- Group C: Stale Device Flush ---
+  // --- Group C: Incremental Group Assembly (stale flush removed) ---
 
-  it('7. Stale connected device is cancelled and disconnect listeners cleared', async () => {
+  it('7. Non-target connected device is retained during incremental assembly', async () => {
+    // Scenario: Device A (MAC1) is already connected. New batch targets only MAC2.
+    // OLD behavior: MAC1 was classified as "stale" and disconnected.
+    // NEW behavior: MAC1 is retained. Both devices end up in the final group.
     mockInput.targetMacs = ['MAC2'];
     const mockDisconnectSub = { remove: jest.fn() };
     mockInput.connectedDevicesRef.current = [mockDevice1];
@@ -335,30 +338,32 @@ describe('ConnectService test suite', () => {
     const promise = runConnectService(mockInput);
 
     await jest.runAllTimersAsync();
-    await promise;
+    const result = await promise;
 
-    expect(mockBleManager.cancelDeviceConnection).toHaveBeenCalledWith('MAC1');
-    expect(mockDisconnectSub.remove).toHaveBeenCalled();
-    expect(mockInput.disconnectListeners.current['MAC1']).toBeUndefined();
+    // MAC1 should NOT be disconnected — it is retained
+    expect(mockBleManager.cancelDeviceConnection).not.toHaveBeenCalledWith('MAC1');
+    expect(mockDisconnectSub.remove).not.toHaveBeenCalled();
+    // Both devices should be in the final group
+    expect(result.devices).toEqual([mockDevice1, mockDevice2]);
+    expect(result.devices.length).toBe(2);
   });
 
-  it('8. Stale flush respects settle delay timing', async () => {
+  it('8. No stale flush settle delay when devices are retained', async () => {
+    // With stale flush removed, connectToDevice should fire immediately
+    // without waiting for a settle delay.
     mockInput.targetMacs = ['MAC2'];
     mockInput.connectedDevicesRef.current = [mockDevice1];
     mockBleManager.connectToDevice = jest.fn().mockResolvedValue(mockDevice2);
 
     const promise = runConnectService(mockInput);
 
-    // Let the cancel device resolve first
-    await Promise.resolve();
-    // Reconnect should not have fired yet because of settle delay
-    expect(mockBleManager.connectToDevice).not.toHaveBeenCalled();
-
-    // Fast-forward timing settle delay
     await jest.runAllTimersAsync();
-    await promise;
+    const result = await promise;
 
-    expect(mockBleManager.connectToDevice).toHaveBeenCalled();
+    // connectToDevice should have been called (no settle delay blocking it)
+    expect(mockBleManager.connectToDevice).toHaveBeenCalledWith('MAC2', undefined);
+    // Both devices retained in final group
+    expect(result.devices).toEqual([mockDevice1, mockDevice2]);
   });
 
   // --- Group D: MTU Negotiation (Android) ---
