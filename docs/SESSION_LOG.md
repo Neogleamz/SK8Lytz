@@ -4148,3 +4148,10 @@ TSC: ?  Jest: ?
 ### [MERGE READY] feat/crewz-resilience - 050a31ecb8128d388fd0541c55e5e6ebb3f5971e
 Files touched: docs/SK8Lytz_App_Master_Reference.md, src/components/crew/CrewLandingScreen.tsx, src/services/CrewService/CrewRealtime.ts, src/hooks/useCrewSession.ts, src/services/GlobalForegroundService.ts, src/services/session/NotificationService.ts, tools/knowledge-base/patterns/offline-first.md
 TSC: ? Jest: ?
+ 
+ # # #   [ M E R G E   R E A D Y ]   f i x / o b s e r v a t o r y - d b - d r i f t      8 5 b 0 9 7 1 c  
+ F i l e s   t o u c h e d :   s u p a b a s e / m i g r a t i o n s / 2 0 2 6 0 6 1 7 _ o b s e r v a t o r y _ f i x e s . s q l ,   s r c / s e r v i c e s / a p p L o g g e r / A p p L o g g e r C l o u d . t s  
+ T S C :   '    J e s t :   ' 
+ ### [MERGE READY] fix/web-console-crash -- bbece676
+Files touched: App.tsx, index.ts
+TSC: ✅  Jest: ✅
