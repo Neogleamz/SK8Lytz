@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import React from 'react';
+import React, { useRef } from 'react';
 import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { AppLogger } from '../../services/appLogger';
@@ -22,17 +22,20 @@ export function CrewScheduleScreen() {
   const { selectedCrewId, setSelectedCrewId, crewName, setCrewName, schedDateTime, setSchedDateTime, showDatePicker, setShowDatePicker, showTimePicker, setShowTimePicker } = formState;
 
   const [locationSpotId, setLocationSpotId] = React.useState<string | undefined>();
+  const isProcessingRef = useRef(false);
 
   const handleCreate = async (scheduled?: Date) => {
-    let sessionName = crewName.trim() || permanentCrews.find(c => c.id === selectedCrewId)?.name || '';
-    if (!sessionName) { setErrorMsg('Pick a crew or enter a session name'); return; }
-
-    const now = new Date();
-    const dateStr = `${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')}`;
-    sessionName = `${sessionName}_${dateStr}`;
-
-    setIsLoading(true); setErrorMsg('');
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
+      let sessionName = crewName.trim() || permanentCrews.find(c => c.id === selectedCrewId)?.name || '';
+      if (!sessionName) { setErrorMsg('Pick a crew or enter a session name'); return; }
+
+      const now = new Date();
+      const dateStr = `${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getDate().toString().padStart(2, '0')}`;
+      sessionName = `${sessionName}_${dateStr}`;
+
+      setIsLoading(true); setErrorMsg('');
       const crewInfo = myCrews.find(c => c.id === selectedCrewId);
       const isSessionPublic = crewInfo ? crewInfo.is_public : false;
 
@@ -61,6 +64,7 @@ export function CrewScheduleScreen() {
       setErrorMsg((e instanceof Error ? e.message : String(e)) || 'Failed to create session');
     } finally {
       setIsLoading(false);
+      isProcessingRef.current = false;
     }
   };
   

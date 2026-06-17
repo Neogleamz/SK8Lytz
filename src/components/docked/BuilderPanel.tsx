@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TouchableOpacity, Modal, TextInput, ActivityIndicator, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GradientLibraryTab } from '../patterns/GradientLibraryTab';
@@ -52,6 +52,7 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
   const [saveModalVisible, setSaveModalVisible] = useState(false);
   const [presetNameInput, setPresetNameInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const isSavingRef = useRef(false);
   const [suggestionChips, setSuggestionChips] = useState<string[]>([]);
 
   React.useEffect(() => {
@@ -93,6 +94,8 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
 
   const handleSavePreset = async () => {
     if (!presetNameInput.trim()) return;
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
     setIsSaving(true);
     const isBuiltin = editingPreset?.id?.startsWith('builtin_');
     try {
@@ -109,6 +112,7 @@ export const BuilderPanel: React.FC<BuilderPanelProps> = ({
       AppLogger.error('BUILDER_PANEL', { event: 'save_preset_failed', id: editingPreset?.id || 'NEW', error: (err instanceof Error ? err.message : String(err)) , payload_size: 0, ssi: 0 });
     } finally {
       setIsSaving(false);
+      isSavingRef.current = false;
     }
   };
 

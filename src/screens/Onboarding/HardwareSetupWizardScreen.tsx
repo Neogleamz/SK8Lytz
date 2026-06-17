@@ -81,6 +81,7 @@ export default function HardwareSetupWizardScreen({
   // isBlinking is string | null (acts as a status union representing the active blinking device's MAC)
   const [isBlinking, setIsBlinking] = useState<string | null>(null);
   const isBlinkingRef = useRef(false);
+  const isScanProcessingRef = useRef(false);
   
   type WizardActionStatus = 'idle' | 'identifying' | 'claiming' | 'error';
   const [actionStatus, setActionStatus] = useState<WizardActionStatus>('idle');
@@ -168,11 +169,17 @@ export default function HardwareSetupWizardScreen({
   }, [step, bleState, scanStage, pendingRegistrations.length]);
 
   const handleStartScan = async () => {
-    const granted = await requestPermissions();
-    if (granted && bleState !== 'SCANNING') {
-      setScanStage('STARTED');
-      // disableProbing is now a no-op — probing is on-demand only (BLINK tap)
-      scanForPeripherals();
+    if (isScanProcessingRef.current) return;
+    isScanProcessingRef.current = true;
+    try {
+      const granted = await requestPermissions();
+      if (granted && bleState !== 'SCANNING') {
+        setScanStage('STARTED');
+        // disableProbing is now a no-op — probing is on-demand only (BLINK tap)
+        scanForPeripherals();
+      }
+    } finally {
+      isScanProcessingRef.current = false;
     }
   };
 

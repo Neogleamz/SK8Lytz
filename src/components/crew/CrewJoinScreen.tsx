@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { ActivityIndicator, Alert, FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { AppLogger } from '../../services/appLogger';
@@ -23,12 +23,15 @@ export function CrewJoinScreen() {
   
   const { inviteCode, setInviteCode } = formState;
   const [error, setError] = useState<string | null>(null);
+  const isProcessingRef = useRef(false);
 
   const keyExtractor = React.useCallback((s: CrewSession) => s.id, []);
 
   const handleJoinByCode = async () => {
     if (inviteCode.trim().length < 6) { setErrorMsg('Enter the 6-character crew invite code'); return; }
     if (!currentUserId) { setErrorMsg('Not logged in'); return; }
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     setIsLoading(true); setErrorMsg('');
     try {
       const crew = await profileService.joinPermanentCrew(inviteCode.trim(), currentUserId);
@@ -48,7 +51,10 @@ export function CrewJoinScreen() {
       AppLogger.log('CREW_ERROR', { action: 'join_crew_by_code', error: e instanceof Error ? e.message : String(e)  });
       setErrorMsg(e.message || 'Crew not found — check the code and try again.');
       setError('Failed to load. Tap to retry.');
-    } finally { setIsLoading(false); }
+    } finally { 
+      setIsLoading(false); 
+      isProcessingRef.current = false;
+    }
   };
 
   const handleJoinById = React.useCallback(async (sessionId: string) => {

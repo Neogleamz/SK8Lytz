@@ -14,7 +14,7 @@ import { Spacing } from '../theme/theme';
  */
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
     Alert,
     Modal,
@@ -96,6 +96,7 @@ export default function AccountModal({
 
   const [tab, setTab] = useState<Tab>('profile');
   const [showEula, setShowEula] = useState(false);
+  const isProcessingRef = useRef(false);
 
   // --- Domain Hooks ---
   const {
@@ -272,6 +273,7 @@ export default function AccountModal({
   const _handleSaveNotifPrefs = (prefs: unknown) => saveNotifPrefs(prefs as Parameters<typeof saveNotifPrefs>[0]);
 
   const handleChangePassword = async () => {
+    if (isProcessingRef.current) return;
     setSecurityMsg(null);
     if (!newPwd || newPwd.length < 8) {
       setSecurityMsg({ type: 'error', text: 'New password must be at least 8 characters' });
@@ -281,6 +283,7 @@ export default function AccountModal({
       setSecurityMsg({ type: 'error', text: 'Passwords do not match' });
       return;
     }
+    isProcessingRef.current = true;
     setModalStatus('saving_pwd');
     try {
       const { error: reAuthError } = await authSignIn(userEmail || '', currentPwd);
@@ -299,6 +302,8 @@ export default function AccountModal({
     } catch (e: unknown) {
       setSecurityMsg({ type: 'error', text: (e instanceof Error ? e.message : String(e)) || 'Failed to update password' });
       setModalStatus('idle');
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
@@ -307,6 +312,8 @@ export default function AccountModal({
       setSecurityMsg({ type: 'error', text: 'Enter a valid email address' });
       return;
     }
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     setModalStatus('saving_email');
     try {
       const { error } = await updateUser({ email: newEmail });
@@ -318,6 +325,8 @@ export default function AccountModal({
       const e = err instanceof Error ? err : new Error((err instanceof Error ? err.message : String(err)));
       setSecurityMsg({ type: 'error', text: e.message || 'Could not update email' });
       setModalStatus('idle');
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
@@ -325,12 +334,16 @@ export default function AccountModal({
 
   const handleSignOut = async () => {
     const doSignOut = async () => {
+      if (isProcessingRef.current) return;
+      isProcessingRef.current = true;
       try {
         await authSignOut();
         onSignOut();
         onClose();
       } catch (err: unknown) {
         AppLogger.error('Sign out failed', err instanceof Error ? err : new Error(String(err)), { category: 'ACCOUNT_MGMT', payload_size: 0, ssi: 0 });
+      } finally {
+        isProcessingRef.current = false;
       }
     };
 

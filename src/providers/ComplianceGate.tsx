@@ -21,6 +21,7 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
   const [status, setStatus] = useState<ComplianceStatus>('checking');
   const [requiresEula, setRequiresEula] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isProcessingRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -92,6 +93,8 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
   };
 
   const handleAccept = async () => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       if (isOfflineMode) {
         // Offline acceptance: write versioned record to AsyncStorage.
@@ -124,15 +127,21 @@ export function ComplianceGate({ children }: ComplianceGateProps) {
        const msg = e instanceof Error ? e.message : String(e);
        AppLogger.error('[ComplianceGate] Accept failed', { error: msg, payload_size: 0, ssi: 0 });
        Alert.alert('Error', 'Could not save compliance status. Please try again.');
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
   const handleDecline = async () => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       await signOut();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       AppLogger.warn('[ComplianceGate] Sign out failed', { error: msg, payload_size: 0, ssi: 0 });
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 

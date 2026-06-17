@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
-import React from 'react';
+import React, { useRef } from 'react';
 import { Alert, Animated, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
 import { CrewMember, crewService } from '../../services/CrewService';
@@ -34,13 +34,18 @@ export function CrewControllerScreen({ onClose, currentModeSummary, lastLeaderSc
   const { activeSessions, myCrews, permanentCrews, isLoadingNearby, refreshNearby, nearbySessions, discoverRadiusMi, setDiscoverRadiusMi, locationLabel, handleDetectLocation, isGettingLocation } = hub;
   const { selectedCrewDetail, setSelectedCrewDetail, expandedCrewId, setExpandedCrewId, cardMembers, setCardMembers, loadingCardMembersFor, makingOwnerFor, setMakingOwnerFor, confirmingDeleteCrewId, setConfirmingDeleteCrewId, confirmingLeaveCrewId, setConfirmingLeaveCrewId, createCrewError, setCreateCrewError, isCreatingCrew, newCrewName, setNewCrewName, newCrewDescription, setNewCrewDescription, newCrewIsPublic, setNewCrewIsPublic, newCrewCity, setNewCrewCity, newCrewState, setNewCrewState } = manage;
   const { currentSession, isHandoffMode, setIsHandoffMode, currentRole, members, executeLeaveSession, executeEndSession, handleHandoffLeadership } = session;
+  const isProcessingRef = useRef(false);
   
   const handleLeave = async () => {
-    try { await executeLeaveSession(); } catch (e: unknown) { AppLogger.warn('CREW_SESSION', { event: 'leave_failed', error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 }); }
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try { await executeLeaveSession(); } catch (e: unknown) { AppLogger.warn('CREW_SESSION', { event: 'leave_failed', error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 }); } finally { isProcessingRef.current = false; }
   };
   
   const handleEndSession = async () => {
-    try { await executeEndSession(); } catch (e: unknown) { AppLogger.warn('CREW_SESSION', { event: 'end_failed', error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 }); }
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try { await executeEndSession(); } catch (e: unknown) { AppLogger.warn('CREW_SESSION', { event: 'end_failed', error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 }); } finally { isProcessingRef.current = false; }
   };
 
   const renderMemberRow = ({ item }: { item: CrewMember }) => {

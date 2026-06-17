@@ -45,6 +45,10 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
   const [editUsername, setEditUsername] = useState('');
   const isMountedRef = useRef(true);
   const isDataLoadingRef = useRef(false);
+  const isSavingProfileRef = useRef(false);
+  const isPickingPhotoRef = useRef(false);
+  const isSavingPrefsRef = useRef(false);
+  const isCrewProcessingRef = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -167,6 +171,8 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
 
   const handleSaveProfile = async () => {
     if (!editName.trim()) return;
+    if (isSavingProfileRef.current) return;
+    isSavingProfileRef.current = true;
     setStatus('saving_profile');
     try {
       const updates: Partial<UserProfile> = { display_name: editName.trim() };
@@ -183,26 +189,30 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       AppLogger.error('[AccountOverview] handleSaveProfile failed', e, { payload_size: 0, ssi: 0 });
       Alert.alert('Error', (e instanceof Error ? e.message : String(e)) || 'Could not save profile');
       setStatus('error');
+    } finally {
+      isSavingProfileRef.current = false;
     }
   };
 
 
   const handlePickProfilePhoto = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Enable photo library access in Settings to set a profile photo.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true, aspect: [1, 1], quality: 0.7,
-    });
-    if (result.canceled || !result.assets[0]) return;
-
-    const asset = result.assets[0];
-    setProfilePhotoUri(asset.uri);
-
+    if (isPickingPhotoRef.current) return;
+    isPickingPhotoRef.current = true;
     try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Enable photo library access in Settings to set a profile photo.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true, aspect: [1, 1], quality: 0.7,
+      });
+      if (result.canceled || !result.assets[0]) return;
+
+      const asset = result.assets[0];
+      setProfilePhotoUri(asset.uri);
+
       if (!user) throw new Error('Not authenticated');
 
       const ext = asset.uri.split('.').pop()?.toLowerCase() ?? 'jpg';
@@ -225,18 +235,26 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     } catch (e: unknown) {
       AppLogger.error('[AccountOverview] handlePickProfilePhoto failed', e, { payload_size: 0, ssi: 0 });
       Alert.alert('Upload failed', (e instanceof Error ? e.message : String(e)) ?? 'Could not upload photo. Try again.');
+    } finally {
+      isPickingPhotoRef.current = false;
     }
   };
 
   const saveNotifPrefs = async (prefs: { crewInvites: boolean; sessionReminders: boolean; leaderHandoff: boolean }) => {
-    await AsyncStorage.setItem(NOTIF_PREF_KEY, JSON.stringify(prefs)).catch(e => {
-      AppLogger.warn('Failed to persist notification preferences', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
-      Alert.alert('Settings Error', 'Failed to save notification preference.');
-    });
-    if (user?.id) {
-      profileService.updateProfile(user.id, { notif_preferences: prefs }).catch((e: unknown) => 
-        AppLogger.warn('Failed to cloud sync notification preferences', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 })
-      );
+    if (isSavingPrefsRef.current) return;
+    isSavingPrefsRef.current = true;
+    try {
+      await AsyncStorage.setItem(NOTIF_PREF_KEY, JSON.stringify(prefs)).catch(e => {
+        AppLogger.warn('Failed to persist notification preferences', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+        Alert.alert('Settings Error', 'Failed to save notification preference.');
+      });
+      if (user?.id) {
+        await profileService.updateProfile(user.id, { notif_preferences: prefs }).catch((e: unknown) => 
+          AppLogger.warn('Failed to cloud sync notification preferences', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 })
+        );
+      }
+    } finally {
+      isSavingPrefsRef.current = false;
     }
   };
 
@@ -269,8 +287,10 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
 
   // Crew handlers
   const handleCreateCrew = async () => {
+    if (isCrewProcessingRef.current) return;
     if (!newCrewName.trim()) { setCrewError('Enter a crew name'); return; }
     if (!user?.id) { setCrewError('Not logged in'); return; }
+    isCrewProcessingRef.current = true;
     setStatus('crew_loading'); setCrewError('');
     try {
       const crew = await profileService.createPermanentCrew(newCrewName.trim(), undefined, user.id);
@@ -282,12 +302,16 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       AppLogger.warn('[AccountOverview] handleCreateCrew failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       setCrewError((e instanceof Error ? e.message : String(e)) ?? 'Failed to create crew');
       setStatus('error');
+    } finally {
+      isCrewProcessingRef.current = false;
     }
   };
 
   const handleJoinCrew = async () => {
+    if (isCrewProcessingRef.current) return;
     if (joinCode.trim().length < 4) { setCrewError('Enter the invite code'); return; }
     if (!user?.id) { setCrewError('Not logged in'); return; }
+    isCrewProcessingRef.current = true;
     setStatus('crew_loading'); setCrewError('');
     try {
       const crew = await profileService.joinPermanentCrew(joinCode.trim(), user.id);
@@ -299,11 +323,15 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
       AppLogger.warn('[AccountOverview] handleJoinCrew failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
       setCrewError((e instanceof Error ? e.message : String(e)) ?? 'Failed to join crew');
       setStatus('error');
+    } finally {
+      isCrewProcessingRef.current = false;
     }
   };
 
   const handleLeaveCrew = async (crewId: string) => {
+    if (isCrewProcessingRef.current) return;
     if (!user?.id) return;
+    isCrewProcessingRef.current = true;
     try {
       await profileService.leavePermanentCrew(crewId, user.id);
       setCrews(prev => prev.filter(c => c.id !== crewId));
@@ -311,6 +339,8 @@ export function useAccountOverview(visible: boolean, onProfileUpdated?: () => vo
     } catch (e: unknown) { 
       AppLogger.error('[AccountOverview] handleLeaveCrew failed', e, { crewId, payload_size: 0, ssi: 0 });
       Alert.alert('Error', (e instanceof Error ? e.message : String(e))); 
+    } finally {
+      isCrewProcessingRef.current = false;
     }
   };
 

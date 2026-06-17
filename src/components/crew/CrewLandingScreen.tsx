@@ -49,6 +49,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
   const [error, setError] = useState<string | null>(null);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const isProcessingRef = useRef(false);
 
   useEffect(() => {
     const pulse = Animated.loop(
@@ -75,6 +76,8 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
 
   const handleJoinById = async (sessionId: string) => {
     handleLocationCheck(async () => {
+      if (isProcessingRef.current) return;
+      isProcessingRef.current = true;
       setIsLoading(true); setErrorMsg('');
       setJoiningSessionId(sessionId);
       try {
@@ -89,6 +92,7 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
       } finally { 
         setIsLoading(false); 
         setJoiningSessionId(null);
+        isProcessingRef.current = false;
       }
     });
   };
@@ -152,6 +156,8 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
     handleLocationCheck(async () => {
       if (inviteCode.trim().length < 6) { setErrorMsg('Enter the 6-character crew invite code'); return; }
       if (!currentUserId) { setErrorMsg('Not logged in'); return; }
+      if (isProcessingRef.current) return;
+      isProcessingRef.current = true;
       setIsLoading(true); setErrorMsg('');
       try {
         const crew = await profileService.joinPermanentCrew(inviteCode.trim(), currentUserId);
@@ -171,7 +177,10 @@ export function CrewLandingScreen({ onClose, showOnlyMap }: { onClose?: () => vo
         AppLogger.log('CREW_ERROR', { action: 'join_crew_by_code', error: e instanceof Error ? e.message : String(e)  });
         setErrorMsg(e.message || 'Crew not found — check the code and try again.');
         setError('Failed to load. Tap to retry.');
-      } finally { setIsLoading(false); }
+      } finally { 
+        setIsLoading(false); 
+        isProcessingRef.current = false;
+      }
     });
   };
 

@@ -8,7 +8,7 @@
  * Zero BLE coupling. Receives captureEntireState as a stable callback prop.
  * Platform: React Native (Android + Web)
  */
-import React from 'react';
+import React, { useRef } from 'react';
 import { Alert, Modal, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -67,6 +67,7 @@ const QuickPresetModal = React.memo(function QuickPresetModal({
 }: QuickPresetModalProps) {
   const styles = React.useMemo(() => createStyles(Colors), [Colors]);
   const { user } = useAuth();
+  const isProcessingRef = useRef(false);
 
   const handleDelete = () => {
     const newArr = [...quickPresets];
@@ -95,17 +96,18 @@ const QuickPresetModal = React.memo(function QuickPresetModal({
   };
 
   const handlePublish = async () => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     setIsPublishingCloud(true);
-    const safeName = promptName.trim() || 'Cloud Scene';
-    if (containsProfanity(safeName)) {
-      Alert.alert(
-        'Invalid Name',
-        'Scene names cannot contain inappropriate language. Please choose a different name.'
-      );
-      setIsPublishingCloud(false);
-      return;
-    }
     try {
+      const safeName = promptName.trim() || 'Cloud Scene';
+      if (containsProfanity(safeName)) {
+        Alert.alert(
+          'Invalid Name',
+          'Scene names cannot contain inappropriate language. Please choose a different name.'
+        );
+        return;
+      }
       const success = await ScenesService.publishScene(
         safeName,
         captureEntireState(),
@@ -129,6 +131,7 @@ const QuickPresetModal = React.memo(function QuickPresetModal({
       Alert.alert('Error', 'Failed to publish scene.');
     } finally {
       setIsPublishingCloud(false);
+      isProcessingRef.current = false;
     }
   };
 

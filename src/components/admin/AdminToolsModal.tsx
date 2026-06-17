@@ -109,6 +109,7 @@ export default function AdminToolsModal({
   const [tab, setTab] = useState<Tab>('timeline');
   const [activePanel, setActivePanel] = useState<AdminPanel | null>(null);
   const [confirmDeleteVisible, setConfirmDeleteVisible] = useState(false);
+  const isProcessingRef = useRef(false);
 
   // ── Domain Hooks ────────────────────────────────────────────────────────────
   const { logs, stats, isUploading, clearLogs, uploadLogs, exportLogs } = useAdminTelemetry(visible);
@@ -153,7 +154,13 @@ export default function AdminToolsModal({
 
 
   const handleExport = async () => {
-    await exportLogs();
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+    try {
+      await exportLogs();
+    } finally {
+      isProcessingRef.current = false;
+    }
   };
 
   const handleClear = () => {
@@ -167,11 +174,15 @@ export default function AdminToolsModal({
   };
 
   const handleUpload = async () => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
     try {
       await uploadLogs();
       Alert.alert('Upload Complete', 'Logs successfully uploaded to sk8lytz-logs bucket on Supabase.');
     } catch (err: unknown) {
       Alert.alert('Upload Failed', err instanceof Error ? err.message : String(err));
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
