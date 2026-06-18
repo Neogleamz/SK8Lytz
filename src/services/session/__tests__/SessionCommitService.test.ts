@@ -21,6 +21,7 @@ jest.mock('../../../services/SpeedTrackingService', () => ({
 import { sessionCommitService, type SessionCommitServiceInput } from '../SessionCommitService';
 import { SpeedTrackingService } from '../../../services/SpeedTrackingService';
 import { WatchBridge } from 'sk8lytz-watch-bridge';
+import type { PromiseServiceActor } from '../../../__tests__/test-env';
 
 describe('SessionCommitService test suite', () => {
   let mockInput: SessionCommitServiceInput;
@@ -56,7 +57,8 @@ describe('SessionCommitService test suite', () => {
     };
   });
 
-  const getPromise = (input: any) => (sessionCommitService as any).config({ input });
+  const getPromise = (input: SessionCommitServiceInput) =>
+    (sessionCommitService as unknown as PromiseServiceActor).config({ input });
 
   it('1. Syncs SUMMARY state to watch and saves session to DB', async () => {
     const promise = getPromise(mockInput);

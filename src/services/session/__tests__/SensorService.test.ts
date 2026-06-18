@@ -3,6 +3,7 @@ import * as Location from 'expo-location';
 import { Accelerometer } from 'expo-sensors';
 import { checkPermission } from '../../PermissionService';
 import { Platform } from 'react-native';
+import type { CallbackServiceActor } from '../../../__tests__/test-env';
 
 jest.mock('react-native', () => ({
   Platform: { OS: 'ios' }
@@ -55,10 +56,10 @@ describe('SensorService test suite', () => {
     jest.useRealTimers();
   });
 
-  const getCallback = () => (sensorService as any).config;
+  const getCallback = () => (sensorService as unknown as CallbackServiceActor).config;
 
   it('1. GPS speed tick updates telemetry via onTelemetryUpdate', async () => {
-    let watchCallback: any;
+    let watchCallback: ((position: { coords: { speed: number; latitude: number; longitude: number }; timestamp: number }) => void) | undefined;
     (Location.watchPositionAsync as jest.Mock).mockImplementation((options, cb) => {
       watchCallback = cb;
       return Promise.resolve({ remove: jest.fn() });
@@ -79,7 +80,7 @@ describe('SensorService test suite', () => {
     expect(watchCallback).toBeDefined();
 
     // Trigger GPS update
-    watchCallback({
+    watchCallback!({
       coords: { speed: 5, latitude: 10, longitude: 20 },
       timestamp: Date.now()
     });
@@ -91,12 +92,11 @@ describe('SensorService test suite', () => {
         sessionPeakSpeed: gpsSpeedRef.current
       })
     );
-
-    cleanup();
+    cleanup?.();
   });
 
   it('2. Accelerometer high-G tick updates peakGForce', () => {
-    let accelCallback: any;
+    let accelCallback: ((data: { x: number; y: number; z: number }) => void) | undefined;
     (Accelerometer.addListener as jest.Mock).mockImplementation((cb) => {
       accelCallback = cb;
       return { remove: jest.fn() };
@@ -115,7 +115,7 @@ describe('SensorService test suite', () => {
 
     // Trigger high-G event (simulate 2G total vector)
     // x=1.15, y=1.15, z=1.15 -> sqrt = ~2.0
-    accelCallback({ x: 1.15, y: 1.15, z: 1.15 });
+    accelCallback!({ x: 1.15, y: 1.15, z: 1.15 });
 
     // The decayed G will be calculated, peak should be higher than 1.0
     expect(onTelemetryUpdateMock).toHaveBeenCalledWith(
@@ -125,8 +125,7 @@ describe('SensorService test suite', () => {
     );
     const lastCallArg = onTelemetryUpdateMock.mock.calls[onTelemetryUpdateMock.mock.calls.length - 1][0];
     expect(lastCallArg.peakGForce).toBeGreaterThan(1.0);
-
-    cleanup();
+    cleanup?.();
   });
 
   it('3. Cleanup removes both subscriptions (location + accelerometer)', async () => {
@@ -147,7 +146,7 @@ describe('SensorService test suite', () => {
 
     for (let i = 0; i < 5; i++) await Promise.resolve();
 
-    cleanup();
+    cleanup?.();
 
     expect(locRemoveMock).toHaveBeenCalled();
     expect(accelRemoveMock).toHaveBeenCalled();
@@ -165,7 +164,7 @@ describe('SensorService test suite', () => {
 
     onTelemetryUpdateMock.mockClear();
     
-    cleanup();
+    cleanup?.();
     
     // Advance 5 seconds
     jest.advanceTimersByTime(5000);

@@ -43,8 +43,8 @@ jest.mock('react-native', () => ({
 // Key mocks: clearWriteQueue and enqueueWrite from BleWriteQueue
 jest.mock('../../BleWriteQueue', () => ({
   clearWriteQueue: jest.fn(),
-  enqueueWrite: jest.fn(async (_priority: any, op: () => Promise<any>) => op()),
-  enqueueDelay: jest.fn(async (_priority: any, delay: number) => new Promise(res => setTimeout(res, delay))),
+  enqueueWrite: jest.fn(async (_priority: string, op: () => Promise<unknown>) => op()),
+  enqueueDelay: jest.fn(async (_priority: string, delay: number) => new Promise(res => setTimeout(res, delay))),
 }));
 
 jest.mock('../../BleSessionFactory', () => ({
@@ -68,17 +68,19 @@ import type { BleManager, Device, Subscription } from 'react-native-ble-plx';
 import { recoveryService } from '../RecoveryService';
 import { createGattSession } from '../../BleSessionFactory';
 import { clearWriteQueue } from '../../BleWriteQueue';
+import type { AnyActorRef, ActorSystem, AnyEventObject } from 'xstate';
+import type { IControllerProtocol } from '../../../protocols/IControllerProtocol';
 
 // Mirrors the private RecoveryInput interface from RecoveryService.ts
 interface RecoveryInput {
   bleManager: BleManager;
   ghostedDeviceIds: string[];
-  adapterMapRef: { current: Map<string, any> };
+  adapterMapRef: { current: Map<string, IControllerProtocol> };
   mtuMapRef: { current: Map<string, number> };
   disconnectListeners: { current: Record<string, Subscription> };
-  handleOrganicDisconnect: (error: any, deviceId: string) => void;
+  handleOrganicDisconnect: (error: Error | null, deviceId: string) => void;
   onOrganicDisconnect: (deviceId: string) => void;
-  handleNotification: (error: any, characteristic: any, deviceId: string) => void;
+  handleNotification: (error: Error | null, characteristic: { value: string | null } | null, deviceId: string) => void;
   getSweepedDevice?: (deviceId: string) => Device | undefined;
 }
 
@@ -104,19 +106,21 @@ describe('RecoveryService test suite', () => {
    * Returns the cancel() cleanup function.
    */
   const callRecoveryService = (input: RecoveryInput, mockSendBack: jest.Mock): () => void => {
-    const fn = (recoveryService as any).config as (params: {
-      input: RecoveryInput;
-      sendBack: (event: any) => void;
-      receive: (listener: any) => void;
-      self: any;
-      system: any;
-    }) => () => void;
+    const fn = (recoveryService as unknown as {
+      config: (params: {
+        input: RecoveryInput;
+        sendBack: (event: AnyEventObject) => void;
+        receive: (listener: (event: AnyEventObject) => void) => void;
+        self: AnyActorRef;
+        system: ActorSystem<any>;
+      }) => () => void;
+    }).config;
     return fn({
       input,
       sendBack: mockSendBack,
       receive: jest.fn(),
-      self: {} as any,
-      system: {} as any,
+      self: {} as unknown as AnyActorRef,
+      system: {} as unknown as ActorSystem<any>,
     });
   };
 

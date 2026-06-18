@@ -2,7 +2,8 @@ import React from 'react';
 import { Platform } from 'react-native';
 import { useBLEScanner } from '../useBLEScanner';
 import { ZENGGE_SERVICE_UUID } from '../../../protocols/ZenggeProtocol';
-import type { Device } from 'react-native-ble-plx';
+import type { BleManager, Device } from 'react-native-ble-plx';
+import type { GlobalWithDev, MutablePlatform } from '../../../__tests__/test-env';
 
 // Mock React Hooks to inspect returned functions of useBLEScanner directly
 jest.mock('react', () => {
@@ -80,8 +81,8 @@ describe('useBLEScanner unit tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
-    (global as any).__DEV__ = true;
-    (Platform as any).OS = 'android';
+    (global as GlobalWithDev).__DEV__ = true;
+    (Platform as unknown as MutablePlatform).OS = 'android';
   });
 
   afterEach(() => {
@@ -93,7 +94,7 @@ describe('useBLEScanner unit tests', () => {
     const mockSetAllDevices = jest.fn();
 
     const scanner = useBLEScanner({
-      bleManager: {} as any,
+      bleManager: {} as unknown as BleManager,
       allDevices: [],
       setAllDevices: mockSetAllDevices,
       bleSend: mockBleSend,
@@ -114,10 +115,10 @@ describe('useBLEScanner unit tests', () => {
     const mockSetAllDevices = jest.fn();
 
     // Force Platform.OS to web to guarantee isSandboxMocking evaluates to true
-    (Platform as any).OS = 'web';
+    (Platform as unknown as MutablePlatform).OS = 'web';
 
     const scanner = useBLEScanner({
-      bleManager: {} as any,
+      bleManager: {} as unknown as BleManager,
       allDevices: [],
       setAllDevices: mockSetAllDevices,
       bleSend: mockBleSend,

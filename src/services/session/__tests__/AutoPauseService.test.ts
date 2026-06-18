@@ -1,4 +1,5 @@
 import { autoPauseService } from '../AutoPauseService';
+import type { CallbackServiceActor } from '../../../__tests__/test-env';
 
 describe('AutoPauseService test suite', () => {
   let sendBackMock: jest.Mock;
@@ -14,7 +15,7 @@ describe('AutoPauseService test suite', () => {
     jest.useRealTimers();
   });
 
-  const getCallback = () => (autoPauseService as any).config;
+  const getCallback = () => (autoPauseService as unknown as CallbackServiceActor).config;
 
   it('1. Triggers AUTO_PAUSE in ACTIVE state when speed remains low for 10 seconds (20 ticks)', () => {
     const callback = getCallback();
@@ -34,8 +35,7 @@ describe('AutoPauseService test suite', () => {
     // Advance another 5 seconds (10 ticks) -> 10s total -> triggers AUTO_PAUSE
     jest.advanceTimersByTime(5000);
     expect(sendBackMock).toHaveBeenCalledWith({ type: 'AUTO_PAUSE' });
-
-    cleanup();
+    cleanup?.();
   });
 
   it('2. Does not trigger AUTO_PAUSE if autoPauseEnabled is false', () => {
@@ -51,8 +51,7 @@ describe('AutoPauseService test suite', () => {
 
     jest.advanceTimersByTime(10000);
     expect(sendBackMock).not.toHaveBeenCalled();
-
-    cleanup();
+    cleanup?.();
   });
 
   it('3. Resets low speed counter if speed goes above 0.2 before 10s', () => {
@@ -82,8 +81,7 @@ describe('AutoPauseService test suite', () => {
     // Advance 2s more -> triggers
     jest.advanceTimersByTime(2000);
     expect(sendBackMock).toHaveBeenCalledWith({ type: 'AUTO_PAUSE' });
-
-    cleanup();
+    cleanup?.();
   });
 
   it('4. Triggers AUTO_RESUME in PAUSED state when speed goes above 0.2', () => {
@@ -106,7 +104,6 @@ describe('AutoPauseService test suite', () => {
     gpsSpeedRef.current = 0.5;
     jest.advanceTimersByTime(500);
     expect(sendBackMock).toHaveBeenCalledWith({ type: 'AUTO_RESUME' });
-
-    cleanup();
+    cleanup?.();
   });
 });

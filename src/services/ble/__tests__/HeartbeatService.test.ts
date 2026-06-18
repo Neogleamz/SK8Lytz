@@ -43,7 +43,7 @@ jest.mock('react-native', () => ({
 // enqueueWrite is the only BleWriteQueue export HeartbeatService uses.
 // Path: from __tests__/ go up two levels to reach src/services/BleWriteQueue.ts
 jest.mock('../../BleWriteQueue', () => ({
-  enqueueWrite: jest.fn(async (_priority: any, op: () => Promise<any>) => op()),
+  enqueueWrite: jest.fn(async (_priority: string, op: () => Promise<unknown>) => op()),
   enqueueDelay: jest.fn().mockResolvedValue(undefined),
   isWriteQueueActive: jest.fn().mockReturnValue(false),
 }));
@@ -64,6 +64,7 @@ import type { IControllerProtocol } from '../../../protocols/IControllerProtocol
 import { heartbeatService, type HeartbeatServiceInput } from '../HeartbeatService';
 import { enqueueWrite } from '../../BleWriteQueue';
 import { ZenggeProtocol } from '../../../protocols/ZenggeProtocol';
+import type { AnyActorRef, AnyEventObject, ActorSystem } from 'xstate';
 
 const HEARTBEAT_INTERVAL_MS = 45_000;
 
@@ -97,19 +98,21 @@ describe('HeartbeatService test suite', () => {
    * Returns the cleanup function (clearInterval wrapper).
    */
   const callHeartbeatService = (input: HeartbeatServiceInput, mockSendBack: jest.Mock): () => void => {
-    const fn = (heartbeatService as any).config as (params: {
-      input: HeartbeatServiceInput;
-      sendBack: (event: any) => void;
-      receive: (listener: any) => void;
-      self: any;
-      system: any;
-    }) => () => void;
+    const fn = (heartbeatService as unknown as {
+      config: (params: {
+        input: HeartbeatServiceInput;
+        sendBack: (event: AnyEventObject) => void;
+        receive: (listener: (event: AnyEventObject) => void) => void;
+        self: AnyActorRef;
+        system: ActorSystem<any>;
+      }) => () => void;
+    }).config;
     return fn({
       input,
       sendBack: mockSendBack,
       receive: jest.fn(),
-      self: {} as any,
-      system: {} as any,
+      self: {} as unknown as AnyActorRef,
+      system: {} as unknown as ActorSystem<any>,
     });
   };
 

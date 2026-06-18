@@ -78,7 +78,7 @@ describe('readDeviceRSSI', () => {
   });
 
   it('returns null when bleManager itself is null — does not throw', async () => {
-    const result = await readDeviceRSSI(MAC, null as any);
+    const result = await readDeviceRSSI(MAC, null as unknown as Parameters<typeof readDeviceRSSI>[1]);
 
     expect(result).toBeNull();
   });

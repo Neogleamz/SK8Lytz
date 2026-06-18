@@ -10,6 +10,12 @@
 // __DEV__ is a React Native runtime global; we declare it here for Jest compatibility.
 (global as typeof globalThis & { __DEV__: boolean }).__DEV__ = true;
 
+/** Internal shape of GroupRepository private reset fields (for test scaffolding only). */
+type GroupRepositoryInternals = {
+  isInitialized: boolean;
+  initPromise: Promise<void> | null;
+};
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../supabaseClient';
 import GroupRepository, { GroupDeviceDelegate } from '../GroupRepository';
@@ -122,8 +128,8 @@ describe('GroupRepository', () => {
       await AsyncStorage.setItem('@Sk8lytz_custom_groups', JSON.stringify(cachedGroups)).catch(() => {});
 
       // Re-initialize a fresh init state
-      (repository as any).isInitialized = false;
-      (repository as any).initPromise = null;
+      (repository as unknown as GroupRepositoryInternals).isInitialized = false;
+      (repository as unknown as GroupRepositoryInternals).initPromise = null;
       await repository.initialize();
 
       expect(repository.getGroups()).toEqual(cachedGroups);

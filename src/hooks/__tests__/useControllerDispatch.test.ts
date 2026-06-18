@@ -4,14 +4,15 @@ import { ZenggeAdapter } from '../../protocols/ZenggeAdapter';
 import { getLocalProfileById } from '../../constants/ProductCatalog';
 import { AppLogger } from '../../services/appLogger';
 import { buildPatternPayload } from '../../protocols/PatternEngine';
+import type { GlobalWithDev } from '../../__tests__/test-env';
 
 // Global mocks
-(global as any).__DEV__ = true;
+(global as GlobalWithDev).__DEV__ = true;
 
 jest.mock('react', () => ({
   ...jest.requireActual('react'),
-  useCallback: (fn: any) => fn,
-  useRef: (initial: any) => ({ current: initial }),
+  useCallback: (fn: (...args: unknown[]) => unknown) => fn,
+  useRef: (initial: unknown) => ({ current: initial }),
 }));
 
 jest.mock('../../services/AppLogger', () => ({
@@ -26,10 +27,11 @@ jest.mock('../../constants/ProductCatalog', () => ({
   getLocalProfileById: jest.fn(),
 }));
 
-function expectPayloadMatch(mockFn: jest.Mock, expectedPayload: number[], extraArgs: any[] = []) {
+function expectPayloadMatch(mockFn: jest.Mock, expectedPayload: number[], extraArgs: unknown[] = []) {
   console.log('[DEBUG expectPayloadMatch] mockFn.mock.calls =', JSON.stringify(mockFn.mock.calls.map(c => [c[0]?.slice?.(0, 10), c[1], c[2]])));
   if (expectedPayload) {
-    expectedPayload[1] = expect.any(Number) as any;
+    // expect.any(Number) is a jest asymmetric matcher — needs unknown cast to assign into typed number[].
+    (expectedPayload as unknown[])[1] = expect.any(Number);
   }
   expect(mockFn).toHaveBeenCalledWith(expectedPayload, "", ...extraArgs);
 }

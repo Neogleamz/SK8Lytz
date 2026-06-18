@@ -2,6 +2,7 @@ import { healthService } from '../HealthService';
 import { WatchBridge } from 'sk8lytz-watch-bridge';
 import { checkPermission } from '../../PermissionService';
 import { Platform } from 'react-native';
+import type { CallbackServiceActor } from '../../../__tests__/test-env';
 
 jest.mock('react-native', () => ({
   Platform: { OS: 'ios' }
@@ -37,10 +38,10 @@ describe('HealthService test suite', () => {
     jest.useRealTimers();
   });
 
-  const getCallback = () => (healthService as any).config;
+  const getCallback = () => (healthService as unknown as CallbackServiceActor).config;
 
   it('1. addWatchHealthListener callback fires -> onHealthUpdate called', () => {
-    let watchListener: any;
+    let watchListener: ((data: { heartRate: number; calories: number; status: string }) => void) | undefined;
     const unsubscribeMock = jest.fn();
     (WatchBridge.addWatchHealthListener as jest.Mock).mockImplementation((cb) => {
       watchListener = cb;
@@ -57,7 +58,7 @@ describe('HealthService test suite', () => {
     expect(watchListener).toBeDefined();
 
     // Trigger watch update
-    watchListener({
+    watchListener!({
       heartRate: 150,
       calories: 300,
       status: 'active'
@@ -69,12 +70,11 @@ describe('HealthService test suite', () => {
         activeCalories: 300
       })
     );
-
-    cleanup();
+    cleanup?.();
   });
 
   it('2. 30s poll interval fires -> phone health data check runs', async () => {
-    let watchListener: any;
+    let watchListener: ((data: { heartRate: number; calories: number; status: string }) => void) | undefined;
     (WatchBridge.addWatchHealthListener as jest.Mock).mockImplementation((cb) => {
       watchListener = cb;
       return jest.fn();
@@ -103,8 +103,7 @@ describe('HealthService test suite', () => {
 
     // pollHealthData should be called
     expect(checkPermission).toHaveBeenCalledWith('HEALTH');
-
-    cleanup();
+    cleanup?.();
   });
 
   it('3. Cleanup calls unsubscribeHealth and stops polling', () => {
@@ -117,8 +116,7 @@ describe('HealthService test suite', () => {
         onHealthUpdate: onHealthUpdateMock
       }
     });
-
-    cleanup();
+    cleanup?.();
 
     expect(unsubscribeMock).toHaveBeenCalled();
 

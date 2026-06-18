@@ -417,7 +417,7 @@ describe('ConnectService test suite', () => {
   });
 
   it('14. onOrganicDisconnect fires on unexpected device disconnect', async () => {
-    let capturedCallback: any = null;
+    let capturedCallback: ((error: Error | null, device: { id: string } | null) => void) | null = null;
     mockBleManager.onDeviceDisconnected = jest.fn().mockImplementation((id, cb) => {
       capturedCallback = cb;
       return mockDisconnectSubscription;
@@ -428,7 +428,7 @@ describe('ConnectService test suite', () => {
 
     expect(capturedCallback).not.toBeNull();
     const disconnectError = new Error('GATT Server organic dropout');
-    capturedCallback(disconnectError);
+    capturedCallback!(disconnectError, null);
 
     expect(mockInput.handleOrganicDisconnect).toHaveBeenCalledWith(disconnectError, 'MAC1');
     expect(mockInput.onOrganicDisconnect).toHaveBeenCalledWith('MAC1');

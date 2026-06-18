@@ -2,6 +2,7 @@ import { notificationService } from '../NotificationService';
 import notifee from '@notifee/react-native';
 import * as Location from 'expo-location';
 import { Platform, AppState } from 'react-native';
+import type { CallbackServiceActor } from '../../../__tests__/test-env';
 
 jest.mock('react-native', () => ({
   Platform: { OS: 'android' },
@@ -29,7 +30,7 @@ jest.mock('../../appLogger', () => ({
 }));
 
 describe('NotificationService test suite', () => {
-  let telemetryRef: any;
+  let telemetryRef: { current: { sessionDistanceMiles: number; gpsSpeed: number } };
 
   beforeEach(() => {
     telemetryRef = { current: { sessionDistanceMiles: 1.5, gpsSpeed: 10.2 } };
@@ -45,7 +46,7 @@ describe('NotificationService test suite', () => {
     jest.useRealTimers();
   });
 
-  const getCallback = () => (notificationService as any).config;
+  const getCallback = () => (notificationService as unknown as CallbackServiceActor).config;
 
   it('1. ACTIVE phase: notification displays PAUSE + END action buttons', async () => {
     const callback = getCallback();
@@ -69,8 +70,7 @@ describe('NotificationService test suite', () => {
     expect(args.android.actions[0].title).toContain('END');
     expect(args.android.actions[1].title).toContain('MUSIC');
     expect(args.android.actions[2].title).toContain('FAVORITE');
-
-    cleanup();
+    cleanup?.();
   });
 
   it('2. PAUSED phase: notification displays RESUME + END action buttons', async () => {
@@ -94,8 +94,7 @@ describe('NotificationService test suite', () => {
     expect(args.android.actions[0].title).toContain('END');
     expect(args.android.actions[1].title).toContain('MUSIC');
     expect(args.android.actions[2].title).toContain('FAVORITE');
-
-    cleanup();
+    cleanup?.();
   });
 
   it('3. ENDING phase: notification displays NO action buttons', async () => {
@@ -116,8 +115,7 @@ describe('NotificationService test suite', () => {
     
     expect(args.title).toContain('Saving Session');
     expect(args.android.actions).toHaveLength(0); // NO actions during ENDING
-
-    cleanup();
+    cleanup?.();
   });
 
   it('4. Cleanup calls cancelNotification', async () => {
@@ -132,7 +130,7 @@ describe('NotificationService test suite', () => {
     });
 
     for (let i = 0; i < 5; i++) await Promise.resolve();
-    cleanup();
+    cleanup?.();
     for (let i = 0; i < 5; i++) await Promise.resolve();
 
     expect(notifee.cancelNotification).toHaveBeenCalled();

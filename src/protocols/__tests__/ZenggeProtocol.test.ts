@@ -2,6 +2,17 @@ import { ZenggeProtocol } from '../ZenggeProtocol';
 import { ZenggeAdapter } from '../ZenggeAdapter';
 import type { ProtocolResult } from '../IControllerProtocol';
 
+/**
+ * Typed prototype accessor for ZenggeProtocol private method spying.
+ * Avoids `as any` prototype casts while still targeting the private `getSequenceCounter`.
+ */
+type ZenggePrototypeWithSequence = typeof ZenggeProtocol.prototype & {
+  getSequenceCounter: () => number;
+};
+
+/** Helper to cast prototype to spyable type without `as any`. */
+const zenggeProto = () => ZenggeProtocol.prototype as unknown as ZenggePrototypeWithSequence;
+
 // ─── ZenggeProtocol (Static Facade Backward Compatibility) ───────────────────
 // Verifies that all 25 legacy consumers can still call ZenggeProtocol.method()
 // statically and receive correct results. The static methods delegate to the
@@ -19,7 +30,7 @@ describe('ZenggeProtocol', () => {
     it('should correctly build the header envelope via the static singleton', () => {
       // The static facade delegates to _instance. We spy on the prototype's
       // instance method (getSequenceCounter) to make the test deterministic.
-      const proto = ZenggeProtocol.prototype as any;
+      const proto = zenggeProto();
       const spy = jest.spyOn(proto, 'getSequenceCounter').mockReturnValue(0);
 
       const payload = [0x71, 0x23, 0x0f, 0xa3];
@@ -36,7 +47,7 @@ describe('ZenggeProtocol', () => {
 
   describe('queryHardwareSettings', () => {
     it('should generate correct query packet for no-mic', () => {
-      const proto = ZenggeProtocol.prototype as any;
+      const proto = zenggeProto();
       const spy = jest.spyOn(proto, 'getSequenceCounter').mockReturnValue(0);
       const result = ZenggeProtocol.queryHardwareSettings(false);
 
@@ -48,7 +59,7 @@ describe('ZenggeProtocol', () => {
 
   describe('setMultiColor', () => {
     it('should enforce 12-pixel minimum', () => {
-      const proto = ZenggeProtocol.prototype as any;
+      const proto = zenggeProto();
       const spy = jest.spyOn(proto, 'getSequenceCounter').mockReturnValue(0);
 
       const colors = [{ r: 255, g: 0, b: 0 }]; // 1 color, will be padded to 12
@@ -64,7 +75,7 @@ describe('ZenggeProtocol', () => {
     });
 
     it('does not truncate at 54 pixels (supports 150 pixels)', () => {
-      const proto = ZenggeProtocol.prototype as any;
+      const proto = zenggeProto();
       const spy = jest.spyOn(proto, 'getSequenceCounter').mockReturnValue(0);
 
       const colors = Array(150).fill({ r: 255, g: 0, b: 0 });

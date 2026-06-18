@@ -86,7 +86,7 @@ describe('HardwareSetupWizard Registration Payload Contract', () => {
     it('[R-24] should evaluate isGrouped sessions purely by checking connectedDevices.length > 1', () => {
       // Invariant: group session detection relies exclusively on the length of live GATT connections.
       // Do not check fragile DisplayDevice fields or DB sync properties.
-      const evaluateIsGrouped = (connectedDevices: any[]) => {
+      const evaluateIsGrouped = (connectedDevices: { id: string }[]) => {
         return connectedDevices.length > 1;
       };
 

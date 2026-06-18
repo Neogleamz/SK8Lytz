@@ -12,7 +12,9 @@
  * silently skipping auto-connect. This test suite locks that path down.
  */
 
-(global as any).__DEV__ = true;
+import type { GlobalWithDev } from '../../__tests__/test-env';
+
+(global as GlobalWithDev).__DEV__ = true;
 
 // ── Module mocks — all native/expo deps pulled transitively by the hook ──────
 jest.mock('@react-native-async-storage/async-storage', () => ({

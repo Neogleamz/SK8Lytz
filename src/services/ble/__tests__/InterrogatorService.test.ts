@@ -54,8 +54,8 @@ jest.mock('../../appLogger', () => ({
 }));
 
 jest.mock('../../BleWriteQueue', () => ({
-  enqueueWrite: jest.fn(async (_priority: any, op: () => Promise<any>) => op()),
-  enqueueDelay: jest.fn(async (_priority: any, delay: number) => new Promise(res => setTimeout(res, delay))),
+  enqueueWrite: jest.fn(async (_priority: string, op: () => Promise<unknown>) => op()),
+  enqueueDelay: jest.fn(async (_priority: string, delay: number) => new Promise(res => setTimeout(res, delay))),
 }));
 
 jest.mock('../../BleSessionFactory', () => ({
@@ -64,7 +64,10 @@ jest.mock('../../BleSessionFactory', () => ({
 
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { BleManager, Subscription } from 'react-native-ble-plx';
+import type { BleManager, BleError, Subscription } from 'react-native-ble-plx';
+
+/** Minimal characteristic shape used in test notification callbacks. Full Characteristic is too wide for stubs. */
+type CharacteristicValue = { value: string | null };
 import {
   interrogateDevice,
   createProbeQueue,
@@ -97,7 +100,7 @@ describe('InterrogatorService test suite', () => {
   let mockOnDeviceInterrogated: jest.Mock;
 
   // Captures the notification callback registered by monitorCharacteristicForDevice
-  let capturedNotificationCb: ((err: any, char: any) => void) | null = null;
+  let capturedNotificationCb: ((err: BleError | null, char: CharacteristicValue | null) => void) | null = null;
 
   const MOCK_MAC = 'AA:BB:CC:DD:EE:FF';
 
@@ -134,7 +137,7 @@ describe('InterrogatorService test suite', () => {
     mockBleManager = {
       writeCharacteristicWithoutResponseForDevice: jest.fn().mockResolvedValue(undefined),
       monitorCharacteristicForDevice: jest.fn().mockImplementation(
-        (_mac: string, _serviceUUID: string, _charUUID: string, cb: (err: any, char: any) => void) => {
+        (_mac: string, _serviceUUID: string, _charUUID: string, cb: (err: BleError | null, char: CharacteristicValue | null) => void) => {
           capturedNotificationCb = cb;
           return mockSubscription;
         }

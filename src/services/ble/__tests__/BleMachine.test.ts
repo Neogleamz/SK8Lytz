@@ -55,8 +55,10 @@ jest.mock('../../appLogger', () => ({
 }));
 
 import { createActor, fromPromise, fromCallback } from 'xstate';
+import type { ActorOptions } from 'xstate';
 import { bleMachine } from '../BleMachine';
-import type { Device } from 'react-native-ble-plx';
+import type { BleManager, Device, BleError } from 'react-native-ble-plx';
+import type { BleMachineContext } from '../BleMachine.types';
 
 const mockBleManager = {
   startDeviceScan: jest.fn(),
@@ -66,7 +68,7 @@ const mockBleManager = {
 
 describe('BleMachine test suite', () => {
   let mockConnectResolve: (val: { devices: Device[] }) => void;
-  let mockConnectReject: (err: any) => void;
+  let mockConnectReject: (err: BleError | Error) => void;
   let mockConnectPromise: Promise<{ devices: Device[] }>;
   let actorsList: ReturnType<typeof createActor>[] = [];
 
@@ -84,7 +86,7 @@ describe('BleMachine test suite', () => {
     },
   });
 
-  let mockInput: any;
+  let mockInput: Omit<BleMachineContext, 'connectedDevices' | 'ghostedDeviceIds'>;
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -92,7 +94,7 @@ describe('BleMachine test suite', () => {
     actorsList = [];
 
     mockInput = {
-      bleManager: mockBleManager,
+      bleManager: mockBleManager as unknown as BleManager,
       scanCallback: jest.fn(),
       scanMode: 1,
       scanServiceUUIDs: ['uuid1'],
@@ -116,8 +118,8 @@ describe('BleMachine test suite', () => {
     });
   });
 
-  const createTestActor = (options?: any) => {
-    const actor = createActor(testBleMachine, options);
+  const createTestActor = (options?: ActorOptions<typeof testBleMachine>) => {
+    const actor = createActor(testBleMachine, options as unknown as Parameters<typeof createActor<typeof testBleMachine>>[1]);
     actorsList.push(actor);
     return actor;
   };

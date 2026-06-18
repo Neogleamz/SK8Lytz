@@ -15,7 +15,7 @@ const TEST_PORT = 18081;
 
 // Helpers removed - using ZenggeProtocol directly
 
-let serverInstance: any;
+let serverInstance: import('http').Server;
 
 beforeAll((done: jest.DoneCallback) => {
   // Clear require cache for the simulator to ensure clean boot

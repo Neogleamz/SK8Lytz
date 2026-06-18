@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-(global as any).__DEV__ = true;
+import type { GlobalWithDev } from '../../__tests__/test-env';
+import type { DevicePatternState } from '../../types/dashboard.types';
+(global as GlobalWithDev).__DEV__ = true;
 import { isStale, normalizeMac, useDeviceStateLedger, warmLedgerCache } from '../useDeviceStateLedger';
 
 jest.mock('react-native', () => ({
@@ -18,8 +20,8 @@ jest.mock('../../services/AppLogger', () => ({
 
 jest.mock('react', () => ({
   ...jest.requireActual('react'),
-  useCallback: (fn: any) => fn,
-  useEffect: jest.fn((fn: any) => fn()),
+  useCallback: (fn: (...args: unknown[]) => unknown) => fn,
+  useEffect: jest.fn((fn: () => void) => fn()),
 }));
 
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -73,13 +75,16 @@ describe('useDeviceStateLedger', () => {
     it('updates in-memory cache immediately so loadSync can read it without awaiting AsyncStorage', () => {
       const ledger = useDeviceStateLedger();
       
-      const mockState = {
+      const mockState: DevicePatternState = {
+        deviceMac: 'AA:BB:CC',
         patternId: 1,
-        mode: 'FIXED',
+        mode: 'MULTIMODE',
+        patternLabel: 'Test Pattern',
         speed: 50,
         brightness: 100,
-        timestamp: Date.now()
-      } as any;
+        rawPayload: [],
+        ts: Date.now()
+      };
 
       ledger.save('AA:BB:CC', mockState);
 

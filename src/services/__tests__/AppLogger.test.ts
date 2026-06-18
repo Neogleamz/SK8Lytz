@@ -1,8 +1,9 @@
 import '@react-native-async-storage/async-storage';
+import type { GlobalWithDev } from '../../__tests__/test-env';
 
 // Define __DEV__ globally for React Native environment
-/* eslint-disable-next-line no-undef, @typescript-eslint/no-explicit-any */
-(global as any).__DEV__ = true;
+/* eslint-disable-next-line no-undef */
+(global as GlobalWithDev).__DEV__ = true;
 
 jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
