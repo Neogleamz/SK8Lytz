@@ -179,7 +179,7 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [CrewSessionManager.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/CrewService/CrewSessionManager.ts)
   - **Details:** HIGH severity. 8 files. Prerequisite: Wave 3 fully merged.
 
-- [ ] **`fix/scanner-ble-hooks`**
+- [x] **`fix/scanner-ble-hooks`** — merged @ ec50a5f3 — R-07: 2 empty catches in useBLEScanner → AppLogger.error; R-08: useRef<any> → useRef<EventFrom> in useBLE; R-16: 3 raw ms values → BLE_TIMING constants (OPTIMISTIC_CONFIRM_RESET_MS, OPTIMISTIC_RECONCILE_RESET_MS, LEDGER_WRITE_DEBOUNCE_MS) in useOptimisticBLE+useDeviceStateLedger; bleTimingConstants.ts updated. TSC ✅ Jest ✅ 8/8 gates ✅
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 MED]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:4]`
   - **Goal:** Fix error swallowing, type safety, and hardcoded delays in BLE scanner and device state hooks.
   - **Decision Log:** R-07 — empty catch blocks in useBLEScanner silently drop scan errors.
@@ -187,7 +187,7 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [useBLEScanner.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts)
   - **Details:** HIGH severity. 5 files. Prerequisite: Wave 3 fully merged.
 
-- [ ] **`fix/memory-leak-sweep`**
+- [x] **`fix/memory-leak-sweep`** — merged @ 85291fb7 — R-22: useEffect cleanup returns added to 6 components (AccountModal, CommunityModal, MarqueeText, ProductVisualizer, PatternCard, useAppMicrophone); R-20: Platform.select in SessionSummaryModal; R-12: stale closure guard in useAppMicrophone. TSC ✅ Jest ✅ 8/8 gates ✅
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:4]`
   - **Goal:** Fix useEffect cleanup omissions, stale closures, and OS variance issues.
   - **Decision Log:** R-22 — 6 components with useEffect lacking cleanup functions, causing memory leaks on unmount.

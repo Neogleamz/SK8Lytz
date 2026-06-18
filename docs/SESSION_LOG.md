@@ -8,6 +8,27 @@
 - `src/hooks/ble/useBLEBatterySweep.ts` — SKIPPED: all R-16 timeouts at L53,58,105,159 already use BLE_TIMING.* constants
 TSC: ✅  Jest: ✅  Browser: ✅  Type Safety: ✅  BLE Guards: ✅  Disconnect Wiring: ✅  Workflow Refs: ✅  (8/8 gates green)
 
+### [MERGE] 2026-06-18T13:26Z — fix/memory-leak-sweep → master @ 85291fb7
+**Files touched:**
+- `src/components/AccountModal.tsx` — R-22: added useEffect cleanup return
+- `src/components/CommunityModal.tsx` — R-22: 4 insertions, cleanup guards
+- `src/components/MarqueeText.tsx` — R-22: cleanup return added
+- `src/components/ProductVisualizer.tsx` — R-22: cleanup return added
+- `src/components/SessionSummaryModal.tsx` — R-20: Platform.select + R-12 stale closure fix
+- `src/components/patterns/PatternCard.tsx` — R-22: cleanup return added
+- `src/hooks/useAppMicrophone.ts` — R-22: cleanup + stale closure guard
+TSC: ✅  Jest: ✅  Browser: ✅  Type Safety: ✅  BLE Guards: ✅  (8/8 gates green)
+
+### [MERGE] 2026-06-18T13:26Z — fix/scanner-ble-hooks → master @ ec50a5f3
+**Files touched:**
+- `src/hooks/ble/useBLEScanner.ts` — R-07: 2 empty catch blocks → AppLogger.error
+- `src/hooks/useBLE.ts` — R-08: `useRef<any>` → `useRef<EventFrom>` typed
+- `src/hooks/useOptimisticBLE.ts` — R-16: raw 300/1000ms → BLE_TIMING constants; R-07: silent catch → AppLogger.error
+- `src/hooks/useDeviceStateLedger.ts` — R-16: inline 500ms → BLE_TIMING.LEDGER_WRITE_DEBOUNCE_MS
+- `src/constants/bleTimingConstants.ts` — added OPTIMISTIC_CONFIRM_RESET_MS, OPTIMISTIC_RECONCILE_RESET_MS, LEDGER_WRITE_DEBOUNCE_MS
+- `docs/plans/PLAN-fix-scanner-ble-hooks.md` — SKIPPED annotations per plan completeness gate
+TSC: ✅  Jest: ✅  Browser: ✅  Type Safety: ✅  BLE Guards: ✅  (8/8 gates green)
+
 ### [MERGE] 2026-06-18T13:23Z — fix/crew-services-hardening → master @ 5201c152
 **Files touched:**
 - `src/services/CrewService/CrewRealtime.ts` — R-07: empty `catch { // ignore }` in `startHeartbeat` → `AppLogger.warn`; R-16: extracted `BROADCAST_DEBOUNCE_MS`, `HEARTBEAT_INTERVAL_MS`, `PERSIST_PAYLOAD_DELAY_MS` constants; R-04: corrected logger prefix from `[CrewService]` → `[CrewRealtime]`
@@ -4464,3 +4485,14 @@ TSC: PASS  Jest: PASS
 
 **Note:** 6 of 7 files were already clean from prior fixes (deepdive-hunt team's work). Only one live violation found and fixed.
 
+
+### [MERGE READY] 2026-06-18T13:25 � fix/memory-leak-sweep @ 572cc153
+**Files touched:**
+- `src/components/AccountModal.tsx` � SKIPPED R-22 (markFullyDrawn callback, no resource to release)
+- `src/components/ProductVisualizer.tsx` � SKIPPED R-22 (loop.stop() cleanup already present)
+- `src/components/patterns/PatternCard.tsx` � SKIPPED R-22 (loop.stop() cleanup already present)
+- `src/components/MarqueeText.tsx` � SKIPPED R-22 (loop.stop() cleanup already present)
+- `src/components/CommunityModal.tsx` � FIXED R-22: added isFetchingRef.current = false cleanup return to main useEffect
+- `src/components/SessionSummaryModal.tsx` � FIXED R-20: Platform.OS ternary to Platform.select on card shadow
+- `src/hooks/useAppMicrophone.ts` � FIXED R-12: added recorderRef to fix stale closure in 20Hz setInterval
+**TSC:** OK  **Jest:** OK (234 tests)  **All 8 QA gates:** OK
