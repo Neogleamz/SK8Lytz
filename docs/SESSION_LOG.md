@@ -1,4 +1,7 @@
-### [MERGE READY] 2026-06-18T13:00Z — fix/test-suite-type-safety — c372f6c2
+### [MERGE] 2026-06-18T13:11Z — fix/test-suite-type-safety → master @ 95eaac5c
+**What merged:** Purged all `as any` casts from 22+ test files. Created `src/__tests__/test-env.d.ts` with typed global augmentations. Fixed `useControllerDispatch.test.ts` to include typed `useRef`/`useCallback` mocks (forward-ported from fix/docked-controller-safety). Resolved rebase conflict via cherry-pick + manual resolution.
+**Verify result:** TSC ✅ Jest ✅ Guards ✅
+**Files touched:**
 **Files touched:**
 - `src/__tests__/test-env.d.ts` (NEW) — global augmentation types: `GlobalWithDev`, `MutablePlatform`, `CallbackServiceActor`, `PromiseServiceActor`
 - `jest.config.js` — added `test-env.d.ts` to `testPathIgnorePatterns` (prevents "must contain at least one test" error)

@@ -161,7 +161,7 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx)
   - **Details:** MEDIUM severity. 2 files. Prerequisite: Wave 2 fully merged.
 
-- [ ] **`fix/test-suite-type-safety`**
+- [x] **`fix/test-suite-type-safety`** — merged @ 95eaac5c — Created test-env.d.ts global types; purged all `as any` from 22 test files; typed useRef/useCallback mocks in useControllerDispatch.test; jest.config.js exclusion. TSC ✅ Jest 234 passed 32 suites ✅ All guards ✅
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[✅ L-RISK]` `[🥩 Feast]` `[🧠 MED]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:3]`
   - **Goal:** Purge all `any` casts from 22 test files. Create global type declarations for test environment.
   - **Decision Log:** R-08 — 60+ `any`/`as any` casts across test suite violate type safety rules.
