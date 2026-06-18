@@ -22,6 +22,7 @@ import { AppState, AppStateStatus } from 'react-native';
 import { AppLogger } from '../services/appLogger';
 import type { DevicePatternState } from '../types/dashboard.types';
 import { scrubPII } from '../utils/piiScrubber';
+import { BLE_TIMING } from '../constants/bleTimingConstants';
 
 
 import { STORAGE_DEVICE_STATE_V2_PREFIX } from '../constants/storageKeys';
@@ -143,7 +144,6 @@ export function useDeviceStateLedger() {
     memoryCache.set(key, entry);
 
     // Debounced AsyncStorage write — module-level timer map prevents dual-instance race
-    const LEDGER_WRITE_DEBOUNCE_MS = 500;
     const existing = debounceTimers.get(key);
     if (existing) clearTimeout(existing);
 
@@ -152,7 +152,7 @@ export function useDeviceStateLedger() {
         AppLogger.warn('PERSISTENCE', { key: '[REDACTED]', event: 'ledger_write_failed', error: (e instanceof Error ? e.message : String(e)), payload_size: 0, ssi: 0 });
       });
       debounceTimers.delete(key);
-    }, LEDGER_WRITE_DEBOUNCE_MS);
+    }, BLE_TIMING.LEDGER_WRITE_DEBOUNCE_MS);
 
     debounceTimers.set(key, timer);
   }, []);

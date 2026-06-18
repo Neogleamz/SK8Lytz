@@ -29,7 +29,7 @@ import type { BleConnectionState, PendingRegistration, PingResult } from '../typ
 import type { BLEPhaseTag } from '../services/ble/BleMachine.types';
 import { useMachine } from '@xstate/react';
 import { bleMachine } from '../services/ble/BleMachine';
-import { ActorRefFrom } from 'xstate';
+import { ActorRefFrom, EventFrom } from 'xstate';
 import { scrubPII } from '../utils/piiScrubber';
 
 import { requestPermission } from '../services/PermissionService';
@@ -140,8 +140,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   }, []);
 
   const disconnectListeners = useRef<Record<string, import('react-native-ble-plx').Subscription>>({});
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const bleSendRef = useRef<any>(null); // MIGRATION-SHIM
+  const bleSendRef = useRef<((event: EventFrom<typeof bleMachine>) => void) | null>(null); // MIGRATION-SHIM resolved
   const dataReceivedCallbackRef = useRef<((deviceId: string, data: number[]) => void) | undefined>(undefined);
   const deviceRecoveredCallbackRef = useRef<((deviceId: string) => void) | undefined>(undefined);
   const hardwareProbedCallbackRef = useRef<((deviceId: string, config: PingResult | null) => void) | undefined>(undefined);

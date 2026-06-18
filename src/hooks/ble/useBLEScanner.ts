@@ -35,7 +35,7 @@ function determineFactoryName(device: Device): string | undefined {
       try {
         const buf = Buffer.from(device.manufacturerData, 'base64');
         if (buf.toString('hex').includes('5053')) return 'BanlanX';
-      } catch {}
+      } catch (e: unknown) { AppLogger.error('[useBLEScanner] Failed to parse manufacturerData base64 in determineFactoryName', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 }); }
     }
     return 'BanlanX';
   }
@@ -81,7 +81,7 @@ export function useBLEScanner({
           if (parsed.hw_setup_rssi_threshold !== undefined) {
              setupRssiThresholdRef.current = parseInt(String(parsed.hw_setup_rssi_threshold), 10);
           }
-        } catch {}
+        } catch (e: unknown) { AppLogger.error('[useBLEScanner] Failed to parse cached RSSI threshold from AsyncStorage JSON', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 }); }
       }
     }).catch((e: unknown) => {
       AppLogger.warn('[useBLEScanner] AsyncStorage.getItem failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });

@@ -250,6 +250,24 @@ export const BLE_TIMING = {
    * RSSIService.ts — setInterval period in startRSSIPolling().
    */
   RSSI_POLL_INTERVAL_MS: 30_000,
+
+  /**
+   * Optimistic write confirmation UI reset delay.
+   * useOptimisticBLE.ts — resets write status from CONFIRMED → IDLE.
+   */
+  OPTIMISTIC_CONFIRM_RESET_MS: 300,
+
+  /**
+   * Optimistic write reconciliation UI reset delay.
+   * useOptimisticBLE.ts — resets write status from RECONCILED → IDLE.
+   */
+  OPTIMISTIC_RECONCILE_RESET_MS: 1000,
+
+  /**
+   * Debounced AsyncStorage write delay for device state ledger.
+   * useDeviceStateLedger.ts — coalesces rapid slider changes into one write.
+   */
+  LEDGER_WRITE_DEBOUNCE_MS: 500,
 } as const;
 
 export type BleTiming = typeof BLE_TIMING;

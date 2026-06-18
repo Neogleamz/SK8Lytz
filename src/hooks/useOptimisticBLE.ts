@@ -15,6 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { useCallback, useRef, useState, useEffect } from 'react';
 import { Platform } from 'react-native';
 import { AppLogger } from '../services/appLogger';
+import { BLE_TIMING } from '../constants/bleTimingConstants';
 
 type WriteFunction = (payload: number[], targetDeviceId?: string) => Promise<boolean | 'partial'>;
 
@@ -108,7 +109,7 @@ export function useOptimisticBLE({
               }
               // Reset to IDLE after brief confirmation window
               if (statusResetTimerRef.current) clearTimeout(statusResetTimerRef.current);
-              statusResetTimerRef.current = setTimeout(() => setWriteStatus('IDLE'), 300);
+              statusResetTimerRef.current = setTimeout(() => setWriteStatus('IDLE'), BLE_TIMING.OPTIMISTIC_CONFIRM_RESET_MS);
             }
             resolve(true);
           } else {
@@ -132,10 +133,11 @@ export function useOptimisticBLE({
 
             // Reset to IDLE after reconciliation window
             if (statusResetTimerRef.current) clearTimeout(statusResetTimerRef.current);
-            statusResetTimerRef.current = setTimeout(() => setWriteStatus('IDLE'), 1000);
+            statusResetTimerRef.current = setTimeout(() => setWriteStatus('IDLE'), BLE_TIMING.OPTIMISTIC_RECONCILE_RESET_MS);
             resolve(false);
           }
         } catch (err: unknown) {
+          AppLogger.error('[OptimisticBLE] Unexpected write error', err instanceof Error ? err.message : String(err), { payload_size: payload.length, ssi: 0 });
           pendingCount.current = Math.max(0, pendingCount.current - 1);
           setWriteStatus('IDLE');
           resolve(false);

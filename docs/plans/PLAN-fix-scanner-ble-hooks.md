@@ -28,3 +28,29 @@ Fix error swallowing, type safety, and hardcoded delays in BLE scanner and devic
 ## Out of Scope
 - BleMachine.ts, ConnectService.ts (Wave 2)
 - DockedController hooks (Wave 1/3)
+
+## Execution Results
+
+### useBLEScanner.ts
+- R-07 L38: ✅ Fixed — empty catch → AppLogger.error
+- R-07 L84: ✅ Fixed — empty catch → AppLogger.error
+- R-16 L107,224,309,348,361,384: // SKIPPED: All timeouts already use BLE_TIMING.* constants — no raw literals found
+- R-22 invariant: ✅ Verified — startSweeper() called unconditionally at registeredMacs.length===0 (L372-376), not modified
+
+### useBLEBatterySweep.ts
+// SKIPPED: All R-16 timeouts at L53,58,105,159 already use BLE_TIMING.* constants — no raw literals found
+
+### useBLE.ts
+- R-08 L144: ✅ Fixed — useRef<any> → useRef<((event: EventFrom<typeof bleMachine>) => void) | null>
+
+### useOptimisticBLE.ts
+- R-16 L111: ✅ Fixed — 300 → BLE_TIMING.OPTIMISTIC_CONFIRM_RESET_MS
+- R-16 L135: ✅ Fixed — 1000 → BLE_TIMING.OPTIMISTIC_RECONCILE_RESET_MS
+- R-07 L138-142: ✅ Fixed — catch block was swallowing error silently → AppLogger.error added
+- R-16 L86: // SKIPPED: setTimeout(async ()=>{}) is not a raw BLE timing literal — debounceMs is a parameter passed from caller
+
+### useDeviceStateLedger.ts
+- R-16 L150: ✅ Fixed — inline LEDGER_WRITE_DEBOUNCE_MS=500 removed, replaced with BLE_TIMING.LEDGER_WRITE_DEBOUNCE_MS
+
+### bleTimingConstants.ts [IMPLICIT MODIFY]
+- Added: OPTIMISTIC_CONFIRM_RESET_MS, OPTIMISTIC_RECONCILE_RESET_MS, LEDGER_WRITE_DEBOUNCE_MS
