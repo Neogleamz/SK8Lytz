@@ -1,4 +1,4 @@
-import type { RGB } from './PatternEngine';
+import type { RGB } from './shared/engineTypes';
 import { hsvToRgb, 
   buildColorJump, buildStrobe, buildSingleDotChase, 
   buildWipeFill, buildCometChase, buildSinePulseWave, buildDashedMarquee, 

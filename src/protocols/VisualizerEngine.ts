@@ -1,4 +1,4 @@
-import type { RGB, PatternId, PatternOptions } from './PatternEngine';
+import type { RGB, PatternId, PatternOptions } from './shared/engineTypes';
 import { generateArray, getPatternTransitionType, getHardwarePixelArray } from './SpatialEngine';
 
 

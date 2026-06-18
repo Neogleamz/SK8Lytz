@@ -3,10 +3,16 @@
  *
  * Source of truth for all SK8LYTZ_TEMPLATES — registry + math builders + dispatch.
  * Synthesizes dynamic pixel arrays based on math parameters instead of legacy firmware IDs.
+ *
+ * CIRCULAR DEP RESOLUTION (Phase 1):
+ *   Before: PatternEngine defined RGB/PatternId/ColorMode/SK8LytzTemplate/PatternOptions locally
+ *           SpatialEngine imported these from PatternEngine
+ *           PatternEngine imported getPatternTransitionType/getHardwarePixelArray from SpatialEngine
+ *           → CYCLE
+ *   After:  Both PatternEngine and SpatialEngine import shared types from shared/engineTypes
+ *           No engine-to-engine type import
+ *           → RESOLVED
  */
-
-
-
 
 import { ZenggeProtocol } from './ZenggeProtocol';
 import { IControllerProtocol } from './IControllerProtocol';
@@ -14,37 +20,16 @@ import { getPatternTransitionType, getHardwarePixelArray } from './SpatialEngine
 import { getVisualizerFrame } from './VisualizerEngine';
 import { getMusicVisualizerFrame, getSymphonyVisualizerFrame } from './SymphonyEngine';
 
-export interface RGB {
-  r: number;
-  g: number;
-  b: number;
-}
+// Import shared types from engineTypes (no more local definitions → circular dep resolved)
+import type { RGB, PatternId, ColorMode, SK8LytzTemplate, PatternOptions } from './shared/engineTypes';
 
-
-export type PatternId = number; // 1 through 61
+// Re-export for backwards compatibility — consumers importing from PatternEngine continue to work
+export type { RGB, PatternId, ColorMode, SK8LytzTemplate, PatternOptions };
 
 // ─── PATTERN REGISTRY ─────────────────────────────────────────────────────────
 // Per Master Reference §1 SK8LytzTemplate schema. This is the SSOT for all
 // pattern metadata. UI components import from here — NOT from CustomEffects.ts.
-
-
-export type ColorMode = 'FG_BG' | 'FG_ONLY' | 'BG_ONLY' | 'GENERATIVE';
-
-
-export interface SK8LytzTemplate {
-  id: number;                   // Unique. Never reuse. 1-28=P1B, 29-61=P1A ge.*
-  name: string;                 // User-facing label in picker
-  icon: string;                 // Emoji for picker card
-  colorMode: ColorMode;         // Canonical: 'FG_BG' | 'FG_ONLY' | 'BG_ONLY' | 'GENERATIVE'
-  requiresForeground: boolean;  // Derived: colorMode !== 'GENERATIVE' — show FG picker
-  requiresBackground: boolean;  // Derived: colorMode === 'FG_BG'     — show BG picker
-  supportsDirection: boolean;   // Show direction toggle in UI?
-  supportsSegment: boolean;     // Segment-mirroring compatible?
-  tier: 1 | 2 | 3;             // 1=ge.* reversal, 2=Programs reversal, 3=SK8Lytz original
-  group: string;                // UI grouping label in picker
-  isHidden?: boolean;           // If true, hide from UI picker
-  sourceRef?: string;           // e.g. 'ge.OceanWaveEffect' or 'Programs:CometChase'
-}
+// Types (RGB, PatternId, ColorMode, SK8LytzTemplate) now live in shared/engineTypes.
 
 
 export const SK8LYTZ_TEMPLATES: SK8LytzTemplate[] = [
@@ -158,10 +143,7 @@ export const SK8LYTZ_TEMPLATES: SK8LytzTemplate[] = [
 // ─── MATH HELPERS ─────────────────────────────────────────────────────────────
 
 
-export interface PatternOptions {
-  distribution?: [number, number, number]; // [tail, cruise, head]
-  segments?: number;
-}
+// PatternOptions is defined in shared/engineTypes — imported above.
 
 
 export function buildMultiColorPayload(
