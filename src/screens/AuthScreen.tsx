@@ -68,7 +68,7 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
           } else {
             setInitialEmail(saved.email || '');
           }
-        } catch {}
+        } catch (e) { AppLogger.error('[AuthScreen]', e instanceof Error ? e.message : String(e), {}); }
         setCredLoadStage('LOADED');
       } else {
         AsyncStorage.getItem(STORAGE_LAST_EMAIL).then(saved => {
@@ -95,7 +95,7 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
   }, [credLoadStage, markFullyDrawn]);
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={styles.container} behavior={Platform.select({ ios: 'padding', android: undefined, default: undefined })}>
       <View style={styles.topButtons}>
         <TouchableOpacity style={styles.topBtn} onPress={toggleTheme}>
           <MaterialCommunityIcons

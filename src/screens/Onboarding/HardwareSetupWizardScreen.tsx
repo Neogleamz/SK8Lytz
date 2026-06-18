@@ -28,6 +28,9 @@ import { buildPatternPayload } from '../../protocols/PatternEngine';
 import type { BleConnectionState, PendingRegistration, PingResult } from '../../types/dashboard.types';
 import { useScreenPerformance } from '../../hooks/useScreenPerformance';
 
+/** R-16: Named delay constant — keepAlive BLE poll interval in ms */
+const KEEP_ALIVE_POLL_MS = 2000;
+
 interface WizardDeviceConfig {
   name: string;
   type: string;
@@ -160,7 +163,7 @@ export default function HardwareSetupWizardScreen({
     if (scanStage === 'STARTED' && step === 2 && pendingRegistrations.length === 0 && bleState !== 'SCANNING' && bleState !== 'PROBING') {
       timer = setTimeout(() => {
         scanForPeripherals({ keepAlive: true });
-      }, 2000);
+      }, KEEP_ALIVE_POLL_MS);
     }
     return () => {
       if (timer) clearTimeout(timer);
@@ -560,7 +563,7 @@ export default function HardwareSetupWizardScreen({
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.select({ ios: 'padding', android: undefined, default: undefined })}
       >
         {step === 1 ? renderStep1() : step === 2 ? renderStep2() : renderStep3()}
 
@@ -775,7 +778,7 @@ function createStyles(Colors: ThemePalette) {
     instructionBody: { color: Colors.textMuted || '#888', fontSize: 13, lineHeight: 18 },
     helpLink: { flexDirection: 'row', alignItems: 'center', marginTop: Spacing.xl, gap: Spacing.sm },
     helpText: { color: Colors.textMuted, fontSize: 13, textDecorationLine: 'underline' },
-    footer: { padding: Spacing.md, paddingBottom: Platform.OS === 'ios' ? 0 : 12 },
+    footer: { padding: Spacing.md, paddingBottom: Platform.select({ ios: 0, android: 12, default: 12 }) },
     primaryBtn: {
       backgroundColor: Colors.primary || '#00f0ff',
       paddingVertical: Spacing.lg, borderRadius: 14, alignItems: 'center', width: '100%'
