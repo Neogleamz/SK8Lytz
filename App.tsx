@@ -56,7 +56,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
 // ── Console.error monkey-patch: pipe third-party library errors to telemetry ──
 const _originalConsoleError = console.error;
 console.error = (...args: unknown[]) => {
-  AppLogger.warn('[console.error]', { args: args.map((a: unknown) => String(a)).slice(0, 3).join(' ') });
+  AppLogger.warn('[console.error]', { args: args.map((a: unknown) => String(a)).slice(0, 3).join(' '), payload_size: 0, ssi: 0 });
   _originalConsoleError.apply(console, args);
 };
 
@@ -169,7 +169,7 @@ export default function App() {
     if (Platform.OS === 'android') {
       try {
         const { initialize } = require('react-native-health-connect');
-        initialize().catch((err: unknown) => AppLogger.warn('HEALTH_CONNECT', { event: 'init_failed', error: err instanceof Error ? err.message : String(err) }));
+        initialize().catch((err: unknown) => AppLogger.warn('HEALTH_CONNECT', { event: 'init_failed', error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 }));
       } catch (_e: unknown) {
         // Fallback if library missing — expected on simulator / non-Health Connect builds
         AppLogger.debug('[App] react-native-health-connect not available', {

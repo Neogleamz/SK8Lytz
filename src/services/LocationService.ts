@@ -68,7 +68,7 @@ class LocationService {
 
       return location;
     } catch (err: unknown) {
-      AppLogger.warn('[LocationService] Error acquiring location', err instanceof Error ? err.message : (err instanceof Error ? err.message : String(err)));
+      AppLogger.warn('[LocationService] Error acquiring location', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       return null;
     }
   }
@@ -181,7 +181,7 @@ class LocationService {
         }
       }
     } catch (err: unknown) {
-      AppLogger.warn('[LocationService] Private session fetch failed', err instanceof Error ? err.message : (err instanceof Error ? err.message : String(err)));
+      AppLogger.warn('[LocationService] Private session fetch failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
     }
 
     // ── Merge + deduplicate by session id ────────────────────────────────────

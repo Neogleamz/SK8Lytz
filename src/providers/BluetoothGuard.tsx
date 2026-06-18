@@ -21,7 +21,7 @@ export function BluetoothGuard({ children }: { children: React.ReactNode }) {
       setHasPermission(granted);
     } catch (e: unknown) {
       const errorMsg = e instanceof Error ? e.message : String(e);
-      AppLogger.warn('BluetoothGuard', { event: 'check_permission_failed', error: errorMsg });
+      AppLogger.warn('BluetoothGuard', { event: 'check_permission_failed', error: errorMsg, payload_size: 0, ssi: 0 });
       setHasPermission(false);
     } finally {
       setStatus(prev => prev === 'checking' ? 'idle' : prev);
@@ -54,10 +54,14 @@ export function BluetoothGuard({ children }: { children: React.ReactNode }) {
           'Bluetooth permission is permanently disabled. You must enable it in your device settings to use SK8Lytz.',
           [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Open Settings', onPress: () => Linking.openSettings() }
+            { text: 'Open Settings', onPress: () => Linking.openSettings().catch(() => {}) }
           ]
         );
       }
+    } catch (e: unknown) {
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      AppLogger.warn('BluetoothGuard', { event: 'request_permission_failed', error: errorMsg, payload_size: 0, ssi: 0 });
+      setHasPermission(false);
     } finally {
       setStatus('idle');
     }

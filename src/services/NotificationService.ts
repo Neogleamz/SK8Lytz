@@ -65,11 +65,20 @@ class NotificationService {
    *   5. Wire foreground + response handlers
    */
   async init(autoRequest: boolean = false, userId?: string): Promise<string | null> {
-    await this._setupAndroidChannel();
+    try {
+      await this._setupAndroidChannel();
+    } catch (err: unknown) {
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'channel_setup_failed', error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
+    }
 
-    const granted = await this._requestPermissions(autoRequest);
+    let granted = false;
+    try {
+      granted = await this._requestPermissions(autoRequest);
+    } catch (err: unknown) {
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'request_permissions_failed', error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
+    }
     if (!granted) {
-      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'permission_denied_or_undetermined' });
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'permission_denied_or_undetermined', payload_size: 0, ssi: 0 });
       return null;
     }
 
@@ -87,7 +96,7 @@ class NotificationService {
       await pushTokenService.registerPushToken(this.token, platform, userId || null);
       AppLogger.log('PUSH_TOKEN_REGISTERED', { platform, tokenPrefix: this.token.slice(0, 12) });
     } catch (err: unknown) {
-      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'push_token_unavailable', error: (err instanceof Error ? err.message : String(err)) });
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'push_token_unavailable', error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
       return null;
     }
 
@@ -143,7 +152,7 @@ class NotificationService {
       });
       AppLogger.log('PUSH_NOTIFICATION_SENT', { type: 'crew_invite', crewId: opts.crewId });
     } catch (err: unknown) {
-      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'crew_invite_notification_failed', error: (err instanceof Error ? err.message : String(err)) });
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'crew_invite_notification_failed', error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
     }
   }
 
@@ -193,7 +202,7 @@ class NotificationService {
         trigger: null,
       });
     } catch (err: unknown) {
-      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'session_live_alert_failed', error: (err instanceof Error ? err.message : String(err)) });
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'session_live_alert_failed', error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
     }
   }
 
@@ -218,7 +227,7 @@ class NotificationService {
       AppLogger.log('PUSH_NOTIFICATION_SENT', { type: 'session_reminder', subtype: 'scheduled', sessionId: opts.sessionId, trigger: trigger?.date?.toISOString() });
       return id;
     } catch (err: unknown) {
-      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'schedule_session_alert_failed', error: (err instanceof Error ? err.message : String(err)) });
+      AppLogger.warn('NOTIFICATION_SERVICE', { event: 'schedule_session_alert_failed', error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
       return null;
     }
   }
