@@ -116,7 +116,13 @@ export const useProtocolBuilder = (_hwPts: number = 16) => {
         const c1 = bldColors[0] || {r:255,g:0,b:0};
         const s = safeParseInt(bldSens, 100);
         const br = safeParseInt(bldBright, 100);
-        const wrapped = adapter.buildMusicConfig({ patternId: id, matrixStyle: bldMatrixStyle, isOn: bldMicSource === 'DEVICE', micSensitivity: s, brightness: br, color1: c1, color2: bldC2, speed: id }).packets[0];
+        // PROTOCOL_CORE-003 FIX: isOn controls whether music mode is active at all (0x01 = ON).
+        // bldMicSource (APP vs DEVICE) is a separate concern: when APP, the hardware listens
+        // for 0x74 magnitude streams; when DEVICE, hardware uses its built-in mic.
+        // The previous `isOn: bldMicSource === 'DEVICE'` conflation caused isOn=false
+        // (music mode DEACTIVATED) any time APP mic was selected.
+        // Cited Truth: ZENGGE_PROTOCOL_BIBLE.md Section 11 — isOn=0x01 activates music mode.
+        const wrapped = adapter.buildMusicConfig({ patternId: id, matrixStyle: bldMatrixStyle, isOn: bldMusicIsOn, micSensitivity: s, brightness: br, color1: c1, color2: bldC2, speed: id }).packets[0];
         const matrixLabel = bldMatrixStyle === 0x27 ? 'Light Screen (0x27)' : 'Light Bar (0x26)';
         setBldResult({ raw: wrapped, wrapped, hex: wrapped.map(b=>b.toString(16).toUpperCase().padStart(2,'0')).join(' '), annotations: ['[0x73] Symphony/Music Config', `Mode: ${id} | Matrix: ${matrixLabel}`, `Mic: ${bldMicSource} | Sens: ${s} | Bright: ${br}`, `C1 RGB(${c1.r},${c1.g},${c1.b}) | C2 RGB(${bldC2.r},${bldC2.g},${bldC2.b})`] });
       } else if (bldProtocol === '0x62') {
@@ -128,7 +134,7 @@ export const useProtocolBuilder = (_hwPts: number = 16) => {
     } catch (e: unknown) { 
       AppLogger.error('[useProtocolBuilder] Build failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
     }
-  }, [bldProtocol, bldColors, bldTrans, bldSpeed, bldPoints, bldDir, bldPatternId, bldBright, bldMicSource, bldMusicMode, bldSens, bldC2, bldMatrixStyle, bldIc, bldOrder, bldSegs, bld51Mode, bld51Speed, bld51Color1, bld51Color2]);
+  }, [bldProtocol, bldColors, bldTrans, bldSpeed, bldPoints, bldDir, bldPatternId, bldBright, bldMicSource, bldMusicMode, bldMusicIsOn, bldSens, bldC2, bldMatrixStyle, bldIc, bldOrder, bldSegs, bld51Mode, bld51Speed, bld51Color1, bld51Color2]);
 
   return {
     bldProtocol, setBldProtocol,

@@ -120,7 +120,20 @@ export class ZenggeProtocol {
   }
 
   public static getNextChunkSeqByte(): number {
-    return ZenggeProtocol._instance.getSequenceCounter();
+    return ZenggeProtocol.sharedInstance.getSequenceCounter();
+  }
+
+  /**
+   * Returns the shared singleton instance used by all namespace facade methods.
+   * Exposes _instance so the namespace and any static callers share ONE
+   * sequence counter — prevents split-brain SeqNum corruption (PROTOCOL_CORE-004).
+   *
+   * Cited Truth: ZENGGE_PROTOCOL_BIBLE.md §2 V2 BLE Packet Framing:
+   *   SeqNum must be a monotonically incrementing per-session value.
+   *   Two independent counters on the same logical connection corrupt the sequence.
+   */
+  public static get sharedInstance(): ZenggeProtocol {
+    return ZenggeProtocol._instance;
   }
 
   // ─── Instance Methods (used by ZenggeAdapter and internally) ────────────────
@@ -608,7 +621,10 @@ export class ZenggeProtocol {
    * Analogous to 0x59 but without animation footer bytes.
    * Hardware-verify via Oracle Phase 2 panel.
    *
-   * @param pixels  Array of RGB pixels. Max 54 (safe MTU limit).
+   * @param pixels  Array of RGB pixels (up to HW_CONSTRAINTS.maxPoints = 300).
+   *                Transport layer (BleWriteDispatcher) handles MTU chunking.
+   *                NOTE: Oracle Lab 2026-04-22 found 0x53 produced NO response on 0xA3.
+   *                See ZENGGE_PROTOCOL_BIBLE.md Section 11 Phase 2 Extended Panels.
    */
   public streamPixelFrame(pixels: { r: number; g: number; b: number }[]): number[] {
     const safePx = pixels.slice(0, HW_CONSTRAINTS.maxPoints);
@@ -1114,7 +1130,14 @@ export class ZenggeProtocol {
 }
 
 export namespace ZenggeProtocol {
-  const _shared = new ZenggeProtocol();
+  // PROTOCOL_CORE-004 FIX: Reuse the class-level singleton (_instance via sharedInstance)
+  // instead of creating a third independent ZenggeProtocol instance.
+  // Previously, this _shared had its own messageCounter running independently of
+  // ZenggeProtocol._instance (used by getNextChunkSeqByte). Result: legacy namespace
+  // callers (ZenggeProtocol.wrapCommand) and chunked-frame sequence bytes diverged,
+  // producing duplicate or mismatched SeqNum within the same BLE session.
+  // Cited Truth: ZENGGE_PROTOCOL_BIBLE.md §2 — SeqNum must be monotonically incrementing.
+  const _shared = ZenggeProtocol.sharedInstance;
 
   export function calculateChecksum(payload: number[]): number { return _shared.calculateChecksum(payload); }
   export function wrapCommand(rawPayload: number[], cmdFamily: number = 0x0b): number[] { return _shared.wrapCommand(rawPayload, cmdFamily); }

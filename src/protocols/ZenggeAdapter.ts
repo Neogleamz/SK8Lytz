@@ -237,27 +237,21 @@ export class ZenggeAdapter implements IControllerProtocol {
 
   // ─── Transport Preparation ─────────────────────────────────────────────────
   /**
-   * Apply MTU-aware chunking to a ProtocolResult.
+   * Pass-through transport preparation (PROTOCOL_CORE-001 fix).
    *
-   * Zengge 0x40 chunk framing:
-   *   Packets larger than (mtu - 3) bytes are fragmented into chunks.
-   *   Each chunk is prefixed with: [0x40, chunkIndex, totalChunks]
-   *   followed by up to (safeMtu - 3) bytes of payload.
+   * 0x40 chunking is handled EXCLUSIVELY by BleWriteDispatcher (Wave 2).
+   * ZenggeAdapter's role is to produce correct flat protocol payloads.
+   * It must NOT perform chunking here — doing so would create a split-brain
+   * where both this adapter and BleWriteDispatcher independently attempt
+   * to fragment the same payload, corrupting the 0x40 segment index sequence.
    *
-   * This logic was previously inline in useBLE.ts writeChunked() (L747-832).
-   * Moving it here means useBLE.ts has ZERO protocol knowledge.
+   * Authoritative chunking implementation: ZenggeProtocol.buildChunkedFrames()
+   * Authoritative chunking caller:         BleWriteDispatcher (Wave 2 scope)
    *
-   * Example (323-byte 0x51 extended, MTU=186):
-   *   safeMtu = 186 - 3 = 183 bytes per write
-   *   chunkPayloadSize = 183 - 3 (chunk header) = 180 bytes of data per chunk
-   *   Chunks = ceil(323 / 180) = 2 chunks
-   *   chunk0: [0x40, 0x00, 0x02, ...180 bytes...]
-   *   chunk1: [0x40, 0x01, 0x02, ...143 bytes...]
-   *
-   * @param result  ProtocolResult to prepare.
-   * @param mtu     Negotiated BLE MTU for this device.
+   * @param result  ProtocolResult to pass through unchanged.
+   * @param _mtu    Negotiated BLE MTU (unused here; consumed by BleWriteDispatcher).
    */
-  prepareForTransmission(result: ProtocolResult, mtu: number): ProtocolResult {
+  prepareForTransmission(result: ProtocolResult, _mtu: number): ProtocolResult {
     // 0x40 chunking is now handled exclusively by BleWriteDispatcher.
     // ZenggeAdapter should only emit flat, protocol-level payloads.
     return result;
