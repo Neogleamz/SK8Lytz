@@ -18,7 +18,7 @@
  * Platform: React Native (Android + Web)
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { AppState, Platform, StyleSheet, Text, TouchableOpacity, View, DeviceEventEmitter, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import { useAppMicrophone } from '../hooks/useAppMicrophone';
 import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
 import { useCuratedPicks } from '../hooks/useCuratedPicks';
@@ -31,6 +31,7 @@ import { getMusicPatternLabel } from '../hooks/useMusicMode';
 import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
 import { useStreetMode } from '../hooks/useStreetMode';
 import { useDeviceStateLedger } from '../hooks/useDeviceStateLedger';
+import { useLoadFavorite } from '../hooks/useLoadFavorite';
 import type { BleConnectionState, DockedBus, IDeviceState, IFavoriteState, ModeType } from '../types/dashboard.types';
 import { getColorName, hexToRgb, rgbToHex, boostForLED } from '../utils/ColorUtils';
 import type { SessionPhase } from '../services/session/SessionMachine.types';
@@ -38,6 +39,7 @@ import type { RGB } from '../utils/kMeansPalette';
 
 
 import FavoritesPanel from './docked/FavoritesPanel';
+import FixedPatternPreviewRow from './docked/FixedPatternPreviewRow';
 import MusicPanel from './docked/MusicPanel';
 import CameraPanel from './docked/CameraPanel';
 import StreetPanel from './docked/StreetPanel';
@@ -52,12 +54,13 @@ import { useTheme } from '../context/ThemeContext';
 import { BuilderPanel } from './docked/BuilderPanel';
 import ProductVisualizer from './ProductVisualizer';
 import SpectrumAnalyzer from './docked/SpectrumAnalyzer';
+import { createDockedControllerStyles } from './controller/DockedController.styles';
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LOCAL_PRODUCT_CATALOG } from '../constants/ProductCatalog';
 import { AppLogger } from '../services/appLogger';
 import { scrubPII } from '../utils/piiScrubber';
-import { checkPermission, openGlobalPermissionsModal, PERMISSION_STATUS_CHANGED_EVENT } from '../services/PermissionService';
+import { openGlobalPermissionsModal, PERMISSION_STATUS_CHANGED_EVENT } from '../services/PermissionService';
 import CommunityModal from './CommunityModal';
 import DockedDock from './docked/DockedDock';
 import QuickPresetModal from './docked/QuickPresetModal';
@@ -81,55 +84,7 @@ type ProductType = string;
 
 // Pattern labels resolved via getMusicPatternLabel(modeType, patternId) from '../hooks/useMusicMode'
 
-const FixedPatternPreviewRow = ({ baseDots, patternId, speed, points = 16, segments = 1 }: { baseDots: string[], patternId: number, speed: number, points?: number, segments?: number }) => {
-  const [offset, setOffset] = React.useState(0);
-
-  // Extend the 8-element static base array explicitly to match physical point counts natively
-  const fullArray = React.useMemo(() => {
-    const arr: string[] = [];
-
-    // Hardware repeats the geometric bounds across the segment boundary safely
-    const dotsPerSegment = Math.max(1, Math.floor(points / Math.max(1, segments)));
-
-    for (let i = 0; i < points; i++) {
-      // Map native segment repetitions safely simulating string data
-      const segmentLocalIndex = i % dotsPerSegment;
-      arr.push(baseDots[segmentLocalIndex % baseDots.length]);
-    }
-    return arr;
-  }, [baseDots, points, segments]);
-
-  React.useEffect(() => {
-    const intervalTime = Math.max(30, 200 - (speed * 1.7));
-    const int = setInterval(() => {
-      setOffset(o => (o + 1) % fullArray.length);
-    }, intervalTime);
-    return () => clearInterval(int);
-  }, [fullArray.length, speed]);
-
-  const displayedDots = React.useMemo(() => {
-    return [...fullArray.slice(fullArray.length - offset), ...fullArray.slice(0, fullArray.length - offset)];
-  }, [fullArray, offset]);
-
-  return (
-    <View style={fixedPatternStyles.container}>
-      <View style={fixedPatternStyles.row}>
-        {displayedDots.slice(0, 10).map((c, i) => (
-          <View
-            key={i}
-            style={[fixedPatternStyles.dot, { backgroundColor: c }]}
-          />
-        ))}
-      </View>
-    </View>
-  );
-};
-
-const fixedPatternStyles = StyleSheet.create({
-  container: { flex: 1, marginRight: Spacing.sm, height: 8, overflow: 'hidden' },
-  row: { flex: 1, flexDirection: 'row', gap: Spacing.xxs },
-  dot: { flex: 1, borderRadius: 4 }
-});
+// FixedPatternPreviewRow extracted to src/components/docked/FixedPatternPreviewRow.tsx (Phase 1)
 
 
 // IDeviceState, IFavoriteState, IQuickPreset — canonical source: '../types/dashboard.types'
@@ -205,7 +160,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const { height: windowHeight } = useWindowDimensions();
     const isShort = windowHeight < 720;
     const gaugeSize = isShort ? 100 : 120;
-    const styles = createStyles(Colors);
+    const styles = createDockedControllerStyles(Colors);
 
     /**
      * Perceptual brightness factor — lifts the floor so LEDs stay visible at low %.
@@ -597,131 +552,41 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const applyStaticModePattern = (pat: typeof fixedModePattern, r?: number, g?: number, b?: number, spd?: number) =>
       _applyStaticModePattern(pat, selectedColor, speed, r, g, b, spd);
 
-    /** Restore a saved favorite — dispatches mode switch + BLE commands */
-    const loadFavorite = React.useCallback((favRaw: IFavoriteState, context: 'FAVORITE' | 'PICK' | 'COMMUNITY' = 'FAVORITE') => {
-      AppLogger.log(context === 'PICK' ? 'PICK_SELECTED' : 'FAVORITE_LOADED', { id: favRaw.id, mode: favRaw.mode });
-      setActiveFavoriteId(favRaw.id);
-      setSpeed(favRaw.speed);
-      setBrightness(favRaw.brightness);
-      if (favRaw.color) setSelectedColor(favRaw.color);
-
-      // Normalize legacy mode names to new taxonomy
-      // PROGRAMS/RBM → silently migrate to MULTIMODE/PATTERN (retired in v2.8.0)
-      const legacyMode = (favRaw.mode === 'RBM' || favRaw.mode === 'PROGRAMS') ? 'PATTERN'
-        : (favRaw.mode === 'FAVORITES' || favRaw.mode === 'PRESETS') ? 'FAVORITES'
-          : favRaw.mode;
-
-      if (legacyMode === 'PATTERN' || legacyMode === 'MULTIMODE') {
-        setActiveMode('MULTIMODE');
-        setLastOperatingMode('MULTIMODE');
-
-        activeModeRef.current = 'MULTIMODE'; // Force sync for writeToDevice closure
-        setFixedSubMode('PATTERN');
-        const restoredId = favRaw.patternId ?? 1;
-        setFixedPatternId(restoredId);
-        setFixedColorMode(favRaw.fixedColorMode ?? 'FOREGROUND');
-        setFixedFgColor(favRaw.fixedFgColor ?? '#FF6600');
-        setFixedBgColor(favRaw.fixedBgColor ?? '#000000');
-        applyFixedPattern(restoredId, favRaw.fixedFgColor ?? '#FF6600', favRaw.fixedBgColor ?? '#000000', favRaw.speed ?? 80, favRaw.brightness ?? 100);
-      } else if (legacyMode === 'MUSIC') {
-        setActiveMode('MUSIC');
-        setLastOperatingMode('MUSIC');
-
-        activeModeRef.current = 'MUSIC'; // Force sync for writeToDevice closure
-        
-        const restoredPattern = favRaw.patternId ?? 0;
-        const restoredSens = favRaw.micSensitivity ?? 80;
-        const restoredSource = favRaw.micSource ?? 'APP';
-        const restoredPrimary = favRaw.musicPrimaryColor ?? '#FF0000';
-        const restoredSecondary = favRaw.musicSecondaryColor ?? '#0000FF';
-        const restoredMatrix = favRaw.musicMatrixStyle ?? 0x27;
-
-        setMusicPatternId(restoredPattern);
-        setMicSensitivity(restoredSens);
-        setMicSource(restoredSource);
-        setMusicPrimaryColor(restoredPrimary);
-        setMusicSecondaryColor(restoredSecondary);
-        setMusicMatrixStyle(restoredMatrix);
-
-        handleMusicChange(restoredPattern, restoredSens, favRaw.brightness ?? 100, restoredSource, restoredPrimary, restoredSecondary, restoredMatrix);
-      } else if (legacyMode === 'CAMERA') {
-        // Permission gate: if camera denied, fall back to MULTIMODE
-        checkPermission('CAMERA').then(granted => {
-          if (granted) {
-            setActiveMode('CAMERA');
-            setLastOperatingMode('CAMERA');
-            activeModeRef.current = 'CAMERA';
-          } else {
-            AppLogger.warn('[DockedController] CAMERA favorite skipped — permission denied', { payload_size: 0, ssi: 0 });
-            setActiveMode('MULTIMODE');
-            setLastOperatingMode('MULTIMODE');
-          }
-        }).catch(err => {
-          AppLogger.error('[DockedController] Error checking CAMERA permission', err, { payload_size: 0, ssi: 0 });
-        });
-      } else if (legacyMode === 'FAVORITES') {
-        setActiveMode('FAVORITES');
-      } else if (legacyMode === 'BUILDER') {
-        setActiveMode('MULTIMODE');
-        setLastOperatingMode('MULTIMODE');
-
-        activeModeRef.current = 'MULTIMODE'; // Force sync for writeToDevice closure
-        setFixedSubMode('BUILDER');
-        
-        if (favRaw.builderNodes && favRaw.builderNodes.length > 0) {
-          setBuilderNodes(favRaw.builderNodes);
-        }
-        if (favRaw.builderFillMode) setBuilderFillMode(favRaw.builderFillMode);
-        if (favRaw.builderTransitionType !== undefined) setBuilderTransitionType(favRaw.builderTransitionType);
-        if (favRaw.builderDirection !== undefined) setBuilderDirection(favRaw.builderDirection);
-        
-        // Auto-dispatch BUILDER payload instead of dead-loading
-        if (favRaw.builderNodes && favRaw.builderNodes.length > 0) {
-          const factor = brtFactor(favRaw.brightness ?? 100);
-          const rgbColors = favRaw.builderNodes.map((n: { colorHex: string }) => ({
-            r: Math.round((parseInt(n.colorHex.slice(1, 3), 16) || 0) * factor),
-            g: Math.round((parseInt(n.colorHex.slice(3, 5), 16) || 0) * factor),
-            b: Math.round((parseInt(n.colorHex.slice(5, 7), 16) || 0) * factor),
-          }));
-          const transition = favRaw.builderTransitionType ?? 1;
-          const speedVal = Math.max(1, Math.min(100, Math.round(favRaw.speed ?? 50)));
-          setMultiColor(rgbColors, hwSettings?.ledPoints || 16, speedVal, favRaw.builderDirection ?? 1, transition);
-        }
-      } else if (legacyMode === 'MULTI' || legacyMode === 'DIY' || legacyMode === 'MULTICOLOR') {
-        setActiveMode('MULTIMODE');
-        setLastOperatingMode('MULTIMODE');
-
-        activeModeRef.current = 'MULTIMODE'; // Force sync for writeToDevice closure
-        setFixedSubMode('BUILDER');
-        
-        setMultiColors(favRaw.multiColors || []);
-        setMultiTransition(favRaw.multiTransition || 3);
-        setMultiLength(favRaw.multiLength || 16);
-        if (favRaw.multiColors) {
-          const factor = brtFactor(favRaw.brightness ?? 100);
-          const rgbColors = favRaw.multiColors.map((h: string) => ({
-            r: Math.round((parseInt(h.slice(1, 3), 16) || 0) * factor),
-            g: Math.round((parseInt(h.slice(3, 5), 16) || 0) * factor),
-            b: Math.round((parseInt(h.slice(5, 7), 16) || 0) * factor),
-          }));
-          const speedVal = Math.max(1, Math.min(100, Math.round(favRaw.speed ?? 50)));
-          setMultiColor(rgbColors, hwSettings?.ledPoints || 12, speedVal, 1, favRaw.multiTransition ?? 3);
-        }
-      } else {
-        // Unknown/legacy mode — best-effort color dispatch
-        if (favRaw.color) {
-          const fallbackColor = favRaw.color;
-          sendColor(parseInt(fallbackColor.slice(1, 3), 16) || 0, parseInt(fallbackColor.slice(3, 5), 16) || 0, parseInt(fallbackColor.slice(5, 7), 16) || 0);
-        }
-      }
-      
-      if (context === 'PICK') {
-        AppLogger.log('PICK_SELECTED', { id: favRaw.id, mode: legacyMode });
-      } else {
-        AppLogger.log('FAVORITE_RENDERED', { id: favRaw.id, mode: legacyMode, patternId: favRaw.patternId });
-      }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [writeToDevice, handleMusicChange, applyFixedPattern, sendColor, clampSpeed, hwSettings?.ledPoints, setActiveFavoriteId, setSpeed, setBrightness, setSelectedColor, setActiveMode, setLastOperatingMode, setFixedSubMode, setFixedPatternId, setFixedColorMode, setFixedFgColor, setFixedBgColor, setMusicPatternId, setMicSensitivity, setMicSource, setMusicPrimaryColor, setMusicSecondaryColor, setMusicMatrixStyle, setBuilderNodes, setBuilderFillMode, setBuilderTransitionType, setBuilderDirection, setMultiColors, setMultiTransition, setMultiLength]);
+    /** Restore a saved favorite — dispatches mode switch + BLE commands.
+     *  Logic extracted to src/hooks/useLoadFavorite.ts (Phase 1 S4 extraction). */
+    const { loadFavorite } = useLoadFavorite({
+      setActiveFavoriteId,
+      setSpeed,
+      setBrightness,
+      setSelectedColor,
+      setActiveMode,
+      setLastOperatingMode,
+      setFixedSubMode,
+      setFixedPatternId,
+      setFixedColorMode,
+      setFixedFgColor,
+      setFixedBgColor,
+      setMusicPatternId,
+      setMicSensitivity,
+      setMicSource,
+      setMusicPrimaryColor,
+      setMusicSecondaryColor,
+      setMusicMatrixStyle,
+      setBuilderNodes,
+      setBuilderFillMode,
+      setBuilderTransitionType,
+      setBuilderDirection,
+      setMultiColors,
+      setMultiTransition,
+      setMultiLength,
+      activeModeRef,
+      handleMusicChange,
+      applyFixedPattern,
+      sendColor,
+      setMultiColor,
+      ledPoints: hwSettings?.ledPoints,
+      brtFactor,
+    });
 
 
 
@@ -1382,85 +1247,5 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 export default DockedController;
 
 
-const createStyles = (Colors: import('../theme/theme').ThemePalette) => StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: 0,
-    paddingBottom: 0,
-    paddingTop: 0,
-  },
-  visualizerWrapper: {
-    width: '100%',
-    alignItems: 'stretch',
-    marginVertical: Spacing.xxs,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: Colors.surfaceHighlight,
-    borderRadius: Layout.borderRadius,
-    padding: Spacing.sm,
-    marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)',
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: Spacing.sm,
-    alignItems: 'center',
-    borderRadius: Layout.borderRadius - 6,
-    overflow: 'hidden',
-  },
-  activeTab: {
-    backgroundColor: 'transparent',
-    borderWidth: 0,
-  },
-  tabText: {
-    ...Typography.body,
-    color: Colors.textMuted,
-    fontWeight: '800',
-    letterSpacing: 1,
-    zIndex: 2,
-  },
-  activeTabText: {
-    color: Colors.isDark ? '#FFF' : Colors.accent,
-  },
-  controlsContainer: {
-    flex: 1,
-    padding: Spacing.md,
-    backgroundColor: Colors.isDark ? 'rgba(21, 25, 40, 0.7)' : Colors.surface,
-    borderRadius: Layout.borderRadius + 4,
-    borderWidth: 1,
-    borderColor: Colors.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0,0,0,0.08)',
-  },
-  activeModeContainer: {
-    flex: 1,
-    overflow: 'hidden',
-  },
-  blePendingIndicator: {
-    width: 6, height: 6, borderRadius: 3, backgroundColor: '#00F0FF', opacity: 0.7, position: 'absolute', right: 8, top: 8, zIndex: 10
-  },
-  bleReconciledIndicator: {
-    width: 6, height: 6, borderRadius: 3, backgroundColor: '#FF4444', position: 'absolute', right: 8, top: 8, zIndex: 10
-  },
-  visualizerContent: {
-    marginBottom: Spacing.sm, width: '100%'
-  },
-  powerBtn: {
-    position: 'absolute', top: 12, left: 16, zIndex: 100, padding: Spacing.sm, borderRadius: 20, borderWidth: 1
-  },
-  powerBtnOn: {
-    backgroundColor: 'rgba(0, 240, 255, 0.15)', borderColor: 'rgba(0, 240, 255, 0.3)'
-  },
-  powerBtnOff: {
-    backgroundColor: 'rgba(255, 68, 68, 0.15)', borderColor: 'rgba(255, 68, 68, 0.3)'
-  },
-  favoriteBtn: {
-    position: 'absolute', top: 12, right: 16, zIndex: 100, backgroundColor: 'rgba(255,255,255,0.1)', padding: Spacing.sm, borderRadius: 20
-  },
-  controlsContainerPadding: {
-    padding: Spacing.xs, overflow: 'hidden'
-  },
-  activeModeFlex: {
-    flex: 1, justifyContent: 'space-evenly'
-  }
-});
+// createStyles extracted to src/components/controller/DockedController.styles.ts (Phase 1)
+
