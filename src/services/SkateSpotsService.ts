@@ -36,7 +36,9 @@ export const SkateSpotsService = {
           }
         }
       }
-    } catch (e: unknown) {}
+    } catch (e: unknown) {
+      AppLogger.error('[SkateSpotsService] Failed to read spots cache', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+    }
 
     const syncCloud = async () => {
       if (isSpotsSyncing) return;

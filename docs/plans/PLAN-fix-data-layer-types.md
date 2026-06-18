@@ -17,12 +17,25 @@ Fix type safety violations, error swallowing, offline-first violations, and Asyn
 ## Files to Create/Modify
 
 ### [MODIFY] [ScenesService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ScenesService.ts)
+// SKIPPED: no violations found — all catch blocks use instanceof Error pattern, storage keys use STORAGE_* constants, no as-unknown-as casts present.
+
 ### [MODIFY] [GradientsService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/GradientsService.ts)
+// SKIPPED: no violations found — instanceof Error pattern in place, STORAGE_LOCAL_GRADIENTS constant used, .returns<CustomBuilderPreset[]>() used instead of casts.
+
 ### [MODIFY] [SkateSpotsService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/SkateSpotsService.ts)
-### [MODIFY] [DeviceRepositoryService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/DeviceRepositoryService.ts)
+// FIXED R-07: Empty catch block at L39 — added AppLogger.error call with instanceof Error unwrapping.
+
+### [MODIFY] [DeviceRepositoryService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/deviceRepository/DeviceRepositoryService.ts)
+// SKIPPED: no violations found — all catch blocks use `const msg = e instanceof Error ? e.message : String(e)` pattern throughout. No as-unknown-as casts.
+
 ### [MODIFY] [SpeedTrackingService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/SpeedTrackingService.ts)
+// SKIPPED: no violations found — offline-first pattern already implemented (getCachedRecentSessions/getCachedLifetimeStats fallbacks), storage keys use constants from storageKeys.ts, instanceof Error checks throughout.
+
 ### [MODIFY] [HealthSyncService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/HealthSyncService.ts)
+// SKIPPED: no violations found — Record<string, unknown> cast at L59 already correct (R-08 fix comment present), instanceof Error checks in all catch blocks.
+
 ### [MODIFY] [GlobalForegroundService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/GlobalForegroundService.ts)
+// SKIPPED: no violations found — instanceof Error checks in all catch blocks, no AsyncStorage usage, no as-unknown-as casts.
 
 ## Verification
 - `npm run verify`
