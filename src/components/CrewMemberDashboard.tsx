@@ -16,6 +16,7 @@
  */
 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     Animated, Dimensions,
@@ -31,6 +32,10 @@ import { shareSessionInvite } from '../services/SessionShareService';
 import { supabase } from '../services/supabaseClient';
 import { Spacing , ThemePalette } from '../theme/theme';
 import type { ViewState } from '../types/ViewState';
+
+// ── Timing constants (R-16: no magic numbers) ─────────────────────────────
+/** Lightweight polling cadence for member list refresh */
+const MEMBER_POLL_INTERVAL_MS = 30_000;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -173,10 +178,26 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
   // ── Load members ────────────────────────────────────────────────────────────
   useEffect(() => {
     let mounted = true;
+    const CACHE_KEY = `sk8lytz:crew_members:${session.id}`;
+
     const loadMembers = async () => {
       if (_isFlushingRef.current) return;
       _isFlushingRef.current = true;
       try {
+        // R-05: Offline-first — seed from cache immediately, then refresh from network
+        try {
+          const cached = await AsyncStorage.getItem(CACHE_KEY);
+          if (cached && mounted) {
+            const cachedMembers = JSON.parse(cached) as CrewMember[];
+            if (cachedMembers.length > 0) {
+              setMembers(cachedMembers);
+              setViewState(cachedMembers.length ? 'success' : 'empty');
+            }
+          }
+        } catch (_cacheErr) {
+          // Cache miss — proceed to network fetch
+        }
+
         const { data, error: supaError } = await supabase
         .from('crew_members')
         .select(`
@@ -193,7 +214,7 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
         }
 
         if (data) {
-          setMembers(data.map((r) => {
+          const freshMembers = data.map((r) => {
             const profile = Array.isArray(r.user_profiles) ? r.user_profiles[0] : r.user_profiles;
             return {
               user_id: r.user_id,
@@ -202,9 +223,12 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
               display_name: profile?.display_name ?? null,
               avatar_color: profile?.avatar_color ?? null,
             };
-          }));
+          });
+          setMembers(freshMembers);
           setErrorMsg('');
-          setViewState(data.length ? 'success' : 'empty');
+          setViewState(freshMembers.length ? 'success' : 'empty');
+          // Persist to cache for offline reads
+          AsyncStorage.setItem(CACHE_KEY, JSON.stringify(freshMembers)).catch(() => {});
         }
       } catch (e: unknown) {
         if (!mounted) return;
@@ -221,7 +245,7 @@ export default function CrewMemberDashboard({ session, role, currentScene, onLea
     };
     loadMembers();
     // Refresh every 30s (lightweight polling for member list)
-    const interval = setInterval(loadMembers, 30000);
+    const interval = setInterval(loadMembers, MEMBER_POLL_INTERVAL_MS);
     return () => {
       mounted = false;
       clearInterval(interval);

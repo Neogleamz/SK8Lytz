@@ -113,8 +113,10 @@ export function useCrewSession(
       if (loadMembersTimerRef.current) clearTimeout(loadMembersTimerRef.current);
       loadMembersTimerRef.current = setTimeout(loadMembers, 500);
       return true;
-    } catch (e: unknown) { 
-      return false; 
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      AppLogger.warn('[useCrewSession] handleHandoffLeadership failed', { error: msg, payload_size: 0, ssi: 0 });
+      return false;
     }
   };
 

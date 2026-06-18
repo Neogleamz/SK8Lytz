@@ -15,6 +15,11 @@ import type { Database } from '../types/supabase';
 import type { PermanentCrew, CrewMemberDisplay, CrewMemberFull } from './ProfileService.types';
 import { AppLogger } from './appLogger';
 
+// ── Timing constants (R-16: no magic numbers) ─────────────────────────────
+/** Delay before removing a temporary broadcast channel in deleteCrew */
+const SESSION_BROADCAST_TEARDOWN_MS = 500;
+
+
 class CrewProfileService {
 
   // ── Permanent Crews ──────────────────────────────────────
@@ -323,7 +328,7 @@ class CrewProfileService {
                 event: 'session_ended',
                 payload: { sessionId: s.id },
               });
-              setTimeout(() => supabase.removeChannel(tempChannel), 500);
+              setTimeout(() => supabase.removeChannel(tempChannel), SESSION_BROADCAST_TEARDOWN_MS);
             }
           });
 

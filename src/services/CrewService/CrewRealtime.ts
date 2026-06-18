@@ -4,6 +4,11 @@ import { AppLogger } from '../appLogger';
 import { CrewSession, CrewRole, CrewMember, CrewScenePayload } from './types';
 import type { CrewService } from './CrewService';
 
+// ── Timing constants (R-16: no magic numbers) ─────────────────────────────
+const BROADCAST_DEBOUNCE_MS = 150;
+const HEARTBEAT_INTERVAL_MS = 60_000;
+const PERSIST_PAYLOAD_DELAY_MS = 5_000;
+
 export class CrewRealtime {
   constructor(private service: CrewService) {}
 
@@ -77,7 +82,7 @@ export class CrewRealtime {
         } as unknown as CrewScenePayload, // override to inject new field
       });
       this._persistLastPayload(payload);
-    }, 150);
+    }, BROADCAST_DEBOUNCE_MS);
   }
 
   // TODO: The plan removed broadcastScene, but unlisted caller CrewService & useDashboardController still require it.
@@ -96,10 +101,10 @@ export class CrewRealtime {
           .from('crew_sessions')
           .update({ updated_at: new Date().toISOString() })
           .eq('id', sessionId);
-      } catch (err) {
-        // ignore
+      } catch (err: unknown) {
+        AppLogger.warn('[CrewRealtime] heartbeat update failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       }
-    }, 60000);
+    }, HEARTBEAT_INTERVAL_MS);
   }
 
   private _lastScenePersistTimer: ReturnType<typeof setTimeout> | null = null;
@@ -117,9 +122,9 @@ export class CrewRealtime {
           .eq('id', this.service.currentSessionId);
       } catch (e: unknown) {
         const msg = e instanceof Error ? e.message : String(e);
-        AppLogger.error('[CrewService] _persistLastScene failed', { error: msg , payload_size: 0, ssi: 0 });
+        AppLogger.error('[CrewRealtime] _persistLastPayload failed', { error: msg, payload_size: 0, ssi: 0 });
       }
-    }, 5000);
+    }, PERSIST_PAYLOAD_DELAY_MS);
   }
 
   unsubscribeRealtime(): void {

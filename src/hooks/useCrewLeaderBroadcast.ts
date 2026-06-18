@@ -1,5 +1,8 @@
 import { useEffect, useRef } from 'react';
 
+/** Debounce window before broadcasting scene state to crew members */
+const LEADER_BROADCAST_DEBOUNCE_MS = 200;
+
 export function useCrewLeaderBroadcast(
   crewRole: 'leader' | 'member' | null | undefined,
   onCrewSceneChange: ((scene: Record<string, unknown>) => void) | undefined,
@@ -13,7 +16,7 @@ export function useCrewLeaderBroadcast(
     if (crewBroadcastTimer.current) clearTimeout(crewBroadcastTimer.current);
     crewBroadcastTimer.current = setTimeout(() => {
       onCrewSceneChange(captureEntireState());
-    }, 200);
+    }, LEADER_BROADCAST_DEBOUNCE_MS);
     return () => {
       if (crewBroadcastTimer.current) clearTimeout(crewBroadcastTimer.current);
     };

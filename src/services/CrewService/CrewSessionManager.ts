@@ -5,6 +5,9 @@ import { CrewSession, CrewMember } from './types';
 import type { Database } from '../../types/supabase';
 import type { CrewService } from './CrewService';
 
+// ── Timing constants (R-16: no magic numbers) ─────────────────────────────
+const CHANNEL_TEARDOWN_DELAY_MS = 600;
+
 export const MAX_MEMBERS_PER_SESSION = 20;
 
 export class CrewSessionManager {
@@ -57,7 +60,7 @@ export class CrewSessionManager {
       return session;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewService] createSession failed', { error: msg });
+      AppLogger.error('[CrewService] createSession failed', { error: msg, payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }
@@ -151,7 +154,7 @@ export class CrewSessionManager {
       return session as CrewSession;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewService] joinSession failed', { error: msg });
+      AppLogger.error('[CrewService] joinSession failed', { error: msg, payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }
@@ -192,7 +195,7 @@ export class CrewSessionManager {
       return session as CrewSession;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewService] joinSessionById failed', { error: msg });
+      AppLogger.error('[CrewService] joinSessionById failed', { error: msg, payload_size: 0, ssi: 0 });
       throw new Error(msg);
     }
   }
@@ -379,7 +382,7 @@ export class CrewSessionManager {
         } catch (err: unknown) {
           AppLogger.warn('[CrewService] deferred removeChannel failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
         }
-      }, 600);
+      }, CHANNEL_TEARDOWN_DELAY_MS);
 
       if (this.service.broadcastTimer) { clearTimeout(this.service.broadcastTimer); this.service.broadcastTimer = null; }
       try {
@@ -432,7 +435,7 @@ export class CrewSessionManager {
       this.service.emit();
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      AppLogger.error('[CrewService] leaveSession failed', { error: msg });
+      AppLogger.error('[CrewService] leaveSession failed', { error: msg, payload_size: 0, ssi: 0 });
     }
   }
 
