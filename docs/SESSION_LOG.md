@@ -1,3 +1,12 @@
+### [MERGE READY] 2026-06-18T12:39Z — fix/crew-ui-types — 4ec11d82
+**Files touched:**
+- `src/components/crew/CrewCard.tsx` — `styles:any`→`ReturnType<typeof createStyles>`, `Colors:any`→`ThemePalette`, `setStep:any`→`CrewModalStep` union, `profileService:any`→`typeof profileService`, `setCardMembers Record<string,any[]>`→`Record<string,CrewMemberFull[]>`
+- `src/components/crew/CrewLandingMap.web.tsx` — `[key:string]:any` index sig → `Record<string,unknown>`
+- `src/components/crew/CrewScheduleScreen.tsx` — 2× `_evt:any` → `DateTimePickerEvent` (imported from @react-native-community/datetimepicker)
+- `src/components/crew/MapFiltersTray.tsx` — `opt:any`→`typeof FILTER_OPTS[number]` (hoisted to module scope), `Colors:any`→`ThemePalette`
+TSC: ✅  Jest: ✅  Browser: ✅  Type Safety: ✅  BLE Guards: ✅  (8/8 gates green)
+**Root cause note:** `typeof FILTER_OPTS[number]` requires `FILTER_OPTS` at module scope — it was originally inside the function body making it invisible to the module-level `FilterPill` type definition. Hoisted to module scope; zero behavior change (pure data constant, no closure dependencies).
+
 ### [MERGE READY] 2026-06-18T12:36Z — fix/session-context-safety — 18b575b9
 **Files touched:**
 - `src/context/SessionContext.tsx` — R-26 isRecoveringRef re-entrancy guard, R-11 floating import .catch(), R-06 AppLogger on autoPause catch, R-08 SessionPhase import replaces inline `as` cast, R-16 UI_TICK_MS named constant
