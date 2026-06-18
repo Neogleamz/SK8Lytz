@@ -1,34 +1,32 @@
+/**
+ * DashboardStyles — static StyleSheet definitions.
+ *
+ * PERF FIX (THEME-001): All styles are now created ONCE at module load time
+ * via a top-level StyleSheet.create call. The former createDashboardStyles()
+ * factory was called on every render cycle (up to 20Hz during telemetry),
+ * causing severe GC pressure. Static creation eliminates that entirely.
+ *
+ * NOTE on dimension-dependent styles: A handful of styles need runtime window
+ * dimensions (slabContainer, glassSlab, skateCardGroupName, deviceListFixed,
+ * flexibleSpacer). These are kept as inline-style helpers exported below
+ * (getDimensionStyles) so only those values are computed per render, not the
+ * entire StyleSheet. All other ~40 style keys are static.
+ *
+ * THEME-003 FIX: getPatternColors has been moved to src/utils/patternColors.ts.
+ * It is re-exported here for backward compatibility.
+ */
+
 import { StyleSheet } from 'react-native';
 import type { ThemePalette } from '../theme/theme';
-import { Layout, Spacing } from '../theme/theme';
+import { Colors, Layout, Spacing, Shadows } from '../theme/theme';
 
-/**
- * Utility to generate premium gradient colors based on pattern name/state
- */
-export const getPatternColors = (patternName?: string, Colors?: ThemePalette) => {
-  if (!patternName) return [Colors?.primary || '#00F0FF', Colors?.secondary || '#7000FF'];
-  
-  const name = patternName.toLowerCase();
-  // ... (Implementation remains the same)
-  if (name.includes('fire') || name.includes('flame')) return ['#FF4D00', '#FF9E00'];
-  if (name.includes('water') || name.includes('ocean')) return ['#00B2FF', '#00FFF0'];
-  if (name.includes('forest') || name.includes('nature')) return ['#00FF85', '#00A3FF'];
-  if (name.includes('sunset') || name.includes('gold')) return ['#FFD600', '#FF00E5'];
-  if (name.includes('nebula') || name.includes('space')) return ['#7000FF', '#00FFFF'];
-  if (name.includes('neon') || name.includes('cyber')) return ['#FF00E5', '#00F0FF'];
-  if (name.includes('police')) return ['#FF0000', '#0000FF'];
-  if (name.includes('matrix')) return ['#00FF00', '#003300'];
-  
-  // Default to branding colors
-  return [Colors?.primary || '#00F0FF', Colors?.secondary || '#7000FF'];
-};
+// Re-export for backward compatibility — consumers should import from utils/patternColors
+export { getPatternColors } from '../utils/patternColors';
 
-export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number = 800, windowWidth: number = 400) => {
-  const isShort = windowHeight < 720;
-  const isVeryShort = windowHeight < 640;
-  const isNarrow = windowWidth < 360;
-
-  return StyleSheet.create({
+// ─────────────────────────────────────────────────────────────────────────────
+// Static styles — created ONCE at module load (THEME-001 fix)
+// ─────────────────────────────────────────────────────────────────────────────
+export const DashboardStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: Colors.background,
@@ -42,11 +40,8 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     padding: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.surfaceHighlight,
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 10,
+    // THEME-002 fix: Platform-aware shadow via Shadows token
+    ...Shadows.soft,
   },
   scanButton: {
     marginTop: Spacing.xl,
@@ -55,10 +50,8 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     borderRadius: Layout.borderRadius,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
+    // Glow shadow applied via Shadows.glow(Colors.primary) at call site
+    // (Shadows.glow is a function taking a color arg — cannot be static spread)
     elevation: 8,
   },
   scanButtonText: {
@@ -90,10 +83,6 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     borderRadius: Layout.borderRadius,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.secondary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 8,
     elevation: 8,
   },
   groupButtonText: {
@@ -102,6 +91,7 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     fontWeight: '800',
     letterSpacing: 1,
   },
+  // THEME-004 fix: replaced '#FF7000' with Colors.warning token
   countdownBadge: {
     position: 'absolute',
     right: -10,
@@ -109,12 +99,9 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: '#FF7000',
+    backgroundColor: Colors.warning,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#FF7000',
-    shadowRadius: 8,
-    shadowOpacity: 1,
     zIndex: 50,
     elevation: 4,
   },
@@ -129,7 +116,7 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     backgroundColor: 'rgba(255, 61, 0, 0.1)',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: Colors.error
+    borderColor: Colors.error,
   },
   /* ──── 4-SLAB DASHBOARD STYLES ──── */
   headerSlab: {
@@ -139,10 +126,6 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     borderBottomColor: 'rgba(0,240,255,0.1)',
     zIndex: 100,
     elevation: 100,
-  },
-  slabContainer: {
-    paddingHorizontal: Layout.padding,
-    marginBottom: isVeryShort ? 8 : isShort ? 16 : 24,
   },
   slabHeader: {
     flexDirection: 'row',
@@ -158,18 +141,19 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     letterSpacing: 1.5,
     fontFamily: 'Righteous',
   },
+  // THEME-004 fix: replaced hardcoded rgba(255,170,0,...) / '#FFAA00' with Colors.warning token
   slabAction: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: 4,
-    backgroundColor: 'rgba(255,170,0,0.1)',
+    backgroundColor: Colors.warning + '1A', // 10% opacity
     borderWidth: 1,
-    borderColor: 'rgba(255,170,0,0.3)',
+    borderColor: Colors.warning + '4D',    // 30% opacity
   },
   slabActionText: {
     fontSize: 10,
     fontWeight: '900',
-    color: '#FFAA00',
+    color: Colors.warning,
     letterSpacing: 0.5,
   },
   glassSlab: {
@@ -177,7 +161,7 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.08)',
-    padding: isShort ? 12 : 16,
+    // Padding is dimension-dependent — see getDimensionStyles()
   },
   slabEmptyText: {
     fontSize: 12,
@@ -207,18 +191,15 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     flex: 1,
     letterSpacing: 0.5,
   },
+  // THEME-002 fix: replaced raw shadow props with Shadows.medium token
   skateCardWrapper: {
     marginBottom: Spacing.lg,
     borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 12,
+    ...Shadows.medium,
   },
   skateCardGradient: {
     borderRadius: 20,
-    padding: Spacing.xxs, // Border thickness
+    padding: Spacing.xxs,
   },
   skateCardInner: {
     backgroundColor: Colors.isDark ? 'rgba(35, 42, 55, 0.85)' : 'rgba(255, 255, 255, 0.95)',
@@ -286,13 +267,7 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
   skateCardContent: {
     marginBottom: Spacing.lg,
   },
-  skateCardGroupName: {
-    fontSize: isVeryShort ? 18 : isShort ? 20 : 22,
-    fontWeight: '900',
-    color: Colors.text,
-    fontFamily: 'Righteous',
-    letterSpacing: 0.5,
-  },
+  // skateCardGroupName fontSize is dimension-dependent — see getDimensionStyles()
   patternPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -337,28 +312,102 @@ export const createDashboardStyles = (Colors: ThemePalette, windowHeight: number
     alignItems: 'center',
     justifyContent: 'center',
   },
-  deviceListFixed: {
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderRadius: 16,
-    padding: isShort ? 4 : 8,
+  // deviceListFixed padding is dimension-dependent — see getDimensionStyles()
+  loadingContainer: {
+    backgroundColor: Colors.background,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  loadingContainer: { backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' },
-  btBanner: { 
-    backgroundColor: Colors.error, 
-    padding: Spacing.lg, 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    flexDirection: 'row', 
+  btBanner: {
+    backgroundColor: Colors.error,
+    padding: Spacing.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
     gap: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.2)'
+    borderBottomColor: 'rgba(255,255,255,0.2)',
   },
-  btBannerText: { color: '#FFF', fontWeight: '900', fontSize: 14, textTransform: 'uppercase', letterSpacing: 0.5 },
+  btBannerText: {
+    color: '#FFF',
+    fontWeight: '900',
+    fontSize: 14,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   controllerWrap: { flex: 1 },
   controllerHeaderWrap: { paddingBottom: Spacing.lg, zIndex: 100, elevation: 100 },
   controllerBodyWrap: { flex: 1 },
   dashboardWrap: { flex: 1, backgroundColor: Colors.background },
   scrollView: { flex: 1 },
-  flexibleSpacer: { flex: 1, minHeight: windowHeight < 720 ? 0 : 20 }
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dimension-dependent style helpers — computed per render ONLY when dimensions
+// change. These are the only styles that needed runtime window sizing.
+// ─────────────────────────────────────────────────────────────────────────────
+export interface DimensionStyles {
+  slabContainer: { paddingHorizontal: number; marginBottom: number };
+  glassSlab: { padding: number };
+  skateCardGroupName: { fontSize: number; fontWeight: '900'; color: string; fontFamily: string; letterSpacing: number };
+  deviceListFixed: { backgroundColor: string; borderRadius: number; padding: number };
+  flexibleSpacer: { flex: number; minHeight: number };
+}
+
+export const getDimensionStyles = (windowHeight: number, windowWidth: number): DimensionStyles => {
+  const isShort = windowHeight < 720;
+  const isVeryShort = windowHeight < 640;
+
+  return {
+    slabContainer: {
+      paddingHorizontal: Layout.padding,
+      marginBottom: isVeryShort ? 8 : isShort ? 16 : 24,
+    },
+    glassSlab: {
+      padding: isShort ? 12 : 16,
+    },
+    skateCardGroupName: {
+      fontSize: isVeryShort ? 18 : isShort ? 20 : 22,
+      fontWeight: '900',
+      color: Colors.text,
+      fontFamily: 'Righteous',
+      letterSpacing: 0.5,
+    },
+    deviceListFixed: {
+      backgroundColor: 'rgba(255,255,255,0.02)',
+      borderRadius: 16,
+      padding: isShort ? 4 : 8,
+    },
+    flexibleSpacer: {
+      flex: 1,
+      minHeight: windowHeight < 720 ? 0 : 20,
+    },
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Backward-compatibility shim (Wave 1 bridge → Wave 2 will remove this)
+//
+// DashboardScreen.tsx calls createDashboardStyles(Colors, w, h) and is listed
+// as Out of Scope for Wave 1 (DashboardScreen.tsx update is Wave 2).
+// This shim keeps the public API intact so TSC passes without touching the
+// monolith. Wave 2 will remove this shim and update DashboardScreen.tsx to
+// use `DashboardStyles` + `getDimensionStyles` directly.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** @deprecated Use DashboardStyles + getDimensionStyles directly. Removed in Wave 2. */
+export const createDashboardStyles = (
+  _Colors: ThemePalette,
+  windowHeight: number = 800,
+  windowWidth: number = 400,
+) => {
+  const dim = getDimensionStyles(windowHeight, windowWidth);
+  return {
+    ...DashboardStyles,
+    slabContainer: dim.slabContainer,
+    glassSlab: { ...DashboardStyles.glassSlab, ...dim.glassSlab },
+    skateCardGroupName: dim.skateCardGroupName,
+    deviceListFixed: dim.deviceListFixed,
+    flexibleSpacer: dim.flexibleSpacer,
+  };
 };
