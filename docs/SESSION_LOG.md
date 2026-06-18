@@ -1,3 +1,15 @@
+### [MERGE] 2026-06-18T12:55Z — fix/docked-controller-safety → master @ 85ca319e
+**What merged:**
+- `src/components/DockedController.tsx` — R-16: replaced hardcoded `50ms` delay with `BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS` import; added `BLE_TIMING` import
+- `src/hooks/useControllerDispatch.ts` — R-26: added `isMusicBusyRef` and `isPatternBusyRef` re-entrancy guards (useRef + try/finally) to `applyFixedPattern` and `handleMusicChange`; added `useRef` to React imports
+- `src/hooks/__tests__/useControllerDispatch.test.ts` — Boy Scout: added `useRef` to React mock (plain-function test context requires mocked dispatcher)
+- `src/components/FixedPatternPreviewRow.tsx` — Phase 1 extraction (new file)
+- `src/components/DockedController.styles.ts` — Phase 1 extraction (new file)
+- `src/hooks/useLoadFavorite.ts` — Phase 1 extraction + type fix for `setBuilderFillMode` literal union
+TSC: ✅  Jest: ✅  Browser: ✅  Type Safety: ✅  BLE Guards: ✅  (8/8 gates green)
+**Blast Radius bypass reason:** `useControllerDispatch.ts` blast-radius scan flagged `useDockedControllerState.ts` as a dependent — confirmed false positive via grep: zero imports of `useControllerDispatch` in that file. Function signatures unchanged; guards are internal-only.
+**Phase 1 commit:** 75558f8a | **Phase 2 commit:** 97906de1 | **Rebased merge:** 85ca319e
+
 ### [MERGE READY] 2026-06-18T12:40Z — fix/onboarding-safety — 5dda15e7
 **Files touched:**
 - `src/screens/AuthScreen.tsx` — R-07: `} catch {}` → `AppLogger.error('[AuthScreen]', ...)` ; R-20: `Platform.OS === 'ios' ? 'padding' : undefined` → `Platform.select({ ios: 'padding', android: undefined, default: undefined })`

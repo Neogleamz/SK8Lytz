@@ -129,7 +129,7 @@ at useBLESweeper.ts:145
 
 #### 🌊 Wave 3 — Architecture & Test Safety (5 parallel tasks, prerequisite: Wave 2 merged)
 
-- [ ] **`fix/docked-controller-safety`**
+- [x] **`fix/docked-controller-safety`** — merged @ 85ca319e — Phase 1: extracted FixedPatternPreviewRow.tsx, DockedController.styles.ts, useLoadFavorite.ts (68KB→58KB). Phase 2: R-16 hardcoded 50ms→BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS; R-26 isMusicBusyRef+isPatternBusyRef re-entrancy guards in applyFixedPattern+handleMusicChange; test mock useRef added.
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:3]`
   - **Goal:** Extract 67KB DockedController monolith into sub-components, then fix re-entrancy races and context overload.
   - **Decision Log:** R-23 — DockedController.tsx at 67KB is a collision zone. S4 mandates extraction before editing.
