@@ -171,7 +171,7 @@ at useBLESweeper.ts:145
 
 #### 🌊 Wave 4 — Services & Cleanup (4 parallel tasks, prerequisite: Wave 3 merged)
 
-- [ ] **`fix/crew-services-hardening`**
+- [x] **`fix/crew-services-hardening`** — merged @ 5201c152 — R-07 empty catch in heartbeat→AppLogger.warn; R-04 payload_size/ssi added to 4 error calls; R-11 silent catch in handleHandoffLeadership→AppLogger.warn; R-05 AsyncStorage offline cache for member list + optimistic UI for executeEndSession; R-16 5 timing constants extracted (BROADCAST_DEBOUNCE_MS, HEARTBEAT_INTERVAL_MS, CHANNEL_TEARDOWN_DELAY_MS, LEADER_BROADCAST_DEBOUNCE_MS, MEMBER_POLL_INTERVAL_MS). TSC ✅ Jest ✅ 8/8 gates ✅
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[☁️ CLOUD]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:4]`
   - **Goal:** Fix circular dependencies, error swallowing, floating promises, memory leaks, and offline-first violations across crew services.
   - **Decision Log:** R-29 — 3 circular dependency cycles in CrewService domain prevent clean imports.
