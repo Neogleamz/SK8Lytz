@@ -1,4 +1,4 @@
-### [MERGE READY] 2026-06-18T13:22Z — fix/crew-services-hardening — 977c1956
+### [MERGE] 2026-06-18T13:23Z — fix/crew-services-hardening → master @ 5201c152
 **Files touched:**
 - `src/services/CrewService/CrewRealtime.ts` — R-07: empty `catch { // ignore }` in `startHeartbeat` → `AppLogger.warn`; R-16: extracted `BROADCAST_DEBOUNCE_MS`, `HEARTBEAT_INTERVAL_MS`, `PERSIST_PAYLOAD_DELAY_MS` constants; R-04: corrected logger prefix from `[CrewService]` → `[CrewRealtime]`
 - `src/services/CrewService/CrewSessionManager.ts` — R-04: added `payload_size: 0, ssi: 0` to 4 `AppLogger.error` calls (`createSession`, `joinSession`, `joinSessionById`, `leaveSession`); R-16: extracted `CHANNEL_TEARDOWN_DELAY_MS = 600` constant
