@@ -1,3 +1,7 @@
+### [MERGE READY] fix/controller-dispatch-safety -- 864e6e84
+Files touched: src/hooks/useControllerDispatch.ts, src/hooks/useDockedControllerState.ts
+TSC: pass  Jest: pass  Gates: all green
+
 ### [ARTIFACT] 2026-06-17T09:18Z � Deep-Dive Code Synthesis: 10-Cluster Intake Complete
 **Type:** Batch Intake (deepdive-audit-sweep)
 **Audit Report:** `system_audit_report.md` (268 verified findings from 36 Map-Reduce agents)

@@ -1,7 +1,7 @@
 {
   "hasLayoutIssues": true,
   "issues": [
-    "Visual sweep exception: Gemini API multimodal request failed: 429 Client Error: Too Many Requests for url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyC2iSHVwHMI5IS4ZKcW8CsFsMLUHKvImmI"
+    "Visual sweep exception: Gemini API multimodal request failed: 403 Client Error: Forbidden for url: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyC2iSHVwHMI5IS4ZKcW8CsFsMLUHKvImmI"
   ],
   "suggestedCSSOverrides": {}
 }
