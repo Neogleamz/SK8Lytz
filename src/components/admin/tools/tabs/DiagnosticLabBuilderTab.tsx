@@ -7,7 +7,6 @@ import { DiagnosticLabHwBadge } from './DiagnosticLabHwBadge';
 import { TRANSITION_TYPES } from './DiagnosticLabConstants';
 import { QuickColorGrid } from './DiagnosticLabQuickColorGrid';
 import { ZenggeProtocol } from '../../../../protocols/ZenggeProtocol';
-import CustomEffectVisualizer from '../../../CustomEffectVisualizer';
 import { ProtocolBuilderContext } from '../../../../hooks/useProtocolBuilder';
 import { DiagnosticDevice, DiagnosticHwSettings } from './DiagnosticLabTypes';
 import { Builder51Mode } from './builder/Builder51Mode';

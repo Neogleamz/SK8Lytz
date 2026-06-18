@@ -28,3 +28,21 @@ Fix missing error handling, type laundering, and code duplication in camera/visu
 
 ## Out of Scope
 - ProductVisualizer.tsx (Wave 4 memory leaks)
+
+## SKIPPED Addendum
+
+### [DELETE] CustomEffectVisualizer.tsx — SKIPPED: Props incompatible with LEDStripPreview
+**Reason:** After reading both components in full, the prop contracts are materially different:
+- `CustomEffectVisualizer`: `effectId` (0x51 protocol mode IDs 1-44), `fgColorHex`, `bgColorHex`, `speed`, `direction` (bool), `segments`
+- `LEDStripPreview`: `patternId` (PatternEngine IDs), `fg`, `bg`, `numLEDs`, `brightness`, hash-based frame diffing
+
+The two components serve different rendering contracts — `CustomEffectVisualizer` visualizes 0x51 DIY Mode firmware effects used in the diagnostic lab builder; `LEDStripPreview` previews `PatternEngine` patterns in the main UI. They cannot be substituted without data mapping that would constitute out-of-scope re-architecture.
+
+**Action taken:** Dead import of `CustomEffectVisualizer` in `DiagnosticLabBuilderTab.tsx` was removed (Boy Scout cleanup). `CustomEffectVisualizer.tsx` itself remains. `LEDStripPreview.tsx` untouched.
+
+### [MODIFY] LEDStripPreview.tsx — SKIPPED: No changes required
+**Reason:** LEDStripPreview is the canonical component and requires no modifications per this task.
+
+### [MODIFY] VisualizerUnit.tsx R-08 L115 — SKIPPED: Out-of-scope caller type incompatibility
+**Reason:** `as unknown as DisplayDevice & IDeviceState` at L115 cannot be eliminated without modifying `ProductVisualizer.tsx` (Wave 4 — explicitly Out of Scope). `ProductVisualizer` passes `DeviceConfig` objects, which lack the `[key: string]: unknown` index signature required by `Partial<DisplayDevice & IDeviceState>`. Any prop-type widening to an indexed type breaks compilation at `ProductVisualizer.tsx:108`. The `as unknown as` pattern is TypeScript-sanctioned for intentional cross-type bridging between structurally incompatible types. R-08 for VisualizerHooks.ts L29,107 (`any` annotations) was resolved per plan.
+**Action taken:** VisualizerHooks.ts `any` types fixed (L29, L107). VisualizerUnit.tsx L115 cast left unchanged.

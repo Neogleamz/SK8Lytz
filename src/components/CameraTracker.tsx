@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Linking, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { AppState, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Camera, useCameraDevice, useCameraPermission, useFrameOutput, Frame } from 'react-native-vision-camera';
 import { Worklets } from 'react-native-worklets-core';
 import { useResizer } from 'react-native-vision-camera-resizer';
@@ -51,7 +51,7 @@ export default function CameraTracker({
         if (granted) requestFromHook();
       }).catch((err: unknown) => {
         const safeErr = err instanceof Error ? err : new Error(String(err));
-        AppLogger.error('Camera permission request failed:', safeErr);
+        AppLogger.error('Camera permission request failed:', safeErr, { payload_size: 0, ssi: 0 });
       });
     }
   }, [hasPermission, requestFromHook]);
@@ -92,7 +92,7 @@ export default function CameraTracker({
       if (__DEV__) AppLogger.log('APP_LOG', { message: 'Camera Sniper: GPU Resizer loaded successfully!', payload_size: 0, ssi: 0 });
     } else if (error) {
       const safeErr = error instanceof Error ? error : new Error(String(error));
-      AppLogger.error('Camera Sniper: GPU Resizer failed to load', safeErr);
+      AppLogger.error('Camera Sniper: GPU Resizer failed to load', safeErr, { payload_size: 0, ssi: 0 });
     }
   }, [resizer, error]);
 
@@ -103,7 +103,7 @@ export default function CameraTracker({
   const dispatchSniperColorJS = React.useMemo(() => Worklets.createRunOnJS(dispatchSniperColor), [dispatchSniperColor]);
   const dispatchVibePaletteJS = React.useMemo(() => Worklets.createRunOnJS(dispatchVibePalette), [dispatchVibePalette]);
   const logFrameErrorJS = React.useMemo(() => Worklets.createRunOnJS((errMsg: string) => {
-    AppLogger.error('Camera Frame Processor Error', new Error(errMsg));
+    AppLogger.error('Camera Frame Processor Error', new Error(errMsg), { payload_size: 0, ssi: 0 });
   }), []);
 
   // Memoize the frame processor onFrame callback to persist throttled timestamp in closure
@@ -180,9 +180,18 @@ export default function CameraTracker({
         <TouchableOpacity
           style={styles.button}
           onPress={async () => {
-            const granted = await requestPermission('CAMERA');
-            if (granted) requestFromHook();
-            else Linking.openSettings();
+            try {
+              const granted = await requestPermission('CAMERA');
+              if (granted) {
+                requestFromHook();
+              } else if (Platform.OS === 'ios' || Platform.OS === 'android') {
+                // openSettings is supported on iOS and Android only
+                await Linking.openSettings();
+              }
+            } catch (settingsErr: unknown) {
+              const safeSettingsErr = settingsErr instanceof Error ? settingsErr : new Error(String(settingsErr));
+              AppLogger.error('Camera permission settings navigation failed', safeSettingsErr);
+            }
           }}
         >
           <Text style={{ color: '#FFF', fontWeight: 'bold' }}>GRANT PERMISSION</Text>

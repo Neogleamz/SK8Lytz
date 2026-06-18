@@ -2,6 +2,38 @@ import { useMemo } from 'react';
 import { Animated } from 'react-native';
 import { getVisualizerFrame, getMusicVisualizerFrame, SK8LYTZ_TEMPLATES, PatternId, RGB } from '../../protocols/PatternEngine';
 import { PositionalMathBuffer, BuilderNode } from '../../protocols/PositionalMathBuffer';
+import type { ProductProfile } from '../../types/ProductCatalog';
+
+/** Typed options bag for useVisualizerLeds — eliminates `any` cast (R-08). */
+export interface VisualizerLedsOptions {
+  pathGeometry: { pathSamples: { top: number; left: number; length: number }[]; totalLength: number };
+  mode: string;
+  color: string;
+  numLeds: number;
+  patternId: number | null | undefined;
+  isPoweredOn: boolean;
+  audioMagnitude: number;
+  fixedFgColor?: string;
+  fixedBgColor?: string;
+  multiColors: string[];
+  multiTransition: number;
+  brightness: number;
+  speed: number;
+  animTick: number;
+  streetBrakeState: 'BRAKING' | 'CRUISING';
+  motionState: string;
+  streetCruiseColor: string;
+  builderNodes: BuilderNode[];
+  builderFillMode: string;
+  builderTransitionType: number;
+  builderDirection: number;
+  vizShape: string;
+  deviceSegments: number;
+  productProfile: ProductProfile;
+  animValue: Animated.Value;
+  fixedDirection: number;
+  streetDistribution: [number, number, number];
+}
 
 export function HSLToHex(h: number, s: number, l: number) {
   h = (h % 360 + 360) % 360;
@@ -26,7 +58,7 @@ export function HSLToHex(h: number, s: number, l: number) {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-export function useVisualizerPath(productProfile: any, numLeds: number, deviceSegments: number, product: string) {
+export function useVisualizerPath(productProfile: ProductProfile, numLeds: number, deviceSegments: number, product: string) {
   return useMemo(() => {
     const vizShape = productProfile.vizShape;
     const numSamples = 5000;
@@ -104,7 +136,7 @@ export function useVisualizerPath(productProfile: any, numLeds: number, deviceSe
   }, [product, productProfile.vizShape, numLeds, deviceSegments, productProfile]);
 }
 
-export function useVisualizerLeds(options: any) {
+export function useVisualizerLeds(options: VisualizerLedsOptions) {
   const { pathGeometry, mode, color, numLeds, patternId, isPoweredOn, audioMagnitude, fixedFgColor, fixedBgColor, multiColors, multiTransition, brightness, speed, animTick, streetBrakeState, motionState, streetCruiseColor, builderNodes, builderFillMode, builderTransitionType, builderDirection, vizShape, deviceSegments, productProfile, animValue, fixedDirection, streetDistribution } = options;
 
   return useMemo(() => {
