@@ -23,6 +23,8 @@ const probeStatusLabel: Record<ProbeStatus, string> = {
 };
 
 
+const PROBE_TIMEOUT_MS = 5000;
+
 interface DeviceSettingsModalProps {
   isVisible: boolean;
   onClose: () => void;
@@ -238,7 +240,7 @@ export default function DeviceSettingsModal({ isVisible, onClose, onSave, initia
           }
           return prev;
         });
-      }, 5000);
+      }, PROBE_TIMEOUT_MS);
     }
   };
 

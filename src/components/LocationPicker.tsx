@@ -12,6 +12,8 @@ import { useAppConfig } from '../context/AppConfigContext';
 // TODO(i18n): Replace with global i18n.t when framework is adopted
 const t = (key: string) => key;
 
+const SEARCH_DEBOUNCE_MS = 400;
+
 export interface CuratedSpot {
   id: string;
   name: string;
@@ -145,7 +147,7 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({
         AppLogger.warn('[LocationPicker] OSM fetch error', { error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
         setFsmState('ERROR');
       }
-    }, 400); // reduced latency since we have local search
+    }, SEARCH_DEBOUNCE_MS); // reduced latency since we have local search
   };
 
   const selectSuggestion = (item: SuggestionItem) => {

@@ -4,6 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { Spacing , ThemePalette } from '../theme/theme';
 
 const ITEM_HEIGHT = 44;
+const COMMIT_DEBOUNCE_MS = 50;
 const getDrumItemLayout = (_data: unknown, index: number) => ({
   length: ITEM_HEIGHT,
   offset: ITEM_HEIGHT * index,
@@ -65,7 +66,7 @@ const VerticalPatternDrum = ({
        if (commitTimeoutRef.current) clearTimeout(commitTimeoutRef.current);
        commitTimeoutRef.current = setTimeout(() => {
           onValueChange(val);
-       }, 50); // Fast 50ms debounce
+       }, COMMIT_DEBOUNCE_MS); // Fast debounce to batch rapid scroll events
     }
   }, [value, onValueChange]);
 

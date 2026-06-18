@@ -22,7 +22,7 @@ export function useWebDemoConsoleBridge() {
     const originalWarn = console.warn;
     const originalError = console.error;
 
-    const sendMessage = (level: 'log' | 'warn' | 'error', args: any[]) => {
+    const sendMessage = (level: 'log' | 'warn' | 'error', args: unknown[]) => {
       try {
         const parsedArgs = args.map(arg => {
           if (typeof arg === 'object') {

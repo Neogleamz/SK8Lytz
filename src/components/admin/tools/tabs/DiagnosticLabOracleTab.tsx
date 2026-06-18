@@ -44,12 +44,13 @@ export function DiagnosticLabOracleTab({
   const { S, txtPri, txtMuted, cardBg: _cardBg, border, isDark, cyan } = useDiagnosticLabStyles();
 
   /** Auto-stream 0x74 magnitude 200 every 100ms when active (for mic shootout). */
+  const MAGNITUDE_STREAM_INTERVAL_MS = 100;
   const [streamActive, setStreamActive] = useState(false);
   useEffect(() => {
     if (!streamActive) return;
     const id = setInterval(() => {
       transmit(ZenggeProtocol.sendMusicMagnitude(200), '0x74 AUTO-STREAM mag=200', '0x74');
-    }, 100);
+    }, MAGNITUDE_STREAM_INTERVAL_MS);
     return () => clearInterval(id);
   }, [streamActive, transmit]);
 
