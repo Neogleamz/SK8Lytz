@@ -90,17 +90,16 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
         return;
       }
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
-      for (const device of targets) {
-        if (__DEV__) AppLogger.log('APP_LOG', { message: '[DEBUG sendColor]', deviceId: device.id, type: typeof device.id, payload_size: 0, ssi: 0 });
+      await Promise.all(targets.map(async (device) => {
+        if (__DEV__) AppLogger.log('APP_LOG', { message: '[DEBUG sendColor]', deviceId: device.id.slice(-5), type: typeof device.id, payload_size: 0, ssi: 0 });
         const adapter = getAdapterForDevice(device.id);
         if (adapter) {
           const result = adapter.buildSolidColor(r, g, b);
           for (const p of result.packets) { await safeWrite(p, device.id); }
         } else {
-          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id, { payload_size: 0, ssi: 0 });
-          return;
+          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id.slice(-5), { payload_size: 0, ssi: 0 });
         }
-      }
+      }));
     },
     [writeToDevice, safeWrite, numLEDs, hwSettings, points, connectedDevices, getAdapterForDevice, primaryDeviceId]
   );
@@ -141,10 +140,10 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       const dir = currentDirection ?? 1;
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
-      for (const device of targets) {
+      await Promise.all(targets.map(async (device) => {
         const adapter = getAdapterForDevice(device.id);
         if (!adapter) {
-          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id, { payload_size: 0, ssi: 0 });
+          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id.slice(-5), { payload_size: 0, ssi: 0 });
           return;
         }
         const protocolKey = adapter.constructor.name;
@@ -177,7 +176,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
         }
 
         if (payload) await safeWrite(payload, device.id);
-      }
+      }));
     },
     [writeToDevice, safeWrite, sendColor, clampSpeed, numLEDs, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
@@ -207,10 +206,10 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
 
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
-      for (const device of targets) {
+      await Promise.all(targets.map(async (device) => {
         const adapter = getAdapterForDevice(device.id);
         if (!adapter) {
-          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id, { payload_size: 0, ssi: 0 });
+          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id.slice(-5), { payload_size: 0, ssi: 0 });
           return;
         }
         if (pat === 'STATIC') {
@@ -222,7 +221,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
           const result = adapter.buildCustomMode([{ mode: 0x3A, speed: tSpd, color1: { r: tR, g: tG, b: tB }, color2: { r: 0, g: 0, b: 0 } }]);
           for (const p of result.packets) { await safeWrite(p, device.id); }
         }
-      }
+      }));
     },
     [writeToDevice, safeWrite, sendColor, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
@@ -271,16 +270,15 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       // 0x02 = Running: hardware scrolls the array natively
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
-      for (const device of targets) {
+      await Promise.all(targets.map(async (device) => {
         const adapter = getAdapterForDevice(device.id);
         if (adapter) {
           const result = adapter.buildMultiColor(arr, (hwSettings?.ledPoints as number | undefined) || numLEDs, hwSpd, 1, 0x02);
           for (const p of result.packets) { await safeWrite(p, device.id); }
         } else {
-          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id, { payload_size: 0, ssi: 0 });
-          return;
+          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id.slice(-5), { payload_size: 0, ssi: 0 });
         }
-      }
+      }));
     },
     [writeToDevice, safeWrite, hwSettings, numLEDs, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
@@ -317,7 +315,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       //   and the controller expects 0x74 magnitude packets.
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
-      for (const device of targets) {
+      await Promise.all(targets.map(async (device) => {
         const adapter = getAdapterForDevice(device.id);
         if (adapter) {
           const result = adapter.buildMusicConfig({
@@ -335,10 +333,9 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
             await new Promise(r => setTimeout(r, BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
           }
         } else {
-          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id, { payload_size: 0, ssi: 0 });
-          return;
+          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id.slice(-5), { payload_size: 0, ssi: 0 });
         }
-      }
+      }));
     },
     [writeToDevice, safeWrite, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
@@ -352,16 +349,15 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       }
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
-      for (const device of targets) {
+      await Promise.all(targets.map(async (device) => {
         const adapter = getAdapterForDevice(device.id);
         if (adapter) {
           const result = isOn ? adapter.buildPowerOn() : adapter.buildPowerOff();
           for (const p of result.packets) { await safeWrite(p, device.id); }
         } else {
-          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id, { payload_size: 0, ssi: 0 });
-          return;
+          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id.slice(-5), { payload_size: 0, ssi: 0 });
         }
-      }
+      }));
     },
     [writeToDevice, safeWrite, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
@@ -375,16 +371,15 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       }
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       
-      for (const device of targets) {
+      await Promise.all(targets.map(async (device) => {
         const adapter = getAdapterForDevice(device.id);
         if (adapter) {
           const result = adapter.buildMultiColor(colors, ledPoints, speed, direction, transitionType);
           for (const p of result.packets) { await safeWrite(p, device.id); }
         } else {
-          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id, { payload_size: 0, ssi: 0 });
-          return;
+          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id.slice(-5), { payload_size: 0, ssi: 0 });
         }
-      }
+      }));
     },
     [writeToDevice, safeWrite, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );

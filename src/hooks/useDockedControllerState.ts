@@ -2,6 +2,11 @@ import { useRef, useState } from 'react';
 import { normalizeMac } from './useDeviceStateLedger';
 import type { DevicePatternState, FixedModePattern, ModeType } from '../types/dashboard.types';
 
+/** Type guard: narrows an unknown value to ModeType. Replaces unsafe `as ModeType` casts. */
+function isModeType(v: unknown): v is ModeType {
+  return typeof v === 'string' && ['FAVORITES', 'MULTIMODE', 'BUILDER', 'MUSIC', 'STREET', 'CAMERA'].includes(v);
+}
+
 /** Opaque alias kept for backward-compatibility — represents a product catalog ID string. */
 export type ProductType = string;
 
@@ -58,7 +63,7 @@ export function useDockedControllerState(
   const [activeProduct, setActiveProduct] = useState<ProductType>(initialProduct);
   // Pre-warm from ledger — restores the mode the device was last set to so the
   // visualizer shows the correct pattern immediately on controller open.
-  const restoredMode = (ledgerState?.mode as ModeType) || 'FAVORITES';
+  const restoredMode: ModeType = isModeType(ledgerState?.mode) ? ledgerState.mode : 'FAVORITES';
   const [activeMode, setActiveMode] = useState<ModeType>(restoredMode);
   const [lastOperatingMode, setLastOperatingMode] = useState<ModeType>(
     restoredMode !== 'FAVORITES' ? restoredMode : 'MULTIMODE'
