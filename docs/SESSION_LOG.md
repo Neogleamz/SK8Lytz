@@ -1,3 +1,12 @@
+﻿### [MERGE] 2026-06-18T12:09Z -- fix-logger-telemetry-hardening -> master @ edc5cd79
+**What merged:**
+- AppLoggerCloud.ts: AppSettingsService for telemetry gate, structural JSON serialization, hardened catch blocks
+- AppLoggerService.ts: KnownDevice[] type (BleDevice + optional batteryLevel), re-entrancy guard
+- AppLoggerStorage.ts: catch block hardened with console.warn
+- useAdminTelemetry.ts: loadingRef re-entrancy guard on load()
+**Verify result:** TSC OK, Jest OK, Browser OK, BLE Invariants OK, Type Safety OK
+**Files touched:** AppLoggerCloud.ts, AppLoggerService.ts, AppLoggerStorage.ts, useAdminTelemetry.ts
+
 ### [MERGE READY] fix/dashboard-styles-perf -- 7eda3422
 Files touched: src/styles/DashboardStyles.ts, src/theme/theme.ts, src/utils/patternColors.ts (new)
 TSC: pass  Jest: pass  Gates: all green
@@ -4246,13 +4255,13 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ✅, Jest ✅, gates ✅
 **Files touched:** src/components/crew/CrewJoinScreen.tsx, src/components/crew/CrewLandingScreen.tsx, src/hooks/useAccountOverview.ts, src/providers/ComplianceGate.tsx, etc.
 
-### [ARTIFACT] 2026-06-17T22:48 � PLAN-fix-stale-flush-group-kill.md
+### [ARTIFACT] 2026-06-17T22:48 � PLAN-fix-stale-flush-group-kill.md
 **Type:** Implementation Plan
 **Path:** docs/plans/PLAN-fix-stale-flush-group-kill.md
 **Summary:** Fix for ConnectService stale flush killing Device A during incremental group assembly when Device B arrives in a separate auto-connect batch. Root cause: L77 marks all non-target connected devices as stale. Single-file surgical fix.
 **Evidence:** User live testing 2026-06-17 + 8-file subagent code trace. Rejected alternative: batch merging (non-deterministic BLE timing).
 
-### [MERGE] 2026-06-17T22:55 � fix/stale-flush-group-kill ? master @ 5b36ab8b
+### [MERGE] 2026-06-17T22:55 � fix/stale-flush-group-kill ? master @ 5b36ab8b
 **What merged:** Removed ConnectService stale flush that killed Device A when Device B connected in a separate auto-connect batch during incremental group assembly. Retained ALL connected devices. Updated tests 7-8 to verify retain-all behavior.
 **Verify result:** TSC ?, Jest ? (222/222), gates ?
 **Files touched:** src/services/ble/ConnectService.ts, src/services/ble/__tests__/ConnectService.test.ts
@@ -4284,3 +4293,4 @@ TSC: PASS  Jest: PASS
 - GlobalForegroundService.ts: SKIPPED — no violations (clean catch blocks)
 
 **Note:** 6 of 7 files were already clean from prior fixes (deepdive-hunt team's work). Only one live violation found and fixed.
+

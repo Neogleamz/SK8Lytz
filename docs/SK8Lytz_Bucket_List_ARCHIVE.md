@@ -3528,4 +3528,13 @@ pm run verify which includes QA tests.
 | **W-1** | C1 (Group Concurrent Write), C3 (Protocol Seq Counter), C7 (PII Scrub), C10 (OS Variance) | ✅ Yes — zero import-tree overlap | None |
 | **W-2** | C2 (Split-Brain), C4 (BLE Type Safety), C5 (Promise IO Guards) | ✅ Yes — no shared files within wave | W-1 fully merged |
 | **W-3** | C6 (Re-entrancy Guards), C8 (FSM State Matrix), C9 (Timer Audit BLE) | ✅ Yes — disjoint after W-2 merges | W-2 fully merged |
+
+
+- [x] **`fix/logger-telemetry-hardening`** *(merged: edc5cd79 — AppLogger type safety, telemetry gating, re-entrancy guards, catch hardening)*
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 MED]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
+  - **Goal:** Fix type laundering, error swallowing, floating promises, and AsyncStorage key drift in logger pipeline.
+  - **Decision Log:** R-07/R-08/R-11 — logger chain swallows errors silently, masking production failures.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-logger-telemetry-hardening.md](./plans/PLAN-fix-logger-telemetry-hardening.md)
+  - **Source of Truth:** 📖 [AppLoggerCloud.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/appLogger/AppLoggerCloud.ts)
+  - **Details:** HIGH severity. 4 files. KnownDevice[] type alias, AppSettingsService gate, structural JSON serialization, loadingRef guard.
 

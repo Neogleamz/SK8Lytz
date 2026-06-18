@@ -68,14 +68,6 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [useControllerDispatch.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useControllerDispatch.ts)
   - **Details:** HIGH severity. 3 files, PII scrubbing + type safety.
 
-- [ ] **`fix/logger-telemetry-hardening`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 MED]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
-  - **Goal:** Fix type laundering, error swallowing, floating promises, and AsyncStorage key drift in logger pipeline.
-  - **Decision Log:** R-07/R-08/R-11 — logger chain swallows errors silently, masking production failures.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-logger-telemetry-hardening.md](./plans/PLAN-fix-logger-telemetry-hardening.md)
-  - **Source of Truth:** 📖 [AppLoggerCloud.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/appLogger/AppLoggerCloud.ts)
-  - **Details:** HIGH severity. 4 files.
-
 - [ ] **`fix/data-layer-types`**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[DB]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 MED]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
   - **Goal:** Fix type safety, error swallowing, offline-first violations, and AsyncStorage key drift in data layer.
