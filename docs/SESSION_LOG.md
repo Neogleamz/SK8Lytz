@@ -1,3 +1,11 @@
+### [MERGE READY] 2026-06-18T12:20Z — fix/ble-services-hardening — 653854f2
+**Files touched:** src/services/ble/RecoveryService.ts, src/services/ble/RSSIService.ts, src/constants/bleTimingConstants.ts
+TSC: ✅  Jest: ✅  Gates: all green (8/8 checks)
+**What was fixed:**
+- RecoveryService.ts L192: replaced empty `catch { /* non-fatal */ }` with `AppLogger.warn` (R-08 error swallowing fix)
+- bleTimingConstants.ts: added `RSSI_POLL_INTERVAL_MS: 30_000` to BLE_TIMING registry
+- RSSIService.ts: replaced hardcoded `RSSI_POLL_INTERVAL_MS = 30_000` literal with `BLE_TIMING.RSSI_POLL_INTERVAL_MS` import
+
 ### [MERGE READY] 2026-06-18T12:18Z — fix/notifications-routing-safety — b72b8a97
 **Files touched:** src/services/NotificationService.ts, src/services/LocationService.ts, src/providers/BluetoothGuard.tsx, App.tsx
 TSC: ✅  Jest: ✅  Gates: all green (8/8 checks)
