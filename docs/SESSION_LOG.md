@@ -1,3 +1,31 @@
+### [MERGE READY] 2026-06-18T12:29Z — fix/dashboard-screen-safety — 1e898953
+**Files touched:**
+- `src/screens/DashboardScreen.tsx` — R-08/R-17/R-20/R-25 type safety, event listener leak fix, BackHandler guard, Platform.select
+- `src/hooks/useDashboardAutoConnect.ts` — R-16 extracted magic numbers to module constants
+- `docs/plans/PLAN-fix-dashboard-screen-safety.md` — SKIPPED annotations added for deferred items
+TSC: ✅  Jest: ✅  Gates: all green (8/8 checks)
+**What was fixed:**
+- R-08: `ledgerState?: any` → `ledgerState?: DevicePatternState` in MemoizedDeviceItemProps; `DevicePatternState` imported from `dashboard.types`
+- R-16: Extracted 5 magic number constants to module-level in useDashboardAutoConnect.ts
+- R-17: `import('react-native').then(...)` → synchronous `require()` to restore cleanup function return path (listener leak fixed)
+- R-20: `Platform.OS === 'web'` → `Platform.select({ web: true, default: false })` (cross-platform readability)
+- R-25: Added `Platform.select` guard before BackHandler registration (web throws without guard)
+**SKIPPED (documented in plan with // SKIPPED annotations):**
+- R-28 FlatList keyExtractor/getItemLayout: deferred pending extraction of MemoizedDeviceItem to own file
+- R-27 context consumer depth: blocked by S4 (requires structural extraction)
+
+### [MERGE] 2026-06-18T12:28Z — fix/camera-visualizer-safety → master @ 73e369fa
+**What merged:**
+- CameraTracker.tsx: Added `{ payload_size: 0, ssi: 0 }` context to 3 `AppLogger.error` calls (R-04)
+- CameraTracker.tsx: Wrapped `onPress` handler in try/catch with `Platform.OS` guard before `Linking.openSettings()` (R-11, R-25); added `Platform` import
+- VisualizerHooks.ts: Replaced 2 `any` type annotations (L29, L107) with strict `unknown` (R-08)
+- DiagnosticLabBuilderTab.tsx: Removed dead `CustomEffectVisualizer` import (Boy Scout)
+**Verify result:** TSC ✅  Jest ✅  8/8 gates ✅  Attestation cryptographically verified
+**Files touched:** src/components/CameraTracker.tsx, src/components/visualizer/VisualizerHooks.ts, src/components/admin/tools/tabs/DiagnosticLabBuilderTab.tsx, docs/plans/PLAN-fix-camera-visualizer-safety.md
+**SKIPPED (documented in plan):**
+- CustomEffectVisualizer.tsx deletion: props incompatible with LEDStripPreview (different rendering contracts)
+- VisualizerUnit.tsx R-08 L115 cast: requires modifying ProductVisualizer.tsx (Wave 4 — Out of Scope)
+
 ### [MERGE READY] 2026-06-18T12:20Z — fix/ble-services-hardening — 653854f2
 **Files touched:** src/services/ble/RecoveryService.ts, src/services/ble/RSSIService.ts, src/constants/bleTimingConstants.ts
 TSC: ✅  Jest: ✅  Gates: all green (8/8 checks)
