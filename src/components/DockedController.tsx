@@ -71,6 +71,7 @@ import QuickPresetModal from './docked/QuickPresetModal';
 import { LiveTelemetryHUD } from './dashboard/LiveTelemetryHUD';
 import { useScreenPerformance } from '../hooks/useScreenPerformance';
 import { enqueueDelay } from '../services/BleWriteQueue';
+import { BLE_TIMING } from '../constants/bleTimingConstants';
 import { useDockedPermissions } from '../hooks/useDockedPermissions';
 import { useCrewLeaderBroadcast } from '../hooks/useCrewLeaderBroadcast';
 
@@ -423,7 +424,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
             });
           }
           if (idx < devicesToReplay.length - 1) {
-            await enqueueDelay('normal', 50);
+            await enqueueDelay('normal', BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS);
           }
         }
       };

@@ -12,7 +12,7 @@
  *
  * Depends on: ZenggeProtocol, PatternEngine, AppLogger, NormalizationUtils
  */
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { getLocalProfileById } from '../constants/ProductCatalog';
 import { buildPatternPayload } from '../protocols/PatternEngine';
 import { IControllerProtocol } from '../protocols/IControllerProtocol';
@@ -47,6 +47,11 @@ interface UseControllerDispatchParams {
 export function useControllerDispatch({ writeToDevice, hwSettings, points, getAdapterForDevice, primaryDeviceId, connectedDevices = [] }: UseControllerDispatchParams) {
   /** Resolve LED count from hw config or fallback */
   const numLEDs = Math.max(1, (hwSettings?.ledPoints as number | undefined) || points || 16);
+
+  // R-26: Re-entrancy guards — prevents concurrent overlapping BLE writes from rapid UI taps.
+  // Both refs are set to true at the top of the async function and released in a finally block.
+  const isMusicBusyRef = useRef(false);
+  const isPatternBusyRef = useRef(false);
 
   const safeWrite = useCallback(
     async (payload: number[], targetId?: string, override?: Record<string, unknown>) => {
@@ -117,6 +122,13 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       currentBrightness?: number,
       currentDirection?: number
     ) => {
+      // R-26: Re-entrancy guard — skip if a pattern write is already in-flight
+      if (isPatternBusyRef.current) {
+        if (__DEV__) AppLogger.warn('[useControllerDispatch] applyFixedPattern re-entrant call dropped', { payload_size: 0, ssi: 0 });
+        return;
+      }
+      isPatternBusyRef.current = true;
+      try {
       if (!writeToDevice) {
         if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "applyFixedPattern called but writeToDevice is undefined", { function: 'applyFixedPattern', payload_size: 0, ssi: 0 });
         return;
@@ -177,6 +189,9 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
 
         if (payload) await safeWrite(payload, device.id);
       }));
+      } finally {
+        isPatternBusyRef.current = false;
+      }
     },
     [writeToDevice, safeWrite, sendColor, clampSpeed, numLEDs, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );
@@ -294,6 +309,13 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       color2Hex: string,
       matrix: number
     ) => {
+      // R-26: Re-entrancy guard — skip if a music config write is already in-flight
+      if (isMusicBusyRef.current) {
+        if (__DEV__) AppLogger.warn('[useControllerDispatch] handleMusicChange re-entrant call dropped', { payload_size: 0, ssi: 0 });
+        return;
+      }
+      isMusicBusyRef.current = true;
+      try {
       if (!writeToDevice) {
         if (__DEV__) AppLogger.error("BLE_DEAD_WIRE", "handleMusicChange called but writeToDevice is undefined", { function: 'handleMusicChange', payload_size: 0, ssi: 0 });
         return;
@@ -336,6 +358,9 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
           AppLogger.error('[useControllerDispatch] No adapter found for device', device.id.slice(-5), { payload_size: 0, ssi: 0 });
         }
       }));
+      } finally {
+        isMusicBusyRef.current = false;
+      }
     },
     [writeToDevice, safeWrite, getAdapterForDevice, primaryDeviceId, connectedDevices]
   );

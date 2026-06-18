@@ -11,6 +11,7 @@ import { buildPatternPayload } from '../../protocols/PatternEngine';
 jest.mock('react', () => ({
   ...jest.requireActual('react'),
   useCallback: (fn: any) => fn,
+  useRef: (initial: any) => ({ current: initial }),
 }));
 
 jest.mock('../../services/AppLogger', () => ({
