@@ -189,7 +189,7 @@ export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ i
             } else {
               mtuMapRef.current.set(conn.id, 186);
             }
-          } catch { /* non-fatal */ }
+          } catch (e: unknown) { AppLogger.warn('[RecoveryService] Phase 3 MTU negotiation failed (non-fatal)', { deviceId: scrubPII(deviceId), error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 }); }
 
           if (disconnectListeners.current[conn.id]) {
             disconnectListeners.current[conn.id].remove();

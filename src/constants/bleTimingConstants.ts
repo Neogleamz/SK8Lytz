@@ -238,11 +238,18 @@ export const BLE_TIMING = {
    */
   THROTTLE_SCAN_OFF_MS: 20_000,
 
+
   /**
    * Scan budget window duration.
    * useBLEBatterySweep.ts:41
    */
   SCAN_BUDGET_WINDOW_MS: 30_000,
+
+  /**
+   * RSSI polling interval for live signal-strength monitoring.
+   * RSSIService.ts — setInterval period in startRSSIPolling().
+   */
+  RSSI_POLL_INTERVAL_MS: 30_000,
 } as const;
 
 export type BleTiming = typeof BLE_TIMING;

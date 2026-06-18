@@ -12,6 +12,7 @@
 import type { Device } from 'react-native-ble-plx';
 import { AppLogger } from '../appLogger';
 import { scrubPII } from '../../utils/piiScrubber';
+import { BLE_TIMING } from '../../constants/bleTimingConstants';
 
 /** Minimal BleManager surface required by RSSIService — allows partial mocks in tests. */
 interface RSSIBleManager {
@@ -20,7 +21,8 @@ interface RSSIBleManager {
 
 export const RSSI_WEAK_THRESHOLD = -75;
 export const RSSI_CRITICAL_THRESHOLD = -82;
-export const RSSI_POLL_INTERVAL_MS = 30_000;
+/** Sourced from BLE_TIMING registry — edit bleTimingConstants.ts to tune. */
+export const RSSI_POLL_INTERVAL_MS = BLE_TIMING.RSSI_POLL_INTERVAL_MS;
 
 /**
  * readDeviceRSSI — Pure async RSSI probe via GATT.
