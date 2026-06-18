@@ -1,3 +1,26 @@
+### [MERGE READY] 2026-06-18T13:00Z — fix/test-suite-type-safety — c372f6c2
+**Files touched:**
+- `src/__tests__/test-env.d.ts` (NEW) — global augmentation types: `GlobalWithDev`, `MutablePlatform`, `CallbackServiceActor`, `PromiseServiceActor`
+- `jest.config.js` — added `test-env.d.ts` to `testPathIgnorePatterns` (prevents "must contain at least one test" error)
+- `src/services/ble/__tests__/HeartbeatService.test.ts` — `AnyActorSystem` → `ActorSystem<any>` (xstate export fix)
+- `src/services/ble/__tests__/RecoveryService.test.ts` — same xstate `ActorSystem` fix
+- `src/services/ble/__tests__/InterrogatorService.test.ts` — narrow `CharacteristicValue` structural interface replaces wide `as any` Characteristic cast
+- `src/services/ble/__tests__/BleMachine.test.ts` — `mockBleManager as unknown as BleManager`; `createActor` options typed via `Parameters<typeof createActor<...>>[1]` cast
+- `src/services/ble/__tests__/ConnectService.test.ts` — `capturedCallback!(err, null)` (non-null assert + 2nd arg)
+- `src/services/session/__tests__/AutoPauseService.test.ts` — relative `test-env` import fix; `cleanup?.()` optional invocation
+- `src/services/session/__tests__/SessionBridge.test.ts` — relative `test-env` import fix
+- `src/services/session/__tests__/SessionCommitService.test.ts` — relative `test-env` import fix; `cleanup?.()` optional invocation
+- `src/services/session/__tests__/SessionMachine.test.ts` — relative `test-env` import fix
+- `src/services/__tests__/AppLogger.test.ts` — relative `test-env` import fix
+- `src/hooks/__tests__/useDeviceStateLedger.test.ts` — `DevicePatternState` mock shape fixed; `ModeType` value corrected to valid union member
+- (all other 8 test files) — `as any` → strict typed casts throughout
+TSC: ✅  Jest: ✅ (234 passed, 32 suites)  Browser: ✅  Type Safety: ✅  BLE Guards: ✅  (8/8 gates green)
+**Key patterns resolved:**
+- `AnyActorSystem` is not exported from `xstate` main — use `ActorSystem<any>` instead
+- XState `cleanup()` return is `void | (() => void)` — use `cleanup?.()` not `cleanup()`
+- `createActor` with machine requiring `input` needs `{ input: ... }` in options — cast via `unknown` to avoid TS2345
+- Relative paths to `test-env.d.ts` differ per depth: `../../__tests__/test-env` from `services/ble/__tests__/`, `../../../__tests__/test-env` from `services/session/__tests__/`
+
 ### [MERGE] 2026-06-18T12:55Z — fix/docked-controller-safety → master @ 85ca319e
 **What merged:**
 - `src/components/DockedController.tsx` — R-16: replaced hardcoded `50ms` delay with `BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS` import; added `BLE_TIMING` import
