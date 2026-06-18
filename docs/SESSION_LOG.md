@@ -1,4 +1,16 @@
-﻿### [MERGE] 2026-06-18T12:09Z -- fix-logger-telemetry-hardening -> master @ edc5cd79
+### [MERGE READY] 2026-06-18T12:18Z — fix/notifications-routing-safety — b72b8a97
+**Files touched:** src/services/NotificationService.ts, src/services/LocationService.ts, src/providers/BluetoothGuard.tsx, App.tsx
+TSC: ✅  Jest: ✅  Gates: all green (8/8 checks)
+**What was fixed:**
+- NotificationService: wrapped `_setupAndroidChannel()` and `_requestPermissions()` in individual try/catch blocks (R-11)
+- NotificationService: added `payload_size: 0, ssi: 0` to 5 AppLogger.warn calls (R-04)
+- LocationService: replaced bare string context args with structured `{ error, payload_size, ssi }` objects in 2 warn calls (R-04)
+- BluetoothGuard: added catch block to `try/finally` in handleRequestPermission (R-11)
+- BluetoothGuard: added `.catch(()=>{})` to unawaited `Linking.openSettings()` (R-11)
+- BluetoothGuard: added `payload_size: 0, ssi: 0` to check_permission_failed warn (R-04)
+- App.tsx: added `payload_size: 0, ssi: 0` to console.error monkey-patch and HEALTH_CONNECT init_failed warns (R-04)
+
+### [MERGE] 2026-06-18T12:09Z -- fix-logger-telemetry-hardening -> master @ edc5cd79
 **What merged:**
 - AppLoggerCloud.ts: AppSettingsService for telemetry gate, structural JSON serialization, hardened catch blocks
 - AppLoggerService.ts: KnownDevice[] type (BleDevice + optional batteryLevel), re-entrancy guard
