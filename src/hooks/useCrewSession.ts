@@ -65,27 +65,31 @@ export function useCrewSession(
 
   const executeEndSession = async () => {
     const currentSessionId = currentSession?.id;
-    try {
-      AppLogger.log('CREW_SESSION_ENDED', { sessionId: currentSessionId ? scrubPII(currentSessionId) : undefined, crewName: currentSession?.name ? scrubPII(currentSession?.name) : undefined, role: 'leader', reason: 'explicit_end', payload_size: 0, ssi: 0 });
-      if (currentSessionId) {
-        // Telemetry
-        if (user) {
-          await SpeedTrackingService.updateLifetimeStats(
-            user.id,
-            crewService.sessionTelemetry.distanceMiles,
-            crewService.sessionTelemetry.topSpeedMph
-          );
+    AppLogger.log('CREW_SESSION_ENDED', { sessionId: currentSessionId ? scrubPII(currentSessionId) : undefined, crewName: currentSession?.name ? scrubPII(currentSession?.name) : undefined, role: 'leader', reason: 'explicit_end', payload_size: 0, ssi: 0 });
+
+    // R-05: Optimistic UI — navigate away immediately, persist to cloud in background
+    setIsHandoffMode(false);
+    onSessionEnded();
+    goToLanding();
+
+    if (currentSessionId) {
+      // Fire-and-forget: telemetry + session end (non-blocking)
+      (async () => {
+        try {
+          if (user) {
+            await SpeedTrackingService.updateLifetimeStats(
+              user.id,
+              crewService.sessionTelemetry.distanceMiles,
+              crewService.sessionTelemetry.topSpeedMph
+            );
+          }
+          await crewService.endSession(currentSessionId, user?.id);
+          refreshNearby();
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : 'Could not end session';
+          AppLogger.error('[useCrewSession] background endSession failed', { error: msg, payload_size: 0, ssi: 0 });
         }
-        await crewService.endSession(currentSessionId, user?.id);
-        refreshNearby();
-      }
-      setIsHandoffMode(false);
-      onSessionEnded();
-      goToLanding();
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? (e instanceof Error ? e.message : String(e)) : 'Could not end session';
-      AppLogger.log('CREW_ERROR', { action: 'end_session', error: msg, payload_size: 0, ssi: 0 });
-      setErrorMsg(msg);
+      })();
     }
   };
 
