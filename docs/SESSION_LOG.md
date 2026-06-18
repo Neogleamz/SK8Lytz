@@ -1,3 +1,13 @@
+### [MERGE READY] 2026-06-18T13:24Z — fix/scanner-ble-hooks — d8850721
+**Files touched:**
+- `src/hooks/ble/useBLEScanner.ts` — R-07 L38: empty `catch {}` → `AppLogger.error('[useBLEScanner] Failed to parse manufacturerData base64 in determineFactoryName', ...)`; R-07 L84: empty `catch {}` → `AppLogger.error('[useBLEScanner] Failed to parse cached RSSI threshold from AsyncStorage JSON', ...)`; R-16: all timeouts already used BLE_TIMING.* — no raw literals found (SKIPPED); R-22 invariant verified intact and not modified (startSweeper() called unconditionally at L372–376 when registeredMacs.length === 0)
+- `src/hooks/useBLE.ts` — R-08 L144: `useRef<any>` → `useRef<((event: EventFrom<typeof bleMachine>) => void) | null>` (MIGRATION-SHIM resolved); added `EventFrom` to xstate imports
+- `src/hooks/useOptimisticBLE.ts` — R-16 L111: raw `300` → `BLE_TIMING.OPTIMISTIC_CONFIRM_RESET_MS`; R-16 L135: raw `1000` → `BLE_TIMING.OPTIMISTIC_RECONCILE_RESET_MS`; R-07 L138-142: silent `catch` → `AppLogger.error('[OptimisticBLE] Unexpected write error', ...)`; R-16 L86: SKIPPED (debounceMs is caller-provided parameter, not raw BLE timing literal)
+- `src/hooks/useDeviceStateLedger.ts` — R-16 L150: inline `LEDGER_WRITE_DEBOUNCE_MS = 500` removed, replaced with `BLE_TIMING.LEDGER_WRITE_DEBOUNCE_MS`
+- `src/constants/bleTimingConstants.ts` — Added `OPTIMISTIC_CONFIRM_RESET_MS: 300`, `OPTIMISTIC_RECONCILE_RESET_MS: 1000`, `LEDGER_WRITE_DEBOUNCE_MS: 500` with JSDoc
+- `src/hooks/ble/useBLEBatterySweep.ts` — SKIPPED: all R-16 timeouts at L53,58,105,159 already use BLE_TIMING.* constants
+TSC: ✅  Jest: ✅  Browser: ✅  Type Safety: ✅  BLE Guards: ✅  Disconnect Wiring: ✅  Workflow Refs: ✅  (8/8 gates green)
+
 ### [MERGE] 2026-06-18T13:23Z — fix/crew-services-hardening → master @ 5201c152
 **Files touched:**
 - `src/services/CrewService/CrewRealtime.ts` — R-07: empty `catch { // ignore }` in `startHeartbeat` → `AppLogger.warn`; R-16: extracted `BROADCAST_DEBOUNCE_MS`, `HEARTBEAT_INTERVAL_MS`, `PERSIST_PAYLOAD_DELAY_MS` constants; R-04: corrected logger prefix from `[CrewService]` → `[CrewRealtime]`
