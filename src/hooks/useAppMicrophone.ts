@@ -64,6 +64,10 @@ export function useAppMicrophone({
   const writeToDeviceRef = useRef(writeToDevice);
   writeToDeviceRef.current = writeToDevice;
 
+  // Mirror recorder into a ref so the setInterval closure always reads the latest instance
+  const recorderRef = useRef(recorder);
+  recorderRef.current = recorder;
+
   const startRecording = async () => {
     if (recorder.isRecording) return;
     try {
@@ -96,7 +100,8 @@ export function useAppMicrophone({
       // Too-slow streaming (10Hz with delta gate) looks like silence → hardware falls back to device mic.
       const prevMagRef = { current: -1 };
       magnitudeInterval.current = setInterval(() => {
-        const stats = recorder.getStatus();
+        // Use recorderRef to avoid stale closure on the recorder instance (R-12)
+        const stats = recorderRef.current.getStatus();
         if (stats.canRecord && stats.isRecording) {
           const metering = stats.metering ?? -160;
           // Map -100..0 dBFS → 0..1 (covers full Android expo-audio metering range)

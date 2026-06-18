@@ -88,6 +88,7 @@ export default function AccountModal({
   const insets = useSafeAreaInsets();
   const styles = createStyles(Colors);
 
+  // SKIPPED R-22: markFullyDrawn() is a fire-and-forget callback, not a subscription/timer/listener — no cleanup resource.
   useEffect(() => {
     if (visible) {
       markFullyDrawn();

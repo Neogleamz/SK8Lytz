@@ -12,6 +12,7 @@ const MarqueeText = ({ children, style, containerStyle }: MarqueeTextProps) => {
   const [containerWidth, setContainerWidth] = useState(0);
   const anim = useRef(new Animated.Value(0)).current;
 
+  // SKIPPED R-22: Animated.loop cleanup `return () => loop.stop()` already present (L34). anim ref is stable — dep array is correct.
   useEffect(() => {
     if (textWidth > containerWidth && containerWidth > 0) {
       const loop = Animated.loop(

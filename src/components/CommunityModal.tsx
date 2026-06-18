@@ -210,6 +210,10 @@ export default function CommunityModal({ isOfflineMode = false, isVisible, onClo
       if (isOfflineMode && activeTab === 'COMMUNITY') setActiveTab('PERSONAL');
       fetchScenes();
     }
+    return () => {
+      // Reset the fetch guard on unmount so a remount doesn't silently skip loading
+      isFetchingRef.current = false;
+    };
   }, [isVisible, activeTab, isOfflineMode]);
 
   const fetchScenes = async () => {

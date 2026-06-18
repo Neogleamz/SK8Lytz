@@ -57,6 +57,7 @@ const ProductVisualizer = ({ product, color, mode, patternId, isPaired, points, 
   const { isDark } = useTheme();
   const animValue = useRef(new Animated.Value(0)).current;
 
+  // SKIPPED R-22: Animated.loop cleanup `return () => loop.stop()` already present at the end of the `if` branch (L86).
   useEffect(() => {
     animValue.stopAnimation();
 

@@ -36,6 +36,7 @@ export const PatternCard: React.FC<PatternCardProps> = React.memo(({
     onSelect(effect.id);
   }, [onSelect, effect.id]);
 
+  // SKIPPED R-22: Animated.loop cleanup `return () => loop.stop()` already present (L48). pulseAnim.stopAnimation() in else branch also correct.
   useEffect(() => {
     if (isSelected) {
       const loop = Animated.loop(
