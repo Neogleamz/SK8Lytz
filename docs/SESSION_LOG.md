@@ -1,3 +1,29 @@
+### [MERGE READY] 2026-06-18T13:22Z — fix/crew-services-hardening — 977c1956
+**Files touched:**
+- `src/services/CrewService/CrewRealtime.ts` — R-07: empty `catch { // ignore }` in `startHeartbeat` → `AppLogger.warn`; R-16: extracted `BROADCAST_DEBOUNCE_MS`, `HEARTBEAT_INTERVAL_MS`, `PERSIST_PAYLOAD_DELAY_MS` constants; R-04: corrected logger prefix from `[CrewService]` → `[CrewRealtime]`
+- `src/services/CrewService/CrewSessionManager.ts` — R-04: added `payload_size: 0, ssi: 0` to 4 `AppLogger.error` calls (`createSession`, `joinSession`, `joinSessionById`, `leaveSession`); R-16: extracted `CHANNEL_TEARDOWN_DELAY_MS = 600` constant
+- `src/services/CrewProfileService.ts` — R-16: extracted `SESSION_BROADCAST_TEARDOWN_MS = 500` constant for deferred `removeChannel` in `deleteCrew`
+- `src/hooks/useCrewSession.ts` — R-11: silent `catch (e) { return false; }` in `handleHandoffLeadership` now emits `AppLogger.warn`; R-05: `executeEndSession` converted to Optimistic UI (navigate away immediately, fire `endSession` in background); Boy Scout: fixed double-nested `instanceof` ternary bug on L86
+- `src/hooks/useCrewLeaderBroadcast.ts` — R-16: extracted `LEADER_BROADCAST_DEBOUNCE_MS = 200` constant
+- `src/components/CrewMemberDashboard.tsx` — R-05: offline-first `AsyncStorage` cache for member list (read cache first → display immediately → fetch fresh → persist); R-16: extracted `MEMBER_POLL_INTERVAL_MS = 30_000` constant
+- `src/hooks/useCrewHub.ts` — SKIPPED: already well-hardened; all `.catch()` blocks present, GPS_TIMEOUT_MS already named constant
+- `src/hooks/useCrewManage.ts` — SKIPPED: already well-hardened; SEARCH_DEBOUNCE_MS already named, all errors logged
+TSC: ✅  Jest: ✅  Browser: ✅  Type Safety: ✅  BLE Guards: ✅  (8/8 gates green)
+**Commits:** a7462bac (hardening sweep) | 977c1956 (optimistic UI)
+
+### [MERGE READY] 2026-06-18T13:20Z — fix/ui-misc-safety — 8aaa2f84
+**Files touched:**
+- `src/components/admin/tools/tabs/oracle/Oracle53LiveStream.tsx` — R-02: import AppLogger; wrap setInterval transmit and single-frame transmit in try-catch with AppLogger.error
+- `src/hooks/dev/useWebDemoConsoleBridge.ts` — R-08: `any[]` → `unknown[]` on sendMessage args parameter
+- `src/components/DeviceSettingsModal.tsx` — R-16: `PROBE_TIMEOUT_MS = 5000` constant; raw `5000` in setTimeout replaced
+- `src/components/LocationPicker.tsx` — R-16: `SEARCH_DEBOUNCE_MS = 400` constant; raw `400` in setTimeout replaced
+- `src/components/VerticalPatternDrum.tsx` — R-16: `COMMIT_DEBOUNCE_MS = 50` constant; raw `50` in setTimeout replaced
+- `src/components/admin/tools/tabs/DiagnosticLabOracleTab.tsx` — R-16: `MAGNITUDE_STREAM_INTERVAL_MS = 100` constant; raw `100` in setInterval replaced
+- `src/components/PositionalGradientBuilder.tsx` — SKIPPED: already has `BLE_WRITE_THROTTLE_MS` constant + `.catch()` in place
+- `src/hooks/cloud/useOfflineSyncWorker.ts` — SKIPPED: already has `SYNC_INTERVAL_MS` constant in place
+- `docs/plans/PLAN-fix-ui-misc-safety.md` — SKIPPED annotations added per Kanban Constitution Rule 9
+TSC: ✅  Jest: ✅  Browser: ✅  Type Safety: ✅  BLE Guards: ✅  (8/8 gates green)
+
 ### [MERGE] 2026-06-18T13:11Z — fix/test-suite-type-safety → master @ 95eaac5c
 **What merged:** Purged all `as any` casts from 22+ test files. Created `src/__tests__/test-env.d.ts` with typed global augmentations. Fixed `useControllerDispatch.test.ts` to include typed `useRef`/`useCallback` mocks (forward-ported from fix/docked-controller-safety). Resolved rebase conflict via cherry-pick + manual resolution.
 **Verify result:** TSC ✅ Jest ✅ Guards ✅
