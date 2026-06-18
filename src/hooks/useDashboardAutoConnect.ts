@@ -25,6 +25,19 @@ import { jitteredDelay } from '../utils/backoff';
 import type { RegisteredGroup, RegisteredDeviceRow } from '../types/ble.types';
 import { scrubPII } from '../utils/piiScrubber';
 
+// ── Module-level timing constants (R-16: replace bare magic numbers) ─────
+/** Max retries before permanently abandoning a failed MAC. */
+const MAX_AUTO_CONNECT_RETRIES = 3;
+/** Base backoff in ms between retries (multiplied by attempt count). */
+const AUTO_CONNECT_RETRY_BACKOFF_MS = 3000;
+/** Debounce window: batch BLE devices appearing within this window into one connectToDevices call. */
+const DEBOUNCE_WINDOW_MS = 500;
+/** Delay (ms) after BLE ready signal before firing the cloud-sync / auto-connect sequence.
+ *  Allows the OS Bluetooth stack to fully initialise before probing. */
+const BLE_STACK_WAKEUP_DELAY_MS = 1500;
+/** Minimum interval (ms) between retrigger calls to prevent burst-scan spam on rapid app minimize/maximize. */
+const RETRIGGER_THROTTLE_MS = 5000;
+
 interface UseDashboardAutoConnectOptions {
   isBluetoothSupported: boolean;
   isBluetoothEnabled: boolean;
@@ -119,10 +132,6 @@ export function useDashboardAutoConnect({
   const autoConnectIdsRef = useRef<string[]>([]);
   /** Tracks retry counts per MAC for failed auto-connect attempts. RC-02 */
   const autoConnectRetriesRef = useRef<Map<string, number>>(new Map());
-  /** Max retries before permanently abandoning a MAC. */
-  const MAX_AUTO_CONNECT_RETRIES = 3;
-  /** Base backoff in ms between retries (multiplied by attempt count). */
-  const AUTO_CONNECT_RETRY_BACKOFF_MS = 3000;
   // Stable ref to the cloud sync function — allows retriggerAutoConnect to call it
   // directly without needing to re-subscribe to the useEffect dependency array.
   const syncCloudAndAutoConnectRef = useRef<(isRetrigger?: boolean) => Promise<void>>(async () => {});
@@ -263,7 +272,7 @@ export function useDashboardAutoConnect({
           });
       };
 
-      debounceTimerRef.current = setTimeout(attemptConnection, 500); // 500ms debounce window
+      debounceTimerRef.current = setTimeout(attemptConnection, DEBOUNCE_WINDOW_MS);
     }
 
     return () => {
@@ -422,12 +431,12 @@ export function useDashboardAutoConnect({
     // after the Wizard completes without needing to re-run the useEffect.
     syncCloudAndAutoConnectRef.current = syncCloudAndAutoConnect;
 
-    // Slight delay to allow Bluetooth stack to fully initialize
+    // Allow the OS Bluetooth stack to fully initialize before firing (see BLE_STACK_WAKEUP_DELAY_MS)
     const timerId = setTimeout(() => {
       syncCloudAndAutoConnect(false).catch((e: unknown) => {
         AppLogger.error('[AutoConnect] syncCloudAndAutoConnect failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
       });
-    }, 1500);
+    }, BLE_STACK_WAKEUP_DELAY_MS);
     return () => clearTimeout(timerId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBluetoothSupported, isBluetoothEnabled]);
@@ -440,8 +449,8 @@ export function useDashboardAutoConnect({
     // Includes a 5-second throttle and a 1.5-second OS BLE stack wakeup delay.
     retriggerAutoConnect: () => {
       const now = Date.now();
-      if (lastRetriggerRef.current && now - lastRetriggerRef.current < 5000) {
-        return; // Throttle 5 seconds to prevent spamming burst scans on rapid minimize/maximize
+      if (lastRetriggerRef.current && now - lastRetriggerRef.current < RETRIGGER_THROTTLE_MS) {
+        return; // Throttle to prevent burst-scan spam on rapid minimize/maximize
       }
       lastRetriggerRef.current = now;
 
@@ -451,13 +460,13 @@ export function useDashboardAutoConnect({
       autoConnectRetriesRef.current.clear();
       
       // Delay to allow Android/iOS Bluetooth stack to fully transition from suspended to active
-      // before blasting a high-power burst scan.
+      // before blasting a high-power burst scan (see BLE_STACK_WAKEUP_DELAY_MS).
       if (retriggerTimerRef.current) clearTimeout(retriggerTimerRef.current);
       retriggerTimerRef.current = setTimeout(() => {
         syncCloudAndAutoConnectRef.current(true).catch((e: unknown) => {
           AppLogger.error('[AutoConnect] retrigger syncCloudAndAutoConnect failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
         });
-      }, 1500);
+      }, BLE_STACK_WAKEUP_DELAY_MS);
     },
   };
 }
