@@ -94,13 +94,14 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [ConnectService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts)
   - **Details:** HIGH severity. 11 files. Prerequisite: Wave 1 fully merged.
 
-- [ ] **`fix/dashboard-screen-safety`**
+- [x] **`fix/dashboard-screen-safety`** — merged @ 830ef034 — R-08 DevicePatternState typed; R-16 5 constants extracted; R-17 listener leak fixed (require→cleanup path); R-20 Platform.select; R-25 BackHandler guard. R-27/R-28 SKIPPED with documented justification.
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:2]`
   - **Goal:** Fix type laundering, OS variance violations, event listener leaks, and FlatList bottlenecks.
   - **Decision Log:** R-08 — 10+ `as unknown as` type laundering instances in DashboardScreen.tsx.
   - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-dashboard-screen-safety.md](./plans/PLAN-fix-dashboard-screen-safety.md)
   - **Source of Truth:** 📖 [DashboardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx)
   - **Details:** HIGH severity. 3 files. Prerequisite: Wave 1 fully merged.
+
 
 - [ ] **`fix/pii-scrubber`**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:2]`

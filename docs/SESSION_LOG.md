@@ -1,4 +1,4 @@
-### [MERGE READY] 2026-06-18T12:29Z — fix/dashboard-screen-safety — 1e898953
+### [MERGE] 2026-06-18T12:30Z — fix/dashboard-screen-safety → master @ 830ef034
 **Files touched:**
 - `src/screens/DashboardScreen.tsx` — R-08/R-17/R-20/R-25 type safety, event listener leak fix, BackHandler guard, Platform.select
 - `src/hooks/useDashboardAutoConnect.ts` — R-16 extracted magic numbers to module constants
