@@ -69,7 +69,7 @@ import { STORAGE_FAVORITES } from '../constants/storageKeys';
 import { useHardwareNotifications, BLEDeviceMinimal, ProbedHardwareConfig } from '../hooks/useHardwareNotifications';
 import { useDeviceStateLedger, normalizeMac } from '../hooks/useDeviceStateLedger';
 import { useTelemetryLedger } from '../hooks/useTelemetryLedger';
-import type { DashboardViewState, DeviceSettings, CustomGroup, DisplayDevice, IFavoriteState } from '../types/dashboard.types';
+import type { DashboardViewState, DeviceSettings, CustomGroup, DisplayDevice, IFavoriteState, DevicePatternState } from '../types/dashboard.types';
 
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
 // — migrated as part of Phase 1 Domain-Driven Refactor
@@ -688,24 +688,26 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   }, [allDevices, connectToDevices, isSkateSessionActive, startSession]);
 
   useEffect(() => {
-    import('react-native').then(({ DeviceEventEmitter }) => {
-      const unsubMusic = DeviceEventEmitter.addListener('BACKGROUND_ACTION_TOGGLE_MUSIC', () => {
-        AppLogger.log('APP_LOG', { event: 'dashboard_received_bg_music' });
-        // If the user has a custom group, we'd normally pass it. 
-        // For notifications, we just trigger it on the first/default group (or whatever is connected).
-        const defaultGroup = customGroups[0] || { id: 'default', name: 'My Skates', deviceIds: allDevices.map(d => d.id.toUpperCase()) };
-        handleGroupMusicPress(defaultGroup);
-      });
-      const unsubFav = DeviceEventEmitter.addListener('BACKGROUND_ACTION_FIRE_FAVORITE', () => {
-        AppLogger.log('APP_LOG', { event: 'dashboard_received_bg_fav' });
-        const defaultGroup = customGroups[0] || { id: 'default', name: 'My Skates', deviceIds: allDevices.map(d => d.id.toUpperCase()) };
-        handleGroupFavoritePress(defaultGroup, null);
-      });
-      return () => {
-        unsubMusic.remove();
-        unsubFav.remove();
-      };
+    // R-17 FIX: react-native is a synchronous CommonJS module in the Metro bundler —
+    // dynamic import() resolves asynchronously and swallows the cleanup function returned
+    // inside .then(), causing a listener leak. Use require() so cleanup is synchronous.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { DeviceEventEmitter } = require('react-native') as typeof import('react-native');
+    const unsubMusic = DeviceEventEmitter.addListener('BACKGROUND_ACTION_TOGGLE_MUSIC', () => {
+      AppLogger.log('APP_LOG', { event: 'dashboard_received_bg_music' });
+      // For notifications, trigger on the first/default group (or whatever is connected).
+      const defaultGroup = customGroups[0] || { id: 'default', name: 'My Skates', deviceIds: allDevices.map(d => d.id.toUpperCase()) };
+      handleGroupMusicPress(defaultGroup);
     });
+    const unsubFav = DeviceEventEmitter.addListener('BACKGROUND_ACTION_FIRE_FAVORITE', () => {
+      AppLogger.log('APP_LOG', { event: 'dashboard_received_bg_fav' });
+      const defaultGroup = customGroups[0] || { id: 'default', name: 'My Skates', deviceIds: allDevices.map(d => d.id.toUpperCase()) };
+      handleGroupFavoritePress(defaultGroup, null);
+    });
+    return () => {
+      unsubMusic.remove();
+      unsubFav.remove();
+    };
   }, [allDevices, customGroups, handleGroupMusicPress, handleGroupFavoritePress]);
 
   const handleToggleRegisteredCollapse = useCallback(() => {
@@ -728,6 +730,8 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   }, [isControllerOpen, connectedDevices.length, ghostedDeviceIds.length, bleState]);
 
   useEffect(() => {
+    // R-25 FIX: BackHandler is Android-only. On web it throws; guard with Platform.select.
+    if (Platform.select({ android: false, default: true })) return;
     const handleBackPress = () => {
       if (isTestModeActive) {
         setDiagnosticState('IDLE');
@@ -950,7 +954,8 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   }, [ble?.batteryTier]);
 
   const BluetoothWarningBanner = useMemo(() => {
-    if (isBluetoothEnabled || Platform.OS === 'web') return null;
+    // R-20 FIX: Use Platform.select for cross-platform readability.
+    if (isBluetoothEnabled || Platform.select({ web: true, default: false })) return null;
     return (
       <TouchableOpacity 
         onPress={() => Linking.openSettings()}
@@ -1104,8 +1109,8 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
                 <MySkatesSlab
                   customGroups={customGroups}
                   lastGroupPatterns={lastGroupPatterns}
-                  allDevices={allDevices as Pick<DisplayDevice, 'id' | 'name'>[] as DisplayDevice[]}
-                  connectedDevices={connectedDevices as Pick<DisplayDevice, 'id' | 'name'>[] as DisplayDevice[]}
+                  allDevices={allDevices as unknown as DisplayDevice[]}
+                  connectedDevices={connectedDevices as unknown as DisplayDevice[]}
                   registeredDevices={registeredDevices as unknown as DisplayDevice[]}
                   powerStates={powerStates}
                   userProfile={userProfile}
@@ -1268,7 +1273,9 @@ interface MemoizedDeviceItemProps {
   isConnected: boolean;
   isSelectionMode: boolean;
   isSelected: boolean;
-  ledgerState?: any;
+  // R-08 FIX: Use the concrete DevicePatternState type (from dashboard.types) which DeviceItem
+  // already expects. This replaces the original `any` cast with a properly-typed contract.
+  ledgerState?: DevicePatternState;
   isPoweredOn: boolean;
   onPress: (mac: string) => void;
   onLongPress: (device: DisplayDevice) => void;
