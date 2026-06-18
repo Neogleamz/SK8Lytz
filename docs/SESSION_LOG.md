@@ -1,3 +1,20 @@
+
+### [MERGE] 2026-06-18T13:41Z — refactor/spatial-pattern-engines ? master @ 178c0b5f
+**What merged:**
+- Extracted 61KB SpatialEngine monolith into 5 focused modules (28KB after extraction)
+- NEW: src/protocols/shared/engineTypes.ts — RGB, PatternId, ColorMode, SK8LytzTemplate, PatternOptions
+- NEW: src/protocols/shared/spatialMath.ts — dim, lerpRGB, hueToRGB, blendRGB, hsvToRgb
+- NEW: src/protocols/shared/coordinateSystem.ts — LED strip/segment coordinate logic
+- NEW: src/protocols/shared/engineUtils.ts — hexToRgb, clamp, smoothStep, mapRange
+- NEW: src/protocols/spatial/effectProcessors.ts — all 61+ builder functions (buildNativeBreathe ? buildGlitchMarquee)
+- MODIFIED: SpatialEngine.ts — rewritten as thin orchestrator; imports from new modules; all re-exports maintained
+- MODIFIED: PatternEngine.ts — removed local RGB/PatternId/ColorMode/SK8LytzTemplate/PatternOptions defs; imports from shared/engineTypes; all re-exports maintained
+- MODIFIED: VisualizerEngine.ts — import RGB/PatternId/PatternOptions from shared/engineTypes (was PatternEngine)
+- MODIFIED: SymphonyEngine.ts — import RGB from shared/engineTypes (was PatternEngine)
+- Circular dep RESOLVED: PatternEngine ? SpatialEngine cycle broken. AST confirmed DAG.
+- BYTE INVARIANT: All BLE payload values byte-for-byte identical. Zero logic changes.
+**Verify result:** TSC ? Jest ? BLE Guards ? Type Safety ? AST ?
+**Files touched:** SpatialEngine.ts, PatternEngine.ts, VisualizerEngine.ts, SymphonyEngine.ts, shared/engineTypes.ts, shared/spatialMath.ts, shared/coordinateSystem.ts, shared/engineUtils.ts, spatial/effectProcessors.ts
 ### [MERGE READY] 2026-06-18T13:24Z â€” fix/scanner-ble-hooks â€” d8850721
 **Files touched:**
 - `src/hooks/ble/useBLEScanner.ts` â€” R-07 L38: empty `catch {}` â†’ `AppLogger.error('[useBLEScanner] Failed to parse manufacturerData base64 in determineFactoryName', ...)`; R-07 L84: empty `catch {}` â†’ `AppLogger.error('[useBLEScanner] Failed to parse cached RSSI threshold from AsyncStorage JSON', ...)`; R-16: all timeouts already used BLE_TIMING.* â€” no raw literals found (SKIPPED); R-22 invariant verified intact and not modified (startSweeper() called unconditionally at L372â€“376 when registeredMacs.length === 0)
