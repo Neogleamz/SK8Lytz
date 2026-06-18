@@ -1,3 +1,15 @@
+### [MERGE READY] 2026-06-18T12:40Z — fix/onboarding-safety — 5dda15e7
+**Files touched:**
+- `src/screens/AuthScreen.tsx` — R-07: `} catch {}` → `AppLogger.error('[AuthScreen]', ...)` ; R-20: `Platform.OS === 'ios' ? 'padding' : undefined` → `Platform.select({ ios: 'padding', android: undefined, default: undefined })`
+- `src/screens/Onboarding/HardwareSetupWizardScreen.tsx` — R-16: `2000` → `KEEP_ALIVE_POLL_MS` module constant; R-20×2: `Platform.OS === 'ios'` ternary → `Platform.select()` in KeyboardAvoidingView behavior and footer paddingBottom style
+TSC: ✅  Jest: ✅  Browser: ✅  Type Safety: ✅  BLE Guards: ✅  (8/8 gates green)
+**What was fixed:**
+- R-07 (AuthScreen L71): Empty `catch {}` now emits `AppLogger.error('[AuthScreen]', ...)` — JSON parse errors in stored credentials are no longer silently swallowed.
+- R-16 (HardwareSetupWizardScreen L163): `setTimeout(..., 2000)` extracted to `KEEP_ALIVE_POLL_MS = 2000` module constant — delay is now self-documenting and easily configurable.
+- R-20 (AuthScreen L98): `Platform.OS === 'ios' ? 'padding' : undefined` → `Platform.select({ ios: 'padding', android: undefined, default: undefined })` — explicit web/other platform handling.
+- R-20 (HardwareSetupWizardScreen L563): Same KAV behavior fix as AuthScreen.
+- R-20 (HardwareSetupWizardScreen L778): `Platform.OS === 'ios' ? 0 : 12` → `Platform.select({ ios: 0, android: 12, default: 12 })` in `footer` stylesheet.
+
 ### [MERGE READY] 2026-06-18T12:39Z — fix/crew-ui-types — 4ec11d82
 **Files touched:**
 - `src/components/crew/CrewCard.tsx` — `styles:any`→`ReturnType<typeof createStyles>`, `Colors:any`→`ThemePalette`, `setStep:any`→`CrewModalStep` union, `profileService:any`→`typeof profileService`, `setCardMembers Record<string,any[]>`→`Record<string,CrewMemberFull[]>`
