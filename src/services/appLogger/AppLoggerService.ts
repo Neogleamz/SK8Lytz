@@ -5,11 +5,11 @@ import * as Battery from 'expo-battery';
 import * as Device from 'expo-device';
 import { TelemetryService } from '../TelemetryService';
 import { FlightRecorder, Breadcrumb } from '../../utils/FlightRecorder';
-import { DisplayDevice } from '../../types/dashboard.types';
+import type { Device as BleDevice } from 'react-native-ble-plx';
 
 class AppLoggerService {
   private storage = new AppLoggerStorage();
-  private activeDevices: DisplayDevice[] = [];
+  private activeDevices: BleDevice[] = [];
   private currentUserId: string | undefined = undefined;
   private sessionId = `telemetry_${Date.now()}`;
   
@@ -21,7 +21,7 @@ class AppLoggerService {
     this.currentUserId = userId;
   }
 
-  updateKnownDevices(devices: DisplayDevice[]) {
+  updateKnownDevices(devices: BleDevice[]) {
     this.activeDevices = devices;
   }
 

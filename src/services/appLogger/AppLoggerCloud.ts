@@ -3,7 +3,7 @@ import { AppSettingsService } from '../AppSettingsService';
 import * as Device from 'expo-device';
 import { FlightRecorder } from '../../utils/FlightRecorder';
 import { LogEntry, EventType } from './types';
-import { DisplayDevice } from '../../types/dashboard.types';
+import type { Device as BleDevice } from 'react-native-ble-plx';
 
 export class AppLoggerCloud {
   static async pushFastLaneError(
@@ -144,7 +144,7 @@ export class AppLoggerCloud {
     }
   }
 
-  static async clearCloudLogs(activeDevices: DisplayDevice[]) {
+  static async clearCloudLogs(activeDevices: BleDevice[]) {
     if (!supabase) return;
     
     const pMac = activeDevices.length > 0 ? activeDevices[0].id : 'unpaired-host';
