@@ -1,9 +1,9 @@
 import { supabase } from '../supabaseClient';
-import { STORAGE_APP_SETTINGS } from '../../constants/storageKeys';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppSettingsService } from '../AppSettingsService';
 import * as Device from 'expo-device';
 import { FlightRecorder } from '../../utils/FlightRecorder';
 import { LogEntry, EventType } from './types';
+import { DisplayDevice } from '../../types/dashboard.types';
 
 export class AppLoggerCloud {
   static async pushFastLaneError(
@@ -49,16 +49,21 @@ export class AppLoggerCloud {
         }
       }
 
-      supabase.from('crash_telemetry').insert({
-      error_signature: safeErrorString.substring(0, 500),
-      stack_trace: payload.stack || payload.stackTrace || null,
-      breadcrumbs: FlightRecorder.getBreadcrumbs() as unknown as import('../../types/supabase').Json,
-      environment_state: {
+      // JSON round-trip produces a plain JSON-serializable object that satisfies the Supabase Json type.
+      // This avoids `as unknown as Json` laundering — if any field is unserializable it becomes null.
+      const breadcrumbsJson = JSON.parse(JSON.stringify(FlightRecorder.getBreadcrumbs())) as import('../../types/supabase').Json;
+      const environmentStateJson = JSON.parse(JSON.stringify({
         ...payload,
         host_device_id: Device.osInternalBuildId || Device.modelId || 'unknown',
         session_id: sessionId,
         event_type: event
-      } as unknown as import('../../types/supabase').Json,
+      })) as import('../../types/supabase').Json;
+
+      supabase.from('crash_telemetry').insert({
+      error_signature: safeErrorString.substring(0, 500),
+      stack_trace: payload.stack || payload.stackTrace || null,
+      breadcrumbs: breadcrumbsJson,
+      environment_state: environmentStateJson,
       severity: normalizedSeverity,
       app_version: Device.osVersion || null
     }).then(({ error }) => {
@@ -82,16 +87,9 @@ export class AppLoggerCloud {
 
     try {
       // ── [TELEMETRY MASTER GATE] ─────────────────────────────────────────────
-      const settingsStr = await AsyncStorage.getItem(STORAGE_APP_SETTINGS);
-      let telemetryEnabled = true;
-      if (settingsStr) {
-        try {
-          const settings = JSON.parse(settingsStr);
-          if (settings.global_telemetry_enabled === false || settings.global_telemetry_enabled === 'false') {
-            telemetryEnabled = false;
-          }
-        } catch {}
-      }
+      // Route through AppSettingsService instead of direct AsyncStorage access (R-24).
+      const settings = await AppSettingsService.fetchAllSettings();
+      const telemetryEnabled = settings.global_telemetry_enabled !== false && settings.global_telemetry_enabled !== 'false';
 
       if (!telemetryEnabled) {
         if (__DEV__) console.log('[AppLogger] Global telemetry is DISABLED. Wiping buffer and aborting upload.');
@@ -146,8 +144,7 @@ export class AppLoggerCloud {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  static async clearCloudLogs(activeDevices: any[]) {
+  static async clearCloudLogs(activeDevices: DisplayDevice[]) {
     if (!supabase) return;
     
     const pMac = activeDevices.length > 0 ? activeDevices[0].id : 'unpaired-host';

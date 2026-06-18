@@ -5,10 +5,11 @@ import * as Battery from 'expo-battery';
 import * as Device from 'expo-device';
 import { TelemetryService } from '../TelemetryService';
 import { FlightRecorder, Breadcrumb } from '../../utils/FlightRecorder';
+import { DisplayDevice } from '../../types/dashboard.types';
 
 class AppLoggerService {
   private storage = new AppLoggerStorage();
-  private activeDevices: any[] = [];
+  private activeDevices: DisplayDevice[] = [];
   private currentUserId: string | undefined = undefined;
   private sessionId = `telemetry_${Date.now()}`;
   
@@ -20,7 +21,7 @@ class AppLoggerService {
     this.currentUserId = userId;
   }
 
-  updateKnownDevices(devices: any[]) {
+  updateKnownDevices(devices: DisplayDevice[]) {
     this.activeDevices = devices;
   }
 
@@ -39,7 +40,9 @@ class AppLoggerService {
         };
         batteryState = stateMap[stateEnum] ?? 'UNKNOWN';
       }
-    } catch(_e: unknown) {}
+    } catch(_e: unknown) {
+      if (__DEV__) console.warn('[AppLogger] Failed to read battery info:', _e instanceof Error ? _e.message : String(_e));
+    }
 
     const deviceTypeMap: Record<number, string> = {
       0: 'UNKNOWN', 1: 'PHONE', 2: 'TABLET', 3: 'DESKTOP', 4: 'TV'
@@ -320,7 +323,9 @@ class AppLoggerService {
         batteryLevel = await Battery.getBatteryLevelAsync();
         isLowPowerMode = await Battery.isLowPowerModeEnabledAsync();
       }
-    } catch(e: unknown) {}
+    } catch(e: unknown) {
+      if (__DEV__) console.warn('[AppLogger] Failed to read battery info (getStats):', e instanceof Error ? e.message : String(e));
+    }
 
     return { 
       modeUsage, patternUsage: finalPatternUsage, colorUsage, devicesDiscovered, 

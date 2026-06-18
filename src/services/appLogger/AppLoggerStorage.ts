@@ -98,7 +98,9 @@ export class AppLoggerStorage {
         totalStorageEstimate += size;
         if (key === STORAGE_KEY) storageBytesEstimate = size;
       });
-    } catch(e) {}
+    } catch(e: unknown) {
+      if (__DEV__) console.warn('[AppLogger] getStorageStats failed:', e instanceof Error ? e.message : String(e));
+    }
     return { storageBytesEstimate, totalStorageEstimate };
   }
 

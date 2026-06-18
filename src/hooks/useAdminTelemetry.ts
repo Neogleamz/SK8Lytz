@@ -78,6 +78,7 @@ export function useAdminTelemetry(visible: boolean) {
   const [stats, setStats] = useState<TelemetryStats | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const isMountedRef = useRef(true);
+  const loadingRef = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -87,6 +88,8 @@ export function useAdminTelemetry(visible: boolean) {
   }, []);
 
   const load = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     try {
       const [allLogs, allStats] = await Promise.all([
         AppLogger.getLogs(),
@@ -98,6 +101,8 @@ export function useAdminTelemetry(visible: boolean) {
     } catch (err: unknown) {
       if (!isMountedRef.current) return;
       AppLogger.warn('[AdminTelemetry] Failed to load telemetry', { error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
+    } finally {
+      loadingRef.current = false;
     }
   }, []);
 
