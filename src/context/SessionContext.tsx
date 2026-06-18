@@ -7,7 +7,7 @@ import { useAuth } from './AuthContext';
 import { useMachine } from '@xstate/react';
 import { sessionMachine } from '../services/session/SessionMachine';
 import { SessionBridge } from '../services/session/SessionBridge';
-import { TelemetrySnapshot, HealthSnapshot } from '../services/session/SessionMachine.types';
+import { TelemetrySnapshot, HealthSnapshot, SessionPhase } from '../services/session/SessionMachine.types';
 
 export interface GlobalTelemetryState {
   gpsSpeed: number;
@@ -41,6 +41,8 @@ interface SessionContextValue {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
+const UI_TICK_MS = 1_000;
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   const [autoPauseEnabled, setAutoPauseEnabled] = useState(false);
@@ -55,6 +57,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           setInitialDataLoaded(true);
         }
       } catch (e) {
+        AppLogger.error('[SessionContext] Failed to load autoPause setting', e instanceof Error ? e.message : String(e), {});
         if (active) {
           setAutoPauseEnabled(false);
           setInitialDataLoaded(true);
@@ -182,7 +185,7 @@ function SessionMachineWrapper({
     return () => SessionBridge.unregister();
   }, [send]);
 
-  const sessionPhase = snapshot.value as 'IDLE' | 'ACTIVE' | 'PAUSED' | 'ENDING';
+  const sessionPhase = snapshot.value as SessionPhase;
   const isSkateSessionActive = sessionPhase === 'ACTIVE' || sessionPhase === 'PAUSED' || sessionPhase === 'ENDING';
 
   // UI timer tick (1s interval)
@@ -209,7 +212,7 @@ function SessionMachineWrapper({
         peakBpm: healthRef.current.peakBpm,
         activeCalories: healthRef.current.activeCalories,
       });
-    }, 1000);
+    }, UI_TICK_MS);
     return () => clearInterval(id);
   }, [snapshot.value, snapshot.context.startTimeMs, snapshot.context.pausedMsAccum, snapshot.context.pauseStartTimeMs]);
 
@@ -234,39 +237,54 @@ function SessionMachineWrapper({
   }, [snapshot.value]);
 
   // Crash recovery
+  // R-26: isRecoveringRef prevents concurrent recover() calls fired by both
+  // the initial useEffect trigger and AppState 'active' events.
+  const isRecoveringRef = useRef(false);
   useEffect(() => {
     let active = true;
     const recover = async () => {
-      const currentSnapshot = actorRef.getSnapshot();
-      const pendingEnd = await AsyncStorage.getItem(STORAGE_PENDING_BG_END).catch(() => null);
-      if (!active) return;
-
-      if (pendingEnd === 'true') {
-        await AsyncStorage.removeItem(STORAGE_PENDING_BG_END).catch(() => null);
+      if (isRecoveringRef.current) return;
+      isRecoveringRef.current = true;
+      try {
+        const currentSnapshot = actorRef.getSnapshot();
+        const pendingEnd = await AsyncStorage.getItem(STORAGE_PENDING_BG_END).catch(() => null);
         if (!active) return;
 
-        if (!currentSnapshot.matches('IDLE')) {
-          send({ type: 'END' });
-        }
-        return;
-      }
-      const phase = await AsyncStorage.getItem(STORAGE_SESSION_PHASE).catch(() => null);
-      if (!active) return;
+        if (pendingEnd === 'true') {
+          await AsyncStorage.removeItem(STORAGE_PENDING_BG_END).catch(() => null);
+          if (!active) return;
 
-      if (phase === 'active' && currentSnapshot.matches('IDLE')) {
-        send({ type: 'START' });
-      }
-      if (phase === 'paused' && currentSnapshot.matches('IDLE')) {
-        send({ type: 'START' });
-        send({ type: 'PAUSE' });
+          if (!currentSnapshot.matches('IDLE')) {
+            send({ type: 'END' });
+          }
+          return;
+        }
+        const phase = await AsyncStorage.getItem(STORAGE_SESSION_PHASE).catch(() => null);
+        if (!active) return;
+
+        if (phase === 'active' && currentSnapshot.matches('IDLE')) {
+          send({ type: 'START' });
+        }
+        if (phase === 'paused' && currentSnapshot.matches('IDLE')) {
+          send({ type: 'START' });
+          send({ type: 'PAUSE' });
+        }
+      } finally {
+        isRecoveringRef.current = false;
       }
     };
-    
+
     let sub: { remove: () => void } | null = null;
     if (initialDataLoaded) {
-      recover();
+      recover().catch((e) =>
+        AppLogger.error('[SessionContext] recover() failed', e instanceof Error ? e.message : String(e), {})
+      );
       sub = AppState.addEventListener('change', (s) => {
-        if (s === 'active') recover();
+        if (s === 'active') {
+          recover().catch((e) =>
+            AppLogger.error('[SessionContext] recover() AppState failed', e instanceof Error ? e.message : String(e), {})
+          );
+        }
       });
     }
     return () => {
@@ -345,14 +363,22 @@ function SessionMachineWrapper({
           send({ type: 'END' });
         } else if (detail.pressAction?.id === 'toggle-music') {
           AppLogger.log('APP_LOG', { event: 'toggle_music_from_notification' });
-          import('react-native').then(({ DeviceEventEmitter }) => {
-            DeviceEventEmitter.emit('BACKGROUND_ACTION_TOGGLE_MUSIC');
-          });
+          import('react-native')
+            .then(({ DeviceEventEmitter }) => {
+              DeviceEventEmitter.emit('BACKGROUND_ACTION_TOGGLE_MUSIC');
+            })
+            .catch((e) =>
+              AppLogger.error('[SessionContext] toggle-music dynamic import failed', e instanceof Error ? e.message : String(e), {})
+            );
         } else if (detail.pressAction?.id === 'fire-favorite') {
           AppLogger.log('APP_LOG', { event: 'fire_favorite_from_notification' });
-          import('react-native').then(({ DeviceEventEmitter }) => {
-            DeviceEventEmitter.emit('BACKGROUND_ACTION_FIRE_FAVORITE');
-          });
+          import('react-native')
+            .then(({ DeviceEventEmitter }) => {
+              DeviceEventEmitter.emit('BACKGROUND_ACTION_FIRE_FAVORITE');
+            })
+            .catch((e) =>
+              AppLogger.error('[SessionContext] fire-favorite dynamic import failed', e instanceof Error ? e.message : String(e), {})
+            );
         }
       }
     });

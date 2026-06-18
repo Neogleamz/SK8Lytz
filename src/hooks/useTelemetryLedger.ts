@@ -114,7 +114,7 @@ const _doFlush = async () => {
         mergeIntoBuffer(offlineData);
       }
     } catch (e: unknown) {
-      // Ignore parse error
+      AppLogger.error('[useTelemetryLedger] Failed to parse offline buffer', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
     }
 
     // If buffer is completely empty, skip network call
@@ -141,7 +141,7 @@ const _doFlush = async () => {
         // Reset memory buffer so we don't accumulate duplicates if it stays running
         _payloadBuffer = {};
       } catch (storageErr: unknown) {
-        // Fatal storage error
+        AppLogger.error('[useTelemetryLedger] Fatal: could not buffer telemetry to AsyncStorage', storageErr instanceof Error ? storageErr.message : String(storageErr), { payload_size: 0, ssi: 0 });
       }
     }
   } catch (e: unknown) {
