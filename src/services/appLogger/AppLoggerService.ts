@@ -7,9 +7,13 @@ import { TelemetryService } from '../TelemetryService';
 import { FlightRecorder, Breadcrumb } from '../../utils/FlightRecorder';
 import type { Device as BleDevice } from 'react-native-ble-plx';
 
+/** Enriched device shape: react-native-ble-plx Device plus any optional fields
+ * injected by displayConnectedDevices in DashboardScreen (e.g. batteryLevel). */
+type KnownDevice = BleDevice & { batteryLevel?: number };
+
 class AppLoggerService {
   private storage = new AppLoggerStorage();
-  private activeDevices: BleDevice[] = [];
+  private activeDevices: KnownDevice[] = [];
   private currentUserId: string | undefined = undefined;
   private sessionId = `telemetry_${Date.now()}`;
   
@@ -22,7 +26,7 @@ class AppLoggerService {
   }
 
   updateKnownDevices(devices: BleDevice[]) {
-    this.activeDevices = devices;
+    this.activeDevices = devices as KnownDevice[];
   }
 
   private async getHostDeviceInfo(): Promise<Record<string, any>> {
