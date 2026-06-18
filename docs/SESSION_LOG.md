@@ -1,3 +1,17 @@
+### [MERGE READY] 2026-06-18T12:36Z — fix/session-context-safety — 18b575b9
+**Files touched:**
+- `src/context/SessionContext.tsx` — R-26 isRecoveringRef re-entrancy guard, R-11 floating import .catch(), R-06 AppLogger on autoPause catch, R-08 SessionPhase import replaces inline `as` cast, R-16 UI_TICK_MS named constant
+- `src/hooks/useTelemetryLedger.ts` — R-11 AppLogger on parse error (L117) and fatal storage error (L144)
+TSC: ✅  Jest: ✅  Browser: ✅  Type Safety: ✅  BLE Guards: ✅  (8/8 gates green)
+**What was fixed:**
+- R-26: `isRecoveringRef = useRef(false)` guard wraps the entire `recover()` body in `try/finally` — prevents concurrent calls from initial load + AppState 'active' firing simultaneously
+- R-11: Both `import('react-native').then(...)` floating promises now chain `.catch(e => AppLogger.error(...))`
+- R-11: `recover()` calls now `.catch(e => AppLogger.error(...))` instead of fire-and-forget
+- R-06: Empty `catch (e)` at autoPause load (L58) now logs before falling back
+- R-08: `snapshot.value as 'IDLE' | 'ACTIVE' | 'PAUSED' | 'ENDING'` → `snapshot.value as SessionPhase` (imported from SessionMachine.types.ts)
+- R-16: `1000` interval literal → `UI_TICK_MS = 1_000` module-level constant
+- R-11 (useTelemetryLedger): Two empty catch blocks now emit `AppLogger.error` with structured messages
+
 ### [MERGE] 2026-06-18T12:30Z — fix/dashboard-screen-safety → master @ 830ef034
 **Files touched:**
 - `src/screens/DashboardScreen.tsx` — R-08/R-17/R-20/R-25 type safety, event listener leak fix, BackHandler guard, Platform.select
