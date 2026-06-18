@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, StyleSheet, View, Text } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTheme } from '../../context/ThemeContext';
+import { ThemePalette } from '../../theme/theme';
 import { MapFilterMatrix } from '../../hooks/useMapFilters';
 
 interface Props {
@@ -9,16 +10,16 @@ interface Props {
   toggleFilter: (key: keyof MapFilterMatrix) => void;
 }
 
+// Active colors precisely matched to CrewLandingMap marker rendering logic
+const FILTER_OPTS = [
+  { key: 'showRinks',        label: 'Rinks', icon: 'roller-skate',         activeColor: '#3B82F6' },
+  { key: 'showParks',        label: 'Parks', icon: 'flag-triangle',         activeColor: '#92400E' },
+  { key: 'showShops',        label: 'Shops', icon: 'storefront-outline',    activeColor: '#8B5CF6' },
+  { key: 'showCrewSessions', label: 'Crewz', icon: 'account-group-outline', activeColor: '#F97316' },
+] as const;
+
 export function MapFiltersTray({ filters, toggleFilter }: Props) {
   const { Colors } = useTheme();
-
-  // Active colors precisely matched to CrewLandingMap marker rendering logic
-  const FILTER_OPTS = [
-    { key: 'showRinks',        label: 'Rinks', icon: 'roller-skate',         activeColor: '#3B82F6' },
-    { key: 'showParks',        label: 'Parks', icon: 'flag-triangle',         activeColor: '#92400E' },
-    { key: 'showShops',        label: 'Shops', icon: 'storefront-outline',    activeColor: '#8B5CF6' },
-    { key: 'showCrewSessions', label: 'Crewz', icon: 'account-group-outline', activeColor: '#F97316' },
-  ] as const;
 
   return (
     <View style={styles.tray}>
@@ -41,10 +42,10 @@ const FilterPill = React.memo(({
   onToggle, 
   Colors 
 }: { 
-  opt: any, 
+  opt: typeof FILTER_OPTS[number], 
   isActive: boolean, 
   onToggle: (k: keyof MapFilterMatrix) => void,
-  Colors: any
+  Colors: ThemePalette
 }) => {
   const handleToggle = React.useCallback(() => onToggle(opt.key), [onToggle, opt.key]);
 

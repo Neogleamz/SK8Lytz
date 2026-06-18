@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import React, { useRef } from 'react';
 import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '../../context/ThemeContext';
@@ -135,7 +135,7 @@ export function CrewScheduleScreen() {
         <DateTimePicker value={schedDateTime} mode="date"
           display={Platform.OS === 'android' ? 'calendar' : 'spinner'}
           minimumDate={new Date()}
-          onChange={(_evt: any, d?: Date) => {
+          onChange={(_evt: DateTimePickerEvent, d?: Date) => {
             setShowDatePicker(false);
             if (d) {
               const m = new Date(d);
@@ -147,7 +147,7 @@ export function CrewScheduleScreen() {
       {showTimePicker && (
         <DateTimePicker value={schedDateTime} mode="time"
           display={Platform.OS === 'android' ? 'clock' : 'spinner'}
-          onChange={(_evt: any, d?: Date) => {
+          onChange={(_evt: DateTimePickerEvent, d?: Date) => {
             setShowTimePicker(false);
             if (d) {
               const m = new Date(schedDateTime);

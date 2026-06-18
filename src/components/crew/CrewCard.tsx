@@ -3,13 +3,18 @@ import * as Clipboard from 'expo-clipboard';
 import React from 'react';
 import { ActivityIndicator, Alert, Animated, Image, Platform, Share, Text, TouchableOpacity, View } from 'react-native';
 import { CrewSession } from '../../services/CrewService';
+import { profileService } from '../../services/ProfileService';
 import { PermanentCrew, CrewMemberFull } from '../../services/ProfileService';
-import { Spacing } from '../../theme/theme';
+import { createStyles } from './CrewStyles';
+import { ThemePalette, Spacing } from '../../theme/theme';
+
+/** Steps available in the Crew modal — mirrors ModalStep in CrewContext (not exported there). */
+type CrewModalStep = 'landing' | 'create' | 'schedule' | 'join' | 'controller' | 'manage' | 'crew-detail' | 'map';
 
 export interface CrewCardProps {
   crew: PermanentCrew;
-  styles: any;
-  Colors: any;
+  styles: ReturnType<typeof createStyles>;
+  Colors: ThemePalette;
   liveSession: CrewSession | null;
   memberInfo: { count: number } | null;
   cardMembers: Record<string, CrewMemberFull[]>;
@@ -21,14 +26,14 @@ export interface CrewCardProps {
   isLoading: boolean;
   pulseAnim: Animated.Value;
   formState: { setSelectedCrewId: (id: string) => void; setCrewName: (name: string) => void; };
-  setStep: (step: any) => void;
+  setStep: (step: CrewModalStep) => void;
   setErrorMsg: (msg: string) => void;
   loadingCardMembersFor: string | null;
   currentUserId: string | null;
   makingOwnerFor: string | null;
   setMakingOwnerFor: (id: string | null) => void;
-  profileService: any;
-  setCardMembers: React.Dispatch<React.SetStateAction<Record<string, any[]>>>;
+  profileService: typeof profileService;
+  setCardMembers: React.Dispatch<React.SetStateAction<Record<string, CrewMemberFull[]>>>;
   handleStartEdit: (crew: PermanentCrew) => void;
   setSelectedCrewDetail: (crew: PermanentCrew) => void;
   handleLeaveCrew: (crew: PermanentCrew) => void;

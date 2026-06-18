@@ -7,9 +7,8 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Spacing } from '../../theme/theme';
 
-interface CrewLandingMapProps {
-  [key: string]: any;
-}
+/** Web-stub props: this component ignores all props and renders a fallback. */
+type CrewLandingMapProps = Record<string, unknown>;
 
 export function CrewLandingMap(_props: CrewLandingMapProps) {
   return (
