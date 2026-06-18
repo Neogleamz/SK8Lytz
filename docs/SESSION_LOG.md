@@ -4248,3 +4248,31 @@ TSC: ?  Jest: ?
 **What merged:** Removed ConnectService stale flush that killed Device A when Device B connected in a separate auto-connect batch during incremental group assembly. Retained ALL connected devices. Updated tests 7-8 to verify retain-all behavior.
 **Verify result:** TSC ?, Jest ? (222/222), gates ?
 **Files touched:** src/services/ble/ConnectService.ts, src/services/ble/__tests__/ConnectService.test.ts
+
+### [MERGE READY] 2026-06-18T12:05 - fix/manifest-permissions @ ce9c4a4b
+Files touched: android/app/src/main/AndroidManifest.xml
+TSC: [checkmark] Jest: [checkmark] (215/215 passed; 2 suites EPERM file-lock pre-existing OS cache issue, unrelated to change) BLE Invariant: [checkmark] Type Safety: [checkmark] Browser QG: [checkmark]
+Change: Removed android:usesPermissionFlags=neverForLocation from BLUETOOTH_SCAN. Android 12+ silently drops unfiltered BLE scans when this flag is set. SK8Lytz scans unfiltered (scanServiceUUIDs: null) to capture FCF1/Zengge advertisements. ACCESS_FINE_LOCATION already declared (line 3).
+
+### [MERGE READY] fix/cloud-functions-security - fabe3b01
+Files touched: supabase/functions/notify-crew-session/index.ts
+TSC: PASS  Jest: PASS
+- Added corsHeaders constant + OPTIONS preflight handler
+- Scoped service role (adminClient) to push token fetch only
+- Auth verification + membership check now use callerClient (anon+JWT, RLS-enforced)
+- Added PushTokenRow, ExpoMessage interfaces; typed fetchPromises, batch, all catch blocks as unknown
+- Documented PostgREST !inner join relationship in comments
+### [MERGE READY] 2026-06-18T12:05Z — fix/data-layer-types @ 12351d01
+**Files touched:** src/services/SkateSpotsService.ts (R-07 empty catch fixed), docs/plans/PLAN-fix-data-layer-types.md (SKIPPED annotations)
+**TSC:** ✅  **Jest:** ✅  **BLE Guards:** ✅  **Type Safety:** ✅
+
+**Audit findings:**
+- ScenesService.ts: SKIPPED — no violations (already clean)
+- GradientsService.ts: SKIPPED — no violations (already clean)
+- SkateSpotsService.ts: FIXED R-07 — empty catch at L39 now logs via AppLogger.error with instanceof Error unwrapping
+- DeviceRepositoryService.ts: SKIPPED — no violations (already uses const msg = e instanceof Error pattern)
+- SpeedTrackingService.ts: SKIPPED — no violations (offline-first already implemented, storage key constants in place)
+- HealthSyncService.ts: SKIPPED — no violations (R-08 fix already present with comment)
+- GlobalForegroundService.ts: SKIPPED — no violations (clean catch blocks)
+
+**Note:** 6 of 7 files were already clean from prior fixes (deepdive-hunt team's work). Only one live violation found and fixed.
