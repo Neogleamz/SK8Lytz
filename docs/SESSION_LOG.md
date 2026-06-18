@@ -4155,16 +4155,29 @@ TSC: ?  Jest: ?
 - src/hooks/useBLE.ts
 
 
-### [ARTIFACT] 2026-06-17T00:07 � Intake: PLAN-fix-hal-parity-split-brain
+
+### [ARTIFACT] 2026-06-17T00:07  Intake: PLAN-fix-hal-parity-split-brain
 **Plan Link**: docs/plans/PLAN-fix-hal-parity.md
 **Context**: Created plan to refactor UI components to use useProtocolDispatch to solve mixed-protocol parity splits.
 
-### [MERGE] 2026-06-17T00:10 � feat/rich-os-notifications -> master @ 1ac8e688
+### [MERGE READY] fix/pii-scrubber — c3c8deb4
+Files touched:
+- src/components/admin/tools/Sk8LytzProgrammer.tsx (FIXED: unit: id → unit: scrubPII(id) at L222)
+- docs/plans/PLAN-fix-pii-scrubber.md (SKIPPED annotations for 3 already-compliant files)
+TSC: ✅  Jest: ✅  BLE Guards: ✅  Type Safety: ✅  Browser QG: ✅
+
+**Audit findings:**
+- Sk8LytzProgrammer.tsx: FIXED — `unit: id` was leaking raw MAC. `deviceId` was already scrubbed but `unit` was not. Patched to `unit: scrubPII(id)`.
+- CrewDetailScreen.tsx: SKIPPED — L122 already uses `crewName: scrubPII(editCrewName.trim())`.
+- CrewLandingScreen.tsx: SKIPPED — L124, L145 already use `crewName: scrubPII(crew.name)`.
+- CrewManageScreen.tsx: SKIPPED — L67 already uses `crewName: scrubPII(crew.name)`. City is location data, not PII.
+
+### [MERGE] 2026-06-17T00:10  feat/rich-os-notifications -> master @ 1ac8e688
 **What merged:** Android Custom RemoteViews with 3 interactive buttons (End, Music, Favorite). Implemented headless background dispatch wired directly to BleWriteQueue.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** NotificationService.ts, index.ts, SessionContext.tsx, DashboardScreen.tsx, NotificationService.test.ts
 
-### [MERGE] 2026-06-17T00:25 � fix/hal-parity-split-brain -> master @ 65e8e85e
+### [MERGE] 2026-06-17T00:25  fix/hal-parity-split-brain -> master @ 65e8e85e
 **What merged:** Rip out raw ZenggeProtocol dispatches from UI to enforce HAL split-brain parity on mixed BLE groups.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** UniversalTacticalSliders.tsx, BuilderPanel.tsx, UniversalSlidersFooter.tsx, DockedController.tsx
