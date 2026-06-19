@@ -10,7 +10,25 @@ import { scrubPII } from '../../utils/piiScrubber';
 import { jitteredDelay } from '../../utils/backoff';
 import { BLE_TIMING } from '../../constants/bleTimingConstants';
 import type { IControllerProtocol } from '../../protocols/IControllerProtocol';
-import { WritePriority, enqueueDelay } from '../BleWriteQueue';
+import { WritePriority, enqueueDelay, setConnectionPriorityCallbacks } from '../BleWriteQueue';
+
+let _bleManager: BleManager | null = null;
+
+export const requestHighPriority = (deviceId: string): void => {
+  if (Platform.OS === 'android' && _bleManager) {
+    _bleManager.requestConnectionPriorityForDevice(deviceId, 1).catch((e: unknown) => {
+      AppLogger.warn('[BLE] requestHighPriority failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+    });
+  }
+};
+
+export const requestBalancedPriority = (deviceId: string): void => {
+  if (Platform.OS === 'android' && _bleManager) {
+    _bleManager.requestConnectionPriorityForDevice(deviceId, 0).catch((e: unknown) => {
+      AppLogger.warn('[BLE] requestBalancedPriority failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+    });
+  }
+};
 
 export interface ConnectServiceInput {
   bleManager: BleManager;
@@ -59,6 +77,18 @@ export const connectService = fromPromise<
     handleNotification,
     enqueueWrite,
   } = input;
+
+  _bleManager = bleManager;
+
+  // Register idle callbacks for connection priority
+  setConnectionPriorityCallbacks(
+    () => {
+      connectedDevicesRef.current.forEach(d => requestHighPriority(d.id));
+    },
+    () => {
+      connectedDevicesRef.current.forEach(d => requestBalancedPriority(d.id));
+    }
+  );
 
   if (targetMacs.length === 0) return { devices: [] };
 
@@ -189,11 +219,6 @@ export const connectService = fromPromise<
     const handshakeDevice = async (conn: Device): Promise<Device | null> => {
       try {
         if (signal.aborted) throw new Error('connect_aborted');
-        if (Platform.OS === 'android') {
-          await bleManager.requestConnectionPriorityForDevice(conn.id, 1).catch((e: unknown) => {
-            AppLogger.warn('[BLE] requestConnectionPriorityForDevice failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
-          });
-        }
         const { adapter } = await createGattSession(bleManager, conn.id, {
           timeout: 6000,
           retries: 1,
@@ -226,6 +251,7 @@ export const connectService = fromPromise<
             }
           }
           mtuMapRef.current.set(conn.id, negotiatedMtu > 23 ? negotiatedMtu : 186);
+          requestHighPriority(conn.id);
         } else {
           mtuMapRef.current.set(conn.id, conn.mtu > 23 ? conn.mtu : 186);
         }
@@ -283,11 +309,7 @@ export const connectService = fromPromise<
         }
 
         AppLogger.log('DEVICE_CONNECTED', { id: scrubPII(conn.id), name: scrubPII(conn.name ?? '') });
-        if (Platform.OS === 'android') {
-          bleManager.requestConnectionPriorityForDevice(conn.id, 0).catch((e: unknown) => {
-            AppLogger.warn('[BLE] Priority BALANCED downgrade failed (non-fatal)', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
-          });
-        }
+        requestBalancedPriority(conn.id);
         return conn;
       } catch (deviceError: unknown) {
         const errMsg = deviceError instanceof Error ? deviceError.message : String(deviceError);

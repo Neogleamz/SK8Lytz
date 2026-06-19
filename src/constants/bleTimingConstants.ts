@@ -268,6 +268,12 @@ export const BLE_TIMING = {
    * useDeviceStateLedger.ts — coalesces rapid slider changes into one write.
    */
   LEDGER_WRITE_DEBOUNCE_MS: 500,
+
+  /**
+   * Idle timeout for connection priority downgrade.
+   * BleWriteQueue.ts — switches connection priority to BALANCED when idle.
+   */
+  CONNECTION_IDLE_TIMEOUT_MS: 30_000,
 } as const;
 
 export type BleTiming = typeof BLE_TIMING;
