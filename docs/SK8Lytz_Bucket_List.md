@@ -61,37 +61,17 @@ at useBLESweeper.ts:145
 
 ---
 
-### ⚡ [BATCH:feat/ble-excellence-w3] — `feat/ble-excellence-w3` — IN PROGRESS
+### ⚡ [BATCH:feat/ble-excellence-w3] — `feat/ble-excellence-w3` — COMPLETE
 > **Worktree**: `feat/ble-excellence-w3` · **Type**: Sequential · **Prerequisite**: Wave 2 merged
 > **Source Analysis**: 📊 [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) — Gaps 4, 7
 
-- [/] **`feat/ble-autoconnect-passive`**
-  - **Tags:** `[✅ READY]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 MED]` `[BATCH:feat/ble-excellence-w3]` `[WAVE:3]`
-  - **Goal:** Use `autoConnect: true` for reconnections (not first-time connects) so the OS reconnects passively when device comes back in range.
-  - **Decision Log:** Industry gap analysis: direct connect for first pairing (faster), autoConnect for subsequent reconnections (fire-and-forget, OS-managed).
-  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-feat-ble-autoconnect-passive.md](./plans/PLAN-feat-ble-autoconnect-passive.md)
-    Key finding: "autoConnect=true lets OS handle passive reconnect — zero app involvement needed"
-    Rejected alternative: "Always autoConnect — slower for first-time pairing (~30s vs ~2s)"
-  - **Source of Truth:** 📖 [ConnectService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts#L154) §connectToDevice
-  - **Details:** Touches ConnectService.ts, BleMachine.ts (invoke input), BleMachine.types.ts. Prerequisite: Wave 2 fully merged.
-
-- [/] **`feat/smart-group-health`**
-  - **Tags:** `[✅ READY]` `[UI]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:feat/ble-excellence-w3]` `[WAVE:3]`
-  - **Goal:** Add per-device connection health within groups — degraded mode banner, per-device status dots, and connected-only command dispatch.
-  - **Decision Log:** Industry gap analysis: no consumer LED app does smart group degradation. This is our competitive edge — show which skate is down and keep the other running.
-  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-feat-smart-group-health.md](./plans/PLAN-feat-smart-group-health.md)
-    Key finding: "When 1 of N devices drops, whole group appears broken — no degraded mode"
-    Rejected alternative: "Group-level binary connected/disconnected — current approach, no granularity"
-  - **Source of Truth:** 📖 [SkateGroupCard.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/SkateGroupCard.tsx#L51) §group power state logic
-  - **Details:** Touches SkateGroupCard, MySkatesSlab, DashboardScreen, dashboard.types.ts. Prerequisite: Wave 2 fully merged.
-
 ---
 
-### ⏳ [BATCH:feat/ble-excellence-w4] — `feat/ble-excellence-w4` — READY
+### ⚡ [BATCH:feat/ble-excellence-w4] — `feat/ble-excellence-w4` — IN PROGRESS
 > **Worktree**: `feat/ble-excellence-w4` · **Type**: Solo · **Prerequisite**: Wave 3 merged
 > **Source Analysis**: 📊 [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) — Gap 1 (the big one)
 
-- [ ] **`feat/ble-background-reconnect`**
+- [/] **`feat/ble-background-reconnect`**
   - **Tags:** `[✅ READY]` `[BLE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 HIGH]` `[BATCH:feat/ble-excellence-w4]` `[WAVE:4]`
   - **Goal:** Maintain BLE connection when app backgrounds — iOS state restoration + Android foreground service so skaters' lights keep working with phone in pocket.
   - **Decision Log:** Industry gap analysis: #1 UX gap. Every competitor (Govee, Hue, LIFX) maintains connection in background. Our app drops connection on background — lights stop responding.

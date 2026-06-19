@@ -3758,4 +3758,26 @@ pm run verify which includes QA tests.
     Rejected alternative: "Always High priority — wastes battery for no benefit during idle"
   - **Source of Truth:** 📖 [ConnectService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts#L154) §connectToDevice
   - **Details:** Touches ConnectService.ts and bleTimingConstants.ts. Prerequisite: Wave 1 fully merged.
+
+
+- [x] **`feat/ble-autoconnect-passive`**
+  - **Tags:** `[✅ READY]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 MED]` `[BATCH:feat/ble-excellence-w3]` `[WAVE:3]`
+  - **Goal:** Use `autoConnect: true` for reconnections (not first-time connects) so the OS reconnects passively when device comes back in range.
+  - **Decision Log:** Industry gap analysis: direct connect for first pairing (faster), autoConnect for subsequent reconnections (fire-and-forget, OS-managed).
+  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-feat-ble-autoconnect-passive.md](./plans/PLAN-feat-ble-autoconnect-passive.md)
+    Key finding: "autoConnect=true lets OS handle passive reconnect — zero app involvement needed"
+    Rejected alternative: "Always autoConnect — slower for first-time pairing (~30s vs ~2s)"
+  - **Source of Truth:** 📖 [ConnectService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts#L154) §connectToDevice
+  - **Details:** Touches ConnectService.ts, BleMachine.ts (invoke input), BleMachine.types.ts. Prerequisite: Wave 2 fully merged.
+
+
+- [x] **`feat/smart-group-health`**
+  - **Tags:** `[✅ READY]` `[UI]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:feat/ble-excellence-w3]` `[WAVE:3]`
+  - **Goal:** Add per-device connection health within groups — degraded mode banner, per-device status dots, and connected-only command dispatch.
+  - **Decision Log:** Industry gap analysis: no consumer LED app does smart group degradation. This is our competitive edge — show which skate is down and keep the other running.
+  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-feat-smart-group-health.md](./plans/PLAN-feat-smart-group-health.md)
+    Key finding: "When 1 of N devices drops, whole group appears broken — no degraded mode"
+    Rejected alternative: "Group-level binary connected/disconnected — current approach, no granularity"
+  - **Source of Truth:** 📖 [SkateGroupCard.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/SkateGroupCard.tsx#L51) §group power state logic
+  - **Details:** Touches SkateGroupCard, MySkatesSlab, DashboardScreen, dashboard.types.ts. Prerequisite: Wave 2 fully merged.
 
