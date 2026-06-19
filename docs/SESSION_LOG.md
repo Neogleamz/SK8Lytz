@@ -5005,7 +5005,17 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/constants/storageKeys.ts, src/screens/DashboardScreen.tsx, src/screens/Dashboard/DashboardCrewHub.tsx, app.config.js, src/services/CrewService/CrewSessionManager.ts, src/services/SpeedTrackingService.ts
 
-### [MERGE READY] fix/controller-dispatch-safety - 4411abe9
-Files touched: src/hooks/useControllerDispatch.ts, docs/plans/PLAN-fix-controller-dispatch-safety.md
+### [MERGE READY] fix/data-layer-types — 1ef14b02
+Files touched: docs/plans/PLAN-fix-data-layer-types.md
 TSC: ?  Jest: ?
+
+
+### [MERGE READY] fix/manifest-permissions â€” f21e00c8
+**Files touched:** app.config.js
+**TSC:** âœ…  **Jest:** âœ…
+
+### [MERGE] 2026-06-18T20:10 — fix/manifest-permissions ? master @ 11b6798b
+**What merged:** Completed fix/manifest-permissions in Wave 1.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** Merged via gatekeeper
 
