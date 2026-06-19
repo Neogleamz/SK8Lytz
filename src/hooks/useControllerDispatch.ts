@@ -21,7 +21,8 @@ import { hexToRgb } from '../utils/ColorUtils';
 import { normalizeUISpeedToHardware } from '../utils/NormalizationUtils';
 import type { IHardwareSettings } from '../types/dashboard.types';
 import { BLE_TIMING } from '../constants/bleTimingConstants';
-
+import { scrubPII } from '../utils/piiScrubber';
+import { enqueueDelay } from '../services/BleWriteQueue';
 /**
  * LRU Cache for pattern payloads to avoid re-running the Math Synthesizer on repeat taps.
  * Key format: {patternId}_{fg.r}_{fg.g}_{fg.b}_{bg.r}_{bg.g}_{bg.b}_{numLEDs}_{speed}_{brightness}
@@ -96,13 +97,13 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       }
       const targets = connectedDevices.length > 0 ? connectedDevices : [{ id: primaryDeviceId ?? '' }];
       await Promise.all(targets.map(async (device) => {
-        if (__DEV__) AppLogger.log('APP_LOG', { message: '[DEBUG sendColor]', deviceId: device.id.slice(-5), type: typeof device.id, payload_size: 0, ssi: 0 });
+        if (__DEV__) AppLogger.log('APP_LOG', { message: '[DEBUG sendColor]', deviceId: scrubPII(device.id), type: typeof device.id, payload_size: 0, ssi: 0 });
         const adapter = getAdapterForDevice(device.id);
         if (adapter) {
           const result = adapter.buildSolidColor(r, g, b);
           for (const p of result.packets) { await safeWrite(p, device.id); }
         } else {
-          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id.slice(-5), { payload_size: 0, ssi: 0 });
+          AppLogger.error('[useControllerDispatch] No adapter found for device', scrubPII(device.id), { payload_size: 0, ssi: 0 });
         }
       }));
     },
@@ -155,7 +156,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       await Promise.all(targets.map(async (device) => {
         const adapter = getAdapterForDevice(device.id);
         if (!adapter) {
-          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id.slice(-5), { payload_size: 0, ssi: 0 });
+          AppLogger.error('[useControllerDispatch] No adapter found for device', scrubPII(device.id), { payload_size: 0, ssi: 0 });
           return;
         }
         const protocolKey = adapter.constructor.name;
@@ -224,7 +225,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
       await Promise.all(targets.map(async (device) => {
         const adapter = getAdapterForDevice(device.id);
         if (!adapter) {
-          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id.slice(-5), { payload_size: 0, ssi: 0 });
+          AppLogger.error('[useControllerDispatch] No adapter found for device', scrubPII(device.id), { payload_size: 0, ssi: 0 });
           return;
         }
         if (pat === 'STATIC') {
@@ -291,7 +292,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
           const result = adapter.buildMultiColor(arr, (hwSettings?.ledPoints as number | undefined) || numLEDs, hwSpd, 1, 0x02);
           for (const p of result.packets) { await safeWrite(p, device.id); }
         } else {
-          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id.slice(-5), { payload_size: 0, ssi: 0 });
+          AppLogger.error('[useControllerDispatch] No adapter found for device', scrubPII(device.id), { payload_size: 0, ssi: 0 });
         }
       }));
     },
@@ -352,10 +353,10 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
           });
           for (const p of result.packets) {
             await safeWrite(p, device.id, { micSource: src });
-            await new Promise(r => setTimeout(r, BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS));
+            await enqueueDelay('normal', BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS);
           }
         } else {
-          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id.slice(-5), { payload_size: 0, ssi: 0 });
+          AppLogger.error('[useControllerDispatch] No adapter found for device', scrubPII(device.id), { payload_size: 0, ssi: 0 });
         }
       }));
       } finally {
@@ -380,7 +381,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
           const result = isOn ? adapter.buildPowerOn() : adapter.buildPowerOff();
           for (const p of result.packets) { await safeWrite(p, device.id); }
         } else {
-          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id.slice(-5), { payload_size: 0, ssi: 0 });
+          AppLogger.error('[useControllerDispatch] No adapter found for device', scrubPII(device.id), { payload_size: 0, ssi: 0 });
         }
       }));
     },
@@ -402,7 +403,7 @@ export function useControllerDispatch({ writeToDevice, hwSettings, points, getAd
           const result = adapter.buildMultiColor(colors, ledPoints, speed, direction, transitionType);
           for (const p of result.packets) { await safeWrite(p, device.id); }
         } else {
-          AppLogger.error('[useControllerDispatch] No adapter found for device', device.id.slice(-5), { payload_size: 0, ssi: 0 });
+          AppLogger.error('[useControllerDispatch] No adapter found for device', scrubPII(device.id), { payload_size: 0, ssi: 0 });
         }
       }));
     },

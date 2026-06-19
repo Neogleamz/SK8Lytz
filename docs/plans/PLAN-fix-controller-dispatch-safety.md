@@ -21,9 +21,11 @@ Fix PII telemetry leaks, re-entrancy races, and type safety violations in the co
 - Replace raw setTimeout with BleWriteQueue.enqueueDelay where applicable
 
 ### [MODIFY] [useControllerAnalytics.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useControllerAnalytics.ts)
+// SKIPPED: Already using UI debounce constants BRIGHTNESS_DEBOUNCE_MS, SPEED_DEBOUNCE_MS, STREET_SENS_DEBOUNCE_MS defined at the top of the file
 - Replace hardcoded setTimeout delays at L101, L109, L118
 
 ### [MODIFY] [useDockedControllerState.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDockedControllerState.ts)
+// SKIPPED: Already uses isModeType type guard
 - Replace `as ModeType` cast with proper type guard
 
 ## Verification
