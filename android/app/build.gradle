@@ -96,8 +96,8 @@ android {
         applicationId 'com.neogleamz.sk8lytz'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 38
-        versionName "3.9.0"
+        versionCode 39
+        versionName "3.10.1"
 
         // Restrict native builds to arm64 (modern phones) + x86_64 (emulator).
         // armeabi-v7a triggers infinite CMake/Ninja re-run loops on Windows

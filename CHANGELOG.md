@@ -1,4 +1,42 @@
-﻿## [3.10.0] - 2026-06-17
+## [3.10.1] - 2026-06-18
+
+### 🐛 Bug Fixes
+- fix(memory-leak-sweep): R-22 cleanup, R-20 Platform.select, R-12 stale closure
+- fix(ble-hooks): R-07 error swallowing, R-08 useRef<any>, R-16 hardcoded delays
+- fix(ui-misc): R-02 Oracle53 error handling, R-08 any[] fix, R-16 hardcoded delay constants
+- fix(crew): harden crew services - R-07 empty catches, R-04 telemetry, R-11 silent error, R-05 offline cache, R-16 named constants
+- fix(test-suite): purge all as-any casts from 22+ test files
+- fix(docked): Phase 2 - R-26 re-entrancy guards, R-16 BLE_TIMING constant, test mock fix
+- fix(onboarding-safety): R-07 empty catch->AppLogger, R-16 timeout constant, R-20x3 Platform.select
+- fix(crew-ui-types): replace any annotations with proper types in CrewCard, CrewLandingMap.web, CrewScheduleScreen, MapFiltersTray
+- fix(session-safety): R-26 re-entrancy guard, R-11 floating promises+catch, R-06 error log, R-08 SessionPhase type, R-16 named constant
+- fix(dashboard-safety): R-08/R-17/R-20/R-25 type safety, event listener leak, BackHandler guard, Platform.select
+- fix(camera-visualizer): AppLogger telemetry context, Platform guard, dead import removal, any→typed
+- fix(ble-hardening): fix empty catch in RecoveryService Phase 3, wire RSSIService to BLE_TIMING registry
+- fix(safety): add try/catch, floating promise guards, and telemetry context to notification/routing services
+- fix(protocol-core): eliminate split-brain SeqNum, fix 0x73 isOn conflation, clean docblocks
+- fix(dispatch): scrub MAC PII, concurrent group writes, ModeType guard
+- fix(data-layer): R-07 empty catch in SkateSpotsService
+- fix(android): remove neverForLocation flag from BLUETOOTH_SCAN permission
+- fix(telemetry): harden logger pipeline - fix type laundering, empty catches, re-entrancy guard, AsyncStorage bypass
+- fix(edge): add CORS headers, scope service role, add TypeScript types in notify-crew-session
+- fix(ble): remove stale flush that killed group devices during incremental assembly
+- fix(ui): Normalize remaining Tier 2 & Tier 3 error variables to FSM state matrix
+- fix(ui): migrate boolean flags to ViewState FSM for Tier 1 components
+- fix(tests): supply adapter mock to fix test failures
+- fix(arch): split-brain trifecta - centralize group state, remove zengge dispatch fallback, centralize stats telemetry
+- fix(crew): add missing try/catch guards and handle promise rejections for async IO
+- fix: os variance parity for android shadow and web touchAction
+- fix(ble/ui): wrap remaining PII with scrubPII in AppLogger for Rule R-09 compliance
+- fix(protocol): unified seq counter, max pixel cap
+- fix(ble): serialize BLE GATT writes per-device to prevent controller collisions
+
+### 🔧 Maintenance & Refactoring
+- refactor(spatial): Phase 1 - extract shared modules, break circular deps, reduce SpatialEngine to 28KB
+- refactor(docked): Phase 1 - extract FixedPatternPreviewRow, styles, useLoadFavorite
+- perf(styles): convert DashboardStyles factory to static StyleSheet + theme token fixes
+
+## [3.10.0] - 2026-06-17
 
 ### ✨ Features
 - feat(crewz): implement offline resilience and heartbeat (6a8b1be2)
