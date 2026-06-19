@@ -32,97 +32,50 @@ at useBLESweeper.ts:145
 
 ---
 
-## 🔥 ON DECK
+### 🔥 ON DECK
 
-### ⚡ [BATCH:deepdive-audit-mega-sweep] — `deepdive-audit-mega-sweep` — READY
-> **Worktree**: Per-task isolated worktrees · **Type**: Parallel (5 Waves) · **Prerequisite**: None
-> **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) — Deep-dive code synthesis from 55 Map-Reduce agents. ~170 verified findings across 22 clusters. AST collision matrix: 54 pairs → 5 waves.
+### ⚡ [BATCH:fix/ble-connection-pipeline] — `fix/ble-connection-pipeline` — READY
+> **Worktree**: `fix/ble-connection-pipeline` · **Type**: Sequential (unified) · **Prerequisite**: None
+> **Source Analysis**: 📊 [connection_pipeline_audit.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_pipeline_audit.md) — 5-agent parallel audit of BLE connection lifecycle (7 HIGH, 9 MEDIUM findings)
 
-#### 🌊 Wave 1 — Foundation & Quick Wins (7 parallel tasks, no prerequisite)
+- [ ] **`fix/ble-state-machine-deadends`**
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:fix/ble-connection-pipeline]` `[WAVE:1]`
+  - **Goal:** Eliminate dead-end states and silent event drops in BleMachine — DISCONNECTING service, RECOVERING timeout, dual HEARTBEAT_FAIL handling, concurrent CONNECT_REQUEST queuing.
+  - **Decision Log:** Audit found DISCONNECTING has no invoked service (H1), second HEARTBEAT_FAIL during RECOVERING silently drops the device (H4), CONNECT_REQUEST during CONNECTING is lost (H5), RECOVERING has no timeout (M2), permanently-failed devices stay in connectedDevices (M6).
+  - **Analysis:** 📊 Source: [connection_pipeline_audit.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_pipeline_audit.md) · Plan: [PLAN-fix-ble-state-machine-deadends.md](./plans/PLAN-fix-ble-state-machine-deadends.md)
+    Key finding: "DISCONNECTING waits for DISCONNECT_COMPLETE but nothing in the codebase sends it — machine hangs forever"
+    Rejected alternative: "Using FORCE_IDLE for disconnect — rejected because it doesn't perform GATT teardown"
+  - **Source of Truth:** 📖 [BleMachine.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts#L236-L243) §DISCONNECTING
+  - **Details:** 9 surgical edits across BleMachine.ts, BleMachine.types.ts, useBLE.ts. Touches state transitions only — service internals are Plan 2.
 
-- [/] **$slug**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
-  - **Goal:** Fix `neverForLocation` manifest regression that silently drops BLE scan results on Android 12+.
-  - **Decision Log:** OS-PERM-001 from deep-dive audit — live production BLE scan bug confirmed on FCF1 hardware.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-manifest-permissions.md](./plans/PLAN-fix-manifest-permissions.md)
-  - **Source of Truth:** 📖 [AndroidManifest.xml](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/android/app/src/main/AndroidManifest.xml)
-  - **Details:** CRITICAL severity. Single file change.
-
-- [/] **$slug**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
-  - **Goal:** Fix critical ZenggeAdapter sequence counter corruption and protocol correctness issues.
-  - **Decision Log:** PROTOCOL_CORE-004 — sequence counter corruption can desync BLE commands on all connected devices.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-protocol-core-integrity.md](./plans/PLAN-fix-protocol-core-integrity.md)
-  - **Source of Truth:** 📖 [ZenggeAdapter.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/ZenggeAdapter.ts) + [ZENGGE_PROTOCOL_BIBLE.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/ZENGGE_PROTOCOL_BIBLE.md)
-  - **Details:** CRITICAL severity. Must cross-check all byte values against Protocol Bible.
-
-- [/] **$slug**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 MED]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
-  - **Goal:** Fix StyleSheet.create firing on every render cycle (up to 20Hz during telemetry).
-  - **Decision Log:** THEME-001 — massive GC pressure from StyleSheet factory invoked in render body.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-dashboard-styles-perf.md](./plans/PLAN-fix-dashboard-styles-perf.md)
-  - **Source of Truth:** 📖 [DashboardStyles.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/styles/DashboardStyles.ts)
-  - **Details:** CRITICAL severity. Convert factory to static StyleSheet.create.
-
-- [/] **$slug**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
-  - **Goal:** Fix PII telemetry leaks, re-entrancy races, and type safety in controller dispatch pipeline.
-  - **Decision Log:** R-09 PII leak — MAC addresses sent unscrubbed to Supabase telemetry (GDPR risk).
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-controller-dispatch-safety.md](./plans/PLAN-fix-controller-dispatch-safety.md)
-  - **Source of Truth:** 📖 [useControllerDispatch.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useControllerDispatch.ts)
-  - **Details:** HIGH severity. 3 files, PII scrubbing + type safety.
-
-- [/] **$slug**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[DB]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 MED]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
-  - **Goal:** Fix type safety, error swallowing, offline-first violations, and AsyncStorage key drift in data layer.
-  - **Decision Log:** R-05/R-08 — cloud-first reads in SpeedTrackingService break offline skating.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-data-layer-types.md](./plans/PLAN-fix-data-layer-types.md)
-  - **Source of Truth:** 📖 [SpeedTrackingService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/SpeedTrackingService.ts)
-  - **Details:** MEDIUM severity. 7 files.
-
-- [/] **$slug**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[☁️ CLOUD]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
-  - **Goal:** Fix CORS, RLS bypass, and type safety in Supabase edge functions.
-  - **Decision Log:** CLOUD-001 — missing CORS headers + service role key bypasses RLS.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-cloud-functions-security.md](./plans/PLAN-fix-cloud-functions-security.md)
-  - **Source of Truth:** 📖 [index.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/supabase/functions/notify-crew-session/index.ts)
-  - **Details:** MEDIUM severity. 1 file.
-
-- [/] **$slug**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
-  - **Goal:** Fix DevSandboxDrawer production exposure, redundant ternary, loose BaseTabProps type, and refreshProfile re-entrancy race.
-  - **Decision Log:** ID-010 — DevSandboxDrawer is accessible to production users (dead-code __DEV__ guard). ID-007 — refreshProfile() re-entrancy race from rapid AppState changes.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-identity-auth-enriched.md](./plans/PLAN-fix-identity-auth-enriched.md)
-  - **Source of Truth:** 📖 [DevSandboxDrawer.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/auth/DevSandboxDrawer.tsx)
-  - **Details:** ⚠️ PRODUCTION EXPOSURE. 4 files, surgical edits only.
-
-#### 🌊 Wave 2 — BLE Core & Privacy (5 parallel tasks, prerequisite: Wave 1 merged)
-
-- [ ] **`fix/ble-services-hardening`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:2]`
-  - **Goal:** Purge `any` types, fix error swallowing, and resolve hardcoded delays across the BLE service layer.
-  - **Decision Log:** R-08/R-16 — 11 BLE service files with type safety violations and raw setTimeout bypassing BleWriteQueue.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-ble-services-hardening.md](./plans/PLAN-fix-ble-services-hardening.md)
-  - **Source of Truth:** 📖 [ConnectService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts)
-  - **Details:** HIGH severity. 11 files. Prerequisite: Wave 1 fully merged.
-
-- [ ] **`fix/pii-scrubber`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:2]`
-  - **Goal:** Scrub all PII (MAC addresses, user names) from telemetry logging in crew/admin components.
-  - **Decision Log:** R-09 — GDPR/privacy violations: MAC addresses and user names sent to Supabase telemetry unscrubbed.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-pii-scrubber.md](./plans/PLAN-fix-pii-scrubber.md)
-  - **Source of Truth:** 📖 [Sk8LytzProgrammer.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/Sk8LytzProgrammer.tsx)
-  - **Details:** HIGH severity. 4 files. Prerequisite: Wave 1 fully merged.
-
-- [ ] **`fix/session-context-safety`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:3]`
-  - **Goal:** Fix re-entrancy races, floating promises, error swallowing, and type safety in session tracking.
-  - **Decision Log:** R-26 — recover() fires concurrently from useEffect + AppState, causing duplicate END events.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-session-context-safety.md](./plans/PLAN-fix-session-context-safety.md)
-  - **Source of Truth:** 📖 [SessionContext.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/context/SessionContext.tsx)
-  - **Details:** HIGH severity. 2 files. Prerequisite: Wave 2 fully merged.
+- [ ] **`fix/connect-recovery-services`**
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:fix/ble-connection-pipeline]` `[WAVE:1]`
+  - **Goal:** Fix orphaned monitor subscriptions in ConnectService, dead Phase 3 recovery, and Phase 1 attempt cap bug in RecoveryService.
+  - **Decision Log:** Audit found monitorCharacteristicForService subscription never stored/cleaned (H2 — duplicate callbacks after recovery), RecoveryService Phase 3 is dead code because getSweepedDevice is never injected (H3), while-loop guard caps at 5 despite PHASE_1_MAX=12 (H7).
+  - **Analysis:** 📊 Source: [connection_pipeline_audit.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_pipeline_audit.md) · Plan: [PLAN-fix-connect-recovery-services.md](./plans/PLAN-fix-connect-recovery-services.md)
+    Key finding: "Phase 3 passive sweeper-watch loops for 10 minutes doing nothing then fails — getSweepedDevice is never passed from BleMachine"
+    Rejected alternative: "Removing Phase 3 entirely — rejected because passive scanner reconnect is the correct last-resort strategy"
+  - **Source of Truth:** 📖 [RecoveryService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/RecoveryService.ts#L38-L169) §Phase3
+  - **Details:** 5 surgical edits across ConnectService.ts, RecoveryService.ts, BleMachine.ts (invoke input only). State transitions untouched — Plan 1 handles those.
 
 ---
+
+### ⏳ [BATCH:fix/autoconnect-dashboard-stale] — `fix/autoconnect-dashboard-stale` — READY
+> **Worktree**: `fix/autoconnect-dashboard-stale` · **Type**: Solo · **Prerequisite**: [BATCH:fix/ble-connection-pipeline] merged
+> **Source Analysis**: 📊 [connection_pipeline_audit.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_pipeline_audit.md) — cloud MAC case mismatch + stale ref + wrong deviceConfigs key
+
+- [ ] **`fix/autoconnect-dashboard-stale`**
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:fix/autoconnect-dashboard-stale]` `[WAVE:2]`
+  - **Goal:** Fix cloud sync MAC case mismatch in auto-connect, sync stale allDevicesRef, and correct renderItem deviceConfigs lookup key.
+  - **Decision Log:** Audit found cloud sync path uses raw device_mac without .toUpperCase() (H6 — same class of bug we just fixed in buildOfflineGroupMap), allDevicesRef never synced after init (M1), renderItem looks up deviceConfigs by Supabase composite key instead of MAC (L4).
+  - **Analysis:** 📊 Source: [connection_pipeline_audit.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_pipeline_audit.md) · Plan: [PLAN-fix-autoconnect-dashboard-stale.md](./plans/PLAN-fix-autoconnect-dashboard-stale.md)
+    Key finding: "Cloud sync path at L396 uses raw device_mac — same .toUpperCase() bug we just fixed in buildOfflineGroupMap"
+    Rejected alternative: "Canonicalizing all MACs to lowercase — rejected because BLE Device.id is uppercase by convention on both platforms"
+  - **Source of Truth:** 📖 [useDashboardAutoConnect.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardAutoConnect.ts#L396-L405) §cloudSync
+  - **Details:** 4 surgical edits across useDashboardAutoConnect.ts and DashboardScreen.tsx. Prerequisite: Wave 1 fully merged into master before this worktree is created.
+
+
+
 
 ##  ❄️ Icebox / Backburner (Manual Trigger Only)
 

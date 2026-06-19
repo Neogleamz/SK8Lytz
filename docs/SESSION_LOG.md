@@ -1,3 +1,10 @@
+### [ARTIFACT] 2026-06-19T06:10Z - Connection Pipeline Audit & Intake (3 plans)
+- [connection_pipeline_audit.md] - 7 HIGH / 9 MEDIUM / 10 LOW findings across 6 BLE connection files
+- [PLAN-fix-ble-state-machine-deadends.md] - BleMachine dead-end states (H1+H4+H5+M2+M3+M6+M8+M9)
+- [PLAN-fix-connect-recovery-services.md] - ConnectService subscriptions + RecoveryService Phase 3/cap (H2+H3+H7+M5+M7)
+- [PLAN-fix-autoconnect-dashboard-stale.md] - Cloud MAC case + stale allDevicesRef + renderItem key (H6+M1+L3+L4)
+- 3 tasks added to ON DECK under 2 batch groups (Wave 1 unified, Wave 2 solo)
+
 ### [MERGE] 2026-06-19T05:42Z — fix/group-connect-stale-devices → master @ 98cfd8ea
 **What merged:**
 - Scanner: split `seenMacsRef` gate — telemetry/interrogation remain one-shot, but Device objects now re-stage on every scan callback to keep `allDevices` fresh
