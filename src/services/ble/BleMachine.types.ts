@@ -11,6 +11,7 @@ export interface BleMachineContext {
   ghostedDeviceIds: string[];
   sweeperId?: number;
   targetMacs?: string[];
+  registeredMacs?: string[];
   adapterMapRef: { current: Map<string, IControllerProtocol> };
   mtuMapRef: { current: Map<string, number> };
   disconnectListeners: { current: Record<string, import('react-native-ble-plx').Subscription> };

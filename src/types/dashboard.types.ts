@@ -133,6 +133,14 @@ export interface DeviceSettings {
 
 
 
+export interface GroupHealthSummary {
+  groupId: string;
+  connectedCount: number;
+  totalCount: number;
+  perDeviceState: Record<string, DeviceConnectionState>;
+  lastSeen?: Record<string, number>;
+}
+
 export interface CustomGroup {
   id: string;
   name: string;

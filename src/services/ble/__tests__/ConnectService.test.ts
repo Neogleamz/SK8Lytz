@@ -153,6 +153,7 @@ describe('ConnectService test suite', () => {
     mockInput = {
       bleManager: mockBleManager as unknown as BleManager,
       targetMacs: ['MAC1'],
+      registeredMacs: [],
       connectedDevicesRef: { current: [] },
       adapterMapRef: { current: new Map() },
       mtuMapRef: { current: new Map() },
@@ -228,7 +229,7 @@ describe('ConnectService test suite', () => {
     const result = await resolveActor(promise);
 
     expect(result).toEqual({ devices: [mockDevice1] });
-    expect(mockBleManager.connectToDevice).toHaveBeenCalledWith('MAC1', undefined);
+    expect(mockBleManager.connectToDevice).toHaveBeenCalledWith('MAC1', { autoConnect: false });
     expect(mockInput.adapterMapRef.current.get('MAC1')).toBe(mockAdapter1);
     expect(mockInput.mtuMapRef.current.get('MAC1')).toBe(512);
   });
@@ -245,8 +246,8 @@ describe('ConnectService test suite', () => {
     const result = await resolveActor(promise);
 
     expect(result.devices).toEqual([mockDevice1, mockDevice2]);
-    expect(mockBleManager.connectToDevice).toHaveBeenNthCalledWith(1, 'MAC1', undefined);
-    expect(mockBleManager.connectToDevice).toHaveBeenNthCalledWith(2, 'MAC2', undefined);
+    expect(mockBleManager.connectToDevice).toHaveBeenNthCalledWith(1, 'MAC1', { autoConnect: false });
+    expect(mockBleManager.connectToDevice).toHaveBeenNthCalledWith(2, 'MAC2', { autoConnect: false });
   });
 
   it('2.1. Group connect (2 MACs) sequential flow asserts isGrouped invariant', async () => {
@@ -291,8 +292,8 @@ describe('ConnectService test suite', () => {
     const result = await promise;
 
     expect(result).toEqual({ devices: [mockDevice1] });
-    expect(mockBleManager.connectToDevice).toHaveBeenNthCalledWith(1, 'MAC1', undefined);
-    expect(mockBleManager.connectToDevice).toHaveBeenNthCalledWith(2, 'MAC1', { refreshGatt: 'OnConnected' });
+    expect(mockBleManager.connectToDevice).toHaveBeenNthCalledWith(1, 'MAC1', { autoConnect: false });
+    expect(mockBleManager.connectToDevice).toHaveBeenNthCalledWith(2, 'MAC1', { autoConnect: false, refreshGatt: 'OnConnected' });
     expect(mockBleManager.cancelDeviceConnection).toHaveBeenCalledWith('MAC1');
   });
 
@@ -362,7 +363,7 @@ describe('ConnectService test suite', () => {
     const result = await promise;
 
     // connectToDevice should have been called (no settle delay blocking it)
-    expect(mockBleManager.connectToDevice).toHaveBeenCalledWith('MAC2', undefined);
+    expect(mockBleManager.connectToDevice).toHaveBeenCalledWith('MAC2', { autoConnect: false });
     // Both devices retained in final group
     expect(result.devices).toEqual([mockDevice1, mockDevice2]);
   });

@@ -22,6 +22,7 @@ interface MySkatesSlabProps {
   connectedDevices: DisplayDevice[];
   registeredDevices: DisplayDevice[];
   connectionStates?: Record<string, DeviceConnectionState>;
+  lastSeen?: Record<string, number>;
   powerStates: Record<string, boolean>;
   userProfile: UserProfile | null;
   onGroupPress: (group: CustomGroup) => void;
@@ -42,6 +43,7 @@ const MySkatesSlab = React.memo(({
   connectedDevices,
   registeredDevices,
   connectionStates,
+  lastSeen,
   powerStates,
   userProfile,
   onGroupPress,
@@ -77,6 +79,7 @@ const MySkatesSlab = React.memo(({
               colors={cardColors}
               rssiMap={rssiMap}
               connectionStates={connectionStates}
+              lastSeen={lastSeen}
               lastPattern={snapshot?.patternLabel}
               userProfile={userProfile}
               powerStates={powerStates}

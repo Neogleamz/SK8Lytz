@@ -189,6 +189,16 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
 
   const [updateTrigger, setUpdateTrigger] = useState(0);
   const [lastRawNotification, setLastRawNotification] = useState<{deviceId: string, payloadHex: string} | null>(null);
+  const [lastSeen, setLastSeen] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (lastRawNotification) {
+      setLastSeen(prev => ({
+        ...prev,
+        [lastRawNotification.deviceId.toUpperCase()]: Date.now()
+      }));
+    }
+  }, [lastRawNotification]);
   type DiagnosticFsmState = 'IDLE' | 'TEST_MODE' | 'DIAGNOSTICS';
   const [diagnosticState, setDiagnosticState] = useState<DiagnosticFsmState>('IDLE');
   const isTestModeActive = diagnosticState === 'TEST_MODE';
@@ -806,11 +816,14 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     // 2. Set React State
     setPowerState(deviceIds, targetState);
 
+    // Filter to only connected devices to support degraded mode (N-1)
+    const connectedMacs = deviceIds.filter(mac => connectedDevices.some(d => d.id.toUpperCase() === mac.toUpperCase()));
+
     // 3. Dispatch BLE command to each device via HAL
-    for (const mac of deviceIds) {
+    for (const mac of connectedMacs) {
       await dispatch.setPower(targetState, mac);
     }
-  }, [powerStates, setPowerState, dispatch]);
+  }, [powerStates, setPowerState, dispatch, connectedDevices]);
 
   const handleGroupPowerPress = useCallback((group: CustomGroup) => {
     handlePowerToggle(group.deviceIds);
@@ -1131,9 +1144,10 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
                   customGroups={customGroups}
                   lastGroupPatterns={lastGroupPatterns}
                   allDevices={allDevices as unknown as DisplayDevice[]}
-                    connectionStates={connectionStates}
                   connectedDevices={connectedDevices as unknown as DisplayDevice[]}
                   registeredDevices={registeredDevices as unknown as DisplayDevice[]}
+                  connectionStates={connectionStates}
+                  lastSeen={lastSeen}
                   powerStates={powerStates}
                   userProfile={userProfile}
                   onGroupPress={handleGroupPress}

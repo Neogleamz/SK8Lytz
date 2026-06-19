@@ -33,6 +33,7 @@ export const requestBalancedPriority = (deviceId: string): void => {
 export interface ConnectServiceInput {
   bleManager: BleManager;
   targetMacs: string[];
+  registeredMacs: string[];
   connectedDevicesRef: { current: Device[] };
   adapterMapRef: { current: Map<string, IControllerProtocol> };
   mtuMapRef: { current: Map<string, number> };
@@ -66,6 +67,7 @@ export const connectService = fromPromise<
   const {
     bleManager,
     targetMacs,
+    registeredMacs = [],
     connectedDevicesRef,
     adapterMapRef,
     mtuMapRef,
@@ -181,10 +183,13 @@ export const connectService = fromPromise<
           }
           
           if (!conn || !conn.id) {
-             conn = await bleManager.connectToDevice(
-              mac,
-              attempt > 1 ? { refreshGatt: 'OnConnected' } : undefined,
-            );
+             const isReconnect = registeredMacs.includes(mac.toUpperCase());
+             const options: import('react-native-ble-plx').ConnectionOptions = attempt > 1 ? { refreshGatt: 'OnConnected' } : {};
+             options.autoConnect = isReconnect;
+             
+             AppLogger.log('BLE_TRANSPORT', { action: 'connecting', mac: scrubPII(mac), autoConnect: options.autoConnect, attempt });
+             
+             conn = await bleManager.connectToDevice(mac, Object.keys(options).length > 0 ? options : undefined);
           }
           break;
         } catch (e: unknown) {

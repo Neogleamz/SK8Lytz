@@ -197,6 +197,7 @@ export const bleMachine = setup({
         input: ({ context }) => ({
           bleManager: context.bleManager,
           targetMacs: context.targetMacs ?? [],
+          registeredMacs: context.registeredMacs ?? [],
           connectedDevicesRef: { current: context.connectedDevices },
           adapterMapRef: context.adapterMapRef,
           mtuMapRef: context.mtuMapRef,

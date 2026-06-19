@@ -18,6 +18,7 @@ interface SkateGroupCardProps {
   isActive?: boolean;
   rssiMap?: Record<string, number>;
   connectionStates?: Record<string, DeviceConnectionState>;
+  lastSeen?: Record<string, number>;
   userProfile: UserProfile | null;
   powerStates: Record<string, boolean>;
   Colors: ThemePalette;
@@ -42,6 +43,7 @@ export const SkateGroupCard = ({
   isActive,
   rssiMap = {},
   connectionStates = {},
+  lastSeen = {},
   userProfile,
   powerStates,
   Colors,
@@ -57,6 +59,19 @@ export const SkateGroupCard = ({
   const isAllOff = onCount === 0;
   const isMixed = onCount > 0 && onCount < total;
   const isPoweredOn = onCount > 0;
+
+  const connectedCount = group.deviceIds.filter(id => connectionStates[id] === 'connected').length;
+  const isDegraded = connectedCount > 0 && connectedCount < total;
+
+  const disconnectedIds = group.deviceIds.filter(id => connectionStates[id] !== 'connected');
+  const lastSeenMs = disconnectedIds.length > 0 ? lastSeen[disconnectedIds[0]] : undefined;
+  let lastSeenText = 'reconnecting...';
+  if (lastSeenMs) {
+    const diffMins = Math.floor((Date.now() - lastSeenMs) / 60000);
+    if (diffMins > 0) {
+      lastSeenText = `Last seen ${diffMins}m ago`;
+    }
+  }
 
   const safeColors: readonly [string, string, ...string[]] = isPoweredOn && colors.length >= 2 
     ? [colors[0], colors[1], ...colors.slice(2)] 
@@ -96,7 +111,7 @@ export const SkateGroupCard = ({
                         key={`icon-${id}`} 
                         name="roller-skate" 
                         size={16} 
-                        color={isDeviceOn ? Colors.success : Colors.error} 
+                        color={connectionStates[id] === 'connected' ? (isDeviceOn ? Colors.success : '#555') : (connectionStates[id] === 'connecting' || connectionStates[id] === 'reconnecting' ? Colors.warning : Colors.error)} 
                         style={[
                           localStyles.skateIconBase,
                           index > 0 ? localStyles.skateStackOffset : localStyles.skateStackBase,
@@ -153,6 +168,11 @@ export const SkateGroupCard = ({
               >
                 {group.name.toUpperCase()}
               </Text>
+              {isDegraded && (
+                <Text style={{ color: Colors.warning, fontSize: 11, marginTop: 4, fontWeight: 'bold' }}>
+                  {`${connectedCount}/${total} skates connected — ${lastSeenText}`}
+                </Text>
+              )}
             </View>
 
             {/* BOTTOM BAR: Pattern Pill */}
