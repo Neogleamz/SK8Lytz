@@ -20,6 +20,7 @@ Fix StyleSheet.create firing on every render cycle (up to 20Hz) and resolve them
 - Replace raw shadow properties with Shadows.soft/Shadows.glow from theme.ts
 - Move getPatternColors to a utility file
 - Replace hardcoded hex colors with Colors.primary/secondary tokens
+// SKIPPED: DashboardStyles.ts modifications were already completed and merged in commit ce3572f16
 
 ### [MODIFY] [theme.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/theme/theme.ts)
 - Remove unnecessary ViewStyle/TextStyle casts by typing config objects strictly

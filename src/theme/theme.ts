@@ -67,32 +67,38 @@ export const Layout = {
 
 import { Platform, ViewStyle, TextStyle } from 'react-native';
 
-export const Shadows = {
-  soft: (Platform.select<ViewStyle>({
+export const Shadows: {
+  soft: ViewStyle;
+  medium: ViewStyle;
+  glow: (color: string) => ViewStyle;
+} = {
+  soft: Platform.select<ViewStyle>({
     ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4 },
     android: { elevation: 3 },
     web: { shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.15, shadowRadius: 4 },
     default: {},
-  }) ?? {}) as ViewStyle,
-  medium: (Platform.select<ViewStyle>({
+  }) ?? {},
+  medium: Platform.select<ViewStyle>({
     ios: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 },
     android: { elevation: 5 },
     web: { shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.2, shadowRadius: 6 },
     default: {},
-  }) ?? {}) as ViewStyle,
-  glow: (color: string): ViewStyle =>
-    (Platform.select<ViewStyle>({
+  }) ?? {},
+  glow: (color: string) =>
+    Platform.select<ViewStyle>({
       ios: { shadowColor: color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 8 },
       android: { shadowColor: color, elevation: 8 },
       web: { shadowColor: color, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 8 },
       default: {},
-    }) ?? {}) as ViewStyle,
+    }) ?? {},
 };
 
-export const TextShadows = {
-  glow: (color: string, radius: number = 10): TextStyle =>
-    (Platform.select<TextStyle>({
+export const TextShadows: {
+  glow: (color: string, radius?: number) => TextStyle;
+} = {
+  glow: (color: string, radius: number = 10) =>
+    Platform.select<TextStyle>({
       web: { textShadow: `0 0 ${radius}px ${color}` } as TextStyle,
       default: { textShadowColor: color, textShadowRadius: radius, textShadowOffset: { width: 0, height: 0 } },
-    }) ?? {}) as TextStyle,
+    }) ?? {},
 };
