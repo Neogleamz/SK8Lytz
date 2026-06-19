@@ -20,7 +20,7 @@ export const getRecoveryBackoffMs = (attempts: number): number => {
 };
 
 export const hasExceededMaxRecovery = (attempts: number): boolean => {
-  return attempts > MAX_RECOVERY_ATTEMPTS;
+  return attempts >= MAX_RECOVERY_ATTEMPTS;
 };
 
 interface RecoveryInput {

@@ -286,8 +286,8 @@ describe('RecoveryService test suite', () => {
     let gattCallCount = 0;
     (createGattSession as jest.Mock).mockImplementation(() => {
       gattCallCount++;
-      // Phase 1+2: first 5 calls fail; Phase 3 call succeeds
-      if (gattCallCount <= 5) {
+      // Phase 1+2: 16 createGattSession calls (loop breaks at attempts=17 before the 17th call); Phase 3 call succeeds
+      if (gattCallCount <= 16) {
         return Promise.reject(new Error('Phase 1/2 fail'));
       }
       return Promise.resolve({ conn: mockConn, adapter: mockAdapter });
