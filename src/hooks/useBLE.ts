@@ -40,6 +40,7 @@ import { enqueueWrite } from '../services/BleWriteQueue';
 import { useBLERSSIMonitor } from './ble/useBLERSSIMonitor';
 import { executePingDevice } from '../services/BlePingService';
 import { executeWriteToDevice, executeWriteChunked, executeProtocolResults as executeProtocolResultsService, BleWriteStateRefs } from '../services/BleWriteDispatcher';
+import { BackgroundBLEService } from '../services/ble/BackgroundBLEService';
 
 let BleManager: typeof import('react-native-ble-plx').BleManager;
 let State: typeof import('react-native-ble-plx').State;
@@ -299,6 +300,11 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   // Sync connectedDevicesRef with XState machine state to prevent split-brain arrays
   useEffect(() => {
     connectedDevicesRef.current = connectedDevices;
+    if (connectedDevices.length > 0) {
+      BackgroundBLEService.startKeepAlive();
+    } else {
+      BackgroundBLEService.stopKeepAlive();
+    }
   }, [connectedDevices]);
 
   const handleNotification = (

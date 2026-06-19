@@ -50,6 +50,7 @@
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "react-native": "0.83.2",
+    "react-native-background-actions": "^4.1.0",
     "react-native-ble-plx": "^3.5.1",
     "react-native-health": "^1.19.0",
     "react-native-health-connect": "^3.5.3",

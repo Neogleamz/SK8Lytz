@@ -19,6 +19,7 @@ import { useEffect, useRef } from 'react';
 import type { Device } from 'react-native-ble-plx';
 import type { RegisteredDevice } from '../hooks/useRegistration';
 import { AppLogger } from '../services/appLogger';
+import { AppState } from 'react-native';
 import { supabase } from '../services/supabaseClient';
 import { useAuth } from '../context/AuthContext';
 import { jitteredDelay } from '../utils/backoff';
@@ -452,32 +453,45 @@ export function useDashboardAutoConnect({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isBluetoothSupported, isBluetoothEnabled]);
 
+  const retriggerAutoConnect = () => {
+    const now = Date.now();
+    if (lastRetriggerRef.current && now - lastRetriggerRef.current < RETRIGGER_THROTTLE_MS) {
+      return; // Throttle to prevent burst-scan spam on rapid minimize/maximize
+    }
+    lastRetriggerRef.current = now;
+
+    AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_retriggered', payload_size: 0, ssi: 0 });
+    hasAutoConnectedRef.current = false;
+    autoConnectIdsRef.current = [];
+    autoConnectRetriesRef.current.clear();
+    
+    // Delay to allow Android/iOS Bluetooth stack to fully transition from suspended to active
+    // before blasting a high-power burst scan (see BLE_STACK_WAKEUP_DELAY_MS).
+    if (retriggerTimerRef.current) clearTimeout(retriggerTimerRef.current);
+    retriggerTimerRef.current = setTimeout(() => {
+      syncCloudAndAutoConnectRef.current(true).catch((e: unknown) => {
+        AppLogger.error('[AutoConnect] retrigger syncCloudAndAutoConnect failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
+      });
+    }, BLE_STACK_WAKEUP_DELAY_MS);
+  };
+
+  // ── AppState transition handler (Foreground Re-entry) ──
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_app_foregrounded', payload_size: 0, ssi: 0 });
+        retriggerAutoConnect();
+      }
+    });
+    return () => subscription.remove();
+  }, []);
+
   return {
     clearAutoConnectQueue: () => {
       autoConnectIdsRef.current = [];
     },
     // FIX: Allow DashboardScreen to re-trigger auto-connect after Setup Wizard completes or AppState wakes up.
     // Includes a 5-second throttle and a 1.5-second OS BLE stack wakeup delay.
-    retriggerAutoConnect: () => {
-      const now = Date.now();
-      if (lastRetriggerRef.current && now - lastRetriggerRef.current < RETRIGGER_THROTTLE_MS) {
-        return; // Throttle to prevent burst-scan spam on rapid minimize/maximize
-      }
-      lastRetriggerRef.current = now;
-
-      AppLogger.log('BLE_STATE_CHANGE', { event: 'auto_connect_retriggered', payload_size: 0, ssi: 0 });
-      hasAutoConnectedRef.current = false;
-      autoConnectIdsRef.current = [];
-      autoConnectRetriesRef.current.clear();
-      
-      // Delay to allow Android/iOS Bluetooth stack to fully transition from suspended to active
-      // before blasting a high-power burst scan (see BLE_STACK_WAKEUP_DELAY_MS).
-      if (retriggerTimerRef.current) clearTimeout(retriggerTimerRef.current);
-      retriggerTimerRef.current = setTimeout(() => {
-        syncCloudAndAutoConnectRef.current(true).catch((e: unknown) => {
-          AppLogger.error('[AutoConnect] retrigger syncCloudAndAutoConnect failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
-        });
-      }, BLE_STACK_WAKEUP_DELAY_MS);
-    },
+    retriggerAutoConnect,
   };
 }

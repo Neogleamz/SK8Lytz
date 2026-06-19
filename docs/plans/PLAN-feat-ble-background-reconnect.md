@@ -28,15 +28,13 @@ Source: No background mode configuration exists. BleManager is initialized witho
 - Add foreground re-entry logic: when app comes to foreground, check connection state and trigger reconnect if needed
 
 #### [MODIFY] iOS Info.plist
-- Add `bluetooth-central` to `UIBackgroundModes` array
+// SKIPPED: Already configured in app.config.js (UIBackgroundModes includes bluetooth-central)
 
 #### [MODIFY] AndroidManifest.xml
-- Add `FOREGROUND_SERVICE` permission
-- Add `FOREGROUND_SERVICE_CONNECTED_DEVICE` permission (Android 14+)
+// SKIPPED: Already configured in app.config.js (FOREGROUND_SERVICE and FOREGROUND_SERVICE_CONNECTED_DEVICE)
 
 #### [MODIFY] app.json / app.config.ts (Expo config)
-- Add iOS background modes plugin configuration
-- Add Android permissions
+// SKIPPED: Already configured in app.config.js
 
 #### [DEPENDENCY] react-native-background-actions (or expo-task-manager)
 - Android foreground service — requires dependency proposal approval
