@@ -5,7 +5,8 @@ import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { webStyle } from '../../utils/webStyles';
 import type { ThemePalette } from '../../theme/theme';
-import type { CustomGroup } from '../../types/dashboard.types';
+import type { CustomGroup, DeviceConnectionState } from '../../types/dashboard.types';
+import { ConnectionStateBadge } from '../ConnectionStateBadge';
 import type { UserProfile } from '../../services/ProfileService';
 
 interface SkateGroupCardProps {
@@ -16,6 +17,7 @@ interface SkateGroupCardProps {
   lastPattern?: string;
   isActive?: boolean;
   rssiMap?: Record<string, number>;
+  connectionStates?: Record<string, DeviceConnectionState>;
   userProfile: UserProfile | null;
   powerStates: Record<string, boolean>;
   Colors: ThemePalette;
@@ -39,6 +41,7 @@ export const SkateGroupCard = ({
   lastPattern,
   isActive,
   rssiMap = {},
+  connectionStates = {},
   userProfile,
   powerStates,
   Colors,
@@ -109,12 +112,14 @@ export const SkateGroupCard = ({
                   {[...group.deviceIds].reverse().map((id) => {
                     const isDeviceOn = powerStates[id] !== false;
                     const rssi = rssiMap[id] || -100;
+                    const cState = connectionStates[id] || 'disconnected';
                     const activeColor = { backgroundColor: isDeviceOn ? Colors.success : Colors.error };
                     return (
                       <View 
                         key={`rssi-${id}`} 
-                        style={localStyles.rssiRow}
-                      >
+                        style={localStyles.rssiRow}>
+                        <ConnectionStateBadge state={cState} hideLabel />
+                        <View style={{ width: 2 }} />
                         <View style={[localStyles.rssiBar1, rssi >= -90 ? activeColor : localStyles.rssiInactive]} />
                         <View style={[localStyles.rssiBar2, rssi >= -75 ? activeColor : localStyles.rssiInactive]} />
                         <View style={[localStyles.rssiBar3, rssi >= -60 ? activeColor : localStyles.rssiInactive]} />

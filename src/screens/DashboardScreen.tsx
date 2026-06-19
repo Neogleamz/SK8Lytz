@@ -69,7 +69,7 @@ import { STORAGE_FAVORITES } from '../constants/storageKeys';
 import { useHardwareNotifications, BLEDeviceMinimal, ProbedHardwareConfig } from '../hooks/useHardwareNotifications';
 import { useDeviceStateLedger, normalizeMac } from '../hooks/useDeviceStateLedger';
 import { useTelemetryLedger } from '../hooks/useTelemetryLedger';
-import type { DashboardViewState, DeviceSettings, CustomGroup, DisplayDevice, IFavoriteState, DevicePatternState } from '../types/dashboard.types';
+import type { DashboardViewState, DeviceSettings, CustomGroup, DisplayDevice, IFavoriteState, DevicePatternState, DeviceConnectionState } from '../types/dashboard.types';
 
 // DeviceSettings and CustomGroup are now imported from '../types/dashboard.types'
 // — migrated as part of Phase 1 Domain-Driven Refactor
@@ -287,6 +287,23 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   }, [connectedDevices, deviceConfigs, registeredDevices]);
 
   const isActuallyConnected = displayConnectedDevices.length > 0;
+
+  const connectionStates = React.useMemo(() => {
+    const states: Record<string, DeviceConnectionState> = {};
+    allDevices.forEach((d) => {
+      const id = d.id.toUpperCase();
+      const isConn = connectedDevices.some((c) => c.id.toUpperCase() === id);
+      if (isConn) {
+        states[id] = 'connected';
+      } else if (bleState === 'CONNECTING') {
+        states[id] = 'connecting';
+      } else {
+        states[id] = 'disconnected';
+      }
+    });
+    return states;
+  }, [allDevices, connectedDevices, bleState]);
+
   // BUG FIX: `d.groupId` is NEVER set on DisplayDevice — deviceConfigs stores `groupIds` (plural array),
   // not `groupId` (singular string). The prior check always returned false, making isPaired=false
   // for ALL connections including groups, causing dispatch to only write to the first device.
@@ -911,6 +928,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
           isSelected={selectedIds.includes(mac)}
           ledgerState={ledgerState ?? undefined}
           isPoweredOn={powerStates[mac] ?? true}
+            connectionState={connectionStates[mac]}
           onPress={handleDeviceItemPress}
           onLongPress={openSettings}
           onPowerToggle={handleDeviceItemPowerToggle}
@@ -1113,6 +1131,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
                   customGroups={customGroups}
                   lastGroupPatterns={lastGroupPatterns}
                   allDevices={allDevices as unknown as DisplayDevice[]}
+                    connectionStates={connectionStates}
                   connectedDevices={connectedDevices as unknown as DisplayDevice[]}
                   registeredDevices={registeredDevices as unknown as DisplayDevice[]}
                   powerStates={powerStates}
@@ -1279,6 +1298,7 @@ interface MemoizedDeviceItemProps {
   // R-08 FIX: Use the concrete DevicePatternState type (from dashboard.types) which DeviceItem
   // already expects. This replaces the original `any` cast with a properly-typed contract.
   ledgerState?: DevicePatternState;
+  connectionState?: DeviceConnectionState;
   isPoweredOn: boolean;
   onPress: (mac: string) => void;
   onLongPress: (device: DisplayDevice) => void;
@@ -1291,6 +1311,7 @@ const MemoizedDeviceItem = React.memo(({
   isSelectionMode,
   isSelected,
   ledgerState,
+  connectionState,
   isPoweredOn,
   onPress,
   onLongPress,
@@ -1320,6 +1341,7 @@ const MemoizedDeviceItem = React.memo(({
       showGroupIcon={false}
       isPoweredOn={isPoweredOn}
       onPowerToggle={handlePowerToggle}
+        connectionState={connectionState}
     />
   );
 });

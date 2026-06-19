@@ -11,7 +11,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 import type { UserProfile } from '../../services/ProfileService';
-import type { CustomGroup, DisplayDevice, GroupPatternSnapshot } from '../../types/dashboard.types';
+import type { CustomGroup, DisplayDevice, GroupPatternSnapshot, DeviceConnectionState } from '../../types/dashboard.types';
 import { resolveGroupCardColors } from '../../utils/presetColorUtils';
 import { SkateGroupCard } from './SkateGroupCard';
 
@@ -21,6 +21,7 @@ interface MySkatesSlabProps {
   allDevices: DisplayDevice[];
   connectedDevices: DisplayDevice[];
   registeredDevices: DisplayDevice[];
+  connectionStates?: Record<string, DeviceConnectionState>;
   powerStates: Record<string, boolean>;
   userProfile: UserProfile | null;
   onGroupPress: (group: CustomGroup) => void;
@@ -40,6 +41,7 @@ const MySkatesSlab = React.memo(({
   allDevices,
   connectedDevices,
   registeredDevices,
+  connectionStates,
   powerStates,
   userProfile,
   onGroupPress,
@@ -74,6 +76,7 @@ const MySkatesSlab = React.memo(({
               isActive={isActive}
               colors={cardColors}
               rssiMap={rssiMap}
+              connectionStates={connectionStates}
               lastPattern={snapshot?.patternLabel}
               userProfile={userProfile}
               powerStates={powerStates}

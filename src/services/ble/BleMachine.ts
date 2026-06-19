@@ -5,6 +5,8 @@ import { AppLogger } from '../appLogger';
 import { connectService } from './ConnectService';
 import { recoveryService } from './RecoveryService';
 import { heartbeatService } from './HeartbeatService';
+import { ZENGGE_SERVICE_UUID } from '../../protocols/ZenggeProtocol';
+import { BANLANX_SERVICE_UUID } from '../../protocols/BanlanxAdapter';
 /**
  * disconnectService — Invoked actor for DISCONNECTING state (H1 fix).
  * Performs GATT teardown: cancels all device connections and removes
@@ -22,6 +24,9 @@ const disconnectService = fromPromise<
   for (const device of connectedDevices) {
     try {
       await bleManager.cancelDeviceConnection(device.id);
+      if ('destroyClient' in bleManager && typeof bleManager.destroyClient === 'function') {
+        (bleManager as unknown as { destroyClient: () => void }).destroyClient();
+      }
     } catch (e: unknown) {
       AppLogger.warn('[disconnectService] cancelDeviceConnection failed', {
         deviceId: device.id,
@@ -136,7 +141,7 @@ export const bleMachine = setup({
       entry: [
         ({ context }) => {
           context.bleManager?.startDeviceScan(
-            context.scanServiceUUIDs,
+            [ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID],
             { allowDuplicates: false, scanMode: context.scanMode },
             context.scanCallback
           );
@@ -162,7 +167,7 @@ export const bleMachine = setup({
         },
         SCAN_RESUME: {
           actions: ({ context }) => context.bleManager?.startDeviceScan(
-            context.scanServiceUUIDs,
+            [ZENGGE_SERVICE_UUID, BANLANX_SERVICE_UUID],
             { allowDuplicates: false, scanMode: context.scanMode },
             context.scanCallback
           )

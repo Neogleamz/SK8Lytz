@@ -8,6 +8,8 @@ import { useProductCatalog } from '../hooks/useProductCatalog';
 import { Layout, Spacing } from '../theme/theme';
 import type { DevicePatternState } from '../types/dashboard.types';
 import { HardwareStatusPills } from './dashboard/HardwareStatusPills';
+import { ConnectionStateBadge } from './ConnectionStateBadge';
+import type { DeviceConnectionState } from '../types/dashboard.types';
 
 interface DeviceItemProps {
   device: { name: string | null; id: string; rssi?: number | null; rssiList?: number[]; isGroup?: boolean; type?: string; product_type?: string; };
@@ -21,9 +23,10 @@ interface DeviceItemProps {
   isPoweredOn?: boolean;
   /** Optional: last known pattern state from useDeviceStateLedger — drives preview swatch. */
   ledgerState?: DevicePatternState;
+  connectionState?: DeviceConnectionState;
 }
 
-function DeviceItem({ device, onPress, onLongPress, isConnected, showGroupIcon, isSelectionMode, isSelected, onPowerToggle, isPoweredOn = true, ledgerState }: DeviceItemProps) {
+function DeviceItem({ device, onPress, onLongPress, isConnected, showGroupIcon, isSelectionMode, isSelected, onPowerToggle, isPoweredOn = true, ledgerState, connectionState }: DeviceItemProps) {
   const { Colors } = useTheme();
   const styles = createStyles(Colors);
   const { allProfiles } = useProductCatalog();
@@ -88,9 +91,12 @@ function DeviceItem({ device, onPress, onLongPress, isConnected, showGroupIcon, 
                 {isConnected && <View style={[styles.avatarStatusDot, showGroupIcon && { backgroundColor: Colors.secondary }]} />}
               </View>
 
-              <Text style={[styles.deviceName, { color: isConnected ? Colors.text : Colors.textMuted }]} numberOfLines={1}>
-                {displayName}
-              </Text>
+              <View style={{ flexDirection: 'column', justifyContent: 'center' }}>
+                <Text style={[styles.deviceName, { color: isConnected ? Colors.text : Colors.textMuted }]} numberOfLines={1}>
+                  {displayName}
+                </Text>
+                {connectionState && <View style={{ marginTop: 2 }}><ConnectionStateBadge state={connectionState} /></View>}
+              </View>
             </View>
 
             {/* Right side: RSSI & Power */}

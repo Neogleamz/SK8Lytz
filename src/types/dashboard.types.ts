@@ -192,6 +192,14 @@ export type BleConnectionState =
   | 'DISCONNECTING'
   | 'ERROR';
 
+/** Per-device connection state for individual badges/indicators. */
+export type DeviceConnectionState =
+  | 'connected'
+  | 'connecting'
+  | 'reconnecting'
+  | 'disconnected'
+  | 'out_of_range';
+
 /** FSM for the primary Dashboard view router. */
 export type DashboardViewState =
   | 'LOADING_REGS'

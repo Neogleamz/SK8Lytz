@@ -173,6 +173,7 @@ export const connectService = fromPromise<
             });
             await new Promise(resolve => setTimeout(resolve, delay));
           } else {
+            bleManager.cancelDeviceConnection(mac).catch(() => {});
             break;
           }
         }
@@ -296,6 +297,7 @@ export const connectService = fromPromise<
           AppLogger.error(`FAILED TO CONNECT TO INDIVIDUAL DEVICE ${scrubPII(conn.id)}`, deviceError instanceof Error ? deviceError.message : String(deviceError), { deviceId: scrubPII(conn.id), payload_size: 0, ssi: 0 });
           AppLogger.log('BLE_CONNECTION_ERROR', { error: errMsg, deviceId: scrubPII(conn.id), context: 'group_sync_fail' });
         }
+        bleManager.cancelDeviceConnection(conn.id).catch(() => {});
         return null;
       }
     };
@@ -323,6 +325,11 @@ export const connectService = fromPromise<
 
   } catch (outerErr: unknown) {
     AppLogger.error('[BLE] connectService outer failed', outerErr instanceof Error ? outerErr.message : String(outerErr), { payload_size: 0, ssi: 0 });
+    for (const mac of targetMacs) {
+      if (!connectedDevicesRef.current.some(d => d.id === mac)) {
+        bleManager.cancelDeviceConnection(mac).catch(() => {});
+      }
+    }
     throw outerErr;
   }
 });
