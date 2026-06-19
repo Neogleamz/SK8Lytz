@@ -1,3 +1,13 @@
+### [MERGE READY] 2026-06-19T06:38Z — fix/autoconnect-dashboard-stale — 5ea98248
+**What fixed (Wave 2 — H6+M1+L3+L4):**
+- H6: Cloud sync MAC case mismatch — `cloudMacSet.add(d.device_mac || d.id)` now `.toUpperCase()` to match BLE `Device.id` convention
+- H6 cont: Merge loop `id` normalized via `const normalizedId = id.toUpperCase()` before `currentSet.has/add`
+- M1: `allDevicesRef` in DashboardScreen never synced after init — added `useEffect` to keep ref current
+- L3: Ref mutation after cloud sync doesn't trigger React re-render — added burst scan to force observer re-fire
+- L4: `renderItem` used `item.id` (Supabase composite key) for `deviceConfigs` lookup — changed to `mac` (uppercase MAC)
+**Verify result:** TSC ✅ Jest ✅ Blast Radius ✅ Type Safety ✅ BLE Guards ✅ Organic Disconnect ✅ Browser Console ✅ Workflow Refs ✅ (8/8 gates green)
+**Files touched:** src/hooks/useDashboardAutoConnect.ts, src/screens/DashboardScreen.tsx
+
 ### [MERGE] 2026-06-19T06:34Z — fix/ble-connection-pipeline → master @ b5338db6
 **What merged (Wave 1 unified — 2 plans, 5 commits):**
 - BleMachine: added disconnectService invoked actor + 10s DISCONNECTING timeout (H1/M3)
