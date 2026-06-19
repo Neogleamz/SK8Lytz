@@ -1,4 +1,8 @@
-﻿### [MERGE] 2026-06-19T08:16Z — feat-ble-excellence-w3 → master
+﻿### [MERGE READY] feat-ble-excellence-w4 - 177d8cb5
+**What:** Background reconnect and keepalive (Wave 4)
+**Files touched:** src/services/ble/BackgroundBLEService.ts, src/hooks/useBLE.ts, src/hooks/useDashboardAutoConnect.ts, docs/plans/PLAN-feat-ble-background-reconnect.md, package.json, package-lock.json
+**Verify result:** TSC ✅, Jest ✅, All gates green
+### [MERGE] 2026-06-19T08:16Z — feat-ble-excellence-w3 → master
 **What merged:** Implemented passive autoConnect for known devices and smart group health UI (degraded mode 1/2 skates connected).
 **Verify result:** TSC ✅, Jest ✅, tests updated, Gatekeeper passed.
 **Files touched:** MySkatesSlab.tsx, SkateGroupCard.tsx, DashboardScreen.tsx, BleMachine.ts, BleMachine.types.ts, ConnectService.ts, ConnectService.test.ts, dashboard.types.ts
@@ -4677,5 +4681,6 @@ TSC: ?  Jest: ?
 ### [MERGE READY] feat-ble-excellence-w2 - 928ff1ca
 **Files touched:** src/services/BleWriteQueue.ts, src/constants/bleTimingConstants.ts, src/services/ble/ConnectService.ts
 **Verify result:** TSC ✅  Jest ✅
+
 
 
