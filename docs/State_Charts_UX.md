@@ -189,3 +189,5 @@ stateDiagram-v2
 ### UX Mandates for Designers:
 1. **Clear Paused State:** The `PAUSED` state must be visually distinct from `ACTIVE` to prevent users from thinking their session is still recording while standing still.
 2. **Ending Grace Period:** The `ENDING` state handles network requests to Supabase. Ensure a non-blocking or well-animated loading state is shown so users don't double-tap "Stop" and trigger duplicate commits.
+
+<!-- Last Validated against Master Cartography Rebuild: 2026-06-19 -->

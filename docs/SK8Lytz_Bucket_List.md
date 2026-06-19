@@ -67,19 +67,9 @@ at useBLESweeper.ts:145
 
 ---
 
-### ⚡ [BATCH:feat/ble-excellence-w4] — `feat/ble-excellence-w4` — IN PROGRESS
+### ⚡ [BATCH:feat/ble-excellence-w4] — `feat/ble-excellence-w4` — COMPLETE
 > **Worktree**: `feat/ble-excellence-w4` · **Type**: Solo · **Prerequisite**: Wave 3 merged
 > **Source Analysis**: 📊 [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) — Gap 1 (the big one)
-
-- [/] **`feat/ble-background-reconnect`**
-  - **Tags:** `[✅ READY]` `[BLE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 HIGH]` `[BATCH:feat/ble-excellence-w4]` `[WAVE:4]`
-  - **Goal:** Maintain BLE connection when app backgrounds — iOS state restoration + Android foreground service so skaters' lights keep working with phone in pocket.
-  - **Decision Log:** Industry gap analysis: #1 UX gap. Every competitor (Govee, Hue, LIFX) maintains connection in background. Our app drops connection on background — lights stop responding.
-  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-feat-ble-background-reconnect.md](./plans/PLAN-feat-ble-background-reconnect.md)
-    Key finding: "Phone in pocket = lights die — the single highest-impact UX gap"
-    Rejected alternative: "Polling reconnect on foreground only — fails when user expects lights to just work"
-  - **Source of Truth:** 📖 [useBLE.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts) §BleManager init
-  - **Details:** Creates NEW BackgroundBLEService.ts. Modifies useBLE.ts, useDashboardAutoConnect.ts, Info.plist, AndroidManifest.xml, app.json. REQUIRES dependency proposal for Android foreground service library. Prerequisite: ALL prior waves merged.
 
 ---
 

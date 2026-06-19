@@ -250,3 +250,5 @@ We removed the redundant `enqueueWrite` calls from `useBLE.ts`. The `BleWriteDis
 - **Pro:** Eliminates the permanent priority queue deadlock that would lock the single-threaded dispatcher.
 - **Con:** Developers must trust `BleWriteDispatcher` for correct serialization and must not attempt to manually enqueue raw payload writes at the hook level.
 
+
+<!-- Synced against recent SESSION_LOG DECISION entries: 2026-06-19 -->

@@ -50,3 +50,5 @@ C4Context
    - If **Supabase** goes down: Skaters can still ride and change lights (Offline-First), but they cannot sync new crews or save cloud backups.
    - If the **Mobile OS** revokes Bluetooth permissions: The app is completely paralyzed.
    - If the **BLE Skate** hardware is out of range: The app queues the command and waits for the hardware to return (Auto-Recovery).
+
+<!-- Last Validated against Master Cartography Rebuild: 2026-06-19 -->

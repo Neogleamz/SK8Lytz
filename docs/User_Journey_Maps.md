@@ -87,3 +87,5 @@ journey
 - **Discrepant Sync State:** If WCSession context delivery fails or drops, the Apple Watch session can get stuck out of sync with the phone.
 - **Heart Rate Priority Fallback:** If the watch is disconnected, the phone falls back to querying Apple Health/Health Connect (15s poll) rather than real-time watch stream (5s push).
 
+
+<!-- Last Validated against Master Cartography Rebuild: 2026-06-19 -->
