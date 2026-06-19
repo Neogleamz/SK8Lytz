@@ -1,4 +1,8 @@
-﻿### [MERGE READY] feat-ble-excellence-w4 - 177d8cb5
+﻿### [MERGE] 2026-06-19T08:26Z — feat-ble-excellence-w4 → master
+**What merged:** Implemented background BLE reconnect (Wave 4 - Gap 1). App now maintains connection when backgrounded via Android foreground service (react-native-background-actions) and iOS state restoration.
+**Verify result:** TSC ✅, Jest ✅, tests updated, Gatekeeper passed.
+**Files touched:** BackgroundBLEService.ts, useBLE.ts, useDashboardAutoConnect.ts, package.json
+### [MERGE READY] feat-ble-excellence-w4 - 177d8cb5
 **What:** Background reconnect and keepalive (Wave 4)
 **Files touched:** src/services/ble/BackgroundBLEService.ts, src/hooks/useBLE.ts, src/hooks/useDashboardAutoConnect.ts, docs/plans/PLAN-feat-ble-background-reconnect.md, package.json, package-lock.json
 **Verify result:** TSC ✅, Jest ✅, All gates green
@@ -4681,6 +4685,7 @@ TSC: ?  Jest: ?
 ### [MERGE READY] feat-ble-excellence-w2 - 928ff1ca
 **Files touched:** src/services/BleWriteQueue.ts, src/constants/bleTimingConstants.ts, src/services/ble/ConnectService.ts
 **Verify result:** TSC ✅  Jest ✅
+
 
 
 
