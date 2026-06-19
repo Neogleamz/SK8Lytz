@@ -4664,3 +4664,8 @@ TSC: ?  Jest: ?
 - fix-ble-gatt-resource-cleanup: Hardened ConnectService and BleMachine with cancelDeviceConnection and destroyClient
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** BleMachine.ts, ConnectService.ts, DashboardScreen.tsx, SkateGroupCard.tsx, DeviceItem.tsx, MySkatesSlab.tsx, ConnectionStateBadge.tsx, dashboard.types.ts
+
+
+### [MERGE READY] feat-ble-excellence-w2 - 928ff1ca
+**Files touched:** src/services/BleWriteQueue.ts, src/constants/bleTimingConstants.ts, src/services/ble/ConnectService.ts
+**Verify result:** TSC ✅  Jest ✅
