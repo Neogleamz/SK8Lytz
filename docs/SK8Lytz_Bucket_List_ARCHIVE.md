@@ -3623,4 +3623,15 @@ pm run verify which includes QA tests.
   - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-refactor-spatial-pattern-engines.md](./plans/PLAN-refactor-spatial-pattern-engines.md)
   - **Source of Truth:** 📖 [SpatialEngine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/SpatialEngine.ts)
   - **Details:** MEDIUM severity. 4 existing files + 5 new extracted modules. Prerequisite: Wave 4 fully merged.
+
+
+- [x] **`fix/notifications-routing-safety`**
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 MED]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:2]`
+  - **Goal:** Fix floating promises, missing error handling, and telemetry context gaps in notification/routing services.
+  - **Decision Log:** R-11 — unprotected Supabase query in LocationService can crash the crew landing screen.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-notifications-routing-safety.md](./plans/PLAN-fix-notifications-routing-safety.md)
+  - **Source of Truth:** 📖 [LocationService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/LocationService.ts)
+  - **Details:** MEDIUM severity. 4 files (includes App.tsx). Prerequisite: Wave 1 fully merged.
+
+#### 🌊 Wave 3 — Architecture & Test Safety (5 parallel tasks, prerequisite: Wave 2 merged)
 

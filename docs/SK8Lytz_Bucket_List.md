@@ -116,16 +116,6 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [Sk8LytzProgrammer.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/Sk8LytzProgrammer.tsx)
   - **Details:** HIGH severity. 4 files. Prerequisite: Wave 1 fully merged.
 
-- [ ] **`fix/notifications-routing-safety`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 MED]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:2]`
-  - **Goal:** Fix floating promises, missing error handling, and telemetry context gaps in notification/routing services.
-  - **Decision Log:** R-11 — unprotected Supabase query in LocationService can crash the crew landing screen.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-notifications-routing-safety.md](./plans/PLAN-fix-notifications-routing-safety.md)
-  - **Source of Truth:** 📖 [LocationService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/LocationService.ts)
-  - **Details:** MEDIUM severity. 4 files (includes App.tsx). Prerequisite: Wave 1 fully merged.
-
-#### 🌊 Wave 3 — Architecture & Test Safety (5 parallel tasks, prerequisite: Wave 2 merged)
-
 - [ ] **`fix/session-context-safety`**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:3]`
   - **Goal:** Fix re-entrancy races, floating promises, error swallowing, and type safety in session tracking.

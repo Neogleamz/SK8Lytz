@@ -4545,3 +4545,9 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
+
+### [MERGE] 2026-06-18T20:24 — fix/notifications-routing-safety ? master @ 76435328
+**What merged:** Completed fix/notifications-routing-safety in Wave 2.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** Merged via gatekeeper
+
