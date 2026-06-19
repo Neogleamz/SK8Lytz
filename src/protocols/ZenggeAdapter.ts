@@ -42,9 +42,9 @@ import {
 
 export class ZenggeAdapter implements IControllerProtocol {
   // ─── Instance ──────────────────────────────────────────────────────────────
-  // Own ZenggeProtocol instance with independent sequence counter.
-  // DO NOT use this.protocol.static* methods from here — use this.protocol.*
-  private readonly protocol = new ZenggeProtocol();
+  // Uses the shared singleton instance to prevent sequence counter corruption
+  // between the adapter and BleWriteDispatcher (PROTOCOL_CORE-004 fix).
+  private get protocol() { return ZenggeProtocol.sharedInstance; }
 
   // ─── Identity ──────────────────────────────────────────────────────────────
   readonly protocolId = 'zengge';

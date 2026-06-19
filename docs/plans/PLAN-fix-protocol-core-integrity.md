@@ -33,3 +33,6 @@ Fix critical ZenggeAdapter sequence counter corruption and protocol correctness 
 ## Out of Scope
 - BleWriteDispatcher.ts (Wave 2)
 - SpatialEngine.ts (Wave 5)
+
+// SKIPPED: useProtocolBuilder.ts — Already fixed in previous commit 3d6104f9.
+// SKIPPED: ZenggeProtocol.ts — Already fixed in previous commit 3d6104f9.
