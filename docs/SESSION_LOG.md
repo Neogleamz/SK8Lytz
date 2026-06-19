@@ -9677,7 +9677,17 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
-### [MERGE READY] fix/protocol-core-integrity — bbb552be
-Files touched: src/protocols/ZenggeAdapter.ts, docs/plans/PLAN-fix-protocol-core-integrity.md
+### [MERGE READY] fix/data-layer-types — 1ef14b02
+Files touched: docs/plans/PLAN-fix-data-layer-types.md
 TSC: ?  Jest: ?
+
+
+### [MERGE READY] fix/manifest-permissions â€” f21e00c8
+**Files touched:** app.config.js
+**TSC:** âœ…  **Jest:** âœ…
+
+### [MERGE] 2026-06-18T20:10 — fix/manifest-permissions ? master @ 11b6798b
+**What merged:** Completed fix/manifest-permissions in Wave 1.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** Merged via gatekeeper
 
