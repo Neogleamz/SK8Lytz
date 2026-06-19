@@ -90,8 +90,8 @@ export function buildOfflineGroupMap(devicesArray: RegisteredDevice[]): Array<{
           offlineGroupMap.set(gId, { id: gId, group_name: gNames[idx] || gId, created_at: now, deviceIds: [] });
         }
         const entry = offlineGroupMap.get(gId)!;
-        if (!entry.deviceIds.includes(d.device_mac)) {
-          entry.deviceIds.push(d.device_mac);
+        if (!entry.deviceIds.includes(d.device_mac.toUpperCase())) {
+          entry.deviceIds.push(d.device_mac.toUpperCase());
         }
       }
     });

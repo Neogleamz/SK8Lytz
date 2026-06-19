@@ -208,7 +208,12 @@ export function useBLEScanner({
       });
       const merged = [...live];
       for (const d of staged) {
-        if (!merged.some(p => p.id === d.id)) merged.push(d);
+        const existingIdx = merged.findIndex(p => p.id === d.id);
+        if (existingIdx >= 0) {
+          merged[existingIdx] = d;  // Upsert: replace stale Device with fresh BLE handle
+        } else {
+          merged.push(d);
+        }
       }
       return merged;
     });
@@ -312,6 +317,12 @@ export function useBLEScanner({
       pendingStagedRef.current.push(device);
       scheduleFlush();
       queueDeviceForInterrogation(mac);
+    } else {
+      // Already-seen MAC: re-stage Device to refresh stale BLE peripheral handle in allDevices.
+      // Telemetry, firmware parse, and GATT interrogation are NOT re-triggered — only the
+      // Device object reference is refreshed so group card taps get a valid GATT handle.
+      pendingStagedRef.current.push(device);
+      scheduleFlush();
     }
   }, [scheduleFlush, queueDeviceForInterrogation, hwCacheRef]);
 
