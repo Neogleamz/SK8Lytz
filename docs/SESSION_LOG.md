@@ -1,3 +1,23 @@
+### [MERGE] 2026-06-19T06:34Z — fix/ble-connection-pipeline → master @ b5338db6
+**What merged (Wave 1 unified — 2 plans, 5 commits):**
+- BleMachine: added disconnectService invoked actor + 10s DISCONNECTING timeout (H1/M3)
+- BleMachine: HEARTBEAT_FAIL in RECOVERING appends to ghostedDeviceIds (H4)
+- BleMachine: CONNECT_REQUEST in CONNECTING cancels+restarts with new targets (H5)
+- BleMachine: RECOVERING 90s safety timeout (M2)
+- BleMachine: RECOVERY_PERMANENTLY_FAILED removes device from connectedDevices (M6)
+- BleMachine: SCAN_START accepted in READY state (M9)
+- BleMachine.types: targetMacs required, removed dead CONNECT_SUCCESS/CONNECT_FAIL (M8/L7)
+- ConnectService: notification subscription stored in notificationListeners for cleanup (H2)
+- ConnectService: MTU catch block now logs AppLogger.warn (M7)
+- ConnectService: Android 12+ connectedDevices race — retry loop (M5)
+- RecoveryService: while-loop guard uses PHASE_1+PHASE_2 total budget (H7)
+- RecoveryService: getSweepedDevice wired from BleMachine via context (H3)
+- RecoveryService: hasExceededMaxRecovery off-by-one fix (> → >=)
+- useBLE: wired notificationListeners ref + getSweepedDevice ref into machine input
+- 3 test files updated with new required mocks
+**Verify result:** TSC ✅ Jest ✅ (234/234) All 8 gates green
+**Files touched:** BleMachine.ts, BleMachine.types.ts, ConnectService.ts, RecoveryService.ts, useBLE.ts, ConnectService.test.ts, RecoveryService.test.ts, BleMachine.test.ts
+
 ### [ARTIFACT] 2026-06-19T06:10Z - Connection Pipeline Audit & Intake (3 plans)
 - [connection_pipeline_audit.md] - 7 HIGH / 9 MEDIUM / 10 LOW findings across 6 BLE connection files
 - [PLAN-fix-ble-state-machine-deadends.md] - BleMachine dead-end states (H1+H4+H5+M2+M3+M6+M8+M9)

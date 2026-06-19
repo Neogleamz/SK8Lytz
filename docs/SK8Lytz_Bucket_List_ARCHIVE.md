@@ -3660,4 +3660,26 @@ pm run verify which includes QA tests.
   - **Decision Log:** User-reported: group card connects 0-1 devices instead of 2; device card taps feel stale or connect wrong device. Root causes: `seenMacsRef` one-shot gate prevents `allDevices` refresh, `buildOfflineGroupMap` MAC case mismatch, wizard `group_ids` slug vs `CustomGroup.id` timestamp mismatch.
   - **Analysis:** 📊 Source: [group_connection_audit.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/group_connection_audit.md) · Plan: [PLAN-fix-group-connect-stale-devices.md](./plans/PLAN-fix-group-connect-stale-devices.md)
   - **Source of Truth:** 📖 [useBLEScanner.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts#L270-L315) §scanCallback + [useDashboardAutoConnect.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardAutoConnect.ts#L93) §buildOfflineGroupMap
+
+
+- [x] **`fix/ble-state-machine-deadends`** — merged @ b5338db6 — BleMachine dead-end states eliminated
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:fix/ble-connection-pipeline]` `[WAVE:1]`
+  - **Goal:** Eliminate dead-end states and silent event drops in BleMachine — DISCONNECTING service, RECOVERING timeout, dual HEARTBEAT_FAIL handling, concurrent CONNECT_REQUEST queuing.
+  - **Decision Log:** Audit found DISCONNECTING has no invoked service (H1), second HEARTBEAT_FAIL during RECOVERING silently drops the device (H4), CONNECT_REQUEST during CONNECTING is lost (H5), RECOVERING has no timeout (M2), permanently-failed devices stay in connectedDevices (M6).
+  - **Analysis:** 📊 Source: [connection_pipeline_audit.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_pipeline_audit.md) · Plan: [PLAN-fix-ble-state-machine-deadends.md](./plans/PLAN-fix-ble-state-machine-deadends.md)
+    Key finding: "DISCONNECTING waits for DISCONNECT_COMPLETE but nothing in the codebase sends it — machine hangs forever"
+    Rejected alternative: "Using FORCE_IDLE for disconnect — rejected because it doesn't perform GATT teardown"
+  - **Source of Truth:** 📖 [BleMachine.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts#L236-L243) §DISCONNECTING
+  - **Details:** 9 surgical edits across BleMachine.ts, BleMachine.types.ts, useBLE.ts. Touches state transitions only — service internals are Plan 2.
+
+
+- [x] **`fix/connect-recovery-services`** — merged @ b5338db6 — ConnectService subscriptions + RecoveryService Phase 3/cap fixed
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:fix/ble-connection-pipeline]` `[WAVE:1]`
+  - **Goal:** Fix orphaned monitor subscriptions in ConnectService, dead Phase 3 recovery, and Phase 1 attempt cap bug in RecoveryService.
+  - **Decision Log:** Audit found monitorCharacteristicForService subscription never stored/cleaned (H2 — duplicate callbacks after recovery), RecoveryService Phase 3 is dead code because getSweepedDevice is never injected (H3), while-loop guard caps at 5 despite PHASE_1_MAX=12 (H7).
+  - **Analysis:** 📊 Source: [connection_pipeline_audit.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_pipeline_audit.md) · Plan: [PLAN-fix-connect-recovery-services.md](./plans/PLAN-fix-connect-recovery-services.md)
+    Key finding: "Phase 3 passive sweeper-watch loops for 10 minutes doing nothing then fails — getSweepedDevice is never passed from BleMachine"
+    Rejected alternative: "Removing Phase 3 entirely — rejected because passive scanner reconnect is the correct last-resort strategy"
+  - **Source of Truth:** 📖 [RecoveryService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/RecoveryService.ts#L38-L169) §Phase3
+  - **Details:** 5 surgical edits across ConnectService.ts, RecoveryService.ts, BleMachine.ts (invoke input only). State transitions untouched — Plan 1 handles those.
 
