@@ -42,7 +42,7 @@ at useBLESweeper.ts:145
 
 #### 🌊 Wave 1 — Foundation & Quick Wins (7 parallel tasks, no prerequisite)
 
-- [ ] **`fix/manifest-permissions`**
+- [/] **$slug**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
   - **Goal:** Fix `neverForLocation` manifest regression that silently drops BLE scan results on Android 12+.
   - **Decision Log:** OS-PERM-001 from deep-dive audit — live production BLE scan bug confirmed on FCF1 hardware.
@@ -50,7 +50,7 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [AndroidManifest.xml](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/android/app/src/main/AndroidManifest.xml)
   - **Details:** CRITICAL severity. Single file change.
 
-- [ ] **`fix/protocol-core-integrity`**
+- [/] **$slug**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
   - **Goal:** Fix critical ZenggeAdapter sequence counter corruption and protocol correctness issues.
   - **Decision Log:** PROTOCOL_CORE-004 — sequence counter corruption can desync BLE commands on all connected devices.
@@ -58,7 +58,7 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [ZenggeAdapter.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/ZenggeAdapter.ts) + [ZENGGE_PROTOCOL_BIBLE.md](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/docs/ZENGGE_PROTOCOL_BIBLE.md)
   - **Details:** CRITICAL severity. Must cross-check all byte values against Protocol Bible.
 
-- [ ] **`fix/dashboard-styles-perf`**
+- [/] **$slug**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 MED]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
   - **Goal:** Fix StyleSheet.create firing on every render cycle (up to 20Hz during telemetry).
   - **Decision Log:** THEME-001 — massive GC pressure from StyleSheet factory invoked in render body.
@@ -66,7 +66,7 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [DashboardStyles.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/styles/DashboardStyles.ts)
   - **Details:** CRITICAL severity. Convert factory to static StyleSheet.create.
 
-- [ ] **`fix/controller-dispatch-safety`**
+- [/] **$slug**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
   - **Goal:** Fix PII telemetry leaks, re-entrancy races, and type safety in controller dispatch pipeline.
   - **Decision Log:** R-09 PII leak — MAC addresses sent unscrubbed to Supabase telemetry (GDPR risk).
@@ -74,7 +74,7 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [useControllerDispatch.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useControllerDispatch.ts)
   - **Details:** HIGH severity. 3 files, PII scrubbing + type safety.
 
-- [ ] **`fix/data-layer-types`**
+- [/] **$slug**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[DB]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 MED]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
   - **Goal:** Fix type safety, error swallowing, offline-first violations, and AsyncStorage key drift in data layer.
   - **Decision Log:** R-05/R-08 — cloud-first reads in SpeedTrackingService break offline skating.
@@ -82,7 +82,7 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [SpeedTrackingService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/SpeedTrackingService.ts)
   - **Details:** MEDIUM severity. 7 files.
 
-- [ ] **`fix/cloud-functions-security`**
+- [/] **$slug**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[☁️ CLOUD]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
   - **Goal:** Fix CORS, RLS bypass, and type safety in Supabase edge functions.
   - **Decision Log:** CLOUD-001 — missing CORS headers + service role key bypasses RLS.
@@ -90,7 +90,7 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [index.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/supabase/functions/notify-crew-session/index.ts)
   - **Details:** MEDIUM severity. 1 file.
 
-- [ ] **`fix/identity-auth-enriched`**
+- [/] **$slug**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
   - **Goal:** Fix DevSandboxDrawer production exposure, redundant ternary, loose BaseTabProps type, and refreshProfile re-entrancy race.
   - **Decision Log:** ID-010 — DevSandboxDrawer is accessible to production users (dead-code __DEV__ guard). ID-007 — refreshProfile() re-entrancy race from rapid AppState changes.
@@ -108,15 +108,6 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [ConnectService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts)
   - **Details:** HIGH severity. 11 files. Prerequisite: Wave 1 fully merged.
 
-- [x] **`fix/dashboard-screen-safety`** — merged @ 830ef034 — R-08 DevicePatternState typed; R-16 5 constants extracted; R-17 listener leak fixed (require→cleanup path); R-20 Platform.select; R-25 BackHandler guard. R-27/R-28 SKIPPED with documented justification.
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:2]`
-  - **Goal:** Fix type laundering, OS variance violations, event listener leaks, and FlatList bottlenecks.
-  - **Decision Log:** R-08 — 10+ `as unknown as` type laundering instances in DashboardScreen.tsx.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-dashboard-screen-safety.md](./plans/PLAN-fix-dashboard-screen-safety.md)
-  - **Source of Truth:** 📖 [DashboardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/DashboardScreen.tsx)
-  - **Details:** HIGH severity. 3 files. Prerequisite: Wave 1 fully merged.
-
-
 - [ ] **`fix/pii-scrubber`**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:2]`
   - **Goal:** Scrub all PII (MAC addresses, user names) from telemetry logging in crew/admin components.
@@ -124,14 +115,6 @@ at useBLESweeper.ts:145
   - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-pii-scrubber.md](./plans/PLAN-fix-pii-scrubber.md)
   - **Source of Truth:** 📖 [Sk8LytzProgrammer.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/Sk8LytzProgrammer.tsx)
   - **Details:** HIGH severity. 4 files. Prerequisite: Wave 1 fully merged.
-
-- [x] **`fix/camera-visualizer-safety`** — merged @ 73e369fa — R-04/R-11/R-25 hardened in CameraTracker; any→unknown in VisualizerHooks; dead import removed. Two findings SKIPPED with documented justification.
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 MED]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:2]`
-  - **Goal:** Fix missing error handling, type laundering, and delete duplicate CustomEffectVisualizer component.
-  - **Decision Log:** R-21 — CustomEffectVisualizer is functionally identical to LEDStripPreview (split-brain duplication).
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-camera-visualizer-safety.md](./plans/PLAN-fix-camera-visualizer-safety.md)
-  - **Source of Truth:** 📖 [CameraTracker.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/CameraTracker.tsx)
-  - **Details:** HIGH severity. 5 files (1 deletion). Prerequisite: Wave 1 fully merged.
 
 - [ ] **`fix/notifications-routing-safety`**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 MED]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:2]`
@@ -142,14 +125,6 @@ at useBLESweeper.ts:145
   - **Details:** MEDIUM severity. 4 files (includes App.tsx). Prerequisite: Wave 1 fully merged.
 
 #### 🌊 Wave 3 — Architecture & Test Safety (5 parallel tasks, prerequisite: Wave 2 merged)
-
-- [x] **`fix/docked-controller-safety`** — merged @ 85ca319e — Phase 1: extracted FixedPatternPreviewRow.tsx, DockedController.styles.ts, useLoadFavorite.ts (68KB→58KB). Phase 2: R-16 hardcoded 50ms→BLE_TIMING.INTER_DEVICE_WRITE_GAP_MS; R-26 isMusicBusyRef+isPatternBusyRef re-entrancy guards in applyFixedPattern+handleMusicChange; test mock useRef added.
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:3]`
-  - **Goal:** Extract 67KB DockedController monolith into sub-components, then fix re-entrancy races and context overload.
-  - **Decision Log:** R-23 — DockedController.tsx at 67KB is a collision zone. S4 mandates extraction before editing.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-docked-controller-safety.md](./plans/PLAN-fix-docked-controller-safety.md)
-  - **Source of Truth:** 📖 [DockedController.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/DockedController.tsx)
-  - **Details:** HIGH severity. Phase 1: extract components. Phase 2: fix violations. Prerequisite: Wave 2 fully merged.
 
 - [ ] **`fix/session-context-safety`**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:3]`
@@ -174,58 +149,6 @@ at useBLESweeper.ts:145
   - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-onboarding-safety.md](./plans/PLAN-fix-onboarding-safety.md)
   - **Source of Truth:** 📖 [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx)
   - **Details:** MEDIUM severity. 2 files. Prerequisite: Wave 2 fully merged.
-
-- [x] **`fix/test-suite-type-safety`** — merged @ 95eaac5c — Created test-env.d.ts global types; purged all `as any` from 22 test files; typed useRef/useCallback mocks in useControllerDispatch.test; jest.config.js exclusion. TSC ✅ Jest 234 passed 32 suites ✅ All guards ✅
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[APP]` `[✅ L-RISK]` `[🥩 Feast]` `[🧠 MED]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:3]`
-  - **Goal:** Purge all `any` casts from 22 test files. Create global type declarations for test environment.
-  - **Decision Log:** R-08 — 60+ `any`/`as any` casts across test suite violate type safety rules.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-test-suite-type-safety.md](./plans/PLAN-fix-test-suite-type-safety.md)
-  - **Source of Truth:** 📖 [BleMachine.test.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/__tests__/BleMachine.test.ts)
-  - **Details:** LOW severity. 22 test files + 1 new type declarations file. Prerequisite: Wave 2 fully merged.
-
-#### 🌊 Wave 4 — Services & Cleanup (4 parallel tasks, prerequisite: Wave 3 merged)
-
-- [x] **`fix/crew-services-hardening`** — merged @ 5201c152 — R-07 empty catch in heartbeat→AppLogger.warn; R-04 payload_size/ssi added to 4 error calls; R-11 silent catch in handleHandoffLeadership→AppLogger.warn; R-05 AsyncStorage offline cache for member list + optimistic UI for executeEndSession; R-16 5 timing constants extracted (BROADCAST_DEBOUNCE_MS, HEARTBEAT_INTERVAL_MS, CHANNEL_TEARDOWN_DELAY_MS, LEADER_BROADCAST_DEBOUNCE_MS, MEMBER_POLL_INTERVAL_MS). TSC ✅ Jest ✅ 8/8 gates ✅
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[☁️ CLOUD]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:4]`
-  - **Goal:** Fix circular dependencies, error swallowing, floating promises, memory leaks, and offline-first violations across crew services.
-  - **Decision Log:** R-29 — 3 circular dependency cycles in CrewService domain prevent clean imports.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-crew-services-hardening.md](./plans/PLAN-fix-crew-services-hardening.md)
-  - **Source of Truth:** 📖 [CrewSessionManager.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/CrewService/CrewSessionManager.ts)
-  - **Details:** HIGH severity. 8 files. Prerequisite: Wave 3 fully merged.
-
-- [x] **`fix/scanner-ble-hooks`** — merged @ ec50a5f3 — R-07: 2 empty catches in useBLEScanner → AppLogger.error; R-08: useRef<any> → useRef<EventFrom> in useBLE; R-16: 3 raw ms values → BLE_TIMING constants (OPTIMISTIC_CONFIRM_RESET_MS, OPTIMISTIC_RECONCILE_RESET_MS, LEDGER_WRITE_DEBOUNCE_MS) in useOptimisticBLE+useDeviceStateLedger; bleTimingConstants.ts updated. TSC ✅ Jest ✅ 8/8 gates ✅
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 MED]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:4]`
-  - **Goal:** Fix error swallowing, type safety, and hardcoded delays in BLE scanner and device state hooks.
-  - **Decision Log:** R-07 — empty catch blocks in useBLEScanner silently drop scan errors.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-scanner-ble-hooks.md](./plans/PLAN-fix-scanner-ble-hooks.md)
-  - **Source of Truth:** 📖 [useBLEScanner.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts)
-  - **Details:** HIGH severity. 5 files. Prerequisite: Wave 3 fully merged.
-
-- [x] **`fix/memory-leak-sweep`** — merged @ 85291fb7 — R-22: useEffect cleanup returns added to 6 components (AccountModal, CommunityModal, MarqueeText, ProductVisualizer, PatternCard, useAppMicrophone); R-20: Platform.select in SessionSummaryModal; R-12: stale closure guard in useAppMicrophone. TSC ✅ Jest ✅ 8/8 gates ✅
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:4]`
-  - **Goal:** Fix useEffect cleanup omissions, stale closures, and OS variance issues.
-  - **Decision Log:** R-22 — 6 components with useEffect lacking cleanup functions, causing memory leaks on unmount.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-memory-leak-sweep.md](./plans/PLAN-fix-memory-leak-sweep.md)
-  - **Source of Truth:** 📖 [AccountModal.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/AccountModal.tsx)
-  - **Details:** MEDIUM severity. 7 files. Prerequisite: Wave 3 fully merged.
-
-- [x] **`fix/ui-misc-safety`** — merged @ 08d279f4 — R-02 Oracle53 error handling; R-08 any[] fix; R-16 hardcoded delay constants extracted.
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:4]`
-  - **Goal:** Fix type safety, hardcoded delays, and fire-and-forget BLE streaming in miscellaneous UI components.
-  - **Decision Log:** R-02 — Oracle53LiveStream violates playback engine model with fire-and-forget 0x53 frames.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-ui-misc-safety.md](./plans/PLAN-fix-ui-misc-safety.md)
-  - **Source of Truth:** 📖 [Oracle53LiveStream.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/admin/tools/tabs/oracle/Oracle53LiveStream.tsx)
-  - **Details:** LOW severity. 8 files. Prerequisite: Wave 3 fully merged.
-
-#### 🌊 Wave 5 — Engine Refactor (1 solo task, prerequisite: Wave 4 merged)
-
-- [x] **`refactor/spatial-pattern-engines`** — merged @ 178c0b5f — Phase 1: extracted shared/engineTypes.ts, shared/spatialMath.ts, shared/coordinateSystem.ts, shared/engineUtils.ts. spatial/effectProcessors.ts (70+ builders). SpatialEngine 61KB→28KB. Circular deps fully resolved. TSC ✅ Jest ✅
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:5]`
-  - **Goal:** Resolve circular dependencies between pattern engine files and extract SpatialEngine (61KB) monolith.
-  - **Decision Log:** R-23/R-29 — 3 circular dependency cycles + SpatialEngine exceeds 30KB S4 safety threshold.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-refactor-spatial-pattern-engines.md](./plans/PLAN-refactor-spatial-pattern-engines.md)
-  - **Source of Truth:** 📖 [SpatialEngine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/protocols/SpatialEngine.ts)
-  - **Details:** MEDIUM severity. 4 existing files + 5 new extracted modules. Prerequisite: Wave 4 fully merged.
 
 ---
 
@@ -263,3 +186,4 @@ at useBLESweeper.ts:145
 - [ ] `feat/siri-google-assistant-integration` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🪙 25k] [⏱️ 3h] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] Siri/Google Assistant phone-level voice control.
 - [ ] `feat/geofence-rink-sync` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🪙 20k] [⏱️ 3h] [🧠 THINK] GPS-based auto-crew discovery.
 - [ ] `feat/add-swipe-nav` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🪙 12k] [⏱️ 3h] [🤖 FLASH] [📝️ NEEDS-PLAN] Card Swipe Navigation.
+

@@ -4518,3 +4518,12 @@ TSC: PASS  Jest: PASS
 **What merged:** Empty payload (no commits in worktree prior to merge)
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** None
+
+### [MERGE READY] fix/data-layer-types � 1ef14b02
+Files touched: docs/plans/PLAN-fix-data-layer-types.md
+TSC: ?  Jest: ?
+
+
+### [MERGE READY] fix/manifest-permissions — f21e00c8
+**Files touched:** app.config.js
+**TSC:** ✅  **Jest:** ✅
