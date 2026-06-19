@@ -4563,3 +4563,9 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
+
+### [MERGE] 2026-06-18T20:31 — fix/onboarding-safety ? master @ 5abc124b
+**What merged:** Completed fix/onboarding-safety in Wave 3.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** Merged via gatekeeper
+

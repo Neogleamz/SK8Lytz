@@ -3634,4 +3634,22 @@ pm run verify which includes QA tests.
   - **Details:** MEDIUM severity. 4 files (includes App.tsx). Prerequisite: Wave 1 fully merged.
 
 #### 🌊 Wave 3 — Architecture & Test Safety (5 parallel tasks, prerequisite: Wave 2 merged)
+
+
+- [x] **`fix/onboarding-safety`**
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:3]`
+  - **Goal:** Fix error swallowing, hardcoded delays, and OS variance in onboarding screens.
+  - **Decision Log:** R-07/R-20 — empty catch in AuthScreen + Platform.OS ternaries instead of Platform.select.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-onboarding-safety.md](./plans/PLAN-fix-onboarding-safety.md)
+  - **Source of Truth:** 📖 [HardwareSetupWizardScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/screens/Onboarding/HardwareSetupWizardScreen.tsx)
+  - **Details:** MEDIUM severity. 2 files. Prerequisite: Wave 2 fully merged.
+
+
+- [x] **`fix/crew-ui-types`**
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:3]`
+  - **Goal:** Replace all `any` type annotations in crew UI components with proper types.
+  - **Decision Log:** R-08 — 8 `any` casts across 4 crew UI components.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-crew-ui-types.md](./plans/PLAN-fix-crew-ui-types.md)
+  - **Source of Truth:** 📖 [CrewCard.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/crew/CrewCard.tsx)
+  - **Details:** MEDIUM severity. 4 files. Prerequisite: Wave 2 fully merged.
 
