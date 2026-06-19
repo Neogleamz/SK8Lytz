@@ -90,6 +90,14 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [index.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/supabase/functions/notify-crew-session/index.ts)
   - **Details:** MEDIUM severity. 1 file.
 
+- [ ] **`fix/identity-auth-enriched`**
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:1]`
+  - **Goal:** Fix DevSandboxDrawer production exposure, redundant ternary, loose BaseTabProps type, and refreshProfile re-entrancy race.
+  - **Decision Log:** ID-010 — DevSandboxDrawer is accessible to production users (dead-code __DEV__ guard). ID-007 — refreshProfile() re-entrancy race from rapid AppState changes.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-identity-auth-enriched.md](./plans/PLAN-fix-identity-auth-enriched.md)
+  - **Source of Truth:** 📖 [DevSandboxDrawer.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/auth/DevSandboxDrawer.tsx)
+  - **Details:** ⚠️ PRODUCTION EXPOSURE. 4 files, surgical edits only.
+
 #### 🌊 Wave 2 — BLE Core & Privacy (5 parallel tasks, prerequisite: Wave 1 merged)
 
 - [ ] **`fix/ble-services-hardening`**
@@ -201,7 +209,7 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [AccountModal.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/AccountModal.tsx)
   - **Details:** MEDIUM severity. 7 files. Prerequisite: Wave 3 fully merged.
 
-- [ ] **`fix/ui-misc-safety`**
+- [x] **`fix/ui-misc-safety`** — merged @ 08d279f4 — R-02 Oracle53 error handling; R-08 any[] fix; R-16 hardcoded delay constants extracted.
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍱 Meal]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:4]`
   - **Goal:** Fix type safety, hardcoded delays, and fire-and-forget BLE streaming in miscellaneous UI components.
   - **Decision Log:** R-02 — Oracle53LiveStream violates playback engine model with fire-and-forget 0x53 frames.
@@ -211,7 +219,7 @@ at useBLESweeper.ts:145
 
 #### 🌊 Wave 5 — Engine Refactor (1 solo task, prerequisite: Wave 4 merged)
 
-- [ ] **`refactor/spatial-pattern-engines`**
+- [x] **`refactor/spatial-pattern-engines`** — merged @ 178c0b5f — Phase 1: extracted shared/engineTypes.ts, shared/spatialMath.ts, shared/coordinateSystem.ts, shared/engineUtils.ts. spatial/effectProcessors.ts (70+ builders). SpatialEngine 61KB→28KB. Circular deps fully resolved. TSC ✅ Jest ✅
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 HIGH]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:5]`
   - **Goal:** Resolve circular dependencies between pattern engine files and extract SpatialEngine (61KB) monolith.
   - **Decision Log:** R-23/R-29 — 3 circular dependency cycles + SpatialEngine exceeds 30KB S4 safety threshold.

@@ -4513,3 +4513,8 @@ TSC: PASS  Jest: PASS
 - `src/components/SessionSummaryModal.tsx` — FIXED R-20: Platform.OS ternary to Platform.select on card shadow
 - `src/hooks/useAppMicrophone.ts` — FIXED R-12: added recorderRef to fix stale closure in 20Hz setInterval
 **TSC:** OK  **Jest:** OK (234 tests)  **All 8 QA gates:** OK
+
+### [MERGE] 2026-06-19T00:39 — fix-gatt-conn-133-exception -> master @ 21909fa4
+**What merged:** Empty payload (no commits in worktree prior to merge)
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** None
