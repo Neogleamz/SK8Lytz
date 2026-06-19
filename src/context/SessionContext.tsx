@@ -185,7 +185,11 @@ function SessionMachineWrapper({
     return () => SessionBridge.unregister();
   }, [send]);
 
-  const sessionPhase = snapshot.value as SessionPhase;
+  const getSessionPhase = (val: unknown): SessionPhase => {
+    if (val === 'ACTIVE' || val === 'PAUSED' || val === 'ENDING') return val;
+    return 'IDLE';
+  };
+  const sessionPhase = getSessionPhase(snapshot.value);
   const isSkateSessionActive = sessionPhase === 'ACTIVE' || sessionPhase === 'PAUSED' || sessionPhase === 'ENDING';
 
   // UI timer tick (1s interval)

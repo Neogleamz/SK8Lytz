@@ -18,7 +18,7 @@ Fix re-entrancy races, floating promises, error swallowing, and type safety in s
 ## Files to Create/Modify
 
 ### [MODIFY] [SessionContext.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/context/SessionContext.tsx)
-### [MODIFY] [useTelemetryLedger.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useTelemetryLedger.ts)
+### [MODIFY] [useTelemetryLedger.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useTelemetryLedger.ts) // SKIPPED: Empty catch blocks already fixed in master
 
 ## Verification
 - `npm run verify`
