@@ -9677,3 +9677,7 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
+### [MERGE READY] fix/protocol-core-integrity — bbb552be
+Files touched: src/protocols/ZenggeAdapter.ts, docs/plans/PLAN-fix-protocol-core-integrity.md
+TSC: ?  Jest: ?
+
