@@ -1,7 +1,7 @@
 # /start-task — The Unified Start Task Engine
 
 **Description:** The Unified Start Task Engine — Triage, Worktree Creation, and Plan Review Gates (Batch-Aware).
-**Persona:** 🕵️ Scout — Reyes
+**Lead Persona:** 🕵️ Scout — Reyes (orchestrated)
 
 **Activated by:** `/start-task`, `"start working on the bucket list"`, `"what's next"`, `"focus on <slug>"`
 
@@ -9,26 +9,28 @@ When I instruct you to do ANY of the above, you must execute this pipeline seque
 
 ---
 
+## 🪃 Orchestration Model (read first)
+
+`/start-task` runs on the **main thread as the orchestrator**. Each phase is owned by a persona that now exists as a real subagent in `.claude/agents/`. Two delegation modes:
+
+- **▶ DELEGATE** — spawn the named subagent via the Agent tool for autonomous, self-contained work. It runs in its own context + model + tool boundary and returns a result. Use for research, code execution, QA, and parity scans.
+- **▶ MAIN THREAD** — keep on the orchestrator because the phase needs live back-and-forth with the user (brainstorm, plan approval, push consent). Subagents **cannot** prompt the user mid-task, so these gates must not be delegated.
+
+After each subagent returns, the orchestrator posts the HANDOFF block and proceeds to the next phase.
+
+---
+
 ### Phase 0 — Reyes: Source of Truth Prime (Anti-Hallucination Gate)
+**▶ DELEGATE to the `reyes` subagent.** Spawn it with the target task slug and this scope:
 
-**Reyes Knowledge-First — MANDATORY FIRST ACTION:**
-
-Announce: *"🕵️ Scout — Reyes is investigating... Checking what we already know."*
-
-1. Read `docs/SESSION_LOG.md` — last 5 entries. Search for any prior findings related to the target task's domain. If prior [DECISION] entries exist about the same topic, cite them and skip re-investigation.
-
-2. Then read the SoT sources:
-   - `docs/SK8Lytz_App_Master_Reference.md` §3 (BLE Protocol Library) and §4 (Hook & Service Registry)
-   - `docs/ZENGGE_PROTOCOL_BIBLE.md` §3 (Opcode Command Map)
-   Skip steps 2–3 if the task is `[UI]` or `[CLOUD]` only.
-
-3. Output the Knowledge State:
-   ```
-   📊 Knowledge State for <task-slug>:
-   SESSION_LOG: [findings found / no prior entries]
-   Master Reference §3: [relevant entries cited / not applicable]
-   Protocol Bible §3: [relevant entries cited / not applicable]
-   ```
+> Read `docs/SESSION_LOG.md` (last 5 entries) for prior findings in the task's domain — cite and flag any that let us skip re-investigation. Then read the SoT sources (`docs/SK8Lytz_App_Master_Reference.md` §3 + §4, `docs/ZENGGE_PROTOCOL_BIBLE.md` §3) — skip these if the task is `[UI]` or `[CLOUD]` only. Return the Knowledge State block:
+> ```
+> 📊 Knowledge State for <task-slug>:
+> SESSION_LOG: [findings found / no prior entries]
+> Master Reference §3: [relevant entries cited / not applicable]
+> Protocol Bible §3: [relevant entries cited / not applicable]
+> ```
+> If live code contradicts the Master Reference, HALT and report — do not reconcile.
 
 ```
 ─────────────────────────────────────────────────────────────────────
@@ -42,11 +44,10 @@ Context: SoT is primed. Casey takes over sprint coordination from this point.
 ---
 
 ### Phase 0.5 — Casey: Pre-Execution Intake Checklist Gate
+**▶ MAIN THREAD** (hard gate — may HALT and need the user). Optionally delegate the read-only scans to `casey`, but the orchestrator owns the HALT decision.
 
 **MANDATORY HARD GATE — runs before ANY worktree creation or subagent launch.**
 **This enforces Kanban Constitution Rule 11. If ANY check fails, HALT immediately.**
-
-For the target task, run this 6-point checklist and output the result:
 
 ```
 Pre-Execution Gate for <slug>:
@@ -65,11 +66,11 @@ Pre-Execution Gate for <slug>:
 ---
 
 ### Phase 1 — Casey: Triage & Setup
+**▶ MAIN THREAD** (worktree creation can HALT on a dirty master; keep it on the orchestrator). The `casey` subagent may be delegated for the orphan-worktree scan and batch-conflict check.
 
-1. **Target Identification (Batch-Aware)**: Parse `docs/SK8Lytz_Bucket_List.md`. Look strictly inside `## 🚧 ACTIVE SPRINT`. If it is empty or fully completed, look at `## 🔥 ON DECK`. Pull the TOP unblocked batch group into ACTIVE SPRINT.
+1. **Target Identification (Batch-Aware)**: Parse `docs/SK8Lytz_Bucket_List.md`. Look strictly inside `## 🚧 ACTIVE SPRINT`. If empty/completed, look at `## 🔥 ON DECK`. Pull the TOP unblocked batch group into ACTIVE SPRINT.
 
 1.5. **Context Resume (The WHY Read — MANDATORY before worktree creation)**:
-   Read the target task's full entry. Output this 3-line summary to chat before any other action:
    ```
    📋 Context Resume for <slug>:
    WHY: <Decision Log verbatim>
@@ -94,14 +95,12 @@ Context: Task slug, WHY, Analysis, and SoT are all confirmed.
 ---
 
 ### Phase 2 — Morgan: Brainstorming & Theory
+**▶ MAIN THREAD** — this is an interactive brainstorm with the user; it CANNOT be delegated (a subagent can't chat with the user). The orchestrator adopts Morgan's voice and rules directly. (You may delegate a one-shot `morgan` call for Giants-First benchmarking research that returns a written analysis, then resume the interactive brainstorm on the main thread.)
 
-**Morgan Rejection-Register-First — MANDATORY FIRST ACTION:**
-
-Before proposing any approach, search `docs/SESSION_LOG.md` for `Rejected:` entries related to the current task's domain.
-
-- **Mandatory Brainstorming**: Drop into a read-only consultative mode. Present your understanding of the task and ask the user to chat through the approach. Do not proceed until the user says "what's next" or asks for a plan.
-- **Devil's Advocate**: If the task is tagged `[Feast]`, you MUST identify 3 potential failure points AND write them to SESSION_LOG as a `[DECISION]` entry before handing to Quinn.
-- **Write Rejected Alternative**: When the user approves an approach, Morgan MUST record the rejected alternative in a `[DECISION]` entry.
+- **Rejection-Register-First (FIRST action):** search `docs/SESSION_LOG.md` for `Rejected:` entries in the task's domain before proposing anything.
+- **Mandatory Brainstorming**: read-only consultative mode. Present your understanding and chat through the approach. Do not proceed until the user says "what's next" or asks for a plan.
+- **Devil's Advocate**: if `[Feast]`, identify 3 failure points AND write them to SESSION_LOG as a `[DECISION]` before handing to Quinn.
+- **Write Rejected Alternative**: when the user approves an approach, record the rejected alternative in a `[DECISION]` entry.
 
 ```
 ─────────────────────────────────────────────────────────────────────
@@ -115,11 +114,11 @@ Context: Chosen approach and rejected alternative logged to SESSION_LOG.
 ---
 
 ### Phase 3 — Quinn: Planning
+**▶ DELEGATE to the `quinn` subagent** to generate the plan, THEN return to the main thread for the approval gate.
 
-- Once the user approves the brainstorm, adopt the TPM persona.
-- Generate a rigorous, step-by-step Implementation Plan.
-- Save a copy to `docs/plans/<slug>.md` (or update existing).
-- **HALT ALL ACTION.** You must explicitly ask: "I have generated the plan artifact. Type 'proceed' to execute, or provide feedback." Do not write any code.
+Spawn `quinn` with the approved approach + SoT citations from Phase 0/2. It writes `docs/plans/<slug>.md` (every code step gets a `Verify:` sub-step; files >20KB get `[HIGH RISK]` + backup; ends with an "Out of Scope" section) and returns the plan path + summary.
+
+**▶ MAIN THREAD GATE:** After Quinn returns, the orchestrator **HALTS ALL ACTION** and asks: *"I have generated the plan artifact at `docs/plans/<slug>.md`. Type 'proceed' to execute, or provide feedback."* Do not write any code until the user types 'proceed'.
 
 ```
 ─────────────────────────────────────────────────────────────────────
@@ -133,17 +132,9 @@ Context: The plan is law. Sage cannot deviate from it without flagging Morgan fo
 ---
 
 ### Phase 4 — Sage: Execution
+**▶ DELEGATE to the `sage` subagent** (only after the user typed 'proceed'). Spawn it with the worktree path + the locked plan and this scope:
 
-**Sage Look-Before-Leap — MANDATORY BEFORE FIRST EDIT:**
-
-Before touching any file:
-1. Call `view_file` on the exact target lines. Never write from memory.
-2. Scan the target file for Boy Scout queue items: `any` casts, dead imports, `console.log`, missing `useEffect` dependency arrays.
-3. Report: `"Sage pre-read complete. File: [name]. Boy Scout queue: [items found / none]."`
-
-- Execute code strictly according to the TPM's plan within the isolated task worktree.
-- **Before the first edit, quote the PLAN's "Files to Create/Modify" list verbatim** — this is the scope fence.
-- **After EVERY file edit**, run `git diff HEAD <filename>`. If any line outside plan scope changed → `git checkout -- <filename>` and retry.
+> Execute the plan strictly within the worktree `../SK8Lytz-worktrees/<slug>`. Before the first edit, quote the plan's "Files to Create/Modify" list verbatim as the scope fence. Look-Before-Leap before every edit (read exact target lines; never write from memory). After EVERY file edit run `git diff HEAD <filename>` — if any line outside plan scope changed, `git checkout -- <filename>` and retry. Apply Boy Scout cleanup only within touched files. If any file exceeds 30KB, HALT and report "component extraction required." Return: files touched + Boy Scout items cleaned + any blocker.
 
 ```
 ─────────────────────────────────────────────────────────────────────
@@ -157,10 +148,11 @@ Context: Files changed: [list]. Sage confirmed Boy Scout cleanup applied within 
 ---
 
 ### Phase 5 — Blake: Edge-Case Hunt
+**▶ DELEGATE to the `blake` subagent** (it auto-loads the `qa-tester` skill). Spawn it with the diff scope:
 
-- Before committing, adopt the QA persona (`/qa-tester`).
-- List 5 weird, rare edge cases (e.g., backgrounding the app, BLE drops, null states).
-- Verify the code explicitly handles these edge cases.
+> Run the 5-case checklist (BLE drop, backgrounding, null race, concurrent writes, domain-specific) against `git diff HEAD`. KNOWN_ISSUES pre-scan first. If the diff spans disparate domains, fan out one read-only sub-agent per domain. Return the QA Edge-Case Report table + binary verdict (PASS ✅ / NEEDS FIX ⚠️). Report gaps with `file:line` — do NOT fix code; hand confirmed gaps back for Sage.
+
+If the verdict is NEEDS FIX, the orchestrator routes the gaps back to a fresh `sage` delegation, then re-runs Blake. Loop until PASS.
 
 ```
 ─────────────────────────────────────────────────────────────────────
@@ -174,20 +166,9 @@ Context: QA verdict is [PASS/NEEDS FIX — resolved].
 ---
 
 ### Phase 5.6 — Avery: Documentation Parity Check
+**▶ DELEGATE to the `avery` subagent.** Spawn it with this scope:
 
-**Avery Parity-Scan-First — MANDATORY:**
-
-```powershell
-git diff HEAD --name-only
-```
-For each changed file, check:
-- `src/hooks/use*.ts` → requires §4 Hook Registry row
-- `src/services/*.ts` → requires §4 Service Registry row
-- `src/protocols/*.ts` or `src/services/BLE*.ts` → requires §3 BLE Protocol Library check
-- `*Machine.ts` or XState config → requires `docs/State_Charts_UX.md` check
-- `supabase/migrations/*.sql` → triggers `/db-sync` automatically
-
-Output parity delta and update `docs/SK8Lytz_App_Master_Reference.md` as needed.
+> Run `git diff HEAD --name-only`. For each changed file: `src/hooks/use*.ts` → §4 Hook Registry row; `src/services/*.ts` → §4 Service Registry row; `src/protocols/*.ts` or `src/services/BLE*.ts` → §3 BLE Protocol Library check; `*Machine.ts`/XState → `docs/State_Charts_UX.md` check; `supabase/migrations/*.sql` → trigger `/db-sync`. Output the parity delta and update `docs/SK8Lytz_App_Master_Reference.md` as needed. Return parity status: CLEARED ✅ or GAPS RESOLVED ✅.
 
 ```
 ─────────────────────────────────────────────────────────────────────
@@ -201,37 +182,25 @@ Context: All gates cleared — QA ✅, Docs ✅.
 ---
 
 ### Phase 6 — Taylor: Release Manager (Attestation & Gatekeeper Merge)
+**▶ DELEGATE to the `taylor` subagent** for the mechanical attestation + merge, with one **▶ MAIN THREAD** gate. Spawn `taylor` with this scope:
 
-**Taylor Attestation-First — MANDATORY FIRST ACTION:**
+> 1. Version consistency check:
+>    ```powershell
+>    Select-String -Path package.json -Pattern '"version"'
+>    Select-String -Path app.json -Pattern '"versionCode"'
+>    git log -1 --format="%h"
+>    ```
+> 2. Commit within worktree: `git add .` then `git commit -m "feat: complete <task-slug>"`.
+> 3. Run `npm run verify` immediately AFTER the final commit to anchor the attestation to the exact HEAD hash.
+> 4. Merge via gatekeeper (CWD must be the master fortress, NOT the worktree):
+>    ```powershell
+>    powershell.exe -ExecutionPolicy Bypass -File .\tools\fortress-gatekeeper.ps1 -ArchiveTask <task-slug>
+>    ```
+> 5. Write the SESSION_LOG `[MERGE]` entry (slug → master @ hash, verify result, files touched).
+> 6. Clean-slate check: `git status -s` on master.
+> 7. Board sync: update the ACTIVE SPRINT header in `docs/SK8Lytz_Bucket_List.md` with the completed slug + next pending task.
+> 8. Discord: `notify_discord.ps1 -Message "✅ Task <task-slug> merged to master. Tests passed. Master is green."`
 
-```powershell
-Select-String -Path package.json -Pattern '"version"'
-Select-String -Path app.json -Pattern '"versionCode"'
-git log -1 --format="%h"
-```
-
-1. **Verification Check (PoE):**
-   ```powershell
-   npm run verify
-   ```
-2. **Commit within worktree:** `git add .` then `git commit -m "feat: complete <task-slug>"`
-   > IMPORTANT: Run `npm run verify` immediately AFTER your final commit to anchor the attestation to the exact HEAD hash.
-3. **Merge via Gatekeeper:**
-   ```powershell
-   powershell.exe -ExecutionPolicy Bypass -File .\tools\fortress-gatekeeper.ps1 -ArchiveTask <task-slug>
-   ```
-4. **Write SESSION_LOG [MERGE] entry (mandatory):**
-   ```markdown
-   ### [MERGE] YYYY-MM-DDTHH:MM — <slug> → master @ <commit-hash>
-   **What merged:** (bullet list of what changed and why)
-   **Verify result:** TSC ✅/❌, Jest ✅/❌, gates ✅/❌
-   **Files touched:** (list from gatekeeper output)
-   ```
-5. **Clean Slate Check**: Run `git status -s` on master immediately after merge.
-6. **Board Sync (MANDATORY — FRICTION-020 Fix)**: Edit `docs/SK8Lytz_Bucket_List.md` to update the ACTIVE SPRINT header with completed slug and next pending task.
-7. **Discord Notification:**
-   ```powershell
-   powershell.exe -ExecutionPolicy Bypass -File .\tools\discord-bridge\notify_discord.ps1 -Message "✅ Task <task-slug> merged to master. Tests passed. Master is green."
-   ```
+Taylor returns the merge result. (If this task flows into a remote push, that consent gate stays on the **main thread** — see `/ship-it` Phase 4.)
 
 > **🚀 RM — Taylor | Pipeline Complete.** Master is green. Session ready for next task or wind-down.
