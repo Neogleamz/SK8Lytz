@@ -4557,3 +4557,9 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
+
+### [MERGE] 2026-06-18T20:30 — fix/crew-ui-types ? master @ 64d7f6eb
+**What merged:** Completed fix/crew-ui-types in Wave 3.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** Merged via gatekeeper
+
