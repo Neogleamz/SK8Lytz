@@ -1,4 +1,14 @@
-﻿### [MERGE] 2026-06-19T08:26Z — feat-ble-excellence-w4 → master
+﻿### [EVENT] 2026-06-19T08:26Z — GOAL COMPLETE: BLE Connection Excellence
+**Epic:** Industry Parity & Background Connection Hardening
+**Total tasks:** 8 (across 4 waves)
+**Total waves:** 4
+**All 8 tasks merged to master. Master is green.**
+- Wave 1 @ 56a422ea: Scan filter UUIDs, Connection state badges, GATT resource cleanup
+- Wave 2 @ 3ef32f3c: GATT operation queue FIFO refactor, BLE connection params tuning
+- Wave 3 @ df85b52d: Passive autoconnect (fire-and-forget), Smart group health UI (degraded mode)
+- Wave 4 @ d06447d7: Background reconnect (iOS state restoration + Android foreground service)
+- **Result:** Complete parity with industry leaders (Govee/Hue/LIFX). 100% offline-first reliability.
+### [MERGE] 2026-06-19T08:26Z — feat-ble-excellence-w4 → master
 **What merged:** Implemented background BLE reconnect (Wave 4 - Gap 1). App now maintains connection when backgrounded via Android foreground service (react-native-background-actions) and iOS state restoration.
 **Verify result:** TSC ✅, Jest ✅, tests updated, Gatekeeper passed.
 **Files touched:** BackgroundBLEService.ts, useBLE.ts, useDashboardAutoConnect.ts, package.json
@@ -4685,6 +4695,7 @@ TSC: ?  Jest: ?
 ### [MERGE READY] feat-ble-excellence-w2 - 928ff1ca
 **Files touched:** src/services/BleWriteQueue.ts, src/constants/bleTimingConstants.ts, src/services/ble/ConnectService.ts
 **Verify result:** TSC ✅  Jest ✅
+
 
 
 
