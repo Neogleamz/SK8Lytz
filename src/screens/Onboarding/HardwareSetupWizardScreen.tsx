@@ -28,8 +28,7 @@ import { buildPatternPayload } from '../../protocols/PatternEngine';
 import type { BleConnectionState, PendingRegistration, PingResult } from '../../types/dashboard.types';
 import { useScreenPerformance } from '../../hooks/useScreenPerformance';
 
-/** R-16: Named delay constant — keepAlive BLE poll interval in ms */
-const KEEP_ALIVE_POLL_MS = 2000;
+import { BLE_TIMING } from '../../constants/bleTimingConstants';
 
 interface WizardDeviceConfig {
   name: string;
@@ -163,7 +162,7 @@ export default function HardwareSetupWizardScreen({
     if (scanStage === 'STARTED' && step === 2 && pendingRegistrations.length === 0 && bleState !== 'SCANNING' && bleState !== 'PROBING') {
       timer = setTimeout(() => {
         scanForPeripherals({ keepAlive: true });
-      }, KEEP_ALIVE_POLL_MS);
+      }, BLE_TIMING.PROBE_QUEUE_DELAY_MS);
     }
     return () => {
       if (timer) clearTimeout(timer);

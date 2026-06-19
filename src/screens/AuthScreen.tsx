@@ -68,7 +68,7 @@ export default function AuthScreen({ onOfflineMode, sessionExpired }: { onOfflin
           } else {
             setInitialEmail(saved.email || '');
           }
-        } catch (e) { AppLogger.error('[AuthScreen]', e instanceof Error ? e.message : String(e), {}); }
+        } catch (e) { AppLogger.error('[AuthScreen] STORAGE_REMEMBER_CREDS read failed', e instanceof Error ? e : new Error(String(e)), { payload_size: 0, ssi: 0 }); }
         setCredLoadStage('LOADED');
       } else {
         AsyncStorage.getItem(STORAGE_LAST_EMAIL).then(saved => {
