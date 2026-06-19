@@ -1,3 +1,7 @@
+﻿### [MERGE READY] 2026-06-19T08:13Z — feat-ble-excellence-w3 — acedfb18
+**What:** Implemented passive autoConnect for known devices and smart group health UI (degraded mode 1/2 skates connected).
+**Files touched:** MySkatesSlab.tsx, SkateGroupCard.tsx, DashboardScreen.tsx, BleMachine.ts, BleMachine.types.ts, ConnectService.ts, ConnectService.test.ts, dashboard.types.ts
+**Verify result:** TSC ✅, Jest ✅, tests updated for options change.
 ### [ARTIFACT] 2026-06-19T07:10Z — BLE Connection Excellence Intake (8 tasks, 4 waves)
 **What:** Industry gap analysis comparing SK8Lytz BLE connection architecture against Govee/Hue/LIFX/Nordic gold standards. Identified 10 gaps, user selected 8 for intake.
 **Artifact:** [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md)
@@ -4657,7 +4661,7 @@ TSC: ?  Jest: ?
 **Files touched:** Merged via gatekeeper
 
 
-### [MERGE] 2026-06-19T02:52 � feat-ble-excellence-w1 -> master
+### [MERGE] 2026-06-19T02:52 � feat-ble-excellence-w1 -> master
 **What merged:**
 - feat-ble-scan-filter-uuid: Added explicit UUID filtering to background iOS scans
 - feat-connection-state-badges: Added ConnectionStateBadge to dashboard to visualize BLE status per device
@@ -4669,3 +4673,4 @@ TSC: ?  Jest: ?
 ### [MERGE READY] feat-ble-excellence-w2 - 928ff1ca
 **Files touched:** src/services/BleWriteQueue.ts, src/constants/bleTimingConstants.ts, src/services/ble/ConnectService.ts
 **Verify result:** TSC ✅  Jest ✅
+
