@@ -4527,3 +4527,9 @@ TSC: ?  Jest: ?
 ### [MERGE READY] fix/manifest-permissions — f21e00c8
 **Files touched:** app.config.js
 **TSC:** ✅  **Jest:** ✅
+
+### [MERGE] 2026-06-18T20:10 � fix/manifest-permissions ? master @ 11b6798b
+**What merged:** Completed fix/manifest-permissions in Wave 1.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** Merged via gatekeeper
+
