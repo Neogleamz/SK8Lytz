@@ -4533,11 +4533,3 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
-# # #   [ M E R G E   R E A D Y ]   f i x / b l e - s e r v i c e s - h a r d e n i n g      9 3 2 e d 3 a 1 
- F i l e s   t o u c h e d : 
- -   s r c / s e r v i c e s / b l e / C o n n e c t S e r v i c e . t s 
- -   s r c / s e r v i c e s / b l e / H e a r t b e a t S e r v i c e . t s 
- -   s r c / s e r v i c e s / B l e S e s s i o n F a c t o r y . t s 
- -   d o c s / p l a n s / P L A N - f i x - b l e - s e r v i c e s - h a r d e n i n g . m d 
- T S C :   '    J e s t :   ' 
- 
