@@ -124,14 +124,6 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [SessionContext.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/context/SessionContext.tsx)
   - **Details:** HIGH severity. 2 files. Prerequisite: Wave 2 fully merged.
 
-- [ ] **`fix/crew-ui-types`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[UI]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:deepdive-audit-mega-sweep]` `[WAVE:3]`
-  - **Goal:** Replace all `any` type annotations in crew UI components with proper types.
-  - **Decision Log:** R-08 — 8 `any` casts across 4 crew UI components.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-crew-ui-types.md](./plans/PLAN-fix-crew-ui-types.md)
-  - **Source of Truth:** 📖 [CrewCard.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/crew/CrewCard.tsx)
-  - **Details:** MEDIUM severity. 4 files. Prerequisite: Wave 2 fully merged.
-
 ---
 
 ##  ❄️ Icebox / Backburner (Manual Trigger Only)
@@ -168,6 +160,7 @@ at useBLESweeper.ts:145
 - [ ] `feat/siri-google-assistant-integration` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🪙 25k] [⏱️ 3h] [🤖 PRO-HIGH] [📝️ NEEDS-PLAN] Siri/Google Assistant phone-level voice control.
 - [ ] `feat/geofence-rink-sync` : [☁️ CLOUD] [⚠️ H-RISK] [🍱 Meal] [🪙 20k] [⏱️ 3h] [🧠 THINK] GPS-based auto-crew discovery.
 - [ ] `feat/add-swipe-nav` : [☁️ CLOUD] [✅ L-RISK] [🍱 Meal] [🪙 12k] [⏱️ 3h] [🤖 FLASH] [📝️ NEEDS-PLAN] Card Swipe Navigation.
+
 
 
 
