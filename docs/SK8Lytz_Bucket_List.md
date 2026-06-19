@@ -49,11 +49,11 @@ at useBLESweeper.ts:145
 
 ---
 
-### ⚡ [BATCH:feat/ble-excellence-w1] — `feat/ble-excellence-w1` — READY
+### ⚡ [BATCH:feat/ble-excellence-w1] — `feat/ble-excellence-w1` — IN PROGRESS
 > **Worktree**: `feat/ble-excellence-w1` · **Type**: Sequential (unified) · **Prerequisite**: None
 > **Source Analysis**: 📊 [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) — Gaps 9, 3, 10
 
-- [ ] **`feat/ble-scan-filter-uuid`**
+- [/] **`feat/ble-scan-filter-uuid`**
   - **Tags:** `[✅ READY]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:feat/ble-excellence-w1]` `[WAVE:1]`
   - **Goal:** Add Service UUID filter to `startDeviceScan` so we only scan for Zengge/BanlanX controllers — required prerequisite for iOS background scanning.
   - **Decision Log:** Industry gap analysis showed iOS background scanning REQUIRES Service UUID filters or it silently fails. We already import ZENGGE_SERVICE_UUID but only use it for post-scan filtering.
@@ -63,7 +63,7 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [useBLEScanner.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts#L6) §ZENGGE_SERVICE_UUID import
   - **Details:** Also check BleMachine.ts SCANNING state for the actual `startDeviceScan` call site.
 
-- [ ] **`feat/connection-state-badges`**
+- [/] **`feat/connection-state-badges`**
   - **Tags:** `[✅ READY]` `[UI]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:feat/ble-excellence-w1]` `[WAVE:1]`
   - **Goal:** Add per-device connection state badges (Connected/Connecting/Reconnecting/Disconnected/Out of Range) to device and group cards alongside existing RSSI meters.
   - **Decision Log:** Industry gap analysis showed we collect RSSI data and show signal bars but have zero connection state visibility. Users see "connected" or nothing — no "reconnecting" or "out of range" states.
@@ -73,7 +73,7 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [SkateGroupCard.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/SkateGroupCard.tsx#L107) §RSSI meters
   - **Details:** Creates NEW ConnectionStateBadge.tsx component. Modifies SkateGroupCard, DeviceItem, MySkatesSlab, DashboardScreen, dashboard.types.ts.
 
-- [ ] **`fix/ble-gatt-resource-cleanup`**
+- [/] **`fix/ble-gatt-resource-cleanup`**
   - **Tags:** `[✅ READY]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:feat/ble-excellence-w1]` `[WAVE:1]`
   - **Goal:** Add explicit GATT handle cleanup after `cancelDeviceConnection` to prevent Android GATT handle exhaustion over many connect/disconnect cycles.
   - **Decision Log:** Industry gap analysis identified missing GATT close() call. Android has ~7-8 GATT connection slots — without cleanup, handles leak and eventually refuse all connections.
