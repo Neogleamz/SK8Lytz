@@ -4656,3 +4656,11 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
+
+### [MERGE] 2026-06-19T02:52 — feat-ble-excellence-w1 -> master
+**What merged:**
+- feat-ble-scan-filter-uuid: Added explicit UUID filtering to background iOS scans
+- feat-connection-state-badges: Added ConnectionStateBadge to dashboard to visualize BLE status per device
+- fix-ble-gatt-resource-cleanup: Hardened ConnectService and BleMachine with cancelDeviceConnection and destroyClient
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** BleMachine.ts, ConnectService.ts, DashboardScreen.tsx, SkateGroupCard.tsx, DeviceItem.tsx, MySkatesSlab.tsx, ConnectionStateBadge.tsx, dashboard.types.ts

@@ -49,47 +49,17 @@ at useBLESweeper.ts:145
 
 ---
 
-### ⚡ [BATCH:feat/ble-excellence-w1] — `feat/ble-excellence-w1` — IN PROGRESS
+### ⚡ [BATCH:feat/ble-excellence-w1] — `feat/ble-excellence-w1` — COMPLETE
 > **Worktree**: `feat/ble-excellence-w1` · **Type**: Sequential (unified) · **Prerequisite**: None
 > **Source Analysis**: 📊 [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) — Gaps 9, 3, 10
 
-- [/] **`feat/ble-scan-filter-uuid`**
-  - **Tags:** `[✅ READY]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:feat/ble-excellence-w1]` `[WAVE:1]`
-  - **Goal:** Add Service UUID filter to `startDeviceScan` so we only scan for Zengge/BanlanX controllers — required prerequisite for iOS background scanning.
-  - **Decision Log:** Industry gap analysis showed iOS background scanning REQUIRES Service UUID filters or it silently fails. We already import ZENGGE_SERVICE_UUID but only use it for post-scan filtering.
-  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-feat-ble-scan-filter-uuid.md](./plans/PLAN-feat-ble-scan-filter-uuid.md)
-    Key finding: "iOS background scanning requires Service UUIDs — without filter, Gap 1 is dead on arrival"
-    Rejected alternative: "Scan all + filter in callback (current approach) — wasteful and iOS-incompatible"
-  - **Source of Truth:** 📖 [useBLEScanner.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts#L6) §ZENGGE_SERVICE_UUID import
-  - **Details:** Also check BleMachine.ts SCANNING state for the actual `startDeviceScan` call site.
-
-- [/] **`feat/connection-state-badges`**
-  - **Tags:** `[✅ READY]` `[UI]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:feat/ble-excellence-w1]` `[WAVE:1]`
-  - **Goal:** Add per-device connection state badges (Connected/Connecting/Reconnecting/Disconnected/Out of Range) to device and group cards alongside existing RSSI meters.
-  - **Decision Log:** Industry gap analysis showed we collect RSSI data and show signal bars but have zero connection state visibility. Users see "connected" or nothing — no "reconnecting" or "out of range" states.
-  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-feat-connection-state-badges.md](./plans/PLAN-feat-connection-state-badges.md)
-    Key finding: "RSSI bars exist but connection state is binary — no transitional states shown"
-    Rejected alternative: "Toast-only approach — insufficient for persistent state visibility"
-  - **Source of Truth:** 📖 [SkateGroupCard.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/SkateGroupCard.tsx#L107) §RSSI meters
-  - **Details:** Creates NEW ConnectionStateBadge.tsx component. Modifies SkateGroupCard, DeviceItem, MySkatesSlab, DashboardScreen, dashboard.types.ts.
-
-- [/] **`fix/ble-gatt-resource-cleanup`**
-  - **Tags:** `[✅ READY]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:feat/ble-excellence-w1]` `[WAVE:1]`
-  - **Goal:** Add explicit GATT handle cleanup after `cancelDeviceConnection` to prevent Android GATT handle exhaustion over many connect/disconnect cycles.
-  - **Decision Log:** Industry gap analysis identified missing GATT close() call. Android has ~7-8 GATT connection slots — without cleanup, handles leak and eventually refuse all connections.
-  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-fix-ble-gatt-resource-cleanup.md](./plans/PLAN-fix-ble-gatt-resource-cleanup.md)
-    Key finding: "cancelDeviceConnection disconnects but doesn't free native GATT handles"
-    Rejected alternative: "Rely on GC — Android BLE GC is unreliable for native handles"
-  - **Source of Truth:** 📖 [BleMachine.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts#L20) §disconnectService
-  - **Details:** Touches BleMachine.ts disconnectService and ConnectService.ts error paths only.
-
 ---
 
-### ⏳ [BATCH:feat/ble-excellence-w2] — `feat/ble-excellence-w2` — READY
+### ⚡ [BATCH:feat/ble-excellence-w2] — `feat/ble-excellence-w2` — IN PROGRESS
 > **Worktree**: `feat/ble-excellence-w2` · **Type**: Sequential (unified) · **Prerequisite**: Wave 1 merged
 > **Source Analysis**: 📊 [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) — Gaps 2, 6
 
-- [ ] **`refactor/ble-gatt-operation-queue`**
+- [/] **`refactor/ble-gatt-operation-queue`**
   - **Tags:** `[✅ READY]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:feat/ble-excellence-w2]` `[WAVE:2]`
   - **Goal:** Upgrade BleWriteQueue to a universal BLE operation queue that serializes ALL GATT operations (writes, reads, descriptors) — preventing silent failures from concurrent Android GATT ops.
   - **Decision Log:** Industry gap analysis identified that heartbeat pings, recovery handshakes, and color writes can race on Android's single-threaded GATT stack. Nordic gold standard: serialize everything through one FIFO.
@@ -99,7 +69,7 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [BleWriteQueue.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleWriteQueue.ts#L1) §Priority FIFO Write Queue
   - **Details:** Touches BleWriteQueue.ts, ConnectService.ts, HeartbeatService.ts, RecoveryService.ts, and all queue consumers. Prerequisite: Wave 1 fully merged.
 
-- [ ] **`feat/ble-connection-params`**
+- [/] **`feat/ble-connection-params`**
   - **Tags:** `[✅ READY]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:feat/ble-excellence-w2]` `[WAVE:2]`
   - **Goal:** Tune BLE connection parameters — request High priority during active control, switch to Balanced during idle to save battery.
   - **Decision Log:** Industry gap analysis showed we use default OS-negotiated parameters. Active control needs ~15ms interval, idle can use ~100ms — 6x battery savings during idle.
