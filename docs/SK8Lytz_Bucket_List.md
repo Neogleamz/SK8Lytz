@@ -19,6 +19,12 @@
 
 ### 🚑 TRIAGE QUEUE
 
+- [ ] **`fix/supabase-db-security-advisors`**
+  - **Tags:** `[📝 NEEDS PLAN]` `[DB]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 PRO-HIGH]`
+  - **Goal:** Fix Supabase security advisors: SECURITY DEFINER views, mutable search_path, RLS disabled on public.spatial_ref_sys, and always-true RLS policies.
+  - **Decision Log:** Logged by /health-sweep during /ship-it Phase 1. High security risk preventing release.
+  - **Details:** 5 major flags including ERRORs on telemetry views and disabled RLS on spatial_ref_sys.
+
 - [ ] **`fix/gatt-conn-133-exception`**
   - **Tags:** `[📝 NEEDS PLAN]` `[LAB]` `[M-RISK]` `[Snack]` `[🤖 PRO-HIGH]`
   - **Plan:** 📎 [PLAN-telemetry-gatt-conn-133-exception.md](./plans/PLAN-telemetry-gatt-conn-133-exception.md)
