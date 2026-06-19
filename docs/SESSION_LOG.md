@@ -1,4 +1,8 @@
-﻿### [MERGE READY] 2026-06-19T08:13Z — feat-ble-excellence-w3 — acedfb18
+﻿### [MERGE] 2026-06-19T08:16Z — feat-ble-excellence-w3 → master
+**What merged:** Implemented passive autoConnect for known devices and smart group health UI (degraded mode 1/2 skates connected).
+**Verify result:** TSC ✅, Jest ✅, tests updated, Gatekeeper passed.
+**Files touched:** MySkatesSlab.tsx, SkateGroupCard.tsx, DashboardScreen.tsx, BleMachine.ts, BleMachine.types.ts, ConnectService.ts, ConnectService.test.ts, dashboard.types.ts
+### [MERGE READY] 2026-06-19T08:13Z — feat-ble-excellence-w3 — acedfb18
 **What:** Implemented passive autoConnect for known devices and smart group health UI (degraded mode 1/2 skates connected).
 **Files touched:** MySkatesSlab.tsx, SkateGroupCard.tsx, DashboardScreen.tsx, BleMachine.ts, BleMachine.types.ts, ConnectService.ts, ConnectService.test.ts, dashboard.types.ts
 **Verify result:** TSC ✅, Jest ✅, tests updated for options change.
@@ -4673,4 +4677,5 @@ TSC: ?  Jest: ?
 ### [MERGE READY] feat-ble-excellence-w2 - 928ff1ca
 **Files touched:** src/services/BleWriteQueue.ts, src/constants/bleTimingConstants.ts, src/services/ble/ConnectService.ts
 **Verify result:** TSC ✅  Jest ✅
+
 
