@@ -11,6 +11,8 @@
 
 ## 🚧 ACTIVE SPRINT
 
+- [/] **`fix/autoconnect-dashboard-stale`** *(worktree: fix-autoconnect-dashboard-stale)*
+
 ---
 
 ## 🔴 CRITICAL: 🛡️ Performance, Stability & Security
@@ -44,7 +46,7 @@ at useBLESweeper.ts:145
 > **Worktree**: `fix/autoconnect-dashboard-stale` · **Type**: Solo · **Prerequisite**: [BATCH:fix/ble-connection-pipeline] merged
 > **Source Analysis**: 📊 [connection_pipeline_audit.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_pipeline_audit.md) — cloud MAC case mismatch + stale ref + wrong deviceConfigs key
 
-- [ ] **`fix/autoconnect-dashboard-stale`**
+- [/] **`fix/autoconnect-dashboard-stale`**
   - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:fix/autoconnect-dashboard-stale]` `[WAVE:2]`
   - **Goal:** Fix cloud sync MAC case mismatch in auto-connect, sync stale allDevicesRef, and correct renderItem deviceConfigs lookup key.
   - **Decision Log:** Audit found cloud sync path uses raw device_mac without .toUpperCase() (H6 — same class of bug we just fixed in buildOfflineGroupMap), allDevicesRef never synced after init (M1), renderItem looks up deviceConfigs by Supabase composite key instead of MAC (L4).
