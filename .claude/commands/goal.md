@@ -76,7 +76,7 @@ MANDATORY PRE-CODE CHECKLIST (ALL 4 REQUIRED):
     The previous wave's merge commit MUST appear. If it does NOT → HALT.
 
 EXECUTION RULES:
-- LOOK BEFORE LEAP: view_file exact target lines before every edit
+- LOOK BEFORE LEAP: Read exact target lines before every edit
 - SURGICAL SCOPE ONLY: Touch ONLY the files listed in the plan
 - POST-DIFF IS MANDATORY: After EVERY file edit, run git diff HEAD <filename>
 - VERIFY BEFORE GATEKEEPER: Run npm run verify AFTER your final commit

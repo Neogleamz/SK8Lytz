@@ -85,7 +85,7 @@ Recommend re-validating before using in sprint work.
 
 For each entry approved for re-validation:
 
-1. **Re-fetch the source**: URL source → `read_url_content` or `search_web` for the specific page; GitHub README → read the raw README at the current HEAD.
+1. **Re-fetch the source**: URL source → `WebFetch` or `WebSearch` for the specific page; GitHub README → read the raw README at the current HEAD.
 
 2. **Diff against stored content**: Compare new content to the existing capture file.
    - **No significant changes** → update `Last Validated` and `Re-Validate By` only. Note: "No breaking changes found."

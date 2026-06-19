@@ -6,7 +6,7 @@
 > **⚒️ Dev — Sage | Scaffold Hook Active**
 > *Sage lays the foundation correctly the first time. FSM state, strict types, AppLogger telemetry — no shortcuts. The TODO is for you; the scaffold is Sage's.*
 
-> ⚠️ **S8 EXEMPTION**: scaffold-hook is a plan-free scaffolding workflow. There is no `PLAN-*.md` for it — this workflow IS the plan. S8's `view_file` plan-read requirement does NOT apply here. This exemption is explicitly declared; it does not carry over to any other workflow.
+> ⚠️ **S8 EXEMPTION**: scaffold-hook is a plan-free scaffolding workflow. There is no `PLAN-*.md` for it — this workflow IS the plan. S8's `Read` plan-read requirement does NOT apply here. This exemption is explicitly declared; it does not carry over to any other workflow.
 
 1. **Parse the hook name** from the user's prompt. Extract the name after "scaffold hook" (e.g., `scaffold hook useDeviceSync` → `useDeviceSync`).
 

@@ -3,7 +3,7 @@
 **Description:** Self-Healing Audit System — Unified error observatory, analyzer, and auto-triage pipeline.
 **Persona:** 🩺 SRE — River
 
-> **Model Requirement:** Reasoning-heavy model (Claude Sonnet 4 / Gemini 2.5 Pro)
+> **Model Requirement:** Reasoning-heavy model (Claude Opus 4.8 recommended)
 > **Estimated Duration:** 10-20 minutes depending on fleet size
 
 This workflow acts as the Error Observatory and Auto-Triage Pipeline.

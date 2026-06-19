@@ -16,9 +16,9 @@ npm run verify 2>&1 | Select-String "error TS" | Select-Object -First 10
 Write-Host "Pre-sync TSC check complete."
 ```
 
-2. Use the `mcp_supabase-mcp-server_generate_typescript_types` MCP tool to pull the latest schema.
-   - The project ID can be retrieved via the `mcp_supabase-mcp-server_list_projects` tool if unknown.
-   - Save the output to `src/types/supabase.ts` using the write tool with `Overwrite: true`.
+2. Use the `mcp__supabase__generate_typescript_types` MCP tool to pull the latest schema.
+   - The project ID can be retrieved via the `mcp__supabase__list_projects` tool if unknown.
+   - Save the output to `src/types/supabase.ts` using the Write tool (full-file replacement).
 
 3. Verify the sync by counting the generated types
 

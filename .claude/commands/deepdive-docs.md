@@ -56,8 +56,8 @@ Before launching any sub-agents, Avery MUST:
 ### Phase 2 — The Fleet Launch
 
 **⛔ ANTI-CONTEXT-EXPLOSION RULE (CRITICAL):**
-> You are STRICTLY FORBIDDEN from using `send_message` to report findings back to the parent agent.
-> Instead, MUST use the write tool. Write findings to `artifacts/deepdive_docs/<Your_DOMAIN_Marker>_cartography.md`. Once the file is written, silently terminate.
+> Do NOT stream your findings inline back to the parent agent (the parent receives your final summary automatically when you return).
+> Instead, MUST use the Write tool. Write findings to `artifacts/deepdive_docs/<Your_DOMAIN_Marker>_cartography.md`. Once the file is written, return only a one-line confirmation of the path.
 
 **The Base Sub-Agent Directive (All Nodes):**
 1. Read EVERY file in your assigned domain. Do NOT modify any code.

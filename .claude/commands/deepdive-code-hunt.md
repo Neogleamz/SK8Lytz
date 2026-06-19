@@ -15,7 +15,7 @@ You are STRICTLY FORBIDDEN from running /deepdive-code-hunt unless /deepdive-doc
 
 ### Phase 0 — Model Verification & Output Directory
 
-1. **Model Check:** Ask the user: *"Confirm your Model Selection is set to a high-context model (Gemini 2.5 Flash recommended). Type 'confirmed' to proceed."*
+1. **Model Check:** Ask the user: *"Confirm your Model Selection is set to a high-context model (Claude Sonnet 4.6 recommended for breadth). Type 'confirmed' to proceed."*
 2. **Output Directory:** Verify `artifacts/deepdive_raw/` is available. Previous run outputs will be archived to `artifacts/deepdive_raw_archive_<timestamp>/` before the new run begins.
 3. **Canary Validation:** Launch 1 Domain Agent (Domain 9: `UTILS` — smallest domain) and 1 Rule Sniper (`R-08: Type Safety`) as canaries. Wait for both to complete and verify output matches the required JSON schema below.
 
@@ -138,7 +138,7 @@ You are STRICTLY FORBIDDEN from running /deepdive-code-hunt unless /deepdive-doc
 ### Phase 2 — The Fleet Launch
 
 **CRITICAL MANDATE FOR ALL SUBAGENTS:**
-> You are STRICTLY FORBIDDEN from using `send_message` to report findings back to the parent agent. Instead, MUST use the write tool. Output findings as a **strict JSON object** conforming to the Required Output Schema and save it to `artifacts/deepdive_raw/<Your_Agent_ID>_findings.json`. Once the file is written, silently terminate.
+> Do NOT stream your findings inline back to the parent agent (the parent receives your final summary automatically when you return). Instead, MUST use the Write tool. Output findings as a **strict JSON object** conforming to the Required Output Schema and save it to `artifacts/deepdive_raw/<Your_Agent_ID>_findings.json`. Once the file is written, return only a one-line confirmation of the path.
 
 ---
 

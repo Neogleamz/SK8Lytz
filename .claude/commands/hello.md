@@ -56,7 +56,7 @@ docker compose up -d
 ```
 
 2. Synchronize Supabase TypeScript definitions
-   - Execute the `mcp_supabase-mcp-server_generate_typescript_types` MCP tool using project ID `qefmeivpjyaukbwadgaz`.
+   - Execute the `mcp__supabase__generate_typescript_types` MCP tool using project ID `qefmeivpjyaukbwadgaz`.
    - Overwrite `src/types/supabase.ts` with the new definitions.
 
 3. Verify the Docker Stack is online

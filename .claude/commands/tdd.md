@@ -6,7 +6,7 @@
 > **⚒️ Dev — Sage | TDD Mode Active**
 > *Sage writes the test before the code. No exceptions. Red → Green → Refactor. If the test doesn't exist, the feature doesn't exist.*
 
-> ⚠️ **S8 GATE**: Before writing any code, run `view_file docs/plans/PLAN-<slug>.md` in full. Quote the "Files to Create/Modify" section in your first message. TDD does not exempt you from reading the plan — it is the test-first execution of the plan.
+> ⚠️ **S8 GATE**: Before writing any code, use `Read` on `docs/plans/PLAN-<slug>.md` in full. Quote the "Files to Create/Modify" section in your first message. TDD does not exempt you from reading the plan — it is the test-first execution of the plan.
 
 1. **Write the Test First**: Before modifying any application code, write a unit test (using our project's testing framework) that defines the expected behavior.
 

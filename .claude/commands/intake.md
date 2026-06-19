@@ -25,9 +25,9 @@ Before any feature classification or planning begins, Reyes MUST establish the i
 Reyes reads `tools/knowledge-base/INDEX.md` and searches for entries matching the task's domain tags.
 - **CURRENT entry found** → cite it directly in the benchmark output. Skip the web search for that specific topic.
 - **STALE/CRITICAL entry found** → note the staleness prominently, then re-search and run `/kb-capture` to update.
-- **No entry found** → proceed with `search_web` AND run `/kb-capture` before handing to Quinn.
+- **No entry found** → proceed with `WebSearch` AND run `/kb-capture` before handing to Quinn.
 
-1. Use `search_web` to research how 5 top-tier companies/apps solve this exact problem. **Skip for any topic already CURRENT in the KB.**
+1. Use `WebSearch` to research how 5 top-tier companies/apps solve this exact problem. **Skip for any topic already CURRENT in the KB.**
 2. Synthesize their approaches into a new entry in `docs/INDUSTRY_BENCHMARKS.md`. AND run `/kb-capture` targeting `knowledge-base/patterns/` for the raw research.
 3. If no clear gold standard exists, extract the closest analog.
 4. Output a summary: *"Industry Benchmark complete. [Company A] does X, [Company B] does Y. We will adopt Z as our gold standard."*

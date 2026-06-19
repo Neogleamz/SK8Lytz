@@ -17,20 +17,22 @@
 
 ---
 
+> Set GRAPHRAG_BRAIN_DIR to your local GraphRAG brain directory before running.
+
 ### Phase 1 — Export Local Scraper Database
 
 Run the export script to convert local SQLite data into markdown files:
 ```powershell
-python D:\graphrag-brain\scripts\export_scraper_db.py
+python <GRAPHRAG_BRAIN_DIR>\scripts\export_scraper_db.py
 ```
 
 ### Phase 2 — Export Cloud Supabase Database
 
 Run the export scripts to bypass RLS and pull all cloud relational data, specifically formatted as narrative markdown for GraphRAG:
 ```powershell
-python D:\graphrag-brain\scripts\export_supabase_db.py
-python D:\graphrag-brain\scripts\export_special_tables.py
-python D:\graphrag-brain\scripts\export_all_supabase_db.py
+python <GRAPHRAG_BRAIN_DIR>\scripts\export_supabase_db.py
+python <GRAPHRAG_BRAIN_DIR>\scripts\export_special_tables.py
+python <GRAPHRAG_BRAIN_DIR>\scripts\export_all_supabase_db.py
 ```
 
 The scripts will:

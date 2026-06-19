@@ -31,7 +31,7 @@ This prevents filing the same TECH DEBT tasks every session.
 ### Phase 1 — The Fleet Launch
 Invoke 3 parallel sub-agents to partition the work:
 
-- **Sub-Agent 1 (Dependencies & Cloud)**: Runs `npm outdated`, `npm audit --audit-level=moderate`, bundle/dependency weight checks (using powershell to find top 15 largest source files and node_modules >5MB), and calls `mcp_supabase-mcp-server_get_advisors`.
+- **Sub-Agent 1 (Dependencies & Cloud)**: Runs `npm outdated`, `npm audit --audit-level=moderate`, bundle/dependency weight checks (using powershell to find top 15 largest source files and node_modules >5MB), and calls `mcp__supabase__get_advisors`.
 - **Sub-Agent 2 (Code Maintenance)**: Searches `src/` for `TODO:`, `FIXME:`, or `HACK:`, and flags God Objects (components with >15 hook calls) and Architectural Smells (files >30KB).
 - **Sub-Agent 3 (Telemetry Sync)**: Runs `node tools/sync_remote_errors.mjs --hours 48 --limit 50 --json` to fetch live production errors from Supabase.
 

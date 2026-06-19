@@ -29,4 +29,4 @@ $verifyOutput | Select-String "error TS" |
   ForEach-Object { Write-Host "  FILE: $_" -ForegroundColor Yellow }
 ```
 
-3. If errors exist, report them to the chat with grouped file paths and propose targeted fixes using `replace_file_content` — one file at a time, smallest error count first.
+3. If errors exist, report them to the chat with grouped file paths and propose targeted fixes using the `Edit` tool — one file at a time, smallest error count first.

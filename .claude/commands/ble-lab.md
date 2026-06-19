@@ -50,7 +50,7 @@ Announce: *"Checking what we already know about this command..."*
    ```
    Show the math for each calculated byte. Verify checksum if applicable.
 
-4. **Cross-reference with source code** — use `grep_search` to find where this command is constructed in the codebase (likely in `src/protocols/` or `src/services/`). Verify the implementation matches the Master Reference.
+4. **Cross-reference with source code** — use the `Grep` tool to find where this command is constructed in the codebase (likely in `src/protocols/` or `src/services/`). Verify the implementation matches the Master Reference.
 
 5. **Report discrepancies** — if the source code and Master Reference disagree, **HALT** and flag the anomaly per the Anti-Hallucination Rule. Do not proceed until the user declares the Source of Truth.
 

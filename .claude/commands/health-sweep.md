@@ -18,7 +18,7 @@ Invoke 2 parallel sub-agents:
 - Reports back the exact results.
 
 **Sub-agent 2 (Cloud Security):**
-- Runs the MCP tool `mcp_supabase-mcp-server_get_advisors` with `type: 'security'`.
+- Runs the MCP tool `mcp__supabase__get_advisors` with `type: 'security'`.
 - Reports back any security advisors flagged.
 
 ### Phase 2: Triage & Synthesis
