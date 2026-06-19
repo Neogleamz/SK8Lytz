@@ -8,6 +8,24 @@
 **Verify result:** TSC ✅ Jest ✅ Blast Radius ✅ Type Safety ✅ BLE Guards ✅ Organic Disconnect ✅ Browser Console ✅ Workflow Refs ✅ (8/8 gates green)
 **Files touched:** src/hooks/useDashboardAutoConnect.ts, src/screens/DashboardScreen.tsx
 
+### [EVENT] 2026-06-19T06:40Z — GOAL COMPLETE: Connection Pipeline Fix
+**Batch:** fix/ble-connection-pipeline + fix/autoconnect-dashboard-stale
+**Total tasks:** 3 (2 Wave 1 + 1 Wave 2)
+**Total waves:** 2
+**All 3 tasks merged to master. Master is green.**
+- Wave 1 @ b5338db6: BleMachine deadends + ConnectService/RecoveryService fixes (H1-H5, H7, M2-M9)
+- Wave 2 @ 8af1ad8f: Cloud MAC normalization + stale ref + deviceConfigs key (H6, M1, L3, L4)
+- 7 HIGH severity bugs eliminated, 9 MEDIUM fixed, 4 LOW fixed
+
+### [MERGE] 2026-06-19T06:40Z — fix/autoconnect-dashboard-stale → master @ 8af1ad8f
+**What merged (Wave 2 — 1 plan, 2 commits):**
+- useDashboardAutoConnect: cloud sync MAC normalized to .toUpperCase() (H6)
+- useDashboardAutoConnect: burst scan after cloud ref mutation for observer wake (L3)
+- DashboardScreen: allDevicesRef synced via useEffect (M1)
+- DashboardScreen: renderItem deviceConfigs lookup uses MAC not composite key (L4)
+**Verify result:** TSC ✅ Jest ✅ All 8 gates green
+**Files touched:** useDashboardAutoConnect.ts, DashboardScreen.tsx
+
 ### [MERGE] 2026-06-19T06:34Z — fix/ble-connection-pipeline → master @ b5338db6
 **What merged (Wave 1 unified — 2 plans, 5 commits):**
 - BleMachine: added disconnectService invoked actor + 10s DISCONNECTING timeout (H1/M3)

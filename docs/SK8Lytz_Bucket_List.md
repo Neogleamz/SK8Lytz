@@ -11,8 +11,6 @@
 
 ## 🚧 ACTIVE SPRINT
 
-- [/] **`fix/autoconnect-dashboard-stale`** *(worktree: fix-autoconnect-dashboard-stale)*
-
 ---
 
 ## 🔴 CRITICAL: 🛡️ Performance, Stability & Security
@@ -45,26 +43,6 @@ at useBLESweeper.ts:145
 ### ⏳ [BATCH:fix/autoconnect-dashboard-stale] — `fix/autoconnect-dashboard-stale` — READY
 > **Worktree**: `fix/autoconnect-dashboard-stale` · **Type**: Solo · **Prerequisite**: [BATCH:fix/ble-connection-pipeline] merged
 > **Source Analysis**: 📊 [connection_pipeline_audit.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_pipeline_audit.md) — cloud MAC case mismatch + stale ref + wrong deviceConfigs key
-
-- [/] **`fix/autoconnect-dashboard-stale`**
-  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:fix/autoconnect-dashboard-stale]` `[WAVE:2]`
-  - **Goal:** Fix cloud sync MAC case mismatch in auto-connect, sync stale allDevicesRef, and correct renderItem deviceConfigs lookup key.
-  - **Decision Log:** Audit found cloud sync path uses raw device_mac without .toUpperCase() (H6 — same class of bug we just fixed in buildOfflineGroupMap), allDevicesRef never synced after init (M1), renderItem looks up deviceConfigs by Supabase composite key instead of MAC (L4).
-  - **Analysis:** 📊 Source: [connection_pipeline_audit.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_pipeline_audit.md) · Plan: [PLAN-fix-autoconnect-dashboard-stale.md](./plans/PLAN-fix-autoconnect-dashboard-stale.md)
-    Key finding: "Cloud sync path at L396 uses raw device_mac — same .toUpperCase() bug we just fixed in buildOfflineGroupMap"
-    Rejected alternative: "Canonicalizing all MACs to lowercase — rejected because BLE Device.id is uppercase by convention on both platforms"
-  - **Source of Truth:** 📖 [useDashboardAutoConnect.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardAutoConnect.ts#L396-L405) §cloudSync
-  - **Details:** 4 surgical edits across useDashboardAutoConnect.ts and DashboardScreen.tsx. Prerequisite: Wave 1 fully merged into master before this worktree is created.
-
-
-
-
-##  ❄️ Icebox / Backburner (Manual Trigger Only)
-
-### 🧹 Tech Debt & Upgrades
-### ⚡ [BATCH:refactor/upgrade-expo-56] — `refactor/upgrade-expo-56` — IN PROGRESS
-> **Worktree**: `refactor/upgrade-expo-56` · **Type**: Sequential · **Prerequisite**: None
-> **Source Analysis**: 📊 [implementation_plan.md](file:///C:/Users/Magma/.gemini/antigravity/brain/fb5fb761-e7be-4241-a902-3cb07dca3307/implementation_plan.md) — User explicitly requested forcing a major dependency update (Expo 55->56) mid-release to resolve deep-tree js-yaml vulnerabilities.
 
 - [ ] **`refactor/upgrade-expo-56`**
   - **Tags:** `[✅ READY]` `[☁️ CLOUD]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 M132]` `[BATCH:refactor/upgrade-expo-56]`
