@@ -198,6 +198,9 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   // ── Phase 1: Fleet Groups, Device Configs, Power States → useDashboardGroups ───────
   // Declare refs before domain hooks that consume them
   const allDevicesRef = React.useRef(allDevices);
+  useEffect(() => {
+    allDevicesRef.current = allDevices;
+  }, [allDevices]);
 
   const [viewState, setViewState] = useState<DashboardViewState>('LOADING_REGS');
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -889,7 +892,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     // IDENTITY FIX: Always resolve to BLE MAC address for all lookups.
     // RegisteredDevice.id is a Supabase composite key (MAC+userId).
     const mac = (item.device_mac || item.id || '').toUpperCase();
-    const cachedConfig = (deviceConfigs[item.id as string] || {}) as Partial<DeviceSettings>;
+    const cachedConfig = (deviceConfigs[mac] || {}) as Partial<DeviceSettings>;
     const mergedItem = {
       ...item,
       ...cachedConfig,

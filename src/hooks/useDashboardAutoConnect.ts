@@ -393,7 +393,7 @@ export function useDashboardAutoConnect({
                 for (const d of devices as RegisteredDeviceRow[]) {
                   const dGroupIds: string[] = d.group_ids || (d.group_id ? [d.group_id] : []);
                   if (dGroupIds.some(gId => allGroupIds.has(gId))) {
-                    cloudMacSet.add(d.device_mac || d.id);
+                    cloudMacSet.add((d.device_mac || d.id).toUpperCase());
                   }
                 }
                 const cloudIds = Array.from(cloudMacSet);
@@ -402,8 +402,9 @@ export function useDashboardAutoConnect({
                   const currentSet = new Set(autoConnectIdsRef.current);
                   let addedNew = false;
                   for (const id of cloudIds) {
-                    if (!currentSet.has(id)) {
-                      currentSet.add(id);
+                    const normalizedId = id.toUpperCase();
+                    if (!currentSet.has(normalizedId)) {
+                      currentSet.add(normalizedId);
                       addedNew = true;
                     }
                   }
@@ -415,6 +416,16 @@ export function useDashboardAutoConnect({
                       payload_size: 0,
                       ssi: 0,
                     });
+                    // L3 FIX: Ref mutation doesn't trigger React re-render.
+                    // Fire a burst scan so new devices flow through allDevices → observer.
+                    if (burstScan) {
+                      try {
+                        const scanResult = burstScan(5000);
+                        if (scanResult && typeof scanResult.catch === 'function') {
+                          scanResult.catch(() => {});
+                        }
+                      } catch { /* non-critical */ }
+                    }
                   }
                 }
               }
