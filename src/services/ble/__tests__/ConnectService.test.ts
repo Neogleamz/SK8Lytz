@@ -157,6 +157,7 @@ describe('ConnectService test suite', () => {
       adapterMapRef: { current: new Map() },
       mtuMapRef: { current: new Map() },
       disconnectListeners: { current: {} },
+      notificationListeners: { current: {} },
       blacklistedMacsRef: { current: [] },
       handleOrganicDisconnect: jest.fn(),
       onOrganicDisconnect: jest.fn(),
