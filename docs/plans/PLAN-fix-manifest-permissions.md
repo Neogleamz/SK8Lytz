@@ -8,9 +8,10 @@ Fix the `neverForLocation` manifest regression that silently drops BLE scan resu
 
 ## Files to Create/Modify
 
-### [MODIFY] [AndroidManifest.xml](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/android/app/src/main/AndroidManifest.xml)
-- Remove `android:usesPermissionFlags="neverForLocation"` from `BLUETOOTH_SCAN` permission
-- Verify `ACCESS_FINE_LOCATION` is declared
+### [MODIFY] [app.config.js](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/app.config.js)
+- Locate the `react-native-ble-plx` plugin configuration inside the `plugins` array.
+- Remove the `neverForLocation: true` flag from the configuration.
+- Verify `ACCESS_FINE_LOCATION` is configured correctly if needed.
 
 ## Verification
 - `npm run verify`
