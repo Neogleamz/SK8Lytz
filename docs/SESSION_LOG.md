@@ -4539,3 +4539,9 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
+
+### [MERGE] 2026-06-18T20:23 — fix/pii-scrubber ? master @ 9321c938
+**What merged:** Completed fix/pii-scrubber in Wave 2.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** Merged via gatekeeper
+
