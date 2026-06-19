@@ -14,10 +14,10 @@ Replace all `any` type annotations in crew UI components with proper types.
 
 ## Files to Create/Modify
 
-### [MODIFY] [CrewCard.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/crew/CrewCard.tsx)
-### [MODIFY] [CrewLandingMap.web.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/crew/CrewLandingMap.web.tsx)
-### [MODIFY] [CrewScheduleScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/crew/CrewScheduleScreen.tsx)
-### [MODIFY] [MapFiltersTray.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/crew/MapFiltersTray.tsx)
+### [MODIFY] [CrewCard.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/crew/CrewCard.tsx) // SKIPPED: Already fixed in master
+### [MODIFY] [CrewLandingMap.web.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/crew/CrewLandingMap.web.tsx) // SKIPPED: Already fixed in master
+### [MODIFY] [CrewScheduleScreen.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/crew/CrewScheduleScreen.tsx) // SKIPPED: Already fixed in master
+### [MODIFY] [MapFiltersTray.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/crew/MapFiltersTray.tsx) // SKIPPED: Already fixed in master
 
 ## Verification
 - `npm run verify`
