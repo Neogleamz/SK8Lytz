@@ -34,15 +34,124 @@ at useBLESweeper.ts:145
 
 ### 🔥 ON DECK
 
-### ⚡ [BATCH:fix/ble-connection-pipeline] — `fix/ble-connection-pipeline` — READY
-> **Worktree**: `fix/ble-connection-pipeline` · **Type**: Sequential (unified) · **Prerequisite**: None
-> **Source Analysis**: 📊 [connection_pipeline_audit.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_pipeline_audit.md) — 5-agent parallel audit of BLE connection lifecycle (7 HIGH, 9 MEDIUM findings)
+### 🛡️ Epic: BLE Connection Excellence
+
+> **Source Analysis**: 📊 [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) — Industry gap analysis vs Govee/Hue/LIFX/Nordic gold standards (10 gaps, 8 selected for intake)
+
+#### Batch Strategy Table
+
+| Wave | Tasks | Worktree | Prerequisite |
+|------|-------|----------|-------------|
+| Wave 1 | scan-filter-uuid, connection-state-badges, gatt-resource-cleanup | `feat/ble-excellence-w1` | None |
+| Wave 2 | gatt-operation-queue, connection-params | `feat/ble-excellence-w2` | Wave 1 merged |
+| Wave 3 | autoconnect-passive, smart-group-health | `feat/ble-excellence-w3` | Wave 2 merged |
+| Wave 4 | background-reconnect | `feat/ble-excellence-w4` | Wave 3 merged |
 
 ---
 
-### ⏳ [BATCH:fix/autoconnect-dashboard-stale] — `fix/autoconnect-dashboard-stale` — READY
-> **Worktree**: `fix/autoconnect-dashboard-stale` · **Type**: Solo · **Prerequisite**: [BATCH:fix/ble-connection-pipeline] merged
-> **Source Analysis**: 📊 [connection_pipeline_audit.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_pipeline_audit.md) — cloud MAC case mismatch + stale ref + wrong deviceConfigs key
+### ⚡ [BATCH:feat/ble-excellence-w1] — `feat/ble-excellence-w1` — READY
+> **Worktree**: `feat/ble-excellence-w1` · **Type**: Sequential (unified) · **Prerequisite**: None
+> **Source Analysis**: 📊 [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) — Gaps 9, 3, 10
+
+- [ ] **`feat/ble-scan-filter-uuid`**
+  - **Tags:** `[✅ READY]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:feat/ble-excellence-w1]` `[WAVE:1]`
+  - **Goal:** Add Service UUID filter to `startDeviceScan` so we only scan for Zengge/BanlanX controllers — required prerequisite for iOS background scanning.
+  - **Decision Log:** Industry gap analysis showed iOS background scanning REQUIRES Service UUID filters or it silently fails. We already import ZENGGE_SERVICE_UUID but only use it for post-scan filtering.
+  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-feat-ble-scan-filter-uuid.md](./plans/PLAN-feat-ble-scan-filter-uuid.md)
+    Key finding: "iOS background scanning requires Service UUIDs — without filter, Gap 1 is dead on arrival"
+    Rejected alternative: "Scan all + filter in callback (current approach) — wasteful and iOS-incompatible"
+  - **Source of Truth:** 📖 [useBLEScanner.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts#L6) §ZENGGE_SERVICE_UUID import
+  - **Details:** Also check BleMachine.ts SCANNING state for the actual `startDeviceScan` call site.
+
+- [ ] **`feat/connection-state-badges`**
+  - **Tags:** `[✅ READY]` `[UI]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:feat/ble-excellence-w1]` `[WAVE:1]`
+  - **Goal:** Add per-device connection state badges (Connected/Connecting/Reconnecting/Disconnected/Out of Range) to device and group cards alongside existing RSSI meters.
+  - **Decision Log:** Industry gap analysis showed we collect RSSI data and show signal bars but have zero connection state visibility. Users see "connected" or nothing — no "reconnecting" or "out of range" states.
+  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-feat-connection-state-badges.md](./plans/PLAN-feat-connection-state-badges.md)
+    Key finding: "RSSI bars exist but connection state is binary — no transitional states shown"
+    Rejected alternative: "Toast-only approach — insufficient for persistent state visibility"
+  - **Source of Truth:** 📖 [SkateGroupCard.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/SkateGroupCard.tsx#L107) §RSSI meters
+  - **Details:** Creates NEW ConnectionStateBadge.tsx component. Modifies SkateGroupCard, DeviceItem, MySkatesSlab, DashboardScreen, dashboard.types.ts.
+
+- [ ] **`fix/ble-gatt-resource-cleanup`**
+  - **Tags:** `[✅ READY]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:feat/ble-excellence-w1]` `[WAVE:1]`
+  - **Goal:** Add explicit GATT handle cleanup after `cancelDeviceConnection` to prevent Android GATT handle exhaustion over many connect/disconnect cycles.
+  - **Decision Log:** Industry gap analysis identified missing GATT close() call. Android has ~7-8 GATT connection slots — without cleanup, handles leak and eventually refuse all connections.
+  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-fix-ble-gatt-resource-cleanup.md](./plans/PLAN-fix-ble-gatt-resource-cleanup.md)
+    Key finding: "cancelDeviceConnection disconnects but doesn't free native GATT handles"
+    Rejected alternative: "Rely on GC — Android BLE GC is unreliable for native handles"
+  - **Source of Truth:** 📖 [BleMachine.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts#L20) §disconnectService
+  - **Details:** Touches BleMachine.ts disconnectService and ConnectService.ts error paths only.
+
+---
+
+### ⏳ [BATCH:feat/ble-excellence-w2] — `feat/ble-excellence-w2` — READY
+> **Worktree**: `feat/ble-excellence-w2` · **Type**: Sequential (unified) · **Prerequisite**: Wave 1 merged
+> **Source Analysis**: 📊 [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) — Gaps 2, 6
+
+- [ ] **`refactor/ble-gatt-operation-queue`**
+  - **Tags:** `[✅ READY]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:feat/ble-excellence-w2]` `[WAVE:2]`
+  - **Goal:** Upgrade BleWriteQueue to a universal BLE operation queue that serializes ALL GATT operations (writes, reads, descriptors) — preventing silent failures from concurrent Android GATT ops.
+  - **Decision Log:** Industry gap analysis identified that heartbeat pings, recovery handshakes, and color writes can race on Android's single-threaded GATT stack. Nordic gold standard: serialize everything through one FIFO.
+  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-refactor-ble-gatt-operation-queue.md](./plans/PLAN-refactor-ble-gatt-operation-queue.md)
+    Key finding: "BleWriteQueue only serializes writes — reads and descriptors bypass the queue entirely"
+    Rejected alternative: "Per-device mutex — doesn't handle priority ordering"
+  - **Source of Truth:** 📖 [BleWriteQueue.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleWriteQueue.ts#L1) §Priority FIFO Write Queue
+  - **Details:** Touches BleWriteQueue.ts, ConnectService.ts, HeartbeatService.ts, RecoveryService.ts, and all queue consumers. Prerequisite: Wave 1 fully merged.
+
+- [ ] **`feat/ble-connection-params`**
+  - **Tags:** `[✅ READY]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:feat/ble-excellence-w2]` `[WAVE:2]`
+  - **Goal:** Tune BLE connection parameters — request High priority during active control, switch to Balanced during idle to save battery.
+  - **Decision Log:** Industry gap analysis showed we use default OS-negotiated parameters. Active control needs ~15ms interval, idle can use ~100ms — 6x battery savings during idle.
+  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-feat-ble-connection-params.md](./plans/PLAN-feat-ble-connection-params.md)
+    Key finding: "Default connection params waste battery — idle timeout should switch to Balanced"
+    Rejected alternative: "Always High priority — wastes battery for no benefit during idle"
+  - **Source of Truth:** 📖 [ConnectService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts#L154) §connectToDevice
+  - **Details:** Touches ConnectService.ts and bleTimingConstants.ts. Prerequisite: Wave 1 fully merged.
+
+---
+
+### ⏳ [BATCH:feat/ble-excellence-w3] — `feat/ble-excellence-w3` — READY
+> **Worktree**: `feat/ble-excellence-w3` · **Type**: Sequential · **Prerequisite**: Wave 2 merged
+> **Source Analysis**: 📊 [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) — Gaps 4, 7
+
+- [ ] **`feat/ble-autoconnect-passive`**
+  - **Tags:** `[✅ READY]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 MED]` `[BATCH:feat/ble-excellence-w3]` `[WAVE:3]`
+  - **Goal:** Use `autoConnect: true` for reconnections (not first-time connects) so the OS reconnects passively when device comes back in range.
+  - **Decision Log:** Industry gap analysis: direct connect for first pairing (faster), autoConnect for subsequent reconnections (fire-and-forget, OS-managed).
+  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-feat-ble-autoconnect-passive.md](./plans/PLAN-feat-ble-autoconnect-passive.md)
+    Key finding: "autoConnect=true lets OS handle passive reconnect — zero app involvement needed"
+    Rejected alternative: "Always autoConnect — slower for first-time pairing (~30s vs ~2s)"
+  - **Source of Truth:** 📖 [ConnectService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts#L154) §connectToDevice
+  - **Details:** Touches ConnectService.ts, BleMachine.ts (invoke input), BleMachine.types.ts. Prerequisite: Wave 2 fully merged.
+
+- [ ] **`feat/smart-group-health`**
+  - **Tags:** `[✅ READY]` `[UI]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:feat/ble-excellence-w3]` `[WAVE:3]`
+  - **Goal:** Add per-device connection health within groups — degraded mode banner, per-device status dots, and connected-only command dispatch.
+  - **Decision Log:** Industry gap analysis: no consumer LED app does smart group degradation. This is our competitive edge — show which skate is down and keep the other running.
+  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-feat-smart-group-health.md](./plans/PLAN-feat-smart-group-health.md)
+    Key finding: "When 1 of N devices drops, whole group appears broken — no degraded mode"
+    Rejected alternative: "Group-level binary connected/disconnected — current approach, no granularity"
+  - **Source of Truth:** 📖 [SkateGroupCard.tsx](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/dashboard/SkateGroupCard.tsx#L51) §group power state logic
+  - **Details:** Touches SkateGroupCard, MySkatesSlab, DashboardScreen, dashboard.types.ts. Prerequisite: Wave 2 fully merged.
+
+---
+
+### ⏳ [BATCH:feat/ble-excellence-w4] — `feat/ble-excellence-w4` — READY
+> **Worktree**: `feat/ble-excellence-w4` · **Type**: Solo · **Prerequisite**: Wave 3 merged
+> **Source Analysis**: 📊 [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) — Gap 1 (the big one)
+
+- [ ] **`feat/ble-background-reconnect`**
+  - **Tags:** `[✅ READY]` `[BLE]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🧠 HIGH]` `[BATCH:feat/ble-excellence-w4]` `[WAVE:4]`
+  - **Goal:** Maintain BLE connection when app backgrounds — iOS state restoration + Android foreground service so skaters' lights keep working with phone in pocket.
+  - **Decision Log:** Industry gap analysis: #1 UX gap. Every competitor (Govee, Hue, LIFX) maintains connection in background. Our app drops connection on background — lights stop responding.
+  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-feat-ble-background-reconnect.md](./plans/PLAN-feat-ble-background-reconnect.md)
+    Key finding: "Phone in pocket = lights die — the single highest-impact UX gap"
+    Rejected alternative: "Polling reconnect on foreground only — fails when user expects lights to just work"
+  - **Source of Truth:** 📖 [useBLE.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useBLE.ts) §BleManager init
+  - **Details:** Creates NEW BackgroundBLEService.ts. Modifies useBLE.ts, useDashboardAutoConnect.ts, Info.plist, AndroidManifest.xml, app.json. REQUIRES dependency proposal for Android foreground service library. Prerequisite: ALL prior waves merged.
+
+---
 
 - [ ] **`refactor/upgrade-expo-56`**
   - **Tags:** `[✅ READY]` `[☁️ CLOUD]` `[⚠️ H-RISK]` `[🥩 Feast]` `[🤖 M132]` `[BATCH:refactor/upgrade-expo-56]`

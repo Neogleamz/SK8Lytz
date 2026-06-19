@@ -1,3 +1,17 @@
+### [ARTIFACT] 2026-06-19T07:10Z — BLE Connection Excellence Intake (8 tasks, 4 waves)
+**What:** Industry gap analysis comparing SK8Lytz BLE connection architecture against Govee/Hue/LIFX/Nordic gold standards. Identified 10 gaps, user selected 8 for intake.
+**Artifact:** [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md)
+**Plans created (8):**
+- Wave 1: PLAN-feat-ble-scan-filter-uuid.md, PLAN-feat-connection-state-badges.md, PLAN-fix-ble-gatt-resource-cleanup.md
+- Wave 2: PLAN-refactor-ble-gatt-operation-queue.md, PLAN-feat-ble-connection-params.md
+- Wave 3: PLAN-feat-ble-autoconnect-passive.md, PLAN-feat-smart-group-health.md
+- Wave 4: PLAN-feat-ble-background-reconnect.md
+**Key decisions:**
+- Wave assignment verified by AST collision analysis (ConnectService.ts is the collision nexus)
+- Gap 3 scoped down: RSSI meters already exist on device + group cards. Task is state badges only.
+- Gap 1 (background reconnect) placed as Wave 4 — depends on all prior infrastructure
+- Gap 5 (bonding) and Gap 8 (metrics) excluded by user
+
 ### [MERGE READY] 2026-06-19T06:38Z — fix/autoconnect-dashboard-stale — 5ea98248
 **What fixed (Wave 2 — H6+M1+L3+L4):**
 - H6: Cloud sync MAC case mismatch — `cloudMacSet.add(d.device_mac || d.id)` now `.toUpperCase()` to match BLE `Device.id` convention
