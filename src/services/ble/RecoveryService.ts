@@ -10,7 +10,8 @@ import { createGattSession } from '../BleSessionFactory';
 import { enqueueWrite, clearWriteQueue } from '../BleWriteQueue';
 import { BLE_TIMING } from '../../constants/bleTimingConstants';
 
-export const MAX_RECOVERY_ATTEMPTS = 5;
+/** Total recovery budget: Phase 1 (12) + Phase 2 (5) = 17 */
+export const MAX_RECOVERY_ATTEMPTS = BLE_TIMING.RECOVERY_PHASE_1_MAX_ATTEMPTS + BLE_TIMING.RECOVERY_PHASE_2_MAX_ATTEMPTS;
 
 export const getRecoveryBackoffMs = (attempts: number): number => {
   const exponential = Math.min(BLE_TIMING.RECOVERY_BASE_MS * Math.pow(1.5, attempts), BLE_TIMING.RECOVERY_MAX_MS);
@@ -28,6 +29,8 @@ interface RecoveryInput {
   adapterMapRef: { current: Map<string, IControllerProtocol> };
   mtuMapRef: { current: Map<string, number> };
   disconnectListeners: { current: Record<string, import('react-native-ble-plx').Subscription> };
+  /** H2 fix: notification monitor subscriptions keyed by device ID for cleanup on reconnect */
+  notificationListeners?: { current: Record<string, import('react-native-ble-plx').Subscription> };
   handleOrganicDisconnect: (error: BleError | null, deviceId: string) => void;
   /**
    * onOrganicDisconnect — fires when a recovered device drops again.
@@ -66,7 +69,8 @@ export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ i
     let reconnectedDevice: Device | null = null;
 
     // --- Phase 1 & 2: GATT hammering ---
-    while (!cancelled && attempts <= BLE_TIMING.RECOVERY_PHASE_2_MAX_ATTEMPTS && !hasExceededMaxRecovery(attempts)) {
+    const TOTAL_MAX_ATTEMPTS = BLE_TIMING.RECOVERY_PHASE_1_MAX_ATTEMPTS + BLE_TIMING.RECOVERY_PHASE_2_MAX_ATTEMPTS;
+    while (!cancelled && attempts < TOTAL_MAX_ATTEMPTS && !hasExceededMaxRecovery(attempts)) {
       try {
         const backoff = attempts <= BLE_TIMING.RECOVERY_PHASE_1_MAX_ATTEMPTS
           ? getRecoveryBackoffMs(attempts)
@@ -127,12 +131,20 @@ export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ i
           onOrganicDisconnect(conn.id);
         });
 
-        conn.monitorCharacteristicForService(
+        // H2 FIX: Clean up stale notification subscription before re-registering
+        if (input.notificationListeners?.current[conn.id]) {
+          input.notificationListeners.current[conn.id].remove();
+          delete input.notificationListeners.current[conn.id];
+        }
+        const notifSub = conn.monitorCharacteristicForService(
           recoveryAdapter.serviceUUID,
           recoveryAdapter.notifyCharacteristicUUID,
           (error: Error | null, characteristic: import('react-native-ble-plx').Characteristic | null) =>
             handleNotification(error as BleError | null, characteristic, conn.id)
         );
+        if (input.notificationListeners) {
+          input.notificationListeners.current[conn.id] = notifSub;
+        }
 
         await new Promise(r => setTimeout(r, BLE_TIMING.RECOVERY_PING_SETTLE_MS));
         if (signal.aborted || cancelled) break;
@@ -205,12 +217,20 @@ export const recoveryService = fromCallback<BleMachineEvent, RecoveryInput>(({ i
             handleOrganicDisconnect((contextError as unknown) as BleError | null, conn.id);
             onOrganicDisconnect(conn.id);
           });
-          conn.monitorCharacteristicForService(
+          // H2 FIX: Clean up stale notification subscription before re-registering
+          if (input.notificationListeners?.current[conn.id]) {
+            input.notificationListeners.current[conn.id].remove();
+            delete input.notificationListeners.current[conn.id];
+          }
+          const notifSub = conn.monitorCharacteristicForService(
             recoveryAdapter.serviceUUID,
             recoveryAdapter.notifyCharacteristicUUID,
             (error: Error | null, characteristic: import('react-native-ble-plx').Characteristic | null) =>
               handleNotification(error as BleError | null, characteristic, conn.id)
           );
+          if (input.notificationListeners) {
+            input.notificationListeners.current[conn.id] = notifSub;
+          }
 
           reconnectedDevice = conn;
           AppLogger.log('AUTO_RECOVERY_SUCCESS', { deviceId: scrubPII(deviceId), phase: 3 });

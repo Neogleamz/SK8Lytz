@@ -140,6 +140,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
   }, []);
 
   const disconnectListeners = useRef<Record<string, import('react-native-ble-plx').Subscription>>({});
+  /** H2 fix: notification monitor subscriptions keyed by device ID for cleanup on reconnect */
+  const notificationListeners = useRef<Record<string, import('react-native-ble-plx').Subscription>>({});
   const bleSendRef = useRef<((event: EventFrom<typeof bleMachine>) => void) | null>(null); // MIGRATION-SHIM resolved
   const dataReceivedCallbackRef = useRef<((deviceId: string, data: number[]) => void) | undefined>(undefined);
   const deviceRecoveredCallbackRef = useRef<((deviceId: string) => void) | undefined>(undefined);
@@ -183,6 +185,7 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       adapterMapRef,
       mtuMapRef,
       disconnectListeners,
+      notificationListeners,
       blacklistedMacsRef,
       handleOrganicDisconnect: (error: import('react-native-ble-plx').BleError | null, deviceId: string) => handleOrganicDisconnectRef.current(error, deviceId),
       // onOrganicDisconnect — the REAL recovery trigger.
@@ -194,6 +197,8 @@ export default function useBLE(registeredMacs: string[] = []): BluetoothLowEnerg
       },
       handleNotification: (error: import('react-native-ble-plx').BleError | null, characteristic: import('react-native-ble-plx').Characteristic | null, deviceId: string) => handleNotificationRef.current(error, characteristic, deviceId),
       enqueueWrite,
+      /** Plan 2 H3 fix: Lookup a device from the scan cache for RecoveryService Phase 3 passive reconnection */
+      getSweepedDevice: (deviceId: string) => allDevicesRef.current.find(d => d.id === deviceId),
     }
   });
 

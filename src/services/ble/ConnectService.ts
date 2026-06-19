@@ -19,6 +19,8 @@ export interface ConnectServiceInput {
   adapterMapRef: { current: Map<string, IControllerProtocol> };
   mtuMapRef: { current: Map<string, number> };
   disconnectListeners: { current: Record<string, import('react-native-ble-plx').Subscription> };
+  /** H2 fix: notification monitor subscriptions keyed by device ID for cleanup on reconnect */
+  notificationListeners: { current: Record<string, import('react-native-ble-plx').Subscription> };
   blacklistedMacsRef: { current: string[] };
   /**
    * handleOrganicDisconnect — legacy logging-only callback. Kept for telemetry.
@@ -50,6 +52,7 @@ export const connectService = fromPromise<
     adapterMapRef,
     mtuMapRef,
     disconnectListeners,
+    notificationListeners,
     blacklistedMacsRef,
     handleOrganicDisconnect,
     onOrganicDisconnect,
@@ -133,8 +136,16 @@ export const connectService = fromPromise<
         try {
           const isConnected = await bleManager.isDeviceConnected(mac);
           if (isConnected) {
-            const devicesList = await bleManager.connectedDevices([]).catch(() => []);
+            let devicesList = await bleManager.connectedDevices([]).catch(() => []);
             conn = devicesList.find(d => d.id === mac) || null;
+
+            // M5 FIX: Android 12+ race — isDeviceConnected=true but connectedDevices list hasn't caught up.
+            // Retry once after a short settle if the device isn't found.
+            if (!conn) {
+              await new Promise(r => setTimeout(r, 200));
+              devicesList = await bleManager.connectedDevices([]).catch(() => []);
+              conn = devicesList.find(d => d.id === mac) || null;
+            }
           } else {
             conn = null;
           }
@@ -201,7 +212,14 @@ export const connectService = fromPromise<
               AppLogger.warn(`[BLE] MTU glitch (23) for ${scrubPII(conn.id)}. Retrying...`, { payload_size: 0, ssi: 0 });
               const backoffMs = BLE_TIMING.MTU_RETRY_SETTLE_MS * Math.pow(2, mtuAttempt - 1);
               await new Promise(res => setTimeout(res, jitteredDelay(backoffMs, 50)));
-            } catch {
+            } catch (mtuErr: unknown) {
+              AppLogger.warn('[ConnectService] MTU negotiation attempt failed', {
+                error: mtuErr instanceof Error ? mtuErr.message : String(mtuErr),
+                deviceId: scrubPII(conn.id),
+                attempt: mtuAttempt,
+                payload_size: 0,
+                ssi: 0,
+              });
               const backoffMs = BLE_TIMING.MTU_RETRY_SETTLE_MS * Math.pow(2, mtuAttempt - 1);
               await new Promise(res => setTimeout(res, jitteredDelay(backoffMs, 50)));
             }
@@ -227,7 +245,12 @@ export const connectService = fromPromise<
           // 2. Trigger XState RECOVERY_START (the actual recovery mechanism)
           onOrganicDisconnect(conn.id);
         });
-        conn.monitorCharacteristicForService(
+        // H2 FIX: Clean up stale notification subscription before re-registering
+        if (notificationListeners.current[conn.id]) {
+          notificationListeners.current[conn.id].remove();
+          delete notificationListeners.current[conn.id];
+        }
+        notificationListeners.current[conn.id] = conn.monitorCharacteristicForService(
           adapter.serviceUUID,
           adapter.notifyCharacteristicUUID,
           (error: BleError | null, characteristic: Characteristic | null) => handleNotification(error, characteristic, conn.id)

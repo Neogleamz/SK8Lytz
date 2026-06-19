@@ -14,6 +14,8 @@ export interface BleMachineContext {
   adapterMapRef: { current: Map<string, IControllerProtocol> };
   mtuMapRef: { current: Map<string, number> };
   disconnectListeners: { current: Record<string, import('react-native-ble-plx').Subscription> };
+  /** H2 fix: notification monitor subscriptions keyed by device ID for cleanup on reconnect */
+  notificationListeners: { current: Record<string, import('react-native-ble-plx').Subscription> };
   blacklistedMacsRef: { current: string[] };
   handleOrganicDisconnect: (error: BleError | null, deviceId: string) => void;
   /** Fires when a device drops unexpectedly — wired by useBLE.ts to send RECOVERY_START */
