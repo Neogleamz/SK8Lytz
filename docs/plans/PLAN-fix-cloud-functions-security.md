@@ -14,7 +14,7 @@ Fix CORS, RLS bypass, and type safety issues in Supabase edge functions.
 
 ## Files to Create/Modify
 
-### [MODIFY] [index.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/supabase/functions/notify-crew-session/index.ts)
+### [MODIFY] [index.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/supabase/functions/notify-crew-session/index.ts) // SKIPPED: Fix already implemented in master (commit 6e79233d4b)
 - Add proper CORS headers
 - Scope service role key usage to minimum required operations
 - Add explicit TypeScript types to all parameters
