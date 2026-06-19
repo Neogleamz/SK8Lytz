@@ -1,16 +1,25 @@
+### [ARTIFACT] 2026-06-19T05:34Z - Group Connection Audit and Plan
+- [group_connection_audit.md] - 6-bug audit of Dashboard group/device connection pipeline
+- [PLAN-fix-group-connect-stale-devices.md] - 3-file fix plan for Bugs 1/2/5
+- Task fix/group-connect-stale-devices added to TRIAGE QUEUE
 
-### [MERGE] 2026-06-18T13:41Z — refactor/spatial-pattern-engines ? master @ 178c0b5f
+### [DECISION] 2026-06-19T05:34Z - seenMacsRef split: gate telemetry not Device refresh
+- Decision: Split seenMacsRef gate into two concerns: first-time telemetry gated by seenMacs, Device object refresh runs for ALL seen MACs via upsert
+- Rejected: Clearing seenMacsRef every cycle (causes telemetry spam and redundant interrogation)
+- Source: useBLEScanner.ts L270-315
+
+### [MERGE] 2026-06-18T13:41Z ï¿½ refactor/spatial-pattern-engines ? master @ 178c0b5f
 **What merged:**
 - Extracted 61KB SpatialEngine monolith into 5 focused modules (28KB after extraction)
-- NEW: src/protocols/shared/engineTypes.ts — RGB, PatternId, ColorMode, SK8LytzTemplate, PatternOptions
-- NEW: src/protocols/shared/spatialMath.ts — dim, lerpRGB, hueToRGB, blendRGB, hsvToRgb
-- NEW: src/protocols/shared/coordinateSystem.ts — LED strip/segment coordinate logic
-- NEW: src/protocols/shared/engineUtils.ts — hexToRgb, clamp, smoothStep, mapRange
-- NEW: src/protocols/spatial/effectProcessors.ts — all 61+ builder functions (buildNativeBreathe ? buildGlitchMarquee)
-- MODIFIED: SpatialEngine.ts — rewritten as thin orchestrator; imports from new modules; all re-exports maintained
-- MODIFIED: PatternEngine.ts — removed local RGB/PatternId/ColorMode/SK8LytzTemplate/PatternOptions defs; imports from shared/engineTypes; all re-exports maintained
-- MODIFIED: VisualizerEngine.ts — import RGB/PatternId/PatternOptions from shared/engineTypes (was PatternEngine)
-- MODIFIED: SymphonyEngine.ts — import RGB from shared/engineTypes (was PatternEngine)
+- NEW: src/protocols/shared/engineTypes.ts ï¿½ RGB, PatternId, ColorMode, SK8LytzTemplate, PatternOptions
+- NEW: src/protocols/shared/spatialMath.ts ï¿½ dim, lerpRGB, hueToRGB, blendRGB, hsvToRgb
+- NEW: src/protocols/shared/coordinateSystem.ts ï¿½ LED strip/segment coordinate logic
+- NEW: src/protocols/shared/engineUtils.ts ï¿½ hexToRgb, clamp, smoothStep, mapRange
+- NEW: src/protocols/spatial/effectProcessors.ts ï¿½ all 61+ builder functions (buildNativeBreathe ? buildGlitchMarquee)
+- MODIFIED: SpatialEngine.ts ï¿½ rewritten as thin orchestrator; imports from new modules; all re-exports maintained
+- MODIFIED: PatternEngine.ts ï¿½ removed local RGB/PatternId/ColorMode/SK8LytzTemplate/PatternOptions defs; imports from shared/engineTypes; all re-exports maintained
+- MODIFIED: VisualizerEngine.ts ï¿½ import RGB/PatternId/PatternOptions from shared/engineTypes (was PatternEngine)
+- MODIFIED: SymphonyEngine.ts ï¿½ import RGB from shared/engineTypes (was PatternEngine)
 - Circular dep RESOLVED: PatternEngine ? SpatialEngine cycle broken. AST confirmed DAG.
 - BYTE INVARIANT: All BLE payload values byte-for-byte identical. Zero logic changes.
 **Verify result:** TSC ? Jest ? BLE Guards ? Type Safety ? AST ?
@@ -4503,23 +4512,23 @@ TSC: PASS  Jest: PASS
 **Note:** 6 of 7 files were already clean from prior fixes (deepdive-hunt team's work). Only one live violation found and fixed.
 
 
-### [MERGE READY] 2026-06-18T13:25 — fix/memory-leak-sweep @ 572cc153
+### [MERGE READY] 2026-06-18T13:25 ï¿½ fix/memory-leak-sweep @ 572cc153
 **Files touched:**
-- `src/components/AccountModal.tsx` — SKIPPED R-22 (markFullyDrawn callback, no resource to release)
-- `src/components/ProductVisualizer.tsx` — SKIPPED R-22 (loop.stop() cleanup already present)
-- `src/components/patterns/PatternCard.tsx` — SKIPPED R-22 (loop.stop() cleanup already present)
-- `src/components/MarqueeText.tsx` — SKIPPED R-22 (loop.stop() cleanup already present)
-- `src/components/CommunityModal.tsx` — FIXED R-22: added isFetchingRef.current = false cleanup return to main useEffect
-- `src/components/SessionSummaryModal.tsx` — FIXED R-20: Platform.OS ternary to Platform.select on card shadow
-- `src/hooks/useAppMicrophone.ts` — FIXED R-12: added recorderRef to fix stale closure in 20Hz setInterval
+- `src/components/AccountModal.tsx` ï¿½ SKIPPED R-22 (markFullyDrawn callback, no resource to release)
+- `src/components/ProductVisualizer.tsx` ï¿½ SKIPPED R-22 (loop.stop() cleanup already present)
+- `src/components/patterns/PatternCard.tsx` ï¿½ SKIPPED R-22 (loop.stop() cleanup already present)
+- `src/components/MarqueeText.tsx` ï¿½ SKIPPED R-22 (loop.stop() cleanup already present)
+- `src/components/CommunityModal.tsx` ï¿½ FIXED R-22: added isFetchingRef.current = false cleanup return to main useEffect
+- `src/components/SessionSummaryModal.tsx` ï¿½ FIXED R-20: Platform.OS ternary to Platform.select on card shadow
+- `src/hooks/useAppMicrophone.ts` ï¿½ FIXED R-12: added recorderRef to fix stale closure in 20Hz setInterval
 **TSC:** OK  **Jest:** OK (234 tests)  **All 8 QA gates:** OK
 
-### [MERGE] 2026-06-19T00:39 — fix-gatt-conn-133-exception -> master @ 21909fa4
+### [MERGE] 2026-06-19T00:39 ï¿½ fix-gatt-conn-133-exception -> master @ 21909fa4
 **What merged:** Empty payload (no commits in worktree prior to merge)
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** None
 
-### [MERGE READY] fix/data-layer-types — 1ef14b02
+### [MERGE READY] fix/data-layer-types ï¿½ 1ef14b02
 Files touched: docs/plans/PLAN-fix-data-layer-types.md
 TSC: ?  Jest: ?
 
@@ -4528,43 +4537,43 @@ TSC: ?  Jest: ?
 **Files touched:** app.config.js
 **TSC:** âœ…  **Jest:** âœ…
 
-### [MERGE] 2026-06-18T20:10 — fix/manifest-permissions ? master @ 11b6798b
+### [MERGE] 2026-06-18T20:10 ï¿½ fix/manifest-permissions ? master @ 11b6798b
 **What merged:** Completed fix/manifest-permissions in Wave 1.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
 
-### [MERGE] 2026-06-18T20:22 — fix/ble-services-hardening ? master @ f06c6659
+### [MERGE] 2026-06-18T20:22 ï¿½ fix/ble-services-hardening ? master @ f06c6659
 **What merged:** Completed fix/ble-services-hardening in Wave 2.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
 
-### [MERGE] 2026-06-18T20:23 — fix/pii-scrubber ? master @ 9321c938
+### [MERGE] 2026-06-18T20:23 ï¿½ fix/pii-scrubber ? master @ 9321c938
 **What merged:** Completed fix/pii-scrubber in Wave 2.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
 
-### [MERGE] 2026-06-18T20:24 — fix/notifications-routing-safety ? master @ 76435328
+### [MERGE] 2026-06-18T20:24 ï¿½ fix/notifications-routing-safety ? master @ 76435328
 **What merged:** Completed fix/notifications-routing-safety in Wave 2.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
 
-### [MERGE] 2026-06-18T20:30 — fix/session-context-safety ? master @ 48a29dfc
+### [MERGE] 2026-06-18T20:30 ï¿½ fix/session-context-safety ? master @ 48a29dfc
 **What merged:** Completed fix/session-context-safety in Wave 3.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
 
-### [MERGE] 2026-06-18T20:30 — fix/crew-ui-types ? master @ 64d7f6eb
+### [MERGE] 2026-06-18T20:30 ï¿½ fix/crew-ui-types ? master @ 64d7f6eb
 **What merged:** Completed fix/crew-ui-types in Wave 3.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
 
-### [MERGE] 2026-06-18T20:31 — fix/onboarding-safety ? master @ 5abc124b
+### [MERGE] 2026-06-18T20:31 ï¿½ fix/onboarding-safety ? master @ 5abc124b
 **What merged:** Completed fix/onboarding-safety in Wave 3.
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
