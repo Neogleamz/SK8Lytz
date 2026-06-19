@@ -5004,3 +5004,8 @@ TSC: ?  Jest: ?
 **What merged:** Fixes for R-24, R-20, R-29 (CrewSessionManager cycle), R-21 (SpeedTrackingService mutex).
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** src/constants/storageKeys.ts, src/screens/DashboardScreen.tsx, src/screens/Dashboard/DashboardCrewHub.tsx, app.config.js, src/services/CrewService/CrewSessionManager.ts, src/services/SpeedTrackingService.ts
+
+### [MERGE READY] fix/controller-dispatch-safety - 4411abe9
+Files touched: src/hooks/useControllerDispatch.ts, docs/plans/PLAN-fix-controller-dispatch-safety.md
+TSC: ?  Jest: ?
+
