@@ -9594,3 +9594,9 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
+### [MERGE READY] fix/dashboard-styles-perf — 86409fb3
+Files touched:
+- src/theme/theme.ts
+- docs/plans/PLAN-fix-dashboard-styles-perf.md
+TSC: ?  Jest: ?
+
