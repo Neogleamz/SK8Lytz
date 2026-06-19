@@ -34,7 +34,7 @@ export interface BaseTabProps {
     warning: string;
     isDark: boolean;
   };
-  styles: Record<string, import('react-native').ViewStyle | import('react-native').TextStyle | import('react-native').ImageStyle>;
+  styles: Record<string, import('react-native').TextStyle | import('react-native').ImageStyle | (Omit<import('react-native').ViewStyle, 'overflow'> & { overflow?: 'visible' | 'hidden' | undefined })>;
 }
 
 export interface AccountTabProfileProps extends BaseTabProps {
