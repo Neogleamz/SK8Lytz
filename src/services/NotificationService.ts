@@ -88,13 +88,13 @@ class NotificationService {
         projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
       });
       this.token = tokenObj.data;
-      AppLogger.log('NOTIFICATION_SERVICE', { event: 'token_acquired', tokenPrefix: this.token.slice(0, 12) });
+      AppLogger.log('NOTIFICATION_SERVICE', { event: 'token_acquired', tokenPrefix: this.token.slice(0, 12), payload_size: 0, ssi: 0 });
 
       const platform = Platform.OS as 'ios' | 'android' | 'web';
       // R-21 fix: route through pushTokenService (extracted from ProfileService during
       // God Object Decomposition). profileService.registerPushToken is now deprecated.
       await pushTokenService.registerPushToken(this.token, platform, userId || null);
-      AppLogger.log('PUSH_TOKEN_REGISTERED', { platform, tokenPrefix: this.token.slice(0, 12) });
+      AppLogger.log('PUSH_TOKEN_REGISTERED', { platform, tokenPrefix: this.token.slice(0, 12), payload_size: 0, ssi: 0 });
     } catch (err: unknown) {
       AppLogger.warn('NOTIFICATION_SERVICE', { event: 'push_token_unavailable', error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
       return null;
@@ -119,7 +119,11 @@ class NotificationService {
     this.responseSub = null;
 
     if (this.token) {
-      await pushTokenService.unregisterPushToken(this.token, userId || null);
+      try {
+        await pushTokenService.unregisterPushToken(this.token, userId || null);
+      } catch (err: unknown) {
+        AppLogger.warn('NOTIFICATION_SERVICE', { event: 'unregister_push_token_failed', error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
+      }
       this.token = null;
     }
   }
@@ -150,7 +154,7 @@ class NotificationService {
         },
         trigger: null, // immediate
       });
-      AppLogger.log('PUSH_NOTIFICATION_SENT', { type: 'crew_invite', crewId: opts.crewId });
+      AppLogger.log('PUSH_NOTIFICATION_SENT', { type: 'crew_invite', crewId: opts.crewId, payload_size: 0, ssi: 0 });
     } catch (err: unknown) {
       AppLogger.warn('NOTIFICATION_SERVICE', { event: 'crew_invite_notification_failed', error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
     }
@@ -224,7 +228,7 @@ class NotificationService {
         },
         trigger: trigger as NotificationsType.NotificationTriggerInput,
       });
-      AppLogger.log('PUSH_NOTIFICATION_SENT', { type: 'session_reminder', subtype: 'scheduled', sessionId: opts.sessionId, trigger: trigger?.date?.toISOString() });
+      AppLogger.log('PUSH_NOTIFICATION_SENT', { type: 'session_reminder', subtype: 'scheduled', sessionId: opts.sessionId, trigger: trigger?.date?.toISOString(), payload_size: 0, ssi: 0 });
       return id;
     } catch (err: unknown) {
       AppLogger.warn('NOTIFICATION_SERVICE', { event: 'schedule_session_alert_failed', error: (err instanceof Error ? err.message : String(err)), payload_size: 0, ssi: 0 });
@@ -270,7 +274,7 @@ class NotificationService {
     if (!Notifications) return;
     this.foregroundSub = Notifications.addNotificationReceivedListener(notification => {
       // Already handled by setNotificationHandler above (shows banner)
-      AppLogger.log('NOTIFICATION_SERVICE', { event: 'foreground_received', id: notification.request.identifier });
+      AppLogger.log('NOTIFICATION_SERVICE', { event: 'foreground_received', id: notification.request.identifier, payload_size: 0, ssi: 0 });
     });
   }
 
@@ -281,7 +285,7 @@ class NotificationService {
       const crewId    = data?.crewId;
       const sessionId = data?.sessionId;
 
-      AppLogger.log('NOTIFICATION_SERVICE', { event: 'tapped', crewId, sessionId });
+      AppLogger.log('NOTIFICATION_SERVICE', { event: 'tapped', crewId, sessionId, payload_size: 0, ssi: 0 });
 
       if (crewId && sessionId && this.joinHandler) {
         this.joinHandler(crewId, sessionId);

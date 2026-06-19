@@ -38,7 +38,7 @@ class LocationService {
       }
 
       if (!isGranted) {
-        AppLogger.log('ERROR_CAUGHT', { service: 'LocationService', reason: 'foreground_location_denied' });
+        AppLogger.log('ERROR_CAUGHT', { service: 'LocationService', reason: 'foreground_location_denied', payload_size: 0, ssi: 0 });
         return null;
       }
 
@@ -64,6 +64,7 @@ class LocationService {
         // R-09: address label omitted — may contain residential PII (street name + number).
         // Log only accuracy for latency diagnostics.
         accuracy: pos.coords.accuracy,
+        payload_size: 0, ssi: 0
       });
 
       return location;
@@ -122,13 +123,15 @@ class LocationService {
     // ── Query 1: All active PUBLIC sessions (visible to everyone in radius) ──
     let publicData: any[] | null = [];
     try {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('crew_sessions')
         .select(SESSION_SELECT)
         .eq('is_active', true)
         .eq('is_public', true)
         .order('created_at', { ascending: false })
         .limit(80);
+      
+      if (error) throw error;
       publicData = data;
     } catch (err: unknown) {
       AppLogger.warn('[LocationService] Public session query failed', { error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
@@ -146,6 +149,9 @@ class LocationService {
           supabase.from('crew_members').select('session_id').eq('user_id', userId)
         ]);
 
+        if (mRes.error) throw mRes.error;
+        if (sRes.error) throw sRes.error;
+
         const myCrewIds = (mRes.data ?? []).map((m: { crew_id: string }) => m.crew_id).filter(Boolean);
         const mySessionIds = (sRes.data ?? []).map((s: { session_id: string }) => s.session_id).filter(Boolean);
 
@@ -161,9 +167,11 @@ class LocationService {
           if (myCrewIds.length > 0) orParts.push(`crew_id.in.(${myCrewIds.join(',')})`);
           if (mySessionIds.length > 0) orParts.push(`id.in.(${mySessionIds.join(',')})`);
           
-          const { data: memberSessions } = await query
+          const { data: memberSessions, error: memberError } = await query
             .or(orParts.join(','))
             .order('created_at', { ascending: false });
+
+          if (memberError) throw memberError;
 
           privateData = (memberSessions ?? []).map((row: Record<string, unknown>) => ({
             id: row.id as string,

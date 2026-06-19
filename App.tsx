@@ -37,7 +37,7 @@ if (g.ErrorUtils) {
   g.ErrorUtils.setGlobalHandler(async (error: unknown, isFatal?: boolean) => {
     try {
       const err = error instanceof Error ? error : new Error(String(error));
-      await AppLogger.log('ERROR_CAUGHT', { message: err.message || 'Unhandled JS Exception', stack: err.stack, isFatal });
+      await AppLogger.log('ERROR_CAUGHT', { message: err.message || 'Unhandled JS Exception', stack: err.stack, isFatal, payload_size: 0, ssi: 0 });
       await AppLogger.uploadLogsToSupabase();
     } catch (e) {
       console.warn('Failed to log error', e);
@@ -49,7 +49,7 @@ if (g.ErrorUtils) {
 // ── Unhandled Promise Rejection capture (web builds) ──────────────────────────
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener('unhandledrejection', (event) => {
-    AppLogger.error('[UnhandledPromise]', event.reason);
+    AppLogger.error('[UnhandledPromise]', 'Unhandled Promise Rejection', { reason: String(event.reason), payload_size: 0, ssi: 0 });
   });
 }
 
@@ -143,7 +143,7 @@ export default function App() {
       } else {
         SplashScreen.hideAsync().catch(() => {});
       }
-      AppLogger.log('APP_OPENED', { loadTimeMs: Date.now() - appStartTime }).catch(() => {});
+      AppLogger.log('APP_OPENED', { loadTimeMs: Date.now() - appStartTime, payload_size: 0, ssi: 0 }).catch(() => {});
       AppLogger.uploadLogsToSupabase().catch(() => {});
       // Pre-warm ledger cache so loadSync() has data before any screen mounts.
       // Fires once per cold start — reads all @SK8Lytz_DeviceState_v2_* keys from AsyncStorage.
@@ -157,7 +157,7 @@ export default function App() {
         AppLogger.uploadLogsToSupabase().catch(() => {});
       }
       if (nextAppState === 'active') {
-        AppLogger.log('APP_FOREGROUNDED', { timestamp: Date.now() }).catch(() => {});
+        AppLogger.log('APP_FOREGROUNDED', { timestamp: Date.now(), payload_size: 0, ssi: 0 }).catch(() => {});
       }
     });
     return () => subscription.remove();
@@ -174,6 +174,7 @@ export default function App() {
         // Fallback if library missing — expected on simulator / non-Health Connect builds
         AppLogger.debug('[App] react-native-health-connect not available', {
           error: _e instanceof Error ? _e.message : String(_e),
+          payload_size: 0, ssi: 0
         });
       }
     }
