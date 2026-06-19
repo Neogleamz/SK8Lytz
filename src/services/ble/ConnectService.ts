@@ -156,8 +156,10 @@ export const connectService = fromPromise<
           if (isTransient && attempt < 3) {
             const baseDelay = BLE_TIMING.GATT_CONNECT_BACKOFF_MS[attempt - 1];
             const delay = jitteredDelay(baseDelay, 500);
-            AppLogger.warn('[BLE] GATT 133 — transient connect error, retrying', { attempt, maxAttempts: 3, delayMs: delay, deviceId: scrubPII(mac), error: errStr, payload_size: 0, ssi: 0 });
-            await bleManager.cancelDeviceConnection(mac).catch(() => {});
+            AppLogger.warn(`[BLE] GATT 133 — transient connect error, retrying`, { attempt, maxAttempts: 3, delayMs: delay, deviceId: scrubPII(mac), error: errStr, payload_size: 0, ssi: 0 });
+            await bleManager.cancelDeviceConnection(mac).catch((e: unknown) => {
+              AppLogger.warn('[BLE] cancelDeviceConnection failed during transient retry', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+            });
             await new Promise(resolve => setTimeout(resolve, delay));
           } else {
             break;
@@ -219,7 +221,7 @@ export const connectService = fromPromise<
         AppLogger.log('DEVICE_CONNECTED', { context: 'adapter_resolved', deviceId: scrubPII(conn.id), protocolId: scrubPII(adapter.protocolId) });
 
         if (disconnectListeners.current[conn.id]) disconnectListeners.current[conn.id].remove();
-        disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: BleError | null, device: Device | null) => {
+        disconnectListeners.current[conn.id] = bleManager.onDeviceDisconnected(conn.id, (error: BleError | null, _device: Device | null) => {
           // 1. Log + telemetry (non-recovery)
           handleOrganicDisconnect(error, conn.id);
           // 2. Trigger XState RECOVERY_START (the actual recovery mechanism)

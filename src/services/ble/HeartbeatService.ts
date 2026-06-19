@@ -71,7 +71,9 @@ export const heartbeatService = fromCallback<BleMachineEvent, HeartbeatServiceIn
           });
           // Cancel the stale GATT handle so the OS releases it immediately.
           // Swallow cancellation errors — we are already in a broken state.
-          await bleManager.cancelDeviceConnection(mac).catch(() => undefined);
+          await bleManager.cancelDeviceConnection(mac).catch((e: unknown) => {
+            AppLogger.warn('[BLE Heartbeat] cancelDeviceConnection failed (ignoring)', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+          });
           
           // Signal the machine that a heartbeat failed for this specific device.
           sendBack({ type: 'HEARTBEAT_FAIL', deviceId: mac });

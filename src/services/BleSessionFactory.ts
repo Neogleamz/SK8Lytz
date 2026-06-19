@@ -23,6 +23,7 @@
  *   - No notification setup — caller-specific
  *   - Retry logic with GATT 133 / transient error handling baked in
  */
+/* global AbortSignal */
 import type { BleManager, Device } from 'react-native-ble-plx';
 import type { IControllerProtocol } from '../protocols/IControllerProtocol';
 import { resolveProtocol, getDefaultProtocol, getProtocolById } from '../protocols/ControllerRegistry';
@@ -126,7 +127,9 @@ export async function createGattSession(
         // BLE_TIMING.GATT_SESSION_BACKOFF_MS base delays; actual delay = base ± 500ms random.
         const delay = jitteredDelay(BLE_TIMING.GATT_SESSION_BACKOFF_MS[attempt - 1] ?? 1500, 500);
         AppLogger.warn(`[BleSessionFactory] GATT 133 on ${scrubPII(mac)}. Attempt ${attempt}/${retries} — retrying in ${delay}ms with refreshGatt`, { context, error: errStr });
-        await bleManager.cancelDeviceConnection(mac).catch(() => {});
+        await bleManager.cancelDeviceConnection(mac).catch((e: unknown) => {
+          AppLogger.warn('[BleSessionFactory] cancelDeviceConnection failed during transient retry', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+        });
         await new Promise(resolve => setTimeout(resolve, delay));
       } else if (errStr.includes('already')) {
         // "already connected" — not an error, grab the handle from connectedDevices

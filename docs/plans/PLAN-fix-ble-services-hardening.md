@@ -22,16 +22,16 @@ Purge `any` types, fix error swallowing, and resolve hardcoded delays across the
 
 ## Files to Create/Modify
 
-### [MODIFY] [BleMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts)
-### [MODIFY] [BleMachine.types.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.types.ts)
+### [MODIFY] [BleMachine.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts) // SKIPPED: already clean (false positive on any)
+### [MODIFY] [BleMachine.types.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.types.ts) // SKIPPED: already clean (false positive on any)
 ### [MODIFY] [ConnectService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts)
-### [MODIFY] [RecoveryService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/RecoveryService.ts)
+### [MODIFY] [RecoveryService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/RecoveryService.ts) // SKIPPED: already clean (uses BLE_TIMING and unknown types)
 ### [MODIFY] [HeartbeatService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/HeartbeatService.ts)
-### [MODIFY] [InterrogatorService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/InterrogatorService.ts)
-### [MODIFY] [RSSIService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/RSSIService.ts)
-### [MODIFY] [BleWriteDispatcher.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleWriteDispatcher.ts)
-### [MODIFY] [BleWriteQueue.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleWriteQueue.ts)
-### [MODIFY] [BlePingService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BlePingService.ts)
+### [MODIFY] [InterrogatorService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/InterrogatorService.ts) // SKIPPED: already clean (uses BLE_TIMING)
+### [MODIFY] [RSSIService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/RSSIService.ts) // SKIPPED: already clean
+### [MODIFY] [BleWriteDispatcher.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleWriteDispatcher.ts) // SKIPPED: already clean (uses BLE_TIMING)
+### [MODIFY] [BleWriteQueue.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleWriteQueue.ts) // SKIPPED: already clean (uses BLE_TIMING)
+### [MODIFY] [BlePingService.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BlePingService.ts) // SKIPPED: already clean (uses BLE_TIMING)
 ### [MODIFY] [BleSessionFactory.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleSessionFactory.ts)
 
 ## Verification
