@@ -3736,4 +3736,26 @@ pm run verify which includes QA tests.
     Rejected alternative: "Rely on GC — Android BLE GC is unreliable for native handles"
   - **Source of Truth:** 📖 [BleMachine.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/BleMachine.ts#L20) §disconnectService
   - **Details:** Touches BleMachine.ts disconnectService and ConnectService.ts error paths only.
+
+
+- [x] **`refactor/ble-gatt-operation-queue`**
+  - **Tags:** `[✅ READY]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:feat/ble-excellence-w2]` `[WAVE:2]`
+  - **Goal:** Upgrade BleWriteQueue to a universal BLE operation queue that serializes ALL GATT operations (writes, reads, descriptors) — preventing silent failures from concurrent Android GATT ops.
+  - **Decision Log:** Industry gap analysis identified that heartbeat pings, recovery handshakes, and color writes can race on Android's single-threaded GATT stack. Nordic gold standard: serialize everything through one FIFO.
+  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-refactor-ble-gatt-operation-queue.md](./plans/PLAN-refactor-ble-gatt-operation-queue.md)
+    Key finding: "BleWriteQueue only serializes writes — reads and descriptors bypass the queue entirely"
+    Rejected alternative: "Per-device mutex — doesn't handle priority ordering"
+  - **Source of Truth:** 📖 [BleWriteQueue.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleWriteQueue.ts#L1) §Priority FIFO Write Queue
+  - **Details:** Touches BleWriteQueue.ts, ConnectService.ts, HeartbeatService.ts, RecoveryService.ts, and all queue consumers. Prerequisite: Wave 1 fully merged.
+
+
+- [x] **`feat/ble-connection-params`**
+  - **Tags:** `[✅ READY]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:feat/ble-excellence-w2]` `[WAVE:2]`
+  - **Goal:** Tune BLE connection parameters — request High priority during active control, switch to Balanced during idle to save battery.
+  - **Decision Log:** Industry gap analysis showed we use default OS-negotiated parameters. Active control needs ~15ms interval, idle can use ~100ms — 6x battery savings during idle.
+  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-feat-ble-connection-params.md](./plans/PLAN-feat-ble-connection-params.md)
+    Key finding: "Default connection params waste battery — idle timeout should switch to Balanced"
+    Rejected alternative: "Always High priority — wastes battery for no benefit during idle"
+  - **Source of Truth:** 📖 [ConnectService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts#L154) §connectToDevice
+  - **Details:** Touches ConnectService.ts and bleTimingConstants.ts. Prerequisite: Wave 1 fully merged.
 

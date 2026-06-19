@@ -55,37 +55,17 @@ at useBLESweeper.ts:145
 
 ---
 
-### ⚡ [BATCH:feat/ble-excellence-w2] — `feat/ble-excellence-w2` — IN PROGRESS
+### ⚡ [BATCH:feat/ble-excellence-w2] — `feat/ble-excellence-w2` — COMPLETE
 > **Worktree**: `feat/ble-excellence-w2` · **Type**: Sequential (unified) · **Prerequisite**: Wave 1 merged
 > **Source Analysis**: 📊 [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) — Gaps 2, 6
 
-- [/] **`refactor/ble-gatt-operation-queue`**
-  - **Tags:** `[✅ READY]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:feat/ble-excellence-w2]` `[WAVE:2]`
-  - **Goal:** Upgrade BleWriteQueue to a universal BLE operation queue that serializes ALL GATT operations (writes, reads, descriptors) — preventing silent failures from concurrent Android GATT ops.
-  - **Decision Log:** Industry gap analysis identified that heartbeat pings, recovery handshakes, and color writes can race on Android's single-threaded GATT stack. Nordic gold standard: serialize everything through one FIFO.
-  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-refactor-ble-gatt-operation-queue.md](./plans/PLAN-refactor-ble-gatt-operation-queue.md)
-    Key finding: "BleWriteQueue only serializes writes — reads and descriptors bypass the queue entirely"
-    Rejected alternative: "Per-device mutex — doesn't handle priority ordering"
-  - **Source of Truth:** 📖 [BleWriteQueue.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/BleWriteQueue.ts#L1) §Priority FIFO Write Queue
-  - **Details:** Touches BleWriteQueue.ts, ConnectService.ts, HeartbeatService.ts, RecoveryService.ts, and all queue consumers. Prerequisite: Wave 1 fully merged.
-
-- [/] **`feat/ble-connection-params`**
-  - **Tags:** `[✅ READY]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 LOW]` `[BATCH:feat/ble-excellence-w2]` `[WAVE:2]`
-  - **Goal:** Tune BLE connection parameters — request High priority during active control, switch to Balanced during idle to save battery.
-  - **Decision Log:** Industry gap analysis showed we use default OS-negotiated parameters. Active control needs ~15ms interval, idle can use ~100ms — 6x battery savings during idle.
-  - **Analysis:** 📊 Source: [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) · Plan: [PLAN-feat-ble-connection-params.md](./plans/PLAN-feat-ble-connection-params.md)
-    Key finding: "Default connection params waste battery — idle timeout should switch to Balanced"
-    Rejected alternative: "Always High priority — wastes battery for no benefit during idle"
-  - **Source of Truth:** 📖 [ConnectService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts#L154) §connectToDevice
-  - **Details:** Touches ConnectService.ts and bleTimingConstants.ts. Prerequisite: Wave 1 fully merged.
-
 ---
 
-### ⏳ [BATCH:feat/ble-excellence-w3] — `feat/ble-excellence-w3` — READY
+### ⚡ [BATCH:feat/ble-excellence-w3] — `feat/ble-excellence-w3` — IN PROGRESS
 > **Worktree**: `feat/ble-excellence-w3` · **Type**: Sequential · **Prerequisite**: Wave 2 merged
 > **Source Analysis**: 📊 [connection_gap_analysis.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/connection_gap_analysis.md) — Gaps 4, 7
 
-- [ ] **`feat/ble-autoconnect-passive`**
+- [/] **`feat/ble-autoconnect-passive`**
   - **Tags:** `[✅ READY]` `[BLE]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 MED]` `[BATCH:feat/ble-excellence-w3]` `[WAVE:3]`
   - **Goal:** Use `autoConnect: true` for reconnections (not first-time connects) so the OS reconnects passively when device comes back in range.
   - **Decision Log:** Industry gap analysis: direct connect for first pairing (faster), autoConnect for subsequent reconnections (fire-and-forget, OS-managed).
@@ -95,7 +75,7 @@ at useBLESweeper.ts:145
   - **Source of Truth:** 📖 [ConnectService.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/services/ble/ConnectService.ts#L154) §connectToDevice
   - **Details:** Touches ConnectService.ts, BleMachine.ts (invoke input), BleMachine.types.ts. Prerequisite: Wave 2 fully merged.
 
-- [ ] **`feat/smart-group-health`**
+- [/] **`feat/smart-group-health`**
   - **Tags:** `[✅ READY]` `[UI]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]` `[BATCH:feat/ble-excellence-w3]` `[WAVE:3]`
   - **Goal:** Add per-device connection health within groups — degraded mode banner, per-device status dots, and connected-only command dispatch.
   - **Decision Log:** Industry gap analysis: no consumer LED app does smart group degradation. This is our competitive edge — show which skate is down and keep the other running.
