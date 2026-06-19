@@ -38,10 +38,7 @@ export function DevSandboxDrawer({ onOfflineMode, setErrorMessage }: DevSandboxD
   };
 
   // Hidden in production entirely
-  if (!__DEV__ && typeof window === 'undefined') {
-    // We allow web container to show it via window check bypass if needed, 
-    // but the hotfix handles __DEV__ gracefully.
-  }
+  if (!__DEV__) return null;
 
   if (!expanded) {
     return (

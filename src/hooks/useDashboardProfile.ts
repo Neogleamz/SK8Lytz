@@ -57,6 +57,7 @@ export function useDashboardProfile({
   const [authUsername, setAuthUsername] = useState<string | null>(null);
 
   const isMountedRef = useRef(true);
+  const isRefreshingRef = useRef(false);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -147,6 +148,8 @@ export function useDashboardProfile({
   };
 
   const refreshProfile = async (): Promise<void> => {
+    if (isRefreshingRef.current) return;
+    isRefreshingRef.current = true;
     try {
       const profile = await profileService.fetchOrCreateProfile(session?.user);
       if (!isMountedRef.current) return;
@@ -162,6 +165,8 @@ export function useDashboardProfile({
     } catch (e: unknown) {
       if (!isMountedRef.current) return;
       AppLogger.error('[useDashboardProfile] Profile refresh failed', e instanceof Error ? e.message : String(e), { payload_size: 0, ssi: 0 });
+    } finally {
+      isRefreshingRef.current = false;
     }
   };
 

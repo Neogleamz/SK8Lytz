@@ -34,7 +34,7 @@ export interface BaseTabProps {
     warning: string;
     isDark: boolean;
   };
-  styles: Record<string, object>;
+  styles: Record<string, import('react-native').ViewStyle | import('react-native').TextStyle | import('react-native').ImageStyle>;
 }
 
 export interface AccountTabProfileProps extends BaseTabProps {
