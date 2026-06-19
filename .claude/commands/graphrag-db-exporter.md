@@ -36,8 +36,8 @@ python <GRAPHRAG_BRAIN_DIR>\scripts\export_all_supabase_db.py
 ```
 
 The scripts will:
-1. Export all 2,195+ skate spots from local SQLite to `D:\graphrag-brain\input\scraper_export\`
-2. Export core Supabase tables (users, devices, spots, sessions) using narrative prose to `D:\graphrag-brain\input\supabase_export\`
+1. Export all 2,195+ skate spots from local SQLite to `<GRAPHRAG_BRAIN_DIR>\input\scraper_export\`
+2. Export core Supabase tables (users, devices, spots, sessions) using narrative prose to `<GRAPHRAG_BRAIN_DIR>\input\supabase_export\`
 3. Export new special tables (crew tables, orders, products) natively.
 4. Dump all remaining 55+ generic tables dynamically.
 
