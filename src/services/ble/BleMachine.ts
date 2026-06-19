@@ -1,17 +1,51 @@
-import { setup, assign } from 'xstate';
+import { setup, assign, fromPromise } from 'xstate';
 import type { Device } from 'react-native-ble-plx';
 import { BleMachineContext, BleMachineEvent } from './BleMachine.types';
 import { AppLogger } from '../appLogger';
 import { connectService } from './ConnectService';
 import { recoveryService } from './RecoveryService';
 import { heartbeatService } from './HeartbeatService';
+/**
+ * disconnectService — Invoked actor for DISCONNECTING state (H1 fix).
+ * Performs GATT teardown: cancels all device connections and removes
+ * disconnect listener subscriptions. Returns to IDLE on success or error.
+ */
+const disconnectService = fromPromise<
+  { success: boolean },
+  {
+    bleManager: BleMachineContext['bleManager'];
+    connectedDevices: BleMachineContext['connectedDevices'];
+    disconnectListeners: BleMachineContext['disconnectListeners'];
+  }
+>(async ({ input }) => {
+  const { bleManager, connectedDevices, disconnectListeners } = input;
+  for (const device of connectedDevices) {
+    try {
+      await bleManager.cancelDeviceConnection(device.id);
+    } catch (e: unknown) {
+      AppLogger.warn('[disconnectService] cancelDeviceConnection failed', {
+        deviceId: device.id,
+        error: e instanceof Error ? e.message : String(e),
+        payload_size: 0,
+        ssi: 0,
+      });
+    }
+    // Remove disconnect listener subscription
+    if (disconnectListeners.current[device.id]) {
+      disconnectListeners.current[device.id].remove();
+      delete disconnectListeners.current[device.id];
+    }
+  }
+  return { success: true };
+});
+
 export const bleMachine = setup({
   types: {
     context: {} as BleMachineContext,
     events: {} as BleMachineEvent,
     input: {} as Omit<BleMachineContext, 'connectedDevices' | 'ghostedDeviceIds'>,
   },
-  actors: { connectService, recoveryService, heartbeatService },
+  actors: { connectService, recoveryService, heartbeatService, disconnectService },
   actions: {
     setDeviceUnreachable: () => {},
     notifyUserDeviceFailed: () => {},
@@ -25,7 +59,7 @@ export const bleMachine = setup({
     },
     setConnectedDevices: assign({
       connectedDevices: ({ event }) => {
-        if (event.type === 'CONNECT_SUCCESS' || event.type === 'UPDATE_CONNECTED_DEVICES') {
+        if (event.type === 'UPDATE_CONNECTED_DEVICES') {
           return event.devices;
         }
         if (event.type === 'xstate.done.actor.connectService' && event.output?.devices) {
@@ -178,6 +212,10 @@ export const bleMachine = setup({
         }
       },
       on: {
+        CONNECT_REQUEST: {
+          target: 'CONNECTING',
+          actions: ['setTargetMacs', { type: 'logTransition', params: { from: 'CONNECTING', to: 'CONNECTING', reason: 'connect_request_override' } }]
+        },
         RECOVERY_START: {
           target: 'RECOVERING',
           actions: ['setGhostedMacs', { type: 'logTransition', params: { from: 'CONNECTING', to: 'RECOVERING' } }]
@@ -210,6 +248,9 @@ export const bleMachine = setup({
           target: 'DISCONNECTING',
           actions: [{ type: 'logTransition', params: { from: 'READY', to: 'DISCONNECTING' } }]
         },
+        SCAN_START: {
+          actions: ['setSweeperId', { type: 'logTransition', params: { from: 'READY', to: 'READY', reason: 'scan_while_ready' } }]
+        },
         RECOVERY_START: [
           {
             guard: ({ event }) => event.type === 'RECOVERY_START' && (event.ghostedMacs?.length ?? 0) >= 2,
@@ -234,6 +275,29 @@ export const bleMachine = setup({
       }
     },
     DISCONNECTING: {
+      invoke: {
+        id: 'disconnectService',
+        src: 'disconnectService',
+        input: ({ context }) => ({
+          bleManager: context.bleManager,
+          connectedDevices: context.connectedDevices,
+          disconnectListeners: context.disconnectListeners,
+        }),
+        onDone: {
+          target: 'IDLE',
+          actions: ['clearConnectedDevices', 'clearGhostedMacs', { type: 'logTransition', params: { from: 'DISCONNECTING', to: 'IDLE' } }]
+        },
+        onError: {
+          target: 'IDLE',
+          actions: ['clearConnectedDevices', 'clearGhostedMacs', { type: 'logTransition', params: { from: 'DISCONNECTING', to: 'IDLE', reason: 'disconnect_error' } }]
+        }
+      },
+      after: {
+        10000: {
+          target: 'IDLE',
+          actions: ['clearConnectedDevices', 'clearGhostedMacs', { type: 'logTransition', params: { from: 'DISCONNECTING', to: 'IDLE', reason: 'disconnect_timeout' } }]
+        }
+      },
       on: {
         DISCONNECT_COMPLETE: {
           target: 'IDLE',
@@ -253,11 +317,28 @@ export const bleMachine = setup({
           handleOrganicDisconnect: context.handleOrganicDisconnect,
           onOrganicDisconnect: context.onOrganicDisconnect,
           handleNotification: context.handleNotification,
+          getSweepedDevice: context.getSweepedDevice,
         }),
-        onDone: undefined,
-        onError: undefined,
+      },
+      after: {
+        90000: {
+          target: 'IDLE',
+          actions: ['clearGhostedMacs', { type: 'logTransition', params: { from: 'RECOVERING', to: 'IDLE', reason: 'recovery_timeout_90s' } }]
+        }
       },
       on: {
+        HEARTBEAT_FAIL: {
+          actions: [
+            assign({
+              ghostedDeviceIds: ({ context, event }) => {
+                if (event.type !== 'HEARTBEAT_FAIL') return context.ghostedDeviceIds;
+                const existing = context.ghostedDeviceIds ?? [];
+                return existing.includes(event.deviceId) ? existing : [...existing, event.deviceId];
+              }
+            }),
+            { type: 'logTransition', params: { from: 'RECOVERING', to: 'RECOVERING', reason: 'additional_heartbeat_fail' } }
+          ]
+        },
         RECOVERY_COMPLETE: [
           {
             target: 'READY',
@@ -281,7 +362,18 @@ export const bleMachine = setup({
         },
         RECOVERY_PERMANENTLY_FAILED: {
           target: 'IDLE',
-          actions: ['setDeviceUnreachable', 'notifyUserDeviceFailed', 'clearGhostedMacs', { type: 'logTransition', params: { from: 'RECOVERING', to: 'IDLE', reason: 'permanent_fail' } }]
+          actions: [
+            assign({
+              connectedDevices: ({ context, event }) => {
+                if (event.type !== 'RECOVERY_PERMANENTLY_FAILED') return context.connectedDevices;
+                return context.connectedDevices.filter(d => d.id !== event.deviceId);
+              }
+            }),
+            'setDeviceUnreachable',
+            'notifyUserDeviceFailed',
+            'clearGhostedMacs',
+            { type: 'logTransition', params: { from: 'RECOVERING', to: 'IDLE', reason: 'permanent_fail' } }
+          ]
         },
         RECOVERY_FAIL: {
           target: 'IDLE',

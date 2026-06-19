@@ -24,6 +24,8 @@ export interface BleMachineContext {
     op: () => Promise<boolean | 'partial'>,
     generation?: number
   ) => Promise<boolean | 'partial'>;
+  /** Lookup a device from the scan cache by MAC — wired by useBLE for RecoveryService Phase 3 */
+  getSweepedDevice?: (deviceId: string) => Device | undefined;
 }
 
 export type BleMachineEvent =
@@ -31,9 +33,7 @@ export type BleMachineEvent =
   | { type: 'SCAN_STOP' }
   | { type: 'SCAN_PAUSE' }
   | { type: 'SCAN_RESUME' }
-  | { type: 'CONNECT_REQUEST'; targetMacs?: string[] }
-  | { type: 'CONNECT_SUCCESS'; devices: Device[] }
-  | { type: 'CONNECT_FAIL' }
+  | { type: 'CONNECT_REQUEST'; targetMacs: string[] }
   | { type: 'DISCONNECT_REQUEST' }
   | { type: 'DISCONNECT_COMPLETE' }
   | { type: 'RECOVERY_START'; ghostedMacs?: string[] }
