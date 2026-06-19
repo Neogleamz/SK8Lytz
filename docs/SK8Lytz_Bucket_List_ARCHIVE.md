@@ -3652,4 +3652,12 @@ pm run verify which includes QA tests.
   - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/1acead38-84ce-4b41-965b-8da5f5cf62ab/system_audit_report.md) · Plan: [PLAN-fix-crew-ui-types.md](./plans/PLAN-fix-crew-ui-types.md)
   - **Source of Truth:** 📖 [CrewCard.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/crew/CrewCard.tsx)
   - **Details:** MEDIUM severity. 4 files. Prerequisite: Wave 2 fully merged.
+
+
+- [x] **`fix/group-connect-stale-devices`** ✅ merged @ `98cfd8ea` — fixed scanner staleness, MAC case, wizard group ID 🚀 Merged in 98cfd8ea
+  - **Tags:** `[✅ READY]` `[🤔 INFERRED]` `[BLE]` `[⚠️ H-RISK]` `[🍱 Meal]` `[🧠 HIGH]`
+  - **Goal:** Fix group card failing to connect both devices and device cards connecting to stale/wrong peripherals.
+  - **Decision Log:** User-reported: group card connects 0-1 devices instead of 2; device card taps feel stale or connect wrong device. Root causes: `seenMacsRef` one-shot gate prevents `allDevices` refresh, `buildOfflineGroupMap` MAC case mismatch, wizard `group_ids` slug vs `CustomGroup.id` timestamp mismatch.
+  - **Analysis:** 📊 Source: [group_connection_audit.md](file:///C:/Users/Magma/.gemini/antigravity/brain/4d36a4af-a431-4005-8193-df3fb92727c5/group_connection_audit.md) · Plan: [PLAN-fix-group-connect-stale-devices.md](./plans/PLAN-fix-group-connect-stale-devices.md)
+  - **Source of Truth:** 📖 [useBLEScanner.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/ble/useBLEScanner.ts#L270-L315) §scanCallback + [useDashboardAutoConnect.ts](file:///c:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/hooks/useDashboardAutoConnect.ts#L93) §buildOfflineGroupMap
 

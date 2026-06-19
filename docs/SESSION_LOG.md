@@ -1,3 +1,12 @@
+### [MERGE] 2026-06-19T05:42Z — fix/group-connect-stale-devices → master @ 98cfd8ea
+**What merged:**
+- Scanner: split `seenMacsRef` gate — telemetry/interrogation remain one-shot, but Device objects now re-stage on every scan callback to keep `allDevices` fresh
+- Scanner: `flushStagedDevices` upserts Device handles (replaces stale objects) instead of skipping duplicates
+- AutoConnect: `buildOfflineGroupMap` normalizes `device_mac` to `.toUpperCase()` to match BLE `Device.id` convention
+- Wizard: replaced slug-based `group_ids` (`fleetName.toLowerCase().replace(...)`) with canonical `group-${Date.now()}` format matching `GroupRepository`
+**Verify result:** TSC ✅ Jest ✅ Blast Radius ✅ Type Safety ✅ BLE Guards ✅ (8/8 gates green)
+**Files touched:** src/hooks/ble/useBLEScanner.ts, src/hooks/useDashboardAutoConnect.ts, src/screens/Onboarding/HardwareSetupWizardScreen.tsx
+
 ### [ARTIFACT] 2026-06-19T05:34Z - Group Connection Audit and Plan
 - [group_connection_audit.md] - 6-bug audit of Dashboard group/device connection pipeline
 - [PLAN-fix-group-connect-stale-devices.md] - 3-file fix plan for Bugs 1/2/5
