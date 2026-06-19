@@ -4533,3 +4533,9 @@ TSC: ?  Jest: ?
 **Verify result:** TSC ?, Jest ?, gates ?
 **Files touched:** Merged via gatekeeper
 
+
+### [MERGE] 2026-06-18T20:22 — fix/ble-services-hardening ? master @ f06c6659
+**What merged:** Completed fix/ble-services-hardening in Wave 2.
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** Merged via gatekeeper
+
