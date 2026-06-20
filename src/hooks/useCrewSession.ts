@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppLogger } from '../services/appLogger';
 import { CrewMember, CrewRole, crewService, CrewSession } from '../services/CrewService';
-import { SpeedTrackingService } from '../services/SpeedTrackingService';
 import { useAuth } from '../context/AuthContext';
 import { scrubPII } from '../utils/piiScrubber';
 
@@ -76,13 +75,6 @@ export function useCrewSession(
       // Fire-and-forget: telemetry + session end (non-blocking)
       (async () => {
         try {
-          if (user) {
-            await SpeedTrackingService.updateLifetimeStats(
-              user.id,
-              crewService.sessionTelemetry.distanceMiles,
-              crewService.sessionTelemetry.topSpeedMph
-            );
-          }
           await crewService.endSession(currentSessionId, user?.id);
           refreshNearby();
         } catch (e: unknown) {

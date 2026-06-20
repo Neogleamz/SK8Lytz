@@ -108,6 +108,19 @@ class GroupRepository {
     return [...this.groups];
   }
 
+  getGroupById(groupId: string): CustomGroup | undefined {
+    return this.groups.find(g => g.id === groupId);
+  }
+
+  getGroupByName(name: string): CustomGroup | undefined {
+    return this.groups.find(g => g.name.toLowerCase() === name.toLowerCase());
+  }
+
+  getGroupsByDeviceId(mac: string): CustomGroup[] {
+    const normalizedMac = mac.toUpperCase();
+    return this.groups.filter(g => g.deviceIds?.map(m => m.toUpperCase()).includes(normalizedMac));
+  }
+
   async setGroups(groups: CustomGroup[]): Promise<void> {
     this.groups = groups;
     await AsyncStorage.setItem(GROUPS_KEY, JSON.stringify(this.groups)).catch((e) =>
