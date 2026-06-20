@@ -1,8 +1,22 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../supabaseClient';
 import { AppLogger } from '../appLogger';
-import { CrewSession, CrewRole, CrewMember, CrewScenePayload, SessionTelemetryData } from './types';
-import { CrewSessionManager } from './CrewSessionManager';
+import { CrewSession, CrewRole, CrewMember, SessionTelemetryData } from './types';
+
+interface ICrewSessionManager {
+  createSession(name: string, displayName: string, opts?: Record<string, unknown>, userId?: string): Promise<CrewSession>;
+  cleanupLegacySessions(userId: string): Promise<void>;
+  cleanupExpiredSessions(): Promise<void>;
+  joinSession(inviteCode: string, displayName: string, userId?: string): Promise<CrewSession>;
+  joinSessionById(sessionId: string, displayName: string, userId?: string): Promise<CrewSession>;
+  fetchActiveSessions(updatedSince?: string): Promise<CrewSession[]>;
+  fetchPublicSessions(updatedSince?: string): Promise<CrewSession[]>;
+  endSession(explicitSessionId?: string, userId?: string): Promise<void>;
+  fetchLastScene(sessionId: string): Promise<Record<string, unknown> | null>;
+  leaveSession(userId?: string): Promise<void>;
+  transferLeadership(newLeaderId: string): Promise<void>;
+  fetchMembers(sessionId: string): Promise<CrewMember[]>;
+}
 import { CrewRealtime } from './CrewRealtime';
 import { CrewAutoRejoin } from './CrewAutoRejoin';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -22,23 +36,23 @@ export class CrewService {
 
   private listeners = new Set<Listener>();
 
-  private manager: CrewSessionManager;
+  private manager: ICrewSessionManager;
   private realtime: CrewRealtime;
   private autoRejoin: CrewAutoRejoin;
 
   // Delegated Methods (Manager)
-  public createSession: CrewSessionManager['createSession'];
-  public cleanupLegacySessions: CrewSessionManager['cleanupLegacySessions'];
-  public cleanupExpiredSessions: CrewSessionManager['cleanupExpiredSessions'];
-  public joinSession: CrewSessionManager['joinSession'];
-  public joinSessionById: CrewSessionManager['joinSessionById'];
-  public fetchActiveSessions: CrewSessionManager['fetchActiveSessions'];
-  public fetchPublicSessions: CrewSessionManager['fetchPublicSessions'];
-  public endSession: CrewSessionManager['endSession'];
-  public fetchLastScene: CrewSessionManager['fetchLastScene'];
-  public leaveSession: CrewSessionManager['leaveSession'];
-  public transferLeadership: CrewSessionManager['transferLeadership'];
-  public fetchMembers: CrewSessionManager['fetchMembers'];
+  public createSession: ICrewSessionManager['createSession'];
+  public cleanupLegacySessions: ICrewSessionManager['cleanupLegacySessions'];
+  public cleanupExpiredSessions: ICrewSessionManager['cleanupExpiredSessions'];
+  public joinSession: ICrewSessionManager['joinSession'];
+  public joinSessionById: ICrewSessionManager['joinSessionById'];
+  public fetchActiveSessions: ICrewSessionManager['fetchActiveSessions'];
+  public fetchPublicSessions: ICrewSessionManager['fetchPublicSessions'];
+  public endSession: ICrewSessionManager['endSession'];
+  public fetchLastScene: ICrewSessionManager['fetchLastScene'];
+  public leaveSession: ICrewSessionManager['leaveSession'];
+  public transferLeadership: ICrewSessionManager['transferLeadership'];
+  public fetchMembers: ICrewSessionManager['fetchMembers'];
 
   // Delegated Methods (Realtime)
   public subscribeAsLeader: CrewRealtime['subscribeAsLeader'];
@@ -49,6 +63,7 @@ export class CrewService {
   public tryAutoRejoin: CrewAutoRejoin['tryAutoRejoin'];
 
   constructor() {
+    const { CrewSessionManager } = require('./CrewSessionManager');
     this.manager = new CrewSessionManager(this);
     this.realtime = new CrewRealtime(this);
     this.autoRejoin = new CrewAutoRejoin(this);

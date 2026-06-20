@@ -1,7 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { AppLogger } from './appLogger';
 import { supabase } from './supabaseClient';
 import { STORAGE_APP_SETTINGS } from '../constants/storageKeys';
+
+interface IAppLogger {
+  log(event: string, payload?: Record<string, unknown>): void;
+  warn(message: string, context?: Record<string, unknown> | unknown): void;
+  error(message: string, errorObj?: unknown, context?: Record<string, unknown>): void;
+}
+
+const getLogger = (): IAppLogger => require('./appLogger/index').AppLogger;
 
 /**
  * Valid known keys for App Settings
@@ -40,7 +47,7 @@ export const AppSettingsService = {
         settingsMap = JSON.parse(cached) as AppSettingsMap;
       }
     } catch (e: unknown) {
-      AppLogger.log('ERROR_CAUGHT', { message: 'Failed to access cached app settings', info: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+      getLogger().log('ERROR_CAUGHT', { message: 'Failed to access cached app settings', info: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
     }
 
     // 2. Background network sync (non-blocking)
@@ -51,7 +58,7 @@ export const AppSettingsService = {
           .select('setting_key, setting_value, is_enabled');
 
         if (error) {
-          AppLogger.log('ERROR', { context: 'AppSettingsService', message: 'Fetch settings failed', info: error instanceof Error ? error.message : String(error), payload_size: 0, ssi: 0 });
+          getLogger().log('ERROR', { context: 'AppSettingsService', message: 'Fetch settings failed', info: error instanceof Error ? error.message : String(error), payload_size: 0, ssi: 0 });
           return;
         }
 
@@ -70,10 +77,10 @@ export const AppSettingsService = {
         try {
           await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(newSettings));
         } catch (e: unknown) {
-          AppLogger.warn('AppSettingsService cache write failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+          getLogger().warn('AppSettingsService cache write failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
         }
       } catch (err: unknown) {
-        AppLogger.log('ERROR', { context: 'AppSettingsService', message: 'Settings sync failed', info: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
+        getLogger().log('ERROR', { context: 'AppSettingsService', message: 'Settings sync failed', info: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       }
     };
 
@@ -94,7 +101,7 @@ export const AppSettingsService = {
       cached[key] = value;
       await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(cached));
     } catch (e: unknown) {
-      AppLogger.warn('AppSettingsService cache update failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
+      getLogger().warn('AppSettingsService cache update failed', { error: e instanceof Error ? e.message : String(e), payload_size: 0, ssi: 0 });
     }
 
     // 2. Background Cloud Sync
@@ -108,7 +115,7 @@ export const AppSettingsService = {
           }, { onConflict: 'setting_key' });
         if (error) throw error;
       } catch (err: unknown) {
-        AppLogger.log('ERROR_CAUGHT', { message: `Failed to update setting ${key}`, error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
+        getLogger().log('ERROR_CAUGHT', { message: `Failed to update setting ${key}`, error: err instanceof Error ? err.message : String(err), payload_size: 0, ssi: 0 });
       }
     })();
 

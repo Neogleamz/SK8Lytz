@@ -2,7 +2,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../supabaseClient';
 import { AppLogger } from '../appLogger';
 import { CrewSession, CrewRole, CrewMember, CrewScenePayload } from './types';
-import type { CrewService } from './CrewService';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+
+interface ICrewRealtimeDependencies {
+  _ensureUnsubscribed(): void;
+  unsubscribe(): void;
+  fetchMembers(sessionId: string): Promise<CrewMember[]>;
+  channel: RealtimeChannel | null;
+  currentSession: CrewSession | null;
+  currentSessionId: string | null;
+  currentRole: CrewRole;
+  broadcastTimer: ReturnType<typeof setTimeout> | null;
+  STORAGE_LAST_SESSION_ID: string;
+  STORAGE_LAST_SESSION_EXP: string;
+  emit(): void;
+}
 
 // ── Timing constants (R-16: no magic numbers) ─────────────────────────────
 const BROADCAST_DEBOUNCE_MS = 150;
@@ -10,7 +24,7 @@ const HEARTBEAT_INTERVAL_MS = 60_000;
 const PERSIST_PAYLOAD_DELAY_MS = 5_000;
 
 export class CrewRealtime {
-  constructor(private service: CrewService) {}
+  constructor(private service: ICrewRealtimeDependencies) {}
 
   subscribeAsLeader(
     sessionId: string,
@@ -31,14 +45,14 @@ export class CrewRealtime {
 
   subscribeAsMember(
     sessionId: string,
-    onSceneOrPayload: (data: any) => void,
+    onSceneOrPayload: (data: unknown) => void,
     onSessionEnded?: () => void,
   ): (() => void) {
     this.service._ensureUnsubscribed();
 
     this.service.channel = supabase
       .channel(`crew:${sessionId}`, { config: { broadcast: { self: false } } })
-      .on('broadcast', { event: 'scene_update' }, (payload: { payload: CrewScenePayload & { payload?: any } }) => {
+      .on('broadcast', { event: 'scene_update' }, (payload: { payload: CrewScenePayload & { payload?: unknown } }) => {
         const crewPayload = payload.payload;
         if (crewPayload?.payload) onSceneOrPayload(crewPayload.payload);
       })
@@ -87,7 +101,7 @@ export class CrewRealtime {
 
   // TODO: The plan removed broadcastScene, but unlisted caller CrewService & useDashboardController still require it.
   // Leaving this stub to prevent compiler failure (S4 rule enforcement).
-  broadcastScene(scene: Record<string, unknown>, userId?: string): void {
+  broadcastScene(_scene: Record<string, unknown>, _userId?: string): void {
     // Cannot compile to byte array here without unlisted refactors. Dummy op.
   }
 

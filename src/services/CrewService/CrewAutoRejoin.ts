@@ -2,10 +2,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../supabaseClient';
 import { AppLogger } from '../appLogger';
 import { CrewSession, CrewRole } from './types';
-import type { CrewService } from './CrewService';
+
+interface ICrewAutoRejoinDependencies {
+  STORAGE_LAST_SESSION_ID: string;
+  STORAGE_LAST_SESSION_EXP: string;
+  currentSession: CrewSession | null;
+  currentSessionId: string | null;
+  currentRole: CrewRole;
+  sessionTelemetry: { distanceMiles: number; topSpeedMph: number; avgSpeedSamples: number[] };
+  emit(): void;
+}
 
 export class CrewAutoRejoin {
-  constructor(private service: CrewService) {}
+  constructor(private service: ICrewAutoRejoinDependencies) {}
 
   async tryAutoRejoin(displayName: string, userId?: string): Promise<{ session: CrewSession; role: CrewRole } | null> {
     try {
