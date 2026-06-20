@@ -82,6 +82,12 @@ import { useAppConfig } from '../context/AppConfigContext';
 import MySkatesSlab from '../components/dashboard/MySkatesSlab';
 import RegisteredFleetSlab from '../components/dashboard/RegisteredFleetSlab';
 import SupportModal from '../components/dashboard/SupportModal';
+
+import { useDashboardState } from './Dashboard/useDashboardState';
+import { DashboardHeaderBanners } from './Dashboard/DashboardHeader';
+import { useDashboardDeviceList } from './Dashboard/DashboardDeviceList';
+import { useDashboardCrewHub, useCrewDeepLink } from './Dashboard/DashboardCrewHub';
+import { useDashboardPowerControls } from './Dashboard/DashboardPowerControls';
 import { createDashboardStyles } from '../styles/DashboardStyles';
 import { scrubPII } from '../utils/piiScrubber';
 import { useScreenPerformance } from '../hooks/useScreenPerformance';
@@ -761,7 +767,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
 
   useEffect(() => {
     // R-25 FIX: BackHandler is Android-only. On web it throws; guard with Platform.select.
-    if (Platform.select({ android: false, default: true })) return;
+    if (Platform.OS !== 'android') return;
     const handleBackPress = () => {
       if (isTestModeActive) {
         setDiagnosticState('IDLE');
