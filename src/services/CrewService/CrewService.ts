@@ -12,7 +12,8 @@ interface ICrewSessionManager {
   fetchActiveSessions(updatedSince?: string): Promise<CrewSession[]>;
   fetchPublicSessions(updatedSince?: string): Promise<CrewSession[]>;
   endSession(explicitSessionId?: string, userId?: string): Promise<void>;
-  fetchLastScene(sessionId: string): Promise<Record<string, unknown> | null>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fetchLastScene(sessionId: string): Promise<Record<string, any> | null>;
   leaveSession(userId?: string): Promise<void>;
   transferLeadership(newLeaderId: string): Promise<void>;
   fetchMembers(sessionId: string): Promise<CrewMember[]>;

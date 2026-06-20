@@ -45,14 +45,16 @@ export class CrewRealtime {
 
   subscribeAsMember(
     sessionId: string,
-    onSceneOrPayload: (data: unknown) => void,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onSceneOrPayload: (data: any) => void,
     onSessionEnded?: () => void,
   ): (() => void) {
     this.service._ensureUnsubscribed();
 
     this.service.channel = supabase
       .channel(`crew:${sessionId}`, { config: { broadcast: { self: false } } })
-      .on('broadcast', { event: 'scene_update' }, (payload: { payload: CrewScenePayload & { payload?: unknown } }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .on('broadcast', { event: 'scene_update' }, (payload: { payload: CrewScenePayload & { payload?: any } }) => {
         const crewPayload = payload.payload;
         if (crewPayload?.payload) onSceneOrPayload(crewPayload.payload);
       })
