@@ -14,7 +14,7 @@
  *  - FavoritesPanel    (FAVORITES)
  *  - QuickPresetModal  (cloud/preset save modal)
  *
- * Depends on: ZenggeProtocol, AppLogger, useBLE (via prop injection), ThemeContext
+ * Depends on: ControllerRegistry, AppLogger, useBLE (via prop injection), ThemeContext
  * Platform: React Native (Android + Web)
  */
 import React, { useEffect, useRef, useState } from 'react';
@@ -23,9 +23,7 @@ import { useAppMicrophone } from '../hooks/useAppMicrophone';
 import { useControllerAnalytics } from '../hooks/useControllerAnalytics';
 import { useCuratedPicks } from '../hooks/useCuratedPicks';
 import { useDockedControllerState, SpatialSegment } from '../hooks/useDockedControllerState';
-import { useSharedFavorites } from '../context/FavoritesContext';
-import { useAppConfig } from '../context/AppConfigContext';
-import { useSharedBLE } from '../context/BLEContext';
+import { useDockedState } from './docked/useDockedState';
 import { useControllerDispatch } from '../hooks/useControllerDispatch';
 import { getMusicPatternLabel } from '../hooks/useMusicMode';
 import { useOptimisticBLE } from '../hooks/useOptimisticBLE';
@@ -50,7 +48,7 @@ import ProEffectsPanel from './docked/ProEffectsPanel';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Layout, Spacing, Typography } from '../theme/theme';
 import { SK8LYTZ_TEMPLATES } from '../protocols/PatternEngine';
-import { useTheme } from '../context/ThemeContext';
+import DockedHeader from './docked/DockedHeader';
 import { BuilderPanel } from './docked/BuilderPanel';
 import ProductVisualizer from './ProductVisualizer';
 import SpectrumAnalyzer from './docked/SpectrumAnalyzer';
@@ -156,8 +154,30 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
 
     // TODO: [R-27] extract contexts to parent container (Context Overload limit exceeded)
     // NOTE: Extracted below into DockedController wrapper
-    const { Colors, isDark } = useTheme();
-    const { isVisibilityAllowed } = useAppConfig();
+    const { 
+      Colors, 
+      isDark, 
+      isVisibilityAllowed,
+      favorites,
+      activeFavoriteId,
+      setActiveFavoriteId,
+      quickPresets,
+      setQuickPresets,
+      activeQuickPresetIndex,
+      setActiveQuickPresetIndex,
+      promptState,
+      promptName,
+      setPromptName,
+      favPromptTargetId,
+      quickPromptTargetIndex,
+      openFavoritePrompt,
+      openPresetPrompt,
+      closePrompt,
+      saveFavorite,
+      deleteFavorite,
+      saveQuickPreset,
+      getAdapterForDevice
+    } = useDockedState();
     const { height: windowHeight } = useWindowDimensions();
     const isShort = windowHeight < 720;
     const gaugeSize = isShort ? 100 : 120;
@@ -325,26 +345,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     const selectedPatternIdRef = useRef(selectedPatternId);
     selectedPatternIdRef.current = selectedPatternId;
     const visualizerColorRef = useRef<string>('#00f0ff'); // synced below after visualizerColor useMemo
-    const {
-      favorites,
-      activeFavoriteId,
-      setActiveFavoriteId,
-      quickPresets,
-      setQuickPresets,
-      activeQuickPresetIndex,
-      setActiveQuickPresetIndex,
-      promptState,
-      promptName,
-      setPromptName,
-      favPromptTargetId,
-      quickPromptTargetIndex,
-      openFavoritePrompt,
-      openPresetPrompt,
-      closePrompt,
-      saveFavorite,
-      deleteFavorite,
-      saveQuickPreset
-    } = useSharedFavorites();
+    // Favorites extracted to useDockedState
     
     const {
       streetSensitivity,
@@ -536,7 +537,7 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
     };
 
 
-    const { getAdapterForDevice } = useSharedBLE();
+    // BLE context extracted to useDockedState
 
     const {
       sendColor,
@@ -910,30 +911,13 @@ const DockedController = React.forwardRef<DockedControllerHandle, Sk8lytzControl
       <View style={styles.container}>
 
 
-        {/* Product Selector - Only show if NO lockedProduct is provided */}
-        {!lockedProduct && (
-          <View style={styles.tabContainer}>
-            {LOCAL_PRODUCT_CATALOG.filter(p => (p as { isActive?: boolean }).isActive !== false).map((profile) => (
-              <TouchableOpacity
-                key={profile.id}
-                style={[styles.tab, activeProduct === profile.id && styles.activeTab]}
-                onPress={() => setActiveProduct(profile.id)}
-              >
-                {activeProduct === profile.id && (
-                  <LinearGradient 
-                    colors={[profile.vizThemeColor || Colors.primary, Colors.accent]} 
-                    start={{ x: 0, y: 0 }} 
-                    end={{ x: 1, y: 1 }} 
-                    style={StyleSheet.absoluteFill} 
-                  />
-                )}
-                <Text style={[styles.tabText, activeProduct === profile.id && styles.activeTabText]}>
-                  {profile.displayName.replace('™', '')}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+        <DockedHeader
+          lockedProduct={lockedProduct}
+          activeProduct={activeProduct}
+          setActiveProduct={setActiveProduct}
+          Colors={Colors}
+          styles={styles}
+        />
 
         {/* Live HUD Pill */}
         <LiveTelemetryHUD

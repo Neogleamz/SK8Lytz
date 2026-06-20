@@ -10,7 +10,7 @@ Extract DockedController.tsx (57.09KB) into sub-components, reduce context depth
 - R-23: Monolith (57.09KB), R-27: 4 context consumers, R-21: Hardcodes ZenggeProtocol
 
 ## Files to Create/Modify
-- `src/components/docked/DockedController.tsx` — Reduce to orchestrator
+- `src/components/DockedController.tsx` — Reduce to orchestrator
 - `src/components/docked/DockedColorPanel.tsx` [NEW]
 - `src/components/docked/DockedEffectPanel.tsx` [NEW]
 - `src/components/docked/DockedMusicPanel.tsx` [NEW]
@@ -28,3 +28,7 @@ Extract DockedController.tsx (57.09KB) into sub-components, reduce context depth
 
 ## Out of Scope
 - DashboardScreen.tsx (C2), ZenggeProtocol.ts (C3)
+
+// SKIPPED: src/components/docked/DockedColorPanel.tsx - Already extracted as BuilderPanel.tsx
+// SKIPPED: src/components/docked/DockedEffectPanel.tsx - Already extracted as ProEffectsPanel.tsx
+// SKIPPED: src/components/docked/DockedMusicPanel.tsx - Already extracted as MusicPanel.tsx
