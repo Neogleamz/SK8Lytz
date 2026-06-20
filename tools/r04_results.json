@@ -1,0 +1,193 @@
+{
+  "agent_id": "R-04",
+  "agent_type": "sniper",
+  "domain_or_rule": "Telemetry Context",
+  "files_scanned": 341,
+  "completion_status": "COMPLETE",
+  "error_details": null,
+  "findings": [
+    {
+      "id": "R-04-001",
+      "file": "src/components/admin/tools/tabs/oracle/Oracle53LiveStream.tsx",
+      "line": 40,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via AppLogger.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "AppLogger.error('[Oracle53LiveStream] 0x53 frame transmit error', e instanceof Error ? e : new Error(String(e)), { fps: p53Fps })",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    },
+    {
+      "id": "R-04-002",
+      "file": "src/components/admin/tools/tabs/oracle/Oracle53LiveStream.tsx",
+      "line": 58,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via AppLogger.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "AppLogger.error('[Oracle53LiveStream] 0x53 single frame error', e instanceof Error ? e : new Error(String(e)), {})",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    },
+    {
+      "id": "R-04-003",
+      "file": "src/components/CameraTracker.tsx",
+      "line": 193,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via AppLogger.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "AppLogger.error('Camera permission settings navigation failed', safeSettingsErr)",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    },
+    {
+      "id": "R-04-004",
+      "file": "src/components/PositionalGradientBuilder.tsx",
+      "line": 63,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via AppLogger.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "AppLogger.error('[PositionalGradientBuilder] BLE write failed', err instanceof Error ? err : new Error(String(err)), { \r                             payload_size: payload.length, \r                 ...",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    },
+    {
+      "id": "R-04-005",
+      "file": "src/context/SessionContext.tsx",
+      "line": 60,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via AppLogger.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "AppLogger.error('[SessionContext] Failed to load autoPause setting', e instanceof Error ? e.message : String(e), {})",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    },
+    {
+      "id": "R-04-006",
+      "file": "src/context/SessionContext.tsx",
+      "line": 284,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via AppLogger.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "AppLogger.error('[SessionContext] recover() failed', e instanceof Error ? e.message : String(e), {})",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    },
+    {
+      "id": "R-04-007",
+      "file": "src/context/SessionContext.tsx",
+      "line": 289,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via AppLogger.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "AppLogger.error('[SessionContext] recover() AppState failed', e instanceof Error ? e.message : String(e), {})",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    },
+    {
+      "id": "R-04-008",
+      "file": "src/context/SessionContext.tsx",
+      "line": 375,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via AppLogger.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "AppLogger.error('[SessionContext] toggle-music dynamic import failed', e instanceof Error ? e.message : String(e), {})",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    },
+    {
+      "id": "R-04-009",
+      "file": "src/context/SessionContext.tsx",
+      "line": 384,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via AppLogger.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "AppLogger.error('[SessionContext] fire-favorite dynamic import failed', e instanceof Error ? e.message : String(e), {})",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    },
+    {
+      "id": "R-04-010",
+      "file": "src/hooks/ble/__tests__/ble-simulator.test.ts",
+      "line": 65,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via console.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "console.error(`postRequest failed for ${endpoint}:`, error instanceof Error ? error.message : String(error))",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    },
+    {
+      "id": "R-04-011",
+      "file": "src/hooks/ble/__tests__/ble-simulator.test.ts",
+      "line": 75,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via console.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "console.error(`getRequest failed for ${endpoint}:`, error instanceof Error ? error.message : String(error))",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    },
+    {
+      "id": "R-04-012",
+      "file": "src/services/CrewService/CrewSessionManager.ts",
+      "line": 86,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via AppLogger.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "AppLogger.error('[CrewService] cleanupLegacySessions threw exception', { error: msg })",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    },
+    {
+      "id": "R-04-013",
+      "file": "src/services/CrewService/CrewSessionManager.ts",
+      "line": 110,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via AppLogger.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "AppLogger.error('[CrewService] cleanupExpiredSessions threw exception', { error: msg })",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    },
+    {
+      "id": "R-04-014",
+      "file": "src/services/CrewService/CrewSessionManager.ts",
+      "line": 229,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via AppLogger.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "AppLogger.error('[CrewService] fetchActiveSessions failed', { error: msg })",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    },
+    {
+      "id": "R-04-015",
+      "file": "src/services/CrewService/CrewSessionManager.ts",
+      "line": 298,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via AppLogger.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "AppLogger.error('[CrewService] fetchPublicSessions fallback failed', { error: msg })",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    },
+    {
+      "id": "R-04-016",
+      "file": "src/services/CrewService/CrewSessionManager.ts",
+      "line": 396,
+      "rule_violated": "R-04",
+      "severity": "MEDIUM",
+      "description": "Error logged via AppLogger.error without telemetry context (missing payload_size or ssi).",
+      "code_snippet": "AppLogger.error('[CrewService] endSession failed', { error: msg })",
+      "suggested_fix": "Add { payload_size: number, ssi: number } to the error arguments context object.",
+      "false_positive_risk": "LOW"
+    }
+  ],
+  "summary": {
+    "total_findings": 16,
+    "high": 0,
+    "medium": 16,
+    "low": 0,
+    "false_positives_noted": 0
+  }
+}

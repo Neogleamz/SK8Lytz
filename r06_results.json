@@ -1,0 +1,92 @@
+[
+  {
+    "file": "src\\components\\admin\\AdminToolsModal.tsx",
+    "line": 146,
+    "catchVar": "e"
+  },
+  {
+    "file": "src\\components\\admin\\tools\\AdminPicksScheduler.tsx",
+    "line": 158,
+    "catchVar": "err"
+  },
+  {
+    "file": "src\\components\\crew\\CrewCard.tsx",
+    "line": 122,
+    "catchVar": "err"
+  },
+  {
+    "file": "src\\components\\crew\\CrewDetailScreen.tsx",
+    "line": 192,
+    "catchVar": "err"
+  },
+  {
+    "file": "src\\components\\CrewMemberDashboard.tsx",
+    "line": 197,
+    "catchVar": "_cacheErr"
+  },
+  {
+    "file": "src\\context\\AppConfigContext.tsx",
+    "line": 29,
+    "catchVar": "error"
+  },
+  {
+    "file": "src\\protocols\\ControllerRegistry.ts",
+    "line": 21,
+    "catchVar": "_e"
+  },
+  {
+    "file": "src\\protocols\\ZenggeProtocol.ts",
+    "line": 19,
+    "catchVar": "_e"
+  },
+  {
+    "file": "src\\providers\\BluetoothGuard.tsx",
+    "line": 62,
+    "catchVar": "e"
+  },
+  {
+    "file": "src\\screens\\DashboardScreen.tsx",
+    "line": 696,
+    "catchVar": "_e"
+  },
+  {
+    "file": "src\\services\\appLogger\\AppLoggerService.ts",
+    "line": 107,
+    "catchVar": "_e"
+  },
+  {
+    "file": "src\\services\\appLogger\\AppLoggerStorage.ts",
+    "line": 33,
+    "catchVar": "e"
+  },
+  {
+    "file": "src\\services\\ble\\InterrogatorService.ts",
+    "line": 50,
+    "catchVar": "e"
+  },
+  {
+    "file": "src\\services\\ble\\InterrogatorService.ts",
+    "line": 149,
+    "catchVar": "err"
+  },
+  {
+    "file": "src\\services\\PermissionService.ts",
+    "line": 50,
+    "catchVar": "error"
+  },
+  {
+    "file": "src\\services\\PermissionService.ts",
+    "line": 174,
+    "catchVar": "err"
+  },
+  {
+    "file": "src\\services\\PermissionService.ts",
+    "line": 184,
+    "catchVar": "error"
+  },
+  {
+    "file": "src\\services\\session\\NotificationService.ts",
+    "line": 94,
+    "catchVar": "err"
+  }
+]

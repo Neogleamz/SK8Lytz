@@ -74,12 +74,22 @@ All scripts use `$PSScriptRoot`-relative resolution (portable), fail **open** on
 - ✅ 3 skills + 11 subagents + 37 commands in place.
 - ✅ This document.
 
-**Pending explicit user consent (self-modifying / auto-executing config):**
-- ⏳ `.claude/hooks/*.ps1` enforcement scripts (auto-run shell on every matching tool call).
-- ⏳ `.claude/settings.json` (activates hooks + permissions + statusline).
-- ⏳ `.claude/output-styles/` persona-header enforcement.
+**Enforcement layer (installed + validated, June 2026):**
+- ✅ `.claude/hooks/guard-push.ps1` — Zero-Bypass Push Gate. Tested: allows `npm`, blocks `git push` with missing/stale attestation.
+- ✅ `.claude/hooks/guard-fortress.ps1` — Master Fortress Lock. Tested: allows docs edits, blocks master `src/` edits while a worktree is active.
+- ✅ `.claude/hooks/guard-strikes.ps1` — Three-Strike Lockout. Blocks edits once `.debug-strikes.json` attempts ≥ 3.
+- ✅ `.claude/hooks/check-any-cast.ps1` — No-`any` Law. Warns on `as any`/`@ts-ignore` in `.ts/.tsx` edits.
+- ✅ `.claude/hooks/statusline.ps1` — shows SK8Lytz | persona | model | worktree | context%.
+- ✅ `.claude/settings.json` — wires all hooks + permissions allow/deny + statusline. Validated JSON.
+- ✅ `.claude/output-styles/sk8lytz-personas.md` — enforces the `[badge | … ]` header + default personas via the system prompt.
 
-These were intentionally deferred: hooks execute shell commands on every tool call and change agent behavior at startup, so they warrant a conscious opt-in. See the active session for the approval step.
+> All scripts are ASCII-only (Windows PowerShell 5.1 mis-parses UTF-8 em-dashes/emoji — discovered and fixed during validation), `$PSScriptRoot`-relative (portable), and fail **open** on parse/git errors. Hooks activate on next session start.
+
+**CLAUDE.md restructure (complete):**
+- ✅ Split into 7 focused `.claude/rules/` files (constitution, prime-directive, safety-protocol, agent-behavior, kanban, sub-agent-behavior, team-roster) — 619 lines of content preserved.
+- ✅ CLAUDE.md slimmed **636 → 34 lines**: orientation + 7 `@`-imports + a "Natural-language routing" table mapping spoken phrases to slash commands.
+- ✅ Rules files created FIRST, CLAUDE.md slimmed LAST (no gap where rules could be lost).
+- ✅ Final sweep: zero stray Antigravity tool references across CLAUDE.md + rules (one intentional reference noting `// turbo` is retired).
 
 ## 7. Open decisions
 

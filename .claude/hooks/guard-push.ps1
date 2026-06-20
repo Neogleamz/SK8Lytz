@@ -1,4 +1,4 @@
-# PreToolUse guard — Zero-Bypass Push Gate (Safety Rule 6 + 7)
+# PreToolUse guard - Zero-Bypass Push Gate (Safety Rule 6 + 7)
 # Blocks `git push` unless a fresh .test-attestation.json exists (anchored to HEAD).
 $ErrorActionPreference = 'SilentlyContinue'
 $raw = [Console]::In.ReadToEnd()
@@ -12,7 +12,7 @@ $root   = (Resolve-Path "$PSScriptRoot\..\..").Path
 $attest = Join-Path $root '.test-attestation.json'
 
 if (-not (Test-Path $attest)) {
-  [Console]::Error.WriteLine("BLOCKED — Zero-Bypass Push Gate (Safety Rule 6): .test-attestation.json not found. Run 'npm run verify' AFTER your final commit, then push. Per Rule 7, also confirm explicit user consent before pushing.")
+  [Console]::Error.WriteLine("BLOCKED - Zero-Bypass Push Gate (Safety Rule 6): .test-attestation.json not found. Run 'npm run verify' AFTER your final commit, then push. Per Rule 7, also confirm explicit user consent before pushing.")
   exit 2
 }
 
@@ -23,7 +23,7 @@ if ($headIso) {
   try {
     $headTime = ([datetimeoffset]$headIso).UtcDateTime
     if ($attestTime -lt $headTime) {
-      [Console]::Error.WriteLine("BLOCKED — Push Gate: .test-attestation.json is STALE (older than the current HEAD commit). Re-run 'npm run verify' to re-anchor the attestation to this commit before pushing.")
+      [Console]::Error.WriteLine("BLOCKED - Push Gate: .test-attestation.json is STALE (older than the current HEAD commit). Re-run 'npm run verify' to re-anchor the attestation to this commit before pushing.")
       exit 2
     }
   } catch { }

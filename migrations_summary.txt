@@ -1,0 +1,176 @@
+﻿CREATE POLICY "profiles_select_secure" ON "public"."user_profiles"
+CREATE POLICY "profiles_insert_secure" ON "public"."user_profiles"
+CREATE POLICY "profiles_update_secure" ON "public"."user_profiles"
+ALTER TABLE "public"."parsed_session_stats" ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "telemetry_insert_auth" ON "public"."parsed_session_stats"
+CREATE POLICY "telemetry_update_auth" ON "public"."parsed_session_stats"
+CREATE POLICY "skate_sessions_owner_access" ON "public"."skate_sessions"
+CREATE POLICY "devices_owner_select" ON "public"."registered_devices"
+CREATE POLICY "devices_owner_insert" ON "public"."registered_devices"
+CREATE POLICY "devices_owner_update" ON "public"."registered_devices"
+ALTER TABLE public.registered_devices
+CREATE OR REPLACE FUNCTION public.delete_account()
+CREATE TABLE telemetry_snapshots (
+ALTER TABLE telemetry_snapshots ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Enable insert for authenticated users" 
+ALTER TABLE skate_sessions ADD COLUMN IF NOT EXISTS skate_spot_id UUID REFERENCES skate_spots(id) ON DELETE SET NULL;
+ALTER TABLE public.registered_devices
+ALTER TABLE registered_devices DROP CONSTRAINT IF EXISTS unique_user_device_mac;
+CREATE POLICY "devices_owner_delete" ON "public"."registered_devices"
+ALTER TABLE "public"."registered_groups" ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "groups_owner_select" ON "public"."registered_groups"
+CREATE POLICY "groups_owner_insert" ON "public"."registered_groups"
+CREATE POLICY "groups_owner_update" ON "public"."registered_groups"
+CREATE POLICY "groups_owner_delete" ON "public"."registered_groups"
+ALTER TABLE skate_spots
+ALTER TABLE skate_spots
+ALTER TABLE skate_spots
+CREATE OR REPLACE FUNCTION get_next_spot_to_enrich()
+ALTER TABLE public.user_profiles 
+CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
+ALTER TABLE public.admin_audit_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admins can view audit logs" ON public.admin_audit_logs
+CREATE POLICY "Admins can insert audit logs" ON public.admin_audit_logs
+CREATE OR REPLACE FUNCTION public.admin_ban_user(p_target_user_id UUID, p_reason TEXT)
+CREATE OR REPLACE FUNCTION public.admin_revoke_ban(p_target_user_id UUID)
+CREATE OR REPLACE FUNCTION public.admin_force_password_reset(p_target_user_id UUID)
+CREATE OR REPLACE FUNCTION public.admin_soft_delete_user(p_target_user_id UUID)
+CREATE OR REPLACE FUNCTION public.handle_auto_promotion()
+CREATE TRIGGER trigger_auto_promotion
+CREATE TABLE public.daemon_status (
+ALTER TABLE public.daemon_status ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read access to daemon_status"
+CREATE POLICY "Allow admin to update daemon status" ON public.daemon_status FOR UPDATE TO authenticated USING ( id = '00000000-0000-0000-0000-000000000000' AND EXISTS (SELECT 1 FROM public.user_profiles WHERE user_id = auth.uid() AND role = 'admin') ) WITH CHECK ( id = '00000000-0000-0000-0000-000000000000' AND EXISTS (SELECT 1 FROM public.user_profiles WHERE user_id = auth.uid() AND role = 'admin') );
+CREATE POLICY "Allow admin to insert daemon status" ON public.daemon_status FOR INSERT TO authenticated WITH CHECK ( id = '00000000-0000-0000-0000-000000000000' AND EXISTS (SELECT 1 FROM public.user_profiles WHERE user_id = auth.uid() AND role = 'admin') );
+ALTER TABLE skate_spots
+CREATE TABLE IF NOT EXISTS scraper_config (
+CREATE OR REPLACE FUNCTION get_next_spot_to_enrich()
+ALTER TABLE scraper_config 
+CREATE OR REPLACE FUNCTION get_next_spot_to_enrich()
+ALTER TABLE scraper_config ADD COLUMN IF NOT EXISTS cooldown_base_ms INT DEFAULT 300000;
+ALTER TABLE scraper_config ADD COLUMN IF NOT EXISTS cooldown_jitter_pct INT DEFAULT 20;
+ALTER TABLE scraper_config ADD COLUMN IF NOT EXISTS max_consecutive_errors INT DEFAULT 3;
+ALTER TABLE scraper_config ADD COLUMN IF NOT EXISTS auto_resume_enabled BOOLEAN DEFAULT TRUE;
+ALTER TABLE scraper_config ADD COLUMN IF NOT EXISTS identity_rotation_enabled BOOLEAN DEFAULT TRUE;
+ALTER TABLE scraper_config ADD COLUMN IF NOT EXISTS randomize_viewport_enabled BOOLEAN DEFAULT TRUE;
+ALTER TABLE scraper_config ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow anon select on scraper_config" ON scraper_config
+CREATE POLICY "Allow admin update on scraper_config" ON scraper_config
+CREATE OR REPLACE FUNCTION get_next_spot_to_enrich()
+ALTER TABLE skate_spots ADD COLUMN IF NOT EXISTS phone_number TEXT;
+ALTER TABLE skate_spots ADD COLUMN IF NOT EXISTS is_published BOOLEAN DEFAULT false;
+ALTER TABLE skate_spots ADD COLUMN IF NOT EXISTS surface_quality TEXT;
+ALTER TABLE skate_spots ADD COLUMN IF NOT EXISTS vibe_score FLOAT;
+ALTER TABLE skate_spots ADD COLUMN IF NOT EXISTS cultural_metadata JSONB DEFAULT '{}';
+ALTER TABLE scraper_config 
+CREATE OR REPLACE FUNCTION get_next_spot_to_enrich()
+ALTER TABLE skate_spots ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0;
+    ALTER TABLE skate_spots DROP CONSTRAINT IF EXISTS skate_spots_verification_status_check;
+ALTER TABLE skate_spots ADD CONSTRAINT skate_spots_verification_status_check 
+CREATE OR REPLACE FUNCTION get_next_spot_to_enrich()
+CREATE OR REPLACE FUNCTION get_next_spot_to_enrich()
+ALTER TABLE skate_spots ADD COLUMN IF NOT EXISTS instagram_url TEXT;
+ALTER TABLE skate_spots ADD COLUMN IF NOT EXISTS facebook_url TEXT;
+ALTER TABLE skate_spots ADD COLUMN IF NOT EXISTS tiktok_url TEXT;
+ALTER TABLE skate_spots ADD COLUMN IF NOT EXISTS schedule_url TEXT;
+    ALTER TABLE skate_spots DROP CONSTRAINT IF EXISTS skate_spots_verification_status_check;
+ALTER TABLE skate_spots ADD CONSTRAINT skate_spots_verification_status_check 
+CREATE OR REPLACE FUNCTION get_next_spot_for_operator()
+CREATE OR REPLACE FUNCTION get_next_spot_for_indexer()
+ALTER TABLE skate_spots ADD COLUMN IF NOT EXISTS pricing_data JSONB;
+ALTER TABLE skate_spots ADD COLUMN IF NOT EXISTS special_events JSONB;
+ALTER TABLE skate_spots ADD COLUMN IF NOT EXISTS google_place_id TEXT UNIQUE;
+ALTER TABLE skate_spots ADD COLUMN IF NOT EXISTS rating NUMERIC;
+ALTER TABLE skate_spots ADD COLUMN IF NOT EXISTS user_ratings_total INTEGER;
+CREATE TABLE IF NOT EXISTS public.sk8lytz_app_settings (
+ALTER TABLE public.sk8lytz_app_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can view app settings"
+CREATE POLICY "Admins can update app settings"
+ALTER TABLE scraper_config 
+ALTER TABLE skate_spots
+ALTER TABLE scraper_config 
+ALTER TABLE scraper_config
+ALTER TABLE scraper_config
+ALTER TABLE scraper_config
+ALTER TABLE scraper_config
+ALTER TABLE scraper_config
+CREATE TABLE IF NOT EXISTS scraper_blocklist (
+ALTER TABLE scraper_blocklist ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow anon all on scraper_blocklist" ON scraper_blocklist
+CREATE TABLE IF NOT EXISTS public.hardware_blacklist (
+ALTER TABLE public.hardware_blacklist ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Admins can view hardware blacklist" ON public.hardware_blacklist
+CREATE POLICY "Admins can manage hardware blacklist" ON public.hardware_blacklist
+CREATE TABLE IF NOT EXISTS public.feature_flags (
+ALTER TABLE public.feature_flags ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Anyone can view feature flags" ON public.feature_flags
+CREATE POLICY "Admins can manage feature flags" ON public.feature_flags
+CREATE OR REPLACE FUNCTION public.admin_revoke_sessions(p_target_user_id UUID)
+CREATE OR REPLACE FUNCTION public.admin_export_user_data(p_target_user_id UUID)
+CREATE OR REPLACE FUNCTION public.admin_add_hardware_blacklist(p_mac_address TEXT, p_reason TEXT)
+CREATE OR REPLACE FUNCTION public.admin_remove_hardware_blacklist(p_mac_address TEXT)
+CREATE TABLE IF NOT EXISTS public.user_lifetime_stats (
+ALTER TABLE public.user_lifetime_stats ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can read their own stats"
+CREATE POLICY "Admins can read all stats"
+CREATE OR REPLACE FUNCTION public.flush_telemetry(payload JSONB)
+CREATE OR REPLACE FUNCTION public.admin_get_global_telemetry()
+ALTER TABLE "public"."skate_sessions"
+CREATE OR REPLACE FUNCTION public.admin_revoke_admin_role(p_target_user_id UUID)
+CREATE OR REPLACE FUNCTION public.handle_auto_promotion()
+CREATE POLICY "Only admins can select telemetry" ON public.discovered_devices_telemetry
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS notif_preferences JSONB DEFAULT '{}';
+ALTER TABLE telemetry_errors
+ALTER TABLE public.telemetry_snapshots 
+CREATE OR REPLACE FUNCTION public.flush_telemetry(payload JSONB)
+CREATE POLICY "telemetry_update_auth" ON "public"."parsed_session_stats"
+CREATE POLICY "profiles_select_secure" ON "public"."user_profiles"
+ALTER TABLE "public"."admin_audit_logs" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."feature_flags" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."hardware_blacklist" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."sk8lytz_app_settings" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."sk8lytz_picks" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."product_catalog" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."discovered_devices_telemetry" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."telemetry_snapshots" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."telemetry_errors" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."user_lifetime_stats" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."user_profiles" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."push_tokens" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."crews" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."crew_members" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."crew_memberships" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."public_sessions" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."crew_sessions" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."skate_sessions" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."skate_spots" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."registered_devices" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."registered_groups" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."user_saved_presets" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."custom_builder_presets" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."shared_scenes" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."parsed_session_stats" ENABLE ROW LEVEL SECURITY;
+CREATE TABLE IF NOT EXISTS public.crash_telemetry (
+ALTER TABLE public.crash_telemetry ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can insert their own crash reports"
+CREATE POLICY "Admins can view and manage crash reports"
+ALTER TABLE "public"."sk8lytz_picks" 
+ALTER TABLE "public"."sk8lytz_picks" 
+ALTER TABLE public.skate_sessions 
+ALTER TABLE skate_sessions DROP COLUMN IF EXISTS active_calories;
+CREATE OR REPLACE FUNCTION get_all_registered_devices()
+ALTER TABLE public.sk8lytz_app_settings
+CREATE OR REPLACE FUNCTION public.resolve_crash_signature(target_signature TEXT, resolver_id UUID DEFAULT NULL)
+CREATE OR REPLACE FUNCTION public.handle_auto_promotion()
+CREATE POLICY "Allow authenticated read on scraper_blocklist" 
+CREATE OR REPLACE FUNCTION public.flush_telemetry(payload JSONB)
+CREATE POLICY "Enable anon insert for telemetry_snapshots"
+CREATE POLICY "Enable anon insert for crash_telemetry"
+CREATE POLICY "Enable anon insert for telemetry_errors"
+CREATE OR REPLACE FUNCTION public.flush_telemetry(payload JSONB)
+CREATE POLICY "Admins can manage picks" ON public.sk8lytz_picks
+ALTER TABLE public.label_designs ADD COLUMN IF NOT EXISTS product_name text;
+ALTER TABLE public.discovered_devices_telemetry ALTER COLUMN product_id TYPE integer;
+ALTER TABLE public.discovered_devices_telemetry ALTER COLUMN firmware_ver TYPE integer;
+ALTER TABLE public.discovered_devices_telemetry ALTER COLUMN ble_version TYPE integer;
+ALTER TABLE public.discovered_devices_telemetry ALTER COLUMN led_version TYPE integer;

@@ -1,0 +1,51 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npx tsc*)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git add*)",
+      "Bash(git worktree list*)",
+      "PowerShell(npm run *)",
+      "PowerShell(git status*)",
+      "PowerShell(git diff*)",
+      "PowerShell(git log*)"
+    ],
+    "deny": [
+      "Bash(rm -rf *)",
+      "Edit(.git/hooks/**)",
+      "Write(.git/hooks/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          { "type": "command", "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/guard-push.ps1" }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/guard-fortress.ps1" },
+          { "type": "command", "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/guard-strikes.ps1" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/check-any-cast.ps1" }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .claude/hooks/statusline.ps1"
+  }
+}
