@@ -205,10 +205,13 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
       }));
     }
   }, [lastRawNotification]);
-  type DiagnosticFsmState = 'IDLE' | 'TEST_MODE' | 'DIAGNOSTICS';
-  const [diagnosticState, setDiagnosticState] = useState<DiagnosticFsmState>('IDLE');
-  const isTestModeActive = diagnosticState === 'TEST_MODE';
-  const isDiagnosticsMode = diagnosticState === 'DIAGNOSTICS';
+  const {
+    viewState, setViewState,
+    isRefreshing, setIsRefreshing,
+    diagnosticState, setDiagnosticState,
+    isTestModeActive, isDiagnosticsMode,
+    isControllerOpen, setIsControllerOpen,
+  } = useDashboardState();
   // isDisconnecting removed - bleState === 'DISCONNECTING' is the canonical FSM gate
 
   // ── Phase 1: Fleet Groups, Device Configs, Power States → useDashboardGroups ───────
@@ -218,8 +221,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
     allDevicesRef.current = allDevices;
   }, [allDevices]);
 
-  const [viewState, setViewState] = useState<DashboardViewState>('LOADING_REGS');
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  
 
   const onRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -237,6 +239,9 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   // Stable ref to retriggerAutoConnect — bridges the forward-reference since
   // useDashboardAutoConnect is declared after useDashboardGroups (hook order constraint).
   const retriggerAutoConnectRef = React.useRef<() => void>(() => {});
+
+
+
   const {
     customGroups,
     setCustomGroups,
@@ -357,26 +362,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
 
   // ── Deep Link Handling ─────────────────────────────────────────────────────
   const [initialDeepLinkCode, setInitialDeepLinkCode] = useState<string | null>(null);
-  useEffect(() => {
-    const handleDeepLink = ({ url }: { url: string }) => {
-      if (!url) return;
-      try {
-        const parsed = ExpoLinking.parse(url) as { path?: string; queryParams?: Record<string, string> };
-        if (parsed.path === 'crew/join' && parsed.queryParams?.code) {
-          const inviteCode = String(parsed.queryParams.code).toUpperCase();
-          AppLogger.log('DEEP_LINK', { action: 'crew_join', inviteCode });
-          setInitialDeepLinkCode(inviteCode);
-          setCrewInitialStep('join');
-          setIsCrewModalVisible(true);
-        }
-      } catch (err: unknown) {
-        AppLogger.error('DEEP_LINK', { event: 'parse_failed', url, error: (err instanceof Error ? err.message : String(err)) , payload_size: 0, ssi: 0 });
-      }
-    };
-    const linkSubscription = Linking.addEventListener('url', handleDeepLink);
-    Linking.getInitialURL().then(url => { if (url) handleDeepLink({ url }); });
-    return () => linkSubscription.remove();
-  }, [setIsCrewModalVisible]);
+  useCrewDeepLink(setInitialDeepLinkCode, setCrewInitialStep, setIsCrewModalVisible);
 
   // Load Crew Hub collapsed state on mount
   useEffect(() => {
@@ -528,11 +514,29 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   // Wire the real function into the ref now that the hook has been called.
   retriggerAutoConnectRef.current = retriggerAutoConnect;
 
-  const [isControllerOpen, setIsControllerOpen] = useState(false);
+
   
   // ── Global Telemetry from SessionProvider ──
   const { isSkateSessionActive, sessionPhase, startSession, endSession, telemetry: sessionTelemetry, health } = useSession();
   
+  const {
+    handlePowerToggle,
+    handleGroupPowerPress,
+    handleGroupMusicPress,
+    handleGroupCameraPress,
+    handleGroupFavoritePress,
+  } = useDashboardPowerControls({
+    powerStates,
+    setPowerState,
+    connectedDevices: displayConnectedDevices,
+    allDevices: allDevices as unknown as DisplayDevice[],
+    connectToDevices: connectToDevices as unknown as (devices: DisplayDevice[]) => void,
+    isSkateSessionActive,
+    startSession,
+    setIsControllerOpen,
+    dockedControllerRef,
+    retriggerAutoConnect: () => retriggerAutoConnectRef.current(),
+  });
   const {
     gpsSpeed,
     peakGForce,
@@ -654,74 +658,8 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
 
 
 
-  const handleGroupMusicPress = useCallback((group: CustomGroup) => {
-    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
-    if (devicesToConnect.length > 0) {
-      connectToDevices(devicesToConnect);
-      if (!isSkateSessionActive) startSession();
-      startTransition(() => {
-        setIsControllerOpen(true);
-      });
-      // Defer mode activation until interactions complete
-      InteractionManager.runAfterInteractions(() => {
-        dockedControllerRef.current?.setActiveMode('MUSIC');
-      });
-    } else {
-      retriggerAutoConnectRef.current();
-    }
-  }, [allDevices, connectToDevices, isSkateSessionActive, startSession]);
 
-  const handleGroupCameraPress = useCallback((group: CustomGroup) => {
-    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
-    if (devicesToConnect.length > 0) {
-      connectToDevices(devicesToConnect);
-      if (!isSkateSessionActive) startSession();
-      startTransition(() => {
-        setIsControllerOpen(true);
-      });
-      InteractionManager.runAfterInteractions(() => {
-        dockedControllerRef.current?.setActiveMode('CAMERA');
-      });
-    } else {
-      retriggerAutoConnectRef.current();
-    }
-  }, [allDevices, connectToDevices, isSkateSessionActive, startSession]);
 
-  const handleGroupFavoritePress = useCallback(async (group: CustomGroup, _snapshot: unknown) => {
-    // Load the last-used IFavoriteState from AsyncStorage (same key as useFavorites)
-    let lastFav: IFavoriteState | null = null;
-    try {
-      const raw = await AsyncStorage.getItem(STORAGE_FAVORITES);
-      if (raw) {
-        const favs = JSON.parse(raw) as IFavoriteState[];
-        if (Array.isArray(favs) && favs.length > 0) {
-          // Use the most recently saved favorite (last in array)
-          lastFav = favs[favs.length - 1];
-        }
-      }
-    } catch (_e: unknown) {
-      /* ignore parse errors */ 
-    }
-
-    if (!lastFav) {
-      Alert.alert('No Favorites', 'You haven\'t saved any favorites yet. Open the controller and tap the ❤️ to save one.');
-      return;
-    }
-
-    const devicesToConnect = allDevices.filter(d => group.deviceIds.includes(d.id.toUpperCase()));
-    if (devicesToConnect.length > 0) {
-      connectToDevices(devicesToConnect);
-      if (!isSkateSessionActive) startSession();
-      startTransition(() => {
-        setIsControllerOpen(true);
-      });
-      InteractionManager.runAfterInteractions(() => {
-        dockedControllerRef.current?.loadFavorite(lastFav as IFavoriteState);
-      });
-    } else {
-      retriggerAutoConnectRef.current();
-    }
-  }, [allDevices, connectToDevices, isSkateSessionActive, startSession]);
 
   useEffect(() => {
     // R-17 FIX: react-native is a synchronous CommonJS module in the Metro bundler —
@@ -815,25 +753,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
 
   const dispatch = useProtocolDispatch();
 
-  const handlePowerToggle = useCallback(async (deviceIds: string[], forceState?: boolean) => {
-    // 1. Determine target state (if not forced, toggle based on first device)
-    const targetState = forceState !== undefined ? forceState : !(powerStates[deviceIds[0]] ?? true);
-    
-    // 2. Set React State
-    setPowerState(deviceIds, targetState);
 
-    // Filter to only connected devices to support degraded mode (N-1)
-    const connectedMacs = deviceIds.filter(mac => connectedDevices.some(d => d.id.toUpperCase() === mac.toUpperCase()));
-
-    // 3. Dispatch BLE command to each device via HAL
-    for (const mac of connectedMacs) {
-      await dispatch.setPower(targetState, mac);
-    }
-  }, [powerStates, setPowerState, dispatch, connectedDevices]);
-
-  const handleGroupPowerPress = useCallback((group: CustomGroup) => {
-    handlePowerToggle(group.deviceIds);
-  }, [handlePowerToggle]);
 
   // toggleSelect replaced by toggleDeviceSelection from useDashboardGroups
   // handleGroupDelete and saveGroup now live in useDashboardGroups
@@ -922,39 +842,20 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   const handleDeviceItemPowerToggle = useCallback((mac: string) => {
     handlePowerToggle([mac]);
   }, [handlePowerToggle]);
+  const { renderItem } = useDashboardDeviceList({
+    displayConnectedDevices,
+    isSelectionMode,
+    selectedIds,
+    powerStates,
+    deviceConfigs: deviceConfigs as Record<string, DeviceSettings>,
+    ledgerLoadSync,
+    rssiMap,
+    connectionStates,
+    handleDeviceItemPress,
+    openSettings,
+    handleDeviceItemPowerToggle,
+  });
 
-  const renderItem = useCallback(({ item }: { item: RegisteredDevice }) => {
-    // S4 Acknowledgement: This file is close to or exceeds 30KB. Only specific plan line items are modified surgically.
-    // IDENTITY FIX: Always resolve to BLE MAC address for all lookups.
-    // RegisteredDevice.id is a Supabase composite key (MAC+userId).
-    const mac = (item.device_mac || item.id || '').toUpperCase();
-    const cachedConfig = (deviceConfigs[mac] || {}) as Partial<DeviceSettings>;
-    const mergedItem = {
-      ...item,
-      ...cachedConfig,
-      id: mac,
-      name: (item.device_name || cachedConfig.name) as string | null, // Map DB field to component prop
-      rssi: rssiMap[mac] ?? item.rssi_at_register ?? null,
-    };
-    const ledgerState = ledgerLoadSync(normalizeMac(mac));
-
-    return (
-      <View style={{ paddingHorizontal: Layout.padding }}>
-        <MemoizedDeviceItem
-          device={mergedItem}
-          isConnected={displayConnectedDevices.some(d => d.id.toUpperCase() === mac)}
-          isSelectionMode={isSelectionMode}
-          isSelected={selectedIds.includes(mac)}
-          ledgerState={ledgerState ?? undefined}
-          isPoweredOn={powerStates[mac] ?? true}
-            connectionState={connectionStates[mac]}
-          onPress={handleDeviceItemPress}
-          onLongPress={openSettings}
-          onPowerToggle={handleDeviceItemPowerToggle}
-        />
-      </View>
-    );
-  }, [displayConnectedDevices, isSelectionMode, selectedIds, powerStates, deviceConfigs, ledgerLoadSync, rssiMap, handleDeviceItemPress, openSettings, handleDeviceItemPowerToggle]);
 
   const mappedRegisteredDevicesForModal = useMemo(() => registeredDevices.map((d) => ({
     // IDENTITY KEY: always use device_mac (BLE MAC address), NOT d.id (Supabase UUID).
@@ -981,35 +882,7 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   })), [registeredDevices, allDevices]);
 
 
-  const BatteryWarningBanner = useMemo(() => {
-    if (ble?.batteryTier !== 'PAUSED') return null;
-    return (
-      <View style={styles.btBanner}>
-        <MaterialCommunityIcons name="battery-alert" size={24} color="#FFF" />
-        <Text style={styles.btBannerText}>
-          Scanning paused. Battery below 15%.
-        </Text>
-      </View>
-    );
-  }, [ble?.batteryTier]);
 
-  const BluetoothWarningBanner = useMemo(() => {
-    // R-20 FIX: Use Platform.select for cross-platform readability.
-    if (isBluetoothEnabled || Platform.select({ web: true, default: false })) return null;
-    return (
-      <TouchableOpacity 
-        onPress={() => Linking.openSettings()}
-        style={styles.btBanner}
-        activeOpacity={0.9}
-      >
-        <MaterialCommunityIcons name="alert-circle" size={24} color="#FFF" />
-        <Text style={styles.btBannerText}>
-          Bluetooth Disabled or Permissions Denied!
-        </Text>
-        <MaterialCommunityIcons name="chevron-right" size={20} color="#FFF" />
-      </TouchableOpacity>
-    );
-  }, [isBluetoothEnabled]);
 
   switch (viewState) {
     case 'LOADING_REGS':
@@ -1038,8 +911,8 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
 
   return (
     <View testID="dashboard-screen" style={styles.safeArea}>
-      {BluetoothWarningBanner}
-      {BatteryWarningBanner}
+      <DashboardHeaderBanners batteryTier={ble?.batteryTier} isBluetoothEnabled={isBluetoothEnabled} Colors={Colors} styles={styles} />
+
       <View style={styles.container}>
         {isControllerOpen ? (
           <View style={styles.controllerWrap}>
@@ -1310,60 +1183,6 @@ export default function DashboardScreen({ isOfflineMode = false }: { isOfflineMo
   );
 }
 
-interface MemoizedDeviceItemProps {
-  device: DisplayDevice;
-  isConnected: boolean;
-  isSelectionMode: boolean;
-  isSelected: boolean;
-  // R-08 FIX: Use the concrete DevicePatternState type (from dashboard.types) which DeviceItem
-  // already expects. This replaces the original `any` cast with a properly-typed contract.
-  ledgerState?: DevicePatternState;
-  connectionState?: DeviceConnectionState;
-  isPoweredOn: boolean;
-  onPress: (mac: string) => void;
-  onLongPress: (device: DisplayDevice) => void;
-  onPowerToggle: (mac: string) => void;
-}
 
-const MemoizedDeviceItem = React.memo(({
-  device,
-  isConnected,
-  isSelectionMode,
-  isSelected,
-  ledgerState,
-  connectionState,
-  isPoweredOn,
-  onPress,
-  onLongPress,
-  onPowerToggle,
-}: MemoizedDeviceItemProps) => {
-  const handlePress = useCallback(() => {
-    onPress(device.id);
-  }, [onPress, device.id]);
-
-  const handleLongPress = useCallback(() => {
-    onLongPress(device);
-  }, [onLongPress, device]);
-
-  const handlePowerToggle = useCallback(() => {
-    onPowerToggle(device.id);
-  }, [onPowerToggle, device.id]);
-
-  return (
-    <DeviceItem
-      device={device}
-      isConnected={isConnected}
-      isSelectionMode={isSelectionMode}
-      isSelected={isSelected}
-      ledgerState={ledgerState}
-      onPress={handlePress}
-      onLongPress={handleLongPress}
-      showGroupIcon={false}
-      isPoweredOn={isPoweredOn}
-      onPowerToggle={handlePowerToggle}
-        connectionState={connectionState}
-    />
-  );
-});
 
 

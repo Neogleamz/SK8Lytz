@@ -16,7 +16,7 @@ interface UseDashboardPowerControlsProps {
   isSkateSessionActive: boolean;
   startSession: () => void;
   setIsControllerOpen: (isOpen: boolean) => void;
-  dockedControllerRef: React.RefObject<DockedControllerHandle>;
+  dockedControllerRef: React.RefObject<DockedControllerHandle | null>;
   retriggerAutoConnect: () => void;
 }
 
