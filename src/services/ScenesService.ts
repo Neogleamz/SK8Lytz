@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+﻿import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { STORAGE_SCENES_CACHE, STORAGE_LOCAL_SCENES, STORAGE_LOCAL_SCENE_SYNC_QUEUE } from '../constants/storageKeys';
 import type { Database } from '../types/supabase';
@@ -317,7 +317,7 @@ class ScenesServiceClass {
           id: scene.id,
           name: scene.name,
           // R-08: Fix double cast by serializing
-          nodes: structuredClone(scene.steps) as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
+          nodes: structuredClone(scene.steps) as unknown as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
           fill_mode: 'SCENE',
           transition_type: 0,
           user_id: userId,
@@ -358,7 +358,7 @@ class ScenesServiceClass {
     return true;
   }
 
-  // ── Sync Queue Operations ──
+  // â”€â”€ Sync Queue Operations â”€â”€
 
   private async enqueueSyncJob(job: SceneSyncJob) {
     try {

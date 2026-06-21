@@ -1,4 +1,4 @@
-import { STORAGE_LOCAL_GRADIENTS } from '../constants/storageKeys';
+﻿import { STORAGE_LOCAL_GRADIENTS } from '../constants/storageKeys';
 import { supabase } from './supabaseClient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppLogger } from './appLogger';
@@ -97,7 +97,7 @@ class GradientsServiceClass {
       name: preset.name || 'Unnamed Gradient',
       nodes: preset.nodes || [],
       fill_mode: preset.fill_mode || 'GRADIENT',
-      transition_type: preset.transition_type || 0x01, // 0x01 = Static fallback — never dispatch 0x00 (undefined opcode)
+      transition_type: preset.transition_type || 0x01, // 0x01 = Static fallback â€” never dispatch 0x00 (undefined opcode)
       user_id: userId
     };
 
@@ -124,7 +124,7 @@ class GradientsServiceClass {
           id: newPreset.id,
           name: newPreset.name,
           // R-08: Fix double cast by serializing
-          nodes: structuredClone(newPreset.nodes) as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
+          nodes: structuredClone(newPreset.nodes) as unknown as Database['public']['Tables']['user_saved_presets']['Insert']['nodes'],
           fill_mode: newPreset.fill_mode || 'GRADIENT',
           transition_type: newPreset.transition_type || 0x01,
           user_id: userId,

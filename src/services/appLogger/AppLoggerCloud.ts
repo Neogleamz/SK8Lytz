@@ -1,4 +1,4 @@
-import { supabase } from '../supabaseClient';
+﻿import { supabase } from '../supabaseClient';
 import { AppSettingsService } from '../AppSettingsService';
 import * as Device from 'expo-device';
 import { FlightRecorder } from '../../utils/FlightRecorder';
@@ -50,14 +50,14 @@ export class AppLoggerCloud {
       }
 
       // JSON round-trip produces a plain JSON-serializable object that satisfies the Supabase Json type.
-      // This avoids `as unknown as Json` laundering — if any field is unserializable it becomes null.
-      const breadcrumbsJson = structuredClone(FlightRecorder.getBreadcrumbs()) as import('../../types/supabase').Json;
+      // This avoids `as unknown as Json` laundering â€” if any field is unserializable it becomes null.
+      const breadcrumbsJson = structuredClone(FlightRecorder.getBreadcrumbs()) as unknown as import('../../types/supabase').Json;
       const environmentStateJson = structuredClone({
         ...payload,
         host_device_id: Device.osInternalBuildId || Device.modelId || 'unknown',
         session_id: sessionId,
         event_type: event
-      }) as import('../../types/supabase').Json;
+      }) as unknown as import('../../types/supabase').Json;
 
       supabase.from('crash_telemetry').insert({
       error_signature: safeErrorString.substring(0, 500),
@@ -86,7 +86,7 @@ export class AppLoggerCloud {
     if (buffer.length === 0) return;
 
     try {
-      // ── [TELEMETRY MASTER GATE] ─────────────────────────────────────────────
+      // â”€â”€ [TELEMETRY MASTER GATE] â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       // Route through AppSettingsService instead of direct AsyncStorage access (R-24).
       const settings = await AppSettingsService.fetchAllSettings();
       const telemetryEnabled = settings.global_telemetry_enabled !== false && settings.global_telemetry_enabled !== 'false';
@@ -96,7 +96,7 @@ export class AppLoggerCloud {
         onSuccess(buffer.length); // Wipe it completely
         return;
       }
-      // ────────────────────────────────────────────────────────────────────────
+      // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
       const deviceId = Device.osInternalBuildId || Device.modelId || 'unknown';
       let successfulCount = 0;
