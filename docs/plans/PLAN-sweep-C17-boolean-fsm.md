@@ -20,3 +20,7 @@ Replace scattered boolean states with string union types or FSM patterns.
 
 ## Out of Scope
 - DashboardScreen.tsx (C2), useDashboardGroups.ts (C9)
+
+// SKIPPED: src/components/auth/AuthFormSignUp.tsx - Already migrated to string union FSM in prior sweep
+// SKIPPED: src/components/CrewModal.tsx - Already migrated to string union FSM in prior sweep
+// SKIPPED: src/hooks/useAccountOverview.ts - Already migrated to string union FSM in prior sweep
