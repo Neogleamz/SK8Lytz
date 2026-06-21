@@ -4739,3 +4739,8 @@ TSC: ?  Jest: ?
 Files touched: (None, changes were already applied in master)
 TSC: ?  Jest: ?
 
+
+### [MERGE] 2026-06-21T05:12 - sweep-w2-c07 -> master
+**What merged:** Hardcoded delays check (Already extracted to BLE_TIMING).
+**Verify result:** TSC ?, Jest ?, gates ?
+**Files touched:** None
