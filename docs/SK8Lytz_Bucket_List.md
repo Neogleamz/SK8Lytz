@@ -88,14 +88,6 @@ at useBLESweeper.ts:145
 > **Worktree**: Solo · **Type**: Solo · **Prerequisite**: Wave 3 fully merged
 > **Source Analysis**: 📊 [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) — Wave 4 of deep-dive synthesis sweep
 
-- [ ] **`sweep/storage-key-registry`**
-  - **Tags:** `[✅ READY]` `[QUAL]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 ROUTINE]` `[BATCH:sweep/deep-dive-w4]` `[WAVE:4]`
-  - **Goal:** Centralize all AsyncStorage keys to storageKeys.ts.
-  - **Decision Log:** R-24 found 7 undocumented/inline AsyncStorage keys. Risk: key collision and drift.
-  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C10-storage-key-registry.md](./plans/PLAN-sweep-C10-storage-key-registry.md)
-  - **Source of Truth:** 📖 [storageKeys.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/constants/storageKeys.ts)
-  - **Details:** 3 files. Prerequisite: Wave 3 fully merged.
-
 ---
 
 ### ⏳ [BATCH:sweep/deep-dive-w5] — `sweep/deep-dive-w5` — BLOCKED

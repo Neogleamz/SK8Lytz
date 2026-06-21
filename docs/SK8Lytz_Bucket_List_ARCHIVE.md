@@ -3908,4 +3908,13 @@ pm run verify which includes QA tests.
   - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C17-boolean-fsm.md](./plans/PLAN-sweep-C17-boolean-fsm.md)
   - **Source of Truth:** 📖 [AuthFormSignUp.tsx](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/components/auth/AuthFormSignUp.tsx)
   - **Details:** 3 files. Prerequisite: Wave 2 fully merged.
+
+
+- [x] **`sweep/storage-key-registry`**
+  - **Tags:** `[✅ READY]` `[QUAL]` `[✅ L-RISK]` `[🍪 Snack]` `[🧠 ROUTINE]` `[BATCH:sweep/deep-dive-w4]` `[WAVE:4]`
+  - **Goal:** Centralize all AsyncStorage keys to storageKeys.ts.
+  - **Decision Log:** R-24 found 7 undocumented/inline AsyncStorage keys. Risk: key collision and drift.
+  - **Analysis:** 📊 Source: [system_audit_report.md](file:///C:/Users/Magma/.gemini/antigravity/brain/d866dd8f-29e4-4fcb-9112-6ebb619bbbc1/system_audit_report.md) · Plan: [PLAN-sweep-C10-storage-key-registry.md](./plans/PLAN-sweep-C10-storage-key-registry.md)
+  - **Source of Truth:** 📖 [storageKeys.ts](file:///C:/Neogleamz/AG_SK8Lytz_App/SK8Lytz/src/constants/storageKeys.ts)
+  - **Details:** 3 files. Prerequisite: Wave 3 fully merged.
 
