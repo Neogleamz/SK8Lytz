@@ -4791,3 +4791,12 @@ TSC: ?  Jest: ?
 **Summary:** Successfully orchestrated the Map-Reduce QA Fleet (55 subagents) into a 13-cluster synthesis roadmap, and autonomously executed all 5 AST-verified Waves. The codebase has been fully hardened against the 195 verified findings (including memory leaks, R-08 JSON type bypasses, R-15 re-entrancy, R-24 key collisions, R-17 boolean UI state).
 **Result:** The Active Sprint is empty. The Fortress Gatekeeper is clean. The system is fundamentally stable.
 
+### [MERGE READY] fix-audit-gaps - 838682bbc137cf43598b230ecd89828b332eddc7
+Files touched:
+- src/constants/storageKeys.ts
+- src/screens/Dashboard/DashboardCrewHub.tsx
+- src/screens/DashboardScreen.tsx
+- app.config.js
+- src/services/CrewService/CrewSessionManager.ts
+- src/services/SpeedTrackingService.ts
+TSC: ?  Jest: ?
